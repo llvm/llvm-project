@@ -1038,7 +1038,7 @@ __gxx_personality_v0
 }
 
 #if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
-extern "C" EXCEPTION_DISPOSITION
+extern "C" _LIBCXXABI_FUNC_VIS EXCEPTION_DISPOSITION
 __gxx_personality_seh0(PEXCEPTION_RECORD ms_exc, void *this_frame,
                        PCONTEXT ms_orig_context, PDISPATCHER_CONTEXT ms_disp)
 {

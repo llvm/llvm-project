@@ -1,0 +1,55 @@
+//===- zdefaultcc.go - default compiler locations -------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file provides default locations for cc, cxx and llgo.
+//
+//===----------------------------------------------------------------------===//
+
+package main
+
+import (
+	"path/filepath"
+	"os"
+	"os/exec"
+)
+
+var defaultGCCGO, defaultCC, defaultCXX string
+
+func getInstPrefix() (string, error) {
+	path, err := exec.LookPath(os.Args[0])
+	if err != nil {
+		return "", err
+	}
+
+	path, err = filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", err
+	}
+
+	prefix := filepath.Join(path, "..", "..")
+	return prefix, nil
+}
+
+func init() {
+	prefix, err := getInstPrefix()
+	if err != nil {
+		panic(err.Error())
+	}
+
+	defaultCC = filepath.Join(prefix, "bin", "clang")
+	defaultCXX = filepath.Join(prefix, "bin", "clang++")
+	defaultGCCGO = filepath.Join(prefix, "bin", "llgo")
+	toolDir = filepath.Join(prefix, "lib", "go", "llgo-@LLGO_VERSION@")
+
+	gccgoName = os.Getenv("GCCGO")
+	if gccgoName == "" {
+		gccgoName = defaultGCCGO
+	}
+	gccgoBin, _ = exec.LookPath(gccgoName)
+}

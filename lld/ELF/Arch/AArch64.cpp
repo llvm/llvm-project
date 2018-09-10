@@ -41,6 +41,7 @@ public:
                 int32_t Index, unsigned RelOff) const override;
   bool needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
                   uint64_t BranchAddr, const Symbol &S) const override;
+  uint32_t getThunkSectionSpacing() const override;
   bool inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const override;
   bool usesOnlyLowPageBits(RelType Type) const override;
   void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
@@ -70,11 +71,6 @@ AArch64::AArch64() {
   // 1 of the tls structures and the tcb size is 16.
   TcbSize = 16;
   NeedsThunks = true;
-
-  // See comment in Arch/ARM.cpp for a more detailed explanation of
-  // ThunkSectionSpacing. For AArch64 the only branches we are permitted to
-  // Thunk have a range of +/- 128 MiB
-  ThunkSectionSpacing = (128 * 1024 * 1024) - 0x30000;
 }
 
 RelExpr AArch64::getRelExpr(RelType Type, const Symbol &S,
@@ -206,6 +202,13 @@ bool AArch64::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
     return false;
   uint64_t Dst = (Expr == R_PLT_PC) ? S.getPltVA() : S.getVA();
   return !inBranchRange(Type, BranchAddr, Dst);
+}
+
+uint32_t AArch64::getThunkSectionSpacing() const {
+  // See comment in Arch/ARM.cpp for a more detailed explanation of
+  // getThunkSectionSpacing(). For AArch64 the only branches we are permitted to
+  // Thunk have a range of +/- 128 MiB
+  return (128 * 1024 * 1024) - 0x30000;
 }
 
 bool AArch64::inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const {

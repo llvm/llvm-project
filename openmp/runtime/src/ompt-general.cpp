@@ -351,7 +351,7 @@ void ompt_post_init() {
       return;
     }
 
-    ompt_thread_t *root_thread = ompt_get_thread();
+    kmp_info_t *root_thread = ompt_get_thread();
 
     ompt_set_thread_state(root_thread, omp_state_overhead);
 
@@ -509,6 +509,12 @@ OMPT_API_ROUTINE int ompt_get_task_info(int ancestor_level, int *type,
                                        task_frame, parallel_data, thread_num);
 }
 
+OMPT_API_ROUTINE int ompt_get_task_memory(void **addr, size_t *size,
+                                          int block) {
+  // stub
+  return 0;
+}
+
 /*****************************************************************************
  * num_procs
  ****************************************************************************/
@@ -643,7 +649,10 @@ OMPT_API_ROUTINE int ompt_get_proc_id(void) {
  * compatability
  ****************************************************************************/
 
+/*
+ * Currently unused function
 OMPT_API_ROUTINE int ompt_get_ompt_version() { return OMPT_VERSION; }
+*/
 
 /*****************************************************************************
 * application-facing API
@@ -673,6 +682,10 @@ int __kmp_control_tool(uint64_t command, uint64_t modifier, void *arg) {
 
 OMPT_API_ROUTINE uint64_t ompt_get_unique_id(void) {
   return __ompt_get_unique_id_internal();
+}
+
+OMPT_API_ROUTINE void ompt_finalize_tool(void) {
+  // stub
 }
 
 /*****************************************************************************

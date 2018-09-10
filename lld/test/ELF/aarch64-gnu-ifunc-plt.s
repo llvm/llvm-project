@@ -49,10 +49,14 @@
 // DISASM-NEXT:    20034: {{.*}} nop
 // DISASM-NEXT:    20038: {{.*}} nop
 // DISASM-NEXT:    2003c: {{.*}} nop
+// DISASM-EMPTY:
+// DISASM-NEXT:   bar2@plt:
 // DISASM-NEXT:    20040: {{.*}} adrp    x16, #65536
 // DISASM-NEXT:    20044: {{.*}} ldr     x17, [x16, #24]
 // DISASM-NEXT:    20048: {{.*}} add     x16, x16, #24
 // DISASM-NEXT:    2004c: {{.*}} br      x17
+// DISASM-EMPTY:
+// DISASM-NEXT:   zed2@plt:
 // DISASM-NEXT:    20050: {{.*}} adrp    x16, #65536
 // DISASM-NEXT:    20054: {{.*}} ldr     x17, [x16, #32]
 // DISASM-NEXT:    20058: {{.*}} add     x16, x16, #32

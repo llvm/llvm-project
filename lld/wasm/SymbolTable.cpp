@@ -60,7 +60,6 @@ void SymbolTable::addCombinedLTOObject() {
 }
 
 void SymbolTable::reportRemainingUndefines() {
-  SetVector<Symbol *> Undefs;
   for (Symbol *Sym : SymVector) {
     if (!Sym->isUndefined() || Sym->isWeak())
       continue;
@@ -68,34 +67,26 @@ void SymbolTable::reportRemainingUndefines() {
       continue;
     if (!Sym->IsUsedInRegularObj)
       continue;
-    Undefs.insert(Sym);
+    error(toString(Sym->getFile()) + ": undefined symbol: " + toString(*Sym));
   }
-
-  if (Undefs.empty())
-    return;
-
-  for (ObjFile *File : ObjectFiles)
-    for (Symbol *Sym : File->getSymbols())
-      if (Undefs.count(Sym))
-        error(toString(File) + ": undefined symbol: " + toString(*Sym));
-
-  for (Symbol *Sym : Undefs)
-    if (!Sym->getFile())
-      error("undefined symbol: " + toString(*Sym));
 }
 
 Symbol *SymbolTable::find(StringRef Name) {
   return SymMap.lookup(CachedHashStringRef(Name));
 }
 
-std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
+std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name, InputFile *File) {
+  bool Inserted = false;
   Symbol *&Sym = SymMap[CachedHashStringRef(Name)];
-  if (Sym)
-    return {Sym, false};
-  Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
-  Sym->IsUsedInRegularObj = false;
-  SymVector.emplace_back(Sym);
-  return {Sym, true};
+  if (!Sym) {
+    Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
+    Sym->IsUsedInRegularObj = false;
+    SymVector.emplace_back(Sym);
+    Inserted = true;
+  }
+  if (!File || File->kind() == InputFile::ObjectKind)
+    Sym->IsUsedInRegularObj = true;
+  return {Sym, Inserted};
 }
 
 static void reportTypeError(const Symbol *Existing, const InputFile *File,
@@ -158,15 +149,15 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef Name,
   LLVM_DEBUG(dbgs() << "addSyntheticFunction: " << Name << "\n");
   assert(!find(Name));
   SyntheticFunctions.emplace_back(Function);
-  return replaceSymbol<DefinedFunction>(insert(Name).first, Name, Flags,
-                                        nullptr, Function);
+  return replaceSymbol<DefinedFunction>(insert(Name, nullptr).first, Name,
+                                        Flags, nullptr, Function);
 }
 
 DefinedData *SymbolTable::addSyntheticDataSymbol(StringRef Name,
                                                  uint32_t Flags) {
   LLVM_DEBUG(dbgs() << "addSyntheticDataSymbol: " << Name << "\n");
   assert(!find(Name));
-  return replaceSymbol<DefinedData>(insert(Name).first, Name, Flags);
+  return replaceSymbol<DefinedData>(insert(Name, nullptr).first, Name, Flags);
 }
 
 DefinedGlobal *SymbolTable::addSyntheticGlobal(StringRef Name, uint32_t Flags,
@@ -175,8 +166,8 @@ DefinedGlobal *SymbolTable::addSyntheticGlobal(StringRef Name, uint32_t Flags,
                     << "\n");
   assert(!find(Name));
   SyntheticGlobals.emplace_back(Global);
-  return replaceSymbol<DefinedGlobal>(insert(Name).first, Name, Flags, nullptr,
-                                      Global);
+  return replaceSymbol<DefinedGlobal>(insert(Name, nullptr).first, Name, Flags,
+                                      nullptr, Global);
 }
 
 static bool shouldReplace(const Symbol *Existing, InputFile *NewFile,
@@ -213,10 +204,7 @@ Symbol *SymbolTable::addDefinedFunction(StringRef Name, uint32_t Flags,
   LLVM_DEBUG(dbgs() << "addDefinedFunction: " << Name << "\n");
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
-
-  if (!File || File->kind() == InputFile::ObjectKind)
-    S->IsUsedInRegularObj = true;
+  std::tie(S, WasInserted) = insert(Name, File);
 
   if (WasInserted || S->isLazy()) {
     replaceSymbol<DefinedFunction>(S, Name, Flags, File, Function);
@@ -238,10 +226,7 @@ Symbol *SymbolTable::addDefinedData(StringRef Name, uint32_t Flags,
                     << "\n");
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
-
-  if (!File || File->kind() == InputFile::ObjectKind)
-    S->IsUsedInRegularObj = true;
+  std::tie(S, WasInserted) = insert(Name, File);
 
   if (WasInserted || S->isLazy()) {
     replaceSymbol<DefinedData>(S, Name, Flags, File, Segment, Address, Size);
@@ -258,12 +243,10 @@ Symbol *SymbolTable::addDefinedData(StringRef Name, uint32_t Flags,
 Symbol *SymbolTable::addDefinedGlobal(StringRef Name, uint32_t Flags,
                                       InputFile *File, InputGlobal *Global) {
   LLVM_DEBUG(dbgs() << "addDefinedGlobal:" << Name << "\n");
+
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
-
-  if (!File || File->kind() == InputFile::ObjectKind)
-    S->IsUsedInRegularObj = true;
+  std::tie(S, WasInserted) = insert(Name, File);
 
   if (WasInserted || S->isLazy()) {
     replaceSymbol<DefinedGlobal>(S, Name, Flags, File, Global);
@@ -284,10 +267,7 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef Name, uint32_t Flags,
 
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
-
-  if (!File || File->kind() == InputFile::ObjectKind)
-    S->IsUsedInRegularObj = true;
+  std::tie(S, WasInserted) = insert(Name, File);
 
   if (WasInserted)
     replaceSymbol<UndefinedFunction>(S, Name, Flags, File, Sig);
@@ -305,10 +285,7 @@ Symbol *SymbolTable::addUndefinedData(StringRef Name, uint32_t Flags,
 
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
-
-  if (!File || File->kind() == InputFile::ObjectKind)
-    S->IsUsedInRegularObj = true;
+  std::tie(S, WasInserted) = insert(Name, File);
 
   if (WasInserted)
     replaceSymbol<UndefinedData>(S, Name, Flags, File);
@@ -326,10 +303,7 @@ Symbol *SymbolTable::addUndefinedGlobal(StringRef Name, uint32_t Flags,
 
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
-
-  if (!File || File->kind() == InputFile::ObjectKind)
-    S->IsUsedInRegularObj = true;
+  std::tie(S, WasInserted) = insert(Name, File);
 
   if (WasInserted)
     replaceSymbol<UndefinedGlobal>(S, Name, Flags, File, Type);
@@ -346,7 +320,7 @@ void SymbolTable::addLazy(ArchiveFile *File, const Archive::Symbol *Sym) {
 
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
+  std::tie(S, WasInserted) = insert(Name, nullptr);
 
   if (WasInserted) {
     replaceSymbol<LazySymbol>(S, Name, File, *Sym);

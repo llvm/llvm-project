@@ -20,6 +20,54 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <mutex>
+
+// Store target policy (disabled, mandatory, default)
+kmp_target_offload_kind_t TargetOffloadPolicy = tgt_default;
+std::mutex TargetOffloadMtx;
+
+////////////////////////////////////////////////////////////////////////////////
+/// manage the success or failure of a target constuct
+
+static void HandleDefaultTargetOffload() {
+  TargetOffloadMtx.lock();
+  if (TargetOffloadPolicy == tgt_default) {
+    if (omp_get_num_devices() > 0) {
+      DP("Default TARGET OFFLOAD policy is now mandatory "
+         "(devicew were found)\n");
+      TargetOffloadPolicy = tgt_mandatory;
+    } else {
+      DP("Default TARGET OFFLOAD policy is now disabled "
+         "(devices were not found)\n");
+      TargetOffloadPolicy = tgt_disabled;
+    }
+  }
+  TargetOffloadMtx.unlock();
+}
+
+static int IsOffloadDisabled() {
+  if (TargetOffloadPolicy == tgt_default) HandleDefaultTargetOffload();
+  return TargetOffloadPolicy == tgt_disabled;
+}
+
+static void HandleTargetOutcome(bool success) {
+  switch (TargetOffloadPolicy) {
+    case tgt_disabled:
+      if (success) {
+        FATAL_MESSAGE0(1, "expected no offloading while offloading is disabled");
+      }
+      break;
+    case tgt_default:
+        FATAL_MESSAGE0(1, "default offloading policy must switched to " 
+            "mandatory or disabled");
+      break;
+    case tgt_mandatory:
+      if (!success) {
+        FATAL_MESSAGE0(1, "failure of target construct while offloading is mandatory");
+      }
+      break;
+  }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /// adds a target shared library to the target execution image
@@ -38,6 +86,8 @@ EXTERN void __tgt_unregister_lib(__tgt_bin_desc *desc) {
 /// and passes the data to the device.
 EXTERN void __tgt_target_data_begin(int64_t device_id, int32_t arg_num,
     void **args_base, void **args, int64_t *arg_sizes, int64_t *arg_types) {
+  if (IsOffloadDisabled()) return;
+
   DP("Entering data begin region for device %" PRId64 " with %d mappings\n",
       device_id, arg_num);
 
@@ -49,6 +99,7 @@ EXTERN void __tgt_target_data_begin(int64_t device_id, int32_t arg_num,
 
   if (CheckDeviceAndCtors(device_id) != OFFLOAD_SUCCESS) {
     DP("Failed to get device %" PRId64 " ready\n", device_id);
+    HandleTargetOutcome(false);
     return;
   }
 
@@ -62,7 +113,9 @@ EXTERN void __tgt_target_data_begin(int64_t device_id, int32_t arg_num,
   }
 #endif
 
-  target_data_begin(Device, arg_num, args_base, args, arg_sizes, arg_types);
+  int rc = target_data_begin(Device, arg_num, args_base,
+      args, arg_sizes, arg_types);
+  HandleTargetOutcome(rc == OFFLOAD_SUCCESS);
 }
 
 EXTERN void __tgt_target_data_begin_nowait(int64_t device_id, int32_t arg_num,
@@ -81,6 +134,7 @@ EXTERN void __tgt_target_data_begin_nowait(int64_t device_id, int32_t arg_num,
 /// created by the last __tgt_target_data_begin.
 EXTERN void __tgt_target_data_end(int64_t device_id, int32_t arg_num,
     void **args_base, void **args, int64_t *arg_sizes, int64_t *arg_types) {
+  if (IsOffloadDisabled()) return;
   DP("Entering data end region with %d mappings\n", arg_num);
 
   // No devices available?
@@ -93,12 +147,14 @@ EXTERN void __tgt_target_data_end(int64_t device_id, int32_t arg_num,
   RTLsMtx.unlock();
   if (Devices_size <= (size_t)device_id) {
     DP("Device ID  %" PRId64 " does not have a matching RTL.\n", device_id);
+    HandleTargetOutcome(false);
     return;
   }
 
   DeviceTy &Device = Devices[device_id];
   if (!Device.IsInit) {
     DP("Uninit device: ignore");
+    HandleTargetOutcome(false);
     return;
   }
 
@@ -110,7 +166,9 @@ EXTERN void __tgt_target_data_end(int64_t device_id, int32_t arg_num,
   }
 #endif
 
-  target_data_end(Device, arg_num, args_base, args, arg_sizes, arg_types);
+  int rc = target_data_end(Device, arg_num, args_base,
+      args, arg_sizes, arg_types);
+  HandleTargetOutcome(rc == OFFLOAD_SUCCESS);
 }
 
 EXTERN void __tgt_target_data_end_nowait(int64_t device_id, int32_t arg_num,
@@ -126,6 +184,7 @@ EXTERN void __tgt_target_data_end_nowait(int64_t device_id, int32_t arg_num,
 
 EXTERN void __tgt_target_data_update(int64_t device_id, int32_t arg_num,
     void **args_base, void **args, int64_t *arg_sizes, int64_t *arg_types) {
+  if (IsOffloadDisabled()) return;
   DP("Entering data update with %d mappings\n", arg_num);
 
   // No devices available?
@@ -135,11 +194,14 @@ EXTERN void __tgt_target_data_update(int64_t device_id, int32_t arg_num,
 
   if (CheckDeviceAndCtors(device_id) != OFFLOAD_SUCCESS) {
     DP("Failed to get device %" PRId64 " ready\n", device_id);
+    HandleTargetOutcome(false);
     return;
   }
 
   DeviceTy& Device = Devices[device_id];
-  target_data_update(Device, arg_num, args_base, args, arg_sizes, arg_types);
+  int rc = target_data_update(Device, arg_num, args_base,
+      args, arg_sizes, arg_types);
+  HandleTargetOutcome(rc == OFFLOAD_SUCCESS);
 }
 
 EXTERN void __tgt_target_data_update_nowait(
@@ -155,6 +217,7 @@ EXTERN void __tgt_target_data_update_nowait(
 
 EXTERN int __tgt_target(int64_t device_id, void *host_ptr, int32_t arg_num,
     void **args_base, void **args, int64_t *arg_sizes, int64_t *arg_types) {
+  if (IsOffloadDisabled()) return OFFLOAD_FAIL;
   DP("Entering target region with entry point " DPxMOD " and device Id %"
       PRId64 "\n", DPxPTR(host_ptr), device_id);
 
@@ -164,6 +227,7 @@ EXTERN int __tgt_target(int64_t device_id, void *host_ptr, int32_t arg_num,
 
   if (CheckDeviceAndCtors(device_id) != OFFLOAD_SUCCESS) {
     DP("Failed to get device %" PRId64 " ready\n", device_id);
+    HandleTargetOutcome(false);
     return OFFLOAD_FAIL;
   }
 
@@ -177,7 +241,7 @@ EXTERN int __tgt_target(int64_t device_id, void *host_ptr, int32_t arg_num,
 
   int rc = target(device_id, host_ptr, arg_num, args_base, args, arg_sizes,
       arg_types, 0, 0, false /*team*/);
-
+  HandleTargetOutcome(rc == OFFLOAD_SUCCESS);
   return rc;
 }
 
@@ -195,6 +259,7 @@ EXTERN int __tgt_target_nowait(int64_t device_id, void *host_ptr,
 EXTERN int __tgt_target_teams(int64_t device_id, void *host_ptr,
     int32_t arg_num, void **args_base, void **args, int64_t *arg_sizes,
     int64_t *arg_types, int32_t team_num, int32_t thread_limit) {
+  if (IsOffloadDisabled()) return OFFLOAD_FAIL;
   DP("Entering target region with entry point " DPxMOD " and device Id %"
       PRId64 "\n", DPxPTR(host_ptr), device_id);
 
@@ -204,6 +269,7 @@ EXTERN int __tgt_target_teams(int64_t device_id, void *host_ptr,
 
   if (CheckDeviceAndCtors(device_id) != OFFLOAD_SUCCESS) {
     DP("Failed to get device %" PRId64 " ready\n", device_id);
+    HandleTargetOutcome(false);
     return OFFLOAD_FAIL;
   }
 
@@ -217,6 +283,7 @@ EXTERN int __tgt_target_teams(int64_t device_id, void *host_ptr,
 
   int rc = target(device_id, host_ptr, arg_num, args_base, args, arg_sizes,
       arg_types, team_num, thread_limit, true /*team*/);
+  HandleTargetOutcome(rc == OFFLOAD_SUCCESS);
 
   return rc;
 }
@@ -242,6 +309,7 @@ EXTERN void __kmpc_push_target_tripcount(int64_t device_id,
 
   if (CheckDeviceAndCtors(device_id) != OFFLOAD_SUCCESS) {
     DP("Failed to get device %" PRId64 " ready\n", device_id);
+    HandleTargetOutcome(false);
     return;
   }
 

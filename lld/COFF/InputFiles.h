@@ -145,6 +145,8 @@ public:
   // if we are not producing a PDB.
   llvm::pdb::DbiModuleDescriptorBuilder *ModuleDBI = nullptr;
 
+  const coff_section *AddrsigSec = nullptr;
+
 private:
   void initializeChunks();
   void initializeSymbols();
