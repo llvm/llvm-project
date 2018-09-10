@@ -12,10 +12,6 @@
 
 #include "index/Index.h"
 #include "index/Merge.h"
-#include "index/dex/DexIndex.h"
-#include "index/dex/Iterator.h"
-#include "index/dex/Token.h"
-#include "index/dex/Trigram.h"
 
 namespace clang {
 namespace clangd {

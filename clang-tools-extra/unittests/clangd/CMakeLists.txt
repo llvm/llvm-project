@@ -16,7 +16,7 @@ add_extra_unittest(ClangdTests
   CodeCompleteTests.cpp
   CodeCompletionStringsTests.cpp
   ContextTests.cpp
-  DexIndexTests.cpp
+  DexTests.cpp
   DraftStoreTests.cpp
   FileDistanceTests.cpp
   FileIndexTests.cpp

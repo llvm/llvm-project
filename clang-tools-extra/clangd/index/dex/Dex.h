@@ -1,4 +1,4 @@
-//===--- DexIndex.h - Dex Symbol Index Implementation -----------*- C++ -*-===//
+//===--- Dex.h - Dex Symbol Index Implementation ----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,8 +17,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_DEXINDEX_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_DEXINDEX_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_DEX_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_DEX_H
 
 #include "Iterator.h"
 #include "Token.h"
@@ -37,11 +37,11 @@ namespace dex {
 // changed frequently, it's safe to assume that it has to be built only once
 // (when the clangd process starts). Therefore, it can be easier to store built
 // index on disk and then load it if available.
-class DexIndex : public SymbolIndex {
+class Dex : public SymbolIndex {
 public:
   // All symbols must outlive this index.
   template <typename Range>
-  DexIndex(Range &&Symbols, llvm::ArrayRef<std::string> Schemes)
+  Dex(Range &&Symbols, llvm::ArrayRef<std::string> Schemes)
       : URISchemes(Schemes) {
     // If Schemes don't contain any items, fall back to SymbolCollector's
     // default URI schemes.
@@ -55,9 +55,9 @@ public:
   }
   // Symbols are owned by BackingData, Index takes ownership.
   template <typename Range, typename Payload>
-  DexIndex(Range &&Symbols, Payload &&BackingData,
-           llvm::ArrayRef<std::string> URISchemes)
-      : DexIndex(std::forward<Range>(Symbols), URISchemes) {
+  Dex(Range &&Symbols, Payload &&BackingData,
+      llvm::ArrayRef<std::string> URISchemes)
+      : Dex(std::forward<Range>(Symbols), URISchemes) {
     KeepAlive = std::shared_ptr<void>(
         std::make_shared<Payload>(std::move(BackingData)), nullptr);
   }
@@ -65,7 +65,7 @@ public:
   /// Builds an index from a slab. The index takes ownership of the slab.
   static std::unique_ptr<SymbolIndex>
   build(SymbolSlab Slab, llvm::ArrayRef<std::string> URISchemes) {
-    return llvm::make_unique<DexIndex>(Slab, std::move(Slab), URISchemes);
+    return llvm::make_unique<Dex>(Slab, std::move(Slab), URISchemes);
   }
 
   bool
@@ -110,4 +110,4 @@ std::vector<std::string> generateProximityURIs(llvm::StringRef URIPath);
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_DEXINDEX_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_DEX_H
