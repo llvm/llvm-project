@@ -508,26 +508,26 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
       new_taskdata->ompt_task_info.deps[i].variable_addr =
           (void *)dep_list[i].base_addr;
       if (dep_list[i].flags.in && dep_list[i].flags.out)
-        new_taskdata->ompt_task_info.deps[i].dependence_flags =
+        new_taskdata->ompt_task_info.deps[i].dependence_type =
             ompt_task_dependence_type_inout;
       else if (dep_list[i].flags.out)
-        new_taskdata->ompt_task_info.deps[i].dependence_flags =
+        new_taskdata->ompt_task_info.deps[i].dependence_type =
             ompt_task_dependence_type_out;
       else if (dep_list[i].flags.in)
-        new_taskdata->ompt_task_info.deps[i].dependence_flags =
+        new_taskdata->ompt_task_info.deps[i].dependence_type =
             ompt_task_dependence_type_in;
     }
     for (i = 0; i < ndeps_noalias; i++) {
       new_taskdata->ompt_task_info.deps[ndeps + i].variable_addr =
           (void *)noalias_dep_list[i].base_addr;
       if (noalias_dep_list[i].flags.in && noalias_dep_list[i].flags.out)
-        new_taskdata->ompt_task_info.deps[ndeps + i].dependence_flags =
+        new_taskdata->ompt_task_info.deps[ndeps + i].dependence_type =
             ompt_task_dependence_type_inout;
       else if (noalias_dep_list[i].flags.out)
-        new_taskdata->ompt_task_info.deps[ndeps + i].dependence_flags =
+        new_taskdata->ompt_task_info.deps[ndeps + i].dependence_type =
             ompt_task_dependence_type_out;
       else if (noalias_dep_list[i].flags.in)
-        new_taskdata->ompt_task_info.deps[ndeps + i].dependence_flags =
+        new_taskdata->ompt_task_info.deps[ndeps + i].dependence_type =
             ompt_task_dependence_type_in;
     }
     ompt_callbacks.ompt_callback(ompt_callback_task_dependences)(
