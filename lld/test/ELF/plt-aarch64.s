@@ -85,6 +85,8 @@
 
 // foo@plt
 // Page(0x30018) - Page(0x10030) = 0x20000 - 0x10000 = 0x10000 = 65536
+// DISASMDSO-EMPTY:
+// DISASMDSO-NEXT:   foo@plt:
 // DISASMDSO-NEXT:     10030:	90 00 00 90 	adrp	x16, #65536
 // 0x3018 & 0xFFF = 0x18 = 24
 // DISASMDSO-NEXT:     10034:	11 0e 40 f9 	ldr	x17, [x16, #24]
@@ -93,6 +95,8 @@
 
 // bar@plt
 // Page(0x30020) - Page(0x10040) = 0x20000 - 0x10000 = 0x10000 = 65536
+// DISASMDSO-EMPTY:
+// DISASMDSO-NEXT:   bar@plt:
 // DISASMDSO-NEXT:     10040:	90 00 00 90 	adrp	x16, #65536
 // 0x3020 & 0xFFF = 0x20 = 32
 // DISASMDSO-NEXT:     10044:	11 12 40 f9 	ldr	x17, [x16, #32]
@@ -101,6 +105,8 @@
 
 // weak@plt
 // Page(0x30028) - Page(0x10050) = 0x20000 - 0x10000 = 0x10000 = 65536
+// DISASMDSO-EMPTY:
+// DISASMDSO-NEXT:   weak@plt:
 // DISASMDSO-NEXT:     10050:	90 00 00 90 	adrp	x16, #65536
 // 0x3028 & 0xFFF = 0x28 = 40
 // DISASMDSO-NEXT:     10054:	11 16 40 f9 	ldr	x17, [x16, #40]
@@ -178,6 +184,8 @@
 
 // bar@plt
 // Page(0x40018) - Page(0x20030) = 0x30000 - 0x20000 = 0x10000 = 65536
+// DISASMEXE-EMPTY:
+// DISASMEXE-NEXT:   bar@plt:
 // DISASMEXE-NEXT:    20030:	90 00 00 90 	adrp	x16, #65536
 // DISASMEXE-NEXT:    20034:	11 0e 40 f9 	ldr	x17, [x16, #24]
 // DISASMEXE-NEXT:    20038:	10 62 00 91 	add	x16, x16, #24
@@ -185,6 +193,8 @@
 
 // weak@plt
 // Page(0x40020) - Page(0x20040) = 0x30000 - 0x20000 = 0x10000 = 65536
+// DISASMEXE-EMPTY:
+// DISASMEXE-NEXT:   weak@plt:
 // DISASMEXE-NEXT:    20040:	90 00 00 90 	adrp	x16, #65536
 // DISASMEXE-NEXT:    20044:	11 12 40 f9 	ldr	x17, [x16, #32]
 // DISASMEXE-NEXT:    20048:	10 82 00 91 	add	x16, x16, #32

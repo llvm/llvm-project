@@ -19,7 +19,7 @@ using namespace lld::coff;
 using namespace llvm;
 using namespace llvm::COFF;
 
-AutoExporter::AutoExporter() {
+void AutoExporter::initSymbolExcludes() {
   if (Config->Machine == I386) {
     ExcludeSymbols = {
         "__NULL_IMPORT_DESCRIPTOR",
@@ -53,7 +53,9 @@ AutoExporter::AutoExporter() {
         "DllMainCRTStartup",
     };
   }
+}
 
+AutoExporter::AutoExporter() {
   ExcludeLibs = {
       "libgcc",
       "libgcc_s",
@@ -90,6 +92,13 @@ AutoExporter::AutoExporter() {
   };
 }
 
+void AutoExporter::addWholeArchive(StringRef Path) {
+  StringRef LibName = sys::path::filename(Path);
+  // Drop the file extension, to match the processing below.
+  LibName = LibName.substr(0, LibName.rfind('.'));
+  ExcludeLibs.erase(LibName);
+}
+
 bool AutoExporter::shouldExport(Defined *Sym) const {
   if (!Sym || !Sym->isLive() || !Sym->getChunk())
     return false;
@@ -102,8 +111,9 @@ bool AutoExporter::shouldExport(Defined *Sym) const {
     return false;
 
   // Don't export anything that looks like an import symbol (which also can be
-  // a manually defined data symbol with such a name).
-  if (Sym->getName().startswith("__imp_"))
+  // a manually defined data symbol with such a name); don't export artificial
+  // symbols like .refptr pointer stubs.
+  if (Sym->getName().startswith("__imp_") || Sym->getName().startswith("."))
     return false;
 
   // If a corresponding __imp_ symbol exists and is defined, don't export it.

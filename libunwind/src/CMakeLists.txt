@@ -2,7 +2,8 @@
 
 set(LIBUNWIND_CXX_SOURCES
     libunwind.cpp
-    Unwind-EHABI.cpp)
+    Unwind-EHABI.cpp
+    Unwind-seh.cpp)
 append_if(LIBUNWIND_CXX_SOURCES APPLE Unwind_AppleExtras.cpp)
 
 set(LIBUNWIND_C_SOURCES
@@ -50,8 +51,9 @@ set(LIBUNWIND_SOURCES
     ${LIBUNWIND_ASM_SOURCES})
 
 # Generate library list.
-set(libraries ${LIBUNWINDCXX_ABI_LIBRARIES})
+set(libraries)
 append_if(libraries LIBUNWIND_HAS_C_LIB c)
+append_if(libraries LIBUNWIND_HAS_GCC_S_LIB gcc_s)
 append_if(libraries LIBUNWIND_HAS_DL_LIB dl)
 if (LIBUNWIND_ENABLE_THREADS)
   append_if(libraries LIBUNWIND_HAS_PTHREAD_LIB pthread)
@@ -61,6 +63,9 @@ endif()
 append_if(LIBUNWIND_CXX_FLAGS LIBUNWIND_HAS_NO_RTTI_FLAG -fno-rtti)
 
 append_if(LIBUNWIND_LINK_FLAGS LIBUNWIND_HAS_NODEFAULTLIBS_FLAG -nodefaultlibs)
+
+# MINGW_LIBRARIES is defined in config-ix.cmake
+append_if(libraries MINGW "${MINGW_LIBRARIES}")
 
 if (LIBUNWIND_HAS_NO_EXCEPTIONS_FLAG AND LIBUNWIND_HAS_FUNWIND_TABLES)
   list(APPEND LIBUNWIND_COMPILE_FLAGS -fno-exceptions)

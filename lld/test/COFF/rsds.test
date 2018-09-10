@@ -14,6 +14,14 @@
 # RUN: llvm-readobj -coff-debug-directory %t.dll > %t.4.txt
 # RUN: cat %t.3.txt %t.4.txt | FileCheck %s
 
+# RUN: rm -f %t.dll %t.pdb
+# RUN: lld-link /Brepro /dll /out:%t.dll /entry:DllMain %t.obj
+# RUN: llvm-readobj -coff-debug-directory %t.dll | FileCheck --check-prefix REPRO %s
+
+# RUN: rm -f %t.dll %t.pdb
+# RUN: lld-link /Brepro /debug /dll /out:%t.dll /entry:DllMain %t.obj
+# RUN: llvm-readobj -coff-debug-directory %t.dll | FileCheck --check-prefix REPRODEBUG %s
+
 # CHECK: File: [[FILE:.*]].dll
 # CHECK: DebugDirectory [
 # CHECK:   DebugEntry {
@@ -53,6 +61,49 @@
 # CHECK:   }
 # CHECK: ]
 
+# REPRO: File: {{.*}}.dll
+# REPRO: DebugDirectory [
+# REPRO:   DebugEntry {
+# REPRO:     Characteristics: 0x0
+# REPRO:     TimeDateStamp: 
+# REPRO:     MajorVersion: 0x0
+# REPRO:     MinorVersion: 0x0
+# REPRO:     Type: Repro (0x10)
+# REPRO:     SizeOfData: 0x0
+# REPRO:     AddressOfRawData: 0x0
+# REPRO:     PointerToRawData: 0x0
+# REPRO:   }
+# REPRO: ]
+
+# REPRODEBUG: File: {{.*}}.dll
+# REPRODEBUG: DebugDirectory [
+# REPRODEBUG:   DebugEntry {
+# REPRODEBUG:     Characteristics: 0x0
+# REPRODEBUG:     TimeDateStamp: 
+# REPRODEBUG:     MajorVersion: 0x0
+# REPRODEBUG:     MinorVersion: 0x0
+# REPRODEBUG:     Type: CodeView (0x2)
+# REPRODEBUG:     SizeOfData: 0x{{[^0]}}
+# REPRODEBUG:     AddressOfRawData: 0x{{[^0]}}
+# REPRODEBUG:     PointerToRawData: 0x{{[^0]}}
+# REPRODEBUG:     PDBInfo {
+# REPRODEBUG:       PDBSignature: 0x53445352
+# REPRODEBUG:       PDBGUID: 
+# REPRODEBUG:       PDBAge: 1
+# REPRODEBUG:       PDBFileName:
+# REPRODEBUG:     }
+# REPRODEBUG:   }
+# REPRODEBUG:   DebugEntry {
+# REPRODEBUG:     Characteristics: 0x0
+# REPRODEBUG:     TimeDateStamp: 
+# REPRODEBUG:     MajorVersion: 0x0
+# REPRODEBUG:     MinorVersion: 0x0
+# REPRODEBUG:     Type: Repro (0x10)
+# REPRODEBUG:     SizeOfData: 0x0
+# REPRODEBUG:     AddressOfRawData: 0x0
+# REPRODEBUG:     PointerToRawData: 0x0
+# REPRODEBUG:   }
+# REPRODEBUG: ]
 --- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_I386

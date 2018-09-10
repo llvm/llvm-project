@@ -1917,6 +1917,56 @@ TEST(CompletionTest, DeprecatedResults) {
                            AllOf(Named("TestClangc"), Deprecated())));
 }
 
+TEST(SignatureHelpTest, InsideArgument) {
+  {
+    const auto Results = signatures(R"cpp(
+      void foo(int x);
+      void foo(int x, int y);
+      int main() { foo(1+^); }
+    )cpp");
+    EXPECT_THAT(
+        Results.signatures,
+        ElementsAre(Sig("foo(int x) -> void", {"int x"}),
+                    Sig("foo(int x, int y) -> void", {"int x", "int y"})));
+    EXPECT_EQ(0, Results.activeParameter);
+  }
+  {
+    const auto Results = signatures(R"cpp(
+      void foo(int x);
+      void foo(int x, int y);
+      int main() { foo(1^); }
+    )cpp");
+    EXPECT_THAT(
+        Results.signatures,
+        ElementsAre(Sig("foo(int x) -> void", {"int x"}),
+                    Sig("foo(int x, int y) -> void", {"int x", "int y"})));
+    EXPECT_EQ(0, Results.activeParameter);
+  }
+  {
+    const auto Results = signatures(R"cpp(
+      void foo(int x);
+      void foo(int x, int y);
+      int main() { foo(1^0); }
+    )cpp");
+    EXPECT_THAT(
+        Results.signatures,
+        ElementsAre(Sig("foo(int x) -> void", {"int x"}),
+                    Sig("foo(int x, int y) -> void", {"int x", "int y"})));
+    EXPECT_EQ(0, Results.activeParameter);
+  }
+  {
+    const auto Results = signatures(R"cpp(
+      void foo(int x);
+      void foo(int x, int y);
+      int bar(int x, int y);
+      int main() { bar(foo(2, 3^)); }
+    )cpp");
+    EXPECT_THAT(Results.signatures, ElementsAre(Sig("foo(int x, int y) -> void",
+                                                    {"int x", "int y"})));
+    EXPECT_EQ(1, Results.activeParameter);
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

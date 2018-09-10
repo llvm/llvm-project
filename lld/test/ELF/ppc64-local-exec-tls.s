@@ -2,7 +2,7 @@
 // RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
 // RUN: ld.lld  %t.o -o %t
 // RUN: llvm-readelf -relocations --wide %t.o | FileCheck --check-prefix=InputRelocs %s
-// RUN: llvm-objdump -D %t | FileCheck --check-prefix=Dis %s
+// RUN: llvm-objdump -d %t | FileCheck --check-prefix=Dis %s
 
 	.text
 	.abiversion 2

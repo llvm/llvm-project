@@ -7,6 +7,14 @@
 .. toctree::
    :maxdepth: 1
 
+Upcoming Release
+================
+
+.. toctree::
+   :maxdepth: 2
+
+   ReleaseNotes
+
 Using Polly
 ===========
 

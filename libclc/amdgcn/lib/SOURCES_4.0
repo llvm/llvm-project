@@ -1,0 +1,5 @@
+cl_khr_int64_extended_atomics/minmax_helpers.39.ll
+mem_fence/waitcnt.ll
+workitem/get_global_size.40.ll
+workitem/get_local_size.40.ll
+workitem/get_num_groups.40.ll

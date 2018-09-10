@@ -333,6 +333,7 @@ TopologyExtraNode            "%1$s: %2$d packages x %3$d nodes/pkg x %4$d cores/
 TopologyExtraNoTi            "%1$s: %2$d packages x %3$d nodes/pkg x %4$d tiles/node x %5$d cores/tile x %6$d threads/core (%7$d total cores)"
 OmptOutdatedWorkshare        "OMPT: Cannot determine workshare type; using the default (loop) instead. "
                              "This issue is fixed in an up-to-date compiler."
+OmpNoAllocator               "Allocator %1$s is not available, will use default allocator."
 
 # --- OpenMP errors detected at runtime ---
 #

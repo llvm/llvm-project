@@ -47,7 +47,7 @@ enum class ICFLevel { None, Safe, All };
 enum class StripPolicy { None, All, Debug };
 
 // For --unresolved-symbols.
-enum class UnresolvedPolicy { ReportError, Warn, Ignore, IgnoreAll };
+enum class UnresolvedPolicy { ReportError, Warn, Ignore };
 
 // For --orphan-handling.
 enum class OrphanHandlingPolicy { Place, Warn, Error };
@@ -139,6 +139,7 @@ struct Configuration {
   bool ExecuteOnly;
   bool ExportDynamic;
   bool FixCortexA53Errata843419;
+  bool FormatBinary = false;
   bool GcSections;
   bool GdbIndex;
   bool GnuHash = false;
@@ -180,6 +181,7 @@ struct Configuration {
   bool ZCombreloc;
   bool ZCopyreloc;
   bool ZExecstack;
+  bool ZGlobal;
   bool ZHazardplt;
   bool ZInitfirst;
   bool ZKeepTextSectionPrefix;

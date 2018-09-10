@@ -7,7 +7,7 @@
 // RUN: llvm-readelf -relocations --wide %t.o | FileCheck --check-prefix=InputRelocs %s
 // RUN: llvm-readelf -relocations --wide %t | FileCheck --check-prefix=OutputRelocs %s
 // RUN: llvm-objdump --section-headers %t | FileCheck --check-prefix=CheckGot %s
-// RUN: llvm-objdump -D %t | FileCheck --check-prefix=Dis %s
+// RUN: llvm-objdump -d %t | FileCheck --check-prefix=Dis %s
 
 // RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
 // RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %p/Inputs/ppc64-tls.s -o %t2.o
@@ -16,7 +16,7 @@
 // RUN: llvm-readelf -relocations --wide %t.o | FileCheck --check-prefix=InputRelocs %s
 // RUN: llvm-readelf -relocations --wide %t | FileCheck --check-prefix=OutputRelocs %s
 // RUN: llvm-objdump --section-headers %t | FileCheck --check-prefix=CheckGot %s
-// RUN: llvm-objdump -D %t | FileCheck --check-prefix=Dis %s
+// RUN: llvm-objdump -d %t | FileCheck --check-prefix=Dis %s
 
 	.text
 	.abiversion 2
