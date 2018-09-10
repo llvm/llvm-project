@@ -45,7 +45,7 @@ bool OptionalFrontEnd::Update() {
 
   // __engaged_ is a bool flag and is true if the optional contains a value.
   // Converting it to unsigned gives us a size of 1 if it contains a value
-  // and 0 if not.
+  // and 0 if not .
   m_size = engaged_sp->GetValueAsUnsigned(0);
 
   return false;
