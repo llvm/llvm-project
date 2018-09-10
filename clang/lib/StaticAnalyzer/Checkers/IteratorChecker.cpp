@@ -198,7 +198,7 @@ public:
 
 class IteratorChecker
     : public Checker<check::PreCall, check::PostCall,
-                     check::PostStmt<MaterializeTemporaryExpr>,
+                     check::PostStmt<MaterializeTemporaryExpr>, check::Bind,
                      check::LiveSymbols, check::DeadSymbols,
                      eval::Assume> {
 
@@ -226,13 +226,23 @@ class IteratorChecker
   void handleAssign(CheckerContext &C, const SVal &Cont,
                     const Expr *CE = nullptr,
                     const SVal &OldCont = UndefinedVal()) const;
+  void handleClear(CheckerContext &C, const SVal &Cont) const;
   void handlePushBack(CheckerContext &C, const SVal &Cont) const;
   void handlePopBack(CheckerContext &C, const SVal &Cont) const;
   void handlePushFront(CheckerContext &C, const SVal &Cont) const;
   void handlePopFront(CheckerContext &C, const SVal &Cont) const;
+  void handleInsert(CheckerContext &C, const SVal &Iter) const;
+  void handleErase(CheckerContext &C, const SVal &Iter) const;
+  void handleErase(CheckerContext &C, const SVal &Iter1,
+                   const SVal &Iter2) const;
+  void handleEraseAfter(CheckerContext &C, const SVal &Iter) const;
+  void handleEraseAfter(CheckerContext &C, const SVal &Iter1,
+                        const SVal &Iter2) const;
   void verifyRandomIncrOrDecr(CheckerContext &C, OverloadedOperatorKind Op,
                               const SVal &RetVal, const SVal &LHS,
                               const SVal &RHS) const;
+  void verifyMatch(CheckerContext &C, const SVal &Iter,
+                   const MemRegion *Cont) const;
   void verifyMatch(CheckerContext &C, const SVal &Iter1,
                    const SVal &Iter2) const;
 
@@ -262,6 +272,9 @@ public:
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const;
+  void checkPostStmt(const CXXConstructExpr *CCE, CheckerContext &C) const;
+  void checkPostStmt(const DeclStmt *DS, CheckerContext &C) const;
   void checkPostStmt(const MaterializeTemporaryExpr *MTE,
                      CheckerContext &C) const;
   void checkLiveSymbols(ProgramStateRef State, SymbolReaper &SR) const;
@@ -287,12 +300,18 @@ bool isIterator(const CXXRecordDecl *CRD);
 bool isComparisonOperator(OverloadedOperatorKind OK);
 bool isBeginCall(const FunctionDecl *Func);
 bool isEndCall(const FunctionDecl *Func);
+bool isAssignCall(const FunctionDecl *Func);
+bool isClearCall(const FunctionDecl *Func);
 bool isPushBackCall(const FunctionDecl *Func);
 bool isEmplaceBackCall(const FunctionDecl *Func);
 bool isPopBackCall(const FunctionDecl *Func);
 bool isPushFrontCall(const FunctionDecl *Func);
 bool isEmplaceFrontCall(const FunctionDecl *Func);
 bool isPopFrontCall(const FunctionDecl *Func);
+bool isInsertCall(const FunctionDecl *Func);
+bool isEraseCall(const FunctionDecl *Func);
+bool isEraseAfterCall(const FunctionDecl *Func);
+bool isEmplaceCall(const FunctionDecl *Func);
 bool isAssignmentOperator(OverloadedOperatorKind OK);
 bool isSimpleComparisonOperator(OverloadedOperatorKind OK);
 bool isAccessOperator(OverloadedOperatorKind OK);
@@ -339,9 +358,18 @@ ProgramStateRef relateIteratorPositions(ProgramStateRef State,
                                         bool Equal);
 ProgramStateRef invalidateAllIteratorPositions(ProgramStateRef State,
                                                const MemRegion *Cont);
+ProgramStateRef
+invalidateAllIteratorPositionsExcept(ProgramStateRef State,
+                                     const MemRegion *Cont, SymbolRef Offset,
+                                     BinaryOperator::Opcode Opc);
 ProgramStateRef invalidateIteratorPositions(ProgramStateRef State,
                                             SymbolRef Offset,
                                             BinaryOperator::Opcode Opc);
+ProgramStateRef invalidateIteratorPositions(ProgramStateRef State,
+                                            SymbolRef Offset1,
+                                            BinaryOperator::Opcode Opc1,
+                                            SymbolRef Offset2,
+                                            BinaryOperator::Opcode Opc2);
 ProgramStateRef reassignAllIteratorPositions(ProgramStateRef State,
                                              const MemRegion *Cont,
                                              const MemRegion *NewCont);
@@ -440,6 +468,33 @@ void IteratorChecker::checkPreCall(const CallEvent &Call,
 
         verifyMatch(C, Call.getArgSVal(0), Call.getArgSVal(1));
       }
+    }
+  } else if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
+    if (!ChecksEnabled[CK_MismatchedIteratorChecker])
+      return;
+
+    const auto *ContReg = InstCall->getCXXThisVal().getAsRegion();
+    if (!ContReg)
+      return;
+    // Check for erase, insert and emplace using iterator of another container
+    if (isEraseCall(Func) || isEraseAfterCall(Func)) {
+      verifyMatch(C, Call.getArgSVal(0),
+                  InstCall->getCXXThisVal().getAsRegion());
+      if (Call.getNumArgs() == 2) {
+        verifyMatch(C, Call.getArgSVal(1),
+                    InstCall->getCXXThisVal().getAsRegion());
+      }
+    } else if (isInsertCall(Func)) {
+      verifyMatch(C, Call.getArgSVal(0),
+                  InstCall->getCXXThisVal().getAsRegion());
+      if (Call.getNumArgs() == 3 &&
+          isIteratorType(Call.getArgExpr(1)->getType()) &&
+          isIteratorType(Call.getArgExpr(2)->getType())) {
+        verifyMatch(C, Call.getArgSVal(1), Call.getArgSVal(2));
+      }
+    } else if (isEmplaceCall(Func)) {
+      verifyMatch(C, Call.getArgSVal(0),
+                  InstCall->getCXXThisVal().getAsRegion());
     }
   } else if (isa<CXXConstructorCall>(&Call)) {
     // Check match of first-last iterator pair in a constructor of a container
@@ -579,7 +634,11 @@ void IteratorChecker::checkPostCall(const CallEvent &Call,
     }
   } else {
     if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
-      if (isPushBackCall(Func) || isEmplaceBackCall(Func)) {
+      if (isAssignCall(Func)) {
+        handleAssign(C, InstCall->getCXXThisVal());
+      } else if (isClearCall(Func)) {
+        handleClear(C, InstCall->getCXXThisVal());
+      } else if (isPushBackCall(Func) || isEmplaceBackCall(Func)) {
         handlePushBack(C, InstCall->getCXXThisVal());
       } else if (isPopBackCall(Func)) {
         handlePopBack(C, InstCall->getCXXThisVal());
@@ -587,6 +646,20 @@ void IteratorChecker::checkPostCall(const CallEvent &Call,
         handlePushFront(C, InstCall->getCXXThisVal());
       } else if (isPopFrontCall(Func)) {
         handlePopFront(C, InstCall->getCXXThisVal());
+      } else if (isInsertCall(Func) || isEmplaceCall(Func)) {
+        handleInsert(C, Call.getArgSVal(0));
+      } else if (isEraseCall(Func)) {
+        if (Call.getNumArgs() == 1) {
+          handleErase(C, Call.getArgSVal(0));
+        } else if (Call.getNumArgs() == 2) {
+          handleErase(C, Call.getArgSVal(0), Call.getArgSVal(1));
+        }
+      } else if (isEraseAfterCall(Func)) {
+        if (Call.getNumArgs() == 1) {
+          handleEraseAfter(C, Call.getArgSVal(0));
+        } else if (Call.getNumArgs() == 2) {
+          handleEraseAfter(C, Call.getArgSVal(0), Call.getArgSVal(1));
+        }
       }
     }
 
@@ -641,6 +714,22 @@ void IteratorChecker::checkPostCall(const CallEvent &Call,
           return;
         }
       }
+    }
+  }
+}
+
+void IteratorChecker::checkBind(SVal Loc, SVal Val, const Stmt *S,
+                                CheckerContext &C) const {
+  auto State = C.getState();
+  const auto *Pos = getIteratorPosition(State, Val);
+  if (Pos) {
+    State = setIteratorPosition(State, Loc, *Pos);
+    C.addTransition(State);
+  } else {
+    const auto *OldPos = getIteratorPosition(State, Loc);
+    if (OldPos) {
+      State = removeIteratorPosition(State, Loc);
+      C.addTransition(State);
     }
   }
 }
@@ -997,6 +1086,24 @@ void IteratorChecker::verifyRandomIncrOrDecr(CheckerContext &C,
   }
 }
 
+void IteratorChecker::verifyMatch(CheckerContext &C, const SVal &Iter,
+                                  const MemRegion *Cont) const {
+  // Verify match between a container and the container of an iterator
+  while (const auto *CBOR = Cont->getAs<CXXBaseObjectRegion>()) {
+    Cont = CBOR->getSuperRegion();
+  }
+
+  auto State = C.getState();
+  const auto *Pos = getIteratorPosition(State, Iter);
+  if (Pos && Pos->getContainer() != Cont) {
+    auto *N = C.generateNonFatalErrorNode(State);
+    if (!N) {
+      return;
+    }
+    reportMismatchedBug("Container accessed using foreign iterator argument.", Iter, Cont, C, N);
+  }
+}
+
 void IteratorChecker::verifyMatch(CheckerContext &C, const SVal &Iter1,
                                   const SVal &Iter2) const {
   // Verify match between the containers of two iterators
@@ -1161,6 +1268,34 @@ void IteratorChecker::handleAssign(CheckerContext &C, const SVal &Cont,
   C.addTransition(State);
 }
 
+void IteratorChecker::handleClear(CheckerContext &C, const SVal &Cont) const {
+  const auto *ContReg = Cont.getAsRegion();
+  if (!ContReg)
+    return;
+
+  while (const auto *CBOR = ContReg->getAs<CXXBaseObjectRegion>()) {
+    ContReg = CBOR->getSuperRegion();
+  }
+
+  // The clear() operation invalidates all the iterators, except the past-end
+  // iterators of list-like containers
+  auto State = C.getState();
+  if (!hasSubscriptOperator(State, ContReg) ||
+      !backModifiable(State, ContReg)) {
+    const auto CData = getContainerData(State, ContReg);
+    if (CData) {
+      if (const auto EndSym = CData->getEnd()) {
+        State =
+            invalidateAllIteratorPositionsExcept(State, ContReg, EndSym, BO_GE);
+        C.addTransition(State);
+        return;
+      }
+    }
+  }
+  State = invalidateAllIteratorPositions(State, ContReg);
+  C.addTransition(State);
+}
+
 void IteratorChecker::handlePushBack(CheckerContext &C,
                                      const SVal &Cont) const {
   const auto *ContReg = Cont.getAsRegion();
@@ -1311,6 +1446,126 @@ void IteratorChecker::handlePopFront(CheckerContext &C,
   }
 }
 
+void IteratorChecker::handleInsert(CheckerContext &C, const SVal &Iter) const {
+  auto State = C.getState();
+  const auto *Pos = getIteratorPosition(State, Iter);
+  if (!Pos)
+    return;
+
+  // For deque-like containers invalidate all iterator positions. For
+  // vector-like containers invalidate iterator positions after the insertion.
+  const auto *Cont = Pos->getContainer();
+  if (hasSubscriptOperator(State, Cont) && backModifiable(State, Cont)) {
+    if (frontModifiable(State, Cont)) {
+      State = invalidateAllIteratorPositions(State, Cont);
+    } else {
+      State = invalidateIteratorPositions(State, Pos->getOffset(), BO_GE);
+    }
+    if (const auto *CData = getContainerData(State, Cont)) {
+      if (const auto EndSym = CData->getEnd()) {
+        State = invalidateIteratorPositions(State, EndSym, BO_GE);
+        State = setContainerData(State, Cont, CData->newEnd(nullptr));
+      }
+    }
+    C.addTransition(State);
+  }
+}
+
+void IteratorChecker::handleErase(CheckerContext &C, const SVal &Iter) const {
+  auto State = C.getState();
+  const auto *Pos = getIteratorPosition(State, Iter);
+  if (!Pos)
+    return;
+
+  // For deque-like containers invalidate all iterator positions. For
+  // vector-like containers invalidate iterator positions at and after the
+  // deletion. For list-like containers only invalidate the deleted position.
+  const auto *Cont = Pos->getContainer();
+  if (hasSubscriptOperator(State, Cont) && backModifiable(State, Cont)) {
+    if (frontModifiable(State, Cont)) {
+      State = invalidateAllIteratorPositions(State, Cont);
+    } else {
+      State = invalidateIteratorPositions(State, Pos->getOffset(), BO_GE);
+    }
+    if (const auto *CData = getContainerData(State, Cont)) {
+      if (const auto EndSym = CData->getEnd()) {
+        State = invalidateIteratorPositions(State, EndSym, BO_GE);
+        State = setContainerData(State, Cont, CData->newEnd(nullptr));
+      }
+    }
+  } else {
+    State = invalidateIteratorPositions(State, Pos->getOffset(), BO_EQ);
+  }
+  C.addTransition(State);
+}
+
+void IteratorChecker::handleErase(CheckerContext &C, const SVal &Iter1,
+                                  const SVal &Iter2) const {
+  auto State = C.getState();
+  const auto *Pos1 = getIteratorPosition(State, Iter1);
+  const auto *Pos2 = getIteratorPosition(State, Iter2);
+  if (!Pos1 || !Pos2)
+    return;
+
+  // For deque-like containers invalidate all iterator positions. For
+  // vector-like containers invalidate iterator positions at and after the
+  // deletion range. For list-like containers only invalidate the deleted
+  // position range [first..last].
+  const auto *Cont = Pos1->getContainer();
+  if (hasSubscriptOperator(State, Cont) && backModifiable(State, Cont)) {
+    if (frontModifiable(State, Cont)) {
+      State = invalidateAllIteratorPositions(State, Cont);
+    } else {
+      State = invalidateIteratorPositions(State, Pos1->getOffset(), BO_GE);
+    }
+    if (const auto *CData = getContainerData(State, Cont)) {
+      if (const auto EndSym = CData->getEnd()) {
+        State = invalidateIteratorPositions(State, EndSym, BO_GE);
+        State = setContainerData(State, Cont, CData->newEnd(nullptr));
+      }
+    }
+  } else {
+    State = invalidateIteratorPositions(State, Pos1->getOffset(), BO_GE,
+                                        Pos2->getOffset(), BO_LT);
+  }
+  C.addTransition(State);
+}
+
+void IteratorChecker::handleEraseAfter(CheckerContext &C,
+                                       const SVal &Iter) const {
+  auto State = C.getState();
+  const auto *Pos = getIteratorPosition(State, Iter);
+  if (!Pos)
+    return;
+
+  // Invalidate the deleted iterator position, which is the position of the
+  // parameter plus one.
+  auto &SymMgr = C.getSymbolManager();
+  auto &BVF = SymMgr.getBasicVals();
+  auto &SVB = C.getSValBuilder();
+  const auto NextSym =
+    SVB.evalBinOp(State, BO_Add,
+                  nonloc::SymbolVal(Pos->getOffset()),
+                  nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
+                  SymMgr.getType(Pos->getOffset())).getAsSymbol();
+  State = invalidateIteratorPositions(State, NextSym, BO_EQ);
+  C.addTransition(State);
+}
+
+void IteratorChecker::handleEraseAfter(CheckerContext &C, const SVal &Iter1,
+                                       const SVal &Iter2) const {
+  auto State = C.getState();
+  const auto *Pos1 = getIteratorPosition(State, Iter1);
+  const auto *Pos2 = getIteratorPosition(State, Iter2);
+  if (!Pos1 || !Pos2)
+    return;
+
+  // Invalidate the deleted iterator position range (first..last)
+  State = invalidateIteratorPositions(State, Pos1->getOffset(), BO_GT,
+                                      Pos2->getOffset(), BO_LT);
+  C.addTransition(State);
+}
+
 void IteratorChecker::reportOutOfRangeBug(const StringRef &Message,
                                           const SVal &Val, CheckerContext &C,
                                           ExplodedNode *ErrNode) const {
@@ -1431,6 +1686,24 @@ bool isEndCall(const FunctionDecl *Func) {
   return IdInfo->getName().endswith_lower("end");
 }
 
+bool isAssignCall(const FunctionDecl *Func) {
+  const auto *IdInfo = Func->getIdentifier();
+  if (!IdInfo)
+    return false;
+  if (Func->getNumParams() > 2)
+    return false;
+  return IdInfo->getName() == "assign";
+}
+
+bool isClearCall(const FunctionDecl *Func) {
+  const auto *IdInfo = Func->getIdentifier();
+  if (!IdInfo)
+    return false;
+  if (Func->getNumParams() > 0)
+    return false;
+  return IdInfo->getName() == "clear";
+}
+
 bool isPushBackCall(const FunctionDecl *Func) {
   const auto *IdInfo = Func->getIdentifier();
   if (!IdInfo)
@@ -1483,6 +1756,56 @@ bool isPopFrontCall(const FunctionDecl *Func) {
   if (Func->getNumParams() > 0)
     return false;
   return IdInfo->getName() == "pop_front";
+}
+
+bool isInsertCall(const FunctionDecl *Func) {
+  const auto *IdInfo = Func->getIdentifier();
+  if (!IdInfo)
+    return false;
+  if (Func->getNumParams() < 2 || Func->getNumParams() > 3)
+    return false;
+  if (!isIteratorType(Func->getParamDecl(0)->getType()))
+    return false;
+  return IdInfo->getName() == "insert";
+}
+
+bool isEmplaceCall(const FunctionDecl *Func) {
+  const auto *IdInfo = Func->getIdentifier();
+  if (!IdInfo)
+    return false;
+  if (Func->getNumParams() < 2)
+    return false;
+  if (!isIteratorType(Func->getParamDecl(0)->getType()))
+    return false;
+  return IdInfo->getName() == "emplace";
+}
+
+bool isEraseCall(const FunctionDecl *Func) {
+  const auto *IdInfo = Func->getIdentifier();
+  if (!IdInfo)
+    return false;
+  if (Func->getNumParams() < 1 || Func->getNumParams() > 2)
+    return false;
+  if (!isIteratorType(Func->getParamDecl(0)->getType()))
+    return false;
+  if (Func->getNumParams() == 2 &&
+      !isIteratorType(Func->getParamDecl(1)->getType()))
+    return false;
+  return IdInfo->getName() == "erase";
+}
+
+bool isEraseAfterCall(const FunctionDecl *Func) {
+  const auto *IdInfo = Func->getIdentifier();
+  if (!IdInfo)
+    return false;
+  if (Func->getNumParams() < 1 || Func->getNumParams() > 2)
+    return false;
+  if (!isIteratorType(Func->getParamDecl(0)->getType()))
+    return false;
+  if (Func->getNumParams() == 2 &&
+      !isIteratorType(Func->getParamDecl(1)->getType()))
+    return false;
+  return IdInfo->getName() == "erase_after";
 }
 
 bool isAssignmentOperator(OverloadedOperatorKind OK) { return OK == OO_Equal; }
@@ -1861,11 +2184,40 @@ ProgramStateRef invalidateAllIteratorPositions(ProgramStateRef State,
   return processIteratorPositions(State, MatchCont, Invalidate);
 }
 
+ProgramStateRef
+invalidateAllIteratorPositionsExcept(ProgramStateRef State,
+                                     const MemRegion *Cont, SymbolRef Offset,
+                                     BinaryOperator::Opcode Opc) {
+  auto MatchContAndCompare = [&](const IteratorPosition &Pos) {
+    return Pos.getContainer() == Cont &&
+           !compare(State, Pos.getOffset(), Offset, Opc);
+  };
+  auto Invalidate = [&](const IteratorPosition &Pos) {
+    return Pos.invalidate();
+  };
+  return processIteratorPositions(State, MatchContAndCompare, Invalidate);
+}
+
 ProgramStateRef invalidateIteratorPositions(ProgramStateRef State,
                                             SymbolRef Offset,
                                             BinaryOperator::Opcode Opc) {
   auto Compare = [&](const IteratorPosition &Pos) {
     return compare(State, Pos.getOffset(), Offset, Opc);
+  };
+  auto Invalidate = [&](const IteratorPosition &Pos) {
+    return Pos.invalidate();
+  };
+  return processIteratorPositions(State, Compare, Invalidate);
+}
+
+ProgramStateRef invalidateIteratorPositions(ProgramStateRef State,
+                                            SymbolRef Offset1,
+                                            BinaryOperator::Opcode Opc1,
+                                            SymbolRef Offset2,
+                                            BinaryOperator::Opcode Opc2) {
+  auto Compare = [&](const IteratorPosition &Pos) {
+    return compare(State, Pos.getOffset(), Offset1, Opc1) &&
+           compare(State, Pos.getOffset(), Offset2, Opc2);
   };
   auto Invalidate = [&](const IteratorPosition &Pos) {
     return Pos.invalidate();
