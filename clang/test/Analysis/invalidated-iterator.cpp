@@ -30,3 +30,170 @@ void bad_copy_assign_operator_forward_list1(std::forward_list<int> &FL1,
   FL1 = FL2;
   *i0; // expected-warning{{Invalidated iterator accessed}}
 }
+
+void good_push_back_list1(std::list<int> &L, int n) {
+  auto i0 = L.cbegin(), i1 = L.cend();
+  L.push_back(n);
+  *i0; // no-warning
+  --i1; // no-warning
+}
+
+void good_push_back_vector1(std::vector<int> &V, int n) {
+  auto i0 = V.cbegin(), i1 = V.cend();
+  V.push_back(n);
+  *i0; // no-warning
+}
+
+void bad_push_back_vector1(std::vector<int> &V, int n) {
+  auto i0 = V.cbegin(), i1 = V.cend();
+  V.push_back(n);
+  --i1; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void bad_push_back_deque1(std::deque<int> &D, int n) {
+  auto i0 = D.cbegin(), i1 = D.cend();
+  D.push_back(n);
+  *i0; // expected-warning{{Invalidated iterator accessed}}
+  --i1; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void good_emplace_back_list1(std::list<int> &L, int n) {
+  auto i0 = L.cbegin(), i1 = L.cend();
+  L.emplace_back(n);
+  *i0; // no-warning
+  --i1; // no-warning
+}
+
+void good_emplace_back_vector1(std::vector<int> &V, int n) {
+  auto i0 = V.cbegin(), i1 = V.cend();
+  V.emplace_back(n);
+  *i0; // no-warning
+}
+
+void bad_emplace_back_vector1(std::vector<int> &V, int n) {
+  auto i0 = V.cbegin(), i1 = V.cend();
+  V.emplace_back(n);
+  --i1; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void bad_emplace_back_deque1(std::deque<int> &D, int n) {
+  auto i0 = D.cbegin(), i1 = D.cend();
+  D.emplace_back(n);
+  *i0; // expected-warning{{Invalidated iterator accessed}}
+  --i1; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void good_pop_back_list1(std::list<int> &L, int n) {
+  auto i0 = L.cbegin(), i1 = L.cend(), i2 = i1--;
+  L.pop_back();
+  *i0; // no-warning
+  *i2; // no-warning
+}
+
+void bad_pop_back_list1(std::list<int> &L, int n) {
+  auto i0 = L.cbegin(), i1 = L.cend(), i2 = i1--;
+  L.pop_back();
+  *i1; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void good_pop_back_vector1(std::vector<int> &V, int n) {
+  auto i0 = V.cbegin(), i1 = V.cend(), i2 = i1--;
+  V.pop_back();
+  *i0; // no-warning
+}
+
+void bad_pop_back_vector1(std::vector<int> &V, int n) {
+  auto i0 = V.cbegin(), i1 = V.cend(), i2 = i1--;
+  V.pop_back();
+  *i1; // expected-warning{{Invalidated iterator accessed}}
+  --i2; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void good_pop_back_deque1(std::deque<int> &D, int n) {
+  auto i0 = D.cbegin(), i1 = D.cend(), i2 = i1--;
+  D.pop_back();
+  *i0; // no-warning
+}
+
+void bad_pop_back_deque1(std::deque<int> &D, int n) {
+  auto i0 = D.cbegin(), i1 = D.cend(), i2 = i1--;
+  D.pop_back();
+  *i1; // expected-warning{{Invalidated iterator accessed}}
+  --i2; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void good_push_front_list1(std::list<int> &L, int n) {
+  auto i0 = L.cbegin(), i1 = L.cend();
+  L.push_front(n);
+  *i0; // no-warning
+  --i1; // no-warning
+}
+
+void bad_push_front_deque1(std::deque<int> &D, int n) {
+  auto i0 = D.cbegin(), i1 = D.cend();
+  D.push_front(n);
+  *i0; // expected-warning{{Invalidated iterator accessed}}
+  --i1; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void good_push_front_forward_list1(std::forward_list<int> &FL, int n) {
+  auto i0 = FL.cbegin(), i1 = FL.cend();
+  FL.push_front(n);
+  *i0; // no-warning
+}
+
+void good_emplace_front_list1(std::list<int> &L, int n) {
+  auto i0 = L.cbegin(), i1 = L.cend();
+  L.emplace_front(n);
+  *i0; // no-warning
+  --i1; // no-warning
+}
+
+void bad_emplace_front_deque1(std::deque<int> &D, int n) {
+  auto i0 = D.cbegin(), i1 = D.cend();
+  D.emplace_front(n);
+  *i0; // expected-warning{{Invalidated iterator accessed}}
+  --i1; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void good_emplace_front_forward_list1(std::forward_list<int> &FL, int n) {
+  auto i0 = FL.cbegin(), i1 = FL.cend();
+  FL.emplace_front(n);
+  *i0; // no-warning
+}
+
+void good_pop_front_list1(std::list<int> &L, int n) {
+  auto i1 = L.cbegin(), i0 = i1++;
+  L.pop_front();
+  *i1; // no-warning
+}
+
+void bad_pop_front_list1(std::list<int> &L, int n) {
+  auto i1 = L.cbegin(), i0 = i1++;
+  L.pop_front();
+  *i0; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void good_pop_front_deque1(std::deque<int> &D, int n) {
+  auto i1 = D.cbegin(), i0 = i1++;
+  D.pop_front();
+  *i1; // no-warning
+}
+
+void bad_pop_front_deque1(std::deque<int> &D, int n) {
+  auto i1 = D.cbegin(), i0 = i1++;
+  D.pop_front();
+  *i0; // expected-warning{{Invalidated iterator accessed}}
+}
+
+void good_pop_front_forward_list1(std::forward_list<int> &FL, int n) {
+  auto i1 = FL.cbegin(), i0 = i1++;
+  FL.pop_front();
+  *i1; // no-warning
+}
+
+void bad_pop_front_forward_list1(std::forward_list<int> &FL, int n) {
+  auto i1 = FL.cbegin(), i0 = i1++;
+  FL.pop_front();
+  *i0; // expected-warning{{Invalidated iterator accessed}}
+}

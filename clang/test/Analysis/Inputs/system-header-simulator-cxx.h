@@ -265,6 +265,8 @@ namespace std {
 
     void push_back(const T &value);
     void push_back(T &&value);
+    template<class... Args>
+    void emplace_back(Args&&... args);
     void pop_back();
 
     T &operator[](size_t n) {
@@ -319,10 +321,14 @@ namespace std {
 
     void push_back(const T &value);
     void push_back(T &&value);
+    template<class... Args>
+    void emplace_back(Args&&... args);
     void pop_back();
 
     void push_front(const T &value);
     void push_front(T &&value);
+    template<class... Args>
+    void emplace_front(Args&&... args);
     void pop_front();
 
     iterator begin() { return iterator(_start); }
@@ -373,10 +379,14 @@ namespace std {
 
     void push_back(const T &value);
     void push_back(T &&value);
+    template<class... Args>
+    void emplace_back(Args&&... args);
     void pop_back();
 
     void push_front(const T &value);
     void push_front(T &&value);
+    template<class... Args>
+    void emplace_front(Args&&... args);
     void pop_front();
 
     T &operator[](size_t n) {
@@ -431,6 +441,8 @@ namespace std {
 
     void push_front(const T &value);
     void push_front(T &&value);
+    template<class... Args>
+    void emplace_front(Args&&... args);
     void pop_front();
 
     iterator begin() { return iterator(_start); }
