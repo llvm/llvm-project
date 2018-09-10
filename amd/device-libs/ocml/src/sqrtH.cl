@@ -22,8 +22,8 @@ MATH_MANGLE(LN)(half x) \
     return BUILTIN_##UN##_F16(x); \
 }
 
-GEN(sqrt_rte,SQRT_RTE)
-GEN(sqrt_rtp,SQRT_RTN)
-GEN(sqrt_rtn,SQRT_RTP)
-GEN(sqrt_rtz,SQRT_RTZ)
+// GEN(sqrt_rte,SQRT_RTE)
+// GEN(sqrt_rtp,SQRT_RTN)
+// GEN(sqrt_rtn,SQRT_RTP)
+// GEN(sqrt_rtz,SQRT_RTZ)
 
