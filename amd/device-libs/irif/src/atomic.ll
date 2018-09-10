@@ -33,7 +33,7 @@ define protected void @__llvm_st_atomic_a1_x_dev_i32(i32 addrspace(1)* nocapture
 }
 
 define protected void @__llvm_st_atomic_a1_x_dev_i64(i64 addrspace(1)* nocapture, i64) #1 {
-  store atomic volatile i64 %1, i64 addrspace(1)* %0 monotonic, align 4
+  store atomic volatile i64 %1, i64 addrspace(1)* %0 monotonic, align 8
   ret void
 }
 
@@ -43,7 +43,7 @@ define protected void @__llvm_st_atomic_a3_x_wg_i32(i32 addrspace(3)* nocapture,
 }
 
 define protected void @__llvm_st_atomic_a3_x_wg_i64(i64 addrspace(3)* nocapture, i64) #1 {
-  store atomic volatile i64 %1, i64 addrspace(3)* %0 monotonic, align 4
+  store atomic volatile i64 %1, i64 addrspace(3)* %0 monotonic, align 8
   ret void
 }
 
