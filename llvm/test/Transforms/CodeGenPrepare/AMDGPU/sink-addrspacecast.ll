@@ -74,7 +74,7 @@ l2:
 ; CHECK: br
 ; CHECK: addrspacecast
 define i64 @sink_flat_to_constant(i1 %pred, i64* %ptr) {
-  %ptr_cast = addrspacecast i64* %ptr to i64 addrspace(2)*
+  %ptr_cast = addrspacecast i64* %ptr to i64 addrspace(4)*
   br i1 %pred, label %l1, label %l2
 
 l1:
@@ -82,7 +82,7 @@ l1:
   ret i64 %v1
 
 l2:
-  %v2 = load i64, i64 addrspace(2)* %ptr_cast
+  %v2 = load i64, i64 addrspace(4)* %ptr_cast
   ret i64 %v2
 }
 

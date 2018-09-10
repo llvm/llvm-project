@@ -16,8 +16,8 @@ define amdgpu_kernel void @volatile_load_flat_from_global(i32 addrspace(1)* noca
 ; CHECK-LABEL: @volatile_load_flat_from_constant(
 ; CHECK: load volatile i32, i32*
 ; CHECK: store i32 %val, i32 addrspace(1)*
-define amdgpu_kernel void @volatile_load_flat_from_constant(i32 addrspace(2)* nocapture %input, i32 addrspace(1)* nocapture %output) #0 {
-  %tmp0 = addrspacecast i32 addrspace(2)* %input to i32*
+define amdgpu_kernel void @volatile_load_flat_from_constant(i32 addrspace(4)* nocapture %input, i32 addrspace(1)* nocapture %output) #0 {
+  %tmp0 = addrspacecast i32 addrspace(4)* %input to i32*
   %tmp1 = addrspacecast i32 addrspace(1)* %output to i32*
   %val = load volatile i32, i32* %tmp0, align 4
   store i32 %val, i32* %tmp1, align 4
