@@ -42,14 +42,14 @@ StmtMatcher withEnclosingCompound(ExprMatcher Matcher) {
 bool isMutated(const SmallVectorImpl<BoundNodes> &Results, ASTUnit *AST) {
   const auto *const S = selectFirst<Stmt>("stmt", Results);
   const auto *const E = selectFirst<Expr>("expr", Results);
-  return utils::ExprMutationAnalyzer(S, &AST->getASTContext()).isMutated(E);
+  return utils::ExprMutationAnalyzer(*S, AST->getASTContext()).isMutated(E);
 }
 
 SmallVector<std::string, 1>
 mutatedBy(const SmallVectorImpl<BoundNodes> &Results, ASTUnit *AST) {
   const auto *const S = selectFirst<Stmt>("stmt", Results);
   SmallVector<std::string, 1> Chain;
-  utils::ExprMutationAnalyzer Analyzer(S, &AST->getASTContext());
+  utils::ExprMutationAnalyzer Analyzer(*S, AST->getASTContext());
   for (const auto *E = selectFirst<Expr>("expr", Results); E != nullptr;) {
     const Stmt *By = Analyzer.findMutation(E);
     std::string buffer;
