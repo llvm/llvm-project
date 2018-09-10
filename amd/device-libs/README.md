@@ -6,7 +6,7 @@ This repository contains the following libraries:
 
 | **Name** | **Comments** | **Dependencies** |
 | --- | --- | --- |
-| irif | Interface to LLVM IR | |
+| irif | Internal interface to LLVM IR | |
 | ocml | Open Compute Math library ([documentation](doc/OCML.md)) | irif |
 | oclc | Open Compute library controls ([documentation](doc/OCML.md#controls)) | |
 | ockl | Open Compute Kernel library. | irif |
@@ -76,9 +76,9 @@ To create packages for the library:
 ## USING BITCODE LIBRARIES
 
 The bitcode libraries should be linked to user bitcode (obtained from source) *before* final code generation
-with llvm-link or -mlink-bitcode-file option of clang.
+with llvm-link or -mlink-builtin-bitcode, or -mlink-bitcode-file options of clang.
 
-For OpenCL, the list of bitcode libraries includes opencl, its dependencies (ocml, ockl, irif)
+For OpenCL, the list of bitcode libraries includes opencl, its dependencies (ocml, ockl)
 and oclc control libraries selected according to OpenCL compilation mode.  Assuming that the build
 of this repository was done in /srv/git/ROCm-Device-Libs/build, the following command line
 shows how to compile simple OpenCL source test.cl into code object test.so:
@@ -93,7 +93,6 @@ shows how to compile simple OpenCL source test.cl into code object test.so:
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_finite_only_off.amdgcn.bc \
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_isa_version_803.amdgcn.bc \
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/oclc/oclc_unsafe_math_off.amdgcn.bc \
-        -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/irif/irif.amdgcn.bc \
         test.cl -o test.so
 
 ## TESTING
