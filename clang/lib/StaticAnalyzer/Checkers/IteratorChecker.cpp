@@ -236,6 +236,9 @@ class IteratorChecker
   void reportMismatchedBug(const StringRef &Message, const SVal &Val1,
                            const SVal &Val2, CheckerContext &C,
                            ExplodedNode *ErrNode) const;
+  void reportMismatchedBug(const StringRef &Message, const SVal &Val,
+                           const MemRegion *Reg, CheckerContext &C,
+                           ExplodedNode *ErrNode) const;
   void reportInvalidatedBug(const StringRef &Message, const SVal &Val,
                             CheckerContext &C, ExplodedNode *ErrNode) const;
 
@@ -276,6 +279,7 @@ namespace {
 
 bool isIteratorType(const QualType &Type);
 bool isIterator(const CXXRecordDecl *CRD);
+bool isComparisonOperator(OverloadedOperatorKind OK);
 bool isBeginCall(const FunctionDecl *Func);
 bool isEndCall(const FunctionDecl *Func);
 bool isAssignmentOperator(OverloadedOperatorKind OK);
@@ -397,8 +401,48 @@ void IteratorChecker::checkPreCall(const CallEvent &Call,
       } else {
         verifyDereference(C, Call.getArgSVal(0));
       }
+    } else if (ChecksEnabled[CK_MismatchedIteratorChecker] &&
+               isComparisonOperator(Func->getOverloadedOperator())) {
+      // Check for comparisons of iterators of different containers
+      if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
+        if (Call.getNumArgs() < 1)
+          return;
+
+        if (!isIteratorType(InstCall->getCXXThisExpr()->getType()) ||
+            !isIteratorType(Call.getArgExpr(0)->getType()))
+          return;
+
+        verifyMatch(C, InstCall->getCXXThisVal(), Call.getArgSVal(0));
+      } else {
+        if (Call.getNumArgs() < 2)
+          return;
+
+        if (!isIteratorType(Call.getArgExpr(0)->getType()) ||
+            !isIteratorType(Call.getArgExpr(1)->getType()))
+          return;
+
+        verifyMatch(C, Call.getArgSVal(0), Call.getArgSVal(1));
+      }
     }
-  } else if (!isa<CXXConstructorCall>(&Call)) {
+  } else if (isa<CXXConstructorCall>(&Call)) {
+    // Check match of first-last iterator pair in a constructor of a container
+    if (Call.getNumArgs() < 2)
+      return;
+
+    const auto *Ctr = cast<CXXConstructorDecl>(Call.getDecl());
+    if (Ctr->getNumParams() < 2)
+      return;
+
+    if (Ctr->getParamDecl(0)->getName() != "first" ||
+        Ctr->getParamDecl(1)->getName() != "last")
+      return;
+
+    if (!isIteratorType(Call.getArgExpr(0)->getType()) ||
+        !isIteratorType(Call.getArgExpr(1)->getType()))
+      return;
+
+    verifyMatch(C, Call.getArgSVal(0), Call.getArgSVal(1));
+  } else {
     // The main purpose of iterators is to abstract away from different
     // containers and provide a (maybe limited) uniform access to them.
     // This implies that any correctly written template function that
@@ -1102,6 +1146,16 @@ void IteratorChecker::reportMismatchedBug(const StringRef &Message,
   C.emitReport(std::move(R));
 }
 
+void IteratorChecker::reportMismatchedBug(const StringRef &Message,
+                                          const SVal &Val, const MemRegion *Reg,
+                                          CheckerContext &C,
+                                          ExplodedNode *ErrNode) const {
+  auto R = llvm::make_unique<BugReport>(*MismatchedBugType, Message, ErrNode);
+  R->markInteresting(Val);
+  R->markInteresting(Reg);
+  C.emitReport(std::move(R));
+}
+
 void IteratorChecker::reportInvalidatedBug(const StringRef &Message,
                                            const SVal &Val, CheckerContext &C,
                                            ExplodedNode *ErrNode) const {
@@ -1171,6 +1225,11 @@ bool isIterator(const CXXRecordDecl *CRD) {
 
   return HasCopyCtor && HasCopyAssign && HasDtor && HasPreIncrOp &&
          HasPostIncrOp && HasDerefOp;
+}
+
+bool isComparisonOperator(OverloadedOperatorKind OK) {
+  return OK == OO_EqualEqual || OK == OO_ExclaimEqual || OK == OO_Less ||
+         OK == OO_LessEqual || OK == OO_Greater || OK == OO_GreaterEqual;
 }
 
 bool isBeginCall(const FunctionDecl *Func) {
