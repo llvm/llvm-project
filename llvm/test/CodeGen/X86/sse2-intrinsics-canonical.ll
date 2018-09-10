@@ -93,43 +93,40 @@ define <8 x i16> @test_x86_sse2_psubus_w(<8 x i16> %a0, <8 x i16> %a1) {
 define <8 x i8> @test_x86_sse2_paddus_b_64(<8 x i8> %a0, <8 x i8> %a1) {
 ; SSE-LABEL: test_x86_sse2_paddus_b_64:
 ; SSE:       ## %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
 ; SSE-NEXT:    ## encoding: [0x66,0x0f,0x6f,0x15,A,A,A,A]
 ; SSE-NEXT:    ## fixup A - offset: 4, value: LCPI4_0, kind: FK_Data_4
-; SSE-NEXT:    paddw %xmm0, %xmm1 ## encoding: [0x66,0x0f,0xfd,0xc8]
+; SSE-NEXT:    pand %xmm2, %xmm1 ## encoding: [0x66,0x0f,0xdb,0xca]
+; SSE-NEXT:    packuswb %xmm1, %xmm1 ## encoding: [0x66,0x0f,0x67,0xc9]
 ; SSE-NEXT:    pand %xmm2, %xmm0 ## encoding: [0x66,0x0f,0xdb,0xc2]
-; SSE-NEXT:    pand %xmm1, %xmm2 ## encoding: [0x66,0x0f,0xdb,0xd1]
-; SSE-NEXT:    pcmpgtw %xmm2, %xmm0 ## encoding: [0x66,0x0f,0x65,0xc2]
-; SSE-NEXT:    movdqa %xmm0, %xmm2 ## encoding: [0x66,0x0f,0x6f,0xd0]
-; SSE-NEXT:    pandn %xmm1, %xmm2 ## encoding: [0x66,0x0f,0xdf,0xd1]
-; SSE-NEXT:    pand LCPI4_0, %xmm0 ## encoding: [0x66,0x0f,0xdb,0x05,A,A,A,A]
-; SSE-NEXT:    ## fixup A - offset: 4, value: LCPI4_0, kind: FK_Data_4
-; SSE-NEXT:    por %xmm2, %xmm0 ## encoding: [0x66,0x0f,0xeb,0xc2]
+; SSE-NEXT:    packuswb %xmm0, %xmm0 ## encoding: [0x66,0x0f,0x67,0xc0]
+; SSE-NEXT:    paddusb %xmm1, %xmm0 ## encoding: [0x66,0x0f,0xdc,0xc1]
+; SSE-NEXT:    punpcklbw %xmm0, %xmm0 ## encoding: [0x66,0x0f,0x60,0xc0]
+; SSE-NEXT:    ## xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE-NEXT:    retl ## encoding: [0xc3]
 ;
 ; AVX2-LABEL: test_x86_sse2_paddus_b_64:
 ; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
 ; AVX2-NEXT:    ## encoding: [0xc5,0xf9,0x6f,0x15,A,A,A,A]
 ; AVX2-NEXT:    ## fixup A - offset: 4, value: LCPI4_0, kind: FK_Data_4
-; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm3 ## encoding: [0xc5,0xf9,0xdb,0xda]
-; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xfd,0xc1]
-; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm1 ## encoding: [0xc5,0xf9,0xdb,0xca]
-; AVX2-NEXT:    vpcmpgtw %xmm1, %xmm3, %xmm1 ## encoding: [0xc5,0xe1,0x65,0xc9]
-; AVX2-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x4c,0xc2,0x10]
+; AVX2-NEXT:    vpshufb %xmm2, %xmm1, %xmm1 ## encoding: [0xc4,0xe2,0x71,0x00,0xca]
+; AVX2-NEXT:    vpshufb %xmm2, %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x00,0xc2]
+; AVX2-NEXT:    vpaddusb %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdc,0xc1]
+; AVX2-NEXT:    vpmovzxbw %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x30,0xc0]
+; AVX2-NEXT:    ## xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX2-NEXT:    retl ## encoding: [0xc3]
 ;
 ; SKX-LABEL: test_x86_sse2_paddus_b_64:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vmovdqa LCPI4_0, %xmm2 ## EVEX TO VEX Compression xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SKX-NEXT:    vmovdqa LCPI4_0, %xmm2 ## EVEX TO VEX Compression xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
 ; SKX-NEXT:    ## encoding: [0xc5,0xf9,0x6f,0x15,A,A,A,A]
 ; SKX-NEXT:    ## fixup A - offset: 4, value: LCPI4_0, kind: FK_Data_4
-; SKX-NEXT:    vpand %xmm2, %xmm0, %xmm3 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdb,0xda]
-; SKX-NEXT:    vpaddw %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xfd,0xc1]
-; SKX-NEXT:    vpand %xmm2, %xmm0, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdb,0xca]
-; SKX-NEXT:    vpcmpnleuw %xmm1, %xmm3, %k1 ## encoding: [0x62,0xf3,0xe5,0x08,0x3e,0xc9,0x06]
-; SKX-NEXT:    vmovdqu16 LCPI4_0, %xmm0 {%k1} ## encoding: [0x62,0xf1,0xff,0x09,0x6f,0x05,A,A,A,A]
-; SKX-NEXT:    ## fixup A - offset: 6, value: LCPI4_0, kind: FK_Data_4
+; SKX-NEXT:    vpshufb %xmm2, %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x71,0x00,0xca]
+; SKX-NEXT:    vpshufb %xmm2, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x00,0xc2]
+; SKX-NEXT:    vpaddusb %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdc,0xc1]
+; SKX-NEXT:    vpmovzxbw %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x30,0xc0]
+; SKX-NEXT:    ## xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %1 = add <8 x i8> %a0, %a1
   %2 = icmp ugt <8 x i8> %a0, %1
@@ -140,46 +137,45 @@ define <8 x i8> @test_x86_sse2_paddus_b_64(<8 x i8> %a0, <8 x i8> %a1) {
 define <4 x i16> @test_x86_sse2_paddus_w_64(<4 x i16> %a0, <4 x i16> %a1) {
 ; SSE-LABEL: test_x86_sse2_paddus_w_64:
 ; SSE:       ## %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [65535,0,65535,0,65535,0,65535,0]
-; SSE-NEXT:    ## encoding: [0x66,0x0f,0x6f,0x15,A,A,A,A]
-; SSE-NEXT:    ## fixup A - offset: 4, value: LCPI5_0, kind: FK_Data_4
-; SSE-NEXT:    paddd %xmm0, %xmm1 ## encoding: [0x66,0x0f,0xfe,0xc8]
-; SSE-NEXT:    pand %xmm2, %xmm0 ## encoding: [0x66,0x0f,0xdb,0xc2]
-; SSE-NEXT:    pand %xmm1, %xmm2 ## encoding: [0x66,0x0f,0xdb,0xd1]
-; SSE-NEXT:    pcmpgtd %xmm2, %xmm0 ## encoding: [0x66,0x0f,0x66,0xc2]
-; SSE-NEXT:    movdqa %xmm0, %xmm2 ## encoding: [0x66,0x0f,0x6f,0xd0]
-; SSE-NEXT:    pandn %xmm1, %xmm2 ## encoding: [0x66,0x0f,0xdf,0xd1]
-; SSE-NEXT:    pand LCPI5_0, %xmm0 ## encoding: [0x66,0x0f,0xdb,0x05,A,A,A,A]
-; SSE-NEXT:    ## fixup A - offset: 4, value: LCPI5_0, kind: FK_Data_4
-; SSE-NEXT:    por %xmm2, %xmm0 ## encoding: [0x66,0x0f,0xeb,0xc2]
+; SSE-NEXT:    pshuflw $232, %xmm1, %xmm1 ## encoding: [0xf2,0x0f,0x70,0xc9,0xe8]
+; SSE-NEXT:    ## xmm1 = xmm1[0,2,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw $232, %xmm1, %xmm1 ## encoding: [0xf3,0x0f,0x70,0xc9,0xe8]
+; SSE-NEXT:    ## xmm1 = xmm1[0,1,2,3,4,6,6,7]
+; SSE-NEXT:    pshufd $232, %xmm1, %xmm1 ## encoding: [0x66,0x0f,0x70,0xc9,0xe8]
+; SSE-NEXT:    ## xmm1 = xmm1[0,2,2,3]
+; SSE-NEXT:    pshuflw $232, %xmm0, %xmm0 ## encoding: [0xf2,0x0f,0x70,0xc0,0xe8]
+; SSE-NEXT:    ## xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; SSE-NEXT:    pshufhw $232, %xmm0, %xmm0 ## encoding: [0xf3,0x0f,0x70,0xc0,0xe8]
+; SSE-NEXT:    ## xmm0 = xmm0[0,1,2,3,4,6,6,7]
+; SSE-NEXT:    pshufd $232, %xmm0, %xmm0 ## encoding: [0x66,0x0f,0x70,0xc0,0xe8]
+; SSE-NEXT:    ## xmm0 = xmm0[0,2,2,3]
+; SSE-NEXT:    paddusw %xmm1, %xmm0 ## encoding: [0x66,0x0f,0xdd,0xc1]
+; SSE-NEXT:    punpcklwd %xmm0, %xmm0 ## encoding: [0x66,0x0f,0x61,0xc0]
+; SSE-NEXT:    ## xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; SSE-NEXT:    retl ## encoding: [0xc3]
 ;
 ; AVX2-LABEL: test_x86_sse2_paddus_w_64:
 ; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2 ## encoding: [0xc5,0xe9,0xef,0xd2]
-; AVX2-NEXT:    vpblendw $170, %xmm2, %xmm0, %xmm3 ## encoding: [0xc4,0xe3,0x79,0x0e,0xda,0xaa]
-; AVX2-NEXT:    ## xmm3 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
-; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xfe,0xc1]
-; AVX2-NEXT:    vpblendw $170, %xmm2, %xmm0, %xmm1 ## encoding: [0xc4,0xe3,0x79,0x0e,0xca,0xaa]
-; AVX2-NEXT:    ## xmm1 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
-; AVX2-NEXT:    vpcmpgtd %xmm1, %xmm3, %xmm1 ## encoding: [0xc5,0xe1,0x66,0xc9]
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm2 = [65535,65535,65535,65535]
-; AVX2-NEXT:    ## encoding: [0xc4,0xe2,0x79,0x18,0x15,A,A,A,A]
-; AVX2-NEXT:    ## fixup A - offset: 5, value: LCPI5_0, kind: FK_Data_4
-; AVX2-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x4a,0xc2,0x10]
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX2-NEXT:    ## encoding: [0xc5,0xf9,0x6f,0x15,A,A,A,A]
+; AVX2-NEXT:    ## fixup A - offset: 4, value: LCPI5_0, kind: FK_Data_4
+; AVX2-NEXT:    vpshufb %xmm2, %xmm1, %xmm1 ## encoding: [0xc4,0xe2,0x71,0x00,0xca]
+; AVX2-NEXT:    vpshufb %xmm2, %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x00,0xc2]
+; AVX2-NEXT:    vpaddusw %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdd,0xc1]
+; AVX2-NEXT:    vpmovzxwd %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x33,0xc0]
+; AVX2-NEXT:    ## xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; AVX2-NEXT:    retl ## encoding: [0xc3]
 ;
 ; SKX-LABEL: test_x86_sse2_paddus_w_64:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2 ## EVEX TO VEX Compression encoding: [0xc5,0xe9,0xef,0xd2]
-; SKX-NEXT:    vpblendw $170, %xmm2, %xmm0, %xmm3 ## encoding: [0xc4,0xe3,0x79,0x0e,0xda,0xaa]
-; SKX-NEXT:    ## xmm3 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
-; SKX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xfe,0xc1]
-; SKX-NEXT:    vpblendw $170, %xmm2, %xmm0, %xmm1 ## encoding: [0xc4,0xe3,0x79,0x0e,0xca,0xaa]
-; SKX-NEXT:    ## xmm1 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
-; SKX-NEXT:    vpcmpnleud %xmm1, %xmm3, %k1 ## encoding: [0x62,0xf3,0x65,0x08,0x1e,0xc9,0x06]
-; SKX-NEXT:    vpbroadcastd LCPI5_0, %xmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0x58,0x05,A,A,A,A]
-; SKX-NEXT:    ## fixup A - offset: 6, value: LCPI5_0, kind: FK_Data_4
+; SKX-NEXT:    vmovdqa LCPI5_0, %xmm2 ## EVEX TO VEX Compression xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; SKX-NEXT:    ## encoding: [0xc5,0xf9,0x6f,0x15,A,A,A,A]
+; SKX-NEXT:    ## fixup A - offset: 4, value: LCPI5_0, kind: FK_Data_4
+; SKX-NEXT:    vpshufb %xmm2, %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x71,0x00,0xca]
+; SKX-NEXT:    vpshufb %xmm2, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x00,0xc2]
+; SKX-NEXT:    vpaddusw %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdd,0xc1]
+; SKX-NEXT:    vpmovzxwd %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x33,0xc0]
+; SKX-NEXT:    ## xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; SKX-NEXT:    retl ## encoding: [0xc3]
   %1 = add <4 x i16> %a0, %a1
   %2 = icmp ugt <4 x i16> %a0, %1

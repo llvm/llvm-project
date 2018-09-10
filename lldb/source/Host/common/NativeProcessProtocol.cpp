@@ -374,29 +374,34 @@ Status NativeProcessProtocol::SetSoftwareBreakpoint(lldb::addr_t addr,
 
 llvm::Expected<llvm::ArrayRef<uint8_t>>
 NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
-  using ArrayRef = llvm::ArrayRef<uint8_t>;
+  static const uint8_t g_aarch64_opcode[] = {0x00, 0x00, 0x20, 0xd4};
+  static const uint8_t g_i386_opcode[] = {0xCC};
+  static const uint8_t g_mips64_opcode[] = {0x00, 0x00, 0x00, 0x0d};
+  static const uint8_t g_mips64el_opcode[] = {0x0d, 0x00, 0x00, 0x00};
+  static const uint8_t g_s390x_opcode[] = {0x00, 0x01};
+  static const uint8_t g_ppc64le_opcode[] = {0x08, 0x00, 0xe0, 0x7f}; // trap
 
   switch (GetArchitecture().GetMachine()) {
   case llvm::Triple::aarch64:
-    return ArrayRef{0x00, 0x00, 0x20, 0xd4};
+    return llvm::makeArrayRef(g_aarch64_opcode);
 
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
-    return ArrayRef{0xcc};
+    return llvm::makeArrayRef(g_i386_opcode);
 
   case llvm::Triple::mips:
   case llvm::Triple::mips64:
-    return ArrayRef{0x00, 0x00, 0x00, 0x0d};
+    return llvm::makeArrayRef(g_mips64_opcode);
 
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64el:
-    return ArrayRef{0x0d, 0x00, 0x00, 0x00};
+    return llvm::makeArrayRef(g_mips64el_opcode);
 
   case llvm::Triple::systemz:
-    return ArrayRef{0x00, 0x01};
+    return llvm::makeArrayRef(g_s390x_opcode);
 
   case llvm::Triple::ppc64le:
-    return ArrayRef{0x08, 0x00, 0xe0, 0x7f}; // trap
+    return llvm::makeArrayRef(g_ppc64le_opcode);
 
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),

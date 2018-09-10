@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPARC_SPARCTARGETSTREAMER_H
-#define LLVM_LIB_TARGET_SPARC_SPARCTARGETSTREAMER_H
+#ifndef LLVM_LIB_TARGET_SPARC_MCTARGETDESC_SPARCTARGETSTREAMER_H
+#define LLVM_LIB_TARGET_SPARC_MCTARGETDESC_SPARCTARGETSTREAMER_H
 
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCStreamer.h"
@@ -33,7 +33,6 @@ public:
   SparcTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
   void emitSparcRegisterIgnore(unsigned reg) override;
   void emitSparcRegisterScratch(unsigned reg) override;
-
 };
 
 // This part is for ELF object output

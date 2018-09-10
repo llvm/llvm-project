@@ -8783,8 +8783,6 @@ def warn_omp_linear_step_zero : Warning<
 def warn_omp_alignment_not_power_of_two : Warning<
   "aligned clause will be ignored because the requested alignment is not a power of 2">,
   InGroup<OpenMPClauses>;
-def err_omp_enclosed_declare_target : Error<
-  "declare target region may not be enclosed within another declare target region">;
 def err_omp_invalid_target_decl : Error<
   "%0 used in declare target directive is not a variable or a function name">;
 def err_omp_declare_target_multiple : Error<

@@ -22,6 +22,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DataLayout.h"
@@ -166,8 +167,9 @@ class HotColdSplitting {
 public:
   HotColdSplitting(ProfileSummaryInfo *ProfSI,
                    function_ref<BlockFrequencyInfo *(Function &)> GBFI,
+                   function_ref<TargetTransformInfo &(Function &)> GTTI,
                    std::function<OptimizationRemarkEmitter &(Function &)> *GORE)
-      : PSI(ProfSI), GetBFI(GBFI), GetORE(GORE) {}
+      : PSI(ProfSI), GetBFI(GBFI), GetTTI(GTTI), GetORE(GORE) {}
   bool run(Module &M);
 
 private:
@@ -195,6 +197,7 @@ private:
   SmallPtrSet<const Function *, 2> OutlinedFunctions;
   ProfileSummaryInfo *PSI;
   function_ref<BlockFrequencyInfo *(Function &)> GetBFI;
+  function_ref<TargetTransformInfo &(Function &)> GetTTI;
   std::function<OptimizationRemarkEmitter &(Function &)> *GetORE;
 };
 
@@ -209,6 +212,7 @@ public:
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<BlockFrequencyInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
   }
 
   bool runOnModule(Module &M) override;
@@ -262,8 +266,10 @@ HotColdSplitting::extractColdRegion(const SmallVectorImpl<BasicBlock *> &Region,
     CallInst *CI = cast<CallInst>(U);
     CallSite CS(CI);
     NumColdSESEOutlined++;
-    OutF->setCallingConv(CallingConv::Cold);
-    CS.setCallingConv(CallingConv::Cold);
+    if (GetTTI(*OutF).useColdCCForColdCall(*OutF)) {
+      OutF->setCallingConv(CallingConv::Cold);
+      CS.setCallingConv(CallingConv::Cold);
+    }
     CI->setIsNoInline();
     LLVM_DEBUG(llvm::dbgs() << "Outlined Region at block: " << Region.front());
     return OutF;
@@ -344,6 +350,9 @@ bool HotColdSplittingLegacyPass::runOnModule(Module &M) {
     return false;
   ProfileSummaryInfo *PSI =
       getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  auto GTTI = [this](Function &F) -> TargetTransformInfo & {
+    return this->getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  };
   auto GBFI = [this](Function &F) {
     return &this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
   };
@@ -354,7 +363,7 @@ bool HotColdSplittingLegacyPass::runOnModule(Module &M) {
     return *ORE.get();
   };
 
-  return HotColdSplitting(PSI, GBFI, &GetORE).run(M);
+  return HotColdSplitting(PSI, GBFI, GTTI, &GetORE).run(M);
 }
 
 char HotColdSplittingLegacyPass::ID = 0;

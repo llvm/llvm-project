@@ -115,8 +115,66 @@ void loop(std::vector<int> &V, int e) {
   }
 }
 
+void good_push_back(std::list<int> &L, int n) {
+  auto i0 = --L.cend();
+  L.push_back(n);
+  *++i0; // no-warning
+}
+
+void bad_push_back(std::list<int> &L, int n) {
+  auto i0 = --L.cend();
+  L.push_back(n);
+  ++i0;
+  *++i0; // expected-warning{{Iterator accessed outside of its range}}
+}
+
+void good_pop_back(std::list<int> &L, int n) {
+  auto i0 = --L.cend(); --i0;
+  L.pop_back();
+  *i0; // no-warning
+}
+
+void bad_pop_back(std::list<int> &L, int n) {
+  auto i0 = --L.cend(); --i0;
+  L.pop_back();
+  *++i0; // expected-warning{{Iterator accessed outside of its range}}
+}
+
+void good_push_front(std::list<int> &L, int n) {
+  auto i0 = L.cbegin();
+  L.push_front(n);
+  *--i0; // no-warning
+}
+
+void bad_push_front(std::list<int> &L, int n) {
+  auto i0 = L.cbegin();
+  L.push_front(n);
+  --i0;
+  *--i0; // expected-warning{{Iterator accessed outside of its range}}
+}
+
+void good_pop_front(std::list<int> &L, int n) {
+  auto i0 = ++L.cbegin();
+  L.pop_front();
+  *i0; // no-warning
+}
+
+void bad_pop_front(std::list<int> &L, int n) {
+  auto i0 = ++L.cbegin();
+  L.pop_front();
+  *--i0; // expected-warning{{Iterator accessed outside of its range}}
+}
+
 void bad_move(std::list<int> &L1, std::list<int> &L2) {
   auto i0 = --L2.cend();
   L1 = std::move(L2);
+  *++i0; // expected-warning{{Iterator accessed outside of its range}}
+}
+
+void bad_move_push_back(std::list<int> &L1, std::list<int> &L2, int n) {
+  auto i0 = --L2.cend();
+  L2.push_back(n);
+  L1 = std::move(L2);
+  ++i0;
   *++i0; // expected-warning{{Iterator accessed outside of its range}}
 }

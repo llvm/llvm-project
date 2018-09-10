@@ -1473,6 +1473,17 @@ define amdgpu_kernel void @test_enqueue_kernel_caller(i8 %a) #2
   ret void
 }
 
+; CHECK: - Name:            unknown_addrspace_kernarg
+; CHECK: Args:
+; CHECK-NEXT: - Name:            ptr
+; CHECK-NEXT: Size:            8
+; CHECK-NEXT: Align:           8
+; CHECK-NEXT: ValueKind:       GlobalBuffer
+; CHECK-NEXT: ValueType:       I32
+define amdgpu_kernel void @unknown_addrspace_kernarg(i32 addrspace(12345)* %ptr) #0 {
+  ret void
+}
+
 attributes #0 = { "amdgpu-implicitarg-num-bytes"="48" }
 attributes #1 = { "amdgpu-implicitarg-num-bytes"="48" "runtime-handle"="__test_block_invoke_kernel_runtime_handle" }
 attributes #2 = { "amdgpu-implicitarg-num-bytes"="48" "calls-enqueue-kernel" }

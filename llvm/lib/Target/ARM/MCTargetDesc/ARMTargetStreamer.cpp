@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ARMTargetMachine.h"
+#include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "llvm/MC/ConstantPools.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"

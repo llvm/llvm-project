@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "AArch64RegisterInfo.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
 #include "MCTargetDesc/AArch64MCExpr.h"
 #include "llvm/ADT/Triple.h"
@@ -20,6 +19,7 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCValue.h"

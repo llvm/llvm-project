@@ -28,6 +28,56 @@ define i8 @test_addcarryx_u32(i8 %c, i32 %a, i32 %b, i8* %ptr) {
   ret i8 %3
 }
 
+define i8 @test_addcarryx_u32_load(i8 %c, i32* %aptr, i32 %b, i8* %ptr) {
+; NOADX-LABEL: test_addcarryx_u32_load:
+; NOADX:       ## %bb.0:
+; NOADX-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
+; NOADX-NEXT:    adcl (%rsi), %edx ## encoding: [0x13,0x16]
+; NOADX-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
+; NOADX-NEXT:    movl %edx, (%rcx) ## encoding: [0x89,0x11]
+; NOADX-NEXT:    retq ## encoding: [0xc3]
+;
+; ADX-LABEL: test_addcarryx_u32_load:
+; ADX:       ## %bb.0:
+; ADX-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
+; ADX-NEXT:    adcxl (%rsi), %edx ## encoding: [0x66,0x0f,0x38,0xf6,0x16]
+; ADX-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
+; ADX-NEXT:    movl %edx, (%rcx) ## encoding: [0x89,0x11]
+; ADX-NEXT:    retq ## encoding: [0xc3]
+  %a = load i32, i32* %aptr
+  %ret = call { i8, i32 } @llvm.x86.addcarryx.u32(i8 %c, i32 %a, i32 %b)
+  %1 = extractvalue { i8, i32 } %ret, 1
+  %2 = bitcast i8* %ptr to i32*
+  store i32 %1, i32* %2, align 1
+  %3 = extractvalue { i8, i32 } %ret, 0
+  ret i8 %3
+}
+
+define i8 @test_addcarryx_u32_load2(i8 %c, i32 %a, i32* %bptr, i8* %ptr) {
+; NOADX-LABEL: test_addcarryx_u32_load2:
+; NOADX:       ## %bb.0:
+; NOADX-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
+; NOADX-NEXT:    adcl (%rdx), %esi ## encoding: [0x13,0x32]
+; NOADX-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
+; NOADX-NEXT:    movl %esi, (%rcx) ## encoding: [0x89,0x31]
+; NOADX-NEXT:    retq ## encoding: [0xc3]
+;
+; ADX-LABEL: test_addcarryx_u32_load2:
+; ADX:       ## %bb.0:
+; ADX-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
+; ADX-NEXT:    adcxl (%rdx), %esi ## encoding: [0x66,0x0f,0x38,0xf6,0x32]
+; ADX-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
+; ADX-NEXT:    movl %esi, (%rcx) ## encoding: [0x89,0x31]
+; ADX-NEXT:    retq ## encoding: [0xc3]
+  %b = load i32, i32* %bptr
+  %ret = call { i8, i32 } @llvm.x86.addcarryx.u32(i8 %c, i32 %a, i32 %b)
+  %1 = extractvalue { i8, i32 } %ret, 1
+  %2 = bitcast i8* %ptr to i32*
+  store i32 %1, i32* %2, align 1
+  %3 = extractvalue { i8, i32 } %ret, 0
+  ret i8 %3
+}
+
 declare { i8, i64 } @llvm.x86.addcarryx.u64(i8, i64, i64)
 
 define i8 @test_addcarryx_u64(i8 %c, i64 %a, i64 %b, i8* %ptr) {

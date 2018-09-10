@@ -13,12 +13,12 @@ define float @load_global_from_flat(float* %generic_scalar) #0 {
 }
 
 ; CHECK-LABEL: @load_constant_from_flat(
-; CHECK-NEXT: %tmp0 = addrspacecast float* %generic_scalar to float addrspace(2)*
-; CHECK-NEXT: %tmp1 = load float, float addrspace(2)* %tmp0
+; CHECK-NEXT: %tmp0 = addrspacecast float* %generic_scalar to float addrspace(4)*
+; CHECK-NEXT: %tmp1 = load float, float addrspace(4)* %tmp0
 ; CHECK-NEXT: ret float %tmp1
 define float @load_constant_from_flat(float* %generic_scalar) #0 {
-  %tmp0 = addrspacecast float* %generic_scalar to float addrspace(2)*
-  %tmp1 = load float, float addrspace(2)* %tmp0
+  %tmp0 = addrspacecast float* %generic_scalar to float addrspace(4)*
+  %tmp1 = load float, float addrspace(4)* %tmp0
   ret float %tmp1
 }
 

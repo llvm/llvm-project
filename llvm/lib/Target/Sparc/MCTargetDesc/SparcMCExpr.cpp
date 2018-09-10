@@ -13,11 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "SparcMCExpr.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Object/ELF.h"
 
 using namespace llvm;
 

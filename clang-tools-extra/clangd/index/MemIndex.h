@@ -30,11 +30,13 @@ public:
   }
   // Symbols are owned by BackingData, Index takes ownership.
   template <typename SymbolRange, typename RefRange, typename Payload>
-  MemIndex(SymbolRange &&Symbols, RefRange &&Refs, Payload &&BackingData)
+  MemIndex(SymbolRange &&Symbols, RefRange &&Refs, Payload &&BackingData,
+           size_t BackingDataSize)
       : MemIndex(std::forward<SymbolRange>(Symbols),
                  std::forward<RefRange>(Refs)) {
     KeepAlive = std::shared_ptr<void>(
         std::make_shared<Payload>(std::move(BackingData)), nullptr);
+    this->BackingDataSize = BackingDataSize;
   }
 
   /// Builds an index from slabs. The index takes ownership of the data.
@@ -58,6 +60,8 @@ private:
   // A map from symbol ID to symbol refs, support query by IDs.
   llvm::DenseMap<SymbolID, llvm::ArrayRef<Ref>> Refs;
   std::shared_ptr<void> KeepAlive; // poor man's move-only std::any
+  // Size of memory retained by KeepAlive.
+  size_t BackingDataSize = 0;
 };
 
 } // namespace clangd

@@ -1842,6 +1842,14 @@ static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleCPUSpecificAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   FunctionDecl *FD = cast<FunctionDecl>(D);
+
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
+    if (MD->getParent()->isLambda()) {
+      S.Diag(AL.getLoc(), diag::err_attribute_dll_lambda) << AL;
+      return;
+    }
+  }
+
   if (!checkAttributeAtLeastNumArgs(S, AL, 1))
     return;
 

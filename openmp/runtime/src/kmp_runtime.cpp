@@ -1225,7 +1225,8 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
 
       ompt_callbacks.ompt_callback(ompt_callback_parallel_begin)(
           &(parent_task_info->task_data), &(parent_task_info->frame),
-          &ompt_parallel_data, team_size, ompt_invoker_program, codeptr);
+          &ompt_parallel_data, team_size, ompt_parallel_invoker_program,
+          codeptr);
     }
   }
 #endif // OMPT_SUPPORT
@@ -3824,7 +3825,7 @@ int __kmp_register_root(int initial_thread) {
 #if OMPT_SUPPORT
   if (!initial_thread && ompt_enabled.enabled) {
 
-    ompt_thread_t *root_thread = ompt_get_thread();
+    kmp_info_t *root_thread = ompt_get_thread();
 
     ompt_set_thread_state(root_thread, omp_state_overhead);
 

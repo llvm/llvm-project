@@ -513,7 +513,7 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     if (ompt_enabled.ompt_callback_parallel_end) {
       ompt_callbacks.ompt_callback(ompt_callback_parallel_end)(
           &(serial_team->t.ompt_team_info.parallel_data), parent_task_data,
-          ompt_invoker_program, OMPT_LOAD_RETURN_ADDRESS(global_tid));
+          ompt_parallel_invoker_program, OMPT_LOAD_RETURN_ADDRESS(global_tid));
     }
     __ompt_lw_taskteam_unlink(this_thr);
     this_thr->th.ompt_thread_info.state = omp_state_overhead;
@@ -1782,7 +1782,7 @@ void __kmpc_for_static_fini(ident_t *loc, kmp_int32 global_tid) {
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   if (ompt_enabled.ompt_callback_work) {
-    ompt_work_type_t ompt_work_type = ompt_work_loop;
+    ompt_work_t ompt_work_type = ompt_work_loop;
     ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
     ompt_task_info_t *task_info = __ompt_get_task_info_object(0);
     // Determine workshare type

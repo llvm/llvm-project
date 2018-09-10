@@ -26,7 +26,15 @@ template <typename To, typename From,
 inline To bit_cast(const From &from) noexcept {
   alignas(To) unsigned char storage[sizeof(To)];
   std::memcpy(&storage, &from, sizeof(To));
+#if defined(__GNUC__)
+  // Before GCC 7.2, GCC thought that this violated strict aliasing.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
   return reinterpret_cast<To &>(storage);
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 }
 
 } // namespace llvm

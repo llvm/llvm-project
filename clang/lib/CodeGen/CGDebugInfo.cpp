@@ -3565,9 +3565,9 @@ void CGDebugInfo::EmitFunctionEnd(CGBuilderTy &Builder, llvm::Function *Fn) {
     DBuilder.finalizeSubprogram(Fn->getSubprogram());
 }
 
-llvm::DIType *CGDebugInfo::EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
-                                                        uint64_t *XOffset) {
-
+CGDebugInfo::BlockByRefType
+CGDebugInfo::EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
+                                          uint64_t *XOffset) {
   SmallVector<llvm::Metadata *, 5> EltTys;
   QualType FType;
   uint64_t FieldSize, FieldOffset;
@@ -3619,23 +3619,21 @@ llvm::DIType *CGDebugInfo::EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
   }
 
   FType = Type;
-  llvm::DIType *FieldTy = getOrCreateType(FType, Unit);
+  llvm::DIType *WrappedTy = getOrCreateType(FType, Unit);
   FieldSize = CGM.getContext().getTypeSize(FType);
   FieldAlign = CGM.getContext().toBits(Align);
 
   *XOffset = FieldOffset;
-  FieldTy = DBuilder.createMemberType(Unit, VD->getName(), Unit, 0, FieldSize,
-                                      FieldAlign, FieldOffset,
-                                      llvm::DINode::FlagZero, FieldTy);
+  llvm::DIType *FieldTy = DBuilder.createMemberType(
+      Unit, VD->getName(), Unit, 0, FieldSize, FieldAlign, FieldOffset,
+      llvm::DINode::FlagZero, WrappedTy);
   EltTys.push_back(FieldTy);
   FieldOffset += FieldSize;
 
   llvm::DINodeArray Elements = DBuilder.getOrCreateArray(EltTys);
-
-  llvm::DINode::DIFlags Flags = llvm::DINode::FlagBlockByrefStruct;
-
-  return DBuilder.createStructType(Unit, "", Unit, 0, FieldOffset, 0, Flags,
-                                   nullptr, Elements);
+  return {DBuilder.createStructType(Unit, "", Unit, 0, FieldOffset, 0,
+                                    llvm::DINode::FlagZero, nullptr, Elements),
+          WrappedTy};
 }
 
 llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
@@ -3656,7 +3654,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   llvm::DIType *Ty;
   uint64_t XOffset = 0;
   if (VD->hasAttr<BlocksAttr>())
-    Ty = EmitTypeForVarWithBlocksAttr(VD, &XOffset);
+    Ty = EmitTypeForVarWithBlocksAttr(VD, &XOffset).WrappedType;
   else
     Ty = getOrCreateType(VD->getType(), Unit);
 
@@ -3794,7 +3792,7 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
   llvm::DIFile *Unit = getOrCreateFile(VD->getLocation());
   llvm::DIType *Ty;
   if (isByRef)
-    Ty = EmitTypeForVarWithBlocksAttr(VD, &XOffset);
+    Ty = EmitTypeForVarWithBlocksAttr(VD, &XOffset).WrappedType;
   else
     Ty = getOrCreateType(VD->getType(), Unit);
 
@@ -3987,10 +3985,10 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
     if (capture->isByRef()) {
       TypeInfo PtrInfo = C.getTypeInfo(C.VoidPtrTy);
       auto Align = PtrInfo.AlignIsRequired ? PtrInfo.Align : 0;
-
-      // FIXME: this creates a second copy of this type!
+      // FIXME: This recomputes the layout of the BlockByRefWrapper.
       uint64_t xoffset;
-      fieldType = EmitTypeForVarWithBlocksAttr(variable, &xoffset);
+      fieldType =
+          EmitTypeForVarWithBlocksAttr(variable, &xoffset).BlockByRefWrapper;
       fieldType = DBuilder.createPointerType(fieldType, PtrInfo.Width);
       fieldType = DBuilder.createMemberType(tunit, name, tunit, line,
                                             PtrInfo.Width, Align, offsetInBits,

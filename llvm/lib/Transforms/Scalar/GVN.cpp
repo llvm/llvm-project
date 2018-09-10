@@ -102,8 +102,12 @@ static cl::opt<bool> EnableMemDep("enable-gvn-memdep", cl::init(true));
 
 // Maximum allowed recursion depth.
 static cl::opt<uint32_t>
-MaxRecurseDepth("max-recurse-depth", cl::Hidden, cl::init(1000), cl::ZeroOrMore,
-                cl::desc("Max recurse depth (default = 1000)"));
+MaxRecurseDepth("gvn-max-recurse-depth", cl::Hidden, cl::init(1000), cl::ZeroOrMore,
+                cl::desc("Max recurse depth in GVN (default = 1000)"));
+
+static cl::opt<uint32_t> MaxNumDeps(
+    "gvn-max-num-deps", cl::Hidden, cl::init(100), cl::ZeroOrMore,
+    cl::desc("Max number of dependences to attempt Load PRE (default = 100)"));
 
 struct llvm::GVN::Expression {
   uint32_t opcode;
@@ -1311,7 +1315,7 @@ bool GVN::processNonLocalLoad(LoadInst *LI) {
   // dependencies, this load isn't worth worrying about.  Optimizing
   // it will be too expensive.
   unsigned NumDeps = Deps.size();
-  if (NumDeps > 100)
+  if (NumDeps > MaxNumDeps)
     return false;
 
   // If we had a phi translation failure, we'll have a single entry which is a
@@ -1736,6 +1740,9 @@ bool GVN::propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
 
       Changed |= NumReplacements > 0;
       NumGVNEqProp += NumReplacements;
+      // Cached information for anything that uses LHS will be invalid.
+      if (MD)
+        MD->invalidateCachedPointerInfo(LHS);
     }
 
     // Now try to deduce additional equalities from this one. For example, if
@@ -1811,6 +1818,9 @@ bool GVN::propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
                                              Root.getStart());
           Changed |= NumReplacements > 0;
           NumGVNEqProp += NumReplacements;
+          // Cached information for anything that uses NotCmp will be invalid.
+          if (MD)
+            MD->invalidateCachedPointerInfo(NotCmp);
         }
       }
       // Ensure that any instruction in scope that gets the "A < B" value number

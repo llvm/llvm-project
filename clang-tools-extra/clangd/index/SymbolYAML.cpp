@@ -11,7 +11,7 @@
 #include "Index.h"
 #include "Serialization.h"
 #include "Trace.h"
-#include "dex/DexIndex.h"
+#include "dex/Dex.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Errc.h"
@@ -225,7 +225,7 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
   if (!Slab)
     return nullptr;
   trace::Span Tracer("BuildIndex");
-  return UseDex ? dex::DexIndex::build(std::move(*Slab), URISchemes)
+  return UseDex ? dex::Dex::build(std::move(*Slab), URISchemes)
                 : MemIndex::build(std::move(*Slab), RefSlab());
 }
 
