@@ -584,6 +584,16 @@ protected:
   /// Emit bypass checks to check any memory assumptions we may have made.
   void emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass);
 
+  /// Compute the transformed value of Index at offset StartValue using step
+  /// StepValue.
+  /// For integer induction, returns StartValue + Index * StepValue.
+  /// For pointer induction, returns StartValue[Index * StepValue].
+  /// FIXME: The newly created binary instructions should contain nsw/nuw
+  /// flags, which can be found from the original scalar operations.
+  Value *emitTransformedIndex(IRBuilder<> &B, Value *Index, ScalarEvolution *SE,
+                              const DataLayout &DL,
+                              const InductionDescriptor &ID) const;
+
   /// Add additional metadata to \p To that was not present on \p Orig.
   ///
   /// Currently this is used to add the noalias annotations based on the
@@ -1971,7 +1981,7 @@ void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, TruncInst *Trunc) {
                      ? Builder.CreateSExtOrTrunc(Induction, IV->getType())
                      : Builder.CreateCast(Instruction::SIToFP, Induction,
                                           IV->getType());
-      ScalarIV = ID.transform(Builder, ScalarIV, PSE.getSE(), DL);
+      ScalarIV = emitTransformedIndex(Builder, ScalarIV, PSE.getSE(), DL, ID);
       ScalarIV->setName("offset.idx");
     }
     if (Trunc) {
@@ -2810,6 +2820,75 @@ void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass) {
   LVer->prepareNoAliasMetadata();
 }
 
+Value *InnerLoopVectorizer::emitTransformedIndex(
+    IRBuilder<> &B, Value *Index, ScalarEvolution *SE, const DataLayout &DL,
+    const InductionDescriptor &ID) const {
+
+  SCEVExpander Exp(*SE, DL, "induction");
+  auto Step = ID.getStep();
+  auto StartValue = ID.getStartValue();
+  assert(Index->getType() == Step->getType() &&
+         "Index type does not match StepValue type");
+  switch (ID.getKind()) {
+  case InductionDescriptor::IK_IntInduction: {
+    assert(Index->getType() == StartValue->getType() &&
+           "Index type does not match StartValue type");
+
+    // FIXME: Theoretically, we can call getAddExpr() of ScalarEvolution
+    // and calculate (Start + Index * Step) for all cases, without
+    // special handling for "isOne" and "isMinusOne".
+    // But in the real life the result code getting worse. We mix SCEV
+    // expressions and ADD/SUB operations and receive redundant
+    // intermediate values being calculated in different ways and
+    // Instcombine is unable to reduce them all.
+
+    if (ID.getConstIntStepValue() && ID.getConstIntStepValue()->isMinusOne())
+      return B.CreateSub(StartValue, Index);
+    if (ID.getConstIntStepValue() && ID.getConstIntStepValue()->isOne())
+      return B.CreateAdd(StartValue, Index);
+    const SCEV *S = SE->getAddExpr(SE->getSCEV(StartValue),
+                                   SE->getMulExpr(Step, SE->getSCEV(Index)));
+    return Exp.expandCodeFor(S, StartValue->getType(), &*B.GetInsertPoint());
+  }
+  case InductionDescriptor::IK_PtrInduction: {
+    assert(isa<SCEVConstant>(Step) &&
+           "Expected constant step for pointer induction");
+    const SCEV *S = SE->getMulExpr(SE->getSCEV(Index), Step);
+    Index = Exp.expandCodeFor(S, Index->getType(), &*B.GetInsertPoint());
+    return B.CreateGEP(nullptr, StartValue, Index);
+  }
+  case InductionDescriptor::IK_FpInduction: {
+    assert(Step->getType()->isFloatingPointTy() && "Expected FP Step value");
+    auto InductionBinOp = ID.getInductionBinOp();
+    assert(InductionBinOp &&
+           (InductionBinOp->getOpcode() == Instruction::FAdd ||
+            InductionBinOp->getOpcode() == Instruction::FSub) &&
+           "Original bin op should be defined for FP induction");
+
+    Value *StepValue = cast<SCEVUnknown>(Step)->getValue();
+
+    // Floating point operations had to be 'fast' to enable the induction.
+    FastMathFlags Flags;
+    Flags.setFast();
+
+    Value *MulExp = B.CreateFMul(StepValue, Index);
+    if (isa<Instruction>(MulExp))
+      // We have to check, the MulExp may be a constant.
+      cast<Instruction>(MulExp)->setFastMathFlags(Flags);
+
+    Value *BOp = B.CreateBinOp(InductionBinOp->getOpcode(), StartValue, MulExp,
+                               "induction");
+    if (isa<Instruction>(BOp))
+      cast<Instruction>(BOp)->setFastMathFlags(Flags);
+
+    return BOp;
+  }
+  case InductionDescriptor::IK_NoInduction:
+    return nullptr;
+  }
+  llvm_unreachable("invalid enum");
+}
+
 BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   /*
    In this function we generate a new loop. The new loop will contain
@@ -2948,7 +3027,7 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
         CastInst::getCastOpcode(CountRoundDown, true, StepType, true);
       Value *CRD = B.CreateCast(CastOp, CountRoundDown, StepType, "cast.crd");
       const DataLayout &DL = OrigLoop->getHeader()->getModule()->getDataLayout();
-      EndValue = II.transform(B, CRD, PSE.getSE(), DL);
+      EndValue = emitTransformedIndex(B, CRD, PSE.getSE(), DL, II);
       EndValue->setName("ind.end");
     }
 
@@ -3044,7 +3123,7 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
                              II.getStep()->getType())
               : B.CreateSExtOrTrunc(CountMinusOne, II.getStep()->getType());
       CMO->setName("cast.cmo");
-      Value *Escape = II.transform(B, CMO, PSE.getSE(), DL);
+      Value *Escape = emitTransformedIndex(B, CMO, PSE.getSE(), DL, II);
       Escape->setName("ind.escape");
       MissingVals[UI] = Escape;
     }
@@ -3688,8 +3767,8 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
           Builder.CreateBinOp((Instruction::BinaryOps)Op, RdxPart,
                               ReducedPartRdx, "bin.rdx"));
     else
-      ReducedPartRdx = RecurrenceDescriptor::createMinMaxOp(
-          Builder, MinMaxKind, ReducedPartRdx, RdxPart);
+      ReducedPartRdx = createMinMaxOp(Builder, MinMaxKind, ReducedPartRdx,
+                                      RdxPart);
   }
 
   if (VF > 1) {
@@ -3879,7 +3958,8 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
       for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
         Constant *Idx = ConstantInt::get(PtrInd->getType(), Lane + Part * VF);
         Value *GlobalIdx = Builder.CreateAdd(PtrInd, Idx);
-        Value *SclrGep = II.transform(Builder, GlobalIdx, PSE.getSE(), DL);
+        Value *SclrGep =
+            emitTransformedIndex(Builder, GlobalIdx, PSE.getSE(), DL, II);
         SclrGep->setName("next.gep");
         VectorLoopValueMap.setScalarValue(P, {Part, Lane}, SclrGep);
       }

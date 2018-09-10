@@ -75,8 +75,8 @@ define amdgpu_kernel void @max_9_sgprs() #0 {
 ;  %x.1 = call i32 @llvm.amdgcn.workgroup.id.y()
 ;  %x.2 = call i32 @llvm.amdgcn.workgroup.id.z()
 ;  %x.3 = call i64 @llvm.amdgcn.dispatch.id()
-;  %x.4 = call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
-;  %x.5 = call i8 addrspace(2)* @llvm.amdgcn.queue.ptr()
+;  %x.4 = call i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
+;  %x.5 = call i8 addrspace(4)* @llvm.amdgcn.queue.ptr()
 ;  store volatile i32 0, i32* undef
 ;  br label %stores
 ;
@@ -85,8 +85,8 @@ define amdgpu_kernel void @max_9_sgprs() #0 {
 ;  store volatile i32 %x.0, i32 addrspace(1)* undef
 ;  store volatile i32 %x.0, i32 addrspace(1)* undef
 ;  store volatile i64 %x.3, i64 addrspace(1)* undef
-;  store volatile i8 addrspace(2)* %x.4, i8 addrspace(2)* addrspace(1)* undef
-;  store volatile i8 addrspace(2)* %x.5, i8 addrspace(2)* addrspace(1)* undef
+;  store volatile i8 addrspace(4)* %x.4, i8 addrspace(4)* addrspace(1)* undef
+;  store volatile i8 addrspace(4)* %x.5, i8 addrspace(4)* addrspace(1)* undef
 ;
 ;  store i32 %one, i32 addrspace(1)* %out1
 ;  store i32 %two, i32 addrspace(1)* %out2
@@ -121,8 +121,8 @@ define amdgpu_kernel void @max_9_sgprs() #0 {
 ;  store volatile i32 %x.0, i32 addrspace(1)* undef
 ;  %x.3 = call i64 @llvm.amdgcn.dispatch.id()
 ;  store volatile i64 %x.3, i64 addrspace(1)* undef
-;  %x.4 = call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
-;  store volatile i8 addrspace(2)* %x.4, i8 addrspace(2)* addrspace(1)* undef
+;  %x.4 = call i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
+;  store volatile i8 addrspace(4)* %x.4, i8 addrspace(4)* addrspace(1)* undef
 ;
 ;  store i32 %one, i32 addrspace(1)* %out1
 ;  store i32 %two, i32 addrspace(1)* %out2
@@ -135,8 +135,8 @@ declare i32 @llvm.amdgcn.workgroup.id.x() #1
 declare i32 @llvm.amdgcn.workgroup.id.y() #1
 declare i32 @llvm.amdgcn.workgroup.id.z() #1
 declare i64 @llvm.amdgcn.dispatch.id() #1
-declare i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #1
-declare i8 addrspace(2)* @llvm.amdgcn.queue.ptr() #1
+declare i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #1
+declare i8 addrspace(4)* @llvm.amdgcn.queue.ptr() #1
 
 attributes #0 = { nounwind "amdgpu-num-sgpr"="14" }
 attributes #1 = { nounwind readnone }

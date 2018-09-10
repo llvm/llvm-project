@@ -76,20 +76,22 @@ AccessQualifier MetadataStreamer::getAccessQualifier(StringRef AccQual) const {
 
 AddressSpaceQualifier MetadataStreamer::getAddressSpaceQualifer(
     unsigned AddressSpace) const {
-  if (AddressSpace == AMDGPUAS::PRIVATE_ADDRESS)
+  switch (AddressSpace) {
+  case AMDGPUAS::PRIVATE_ADDRESS:
     return AddressSpaceQualifier::Private;
-  if (AddressSpace == AMDGPUAS::GLOBAL_ADDRESS)
+  case AMDGPUAS::GLOBAL_ADDRESS:
     return AddressSpaceQualifier::Global;
-  if (AddressSpace == AMDGPUAS::CONSTANT_ADDRESS)
+  case AMDGPUAS::CONSTANT_ADDRESS:
     return AddressSpaceQualifier::Constant;
-  if (AddressSpace == AMDGPUAS::LOCAL_ADDRESS)
+  case AMDGPUAS::LOCAL_ADDRESS:
     return AddressSpaceQualifier::Local;
-  if (AddressSpace == AMDGPUAS::FLAT_ADDRESS)
+  case AMDGPUAS::FLAT_ADDRESS:
     return AddressSpaceQualifier::Generic;
-  if (AddressSpace == AMDGPUAS::REGION_ADDRESS)
+  case AMDGPUAS::REGION_ADDRESS:
     return AddressSpaceQualifier::Region;
-
-  llvm_unreachable("Unknown address space qualifier");
+  default:
+    return AddressSpaceQualifier::Unknown;
+  }
 }
 
 ValueKind MetadataStreamer::getValueKind(Type *Ty, StringRef TypeQual,
