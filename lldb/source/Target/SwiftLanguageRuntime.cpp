@@ -3881,7 +3881,7 @@ llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationAfterReturn(
       error_reg_name = "r6";
       break;
     case llvm::Triple::ArchType::aarch64:
-      error_reg_name = "x19";
+      error_reg_name = "x21";
       break;
     case llvm::Triple::ArchType::x86_64:
       error_reg_name = "r12";
@@ -3918,11 +3918,6 @@ llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationAfterReturn(
                      const_cast<RegisterInfo *>(reg_info));
     error_val = val;
   }
-//  if (log)
-//    log->Printf("Found return address: 0x%" PRIu64 " from register %s.",
-//                return_addr,
-//                error_reg_name.str().c_str());
-  
   return error_val;
 }
 
