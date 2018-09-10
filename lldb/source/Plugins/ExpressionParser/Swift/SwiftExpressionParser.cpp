@@ -1663,6 +1663,11 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
   return std::move(result);
 }
 
+bool SwiftExpressionParser::Complete(CompletionRequest &request, unsigned line,
+				     unsigned pos, unsigned typed_pos) {
+  return false;
+}
+
 unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
                                       uint32_t first_line, uint32_t last_line,
                                       uint32_t line_offset) {
