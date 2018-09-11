@@ -30,6 +30,12 @@ static inline StringRef stringFromIndexStoreStringRef(indexstore_string_ref_t st
   return StringRef(str.data, str.length);
 }
 
+template<typename Ret, typename ...Params>
+static inline Ret functionPtrFromFunctionRef(void *ctx, Params ...params) {
+  auto fn = (llvm::function_ref<Ret(Params...)> *)ctx;
+  return (*fn)(std::forward<Params>(params)...);
+}
+
 class IndexRecordSymbol {
   indexstore_symbol_t obj;
   friend class IndexRecordReader;
@@ -77,7 +83,7 @@ public:
       return receiver(sym_rel);
     });
 #else
-    return false;
+    return indexstore_occurrence_relations_apply_f(obj, &receiver, functionPtrFromFunctionRef);
 #endif
   }
 
@@ -136,7 +142,7 @@ public:
       return receiver(stringFromIndexStoreStringRef(unit_name));
     });
 #else
-    return false;
+    return indexstore_store_units_apply_f(obj, sorted, &receiver, functionPtrFromFunctionRef);
 #endif
   }
 
@@ -192,9 +198,28 @@ public:
     indexstore_store_set_unit_event_handler(obj, ^(indexstore_unit_event_notification_t evt_note) {
       handler(UnitEventNotification(evt_note));
     });
+#else
+    if (!handler) {
+      indexstore_store_set_unit_event_handler_f(obj, nullptr, nullptr, nullptr);
+      return;
+    }
+
+    auto fnPtr = new UnitEventHandler(handler);
+    indexstore_store_set_unit_event_handler_f(obj, fnPtr, event_handler, event_handler_finalizer);
 #endif
   }
 
+private:
+  static void event_handler(void *ctx, indexstore_unit_event_notification_t evt) {
+    auto fnPtr = (UnitEventHandler*)ctx;
+    (*fnPtr)(evt);
+  }
+  static void event_handler_finalizer(void *ctx) {
+    auto fnPtr = (UnitEventHandler*)ctx;
+    delete fnPtr;
+  }
+
+public:
   bool startEventListening(bool waitInitialSync, std::string &error) {
     indexstore_unit_event_listen_options_t opts;
     opts.wait_initial_sync = waitInitialSync;
@@ -294,7 +319,8 @@ public:
       receiver(symbol);
     });
 #else
-    return false;
+    return indexstore_record_reader_search_symbols_f(obj, &filter, functionPtrFromFunctionRef,
+                                                     &receiver, functionPtrFromFunctionRef);
 #endif
   }
 
@@ -304,7 +330,7 @@ public:
       return receiver(sym);
     });
 #else
-    return false;
+    return indexstore_record_reader_symbols_apply_f(obj, noCache, &receiver, functionPtrFromFunctionRef);
 #endif
   }
 
@@ -315,7 +341,6 @@ public:
   bool foreachOccurrence(ArrayRef<IndexRecordSymbol> symbolsFilter,
                          ArrayRef<IndexRecordSymbol> relatedSymbolsFilter,
               llvm::function_ref<bool(IndexRecordOccurrence)> receiver) {
-#if INDEXSTORE_HAS_BLOCKS
     llvm::SmallVector<indexstore_symbol_t, 16> c_symbolsFilter;
     c_symbolsFilter.reserve(symbolsFilter.size());
     for (IndexRecordSymbol sym : symbolsFilter) {
@@ -326,6 +351,7 @@ public:
     for (IndexRecordSymbol sym : relatedSymbolsFilter) {
       c_relatedSymbolsFilter.push_back(sym.obj);
     }
+#if INDEXSTORE_HAS_BLOCKS
     return indexstore_record_reader_occurrences_of_symbols_apply(obj,
                                 c_symbolsFilter.data(), c_symbolsFilter.size(),
                                 c_relatedSymbolsFilter.data(),
@@ -334,7 +360,11 @@ public:
                                   return receiver(occur);
                                 });
 #else
-    return false;
+    return indexstore_record_reader_occurrences_of_symbols_apply_f(obj,
+                                c_symbolsFilter.data(), c_symbolsFilter.size(),
+                                c_relatedSymbolsFilter.data(),
+                                c_relatedSymbolsFilter.size(),
+                                &receiver, functionPtrFromFunctionRef);
 #endif
   }
 
@@ -345,7 +375,7 @@ public:
       return receiver(occur);
     });
 #else
-    return false;
+    return indexstore_record_reader_occurrences_apply_f(obj, &receiver, functionPtrFromFunctionRef);
 #endif
   }
 
@@ -359,7 +389,10 @@ public:
       return receiver(occur);
     });
 #else
-    return false;
+    return indexstore_record_reader_occurrences_in_line_range_apply_f(obj,
+                                                                      lineStart,
+                                                                      lineEnd,
+                                         &receiver, functionPtrFromFunctionRef);
 #endif
   }
 };
@@ -480,7 +513,7 @@ public:
       return receiver(dep);
     });
 #else
-    return false;
+    return indexstore_unit_reader_dependencies_apply_f(obj, &receiver, functionPtrFromFunctionRef);
 #endif
   }
 
@@ -490,7 +523,7 @@ public:
       return receiver(inc);
     });
 #else
-    return false;
+    return indexstore_unit_reader_includes_apply_f(obj, &receiver, functionPtrFromFunctionRef);
 #endif
   }
 };
