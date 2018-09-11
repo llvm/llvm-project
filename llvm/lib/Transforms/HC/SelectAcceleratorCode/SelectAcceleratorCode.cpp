@@ -121,8 +121,11 @@ public:
     static char ID;
     SelectAcceleratorCode() : ModulePass{ID} {}
 
-    bool doInitialization(Module &M) override
-    {   // TODO: this may represent a valid analysis pass.
+    bool doInitialization(Module &M) override { return false; }
+
+    bool runOnModule(Module &M) override {
+        // This may be a candidate for an analysis pass that is
+        // invalidated appropriately by other passes.
         for (auto&& F : M.functions()) {
             if (F.getCallingConv() == CallingConv::AMDGPU_KERNEL) {
                  auto Tmp = HCCallees_.insert(M.getFunction(F.getName()));
@@ -130,11 +133,6 @@ public:
             }
         }
 
-        return false;
-    }
-
-    bool runOnModule(Module &M) override
-    {
         bool Modified = eraseNonHCFunctions_(M);
 
         Modified = eraseDeadGlobals_(M) || Modified;
