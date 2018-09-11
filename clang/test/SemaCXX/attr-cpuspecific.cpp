@@ -109,3 +109,6 @@ int __attribute__((cpu_specific(sandybridge))) BadOutOfLine::foo(int) { return 1
 
 // Ensure Cpp Spelling works.
 [[clang::cpu_specific(ivybridge,atom)]] int CppSpelling(){}
+
+// expected-error@+1 {{lambda cannot be declared 'cpu_dispatch'}}
+auto x = []() __attribute__((cpu_dispatch(atom))) {};

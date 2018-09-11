@@ -417,7 +417,6 @@
 // RUN: %clang -march=corei7-avx -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_COREI7_AVX_M32
-// CHECK_COREI7_AVX_M32: #define __AES__ 1
 // CHECK_COREI7_AVX_M32: #define __AVX__ 1
 // CHECK_COREI7_AVX_M32: #define __MMX__ 1
 // CHECK_COREI7_AVX_M32: #define __PCLMUL__ 1
@@ -441,7 +440,6 @@
 // RUN: %clang -march=corei7-avx -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_COREI7_AVX_M64
-// CHECK_COREI7_AVX_M64: #define __AES__ 1
 // CHECK_COREI7_AVX_M64: #define __AVX__ 1
 // CHECK_COREI7_AVX_M64: #define __MMX__ 1
 // CHECK_COREI7_AVX_M64: #define __PCLMUL__ 1
@@ -468,7 +466,6 @@
 // RUN: %clang -march=core-avx-i -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_CORE_AVX_I_M32
-// CHECK_CORE_AVX_I_M32: #define __AES__ 1
 // CHECK_CORE_AVX_I_M32: #define __AVX__ 1
 // CHECK_CORE_AVX_I_M32: #define __F16C__ 1
 // CHECK_CORE_AVX_I_M32: #define __MMX__ 1
@@ -492,7 +489,6 @@
 // RUN: %clang -march=core-avx-i -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_CORE_AVX_I_M64
-// CHECK_CORE_AVX_I_M64: #define __AES__ 1
 // CHECK_CORE_AVX_I_M64: #define __AVX__ 1
 // CHECK_CORE_AVX_I_M64: #define __F16C__ 1
 // CHECK_CORE_AVX_I_M64: #define __MMX__ 1
@@ -519,7 +515,6 @@
 // RUN: %clang -march=core-avx2 -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_CORE_AVX2_M32
-// CHECK_CORE_AVX2_M32: #define __AES__ 1
 // CHECK_CORE_AVX2_M32: #define __AVX2__ 1
 // CHECK_CORE_AVX2_M32: #define __AVX__ 1
 // CHECK_CORE_AVX2_M32: #define __BMI2__ 1
@@ -550,7 +545,6 @@
 // RUN: %clang -march=core-avx2 -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_CORE_AVX2_M64
-// CHECK_CORE_AVX2_M64: #define __AES__ 1
 // CHECK_CORE_AVX2_M64: #define __AVX2__ 1
 // CHECK_CORE_AVX2_M64: #define __AVX__ 1
 // CHECK_CORE_AVX2_M64: #define __BMI2__ 1
@@ -585,7 +579,6 @@
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_BROADWELL_M32
 // CHECK_BROADWELL_M32: #define __ADX__ 1
-// CHECK_BROADWELL_M32: #define __AES__ 1
 // CHECK_BROADWELL_M32: #define __AVX2__ 1
 // CHECK_BROADWELL_M32: #define __AVX__ 1
 // CHECK_BROADWELL_M32: #define __BMI2__ 1
@@ -619,7 +612,6 @@
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_BROADWELL_M64
 // CHECK_BROADWELL_M64: #define __ADX__ 1
-// CHECK_BROADWELL_M64: #define __AES__ 1
 // CHECK_BROADWELL_M64: #define __AVX2__ 1
 // CHECK_BROADWELL_M64: #define __AVX__ 1
 // CHECK_BROADWELL_M64: #define __BMI2__ 1
@@ -1557,7 +1549,6 @@
 // RUN: %clang -march=slm -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SLM_M32
-// CHECK_SLM_M32: #define __AES__ 1
 // CHECK_SLM_M32: #define __FXSR__ 1
 // CHECK_SLM_M32: #define __MMX__ 1
 // CHECK_SLM_M32: #define __PCLMUL__ 1
@@ -1580,7 +1571,6 @@
 // RUN: %clang -march=slm -m64 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SLM_M64
-// CHECK_SLM_M64: #define __AES__ 1
 // CHECK_SLM_M64: #define __FXSR__ 1
 // CHECK_SLM_M64: #define __MMX__ 1
 // CHECK_SLM_M64: #define __PCLMUL__ 1
