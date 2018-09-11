@@ -1,4 +1,4 @@
-// XFAIL: linux
+
 
 #include "print-unit.h"
 #include "syshead.h"

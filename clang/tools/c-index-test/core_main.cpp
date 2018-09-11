@@ -322,8 +322,6 @@ static bool printSourceSymbolsFromModule(StringRef modulePath,
   return false;
 }
 
-#if INDEXSTORE_HAS_BLOCKS
-
 //===----------------------------------------------------------------------===//
 // Print Record
 //===----------------------------------------------------------------------===//
@@ -606,25 +604,6 @@ static int printStoreUnits(StringRef StorePath, raw_ostream &OS) {
   return !Success;
 }
 
-
-#else
-
-static int printUnit(StringRef Filename, raw_ostream &OS) {
-  return 1;
-}
-
-static int printStoreUnits(StringRef StorePath, raw_ostream &OS) {
-  return 1;
-}
-
-static int printStoreFileRecord(StringRef storePath, StringRef filePath,
-                                Optional<unsigned> lineStart, unsigned lineCount,
-                                raw_ostream &OS) {
-  return 1;
-}
-
-#endif
-
 //===----------------------------------------------------------------------===//
 // Helper Utils
 //===----------------------------------------------------------------------===//
@@ -655,8 +634,6 @@ static void printSymbolNameAndUSR(const Decl *D, ASTContext &Ctx,
     OS << USRBuf;
   }
 }
-
-#if INDEXSTORE_HAS_BLOCKS
 
 static void printSymbol(const IndexRecordDecl &Rec, raw_ostream &OS) {
   printSymbolInfo(Rec.SymInfo, OS);
@@ -784,17 +761,6 @@ static void printSymbol(indexstore::IndexRecordOccurrence Occur, raw_ostream &OS
     return true;
   });
 }
-
-#else
-
-static int printRecord(StringRef Filename, raw_ostream &OS) {
-  return 1;
-}
-static int printStoreRecords(StringRef StorePath, raw_ostream &OS) {
-  return 1;
-}
-
-#endif
 
 static int watchDirectory(StringRef dirPath) {
   raw_ostream &OS = outs();
@@ -939,11 +905,9 @@ int indextest_core_main(int argc, const char **argv) {
       return printUnit(options::InputFiles[0], outs());
   }
 
-#if INDEXSTORE_HAS_BLOCKS
   if (options::Action == ActionType::PrintStoreFormatVersion) {
     outs() << indexstore::IndexStore::formatVersion() << '\n';
   }
-#endif
 
   if (options::Action == ActionType::AggregateAsJSON) {
     if (options::InputFiles.empty()) {
