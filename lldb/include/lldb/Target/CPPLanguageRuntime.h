@@ -24,6 +24,25 @@ namespace lldb_private {
 
 class CPPLanguageRuntime : public LanguageRuntime {
 public:
+  enum class LibCppStdFunctionCallableCase {
+    Lambda = 0,
+    CallableObject,
+    FreeOrMemberFunction,
+    Invalid
+  };
+
+  struct LibCppStdFunctionCallableInfo {
+    Symbol callable_symbol;
+    Address callable_address;
+    LineEntry callable_line_entry;
+    lldb::addr_t member__f_pointer_value = 0u;
+    LibCppStdFunctionCallableCase callable_case =
+        LibCppStdFunctionCallableCase::Invalid;
+  };
+
+  LibCppStdFunctionCallableInfo
+  FindLibCppStdFunctionCallableInfo(lldb::ValueObjectSP &valobj_sp);
+
   ~CPPLanguageRuntime() override;
 
   lldb::LanguageType GetLanguageType() const override {
