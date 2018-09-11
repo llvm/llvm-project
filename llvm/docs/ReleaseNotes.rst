@@ -291,6 +291,22 @@ Changes to the DAG infrastructure
   changes to backends that directly access ``PatFrag`` members.
 
 
+External Open Source Projects Using LLVM 7
+==========================================
+
+Zig Programming Language
+------------------------
+
+`Zig <https://ziglang.org>`_  is an open-source programming language designed
+for robustness, optimality, and clarity. Zig is an alternative to C, providing
+high level features such as generics, compile time function execution, partial
+evaluation, and LLVM-based coroutines, while exposing low level LLVM IR
+features such as aliases and intrinsics. Zig uses Clang to provide automatic
+import of .h symbols - even inline functions and macros. Zig uses LLD combined
+with lazily building compiler-rt to provide out-of-the-box cross-compiling for
+all supported targets.
+
+
 Additional Information
 ======================
 
