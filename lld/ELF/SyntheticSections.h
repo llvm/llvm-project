@@ -536,6 +536,7 @@ struct RelativeReloc {
 class RelrBaseSection : public SyntheticSection {
 public:
   RelrBaseSection();
+  bool empty() const override { return Relocs.empty(); }
   std::vector<RelativeReloc> Relocs;
 };
 

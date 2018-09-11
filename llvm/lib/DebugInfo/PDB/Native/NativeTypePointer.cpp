@@ -57,7 +57,7 @@ bool NativeTypePointer::isConstType() const { return false; }
 
 uint64_t NativeTypePointer::getLength() const { return Record.getSize(); }
 
-uint32_t NativeTypePointer::getTypeId() const {
+SymIndexId NativeTypePointer::getTypeId() const {
   // This is the pointee SymIndexId.
   return Session.getSymbolCache().findSymbolByTypeIndex(Record.ReferentType);
 }
