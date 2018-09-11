@@ -1510,8 +1510,17 @@ static void maybeDiagnoseUTF8Homoglyph(DiagnosticsEngine &Diags, uint32_t C,
     bool operator<(HomoglyphPair R) const { return Character < R.Character; }
   };
   static constexpr HomoglyphPair SortedHomoglyphs[] = {
+    {U'\u00ad', 0},   // SOFT HYPHEN
     {U'\u01c3', '!'}, // LATIN LETTER RETROFLEX CLICK
     {U'\u037e', ';'}, // GREEK QUESTION MARK
+    {U'\u200b', 0},   // ZERO WIDTH SPACE
+    {U'\u200c', 0},   // ZERO WIDTH NON-JOINER
+    {U'\u200d', 0},   // ZERO WIDTH JOINER
+    {U'\u2060', 0},   // WORD JOINER
+    {U'\u2061', 0},   // FUNCTION APPLICATION
+    {U'\u2062', 0},   // INVISIBLE TIMES
+    {U'\u2063', 0},   // INVISIBLE SEPARATOR
+    {U'\u2064', 0},   // INVISIBLE PLUS
     {U'\u2212', '-'}, // MINUS SIGN
     {U'\u2215', '/'}, // DIVISION SLASH
     {U'\u2216', '\\'}, // SET MINUS
@@ -1521,6 +1530,7 @@ static void maybeDiagnoseUTF8Homoglyph(DiagnosticsEngine &Diags, uint32_t C,
     {U'\u2236', ':'}, // RATIO
     {U'\u223c', '~'}, // TILDE OPERATOR
     {U'\ua789', ':'}, // MODIFIER LETTER COLON
+    {U'\ufeff', 0},   // ZERO WIDTH NO-BREAK SPACE
     {U'\uff01', '!'}, // FULLWIDTH EXCLAMATION MARK
     {U'\uff03', '#'}, // FULLWIDTH NUMBER SIGN
     {U'\uff04', '$'}, // FULLWIDTH DOLLAR SIGN
@@ -1560,9 +1570,14 @@ static void maybeDiagnoseUTF8Homoglyph(DiagnosticsEngine &Diags, uint32_t C,
       llvm::raw_svector_ostream CharOS(CharBuf);
       llvm::write_hex(CharOS, C, llvm::HexPrintStyle::Upper, 4);
     }
-    const char LooksLikeStr[] = {Homoglyph->LooksLike, 0};
-    Diags.Report(Range.getBegin(), diag::warn_utf8_symbol_homoglyph)
-        << Range << CharBuf << LooksLikeStr;
+    if (Homoglyph->LooksLike) {
+      const char LooksLikeStr[] = {Homoglyph->LooksLike, 0};
+      Diags.Report(Range.getBegin(), diag::warn_utf8_symbol_homoglyph)
+          << Range << CharBuf << LooksLikeStr;
+    } else {
+      Diags.Report(Range.getBegin(), diag::warn_utf8_symbol_zero_width)
+          << Range << CharBuf;
+    }
   }
 }
 

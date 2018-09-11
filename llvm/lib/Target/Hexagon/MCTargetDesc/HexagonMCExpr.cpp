@@ -9,11 +9,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonMCExpr.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Object/ELF.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;

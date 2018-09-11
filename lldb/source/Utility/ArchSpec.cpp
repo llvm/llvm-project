@@ -815,6 +815,7 @@ bool ArchSpec::CharIsSignedByDefault() const {
   case llvm::Triple::ppc64le:
   case llvm::Triple::systemz:
   case llvm::Triple::xcore:
+  case llvm::Triple::arc:
     return false;
   }
 }
@@ -1477,7 +1478,10 @@ bool ArchSpec::IsAlwaysThumbInstructions() const {
 
     if (GetCore() == ArchSpec::Core::eCore_arm_armv7m ||
         GetCore() == ArchSpec::Core::eCore_arm_armv7em ||
-        GetCore() == ArchSpec::Core::eCore_arm_armv6m) {
+        GetCore() == ArchSpec::Core::eCore_arm_armv6m ||
+        GetCore() == ArchSpec::Core::eCore_thumbv7m ||
+        GetCore() == ArchSpec::Core::eCore_thumbv7em ||
+        GetCore() == ArchSpec::Core::eCore_thumbv6m) {
       return true;
     }
   }

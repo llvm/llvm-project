@@ -380,10 +380,12 @@ static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysis &AA,
 /// \param MSSA      The MemorySSA instance that Start and ClobberAt belong to.
 /// \param Query     The UpwardsMemoryQuery we used for our search.
 /// \param AA        The AliasAnalysis we used for our search.
+/// \param AllowImpreciseClobber Always false, unless we do relaxed verify.
 static void
 checkClobberSanity(const MemoryAccess *Start, MemoryAccess *ClobberAt,
                    const MemoryLocation &StartLoc, const MemorySSA &MSSA,
-                   const UpwardsMemoryQuery &Query, AliasAnalysis &AA) {
+                   const UpwardsMemoryQuery &Query, AliasAnalysis &AA,
+                   bool AllowImpreciseClobber = false) {
   assert(MSSA.dominates(ClobberAt, Start) && "Clobber doesn't dominate start?");
 
   if (MSSA.isLiveOnEntryDef(Start)) {
@@ -453,6 +455,14 @@ checkClobberSanity(const MemoryAccess *Start, MemoryAccess *ClobberAt,
           upward_defs_end());
     }
   }
+
+  // If the verify is done following an optimization, it's possible that
+  // ClobberAt was a conservative clobbering, that we can now infer is not a
+  // true clobbering access. Don't fail the verify if that's the case.
+  // We do have accesses that claim they're optimized, but could be optimized
+  // further. Updating all these can be expensive, so allow it for now (FIXME).
+  if (AllowImpreciseClobber)
+    return;
 
   // If ClobberAt is a MemoryPhi, we can assume something above it acted as a
   // clobber. Otherwise, `ClobberAt` should've acted as a clobber at some point.
@@ -1694,7 +1704,7 @@ void MemorySSA::checkClobberSanityAccess(const MemoryAccess *MA) const {
       return;
     auto *Clobber = MUD->getOptimized();
     UpwardsMemoryQuery Q(I, MUD);
-    checkClobberSanity(MUD, Clobber, *Loc, *this, Q, *AA);
+    checkClobberSanity(MUD, Clobber, *Loc, *this, Q, *AA, true);
   }
 }
 

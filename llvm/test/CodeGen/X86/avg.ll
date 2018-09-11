@@ -2896,3 +2896,32 @@ define void @not_avg_v16i8_wide_constants(<16 x i8>* %a, <16 x i8>* %b) nounwind
   store <16 x i8> %8, <16 x i8>* undef, align 4
   ret void
 }
+
+; Make sure we don't fail on single element vectors.
+define <1 x i8> @avg_v1i8(<1 x i8> %x, <1 x i8> %y) {
+; SSE2-LABEL: avg_v1i8:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movzbl %dil, %eax
+; SSE2-NEXT:    movzbl %sil, %ecx
+; SSE2-NEXT:    leal 1(%rax,%rcx), %eax
+; SSE2-NEXT:    shrl %eax
+; SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: avg_v1i8:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movzbl %dil, %eax
+; AVX-NEXT:    movzbl %sil, %ecx
+; AVX-NEXT:    leal 1(%rax,%rcx), %eax
+; AVX-NEXT:    shrl %eax
+; AVX-NEXT:    # kill: def $al killed $al killed $eax
+; AVX-NEXT:    retq
+  %a = zext <1 x i8> %x to <1 x i16>
+  %b = zext <1 x i8> %y to <1 x i16>
+  %c = add <1 x i16> %a, %b
+  %d = add <1 x i16> %c, <i16 1>
+  %e = lshr <1 x i16> %d, <i16 1>
+  %f = trunc <1 x i16> %e to <1 x i8>
+  ret <1 x i8> %f
+}
+

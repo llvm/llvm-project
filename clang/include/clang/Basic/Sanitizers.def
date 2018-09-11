@@ -53,6 +53,9 @@ SANITIZER("kernel-hwaddress", KernelHWAddress)
 // MemorySanitizer
 SANITIZER("memory", Memory)
 
+// Kernel MemorySanitizer (KMSAN)
+SANITIZER("kernel-memory", KernelMemory)
+
 // libFuzzer
 SANITIZER("fuzzer", Fuzzer)
 

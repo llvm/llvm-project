@@ -377,8 +377,11 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MIB.add(Callee);
 
   // Tell the call which registers are clobbered.
-  auto TRI = MF.getSubtarget().getRegisterInfo();
+  auto TRI = MF.getSubtarget<AArch64Subtarget>().getRegisterInfo();
   MIB.addRegMask(TRI->getCallPreservedMask(MF, F.getCallingConv()));
+
+  if (TRI->isAnyArgRegReserved(MF))
+    TRI->emitReservedArgRegCallError(MF);
 
   // Do the actual argument marshalling.
   SmallVector<unsigned, 8> PhysRegs;

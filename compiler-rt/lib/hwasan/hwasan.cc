@@ -171,21 +171,52 @@ static void HWAsanCheckFailed(const char *file, int line, const char *cond,
   Die();
 }
 
-static void HwasanPrintMemoryUsage() {
+static constexpr uptr kMemoryUsageBufferSize = 4096;
+
+static void HwasanFormatMemoryUsage(InternalScopedString &s) {
   auto thread_stats = Thread::GetThreadStats();
   auto *sds = StackDepotGetStats();
   AllocatorStatCounters asc;
   GetAllocatorStats(asc);
-  Printf(
+  s.append(
       "HWASAN pid: %d rss: %zd threads: %zd stacks: %zd"
       " thr_aux: %zd stack_depot: %zd uniq_stacks: %zd"
-      " heap: %zd\n",
+      " heap: %zd",
       internal_getpid(), GetRSS(), thread_stats.n_live_threads,
       thread_stats.total_stack_size,
       thread_stats.n_live_threads * Thread::MemoryUsedPerThread(),
-      sds->allocated, sds->n_uniq_ids,
-      asc[AllocatorStatMapped]);
+      sds->allocated, sds->n_uniq_ids, asc[AllocatorStatMapped]);
 }
+
+#if SANITIZER_ANDROID
+static char *memory_usage_buffer = nullptr;
+
+#define PR_SET_VMA 0x53564d41
+#define PR_SET_VMA_ANON_NAME 0
+
+static void InitMemoryUsage() {
+  memory_usage_buffer =
+      (char *)MmapOrDie(kMemoryUsageBufferSize, "memory usage string");
+  CHECK(memory_usage_buffer);
+  memory_usage_buffer[0] = '\0';
+  CHECK(internal_prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME,
+                       (uptr)memory_usage_buffer, kMemoryUsageBufferSize,
+                       (uptr)memory_usage_buffer) == 0);
+}
+
+void UpdateMemoryUsage() {
+  if (!flags()->export_memory_stats)
+    return;
+  if (!memory_usage_buffer)
+    InitMemoryUsage();
+  InternalScopedString s(kMemoryUsageBufferSize);
+  HwasanFormatMemoryUsage(s);
+  internal_strncpy(memory_usage_buffer, s.data(), kMemoryUsageBufferSize - 1);
+  memory_usage_buffer[kMemoryUsageBufferSize - 1] = '\0';
+}
+#else
+void UpdateMemoryUsage() {}
+#endif
 
 } // namespace __hwasan
 
@@ -455,7 +486,11 @@ void __hwasan_handle_longjmp(const void *sp_dst) {
   TagMemory(sp, dst - sp, 0);
 }
 
-void __hwasan_print_memory_usage() { HwasanPrintMemoryUsage(); }
+void __hwasan_print_memory_usage() {
+  InternalScopedString s(kMemoryUsageBufferSize);
+  HwasanFormatMemoryUsage(s);
+  Printf("%s\n", s.data());
+}
 
 static const u8 kFallbackTag = 0xBB;
 

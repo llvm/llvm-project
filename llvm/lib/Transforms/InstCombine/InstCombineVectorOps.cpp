@@ -1350,6 +1350,41 @@ static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
   return NewBO;
 }
 
+/// Match a shuffle-select-shuffle pattern where the shuffles are widening and
+/// narrowing (concatenating with undef and extracting back to the original
+/// length). This allows replacing the wide select with a narrow select.
+Instruction *narrowVectorSelect(ShuffleVectorInst &Shuf,
+                                InstCombiner::BuilderTy &Builder) {
+  // This must be a narrowing identity shuffle. It extracts the 1st N elements
+  // of the 1st vector operand of a shuffle.
+  if (!match(Shuf.getOperand(1), m_Undef()) || !Shuf.isIdentityWithExtract())
+    return nullptr;
+
+  // The vector being shuffled must be a vector select that we can eliminate.
+  // TODO: The one-use requirement could be eased if X and/or Y are constants.
+  Value *Cond, *X, *Y;
+  if (!match(Shuf.getOperand(0),
+             m_OneUse(m_Select(m_Value(Cond), m_Value(X), m_Value(Y)))))
+    return nullptr;
+
+  // We need a narrow condition value. It must be extended with undef elements
+  // and have the same number of elements as this shuffle.
+  unsigned NarrowNumElts = Shuf.getType()->getVectorNumElements();
+  Value *NarrowCond;
+  if (!match(Cond, m_OneUse(m_ShuffleVector(m_Value(NarrowCond), m_Undef(),
+                                            m_Constant()))) ||
+      NarrowCond->getType()->getVectorNumElements() != NarrowNumElts ||
+      !cast<ShuffleVectorInst>(Cond)->isIdentityWithPadding())
+    return nullptr;
+
+  // shuf (sel (shuf NarrowCond, undef, WideMask), X, Y), undef, NarrowMask) -->
+  // sel NarrowCond, (shuf X, undef, NarrowMask), (shuf Y, undef, NarrowMask)
+  Value *Undef = UndefValue::get(X->getType());
+  Value *NarrowX = Builder.CreateShuffleVector(X, Undef, Shuf.getMask());
+  Value *NarrowY = Builder.CreateShuffleVector(Y, Undef, Shuf.getMask());
+  return SelectInst::Create(NarrowCond, NarrowX, NarrowY);
+}
+
 Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   Value *LHS = SVI.getOperand(0);
   Value *RHS = SVI.getOperand(1);
@@ -1358,6 +1393,9 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     return replaceInstUsesWith(SVI, V);
 
   if (Instruction *I = foldSelectShuffle(SVI, Builder, DL))
+    return I;
+
+  if (Instruction *I = narrowVectorSelect(SVI, Builder))
     return I;
 
   unsigned VWidth = SVI.getType()->getVectorNumElements();

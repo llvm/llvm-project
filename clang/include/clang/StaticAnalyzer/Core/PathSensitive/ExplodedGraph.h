@@ -242,6 +242,11 @@ public:
 
   int64_t getID(ExplodedGraph *G) const;
 
+  /// The node is trivial if it has only one successor, only one predecessor,
+  /// and its program state is the same as the program state of the previous
+  /// node.
+  bool isTrivial() const;
+
 private:
   void replaceSuccessor(ExplodedNode *node) { Succs.replaceNode(node); }
   void replacePredecessor(ExplodedNode *node) { Preds.replaceNode(node); }
@@ -463,9 +468,19 @@ namespace llvm {
 
     static NodeRef getEntryNode(NodeRef N) { return N; }
 
-    static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
+    static ChildIteratorType child_begin(NodeRef N) {
+      if (N->succ_size() == 1 && (*N->succ_begin())->isTrivial()) {
+        return child_begin(*N->succ_begin());
+      }
+      return N->succ_begin();
+    }
 
-    static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
+    static ChildIteratorType child_end(NodeRef N) {
+      if (N->succ_size() == 1 && (*N->succ_begin())->isTrivial()) {
+        return child_end(*N->succ_begin());
+      }
+      return N->succ_end();
+    }
 
     static nodes_iterator nodes_begin(NodeRef N) { return df_begin(N); }
 

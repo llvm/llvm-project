@@ -65,22 +65,24 @@ void AllocatorSwallowThreadLocalCache(AllocatorCache *cache) {
 
 static uptr TaggedSize(uptr size) {
   if (!size) size = 1;
-  return RoundUpTo(size, kShadowAlignment);
+  uptr new_size = RoundUpTo(size, kShadowAlignment);
+  CHECK_GE(new_size, size);
+  return new_size;
 }
 
 static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
                             bool zeroise) {
-  alignment = Max(alignment, kShadowAlignment);
-  uptr size = TaggedSize(orig_size);
-
-  if (size > kMaxAllowedMallocSize) {
+  if (orig_size > kMaxAllowedMallocSize) {
     if (AllocatorMayReturnNull()) {
       Report("WARNING: HWAddressSanitizer failed to allocate 0x%zx bytes\n",
-             size);
+             orig_size);
       return nullptr;
     }
-    ReportAllocationSizeTooBig(size, kMaxAllowedMallocSize, stack);
+    ReportAllocationSizeTooBig(orig_size, kMaxAllowedMallocSize, stack);
   }
+
+  alignment = Max(alignment, kShadowAlignment);
+  uptr size = TaggedSize(orig_size);
   Thread *t = GetCurrentThread();
   void *allocated;
   if (t) {

@@ -1956,6 +1956,8 @@ public:
                                 FunctionDecl *NewFD, LookupResult &Previous,
                                 bool IsMemberSpecialization);
   bool shouldLinkDependentDeclWithPrevious(Decl *D, Decl *OldDecl);
+  bool canFullyTypeCheckRedeclaration(ValueDecl *NewD, ValueDecl *OldD,
+                                      QualType NewT, QualType OldT);
   void CheckMain(FunctionDecl *FD, const DeclSpec &D);
   void CheckMSVCRTEntryPoint(FunctionDecl *FD);
   Attr *getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD, bool IsDefinition);
@@ -8601,8 +8603,8 @@ public:
   //
 private:
   void *VarDataSharingAttributesStack;
-  /// Set to true inside '#pragma omp declare target' region.
-  bool IsInOpenMPDeclareTargetContext = false;
+  /// Number of nested '#pragma omp declare target' directives.
+  unsigned DeclareTargetNestingLevel = 0;
   /// Initialization of data-sharing attributes stack.
   void InitDataSharingAttributesStack();
   void DestroyDataSharingAttributesStack();
@@ -8736,7 +8738,7 @@ public:
                                    SourceLocation IdLoc = SourceLocation());
   /// Return true inside OpenMP declare target region.
   bool isInOpenMPDeclareTargetContext() const {
-    return IsInOpenMPDeclareTargetContext;
+    return DeclareTargetNestingLevel > 0;
   }
   /// Return true inside OpenMP target region.
   bool isInOpenMPTargetExecutionDirective() const;
@@ -10231,6 +10233,7 @@ public:
   struct CodeCompleteExpressionData;
   void CodeCompleteExpression(Scope *S,
                               const CodeCompleteExpressionData &Data);
+  void CodeCompleteExpression(Scope *S, QualType PreferredType);
   void CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base, Expr *OtherOpBase,
                                        SourceLocation OpLoc, bool IsArrow,
                                        bool IsBaseExprStatement);
@@ -10241,11 +10244,14 @@ public:
                                       const VirtSpecifiers *VS = nullptr);
   void CodeCompleteBracketDeclarator(Scope *S);
   void CodeCompleteCase(Scope *S);
-  void CodeCompleteCall(Scope *S, Expr *Fn, ArrayRef<Expr *> Args,
-                        SourceLocation OpenParLoc);
-  void CodeCompleteConstructor(Scope *S, QualType Type, SourceLocation Loc,
-                               ArrayRef<Expr *> Args,
-                               SourceLocation OpenParLoc);
+  /// Reports signatures for a call to CodeCompleteConsumer and returns the
+  /// preferred type for the current argument. Returned type can be null.
+  QualType ProduceCallSignatureHelp(Scope *S, Expr *Fn, ArrayRef<Expr *> Args,
+                                    SourceLocation OpenParLoc);
+  QualType ProduceConstructorSignatureHelp(Scope *S, QualType Type,
+                                           SourceLocation Loc,
+                                           ArrayRef<Expr *> Args,
+                                           SourceLocation OpenParLoc);
   void CodeCompleteInitializer(Scope *S, Decl *D);
   void CodeCompleteReturn(Scope *S);
   void CodeCompleteAfterIf(Scope *S);

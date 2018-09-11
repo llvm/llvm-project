@@ -497,8 +497,7 @@ void MachineLICMBase::HoistRegionPostRA() {
 
   // Walk the entire region, count number of defs for each register, and
   // collect potential LICM candidates.
-  const std::vector<MachineBasicBlock *> &Blocks = CurLoop->getBlocks();
-  for (MachineBasicBlock *BB : Blocks) {
+  for (MachineBasicBlock *BB : CurLoop->getBlocks()) {
     // If the header of the loop containing this basic block is a landing pad,
     // then don't try to hoist instructions out of this loop.
     const MachineLoop *ML = MLI->getLoopFor(BB);
@@ -570,8 +569,7 @@ void MachineLICMBase::HoistRegionPostRA() {
 /// Add register 'Reg' to the livein sets of BBs in the current loop, and make
 /// sure it is not killed by any instructions in the loop.
 void MachineLICMBase::AddToLiveIns(unsigned Reg) {
-  const std::vector<MachineBasicBlock *> &Blocks = CurLoop->getBlocks();
-  for (MachineBasicBlock *BB : Blocks) {
+  for (MachineBasicBlock *BB : CurLoop->getBlocks()) {
     if (!BB->isLiveIn(Reg))
       BB->addLiveIn(Reg);
     for (MachineInstr &MI : *BB) {

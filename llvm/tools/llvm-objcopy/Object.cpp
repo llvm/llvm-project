@@ -155,9 +155,9 @@ void ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
   }
 
   if (Sec.CompressionType == DebugCompressionType::GNU) {
-    ArrayRef<uint8_t> Magic = {'Z', 'L', 'I', 'B'};
-    std::copy(Magic.begin(), Magic.end(), Buf);
-    Buf += Magic.size();
+    const char *Magic = "ZLIB";
+    memcpy(Buf, Magic, strlen(Magic));
+    Buf += strlen(Magic);
     const uint64_t DecompressedSize =
         support::endian::read64be(&Sec.DecompressedSize);
     memcpy(Buf, &DecompressedSize, sizeof(DecompressedSize));

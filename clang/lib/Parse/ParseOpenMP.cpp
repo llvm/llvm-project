@@ -418,11 +418,19 @@ void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
     SourceLocation LParLoc = T.getOpenLocation();
     if (ParseExpressionList(
             Exprs, CommaLocs, [this, OmpPrivParm, LParLoc, &Exprs] {
-              Actions.CodeCompleteConstructor(
+              QualType PreferredType = Actions.ProduceConstructorSignatureHelp(
                   getCurScope(),
                   OmpPrivParm->getType()->getCanonicalTypeInternal(),
                   OmpPrivParm->getLocation(), Exprs, LParLoc);
+              CalledSignatureHelp = true;
+              Actions.CodeCompleteExpression(getCurScope(), PreferredType);
             })) {
+      if (PP.isCodeCompletionReached() && !CalledSignatureHelp) {
+        Actions.ProduceConstructorSignatureHelp(
+            getCurScope(), OmpPrivParm->getType()->getCanonicalTypeInternal(),
+            OmpPrivParm->getLocation(), Exprs, LParLoc);
+        CalledSignatureHelp = true;
+      }
       Actions.ActOnInitializerError(OmpPrivParm);
       SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
     } else {
@@ -774,8 +782,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
 
     llvm::SmallVector<Decl *, 4>  Decls;
     DKind = parseOpenMPDirectiveKind(*this);
-    while (DKind != OMPD_end_declare_target && DKind != OMPD_declare_target &&
-           Tok.isNot(tok::eof) && Tok.isNot(tok::r_brace)) {
+    while (DKind != OMPD_end_declare_target && Tok.isNot(tok::eof) &&
+           Tok.isNot(tok::r_brace)) {
       DeclGroupPtrTy Ptr;
       // Here we expect to see some function declaration.
       if (AS == AS_none) {

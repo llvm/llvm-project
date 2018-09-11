@@ -81,7 +81,7 @@ entry:
 ; CHECK-NEXT: {{^$}}
 ; CHECK-NEXT: kernel1:
 ; CHECK-NEXT: s_endpgm
-define amdgpu_kernel void @kernel1(i32 addrspace(1)* addrspace(2)* %ptr.out) align 256 {
+define amdgpu_kernel void @kernel1(i32 addrspace(1)* addrspace(4)* %ptr.out) align 256 {
 entry:
   ret void
 }

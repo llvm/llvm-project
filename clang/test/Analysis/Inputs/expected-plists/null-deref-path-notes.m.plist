@@ -1,3 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+ <key>clang_version</key>
+<string>clang version 8.0.0 </string>
  <key>diagnostics</key>
  <array>
   <dict>
@@ -242,6 +248,16 @@
    <key>col</key><integer>10</integer>
    <key>file</key><integer>0</integer>
   </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>13</integer>
+    <integer>14</integer>
+    <integer>18</integer>
+    <integer>19</integer>
+   </array>
+  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -469,6 +485,16 @@
    <key>line</key><integer>33</integer>
    <key>col</key><integer>12</integer>
    <key>file</key><integer>0</integer>
+  </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>27</integer>
+    <integer>28</integer>
+    <integer>29</integer>
+    <integer>33</integer>
+   </array>
   </dict>
   </dict>
   <dict>
@@ -747,6 +773,17 @@
    <key>col</key><integer>6</integer>
    <key>file</key><integer>0</integer>
   </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>39</integer>
+    <integer>40</integer>
+    <integer>41</integer>
+    <integer>47</integer>
+    <integer>50</integer>
+   </array>
+  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -970,7 +1007,22 @@
    <key>col</key><integer>8</integer>
    <key>file</key><integer>0</integer>
   </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>60</integer>
+    <integer>61</integer>
+    <integer>66</integer>
+    <integer>67</integer>
+    <integer>68</integer>
+   </array>
   </dict>
+  </dict>
+ </array>
+ <key>files</key>
+ <array>
+   <string>/clang/test/Analysis/null-deref-path-notes.m</string>
  </array>
 </dict>
 </plist>

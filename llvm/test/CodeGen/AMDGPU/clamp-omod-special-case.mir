@@ -43,8 +43,8 @@ body:             |
 
     %3 = COPY $vgpr0
     %0 = COPY $sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
     %25 = REG_SEQUENCE %3, 1, %24, 2
     %10 = S_MOV_B32 61440
@@ -105,8 +105,8 @@ body:             |
 
     %3 = COPY $vgpr0
     %0 = COPY $sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
     %25 = REG_SEQUENCE %3, 1, %24, 2
     %10 = S_MOV_B32 61440
@@ -168,8 +168,8 @@ body:             |
 
     %3 = COPY $vgpr0
     %0 = COPY $sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
     %25 = REG_SEQUENCE %3, 1, %24, 2
     %10 = S_MOV_B32 61440
@@ -233,8 +233,8 @@ body:             |
 
     %3 = COPY $vgpr0
     %0 = COPY $sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
     %25 = REG_SEQUENCE %3, 1, %24, 2
     %10 = S_MOV_B32 61440
@@ -310,8 +310,8 @@ body:             |
 
     %3 = COPY $vgpr0
     %0 = COPY $sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
     %25 = REG_SEQUENCE %3, 1, %24, 2
     %10 = S_MOV_B32 61440
@@ -375,8 +375,8 @@ body:             |
 
     %3 = COPY $vgpr0
     %0 = COPY $sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
     %25 = REG_SEQUENCE %3, 1, %24, 2
     %10 = S_MOV_B32 61440

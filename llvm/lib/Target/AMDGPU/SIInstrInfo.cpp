@@ -2066,12 +2066,40 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     if (Src2->isReg() && Src2->getReg() == Reg) {
       // Not allowed to use constant bus for another operand.
       // We can however allow an inline immediate as src0.
-      if (!Src0->isImm() &&
-          (Src0->isReg() && RI.isSGPRClass(MRI->getRegClass(Src0->getReg()))))
-        return false;
+      bool Src0Inlined = false;
+      if (Src0->isReg()) {
+        // Try to inline constant if possible.
+        // If the Def moves immediate and the use is single
+        // We are saving VGPR here.
+        MachineInstr *Def = MRI->getUniqueVRegDef(Src0->getReg());
+        if (Def && Def->isMoveImmediate() &&
+          isInlineConstant(Def->getOperand(1)) &&
+          MRI->hasOneUse(Src0->getReg())) {
+          Src0->ChangeToImmediate(Def->getOperand(1).getImm());
+          Src0Inlined = true;
+        } else if ((RI.isPhysicalRegister(Src0->getReg()) &&
+            RI.isSGPRClass(RI.getPhysRegClass(Src0->getReg()))) ||
+            (RI.isVirtualRegister(Src0->getReg()) &&
+            RI.isSGPRClass(MRI->getRegClass(Src0->getReg()))))
+          return false;
+          // VGPR is okay as Src0 - fallthrough
+      }
 
-      if (!Src1->isReg() || RI.isSGPRClass(MRI->getRegClass(Src1->getReg())))
-        return false;
+      if (Src1->isReg() && !Src0Inlined ) {
+        // We have one slot for inlinable constant so far - try to fill it
+        MachineInstr *Def = MRI->getUniqueVRegDef(Src1->getReg());
+        if (Def && Def->isMoveImmediate() &&
+            isInlineConstant(Def->getOperand(1)) &&
+            MRI->hasOneUse(Src1->getReg()) &&
+            commuteInstruction(UseMI)) {
+            Src0->ChangeToImmediate(Def->getOperand(1).getImm());
+        } else if ((RI.isPhysicalRegister(Src1->getReg()) &&
+            RI.isSGPRClass(RI.getPhysRegClass(Src1->getReg()))) ||
+            (RI.isVirtualRegister(Src1->getReg()) &&
+            RI.isSGPRClass(MRI->getRegClass(Src1->getReg()))))
+          return false;
+          // VGPR is okay as Src1 - fallthrough
+      }
 
       const int64_t Imm = ImmOp->getImm();
 
@@ -4063,9 +4091,17 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst) const {
             getNamedOperand(*Add, SrcNames[i]);
 
           if (Src->isReg()) {
-            auto Mov = MRI.getUniqueVRegDef(Src->getReg());
-            if (Mov && Mov->getOpcode() == AMDGPU::S_MOV_B32)
-              Src = &Mov->getOperand(1);
+            MachineInstr *Def = MRI.getUniqueVRegDef(Src->getReg());
+            if (Def) {
+              if (Def->isMoveImmediate())
+                Src = &Def->getOperand(1);
+              else if (Def->isCopy()) {
+                auto Mov = MRI.getUniqueVRegDef(Def->getOperand(1).getReg());
+                if (Mov && Mov->isMoveImmediate()) {
+                  Src = &Mov->getOperand(1);
+                }
+              }
+            }
           }
 
           if (Src) {

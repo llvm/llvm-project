@@ -152,10 +152,14 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
                                    const std::string &FS,
                                    const TargetMachine &TM, bool LittleEndian)
     : AArch64GenSubtargetInfo(TT, CPU, FS),
-      ReserveX18(AArch64::isX18ReservedByDefault(TT)), IsLittle(LittleEndian),
+      ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
+      IsLittle(LittleEndian),
       TargetTriple(TT), FrameLowering(),
       InstrInfo(initializeSubtargetDependencies(FS, CPU)), TSInfo(),
       TLInfo(TM, *this) {
+  if (AArch64::isX18ReservedByDefault(TT))
+    ReserveXRegister.set(18);
+
   CallLoweringInfo.reset(new AArch64CallLowering(*getTargetLowering()));
   Legalizer.reset(new AArch64LegalizerInfo(*this));
 

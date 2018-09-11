@@ -1253,7 +1253,7 @@ static void computeCalleeSaveRegisterPairs(
     // we also need to save lr in the shadow call stack.
     if ((RPI.Reg1 == AArch64::LR || RPI.Reg2 == AArch64::LR) &&
         MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)) {
-      if (!MF.getSubtarget<AArch64Subtarget>().isX18Reserved())
+      if (!MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(18))
         report_fatal_error("Must reserve x18 to use shadow call stack");
       NeedShadowCallStackProlog = true;
     }

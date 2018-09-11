@@ -3998,9 +3998,9 @@ void TypoCorrectionConsumer::addName(StringRef Name, NamedDecl *ND,
 
   // Compute an upper bound on the allowable edit distance, so that the
   // edit-distance algorithm can short-circuit.
-  unsigned UpperBound = (TypoStr.size() + 2) / 3 + 1;
+  unsigned UpperBound = (TypoStr.size() + 2) / 3;
   unsigned ED = TypoStr.edit_distance(Name, true, UpperBound);
-  if (ED >= UpperBound) return;
+  if (ED > UpperBound) return;
 
   TypoCorrection TC(&SemaRef.Context.Idents.get(Name), ND, NNS, ED);
   if (isKeyword) TC.makeKeyword();

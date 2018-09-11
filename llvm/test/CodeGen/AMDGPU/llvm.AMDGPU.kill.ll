@@ -20,7 +20,7 @@ main_body:
 ; SI: v_cmp_gt_f32_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], 0, v{{[0-9]+}}
 ; SI: v_cmpx_le_f32_e32 vcc, 0, v{{[0-9]+}}
 ; SI: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1.0, [[CMP]]
-define amdgpu_ps void @kill_vcc_implicit_def([6 x <16 x i8>] addrspace(2)* byval %arg, [17 x <16 x i8>] addrspace(2)* byval %arg1, [17 x <4 x i32>] addrspace(2)* byval %arg2, [34 x <8 x i32>] addrspace(2)* byval %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, float %arg20, float %arg21) {
+define amdgpu_ps void @kill_vcc_implicit_def([6 x <16 x i8>] addrspace(4)* byval %arg, [17 x <16 x i8>] addrspace(4)* byval %arg1, [17 x <4 x i32>] addrspace(4)* byval %arg2, [34 x <8 x i32>] addrspace(4)* byval %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, float %arg20, float %arg21) {
 entry:
   %tmp0 = fcmp olt float %arg13, 0.000000e+00
   call void @llvm.AMDGPU.kill(float %arg14)

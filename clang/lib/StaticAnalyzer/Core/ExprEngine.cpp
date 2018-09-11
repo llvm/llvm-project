@@ -2974,6 +2974,7 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
   }
 
   static void dumpProgramPoint(ProgramPoint Loc,
+                               const PrintingPolicy &PP,
                                llvm::raw_string_ostream &Out) {
     switch (Loc.getKind()) {
     case ProgramPoint::BlockEntranceKind:
@@ -3112,8 +3113,7 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
       assert(S != nullptr && "Expecting non-null Stmt");
 
       Out << S->getStmtClassName() << ' ' << (const void *)S << ' ';
-      LangOptions LO; // FIXME.
-      S->printPretty(Out, nullptr, PrintingPolicy(LO));
+      S->printPretty(Out, nullptr, PP);
       printLocation(Out, S->getBeginLoc());
 
       if (Loc.getAs<PreStmt>())
@@ -3132,32 +3132,52 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
     }
   }
 
+  static bool isNodeHidden(const ExplodedNode *N) {
+    return N->isTrivial();
+  }
+
   static std::string getNodeLabel(const ExplodedNode *N, void*){
     std::string sbuf;
     llvm::raw_string_ostream Out(sbuf);
 
-    // Program Location.
-    ProgramPoint Loc = N->getLocation();
+    // Find the first node which program point and tag has to be included in
+    // the output.
+    const ExplodedNode *FirstHiddenNode = N;
+    while (FirstHiddenNode->pred_size() == 1 &&
+           isNodeHidden(*FirstHiddenNode->pred_begin())) {
+      FirstHiddenNode = *FirstHiddenNode->pred_begin();
+    }
 
-    dumpProgramPoint(Loc, Out);
+    ProgramStateRef State = N->getState();
+    const auto &PP = State->getStateManager().getContext().getPrintingPolicy();
 
-    ProgramStateRef state = N->getState();
+    // Dump program point for all the previously skipped nodes.
+    const ExplodedNode *OtherNode = FirstHiddenNode;
+    while (true) {
+      dumpProgramPoint(OtherNode->getLocation(), PP, Out);
+
+      if (const ProgramPointTag *Tag = OtherNode->getLocation().getTag())
+        Out << "\\lTag:" << Tag->getTagDescription();
+
+      if (OtherNode == N)
+        break;
+
+      OtherNode = *OtherNode->succ_begin();
+
+      Out << "\\l--------\\l";
+    }
+
+    Out << "\\l\\|";
+
     ExplodedGraph &Graph =
-        static_cast<ExprEngine *>(state->getStateManager().getOwningEngine())
+        static_cast<ExprEngine *>(State->getStateManager().getOwningEngine())
             ->getGraph();
 
-    Out << "\\|StateID: " << state->getID() << " (" << (const void *)state.get()
+    Out << "StateID: " << State->getID() << " (" << (const void *)State.get()
         << ")"
         << " NodeID: " << N->getID(&Graph) << " (" << (const void *)N << ")\\|";
 
-    state->printDOT(Out, N->getLocationContext());
-
-    Out << "\\l";
-
-    if (const ProgramPointTag *tag = Loc.getTag()) {
-      Out << "\\|Tag: " << tag->getTagDescription();
-      Out << "\\l";
-    }
+    State->printDOT(Out, N->getLocationContext());
     return Out.str();
   }
 };

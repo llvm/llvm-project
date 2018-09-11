@@ -290,6 +290,11 @@ int64_t ExplodedNode::getID(ExplodedGraph *G) const {
   return *Out / alignof(ExplodedNode);
 }
 
+bool ExplodedNode::isTrivial() const {
+  return pred_size() == 1 && succ_size() == 1 &&
+         (*pred_begin())->getState()->getID() == getState()->getID();
+}
+
 ExplodedNode *ExplodedGraph::getNode(const ProgramPoint &L,
                                      ProgramStateRef State,
                                      bool IsSink,

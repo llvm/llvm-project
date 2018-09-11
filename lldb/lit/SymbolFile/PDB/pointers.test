@@ -10,11 +10,11 @@ RUN: lldb-test symbols %T/PointerTypeTest.cpp.exe | FileCheck --check-prefix=F %
 CHECK: Module [[MOD:.*]]
 CHECK: {{^[0-9A-F]+}}:   CompileUnit{{[{]0x[0-9a-f]+[}]}}, language = "c++", file = '{{.*}}\PointerTypeTest.cpp'
 
-MAIN-ST-F:  name = "main::ST::f"
+MAIN-ST-F:  name = "f"
 MAIN-ST-F-SAME: decl = PointerTypeTest.cpp:8
 MAIN-ST-F-SAME: compiler_type = {{.*}} int (int)
 
-MAIN-ST:  name = "main::ST", size = 4, decl = PointerTypeTest.cpp:6, compiler_type = {{.*}} struct main::ST {
+MAIN-ST:  name = "ST", size = 4, decl = PointerTypeTest.cpp:6, compiler_type = {{.*}} struct ST {
 MAIN-ST-NEXT: int a;
 MAIN-ST-NEXT: int {{.*}}f(int);
 MAIN-ST-NEXT:}
@@ -26,13 +26,13 @@ MAIN-SAME:    (int (*)[2][4]), scope = local
 MAIN:     Variable{{.*}}, name = "p_int"
 MAIN-SAME:    (int *), scope = local
 MAIN:     Variable{{.*}}, name = "p_member_field"
-MAIN-SAME:    (int main::ST::*), scope = local
+MAIN-SAME:    (int ST::*), scope = local
 MAIN:     Variable{{.*}}, name = "p_member_method"
-MAIN-SAME:    (int (main::ST::*)(int)), scope = local
+MAIN-SAME:    (int (ST::*)(int)), scope = local
 
 F:   Function{[[FID2:.*]]}, demangled = {{.*}}f(int)
 F-NEXT:  Block{[[FID2]]}
 F:     Variable{{.*}}, name = "this"
-F-SAME:    (main::ST *), scope = parameter, location = {{.*}}, artificial
+F-SAME:    (ST *), scope = parameter, location = {{.*}}, artificial
 F:     Variable{{.*}}, name = "x"
 F-SAME:    (int), scope = parameter, decl = PointerTypeTest.cpp:8

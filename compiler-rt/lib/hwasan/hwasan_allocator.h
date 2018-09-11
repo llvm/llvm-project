@@ -34,7 +34,7 @@ struct Metadata {
 };
 
 struct HwasanMapUnmapCallback {
-  void OnMap(uptr p, uptr size) const {}
+  void OnMap(uptr p, uptr size) const { UpdateMemoryUsage(); }
   void OnUnmap(uptr p, uptr size) const {
     // We are about to unmap a chunk of user memory.
     // It can return as user-requested mmap() or another thread stack.

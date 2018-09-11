@@ -3208,6 +3208,10 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (!processCallArgs(CLI, OutVTs, NumBytes))
     return false;
 
+  const AArch64RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
+  if (RegInfo->isAnyArgRegReserved(*MF))
+    RegInfo->emitReservedArgRegCallError(*MF);
+
   // Issue the call.
   MachineInstrBuilder MIB;
   if (Subtarget->useSmallAddressing()) {

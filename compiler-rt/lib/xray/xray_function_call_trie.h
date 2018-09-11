@@ -15,7 +15,7 @@
 #ifndef XRAY_FUNCTION_CALL_TRIE_H
 #define XRAY_FUNCTION_CALL_TRIE_H
 
-#include "sanitizer_common/sanitizer_allocator_internal.h"
+#include "xray_defs.h"
 #include "xray_profiling_flags.h"
 #include "xray_segmented_array.h"
 #include <memory> // For placement new.
@@ -120,9 +120,11 @@ public:
     // We add a constructor here to allow us to inplace-construct through
     // Array<...>'s AppendEmplace.
     Node(Node *P, NodeIdPairAllocatorType &A, int64_t CC, int64_t CLT,
-         int32_t F)
-        : Parent(P), Callees(A), CallCount(CC), CumulativeLocalTime(CLT),
-          FId(F) {}
+         int32_t F) XRAY_NEVER_INSTRUMENT : Parent(P),
+                                            Callees(A),
+                                            CallCount(CC),
+                                            CumulativeLocalTime(CLT),
+                                            FId(F) {}
 
     // TODO: Include the compact histogram.
   };
@@ -134,7 +136,8 @@ private:
 
     // We add a constructor here to allow us to inplace-construct through
     // Array<...>'s AppendEmplace.
-    ShadowStackEntry(uint64_t T, Node *N) : EntryTSC{T}, NodePtr{N} {}
+    ShadowStackEntry(uint64_t T, Node *N) XRAY_NEVER_INSTRUMENT : EntryTSC{T},
+                                                                  NodePtr{N} {}
   };
 
   using NodeArray = Array<Node>;
@@ -158,8 +161,9 @@ public:
     Allocators(const Allocators &) = delete;
     Allocators &operator=(const Allocators &) = delete;
 
-    Allocators(Allocators &&O)
-        : NodeAllocator(O.NodeAllocator), RootAllocator(O.RootAllocator),
+    Allocators(Allocators &&O) XRAY_NEVER_INSTRUMENT
+        : NodeAllocator(O.NodeAllocator),
+          RootAllocator(O.RootAllocator),
           ShadowStackAllocator(O.ShadowStackAllocator),
           NodeIdPairAllocator(O.NodeIdPairAllocator) {
       O.NodeAllocator = nullptr;
@@ -168,7 +172,7 @@ public:
       O.NodeIdPairAllocator = nullptr;
     }
 
-    Allocators &operator=(Allocators &&O) {
+    Allocators &operator=(Allocators &&O) XRAY_NEVER_INSTRUMENT {
       {
         auto Tmp = O.NodeAllocator;
         O.NodeAllocator = this->NodeAllocator;
@@ -192,58 +196,54 @@ public:
       return *this;
     }
 
-    ~Allocators() {
+    ~Allocators() XRAY_NEVER_INSTRUMENT {
       // Note that we cannot use delete on these pointers, as they need to be
       // returned to the sanitizer_common library's internal memory tracking
       // system.
       if (NodeAllocator != nullptr) {
         NodeAllocator->~NodeAllocatorType();
-        InternalFree(NodeAllocator);
+        deallocate(NodeAllocator);
         NodeAllocator = nullptr;
       }
       if (RootAllocator != nullptr) {
         RootAllocator->~RootAllocatorType();
-        InternalFree(RootAllocator);
+        deallocate(RootAllocator);
         RootAllocator = nullptr;
       }
       if (ShadowStackAllocator != nullptr) {
         ShadowStackAllocator->~ShadowStackAllocatorType();
-        InternalFree(ShadowStackAllocator);
+        deallocate(ShadowStackAllocator);
         ShadowStackAllocator = nullptr;
       }
       if (NodeIdPairAllocator != nullptr) {
         NodeIdPairAllocator->~NodeIdPairAllocatorType();
-        InternalFree(NodeIdPairAllocator);
+        deallocate(NodeIdPairAllocator);
         NodeIdPairAllocator = nullptr;
       }
     }
   };
 
   // TODO: Support configuration of options through the arguments.
-  static Allocators InitAllocators() {
+  static Allocators InitAllocators() XRAY_NEVER_INSTRUMENT {
     return InitAllocatorsCustom(profilingFlags()->per_thread_allocator_max);
   }
 
-  static Allocators InitAllocatorsCustom(uptr Max) {
+  static Allocators InitAllocatorsCustom(uptr Max) XRAY_NEVER_INSTRUMENT {
     Allocators A;
-    auto NodeAllocator = reinterpret_cast<Allocators::NodeAllocatorType *>(
-        InternalAlloc(sizeof(Allocators::NodeAllocatorType)));
+    auto NodeAllocator = allocate<Allocators::NodeAllocatorType>();
     new (NodeAllocator) Allocators::NodeAllocatorType(Max);
     A.NodeAllocator = NodeAllocator;
 
-    auto RootAllocator = reinterpret_cast<Allocators::RootAllocatorType *>(
-        InternalAlloc(sizeof(Allocators::RootAllocatorType)));
+    auto RootAllocator = allocate<Allocators::RootAllocatorType>();
     new (RootAllocator) Allocators::RootAllocatorType(Max);
     A.RootAllocator = RootAllocator;
 
     auto ShadowStackAllocator =
-        reinterpret_cast<Allocators::ShadowStackAllocatorType *>(
-            InternalAlloc(sizeof(Allocators::ShadowStackAllocatorType)));
+        allocate<Allocators::ShadowStackAllocatorType>();
     new (ShadowStackAllocator) Allocators::ShadowStackAllocatorType(Max);
     A.ShadowStackAllocator = ShadowStackAllocator;
 
-    auto NodeIdPairAllocator = reinterpret_cast<NodeIdPairAllocatorType *>(
-        InternalAlloc(sizeof(NodeIdPairAllocatorType)));
+    auto NodeIdPairAllocator = allocate<NodeIdPairAllocatorType>();
     new (NodeIdPairAllocator) NodeIdPairAllocatorType(Max);
     A.NodeIdPairAllocator = NodeIdPairAllocator;
     return A;
@@ -256,12 +256,13 @@ private:
   NodeIdPairAllocatorType *NodeIdPairAllocator = nullptr;
 
 public:
-  explicit FunctionCallTrie(const Allocators &A)
-      : Nodes(*A.NodeAllocator), Roots(*A.RootAllocator),
+  explicit FunctionCallTrie(const Allocators &A) XRAY_NEVER_INSTRUMENT
+      : Nodes(*A.NodeAllocator),
+        Roots(*A.RootAllocator),
         ShadowStack(*A.ShadowStackAllocator),
         NodeIdPairAllocator(A.NodeIdPairAllocator) {}
 
-  void enterFunction(const int32_t FId, uint64_t TSC) {
+  void enterFunction(const int32_t FId, uint64_t TSC) XRAY_NEVER_INSTRUMENT {
     DCHECK_NE(FId, 0);
     // This function primarily deals with ensuring that the ShadowStack is
     // consistent and ready for when an exit event is encountered.
@@ -301,7 +302,7 @@ public:
     return;
   }
 
-  void exitFunction(int32_t FId, uint64_t TSC) {
+  void exitFunction(int32_t FId, uint64_t TSC) XRAY_NEVER_INSTRUMENT {
     // When we exit a function, we look up the ShadowStack to see whether we've
     // entered this function before. We do as little processing here as we can,
     // since most of the hard work would have already been done at function
@@ -323,7 +324,7 @@ public:
     }
   }
 
-  const RootArray &getRoots() const { return Roots; }
+  const RootArray &getRoots() const XRAY_NEVER_INSTRUMENT { return Roots; }
 
   // The deepCopyInto operation will update the provided FunctionCallTrie by
   // re-creating the contents of this particular FunctionCallTrie in the other
@@ -338,7 +339,7 @@ public:
   // synchronisation of both "this" and |O|.
   //
   // This function must *not* be called with a non-empty FunctionCallTrie |O|.
-  void deepCopyInto(FunctionCallTrie &O) const {
+  void deepCopyInto(FunctionCallTrie &O) const XRAY_NEVER_INSTRUMENT {
     DCHECK(O.getRoots().empty());
 
     // We then push the root into a stack, to use as the parent marker for new
@@ -394,7 +395,7 @@ public:
   //
   // This function is *not* thread-safe, and may require external
   // synchronisation of both "this" and |O|.
-  void mergeInto(FunctionCallTrie &O) const {
+  void mergeInto(FunctionCallTrie &O) const XRAY_NEVER_INSTRUMENT {
     struct NodeAndTarget {
       FunctionCallTrie::Node *OrigNode;
       FunctionCallTrie::Node *TargetNode;

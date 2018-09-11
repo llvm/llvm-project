@@ -417,11 +417,11 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
 }
 
 static bool isCompressed(const SectionBase &Section) {
-  ArrayRef<uint8_t> GnuPrefix = {'Z', 'L', 'I', 'B'};
+  const char *Magic = "ZLIB";
   return StringRef(Section.Name).startswith(".zdebug") ||
-         (Section.OriginalData.size() > strlen("ZLIB") &&
-          std::equal(GnuPrefix.begin(), GnuPrefix.end(),
-                     Section.OriginalData.data())) ||
+         (Section.OriginalData.size() > strlen(Magic) &&
+          !strncmp(reinterpret_cast<const char *>(Section.OriginalData.data()),
+                   Magic, strlen(Magic))) ||
          (Section.Flags & ELF::SHF_COMPRESSED);
 }
 
@@ -459,6 +459,7 @@ static void compressSections(const CopyConfig &Config, Object &Obj,
     return isCompressable(Sec) || RemovePred(Sec);
   };
 }
+
 // This function handles the high level operations of GNU objcopy including
 // handling command line options. It's important to outline certain properties
 // we expect to hold of the command line operations. Any operation that "keeps"

@@ -101,6 +101,9 @@ namespace opts {
 cl::SubCommand DumpSubcommand("dump", "Dump MSF and CodeView debug info");
 cl::SubCommand BytesSubcommand("bytes", "Dump raw bytes from the PDB file");
 
+cl::SubCommand DiaDumpSubcommand("diadump",
+                                 "Dump debug information using a DIA-like API");
+
 cl::SubCommand
     PrettySubcommand("pretty",
                      "Dump semantic information about types and symbols");
@@ -153,6 +156,23 @@ cl::ValuesClass ChunkValues = cl::values(
     clEnumValN(ModuleSubsection::Unknown, "unknown",
                "Any subsection not covered by another option"),
     clEnumValN(ModuleSubsection::All, "all", "All known subsections"));
+
+namespace diadump {
+cl::list<std::string> InputFilenames(cl::Positional,
+                                     cl::desc("<input PDB files>"),
+                                     cl::OneOrMore, cl::sub(DiaDumpSubcommand));
+
+cl::opt<bool> Native("native", cl::desc("Use native PDB reader instead of DIA"),
+                     cl::sub(DiaDumpSubcommand));
+
+static cl::opt<bool> Enums("enums", cl::desc("Dump enum types"),
+                           cl::sub(DiaDumpSubcommand));
+static cl::opt<bool> Pointers("pointers", cl::desc("Dump enum types"),
+                              cl::sub(DiaDumpSubcommand));
+static cl::opt<bool> Compilands("compilands",
+                                cl::desc("Dump compiland information"),
+                                cl::sub(DiaDumpSubcommand));
+} // namespace diadump
 
 namespace pretty {
 cl::list<std::string> InputFilenames(cl::Positional,
@@ -923,6 +943,34 @@ static void dumpInjectedSources(LinePrinter &Printer, IPDBSession &Session) {
   }
 }
 
+static void dumpDia(StringRef Path) {
+  std::unique_ptr<IPDBSession> Session;
+
+  const auto ReaderType =
+      opts::diadump::Native ? PDB_ReaderType::Native : PDB_ReaderType::DIA;
+  ExitOnErr(loadDataForPDB(ReaderType, Path, Session));
+
+  auto GlobalScope = Session->getGlobalScope();
+
+  std::vector<PDB_SymType> SymTypes;
+
+  if (opts::diadump::Compilands)
+    SymTypes.push_back(PDB_SymType::Compiland);
+  if (opts::diadump::Enums)
+    SymTypes.push_back(PDB_SymType::Enum);
+  if (opts::diadump::Pointers)
+    SymTypes.push_back(PDB_SymType::PointerType);
+
+  for (PDB_SymType ST : SymTypes) {
+    auto Children = GlobalScope->findAllChildren(ST);
+    while (auto Child = Children->getNext()) {
+      outs() << "{";
+      Child->defaultDump(outs(), 2);
+      outs() << "\n}\n";
+    }
+  }
+}
+
 static void dumpPretty(StringRef Path) {
   std::unique_ptr<IPDBSession> Session;
 
@@ -1385,6 +1433,8 @@ int main(int Argc, const char **Argv) {
     yamlToPdb(opts::yaml2pdb::InputFilename);
   } else if (opts::AnalyzeSubcommand) {
     dumpAnalysis(opts::analyze::InputFilename.front());
+  } else if (opts::DiaDumpSubcommand) {
+    llvm::for_each(opts::diadump::InputFilenames, dumpDia);
   } else if (opts::PrettySubcommand) {
     if (opts::pretty::Lines)
       opts::pretty::Compilands = true;

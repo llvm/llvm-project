@@ -2225,19 +2225,20 @@ static bool hasNoCarryFlagUses(SDNode *N) {
 /// the {load; op; store} to modify transformation.
 static bool isFusableLoadOpStorePattern(StoreSDNode *StoreNode,
                                         SDValue StoredVal, SelectionDAG *CurDAG,
+                                        unsigned LoadOpNo,
                                         LoadSDNode *&LoadNode,
                                         SDValue &InputChain) {
-  // is the stored value result 0 of the load?
+  // Is the stored value result 0 of the operation?
   if (StoredVal.getResNo() != 0) return false;
 
-  // are there other uses of the loaded value than the inc or dec?
+  // Are there other uses of the operation other than the store?
   if (!StoredVal.getNode()->hasNUsesOfValue(1, 0)) return false;
 
-  // is the store non-extending and non-indexed?
+  // Is the store non-extending and non-indexed?
   if (!ISD::isNormalStore(StoreNode) || StoreNode->isNonTemporal())
     return false;
 
-  SDValue Load = StoredVal->getOperand(0);
+  SDValue Load = StoredVal->getOperand(LoadOpNo);
   // Is the stored value a non-extending and non-indexed load?
   if (!ISD::isNormalLoad(Load.getNode())) return false;
 
@@ -2366,26 +2367,39 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
   if (MemVT != MVT::i64 && MemVT != MVT::i32 && MemVT != MVT::i16 &&
       MemVT != MVT::i8)
     return false;
+
+  bool IsCommutable = false;
   switch (Opc) {
   default:
     return false;
   case X86ISD::INC:
   case X86ISD::DEC:
-  case X86ISD::ADD:
-  case X86ISD::ADC:
   case X86ISD::SUB:
   case X86ISD::SBB:
+    break;
+  case X86ISD::ADD:
+  case X86ISD::ADC:
   case X86ISD::AND:
   case X86ISD::OR:
   case X86ISD::XOR:
+    IsCommutable = true;
     break;
   }
 
+  unsigned LoadOpNo = 0;
   LoadSDNode *LoadNode = nullptr;
   SDValue InputChain;
-  if (!isFusableLoadOpStorePattern(StoreNode, StoredVal, CurDAG, LoadNode,
-                                   InputChain))
-    return false;
+  if (!isFusableLoadOpStorePattern(StoreNode, StoredVal, CurDAG, LoadOpNo,
+                                   LoadNode, InputChain)) {
+    if (!IsCommutable)
+      return false;
+
+    // This operation is commutable, try the other operand.
+    LoadOpNo = 1;
+    if (!isFusableLoadOpStorePattern(StoreNode, StoredVal, CurDAG, LoadOpNo,
+                                     LoadNode, InputChain))
+      return false;
+  }
 
   SDValue Base, Scale, Index, Disp, Segment;
   if (!selectAddr(LoadNode, LoadNode->getBasePtr(), Base, Scale, Index, Disp,
@@ -2503,7 +2517,7 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
     };
 
     unsigned NewOpc = SelectRegOpcode(Opc);
-    SDValue Operand = StoredVal->getOperand(1);
+    SDValue Operand = StoredVal->getOperand(1-LoadOpNo);
 
     // See if the operand is a constant that we can fold into an immediate
     // operand.

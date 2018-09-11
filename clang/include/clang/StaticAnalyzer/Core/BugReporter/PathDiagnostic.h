@@ -759,7 +759,7 @@ public:
 };
 
 /// File IDs mapped to sets of line numbers.
-using FilesToLineNumsMap = std::map<unsigned, std::set<unsigned>>;
+using FilesToLineNumsMap = std::map<FileID, std::set<unsigned>>;
 
 /// PathDiagnostic - PathDiagnostic objects represent a single path-sensitive
 ///  diagnostic.  It represents an ordered-collection of PathDiagnosticPieces,
@@ -858,13 +858,13 @@ public:
   meta_iterator meta_end() const { return OtherDesc.end(); }
   void addMeta(StringRef s) { OtherDesc.push_back(s); }
 
-  using filesmap_iterator = FilesToLineNumsMap::const_iterator;
-
-  filesmap_iterator executedLines_begin() const {
-    return ExecutedLines->begin();
+  const FilesToLineNumsMap &getExecutedLines() const {
+    return *ExecutedLines;
   }
 
-  filesmap_iterator executedLines_end() const { return ExecutedLines->end(); }
+  FilesToLineNumsMap &getExecutedLines() {
+    return *ExecutedLines;
+  }
 
   PathDiagnosticLocation getLocation() const {
     return Loc;
