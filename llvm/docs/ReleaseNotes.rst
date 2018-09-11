@@ -116,6 +116,8 @@ Non-comprehensive list of changes in this release
 * The :program:`opt` tool now supports the ``-load-pass-plugin`` option for
   loading pass plugins for the new PassManager.
 
+* Support for profiling JITed code with perf.
+
 
 Changes to the LLVM IR
 ----------------------
@@ -276,6 +278,9 @@ Changes to the C API
 * Removed ``LLVMAddBBVectorizePass``. The implementation was removed and the C
   interface was made a deprecated no-op in LLVM 5. Use
   ``LLVMAddSLPVectorizePass`` instead to get the supported SLP vectorizer.
+
+* Expanded the OrcJIT APIs so they can register event listeners like debuggers
+  and profilers.
 
 Changes to the DAG infrastructure
 ---------------------------------
