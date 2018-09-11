@@ -2,8 +2,6 @@
 // RUN: %clang -arch x86_64 -mmacosx-version-min=10.7 -c %s -o %t.o -index-store-path %t.idx -fmodules -fmodules-cache-path=%t.mcp -Xclang -fdisable-module-hash -I %S/Inputs/module
 // RUN: c-index-test core -print-unit %t.idx | FileCheck %s
 
-// XFAIL: linux
-
 @import ModDep;
 @import ModSystem;
 
