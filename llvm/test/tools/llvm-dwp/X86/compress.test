@@ -1,7 +1,6 @@
+REQUIRES: zlib
 RUN: llvm-dwp %p/../Inputs/compress/a.dwo -o %t
 RUN: llvm-dwarfdump -v %t | FileCheck %s
-
-REQUIRES: zlib
 
 Simple test built from this input which produces DWARF long enough to be compressed in the .[z]debug_info section:
 

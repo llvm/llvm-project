@@ -15,6 +15,7 @@
 #include <limits.h>
 #include <stdlib.h>
 
+#define __KMP_IMP
 #include "omp.h" // omp_* declarations, must be included before "kmp.h"
 #include "kmp.h" // KMP_DEFAULT_STKSIZE
 #include "kmp_stub.h"
@@ -337,5 +338,18 @@ double __kmps_get_wtick(void) {
 #endif
   return wtick;
 } // __kmps_get_wtick
+
+#if OMP_50_ENABLED
+/* OpenMP 5.0 Memory Management */
+const omp_allocator_t *OMP_NULL_ALLOCATOR = NULL;
+const omp_allocator_t *omp_default_mem_alloc = (const omp_allocator_t *)1;
+const omp_allocator_t *omp_large_cap_mem_alloc = (const omp_allocator_t *)2;
+const omp_allocator_t *omp_const_mem_alloc = (const omp_allocator_t *)3;
+const omp_allocator_t *omp_high_bw_mem_alloc = (const omp_allocator_t *)4;
+const omp_allocator_t *omp_low_lat_mem_alloc = (const omp_allocator_t *)5;
+const omp_allocator_t *omp_cgroup_mem_alloc = (const omp_allocator_t *)6;
+const omp_allocator_t *omp_pteam_mem_alloc = (const omp_allocator_t *)7;
+const omp_allocator_t *omp_thread_mem_alloc = (const omp_allocator_t *)8;
+#endif /* OMP_50_ENABLED */
 
 // end of file //

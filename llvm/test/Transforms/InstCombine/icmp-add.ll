@@ -73,6 +73,23 @@ define i1 @test4(i32 %a) {
   ret i1 %c
 }
 
+define { i32, i1 } @test4multiuse(i32 %a) {
+; CHECK-LABEL: @test4multiuse(
+; CHECK: [[B:%.*]] = add i32 %a, -2147483644
+; CHECK: [[C:%.*]] = icmp slt i32 %b, -4
+; CHECK: [[TMP:%.*]] = insertvalue { i32, i1 } undef, i32 [[B]], 0
+; CHECK: [[RES:%.*]] = insertvalue { i32, i1 } [[TMP]], i1 [[C]], 1
+; CHECK: ret { i32, i1 } [[RES]]
+
+  %b = add i32 %a, -2147483644
+  %c = icmp slt i32 %b, -4
+
+  %tmp = insertvalue { i32, i1 } undef, i32 %b, 0
+  %res = insertvalue { i32, i1 } %tmp, i1 %c, 1
+
+  ret { i32, i1 } %res
+}
+
 define <2 x i1> @test4vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test4vec(
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> %a, <i32 -4, i32 -4>

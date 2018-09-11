@@ -495,12 +495,7 @@ option(LLVM_INCLUDE_GO_TESTS "Include the Go bindings tests in test build target
 
 option(LLVM_BUILD_BENCHMARKS "Add LLVM benchmark targets to the list of default
 targets. If OFF, benchmarks still could be built using Benchmarks target." OFF)
-option(LLVM_INCLUDE_BENCHMARKS "Generate benchmark targets. If OFF, benchmarks
-can't be built. This is set to OFF for Windows." ON)
-
-if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
-  set(LLVM_INCLUDE_BENCHMARKS OFF)
-endif()
+option(LLVM_INCLUDE_BENCHMARKS "Generate benchmark targets. If OFF, benchmarks can't be built." ON)
 
 option (LLVM_BUILD_DOCS "Build the llvm documentation." OFF)
 option (LLVM_INCLUDE_DOCS "Generate build targets for llvm documentation." ON)

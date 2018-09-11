@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Serialization.h"
-#include "../RIFF.h"
 #include "Index.h"
+#include "RIFF.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"

@@ -61,30 +61,30 @@ UNNAMED-STRUCT-SAME: struct UnnamedStruct {
 UNNAMED-STRUCT:   int a;
 UNNAMED-STRUCT:}
 
-BASE:  name = "MemberTest::Base", size = 4,  decl = ClassLayoutTest.cpp:59
-BASE-SAME: class MemberTest::Base {
+BASE:  name = "Base", size = 4,  decl = ClassLayoutTest.cpp:59
+BASE-SAME: class Base {
 BASE:    int a;
-BASE:    void {{.*}}Base();
-BASE:    {{.*}}~Base();
-BASE:    int {{.*}}Get();
+BASE:    Base();
+BASE:    ~Base();
+BASE:    int Get();
 BASE:}
 
-FRIEND:  name = "MemberTest::Friend", size = 1, decl = ClassLayoutTest.cpp:70
-FRIEND-SAME: class MemberTest::Friend {
+FRIEND:  name = "Friend", size = 1, decl = ClassLayoutTest.cpp:70
+FRIEND-SAME: class Friend {
 FRIEND:    int f();
 FRIEND: }
 
-CLASS:  name = "MemberTest::Class", size = 88, decl = ClassLayoutTest.cpp:74
-CLASS-SAME: class MemberTest::Class : public MemberTest::Base {
+CLASS:  name = "Class", size = 88, decl = ClassLayoutTest.cpp:74
+CLASS-SAME: class Class : public MemberTest::Base {
 CLASS:    static int m_static;
 CLASS:    int m_public;
 CLASS:    Struct m_struct;
 CLASS:    Union m_union;
 CLASS:    int m_private;
 CLASS:    int m_protected;
-CLASS:    void Class();
-CLASS:    void Class(int);
-CLASS:    ~MemberTest::Class();
+CLASS:    Class();
+CLASS:    Class(int);
+CLASS:    ~Class();
 CLASS:    static int {{.*}}StaticMemberFunc(int, ...);
 CLASS:    int Get();
 CLASS:    int f(MemberTest::Friend);

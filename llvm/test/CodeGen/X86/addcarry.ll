@@ -30,9 +30,8 @@ entry:
 define void @add128_rmw2(i128 %a, i128* %b) nounwind {
 ; CHECK-LABEL: add128_rmw2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addq (%rdx), %rdi
+; CHECK-NEXT:    addq %rdi, (%rdx)
 ; CHECK-NEXT:    adcq %rsi, 8(%rdx)
-; CHECK-NEXT:    movq %rdi, (%rdx)
 ; CHECK-NEXT:    retq
 entry:
   %0 = load i128, i128* %b
@@ -57,6 +56,36 @@ define i256 @add256(i256 %a, i256 %b) nounwind {
 entry:
   %0 = add i256 %a, %b
   ret i256 %0
+}
+
+define void @add256_rmw(i256* %a, i256 %b) nounwind {
+; CHECK-LABEL: add256_rmw:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addq %rsi, (%rdi)
+; CHECK-NEXT:    adcq %rdx, 8(%rdi)
+; CHECK-NEXT:    adcq %rcx, 16(%rdi)
+; CHECK-NEXT:    adcq %r8, 24(%rdi)
+; CHECK-NEXT:    retq
+entry:
+  %0 = load i256, i256* %a
+  %1 = add i256 %0, %b
+  store i256 %1, i256* %a
+  ret void
+}
+
+define void @add256_rmw2(i256 %a, i256* %b) nounwind {
+; CHECK-LABEL: add256_rmw2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addq %rdi, (%r8)
+; CHECK-NEXT:    adcq %rsi, 8(%r8)
+; CHECK-NEXT:    adcq %rdx, 16(%r8)
+; CHECK-NEXT:    adcq %rcx, 24(%r8)
+; CHECK-NEXT:    retq
+entry:
+  %0 = load i256, i256* %b
+  %1 = add i256 %a, %0
+  store i256 %1, i256* %b
+  ret void
 }
 
 define void @a(i64* nocapture %s, i64* nocapture %t, i64 %a, i64 %b, i64 %c) nounwind {

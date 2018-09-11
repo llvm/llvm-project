@@ -47,18 +47,18 @@ Optional<uint64_t> InstrumentationMap::getFunctionAddr(int32_t FuncId) const {
 }
 
 static Error
-loadELF64(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
+loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
           InstrumentationMap::SledContainer &Sleds,
           InstrumentationMap::FunctionAddressMap &FunctionAddresses,
           InstrumentationMap::FunctionAddressReverseMap &FunctionIds) {
   InstrumentationMap Map;
 
   // Find the section named "xray_instr_map".
-  if (!ObjFile.getBinary()->isELF() ||
+  if ((!ObjFile.getBinary()->isELF() && !ObjFile.getBinary()->isMachO()) ||
       !(ObjFile.getBinary()->getArch() == Triple::x86_64 ||
         ObjFile.getBinary()->getArch() == Triple::ppc64le))
     return make_error<StringError>(
-        "File format not supported (only does ELF little endian 64-bit).",
+        "File format not supported (only does ELF and Mach-O little endian 64-bit).",
         std::make_error_code(std::errc::not_supported));
 
   StringRef Contents = "";
@@ -191,7 +191,7 @@ llvm::xray::loadInstrumentationMap(StringRef Filename) {
     if (auto E = loadYAML(Fd, FileSize, Filename, Map.Sleds,
                           Map.FunctionAddresses, Map.FunctionIds))
       return std::move(E);
-  } else if (auto E = loadELF64(Filename, *ObjectFileOrError, Map.Sleds,
+  } else if (auto E = loadObj(Filename, *ObjectFileOrError, Map.Sleds,
                                 Map.FunctionAddresses, Map.FunctionIds)) {
     return std::move(E);
   }

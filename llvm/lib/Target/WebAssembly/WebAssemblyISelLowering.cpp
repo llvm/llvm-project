@@ -126,6 +126,17 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   // There is no i64x2.mul instruction
   setOperationAction(ISD::MUL, MVT::v2i64, Expand);
 
+  // We have custom shuffle lowering to expose the shuffle mask
+  if (Subtarget->hasSIMD128()) {
+    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32}) {
+      setOperationAction(ISD::VECTOR_SHUFFLE, T, Custom);
+    }
+    if (EnableUnimplementedWasmSIMDInstrs) {
+      setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2i64, Custom);
+      setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2f64, Custom);
+    }
+  }
+
   // As a special case, these operators use the type to mean the type to
   // sign-extend from.
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
@@ -804,6 +815,8 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return LowerCopyToReg(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN:
     return LowerINTRINSIC_WO_CHAIN(Op, DAG);
+  case ISD::VECTOR_SHUFFLE:
+    return LowerVECTOR_SHUFFLE(Op, DAG);
   }
 }
 
@@ -951,6 +964,32 @@ WebAssemblyTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     // TODO For now, just return 0 not to crash
     return DAG.getConstant(0, DL, Op.getValueType());
   }
+}
+
+SDValue
+WebAssemblyTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(Op.getNode())->getMask();
+  MVT VecType = Op.getOperand(0).getSimpleValueType();
+  assert(VecType.is128BitVector() && "Unexpected shuffle vector type");
+  size_t LaneBytes = VecType.getVectorElementType().getSizeInBits() / 8;
+
+  // Space for two vector args and sixteen mask indices
+  SDValue Ops[18];
+  size_t OpIdx = 0;
+  Ops[OpIdx++] = Op.getOperand(0);
+  Ops[OpIdx++] = Op.getOperand(1);
+
+  // Expand mask indices to byte indices and materialize them as operands
+  for (size_t I = 0, Lanes = Mask.size(); I < Lanes; ++I) {
+    for (size_t J = 0; J < LaneBytes; ++J) {
+      Ops[OpIdx++] =
+          DAG.getConstant((uint64_t)Mask[I] * LaneBytes + J, DL, MVT::i32);
+    }
+  }
+
+  return DAG.getNode(WebAssemblyISD::SHUFFLE, DL, MVT::v16i8, Ops);
 }
 
 //===----------------------------------------------------------------------===//

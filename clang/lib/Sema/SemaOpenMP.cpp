@@ -12960,19 +12960,14 @@ bool Sema::ActOnStartOpenMPDeclareTargetDirective(SourceLocation Loc) {
     Diag(Loc, diag::err_omp_region_not_file_context);
     return false;
   }
-  if (IsInOpenMPDeclareTargetContext) {
-    Diag(Loc, diag::err_omp_enclosed_declare_target);
-    return false;
-  }
-
-  IsInOpenMPDeclareTargetContext = true;
+  ++DeclareTargetNestingLevel;
   return true;
 }
 
 void Sema::ActOnFinishOpenMPDeclareTargetDirective() {
-  assert(IsInOpenMPDeclareTargetContext &&
+  assert(DeclareTargetNestingLevel > 0 &&
          "Unexpected ActOnFinishOpenMPDeclareTargetDirective");
-  IsInOpenMPDeclareTargetContext = false;
+  --DeclareTargetNestingLevel;
 }
 
 void Sema::ActOnOpenMPDeclareTargetName(Scope *CurScope,

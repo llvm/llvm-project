@@ -2212,6 +2212,9 @@ ClangASTContext::CreateEnumerationType(const char *name, DeclContext *decl_ctx,
       false);    // IsFixed
 
   if (enum_decl) {
+    if (decl_ctx)
+      decl_ctx->addDecl(enum_decl);
+
     // TODO: check if we should be setting the promotion type too?
     enum_decl->setIntegerType(ClangUtil::GetQualType(integer_clang_type));
 
@@ -4738,6 +4741,8 @@ CompilerType ClangASTContext::CreateTypedefType(
         clang_ast->getTrivialTypeSourceInfo(qual_type));
 
     decl->setAccess(clang::AS_public); // TODO respect proper access specifier
+
+    decl_ctx->addDecl(decl);
 
     // Get a uniqued clang::QualType for the typedef decl type
     return CompilerType(clang_ast, clang_ast->getTypedefType(decl));
@@ -7746,6 +7751,15 @@ clang::TagDecl *ClangASTContext::GetAsTagDecl(const CompilerType &type) {
     return qual_type->getAsTagDecl();
 }
 
+clang::TypedefNameDecl *
+ClangASTContext::GetAsTypedefDecl(const CompilerType &type) {
+  const clang::TypedefType *typedef_type =
+      llvm::dyn_cast<clang::TypedefType>(ClangUtil::GetQualType(type));
+  if (typedef_type)
+    return typedef_type->getDecl();
+  return nullptr;
+}
+
 clang::CXXRecordDecl *
 ClangASTContext::GetAsCXXRecordDecl(lldb::opaque_compiler_type_t type) {
   return GetCanonicalQualType(type)->getAsCXXRecordDecl();
@@ -8831,7 +8845,7 @@ bool ClangASTContext::CompleteTagDeclarationDefinition(
   return false;
 }
 
-bool ClangASTContext::AddEnumerationValueToEnumerationType(
+clang::EnumConstantDecl *ClangASTContext::AddEnumerationValueToEnumerationType(
     lldb::opaque_compiler_type_t type,
     const CompilerType &enumerator_clang_type, const Declaration &decl,
     const char *name, int64_t enum_value, uint32_t enum_value_bit_size) {
@@ -8863,12 +8877,12 @@ bool ClangASTContext::AddEnumerationValueToEnumerationType(
           VerifyDecl(enumerator_decl);
 #endif
 
-          return true;
+          return enumerator_decl;
         }
       }
     }
   }
-  return false;
+  return nullptr;
 }
 
 CompilerType

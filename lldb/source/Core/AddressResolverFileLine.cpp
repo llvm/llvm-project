@@ -78,8 +78,8 @@ AddressResolverFileLine::SearchCallback(SearchFilter &filter,
   return Searcher::eCallbackReturnContinue;
 }
 
-Searcher::Depth AddressResolverFileLine::GetDepth() {
-  return Searcher::eDepthCompUnit;
+lldb::SearchDepth AddressResolverFileLine::GetDepth() {
+  return lldb::eSearchDepthCompUnit;
 }
 
 void AddressResolverFileLine::GetDescription(Stream *s) {

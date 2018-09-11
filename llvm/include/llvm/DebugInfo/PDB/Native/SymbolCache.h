@@ -32,6 +32,12 @@ class SymbolCache {
   DenseMap<codeview::TypeIndex, SymIndexId> TypeIndexToSymbolId;
   std::vector<SymIndexId> Compilands;
 
+  SymIndexId createSymbolPlaceholder() {
+    SymIndexId Id = Cache.size();
+    Cache.push_back(nullptr);
+    return Id;
+  }
+
 public:
   SymbolCache(NativeSession &Session, DbiStream *Dbi);
 

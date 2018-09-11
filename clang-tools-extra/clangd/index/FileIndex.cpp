@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FileIndex.h"
-#include "../Logger.h"
+#include "Logger.h"
 #include "SymbolCollector.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Lex/Preprocessor.h"
@@ -127,11 +127,18 @@ std::unique_ptr<SymbolIndex> FileSymbols::buildMemIndex() {
     }
   }
 
+  size_t StorageSize = RefsStorage.size() * sizeof(Ref);
+  for (const auto &Slab : SymbolSlabs)
+    StorageSize += Slab->bytes();
+  for (const auto &RefSlab : RefSlabs)
+    StorageSize += RefSlab->bytes();
+
   // Index must keep the slabs and contiguous ranges alive.
   return llvm::make_unique<MemIndex>(
       llvm::make_pointee_range(AllSymbols), std::move(AllRefs),
       std::make_tuple(std::move(SymbolSlabs), std::move(RefSlabs),
-                      std::move(RefsStorage)));
+                      std::move(RefsStorage)),
+      StorageSize);
 }
 
 void FileIndex::update(PathRef Path, ASTContext *AST,

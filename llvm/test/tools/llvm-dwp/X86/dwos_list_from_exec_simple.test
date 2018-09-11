@@ -10,8 +10,7 @@ RUN: cp %p/../Inputs/dwos_list_from_exec/d.dwo d.dwo
 RUN: cp %p/../Inputs/dwos_list_from_exec/e.dwo e.dwo
 RUN: cp %p/../Inputs/dwos_list_from_exec/main main
 RUN: cp %p/../Inputs/dwos_list_from_exec/libd.so libd.so
-RUN: llvm-dwp c.dwo e.dwo -e main -e libd.so -o pkg.dwp
-RUN: llvm-dwarfdump -v pkg.dwp | FileCheck %s
+RUN: llvm-dwp c.dwo e.dwo -e main -e libd.so -o - | llvm-dwarfdump -v - | FileCheck %s
 
 Build commands for the test binaries:
 

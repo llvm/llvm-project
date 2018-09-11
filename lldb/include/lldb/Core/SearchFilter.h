@@ -70,15 +70,6 @@ public:
     eCallbackReturnPop       // Pop one level up and continue iterating
   } CallbackReturn;
 
-  typedef enum {
-    eDepthTarget,
-    eDepthModule,
-    eDepthCompUnit,
-    eDepthFunction,
-    eDepthBlock,
-    eDepthAddress
-  } Depth;
-
   Searcher();
 
   virtual ~Searcher();
@@ -87,7 +78,7 @@ public:
                                         SymbolContext &context, Address *addr,
                                         bool complete) = 0;
 
-  virtual Depth GetDepth() = 0;
+  virtual lldb::SearchDepth GetDepth() = 0;
 
   //------------------------------------------------------------------
   /// Prints a canonical description for the searcher to the stream \a s.

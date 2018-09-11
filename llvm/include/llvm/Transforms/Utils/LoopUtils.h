@@ -158,10 +158,6 @@ public:
   /// RecurrenceKind.
   static unsigned getRecurrenceBinOp(RecurrenceKind Kind);
 
-  /// Returns a Min/Max operation corresponding to MinMaxRecurrenceKind.
-  static Value *createMinMaxOp(IRBuilder<> &Builder, MinMaxRecurrenceKind RK,
-                               Value *Left, Value *Right);
-
   /// Returns true if Phi is a reduction of type Kind and adds it to the
   /// RecurrenceDescriptor. If either \p DB is non-null or \p AC and \p DT are
   /// non-null, the minimal bit width needed to compute the reduction will be
@@ -271,18 +267,10 @@ public:
   ///  -1 - consecutive and decreasing.
   int getConsecutiveDirection() const;
 
-  /// Compute the transformed value of Index at offset StartValue using step
-  /// StepValue.
-  /// For integer induction, returns StartValue + Index * StepValue.
-  /// For pointer induction, returns StartValue[Index * StepValue].
-  /// FIXME: The newly created binary instructions should contain nsw/nuw
-  /// flags, which can be found from the original scalar operations.
-  Value *transform(IRBuilder<> &B, Value *Index, ScalarEvolution *SE,
-                   const DataLayout& DL) const;
-
   Value *getStartValue() const { return StartValue; }
   InductionKind getKind() const { return IK; }
   const SCEV *getStep() const { return Step; }
+  BinaryOperator *getInductionBinOp() const { return InductionBinOp; }
   ConstantInt *getConstIntStepValue() const;
 
   /// Returns true if \p Phi is an induction in the loop \p L. If \p Phi is an
@@ -514,6 +502,11 @@ bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         Loop *CurLoop, AliasSetTracker *CurAST,
                         bool TargetExecutesOncePerLoop,
                         OptimizationRemarkEmitter *ORE = nullptr);
+
+/// Returns a Min/Max operation corresponding to MinMaxRecurrenceKind.
+Value *createMinMaxOp(IRBuilder<> &Builder,
+                      RecurrenceDescriptor::MinMaxRecurrenceKind RK,
+                      Value *Left, Value *Right);
 
 /// Generates an ordered vector reduction using extracts to reduce the value.
 Value *

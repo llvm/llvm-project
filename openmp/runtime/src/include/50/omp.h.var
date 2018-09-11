@@ -27,8 +27,14 @@
 
 #   if defined(_WIN32)
 #       define __KAI_KMPC_CONVENTION __cdecl
+#       ifndef __KMP_IMP
+#           define __KMP_IMP __declspec(dllimport)
+#       endif
 #   else
 #       define __KAI_KMPC_CONVENTION
+#       ifndef __KMP_IMP
+#           define __KMP_IMP
+#       endif
 #   endif
 
     /* schedule kind constants */
@@ -86,17 +92,25 @@
     extern void   __KAI_KMPC_CONVENTION  omp_destroy_nest_lock (omp_nest_lock_t *);
     extern int    __KAI_KMPC_CONVENTION  omp_test_nest_lock    (omp_nest_lock_t *);
 
-    /* lock hint type for dynamic user lock */
-    typedef enum omp_lock_hint_t {
-        omp_lock_hint_none           = 0,
-        omp_lock_hint_uncontended    = 1,
-        omp_lock_hint_contended      = (1<<1 ),
-        omp_lock_hint_nonspeculative = (1<<2 ),
-        omp_lock_hint_speculative    = (1<<3 ),
+    /* OpenMP 5.0  Synchronization hints*/
+    typedef enum omp_sync_hint_t {
+        omp_sync_hint_none           = 0,
+        omp_lock_hint_none           = omp_sync_hint_none,
+        omp_sync_hint_uncontended    = 1,
+        omp_lock_hint_uncontended    = omp_sync_hint_uncontended,
+        omp_sync_hint_contended      = (1<<1),
+        omp_lock_hint_contended      = omp_sync_hint_contended,
+        omp_sync_hint_nonspeculative = (1<<2),
+        omp_lock_hint_nonspeculative = omp_sync_hint_nonspeculative,
+        omp_sync_hint_speculative    = (1<<3),
+        omp_lock_hint_speculative    = omp_sync_hint_speculative,
         kmp_lock_hint_hle            = (1<<16),
         kmp_lock_hint_rtm            = (1<<17),
         kmp_lock_hint_adaptive       = (1<<18)
-    } omp_lock_hint_t;
+    } omp_sync_hint_t;
+
+    /* lock hint type for dynamic user lock */
+    typedef omp_sync_hint_t omp_lock_hint_t;
 
     /* hinted lock initializers */
     extern void __KAI_KMPC_CONVENTION omp_init_lock_with_hint(omp_lock_t *, omp_lock_hint_t);
@@ -199,7 +213,30 @@
     
     extern int __KAI_KMPC_CONVENTION omp_control_tool(int, int, void*);
 
+    /* OpenMP 5.0 Memory Management */
+    typedef void *omp_allocator_t;
+    extern __KMP_IMP const omp_allocator_t *OMP_NULL_ALLOCATOR;
+    extern __KMP_IMP const omp_allocator_t *omp_default_mem_alloc;
+    extern __KMP_IMP const omp_allocator_t *omp_large_cap_mem_alloc;
+    extern __KMP_IMP const omp_allocator_t *omp_const_mem_alloc;
+    extern __KMP_IMP const omp_allocator_t *omp_high_bw_mem_alloc;
+    extern __KMP_IMP const omp_allocator_t *omp_low_lat_mem_alloc;
+    extern __KMP_IMP const omp_allocator_t *omp_cgroup_mem_alloc;
+    extern __KMP_IMP const omp_allocator_t *omp_pteam_mem_alloc;
+    extern __KMP_IMP const omp_allocator_t *omp_thread_mem_alloc;
+
+    extern void __KAI_KMPC_CONVENTION omp_set_default_allocator(const omp_allocator_t *);
+    extern const omp_allocator_t * __KAI_KMPC_CONVENTION omp_get_default_allocator(void);
+#ifdef __cplusplus
+    extern void *__KAI_KMPC_CONVENTION omp_alloc(size_t size, const omp_allocator_t *allocator = OMP_NULL_ALLOCATOR);
+    extern void __KAI_KMPC_CONVENTION omp_free(void * ptr, const omp_allocator_t *allocator = OMP_NULL_ALLOCATOR);
+#else
+    extern void *__KAI_KMPC_CONVENTION omp_alloc(size_t size, const omp_allocator_t *allocator);
+    extern void __KAI_KMPC_CONVENTION omp_free(void *ptr, const omp_allocator_t *allocator);
+#endif
+
 #   undef __KAI_KMPC_CONVENTION
+#   undef __KMP_IMP
 
     /* Warning:
        The following typedefs are not standard, deprecated and will be removed in a future release.

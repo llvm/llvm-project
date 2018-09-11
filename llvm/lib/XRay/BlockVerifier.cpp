@@ -47,14 +47,19 @@ StringRef recordToString(BlockVerifier::State R) {
   case BlockVerifier::State::Unknown:
     return "Unknown";
   }
+  llvm_unreachable("Unkown state!");
 }
+
+struct Transition {
+  BlockVerifier::State From;
+  std::bitset<number(BlockVerifier::State::StateMax)> ToStates;
+};
 
 } // namespace
 
 Error BlockVerifier::transition(State To) {
   using ToSet = std::bitset<number(State::StateMax)>;
-  static constexpr std::array<const std::tuple<State, ToSet>,
-                              number(State::StateMax)>
+  static constexpr std::array<const Transition, number(State::StateMax)>
       TransitionTable{{{State::Unknown,
                         {mask(State::BufferExtents) | mask(State::NewBuffer)}},
 
@@ -107,9 +112,9 @@ Error BlockVerifier::transition(State To) {
     return Error::success();
 
   auto &Mapping = TransitionTable[number(CurrentRecord)];
-  auto &From = std::get<0>(Mapping);
-  auto &Destinations = std::get<1>(Mapping);
-  assert(From == CurrentRecord && "BUG: Wrong index for record mapping.");
+  auto &Destinations = Mapping.ToStates;
+  assert(Mapping.From == CurrentRecord &&
+         "BUG: Wrong index for record mapping.");
   if ((Destinations & ToSet(mask(To))) == 0)
     return createStringError(
         std::make_error_code(std::errc::executable_format_error),

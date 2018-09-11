@@ -316,7 +316,7 @@ body:             |
 
     %2 = COPY $vgpr0
     %0 = COPY $sgpr0_sgpr1
-    %3 = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %3 = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     %15 = V_ASHRREV_I32_e64 31, %2, implicit $exec
     %16 = REG_SEQUENCE %2, 1, %15, 2
     %17 = V_LSHLREV_B64 2, killed %16, implicit $exec

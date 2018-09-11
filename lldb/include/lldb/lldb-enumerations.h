@@ -256,6 +256,16 @@ enum ExpressionResults {
   eExpressionStoppedForDebug
 };
 
+enum SearchDepth {
+    eSearchDepthTarget = 0,
+    eSearchDepthModule,
+    eSearchDepthCompUnit,
+    eSearchDepthFunction,
+    eSearchDepthBlock,
+    eSearchDepthAddress,
+    kNumSearchDepthKinds = eSearchDepthAddress
+};
+
 //----------------------------------------------------------------------
 // Connection Status Types
 //----------------------------------------------------------------------

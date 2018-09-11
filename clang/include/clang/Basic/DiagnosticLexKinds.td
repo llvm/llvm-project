@@ -122,6 +122,9 @@ def ext_unicode_whitespace : ExtWarn<
 def warn_utf8_symbol_homoglyph : Warning<
   "treating Unicode character <U+%0> as identifier character rather than "
   "as '%1' symbol">, InGroup<DiagGroup<"unicode-homoglyph">>;
+def warn_utf8_symbol_zero_width : Warning<
+  "identifier contains Unicode character <U+%0> that is invisible in "
+  "some environments">, InGroup<DiagGroup<"unicode-zero-width">>;
 
 def err_hex_escape_no_digits : Error<
   "\\%0 used with no following hex digits">;
