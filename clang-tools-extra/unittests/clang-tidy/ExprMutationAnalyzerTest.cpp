@@ -724,6 +724,65 @@ TEST(ExprMutationAnalyzerTest, NotUnevaluatedExpressions) {
   EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x.f()"));
 }
 
+TEST(ExprMutationAnalyzerTest, UniquePtr) {
+  const std::string UniquePtrDef =
+      "template <class T> struct UniquePtr {"
+      "  UniquePtr();"
+      "  UniquePtr(const UniquePtr&) = delete;"
+      "  UniquePtr(UniquePtr&&);"
+      "  UniquePtr& operator=(const UniquePtr&) = delete;"
+      "  UniquePtr& operator=(UniquePtr&&);"
+      "  T& operator*() const;"
+      "  T* operator->() const;"
+      "};";
+
+  auto AST = tooling::buildASTFromCode(
+      UniquePtrDef + "void f() { UniquePtr<int> x; *x = 10; }");
+  auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("* x = 10"));
+
+  AST = tooling::buildASTFromCode(UniquePtrDef +
+                                  "void f() { UniquePtr<int> x; *x; }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCode(UniquePtrDef +
+                                  "void f() { UniquePtr<const int> x; *x; }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCode(UniquePtrDef +
+                                  "struct S { int v; };"
+                                  "void f() { UniquePtr<S> x; x->v; }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x"));
+
+  AST = tooling::buildASTFromCode(UniquePtrDef +
+                                  "struct S { int v; };"
+                                  "void f() { UniquePtr<const S> x; x->v; }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCode(UniquePtrDef +
+                                  "struct S { void mf(); };"
+                                  "void f() { UniquePtr<S> x; x->mf(); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x"));
+
+  AST = tooling::buildASTFromCode(
+      UniquePtrDef + "struct S { void mf() const; };"
+                     "void f() { UniquePtr<const S> x; x->mf(); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCodeWithArgs(
+      UniquePtrDef + "template <class T> void f() { UniquePtr<T> x; x->mf(); }",
+      {"-fno-delayed-template-parsing"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x->mf()"));
+}
+
 } // namespace test
 } // namespace tidy
 } // namespace clang
