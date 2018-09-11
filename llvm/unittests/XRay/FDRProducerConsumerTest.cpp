@@ -42,7 +42,7 @@ template <> std::unique_ptr<Record> MakeRecord<NewBufferRecord>() {
 }
 
 template <> std::unique_ptr<Record> MakeRecord<NewCPUIDRecord>() {
-  return make_unique<NewCPUIDRecord>(1);
+  return make_unique<NewCPUIDRecord>(1, 2);
 }
 
 template <> std::unique_ptr<Record> MakeRecord<TSCWrapRecord>() {

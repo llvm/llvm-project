@@ -11,9 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Sparc.h"
-#include "SparcRegisterInfo.h"
-#include "SparcSubtarget.h"
+#include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"

@@ -758,9 +758,7 @@ int runOrcLazyJIT(const char *ProgName) {
                         : None);
   auto TM = ExitOnErr(TMD.createTargetMachine());
   auto DL = TM->createDataLayout();
-  auto ES = llvm::make_unique<orc::ExecutionSession>();
-  auto J =
-      ExitOnErr(orc::LLLazyJIT::Create(std::move(ES), std::move(TM), DL, Ctx));
+  auto J = ExitOnErr(orc::LLLazyJIT::Create(std::move(TM), DL, Ctx));
 
   auto Dump = createDebugDumper();
 

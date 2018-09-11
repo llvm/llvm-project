@@ -757,7 +757,7 @@ define i32 @test44(i32 %x, i32 %y) {
 
 define i32 @test45(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test45(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[Y]], i32 [[X]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;

@@ -618,6 +618,14 @@ public:
     BasicBlocks.sort(comp);
   }
 
+  /// Return the number of \p MachineInstrs in this \p MachineFunction.
+  unsigned getInstructionCount() const {
+    unsigned InstrCount = 0;
+    for (const MachineBasicBlock &MBB : BasicBlocks)
+      InstrCount += MBB.size();
+    return InstrCount;
+  }
+
   //===--------------------------------------------------------------------===//
   // Internal functions used to automatically number MachineBasicBlocks
 

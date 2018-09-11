@@ -134,21 +134,20 @@ class IndVarSimplify {
   const TargetTransformInfo *TTI;
 
   SmallVector<WeakTrackingVH, 16> DeadInsts;
-  bool Changed = false;
 
   bool isValidRewrite(Value *FromVal, Value *ToVal);
 
-  void handleFloatingPointIV(Loop *L, PHINode *PH);
-  void rewriteNonIntegerIVs(Loop *L);
+  bool handleFloatingPointIV(Loop *L, PHINode *PH);
+  bool rewriteNonIntegerIVs(Loop *L);
 
-  void simplifyAndExtend(Loop *L, SCEVExpander &Rewriter, LoopInfo *LI);
+  bool simplifyAndExtend(Loop *L, SCEVExpander &Rewriter, LoopInfo *LI);
 
   bool canLoopBeDeleted(Loop *L, SmallVector<RewritePhi, 8> &RewritePhiSet);
-  void rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter);
+  bool rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter);
   bool rewriteFirstIterationLoopExitValues(Loop *L);
 
-  Value *linearFunctionTestReplace(Loop *L, const SCEV *BackedgeTakenCount,
-                                   PHINode *IndVar, SCEVExpander &Rewriter);
+  bool linearFunctionTestReplace(Loop *L, const SCEV *BackedgeTakenCount,
+                                 PHINode *IndVar, SCEVExpander &Rewriter);
 
   bool sinkUnusedInvariants(Loop *L);
 
@@ -281,7 +280,7 @@ static bool ConvertToSInt(const APFloat &APF, int64_t &IntVal) {
 /// is converted into
 /// for(int i = 0; i < 10000; ++i)
 ///   bar((double)i);
-void IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
+bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   unsigned IncomingEdge = L->contains(PN->getIncomingBlock(0));
   unsigned BackEdge     = IncomingEdge^1;
 
@@ -290,12 +289,12 @@ void IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
 
   int64_t InitValue;
   if (!InitValueVal || !ConvertToSInt(InitValueVal->getValueAPF(), InitValue))
-    return;
+    return false;
 
   // Check IV increment. Reject this PN if increment operation is not
   // an add or increment value can not be represented by an integer.
   auto *Incr = dyn_cast<BinaryOperator>(PN->getIncomingValue(BackEdge));
-  if (Incr == nullptr || Incr->getOpcode() != Instruction::FAdd) return;
+  if (Incr == nullptr || Incr->getOpcode() != Instruction::FAdd) return false;
 
   // If this is not an add of the PHI with a constantfp, or if the constant fp
   // is not an integer, bail out.
@@ -303,15 +302,15 @@ void IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   int64_t IncValue;
   if (IncValueVal == nullptr || Incr->getOperand(0) != PN ||
       !ConvertToSInt(IncValueVal->getValueAPF(), IncValue))
-    return;
+    return false;
 
   // Check Incr uses. One user is PN and the other user is an exit condition
   // used by the conditional terminator.
   Value::user_iterator IncrUse = Incr->user_begin();
   Instruction *U1 = cast<Instruction>(*IncrUse++);
-  if (IncrUse == Incr->user_end()) return;
+  if (IncrUse == Incr->user_end()) return false;
   Instruction *U2 = cast<Instruction>(*IncrUse++);
-  if (IncrUse != Incr->user_end()) return;
+  if (IncrUse != Incr->user_end()) return false;
 
   // Find exit condition, which is an fcmp.  If it doesn't exist, or if it isn't
   // only used by a branch, we can't transform it.
@@ -320,7 +319,7 @@ void IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
     Compare = dyn_cast<FCmpInst>(U2);
   if (!Compare || !Compare->hasOneUse() ||
       !isa<BranchInst>(Compare->user_back()))
-    return;
+    return false;
 
   BranchInst *TheBr = cast<BranchInst>(Compare->user_back());
 
@@ -332,7 +331,7 @@ void IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   if (!L->contains(TheBr->getParent()) ||
       (L->contains(TheBr->getSuccessor(0)) &&
        L->contains(TheBr->getSuccessor(1))))
-    return;
+    return false;
 
   // If it isn't a comparison with an integer-as-fp (the exit value), we can't
   // transform it.
@@ -340,12 +339,12 @@ void IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   int64_t ExitValue;
   if (ExitValueVal == nullptr ||
       !ConvertToSInt(ExitValueVal->getValueAPF(), ExitValue))
-    return;
+    return false;
 
   // Find new predicate for integer comparison.
   CmpInst::Predicate NewPred = CmpInst::BAD_ICMP_PREDICATE;
   switch (Compare->getPredicate()) {
-  default: return;  // Unknown comparison.
+  default: return false;  // Unknown comparison.
   case CmpInst::FCMP_OEQ:
   case CmpInst::FCMP_UEQ: NewPred = CmpInst::ICMP_EQ; break;
   case CmpInst::FCMP_ONE:
@@ -368,24 +367,24 @@ void IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
 
   // The start/stride/exit values must all fit in signed i32.
   if (!isInt<32>(InitValue) || !isInt<32>(IncValue) || !isInt<32>(ExitValue))
-    return;
+    return false;
 
   // If not actually striding (add x, 0.0), avoid touching the code.
   if (IncValue == 0)
-    return;
+    return false;
 
   // Positive and negative strides have different safety conditions.
   if (IncValue > 0) {
     // If we have a positive stride, we require the init to be less than the
     // exit value.
     if (InitValue >= ExitValue)
-      return;
+      return false;
 
     uint32_t Range = uint32_t(ExitValue-InitValue);
     // Check for infinite loop, either:
     // while (i <= Exit) or until (i > Exit)
     if (NewPred == CmpInst::ICMP_SLE || NewPred == CmpInst::ICMP_SGT) {
-      if (++Range == 0) return;  // Range overflows.
+      if (++Range == 0) return false;  // Range overflows.
     }
 
     unsigned Leftover = Range % uint32_t(IncValue);
@@ -395,23 +394,23 @@ void IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
     // around and do things the fp IV wouldn't.
     if ((NewPred == CmpInst::ICMP_EQ || NewPred == CmpInst::ICMP_NE) &&
         Leftover != 0)
-      return;
+      return false;
 
     // If the stride would wrap around the i32 before exiting, we can't
     // transform the IV.
     if (Leftover != 0 && int32_t(ExitValue+IncValue) < ExitValue)
-      return;
+      return false;
   } else {
     // If we have a negative stride, we require the init to be greater than the
     // exit value.
     if (InitValue <= ExitValue)
-      return;
+      return false;
 
     uint32_t Range = uint32_t(InitValue-ExitValue);
     // Check for infinite loop, either:
     // while (i >= Exit) or until (i < Exit)
     if (NewPred == CmpInst::ICMP_SGE || NewPred == CmpInst::ICMP_SLT) {
-      if (++Range == 0) return;  // Range overflows.
+      if (++Range == 0) return false;  // Range overflows.
     }
 
     unsigned Leftover = Range % uint32_t(-IncValue);
@@ -421,12 +420,12 @@ void IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
     // around and do things the fp IV wouldn't.
     if ((NewPred == CmpInst::ICMP_EQ || NewPred == CmpInst::ICMP_NE) &&
         Leftover != 0)
-      return;
+      return false;
 
     // If the stride would wrap around the i32 before exiting, we can't
     // transform the IV.
     if (Leftover != 0 && int32_t(ExitValue+IncValue) > ExitValue)
-      return;
+      return false;
   }
 
   IntegerType *Int32Ty = Type::getInt32Ty(PN->getContext());
@@ -472,10 +471,10 @@ void IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
     PN->replaceAllUsesWith(Conv);
     RecursivelyDeleteTriviallyDeadInstructions(PN, TLI);
   }
-  Changed = true;
+  return true;
 }
 
-void IndVarSimplify::rewriteNonIntegerIVs(Loop *L) {
+bool IndVarSimplify::rewriteNonIntegerIVs(Loop *L) {
   // First step.  Check to see if there are any floating-point recurrences.
   // If there are, change them into integer recurrences, permitting analysis by
   // the SCEV routines.
@@ -485,15 +484,17 @@ void IndVarSimplify::rewriteNonIntegerIVs(Loop *L) {
   for (PHINode &PN : Header->phis())
     PHIs.push_back(&PN);
 
+  bool Changed = false;
   for (unsigned i = 0, e = PHIs.size(); i != e; ++i)
     if (PHINode *PN = dyn_cast_or_null<PHINode>(&*PHIs[i]))
-      handleFloatingPointIV(L, PN);
+      Changed |= handleFloatingPointIV(L, PN);
 
   // If the loop previously had floating-point IV, ScalarEvolution
   // may not have been able to compute a trip count. Now that we've done some
   // re-writing, the trip count may be computable.
   if (Changed)
     SE->forgetLoop(L);
+  return Changed;
 }
 
 namespace {
@@ -533,7 +534,7 @@ struct RewritePhi {
 /// happen later, except that it's more powerful in some cases, because it's
 /// able to brute-force evaluate arbitrary instructions as long as they have
 /// constant operands at the beginning of the loop.
-void IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
+bool IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
   // Check a pre-condition.
   assert(L->isRecursivelyLCSSAForm(*DT, *LI) &&
          "Indvars did not preserve LCSSA!");
@@ -663,6 +664,7 @@ void IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
 
   bool LoopCanBeDel = canLoopBeDeleted(L, RewritePhiSet);
 
+  bool Changed = false;
   // Transformation.
   for (const RewritePhi &Phi : RewritePhiSet) {
     PHINode *PN = Phi.PN;
@@ -696,6 +698,7 @@ void IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
   // The insertion point instruction may have been deleted; clear it out
   // so that the rewriter doesn't trip over it later.
   Rewriter.clearInsertPoint();
+  return Changed;
 }
 
 //===---------------------------------------------------------------------===//
@@ -1929,7 +1932,7 @@ public:
 /// candidates for simplification.
 ///
 /// Sign/Zero extend elimination is interleaved with IV simplification.
-void IndVarSimplify::simplifyAndExtend(Loop *L,
+bool IndVarSimplify::simplifyAndExtend(Loop *L,
                                        SCEVExpander &Rewriter,
                                        LoopInfo *LI) {
   SmallVector<WideIVInfo, 8> WideIVs;
@@ -1946,6 +1949,7 @@ void IndVarSimplify::simplifyAndExtend(Loop *L,
   // for all current phis, then determines whether any IVs can be
   // widened. Widening adds new phis to LoopPhis, inducing another round of
   // simplification on the wide IVs.
+  bool Changed = false;
   while (!LoopPhis.empty()) {
     // Evaluate as many IV expressions as possible before widening any IVs. This
     // forces SCEV to set no-wrap flags before evaluating sign/zero
@@ -1975,6 +1979,7 @@ void IndVarSimplify::simplifyAndExtend(Loop *L,
       }
     }
   }
+  return Changed;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2341,11 +2346,9 @@ static Value *genLoopLimit(PHINode *IndVar, const SCEV *IVCount, Loop *L,
 /// able to rewrite the exit tests of any loop where the SCEV analysis can
 /// determine a loop-invariant trip count of the loop, which is actually a much
 /// broader range than just linear tests.
-Value *IndVarSimplify::
-linearFunctionTestReplace(Loop *L,
-                          const SCEV *BackedgeTakenCount,
-                          PHINode *IndVar,
-                          SCEVExpander &Rewriter) {
+bool IndVarSimplify::
+linearFunctionTestReplace(Loop *L, const SCEV *BackedgeTakenCount,
+                          PHINode *IndVar, SCEVExpander &Rewriter) {
   assert(canExpandBackedgeTakenCount(L, SE, Rewriter) && "precondition");
 
   // Initialize CmpIndVar and IVCount to their preincremented values.
@@ -2468,8 +2471,7 @@ linearFunctionTestReplace(Loop *L,
   DeadInsts.push_back(OrigCond);
 
   ++NumLFTR;
-  Changed = true;
-  return Cond;
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2573,6 +2575,7 @@ bool IndVarSimplify::run(Loop *L) {
   // We need (and expect!) the incoming loop to be in LCSSA.
   assert(L->isRecursivelyLCSSAForm(*DT, *LI) &&
          "LCSSA required to run indvars!");
+  bool Changed = false;
 
   // If LoopSimplify form is not available, stay out of trouble. Some notes:
   //  - LSR currently only supports LoopSimplify-form loops. Indvars'
@@ -2588,7 +2591,7 @@ bool IndVarSimplify::run(Loop *L) {
 
   // If there are any floating-point recurrences, attempt to
   // transform them to use integer recurrences.
-  rewriteNonIntegerIVs(L);
+  Changed |= rewriteNonIntegerIVs(L);
 
   const SCEV *BackedgeTakenCount = SE->getBackedgeTakenCount(L);
 
@@ -2605,7 +2608,7 @@ bool IndVarSimplify::run(Loop *L) {
   // other expressions involving loop IVs have been evaluated. This helps SCEV
   // set no-wrap flags before normalizing sign/zero extension.
   Rewriter.disableCanonicalMode();
-  simplifyAndExtend(L, Rewriter, LI);
+  Changed |= simplifyAndExtend(L, Rewriter, LI);
 
   // Check to see if this loop has a computable loop-invariant execution count.
   // If so, this means that we can compute the final value of any expressions
@@ -2615,7 +2618,7 @@ bool IndVarSimplify::run(Loop *L) {
   //
   if (ReplaceExitValue != NeverRepl &&
       !isa<SCEVCouldNotCompute>(BackedgeTakenCount))
-    rewriteLoopExitValues(L, Rewriter);
+    Changed |= rewriteLoopExitValues(L, Rewriter);
 
   // Eliminate redundant IV cycles.
   NumElimIV += Rewriter.replaceCongruentIVs(L, DT, DeadInsts);
@@ -2636,8 +2639,8 @@ bool IndVarSimplify::run(Loop *L) {
       // explicitly check any assumptions made by SCEV. Brittle.
       const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(BackedgeTakenCount);
       if (!AR || AR->getLoop()->getLoopPreheader())
-        (void)linearFunctionTestReplace(L, BackedgeTakenCount, IndVar,
-                                        Rewriter);
+        Changed |= linearFunctionTestReplace(L, BackedgeTakenCount, IndVar,
+                                             Rewriter);
     }
   }
   // Clear the rewriter cache, because values that are in the rewriter's cache

@@ -60,7 +60,7 @@ static llvm::StringRef
 deserialize(const exegesis::BenchmarkResultContext &Context,
             llvm::StringRef String, llvm::MCInst &Value) {
   llvm::SmallVector<llvm::StringRef, 8> Pieces;
-  String.split(Pieces, " ");
+  String.split(Pieces, " ", /* MaxSplit */ -1, /* KeepEmpty */ false);
   if (Pieces.empty())
     return "Invalid Instruction";
   bool ProcessOpcode = true;

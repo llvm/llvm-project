@@ -101,6 +101,7 @@
 
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/RecyclingAllocator.h"
@@ -977,15 +978,10 @@ private:
   // Allocator used for creating external nodes.
   Allocator &allocator;
 
-  /// dataAs - Represent data as a node type without breaking aliasing rules.
+  /// Represent data as a node type without breaking aliasing rules.
   template <typename T>
   T &dataAs() const {
-    union {
-      const char *d;
-      T *t;
-    } u;
-    u.d = data.buffer;
-    return *u.t;
+    return *bit_cast<T *>(const_cast<char *>(data.buffer));
   }
 
   const RootLeaf &rootLeaf() const {

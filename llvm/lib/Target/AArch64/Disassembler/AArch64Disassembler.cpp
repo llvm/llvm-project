@@ -12,7 +12,6 @@
 
 #include "AArch64Disassembler.h"
 #include "AArch64ExternalSymbolizer.h"
-#include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
@@ -20,6 +19,8 @@
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"

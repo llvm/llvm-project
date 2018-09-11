@@ -7,9 +7,7 @@ declare i32 @__gxx_personality_v0(...)
 
 ; Outlined function is called from a basic block named codeRepl
 ; CHECK: codeRepl:
-; CHECK-NEXT: call coldcc void @foo
-; Check that no recursive outlining is done.
-; CHECK-NOT: codeRepl:
+; CHECK-NEXT: call void @foo
 ; Function Attrs: ssp uwtable
 define hidden void @foo() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 entry:
