@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/NativeTypeBuiltin.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace llvm {
 namespace pdb {
@@ -24,7 +25,6 @@ std::unique_ptr<NativeRawSymbol> NativeTypeBuiltin::clone() const {
 }
 
 void NativeTypeBuiltin::dump(raw_ostream &OS, int Indent) const {
-  // TODO:  Apparently nothing needs this yet.
 }
 
 PDB_SymType NativeTypeBuiltin::getSymTag() const {

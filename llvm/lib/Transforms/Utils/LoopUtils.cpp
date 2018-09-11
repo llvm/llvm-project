@@ -709,50 +709,6 @@ unsigned RecurrenceDescriptor::getRecurrenceBinOp(RecurrenceKind Kind) {
   }
 }
 
-Value *RecurrenceDescriptor::createMinMaxOp(IRBuilder<> &Builder,
-                                            MinMaxRecurrenceKind RK,
-                                            Value *Left, Value *Right) {
-  CmpInst::Predicate P = CmpInst::ICMP_NE;
-  switch (RK) {
-  default:
-    llvm_unreachable("Unknown min/max recurrence kind");
-  case MRK_UIntMin:
-    P = CmpInst::ICMP_ULT;
-    break;
-  case MRK_UIntMax:
-    P = CmpInst::ICMP_UGT;
-    break;
-  case MRK_SIntMin:
-    P = CmpInst::ICMP_SLT;
-    break;
-  case MRK_SIntMax:
-    P = CmpInst::ICMP_SGT;
-    break;
-  case MRK_FloatMin:
-    P = CmpInst::FCMP_OLT;
-    break;
-  case MRK_FloatMax:
-    P = CmpInst::FCMP_OGT;
-    break;
-  }
-
-  // We only match FP sequences that are 'fast', so we can unconditionally
-  // set it on any generated instructions.
-  IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-  FastMathFlags FMF;
-  FMF.setFast();
-  Builder.setFastMathFlags(FMF);
-
-  Value *Cmp;
-  if (RK == MRK_FloatMin || RK == MRK_FloatMax)
-    Cmp = Builder.CreateFCmp(P, Left, Right, "rdx.minmax.cmp");
-  else
-    Cmp = Builder.CreateICmp(P, Left, Right, "rdx.minmax.cmp");
-
-  Value *Select = Builder.CreateSelect(Cmp, Left, Right, "rdx.minmax.select");
-  return Select;
-}
-
 InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
                                          const SCEV *Step, BinaryOperator *BOp,
                                          SmallVectorImpl<Instruction *> *Casts)
@@ -801,74 +757,6 @@ ConstantInt *InductionDescriptor::getConstIntStepValue() const {
   if (isa<SCEVConstant>(Step))
     return dyn_cast<ConstantInt>(cast<SCEVConstant>(Step)->getValue());
   return nullptr;
-}
-
-Value *InductionDescriptor::transform(IRBuilder<> &B, Value *Index,
-                                      ScalarEvolution *SE,
-                                      const DataLayout& DL) const {
-
-  SCEVExpander Exp(*SE, DL, "induction");
-  assert(Index->getType() == Step->getType() &&
-         "Index type does not match StepValue type");
-  switch (IK) {
-  case IK_IntInduction: {
-    assert(Index->getType() == StartValue->getType() &&
-           "Index type does not match StartValue type");
-
-    // FIXME: Theoretically, we can call getAddExpr() of ScalarEvolution
-    // and calculate (Start + Index * Step) for all cases, without
-    // special handling for "isOne" and "isMinusOne".
-    // But in the real life the result code getting worse. We mix SCEV
-    // expressions and ADD/SUB operations and receive redundant
-    // intermediate values being calculated in different ways and
-    // Instcombine is unable to reduce them all.
-
-    if (getConstIntStepValue() &&
-        getConstIntStepValue()->isMinusOne())
-      return B.CreateSub(StartValue, Index);
-    if (getConstIntStepValue() &&
-        getConstIntStepValue()->isOne())
-      return B.CreateAdd(StartValue, Index);
-    const SCEV *S = SE->getAddExpr(SE->getSCEV(StartValue),
-                                   SE->getMulExpr(Step, SE->getSCEV(Index)));
-    return Exp.expandCodeFor(S, StartValue->getType(), &*B.GetInsertPoint());
-  }
-  case IK_PtrInduction: {
-    assert(isa<SCEVConstant>(Step) &&
-           "Expected constant step for pointer induction");
-    const SCEV *S = SE->getMulExpr(SE->getSCEV(Index), Step);
-    Index = Exp.expandCodeFor(S, Index->getType(), &*B.GetInsertPoint());
-    return B.CreateGEP(nullptr, StartValue, Index);
-  }
-  case IK_FpInduction: {
-    assert(Step->getType()->isFloatingPointTy() && "Expected FP Step value");
-    assert(InductionBinOp &&
-           (InductionBinOp->getOpcode() == Instruction::FAdd ||
-            InductionBinOp->getOpcode() == Instruction::FSub) &&
-           "Original bin op should be defined for FP induction");
-
-    Value *StepValue = cast<SCEVUnknown>(Step)->getValue();
-
-    // Floating point operations had to be 'fast' to enable the induction.
-    FastMathFlags Flags;
-    Flags.setFast();
-
-    Value *MulExp = B.CreateFMul(StepValue, Index);
-    if (isa<Instruction>(MulExp))
-      // We have to check, the MulExp may be a constant.
-      cast<Instruction>(MulExp)->setFastMathFlags(Flags);
-
-    Value *BOp = B.CreateBinOp(InductionBinOp->getOpcode() , StartValue,
-                               MulExp, "induction");
-    if (isa<Instruction>(BOp))
-      cast<Instruction>(BOp)->setFastMathFlags(Flags);
-
-    return BOp;
-  }
-  case IK_NoInduction:
-    return nullptr;
-  }
-  llvm_unreachable("invalid enum");
 }
 
 bool InductionDescriptor::isFPInductionPHI(PHINode *Phi, const Loop *TheLoop,
@@ -1553,6 +1441,51 @@ static Value *addFastMathFlag(Value *V) {
   return V;
 }
 
+Value *llvm::createMinMaxOp(IRBuilder<> &Builder,
+                            RecurrenceDescriptor::MinMaxRecurrenceKind RK,
+                            Value *Left, Value *Right) {
+  CmpInst::Predicate P = CmpInst::ICMP_NE;
+  switch (RK) {
+  default:
+    llvm_unreachable("Unknown min/max recurrence kind");
+  case RecurrenceDescriptor::MRK_UIntMin:
+    P = CmpInst::ICMP_ULT;
+    break;
+  case RecurrenceDescriptor::MRK_UIntMax:
+    P = CmpInst::ICMP_UGT;
+    break;
+  case RecurrenceDescriptor::MRK_SIntMin:
+    P = CmpInst::ICMP_SLT;
+    break;
+  case RecurrenceDescriptor::MRK_SIntMax:
+    P = CmpInst::ICMP_SGT;
+    break;
+  case RecurrenceDescriptor::MRK_FloatMin:
+    P = CmpInst::FCMP_OLT;
+    break;
+  case RecurrenceDescriptor::MRK_FloatMax:
+    P = CmpInst::FCMP_OGT;
+    break;
+  }
+
+  // We only match FP sequences that are 'fast', so we can unconditionally
+  // set it on any generated instructions.
+  IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+  FastMathFlags FMF;
+  FMF.setFast();
+  Builder.setFastMathFlags(FMF);
+
+  Value *Cmp;
+  if (RK == RecurrenceDescriptor::MRK_FloatMin ||
+      RK == RecurrenceDescriptor::MRK_FloatMax)
+    Cmp = Builder.CreateFCmp(P, Left, Right, "rdx.minmax.cmp");
+  else
+    Cmp = Builder.CreateICmp(P, Left, Right, "rdx.minmax.cmp");
+
+  Value *Select = Builder.CreateSelect(Cmp, Left, Right, "rdx.minmax.select");
+  return Select;
+}
+
 // Helper to generate an ordered reduction.
 Value *
 llvm::getOrderedReduction(IRBuilder<> &Builder, Value *Acc, Value *Src,
@@ -1574,8 +1507,7 @@ llvm::getOrderedReduction(IRBuilder<> &Builder, Value *Acc, Value *Src,
     } else {
       assert(MinMaxKind != RecurrenceDescriptor::MRK_Invalid &&
              "Invalid min/max");
-      Result = RecurrenceDescriptor::createMinMaxOp(Builder, MinMaxKind, Result,
-                                                    Ext);
+      Result = createMinMaxOp(Builder, MinMaxKind, Result, Ext);
     }
 
     if (!RedOps.empty())
@@ -1618,8 +1550,7 @@ llvm::getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
     } else {
       assert(MinMaxKind != RecurrenceDescriptor::MRK_Invalid &&
              "Invalid min/max");
-      TmpVec = RecurrenceDescriptor::createMinMaxOp(Builder, MinMaxKind, TmpVec,
-                                                    Shuf);
+      TmpVec = createMinMaxOp(Builder, MinMaxKind, TmpVec, Shuf);
     }
     if (!RedOps.empty())
       propagateIRFlags(TmpVec, RedOps);

@@ -64,11 +64,6 @@ struct IntrinsicData {
  * the alphabetical order.
  */
 static const IntrinsicData IntrinsicsWithChain[] = {
-  X86_INTRINSIC_DATA(addcarry_u32,  ADX, X86ISD::ADC, 0),
-  X86_INTRINSIC_DATA(addcarry_u64,  ADX, X86ISD::ADC, 0),
-  X86_INTRINSIC_DATA(addcarryx_u32, ADX, X86ISD::ADC, 0),
-  X86_INTRINSIC_DATA(addcarryx_u64, ADX, X86ISD::ADC, 0),
-
   X86_INTRINSIC_DATA(avx2_gather_d_d,      GATHER_AVX2, X86::VPGATHERDDrm, 0),
   X86_INTRINSIC_DATA(avx2_gather_d_d_256,  GATHER_AVX2, X86::VPGATHERDDYrm, 0),
   X86_INTRINSIC_DATA(avx2_gather_d_pd,     GATHER_AVX2, X86::VGATHERDPDrm, 0),
@@ -270,9 +265,6 @@ static const IntrinsicData IntrinsicsWithChain[] = {
   X86_INTRINSIC_DATA(rdseed_64, RDSEED, X86ISD::RDSEED, 0),
   X86_INTRINSIC_DATA(rdtsc,     RDTSC,  X86ISD::RDTSC_DAG, 0),
   X86_INTRINSIC_DATA(rdtscp,    RDTSC,  X86ISD::RDTSCP_DAG, 0),
-
-  X86_INTRINSIC_DATA(subborrow_u32, ADX, X86ISD::SBB, 0),
-  X86_INTRINSIC_DATA(subborrow_u64, ADX, X86ISD::SBB, 0),
   X86_INTRINSIC_DATA(xgetbv, XGETBV, X86::XGETBV, 0),
   X86_INTRINSIC_DATA(xtest,     XTEST,  X86ISD::XTEST,  0),
 };
@@ -294,6 +286,10 @@ static const IntrinsicData* getIntrinsicWithChain(unsigned IntNo) {
  * the alphabetical order.
  */
 static const IntrinsicData  IntrinsicsWithoutChain[] = {
+  X86_INTRINSIC_DATA(addcarry_u32,      ADX, X86ISD::ADC, 0),
+  X86_INTRINSIC_DATA(addcarry_u64,      ADX, X86ISD::ADC, 0),
+  X86_INTRINSIC_DATA(addcarryx_u32,     ADX, X86ISD::ADC, 0),
+  X86_INTRINSIC_DATA(addcarryx_u64,     ADX, X86ISD::ADC, 0),
   X86_INTRINSIC_DATA(avx_addsub_pd_256, INTR_TYPE_2OP, X86ISD::ADDSUB, 0),
   X86_INTRINSIC_DATA(avx_addsub_ps_256, INTR_TYPE_2OP, X86ISD::ADDSUB, 0),
   X86_INTRINSIC_DATA(avx_cmp_pd_256,    INTR_TYPE_3OP, X86ISD::CMPP, 0),
@@ -1225,6 +1221,8 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
   X86_INTRINSIC_DATA(ssse3_pmadd_ub_sw_128, INTR_TYPE_2OP, X86ISD::VPMADDUBSW, 0),
   X86_INTRINSIC_DATA(ssse3_pmul_hr_sw_128, INTR_TYPE_2OP, X86ISD::MULHRS, 0),
   X86_INTRINSIC_DATA(ssse3_pshuf_b_128, INTR_TYPE_2OP, X86ISD::PSHUFB, 0),
+  X86_INTRINSIC_DATA(subborrow_u32,     ADX, X86ISD::SBB, 0),
+  X86_INTRINSIC_DATA(subborrow_u64,     ADX, X86ISD::SBB, 0),
   X86_INTRINSIC_DATA(tbm_bextri_u32,    INTR_TYPE_2OP, X86ISD::BEXTR, 0),
   X86_INTRINSIC_DATA(tbm_bextri_u64,    INTR_TYPE_2OP, X86ISD::BEXTR, 0),
   X86_INTRINSIC_DATA(vcvtph2ps_128,     INTR_TYPE_1OP, X86ISD::CVTPH2PS, 0),

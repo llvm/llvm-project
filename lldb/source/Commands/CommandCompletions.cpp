@@ -366,8 +366,8 @@ CommandCompletions::SourceFileCompleter::SourceFileCompleter(
   m_dir_name = partial_spec.GetDirectory().GetCString();
 }
 
-Searcher::Depth CommandCompletions::SourceFileCompleter::GetDepth() {
-  return eDepthCompUnit;
+lldb::SearchDepth CommandCompletions::SourceFileCompleter::GetDepth() {
+  return lldb::eSearchDepthCompUnit;
 }
 
 Searcher::CallbackReturn
@@ -458,8 +458,8 @@ CommandCompletions::SymbolCompleter::SymbolCompleter(
   m_regex.Compile(regex_str);
 }
 
-Searcher::Depth CommandCompletions::SymbolCompleter::GetDepth() {
-  return eDepthModule;
+lldb::SearchDepth CommandCompletions::SymbolCompleter::GetDepth() {
+  return lldb::eSearchDepthModule;
 }
 
 Searcher::CallbackReturn CommandCompletions::SymbolCompleter::SearchCallback(
@@ -506,8 +506,8 @@ CommandCompletions::ModuleCompleter::ModuleCompleter(
   m_dir_name = partial_spec.GetDirectory().GetCString();
 }
 
-Searcher::Depth CommandCompletions::ModuleCompleter::GetDepth() {
-  return eDepthModule;
+lldb::SearchDepth CommandCompletions::ModuleCompleter::GetDepth() {
+  return lldb::eSearchDepthModule;
 }
 
 Searcher::CallbackReturn CommandCompletions::ModuleCompleter::SearchCallback(

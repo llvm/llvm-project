@@ -317,13 +317,13 @@ define <4 x half> @v4f16_func_void() #0 {
   ret <4 x half> %val
 }
 
+; FIXME: Mixing buffer and global
 ; FIXME: Should not scalarize
 ; GCN-LABEL: {{^}}v5i16_func_void:
 ; GFX9: buffer_load_dwordx2 v[0:1]
-; GFX9: buffer_load_ushort v4
-; GFX9: v_lshrrev_b32_e32 v5, 16, v0
-; GFX9: v_lshrrev_b32_e32 v3, 16, v1
-; GCN: s_setpc_b64
+; GFX9-NEXT: global_load_short_d16 v2
+; GFX9-NEXT: s_waitcnt
+; GFX9-NEXT: s_setpc_b64
 define <5 x i16> @v5i16_func_void() #0 {
   %ptr = load volatile <5 x i16> addrspace(1)*, <5 x i16> addrspace(1)* addrspace(4)* undef
   %val = load <5 x i16>, <5 x i16> addrspace(1)* %ptr

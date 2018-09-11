@@ -1055,6 +1055,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setStackPointerRegisterToSaveRestore(isPPC64 ? PPC::X1 : PPC::R1);
 
   // We have target-specific dag combine patterns for the following nodes:
+  setTargetDAGCombine(ISD::ADD);
   setTargetDAGCombine(ISD::SHL);
   setTargetDAGCombine(ISD::SRA);
   setTargetDAGCombine(ISD::SRL);
@@ -12470,6 +12471,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
   SDLoc dl(N);
   switch (N->getOpcode()) {
   default: break;
+  case ISD::ADD:
+    return combineADD(N, DCI);
   case ISD::SHL:
     return combineSHL(N, DCI);
   case ISD::SRA:
@@ -14171,6 +14174,100 @@ SDValue PPCTargetLowering::combineSRA(SDNode *N, DAGCombinerInfo &DCI) const {
 
 SDValue PPCTargetLowering::combineSRL(SDNode *N, DAGCombinerInfo &DCI) const {
   if (auto Value = stripModuloOnShift(*this, N, DCI.DAG))
+    return Value;
+
+  return SDValue();
+}
+
+// Transform (add X, (zext(setne Z, C))) -> (addze X, (addic (addi Z, -C), -1))
+// Transform (add X, (zext(sete  Z, C))) -> (addze X, (subfic (addi Z, -C), 0))
+// When C is zero, the equation (addi Z, -C) can be simplified to Z
+// Requirement: -C in [-32768, 32767], X and Z are MVT::i64 types
+static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
+                                 const PPCSubtarget &Subtarget) {
+  if (!Subtarget.isPPC64())
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  auto isZextOfCompareWithConstant = [](SDValue Op) {
+    if (Op.getOpcode() != ISD::ZERO_EXTEND || !Op.hasOneUse() ||
+        Op.getValueType() != MVT::i64)
+      return false;
+
+    SDValue Cmp = Op.getOperand(0);
+    if (Cmp.getOpcode() != ISD::SETCC || !Cmp.hasOneUse() ||
+        Cmp.getOperand(0).getValueType() != MVT::i64)
+      return false;
+
+    if (auto *Constant = dyn_cast<ConstantSDNode>(Cmp.getOperand(1))) {
+      int64_t NegConstant = 0 - Constant->getSExtValue();
+      // Due to the limitations of the addi instruction,
+      // -C is required to be [-32768, 32767].
+      return isInt<16>(NegConstant);
+    }
+
+    return false;
+  };
+
+  bool LHSHasPattern = isZextOfCompareWithConstant(LHS);
+  bool RHSHasPattern = isZextOfCompareWithConstant(RHS);
+
+  // If there is a pattern, canonicalize a zext operand to the RHS.
+  if (LHSHasPattern && !RHSHasPattern)
+    std::swap(LHS, RHS);
+  else if (!LHSHasPattern && !RHSHasPattern)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDVTList VTs = DAG.getVTList(MVT::i64, MVT::i64);
+  SDValue Cmp = RHS.getOperand(0);
+  SDValue Z = Cmp.getOperand(0);
+  auto *Constant = dyn_cast<ConstantSDNode>(Cmp.getOperand(1));
+
+  assert(Constant && "Constant Should not be a null pointer.");
+  int64_t NegConstant = 0 - Constant->getSExtValue();
+
+  switch(cast<CondCodeSDNode>(Cmp.getOperand(2))->get()) {
+  default: break;
+  case ISD::SETNE: {
+    //                                 when C == 0
+    //                             --> addze X, (addic Z, -1).carry
+    //                            /
+    // add X, (zext(setne Z, C))--
+    //                            \    when -32768 <= -C <= 32767 && C != 0
+    //                             --> addze X, (addic (addi Z, -C), -1).carry
+    SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::i64, Z,
+                              DAG.getConstant(NegConstant, DL, MVT::i64));
+    SDValue AddOrZ = NegConstant != 0 ? Add : Z;
+    SDValue Addc = DAG.getNode(ISD::ADDC, DL, DAG.getVTList(MVT::i64, MVT::Glue),
+                               AddOrZ, DAG.getConstant(-1ULL, DL, MVT::i64));
+    return DAG.getNode(ISD::ADDE, DL, VTs, LHS, DAG.getConstant(0, DL, MVT::i64),
+                       SDValue(Addc.getNode(), 1));
+    }
+  case ISD::SETEQ: {
+    //                                 when C == 0
+    //                             --> addze X, (subfic Z, 0).carry
+    //                            /
+    // add X, (zext(sete  Z, C))--
+    //                            \    when -32768 <= -C <= 32767 && C != 0
+    //                             --> addze X, (subfic (addi Z, -C), 0).carry
+    SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::i64, Z,
+                              DAG.getConstant(NegConstant, DL, MVT::i64));
+    SDValue AddOrZ = NegConstant != 0 ? Add : Z;
+    SDValue Subc = DAG.getNode(ISD::SUBC, DL, DAG.getVTList(MVT::i64, MVT::Glue),
+                               DAG.getConstant(0, DL, MVT::i64), AddOrZ);
+    return DAG.getNode(ISD::ADDE, DL, VTs, LHS, DAG.getConstant(0, DL, MVT::i64),
+                       SDValue(Subc.getNode(), 1));
+    }
+  }
+
+  return SDValue();
+}
+
+SDValue PPCTargetLowering::combineADD(SDNode *N, DAGCombinerInfo &DCI) const {
+  if (auto Value = combineADDToADDZE(N, DCI.DAG, Subtarget))
     return Value;
 
   return SDValue();

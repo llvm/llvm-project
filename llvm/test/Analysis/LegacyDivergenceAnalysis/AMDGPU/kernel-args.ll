@@ -10,7 +10,7 @@
 ; CHECK: DIVERGENT:  float %arg5
 ; CHECK: DIVERGENT:  i32 %arg6
 
-define amdgpu_ps void @test_amdgpu_ps([4 x <16 x i8>] addrspace(2)* byval %arg0, float inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <3 x i32> %arg4, float %arg5, i32 %arg6) #0 {
+define amdgpu_ps void @test_amdgpu_ps([4 x <16 x i8>] addrspace(4)* byval %arg0, float inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <3 x i32> %arg4, float %arg5, i32 %arg6) #0 {
   ret void
 }
 
@@ -22,7 +22,7 @@ define amdgpu_ps void @test_amdgpu_ps([4 x <16 x i8>] addrspace(2)* byval %arg0,
 ; CHECK-NOT: %arg4
 ; CHECK-NOT: %arg5
 ; CHECK-NOT: %arg6
-define amdgpu_kernel void @test_amdgpu_kernel([4 x <16 x i8>] addrspace(2)* byval %arg0, float inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <3 x i32> %arg4, float %arg5, i32 %arg6) #0 {
+define amdgpu_kernel void @test_amdgpu_kernel([4 x <16 x i8>] addrspace(4)* byval %arg0, float inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <3 x i32> %arg4, float %arg5, i32 %arg6) #0 {
   ret void
 }
 
@@ -34,7 +34,7 @@ define amdgpu_kernel void @test_amdgpu_kernel([4 x <16 x i8>] addrspace(2)* byva
 ; CHECK: DIVERGENT:
 ; CHECK: DIVERGENT:
 ; CHECK: DIVERGENT:
-define void @test_c([4 x <16 x i8>] addrspace(2)* byval %arg0, float inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <3 x i32> %arg4, float %arg5, i32 %arg6) #0 {
+define void @test_c([4 x <16 x i8>] addrspace(4)* byval %arg0, float inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <3 x i32> %arg4, float %arg5, i32 %arg6) #0 {
   ret void
 }
 

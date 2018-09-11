@@ -129,10 +129,9 @@ public:
   /// If New is the only predecessor, move Old's Phi, if present, to New.
   /// Otherwise, add a new Phi in New with appropriate incoming values, and
   /// update the incoming values in Old's Phi node too, if present.
-  void
-  wireOldPredecessorsToNewImmediatePredecessor(BasicBlock *Old, BasicBlock *New,
-                                               ArrayRef<BasicBlock *> Preds);
-
+  void wireOldPredecessorsToNewImmediatePredecessor(
+      BasicBlock *Old, BasicBlock *New, ArrayRef<BasicBlock *> Preds,
+      bool IdenticalEdgesWereMerged = true);
   // The below are utility functions. Other than creation of accesses to pass
   // to insertDef, and removeAccess to remove accesses, you should generally
   // not attempt to update memoryssa yourself. It is very non-trivial to get

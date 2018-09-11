@@ -275,8 +275,7 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
   // inserted code, doing constant propagation and dead code elimination as we
   // go.
   const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
-  const std::vector<BasicBlock *> &NewLoopBlocks = L->getBlocks();
-  for (BasicBlock *BB : NewLoopBlocks) {
+  for (BasicBlock *BB : L->getBlocks()) {
     for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E;) {
       Instruction *Inst = &*I++;
 

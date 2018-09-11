@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Trigram.h"
-#include "../../FuzzyMatch.h"
+#include "FuzzyMatch.h"
 #include "Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"

@@ -1309,7 +1309,7 @@ let Predicates = [HasBMI2] in {
 //
 let Predicates = [HasADX], Defs = [EFLAGS], Uses = [EFLAGS],
     Constraints = "$src1 = $dst", AddedComplexity = 10 in {
-  let SchedRW = [WriteADC] in {
+  let SchedRW = [WriteADC], isCommutable = 1 in {
   def ADCX32rr : I<0xF6, MRMSrcReg, (outs GR32:$dst),
                    (ins GR32:$src1, GR32:$src2),
                    "adcx{l}\t{$src2, $dst|$dst, $src2}",
@@ -1359,4 +1359,13 @@ let Predicates = [HasADX], Defs = [EFLAGS], Uses = [EFLAGS],
                     "adox{q}\t{$src2, $dst|$dst, $src2}", []>, T8XS;
   } // hasSideEffects = 0
   } // mayLoad = 1, SchedRW = [WriteADCLd]
+}
+
+// Patterns to recognize loads on the LHS of an ADC. We can't make X86adc_flag
+// commutable since it has EFLAGs as an input.
+let Predicates = [HasADX], AddedComplexity = 10 in {
+  def : Pat<(X86adc_flag (loadi32 addr:$src2), GR32:$src1, EFLAGS),
+            (ADCX32rm GR32:$src1, addr:$src2)>;
+  def : Pat<(X86adc_flag (loadi64 addr:$src2), GR64:$src1, EFLAGS),
+            (ADCX64rm GR64:$src1, addr:$src2)>;
 }

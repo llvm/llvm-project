@@ -498,7 +498,8 @@ static MemoryAccess *onlySingleValue(MemoryPhi *MP) {
 }
 
 void MemorySSAUpdater::wireOldPredecessorsToNewImmediatePredecessor(
-    BasicBlock *Old, BasicBlock *New, ArrayRef<BasicBlock *> Preds) {
+    BasicBlock *Old, BasicBlock *New, ArrayRef<BasicBlock *> Preds,
+    bool IdenticalEdgesWereMerged) {
   assert(!MSSA->getWritableBlockAccesses(New) &&
          "Access list should be null for a new block.");
   MemoryPhi *Phi = MSSA->getMemoryAccess(Old);
@@ -513,9 +514,17 @@ void MemorySSAUpdater::wireOldPredecessorsToNewImmediatePredecessor(
                              "new immediate predecessor.");
     MemoryPhi *NewPhi = MSSA->createMemoryPhi(New);
     SmallPtrSet<BasicBlock *, 16> PredsSet(Preds.begin(), Preds.end());
+    // Currently only support the case of removing a single incoming edge when
+    // identical edges were not merged.
+    if (!IdenticalEdgesWereMerged)
+      assert(PredsSet.size() == Preds.size() &&
+             "If identical edges were not merged, we cannot have duplicate "
+             "blocks in the predecessors");
     Phi->unorderedDeleteIncomingIf([&](MemoryAccess *MA, BasicBlock *B) {
       if (PredsSet.count(B)) {
         NewPhi->addIncoming(MA, B);
+        if (!IdenticalEdgesWereMerged)
+          PredsSet.erase(B);
         return true;
       }
       return false;

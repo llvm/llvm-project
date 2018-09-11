@@ -44,8 +44,8 @@ multiclass ExtractLane<ValueType vec_t, string vec, ImmLeaf imm_t,
                        WebAssemblyRegClass reg_t, bits<32> simdop,
                        string suffix = "", SDNode extract = vector_extract> {
   defm EXTRACT_LANE_#vec_t#suffix :
-      SIMD_I<(outs reg_t:$dst), (ins V128:$vec, i32imm_op:$idx),
-             (outs), (ins i32imm_op:$idx),
+      SIMD_I<(outs reg_t:$dst), (ins V128:$vec, vec_i8imm_op:$idx),
+             (outs), (ins vec_i8imm_op:$idx),
              [(set reg_t:$dst, (extract (vec_t V128:$vec), (i32 imm_t:$idx)))],
              vec#".extract_lane"#suffix#"\t$dst, $vec, $idx",
              vec#".extract_lane"#suffix#"\t$idx", simdop>;
@@ -80,8 +80,8 @@ multiclass ReplaceLane<ValueType vec_t, string vec, ImmLeaf imm_t,
                        WebAssemblyRegClass reg_t, ValueType lane_t,
                        bits<32> simdop> {
   defm REPLACE_LANE_#vec_t :
-      SIMD_I<(outs V128:$dst), (ins V128:$vec, i32imm_op:$idx, reg_t:$x),
-             (outs), (ins i32imm_op:$idx),
+      SIMD_I<(outs V128:$dst), (ins V128:$vec, vec_i8imm_op:$idx, reg_t:$x),
+             (outs), (ins vec_i8imm_op:$idx),
              [(set V128:$dst, (vector_insert
                (vec_t V128:$vec), (lane_t reg_t:$x), (i32 imm_t:$idx)))],
              vec#".replace_lane\t$dst, $vec, $idx, $x",
@@ -218,6 +218,36 @@ defm "" : Splat<v2i64, "i64x2", I64, splat2, 6>;
 defm "" : Splat<v4f32, "f32x4", F32, splat4, 7>;
 defm "" : Splat<v2f64, "f64x2", F64, splat2, 8>;
 
+defm SHUFFLE_v16i8 :
+  SIMD_I<(outs V128:$dst),
+         (ins V128:$x, V128:$y,
+           vec_i8imm_op:$m0, vec_i8imm_op:$m1,
+           vec_i8imm_op:$m2, vec_i8imm_op:$m3,
+           vec_i8imm_op:$m4, vec_i8imm_op:$m5,
+           vec_i8imm_op:$m6, vec_i8imm_op:$m7,
+           vec_i8imm_op:$m8, vec_i8imm_op:$m9,
+           vec_i8imm_op:$mA, vec_i8imm_op:$mB,
+           vec_i8imm_op:$mC, vec_i8imm_op:$mD,
+           vec_i8imm_op:$mE, vec_i8imm_op:$mF),
+         (outs),
+         (ins
+           vec_i8imm_op:$m0, vec_i8imm_op:$m1,
+           vec_i8imm_op:$m2, vec_i8imm_op:$m3,
+           vec_i8imm_op:$m4, vec_i8imm_op:$m5,
+           vec_i8imm_op:$m6, vec_i8imm_op:$m7,
+           vec_i8imm_op:$m8, vec_i8imm_op:$m9,
+           vec_i8imm_op:$mA, vec_i8imm_op:$mB,
+           vec_i8imm_op:$mC, vec_i8imm_op:$mD,
+           vec_i8imm_op:$mE, vec_i8imm_op:$mF),
+         [],
+         "v8x16.shuffle\t$dst, $x, $y, "#
+           "$m0, $m1, $m2, $m3, $m4, $m5, $m6, $m7, "#
+           "$m8, $m9, $mA, $mB, $mC, $mD, $mE, $mF",
+         "v8x16.shuffle\t"#
+           "$m0, $m1, $m2, $m3, $m4, $m5, $m6, $m7, "#
+           "$m8, $m9, $mA, $mB, $mC, $mD, $mE, $mF",
+         23>;
+
 let isCommutable = 1 in {
 defm ADD : SIMDBinaryInt<add, "add", 24>;
 defm ADD : SIMDBinaryFP<fadd, "add", 122>;
@@ -281,6 +311,30 @@ foreach t2 = !foldl(
   )
 ) in
 def : Pat<(t1 (bitconvert (t2 V128:$v))), (t1 V128:$v)>;
+
+// Shuffles after custom lowering
+def wasm_shuffle_t : SDTypeProfile<1, 18, []>;
+def wasm_shuffle : SDNode<"WebAssemblyISD::SHUFFLE", wasm_shuffle_t>;
+foreach vec_t = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
+def : Pat<(v16i8 (wasm_shuffle (vec_t V128:$x), (vec_t V128:$y),
+            (i32 LaneIdx32:$m0), (i32 LaneIdx32:$m1),
+            (i32 LaneIdx32:$m2), (i32 LaneIdx32:$m3),
+            (i32 LaneIdx32:$m4), (i32 LaneIdx32:$m5),
+            (i32 LaneIdx32:$m6), (i32 LaneIdx32:$m7),
+            (i32 LaneIdx32:$m8), (i32 LaneIdx32:$m9),
+            (i32 LaneIdx32:$mA), (i32 LaneIdx32:$mB),
+            (i32 LaneIdx32:$mC), (i32 LaneIdx32:$mD),
+            (i32 LaneIdx32:$mE), (i32 LaneIdx32:$mF))),
+          (v16i8 (SHUFFLE_v16i8 (vec_t V128:$x), (vec_t V128:$y),
+            (i32 LaneIdx32:$m0), (i32 LaneIdx32:$m1),
+            (i32 LaneIdx32:$m2), (i32 LaneIdx32:$m3),
+            (i32 LaneIdx32:$m4), (i32 LaneIdx32:$m5),
+            (i32 LaneIdx32:$m6), (i32 LaneIdx32:$m7),
+            (i32 LaneIdx32:$m8), (i32 LaneIdx32:$m9),
+            (i32 LaneIdx32:$mA), (i32 LaneIdx32:$mB),
+            (i32 LaneIdx32:$mC), (i32 LaneIdx32:$mD),
+            (i32 LaneIdx32:$mE), (i32 LaneIdx32:$mF)))>;
+}
 
 // arbitrary other BUILD_VECTOR patterns
 def : Pat<(v16i8 (build_vector

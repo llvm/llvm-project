@@ -619,6 +619,10 @@ static std::string getOverloadAsString(const CodeCompletionString &CCS) {
       OS << "<#" << C.Text << "#>";
       break;
 
+    // FIXME: We can also print optional parameters of an overload.
+    case CodeCompletionString::CK_Optional:
+      break;
+
     default: OS << C.Text; break;
     }
   }

@@ -268,9 +268,9 @@ define void @f1() {
 ; 686-NEXT:    sete %cl
 ; 686-NEXT:    xorl %edi, %edi
 ; 686-NEXT:    addl $7093, %edx # imm = 0x1BB5
-; 686-NEXT:    adcxl %edi, %esi
+; 686-NEXT:    adcxl %esi, %edi
 ; 686-NEXT:    cmpl %ecx, %edx
-; 686-NEXT:    sbbl $0, %esi
+; 686-NEXT:    sbbl $0, %edi
 ; 686-NEXT:    setl %cl
 ; 686-NEXT:    movzbl %cl, %ecx
 ; 686-NEXT:    movl %ecx, var_57

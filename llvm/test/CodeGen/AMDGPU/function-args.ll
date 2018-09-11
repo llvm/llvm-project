@@ -314,8 +314,17 @@ define void @void_func_v4i16(<4 x i16> %arg0) #0 {
 }
 
 ; GCN-LABEL: {{^}}void_func_v5i16:
-; GCN-DAG: buffer_store_short v4, off,
-; GCN-DAG: buffer_store_dwordx2 v[1:2], off
+; CI: v_lshlrev_b32
+; CI: v_and_b32
+; CI: v_lshlrev_b32
+; CI: v_or_b32
+; CI: v_or_b32
+; CI-DAG: buffer_store_short v
+; CI-DAG: buffer_store_dwordx2 v
+
+; GFX89-DAG: buffer_store_short v2, off,
+; GFX89-DAG: buffer_store_dwordx2 v[0:1], off
+
 define void @void_func_v5i16(<5 x i16> %arg0) #0 {
   store <5 x i16> %arg0, <5 x i16> addrspace(1)* undef
   ret void

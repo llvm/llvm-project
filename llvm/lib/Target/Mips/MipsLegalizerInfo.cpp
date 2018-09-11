@@ -32,6 +32,10 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   getActionDefinitionsBuilder({G_AND, G_OR, G_XOR, G_SHL, G_ASHR, G_LSHR})
       .legalFor({s32});
 
+  getActionDefinitionsBuilder(G_ICMP)
+      .legalFor({{s32, s32}})
+      .minScalar(0, s32);
+
   getActionDefinitionsBuilder(G_CONSTANT)
       .legalFor({s32});
 

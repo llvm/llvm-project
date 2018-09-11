@@ -20,12 +20,52 @@
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_posix.h"
+#include "xray_defs.h"
 #include "xray_utils.h"
 #include <cstddef>
 #include <cstdint>
 #include <sys/mman.h>
 
 namespace __xray {
+
+// We implement our own memory allocation routine which will bypass the
+// internal allocator. This allows us to manage the memory directly, using
+// mmap'ed memory to back the allocators.
+template <class T> T *allocate() XRAY_NEVER_INSTRUMENT {
+  auto B = reinterpret_cast<void *>(
+      internal_mmap(NULL, sizeof(T), PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+  if (B == MAP_FAILED) {
+    if (Verbosity())
+      Report("XRay Profiling: Failed to allocate memory of size %d.\n",
+             sizeof(T));
+    return nullptr;
+  }
+  return reinterpret_cast<T *>(B);
+}
+
+template <class T> void deallocate(T *B) XRAY_NEVER_INSTRUMENT {
+  if (B == nullptr)
+    return;
+  internal_munmap(B, sizeof(T));
+}
+
+inline void *allocateBuffer(size_t S) XRAY_NEVER_INSTRUMENT {
+  auto B = reinterpret_cast<void *>(internal_mmap(
+      NULL, S, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+  if (B == MAP_FAILED) {
+    if (Verbosity())
+      Report("XRay Profiling: Failed to allocate memory of size %d.\n", S);
+    return nullptr;
+  }
+  return B;
+}
+
+inline void deallocateBuffer(void *B, size_t S) XRAY_NEVER_INSTRUMENT {
+  if (B == nullptr)
+    return;
+  internal_munmap(B, S);
+}
 
 /// The Allocator type hands out fixed-sized chunks of memory that are
 /// cache-line aligned and sized. This is useful for placement of
@@ -59,12 +99,12 @@ private:
   size_t AllocatedBlocks = 0;
   SpinMutex Mutex{};
 
-  void *Alloc() {
+  void *Alloc() XRAY_NEVER_INSTRUMENT {
     SpinMutexLock Lock(&Mutex);
     if (UNLIKELY(BackingStore == nullptr)) {
       BackingStore = reinterpret_cast<void *>(
           internal_mmap(NULL, MaxMemory, PROT_READ | PROT_WRITE,
-                        MAP_PRIVATE | MAP_ANONYMOUS, 0, 0));
+                        MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
       if (BackingStore == MAP_FAILED) {
         BackingStore = nullptr;
         if (Verbosity())
@@ -107,12 +147,12 @@ private:
   }
 
 public:
-  explicit Allocator(size_t M)
+  explicit Allocator(size_t M) XRAY_NEVER_INSTRUMENT
       : MaxMemory(nearest_boundary(M, kCacheLineSize)) {}
 
-  Block Allocate() { return {Alloc()}; }
+  Block Allocate() XRAY_NEVER_INSTRUMENT { return {Alloc()}; }
 
-  ~Allocator() NOEXCEPT {
+  ~Allocator() NOEXCEPT XRAY_NEVER_INSTRUMENT {
     if (BackingStore != nullptr) {
       internal_munmap(BackingStore, MaxMemory);
     }

@@ -648,14 +648,17 @@ class InterpolateTest : public ::testing::Test {
 protected:
   // Adds an entry to the underlying compilation database.
   // A flag is injected: -D <File>, so the command used can be identified.
-  void add(llvm::StringRef File, llvm::StringRef Flags = "") {
-    llvm::SmallVector<StringRef, 8> Argv = {"clang", File, "-D", File};
+  void add(StringRef File, StringRef Clang, StringRef Flags) {
+    SmallVector<StringRef, 8> Argv = {Clang, File, "-D", File};
     llvm::SplitString(Flags, Argv);
-    llvm::SmallString<32> Dir;
+
+    SmallString<32> Dir;
     llvm::sys::path::system_temp_directory(false, Dir);
+
     Entries[path(File)].push_back(
         {Dir, path(File), {Argv.begin(), Argv.end()}, "foo.o"});
   }
+  void add(StringRef File, StringRef Flags = "") { add(File, "clang", Flags); }
 
   // Turn a unix path fragment (foo/bar.h) into a native path (C:\tmp\foo\bar.h)
   std::string path(llvm::SmallString<32> File) {
@@ -737,6 +740,30 @@ TEST_F(InterpolateTest, Case) {
   add("foo/bar/baz/quiet.cc");
   // Case mismatches are completely ignored, so we choose the name match.
   EXPECT_EQ(getCommand("foo/bar/baz/shout.C"), "clang -D FOO/BAR/BAZ/SHOUT.cc");
+}
+
+TEST_F(InterpolateTest, Aliasing) {
+  add("foo.cpp", "-faligned-new");
+
+  // The interpolated command should keep the given flag as written, even though
+  // the flag is internally represented as an alias.
+  EXPECT_EQ(getCommand("foo.hpp"), "clang -D foo.cpp -faligned-new");
+}
+
+TEST_F(InterpolateTest, ClangCL) {
+  add("foo.cpp", "clang-cl", "/W4");
+
+  // Language flags should be added with CL syntax.
+  EXPECT_EQ(getCommand("foo.h"), "clang-cl -D foo.cpp /W4 /TP");
+}
+
+TEST_F(InterpolateTest, DriverModes) {
+  add("foo.cpp", "clang-cl", "--driver-mode=gcc");
+  add("bar.cpp", "clang", "--driver-mode=cl");
+
+  // --driver-mode overrides should be respected.
+  EXPECT_EQ(getCommand("foo.h"), "clang-cl -D foo.cpp --driver-mode=gcc -x c++-header");
+  EXPECT_EQ(getCommand("bar.h"), "clang -D bar.cpp --driver-mode=cl /TP");
 }
 
 TEST(CompileCommandTest, EqualityOperator) {

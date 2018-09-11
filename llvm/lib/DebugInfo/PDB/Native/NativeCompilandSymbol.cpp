@@ -23,6 +23,16 @@ PDB_SymType NativeCompilandSymbol::getSymTag() const {
   return PDB_SymType::Compiland;
 }
 
+void NativeCompilandSymbol::dump(raw_ostream &OS, int Indent) const {
+  NativeRawSymbol::dump(OS, Indent);
+
+  dumpSymbolField(OS, "lexicalParentId", 0, Indent);
+  dumpSymbolField(OS, "libraryName", getLibraryName(), Indent);
+  dumpSymbolField(OS, "name", getName(), Indent);
+  dumpSymbolField(OS, "editAndContinueEnabled", isEditAndContinueEnabled(),
+                  Indent);
+}
+
 std::unique_ptr<NativeRawSymbol> NativeCompilandSymbol::clone() const {
   return llvm::make_unique<NativeCompilandSymbol>(Session, SymbolId, Module);
 }

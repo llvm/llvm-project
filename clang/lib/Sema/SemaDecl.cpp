@@ -3245,20 +3245,15 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
     //   Redeclarations or specializations of a function or function template
     //   with a declared return type that uses a placeholder type shall also
     //   use that placeholder, not a deduced type.
-    QualType OldDeclaredReturnType =
-        (Old->getTypeSourceInfo()
-             ? Old->getTypeSourceInfo()->getType()->castAs<FunctionType>()
-             : OldType)->getReturnType();
-    QualType NewDeclaredReturnType =
-        (New->getTypeSourceInfo()
-             ? New->getTypeSourceInfo()->getType()->castAs<FunctionType>()
-             : NewType)->getReturnType();
+    QualType OldDeclaredReturnType = Old->getDeclaredReturnType();
+    QualType NewDeclaredReturnType = New->getDeclaredReturnType();
     if (!Context.hasSameType(OldDeclaredReturnType, NewDeclaredReturnType) &&
-        !((NewQType->isDependentType() || OldQType->isDependentType()) &&
-          New->isLocalExternDecl())) {
+        canFullyTypeCheckRedeclaration(New, Old, NewDeclaredReturnType,
+                                       OldDeclaredReturnType)) {
       QualType ResQT;
       if (NewDeclaredReturnType->isObjCObjectPointerType() &&
           OldDeclaredReturnType->isObjCObjectPointerType())
+        // FIXME: This does the wrong thing for a deduced return type.
         ResQT = Context.mergeObjCGCQualifiers(NewQType, OldQType);
       if (ResQT.isNull()) {
         if (New->isCXXClassMember() && New->isOutOfLine())
@@ -3423,13 +3418,11 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
     if (OldQTypeForComparison == NewQType)
       return MergeCompatibleFunctionDecls(New, Old, S, MergeTypeWithOld);
 
-    if ((NewQType->isDependentType() || OldQType->isDependentType()) &&
-        New->isLocalExternDecl()) {
-      // It's OK if we couldn't merge types for a local function declaraton
-      // if either the old or new type is dependent. We'll merge the types
-      // when we instantiate the function.
+    // If the types are imprecise (due to dependent constructs in friends or
+    // local extern declarations), it's OK if they differ. We'll check again
+    // during instantiation.
+    if (!canFullyTypeCheckRedeclaration(New, Old, NewQType, OldQType))
       return false;
-    }
 
     // Fall through for conflicting redeclarations and redefinitions.
   }
@@ -9300,6 +9293,39 @@ Attr *Sema::getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
   }
   return nullptr;
 }
+
+/// Determines if we can perform a correct type check for \p D as a
+/// redeclaration of \p PrevDecl. If not, we can generally still perform a
+/// best-effort check.
+///
+/// \param NewD The new declaration.
+/// \param OldD The old declaration.
+/// \param NewT The portion of the type of the new declaration to check.
+/// \param OldT The portion of the type of the old declaration to check.
+bool Sema::canFullyTypeCheckRedeclaration(ValueDecl *NewD, ValueDecl *OldD,
+                                          QualType NewT, QualType OldT) {
+  if (!NewD->getLexicalDeclContext()->isDependentContext())
+    return true;
+
+  // For dependently-typed local extern declarations and friends, we can't
+  // perform a correct type check in general until instantiation:
+  //
+  //   int f();
+  //   template<typename T> void g() { T f(); }
+  //
+  // (valid if g() is only instantiated with T = int).
+  if (NewT->isDependentType() &&
+      (NewD->isLocalExternDecl() || NewD->getFriendObjectKind()))
+    return false;
+
+  // Similarly, if the previous declaration was a dependent local extern
+  // declaration, we don't really know its type yet.
+  if (OldT->isDependentType() && OldD->isLocalExternDecl())
+    return false;
+
+  return true;
+}
+
 /// Checks if the new declaration declared in dependent context must be
 /// put in the same redeclaration chain as the specified declaration.
 ///
@@ -9310,20 +9336,30 @@ Attr *Sema::getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
 ///          belongs to.
 ///
 bool Sema::shouldLinkDependentDeclWithPrevious(Decl *D, Decl *PrevDecl) {
-  // Any declarations should be put into redeclaration chains except for
-  // friend declaration in a dependent context that names a function in
-  // namespace scope.
+  if (!D->getLexicalDeclContext()->isDependentContext())
+    return true;
+
+  // Don't chain dependent friend function definitions until instantiation, to
+  // permit cases like
   //
-  // This allows to compile code like:
+  //   void func();
+  //   template<typename T> class C1 { friend void func() {} };
+  //   template<typename T> class C2 { friend void func() {} };
   //
-  //       void func();
-  //       template<typename T> class C1 { friend void func() { } };
-  //       template<typename T> class C2 { friend void func() { } };
+  // ... which is valid if only one of C1 and C2 is ever instantiated.
   //
-  // This code snippet is a valid code unless both templates are instantiated.
-  return !(D->getLexicalDeclContext()->isDependentContext() &&
-           D->getDeclContext()->isFileContext() &&
-           D->getFriendObjectKind() != Decl::FOK_None);
+  // FIXME: This need only apply to function definitions. For now, we proxy
+  // this by checking for a file-scope function. We do not want this to apply
+  // to friend declarations nominating member functions, because that gets in
+  // the way of access checks.
+  if (D->getFriendObjectKind() && D->getDeclContext()->isFileContext())
+    return false;
+
+  auto *VD = dyn_cast<ValueDecl>(D);
+  auto *PrevVD = dyn_cast<ValueDecl>(PrevDecl);
+  return !VD || !PrevVD ||
+         canFullyTypeCheckRedeclaration(VD, PrevVD, VD->getType(),
+                                        PrevVD->getType());
 }
 
 namespace MultiVersioning {

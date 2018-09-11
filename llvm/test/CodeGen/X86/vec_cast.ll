@@ -53,19 +53,12 @@ define <3 x i32> @b(<3 x i16> %a) nounwind {
 define <1 x i32> @c(<1 x i16> %a) nounwind {
 ; CHECK-LIN-LABEL: c:
 ; CHECK-LIN:       # %bb.0:
-; CHECK-LIN-NEXT:    movd %edi, %xmm0
-; CHECK-LIN-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
-; CHECK-LIN-NEXT:    psrad $16, %xmm0
-; CHECK-LIN-NEXT:    movd %xmm0, %eax
+; CHECK-LIN-NEXT:    movswl %di, %eax
 ; CHECK-LIN-NEXT:    retq
 ;
 ; CHECK-WIN-LABEL: c:
 ; CHECK-WIN:       # %bb.0:
-; CHECK-WIN-NEXT:    # kill: def $cx killed $cx def $ecx
-; CHECK-WIN-NEXT:    movd %ecx, %xmm0
-; CHECK-WIN-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
-; CHECK-WIN-NEXT:    psrad $16, %xmm0
-; CHECK-WIN-NEXT:    movd %xmm0, %eax
+; CHECK-WIN-NEXT:    movswl %cx, %eax
 ; CHECK-WIN-NEXT:    retq
   %c = sext <1 x i16> %a to <1 x i32>
   ret <1 x i32> %c
@@ -120,19 +113,12 @@ define <3 x i32> @e(<3 x i16> %a) nounwind {
 define <1 x i32> @f(<1 x i16> %a) nounwind {
 ; CHECK-LIN-LABEL: f:
 ; CHECK-LIN:       # %bb.0:
-; CHECK-LIN-NEXT:    movd %edi, %xmm0
-; CHECK-LIN-NEXT:    pxor %xmm1, %xmm1
-; CHECK-LIN-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; CHECK-LIN-NEXT:    movd %xmm0, %eax
+; CHECK-LIN-NEXT:    movzwl %di, %eax
 ; CHECK-LIN-NEXT:    retq
 ;
 ; CHECK-WIN-LABEL: f:
 ; CHECK-WIN:       # %bb.0:
-; CHECK-WIN-NEXT:    # kill: def $cx killed $cx def $ecx
-; CHECK-WIN-NEXT:    movd %ecx, %xmm0
-; CHECK-WIN-NEXT:    pxor %xmm1, %xmm1
-; CHECK-WIN-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; CHECK-WIN-NEXT:    movd %xmm0, %eax
+; CHECK-WIN-NEXT:    movzwl %cx, %eax
 ; CHECK-WIN-NEXT:    retq
   %c = zext <1 x i16> %a to <1 x i32>
   ret <1 x i32> %c

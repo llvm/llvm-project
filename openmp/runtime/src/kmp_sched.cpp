@@ -68,7 +68,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   ompt_team_info_t *team_info = NULL;
   ompt_task_info_t *task_info = NULL;
-  ompt_work_type_t ompt_work_type = ompt_work_loop;
+  ompt_work_t ompt_work_type = ompt_work_loop;
 
   static kmp_int8 warn = 0;
 

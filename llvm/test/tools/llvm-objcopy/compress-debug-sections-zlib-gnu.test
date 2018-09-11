@@ -1,0 +1,49 @@
+# REQUIRES: zlib
+
+# RUN: yaml2obj %p/Inputs/compress-debug-sections.yaml -o %t.o
+# RUN: llvm-objcopy --compress-debug-sections=zlib-gnu %t.o %t-compressed.o
+
+# RUN: llvm-objdump -s %t.o -section=.debug_foo | FileCheck %s
+# RUN: llvm-objdump -s %t-compressed.o | FileCheck %s --check-prefix=CHECK-COMPRESSED
+# RUN: llvm-readobj -relocations -s %t-compressed.o | FileCheck %s --check-prefix=CHECK-FLAGS
+
+# CHECK: .debug_foo:
+
+# CHECK-COMPRESSED: .zdebug_foo:
+# CHECK-COMPRESSED: ZLIB
+# CHECK-COMPRESSED: .notdebug_foo:
+
+# CHECK-FLAGS-NOT: Name: .debug_foo
+# CHECK-FLAGS: Index: 1
+# CHECK-FLAGS-NEXT: Name: .zdebug_foo
+# CHECK-FLAGS-NEXT: Type: SHT_PROGBITS
+# CHECK-FLAGS-NEXT: Flags [
+# CHECK-FLAGS-NEXT: ]
+# CHECK-FLAGS-NEXT: Address:
+# CHECK-FLAGS-NEXT: Offset:
+# CHECK-FLAGS-NEXT: Size: 23
+
+# CHECK-FLAGS: Name: .notdebug_foo
+# CHECK-FLAGS-NEXT: Type: SHT_PROGBITS
+# CHECK-FLAGS-NEXT: Flags [
+# CHECK-FLAGS-NEXT: ]
+# CHECK-FLAGS-NEXT: Address:
+# CHECK-FLAGS-NEXT: Offset:
+# CHECK-FLAGS-NEXT: Size: 8
+
+# CHECK-FLAGS: Name: .rela.debug_foo
+# CHECK-FLAGS-NEXT: Type: SHT_RELA
+# CHECK-FLAGS-NEXT: Flags [
+# CHECK-FLAGS-NEXT: ]
+# CHECK-FLAGS-NEXT: Address:
+# CHECK-FLAGS-NEXT: Offset:
+# CHECK-FLAGS-NEXT: Size:
+# CHECK-FLAGS-NEXT: Link:
+# CHECK-FLAGS-NEXT: Info: 1
+
+# CHECK-FLAGS: Relocations [
+# CHECK-FLAGS-NEXT:   .rela.debug_foo {
+# CHECK-FLAGS-NEXT:     0x1 R_X86_64_32 - 0x0
+# CHECK-FLAGS-NEXT:   }
+# CHECK-FLAGS-NEXT: ]
+

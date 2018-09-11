@@ -59,8 +59,19 @@ void t2() {
   }
 }
 
+#pragma omp declare target
+  void abc();
+#pragma omp end declare target
+void cba();
+#pragma omp end declare target // expected-error {{unexpected OpenMP directive '#pragma omp end declare target'}}
 
-#pragma omp declare target // expected-note {{to match this '#pragma omp declare target'}}
+#pragma omp declare target  
+  #pragma omp declare target
+    void def();
+  #pragma omp end declare target
+  void fed();
+
+#pragma omp declare target
 #pragma omp threadprivate(a) // expected-note {{defined as threadprivate or thread local}}
 extern int b;
 int g;
@@ -100,8 +111,11 @@ void foo(int p) {
   f();
   c();
 }
-#pragma omp declare target // expected-error {{expected '#pragma omp end declare target'}}
+#pragma omp declare target
 void foo1() {}
+#pragma omp end declare target
+
+#pragma omp end declare target
 #pragma omp end declare target
 #pragma omp end declare target // expected-error {{unexpected OpenMP directive '#pragma omp end declare target'}}
 

@@ -38,7 +38,10 @@ public:
   /// or higher than the given one.
   void advanceTo(DocID ID) override {
     assert(!reachedEnd() && "DOCUMENT iterator can't advance() at the end.");
-    Index = std::lower_bound(Index, std::end(Documents), ID);
+    // If current ID is beyond requested one, iterator is already in the right
+    // state.
+    if (peek() < ID)
+      Index = std::lower_bound(Index, std::end(Documents), ID);
   }
 
   DocID peek() const override {
