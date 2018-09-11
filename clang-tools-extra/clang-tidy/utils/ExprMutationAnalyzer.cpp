@@ -51,6 +51,20 @@ const auto nonConstReferenceType = [] {
   return referenceType(pointee(unless(isConstQualified())));
 };
 
+const auto nonConstPointerType = [] {
+  return pointerType(pointee(unless(isConstQualified())));
+};
+
+const auto isMoveOnly = [] {
+  return cxxRecordDecl(
+      hasMethod(cxxConstructorDecl(isMoveConstructor(), unless(isDeleted()))),
+      hasMethod(cxxMethodDecl(isMoveAssignmentOperator(), unless(isDeleted()))),
+      unless(anyOf(hasMethod(cxxConstructorDecl(isCopyConstructor(),
+                                                unless(isDeleted()))),
+                   hasMethod(cxxMethodDecl(isCopyAssignmentOperator(),
+                                           unless(isDeleted()))))));
+};
+
 } // namespace
 
 const Stmt *ExprMutationAnalyzer::findMutation(const Expr *Exp) {
@@ -168,6 +182,15 @@ const Stmt *ExprMutationAnalyzer::findDirectMutation(const Expr *Exp) {
   const auto AsPointerFromArrayDecay =
       castExpr(hasCastKind(CK_ArrayToPointerDecay),
                unless(hasParent(arraySubscriptExpr())), has(equalsNode(Exp)));
+  // Treat calling `operator->()` of move-only classes as taking address.
+  // These are typically smart pointers with unique ownership so we treat
+  // mutation of pointee as mutation of the smart pointer itself.
+  const auto AsOperatorArrowThis = cxxOperatorCallExpr(
+      hasOverloadedOperatorName("->"),
+      callee(cxxMethodDecl(
+          ofClass(isMoveOnly()),
+          returns(hasUnqualifiedDesugaredType(nonConstPointerType())))),
+      argumentCountIs(1), hasArgument(0, equalsNode(Exp)));
 
   // Used as non-const-ref argument when calling a function.
   // An argument is assumed to be non-const-ref when the function is unresolved.
@@ -197,8 +220,8 @@ const Stmt *ExprMutationAnalyzer::findDirectMutation(const Expr *Exp) {
   const auto Matches =
       match(findAll(stmt(anyOf(AsAssignmentLhs, AsIncDecOperand, AsNonConstThis,
                                AsAmpersandOperand, AsPointerFromArrayDecay,
-                               AsNonConstRefArg, AsLambdaRefCaptureInit,
-                               AsNonConstRefReturn))
+                               AsOperatorArrowThis, AsNonConstRefArg,
+                               AsLambdaRefCaptureInit, AsNonConstRefReturn))
                         .bind("stmt")),
             Stm, Context);
   return selectFirst<Stmt>("stmt", Matches);
@@ -250,6 +273,21 @@ const Stmt *ExprMutationAnalyzer::findRangeLoopMutation(const Expr *Exp) {
 }
 
 const Stmt *ExprMutationAnalyzer::findReferenceMutation(const Expr *Exp) {
+  // Follow non-const reference returned by `operator*()` of move-only classes.
+  // These are typically smart pointers with unique ownership so we treat
+  // mutation of pointee as mutation of the smart pointer itself.
+  const auto Ref = match(
+      findAll(cxxOperatorCallExpr(
+                  hasOverloadedOperatorName("*"),
+                  callee(cxxMethodDecl(ofClass(isMoveOnly()),
+                                       returns(hasUnqualifiedDesugaredType(
+                                           nonConstReferenceType())))),
+                  argumentCountIs(1), hasArgument(0, equalsNode(Exp)))
+                  .bind("expr")),
+      Stm, Context);
+  if (const Stmt *S = findExprMutation(Ref))
+    return S;
+
   // If 'Exp' is bound to a non-const reference, check all declRefExpr to that.
   const auto Refs = match(
       stmt(forEachDescendant(
