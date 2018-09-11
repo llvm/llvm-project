@@ -82,7 +82,7 @@ macro(opencl_bc_lib name)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${output_name} DESTINATION lib COMPONENT device-libs)
 endmacro()
 
-macro(clang_opencl_code name dir)
+function(clang_opencl_code name dir)
   set(tgt_name ${name}_code)
   set_source_files_properties(${dir}/${name}.cl PROPERTIES LANGUAGE "OCL")
   add_executable(${tgt_name} ${dir}/${name}.cl)
@@ -93,13 +93,12 @@ macro(clang_opencl_code name dir)
     get_target_property(lib_path ${lib}_lib ARCHIVE_OUTPUT_DIRECTORY)
     set(mlink_flags "${mlink_flags} -Xclang -mlink-bitcode-file -Xclang ${lib_path}/${lib_file}.amdgcn${BC_EXT}")
   endforeach()
-  set(CMAKE_OCL_FLAGS "${CMAKE_OCL_FLAGS} -mcpu=fiji ${mlink_flags}")
+  set(test_build_flags "${CMAKE_OCL_FLAGS} -mcpu=fiji ${mlink_flags}")
   #dummy link since clang already generated CodeObject file
   set_target_properties(${tgt_name} PROPERTIES
-    COMPILE_FLAGS "${CLANG_OCL_FLAGS} ${CMAKE_OCL_FLAGS}"
+    COMPILE_FLAGS "${CLANG_OCL_FLAGS} ${test_build_flags}"
     LANGUAGE "OCL" LINKER_LANGUAGE "OCL")
-
-endmacro()
+endfunction()
 
 set (oclc_default_libs
   oclc_correctly_rounded_sqrt_off
