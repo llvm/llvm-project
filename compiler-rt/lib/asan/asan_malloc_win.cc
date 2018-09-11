@@ -125,7 +125,7 @@ void *_recalloc_base(void *p, size_t n, size_t elem_size) {
 }
 
 ALLOCATION_FUNCTION_ATTRIBUTE
-size_t _msize(const void *ptr) {
+size_t _msize(void *ptr) {
   GET_CURRENT_PC_BP_SP;
   (void)sp;
   return asan_malloc_usable_size(ptr, pc, bp);
