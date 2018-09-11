@@ -8,7 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Index/IndexDataStore.h"
-#include "IndexDataStoreUtils.h"
+#include "clang/DirectoryWatcher/DirectoryWatcher.h"
+#include "../lib/Index/IndexDataStoreUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
@@ -20,40 +21,6 @@ using namespace clang;
 using namespace clang::index;
 using namespace clang::index::store;
 using namespace llvm;
-
-static void appendSubDir(StringRef subdir, SmallVectorImpl<char> &StorePathBuf) {
-  SmallString<10> VersionPath;
-  raw_svector_ostream(VersionPath) << 'v' << STORE_FORMAT_VERSION;
-
-  sys::path::append(StorePathBuf, VersionPath);
-  sys::path::append(StorePathBuf, subdir);
-}
-
-void store::appendInteriorUnitPath(StringRef UnitName,
-                                   SmallVectorImpl<char> &PathBuf) {
-  sys::path::append(PathBuf, UnitName);
-}
-
-void store::appendUnitSubDir(SmallVectorImpl<char> &StorePathBuf) {
-  return appendSubDir("units", StorePathBuf);
-}
-
-void store::appendRecordSubDir(SmallVectorImpl<char> &StorePathBuf) {
-  return appendSubDir("records", StorePathBuf);
-}
-
-void store::appendInteriorRecordPath(StringRef RecordName,
-                                     SmallVectorImpl<char> &PathBuf) {
-  // To avoid putting a huge number of files into the records directory, create
-  // subdirectories based on the last 2 characters from the hash.
-  StringRef hash2chars = RecordName.substr(RecordName.size()-2);
-  sys::path::append(PathBuf, hash2chars);
-  sys::path::append(PathBuf, RecordName);
-}
-
-//===----------------------------------------------------------------------===//
-// IndexDataStore
-//===----------------------------------------------------------------------===//
 
 namespace {
 
@@ -75,7 +42,7 @@ public:
 class IndexDataStoreImpl {
   std::string FilePath;
   std::shared_ptr<UnitEventHandlerData> TheUnitEventHandlerData;
-  std::unique_ptr<AbstractDirectoryWatcher> DirWatcher;
+  std::unique_ptr<DirectoryWatcher> DirWatcher;
 
 public:
   explicit IndexDataStoreImpl(StringRef indexStorePath)
@@ -87,8 +54,7 @@ public:
   bool foreachUnitName(bool sorted,
                        llvm::function_ref<bool(StringRef unitName)> receiver);
   void setUnitEventHandler(IndexDataStore::UnitEventHandler Handler);
-  bool startEventListening(llvm::function_ref<AbstractDirectoryWatcher::CreateFnTy> createFn,
-                           bool waitInitialSync, std::string &Error);
+  bool startEventListening(bool waitInitialSync, std::string &Error);
   void stopEventListening();
   void discardUnit(StringRef UnitName);
   void discardRecord(StringRef RecordName);
@@ -131,8 +97,7 @@ void IndexDataStoreImpl::setUnitEventHandler(IndexDataStore::UnitEventHandler ha
   TheUnitEventHandlerData->setHandler(std::move(handler));
 }
 
-bool IndexDataStoreImpl::startEventListening(llvm::function_ref<AbstractDirectoryWatcher::CreateFnTy> createFn,
-                                             bool waitInitialSync, std::string &Error) {
+bool IndexDataStoreImpl::startEventListening(bool waitInitialSync, std::string &Error) {
   if (DirWatcher) {
     Error = "event listener already active";
     return true;
@@ -143,20 +108,20 @@ bool IndexDataStoreImpl::startEventListening(llvm::function_ref<AbstractDirector
   appendUnitSubDir(UnitPath);
 
   auto localUnitEventHandlerData = TheUnitEventHandlerData;
-  auto OnUnitsChange = [localUnitEventHandlerData](ArrayRef<AbstractDirectoryWatcher::Event> Events, bool isInitial) {
+  auto OnUnitsChange = [localUnitEventHandlerData](ArrayRef<DirectoryWatcher::Event> Events, bool isInitial) {
     SmallVector<IndexDataStore::UnitEvent, 16> UnitEvents;
     UnitEvents.reserve(Events.size());
-    for (const AbstractDirectoryWatcher::Event &evt : Events) {
+    for (const DirectoryWatcher::Event &evt : Events) {
       IndexDataStore::UnitEventKind K;
       StringRef UnitName = sys::path::filename(evt.Filename);
       switch (evt.Kind) {
-      case AbstractDirectoryWatcher::EventKind::Added:
+      case DirectoryWatcher::EventKind::Added:
         K = IndexDataStore::UnitEventKind::Added; break;
-      case AbstractDirectoryWatcher::EventKind::Removed:
+      case DirectoryWatcher::EventKind::Removed:
         K = IndexDataStore::UnitEventKind::Removed; break;
-      case AbstractDirectoryWatcher::EventKind::Modified:
+      case DirectoryWatcher::EventKind::Modified:
         K = IndexDataStore::UnitEventKind::Modified; break;
-      case AbstractDirectoryWatcher::EventKind::DirectoryDeleted:
+      case DirectoryWatcher::EventKind::DirectoryDeleted:
         K = IndexDataStore::UnitEventKind::DirectoryDeleted;
         UnitName = StringRef();
         break;
@@ -170,7 +135,8 @@ bool IndexDataStoreImpl::startEventListening(llvm::function_ref<AbstractDirector
     }
   };
 
-  DirWatcher = createFn(UnitPath.str(), OnUnitsChange, waitInitialSync, Error);
+  DirWatcher = DirectoryWatcher::create(UnitPath.str(), OnUnitsChange,
+                                        waitInitialSync, Error);
   if (!DirWatcher)
     return true;
 
@@ -237,9 +203,8 @@ void IndexDataStore::setUnitEventHandler(UnitEventHandler Handler) {
   return IMPL->setUnitEventHandler(std::move(Handler));
 }
 
-bool IndexDataStore::startEventListening(llvm::function_ref<AbstractDirectoryWatcher::CreateFnTy> createFn,
-                                         bool waitInitialSync, std::string &Error) {
-  return IMPL->startEventListening(std::move(createFn), waitInitialSync, Error);
+bool IndexDataStore::startEventListening(bool waitInitialSync, std::string &Error) {
+  return IMPL->startEventListening(waitInitialSync, Error);
 }
 
 void IndexDataStore::stopEventListening() {
