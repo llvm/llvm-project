@@ -589,7 +589,6 @@ class SilvermontProc<string Name> : ProcessorModel<Name, SLMModel, [
   FeatureMOVBE,
   FeaturePOPCNT,
   FeaturePCLMUL,
-  FeatureAES,
   FeatureSlowDivide64,
   FeatureSlowTwoMemOps,
   FeaturePRFCHW,
@@ -702,7 +701,6 @@ class WestmereProc<string Name> : ProcessorModel<Name, SandyBridgeModel, [
   Feature64Bit,
   FeatureCMPXCHG16B,
   FeaturePOPCNT,
-  FeatureAES,
   FeaturePCLMUL,
   FeatureLAHFSAHF,
   FeatureMacroFusion
@@ -721,7 +719,6 @@ def SNBFeatures : ProcessorFeatures<[], [
   Feature64Bit,
   FeatureCMPXCHG16B,
   FeaturePOPCNT,
-  FeatureAES,
   FeatureSlowDivide64,
   FeaturePCLMUL,
   FeatureXSAVE,
@@ -791,6 +788,7 @@ class BroadwellProc<string Name> : ProcModel<Name, BroadwellModel,
 def : BroadwellProc<"broadwell">;
 
 def SKLFeatures : ProcessorFeatures<BDWFeatures.Value, [
+  FeatureAES,
   FeatureMPX,
   FeatureRTM,
   FeatureXSAVEC,

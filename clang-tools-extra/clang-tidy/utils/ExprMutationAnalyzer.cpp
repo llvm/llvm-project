@@ -102,7 +102,7 @@ bool ExprMutationAnalyzer::isUnevaluated(const Expr *Exp) {
                                       hasDescendant(equalsNode(Exp)))),
                                   cxxNoexceptExpr())))))
                          .bind("expr")),
-                 *Stm, *Context)) != nullptr;
+                 Stm, Context)) != nullptr;
 }
 
 const Stmt *
@@ -125,7 +125,7 @@ ExprMutationAnalyzer::findDeclMutation(ArrayRef<BoundNodes> Matches) {
 
 const Stmt *ExprMutationAnalyzer::findDeclMutation(const Decl *Dec) {
   const auto Refs = match(
-      findAll(declRefExpr(to(equalsNode(Dec))).bind("expr")), *Stm, *Context);
+      findAll(declRefExpr(to(equalsNode(Dec))).bind("expr")), Stm, Context);
   for (const auto &RefNodes : Refs) {
     const auto *E = RefNodes.getNodeAs<Expr>("expr");
     if (findMutation(E))
@@ -200,7 +200,7 @@ const Stmt *ExprMutationAnalyzer::findDirectMutation(const Expr *Exp) {
                                AsNonConstRefArg, AsLambdaRefCaptureInit,
                                AsNonConstRefReturn))
                         .bind("stmt")),
-            *Stm, *Context);
+            Stm, Context);
   return selectFirst<Stmt>("stmt", Matches);
 }
 
@@ -211,7 +211,7 @@ const Stmt *ExprMutationAnalyzer::findMemberMutation(const Expr *Exp) {
                                cxxDependentScopeMemberExpr(
                                    hasObjectExpression(equalsNode(Exp)))))
                         .bind("expr")),
-            *Stm, *Context);
+            Stm, Context);
   return findExprMutation(MemberExprs);
 }
 
@@ -220,7 +220,7 @@ const Stmt *ExprMutationAnalyzer::findArrayElementMutation(const Expr *Exp) {
   const auto SubscriptExprs = match(
       findAll(arraySubscriptExpr(hasBase(ignoringImpCasts(equalsNode(Exp))))
                   .bind("expr")),
-      *Stm, *Context);
+      Stm, Context);
   return findExprMutation(SubscriptExprs);
 }
 
@@ -233,7 +233,7 @@ const Stmt *ExprMutationAnalyzer::findCastMutation(const Expr *Exp) {
                                    implicitCastExpr(hasImplicitDestinationType(
                                        nonConstReferenceType()))))
                         .bind("expr")),
-            *Stm, *Context);
+            Stm, Context);
   return findExprMutation(Casts);
 }
 
@@ -245,7 +245,7 @@ const Stmt *ExprMutationAnalyzer::findRangeLoopMutation(const Expr *Exp) {
                 hasLoopVariable(
                     varDecl(hasType(nonConstReferenceType())).bind("decl")),
                 hasRangeInit(equalsNode(Exp)))),
-            *Stm, *Context);
+            Stm, Context);
   return findDeclMutation(LoopVars);
 }
 
@@ -265,7 +265,7 @@ const Stmt *ExprMutationAnalyzer::findReferenceMutation(const Expr *Exp) {
               unless(hasParent(declStmt(hasParent(
                   cxxForRangeStmt(hasRangeStmt(equalsBoundNode("stmt"))))))))
               .bind("decl"))),
-      *Stm, *Context);
+      Stm, Context);
   return findDeclMutation(Refs);
 }
 

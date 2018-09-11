@@ -198,4 +198,134 @@ define <2 x i64> @test7_vec(<2 x i32> %V) {
   ret <2 x i64> %add
 }
 
+define i64 @test8(i32 %V) {
+; CHECK-LABEL: @test8(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i32 [[V:%.*]], 16
+; CHECK-NEXT:    [[MULCONV:%.*]] = mul nsw i32 [[ASHR]], 32767
+; CHECK-NEXT:    [[MUL:%.*]] = sext i32 [[MULCONV]] to i64
+; CHECK-NEXT:    ret i64 [[MUL]]
+;
+  %ashr = ashr i32 %V, 16
+  %sext = sext i32 %ashr to i64
+  %mul = mul i64 %sext, 32767
+  ret i64 %mul
+}
+
+define <2 x i64> @test8_splat(<2 x i32> %V) {
+; CHECK-LABEL: @test8_splat(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i32> [[ASHR]] to <2 x i64>
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <2 x i64> [[SEXT]], <i64 32767, i64 32767>
+; CHECK-NEXT:    ret <2 x i64> [[MUL]]
+;
+  %ashr = ashr <2 x i32> %V, <i32 16, i32 16>
+  %sext = sext <2 x i32> %ashr to <2 x i64>
+  %mul = mul <2 x i64> %sext, <i64 32767, i64 32767>
+  ret <2 x i64> %mul
+}
+
+define <2 x i64> @test8_vec(<2 x i32> %V) {
+; CHECK-LABEL: @test8_vec(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i32> [[ASHR]] to <2 x i64>
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <2 x i64> [[SEXT]], <i64 32767, i64 16384>
+; CHECK-NEXT:    ret <2 x i64> [[MUL]]
+;
+  %ashr = ashr <2 x i32> %V, <i32 16, i32 16>
+  %sext = sext <2 x i32> %ashr to <2 x i64>
+  %mul = mul <2 x i64> %sext, <i64 32767, i64 16384>
+  ret <2 x i64> %mul
+}
+
+define <2 x i64> @test8_vec2(<2 x i32> %V) {
+; CHECK-LABEL: @test8_vec2(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i32> [[ASHR]] to <2 x i64>
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <2 x i64> [[SEXT]], <i64 32767, i64 -32767>
+; CHECK-NEXT:    ret <2 x i64> [[MUL]]
+;
+  %ashr = ashr <2 x i32> %V, <i32 16, i32 16>
+  %sext = sext <2 x i32> %ashr to <2 x i64>
+  %mul = mul <2 x i64> %sext, <i64 32767, i64 -32767>
+  ret <2 x i64> %mul
+}
+
+define i64 @test9(i32 %V) {
+; CHECK-LABEL: @test9(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i32 [[V:%.*]], 16
+; CHECK-NEXT:    [[MULCONV:%.*]] = mul nsw i32 [[ASHR]], -32767
+; CHECK-NEXT:    [[MUL:%.*]] = sext i32 [[MULCONV]] to i64
+; CHECK-NEXT:    ret i64 [[MUL]]
+;
+  %ashr = ashr i32 %V, 16
+  %sext = sext i32 %ashr to i64
+  %mul = mul i64 %sext, -32767
+  ret i64 %mul
+}
+
+define <2 x i64> @test9_splat(<2 x i32> %V) {
+; CHECK-LABEL: @test9_splat(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i32> [[ASHR]] to <2 x i64>
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <2 x i64> [[SEXT]], <i64 -32767, i64 -32767>
+; CHECK-NEXT:    ret <2 x i64> [[MUL]]
+;
+  %ashr = ashr <2 x i32> %V, <i32 16, i32 16>
+  %sext = sext <2 x i32> %ashr to <2 x i64>
+  %mul = mul <2 x i64> %sext, <i64 -32767, i64 -32767>
+  ret <2 x i64> %mul
+}
+
+define <2 x i64> @test9_vec(<2 x i32> %V) {
+; CHECK-LABEL: @test9_vec(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i32> [[ASHR]] to <2 x i64>
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <2 x i64> [[SEXT]], <i64 -32767, i64 -10>
+; CHECK-NEXT:    ret <2 x i64> [[MUL]]
+;
+  %ashr = ashr <2 x i32> %V, <i32 16, i32 16>
+  %sext = sext <2 x i32> %ashr to <2 x i64>
+  %mul = mul <2 x i64> %sext, <i64 -32767, i64 -10>
+  ret <2 x i64> %mul
+}
+
+define i64 @test10(i32 %V) {
+; CHECK-LABEL: @test10(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[V:%.*]], 16
+; CHECK-NEXT:    [[MULCONV:%.*]] = mul nuw i32 [[LSHR]], 65535
+; CHECK-NEXT:    [[MUL:%.*]] = zext i32 [[MULCONV]] to i64
+; CHECK-NEXT:    ret i64 [[MUL]]
+;
+  %lshr = lshr i32 %V, 16
+  %zext = zext i32 %lshr to i64
+  %mul = mul i64 %zext, 65535
+  ret i64 %mul
+}
+
+define <2 x i64> @test10_splat(<2 x i32> %V) {
+; CHECK-LABEL: @test10_splat(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[V:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[LSHR]] to <2 x i64>
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw <2 x i64> [[ZEXT]], <i64 65535, i64 65535>
+; CHECK-NEXT:    ret <2 x i64> [[MUL]]
+;
+  %lshr = lshr <2 x i32> %V, <i32 16, i32 16>
+  %zext = zext <2 x i32> %lshr to <2 x i64>
+  %mul = mul <2 x i64> %zext, <i64 65535, i64 65535>
+  ret <2 x i64> %mul
+}
+
+define <2 x i64> @test10_vec(<2 x i32> %V) {
+; CHECK-LABEL: @test10_vec(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[V:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[LSHR]] to <2 x i64>
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw <2 x i64> [[ZEXT]], <i64 65535, i64 2>
+; CHECK-NEXT:    ret <2 x i64> [[MUL]]
+;
+  %lshr = lshr <2 x i32> %V, <i32 16, i32 16>
+  %zext = zext <2 x i32> %lshr to <2 x i64>
+  %mul = mul <2 x i64> %zext, <i64 65535, i64 2>
+  ret <2 x i64> %mul
+}
+
 !0 = !{ i32 0, i32 2000 }

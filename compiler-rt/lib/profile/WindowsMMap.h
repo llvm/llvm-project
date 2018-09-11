@@ -12,7 +12,7 @@
 
 #if defined(_WIN32)
 
-#include <BaseTsd.h>
+#include <basetsd.h>
 #include <io.h>
 #include <sys/types.h>
 

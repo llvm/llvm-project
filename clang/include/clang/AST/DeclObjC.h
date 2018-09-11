@@ -506,6 +506,9 @@ public:
   /// Returns whether this specific method is a definition.
   bool isThisDeclarationADefinition() const { return hasBody(); }
 
+  /// Is this method defined in the NSObject base class?
+  bool definedInNSObject(const ASTContext &) const;
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ObjCMethod; }

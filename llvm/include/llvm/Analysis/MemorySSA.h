@@ -824,7 +824,8 @@ protected:
                                InsertionPlace);
   void insertIntoListsBefore(MemoryAccess *, const BasicBlock *,
                              AccessList::iterator);
-  MemoryUseOrDef *createDefinedAccess(Instruction *, MemoryAccess *);
+  MemoryUseOrDef *createDefinedAccess(Instruction *, MemoryAccess *,
+                                      const MemoryUseOrDef *Template = nullptr);
 
 private:
   class CachingWalker;
@@ -845,7 +846,8 @@ private:
   void markUnreachableAsLiveOnEntry(BasicBlock *BB);
   bool dominatesUse(const MemoryAccess *, const MemoryAccess *) const;
   MemoryPhi *createMemoryPhi(BasicBlock *BB);
-  MemoryUseOrDef *createNewAccess(Instruction *);
+  MemoryUseOrDef *createNewAccess(Instruction *,
+                                  const MemoryUseOrDef *Template = nullptr);
   MemoryAccess *findDominatingDef(BasicBlock *, enum InsertionPlace);
   void placePHINodes(const SmallPtrSetImpl<BasicBlock *> &);
   MemoryAccess *renameBlock(BasicBlock *, MemoryAccess *, bool);

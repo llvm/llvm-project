@@ -35,8 +35,10 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFGDiff.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/OperandTraits.h"
@@ -45,6 +47,7 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -56,6 +59,12 @@ class Instruction;
 class MemoryAccess;
 class LLVMContext;
 class raw_ostream;
+
+using ValueToValueMapTy = ValueMap<const Value *, WeakTrackingVH>;
+using PhiToDefMap = SmallDenseMap<MemoryPhi *, MemoryAccess *>;
+using CFGUpdate = cfg::Update<BasicBlock *>;
+using GraphDiffInvBBPair =
+    std::pair<const GraphDiff<BasicBlock *> *, Inverse<BasicBlock *>>;
 
 class MemorySSAUpdater {
 private:
@@ -70,6 +79,7 @@ private:
 
 public:
   MemorySSAUpdater(MemorySSA *MSSA) : MSSA(MSSA) {}
+
   /// Insert a definition into the MemorySSA IR.  RenameUses will rename any use
   /// below the new def block (and any inserted phis).  RenameUses should be set
   /// to true if the definition may cause new aliases for loads below it.  This
@@ -89,6 +99,39 @@ public:
   /// Where a mayalias b, *does* require RenameUses be set to true.
   void insertDef(MemoryDef *Def, bool RenameUses = false);
   void insertUse(MemoryUse *Use);
+  /// Update the MemoryPhi in `To` following an edge deletion between `From` and
+  /// `To`. If `To` becomes unreachable, a call to removeBlocks should be made.
+  void removeEdge(BasicBlock *From, BasicBlock *To);
+  /// Update the MemoryPhi in `To` to have a single incoming edge from `From`,
+  /// following a CFG change that replaced multiple edges (switch) with a direct
+  /// branch.
+  void removeDuplicatePhiEdgesBetween(BasicBlock *From, BasicBlock *To);
+  /// Update MemorySSA after a loop was cloned, given the blocks in RPO order,
+  /// the exit blocks and a 1:1 mapping of all blocks and instructions
+  /// cloned. This involves duplicating all defs and uses in the cloned blocks
+  /// Updating phi nodes in exit block successors is done separately.
+  void updateForClonedLoop(const LoopBlocksRPO &LoopBlocks,
+                           ArrayRef<BasicBlock *> ExitBlocks,
+                           const ValueToValueMapTy &VM,
+                           bool IgnoreIncomingWithNoClones = false);
+  // Block BB was fully or partially cloned into its predecessor P1. Map
+  // contains the 1:1 mapping of instructions cloned and VM[BB]=P1.
+  void updateForClonedBlockIntoPred(BasicBlock *BB, BasicBlock *P1,
+                                    const ValueToValueMapTy &VM);
+  /// Update phi nodes in exit block successors following cloning. Exit blocks
+  /// that were not cloned don't have additional predecessors added.
+  void updateExitBlocksForClonedLoop(ArrayRef<BasicBlock *> ExitBlocks,
+                                     const ValueToValueMapTy &VMap,
+                                     DominatorTree &DT);
+  void updateExitBlocksForClonedLoop(
+      ArrayRef<BasicBlock *> ExitBlocks,
+      ArrayRef<std::unique_ptr<ValueToValueMapTy>> VMaps, DominatorTree &DT);
+
+  /// Apply CFG updates, analogous with the DT edge updates.
+  void applyUpdates(ArrayRef<CFGUpdate> Updates, DominatorTree &DT);
+  /// Apply CFG insert updates, analogous with the DT edge updates.
+  void applyInsertUpdates(ArrayRef<CFGUpdate> Updates, DominatorTree &DT);
+
   void moveBefore(MemoryUseOrDef *What, MemoryUseOrDef *Where);
   void moveAfter(MemoryUseOrDef *What, MemoryUseOrDef *Where);
   void moveToPlace(MemoryUseOrDef *What, BasicBlock *BB,
@@ -219,6 +262,23 @@ private:
   template <class RangeType>
   MemoryAccess *tryRemoveTrivialPhi(MemoryPhi *Phi, RangeType &Operands);
   void fixupDefs(const SmallVectorImpl<WeakVH> &);
+  // Clone all uses and defs from BB to NewBB given a 1:1 map of all
+  // instructions and blocks cloned, and a map of MemoryPhi : Definition
+  // (MemoryAccess Phi or Def). VMap maps old instructions to cloned
+  // instructions and old blocks to cloned blocks. MPhiMap, is created in the
+  // caller of this private method, and maps existing MemoryPhis to new
+  // definitions that new MemoryAccesses must point to. These definitions may
+  // not necessarily be MemoryPhis themselves, they may be MemoryDefs. As such,
+  // the map is between MemoryPhis and MemoryAccesses, where the MemoryAccesses
+  // may be MemoryPhis or MemoryDefs and not MemoryUses.
+  void cloneUsesAndDefs(BasicBlock *BB, BasicBlock *NewBB,
+                        const ValueToValueMapTy &VMap, PhiToDefMap &MPhiMap);
+  template <typename Iter>
+  void privateUpdateExitBlocksForClonedLoop(ArrayRef<BasicBlock *> ExitBlocks,
+                                            Iter ValuesBegin, Iter ValuesEnd,
+                                            DominatorTree &DT);
+  void applyInsertUpdates(ArrayRef<CFGUpdate>, DominatorTree &DT,
+                          const GraphDiff<BasicBlock *> *GD);
 };
 } // end namespace llvm
 

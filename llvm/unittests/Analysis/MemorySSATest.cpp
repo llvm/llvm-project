@@ -1393,3 +1393,195 @@ TEST_F(MemorySSATest, TestOptimizedDefsAreProperUses) {
             (std::vector<const MemoryDef *>{StoreAAccess, StoreAAccess,
                                             StoreBAccess}));
 }
+
+//   entry
+//     |
+//   header
+//    / \
+// body  |
+//    \ /
+//    exit
+// header:
+//  ; 1 = MemoryDef(liveOnEntry)
+// body:
+//  ; 2 = MemoryDef(1)
+// exit:
+//  ; 3 = MemoryPhi({body, 2}, {header, 1})
+//  ; 4 = MemoryDef(3); optimized to 3, cannot optimize thorugh phi.
+//  Insert edge: entry -> exit, check mssa Update is correct.
+TEST_F(MemorySSATest, TestAddedEdgeToBlockWithPhiNotOpt) {
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+  Argument *PointerArg = &*F->arg_begin();
+  BasicBlock *Entry(BasicBlock::Create(C, "entry", F));
+  BasicBlock *Header(BasicBlock::Create(C, "header", F));
+  BasicBlock *Body(BasicBlock::Create(C, "body", F));
+  BasicBlock *Exit(BasicBlock::Create(C, "exit", F));
+  B.SetInsertPoint(Entry);
+  BranchInst::Create(Header, Entry);
+  B.SetInsertPoint(Header);
+  B.CreateStore(B.getInt8(16), PointerArg);
+  B.CreateCondBr(B.getTrue(), Exit, Body);
+  B.SetInsertPoint(Body);
+  B.CreateStore(B.getInt8(16), PointerArg);
+  BranchInst::Create(Exit, Body);
+  B.SetInsertPoint(Exit);
+  StoreInst *S1 = B.CreateStore(B.getInt8(16), PointerArg);
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAWalker *Walker = Analyses->Walker;
+  std::unique_ptr<MemorySSAUpdater> MSSAU =
+      make_unique<MemorySSAUpdater>(&MSSA);
+
+  MemoryPhi *Phi = MSSA.getMemoryAccess(Exit);
+  EXPECT_EQ(Phi, Walker->getClobberingMemoryAccess(S1));
+
+  // Alter CFG, add edge: entry -> exit
+  Entry->getTerminator()->eraseFromParent();
+  B.SetInsertPoint(Entry);
+  B.CreateCondBr(B.getTrue(), Header, Exit);
+  SmallVector<CFGUpdate, 1> Updates;
+  Updates.push_back({cfg::UpdateKind::Insert, Entry, Exit});
+  Analyses->DT.applyUpdates(Updates);
+  MSSAU->applyInsertUpdates(Updates, Analyses->DT);
+  EXPECT_EQ(Phi, Walker->getClobberingMemoryAccess(S1));
+}
+
+//   entry
+//     |
+//   header
+//    / \
+// body  |
+//    \ /
+//    exit
+// header:
+//  ; 1 = MemoryDef(liveOnEntry)
+// body:
+//  ; 2 = MemoryDef(1)
+// exit:
+//  ; 3 = MemoryPhi({body, 2}, {header, 1})
+//  ; 4 = MemoryDef(3); optimize this to 1 now, added edge should invalidate
+//  the optimized access.
+//  Insert edge: entry -> exit, check mssa Update is correct.
+TEST_F(MemorySSATest, TestAddedEdgeToBlockWithPhiOpt) {
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+  Argument *PointerArg = &*F->arg_begin();
+  Type *Int8 = Type::getInt8Ty(C);
+  BasicBlock *Entry(BasicBlock::Create(C, "entry", F));
+  BasicBlock *Header(BasicBlock::Create(C, "header", F));
+  BasicBlock *Body(BasicBlock::Create(C, "body", F));
+  BasicBlock *Exit(BasicBlock::Create(C, "exit", F));
+
+  B.SetInsertPoint(Entry);
+  Value *Alloca = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "A");
+  BranchInst::Create(Header, Entry);
+
+  B.SetInsertPoint(Header);
+  StoreInst *S1 = B.CreateStore(B.getInt8(16), PointerArg);
+  B.CreateCondBr(B.getTrue(), Exit, Body);
+
+  B.SetInsertPoint(Body);
+  B.CreateStore(ConstantInt::get(Int8, 0), Alloca);
+  BranchInst::Create(Exit, Body);
+
+  B.SetInsertPoint(Exit);
+  StoreInst *S2 = B.CreateStore(B.getInt8(16), PointerArg);
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAWalker *Walker = Analyses->Walker;
+  std::unique_ptr<MemorySSAUpdater> MSSAU =
+      make_unique<MemorySSAUpdater>(&MSSA);
+
+  MemoryDef *DefS1 = cast<MemoryDef>(MSSA.getMemoryAccess(S1));
+  EXPECT_EQ(DefS1, Walker->getClobberingMemoryAccess(S2));
+
+  // Alter CFG, add edge: entry -> exit
+  Entry->getTerminator()->eraseFromParent();
+  B.SetInsertPoint(Entry);
+  B.CreateCondBr(B.getTrue(), Header, Exit);
+  SmallVector<CFGUpdate, 1> Updates;
+  Updates.push_back({cfg::UpdateKind::Insert, Entry, Exit});
+  Analyses->DT.applyUpdates(Updates);
+  MSSAU->applyInsertUpdates(Updates, Analyses->DT);
+
+  MemoryPhi *Phi = MSSA.getMemoryAccess(Exit);
+  EXPECT_EQ(Phi, Walker->getClobberingMemoryAccess(S2));
+}
+
+//   entry
+//    /  |
+//   a   |
+//  / \  |
+//  b c  f
+//  \ /  |
+//   d   |
+//    \ /
+//     e
+// f:
+//  ; 1 = MemoryDef(liveOnEntry)
+// e:
+//  ; 2 = MemoryPhi({d, liveOnEntry}, {f, 1})
+//
+// Insert edge: f -> c, check update is correct.
+// After update:
+// f:
+//  ; 1 = MemoryDef(liveOnEntry)
+// c:
+//  ; 3 = MemoryPhi({a, liveOnEntry}, {f, 1})
+// d:
+//  ; 4 = MemoryPhi({b, liveOnEntry}, {c, 3})
+// e:
+//  ; 2 = MemoryPhi({d, 4}, {f, 1})
+TEST_F(MemorySSATest, TestAddedEdgeToBlockWithNoPhiAddNewPhis) {
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+  Argument *PointerArg = &*F->arg_begin();
+  BasicBlock *Entry(BasicBlock::Create(C, "entry", F));
+  BasicBlock *ABlock(BasicBlock::Create(C, "a", F));
+  BasicBlock *BBlock(BasicBlock::Create(C, "b", F));
+  BasicBlock *CBlock(BasicBlock::Create(C, "c", F));
+  BasicBlock *DBlock(BasicBlock::Create(C, "d", F));
+  BasicBlock *EBlock(BasicBlock::Create(C, "e", F));
+  BasicBlock *FBlock(BasicBlock::Create(C, "f", F));
+
+  B.SetInsertPoint(Entry);
+  B.CreateCondBr(B.getTrue(), ABlock, FBlock);
+  B.SetInsertPoint(ABlock);
+  B.CreateCondBr(B.getTrue(), BBlock, CBlock);
+  B.SetInsertPoint(BBlock);
+  BranchInst::Create(DBlock, BBlock);
+  B.SetInsertPoint(CBlock);
+  BranchInst::Create(DBlock, CBlock);
+  B.SetInsertPoint(DBlock);
+  BranchInst::Create(EBlock, DBlock);
+  B.SetInsertPoint(FBlock);
+  B.CreateStore(B.getInt8(16), PointerArg);
+  BranchInst::Create(EBlock, FBlock);
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  std::unique_ptr<MemorySSAUpdater> MSSAU =
+      make_unique<MemorySSAUpdater>(&MSSA);
+
+  // Alter CFG, add edge: f -> c
+  FBlock->getTerminator()->eraseFromParent();
+  B.SetInsertPoint(FBlock);
+  B.CreateCondBr(B.getTrue(), CBlock, EBlock);
+  SmallVector<CFGUpdate, 1> Updates;
+  Updates.push_back({cfg::UpdateKind::Insert, FBlock, CBlock});
+  Analyses->DT.applyUpdates(Updates);
+  MSSAU->applyInsertUpdates(Updates, Analyses->DT);
+
+  MemoryPhi *MPC = MSSA.getMemoryAccess(CBlock);
+  EXPECT_NE(MPC, nullptr);
+  MemoryPhi *MPD = MSSA.getMemoryAccess(DBlock);
+  EXPECT_NE(MPD, nullptr);
+  MemoryPhi *MPE = MSSA.getMemoryAccess(EBlock);
+  EXPECT_EQ(MPD, MPE->getIncomingValueForBlock(DBlock));
+}

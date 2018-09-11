@@ -336,7 +336,7 @@ private:
   mutable IdentifierInfo *BoolName = nullptr;
 
   /// The identifier 'NSObject'.
-  IdentifierInfo *NSObjectName = nullptr;
+  mutable IdentifierInfo *NSObjectName = nullptr;
 
   /// The identifier 'NSCopying'.
   IdentifierInfo *NSCopyingName = nullptr;
@@ -1676,7 +1676,7 @@ public:
   }
 
   /// Retrieve the identifier 'NSObject'.
-  IdentifierInfo *getNSObjectName() {
+  IdentifierInfo *getNSObjectName() const {
     if (!NSObjectName) {
       NSObjectName = &Idents.get("NSObject");
     }

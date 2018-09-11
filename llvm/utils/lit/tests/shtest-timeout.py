@@ -1,7 +1,7 @@
 # REQUIRES: python-psutil
 
-# PR33944
-# XFAIL: windows
+# llvm.org/PR33944
+# REQUIRES: nowindows
 
 # FIXME: This test is fragile because it relies on time which can
 # be affected by system performance. In particular we are currently
