@@ -109,18 +109,14 @@ static lto::Config createConfig() {
 }
 
 BitcodeCompiler::BitcodeCompiler() {
+  // Initialize IndexFile.
+  if (!Config->ThinLTOIndexOnlyArg.empty())
+    IndexFile = openFile(Config->ThinLTOIndexOnlyArg);
+
   // Initialize LTOObj.
   lto::ThinBackend Backend;
-
   if (Config->ThinLTOIndexOnly) {
-    StringRef Path = Config->ThinLTOIndexOnlyArg;
-    if (!Path.empty())
-      IndexFile = openFile(Path);
-
-    auto OnIndexWrite = [&](const std::string &Identifier) {
-      ObjectToIndexFileState[Identifier] = true;
-    };
-
+    auto OnIndexWrite = [&](StringRef S) { ThinIndices.erase(S); };
     Backend = lto::createWriteIndexesThinBackend(
         Config->ThinLTOPrefixReplace.first, Config->ThinLTOPrefixReplace.second,
         Config->ThinLTOEmitImportsFiles, IndexFile.get(), OnIndexWrite);
@@ -133,10 +129,10 @@ BitcodeCompiler::BitcodeCompiler() {
 
   // Initialize UsedStartStop.
   for (Symbol *Sym : Symtab->getSymbols()) {
-    StringRef Name = Sym->getName();
+    StringRef S = Sym->getName();
     for (StringRef Prefix : {"__start_", "__stop_"})
-      if (Name.startswith(Prefix))
-        UsedStartStop.insert(Name.substr(Prefix.size()));
+      if (S.startswith(Prefix))
+        UsedStartStop.insert(S.substr(Prefix.size()));
   }
 }
 
@@ -152,7 +148,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
   bool IsExec = !Config->Shared && !Config->Relocatable;
 
   if (Config->ThinLTOIndexOnly)
-    ObjectToIndexFileState.insert({Obj.getName(), false});
+    ThinIndices.insert(Obj.getName());
 
   ArrayRef<Symbol *> Syms = F.getSymbols();
   ArrayRef<lto::InputFile::Symbol> ObjSyms = Obj.symbols();
@@ -241,15 +237,11 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
       Cache));
 
   // Emit empty index files for non-indexed files
-  if (Config->ThinLTOIndexOnly) {
-    for (auto &Identifier : ObjectToIndexFileState)
-      if (!Identifier.getValue()) {
-        std::string Path = getThinLTOOutputFile(Identifier.getKey());
-        openFile(Path + ".thinlto.bc");
-
-        if (Config->ThinLTOEmitImportsFiles)
-          openFile(Path + ".imports");
-      }
+  for (StringRef S : ThinIndices) {
+    std::string Path = getThinLTOOutputFile(S);
+    openFile(Path + ".thinlto.bc");
+    if (Config->ThinLTOEmitImportsFiles)
+      openFile(Path + ".imports");
   }
 
   // If LazyObjFile has not been added to link, emit empty index files.

@@ -71,11 +71,6 @@ private:
   /// The value of the cycle counter at the beginning of the last scop.
   llvm::Value *CyclesInScopStartPtr;
 
-  /// A memory location which serves as argument of the RDTSCP function.
-  ///
-  /// The value written to this location is currently not used.
-  llvm::Value *RDTSCPWriteLocation;
-
   /// A global variable, that keeps track if the performance monitor
   /// initialization has already been run.
   llvm::Value *AlreadyInitializedPtr;
@@ -106,7 +101,7 @@ private:
   /// this scop runs.
   void addScopCounter();
 
-  /// Get a reference to the intrinsic "i64 @llvm.x86.rdtscp(i8*)".
+  /// Get a reference to the intrinsic "{ i64, i32 } @llvm.x86.rdtscp()".
   ///
   /// The rdtscp function returns the current value of the processor's
   /// time-stamp counter as well as the current CPU identifier. On modern x86

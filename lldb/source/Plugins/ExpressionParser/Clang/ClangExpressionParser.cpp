@@ -1162,9 +1162,9 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
 
           if (!dynamic_checkers->Install(install_diagnostics, exe_ctx)) {
             if (install_diagnostics.Diagnostics().size())
-              err.SetErrorString("couldn't install checkers, unknown error");
-            else
               err.SetErrorString(install_diagnostics.GetString().c_str());
+            else
+              err.SetErrorString("couldn't install checkers, unknown error");
 
             return err;
           }
