@@ -1210,7 +1210,7 @@ TEST(FindReferences, NeedsIndex) {
   TU.Code = ("\n\n" + Main.code()).str();
   EXPECT_THAT(findReferences(AST, Main.point(), TU.index().get()),
               ElementsAre(RangeIs(Main.range())));
-};
+}
 
 TEST(FindReferences, NoQueryForLocalSymbols) {
   struct RecordingIndex : public MemIndex {
@@ -1244,7 +1244,7 @@ TEST(FindReferences, NoQueryForLocalSymbols) {
     else
       EXPECT_EQ(Rec.RefIDs, llvm::None) << T.AnnotatedCode;
   }
-};
+}
 
 } // namespace
 } // namespace clangd
