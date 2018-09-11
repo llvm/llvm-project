@@ -41,7 +41,7 @@ bool NativeCompilandSymbol::isEditAndContinueEnabled() const {
   return Module.hasECInfo();
 }
 
-uint32_t NativeCompilandSymbol::getLexicalParentId() const { return 0; }
+SymIndexId NativeCompilandSymbol::getLexicalParentId() const { return 0; }
 
 // The usage of getObjFileName for getLibraryName and getModuleName for getName
 // may seem backwards, but it is consistent with DIA, which is what this API

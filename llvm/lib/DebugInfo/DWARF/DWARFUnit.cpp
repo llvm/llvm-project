@@ -113,12 +113,13 @@ void DWARFUnitVector::addUnitsImpl(
 }
 
 DWARFUnit *DWARFUnitVector::getUnitForOffset(uint32_t Offset) const {
-  auto *CU = std::upper_bound(
-    this->begin(), this->end(), Offset,
-    [](uint32_t LHS, const std::unique_ptr<DWARFUnit> &RHS) {
-    return LHS < RHS->getNextUnitOffset();
-  });
-  if (CU != this->end() && (*CU)->getOffset() <= Offset)
+  auto end = begin() + getNumInfoUnits();
+  auto *CU =
+      std::upper_bound(begin(), end, Offset,
+                       [](uint32_t LHS, const std::unique_ptr<DWARFUnit> &RHS) {
+                         return LHS < RHS->getNextUnitOffset();
+                       });
+  if (CU != end && (*CU)->getOffset() <= Offset)
     return CU->get();
   return nullptr;
 }
@@ -130,13 +131,14 @@ DWARFUnitVector::getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) {
     return nullptr;
 
   auto Offset = CUOff->Offset;
+  auto end = begin() + getNumInfoUnits();
 
-  auto *CU = std::upper_bound(
-    this->begin(), this->end(), CUOff->Offset,
-    [](uint32_t LHS, const std::unique_ptr<DWARFUnit> &RHS) {
-    return LHS < RHS->getNextUnitOffset();
-  });
-  if (CU != this->end() && (*CU)->getOffset() <= Offset)
+  auto *CU =
+      std::upper_bound(begin(), end, CUOff->Offset,
+                       [](uint32_t LHS, const std::unique_ptr<DWARFUnit> &RHS) {
+                         return LHS < RHS->getNextUnitOffset();
+                       });
+  if (CU != end && (*CU)->getOffset() <= Offset)
     return CU->get();
 
   if (!Parser)
@@ -148,6 +150,7 @@ DWARFUnitVector::getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) {
 
   auto *NewCU = U.get();
   this->insert(CU, std::move(U));
+  ++NumInfoUnits;
   return NewCU;
 }
 

@@ -70,6 +70,7 @@ TEST(StringExtrasTest, ToAndFromHex) {
                     OddBytes.size());
   EXPECT_EQ(OddStr, toHex(OddData));
   EXPECT_EQ(OddData, fromHex(StringRef(OddStr).drop_front()));
+  EXPECT_EQ(StringRef(OddStr).lower(), toHex(OddData, true));
 
   std::vector<uint8_t> EvenBytes = {0xA5, 0xBD, 0x0D, 0x3E, 0xCD};
   std::string EvenStr = "A5BD0D3ECD";
@@ -77,6 +78,7 @@ TEST(StringExtrasTest, ToAndFromHex) {
                      EvenBytes.size());
   EXPECT_EQ(EvenStr, toHex(EvenData));
   EXPECT_EQ(EvenData, fromHex(EvenStr));
+  EXPECT_EQ(StringRef(EvenStr).lower(), toHex(EvenData, true));
 }
 
 TEST(StringExtrasTest, to_float) {

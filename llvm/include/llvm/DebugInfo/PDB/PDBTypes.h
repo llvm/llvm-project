@@ -22,6 +22,8 @@
 namespace llvm {
 namespace pdb {
 
+typedef uint32_t SymIndexId;
+
 class IPDBDataStream;
 class IPDBInjectedSource;
 class IPDBLineNumber;

@@ -88,8 +88,8 @@ bool ForRangeCopyCheck::handleCopyIsOnlyConstReferenced(
   // Because the fix (changing to `const auto &`) will introduce an unused
   // compiler warning which can't be suppressed.
   // Since this case is very rare, it is safe to ignore it.
-  if (!utils::ExprMutationAnalyzer(ForRange.getBody(), &Context)
-          .isMutated(&LoopVar) &&
+  if (!utils::ExprMutationAnalyzer(*ForRange.getBody(), Context)
+           .isMutated(&LoopVar) &&
       !utils::decl_ref_expr::allDeclRefExprs(LoopVar, *ForRange.getBody(),
                                              Context)
            .empty()) {

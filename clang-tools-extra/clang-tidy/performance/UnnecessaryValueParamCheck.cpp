@@ -95,14 +95,14 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   // Do not trigger on non-const value parameters when they are mutated either
   // within the function body or within init expression(s) when the function is
   // a ctor.
-  if (utils::ExprMutationAnalyzer(Function->getBody(), Result.Context)
+  if (utils::ExprMutationAnalyzer(*Function->getBody(), *Result.Context)
           .isMutated(Param))
     return;
   // CXXCtorInitializer might also mutate Param but they're not part of function
   // body, so check them separately here.
   if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(Function)) {
     for (const auto *Init : Ctor->inits()) {
-      if (utils::ExprMutationAnalyzer(Init->getInit(), Result.Context)
+      if (utils::ExprMutationAnalyzer(*Init->getInit(), *Result.Context)
               .isMutated(Param))
         return;
     }

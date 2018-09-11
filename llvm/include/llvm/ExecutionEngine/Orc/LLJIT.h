@@ -31,8 +31,7 @@ class LLJIT {
 public:
   /// Create an LLJIT instance.
   static Expected<std::unique_ptr<LLJIT>>
-  Create(std::unique_ptr<ExecutionSession> ES,
-         std::unique_ptr<TargetMachine> TM, DataLayout DL);
+  Create(std::unique_ptr<TargetMachine> TM, DataLayout DL);
 
   /// Returns a reference to the ExecutionSession for this JIT instance.
   ExecutionSession &getExecutionSession() { return *ES; }
@@ -117,8 +116,7 @@ class LLLazyJIT : public LLJIT {
 public:
   /// Create an LLLazyJIT instance.
   static Expected<std::unique_ptr<LLLazyJIT>>
-  Create(std::unique_ptr<ExecutionSession> ES,
-         std::unique_ptr<TargetMachine> TM, DataLayout DL, LLVMContext &Ctx);
+  Create(std::unique_ptr<TargetMachine> TM, DataLayout DL, LLVMContext &Ctx);
 
   /// Set an IR transform (e.g. pass manager pipeline) to run on each function
   /// when it is compiled.

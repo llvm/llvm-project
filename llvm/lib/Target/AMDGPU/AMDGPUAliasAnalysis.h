@@ -36,10 +36,9 @@ class AMDGPUAAResult : public AAResultBase<AMDGPUAAResult> {
 
 public:
   explicit AMDGPUAAResult(const DataLayout &DL, Triple T) : AAResultBase(),
-    DL(DL), ASAliasRules(T.getArch()) {}
+    DL(DL) {}
   AMDGPUAAResult(AMDGPUAAResult &&Arg)
-      : AAResultBase(std::move(Arg)), DL(Arg.DL),
-        ASAliasRules(Arg.ASAliasRules){}
+      : AAResultBase(std::move(Arg)), DL(Arg.DL) {}
 
   /// Handle invalidation events from the new pass manager.
   ///
@@ -52,17 +51,6 @@ public:
 private:
   bool Aliases(const MDNode *A, const MDNode *B) const;
   bool PathAliases(const MDNode *A, const MDNode *B) const;
-
-  class ASAliasRulesTy {
-  public:
-    ASAliasRulesTy(Triple::ArchType Arch_);
-
-    AliasResult getAliasResult(unsigned AS1, unsigned AS2) const;
-
-  private:
-    Triple::ArchType Arch;
-    const AliasResult (*ASAliasRules)[7][7];
-  } ASAliasRules;
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.
