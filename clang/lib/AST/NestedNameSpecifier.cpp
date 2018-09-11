@@ -547,6 +547,7 @@ operator=(const NestedNameSpecifierLocBuilder &Other) {
   }
 
   // Deep copy.
+  BufferSize = 0;
   Append(Other.Buffer, Other.Buffer + Other.BufferSize, Buffer, BufferSize,
          BufferCapacity);
   return *this;

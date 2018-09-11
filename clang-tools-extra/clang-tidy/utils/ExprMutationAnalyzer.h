@@ -23,7 +23,7 @@ namespace utils {
 /// a given statement.
 class ExprMutationAnalyzer {
 public:
-  ExprMutationAnalyzer(const Stmt *Stm, ASTContext *Context)
+  ExprMutationAnalyzer(const Stmt &Stm, ASTContext &Context)
       : Stm(Stm), Context(Context) {}
 
   bool isMutated(const Decl *Dec) { return findDeclMutation(Dec) != nullptr; }
@@ -44,8 +44,8 @@ private:
   const Stmt *findRangeLoopMutation(const Expr *Exp);
   const Stmt *findReferenceMutation(const Expr *Exp);
 
-  const Stmt *const Stm;
-  ASTContext *const Context;
+  const Stmt &Stm;
+  ASTContext &Context;
   llvm::DenseMap<const Expr *, const Stmt *> Results;
 };
 

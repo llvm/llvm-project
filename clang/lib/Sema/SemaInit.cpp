@@ -9139,13 +9139,13 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     return QualType();
   }
 
-  Diag(TSInfo->getTypeLoc().getBeginLoc(),
-       diag::warn_cxx14_compat_class_template_argument_deduction)
-      << TSInfo->getTypeLoc().getSourceRange();
-
   // Can't deduce from dependent arguments.
-  if (Expr::hasAnyTypeDependentArguments(Inits))
+  if (Expr::hasAnyTypeDependentArguments(Inits)) {
+    Diag(TSInfo->getTypeLoc().getBeginLoc(),
+         diag::warn_cxx14_compat_class_template_argument_deduction)
+        << TSInfo->getTypeLoc().getSourceRange() << 0;
     return Context.DependentTy;
+  }
 
   // FIXME: Perform "exact type" matching first, per CWG discussion?
   //        Or implement this via an implied 'T(T) -> T' deduction guide?
@@ -9348,5 +9348,10 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   // C++ [dcl.type.class.deduct]p1:
   //  The placeholder is replaced by the return type of the function selected
   //  by overload resolution for class template deduction.
-  return SubstAutoType(TSInfo->getType(), Best->Function->getReturnType());
+  QualType DeducedType =
+      SubstAutoType(TSInfo->getType(), Best->Function->getReturnType());
+  Diag(TSInfo->getTypeLoc().getBeginLoc(),
+       diag::warn_cxx14_compat_class_template_argument_deduction)
+      << TSInfo->getTypeLoc().getSourceRange() << 1 << DeducedType;
+  return DeducedType;
 }

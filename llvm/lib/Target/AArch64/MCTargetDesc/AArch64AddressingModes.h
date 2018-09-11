@@ -754,12 +754,8 @@ static inline uint64_t decodeAdvSIMDModImmType12(uint8_t Imm) {
 /// Returns true if Imm is the concatenation of a repeating pattern of type T.
 template <typename T>
 static inline bool isSVEMaskOfIdenticalElements(int64_t Imm) {
-  union {
-    int64_t Whole;
-    T Parts[sizeof(int64_t)/sizeof(T)];
-  } Vec { Imm };
-
-  return all_of(Vec.Parts, [Vec](T Elem) { return Elem == Vec.Parts[0]; });
+  auto Parts = bit_cast<std::array<T, sizeof(int64_t) / sizeof(T)>>(Imm);
+  return all_of(Parts, [&](T Elem) { return Elem == Parts[0]; });
 }
 
 /// Returns true if Imm is valid for CPY/DUP.
@@ -787,29 +783,20 @@ static inline bool isSVEAddSubImm(int64_t Imm) {
 
 /// Return true if Imm is valid for DUPM and has no single CPY/DUP equivalent.
 static inline bool isSVEMoveMaskPreferredLogicalImmediate(int64_t Imm) {
-  union {
-    int64_t D;
-    int32_t S[2];
-    int16_t H[4];
-    int8_t  B[8];
-  } Vec = { Imm };
-
-  if (isSVECpyImm<int64_t>(Vec.D))
+  if (isSVECpyImm<int64_t>(Imm))
     return false;
 
-  if (isSVEMaskOfIdenticalElements<int32_t>(Imm) &&
-      isSVECpyImm<int32_t>(Vec.S[0]))
-    return false;
+  auto S = bit_cast<std::array<int32_t, 2>>(Imm);
+  auto H = bit_cast<std::array<int16_t, 4>>(Imm);
+  auto B = bit_cast<std::array<int8_t, 8>>(Imm);
 
-  if (isSVEMaskOfIdenticalElements<int16_t>(Imm) &&
-      isSVECpyImm<int16_t>(Vec.H[0]))
+  if (isSVEMaskOfIdenticalElements<int32_t>(Imm) && isSVECpyImm<int32_t>(S[0]))
     return false;
-
-  if (isSVEMaskOfIdenticalElements<int8_t>(Imm) &&
-      isSVECpyImm<int8_t>(Vec.B[0]))
+  if (isSVEMaskOfIdenticalElements<int16_t>(Imm) && isSVECpyImm<int16_t>(H[0]))
     return false;
-
-  return isLogicalImmediate(Vec.D, 64);
+  if (isSVEMaskOfIdenticalElements<int8_t>(Imm) && isSVECpyImm<int8_t>(B[0]))
+    return false;
+  return isLogicalImmediate(Imm, 64);
 }
 
 inline static bool isAnyMOVZMovAlias(uint64_t Value, int RegWidth) {
