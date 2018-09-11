@@ -119,15 +119,18 @@ public:
 
 class NewCPUIDRecord : public MetadataRecord {
   uint16_t CPUId = 0;
+  uint64_t TSC = 0;
   friend class RecordInitializer;
 
 public:
   NewCPUIDRecord() = default;
-  explicit NewCPUIDRecord(uint16_t C) : MetadataRecord(), CPUId(C) {}
+  NewCPUIDRecord(uint16_t C, uint64_t T) : MetadataRecord(), CPUId(C), TSC(T) {}
 
   MetadataType metadataType() const override { return MetadataType::NewCPUId; }
 
   uint16_t cpuid() const { return CPUId; }
+
+  uint64_t tsc() const { return TSC; }
 
   Error apply(RecordVisitor &V) override;
 };

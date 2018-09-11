@@ -56,9 +56,9 @@ bool InstructionPrecedenceTracking::hasSpecialInstructions(
 
 bool InstructionPrecedenceTracking::isPreceededBySpecialInstruction(
     const Instruction *Insn) {
-  const Instruction *MaybeFirstICF =
+  const Instruction *MaybeFirstSpecial =
       getFirstSpecialInstruction(Insn->getParent());
-  return MaybeFirstICF && OI.dominates(MaybeFirstICF, Insn);
+  return MaybeFirstSpecial && OI.dominates(MaybeFirstSpecial, Insn);
 }
 
 void InstructionPrecedenceTracking::fill(const BasicBlock *BB) {

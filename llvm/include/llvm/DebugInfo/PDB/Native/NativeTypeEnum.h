@@ -39,7 +39,7 @@ public:
 
   PDB_BuiltinType getBuiltinType() const override;
   PDB_SymType getSymTag() const override;
-  uint32_t getUnmodifiedTypeId() const override;
+  SymIndexId getUnmodifiedTypeId() const override;
   bool hasConstructor() const override;
   bool hasAssignmentOperator() const override;
   bool hasCastOperator() const override;
@@ -51,7 +51,7 @@ public:
   bool isIntrinsic() const override;
   bool isPacked() const override;
   bool isScoped() const override;
-  uint32_t getTypeId() const override;
+  SymIndexId getTypeId() const override;
   bool isRefUdt() const override;
   bool isValueUdt() const override;
   bool isInterfaceUdt() const override;

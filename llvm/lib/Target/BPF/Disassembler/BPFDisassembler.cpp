@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BPF.h"
-#include "BPFSubtarget.h"
 #include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCAsmInfo.h"

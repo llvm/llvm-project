@@ -9,7 +9,6 @@
 
 #define DEBUG_TYPE "hexagon-disassembler"
 
-#include "Hexagon.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
 #include "MCTargetDesc/HexagonMCChecker.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"

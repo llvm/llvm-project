@@ -175,7 +175,7 @@ void DumpDIAValue(llvm::raw_ostream &OS, int Indent, StringRef Name,
 
   dumpSymbolField(OS, Name, V, Indent);
 }
-}
+} // namespace
 
 namespace llvm {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const GUID &G) {
@@ -184,133 +184,188 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const GUID &G) {
   A.format(OS, "");
   return OS;
 }
-}
+} // namespace llvm
 
 DIARawSymbol::DIARawSymbol(const DIASession &PDBSession,
                            CComPtr<IDiaSymbol> DiaSymbol)
     : Session(PDBSession), Symbol(DiaSymbol) {}
 
 #define RAW_METHOD_DUMP(Stream, Method)                                        \
-  DumpDIAValue(Stream, Indent, StringRef(#Method), Symbol,                     \
+  DumpDIAValue(Stream, Indent, StringRef{#Method}, Symbol,                     \
                &IDiaSymbol::get_##Method);
 
 void DIARawSymbol::dump(raw_ostream &OS, int Indent) const {
-    RAW_METHOD_DUMP(OS, symIndexId) RAW_METHOD_DUMP(OS, symTag)
+  RAW_METHOD_DUMP(OS, symIndexId);
+  RAW_METHOD_DUMP(OS, symTag);
 
-        RAW_METHOD_DUMP(OS, access) RAW_METHOD_DUMP(
-            OS,
-            addressOffset) RAW_METHOD_DUMP(OS,
-                                           addressSection) RAW_METHOD_DUMP(OS,
-                                                                           age)
-            RAW_METHOD_DUMP(OS, arrayIndexTypeId) RAW_METHOD_DUMP(
-                OS, backEndMajor) RAW_METHOD_DUMP(OS, backEndMinor)
-                RAW_METHOD_DUMP(OS, backEndBuild) RAW_METHOD_DUMP(
-                    OS, backEndQFE) RAW_METHOD_DUMP(OS, baseDataOffset)
-                    RAW_METHOD_DUMP(OS, baseDataSlot) RAW_METHOD_DUMP(
-                        OS, baseSymbolId) RAW_METHOD_DUMP(OS, baseType)
-                        RAW_METHOD_DUMP(OS, bitPosition) RAW_METHOD_DUMP(
-                            OS,
-                            callingConvention) RAW_METHOD_DUMP(OS,
-                                                               classParentId)
-                            RAW_METHOD_DUMP(OS, compilerName) RAW_METHOD_DUMP(
-                                OS, count) RAW_METHOD_DUMP(OS, countLiveRanges)
-                                RAW_METHOD_DUMP(OS, frontEndMajor) RAW_METHOD_DUMP(
-                                    OS,
-                                    frontEndMinor) RAW_METHOD_DUMP(OS,
-                                                                   frontEndBuild)
-                                    RAW_METHOD_DUMP(OS, frontEndQFE) RAW_METHOD_DUMP(
-                                        OS,
-                                        lexicalParentId) RAW_METHOD_DUMP(OS,
-                                                                         libraryName)
-                                        RAW_METHOD_DUMP(
-                                            OS, liveRangeStartAddressOffset)
-                                            RAW_METHOD_DUMP(
-                                                OS,
-                                                liveRangeStartAddressSection)
-                                                RAW_METHOD_DUMP(
-                                                    OS,
-                                                    liveRangeStartRelativeVirtualAddress) RAW_METHOD_DUMP(OS, localBasePointerRegisterId) RAW_METHOD_DUMP(OS, lowerBoundId) RAW_METHOD_DUMP(OS, memorySpaceKind) RAW_METHOD_DUMP(OS, name) RAW_METHOD_DUMP(OS, numberOfAcceleratorPointerTags) RAW_METHOD_DUMP(OS, numberOfColumns) RAW_METHOD_DUMP(OS, numberOfModifiers) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                           numberOfRegisterIndices) RAW_METHOD_DUMP(OS, numberOfRows) RAW_METHOD_DUMP(OS, objectFileName) RAW_METHOD_DUMP(OS, oemId) RAW_METHOD_DUMP(OS, oemSymbolId) RAW_METHOD_DUMP(OS, offsetInUdt) RAW_METHOD_DUMP(OS, platform) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     rank) RAW_METHOD_DUMP(OS, registerId) RAW_METHOD_DUMP(OS, registerType) RAW_METHOD_DUMP(OS, relativeVirtualAddress) RAW_METHOD_DUMP(OS, samplerSlot) RAW_METHOD_DUMP(OS, signature) RAW_METHOD_DUMP(OS, sizeInUdt) RAW_METHOD_DUMP(OS, slot) RAW_METHOD_DUMP(OS, sourceFileName) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      stride) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              subTypeId) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         symbolsFileName) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          targetOffset) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        targetRelativeVirtualAddress) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      targetVirtualAddress) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            targetSection) RAW_METHOD_DUMP(OS, textureSlot) RAW_METHOD_DUMP(OS, timeStamp) RAW_METHOD_DUMP(OS, token) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      typeId) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              uavSlot) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       undecoratedName) RAW_METHOD_DUMP(OS, unmodifiedTypeId) RAW_METHOD_DUMP(OS, upperBoundId) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                virtualBaseDispIndex) RAW_METHOD_DUMP(OS, virtualBaseOffset) RAW_METHOD_DUMP(OS, virtualTableShapeId) RAW_METHOD_DUMP(OS, dataKind) RAW_METHOD_DUMP(OS, guid) RAW_METHOD_DUMP(OS, offset) RAW_METHOD_DUMP(OS, thisAdjust) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          virtualBasePointerOffset) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    locationType) RAW_METHOD_DUMP(OS, machineType) RAW_METHOD_DUMP(OS, thunkOrdinal) RAW_METHOD_DUMP(OS, length) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 liveRangeLength) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  virtualAddress) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  udtKind) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           constructor) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        customCallingConvention) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 farReturn) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            code) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  compilerGenerated) RAW_METHOD_DUMP(OS, constType) RAW_METHOD_DUMP(OS, editAndContinueEnabled) RAW_METHOD_DUMP(OS, function) RAW_METHOD_DUMP(OS, stride) RAW_METHOD_DUMP(OS, noStackOrdering) RAW_METHOD_DUMP(OS, hasAlloca) RAW_METHOD_DUMP(OS, hasAssignmentOperator) RAW_METHOD_DUMP(OS, isCTypes) RAW_METHOD_DUMP(OS, hasCastOperator) RAW_METHOD_DUMP(OS, hasDebugInfo) RAW_METHOD_DUMP(OS, hasEH) RAW_METHOD_DUMP(OS, hasEHa) RAW_METHOD_DUMP(OS, hasInlAsm) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    framePointerPresent) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         inlSpec) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  interruptReturn) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   hasLongJump) RAW_METHOD_DUMP(OS, hasManagedCode) RAW_METHOD_DUMP(OS, hasNestedTypes) RAW_METHOD_DUMP(OS, noInline) RAW_METHOD_DUMP(OS, noReturn) RAW_METHOD_DUMP(OS, optimizedCodeDebugInfo) RAW_METHOD_DUMP(OS, overloadedOperator) RAW_METHOD_DUMP(OS, hasSEH) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    hasSecurityChecks) RAW_METHOD_DUMP(OS, hasSetJump) RAW_METHOD_DUMP(OS, strictGSCheck) RAW_METHOD_DUMP(OS, isAcceleratorGroupSharedLocal) RAW_METHOD_DUMP(OS, isAcceleratorPointerTagLiveRange) RAW_METHOD_DUMP(OS, isAcceleratorStubFunction)
-                                                    RAW_METHOD_DUMP(OS, isAggregated) RAW_METHOD_DUMP(
-                                                        OS,
-                                                        intro) RAW_METHOD_DUMP(OS,
-                                                                               isCVTCIL)
-                                                        RAW_METHOD_DUMP(OS, isConstructorVirtualBase) RAW_METHOD_DUMP(
-                                                            OS,
-                                                            isCxxReturnUdt) RAW_METHOD_DUMP(OS, isDataAligned)
-                                                            RAW_METHOD_DUMP(OS, isHLSLData) RAW_METHOD_DUMP(
-                                                                OS,
-                                                                isHotpatchable)
-                                                                RAW_METHOD_DUMP(
-                                                                    OS,
-                                                                    indirectVirtualBaseClass)
-                                                                    RAW_METHOD_DUMP(
-                                                                        OS,
-                                                                        isInterfaceUdt) RAW_METHOD_DUMP(OS,
-                                                                                                        intrinsic) RAW_METHOD_DUMP(OS,
-                                                                                                                                   isLTCG) RAW_METHOD_DUMP(OS, isLocationControlFlowDependent) RAW_METHOD_DUMP(OS, isMSILNetmodule) RAW_METHOD_DUMP(OS, isMatrixRowMajor) RAW_METHOD_DUMP(OS, managed) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                       msil) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                             isMultipleInheritance) RAW_METHOD_DUMP(OS, isNaked) RAW_METHOD_DUMP(OS, nested) RAW_METHOD_DUMP(OS, isOptimizedAway) RAW_METHOD_DUMP(OS, packed) RAW_METHOD_DUMP(OS, isPointerBasedOnSymbolValue) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               isPointerToDataMember) RAW_METHOD_DUMP(OS, isPointerToMemberFunction) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     pure) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           RValueReference) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            isRefUdt) RAW_METHOD_DUMP(OS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      reference) RAW_METHOD_DUMP(OS, restrictedType) RAW_METHOD_DUMP(OS, isReturnValue) RAW_METHOD_DUMP(OS, isSafeBuffers) RAW_METHOD_DUMP(OS, scoped) RAW_METHOD_DUMP(OS, isSdl) RAW_METHOD_DUMP(OS, isSingleInheritance)
-                                                                        RAW_METHOD_DUMP(OS, isSplitted) RAW_METHOD_DUMP(
-                                                                            OS,
-                                                                            isStatic) RAW_METHOD_DUMP(OS,
-                                                                                                      isStripped)
-                                                                            RAW_METHOD_DUMP(OS, unalignedType) RAW_METHOD_DUMP(
-                                                                                OS,
-                                                                                notReached) RAW_METHOD_DUMP(OS, isValueUdt)
-                                                                                RAW_METHOD_DUMP(OS, virtual) RAW_METHOD_DUMP(
-                                                                                    OS,
-                                                                                    virtualBaseClass)
-                                                                                    RAW_METHOD_DUMP(
-                                                                                        OS,
-                                                                                        isVirtualInheritance)
-                                                                                        RAW_METHOD_DUMP(
-                                                                                            OS,
-                                                                                            volatileType)
-                                                                                            RAW_METHOD_DUMP(
-                                                                                                OS,
-                                                                                                wasInlined)
-                                                                                                RAW_METHOD_DUMP(
-                                                                                                    OS,
-                                                                                                    unused)
-                                                                                                    RAW_METHOD_DUMP(
-                                                                                                        OS,
-                                                                                                        value)}
+  RAW_METHOD_DUMP(OS, access);
+  RAW_METHOD_DUMP(OS, addressOffset);
+  RAW_METHOD_DUMP(OS, addressSection);
+  RAW_METHOD_DUMP(OS, age);
+  RAW_METHOD_DUMP(OS, arrayIndexTypeId);
+  RAW_METHOD_DUMP(OS, backEndMajor);
+  RAW_METHOD_DUMP(OS, backEndMinor);
+  RAW_METHOD_DUMP(OS, backEndBuild);
+  RAW_METHOD_DUMP(OS, backEndQFE);
+  RAW_METHOD_DUMP(OS, baseDataOffset);
+  RAW_METHOD_DUMP(OS, baseDataSlot);
+  RAW_METHOD_DUMP(OS, baseSymbolId);
+  RAW_METHOD_DUMP(OS, baseType);
+  RAW_METHOD_DUMP(OS, bitPosition);
+  RAW_METHOD_DUMP(OS, callingConvention);
+  RAW_METHOD_DUMP(OS, classParentId);
+  RAW_METHOD_DUMP(OS, compilerName);
+  RAW_METHOD_DUMP(OS, count);
+  RAW_METHOD_DUMP(OS, countLiveRanges);
+  RAW_METHOD_DUMP(OS, frontEndMajor);
+  RAW_METHOD_DUMP(OS, frontEndMinor);
+  RAW_METHOD_DUMP(OS, frontEndBuild);
+  RAW_METHOD_DUMP(OS, frontEndQFE);
+  RAW_METHOD_DUMP(OS, lexicalParentId);
+  RAW_METHOD_DUMP(OS, libraryName);
+  RAW_METHOD_DUMP(OS, liveRangeStartAddressOffset);
+  RAW_METHOD_DUMP(OS, liveRangeStartAddressSection);
+  RAW_METHOD_DUMP(OS, liveRangeStartRelativeVirtualAddress);
+  RAW_METHOD_DUMP(OS, localBasePointerRegisterId);
+  RAW_METHOD_DUMP(OS, lowerBoundId);
+  RAW_METHOD_DUMP(OS, memorySpaceKind);
+  RAW_METHOD_DUMP(OS, name);
+  RAW_METHOD_DUMP(OS, numberOfAcceleratorPointerTags);
+  RAW_METHOD_DUMP(OS, numberOfColumns);
+  RAW_METHOD_DUMP(OS, numberOfModifiers);
+  RAW_METHOD_DUMP(OS, numberOfRegisterIndices);
+  RAW_METHOD_DUMP(OS, numberOfRows);
+  RAW_METHOD_DUMP(OS, objectFileName);
+  RAW_METHOD_DUMP(OS, oemId);
+  RAW_METHOD_DUMP(OS, oemSymbolId);
+  RAW_METHOD_DUMP(OS, offsetInUdt);
+  RAW_METHOD_DUMP(OS, platform);
+  RAW_METHOD_DUMP(OS, rank);
+  RAW_METHOD_DUMP(OS, registerId);
+  RAW_METHOD_DUMP(OS, registerType);
+  RAW_METHOD_DUMP(OS, relativeVirtualAddress);
+  RAW_METHOD_DUMP(OS, samplerSlot);
+  RAW_METHOD_DUMP(OS, signature);
+  RAW_METHOD_DUMP(OS, sizeInUdt);
+  RAW_METHOD_DUMP(OS, slot);
+  RAW_METHOD_DUMP(OS, sourceFileName);
+  RAW_METHOD_DUMP(OS, stride);
+  RAW_METHOD_DUMP(OS, subTypeId);
+  RAW_METHOD_DUMP(OS, symbolsFileName);
+  RAW_METHOD_DUMP(OS, targetOffset);
+  RAW_METHOD_DUMP(OS, targetRelativeVirtualAddress);
+  RAW_METHOD_DUMP(OS, targetVirtualAddress);
+  RAW_METHOD_DUMP(OS, targetSection);
+  RAW_METHOD_DUMP(OS, textureSlot);
+  RAW_METHOD_DUMP(OS, timeStamp);
+  RAW_METHOD_DUMP(OS, token);
+  RAW_METHOD_DUMP(OS, typeId);
+  RAW_METHOD_DUMP(OS, uavSlot);
+  RAW_METHOD_DUMP(OS, undecoratedName);
+  RAW_METHOD_DUMP(OS, unmodifiedTypeId);
+  RAW_METHOD_DUMP(OS, upperBoundId);
+  RAW_METHOD_DUMP(OS, virtualBaseDispIndex);
+  RAW_METHOD_DUMP(OS, virtualBaseOffset);
+  RAW_METHOD_DUMP(OS, virtualTableShapeId);
+  RAW_METHOD_DUMP(OS, dataKind);
+  RAW_METHOD_DUMP(OS, guid);
+  RAW_METHOD_DUMP(OS, offset);
+  RAW_METHOD_DUMP(OS, thisAdjust);
+  RAW_METHOD_DUMP(OS, virtualBasePointerOffset);
+  RAW_METHOD_DUMP(OS, locationType);
+  RAW_METHOD_DUMP(OS, machineType);
+  RAW_METHOD_DUMP(OS, thunkOrdinal);
+  RAW_METHOD_DUMP(OS, length);
+  RAW_METHOD_DUMP(OS, liveRangeLength);
+  RAW_METHOD_DUMP(OS, virtualAddress);
+  RAW_METHOD_DUMP(OS, udtKind);
+  RAW_METHOD_DUMP(OS, constructor);
+  RAW_METHOD_DUMP(OS, customCallingConvention);
+  RAW_METHOD_DUMP(OS, farReturn);
+  RAW_METHOD_DUMP(OS, code);
+  RAW_METHOD_DUMP(OS, compilerGenerated);
+  RAW_METHOD_DUMP(OS, constType);
+  RAW_METHOD_DUMP(OS, editAndContinueEnabled);
+  RAW_METHOD_DUMP(OS, function);
+  RAW_METHOD_DUMP(OS, stride);
+  RAW_METHOD_DUMP(OS, noStackOrdering);
+  RAW_METHOD_DUMP(OS, hasAlloca);
+  RAW_METHOD_DUMP(OS, hasAssignmentOperator);
+  RAW_METHOD_DUMP(OS, isCTypes);
+  RAW_METHOD_DUMP(OS, hasCastOperator);
+  RAW_METHOD_DUMP(OS, hasDebugInfo);
+  RAW_METHOD_DUMP(OS, hasEH);
+  RAW_METHOD_DUMP(OS, hasEHa);
+  RAW_METHOD_DUMP(OS, hasInlAsm);
+  RAW_METHOD_DUMP(OS, framePointerPresent);
+  RAW_METHOD_DUMP(OS, inlSpec);
+  RAW_METHOD_DUMP(OS, interruptReturn);
+  RAW_METHOD_DUMP(OS, hasLongJump);
+  RAW_METHOD_DUMP(OS, hasManagedCode);
+  RAW_METHOD_DUMP(OS, hasNestedTypes);
+  RAW_METHOD_DUMP(OS, noInline);
+  RAW_METHOD_DUMP(OS, noReturn);
+  RAW_METHOD_DUMP(OS, optimizedCodeDebugInfo);
+  RAW_METHOD_DUMP(OS, overloadedOperator);
+  RAW_METHOD_DUMP(OS, hasSEH);
+  RAW_METHOD_DUMP(OS, hasSecurityChecks);
+  RAW_METHOD_DUMP(OS, hasSetJump);
+  RAW_METHOD_DUMP(OS, strictGSCheck);
+  RAW_METHOD_DUMP(OS, isAcceleratorGroupSharedLocal);
+  RAW_METHOD_DUMP(OS, isAcceleratorPointerTagLiveRange);
+  RAW_METHOD_DUMP(OS, isAcceleratorStubFunction);
+  RAW_METHOD_DUMP(OS, isAggregated);
+  RAW_METHOD_DUMP(OS, intro);
+  RAW_METHOD_DUMP(OS, isCVTCIL);
+  RAW_METHOD_DUMP(OS, isConstructorVirtualBase);
+  RAW_METHOD_DUMP(OS, isCxxReturnUdt);
+  RAW_METHOD_DUMP(OS, isDataAligned);
+  RAW_METHOD_DUMP(OS, isHLSLData);
+  RAW_METHOD_DUMP(OS, isHotpatchable);
+  RAW_METHOD_DUMP(OS, indirectVirtualBaseClass);
+  RAW_METHOD_DUMP(OS, isInterfaceUdt);
+  RAW_METHOD_DUMP(OS, intrinsic);
+  RAW_METHOD_DUMP(OS, isLTCG);
+  RAW_METHOD_DUMP(OS, isLocationControlFlowDependent);
+  RAW_METHOD_DUMP(OS, isMSILNetmodule);
+  RAW_METHOD_DUMP(OS, isMatrixRowMajor);
+  RAW_METHOD_DUMP(OS, managed);
+  RAW_METHOD_DUMP(OS, msil);
+  RAW_METHOD_DUMP(OS, isMultipleInheritance);
+  RAW_METHOD_DUMP(OS, isNaked);
+  RAW_METHOD_DUMP(OS, nested);
+  RAW_METHOD_DUMP(OS, isOptimizedAway);
+  RAW_METHOD_DUMP(OS, packed);
+  RAW_METHOD_DUMP(OS, isPointerBasedOnSymbolValue);
+  RAW_METHOD_DUMP(OS, isPointerToDataMember);
+  RAW_METHOD_DUMP(OS, isPointerToMemberFunction);
+  RAW_METHOD_DUMP(OS, pure);
+  RAW_METHOD_DUMP(OS, RValueReference);
+  RAW_METHOD_DUMP(OS, isRefUdt);
+  RAW_METHOD_DUMP(OS, reference);
+  RAW_METHOD_DUMP(OS, restrictedType);
+  RAW_METHOD_DUMP(OS, isReturnValue);
+  RAW_METHOD_DUMP(OS, isSafeBuffers);
+  RAW_METHOD_DUMP(OS, scoped);
+  RAW_METHOD_DUMP(OS, isSdl);
+  RAW_METHOD_DUMP(OS, isSingleInheritance);
+  RAW_METHOD_DUMP(OS, isSplitted);
+  RAW_METHOD_DUMP(OS, isStatic);
+  RAW_METHOD_DUMP(OS, isStripped);
+  RAW_METHOD_DUMP(OS, unalignedType);
+  RAW_METHOD_DUMP(OS, notReached);
+  RAW_METHOD_DUMP(OS, isValueUdt);
+  RAW_METHOD_DUMP(OS, virtual);
+  RAW_METHOD_DUMP(OS, virtualBaseClass);
+  RAW_METHOD_DUMP(OS, isVirtualInheritance);
+  RAW_METHOD_DUMP(OS, volatileType);
+  RAW_METHOD_DUMP(OS, wasInlined);
+  RAW_METHOD_DUMP(OS, unused);
+  RAW_METHOD_DUMP(OS, value);
+}
 
-std::unique_ptr<IPDBEnumSymbols> DIARawSymbol::findChildren(
-    PDB_SymType Type) const {
+std::unique_ptr<IPDBEnumSymbols>
+DIARawSymbol::findChildren(PDB_SymType Type) const {
   enum SymTagEnum EnumVal = static_cast<enum SymTagEnum>(Type);
 
   CComPtr<IDiaEnumSymbols> DiaEnumerator;
@@ -354,9 +409,8 @@ DIARawSymbol::findChildrenByAddr(PDB_SymType Type, StringRef Name,
   wchar_t *Name16Str = reinterpret_cast<wchar_t *>(Name16.data());
 
   CComPtr<IDiaEnumSymbols> DiaEnumerator;
-  if (S_OK !=
-      Symbol->findChildrenExByAddr(EnumVal, Name16Str, CompareFlags, Section,
-                                   Offset, &DiaEnumerator))
+  if (S_OK != Symbol->findChildrenExByAddr(EnumVal, Name16Str, CompareFlags,
+                                           Section, Offset, &DiaEnumerator))
     return nullptr;
 
   return llvm::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
@@ -374,9 +428,8 @@ DIARawSymbol::findChildrenByVA(PDB_SymType Type, StringRef Name,
   wchar_t *Name16Str = reinterpret_cast<wchar_t *>(Name16.data());
 
   CComPtr<IDiaEnumSymbols> DiaEnumerator;
-  if (S_OK !=
-      Symbol->findChildrenExByVA(EnumVal, Name16Str, CompareFlags, VA,
-                                  &DiaEnumerator))
+  if (S_OK != Symbol->findChildrenExByVA(EnumVal, Name16Str, CompareFlags, VA,
+                                         &DiaEnumerator))
     return nullptr;
 
   return llvm::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
@@ -393,9 +446,8 @@ DIARawSymbol::findChildrenByRVA(PDB_SymType Type, StringRef Name,
   wchar_t *Name16Str = reinterpret_cast<wchar_t *>(Name16.data());
 
   CComPtr<IDiaEnumSymbols> DiaEnumerator;
-  if (S_OK !=
-      Symbol->findChildrenExByRVA(EnumVal, Name16Str, CompareFlags, RVA,
-                                  &DiaEnumerator))
+  if (S_OK != Symbol->findChildrenExByRVA(EnumVal, Name16Str, CompareFlags, RVA,
+                                          &DiaEnumerator))
     return nullptr;
 
   return llvm::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
@@ -440,7 +492,8 @@ std::unique_ptr<IPDBEnumLineNumbers>
 DIARawSymbol::findInlineeLinesByAddr(uint32_t Section, uint32_t Offset,
                                      uint32_t Length) const {
   CComPtr<IDiaEnumLineNumbers> DiaEnumerator;
-  if (S_OK != Symbol->findInlineeLinesByAddr(Section, Offset, Length, &DiaEnumerator))
+  if (S_OK !=
+      Symbol->findInlineeLinesByAddr(Section, Offset, Length, &DiaEnumerator))
     return nullptr;
 
   return llvm::make_unique<DIAEnumLineNumbers>(DiaEnumerator);
@@ -476,8 +529,7 @@ void DIARawSymbol::getDataBytes(llvm::SmallVector<uint8_t, 32> &bytes) const {
   Symbol->get_dataBytes(DataSize, &DataSize, bytes.data());
 }
 
-std::string
-DIARawSymbol::getUndecoratedNameEx(PDB_UndnameFlags Flags) const {
+std::string DIARawSymbol::getUndecoratedNameEx(PDB_UndnameFlags Flags) const {
   CComBSTR Result16;
   if (S_OK != Symbol->get_undecoratedNameEx((DWORD)Flags, &Result16))
     return std::string();
@@ -507,7 +559,7 @@ uint32_t DIARawSymbol::getAge() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_age);
 }
 
-uint32_t DIARawSymbol::getArrayIndexTypeId() const {
+SymIndexId DIARawSymbol::getArrayIndexTypeId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_arrayIndexTypeId);
 }
 
@@ -526,7 +578,7 @@ uint32_t DIARawSymbol::getBaseDataSlot() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_baseDataSlot);
 }
 
-uint32_t DIARawSymbol::getBaseSymbolId() const {
+SymIndexId DIARawSymbol::getBaseSymbolId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_baseSymbolId);
 }
 
@@ -544,7 +596,7 @@ PDB_CallingConv DIARawSymbol::getCallingConvention() const {
       Symbol, &IDiaSymbol::get_callingConvention);
 }
 
-uint32_t DIARawSymbol::getClassParentId() const {
+SymIndexId DIARawSymbol::getClassParentId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_classParentId);
 }
 
@@ -571,7 +623,7 @@ PDB_Lang DIARawSymbol::getLanguage() const {
   return PrivateGetDIAValue<DWORD, PDB_Lang>(Symbol, &IDiaSymbol::get_language);
 }
 
-uint32_t DIARawSymbol::getLexicalParentId() const {
+SymIndexId DIARawSymbol::getLexicalParentId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_lexicalParentId);
 }
 
@@ -599,7 +651,7 @@ codeview::RegisterId DIARawSymbol::getLocalBasePointerRegisterId() const {
       Symbol, &IDiaSymbol::get_localBasePointerRegisterId);
 }
 
-uint32_t DIARawSymbol::getLowerBoundId() const {
+SymIndexId DIARawSymbol::getLowerBoundId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_lowerBoundId);
 }
 
@@ -640,7 +692,7 @@ uint32_t DIARawSymbol::getOemId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_oemId);
 }
 
-uint32_t DIARawSymbol::getOemSymbolId() const {
+SymIndexId DIARawSymbol::getOemSymbolId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_oemSymbolId);
 }
 
@@ -689,8 +741,7 @@ std::string DIARawSymbol::getSourceFileName() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_sourceFileName);
 }
 
-std::unique_ptr<IPDBLineNumber>
-DIARawSymbol::getSrcLineOnTypeDefn() const {
+std::unique_ptr<IPDBLineNumber> DIARawSymbol::getSrcLineOnTypeDefn() const {
   CComPtr<IDiaLineNumber> LineNumber;
   if (FAILED(Symbol->getSrcLineOnTypeDefn(&LineNumber)) || !LineNumber)
     return nullptr;
@@ -702,7 +753,7 @@ uint32_t DIARawSymbol::getStride() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_stride);
 }
 
-uint32_t DIARawSymbol::getSubTypeId() const {
+SymIndexId DIARawSymbol::getSubTypeId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_subTypeId);
 }
 
@@ -710,7 +761,7 @@ std::string DIARawSymbol::getSymbolsFileName() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_symbolsFileName);
 }
 
-uint32_t DIARawSymbol::getSymIndexId() const {
+SymIndexId DIARawSymbol::getSymIndexId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_symIndexId);
 }
 
@@ -743,7 +794,7 @@ uint32_t DIARawSymbol::getToken() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_token);
 }
 
-uint32_t DIARawSymbol::getTypeId() const {
+SymIndexId DIARawSymbol::getTypeId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_typeId);
 }
 
@@ -755,11 +806,11 @@ std::string DIARawSymbol::getUndecoratedName() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_undecoratedName);
 }
 
-uint32_t DIARawSymbol::getUnmodifiedTypeId() const {
+SymIndexId DIARawSymbol::getUnmodifiedTypeId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_unmodifiedTypeId);
 }
 
-uint32_t DIARawSymbol::getUpperBoundId() const {
+SymIndexId DIARawSymbol::getUpperBoundId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_upperBoundId);
 }
 
@@ -780,7 +831,7 @@ uint32_t DIARawSymbol::getVirtualBaseOffset() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_virtualBaseOffset);
 }
 
-uint32_t DIARawSymbol::getVirtualTableShapeId() const {
+SymIndexId DIARawSymbol::getVirtualTableShapeId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_virtualTableShapeId);
 }
 

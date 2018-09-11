@@ -29,6 +29,7 @@ public:
   struct Block {
     uint64_t ProcessID;
     int32_t ThreadID;
+    WallclockRecord *WallclockTime;
     std::vector<Record *> Records;
   };
 
@@ -41,7 +42,7 @@ private:
   enum class State : unsigned { SeekExtents, ExtentsFound, ThreadIDFound };
 
   State CurrentState = State::SeekExtents;
-  Block CurrentBlock{0, 0, {}};
+  Block CurrentBlock{0, 0, nullptr, {}};
 
 public:
   explicit BlockIndexer(Index &I) : RecordVisitor(), Indices(I) {}

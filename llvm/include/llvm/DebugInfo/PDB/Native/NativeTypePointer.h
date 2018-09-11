@@ -35,7 +35,7 @@ public:
   bool isRValueReference() const override;
   bool isPointerToDataMember() const override;
   bool isPointerToMemberFunction() const override;
-  uint32_t getTypeId() const override;
+  SymIndexId getTypeId() const override;
   bool isRestrictedType() const override;
   bool isVolatileType() const override;
   bool isUnalignedType() const override;

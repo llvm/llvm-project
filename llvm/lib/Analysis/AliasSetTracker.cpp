@@ -407,8 +407,8 @@ void AliasSetTracker::add(AnyMemSetInst *MSI) {
 }
 
 void AliasSetTracker::add(AnyMemTransferInst *MTI) {
-  addPointer(MemoryLocation::getForSource(MTI), AliasSet::RefAccess);
   addPointer(MemoryLocation::getForDest(MTI), AliasSet::ModAccess);
+  addPointer(MemoryLocation::getForSource(MTI), AliasSet::RefAccess);
 }
 
 void AliasSetTracker::addUnknown(Instruction *Inst) {

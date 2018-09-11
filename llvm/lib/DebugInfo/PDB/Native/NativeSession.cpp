@@ -89,7 +89,7 @@ std::unique_ptr<PDBSymbolExe> NativeSession::getGlobalScope() {
 }
 
 std::unique_ptr<PDBSymbol>
-NativeSession::getSymbolById(uint32_t SymbolId) const {
+NativeSession::getSymbolById(SymIndexId SymbolId) const {
   return Cache.getSymbolById(SymbolId);
 }
 

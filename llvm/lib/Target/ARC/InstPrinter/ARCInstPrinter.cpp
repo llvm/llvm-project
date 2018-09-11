@@ -30,7 +30,7 @@ using namespace llvm;
 
 template <class T>
 static const char *BadConditionCode(T cc) {
-  DEBUG(dbgs() << "Unknown condition code passed: " << cc << "\n");
+  LLVM_DEBUG(dbgs() << "Unknown condition code passed: " << cc << "\n");
   return "{unknown-cc}";
 }
 

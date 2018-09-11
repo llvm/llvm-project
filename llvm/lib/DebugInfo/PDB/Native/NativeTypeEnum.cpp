@@ -155,7 +155,7 @@ PDB_BuiltinType NativeTypeEnum::getBuiltinType() const {
   llvm_unreachable("Unreachable");
 }
 
-uint32_t NativeTypeEnum::getUnmodifiedTypeId() const {
+SymIndexId NativeTypeEnum::getUnmodifiedTypeId() const {
   // FIXME: If this is const, volatile, or unaligned, we should return the
   // SymIndexId of the unmodified type here.
   return 0;
@@ -212,7 +212,7 @@ bool NativeTypeEnum::isScoped() const {
   return bool(Record.getOptions() & codeview::ClassOptions::Scoped);
 }
 
-uint32_t NativeTypeEnum::getTypeId() const {
+SymIndexId NativeTypeEnum::getTypeId() const {
   return Session.getSymbolCache().findSymbolByTypeIndex(
       Record.getUnderlyingType());
 }

@@ -86,7 +86,7 @@ Error FDRTraceWriter::visit(WallclockRecord &R) {
 }
 
 Error FDRTraceWriter::visit(NewCPUIDRecord &R) {
-  return writeMetadata<2u>(OS, R.cpuid());
+  return writeMetadata<2u>(OS, R.cpuid(), R.tsc());
 }
 
 Error FDRTraceWriter::visit(TSCWrapRecord &R) {

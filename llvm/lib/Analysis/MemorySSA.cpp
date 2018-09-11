@@ -1542,9 +1542,10 @@ MemoryPhi *MemorySSA::createMemoryPhi(BasicBlock *BB) {
 }
 
 MemoryUseOrDef *MemorySSA::createDefinedAccess(Instruction *I,
-                                               MemoryAccess *Definition) {
+                                               MemoryAccess *Definition,
+                                               const MemoryUseOrDef *Template) {
   assert(!isa<PHINode>(I) && "Cannot create a defined access for a PHI");
-  MemoryUseOrDef *NewAccess = createNewAccess(I);
+  MemoryUseOrDef *NewAccess = createNewAccess(I, Template);
   assert(
       NewAccess != nullptr &&
       "Tried to create a memory access for a non-memory touching instruction");
@@ -1567,7 +1568,8 @@ static inline bool isOrdered(const Instruction *I) {
 }
 
 /// Helper function to create new memory accesses
-MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I) {
+MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
+                                           const MemoryUseOrDef *Template) {
   // The assume intrinsic has a control dependency which we model by claiming
   // that it writes arbitrarily. Ignore that fake memory dependency here.
   // FIXME: Replace this special casing with a more accurate modelling of
@@ -1576,18 +1578,31 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I) {
     if (II->getIntrinsicID() == Intrinsic::assume)
       return nullptr;
 
-  // Find out what affect this instruction has on memory.
-  ModRefInfo ModRef = AA->getModRefInfo(I, None);
-  // The isOrdered check is used to ensure that volatiles end up as defs
-  // (atomics end up as ModRef right now anyway).  Until we separate the
-  // ordering chain from the memory chain, this enables people to see at least
-  // some relative ordering to volatiles.  Note that getClobberingMemoryAccess
-  // will still give an answer that bypasses other volatile loads.  TODO:
-  // Separate memory aliasing and ordering into two different chains so that we
-  // can precisely represent both "what memory will this read/write/is clobbered
-  // by" and "what instructions can I move this past".
-  bool Def = isModSet(ModRef) || isOrdered(I);
-  bool Use = isRefSet(ModRef);
+  bool Def, Use;
+  if (Template) {
+    Def = dyn_cast_or_null<MemoryDef>(Template) != nullptr;
+    Use = dyn_cast_or_null<MemoryUse>(Template) != nullptr;
+#if !defined(NDEBUG)
+    ModRefInfo ModRef = AA->getModRefInfo(I, None);
+    bool DefCheck, UseCheck;
+    DefCheck = isModSet(ModRef) || isOrdered(I);
+    UseCheck = isRefSet(ModRef);
+    assert(Def == DefCheck && (Def || Use == UseCheck) && "Invalid template");
+#endif
+  } else {
+    // Find out what affect this instruction has on memory.
+    ModRefInfo ModRef = AA->getModRefInfo(I, None);
+    // The isOrdered check is used to ensure that volatiles end up as defs
+    // (atomics end up as ModRef right now anyway).  Until we separate the
+    // ordering chain from the memory chain, this enables people to see at least
+    // some relative ordering to volatiles.  Note that getClobberingMemoryAccess
+    // will still give an answer that bypasses other volatile loads.  TODO:
+    // Separate memory aliasing and ordering into two different chains so that
+    // we can precisely represent both "what memory will this read/write/is
+    // clobbered by" and "what instructions can I move this past".
+    Def = isModSet(ModRef) || isOrdered(I);
+    Use = isRefSet(ModRef);
+  }
 
   // It's possible for an instruction to not modify memory at all. During
   // construction, we ignore them.
