@@ -29,8 +29,11 @@ findGeneratorByName(llvm::StringRef Format) {
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the generators.
 extern volatile int YAMLGeneratorAnchorSource;
+extern volatile int MDGeneratorAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED YAMLGeneratorAnchorDest =
     YAMLGeneratorAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED MDGeneratorAnchorDest =
+    MDGeneratorAnchorSource;
 
 } // namespace doc
 } // namespace clang
