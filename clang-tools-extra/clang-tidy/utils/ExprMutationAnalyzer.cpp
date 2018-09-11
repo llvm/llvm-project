@@ -48,11 +48,13 @@ AST_MATCHER_P(GenericSelectionExpr, hasControllingExpr,
 }
 
 const auto nonConstReferenceType = [] {
-  return referenceType(pointee(unless(isConstQualified())));
+  return hasUnqualifiedDesugaredType(
+      referenceType(pointee(unless(isConstQualified()))));
 };
 
 const auto nonConstPointerType = [] {
-  return pointerType(pointee(unless(isConstQualified())));
+  return hasUnqualifiedDesugaredType(
+      pointerType(pointee(unless(isConstQualified()))));
 };
 
 const auto isMoveOnly = [] {
@@ -185,12 +187,11 @@ const Stmt *ExprMutationAnalyzer::findDirectMutation(const Expr *Exp) {
   // Treat calling `operator->()` of move-only classes as taking address.
   // These are typically smart pointers with unique ownership so we treat
   // mutation of pointee as mutation of the smart pointer itself.
-  const auto AsOperatorArrowThis = cxxOperatorCallExpr(
-      hasOverloadedOperatorName("->"),
-      callee(cxxMethodDecl(
-          ofClass(isMoveOnly()),
-          returns(hasUnqualifiedDesugaredType(nonConstPointerType())))),
-      argumentCountIs(1), hasArgument(0, equalsNode(Exp)));
+  const auto AsOperatorArrowThis =
+      cxxOperatorCallExpr(hasOverloadedOperatorName("->"),
+                          callee(cxxMethodDecl(ofClass(isMoveOnly()),
+                                               returns(nonConstPointerType()))),
+                          argumentCountIs(1), hasArgument(0, equalsNode(Exp)));
 
   // Used as non-const-ref argument when calling a function.
   // An argument is assumed to be non-const-ref when the function is unresolved.
