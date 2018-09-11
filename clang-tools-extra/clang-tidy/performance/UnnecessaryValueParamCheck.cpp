@@ -10,10 +10,10 @@
 #include "UnnecessaryValueParamCheck.h"
 
 #include "../utils/DeclRefExprUtils.h"
-#include "../utils/ExprMutationAnalyzer.h"
 #include "../utils/FixItHintUtils.h"
 #include "../utils/Matchers.h"
 #include "../utils/TypeTraits.h"
+#include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
@@ -95,14 +95,14 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   // Do not trigger on non-const value parameters when they are mutated either
   // within the function body or within init expression(s) when the function is
   // a ctor.
-  if (utils::ExprMutationAnalyzer(*Function->getBody(), *Result.Context)
+  if (ExprMutationAnalyzer(*Function->getBody(), *Result.Context)
           .isMutated(Param))
     return;
   // CXXCtorInitializer might also mutate Param but they're not part of function
   // body, so check them separately here.
   if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(Function)) {
     for (const auto *Init : Ctor->inits()) {
-      if (utils::ExprMutationAnalyzer(*Init->getInit(), *Result.Context)
+      if (ExprMutationAnalyzer(*Init->getInit(), *Result.Context)
               .isMutated(Param))
         return;
     }

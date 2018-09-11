@@ -9,9 +9,9 @@
 
 #include "ForRangeCopyCheck.h"
 #include "../utils/DeclRefExprUtils.h"
-#include "../utils/ExprMutationAnalyzer.h"
 #include "../utils/FixItHintUtils.h"
 #include "../utils/TypeTraits.h"
+#include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
 
 using namespace clang::ast_matchers;
 
@@ -88,8 +88,7 @@ bool ForRangeCopyCheck::handleCopyIsOnlyConstReferenced(
   // Because the fix (changing to `const auto &`) will introduce an unused
   // compiler warning which can't be suppressed.
   // Since this case is very rare, it is safe to ignore it.
-  if (!utils::ExprMutationAnalyzer(*ForRange.getBody(), Context)
-           .isMutated(&LoopVar) &&
+  if (!ExprMutationAnalyzer(*ForRange.getBody(), Context).isMutated(&LoopVar) &&
       !utils::decl_ref_expr::allDeclRefExprs(LoopVar, *ForRange.getBody(),
                                              Context)
            .empty()) {
