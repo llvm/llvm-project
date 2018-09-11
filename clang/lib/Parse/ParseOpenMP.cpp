@@ -422,8 +422,15 @@ void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
                   getCurScope(),
                   OmpPrivParm->getType()->getCanonicalTypeInternal(),
                   OmpPrivParm->getLocation(), Exprs, LParLoc);
+              CalledSignatureHelp = true;
               Actions.CodeCompleteExpression(getCurScope(), PreferredType);
             })) {
+      if (PP.isCodeCompletionReached() && !CalledSignatureHelp) {
+        Actions.ProduceConstructorSignatureHelp(
+            getCurScope(), OmpPrivParm->getType()->getCanonicalTypeInternal(),
+            OmpPrivParm->getLocation(), Exprs, LParLoc);
+        CalledSignatureHelp = true;
+      }
       Actions.ActOnInitializerError(OmpPrivParm);
       SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
     } else {

@@ -607,3 +607,11 @@ Selector NSAPI::getOrInitSelector(ArrayRef<StringRef> Ids,
   }
   return Sel;
 }
+
+Selector NSAPI::getOrInitNullarySelector(StringRef Id, Selector &Sel) const {
+  if (Sel.isNull()) {
+    IdentifierInfo *Ident = &Ctx.Idents.get(Id);
+    Sel = Ctx.Selectors.getSelector(0, &Ident);
+  }
+  return Sel;
+}
