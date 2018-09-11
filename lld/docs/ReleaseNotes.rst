@@ -17,8 +17,8 @@ lld 7 for ELF, COFF and MinGW are production-ready. lld/ELF can build the entire
 FreeBSD/AMD64 and will be the default linker of the next version of the
 operating system. lld/COFF is being used to build popular large programs such as
 the Chrome web browser. lld/MinGW is being used by Firefox for their MinGW
-builds, though it needs a special-built sysroot. Mach-O and WebAssembly supports
-are still experimental.
+builds. lld/MinGW still needs a sysroot specifically built for lld, with
+llvm-dlltool, though. Mach-O and WebAssembly supports are still experimental.
 
 Non-comprehensive list of changes in this release
 =================================================
