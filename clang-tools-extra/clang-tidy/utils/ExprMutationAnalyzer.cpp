@@ -145,11 +145,16 @@ const Stmt *ExprMutationAnalyzer::findDirectMutation(const Expr *Exp) {
                     hasUnaryOperand(equalsNode(Exp)));
 
   // Invoking non-const member function.
+  // A member function is assumed to be non-const when it is unresolved.
   const auto NonConstMethod = cxxMethodDecl(unless(isConst()));
   const auto AsNonConstThis =
       expr(anyOf(cxxMemberCallExpr(callee(NonConstMethod), on(equalsNode(Exp))),
                  cxxOperatorCallExpr(callee(NonConstMethod),
-                                     hasArgument(0, equalsNode(Exp)))));
+                                     hasArgument(0, equalsNode(Exp))),
+                 callExpr(callee(expr(anyOf(
+                     unresolvedMemberExpr(hasObjectExpression(equalsNode(Exp))),
+                     cxxDependentScopeMemberExpr(
+                         hasObjectExpression(equalsNode(Exp)))))))));
 
   // Taking address of 'Exp'.
   // We're assuming 'Exp' is mutated as soon as its address is taken, though in
@@ -165,10 +170,16 @@ const Stmt *ExprMutationAnalyzer::findDirectMutation(const Expr *Exp) {
                unless(hasParent(arraySubscriptExpr())), has(equalsNode(Exp)));
 
   // Used as non-const-ref argument when calling a function.
+  // An argument is assumed to be non-const-ref when the function is unresolved.
   const auto NonConstRefParam = forEachArgumentWithParam(
       equalsNode(Exp), parmVarDecl(hasType(nonConstReferenceType())));
-  const auto AsNonConstRefArg =
-      anyOf(callExpr(NonConstRefParam), cxxConstructExpr(NonConstRefParam));
+  const auto AsNonConstRefArg = anyOf(
+      callExpr(NonConstRefParam), cxxConstructExpr(NonConstRefParam),
+      callExpr(callee(expr(anyOf(unresolvedLookupExpr(), unresolvedMemberExpr(),
+                                 cxxDependentScopeMemberExpr(),
+                                 hasType(templateTypeParmType())))),
+               hasAnyArgument(equalsNode(Exp))),
+      cxxUnresolvedConstructExpr(hasAnyArgument(equalsNode(Exp))));
 
   // Captured by a lambda by reference.
   // If we're initializing a capture with 'Exp' directly then we're initializing
@@ -195,9 +206,12 @@ const Stmt *ExprMutationAnalyzer::findDirectMutation(const Expr *Exp) {
 
 const Stmt *ExprMutationAnalyzer::findMemberMutation(const Expr *Exp) {
   // Check whether any member of 'Exp' is mutated.
-  const auto MemberExprs = match(
-      findAll(memberExpr(hasObjectExpression(equalsNode(Exp))).bind("expr")),
-      Stm, Context);
+  const auto MemberExprs =
+      match(findAll(expr(anyOf(memberExpr(hasObjectExpression(equalsNode(Exp))),
+                               cxxDependentScopeMemberExpr(
+                                   hasObjectExpression(equalsNode(Exp)))))
+                        .bind("expr")),
+            Stm, Context);
   return findExprMutation(MemberExprs);
 }
 
