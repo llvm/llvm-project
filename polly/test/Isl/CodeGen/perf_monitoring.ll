@@ -36,35 +36,37 @@ return:
 ; CHECK-NEXT: @__polly_perf_initialized = weak thread_local(initialexec) constant i1 false
 ; CHECK-NEXT: @__polly_perf_cycles_in_scops = weak thread_local(initialexec) constant i64 0
 ; CHECK-NEXT: @__polly_perf_cycles_in_scop_start = weak thread_local(initialexec) constant i64 0
-; CHECK-NEXT: @__polly_perf_write_loation = weak thread_local(initialexec) constant i32 0
 
 ; CHECK:      polly.split_new_and_old:                          ; preds = %entry
-; CHECK-NEXT:   %0 = call i64 @llvm.x86.rdtscp(i8* bitcast (i32* @__polly_perf_write_loation to i8*))
-; CHECK-NEXT:   store volatile i64 %0, i64* @__polly_perf_cycles_in_scop_start
+; CHECK-NEXT:   %0 = call { i64, i32 } @llvm.x86.rdtscp()
+; CHECK-NEXT:   %1 = extractvalue { i64, i32 } %0, 0
+; CHECK-NEXT:   store volatile i64 %1, i64* @__polly_perf_cycles_in_scop_start
 
 ; CHECK:      polly.merge_new_and_old:                          ; preds = %polly.exiting, %return.region_exiting
-; CHECK-NEXT:   %5 = load volatile i64, i64* @__polly_perf_cycles_in_scop_start
-; CHECK-NEXT:   %6 = call i64 @llvm.x86.rdtscp(i8* bitcast (i32* @__polly_perf_write_loation to i8*))
-; CHECK-NEXT:   %7 = sub i64 %6, %5
-; CHECK-NEXT:   %8 = load volatile i64, i64* @__polly_perf_cycles_in_scops
-; CHECK-NEXT:   %9 = add i64 %8, %7
-; CHECK-NEXT:   store volatile i64 %9, i64* @__polly_perf_cycles_in_scops
+; CHECK-NEXT:   %6 = load volatile i64, i64* @__polly_perf_cycles_in_scop_start
+; CHECK-NEXT:   %7 = call { i64, i32 } @llvm.x86.rdtscp()
+; CHECK-NEXT:   %8 = extractvalue { i64, i32 } %7, 0
+; CHECK-NEXT:   %9 = sub i64 %8, %6
+; CHECK-NEXT:   %10 = load volatile i64, i64* @__polly_perf_cycles_in_scops
+; CHECK-NEXT:   %11 = add i64 %10, %9
+; CHECK-NEXT:   store volatile i64 %11, i64* @__polly_perf_cycles_in_scops
 
 
 ; CHECK:      define weak_odr void @__polly_perf_final() {
 ; CHECK-NEXT: start:
-; CHECK-NEXT:   %0 = call i64 @llvm.x86.rdtscp(i8* bitcast (i32* @__polly_perf_write_loation to i8*))
-; CHECK-NEXT:   %1 = load volatile i64, i64* @__polly_perf_cycles_total_start
-; CHECK-NEXT:   %2 = sub i64 %0, %1
-; CHECK-NEXT:   %3 = load volatile i64, i64* @__polly_perf_cycles_in_scops
-; CHECK-NEXT:   %4 = call i32 (...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @1, i32 0, i32 0), i8 addrspace(4)* getelementptr inbounds ([27 x i8], [27 x i8] addrspace(4)* @0, i32 0, i32 0))
-; CHECK-NEXT:   %5 = call i32 @fflush(i8* null)
-; CHECK-NEXT:   %6 = call i32 (...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @3, i32 0, i32 0), i8 addrspace(4)* getelementptr inbounds ([27 x i8], [27 x i8] addrspace(4)* @2, i32 0, i32 0))
-; CHECK-NEXT:   %7 = call i32 @fflush(i8* null)
-; CHECK-NEXT:   %8 = call i32 (...) @printf(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @6, i32 0, i32 0), i8 addrspace(4)* getelementptr inbounds ([8 x i8], [8 x i8] addrspace(4)* @4, i32 0, i32 0), i64 %2, i8 addrspace(4)* getelementptr inbounds ([2 x i8], [2 x i8] addrspace(4)* @5, i32 0, i32 0))
-; CHECK-NEXT:   %9 = call i32 @fflush(i8* null)
-; CHECK-NEXT:   %10 = call i32 (...) @printf(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @9, i32 0, i32 0), i8 addrspace(4)* getelementptr inbounds ([8 x i8], [8 x i8] addrspace(4)* @7, i32 0, i32 0), i64 %3, i8 addrspace(4)* getelementptr inbounds ([2 x i8], [2 x i8] addrspace(4)* @8, i32 0, i32 0))
-; CHECK-NEXT:   %11 = call i32 @fflush(i8* null)
+; CHECK-NEXT:   %0 = call { i64, i32 } @llvm.x86.rdtscp()
+; CHECK-NEXT:   %1 = extractvalue { i64, i32 } %0, 0
+; CHECK-NEXT:   %2 = load volatile i64, i64* @__polly_perf_cycles_total_start
+; CHECK-NEXT:   %3 = sub i64 %1, %2
+; CHECK-NEXT:   %4 = load volatile i64, i64* @__polly_perf_cycles_in_scops
+; CHECK-NEXT:   %5 = call i32 (...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @1, i32 0, i32 0), i8 addrspace(4)* getelementptr inbounds ([27 x i8], [27 x i8] addrspace(4)* @0, i32 0, i32 0))
+; CHECK-NEXT:   %6 = call i32 @fflush(i8* null)
+; CHECK-NEXT:   %7 = call i32 (...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @3, i32 0, i32 0), i8 addrspace(4)* getelementptr inbounds ([27 x i8], [27 x i8] addrspace(4)* @2, i32 0, i32 0))
+; CHECK-NEXT:   %8 = call i32 @fflush(i8* null)
+; CHECK-NEXT:   %9 = call i32 (...) @printf(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @6, i32 0, i32 0), i8 addrspace(4)* getelementptr inbounds ([8 x i8], [8 x i8] addrspace(4)* @4, i32 0, i32 0), i64 %3, i8 addrspace(4)* getelementptr inbounds ([2 x i8], [2 x i8] addrspace(4)* @5, i32 0, i32 0))
+; CHECK-NEXT:   %10 = call i32 @fflush(i8* null)
+; CHECK-NEXT:   %11 = call i32 (...) @printf(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @9, i32 0, i32 0), i8 addrspace(4)* getelementptr inbounds ([8 x i8], [8 x i8] addrspace(4)* @7, i32 0, i32 0), i64 %4, i8 addrspace(4)* getelementptr inbounds ([2 x i8], [2 x i8] addrspace(4)* @8, i32 0, i32 0))
+; CHECK-NEXT:   %12 = call i32 @fflush(i8* null)
 
 
 ; CHECK:      define weak_odr void @__polly_perf_init() {
@@ -78,7 +80,8 @@ return:
 ; CHECK:      initbb:                                           ; preds = %start
 ; CHECK-NEXT:   store i1 true, i1* @__polly_perf_initialized
 ; CHECK-NEXT:   %1 = call i32 @atexit(i8* bitcast (void ()* @__polly_perf_final to i8*))
-; CHECK-NEXT:   %2 = call i64 @llvm.x86.rdtscp(i8* bitcast (i32* @__polly_perf_write_loation to i8*))
-; CHECK-NEXT:   store volatile i64 %2, i64* @__polly_perf_cycles_total_start
+; CHECK-NEXT:   %2 = call { i64, i32 } @llvm.x86.rdtscp()
+; CHECK-NEXT:   %3 = extractvalue { i64, i32 } %2, 0
+; CHECK-NEXT:   store volatile i64 %3, i64* @__polly_perf_cycles_total_start
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }
