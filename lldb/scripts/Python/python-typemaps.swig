@@ -77,6 +77,26 @@
   }
 }
 
+%typemap(in) lldb::StateType {
+  using namespace lldb_private;
+  if (PythonInteger::Check($input))
+  {
+    PythonInteger py_int(PyRefType::Borrowed, $input);
+    int64_t state_type_value = py_int.GetInteger() ;
+
+    if (state_type_value > lldb::StateType::kLastStateType) {
+      PyErr_SetString(PyExc_ValueError, "Not a valid StateType value");
+      return nullptr;
+    }
+    $1 = static_cast<lldb::StateType>(state_type_value);
+  }
+  else
+  {
+    PyErr_SetString(PyExc_ValueError, "Expecting an integer");
+    return nullptr;
+  }
+}
+
 /* Typemap definitions to allow SWIG to properly handle char buffer. */
 
 // typemap for a char buffer
