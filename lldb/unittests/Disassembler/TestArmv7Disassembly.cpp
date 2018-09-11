@@ -48,7 +48,7 @@ void TestArmv7Disassembly::TearDownTestCase() {
 TEST_F(TestArmv7Disassembly, TestCortexFPDisass) {
   ArchSpec arch("armv7em--");
 
-  const int num_of_instructions = 3;
+  const unsigned num_of_instructions = 3;
   uint8_t data[] = {
       0x00, 0xee, 0x10, 0x2a, // 0xee002a10 :  vmov   s0, r2
       0xb8, 0xee, 0xc0, 0x0b, // 0xeeb80bc0 :  vcvt.f64.s32 d0, s0
