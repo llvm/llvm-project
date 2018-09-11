@@ -24,7 +24,7 @@
  * INDEXSTORE_VERSION_MAJOR is intended for "major" source/ABI breaking changes.
  */
 #define INDEXSTORE_VERSION_MAJOR 0
-#define INDEXSTORE_VERSION_MINOR 10
+#define INDEXSTORE_VERSION_MINOR 11
 
 #define INDEXSTORE_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                           \
@@ -101,6 +101,11 @@ indexstore_store_units_apply(indexstore_t, unsigned sorted,
                              bool(^applier)(indexstore_string_ref_t unit_name));
 #endif
 
+INDEXSTORE_PUBLIC bool
+indexstore_store_units_apply_f(indexstore_t, unsigned sorted,
+                               void *context,
+              bool(*applier)(void *context, indexstore_string_ref_t unit_name));
+
 typedef void *indexstore_unit_event_notification_t;
 typedef void *indexstore_unit_event_t;
 
@@ -136,6 +141,11 @@ INDEXSTORE_PUBLIC void
 indexstore_store_set_unit_event_handler(indexstore_t,
                                         indexstore_unit_event_handler_t handler);
 #endif
+
+INDEXSTORE_PUBLIC void
+indexstore_store_set_unit_event_handler_f(indexstore_t, void *context,
+            void(*handler)(void *context, indexstore_unit_event_notification_t),
+                                          void(*finalizer)(void *context));
 
 typedef struct {
   /// If true, \c indexstore_store_start_unit_event_listening will block until
@@ -332,6 +342,11 @@ indexstore_occurrence_relations_apply(indexstore_occurrence_t,
                       bool(^applier)(indexstore_symbol_relation_t symbol_rel));
 #endif
 
+INDEXSTORE_PUBLIC bool
+indexstore_occurrence_relations_apply_f(indexstore_occurrence_t,
+                                        void *context,
+        bool(*applier)(void *context, indexstore_symbol_relation_t symbol_rel));
+
 INDEXSTORE_PUBLIC uint64_t
 indexstore_occurrence_get_roles(indexstore_occurrence_t);
 
@@ -388,6 +403,37 @@ indexstore_record_reader_occurrences_of_symbols_apply(indexstore_record_reader_t
         bool(^applier)(indexstore_occurrence_t occur));
 #endif
 
+INDEXSTORE_PUBLIC bool
+indexstore_record_reader_search_symbols_f(indexstore_record_reader_t,
+                                          void *filter_ctx,
+    bool(*filter)(void *filter_ctx, indexstore_symbol_t symbol, bool *stop),
+                                          void *receiver_ctx,
+    void(*receiver)(void *receiver_ctx, indexstore_symbol_t symbol));
+
+INDEXSTORE_PUBLIC bool
+indexstore_record_reader_symbols_apply_f(indexstore_record_reader_t,
+                                         bool nocache,
+                                         void *context,
+                     bool(*applier)(void *context, indexstore_symbol_t symbol));
+
+INDEXSTORE_PUBLIC bool
+indexstore_record_reader_occurrences_apply_f(indexstore_record_reader_t,
+                                             void *context,
+                  bool(*applier)(void *context, indexstore_occurrence_t occur));
+
+INDEXSTORE_PUBLIC bool
+indexstore_record_reader_occurrences_in_line_range_apply_f(indexstore_record_reader_t,
+                                                           unsigned line_start,
+                                                           unsigned line_count,
+                                                           void *context,
+                  bool(*applier)(void *context, indexstore_occurrence_t occur));
+
+INDEXSTORE_PUBLIC bool
+indexstore_record_reader_occurrences_of_symbols_apply_f(indexstore_record_reader_t,
+        indexstore_symbol_t *symbols, size_t symbols_count,
+        indexstore_symbol_t *related_symbols, size_t related_symbols_count,
+        void *context,
+        bool(*applier)(void *context, indexstore_occurrence_t occur));
 
 typedef void *indexstore_unit_reader_t;
 
@@ -480,8 +526,17 @@ indexstore_unit_reader_dependencies_apply(indexstore_unit_reader_t,
 INDEXSTORE_PUBLIC bool
 indexstore_unit_reader_includes_apply(indexstore_unit_reader_t,
                              bool(^applier)(indexstore_unit_include_t));
-
 #endif
+
+INDEXSTORE_PUBLIC bool
+indexstore_unit_reader_dependencies_apply_f(indexstore_unit_reader_t,
+                                            void *context,
+                   bool(*applier)(void *context, indexstore_unit_dependency_t));
+
+INDEXSTORE_PUBLIC bool
+indexstore_unit_reader_includes_apply_f(indexstore_unit_reader_t,
+                                        void *context,
+                      bool(*applier)(void *context, indexstore_unit_include_t));
 
 INDEXSTORE_END_DECLS
 

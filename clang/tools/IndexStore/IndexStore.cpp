@@ -23,7 +23,10 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ManagedStatic.h"
+
+#if INDEXSTORE_HAS_BLOCKS
 #include <Block.h>
+#endif
 
 using namespace clang;
 using namespace clang::index;
@@ -126,6 +129,17 @@ indexstore_store_units_apply(indexstore_t c_store, unsigned sorted,
     return applier(toIndexStoreString(unitName));
   });
 }
+#endif
+
+bool
+indexstore_store_units_apply_f(indexstore_t c_store, unsigned sorted,
+                               void *context,
+             bool(*applier)(void *context, indexstore_string_ref_t unit_name)) {
+  IndexDataStore *store = static_cast<IndexDataStore*>(c_store);
+  return store->foreachUnitName(sorted, [&](StringRef unitName) -> bool {
+    return applier(context, toIndexStoreString(unitName));
+  });
+}
 
 size_t
 indexstore_unit_event_notification_get_events_count(indexstore_unit_event_notification_t c_evtnote) {
@@ -174,6 +188,7 @@ indexstore_unit_event_get_modification_time(indexstore_unit_event_t c_evt) {
   return toTimeSpec(evt->ModTime);
 }
 
+#if INDEXSTORE_HAS_BLOCKS
 void
 indexstore_store_set_unit_event_handler(indexstore_t c_store,
                                     indexstore_unit_event_handler_t blk_handler) {
@@ -208,6 +223,45 @@ indexstore_store_set_unit_event_handler(indexstore_t c_store,
   });
 }
 #endif
+
+void
+indexstore_store_set_unit_event_handler_f(indexstore_t c_store, void *context,
+         void(*fn_handler)(void *context, indexstore_unit_event_notification_t),
+                                          void(*finalizer)(void *context)) {
+  IndexDataStore *store = static_cast<IndexDataStore*>(c_store);
+  if (!fn_handler) {
+    store->setUnitEventHandler(nullptr);
+    return;
+  }
+
+  class BlockWrapper {
+    void *context;
+    void(*fn_handler)(void *context, indexstore_unit_event_notification_t);
+    void(*finalizer)(void *context);
+
+  public:
+    BlockWrapper(void *_context,
+                 void(*_fn_handler)(void *context, indexstore_unit_event_notification_t),
+                 void(*_finalizer)(void *context))
+    : context(_context), fn_handler(_fn_handler), finalizer(_finalizer) {}
+
+    ~BlockWrapper() {
+      if (finalizer) {
+        finalizer(context);
+      }
+    }
+
+    void operator()(indexstore_unit_event_notification_t evt_note) const {
+      fn_handler(context, evt_note);
+    }
+  };
+
+  auto handler = std::make_shared<BlockWrapper>(context, fn_handler, finalizer);
+
+  store->setUnitEventHandler([handler](IndexDataStore::UnitEventNotification evtNote) {
+    (*handler)(&evtNote);
+  });
+}
 
 bool
 indexstore_store_start_unit_event_listening(indexstore_t c_store,
@@ -328,6 +382,18 @@ indexstore_occurrence_relations_apply(indexstore_occurrence_t occur,
 }
 #endif
 
+bool
+indexstore_occurrence_relations_apply_f(indexstore_occurrence_t occur,
+                                        void *context,
+       bool(*applier)(void *context, indexstore_symbol_relation_t symbol_rel)) {
+  auto *recOccur = static_cast<IndexRecordOccurrence*>(occur);
+  for (auto &rel : recOccur->Relations) {
+    if (!applier(context, &rel))
+      return false;
+  }
+  return true;
+}
+
 uint64_t
 indexstore_occurrence_get_roles(indexstore_occurrence_t occur) {
   return getIndexStoreRoles(static_cast<IndexRecordOccurrence*>(occur)->Roles);
@@ -444,6 +510,77 @@ indexstore_record_reader_occurrences_of_symbols_apply(indexstore_record_reader_t
 }
 #endif
 
+bool
+indexstore_record_reader_search_symbols_f(indexstore_record_reader_t rdr,
+                                          void *filter_ctx,
+    bool(*filter)(void *filter_ctx, indexstore_symbol_t symbol, bool *stop),
+                                          void *receiver_ctx,
+              void(*receiver)(void *receiver_ctx, indexstore_symbol_t symbol)) {
+  auto *reader = static_cast<IndexRecordReader *>(rdr);
+
+  auto filterFn = [&](const IndexRecordDecl &D) -> IndexRecordReader::DeclSearchReturn {
+    bool stop = false;
+    bool accept = filter(filter_ctx, (indexstore_symbol_t)&D, &stop);
+    return { accept, !stop };
+  };
+  auto receiverFn = [&](const IndexRecordDecl *D) {
+    receiver(receiver_ctx, (indexstore_symbol_t)D);
+  };
+
+  return reader->searchDecls(filterFn, receiverFn);
+}
+
+INDEXSTORE_PUBLIC bool
+indexstore_record_reader_symbols_apply_f(indexstore_record_reader_t rdr,
+                                         bool nocache,
+                                         void *context,
+                    bool(*applier)(void *context, indexstore_symbol_t symbol)) {
+  auto *reader = static_cast<IndexRecordReader *>(rdr);
+  auto receiverFn = [&](const IndexRecordDecl *D) -> bool {
+    return applier(context, (indexstore_symbol_t)D);
+  };
+  return reader->foreachDecl(nocache, receiverFn);
+}
+
+INDEXSTORE_PUBLIC bool
+indexstore_record_reader_occurrences_apply_f(indexstore_record_reader_t rdr,
+                                             void *context,
+                 bool(*applier)(void *context, indexstore_occurrence_t occur)) {
+  auto *reader = static_cast<IndexRecordReader *>(rdr);
+  auto receiverFn = [&](const IndexRecordOccurrence &RO) -> bool {
+    return applier(context, (indexstore_occurrence_t)&RO);
+  };
+  return reader->foreachOccurrence(receiverFn);
+}
+
+INDEXSTORE_PUBLIC bool
+indexstore_record_reader_occurrences_in_line_range_apply_f(indexstore_record_reader_t rdr,
+                                                           unsigned line_start,
+                                                           unsigned line_count,
+                                                           void *context,
+                 bool(*applier)(void *context, indexstore_occurrence_t occur)) {
+  auto *reader = static_cast<IndexRecordReader *>(rdr);
+  auto receiverFn = [&](const IndexRecordOccurrence &RO) -> bool {
+    return applier(context, (indexstore_occurrence_t)&RO);
+  };
+  return reader->foreachOccurrenceInLineRange(line_start, line_count, receiverFn);
+}
+
+INDEXSTORE_PUBLIC bool
+indexstore_record_reader_occurrences_of_symbols_apply_f(indexstore_record_reader_t rdr,
+        indexstore_symbol_t *symbols, size_t symbols_count,
+        indexstore_symbol_t *related_symbols, size_t related_symbols_count,
+        void *context,
+        bool(*applier)(void *context, indexstore_occurrence_t occur)) {
+  auto *reader = static_cast<IndexRecordReader *>(rdr);
+  auto receiverFn = [&](const IndexRecordOccurrence &RO) -> bool {
+    return applier(context, (indexstore_occurrence_t)&RO);
+  };
+  return reader->foreachOccurrence({(IndexRecordDecl**)symbols, symbols_count},
+                                   {(IndexRecordDecl**)related_symbols, related_symbols_count},
+                                   receiverFn);
+}
+
 size_t
 indexstore_store_get_unit_name_from_output_path(indexstore_t store,
                                                 const char *output_path,
@@ -452,7 +589,8 @@ indexstore_store_get_unit_name_from_output_path(indexstore_t store,
   SmallString<256> unitName;
   IndexUnitWriter::getUnitNameForAbsoluteOutputFile(output_path, unitName);
   size_t nameLen = unitName.size();
-  strlcpy(name_buf, unitName.c_str(), buf_size);
+  strncpy(name_buf, unitName.c_str(), buf_size-1);
+  name_buf[buf_size-1] = '\0';
   return nameLen;
 }
 
@@ -661,3 +799,23 @@ indexstore_unit_reader_includes_apply(indexstore_unit_reader_t rdr,
   });
 }
 #endif
+
+bool
+indexstore_unit_reader_dependencies_apply_f(indexstore_unit_reader_t rdr,
+                                            void *context,
+                  bool(*applier)(void *context, indexstore_unit_dependency_t)) {
+  auto reader = static_cast<IndexUnitReader*>(rdr);
+  return reader->foreachDependency([&](const IndexUnitReader::DependencyInfo &depInfo) -> bool {
+    return applier(context, (void*)&depInfo);
+  });
+}
+
+bool
+indexstore_unit_reader_includes_apply_f(indexstore_unit_reader_t rdr,
+                                        void *context,
+                     bool(*applier)(void *context, indexstore_unit_include_t)) {
+  auto reader = static_cast<IndexUnitReader*>(rdr);
+  return reader->foreachInclude([&](const IndexUnitReader::IncludeInfo &incInfo) -> bool {
+    return applier(context, (void*)&incInfo);
+  });
+}
