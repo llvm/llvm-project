@@ -114,6 +114,29 @@ TEST(ExprMutationAnalyzerTest, NonConstMemberFunc) {
   EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x.mf()"));
 }
 
+TEST(ExprMutationAnalyzerTest, AssumedNonConstMemberFunc) {
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      "struct X { template <class T> void mf(); };"
+      "template <class T> void f() { X x; x.mf<T>(); }",
+      {"-fno-delayed-template-parsing"});
+  auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x.mf<T>()"));
+
+  AST = tooling::buildASTFromCodeWithArgs(
+      "template <class T> void f() { T x; x.mf(); }",
+      {"-fno-delayed-template-parsing"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x.mf()"));
+
+  AST = tooling::buildASTFromCodeWithArgs(
+      "template <class T> struct X;"
+      "template <class T> void f() { X<T> x; x.mf(); }",
+      {"-fno-delayed-template-parsing"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x.mf()"));
+}
+
 TEST(ExprMutationAnalyzerTest, ConstMemberFunc) {
   const auto AST = tooling::buildASTFromCode(
       "void f() { struct Foo { void mf() const; }; Foo x; x.mf(); }");
@@ -292,6 +315,59 @@ TEST(ExprMutationAnalyzerTest, Forward) {
               ElementsAre("std::forward<A &>(x)"));
 }
 
+TEST(ExprMutationAnalyzerTest, CallUnresolved) {
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      "template <class T> void f() { T x; g(x); }",
+      {"-fno-delayed-template-parsing"});
+  auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("g(x)"));
+
+  AST = tooling::buildASTFromCodeWithArgs(
+      "template <int N> void f() { char x[N]; g(x); }",
+      {"-fno-delayed-template-parsing"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("g(x)"));
+
+  AST = tooling::buildASTFromCodeWithArgs(
+      "template <class T> void f(T t) { int x; g(t, x); }",
+      {"-fno-delayed-template-parsing"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("g(t, x)"));
+
+  AST = tooling::buildASTFromCodeWithArgs(
+      "template <class T> void f(T t) { int x; t.mf(x); }",
+      {"-fno-delayed-template-parsing"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("t.mf(x)"));
+
+  AST = tooling::buildASTFromCodeWithArgs(
+      "template <class T> struct S;"
+      "template <class T> void f() { S<T> s; int x; s.mf(x); }",
+      {"-fno-delayed-template-parsing"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("s.mf(x)"));
+
+  AST = tooling::buildASTFromCodeWithArgs(
+      "struct S { template <class T> void mf(); };"
+      "template <class T> void f(S s) { int x; s.mf<T>(x); }",
+      {"-fno-delayed-template-parsing"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("s.mf<T>(x)"));
+
+  AST = tooling::buildASTFromCodeWithArgs("template <class F>"
+                                          "void g(F f) { int x; f(x); } ",
+                                          {"-fno-delayed-template-parsing"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("f(x)"));
+
+  AST = tooling::buildASTFromCodeWithArgs(
+      "template <class T> void f() { int x; (void)T(x); }",
+      {"-fno-delayed-template-parsing"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("T(x)"));
+}
+
 TEST(ExprMutationAnalyzerTest, ReturnAsValue) {
   const auto AST = tooling::buildASTFromCode("int f() { int x; return x; }");
   const auto Results =
@@ -347,6 +423,22 @@ TEST(ExprMutationAnalyzerTest, ArrayToPointerDecay) {
   EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x"));
 }
 
+TEST(ExprMutationAnalyzerTest, TemplateWithArrayToPointerDecay) {
+  const auto AST = tooling::buildASTFromCodeWithArgs(
+      "template <typename T> struct S { static constexpr int v = 8; };"
+      "template <> struct S<int> { static constexpr int v = 4; };"
+      "void g(char*);"
+      "template <typename T> void f() { char x[S<T>::v]; g(x); }"
+      "template <> void f<int>() { char y[S<int>::v]; g(y); }",
+      {"-fno-delayed-template-parsing"});
+  const auto ResultsX =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(ResultsX, AST.get()), ElementsAre("g(x)"));
+  const auto ResultsY =
+      match(withEnclosingCompound(declRefTo("y")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(ResultsY, AST.get()), ElementsAre("y"));
+}
+
 TEST(ExprMutationAnalyzerTest, FollowRefModified) {
   const auto AST = tooling::buildASTFromCode(
       "void f() { int x; int& r0 = x; int& r1 = r0; int& r2 = r1; "
@@ -398,20 +490,46 @@ TEST(ExprMutationAnalyzerTest, ArrayElementNotModified) {
 }
 
 TEST(ExprMutationAnalyzerTest, NestedMemberModified) {
-  const auto AST = tooling::buildASTFromCode(
+  auto AST = tooling::buildASTFromCode(
       "void f() { struct A { int vi; }; struct B { A va; }; "
       "struct C { B vb; }; C x; x.vb.va.vi = 10; }");
-  const auto Results =
+  auto Results =
       match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
   EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x.vb.va.vi = 10"));
+
+  AST = tooling::buildASTFromCodeWithArgs(
+      "template <class T> void f() { T x; x.y.z = 10; }",
+      {"-fno-delayed-template-parsing"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x.y.z = 10"));
+
+  AST = tooling::buildASTFromCodeWithArgs(
+      "template <class T> struct S;"
+      "template <class T> void f() { S<T> x; x.y.z = 10; }",
+      {"-fno-delayed-template-parsing"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x.y.z = 10"));
 }
 
 TEST(ExprMutationAnalyzerTest, NestedMemberNotModified) {
-  const auto AST = tooling::buildASTFromCode(
+  auto AST = tooling::buildASTFromCode(
       "void f() { struct A { int vi; }; struct B { A va; }; "
       "struct C { B vb; }; C x; x.vb.va.vi; }");
-  const auto Results =
+  auto Results =
       match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCodeWithArgs(
+      "template <class T> void f() { T x; x.y.z; }",
+      {"-fno-delayed-template-parsing"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCodeWithArgs(
+      "template <class T> struct S;"
+      "template <class T> void f() { S<T> x; x.y.z; }",
+      {"-fno-delayed-template-parsing"});
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
   EXPECT_FALSE(isMutated(Results, AST.get()));
 }
 
