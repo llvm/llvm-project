@@ -1499,16 +1499,25 @@ Instruction *InstCombiner::foldICmpXorConstant(ICmpInst &Cmp,
     }
   }
 
-  // (icmp ugt (xor X, C), ~C) -> (icmp ult X, C)
-  //   iff -C is a power of 2
-  if (Pred == ICmpInst::ICMP_UGT && *XorC == ~C && (C + 1).isPowerOf2())
-    return new ICmpInst(ICmpInst::ICMP_ULT, X, Y);
-
-  // (icmp ult (xor X, C), -C) -> (icmp uge X, C)
-  //   iff -C is a power of 2
-  if (Pred == ICmpInst::ICMP_ULT && *XorC == -C && C.isPowerOf2())
-    return new ICmpInst(ICmpInst::ICMP_UGE, X, Y);
-
+  // Mask constant magic can eliminate an 'xor' with unsigned compares.
+  if (Pred == ICmpInst::ICMP_UGT) {
+    // (xor X, ~C) >u C --> X <u ~C (when C+1 is a power of 2)
+    if (*XorC == ~C && (C + 1).isPowerOf2())
+      return new ICmpInst(ICmpInst::ICMP_ULT, X, Y);
+    // (xor X, C) >u C --> X >u C (when C+1 is a power of 2)
+    if (*XorC == C && (C + 1).isPowerOf2())
+      return new ICmpInst(ICmpInst::ICMP_UGT, X, Y);
+  }
+  if (Pred == ICmpInst::ICMP_ULT) {
+    // (xor X, -C) <u C --> X >u ~C (when C is a power of 2)
+    if (*XorC == -C && C.isPowerOf2())
+      return new ICmpInst(ICmpInst::ICMP_UGT, X,
+                          ConstantInt::get(X->getType(), ~C));
+    // (xor X, C) <u C --> X >u ~C (when -C is a power of 2)
+    if (*XorC == C && (-C).isPowerOf2())
+      return new ICmpInst(ICmpInst::ICMP_UGT, X,
+                          ConstantInt::get(X->getType(), ~C));
+  }
   return nullptr;
 }
 
@@ -3038,6 +3047,18 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
     return nullptr;
 
   const CmpInst::Predicate Pred = I.getPredicate();
+  Value *X;
+
+  // Convert add-with-unsigned-overflow comparisons into a 'not' with compare.
+  // (Op1 + X) <u Op1 --> ~Op1 <u X
+  // Op0 >u (Op0 + X) --> X >u ~Op0
+  if (match(Op0, m_OneUse(m_c_Add(m_Specific(Op1), m_Value(X)))) &&
+      Pred == ICmpInst::ICMP_ULT)
+    return new ICmpInst(Pred, Builder.CreateNot(Op1), X);
+  if (match(Op1, m_OneUse(m_c_Add(m_Specific(Op0), m_Value(X)))) &&
+      Pred == ICmpInst::ICMP_UGT)
+    return new ICmpInst(Pred, X, Builder.CreateNot(Op0));
+
   bool NoOp0WrapProblem = false, NoOp1WrapProblem = false;
   if (BO0 && isa<OverflowingBinaryOperator>(BO0))
     NoOp0WrapProblem =

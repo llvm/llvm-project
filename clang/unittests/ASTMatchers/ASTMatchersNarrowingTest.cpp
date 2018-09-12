@@ -1768,6 +1768,48 @@ TEST(IsInTemplateInstantiation, Sharing) {
     Matcher));
 }
 
+TEST(IsInstantiationDependent, MatchesNonValueTypeDependent) {
+  EXPECT_TRUE(matches(
+      "template<typename T> void f() { (void) sizeof(sizeof(T() + T())); }",
+      expr(isInstantiationDependent())));
+}
+
+TEST(IsInstantiationDependent, MatchesValueDependent) {
+  EXPECT_TRUE(matches("template<int T> int f() { return T; }",
+                      expr(isInstantiationDependent())));
+}
+
+TEST(IsInstantiationDependent, MatchesTypeDependent) {
+  EXPECT_TRUE(matches("template<typename T> T f() { return T(); }",
+                      expr(isInstantiationDependent())));
+}
+
+TEST(IsTypeDependent, MatchesTypeDependent) {
+  EXPECT_TRUE(matches("template<typename T> T f() { return T(); }",
+                      expr(isTypeDependent())));
+}
+
+TEST(IsTypeDependent, NotMatchesValueDependent) {
+  EXPECT_TRUE(notMatches("template<int T> int f() { return T; }",
+                         expr(isTypeDependent())));
+}
+
+TEST(IsValueDependent, MatchesValueDependent) {
+  EXPECT_TRUE(matches("template<int T> int f() { return T; }",
+                      expr(isValueDependent())));
+}
+
+TEST(IsValueDependent, MatchesTypeDependent) {
+  EXPECT_TRUE(matches("template<typename T> T f() { return T(); }",
+                      expr(isValueDependent())));
+}
+
+TEST(IsValueDependent, MatchesInstantiationDependent) {
+  EXPECT_TRUE(matches(
+      "template<typename T> void f() { (void) sizeof(sizeof(T() + T())); }",
+      expr(isValueDependent())));
+}
+
 TEST(IsExplicitTemplateSpecialization,
      DoesNotMatchPrimaryTemplate) {
   EXPECT_TRUE(notMatches(

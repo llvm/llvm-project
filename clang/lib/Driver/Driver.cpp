@@ -2982,22 +2982,9 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     }
   }
 
-  // Diagnose unsupported forms of /Yc /Yu. Ignore /Yc/Yu for now if:
-  // * no filename after it
-  // * both /Yc and /Yu passed but with different filenames
-  // * corresponding file not also passed as /FI
+  // Ignore /Yc/Yu if both /Yc and /Yu passed but with different filenames.
   Arg *YcArg = Args.getLastArg(options::OPT__SLASH_Yc);
   Arg *YuArg = Args.getLastArg(options::OPT__SLASH_Yu);
-  if (YcArg && YcArg->getValue()[0] == '\0') {
-    Diag(clang::diag::warn_drv_ycyu_no_arg_clang_cl) << YcArg->getSpelling();
-    Args.eraseArg(options::OPT__SLASH_Yc);
-    YcArg = nullptr;
-  }
-  if (YuArg && YuArg->getValue()[0] == '\0') {
-    Diag(clang::diag::warn_drv_ycyu_no_arg_clang_cl) << YuArg->getSpelling();
-    Args.eraseArg(options::OPT__SLASH_Yu);
-    YuArg = nullptr;
-  }
   if (YcArg && YuArg && strcmp(YcArg->getValue(), YuArg->getValue()) != 0) {
     Diag(clang::diag::warn_drv_ycyu_different_arg_clang_cl);
     Args.eraseArg(options::OPT__SLASH_Yc);
@@ -4279,11 +4266,11 @@ std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
     // extension of .pch is assumed. "
     if (!llvm::sys::path::has_extension(Output))
       Output += ".pch";
-  } else if (Arg *YcArg = C.getArgs().getLastArg(options::OPT__SLASH_Yc)) {
-    Output = YcArg->getValue();
-    llvm::sys::path::replace_extension(Output, ".pch");
   } else {
-    Output = BaseName;
+    if (Arg *YcArg = C.getArgs().getLastArg(options::OPT__SLASH_Yc))
+      Output = YcArg->getValue();
+    if (Output.empty())
+      Output = BaseName;
     llvm::sys::path::replace_extension(Output, ".pch");
   }
   return Output.str();

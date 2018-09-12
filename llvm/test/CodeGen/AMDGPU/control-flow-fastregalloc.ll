@@ -174,7 +174,8 @@ end:
 ; GCN: s_mov_b32 m0, -1
 ; GCN: ds_read_b32 [[LOAD0:v[0-9]+]]
 
-; GCN: v_cmp_ne_u32_e64 [[CMP0:s\[[0-9]+:[0-9]\]]], v0,
+; GCN: s_mov_b32 [[ZERO:s[0-9]+]], 0
+; GCN: v_cmp_ne_u32_e64 [[CMP0:s\[[0-9]+:[0-9]\]]], [[ZERO]], v0
 
 ; GCN: s_mov_b64 s{{\[}}[[SAVEEXEC_LO:[0-9]+]]:[[SAVEEXEC_HI:[0-9]+]]{{\]}}, exec
 ; GCN: s_and_b64 s{{\[}}[[ANDEXEC_LO:[0-9]+]]:[[ANDEXEC_HI:[0-9]+]]{{\]}}, s{{\[}}[[SAVEEXEC_LO:[0-9]+]]:[[SAVEEXEC_HI:[0-9]+]]{{\]}}, [[CMP0]]

@@ -930,7 +930,7 @@ using FunctionAnalysisManager = AnalysisManager<Function>;
 /// analysis manager over an "inner" IR unit.  The inner unit must be contained
 /// in the outer unit.
 ///
-/// Fore example, InnerAnalysisManagerProxy<FunctionAnalysisManager, Module> is
+/// For example, InnerAnalysisManagerProxy<FunctionAnalysisManager, Module> is
 /// an analysis over Modules (the "outer" unit) that provides access to a
 /// Function analysis manager.  The FunctionAnalysisManager is the "inner"
 /// manager being proxied, and Functions are the "inner" unit.  The inner/outer

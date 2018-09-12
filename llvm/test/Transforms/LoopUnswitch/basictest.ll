@@ -1,4 +1,5 @@
 ; RUN: opt < %s -loop-unswitch -verify-loop-info -S < %s 2>&1 | FileCheck %s
+; RUN: opt < %s -loop-unswitch -verify-loop-info -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s 2>&1 | FileCheck %s
 
 define i32 @test(i32* %A, i1 %C) {
 entry:

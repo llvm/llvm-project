@@ -22,9 +22,11 @@ Error BlockIndexer::visit(BufferExtents &) {
     std::tie(It, std::ignore) =
         Indices.insert({{CurrentBlock.ProcessID, CurrentBlock.ThreadID}, {}});
     It->second.push_back({CurrentBlock.ProcessID, CurrentBlock.ThreadID,
+                          CurrentBlock.WallclockTime,
                           std::move(CurrentBlock.Records)});
     CurrentBlock.ProcessID = 0;
     CurrentBlock.ThreadID = 0;
+    CurrentBlock.WallclockTime = nullptr;
     CurrentBlock.Records = {};
   }
   CurrentState = State::ExtentsFound;
@@ -33,6 +35,7 @@ Error BlockIndexer::visit(BufferExtents &) {
 
 Error BlockIndexer::visit(WallclockRecord &R) {
   CurrentBlock.Records.push_back(&R);
+  CurrentBlock.WallclockTime = &R;
   return Error::success();
 }
 
@@ -86,6 +89,7 @@ Error BlockIndexer::flush() {
   std::tie(It, std::ignore) =
       Indices.insert({{CurrentBlock.ProcessID, CurrentBlock.ThreadID}, {}});
   It->second.push_back({CurrentBlock.ProcessID, CurrentBlock.ThreadID,
+                        CurrentBlock.WallclockTime,
                         std::move(CurrentBlock.Records)});
   CurrentBlock.ProcessID = 0;
   CurrentBlock.ThreadID = 0;

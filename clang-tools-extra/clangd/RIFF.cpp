@@ -37,7 +37,7 @@ Expected<Chunk> readChunk(StringRef &Stream) {
     Stream = Stream.drop_front();
   }
   return std::move(C);
-};
+}
 
 raw_ostream &operator<<(raw_ostream &OS, const Chunk &C) {
   OS.write(C.ID.data(), C.ID.size());

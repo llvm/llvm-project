@@ -356,6 +356,11 @@ public:
   /// append them to ASTs.
   int buildASTs(std::vector<std::unique_ptr<ASTUnit>> &ASTs);
 
+  /// Sets whether working directory should be restored after calling run(). By
+  /// default, working directory is restored. However, it could be useful to
+  /// turn this off when running on multiple threads to avoid the raciness.
+  void setRestoreWorkingDir(bool RestoreCWD);
+
   /// Returns the file manager used in the tool.
   ///
   /// The file manager is shared between all translation units.
@@ -380,6 +385,8 @@ private:
   ArgumentsAdjuster ArgsAdjuster;
 
   DiagnosticConsumer *DiagConsumer = nullptr;
+
+  bool RestoreCWD = true;
 };
 
 template <typename T>

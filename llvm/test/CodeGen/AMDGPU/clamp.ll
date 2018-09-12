@@ -54,7 +54,7 @@ define amdgpu_kernel void @v_clamp_negabs_f32(float addrspace(1)* %out, float ad
 ; GCN-LABEL: {{^}}v_clamp_negzero_f32:
 ; GCN-DAG: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; GCN-DAG: v_add_f32_e32 [[ADD:v[0-9]+]], 0.5, [[A]]
-; GCN-DAG: v_bfrev_b32_e32 [[SIGNBIT:v[0-9]+]], 1
+; GCN-DAG: s_brev_b32 [[SIGNBIT:s[0-9]+]], 1
 ; GCN: v_med3_f32 v{{[0-9]+}}, [[ADD]], [[SIGNBIT]], 1.0
 define amdgpu_kernel void @v_clamp_negzero_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

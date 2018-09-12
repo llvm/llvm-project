@@ -2563,10 +2563,12 @@ static SDValue lowerUnalignedIntStore(StoreSDNode *SD, SelectionDAG &DAG,
 }
 
 // Lower (store (fp_to_sint $fp) $ptr) to (store (TruncIntFP $fp), $ptr).
-static SDValue lowerFP_TO_SINT_STORE(StoreSDNode *SD, SelectionDAG &DAG) {
+static SDValue lowerFP_TO_SINT_STORE(StoreSDNode *SD, SelectionDAG &DAG,
+                                     bool SingleFloat) {
   SDValue Val = SD->getValue();
 
-  if (Val.getOpcode() != ISD::FP_TO_SINT)
+  if (Val.getOpcode() != ISD::FP_TO_SINT ||
+      (Val.getValueSizeInBits() > 32 && SingleFloat))
     return SDValue();
 
   EVT FPTy = EVT::getFloatingPointVT(Val.getValueSizeInBits());
@@ -2587,7 +2589,7 @@ SDValue MipsTargetLowering::lowerSTORE(SDValue Op, SelectionDAG &DAG) const {
       ((MemVT == MVT::i32) || (MemVT == MVT::i64)))
     return lowerUnalignedIntStore(SD, DAG, Subtarget.isLittle());
 
-  return lowerFP_TO_SINT_STORE(SD, DAG);
+  return lowerFP_TO_SINT_STORE(SD, DAG, Subtarget.isSingleFloat());
 }
 
 SDValue MipsTargetLowering::lowerEH_DWARF_CFA(SDValue Op,
@@ -2603,6 +2605,9 @@ SDValue MipsTargetLowering::lowerEH_DWARF_CFA(SDValue Op,
 
 SDValue MipsTargetLowering::lowerFP_TO_SINT(SDValue Op,
                                             SelectionDAG &DAG) const {
+  if (Op.getValueSizeInBits() > 32 && Subtarget.isSingleFloat())
+    return SDValue();
+
   EVT FPTy = EVT::getFloatingPointVT(Op.getValueSizeInBits());
   SDValue Trunc = DAG.getNode(MipsISD::TruncIntFP, SDLoc(Op), FPTy,
                               Op.getOperand(0));

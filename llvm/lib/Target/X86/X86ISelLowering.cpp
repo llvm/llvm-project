@@ -38706,6 +38706,13 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
     return DAG.getConstant(Imm, SDLoc(N), N->getValueType(0));
   }
 
+  // Look through int->fp bitcasts that don't change the element width.
+  if (Src.getOpcode() == ISD::BITCAST && Src.hasOneUse() &&
+      SrcVT.isFloatingPoint() &&
+      Src.getOperand(0).getValueType() ==
+        EVT(SrcVT).changeVectorElementTypeToInteger())
+    Src = Src.getOperand(0);
+
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
                                         !DCI.isBeforeLegalizeOps());
@@ -38714,7 +38721,6 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
   KnownBits Known;
   APInt DemandedMask(APInt::getSignMask(SrcVT.getScalarSizeInBits()));
   if (TLI.SimplifyDemandedBits(Src, DemandedMask, Known, TLO)) {
-    DCI.AddToWorklist(Src.getNode());
     DCI.CommitTargetLoweringOpt(TLO);
     return SDValue(N, 0);
   }

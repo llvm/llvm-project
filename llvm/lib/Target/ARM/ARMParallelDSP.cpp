@@ -426,7 +426,7 @@ static void MatchReductions(Function &F, Loop *TheLoop, BasicBlock *Header,
 
   for (PHINode &Phi : Header->phis()) {
     const auto *Ty = Phi.getType();
-    if (!Ty->isIntegerTy(32))
+    if (!Ty->isIntegerTy(32) && !Ty->isIntegerTy(64))
       continue;
 
     const bool IsReduction =
@@ -454,9 +454,11 @@ static void MatchReductions(Function &F, Loop *TheLoop, BasicBlock *Header,
 
 static void AddMACCandidate(OpChainList &Candidates,
                             const Instruction *Acc,
-                            Value *MulOp0, Value *MulOp1, int MulOpNum) {
-  Instruction *Mul = dyn_cast<Instruction>(Acc->getOperand(MulOpNum));
+                            Instruction *Mul,
+                            Value *MulOp0, Value *MulOp1) {
   LLVM_DEBUG(dbgs() << "OK, found acc mul:\t"; Mul->dump());
+  assert(Mul->getOpcode() == Instruction::Mul &&
+         "expected mul instruction");
   ValueList LHS;
   ValueList RHS;
   if (IsNarrowSequence<16>(MulOp0, LHS) &&
@@ -475,20 +477,44 @@ static void MatchParallelMACSequences(Reduction &R,
   // Pattern 1: the accumulator is the RHS of the mul.
   while(match(Acc, m_Add(m_Mul(m_Value(MulOp0), m_Value(MulOp1)),
                          m_Value(A)))){
-    AddMACCandidate(Candidates, Acc, MulOp0, MulOp1, 0);
+    Instruction *Mul = cast<Instruction>(Acc->getOperand(0));
+    AddMACCandidate(Candidates, Acc, Mul, MulOp0, MulOp1);
     Acc = dyn_cast<Instruction>(A);
   }
   // Pattern 2: the accumulator is the LHS of the mul.
   while(match(Acc, m_Add(m_Value(A),
                          m_Mul(m_Value(MulOp0), m_Value(MulOp1))))) {
-    AddMACCandidate(Candidates, Acc, MulOp0, MulOp1, 1);
+    Instruction *Mul = cast<Instruction>(Acc->getOperand(1));
+    AddMACCandidate(Candidates, Acc, Mul, MulOp0, MulOp1);
     Acc = dyn_cast<Instruction>(A);
   }
 
   // The last mul in the chain has a slightly different pattern:
   // the mul is the first operand
   if (match(Acc, m_Add(m_Mul(m_Value(MulOp0), m_Value(MulOp1)), m_Value(A))))
-    AddMACCandidate(Candidates, Acc, MulOp0, MulOp1, 0);
+    AddMACCandidate(Candidates, Acc, cast<Instruction>(Acc->getOperand(0)),
+                    MulOp0, MulOp1);
+
+  // Same as above, but SMLALD may perform 32-bit muls, sext the results and
+  // then accumulate.
+  while(match(Acc, m_Add(m_SExt(m_Mul(m_Value(MulOp0), m_Value(MulOp1))),
+                        m_Value(A)))) {
+    Value *Mul = cast<Instruction>(Acc->getOperand(0))->getOperand(0);
+    AddMACCandidate(Candidates, Acc, cast<Instruction>(Mul), MulOp0, MulOp1);
+    Acc = dyn_cast<Instruction>(A);
+  }
+  while(match(Acc, m_Add(m_Value(A),
+                         m_SExt(m_Mul(m_Value(MulOp0), m_Value(MulOp1)))))) {
+    Value *Mul = cast<Instruction>(Acc->getOperand(1))->getOperand(0);
+    AddMACCandidate(Candidates, Acc, cast<Instruction>(Mul), MulOp0, MulOp1);
+    Acc = dyn_cast<Instruction>(A);
+  }
+  if (match(Acc, m_Add(m_SExt(m_Mul(m_Value(MulOp0), m_Value(MulOp1))),
+                       m_Value(A)))) {
+    Value *Mul = cast<Instruction>(
+      cast<Instruction>(Acc)->getOperand(0))->getOperand(0);
+    AddMACCandidate(Candidates, Acc, cast<Instruction>(Mul), MulOp0, MulOp1);
+  }
 
   // Because we start at the bottom of the chain, and we work our way up,
   // the muls are added in reverse program order to the list.
@@ -635,13 +661,12 @@ bool ARMParallelDSP::MatchSMLAD(Function &F) {
   return Changed;
 }
 
-static void CreateLoadIns(IRBuilder<NoFolder> &IRB, Instruction *Acc,
-                          LoadInst **VecLd) {
-  const Type *AccTy = Acc->getType();
+static void CreateLoadIns(IRBuilder<NoFolder> &IRB, LoadInst **VecLd,
+                          const Type *LoadTy) {
   const unsigned AddrSpace = (*VecLd)->getPointerAddressSpace();
 
   Value *VecPtr = IRB.CreateBitCast((*VecLd)->getPointerOperand(),
-                                    AccTy->getPointerTo(AddrSpace));
+                                    LoadTy->getPointerTo(AddrSpace));
   *VecLd = IRB.CreateAlignedLoad(VecPtr, (*VecLd)->getAlignment());
 }
 
@@ -657,10 +682,13 @@ Instruction *ARMParallelDSP::CreateSMLADCall(LoadInst *VecLd0, LoadInst *VecLd1,
                               ++BasicBlock::iterator(InsertAfter));
 
   // Replace the reduction chain with an intrinsic call
-  CreateLoadIns(Builder, Acc, &VecLd0);
-  CreateLoadIns(Builder, Acc, &VecLd1);
+  const Type *Ty = IntegerType::get(M->getContext(), 32);
+  CreateLoadIns(Builder, &VecLd0, Ty);
+  CreateLoadIns(Builder, &VecLd1, Ty);
   Value* Args[] = { VecLd0, VecLd1, Acc };
-  Function *SMLAD = Intrinsic::getDeclaration(M, Intrinsic::arm_smlad);
+  Function *SMLAD = Acc->getType()->isIntegerTy(32) ?
+    Intrinsic::getDeclaration(M, Intrinsic::arm_smlad) :
+    Intrinsic::getDeclaration(M, Intrinsic::arm_smlald);
   CallInst *Call = Builder.CreateCall(SMLAD, Args);
   NumSMLAD++;
   return Call;

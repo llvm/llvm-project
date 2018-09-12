@@ -16,6 +16,7 @@
 #include "Writer.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Timer.h"
+#include "llvm/DebugInfo/CodeView/DebugFrameDataSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/CodeView/GlobalTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
@@ -821,6 +822,20 @@ static pdb::SectionContrib createSectionContrib(const Chunk *C, uint32_t Modi) {
   return SC;
 }
 
+static uint32_t
+translateStringTableIndex(uint32_t ObjIndex,
+                          const DebugStringTableSubsectionRef &ObjStrTable,
+                          DebugStringTableSubsection &PdbStrTable) {
+  auto ExpectedString = ObjStrTable.getString(ObjIndex);
+  if (!ExpectedString) {
+    warn("Invalid string table reference");
+    consumeError(ExpectedString.takeError());
+    return 0;
+  }
+
+  return PdbStrTable.insert(*ExpectedString);
+}
+
 void PDBLinker::addObjFile(ObjFile *File) {
   // Add a module descriptor for every object file. We need to put an absolute
   // path to the object into the PDB. If this is a plain object, we make its
@@ -832,7 +847,8 @@ void PDBLinker::addObjFile(ObjFile *File) {
   sys::path::native(Path, sys::path::Style::windows);
   StringRef Name = InArchive ? File->getName() : StringRef(Path);
 
-  File->ModuleDBI = &ExitOnErr(Builder.getDbiBuilder().addModuleInfo(Name));
+  pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
+  File->ModuleDBI = &ExitOnErr(DbiBuilder.addModuleInfo(Name));
   File->ModuleDBI->setObjFileName(Path);
 
   auto Chunks = File->getChunks();
@@ -870,6 +886,7 @@ void PDBLinker::addObjFile(ObjFile *File) {
   DebugStringTableSubsectionRef CVStrTab;
   DebugChecksumsSubsectionRef Checksums;
   std::vector<ulittle32_t *> StringTableReferences;
+  std::vector<DebugFrameDataSubsectionRef> FpoFrames;
   for (SectionChunk *DebugChunk : File->getDebugChunks()) {
     if (!DebugChunk->Live || DebugChunk->getSectionName() != ".debug$S")
       continue;
@@ -901,6 +918,15 @@ void PDBLinker::addObjFile(ObjFile *File) {
         // modification because the file checksum offsets will stay the same.
         File->ModuleDBI->addDebugSubsection(SS);
         break;
+      case DebugSubsectionKind::FrameData: {
+        // We need to re-write string table indices here, so save off all
+        // frame data subsections until we've processed the entire list of
+        // subsections so that we can be sure we have the string table.
+        DebugFrameDataSubsectionRef FDS;
+        ExitOnErr(FDS.initialize(SS.getRecordData()));
+        FpoFrames.push_back(std::move(FDS));
+        break;
+      }
       case DebugSubsectionKind::Symbols:
         if (Config->DebugGHashes) {
           mergeSymbolRecords(Alloc, File, Builder.getGsiBuilder(), IndexMap,
@@ -933,18 +959,20 @@ void PDBLinker::addObjFile(ObjFile *File) {
     return;
   }
 
-  // Rewrite each string table reference based on the value that the string
-  // assumes in the final PDB.
-  for (ulittle32_t *Ref : StringTableReferences) {
-    auto ExpectedString = CVStrTab.getString(*Ref);
-    if (!ExpectedString) {
-      warn("Invalid string table reference");
-      consumeError(ExpectedString.takeError());
-      continue;
+  // Rewrite string table indices in the Fpo Data and symbol records to refer to
+  // the global PDB string table instead of the object file string table.
+  for (DebugFrameDataSubsectionRef &FDS : FpoFrames) {
+    const uint32_t *Reloc = FDS.getRelocPtr();
+    for (codeview::FrameData FD : FDS) {
+      FD.RvaStart += *Reloc;
+      FD.FrameFunc =
+          translateStringTableIndex(FD.FrameFunc, CVStrTab, PDBStrTab);
+      DbiBuilder.addFrameData(FD);
     }
-
-    *Ref = PDBStrTab.insert(*ExpectedString);
   }
+
+  for (ulittle32_t *Ref : StringTableReferences)
+    *Ref = translateStringTableIndex(*Ref, CVStrTab, PDBStrTab);
 
   // Make a new file checksum table that refers to offsets in the PDB-wide
   // string table. Generally the string table subsection appears after the

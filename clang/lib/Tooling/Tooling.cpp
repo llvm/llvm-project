@@ -441,6 +441,17 @@ int ClangTool::run(ToolAction *Action) {
     AbsolutePaths.push_back(std::move(*AbsPath));
   }
 
+  // Remember the working directory in case we need to restore it.
+  std::string InitialWorkingDir;
+  if (RestoreCWD) {
+    if (auto CWD = OverlayFileSystem->getCurrentWorkingDirectory()) {
+      InitialWorkingDir = std::move(*CWD);
+    } else {
+      llvm::errs() << "Could not get working directory: "
+                   << CWD.getError().message() << "\n";
+    }
+  }
+
   for (llvm::StringRef File : AbsolutePaths) {
     // Currently implementations of CompilationDatabase::getCompileCommands can
     // change the state of the file system (e.g.  prepare generated headers), so
@@ -508,6 +519,13 @@ int ClangTool::run(ToolAction *Action) {
       }
     }
   }
+
+  if (!InitialWorkingDir.empty()) {
+    if (auto EC =
+            OverlayFileSystem->setCurrentWorkingDirectory(InitialWorkingDir))
+      llvm::errs() << "Error when trying to restore working dir: "
+                   << EC.message() << "\n";
+  }
   return ProcessingFailed ? 1 : (FileSkipped ? 2 : 0);
 }
 
@@ -542,6 +560,10 @@ public:
 int ClangTool::buildASTs(std::vector<std::unique_ptr<ASTUnit>> &ASTs) {
   ASTBuilderAction Action(ASTs);
   return run(&Action);
+}
+
+void ClangTool::setRestoreWorkingDir(bool RestoreCWD) {
+  this->RestoreCWD = RestoreCWD;
 }
 
 namespace clang {

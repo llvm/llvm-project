@@ -27,6 +27,7 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/TargetParser.h"
 
 namespace llvm {
 #include "AMDGPUPTNote.h"
@@ -38,84 +39,6 @@ using namespace llvm::AMDGPU;
 //===----------------------------------------------------------------------===//
 // AMDGPUTargetStreamer
 //===----------------------------------------------------------------------===//
-
-static const struct {
-  const char *Name;
-  unsigned Mach;
-} MachTable[] = {
-      // Radeon HD 2000/3000 Series (R600).
-      { "r600", ELF::EF_AMDGPU_MACH_R600_R600 },
-      { "r630", ELF::EF_AMDGPU_MACH_R600_R630 },
-      { "rs880", ELF::EF_AMDGPU_MACH_R600_RS880 },
-      { "rv670", ELF::EF_AMDGPU_MACH_R600_RV670 },
-      // Radeon HD 4000 Series (R700).
-      { "rv710", ELF::EF_AMDGPU_MACH_R600_RV710 },
-      { "rv730", ELF::EF_AMDGPU_MACH_R600_RV730 },
-      { "rv770", ELF::EF_AMDGPU_MACH_R600_RV770 },
-      // Radeon HD 5000 Series (Evergreen).
-      { "cedar", ELF::EF_AMDGPU_MACH_R600_CEDAR },
-      { "cypress", ELF::EF_AMDGPU_MACH_R600_CYPRESS },
-      { "juniper", ELF::EF_AMDGPU_MACH_R600_JUNIPER },
-      { "redwood", ELF::EF_AMDGPU_MACH_R600_REDWOOD },
-      { "sumo", ELF::EF_AMDGPU_MACH_R600_SUMO },
-      // Radeon HD 6000 Series (Northern Islands).
-      { "barts", ELF::EF_AMDGPU_MACH_R600_BARTS },
-      { "caicos", ELF::EF_AMDGPU_MACH_R600_CAICOS },
-      { "cayman", ELF::EF_AMDGPU_MACH_R600_CAYMAN },
-      { "turks", ELF::EF_AMDGPU_MACH_R600_TURKS },
-      // AMDGCN GFX6.
-      { "gfx600", ELF::EF_AMDGPU_MACH_AMDGCN_GFX600 },
-      { "tahiti", ELF::EF_AMDGPU_MACH_AMDGCN_GFX600 },
-      { "gfx601", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601 },
-      { "hainan", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601 },
-      { "oland", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601 },
-      { "pitcairn", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601 },
-      { "verde", ELF::EF_AMDGPU_MACH_AMDGCN_GFX601 },
-      // AMDGCN GFX7.
-      { "gfx700", ELF::EF_AMDGPU_MACH_AMDGCN_GFX700 },
-      { "kaveri", ELF::EF_AMDGPU_MACH_AMDGCN_GFX700 },
-      { "gfx701", ELF::EF_AMDGPU_MACH_AMDGCN_GFX701 },
-      { "hawaii", ELF::EF_AMDGPU_MACH_AMDGCN_GFX701 },
-      { "gfx702", ELF::EF_AMDGPU_MACH_AMDGCN_GFX702 },
-      { "gfx703", ELF::EF_AMDGPU_MACH_AMDGCN_GFX703 },
-      { "kabini", ELF::EF_AMDGPU_MACH_AMDGCN_GFX703 },
-      { "mullins", ELF::EF_AMDGPU_MACH_AMDGCN_GFX703 },
-      { "gfx704", ELF::EF_AMDGPU_MACH_AMDGCN_GFX704 },
-      { "bonaire", ELF::EF_AMDGPU_MACH_AMDGCN_GFX704 },
-      // AMDGCN GFX8.
-      { "gfx801", ELF::EF_AMDGPU_MACH_AMDGCN_GFX801 },
-      { "carrizo", ELF::EF_AMDGPU_MACH_AMDGCN_GFX801 },
-      { "gfx802", ELF::EF_AMDGPU_MACH_AMDGCN_GFX802 },
-      { "iceland", ELF::EF_AMDGPU_MACH_AMDGCN_GFX802 },
-      { "tonga", ELF::EF_AMDGPU_MACH_AMDGCN_GFX802 },
-      { "gfx803", ELF::EF_AMDGPU_MACH_AMDGCN_GFX803 },
-      { "fiji", ELF::EF_AMDGPU_MACH_AMDGCN_GFX803 },
-      { "polaris10", ELF::EF_AMDGPU_MACH_AMDGCN_GFX803 },
-      { "polaris11", ELF::EF_AMDGPU_MACH_AMDGCN_GFX803 },
-      { "gfx810", ELF::EF_AMDGPU_MACH_AMDGCN_GFX810 },
-      { "stoney", ELF::EF_AMDGPU_MACH_AMDGCN_GFX810 },
-      // AMDGCN GFX9.
-      { "gfx900", ELF::EF_AMDGPU_MACH_AMDGCN_GFX900 },
-      { "gfx902", ELF::EF_AMDGPU_MACH_AMDGCN_GFX902 },
-      { "gfx904", ELF::EF_AMDGPU_MACH_AMDGCN_GFX904 },
-      { "gfx906", ELF::EF_AMDGPU_MACH_AMDGCN_GFX906 },
-      // Not specified processor.
-      { nullptr, ELF::EF_AMDGPU_MACH_NONE }
-};
-
-unsigned AMDGPUTargetStreamer::getMACH(StringRef GPU) const {
-  auto Entry = MachTable;
-  for (; Entry->Name && GPU != Entry->Name; ++Entry)
-    ;
-  return Entry->Mach;
-}
-
-const char *AMDGPUTargetStreamer::getMachName(unsigned Mach) {
-  auto Entry = MachTable;
-  for (; Entry->Name && Mach != Entry->Mach; ++Entry)
-    ;
-  return Entry->Name;
-}
 
 bool AMDGPUTargetStreamer::EmitHSAMetadata(StringRef HSAMetadataString) {
   HSAMD::Metadata HSAMetadata;
@@ -205,7 +128,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     bool ReserveVCC, bool ReserveFlatScr, bool ReserveXNACK) {
   amdhsa::kernel_descriptor_t DefaultKD = getDefaultAmdhsaKernelDescriptor();
 
-  IsaInfo::IsaVersion IVersion = IsaInfo::getIsaVersion(STI.getFeatureBits());
+  IsaVersion IVersion = getIsaVersion(STI.getCPU());
 
   OS << "\t.amdhsa_kernel " << KernelName << '\n';
 
@@ -342,7 +265,7 @@ AMDGPUTargetELFStreamer::AMDGPUTargetELFStreamer(
   unsigned EFlags = MCA.getELFHeaderEFlags();
 
   EFlags &= ~ELF::EF_AMDGPU_MACH;
-  EFlags |= getMACH(STI.getCPU());
+  EFlags |= getElfMach(STI.getCPU());
 
   EFlags &= ~ELF::EF_AMDGPU_XNACK;
   if (AMDGPU::hasXNACK(STI))

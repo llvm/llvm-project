@@ -25,7 +25,7 @@ Error RecordPrinter::visit(WallclockRecord &R) {
 }
 
 Error RecordPrinter::visit(NewCPUIDRecord &R) {
-  OS << formatv("<CPU ID: {0}>", R.cpuid()) << Delim;
+  OS << formatv("<CPU: id = {0}, tsc = {1}>", R.cpuid(), R.tsc()) << Delim;
   return Error::success();
 }
 

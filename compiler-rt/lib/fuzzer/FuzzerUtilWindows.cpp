@@ -24,7 +24,7 @@
 #include <windows.h>
 
 // This must be included after windows.h.
-#include <Psapi.h>
+#include <psapi.h>
 
 namespace fuzzer {
 

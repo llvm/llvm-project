@@ -266,16 +266,15 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
     for (auto UI = DefBefore->use_begin(), UE = DefBefore->use_end();
          UI != UE;) {
       Use &U = *UI++;
-      // Leave the uses alone
-      if (isa<MemoryUse>(U.getUser()))
+      // Leave the MemoryUses alone.
+      // Also make sure we skip ourselves to avoid self references.
+      if (isa<MemoryUse>(U.getUser()) || U.getUser() == MD)
         continue;
       U.set(MD);
     }
   }
 
   // and that def is now our defining access.
-  // We change them in this order otherwise we will appear in the use list
-  // above and reset ourselves.
   MD->setDefiningAccess(DefBefore);
 
   SmallVector<WeakVH, 8> FixupList(InsertedPHIs.begin(), InsertedPHIs.end());

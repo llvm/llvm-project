@@ -28,18 +28,19 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
-#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
@@ -65,8 +66,10 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
@@ -180,6 +183,8 @@ namespace {
 
     Loop *currentLoop = nullptr;
     DominatorTree *DT = nullptr;
+    MemorySSA *MSSA = nullptr;
+    std::unique_ptr<MemorySSAUpdater> MSSAU;
     BasicBlock *loopHeader = nullptr;
     BasicBlock *loopPreheader = nullptr;
 
@@ -214,6 +219,10 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<AssumptionCacheTracker>();
       AU.addRequired<TargetTransformInfoWrapperPass>();
+      if (EnableMSSALoopDependency) {
+        AU.addRequired<MemorySSAWrapperPass>();
+        AU.addPreserved<MemorySSAWrapperPass>();
+      }
       if (hasBranchDivergence)
         AU.addRequired<LegacyDivergenceAnalysis>();
       getLoopAnalysisUsage(AU);
@@ -384,6 +393,7 @@ INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_END(LoopUnswitch, "loop-unswitch", "Unswitch loops",
                       false, false)
 
@@ -515,6 +525,11 @@ bool LoopUnswitch::runOnLoop(Loop *L, LPPassManager &LPM_Ref) {
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   LPM = &LPM_Ref;
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  if (EnableMSSALoopDependency) {
+    MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
+    MSSAU = make_unique<MemorySSAUpdater>(MSSA);
+    assert(DT && "Cannot update MemorySSA without a valid DomTree.");
+  }
   currentLoop = L;
   Function *F = currentLoop->getHeader()->getParent();
 
@@ -522,12 +537,20 @@ bool LoopUnswitch::runOnLoop(Loop *L, LPPassManager &LPM_Ref) {
   if (SanitizeMemory)
     SafetyInfo.computeLoopSafetyInfo(L);
 
+  if (MSSA && VerifyMemorySSA)
+    MSSA->verifyMemorySSA();
+
   bool Changed = false;
   do {
     assert(currentLoop->isLCSSAForm(*DT));
+    if (MSSA && VerifyMemorySSA)
+      MSSA->verifyMemorySSA();
     redoLoop = false;
     Changed |= processCurrentLoop();
   } while(redoLoop);
+
+  if (MSSA && VerifyMemorySSA)
+    MSSA->verifyMemorySSA();
 
   return Changed;
 }
@@ -952,13 +975,16 @@ void LoopUnswitch::EmitPreheaderBranchOnCondition(Value *LIC, Constant *Val,
     if (OldBranchSucc != TrueDest && OldBranchSucc != FalseDest) {
       Updates.push_back({DominatorTree::Delete, OldBranchParent, OldBranchSucc});
     }
-
     DT->applyUpdates(Updates);
+
+    if (MSSAU)
+      MSSAU->applyUpdates(Updates, *DT);
   }
 
   // If either edge is critical, split it. This helps preserve LoopSimplify
   // form for enclosing loops.
-  auto Options = CriticalEdgeSplittingOptions(DT, LI).setPreserveLCSSA();
+  auto Options =
+      CriticalEdgeSplittingOptions(DT, LI, MSSAU.get()).setPreserveLCSSA();
   SplitCriticalEdge(BI, 0, Options);
   SplitCriticalEdge(BI, 1, Options);
 }
@@ -984,7 +1010,7 @@ void LoopUnswitch::UnswitchTrivialCondition(Loop *L, Value *Cond, Constant *Val,
   // First step, split the preheader, so that we know that there is a safe place
   // to insert the conditional branch.  We will change loopPreheader to have a
   // conditional branch on Cond.
-  BasicBlock *NewPH = SplitEdge(loopPreheader, loopHeader, DT, LI);
+  BasicBlock *NewPH = SplitEdge(loopPreheader, loopHeader, DT, LI, MSSAU.get());
 
   // Now that we have a place to insert the conditional branch, create a place
   // to branch to: this is the exit block out of the loop that we should
@@ -995,7 +1021,8 @@ void LoopUnswitch::UnswitchTrivialCondition(Loop *L, Value *Cond, Constant *Val,
   // without actually branching to it (the exit block should be dominated by the
   // loop header, not the preheader).
   assert(!L->contains(ExitBlock) && "Exit block is in the loop?");
-  BasicBlock *NewExit = SplitBlock(ExitBlock, &ExitBlock->front(), DT, LI);
+  BasicBlock *NewExit =
+      SplitBlock(ExitBlock, &ExitBlock->front(), DT, LI, MSSAU.get());
 
   // Okay, now we have a position to branch from and a position to branch to,
   // insert the new conditional branch.
@@ -1015,6 +1042,7 @@ void LoopUnswitch::UnswitchTrivialCondition(Loop *L, Value *Cond, Constant *Val,
   // particular value, rewrite the loop with this info.  We know that this will
   // at least eliminate the old branch.
   RewriteLoopBodyWithConditionConstant(L, Cond, Val, false);
+
   ++NumTrivial;
 }
 
@@ -1190,7 +1218,7 @@ void LoopUnswitch::SplitExitEdges(Loop *L,
 
     // Although SplitBlockPredecessors doesn't preserve loop-simplify in
     // general, if we call it on all predecessors of all exits then it does.
-    SplitBlockPredecessors(ExitBlock, Preds, ".us-lcssa", DT, LI, nullptr,
+    SplitBlockPredecessors(ExitBlock, Preds, ".us-lcssa", DT, LI, MSSAU.get(),
                            /*PreserveLCSSA*/ true);
   }
 }
@@ -1216,7 +1244,8 @@ void LoopUnswitch::UnswitchNontrivialCondition(Value *LIC, Constant *Val,
 
   // First step, split the preheader and exit blocks, and add these blocks to
   // the LoopBlocks list.
-  BasicBlock *NewPreheader = SplitEdge(loopPreheader, loopHeader, DT, LI);
+  BasicBlock *NewPreheader =
+      SplitEdge(loopPreheader, loopHeader, DT, LI, MSSAU.get());
   LoopBlocks.push_back(NewPreheader);
 
   // We want the loop to come after the preheader, but before the exit blocks.
@@ -1318,10 +1347,24 @@ void LoopUnswitch::UnswitchNontrivialCondition(Value *LIC, Constant *Val,
   assert(OldBR->isUnconditional() && OldBR->getSuccessor(0) == LoopBlocks[0] &&
          "Preheader splitting did not work correctly!");
 
+  if (MSSAU) {
+    // Update MemorySSA after cloning, and before splitting to unreachables,
+    // since that invalidates the 1:1 mapping of clones in VMap.
+    LoopBlocksRPO LBRPO(L);
+    LBRPO.perform(LI);
+    MSSAU->updateForClonedLoop(LBRPO, ExitBlocks, VMap);
+  }
+
   // Emit the new branch that selects between the two versions of this loop.
   EmitPreheaderBranchOnCondition(LIC, Val, NewBlocks[0], LoopBlocks[0], OldBR,
                                  TI);
   LPM->deleteSimpleAnalysisValue(OldBR, L);
+  if (MSSAU) {
+    // Update MemoryPhis in Exit blocks.
+    MSSAU->updateExitBlocksForClonedLoop(ExitBlocks, VMap, *DT);
+    if (VerifyMemorySSA)
+      MSSA->verifyMemorySSA();
+  }
 
   // The OldBr was replaced by a new one and removed (but not erased) by
   // EmitPreheaderBranchOnCondition. It is no longer needed, so delete it.
@@ -1347,6 +1390,9 @@ void LoopUnswitch::UnswitchNontrivialCondition(Value *LIC, Constant *Val,
   if (!LoopProcessWorklist.empty() && LoopProcessWorklist.back() == NewLoop &&
       LICHandle && !isa<Constant>(LICHandle))
     RewriteLoopBodyWithConditionConstant(NewLoop, LICHandle, Val, true);
+
+  if (MSSA && VerifyMemorySSA)
+    MSSA->verifyMemorySSA();
 }
 
 /// Remove all instances of I from the worklist vector specified.
@@ -1485,7 +1531,7 @@ void LoopUnswitch::RewriteLoopBodyWithConditionConstant(Loop *L, Value *LIC,
     // and hooked up so as to preserve the loop structure, because
     // trying to update it is complicated.  So instead we preserve the
     // loop structure and put the block on a dead code path.
-    SplitEdge(Switch, SISucc, DT, LI);
+    SplitEdge(Switch, SISucc, DT, LI, MSSAU.get());
     // Compute the successors instead of relying on the return value
     // of SplitEdge, since it may have split the switch successor
     // after PHI nodes.
@@ -1539,6 +1585,8 @@ void LoopUnswitch::SimplifyCode(std::vector<Instruction*> &Worklist, Loop *L) {
           Worklist.push_back(Use);
       LPM->deleteSimpleAnalysisValue(I, L);
       RemoveFromWorklist(I, Worklist);
+      if (MSSAU)
+        MSSAU->removeMemoryAccess(I);
       I->eraseFromParent();
       ++NumSimplify;
       continue;
@@ -1578,6 +1626,8 @@ void LoopUnswitch::SimplifyCode(std::vector<Instruction*> &Worklist, Loop *L) {
         // Move all of the successor contents from Succ to Pred.
         Pred->getInstList().splice(BI->getIterator(), Succ->getInstList(),
                                    Succ->begin(), Succ->end());
+        if (MSSAU)
+          MSSAU->moveAllAfterMergeBlocks(Succ, Pred, BI);
         LPM->deleteSimpleAnalysisValue(BI, L);
         RemoveFromWorklist(BI, Worklist);
         BI->eraseFromParent();

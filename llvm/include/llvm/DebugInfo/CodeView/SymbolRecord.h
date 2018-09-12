@@ -761,7 +761,51 @@ public:
   uint16_t SectionIdOfExceptionHandler;
   FrameProcedureOptions Flags;
 
+  /// Extract the register this frame uses to refer to local variables.
+  RegisterId getLocalFramePtrReg(CPUType CPU) const {
+    return decodeFramePtrReg((uint32_t(Flags) >> 14U) & 0x3U, CPU);
+  }
+
+  /// Extract the register this frame uses to refer to parameters.
+  RegisterId getParamFramePtrReg(CPUType CPU) const {
+    return decodeFramePtrReg((uint32_t(Flags) >> 16U) & 0x3U, CPU);
+  }
+
   uint32_t RecordOffset;
+
+private:
+  static RegisterId decodeFramePtrReg(uint32_t EncodedReg, CPUType CPU) {
+    assert(EncodedReg < 4);
+    switch (CPU) {
+    // FIXME: Add ARM and AArch64 variants here.
+    default:
+      break;
+    case CPUType::Intel8080:
+    case CPUType::Intel8086:
+    case CPUType::Intel80286:
+    case CPUType::Intel80386:
+    case CPUType::Intel80486:
+    case CPUType::Pentium:
+    case CPUType::PentiumPro:
+    case CPUType::Pentium3:
+      switch (EncodedReg) {
+      case 0: return RegisterId::NONE;
+      case 1: return RegisterId::VFRAME;
+      case 2: return RegisterId::EBP;
+      case 3: return RegisterId::EBX;
+      }
+      llvm_unreachable("bad encoding");
+    case CPUType::X64:
+      switch (EncodedReg) {
+      case 0: return RegisterId::NONE;
+      case 1: return RegisterId::RSP;
+      case 2: return RegisterId::RBP;
+      case 3: return RegisterId::R13;
+      }
+      llvm_unreachable("bad encoding");
+    }
+    return RegisterId::NONE;
+  }
 };
 
 // S_CALLSITEINFO

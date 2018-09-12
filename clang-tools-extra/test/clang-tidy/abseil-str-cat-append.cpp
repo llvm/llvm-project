@@ -97,7 +97,7 @@ void Bar() {
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: call to 'absl::StrCat' has no effect
   A = StrCat(A, B);
 // CHECK-MESSAGES: [[@LINE-1]]:3: warning: call 'absl::StrAppend' instead of 'absl::StrCat' when appending to a string to avoid a performance penalty
-// CHECK-FIXES: {{^}}  StrAppend(&A, B);
+// CHECK-FIXES: {{^}}  absl::StrAppend(&A, B);
   B = StrCat(A, B);
 
 #define M(X) X = StrCat(X, A)
@@ -117,13 +117,13 @@ void OutsideAbsl() {
   std::string A, B;
   A = absl::StrCat(A, B);
 // CHECK-MESSAGES: [[@LINE-1]]:3: warning: call 'absl::StrAppend' instead of 'absl::StrCat' when appending to a string to avoid a performance penalty
-// CHECK-FIXES: {{^}}  StrAppend(&A, B);
+// CHECK-FIXES: {{^}}  absl::StrAppend(&A, B);
 }
 
-void OutisdeUsingAbsl() {
+void OutsideUsingAbsl() {
   std::string A, B;
   using absl::StrCat;
   A = StrCat(A, B);
 // CHECK-MESSAGES: [[@LINE-1]]:3: warning: call 'absl::StrAppend' instead of 'absl::StrCat' when appending to a string to avoid a performance penalty
-// CHECK-FIXES: {{^}}  StrAppend(&A, B);
+// CHECK-FIXES: {{^}}  absl::StrAppend(&A, B);
 }

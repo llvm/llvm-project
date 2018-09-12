@@ -37,6 +37,8 @@ bool OrderedBasicBlock::comesBefore(const Instruction *A,
   const Instruction *Inst = nullptr;
   assert(!(LastInstFound == BB->end() && NextInstPos != 0) &&
          "Instruction supposed to be in NumberedInsts");
+  assert(A->getParent() == BB && "Instruction supposed to be in the block!");
+  assert(B->getParent() == BB && "Instruction supposed to be in the block!");
 
   // Start the search with the instruction found in the last lookup round.
   auto II = BB->begin();
@@ -65,6 +67,7 @@ bool OrderedBasicBlock::comesBefore(const Instruction *A,
 bool OrderedBasicBlock::dominates(const Instruction *A, const Instruction *B) {
   assert(A->getParent() == B->getParent() &&
          "Instructions must be in the same basic block!");
+  assert(A->getParent() == BB && "Instructions must be in the tracked block!");
 
   // First we lookup the instructions. If they don't exist, lookup will give us
   // back ::end(). If they both exist, we compare the numbers. Otherwise, if NA

@@ -15,6 +15,7 @@ add_clang_library(clangAnalysis
   Consumed.cpp
   CodeInjector.cpp
   Dominators.cpp
+  ExprMutationAnalyzer.cpp
   FormatString.cpp
   LiveVariables.cpp
   OSLog.cpp
@@ -33,6 +34,7 @@ add_clang_library(clangAnalysis
 
   LINK_LIBS
   clangAST
+  clangASTMatchers
   clangBasic
   clangLex
   )

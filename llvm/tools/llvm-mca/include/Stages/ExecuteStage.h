@@ -59,9 +59,9 @@ public:
   llvm::Error cycleStart() override;
   llvm::Error execute(InstRef &IR) override;
 
-  void
-  notifyInstructionIssued(const InstRef &IR,
-                          llvm::ArrayRef<std::pair<ResourceRef, double>> Used);
+  void notifyInstructionIssued(
+      const InstRef &IR,
+      llvm::ArrayRef<std::pair<ResourceRef, ResourceCycles>> Used);
   void notifyInstructionExecuted(const InstRef &IR);
   void notifyInstructionReady(const InstRef &IR);
   void notifyResourceAvailable(const ResourceRef &RR);

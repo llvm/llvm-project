@@ -4568,6 +4568,11 @@ private:
   // of a ComparisonCategoryType enumerator.
   llvm::SmallBitVector FullyCheckedComparisonCategories;
 
+  ValueDecl *tryLookupCtorInitMemberDecl(CXXRecordDecl *ClassDecl,
+                                         CXXScopeSpec &SS,
+                                         ParsedType TemplateTypeTy,
+                                         IdentifierInfo *MemberOrBase);
+
 public:
   /// Lookup the specified comparison category types in the standard
   ///   library, an check the VarDecls possibly returned by the operator<=>
@@ -10254,6 +10259,12 @@ public:
                                            SourceLocation Loc,
                                            ArrayRef<Expr *> Args,
                                            SourceLocation OpenParLoc);
+  QualType ProduceCtorInitMemberSignatureHelp(Scope *S, Decl *ConstructorDecl,
+                                              CXXScopeSpec SS,
+                                              ParsedType TemplateTypeTy,
+                                              ArrayRef<Expr *> ArgExprs,
+                                              IdentifierInfo *II,
+                                              SourceLocation OpenParLoc);
   void CodeCompleteInitializer(Scope *S, Decl *D);
   void CodeCompleteReturn(Scope *S);
   void CodeCompleteAfterIf(Scope *S);
@@ -10794,7 +10805,6 @@ struct LateParsedTemplate {
   /// The template function declaration to be late parsed.
   Decl *D;
 };
-
 } // end namespace clang
 
 namespace llvm {

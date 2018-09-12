@@ -103,7 +103,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i8(i8 addrspace(1)* noalias %out, i
 ; GCN-DAG: s_flbit_i32_b32 [[FFBH_LO:s[0-9]+]], s[[LO]]
 ; GCN-DAG: s_add_i32 [[ADD:s[0-9]+]], [[FFBH_LO]], 32
 ; GCN-DAG: s_flbit_i32_b32 [[FFBH_HI:s[0-9]+]], s[[HI]]
-; GCN-DAG: v_mov_b32_e32 [[VFFBH_LO:v[0-9]+]], [[FFBH_LO]]
+; GCN-DAG: v_mov_b32_e32 [[VFFBH_LO:v[0-9]+]], [[ADD]]
 ; GCN-DAG: v_mov_b32_e32 [[VFFBH_HI:v[0-9]+]], [[FFBH_HI]]
 ; GCN-DAG: v_cndmask_b32_e32 v[[CTLZ:[0-9]+]], [[VFFBH_HI]], [[VFFBH_LO]]
 ; GCN-DAG: v_mov_b32_e32 v[[CTLZ_HI:[0-9]+]], 0{{$}}

@@ -2,6 +2,7 @@
 // RUN: clang-tidy -checks='-*, abseil-no-internal-dependencies' -header-filter='.*' %s -- -I %S/Inputs 2>&1 | FileCheck %s
 
 #include "absl/strings/internal-file.h"
+#include "absl/flags/internal-file.h"
 // CHECK-NOT: warning:
 
 #include "absl/external-file.h"

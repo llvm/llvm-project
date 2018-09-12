@@ -18,6 +18,7 @@
 #include "HardwareUnits/HardwareUnit.h"
 #include "HardwareUnits/LSUnit.h"
 #include "ResourceManager.h"
+#include "Support.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSchedule.h"
 
@@ -103,7 +104,7 @@ class Scheduler : public HardwareUnit {
   /// Issue an instruction without updating the ready queue.
   void issueInstructionImpl(
       InstRef &IR,
-      llvm::SmallVectorImpl<std::pair<ResourceRef, double>> &Pipes);
+      llvm::SmallVectorImpl<std::pair<ResourceRef, ResourceCycles>> &Pipes);
 
   // Identify instructions that have finished executing, and remove them from
   // the IssuedSet. References to executed instructions are added to input
@@ -164,10 +165,10 @@ public:
   /// Issue an instruction and populates a vector of used pipeline resources,
   /// and a vector of instructions that transitioned to the ready state as a
   /// result of this event.
-  void
-  issueInstruction(InstRef &IR,
-                   llvm::SmallVectorImpl<std::pair<ResourceRef, double>> &Used,
-                   llvm::SmallVectorImpl<InstRef> &Ready);
+  void issueInstruction(
+      InstRef &IR,
+      llvm::SmallVectorImpl<std::pair<ResourceRef, ResourceCycles>> &Used,
+      llvm::SmallVectorImpl<InstRef> &Ready);
 
   /// Returns true if IR has to be issued immediately, or if IR is a zero
   /// latency instruction.
