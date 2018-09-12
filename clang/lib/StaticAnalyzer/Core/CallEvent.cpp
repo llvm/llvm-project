@@ -27,6 +27,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -164,6 +165,68 @@ bool CallEvent::isGlobalCFunction(StringRef FunctionName) const {
     return false;
 
   return CheckerContext::isCLibraryFunction(FD, FunctionName);
+}
+
+AnalysisDeclContext *CallEvent::getCalleeAnalysisDeclContext() const {
+  const Decl *D = getDecl();
+
+  // If the callee is completely unknown, we cannot construct the stack frame.
+  if (!D)
+    return nullptr;
+
+  // FIXME: Skip virtual functions for now. There's no easy procedure to foresee
+  // the exact decl that should be used, especially when it's not a definition.
+  if (const Decl *RD = getRuntimeDefinition().getDecl())
+    if (RD != D)
+      return nullptr;
+
+  return LCtx->getAnalysisDeclContext()->getManager()->getContext(D);
+}
+
+const StackFrameContext *CallEvent::getCalleeStackFrame() const {
+  AnalysisDeclContext *ADC = getCalleeAnalysisDeclContext();
+  if (!ADC)
+    return nullptr;
+
+  const Expr *E = getOriginExpr();
+  if (!E)
+    return nullptr;
+
+  // Recover CFG block via reverse lookup.
+  // TODO: If we were to keep CFG element information as part of the CallEvent
+  // instead of doing this reverse lookup, we would be able to build the stack
+  // frame for non-expression-based calls, and also we wouldn't need the reverse
+  // lookup.
+  CFGStmtMap *Map = LCtx->getAnalysisDeclContext()->getCFGStmtMap();
+  const CFGBlock *B = Map->getBlock(E);
+  assert(B);
+
+  // Also recover CFG index by scanning the CFG block.
+  unsigned Idx = 0, Sz = B->size();
+  for (; Idx < Sz; ++Idx)
+    if (auto StmtElem = (*B)[Idx].getAs<CFGStmt>())
+      if (StmtElem->getStmt() == E)
+        break;
+  assert(Idx < Sz);
+
+  return ADC->getManager()->getStackFrame(ADC, LCtx, E, B, Idx);
+}
+
+const VarRegion *CallEvent::getParameterLocation(unsigned Index) const {
+  const StackFrameContext *SFC = getCalleeStackFrame();
+  // We cannot construct a VarRegion without a stack frame.
+  if (!SFC)
+    return nullptr;
+
+  const ParmVarDecl *PVD = parameters()[Index];
+  const VarRegion *VR =
+      State->getStateManager().getRegionManager().getVarRegion(PVD, SFC);
+
+  // This sanity check would fail if our parameter declaration doesn't
+  // correspond to the stack frame's function declaration.
+  assert(VR->getStackFrame() == SFC);
+
+  return VR;
 }
 
 /// Returns true if a type is a pointer-to-const or reference-to-const

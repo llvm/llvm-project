@@ -1373,13 +1373,14 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
   case TemplateArgument::Declaration: {
     const NamedDecl *ND = TA.getAsDecl();
     if (isa<FieldDecl>(ND) || isa<IndirectFieldDecl>(ND)) {
-      mangleMemberDataPointer(
-          cast<CXXRecordDecl>(ND->getDeclContext())->getMostRecentNonInjectedDecl(),
-          cast<ValueDecl>(ND));
+      mangleMemberDataPointer(cast<CXXRecordDecl>(ND->getDeclContext())
+                                  ->getMostRecentNonInjectedDecl(),
+                              cast<ValueDecl>(ND));
     } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(ND)) {
       const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
       if (MD && MD->isInstance()) {
-        mangleMemberFunctionPointer(MD->getParent()->getMostRecentNonInjectedDecl(), MD);
+        mangleMemberFunctionPointer(
+            MD->getParent()->getMostRecentNonInjectedDecl(), MD);
       } else {
         Out << "$1?";
         mangleName(FD);
@@ -2285,7 +2286,8 @@ void MicrosoftCXXNameMangler::mangleType(const TagDecl *TD) {
 
 // If you add a call to this, consider updating isArtificialTagType() too.
 void MicrosoftCXXNameMangler::mangleArtificalTagType(
-    TagTypeKind TK, StringRef UnqualifiedName, ArrayRef<StringRef> NestedNames) {
+    TagTypeKind TK, StringRef UnqualifiedName,
+    ArrayRef<StringRef> NestedNames) {
   // <name> ::= <unscoped-name> {[<named-scope>]+ | [<nested-name>]}? @
   mangleTagTypeKind(TK);
 
@@ -2372,8 +2374,8 @@ void MicrosoftCXXNameMangler::mangleArrayType(const ArrayType *T) {
 // <type>                   ::= <pointer-to-member-type>
 // <pointer-to-member-type> ::= <pointer-cvr-qualifiers> <cvr-qualifiers>
 //                                                          <class name> <type>
-void MicrosoftCXXNameMangler::mangleType(const MemberPointerType *T, Qualifiers Quals,
-                                         SourceRange Range) {
+void MicrosoftCXXNameMangler::mangleType(const MemberPointerType *T,
+                                         Qualifiers Quals, SourceRange Range) {
   QualType PointeeType = T->getPointeeType();
   manglePointerCVQualifiers(Quals);
   manglePointerExtQualifiers(Quals, PointeeType);

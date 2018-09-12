@@ -826,19 +826,47 @@ void useC(C c);
 void useCByReference(const C &c);
 void useD(D d);
 void useDByReference(const D &d);
+void useCAndD(C c, D d);
 
-// FIXME: Find construction context for the argument.
 // CHECK: void passArgument()
 // CHECK:          1: useC
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(class C))
-// CXX11-NEXT:     3: C() (CXXConstructExpr, [B1.4], class C)
+// CXX11-ELIDE-NEXT:     3: C() (CXXConstructExpr, [B1.4], [B1.5], class C)
+// CXX11-NOELIDE-NEXT:     3: C() (CXXConstructExpr, [B1.4], class C)
 // CXX11-NEXT:     4: [B1.3]
-// CXX11-NEXT:     5: [B1.4] (CXXConstructExpr, class C)
+// CXX11-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.6]+0, class C)
 // CXX11-NEXT:     6: [B1.2]([B1.5])
-// CXX17-NEXT:     3: C() (CXXConstructExpr, class C)
+// CXX17-NEXT:     3: C() (CXXConstructExpr, [B1.4]+0, class C)
 // CXX17-NEXT:     4: [B1.2]([B1.3])
 void passArgument() {
   useC(C());
+}
+
+// CHECK: void passTwoArguments()
+// CHECK:        [B1]
+// CHECK-NEXT:     1: useCAndD
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(class C, class argument_constructors::D))
+// CXX11-ELIDE-NEXT:     3: C() (CXXConstructExpr, [B1.4], [B1.5], class C)
+// CXX11-NOELIDE-NEXT:     3: C() (CXXConstructExpr, [B1.4], class C)
+// CXX11-NEXT:     4: [B1.3]
+// CXX11-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.12]+0, class C)
+// CXX11-ELIDE-NEXT:     6: argument_constructors::D() (CXXConstructExpr, [B1.7], [B1.9], [B1.10], class argument_constructors::D)
+// CXX11-NOELIDE-NEXT:     6: argument_constructors::D() (CXXConstructExpr, [B1.7], [B1.9], class argument_constructors::D)
+// CXX11-NEXT:     7: [B1.6] (BindTemporary)
+// CXX11-NEXT:     8: [B1.7] (ImplicitCastExpr, NoOp, const class argument_constructors::D)
+// CXX11-NEXT:     9: [B1.8]
+// CXX11-NEXT:    10: [B1.9] (CXXConstructExpr, [B1.11], [B1.12]+1, class argument_constructors::D)
+// CXX11-NEXT:    11: [B1.10] (BindTemporary)
+// CXX11-NEXT:    12: [B1.2]([B1.5], [B1.11])
+// CXX11-NEXT:    13: ~argument_constructors::D() (Temporary object destructor)
+// CXX11-NEXT:    14: ~argument_constructors::D() (Temporary object destructor)
+// CXX17-NEXT:     3: C() (CXXConstructExpr, [B1.6]+0, class C)
+// CXX17-NEXT:     4: argument_constructors::D() (CXXConstructExpr, [B1.5], [B1.6]+1, class argument_co
+// CXX17-NEXT:     5: [B1.4] (BindTemporary)
+// CXX17-NEXT:     6: [B1.2]([B1.3], [B1.5])
+// CXX17-NEXT:     7: ~argument_constructors::D() (Temporary object destructor)
+void passTwoArguments() {
+  useCAndD(C(), D());
 }
 
 // CHECK: void passArgumentByReference()
@@ -852,20 +880,20 @@ void passArgumentByReference() {
   useCByReference(C());
 }
 
-// FIXME: Find construction context for the argument.
 // CHECK: void passArgumentWithDestructor()
 // CHECK:          1: useD
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(class argument_constructors::D))
-// CXX11-NEXT:     3: argument_constructors::D() (CXXConstructExpr, [B1.4], [B1.6], class argument_constructors::D)
+// CXX11-ELIDE-NEXT:     3: argument_constructors::D() (CXXConstructExpr, [B1.4], [B1.6], [B1.7], class argument_constructors::D)
+// CXX11-NOELIDE-NEXT:     3: argument_constructors::D() (CXXConstructExpr, [B1.4], [B1.6], class argument_constructors::D)
 // CXX11-NEXT:     4: [B1.3] (BindTemporary)
 // CXX11-NEXT:     5: [B1.4] (ImplicitCastExpr, NoOp, const class argument_constructors::D)
 // CXX11-NEXT:     6: [B1.5]
-// CXX11-NEXT:     7: [B1.6] (CXXConstructExpr, class argument_constructors::D)
+// CXX11-NEXT:     7: [B1.6] (CXXConstructExpr, [B1.8], [B1.9]+0, class argument_constructors::D)
 // CXX11-NEXT:     8: [B1.7] (BindTemporary)
 // CXX11-NEXT:     9: [B1.2]([B1.8])
 // CXX11-NEXT:    10: ~argument_constructors::D() (Temporary object destructor)
 // CXX11-NEXT:    11: ~argument_constructors::D() (Temporary object destructor)
-// CXX17-NEXT:     3: argument_constructors::D() (CXXConstructExpr, class argument_constructors::D)
+// CXX17-NEXT:     3: argument_constructors::D() (CXXConstructExpr, [B1.4], [B1.5]+0, class argument_constructors::D)
 // CXX17-NEXT:     4: [B1.3] (BindTemporary)
 // CXX17-NEXT:     5: [B1.2]([B1.4])
 // CXX17-NEXT:     6: ~argument_constructors::D() (Temporary object destructor)
@@ -886,13 +914,13 @@ void passArgumentWithDestructorByReference() {
   useDByReference(D());
 }
 
-// FIXME: Find construction context for the argument.
 // CHECK: void passArgumentIntoAnotherConstructor()
-// CXX11:          1: argument_constructors::D() (CXXConstructExpr, [B1.2], [B1.4], class argument_constructors::D)
+// CXX11-ELIDE:          1: argument_constructors::D() (CXXConstructExpr, [B1.2], [B1.4], [B1.5], class argument_constructors::D)
+// CXX11-NOELIDE:          1: argument_constructors::D() (CXXConstructExpr, [B1.2], [B1.4], class argument_constructors::D)
 // CXX11-NEXT:     2: [B1.1] (BindTemporary)
 // CXX11-NEXT:     3: [B1.2] (ImplicitCastExpr, NoOp, const class argument_constructors::D)
 // CXX11-NEXT:     4: [B1.3]
-// CXX11-NEXT:     5: [B1.4] (CXXConstructExpr, class argument_constructors::D)
+// CXX11-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.6], [B1.7]+0, class argument_constructors::D)
 // CXX11-NEXT:     6: [B1.5] (BindTemporary)
 // CXX11-ELIDE-NEXT:     7: [B1.6] (CXXConstructExpr, [B1.9], [B1.10], class argument_constructors::E)
 // CXX11-NOELIDE-NEXT:     7: [B1.6] (CXXConstructExpr, [B1.9], class argument_constructors::E)
@@ -902,7 +930,7 @@ void passArgumentWithDestructorByReference() {
 // CXX11-NEXT:    11: argument_constructors::E e = argument_constructors::E(argument_constructors::D());
 // CXX11-NEXT:    12: ~argument_constructors::D() (Temporary object destructor)
 // CXX11-NEXT:    13: ~argument_constructors::D() (Temporary object destructor)
-// CXX17:          1: argument_constructors::D() (CXXConstructExpr, class argument_constructors::D)
+// CXX17:          1: argument_constructors::D() (CXXConstructExpr, [B1.2], [B1.3]+0, class argument_constructors::D)
 // CXX17-NEXT:     2: [B1.1] (BindTemporary)
 // CXX17-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.5], class argument_constructors::E)
 // CXX17-NEXT:     4: argument_constructors::E([B1.3]) (CXXFunctionalCastExpr, ConstructorConversion, class argument_constructors::E)

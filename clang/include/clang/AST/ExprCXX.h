@@ -301,7 +301,8 @@ public:
 /// \c static_cast<int>(1.0).
 class CXXStaticCastExpr final
     : public CXXNamedCastExpr,
-      private llvm::TrailingObjects<CXXStaticCastExpr, CXXBaseSpecifier *> {
+      private llvm::TrailingObjects<CXXStaticCastExpr, CastExpr::BasePathSizeTy,
+                                    CXXBaseSpecifier *> {
   CXXStaticCastExpr(QualType ty, ExprValueKind vk, CastKind kind, Expr *op,
                     unsigned pathSize, TypeSourceInfo *writtenTy,
                     SourceLocation l, SourceLocation RParenLoc,
@@ -311,6 +312,10 @@ class CXXStaticCastExpr final
 
   explicit CXXStaticCastExpr(EmptyShell Empty, unsigned PathSize)
       : CXXNamedCastExpr(CXXStaticCastExprClass, Empty, PathSize) {}
+
+  size_t numTrailingObjects(OverloadToken<CastExpr::BasePathSizeTy>) const {
+    return path_empty() ? 0 : 1;
+  }
 
 public:
   friend class CastExpr;
@@ -337,7 +342,8 @@ public:
 /// check to determine how to perform the type conversion.
 class CXXDynamicCastExpr final
     : public CXXNamedCastExpr,
-      private llvm::TrailingObjects<CXXDynamicCastExpr, CXXBaseSpecifier *> {
+      private llvm::TrailingObjects<
+          CXXDynamicCastExpr, CastExpr::BasePathSizeTy, CXXBaseSpecifier *> {
   CXXDynamicCastExpr(QualType ty, ExprValueKind VK, CastKind kind,
                      Expr *op, unsigned pathSize, TypeSourceInfo *writtenTy,
                      SourceLocation l, SourceLocation RParenLoc,
@@ -347,6 +353,10 @@ class CXXDynamicCastExpr final
 
   explicit CXXDynamicCastExpr(EmptyShell Empty, unsigned pathSize)
       : CXXNamedCastExpr(CXXDynamicCastExprClass, Empty, pathSize) {}
+
+  size_t numTrailingObjects(OverloadToken<CastExpr::BasePathSizeTy>) const {
+    return path_empty() ? 0 : 1;
+  }
 
 public:
   friend class CastExpr;
@@ -380,6 +390,7 @@ public:
 class CXXReinterpretCastExpr final
     : public CXXNamedCastExpr,
       private llvm::TrailingObjects<CXXReinterpretCastExpr,
+                                    CastExpr::BasePathSizeTy,
                                     CXXBaseSpecifier *> {
   CXXReinterpretCastExpr(QualType ty, ExprValueKind vk, CastKind kind,
                          Expr *op, unsigned pathSize,
@@ -391,6 +402,10 @@ class CXXReinterpretCastExpr final
 
   CXXReinterpretCastExpr(EmptyShell Empty, unsigned pathSize)
       : CXXNamedCastExpr(CXXReinterpretCastExprClass, Empty, pathSize) {}
+
+  size_t numTrailingObjects(OverloadToken<CastExpr::BasePathSizeTy>) const {
+    return path_empty() ? 0 : 1;
+  }
 
 public:
   friend class CastExpr;
@@ -419,7 +434,8 @@ public:
 /// value.
 class CXXConstCastExpr final
     : public CXXNamedCastExpr,
-      private llvm::TrailingObjects<CXXConstCastExpr, CXXBaseSpecifier *> {
+      private llvm::TrailingObjects<CXXConstCastExpr, CastExpr::BasePathSizeTy,
+                                    CXXBaseSpecifier *> {
   CXXConstCastExpr(QualType ty, ExprValueKind VK, Expr *op,
                    TypeSourceInfo *writtenTy, SourceLocation l,
                    SourceLocation RParenLoc, SourceRange AngleBrackets)
@@ -428,6 +444,10 @@ class CXXConstCastExpr final
 
   explicit CXXConstCastExpr(EmptyShell Empty)
       : CXXNamedCastExpr(CXXConstCastExprClass, Empty, 0) {}
+
+  size_t numTrailingObjects(OverloadToken<CastExpr::BasePathSizeTy>) const {
+    return path_empty() ? 0 : 1;
+  }
 
 public:
   friend class CastExpr;
@@ -1471,7 +1491,8 @@ public:
 /// \endcode
 class CXXFunctionalCastExpr final
     : public ExplicitCastExpr,
-      private llvm::TrailingObjects<CXXFunctionalCastExpr, CXXBaseSpecifier *> {
+      private llvm::TrailingObjects<
+          CXXFunctionalCastExpr, CastExpr::BasePathSizeTy, CXXBaseSpecifier *> {
   SourceLocation LParenLoc;
   SourceLocation RParenLoc;
 
@@ -1485,6 +1506,10 @@ class CXXFunctionalCastExpr final
 
   explicit CXXFunctionalCastExpr(EmptyShell Shell, unsigned PathSize)
       : ExplicitCastExpr(CXXFunctionalCastExprClass, Shell, PathSize) {}
+
+  size_t numTrailingObjects(OverloadToken<CastExpr::BasePathSizeTy>) const {
+    return path_empty() ? 0 : 1;
+  }
 
 public:
   friend class CastExpr;

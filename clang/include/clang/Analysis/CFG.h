@@ -196,7 +196,8 @@ public:
                  // These are possible in C++17 due to mandatory copy elision.
                  isa<ReturnedValueConstructionContext>(C) ||
                  isa<VariableConstructionContext>(C) ||
-                 isa<ConstructorInitializerConstructionContext>(C)));
+                 isa<ConstructorInitializerConstructionContext>(C) ||
+                 isa<ArgumentConstructionContext>(C)));
     Data2.setPointer(const_cast<ConstructionContext *>(C));
   }
 

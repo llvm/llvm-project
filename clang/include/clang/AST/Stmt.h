@@ -204,7 +204,7 @@ protected:
 
     unsigned Kind : 6;
     unsigned PartOfExplicitCast : 1; // Only set for ImplicitCastExpr.
-    unsigned BasePathSize : 32 - 6 - 1 - NumExprBits;
+    unsigned BasePathIsEmpty : 1;
   };
 
   class CallExprBitfields {

@@ -2362,6 +2362,22 @@ It is only supported when using the Microsoft C++ ABI.
   }];
 }
 
+def LifetimeBoundDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``lifetimebound`` attribute indicates that a resource owned by
+a function parameter or implicit object parameter
+is retained by the return value of the annotated function
+(or, for a parameter of a constructor, in the value of the constructed object).
+It is only supported in C++.
+
+This attribute provides an experimental implementation of the facility
+described in the C++ committee paper [http://wg21.link/p0936r0](P0936R0),
+and is subject to change as the design of the corresponding functionality
+changes.
+  }];
+}
+
 def TrivialABIDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{

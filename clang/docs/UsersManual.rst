@@ -2778,6 +2778,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /Brepro                 Emit an object file which can be reproduced over time
       /C                      Don't discard comments when preprocessing
       /c                      Compile only
+      /d1PP                   Retain macro definitions in /E mode
       /d1reportAllClassLayout Dump record layout information
       /diagnostics:caret      Enable caret and column diagnostics (on by default)
       /diagnostics:classic    Disable column and caret diagnostics
@@ -2811,6 +2812,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /GS-                    Disable buffer security check
       /GS                     Enable buffer security check
       /Gs<value>              Set stack probe size
+      /guard:<value>          Enable Control Flow Guard with /guard:cf
       /Gv                     Set __vectorcall as a default calling convention
       /Gw-                    Don't put each data item in its own section
       /Gw                     Put each data item in its own section
@@ -2866,6 +2868,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /WX-                    Do not treat warnings as errors
       /WX                     Treat warnings as errors
       /w                      Disable all warnings
+      /X                      Don't add %INCLUDE% to the include search path
       /Y-                     Disable precompiled headers, overrides /Yc and /Yu
       /Yc<filename>           Generate a pch file for all code up to and including <filename>
       /Yu<filename>           Load a pch file and use it instead of all code up to and including <filename>
@@ -2889,8 +2892,15 @@ Execute ``clang-cl /?`` to see a list of supported options:
     OPTIONS:
       -###                    Print (but do not run) the commands to run for this compilation
       --analyze               Run the static analyzer
+      -faddrsig               Emit an address-significance table
       -fansi-escape-codes     Use ANSI escape codes for diagnostics
+      -fblocks                Enable the 'blocks' language feature
+      -fcf-protection=<value> Instrument control-flow architecture protection. Options: return, branch, full, none.
+      -fcf-protection         Enable cf-protection in 'full' mode
       -fcolor-diagnostics     Use colors in diagnostics
+      -fcomplete-member-pointers
+                              Require member pointer base types to be complete if they would be significant under the Microsoft ABI
+      -fcoverage-mapping      Generate coverage mapping to enable code coverage analysis
       -fdebug-macro           Emit macro debug information
       -fdelayed-template-parsing
                               Parse templated function definitions at the end of the translation unit
@@ -2900,6 +2910,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               Print fix-its in machine parseable form
       -flto=<value>           Set LTO mode to either 'full' or 'thin'
       -flto                   Enable LTO in 'full' mode
+      -fmerge-all-constants   Allow merging of constants
       -fms-compatibility-version=<value>
                               Dot-separated value representing the Microsoft compiler version
                               number to report in _MSC_VER (0 = don't define it (default))
@@ -2907,9 +2918,17 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fms-extensions         Accept some non-standard constructs supported by the Microsoft compiler
       -fmsc-version=<value>   Microsoft compiler version number to report in _MSC_VER
                               (0 = don't define it (default))
+      -fno-addrsig            Don't emit an address-significance table
+      -fno-builtin-<value>    Disable implicit builtin knowledge of a specific function
+      -fno-builtin            Disable implicit builtin knowledge of functions
+      -fno-complete-member-pointers
+                              Do not require member pointer base types to be complete if they would be significant under the Microsoft ABI
+      -fno-coverage-mapping   Disable code coverage analysis
       -fno-debug-macro        Do not emit macro debug information
       -fno-delayed-template-parsing
                               Disable delayed template parsing
+      -fno-sanitize-address-poison-class-member-array-new-cookie
+                              Disable poisoning array cookies when using class member operator new[] in AddressSanitizer
       -fno-sanitize-address-use-after-scope
                               Disable use-after-scope detection in AddressSanitizer
       -fno-sanitize-blacklist Don't use blacklist file for sanitizers
@@ -2945,6 +2964,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               Level of field padding for AddressSanitizer
       -fsanitize-address-globals-dead-stripping
                               Enable linker dead stripping of globals in AddressSanitizer
+      -fsanitize-address-poison-class-member-array-new-cookie
+                              Enable poisoning array cookies when using class member operator new[] in AddressSanitizer
       -fsanitize-address-use-after-scope
                               Enable use-after-scope detection in AddressSanitizer
       -fsanitize-blacklist=<value>

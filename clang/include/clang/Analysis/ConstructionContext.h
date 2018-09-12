@@ -22,65 +22,200 @@
 
 namespace clang {
 
-/// Construction context is a linked list of multiple layers. Layers are
-/// created gradually while traversing the AST, and layers that represent
-/// the outmost AST nodes are built first, while the node that immediately
-/// contains the constructor would be built last and capture the previous
-/// layers as its parents. Construction context captures the last layer
-/// (which has links to the previous layers) and classifies the seemingly
-/// arbitrary chain of layers into one of the possible ways of constructing
-/// an object in C++ for user-friendly experience.
-class ConstructionContextLayer {
+/// Represents a single point (AST node) in the program that requires attention
+/// during construction of an object. ConstructionContext would be represented
+/// as a list of such items.
+class ConstructionContextItem {
 public:
-  typedef llvm::PointerUnion<Stmt *, CXXCtorInitializer *> TriggerTy;
+  enum ItemKind {
+    VariableKind,
+    NewAllocatorKind,
+    ReturnKind,
+    MaterializationKind,
+    TemporaryDestructorKind,
+    ElidedDestructorKind,
+    ElidableConstructorKind,
+    ArgumentKind,
+    STATEMENT_WITH_INDEX_KIND_BEGIN=ArgumentKind,
+    STATEMENT_WITH_INDEX_KIND_END=ArgumentKind,
+    STATEMENT_KIND_BEGIN = VariableKind,
+    STATEMENT_KIND_END = ArgumentKind,
+    InitializerKind,
+    INITIALIZER_KIND_BEGIN=InitializerKind,
+    INITIALIZER_KIND_END=InitializerKind
+  };
+
+  LLVM_DUMP_METHOD static StringRef getKindAsString(ItemKind K) {
+    switch (K) {
+      case VariableKind:            return "construct into local variable";
+      case NewAllocatorKind:        return "construct into new-allocator";
+      case ReturnKind:              return "construct into return address";
+      case MaterializationKind:     return "materialize temporary";
+      case TemporaryDestructorKind: return "destroy temporary";
+      case ElidedDestructorKind:    return "elide destructor";
+      case ElidableConstructorKind: return "elide constructor";
+      case ArgumentKind:            return "construct into argument";
+      case InitializerKind:         return "construct into member variable";
+    };
+    llvm_unreachable("Unknown ItemKind");
+  }
 
 private:
+  const void *const Data;
+  const ItemKind Kind;
+  const unsigned Index = 0;
+
+  bool hasStatement() const {
+    return Kind >= STATEMENT_KIND_BEGIN &&
+           Kind <= STATEMENT_KIND_END;
+  }
+
+  bool hasIndex() const {
+    return Kind >= STATEMENT_WITH_INDEX_KIND_BEGIN &&
+           Kind >= STATEMENT_WITH_INDEX_KIND_END;
+  }
+
+  bool hasInitializer() const {
+    return Kind >= INITIALIZER_KIND_BEGIN &&
+           Kind <= INITIALIZER_KIND_END;
+  }
+
+public:
+  // ConstructionContextItem should be simple enough so that it was easy to
+  // re-construct it from the AST node it captures. For that reason we provide
+  // simple implicit conversions from all sorts of supported AST nodes.
+  ConstructionContextItem(const DeclStmt *DS)
+      : Data(DS), Kind(VariableKind) {}
+
+  ConstructionContextItem(const CXXNewExpr *NE)
+      : Data(NE), Kind(NewAllocatorKind) {}
+
+  ConstructionContextItem(const ReturnStmt *RS)
+      : Data(RS), Kind(ReturnKind) {}
+
+  ConstructionContextItem(const MaterializeTemporaryExpr *MTE)
+      : Data(MTE), Kind(MaterializationKind) {}
+
+  ConstructionContextItem(const CXXBindTemporaryExpr *BTE,
+                          bool IsElided = false)
+      : Data(BTE),
+        Kind(IsElided ? ElidedDestructorKind : TemporaryDestructorKind) {}
+
+  ConstructionContextItem(const CXXConstructExpr *CE)
+      : Data(CE), Kind(ElidableConstructorKind) {}
+
+  ConstructionContextItem(const CallExpr *CE, unsigned Index)
+      : Data(CE), Kind(ArgumentKind), Index(Index) {}
+
+  ConstructionContextItem(const CXXConstructExpr *CE, unsigned Index)
+      : Data(CE), Kind(ArgumentKind), Index(Index) {}
+
+  ConstructionContextItem(const ObjCMessageExpr *ME, unsigned Index)
+      : Data(ME), Kind(ArgumentKind), Index(Index) {}
+
+  // A polymorphic version of the previous calls with dynamic type check.
+  ConstructionContextItem(const Expr *E, unsigned Index)
+      : Data(E), Kind(ArgumentKind), Index(Index) {
+    assert(isa<CallExpr>(E) || isa<CXXConstructExpr>(E) ||
+           isa<ObjCMessageExpr>(E));
+  }
+
+  ConstructionContextItem(const CXXCtorInitializer *Init)
+      : Data(Init), Kind(InitializerKind), Index(0) {}
+
+  ItemKind getKind() const { return Kind; }
+
+  LLVM_DUMP_METHOD StringRef getKindAsString() const {
+    return getKindAsString(getKind());
+  }
+
   /// The construction site - the statement that triggered the construction
   /// for one of its parts. For instance, stack variable declaration statement
   /// triggers construction of itself or its elements if it's an array,
   /// new-expression triggers construction of the newly allocated object(s).
-  TriggerTy Trigger;
+  const Stmt *getStmt() const {
+    assert(hasStatement());
+    return static_cast<const Stmt *>(Data);
+  }
 
-  /// Sometimes a single trigger is not enough to describe the construction
-  /// site. In this case we'd have a chain of "partial" construction context
-  /// layers.
-  /// Some examples:
-  /// - A constructor within in an aggregate initializer list within a variable
-  ///   would have a construction context of the initializer list with
-  ///   the parent construction context of a variable.
-  /// - A constructor for a temporary that needs to be both destroyed
-  ///   and materialized into an elidable copy constructor would have a
-  ///   construction context of a CXXBindTemporaryExpr with the parent
-  ///   construction context of a MaterializeTemproraryExpr.
-  /// Not all of these are currently supported.
+  const Stmt *getStmtOrNull() const {
+    return hasStatement() ? getStmt() : nullptr;
+  }
+
+  /// The construction site is not necessarily a statement. It may also be a
+  /// CXXCtorInitializer, which means that a member variable is being
+  /// constructed during initialization of the object that contains it.
+  const CXXCtorInitializer *getCXXCtorInitializer() const {
+    assert(hasInitializer());
+    return static_cast<const CXXCtorInitializer *>(Data);
+  }
+
+  /// If a single trigger statement triggers multiple constructors, they are
+  /// usually being enumerated. This covers function argument constructors
+  /// triggered by a call-expression and items in an initializer list triggered
+  /// by an init-list-expression.
+  unsigned getIndex() const {
+    // This is a fairly specific request. Let's make sure the user knows
+    // what he's doing.
+    assert(hasIndex());
+    return Index;
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const {
+    ID.AddPointer(Data);
+    ID.AddInteger(Kind);
+    ID.AddInteger(Index);
+  }
+
+  bool operator==(const ConstructionContextItem &Other) const {
+    // For most kinds the Index comparison is trivially true, but
+    // checking kind separately doesn't seem to be less expensive
+    // than checking Index. Same in operator<().
+    return std::make_tuple(Data, Kind, Index) ==
+           std::make_tuple(Other.Data, Other.Kind, Other.Index);
+  }
+
+  bool operator<(const ConstructionContextItem &Other) const {
+    return std::make_tuple(Data, Kind, Index) <
+           std::make_tuple(Other.Data, Other.Kind, Other.Index);
+  }
+};
+
+/// Construction context can be seen as a linked list of multiple layers.
+/// Sometimes a single trigger is not enough to describe the construction
+/// site. That's what causing us to have a chain of "partial" construction
+/// context layers. Some examples:
+/// - A constructor within in an aggregate initializer list within a variable
+///   would have a construction context of the initializer list with
+///   the parent construction context of a variable.
+/// - A constructor for a temporary that needs to be both destroyed
+///   and materialized into an elidable copy constructor would have a
+///   construction context of a CXXBindTemporaryExpr with the parent
+///   construction context of a MaterializeTemproraryExpr.
+/// Not all of these are currently supported.
+/// Layers are created gradually while traversing the AST, and layers that
+/// represent the outmost AST nodes are built first, while the node that
+/// immediately contains the constructor would be built last and capture the
+/// previous layers as its parents. Construction context captures the last layer
+/// (which has links to the previous layers) and classifies the seemingly
+/// arbitrary chain of layers into one of the possible ways of constructing
+/// an object in C++ for user-friendly experience.
+class ConstructionContextLayer {
   const ConstructionContextLayer *Parent = nullptr;
+  ConstructionContextItem Item;
 
-  ConstructionContextLayer(TriggerTy Trigger,
-                          const ConstructionContextLayer *Parent)
-      : Trigger(Trigger), Parent(Parent) {}
+  ConstructionContextLayer(ConstructionContextItem Item,
+                           const ConstructionContextLayer *Parent)
+      : Parent(Parent), Item(Item) {}
 
 public:
   static const ConstructionContextLayer *
-  create(BumpVectorContext &C, TriggerTy Trigger,
+  create(BumpVectorContext &C, const ConstructionContextItem &Item,
          const ConstructionContextLayer *Parent = nullptr);
 
+  const ConstructionContextItem &getItem() const { return Item; }
   const ConstructionContextLayer *getParent() const { return Parent; }
   bool isLast() const { return !Parent; }
-
-  const Stmt *getTriggerStmt() const {
-    return Trigger.dyn_cast<Stmt *>();
-  }
-
-  const CXXCtorInitializer *getTriggerInit() const {
-    return Trigger.dyn_cast<CXXCtorInitializer *>();
-  }
-
-  /// Returns true if these layers are equal as individual layers, even if
-  /// their parents are different.
-  bool isSameLayer(const ConstructionContextLayer *Other) const {
-    assert(Other);
-    return (Trigger == Other->Trigger);
-  }
 
   /// See if Other is a proper initial segment of this construction context
   /// in terms of the parent chain - i.e. a few first parents coincide and
@@ -114,7 +249,8 @@ public:
     SimpleReturnedValueKind,
     CXX17ElidedCopyReturnedValueKind,
     RETURNED_VALUE_BEGIN = SimpleReturnedValueKind,
-    RETURNED_VALUE_END = CXX17ElidedCopyReturnedValueKind
+    RETURNED_VALUE_END = CXX17ElidedCopyReturnedValueKind,
+    ArgumentKind
   };
 
 protected:
@@ -131,6 +267,23 @@ private:
     auto *CC = C.getAllocator().Allocate<T>();
     return new (CC) T(Args...);
   }
+
+  // A sub-routine of createFromLayers() that deals with temporary objects
+  // that need to be materialized. The BTE argument is for the situation when
+  // the object also needs to be bound for destruction.
+  static const ConstructionContext *createMaterializedTemporaryFromLayers(
+      BumpVectorContext &C, const MaterializeTemporaryExpr *MTE,
+      const CXXBindTemporaryExpr *BTE,
+      const ConstructionContextLayer *ParentLayer);
+
+  // A sub-routine of createFromLayers() that deals with temporary objects
+  // that need to be bound for destruction. Automatically finds out if the
+  // object also needs to be materialized and delegates to
+  // createMaterializedTemporaryFromLayers() if necessary.
+  static const ConstructionContext *
+  createBoundTemporaryFromLayers(
+      BumpVectorContext &C, const CXXBindTemporaryExpr *BTE,
+      const ConstructionContextLayer *ParentLayer);
 
 public:
   /// Consume the construction context layer, together with its parent layers,
@@ -466,6 +619,32 @@ public:
 
   static bool classof(const ConstructionContext *CC) {
     return CC->getKind() == CXX17ElidedCopyReturnedValueKind;
+  }
+};
+
+class ArgumentConstructionContext : public ConstructionContext {
+  const Expr *CE; // The call of which the context is an argument.
+  unsigned Index; // Which argument we're constructing.
+  const CXXBindTemporaryExpr *BTE; // Whether the object needs to be destroyed.
+
+  friend class ConstructionContext; // Allows to create<>() itself.
+
+  explicit ArgumentConstructionContext(const Expr *CE, unsigned Index,
+                                       const CXXBindTemporaryExpr *BTE)
+      : ConstructionContext(ArgumentKind), CE(CE),
+        Index(Index), BTE(BTE) {
+    assert(isa<CallExpr>(CE) || isa<CXXConstructExpr>(CE) ||
+           isa<ObjCMessageExpr>(CE));
+    // BTE is optional.
+  }
+
+public:
+  const Expr *getCallLikeExpr() const { return CE; }
+  unsigned getIndex() const { return Index; }
+  const CXXBindTemporaryExpr *getCXXBindTemporaryExpr() const { return BTE; }
+
+  static bool classof(const ConstructionContext *CC) {
+    return CC->getKind() == ArgumentKind;
   }
 };
 

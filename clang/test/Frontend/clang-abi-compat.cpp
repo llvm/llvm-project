@@ -1,6 +1,6 @@
 // RUN: not %clang_cc1 -fclang-abi-compat=banana %s -fsyntax-only 2>&1 | FileCheck --check-prefix=INVALID %s
 // RUN: not %clang_cc1 -fclang-abi-compat=2.9 %s -fsyntax-only 2>&1 | FileCheck --check-prefix=INVALID %s
-// RUN: not %clang_cc1 -fclang-abi-compat=8 %s -fsyntax-only 2>&1 | FileCheck --check-prefix=INVALID %s
+// RUN: not %clang_cc1 -fclang-abi-compat=42 %s -fsyntax-only 2>&1 | FileCheck --check-prefix=INVALID %s
 // RUN: not %clang_cc1 -fclang-abi-compat=3.10 %s -fsyntax-only 2>&1 | FileCheck --check-prefix=INVALID %s
 // RUN: not %clang_cc1 -fclang-abi-compat=4.1 %s -fsyntax-only 2>&1 | FileCheck --check-prefix=INVALID %s
 // RUN: not %clang_cc1 -fclang-abi-compat=04 %s -fsyntax-only 2>&1 | FileCheck --check-prefix=INVALID %s

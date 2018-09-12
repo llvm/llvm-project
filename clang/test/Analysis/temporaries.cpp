@@ -458,6 +458,21 @@ namespace destructors {
 #endif // TEMPORARY_DTORS
 }
 
+namespace default_param_elided_destructors {
+struct a {
+  ~a();
+};
+struct F {
+  a d;
+  F(char *, a = a());
+};
+void g() {
+  char h[1];
+  for (int i = 0;;)
+    F j(i ? j : h);
+}
+} // namespace default_param_elided_destructors
+
 void testStaticMaterializeTemporaryExpr() {
   static const Trivial &ref = getTrivial();
   clang_analyzer_eval(ref.value == 42); // expected-warning{{TRUE}}
