@@ -1508,8 +1508,11 @@ void JITDylib::dump(raw_ostream &OS) {
        << "Symbol table:\n";
 
     for (auto &KV : Symbols) {
-      OS << "    \"" << *KV.first
-         << "\": " << format("0x%016x", KV.second.getAddress());
+      OS << "    \"" << *KV.first << "\": ";
+      if (auto Addr = KV.second.getAddress())
+        OS << format("0x%016x", Addr);
+      else
+        OS << "<not resolved>";
       if (KV.second.getFlags().isLazy() ||
           KV.second.getFlags().isMaterializing()) {
         OS << " (";

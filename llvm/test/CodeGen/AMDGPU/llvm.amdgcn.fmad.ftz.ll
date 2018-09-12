@@ -21,8 +21,7 @@ define amdgpu_kernel void @mad_f32(
 }
 
 ; GCN-LABEL: {{^}}mad_f32_imm_a:
-; GCN: v_mov_b32_e32 [[KA:v[0-9]+]], 0x41000000
-; GCN:  v_ma{{[dc]}}_f32 {{v[0-9]+}}, [[KA]],
+; GCN: v_madmk_f32 {{v[0-9]+}}, {{v[0-9]+}}, 0x41000000,
 define amdgpu_kernel void @mad_f32_imm_a(
     float addrspace(1)* %r,
     float addrspace(1)* %b,

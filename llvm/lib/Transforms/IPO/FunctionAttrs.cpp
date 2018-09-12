@@ -281,6 +281,13 @@ static bool addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter) {
     F->removeFnAttr(Attribute::ReadNone);
     F->removeFnAttr(Attribute::WriteOnly);
 
+    if (!WritesMemory && !ReadsMemory) {
+      // Clear out any "access range attributes" if readnone was deduced.
+      F->removeFnAttr(Attribute::ArgMemOnly);
+      F->removeFnAttr(Attribute::InaccessibleMemOnly);
+      F->removeFnAttr(Attribute::InaccessibleMemOrArgMemOnly);
+    }
+
     // Add in the new attribute.
     if (WritesMemory && !ReadsMemory)
       F->addFnAttr(Attribute::WriteOnly);

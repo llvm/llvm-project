@@ -1967,6 +1967,45 @@ TEST(SignatureHelpTest, InsideArgument) {
   }
 }
 
+TEST(SignatureHelpTest, ConstructorInitializeFields) {
+  {
+    const auto Results = signatures(R"cpp(
+      struct A {
+        A(int);
+      };
+      struct B {
+        B() : a_elem(^) {}
+        A a_elem;
+      };
+    )cpp");
+    EXPECT_THAT(Results.signatures, UnorderedElementsAre(
+            Sig("A(int)", {"int"}),
+            Sig("A(A &&)", {"A &&"}),
+            Sig("A(const A &)", {"const A &"})
+        ));
+  }
+  {
+    const auto Results = signatures(R"cpp(
+      struct A {
+        A(int);
+      };
+      struct C {
+        C(int);
+        C(A);
+      };
+      struct B {
+        B() : c_elem(A(1^)) {}
+        C c_elem;
+      };
+    )cpp");
+    EXPECT_THAT(Results.signatures, UnorderedElementsAre(
+            Sig("A(int)", {"int"}),
+            Sig("A(A &&)", {"A &&"}),
+            Sig("A(const A &)", {"const A &"})
+        ));
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

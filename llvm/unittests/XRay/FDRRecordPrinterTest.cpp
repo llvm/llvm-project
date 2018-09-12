@@ -39,10 +39,10 @@ template <> struct Helper<WallclockRecord> {
 
 template <> struct Helper<NewCPUIDRecord> {
   static std::unique_ptr<Record> construct() {
-    return make_unique<NewCPUIDRecord>(1);
+    return make_unique<NewCPUIDRecord>(1, 2);
   }
 
-  static const char *expected() { return "<CPU ID: 1>"; }
+  static const char *expected() { return "<CPU: id = 1, tsc = 2>"; }
 };
 
 template <> struct Helper<TSCWrapRecord> {

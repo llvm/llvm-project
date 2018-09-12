@@ -114,18 +114,16 @@ StringRef elf::getOutputSectionName(const InputSectionBase *S) {
   // for instance.
   if (Config->ZKeepTextSectionPrefix)
     for (StringRef V :
-         {".text.hot.", ".text.unlikely.", ".text.startup.", ".text.exit."}) {
+         {".text.hot.", ".text.unlikely.", ".text.startup.", ".text.exit."})
       if (isSectionPrefix(V, S->Name))
         return V.drop_back();
-    }
 
   for (StringRef V :
        {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.rel.ro.",
         ".bss.", ".init_array.", ".fini_array.", ".ctors.", ".dtors.", ".tbss.",
-        ".gcc_except_table.", ".tdata.", ".ARM.exidx.", ".ARM.extab."}) {
+        ".gcc_except_table.", ".tdata.", ".ARM.exidx.", ".ARM.extab."})
     if (isSectionPrefix(V, S->Name))
       return V.drop_back();
-  }
 
   // CommonSection is identified as "COMMON" in linker scripts.
   // By default, it should go to .bss section.

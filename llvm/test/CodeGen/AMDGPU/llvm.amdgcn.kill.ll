@@ -212,7 +212,7 @@ define amdgpu_gs void @neg_olt(float %a) {
 
 ; SI-LABEL: {{^}}fcmp_x2:
 ; FIXME: LLVM should be able to combine these fcmp opcodes.
-; SI: v_cmp_gt_f32
+; SI: v_cmp_lt_f32_e32 vcc, s{{[0-9]+}}, v0
 ; SI: v_cndmask_b32
 ; SI: v_cmpx_le_f32
 define amdgpu_ps void @fcmp_x2(float %a) #0 {

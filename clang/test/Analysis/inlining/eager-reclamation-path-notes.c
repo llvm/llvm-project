@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=text -analyzer-config graph-trim-interval=5 -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=plist-multi-file -analyzer-config graph-trim-interval=5 %s -o %t.plist
-// RUN: cat %t.plist | diff -u -w -I "<string>/" -I "<string>.:" -I "clang version" - %S/Inputs/expected-plists/eager-reclamation-path-notes.c.plist
+// RUN: cat %t.plist | diff -u -w -I "<string>/" -I "<string>.:" -I "version" - %S/Inputs/expected-plists/eager-reclamation-path-notes.c.plist
 
 void use(int *ptr, int val) {
   *ptr = val; // expected-warning {{Dereference of null pointer (loaded from variable 'ptr')}}

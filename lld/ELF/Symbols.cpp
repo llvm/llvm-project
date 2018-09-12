@@ -103,7 +103,8 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
     return 0;
   case Symbol::LazyArchiveKind:
   case Symbol::LazyObjectKind:
-    llvm_unreachable("lazy symbol reached writer");
+    assert(Sym.IsUsedInRegularObj && "lazy symbol reached writer");
+    return 0;
   }
   llvm_unreachable("invalid symbol kind");
 }

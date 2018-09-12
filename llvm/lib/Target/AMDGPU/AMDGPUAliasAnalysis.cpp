@@ -46,12 +46,8 @@ void AMDGPUAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
 }
 
-// Must match the table in getAliasResult.
-AMDGPUAAResult::ASAliasRulesTy::ASAliasRulesTy(Triple::ArchType Arch_)
-  : Arch(Arch_) {
-  // These arrarys are indexed by address space value
-  // enum elements 0 ... to 6
-  static const AliasResult ASAliasRulesGenIsZero[7][7] = {
+// These arrays are indexed by address space value enum elements 0 ... to 6
+static const AliasResult ASAliasRules[7][7] = {
   /*                    Flat       Global    Region    Group     Constant  Private   Constant 32-bit */
   /* Flat     */        {MayAlias, MayAlias, MayAlias, MayAlias, MayAlias, MayAlias, MayAlias},
   /* Global   */        {MayAlias, MayAlias, NoAlias , NoAlias , MayAlias, NoAlias , MayAlias},
@@ -60,22 +56,15 @@ AMDGPUAAResult::ASAliasRulesTy::ASAliasRulesTy(Triple::ArchType Arch_)
   /* Constant */        {MayAlias, MayAlias, MayAlias, NoAlias , NoAlias,  NoAlias , MayAlias},
   /* Private  */        {MayAlias, NoAlias , NoAlias , NoAlias , NoAlias , MayAlias, NoAlias},
   /* Constant 32-bit */ {MayAlias, MayAlias, MayAlias, NoAlias , MayAlias, NoAlias , NoAlias}
-  };
+};
 
+static AliasResult getAliasResult(unsigned AS1, unsigned AS2) {
   static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= 6, "Addr space out of range");
 
-  ASAliasRules = &ASAliasRulesGenIsZero;
-}
+  if (AS1 > AMDGPUAS::MAX_AMDGPU_ADDRESS || AS2 > AMDGPUAS::MAX_AMDGPU_ADDRESS)
+    return MayAlias;
 
-AliasResult AMDGPUAAResult::ASAliasRulesTy::getAliasResult(unsigned AS1,
-    unsigned AS2) const {
-  if (AS1 > AMDGPUAS::MAX_AMDGPU_ADDRESS || AS2 > AMDGPUAS::MAX_AMDGPU_ADDRESS) {
-    if (Arch == Triple::amdgcn)
-      report_fatal_error("Pointer address space out of range");
-    return AS1 == AS2 ? MayAlias : NoAlias;
-  }
-
-  return (*ASAliasRules)[AS1][AS2];
+  return ASAliasRules[AS1][AS2];
 }
 
 AliasResult AMDGPUAAResult::alias(const MemoryLocation &LocA,
@@ -83,8 +72,9 @@ AliasResult AMDGPUAAResult::alias(const MemoryLocation &LocA,
   unsigned asA = LocA.Ptr->getType()->getPointerAddressSpace();
   unsigned asB = LocB.Ptr->getType()->getPointerAddressSpace();
 
-  AliasResult Result = ASAliasRules.getAliasResult(asA, asB);
-  if (Result == NoAlias) return Result;
+  AliasResult Result = getAliasResult(asA, asB);
+  if (Result == NoAlias)
+    return Result;
 
   // Forward the query to the next alias analysis.
   return AAResultBase::alias(LocA, LocB);

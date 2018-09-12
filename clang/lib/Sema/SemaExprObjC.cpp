@@ -2471,7 +2471,8 @@ ExprResult Sema::BuildClassMessage(TypeSourceInfo *ReceiverTypeInfo,
     if (!Method)
       Method = Class->lookupPrivateClassMethod(Sel);
 
-    if (Method && DiagnoseUseOfDecl(Method, SelectorSlotLocs))
+    if (Method && DiagnoseUseOfDecl(Method, SelectorSlotLocs,
+                                    nullptr, false, false, Class))
       return ExprError();
   }
 
@@ -2784,14 +2785,19 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
       } else {
         if (ObjCMethodDecl *CurMeth = getCurMethodDecl()) {
           if (ObjCInterfaceDecl *ClassDecl = CurMeth->getClassInterface()) {
+            // FIXME: Is this correct? Why are we assuming that a message to
+            // Class will call a method in the current interface?
+
             // First check the public methods in the class interface.
             Method = ClassDecl->lookupClassMethod(Sel);
 
             if (!Method)
               Method = ClassDecl->lookupPrivateClassMethod(Sel);
+
+            if (Method && DiagnoseUseOfDecl(Method, SelectorSlotLocs, nullptr,
+                                            false, false, ClassDecl))
+              return ExprError();
           }
-          if (Method && DiagnoseUseOfDecl(Method, SelectorSlotLocs))
-            return ExprError();
         }
         if (!Method) {
           // If not messaging 'self', look for any factory method named 'Sel'.

@@ -34,7 +34,7 @@ define amdgpu_kernel void @mad_f16_imm_a(
 }
 
 ; GCN-LABEL: {{^}}mad_f16_imm_b:
-; GCN:  v_mov_b32_e32 [[KB:v[0-9]+]], 0x4800
+; GCN:  s_movk_i32 [[KB:s[0-9]+]], 0x4800
 ; GFX8: v_mad_f16 {{v[0-9]+}}, {{v[0-9]+}}, [[KB]],
 ; GFX9: v_mad_legacy_f16 {{v[0-9]+}}, {{v[0-9]+}}, [[KB]],
 define amdgpu_kernel void @mad_f16_imm_b(

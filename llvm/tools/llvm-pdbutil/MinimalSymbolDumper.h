@@ -53,6 +53,11 @@ private:
   std::string idIndex(codeview::TypeIndex TI) const;
 
   LinePrinter &P;
+
+  /// Dumping certain records requires knowing what machine this is. The
+  /// S_COMPILE3 record will tell us, but if we don't see one, default to X64.
+  codeview::CPUType CompilationCPU = codeview::CPUType::X64;
+
   bool RecordBytes;
   const SymbolGroup *SymGroup = nullptr;
   codeview::LazyRandomTypeCollection &Ids;

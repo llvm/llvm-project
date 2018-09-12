@@ -10,7 +10,7 @@ define float @pr26491(<4 x float> %a0) {
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[3,3]
 ; SSE2-NEXT:    addps %xmm0, %xmm1
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
-; SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm1[1],xmm0[1]
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
 ; SSE2-NEXT:    addss %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -19,7 +19,7 @@ define float @pr26491(<4 x float> %a0) {
 ; SSSE3-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SSSE3-NEXT:    addps %xmm0, %xmm1
 ; SSSE3-NEXT:    movaps %xmm1, %xmm0
-; SSSE3-NEXT:    movhlps {{.*#+}} xmm0 = xmm1[1],xmm0[1]
+; SSSE3-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
 ; SSSE3-NEXT:    addss %xmm1, %xmm0
 ; SSSE3-NEXT:    retq
 ;

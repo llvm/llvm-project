@@ -23,11 +23,13 @@
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 
 using namespace llvm;
+using namespace ore;
 
 Pass *MachineFunctionPass::createPrinterPass(raw_ostream &O,
                                              const std::string &Banner) const {
@@ -57,8 +59,42 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
     llvm_unreachable("MachineFunctionProperties check failed");
   }
 #endif
+  // Collect the MI count of the function before the pass.
+  unsigned CountBefore, CountAfter;
+
+  // Check if the user asked for size remarks.
+  bool ShouldEmitSizeRemarks =
+      F.getParent()->shouldEmitInstrCountChangedRemark();
+
+  // If we want size remarks, collect the number of MachineInstrs in our
+  // MachineFunction before the pass runs.
+  if (ShouldEmitSizeRemarks)
+    CountBefore = MF.getInstructionCount();
 
   bool RV = runOnMachineFunction(MF);
+
+  if (ShouldEmitSizeRemarks) {
+    // We wanted size remarks. Check if there was a change to the number of
+    // MachineInstrs in the module. Emit a remark if there was a change.
+    CountAfter = MF.getInstructionCount();
+    if (CountBefore != CountAfter) {
+      MachineOptimizationRemarkEmitter MORE(MF, nullptr);
+      MORE.emit([&]() {
+        int64_t Delta = static_cast<int64_t>(CountAfter) -
+                        static_cast<int64_t>(CountBefore);
+        MachineOptimizationRemarkAnalysis R("size-info", "FunctionMISizeChange",
+                                            MF.getFunction().getSubprogram(),
+                                            &MF.front());
+        R << NV("Pass", getPassName())
+          << ": Function: " << NV("Function", F.getName()) << ": "
+          << "MI Instruction count changed from "
+          << NV("MIInstrsBefore", CountBefore) << " to "
+          << NV("MIInstrsAfter", CountAfter)
+          << "; Delta: " << NV("Delta", Delta);
+        return R;
+      });
+    }
+  }
 
   MFProps.set(SetProperties);
   MFProps.reset(ClearedProperties);

@@ -2758,6 +2758,46 @@ enum class Y {};
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt;</td><td class="name" onclick="toggle('isInstantiationDependent0')"><a name="isInstantiationDependent0Anchor">isInstantiationDependent</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isInstantiationDependent0"><pre>Matches expressions that are instantiation-dependent even if it is
+neither type- nor value-dependent.
+
+In the following example, the expression sizeof(sizeof(T() + T()))
+is instantiation-dependent (since it involves a template parameter T),
+but is neither type- nor value-dependent, since the type of the inner
+sizeof is known (std::size_t) and therefore the size of the outer
+sizeof is known.
+  template&lt;typename T&gt;
+  void f(T x, T y) { sizeof(sizeof(T() + T()); }
+expr(isInstantiationDependent()) matches sizeof(sizeof(T() + T())
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt;</td><td class="name" onclick="toggle('isTypeDependent0')"><a name="isTypeDependent0Anchor">isTypeDependent</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isTypeDependent0"><pre>Matches expressions that are type-dependent because the template type
+is not yet instantiated.
+
+For example, the expressions "x" and "x + y" are type-dependent in
+the following code, but "y" is not type-dependent:
+  template&lt;typename T&gt;
+  void add(T x, int y) {
+    x + y;
+  }
+expr(isTypeDependent()) matches x + y
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt;</td><td class="name" onclick="toggle('isValueDependent0')"><a name="isValueDependent0Anchor">isValueDependent</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isValueDependent0"><pre>Matches expression that are value-dependent because they contain a
+non-type template parameter.
+
+For example, the array bound of "Chars" in the following example is
+value-dependent.
+  template&lt;int Size&gt; int f() { return Size; }
+expr(isValueDependent()) matches return Size
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FieldDecl.html">FieldDecl</a>&gt;</td><td class="name" onclick="toggle('hasBitWidth0')"><a name="hasBitWidth0Anchor">hasBitWidth</a></td><td>unsigned Width</td></tr>
 <tr><td colspan="4" class="doc" id="hasBitWidth0"><pre>Matches non-static data members that are bit-fields of the specified
 bit width.

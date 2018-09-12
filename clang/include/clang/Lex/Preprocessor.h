@@ -726,6 +726,9 @@ private:
   /// The file ID for the PCH through header.
   FileID PCHThroughHeaderFileID;
 
+  /// Whether tokens are being skipped until a #pragma hdrstop is seen.
+  bool SkippingUntilPragmaHdrStop = false;
+
   /// Whether tokens are being skipped until the through header is seen.
   bool SkippingUntilPCHThroughHeader = false;
 
@@ -1168,11 +1171,19 @@ public:
   /// True if using a PCH with a through header.
   bool usingPCHWithThroughHeader();
 
-  /// Skip tokens until after the #include of the through header.
-  void SkipTokensUntilPCHThroughHeader();
+  /// True if creating a PCH with a #pragma hdrstop.
+  bool creatingPCHWithPragmaHdrStop();
 
-  /// Process directives while skipping until the through header is found.
-  void HandleSkippedThroughHeaderDirective(Token &Result,
+  /// True if using a PCH with a #pragma hdrstop.
+  bool usingPCHWithPragmaHdrStop();
+
+  /// Skip tokens until after the #include of the through header or
+  /// until after a #pragma hdrstop.
+  void SkipTokensWhileUsingPCH();
+
+  /// Process directives while skipping until the through header or
+  /// #pragma hdrstop is found.
+  void HandleSkippedDirectiveWhileUsingPCH(Token &Result,
                                            SourceLocation HashLoc);
 
   /// Enter the specified FileID as the main source file,
@@ -2203,6 +2214,7 @@ public:
   void HandlePragmaPopMacro(Token &Tok);
   void HandlePragmaIncludeAlias(Token &Tok);
   void HandlePragmaModuleBuild(Token &Tok);
+  void HandlePragmaHdrstop(Token &Tok);
   IdentifierInfo *ParsePragmaPushOrPopMacro(Token &Tok);
 
   // Return true and store the first token only if any CommentHandler

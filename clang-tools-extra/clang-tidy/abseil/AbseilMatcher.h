@@ -43,24 +43,15 @@ AST_POLYMORPHIC_MATCHER(
   // Determine whether filepath contains "absl/[absl-library]" substring, where
   // [absl-library] is AbseilLibraries list entry.
   StringRef Path = FileEntry->getName();
-  const static llvm::SmallString<5> AbslPrefix("absl/");
+  static constexpr llvm::StringLiteral AbslPrefix("absl/");
   size_t PrefixPosition = Path.find(AbslPrefix);
   if (PrefixPosition == StringRef::npos)
     return false;
   Path = Path.drop_front(PrefixPosition + AbslPrefix.size());
-  static const char *AbseilLibraries[] = {"algorithm",
-                                          "base",
-                                          "container",
-                                          "debugging",
-                                          "flags"
-                                          "memory",
-                                          "meta",
-                                          "numeric",
-                                          "strings",
-                                          "synchronization",
-                                          "time",
-                                          "types",
-                                          "utility"};
+  static const char *AbseilLibraries[] = {
+      "algorithm", "base",  "container", "debugging", "flags",
+      "memory",    "meta",  "numeric",   "strings",   "synchronization",
+      "time",      "types", "utility"};
   return std::any_of(
       std::begin(AbseilLibraries), std::end(AbseilLibraries),
       [&](const char *Library) { return Path.startswith(Library); });

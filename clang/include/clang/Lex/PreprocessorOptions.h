@@ -54,6 +54,16 @@ public:
   /// definitions and expansions.
   bool DetailedRecord = false;
 
+  /// When true, we are creating or using a PCH where a #pragma hdrstop is
+  /// expected to indicate the beginning or end of the PCH.
+  bool PCHWithHdrStop = false;
+
+  /// When true, we are creating a PCH or creating the PCH object while
+  /// expecting a #pragma hdrstop to separate the two.  Allow for a
+  /// missing #pragma hdrstop, which generates a PCH for the whole file,
+  /// and creates an empty PCH object.
+  bool PCHWithHdrStopCreate = false;
+
   /// If non-empty, the filename used in an #include directive in the primary
   /// source file (or command-line preinclude) that is used to implement
   /// MSVC-style precompiled headers. When creating a PCH, after the #include

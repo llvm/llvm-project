@@ -87,6 +87,11 @@ Attribute Changes in Clang
 Windows Support
 ---------------
 
+- clang-cl now supports the use of the precompiled header options /Yc and /Yu
+  without the filename argument. When these options are used without the
+  filename, a `#pragma hdrstop` inside the source marks the end of the
+  precompiled code.
+
 - ...
 
 

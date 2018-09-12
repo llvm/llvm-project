@@ -758,9 +758,12 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
       // instructions (in fact, they get ignored if they *do* exist).
       MF->setVariableDbgInfo(DI.getVariable(), DI.getExpression(),
                              getOrCreateFrameIndex(*AI), DI.getDebugLoc());
-    } else
-      MIRBuilder.buildDirectDbgValue(getOrCreateVReg(*Address),
-                                     DI.getVariable(), DI.getExpression());
+    } else {
+      // A dbg.declare describes the address of a source variable, so lower it
+      // into an indirect DBG_VALUE.
+      MIRBuilder.buildIndirectDbgValue(getOrCreateVReg(*Address),
+                                       DI.getVariable(), DI.getExpression());
+    }
     return true;
   }
   case Intrinsic::dbg_label: {

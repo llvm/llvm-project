@@ -16,8 +16,8 @@
 #define LLVM_TOOLS_LLVM_MCA_HWEVENTLISTENER_H
 
 #include "Instruction.h"
+#include "Support.h"
 #include "llvm/ADT/ArrayRef.h"
-#include <utility>
 
 namespace mca {
 
@@ -61,11 +61,12 @@ public:
 class HWInstructionIssuedEvent : public HWInstructionEvent {
 public:
   using ResourceRef = std::pair<uint64_t, uint64_t>;
-  HWInstructionIssuedEvent(const InstRef &IR,
-                           llvm::ArrayRef<std::pair<ResourceRef, double>> UR)
+  HWInstructionIssuedEvent(
+      const InstRef &IR,
+      llvm::ArrayRef<std::pair<ResourceRef, ResourceCycles>> UR)
       : HWInstructionEvent(HWInstructionEvent::Issued, IR), UsedResources(UR) {}
 
-  llvm::ArrayRef<std::pair<ResourceRef, double>> UsedResources;
+  llvm::ArrayRef<std::pair<ResourceRef, ResourceCycles>> UsedResources;
 };
 
 class HWInstructionDispatchedEvent : public HWInstructionEvent {

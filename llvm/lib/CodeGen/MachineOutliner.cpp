@@ -807,6 +807,11 @@ struct MachineOutliner : public ModulePass {
         return SP;
     return nullptr;
   }
+
+  /// Populate and \p InstructionMapper with instruction-to-integer mappings.
+  /// These are used to construct a suffix tree.
+  void populateMapper(InstructionMapper &Mapper, Module &M,
+                      MachineModuleInfo &MMI);
 };
 
 } // Anonymous namespace.
@@ -1333,34 +1338,8 @@ bool MachineOutliner::outline(
   return OutlinedSomething;
 }
 
-bool MachineOutliner::runOnModule(Module &M) {
-  // Check if there's anything in the module. If it's empty, then there's
-  // nothing to outline.
-  if (M.empty())
-    return false;
-
-  MachineModuleInfo &MMI = getAnalysis<MachineModuleInfo>();
-
-  // If the user passed -enable-machine-outliner=always or
-  // -enable-machine-outliner, the pass will run on all functions in the module.
-  // Otherwise, if the target supports default outlining, it will run on all
-  // functions deemed by the target to be worth outlining from by default. Tell
-  // the user how the outliner is running.
-  LLVM_DEBUG(
-    dbgs() << "Machine Outliner: Running on ";
-    if (RunOnAllFunctions)
-      dbgs() << "all functions";
-    else
-      dbgs() << "target-default functions";
-    dbgs() << "\n"
-  );
-
-  // If the user specifies that they want to outline from linkonceodrs, set
-  // it here.
-  OutlineFromLinkOnceODRs = EnableLinkOnceODROutlining;
-
-  InstructionMapper Mapper;
-
+void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
+                                     MachineModuleInfo &MMI) {
   // Build instruction mappings for each function in the module. Start by
   // iterating over each Function in M.
   for (Function &F : M) {
@@ -1407,6 +1386,37 @@ bool MachineOutliner::runOnModule(Module &M) {
       Mapper.convertToUnsignedVec(MBB, *TII);
     }
   }
+}
+
+bool MachineOutliner::runOnModule(Module &M) {
+  // Check if there's anything in the module. If it's empty, then there's
+  // nothing to outline.
+  if (M.empty())
+    return false;
+
+  MachineModuleInfo &MMI = getAnalysis<MachineModuleInfo>();
+
+  // If the user passed -enable-machine-outliner=always or
+  // -enable-machine-outliner, the pass will run on all functions in the module.
+  // Otherwise, if the target supports default outlining, it will run on all
+  // functions deemed by the target to be worth outlining from by default. Tell
+  // the user how the outliner is running.
+  LLVM_DEBUG(
+    dbgs() << "Machine Outliner: Running on ";
+    if (RunOnAllFunctions)
+      dbgs() << "all functions";
+    else
+      dbgs() << "target-default functions";
+    dbgs() << "\n"
+  );
+
+  // If the user specifies that they want to outline from linkonceodrs, set
+  // it here.
+  OutlineFromLinkOnceODRs = EnableLinkOnceODROutlining;
+  InstructionMapper Mapper;
+
+  // Prepare instruction mappings for the suffix tree.
+  populateMapper(Mapper, M, MMI);
 
   // Construct a suffix tree, use it to find candidates, and then outline them.
   SuffixTree ST(Mapper.UnsignedVec);

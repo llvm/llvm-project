@@ -166,6 +166,14 @@ public:
     return getOrInitSelector(StringRef("isEqual"), isEqualSel);
   }
 
+  Selector getNewSelector() const {
+    return getOrInitNullarySelector("new", NewSel);
+  }
+
+  Selector getInitSelector() const {
+    return getOrInitNullarySelector("init", InitSel);
+  }
+
   /// Enumerates the NSNumber methods used to generate literals.
   enum NSNumberLiteralMethodKind {
     NSNumberWithChar,
@@ -229,6 +237,7 @@ private:
   bool isObjCEnumerator(const Expr *E,
                         StringRef name, IdentifierInfo *&II) const;
   Selector getOrInitSelector(ArrayRef<StringRef> Ids, Selector &Sel) const;
+  Selector getOrInitNullarySelector(StringRef Id, Selector &Sel) const;
 
   ASTContext &Ctx;
 
@@ -251,7 +260,7 @@ private:
 
   mutable Selector objectForKeyedSubscriptSel, objectAtIndexedSubscriptSel,
                    setObjectForKeyedSubscriptSel,setObjectAtIndexedSubscriptSel,
-                   isEqualSel;
+                   isEqualSel, InitSel, NewSel;
 
   mutable IdentifierInfo *BOOLId, *NSIntegerId, *NSUIntegerId;
   mutable IdentifierInfo *NSASCIIStringEncodingId, *NSUTF8StringEncodingId;

@@ -409,7 +409,7 @@ define i32 @test32(i32 %X) {
 
 define <2 x i32> @test32vec(<2 x i32> %X) {
 ; CHECK-LABEL: @test32vec(
-; CHECK-NEXT:    [[MUL:%.*]] = shl nsw <2 x i32> [[X:%.*]], <i32 31, i32 31>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[X:%.*]], <i32 31, i32 31>
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %mul = mul nsw <2 x i32> %X, <i32 -2147483648, i32 -2147483648>

@@ -1195,8 +1195,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   // integer add followed by a sext.
   if (SExtInst *LHSConv = dyn_cast<SExtInst>(LHS)) {
     // (add (sext x), cst) --> (sext (add x, cst'))
-    Constant *RHSC;
-    if (match(RHS, m_Constant(RHSC))) {
+    if (auto *RHSC = dyn_cast<Constant>(RHS)) {
       if (LHSConv->hasOneUse()) {
         Constant *CI =
             ConstantExpr::getTrunc(RHSC, LHSConv->getOperand(0)->getType());
@@ -1232,8 +1231,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   // integer add followed by a zext.
   if (auto *LHSConv = dyn_cast<ZExtInst>(LHS)) {
     // (add (zext x), cst) --> (zext (add x, cst'))
-    Constant *RHSC;
-    if (match(RHS, m_Constant(RHSC))) {
+    if (auto *RHSC = dyn_cast<Constant>(RHS)) {
       if (LHSConv->hasOneUse()) {
         Constant *CI =
             ConstantExpr::getTrunc(RHSC, LHSConv->getOperand(0)->getType());

@@ -412,8 +412,15 @@ def err_pp_through_header_not_found : Error<
 def err_pp_through_header_not_seen : Error<
   "#include of '%0' not seen while attempting to "
   "%select{create|use}1 precompiled header">, DefaultFatal;
+def err_pp_pragma_hdrstop_not_seen : Error<
+  "#pragma hdrstop not seen while attempting to use precompiled header">,
+  DefaultFatal;
 def warn_pp_macro_def_mismatch_with_pch : Warning<
   "definition of macro %0 does not match definition in precompiled header">,
+  InGroup<ClangClPch>;
+def warn_pp_hdrstop_filename_ignored : Warning<
+  "#pragma hdrstop filename not supported, "
+  "/Fp can be used to specify precompiled header filename">,
   InGroup<ClangClPch>;
 def err_pp_file_not_found_not_fatal : Error<
   "'%0' file not found with <angled> include; use \"quotes\" instead">;

@@ -496,7 +496,7 @@ void getLoopAnalysisUsage(AnalysisUsage &AU);
 /// \p TargetExecutesOncePerLoop is true only when it is guaranteed that the
 /// target executes at most once per execution of the loop body.  This is used
 /// to assess the legality of duplicating atomic loads.  Generally, this is
-/// true when moving out of loop and not true when moving into loops.  
+/// true when moving out of loop and not true when moving into loops.
 /// If \p ORE is set use it to emit optimization remarks.
 bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         Loop *CurLoop, AliasSetTracker *CurAST,

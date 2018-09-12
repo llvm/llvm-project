@@ -93,7 +93,7 @@ void StrCatAppendCheck::check(const MatchFinder::MatchResult &Result) {
       << FixItHint::CreateReplacement(
              CharSourceRange::getTokenRange(Op->getBeginLoc(),
                                             Call->getCallee()->getEndLoc()),
-             "StrAppend")
+             "absl::StrAppend")
       << FixItHint::CreateInsertion(Call->getArg(0)->getBeginLoc(), "&");
 }
 

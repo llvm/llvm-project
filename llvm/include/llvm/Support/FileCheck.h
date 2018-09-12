@@ -80,7 +80,7 @@ class FileCheckPattern {
   std::vector<std::pair<StringRef, unsigned>> VariableUses;
 
   /// Maps definitions of variables to their parenthesized capture numbers.
-  /// 
+  ///
   /// E.g. for the pattern "foo[[bar:.*]]baz", VariableDefs will map "bar" to
   /// 1.
   std::map<StringRef, unsigned> VariableDefs;

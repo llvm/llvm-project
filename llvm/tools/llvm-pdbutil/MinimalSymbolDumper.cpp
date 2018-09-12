@@ -490,6 +490,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   AutoIndent Indent(P, 7);
   SourceLanguage Lang = static_cast<SourceLanguage>(
       Compile2.Flags & CompileSym2Flags::SourceLanguageMask);
+  CompilationCPU = Compile2.Machine;
   P.formatLine("machine = {0}, ver = {1}, language = {2}",
                formatMachineType(Compile2.Machine), Compile2.Version,
                formatSourceLanguage(Lang));
@@ -510,6 +511,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   AutoIndent Indent(P, 7);
   SourceLanguage Lang = static_cast<SourceLanguage>(
       Compile3.Flags & CompileSym3Flags::SourceLanguageMask);
+  CompilationCPU = Compile3.Machine;
   P.formatLine("machine = {0}, Ver = {1}, language = {2}",
                formatMachineType(Compile3.Machine), Compile3.Version,
                formatSourceLanguage(Lang));
@@ -629,6 +631,9 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, FrameProcSym &FP) {
                FP.BytesOfCalleeSavedRegisters,
                formatSegmentOffset(FP.SectionIdOfExceptionHandler,
                                    FP.OffsetOfExceptionHandler));
+  P.formatLine("local fp reg = {0}, param fp reg = {1}",
+               formatRegisterId(FP.getLocalFramePtrReg(CompilationCPU)),
+               formatRegisterId(FP.getParamFramePtrReg(CompilationCPU)));
   P.formatLine("flags = {0}",
                formatFrameProcedureOptions(P.getIndentLevel() + 9, FP.Flags));
   return Error::success();

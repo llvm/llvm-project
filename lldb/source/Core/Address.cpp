@@ -281,7 +281,7 @@ addr_t Address::GetFileAddress() const {
     // We have a valid file range, so we can return the file based address by
     // adding the file base address to our offset
     return sect_file_addr + m_offset;
-  } else if (SectionWasDeleted()) {
+  } else if (SectionWasDeletedPrivate()) {
     // Used to have a valid section but it got deleted so the offset doesn't
     // mean anything without the section
     return LLDB_INVALID_ADDRESS;
@@ -302,7 +302,7 @@ addr_t Address::GetLoadAddress(Target *target) const {
         return sect_load_addr + m_offset;
       }
     }
-  } else if (SectionWasDeleted()) {
+  } else if (SectionWasDeletedPrivate()) {
     // Used to have a valid section but it got deleted so the offset doesn't
     // mean anything without the section
     return LLDB_INVALID_ADDRESS;
@@ -761,6 +761,12 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
 }
 
 bool Address::SectionWasDeleted() const {
+  if (GetSection())
+    return false;
+  return SectionWasDeletedPrivate();
+}
+
+bool Address::SectionWasDeletedPrivate() const {
   lldb::SectionWP empty_section_wp;
 
   // If either call to "std::weak_ptr::owner_before(...) value returns true,

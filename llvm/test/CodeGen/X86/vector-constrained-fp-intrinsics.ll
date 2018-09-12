@@ -88,7 +88,7 @@ define <3 x double> @constrained_vector_fdiv_v3f64() {
 ; NO-FMA-NEXT:    divsd {{.*}}(%rip), %xmm1
 ; NO-FMA-NEXT:    movsd %xmm1, -{{[0-9]+}}(%rsp)
 ; NO-FMA-NEXT:    movapd %xmm0, %xmm1
-; NO-FMA-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; NO-FMA-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; NO-FMA-NEXT:    fldl -{{[0-9]+}}(%rsp)
 ; NO-FMA-NEXT:    retq
 ;
@@ -473,7 +473,7 @@ define <3 x double> @constrained_vector_fmul_v3f64() {
 ; NO-FMA-NEXT:    mulsd {{.*}}(%rip), %xmm1
 ; NO-FMA-NEXT:    movsd %xmm1, -{{[0-9]+}}(%rsp)
 ; NO-FMA-NEXT:    movapd %xmm0, %xmm1
-; NO-FMA-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; NO-FMA-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; NO-FMA-NEXT:    fldl -{{[0-9]+}}(%rsp)
 ; NO-FMA-NEXT:    retq
 ;
@@ -604,7 +604,7 @@ define <3 x double> @constrained_vector_fadd_v3f64() {
 ; NO-FMA-NEXT:    addsd {{.*}}(%rip), %xmm1
 ; NO-FMA-NEXT:    movsd %xmm1, -{{[0-9]+}}(%rsp)
 ; NO-FMA-NEXT:    movapd %xmm0, %xmm1
-; NO-FMA-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; NO-FMA-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; NO-FMA-NEXT:    fldl -{{[0-9]+}}(%rsp)
 ; NO-FMA-NEXT:    retq
 ;
@@ -737,7 +737,7 @@ define <3 x double> @constrained_vector_fsub_v3f64() {
 ; NO-FMA-NEXT:    subpd {{.*}}(%rip), %xmm0
 ; NO-FMA-NEXT:    movsd %xmm1, -{{[0-9]+}}(%rsp)
 ; NO-FMA-NEXT:    movapd %xmm0, %xmm1
-; NO-FMA-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; NO-FMA-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; NO-FMA-NEXT:    fldl -{{[0-9]+}}(%rsp)
 ; NO-FMA-NEXT:    retq
 ;
@@ -1210,7 +1210,7 @@ define <3 x double> @constrained_vector_sqrt_v3f64() {
 ; NO-FMA-NEXT:    sqrtpd {{.*}}(%rip), %xmm0
 ; NO-FMA-NEXT:    movsd %xmm1, -{{[0-9]+}}(%rsp)
 ; NO-FMA-NEXT:    movapd %xmm0, %xmm1
-; NO-FMA-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; NO-FMA-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; NO-FMA-NEXT:    fldl -{{[0-9]+}}(%rsp)
 ; NO-FMA-NEXT:    retq
 ;

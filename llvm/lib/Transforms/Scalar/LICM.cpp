@@ -653,16 +653,8 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
     if (isLoadInvariantInLoop(LI, DT, CurLoop))
       return true;
 
-    // Don't hoist loads which have may-aliased stores in loop.
-    uint64_t Size = 0;
-    if (LI->getType()->isSized())
-      Size = I.getModule()->getDataLayout().getTypeStoreSize(LI->getType());
-
-    AAMDNodes AAInfo;
-    LI->getAAMetadata(AAInfo);
-
-    bool Invalidated = pointerInvalidatedByLoop(
-        MemoryLocation(LI->getOperand(0), Size, AAInfo), CurAST, CurLoop, AA);
+    bool Invalidated = pointerInvalidatedByLoop(MemoryLocation::get(LI),
+                                                CurAST, CurLoop, AA);
     // Check loop-invariant address because this may also be a sinkable load
     // whose address is not necessarily loop-invariant.
     if (ORE && Invalidated && CurLoop->isLoopInvariant(LI->getPointerOperand()))
@@ -1543,11 +1535,6 @@ LoopInvariantCodeMotion::collectAliasInfoForLoop(Loop *L, LoopInfo *LI,
                                                  AliasAnalysis *AA) {
   std::unique_ptr<AliasSetTracker> CurAST;
   SmallVector<Loop *, 4> RecomputeLoops;
-  auto mergeLoop = [&CurAST](Loop *L) {
-    // Loop over the body of this loop, looking for calls, invokes, and stores.
-    for (BasicBlock *BB : L->blocks())
-      CurAST->add(*BB); // Incorporate the specified basic block
-  };
   for (Loop *InnerL : L->getSubLoops()) {
     auto MapI = LoopToAliasSetMap.find(InnerL);
     // If the AST for this inner loop is missing it may have been merged into
@@ -1574,10 +1561,13 @@ LoopInvariantCodeMotion::collectAliasInfoForLoop(Loop *L, LoopInfo *LI,
 
   // Add everything from the sub loops that are no longer directly available.
   for (Loop *InnerL : RecomputeLoops)
-    mergeLoop(InnerL);
+    for (BasicBlock *BB : InnerL->blocks())
+      CurAST->add(*BB);
 
-  // And merge in this loop.
-  mergeLoop(L);
+  // And merge in this loop (without anything from inner loops).
+  for (BasicBlock *BB : L->blocks())
+    if (LI->getLoopFor(BB) == L)
+      CurAST->add(*BB);
 
   return CurAST;
 }

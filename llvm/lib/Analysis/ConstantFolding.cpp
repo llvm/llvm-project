@@ -960,10 +960,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
         NewIdxs.size() > *LastIRIndex) {
       InRangeIndex = LastIRIndex;
       for (unsigned I = 0; I <= *LastIRIndex; ++I)
-        if (NewIdxs[I] != InnermostGEP->getOperand(I + 1)) {
-          InRangeIndex = None;
-          break;
-        }
+        if (NewIdxs[I] != InnermostGEP->getOperand(I + 1))
+          return nullptr;
     }
 
   // Create a GEP.
@@ -985,11 +983,6 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 /// returned, if not, null is returned.  Note that this function can fail when
 /// attempting to fold instructions like loads and stores, which have no
 /// constant expression form.
-///
-/// TODO: This function neither utilizes nor preserves nsw/nuw/inbounds/inrange
-/// etc information, due to only being passed an opcode and operands. Constant
-/// folding using this function strips this information.
-///
 Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
                                        ArrayRef<Constant *> Ops,
                                        const DataLayout &DL,

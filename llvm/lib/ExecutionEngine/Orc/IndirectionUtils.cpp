@@ -123,6 +123,21 @@ createLocalCompileCallbackManager(const Triple &T, ExecutionSession &ES,
       return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
     }
 
+    case Triple::mips: {
+      typedef orc::LocalJITCompileCallbackManager<orc::OrcMips32Be> CCMgrT;
+      return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
+    }
+    case Triple::mipsel: {
+      typedef orc::LocalJITCompileCallbackManager<orc::OrcMips32Le> CCMgrT;
+      return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
+    }
+ 
+    case Triple::mips64:
+    case Triple::mips64el: {
+      typedef orc::LocalJITCompileCallbackManager<orc::OrcMips64> CCMgrT;
+      return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
+    }
+ 
     case Triple::x86_64: {
       if ( T.getOS() == Triple::OSType::Win32 ) {
         typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_Win32> CCMgrT;
@@ -157,6 +172,25 @@ createLocalIndirectStubsManagerBuilder(const Triple &T) {
                        orc::LocalIndirectStubsManager<orc::OrcI386>>();
       };
 
+    case Triple::mips:
+      return [](){
+          return llvm::make_unique<
+                      orc::LocalIndirectStubsManager<orc::OrcMips32Be>>();
+      };
+
+    case Triple::mipsel:
+      return [](){
+          return llvm::make_unique<
+                      orc::LocalIndirectStubsManager<orc::OrcMips32Le>>();
+      };
+
+    case Triple::mips64:
+    case Triple::mips64el:
+      return [](){
+          return llvm::make_unique<
+                      orc::LocalIndirectStubsManager<orc::OrcMips64>>();
+      };
+      
     case Triple::x86_64:
       if (T.getOS() == Triple::OSType::Win32) {
         return [](){

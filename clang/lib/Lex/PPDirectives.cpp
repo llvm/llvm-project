@@ -887,18 +887,29 @@ private:
   bool save;
 };
 
-/// Process a directive while looking for the through header.
-/// Only #include (to check if it is the through header) and #define (to warn
-/// about macros that don't match the PCH) are handled. All other directives
-/// are completely discarded.
-void Preprocessor::HandleSkippedThroughHeaderDirective(Token &Result,
+/// Process a directive while looking for the through header or a #pragma
+/// hdrstop. The following directives are handled:
+/// #include (to check if it is the through header)
+/// #define (to warn about macros that don't match the PCH)
+/// #pragma (to check for pragma hdrstop).
+/// All other directives are completely discarded.
+void Preprocessor::HandleSkippedDirectiveWhileUsingPCH(Token &Result,
                                                        SourceLocation HashLoc) {
   if (const IdentifierInfo *II = Result.getIdentifierInfo()) {
-    if (II->getPPKeywordID() == tok::pp_include)
-      return HandleIncludeDirective(HashLoc, Result);
-    if (II->getPPKeywordID() == tok::pp_define)
+    if (II->getPPKeywordID() == tok::pp_define) {
       return HandleDefineDirective(Result,
                                    /*ImmediatelyAfterHeaderGuard=*/false);
+    }
+    if (SkippingUntilPCHThroughHeader &&
+        II->getPPKeywordID() == tok::pp_include) {
+      return HandleIncludeDirective(HashLoc, Result);
+    }
+    if (SkippingUntilPragmaHdrStop && II->getPPKeywordID() == tok::pp_pragma) {
+      Token P = LookAhead(0);
+      auto *II = P.getIdentifierInfo();
+      if (II && II->getName() == "hdrstop")
+        return HandlePragmaDirective(HashLoc, PIK_HashPragma);
+    }
   }
   DiscardUntilEndOfDirective();
 }
@@ -964,8 +975,8 @@ void Preprocessor::HandleDirective(Token &Result) {
   // and reset to previous state when returning from this function.
   ResetMacroExpansionHelper helper(this);
 
-  if (SkippingUntilPCHThroughHeader)
-    return HandleSkippedThroughHeaderDirective(Result, SavedHash.getLocation());
+  if (SkippingUntilPCHThroughHeader || SkippingUntilPragmaHdrStop)
+    return HandleSkippedDirectiveWhileUsingPCH(Result, SavedHash.getLocation());
 
   switch (Result.getKind()) {
   case tok::eod:

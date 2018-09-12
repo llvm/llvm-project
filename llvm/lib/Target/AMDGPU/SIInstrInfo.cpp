@@ -1421,10 +1421,15 @@ MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
 // TargetInstrInfo::commuteInstruction uses it.
 bool SIInstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx0,
                                         unsigned &SrcOpIdx1) const {
-  if (!MI.isCommutable())
+  return findCommutedOpIndices(MI.getDesc(), SrcOpIdx0, SrcOpIdx1);
+}
+
+bool SIInstrInfo::findCommutedOpIndices(MCInstrDesc Desc, unsigned &SrcOpIdx0,
+                                        unsigned &SrcOpIdx1) const {
+  if (!Desc.isCommutable())
     return false;
 
-  unsigned Opc = MI.getOpcode();
+  unsigned Opc = Desc.getOpcode();
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
   if (Src0Idx == -1)
     return false;

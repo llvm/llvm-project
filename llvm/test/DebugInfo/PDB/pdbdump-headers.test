@@ -487,6 +487,7 @@ ALL-NEXT:          type = `0x1001 (int ())`, debug start = 3, debug end = 8, fla
 ALL-NEXT:    164 | S_FRAMEPROC [size = 32]
 ALL-NEXT:          size = 0, padding size = 0, offset to padding = 0
 ALL-NEXT:          bytes of callee saved registers = 0, exception handler addr = 0000:0000
+ALL-NEXT:          local fp reg = EBP, param fp reg = EBP
 ALL-NEXT:          flags = has async eh | opt speed
 ALL-NEXT:    196 | S_END [size = 4]
 ALL-NEXT:    200 | S_BUILDINFO [size = 8] BuildId = `0x100E`

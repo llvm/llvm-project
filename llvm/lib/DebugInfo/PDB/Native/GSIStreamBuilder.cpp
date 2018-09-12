@@ -310,13 +310,14 @@ Error GSIStreamBuilder::commitPublicsHashStream(
   PublicsStreamHeader Header;
 
   // FIXME: Fill these in. They are for incremental linking.
+  Header.SymHash = PSH->calculateSerializedLength();
+  Header.AddrMap = PSH->Records.size() * 4;
   Header.NumThunks = 0;
   Header.SizeOfThunk = 0;
   Header.ISectThunkTable = 0;
+  memset(Header.Padding, 0, sizeof(Header.Padding));
   Header.OffThunkTable = 0;
   Header.NumSections = 0;
-  Header.SymHash = PSH->calculateSerializedLength();
-  Header.AddrMap = PSH->Records.size() * 4;
   if (auto EC = Writer.writeObject(Header))
     return EC;
 
