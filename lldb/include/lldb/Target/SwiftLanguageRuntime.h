@@ -246,9 +246,8 @@ public:
 
   SwiftExceptionPrecondition *GetExceptionPrecondition();
 
-  static lldb::ValueObjectSP
-  CalculateErrorValueFromFirstArgument(lldb::StackFrameSP frame_sp,
-                                       ConstString name);
+  static lldb::ValueObjectSP CalculateErrorValue(lldb::StackFrameSP frame_sp,
+                                                 ConstString name);
 
   lldb::ValueObjectSP CalculateErrorValueObjectFromValue(Value &value,
                                                          ConstString name,
