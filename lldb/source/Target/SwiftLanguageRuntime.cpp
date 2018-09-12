@@ -3197,8 +3197,9 @@ SwiftLanguageRuntime::CalculateErrorValueObjectFromValue(
   return error_valobj_sp;
 }
 
-ValueObjectSP SwiftLanguageRuntime::CalculateErrorValueFromFirstArgument(
-    StackFrameSP frame_sp, ConstString variable_name) {
+ValueObjectSP
+SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
+                                          ConstString variable_name) {
   ProcessSP process_sp(frame_sp->GetThread()->GetProcess());
   ABISP abi_sp(process_sp->GetABI());
   ValueList argument_values;
@@ -3215,37 +3216,38 @@ ValueObjectSP SwiftLanguageRuntime::CalculateErrorValueFromFirstArgument(
   input_value.SetCompilerType(clang_void_ptr_type);
   argument_values.PushValue(input_value);
 
-  bool success = abi_sp->GetArgumentValues(*(frame_sp->GetThread().get()),
-                                           argument_values);
-  if (success) {
-    ExecutionContext exe_ctx;
-    frame_sp->CalculateExecutionContext(exe_ctx);
-    DataExtractor data;
+  auto *runtime = process_sp->GetSwiftLanguageRuntime();
+  if (!runtime)
+    return error_valobj_sp;
 
-    auto ast_context = target->GetScratchSwiftASTContext(error, *frame_sp);
-    if (!ast_context || error.Fail())
-      return error_valobj_sp;
+  llvm::Optional<Value> arg0 =
+      runtime->GetErrorReturnLocationAfterReturn(frame_sp);
+  if (!arg0)
+    return error_valobj_sp;
 
-    CompilerType swift_error_proto_type = ast_context->GetErrorType();
-    if (swift_error_proto_type.IsValid()) {
-      Value *arg0 = argument_values.GetValueAtIndex(0);
-      Status extract_error = arg0->GetValueAsData(&exe_ctx, data, 0, nullptr);
-      if (extract_error.Success()) {
-        error_valobj_sp = ValueObjectConstResult::Create(
-            frame_sp.get(), swift_error_proto_type, variable_name, data);
-        if (error_valobj_sp->GetError().Fail()) {
-          // If we couldn't make the error ValueObject, then we will always
-          // stop.
-          // FIXME: Some logging here would be good.
-          return error_valobj_sp;
-        }
+  ExecutionContext exe_ctx;
+  frame_sp->CalculateExecutionContext(exe_ctx);
 
-        error_valobj_sp =
-            error_valobj_sp->GetQualifiedRepresentationIfAvailable(
-                lldb::eDynamicCanRunTarget, true);
-      }
-    }
-  }
+  auto *exe_scope = exe_ctx.GetBestExecutionContextScope();
+  if (!exe_scope)
+    return error_valobj_sp;
+
+  auto ast_context = target->GetScratchSwiftASTContext(error, *frame_sp);
+  if (!ast_context || error.Fail())
+    return error_valobj_sp;
+
+  CompilerType swift_error_proto_type = ast_context->GetErrorType();
+  if (!swift_error_proto_type.IsValid())
+    return error_valobj_sp;
+
+  arg0->SetCompilerType(swift_error_proto_type);
+  error_valobj_sp =
+      ValueObjectConstResult::Create(exe_scope, *arg0, variable_name);
+  if (error_valobj_sp->GetError().Fail())
+    return error_valobj_sp;
+
+  error_valobj_sp = error_valobj_sp->GetQualifiedRepresentationIfAvailable(
+      lldb::eDynamicCanRunTarget, true);
   return error_valobj_sp;
 }
 
@@ -3323,8 +3325,8 @@ bool SwiftLanguageRuntime::SwiftExceptionPrecondition::EvaluatePrecondition(
     if (!frame_sp)
       return true;
 
-    ValueObjectSP error_valobj_sp = CalculateErrorValueFromFirstArgument(
-        frame_sp, ConstString("__swift_error_var"));
+    ValueObjectSP error_valobj_sp =
+        CalculateErrorValue(frame_sp, ConstString("__swift_error_var"));
     if (!error_valobj_sp || error_valobj_sp->GetError().Fail())
       return true;
 
