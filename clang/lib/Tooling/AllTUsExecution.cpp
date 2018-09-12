@@ -129,6 +129,8 @@ llvm::Error AllTUsToolExecutor::execute(
           },
           File);
     }
+    // Make sure all tasks have finished before resetting the working directory.
+    Pool.wait();
     if (!InitialWorkingDir.empty()) {
       if (auto EC = llvm::sys::fs::set_current_path(InitialWorkingDir))
         llvm::errs() << "Error while restoring working directory: "

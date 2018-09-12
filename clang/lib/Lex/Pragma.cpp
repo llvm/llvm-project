@@ -876,6 +876,37 @@ void Preprocessor::HandlePragmaModuleBuild(Token &Tok) {
                                        StringRef(Start, End - Start));
 }
 
+void Preprocessor::HandlePragmaHdrstop(Token &Tok) {
+  Lex(Tok);
+  if (Tok.is(tok::l_paren)) {
+    Diag(Tok.getLocation(), diag::warn_pp_hdrstop_filename_ignored);
+
+    std::string FileName;
+    if (!LexStringLiteral(Tok, FileName, "pragma hdrstop", false))
+      return;
+
+    if (Tok.isNot(tok::r_paren)) {
+      Diag(Tok, diag::err_expected) << tok::r_paren;
+      return;
+    }
+    Lex(Tok);
+  }
+  if (Tok.isNot(tok::eod))
+    Diag(Tok.getLocation(), diag::ext_pp_extra_tokens_at_eol)
+        << "pragma hdrstop";
+
+  if (creatingPCHWithPragmaHdrStop() &&
+      SourceMgr.isInMainFile(Tok.getLocation())) {
+    assert(CurLexer && "no lexer for #pragma hdrstop processing");
+    Token &Result = Tok;
+    Result.startToken();
+    CurLexer->FormTokenWithChars(Result, CurLexer->BufferEnd, tok::eof);
+    CurLexer->cutOffLexing();
+  }
+  if (usingPCHWithPragmaHdrStop())
+    SkippingUntilPragmaHdrStop = false;
+}
+
 /// AddPragmaHandler - Add the specified pragma handler to the preprocessor.
 /// If 'Namespace' is non-null, then it is a token required to exist on the
 /// pragma line before the pragma string starts, e.g. "STDC" or "GCC".
@@ -1217,6 +1248,15 @@ public:
         << WarningName;
     else if (Callbacks)
       Callbacks->PragmaDiagnostic(DiagLoc, Namespace, SV, WarningName);
+  }
+};
+
+/// "\#pragma hdrstop [<header-name-string>]"
+struct PragmaHdrstopHandler : public PragmaHandler {
+  PragmaHdrstopHandler() : PragmaHandler("hdrstop") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
+                    Token &DepToken) override {
+    PP.HandlePragmaHdrstop(DepToken);
   }
 };
 
@@ -1799,6 +1839,7 @@ void Preprocessor::RegisterBuiltinPragmas() {
   if (LangOpts.MicrosoftExt) {
     AddPragmaHandler(new PragmaWarningHandler());
     AddPragmaHandler(new PragmaIncludeAliasHandler());
+    AddPragmaHandler(new PragmaHdrstopHandler());
   }
 
   // Pragmas added by plugins

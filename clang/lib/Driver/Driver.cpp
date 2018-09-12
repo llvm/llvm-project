@@ -2984,22 +2984,9 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     }
   }
 
-  // Diagnose unsupported forms of /Yc /Yu. Ignore /Yc/Yu for now if:
-  // * no filename after it
-  // * both /Yc and /Yu passed but with different filenames
-  // * corresponding file not also passed as /FI
+  // Ignore /Yc/Yu if both /Yc and /Yu passed but with different filenames.
   Arg *YcArg = Args.getLastArg(options::OPT__SLASH_Yc);
   Arg *YuArg = Args.getLastArg(options::OPT__SLASH_Yu);
-  if (YcArg && YcArg->getValue()[0] == '\0') {
-    Diag(clang::diag::warn_drv_ycyu_no_arg_clang_cl) << YcArg->getSpelling();
-    Args.eraseArg(options::OPT__SLASH_Yc);
-    YcArg = nullptr;
-  }
-  if (YuArg && YuArg->getValue()[0] == '\0') {
-    Diag(clang::diag::warn_drv_ycyu_no_arg_clang_cl) << YuArg->getSpelling();
-    Args.eraseArg(options::OPT__SLASH_Yu);
-    YuArg = nullptr;
-  }
   if (YcArg && YuArg && strcmp(YcArg->getValue(), YuArg->getValue()) != 0) {
     Diag(clang::diag::warn_drv_ycyu_different_arg_clang_cl);
     Args.eraseArg(options::OPT__SLASH_Yc);
@@ -4167,16 +4154,24 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
 }
 
 std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
-  // Respect a limited subset of the '-Bprefix' functionality in GCC by
-  // attempting to use this prefix when looking for file paths.
-  for (const std::string &Dir : PrefixDirs) {
-    if (Dir.empty())
-      continue;
-    SmallString<128> P(Dir[0] == '=' ? SysRoot + Dir.substr(1) : Dir);
-    llvm::sys::path::append(P, Name);
-    if (llvm::sys::fs::exists(Twine(P)))
-      return P.str();
-  }
+  // Seach for Name in a list of paths.
+  auto SearchPaths = [&](const llvm::SmallVectorImpl<std::string> &P)
+      -> llvm::Optional<std::string> {
+    // Respect a limited subset of the '-Bprefix' functionality in GCC by
+    // attempting to use this prefix when looking for file paths.
+    for (const auto &Dir : P) {
+      if (Dir.empty())
+        continue;
+      SmallString<128> P(Dir[0] == '=' ? SysRoot + Dir.substr(1) : Dir);
+      llvm::sys::path::append(P, Name);
+      if (llvm::sys::fs::exists(Twine(P)))
+        return {P.str()};
+    }
+    return None;
+  };
+
+  if (auto P = SearchPaths(PrefixDirs))
+    return *P;
 
   SmallString<128> R(ResourceDir);
   llvm::sys::path::append(R, Name);
@@ -4188,14 +4183,11 @@ std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
   if (llvm::sys::fs::exists(Twine(P)))
     return P.str();
 
-  for (const std::string &Dir : TC.getFilePaths()) {
-    if (Dir.empty())
-      continue;
-    SmallString<128> P(Dir[0] == '=' ? SysRoot + Dir.substr(1) : Dir);
-    llvm::sys::path::append(P, Name);
-    if (llvm::sys::fs::exists(Twine(P)))
-      return P.str();
-  }
+  if (auto P = SearchPaths(TC.getLibraryPaths()))
+    return *P;
+
+  if (auto P = SearchPaths(TC.getFilePaths()))
+    return *P;
 
   return Name;
 }
@@ -4281,11 +4273,11 @@ std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
     // extension of .pch is assumed. "
     if (!llvm::sys::path::has_extension(Output))
       Output += ".pch";
-  } else if (Arg *YcArg = C.getArgs().getLastArg(options::OPT__SLASH_Yc)) {
-    Output = YcArg->getValue();
-    llvm::sys::path::replace_extension(Output, ".pch");
   } else {
-    Output = BaseName;
+    if (Arg *YcArg = C.getArgs().getLastArg(options::OPT__SLASH_Yc))
+      Output = YcArg->getValue();
+    if (Output.empty())
+      Output = BaseName;
     llvm::sys::path::replace_extension(Output, ".pch");
   }
   return Output.str();

@@ -12998,16 +12998,20 @@ void Sema::ActOnOpenMPDeclareTargetName(Scope *CurScope,
   }
 
   NamedDecl *ND = Lookup.getAsSingle<NamedDecl>();
-  if (isa<VarDecl>(ND) || isa<FunctionDecl>(ND)) {
+  if (isa<VarDecl>(ND) || isa<FunctionDecl>(ND) ||
+      isa<FunctionTemplateDecl>(ND)) {
     if (!SameDirectiveDecls.insert(cast<NamedDecl>(ND->getCanonicalDecl())))
       Diag(Id.getLoc(), diag::err_omp_declare_target_multiple) << Id.getName();
-    if (!ND->hasAttr<OMPDeclareTargetDeclAttr>()) {
+    llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
+        OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(
+            cast<ValueDecl>(ND));
+    if (!Res) {
       auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(Context, MT);
       ND->addAttr(A);
       if (ASTMutationListener *ML = Context.getASTMutationListener())
         ML->DeclarationMarkedOpenMPDeclareTarget(ND, A);
       checkDeclIsAllowedInOpenMPTarget(nullptr, ND, Id.getLoc());
-    } else if (ND->getAttr<OMPDeclareTargetDeclAttr>()->getMapType() != MT) {
+    } else if (*Res != MT) {
       Diag(Id.getLoc(), diag::err_omp_declare_target_to_and_link)
           << Id.getName();
     }
@@ -13018,79 +13022,13 @@ void Sema::ActOnOpenMPDeclareTargetName(Scope *CurScope,
 
 static void checkDeclInTargetContext(SourceLocation SL, SourceRange SR,
                                      Sema &SemaRef, Decl *D) {
-  if (!D)
+  if (!D || !isa<VarDecl>(D))
     return;
-  const Decl *LD = nullptr;
-  if (isa<TagDecl>(D)) {
-    LD = cast<TagDecl>(D)->getDefinition();
-  } else if (isa<VarDecl>(D)) {
-    LD = cast<VarDecl>(D)->getDefinition();
-
-    // If this is an implicit variable that is legal and we do not need to do
-    // anything.
-    if (cast<VarDecl>(D)->isImplicit()) {
-      auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(
-          SemaRef.Context, OMPDeclareTargetDeclAttr::MT_To);
-      D->addAttr(A);
-      if (ASTMutationListener *ML = SemaRef.Context.getASTMutationListener())
-        ML->DeclarationMarkedOpenMPDeclareTarget(D, A);
-      return;
-    }
-  } else if (const auto *F = dyn_cast<FunctionDecl>(D)) {
-    const FunctionDecl *FD = nullptr;
-    if (cast<FunctionDecl>(D)->hasBody(FD)) {
-      LD = FD;
-      // If the definition is associated with the current declaration in the
-      // target region (it can be e.g. a lambda) that is legal and we do not
-      // need to do anything else.
-      if (LD == D) {
-        auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(
-            SemaRef.Context, OMPDeclareTargetDeclAttr::MT_To);
-        D->addAttr(A);
-        if (ASTMutationListener *ML = SemaRef.Context.getASTMutationListener())
-          ML->DeclarationMarkedOpenMPDeclareTarget(D, A);
-        return;
-      }
-    } else if (F->isFunctionTemplateSpecialization() &&
-               F->getTemplateSpecializationKind() ==
-                   TSK_ImplicitInstantiation) {
-      // Check if the function is implicitly instantiated from the template
-      // defined in the declare target region.
-      const FunctionTemplateDecl *FTD = F->getPrimaryTemplate();
-      if (FTD && FTD->hasAttr<OMPDeclareTargetDeclAttr>())
-        return;
-    }
-  }
-  if (!LD)
-    LD = D;
-  if (LD && !LD->hasAttr<OMPDeclareTargetDeclAttr>() &&
-      ((isa<VarDecl>(LD) && !isa<ParmVarDecl>(LD)) || isa<FunctionDecl>(LD))) {
-    // Outlined declaration is not declared target.
-    if (!isa<FunctionDecl>(LD)) {
-      if (LD->isOutOfLine()) {
-        SemaRef.Diag(LD->getLocation(), diag::warn_omp_not_in_target_context);
-        SemaRef.Diag(SL, diag::note_used_here) << SR;
-      } else {
-        const DeclContext *DC = LD->getDeclContext();
-        while (DC &&
-               (!isa<FunctionDecl>(DC) ||
-                !cast<FunctionDecl>(DC)->hasAttr<OMPDeclareTargetDeclAttr>()))
-          DC = DC->getParent();
-        if (DC)
-          return;
-
-        // Is not declared in target context.
-        SemaRef.Diag(LD->getLocation(), diag::warn_omp_not_in_target_context);
-        SemaRef.Diag(SL, diag::note_used_here) << SR;
-      }
-    }
-    // Mark decl as declared target to prevent further diagnostic.
-    auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(
-        SemaRef.Context, OMPDeclareTargetDeclAttr::MT_To);
-    D->addAttr(A);
-    if (ASTMutationListener *ML = SemaRef.Context.getASTMutationListener())
-      ML->DeclarationMarkedOpenMPDeclareTarget(D, A);
-  }
+  auto *VD = cast<VarDecl>(D);
+  if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD))
+    return;
+  SemaRef.Diag(VD->getLocation(), diag::warn_omp_not_in_target_context);
+  SemaRef.Diag(SL, diag::note_used_here) << SR;
 }
 
 static bool checkValueDeclInTarget(SourceLocation SL, SourceRange SR,
@@ -13109,7 +13047,8 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
   SourceLocation SL = E ? E->getBeginLoc() : D->getLocation();
   if (auto *VD = dyn_cast<VarDecl>(D)) {
     // Only global variables can be marked as declare target.
-    if (VD->isLocalVarDeclOrParm())
+    if (!VD->isFileVarDecl() && !VD->isStaticLocal() &&
+        !VD->isStaticDataMember())
       return;
     // 2.10.6: threadprivate variable cannot appear in a declare target
     // directive.
@@ -13119,48 +13058,39 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
       return;
     }
   }
-  if (auto *VD = dyn_cast<ValueDecl>(D)) {
-    // Problem if any with var declared with incomplete type will be reported
-    // as normal, so no need to check it here.
-    if ((E || !VD->getType()->isIncompleteType()) &&
-        !checkValueDeclInTarget(SL, SR, *this, DSAStack, VD)) {
-      // Mark decl as declared target to prevent further diagnostic.
-      if (isa<VarDecl>(VD) || isa<FunctionDecl>(VD) ||
-          isa<FunctionTemplateDecl>(VD)) {
-        auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(
-            Context, OMPDeclareTargetDeclAttr::MT_To);
-        VD->addAttr(A);
-        if (ASTMutationListener *ML = Context.getASTMutationListener())
-          ML->DeclarationMarkedOpenMPDeclareTarget(VD, A);
-      }
-      return;
-    }
-  }
   if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
     D = FTD->getTemplatedDecl();
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-    if (FD->hasAttr<OMPDeclareTargetDeclAttr>() &&
-        (FD->getAttr<OMPDeclareTargetDeclAttr>()->getMapType() ==
-         OMPDeclareTargetDeclAttr::MT_Link)) {
+    llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
+        OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(FD);
+    if (Res && *Res == OMPDeclareTargetDeclAttr::MT_Link) {
       assert(IdLoc.isValid() && "Source location is expected");
       Diag(IdLoc, diag::err_omp_function_in_link_clause);
       Diag(FD->getLocation(), diag::note_defined_here) << FD;
       return;
     }
   }
-  if (!E) {
-    // Checking declaration inside declare target region.
-    if (!D->hasAttr<OMPDeclareTargetDeclAttr>() &&
-        (isa<VarDecl>(D) || isa<FunctionDecl>(D) ||
-         isa<FunctionTemplateDecl>(D))) {
-      auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(
-          Context, OMPDeclareTargetDeclAttr::MT_To);
-      D->addAttr(A);
-      if (ASTMutationListener *ML = Context.getASTMutationListener())
-        ML->DeclarationMarkedOpenMPDeclareTarget(D, A);
+  if (auto *VD = dyn_cast<ValueDecl>(D)) {
+    // Problem if any with var declared with incomplete type will be reported
+    // as normal, so no need to check it here.
+    if ((E || !VD->getType()->isIncompleteType()) &&
+        !checkValueDeclInTarget(SL, SR, *this, DSAStack, VD))
+      return;
+    if (!E && !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD)) {
+      // Checking declaration inside declare target region.
+      if (isa<VarDecl>(D) || isa<FunctionDecl>(D) ||
+          isa<FunctionTemplateDecl>(D)) {
+        auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(
+            Context, OMPDeclareTargetDeclAttr::MT_To);
+        D->addAttr(A);
+        if (ASTMutationListener *ML = Context.getASTMutationListener())
+          ML->DeclarationMarkedOpenMPDeclareTarget(D, A);
+      }
+      return;
     }
-    return;
   }
+  if (!E)
+    return;
   checkDeclInTargetContext(E->getExprLoc(), E->getSourceRange(), *this, D);
 }
 
