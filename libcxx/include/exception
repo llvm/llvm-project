@@ -81,6 +81,7 @@ template <class E> void rethrow_if_nested(const E& e);
 #include <cstddef>
 #include <cstdlib>
 #include <type_traits>
+#include <version>
 
 #if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
 #include <vcruntime_exception.h>

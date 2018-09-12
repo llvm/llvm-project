@@ -101,4 +101,17 @@ __cpp_lib_void_t                            201411L <type_traits>
 #pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER > 11
+#endif
+
+#if _LIBCPP_STD_VER > 14
+# define __cpp_lib_atomic_is_always_lock_free           201603L
+# define __cpp_lib_filesystem                           201703L
+# define __cpp_lib_invoke                               201411L
+# define __cpp_lib_void_t                               201411L
+#endif
+
+#if _LIBCPP_STD_VER > 17
+#endif
+
 #endif  // _LIBCPP_VERSIONH

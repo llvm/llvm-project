@@ -646,6 +646,7 @@ template <class BidirectionalIterator, class Compare>
 #include <iterator>
 #include <cstddef>
 #include <bit>
+#include <version>
 
 #include <__debug>
 

@@ -667,6 +667,7 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 #if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
 #  include <atomic>
 #endif
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
