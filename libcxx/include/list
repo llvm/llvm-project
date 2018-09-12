@@ -2208,7 +2208,7 @@ template <class _Comp>
 void
 list<_Tp, _Alloc>::merge(list& __c, _Comp __comp)
 {
-    if (this != &__c)
+    if (this != _VSTD::addressof(__c))
     {
         iterator __f1 = begin();
         iterator __e1 = end();
