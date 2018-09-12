@@ -50,6 +50,9 @@ public:
   bool hasBeenUsed() const { return HasBeenUsed; }
 
   void resetUsedFlag() { HasBeenUsed = false; }
+
+private:
+  void emitHeader(AsmPrinter &Asm, MCSection *Section);
 };
 
 } // end namespace llvm

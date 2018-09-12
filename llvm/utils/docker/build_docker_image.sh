@@ -117,7 +117,7 @@ while [[ $# -gt 0 ]]; do
 
       CHECKOUT_ARGS="$CHECKOUT_ARGS $1 $PROJ"
       if [ "$PROJ" != "clang-tools-extra" ]; then
-        CMAKE_ENABLED_PROJECTS="$CMAKE_ENABLED_PROJECTS:$PROJ"
+        CMAKE_ENABLED_PROJECTS="$CMAKE_ENABLED_PROJECTS;$PROJ"
       fi
 
       shift 2
@@ -142,7 +142,7 @@ done
 
 
 if [ "$CMAKE_ENABLED_PROJECTS" != "" ]; then
-  # Remove the leading ':' character.
+  # Remove the leading ';' character.
   CMAKE_ENABLED_PROJECTS="${CMAKE_ENABLED_PROJECTS:1}"
 
   if [[ $SEEN_CMAKE_ARGS -eq 0 ]]; then

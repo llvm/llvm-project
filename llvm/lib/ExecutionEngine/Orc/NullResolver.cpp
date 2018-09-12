@@ -14,9 +14,8 @@
 namespace llvm {
 namespace orc {
 
-SymbolNameSet NullResolver::lookupFlags(SymbolFlagsMap &Flags,
-                                        const SymbolNameSet &Symbols) {
-  return Symbols;
+SymbolFlagsMap NullResolver::lookupFlags(const SymbolNameSet &Symbols) {
+  return SymbolFlagsMap();
 }
 
 SymbolNameSet

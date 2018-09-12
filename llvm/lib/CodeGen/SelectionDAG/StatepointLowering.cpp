@@ -419,10 +419,10 @@ static void lowerIncomingStatepointValue(SDValue Incoming, bool LiveInOnly,
                                                   Builder.getFrameIndexTy()));
   } else if (LiveInOnly) {
     // If this value is live in (not live-on-return, or live-through), we can
-    // treat it the same way patchpoint treats it's "live in" values.  We'll 
-    // end up folding some of these into stack references, but they'll be 
+    // treat it the same way patchpoint treats it's "live in" values.  We'll
+    // end up folding some of these into stack references, but they'll be
     // handled by the register allocator.  Note that we do not have the notion
-    // of a late use so these values might be placed in registers which are 
+    // of a late use so these values might be placed in registers which are
     // clobbered by the call.  This is fine for live-in.
     Ops.push_back(Incoming);
   } else {
@@ -498,7 +498,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   auto isGCValue =[&](const Value *V) {
     return is_contained(SI.Ptrs, V) || is_contained(SI.Bases, V);
   };
-  
+
   // Before we actually start lowering (and allocating spill slots for values),
   // reserve any stack slots which we judge to be profitable to reuse for a
   // particular value.  This is purely an optimization over the code below and
@@ -861,7 +861,8 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
       //       completely and make statepoint call to return a tuple.
       unsigned Reg = FuncInfo.CreateRegs(RetTy);
       RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
-                       DAG.getDataLayout(), Reg, RetTy, true);
+                       DAG.getDataLayout(), Reg, RetTy,
+                       ISP.getCallSite().getCallingConv());
       SDValue Chain = DAG.getEntryNode();
 
       RFV.getCopyToRegs(ReturnValue, DAG, getCurSDLoc(), Chain, nullptr);

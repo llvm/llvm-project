@@ -209,7 +209,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
 
     FeatureDisable(false),
     InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
-    TLInfo(TM, *this), 
+    TLInfo(TM, *this),
     FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0) {
   AS = AMDGPU::getAMDGPUAS(TT);
   CallLoweringInfo.reset(new AMDGPUCallLowering(*getTargetLowering()));
@@ -406,6 +406,44 @@ bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
   return true;
 }
 
+uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
+                                                 unsigned &MaxAlign) const {
+  assert(F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
+         F.getCallingConv() == CallingConv::SPIR_KERNEL);
+
+  const DataLayout &DL = F.getParent()->getDataLayout();
+  uint64_t ExplicitArgBytes = 0;
+  MaxAlign = 1;
+
+  for (const Argument &Arg : F.args()) {
+    Type *ArgTy = Arg.getType();
+
+    unsigned Align = DL.getABITypeAlignment(ArgTy);
+    uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
+    ExplicitArgBytes = alignTo(ExplicitArgBytes, Align) + AllocSize;
+    MaxAlign = std::max(MaxAlign, Align);
+  }
+
+  return ExplicitArgBytes;
+}
+
+unsigned AMDGPUSubtarget::getKernArgSegmentSize(const Function &F,
+                                                unsigned &MaxAlign) const {
+  uint64_t ExplicitArgBytes = getExplicitKernArgSize(F, MaxAlign);
+
+  unsigned ExplicitOffset = getExplicitKernelArgOffset(F);
+
+  uint64_t TotalSize = ExplicitOffset + ExplicitArgBytes;
+  unsigned ImplicitBytes = getImplicitArgNumBytes(F);
+  if (ImplicitBytes != 0) {
+    unsigned Alignment = getAlignmentForImplicitArgPtr();
+    TotalSize = alignTo(ExplicitArgBytes, Alignment) + ImplicitBytes;
+  }
+
+  // Being able to dereference past the end is useful for emitting scalar loads.
+  return alignTo(TotalSize, 4);
+}
+
 R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
                              const TargetMachine &TM) :
   R600GenSubtargetInfo(TT, GPU, FS),
@@ -444,40 +482,6 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
 
 bool GCNSubtarget::isVGPRSpillingEnabled(const Function& F) const {
   return EnableVGPRSpilling || !AMDGPU::isShader(F.getCallingConv());
-}
-
-uint64_t GCNSubtarget::getExplicitKernArgSize(const Function &F) const {
-  assert(F.getCallingConv() == CallingConv::AMDGPU_KERNEL);
-
-  const DataLayout &DL = F.getParent()->getDataLayout();
-  uint64_t ExplicitArgBytes = 0;
-  for (const Argument &Arg : F.args()) {
-    Type *ArgTy = Arg.getType();
-
-    unsigned Align = DL.getABITypeAlignment(ArgTy);
-    uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
-    ExplicitArgBytes = alignTo(ExplicitArgBytes, Align) + AllocSize;
-  }
-
-  return ExplicitArgBytes;
-}
-
-unsigned GCNSubtarget::getKernArgSegmentSize(const Function &F,
-                                            int64_t ExplicitArgBytes) const {
-  if (ExplicitArgBytes == -1)
-    ExplicitArgBytes = getExplicitKernArgSize(F);
-
-  unsigned ExplicitOffset = getExplicitKernelArgOffset(F);
-
-  uint64_t TotalSize = ExplicitOffset + ExplicitArgBytes;
-  unsigned ImplicitBytes = getImplicitArgNumBytes(F);
-  if (ImplicitBytes != 0) {
-    unsigned Alignment = getAlignmentForImplicitArgPtr();
-    TotalSize = alignTo(ExplicitArgBytes, Alignment) + ImplicitBytes;
-  }
-
-  // Being able to dereference past the end is useful for emitting scalar loads.
-  return alignTo(TotalSize, 4);
 }
 
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {

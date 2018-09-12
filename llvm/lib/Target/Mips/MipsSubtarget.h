@@ -163,7 +163,7 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
 
   // HasEVA -- supports EVA ASE.
   bool HasEVA;
- 
+
   // nomadd4 - disables generation of 4-operand madd.s, madd.d and
   // related instructions.
   bool DisableMadd4;

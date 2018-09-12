@@ -24,8 +24,26 @@ unsigned AddressPool::getIndex(const MCSymbol *Sym, bool TLS) {
   return IterBool.first->second.Number;
 }
 
+
+void AddressPool::emitHeader(AsmPrinter &Asm, MCSection *Section) {
+  static const uint8_t AddrSize = Asm.getDataLayout().getPointerSize();
+  Asm.OutStreamer->SwitchSection(Section);
+
+  uint64_t Length = sizeof(uint16_t) // version
+                  + sizeof(uint8_t)  // address_size
+                  + sizeof(uint8_t)  // segment_selector_size
+                  + AddrSize * Pool.size(); // entries
+  Asm.emitInt32(Length); // TODO: Support DWARF64 format.
+  Asm.emitInt16(Asm.getDwarfVersion());
+  Asm.emitInt8(AddrSize);
+  Asm.emitInt8(0); // TODO: Support non-zero segment_selector_size.
+}
+
 // Emit addresses into the section given.
 void AddressPool::emit(AsmPrinter &Asm, MCSection *AddrSection) {
+  if (Asm.getDwarfVersion() >= 5)
+    emitHeader(Asm, AddrSection);
+
   if (Pool.empty())
     return;
 

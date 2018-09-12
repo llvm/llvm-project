@@ -166,7 +166,7 @@ void CallGraphNode::print(raw_ostream &OS) const {
     OS << "Call graph node for function: '" << F->getName() << "'";
   else
     OS << "Call graph node <<null function>>";
-  
+
   OS << "<<" << this << ">>  #uses=" << getNumReferences() << '\n';
 
   for (const auto &I : *this) {

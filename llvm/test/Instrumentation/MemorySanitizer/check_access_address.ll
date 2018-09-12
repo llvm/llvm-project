@@ -38,11 +38,14 @@ entry:
 
 ; CHECK-LABEL: @Store
 ; CHECK: load {{.*}} @__msan_param_tls
+; Shadow calculations must happen after the check.
+; CHECK-NOT: xor
 ; CHECK: icmp
 ; CHECK: br i1
 ; CHECK: <label>
 ; CHECK: call void @__msan_warning_noreturn
 ; CHECK: <label>
+; CHECK: xor
 ; CHECK: store
 ; CHECK: store i32 %x
 ; CHECK: ret void

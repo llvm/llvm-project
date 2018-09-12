@@ -74,7 +74,7 @@ class Value;
     /// vararg functions can be extracted. This is safe, if all vararg handling
     /// code is extracted, including vastart. If AllowAlloca is true, then
     /// extraction of blocks containing alloca instructions would be possible,
-    /// however code extractor won't validate whether extraction is legal. 
+    /// however code extractor won't validate whether extraction is legal.
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,

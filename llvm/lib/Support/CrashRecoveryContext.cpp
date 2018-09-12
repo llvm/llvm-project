@@ -49,7 +49,7 @@ public:
 
   /// Called when the separate crash-recovery thread was finished, to
   /// indicate that we don't need to clear the thread-local CurrentContext.
-  void setSwitchedThread() { 
+  void setSwitchedThread() {
 #if defined(LLVM_ENABLE_THREADS) && LLVM_ENABLE_THREADS != 0
     SwitchedThread = true;
 #endif
@@ -96,7 +96,7 @@ CrashRecoveryContext::~CrashRecoveryContext() {
     delete tmp;
   }
   tlIsRecoveringFromCrash->set(PC);
-  
+
   CrashRecoveryContextImpl *CRCI = (CrashRecoveryContextImpl *) Impl;
   delete CRCI;
 }

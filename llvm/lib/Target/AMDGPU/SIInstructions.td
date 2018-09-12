@@ -374,6 +374,7 @@ def SI_RETURN_TO_EPILOG : SPseudoInstSI <
   let isReturn = 1;
   let hasNoSchedulingInfo = 1;
   let DisableWQM = 1;
+  let FixedSize = 1;
 }
 
 // Return for returning function calls.
@@ -1386,6 +1387,11 @@ def : GCNPat<
 >;
 
 def : GCNPat<
+  (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
+  (V_MUL_F16_e64 0, (i32 CONST.FP16_NEG_ONE), $src_mods, $src, 0, 0)
+>;
+
+def : GCNPat<
   (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
   (V_PK_MUL_F16 0, (i32 CONST.V2FP16_ONE), $src_mods, $src, DSTCLAMP.NONE)
 >;
@@ -1409,6 +1415,11 @@ let OtherPredicates = [NoFP32Denormals] in {
 def : GCNPat<
   (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
   (V_MUL_F32_e64 0, (i32 CONST.FP32_ONE), $src_mods, $src, 0, 0)
+>;
+
+def : GCNPat<
+  (fcanonicalize (f32 (fneg (VOP3Mods f32:$src, i32:$src_mods)))),
+  (V_MUL_F32_e64 0, (i32 CONST.FP32_NEG_ONE), $src_mods, $src, 0, 0)
 >;
 }
 

@@ -495,6 +495,12 @@ void NVPTXAsmPrinter::EmitFunctionBodyEnd() {
   VRegMapping.clear();
 }
 
+const MCSymbol *NVPTXAsmPrinter::getFunctionFrameSymbol() const {
+    SmallString<128> Str;
+    raw_svector_ostream(Str) << DEPOTNAME << getFunctionNumber();
+    return OutContext.getOrCreateSymbol(Str);
+}
+
 void NVPTXAsmPrinter::emitImplicitDef(const MachineInstr *MI) const {
   unsigned RegNo = MI->getOperand(0).getReg();
   if (TargetRegisterInfo::isVirtualRegister(RegNo)) {

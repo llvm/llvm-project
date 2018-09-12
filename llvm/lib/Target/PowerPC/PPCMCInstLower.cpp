@@ -75,7 +75,7 @@ static MCSymbol *GetSymbolFromOperand(const MachineOperand &MO,
     }
     return Sym;
   }
-  
+
   return Sym;
 }
 
@@ -130,7 +130,7 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
   // Subtract off the PIC base if required.
   if (MO.getTargetFlags() & PPCII::MO_PIC_FLAG) {
     const MachineFunction *MF = MO.getParent()->getParent()->getParent();
-    
+
     const MCExpr *PB = MCSymbolRefExpr::create(MF->getPICBaseSymbol(), Ctx);
     Expr = MCBinaryExpr::createSub(Expr, PB, Ctx);
   }
@@ -151,7 +151,7 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
 void llvm::LowerPPCMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                         AsmPrinter &AP, bool isDarwin) {
   OutMI.setOpcode(MI->getOpcode());
-  
+
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     MCOperand MCOp;
     if (LowerPPCMachineOperandToMCOperand(MI->getOperand(i), MCOp, AP,

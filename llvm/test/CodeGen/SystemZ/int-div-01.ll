@@ -69,7 +69,7 @@ define i32 @f5(i32 %dummy, i32 *%src, i32 %b) {
 ; CHECK-NOT: dsgfr
 ; CHECK: or %r2, %r3
 ; CHECK: br %r14
-  %a = load i32 , i32 *%src
+  %a = load i32, i32 *%src
   %div = sdiv i32 %a, %b
   %rem = srem i32 %a, %b
   %or = or i32 %rem, %div
@@ -83,7 +83,7 @@ define void @f6(i32 *%dest, i32 %a, i32 *%src) {
 ; CHECK: dsgf %r0, 0(%r4)
 ; CHECK: st %r1, 0(%r2)
 ; CHECK: br %r14
-  %b = load i32 , i32 *%src
+  %b = load i32, i32 *%src
   %div = sdiv i32 %a, %b
   store i32 %div, i32 *%dest
   ret void
@@ -96,7 +96,7 @@ define void @f7(i32 *%dest, i32 %a, i32 *%src) {
 ; CHECK: dsgf %r0, 0(%r4)
 ; CHECK: st %r0, 0(%r2)
 ; CHECK: br %r14
-  %b = load i32 , i32 *%src
+  %b = load i32, i32 *%src
   %rem = srem i32 %a, %b
   store i32 %rem, i32 *%dest
   ret void
@@ -112,7 +112,7 @@ define i32 @f8(i32 %dummy, i32 %a, i32 *%src) {
 ; CHECK-NOT: {{dsgf|dsgfr}}
 ; CHECK: or %r2, %r3
 ; CHECK: br %r14
-  %b = load i32 , i32 *%src
+  %b = load i32, i32 *%src
   %div = sdiv i32 %a, %b
   %rem = srem i32 %a, %b
   %or = or i32 %rem, %div
@@ -125,7 +125,7 @@ define i32 @f9(i32 %dummy, i32 %a, i32 *%src) {
 ; CHECK: dsgf %r2, 524284(%r4)
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%src, i64 131071
-  %b = load i32 , i32 *%ptr
+  %b = load i32, i32 *%ptr
   %rem = srem i32 %a, %b
   ret i32 %rem
 }
@@ -138,7 +138,7 @@ define i32 @f10(i32 %dummy, i32 %a, i32 *%src) {
 ; CHECK: dsgf %r2, 0(%r4)
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%src, i64 131072
-  %b = load i32 , i32 *%ptr
+  %b = load i32, i32 *%ptr
   %rem = srem i32 %a, %b
   ret i32 %rem
 }
@@ -149,7 +149,7 @@ define i32 @f11(i32 %dummy, i32 %a, i32 *%src) {
 ; CHECK: dsgf %r2, -4(%r4)
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%src, i64 -1
-  %b = load i32 , i32 *%ptr
+  %b = load i32, i32 *%ptr
   %rem = srem i32 %a, %b
   ret i32 %rem
 }
@@ -160,7 +160,7 @@ define i32 @f12(i32 %dummy, i32 %a, i32 *%src) {
 ; CHECK: dsgf %r2, -524288(%r4)
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%src, i64 -131072
-  %b = load i32 , i32 *%ptr
+  %b = load i32, i32 *%ptr
   %rem = srem i32 %a, %b
   ret i32 %rem
 }
@@ -173,7 +173,7 @@ define i32 @f13(i32 %dummy, i32 %a, i32 *%src) {
 ; CHECK: dsgf %r2, 0(%r4)
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%src, i64 -131073
-  %b = load i32 , i32 *%ptr
+  %b = load i32, i32 *%ptr
   %rem = srem i32 %a, %b
   ret i32 %rem
 }
@@ -186,7 +186,7 @@ define i32 @f14(i32 %dummy, i32 %a, i64 %src, i64 %index) {
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 524287
   %ptr = inttoptr i64 %add2 to i32 *
-  %b = load i32 , i32 *%ptr
+  %b = load i32, i32 *%ptr
   %rem = srem i32 %a, %b
   ret i32 %rem
 }
@@ -200,7 +200,7 @@ define void @f15(i32 *%dest, i32 *%src) {
 ; CHECK: lgfr %r1, %r2
 ; CHECK: dsgfr %r0, [[B]]
 ; CHECK: br %r14
-  %b = load i32 , i32 *%src
+  %b = load i32, i32 *%src
   %a = call i32 @foo()
   %div = sdiv i32 %a, %b
   store i32 %div, i32 *%dest
@@ -223,16 +223,16 @@ define i32 @f16(i32 *%ptr0) {
   %ptr8 = getelementptr i32, i32 *%ptr0, i64 16
   %ptr9 = getelementptr i32, i32 *%ptr0, i64 18
 
-  %val0 = load i32 , i32 *%ptr0
-  %val1 = load i32 , i32 *%ptr1
-  %val2 = load i32 , i32 *%ptr2
-  %val3 = load i32 , i32 *%ptr3
-  %val4 = load i32 , i32 *%ptr4
-  %val5 = load i32 , i32 *%ptr5
-  %val6 = load i32 , i32 *%ptr6
-  %val7 = load i32 , i32 *%ptr7
-  %val8 = load i32 , i32 *%ptr8
-  %val9 = load i32 , i32 *%ptr9
+  %val0 = load i32, i32 *%ptr0
+  %val1 = load i32, i32 *%ptr1
+  %val2 = load i32, i32 *%ptr2
+  %val3 = load i32, i32 *%ptr3
+  %val4 = load i32, i32 *%ptr4
+  %val5 = load i32, i32 *%ptr5
+  %val6 = load i32, i32 *%ptr6
+  %val7 = load i32, i32 *%ptr7
+  %val8 = load i32, i32 *%ptr8
+  %val9 = load i32, i32 *%ptr9
 
   %ret = call i32 @foo()
 

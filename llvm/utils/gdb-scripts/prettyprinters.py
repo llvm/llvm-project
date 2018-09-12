@@ -22,8 +22,7 @@ class SmallStringPrinter:
 
   def to_string(self):
     begin = self.val['BeginX']
-    end = self.val['EndX']
-    return escape_bytes(begin.cast(gdb.lookup_type('char').pointer()), end - begin)
+    return escape_bytes(begin.cast(gdb.lookup_type('char').pointer()), self.val['Size'])
 
 class StringRefPrinter:
   """Print an llvm::StringRef object."""
@@ -34,44 +33,25 @@ class StringRefPrinter:
   def to_string(self):
     return escape_bytes(self.val['Data'], self.val['Length'])
 
-class SmallVectorPrinter:
+class SmallVectorPrinter(Iterator):
   """Print an llvm::SmallVector object."""
-
-  class _iterator:
-    def __init__(self, begin, end):
-      self.cur = begin
-      self.end = end
-      self.count = 0
-
-    def __iter__(self):
-      return self
-
-    def next(self):
-      if self.cur == self.end:
-        raise StopIteration
-      count = self.count
-      self.count = self.count + 1
-      cur = self.cur
-      self.cur = self.cur + 1
-      return '[%d]' % count, cur.dereference()
-
-    __next__ = next
 
   def __init__(self, val):
     self.val = val
+    t = val.type.template_argument(0).pointer()
+    self.begin = val['BeginX'].cast(t)
+    self.size = val['Size']
+    self.i = 0
 
-  def children(self):
-    t = self.val.type.template_argument(0).pointer()
-    begin = self.val['BeginX'].cast(t)
-    end = self.val['EndX'].cast(t)
-    return self._iterator(begin, end)
+  def __next__(self):
+    if self.i == self.size:
+      raise StopIteration
+    ret = '[{}]'.format(self.i), (self.begin+self.i).dereference()
+    self.i += 1
+    return ret
 
   def to_string(self):
-    t = self.val.type.template_argument(0).pointer()
-    begin = self.val['BeginX'].cast(t)
-    end = self.val['EndX'].cast(t)
-    capacity = self.val['CapacityX'].cast(t)
-    return 'llvm::SmallVector of length %d, capacity %d' % (end - begin, capacity - begin)
+    return 'llvm::SmallVector of Size {}, Capacity {}'.format(self.size, self.val['Capacity'])
 
   def display_hint (self):
     return 'array'

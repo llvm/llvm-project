@@ -357,6 +357,41 @@ static bool CleanupConstantGlobalUsers(Value *V, Constant *Init,
   return Changed;
 }
 
+static bool isSafeSROAElementUse(Value *V);
+
+/// Return true if the specified GEP is a safe user of a derived
+/// expression from a global that we want to SROA.
+static bool isSafeSROAGEP(User *U) {
+  // Check to see if this ConstantExpr GEP is SRA'able.  In particular, we
+  // don't like < 3 operand CE's, and we don't like non-constant integer
+  // indices.  This enforces that all uses are 'gep GV, 0, C, ...' for some
+  // value of C.
+  if (U->getNumOperands() < 3 || !isa<Constant>(U->getOperand(1)) ||
+      !cast<Constant>(U->getOperand(1))->isNullValue())
+    return false;
+
+  gep_type_iterator GEPI = gep_type_begin(U), E = gep_type_end(U);
+  ++GEPI; // Skip over the pointer index.
+
+  // For all other level we require that the indices are constant and inrange.
+  // In particular, consider: A[0][i].  We cannot know that the user isn't doing
+  // invalid things like allowing i to index an out-of-range subscript that
+  // accesses A[1]. This can also happen between different members of a struct
+  // in llvm IR.
+  for (; GEPI != E; ++GEPI) {
+    if (GEPI.isStruct())
+      continue;
+
+    ConstantInt *IdxVal = dyn_cast<ConstantInt>(GEPI.getOperand());
+    if (!IdxVal || (GEPI.isBoundedSequential() &&
+                    IdxVal->getZExtValue() >= GEPI.getSequentialNumElements()))
+      return false;
+  }
+
+  return llvm::all_of(U->users(),
+                      [](User *UU) { return isSafeSROAElementUse(UU); });
+}
+
 /// Return true if the specified instruction is a safe user of a derived
 /// expression from a global that we want to SROA.
 static bool isSafeSROAElementUse(Value *V) {
@@ -374,83 +409,24 @@ static bool isSafeSROAElementUse(Value *V) {
   if (StoreInst *SI = dyn_cast<StoreInst>(I))
     return SI->getOperand(0) != V;
 
-  // Otherwise, it must be a GEP.
-  GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(I);
-  if (!GEPI) return false;
-
-  if (GEPI->getNumOperands() < 3 || !isa<Constant>(GEPI->getOperand(1)) ||
-      !cast<Constant>(GEPI->getOperand(1))->isNullValue())
-    return false;
-
-  for (User *U : GEPI->users())
-    if (!isSafeSROAElementUse(U))
-      return false;
-  return true;
-}
-
-/// U is a direct user of the specified global value.  Look at it and its uses
-/// and decide whether it is safe to SROA this global.
-static bool IsUserOfGlobalSafeForSRA(User *U, GlobalValue *GV) {
-  // The user of the global must be a GEP Inst or a ConstantExpr GEP.
-  if (!isa<GetElementPtrInst>(U) &&
-      (!isa<ConstantExpr>(U) ||
-       cast<ConstantExpr>(U)->getOpcode() != Instruction::GetElementPtr))
-    return false;
-
-  // Check to see if this ConstantExpr GEP is SRA'able.  In particular, we
-  // don't like < 3 operand CE's, and we don't like non-constant integer
-  // indices.  This enforces that all uses are 'gep GV, 0, C, ...' for some
-  // value of C.
-  if (U->getNumOperands() < 3 || !isa<Constant>(U->getOperand(1)) ||
-      !cast<Constant>(U->getOperand(1))->isNullValue() ||
-      !isa<ConstantInt>(U->getOperand(2)))
-    return false;
-
-  gep_type_iterator GEPI = gep_type_begin(U), E = gep_type_end(U);
-  ++GEPI;  // Skip over the pointer index.
-
-  // If this is a use of an array allocation, do a bit more checking for sanity.
-  if (GEPI.isSequential()) {
-    ConstantInt *Idx = cast<ConstantInt>(U->getOperand(2));
-
-    // Check to make sure that index falls within the array.  If not,
-    // something funny is going on, so we won't do the optimization.
-    //
-    if (GEPI.isBoundedSequential() &&
-        Idx->getZExtValue() >= GEPI.getSequentialNumElements())
-      return false;
-
-    // We cannot scalar repl this level of the array unless any array
-    // sub-indices are in-range constants.  In particular, consider:
-    // A[0][i].  We cannot know that the user isn't doing invalid things like
-    // allowing i to index an out-of-range subscript that accesses A[1].
-    //
-    // Scalar replacing *just* the outer index of the array is probably not
-    // going to be a win anyway, so just give up.
-    for (++GEPI; // Skip array index.
-         GEPI != E;
-         ++GEPI) {
-      if (GEPI.isStruct())
-        continue;
-
-      ConstantInt *IdxVal = dyn_cast<ConstantInt>(GEPI.getOperand());
-      if (!IdxVal ||
-          (GEPI.isBoundedSequential() &&
-           IdxVal->getZExtValue() >= GEPI.getSequentialNumElements()))
-        return false;
-    }
-  }
-
-  return llvm::all_of(U->users(),
-                      [](User *UU) { return isSafeSROAElementUse(UU); });
+  // Otherwise, it must be a GEP. Check it and its users are safe to SRA.
+  return isa<GetElementPtrInst>(I) && isSafeSROAGEP(I);
 }
 
 /// Look at all uses of the global and decide whether it is safe for us to
 /// perform this transformation.
 static bool GlobalUsersSafeToSRA(GlobalValue *GV) {
-  for (User *U : GV->users())
-    if (!IsUserOfGlobalSafeForSRA(U, GV))
+  for (User *U : GV->users()) {
+    // The user of the global must be a GEP Inst or a ConstantExpr GEP.
+    if (!isa<GetElementPtrInst>(U) &&
+        (!isa<ConstantExpr>(U) ||
+        cast<ConstantExpr>(U)->getOpcode() != Instruction::GetElementPtr))
       return false;
+
+    // Check the gep and it's users are safe to SRA
+    if (!isSafeSROAGEP(U))
+      return false;
+  }
 
   return true;
 }

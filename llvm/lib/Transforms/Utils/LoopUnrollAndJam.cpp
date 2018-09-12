@@ -81,15 +81,18 @@ static bool partitionOuterLoopBlocks(Loop *L, Loop *SubLoop,
   return true;
 }
 
-// Move the phi operands of Header from Latch out of AftBlocks to InsertLoc.
-static void moveHeaderPhiOperandsToForeBlocks(BasicBlock *Header,
-                                              BasicBlock *Latch,
-                                              Instruction *InsertLoc,
-                                              BasicBlockSet &AftBlocks) {
-  // We need to ensure we move the instructions in the correct order,
-  // starting with the earliest required instruction and moving forward.
-  std::vector<Instruction *> Worklist;
-  std::vector<Instruction *> Visited;
+// Looks at the phi nodes in Header for values coming from Latch. For these
+// instructions and all their operands calls Visit on them, keeping going for
+// all the operands in AftBlocks. Returns false if Visit returns false,
+// otherwise returns true. This is used to process the instructions in the
+// Aft blocks that need to be moved before the subloop. It is used in two
+// places. One to check that the required set of instructions can be moved
+// before the loop. Then to collect the instructions to actually move in
+// moveHeaderPhiOperandsToForeBlocks.
+template <typename T>
+static bool processHeaderPhiOperands(BasicBlock *Header, BasicBlock *Latch,
+                                     BasicBlockSet &AftBlocks, T Visit) {
+  SmallVector<Instruction *, 8> Worklist;
   for (auto &Phi : Header->phis()) {
     Value *V = Phi.getIncomingValueForBlock(Latch);
     if (Instruction *I = dyn_cast<Instruction>(V))
@@ -99,14 +102,32 @@ static void moveHeaderPhiOperandsToForeBlocks(BasicBlock *Header,
   while (!Worklist.empty()) {
     Instruction *I = Worklist.back();
     Worklist.pop_back();
-    if (!AftBlocks.count(I->getParent()))
-      continue;
+    if (!Visit(I))
+      return false;
 
-    Visited.push_back(I);
-    for (auto &U : I->operands())
-      if (Instruction *II = dyn_cast<Instruction>(U))
-        Worklist.push_back(II);
+    if (AftBlocks.count(I->getParent()))
+      for (auto &U : I->operands())
+        if (Instruction *II = dyn_cast<Instruction>(U))
+          Worklist.push_back(II);
   }
+
+  return true;
+}
+
+// Move the phi operands of Header from Latch out of AftBlocks to InsertLoc.
+static void moveHeaderPhiOperandsToForeBlocks(BasicBlock *Header,
+                                              BasicBlock *Latch,
+                                              Instruction *InsertLoc,
+                                              BasicBlockSet &AftBlocks) {
+  // We need to ensure we move the instructions in the correct order,
+  // starting with the earliest required instruction and moving forward.
+  std::vector<Instruction *> Visited;
+  processHeaderPhiOperands(Header, Latch, AftBlocks,
+                           [&Visited, &AftBlocks](Instruction *I) {
+                             if (AftBlocks.count(I->getParent()))
+                               Visited.push_back(I);
+                             return true;
+                           });
 
   // Move all instructions in program order to before the InsertLoc
   BasicBlock *InsertLocBB = InsertLoc->getParent();
@@ -735,31 +756,24 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   //  ForeBlock phi operands before the subloop
 
   // Make sure we can move all instructions we need to before the subloop
-  SmallVector<Instruction *, 8> Worklist;
-  SmallPtrSet<Instruction *, 8> Visited;
-  for (auto &Phi : Header->phis()) {
-    Value *V = Phi.getIncomingValueForBlock(Latch);
-    if (Instruction *I = dyn_cast<Instruction>(V))
-      Worklist.push_back(I);
-  }
-  while (!Worklist.empty()) {
-    Instruction *I = Worklist.back();
-    Worklist.pop_back();
-    if (Visited.insert(I).second) {
-      if (SubLoop->contains(I->getParent()))
-        return false;
-      if (AftBlocks.count(I->getParent())) {
-        // If we hit a phi node in afts we know we are done (probably LCSSA)
-        if (isa<PHINode>(I))
-          return false;
-        if (I->mayHaveSideEffects() || I->mayReadOrWriteMemory())
-          return false;
-        for (auto &U : I->operands())
-          if (Instruction *II = dyn_cast<Instruction>(U))
-            Worklist.push_back(II);
-      }
-    }
-  }
+  if (!processHeaderPhiOperands(
+          Header, Latch, AftBlocks, [&AftBlocks, &SubLoop](Instruction *I) {
+            if (SubLoop->contains(I->getParent()))
+              return false;
+            if (AftBlocks.count(I->getParent())) {
+              // If we hit a phi node in afts we know we are done (probably
+              // LCSSA)
+              if (isa<PHINode>(I))
+                return false;
+              // Can't move instructions with side effects or memory
+              // reads/writes
+              if (I->mayHaveSideEffects() || I->mayReadOrWriteMemory())
+                return false;
+            }
+            // Keep going
+            return true;
+          }))
+    return false;
 
   // Check for memory dependencies which prohibit the unrolling we are doing.
   // Because of the way we are unrolling Fore/Sub/Aft blocks, we need to check

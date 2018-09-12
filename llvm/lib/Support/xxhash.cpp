@@ -71,12 +71,12 @@ static uint64_t mergeRound(uint64_t Acc, uint64_t Val) {
 uint64_t llvm::xxHash64(StringRef Data) {
   size_t Len = Data.size();
   uint64_t Seed = 0;
-  const char *P = Data.data();
-  const char *const BEnd = P + Len;
+  const unsigned char *P = Data.bytes_begin();
+  const unsigned char *const BEnd = Data.bytes_end();
   uint64_t H64;
 
   if (Len >= 32) {
-    const char *const Limit = BEnd - 32;
+    const unsigned char *const Limit = BEnd - 32;
     uint64_t V1 = Seed + PRIME64_1 + PRIME64_2;
     uint64_t V2 = Seed + PRIME64_2;
     uint64_t V3 = Seed + 0;
@@ -131,4 +131,8 @@ uint64_t llvm::xxHash64(StringRef Data) {
   H64 ^= H64 >> 32;
 
   return H64;
+}
+
+uint64_t llvm::xxHash64(ArrayRef<uint8_t> Data) {
+  return xxHash64({(const char *)Data.data(), Data.size()});
 }

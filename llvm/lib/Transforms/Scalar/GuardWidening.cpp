@@ -43,6 +43,7 @@
 #include <functional>
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -61,6 +62,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "guard-widening"
 
+STATISTIC(GuardsEliminated, "Number of eliminated guards");
+
 namespace {
 
 class GuardWideningImpl {
@@ -75,20 +78,32 @@ class GuardWideningImpl {
 
   /// The set of guards whose conditions have been widened into dominating
   /// guards.
-  SmallVector<IntrinsicInst *, 16> EliminatedGuards;
+  SmallVector<Instruction *, 16> EliminatedGuards;
 
   /// The set of guards which have been widened to include conditions to other
   /// guards.
-  DenseSet<IntrinsicInst *> WidenedGuards;
+  DenseSet<Instruction *> WidenedGuards;
 
   /// Try to eliminate guard \p Guard by widening it into an earlier dominating
   /// guard.  \p DFSI is the DFS iterator on the dominator tree that is
   /// currently visiting the block containing \p Guard, and \p GuardsPerBlock
   /// maps BasicBlocks to the set of guards seen in that block.
   bool eliminateGuardViaWidening(
-      IntrinsicInst *Guard, const df_iterator<DomTreeNode *> &DFSI,
-      const DenseMap<BasicBlock *, SmallVector<IntrinsicInst *, 8>> &
+      Instruction *Guard, const df_iterator<DomTreeNode *> &DFSI,
+      const DenseMap<BasicBlock *, SmallVector<Instruction *, 8>> &
           GuardsPerBlock);
+
+  // Get the condition from \p GuardInst.
+  Value *getGuardCondition(Instruction *GuardInst);
+
+  // Set the condition for \p GuardInst.
+  void setGuardCondition(Instruction *GuardInst, Value *NewCond);
+
+  // Whether or not the particular instruction is a guard.
+  bool isGuard(const Instruction *I);
+
+  // Eliminates the guard instruction properly.
+  void eliminateGuard(Instruction *GuardInst);
 
   /// Used to keep track of which widening potential is more effective.
   enum WideningScore {
@@ -113,9 +128,9 @@ class GuardWideningImpl {
   /// Compute the score for widening the condition in \p DominatedGuard
   /// (contained in \p DominatedGuardLoop) into \p DominatingGuard (contained in
   /// \p DominatingGuardLoop).
-  WideningScore computeWideningScore(IntrinsicInst *DominatedGuard,
+  WideningScore computeWideningScore(Instruction *DominatedGuard,
                                      Loop *DominatedGuardLoop,
-                                     IntrinsicInst *DominatingGuard,
+                                     Instruction *DominatingGuard,
                                      Loop *DominatingGuardLoop);
 
   /// Helper to check if \p V can be hoisted to \p InsertPos.
@@ -206,10 +221,10 @@ class GuardWideningImpl {
 
   /// Widen \p ToWiden to fail if \p NewCondition is false (in addition to
   /// whatever it is already checking).
-  void widenGuard(IntrinsicInst *ToWiden, Value *NewCondition) {
+  void widenGuard(Instruction *ToWiden, Value *NewCondition) {
     Value *Result;
-    widenCondCommon(ToWiden->getArgOperand(0), NewCondition, ToWiden, Result);
-    ToWiden->setArgOperand(0, Result);
+    widenCondCommon(ToWiden->getOperand(0), NewCondition, ToWiden, Result);
+    setGuardCondition(ToWiden, Result);
   }
 
 public:
@@ -225,9 +240,7 @@ public:
 }
 
 bool GuardWideningImpl::run() {
-  using namespace llvm::PatternMatch;
-
-  DenseMap<BasicBlock *, SmallVector<IntrinsicInst *, 8>> GuardsInBlock;
+  DenseMap<BasicBlock *, SmallVector<Instruction *, 8>> GuardsInBlock;
   bool Changed = false;
 
   for (auto DFI = df_begin(Root), DFE = df_end(Root);
@@ -239,8 +252,8 @@ bool GuardWideningImpl::run() {
     auto &CurrentList = GuardsInBlock[BB];
 
     for (auto &I : *BB)
-      if (match(&I, m_Intrinsic<Intrinsic::experimental_guard>()))
-        CurrentList.push_back(cast<IntrinsicInst>(&I));
+      if (isGuard(&I))
+        CurrentList.push_back(cast<Instruction>(&I));
 
     for (auto *II : CurrentList)
       Changed |= eliminateGuardViaWidening(II, DFI, GuardsInBlock);
@@ -249,16 +262,16 @@ bool GuardWideningImpl::run() {
   assert(EliminatedGuards.empty() || Changed);
   for (auto *II : EliminatedGuards)
     if (!WidenedGuards.count(II))
-      II->eraseFromParent();
+      eliminateGuard(II);
 
   return Changed;
 }
 
 bool GuardWideningImpl::eliminateGuardViaWidening(
-    IntrinsicInst *GuardInst, const df_iterator<DomTreeNode *> &DFSI,
-    const DenseMap<BasicBlock *, SmallVector<IntrinsicInst *, 8>> &
+    Instruction *GuardInst, const df_iterator<DomTreeNode *> &DFSI,
+    const DenseMap<BasicBlock *, SmallVector<Instruction *, 8>> &
         GuardsInBlock) {
-  IntrinsicInst *BestSoFar = nullptr;
+  Instruction *BestSoFar = nullptr;
   auto BestScoreSoFar = WS_IllegalOrNegative;
   auto *GuardInstLoop = LI.getLoopFor(GuardInst->getParent());
 
@@ -302,8 +315,8 @@ bool GuardWideningImpl::eliminateGuardViaWidening(
     for (auto *Candidate : make_range(I, E)) {
       auto Score =
           computeWideningScore(GuardInst, GuardInstLoop, Candidate, CurLoop);
-      LLVM_DEBUG(dbgs() << "Score between " << *GuardInst->getArgOperand(0)
-                        << " and " << *Candidate->getArgOperand(0) << " is "
+      LLVM_DEBUG(dbgs() << "Score between " << *getGuardCondition(GuardInst)
+                        << " and " << *getGuardCondition(Candidate) << " is "
                         << scoreTypeToString(Score) << "\n");
       if (Score > BestScoreSoFar) {
         BestScoreSoFar = Score;
@@ -323,16 +336,41 @@ bool GuardWideningImpl::eliminateGuardViaWidening(
   LLVM_DEBUG(dbgs() << "Widening " << *GuardInst << " into " << *BestSoFar
                     << " with score " << scoreTypeToString(BestScoreSoFar)
                     << "\n");
-  widenGuard(BestSoFar, GuardInst->getArgOperand(0));
-  GuardInst->setArgOperand(0, ConstantInt::getTrue(GuardInst->getContext()));
+  widenGuard(BestSoFar, getGuardCondition(GuardInst));
+  setGuardCondition(GuardInst, ConstantInt::getTrue(GuardInst->getContext()));
   EliminatedGuards.push_back(GuardInst);
   WidenedGuards.insert(BestSoFar);
   return true;
 }
 
+Value *GuardWideningImpl::getGuardCondition(Instruction *GuardInst) {
+  IntrinsicInst *GI = cast<IntrinsicInst>(GuardInst);
+  assert(GI->getIntrinsicID() == Intrinsic::experimental_guard &&
+         "Bad guard intrinsic?");
+  return GI->getArgOperand(0);
+}
+
+void GuardWideningImpl::setGuardCondition(Instruction *GuardInst,
+                                          Value *NewCond) {
+  IntrinsicInst *GI = cast<IntrinsicInst>(GuardInst);
+  assert(GI->getIntrinsicID() == Intrinsic::experimental_guard &&
+         "Bad guard intrinsic?");
+  GI->setArgOperand(0, NewCond);
+}
+
+bool GuardWideningImpl::isGuard(const Instruction* I) {
+  using namespace llvm::PatternMatch;
+  return match(I, m_Intrinsic<Intrinsic::experimental_guard>());
+}
+
+void GuardWideningImpl::eliminateGuard(Instruction *GuardInst) {
+  GuardInst->eraseFromParent();
+  ++GuardsEliminated;
+}
+
 GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
-    IntrinsicInst *DominatedGuard, Loop *DominatedGuardLoop,
-    IntrinsicInst *DominatingGuard, Loop *DominatingGuardLoop) {
+    Instruction *DominatedGuard, Loop *DominatedGuardLoop,
+    Instruction *DominatingGuard, Loop *DominatingGuardLoop) {
   bool HoistingOutOfLoop = false;
 
   if (DominatingGuardLoop != DominatedGuardLoop) {
@@ -345,7 +383,7 @@ GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
     HoistingOutOfLoop = true;
   }
 
-  if (!isAvailableAt(DominatedGuard->getArgOperand(0), DominatingGuard))
+  if (!isAvailableAt(getGuardCondition(DominatedGuard), DominatingGuard))
     return WS_IllegalOrNegative;
 
   // If the guard was conditional executed, it may never be reached
@@ -355,9 +393,9 @@ GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
   // case.  At the moment, we really only consider the second in our heuristic
   // here.  TODO: evaluate cost model for spurious deopt
   // NOTE: As written, this also lets us hoist right over another guard which
-  // is essentially just another spelling for control flow.  
-  if (isWideningCondProfitable(DominatedGuard->getArgOperand(0),
-                               DominatingGuard->getArgOperand(0)))
+  // is essentially just another spelling for control flow.
+  if (isWideningCondProfitable(getGuardCondition(DominatedGuard),
+                               getGuardCondition(DominatingGuard)))
     return HoistingOutOfLoop ? WS_VeryPositive : WS_Positive;
 
   if (HoistingOutOfLoop)
@@ -369,7 +407,7 @@ GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
   auto MaybeHoistingOutOfIf = [&]() {
     auto *DominatingBlock = DominatingGuard->getParent();
     auto *DominatedBlock = DominatedGuard->getParent();
-    
+
     // Same Block?
     if (DominatedBlock == DominatingBlock)
       return false;

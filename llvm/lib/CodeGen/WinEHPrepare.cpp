@@ -54,7 +54,7 @@ static cl::opt<bool> DemoteCatchSwitchPHIOnlyOpt(
     cl::desc("Demote catchswitch BBs only (for wasm EH)"), cl::init(false));
 
 namespace {
-  
+
 class WinEHPrepare : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid.

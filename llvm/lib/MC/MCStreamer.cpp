@@ -514,7 +514,7 @@ void MCStreamer::EmitCFIEscape(StringRef Values) {
 
 void MCStreamer::EmitCFIGnuArgsSize(int64_t Size) {
   MCSymbol *Label = EmitCFILabel();
-  MCCFIInstruction Instruction = 
+  MCCFIInstruction Instruction =
     MCCFIInstruction::createGnuArgsSize(Label, Size);
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
@@ -829,6 +829,8 @@ void MCStreamer::EmitCOFFSectionIndex(MCSymbol const *Symbol) {
 }
 
 void MCStreamer::EmitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) {}
+
+void MCStreamer::EmitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) {}
 
 /// EmitRawText - If this file is backed by an assembly streamer, this dumps
 /// the specified string in the output .s file.  This capability is

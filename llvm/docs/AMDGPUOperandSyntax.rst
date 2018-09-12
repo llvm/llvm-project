@@ -1002,31 +1002,13 @@ These instructions use VOP3P format but have different modifiers.
 
 GFX9 only.
 
-.. _amdgpu_synid_mad_op_sel:
+.. _amdgpu_synid_mad_mix_op_sel:
 
-mad_op_sel
-~~~~~~~~~~
-
-Selects the size of source operands: either 32 bits or 16 bits.
-By default, 32 bits are used for all source operands.
-
-The value 0 indicates 32 bits, the value 1 indicates 16 bits.
-The location of 16 bits in the operand may be specified by
-:ref:`mad_op_sel_hi<amdgpu_synid_mad_op_sel_hi>`.
-
-    ======================================== ================================================
-    Syntax                                   Description
-    ======================================== ================================================
-    op_sel:[{0..1},{0..1},{0..1}]            Select size of each source operand.
-    ======================================== ================================================
-
-.. _amdgpu_synid_mad_op_sel_hi:
-
-mad_op_sel_hi
-~~~~~~~~~~~~~
+mad_mix_op_sel
+~~~~~~~~~~~~~~
 
 This operand has meaning only for 16-bit source operands as indicated by
-:ref:`mad_op_sel<amdgpu_synid_mad_op_sel>`.
+:ref:`mad_mix_op_sel_hi<amdgpu_synid_mad_mix_op_sel_hi>`.
 It specifies to select either the low [15:0] or high [31:16] operand bits
 as input to the operation.
 
@@ -1036,7 +1018,25 @@ By default, low bits are used for all operands.
     ======================================== ================================================
     Syntax                                   Description
     ======================================== ================================================
-    op_sel_hi:[{0..1},{0..1},{0..1}]         Select location of each 16-bit source operand.
+    op_sel:[{0..1},{0..1},{0..1}]            Select location of each 16-bit source operand.
+    ======================================== ================================================
+
+.. _amdgpu_synid_mad_mix_op_sel_hi:
+
+mad_mix_op_sel_hi
+~~~~~~~~~~~~~~~~~
+
+Selects the size of source operands: either 32 bits or 16 bits.
+By default, 32 bits are used for all source operands.
+
+The value 0 indicates 32 bits, the value 1 indicates 16 bits.
+The location of 16 bits in the operand may be specified by
+:ref:`mad_mix_op_sel<amdgpu_synid_mad_mix_op_sel>`.
+
+    ======================================== ================================================
+    Syntax                                   Description
+    ======================================== ================================================
+    op_sel_hi:[{0..1},{0..1},{0..1}]         Select size of each source operand.
     ======================================== ================================================
 
 abs

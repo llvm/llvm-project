@@ -241,6 +241,12 @@ bb:
   ret { { float, i32 }, { i32, <2 x float> } } { { float, i32 } { float 1.000000e+00, i32 2 }, { i32, <2 x float> } { i32 3, <2 x float> <float 2.000000e+00, float 4.000000e+00> } }
 }
 
+; GCN-LABEL: {{^}}ret_return_to_epilog_pseudo_size:
+; GCN: codeLenInByte = 0{{$}}
+define amdgpu_ps float @ret_return_to_epilog_pseudo_size() #0 {
+  ret float undef
+}
+
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 
 attributes #0 = { nounwind }

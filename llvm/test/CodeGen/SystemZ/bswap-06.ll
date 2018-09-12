@@ -9,7 +9,7 @@ define i16 @f1(i16 *%src) {
 ; CHECK-LABEL: f1:
 ; CHECK: lrvh %r2, 0(%r2)
 ; CHECK: br %r14
-  %a = load i16 , i16 *%src
+  %a = load i16, i16 *%src
   %swapped = call i16 @llvm.bswap.i16(i16 %a)
   ret i16 %swapped
 }
@@ -20,7 +20,7 @@ define i16 @f2(i16 *%src) {
 ; CHECK: lrvh %r2, 524286(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr i16, i16 *%src, i64 262143
-  %a = load i16 , i16 *%ptr
+  %a = load i16, i16 *%ptr
   %swapped = call i16 @llvm.bswap.i16(i16 %a)
   ret i16 %swapped
 }
@@ -33,7 +33,7 @@ define i16 @f3(i16 *%src) {
 ; CHECK: lrvh %r2, 0(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr i16, i16 *%src, i64 262144
-  %a = load i16 , i16 *%ptr
+  %a = load i16, i16 *%ptr
   %swapped = call i16 @llvm.bswap.i16(i16 %a)
   ret i16 %swapped
 }
@@ -44,7 +44,7 @@ define i16 @f4(i16 *%src) {
 ; CHECK: lrvh %r2, -2(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr i16, i16 *%src, i64 -1
-  %a = load i16 , i16 *%ptr
+  %a = load i16, i16 *%ptr
   %swapped = call i16 @llvm.bswap.i16(i16 %a)
   ret i16 %swapped
 }
@@ -55,7 +55,7 @@ define i16 @f5(i16 *%src) {
 ; CHECK: lrvh %r2, -524288(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr i16, i16 *%src, i64 -262144
-  %a = load i16 , i16 *%ptr
+  %a = load i16, i16 *%ptr
   %swapped = call i16 @llvm.bswap.i16(i16 %a)
   ret i16 %swapped
 }
@@ -68,7 +68,7 @@ define i16 @f6(i16 *%src) {
 ; CHECK: lrvh %r2, 0(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr i16, i16 *%src, i64 -262145
-  %a = load i16 , i16 *%ptr
+  %a = load i16, i16 *%ptr
   %swapped = call i16 @llvm.bswap.i16(i16 %a)
   ret i16 %swapped
 }
@@ -81,7 +81,7 @@ define i16 @f7(i64 %src, i64 %index) {
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 524287
   %ptr = inttoptr i64 %add2 to i16 *
-  %a = load i16 , i16 *%ptr
+  %a = load i16, i16 *%ptr
   %swapped = call i16 @llvm.bswap.i16(i16 %a)
   ret i16 %swapped
 }

@@ -4468,16 +4468,6 @@ let Predicates = [HasAVX512] in {
             (VMOVSSZmr addr:$dst, (COPY_TO_REGCLASS (v4f32 VR128X:$src), FR32X))>;
 }
 
-let Predicates = [HasAVX512, OptForSize] in {
-  // Shuffle with VMOVSS
-  def : Pat<(v4i32 (X86Movss VR128X:$src1, VR128X:$src2)),
-            (VMOVSSZrr (v4i32 VR128X:$src1), VR128X:$src2)>;
-
-  // Shuffle with VMOVSD
-  def : Pat<(v2i64 (X86Movsd VR128X:$src1, VR128X:$src2)),
-            (VMOVSDZrr VR128X:$src1, VR128X:$src2)>;
-}
-
 let ExeDomain = SSEPackedInt, SchedRW = [SchedWriteVecLogic.XMM] in {
 def VMOVZPQILo2PQIZrr : AVX512XSI<0x7E, MRMSrcReg, (outs VR128X:$dst),
                                 (ins VR128X:$src),

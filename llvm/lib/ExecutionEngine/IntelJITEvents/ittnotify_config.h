@@ -7,7 +7,7 @@
  *
  *===----------------------------------------------------------------------===*
  *
- * This file provides Intel(R) Performance Analyzer JIT (Just-In-Time) 
+ * This file provides Intel(R) Performance Analyzer JIT (Just-In-Time)
  * Profiling API internal config.
  *
  * NOTE: This file comes in a style different from the rest of LLVM
@@ -213,7 +213,7 @@ typedef pthread_mutex_t   mutex_t;
 #define __itt_thread_id()         GetCurrentThreadId()
 #define __itt_thread_yield()      SwitchToThread()
 #ifndef ITT_SIMPLE_INIT
-ITT_INLINE long 
+ITT_INLINE long
 __itt_interlocked_increment(volatile long* ptr) ITT_INLINE_ATTRIBUTE;
 ITT_INLINE long __itt_interlocked_increment(volatile long* ptr)
 {
@@ -273,7 +273,7 @@ ITT_INLINE long __TBB_machine_fetchadd4(volatile void* ptr, long addend)
 }
 #endif /* ITT_ARCH==ITT_ARCH_IA64 */
 #ifndef ITT_SIMPLE_INIT
-ITT_INLINE long 
+ITT_INLINE long
 __itt_interlocked_increment(volatile long* ptr) ITT_INLINE_ATTRIBUTE;
 ITT_INLINE long __itt_interlocked_increment(volatile long* ptr)
 {

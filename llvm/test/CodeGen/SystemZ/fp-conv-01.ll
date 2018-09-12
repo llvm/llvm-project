@@ -20,7 +20,7 @@ define float @f2(fp128 *%ptr) {
 ; CHECK-LABEL: f2:
 ; CHECK: lexbr %f0, %f0
 ; CHECK: br %r14
-  %val = load fp128 , fp128 *%ptr
+  %val = load fp128, fp128 *%ptr
   %res = fptrunc fp128 %val to float
   ret float %res
 }
@@ -33,7 +33,7 @@ define void @f3(float *%dst, fp128 *%ptr, float %d1, float %d2) {
 ; CHECK: aebr %f1, %f2
 ; CHECK: ste %f1, 0(%r2)
 ; CHECK: br %r14
-  %val = load fp128 , fp128 *%ptr
+  %val = load fp128, fp128 *%ptr
   %conv = fptrunc fp128 %val to float
   %res = fadd float %conv, %d2
   store float %res, float *%dst
@@ -45,7 +45,7 @@ define double @f4(fp128 *%ptr) {
 ; CHECK-LABEL: f4:
 ; CHECK: ldxbr %f0, %f0
 ; CHECK: br %r14
-  %val = load fp128 , fp128 *%ptr
+  %val = load fp128, fp128 *%ptr
   %res = fptrunc fp128 %val to double
   ret double %res
 }
@@ -59,7 +59,7 @@ define void @f5(double *%dst, fp128 *%ptr, double %d1, double %d2) {
 ; CHECK-VECTOR: wfadb [[REG:%f[0-9]+]], %f1, %f2
 ; CHECK-VECTOR: std [[REG]], 0(%r2)
 ; CHECK: br %r14
-  %val = load fp128 , fp128 *%ptr
+  %val = load fp128, fp128 *%ptr
   %conv = fptrunc fp128 %val to double
   %res = fadd double %conv, %d2
   store double %res, double *%dst

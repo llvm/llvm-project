@@ -64,7 +64,7 @@ bool ARMELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
   }
 }
 
-// Need to examine the Fixup when determining whether to 
+// Need to examine the Fixup when determining whether to
 // emit the relocation as an explicit symbol or as a section relative
 // offset
 unsigned ARMELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,

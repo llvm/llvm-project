@@ -49,6 +49,7 @@ struct HexagonEvaluator : public BitTracker::MachineEvaluator {
   const HexagonInstrInfo &TII;
 
 private:
+  unsigned getUniqueDefVReg(const MachineInstr &MI) const;
   bool evaluateLoad(const MachineInstr &MI, const CellMapType &Inputs,
                     CellMapType &Outputs) const;
   bool evaluateFormalCopy(const MachineInstr &MI, const CellMapType &Inputs,

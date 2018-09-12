@@ -1,0 +1,123 @@
+# RUN: llc -mtriple=amdgcn-mesa-mesa3d -run-pass=legalizer %s -o - | FileCheck %s
+
+---
+name: test_insert_lo32_i64
+body: |
+  bb.0.entry:
+    liveins: $vgpr0_vgpr1, $vgpr2
+
+    ; CHECK-LABEL: name: test_insert_lo32_i64
+    ; CHECK: %2:_(s64) = G_INSERT %0, %1(s32), 0
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s32) = COPY $vgpr2
+    %2:_(s64) = G_INSERT %0, %1, 0
+    S_ENDPGM implicit %2
+...
+---
+name: test_insert_hi32_i64
+body: |
+  bb.0.entry:
+    liveins: $vgpr0_vgpr1, $vgpr2
+
+    ; CHECK-LABEL: name: test_insert_hi32_i64
+    ; CHECK: %2:_(s64) = G_INSERT %0, %1(s32), 32
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s32) = COPY $vgpr2
+    %2:_(s64) = G_INSERT %0, %1, 32
+    S_ENDPGM implicit %2
+...
+
+---
+name: test_insert_dword0_i128
+body: |
+  bb.0.entry:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+
+    ; CHECK-LABEL: name: test_insert_dword0_i128
+    ; CHECK: %2:_(s128) = G_INSERT %0, %1(s32), 0
+    %0:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(s32) = COPY $vgpr4
+    %2:_(s128) = G_INSERT %0, %1, 0
+    S_ENDPGM implicit %2
+...
+
+---
+name: test_insert_dword1_i128
+body: |
+  bb.0.entry:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+
+    ; CHECK-LABEL: name: test_insert_dword1_i128
+    ; CHECK: %2:_(s128) = G_INSERT %0, %1(s32), 32
+    %0:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(s32) = COPY $vgpr4
+    %2:_(s128) = G_INSERT %0, %1, 32
+    S_ENDPGM implicit %2
+...
+
+---
+name: test_insert_dword2_i128
+body: |
+  bb.0.entry:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+
+    ; CHECK-LABEL: name: test_insert_dword2_i128
+    ; CHECK: %2:_(s128) = G_INSERT %0, %1(s32), 64
+    %0:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(s32) = COPY $vgpr4
+    %2:_(s128) = G_INSERT %0, %1, 64
+    S_ENDPGM implicit %2
+...
+
+---
+name: test_insert_dword3_i128
+body: |
+  bb.0.entry:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+
+    ; CHECK-LABEL: name: test_insert_dword3_i128
+    ; CHECK: %2:_(s128) = G_INSERT %0, %1(s32), 96
+    %0:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(s32) = COPY $vgpr4
+    %2:_(s128) = G_INSERT %0, %1, 96
+    S_ENDPGM implicit %2
+...
+---
+name: test_insert_dword0_i96
+body: |
+  bb.0.entry:
+    liveins: $vgpr0_vgpr1_vgpr2, $vgpr3
+
+    ; CHECK-LABEL: name: test_insert_dword0_i96
+    ; CHECK: %2:_(s96) = G_INSERT %0, %1(s32), 0
+    %0:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(s32) = COPY $vgpr3
+    %2:_(s96) = G_INSERT %0, %1, 0
+    S_ENDPGM implicit %2
+...
+---
+name: test_insert_dword1_i96
+body: |
+  bb.0.entry:
+    liveins: $vgpr0_vgpr1_vgpr2, $vgpr3
+
+    ; CHECK-LABEL: name: test_insert_dword1_i96
+    ; CHECK: %2:_(s96) = G_INSERT %0, %1(s32), 32
+    %0:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(s32) = COPY $vgpr3
+    %2:_(s96) = G_INSERT %0, %1, 32
+    S_ENDPGM implicit %2
+...
+---
+name: test_insert_dword2_i96
+body: |
+  bb.0.entry:
+    liveins: $vgpr0_vgpr1_vgpr2, $vgpr3
+
+    ; CHECK-LABEL: name: test_insert_dword2_i96
+    ; CHECK: %2:_(s96) = G_INSERT %0, %1(s32), 64
+    %0:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(s32) = COPY $vgpr3
+    %2:_(s96) = G_INSERT %0, %1, 64
+    S_ENDPGM implicit %2
+...

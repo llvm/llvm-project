@@ -156,7 +156,7 @@ class StatepointOpers {
   // TODO:: we should change the STATEPOINT representation so that CC and
   // Flags should be part of meta operands, with args and deopt operands, and
   // gc operands all prefixed by their length and a type code. This would be
-  // much more consistent. 
+  // much more consistent.
 public:
   // These values are aboolute offsets into the operands of the statepoint
   // instruction.

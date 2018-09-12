@@ -238,17 +238,18 @@ public:
 
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                    bool OutlineFromLinkOnceODRs) const override;
-  outliner::TargetCostInfo getOutliningCandidateInfo(
+  outliner::OutlinedFunction getOutliningCandidateInfo(
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
   outliner::InstrType
   getOutliningType(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
   unsigned getMachineOutlinerMBBFlags(MachineBasicBlock &MBB) const override;
   void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
-                            const outliner::TargetCostInfo &TCI) const override;
+                          const outliner::OutlinedFunction &OF) const override;
   MachineBasicBlock::iterator
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
-                     const outliner::TargetCostInfo &TCI) const override;
+                     const outliner::Candidate &C) const override;
+  bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
   /// Returns true if the instruction sets to an immediate value that can be
   /// executed more efficiently.
   bool isExynosResetFast(const MachineInstr &MI) const;
@@ -271,6 +272,10 @@ private:
                              ArrayRef<MachineOperand> Cond) const;
   bool substituteCmpToZero(MachineInstr &CmpInstr, unsigned SrcReg,
                            const MachineRegisterInfo *MRI) const;
+
+  /// Returns an unused general-purpose register which can be used for
+  /// constructing an outlined call if one exists. Returns 0 otherwise.
+  unsigned findRegisterToSaveLRTo(const outliner::Candidate &C) const;
 };
 
 /// emitFrameOffset - Emit instructions as needed to set DestReg to SrcReg
@@ -337,6 +342,32 @@ static inline bool isCondBranchOpcode(int Opc) {
 
 static inline bool isIndirectBranchOpcode(int Opc) {
   return Opc == AArch64::BR;
+}
+
+// struct TSFlags {
+#define TSFLAG_ELEMENT_SIZE_TYPE(X)      (X)       // 3-bits
+#define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3) // 1-bit
+// }
+
+namespace AArch64 {
+
+enum ElementSizeType {
+  ElementSizeMask = TSFLAG_ELEMENT_SIZE_TYPE(0x7),
+  ElementSizeNone = TSFLAG_ELEMENT_SIZE_TYPE(0x0),
+  ElementSizeB    = TSFLAG_ELEMENT_SIZE_TYPE(0x1),
+  ElementSizeH    = TSFLAG_ELEMENT_SIZE_TYPE(0x2),
+  ElementSizeS    = TSFLAG_ELEMENT_SIZE_TYPE(0x3),
+  ElementSizeD    = TSFLAG_ELEMENT_SIZE_TYPE(0x4),
+};
+
+enum DestructiveInstType {
+  DestructiveInstTypeMask = TSFLAG_DESTRUCTIVE_INST_TYPE(0x1),
+  NotDestructive          = TSFLAG_DESTRUCTIVE_INST_TYPE(0x0),
+  Destructive             = TSFLAG_DESTRUCTIVE_INST_TYPE(0x1),
+};
+
+#undef TSFLAG_ELEMENT_SIZE_TYPE
+#undef TSFLAG_DESTRUCTIVE_INST_TYPE
 }
 
 } // end namespace llvm

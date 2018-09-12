@@ -64,7 +64,7 @@ public:
 
   /// Returns true if at least one of the register writes performed by
   /// \param Inst implicitly clears the upper portion of all super-registers.
-  /// 
+  ///
   /// Example: on X86-64, a write to EAX implicitly clears the upper half of
   /// RAX. Also (still on x86) an XMM write perfomed by an AVX 128-bit
   /// instruction implicitly clears the upper portion of the correspondent
@@ -86,6 +86,19 @@ public:
   virtual bool clearsSuperRegisters(const MCRegisterInfo &MRI,
                                     const MCInst &Inst,
                                     APInt &Writes) const;
+
+  /// Returns true if \param Inst is a dependency breaking instruction for the
+  /// given subtarget.
+  ///
+  /// The value computed by a dependency breaking instruction is not dependent
+  /// on the inputs. An example of dependency breaking instruction on X86 is
+  /// `XOR %eax, %eax`.
+  /// TODO: In future, we could implement an alternative approach where this
+  /// method returns `true` if the input instruction is not dependent on
+  /// some/all of its input operands. An APInt mask could then be used to
+  /// identify independent operands.
+  virtual bool isDependencyBreaking(const MCSubtargetInfo &STI,
+                                    const MCInst &Inst) const;
 
   /// Given a branch instruction try to get the address the branch
   /// targets. Return true on success, and the address in Target.

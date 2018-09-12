@@ -56,7 +56,7 @@ using namespace llvm;
 
 STATISTIC(NumArgumentsEliminated, "Number of unread args removed");
 STATISTIC(NumRetValsEliminated  , "Number of unused return values removed");
-STATISTIC(NumArgumentsReplacedWithUndef, 
+STATISTIC(NumArgumentsReplacedWithUndef,
           "Number of unread args replaced with undef");
 
 namespace {
@@ -109,7 +109,7 @@ namespace {
 
 char DAH::ID = 0;
 
-INITIALIZE_PASS(DAH, "deadarghaX0r", 
+INITIALIZE_PASS(DAH, "deadarghaX0r",
                 "Dead Argument Hacking (BUGPOINT USE ONLY; DO NOT USE)",
                 false, false)
 
@@ -256,7 +256,7 @@ bool DeadArgumentEliminationPass::DeleteDeadVarargs(Function &Fn) {
   return true;
 }
 
-/// RemoveDeadArgumentsFromCallers - Checks if the given function has any 
+/// RemoveDeadArgumentsFromCallers - Checks if the given function has any
 /// arguments that are unused, and changes the caller parameters to be undefined
 /// instead.
 bool DeadArgumentEliminationPass::RemoveDeadArgumentsFromCallers(Function &Fn) {
@@ -640,7 +640,7 @@ void DeadArgumentEliminationPass::SurveyFunction(const Function &F) {
       Result = Live;
     } else {
       // See what the effect of this use is (recording any uses that cause
-      // MaybeLive in MaybeLiveArgUses). 
+      // MaybeLive in MaybeLiveArgUses).
       Result = SurveyUses(&*AI, MaybeLiveArgUses);
     }
 
@@ -777,7 +777,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
   //    argument.
   // 2) Retain the 'returned' attribute and treat the return value (but not the
   //    entire function) as live so that it is not eliminated.
-  // 
+  //
   // It's not clear in the general case which option is more profitable because,
   // even in the absence of explicit uses of the return value, code generation
   // is free to use the 'returned' attribute to do things like eliding

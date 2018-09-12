@@ -133,6 +133,7 @@ struct CopyConfig {
   std::vector<StringRef> SymbolsToWeaken;
   std::vector<StringRef> SymbolsToRemove;
   std::vector<StringRef> SymbolsToKeep;
+  StringMap<StringRef> SectionsToRename;
   StringMap<StringRef> SymbolsToRename;
   bool StripAll = false;
   bool StripAllGNU = false;
@@ -183,6 +184,11 @@ LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
 
 } // end namespace objcopy
 } // end namespace llvm
+
+static bool IsDebugSection(const SectionBase &Sec) {
+  return Sec.Name.startswith(".debug") || Sec.Name.startswith(".zdebug") ||
+         Sec.Name == ".gdb_index";
+}
 
 static bool IsDWOSection(const SectionBase &Sec) {
   return Sec.Name.endswith(".dwo");
@@ -315,8 +321,7 @@ static void HandleArgs(const CopyConfig &Config, Object &Obj,
   // Removes:
   if (!Config.ToRemove.empty()) {
     RemovePred = [&Config](const SectionBase &Sec) {
-      return std::find(std::begin(Config.ToRemove), std::end(Config.ToRemove),
-                       Sec.Name) != std::end(Config.ToRemove);
+      return find(Config.ToRemove, Sec.Name) != Config.ToRemove.end();
     };
   }
 
@@ -345,7 +350,7 @@ static void HandleArgs(const CopyConfig &Config, Object &Obj,
       case SHT_STRTAB:
         return true;
       }
-      return Sec.Name.startswith(".debug");
+      return IsDebugSection(Sec);
     };
 
   if (Config.StripSections) {
@@ -356,7 +361,7 @@ static void HandleArgs(const CopyConfig &Config, Object &Obj,
 
   if (Config.StripDebug) {
     RemovePred = [RemovePred](const SectionBase &Sec) {
-      return RemovePred(Sec) || Sec.Name.startswith(".debug");
+      return RemovePred(Sec) || IsDebugSection(Sec);
     };
   }
 
@@ -384,8 +389,7 @@ static void HandleArgs(const CopyConfig &Config, Object &Obj,
   if (!Config.OnlyKeep.empty()) {
     RemovePred = [&Config, RemovePred, &Obj](const SectionBase &Sec) {
       // Explicitly keep these sections regardless of previous removes.
-      if (std::find(std::begin(Config.OnlyKeep), std::end(Config.OnlyKeep),
-                    Sec.Name) != std::end(Config.OnlyKeep))
+      if (find(Config.OnlyKeep, Sec.Name) != Config.OnlyKeep.end())
         return false;
 
       // Allow all implicit removes.
@@ -395,7 +399,8 @@ static void HandleArgs(const CopyConfig &Config, Object &Obj,
       // Keep special sections.
       if (Obj.SectionNames == &Sec)
         return false;
-      if (Obj.SymbolTable == &Sec || Obj.SymbolTable->getStrTab() == &Sec)
+      if (Obj.SymbolTable == &Sec ||
+          (Obj.SymbolTable && Obj.SymbolTable->getStrTab() == &Sec))
         return false;
 
       // Remove everything else.
@@ -406,8 +411,7 @@ static void HandleArgs(const CopyConfig &Config, Object &Obj,
   if (!Config.Keep.empty()) {
     RemovePred = [Config, RemovePred](const SectionBase &Sec) {
       // Explicitly keep these sections regardless of previous removes.
-      if (std::find(std::begin(Config.Keep), std::end(Config.Keep), Sec.Name) !=
-          std::end(Config.Keep))
+      if (find(Config.Keep, Sec.Name) != Config.Keep.end())
         return false;
       // Otherwise defer to RemovePred.
       return RemovePred(Sec);
@@ -420,7 +424,7 @@ static void HandleArgs(const CopyConfig &Config, Object &Obj,
   // (equivalently, the updated symbol table is not empty)
   // the symbol table and the string table should not be removed.
   if ((!Config.SymbolsToKeep.empty() || Config.KeepFileSymbols) &&
-      !Obj.SymbolTable->empty()) {
+      Obj.SymbolTable && !Obj.SymbolTable->empty()) {
     RemovePred = [&Obj, RemovePred](const SectionBase &Sec) {
       if (&Sec == Obj.SymbolTable || &Sec == Obj.SymbolTable->getStrTab())
         return false;
@@ -429,6 +433,14 @@ static void HandleArgs(const CopyConfig &Config, Object &Obj,
   }
 
   Obj.removeSections(RemovePred);
+
+  if (!Config.SectionsToRename.empty()) {
+    for (auto &Sec : Obj.sections()) {
+      const auto Iter = Config.SectionsToRename.find(Sec.Name);
+      if (Iter != Config.SectionsToRename.end())
+        Sec.Name = Iter->second;
+    }
+  }
 
   if (!Config.AddSection.empty()) {
     for (const auto &Flag : Config.AddSection) {
@@ -585,6 +597,14 @@ static CopyConfig ParseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
     auto Old2New = StringRef(Arg->getValue()).split('=');
     if (!Config.SymbolsToRename.insert(Old2New).second)
       error("Multiple redefinition of symbol " + Old2New.first);
+  }
+
+  for (auto Arg : InputArgs.filtered(OBJCOPY_rename_section)) {
+    if (!StringRef(Arg->getValue()).contains('='))
+      error("Bad format for --rename-section");
+    auto Old2New = StringRef(Arg->getValue()).split('=');
+    if (!Config.SectionsToRename.insert(Old2New).second)
+      error("Already have a section rename for " + Old2New.first);
   }
 
   for (auto Arg : InputArgs.filtered(OBJCOPY_remove_section))

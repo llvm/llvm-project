@@ -264,9 +264,9 @@ define <4 x i64> @test_rem7_4i64(<4 x i64> %a) nounwind {
 ; AVX1-NEXT:    addq %rdx, %rax
 ; AVX1-NEXT:    shrq $2, %rax
 ; AVX1-NEXT:    leaq (,%rax,8), %rdx
-; AVX1-NEXT:    subq %rax, %rdx
-; AVX1-NEXT:    subq %rdx, %rcx
-; AVX1-NEXT:    vmovq %rcx, %xmm2
+; AVX1-NEXT:    subq %rdx, %rax
+; AVX1-NEXT:    addq %rcx, %rax
+; AVX1-NEXT:    vmovq %rax, %xmm2
 ; AVX1-NEXT:    vmovq %xmm1, %rcx
 ; AVX1-NEXT:    movq %rcx, %rax
 ; AVX1-NEXT:    mulq %rsi
@@ -276,9 +276,9 @@ define <4 x i64> @test_rem7_4i64(<4 x i64> %a) nounwind {
 ; AVX1-NEXT:    addq %rdx, %rax
 ; AVX1-NEXT:    shrq $2, %rax
 ; AVX1-NEXT:    leaq (,%rax,8), %rdx
-; AVX1-NEXT:    subq %rax, %rdx
-; AVX1-NEXT:    subq %rdx, %rcx
-; AVX1-NEXT:    vmovq %rcx, %xmm1
+; AVX1-NEXT:    subq %rdx, %rax
+; AVX1-NEXT:    addq %rcx, %rax
+; AVX1-NEXT:    vmovq %rax, %xmm1
 ; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; AVX1-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX1-NEXT:    movq %rcx, %rax
@@ -289,9 +289,9 @@ define <4 x i64> @test_rem7_4i64(<4 x i64> %a) nounwind {
 ; AVX1-NEXT:    addq %rdx, %rax
 ; AVX1-NEXT:    shrq $2, %rax
 ; AVX1-NEXT:    leaq (,%rax,8), %rdx
-; AVX1-NEXT:    subq %rax, %rdx
-; AVX1-NEXT:    subq %rdx, %rcx
-; AVX1-NEXT:    vmovq %rcx, %xmm2
+; AVX1-NEXT:    subq %rdx, %rax
+; AVX1-NEXT:    addq %rcx, %rax
+; AVX1-NEXT:    vmovq %rax, %xmm2
 ; AVX1-NEXT:    vmovq %xmm0, %rcx
 ; AVX1-NEXT:    movq %rcx, %rax
 ; AVX1-NEXT:    mulq %rsi
@@ -301,9 +301,9 @@ define <4 x i64> @test_rem7_4i64(<4 x i64> %a) nounwind {
 ; AVX1-NEXT:    addq %rdx, %rax
 ; AVX1-NEXT:    shrq $2, %rax
 ; AVX1-NEXT:    leaq (,%rax,8), %rdx
-; AVX1-NEXT:    subq %rax, %rdx
-; AVX1-NEXT:    subq %rdx, %rcx
-; AVX1-NEXT:    vmovq %rcx, %xmm0
+; AVX1-NEXT:    subq %rdx, %rax
+; AVX1-NEXT:    addq %rcx, %rax
+; AVX1-NEXT:    vmovq %rax, %xmm0
 ; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
@@ -321,9 +321,9 @@ define <4 x i64> @test_rem7_4i64(<4 x i64> %a) nounwind {
 ; AVX2-NEXT:    addq %rdx, %rax
 ; AVX2-NEXT:    shrq $2, %rax
 ; AVX2-NEXT:    leaq (,%rax,8), %rdx
-; AVX2-NEXT:    subq %rax, %rdx
-; AVX2-NEXT:    subq %rdx, %rcx
-; AVX2-NEXT:    vmovq %rcx, %xmm2
+; AVX2-NEXT:    subq %rdx, %rax
+; AVX2-NEXT:    addq %rcx, %rax
+; AVX2-NEXT:    vmovq %rax, %xmm2
 ; AVX2-NEXT:    vmovq %xmm1, %rcx
 ; AVX2-NEXT:    movq %rcx, %rax
 ; AVX2-NEXT:    mulq %rsi
@@ -333,9 +333,9 @@ define <4 x i64> @test_rem7_4i64(<4 x i64> %a) nounwind {
 ; AVX2-NEXT:    addq %rdx, %rax
 ; AVX2-NEXT:    shrq $2, %rax
 ; AVX2-NEXT:    leaq (,%rax,8), %rdx
-; AVX2-NEXT:    subq %rax, %rdx
-; AVX2-NEXT:    subq %rdx, %rcx
-; AVX2-NEXT:    vmovq %rcx, %xmm1
+; AVX2-NEXT:    subq %rdx, %rax
+; AVX2-NEXT:    addq %rcx, %rax
+; AVX2-NEXT:    vmovq %rax, %xmm1
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; AVX2-NEXT:    vpextrq $1, %xmm0, %rcx
 ; AVX2-NEXT:    movq %rcx, %rax
@@ -346,9 +346,9 @@ define <4 x i64> @test_rem7_4i64(<4 x i64> %a) nounwind {
 ; AVX2-NEXT:    addq %rdx, %rax
 ; AVX2-NEXT:    shrq $2, %rax
 ; AVX2-NEXT:    leaq (,%rax,8), %rdx
-; AVX2-NEXT:    subq %rax, %rdx
-; AVX2-NEXT:    subq %rdx, %rcx
-; AVX2-NEXT:    vmovq %rcx, %xmm2
+; AVX2-NEXT:    subq %rdx, %rax
+; AVX2-NEXT:    addq %rcx, %rax
+; AVX2-NEXT:    vmovq %rax, %xmm2
 ; AVX2-NEXT:    vmovq %xmm0, %rcx
 ; AVX2-NEXT:    movq %rcx, %rax
 ; AVX2-NEXT:    mulq %rsi
@@ -358,9 +358,9 @@ define <4 x i64> @test_rem7_4i64(<4 x i64> %a) nounwind {
 ; AVX2-NEXT:    addq %rdx, %rax
 ; AVX2-NEXT:    shrq $2, %rax
 ; AVX2-NEXT:    leaq (,%rax,8), %rdx
-; AVX2-NEXT:    subq %rax, %rdx
-; AVX2-NEXT:    subq %rdx, %rcx
-; AVX2-NEXT:    vmovq %rcx, %xmm0
+; AVX2-NEXT:    subq %rdx, %rax
+; AVX2-NEXT:    addq %rcx, %rax
+; AVX2-NEXT:    vmovq %rax, %xmm0
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq

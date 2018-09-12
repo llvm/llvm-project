@@ -23,8 +23,8 @@ class AMDGPUMachineFunction : public MachineFunctionInfo {
   SmallDenseMap<const GlobalValue *, unsigned, 4> LocalMemoryObjects;
 
 protected:
-  uint64_t ExplicitKernArgSize;
-  unsigned MaxKernArgAlign;
+  uint64_t ExplicitKernArgSize; // Cache for this.
+  unsigned MaxKernArgAlign; // Cache for this.
 
   /// Number of bytes in the LDS that are being used.
   unsigned LDSSize;
@@ -43,17 +43,6 @@ protected:
 
 public:
   AMDGPUMachineFunction(const MachineFunction &MF);
-
-  uint64_t allocateKernArg(uint64_t Size, unsigned Align) {
-    assert(isPowerOf2_32(Align));
-    ExplicitKernArgSize = alignTo(ExplicitKernArgSize, Align);
-
-    uint64_t Result = ExplicitKernArgSize;
-    ExplicitKernArgSize += Size;
-
-    MaxKernArgAlign = std::max(Align, MaxKernArgAlign);
-    return Result;
-  }
 
   uint64_t getExplicitKernArgSize() const {
     return ExplicitKernArgSize;

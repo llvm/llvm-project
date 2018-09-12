@@ -194,9 +194,8 @@ define <4 x i32> @test_v4i32_not_sub_splatconst(<4 x i32> %a0) {
 
 define <4 x i32> @test_v4i32_not_sub_const(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_not_sub_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub <4 x i32> <i32 3, i32 5, i32 -1, i32 15>, [[A0:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A0:%.*]], <i32 -4, i32 -6, i32 0, i32 -16>
+; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = sub <4 x i32> <i32  3, i32  5, i32 -1, i32 15>, %a0
   %2 = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, %1
@@ -205,9 +204,8 @@ define <4 x i32> @test_v4i32_not_sub_const(<4 x i32> %a0) {
 
 define <4 x i32> @test_v4i32_not_sub_const_undef(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_not_sub_const_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub <4 x i32> <i32 3, i32 undef, i32 -1, i32 15>, [[A0:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 -1, i32 -1, i32 -1, i32 undef>
-; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A0:%.*]], <i32 -4, i32 undef, i32 0, i32 -16>
+; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = sub <4 x i32> <i32  3, i32 undef, i32 -1, i32 15>, %a0
   %2 = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 undef>, %1

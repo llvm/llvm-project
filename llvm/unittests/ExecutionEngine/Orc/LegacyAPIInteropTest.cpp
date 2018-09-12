@@ -14,7 +14,57 @@
 using namespace llvm;
 using namespace llvm::orc;
 
+class LegacyAPIsStandardTest : public CoreAPIsBasedStandardTest {};
+
 namespace {
+
+TEST_F(LegacyAPIsStandardTest, TestLambdaSymbolResolver) {
+  cantFail(V.define(absoluteSymbols({{Foo, FooSym}, {Bar, BarSym}})));
+
+  auto Resolver = createSymbolResolver(
+      [&](const SymbolNameSet &Symbols) { return V.lookupFlags(Symbols); },
+      [&](std::shared_ptr<AsynchronousSymbolQuery> Q, SymbolNameSet Symbols) {
+        return V.legacyLookup(std::move(Q), Symbols);
+      });
+
+  SymbolNameSet Symbols({Foo, Bar, Baz});
+
+  SymbolFlagsMap SymbolFlags = Resolver->lookupFlags(Symbols);
+
+  EXPECT_EQ(SymbolFlags.size(), 2U)
+      << "lookupFlags returned the wrong number of results";
+  EXPECT_EQ(SymbolFlags.count(Foo), 1U) << "Missing lookupFlags result for foo";
+  EXPECT_EQ(SymbolFlags.count(Bar), 1U) << "Missing lookupFlags result for bar";
+  EXPECT_EQ(SymbolFlags[Foo], FooSym.getFlags())
+      << "Incorrect lookupFlags result for Foo";
+  EXPECT_EQ(SymbolFlags[Bar], BarSym.getFlags())
+      << "Incorrect lookupFlags result for Bar";
+
+  bool OnResolvedRun = false;
+
+  auto OnResolved = [&](Expected<SymbolMap> Result) {
+    OnResolvedRun = true;
+    EXPECT_TRUE(!!Result) << "Unexpected error";
+    EXPECT_EQ(Result->size(), 2U) << "Unexpected number of resolved symbols";
+    EXPECT_EQ(Result->count(Foo), 1U) << "Missing lookup result for foo";
+    EXPECT_EQ(Result->count(Bar), 1U) << "Missing lookup result for bar";
+    EXPECT_EQ((*Result)[Foo].getAddress(), FooSym.getAddress())
+        << "Incorrect address for foo";
+    EXPECT_EQ((*Result)[Bar].getAddress(), BarSym.getAddress())
+        << "Incorrect address for bar";
+  };
+  auto OnReady = [&](Error Err) {
+    EXPECT_FALSE(!!Err) << "Finalization should never fail in this test";
+  };
+
+  auto Q = std::make_shared<AsynchronousSymbolQuery>(SymbolNameSet({Foo, Bar}),
+                                                     OnResolved, OnReady);
+  auto Unresolved = Resolver->lookup(std::move(Q), Symbols);
+
+  EXPECT_EQ(Unresolved.size(), 1U) << "Expected one unresolved symbol";
+  EXPECT_EQ(Unresolved.count(Baz), 1U) << "Expected baz to not be resolved";
+  EXPECT_TRUE(OnResolvedRun) << "OnResolved was never run";
+}
 
 TEST(LegacyAPIInteropTest, QueryAgainstVSO) {
 
@@ -25,14 +75,13 @@ TEST(LegacyAPIInteropTest, QueryAgainstVSO) {
   JITEvaluatedSymbol FooSym(0xdeadbeef, JITSymbolFlags::Exported);
   cantFail(V.define(absoluteSymbols({{Foo, FooSym}})));
 
-  auto LookupFlags = [&](SymbolFlagsMap &SymbolFlags,
-                         const SymbolNameSet &Names) {
-    return V.lookupFlags(SymbolFlags, Names);
+  auto LookupFlags = [&](const SymbolNameSet &Names) {
+    return V.lookupFlags(Names);
   };
 
   auto Lookup = [&](std::shared_ptr<AsynchronousSymbolQuery> Query,
                     SymbolNameSet Symbols) {
-    return V.lookup(std::move(Query), Symbols);
+    return V.legacyLookup(std::move(Query), Symbols);
   };
 
   auto UnderlyingResolver =
@@ -92,40 +141,31 @@ TEST(LegacyAPIInteropTset, LegacyLookupHelpersFn) {
 
   SymbolNameSet Symbols({Foo, Bar, Baz});
 
-  SymbolFlagsMap SymbolFlags;
-  auto SymbolsNotFound =
-      lookupFlagsWithLegacyFn(SymbolFlags, Symbols, LegacyLookup);
+  auto SymbolFlags = lookupFlagsWithLegacyFn(Symbols, LegacyLookup);
 
-  EXPECT_TRUE(!!SymbolsNotFound) << "lookupFlagsWithLegacy failed unexpectedly";
-  EXPECT_EQ(SymbolFlags.size(), 2U) << "Wrong number of flags returned";
-  EXPECT_EQ(SymbolFlags.count(Foo), 1U) << "Flags for foo missing";
-  EXPECT_EQ(SymbolFlags.count(Bar), 1U) << "Flags for foo missing";
-  EXPECT_EQ(SymbolFlags[Foo], FooFlags) << "Wrong flags for foo";
-  EXPECT_EQ(SymbolFlags[Bar], BarFlags) << "Wrong flags for foo";
-  EXPECT_EQ(SymbolsNotFound->size(), 1U) << "Expected one symbol not found";
-  EXPECT_EQ(SymbolsNotFound->count(Baz), 1U)
-      << "Expected symbol baz to be not found";
+  EXPECT_TRUE(!!SymbolFlags) << "Expected lookupFlagsWithLegacyFn to succeed";
+  EXPECT_EQ(SymbolFlags->size(), 2U) << "Wrong number of flags returned";
+  EXPECT_EQ(SymbolFlags->count(Foo), 1U) << "Flags for foo missing";
+  EXPECT_EQ(SymbolFlags->count(Bar), 1U) << "Flags for foo missing";
+  EXPECT_EQ((*SymbolFlags)[Foo], FooFlags) << "Wrong flags for foo";
+  EXPECT_EQ((*SymbolFlags)[Bar], BarFlags) << "Wrong flags for foo";
   EXPECT_FALSE(BarMaterialized)
       << "lookupFlags should not have materialized bar";
 
   bool OnResolvedRun = false;
   bool OnReadyRun = false;
-  auto OnResolved =
-      [&](Expected<AsynchronousSymbolQuery::ResolutionResult> Result) {
-        OnResolvedRun = true;
-        EXPECT_TRUE(!!Result) << "lookuWithLegacy failed to resolve";
+  auto OnResolved = [&](Expected<SymbolMap> Result) {
+    OnResolvedRun = true;
+    EXPECT_TRUE(!!Result) << "lookuWithLegacy failed to resolve";
 
-        auto &Resolved = Result->Symbols;
-        EXPECT_EQ(Resolved.size(), 2U) << "Wrong number of symbols resolved";
-        EXPECT_EQ(Resolved.count(Foo), 1U) << "Result for foo missing";
-        EXPECT_EQ(Resolved.count(Bar), 1U) << "Result for bar missing";
-        EXPECT_EQ(Resolved[Foo].getAddress(), FooAddr)
-            << "Wrong address for foo";
-        EXPECT_EQ(Resolved[Foo].getFlags(), FooFlags) << "Wrong flags for foo";
-        EXPECT_EQ(Resolved[Bar].getAddress(), BarAddr)
-            << "Wrong address for bar";
-        EXPECT_EQ(Resolved[Bar].getFlags(), BarFlags) << "Wrong flags for bar";
-      };
+    EXPECT_EQ(Result->size(), 2U) << "Wrong number of symbols resolved";
+    EXPECT_EQ(Result->count(Foo), 1U) << "Result for foo missing";
+    EXPECT_EQ(Result->count(Bar), 1U) << "Result for bar missing";
+    EXPECT_EQ((*Result)[Foo].getAddress(), FooAddr) << "Wrong address for foo";
+    EXPECT_EQ((*Result)[Foo].getFlags(), FooFlags) << "Wrong flags for foo";
+    EXPECT_EQ((*Result)[Bar].getAddress(), BarAddr) << "Wrong address for bar";
+    EXPECT_EQ((*Result)[Bar].getFlags(), BarFlags) << "Wrong flags for bar";
+  };
   auto OnReady = [&](Error Err) {
     EXPECT_FALSE(!!Err) << "Finalization unexpectedly failed";
     OnReadyRun = true;

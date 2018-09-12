@@ -49,6 +49,9 @@ public:
     init(this->SV.begin(), this->SV.end(), false);
   }
 
+  // Key function.
+  ~SmallVectorMemoryBuffer() override;
+
   StringRef getBufferIdentifier() const override { return BufferName; }
 
   BufferKind getBufferKind() const override { return MemoryBuffer_Malloc; }
@@ -56,7 +59,6 @@ public:
 private:
   SmallVector<char, 0> SV;
   std::string BufferName;
-  void anchor() override;
 };
 
 } // namespace llvm

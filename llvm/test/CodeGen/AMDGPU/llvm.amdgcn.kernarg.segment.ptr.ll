@@ -79,7 +79,7 @@ define amdgpu_kernel void @opencl_test_implicit_alignment(i32 addrspace(1)* %out
 ; CO-V2: enable_sgpr_kernarg_segment_ptr = 1
 ; HSA: kernarg_segment_byte_size = 0
 ; OS-MESA3D: kernarg_segment_byte_size = 16
-; CO-V2: kernarg_segment_alignment = 32
+; CO-V2: kernarg_segment_alignment = 4
 
 ; HSA: s_load_dword s{{[0-9]+}}, s[4:5]
 define amdgpu_kernel void @test_no_kernargs() #1 {

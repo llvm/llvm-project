@@ -3946,6 +3946,24 @@ static bool ForceArbitraryInstResultType(TreePatternNode *N, TreePattern &TP) {
   return false;
 }
 
+// Promote xform function to be an explicit node wherever set.
+static TreePatternNodePtr PromoteXForms(TreePatternNodePtr N) {
+  if (Record *Xform = N->getTransformFn()) {
+      N->setTransformFn(nullptr);
+      std::vector<TreePatternNodePtr> Children;
+      Children.push_back(PromoteXForms(N));
+      return std::make_shared<TreePatternNode>(Xform, std::move(Children),
+                                               N->getNumTypes());
+  }
+
+  if (!N->isLeaf())
+    for (unsigned i = 0, e = N->getNumChildren(); i != e; ++i) {
+      TreePatternNodePtr Child = N->getChildShared(i);
+      N->setChild(i, PromoteXForms(Child));
+    }
+  return N;
+}
+
 void CodeGenDAGPatterns::ParseOnePattern(Record *TheDef,
        TreePattern &Pattern, TreePattern &Result,
        const std::vector<Record *> &InstImpResults) {
@@ -4011,30 +4029,8 @@ void CodeGenDAGPatterns::ParseOnePattern(Record *TheDef,
     Result.error("Could not infer all types in pattern result!");
   }
 
-  // Promote the xform function to be an explicit node if set.
-  const TreePatternNodePtr &DstPattern = Result.getOnlyTree();
-  std::vector<TreePatternNodePtr> ResultNodeOperands;
-  for (unsigned ii = 0, ee = DstPattern->getNumChildren(); ii != ee; ++ii) {
-    TreePatternNodePtr OpNode = DstPattern->getChildShared(ii);
-    if (Record *Xform = OpNode->getTransformFn()) {
-      OpNode->setTransformFn(nullptr);
-      std::vector<TreePatternNodePtr> Children;
-      Children.push_back(OpNode);
-      OpNode = std::make_shared<TreePatternNode>(Xform, std::move(Children),
-                                                 OpNode->getNumTypes());
-    }
-    ResultNodeOperands.push_back(OpNode);
-  }
-
-  TreePatternNodePtr DstShared =
-      DstPattern->isLeaf()
-          ? DstPattern
-          : std::make_shared<TreePatternNode>(DstPattern->getOperator(),
-                                              std::move(ResultNodeOperands),
-                                              DstPattern->getNumTypes());
-
-  for (unsigned i = 0, e = Result.getOnlyTree()->getNumTypes(); i != e; ++i)
-    DstShared->setType(i, Result.getOnlyTree()->getExtType(i));
+  // Promote xform function to be an explicit node wherever set.
+  TreePatternNodePtr DstShared = PromoteXForms(Result.getOnlyTree());
 
   TreePattern Temp(Result.getRecord(), DstShared, false, *this);
   Temp.InferAllTypes();

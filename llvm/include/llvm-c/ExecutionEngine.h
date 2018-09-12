@@ -187,6 +187,7 @@ void LLVMDisposeMCJITMemoryManager(LLVMMCJITMemoryManagerRef MM);
 LLVMJITEventListenerRef LLVMCreateGDBRegistrationListener(void);
 LLVMJITEventListenerRef LLVMCreateIntelJITEventListener(void);
 LLVMJITEventListenerRef LLVMCreateOprofileJITEventListener(void);
+LLVMJITEventListenerRef LLVMCreatePerfJITEventListener(void);
 
 /**
  * @}

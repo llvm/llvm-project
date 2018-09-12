@@ -175,7 +175,7 @@ bool ShadowStackGCLowering::doInitialization(Module &M) {
   }
   if (!Active)
     return false;
-  
+
   // struct FrameMap {
   //   int32_t NumRoots; // Number of roots in stack frame.
   //   int32_t NumMeta;  // Number of metadata descriptors. May be < NumRoots.
@@ -286,7 +286,7 @@ bool ShadowStackGCLowering::runOnFunction(Function &F) {
   if (!F.hasGC() ||
       F.getGC() != std::string("shadow-stack"))
     return false;
-  
+
   LLVMContext &Context = F.getContext();
 
   // Find calls to llvm.gcroot.

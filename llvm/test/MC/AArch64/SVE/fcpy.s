@@ -1554,3 +1554,31 @@ fcpy z0.d, p0/m, #31.00000000
 // CHECK-ENCODING: [0xe0,0xc7,0xd0,0x05]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: e0 c7 d0 05 <unknown>
+
+
+// --------------------------------------------------------------------------//
+// Test compatibility with MOVPRFX instruction.
+
+movprfx z0.d, p0/z, z7.d
+// CHECK-INST: movprfx	z0.d, p0/z, z7.d
+// CHECK-ENCODING: [0xe0,0x20,0xd0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 20 d0 04 <unknown>
+
+fcpy z0.d, p0/m, #31.00000000
+// CHECK-INST: fmov	z0.d, p0/m, #31.00000000
+// CHECK-ENCODING: [0xe0,0xc7,0xd0,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 c7 d0 05 <unknown>
+
+movprfx z0, z7
+// CHECK-INST: movprfx	z0, z7
+// CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+
+fcpy z0.d, p0/m, #31.00000000
+// CHECK-INST: fmov	z0.d, p0/m, #31.00000000
+// CHECK-ENCODING: [0xe0,0xc7,0xd0,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 c7 d0 05 <unknown>

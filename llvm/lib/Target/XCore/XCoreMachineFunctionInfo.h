@@ -43,11 +43,11 @@ class XCoreFunctionInfo : public MachineFunctionInfo {
 
 public:
   XCoreFunctionInfo() = default;
-  
+
   explicit XCoreFunctionInfo(MachineFunction &MF) {}
-  
+
   ~XCoreFunctionInfo() override = default;
-  
+
   void setVarArgsFrameIndex(int off) { VarArgsFrameIndex = off; }
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
 

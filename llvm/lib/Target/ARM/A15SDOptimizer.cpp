@@ -660,8 +660,9 @@ bool A15SDOptimizer::runOnMachineFunction(MachineFunction &Fn) {
   const ARMSubtarget &STI = Fn.getSubtarget<ARMSubtarget>();
   // Since the A15SDOptimizer pass can insert VDUP instructions, it can only be
   // enabled when NEON is available.
-  if (!(STI.isCortexA15() && STI.hasNEON()))
+  if (!(STI.useSplatVFPToNeon() && STI.hasNEON()))
     return false;
+
   TII = STI.getInstrInfo();
   TRI = STI.getRegisterInfo();
   MRI = &Fn.getRegInfo();

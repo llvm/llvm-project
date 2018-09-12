@@ -441,8 +441,8 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer) {
       Dumper->printSectionAsString(Obj, SectionName);
     });
   if (!opts::HexDump.empty())
-    llvm::for_each(opts::HexDump, [&Dumper](StringRef SectionName) {
-      Dumper->printSectionAsHex(SectionName);
+    llvm::for_each(opts::HexDump, [&Dumper, Obj](StringRef SectionName) {
+      Dumper->printSectionAsHex(Obj, SectionName);
     });
   if (opts::HashTable)
     Dumper->printHashTable();

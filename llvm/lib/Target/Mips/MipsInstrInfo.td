@@ -73,12 +73,8 @@ def MipsGPRel : SDNode<"MipsISD::GPRel", SDTIntUnaryOp>;
 // Hi node for accessing the GOT.
 def MipsGotHi : SDNode<"MipsISD::GotHi", SDTIntUnaryOp>;
 
-// TlsGd node is used to handle General Dynamic TLS
-def MipsTlsGd : SDNode<"MipsISD::TlsGd", SDTIntUnaryOp>;
-
-// TprelHi and TprelLo nodes are used to handle Local Exec TLS
-def MipsTprelHi    : SDNode<"MipsISD::TprelHi", SDTIntUnaryOp>;
-def MipsTprelLo    : SDNode<"MipsISD::TprelLo", SDTIntUnaryOp>;
+// Hi node for handling TLS offsets
+def MipsTlsHi   : SDNode<"MipsISD::TlsHi", SDTIntUnaryOp>;
 
 // Thread pointer
 def MipsThreadPointer: SDNode<"MipsISD::ThreadPointer", SDT_MipsThreadPointer>;
@@ -3074,7 +3070,6 @@ multiclass MipsHiLoRelocs<Instruction Lui, Instruction Addiu,
   def : MipsPat<(MipsHi tblockaddress:$in), (Lui tblockaddress:$in)>;
   def : MipsPat<(MipsHi tjumptable:$in), (Lui tjumptable:$in)>;
   def : MipsPat<(MipsHi tconstpool:$in), (Lui tconstpool:$in)>;
-  def : MipsPat<(MipsHi tglobaltlsaddr:$in), (Lui tglobaltlsaddr:$in)>;
   def : MipsPat<(MipsHi texternalsym:$in), (Lui texternalsym:$in)>;
 
   def : MipsPat<(MipsLo tglobaladdr:$in), (Addiu ZeroReg, tglobaladdr:$in)>;
@@ -3098,6 +3093,10 @@ multiclass MipsHiLoRelocs<Instruction Lui, Instruction Addiu,
               (Addiu GPROpnd:$hi, tglobaltlsaddr:$lo)>;
 }
 
+// wrapper_pic
+class WrapperPat<SDNode node, Instruction ADDiuOp, RegisterClass RC>:
+      MipsPat<(MipsWrapper RC:$gp, node:$in), (ADDiuOp RC:$gp, node:$in)>;
+
 let AdditionalPredicates = [NotInMicroMips] in {
   defm : MipsHiLoRelocs<LUi, ADDiu, ZERO, GPR32Opnd>, ISA_MIPS1;
 
@@ -3105,16 +3104,14 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsPat<(MipsGotHi texternalsym:$in), (LUi texternalsym:$in)>,
         ISA_MIPS1;
 
+  def : MipsPat<(MipsTlsHi tglobaltlsaddr:$in), (LUi tglobaltlsaddr:$in)>,
+        ISA_MIPS1;
+
   // gp_rel relocs
   def : MipsPat<(add GPR32:$gp, (MipsGPRel tglobaladdr:$in)),
                 (ADDiu GPR32:$gp, tglobaladdr:$in)>, ISA_MIPS1, ABI_NOT_N64;
   def : MipsPat<(add GPR32:$gp, (MipsGPRel tconstpool:$in)),
                 (ADDiu GPR32:$gp, tconstpool:$in)>, ISA_MIPS1, ABI_NOT_N64;
-
-  // wrapper_pic
-  class WrapperPat<SDNode node, Instruction ADDiuOp, RegisterClass RC>:
-        MipsPat<(MipsWrapper RC:$gp, node:$in),
-                (ADDiuOp RC:$gp, node:$in)>;
 
   def : WrapperPat<tglobaladdr, ADDiu, GPR32>, ISA_MIPS1;
   def : WrapperPat<tconstpool, ADDiu, GPR32>, ISA_MIPS1;

@@ -55,9 +55,9 @@
 ; V5RNGLISTS-NOT:  DW_TAG
 ; V5RNGLISTS:      DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x0000000c)
 ; V5RNGLISTS:      .debug_rnglists contents:
-; V5RNGLISTS-NEXT: 0x00000000: Range List Header: length = 0x00000014, version = 0x0005,
+; V5RNGLISTS-NEXT: 0x00000000: range list header: length = 0x00000014, version = 0x0005,
 ; V5RNGLISTS-SAME: addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
-; V5RNGLISTS-NEXT: Ranges:
+; V5RNGLISTS-NEXT: ranges:
 ; V5RNGLISTS-NEXT: 0x0000000c: [DW_RLE_offset_pair]:
 ; V5RNGLISTS-NEXT: 0x0000000f: [DW_RLE_offset_pair]:
 ; V5RNGLISTS:      0x{{[0-9a-f]+}}: [DW_RLE_end_of_list]

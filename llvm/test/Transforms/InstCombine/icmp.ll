@@ -3345,7 +3345,7 @@ define <2 x i1> @PR36583(<2 x i8*>)  {
 define <2 x i32> @Op1Negated_Vec(<2 x i32> %x) {
 ; CHECK-LABEL: @Op1Negated_Vec(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[SUB]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[SUB]], <2 x i32> [[X]]
 ; CHECK-NEXT:    ret <2 x i32> [[COND]]
 ;

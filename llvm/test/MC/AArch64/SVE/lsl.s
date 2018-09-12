@@ -162,3 +162,55 @@ lsl     z0.s, z1.s, z2.d
 // CHECK-ENCODING: [0x20,0x8c,0xa2,0x04]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 20 8c a2 04 <unknown>
+
+
+// --------------------------------------------------------------------------//
+// Test compatibility with MOVPRFX instruction.
+
+movprfx z31.d, p0/z, z6.d
+// CHECK-INST: movprfx	z31.d, p0/z, z6.d
+// CHECK-ENCODING: [0xdf,0x20,0xd0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: df 20 d0 04 <unknown>
+
+lsl     z31.d, p0/m, z31.d, #63
+// CHECK-INST: lsl	z31.d, p0/m, z31.d, #63
+// CHECK-ENCODING: [0xff,0x83,0xc3,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 83 c3 04 <unknown>
+
+movprfx z31, z6
+// CHECK-INST: movprfx	z31, z6
+// CHECK-ENCODING: [0xdf,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: df bc 20 04 <unknown>
+
+lsl     z31.d, p0/m, z31.d, #63
+// CHECK-INST: lsl	z31.d, p0/m, z31.d, #63
+// CHECK-ENCODING: [0xff,0x83,0xc3,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff 83 c3 04 <unknown>
+
+movprfx z0.s, p0/z, z7.s
+// CHECK-INST: movprfx	z0.s, p0/z, z7.s
+// CHECK-ENCODING: [0xe0,0x20,0x90,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 20 90 04 <unknown>
+
+lsl     z0.s, p0/m, z0.s, z1.d
+// CHECK-INST: lsl	z0.s, p0/m, z0.s, z1.d
+// CHECK-ENCODING: [0x20,0x80,0x9b,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 20 80 9b 04 <unknown>
+
+movprfx z0, z7
+// CHECK-INST: movprfx	z0, z7
+// CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+
+lsl     z0.s, p0/m, z0.s, z1.d
+// CHECK-INST: lsl	z0.s, p0/m, z0.s, z1.d
+// CHECK-ENCODING: [0x20,0x80,0x9b,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 20 80 9b 04 <unknown>

@@ -327,10 +327,16 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
 
   // Only include DW_AT_frame_base in full debug info
   if (!includeMinimalInlineScopes()) {
-    const TargetRegisterInfo *RI = Asm->MF->getSubtarget().getRegisterInfo();
-    MachineLocation Location(RI->getFrameRegister(*Asm->MF));
-    if (RI->isPhysicalRegister(Location.getReg()))
-      addAddress(*SPDie, dwarf::DW_AT_frame_base, Location);
+    if (Asm->MF->getTarget().getTargetTriple().isNVPTX()) {
+      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+      addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_call_frame_cfa);
+      addBlock(*SPDie, dwarf::DW_AT_frame_base, Loc);
+    } else {
+      const TargetRegisterInfo *RI = Asm->MF->getSubtarget().getRegisterInfo();
+      MachineLocation Location(RI->getFrameRegister(*Asm->MF));
+      if (RI->isPhysicalRegister(Location.getReg()))
+        addAddress(*SPDie, dwarf::DW_AT_frame_base, Location);
+    }
   }
 
   // Add name to the name table, we do this here because we're guaranteed
@@ -420,8 +426,6 @@ void DwarfCompileUnit::addScopeRangeList(DIE &ScopeDIE,
   } else {
     addSectionLabel(ScopeDIE, dwarf::DW_AT_ranges, List.getSym(),
                     RangeSectionSym);
-    if (DD->getDwarfVersion() >= 5)
-      addRnglistsBase();
   }
 
   // Add the range list to the set of ranges to be emitted.
@@ -572,8 +576,11 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     Ops.append(Expr->elements_begin(), Expr->elements_end());
     DIExpressionCursor Cursor(Ops);
     DwarfExpr.setMemoryLocationKind();
-    DwarfExpr.addMachineRegExpression(
-        *Asm->MF->getSubtarget().getRegisterInfo(), Cursor, FrameReg);
+    if (const MCSymbol *FrameSymbol = Asm->getFunctionFrameSymbol())
+      addOpAddress(*Loc, FrameSymbol);
+    else
+      DwarfExpr.addMachineRegExpression(
+          *Asm->MF->getSubtarget().getRegisterInfo(), Cursor, FrameReg);
     DwarfExpr.addExpression(std::move(Cursor));
   }
   addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());

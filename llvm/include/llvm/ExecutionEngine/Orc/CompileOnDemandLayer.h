@@ -23,6 +23,7 @@
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
+#include "llvm/ExecutionEngine/Orc/Legacy.h"
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/IR/Attributes.h"
@@ -67,21 +68,11 @@ public:
   using IndirectStubsManagerBuilder =
       std::function<std::unique_ptr<IndirectStubsManager>()>;
 
-  /// Retrieve symbol resolver for the given VModuleKey.
-  using GetSymbolResolverFunction =
-      std::function<std::shared_ptr<SymbolResolver>(VModuleKey K)>;
-
-  /// Set the symbol resolver for the given VModuleKey.
-  using SetSymbolResolverFunction =
-      std::function<void(VModuleKey K, std::shared_ptr<SymbolResolver> R)>;
-
   using GetAvailableContextFunction = std::function<LLVMContext &()>;
 
   CompileOnDemandLayer2(ExecutionSession &ES, IRLayer &BaseLayer,
                         JITCompileCallbackManager &CCMgr,
                         IndirectStubsManagerBuilder BuildIndirectStubsManager,
-                        GetSymbolResolverFunction GetSymbolResolver,
-                        SetSymbolResolverFunction SetSymbolResolver,
                         GetAvailableContextFunction GetAvailableContext);
 
   Error add(VSO &V, VModuleKey K, std::unique_ptr<Module> M) override;
@@ -96,8 +87,7 @@ private:
   IndirectStubsManager &getStubsManager(const VSO &V);
 
   void emitExtractedFunctionsModule(MaterializationResponsibility R,
-                                    std::unique_ptr<Module> M,
-                                    std::shared_ptr<SymbolResolver> Resolver);
+                                    std::unique_ptr<Module> M);
 
   mutable std::mutex CODLayerMutex;
 
@@ -105,8 +95,6 @@ private:
   JITCompileCallbackManager &CCMgr;
   IndirectStubsManagerBuilder BuildIndirectStubsManager;
   StubManagersMap StubsMgrs;
-  GetSymbolResolverFunction GetSymbolResolver;
-  SetSymbolResolverFunction SetSymbolResolver;
   GetAvailableContextFunction GetAvailableContext;
 };
 
@@ -511,20 +499,29 @@ private:
     };
 
     auto GVsResolver = createSymbolResolver(
-        [&LD, LegacyLookup](SymbolFlagsMap &SymbolFlags,
-                            const SymbolNameSet &Symbols) {
-          auto NotFoundViaLegacyLookup =
-              lookupFlagsWithLegacyFn(SymbolFlags, Symbols, LegacyLookup);
+        [&LD, LegacyLookup](const SymbolNameSet &Symbols) {
+          auto SymbolFlags = lookupFlagsWithLegacyFn(Symbols, LegacyLookup);
 
-          if (!NotFoundViaLegacyLookup) {
-            logAllUnhandledErrors(NotFoundViaLegacyLookup.takeError(), errs(),
+          if (!SymbolFlags) {
+            logAllUnhandledErrors(SymbolFlags.takeError(), errs(),
                                   "CODLayer/GVsResolver flags lookup failed: ");
-            SymbolFlags.clear();
-            return SymbolNameSet();
+            return SymbolFlagsMap();
           }
 
-          return LD.BackingResolver->lookupFlags(SymbolFlags,
-                                                 *NotFoundViaLegacyLookup);
+          if (SymbolFlags->size() == Symbols.size())
+            return *SymbolFlags;
+
+          SymbolNameSet NotFoundViaLegacyLookup;
+          for (auto &S : Symbols)
+            if (!SymbolFlags->count(S))
+              NotFoundViaLegacyLookup.insert(S);
+          auto SymbolFlags2 =
+              LD.BackingResolver->lookupFlags(NotFoundViaLegacyLookup);
+
+          for (auto &KV : SymbolFlags2)
+            (*SymbolFlags)[KV.first] = std::move(KV.second);
+
+          return *SymbolFlags;
         },
         [this, &LD,
          LegacyLookup](std::shared_ptr<AsynchronousSymbolQuery> Query,
@@ -671,18 +668,29 @@ private:
 
     // Create memory manager and symbol resolver.
     auto Resolver = createSymbolResolver(
-        [&LD, LegacyLookup](SymbolFlagsMap &SymbolFlags,
-                            const SymbolNameSet &Symbols) {
-          auto NotFoundViaLegacyLookup =
-              lookupFlagsWithLegacyFn(SymbolFlags, Symbols, LegacyLookup);
-          if (!NotFoundViaLegacyLookup) {
-            logAllUnhandledErrors(NotFoundViaLegacyLookup.takeError(), errs(),
+        [&LD, LegacyLookup](const SymbolNameSet &Symbols) {
+          auto SymbolFlags = lookupFlagsWithLegacyFn(Symbols, LegacyLookup);
+          if (!SymbolFlags) {
+            logAllUnhandledErrors(SymbolFlags.takeError(), errs(),
                                   "CODLayer/SubResolver flags lookup failed: ");
-            SymbolFlags.clear();
-            return SymbolNameSet();
+            return SymbolFlagsMap();
           }
-          return LD.BackingResolver->lookupFlags(SymbolFlags,
-                                                 *NotFoundViaLegacyLookup);
+
+          if (SymbolFlags->size() == Symbols.size())
+            return *SymbolFlags;
+
+          SymbolNameSet NotFoundViaLegacyLookup;
+          for (auto &S : Symbols)
+            if (!SymbolFlags->count(S))
+              NotFoundViaLegacyLookup.insert(S);
+
+          auto SymbolFlags2 =
+              LD.BackingResolver->lookupFlags(NotFoundViaLegacyLookup);
+
+          for (auto &KV : SymbolFlags2)
+            (*SymbolFlags)[KV.first] = std::move(KV.second);
+
+          return *SymbolFlags;
         },
         [this, &LD, LegacyLookup](std::shared_ptr<AsynchronousSymbolQuery> Q,
                                   SymbolNameSet Symbols) {

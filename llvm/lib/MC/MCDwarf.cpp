@@ -495,7 +495,7 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 
   // Parameters of the state machine, are next.
   MCOS->EmitIntValue(context.getAsmInfo()->getMinInstAlignment(), 1);
-  // maximum_operations_per_instruction 
+  // maximum_operations_per_instruction
   // For non-VLIW architectures this field is always 1.
   // FIXME: VLIW architectures need to update this field accordingly.
   if (LineTableVersion >= 4)
@@ -732,6 +732,57 @@ void MCDwarfLineAddr::Encode(MCContext &Context, MCDwarfLineTableParams Params,
     assert(Temp <= 255 && "Buggy special opcode encoding.");
     OS << char(Temp);
   }
+}
+
+bool MCDwarfLineAddr::FixedEncode(MCContext &Context,
+                                  MCDwarfLineTableParams Params,
+                                  int64_t LineDelta, uint64_t AddrDelta,
+                                  raw_ostream &OS,
+                                  uint32_t *Offset, uint32_t *Size) {
+  if (LineDelta != INT64_MAX) {
+    OS << char(dwarf::DW_LNS_advance_line);
+    encodeSLEB128(LineDelta, OS);
+  }
+
+  // Use address delta to adjust address or use absolute address to adjust
+  // address.
+  bool SetDelta;
+  // According to DWARF spec., the DW_LNS_fixed_advance_pc opcode takes a
+  // single uhalf (unencoded) operand. So, the maximum value of AddrDelta
+  // is 65535. We set a conservative upper bound for it for relaxation.
+  if (AddrDelta > 60000) {
+    const MCAsmInfo *asmInfo = Context.getAsmInfo();
+    unsigned AddrSize = asmInfo->getCodePointerSize();
+
+    OS << char(dwarf::DW_LNS_extended_op);
+    encodeULEB128(1 + AddrSize, OS);
+    OS << char(dwarf::DW_LNE_set_address);
+    // Generate fixup for the address.
+    *Offset = OS.tell();
+    *Size = AddrSize;
+    SetDelta = false;
+    std::vector<uint8_t> FillData;
+    FillData.insert(FillData.begin(), AddrSize, 0);
+    OS.write(reinterpret_cast<char *>(FillData.data()), AddrSize);
+  } else {
+    OS << char(dwarf::DW_LNS_fixed_advance_pc);
+    // Generate fixup for 2-bytes address delta.
+    *Offset = OS.tell();
+    *Size = 2;
+    SetDelta = true;
+    OS << char(0);
+    OS << char(0);
+  }
+
+  if (LineDelta == INT64_MAX) {
+    OS << char(dwarf::DW_LNS_extended_op);
+    OS << char(1);
+    OS << char(dwarf::DW_LNE_end_sequence);
+  } else {
+    OS << char(dwarf::DW_LNS_copy);
+  }
+
+  return SetDelta;
 }
 
 // Utility function to write a tuple for .debug_abbrev.

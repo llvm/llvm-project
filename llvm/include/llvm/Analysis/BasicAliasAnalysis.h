@@ -43,6 +43,7 @@ class LoopInfo;
 class PHINode;
 class SelectInst;
 class TargetLibraryInfo;
+class PhiValues;
 class Value;
 
 /// This is the AA result object for the basic, local, and stateless alias
@@ -60,19 +61,22 @@ class BasicAAResult : public AAResultBase<BasicAAResult> {
   AssumptionCache &AC;
   DominatorTree *DT;
   LoopInfo *LI;
+  PhiValues *PV;
 
 public:
   BasicAAResult(const DataLayout &DL, const Function &F,
                 const TargetLibraryInfo &TLI, AssumptionCache &AC,
-                DominatorTree *DT = nullptr, LoopInfo *LI = nullptr)
-      : AAResultBase(), DL(DL), F(F), TLI(TLI), AC(AC), DT(DT), LI(LI) {}
+                DominatorTree *DT = nullptr, LoopInfo *LI = nullptr,
+                PhiValues *PV = nullptr)
+      : AAResultBase(), DL(DL), F(F), TLI(TLI), AC(AC), DT(DT), LI(LI), PV(PV)
+        {}
 
   BasicAAResult(const BasicAAResult &Arg)
       : AAResultBase(Arg), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI), AC(Arg.AC),
-        DT(Arg.DT), LI(Arg.LI) {}
+        DT(Arg.DT),  LI(Arg.LI), PV(Arg.PV) {}
   BasicAAResult(BasicAAResult &&Arg)
       : AAResultBase(std::move(Arg)), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI),
-        AC(Arg.AC), DT(Arg.DT), LI(Arg.LI) {}
+        AC(Arg.AC), DT(Arg.DT), LI(Arg.LI), PV(Arg.PV) {}
 
   /// Handle invalidation events in the new pass manager.
   bool invalidate(Function &Fn, const PreservedAnalyses &PA,

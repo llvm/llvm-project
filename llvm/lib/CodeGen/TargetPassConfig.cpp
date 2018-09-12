@@ -166,7 +166,7 @@ static cl::opt<CFLAAType> UseCFLAA(
                           "Enable unification-based CFL-AA"),
                clEnumValN(CFLAAType::Andersen, "anders",
                           "Enable inclusion-based CFL-AA"),
-               clEnumValN(CFLAAType::Both, "both", 
+               clEnumValN(CFLAAType::Both, "both",
                           "Enable both variants of CFL-AA")));
 
 /// Option names for limiting the codegen pipeline.

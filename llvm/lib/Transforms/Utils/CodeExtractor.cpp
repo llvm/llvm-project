@@ -1020,7 +1020,7 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
     } else {
       // Otherwise we must have code extracted an unwind or something, just
       // return whatever we want.
-      ReturnInst::Create(Context, 
+      ReturnInst::Create(Context,
                          Constant::getNullValue(OldFnRetTy), TheSwitch);
     }
 
@@ -1158,13 +1158,13 @@ Function *CodeExtractor::extractCodeRegion() {
   splitReturnBlocks();
 
   // This takes place of the original loop
-  BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(), 
+  BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),
                                                 "codeRepl", oldFunction,
                                                 header);
 
   // The new function needs a root node because other nodes can branch to the
   // head of the region, but the entry node of a function cannot have preds.
-  BasicBlock *newFuncRoot = BasicBlock::Create(header->getContext(), 
+  BasicBlock *newFuncRoot = BasicBlock::Create(header->getContext(),
                                                "newFuncRoot");
   auto *BranchI = BranchInst::Create(header);
   // If the original function has debug info, we have to add a debug location

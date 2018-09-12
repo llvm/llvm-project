@@ -54,3 +54,31 @@ asrd    z31.d, p0/m, z31.d, #64
 // CHECK-ENCODING: [0x1f,0x80,0x84,0x04]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 1f 80 84 04 <unknown>
+
+
+// --------------------------------------------------------------------------//
+// Test compatibility with MOVPRFX instruction.
+
+movprfx z31.d, p0/z, z6.d
+// CHECK-INST: movprfx	z31.d, p0/z, z6.d
+// CHECK-ENCODING: [0xdf,0x20,0xd0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: df 20 d0 04 <unknown>
+
+asrd    z31.d, p0/m, z31.d, #64
+// CHECK-INST: asrd	z31.d, p0/m, z31.d, #64
+// CHECK-ENCODING: [0x1f,0x80,0x84,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 1f 80 84 04 <unknown>
+
+movprfx z31, z6
+// CHECK-INST: movprfx	z31, z6
+// CHECK-ENCODING: [0xdf,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: df bc 20 04 <unknown>
+
+asrd    z31.d, p0/m, z31.d, #64
+// CHECK-INST: asrd	z31.d, p0/m, z31.d, #64
+// CHECK-ENCODING: [0x1f,0x80,0x84,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 1f 80 84 04 <unknown>

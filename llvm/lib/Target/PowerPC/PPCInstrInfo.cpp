@@ -316,11 +316,11 @@ unsigned PPCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 }
 
 // For opcodes with the ReMaterializable flag set, this function is called to
-// verify the instruction is really rematable.  
+// verify the instruction is really rematable.
 bool PPCInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
                                                      AliasAnalysis *AA) const {
   switch (MI.getOpcode()) {
-  default: 
+  default:
     // This function should only be called for opcodes with the ReMaterializable
     // flag set.
     llvm_unreachable("Unknown rematerializable operation!");

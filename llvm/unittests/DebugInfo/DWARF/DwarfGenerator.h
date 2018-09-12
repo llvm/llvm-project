@@ -36,11 +36,11 @@ class MCCodeEmitter;
 class MCContext;
 struct MCDwarfLineTableParams;
 class MCInstrInfo;
-class MCObjectFileInfo;
 class MCRegisterInfo;
 class MCStreamer;
 class MCSubtargetInfo;
 class raw_fd_ostream;
+class TargetLoweringObjectFile;
 class TargetMachine;
 class Triple;
 
@@ -89,6 +89,14 @@ public:
   /// \param U the unsigned integer to encode.
   void addAttribute(uint16_t Attr, dwarf::Form Form, uint64_t U);
 
+  /// Add an attribute value to be encoded as a DIEExpr
+  ///
+  /// \param Attr a dwarf::Attribute enumeration value or any uint16_t that
+  /// represents a user defined DWARF attribute.
+  /// \param Form the dwarf::Form to use when encoding the attribute.
+  /// \param Expr the MC expression used to compute the value.
+  void addAttribute(uint16_t Attr, dwarf::Form Form, const MCExpr &Expr);
+
   /// Add an attribute value to be encoded as a DIEString or DIEInlinedString.
   ///
   /// \param Attr a dwarf::Attribute enumeration value or any uint16_t that
@@ -122,6 +130,9 @@ public:
   /// \param P a pointer to the data to store as the attribute value.
   /// \param S the size in bytes of the data pointed to by P .
   void addAttribute(uint16_t Attr, dwarf::Form Form, const void *P, size_t S);
+
+  /// Add a DW_AT_str_offsets_base attribute to this DIE.
+  void addStrOffsetsBaseAttribute();
 
   /// Add a new child to this DIE object.
   ///
@@ -227,7 +238,6 @@ private:
 class Generator {
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MCAsmInfo> MAI;
-  std::unique_ptr<MCObjectFileInfo> MOFI;
   std::unique_ptr<MCContext> MC;
   MCAsmBackend *MAB; // Owned by MCStreamer
   std::unique_ptr<MCInstrInfo> MII;
@@ -235,12 +245,15 @@ class Generator {
   MCCodeEmitter *MCE; // Owned by MCStreamer
   MCStreamer *MS;     // Owned by AsmPrinter
   std::unique_ptr<TargetMachine> TM;
+  TargetLoweringObjectFile *TLOF; // Owned by TargetMachine;
   std::unique_ptr<AsmPrinter> Asm;
   BumpPtrAllocator Allocator;
   std::unique_ptr<DwarfStringPool> StringPool; // Entries owned by Allocator.
   std::vector<std::unique_ptr<CompileUnit>> CompileUnits;
   std::vector<std::unique_ptr<LineTable>> LineTables;
   DIEAbbrevSet Abbreviations;
+
+  MCSymbol *StringOffsetsStartSym;
 
   SmallString<4096> FileBytes;
   /// The stream we use to generate the DWARF into as an ELF file.
@@ -293,6 +306,7 @@ public:
   MCContext *getMCContext() const { return MC.get(); }
   DIEAbbrevSet &getAbbrevSet() { return Abbreviations; }
   DwarfStringPool &getStringPool() { return *StringPool; }
+  MCSymbol *getStringOffsetsStartSym() const { return StringOffsetsStartSym; }
 
   /// Save the generated DWARF file to disk.
   ///

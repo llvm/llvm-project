@@ -12,6 +12,8 @@
 namespace llvm {
 namespace orc {
 
+void SymbolResolver::anchor() {}
+
 JITSymbolResolverAdapter::JITSymbolResolverAdapter(
     ExecutionSession &ES, SymbolResolver &R, MaterializationResponsibility *MR)
     : ES(ES), R(R), MR(MR) {}
@@ -27,8 +29,14 @@ JITSymbolResolverAdapter::lookup(const LookupSet &Symbols) {
     return R.lookup(std::move(Q), std::move(Unresolved));
   };
 
-  auto InternedResult = blockingLookup(ES, std::move(LookupFn),
-                                       std::move(InternedSymbols), false, MR);
+  auto RegisterDependencies = [&](const SymbolDependenceMap &Deps) {
+    if (MR)
+      MR->addDependenciesForAll(Deps);
+  };
+
+  auto InternedResult =
+      ES.legacyLookup(ES, std::move(LookupFn), std::move(InternedSymbols),
+                      false, RegisterDependencies);
 
   if (!InternedResult)
     return InternedResult.takeError();
@@ -46,8 +54,7 @@ JITSymbolResolverAdapter::lookupFlags(const LookupSet &Symbols) {
   for (auto &S : Symbols)
     InternedSymbols.insert(ES.getSymbolStringPool().intern(S));
 
-  SymbolFlagsMap SymbolFlags;
-  R.lookupFlags(SymbolFlags, InternedSymbols);
+  SymbolFlagsMap SymbolFlags = R.lookupFlags(InternedSymbols);
   LookupFlagsResult Result;
   for (auto &KV : SymbolFlags) {
     ResolvedStrings.insert(KV.first);

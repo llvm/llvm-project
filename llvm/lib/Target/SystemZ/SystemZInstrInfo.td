@@ -1352,8 +1352,8 @@ def : Pat<(z_udivrem GR64:$src1, (i64 (load bdxaddr20only:$src2))),
 //===----------------------------------------------------------------------===//
 
 // Logical shift left.
-defm SLL : BinaryRSAndK<"sll", 0x89, 0xEBDF, shl, GR32>;
-def SLLG : BinaryRSY<"sllg", 0xEB0D, shl, GR64>;
+defm SLL : BinaryRSAndK<"sll", 0x89, 0xEBDF, shiftop<shl>, GR32>;
+def SLLG : BinaryRSY<"sllg", 0xEB0D, shiftop<shl>, GR64>;
 def SLDL : BinaryRS<"sldl", 0x8D, null_frag, GR128>;
 
 // Arithmetic shift left.
@@ -1364,20 +1364,20 @@ let Defs = [CC] in {
 }
 
 // Logical shift right.
-defm SRL : BinaryRSAndK<"srl", 0x88, 0xEBDE, srl, GR32>;
-def SRLG : BinaryRSY<"srlg", 0xEB0C, srl, GR64>;
+defm SRL : BinaryRSAndK<"srl", 0x88, 0xEBDE, shiftop<srl>, GR32>;
+def SRLG : BinaryRSY<"srlg", 0xEB0C, shiftop<srl>, GR64>;
 def SRDL : BinaryRS<"srdl", 0x8C, null_frag, GR128>;
 
 // Arithmetic shift right.
 let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
-  defm SRA : BinaryRSAndK<"sra", 0x8A, 0xEBDC, sra, GR32>;
-  def SRAG : BinaryRSY<"srag", 0xEB0A, sra, GR64>;
+  defm SRA : BinaryRSAndK<"sra", 0x8A, 0xEBDC, shiftop<sra>, GR32>;
+  def SRAG : BinaryRSY<"srag", 0xEB0A, shiftop<sra>, GR64>;
   def SRDA : BinaryRS<"srda", 0x8E, null_frag, GR128>;
 }
 
 // Rotate left.
-def RLL  : BinaryRSY<"rll",  0xEB1D, rotl, GR32>;
-def RLLG : BinaryRSY<"rllg", 0xEB1C, rotl, GR64>;
+def RLL  : BinaryRSY<"rll",  0xEB1D, shiftop<rotl>, GR32>;
+def RLLG : BinaryRSY<"rllg", 0xEB1C, shiftop<rotl>, GR64>;
 
 // Rotate second operand left and inserted selected bits into first operand.
 // These can act like 32-bit operands provided that the constant start and
@@ -2162,29 +2162,29 @@ def : Pat<(and (xor GR64:$x, (i64 -1)), GR64:$y),
 // Complexity is added so that we match this before we match NILF on the AND
 // operation alone.
 let AddedComplexity = 4 in {
-  def : Pat<(shl GR32:$val, (and GR32:$shift, uimm32:$imm)),
-            (SLL GR32:$val, (NILL GR32:$shift, uimm32:$imm), 0)>;
+  def : Pat<(shl GR32:$val, (and GR32:$shift, imm32zx16trunc:$imm)),
+            (SLL GR32:$val, (NILL GR32:$shift, imm32zx16trunc:$imm), 0)>;
 
-  def : Pat<(sra GR32:$val, (and GR32:$shift, uimm32:$imm)),
-            (SRA GR32:$val, (NILL GR32:$shift, uimm32:$imm), 0)>;
+  def : Pat<(sra GR32:$val, (and GR32:$shift, imm32zx16trunc:$imm)),
+            (SRA GR32:$val, (NILL GR32:$shift, imm32zx16trunc:$imm), 0)>;
 
-  def : Pat<(srl GR32:$val, (and GR32:$shift, uimm32:$imm)),
-            (SRL GR32:$val, (NILL GR32:$shift, uimm32:$imm), 0)>;
+  def : Pat<(srl GR32:$val, (and GR32:$shift, imm32zx16trunc:$imm)),
+            (SRL GR32:$val, (NILL GR32:$shift, imm32zx16trunc:$imm), 0)>;
 
-  def : Pat<(shl GR64:$val, (and GR32:$shift, uimm32:$imm)),
-            (SLLG GR64:$val, (NILL GR32:$shift, uimm32:$imm), 0)>;
+  def : Pat<(shl GR64:$val, (and GR32:$shift, imm32zx16trunc:$imm)),
+            (SLLG GR64:$val, (NILL GR32:$shift, imm32zx16trunc:$imm), 0)>;
 
-  def : Pat<(sra GR64:$val, (and GR32:$shift, uimm32:$imm)),
-            (SRAG GR64:$val, (NILL GR32:$shift, uimm32:$imm), 0)>;
+  def : Pat<(sra GR64:$val, (and GR32:$shift, imm32zx16trunc:$imm)),
+            (SRAG GR64:$val, (NILL GR32:$shift, imm32zx16trunc:$imm), 0)>;
 
-  def : Pat<(srl GR64:$val, (and GR32:$shift, uimm32:$imm)),
-            (SRLG GR64:$val, (NILL GR32:$shift, uimm32:$imm), 0)>;
+  def : Pat<(srl GR64:$val, (and GR32:$shift, imm32zx16trunc:$imm)),
+            (SRLG GR64:$val, (NILL GR32:$shift, imm32zx16trunc:$imm), 0)>;
 
-  def : Pat<(rotl GR32:$val, (and GR32:$shift, uimm32:$imm)),
-            (RLL GR32:$val, (NILL GR32:$shift, uimm32:$imm), 0)>;
+  def : Pat<(rotl GR32:$val, (and GR32:$shift, imm32zx16trunc:$imm)),
+            (RLL GR32:$val, (NILL GR32:$shift, imm32zx16trunc:$imm), 0)>;
 
-  def : Pat<(rotl GR64:$val, (and GR32:$shift, uimm32:$imm)),
-            (RLLG GR64:$val, (NILL GR32:$shift, uimm32:$imm), 0)>;
+  def : Pat<(rotl GR64:$val, (and GR32:$shift, imm32zx16trunc:$imm)),
+            (RLLG GR64:$val, (NILL GR32:$shift, imm32zx16trunc:$imm), 0)>;
 }
 
 // Peepholes for turning scalar operations into block operations.

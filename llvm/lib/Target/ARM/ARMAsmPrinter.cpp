@@ -117,7 +117,7 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // globals from all functions in PromotedGlobals.
   for (auto *GV : AFI->getGlobalsPromotedToConstantPool())
     PromotedGlobals.insert(GV);
-  
+
   // Calculate this function's optimization goal.
   unsigned OptimizationGoal;
   if (F.hasFnAttribute(Attribute::OptimizeNone))
@@ -233,6 +233,15 @@ void ARMAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
     GetCPISymbol(MO.getIndex())->print(O, MAI);
     break;
   }
+}
+
+MCSymbol *ARMAsmPrinter::GetCPISymbol(unsigned CPID) const {
+  // The AsmPrinter::GetCPISymbol superclass method tries to use CPID as
+  // indexes in MachineConstantPool, which isn't in sync with indexes used here.
+  const DataLayout &DL = getDataLayout();
+  return OutContext.getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+                                      "CPI" + Twine(getFunctionNumber()) + "_" +
+                                      Twine(CPID));
 }
 
 //===--------------------------------------------------------------------===//
@@ -358,8 +367,9 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 
       unsigned NumVals = InlineAsm::getNumOperandRegisters(Flags);
       unsigned RC;
-      InlineAsm::hasRegClassConstraint(Flags, RC);
-      if (RC == ARM::GPRPairRegClassID) {
+      const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+      if (InlineAsm::hasRegClassConstraint(Flags, RC) &&
+          ARM::GPRPairRegClass.hasSubClassEq(TRI->getRegClass(RC))) {
         if (NumVals != 1)
           return true;
         const MachineOperand &MO = MI->getOperand(OpNum);
@@ -981,7 +991,7 @@ void ARMAsmPrinter::EmitJumpTableTBInst(const MachineInstr *MI,
 
   if (Subtarget->isThumb1Only())
     EmitAlignment(2);
-  
+
   MCSymbol *JTISymbol = GetARMJTIPICJumpTableLabel(JTI);
   OutStreamer->EmitLabel(JTISymbol);
 

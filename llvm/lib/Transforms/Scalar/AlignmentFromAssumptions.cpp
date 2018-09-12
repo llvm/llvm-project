@@ -280,7 +280,7 @@ bool AlignmentFromAssumptionsPass::extractAlignmentInfo(CallInst *I,
     return false;
 
   // Sign extend the offset to 64 bits (so that it is like all of the other
-  // expressions). 
+  // expressions).
   unsigned OffSCEVBits = OffSCEV->getType()->getPrimitiveSizeInBits();
   if (OffSCEVBits < 64)
     OffSCEV = SE->getSignExtendExpr(OffSCEV, Int64Ty);

@@ -30,3 +30,31 @@ udot  z0.d, z1.h, z15.h[1]
 // CHECK-ENCODING: [0x20,0x04,0xff,0x44]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 20 04 ff 44 <unknown>
+
+
+// --------------------------------------------------------------------------//
+// Test compatibility with MOVPRFX instruction.
+
+movprfx z0, z7
+// CHECK-INST: movprfx	z0, z7
+// CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+
+udot  z0.d, z1.h, z31.h
+// CHECK-INST: udot	z0.d, z1.h, z31.h
+// CHECK-ENCODING: [0x20,0x04,0xdf,0x44]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 20 04 df 44 <unknown>
+
+movprfx z0, z7
+// CHECK-INST: movprfx	z0, z7
+// CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+
+udot  z0.d, z1.h, z15.h[1]
+// CHECK-INST: udot	z0.d, z1.h, z15.h[1]
+// CHECK-ENCODING: [0x20,0x04,0xff,0x44]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 20 04 ff 44 <unknown>

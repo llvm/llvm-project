@@ -350,18 +350,18 @@ DecodeStatus SparcDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
     return MCDisassembler::Fail;
 
   // Calling the auto-generated decoder function.
-  
+
   if (STI.getFeatureBits()[Sparc::FeatureV9])
   {
     Result = decodeInstruction(DecoderTableSparcV932, Instr, Insn, Address, this, STI);
   }
   else
   {
-    Result = decodeInstruction(DecoderTableSparcV832, Instr, Insn, Address, this, STI);      
+    Result = decodeInstruction(DecoderTableSparcV832, Instr, Insn, Address, this, STI);
   }
   if (Result != MCDisassembler::Fail)
     return Result;
-  
+
   Result =
       decodeInstruction(DecoderTableSparc32, Instr, Insn, Address, this, STI);
 
@@ -662,7 +662,7 @@ static DecodeStatus DecodeTRAP(MCInst &MI, unsigned insn, uint64_t Address,
     if (status != MCDisassembler::Success)
       return status;
   }
-  
+
   // Decode CC
   MI.addOperand(MCOperand::createImm(cc));
 

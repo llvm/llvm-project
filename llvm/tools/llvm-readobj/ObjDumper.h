@@ -89,10 +89,10 @@ public:
   virtual void printStackMap() const = 0;
 
   void printSectionAsString(const object::ObjectFile *Obj, StringRef SecName);
+  void printSectionAsHex(const object::ObjectFile *Obj, StringRef SecName);
 
 protected:
   ScopedPrinter &W;
-  void SectionHexDump(StringRef SecName, const uint8_t *Section, size_t Size);
 };
 
 std::error_code createCOFFDumper(const object::ObjectFile *Obj,

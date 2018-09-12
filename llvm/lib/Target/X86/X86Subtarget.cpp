@@ -68,14 +68,36 @@ X86Subtarget::classifyGlobalReference(const GlobalValue *GV) const {
 
 unsigned char
 X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
-  // 64 bits can use %rip addressing for anything local.
-  if (is64Bit())
-    return X86II::MO_NO_FLAG;
-
-  // If this is for a position dependent executable, the static linker can
-  // figure it out.
+  // If we're not PIC, it's not very interesting.
   if (!isPositionIndependent())
     return X86II::MO_NO_FLAG;
+
+  if (is64Bit()) {
+    // 64-bit ELF PIC local references may use GOTOFF relocations.
+    if (isTargetELF()) {
+      switch (TM.getCodeModel()) {
+      // 64-bit small code model is simple: All rip-relative.
+      case CodeModel::Small:
+      case CodeModel::Kernel:
+        return X86II::MO_NO_FLAG;
+
+      // The large PIC code model uses GOTOFF.
+      case CodeModel::Large:
+        return X86II::MO_GOTOFF;
+
+      // Medium is a hybrid: RIP-rel for code, GOTOFF for DSO local data.
+      case CodeModel::Medium:
+        if (isa<Function>(GV))
+          return X86II::MO_NO_FLAG; // All code is RIP-relative
+        return X86II::MO_GOTOFF;    // Local symbols use GOTOFF.
+      }
+      llvm_unreachable("invalid code model");
+    }
+
+    // Otherwise, this is either a RIP-relative reference or a 64-bit movabsq,
+    // both of which use MO_NO_FLAG.
+    return X86II::MO_NO_FLAG;
+  }
 
   // The COFF dynamic linker just patches the executable sections.
   if (isTargetCOFF())
@@ -97,8 +119,8 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
 
 unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
                                                     const Module &M) const {
-  // Large model never uses stubs.
-  if (TM.getCodeModel() == CodeModel::Large)
+  // The static large model never uses stubs.
+  if (TM.getCodeModel() == CodeModel::Large && !isPositionIndependent())
     return X86II::MO_NO_FLAG;
 
   // Absolute symbols can be referenced directly.
@@ -120,8 +142,14 @@ unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
   if (isTargetCOFF())
     return X86II::MO_DLLIMPORT;
 
-  if (is64Bit())
+  if (is64Bit()) {
+    // ELF supports a large, truly PIC code model with non-PC relative GOT
+    // references. Other object file formats do not. Use the no-flag, 64-bit
+    // reference for them.
+    if (TM.getCodeModel() == CodeModel::Large)
+      return isTargetELF() ? X86II::MO_GOT : X86II::MO_NO_FLAG;
     return X86II::MO_GOTPCREL;
+  }
 
   if (isTargetDarwin()) {
     if (!isPositionIndependent())

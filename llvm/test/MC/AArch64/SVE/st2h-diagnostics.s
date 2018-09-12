@@ -94,3 +94,19 @@ st2h { v0.2d, v1.2d }, p0, [x0]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: st2h { v0.2d, v1.2d }, p0, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z21.h, p5/z, z28.h
+st2h    { z21.h, z22.h }, p5, [x10, #10, mul vl]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: st2h    { z21.h, z22.h }, p5, [x10, #10, mul vl]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z21, z28
+st2h    { z21.h, z22.h }, p5, [x10, #10, mul vl]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: st2h    { z21.h, z22.h }, p5, [x10, #10, mul vl]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

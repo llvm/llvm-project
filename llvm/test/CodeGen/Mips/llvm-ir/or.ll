@@ -106,9 +106,8 @@ define signext i32 @or_i32(i32 signext %a, i32 signext %b) {
 ;
 ; GP64-LABEL: or_i32:
 ; GP64:       # %bb.0: # %entry
-; GP64-NEXT:    or $1, $4, $5
 ; GP64-NEXT:    jr $ra
-; GP64-NEXT:    sll $2, $1, 0
+; GP64-NEXT:    or $2, $4, $5
 ;
 ; MM32-LABEL: or_i32:
 ; MM32:       # %bb.0: # %entry
@@ -284,8 +283,9 @@ define signext i32 @or_i32_4(i32 signext %b) {
 ;
 ; GP64-LABEL: or_i32_4:
 ; GP64:       # %bb.0: # %entry
+; GP64-NEXT:    ori $1, $4, 4
 ; GP64-NEXT:    jr $ra
-; GP64-NEXT:    ori $2, $4, 4
+; GP64-NEXT:    sll $2, $1, 0
 ;
 ; MM32-LABEL: or_i32_4:
 ; MM32:       # %bb.0: # %entry
@@ -450,8 +450,9 @@ define signext i32 @or_i32_31(i32 signext %b) {
 ;
 ; GP64-LABEL: or_i32_31:
 ; GP64:       # %bb.0: # %entry
+; GP64-NEXT:    ori $1, $4, 31
 ; GP64-NEXT:    jr $ra
-; GP64-NEXT:    ori $2, $4, 31
+; GP64-NEXT:    sll $2, $1, 0
 ;
 ; MM32-LABEL: or_i32_31:
 ; MM32:       # %bb.0: # %entry
@@ -616,8 +617,9 @@ define signext i32 @or_i32_255(i32 signext %b) {
 ;
 ; GP64-LABEL: or_i32_255:
 ; GP64:       # %bb.0: # %entry
+; GP64-NEXT:    ori $1, $4, 255
 ; GP64-NEXT:    jr $ra
-; GP64-NEXT:    ori $2, $4, 255
+; GP64-NEXT:    sll $2, $1, 0
 ;
 ; MM32-LABEL: or_i32_255:
 ; MM32:       # %bb.0: # %entry
@@ -786,8 +788,9 @@ define signext i32 @or_i32_32768(i32 signext %b) {
 ;
 ; GP64-LABEL: or_i32_32768:
 ; GP64:       # %bb.0: # %entry
+; GP64-NEXT:    ori $1, $4, 32768
 ; GP64-NEXT:    jr $ra
-; GP64-NEXT:    ori $2, $4, 32768
+; GP64-NEXT:    sll $2, $1, 0
 ;
 ; MM32-LABEL: or_i32_32768:
 ; MM32:       # %bb.0: # %entry
@@ -952,8 +955,9 @@ define signext i32 @or_i32_65(i32 signext %b) {
 ;
 ; GP64-LABEL: or_i32_65:
 ; GP64:       # %bb.0: # %entry
+; GP64-NEXT:    ori $1, $4, 65
 ; GP64-NEXT:    jr $ra
-; GP64-NEXT:    ori $2, $4, 65
+; GP64-NEXT:    sll $2, $1, 0
 ;
 ; MM32-LABEL: or_i32_65:
 ; MM32:       # %bb.0: # %entry
@@ -1118,8 +1122,9 @@ define signext i32 @or_i32_256(i32 signext %b) {
 ;
 ; GP64-LABEL: or_i32_256:
 ; GP64:       # %bb.0: # %entry
+; GP64-NEXT:    ori $1, $4, 256
 ; GP64-NEXT:    jr $ra
-; GP64-NEXT:    ori $2, $4, 256
+; GP64-NEXT:    sll $2, $1, 0
 ;
 ; MM32-LABEL: or_i32_256:
 ; MM32:       # %bb.0: # %entry

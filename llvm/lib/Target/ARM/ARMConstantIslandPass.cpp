@@ -2128,7 +2128,7 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
     unsigned DeadSize = 0;
     bool CanDeleteLEA = false;
     bool BaseRegKill = false;
-    
+
     unsigned IdxReg = ~0U;
     bool IdxRegKill = true;
     if (isThumb2) {

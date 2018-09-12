@@ -111,6 +111,7 @@ static bool isShiftedMask(uint64_t I, uint64_t &Pos, uint64_t &Size) {
 // The MIPS MSA ABI passes vector arguments in the integer register set.
 // The number of integer registers used is dependant on the ABI used.
 MVT MipsTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
+                                                      CallingConv::ID CC,
                                                       EVT VT) const {
   if (VT.isVector()) {
       if (Subtarget.isABI_O32()) {
@@ -123,6 +124,7 @@ MVT MipsTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
 }
 
 unsigned MipsTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
+                                                           CallingConv::ID CC,
                                                            EVT VT) const {
   if (VT.isVector())
     return std::max((VT.getSizeInBits() / (Subtarget.isABI_O32() ? 32 : 64)),
@@ -131,10 +133,10 @@ unsigned MipsTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
 }
 
 unsigned MipsTargetLowering::getVectorTypeBreakdownForCallingConv(
-    LLVMContext &Context, EVT VT, EVT &IntermediateVT,
+    LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
     unsigned &NumIntermediates, MVT &RegisterVT) const {
   // Break down vector types to either 2 i64s or 4 i32s.
-  RegisterVT = getRegisterTypeForCallingConv(Context, VT) ;
+  RegisterVT = getRegisterTypeForCallingConv(Context, CC, VT);
   IntermediateVT = RegisterVT;
   NumIntermediates = VT.getSizeInBits() < RegisterVT.getSizeInBits()
                          ? VT.getVectorNumElements()
@@ -189,6 +191,7 @@ const char *MipsTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case MipsISD::Hi:                return "MipsISD::Hi";
   case MipsISD::Lo:                return "MipsISD::Lo";
   case MipsISD::GotHi:             return "MipsISD::GotHi";
+  case MipsISD::TlsHi:             return "MipsISD::TlsHi";
   case MipsISD::GPRel:             return "MipsISD::GPRel";
   case MipsISD::ThreadPointer:     return "MipsISD::ThreadPointer";
   case MipsISD::Ret:               return "MipsISD::Ret";
@@ -2040,7 +2043,7 @@ lowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const
 
     SDValue TGAHi = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0,
                                                MipsII::MO_DTPREL_HI);
-    SDValue Hi = DAG.getNode(MipsISD::Hi, DL, PtrVT, TGAHi);
+    SDValue Hi = DAG.getNode(MipsISD::TlsHi, DL, PtrVT, TGAHi);
     SDValue TGALo = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0,
                                                MipsII::MO_DTPREL_LO);
     SDValue Lo = DAG.getNode(MipsISD::Lo, DL, PtrVT, TGALo);
@@ -2064,7 +2067,7 @@ lowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const
                                                MipsII::MO_TPREL_HI);
     SDValue TGALo = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0,
                                                MipsII::MO_TPREL_LO);
-    SDValue Hi = DAG.getNode(MipsISD::Hi, DL, PtrVT, TGAHi);
+    SDValue Hi = DAG.getNode(MipsISD::TlsHi, DL, PtrVT, TGAHi);
     SDValue Lo = DAG.getNode(MipsISD::Lo, DL, PtrVT, TGALo);
     Offset = DAG.getNode(ISD::ADD, DL, PtrVT, Hi, Lo);
   }
@@ -3711,6 +3714,13 @@ static std::pair<bool, bool> parsePhysicalReg(StringRef C, StringRef &Prefix,
   // Parse the numeric characters.
   return std::make_pair(!getAsUnsignedInteger(StringRef(I, E - I), 10, Reg),
                         true);
+}
+
+EVT MipsTargetLowering::getTypeForExtReturn(LLVMContext &Context, EVT VT,
+                                            ISD::NodeType) const {
+  bool Cond = !Subtarget.isABI_O32() && VT.getSizeInBits() == 32;
+  EVT MinVT = getRegisterType(Context, Cond ? MVT::i64 : MVT::i32);
+  return VT.bitsLT(MinVT) ? MinVT : VT;
 }
 
 std::pair<unsigned, const TargetRegisterClass *> MipsTargetLowering::

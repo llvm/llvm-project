@@ -47,6 +47,12 @@ set(LLVM_CONFIG_LIBRARY_DIRS
 set(LLVM_CONFIG_CMAKE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(LLVM_CONFIG_BINARY_DIR "${LLVM_BINARY_DIR}")
 set(LLVM_CONFIG_TOOLS_BINARY_DIR "${LLVM_TOOLS_BINARY_DIR}")
+
+if (LLVM_LINK_LLVM_DYLIB)
+  set(LLVM_CONFIG_LINK_LLVM_DYLIB
+      "set(LLVM_LINK_LLVM_DYLIB ${LLVM_LINK_LLVM_DYLIB})")
+endif()
+
 # We need to use the full path to the LLVM Exports file to make sure we get the
 # one from the build tree. This is due to our cmake files being split between
 # this source dir and the binary dir in the build tree configuration and the

@@ -26,8 +26,10 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLAN_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_H
 
+#include "VPlanLoopInfo.h"
 #include "VPlanValue.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -51,7 +53,6 @@ class BasicBlock;
 class DominatorTree;
 class InnerLoopVectorizer;
 class InterleaveGroup;
-class LoopInfo;
 class raw_ostream;
 class Value;
 class VPBasicBlock;
@@ -516,6 +517,23 @@ public:
 
   /// Delete all blocks reachable from a given VPBlockBase, inclusive.
   static void deleteCFG(VPBlockBase *Entry);
+
+  void printAsOperand(raw_ostream &OS, bool PrintType) const {
+    OS << getName();
+  }
+
+  void print(raw_ostream &OS) const {
+    // TODO: Only printing VPBB name for now since we only have dot printing
+    // support for VPInstructions/Recipes.
+    printAsOperand(OS, false);
+  }
+
+  /// Return true if it is legal to hoist instructions into this block.
+  bool isLegalToHoistInto() {
+    // There are currently no constraints that prevent an instruction to be
+    // hoisted into a VPBlockBase.
+    return true;
+  }
 };
 
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
@@ -1037,6 +1055,12 @@ public:
     EntryBlock->setParent(this);
   }
 
+  // FIXME: DominatorTreeBase is doing 'A->getParent()->front()'. 'front' is a
+  // specific interface of llvm::Function, instead of using
+  // GraphTraints::getEntryNode. We should add a new template parameter to
+  // DominatorTreeBase representing the Graph type.
+  VPBlockBase &front() const { return *Entry; }
+
   const VPBlockBase *getExit() const { return Exit; }
   VPBlockBase *getExit() { return Exit; }
 
@@ -1087,6 +1111,9 @@ private:
   /// VPlan.
   Value2VPValueTy Value2VPValue;
 
+  /// Holds the VPLoopInfo analysis for this VPlan.
+  VPLoopInfo VPLInfo;
+
 public:
   VPlan(VPBlockBase *Entry = nullptr) : Entry(Entry) {}
 
@@ -1132,6 +1159,10 @@ public:
     assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
     return Value2VPValue[V];
   }
+
+  /// Return the VPLoopInfo analysis for this VPlan.
+  VPLoopInfo &getVPLoopInfo() { return VPLInfo; }
+  const VPLoopInfo &getVPLoopInfo() const { return VPLInfo; }
 
 private:
   /// Add to the given dominator tree the header block and every new basic block
@@ -1210,12 +1241,15 @@ inline raw_ostream &operator<<(raw_ostream &OS, VPlan &Plan) {
   return OS;
 }
 
-//===--------------------------------------------------------------------===//
-// GraphTraits specializations for VPlan/VPRegionBlock Control-Flow Graphs  //
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
+// GraphTraits specializations for VPlan Hierarchical Control-Flow Graphs     //
+//===----------------------------------------------------------------------===//
 
-// Provide specializations of GraphTraits to be able to treat a VPBlockBase as a
-// graph of VPBlockBase nodes...
+// The following set of template specializations implement GraphTraits to treat
+// any VPBlockBase as a node in a graph of VPBlockBases. It's important to note
+// that VPBlockBase traits don't recurse into VPRegioBlocks, i.e., if the
+// VPBlockBase is a VPRegionBlock, this specialization provides access to its
+// successors/predecessors but not to the blocks inside the region.
 
 template <> struct GraphTraits<VPBlockBase *> {
   using NodeRef = VPBlockBase *;
@@ -1247,17 +1281,13 @@ template <> struct GraphTraits<const VPBlockBase *> {
   }
 };
 
-// Provide specializations of GraphTraits to be able to treat a VPBlockBase as a
-// graph of VPBlockBase nodes... and to walk it in inverse order. Inverse order
-// for a VPBlockBase is considered to be when traversing the predecessors of a
-// VPBlockBase instead of its successors.
+// Inverse order specialization for VPBasicBlocks. Predecessors are used instead
+// of successors for the inverse traversal.
 template <> struct GraphTraits<Inverse<VPBlockBase *>> {
   using NodeRef = VPBlockBase *;
   using ChildIteratorType = SmallVectorImpl<VPBlockBase *>::iterator;
 
-  static Inverse<VPBlockBase *> getEntryNode(Inverse<VPBlockBase *> B) {
-    return B;
-  }
+  static NodeRef getEntryNode(Inverse<NodeRef> B) { return B.Graph; }
 
   static inline ChildIteratorType child_begin(NodeRef N) {
     return N->getPredecessors().begin();
@@ -1265,6 +1295,71 @@ template <> struct GraphTraits<Inverse<VPBlockBase *>> {
 
   static inline ChildIteratorType child_end(NodeRef N) {
     return N->getPredecessors().end();
+  }
+};
+
+// The following set of template specializations implement GraphTraits to
+// treat VPRegionBlock as a graph and recurse inside its nodes. It's important
+// to note that the blocks inside the VPRegionBlock are treated as VPBlockBases
+// (i.e., no dyn_cast is performed, VPBlockBases specialization is used), so
+// there won't be automatic recursion into other VPBlockBases that turn to be
+// VPRegionBlocks.
+
+template <>
+struct GraphTraits<VPRegionBlock *> : public GraphTraits<VPBlockBase *> {
+  using GraphRef = VPRegionBlock *;
+  using nodes_iterator = df_iterator<NodeRef>;
+
+  static NodeRef getEntryNode(GraphRef N) { return N->getEntry(); }
+
+  static nodes_iterator nodes_begin(GraphRef N) {
+    return nodes_iterator::begin(N->getEntry());
+  }
+
+  static nodes_iterator nodes_end(GraphRef N) {
+    // df_iterator::end() returns an empty iterator so the node used doesn't
+    // matter.
+    return nodes_iterator::end(N);
+  }
+};
+
+template <>
+struct GraphTraits<const VPRegionBlock *>
+    : public GraphTraits<const VPBlockBase *> {
+  using GraphRef = const VPRegionBlock *;
+  using nodes_iterator = df_iterator<NodeRef>;
+
+  static NodeRef getEntryNode(GraphRef N) { return N->getEntry(); }
+
+  static nodes_iterator nodes_begin(GraphRef N) {
+    return nodes_iterator::begin(N->getEntry());
+  }
+
+  static nodes_iterator nodes_end(GraphRef N) {
+    // df_iterator::end() returns an empty iterator so the node used doesn't
+    // matter.
+    return nodes_iterator::end(N);
+  }
+};
+
+template <>
+struct GraphTraits<Inverse<VPRegionBlock *>>
+    : public GraphTraits<Inverse<VPBlockBase *>> {
+  using GraphRef = VPRegionBlock *;
+  using nodes_iterator = df_iterator<NodeRef>;
+
+  static NodeRef getEntryNode(Inverse<GraphRef> N) {
+    return N.Graph->getExit();
+  }
+
+  static nodes_iterator nodes_begin(GraphRef N) {
+    return nodes_iterator::begin(N->getExit());
+  }
+
+  static nodes_iterator nodes_end(GraphRef N) {
+    // df_iterator::end() returns an empty iterator so the node used doesn't
+    // matter.
+    return nodes_iterator::end(N);
   }
 };
 

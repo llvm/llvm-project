@@ -146,7 +146,7 @@ void XCoreAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   }
 
   EmitAlignment(Align > 2 ? Align : 2, GV);
-  
+
   if (GV->isThreadLocal()) {
     report_fatal_error("TLS is not supported by this target!");
   }
@@ -162,7 +162,7 @@ void XCoreAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   // are padded to 32 bits.
   if (Size < 4)
     OutStreamer->EmitZeros(4 - Size);
-  
+
   // Mark the end of the global
   getTargetStreamer().emitCCBottomData(GVSym->getName());
 }
@@ -295,6 +295,6 @@ void XCoreAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 }
 
 // Force static initialization.
-extern "C" void LLVMInitializeXCoreAsmPrinter() { 
+extern "C" void LLVMInitializeXCoreAsmPrinter() {
   RegisterAsmPrinter<XCoreAsmPrinter> X(getTheXCoreTarget());
 }

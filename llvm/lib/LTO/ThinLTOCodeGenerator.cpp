@@ -422,7 +422,7 @@ public:
     int TempFD;
     llvm::sys::path::remove_filename(CachePath);
     sys::path::append(TempFilename, CachePath, "Thin-%%%%%%.tmp.o");
-    std::error_code EC = 
+    std::error_code EC =
       sys::fs::createUniqueFile(TempFilename, TempFD, TempFilename);
     if (EC) {
       errs() << "Error: " << EC.message() << "\n";
@@ -432,7 +432,7 @@ public:
       raw_fd_ostream OS(TempFD, /* ShouldClose */ true);
       OS << OutputBuffer.getBuffer();
     }
-    // Rename temp file to final destination; rename is atomic 
+    // Rename temp file to final destination; rename is atomic
     EC = sys::fs::rename(TempFilename, EntryPath);
     if (EC)
       sys::fs::remove(TempFilename);
@@ -1048,10 +1048,10 @@ void ThinLTOCodeGenerator::run() {
         if (SavedObjectsDirectoryPath.empty()) {
           // We need to generated a memory buffer for the linker.
           if (!CacheEntryPath.empty()) {
-            // When cache is enabled, reload from the cache if possible. 
+            // When cache is enabled, reload from the cache if possible.
             // Releasing the buffer from the heap and reloading it from the
-            // cache file with mmap helps us to lower memory pressure. 
-            // The freed memory can be used for the next input file. 
+            // cache file with mmap helps us to lower memory pressure.
+            // The freed memory can be used for the next input file.
             // The final binary link will read from the VFS cache (hopefully!)
             // or from disk (if the memory pressure was too high).
             auto ReloadedBufferOrErr = CacheEntry.tryLoadingBuffer();

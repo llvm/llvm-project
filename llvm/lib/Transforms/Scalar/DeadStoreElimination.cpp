@@ -188,7 +188,7 @@ static bool hasAnalyzableMemoryWrite(Instruction *I,
 /// returns true, this function and getLocForRead completely describe the memory
 /// operations for this instruction.
 static MemoryLocation getLocForWrite(Instruction *Inst) {
-  
+
   if (StoreInst *SI = dyn_cast<StoreInst>(Inst))
     return MemoryLocation::get(SI);
 

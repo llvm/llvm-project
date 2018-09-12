@@ -96,7 +96,7 @@ const RegisterBankInfo::ValueMapping *getValueMapping(unsigned BankID,
     break;
   default:
     Idx = BankID == AMDGPU::VGPRRegBankID ? VGPRStartIdx : SGPRStartIdx;
-    Idx += llvm::countTrailingZeros(Size);
+    Idx += Log2_32_Ceil(Size);
     break;
   }
   return &ValMappings[Idx];

@@ -130,21 +130,18 @@ namespace orc {
 
 class ExtractingIRMaterializationUnit : public IRMaterializationUnit {
 public:
-  ExtractingIRMaterializationUnit(
-      ExecutionSession &ES, CompileOnDemandLayer2 &Parent,
-      std::unique_ptr<Module> M,
-      std::shared_ptr<SymbolResolver> BackingResolver)
-      : IRMaterializationUnit(ES, std::move(M)), Parent(Parent),
-        BackingResolver(std::move(BackingResolver)) {}
+  ExtractingIRMaterializationUnit(ExecutionSession &ES,
+                                  CompileOnDemandLayer2 &Parent,
+                                  std::unique_ptr<Module> M)
+      : IRMaterializationUnit(ES, std::move(M)), Parent(Parent) {}
 
-  ExtractingIRMaterializationUnit(
-      std::unique_ptr<Module> M, SymbolFlagsMap SymbolFlags,
-      SymbolNameToDefinitionMap SymbolToDefinition,
-      CompileOnDemandLayer2 &Parent,
-      std::shared_ptr<SymbolResolver> BackingResolver)
+  ExtractingIRMaterializationUnit(std::unique_ptr<Module> M,
+                                  SymbolFlagsMap SymbolFlags,
+                                  SymbolNameToDefinitionMap SymbolToDefinition,
+                                  CompileOnDemandLayer2 &Parent)
       : IRMaterializationUnit(std::move(M), std::move(SymbolFlags),
                               std::move(SymbolToDefinition)),
-        Parent(Parent), BackingResolver(std::move(BackingResolver)) {}
+        Parent(Parent) {}
 
 private:
   void materialize(MaterializationResponsibility R) override {
@@ -152,10 +149,6 @@ private:
     //        extracted module key, extracted module, and source module key
     //        together. This could be used, for example, to provide a specific
     //        memory manager instance to the linking layer.
-
-    // FIXME: The derived constructor should *only* look for the names of
-    //        original function definitions in the target VSO. All other
-    //        symbols should be looked up in the backing resolver.
 
     auto RequestedSymbols = R.getRequestedSymbols();
 
@@ -201,12 +194,12 @@ private:
              "of entries");
       R.replace(llvm::make_unique<ExtractingIRMaterializationUnit>(
           std::move(M), std::move(DelegatedSymbolFlags),
-          std::move(DelegatedSymbolToDefinition), Parent, BackingResolver));
+          std::move(DelegatedSymbolToDefinition), Parent));
     }
 
     if (ExtractedFunctionsModule)
-      Parent.emitExtractedFunctionsModule(
-          std::move(R), std::move(ExtractedFunctionsModule), BackingResolver);
+      Parent.emitExtractedFunctionsModule(std::move(R),
+                                          std::move(ExtractedFunctionsModule));
   }
 
   void discard(const VSO &V, SymbolStringPtr Name) override {
@@ -218,19 +211,14 @@ private:
 
   mutable std::mutex SourceModuleMutex;
   CompileOnDemandLayer2 &Parent;
-  std::shared_ptr<SymbolResolver> BackingResolver;
 };
 
 CompileOnDemandLayer2::CompileOnDemandLayer2(
     ExecutionSession &ES, IRLayer &BaseLayer, JITCompileCallbackManager &CCMgr,
     IndirectStubsManagerBuilder BuildIndirectStubsManager,
-    GetSymbolResolverFunction GetSymbolResolver,
-    SetSymbolResolverFunction SetSymbolResolver,
     GetAvailableContextFunction GetAvailableContext)
     : IRLayer(ES), BaseLayer(BaseLayer), CCMgr(CCMgr),
       BuildIndirectStubsManager(std::move(BuildIndirectStubsManager)),
-      GetSymbolResolver(std::move(GetSymbolResolver)),
-      SetSymbolResolver(std::move(SetSymbolResolver)),
       GetAvailableContext(std::move(GetAvailableContext)) {}
 
 Error CompileOnDemandLayer2::add(VSO &V, VModuleKey K,
@@ -306,18 +294,13 @@ void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
     StubInits[*KV.first] = KV.second;
 
   // Build the function-body-extracting materialization unit.
-  auto SR = GetSymbolResolver(K);
   if (auto Err = R.getTargetVSO().define(
-          llvm::make_unique<ExtractingIRMaterializationUnit>(
-              ES, *this, std::move(M), SR))) {
+          llvm::make_unique<ExtractingIRMaterializationUnit>(ES, *this,
+                                                             std::move(M)))) {
     ES.reportError(std::move(Err));
     R.failMaterialization();
     return;
   }
-
-  // Replace the fallback symbol resolver: We will re-use M's VModuleKey for
-  // the GlobalsModule.
-  SetSymbolResolver(K, SR);
 
   // Build the stubs.
   // FIXME: Remove function bodies materialization unit if stub creation fails.
@@ -351,22 +334,8 @@ IndirectStubsManager &CompileOnDemandLayer2::getStubsManager(const VSO &V) {
 }
 
 void CompileOnDemandLayer2::emitExtractedFunctionsModule(
-    MaterializationResponsibility R, std::unique_ptr<Module> M,
-    std::shared_ptr<SymbolResolver> Resolver) {
-  auto &TargetVSO = R.getTargetVSO();
+    MaterializationResponsibility R, std::unique_ptr<Module> M) {
   auto K = getExecutionSession().allocateVModule();
-
-  auto ExtractedFunctionsResolver = createSymbolResolver(
-      [=](SymbolFlagsMap &Flags, const SymbolNameSet &Symbols) {
-        return Resolver->lookupFlags(Flags, Symbols);
-      },
-      [=, &TargetVSO](std::shared_ptr<AsynchronousSymbolQuery> Query,
-                      SymbolNameSet Symbols) {
-        auto RemainingSymbols = TargetVSO.lookup(Query, std::move(Symbols));
-        return Resolver->lookup(std::move(Query), std::move(RemainingSymbols));
-      });
-
-  SetSymbolResolver(K, std::move(ExtractedFunctionsResolver));
   BaseLayer.emit(std::move(R), std::move(K), std::move(M));
 }
 

@@ -38,7 +38,7 @@ using namespace llvm;
 // LLVMCreateDisasm() creates a disassembler for the TripleName.  Symbolic
 // disassembly is supported by passing a block of information in the DisInfo
 // parameter and specifying the TagType and callback functions as described in
-// the header llvm-c/Disassembler.h .  The pointer to the block and the 
+// the header llvm-c/Disassembler.h .  The pointer to the block and the
 // functions can all be passed as NULL.  If successful, this returns a
 // disassembler context.  If not, it returns NULL.
 //

@@ -9,7 +9,7 @@
 //
 // This file defines PassRegistry, a class that is used in the initialization
 // and registration of passes.  At application startup, passes are registered
-// with the PassRegistry, which is later provided to the PassManager for 
+// with the PassRegistry, which is later provided to the PassManager for
 // dependency resolution and similar tasks.
 //
 //===----------------------------------------------------------------------===//

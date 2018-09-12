@@ -701,6 +701,7 @@ static bool needsRuntimeRegistrationOfSectionRange(const Module &M) {
   // Use linker script magic to get data/cnts/name start/end.
   if (Triple(M.getTargetTriple()).isOSLinux() ||
       Triple(M.getTargetTriple()).isOSFreeBSD() ||
+      Triple(M.getTargetTriple()).isOSFuchsia() ||
       Triple(M.getTargetTriple()).isPS4CPU())
     return false;
 
@@ -907,7 +908,7 @@ void InstrProfiling::emitRegistration() {
 
   IRBuilder<> IRB(BasicBlock::Create(M->getContext(), "", RegisterF));
   for (Value *Data : UsedVars)
-    if (Data != NamesVar)
+    if (Data != NamesVar && !isa<Function>(Data))
       IRB.CreateCall(RuntimeRegisterF, IRB.CreateBitCast(Data, VoidPtrTy));
 
   if (NamesVar) {

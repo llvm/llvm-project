@@ -54,6 +54,9 @@ typedef enum {
   LLVMDIFlagMainSubprogram = 1 << 21,
   LLVMDIFlagTypePassByValue = 1 << 22,
   LLVMDIFlagTypePassByReference = 1 << 23,
+  LLVMDIFlagFixedEnum = 1 << 24,
+  LLVMDIFlagThunk = 1 << 25,
+  LLVMDIFlagTrivial = 1 << 26,
   LLVMDIFlagIndirectVirtualBase = (1 << 2) | (1 << 5),
   LLVMDIFlagAccessibility = LLVMDIFlagPrivate | LLVMDIFlagProtected |
                             LLVMDIFlagPublic,

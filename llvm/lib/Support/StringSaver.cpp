@@ -17,3 +17,10 @@ StringRef StringSaver::save(StringRef S) {
   P[S.size()] = '\0';
   return StringRef(P, S.size());
 }
+
+StringRef UniqueStringSaver::save(StringRef S) {
+  auto R = Unique.insert(S);
+  if (R.second)                 // cache miss, need to actually save the string
+    *R.first = Strings.save(S); // safe replacement with equal value
+  return *R.first;
+}

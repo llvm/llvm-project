@@ -443,6 +443,10 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
   // register writes implicitly clear the upper portion of a super-register.
   MCIA.clearsSuperRegisters(MRI, MCI, WriteMask);
 
+  // Check if this is a dependency breaking instruction.
+  if (MCIA.isDependencyBreaking(STI, MCI))
+    NewIS->setDependencyBreaking();
+
   // Initialize writes.
   unsigned WriteIndex = 0;
   for (const WriteDescriptor &WD : D.Writes) {

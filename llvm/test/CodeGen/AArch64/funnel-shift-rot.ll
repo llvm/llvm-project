@@ -64,6 +64,19 @@ define i32 @rotl_i32(i32 %x, i32 %z) {
   ret i32 %f
 }
 
+define i64 @rotl_i64(i64 %x, i64 %z) {
+; CHECK-LABEL: rotl_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w9, wzr, #0x40
+; CHECK-NEXT:    sub w9, w9, w1
+; CHECK-NEXT:    lsl x8, x0, x1
+; CHECK-NEXT:    lsr x9, x0, x9
+; CHECK-NEXT:    orr x0, x8, x9
+; CHECK-NEXT:    ret
+  %f = call i64 @llvm.fshl.i64(i64 %x, i64 %x, i64 %z)
+  ret i64 %f
+}
+
 ; Vector rotate.
 
 define <4 x i32> @rotl_v4i32(<4 x i32> %x, <4 x i32> %z) {
@@ -138,14 +151,19 @@ define i16 @rotr_i16(i16 %x, i16 %z) {
   ret i16 %f
 }
 
+define i32 @rotr_i32(i32 %x, i32 %z) {
+; CHECK-LABEL: rotr_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ror w0, w0, w1
+; CHECK-NEXT:    ret
+  %f = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 %z)
+  ret i32 %f
+}
+
 define i64 @rotr_i64(i64 %x, i64 %z) {
 ; CHECK-LABEL: rotr_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w9, wzr, #0x40
-; CHECK-NEXT:    sub w9, w9, w1
-; CHECK-NEXT:    lsr x8, x0, x1
-; CHECK-NEXT:    lsl x9, x0, x9
-; CHECK-NEXT:    orr x0, x9, x8
+; CHECK-NEXT:    ror x0, x0, x1
 ; CHECK-NEXT:    ret
   %f = call i64 @llvm.fshr.i64(i64 %x, i64 %x, i64 %z)
   ret i64 %f

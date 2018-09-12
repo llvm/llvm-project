@@ -96,7 +96,7 @@ private:
     assert(PredClosure.count(Node) && "Invalid node!");
     return PredClosure[Node].end();
   }
-  
+
   succ_iterator_ty succ_begin(change_ty Node) {
     assert(Successors.count(Node) && "Invalid node!");
     return Successors[Node].begin();
@@ -205,7 +205,7 @@ DAGDeltaAlgorithmImpl::DAGDeltaAlgorithmImpl(
     Worklist.pop_back();
 
     std::set<change_ty> &ChangeSuccs = SuccClosure[Change];
-    for (pred_iterator_ty it = pred_begin(Change), 
+    for (pred_iterator_ty it = pred_begin(Change),
            ie = pred_end(Change); it != ie; ++it) {
       SuccClosure[*it].insert(Change);
       SuccClosure[*it].insert(ChangeSuccs.begin(), ChangeSuccs.end());
@@ -222,7 +222,7 @@ DAGDeltaAlgorithmImpl::DAGDeltaAlgorithmImpl(
     for (succ_closure_iterator_ty it2 = succ_closure_begin(*it),
            ie2 = succ_closure_end(*it); it2 != ie2; ++it2)
       PredClosure[*it2].insert(*it);
-  
+
   // Dump useful debug info.
   LLVM_DEBUG({
     llvm::errs() << "-- DAGDeltaAlgorithmImpl --\n";

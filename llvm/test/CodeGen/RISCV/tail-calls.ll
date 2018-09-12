@@ -106,7 +106,7 @@ entry:
   tail call void @callee_irq()
   ret void
 }
-attributes #0 = { "interrupt" }
+attributes #0 = { "interrupt"="machine" }
 
 ; Byval parameters hand the function a pointer directly into the stack area
 ; we want to reuse during a tail call. Do not tail call optimize functions with

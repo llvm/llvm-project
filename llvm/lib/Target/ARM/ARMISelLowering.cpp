@@ -3096,7 +3096,7 @@ static SDValue promoteToConstantPool(const GlobalValue *GV, SelectionDAG &DAG,
   // need to be duplicated) or duplicating the constant wouldn't increase code
   // size (implying the constant is no larger than 4 bytes).
   const Function &F = DAG.getMachineFunction().getFunction();
-  
+
   // We rely on this decision to inline being idemopotent and unrelated to the
   // use-site. We know that if we inline a variable at one use site, we'll
   // inline it elsewhere too (and reuse the constant pool entry). Fast-isel
@@ -5162,7 +5162,7 @@ static SDValue ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
       return SDValue();
     // SoftFP: read half-precision arguments:
     //
-    // t2: i32,ch = ... 
+    // t2: i32,ch = ...
     //        t7: i16 = truncate t2 <~~~~ Op
     //      t8: f16 = bitcast t7    <~~~~ N
     //
@@ -5173,7 +5173,7 @@ static SDValue ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   }
 
-  // Half-precision return values 
+  // Half-precision return values
   if (SrcVT == MVT::f16 && DstVT == MVT::i16) {
     if (!HasFullFP16)
       return SDValue();
@@ -10676,6 +10676,83 @@ static SDValue PerformMULCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue CombineANDShift(SDNode *N,
+                               TargetLowering::DAGCombinerInfo &DCI,
+                               const ARMSubtarget *Subtarget) {
+  // Allow DAGCombine to pattern-match before we touch the canonical form.
+  if (DCI.isBeforeLegalize() || DCI.isCalledByLegalizer())
+    return SDValue();
+
+  if (N->getValueType(0) != MVT::i32)
+    return SDValue();
+
+  ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!N1C)
+    return SDValue();
+
+  uint32_t C1 = (uint32_t)N1C->getZExtValue();
+  // Don't transform uxtb/uxth.
+  if (C1 == 255 || C1 == 65535)
+    return SDValue();
+
+  SDNode *N0 = N->getOperand(0).getNode();
+  if (!N0->hasOneUse())
+    return SDValue();
+
+  if (N0->getOpcode() != ISD::SHL && N0->getOpcode() != ISD::SRL)
+    return SDValue();
+
+  bool LeftShift = N0->getOpcode() == ISD::SHL;
+
+  ConstantSDNode *N01C = dyn_cast<ConstantSDNode>(N0->getOperand(1));
+  if (!N01C)
+    return SDValue();
+
+  uint32_t C2 = (uint32_t)N01C->getZExtValue();
+  if (!C2 || C2 >= 32)
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(N);
+
+  // We have a pattern of the form "(and (shl x, c2) c1)" or
+  // "(and (srl x, c2) c1)", where c1 is a shifted mask. Try to
+  // transform to a pair of shifts, to save materializing c1.
+
+  // First pattern: right shift, and c1+1 is a power of two.
+  // FIXME: Also check reversed pattern (left shift, and ~c1+1 is a power
+  // of two).
+  // FIXME: Use demanded bits?
+  if (!LeftShift && isMask_32(C1)) {
+    uint32_t C3 = countLeadingZeros(C1);
+    if (C2 < C3) {
+      SDValue SHL = DAG.getNode(ISD::SHL, DL, MVT::i32, N0->getOperand(0),
+                                DAG.getConstant(C3 - C2, DL, MVT::i32));
+      return DAG.getNode(ISD::SRL, DL, MVT::i32, SHL,
+                         DAG.getConstant(C3, DL, MVT::i32));
+    }
+  }
+
+  // Second pattern: left shift, and (c1>>c2)+1 is a power of two.
+  // FIXME: Also check reversed pattern (right shift, and ~(c1<<c2)+1
+  // is a power of two).
+  // FIXME: Use demanded bits?
+  if (LeftShift && isShiftedMask_32(C1)) {
+    uint32_t C3 = countLeadingZeros(C1);
+    if (C2 + C3 < 32 && C1 == ((-1U << (C2 + C3)) >> C3)) {
+      SDValue SHL = DAG.getNode(ISD::SHL, DL, MVT::i32, N0->getOperand(0),
+                                DAG.getConstant(C2 + C3, DL, MVT::i32));
+      return DAG.getNode(ISD::SRL, DL, MVT::i32, SHL,
+                        DAG.getConstant(C3, DL, MVT::i32));
+    }
+  }
+
+  // FIXME: Transform "(and (shl x, c2) c1)" ->
+  // "(shl (and x, c1>>c2), c2)" if "c1 >> c2" is a cheaper immediate than
+  // c1.
+  return SDValue();
+}
+
 static SDValue PerformANDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const ARMSubtarget *Subtarget) {
@@ -10716,6 +10793,10 @@ static SDValue PerformANDCombine(SDNode *N,
     if (SDValue Result = PerformSHLSimplify(N, DCI, Subtarget))
       return Result;
   }
+
+  if (Subtarget->isThumb1Only())
+    if (SDValue Result = CombineANDShift(N, DCI, Subtarget))
+      return Result;
 
   return SDValue();
 }
@@ -13380,13 +13461,13 @@ bool ARMTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
     auto *RHS = dyn_cast<ConstantSDNode>(Op->getOperand(1));
     if (!RHS || RHS->getZExtValue() != 4)
       return false;
-    
+
     Offset = Op->getOperand(1);
     Base = Op->getOperand(0);
     AM = ISD::POST_INC;
     return true;
   }
-  
+
   bool isInc;
   bool isLegal = false;
   if (Subtarget->isThumb2())

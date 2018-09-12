@@ -333,7 +333,7 @@ public:
 
   relocation_iterator locrel_begin() const;
   relocation_iterator locrel_end() const;
-  
+
   void moveRelocationNext(DataRefImpl &Rel) const override;
   uint64_t getRelocationOffset(DataRefImpl Rel) const override;
   symbol_iterator getRelocationSymbol(DataRefImpl Rel) const override;

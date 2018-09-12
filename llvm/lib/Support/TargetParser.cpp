@@ -433,6 +433,17 @@ unsigned llvm::AArch64::getDefaultExtensions(StringRef CPU, ArchKind AK) {
     .Default(AArch64::AEK_INVALID);
 }
 
+AArch64::ArchKind llvm::AArch64::getCPUArchKind(StringRef CPU) {
+  if (CPU == "generic")
+    return AArch64::ArchKind::ARMV8A;
+
+  return StringSwitch<AArch64::ArchKind>(CPU)
+#define AARCH64_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT) \
+  .Case(NAME, AArch64::ArchKind:: ID)
+#include "llvm/Support/AArch64TargetParser.def"
+    .Default(AArch64::ArchKind::INVALID);
+}
+
 bool llvm::AArch64::getExtensionFeatures(unsigned Extensions,
                                      std::vector<StringRef> &Features) {
 

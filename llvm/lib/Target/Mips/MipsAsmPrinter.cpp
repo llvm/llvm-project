@@ -1094,7 +1094,7 @@ void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
   //   ALIGN
   //   B .tmpN
   //   11 NOP instructions (44 bytes)
-  //   ADDIU T9, T9, 52 
+  //   ADDIU T9, T9, 52
   // .tmpN
   //
   // We need the 44 bytes (11 instructions) because at runtime, we'd

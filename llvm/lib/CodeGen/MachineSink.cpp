@@ -509,7 +509,7 @@ bool MachineSinking::PostponeSplitCriticalEdge(MachineInstr &MI,
   }
 
   ToSplit.insert(std::make_pair(FromBB, ToBB));
-  
+
   return true;
 }
 

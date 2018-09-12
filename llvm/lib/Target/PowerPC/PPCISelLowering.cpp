@@ -1224,6 +1224,7 @@ unsigned PPCTargetLowering::getByValTypeAlignment(Type *Ty,
 }
 
 unsigned PPCTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
+                                                          CallingConv:: ID CC,
                                                           EVT VT) const {
   if (Subtarget.hasSPE() && VT == MVT::f64)
     return 2;
@@ -1231,6 +1232,7 @@ unsigned PPCTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
 }
 
 MVT PPCTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
+                                                     CallingConv:: ID CC,
                                                      EVT VT) const {
   if (Subtarget.hasSPE() && VT == MVT::f64)
     return MVT::i32;
@@ -13102,8 +13104,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
 
 SDValue
 PPCTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
-                                  SelectionDAG &DAG,
-                                  std::vector<SDNode *> *Created) const {
+                                 SelectionDAG &DAG,
+                                 SmallVectorImpl<SDNode *> &Created) const {
   // fold (sdiv X, pow2)
   EVT VT = N->getValueType(0);
   if (VT == MVT::i64 && !Subtarget.isPPC64())
@@ -13120,13 +13122,11 @@ PPCTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   SDValue ShiftAmt = DAG.getConstant(Lg2, DL, VT);
 
   SDValue Op = DAG.getNode(PPCISD::SRA_ADDZE, DL, VT, N0, ShiftAmt);
-  if (Created)
-    Created->push_back(Op.getNode());
+  Created.push_back(Op.getNode());
 
   if (IsNegPow2) {
     Op = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Op);
-    if (Created)
-      Created->push_back(Op.getNode());
+    Created.push_back(Op.getNode());
   }
 
   return Op;

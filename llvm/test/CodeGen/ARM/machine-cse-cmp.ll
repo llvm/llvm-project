@@ -65,8 +65,8 @@ if.end:
 %s2 = sub nsw i32 %s, %size
 %s3 = sub nsw i32 %sub, %s2
 ; CHECK: sub [[R1:r[0-9]+]], [[R2:r[0-9]+]], r2
-; CHECK: sub [[R3:r[0-9]+]], [[R1]], r2
-; CHECK: sub [[R4:r[0-9]+]], [[R1]], [[R3]]
+; CHECK: sub [[R3:r[0-9]+]], r2, [[R1]]
+; CHECK: add [[R4:r[0-9]+]], [[R1]], [[R3]]
 ; CHECK-NOT: sub
 ; CHECK: str
 store i32 %s3, i32* %offset, align 4

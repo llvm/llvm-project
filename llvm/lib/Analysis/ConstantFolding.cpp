@@ -1603,14 +1603,21 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
         return Operands[0];
     }
 
-    if (isa<ConstantPointerNull>(Operands[0]) &&
-        !NullPointerIsDefined(
-            CS.getCaller(), Operands[0]->getType()->getPointerAddressSpace())) {
+    if (isa<ConstantPointerNull>(Operands[0])) {
       // launder(null) == null == strip(null) iff in addrspace 0
       if (IntrinsicID == Intrinsic::launder_invariant_group ||
-          IntrinsicID == Intrinsic::strip_invariant_group)
-        return Operands[0];
-      return nullptr;
+          IntrinsicID == Intrinsic::strip_invariant_group) {
+        // If instruction is not yet put in a basic block (e.g. when cloning
+        // a function during inlining), CS caller may not be available.
+        // So check CS's BB first before querying CS.getCaller.
+        const Function *Caller = CS.getParent() ? CS.getCaller() : nullptr;
+        if (Caller &&
+            !NullPointerIsDefined(
+                Caller, Operands[0]->getType()->getPointerAddressSpace())) {
+          return Operands[0];
+        }
+        return nullptr;
+      }
     }
 
     if (auto *Op = dyn_cast<ConstantFP>(Operands[0])) {

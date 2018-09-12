@@ -740,7 +740,7 @@ getARMBLTargetOpValue(const MCInst &MI, unsigned OpIdx,
   const MCOperand MO = MI.getOperand(OpIdx);
   if (MO.isExpr()) {
     if (HasConditionalBranch(MI))
-      return ::getBranchTargetOpValue(MI, OpIdx, 
+      return ::getBranchTargetOpValue(MI, OpIdx,
                                       ARM::fixup_arm_condbl, Fixups, STI);
     return ::getBranchTargetOpValue(MI, OpIdx, ARM::fixup_arm_uncondbl, Fixups, STI);
   }
@@ -766,10 +766,10 @@ uint32_t ARMMCCodeEmitter::getThumbBranchTargetOpValue(
     const MCSubtargetInfo &STI) const {
   unsigned Val = 0;
   const MCOperand MO = MI.getOperand(OpIdx);
-    
+
   if(MO.isExpr())
     return ::getBranchTargetOpValue(MI, OpIdx, ARM::fixup_t2_uncondbranch, Fixups, STI);
-  else 
+  else
     Val = MO.getImm() >> 1;
 
   bool I  = (Val & 0x800000);

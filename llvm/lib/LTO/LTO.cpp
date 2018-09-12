@@ -428,7 +428,14 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     assert(ResI != ResE);
     SymbolResolution Res = *ResI++;
 
-    auto &GlobalRes = GlobalResolutions[Sym.getName()];
+    StringRef Name = Sym.getName();
+    Triple TT(RegularLTO.CombinedModule->getTargetTriple());
+    // Strip the __imp_ prefix from COFF dllimport symbols (similar to the
+    // way they are handled by lld), otherwise we can end up with two
+    // global resolutions (one with and one for a copy of the symbol without).
+    if (TT.isOSBinFormatCOFF() && Name.startswith("__imp_"))
+      Name = Name.substr(strlen("__imp_"));
+    auto &GlobalRes = GlobalResolutions[Name];
     GlobalRes.UnnamedAddr &= Sym.isUnnamedAddr();
     if (Res.Prevailing) {
       assert(!GlobalRes.Prevailing &&
@@ -865,7 +872,8 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       GlobalValue *GV =
           RegularLTO.CombinedModule->getNamedValue(R.second.IRName);
       // Ignore symbols defined in other partitions.
-      if (!GV || GV->hasLocalLinkage())
+      // Also skip declarations, which are not allowed to have internal linkage.
+      if (!GV || GV->hasLocalLinkage() || GV->isDeclaration())
         continue;
       GV->setUnnamedAddr(R.second.UnnamedAddr ? GlobalValue::UnnamedAddr::Global
                                               : GlobalValue::UnnamedAddr::None);

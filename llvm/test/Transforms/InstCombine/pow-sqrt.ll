@@ -20,9 +20,9 @@ define <2 x double> @pow_intrinsic_half_approx(<2 x double> %x) {
 
 define double @pow_libcall_half_approx(double %x) {
 ; CHECK-LABEL: @pow_libcall_half_approx(
-; CHECK-NEXT:    [[SQRT:%.*]] = call double @sqrt(double %x)
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[SQRT]])
-; CHECK-NEXT:    [[TMP2:%.*]] = fcmp oeq double %x, 0xFFF0000000000000
+; CHECK-NEXT:    [[SQRT:%.*]] = call afn double @sqrt(double %x)
+; CHECK-NEXT:    [[TMP1:%.*]] = call afn double @llvm.fabs.f64(double [[SQRT]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp afn oeq double %x, 0xFFF0000000000000
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], double 0x7FF0000000000000, double [[TMP1]]
 ; CHECK-NEXT:    ret double [[TMP3]]
 ;
