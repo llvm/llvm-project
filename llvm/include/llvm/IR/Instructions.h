@@ -5331,6 +5331,25 @@ inline Value *getPointerOperand(Value *V) {
   return nullptr;
 }
 
+/// A helper function that returns the alignment of load or store instruction.
+inline unsigned getLoadStoreAlignment(Value *I) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         "Expected Load or Store instruction");
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return LI->getAlignment();
+  return cast<StoreInst>(I)->getAlignment();
+}
+
+/// A helper function that returns the address space of the pointer operand of
+/// load or store instruction.
+inline unsigned getLoadStoreAddressSpace(Value *I) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         "Expected Load or Store instruction");
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return LI->getPointerAddressSpace();
+  return cast<StoreInst>(I)->getPointerAddressSpace();
+}
+
 } // end namespace llvm
 
 #endif // LLVM_IR_INSTRUCTIONS_H

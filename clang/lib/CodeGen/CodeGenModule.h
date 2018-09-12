@@ -764,7 +764,8 @@ public:
   /// bitcast to the new variable.
   llvm::GlobalVariable *
   CreateOrReplaceCXXRuntimeVariable(StringRef Name, llvm::Type *Ty,
-                                    llvm::GlobalValue::LinkageTypes Linkage);
+                                    llvm::GlobalValue::LinkageTypes Linkage,
+                                    unsigned Alignment);
 
   llvm::Function *
   CreateGlobalInitOrDestructFunction(llvm::FunctionType *ty, const Twine &name,

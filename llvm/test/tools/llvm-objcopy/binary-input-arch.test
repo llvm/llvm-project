@@ -65,8 +65,8 @@
 # CHECK-NEXT:     ]
 # 32-NEXT:        HeaderSize: 52
 # 64-NEXT:        HeaderSize: 64
-# 32-NEXT:        ProgramHeaderEntrySize: 32
-# 64-NEXT:        ProgramHeaderEntrySize: 56
+# 32-NEXT:        ProgramHeaderEntrySize: 0
+# 64-NEXT:        ProgramHeaderEntrySize: 0
 # CHECK-NEXT:     ProgramHeaderCount: 0
 # 32-NEXT:        SectionHeaderEntrySize: 40
 # 64-NEXT:        SectionHeaderEntrySize: 64

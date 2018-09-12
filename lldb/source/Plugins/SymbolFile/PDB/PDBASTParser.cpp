@@ -42,8 +42,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::pdb;
 
-namespace {
-int TranslateUdtKind(PDB_UdtType pdb_kind) {
+static int TranslateUdtKind(PDB_UdtType pdb_kind) {
   switch (pdb_kind) {
   case PDB_UdtType::Class:
     return clang::TTK_Class;
@@ -57,7 +56,7 @@ int TranslateUdtKind(PDB_UdtType pdb_kind) {
   llvm_unreachable("unsuported PDB UDT type");
 }
 
-lldb::Encoding TranslateBuiltinEncoding(PDB_BuiltinType type) {
+static lldb::Encoding TranslateBuiltinEncoding(PDB_BuiltinType type) {
   switch (type) {
   case PDB_BuiltinType::Float:
     return lldb::eEncodingIEEE754;
@@ -78,7 +77,7 @@ lldb::Encoding TranslateBuiltinEncoding(PDB_BuiltinType type) {
   }
 }
 
-lldb::Encoding TranslateEnumEncoding(PDB_VariantType type) {
+static lldb::Encoding TranslateEnumEncoding(PDB_VariantType type) {
   switch (type) {
   case PDB_VariantType::Int8:
   case PDB_VariantType::Int16:
@@ -99,7 +98,7 @@ lldb::Encoding TranslateEnumEncoding(PDB_VariantType type) {
   return lldb::eEncodingSint;
 }
 
-CompilerType
+static CompilerType
 GetBuiltinTypeForPDBEncodingAndBitSize(ClangASTContext &clang_ast,
                                        const PDBSymbolTypeBuiltin &pdb_type,
                                        Encoding encoding, uint32_t width) {
@@ -148,8 +147,8 @@ GetBuiltinTypeForPDBEncodingAndBitSize(ClangASTContext &clang_ast,
   return clang_ast.GetBuiltinTypeForEncodingAndBitSize(encoding, width);
 }
 
-ConstString GetPDBBuiltinTypeName(const PDBSymbolTypeBuiltin &pdb_type,
-                                  CompilerType &compiler_type) {
+static ConstString GetPDBBuiltinTypeName(const PDBSymbolTypeBuiltin &pdb_type,
+                                         CompilerType &compiler_type) {
   PDB_BuiltinType kind = pdb_type.getBuiltinType();
   switch (kind) {
   default:
@@ -180,7 +179,8 @@ ConstString GetPDBBuiltinTypeName(const PDBSymbolTypeBuiltin &pdb_type,
   return compiler_type.GetTypeName();
 }
 
-bool GetDeclarationForSymbol(const PDBSymbol &symbol, Declaration &decl) {
+static bool GetDeclarationForSymbol(const PDBSymbol &symbol,
+                                    Declaration &decl) {
   auto &raw_sym = symbol.getRawSymbol();
   auto first_line_up = raw_sym.getSrcLineOnTypeDefn();
 
@@ -205,7 +205,7 @@ bool GetDeclarationForSymbol(const PDBSymbol &symbol, Declaration &decl) {
   return true;
 }
 
-AccessType TranslateMemberAccess(PDB_MemberAccess access) {
+static AccessType TranslateMemberAccess(PDB_MemberAccess access) {
   switch (access) {
   case PDB_MemberAccess::Private:
     return eAccessPrivate;
@@ -217,7 +217,7 @@ AccessType TranslateMemberAccess(PDB_MemberAccess access) {
   return eAccessNone;
 }
 
-AccessType GetDefaultAccessibilityForUdtKind(PDB_UdtType udt_kind) {
+static AccessType GetDefaultAccessibilityForUdtKind(PDB_UdtType udt_kind) {
   switch (udt_kind) {
   case PDB_UdtType::Struct:
   case PDB_UdtType::Union:
@@ -229,7 +229,7 @@ AccessType GetDefaultAccessibilityForUdtKind(PDB_UdtType udt_kind) {
   llvm_unreachable("unsupported PDB UDT type");
 }
 
-AccessType GetAccessibilityForUdt(const PDBSymbolTypeUDT &udt) {
+static AccessType GetAccessibilityForUdt(const PDBSymbolTypeUDT &udt) {
   AccessType access = TranslateMemberAccess(udt.getAccess());
   if (access != lldb::eAccessNone || !udt.isNested())
     return access;
@@ -245,7 +245,7 @@ AccessType GetAccessibilityForUdt(const PDBSymbolTypeUDT &udt) {
   return GetDefaultAccessibilityForUdtKind(parent_udt->getUdtKind());
 }
 
-clang::MSInheritanceAttr::Spelling
+static clang::MSInheritanceAttr::Spelling
 GetMSInheritance(const PDBSymbolTypeUDT &udt) {
   int base_count = 0;
   bool has_virtual = false;
@@ -265,7 +265,7 @@ GetMSInheritance(const PDBSymbolTypeUDT &udt) {
   return clang::MSInheritanceAttr::Keyword_single_inheritance;
 }
 
-std::unique_ptr<llvm::pdb::PDBSymbol>
+static std::unique_ptr<llvm::pdb::PDBSymbol>
 GetClassOrFunctionParent(const llvm::pdb::PDBSymbol &symbol) {
   const IPDBSession &session = symbol.getSession();
   const IPDBRawSymbol &raw = symbol.getRawSymbol();
@@ -288,7 +288,7 @@ GetClassOrFunctionParent(const llvm::pdb::PDBSymbol &symbol) {
   return GetClassOrFunctionParent(*lexical_parent);
 }
 
-clang::NamedDecl *
+static clang::NamedDecl *
 GetDeclFromContextByName(const clang::ASTContext &ast,
                          const clang::DeclContext &decl_context,
                          llvm::StringRef name) {
@@ -301,10 +301,9 @@ GetDeclFromContextByName(const clang::ASTContext &ast,
   return result[0];
 }
 
-bool IsAnonymousNamespaceName(const std::string &name) {
-  return name == "`anonymous namespace'" | name == "`anonymous-namespace'";
+static bool IsAnonymousNamespaceName(const std::string &name) {
+  return name == "`anonymous namespace'" || name == "`anonymous-namespace'";
 }
-} // namespace
 
 PDBASTParser::PDBASTParser(lldb_private::ClangASTContext &ast) : m_ast(ast) {}
 

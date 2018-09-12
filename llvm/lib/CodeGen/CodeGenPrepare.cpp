@@ -278,7 +278,7 @@ class TypePromotionTransaction;
     /// Keep track of GEPs accessing the same data structures such as structs or
     /// arrays that are candidates to be split later because of their large
     /// size.
-    DenseMap<
+    MapVector<
         AssertingVH<Value>,
         SmallVector<std::pair<AssertingVH<GetElementPtrInst>, int64_t>, 32>>
         LargeOffsetGEPMap;

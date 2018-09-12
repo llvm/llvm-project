@@ -4623,6 +4623,41 @@ static Instruction *canonicalizeICmpBool(ICmpInst &I,
   }
 }
 
+// Transform pattern like:
+//   (1 << Y) u<= X
+//   (1 << Y) u>  X
+// Into:
+//   (X l>> Y) != 0
+//   (X l>> Y) == 0
+static Instruction *foldICmpWithHighBitMask(ICmpInst &Cmp,
+                                            InstCombiner::BuilderTy &Builder) {
+  ICmpInst::Predicate Pred;
+  Value *X, *Y;
+  if (!match(&Cmp,
+             m_c_ICmp(Pred, m_OneUse(m_Shl(m_One(), m_Value(Y))), m_Value(X))))
+    return nullptr;
+
+  // We want X to be the icmp's second operand, so swap predicate if it is not.
+  if (Cmp.getOperand(0) == X)
+    Pred = Cmp.getSwappedPredicate();
+
+  ICmpInst::Predicate NewPred;
+  switch (Pred) {
+  case ICmpInst::ICMP_ULE:
+    NewPred = ICmpInst::ICMP_NE;
+    break;
+  case ICmpInst::ICMP_UGT:
+    NewPred = ICmpInst::ICMP_EQ;
+    break;
+  default:
+    return nullptr;
+  }
+
+  Value *NewX = Builder.CreateLShr(X, Y, X->getName() + ".highbits");
+  Constant *Zero = Constant::getNullValue(NewX->getType());
+  return CmpInst::Create(Instruction::ICmp, NewPred, NewX, Zero);
+}
+
 static Instruction *foldVectorCmp(CmpInst &Cmp,
                                   InstCombiner::BuilderTy &Builder) {
   // If both arguments of the cmp are shuffles that use the same mask and
@@ -4912,6 +4947,9 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     if (match(Op1, m_Add(m_Value(X), m_APInt(C))) && Op0 == X)
       return foldICmpAddOpConst(X, *C, I.getSwappedPredicate());
   }
+
+  if (Instruction *Res = foldICmpWithHighBitMask(I, Builder))
+    return Res;
 
   if (I.getType()->isVectorTy())
     if (Instruction *Res = foldVectorCmp(I, Builder))

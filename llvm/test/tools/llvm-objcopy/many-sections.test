@@ -22,12 +22,12 @@ EHDR-NEXT:   Type: Relocatable (0x1)
 EHDR-NEXT:   Machine: EM_X86_64 (0x3E)
 EHDR-NEXT:   Version: 1
 EHDR-NEXT:   Entry: 0x0
-EHDR-NEXT:   ProgramHeaderOffset: 0x40
+EHDR-NEXT:   ProgramHeaderOffset: 0x0
 EHDR-NEXT:   SectionHeaderOffset:
 EHDR-NEXT:   Flags [ (0x0)
 EHDR-NEXT:   ]
 EHDR-NEXT:   HeaderSize: 64
-EHDR-NEXT:   ProgramHeaderEntrySize: 56
+EHDR-NEXT:   ProgramHeaderEntrySize: 0
 EHDR-NEXT:   ProgramHeaderCount: 0
 EHDR-NEXT:   SectionHeaderEntrySize: 64
 EHDR-NEXT:   SectionHeaderCount: 0

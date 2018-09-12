@@ -171,12 +171,6 @@ static cl::opt<bool> EnableInterleavedMemAccesses(
     "enable-interleaved-mem-accesses", cl::init(false), cl::Hidden,
     cl::desc("Enable vectorization on interleaved memory accesses in a loop"));
 
-/// Maximum factor for an interleaved memory access.
-static cl::opt<unsigned> MaxInterleaveGroupFactor(
-    "max-interleave-group-factor", cl::Hidden,
-    cl::desc("Maximum factor for an interleaved access group (default = 8)"),
-    cl::init(8));
-
 /// We don't interleave loops with a known constant trip count below this
 /// number.
 static const unsigned TinyTripCountInterleaveThreshold = 128;
@@ -265,10 +259,6 @@ static Type *ToVectorTy(Type *Scalar, unsigned VF) {
   return VectorType::get(Scalar, VF);
 }
 
-// FIXME: The following helper functions have multiple implementations
-// in the project. They can be effectively organized in a common Load/Store
-// utilities unit.
-
 /// A helper function that returns the type of loaded or stored value.
 static Type *getMemInstValueType(Value *I) {
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
@@ -276,25 +266,6 @@ static Type *getMemInstValueType(Value *I) {
   if (auto *LI = dyn_cast<LoadInst>(I))
     return LI->getType();
   return cast<StoreInst>(I)->getValueOperand()->getType();
-}
-
-/// A helper function that returns the alignment of load or store instruction.
-static unsigned getMemInstAlignment(Value *I) {
-  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
-         "Expected Load or Store instruction");
-  if (auto *LI = dyn_cast<LoadInst>(I))
-    return LI->getAlignment();
-  return cast<StoreInst>(I)->getAlignment();
-}
-
-/// A helper function that returns the address space of the pointer operand of
-/// load or store instruction.
-static unsigned getMemInstAddressSpace(Value *I) {
-  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
-         "Expected Load or Store instruction");
-  if (auto *LI = dyn_cast<LoadInst>(I))
-    return LI->getPointerAddressSpace();
-  return cast<StoreInst>(I)->getPointerAddressSpace();
 }
 
 /// A helper function that returns true if the given type is irregular. The
@@ -808,348 +779,6 @@ void InnerLoopVectorizer::addMetadata(ArrayRef<Value *> To,
       addMetadata(I, From);
   }
 }
-
-namespace llvm {
-
-/// The group of interleaved loads/stores sharing the same stride and
-/// close to each other.
-///
-/// Each member in this group has an index starting from 0, and the largest
-/// index should be less than interleaved factor, which is equal to the absolute
-/// value of the access's stride.
-///
-/// E.g. An interleaved load group of factor 4:
-///        for (unsigned i = 0; i < 1024; i+=4) {
-///          a = A[i];                           // Member of index 0
-///          b = A[i+1];                         // Member of index 1
-///          d = A[i+3];                         // Member of index 3
-///          ...
-///        }
-///
-///      An interleaved store group of factor 4:
-///        for (unsigned i = 0; i < 1024; i+=4) {
-///          ...
-///          A[i]   = a;                         // Member of index 0
-///          A[i+1] = b;                         // Member of index 1
-///          A[i+2] = c;                         // Member of index 2
-///          A[i+3] = d;                         // Member of index 3
-///        }
-///
-/// Note: the interleaved load group could have gaps (missing members), but
-/// the interleaved store group doesn't allow gaps.
-class InterleaveGroup {
-public:
-  InterleaveGroup(Instruction *Instr, int Stride, unsigned Align)
-      : Align(Align), InsertPos(Instr) {
-    assert(Align && "The alignment should be non-zero");
-
-    Factor = std::abs(Stride);
-    assert(Factor > 1 && "Invalid interleave factor");
-
-    Reverse = Stride < 0;
-    Members[0] = Instr;
-  }
-
-  bool isReverse() const { return Reverse; }
-  unsigned getFactor() const { return Factor; }
-  unsigned getAlignment() const { return Align; }
-  unsigned getNumMembers() const { return Members.size(); }
-
-  /// Try to insert a new member \p Instr with index \p Index and
-  /// alignment \p NewAlign. The index is related to the leader and it could be
-  /// negative if it is the new leader.
-  ///
-  /// \returns false if the instruction doesn't belong to the group.
-  bool insertMember(Instruction *Instr, int Index, unsigned NewAlign) {
-    assert(NewAlign && "The new member's alignment should be non-zero");
-
-    int Key = Index + SmallestKey;
-
-    // Skip if there is already a member with the same index.
-    if (Members.find(Key) != Members.end())
-      return false;
-
-    if (Key > LargestKey) {
-      // The largest index is always less than the interleave factor.
-      if (Index >= static_cast<int>(Factor))
-        return false;
-
-      LargestKey = Key;
-    } else if (Key < SmallestKey) {
-      // The largest index is always less than the interleave factor.
-      if (LargestKey - Key >= static_cast<int>(Factor))
-        return false;
-
-      SmallestKey = Key;
-    }
-
-    // It's always safe to select the minimum alignment.
-    Align = std::min(Align, NewAlign);
-    Members[Key] = Instr;
-    return true;
-  }
-
-  /// Get the member with the given index \p Index
-  ///
-  /// \returns nullptr if contains no such member.
-  Instruction *getMember(unsigned Index) const {
-    int Key = SmallestKey + Index;
-    auto Member = Members.find(Key);
-    if (Member == Members.end())
-      return nullptr;
-
-    return Member->second;
-  }
-
-  /// Get the index for the given member. Unlike the key in the member
-  /// map, the index starts from 0.
-  unsigned getIndex(Instruction *Instr) const {
-    for (auto I : Members)
-      if (I.second == Instr)
-        return I.first - SmallestKey;
-
-    llvm_unreachable("InterleaveGroup contains no such member");
-  }
-
-  Instruction *getInsertPos() const { return InsertPos; }
-  void setInsertPos(Instruction *Inst) { InsertPos = Inst; }
-
-  /// Add metadata (e.g. alias info) from the instructions in this group to \p
-  /// NewInst.
-  ///
-  /// FIXME: this function currently does not add noalias metadata a'la
-  /// addNewMedata.  To do that we need to compute the intersection of the
-  /// noalias info from all members.
-  void addMetadata(Instruction *NewInst) const {
-    SmallVector<Value *, 4> VL;
-    std::transform(Members.begin(), Members.end(), std::back_inserter(VL),
-                   [](std::pair<int, Instruction *> p) { return p.second; });
-    propagateMetadata(NewInst, VL);
-  }
-
-private:
-  unsigned Factor; // Interleave Factor.
-  bool Reverse;
-  unsigned Align;
-  DenseMap<int, Instruction *> Members;
-  int SmallestKey = 0;
-  int LargestKey = 0;
-
-  // To avoid breaking dependences, vectorized instructions of an interleave
-  // group should be inserted at either the first load or the last store in
-  // program order.
-  //
-  // E.g. %even = load i32             // Insert Position
-  //      %add = add i32 %even         // Use of %even
-  //      %odd = load i32
-  //
-  //      store i32 %even
-  //      %odd = add i32               // Def of %odd
-  //      store i32 %odd               // Insert Position
-  Instruction *InsertPos;
-};
-} // end namespace llvm
-
-namespace {
-
-/// Drive the analysis of interleaved memory accesses in the loop.
-///
-/// Use this class to analyze interleaved accesses only when we can vectorize
-/// a loop. Otherwise it's meaningless to do analysis as the vectorization
-/// on interleaved accesses is unsafe.
-///
-/// The analysis collects interleave groups and records the relationships
-/// between the member and the group in a map.
-class InterleavedAccessInfo {
-public:
-  InterleavedAccessInfo(PredicatedScalarEvolution &PSE, Loop *L,
-                        DominatorTree *DT, LoopInfo *LI,
-                        const LoopAccessInfo *LAI)
-    : PSE(PSE), TheLoop(L), DT(DT), LI(LI), LAI(LAI) {}
-
-  ~InterleavedAccessInfo() {
-    SmallPtrSet<InterleaveGroup *, 4> DelSet;
-    // Avoid releasing a pointer twice.
-    for (auto &I : InterleaveGroupMap)
-      DelSet.insert(I.second);
-    for (auto *Ptr : DelSet)
-      delete Ptr;
-  }
-
-  /// Analyze the interleaved accesses and collect them in interleave
-  /// groups. Substitute symbolic strides using \p Strides.
-  void analyzeInterleaving();
-
-  /// Check if \p Instr belongs to any interleave group.
-  bool isInterleaved(Instruction *Instr) const {
-    return InterleaveGroupMap.find(Instr) != InterleaveGroupMap.end();
-  }
-
-  /// Get the interleave group that \p Instr belongs to.
-  ///
-  /// \returns nullptr if doesn't have such group.
-  InterleaveGroup *getInterleaveGroup(Instruction *Instr) const {
-    auto Group = InterleaveGroupMap.find(Instr);
-    if (Group == InterleaveGroupMap.end())
-      return nullptr;
-    return Group->second;
-  }
-
-  /// Returns true if an interleaved group that may access memory
-  /// out-of-bounds requires a scalar epilogue iteration for correctness.
-  bool requiresScalarEpilogue() const { return RequiresScalarEpilogue; }
-
-private:
-  /// A wrapper around ScalarEvolution, used to add runtime SCEV checks.
-  /// Simplifies SCEV expressions in the context of existing SCEV assumptions.
-  /// The interleaved access analysis can also add new predicates (for example
-  /// by versioning strides of pointers).
-  PredicatedScalarEvolution &PSE;
-
-  Loop *TheLoop;
-  DominatorTree *DT;
-  LoopInfo *LI;
-  const LoopAccessInfo *LAI;
-
-  /// True if the loop may contain non-reversed interleaved groups with
-  /// out-of-bounds accesses. We ensure we don't speculatively access memory
-  /// out-of-bounds by executing at least one scalar epilogue iteration.
-  bool RequiresScalarEpilogue = false;
-
-  /// Holds the relationships between the members and the interleave group.
-  DenseMap<Instruction *, InterleaveGroup *> InterleaveGroupMap;
-
-  /// Holds dependences among the memory accesses in the loop. It maps a source
-  /// access to a set of dependent sink accesses.
-  DenseMap<Instruction *, SmallPtrSet<Instruction *, 2>> Dependences;
-
-  /// The descriptor for a strided memory access.
-  struct StrideDescriptor {
-    StrideDescriptor() = default;
-    StrideDescriptor(int64_t Stride, const SCEV *Scev, uint64_t Size,
-                     unsigned Align)
-        : Stride(Stride), Scev(Scev), Size(Size), Align(Align) {}
-
-    // The access's stride. It is negative for a reverse access.
-    int64_t Stride = 0;
-
-    // The scalar expression of this access.
-    const SCEV *Scev = nullptr;
-
-    // The size of the memory object.
-    uint64_t Size = 0;
-
-    // The alignment of this access.
-    unsigned Align = 0;
-  };
-
-  /// A type for holding instructions and their stride descriptors.
-  using StrideEntry = std::pair<Instruction *, StrideDescriptor>;
-
-  /// Create a new interleave group with the given instruction \p Instr,
-  /// stride \p Stride and alignment \p Align.
-  ///
-  /// \returns the newly created interleave group.
-  InterleaveGroup *createInterleaveGroup(Instruction *Instr, int Stride,
-                                         unsigned Align) {
-    assert(!isInterleaved(Instr) && "Already in an interleaved access group");
-    InterleaveGroupMap[Instr] = new InterleaveGroup(Instr, Stride, Align);
-    return InterleaveGroupMap[Instr];
-  }
-
-  /// Release the group and remove all the relationships.
-  void releaseGroup(InterleaveGroup *Group) {
-    for (unsigned i = 0; i < Group->getFactor(); i++)
-      if (Instruction *Member = Group->getMember(i))
-        InterleaveGroupMap.erase(Member);
-
-    delete Group;
-  }
-
-  /// Collect all the accesses with a constant stride in program order.
-  void collectConstStrideAccesses(
-      MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-      const ValueToValueMap &Strides);
-
-  /// Returns true if \p Stride is allowed in an interleaved group.
-  static bool isStrided(int Stride) {
-    unsigned Factor = std::abs(Stride);
-    return Factor >= 2 && Factor <= MaxInterleaveGroupFactor;
-  }
-
-  /// Returns true if \p BB is a predicated block.
-  bool isPredicated(BasicBlock *BB) const {
-    return LoopAccessInfo::blockNeedsPredication(BB, TheLoop, DT);
-  }
-
-  /// Returns true if LoopAccessInfo can be used for dependence queries.
-  bool areDependencesValid() const {
-    return LAI && LAI->getDepChecker().getDependences();
-  }
-
-  /// Returns true if memory accesses \p A and \p B can be reordered, if
-  /// necessary, when constructing interleaved groups.
-  ///
-  /// \p A must precede \p B in program order. We return false if reordering is
-  /// not necessary or is prevented because \p A and \p B may be dependent.
-  bool canReorderMemAccessesForInterleavedGroups(StrideEntry *A,
-                                                 StrideEntry *B) const {
-    // Code motion for interleaved accesses can potentially hoist strided loads
-    // and sink strided stores. The code below checks the legality of the
-    // following two conditions:
-    //
-    // 1. Potentially moving a strided load (B) before any store (A) that
-    //    precedes B, or
-    //
-    // 2. Potentially moving a strided store (A) after any load or store (B)
-    //    that A precedes.
-    //
-    // It's legal to reorder A and B if we know there isn't a dependence from A
-    // to B. Note that this determination is conservative since some
-    // dependences could potentially be reordered safely.
-
-    // A is potentially the source of a dependence.
-    auto *Src = A->first;
-    auto SrcDes = A->second;
-
-    // B is potentially the sink of a dependence.
-    auto *Sink = B->first;
-    auto SinkDes = B->second;
-
-    // Code motion for interleaved accesses can't violate WAR dependences.
-    // Thus, reordering is legal if the source isn't a write.
-    if (!Src->mayWriteToMemory())
-      return true;
-
-    // At least one of the accesses must be strided.
-    if (!isStrided(SrcDes.Stride) && !isStrided(SinkDes.Stride))
-      return true;
-
-    // If dependence information is not available from LoopAccessInfo,
-    // conservatively assume the instructions can't be reordered.
-    if (!areDependencesValid())
-      return false;
-
-    // If we know there is a dependence from source to sink, assume the
-    // instructions can't be reordered. Otherwise, reordering is legal.
-    return Dependences.find(Src) == Dependences.end() ||
-           !Dependences.lookup(Src).count(Sink);
-  }
-
-  /// Collect the dependences from LoopAccessInfo.
-  ///
-  /// We process the dependences once during the interleaved access analysis to
-  /// enable constant-time dependence queries.
-  void collectDependences() {
-    if (!areDependencesValid())
-      return;
-    auto *Deps = LAI->getDepChecker().getDependences();
-    for (auto Dep : *Deps)
-      Dependences[Dep.getSource(*LAI)].insert(Dep.getDestination(*LAI));
-  }
-};
-
-} // end anonymous namespace
 
 static void emitMissedWarning(Function *F, Loop *L,
                               const LoopVectorizeHints &LH,
@@ -2288,7 +1917,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
   Type *ScalarTy = getMemInstValueType(Instr);
   unsigned InterleaveFactor = Group->getFactor();
   Type *VecTy = VectorType::get(ScalarTy, InterleaveFactor * VF);
-  Type *PtrTy = VecTy->getPointerTo(getMemInstAddressSpace(Instr));
+  Type *PtrTy = VecTy->getPointerTo(getLoadStoreAddressSpace(Instr));
 
   // Prepare for the new pointers.
   setDebugLocFromInst(Builder, Ptr);
@@ -2431,13 +2060,13 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
   Type *ScalarDataTy = getMemInstValueType(Instr);
   Type *DataTy = VectorType::get(ScalarDataTy, VF);
   Value *Ptr = getLoadStorePointerOperand(Instr);
-  unsigned Alignment = getMemInstAlignment(Instr);
+  unsigned Alignment = getLoadStoreAlignment(Instr);
   // An alignment of 0 means target abi alignment. We need to use the scalar's
   // target abi alignment in such a case.
   const DataLayout &DL = Instr->getModule()->getDataLayout();
   if (!Alignment)
     Alignment = DL.getABITypeAlignment(ScalarDataTy);
-  unsigned AddressSpace = getMemInstAddressSpace(Instr);
+  unsigned AddressSpace = getLoadStoreAddressSpace(Instr);
 
   // Determine if the pointer operand of the access is either consecutive or
   // reverse consecutive.
@@ -4700,318 +4329,6 @@ void LoopVectorizationCostModel::collectLoopUniforms(unsigned VF) {
   Uniforms[VF].insert(Worklist.begin(), Worklist.end());
 }
 
-void InterleavedAccessInfo::collectConstStrideAccesses(
-    MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-    const ValueToValueMap &Strides) {
-  auto &DL = TheLoop->getHeader()->getModule()->getDataLayout();
-
-  // Since it's desired that the load/store instructions be maintained in
-  // "program order" for the interleaved access analysis, we have to visit the
-  // blocks in the loop in reverse postorder (i.e., in a topological order).
-  // Such an ordering will ensure that any load/store that may be executed
-  // before a second load/store will precede the second load/store in
-  // AccessStrideInfo.
-  LoopBlocksDFS DFS(TheLoop);
-  DFS.perform(LI);
-  for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO()))
-    for (auto &I : *BB) {
-      auto *LI = dyn_cast<LoadInst>(&I);
-      auto *SI = dyn_cast<StoreInst>(&I);
-      if (!LI && !SI)
-        continue;
-
-      Value *Ptr = getLoadStorePointerOperand(&I);
-      // We don't check wrapping here because we don't know yet if Ptr will be
-      // part of a full group or a group with gaps. Checking wrapping for all
-      // pointers (even those that end up in groups with no gaps) will be overly
-      // conservative. For full groups, wrapping should be ok since if we would
-      // wrap around the address space we would do a memory access at nullptr
-      // even without the transformation. The wrapping checks are therefore
-      // deferred until after we've formed the interleaved groups.
-      int64_t Stride = getPtrStride(PSE, Ptr, TheLoop, Strides,
-                                    /*Assume=*/true, /*ShouldCheckWrap=*/false);
-
-      const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
-      PointerType *PtrTy = dyn_cast<PointerType>(Ptr->getType());
-      uint64_t Size = DL.getTypeAllocSize(PtrTy->getElementType());
-
-      // An alignment of 0 means target ABI alignment.
-      unsigned Align = getMemInstAlignment(&I);
-      if (!Align)
-        Align = DL.getABITypeAlignment(PtrTy->getElementType());
-
-      AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size, Align);
-    }
-}
-
-// Analyze interleaved accesses and collect them into interleaved load and
-// store groups.
-//
-// When generating code for an interleaved load group, we effectively hoist all
-// loads in the group to the location of the first load in program order. When
-// generating code for an interleaved store group, we sink all stores to the
-// location of the last store. This code motion can change the order of load
-// and store instructions and may break dependences.
-//
-// The code generation strategy mentioned above ensures that we won't violate
-// any write-after-read (WAR) dependences.
-//
-// E.g., for the WAR dependence:  a = A[i];      // (1)
-//                                A[i] = b;      // (2)
-//
-// The store group of (2) is always inserted at or below (2), and the load
-// group of (1) is always inserted at or above (1). Thus, the instructions will
-// never be reordered. All other dependences are checked to ensure the
-// correctness of the instruction reordering.
-//
-// The algorithm visits all memory accesses in the loop in bottom-up program
-// order. Program order is established by traversing the blocks in the loop in
-// reverse postorder when collecting the accesses.
-//
-// We visit the memory accesses in bottom-up order because it can simplify the
-// construction of store groups in the presence of write-after-write (WAW)
-// dependences.
-//
-// E.g., for the WAW dependence:  A[i] = a;      // (1)
-//                                A[i] = b;      // (2)
-//                                A[i + 1] = c;  // (3)
-//
-// We will first create a store group with (3) and (2). (1) can't be added to
-// this group because it and (2) are dependent. However, (1) can be grouped
-// with other accesses that may precede it in program order. Note that a
-// bottom-up order does not imply that WAW dependences should not be checked.
-void InterleavedAccessInfo::analyzeInterleaving() {
-  LLVM_DEBUG(dbgs() << "LV: Analyzing interleaved accesses...\n");
-  const ValueToValueMap &Strides = LAI->getSymbolicStrides();
-
-  // Holds all accesses with a constant stride.
-  MapVector<Instruction *, StrideDescriptor> AccessStrideInfo;
-  collectConstStrideAccesses(AccessStrideInfo, Strides);
-
-  if (AccessStrideInfo.empty())
-    return;
-
-  // Collect the dependences in the loop.
-  collectDependences();
-
-  // Holds all interleaved store groups temporarily.
-  SmallSetVector<InterleaveGroup *, 4> StoreGroups;
-  // Holds all interleaved load groups temporarily.
-  SmallSetVector<InterleaveGroup *, 4> LoadGroups;
-
-  // Search in bottom-up program order for pairs of accesses (A and B) that can
-  // form interleaved load or store groups. In the algorithm below, access A
-  // precedes access B in program order. We initialize a group for B in the
-  // outer loop of the algorithm, and then in the inner loop, we attempt to
-  // insert each A into B's group if:
-  //
-  //  1. A and B have the same stride,
-  //  2. A and B have the same memory object size, and
-  //  3. A belongs in B's group according to its distance from B.
-  //
-  // Special care is taken to ensure group formation will not break any
-  // dependences.
-  for (auto BI = AccessStrideInfo.rbegin(), E = AccessStrideInfo.rend();
-       BI != E; ++BI) {
-    Instruction *B = BI->first;
-    StrideDescriptor DesB = BI->second;
-
-    // Initialize a group for B if it has an allowable stride. Even if we don't
-    // create a group for B, we continue with the bottom-up algorithm to ensure
-    // we don't break any of B's dependences.
-    InterleaveGroup *Group = nullptr;
-    if (isStrided(DesB.Stride)) {
-      Group = getInterleaveGroup(B);
-      if (!Group) {
-        LLVM_DEBUG(dbgs() << "LV: Creating an interleave group with:" << *B
-                          << '\n');
-        Group = createInterleaveGroup(B, DesB.Stride, DesB.Align);
-      }
-      if (B->mayWriteToMemory())
-        StoreGroups.insert(Group);
-      else
-        LoadGroups.insert(Group);
-    }
-
-    for (auto AI = std::next(BI); AI != E; ++AI) {
-      Instruction *A = AI->first;
-      StrideDescriptor DesA = AI->second;
-
-      // Our code motion strategy implies that we can't have dependences
-      // between accesses in an interleaved group and other accesses located
-      // between the first and last member of the group. Note that this also
-      // means that a group can't have more than one member at a given offset.
-      // The accesses in a group can have dependences with other accesses, but
-      // we must ensure we don't extend the boundaries of the group such that
-      // we encompass those dependent accesses.
-      //
-      // For example, assume we have the sequence of accesses shown below in a
-      // stride-2 loop:
-      //
-      //  (1, 2) is a group | A[i]   = a;  // (1)
-      //                    | A[i-1] = b;  // (2) |
-      //                      A[i-3] = c;  // (3)
-      //                      A[i]   = d;  // (4) | (2, 4) is not a group
-      //
-      // Because accesses (2) and (3) are dependent, we can group (2) with (1)
-      // but not with (4). If we did, the dependent access (3) would be within
-      // the boundaries of the (2, 4) group.
-      if (!canReorderMemAccessesForInterleavedGroups(&*AI, &*BI)) {
-        // If a dependence exists and A is already in a group, we know that A
-        // must be a store since A precedes B and WAR dependences are allowed.
-        // Thus, A would be sunk below B. We release A's group to prevent this
-        // illegal code motion. A will then be free to form another group with
-        // instructions that precede it.
-        if (isInterleaved(A)) {
-          InterleaveGroup *StoreGroup = getInterleaveGroup(A);
-          StoreGroups.remove(StoreGroup);
-          releaseGroup(StoreGroup);
-        }
-
-        // If a dependence exists and A is not already in a group (or it was
-        // and we just released it), B might be hoisted above A (if B is a
-        // load) or another store might be sunk below A (if B is a store). In
-        // either case, we can't add additional instructions to B's group. B
-        // will only form a group with instructions that it precedes.
-        break;
-      }
-
-      // At this point, we've checked for illegal code motion. If either A or B
-      // isn't strided, there's nothing left to do.
-      if (!isStrided(DesA.Stride) || !isStrided(DesB.Stride))
-        continue;
-
-      // Ignore A if it's already in a group or isn't the same kind of memory
-      // operation as B.
-      // Note that mayReadFromMemory() isn't mutually exclusive to mayWriteToMemory
-      // in the case of atomic loads. We shouldn't see those here, canVectorizeMemory()
-      // should have returned false - except for the case we asked for optimization
-      // remarks.
-      if (isInterleaved(A) || (A->mayReadFromMemory() != B->mayReadFromMemory())
-          || (A->mayWriteToMemory() != B->mayWriteToMemory()))
-        continue;
-
-      // Check rules 1 and 2. Ignore A if its stride or size is different from
-      // that of B.
-      if (DesA.Stride != DesB.Stride || DesA.Size != DesB.Size)
-        continue;
-
-      // Ignore A if the memory object of A and B don't belong to the same
-      // address space
-      if (getMemInstAddressSpace(A) != getMemInstAddressSpace(B))
-        continue;
-
-      // Calculate the distance from A to B.
-      const SCEVConstant *DistToB = dyn_cast<SCEVConstant>(
-          PSE.getSE()->getMinusSCEV(DesA.Scev, DesB.Scev));
-      if (!DistToB)
-        continue;
-      int64_t DistanceToB = DistToB->getAPInt().getSExtValue();
-
-      // Check rule 3. Ignore A if its distance to B is not a multiple of the
-      // size.
-      if (DistanceToB % static_cast<int64_t>(DesB.Size))
-        continue;
-
-      // Ignore A if either A or B is in a predicated block. Although we
-      // currently prevent group formation for predicated accesses, we may be
-      // able to relax this limitation in the future once we handle more
-      // complicated blocks.
-      if (isPredicated(A->getParent()) || isPredicated(B->getParent()))
-        continue;
-
-      // The index of A is the index of B plus A's distance to B in multiples
-      // of the size.
-      int IndexA =
-          Group->getIndex(B) + DistanceToB / static_cast<int64_t>(DesB.Size);
-
-      // Try to insert A into B's group.
-      if (Group->insertMember(A, IndexA, DesA.Align)) {
-        LLVM_DEBUG(dbgs() << "LV: Inserted:" << *A << '\n'
-                          << "    into the interleave group with" << *B
-                          << '\n');
-        InterleaveGroupMap[A] = Group;
-
-        // Set the first load in program order as the insert position.
-        if (A->mayReadFromMemory())
-          Group->setInsertPos(A);
-      }
-    } // Iteration over A accesses.
-  } // Iteration over B accesses.
-
-  // Remove interleaved store groups with gaps.
-  for (InterleaveGroup *Group : StoreGroups)
-    if (Group->getNumMembers() != Group->getFactor()) {
-      LLVM_DEBUG(
-          dbgs() << "LV: Invalidate candidate interleaved store group due "
-                    "to gaps.\n");
-      releaseGroup(Group);
-    }
-  // Remove interleaved groups with gaps (currently only loads) whose memory
-  // accesses may wrap around. We have to revisit the getPtrStride analysis,
-  // this time with ShouldCheckWrap=true, since collectConstStrideAccesses does
-  // not check wrapping (see documentation there).
-  // FORNOW we use Assume=false;
-  // TODO: Change to Assume=true but making sure we don't exceed the threshold
-  // of runtime SCEV assumptions checks (thereby potentially failing to
-  // vectorize altogether).
-  // Additional optional optimizations:
-  // TODO: If we are peeling the loop and we know that the first pointer doesn't
-  // wrap then we can deduce that all pointers in the group don't wrap.
-  // This means that we can forcefully peel the loop in order to only have to
-  // check the first pointer for no-wrap. When we'll change to use Assume=true
-  // we'll only need at most one runtime check per interleaved group.
-  for (InterleaveGroup *Group : LoadGroups) {
-    // Case 1: A full group. Can Skip the checks; For full groups, if the wide
-    // load would wrap around the address space we would do a memory access at
-    // nullptr even without the transformation.
-    if (Group->getNumMembers() == Group->getFactor())
-      continue;
-
-    // Case 2: If first and last members of the group don't wrap this implies
-    // that all the pointers in the group don't wrap.
-    // So we check only group member 0 (which is always guaranteed to exist),
-    // and group member Factor - 1; If the latter doesn't exist we rely on
-    // peeling (if it is a non-reveresed accsess -- see Case 3).
-    Value *FirstMemberPtr = getLoadStorePointerOperand(Group->getMember(0));
-    if (!getPtrStride(PSE, FirstMemberPtr, TheLoop, Strides, /*Assume=*/false,
-                      /*ShouldCheckWrap=*/true)) {
-      LLVM_DEBUG(
-          dbgs() << "LV: Invalidate candidate interleaved group due to "
-                    "first group member potentially pointer-wrapping.\n");
-      releaseGroup(Group);
-      continue;
-    }
-    Instruction *LastMember = Group->getMember(Group->getFactor() - 1);
-    if (LastMember) {
-      Value *LastMemberPtr = getLoadStorePointerOperand(LastMember);
-      if (!getPtrStride(PSE, LastMemberPtr, TheLoop, Strides, /*Assume=*/false,
-                        /*ShouldCheckWrap=*/true)) {
-        LLVM_DEBUG(
-            dbgs() << "LV: Invalidate candidate interleaved group due to "
-                      "last group member potentially pointer-wrapping.\n");
-        releaseGroup(Group);
-      }
-    } else {
-      // Case 3: A non-reversed interleaved load group with gaps: We need
-      // to execute at least one scalar epilogue iteration. This will ensure
-      // we don't speculatively access memory out-of-bounds. We only need
-      // to look for a member at index factor - 1, since every group must have
-      // a member at index zero.
-      if (Group->isReverse()) {
-        LLVM_DEBUG(
-            dbgs() << "LV: Invalidate candidate interleaved group due to "
-                      "a reverse access with gaps.\n");
-        releaseGroup(Group);
-        continue;
-      }
-      LLVM_DEBUG(
-          dbgs() << "LV: Interleaved group requires epilogue iteration.\n");
-      RequiresScalarEpilogue = true;
-    }
-  }
-}
-
 Optional<unsigned> LoopVectorizationCostModel::computeMaxVF(bool OptForSize) {
   if (Legal->getRuntimePointerChecking()->Need && TTI.hasBranchDivergence()) {
     // TODO: It may by useful to do since it's still likely to be dynamically
@@ -5813,8 +5130,8 @@ unsigned LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   Type *ValTy = getMemInstValueType(I);
   auto SE = PSE.getSE();
 
-  unsigned Alignment = getMemInstAlignment(I);
-  unsigned AS = getMemInstAddressSpace(I);
+  unsigned Alignment = getLoadStoreAlignment(I);
+  unsigned AS = getLoadStoreAddressSpace(I);
   Value *Ptr = getLoadStorePointerOperand(I);
   Type *PtrTy = ToVectorTy(Ptr->getType(), VF);
 
@@ -5852,9 +5169,9 @@ unsigned LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
                                                              unsigned VF) {
   Type *ValTy = getMemInstValueType(I);
   Type *VectorTy = ToVectorTy(ValTy, VF);
-  unsigned Alignment = getMemInstAlignment(I);
+  unsigned Alignment = getLoadStoreAlignment(I);
   Value *Ptr = getLoadStorePointerOperand(I);
-  unsigned AS = getMemInstAddressSpace(I);
+  unsigned AS = getLoadStoreAddressSpace(I);
   int ConsecutiveStride = Legal->isConsecutivePtr(Ptr);
 
   assert((ConsecutiveStride == 1 || ConsecutiveStride == -1) &&
@@ -5888,7 +5205,7 @@ unsigned LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
                                                           unsigned VF) {
   Type *ValTy = getMemInstValueType(I);
   Type *VectorTy = ToVectorTy(ValTy, VF);
-  unsigned Alignment = getMemInstAlignment(I);
+  unsigned Alignment = getLoadStoreAlignment(I);
   Value *Ptr = getLoadStorePointerOperand(I);
 
   return TTI.getAddressComputationCost(VectorTy) +
@@ -5900,7 +5217,7 @@ unsigned LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
                                                             unsigned VF) {
   Type *ValTy = getMemInstValueType(I);
   Type *VectorTy = ToVectorTy(ValTy, VF);
-  unsigned AS = getMemInstAddressSpace(I);
+  unsigned AS = getLoadStoreAddressSpace(I);
 
   auto Group = getInterleavedAccessGroup(I);
   assert(Group && "Fail to get an interleaved access group.");
@@ -5934,8 +5251,8 @@ unsigned LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
   // moment.
   if (VF == 1) {
     Type *ValTy = getMemInstValueType(I);
-    unsigned Alignment = getMemInstAlignment(I);
-    unsigned AS = getMemInstAddressSpace(I);
+    unsigned Alignment = getLoadStoreAlignment(I);
+    unsigned AS = getLoadStoreAddressSpace(I);
 
     return TTI.getAddressComputationCost(ValTy) +
            TTI.getMemoryOpCost(I->getOpcode(), ValTy, Alignment, AS, I);
