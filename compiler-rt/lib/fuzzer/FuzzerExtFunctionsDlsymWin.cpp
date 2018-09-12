@@ -13,10 +13,10 @@
 
 #include "FuzzerExtFunctions.h"
 #include "FuzzerIO.h"
-#include "Windows.h"
+#include <windows.h>
 
 // This must be included after Windows.h.
-#include "Psapi.h"
+#include <psapi.h>
 
 namespace fuzzer {
 

@@ -5,9 +5,9 @@
 // CHECK-NEXT:        -:    0:Programs:1
 // CHECK-NEXT:        -:    1:int main(void)
 // CHECK-NEXT:        -:    2:{
-// CHECK-NEXT:        3:    3:  int i = 22;
+// CHECK-NEXT:        1:    3:  int i = 22;
 // CHECK-NEXT:        -:    4:
-// CHECK-NEXT:        3:    5:  switch (i) {
+// CHECK-NEXT:        1:    5:  switch (i) {
 // CHECK-NEXT:        -:    6:    case 7:
 // CHECK-NEXT:    #####:    7:      break;
 // CHECK-NEXT:        -:    8:
