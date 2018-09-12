@@ -18,6 +18,7 @@ add_clang_library(clangTidyPerformanceModule
   LINK_LIBS
   clangAST
   clangASTMatchers
+  clangAnalysis
   clangBasic
   clangLex
   clangTidy
