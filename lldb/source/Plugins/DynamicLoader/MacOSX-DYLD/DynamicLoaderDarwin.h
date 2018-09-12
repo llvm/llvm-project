@@ -18,10 +18,10 @@
 
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Host/SafeMachO.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/SafeMachO.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UUID.h"
 

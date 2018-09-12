@@ -18,7 +18,7 @@
 
 // Other libraries and framework includes
 
-#include "lldb/Utility/SafeMachO.h"
+#include "lldb/Host/SafeMachO.h"
 
 // Project includes
 #include "lldb/Target/DynamicLoader.h"

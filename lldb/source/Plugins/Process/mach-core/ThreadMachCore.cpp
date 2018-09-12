@@ -9,8 +9,6 @@
 
 #include "ThreadMachCore.h"
 
-#include "lldb/Utility/SafeMachO.h"
-
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"
