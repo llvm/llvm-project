@@ -141,6 +141,7 @@ template <class... Types>
 #include <type_traits>
 #include <__functional_base>
 #include <utility>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

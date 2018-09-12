@@ -67,7 +67,10 @@ TEST_F(TestArmv7Disassembly, TestCortexFPDisass) {
   disass_sp = Disassembler::DisassembleBytes(arch, nullptr, nullptr, start_addr,
                                  &data, sizeof (data), num_of_instructions, false);
 
-  ASSERT_NE (nullptr, disass_sp.get());
+  // If we failed to get a disassembler, we can assume it is because
+  // the llvm we linked against was not built with the ARM target,
+  // and we should skip these tests without marking anything as failing.
+
   if (disass_sp) {
     const InstructionList inst_list (disass_sp->GetInstructionList());
     EXPECT_EQ (num_of_instructions, inst_list.GetSize());

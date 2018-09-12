@@ -178,6 +178,7 @@ namespace std {
 #include <iterator>
 #include <limits>
 #include <stdexcept>
+#include <version>
 #include <__debug>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
