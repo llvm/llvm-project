@@ -77,14 +77,16 @@ class SelectAcceleratorCode : public ModulePass {
         return erasedSome;
     }
 
-    bool eraseNonHCFunctions_(Module &M) const
+    bool eraseNonHCFunctionsBody_(Module &M) const
     {
-        return eraseIf_(
-            [&]() { return M.begin(); },
-            [&]() { return M.end(); },
-            [&, this](const Function &F) {
-                return HCCallees_.count(M.getFunction(F.getName())) == 0;
-            });
+        bool Modified = false;
+        for (auto&& F : M.functions()) {
+          if (HCCallees_.count(M.getFunction(F.getName())) == 0) {
+            F.deleteBody();
+            Modified = true;
+          }
+        };
+        return Modified;
     }
 
     bool eraseDeadGlobals_(Module &M) const
@@ -133,7 +135,7 @@ public:
             }
         }
 
-        bool Modified = eraseNonHCFunctions_(M);
+        bool Modified = eraseNonHCFunctionsBody_(M);
 
         Modified = eraseDeadGlobals_(M) || Modified;
 
