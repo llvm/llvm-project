@@ -540,9 +540,8 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
         ConstString persistent_variable_name(
             persistent_state->GetNextPersistentVariableName(GetTarget(),
                                                             prefix));
-        m_return_valobj_sp =
-            SwiftLanguageRuntime::CalculateErrorValueFromFirstArgument(
-                frame_sp, persistent_variable_name);
+        m_return_valobj_sp = SwiftLanguageRuntime::CalculateErrorValue(
+            frame_sp, persistent_variable_name);
 
         DataExtractor data;
         Status data_error;
