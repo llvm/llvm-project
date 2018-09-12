@@ -79,7 +79,7 @@ class ResourcePressureView : public View {
   llvm::DenseMap<unsigned, unsigned> Resource2VecIndex;
 
   // Table of resources used by instructions.
-  std::vector<double> ResourceUsage;
+  std::vector<ResourceCycles> ResourceUsage;
   unsigned NumResourceUnits;
 
   const llvm::MCInst &GetMCInstFromIndex(unsigned Index) const;

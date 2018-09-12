@@ -312,8 +312,10 @@ static void splitCallSite(
   // `musttail` calls must be followed by optional `bitcast`, and `ret`. The
   // split blocks will be terminated right after that so there're no users for
   // this phi in a `TailBB`.
-  if (!IsMustTailCall && !Instr->use_empty())
+  if (!IsMustTailCall && !Instr->use_empty()) {
     CallPN = PHINode::Create(Instr->getType(), Preds.size(), "phi.call");
+    CallPN->setDebugLoc(Instr->getDebugLoc());
+  }
 
   LLVM_DEBUG(dbgs() << "split call-site : " << *Instr << " into \n");
 
@@ -394,6 +396,7 @@ static void splitCallSite(
       if (isa<PHINode>(CurrentI))
         continue;
       PHINode *NewPN = PHINode::Create(CurrentI->getType(), Preds.size());
+      NewPN->setDebugLoc(CurrentI->getDebugLoc());
       for (auto &Mapping : ValueToValueMaps)
         NewPN->addIncoming(Mapping[CurrentI],
                            cast<Instruction>(Mapping[CurrentI])->getParent());

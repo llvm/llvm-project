@@ -963,7 +963,10 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
          Token.is(MIToken::kw_arcp) ||
          Token.is(MIToken::kw_contract) ||
          Token.is(MIToken::kw_afn) ||
-         Token.is(MIToken::kw_reassoc)) {
+         Token.is(MIToken::kw_reassoc) ||
+         Token.is(MIToken::kw_nuw) ||
+         Token.is(MIToken::kw_nsw) ||
+         Token.is(MIToken::kw_exact)) {
     // Mine frame and fast math flags
     if (Token.is(MIToken::kw_frame_setup))
       Flags |= MachineInstr::FrameSetup;
@@ -983,6 +986,12 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
       Flags |= MachineInstr::FmAfn;
     if (Token.is(MIToken::kw_reassoc))
       Flags |= MachineInstr::FmReassoc;
+    if (Token.is(MIToken::kw_nuw))
+      Flags |= MachineInstr::NoUWrap;
+    if (Token.is(MIToken::kw_nsw))
+      Flags |= MachineInstr::NoSWrap;
+    if (Token.is(MIToken::kw_exact))
+      Flags |= MachineInstr::IsExact;
 
     lex();
   }

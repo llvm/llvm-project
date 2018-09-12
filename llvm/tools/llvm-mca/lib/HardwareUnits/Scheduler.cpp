@@ -66,7 +66,7 @@ Scheduler::Status Scheduler::isAvailable(const InstRef &IR) const {
 
 void Scheduler::issueInstructionImpl(
     InstRef &IR,
-    SmallVectorImpl<std::pair<ResourceRef, double>> &UsedResources) {
+    SmallVectorImpl<std::pair<ResourceRef, ResourceCycles>> &UsedResources) {
   Instruction *IS = IR.getInstruction();
   const InstrDesc &D = IS->getDesc();
 
@@ -86,7 +86,8 @@ void Scheduler::issueInstructionImpl(
 
 // Release the buffered resources and issue the instruction.
 void Scheduler::issueInstruction(
-    InstRef &IR, SmallVectorImpl<std::pair<ResourceRef, double>> &UsedResources,
+    InstRef &IR,
+    SmallVectorImpl<std::pair<ResourceRef, ResourceCycles>> &UsedResources,
     SmallVectorImpl<InstRef> &ReadyInstructions) {
   const Instruction &Inst = *IR.getInstruction();
   bool HasDependentUsers = Inst.hasDependentUsers();

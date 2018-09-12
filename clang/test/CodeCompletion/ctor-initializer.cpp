@@ -64,3 +64,27 @@ struct B {
   // CHECK-CC8: COMPLETION: Pattern : member2(<#args#>
   int member1, member2;
 };
+
+struct Base2 {
+  Base2(int);
+};
+
+struct Composition1 {
+  Composition1() : b2_elem() {}
+  // RUN: %clang_cc1 -fsyntax-only -std=c++98 -code-completion-at=%s:73:28 %s -o - | FileCheck -check-prefix=CHECK-CC9 %s
+  // RUN: %clang_cc1 -fsyntax-only -std=c++14 -code-completion-at=%s:73:28 %s -o - | FileCheck -check-prefix=CHECK-CC9 %s
+  // CHECK-CC9: OVERLOAD: Base2(<#int#>)
+  // CHECK-CC9: OVERLOAD: Base2(<#const Base2 &#>)
+  // CHECK-CC9-NOT: OVERLOAD: Composition1
+  Composition1(Base2);
+  Base2 b2_elem;
+};
+
+struct Composition2 {
+  Composition2() : c1_elem(Base2(1)) {}
+  // RUN: %clang_cc1 -fsyntax-only -std=c++98 -code-completion-at=%s:84:34 %s -o - | FileCheck -check-prefix=CHECK-CC9 %s
+  // RUN: %clang_cc1 -fsyntax-only -std=c++14 -code-completion-at=%s:84:34 %s -o - | FileCheck -check-prefix=CHECK-CC9 %s
+  // RUN: %clang_cc1 -fsyntax-only -std=c++98 -code-completion-at=%s:84:35 %s -o - | FileCheck -check-prefix=CHECK-CC9 %s
+  // RUN: %clang_cc1 -fsyntax-only -std=c++14 -code-completion-at=%s:84:35 %s -o - | FileCheck -check-prefix=CHECK-CC9 %s
+  Composition1 c1_elem;
+};

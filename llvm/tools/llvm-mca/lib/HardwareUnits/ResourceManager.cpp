@@ -247,7 +247,7 @@ bool ResourceManager::mustIssueImmediately(const InstrDesc &Desc) const {
 
 void ResourceManager::issueInstruction(
     const InstrDesc &Desc,
-    SmallVectorImpl<std::pair<ResourceRef, double>> &Pipes) {
+    SmallVectorImpl<std::pair<ResourceRef, ResourceCycles>> &Pipes) {
   for (const std::pair<uint64_t, ResourceUsage> &R : Desc.Resources) {
     const CycleSegment &CS = R.second.CS;
     if (!CS.size()) {
@@ -263,8 +263,8 @@ void ResourceManager::issueInstruction(
       // Replace the resource mask with a valid processor resource index.
       const ResourceState &RS = *Resources[getResourceStateIndex(Pipe.first)];
       Pipe.first = RS.getProcResourceID();
-      Pipes.emplace_back(
-          std::pair<ResourceRef, double>(Pipe, static_cast<double>(CS.size())));
+      Pipes.emplace_back(std::pair<ResourceRef, ResourceCycles>(
+          Pipe, ResourceCycles(CS.size())));
     } else {
       assert((countPopulation(R.first) > 1) && "Expected a group!");
       // Mark this group as reserved.

@@ -8,8 +8,8 @@
 ; CHECK-NEXT: <PID: 2631>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: Body:
-; CHECK-NEXT:  <CPU ID: 6>
-; CHECK-NEXT:  <CPU ID: 6>
+; CHECK-NEXT:  <CPU: id = 6, tsc = 2034042117104344>
+; CHECK-NEXT:  <CPU: id = 6, tsc = 2034042117104344>
 ; CHECK-NEXT:  <TSC Wrap: base = 2034042117104344>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: -  <Function Enter: #3 delta = +3>

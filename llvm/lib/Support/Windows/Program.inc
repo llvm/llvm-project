@@ -317,7 +317,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
 static bool argNeedsQuotes(StringRef Arg) {
   if (Arg.empty())
     return true;
-  return StringRef::npos != Arg.find_first_of("\t \"&\'()*<>\\`^|");
+  return StringRef::npos != Arg.find_first_of("\t \"&\'()*<>\\`^|\n");
 }
 
 static std::string quoteSingleArg(StringRef Arg) {

@@ -179,6 +179,10 @@ private:
 
   DebugStringTableSubsectionRef CVStringTable;
 
+  /// Track the compilation CPU type. S_COMPILE3 symbol records typically come
+  /// first, but if we don't see one, just assume an X64 CPU type. It is common.
+  CPUType CompilationCPUType = CPUType::X64;
+
   ScopedPrinter &Writer;
   BinaryByteStream TypeContents;
   LazyRandomTypeCollection Types;
@@ -1150,7 +1154,7 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
   auto CODD = llvm::make_unique<COFFObjectDumpDelegate>(*this, Section, Obj,
                                                         SectionContents);
   CVSymbolDumper CVSD(W, Types, CodeViewContainer::ObjectFile, std::move(CODD),
-                      opts::CodeViewSubsectionBytes);
+                      CompilationCPUType, opts::CodeViewSubsectionBytes);
   CVSymbolArray Symbols;
   BinaryStreamReader Reader(BinaryData, llvm::support::little);
   if (auto EC = Reader.readArray(Symbols, Reader.getLength())) {
@@ -1163,6 +1167,7 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
     W.flush();
     error(std::move(EC));
   }
+  CompilationCPUType = CVSD.getCompilationCPUType();
   W.flush();
 }
 

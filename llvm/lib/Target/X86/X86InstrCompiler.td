@@ -394,30 +394,41 @@ def : Pat<(sub GR64:$op, (i64 (X86setcc_c X86_COND_B, EFLAGS))),
 //
 let SchedRW = [WriteMicrocoded] in {
 let Defs = [ECX,EDI,ESI], Uses = [ECX,EDI,ESI], isCodeGenOnly = 1 in {
-def REP_MOVSB_32 : I<0xA4, RawFrm, (outs), (ins), "{rep;movsb|rep movsb}",
-                    [(X86rep_movs i8)]>, REP,
-                   Requires<[Not64BitMode]>;
-def REP_MOVSW_32 : I<0xA5, RawFrm, (outs), (ins), "{rep;movsw|rep movsw}",
-                    [(X86rep_movs i16)]>, REP, OpSize16,
-                   Requires<[Not64BitMode]>;
-def REP_MOVSD_32 : I<0xA5, RawFrm, (outs), (ins), "{rep;movsl|rep movsd}",
-                    [(X86rep_movs i32)]>, REP, OpSize32,
-                   Requires<[Not64BitMode]>;
+def REP_MOVSB_32 : I<0xA4, RawFrm, (outs), (ins),
+                    "{rep;movsb (%esi), %es:(%edi)|rep movsb es:[edi], [esi]}",
+                    [(X86rep_movs i8)]>, REP, AdSize32,
+                   Requires<[NotLP64]>;
+def REP_MOVSW_32 : I<0xA5, RawFrm, (outs), (ins),
+                    "{rep;movsw (%esi), %es:(%edi)|rep movsw es:[edi], [esi]}",
+                    [(X86rep_movs i16)]>, REP, AdSize32, OpSize16,
+                   Requires<[NotLP64]>;
+def REP_MOVSD_32 : I<0xA5, RawFrm, (outs), (ins),
+                    "{rep;movsl (%esi), %es:(%edi)|rep movsd es:[edi], [esi]}",
+                    [(X86rep_movs i32)]>, REP, AdSize32, OpSize32,
+                   Requires<[NotLP64]>;
+def REP_MOVSQ_32 : RI<0xA5, RawFrm, (outs), (ins),
+                    "{rep;movsq (%esi), %es:(%edi)|rep movsq es:[edi], [esi]}",
+                    [(X86rep_movs i64)]>, REP, AdSize32,
+                   Requires<[NotLP64, In64BitMode]>;
 }
 
 let Defs = [RCX,RDI,RSI], Uses = [RCX,RDI,RSI], isCodeGenOnly = 1 in {
-def REP_MOVSB_64 : I<0xA4, RawFrm, (outs), (ins), "{rep;movsb|rep movsb}",
-                    [(X86rep_movs i8)]>, REP,
-                   Requires<[In64BitMode]>;
-def REP_MOVSW_64 : I<0xA5, RawFrm, (outs), (ins), "{rep;movsw|rep movsw}",
-                    [(X86rep_movs i16)]>, REP, OpSize16,
-                   Requires<[In64BitMode]>;
-def REP_MOVSD_64 : I<0xA5, RawFrm, (outs), (ins), "{rep;movsl|rep movsd}",
-                    [(X86rep_movs i32)]>, REP, OpSize32,
-                   Requires<[In64BitMode]>;
-def REP_MOVSQ_64 : RI<0xA5, RawFrm, (outs), (ins), "{rep;movsq|rep movsq}",
-                    [(X86rep_movs i64)]>, REP,
-                   Requires<[In64BitMode]>;
+def REP_MOVSB_64 : I<0xA4, RawFrm, (outs), (ins),
+                    "{rep;movsb (%rsi), %es:(%rdi)|rep movsb es:[rdi], [rsi]}",
+                    [(X86rep_movs i8)]>, REP, AdSize64,
+                   Requires<[IsLP64]>;
+def REP_MOVSW_64 : I<0xA5, RawFrm, (outs), (ins),
+                    "{rep;movsw (%rsi), %es:(%rdi)|rep movsw es:[rdi], [rsi]}",
+                    [(X86rep_movs i16)]>, REP, AdSize64, OpSize16,
+                   Requires<[IsLP64]>;
+def REP_MOVSD_64 : I<0xA5, RawFrm, (outs), (ins),
+                    "{rep;movsl (%rsi), %es:(%rdi)|rep movsdi es:[rdi], [rsi]}",
+                    [(X86rep_movs i32)]>, REP, AdSize64, OpSize32,
+                   Requires<[IsLP64]>;
+def REP_MOVSQ_64 : RI<0xA5, RawFrm, (outs), (ins),
+                    "{rep;movsq (%rsi), %es:(%rdi)|rep movsq es:[rdi], [rsi]}",
+                    [(X86rep_movs i64)]>, REP, AdSize64,
+                   Requires<[IsLP64]>;
 }
 
 // FIXME: Should use "(X86rep_stos AL)" as the pattern.

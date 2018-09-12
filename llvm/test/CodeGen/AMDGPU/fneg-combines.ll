@@ -498,7 +498,7 @@ define amdgpu_kernel void @v_fneg_neg0_minnum_f32(float addrspace(1)* %out, floa
 ; GCN-LABEL: {{^}}v_fneg_inv2pi_minnum_f32:
 ; GCN-DAG: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 
-; SI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0xbe22f983
+; SI-DAG: s_mov_b32 [[K:s[0-9]+]], 0xbe22f983
 ; SI: v_max_f32_e64 [[RESULT:v[0-9]+]], -[[A]], [[K]]
 
 ; VI: v_min_f32_e32 [[MAX:v[0-9]+]], 0.15915494, [[A]]
@@ -520,7 +520,7 @@ define amdgpu_kernel void @v_fneg_inv2pi_minnum_f32(float addrspace(1)* %out, fl
 ; GCN-LABEL: {{^}}v_fneg_neg_inv2pi_minnum_f32:
 ; GCN-DAG: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 
-; SI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e22f983
+; SI-DAG: s_mov_b32 [[K:s[0-9]+]], 0x3e22f983
 ; SI: v_max_f32_e64 [[RESULT:v[0-9]+]], -[[A]], [[K]]
 
 ; VI: v_max_f32_e64 [[RESULT:v[0-9]+]], -[[A]], 0.15915494
@@ -660,7 +660,7 @@ define amdgpu_kernel void @v_fneg_0_minnum_foldable_use_f32(float addrspace(1)* 
 }
 
 ; GCN-LABEL: {{^}}v_fneg_inv2pi_minnum_foldable_use_f32:
-; SI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0xbe22f983
+; SI-DAG: s_mov_b32 [[K:s[0-9]+]], 0xbe22f983
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 

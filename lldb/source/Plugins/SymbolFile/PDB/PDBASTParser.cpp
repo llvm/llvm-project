@@ -919,7 +919,7 @@ clang::DeclContext *PDBASTParser::GetDeclContextContainingSymbol(
 
   // Split context and retrieve nested namespaces
   auto curr_context = m_ast.GetTranslationUnitDecl();
-  auto from = 0;
+  std::string::size_type from = 0;
   while (from < context_size) {
     auto to = context.find("::", from);
     if (to == std::string::npos)

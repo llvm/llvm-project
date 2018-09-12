@@ -53,11 +53,11 @@ bool ExecuteStage::isAvailable(const InstRef &IR) const {
 }
 
 Error ExecuteStage::issueInstruction(InstRef &IR) {
-  SmallVector<std::pair<ResourceRef, double>, 4> Used;
+  SmallVector<std::pair<ResourceRef, ResourceCycles>, 4> Used;
   SmallVector<InstRef, 4> Ready;
   HWS.issueInstruction(IR, Used, Ready);
 
-  notifyReservedOrReleasedBuffers(IR, /* Reserved */false);
+  notifyReservedOrReleasedBuffers(IR, /* Reserved */ false);
   notifyInstructionIssued(IR, Used);
   if (IR.getInstruction()->isExecuted()) {
     notifyInstructionExecuted(IR);
@@ -120,7 +120,7 @@ Error ExecuteStage::execute(InstRef &IR) {
   // be released after MCIS is issued, and all the ResourceCycles for those
   // units have been consumed.
   HWS.dispatch(IR);
-  notifyReservedOrReleasedBuffers(IR, /* Reserved */true);
+  notifyReservedOrReleasedBuffers(IR, /* Reserved */ true);
   if (!HWS.isReady(IR))
     return ErrorSuccess();
 
@@ -156,10 +156,10 @@ void ExecuteStage::notifyResourceAvailable(const ResourceRef &RR) {
 }
 
 void ExecuteStage::notifyInstructionIssued(
-    const InstRef &IR, ArrayRef<std::pair<ResourceRef, double>> Used) {
+    const InstRef &IR, ArrayRef<std::pair<ResourceRef, ResourceCycles>> Used) {
   LLVM_DEBUG({
     dbgs() << "[E] Instruction Issued: #" << IR << '\n';
-    for (const std::pair<ResourceRef, unsigned> &Resource : Used) {
+    for (const std::pair<ResourceRef, ResourceCycles> &Resource : Used) {
       dbgs() << "[E] Resource Used: [" << Resource.first.first << '.'
              << Resource.first.second << "], ";
       dbgs() << "cycles: " << Resource.second << '\n';

@@ -820,19 +820,6 @@ let Constraints = "$src1 = $dst" in {
                       Sched<[SchedWriteFShuffle.XMM]>, NotMemoryFoldable;
 }
 
-// TODO: This is largely to trick fastisel into ignoring the pattern.
-def UnpckhUnary : PatFrag<(ops node:$src1, node:$src2),
-                          (X86Unpckh node:$src1, node:$src2), [{
-  return N->getOperand(0) == N->getOperand(1);
-}]>;
-
-let Predicates = [UseSSE2] in {
-  // TODO: This is a hack pattern to allow lowering to emit unpckh instead of
-  // movhlps for sse2 without changing a bunch of tests.
-  def : Pat<(v2f64 (UnpckhUnary VR128:$src, VR128:$src)),
-            (MOVHLPSrr VR128:$src, VR128:$src)>;
-}
-
 //===----------------------------------------------------------------------===//
 // SSE 1 & 2 - Conversion Instructions
 //===----------------------------------------------------------------------===//

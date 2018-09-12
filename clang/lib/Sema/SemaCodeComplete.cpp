@@ -4586,6 +4586,25 @@ QualType Sema::ProduceConstructorSignatureHelp(Scope *S, QualType Type,
   return ProduceSignatureHelp(*this, S, Results, Args.size(), OpenParLoc);
 }
 
+QualType Sema::ProduceCtorInitMemberSignatureHelp(
+    Scope *S, Decl *ConstructorDecl, CXXScopeSpec SS, ParsedType TemplateTypeTy,
+    ArrayRef<Expr *> ArgExprs, IdentifierInfo *II, SourceLocation OpenParLoc) {
+  if (!CodeCompleter)
+    return QualType();
+
+  CXXConstructorDecl *Constructor =
+      dyn_cast<CXXConstructorDecl>(ConstructorDecl);
+  if (!Constructor)
+    return QualType();
+  // FIXME: Add support for Base class constructors as well.
+  if (ValueDecl *MemberDecl = tryLookupCtorInitMemberDecl(
+          Constructor->getParent(), SS, TemplateTypeTy, II))
+    return ProduceConstructorSignatureHelp(getCurScope(), MemberDecl->getType(),
+                                           MemberDecl->getLocation(), ArgExprs,
+                                           OpenParLoc);
+  return QualType();
+}
+
 void Sema::CodeCompleteInitializer(Scope *S, Decl *D) {
   ValueDecl *VD = dyn_cast_or_null<ValueDecl>(D);
   if (!VD) {

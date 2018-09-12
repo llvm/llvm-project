@@ -7615,14 +7615,28 @@ bool Sema::hasVisibleDefinition(NamedDecl *D, NamedDecl **Suggested,
   assert(D && "missing definition for pattern of instantiated definition");
 
   *Suggested = D;
-  if (isVisible(D))
+
+  auto DefinitionIsVisible = [&] {
+    // The (primary) definition might be in a visible module.
+    if (isVisible(D))
+      return true;
+
+    // A visible module might have a merged definition instead.
+    if (D->isModulePrivate() ? hasMergedDefinitionInCurrentModule(D)
+                             : hasVisibleMergedDefinition(D))
+      return true;
+
+    return false;
+  };
+
+  if (DefinitionIsVisible())
     return true;
 
   // The external source may have additional definitions of this entity that are
   // visible, so complete the redeclaration chain now and ask again.
   if (auto *Source = Context.getExternalSource()) {
     Source->CompleteRedeclChain(D);
-    return isVisible(D);
+    return DefinitionIsVisible();
   }
 
   return false;

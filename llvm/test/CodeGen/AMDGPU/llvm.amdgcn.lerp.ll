@@ -4,7 +4,7 @@
 declare i32 @llvm.amdgcn.lerp(i32, i32, i32) #0
 
 ; GCN-LABEL: {{^}}v_lerp:
-; GCN: v_lerp_u8 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_lerp_u8 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 define amdgpu_kernel void @v_lerp(i32 addrspace(1)* %out, i32 %src) nounwind {
   %result= call i32 @llvm.amdgcn.lerp(i32 %src, i32 100, i32 100) #0
   store i32 %result, i32 addrspace(1)* %out, align 4

@@ -432,9 +432,9 @@ define <4 x float> @test16(<4 x float> %A, <4 x float> %B) {
 ; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    subss %xmm3, %xmm2
 ; SSE-NEXT:    movaps %xmm0, %xmm4
-; SSE-NEXT:    movhlps {{.*#+}} xmm4 = xmm0[1],xmm4[1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm0[1]
 ; SSE-NEXT:    movaps %xmm1, %xmm5
-; SSE-NEXT:    movhlps {{.*#+}} xmm5 = xmm1[1],xmm5[1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm5 = xmm5[1],xmm1[1]
 ; SSE-NEXT:    subss %xmm5, %xmm4
 ; SSE-NEXT:    movshdup {{.*#+}} xmm5 = xmm0[1,1,3,3]
 ; SSE-NEXT:    addss %xmm3, %xmm5

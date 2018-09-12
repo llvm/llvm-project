@@ -43,7 +43,7 @@ define float @test_v4f32(<4 x float> %a0) {
 ; SSE2-LABEL: test_v4f32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
-; SSE2-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE2-NEXT:    minps %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[2,3]
@@ -53,7 +53,7 @@ define float @test_v4f32(<4 x float> %a0) {
 ; SSE41-LABEL: test_v4f32:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movaps %xmm0, %xmm1
-; SSE41-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; SSE41-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE41-NEXT:    minps %xmm1, %xmm0
 ; SSE41-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SSE41-NEXT:    minps %xmm1, %xmm0
@@ -83,7 +83,7 @@ define float @test_v8f32(<8 x float> %a0) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    minps %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
-; SSE2-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE2-NEXT:    minps %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[2,3]
@@ -94,7 +94,7 @@ define float @test_v8f32(<8 x float> %a0) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    minps %xmm1, %xmm0
 ; SSE41-NEXT:    movaps %xmm0, %xmm1
-; SSE41-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; SSE41-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE41-NEXT:    minps %xmm1, %xmm0
 ; SSE41-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SSE41-NEXT:    minps %xmm1, %xmm0
@@ -134,7 +134,7 @@ define float @test_v16f32(<16 x float> %a0) {
 ; SSE2-NEXT:    minps %xmm2, %xmm0
 ; SSE2-NEXT:    minps %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
-; SSE2-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE2-NEXT:    minps %xmm1, %xmm0
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[2,3]
@@ -147,7 +147,7 @@ define float @test_v16f32(<16 x float> %a0) {
 ; SSE41-NEXT:    minps %xmm2, %xmm0
 ; SSE41-NEXT:    minps %xmm1, %xmm0
 ; SSE41-NEXT:    movaps %xmm0, %xmm1
-; SSE41-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; SSE41-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE41-NEXT:    minps %xmm1, %xmm0
 ; SSE41-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SSE41-NEXT:    minps %xmm1, %xmm0
@@ -190,8 +190,8 @@ define float @test_v16f32(<16 x float> %a0) {
 define double @test_v2f64(<2 x double> %a0) {
 ; SSE-LABEL: test_v2f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps %xmm0, %xmm1
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; SSE-NEXT:    movapd %xmm0, %xmm1
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE-NEXT:    minpd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -215,7 +215,7 @@ define double @test_v4f64(<4 x double> %a0) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    minpd %xmm1, %xmm0
 ; SSE-NEXT:    movapd %xmm0, %xmm1
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE-NEXT:    minpd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -249,7 +249,7 @@ define double @test_v8f64(<8 x double> %a0) {
 ; SSE-NEXT:    minpd %xmm2, %xmm0
 ; SSE-NEXT:    minpd %xmm1, %xmm0
 ; SSE-NEXT:    movapd %xmm0, %xmm1
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE-NEXT:    minpd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -290,7 +290,7 @@ define double @test_v16f64(<16 x double> %a0) {
 ; SSE-NEXT:    minpd %xmm3, %xmm1
 ; SSE-NEXT:    minpd %xmm1, %xmm0
 ; SSE-NEXT:    movapd %xmm0, %xmm1
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE-NEXT:    minpd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
