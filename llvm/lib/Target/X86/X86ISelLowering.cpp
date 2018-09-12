@@ -38707,7 +38707,7 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
   }
 
   // Look through int->fp bitcasts that don't change the element width.
-  if (Src.getOpcode() == ISD::BITCAST && Src.getOperand(0).hasOneUse() &&
+  if (Src.getOpcode() == ISD::BITCAST && Src.hasOneUse() &&
       SrcVT.isFloatingPoint() &&
       Src.getOperand(0).getValueType() ==
         EVT(SrcVT).changeVectorElementTypeToInteger())

@@ -9,6 +9,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; waitcnt should be inserted after exec modification
 ; SI: v_cmp_lt_i32_e32 vcc, 0,
+; SI: v_mov_b32_e32 {{v[0-9]+}}, 0
 ; SI-NEXT: s_and_saveexec_b64 [[SAVE1:s\[[0-9]+:[0-9]+\]]], vcc
 ; SI-NEXT: s_xor_b64 [[SAVE2:s\[[0-9]+:[0-9]+\]]], exec, [[SAVE1]]
 ; SI-NEXT: ; mask branch [[FLOW_BB:BB[0-9]+_[0-9]+]]

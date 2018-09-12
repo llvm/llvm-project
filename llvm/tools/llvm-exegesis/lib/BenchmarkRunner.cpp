@@ -55,7 +55,7 @@ BenchmarkRunner::run(unsigned Opcode, unsigned NumRepetitions) {
 
   std::vector<InstructionBenchmark> InstrBenchmarks;
   for (const BenchmarkCode &Conf : ConfigurationOrError.get())
-    InstrBenchmarks.push_back(runConfiguration(Conf, Opcode, NumRepetitions));
+    InstrBenchmarks.push_back(runConfiguration(Conf, NumRepetitions));
   return InstrBenchmarks;
 }
 
@@ -70,7 +70,7 @@ GenerateInstructions(const BenchmarkCode &BC, const int MinInstructions) {
 }
 
 InstructionBenchmark
-BenchmarkRunner::runConfiguration(const BenchmarkCode &BC, unsigned Opcode,
+BenchmarkRunner::runConfiguration(const BenchmarkCode &BC,
                                   unsigned NumRepetitions) const {
   InstructionBenchmark InstrBenchmark;
   InstrBenchmark.Mode = Mode;

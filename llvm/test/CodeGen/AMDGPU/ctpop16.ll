@@ -227,9 +227,9 @@ define amdgpu_kernel void @v_ctpop_i16_add_inline_constant_inv(i16 addrspace(1)*
 
 ; FUNC-LABEL: {{^}}v_ctpop_i16_add_literal:
 ; GCN-DAG: {{buffer|flat}}_load_ushort [[VAL:v[0-9]+]],
-; SI-DAG: v_mov_b32_e32 [[LIT:v[0-9]+]], 0x3e7
+; SI-DAG: s_movk_i32 [[LIT:s[0-9]+]], 0x3e7
 ; VI-DAG: s_movk_i32 [[LIT:s[0-9]+]], 0x3e7
-; SI: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], [[VAL]], [[LIT]]
+; SI: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], [[VAL]], [[LIT]]
 ; VI: v_bcnt_u32_b32 [[RESULT:v[0-9]+]], [[VAL]], [[LIT]]
 ; GCN: buffer_store_short [[RESULT]],
 ; GCN: s_endpgm

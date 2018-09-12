@@ -127,9 +127,9 @@ define amdgpu_kernel void @test_class_9bit_mask_f32(i32 addrspace(1)* %out, floa
 
 ; SI-LABEL: {{^}}v_test_class_full_mask_f32:
 ; SI-DAG: buffer_load_dword [[VA:v[0-9]+]]
-; SI-DAG: v_mov_b32_e32 [[MASK:v[0-9]+]], 0x1ff{{$}}
-; SI: v_cmp_class_f32_e32 vcc, [[VA]], [[MASK]]
-; SI-NEXT: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, -1, vcc
+; SI-DAG: s_movk_i32 [[MASK:s[0-9]+]], 0x1ff{{$}}
+; SI: v_cmp_class_f32_e64 s[{{[0-9]}}:{{[0-9]}}], [[VA]], [[MASK]]
+; SI-NEXT: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, -1, s[{{[0-9]}}:{{[0-9]}}]
 ; SI: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define amdgpu_kernel void @v_test_class_full_mask_f32(i32 addrspace(1)* %out, float addrspace(1)* %in) #0 {
@@ -165,7 +165,7 @@ define amdgpu_kernel void @test_class_inline_imm_constant_dynamic_mask_f32(i32 a
 ; FIXME: Why isn't this using a literal constant operand?
 ; SI-LABEL: {{^}}test_class_lit_constant_dynamic_mask_f32:
 ; SI-DAG: buffer_load_dword [[VB:v[0-9]+]]
-; SI-DAG: v_mov_b32_e32 [[VK:v[0-9]+]], 0x44800000
+; SI-DAG: s_mov_b32 [[VK:s[0-9]+]], 0x44800000
 ; SI: v_cmp_class_f32_e32 vcc, [[VK]], [[VB]]
 ; SI-NEXT: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, -1, vcc
 ; SI: buffer_store_dword [[RESULT]]
@@ -284,10 +284,10 @@ define amdgpu_kernel void @test_class_full_mask_f64(i32 addrspace(1)* %out, [8 x
 
 ; SI-LABEL: {{^}}v_test_class_full_mask_f64:
 ; SI-DAG: buffer_load_dwordx2 [[VA:v\[[0-9]+:[0-9]+\]]]
-; SI-DAG: v_mov_b32_e32 [[MASK:v[0-9]+]], 0x1ff{{$}}
-; SI: v_cmp_class_f64_e32 vcc, [[VA]], [[MASK]]
+; SI-DAG: s_movk_i32 [[MASK:s[0-9]+]], 0x1ff{{$}}
+; SI: v_cmp_class_f64_e64 s[{{[0-9]}}:{{[0-9]}}], [[VA]], [[MASK]]
 ; SI-NOT: vcc
-; SI: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, -1, vcc
+; SI: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, -1, s[{{[0-9]}}:{{[0-9]}}]
 ; SI: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define amdgpu_kernel void @v_test_class_full_mask_f64(i32 addrspace(1)* %out, double addrspace(1)* %in) #0 {
@@ -377,8 +377,8 @@ define amdgpu_kernel void @test_fold_or3_class_f32_0(i32 addrspace(1)* %out, flo
 
 ; SI-LABEL: {{^}}test_fold_or_all_tests_class_f32_0:
 ; SI-NOT: v_cmp_class
-; SI: v_mov_b32_e32 [[MASK:v[0-9]+]], 0x3ff{{$}}
-; SI: v_cmp_class_f32_e32 vcc, v{{[0-9]+}}, [[MASK]]{{$}}
+; SI: s_movk_i32 [[MASK:s[0-9]+]], 0x3ff{{$}}
+; SI: v_cmp_class_f32_e64 s[0:1], v{{[0-9]+}}, [[MASK]]{{$}}
 ; SI-NOT: v_cmp_class
 ; SI: s_endpgm
 define amdgpu_kernel void @test_fold_or_all_tests_class_f32_0(i32 addrspace(1)* %out, float addrspace(1)* %in) #0 {

@@ -366,8 +366,8 @@ define amdgpu_kernel void @test_div_scale_f32_fabs_den(float addrspace(1)* %out,
 }
 
 ; SI-LABEL: {{^}}test_div_scale_f32_val_undef_val:
-; SI: v_mov_b32_e32 [[K:v[0-9]+]], 0x41000000
-; SI: v_div_scale_f32 v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, [[K]], [[K]], [[K]]
+; SI: s_mov_b32 [[K:s[0-9]+]], 0x41000000
+; SI: v_div_scale_f32 v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, [[K]], v{{[0-9]+}}, [[K]]
 define amdgpu_kernel void @test_div_scale_f32_val_undef_val(float addrspace(1)* %out) #0 {
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float 8.0, float undef, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
@@ -376,8 +376,8 @@ define amdgpu_kernel void @test_div_scale_f32_val_undef_val(float addrspace(1)* 
 }
 
 ; SI-LABEL: {{^}}test_div_scale_f32_undef_val_val:
-; SI: v_mov_b32_e32 [[K:v[0-9]+]], 0x41000000
-; SI: v_div_scale_f32 v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, [[K]], [[K]], [[K]]
+; SI: s_mov_b32 [[K:s[0-9]+]], 0x41000000
+; SI: v_div_scale_f32 v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, [[K]], [[K]], v{{[0-9]+}}
 define amdgpu_kernel void @test_div_scale_f32_undef_val_val(float addrspace(1)* %out) #0 {
   %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float undef, float 8.0, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0

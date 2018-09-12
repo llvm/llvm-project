@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/DebugInfo/CodeView/DebugFrameDataSubsection.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
@@ -74,10 +75,23 @@ void DbiStreamBuilder::setPublicsStreamIndex(uint32_t Index) {
   PublicsStreamIndex = Index;
 }
 
+void DbiStreamBuilder::addFrameData(const codeview::FrameData &FD) {
+  if (!FrameData.hasValue())
+    FrameData.emplace(false);
+
+  FrameData->addFrameData(FD);
+}
+
 Error DbiStreamBuilder::addDbgStream(pdb::DbgHeaderType Type,
                                      ArrayRef<uint8_t> Data) {
+  assert(Type != DbgHeaderType::NewFPO &&
+         "NewFPO data should be written via addFrameData()!");
+
   DbgStreams[(int)Type].emplace();
-  DbgStreams[(int)Type]->Data = Data;
+  DbgStreams[(int)Type]->Size = Data.size();
+  DbgStreams[(int)Type]->WriteFn = [Data](BinaryStreamWriter &Writer) {
+    return Writer.writeArray(Data);
+  };
   return Error::success();
 }
 
@@ -272,10 +286,20 @@ Error DbiStreamBuilder::finalize() {
 }
 
 Error DbiStreamBuilder::finalizeMsfLayout() {
+  if (FrameData.hasValue()) {
+    DbgStreams[(int)DbgHeaderType::NewFPO].emplace();
+    DbgStreams[(int)DbgHeaderType::NewFPO]->Size =
+        FrameData->calculateSerializedSize();
+    DbgStreams[(int)DbgHeaderType::NewFPO]->WriteFn =
+        [this](BinaryStreamWriter &Writer) {
+          return FrameData->commit(Writer);
+        };
+  }
+
   for (auto &S : DbgStreams) {
     if (!S.hasValue())
       continue;
-    auto ExpectedIndex = Msf.addStream(S->Data.size());
+    auto ExpectedIndex = Msf.addStream(S->Size);
     if (!ExpectedIndex)
       return ExpectedIndex.takeError();
     S->StreamNumber = *ExpectedIndex;
@@ -406,7 +430,8 @@ Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
     auto WritableStream = WritableMappedBlockStream::createIndexedStream(
         Layout, MsfBuffer, Stream->StreamNumber, Allocator);
     BinaryStreamWriter DbgStreamWriter(*WritableStream);
-    if (auto EC = DbgStreamWriter.writeArray(Stream->Data))
+
+    if (auto EC = Stream->WriteFn(DbgStreamWriter))
       return EC;
   }
 

@@ -449,37 +449,37 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   }
 
   unsigned NewOpc;
-  bool NewIsUnscaled = false;
+  int Scale = 1;
   switch (MBBI->getOpcode()) {
   default:
     llvm_unreachable("Unexpected callee-save save/restore opcode!");
   case AArch64::STPXi:
     NewOpc = AArch64::STPXpre;
+    Scale = 8;
     break;
   case AArch64::STPDi:
     NewOpc = AArch64::STPDpre;
+    Scale = 8;
     break;
   case AArch64::STRXui:
     NewOpc = AArch64::STRXpre;
-    NewIsUnscaled = true;
     break;
   case AArch64::STRDui:
     NewOpc = AArch64::STRDpre;
-    NewIsUnscaled = true;
     break;
   case AArch64::LDPXi:
     NewOpc = AArch64::LDPXpost;
+    Scale = 8;
     break;
   case AArch64::LDPDi:
     NewOpc = AArch64::LDPDpost;
+    Scale = 8;
     break;
   case AArch64::LDRXui:
     NewOpc = AArch64::LDRXpost;
-    NewIsUnscaled = true;
     break;
   case AArch64::LDRDui:
     NewOpc = AArch64::LDRDpost;
-    NewIsUnscaled = true;
     break;
   }
 
@@ -497,12 +497,8 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
          "instruction!");
   assert(MBBI->getOperand(OpndIdx - 1).getReg() == AArch64::SP &&
          "Unexpected base register in callee-save save/restore instruction!");
-  // Last operand is immediate offset that needs fixing.
-  assert(CSStackSizeInc % 8 == 0);
-  int64_t CSStackSizeIncImm = CSStackSizeInc;
-  if (!NewIsUnscaled)
-    CSStackSizeIncImm /= 8;
-  MIB.addImm(CSStackSizeIncImm);
+  assert(CSStackSizeInc % Scale == 0);
+  MIB.addImm(CSStackSizeInc / Scale);
 
   MIB.setMIFlags(MBBI->getFlags());
   MIB.setMemRefs(MBBI->memoperands());
@@ -523,12 +519,21 @@ static void fixupCalleeSaveRestoreStackOffset(MachineInstr &MI,
     return;
   }
 
-  (void)Opc;
-  assert((Opc == AArch64::STPXi || Opc == AArch64::STPDi ||
-          Opc == AArch64::STRXui || Opc == AArch64::STRDui ||
-          Opc == AArch64::LDPXi || Opc == AArch64::LDPDi ||
-          Opc == AArch64::LDRXui || Opc == AArch64::LDRDui) &&
-         "Unexpected callee-save save/restore opcode!");
+  unsigned Scale;
+  switch (Opc) {
+  case AArch64::STPXi:
+  case AArch64::STRXui:
+  case AArch64::STPDi:
+  case AArch64::STRDui:
+  case AArch64::LDPXi:
+  case AArch64::LDRXui:
+  case AArch64::LDPDi:
+  case AArch64::LDRDui:
+    Scale = 8;
+    break;
+  default:
+    llvm_unreachable("Unexpected callee-save save/restore opcode!");
+  }
 
   unsigned OffsetIdx = MI.getNumExplicitOperands() - 1;
   assert(MI.getOperand(OffsetIdx - 1).getReg() == AArch64::SP &&
@@ -537,7 +542,7 @@ static void fixupCalleeSaveRestoreStackOffset(MachineInstr &MI,
   MachineOperand &OffsetOpnd = MI.getOperand(OffsetIdx);
   // All generated opcodes have scaled offsets.
   assert(LocalStackSize % 8 == 0);
-  OffsetOpnd.setImm(OffsetOpnd.getImm() + LocalStackSize / 8);
+  OffsetOpnd.setImm(OffsetOpnd.getImm() + LocalStackSize / Scale);
 }
 
 static void adaptForLdStOpt(MachineBasicBlock &MBB,
@@ -1203,7 +1208,7 @@ struct RegPairInfo {
   unsigned Reg2 = AArch64::NoRegister;
   int FrameIdx;
   int Offset;
-  bool IsGPR;
+  enum RegType { GPR, FPR64 } Type;
 
   RegPairInfo() = default;
 
@@ -1237,16 +1242,26 @@ static void computeCalleeSaveRegisterPairs(
     RegPairInfo RPI;
     RPI.Reg1 = CSI[i].getReg();
 
-    assert(AArch64::GPR64RegClass.contains(RPI.Reg1) ||
-           AArch64::FPR64RegClass.contains(RPI.Reg1));
-    RPI.IsGPR = AArch64::GPR64RegClass.contains(RPI.Reg1);
+    if (AArch64::GPR64RegClass.contains(RPI.Reg1))
+      RPI.Type = RegPairInfo::GPR;
+    else if (AArch64::FPR64RegClass.contains(RPI.Reg1))
+      RPI.Type = RegPairInfo::FPR64;
+    else
+      llvm_unreachable("Unsupported register class.");
 
     // Add the next reg to the pair if it is in the same register class.
     if (i + 1 < Count) {
       unsigned NextReg = CSI[i + 1].getReg();
-      if ((RPI.IsGPR && AArch64::GPR64RegClass.contains(NextReg)) ||
-          (!RPI.IsGPR && AArch64::FPR64RegClass.contains(NextReg)))
-        RPI.Reg2 = NextReg;
+      switch (RPI.Type) {
+      case RegPairInfo::GPR:
+        if (AArch64::GPR64RegClass.contains(NextReg))
+          RPI.Reg2 = NextReg;
+        break;
+      case RegPairInfo::FPR64:
+        if (AArch64::FPR64RegClass.contains(NextReg))
+          RPI.Reg2 = NextReg;
+        break;
+      }
     }
 
     // If either of the registers to be saved is the lr register, it means that
@@ -1343,10 +1358,19 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     // Rationale: This sequence saves uop updates compared to a sequence of
     // pre-increment spills like stp xi,xj,[sp,#-16]!
     // Note: Similar rationale and sequence for restores in epilog.
-    if (RPI.IsGPR)
-      StrOpc = RPI.isPaired() ? AArch64::STPXi : AArch64::STRXui;
-    else
-      StrOpc = RPI.isPaired() ? AArch64::STPDi : AArch64::STRDui;
+    unsigned Size, Align;
+    switch (RPI.Type) {
+    case RegPairInfo::GPR:
+       StrOpc = RPI.isPaired() ? AArch64::STPXi : AArch64::STRXui;
+       Size = 8;
+       Align = 8;
+       break;
+    case RegPairInfo::FPR64:
+       StrOpc = RPI.isPaired() ? AArch64::STPDi : AArch64::STRDui;
+       Size = 8;
+       Align = 8;
+       break;
+    }
     LLVM_DEBUG(dbgs() << "CSR spill: (" << printReg(Reg1, TRI);
                if (RPI.isPaired()) dbgs() << ", " << printReg(Reg2, TRI);
                dbgs() << ") -> fi#(" << RPI.FrameIdx;
@@ -1362,15 +1386,16 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       MIB.addReg(Reg2, getPrologueDeath(MF, Reg2));
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, RPI.FrameIdx + 1),
-          MachineMemOperand::MOStore, 8, 8));
+          MachineMemOperand::MOStore, Size, Align));
     }
     MIB.addReg(Reg1, getPrologueDeath(MF, Reg1))
         .addReg(AArch64::SP)
-        .addImm(RPI.Offset) // [sp, #offset*8], where factor*8 is implicit
+        .addImm(RPI.Offset) // [sp, #offset*scale],
+                            // where factor*scale is implicit
         .setMIFlag(MachineInstr::FrameSetup);
     MIB.addMemOperand(MF.getMachineMemOperand(
         MachinePointerInfo::getFixedStack(MF, RPI.FrameIdx),
-        MachineMemOperand::MOStore, 8, 8));
+        MachineMemOperand::MOStore, Size, Align));
   }
   return true;
 }
@@ -1404,10 +1429,19 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     //    ldp     x22, x21, [sp, #0]      // addImm(+0)
     // Note: see comment in spillCalleeSavedRegisters()
     unsigned LdrOpc;
-    if (RPI.IsGPR)
-      LdrOpc = RPI.isPaired() ? AArch64::LDPXi : AArch64::LDRXui;
-    else
-      LdrOpc = RPI.isPaired() ? AArch64::LDPDi : AArch64::LDRDui;
+    unsigned Size, Align;
+    switch (RPI.Type) {
+    case RegPairInfo::GPR:
+       LdrOpc = RPI.isPaired() ? AArch64::LDPXi : AArch64::LDRXui;
+       Size = 8;
+       Align = 8;
+       break;
+    case RegPairInfo::FPR64:
+       LdrOpc = RPI.isPaired() ? AArch64::LDPDi : AArch64::LDRDui;
+       Size = 8;
+       Align = 8;
+       break;
+    }
     LLVM_DEBUG(dbgs() << "CSR restore: (" << printReg(Reg1, TRI);
                if (RPI.isPaired()) dbgs() << ", " << printReg(Reg2, TRI);
                dbgs() << ") -> fi#(" << RPI.FrameIdx;
@@ -1419,15 +1453,16 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       MIB.addReg(Reg2, getDefRegState(true));
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, RPI.FrameIdx + 1),
-          MachineMemOperand::MOLoad, 8, 8));
+          MachineMemOperand::MOLoad, Size, Align));
     }
     MIB.addReg(Reg1, getDefRegState(true))
         .addReg(AArch64::SP)
-        .addImm(RPI.Offset) // [sp, #offset*8] where the factor*8 is implicit
+        .addImm(RPI.Offset) // [sp, #offset*scale]
+                            // where factor*scale is implicit
         .setMIFlag(MachineInstr::FrameDestroy);
     MIB.addMemOperand(MF.getMachineMemOperand(
         MachinePointerInfo::getFixedStack(MF, RPI.FrameIdx),
-        MachineMemOperand::MOLoad, 8, 8));
+        MachineMemOperand::MOLoad, Size, Align));
   };
 
   if (ReverseCSRRestoreSeq)

@@ -25,14 +25,14 @@ entry:
 
 ; GCN-LABEL: {{^}}sin_v2f16:
 ; GCN: buffer_load_dword v[[A_V2_F16:[0-9]+]]
-; SI:  v_mov_b32_e32 v[[HALF_PI:[0-9]+]], 0x3e22f983{{$}}
+; SI:  s_mov_b32 [[HALF_PI:s[0-9]+]], 0x3e22f983{{$}}
 
 ; SI: v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_V2_F16]]
 ; SI: v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
 ; SI: v_cvt_f32_f16_e32 v[[A_F32_1:[0-9]+]], v[[A_F16_1]]
-; SI: v_mul_f32_e32 v[[M_F32_0:[0-9]+]], v[[A_F32_0]], v[[HALF_PI]]
+; SI: v_mul_f32_e32 v[[M_F32_0:[0-9]+]], [[HALF_PI]], v[[A_F32_0]]
 ; SI: v_fract_f32_e32 v[[F_F32_0:[0-9]+]], v[[M_F32_0]]
-; SI: v_mul_f32_e32 v[[M_F32_1:[0-9]+]], v[[A_F32_1]], v[[HALF_PI]]
+; SI: v_mul_f32_e32 v[[M_F32_1:[0-9]+]], [[HALF_PI]], v[[A_F32_1]]
 ; SI: v_fract_f32_e32 v[[F_F32_1:[0-9]+]], v[[M_F32_1]]
 ; SI: v_sin_f32_e32 v[[R_F32_1:[0-9]+]], v[[F_F32_1]]
 ; SI: v_sin_f32_e32 v[[R_F32_0:[0-9]+]], v[[F_F32_0]]

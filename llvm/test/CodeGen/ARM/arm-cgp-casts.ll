@@ -288,6 +288,50 @@ cleanup:
   ret i32 %retval.0
 }
 
+; CHECK-COMMON-LABEL: bitcast_i16
+; CHECK-COMMON-NOT: uxt
+define i16 @bitcast_i16(i16 zeroext %arg0, i16 zeroext %arg1) {
+entry:
+  %cast = bitcast i16 12345 to i16
+  %add = add nuw i16 %arg0, 1
+  %cmp = icmp ule i16 %add, %cast
+  %res = select i1 %cmp, i16 %arg1, i16 32657
+  ret i16 %res
+}
+
+; CHECK-COMMON-LABEL: bitcast_i8
+; CHECK-COMMON-NOT: uxt
+define i8 @bitcast_i8(i8 zeroext %arg0, i8 zeroext %arg1) {
+entry:
+  %cast = bitcast i8 127 to i8
+  %mul = shl nuw i8 %arg0, 1
+  %cmp = icmp uge i8 %mul, %arg1
+  %res = select i1 %cmp, i8 %cast, i8 128
+  ret i8 %res
+}
+
+; CHECK-COMMON-LABEL: bitcast_i16_minus
+; CHECK-COMMON-NOT: uxt
+define i16 @bitcast_i16_minus(i16 zeroext %arg0, i16 zeroext %arg1) {
+entry:
+  %cast = bitcast i16 -12345 to i16
+  %xor = xor i16 %arg0, 7
+  %cmp = icmp eq i16 %xor, %arg1
+  %res = select i1 %cmp, i16 %cast, i16 32657
+  ret i16 %res
+}
+
+; CHECK-COMMON-LABEL: bitcast_i8_minus
+; CHECK-COMMON-NOT: uxt
+define i8 @bitcast_i8_minus(i8 zeroext %arg0, i8 zeroext %arg1) {
+entry:
+  %cast = bitcast i8 -127 to i8
+  %and = and i8 %arg0, 3
+  %cmp = icmp ne i8 %and, %arg1
+  %res = select i1 %cmp, i8 %cast, i8 128
+  ret i8 %res
+}
+
 declare %class.x* @_ZNK2ae2afEv(%class.ae*) local_unnamed_addr
 declare %class.v* @_ZN1x2acEv(%class.x*) local_unnamed_addr
 declare i32 @dummy(i32, i32)

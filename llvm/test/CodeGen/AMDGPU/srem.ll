@@ -19,7 +19,7 @@ define amdgpu_kernel void @srem_i32_4(i32 addrspace(1)* %out, i32 addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}srem_i32_7:
-; SI: v_mov_b32_e32 [[MAGIC:v[0-9]+]], 0x92492493
+; SI: s_mov_b32 [[MAGIC:s[0-9]+]], 0x92492493
 ; SI: v_mul_hi_i32 {{v[0-9]+}}, {{v[0-9]+}}, [[MAGIC]]
 ; SI: v_mul_lo_i32
 ; SI: v_sub_{{[iu]}}32

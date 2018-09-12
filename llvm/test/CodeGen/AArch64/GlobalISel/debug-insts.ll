@@ -6,18 +6,16 @@
 ; CHECK:    - { id: {{.*}}, name: in.addr, type: default, offset: 0, size: {{.*}}, alignment: {{.*}},
 ; CHECK-NEXT: callee-saved-register: '', callee-saved-restored: true,
 ; CHECK-NEXT: debug-info-variable: '!11', debug-info-expression: '!DIExpression()',
-; CHECK: DBG_VALUE debug-use %0(s32), debug-use $noreg, !11, !DIExpression(), debug-location !12
 define void @debug_declare(i32 %in) #0 !dbg !7 {
 entry:
   %in.addr = alloca i32, align 4
   store i32 %in, i32* %in.addr, align 4
   call void @llvm.dbg.declare(metadata i32* %in.addr, metadata !11, metadata !DIExpression()), !dbg !12
-  call void @llvm.dbg.declare(metadata i32 %in, metadata !11, metadata !DIExpression()), !dbg !12
   ret void, !dbg !12
 }
 
 ; CHECK-LABEL: name: debug_declare_vla
-; CHECK: DBG_VALUE debug-use %{{[0-9]+}}(p0), debug-use $noreg, !14, !DIExpression(), debug-location !15
+; CHECK: DBG_VALUE debug-use %{{[0-9]+}}(p0), 0, !14, !DIExpression(), debug-location !15
 define void @debug_declare_vla(i32 %in) #0 !dbg !13 {
 entry:
   %vla.addr = alloca i32, i32 %in

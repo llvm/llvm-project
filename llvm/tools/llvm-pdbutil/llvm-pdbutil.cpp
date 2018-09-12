@@ -501,6 +501,9 @@ cl::opt<bool>
                        cl::desc("dump CodeView symbol record raw bytes"),
                        cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 
+cl::opt<bool> DumpFpo("fpo", cl::desc("dump FPO records"),
+                      cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
+
 // MODULE & FILE OPTIONS
 cl::opt<bool> DumpModules("modules", cl::desc("dump compiland information"),
                           cl::cat(FileOptions), cl::sub(DumpSubcommand));
@@ -1372,6 +1375,7 @@ int main(int Argc, const char **Argv) {
   if (opts::DumpSubcommand) {
     if (opts::dump::RawAll) {
       opts::dump::DumpGlobals = true;
+      opts::dump::DumpFpo = true;
       opts::dump::DumpInlineeLines = true;
       opts::dump::DumpIds = true;
       opts::dump::DumpIdExtras = true;
