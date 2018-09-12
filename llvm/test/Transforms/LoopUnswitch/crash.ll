@@ -1,4 +1,5 @@
 ; RUN: opt < %s -loop-unswitch -disable-output
+; RUN: opt < %s -loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -disable-output
 
 define void @test1(i32* %S2) {
 entry:

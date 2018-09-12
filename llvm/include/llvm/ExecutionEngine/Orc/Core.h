@@ -761,11 +761,6 @@ private:
 /// An ExecutionSession represents a running JIT program.
 class ExecutionSession : public ExecutionSessionBase {
 public:
-  using ErrorReporter = std::function<void(Error)>;
-
-  using DispatchMaterializationFunction = std::function<void(
-      JITDylib &JD, std::unique_ptr<MaterializationUnit> MU)>;
-
   /// Construct an ExecutionEngine.
   ///
   /// SymbolStringPools may be shared between ExecutionSessions.

@@ -1278,7 +1278,7 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
     unsigned Reg = X86MFInfo->getSRetReturnReg();
     assert(Reg &&
            "SRetReturnReg should have been set in LowerFormalArguments()!");
-    unsigned RetReg = Subtarget->is64Bit() ? X86::RAX : X86::EAX;
+    unsigned RetReg = Subtarget->isTarget64BitLP64() ? X86::RAX : X86::EAX;
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(TargetOpcode::COPY), RetReg).addReg(Reg);
     RetRegs.push_back(RetReg);

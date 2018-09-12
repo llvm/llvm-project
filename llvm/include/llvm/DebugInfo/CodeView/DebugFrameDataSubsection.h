@@ -26,11 +26,12 @@ public:
   }
 
   Error initialize(BinaryStreamReader Reader);
+  Error initialize(BinaryStreamRef Stream);
 
   FixedStreamArray<FrameData>::Iterator begin() const { return Frames.begin(); }
   FixedStreamArray<FrameData>::Iterator end() const { return Frames.end(); }
 
-  const void *getRelocPtr() const { return RelocPtr; }
+  const uint32_t *getRelocPtr() const { return RelocPtr; }
 
 private:
   const uint32_t *RelocPtr = nullptr;
@@ -39,8 +40,9 @@ private:
 
 class DebugFrameDataSubsection final : public DebugSubsection {
 public:
-  DebugFrameDataSubsection()
-      : DebugSubsection(DebugSubsectionKind::FrameData) {}
+  DebugFrameDataSubsection(bool IncludeRelocPtr)
+      : DebugSubsection(DebugSubsectionKind::FrameData),
+        IncludeRelocPtr(IncludeRelocPtr) {}
   static bool classof(const DebugSubsection *S) {
     return S->kind() == DebugSubsectionKind::FrameData;
   }
@@ -52,6 +54,7 @@ public:
   void setFrames(ArrayRef<FrameData> Frames);
 
 private:
+  bool IncludeRelocPtr = false;
   std::vector<FrameData> Frames;
 };
 }

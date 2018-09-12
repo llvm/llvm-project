@@ -17,6 +17,7 @@
 #define LLVM_TOOLS_LLVM_MCA_RESOURCE_MANAGER_H
 
 #include "Instruction.h"
+#include "Support.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -344,7 +345,7 @@ public:
 
   void issueInstruction(
       const InstrDesc &Desc,
-      llvm::SmallVectorImpl<std::pair<ResourceRef, double>> &Pipes);
+      llvm::SmallVectorImpl<std::pair<ResourceRef, ResourceCycles>> &Pipes);
 
   void cycleEvent(llvm::SmallVectorImpl<ResourceRef> &ResourcesFreed);
 

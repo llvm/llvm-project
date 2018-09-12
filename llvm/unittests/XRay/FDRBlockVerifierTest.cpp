@@ -28,7 +28,7 @@ TEST(FDRBlockVerifierTest, ValidBlocksV3) {
                     .add<NewBufferRecord>(1)
                     .add<WallclockRecord>(1, 2)
                     .add<PIDRecord>(1)
-                    .add<NewCPUIDRecord>(1)
+                    .add<NewCPUIDRecord>(1, 2)
                     .add<FunctionRecord>(RecordTypes::ENTER, 1, 1)
                     .add<FunctionRecord>(RecordTypes::EXIT, 1, 100)
                     .consume();
@@ -37,7 +37,7 @@ TEST(FDRBlockVerifierTest, ValidBlocksV3) {
                     .add<NewBufferRecord>(1)
                     .add<WallclockRecord>(1, 2)
                     .add<PIDRecord>(1)
-                    .add<NewCPUIDRecord>(1)
+                    .add<NewCPUIDRecord>(1, 2)
                     .add<FunctionRecord>(RecordTypes::ENTER, 1, 1)
                     .add<FunctionRecord>(RecordTypes::EXIT, 1, 100)
                     .consume();
@@ -46,7 +46,7 @@ TEST(FDRBlockVerifierTest, ValidBlocksV3) {
                     .add<NewBufferRecord>(2)
                     .add<WallclockRecord>(1, 2)
                     .add<PIDRecord>(1)
-                    .add<NewCPUIDRecord>(2)
+                    .add<NewCPUIDRecord>(2, 2)
                     .add<FunctionRecord>(RecordTypes::ENTER, 1, 1)
                     .add<FunctionRecord>(RecordTypes::EXIT, 1, 100)
                     .consume();
@@ -75,7 +75,7 @@ TEST(FDRBlockVerifierTest, MissingPIDRecord) {
                    .add<BufferExtents>(20)
                    .add<NewBufferRecord>(1)
                    .add<WallclockRecord>(1, 2)
-                   .add<NewCPUIDRecord>(1)
+                   .add<NewCPUIDRecord>(1, 2)
                    .add<FunctionRecord>(RecordTypes::ENTER, 1, 1)
                    .add<FunctionRecord>(RecordTypes::EXIT, 1, 100)
                    .consume();
@@ -89,7 +89,7 @@ TEST(FDRBlockVerifierTest, MissingBufferExtents) {
   auto Block = LogBuilder()
                    .add<NewBufferRecord>(1)
                    .add<WallclockRecord>(1, 2)
-                   .add<NewCPUIDRecord>(1)
+                   .add<NewCPUIDRecord>(1, 2)
                    .add<FunctionRecord>(RecordTypes::ENTER, 1, 1)
                    .add<FunctionRecord>(RecordTypes::EXIT, 1, 100)
                    .consume();
@@ -103,7 +103,7 @@ TEST(FDRBlockVerifierTest, IgnoreRecordsAfterEOB) {
   auto Block = LogBuilder()
                    .add<NewBufferRecord>(1)
                    .add<WallclockRecord>(1, 2)
-                   .add<NewCPUIDRecord>(1)
+                   .add<NewCPUIDRecord>(1, 2)
                    .add<EndBufferRecord>()
                    .add<FunctionRecord>(RecordTypes::ENTER, 1, 1)
                    .add<FunctionRecord>(RecordTypes::EXIT, 1, 100)
@@ -118,7 +118,7 @@ TEST(FDRBlockVerifierTest, MalformedV2) {
   auto Block = LogBuilder()
                    .add<NewBufferRecord>(1)
                    .add<WallclockRecord>(1, 2)
-                   .add<NewCPUIDRecord>(1)
+                   .add<NewCPUIDRecord>(1, 2)
                    .add<FunctionRecord>(RecordTypes::ENTER, 1, 1)
                    .add<FunctionRecord>(RecordTypes::EXIT, 1, 100)
                    .add<NewBufferRecord>(2)

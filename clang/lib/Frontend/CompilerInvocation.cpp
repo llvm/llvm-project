@@ -2862,6 +2862,9 @@ static void ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
                                   frontend::ActionKind Action) {
   Opts.ImplicitPCHInclude = Args.getLastArgValue(OPT_include_pch);
   Opts.ImplicitPTHInclude = Args.getLastArgValue(OPT_include_pth);
+  Opts.PCHWithHdrStop = Args.hasArg(OPT_pch_through_hdrstop_create) ||
+                        Args.hasArg(OPT_pch_through_hdrstop_use);
+  Opts.PCHWithHdrStopCreate = Args.hasArg(OPT_pch_through_hdrstop_create);
   Opts.PCHThroughHeader = Args.getLastArgValue(OPT_pch_through_header_EQ);
   if (const Arg *A = Args.getLastArg(OPT_token_cache))
       Opts.TokenCache = A->getValue();

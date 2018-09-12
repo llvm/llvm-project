@@ -18,16 +18,19 @@ accuracy before using.
 
 To generate all current tests:
 - Generate mapper tests:
-    python gen_tests.py -flag='--dump-mapper' -flag='--doxygen' -flag='--extra-arg=-fmodules-ts' -prefix mapper
+    python gen_tests.py -flag='--dump-mapper' -flag='--doxygen' -flag='--extra-arg=-fmodules-ts' -prefix mapper -use-check-next
 
 - Generate reducer tests:
-    python gen_tests.py -flag='--dump-intermediate' -flag='--doxygen' -flag='--extra-arg=-fmodules-ts' -prefix bc
+    python gen_tests.py -flag='--dump-intermediate' -flag='--doxygen' -flag='--extra-arg=-fmodules-ts' -prefix bc -use-check-next
 
 - Generate yaml tests:
-    python gen_tests.py -flag='--format=yaml' -flag='--doxygen' -flag='--extra-arg=-fmodules-ts' -prefix yaml
+    python gen_tests.py -flag='--format=yaml' -flag='--doxygen' -flag='--extra-arg=-fmodules-ts' -prefix yaml -use-check-next
 
 - Generate public decl tests:
-    python gen_tests.py -flag='--format=yaml' -flag='--doxygen' -flag='--public' -flag='--extra-arg=-fmodules-ts' -prefix public
+    python gen_tests.py -flag='--format=yaml' -flag='--doxygen' -flag='--public' -flag='--extra-arg=-fmodules-ts' -prefix public -use-check-next
+
+- Generate Markdown tests:
+    python gen_tests.py -flag='--format=md' -flag='--doxygen' -flag='--public' -flag='--extra-arg=-fmodules-ts' -prefix md
 
 This script was written on/for Linux, and has not been tested on any other
 platform and so it may not work.
@@ -95,7 +98,8 @@ def get_test_case_code(test_case_path, flags):
     return code
 
 
-def get_output(root, out_file, case_out_path, flags, checkname, bcanalyzer):
+def get_output(root, out_file, case_out_path, flags, checkname, bcanalyzer,
+                check_next=True):
     output = ''
     run_cmd = ''
     if '--dump-mapper' in flags or '--dump-intermediate' in flags:
@@ -119,8 +123,14 @@ def get_output(root, out_file, case_out_path, flags, checkname, bcanalyzer):
     output = re.sub(YAML_USR_REGEX, YAML_USR, output)
     output = re.sub(BITCODE_USR_REGEX, BITCODE_USR, output)
     output = CHECK.format(checkname) + output.rstrip()
-    output = run_cmd + output.replace('\n',
-                                      '\n' + CHECK_NEXT.format(checkname))
+    
+    if check_next:
+      check_comment = CHECK_NEXT.format(checkname)
+    else:
+      check_comment = CHECK.format(checkname)
+    
+    output = output.replace('\n', '\n' + check_comment)
+    output = run_cmd + output.replace('%s\n' % check_comment, "")
 
     return output + '\n'
 
@@ -151,6 +161,12 @@ def main():
         metavar="PATH",
         default='llvm-bcanalyzer',
         help='path to llvm-bcanalyzer binary')
+    parser.add_argument(
+        '-use-check-next',
+        dest='check_next',
+        default=False,
+        action='store_true',
+        help='Whether or not to use CHECK-NEXT in the resulting tests.')
     args = parser.parse_args()
 
     flags = ' '.join(args.flags)
@@ -188,7 +204,8 @@ def main():
                 if len(usr) < 2:
                     continue
                 all_output += get_output(root, out_file, out_dir, args.flags,
-                                         num_outputs, args.bcanalyzer)
+                                         num_outputs, args.bcanalyzer, 
+                                         args.check_next)
                 num_outputs += 1
 
         # Add test case code to test

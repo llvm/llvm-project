@@ -75,7 +75,7 @@ TEST(XRayFDRTest, BuilderAndBlockVerifier) {
                    .add<NewBufferRecord>(1)
                    .add<WallclockRecord>(1, 1)
                    .add<PIDRecord>(1)
-                   .add<NewCPUIDRecord>(1)
+                   .add<NewCPUIDRecord>(1, 2)
                    .consume();
   BlockVerifier Verifier;
   for (auto &R : Block)
@@ -89,7 +89,7 @@ TEST(XRayFDRTest, IndexAndVerifyBlocks) {
                     .add<NewBufferRecord>(1)
                     .add<WallclockRecord>(1, 1)
                     .add<PIDRecord>(1)
-                    .add<NewCPUIDRecord>(1)
+                    .add<NewCPUIDRecord>(1, 2)
                     .add<FunctionRecord>(RecordTypes::ENTER, 1, 1)
                     .add<FunctionRecord>(RecordTypes::EXIT, 1, 100)
                     .consume();
@@ -98,7 +98,7 @@ TEST(XRayFDRTest, IndexAndVerifyBlocks) {
                     .add<NewBufferRecord>(1)
                     .add<WallclockRecord>(1, 1)
                     .add<PIDRecord>(1)
-                    .add<NewCPUIDRecord>(1)
+                    .add<NewCPUIDRecord>(1, 2)
                     .add<FunctionRecord>(RecordTypes::ENTER, 1, 1)
                     .add<FunctionRecord>(RecordTypes::EXIT, 1, 100)
                     .consume();
@@ -107,7 +107,7 @@ TEST(XRayFDRTest, IndexAndVerifyBlocks) {
                     .add<NewBufferRecord>(1)
                     .add<WallclockRecord>(1, 1)
                     .add<PIDRecord>(1)
-                    .add<NewCPUIDRecord>(1)
+                    .add<NewCPUIDRecord>(1, 2)
                     .add<FunctionRecord>(RecordTypes::ENTER, 1, 1)
                     .add<FunctionRecord>(RecordTypes::EXIT, 1, 100)
                     .consume();

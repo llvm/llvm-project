@@ -1099,13 +1099,24 @@ bool EmulateInstructionMIPS64::Emulate_DADDiu(llvm::MCInst &insn) {
     Context context;
 
     /* read <src> register */
-    const int64_t src_opd_val = ReadRegisterUnsigned(
+    const uint64_t src_opd_val = ReadRegisterUnsigned(
         eRegisterKindDWARF, dwarf_zero_mips64 + src, 0, &success);
     if (!success)
       return false;
 
     /* Check if this is daddiu sp, sp, imm16 */
     if (dst == dwarf_sp_mips64) {
+      /*
+       * From the MIPS IV spec:
+       *
+       * The term “unsigned” in the instruction name is a misnomer; this
+       * operation is 64-bit modulo arithmetic that does not trap on overflow.
+       * It is appropriate for arithmetic which is not signed, such as address
+       * arithmetic, or integer arithmetic environments that ignore overflow,
+       * such as “C” language arithmetic.
+       *
+       * Assume 2's complement and rely on unsigned overflow here.
+       */
       uint64_t result = src_opd_val + imm;
       RegisterInfo reg_info_sp;
 

@@ -1132,7 +1132,7 @@ auto lower_bound(R &&Range, ForwardIt I) -> decltype(adl_begin(Range)) {
 
 /// Wrapper function around std::equal to detect if all elements
 /// in a container are same.
-template <typename R> 
+template <typename R>
 bool is_splat(R &&Range) {
   size_t range_size = size(Range);
   return range_size != 0 && (range_size == 1 ||

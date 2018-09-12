@@ -1,4 +1,4 @@
-//===---------- ExprMutationAnalyzer.h - clang-tidy -----------------------===//
+//===---------- ExprMutationAnalyzer.h ------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,8 +6,8 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_EXPRMUTATIONANALYZER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_EXPRMUTATIONANALYZER_H
+#ifndef LLVM_CLANG_ANALYSIS_ANALYSES_EXPRMUTATIONANALYZER_H
+#define LLVM_CLANG_ANALYSIS_ANALYSES_EXPRMUTATIONANALYZER_H
 
 #include <type_traits>
 
@@ -16,8 +16,6 @@
 #include "llvm/ADT/DenseMap.h"
 
 namespace clang {
-namespace tidy {
-namespace utils {
 
 /// Analyzes whether any mutative operations are applied to an expression within
 /// a given statement.
@@ -49,8 +47,6 @@ private:
   llvm::DenseMap<const Expr *, const Stmt *> Results;
 };
 
-} // namespace utils
-} // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_EXPRMUTATIONANALYZER_H
+#endif // LLVM_CLANG_ANALYSIS_ANALYSES_EXPRMUTATIONANALYZER_H

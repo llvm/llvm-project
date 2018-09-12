@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=plist -o %t %s
-// RUN: cat %t | diff -u -w -I "<string>/" -I "<string>.:" -I "clang version" - %S/Inputs/expected-plists/undef-value-caller.c.plist
+// RUN: cat %t | diff -u -w -I "<string>/" -I "<string>.:" -I "version" - %S/Inputs/expected-plists/undef-value-caller.c.plist
 
 #include "undef-value-callee.h"
 

@@ -177,29 +177,25 @@ std::shared_ptr<SymbolIndex> SwapIndex::snapshot() const {
 
 bool fromJSON(const llvm::json::Value &Parameters, FuzzyFindRequest &Request) {
   json::ObjectMapper O(Parameters);
-  llvm::Optional<int64_t> MaxCandidateCount;
+  int64_t MaxCandidateCount;
   bool OK =
       O && O.map("Query", Request.Query) && O.map("Scopes", Request.Scopes) &&
+      O.map("MaxCandidateCount", MaxCandidateCount) &&
       O.map("RestrictForCodeCompletion", Request.RestrictForCodeCompletion) &&
-      O.map("ProximityPaths", Request.ProximityPaths) &&
-      O.map("MaxCandidateCount", MaxCandidateCount);
-  if (MaxCandidateCount)
-    Request.MaxCandidateCount = MaxCandidateCount.getValue();
+      O.map("ProximityPaths", Request.ProximityPaths);
+  if (OK && MaxCandidateCount <= std::numeric_limits<uint32_t>::max())
+    Request.MaxCandidateCount = MaxCandidateCount;
   return OK;
 }
 
 llvm::json::Value toJSON(const FuzzyFindRequest &Request) {
-  auto Result = json::Object{
+  return json::Object{
       {"Query", Request.Query},
       {"Scopes", json::Array{Request.Scopes}},
+      {"MaxCandidateCount", Request.MaxCandidateCount},
       {"RestrictForCodeCompletion", Request.RestrictForCodeCompletion},
       {"ProximityPaths", json::Array{Request.ProximityPaths}},
   };
-  // A huge limit means no limit, leave it out.
-  if (Request.MaxCandidateCount <= std::numeric_limits<int64_t>::max())
-    Result["MaxCandidateCount"] =
-        static_cast<int64_t>(Request.MaxCandidateCount);
-  return std::move(Result);
 }
 
 bool SwapIndex::fuzzyFind(const FuzzyFindRequest &R,

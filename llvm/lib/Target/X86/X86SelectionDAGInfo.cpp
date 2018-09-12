@@ -255,14 +255,15 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
     }
   }
 
+  bool Use64BitRegs = Subtarget.isTarget64BitLP64();
   SDValue InFlag;
-  Chain = DAG.getCopyToReg(Chain, dl, Subtarget.is64Bit() ? X86::RCX : X86::ECX,
+  Chain = DAG.getCopyToReg(Chain, dl, Use64BitRegs ? X86::RCX : X86::ECX,
                            DAG.getIntPtrConstant(Repeats.Count(), dl), InFlag);
   InFlag = Chain.getValue(1);
-  Chain = DAG.getCopyToReg(Chain, dl, Subtarget.is64Bit() ? X86::RDI : X86::EDI,
+  Chain = DAG.getCopyToReg(Chain, dl, Use64BitRegs ? X86::RDI : X86::EDI,
                            Dst, InFlag);
   InFlag = Chain.getValue(1);
-  Chain = DAG.getCopyToReg(Chain, dl, Subtarget.is64Bit() ? X86::RSI : X86::ESI,
+  Chain = DAG.getCopyToReg(Chain, dl, Use64BitRegs ? X86::RSI : X86::ESI,
                            Src, InFlag);
   InFlag = Chain.getValue(1);
 

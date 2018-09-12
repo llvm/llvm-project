@@ -21,6 +21,46 @@
 
 namespace mca {
 
+/// This class represents the number of cycles per resource (fractions of
+/// cycles).  That quantity is managed here as a ratio, and accessed via the
+/// double cast-operator below.  The two quantities, number of cycles and
+/// number of resources, are kept separate.  This is used by the
+/// ResourcePressureView to calculate the average resource cycles
+/// per instruction/iteration.
+class ResourceCycles {
+  unsigned Numerator, Denominator;
+
+public:
+  ResourceCycles() : Numerator(0), Denominator(1) {}
+  ResourceCycles(unsigned Cycles, unsigned ResourceUnits = 1)
+      : Numerator(Cycles), Denominator(ResourceUnits) {}
+
+  operator double() const {
+    assert(Denominator && "Invalid denominator (must be non-zero).");
+    return (Denominator == 1) ? Numerator : (double)Numerator / Denominator;
+  }
+
+  // Add the components of RHS to this instance.  Instead of calculating
+  // the final value here, we keep track of the numerator and denominator
+  // separately, to reduce floating point error.
+  ResourceCycles &operator+=(const ResourceCycles &RHS) {
+    if (Denominator == RHS.Denominator)
+      Numerator += RHS.Numerator;
+    else {
+      // Create a common denominator for LHS and RHS by calculating the least
+      // common multiple from the GCD.
+      unsigned GCD =
+          llvm::GreatestCommonDivisor64(Denominator, RHS.Denominator);
+      unsigned LCM = (Denominator * RHS.Denominator) / GCD;
+      unsigned LHSNumerator = Numerator * (LCM / Denominator);
+      unsigned RHSNumerator = RHS.Numerator * (LCM / RHS.Denominator);
+      Numerator = LHSNumerator + RHSNumerator;
+      Denominator = LCM;
+    }
+    return *this;
+  }
+};
+
 /// Populates vector Masks with processor resource masks.
 ///
 /// The number of bits set in a mask depends on the processor resource type.

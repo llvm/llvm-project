@@ -30,7 +30,7 @@ TEST(FDRBlockIndexerTest, IndexBlocksV3) {
                     .add<NewBufferRecord>(1)
                     .add<WallclockRecord>(1, 2)
                     .add<PIDRecord>(1)
-                    .add<NewCPUIDRecord>(1)
+                    .add<NewCPUIDRecord>(1, 2)
                     .add<FunctionRecord>(RecordTypes::ENTER, 1, 1)
                     .add<FunctionRecord>(RecordTypes::EXIT, 1, 100)
                     .consume();
@@ -39,7 +39,7 @@ TEST(FDRBlockIndexerTest, IndexBlocksV3) {
                     .add<NewBufferRecord>(1)
                     .add<WallclockRecord>(1, 2)
                     .add<PIDRecord>(1)
-                    .add<NewCPUIDRecord>(1)
+                    .add<NewCPUIDRecord>(1, 2)
                     .add<FunctionRecord>(RecordTypes::ENTER, 1, 1)
                     .add<FunctionRecord>(RecordTypes::EXIT, 1, 100)
                     .consume();
@@ -48,7 +48,7 @@ TEST(FDRBlockIndexerTest, IndexBlocksV3) {
                     .add<NewBufferRecord>(2)
                     .add<WallclockRecord>(1, 2)
                     .add<PIDRecord>(1)
-                    .add<NewCPUIDRecord>(2)
+                    .add<NewCPUIDRecord>(2, 2)
                     .add<FunctionRecord>(RecordTypes::ENTER, 1, 1)
                     .add<FunctionRecord>(RecordTypes::EXIT, 1, 100)
                     .consume();

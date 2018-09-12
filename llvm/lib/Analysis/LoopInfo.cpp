@@ -218,20 +218,13 @@ MDNode *Loop::getLoopID() const {
   } else {
     assert(!getLoopLatch() &&
            "The loop should have no single latch at this point");
-    // Go through each predecessor of the loop header and check the
-    // terminator for the metadata.
-    BasicBlock *H = getHeader();
-    for (BasicBlock *BB : this->blocks()) {
+    // Go through the latch blocks and check the terminator for the metadata.
+    SmallVector<BasicBlock *, 4> LatchesBlocks;
+    getLoopLatches(LatchesBlocks);
+    for (BasicBlock *BB : LatchesBlocks) {
       TerminatorInst *TI = BB->getTerminator();
-      MDNode *MD = nullptr;
+      MDNode *MD = TI->getMetadata(LLVMContext::MD_loop);
 
-      // Check if this terminator branches to the loop header.
-      for (BasicBlock *Successor : successors(TI)) {
-        if (Successor == H) {
-          MD = TI->getMetadata(LLVMContext::MD_loop);
-          break;
-        }
-      }
       if (!MD)
         return nullptr;
 

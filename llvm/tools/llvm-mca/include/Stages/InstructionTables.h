@@ -28,7 +28,7 @@ namespace mca {
 class InstructionTables final : public Stage {
   const llvm::MCSchedModel &SM;
   InstrBuilder &IB;
-  llvm::SmallVector<std::pair<ResourceRef, double>, 4> UsedResources;
+  llvm::SmallVector<std::pair<ResourceRef, ResourceCycles>, 4> UsedResources;
 
 public:
   InstructionTables(const llvm::MCSchedModel &Model, InstrBuilder &Builder)

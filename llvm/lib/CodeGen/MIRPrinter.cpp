@@ -695,6 +695,12 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "afn ";
   if (MI.getFlag(MachineInstr::FmReassoc))
     OS << "reassoc ";
+  if (MI.getFlag(MachineInstr::NoUWrap))
+    OS << "nuw ";
+  if (MI.getFlag(MachineInstr::NoSWrap))
+    OS << "nsw ";
+  if (MI.getFlag(MachineInstr::IsExact))
+    OS << "exact ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)

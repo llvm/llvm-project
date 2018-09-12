@@ -38,6 +38,12 @@ elseif( CMAKE_HOST_UNIX )
   endif()
 endif( MSVC OR MINGW )
 
+# Delay load shell32.dll if possible to speed up process startup.
+set (delayload_flags)
+if (MSVC)
+  set (delayload_flags delayimp -delayload:shell32.dll -delayload:ole32.dll)
+endif()
+
 add_llvm_library(LLVMSupport
   AMDGPUMetadata.cpp
   APFloat.cpp
@@ -164,7 +170,7 @@ add_llvm_library(LLVMSupport
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ADT
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Support
   ${Backtrace_INCLUDE_DIRS}
-  LINK_LIBS ${system_libs}
+  LINK_LIBS ${system_libs} ${delayload_flags}
   )
 
 set_property(TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS "${system_libs}")

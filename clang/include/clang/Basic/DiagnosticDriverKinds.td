@@ -151,9 +151,6 @@ def warn_drv_unknown_argument_clang_cl_with_suggestion : Warning<
   "unknown argument ignored in clang-cl '%0' (did you mean '%1'?)">,
   InGroup<UnknownArgument>;
 
-def warn_drv_ycyu_no_arg_clang_cl : Warning<
-  "support for '%0' without a filename not implemented yet; flag ignored">,
-  InGroup<ClangClPch>;
 def warn_drv_ycyu_different_arg_clang_cl : Warning<
   "support for '/Yc' and '/Yu' with different filenames not implemented yet; flags ignored">,
   InGroup<ClangClPch>;
