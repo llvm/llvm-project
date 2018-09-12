@@ -76,6 +76,9 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   if (launch_info.GetFlags().Test(eLaunchFlagDebug))
     flags |= DEBUG_ONLY_THIS_PROCESS;
 
+  if (launch_info.GetFlags().Test(eLaunchFlagDisableSTDIO))
+    flags &= ~CREATE_NEW_CONSOLE;
+
   LPVOID env_block = nullptr;
   ::CreateEnvironmentBuffer(launch_info.GetEnvironment(), environment);
   if (!environment.empty())
