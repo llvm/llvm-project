@@ -10496,7 +10496,8 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
                                            OldDecl->getTemplateParameters(),
                                            /*Complain=*/true,
                                            TPL_TemplateMatch))
-          OldTemplateParams = OldDecl->getTemplateParameters();
+          OldTemplateParams =
+              OldDecl->getMostRecentDecl()->getTemplateParameters();
         else
           Invalid = true;
 

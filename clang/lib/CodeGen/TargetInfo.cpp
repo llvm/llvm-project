@@ -5549,6 +5549,9 @@ public:
 private:
   ABIArgInfo classifyReturnType(QualType RetTy, bool isVariadic) const;
   ABIArgInfo classifyArgumentType(QualType RetTy, bool isVariadic) const;
+  ABIArgInfo classifyHomogeneousAggregate(QualType Ty, const Type *Base,
+                                          uint64_t Members) const;
+  ABIArgInfo coerceIllegalVector(QualType Ty) const;
   bool isIllegalVectorType(QualType Ty) const;
 
   bool isHomogeneousAggregateBaseType(QualType Ty) const override;
@@ -5723,6 +5726,41 @@ void ARMABIInfo::setCCs() {
     RuntimeCC = abiCC;
 }
 
+ABIArgInfo ARMABIInfo::coerceIllegalVector(QualType Ty) const {
+  uint64_t Size = getContext().getTypeSize(Ty);
+  if (Size <= 32) {
+    llvm::Type *ResType =
+        llvm::Type::getInt32Ty(getVMContext());
+    return ABIArgInfo::getDirect(ResType);
+  }
+  if (Size == 64 || Size == 128) {
+    llvm::Type *ResType = llvm::VectorType::get(
+        llvm::Type::getInt32Ty(getVMContext()), Size / 32);
+    return ABIArgInfo::getDirect(ResType);
+  }
+  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+}
+
+ABIArgInfo ARMABIInfo::classifyHomogeneousAggregate(QualType Ty,
+                                                    const Type *Base,
+                                                    uint64_t Members) const {
+  assert(Base && "Base class should be set for homogeneous aggregate");
+  // Base can be a floating-point or a vector.
+  if (const VectorType *VT = Base->getAs<VectorType>()) {
+    // FP16 vectors should be converted to integer vectors
+    if (!getTarget().hasLegalHalfType() &&
+        (VT->getElementType()->isFloat16Type() ||
+          VT->getElementType()->isHalfType())) {
+      uint64_t Size = getContext().getTypeSize(VT);
+      llvm::Type *NewVecTy = llvm::VectorType::get(
+          llvm::Type::getInt32Ty(getVMContext()), Size / 32);
+      llvm::Type *Ty = llvm::ArrayType::get(NewVecTy, Members);
+      return ABIArgInfo::getDirect(Ty, 0, nullptr, false);
+    }
+  }
+  return ABIArgInfo::getDirect(nullptr, 0, nullptr, false);
+}
+
 ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty,
                                             bool isVariadic) const {
   // 6.1.2.1 The following argument types are VFP CPRCs:
@@ -5737,25 +5775,8 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty,
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
   // Handle illegal vector types here.
-  if (isIllegalVectorType(Ty)) {
-    uint64_t Size = getContext().getTypeSize(Ty);
-    if (Size <= 32) {
-      llvm::Type *ResType =
-          llvm::Type::getInt32Ty(getVMContext());
-      return ABIArgInfo::getDirect(ResType);
-    }
-    if (Size == 64) {
-      llvm::Type *ResType = llvm::VectorType::get(
-          llvm::Type::getInt32Ty(getVMContext()), 2);
-      return ABIArgInfo::getDirect(ResType);
-    }
-    if (Size == 128) {
-      llvm::Type *ResType = llvm::VectorType::get(
-          llvm::Type::getInt32Ty(getVMContext()), 4);
-      return ABIArgInfo::getDirect(ResType);
-    }
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
-  }
+  if (isIllegalVectorType(Ty))
+    return coerceIllegalVector(Ty);
 
   // _Float16 and __fp16 get passed as if it were an int or float, but with
   // the top 16 bits unspecified. This is not done for OpenCL as it handles the
@@ -5791,11 +5812,8 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty,
     // into VFP registers.
     const Type *Base = nullptr;
     uint64_t Members = 0;
-    if (isHomogeneousAggregate(Ty, Base, Members)) {
-      assert(Base && "Base class should be set for homogeneous aggregate");
-      // Base can be a floating-point or a vector.
-      return ABIArgInfo::getDirect(nullptr, 0, nullptr, false);
-    }
+    if (isHomogeneousAggregate(Ty, Base, Members))
+      return classifyHomogeneousAggregate(Ty, Base, Members);
   } else if (getABIKind() == ARMABIInfo::AAPCS16_VFP) {
     // WatchOS does have homogeneous aggregates. Note that we intentionally use
     // this convention even for a variadic function: the backend will use GPRs
@@ -5954,9 +5972,15 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy,
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
 
-  // Large vector types should be returned via memory.
-  if (RetTy->isVectorType() && getContext().getTypeSize(RetTy) > 128) {
-    return getNaturalAlignIndirect(RetTy);
+  if (const VectorType *VT = RetTy->getAs<VectorType>()) {
+    // Large vector types should be returned via memory.
+    if (getContext().getTypeSize(RetTy) > 128)
+      return getNaturalAlignIndirect(RetTy);
+    // FP16 vectors should be converted to integer vectors
+    if (!getTarget().hasLegalHalfType() &&
+        (VT->getElementType()->isFloat16Type() ||
+         VT->getElementType()->isHalfType()))
+      return coerceIllegalVector(RetTy);
   }
 
   // _Float16 and __fp16 get returned as if it were an int or float, but with
@@ -6016,11 +6040,8 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy,
   if (IsEffectivelyAAPCS_VFP) {
     const Type *Base = nullptr;
     uint64_t Members = 0;
-    if (isHomogeneousAggregate(RetTy, Base, Members)) {
-      assert(Base && "Base class should be set for homogeneous aggregate");
-      // Homogeneous Aggregates are returned directly.
-      return ABIArgInfo::getDirect(nullptr, 0, nullptr, false);
-    }
+    if (isHomogeneousAggregate(RetTy, Base, Members))
+      return classifyHomogeneousAggregate(RetTy, Base, Members);
   }
 
   // Aggregates <= 4 bytes are returned in r0; other aggregates
@@ -6055,6 +6076,13 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy,
 /// isIllegalVector - check whether Ty is an illegal vector type.
 bool ARMABIInfo::isIllegalVectorType(QualType Ty) const {
   if (const VectorType *VT = Ty->getAs<VectorType> ()) {
+    // On targets that don't support FP16, FP16 is expanded into float, and we
+    // don't want the ABI to depend on whether or not FP16 is supported in
+    // hardware. Thus return false to coerce FP16 vectors into integer vectors.
+    if (!getTarget().hasLegalHalfType() &&
+        (VT->getElementType()->isFloat16Type() ||
+         VT->getElementType()->isHalfType()))
+      return true;
     if (isAndroid()) {
       // Android shipped using Clang 3.1, which supported a slightly different
       // vector ABI. The primary differences were that 3-element vector types

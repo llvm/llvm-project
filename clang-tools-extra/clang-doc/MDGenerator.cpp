@@ -32,6 +32,7 @@ std::string getAccess(AccessSpecifier AS) {
   case AccessSpecifier::AS_none:
     return {};
   }
+  llvm_unreachable("Unknown AccessSpecifier");
 }
 
 std::string getTagType(TagTypeKind AS) {
@@ -47,6 +48,7 @@ std::string getTagType(TagTypeKind AS) {
   case TagTypeKind::TTK_Enum:
     return "enum";
   }
+  llvm_unreachable("Unknown TagTypeKind");
 }
 
 // Markdown generation

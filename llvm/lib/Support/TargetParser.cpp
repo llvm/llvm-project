@@ -17,7 +17,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include <cctype>
 
 using namespace llvm;
@@ -1094,93 +1093,6 @@ void AMDGPU::fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values) {
 void AMDGPU::fillValidArchListR600(SmallVectorImpl<StringRef> &Values) {
   for (const auto C : R600GPUs)
     Values.push_back(C.Name);
-}
-
-StringRef AMDGPU::getArchNameFromElfMach(unsigned ElfMach) {
-  AMDGPU::GPUKind AK;
-
-  switch (ElfMach) {
-  case ELF::EF_AMDGPU_MACH_R600_R600:     AK = GK_R600;    break;
-  case ELF::EF_AMDGPU_MACH_R600_R630:     AK = GK_R630;    break;
-  case ELF::EF_AMDGPU_MACH_R600_RS880:    AK = GK_RS880;   break;
-  case ELF::EF_AMDGPU_MACH_R600_RV670:    AK = GK_RV670;   break;
-  case ELF::EF_AMDGPU_MACH_R600_RV710:    AK = GK_RV710;   break;
-  case ELF::EF_AMDGPU_MACH_R600_RV730:    AK = GK_RV730;   break;
-  case ELF::EF_AMDGPU_MACH_R600_RV770:    AK = GK_RV770;   break;
-  case ELF::EF_AMDGPU_MACH_R600_CEDAR:    AK = GK_CEDAR;   break;
-  case ELF::EF_AMDGPU_MACH_R600_CYPRESS:  AK = GK_CYPRESS; break;
-  case ELF::EF_AMDGPU_MACH_R600_JUNIPER:  AK = GK_JUNIPER; break;
-  case ELF::EF_AMDGPU_MACH_R600_REDWOOD:  AK = GK_REDWOOD; break;
-  case ELF::EF_AMDGPU_MACH_R600_SUMO:     AK = GK_SUMO;    break;
-  case ELF::EF_AMDGPU_MACH_R600_BARTS:    AK = GK_BARTS;   break;
-  case ELF::EF_AMDGPU_MACH_R600_CAICOS:   AK = GK_CAICOS;  break;
-  case ELF::EF_AMDGPU_MACH_R600_CAYMAN:   AK = GK_CAYMAN;  break;
-  case ELF::EF_AMDGPU_MACH_R600_TURKS:    AK = GK_TURKS;   break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX600: AK = GK_GFX600;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX601: AK = GK_GFX601;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX700: AK = GK_GFX700;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX701: AK = GK_GFX701;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX702: AK = GK_GFX702;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX703: AK = GK_GFX703;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX704: AK = GK_GFX704;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX801: AK = GK_GFX801;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX802: AK = GK_GFX802;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX803: AK = GK_GFX803;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX810: AK = GK_GFX810;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX900: AK = GK_GFX900;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX902: AK = GK_GFX902;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX904: AK = GK_GFX904;  break;
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX906: AK = GK_GFX906;  break;
-  case ELF::EF_AMDGPU_MACH_NONE:          AK = GK_NONE;    break;
-  }
-
-  StringRef GPUName = getArchNameAMDGCN(AK);
-  if (GPUName != "")
-    return GPUName;
-  return getArchNameR600(AK);
-}
-
-unsigned AMDGPU::getElfMach(StringRef GPU) {
-  AMDGPU::GPUKind AK = parseArchAMDGCN(GPU);
-  if (AK == AMDGPU::GPUKind::GK_NONE)
-    AK = parseArchR600(GPU);
-
-  switch (AK) {
-  case GK_R600:    return ELF::EF_AMDGPU_MACH_R600_R600;
-  case GK_R630:    return ELF::EF_AMDGPU_MACH_R600_R630;
-  case GK_RS880:   return ELF::EF_AMDGPU_MACH_R600_RS880;
-  case GK_RV670:   return ELF::EF_AMDGPU_MACH_R600_RV670;
-  case GK_RV710:   return ELF::EF_AMDGPU_MACH_R600_RV710;
-  case GK_RV730:   return ELF::EF_AMDGPU_MACH_R600_RV730;
-  case GK_RV770:   return ELF::EF_AMDGPU_MACH_R600_RV770;
-  case GK_CEDAR:   return ELF::EF_AMDGPU_MACH_R600_CEDAR;
-  case GK_CYPRESS: return ELF::EF_AMDGPU_MACH_R600_CYPRESS;
-  case GK_JUNIPER: return ELF::EF_AMDGPU_MACH_R600_JUNIPER;
-  case GK_REDWOOD: return ELF::EF_AMDGPU_MACH_R600_REDWOOD;
-  case GK_SUMO:    return ELF::EF_AMDGPU_MACH_R600_SUMO;
-  case GK_BARTS:   return ELF::EF_AMDGPU_MACH_R600_BARTS;
-  case GK_CAICOS:  return ELF::EF_AMDGPU_MACH_R600_CAICOS;
-  case GK_CAYMAN:  return ELF::EF_AMDGPU_MACH_R600_CAYMAN;
-  case GK_TURKS:   return ELF::EF_AMDGPU_MACH_R600_TURKS;
-  case GK_GFX600:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX600;
-  case GK_GFX601:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX601;
-  case GK_GFX700:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX700;
-  case GK_GFX701:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX701;
-  case GK_GFX702:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX702;
-  case GK_GFX703:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX703;
-  case GK_GFX704:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX704;
-  case GK_GFX801:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX801;
-  case GK_GFX802:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX802;
-  case GK_GFX803:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX803;
-  case GK_GFX810:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX810;
-  case GK_GFX900:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX900;
-  case GK_GFX902:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX902;
-  case GK_GFX904:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX904;
-  case GK_GFX906:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX906;
-  case GK_NONE:    return ELF::EF_AMDGPU_MACH_NONE;
-  }
-
-  llvm_unreachable("unknown GPU");
 }
 
 AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {

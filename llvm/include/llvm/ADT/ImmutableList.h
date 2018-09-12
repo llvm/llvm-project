@@ -94,6 +94,9 @@ public:
     bool operator==(const iterator& I) const { return L == I.L; }
     bool operator!=(const iterator& I) const { return L != I.L; }
     const value_type& operator*() const { return L->getHead(); }
+    const typename std::remove_reference<value_type>::type* operator->() const {
+      return &L->getHead();
+    }
 
     ImmutableList getList() const { return L; }
   };
@@ -127,14 +130,14 @@ public:
   bool operator==(const ImmutableList& L) const { return isEqual(L); }
 
   /// getHead - Returns the head of the list.
-  const T& getHead() {
+  const T& getHead() const {
     assert(!isEmpty() && "Cannot get the head of an empty list.");
     return X->getHead();
   }
 
   /// getTail - Returns the tail of the list, which is another (possibly empty)
   ///  ImmutableList.
-  ImmutableList getTail() {
+  ImmutableList getTail() const {
     return X ? X->getTail() : nullptr;
   }
 

@@ -449,37 +449,51 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   }
 
   unsigned NewOpc;
-  bool NewIsUnscaled = false;
+  int Scale = 1;
   switch (MBBI->getOpcode()) {
   default:
     llvm_unreachable("Unexpected callee-save save/restore opcode!");
   case AArch64::STPXi:
     NewOpc = AArch64::STPXpre;
+    Scale = 8;
     break;
   case AArch64::STPDi:
     NewOpc = AArch64::STPDpre;
+    Scale = 8;
+    break;
+  case AArch64::STPQi:
+    NewOpc = AArch64::STPQpre;
+    Scale = 16;
     break;
   case AArch64::STRXui:
     NewOpc = AArch64::STRXpre;
-    NewIsUnscaled = true;
     break;
   case AArch64::STRDui:
     NewOpc = AArch64::STRDpre;
-    NewIsUnscaled = true;
+    break;
+  case AArch64::STRQui:
+    NewOpc = AArch64::STRQpre;
     break;
   case AArch64::LDPXi:
     NewOpc = AArch64::LDPXpost;
+    Scale = 8;
     break;
   case AArch64::LDPDi:
     NewOpc = AArch64::LDPDpost;
+    Scale = 8;
+    break;
+  case AArch64::LDPQi:
+    NewOpc = AArch64::LDPQpost;
+    Scale = 16;
     break;
   case AArch64::LDRXui:
     NewOpc = AArch64::LDRXpost;
-    NewIsUnscaled = true;
     break;
   case AArch64::LDRDui:
     NewOpc = AArch64::LDRDpost;
-    NewIsUnscaled = true;
+    break;
+  case AArch64::LDRQui:
+    NewOpc = AArch64::LDRQpost;
     break;
   }
 
@@ -497,12 +511,8 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
          "instruction!");
   assert(MBBI->getOperand(OpndIdx - 1).getReg() == AArch64::SP &&
          "Unexpected base register in callee-save save/restore instruction!");
-  // Last operand is immediate offset that needs fixing.
-  assert(CSStackSizeInc % 8 == 0);
-  int64_t CSStackSizeIncImm = CSStackSizeInc;
-  if (!NewIsUnscaled)
-    CSStackSizeIncImm /= 8;
-  MIB.addImm(CSStackSizeIncImm);
+  assert(CSStackSizeInc % Scale == 0);
+  MIB.addImm(CSStackSizeInc / Scale);
 
   MIB.setMIFlags(MBBI->getFlags());
   MIB.setMemRefs(MBBI->memoperands());
@@ -523,12 +533,27 @@ static void fixupCalleeSaveRestoreStackOffset(MachineInstr &MI,
     return;
   }
 
-  (void)Opc;
-  assert((Opc == AArch64::STPXi || Opc == AArch64::STPDi ||
-          Opc == AArch64::STRXui || Opc == AArch64::STRDui ||
-          Opc == AArch64::LDPXi || Opc == AArch64::LDPDi ||
-          Opc == AArch64::LDRXui || Opc == AArch64::LDRDui) &&
-         "Unexpected callee-save save/restore opcode!");
+  unsigned Scale;
+  switch (Opc) {
+  case AArch64::STPXi:
+  case AArch64::STRXui:
+  case AArch64::STPDi:
+  case AArch64::STRDui:
+  case AArch64::LDPXi:
+  case AArch64::LDRXui:
+  case AArch64::LDPDi:
+  case AArch64::LDRDui:
+    Scale = 8;
+    break;
+  case AArch64::STPQi:
+  case AArch64::STRQui:
+  case AArch64::LDPQi:
+  case AArch64::LDRQui:
+    Scale = 16;
+    break;
+  default:
+    llvm_unreachable("Unexpected callee-save save/restore opcode!");
+  }
 
   unsigned OffsetIdx = MI.getNumExplicitOperands() - 1;
   assert(MI.getOperand(OffsetIdx - 1).getReg() == AArch64::SP &&
@@ -536,8 +561,8 @@ static void fixupCalleeSaveRestoreStackOffset(MachineInstr &MI,
   // Last operand is immediate offset that needs fixing.
   MachineOperand &OffsetOpnd = MI.getOperand(OffsetIdx);
   // All generated opcodes have scaled offsets.
-  assert(LocalStackSize % 8 == 0);
-  OffsetOpnd.setImm(OffsetOpnd.getImm() + LocalStackSize / 8);
+  assert(LocalStackSize % Scale == 0);
+  OffsetOpnd.setImm(OffsetOpnd.getImm() + LocalStackSize / Scale);
 }
 
 static void adaptForLdStOpt(MachineBasicBlock &MBB,
@@ -1203,7 +1228,7 @@ struct RegPairInfo {
   unsigned Reg2 = AArch64::NoRegister;
   int FrameIdx;
   int Offset;
-  bool IsGPR;
+  enum RegType { GPR, FPR64, FPR128 } Type;
 
   RegPairInfo() = default;
 
@@ -1237,16 +1262,32 @@ static void computeCalleeSaveRegisterPairs(
     RegPairInfo RPI;
     RPI.Reg1 = CSI[i].getReg();
 
-    assert(AArch64::GPR64RegClass.contains(RPI.Reg1) ||
-           AArch64::FPR64RegClass.contains(RPI.Reg1));
-    RPI.IsGPR = AArch64::GPR64RegClass.contains(RPI.Reg1);
+    if (AArch64::GPR64RegClass.contains(RPI.Reg1))
+      RPI.Type = RegPairInfo::GPR;
+    else if (AArch64::FPR64RegClass.contains(RPI.Reg1))
+      RPI.Type = RegPairInfo::FPR64;
+    else if (AArch64::FPR128RegClass.contains(RPI.Reg1))
+      RPI.Type = RegPairInfo::FPR128;
+    else
+      llvm_unreachable("Unsupported register class.");
 
     // Add the next reg to the pair if it is in the same register class.
     if (i + 1 < Count) {
       unsigned NextReg = CSI[i + 1].getReg();
-      if ((RPI.IsGPR && AArch64::GPR64RegClass.contains(NextReg)) ||
-          (!RPI.IsGPR && AArch64::FPR64RegClass.contains(NextReg)))
-        RPI.Reg2 = NextReg;
+      switch (RPI.Type) {
+      case RegPairInfo::GPR:
+        if (AArch64::GPR64RegClass.contains(NextReg))
+          RPI.Reg2 = NextReg;
+        break;
+      case RegPairInfo::FPR64:
+        if (AArch64::FPR64RegClass.contains(NextReg))
+          RPI.Reg2 = NextReg;
+        break;
+      case RegPairInfo::FPR128:
+        if (AArch64::FPR128RegClass.contains(NextReg))
+          RPI.Reg2 = NextReg;
+        break;
+      }
     }
 
     // If either of the registers to be saved is the lr register, it means that
@@ -1279,17 +1320,21 @@ static void computeCalleeSaveRegisterPairs(
 
     RPI.FrameIdx = CSI[i].getFrameIdx();
 
-    if (Count * 8 != AFI->getCalleeSavedStackSize() && !RPI.isPaired()) {
-      // Round up size of non-pair to pair size if we need to pad the
-      // callee-save area to ensure 16-byte alignment.
-      Offset -= 16;
+    int Scale = RPI.Type == RegPairInfo::FPR128 ? 16 : 8;
+    Offset -= RPI.isPaired() ? 2 * Scale : Scale;
+
+    // Round up size of non-pair to pair size if we need to pad the
+    // callee-save area to ensure 16-byte alignment.
+    if (AFI->hasCalleeSaveStackFreeSpace() &&
+        RPI.Type != RegPairInfo::FPR128 && !RPI.isPaired()) {
+      Offset -= 8;
+      assert(Offset % 16 == 0);
       assert(MFI.getObjectAlignment(RPI.FrameIdx) <= 16);
       MFI.setObjectAlignment(RPI.FrameIdx, 16);
-      AFI->setCalleeSaveStackHasFreeSpace(true);
-    } else
-      Offset -= RPI.isPaired() ? 16 : 8;
-    assert(Offset % 8 == 0);
-    RPI.Offset = Offset / 8;
+    }
+
+    assert(Offset % Scale == 0);
+    RPI.Offset = Offset / Scale;
     assert((RPI.Offset >= -64 && RPI.Offset <= 63) &&
            "Offset out of bounds for LDP/STP immediate");
 
@@ -1343,10 +1388,24 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     // Rationale: This sequence saves uop updates compared to a sequence of
     // pre-increment spills like stp xi,xj,[sp,#-16]!
     // Note: Similar rationale and sequence for restores in epilog.
-    if (RPI.IsGPR)
-      StrOpc = RPI.isPaired() ? AArch64::STPXi : AArch64::STRXui;
-    else
-      StrOpc = RPI.isPaired() ? AArch64::STPDi : AArch64::STRDui;
+    unsigned Size, Align;
+    switch (RPI.Type) {
+    case RegPairInfo::GPR:
+       StrOpc = RPI.isPaired() ? AArch64::STPXi : AArch64::STRXui;
+       Size = 8;
+       Align = 8;
+       break;
+    case RegPairInfo::FPR64:
+       StrOpc = RPI.isPaired() ? AArch64::STPDi : AArch64::STRDui;
+       Size = 8;
+       Align = 8;
+       break;
+    case RegPairInfo::FPR128:
+       StrOpc = RPI.isPaired() ? AArch64::STPQi : AArch64::STRQui;
+       Size = 16;
+       Align = 16;
+       break;
+    }
     LLVM_DEBUG(dbgs() << "CSR spill: (" << printReg(Reg1, TRI);
                if (RPI.isPaired()) dbgs() << ", " << printReg(Reg2, TRI);
                dbgs() << ") -> fi#(" << RPI.FrameIdx;
@@ -1362,15 +1421,16 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       MIB.addReg(Reg2, getPrologueDeath(MF, Reg2));
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, RPI.FrameIdx + 1),
-          MachineMemOperand::MOStore, 8, 8));
+          MachineMemOperand::MOStore, Size, Align));
     }
     MIB.addReg(Reg1, getPrologueDeath(MF, Reg1))
         .addReg(AArch64::SP)
-        .addImm(RPI.Offset) // [sp, #offset*8], where factor*8 is implicit
+        .addImm(RPI.Offset) // [sp, #offset*scale],
+                            // where factor*scale is implicit
         .setMIFlag(MachineInstr::FrameSetup);
     MIB.addMemOperand(MF.getMachineMemOperand(
         MachinePointerInfo::getFixedStack(MF, RPI.FrameIdx),
-        MachineMemOperand::MOStore, 8, 8));
+        MachineMemOperand::MOStore, Size, Align));
   }
   return true;
 }
@@ -1404,10 +1464,24 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     //    ldp     x22, x21, [sp, #0]      // addImm(+0)
     // Note: see comment in spillCalleeSavedRegisters()
     unsigned LdrOpc;
-    if (RPI.IsGPR)
-      LdrOpc = RPI.isPaired() ? AArch64::LDPXi : AArch64::LDRXui;
-    else
-      LdrOpc = RPI.isPaired() ? AArch64::LDPDi : AArch64::LDRDui;
+    unsigned Size, Align;
+    switch (RPI.Type) {
+    case RegPairInfo::GPR:
+       LdrOpc = RPI.isPaired() ? AArch64::LDPXi : AArch64::LDRXui;
+       Size = 8;
+       Align = 8;
+       break;
+    case RegPairInfo::FPR64:
+       LdrOpc = RPI.isPaired() ? AArch64::LDPDi : AArch64::LDRDui;
+       Size = 8;
+       Align = 8;
+       break;
+    case RegPairInfo::FPR128:
+       LdrOpc = RPI.isPaired() ? AArch64::LDPQi : AArch64::LDRQui;
+       Size = 16;
+       Align = 16;
+       break;
+    }
     LLVM_DEBUG(dbgs() << "CSR restore: (" << printReg(Reg1, TRI);
                if (RPI.isPaired()) dbgs() << ", " << printReg(Reg2, TRI);
                dbgs() << ") -> fi#(" << RPI.FrameIdx;
@@ -1419,15 +1493,16 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       MIB.addReg(Reg2, getDefRegState(true));
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, RPI.FrameIdx + 1),
-          MachineMemOperand::MOLoad, 8, 8));
+          MachineMemOperand::MOLoad, Size, Align));
     }
     MIB.addReg(Reg1, getDefRegState(true))
         .addReg(AArch64::SP)
-        .addImm(RPI.Offset) // [sp, #offset*8] where the factor*8 is implicit
+        .addImm(RPI.Offset) // [sp, #offset*scale]
+                            // where factor*scale is implicit
         .setMIFlag(MachineInstr::FrameDestroy);
     MIB.addMemOperand(MF.getMachineMemOperand(
         MachinePointerInfo::getFixedStack(MF, RPI.FrameIdx),
-        MachineMemOperand::MOLoad, 8, 8));
+        MachineMemOperand::MOLoad, Size, Align));
   };
 
   if (ReverseCSRRestoreSeq)
@@ -1472,24 +1547,6 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
                                 ? RegInfo->getBaseRegister()
                                 : (unsigned)AArch64::NoRegister;
 
-  unsigned SpillEstimate = SavedRegs.count();
-  for (unsigned i = 0; CSRegs[i]; ++i) {
-    unsigned Reg = CSRegs[i];
-    unsigned PairedReg = CSRegs[i ^ 1];
-    if (Reg == BasePointerReg)
-      SpillEstimate++;
-    if (produceCompactUnwindFrame(MF) && !SavedRegs.test(PairedReg))
-      SpillEstimate++;
-  }
-  SpillEstimate += 2; // Conservatively include FP+LR in the estimate
-  unsigned StackEstimate = MFI.estimateStackSize(MF) + 8 * SpillEstimate;
-
-  // The frame record needs to be created by saving the appropriate registers
-  if (hasFP(MF) || windowsRequiresStackProbe(MF, StackEstimate)) {
-    SavedRegs.set(AArch64::FP);
-    SavedRegs.set(AArch64::LR);
-  }
-
   unsigned ExtraCSSpill = 0;
   // Figure out which callee-saved registers to save/restore.
   for (unsigned i = 0; CSRegs[i]; ++i) {
@@ -1513,12 +1570,31 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     // MachO's compact unwind format relies on all registers being stored in
     // pairs.
     // FIXME: the usual format is actually better if unwinding isn't needed.
-    if (produceCompactUnwindFrame(MF) && !SavedRegs.test(PairedReg)) {
+    if (produceCompactUnwindFrame(MF) && PairedReg != AArch64::NoRegister &&
+        !SavedRegs.test(PairedReg)) {
       SavedRegs.set(PairedReg);
       if (AArch64::GPR64RegClass.contains(PairedReg) &&
           !RegInfo->isReservedReg(MF, PairedReg))
         ExtraCSSpill = PairedReg;
     }
+  }
+
+  // Calculates the callee saved stack size.
+  unsigned CSStackSize = 0;
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  for (unsigned Reg : SavedRegs.set_bits())
+    CSStackSize += TRI->getRegSizeInBits(Reg, MRI) / 8;
+
+  // Save number of saved regs, so we can easily update CSStackSize later.
+  unsigned NumSavedRegs = SavedRegs.count();
+
+  // The frame record needs to be created by saving the appropriate registers
+  unsigned EstimatedStackSize = MFI.estimateStackSize(MF);
+  if (hasFP(MF) ||
+      windowsRequiresStackProbe(MF, EstimatedStackSize + CSStackSize + 16)) {
+    SavedRegs.set(AArch64::FP);
+    SavedRegs.set(AArch64::LR);
   }
 
   LLVM_DEBUG(dbgs() << "*** determineCalleeSaves\nUsed CSRs:";
@@ -1528,15 +1604,12 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
              dbgs() << "\n";);
 
   // If any callee-saved registers are used, the frame cannot be eliminated.
-  unsigned NumRegsSpilled = SavedRegs.count();
-  bool CanEliminateFrame = NumRegsSpilled == 0;
+  bool CanEliminateFrame = SavedRegs.count() == 0;
 
   // The CSR spill slots have not been allocated yet, so estimateStackSize
   // won't include them.
-  unsigned CFSize = MFI.estimateStackSize(MF) + 8 * NumRegsSpilled;
-  LLVM_DEBUG(dbgs() << "Estimated stack frame size: " << CFSize << " bytes.\n");
   unsigned EstimatedStackSizeLimit = estimateRSStackSizeLimit(MF);
-  bool BigStack = (CFSize > EstimatedStackSizeLimit);
+  bool BigStack = (EstimatedStackSize + CSStackSize) > EstimatedStackSizeLimit;
   if (BigStack || !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF))
     AFI->setHasStackFrame(true);
 
@@ -1557,7 +1630,6 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       if (produceCompactUnwindFrame(MF))
         SavedRegs.set(UnspilledCSGPRPaired);
       ExtraCSSpill = UnspilledCSGPRPaired;
-      NumRegsSpilled = SavedRegs.count();
     }
 
     // If we didn't find an extra callee-saved register to spill, create
@@ -1574,9 +1646,17 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     }
   }
 
+  // Adding the size of additional 64bit GPR saves.
+  CSStackSize += 8 * (SavedRegs.count() - NumSavedRegs);
+  unsigned AlignedCSStackSize = alignTo(CSStackSize, 16);
+  LLVM_DEBUG(dbgs() << "Estimated stack frame size: "
+               << EstimatedStackSize + AlignedCSStackSize
+               << " bytes.\n");
+
   // Round up to register pair alignment to avoid additional SP adjustment
   // instructions.
-  AFI->setCalleeSavedStackSize(alignTo(8 * NumRegsSpilled, 16));
+  AFI->setCalleeSavedStackSize(AlignedCSStackSize);
+  AFI->setCalleeSaveStackHasFreeSpace(AlignedCSStackSize != CSStackSize);
 }
 
 bool AArch64FrameLowering::enableStackSlotScavenging(

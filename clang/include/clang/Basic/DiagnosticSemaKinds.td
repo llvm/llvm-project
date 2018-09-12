@@ -774,7 +774,7 @@ def warn_pragma_pack_non_default_at_include : Warning<
   "members in the included file">, InGroup<PragmaPackSuspiciousInclude>,
   DefaultIgnore;
 def warn_pragma_pack_modified_after_include : Warning<
-  "the current #pragma pack aligment value is modified in the included "
+  "the current #pragma pack alignment value is modified in the included "
   "file">, InGroup<PragmaPack>;
 def warn_pragma_pack_no_pop_eof : Warning<"unterminated "
   "'#pragma pack (push, ...)' at end of file">, InGroup<PragmaPack>;

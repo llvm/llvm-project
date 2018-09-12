@@ -1,0 +1,253 @@
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass=prologepilog %s -o - | FileCheck %s
+
+# The tests below test the allocation of 128bit callee-saves
+# on the stack, specifically their offsets.
+
+# Padding of GPR64-registers is needed to ensure 16 byte alignment of
+# the stack pointer after the GPR64/FPR64 block (which is also needed
+# for the FPR128 saves when present).
+
+# This file also tests whether an emergency stack slot is allocated
+# when the stack frame is over a given size, caused by a series of
+# FPR128 saves. The alignment can leave a gap that can be scavenged
+# for stack slot scavenging, so it is important that the stack size
+# is properly estimated.
+
+
+--- |
+
+  ; ModuleID = '<stdin>'
+  source_filename = "<stdin>"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+
+  ; Function Attrs: nounwind
+  define aarch64_vector_pcs void @test_q10_q11_x19() nounwind { entry: unreachable }
+
+  ; Function Attrs: nounwind
+  define aarch64_vector_pcs void @test_q10_q11_x19_x20() nounwind { entry: unreachable }
+
+  ; Function Attrs: nounwind
+  define aarch64_vector_pcs void @test_q10_q11_x19_x20_x21() nounwind { entry: unreachable }
+
+  ; Function Attrs: nounwind
+  define aarch64_vector_pcs void @test_q8_to_q23_x19_to_x30() nounwind { entry: unreachable }
+
+  ; Function Attrs: nounwind
+  define aarch64_vector_pcs void @test_q8_to_q23_x19_to_x30_preinc() nounwind { entry: unreachable }
+
+...
+---
+name:            test_q10_q11_x19
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+  $x19 = IMPLICIT_DEF
+  $q10 = IMPLICIT_DEF
+  $q11 = IMPLICIT_DEF
+
+  ; Check that the alignment gap for the 8-byte x19 is padded
+  ; with another 8 bytes. The CSR region will look like this:
+  ;    +-------------------+
+  ;    |/////padding///////|        (8 bytes)
+  ;    |       X19         |        (8 bytes)
+  ;    +-------------------+ <-  SP -16
+  ;    |     Q10, Q11      |        (32 bytes)
+  ;    +-------------------+ <-  SP -48
+
+  ; CHECK-LABEL: test_q10_q11_x19{{[[:space:]]}}
+  ; CHECK-DAG: $sp = frame-setup STPQpre killed $q11, killed $q10, $sp, -3 :: (store 16 into %stack.[[Q11:[0-9]+]]), (store 16 into %stack.[[Q10:[0-9]+]])
+  ; CHECK-DAG: - { id: [[Q11]], {{.*}}, offset: -48, size: 16, alignment: 16
+  ; CHECK-DAG: - { id: [[Q10]], {{.*}}, offset: -32, size: 16, alignment: 16
+  ; CHECK-DAG: frame-setup STRXui killed $x19, $sp, 4 :: (store 8 into %stack.[[X19:[0-9]+]])
+  ; CHECK-DAG: - { id: [[X19]], {{.*}}, offset: -16, size: 8, alignment: 16
+
+...
+---
+name:            test_q10_q11_x19_x20
+alignment:       2
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+  $x19 = IMPLICIT_DEF
+  $x20 = IMPLICIT_DEF
+  $q10 = IMPLICIT_DEF
+  $q11 = IMPLICIT_DEF
+
+  ;    +-------------------+
+  ;    |     X19, X20      |        (16 bytes)
+  ;    +-------------------+ <-  SP -16
+  ;    |     Q10, Q11      |        (32 bytes)
+  ;    +-------------------+ <-  SP -48
+
+  ; CHECK-LABEL: test_q10_q11_x19_x20{{[[:space:]]}}
+  ; CHECK-DAG: $sp = frame-setup STPQpre killed $q11, killed $q10, $sp, -3 :: (store 16 into %stack.[[Q11:[0-9]+]]), (store 16 into %stack.[[Q10:[0-9]+]])
+  ; CHECK-DAG: frame-setup STPXi killed $x20, killed $x19, $sp, 4 :: (store 8 into %stack.[[X20:[0-9]+]]), (store 8 into %stack.[[X19:[0-9]+]])
+  ; CHECK-DAG: - { id: [[Q11]], {{.*}}, offset: -48, size: 16, alignment: 16
+  ; CHECK-DAG: - { id: [[Q10]], {{.*}}, offset: -32, size: 16, alignment: 16
+  ; CHECK-DAG: - { id: [[X20]], {{.*}}, offset: -16, size: 8, alignment: 8
+  ; CHECK-DAG: - { id: [[X19]], {{.*}}, offset:  -8, size: 8, alignment: 8
+
+...
+---
+name:            test_q10_q11_x19_x20_x21
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+  $x19 = IMPLICIT_DEF
+  $x20 = IMPLICIT_DEF
+  $x21 = IMPLICIT_DEF
+  $q10 = IMPLICIT_DEF
+  $q11 = IMPLICIT_DEF
+
+  ; Check that the alignment gap is padded with another 8 bytes.
+  ; The CSR region will look like this:
+  ;    +-------------------+
+  ;    |     X19, X20      |        (16 bytes)
+  ;    +-------------------+ <-  SP -16
+  ;    |/////padding///////|        (8 bytes)
+  ;    |        X21        |        (8 bytes)
+  ;    +-------------------+ <-  SP -32
+  ;    |     Q10, Q11      |        (32 bytes)
+  ;    +-------------------+ <-  SP -64
+
+  ; CHECK-LABEL: test_q10_q11_x19_x20_x21
+  ; CHECK-DAG: $sp = frame-setup STPQpre killed $q11, killed $q10, $sp, -4 :: (store 16 into %stack.[[Q11:[0-9]+]]), (store 16 into %stack.[[Q10:[0-9]+]])
+  ; CHECK-DAG: frame-setup STRXui killed $x21, $sp, 4 :: (store 8 into %stack.[[X21:[0-9]+]])
+  ; CHECK-DAG: frame-setup STPXi killed $x20, killed $x19, $sp, 6
+  ; CHECK-DAG: - { id: [[Q11]], {{.*}}, offset: -64, size: 16, alignment: 16
+  ; CHECK-DAG: - { id: [[Q10]], {{.*}}, offset: -48, size: 16, alignment: 16
+  ; CHECK-DAG: - { id: [[X21]], {{.*}}, offset: -32, size: 8, alignment: 16
+
+...
+---
+name:            test_q8_to_q23_x19_to_x30
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+  $x19 = IMPLICIT_DEF
+  $x20 = IMPLICIT_DEF
+  $x21 = IMPLICIT_DEF
+  $x22 = IMPLICIT_DEF
+  $x23 = IMPLICIT_DEF
+  $x24 = IMPLICIT_DEF
+  $x25 = IMPLICIT_DEF
+  $x26 = IMPLICIT_DEF
+  $x27 = IMPLICIT_DEF
+  $x28 = IMPLICIT_DEF
+  $fp = IMPLICIT_DEF
+  $lr = IMPLICIT_DEF
+  $q8 = IMPLICIT_DEF
+  $q9 = IMPLICIT_DEF
+  $q10 = IMPLICIT_DEF
+  $q11 = IMPLICIT_DEF
+  $q12 = IMPLICIT_DEF
+  $q13 = IMPLICIT_DEF
+  $q14 = IMPLICIT_DEF
+  $q15 = IMPLICIT_DEF
+  $q16 = IMPLICIT_DEF
+  $q17 = IMPLICIT_DEF
+  $q18 = IMPLICIT_DEF
+  $q19 = IMPLICIT_DEF
+  $q20 = IMPLICIT_DEF
+  $q21 = IMPLICIT_DEF
+  $q22 = IMPLICIT_DEF
+  $q23 = IMPLICIT_DEF
+
+  ; Test with more callee saves, which triggers 'BigStack' in
+  ; AArch64FrameLowering which in turn causes an emergency spill
+  ; slot to be allocated. The emergency spill slot is allocated
+  ; as close as possible to SP, so at SP + 0.
+  ;    +-------------------+
+  ;    |     X19..X30      |        (96 bytes)
+  ;    +-------------------+ <-  SP -96
+  ;    |      Q8..Q23      |        (256 bytes)
+  ;    +-------------------+ <-  SP -352
+  ;    |   emergency slot  |        (16 bytes)
+  ;    +-------------------+ <-  SP -368
+
+  ; CHECK-LABEL: test_q8_to_q23_x19_to_x30
+  ; CHECK: $sp = frame-setup SUBXri $sp, 368, 0
+  ; CHECK-NEXT: frame-setup STPQi killed $q23, killed $q22, $sp, 1 :: (store 16 into %stack.{{[0-9]+}}), (store 16 into %stack.{{[0-9]+}})
+  ; CHECK-NEXT: frame-setup STPQi killed $q21, killed $q20, $sp, 3
+  ; CHECK-NEXT: frame-setup STPQi killed $q19, killed $q18, $sp, 5
+  ; CHECK-NEXT: frame-setup STPQi killed $q17, killed $q16, $sp, 7
+  ; CHECK-NEXT: frame-setup STPQi killed $q15, killed $q14, $sp, 9
+  ; CHECK-NEXT: frame-setup STPQi killed $q13, killed $q12, $sp, 11
+  ; CHECK-NEXT: frame-setup STPQi killed $q11, killed $q10, $sp, 13
+  ; CHECK-NEXT: frame-setup STPQi killed $q9, killed $q8, $sp, 15
+  ; CHECK-NEXT: frame-setup STPXi killed $x28, killed $x27, $sp, 34 :: (store 8 into %stack.{{[0-9]+}}), (store 8 into %stack.{{[0-9]+}})
+  ; CHECK-NEXT: frame-setup STPXi killed $x26, killed $x25, $sp, 36
+  ; CHECK-NEXT: frame-setup STPXi killed $x24, killed $x23, $sp, 38
+  ; CHECK-NEXT: frame-setup STPXi killed $x22, killed $x21, $sp, 40
+  ; CHECK-NEXT: frame-setup STPXi killed $x20, killed $x19, $sp, 42
+  ; CHECK-NEXT: frame-setup STPXi killed $fp, killed $lr, $sp, 44
+
+...
+---
+name:            test_q8_to_q23_x19_to_x30_preinc
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 160, alignment: 4, local-offset: 0 }
+constants:
+body:             |
+  bb.0.entry:
+  $x19 = IMPLICIT_DEF
+  $x20 = IMPLICIT_DEF
+  $x21 = IMPLICIT_DEF
+  $x22 = IMPLICIT_DEF
+  $x23 = IMPLICIT_DEF
+  $x24 = IMPLICIT_DEF
+  $x25 = IMPLICIT_DEF
+  $x26 = IMPLICIT_DEF
+  $x27 = IMPLICIT_DEF
+  $x28 = IMPLICIT_DEF
+  $fp = IMPLICIT_DEF
+  $lr = IMPLICIT_DEF
+  $q8 = IMPLICIT_DEF
+  $q9 = IMPLICIT_DEF
+  $q10 = IMPLICIT_DEF
+  $q11 = IMPLICIT_DEF
+  $q12 = IMPLICIT_DEF
+  $q13 = IMPLICIT_DEF
+  $q14 = IMPLICIT_DEF
+  $q15 = IMPLICIT_DEF
+  $q16 = IMPLICIT_DEF
+  $q17 = IMPLICIT_DEF
+  $q18 = IMPLICIT_DEF
+  $q19 = IMPLICIT_DEF
+  $q20 = IMPLICIT_DEF
+  $q21 = IMPLICIT_DEF
+  $q22 = IMPLICIT_DEF
+  $q23 = IMPLICIT_DEF
+
+  ; When the total stack size >= 512, it will use the pre-increment
+  ; rather than the 'sub sp, sp, <size>'.
+  ;    +-------------------+
+  ;    |     X19..X30      |        (96 bytes)
+  ;    +-------------------+ <-  SP -96
+  ;    |      Q8..Q23      |        (256 bytes)
+  ;    +-------------------+ <-  SP -352
+  ;    |       'obj'       |        (32 bytes)
+  ;    +-------------------+ <-  SP -384
+  ;    |   emergency slot  |        (16 bytes)
+  ;    +-------------------+ <-  SP -400
+
+  ; CHECK-LABEL: test_q8_to_q23_x19_to_x30_preinc
+  ; CHECK: $sp = frame-setup STPQpre killed $q23, killed $q22, $sp, -22 :: (store 16 into %stack.{{[0-9]+}}), (store 16 into %stack.{{[0-9]+}})
+  ; CHECK-NEXT: frame-setup STPQi killed $q21, killed $q20, $sp, 2
+  ; CHECK-NEXT: frame-setup STPQi killed $q19, killed $q18, $sp, 4
+  ; CHECK-NEXT: frame-setup STPQi killed $q17, killed $q16, $sp, 6
+  ; CHECK-NEXT: frame-setup STPQi killed $q15, killed $q14, $sp, 8
+  ; CHECK-NEXT: frame-setup STPQi killed $q13, killed $q12, $sp, 10
+  ; CHECK-NEXT: frame-setup STPQi killed $q11, killed $q10, $sp, 12
+  ; CHECK-NEXT: frame-setup STPQi killed $q9, killed $q8, $sp, 14
+  ; CHECK-NEXT: frame-setup STPXi killed $x28, killed $x27, $sp, 32 :: (store 8 into %stack.{{[0-9]+}}), (store 8 into %stack.{{[0-9]+}})
+  ; CHECK-NEXT: frame-setup STPXi killed $x26, killed $x25, $sp, 34
+  ; CHECK-NEXT: frame-setup STPXi killed $x24, killed $x23, $sp, 36
+  ; CHECK-NEXT: frame-setup STPXi killed $x22, killed $x21, $sp, 38
+  ; CHECK-NEXT: frame-setup STPXi killed $x20, killed $x19, $sp, 40
+  ; CHECK-NEXT: frame-setup STPXi killed $fp, killed $lr, $sp, 42
+  ; CHECK-NEXT: $sp = frame-setup SUBXri $sp, 176, 0
+
+...

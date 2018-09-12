@@ -46,7 +46,7 @@
 #include "lldb/Utility/Timer.h"
 #include "lldb/Utility/UUID.h"
 
-#include "lldb/Utility/SafeMachO.h"
+#include "lldb/Host/SafeMachO.h"
 
 #include "llvm/Support/MemoryBuffer.h"
 
