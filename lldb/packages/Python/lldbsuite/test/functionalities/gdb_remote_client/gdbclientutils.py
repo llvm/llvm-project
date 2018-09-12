@@ -130,6 +130,8 @@ class MockGDBServerResponder:
             return self.QEnableErrorStrings()
         if packet == "?":
             return self.haltReason()
+        if packet == "s":
+            return self.haltReason()
         if packet[0] == "H":
             return self.selectThread(packet[1], int(packet[2:], 16))
         if packet[0:6] == "qXfer:":
@@ -144,6 +146,9 @@ class MockGDBServerResponder:
             return self.vAttach(int(pid, 16))
         if packet[0] == "Z":
             return self.setBreakpoint(packet)
+        if packet.startswith("qThreadStopInfo"):
+            threadnum = int (packet[15:], 16)
+            return self.threadStopInfo(threadnum)
         return self.other(packet)
 
     def interrupt(self):
@@ -203,6 +208,9 @@ class MockGDBServerResponder:
 
     def setBreakpoint(self, packet):
         raise self.UnexpectedPacketException()
+
+    def threadStopInfo(self, threadnum):
+        return ""
 
     def other(self, packet):
         # empty string means unsupported
