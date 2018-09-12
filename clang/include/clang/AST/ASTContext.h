@@ -997,7 +997,8 @@ public:
   /// Get the additional modules in which the definition \p Def has
   /// been merged.
   ArrayRef<Module*> getModulesWithMergedDefinition(const NamedDecl *Def) {
-    auto MergedIt = MergedDefModules.find(Def);
+    auto MergedIt =
+        MergedDefModules.find(cast<NamedDecl>(Def->getCanonicalDecl()));
     if (MergedIt == MergedDefModules.end())
       return None;
     return MergedIt->second;

@@ -933,13 +933,13 @@ void ASTContext::mergeDefinitionIntoModule(NamedDecl *ND, Module *M,
       Listener->RedefinedHiddenDefinition(ND, M);
 
   if (getLangOpts().ModulesLocalVisibility)
-    MergedDefModules[ND].push_back(M);
+    MergedDefModules[cast<NamedDecl>(ND->getCanonicalDecl())].push_back(M);
   else
     ND->setVisibleDespiteOwningModule();
 }
 
 void ASTContext::deduplicateMergedDefinitonsFor(NamedDecl *ND) {
-  auto It = MergedDefModules.find(ND);
+  auto It = MergedDefModules.find(cast<NamedDecl>(ND->getCanonicalDecl()));
   if (It == MergedDefModules.end())
     return;
 

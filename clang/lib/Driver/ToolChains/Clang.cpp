@@ -1105,10 +1105,19 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       StringRef ThroughHeader = YcArg ? YcArg->getValue() : YuArg->getValue();
       if (!isa<PrecompileJobAction>(JA)) {
         CmdArgs.push_back("-include-pch");
-        CmdArgs.push_back(Args.MakeArgString(D.GetClPchPath(C, ThroughHeader)));
+        CmdArgs.push_back(Args.MakeArgString(D.GetClPchPath(
+            C, !ThroughHeader.empty()
+                   ? ThroughHeader
+                   : llvm::sys::path::filename(Inputs[0].getBaseInput()))));
       }
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine("-pch-through-header=") + ThroughHeader));
+
+      if (ThroughHeader.empty()) {
+        CmdArgs.push_back(Args.MakeArgString(
+            Twine("-pch-through-hdrstop-") + (YcArg ? "create" : "use")));
+      } else {
+        CmdArgs.push_back(
+            Args.MakeArgString(Twine("-pch-through-header=") + ThroughHeader));
+      }
     }
   }
 

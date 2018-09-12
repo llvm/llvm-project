@@ -1487,19 +1487,19 @@ DeclResult Sema::CheckClassTemplate(
         NamedDecl *Hidden = nullptr;
         if (SkipBody && !hasVisibleDefinition(Def, &Hidden)) {
           SkipBody->ShouldSkip = true;
+          SkipBody->Previous = Def;
           auto *Tmpl = cast<CXXRecordDecl>(Hidden)->getDescribedClassTemplate();
           assert(Tmpl && "original definition of a class template is not a "
                          "class template?");
           makeMergedDefinitionVisible(Hidden);
           makeMergedDefinitionVisible(Tmpl);
-          return Def;
+        } else {
+          Diag(NameLoc, diag::err_redefinition) << Name;
+          Diag(Def->getLocation(), diag::note_previous_definition);
+          // FIXME: Would it make sense to try to "forget" the previous
+          // definition, as part of error recovery?
+          return true;
         }
-
-        Diag(NameLoc, diag::err_redefinition) << Name;
-        Diag(Def->getLocation(), diag::note_previous_definition);
-        // FIXME: Would it make sense to try to "forget" the previous
-        // definition, as part of error recovery?
-        return true;
       }
     }
   } else if (PrevDecl) {
@@ -1520,13 +1520,14 @@ DeclResult Sema::CheckClassTemplate(
   if (!(TUK == TUK_Friend && CurContext->isDependentContext()) &&
       CheckTemplateParameterList(
           TemplateParams,
-          PrevClassTemplate ? PrevClassTemplate->getTemplateParameters()
-                            : nullptr,
+          PrevClassTemplate
+              ? PrevClassTemplate->getMostRecentDecl()->getTemplateParameters()
+              : nullptr,
           (SS.isSet() && SemanticContext && SemanticContext->isRecord() &&
            SemanticContext->isDependentContext())
               ? TPC_ClassTemplateMember
-              : TUK == TUK_Friend ? TPC_FriendClassTemplate
-                                  : TPC_ClassTemplate))
+              : TUK == TUK_Friend ? TPC_FriendClassTemplate : TPC_ClassTemplate,
+          SkipBody))
     Invalid = true;
 
   if (SS.isSet()) {
@@ -1561,7 +1562,7 @@ DeclResult Sema::CheckClassTemplate(
 
   // Add alignment attributes if necessary; these attributes are checked when
   // the ASTContext lays out the structure.
-  if (TUK == TUK_Definition) {
+  if (TUK == TUK_Definition && (!SkipBody || !SkipBody->ShouldSkip)) {
     AddAlignmentAttributesForRecord(NewClass);
     AddMsStructLayoutForRecord(NewClass);
   }
@@ -1604,7 +1605,7 @@ DeclResult Sema::CheckClassTemplate(
   NewClass->setLexicalDeclContext(CurContext);
   NewTemplate->setLexicalDeclContext(CurContext);
 
-  if (TUK == TUK_Definition)
+  if (TUK == TUK_Definition && (!SkipBody || !SkipBody->ShouldSkip))
     NewClass->startDefinition();
 
   ProcessDeclAttributeList(S, NewClass, Attr);
@@ -1653,6 +1654,9 @@ DeclResult Sema::CheckClassTemplate(
   }
 
   ActOnDocumentableDecl(NewTemplate);
+
+  if (SkipBody && SkipBody->ShouldSkip)
+    return SkipBody->Previous;
 
   return NewTemplate;
 }
@@ -2151,10 +2155,17 @@ static bool DiagnoseUnexpandedParameterPacks(Sema &S,
 /// \param TPC Describes the context in which we are checking the given
 /// template parameter list.
 ///
+/// \param SkipBody If we might have already made a prior merged definition
+/// of this template visible, the corresponding body-skipping information.
+/// Default argument redefinition is not an error when skipping such a body,
+/// because (under the ODR) we can assume the default arguments are the same
+/// as the prior merged definition.
+///
 /// \returns true if an error occurred, false otherwise.
 bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
                                       TemplateParameterList *OldParams,
-                                      TemplateParamListContext TPC) {
+                                      TemplateParamListContext TPC,
+                                      SkipBodyInfo *SkipBody) {
   bool Invalid = false;
 
   // C++ [temp.param]p10:
@@ -2204,7 +2215,8 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
                "Parameter packs can't have a default argument!");
         SawParameterPack = true;
       } else if (OldTypeParm && hasVisibleDefaultArgument(OldTypeParm) &&
-                 NewTypeParm->hasDefaultArgument()) {
+                 NewTypeParm->hasDefaultArgument() &&
+                 (!SkipBody || !SkipBody->ShouldSkip)) {
         OldDefaultLoc = OldTypeParm->getDefaultArgumentLoc();
         NewDefaultLoc = NewTypeParm->getDefaultArgumentLoc();
         SawDefaultArgument = true;
@@ -2248,7 +2260,8 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         if (!NewNonTypeParm->isPackExpansion())
           SawParameterPack = true;
       } else if (OldNonTypeParm && hasVisibleDefaultArgument(OldNonTypeParm) &&
-                 NewNonTypeParm->hasDefaultArgument()) {
+                 NewNonTypeParm->hasDefaultArgument() &&
+                 (!SkipBody || !SkipBody->ShouldSkip)) {
         OldDefaultLoc = OldNonTypeParm->getDefaultArgumentLoc();
         NewDefaultLoc = NewNonTypeParm->getDefaultArgumentLoc();
         SawDefaultArgument = true;
@@ -2291,7 +2304,8 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
           SawParameterPack = true;
       } else if (OldTemplateParm &&
                  hasVisibleDefaultArgument(OldTemplateParm) &&
-                 NewTemplateParm->hasDefaultArgument()) {
+                 NewTemplateParm->hasDefaultArgument() &&
+                 (!SkipBody || !SkipBody->ShouldSkip)) {
         OldDefaultLoc = OldTemplateParm->getDefaultArgument().getLocation();
         NewDefaultLoc = NewTemplateParm->getDefaultArgument().getLocation();
         SawDefaultArgument = true;
@@ -7690,9 +7704,8 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
     NamedDecl *Hidden = nullptr;
     if (Def && SkipBody && !hasVisibleDefinition(Def, &Hidden)) {
       SkipBody->ShouldSkip = true;
+      SkipBody->Previous = Def;
       makeMergedDefinitionVisible(Hidden);
-      // From here on out, treat this as just a redeclaration.
-      TUK = TUK_Declaration;
     } else if (Def) {
       SourceRange Range(TemplateNameLoc, RAngleLoc);
       Diag(TemplateNameLoc, diag::err_redefinition) << Specialization << Range;
@@ -7707,7 +7720,7 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
 
   // Add alignment attributes if necessary; these attributes are checked when
   // the ASTContext lays out the structure.
-  if (TUK == TUK_Definition) {
+  if (TUK == TUK_Definition && (!SkipBody || !SkipBody->ShouldSkip)) {
     AddAlignmentAttributesForRecord(Specialization);
     AddMsStructLayoutForRecord(Specialization);
   }
@@ -7743,7 +7756,7 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   Specialization->setLexicalDeclContext(CurContext);
 
   // We may be starting the definition of this specialization.
-  if (TUK == TUK_Definition)
+  if (TUK == TUK_Definition && (!SkipBody || !SkipBody->ShouldSkip))
     Specialization->startDefinition();
 
   if (TUK == TUK_Friend) {
@@ -7759,6 +7772,10 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
     // context. However, specializations are not found by name lookup.
     CurContext->addDecl(Specialization);
   }
+
+  if (SkipBody && SkipBody->ShouldSkip)
+    return SkipBody->Previous;
+
   return Specialization;
 }
 
