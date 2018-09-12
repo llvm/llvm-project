@@ -1,0 +1,5 @@
+V[09:08:34.301] Code complete: fuzzyFind("s", scopes=[llvm::])
+V[09:08:34.368] Code complete: fuzzyFind("sy", scopes=[llvm::])
+V[09:08:34.442] Code complete: fuzzyFind("sys", scopes=[llvm::])
+V[09:09:12.075] Code complete: fuzzyFind("Dex", scopes=[clang::clangd::, clang::, clang::clangd::dex::])
+V[09:09:12.075] Code complete: fuzzyFind("Variable", scopes=[])

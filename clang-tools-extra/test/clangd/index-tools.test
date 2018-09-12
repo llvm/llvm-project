@@ -1,0 +1,2 @@
+# RUN: global-symbol-builder %p/Inputs/BenchmarkSource.cpp -- -I%p/Inputs > %t.index
+# RUN: %clangd-benchmark-dir/IndexBenchmark %t.index %p/Inputs/requests.log --benchmark_min_time=0.01

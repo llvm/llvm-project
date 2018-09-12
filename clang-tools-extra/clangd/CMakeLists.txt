@@ -75,3 +75,7 @@ endif()
 add_subdirectory(tool)
 add_subdirectory(global-symbol-builder)
 add_subdirectory(index/dex/dexp)
+
+if (LLVM_INCLUDE_BENCHMARKS)
+  add_subdirectory(benchmarks)
+endif()
