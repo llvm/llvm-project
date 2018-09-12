@@ -16,7 +16,6 @@
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/SafeMachO.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/Utility/UUID.h"
@@ -29,7 +28,6 @@ typedef int cpu_subtype_t;
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace llvm::MachO;
 
 #if defined(__APPLE__)
 
