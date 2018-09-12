@@ -756,6 +756,50 @@ void DwarfLinker::keepDIEAndDependencies(
   }
 }
 
+namespace {
+/// This class represents an item in the work list. In addition to it's obvious
+/// purpose of representing the state associated with a particular run of the
+/// work loop, it also serves as a marker to indicate that we should run the
+/// "continuation" code.
+///
+/// Originally, the latter was lambda which allowed arbitrary code to be run.
+/// Because we always need to run the exact same code, it made more sense to
+/// use a boolean and repurpose the already existing DIE field.
+struct WorklistItem {
+  DWARFDie Die;
+  unsigned Flags;
+  bool IsContinuation;
+  CompileUnit::DIEInfo *ChildInfo = nullptr;
+
+  /// Construct a classic worklist item.
+  WorklistItem(DWARFDie Die, unsigned Flags)
+      : Die(Die), Flags(Flags), IsContinuation(false){};
+
+  /// Creates a continuation marker.
+  WorklistItem(DWARFDie Die) : Die(Die), IsContinuation(true){};
+};
+} // namespace
+
+// Helper that updates the completeness of the current DIE. It depends on the
+// fact that the incompletness of its children is already computed.
+static void updateIncompleteness(const DWARFDie &Die,
+                                 CompileUnit::DIEInfo &ChildInfo,
+                                 CompileUnit &CU) {
+  // Only propagate incomplete members.
+  if (Die.getTag() != dwarf::DW_TAG_structure_type &&
+      Die.getTag() != dwarf::DW_TAG_class_type)
+    return;
+
+  unsigned Idx = CU.getOrigUnit().getDIEIndex(Die);
+  CompileUnit::DIEInfo &MyInfo = CU.getInfo(Idx);
+
+  if (MyInfo.Incomplete)
+    return;
+
+  if (ChildInfo.Incomplete || ChildInfo.Prune)
+    MyInfo.Incomplete = true;
+}
+
 /// Recursively walk the \p DIE tree and look for DIEs to
 /// keep. Store that information in \p CU's DIEInfo.
 ///
@@ -770,58 +814,80 @@ void DwarfLinker::keepDIEAndDependencies(
 /// traversal we are currently doing.
 ///
 /// The return value indicates whether the DIE is incomplete.
-bool DwarfLinker::lookForDIEsToKeep(RelocationManager &RelocMgr,
+void DwarfLinker::lookForDIEsToKeep(RelocationManager &RelocMgr,
                                     RangesTy &Ranges, const UnitListTy &Units,
                                     const DWARFDie &Die,
                                     const DebugMapObject &DMO, CompileUnit &CU,
                                     unsigned Flags) {
-  unsigned Idx = CU.getOrigUnit().getDIEIndex(Die);
-  CompileUnit::DIEInfo &MyInfo = CU.getInfo(Idx);
-  bool AlreadyKept = MyInfo.Keep;
-  if (MyInfo.Prune)
-    return true;
+  // LIFO work list.
+  SmallVector<WorklistItem, 4> Worklist;
+  Worklist.emplace_back(Die, Flags);
 
-  // If the Keep flag is set, we are marking a required DIE's
-  // dependencies. If our target is already marked as kept, we're all
-  // set.
-  if ((Flags & TF_DependencyWalk) && AlreadyKept)
-    return MyInfo.Incomplete;
+  while (!Worklist.empty()) {
+    WorklistItem Current = Worklist.back();
+    Worklist.pop_back();
 
-  // We must not call shouldKeepDIE while called from keepDIEAndDependencies,
-  // because it would screw up the relocation finding logic.
-  if (!(Flags & TF_DependencyWalk))
-    Flags = shouldKeepDIE(RelocMgr, Ranges, Die, DMO, CU, MyInfo, Flags);
+    if (Current.IsContinuation) {
+      updateIncompleteness(Current.Die, *Current.ChildInfo, CU);
+      continue;
+    }
 
-  // If it is a newly kept DIE mark it as well as all its dependencies as kept.
-  if (!AlreadyKept && (Flags & TF_Keep)) {
-    bool UseOdr = (Flags & TF_DependencyWalk) ? (Flags & TF_ODR) : CU.hasODR();
-    keepDIEAndDependencies(RelocMgr, Ranges, Units, Die, MyInfo, DMO, CU,
-                           UseOdr);
+    unsigned Idx = CU.getOrigUnit().getDIEIndex(Current.Die);
+    CompileUnit::DIEInfo &MyInfo = CU.getInfo(Idx);
+
+    // At this point we are guaranteed to have a continuation marker before us
+    // in the worklist, except for the last DIE.
+    if (!Worklist.empty())
+      Worklist.back().ChildInfo = &MyInfo;
+
+    if (MyInfo.Prune)
+      continue;
+
+    // If the Keep flag is set, we are marking a required DIE's dependencies.
+    // If our target is already marked as kept, we're all set.
+    bool AlreadyKept = MyInfo.Keep;
+    if ((Current.Flags & TF_DependencyWalk) && AlreadyKept)
+      continue;
+
+    // We must not call shouldKeepDIE while called from keepDIEAndDependencies,
+    // because it would screw up the relocation finding logic.
+    if (!(Current.Flags & TF_DependencyWalk))
+      Current.Flags = shouldKeepDIE(RelocMgr, Ranges, Current.Die, DMO, CU,
+                                    MyInfo, Current.Flags);
+
+    // If it is a newly kept DIE mark it as well as all its dependencies as
+    // kept.
+    if (!AlreadyKept && (Current.Flags & TF_Keep)) {
+      bool UseOdr = (Current.Flags & TF_DependencyWalk)
+                        ? (Current.Flags & TF_ODR)
+                        : CU.hasODR();
+      keepDIEAndDependencies(RelocMgr, Ranges, Units, Current.Die, MyInfo, DMO,
+                             CU, UseOdr);
+    }
+
+    // The TF_ParentWalk flag tells us that we are currently walking up
+    // the parent chain of a required DIE, and we don't want to mark all
+    // the children of the parents as kept (consider for example a
+    // DW_TAG_namespace node in the parent chain). There are however a
+    // set of DIE types for which we want to ignore that directive and still
+    // walk their children.
+    if (dieNeedsChildrenToBeMeaningful(Current.Die.getTag()))
+      Current.Flags &= ~TF_ParentWalk;
+
+    if (!Current.Die.hasChildren() || (Current.Flags & TF_ParentWalk))
+      continue;
+
+    // Add children in reverse order to the worklist to effectively process
+    // them in order.
+    for (auto Child : reverse(Current.Die.children())) {
+      // Add continuation marker before every child to calculate incompleteness
+      // after the last child is processed. We can't store this information in
+      // the same item because we might have to process other continuations
+      // first.
+      Worklist.emplace_back(Current.Die);
+      Worklist.emplace_back(Child, Current.Flags);
+    }
   }
-  // The TF_ParentWalk flag tells us that we are currently walking up
-  // the parent chain of a required DIE, and we don't want to mark all
-  // the children of the parents as kept (consider for example a
-  // DW_TAG_namespace node in the parent chain). There are however a
-  // set of DIE types for which we want to ignore that directive and still
-  // walk their children.
-  if (dieNeedsChildrenToBeMeaningful(Die.getTag()))
-    Flags &= ~TF_ParentWalk;
-
-  if (!Die.hasChildren() || (Flags & TF_ParentWalk))
-    return MyInfo.Incomplete;
-
-  bool Incomplete = false;
-  for (auto Child : Die.children()) {
-    Incomplete |=
-        lookForDIEsToKeep(RelocMgr, Ranges, Units, Child, DMO, CU, Flags);
-
-    // If any of the members are incomplete we propagate the incompleteness.
-    if (!MyInfo.Incomplete && Incomplete &&
-        (Die.getTag() == dwarf::DW_TAG_structure_type ||
-         Die.getTag() == dwarf::DW_TAG_class_type))
-      MyInfo.Incomplete = true;
-  }
-  return MyInfo.Incomplete;
 }
 
 /// Assign an abbreviation number to \p Abbrev.

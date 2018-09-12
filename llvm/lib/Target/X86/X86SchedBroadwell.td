@@ -137,6 +137,7 @@ def  : WriteRes<WriteSETCCStore, [BWPort06,BWPort4,BWPort237]> {
   let NumMicroOps = 3;
 }
 def  : WriteRes<WriteLAHFSAHF, [BWPort06]>;
+def  : WriteRes<WriteBitTest,[BWPort06]>; // Bit Test instrs
 
 // Bit counts.
 defm : BWWriteResPair<WriteBSF, [BWPort1], 3>;
@@ -603,14 +604,6 @@ def BWWriteResGroup6 : SchedWriteRes<[BWPort06]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[BWWriteResGroup6], (instrs CDQ, CQO)>;
-def: InstRW<[BWWriteResGroup6], (instregex "BT(16|32|64)ri8",
-                                           "BT(16|32|64)rr",
-                                           "BTC(16|32|64)ri8",
-                                           "BTC(16|32|64)rr",
-                                           "BTR(16|32|64)ri8",
-                                           "BTR(16|32|64)rr",
-                                           "BTS(16|32|64)ri8",
-                                           "BTS(16|32|64)rr")>;
 
 def BWWriteResGroup7 : SchedWriteRes<[BWPort15]> {
   let Latency = 1;

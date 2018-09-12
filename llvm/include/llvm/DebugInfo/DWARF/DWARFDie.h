@@ -46,7 +46,7 @@ class DWARFDie {
 
 public:
   DWARFDie() = default;
-  DWARFDie(DWARFUnit *Unit, const DWARFDebugInfoEntry * D) : U(Unit), Die(D) {}
+  DWARFDie(DWARFUnit *Unit, const DWARFDebugInfoEntry *D) : U(Unit), Die(D) {}
 
   bool isValid() const { return U && Die; }
   explicit operator bool() const { return isValid(); }
@@ -82,9 +82,7 @@ public:
   }
 
   /// Returns true for a valid DIE that terminates a sibling chain.
-  bool isNULL() const {
-    return getAbbreviationDeclarationPtr() == nullptr;
-  }
+  bool isNULL() const { return getAbbreviationDeclarationPtr() == nullptr; }
 
   /// Returns true if DIE represents a subprogram (not inlined).
   bool isSubprogramDIE() const;
@@ -128,7 +126,6 @@ public:
   /// \param indent the number of characters to indent each line that is output.
   void dump(raw_ostream &OS, unsigned indent = 0,
             DIDumpOptions DumpOpts = DIDumpOptions()) const;
-
 
   /// Convenience zero-argument overload for debugging.
   LLVM_DUMP_METHOD void dump() const;
@@ -275,18 +272,25 @@ public:
 
   iterator begin() const;
   iterator end() const;
+
+  std::reverse_iterator<iterator> rbegin() const;
+  std::reverse_iterator<iterator> rend() const;
+
   iterator_range<iterator> children() const;
 };
 
-class DWARFDie::attribute_iterator :
-    public iterator_facade_base<attribute_iterator, std::forward_iterator_tag,
-                                const DWARFAttribute> {
+class DWARFDie::attribute_iterator
+    : public iterator_facade_base<attribute_iterator, std::forward_iterator_tag,
+                                  const DWARFAttribute> {
   /// The DWARF DIE we are extracting attributes from.
   DWARFDie Die;
   /// The value vended to clients via the operator*() or operator->().
   DWARFAttribute AttrValue;
   /// The attribute index within the abbreviation declaration in Die.
   uint32_t Index;
+
+  friend bool operator==(const attribute_iterator &LHS,
+                         const attribute_iterator &RHS);
 
   /// Update the attribute index and attempt to read the attribute value. If the
   /// attribute is able to be read, update AttrValue and the Index member
@@ -303,12 +307,21 @@ public:
   attribute_iterator &operator--();
   explicit operator bool() const { return AttrValue.isValid(); }
   const DWARFAttribute &operator*() const { return AttrValue; }
-  bool operator==(const attribute_iterator &X) const { return Index == X.Index; }
 };
+
+inline bool operator==(const DWARFDie::attribute_iterator &LHS,
+                       const DWARFDie::attribute_iterator &RHS) {
+  return LHS.Index == RHS.Index;
+}
+
+inline bool operator!=(const DWARFDie::attribute_iterator &LHS,
+                       const DWARFDie::attribute_iterator &RHS) {
+  return !(LHS == RHS);
+}
 
 inline bool operator==(const DWARFDie &LHS, const DWARFDie &RHS) {
   return LHS.getDebugInfoEntry() == RHS.getDebugInfoEntry() &&
-      LHS.getDwarfUnit() == RHS.getDwarfUnit();
+         LHS.getDwarfUnit() == RHS.getDwarfUnit();
 }
 
 inline bool operator!=(const DWARFDie &LHS, const DWARFDie &RHS) {
@@ -323,11 +336,15 @@ class DWARFDie::iterator
     : public iterator_facade_base<iterator, std::bidirectional_iterator_tag,
                                   const DWARFDie> {
   DWARFDie Die;
+
+  friend std::reverse_iterator<llvm::DWARFDie::iterator>;
+  friend bool operator==(const DWARFDie::iterator &LHS,
+                         const DWARFDie::iterator &RHS);
+
 public:
   iterator() = default;
 
-  explicit iterator(DWARFDie D) : Die(D) {
-  }
+  explicit iterator(DWARFDie D) : Die(D) {}
 
   iterator &operator++() {
     Die = Die.getSibling();
@@ -339,10 +356,18 @@ public:
     return *this;
   }
 
-  explicit operator bool() const { return Die.isValid(); }
   const DWARFDie &operator*() const { return Die; }
-  bool operator==(const iterator &X) const { return Die == X.Die; }
 };
+
+inline bool operator==(const DWARFDie::iterator &LHS,
+                       const DWARFDie::iterator &RHS) {
+  return LHS.Die == RHS.Die;
+}
+
+inline bool operator!=(const DWARFDie::iterator &LHS,
+                       const DWARFDie::iterator &RHS) {
+  return !(LHS == RHS);
+}
 
 // These inline functions must follow the DWARFDie::iterator definition above
 // as they use functions from that class.
@@ -356,6 +381,82 @@ inline DWARFDie::iterator DWARFDie::end() const {
 
 inline iterator_range<DWARFDie::iterator> DWARFDie::children() const {
   return make_range(begin(), end());
+}
+
+} // end namespace llvm
+
+namespace std {
+
+template <>
+class reverse_iterator<llvm::DWARFDie::iterator>
+    : public llvm::iterator_facade_base<
+          reverse_iterator<llvm::DWARFDie::iterator>,
+          bidirectional_iterator_tag, const llvm::DWARFDie> {
+
+private:
+  llvm::DWARFDie Die;
+  bool AtEnd;
+
+public:
+  reverse_iterator(llvm::DWARFDie::iterator It)
+      : Die(It.Die), AtEnd(!It.Die.getPreviousSibling()) {
+    if (!AtEnd)
+      Die = Die.getPreviousSibling();
+  }
+
+  reverse_iterator<llvm::DWARFDie::iterator> &operator++() {
+    assert(!AtEnd && "Incrementing rend");
+    llvm::DWARFDie D = Die.getPreviousSibling();
+    if (D)
+      Die = D;
+    else
+      AtEnd = true;
+    return *this;
+  }
+
+  reverse_iterator<llvm::DWARFDie::iterator> &operator--() {
+    if (AtEnd) {
+      AtEnd = false;
+      return *this;
+    }
+    Die = Die.getSibling();
+    assert(!Die.isNULL() && "Decrementing rbegin");
+    return *this;
+  }
+
+  const llvm::DWARFDie &operator*() const {
+    assert(Die.isValid());
+    return Die;
+  }
+
+  // FIXME: We should be able to specify the equals operator as a friend, but
+  //        that causes the compiler to think the operator overload is ambiguous
+  //        with the friend declaration and the actual definition as candidates.
+  bool equals(const reverse_iterator<llvm::DWARFDie::iterator> &RHS) const {
+    return Die == RHS.Die && AtEnd == RHS.AtEnd;
+  }
+};
+
+} // namespace std
+
+namespace llvm {
+
+inline bool operator==(const std::reverse_iterator<DWARFDie::iterator> &LHS,
+                       const std::reverse_iterator<DWARFDie::iterator> &RHS) {
+  return LHS.equals(RHS);
+}
+
+inline bool operator!=(const std::reverse_iterator<DWARFDie::iterator> &LHS,
+                       const std::reverse_iterator<DWARFDie::iterator> &RHS) {
+  return !(LHS == RHS);
+}
+
+inline std::reverse_iterator<DWARFDie::iterator> DWARFDie::rbegin() const {
+  return llvm::make_reverse_iterator(end());
+}
+
+inline std::reverse_iterator<DWARFDie::iterator> DWARFDie::rend() const {
+  return llvm::make_reverse_iterator(begin());
 }
 
 } // end namespace llvm

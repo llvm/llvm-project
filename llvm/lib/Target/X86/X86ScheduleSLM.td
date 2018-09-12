@@ -120,6 +120,7 @@ def  : WriteRes<WriteSETCCStore, [SLM_IEC_RSV01, SLM_MEC_RSV]> {
   let ResourceCycles = [2,1];
 }
 def  : WriteRes<WriteLAHFSAHF, [SLM_IEC_RSV01]>;
+def  : WriteRes<WriteBitTest,[SLM_IEC_RSV01]>;
 
 // This is for simple LEAs with one or two input operands.
 // The complex ones can only execute on port 1, and they require two cycles on

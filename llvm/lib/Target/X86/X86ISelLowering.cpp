@@ -37928,8 +37928,7 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
     // Look through extract_vector_elts. If it comes from an FNEG, create a
     // new extract from the FNEG input.
     if (V.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-        isa<ConstantSDNode>(V.getOperand(1)) &&
-        cast<ConstantSDNode>(V.getOperand(1))->getZExtValue() == 0) {
+        isNullConstant(V.getOperand(1))) {
       if (SDValue NegVal = isFNEG(V.getOperand(0).getNode())) {
         NegVal = DAG.getBitcast(V.getOperand(0).getValueType(), NegVal);
         V = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(V), V.getValueType(),
@@ -39473,8 +39472,7 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
   if ((IdxVal == OpVT.getVectorNumElements() / 2) &&
       Vec.getOpcode() == ISD::INSERT_SUBVECTOR &&
       OpVT.getSizeInBits() == SubVecVT.getSizeInBits() * 2) {
-    auto *Idx2 = dyn_cast<ConstantSDNode>(Vec.getOperand(2));
-    if (Idx2 && Idx2->getZExtValue() == 0) {
+    if (isNullConstant(Vec.getOperand(2))) {
       SDValue SubVec2 = Vec.getOperand(1);
       // If needed, look through bitcasts to get to the load.
       if (auto *FirstLd = dyn_cast<LoadSDNode>(peekThroughBitcasts(SubVec2))) {
