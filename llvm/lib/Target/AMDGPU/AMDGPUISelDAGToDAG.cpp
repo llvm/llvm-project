@@ -101,7 +101,7 @@ private:
   std::pair<SDValue, SDValue> foldFrameIndex(SDValue N) const;
   bool isNoNanSrc(SDValue N) const;
   bool isInlineImmediate(const SDNode *N) const;
-
+  bool isVGPRImm(const SDNode *N) const;
   bool isUniformBr(const SDNode *N) const;
 
   MachineSDNode *buildSMovImm64(SDLoc &DL, uint64_t Val, EVT VT) const;
@@ -2067,6 +2067,56 @@ bool AMDGPUDAGToDAGISel::SelectHi16Elt(SDValue In, SDValue &Src) const {
 
   return isExtractHiElt(In, Src);
 }
+
+bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
+  if (Subtarget->getGeneration() < AMDGPUSubtarget::SOUTHERN_ISLANDS) {
+    return false;
+  }
+  const SIRegisterInfo *SIRI =
+    static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
+  const SIInstrInfo * SII =
+    static_cast<const SIInstrInfo *>(Subtarget->getInstrInfo());
+
+  unsigned Limit = 0;
+  bool AllUsesAcceptSReg = true;
+  for (SDNode::use_iterator U = N->use_begin(), E = SDNode::use_end();
+    Limit < 10 && U != E; ++U, ++Limit) {
+    const TargetRegisterClass *RC = getOperandRegClass(*U, U.getOperandNo());
+
+    // If the register class is unknown, it could be an unknown
+    // register class that needs to be an SGPR, e.g. an inline asm
+    // constraint
+    if (!RC || SIRI->isSGPRClass(RC))
+      return false;
+
+    if (RC != &AMDGPU::VS_32RegClass) {
+      AllUsesAcceptSReg = false;
+      SDNode * User = *U;
+      if (User->isMachineOpcode()) {
+        unsigned Opc = User->getMachineOpcode();
+        MCInstrDesc Desc = SII->get(Opc);
+        if (Desc.isCommutable()) {
+          unsigned OpIdx = Desc.getNumDefs() + U.getOperandNo();
+          unsigned CommuteIdx1 = TargetInstrInfo::CommuteAnyOperandIndex;
+          if (SII->findCommutedOpIndices(Desc, OpIdx, CommuteIdx1)) {
+            unsigned CommutedOpNo = CommuteIdx1 - Desc.getNumDefs();
+            const TargetRegisterClass *CommutedRC = getOperandRegClass(*U, CommutedOpNo);
+            if (CommutedRC == &AMDGPU::VS_32RegClass)
+              AllUsesAcceptSReg = true;
+          }
+        }
+      }
+      // If "AllUsesAcceptSReg == false" so far we haven't suceeded
+      // commuting current user. This means have at least one use
+      // that strictly require VGPR. Thus, we will not attempt to commute
+      // other user instructions.
+      if (!AllUsesAcceptSReg)
+        break;
+    }
+  }
+  return !AllUsesAcceptSReg && (Limit < 10);
+}
+
 
 void AMDGPUDAGToDAGISel::PostprocessISelDAG() {
   const AMDGPUTargetLowering& Lowering =

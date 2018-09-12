@@ -171,14 +171,13 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
     if (match(&I, m_Mul(m_Value(NewOp), m_Constant(C1)))) {
       // Replace X*(2^C) with X << C, where C is either a scalar or a vector.
       if (Constant *NewCst = getLogBase2(NewOp->getType(), C1)) {
-        unsigned Width = NewCst->getType()->getPrimitiveSizeInBits();
         BinaryOperator *Shl = BinaryOperator::CreateShl(NewOp, NewCst);
 
         if (I.hasNoUnsignedWrap())
           Shl->setHasNoUnsignedWrap();
         if (I.hasNoSignedWrap()) {
           const APInt *V;
-          if (match(NewCst, m_APInt(V)) && *V != Width - 1)
+          if (match(NewCst, m_APInt(V)) && *V != V->getBitWidth() - 1)
             Shl->setHasNoSignedWrap();
         }
 
@@ -327,7 +326,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
   // integer mul followed by a sext.
   if (SExtInst *Op0Conv = dyn_cast<SExtInst>(Op0)) {
     // (mul (sext x), cst) --> (sext (mul x, cst'))
-    if (ConstantInt *Op1C = dyn_cast<ConstantInt>(Op1)) {
+    if (auto *Op1C = dyn_cast<Constant>(Op1)) {
       if (Op0Conv->hasOneUse()) {
         Constant *CI =
             ConstantExpr::getTrunc(Op1C, Op0Conv->getOperand(0)->getType());
@@ -363,7 +362,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
   // integer mul followed by a zext.
   if (auto *Op0Conv = dyn_cast<ZExtInst>(Op0)) {
     // (mul (zext x), cst) --> (zext (mul x, cst'))
-    if (ConstantInt *Op1C = dyn_cast<ConstantInt>(Op1)) {
+    if (auto *Op1C = dyn_cast<Constant>(Op1)) {
       if (Op0Conv->hasOneUse()) {
         Constant *CI =
             ConstantExpr::getTrunc(Op1C, Op0Conv->getOperand(0)->getType());

@@ -275,14 +275,14 @@ public:
     {
       unsigned CtorId = 0, DtorId = 0;
       for (auto Ctor : orc::getConstructors(*M)) {
-        std::string NewCtorName = ("$static_ctor." + Twine(CtorId++)).str();
+        std::string NewCtorName = ("__ORCstatic_ctor." + Twine(CtorId++)).str();
         Ctor.Func->setName(NewCtorName);
         Ctor.Func->setLinkage(GlobalValue::ExternalLinkage);
         Ctor.Func->setVisibility(GlobalValue::HiddenVisibility);
         CtorNames.push_back(mangle(NewCtorName));
       }
       for (auto Dtor : orc::getDestructors(*M)) {
-        std::string NewDtorName = ("$static_dtor." + Twine(DtorId++)).str();
+        std::string NewDtorName = ("__ORCstatic_dtor." + Twine(DtorId++)).str();
         dbgs() << "Found dtor: " << NewDtorName << "\n";
         Dtor.Func->setName(NewDtorName);
         Dtor.Func->setLinkage(GlobalValue::ExternalLinkage);

@@ -31,17 +31,17 @@ Error InstructionTables::execute(InstRef &IR) {
     // Skip zero-cycle resources (i.e., unused resources).
     if (!Resource.second.size())
       continue;
-    double Cycles = static_cast<double>(Resource.second.size());
+    unsigned Cycles = Resource.second.size();
     unsigned Index = std::distance(
         Masks.begin(), std::find(Masks.begin(), Masks.end(), Resource.first));
     const MCProcResourceDesc &ProcResource = *SM.getProcResource(Index);
     unsigned NumUnits = ProcResource.NumUnits;
     if (!ProcResource.SubUnitsIdxBegin) {
       // The number of cycles consumed by each unit.
-      Cycles /= NumUnits;
       for (unsigned I = 0, E = NumUnits; I < E; ++I) {
         ResourceRef ResourceUnit = std::make_pair(Index, 1U << I);
-        UsedResources.emplace_back(std::make_pair(ResourceUnit, Cycles));
+        UsedResources.emplace_back(
+            std::make_pair(ResourceUnit, ResourceCycles(Cycles, NumUnits)));
       }
       continue;
     }
@@ -53,10 +53,10 @@ Error InstructionTables::execute(InstRef &IR) {
       unsigned SubUnitIdx = ProcResource.SubUnitsIdxBegin[I1];
       const MCProcResourceDesc &SubUnit = *SM.getProcResource(SubUnitIdx);
       // Compute the number of cycles consumed by each resource unit.
-      double RUCycles = Cycles / (NumUnits * SubUnit.NumUnits);
       for (unsigned I2 = 0, E2 = SubUnit.NumUnits; I2 < E2; ++I2) {
         ResourceRef ResourceUnit = std::make_pair(SubUnitIdx, 1U << I2);
-        UsedResources.emplace_back(std::make_pair(ResourceUnit, RUCycles));
+        UsedResources.emplace_back(std::make_pair(
+            ResourceUnit, ResourceCycles(Cycles, NumUnits * SubUnit.NumUnits)));
       }
     }
   }

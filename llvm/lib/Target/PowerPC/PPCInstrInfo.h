@@ -136,7 +136,7 @@ class PPCInstrInfo : public PPCGenInstrInfo {
                                   unsigned ConstantOpNo,
                                   MachineInstr &DefMI,
                                   bool KillDefMI) const;
-  // Try to find that, if the instruction 'MI' contains any operand that 
+  // Try to find that, if the instruction 'MI' contains any operand that
   // could be forwarded from some inst that feeds it. If yes, return the
   // Def of that operand. And OpNoForForwarding is the operand index in
   // the 'MI' for that 'Def'. If we see another use of this Def between

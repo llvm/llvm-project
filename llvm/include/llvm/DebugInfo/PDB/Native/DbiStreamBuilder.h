@@ -15,6 +15,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Support/Error.h"
 
+#include "llvm/DebugInfo/CodeView/DebugFrameDataSubsection.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
@@ -24,6 +25,9 @@
 #include "llvm/Support/Endian.h"
 
 namespace llvm {
+namespace codeview {
+struct FrameData;
+}
 namespace msf {
 class MSFBuilder;
 }
@@ -65,6 +69,7 @@ public:
   void setGlobalsStreamIndex(uint32_t Index);
   void setPublicsStreamIndex(uint32_t Index);
   void setSymbolRecordStreamIndex(uint32_t Index);
+  void addFrameData(const codeview::FrameData &FD);
 
   Expected<DbiModuleDescriptorBuilder &> addModuleInfo(StringRef ModuleName);
   Error addModuleSourceFile(DbiModuleDescriptorBuilder &Module, StringRef File);
@@ -84,7 +89,8 @@ public:
 
 private:
   struct DebugStream {
-    ArrayRef<uint8_t> Data;
+    std::function<Error(BinaryStreamWriter &)> WriteFn;
+    uint32_t Size = 0;
     uint16_t StreamNumber = kInvalidStreamIndex;
   };
 
@@ -116,6 +122,8 @@ private:
   const DbiStreamHeader *Header;
 
   std::vector<std::unique_ptr<DbiModuleDescriptorBuilder>> ModiList;
+
+  Optional<codeview::DebugFrameDataSubsection> FrameData;
 
   StringMap<uint32_t> SourceFileNames;
 

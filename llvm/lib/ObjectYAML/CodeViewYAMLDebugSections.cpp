@@ -511,7 +511,7 @@ std::shared_ptr<DebugSubsection> YAMLFrameDataSubsection::toCodeViewSubsection(
     const codeview::StringsAndChecksums &SC) const {
   assert(SC.hasStrings());
 
-  auto Result = std::make_shared<DebugFrameDataSubsection>();
+  auto Result = std::make_shared<DebugFrameDataSubsection>(true);
   for (const auto &YF : Frames) {
     codeview::FrameData F;
     F.CodeSize = YF.CodeSize;

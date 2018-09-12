@@ -378,7 +378,7 @@ public:
   /// Return the alias set which contains the specified memory location.  If
   /// the memory location aliases two or more existing alias sets, will have
   /// the effect of merging those alias sets before the single resulting alias
-  /// set is returned.  
+  /// set is returned.
   AliasSet &getAliasSetFor(const MemoryLocation &MemLoc);
 
   /// Return true if the specified instruction "may" (or must) alias one of the

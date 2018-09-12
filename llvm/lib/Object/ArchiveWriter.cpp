@@ -372,20 +372,32 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
 static Expected<std::vector<unsigned>>
 getSymbols(MemoryBufferRef Buf, raw_ostream &SymNames, bool &HasObject) {
   std::vector<unsigned> Ret;
-  LLVMContext Context;
 
-  Expected<std::unique_ptr<object::SymbolicFile>> ObjOrErr =
-      object::SymbolicFile::createSymbolicFile(Buf, llvm::file_magic::unknown,
-                                               &Context);
-  if (!ObjOrErr) {
-    // FIXME: check only for "not an object file" errors.
-    consumeError(ObjOrErr.takeError());
-    return Ret;
+  // In the scenario when LLVMContext is populated SymbolicFile will contain a
+  // reference to it, thus SymbolicFile should be destroyed first.
+  LLVMContext Context;
+  std::unique_ptr<object::SymbolicFile> Obj;
+  if (identify_magic(Buf.getBuffer()) == file_magic::bitcode) {
+    auto ObjOrErr = object::SymbolicFile::createSymbolicFile(
+        Buf, file_magic::bitcode, &Context);
+    if (!ObjOrErr) {
+      // FIXME: check only for "not an object file" errors.
+      consumeError(ObjOrErr.takeError());
+      return Ret;
+    }
+    Obj = std::move(*ObjOrErr);
+  } else {
+    auto ObjOrErr = object::SymbolicFile::createSymbolicFile(Buf);
+    if (!ObjOrErr) {
+      // FIXME: check only for "not an object file" errors.
+      consumeError(ObjOrErr.takeError());
+      return Ret;
+    }
+    Obj = std::move(*ObjOrErr);
   }
 
   HasObject = true;
-  object::SymbolicFile &Obj = *ObjOrErr.get();
-  for (const object::BasicSymbolRef &S : Obj.symbols()) {
+  for (const object::BasicSymbolRef &S : Obj->symbols()) {
     if (!isArchiveSymbol(S))
       continue;
     Ret.push_back(SymNames.tell());
@@ -470,7 +482,7 @@ Error llvm::writeArchive(StringRef ArcName,
   if (WriteSymtab) {
     uint64_t MaxOffset = 0;
     uint64_t LastOffset = MaxOffset;
-    for (const auto& M : Data) {
+    for (const auto &M : Data) {
       // Record the start of the member's offset
       LastOffset = MaxOffset;
       // Account for the size of each part associated with the member.

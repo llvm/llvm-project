@@ -22,6 +22,7 @@
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugCrossExSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugCrossImpSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugFrameDataSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
@@ -139,6 +140,11 @@ Error DumpOutputStyle::dump() {
 
   if (opts::dump::DumpXme) {
     if (auto EC = dumpXme())
+      return EC;
+  }
+
+  if (opts::dump::DumpFpo) {
+    if (auto EC = dumpFpo())
       return EC;
   }
 
@@ -982,6 +988,58 @@ Error DumpOutputStyle::dumpXme() {
         }
       });
 
+  return Error::success();
+}
+
+Error DumpOutputStyle::dumpFpo() {
+  printHeader(P, "New FPO Data");
+
+  if (!File.isPdb()) {
+    printStreamNotValidForObj();
+    return Error::success();
+  }
+
+  PDBFile &File = getPdb();
+  if (!File.hasPDBDbiStream()) {
+    printStreamNotPresent("DBI");
+    return Error::success();
+  }
+
+  ExitOnError Err("Error dumping fpo data:");
+
+  auto &Dbi = Err(File.getPDBDbiStream());
+
+  uint32_t Index = Dbi.getDebugStreamIndex(DbgHeaderType::NewFPO);
+  if (Index == kInvalidStreamIndex) {
+    printStreamNotPresent("New FPO");
+    return Error::success();
+  }
+
+  std::unique_ptr<MappedBlockStream> NewFpo = File.createIndexedStream(Index);
+
+  DebugFrameDataSubsectionRef FDS;
+  if (auto EC = FDS.initialize(*NewFpo))
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Invalid new fpo stream");
+
+  P.printLine("  RVA    | Code | Locals | Params | Stack | Prolog | Saved Regs "
+              "| Has SEH | Has C++EH | Start | Program");
+  for (const FrameData &FD : FDS) {
+    bool IsFuncStart = FD.Flags & FrameData::IsFunctionStart;
+    bool HasEH = FD.Flags & FrameData::HasEH;
+    bool HasSEH = FD.Flags & FrameData::HasSEH;
+
+    auto &StringTable = Err(File.getStringTable());
+
+    auto Program = Err(StringTable.getStringForID(FD.FrameFunc));
+    P.formatLine("{0:X-8} | {1,4} | {2,6} | {3,6} | {4,5} | {5,6} | {6,10} | "
+                 "{7,7} | {8,9} | {9,5} | {10}",
+                 uint32_t(FD.RvaStart), uint32_t(FD.CodeSize),
+                 uint32_t(FD.LocalSize), uint32_t(FD.ParamsSize),
+                 uint32_t(FD.MaxStackSize), uint16_t(FD.PrologSize),
+                 uint16_t(FD.SavedRegsSize), HasSEH, HasEH, IsFuncStart,
+                 Program);
+  }
   return Error::success();
 }
 

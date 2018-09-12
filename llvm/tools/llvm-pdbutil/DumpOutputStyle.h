@@ -85,6 +85,7 @@ private:
   Error dumpInlineeLines();
   Error dumpXmi();
   Error dumpXme();
+  Error dumpFpo();
   Error dumpTpiStream(uint32_t StreamIdx);
   Error dumpTypesFromObjectFile();
   Error dumpModules();

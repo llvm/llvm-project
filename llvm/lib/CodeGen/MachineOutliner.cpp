@@ -807,8 +807,26 @@ struct MachineOutliner : public ModulePass {
         return SP;
     return nullptr;
   }
-};
 
+  /// Populate and \p InstructionMapper with instruction-to-integer mappings.
+  /// These are used to construct a suffix tree.
+  void populateMapper(InstructionMapper &Mapper, Module &M,
+                      MachineModuleInfo &MMI);
+
+  /// Initialize information necessary to output a size remark.
+  /// FIXME: This should be handled by the pass manager, not the outliner.
+  /// FIXME: This is nearly identical to the initSizeRemarkInfo in the legacy
+  /// pass manager.
+  void initSizeRemarkInfo(
+      const Module &M, const MachineModuleInfo &MMI,
+      StringMap<unsigned> &FunctionToInstrCount);
+
+  /// Emit the remark.
+  // FIXME: This should be handled by the pass manager, not the outliner.
+  void emitInstrCountChangedRemark(
+      const Module &M, const MachineModuleInfo &MMI,
+      const StringMap<unsigned> &FunctionToInstrCount);
+};
 } // Anonymous namespace.
 
 char MachineOutliner::ID = 0;
@@ -1333,34 +1351,8 @@ bool MachineOutliner::outline(
   return OutlinedSomething;
 }
 
-bool MachineOutliner::runOnModule(Module &M) {
-  // Check if there's anything in the module. If it's empty, then there's
-  // nothing to outline.
-  if (M.empty())
-    return false;
-
-  MachineModuleInfo &MMI = getAnalysis<MachineModuleInfo>();
-
-  // If the user passed -enable-machine-outliner=always or
-  // -enable-machine-outliner, the pass will run on all functions in the module.
-  // Otherwise, if the target supports default outlining, it will run on all
-  // functions deemed by the target to be worth outlining from by default. Tell
-  // the user how the outliner is running.
-  LLVM_DEBUG(
-    dbgs() << "Machine Outliner: Running on ";
-    if (RunOnAllFunctions)
-      dbgs() << "all functions";
-    else
-      dbgs() << "target-default functions";
-    dbgs() << "\n"
-  );
-
-  // If the user specifies that they want to outline from linkonceodrs, set
-  // it here.
-  OutlineFromLinkOnceODRs = EnableLinkOnceODROutlining;
-
-  InstructionMapper Mapper;
-
+void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
+                                     MachineModuleInfo &MMI) {
   // Build instruction mappings for each function in the module. Start by
   // iterating over each Function in M.
   for (Function &F : M) {
@@ -1407,6 +1399,106 @@ bool MachineOutliner::runOnModule(Module &M) {
       Mapper.convertToUnsignedVec(MBB, *TII);
     }
   }
+}
+
+void MachineOutliner::initSizeRemarkInfo(
+    const Module &M, const MachineModuleInfo &MMI,
+    StringMap<unsigned> &FunctionToInstrCount) {
+  // Collect instruction counts for every function. We'll use this to emit
+  // per-function size remarks later.
+  for (const Function &F : M) {
+    MachineFunction *MF = MMI.getMachineFunction(F);
+
+    // We only care about MI counts here. If there's no MachineFunction at this
+    // point, then there won't be after the outliner runs, so let's move on.
+    if (!MF)
+      continue;
+    FunctionToInstrCount[F.getName().str()] = MF->getInstructionCount();
+  }
+}
+
+void MachineOutliner::emitInstrCountChangedRemark(
+    const Module &M, const MachineModuleInfo &MMI,
+    const StringMap<unsigned> &FunctionToInstrCount) {
+  // Iterate over each function in the module and emit remarks.
+  // Note that we won't miss anything by doing this, because the outliner never
+  // deletes functions.
+  for (const Function &F : M) {
+    MachineFunction *MF = MMI.getMachineFunction(F);
+
+    // The outliner never deletes functions. If we don't have a MF here, then we
+    // didn't have one prior to outlining either.
+    if (!MF)
+      continue;
+
+    std::string Fname = F.getName();
+    unsigned FnCountAfter = MF->getInstructionCount();
+    unsigned FnCountBefore = 0;
+
+    // Check if the function was recorded before.
+    auto It = FunctionToInstrCount.find(Fname);
+
+    // Did we have a previously-recorded size? If yes, then set FnCountBefore
+    // to that.
+    if (It != FunctionToInstrCount.end())
+      FnCountBefore = It->second;
+
+    // Compute the delta and emit a remark if there was a change.
+    int64_t FnDelta = static_cast<int64_t>(FnCountAfter) -
+                      static_cast<int64_t>(FnCountBefore);
+    if (FnDelta == 0)
+      continue;
+
+    MachineOptimizationRemarkEmitter MORE(*MF, nullptr);
+    MORE.emit([&]() {
+      MachineOptimizationRemarkAnalysis R("size-info", "FunctionMISizeChange",
+                                          DiagnosticLocation(),
+                                          &MF->front());
+      R << DiagnosticInfoOptimizationBase::Argument("Pass", "Machine Outliner")
+        << ": Function: "
+        << DiagnosticInfoOptimizationBase::Argument("Function", F.getName())
+        << ": MI instruction count changed from "
+        << DiagnosticInfoOptimizationBase::Argument("MIInstrsBefore",
+                                                    FnCountBefore)
+        << " to "
+        << DiagnosticInfoOptimizationBase::Argument("MIInstrsAfter",
+                                                    FnCountAfter)
+        << "; Delta: "
+        << DiagnosticInfoOptimizationBase::Argument("Delta", FnDelta);
+      return R;
+    });
+  }
+}
+
+bool MachineOutliner::runOnModule(Module &M) {
+  // Check if there's anything in the module. If it's empty, then there's
+  // nothing to outline.
+  if (M.empty())
+    return false;
+
+  MachineModuleInfo &MMI = getAnalysis<MachineModuleInfo>();
+
+  // If the user passed -enable-machine-outliner=always or
+  // -enable-machine-outliner, the pass will run on all functions in the module.
+  // Otherwise, if the target supports default outlining, it will run on all
+  // functions deemed by the target to be worth outlining from by default. Tell
+  // the user how the outliner is running.
+  LLVM_DEBUG(
+    dbgs() << "Machine Outliner: Running on ";
+    if (RunOnAllFunctions)
+      dbgs() << "all functions";
+    else
+      dbgs() << "target-default functions";
+    dbgs() << "\n"
+  );
+
+  // If the user specifies that they want to outline from linkonceodrs, set
+  // it here.
+  OutlineFromLinkOnceODRs = EnableLinkOnceODROutlining;
+  InstructionMapper Mapper;
+
+  // Prepare instruction mappings for the suffix tree.
+  populateMapper(Mapper, M, MMI);
 
   // Construct a suffix tree, use it to find candidates, and then outline them.
   SuffixTree ST(Mapper.UnsignedVec);
@@ -1420,8 +1512,28 @@ bool MachineOutliner::runOnModule(Module &M) {
   // Remove candidates that overlap with other candidates.
   pruneOverlaps(CandidateList, FunctionList, Mapper, MaxCandidateLen);
 
+  // If we've requested size remarks, then collect the MI counts of every
+  // function before outlining, and the MI counts after outlining.
+  // FIXME: This shouldn't be in the outliner at all; it should ultimately be
+  // the pass manager's responsibility.
+  // This could pretty easily be placed in outline instead, but because we
+  // really ultimately *don't* want this here, it's done like this for now
+  // instead.
+
+  // Check if we want size remarks.
+  bool ShouldEmitSizeRemarks = M.shouldEmitInstrCountChangedRemark();
+  StringMap<unsigned> FunctionToInstrCount;
+  if (ShouldEmitSizeRemarks)
+    initSizeRemarkInfo(M, MMI, FunctionToInstrCount);
+
   // Outline each of the candidates and return true if something was outlined.
   bool OutlinedSomething = outline(M, CandidateList, FunctionList, Mapper);
+
+  // If we outlined something, we definitely changed the MI count of the
+  // module. If we've asked for size remarks, then output them.
+  // FIXME: This should be in the pass manager.
+  if (ShouldEmitSizeRemarks && OutlinedSomething)
+    emitInstrCountChangedRemark(M, MMI, FunctionToInstrCount);
 
   return OutlinedSomething;
 }
