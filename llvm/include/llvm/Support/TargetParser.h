@@ -320,13 +320,6 @@ enum GPUKind : uint32_t {
   GK_AMDGCN_LAST = GK_GFX906,
 };
 
-/// Instruction set architecture version.
-struct IsaVersion {
-  unsigned Major;
-  unsigned Minor;
-  unsigned Stepping;
-};
-
 // This isn't comprehensive for now, just things that are needed from the
 // frontend driver.
 enum ArchFeatureKind : uint32_t {
@@ -342,22 +335,18 @@ enum ArchFeatureKind : uint32_t {
   FEATURE_FAST_DENORMAL_F32 = 1 << 5
 };
 
+GPUKind parseArchAMDGCN(StringRef CPU);
+GPUKind parseArchR600(StringRef CPU);
 StringRef getArchNameAMDGCN(GPUKind AK);
 StringRef getArchNameR600(GPUKind AK);
 StringRef getCanonicalArchName(StringRef Arch);
-GPUKind parseArchAMDGCN(StringRef CPU);
-GPUKind parseArchR600(StringRef CPU);
 unsigned getArchAttrAMDGCN(GPUKind AK);
 unsigned getArchAttrR600(GPUKind AK);
 
 void fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values);
 void fillValidArchListR600(SmallVectorImpl<StringRef> &Values);
 
-StringRef getArchNameFromElfMach(unsigned ElfMach);
-unsigned getElfMach(StringRef GPU);
-IsaVersion getIsaVersion(StringRef GPU);
-
-} // namespace AMDGPU
+}
 
 } // namespace llvm
 

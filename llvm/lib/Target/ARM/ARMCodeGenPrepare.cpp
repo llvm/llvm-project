@@ -209,6 +209,8 @@ static bool isSource(Value *V) {
     return true;
   else if (isa<LoadInst>(V))
     return true;
+  else if (isa<BitCastInst>(V))
+    return true;
   else if (auto *Call = dyn_cast<CallInst>(V))
     return Call->hasRetAttr(Attribute::AttrKind::ZExt);
   return false;
@@ -545,11 +547,8 @@ bool ARMCodeGenPrepare::isSupportedValue(Value *V) {
       isa<LoadInst>(V))
     return isSupportedType(V);
 
-  if (auto *Trunc = dyn_cast<TruncInst>(V))
-    return isSupportedType(Trunc->getOperand(0));
-
-  if (auto *ZExt = dyn_cast<ZExtInst>(V))
-    return isSupportedType(ZExt->getOperand(0));
+  if (isa<CastInst>(V) && !isa<SExtInst>(V)) 
+    return isSupportedType(cast<CastInst>(V)->getOperand(0));
 
   // Special cases for calls as we need to check for zeroext
   // TODO We should accept calls even if they don't have zeroext, as they can

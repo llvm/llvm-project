@@ -38,6 +38,25 @@ public:
                        /// string mode.
   };
 
+  /// Utility class for counting the bytes that were written to a stream in a
+  /// certain time span.
+  /// @example
+  ///   ByteDelta delta(*this);
+  ///   WriteDataToStream("foo");
+  ///   return *delta;
+  /// @endcode
+  class ByteDelta {
+    Stream *m_stream;
+    /// Bytes we have written so far when ByteDelta was created.
+    size_t m_start;
+
+  public:
+    ByteDelta(Stream &s) : m_stream(&s), m_start(s.GetWrittenBytes()) {}
+    /// Returns the number of bytes written to the given Stream since this
+    /// ByteDelta object was created.
+    size_t operator*() const { return m_stream->GetWrittenBytes() - m_start; }
+  };
+
   //------------------------------------------------------------------
   /// Construct with flags and address size and byte order.
   ///
@@ -550,7 +569,7 @@ protected:
   int m_indent_level; ///< Indention level.
   std::size_t m_bytes_written = 0; ///< Number of bytes written so far.
 
-  size_t _PutHex8(uint8_t uvalue, bool add_prefix);
+  void _PutHex8(uint8_t uvalue, bool add_prefix);
 
   //------------------------------------------------------------------
   /// Output character bytes to the stream.

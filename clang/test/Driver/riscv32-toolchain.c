@@ -21,6 +21,7 @@
 
 // RUN: %clang %s -### -no-canonical-prefixes \
 // RUN:   -target riscv32-unknown-elf \
+// RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV32-BAREMETAL-NOSYSROOT-ILP32 %s
 
@@ -52,6 +53,7 @@
 
 // RUN: %clangxx %s -### -no-canonical-prefixes \
 // RUN:   -target riscv32-unknown-elf -stdlib=libstdc++ \
+// RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree 2>&1 \
 // RUN:   | FileCheck -check-prefix=CXX-RV32-BAREMETAL-NOSYSROOT-ILP32 %s
 

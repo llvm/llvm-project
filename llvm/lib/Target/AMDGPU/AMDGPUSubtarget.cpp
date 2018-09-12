@@ -124,8 +124,10 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   return *this;
 }
 
-AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) :
+AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT,
+                                             const FeatureBitset &FeatureBits) :
   TargetTriple(TT),
+  SubtargetFeatureBits(FeatureBits),
   Has16BitInsts(false),
   HasMadMixInsts(false),
   FP32Denormals(false),
@@ -142,9 +144,9 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) :
   { }
 
 GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
-                           const GCNTargetMachine &TM) :
+                                 const GCNTargetMachine &TM) :
     AMDGPUGenSubtargetInfo(TT, GPU, FS),
-    AMDGPUSubtarget(TT),
+    AMDGPUSubtarget(TT, getFeatureBits()),
     TargetTriple(TT),
     Gen(SOUTHERN_ISLANDS),
     IsaVersion(ISAVersion0_0_0),
@@ -446,7 +448,7 @@ unsigned AMDGPUSubtarget::getKernArgSegmentSize(const Function &F,
 R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
                              const TargetMachine &TM) :
   R600GenSubtargetInfo(TT, GPU, FS),
-  AMDGPUSubtarget(TT),
+  AMDGPUSubtarget(TT, getFeatureBits()),
   InstrInfo(*this),
   FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
   FMA(false),

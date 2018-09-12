@@ -108,7 +108,6 @@ private:
 
   // Internal helpers.
   InstructionBenchmark runConfiguration(const BenchmarkCode &Configuration,
-                                        unsigned Opcode,
                                         unsigned NumRepetitions) const;
 
   // Calls generateCodeTemplate and expands it into one or more BenchmarkCode.

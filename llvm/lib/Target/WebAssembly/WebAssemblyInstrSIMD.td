@@ -145,6 +145,27 @@ multiclass SIMDNot<ValueType vec_t, PatFrag splat_pat, ValueType lane_t> {
                            )],
                            "v128.not\t$dst, $vec", "v128.not", 62>;
 }
+multiclass SIMDCondition<ValueType vec_t, ValueType out_t, string vec,
+                             string name, CondCode cond, bits<32> simdop> {
+  defm _#vec_t :
+    SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128: $rhs), (outs), (ins),
+           [(set (out_t V128:$dst),
+             (setcc (vec_t V128:$lhs), (vec_t V128:$rhs), cond))],
+           vec#"."#name#"\t$dst, $lhs, $rhs", vec#"."#name, simdop>;
+}
+multiclass SIMDConditionInt<string name, CondCode cond, bits<32> baseInst,
+                            int step = 1> {
+  defm "" : SIMDCondition<v16i8, v16i8, "i8x16", name, cond, baseInst>;
+  defm "" : SIMDCondition<v8i16, v8i16, "i16x8", name, cond,
+                              !add(baseInst, step)>;
+  defm "" : SIMDCondition<v4i32, v4i32, "i32x4", name, cond,
+                              !add(!add(baseInst, step), step)>;
+}
+multiclass SIMDConditionFP<string name, CondCode cond, bits<32> baseInst> {
+  defm "" : SIMDCondition<v4f32, v4i32, "f32x4", name, cond, baseInst>;
+  defm "" : SIMDCondition<v2f64, v2i64, "f64x2", name, cond,
+                              !add(baseInst, 1)>;
+}
 
 let Defs = [ARGUMENTS] in {
 defm "" : ConstVec<v16i8,
@@ -270,6 +291,26 @@ defm "" : SIMDNot<v8i16, splat8, i32>;
 defm "" : SIMDNot<v4i32, splat4, i32>;
 defm "" : SIMDNot<v2i64, splat2, i64>;
 
+let isCommutable = 1 in {
+defm EQ : SIMDConditionInt<"eq", SETEQ, 72>;
+defm EQ : SIMDConditionFP<"eq", SETOEQ, 75>;
+defm NE : SIMDConditionInt<"ne", SETNE, 77>;
+defm NE : SIMDConditionFP<"ne", SETUNE, 80>;
+} // isCommutable = 1
+
+defm LT_S : SIMDConditionInt<"lt_s", SETLT, 82, 2>;
+defm LT_U : SIMDConditionInt<"lt_u", SETULT, 83, 2>;
+defm LT : SIMDConditionFP<"lt", SETOLT, 88>;
+defm LE_S : SIMDConditionInt<"le_s", SETLE, 90, 2>;
+defm LE_U : SIMDConditionInt<"le_u", SETULE, 91, 2>;
+defm LE : SIMDConditionFP<"le", SETOLE, 96>;
+defm GT_S : SIMDConditionInt<"gt_s", SETGT, 98, 2>;
+defm GT_U : SIMDConditionInt<"gt_u", SETUGT, 99, 2>;
+defm GT : SIMDConditionFP<"gt", SETOGT, 104>;
+defm GE_S : SIMDConditionInt<"ge_s", SETGE, 106, 2>;
+defm GE_U : SIMDConditionInt<"ge_u", SETUGE, 107, 2>;
+defm GE : SIMDConditionFP<"ge", SETOGE, 112>;
+
 } // Defs = [ARGUMENTS]
 
 // Def load and store patterns from WebAssemblyInstrMemory.td for vector types
@@ -294,6 +335,19 @@ def : StorePatGlobalAddrOffOnly<vec_t, store, !cast<NI>("STORE_"#vec_t)>;
 def : StorePatExternSymOffOnly<vec_t, store, !cast<NI>("STORE_"#vec_t)>;
 
 }
+
+// Lower float comparisons that don't care about NaN to standard
+// WebAssembly float comparisons. These instructions are generated in
+// the target-independent expansion of unordered comparisons and
+// ordered ne.
+def : Pat<(v4i32 (seteq (v4f32 V128:$lhs), (v4f32 V128:$rhs))),
+          (v4i32 (EQ_v4f32 (v4f32 V128:$lhs), (v4f32 V128:$rhs)))>;
+def : Pat<(v4i32 (setne (v4f32 V128:$lhs), (v4f32 V128:$rhs))),
+          (v4i32 (NE_v4f32 (v4f32 V128:$lhs), (v4f32 V128:$rhs)))>;
+def : Pat<(v2i64 (seteq (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
+          (v2i64 (EQ_v2f64 (v2f64 V128:$lhs), (v2f64 V128:$rhs)))>;
+def : Pat<(v2i64 (setne (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
+          (v2i64 (NE_v2f64 (v2f64 V128:$lhs), (v2f64 V128:$rhs)))>;
 
 // follow convention of making implicit expansions unsigned
 def : Pat<(i32 (vector_extract (v16i8 V128:$vec), (i32 LaneIdx16:$idx))),

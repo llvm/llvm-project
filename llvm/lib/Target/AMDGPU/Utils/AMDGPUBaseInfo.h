@@ -19,7 +19,6 @@
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetParser.h"
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -57,6 +56,16 @@ enum {
   TRAP_NUM_SGPRS = 16
 };
 
+/// Instruction set architecture version.
+struct IsaVersion {
+  unsigned Major;
+  unsigned Minor;
+  unsigned Stepping;
+};
+
+/// \returns Isa version for given subtarget \p Features.
+IsaVersion getIsaVersion(const FeatureBitset &Features);
+
 /// Streams isa version string for given subtarget \p STI into \p Stream.
 void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream);
 
@@ -64,114 +73,114 @@ void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream);
 /// false otherwise.
 bool hasCodeObjectV3(const MCSubtargetInfo *STI);
 
-/// \returns Wavefront size for given subtarget \p STI.
-unsigned getWavefrontSize(const MCSubtargetInfo *STI);
+/// \returns Wavefront size for given subtarget \p Features.
+unsigned getWavefrontSize(const FeatureBitset &Features);
 
-/// \returns Local memory size in bytes for given subtarget \p STI.
-unsigned getLocalMemorySize(const MCSubtargetInfo *STI);
+/// \returns Local memory size in bytes for given subtarget \p Features.
+unsigned getLocalMemorySize(const FeatureBitset &Features);
 
 /// \returns Number of execution units per compute unit for given subtarget \p
-/// STI.
-unsigned getEUsPerCU(const MCSubtargetInfo *STI);
+/// Features.
+unsigned getEUsPerCU(const FeatureBitset &Features);
 
 /// \returns Maximum number of work groups per compute unit for given subtarget
-/// \p STI and limited by given \p FlatWorkGroupSize.
-unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo *STI,
+/// \p Features and limited by given \p FlatWorkGroupSize.
+unsigned getMaxWorkGroupsPerCU(const FeatureBitset &Features,
                                unsigned FlatWorkGroupSize);
 
 /// \returns Maximum number of waves per compute unit for given subtarget \p
-/// STI without any kind of limitation.
-unsigned getMaxWavesPerCU(const MCSubtargetInfo *STI);
+/// Features without any kind of limitation.
+unsigned getMaxWavesPerCU(const FeatureBitset &Features);
 
 /// \returns Maximum number of waves per compute unit for given subtarget \p
-/// STI and limited by given \p FlatWorkGroupSize.
-unsigned getMaxWavesPerCU(const MCSubtargetInfo *STI,
+/// Features and limited by given \p FlatWorkGroupSize.
+unsigned getMaxWavesPerCU(const FeatureBitset &Features,
                           unsigned FlatWorkGroupSize);
 
 /// \returns Minimum number of waves per execution unit for given subtarget \p
-/// STI.
-unsigned getMinWavesPerEU(const MCSubtargetInfo *STI);
+/// Features.
+unsigned getMinWavesPerEU(const FeatureBitset &Features);
 
 /// \returns Maximum number of waves per execution unit for given subtarget \p
-/// STI without any kind of limitation.
+/// Features without any kind of limitation.
 unsigned getMaxWavesPerEU();
 
 /// \returns Maximum number of waves per execution unit for given subtarget \p
-/// STI and limited by given \p FlatWorkGroupSize.
-unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI,
+/// Features and limited by given \p FlatWorkGroupSize.
+unsigned getMaxWavesPerEU(const FeatureBitset &Features,
                           unsigned FlatWorkGroupSize);
 
-/// \returns Minimum flat work group size for given subtarget \p STI.
-unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo *STI);
+/// \returns Minimum flat work group size for given subtarget \p Features.
+unsigned getMinFlatWorkGroupSize(const FeatureBitset &Features);
 
-/// \returns Maximum flat work group size for given subtarget \p STI.
-unsigned getMaxFlatWorkGroupSize(const MCSubtargetInfo *STI);
+/// \returns Maximum flat work group size for given subtarget \p Features.
+unsigned getMaxFlatWorkGroupSize(const FeatureBitset &Features);
 
-/// \returns Number of waves per work group for given subtarget \p STI and
+/// \returns Number of waves per work group for given subtarget \p Features and
 /// limited by given \p FlatWorkGroupSize.
-unsigned getWavesPerWorkGroup(const MCSubtargetInfo *STI,
+unsigned getWavesPerWorkGroup(const FeatureBitset &Features,
                               unsigned FlatWorkGroupSize);
 
-/// \returns SGPR allocation granularity for given subtarget \p STI.
-unsigned getSGPRAllocGranule(const MCSubtargetInfo *STI);
+/// \returns SGPR allocation granularity for given subtarget \p Features.
+unsigned getSGPRAllocGranule(const FeatureBitset &Features);
 
-/// \returns SGPR encoding granularity for given subtarget \p STI.
-unsigned getSGPREncodingGranule(const MCSubtargetInfo *STI);
+/// \returns SGPR encoding granularity for given subtarget \p Features.
+unsigned getSGPREncodingGranule(const FeatureBitset &Features);
 
-/// \returns Total number of SGPRs for given subtarget \p STI.
-unsigned getTotalNumSGPRs(const MCSubtargetInfo *STI);
+/// \returns Total number of SGPRs for given subtarget \p Features.
+unsigned getTotalNumSGPRs(const FeatureBitset &Features);
 
-/// \returns Addressable number of SGPRs for given subtarget \p STI.
-unsigned getAddressableNumSGPRs(const MCSubtargetInfo *STI);
+/// \returns Addressable number of SGPRs for given subtarget \p Features.
+unsigned getAddressableNumSGPRs(const FeatureBitset &Features);
 
 /// \returns Minimum number of SGPRs that meets the given number of waves per
-/// execution unit requirement for given subtarget \p STI.
-unsigned getMinNumSGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
+/// execution unit requirement for given subtarget \p Features.
+unsigned getMinNumSGPRs(const FeatureBitset &Features, unsigned WavesPerEU);
 
 /// \returns Maximum number of SGPRs that meets the given number of waves per
-/// execution unit requirement for given subtarget \p STI.
-unsigned getMaxNumSGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+/// execution unit requirement for given subtarget \p Features.
+unsigned getMaxNumSGPRs(const FeatureBitset &Features, unsigned WavesPerEU,
                         bool Addressable);
 
 /// \returns Number of extra SGPRs implicitly required by given subtarget \p
-/// STI when the given special registers are used.
-unsigned getNumExtraSGPRs(const MCSubtargetInfo *STI, bool VCCUsed,
+/// Features when the given special registers are used.
+unsigned getNumExtraSGPRs(const FeatureBitset &Features, bool VCCUsed,
                           bool FlatScrUsed, bool XNACKUsed);
 
 /// \returns Number of extra SGPRs implicitly required by given subtarget \p
-/// STI when the given special registers are used. XNACK is inferred from
-/// \p STI.
-unsigned getNumExtraSGPRs(const MCSubtargetInfo *STI, bool VCCUsed,
+/// Features when the given special registers are used. XNACK is inferred from
+/// \p Features.
+unsigned getNumExtraSGPRs(const FeatureBitset &Features, bool VCCUsed,
                           bool FlatScrUsed);
 
-/// \returns Number of SGPR blocks needed for given subtarget \p STI when
+/// \returns Number of SGPR blocks needed for given subtarget \p Features when
 /// \p NumSGPRs are used. \p NumSGPRs should already include any special
 /// register counts.
-unsigned getNumSGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs);
+unsigned getNumSGPRBlocks(const FeatureBitset &Features, unsigned NumSGPRs);
 
-/// \returns VGPR allocation granularity for given subtarget \p STI.
-unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI);
+/// \returns VGPR allocation granularity for given subtarget \p Features.
+unsigned getVGPRAllocGranule(const FeatureBitset &Features);
 
-/// \returns VGPR encoding granularity for given subtarget \p STI.
-unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI);
+/// \returns VGPR encoding granularity for given subtarget \p Features.
+unsigned getVGPREncodingGranule(const FeatureBitset &Features);
 
-/// \returns Total number of VGPRs for given subtarget \p STI.
-unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI);
+/// \returns Total number of VGPRs for given subtarget \p Features.
+unsigned getTotalNumVGPRs(const FeatureBitset &Features);
 
-/// \returns Addressable number of VGPRs for given subtarget \p STI.
-unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI);
+/// \returns Addressable number of VGPRs for given subtarget \p Features.
+unsigned getAddressableNumVGPRs(const FeatureBitset &Features);
 
 /// \returns Minimum number of VGPRs that meets given number of waves per
-/// execution unit requirement for given subtarget \p STI.
-unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
+/// execution unit requirement for given subtarget \p Features.
+unsigned getMinNumVGPRs(const FeatureBitset &Features, unsigned WavesPerEU);
 
 /// \returns Maximum number of VGPRs that meets given number of waves per
-/// execution unit requirement for given subtarget \p STI.
-unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
+/// execution unit requirement for given subtarget \p Features.
+unsigned getMaxNumVGPRs(const FeatureBitset &Features, unsigned WavesPerEU);
 
-/// \returns Number of VGPR blocks needed for given subtarget \p STI when
+/// \returns Number of VGPR blocks needed for given subtarget \p Features when
 /// \p NumVGPRs are used.
-unsigned getNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs);
+unsigned getNumVGPRBlocks(const FeatureBitset &Features, unsigned NumSGPRs);
 
 } // end namespace IsaInfo
 
@@ -224,7 +233,7 @@ LLVM_READONLY
 int getMCOpcode(uint16_t Opcode, unsigned Gen);
 
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
-                               const MCSubtargetInfo *STI);
+                               const FeatureBitset &Features);
 
 amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor();
 
@@ -259,25 +268,25 @@ std::pair<int, int> getIntegerPairAttribute(const Function &F,
                                             bool OnlyFirstRequired = false);
 
 /// \returns Vmcnt bit mask for given isa \p Version.
-unsigned getVmcntBitMask(const IsaVersion &Version);
+unsigned getVmcntBitMask(const IsaInfo::IsaVersion &Version);
 
 /// \returns Expcnt bit mask for given isa \p Version.
-unsigned getExpcntBitMask(const IsaVersion &Version);
+unsigned getExpcntBitMask(const IsaInfo::IsaVersion &Version);
 
 /// \returns Lgkmcnt bit mask for given isa \p Version.
-unsigned getLgkmcntBitMask(const IsaVersion &Version);
+unsigned getLgkmcntBitMask(const IsaInfo::IsaVersion &Version);
 
 /// \returns Waitcnt bit mask for given isa \p Version.
-unsigned getWaitcntBitMask(const IsaVersion &Version);
+unsigned getWaitcntBitMask(const IsaInfo::IsaVersion &Version);
 
 /// \returns Decoded Vmcnt from given \p Waitcnt for given isa \p Version.
-unsigned decodeVmcnt(const IsaVersion &Version, unsigned Waitcnt);
+unsigned decodeVmcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt);
 
 /// \returns Decoded Expcnt from given \p Waitcnt for given isa \p Version.
-unsigned decodeExpcnt(const IsaVersion &Version, unsigned Waitcnt);
+unsigned decodeExpcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt);
 
 /// \returns Decoded Lgkmcnt from given \p Waitcnt for given isa \p Version.
-unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt);
+unsigned decodeLgkmcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt);
 
 /// Decodes Vmcnt, Expcnt and Lgkmcnt from given \p Waitcnt for given isa
 /// \p Version, and writes decoded values into \p Vmcnt, \p Expcnt and
@@ -288,19 +297,19 @@ unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt);
 ///     \p Vmcnt = \p Waitcnt[3:0] | \p Waitcnt[15:14]  (gfx9+ only)
 ///     \p Expcnt = \p Waitcnt[6:4]
 ///     \p Lgkmcnt = \p Waitcnt[11:8]
-void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt,
+void decodeWaitcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt,
                    unsigned &Vmcnt, unsigned &Expcnt, unsigned &Lgkmcnt);
 
 /// \returns \p Waitcnt with encoded \p Vmcnt for given isa \p Version.
-unsigned encodeVmcnt(const IsaVersion &Version, unsigned Waitcnt,
+unsigned encodeVmcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt,
                      unsigned Vmcnt);
 
 /// \returns \p Waitcnt with encoded \p Expcnt for given isa \p Version.
-unsigned encodeExpcnt(const IsaVersion &Version, unsigned Waitcnt,
+unsigned encodeExpcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt,
                       unsigned Expcnt);
 
 /// \returns \p Waitcnt with encoded \p Lgkmcnt for given isa \p Version.
-unsigned encodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt,
+unsigned encodeLgkmcnt(const IsaInfo::IsaVersion &Version, unsigned Waitcnt,
                        unsigned Lgkmcnt);
 
 /// Encodes \p Vmcnt, \p Expcnt and \p Lgkmcnt into Waitcnt for given isa
@@ -315,7 +324,7 @@ unsigned encodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt,
 ///
 /// \returns Waitcnt with encoded \p Vmcnt, \p Expcnt and \p Lgkmcnt for given
 /// isa \p Version.
-unsigned encodeWaitcnt(const IsaVersion &Version,
+unsigned encodeWaitcnt(const IsaInfo::IsaVersion &Version,
                        unsigned Vmcnt, unsigned Expcnt, unsigned Lgkmcnt);
 
 unsigned getInitialPSInputAddr(const Function &F);

@@ -1,0 +1,3 @@
+# RUN: global-symbol-builder %p/Inputs/BenchmarkSource.cpp -- -I%p/Inputs > %t.index
+# FIXME: By default, benchmarks are excluded from the list of default targets hence not built. Find a way to depend on benchmarks to run the next command.
+# RUN: if [ -f %clangd-benchmark-dir/IndexBenchmark ]; then %clangd-benchmark-dir/IndexBenchmark %t.index %p/Inputs/requests.log --benchmark_min_time=0.01 ; fi

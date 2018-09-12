@@ -14,11 +14,9 @@
 
 #include "llvm/ADT/StringRef.h"
 
-#include "lldb/API/SBValue.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/VariableList.h"
 
-#include "lldb/API/SBFrame.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/ClangASTContext.h"

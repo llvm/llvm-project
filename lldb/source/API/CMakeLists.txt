@@ -146,6 +146,7 @@ endif()
 if (LLDB_BUILD_FRAMEWORK)
   set_target_properties(liblldb
     PROPERTIES
+    SOVERSION "1.0.0"
     OUTPUT_NAME LLDB
     FRAMEWORK On
     FRAMEWORK_VERSION ${LLDB_FRAMEWORK_VERSION}

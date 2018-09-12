@@ -40,7 +40,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 
@@ -135,9 +134,9 @@ void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
     getTargetStreamer()->EmitDirectiveHSACodeObjectVersion(2, 1);
 
   // HSA and PAL emit NT_AMDGPU_HSA_ISA for code objects v2.
-  IsaVersion Version = getIsaVersion(getSTI()->getCPU());
+  IsaInfo::IsaVersion ISA = IsaInfo::getIsaVersion(getSTI()->getFeatureBits());
   getTargetStreamer()->EmitDirectiveHSACodeObjectISA(
-      Version.Major, Version.Minor, Version.Stepping, "AMD", "AMDGPU");
+      ISA.Major, ISA.Minor, ISA.Stepping, "AMD", "AMDGPU");
 }
 
 void AMDGPUAsmPrinter::EmitEndOfAsmFile(Module &M) {
@@ -241,7 +240,7 @@ void AMDGPUAsmPrinter::EmitFunctionBodyEnd() {
       *getSTI(), KernelName, getAmdhsaKernelDescriptor(*MF, CurrentProgramInfo),
       CurrentProgramInfo.NumVGPRsForWavesPerEU,
       CurrentProgramInfo.NumSGPRsForWavesPerEU -
-          IsaInfo::getNumExtraSGPRs(getSTI(),
+          IsaInfo::getNumExtraSGPRs(getSTI()->getFeatureBits(),
                                     CurrentProgramInfo.VCCUsed,
                                     CurrentProgramInfo.FlatUsed),
       CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed,
@@ -562,7 +561,7 @@ static bool hasAnyNonFlatUseOfReg(const MachineRegisterInfo &MRI,
 
 int32_t AMDGPUAsmPrinter::SIFunctionResourceInfo::getTotalNumSGPRs(
   const GCNSubtarget &ST) const {
-  return NumExplicitSGPR + IsaInfo::getNumExtraSGPRs(&ST,
+  return NumExplicitSGPR + IsaInfo::getNumExtraSGPRs(ST.getFeatureBits(),
                                                      UsesVCC, UsesFlatScratch);
 }
 
@@ -759,7 +758,7 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
 
           // 48 SGPRs - vcc, - flat_scr, -xnack
           int MaxSGPRGuess =
-              47 - IsaInfo::getNumExtraSGPRs(getSTI(), true,
+              47 - IsaInfo::getNumExtraSGPRs(ST.getFeatureBits(), true,
                                              ST.hasFlatAddressSpace());
           MaxSGPR = std::max(MaxSGPR, MaxSGPRGuess);
           MaxVGPR = std::max(MaxVGPR, 23);
@@ -824,7 +823,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // duplicated in part in AMDGPUAsmParser::calculateGPRBlocks, and could be
   // unified.
   unsigned ExtraSGPRs = IsaInfo::getNumExtraSGPRs(
-      getSTI(), ProgInfo.VCCUsed, ProgInfo.FlatUsed);
+      STM.getFeatureBits(), ProgInfo.VCCUsed, ProgInfo.FlatUsed);
 
   // Check the addressable register limit before we add ExtraSGPRs.
   if (STM.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
@@ -906,9 +905,9 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   }
 
   ProgInfo.SGPRBlocks = IsaInfo::getNumSGPRBlocks(
-      getSTI(), ProgInfo.NumSGPRsForWavesPerEU);
+      STM.getFeatureBits(), ProgInfo.NumSGPRsForWavesPerEU);
   ProgInfo.VGPRBlocks = IsaInfo::getNumVGPRBlocks(
-      getSTI(), ProgInfo.NumVGPRsForWavesPerEU);
+      STM.getFeatureBits(), ProgInfo.NumVGPRsForWavesPerEU);
 
   // Update DebuggerWavefrontPrivateSegmentOffsetSGPR and
   // DebuggerPrivateSegmentBufferSGPR fields if "amdgpu-debugger-emit-prologue"
@@ -1138,7 +1137,7 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
 
-  AMDGPU::initDefaultAMDKernelCodeT(Out, getSTI());
+  AMDGPU::initDefaultAMDKernelCodeT(Out, STM.getFeatureBits());
 
   Out.compute_pgm_resource_registers =
       CurrentProgramInfo.ComputePGMRSrc1 |
