@@ -174,7 +174,7 @@ public:
     std::copy(List.begin(), List.end(), ParameterList);
   }
 
-  /// Parameters - The list of parameters for a function-like macro.  This can 
+  /// Parameters - The list of parameters for a function-like macro.  This can
   /// be empty, for, e.g. "#define X()".
   using param_iterator = IdentifierInfo *const *;
   bool param_empty() const { return NumParameters == 0; }

@@ -332,7 +332,7 @@ struct FilenamePatternConstraint {
   StringRef IgnoredFilesPattern;
   std::shared_ptr<llvm::Regex> IgnoredFilesRegex;
 
-  FilenamePatternConstraint(StringRef IgnoredFilesPattern) 
+  FilenamePatternConstraint(StringRef IgnoredFilesPattern)
       : IgnoredFilesPattern(IgnoredFilesPattern) {
     IgnoredFilesRegex = std::make_shared<llvm::Regex>("^(" +
         IgnoredFilesPattern.str() + "$)");

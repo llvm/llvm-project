@@ -34,9 +34,9 @@ class StringSizerHelper {
 public:
   enum { Size = SizeOfStr };
 };
-} // end namespace clang 
+} // end namespace clang
 
 #define STR_SIZE(str, fieldTy) clang::StringSizerHelper<sizeof(str)-1, \
-                                                        fieldTy>::Size 
+                                                        fieldTy>::Size
 
 #endif

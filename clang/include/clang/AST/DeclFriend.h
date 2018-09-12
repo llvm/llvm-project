@@ -254,7 +254,7 @@ inline void CXXRecordDecl::pushFriendDecl(FriendDecl *FD) {
   FD->NextFriend = data().FirstFriend;
   data().FirstFriend = FD;
 }
-  
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_DECLFRIEND_H

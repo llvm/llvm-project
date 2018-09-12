@@ -90,7 +90,7 @@ namespace {
       }
 
       S.Diag(L, diag) << R1 << R2;
-      
+
       SourceLocation Open = SilenceableCondVal.getBegin();
       if (Open.isValid()) {
         SourceLocation Close = SilenceableCondVal.getEnd();
@@ -330,7 +330,7 @@ static void EmitDiagForCXXThrowInNonThrowingFunc(Sema &S, SourceLocation OpLoc,
         S.Diag(FD->getLocation(), diag::note_throw_in_dtor)
             << !isa<CXXDestructorDecl>(FD) << !Ty->hasExceptionSpec()
             << FD->getExceptionSpecSourceRange();
-    } else 
+    } else
       S.Diag(FD->getLocation(), diag::note_throw_in_function)
           << FD->getExceptionSpecSourceRange();
   }
@@ -417,9 +417,10 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
   CFGBlock::FilterOptions FO;
   FO.IgnoreDefaultsWithCoveredEnums = 1;
 
-  for (CFGBlock::filtered_pred_iterator
-	 I = cfg->getExit().filtered_pred_start_end(FO); I.hasMore(); ++I) {
-    const CFGBlock& B = **I;
+  for (CFGBlock::filtered_pred_iterator I =
+           cfg->getExit().filtered_pred_start_end(FO);
+       I.hasMore(); ++I) {
+    const CFGBlock &B = **I;
     if (!live[B.getBlockID()])
       continue;
 
@@ -524,18 +525,18 @@ struct CheckFallThroughDiagnostics {
     bool isVirtualMethod = false;
     if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(Func))
       isVirtualMethod = Method->isVirtual();
-    
+
     // Don't suggest that template instantiations be marked "noreturn"
     bool isTemplateInstantiation = false;
     if (const FunctionDecl *Function = dyn_cast<FunctionDecl>(Func))
       isTemplateInstantiation = Function->isTemplateInstantiation();
-        
+
     if (!isVirtualMethod && !isTemplateInstantiation)
       D.diag_NeverFallThroughOrReturn =
         diag::warn_suggest_noreturn_function;
     else
       D.diag_NeverFallThroughOrReturn = 0;
-    
+
     D.funMode = Function;
     return D;
   }
@@ -657,6 +658,11 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
     else
       S.Diag(Loc, DiagID);
   };
+
+  // cpu_dispatch functions permit empty function bodies for ICC compatibility.
+  if (D->getAsFunction() && D->getAsFunction()->isCPUDispatchMultiVersion())
+    return;
+
   // Either in a function body compound statement, or a function-try-block.
   switch (CheckFallThrough(AC)) {
     case UnknownFallThrough:
@@ -1220,7 +1226,7 @@ static void DiagnoseSwitchLabelsFallthrough(Sema &S, AnalysisDeclContext &AC,
                                             bool PerFunction) {
   // Only perform this analysis when using [[]] attributes. There is no good
   // workflow for this warning when not using C++11. There is no good way to
-  // silence the warning (no attribute is available) unless we are using 
+  // silence the warning (no attribute is available) unless we are using
   // [[]] attributes. One could use pragmas to silence the warning, but as a
   // general solution that is gross and not in the spirit of this warning.
   //
@@ -1486,7 +1492,7 @@ class UninitValsDiagReporter : public UninitVariablesHandler {
   // order of diagnostics when calling flushDiagnostics().
   typedef llvm::MapVector<const VarDecl *, MappedType> UsesMap;
   UsesMap uses;
-  
+
 public:
   UninitValsDiagReporter(Sema &S) : S(S) {}
   ~UninitValsDiagReporter() override { flushDiagnostics(); }
@@ -1502,11 +1508,11 @@ public:
                                  const UninitUse &use) override {
     getUses(vd).getPointer()->push_back(use);
   }
-  
+
   void handleSelfInit(const VarDecl *vd) override {
     getUses(vd).setInt(true);
   }
-  
+
   void flushDiagnostics() {
     for (const auto &P : uses) {
       const VarDecl *vd = P.first;
@@ -1515,7 +1521,7 @@ public:
       UsesVec *vec = V.getPointer();
       bool hasSelfInit = V.getInt();
 
-      // Specially handle the case where we have uses of an uninitialized 
+      // Specially handle the case where we have uses of an uninitialized
       // variable, but the root cause is an idiomatic self-init.  We want
       // to report the diagnostic at the self-init since that is the root cause.
       if (!vec->empty() && hasSelfInit && hasAlwaysUninitializedUse(vec))
@@ -1545,7 +1551,7 @@ public:
             break;
         }
       }
-      
+
       // Release the uses vector.
       delete vec;
     }
@@ -1859,10 +1865,10 @@ namespace clang {
 namespace consumed {
 namespace {
 class ConsumedWarningsHandler : public ConsumedWarningsHandlerBase {
-  
+
   Sema &S;
   DiagList Warnings;
-  
+
 public:
 
   ConsumedWarningsHandler(Sema &S) : S(S) {}
@@ -1883,28 +1889,28 @@ public:
 
     Warnings.emplace_back(std::move(Warning), OptionalNotes());
   }
-  
+
   void warnParamReturnTypestateMismatch(SourceLocation Loc,
                                         StringRef VariableName,
                                         StringRef ExpectedState,
                                         StringRef ObservedState) override {
-    
+
     PartialDiagnosticAt Warning(Loc, S.PDiag(
       diag::warn_param_return_typestate_mismatch) << VariableName <<
         ExpectedState << ObservedState);
 
     Warnings.emplace_back(std::move(Warning), OptionalNotes());
   }
-  
+
   void warnParamTypestateMismatch(SourceLocation Loc, StringRef ExpectedState,
                                   StringRef ObservedState) override {
-    
+
     PartialDiagnosticAt Warning(Loc, S.PDiag(
       diag::warn_param_typestate_mismatch) << ExpectedState << ObservedState);
 
     Warnings.emplace_back(std::move(Warning), OptionalNotes());
   }
-  
+
   void warnReturnTypestateForUnconsumableType(SourceLocation Loc,
                                               StringRef TypeName) override {
     PartialDiagnosticAt Warning(Loc, S.PDiag(
@@ -1912,28 +1918,28 @@ public:
 
     Warnings.emplace_back(std::move(Warning), OptionalNotes());
   }
-  
+
   void warnReturnTypestateMismatch(SourceLocation Loc, StringRef ExpectedState,
                                    StringRef ObservedState) override {
-                                    
+
     PartialDiagnosticAt Warning(Loc, S.PDiag(
       diag::warn_return_typestate_mismatch) << ExpectedState << ObservedState);
 
     Warnings.emplace_back(std::move(Warning), OptionalNotes());
   }
-  
+
   void warnUseOfTempInInvalidState(StringRef MethodName, StringRef State,
                                    SourceLocation Loc) override {
-                                                    
+
     PartialDiagnosticAt Warning(Loc, S.PDiag(
       diag::warn_use_of_temp_in_invalid_state) << MethodName << State);
 
     Warnings.emplace_back(std::move(Warning), OptionalNotes());
   }
-  
+
   void warnUseInInvalidState(StringRef MethodName, StringRef VariableName,
                              StringRef State, SourceLocation Loc) override {
-  
+
     PartialDiagnosticAt Warning(Loc, S.PDiag(diag::warn_use_in_invalid_state) <<
                                 MethodName << VariableName << State);
 
@@ -2021,7 +2027,7 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
     flushDiagnostics(S, fscope);
     return;
   }
-  
+
   const Stmt *Body = D->getBody();
   assert(Body);
 
@@ -2107,7 +2113,7 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
     if (!analyzed)
       flushDiagnostics(S, fscope);
   }
-  
+
   // Warning: check missing 'return'
   if (P.enableCheckFallThrough) {
     const CheckFallThroughDiagnostics &CD =

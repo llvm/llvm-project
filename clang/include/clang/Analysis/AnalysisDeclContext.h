@@ -111,7 +111,7 @@ public:
   AnalysisDeclContextManager *getManager() const {
     return Manager;
   }
-  
+
   /// Return the build options used to construct the CFG.
   CFG::BuildOptions &getCFGBuildOptions() {
     return cfgBuildOptions;
@@ -190,7 +190,7 @@ public:
                                          const Stmt *S,
                                          const CFGBlock *Blk,
                                          unsigned Idx);
-  
+
   const BlockInvocationContext *
   getBlockInvocationContext(const LocationContext *parent,
                             const BlockDecl *BD,
@@ -359,7 +359,7 @@ class BlockInvocationContext : public LocationContext {
   friend class LocationContextManager;
 
   const BlockDecl *BD;
-  
+
   // FIXME: Come up with a more type-safe way to model context-sensitivity.
   const void *ContextData;
 
@@ -372,7 +372,7 @@ public:
   ~BlockInvocationContext() override = default;
 
   const BlockDecl *getBlockDecl() const { return BD; }
-  
+
   const void *getContextData() const { return ContextData; }
 
   void Profile(llvm::FoldingSetNodeID &ID) override;
@@ -403,7 +403,7 @@ public:
   const ScopeContext *getScope(AnalysisDeclContext *ctx,
                                const LocationContext *parent,
                                const Stmt *s);
-  
+
   const BlockInvocationContext *
   getBlockInvocationContext(AnalysisDeclContext *ctx,
                             const LocationContext *parent,
@@ -463,7 +463,7 @@ public:
   CFG::BuildOptions &getCFGBuildOptions() {
     return cfgBuildOptions;
   }
-  
+
   /// Return true if faux bodies should be synthesized for well-known
   /// functions.
   bool synthesizeBodies() const { return SynthesizeBodies; }

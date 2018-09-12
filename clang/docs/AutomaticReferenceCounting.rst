@@ -974,28 +974,66 @@ It is undefined behavior to access an ownership-qualified object through an
 lvalue of a differently-qualified type, except that any non-``__weak`` object
 may be read through an ``__unsafe_unretained`` lvalue.
 
-It is undefined behavior if a managed operation is performed on a ``__strong``
-or ``__weak`` object without a guarantee that it contains a primitive zero
-bit-pattern, or if the storage for such an object is freed or reused without the
-object being first assigned a null pointer.
+It is undefined behavior if the storage of a ``__strong`` or ``__weak``
+object is not properly initialized before the first managed operation
+is performed on the object, or if the storage of such an object is freed
+or reused before the object has been properly deinitialized.  Storage for
+a ``__strong`` or ``__weak`` object may be properly initialized by filling
+it with the representation of a null pointer, e.g. by acquiring the memory
+with ``calloc`` or using ``bzero`` to zero it out.  A ``__strong`` or
+``__weak`` object may be properly deinitialized by assigning a null pointer
+into it.  A ``__strong`` object may also be properly initialized
+by copying into it (e.g. with ``memcpy``) the representation of a
+different ``__strong`` object whose storage has been properly initialized;
+doing this properly deinitializes the source object and causes its storage
+to no longer be properly initialized.  A ``__weak`` object may not be
+representation-copied in this way.
+
+These requirements are followed automatically for objects whose
+initialization and deinitialization are under the control of ARC:
+
+* objects of static, automatic, and temporary storage duration
+* instance variables of Objective-C objects
+* elements of arrays where the array object's initialization and
+  deinitialization are under the control of ARC
+* fields of Objective-C struct types where the struct object's
+  initialization and deinitialization are under the control of ARC
+* non-static data members of Objective-C++ non-union class types
+* Objective-C++ objects and arrays of dynamic storage duration created
+  with the ``new`` or ``new[]`` operators and destroyed with the
+  corresponding ``delete`` or ``delete[]`` operator
+
+They are not followed automatically for these objects:
+
+* objects of dynamic storage duration created in other memory, such as
+  that returned by ``malloc``
+* union members
 
 .. admonition:: Rationale
 
-  ARC cannot differentiate between an assignment operator which is intended to
-  "initialize" dynamic memory and one which is intended to potentially replace
-  a value.  Therefore the object's pointer must be valid before letting ARC at
-  it.  Similarly, C and Objective-C do not provide any language hooks for
-  destroying objects held in dynamic memory, so it is the programmer's
-  responsibility to avoid leaks (``__strong`` objects) and consistency errors
-  (``__weak`` objects).
+  ARC must perform special operations when initializing an object and
+  when destroying it.  In many common situations, ARC knows when an
+  object is created and when it is destroyed and can ensure that these
+  operations are performed correctly.  Otherwise, however, ARC requires
+  programmer cooperation to establish its initialization invariants
+  because it is infeasible for ARC to dynamically infer whether they
+  are intact.  For example, there is no syntactic difference in C between
+  an assignment that is intended by the programmer to initialize a variable
+  and one that is intended to replace the existing value stored there,
+  but ARC must perform one operation or the other.  ARC chooses to always
+  assume that objects are initialized (except when it is in charge of
+  initializing them) because the only workable alternative would be to
+  ban all code patterns that could potentially be used to access
+  uninitialized memory, and that would be too limiting.  In practice,
+  this is rarely a problem because programmers do not generally need to
+  work with objects for which the requirements are not handled
+  automatically.
 
-These requirements are followed automatically in Objective-C++ when creating
-objects of retainable object owner type with ``new`` or ``new[]`` and destroying
-them with ``delete``, ``delete[]``, or a pseudo-destructor expression.  Note
-that arrays of nontrivially-ownership-qualified type are not ABI compatible with
-non-ARC code because the element type is non-POD: such arrays that are
-``new[]``'d in ARC translation units cannot be ``delete[]``'d in non-ARC
-translation units and vice-versa.
+Note that dynamically-allocated Objective-C++ arrays of
+nontrivially-ownership-qualified type are not ABI-compatible with non-ARC
+code because the non-ARC code will consider the element type to be POD.
+Such arrays that are ``new[]``'d in ARC translation units cannot be
+``delete[]``'d in non-ARC translation units and vice-versa.
 
 .. _arc.ownership.restrictions.pass_by_writeback:
 

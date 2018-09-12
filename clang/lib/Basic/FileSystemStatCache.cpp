@@ -95,17 +95,17 @@ bool FileSystemStatCache::get(StringRef Path, FileData &Data, bool isFile,
 
   // If the path doesn't exist, return failure.
   if (R == CacheMissing) return true;
-  
+
   // If the path exists, make sure that its "directoryness" matches the clients
   // demands.
   if (Data.IsDirectory != isForDir) {
     // If not, close the file if opened.
     if (F)
       *F = nullptr;
-    
+
     return true;
   }
-  
+
   return false;
 }
 
@@ -120,7 +120,7 @@ MemorizeStatCalls::getStat(StringRef Path, FileData &Data, bool isFile,
   // entries).
   if (Result == CacheMissing)
     return Result;
-  
+
   // Cache file 'stat' results and directories with absolutely paths.
   if (!Data.IsDirectory || llvm::sys::path::is_absolute(Path))
     StatCalls[Path] = Data;

@@ -13,7 +13,7 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
-#include <memory> 
+#include <memory>
 #include <set>
 #include <string>
 #include <utility>
@@ -27,7 +27,7 @@ class MemoryBuffer;
 
 namespace clang {
 
-/// Enumerate the kinds of standard library that 
+/// Enumerate the kinds of standard library that
 enum ObjCXXARCStandardLibraryKind {
   ARCXX_nolib,
 
@@ -37,7 +37,7 @@ enum ObjCXXARCStandardLibraryKind {
   /// libstdc++
   ARCXX_libstdcxx
 };
-  
+
 /// PreprocessorOptions - This class is used for passing the various options
 /// used in preprocessor initialization to InitializePreprocessor().
 class PreprocessorOptions {
@@ -136,15 +136,15 @@ public:
   /// the buffers associated with remapped files.
   ///
   /// This flag defaults to false; it can be set true only through direct
-  /// manipulation of the compiler invocation object, in cases where the 
+  /// manipulation of the compiler invocation object, in cases where the
   /// compiler invocation and its buffers will be reused.
   bool RetainRemappedFileBuffers = false;
-  
+
   /// The Objective-C++ ARC standard library that we should support,
   /// by providing appropriate definitions to retrofit the standard library
   /// with support for lifetime-qualified pointers.
   ObjCXXARCStandardLibraryKind ObjCXXARCStandardLibrary = ARCXX_nolib;
-    
+
   /// Records the set of modules
   class FailedModulesSet {
     llvm::StringSet<> Failed;
@@ -158,7 +158,7 @@ public:
       Failed.insert(module);
     }
   };
-  
+
   /// The set of modules that failed to build.
   ///
   /// This pointer will be shared among all of the compiler instances created
@@ -185,7 +185,7 @@ public:
     RemappedFiles.clear();
     RemappedFileBuffers.clear();
   }
-  
+
   /// Reset any options that are not considered when building a
   /// module.
   void resetNonModularOptions() {

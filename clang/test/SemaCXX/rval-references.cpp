@@ -65,10 +65,9 @@ void f() {
 }
 
 int&& should_warn(int i) {
-  // FIXME: The stack address return test doesn't reason about casts.
-  return static_cast<int&&>(i); // xpected-warning {{returning reference to temporary}}
+  return static_cast<int&&>(i); // expected-warning {{reference to stack memory associated with parameter 'i' returned}}
 }
-int&& should_not_warn(int&& i) { // But GCC 4.4 does
+int&& should_not_warn(int&& i) {
   return static_cast<int&&>(i);
 }
 

@@ -266,7 +266,7 @@ TEST_F(FileManagerTest, addRemoveStatCache) {
 // getFile() Should return the same entry as getVirtualFile if the file actually
 // is a virtual file, even if the name is not exactly the same (but is after
 // normalisation done by the file system, like on Windows). This can be checked
-// here by checkng the size.
+// here by checking the size.
 TEST_F(FileManagerTest, getVirtualFileWithDifferentName) {
   // Inject fake files into the file system.
   auto statCache = llvm::make_unique<FakeStatCache>();

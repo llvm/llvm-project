@@ -188,6 +188,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(decayedType);
   REGISTER_MATCHER(decl);
   REGISTER_MATCHER(declaratorDecl);
+  REGISTER_MATCHER(decltypeType);
   REGISTER_MATCHER(declCountIs);
   REGISTER_MATCHER(declRefExpr);
   REGISTER_MATCHER(declStmt);
@@ -358,6 +359,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isInTemplateInstantiation);
   REGISTER_MATCHER(isLambda);
   REGISTER_MATCHER(isListInitialization);
+  REGISTER_MATCHER(isMain);
   REGISTER_MATCHER(isMemberInitializer);
   REGISTER_MATCHER(isMoveAssignmentOperator);
   REGISTER_MATCHER(isMoveConstructor);
@@ -408,6 +410,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(objcImplementationDecl);
   REGISTER_MATCHER(objcInterfaceDecl);
   REGISTER_MATCHER(objcIvarDecl);
+  REGISTER_MATCHER(objcIvarRefExpr);
   REGISTER_MATCHER(objcMessageExpr);
   REGISTER_MATCHER(objcMethodDecl);
   REGISTER_MATCHER(objcObjectPointerType);

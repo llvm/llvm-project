@@ -281,7 +281,7 @@ void EHScopeStack::popNullFixups() {
     BranchFixups.pop_back();
 }
 
-void CodeGenFunction::initFullExprCleanup() {
+Address CodeGenFunction::createCleanupActiveFlag() {
   // Create a variable to decide whether the cleanup needs to be run.
   Address active = CreateTempAllocaWithoutCast(
       Builder.getInt1Ty(), CharUnits::One(), "cleanup.cond");
@@ -293,10 +293,14 @@ void CodeGenFunction::initFullExprCleanup() {
   // Initialize it to true at the current location.
   Builder.CreateStore(Builder.getTrue(), active);
 
+  return active;
+}
+
+void CodeGenFunction::initFullExprCleanupWithFlag(Address ActiveFlag) {
   // Set that as the active flag in the cleanup.
   EHCleanupScope &cleanup = cast<EHCleanupScope>(*EHStack.begin());
   assert(!cleanup.hasActiveFlag() && "cleanup already has active flag?");
-  cleanup.setActiveFlag(active);
+  cleanup.setActiveFlag(ActiveFlag);
 
   if (cleanup.isNormalCleanup()) cleanup.setTestFlagInNormalCleanup();
   if (cleanup.isEHCleanup()) cleanup.setTestFlagInEHCleanup();
@@ -315,7 +319,7 @@ static llvm::LoadInst *createLoadInstBefore(Address addr, const Twine &name,
   auto load = new llvm::LoadInst(addr.getPointer(), name, beforeInst);
   load->setAlignment(addr.getAlignment().getQuantity());
   return load;
-}                                 
+}
 
 /// All the branch fixups on the EH stack have propagated out past the
 /// outermost normal cleanup; resolve them all by adding cases to the
@@ -494,6 +498,13 @@ void CodeGenFunction::PopCleanupBlocks(
                               &LifetimeExtendedCleanupStack[I],
                               Header.getSize());
     I += Header.getSize();
+
+    if (Header.isConditional()) {
+      Address ActiveFlag =
+          reinterpret_cast<Address &>(LifetimeExtendedCleanupStack[I]);
+      initFullExprCleanupWithFlag(ActiveFlag);
+      I += sizeof(ActiveFlag);
+    }
   }
   LifetimeExtendedCleanupStack.resize(OldLifetimeExtendedSize);
 }
@@ -610,7 +621,7 @@ static void destroyOptimisticNormalEntry(CodeGenFunction &CGF,
     ++i;
 
     use.set(unreachableBB);
-    
+
     // The only uses should be fixup switches.
     llvm::SwitchInst *si = cast<llvm::SwitchInst>(use.getUser());
     if (si->getNumCases() == 1 && si->getDefaultDest() == unreachableBB) {
@@ -629,7 +640,7 @@ static void destroyOptimisticNormalEntry(CodeGenFunction &CGF,
       condition->eraseFromParent();
     }
   }
-  
+
   assert(entry->use_empty());
   delete entry;
 }
@@ -648,7 +659,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
   Address NormalActiveFlag =
     Scope.shouldTestFlagInNormalCleanup() ? Scope.getActiveFlag()
                                           : Address::invalid();
-  Address EHActiveFlag = 
+  Address EHActiveFlag =
     Scope.shouldTestFlagInEHCleanup() ? Scope.getActiveFlag()
                                       : Address::invalid();
 
@@ -697,7 +708,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
   // cleanup, rewrite it so that it leads to the appropriate place.
   if (Scope.isNormalCleanup() && HasPrebranchedFallthrough && !IsActive) {
     llvm::BasicBlock *prebranchDest;
-    
+
     // If the prebranch is semantically branching through the next
     // cleanup, just forward it to the next block, leaving the
     // insertion point in the prebranched block.
@@ -911,7 +922,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
       }
 
       // V.  Set up the fallthrough edge out.
-      
+
       // Case 1: a fallthrough source exists but doesn't branch to the
       // cleanup because the cleanup is inactive.
       if (!HasFallthrough && FallthroughSource) {
@@ -1014,11 +1025,11 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
 bool CodeGenFunction::isObviouslyBranchWithoutCleanups(JumpDest Dest) const {
   assert(Dest.getScopeDepth().encloses(EHStack.stable_begin())
          && "stale jump destination");
-  
+
   // Calculate the innermost active normal cleanup.
   EHScopeStack::stable_iterator TopCleanup =
     EHStack.getInnermostActiveNormalCleanup();
-  
+
   // If we're not in an active normal cleanup scope, or if the
   // destination scope is within the innermost active normal cleanup
   // scope, we don't need to worry about fixups.
@@ -1108,7 +1119,7 @@ void CodeGenFunction::EmitBranchThroughCleanup(JumpDest Dest) {
         break;
     }
   }
-  
+
   Builder.ClearInsertionPoint();
 }
 

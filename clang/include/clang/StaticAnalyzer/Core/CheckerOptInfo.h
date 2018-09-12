@@ -28,7 +28,7 @@ class CheckerOptInfo {
 public:
   CheckerOptInfo(StringRef name, bool enable)
     : Name(name), Enable(enable), Claimed(false) { }
-  
+
   StringRef getName() const { return Name; }
   bool isEnabled() const { return Enable; }
   bool isDisabled() const { return !isEnabled(); }

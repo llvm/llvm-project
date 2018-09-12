@@ -729,7 +729,7 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
                           DI, D->getStorageClass());
 
   // In ARC, infer 'retaining' for variables of retainable type.
-  if (SemaRef.getLangOpts().ObjCAutoRefCount && 
+  if (SemaRef.getLangOpts().ObjCAutoRefCount &&
       SemaRef.inferObjCARCLifetime(Var))
     Var->setInvalidDecl();
 
@@ -2056,7 +2056,7 @@ TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D,
   // previous declaration we just found.
   if (isFriend && Method->getPreviousDecl())
     Method->setAccess(Method->getPreviousDecl()->getAccess());
-  else 
+  else
     Method->setAccess(D->getAccess());
   if (FunctionTemplate)
     FunctionTemplate->setAccess(Method->getAccess());
@@ -3417,7 +3417,7 @@ TemplateDeclInstantiator::SubstFunctionType(FunctionDecl *D,
     ThisContext = cast<CXXRecordDecl>(Owner);
     ThisTypeQuals = Method->getTypeQualifiers();
   }
-  
+
   TypeSourceInfo *NewTInfo
     = SemaRef.SubstFunctionDeclType(OldTInfo, TemplateArgs,
                                     D->getTypeSpecStartLoc(),
@@ -4890,14 +4890,14 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
                           const MultiLevelTemplateArgumentList &TemplateArgs,
                           bool FindingInstantiatedContext) {
   DeclContext *ParentDC = D->getDeclContext();
-  // FIXME: Parmeters of pointer to functions (y below) that are themselves 
+  // FIXME: Parmeters of pointer to functions (y below) that are themselves
   // parameters (p below) can have their ParentDC set to the translation-unit
-  // - thus we can not consistently check if the ParentDC of such a parameter 
+  // - thus we can not consistently check if the ParentDC of such a parameter
   // is Dependent or/and a FunctionOrMethod.
-  // For e.g. this code, during Template argument deduction tries to 
+  // For e.g. this code, during Template argument deduction tries to
   // find an instantiated decl for (T y) when the ParentDC for y is
-  // the translation unit.  
-  //   e.g. template <class T> void Foo(auto (*p)(T y) -> decltype(y())) {} 
+  // the translation unit.
+  //   e.g. template <class T> void Foo(auto (*p)(T y) -> decltype(y())) {}
   //   float baz(float(*)()) { return 0.0; }
   //   Foo(baz);
   // The better fix here is perhaps to ensure that a ParmVarDecl, by the time

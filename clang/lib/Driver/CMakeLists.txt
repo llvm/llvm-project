@@ -57,6 +57,7 @@ add_clang_library(clangDriver
   ToolChains/NetBSD.cpp
   ToolChains/OpenBSD.cpp
   ToolChains/PS4CPU.cpp
+  ToolChains/RISCV.cpp
   ToolChains/Solaris.cpp
   ToolChains/TCE.cpp
   ToolChains/WebAssembly.cpp

@@ -34,12 +34,12 @@ struct PCHBuffer {
   llvm::SmallVector<char, 0> Data;
   bool IsComplete;
 };
-  
+
 /// This abstract interface provides operations for creating
 /// containers for serialized ASTs (precompiled headers and clang
 /// modules).
 class PCHContainerWriter {
-public: 
+public:
   virtual ~PCHContainerWriter() = 0;
   virtual StringRef getFormat() const = 0;
 
@@ -58,7 +58,7 @@ public:
 /// containers for serialized ASTs (precompiled headers and clang
 /// modules).
 class PCHContainerReader {
-public: 
+public:
   virtual ~PCHContainerReader() = 0;
   /// Equivalent to the format passed to -fmodule-format=
   virtual StringRef getFormat() const = 0;
@@ -102,7 +102,7 @@ public:
   }
   void registerReader(std::unique_ptr<PCHContainerReader> Reader) {
     Readers[Reader->getFormat()] = std::move(Reader);
-  }  
+  }
   const PCHContainerWriter *getWriterOrNull(StringRef Format) {
     return Writers[Format].get();
   }

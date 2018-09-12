@@ -74,7 +74,7 @@ using DiagnosticForConsumerMapTy =
 /// This class provides an interface through which checkers can create
 /// individual bug reports.
 class BugReport : public llvm::ilist_node<BugReport> {
-public:  
+public:
   class NodeResolver {
     virtual void anchor();
 
@@ -102,7 +102,7 @@ protected:
   PathDiagnosticLocation Location;
   PathDiagnosticLocation UniqueingLocation;
   const Decl *UniqueingDecl;
-  
+
   const ExplodedNode *ErrorNode = nullptr;
   SmallVector<SourceRange, 4> Ranges;
   ExtraTextList ExtraText;
@@ -220,12 +220,12 @@ public:
 
   /// Disable all path pruning when generating a PathDiagnostic.
   void disablePathPruning() { DoNotPrunePath = true; }
-  
+
   void markInteresting(SymbolRef sym);
   void markInteresting(const MemRegion *R);
   void markInteresting(SVal V);
   void markInteresting(const LocationContext *LC);
-  
+
   bool isInteresting(SymbolRef sym);
   bool isInteresting(const MemRegion *R);
   bool isInteresting(SVal V);
@@ -251,11 +251,11 @@ public:
   void markInvalid(const void *Tag, const void *Data) {
     Invalidations.insert(std::make_pair(Tag, Data));
   }
-  
+
   /// Return the canonical declaration, be it a method or class, where
   /// this issue semantically occurred.
   const Decl *getDeclWithIssue() const;
-  
+
   /// Specifically set the Decl where an issue occurred.  This isn't necessary
   /// for BugReports that cover a path as it will be automatically inferred.
   void setDeclWithIssue(const Decl *declWithIssue) {
@@ -290,7 +290,7 @@ public:
 
   /// This allows for addition of meta data to the diagnostic.
   ///
-  /// Currently, only the HTMLDiagnosticClient knows how to display it. 
+  /// Currently, only the HTMLDiagnosticClient knows how to display it.
   void addExtraText(StringRef S) {
     ExtraText.push_back(S);
   }
@@ -310,7 +310,7 @@ public:
   PathDiagnosticLocation getUniqueingLocation() const {
     return UniqueingLocation;
   }
-  
+
   /// Get the declaration containing the uniqueing location.
   const Decl *getUniqueingDecl() const {
     return UniqueingDecl;

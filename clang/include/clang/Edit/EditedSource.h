@@ -85,7 +85,7 @@ public:
   bool canInsertInOffset(SourceLocation OrigLoc, FileOffset Offs);
 
   bool commit(const Commit &commit);
-  
+
   void applyRewrites(EditsReceiver &receiver, bool adjustRemovals = true);
   void clearRewrites();
 

@@ -1296,7 +1296,7 @@ struct FormatStyle {
   /// If ``Never``, lays out Objective-C protocol conformance list items
   /// onto individual lines whenever they go over ``ColumnLimit``.
   ///
-  /// \code
+  /// \code{.objc}
   ///    Always (or Auto, if BinPackParameters=true):
   ///    @interface ccccccccccccc () <
   ///        ccccccccccccc, ccccccccccccc,

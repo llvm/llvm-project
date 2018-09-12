@@ -500,7 +500,7 @@ private:
   std::vector<til::BasicBlock *> BlockMap;
 
   // Extra information per BB. Indexed by clang BlockID.
-  std::vector<BlockInfo> BBInfo;           
+  std::vector<BlockInfo> BBInfo;
 
   LVarDefinitionMap CurrentLVarMap;
   std::vector<til::Phi *> CurrentArguments;

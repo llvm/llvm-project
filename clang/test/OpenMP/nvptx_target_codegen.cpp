@@ -562,7 +562,6 @@ int baz(int f, double &a) {
   // CHECK: [[REC_ADDR:%.+]] = bitcast i8* [[PTR]] to %struct._globalized_locals_ty*
   // CHECK: [[F_PTR:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[REC_ADDR]], i32 0, i32 0
   // CHECK: store i32 %{{.+}}, i32* [[F_PTR]],
-  // CHECK: store i32 [[GTID]], i32* [[GTID_ADDR]],
 
   // CHECK: [[RES:%.+]] = call i8 @__kmpc_is_spmd_exec_mode()
   // CHECK: icmp ne i8 [[RES]], 0
@@ -573,7 +572,7 @@ int baz(int f, double &a) {
   // CHECK: br i1
 
   // CHECK: call void @__kmpc_serialized_parallel(%struct.ident_t* @{{.+}}, i32 [[GTID]])
-  // CHECK: call void [[OUTLINED:@.+]](i32* [[GTID_ADDR]], i32* [[ZERO_ADDR]], i32* [[F_PTR]], double* %{{.+}})
+  // CHECK: call void [[OUTLINED:@.+]](i32* [[ZERO_ADDR]], i32* [[ZERO_ADDR]], i32* [[F_PTR]], double* %{{.+}})
   // CHECK: call void @__kmpc_end_serialized_parallel(%struct.ident_t* @{{.+}}, i32 [[GTID]])
   // CHECK: br label
 
@@ -591,6 +590,7 @@ int baz(int f, double &a) {
   // CHECK: call void @__kmpc_end_sharing_variables()
   // CHECK: br label
 
+  // CHECK: store i32 [[GTID]], i32* [[GTID_ADDR]],
   // CHECK: call void [[OUTLINED]](i32* [[GTID_ADDR]], i32* [[ZERO_ADDR]], i32* [[F_PTR]], double* %{{.+}})
   // CHECK: br label
 

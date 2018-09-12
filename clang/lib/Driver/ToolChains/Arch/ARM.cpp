@@ -232,7 +232,7 @@ arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
       break;
 
     case llvm::Triple::OpenBSD:
-      ABI = FloatABI::Soft;
+      ABI = FloatABI::SoftFP;
       break;
 
     default:
@@ -448,7 +448,7 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
           if (B->getOption().matches(options::OPT_mlong_calls))
             D.Diag(diag::err_opt_not_valid_with_opt) << A->getAsString(Args) << B->getAsString(Args);
         }
-	Features.push_back("+execute-only");
+        Features.push_back("+execute-only");
       }
     }
   }

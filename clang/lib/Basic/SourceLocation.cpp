@@ -49,7 +49,7 @@ void SourceLocation::print(raw_ostream &OS, const SourceManager &SM)const{
 
   if (isFileID()) {
     PresumedLoc PLoc = SM.getPresumedLoc(*this);
-    
+
     if (PLoc.isInvalid()) {
       OS << "<invalid>";
       return;

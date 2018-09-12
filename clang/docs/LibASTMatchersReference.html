@@ -1267,6 +1267,20 @@ Example matches @finally
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('objcIvarRefExpr0')"><a name="objcIvarRefExpr0Anchor">objcIvarRefExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCIvarRefExpr.html">ObjCIvarRefExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="objcIvarRefExpr0"><pre>Matches a reference to an ObjCIvar.
+
+Example: matches "a" in "init" method:
+@implementation A {
+  NSString *a;
+}
+- (void) init {
+  a = @"hello";
+}
+}
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('objcMessageExpr0')"><a name="objcMessageExpr0Anchor">objcMessageExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="objcMessageExpr0"><pre>Matches ObjectiveC Message invocation expressions.
 
@@ -1574,6 +1588,18 @@ Example matches i[1].
   void f(int i[]) {
     i[1] = 0;
   }
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('decltypeType0')"><a name="decltypeType0Anchor">decltypeType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DecltypeType.html">DecltypeType</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="decltypeType0"><pre>Matches types nodes representing C++11 decltype(&lt;expr&gt;) types.
+
+Given:
+  short i = 1;
+  int j = 42;
+  decltype(i + j) result = i + j;
+decltypeType() 
+  matches "decltype(i + j)"
 </pre></td></tr>
 
 
@@ -2919,6 +2945,12 @@ namespaceDecl(isInline()) will match n::m.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isMain0')"><a name="isMain0Anchor">isMain</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isMain0"><pre>Determines whether the function is "main", which is the entry point
+into an executable program.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isNoReturn0')"><a name="isNoReturn0Anchor">isNoReturn</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isNoReturn0"><pre>Matches FunctionDecls that have a noreturn attribute.
 
@@ -3275,9 +3307,9 @@ Example
 matcher = objcMessagaeExpr(isInstanceMessage())
 matches
   NSString *x = @"hello";
-  [x containsString:@"h"]
+  [x containsString:@"h"];
 but not
-  [NSString stringWithFormat:@"format"]
+  [NSString stringWithFormat:@"format"];
 </pre></td></tr>
 
 
@@ -4233,6 +4265,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -4529,6 +4562,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -4732,6 +4766,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -4882,6 +4917,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -5043,6 +5079,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -5150,6 +5187,19 @@ declaration of class D.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DecltypeType.html">DecltypeType</a>&gt;</td><td class="name" onclick="toggle('hasUnderlyingType0')"><a name="hasUnderlyingType0Anchor">hasUnderlyingType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td></tr>
+<tr><td colspan="4" class="doc" id="hasUnderlyingType0"><pre>Matches DecltypeType nodes to find out the underlying type.
+
+Given
+  decltype(1) a = 1;
+  decltype(2.0) b = 2.0;
+decltypeType(hasUnderlyingType(isInteger()))
+  matches "auto a"
+
+Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DecltypeType.html">DecltypeType</a>&gt;
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1DoStmt.html">DoStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody0')"><a name="hasBody0Anchor">hasBody</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasBody0"><pre>Matches a 'for', 'while', 'do while' statement or a function
 definition that has a given body.
@@ -5216,6 +5266,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -5636,6 +5687,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -5669,6 +5721,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -5702,6 +5755,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -5894,7 +5948,7 @@ and the inner matcher matches on that instance.
 
 For example the method call in
   NSString *x = @"hello";
-  [x containsString:@"h"]
+  [x containsString:@"h"];
 is matched by
 objcMessageExpr(hasReceiver(declRefExpr(to(varDecl(hasName("x"))))))
 </pre></td></tr>
@@ -6062,6 +6116,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -6143,6 +6198,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -6295,6 +6351,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -6417,6 +6474,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -6470,6 +6528,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -6534,6 +6593,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given
@@ -6564,7 +6624,7 @@ type of the matched node.
 For example, in:
   class A {};
   using B = A;
-The matcher type(hasUnqualifeidDesugaredType(recordType())) matches
+The matcher type(hasUnqualifiedDesugaredType(recordType())) matches
 both B and A.
 </pre></td></tr>
 
@@ -6598,6 +6658,7 @@ The associated declaration is:
 - for MemberExpr, the declaration of the referenced member
 - for CXXConstructExpr, the declaration of the constructor
 - for CXXNewExpr, the declaration of the operator new
+- for ObjCIvarExpr, the declaration of the ivar
 
 For type nodes, hasDeclaration will generally match the declaration of the
 sugared type. Given

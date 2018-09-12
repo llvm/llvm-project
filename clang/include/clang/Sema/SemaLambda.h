@@ -25,11 +25,11 @@ class FunctionScopeInfo;
 class Sema;
 
 /// Examines the FunctionScopeInfo stack to determine the nearest
-/// enclosing lambda (to the current lambda) that is 'capture-capable' for 
+/// enclosing lambda (to the current lambda) that is 'capture-capable' for
 /// the variable referenced in the current lambda (i.e. \p VarToCapture).
 /// If successful, returns the index into Sema's FunctionScopeInfo stack
-/// of the capture-capable lambda's LambdaScopeInfo. 
-/// See Implementation for more detailed comments. 
+/// of the capture-capable lambda's LambdaScopeInfo.
+/// See Implementation for more detailed comments.
 
 Optional<unsigned> getStackIndexOfNearestEnclosingCaptureCapableLambda(
     ArrayRef<const sema::FunctionScopeInfo *> FunctionScopes,

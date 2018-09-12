@@ -47,7 +47,7 @@ class NotDeleted2c { int &&a = static_cast<int&&>(n); };
 NotDeleted2c nd2c;
 // Note: this one does not have a deleted default constructor even though the
 // implicit default constructor is ill-formed!
-class NotDeleted2d { int &&a = 0; }; // expected-error {{reference member 'a' binds to a temporary object}} expected-note {{here}}
+class NotDeleted2d { int &&a = 0; }; // expected-error {{reference member 'a' binds to a temporary object}} expected-note {{default member init}}
 NotDeleted2d nd2d; // expected-note {{first required here}}
 
 // - any non-variant non-static data member of const qualified type (or array

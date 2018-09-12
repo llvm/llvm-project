@@ -27,7 +27,7 @@ std::string ObjCRuntime::getAsString() const {
     llvm::raw_string_ostream Out(Result);
     Out << *this;
   }
-  return Result;  
+  return Result;
 }
 
 raw_ostream &clang::operator<<(raw_ostream &out, const ObjCRuntime &value) {

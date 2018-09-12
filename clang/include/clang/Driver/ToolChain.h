@@ -413,6 +413,11 @@ public:
     return llvm::DebuggerKind::GDB;
   }
 
+  /// Does this toolchain supports given debug info option or not.
+  virtual bool supportsDebugInfoOption(const llvm::opt::Arg *) const {
+    return true;
+  }
+
   /// GetExceptionModel - Return the tool chain exception model.
   virtual llvm::ExceptionHandling
   GetExceptionModel(const llvm::opt::ArgList &Args) const;

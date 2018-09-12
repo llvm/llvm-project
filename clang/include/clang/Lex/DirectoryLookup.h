@@ -24,7 +24,7 @@ class DirectoryEntry;
 class FileEntry;
 class HeaderSearch;
 class Module;
-  
+
 /// DirectoryLookup - This class represents one entry in the search list that
 /// specifies the search order for directories in \#include directives.  It
 /// represents either a directory, a framework, or a headermap.
@@ -54,14 +54,14 @@ private:
   /// LookupType - This indicates whether this DirectoryLookup object is a
   /// normal directory, a framework, or a headermap.
   unsigned LookupType : 2;
-  
+
   /// Whether this is a header map used when building a framework.
   unsigned IsIndexHeaderMap : 1;
 
   /// Whether we've performed an exhaustive search for module maps
   /// within the subdirectories of this directory.
   unsigned SearchedAllModuleMaps : 1;
-  
+
 public:
   /// DirectoryLookup ctor - Note that this ctor *does not take ownership* of
   /// 'dir'.
@@ -140,10 +140,10 @@ public:
   }
 
   /// Whether this header map is building a framework or not.
-  bool isIndexHeaderMap() const { 
-    return isHeaderMap() && IsIndexHeaderMap; 
+  bool isIndexHeaderMap() const {
+    return isHeaderMap() && IsIndexHeaderMap;
   }
-  
+
   /// LookupFile - Lookup the specified file in this search path, returning it
   /// if it exists or returning null if not.
   ///

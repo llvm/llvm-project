@@ -564,7 +564,7 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
     StringRef Suffix =
       tools::arm::getLLVMArchSuffixForARM(CPU, MArch, Triple);
     bool IsMProfile = ARM::parseArchProfile(Suffix) == ARM::ProfileKind::M;
-    bool ThumbDefault = IsMProfile || (ARM::parseArchVersion(Suffix) == 7 && 
+    bool ThumbDefault = IsMProfile || (ARM::parseArchVersion(Suffix) == 7 &&
                                        getTriple().isOSBinFormatMachO());
     // FIXME: this is invalid for WindowsCE
     if (getTriple().isOSWindows())
@@ -803,8 +803,8 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
   using namespace SanitizerKind;
 
   SanitizerMask Res = (Undefined & ~Vptr & ~Function) | (CFI & ~CFIICall) |
-                      CFICastStrict | UnsignedIntegerOverflow | Nullability |
-                      LocalBounds;
+                      CFICastStrict | UnsignedIntegerOverflow |
+                      ImplicitConversion | Nullability | LocalBounds;
   if (getTriple().getArch() == llvm::Triple::x86 ||
       getTriple().getArch() == llvm::Triple::x86_64 ||
       getTriple().getArch() == llvm::Triple::arm ||

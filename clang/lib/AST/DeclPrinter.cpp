@@ -44,7 +44,7 @@ namespace {
     ///
     /// \param Quals The Objective-C declaration qualifiers.
     /// \param T The type to print.
-    void PrintObjCMethodType(ASTContext &Ctx, Decl::ObjCDeclQualifier Quals, 
+    void PrintObjCMethodType(ASTContext &Ctx, Decl::ObjCDeclQualifier Quals,
                              QualType T);
 
     void PrintObjCTypeParams(ObjCTypeParamList *Params);
@@ -204,7 +204,7 @@ LLVM_DUMP_METHOD void DeclContext::dumpDeclContext() const {
   const DeclContext *DC = this;
   while (!DC->isTranslationUnit())
     DC = DC->getParent();
-  
+
   ASTContext &Ctx = cast<TranslationUnitDecl>(DC)->getASTContext();
   DeclPrinter Printer(llvm::errs(), Ctx.getPrintingPolicy(), Ctx, 0);
   Printer.VisitDeclContext(const_cast<DeclContext *>(this), /*Indent=*/false);
@@ -490,7 +490,7 @@ void DeclPrinter::VisitTranslationUnitDecl(TranslationUnitDecl *D) {
 void DeclPrinter::VisitTypedefDecl(TypedefDecl *D) {
   if (!Policy.SuppressSpecifiers) {
     Out << "typedef ";
-    
+
     if (D->isModulePrivate())
       Out << "__module_private__ ";
   }
@@ -651,7 +651,7 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     }
 
     Proto += ")";
-    
+
     if (FT) {
       if (FT->isConst())
         Proto += " const";
@@ -676,7 +676,7 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
       Proto += " throw(";
       if (FT->getExceptionSpecType() == EST_MSAny)
         Proto += "...";
-      else 
+      else
         for (unsigned I = 0, N = FT->getNumExceptions(); I != N; ++I) {
           if (I)
             Proto += ", ";
@@ -1151,8 +1151,8 @@ void DeclPrinter::VisitClassTemplatePartialSpecializationDecl(
 // Objective-C declarations
 //----------------------------------------------------------------------------
 
-void DeclPrinter::PrintObjCMethodType(ASTContext &Ctx, 
-                                      Decl::ObjCDeclQualifier Quals, 
+void DeclPrinter::PrintObjCMethodType(ASTContext &Ctx,
+                                      Decl::ObjCDeclQualifier Quals,
                                       QualType T) {
   Out << '(';
   if (Quals & Decl::ObjCDeclQualifier::OBJC_TQ_In)
@@ -1171,7 +1171,7 @@ void DeclPrinter::PrintObjCMethodType(ASTContext &Ctx,
     if (auto nullability = AttributedType::stripOuterNullability(T))
       Out << getNullabilitySpelling(*nullability, true) << ' ';
   }
-  
+
   Out << Ctx.getUnqualifiedObjCPointerType(T).getAsString(Policy);
   Out << ')';
 }
@@ -1226,7 +1226,7 @@ void DeclPrinter::VisitObjCMethodDecl(ObjCMethodDecl *OMD) {
     if (lastPos != 0)
       Out << " ";
     Out << name.substr(lastPos, pos - lastPos) << ':';
-    PrintObjCMethodType(OMD->getASTContext(), 
+    PrintObjCMethodType(OMD->getASTContext(),
                         PI->getObjCDeclQualifier(),
                         PI->getType());
     Out << *PI;
@@ -1238,7 +1238,7 @@ void DeclPrinter::VisitObjCMethodDecl(ObjCMethodDecl *OMD) {
 
   if (OMD->isVariadic())
       Out << ", ...";
-  
+
   prettyPrintAttributes(OMD);
 
   if (OMD->getBody() && !Policy.TerseOutput) {
@@ -1258,7 +1258,7 @@ void DeclPrinter::VisitObjCImplementationDecl(ObjCImplementationDecl *OID) {
     Out << "@implementation " << I << " : " << *SID;
   else
     Out << "@implementation " << I;
-  
+
   if (OID->ivar_size() > 0) {
     Out << "{\n";
     eolnOut = true;
@@ -1303,7 +1303,7 @@ void DeclPrinter::VisitObjCInterfaceDecl(ObjCInterfaceDecl *OID) {
   if (auto TypeParams = OID->getTypeParamListAsWritten()) {
     PrintObjCTypeParams(TypeParams);
   }
-  
+
   if (SID)
     Out << " : " << QualType(OID->getSuperClassType(), 0).getAsString(Policy);
 
@@ -1382,7 +1382,7 @@ void DeclPrinter::VisitObjCCategoryDecl(ObjCCategoryDecl *PID) {
     Indentation -= Policy.Indentation;
     Out << "}\n";
   }
-  
+
   VisitDeclContext(PID, false);
   Out << "@end";
 
@@ -1461,7 +1461,7 @@ void DeclPrinter::VisitObjCPropertyDecl(ObjCPropertyDecl *PDecl) {
       Out << (first ? ' ' : ',') << "atomic";
       first = false;
     }
-    
+
     if (PDecl->getPropertyAttributes() &
         ObjCPropertyDecl::OBJC_PR_nullability) {
       if (auto nullability = AttributedType::stripOuterNullability(T)) {

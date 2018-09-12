@@ -251,7 +251,7 @@ private:
     while (OuterS && (isa<ParenExpr>(OuterS) ||
                       isa<CastExpr>(OuterS) ||
                       isa<ExprWithCleanups>(OuterS)));
-    
+
     if (!OuterS)
       return std::make_pair(prevStmt, nextStmt);
 
@@ -419,7 +419,7 @@ private:
   bool isRemovable(Expr *E) const {
     return Removables.count(E);
   }
-  
+
   bool tryRemoving(Expr *E) const {
     if (isRemovable(E)) {
       Pass.TA.removeStmt(E);

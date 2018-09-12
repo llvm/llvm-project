@@ -191,19 +191,28 @@ TEST_F(FormatTestJS, JSDocComments) {
 
   // Break a single line long jsdoc comment pragma.
   EXPECT_EQ("/**\n"
-            " * @returns {string} jsdoc line 12\n"
+            " * @returns\n"
+            " *     {string}\n"
+            " *     jsdoc line 12\n"
             " */",
             format("/** @returns {string} jsdoc line 12 */",
                    getGoogleJSStyleWithColumns(20)));
 
   EXPECT_EQ("/**\n"
-            " * @returns {string} jsdoc line 12\n"
+            " * @returns\n"
+            " *     {string}\n"
+            " *     jsdoc line 12\n"
             " */",
             format("/** @returns {string} jsdoc line 12  */",
                    getGoogleJSStyleWithColumns(20)));
 
+  // FIXME: this overcounts the */ as a continuation of the 12 when breaking.
+  // Related to the FIXME in BreakableBlockComment::getRangeLength.
   EXPECT_EQ("/**\n"
-            " * @returns {string} jsdoc line 12\n"
+            " * @returns\n"
+            " *     {string}\n"
+            " *     jsdoc line\n"
+            " *     12\n"
             " */",
             format("/** @returns {string} jsdoc line 12*/",
                    getGoogleJSStyleWithColumns(20)));
@@ -212,7 +221,8 @@ TEST_F(FormatTestJS, JSDocComments) {
   EXPECT_EQ("/**\n"
             " * line 1\n"
             " * line 2\n"
-            " * @returns {string} jsdoc line 12\n"
+            " * @returns {string}\n"
+            " *     jsdoc line 12\n"
             " */",
             format("/** line 1\n"
                    " * line 2\n"
@@ -2028,21 +2038,24 @@ TEST_F(FormatTestJS, WrapAfterParen) {
 
 TEST_F(FormatTestJS, JSDocAnnotations) {
   verifyFormat("/**\n"
-               " * @export {this.is.a.long.path.to.a.Type}\n"
+               " * @exports\n"
+               " *     {this.is.a.long.path.to.a.Type}\n"
                " */",
                "/**\n"
-               " * @export {this.is.a.long.path.to.a.Type}\n"
+               " * @exports {this.is.a.long.path.to.a.Type}\n"
                " */",
                getGoogleJSStyleWithColumns(20));
   verifyFormat("/**\n"
-               " * @mods {this.is.a.long.path.to.a.Type}\n"
+               " * @mods\n"
+               " *     {this.is.a.long.path.to.a.Type}\n"
                " */",
                "/**\n"
                " * @mods {this.is.a.long.path.to.a.Type}\n"
                " */",
                getGoogleJSStyleWithColumns(20));
   verifyFormat("/**\n"
-               " * @param {this.is.a.long.path.to.a.Type}\n"
+               " * @param\n"
+               " *     {this.is.a.long.path.to.a.Type}\n"
                " */",
                "/**\n"
                " * @param {this.is.a.long.path.to.a.Type}\n"
@@ -2058,34 +2071,36 @@ TEST_F(FormatTestJS, JSDocAnnotations) {
   verifyFormat(
       "/**\n"
       " * @param This is a\n"
-      " * long comment but\n"
-      " * no type\n"
+      " *     long comment\n"
+      " *     but no type\n"
       " */",
       "/**\n"
       " * @param This is a long comment but no type\n"
       " */",
       getGoogleJSStyleWithColumns(20));
-  // Don't break @param line, but reindent it and reflow unrelated lines.
-  verifyFormat("{\n"
-               "  /**\n"
-               "   * long long long\n"
-               "   * long\n"
-               "   * @param {this.is.a.long.path.to.a.Type} a\n"
-               "   * long long long\n"
-               "   * long long\n"
-               "   */\n"
-               "  function f(a) {}\n"
-               "}",
-               "{\n"
-               "/**\n"
-               " * long long long long\n"
-               " * @param {this.is.a.long.path.to.a.Type} a\n"
-               " * long long long long\n"
-               " * long\n"
-               " */\n"
-               "  function f(a) {}\n"
-               "}",
-               getGoogleJSStyleWithColumns(20));
+  // Break and reindent @param line and reflow unrelated lines.
+  EXPECT_EQ("{\n"
+            "  /**\n"
+            "   * long long long\n"
+            "   * long\n"
+            "   * @param\n"
+            "   *     {this.is.a.long.path.to.a.Type}\n"
+            "   *     a\n"
+            "   * long long long\n"
+            "   * long long\n"
+            "   */\n"
+            "  function f(a) {}\n"
+            "}",
+            format("{\n"
+                   "/**\n"
+                   " * long long long long\n"
+                   " * @param {this.is.a.long.path.to.a.Type} a\n"
+                   " * long long long long\n"
+                   " * long\n"
+                   " */\n"
+                   "  function f(a) {}\n"
+                   "}",
+                   getGoogleJSStyleWithColumns(20)));
 }
 
 TEST_F(FormatTestJS, RequoteStringsSingle) {

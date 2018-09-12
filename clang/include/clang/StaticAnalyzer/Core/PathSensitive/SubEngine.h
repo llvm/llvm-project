@@ -29,7 +29,7 @@ class CrossTranslationUnitContext;
 }
 
 namespace ento {
-  
+
 struct NodeBuilderContext;
 class AnalysisManager;
 class ExplodedNodeSet;
@@ -133,7 +133,7 @@ public:
 
   /// processRegionChanges - Called by ProgramStateManager whenever a change is
   /// made to the store. Used to update checkers that track region values.
-  virtual ProgramStateRef 
+  virtual ProgramStateRef
   processRegionChanges(ProgramStateRef state,
                        const InvalidatedSymbols *invalidated,
                        ArrayRef<const MemRegion *> ExplicitRegions,
@@ -142,7 +142,7 @@ public:
                        const CallEvent *Call) = 0;
 
 
-  inline ProgramStateRef 
+  inline ProgramStateRef
   processRegionChange(ProgramStateRef state,
                       const MemRegion* MR,
                       const LocationContext *LCtx) {

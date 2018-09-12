@@ -20,21 +20,21 @@
 using namespace clang;
 
 
-/// MayBeDesignationStart - Return true if the current token might be the start 
-/// of a designator.  If we can tell it is impossible that it is a designator, 
+/// MayBeDesignationStart - Return true if the current token might be the start
+/// of a designator.  If we can tell it is impossible that it is a designator,
 /// return false.
 bool Parser::MayBeDesignationStart() {
   switch (Tok.getKind()) {
-  default: 
+  default:
     return false;
-      
+
   case tok::period:      // designator: '.' identifier
     return true;
-      
+
   case tok::l_square: {  // designator: array-designator
     if (!PP.getLangOpts().CPlusPlus11)
       return true;
-    
+
     // C++11 lambda expressions and C99 designators can be ambiguous all the
     // way through the closing ']' and to the next character. Handle the easy
     // cases here, and fall back to tentative parsing if those fail.
@@ -43,28 +43,28 @@ bool Parser::MayBeDesignationStart() {
     case tok::r_square:
       // Definitely starts a lambda expression.
       return false;
-      
+
     case tok::amp:
     case tok::kw_this:
     case tok::identifier:
       // We have to do additional analysis, because these could be the
       // start of a constant expression or a lambda capture list.
       break;
-        
+
     default:
-      // Anything not mentioned above cannot occur following a '[' in a 
+      // Anything not mentioned above cannot occur following a '[' in a
       // lambda expression.
-      return true;        
+      return true;
     }
-    
+
     // Handle the complicated case below.
-    break;    
+    break;
   }
   case tok::identifier:  // designation: identifier ':'
     return PP.LookAhead(0).is(tok::colon);
   }
-  
-  // Parse up to (at most) the token after the closing ']' to determine 
+
+  // Parse up to (at most) the token after the closing ']' to determine
   // whether this is a C99 designator or a lambda.
   TentativeParsingAction Tentative(*this);
 
@@ -198,7 +198,7 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator() {
     // it will be rejected because a constant-expression cannot begin with a
     // lambda-expression.
     InMessageExpressionRAIIObject InMessage(*this, true);
-    
+
     BalancedDelimiterTracker T(*this, tok::l_square);
     T.consumeOpen();
     SourceLocation StartLoc = T.getOpenLocation();
@@ -212,7 +212,7 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator() {
     if  (getLangOpts().ObjC1 && getLangOpts().CPlusPlus) {
       // Send to 'super'.
       if (Tok.is(tok::identifier) && Tok.getIdentifierInfo() == Ident_super &&
-          NextToken().isNot(tok::period) && 
+          NextToken().isNot(tok::period) &&
           getCurScope()->isInObjcMethodScope()) {
         CheckArrayDesignatorSyntax(*this, StartLoc, Desig);
         return ParseAssignmentExprWithObjCMessageExprStart(
@@ -226,13 +226,13 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator() {
         SkipUntil(tok::r_square, StopAtSemi);
         return ExprError();
       }
-      
+
       // If the receiver was a type, we have a class message; parse
       // the rest of it.
       if (!IsExpr) {
         CheckArrayDesignatorSyntax(*this, StartLoc, Desig);
-        return ParseAssignmentExprWithObjCMessageExprStart(StartLoc, 
-                                                           SourceLocation(), 
+        return ParseAssignmentExprWithObjCMessageExprStart(StartLoc,
+                                                           SourceLocation(),
                                    ParsedType::getFromOpaquePtr(TypeOrExpr),
                                                            nullptr);
       }
@@ -281,8 +281,8 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator() {
         }
 
         return ParseAssignmentExprWithObjCMessageExprStart(StartLoc,
-                                                           SourceLocation(), 
-                                                           ReceiverType, 
+                                                           SourceLocation(),
+                                                           ReceiverType,
                                                            nullptr);
 
       case Sema::ObjCInstanceMessage:
@@ -387,7 +387,7 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator() {
 ///
 ExprResult Parser::ParseBraceInitializer() {
   InMessageExpressionRAIIObject InMessage(*this, false);
-  
+
   BalancedDelimiterTracker T(*this, tok::l_brace);
   T.consumeOpen();
   SourceLocation LBraceLoc = T.getOpenLocation();
@@ -485,7 +485,7 @@ bool Parser::ParseMicrosoftIfExistsBraceInitializer(ExprVector &InitExprs,
   IfExistsCondition Result;
   if (ParseMicrosoftIfExistsCondition(Result))
     return false;
-  
+
   BalancedDelimiterTracker Braces(*this, tok::l_brace);
   if (Braces.consumeOpen()) {
     Diag(Tok, diag::err_expected) << tok::l_brace;
@@ -496,7 +496,7 @@ bool Parser::ParseMicrosoftIfExistsBraceInitializer(ExprVector &InitExprs,
   case IEB_Parse:
     // Parse the declarations below.
     break;
-        
+
   case IEB_Dependent:
     Diag(Result.KeywordLoc, diag::warn_microsoft_dependent_exists)
       << Result.IsIfExists;
@@ -520,7 +520,7 @@ bool Parser::ParseMicrosoftIfExistsBraceInitializer(ExprVector &InitExprs,
 
     if (Tok.is(tok::ellipsis))
       SubElt = Actions.ActOnPackExpansion(SubElt.get(), ConsumeToken());
-    
+
     // If we couldn't parse the subelement, bail out.
     if (!SubElt.isInvalid())
       InitExprs.push_back(SubElt.get());

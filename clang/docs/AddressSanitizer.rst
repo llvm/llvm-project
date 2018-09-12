@@ -276,6 +276,7 @@ AddressSanitizer is supported on:
 * OS X 10.7 - 10.11 (i386/x86\_64)
 * iOS Simulator
 * Android ARM
+* NetBSD i386/x86\_64
 * FreeBSD i386/x86\_64 (tested on FreeBSD 11-current)
 
 Ports to various other platforms are in progress.

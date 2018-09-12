@@ -163,7 +163,7 @@ void SwiftAggLowering::addTypedData(const RecordDecl *record, CharUnits begin,
     //   - virtual bases
     for (auto &vbaseSpecifier : cxxRecord->vbases()) {
       auto baseRecord = vbaseSpecifier.getType()->getAsCXXRecordDecl();
-      addTypedData(baseRecord, begin + layout.getVBaseClassOffset(baseRecord));      
+      addTypedData(baseRecord, begin + layout.getVBaseClassOffset(baseRecord));
     }
   }
 }
@@ -583,7 +583,7 @@ bool SwiftAggLowering::shouldPassIndirectly(bool asReturnValue) const {
   if (Entries.size() == 1) {
     return getSwiftABIInfo(CGM).shouldPassIndirectlyForSwift(
                                                            Entries.back().Type,
-                                                             asReturnValue);    
+                                                             asReturnValue);
   }
 
   SmallVector<llvm::Type*, 8> componentTys;

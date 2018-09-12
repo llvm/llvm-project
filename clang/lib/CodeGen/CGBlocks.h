@@ -70,7 +70,7 @@ public:
   BlockFlags() : flags(0) {}
   BlockFlags(BlockLiteralFlags flag) : flags(flag) {}
   BlockFlags(BlockByrefFlags flag) : flags(flag) {}
-  
+
   uint32_t getBitMask() const { return flags; }
   bool empty() const { return flags == 0; }
 
@@ -211,7 +211,7 @@ public:
       Capture v;
       v.Data = reinterpret_cast<uintptr_t>(value);
       return v;
-    }    
+    }
   };
 
   /// CanBeGlobal - True if the block can be global, i.e. it has
@@ -229,7 +229,7 @@ public:
   /// UsesStret : True if the block uses an stret return.  Mutable
   /// because it gets set later in the block-creation process.
   mutable bool UsesStret : 1;
-  
+
   /// HasCapturedVariableLayout : True if block has captured variables
   /// and their layout meta-data has been generated.
   bool HasCapturedVariableLayout : 1;
@@ -240,7 +240,7 @@ public:
   bool CapturesNonExternalType : 1;
 
   /// The mapping of allocated indexes within the block.
-  llvm::DenseMap<const VarDecl*, Capture> Captures;  
+  llvm::DenseMap<const VarDecl*, Capture> Captures;
 
   Address LocalAddress;
   llvm::StructType *StructureType;
@@ -249,7 +249,7 @@ public:
   CharUnits BlockSize;
   CharUnits BlockAlign;
   CharUnits CXXThisOffset;
-  
+
   // Offset of the gap caused by block header having a smaller
   // alignment than the alignment of the block descriptor. This
   // is the gap offset before the first capturued field.

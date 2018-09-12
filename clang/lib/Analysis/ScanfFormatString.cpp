@@ -41,7 +41,7 @@ static bool ParseScanList(FormatStringHandler &H,
     H.HandleIncompleteScanList(start, I);
     return true;
   }
-  
+
   // Special case: ']' is the first character.
   if (*I == ']') {
     if (++I == E) {
@@ -65,7 +65,7 @@ static bool ParseScanList(FormatStringHandler &H,
       H.HandleIncompleteScanList(start, I - 1);
       return true;
     }
-  }    
+  }
 
   CS.setEndScanList(I);
   return false;
@@ -98,17 +98,17 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
       break;
     }
   }
-  
+
     // No format specifier found?
   if (!Start)
     return false;
-  
+
   if (I == E) {
       // No more characters left?
     H.HandleIncompleteSpecifier(Start, E - Start);
     return true;
   }
-  
+
   ScanfSpecifier FS;
   if (ParseArgPosition(H, FS, Start, I, E))
     return true;
@@ -118,7 +118,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
     H.HandleIncompleteSpecifier(Start, E - Start);
     return true;
   }
-  
+
   // Look for '*' flag if it is present.
   if (*I == '*') {
     FS.setSuppressAssignment(I);
@@ -127,7 +127,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
       return true;
     }
   }
-  
+
   // Look for the field width (if any).  Unlike printf, this is either
   // a fixed integer or isn't present.
   const OptionalAmount &Amt = clang::analyze_format_string::ParseAmount(I, E);
@@ -141,20 +141,20 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
       return true;
     }
   }
-  
+
   // Look for the length modifier.
   if (ParseLengthModifier(FS, I, E, LO, /*scanf=*/true) && I == E) {
       // No more characters left?
     H.HandleIncompleteSpecifier(Start, E - Start);
     return true;
   }
-  
+
   // Detect spurious null characters, which are likely errors.
   if (*I == '\0') {
     H.HandleNullChar(I);
     return true;
   }
-  
+
   // Finally, look for the conversion specifier.
   const char *conversionPosition = I++;
   ScanfConversionSpecifier::Kind k = ScanfConversionSpecifier::InvalidSpecifier;
@@ -207,7 +207,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   if (CS.consumesDataArgument() && !FS.getSuppressAssignment()
       && !FS.usesPositionalArg())
     FS.setArgIndex(argIndex++);
-  
+
   // FIXME: '%' and '*' doesn't make sense.  Issue a warning.
   // FIXME: 'ConsumedSoFar' and '*' doesn't make sense.
 
@@ -537,9 +537,9 @@ bool clang::analyze_format_string::ParseScanfString(FormatStringHandler &H,
                                                     const char *E,
                                                     const LangOptions &LO,
                                                     const TargetInfo &Target) {
-  
+
   unsigned argIndex = 0;
-  
+
   // Keep looking for a format specifier until we have exhausted the string.
   while (I != E) {
     const ScanfSpecifierResult &FSR = ParseScanfSpecifier(H, I, E, argIndex,

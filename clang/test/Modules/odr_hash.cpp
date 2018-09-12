@@ -3146,6 +3146,177 @@ Invalid1 i1;
 #undef DECLS
 }
 
+namespace Enums {
+#if defined(FIRST)
+enum E1 { x11 };
+#elif defined(SECOND)
+enum E1 {};
+#else
+E1 e1;
+// expected-error@first.h:* {{'Enums::x11' from module 'FirstModule' is not present in definition of 'Enums::E1' in module 'SecondModule'}}
+// expected-note@second.h:* {{definition has no member 'x11'}}
+#endif
+
+#if defined(FIRST)
+enum E2 {};
+#elif defined(SECOND)
+enum E2 { x21 };
+#else
+E2 e2;
+// expected-error@second.h:* {{'Enums::E2' has different definitions in different modules; definition in module 'SecondModule' first difference is enum with 1 element}}
+// expected-note@first.h:* {{but in 'FirstModule' found enum with 0 elements}}
+#endif
+
+#if defined(FIRST)
+enum E3 { x31 };
+#elif defined(SECOND)
+enum E3 { x32 };
+#else
+E3 e3;
+// expected-error@first.h:* {{'Enums::x31' from module 'FirstModule' is not present in definition of 'Enums::E3' in module 'SecondModule'}}
+// expected-note@second.h:* {{definition has no member 'x31'}}
+#endif
+
+#if defined(FIRST)
+enum E4 { x41 };
+#elif defined(SECOND)
+enum E4 { x41, x42 };
+#else
+E4 e4;
+// expected-error@second.h:* {{'Enums::E4' has different definitions in different modules; definition in module 'SecondModule' first difference is enum with 2 elements}}
+// expected-note@first.h:* {{but in 'FirstModule' found enum with 1 element}}
+#endif
+
+#if defined(FIRST)
+enum E5 { x51, x52 };
+#elif defined(SECOND)
+enum E5 { x51 };
+#else
+E5 e5;
+// expected-error@first.h:* {{'Enums::x52' from module 'FirstModule' is not present in definition of 'Enums::E5' in module 'SecondModule'}}
+// expected-note@second.h:* {{definition has no member 'x52'}}
+#endif
+
+#if defined(FIRST)
+enum E6 { x61, x62 };
+#elif defined(SECOND)
+enum E6 { x62, x61 };
+#else
+E6 e6;
+// expected-error@second.h:* {{'Enums::E6' has different definitions in different modules; definition in module 'SecondModule' first difference is 1st element has name 'x62'}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st element has name 'x61'}}
+#endif
+
+#if defined(FIRST)
+enum E7 { x71 = 0 };
+#elif defined(SECOND)
+enum E7 { x71 };
+#else
+E7 e7;
+// expected-error@second.h:* {{'Enums::E7' has different definitions in different modules; definition in module 'SecondModule' first difference is 1st element 'x71' has an initilizer}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st element 'x71' does not have an initializer}}
+#endif
+
+#if defined(FIRST)
+enum E8 { x81 };
+#elif defined(SECOND)
+enum E8 { x81 = 0 };
+#else
+E8 e8;
+// expected-error@second.h:* {{'Enums::E8' has different definitions in different modules; definition in module 'SecondModule' first difference is 1st element 'x81' does not have an initilizer}}
+// expected-note@first.h:* {{but in 'FirstModule' found 1st element 'x81' has an initializer}}
+#endif
+
+#if defined(FIRST)
+enum E9 { x91 = 0, x92 = 1 };
+#elif defined(SECOND)
+enum E9 { x91 = 0, x92 = 2 - 1 };
+#else
+E9 e9;
+// expected-error@second.h:* {{'Enums::E9' has different definitions in different modules; definition in module 'SecondModule' first difference is 2nd element 'x92' has an initializer}}
+// expected-note@first.h:* {{but in 'FirstModule' found 2nd element 'x92' has different initializer}}
+#endif
+
+#if defined(FIRST)
+enum class E10 : int {};
+#elif defined(SECOND)
+enum class E10 {};
+#else
+E10 e10;
+// expected-error@second.h:* {{'Enums::E10' has different definitions in different modules; definition in module 'SecondModule' first difference is enum without specified type}}
+// expected-note@first.h:* {{but in 'FirstModule' found enum with specified type}}
+#endif
+
+#if defined(FIRST)
+enum E11 {};
+#elif defined(SECOND)
+enum E11 : int {};
+#else
+E11 e11;
+// expected-error@second.h:* {{'Enums::E11' has different definitions in different modules; definition in module 'SecondModule' first difference is enum with specified type}}
+// expected-note@first.h:* {{but in 'FirstModule' found enum without specified type}}
+#endif
+
+#if defined(FIRST)
+enum struct E12 : long {};
+#elif defined(SECOND)
+enum struct E12 : int {};
+#else
+E12 e12;
+// expected-error@second.h:* {{'Enums::E12' has different definitions in different modules; definition in module 'SecondModule' first difference is enum with specified type 'int'}}
+// expected-note@first.h:* {{but in 'FirstModule' found enum with specified type 'long'}}
+#endif
+
+#if defined(FIRST)
+enum struct E13 {};
+#elif defined(SECOND)
+enum E13 {};
+#else
+E13 e13;
+// expected-error@second.h:* {{'Enums::E13' has different definitions in different modules; definition in module 'SecondModule' first difference is enum that is not scoped}}
+// expected-note@first.h:* {{but in 'FirstModule' found enum that is scoped}}
+#endif
+
+#if defined(FIRST)
+enum E14 {};
+#elif defined(SECOND)
+enum struct E14 {};
+#else
+E14 e14;
+// expected-error@second.h:* {{'Enums::E14' has different definitions in different modules; definition in module 'SecondModule' first difference is enum that is scoped}}
+// expected-note@first.h:* {{but in 'FirstModule' found enum that is not scoped}}
+#endif
+
+#if defined(FIRST)
+enum class E15 {};
+#elif defined(SECOND)
+enum struct E15 {};
+#else
+E15 e15;
+// expected-error@second.h:* {{'Enums::E15' has different definitions in different modules; definition in module 'SecondModule' first difference is enum scoped with keyword struct}}
+// expected-note@first.h:* {{but in 'FirstModule' found enum scoped with keyword class}}
+#endif
+
+#if defined(FIRST)
+enum struct E16 {};
+#elif defined(SECOND)
+enum class E16 {};
+#else
+E16 e16;
+// expected-error@second.h:* {{'Enums::E16' has different definitions in different modules; definition in module 'SecondModule' first difference is enum scoped with keyword class}}
+// expected-note@first.h:* {{but in 'FirstModule' found enum scoped with keyword struct}}
+#endif
+
+#if defined(FIRST)
+enum Valid { v1 = (struct S*)0 == (struct S*)0 };
+#elif defined(SECOND)
+struct S {};
+enum Valid { v1 = (struct S*)0 == (struct S*)0 };
+#else
+Valid V;
+#endif
+}  // namespace Enums
+
 // Collection of interesting cases below.
 
 // Naive parsing of AST can lead to cycles in processing.  Ensure

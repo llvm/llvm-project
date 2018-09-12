@@ -21,16 +21,7 @@ static llvm::cl::opt<std::string>
                  llvm::cl::init("standalone"));
 
 void InMemoryToolResults::addResult(StringRef Key, StringRef Value) {
-  auto Intern = [&](StringRef &V) {
-    auto R = Strings.insert(V);
-    if (R.second) { // A new entry, create a new string copy.
-      *R.first = StringsPool.save(V);
-    }
-    V = *R.first;
-  };
-  Intern(Key);
-  Intern(Value);
-  KVResults.push_back({Key, Value});
+  KVResults.push_back({Strings.save(Key), Strings.save(Value)});
 }
 
 std::vector<std::pair<llvm::StringRef, llvm::StringRef>>

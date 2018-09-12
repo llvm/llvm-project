@@ -1134,17 +1134,21 @@ the configuration (without a prefix: ``Auto``).
   .. code-block:: c++
 
     true:
-    SomeClass::Constructor()
-        : aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaa) {
-      return 0;
-    }
+    FitsOnOneLine::Constructor()
+        : aaaaaaaaaaaaa(aaaaaaaaaaaaaa), aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}
+
+    DoesntFit::Constructor()
+        : aaaaaaaaaaaaa(aaaaaaaaaaaaaa),
+          aaaaaaaaaaaaa(aaaaaaaaaaaaaa),
+          aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}
 
     false:
-    SomeClass::Constructor()
-        : aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaa),
-          aaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaa) {
-      return 0;
-    }
+    FitsOnOneLine::Constructor()
+        : aaaaaaaaaaaaa(aaaaaaaaaaaaaa), aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}
+
+    DoesntFit::Constructor()
+        : aaaaaaaaaaaaa(aaaaaaaaaaaaaa), aaaaaaaaaaaaa(aaaaaaaaaaaaaa),
+          aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}
 
 **ConstructorInitializerIndentWidth** (``unsigned``)
   The number of characters to use for indentation of constructor
@@ -1280,6 +1284,10 @@ the configuration (without a prefix: ``Auto``).
   Regular expressions denoting the different ``#include`` categories
   used for ordering ``#includes``.
 
+  `POSIX extended
+  <http://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html>`_
+  regular expressions are supported.
+
   These regular expressions are matched against the filename of an include
   (including the <> or "") in order. The value belonging to the first
   matching regular expression is assigned and ``#includes`` are sorted first
@@ -1302,6 +1310,8 @@ the configuration (without a prefix: ``Auto``).
         Priority:        2
       - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
         Priority:        3
+      - Regex:           '<[[:alnum:].]+>'
+        Priority:        4
       - Regex:           '.*'
         Priority:        1
 

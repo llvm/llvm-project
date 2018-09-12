@@ -75,7 +75,7 @@ bool IndexingContext::handleReference(const NamedDecl *D, SourceLocation Loc,
 
   if (isa<NonTypeTemplateParmDecl>(D) || isa<TemplateTypeParmDecl>(D))
     return true;
-    
+
   return handleDeclOccurrence(D, Loc, /*IsRef=*/true, Parent, Roles, Relations,
                               RefE, RefD, DC);
 }
@@ -390,6 +390,9 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
     }
   }
 
+  if (!OrigD)
+    OrigD = D;
+
   if (isTemplateImplicitInstantiation(D)) {
     if (!IsRef)
       return true;
@@ -398,9 +401,6 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
       return true;
     assert(!isTemplateImplicitInstantiation(D));
   }
-
-  if (!OrigD)
-    OrigD = D;
 
   if (IsRef)
     Roles |= (unsigned)SymbolRole::Reference;

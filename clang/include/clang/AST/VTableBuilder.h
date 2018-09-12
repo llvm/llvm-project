@@ -394,7 +394,7 @@ public:
 
   /// Return the offset in chars (relative to the vtable address point) where
   /// the offset of the virtual base that contains the given base is stored,
-  /// otherwise, if no virtual base contains the given class, return 0. 
+  /// otherwise, if no virtual base contains the given class, return 0.
   ///
   /// Base must be a virtual base class or an unambiguous base.
   CharUnits getVirtualBaseOffsetOffset(const CXXRecordDecl *RD,

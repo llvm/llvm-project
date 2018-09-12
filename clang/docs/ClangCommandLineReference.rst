@@ -1928,7 +1928,7 @@ Enable the loop vectorization passes
 
 .. option:: -fvisibility-inlines-hidden
 
-Give inline C++ member functions default visibility by default
+Give inline C++ member functions hidden visibility by default
 
 .. option:: -fvisibility-ms-compat
 

@@ -89,7 +89,7 @@ public:
     /// This is a scope that corresponds to the Objective-C
     /// \@catch statement.
     AtCatchScope = 0x400,
-    
+
     /// This scope corresponds to an Objective-C method body.
     /// It always has FnScope and DeclScope set as well.
     ObjCMethodScope = 0x800,
@@ -347,7 +347,7 @@ public:
     }
     return false;
   }
-  
+
   /// isInObjcMethodScope - Return true if this scope is, or is contained in, an
   /// Objective-C method body.  Note that this method is not constant time.
   bool isInObjcMethodScope() const {

@@ -51,7 +51,7 @@ namespace ento {
   /// be accessible from more than one translation unit.
   #define REGISTER_SET_WITH_PROGRAMSTATE(Name, Elem) \
     REGISTER_TRAIT_WITH_PROGRAMSTATE(Name, llvm::ImmutableSet<Elem>)
-  
+
   /// Declares an immutable list of type \p NameTy, suitable for placement into
   /// the ProgramState. This is implementing using llvm::ImmutableList.
   ///
@@ -83,7 +83,7 @@ public:
   /// If we are post visiting a call, this flag will be set if the
   /// call was inlined.  In all other cases it will be false.
   const bool wasInlined;
-  
+
   CheckerContext(NodeBuilder &builder,
                  ExprEngine &eng,
                  ExplodedNode *pred,
@@ -110,7 +110,7 @@ public:
   StoreManager &getStoreManager() {
     return Eng.getStoreManager();
   }
-  
+
   /// Returns the previous node in the exploded graph, which includes
   /// the state of the program before the checker ran. Note, checkers should
   /// not retain the node in their state since the nodes might get invalidated.
@@ -149,7 +149,7 @@ public:
   BugReporter &getBugReporter() {
     return Eng.getBugReporter();
   }
-  
+
   SourceManager &getSourceManager() {
     return getBugReporter().getSourceManager();
   }
@@ -308,7 +308,7 @@ public:
   static bool isCLibraryFunction(const FunctionDecl *FD,
                                  StringRef Name = StringRef());
 
-  /// Depending on wither the location corresponds to a macro, return 
+  /// Depending on wither the location corresponds to a macro, return
   /// either the macro name or the token spelling.
   ///
   /// This could be useful when checkers' logic depends on whether a function

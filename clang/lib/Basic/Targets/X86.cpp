@@ -1484,6 +1484,38 @@ unsigned X86TargetInfo::multiVersionSortPriority(StringRef Name) const {
   return getFeaturePriority(getFeature(Name)) << 1;
 }
 
+bool X86TargetInfo::validateCPUSpecificCPUDispatch(StringRef Name) const {
+  return llvm::StringSwitch<bool>(Name)
+#define CPU_SPECIFIC(NAME, MANGLING, FEATURES) .Case(NAME, true)
+#define CPU_SPECIFIC_ALIAS(NEW_NAME, NAME) .Case(NEW_NAME, true)
+#include "clang/Basic/X86Target.def"
+      .Default(false);
+}
+
+static StringRef CPUSpecificCPUDispatchNameDealias(StringRef Name) {
+  return llvm::StringSwitch<StringRef>(Name)
+#define CPU_SPECIFIC_ALIAS(NEW_NAME, NAME) .Case(NEW_NAME, NAME)
+#include "clang/Basic/X86Target.def"
+      .Default(Name);
+}
+
+char X86TargetInfo::CPUSpecificManglingCharacter(StringRef Name) const {
+  return llvm::StringSwitch<char>(CPUSpecificCPUDispatchNameDealias(Name))
+#define CPU_SPECIFIC(NAME, MANGLING, FEATURES) .Case(NAME, MANGLING)
+#include "clang/Basic/X86Target.def"
+      .Default(0);
+}
+
+void X86TargetInfo::getCPUSpecificCPUDispatchFeatures(
+    StringRef Name, llvm::SmallVectorImpl<StringRef> &Features) const {
+  StringRef WholeList =
+      llvm::StringSwitch<StringRef>(CPUSpecificCPUDispatchNameDealias(Name))
+#define CPU_SPECIFIC(NAME, MANGLING, FEATURES) .Case(NAME, FEATURES)
+#include "clang/Basic/X86Target.def"
+          .Default("");
+  WholeList.split(Features, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+}
+
 std::string X86TargetInfo::getCPUKindCanonicalName(CPUKind Kind) const {
   switch (Kind) {
   case CK_Generic:
@@ -1725,7 +1757,7 @@ void X86TargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
 #define PROC(ENUM, STRING, IS64BIT)                                            \
   if (IS64BIT || getTriple().getArch() == llvm::Triple::x86)                   \
     Values.emplace_back(STRING);
-  // Go through CPUKind checking to ensure that the alias is de-aliased and 
+  // Go through CPUKind checking to ensure that the alias is de-aliased and
   // 64 bit-ness is checked.
 #define PROC_ALIAS(ENUM, ALIAS)                                                \
   if (checkCPUKind(getCPUKind(ALIAS)))                                         \

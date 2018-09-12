@@ -388,7 +388,7 @@ void WalkAST::checkCall_bcopy(const CallExpr *CE, const FunctionDecl *FD) {
                      "Use of deprecated function in call to 'bcopy()'",
                      "Security",
                      "The bcopy() function is obsoleted by memcpy() "
-		     "or memmove().",
+                     "or memmove().",
                      CELoc, CE->getCallee()->getSourceRange());
 }
 

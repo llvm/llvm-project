@@ -66,13 +66,13 @@ class Token;
 
       /// A macro expansion.
       MacroExpansionKind,
-      
+
       /// \defgroup Preprocessing directives
       /// @{
-      
+
       /// A macro definition.
       MacroDefinitionKind,
-      
+
       /// An inclusion directive, such as \c \#include, \c
       /// \#import, or \c \#include_next.
       InclusionDirectiveKind,
@@ -86,10 +86,10 @@ class Token;
   private:
     /// The kind of preprocessed entity that this object describes.
     EntityKind Kind;
-    
+
     /// The source range that covers this preprocessed entity.
     SourceRange Range;
-    
+
   protected:
     friend class PreprocessingRecord;
 
@@ -99,8 +99,8 @@ class Token;
   public:
     /// Retrieve the kind of preprocessed entity stored in this object.
     EntityKind getKind() const { return Kind; }
-    
-    /// Retrieve the source range that covers this entire preprocessed 
+
+    /// Retrieve the source range that covers this entire preprocessed
     /// entity.
     SourceRange getSourceRange() const LLVM_READONLY { return Range; }
 
@@ -108,7 +108,7 @@ class Token;
     /// entity.
     bool isInvalid() const { return Kind == InvalidKind; }
 
-    // Only allow allocation of preprocessed entities using the allocator 
+    // Only allow allocation of preprocessed entities using the allocator
     // in PreprocessingRecord or by doing a placement new.
     void *operator new(size_t bytes, PreprocessingRecord &PR,
                        unsigned alignment = 8) noexcept {
@@ -130,15 +130,15 @@ class Token;
     void *operator new(size_t bytes) noexcept;
     void operator delete(void *data) noexcept;
   };
-  
+
   /// Records the presence of a preprocessor directive.
   class PreprocessingDirective : public PreprocessedEntity {
   public:
-    PreprocessingDirective(EntityKind Kind, SourceRange Range) 
+    PreprocessingDirective(EntityKind Kind, SourceRange Range)
         : PreprocessedEntity(Kind, Range) {}
-    
+
     // Implement isa/cast/dyncast/etc.
-    static bool classof(const PreprocessedEntity *PD) { 
+    static bool classof(const PreprocessedEntity *PD) {
       return PD->getKind() >= FirstPreprocessingDirective &&
              PD->getKind() <= LastPreprocessingDirective;
     }
@@ -159,13 +159,13 @@ class Token;
 
     /// Retrieve the location of the macro name in the definition.
     SourceLocation getLocation() const { return getSourceRange().getBegin(); }
-    
+
     // Implement isa/cast/dyncast/etc.
     static bool classof(const PreprocessedEntity *PE) {
       return PE->getKind() == MacroDefinitionKind;
     }
   };
-  
+
   /// Records the location of a macro expansion.
   class MacroExpansion : public PreprocessedEntity {
     /// The definition of this macro or the name of the macro if it is
@@ -246,16 +246,16 @@ class Token;
 
   public:
     InclusionDirective(PreprocessingRecord &PPRec,
-                       InclusionKind Kind, StringRef FileName, 
+                       InclusionKind Kind, StringRef FileName,
                        bool InQuotes, bool ImportedModule,
                        const FileEntry *File, SourceRange Range);
-    
+
     /// Determine what kind of inclusion directive this is.
     InclusionKind getKind() const { return static_cast<InclusionKind>(Kind); }
-    
+
     /// Retrieve the included file name as it was written in the source.
     StringRef getFileName() const { return FileName; }
-    
+
     /// Determine whether the included file name was written in quotes;
     /// otherwise, it was written in angle brackets.
     bool wasInQuotes() const { return InQuotes; }
@@ -263,23 +263,23 @@ class Token;
     /// Determine whether the inclusion directive was automatically
     /// turned into a module import.
     bool importedModule() const { return ImportedModule; }
-    
+
     /// Retrieve the file entry for the actual file that was included
     /// by this directive.
     const FileEntry *getFile() const { return File; }
-        
+
     // Implement isa/cast/dyncast/etc.
     static bool classof(const PreprocessedEntity *PE) {
       return PE->getKind() == InclusionDirectiveKind;
     }
   };
-  
+
   /// An abstract class that should be subclassed by any external source
   /// of preprocessing record entries.
   class ExternalPreprocessingRecordSource {
   public:
     virtual ~ExternalPreprocessingRecordSource();
-    
+
     /// Read a preallocated preprocessed entity from the external source.
     ///
     /// \returns null if an error occurred that prevented the preprocessed
@@ -301,20 +301,20 @@ class Token;
     /// Read a preallocated skipped range from the external source.
     virtual SourceRange ReadSkippedRange(unsigned Index) = 0;
   };
-  
+
   /// A record of the steps taken while preprocessing a source file,
-  /// including the various preprocessing directives processed, macros 
+  /// including the various preprocessing directives processed, macros
   /// expanded, etc.
   class PreprocessingRecord : public PPCallbacks {
     SourceManager &SourceMgr;
-    
+
     /// Allocator used to store preprocessing objects.
     llvm::BumpPtrAllocator BumpAlloc;
 
     /// The set of preprocessed entities in this record, in order they
     /// were seen.
     std::vector<PreprocessedEntity *> PreprocessedEntities;
-    
+
     /// The set of preprocessed entities in this record that have been
     /// loaded from external sources.
     ///
@@ -362,7 +362,7 @@ class Token;
 
     /// Retrieve the loaded preprocessed entity at the given index.
     PreprocessedEntity *getLoadedPreprocessedEntity(unsigned Index);
-    
+
     /// Determine the number of preprocessed entities that were
     /// loaded (or can be loaded) from an external source.
     unsigned getNumLoadedPreprocessedEntities() const {
@@ -403,7 +403,7 @@ class Token;
     void *Allocate(unsigned Size, unsigned Align = 8) {
       return BumpAlloc.Allocate(Size, Align);
     }
-    
+
     /// Deallocate memory in the preprocessing record.
     void Deallocate(void *Ptr) {}
 
@@ -518,7 +518,7 @@ class Token;
       ensureSkippedRangesLoaded();
       return SkippedRanges;
     }
-        
+
   private:
     friend class ASTReader;
     friend class ASTWriter;

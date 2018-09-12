@@ -884,7 +884,7 @@ public:
     : Expr(OpaqueValueExprClass, T, VK, OK,
            T->isDependentType() ||
            (SourceExpr && SourceExpr->isTypeDependent()),
-           T->isDependentType() || 
+           T->isDependentType() ||
            (SourceExpr && SourceExpr->isValueDependent()),
            T->isInstantiationDependentType() ||
            (SourceExpr && SourceExpr->isInstantiationDependent()),
@@ -1206,9 +1206,10 @@ public:
   enum IdentType {
     Func,
     Function,
-    LFunction,  // Same as Function, but as wide string.
+    LFunction, // Same as Function, but as wide string.
     FuncDName,
     FuncSig,
+    LFuncSig, // Same as FuncSig, but as as wide string
     PrettyFunction,
     /// The same as PrettyFunction, except that the
     /// 'virtual' keyword is omitted for virtual member functions.
@@ -2786,20 +2787,26 @@ public:
 /// representation in the source code (ExplicitCastExpr's derived
 /// classes).
 class CastExpr : public Expr {
+public:
+  using BasePathSizeTy = unsigned int;
+  static_assert(std::numeric_limits<BasePathSizeTy>::max() >= 16384,
+                "[implimits] Direct and indirect base classes [16384].");
+
 private:
   Stmt *Op;
 
   bool CastConsistency() const;
+
+  BasePathSizeTy *BasePathSize();
 
   const CXXBaseSpecifier * const *path_buffer() const {
     return const_cast<CastExpr*>(this)->path_buffer();
   }
   CXXBaseSpecifier **path_buffer();
 
-  void setBasePathSize(unsigned basePathSize) {
-    CastExprBits.BasePathSize = basePathSize;
-    assert(CastExprBits.BasePathSize == basePathSize &&
-           "basePathSize doesn't fit in bits of CastExprBits.BasePathSize!");
+  void setBasePathSize(BasePathSizeTy basePathSize) {
+    assert(!path_empty() && basePathSize != 0);
+    *(BasePathSize()) = basePathSize;
   }
 
 protected:
@@ -2821,14 +2828,20 @@ protected:
               (op && op->containsUnexpandedParameterPack()))),
         Op(op) {
     CastExprBits.Kind = kind;
-    setBasePathSize(BasePathSize);
+    CastExprBits.PartOfExplicitCast = false;
+    CastExprBits.BasePathIsEmpty = BasePathSize == 0;
+    if (!path_empty())
+      setBasePathSize(BasePathSize);
     assert(CastConsistency());
   }
 
   /// Construct an empty cast.
   CastExpr(StmtClass SC, EmptyShell Empty, unsigned BasePathSize)
     : Expr(SC, Empty) {
-    setBasePathSize(BasePathSize);
+    CastExprBits.PartOfExplicitCast = false;
+    CastExprBits.BasePathIsEmpty = BasePathSize == 0;
+    if (!path_empty())
+      setBasePathSize(BasePathSize);
   }
 
 public:
@@ -2856,8 +2869,12 @@ public:
 
   typedef CXXBaseSpecifier **path_iterator;
   typedef const CXXBaseSpecifier * const *path_const_iterator;
-  bool path_empty() const { return CastExprBits.BasePathSize == 0; }
-  unsigned path_size() const { return CastExprBits.BasePathSize; }
+  bool path_empty() const { return CastExprBits.BasePathIsEmpty; }
+  unsigned path_size() const {
+    if (path_empty())
+      return 0U;
+    return *(const_cast<CastExpr *>(this)->BasePathSize());
+  }
   path_iterator path_begin() { return path_buffer(); }
   path_iterator path_end() { return path_buffer() + path_size(); }
   path_const_iterator path_begin() const { return path_buffer(); }
@@ -2905,7 +2922,12 @@ public:
 /// @endcode
 class ImplicitCastExpr final
     : public CastExpr,
-      private llvm::TrailingObjects<ImplicitCastExpr, CXXBaseSpecifier *> {
+      private llvm::TrailingObjects<ImplicitCastExpr, CastExpr::BasePathSizeTy,
+                                    CXXBaseSpecifier *> {
+  size_t numTrailingObjects(OverloadToken<CastExpr::BasePathSizeTy>) const {
+    return path_empty() ? 0 : 1;
+  }
+
 private:
   ImplicitCastExpr(QualType ty, CastKind kind, Expr *op,
                    unsigned BasePathLength, ExprValueKind VK)
@@ -2921,6 +2943,11 @@ public:
   ImplicitCastExpr(OnStack_t _, QualType ty, CastKind kind, Expr *op,
                    ExprValueKind VK)
     : CastExpr(ImplicitCastExprClass, ty, VK, kind, op, 0) {
+  }
+
+  bool isPartOfExplicitCast() const { return CastExprBits.PartOfExplicitCast; }
+  void setIsPartOfExplicitCast(bool PartOfExplicitCast) {
+    CastExprBits.PartOfExplicitCast = PartOfExplicitCast;
   }
 
   static ImplicitCastExpr *Create(const ASTContext &Context, QualType T,
@@ -3005,7 +3032,8 @@ public:
 /// (Type)expr. For example: @c (int)f.
 class CStyleCastExpr final
     : public ExplicitCastExpr,
-      private llvm::TrailingObjects<CStyleCastExpr, CXXBaseSpecifier *> {
+      private llvm::TrailingObjects<CStyleCastExpr, CastExpr::BasePathSizeTy,
+                                    CXXBaseSpecifier *> {
   SourceLocation LPLoc; // the location of the left paren
   SourceLocation RPLoc; // the location of the right paren
 
@@ -3018,6 +3046,10 @@ class CStyleCastExpr final
   /// Construct an empty C-style explicit cast.
   explicit CStyleCastExpr(EmptyShell Shell, unsigned PathSize)
     : ExplicitCastExpr(CStyleCastExprClass, Shell, PathSize) { }
+
+  size_t numTrailingObjects(OverloadToken<CastExpr::BasePathSizeTy>) const {
+    return path_empty() ? 0 : 1;
+  }
 
 public:
   static CStyleCastExpr *Create(const ASTContext &Context, QualType T,
@@ -5333,7 +5365,7 @@ public:
 
   SourceLocation getLocStart() const LLVM_READONLY { return SourceLocation(); }
   SourceLocation getLocEnd() const LLVM_READONLY { return SourceLocation(); }
-  
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == TypoExprClass;
   }

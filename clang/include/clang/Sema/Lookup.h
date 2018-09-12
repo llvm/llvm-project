@@ -50,11 +50,11 @@ public:
     /// No entity found met the criteria.
     NotFound = 0,
 
-    /// No entity found met the criteria within the current 
-    /// instantiation,, but there were dependent base classes of the 
+    /// No entity found met the criteria within the current
+    /// instantiation,, but there were dependent base classes of the
     /// current instantiation that could not be searched.
     NotFoundInCurrentInstantiation,
-    
+
     /// Name lookup found a single declaration that met the
     /// criteria.  getFoundDecl() will return this declaration.
     Found,
@@ -435,7 +435,7 @@ public:
   bool wasNotFoundInCurrentInstantiation() const {
     return ResultKind == NotFoundInCurrentInstantiation;
   }
-  
+
   /// Note that while no result was found in the current instantiation,
   /// there were dependent base classes that could not be searched.
   void setNotFoundInCurrentInstantiation() {
@@ -610,7 +610,7 @@ public:
     LookupResult::iterator I;
     bool Changed = false;
     bool CalledDone = false;
-    
+
     Filter(LookupResult &Results) : Results(Results), I(Results.begin()) {}
 
   public:

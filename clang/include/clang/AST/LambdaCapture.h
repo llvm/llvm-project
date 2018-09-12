@@ -41,7 +41,7 @@ class LambdaCapture {
   };
 
   // Decl could represent:
-  // - a VarDecl* that represents the variable that was captured or the 
+  // - a VarDecl* that represents the variable that was captured or the
   //   init-capture.
   // - or, is a nullptr and Capture_This is set in Bits if this represents a
   //   capture of '*this' by value or reference.

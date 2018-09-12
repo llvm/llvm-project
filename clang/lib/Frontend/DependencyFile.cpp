@@ -329,7 +329,7 @@ void DFGImpl::InclusionDirective(SourceLocation HashLoc,
                                  const FileEntry *File,
                                  StringRef SearchPath,
                                  StringRef RelativePath,
-                                 const Module *Imported, 
+                                 const Module *Imported,
                                  SrcMgr::CharacteristicKind FileType) {
   if (!File) {
     if (AddMissingHeaderDeps)

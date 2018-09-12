@@ -252,7 +252,7 @@ CODEGENOPT(DebugExplicitImport, 1, 0)  ///< Whether or not debug info should
 CODEGENOPT(EnableSplitDwarf, 1, 0) ///< Whether to enable split DWARF
 CODEGENOPT(SplitDwarfInlining, 1, 1) ///< Whether to include inlining info in the
                                      ///< skeleton CU to allow for symbolication
-				     ///< of inline stack frames without .dwo files.
+                                     ///< of inline stack frames without .dwo files.
 CODEGENOPT(DebugFwdTemplateParams, 1, 0) ///< Whether to emit complete
                                          ///< template parameter descriptions in
                                          ///< forward declarations (versus just

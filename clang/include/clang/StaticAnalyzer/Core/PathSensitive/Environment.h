@@ -40,14 +40,14 @@ public:
 
   const Stmt *getStmt() const { return first; }
   const LocationContext *getLocationContext() const { return second; }
-  
+
   /// Profile an EnvironmentEntry for inclusion in a FoldingSet.
   static void Profile(llvm::FoldingSetNodeID &ID,
                       const EnvironmentEntry &E) {
     ID.AddPointer(E.getStmt());
     ID.AddPointer(E.getLocationContext());
   }
-  
+
   void Profile(llvm::FoldingSetNodeID &ID) const {
     Profile(ID, *this);
   }

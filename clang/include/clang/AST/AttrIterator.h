@@ -106,7 +106,7 @@ public:
                          specific_attr_iterator Right) {
     assert((Left.Current == nullptr) == (Right.Current == nullptr));
     if (Left.Current < Right.Current)
-      Left.AdvanceToNext(Right.Current); 
+      Left.AdvanceToNext(Right.Current);
     else
       Right.AdvanceToNext(Left.Current);
     return Left.Current == Right.Current;

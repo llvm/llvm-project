@@ -84,7 +84,7 @@ public:
   void VisitObjCMessageExpr(ObjCMessageExpr *ME) {
     if (ObjCInterfaceDecl *IDecl = ME->getReceiverInterface()) {
       Selector Sel = ME->getSelector();
-      
+
       // Find the callee definition within the same translation unit.
       Decl *D = nullptr;
       if (ME->isInstanceMessage())

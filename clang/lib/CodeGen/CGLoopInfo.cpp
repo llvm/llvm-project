@@ -155,7 +155,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
     unsigned ValueInt = 1;
     // Translate opencl_unroll_hint attribute argument to
     // equivalent LoopHintAttr enums.
-    // OpenCL v2.0 s6.11.5:  
+    // OpenCL v2.0 s6.11.5:
     // 0 - full unroll (no argument).
     // 1 - disable unroll.
     // other positive integer n - unroll by n.

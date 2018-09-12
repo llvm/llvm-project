@@ -235,10 +235,10 @@ void fVoidPointerTest2() {
 }
 
 class VoidPointerRRefTest1 {
-  void *&&vptrrref;
+  void *&&vptrrref; // expected-note {{here}}
 
 public:
-  VoidPointerRRefTest1(void *vptr, char) : vptrrref(static_cast<void *&&>(vptr)) {
+  VoidPointerRRefTest1(void *vptr, char) : vptrrref(static_cast<void *&&>(vptr)) { // expected-warning {{binding reference member 'vptrrref' to stack allocated parameter 'vptr'}}
     // All good!
   }
 };
@@ -249,10 +249,10 @@ void fVoidPointerRRefTest1() {
 }
 
 class VoidPointerRRefTest2 {
-  void **&&vpptrrref;
+  void **&&vpptrrref; // expected-note {{here}}
 
 public:
-  VoidPointerRRefTest2(void **vptr, char) : vpptrrref(static_cast<void **&&>(vptr)) {
+  VoidPointerRRefTest2(void **vptr, char) : vpptrrref(static_cast<void **&&>(vptr)) { // expected-warning {{binding reference member 'vpptrrref' to stack allocated parameter 'vptr'}}
     // All good!
   }
 };
@@ -263,10 +263,10 @@ void fVoidPointerRRefTest2() {
 }
 
 class VoidPointerLRefTest {
-  void *&vptrrref;
+  void *&vptrrref; // expected-note {{here}}
 
 public:
-  VoidPointerLRefTest(void *vptr, char) : vptrrref(static_cast<void *&>(vptr)) {
+  VoidPointerLRefTest(void *vptr, char) : vptrrref(static_cast<void *&>(vptr)) { // expected-warning {{binding reference member 'vptrrref' to stack allocated parameter 'vptr'}}
     // All good!
   }
 };

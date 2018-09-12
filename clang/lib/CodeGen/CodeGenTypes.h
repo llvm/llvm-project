@@ -140,7 +140,7 @@ class CodeGenTypes {
 
   /// Contains the LLVM IR type for any converted RecordDecl.
   llvm::DenseMap<const Type*, llvm::StructType *> RecordDeclTypes;
-  
+
   /// Hold memoized CGFunctionInfo results.
   llvm::FoldingSet<CGFunctionInfo> FunctionInfos;
 
@@ -149,15 +149,15 @@ class CodeGenTypes {
   /// struct A { struct B { int x; } } when processing 'x', the 'A' and 'B'
   /// types will be in this set.
   llvm::SmallPtrSet<const Type*, 4> RecordsBeingLaidOut;
-  
+
   llvm::SmallPtrSet<const CGFunctionInfo*, 4> FunctionsBeingProcessed;
-  
+
   /// True if we didn't layout a function due to a being inside
   /// a recursive struct conversion, set this to true.
   bool SkippedLayout;
 
   SmallVector<const RecordDecl *, 8> DeferredRecords;
-  
+
   /// This map keeps cache of llvm::Types and maps clang::Type to
   /// corresponding llvm::Type.
   llvm::DenseMap<const Type *, llvm::Type *> TypeCache;
@@ -343,7 +343,7 @@ public:
   /// optional suffix and name the given LLVM type using it.
   void addRecordTypeName(const RecordDecl *RD, llvm::StructType *Ty,
                          StringRef suffix);
-  
+
 
 public:  // These are internal details of CGT that shouldn't be used externally.
   /// ConvertRecordDeclType - Lay out a tagged decl type like struct or union.
@@ -365,7 +365,7 @@ public:  // These are internal details of CGT that shouldn't be used externally.
   /// IsZeroInitializable - Return whether a record type can be
   /// zero-initialized (in the C++ sense) with an LLVM zeroinitializer.
   bool isZeroInitializable(const RecordDecl *RD);
-  
+
   bool isRecordLayoutComplete(const Type *Ty) const;
   bool noRecordsBeingLaidOut() const {
     return RecordsBeingLaidOut.empty();
@@ -373,7 +373,7 @@ public:  // These are internal details of CGT that shouldn't be used externally.
   bool isRecordBeingLaidOut(const Type *Ty) const {
     return RecordsBeingLaidOut.count(Ty);
   }
-                            
+
 };
 
 }  // end namespace CodeGen

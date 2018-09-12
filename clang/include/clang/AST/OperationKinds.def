@@ -307,7 +307,7 @@ CAST_OPERATION(AtomicToNonAtomic)
 /// Converts from T to _Atomic(T).
 CAST_OPERATION(NonAtomicToAtomic)
 
-/// Causes a block literal to by copied to the heap and then 
+/// Causes a block literal to by copied to the heap and then
 /// autoreleased.
 ///
 /// This particular cast kind is used for the conversion from a C++11
@@ -391,13 +391,13 @@ BINARY_OPERATION(Comma, ",")
 // [C99 6.5.2.4] Postfix increment and decrement
 UNARY_OPERATION(PostInc, "++")
 UNARY_OPERATION(PostDec, "--")
-// [C99 6.5.3.1] Prefix increment and decrement 
+// [C99 6.5.3.1] Prefix increment and decrement
 UNARY_OPERATION(PreInc, "++")
 UNARY_OPERATION(PreDec, "--")
 // [C99 6.5.3.2] Address and indirection
 UNARY_OPERATION(AddrOf, "&")
 UNARY_OPERATION(Deref, "*")
-// [C99 6.5.3.3] Unary arithmetic 
+// [C99 6.5.3.3] Unary arithmetic
 UNARY_OPERATION(Plus, "+")
 UNARY_OPERATION(Minus, "-")
 UNARY_OPERATION(Not, "~")

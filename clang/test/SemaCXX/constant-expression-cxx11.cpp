@@ -1555,13 +1555,13 @@ namespace CompoundLiteral {
 
   // Other kinds are not.
   struct X { int a[2]; };
-  constexpr int *n = (X){1, 2}.a; // expected-warning {{C99}} expected-warning {{temporary array}}
+  constexpr int *n = (X){1, 2}.a; // expected-warning {{C99}} expected-warning {{temporary}}
   // expected-error@-1 {{constant expression}}
   // expected-note@-2 {{pointer to subobject of temporary}}
   // expected-note@-3 {{temporary created here}}
 
   void f() {
-    static constexpr int *p = (int*)(int[1]){3}; // expected-warning {{C99}}
+    static constexpr int *p = (int*)(int[1]){3}; // expected-warning {{C99}} expected-warning {{temporary}}
     // expected-error@-1 {{constant expression}}
     // expected-note@-2 {{pointer to subobject of temporary}}
     // expected-note@-3 {{temporary created here}}

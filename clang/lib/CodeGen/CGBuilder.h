@@ -116,7 +116,7 @@ public:
                                       CharUnits Align, bool IsVolatile = false) {
     return CreateAlignedStore(Val, Addr, Align.getQuantity(), IsVolatile);
   }
-  
+
   // FIXME: these "default-aligned" APIs should be removed,
   // but I don't feel like fixing all the builtin code right now.
   llvm::StoreInst *CreateDefaultAlignedStore(llvm::Value *Val,
