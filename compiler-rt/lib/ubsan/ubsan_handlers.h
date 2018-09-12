@@ -122,6 +122,23 @@ struct InvalidValueData {
 /// \brief Handle a load of an invalid value for the type.
 RECOVERABLE(load_invalid_value, InvalidValueData *Data, ValueHandle Val)
 
+/// Known implicit conversion check kinds.
+/// Keep in sync with the enum of the same name in CGExprScalar.cpp
+enum ImplicitConversionCheckKind : unsigned char {
+  ICCK_IntegerTruncation = 0,
+};
+
+struct ImplicitConversionData {
+  SourceLocation Loc;
+  const TypeDescriptor &FromType;
+  const TypeDescriptor &ToType;
+  /* ImplicitConversionCheckKind */ unsigned char Kind;
+};
+
+/// \brief Implict conversion that changed the value.
+RECOVERABLE(implicit_conversion, ImplicitConversionData *Data, ValueHandle Src,
+            ValueHandle Dst)
+
 /// Known builtin check kinds.
 /// Keep in sync with the enum of the same name in CodeGenFunction.h
 enum BuiltinCheckKind : unsigned char {

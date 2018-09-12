@@ -32,16 +32,6 @@ namespace __xray {
 
 namespace {
 
-constexpr uptr XRayProfilingVersion = 0x20180424;
-
-struct XRayProfilingFileHeader {
-  const u64 MagicBytes = 0x7872617970726f66; // Identifier for XRay profiling
-                                             // files 'xrayprof' in hex.
-  const uptr Version = XRayProfilingVersion;
-  uptr Timestamp = 0; // System time in nanoseconds.
-  uptr PID = 0;       // Process ID.
-};
-
 atomic_sint32_t ProfilerLogFlushStatus = {
     XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING};
 
@@ -144,14 +134,7 @@ XRayLogFlushStatus profilingFlush() XRAY_NEVER_INSTRUMENT {
         if (Verbosity())
           Report("profiling: Failed to flush to file, dropping data.\n");
       } else {
-        XRayProfilingFileHeader Header;
-        Header.Timestamp = NanoTime();
-        Header.PID = internal_getpid();
-        retryingWriteAll(Fd, reinterpret_cast<const char *>(&Header),
-                         reinterpret_cast<const char *>(&Header) +
-                             sizeof(Header));
-
-        // Now for each of the threads, write out the profile data as we would
+        // Now for each of the buffers, write out the profile data as we would
         // see it in memory, verbatim.
         while (B.Data != nullptr && B.Size != 0) {
           retryingWriteAll(Fd, reinterpret_cast<const char *>(B.Data),

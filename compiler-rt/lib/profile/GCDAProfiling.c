@@ -20,6 +20,8 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
+#if !defined(__Fuchsia__)
+
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -602,3 +604,5 @@ void llvm_gcov_init(fn_ptr wfn, fn_ptr ffn) {
     atexit(llvm_writeout_files);
   }
 }
+
+#endif

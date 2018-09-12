@@ -8,7 +8,7 @@
 // Linkage issue
 // XFAIL: openbsd
 
-#include <iostream>
+#include <cstdio>
 
 extern "C" {
 void __ubsan_get_current_report_data(const char **OutIssueKind,
@@ -26,9 +26,9 @@ void __ubsan_on_report(void) {
   __ubsan_get_current_report_data(&IssueKind, &Message, &Filename, &Line, &Col,
                                   &Addr);
 
-  std::cout << "Issue: " << IssueKind << "\n"
-            << "Location: " << Filename << ":" << Line << ":" << Col << "\n"
-            << "Message: " << Message << std::endl;
+  printf("Issue: %s\n", IssueKind);
+  printf("Location: %s:%u:%u\n", Filename, Line, Col);
+  printf("Message: %s\n", Message);
 
   (void)Addr;
 }

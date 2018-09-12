@@ -53,6 +53,7 @@
 #include <link.h>
 #include <pthread.h>
 #include <sched.h>
+#include <signal.h>
 #include <sys/mman.h>
 #if !SANITIZER_SOLARIS
 #include <sys/ptrace.h>
@@ -66,7 +67,6 @@
 #include <ucontext.h>
 #endif
 #if SANITIZER_OPENBSD
-#include <signal.h>
 #include <sys/futex.h>
 #endif
 #include <unistd.h>
@@ -102,10 +102,6 @@ extern struct ps_strings *__ps_strings;
 #include <stdlib.h>
 #include <thread.h>
 #define environ _environ
-#endif
-
-#if !SANITIZER_ANDROID
-#include <sys/signal.h>
 #endif
 
 extern char **environ;

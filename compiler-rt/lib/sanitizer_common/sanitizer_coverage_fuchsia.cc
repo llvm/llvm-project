@@ -146,9 +146,9 @@ class TracePcGuardController final {
       // indices, but we'll never move the mapping address so we don't have
       // any multi-thread synchronization issues with that.
       uintptr_t mapping;
-      status =
-          _zx_vmar_map(_zx_vmar_root_self(), 0, vmo_, 0, MappingSize,
-                       ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &mapping);
+      status = _zx_vmar_map_old(_zx_vmar_root_self(), 0, vmo_, 0, MappingSize,
+                                ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+                                &mapping);
       CHECK_EQ(status, ZX_OK);
 
       // Hereafter other threads are free to start storing into

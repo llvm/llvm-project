@@ -7,6 +7,8 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
+#if !defined(__Fuchsia__)
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -348,11 +350,11 @@ static int parseFilenamePattern(const char *FilenamePat,
   if (lprofCurFilename.Filename)
     free((void *)lprofCurFilename.Filename);
 
-  memset(&lprofCurFilename, 0, sizeof(lprofCurFilename));
-
   if (lprofCurFilename.FilenamePat && lprofCurFilename.OwnsFilenamePat) {
     free((void *)lprofCurFilename.FilenamePat);
   }
+
+  memset(&lprofCurFilename, 0, sizeof(lprofCurFilename));
 
   if (!CopyFilenamePat)
     lprofCurFilename.FilenamePat = FilenamePat;
@@ -717,3 +719,5 @@ int __llvm_profile_register_write_file_atexit(void) {
   HasBeenRegistered = 1;
   return atexit(writeFileWithoutReturn);
 }
+
+#endif

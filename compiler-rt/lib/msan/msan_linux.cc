@@ -143,7 +143,7 @@ bool InitShadow(bool init_origins) {
     if (map) {
       if (!CheckMemoryRangeAvailability(start, size))
         return false;
-      if ((uptr)MmapFixedNoReserve(start, size, kMemoryLayout[i].name) != start)
+      if (!MmapFixedNoReserve(start, size, kMemoryLayout[i].name))
         return false;
       if (common_flags()->use_madv_dontdump)
         DontDumpShadowMemory(start, size);

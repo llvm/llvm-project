@@ -1,7 +1,7 @@
 // Regression test for
 // https://bugs.llvm.org/show_bug.cgi?id=32434
 
-// RUN: %clangxx_asan -O0 %s -o %t
+// RUN: %clangxx_asan -fexceptions -O0 %s -o %t
 // RUN: %run %t
 
 #include <assert.h>
