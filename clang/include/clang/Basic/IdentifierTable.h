@@ -312,18 +312,6 @@ public:
     ChangedAfterLoad = true;
   }
 
-  /// Determine whether the frontend token information for this
-  /// identifier has changed since it was loaded from an AST file.
-  bool hasFETokenInfoChangedSinceDeserialization() const {
-    return FEChangedAfterLoad;
-  }
-
-  /// Note that the frontend token information for this identifier has
-  /// changed since it was loaded from an AST file.
-  void setFETokenInfoChangedSinceDeserialization() {
-    FEChangedAfterLoad = true;
-  }
-
   /// Determine whether the information for this identifier is out of
   /// date with respect to the external source.
   bool isOutOfDate() const { return OutOfDate; }
