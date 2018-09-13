@@ -201,16 +201,16 @@ void ClangdServer::removeDocument(PathRef File) {
   WorkScheduler.remove(File);
 }
 
-TaskHandle ClangdServer::codeComplete(PathRef File, Position Pos,
-                                      const clangd::CodeCompleteOptions &Opts,
-                                      Callback<CodeCompleteResult> CB) {
+Canceler ClangdServer::codeComplete(PathRef File, Position Pos,
+                                    const clangd::CodeCompleteOptions &Opts,
+                                    Callback<CodeCompleteResult> CB) {
   // Copy completion options for passing them to async task handler.
   auto CodeCompleteOpts = Opts;
   if (!CodeCompleteOpts.Index) // Respect overridden index.
     CodeCompleteOpts.Index = Index;
 
-  TaskHandle TH = Task::createHandle();
-  WithContext ContextWithCancellation(setCurrentTask(TH));
+  auto Cancelable = cancelableTask();
+  WithContext ContextWithCancellation(std::move(Cancelable.first));
   // Copy PCHs to avoid accessing this->PCHs concurrently
   std::shared_ptr<PCHContainerOperations> PCHs = this->PCHs;
   auto FS = FSProvider.getFileSystem();
@@ -259,7 +259,7 @@ TaskHandle ClangdServer::codeComplete(PathRef File, Position Pos,
   // We use a potentially-stale preamble because latency is critical here.
   WorkScheduler.runWithPreamble("CodeComplete", File, TUScheduler::Stale,
                                 Bind(Task, File.str(), std::move(CB)));
-  return TH;
+  return std::move(Cancelable.second);
 }
 
 void ClangdServer::signatureHelp(PathRef File, Position Pos,

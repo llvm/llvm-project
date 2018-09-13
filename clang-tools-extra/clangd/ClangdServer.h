@@ -125,9 +125,9 @@ public:
   /// while returned future is not yet ready.
   /// A version of `codeComplete` that runs \p Callback on the processing thread
   /// when codeComplete results become available.
-  TaskHandle codeComplete(PathRef File, Position Pos,
-                          const clangd::CodeCompleteOptions &Opts,
-                          Callback<CodeCompleteResult> CB);
+  Canceler codeComplete(PathRef File, Position Pos,
+                        const clangd::CodeCompleteOptions &Opts,
+                        Callback<CodeCompleteResult> CB);
 
   /// Provide signature help for \p File at \p Pos.  This method should only be
   /// called for tracked files.
