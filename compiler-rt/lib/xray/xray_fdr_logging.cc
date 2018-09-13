@@ -272,12 +272,27 @@ static void writeCallArgumentMetadata(uint64_t A) XRAY_NEVER_INSTRUMENT {
   incrementExtents(sizeof(MetadataRecord));
 }
 
-static void writeFunctionRecord(int FuncId, uint32_t TSCDelta,
+static void writeFunctionRecord(int32_t FuncId, uint32_t TSCDelta,
                                 XRayEntryType EntryType) XRAY_NEVER_INSTRUMENT {
+  constexpr int32_t MaxFuncId = (1 << 29) - 1;
+  if (UNLIKELY(FuncId > MaxFuncId)) {
+    if (Verbosity())
+      Report("Warning: Function ID '%d' > max function id: '%d'", FuncId,
+             MaxFuncId);
+    return;
+  }
+
   FunctionRecord FuncRecord;
   FuncRecord.Type = uint8_t(RecordType::Function);
+
   // Only take 28 bits of the function id.
-  FuncRecord.FuncId = FuncId & ~(0x0F << 28);
+  //
+  // We need to be careful about the sign bit and the bitwise operations being
+  // performed here. In effect, we want to truncate the value of the function id
+  // to the first 28 bits. To do this properly, this means we need to mask the
+  // function id with (2 ^ 28) - 1 == 0x0fffffff.
+  //
+  FuncRecord.FuncId = FuncId & MaxFuncId;
   FuncRecord.TSCDelta = TSCDelta;
 
   auto &TLD = getThreadLocalData();
@@ -345,7 +360,8 @@ static atomic_uint64_t ThresholdTicks{0};
 // Re-point the thread local pointer into this thread's Buffer before the recent
 // "Function Entry" record and any "Tail Call Exit" records after that.
 static void rewindRecentCall(uint64_t TSC, uint64_t &LastTSC,
-                             uint64_t &LastFunctionEntryTSC, int32_t FuncId) {
+                             uint64_t &LastFunctionEntryTSC,
+                             int32_t FuncId) XRAY_NEVER_INSTRUMENT {
   auto &TLD = getThreadLocalData();
   TLD.RecordPtr -= FunctionRecSize;
   decrementExtents(FunctionRecSize);
@@ -521,6 +537,7 @@ static uint32_t writeCurrentCPUTSC(ThreadLocalData &TLD, uint64_t TSC,
     writeNewCPUIdMetadata(CPU, TSC);
     return 0;
   }
+
   // If the delta is greater than the range for a uint32_t, then we write out
   // the TSC wrap metadata entry with the full TSC, and the TSC for the
   // function record be 0.
@@ -596,14 +613,16 @@ static void processFunctionHook(int32_t FuncId, XRayEntryType Entry,
   //       1. When the delta between the TSC we get and the previous TSC for the
   //          same CPU is outside of the uint32_t range, we end up having to
   //          write a MetadataRecord to indicate a "tsc wrap" before the actual
-  //          FunctionRecord.
+  //          FunctionRecord. This means we have: 1 MetadataRecord + 1 Function
+  //          Record.
   //       2. When we learn that we've moved CPUs, we need to write a
   //          MetadataRecord to indicate a "cpu change", and thus write out the
   //          current TSC for that CPU before writing out the actual
-  //          FunctionRecord.
-  //       3. When we learn about a new CPU ID, we need to write down a "new cpu
-  //          id" MetadataRecord before writing out the actual FunctionRecord.
-  //       4. The second MetadataRecord is the optional function call argument.
+  //          FunctionRecord. This means we have: 1 MetadataRecord + 1 Function
+  //          Record.
+  //       3. Given the previous two cases, in addition we can add at most one
+  //          function argument record. This means we have: 2 MetadataRecord + 1
+  //          Function Record.
   //
   // So the math we need to do is to determine whether writing 40 bytes past the
   // current pointer exceeds the buffer's maximum size. If we don't have enough
@@ -615,19 +634,20 @@ static void processFunctionHook(int32_t FuncId, XRayEntryType Entry,
     return;
   }
 
-  // By this point, we are now ready to write up to 40 bytes (explained above).
-  DCHECK((TLD.RecordPtr + MaxSize) - static_cast<char *>(TLD.Buffer.Data) >=
-             static_cast<ptrdiff_t>(MetadataRecSize) &&
-         "Misconfigured BufferQueue provided; Buffer size not large enough.");
-
   auto RecordTSCDelta = writeCurrentCPUTSC(TLD, TSC, CPU);
   TLD.LastTSC = TSC;
   TLD.CurrentCPU = CPU;
   switch (Entry) {
   case XRayEntryType::ENTRY:
-  case XRayEntryType::LOG_ARGS_ENTRY:
     // Update the thread local state for the next invocation.
     TLD.LastFunctionEntryTSC = TSC;
+    break;
+  case XRayEntryType::LOG_ARGS_ENTRY:
+    // Update the thread local state for the next invocation, but also prevent
+    // rewinding when we have arguments logged.
+    TLD.LastFunctionEntryTSC = TSC;
+    TLD.NumConsecutiveFnEnters = 0;
+    TLD.NumTailCalls = 0;
     break;
   case XRayEntryType::TAIL:
   case XRayEntryType::EXIT:
@@ -986,10 +1006,16 @@ void fdrLoggingHandleCustomEvent(void *Event,
   //   - The metadata record we're going to write. (16 bytes)
   //   - The additional data we're going to write. Currently, that's the size
   //   of the event we're going to dump into the log as free-form bytes.
-  if (!prepareBuffer(TSC, CPU, clock_gettime, MetadataRecSize + EventSize)) {
+  if (!prepareBuffer(TSC, CPU, clock_gettime,
+                     MetadataRecSize + ReducedEventSize)) {
     TLD.BQ = nullptr;
     return;
   }
+
+  // We need to reset the counts for the number of functions we're able to
+  // rewind.
+  TLD.NumConsecutiveFnEnters = 0;
+  TLD.NumTailCalls = 0;
 
   // Write the custom event metadata record, which consists of the following
   // information:
@@ -1001,11 +1027,12 @@ void fdrLoggingHandleCustomEvent(void *Event,
       uint8_t(MetadataRecord::RecordKinds::CustomEventMarker);
   constexpr auto TSCSize = sizeof(TC.TSC);
   internal_memcpy(&CustomEvent.Data, &ReducedEventSize, sizeof(int32_t));
-  internal_memcpy(&CustomEvent.Data[sizeof(int32_t)], &TSC, TSCSize);
+  internal_memcpy(&CustomEvent.Data + sizeof(int32_t), &TSC, TSCSize);
   internal_memcpy(TLD.RecordPtr, &CustomEvent, sizeof(CustomEvent));
   TLD.RecordPtr += sizeof(CustomEvent);
   internal_memcpy(TLD.RecordPtr, Event, ReducedEventSize);
-  incrementExtents(MetadataRecSize + EventSize);
+  TLD.RecordPtr += ReducedEventSize;
+  incrementExtents(MetadataRecSize + ReducedEventSize);
   endBufferIfFull();
 }
 
@@ -1031,7 +1058,8 @@ void fdrLoggingHandleTypedEvent(
   //   - The metadata record we're going to write. (16 bytes)
   //   - The additional data we're going to write. Currently, that's the size
   //   of the event we're going to dump into the log as free-form bytes.
-  if (!prepareBuffer(TSC, CPU, clock_gettime, MetadataRecSize + EventSize)) {
+  if (!prepareBuffer(TSC, CPU, clock_gettime,
+                     MetadataRecSize + ReducedEventSize)) {
     TLD.BQ = nullptr;
     return;
   }
@@ -1056,6 +1084,7 @@ void fdrLoggingHandleTypedEvent(
 
   TLD.RecordPtr += sizeof(TypedEvent);
   internal_memcpy(TLD.RecordPtr, Event, ReducedEventSize);
+  TLD.RecordPtr += ReducedEventSize;
   incrementExtents(MetadataRecSize + EventSize);
   endBufferIfFull();
 }
