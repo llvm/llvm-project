@@ -1181,6 +1181,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   // Prefer likely predicted branches to selects on out-of-order cores.
   PredictableSelectIsExpensive = Subtarget->getSchedModel().isOutOfOrder();
 
+  setPrefLoopAlignment(Subtarget->getPrefLoopAlignment());
+
   setMinFunctionAlignment(Subtarget->isThumb() ? 1 : 2);
 }
 
@@ -14546,6 +14548,11 @@ Value *ARMTargetLowering::emitStoreConditional(IRBuilder<> &Builder, Value *Val,
       Strex, {Builder.CreateZExtOrBitCast(
                   Val, Strex->getFunctionType()->getParamType(0)),
               Addr});
+}
+
+
+bool ARMTargetLowering::alignLoopsWithOptSize() const {
+  return Subtarget->isMClass();
 }
 
 /// A helper function for determining the number of interleaved accesses we
