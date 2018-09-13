@@ -82,7 +82,11 @@ struct CVIndexMap {
   bool IsTypeServerMap = false;
 };
 
+class DebugSHandler;
+
 class PDBLinker {
+  friend DebugSHandler;
+
 public:
   PDBLinker(SymbolTable *Symtab)
       : Alloc(), Symtab(Symtab), Builder(Alloc), TypeTable(Alloc),
@@ -167,6 +171,50 @@ private:
   /// List of TypeServer PDBs which cannot be loaded.
   /// Cached to prevent repeated load attempts.
   std::map<GUID, std::string> MissingTypeServerPDBs;
+};
+
+class DebugSHandler {
+  PDBLinker &Linker;
+
+  /// The object file whose .debug$S sections we're processing.
+  ObjFile &File;
+
+  /// The result of merging type indices.
+  const CVIndexMap &IndexMap;
+
+  /// The DEBUG_S_STRINGTABLE subsection.  These strings are referred to by
+  /// index from other records in the .debug$S section.  All of these strings
+  /// need to be added to the global PDB string table, and all references to
+  /// these strings need to have their indices re-written to refer to the
+  /// global PDB string table.
+  DebugStringTableSubsectionRef CVStrTab;
+
+  /// The DEBUG_S_FILECHKSMS subsection.  As above, these are referred to
+  /// by other records in the .debug$S section and need to be merged into the
+  /// PDB.
+  DebugChecksumsSubsectionRef Checksums;
+
+  /// The DEBUG_S_FRAMEDATA subsection(s).  There can be more than one of
+  /// these and they need not appear in any specific order.  However, they
+  /// contain string table references which need to be re-written, so we
+  /// collect them all here and re-write them after all subsections have been
+  /// discovered and processed.
+  std::vector<DebugFrameDataSubsectionRef> NewFpoFrames;
+
+  /// Pointers to raw memory that we determine have string table references
+  /// that need to be re-written.  We first process all .debug$S subsections
+  /// to ensure that we can handle subsections written in any order, building
+  /// up this list as we go.  At the end, we use the string table (which must
+  /// have been discovered by now else it is an error) to re-write these
+  /// references.
+  std::vector<ulittle32_t *> StringTableReferences;
+
+public:
+  DebugSHandler(PDBLinker &Linker, ObjFile &File, const CVIndexMap &IndexMap)
+      : Linker(Linker), File(File), IndexMap(IndexMap) {}
+
+  void handleDebugS(lld::coff::SectionChunk &DebugS);
+  void finish();
 };
 }
 
@@ -785,15 +833,14 @@ static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
   cantFail(std::move(EC));
 }
 
-// Allocate memory for a .debug$S section and relocate it.
+// Allocate memory for a .debug$S / .debug$F section and relocate it.
 static ArrayRef<uint8_t> relocateDebugChunk(BumpPtrAllocator &Alloc,
-                                            SectionChunk *DebugChunk) {
-  uint8_t *Buffer = Alloc.Allocate<uint8_t>(DebugChunk->getSize());
-  assert(DebugChunk->OutputSectionOff == 0 &&
+                                            SectionChunk &DebugChunk) {
+  uint8_t *Buffer = Alloc.Allocate<uint8_t>(DebugChunk.getSize());
+  assert(DebugChunk.OutputSectionOff == 0 &&
          "debug sections should not be in output sections");
-  DebugChunk->writeTo(Buffer);
-  return consumeDebugMagic(makeArrayRef(Buffer, DebugChunk->getSize()),
-                           ".debug$S");
+  DebugChunk.writeTo(Buffer);
+  return makeArrayRef(Buffer, DebugChunk.getSize());
 }
 
 static pdb::SectionContrib createSectionContrib(const Chunk *C, uint32_t Modi) {
@@ -834,6 +881,114 @@ translateStringTableIndex(uint32_t ObjIndex,
   }
 
   return PdbStrTable.insert(*ExpectedString);
+}
+
+void DebugSHandler::handleDebugS(lld::coff::SectionChunk &DebugS) {
+  DebugSubsectionArray Subsections;
+
+  ArrayRef<uint8_t> RelocatedDebugContents = consumeDebugMagic(
+      relocateDebugChunk(Linker.Alloc, DebugS), DebugS.getSectionName());
+
+  BinaryStreamReader Reader(RelocatedDebugContents, support::little);
+  ExitOnErr(Reader.readArray(Subsections, RelocatedDebugContents.size()));
+
+  for (const DebugSubsectionRecord &SS : Subsections) {
+    switch (SS.kind()) {
+    case DebugSubsectionKind::StringTable: {
+      assert(!CVStrTab.valid() &&
+             "Encountered multiple string table subsections!");
+      ExitOnErr(CVStrTab.initialize(SS.getRecordData()));
+      break;
+    }
+    case DebugSubsectionKind::FileChecksums:
+      assert(!Checksums.valid() &&
+             "Encountered multiple checksum subsections!");
+      ExitOnErr(Checksums.initialize(SS.getRecordData()));
+      break;
+    case DebugSubsectionKind::Lines:
+      // We can add the relocated line table directly to the PDB without
+      // modification because the file checksum offsets will stay the same.
+      File.ModuleDBI->addDebugSubsection(SS);
+      break;
+    case DebugSubsectionKind::FrameData: {
+      // We need to re-write string table indices here, so save off all
+      // frame data subsections until we've processed the entire list of
+      // subsections so that we can be sure we have the string table.
+      DebugFrameDataSubsectionRef FDS;
+      ExitOnErr(FDS.initialize(SS.getRecordData()));
+      NewFpoFrames.push_back(std::move(FDS));
+      break;
+    }
+    case DebugSubsectionKind::Symbols:
+      if (Config->DebugGHashes) {
+        mergeSymbolRecords(Linker.Alloc, &File, Linker.Builder.getGsiBuilder(),
+                           IndexMap, Linker.GlobalIDTable,
+                           StringTableReferences, SS.getRecordData());
+      } else {
+        mergeSymbolRecords(Linker.Alloc, &File, Linker.Builder.getGsiBuilder(),
+                           IndexMap, Linker.IDTable, StringTableReferences,
+                           SS.getRecordData());
+      }
+      break;
+    default:
+      // FIXME: Process the rest of the subsections.
+      break;
+    }
+  }
+}
+
+void DebugSHandler::finish() {
+  pdb::DbiStreamBuilder &DbiBuilder = Linker.Builder.getDbiBuilder();
+
+  // We should have seen all debug subsections across the entire object file now
+  // which means that if a StringTable subsection and Checksums subsection were
+  // present, now is the time to handle them.
+  if (!CVStrTab.valid()) {
+    if (Checksums.valid())
+      fatal(".debug$S sections with a checksums subsection must also contain a "
+            "string table subsection");
+
+    if (!StringTableReferences.empty())
+      warn("No StringTable subsection was encountered, but there are string "
+           "table references");
+    return;
+  }
+
+  // Rewrite string table indices in the Fpo Data and symbol records to refer to
+  // the global PDB string table instead of the object file string table.
+  for (DebugFrameDataSubsectionRef &FDS : NewFpoFrames) {
+    const uint32_t *Reloc = FDS.getRelocPtr();
+    for (codeview::FrameData FD : FDS) {
+      FD.RvaStart += *Reloc;
+      FD.FrameFunc =
+          translateStringTableIndex(FD.FrameFunc, CVStrTab, Linker.PDBStrTab);
+      DbiBuilder.addNewFpoData(FD);
+    }
+  }
+
+  for (ulittle32_t *Ref : StringTableReferences)
+    *Ref = translateStringTableIndex(*Ref, CVStrTab, Linker.PDBStrTab);
+
+  // Make a new file checksum table that refers to offsets in the PDB-wide
+  // string table. Generally the string table subsection appears after the
+  // checksum table, so we have to do this after looping over all the
+  // subsections.
+  auto NewChecksums = make_unique<DebugChecksumsSubsection>(Linker.PDBStrTab);
+  for (FileChecksumEntry &FC : Checksums) {
+    SmallString<128> FileName =
+        ExitOnErr(CVStrTab.getString(FC.FileNameOffset));
+    if (!sys::path::is_absolute(FileName) && !Config->PDBSourcePath.empty()) {
+      SmallString<128> AbsoluteFileName = Config->PDBSourcePath;
+      sys::path::append(AbsoluteFileName, FileName);
+      sys::path::native(AbsoluteFileName);
+      sys::path::remove_dots(AbsoluteFileName, /*remove_dot_dots=*/true);
+      FileName = std::move(AbsoluteFileName);
+    }
+    ExitOnErr(Linker.Builder.getDbiBuilder().addModuleSourceFile(
+        *File.ModuleDBI, FileName));
+    NewChecksums->addChecksum(FileName, FC.Kind, FC.Checksum);
+  }
+  File.ModuleDBI->addDebugSubsection(std::move(NewChecksums));
 }
 
 void PDBLinker::addObjFile(ObjFile *File) {
@@ -878,122 +1033,38 @@ void PDBLinker::addObjFile(ObjFile *File) {
     return;
   }
 
-  const CVIndexMap &IndexMap = *IndexMapResult;
-
   ScopedTimer T(SymbolMergingTimer);
 
-  // Now do all live .debug$S sections.
-  DebugStringTableSubsectionRef CVStrTab;
-  DebugChecksumsSubsectionRef Checksums;
-  std::vector<ulittle32_t *> StringTableReferences;
-  std::vector<DebugFrameDataSubsectionRef> FpoFrames;
+  DebugSHandler DSH(*this, *File, *IndexMapResult);
+  // Now do all live .debug$S and .debug$F sections.
   for (SectionChunk *DebugChunk : File->getDebugChunks()) {
-    if (!DebugChunk->Live || DebugChunk->getSectionName() != ".debug$S")
+    if (!DebugChunk->Live || DebugChunk->getSize() == 0)
       continue;
 
-    ArrayRef<uint8_t> RelocatedDebugContents =
-        relocateDebugChunk(Alloc, DebugChunk);
-    if (RelocatedDebugContents.empty())
+    if (DebugChunk->getSectionName() == ".debug$S") {
+      DSH.handleDebugS(*DebugChunk);
       continue;
+    }
 
-    DebugSubsectionArray Subsections;
-    BinaryStreamReader Reader(RelocatedDebugContents, support::little);
-    ExitOnErr(Reader.readArray(Subsections, RelocatedDebugContents.size()));
+    if (DebugChunk->getSectionName() == ".debug$F") {
+      ArrayRef<uint8_t> RelocatedDebugContents =
+          relocateDebugChunk(Alloc, *DebugChunk);
 
-    for (const DebugSubsectionRecord &SS : Subsections) {
-      switch (SS.kind()) {
-      case DebugSubsectionKind::StringTable: {
-        assert(!CVStrTab.valid() &&
-               "Encountered multiple string table subsections!");
-        ExitOnErr(CVStrTab.initialize(SS.getRecordData()));
-        break;
-      }
-      case DebugSubsectionKind::FileChecksums:
-        assert(!Checksums.valid() &&
-               "Encountered multiple checksum subsections!");
-        ExitOnErr(Checksums.initialize(SS.getRecordData()));
-        break;
-      case DebugSubsectionKind::Lines:
-        // We can add the relocated line table directly to the PDB without
-        // modification because the file checksum offsets will stay the same.
-        File->ModuleDBI->addDebugSubsection(SS);
-        break;
-      case DebugSubsectionKind::FrameData: {
-        // We need to re-write string table indices here, so save off all
-        // frame data subsections until we've processed the entire list of
-        // subsections so that we can be sure we have the string table.
-        DebugFrameDataSubsectionRef FDS;
-        ExitOnErr(FDS.initialize(SS.getRecordData()));
-        FpoFrames.push_back(std::move(FDS));
-        break;
-      }
-      case DebugSubsectionKind::Symbols:
-        if (Config->DebugGHashes) {
-          mergeSymbolRecords(Alloc, File, Builder.getGsiBuilder(), IndexMap,
-                             GlobalIDTable, StringTableReferences,
-                             SS.getRecordData());
-        } else {
-          mergeSymbolRecords(Alloc, File, Builder.getGsiBuilder(), IndexMap,
-                             IDTable, StringTableReferences,
-                             SS.getRecordData());
-        }
-        break;
-      default:
-        // FIXME: Process the rest of the subsections.
-        break;
-      }
+      FixedStreamArray<object::FpoData> FpoRecords;
+      BinaryStreamReader Reader(RelocatedDebugContents, support::little);
+      uint32_t Count = RelocatedDebugContents.size() / sizeof(object::FpoData);
+      ExitOnErr(Reader.readArray(FpoRecords, Count));
+
+      // These are already relocated and don't refer to the string table, so we
+      // can just copy it.
+      for (const object::FpoData &FD : FpoRecords)
+        DbiBuilder.addOldFpoData(FD);
+      continue;
     }
   }
 
-  // We should have seen all debug subsections across the entire object file now
-  // which means that if a StringTable subsection and Checksums subsection were
-  // present, now is the time to handle them.
-  if (!CVStrTab.valid()) {
-    if (Checksums.valid())
-      fatal(".debug$S sections with a checksums subsection must also contain a "
-            "string table subsection");
-
-    if (!StringTableReferences.empty())
-      warn("No StringTable subsection was encountered, but there are string "
-           "table references");
-    return;
-  }
-
-  // Rewrite string table indices in the Fpo Data and symbol records to refer to
-  // the global PDB string table instead of the object file string table.
-  for (DebugFrameDataSubsectionRef &FDS : FpoFrames) {
-    const uint32_t *Reloc = FDS.getRelocPtr();
-    for (codeview::FrameData FD : FDS) {
-      FD.RvaStart += *Reloc;
-      FD.FrameFunc =
-          translateStringTableIndex(FD.FrameFunc, CVStrTab, PDBStrTab);
-      DbiBuilder.addFrameData(FD);
-    }
-  }
-
-  for (ulittle32_t *Ref : StringTableReferences)
-    *Ref = translateStringTableIndex(*Ref, CVStrTab, PDBStrTab);
-
-  // Make a new file checksum table that refers to offsets in the PDB-wide
-  // string table. Generally the string table subsection appears after the
-  // checksum table, so we have to do this after looping over all the
-  // subsections.
-  auto NewChecksums = make_unique<DebugChecksumsSubsection>(PDBStrTab);
-  for (FileChecksumEntry &FC : Checksums) {
-    SmallString<128> FileName = ExitOnErr(CVStrTab.getString(FC.FileNameOffset));
-    if (!sys::path::is_absolute(FileName) &&
-        !Config->PDBSourcePath.empty()) {
-      SmallString<128> AbsoluteFileName = Config->PDBSourcePath;
-      sys::path::append(AbsoluteFileName, FileName);
-      sys::path::native(AbsoluteFileName);
-      sys::path::remove_dots(AbsoluteFileName, /*remove_dot_dots=*/true);
-      FileName = std::move(AbsoluteFileName);
-    }
-    ExitOnErr(Builder.getDbiBuilder().addModuleSourceFile(*File->ModuleDBI,
-                                                          FileName));
-    NewChecksums->addChecksum(FileName, FC.Kind, FC.Checksum);
-  }
-  File->ModuleDBI->addDebugSubsection(std::move(NewChecksums));
+  // Do any post-processing now that all .debug$S sections have been processed.
+  DSH.finish();
 }
 
 static PublicSym32 createPublic(Defined *Def) {

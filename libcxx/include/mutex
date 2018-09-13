@@ -194,6 +194,7 @@ template<class Callable, class ...Args>
 #ifndef _LIBCPP_CXX03_LANG
 #include <tuple>
 #endif
+#include <version>
 #include <__threading_support>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

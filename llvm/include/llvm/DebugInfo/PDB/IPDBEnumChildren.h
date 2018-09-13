@@ -27,7 +27,6 @@ public:
   virtual ChildTypePtr getChildAtIndex(uint32_t Index) const = 0;
   virtual ChildTypePtr getNext() = 0;
   virtual void reset() = 0;
-  virtual MyType *clone() const = 0;
 };
 
 } // end namespace pdb

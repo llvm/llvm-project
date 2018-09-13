@@ -16,8 +16,8 @@ define i8 @and_shl(i8 %x, i8 %y, i8 %z, i8 %shamt) {
 ; CHECK-LABEL: @and_shl(
 ; CHECK-NEXT:    [[SX:%.*]] = shl i8 [[X:%.*]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    [[SY:%.*]] = shl i8 [[Y:%.*]], [[SHAMT]]
-; CHECK-NEXT:    [[A:%.*]] = and i8 [[SX]], [[SY]]
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = and i8 [[SX]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[A]], [[SY]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = shl i8 %x, %shamt
@@ -31,8 +31,8 @@ define i8 @or_shl(i8 %x, i8 %y, i8 %z, i8 %shamt) {
 ; CHECK-LABEL: @or_shl(
 ; CHECK-NEXT:    [[SX:%.*]] = shl i8 [[X:%.*]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    [[SY:%.*]] = shl i8 [[Y:%.*]], [[SHAMT]]
-; CHECK-NEXT:    [[A:%.*]] = or i8 [[SX]], [[SY]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = or i8 [[SX]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[A]], [[SY]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = shl i8 %x, %shamt
@@ -46,8 +46,8 @@ define i8 @xor_shl(i8 %x, i8 %y, i8 %z, i8 %shamt) {
 ; CHECK-LABEL: @xor_shl(
 ; CHECK-NEXT:    [[SX:%.*]] = shl i8 [[X:%.*]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    [[SY:%.*]] = shl i8 [[Y:%.*]], [[SHAMT]]
-; CHECK-NEXT:    [[A:%.*]] = xor i8 [[SX]], [[SY]]
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = xor i8 [[SX]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], [[SY]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = shl i8 %x, %shamt
@@ -61,8 +61,8 @@ define i8 @and_lshr(i8 %x, i8 %y, i8 %z, i8 %shamt) {
 ; CHECK-LABEL: @and_lshr(
 ; CHECK-NEXT:    [[SX:%.*]] = lshr i8 [[X:%.*]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    [[SY:%.*]] = lshr i8 [[Y:%.*]], [[SHAMT]]
-; CHECK-NEXT:    [[A:%.*]] = and i8 [[SX]], [[SY]]
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = and i8 [[SX]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[A]], [[SY]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = lshr i8 %x, %shamt
@@ -76,8 +76,8 @@ define i8 @or_lshr(i8 %x, i8 %y, i8 %z, i8 %shamt) {
 ; CHECK-LABEL: @or_lshr(
 ; CHECK-NEXT:    [[SX:%.*]] = lshr i8 [[X:%.*]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    [[SY:%.*]] = lshr i8 [[Y:%.*]], [[SHAMT]]
-; CHECK-NEXT:    [[A:%.*]] = or i8 [[SX]], [[SY]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = or i8 [[SX]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[A]], [[SY]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = lshr i8 %x, %shamt
@@ -91,8 +91,8 @@ define i8 @xor_lshr(i8 %x, i8 %y, i8 %z, i8 %shamt) {
 ; CHECK-LABEL: @xor_lshr(
 ; CHECK-NEXT:    [[SX:%.*]] = lshr i8 [[X:%.*]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    [[SY:%.*]] = lshr i8 [[Y:%.*]], [[SHAMT]]
-; CHECK-NEXT:    [[A:%.*]] = xor i8 [[SX]], [[SY]]
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = xor i8 [[SX]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], [[SY]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = lshr i8 %x, %shamt
@@ -106,8 +106,8 @@ define i8 @and_ashr(i8 %x, i8 %y, i8 %z, i8 %shamt) {
 ; CHECK-LABEL: @and_ashr(
 ; CHECK-NEXT:    [[SX:%.*]] = ashr i8 [[X:%.*]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    [[SY:%.*]] = ashr i8 [[Y:%.*]], [[SHAMT]]
-; CHECK-NEXT:    [[A:%.*]] = and i8 [[SX]], [[SY]]
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = and i8 [[SX]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[A]], [[SY]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = ashr i8 %x, %shamt
@@ -121,8 +121,8 @@ define i8 @or_ashr(i8 %x, i8 %y, i8 %z, i8 %shamt) {
 ; CHECK-LABEL: @or_ashr(
 ; CHECK-NEXT:    [[SX:%.*]] = ashr i8 [[X:%.*]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    [[SY:%.*]] = ashr i8 [[Y:%.*]], [[SHAMT]]
-; CHECK-NEXT:    [[A:%.*]] = or i8 [[SX]], [[SY]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = or i8 [[SX]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[A]], [[SY]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = ashr i8 %x, %shamt
@@ -138,8 +138,8 @@ define <2 x i8> @xor_ashr(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z, <2 x i8> %shamt
 ; CHECK-LABEL: @xor_ashr(
 ; CHECK-NEXT:    [[SX:%.*]] = ashr <2 x i8> [[X:%.*]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    [[SY:%.*]] = ashr <2 x i8> [[Y:%.*]], [[SHAMT]]
-; CHECK-NEXT:    [[A:%.*]] = xor <2 x i8> [[SX]], [[SY]]
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = xor <2 x i8> [[SX]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[A]], [[SY]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %sx = ashr <2 x i8> %x, %shamt
@@ -203,29 +203,19 @@ define i8 @xor_lshr_multiuse(i8 %x, i8 %y, i8 %z, i8 %shamt) {
 }
 
 ; Math ops work too. Change instruction positions too to verify placement.
-; We only care about extra uses of the first associative value - in this
-; case, it's %a. Everything else can have extra uses.
-
-declare void @use(i8)
 
 define i8 @add_lshr(i8 %x, i8 %y, i8 %z, i8 %shamt) {
 ; CHECK-LABEL: @add_lshr(
 ; CHECK-NEXT:    [[SX:%.*]] = lshr i8 [[X:%.*]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[SX]], [[Z:%.*]]
 ; CHECK-NEXT:    [[SY:%.*]] = lshr i8 [[Y:%.*]], [[SHAMT]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[SX]], [[SY]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[TMP1]], [[Z:%.*]]
-; CHECK-NEXT:    call void @use(i8 [[SX]])
-; CHECK-NEXT:    call void @use(i8 [[SY]])
-; CHECK-NEXT:    call void @use(i8 [[TMP2]])
-; CHECK-NEXT:    ret i8 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[A]], [[SY]]
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = lshr i8 %x, %shamt
   %a = add i8 %sx, %z
   %sy = lshr i8 %y, %shamt
   %r = add i8 %a, %sy
-  call void @use(i8 %sx)
-  call void @use(i8 %sy)
-  call void @use(i8 %r)
   ret i8 %r
 }
 
@@ -235,8 +225,8 @@ define i8 @mul_sub(i8 %x, i8 %y, i8 %z, i8 %m) {
 ; CHECK-LABEL: @mul_sub(
 ; CHECK-NEXT:    [[SX:%.*]] = sub i8 [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[SY:%.*]] = sub i8 [[Y:%.*]], [[M]]
-; CHECK-NEXT:    [[A:%.*]] = mul i8 [[SX]], [[SY]]
-; CHECK-NEXT:    [[R:%.*]] = mul i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[SX]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = mul nuw i8 [[A]], [[SY]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = sub i8 %x, %m
@@ -249,9 +239,9 @@ define i8 @mul_sub(i8 %x, i8 %y, i8 %z, i8 %m) {
 define i8 @add_mul(i8 %x, i8 %y, i8 %z, i8 %m) {
 ; CHECK-LABEL: @add_mul(
 ; CHECK-NEXT:    [[SX:%.*]] = mul nuw i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[A:%.*]] = add nuw i8 [[Z:%.*]], [[SX]]
 ; CHECK-NEXT:    [[SY:%.*]] = mul nsw i8 [[M:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[SX]], [[SY]]
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[A]], [[SY]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sx = mul nuw i8 %x, 42
@@ -267,9 +257,9 @@ define i8 @add_mul(i8 %x, i8 %y, i8 %z, i8 %m) {
 define float @fadd_fmul(float %x, float %y, float %z, float %m) {
 ; CHECK-LABEL: @fadd_fmul(
 ; CHECK-NEXT:    [[SX:%.*]] = fmul float [[X:%.*]], [[M:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = fadd fast float [[SX]], [[Z:%.*]]
 ; CHECK-NEXT:    [[SY:%.*]] = fmul float [[Y:%.*]], [[M]]
-; CHECK-NEXT:    [[A:%.*]] = fadd fast float [[SX]], [[SY]]
-; CHECK-NEXT:    [[R:%.*]] = fadd fast float [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fadd fast float [[A]], [[SY]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %sx = fmul float %x, %m
@@ -283,8 +273,8 @@ define float @fmul_fdiv(float %x, float %y, float %z, float %m) {
 ; CHECK-LABEL: @fmul_fdiv(
 ; CHECK-NEXT:    [[SX:%.*]] = fdiv float [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[SY:%.*]] = fdiv float [[Y:%.*]], 4.200000e+01
-; CHECK-NEXT:    [[A:%.*]] = fmul fast float [[SY]], [[SX]]
-; CHECK-NEXT:    [[R:%.*]] = fmul fast float [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = fmul fast float [[SY]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fmul fast float [[A]], [[SX]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %sx = fdiv float %x, %m
@@ -294,7 +284,7 @@ define float @fmul_fdiv(float %x, float %y, float %z, float %m) {
   ret float %r
 }
 
-; Verify that debug info for modified instructions is not invalid.
+; Verify that debug info for modified instructions gets discarded (references become undef).
 
 define i32 @and_shl_dbg(i32 %x, i32 %y, i32 %z, i32 %shamt) {
 ; CHECK-LABEL: @and_shl_dbg(
@@ -306,11 +296,11 @@ define i32 @and_shl_dbg(i32 %x, i32 %y, i32 %z, i32 %shamt) {
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[SHL]], metadata !16, metadata !DIExpression()), !dbg !25
 ; CHECK-NEXT:    [[SHL1:%.*]] = shl i32 [[Y]], [[SHAMT]], !dbg !26
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[SHL1]], metadata !17, metadata !DIExpression()), !dbg !27
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata !2, metadata !18, metadata !DIExpression()), !dbg !28
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[SHL]], [[SHL1]], !dbg !29
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[Z]], !dbg !29
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[TMP2]], metadata !19, metadata !DIExpression()), !dbg !30
-; CHECK-NEXT:    ret i32 [[TMP2]], !dbg !31
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHL]], [[Z]], !dbg !28
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[AND]], metadata !18, metadata !DIExpression()), !dbg !29
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND]], [[SHL1]], !dbg !30
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[AND2]], metadata !19, metadata !DIExpression()), !dbg !31
+; CHECK-NEXT:    ret i32 [[AND2]], !dbg !32
 ;
   call void @llvm.dbg.value(metadata i32 %x, metadata !13, metadata !DIExpression()), !dbg !21
   call void @llvm.dbg.value(metadata i32 %y, metadata !14, metadata !DIExpression()), !dbg !22

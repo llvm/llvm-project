@@ -487,6 +487,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #include <memory>
 #include <tuple>
 #include <utility>
+#include <version>
 
 #include <__functional_base>
 
@@ -2339,8 +2340,6 @@ bind(_Fp&& __f, _BoundArgs&&... __bound_args)
 #endif  // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 14
-
-#define __cpp_lib_invoke 201411
 
 template <class _Fn, class ..._Args>
 result_of_t<_Fn&&(_Args&&...)>

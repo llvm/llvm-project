@@ -91,6 +91,7 @@ void  operator delete[](void* ptr, void*) noexcept;
 #include <exception>
 #include <type_traits>
 #include <cstddef>
+#include <version>
 #ifdef _LIBCPP_NO_EXCEPTIONS
 #include <cstdlib>
 #endif

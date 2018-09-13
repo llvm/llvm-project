@@ -347,13 +347,10 @@ static ConstantAsMetadata *getConstantOrNull(Constant *C) {
   return nullptr;
 }
 
-DIDerivedType *DIBuilder::createVariantMemberType(DIScope *Scope, StringRef Name,
-						  DIFile *File, unsigned LineNumber,
-						  uint64_t SizeInBits,
-						  uint32_t AlignInBits,
-						  uint64_t OffsetInBits,
-						  Constant *Discriminant,
-						  DINode::DIFlags Flags, DIType *Ty) {
+DIDerivedType *DIBuilder::createVariantMemberType(
+    DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
+    uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
+    Constant *Discriminant, DINode::DIFlags Flags, DIType *Ty) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_member, Name, File,
                             LineNumber, getNonCompileUnitScope(Scope), Ty,
                             SizeInBits, AlignInBits, OffsetInBits, None, Flags,

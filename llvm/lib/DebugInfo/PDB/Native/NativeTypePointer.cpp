@@ -49,10 +49,6 @@ void NativeTypePointer::dump(raw_ostream &OS, int Indent) const {
   dumpSymbolField(OS, "volatileType", isVolatileType(), Indent);
 }
 
-std::unique_ptr<NativeRawSymbol> NativeTypePointer::clone() const {
-  return llvm::make_unique<NativeTypePointer>(Session, SymbolId, Record);
-}
-
 bool NativeTypePointer::isConstType() const { return false; }
 
 uint64_t NativeTypePointer::getLength() const { return Record.getSize(); }

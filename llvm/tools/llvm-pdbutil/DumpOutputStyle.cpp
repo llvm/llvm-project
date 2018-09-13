@@ -991,22 +991,56 @@ Error DumpOutputStyle::dumpXme() {
   return Error::success();
 }
 
-Error DumpOutputStyle::dumpFpo() {
+std::string formatFrameType(object::frame_type FT) {
+  switch (FT) {
+  case object::frame_type::Fpo:
+    return "FPO";
+  case object::frame_type::NonFpo:
+    return "Non-FPO";
+  case object::frame_type::Trap:
+    return "Trap";
+  case object::frame_type::Tss:
+    return "TSS";
+  }
+  return "<unknown>";
+}
+
+Error DumpOutputStyle::dumpOldFpo(PDBFile &File) {
+  printHeader(P, "Old FPO Data");
+
+  ExitOnError Err("Error dumping old fpo data:");
+  auto &Dbi = Err(File.getPDBDbiStream());
+
+  uint32_t Index = Dbi.getDebugStreamIndex(DbgHeaderType::FPO);
+  if (Index == kInvalidStreamIndex) {
+    printStreamNotPresent("FPO");
+    return Error::success();
+  }
+
+  std::unique_ptr<MappedBlockStream> OldFpo = File.createIndexedStream(Index);
+  BinaryStreamReader Reader(*OldFpo);
+  FixedStreamArray<object::FpoData> Records;
+  Err(Reader.readArray(Records,
+                       Reader.bytesRemaining() / sizeof(object::FpoData)));
+
+  P.printLine("  RVA    | Code | Locals | Params | Prolog | Saved Regs | Use "
+              "BP | Has SEH | Frame Type");
+
+  for (const object::FpoData &FD : Records) {
+    P.formatLine("{0:X-8} | {1,4} | {2,6} | {3,6} | {4,6} | {5,10} | {6,6} | "
+                 "{7,7} | {8,9}",
+                 uint32_t(FD.Offset), uint32_t(FD.Size), uint32_t(FD.NumLocals),
+                 uint32_t(FD.NumParams), FD.getPrologSize(),
+                 FD.getNumSavedRegs(), FD.useBP(), FD.hasSEH(),
+                 formatFrameType(FD.getFP()));
+  }
+  return Error::success();
+}
+
+Error DumpOutputStyle::dumpNewFpo(PDBFile &File) {
   printHeader(P, "New FPO Data");
 
-  if (!File.isPdb()) {
-    printStreamNotValidForObj();
-    return Error::success();
-  }
-
-  PDBFile &File = getPdb();
-  if (!File.hasPDBDbiStream()) {
-    printStreamNotPresent("DBI");
-    return Error::success();
-  }
-
-  ExitOnError Err("Error dumping fpo data:");
-
+  ExitOnError Err("Error dumping new fpo data:");
   auto &Dbi = Err(File.getPDBDbiStream());
 
   uint32_t Index = Dbi.getDebugStreamIndex(DbgHeaderType::NewFPO);
@@ -1040,6 +1074,25 @@ Error DumpOutputStyle::dumpFpo() {
                  uint16_t(FD.SavedRegsSize), HasSEH, HasEH, IsFuncStart,
                  Program);
   }
+  return Error::success();
+}
+
+Error DumpOutputStyle::dumpFpo() {
+  if (!File.isPdb()) {
+    printStreamNotValidForObj();
+    return Error::success();
+  }
+
+  PDBFile &File = getPdb();
+  if (!File.hasPDBDbiStream()) {
+    printStreamNotPresent("DBI");
+    return Error::success();
+  }
+
+  if (auto EC = dumpOldFpo(File))
+    return EC;
+  if (auto EC = dumpNewFpo(File))
+    return EC;
   return Error::success();
 }
 

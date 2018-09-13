@@ -43,10 +43,3 @@ std::unique_ptr<IPDBInjectedSource> DIAEnumInjectedSources::getNext() {
 }
 
 void DIAEnumInjectedSources::reset() { Enumerator->Reset(); }
-
-DIAEnumInjectedSources *DIAEnumInjectedSources::clone() const {
-  CComPtr<IDiaEnumInjectedSources> EnumeratorClone;
-  if (S_OK != Enumerator->Clone(&EnumeratorClone))
-    return nullptr;
-  return new DIAEnumInjectedSources(Session, EnumeratorClone);
-}
