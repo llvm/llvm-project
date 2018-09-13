@@ -4,11 +4,11 @@ set(LLVM_LINK_COMPONENTS
     Support
     )
 
-add_clang_executable(global-symbol-builder
-  GlobalSymbolBuilderMain.cpp
+add_clang_executable(clangd-indexer
+  IndexerMain.cpp
   )
 
-target_link_libraries(global-symbol-builder
+target_link_libraries(clangd-indexer
   PRIVATE
   clangAST
   clangIndex
