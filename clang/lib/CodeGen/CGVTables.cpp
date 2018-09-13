@@ -756,9 +756,11 @@ CodeGenVTables::GenerateConstructionVTable(const CXXRecordDecl *RD,
   if (Linkage == llvm::GlobalVariable::AvailableExternallyLinkage)
     Linkage = llvm::GlobalVariable::InternalLinkage;
 
+  unsigned Align = CGM.getDataLayout().getABITypeAlignment(VTType);
+
   // Create the variable that will hold the construction vtable.
   llvm::GlobalVariable *VTable =
-    CGM.CreateOrReplaceCXXRuntimeVariable(Name, VTType, Linkage);
+      CGM.CreateOrReplaceCXXRuntimeVariable(Name, VTType, Linkage, Align);
   CGM.setGVProperties(VTable, RD);
 
   // V-tables are always unnamed_addr.

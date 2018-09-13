@@ -38,7 +38,7 @@
 #include "pragma-pack1.h"
 
 #ifdef WARN_MODIFIED_HEADER
-// expected-warning@-3 {{the current #pragma pack aligment value is modified in the included file}}
+// expected-warning@-3 {{the current #pragma pack alignment value is modified in the included file}}
 #endif
 
 #ifdef PUSH_SET_HERE

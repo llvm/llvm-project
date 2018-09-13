@@ -513,11 +513,6 @@ unsigned HexagonToolChain::getOptimizationLevel(
 void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                                              ArgStringList &CC1Args,
                                              Action::OffloadKind) const {
-  if (!DriverArgs.hasArg(options::OPT_ffp_contract)) {
-    unsigned OptLevel = getOptimizationLevel(DriverArgs);
-    if (OptLevel >= 3)
-      CC1Args.push_back("-ffp-contract=fast");
-  }
   if (DriverArgs.hasArg(options::OPT_ffixed_r19)) {
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+reserved-r19");

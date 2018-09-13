@@ -110,7 +110,7 @@
 // RUN:   -O3 \
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK026 %s
-// CHECK026: "-ffp-contract=fast"
+// CHECK026-NOT: "-ffp-contract=fast"
 // CHECK026: hexagon-link
 
 // RUN: %clang -### -target hexagon-unknown-elf \

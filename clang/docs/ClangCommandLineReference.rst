@@ -2298,6 +2298,34 @@ The thread model to use, e.g. posix, single (posix by default)
 
 AARCH64
 -------
+.. option:: -ffixed-x1
+
+Reserve the x1 register (AArch64 only)
+
+.. option:: -ffixed-x2
+
+Reserve the x2 register (AArch64 only)
+
+.. option:: -ffixed-x3
+
+Reserve the x3 register (AArch64 only)
+
+.. option:: -ffixed-x4
+
+Reserve the x4 register (AArch64 only)
+
+.. option:: -ffixed-x5
+
+Reserve the x5 register (AArch64 only)
+
+.. option:: -ffixed-x6
+
+Reserve the x6 register (AArch64 only)
+
+.. option:: -ffixed-x7
+
+Reserve the x7 register (AArch64 only)
+
 .. option:: -ffixed-x18
 
 Reserve the x18 register (AArch64 only)
