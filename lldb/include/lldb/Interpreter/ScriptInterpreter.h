@@ -19,6 +19,7 @@
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Core/SearchFilter.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
 
@@ -232,6 +233,26 @@ public:
                                 bool &script_error) {
     script_error = true;
     return lldb::eStateStepping;
+  }
+
+  virtual StructuredData::GenericSP
+  CreateScriptedBreakpointResolver(const char *class_name,
+                                   StructuredDataImpl *args_data,
+                                   lldb::BreakpointSP &bkpt_sp) {
+    return StructuredData::GenericSP();
+  }
+  
+  virtual bool
+  ScriptedBreakpointResolverSearchCallback(StructuredData::GenericSP implementor_sp,
+                                           SymbolContext *sym_ctx)
+  {
+    return false;
+  }
+
+  virtual lldb::SearchDepth
+  ScriptedBreakpointResolverSearchDepth(StructuredData::GenericSP implementor_sp)
+  {
+    return lldb::eSearchDepthModule;
   }
 
   virtual StructuredData::ObjectSP

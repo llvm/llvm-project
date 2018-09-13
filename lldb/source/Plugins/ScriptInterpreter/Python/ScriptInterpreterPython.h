@@ -81,6 +81,15 @@ public:
                                            const char *method_name,
                                            Event *event_sp, bool &got_error);
 
+  typedef void *(*SWIGPythonCreateScriptedBreakpointResolver)(
+      const char *python_class_name, const char *session_dictionary_name,
+      lldb_private::StructuredDataImpl *args_impl,
+      lldb::BreakpointSP &bkpt_sp);
+
+  typedef unsigned int (*SWIGPythonCallBreakpointResolver)(void *implementor,
+                                          const char *method_name,
+                                          lldb_private::SymbolContext *sym_ctx);
+
   typedef void *(*SWIGPythonCreateOSPlugin)(const char *python_class_name,
                                             const char *session_dictionary_name,
                                             const lldb::ProcessSP &process_sp);
@@ -208,6 +217,19 @@ public:
   lldb::StateType
   ScriptedThreadPlanGetRunState(StructuredData::ObjectSP implementor_sp,
                                 bool &script_error) override;
+                                
+  StructuredData::GenericSP
+  CreateScriptedBreakpointResolver(const char *class_name,
+                                   StructuredDataImpl *args_data,
+                                   lldb::BreakpointSP &bkpt_sp) override;
+  bool
+  ScriptedBreakpointResolverSearchCallback(StructuredData::GenericSP
+                                               implementor_sp,
+                                           SymbolContext *sym_ctx) override;
+
+  lldb::SearchDepth
+  ScriptedBreakpointResolverSearchDepth(StructuredData::GenericSP
+                                            implementor_sp) override;
 
   StructuredData::GenericSP
   OSPlugin_CreatePluginObject(const char *class_name,
@@ -411,7 +433,9 @@ public:
       SWIGPythonScriptKeyword_Value swig_run_script_keyword_value,
       SWIGPython_GetDynamicSetting swig_plugin_get,
       SWIGPythonCreateScriptedThreadPlan swig_thread_plan_script,
-      SWIGPythonCallThreadPlan swig_call_thread_plan);
+      SWIGPythonCallThreadPlan swig_call_thread_plan,
+      SWIGPythonCreateScriptedBreakpointResolver swig_bkpt_resolver_script,
+      SWIGPythonCallBreakpointResolver swig_call_breakpoint_resolver);
 
   const char *GetDictionaryName() { return m_dictionary_name.c_str(); }
 

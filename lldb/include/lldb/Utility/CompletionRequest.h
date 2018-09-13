@@ -11,11 +11,50 @@
 #define LLDB_UTILITY_COMPLETIONREQUEST_H
 
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/StringList.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 
 namespace lldb_private {
+class CompletionResult {
+  //----------------------------------------------------------
+  /// A single completion and all associated data.
+  //----------------------------------------------------------
+  struct Completion {
+    Completion(llvm::StringRef completion, llvm::StringRef description)
+        : m_completion(completion.str()), m_descripton(description.str()) {}
+
+    std::string m_completion;
+    std::string m_descripton;
+
+    /// Generates a string that uniquely identifies this completion result.
+    std::string GetUniqueKey() const;
+  };
+  std::vector<Completion> m_results;
+
+  /// List of added completions so far. Used to filter out duplicates.
+  llvm::StringSet<> m_added_values;
+
+public:
+  void AddResult(llvm::StringRef completion, llvm::StringRef description);
+
+  //----------------------------------------------------------
+  /// Adds all collected completion matches to the given list.
+  /// The list will be cleared before the results are added. The number of
+  /// results here is guaranteed to be equal to GetNumberOfResults().
+  //----------------------------------------------------------
+  void GetMatches(StringList &matches) const;
+
+  //----------------------------------------------------------
+  /// Adds all collected completion descriptions to the given list.
+  /// The list will be cleared before the results are added. The number of
+  /// results here is guaranteed to be equal to GetNumberOfResults().
+  //----------------------------------------------------------
+  void GetDescriptions(StringList &descriptions) const;
+
+  std::size_t GetNumberOfResults() const { return m_results.size(); }
+};
 
 //----------------------------------------------------------------------
 /// @class CompletionRequest CompletionRequest.h
@@ -46,13 +85,13 @@ public:
   ///     completion from match_start_point, and return match_return_elements
   ///     elements.
   ///
-  /// @param [out] matches
-  ///     A list of matches that will be filled by the different completion
-  ///     handlers.
+  /// @param [out] result
+  ///     The CompletionResult that will be filled with the results after this
+  ///     request has been handled.
   //----------------------------------------------------------
   CompletionRequest(llvm::StringRef command_line, unsigned raw_cursor_pos,
                     int match_start_point, int max_return_elements,
-                    StringList &matches);
+                    CompletionResult &result);
 
   llvm::StringRef GetRawLine() const { return m_command; }
 
@@ -84,10 +123,11 @@ public:
   /// afterwards.
   ///
   /// @param match The suggested completion.
-  void AddCompletion(llvm::StringRef completion) {
-    // Add the completion if we haven't seen the same value before.
-    if (m_match_set.insert(completion).second)
-      m_matches->AppendString(completion);
+  /// @param match An optional description of the completion string. The
+  ///     description will be displayed to the user alongside the completion.
+  void AddCompletion(llvm::StringRef completion,
+                     llvm::StringRef description = "") {
+    m_result.AddResult(completion, description);
   }
 
   /// Adds multiple possible completion strings.
@@ -100,7 +140,25 @@ public:
       AddCompletion(completions.GetStringAtIndex(i));
   }
 
-  std::size_t GetNumberOfMatches() const { return m_matches->GetSize(); }
+  /// Adds multiple possible completion strings alongside their descriptions.
+  ///
+  /// The number of completions and descriptions must be identical.
+  ///
+  /// \param completions The list of completions.
+  /// \param completions The list of descriptions.
+  ///
+  /// @see AddCompletion
+  void AddCompletions(const StringList &completions,
+                      const StringList &descriptions) {
+    lldbassert(completions.GetSize() == descriptions.GetSize());
+    for (std::size_t i = 0; i < completions.GetSize(); ++i)
+      AddCompletion(completions.GetStringAtIndex(i),
+                    descriptions.GetStringAtIndex(i));
+  }
+
+  std::size_t GetNumberOfMatches() const {
+    return m_result.GetNumberOfResults();
+  }
 
   llvm::StringRef GetCursorArgument() const {
     return GetParsedLine().GetArgumentAtIndex(GetCursorIndex());
@@ -134,14 +192,11 @@ private:
   /// after the completion.)  \bfalse otherwise.
   bool m_word_complete = false;
 
-  // Note: This list is kept private. This is by design to prevent that any
-  // completion depends on any already computed completion from another backend.
-  // Note: We don't own the list. It's owned by the creator of the
-  // CompletionRequest object.
-  StringList *m_matches;
-
-  /// List of added completions so far. Used to filter out duplicates.
-  llvm::StringSet<> m_match_set;
+  /// The result this request is supposed to fill out.
+  /// We keep this object private to ensure that no backend can in any way
+  /// depend on already calculated completions (which would make debugging and
+  /// testing them much more complicated).
+  CompletionResult &m_result;
 };
 
 } // namespace lldb_private
