@@ -1236,6 +1236,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Read all input files given via the command line.
   run();
 
+  if (errorCount())
+    return;
+
   // We should have inferred a machine type by now from the input files, but if
   // not we assume x64.
   if (Config->Machine == IMAGE_FILE_MACHINE_UNKNOWN) {

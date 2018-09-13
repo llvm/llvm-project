@@ -430,6 +430,15 @@ lldb::StateType NativeProcessProtocol::GetState() const {
   return m_state;
 }
 
+Status NativeProcessProtocol::ReadMemoryWithoutTrap(lldb::addr_t addr,
+                                                    void *buf, size_t size,
+                                                    size_t &bytes_read) {
+  Status error = ReadMemory(addr, buf, size, bytes_read);
+  if (error.Fail())
+    return error;
+  return m_breakpoint_list.RemoveTrapsFromBuffer(addr, buf, size);
+}
+
 void NativeProcessProtocol::SetState(lldb::StateType state,
                                      bool notify_delegates) {
   std::lock_guard<std::recursive_mutex> guard(m_state_mutex);
