@@ -225,11 +225,11 @@ int main(int argc, const char **argv) {
   Example usage for building index for the whole project using CMake compile
   commands:
 
-  $ global-symbol-builder --executor=all-TUs compile_commands.json > index.yaml
+  $ clangd-indexer --executor=all-TUs compile_commands.json > index.yaml
 
   Example usage for file sequence index without flags:
 
-  $ global-symbol-builder File1.cpp File2.cpp ... FileN.cpp > index.yaml
+  $ clangd-indexer File1.cpp File2.cpp ... FileN.cpp > index.yaml
 
   Note: only symbols from header files will be collected.
   )";
