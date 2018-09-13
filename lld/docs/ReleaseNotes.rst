@@ -10,15 +10,24 @@ Introduction
 
 lld is a high-performance linker that supports ELF (Unix), COFF (Windows),
 Mach-O (macOS), MinGW and WebAssembly. lld is command-line-compatible with GNU
-linkers and Microsoft link.exe, and is significantly faster than these system
+linkers and Microsoft link.exe, and is significantly faster than the system
 default linkers.
 
-lld 7 for ELF, COFF and MinGW are production-ready. lld/ELF can build the entire
-FreeBSD/AMD64 and will be the default linker of the next version of the
-operating system. lld/COFF is being used to build popular large programs such as
-the Chrome web browser. lld/MinGW is being used by Firefox for their MinGW
-builds. lld/MinGW still needs a sysroot specifically built for lld, with
-llvm-dlltool, though. Mach-O and WebAssembly supports are still experimental.
+lld 7 for ELF, COFF and MinGW are production-ready.
+
+* lld/ELF can build the entire FreeBSD/{AMD64,ARMv7} and will be the default
+  linker of the next version of the operating system.
+
+* lld/COFF is being used to create official builds of large popular programs
+  such as Chrome and Firefox.
+
+* lld/MinGW is being used by Firefox for their MinGW builds. lld/MinGW still
+  needs a sysroot specifically built for lld, with llvm-dlltool, though.
+
+* lld/WebAssembly is used as the default (only) linker in Emscripten when using
+  the upstream LLVM compiler.
+
+* lld/Mach-O is still experimental.
 
 Non-comprehensive list of changes in this release
 =================================================
@@ -96,6 +105,8 @@ COFF Improvements
 * Sped up PDB file creation.
 
 * Changed section layout to improve compatibility with link.exe.
+
+* `/subsystem` inference is improved to cover more corner cases.
 
 * Added the following flags: ``--color-diagnostics={always,never,auto}``,
   ``--no-color-diagnostics``, ``/brepro``, ``/debug:full``, ``/debug:ghash``,
