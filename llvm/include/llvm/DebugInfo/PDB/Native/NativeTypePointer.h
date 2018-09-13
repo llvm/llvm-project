@@ -27,7 +27,6 @@ public:
   ~NativeTypePointer() override;
 
   void dump(raw_ostream &OS, int Indent) const override;
-  std::unique_ptr<NativeRawSymbol> clone() const override;
 
   bool isConstType() const override;
   uint64_t getLength() const override;

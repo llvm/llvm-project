@@ -32,7 +32,6 @@ public:
   virtual Optional<RecordType> getItemAtIndex(uint32_t Index) const = 0;
   virtual bool getNext(RecordType &Record) = 0;
   virtual void reset() = 0;
-  virtual IPDBDataStream *clone() const = 0;
 };
 
 } // end namespace pdb

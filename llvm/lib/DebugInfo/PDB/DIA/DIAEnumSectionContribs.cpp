@@ -45,10 +45,3 @@ std::unique_ptr<IPDBSectionContrib> DIAEnumSectionContribs::getNext() {
 }
 
 void DIAEnumSectionContribs::reset() { Enumerator->Reset(); }
-
-DIAEnumSectionContribs *DIAEnumSectionContribs::clone() const {
-  CComPtr<IDiaEnumSectionContribs> EnumeratorClone;
-  if (S_OK != Enumerator->Clone(&EnumeratorClone))
-    return nullptr;
-  return new DIAEnumSectionContribs(Session, EnumeratorClone);
-}

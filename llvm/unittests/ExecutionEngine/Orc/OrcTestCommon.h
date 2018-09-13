@@ -46,9 +46,9 @@ namespace orc {
 //     linkage and non-hidden visibility.
 // (5) V -- A JITDylib associated with ES.
 class CoreAPIsBasedStandardTest : public testing::Test {
-public:
 protected:
-  ExecutionSession ES;
+  std::shared_ptr<SymbolStringPool> SSP = std::make_shared<SymbolStringPool>();
+  ExecutionSession ES{SSP};
   JITDylib &JD = ES.createJITDylib("JD");
   SymbolStringPtr Foo = ES.getSymbolStringPool().intern("foo");
   SymbolStringPtr Bar = ES.getSymbolStringPool().intern("bar");

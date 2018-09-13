@@ -244,6 +244,7 @@
 #include <utility>
 #include <iomanip> // for quoted
 #include <string_view>
+#include <version>
 
 #include <__debug>
 
@@ -255,10 +256,6 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 #ifndef _LIBCPP_CXX03_LANG
-
-#if _LIBCPP_STD_VER >= 17
-#define __cpp_lib_filesystem 201703
-#endif
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 

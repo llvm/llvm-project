@@ -577,10 +577,6 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
   };
 
   std::function<void(Visiting)> VisitModule = [&](Visiting V) {
-    // Modules that aren't available cannot be made visible.
-    if (!V.M->isAvailable())
-      return;
-
     // Nothing to do for a module that's already visible.
     unsigned ID = V.M->getVisibilityID();
     if (ImportLocs.size() <= ID)
@@ -594,8 +590,11 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
     // Make any exported modules visible.
     SmallVector<Module *, 16> Exports;
     V.M->getExportedModules(Exports);
-    for (Module *E : Exports)
-      VisitModule({E, &V});
+    for (Module *E : Exports) {
+      // Don't recurse to unavailable submodules.
+      if (E->isAvailable())
+        VisitModule({E, &V});
+    }
 
     for (auto &C : V.M->Conflicts) {
       if (isVisible(C.Other)) {

@@ -19,6 +19,7 @@ foreach SIZE = [2, 4, 8, 16, 32] in
 def LaneIdx#SIZE : ImmLeaf<i32, "return 0 <= Imm && Imm < "#SIZE#";">;
 
 multiclass ConstVec<ValueType vec_t, dag ops, dag pat, string args> {
+  let isMoveImm = 1, isReMaterializable = 1 in
   defm CONST_V128_#vec_t : SIMD_I<(outs V128:$dst), ops, (outs), ops,
                                   [(set V128:$dst, (vec_t pat))],
                                   "v128.const\t$dst, "#args,

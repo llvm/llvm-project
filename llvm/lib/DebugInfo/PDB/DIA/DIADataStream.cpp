@@ -65,11 +65,3 @@ bool DIADataStream::getNext(RecordType &Record) {
 }
 
 void DIADataStream::reset() { StreamData->Reset(); }
-
-DIADataStream *DIADataStream::clone() const {
-  CComPtr<IDiaEnumDebugStreamData> EnumeratorClone;
-  if (S_OK != StreamData->Clone(&EnumeratorClone))
-    return nullptr;
-
-  return new DIADataStream(EnumeratorClone);
-}

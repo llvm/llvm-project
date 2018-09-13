@@ -523,38 +523,40 @@ static void expandTildeExpr(SmallVectorImpl<char> &Path) {
   llvm::sys::path::append(Path, Storage);
 }
 
+static file_type typeForMode(mode_t Mode) {
+  if (S_ISDIR(Mode))
+    return file_type::directory_file;
+  else if (S_ISREG(Mode))
+    return file_type::regular_file;
+  else if (S_ISBLK(Mode))
+    return file_type::block_file;
+  else if (S_ISCHR(Mode))
+    return file_type::character_file;
+  else if (S_ISFIFO(Mode))
+    return file_type::fifo_file;
+  else if (S_ISSOCK(Mode))
+    return file_type::socket_file;
+  else if (S_ISLNK(Mode))
+    return file_type::symlink_file;
+  return file_type::type_unknown;
+}
+
 static std::error_code fillStatus(int StatRet, const struct stat &Status,
                                   file_status &Result) {
   if (StatRet != 0) {
-    std::error_code ec(errno, std::generic_category());
-    if (ec == errc::no_such_file_or_directory)
+    std::error_code EC(errno, std::generic_category());
+    if (EC == errc::no_such_file_or_directory)
       Result = file_status(file_type::file_not_found);
     else
       Result = file_status(file_type::status_error);
-    return ec;
+    return EC;
   }
 
-  file_type Type = file_type::type_unknown;
-
-  if (S_ISDIR(Status.st_mode))
-    Type = file_type::directory_file;
-  else if (S_ISREG(Status.st_mode))
-    Type = file_type::regular_file;
-  else if (S_ISBLK(Status.st_mode))
-    Type = file_type::block_file;
-  else if (S_ISCHR(Status.st_mode))
-    Type = file_type::character_file;
-  else if (S_ISFIFO(Status.st_mode))
-    Type = file_type::fifo_file;
-  else if (S_ISSOCK(Status.st_mode))
-    Type = file_type::socket_file;
-  else if (S_ISLNK(Status.st_mode))
-    Type = file_type::symlink_file;
-
   perms Perms = static_cast<perms>(Status.st_mode) & all_perms;
-  Result = file_status(Type, Perms, Status.st_dev, Status.st_nlink,
-                       Status.st_ino, Status.st_atime, Status.st_mtime,
-                       Status.st_uid, Status.st_gid, Status.st_size);
+  Result = file_status(typeForMode(Status.st_mode), Perms, Status.st_dev,
+                       Status.st_nlink, Status.st_ino, Status.st_atime,
+                       Status.st_mtime, Status.st_uid, Status.st_gid,
+                       Status.st_size);
 
   return std::error_code();
 }
@@ -696,19 +698,30 @@ std::error_code detail::directory_iterator_destruct(detail::DirIterState &it) {
   return std::error_code();
 }
 
-std::error_code detail::directory_iterator_increment(detail::DirIterState &it) {
+static file_type direntType(dirent* Entry) {
+  // Most platforms provide the file type in the dirent: Linux/BSD/Mac.
+  // The DTTOIF macro lets us reuse our status -> type conversion.
+#if defined(_DIRENT_HAVE_D_TYPE) && defined(DTTOIF)
+  return typeForMode(DTTOIF(Entry->d_type));
+#else
+  // Other platforms such as Solaris require a stat() to get the type.
+  return file_type::type_unknown;
+#endif
+}
+
+std::error_code detail::directory_iterator_increment(detail::DirIterState &It) {
   errno = 0;
-  dirent *cur_dir = ::readdir(reinterpret_cast<DIR *>(it.IterationHandle));
-  if (cur_dir == nullptr && errno != 0) {
+  dirent *CurDir = ::readdir(reinterpret_cast<DIR *>(It.IterationHandle));
+  if (CurDir == nullptr && errno != 0) {
     return std::error_code(errno, std::generic_category());
-  } else if (cur_dir != nullptr) {
-    StringRef name(cur_dir->d_name);
-    if ((name.size() == 1 && name[0] == '.') ||
-        (name.size() == 2 && name[0] == '.' && name[1] == '.'))
-      return directory_iterator_increment(it);
-    it.CurrentEntry.replace_filename(name);
+  } else if (CurDir != nullptr) {
+    StringRef Name(CurDir->d_name);
+    if ((Name.size() == 1 && Name[0] == '.') ||
+        (Name.size() == 2 && Name[0] == '.' && Name[1] == '.'))
+      return directory_iterator_increment(It);
+    It.CurrentEntry.replace_filename(Name, direntType(CurDir));
   } else
-    return directory_iterator_destruct(it);
+    return directory_iterator_destruct(It);
 
   return std::error_code();
 }

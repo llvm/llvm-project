@@ -118,7 +118,6 @@ private:
   void OptimizeInst(Instruction *I);
   Instruction *canonicalizeNegConstExpr(Instruction *I);
   void BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT);
-  void swapOperandsToMatchBinops(BinaryOperator &B);
 };
 
 } // end namespace llvm

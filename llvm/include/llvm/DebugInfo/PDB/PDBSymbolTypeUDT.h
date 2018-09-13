@@ -25,11 +25,6 @@ namespace pdb {
 class PDBSymbolTypeUDT : public PDBSymbol {
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::UDT)
 public:
-  std::unique_ptr<PDBSymbolTypeUDT> clone() const {
-    return getSession().getConcreteSymbolById<PDBSymbolTypeUDT>(
-        getSymIndexId());
-  }
-
   void dump(PDBSymDumper &Dumper) const override;
 
   FORWARD_SYMBOL_ID_METHOD(getClassParent)
