@@ -623,38 +623,5 @@ bool fromJSON(const json::Value &Params, ReferenceParams &R) {
   return fromJSON(Params, Base);
 }
 
-json::Value toJSON(const CancelParams &CP) {
-  return json::Object{{"id", CP.ID}};
-}
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &O, const CancelParams &CP) {
-  O << toJSON(CP);
-  return O;
-}
-
-llvm::Optional<std::string> parseNumberOrString(const json::Value *Params) {
-  if (!Params)
-    return llvm::None;
-  // ID is either a number or a string, check for both.
-  if(const auto AsString = Params->getAsString())
-    return AsString->str();
-
-  if(const auto AsNumber = Params->getAsInteger())
-    return itostr(AsNumber.getValue());
-
-  return llvm::None;
-}
-
-bool fromJSON(const json::Value &Params, CancelParams &CP) {
-  const auto ParamsAsObject = Params.getAsObject();
-  if (!ParamsAsObject)
-    return false;
-  if (auto Parsed = parseNumberOrString(ParamsAsObject->get("id"))) {
-    CP.ID = std::move(*Parsed);
-    return true;
-  }
-  return false;
-}
-
 } // namespace clangd
 } // namespace clang
