@@ -1629,15 +1629,6 @@ Status NativeProcessLinux::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
   return Status();
 }
 
-Status NativeProcessLinux::ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf,
-                                                 size_t size,
-                                                 size_t &bytes_read) {
-  Status error = ReadMemory(addr, buf, size, bytes_read);
-  if (error.Fail())
-    return error;
-  return m_breakpoint_list.RemoveTrapsFromBuffer(addr, buf, size);
-}
-
 Status NativeProcessLinux::WriteMemory(lldb::addr_t addr, const void *buf,
                                        size_t size, size_t &bytes_written) {
   const unsigned char *src = static_cast<const unsigned char *>(buf);
