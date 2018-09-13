@@ -202,6 +202,8 @@ protected:
   dw_offset_t m_length = 0;
   uint16_t m_version = 0;
   uint8_t m_addr_size = 0;
+  uint8_t m_unit_type = 0;
+  uint64_t m_dwo_id = 0;
   DWARFProducer m_producer = eProducerInvalid;
   uint32_t m_producer_version_major = 0;
   uint32_t m_producer_version_minor = 0;

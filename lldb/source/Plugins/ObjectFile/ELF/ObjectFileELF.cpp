@@ -1789,6 +1789,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
       static ConstString g_sect_name_dwarf_debug_frame(".debug_frame");
       static ConstString g_sect_name_dwarf_debug_info(".debug_info");
       static ConstString g_sect_name_dwarf_debug_line(".debug_line");
+      static ConstString g_sect_name_dwarf_debug_line_str(".debug_line_str");
       static ConstString g_sect_name_dwarf_debug_loc(".debug_loc");
       static ConstString g_sect_name_dwarf_debug_macinfo(".debug_macinfo");
       static ConstString g_sect_name_dwarf_debug_macro(".debug_macro");
@@ -1803,6 +1804,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
           ".debug_abbrev.dwo");
       static ConstString g_sect_name_dwarf_debug_info_dwo(".debug_info.dwo");
       static ConstString g_sect_name_dwarf_debug_line_dwo(".debug_line.dwo");
+      static ConstString g_sect_name_dwarf_debug_line_str_dwo(".debug_line_str.dwo");
       static ConstString g_sect_name_dwarf_debug_macro_dwo(".debug_macro.dwo");
       static ConstString g_sect_name_dwarf_debug_loc_dwo(".debug_loc.dwo");
       static ConstString g_sect_name_dwarf_debug_str_dwo(".debug_str.dwo");
@@ -1863,6 +1865,8 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         sect_type = eSectionTypeDWARFDebugInfo;
       else if (name == g_sect_name_dwarf_debug_line)
         sect_type = eSectionTypeDWARFDebugLine;
+      else if (name == g_sect_name_dwarf_debug_line_str)
+        sect_type = eSectionTypeDWARFDebugLineStr;
       else if (name == g_sect_name_dwarf_debug_loc)
         sect_type = eSectionTypeDWARFDebugLoc;
       else if (name == g_sect_name_dwarf_debug_macinfo)
@@ -1889,6 +1893,8 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         sect_type = eSectionTypeDWARFDebugInfo;
       else if (name == g_sect_name_dwarf_debug_line_dwo)
         sect_type = eSectionTypeDWARFDebugLine;
+      else if (name == g_sect_name_dwarf_debug_line_str_dwo)
+        sect_type = eSectionTypeDWARFDebugLineStr;
       else if (name == g_sect_name_dwarf_debug_macro_dwo)
         sect_type = eSectionTypeDWARFDebugMacro;
       else if (name == g_sect_name_dwarf_debug_loc_dwo)

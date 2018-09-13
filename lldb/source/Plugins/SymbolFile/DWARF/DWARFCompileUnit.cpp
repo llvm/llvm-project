@@ -34,8 +34,18 @@ DWARFUnitSP DWARFCompileUnit::Extract(SymbolFileDWARF *dwarf2Data,
     cu_sp->m_length = debug_info.GetDWARFInitialLength(offset_ptr);
     cu_sp->m_is_dwarf64 = debug_info.IsDWARF64();
     cu_sp->m_version = debug_info.GetU16(offset_ptr);
-    abbr_offset = debug_info.GetDWARFOffset(offset_ptr);
-    cu_sp->m_addr_size = debug_info.GetU8(offset_ptr);
+
+    if (cu_sp->m_version == 5) {
+      cu_sp->m_unit_type = debug_info.GetU8(offset_ptr);
+      cu_sp->m_addr_size = debug_info.GetU8(offset_ptr);
+      abbr_offset = debug_info.GetDWARFOffset(offset_ptr);
+
+      if (cu_sp->m_unit_type == llvm::dwarf::DW_UT_skeleton)
+        cu_sp->m_dwo_id = debug_info.GetU64(offset_ptr);
+    } else {
+      abbr_offset = debug_info.GetDWARFOffset(offset_ptr);
+      cu_sp->m_addr_size = debug_info.GetU8(offset_ptr);
+    }
 
     bool length_OK =
         debug_info.ValidOffset(cu_sp->GetNextCompileUnitOffset() - 1);
@@ -65,6 +75,23 @@ void DWARFCompileUnit::Dump(Stream *s) const {
             GetNextCompileUnitOffset());
 }
 
+uint32_t DWARFCompileUnit::GetHeaderByteSize() const {
+  if (m_version < 5)
+    return m_is_dwarf64 ? 23 : 11;
+
+  switch (m_unit_type) {
+  case llvm::dwarf::DW_UT_compile:
+  case llvm::dwarf::DW_UT_partial:
+    return 12;
+  case llvm::dwarf::DW_UT_skeleton:
+  case llvm::dwarf::DW_UT_split_compile:
+    return 20;
+  case llvm::dwarf::DW_UT_type:
+  case llvm::dwarf::DW_UT_split_type:
+    return 24;
+  }
+  llvm_unreachable("invalid UnitType.");
+}
 
 const lldb_private::DWARFDataExtractor &DWARFCompileUnit::GetData() const {
   return m_dwarf->get_debug_info_data();
