@@ -198,7 +198,7 @@ class OrIterator : public Iterator {
 public:
   explicit OrIterator(std::vector<std::unique_ptr<Iterator>> AllChildren)
       : Children(std::move(AllChildren)) {
-    assert(Children.size() > 0 && "OR iterator must have at least one child.");
+    assert(!Children.empty() && "OR iterator should have at least one child.");
   }
 
   /// Returns true if all children are exhausted.
@@ -405,12 +405,16 @@ std::unique_ptr<Iterator> create(PostingListRef Documents) {
 
 std::unique_ptr<Iterator>
 createAnd(std::vector<std::unique_ptr<Iterator>> Children) {
-  return llvm::make_unique<AndIterator>(move(Children));
+  // If there is exactly one child, pull it one level up: AND(Child) -> Child.
+  return Children.size() == 1 ? std::move(Children.front())
+                              : llvm::make_unique<AndIterator>(move(Children));
 }
 
 std::unique_ptr<Iterator>
 createOr(std::vector<std::unique_ptr<Iterator>> Children) {
-  return llvm::make_unique<OrIterator>(move(Children));
+  // If there is exactly one child, pull it one level up: OR(Child) -> Child.
+  return Children.size() == 1 ? std::move(Children.front())
+                              : llvm::make_unique<OrIterator>(move(Children));
 }
 
 std::unique_ptr<Iterator> createTrue(DocID Size) {
