@@ -510,6 +510,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <type_traits>
 #include <initializer_list>
 #include <__functional_base>
+#include <version>
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 #include <cstdint>
 #endif

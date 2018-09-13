@@ -181,6 +181,7 @@ template <class T, class Alloc>
 #include <iterator>
 #include <algorithm>
 #include <type_traits>
+#include <version>
 
 #include <__debug>
 
@@ -2208,7 +2209,7 @@ template <class _Comp>
 void
 list<_Tp, _Alloc>::merge(list& __c, _Comp __comp)
 {
-    if (this != &__c)
+    if (this != _VSTD::addressof(__c))
     {
         iterator __f1 = begin();
         iterator __e1 = end();

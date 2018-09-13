@@ -80,6 +80,36 @@ TEST_F(ImmutableListTest, OneElemIntListTest) {
   EXPECT_FALSE(L2.contains(2));
 }
 
+// We'll store references to objects of this type.
+struct Unmodifiable {
+  Unmodifiable() = default;
+
+  // We'll delete all of these special member functions to make sure no copy or
+  // move happens during insertation.
+  Unmodifiable(const Unmodifiable &) = delete;
+  Unmodifiable(const Unmodifiable &&) = delete;
+  Unmodifiable &operator=(const Unmodifiable &) = delete;
+  Unmodifiable &operator=(const Unmodifiable &&) = delete;
+
+  void doNothing() const {}
+
+  void Profile(FoldingSetNodeID &ID) const { ID.AddPointer(this); }
+};
+
+// Mostly just a check whether ImmutableList::iterator can be instantiated
+// with a reference type as a template argument.
+TEST_F(ImmutableListTest, ReferenceStoringTest) {
+  ImmutableList<const Unmodifiable &>::Factory f;
+
+  Unmodifiable N;
+  ImmutableList<const Unmodifiable &> L = f.create(N);
+  for (ImmutableList<const Unmodifiable &>::iterator It = L.begin(),
+                                                     E = L.end();
+       It != E; ++It) {
+    It->doNothing();
+  }
+}
+
 TEST_F(ImmutableListTest, CreatingIntListTest) {
   ImmutableList<Wrapper<int>>::Factory f;
 

@@ -65,6 +65,9 @@ public:
       const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
       uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr,
       bool ReserveXNACK) = 0;
+
+  static StringRef getArchNameFromElfMach(unsigned ElfMach);
+  static unsigned getElfMach(StringRef GPU);
 };
 
 class AMDGPUTargetAsmStreamer final : public AMDGPUTargetStreamer {

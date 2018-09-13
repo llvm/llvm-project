@@ -10,6 +10,15 @@
 #ifndef HEADER
 #define HEADER
 
+template <typename T>
+void bar(T &x, T &y) { x.a += y.a; }
+
+namespace N1
+{
+  struct A { int a; A() : a(0) {} };
+  #pragma omp declare reduction(+: A : bar(omp_out, omp_in))
+};
+
 #pragma omp declare reduction(+ : int, char : omp_out *= omp_in)
 // CHECK: #pragma omp declare reduction (+ : int : omp_out *= omp_in){{$}}
 // CHECK-NEXT: #pragma omp declare reduction (+ : char : omp_out *= omp_in)
@@ -64,6 +73,11 @@ int main() {
   }
   // #pragma omp parallel reduction(::fun:sss)
   // TODO-CHECK: #pragma omp parallel reduction(::fun: sss)
+  {
+  }
+  N1::A a;
+  // CHECK: #pragma omp parallel reduction(+: a)
+  #pragma omp parallel reduction(+: a)
   {
   }
   return foo(15);

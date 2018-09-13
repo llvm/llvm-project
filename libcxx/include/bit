@@ -21,6 +21,7 @@ namespace std {
 */
 
 #include <__config>
+#include <version>
 
 #if defined(__IBMCPP__)
 #include "support/ibm/support.h"

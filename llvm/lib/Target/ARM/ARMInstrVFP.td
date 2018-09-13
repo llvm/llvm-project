@@ -725,9 +725,11 @@ def VCVTBHD : ADuI<0b11101, 0b11, 0b0010, 0b01, 0,
 }
 
 def : FullFP16Pat<(f64 (fpextend HPR:$Sm)),
-                  (VCVTBHD (COPY_TO_REGCLASS HPR:$Sm, SPR))>;
+                  (VCVTBHD (COPY_TO_REGCLASS HPR:$Sm, SPR))>,
+                  Requires<[HasFPARMv8, HasDPVFP]>;
 def : FP16Pat<(f64 (f16_to_fp GPR:$a)),
-              (VCVTBHD (COPY_TO_REGCLASS GPR:$a, SPR))>;
+              (VCVTBHD (COPY_TO_REGCLASS GPR:$a, SPR))>,
+              Requires<[HasFPARMv8, HasDPVFP]>;
 
 def VCVTBDH : ADuI<0b11101, 0b11, 0b0011, 0b01, 0,
                    (outs SPR:$Sd), (ins DPR:$Dm),
@@ -746,9 +748,11 @@ def VCVTBDH : ADuI<0b11101, 0b11, 0b0011, 0b01, 0,
 }
 
 def : FullFP16Pat<(f16 (fpround DPR:$Dm)),
-                  (COPY_TO_REGCLASS (VCVTBDH DPR:$Dm), HPR)>;
+                  (COPY_TO_REGCLASS (VCVTBDH DPR:$Dm), HPR)>,
+                  Requires<[HasFPARMv8, HasDPVFP]>;
 def : FP16Pat<(fp_to_f16 (f64 DPR:$a)),
-              (i32 (COPY_TO_REGCLASS (VCVTBDH DPR:$a), GPR))>;
+              (i32 (COPY_TO_REGCLASS (VCVTBDH DPR:$a), GPR))>,
+                   Requires<[HasFPARMv8, HasDPVFP]>;
 
 def VCVTTHD : ADuI<0b11101, 0b11, 0b0010, 0b11, 0,
                    (outs DPR:$Dd), (ins SPR:$Sm),

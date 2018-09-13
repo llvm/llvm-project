@@ -4152,16 +4152,24 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
 }
 
 std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
-  // Respect a limited subset of the '-Bprefix' functionality in GCC by
-  // attempting to use this prefix when looking for file paths.
-  for (const std::string &Dir : PrefixDirs) {
-    if (Dir.empty())
-      continue;
-    SmallString<128> P(Dir[0] == '=' ? SysRoot + Dir.substr(1) : Dir);
-    llvm::sys::path::append(P, Name);
-    if (llvm::sys::fs::exists(Twine(P)))
-      return P.str();
-  }
+  // Seach for Name in a list of paths.
+  auto SearchPaths = [&](const llvm::SmallVectorImpl<std::string> &P)
+      -> llvm::Optional<std::string> {
+    // Respect a limited subset of the '-Bprefix' functionality in GCC by
+    // attempting to use this prefix when looking for file paths.
+    for (const auto &Dir : P) {
+      if (Dir.empty())
+        continue;
+      SmallString<128> P(Dir[0] == '=' ? SysRoot + Dir.substr(1) : Dir);
+      llvm::sys::path::append(P, Name);
+      if (llvm::sys::fs::exists(Twine(P)))
+        return {P.str()};
+    }
+    return None;
+  };
+
+  if (auto P = SearchPaths(PrefixDirs))
+    return *P;
 
   SmallString<128> R(ResourceDir);
   llvm::sys::path::append(R, Name);
@@ -4173,14 +4181,11 @@ std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
   if (llvm::sys::fs::exists(Twine(P)))
     return P.str();
 
-  for (const std::string &Dir : TC.getFilePaths()) {
-    if (Dir.empty())
-      continue;
-    SmallString<128> P(Dir[0] == '=' ? SysRoot + Dir.substr(1) : Dir);
-    llvm::sys::path::append(P, Name);
-    if (llvm::sys::fs::exists(Twine(P)))
-      return P.str();
-  }
+  if (auto P = SearchPaths(TC.getLibraryPaths()))
+    return *P;
+
+  if (auto P = SearchPaths(TC.getFilePaths()))
+    return *P;
 
   return Name;
 }

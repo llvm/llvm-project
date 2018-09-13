@@ -1338,9 +1338,11 @@ bool HvxSelector::scalarizeShuffle(ArrayRef<int> Mask, const SDLoc &dl,
   MVT SingleTy = getSingleVT(MVT::i8);
 
   SmallVector<SDValue,128> Ops;
+  LLVMContext &Ctx = *DAG.getContext();
+  MVT LegalTy = Lower.getTypeToTransformTo(Ctx, ElemTy).getSimpleVT();
   for (int I : Mask) {
     if (I < 0) {
-      Ops.push_back(ISel.selectUndef(dl, ElemTy));
+      Ops.push_back(ISel.selectUndef(dl, LegalTy));
       continue;
     }
     SDValue Vec;
@@ -1360,7 +1362,7 @@ bool HvxSelector::scalarizeShuffle(ArrayRef<int> Mask, const SDLoc &dl,
       }
     }
     SDValue Idx = DAG.getConstant(M, dl, MVT::i32);
-    SDValue Ex = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ElemTy, {Vec, Idx});
+    SDValue Ex = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, LegalTy, {Vec, Idx});
     SDValue L = Lower.LowerOperation(Ex, DAG);
     assert(L.getNode());
     Ops.push_back(L);

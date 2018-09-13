@@ -9,7 +9,7 @@
 
 #include "ThreadKDP.h"
 
-#include "lldb/Utility/SafeMachO.h"
+#include "lldb/Host/SafeMachO.h"
 
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Target/Process.h"

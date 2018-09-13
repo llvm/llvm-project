@@ -203,6 +203,7 @@ template <size_t I>
 #include <cstddef>
 #include <cstring>
 #include <cstdint>
+#include <version>
 #include <__debug>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

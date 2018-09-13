@@ -353,8 +353,6 @@ unsigned getArchAttrR600(GPUKind AK);
 void fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values);
 void fillValidArchListR600(SmallVectorImpl<StringRef> &Values);
 
-StringRef getArchNameFromElfMach(unsigned ElfMach);
-unsigned getElfMach(StringRef GPU);
 IsaVersion getIsaVersion(StringRef GPU);
 
 } // namespace AMDGPU

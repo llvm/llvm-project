@@ -10,7 +10,6 @@
 #include "lldb/Host/Symbols.h"
 
 // C Includes
-#include "lldb/Utility/SafeMachO.h"
 #include <dirent.h>
 #include <pwd.h>
 
@@ -42,7 +41,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace llvm::MachO;
 
 #if !defined(__arm__) && !defined(__arm64__) &&                                \
     !defined(__aarch64__) // No DebugSymbols on the iOS devices

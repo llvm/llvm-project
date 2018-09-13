@@ -386,6 +386,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <functional>
 #include <stdexcept>
 #include <tuple>
+#include <version>
 
 #include <__debug>
 

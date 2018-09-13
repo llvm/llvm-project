@@ -41,6 +41,7 @@ module lldb_Host {
   module ProcessLauncher { header "Host/ProcessLauncher.h" export * }
   module ProcessRunLock { header "Host/ProcessRunLock.h" export * }
   module PseudoTerminal { header "Host/PseudoTerminal.h" export * }
+  module SafeMachO { header "Host/SafeMachO.h" export * }
   module SocketAddress { header "Host/SocketAddress.h" export * }
   module Socket { header "Host/Socket.h" export * }
   module StringConvert { header "Host/StringConvert.h" export * }

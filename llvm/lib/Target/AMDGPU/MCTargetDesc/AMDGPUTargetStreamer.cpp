@@ -48,6 +48,93 @@ bool AMDGPUTargetStreamer::EmitHSAMetadata(StringRef HSAMetadataString) {
   return EmitHSAMetadata(HSAMetadata);
 }
 
+StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
+  AMDGPU::GPUKind AK;
+
+  switch (ElfMach) {
+  case ELF::EF_AMDGPU_MACH_R600_R600:     AK = GK_R600;    break;
+  case ELF::EF_AMDGPU_MACH_R600_R630:     AK = GK_R630;    break;
+  case ELF::EF_AMDGPU_MACH_R600_RS880:    AK = GK_RS880;   break;
+  case ELF::EF_AMDGPU_MACH_R600_RV670:    AK = GK_RV670;   break;
+  case ELF::EF_AMDGPU_MACH_R600_RV710:    AK = GK_RV710;   break;
+  case ELF::EF_AMDGPU_MACH_R600_RV730:    AK = GK_RV730;   break;
+  case ELF::EF_AMDGPU_MACH_R600_RV770:    AK = GK_RV770;   break;
+  case ELF::EF_AMDGPU_MACH_R600_CEDAR:    AK = GK_CEDAR;   break;
+  case ELF::EF_AMDGPU_MACH_R600_CYPRESS:  AK = GK_CYPRESS; break;
+  case ELF::EF_AMDGPU_MACH_R600_JUNIPER:  AK = GK_JUNIPER; break;
+  case ELF::EF_AMDGPU_MACH_R600_REDWOOD:  AK = GK_REDWOOD; break;
+  case ELF::EF_AMDGPU_MACH_R600_SUMO:     AK = GK_SUMO;    break;
+  case ELF::EF_AMDGPU_MACH_R600_BARTS:    AK = GK_BARTS;   break;
+  case ELF::EF_AMDGPU_MACH_R600_CAICOS:   AK = GK_CAICOS;  break;
+  case ELF::EF_AMDGPU_MACH_R600_CAYMAN:   AK = GK_CAYMAN;  break;
+  case ELF::EF_AMDGPU_MACH_R600_TURKS:    AK = GK_TURKS;   break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX600: AK = GK_GFX600;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX601: AK = GK_GFX601;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX700: AK = GK_GFX700;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX701: AK = GK_GFX701;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX702: AK = GK_GFX702;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX703: AK = GK_GFX703;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX704: AK = GK_GFX704;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX801: AK = GK_GFX801;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX802: AK = GK_GFX802;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX803: AK = GK_GFX803;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX810: AK = GK_GFX810;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX900: AK = GK_GFX900;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX902: AK = GK_GFX902;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX904: AK = GK_GFX904;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX906: AK = GK_GFX906;  break;
+  case ELF::EF_AMDGPU_MACH_NONE:          AK = GK_NONE;    break;
+  }
+
+  StringRef GPUName = getArchNameAMDGCN(AK);
+  if (GPUName != "")
+    return GPUName;
+  return getArchNameR600(AK);
+}
+
+unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
+  AMDGPU::GPUKind AK = parseArchAMDGCN(GPU);
+  if (AK == AMDGPU::GPUKind::GK_NONE)
+    AK = parseArchR600(GPU);
+
+  switch (AK) {
+  case GK_R600:    return ELF::EF_AMDGPU_MACH_R600_R600;
+  case GK_R630:    return ELF::EF_AMDGPU_MACH_R600_R630;
+  case GK_RS880:   return ELF::EF_AMDGPU_MACH_R600_RS880;
+  case GK_RV670:   return ELF::EF_AMDGPU_MACH_R600_RV670;
+  case GK_RV710:   return ELF::EF_AMDGPU_MACH_R600_RV710;
+  case GK_RV730:   return ELF::EF_AMDGPU_MACH_R600_RV730;
+  case GK_RV770:   return ELF::EF_AMDGPU_MACH_R600_RV770;
+  case GK_CEDAR:   return ELF::EF_AMDGPU_MACH_R600_CEDAR;
+  case GK_CYPRESS: return ELF::EF_AMDGPU_MACH_R600_CYPRESS;
+  case GK_JUNIPER: return ELF::EF_AMDGPU_MACH_R600_JUNIPER;
+  case GK_REDWOOD: return ELF::EF_AMDGPU_MACH_R600_REDWOOD;
+  case GK_SUMO:    return ELF::EF_AMDGPU_MACH_R600_SUMO;
+  case GK_BARTS:   return ELF::EF_AMDGPU_MACH_R600_BARTS;
+  case GK_CAICOS:  return ELF::EF_AMDGPU_MACH_R600_CAICOS;
+  case GK_CAYMAN:  return ELF::EF_AMDGPU_MACH_R600_CAYMAN;
+  case GK_TURKS:   return ELF::EF_AMDGPU_MACH_R600_TURKS;
+  case GK_GFX600:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX600;
+  case GK_GFX601:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX601;
+  case GK_GFX700:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX700;
+  case GK_GFX701:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX701;
+  case GK_GFX702:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX702;
+  case GK_GFX703:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX703;
+  case GK_GFX704:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX704;
+  case GK_GFX801:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX801;
+  case GK_GFX802:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX802;
+  case GK_GFX803:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX803;
+  case GK_GFX810:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX810;
+  case GK_GFX900:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX900;
+  case GK_GFX902:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX902;
+  case GK_GFX904:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX904;
+  case GK_GFX906:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX906;
+  case GK_NONE:    return ELF::EF_AMDGPU_MACH_NONE;
+  }
+
+  llvm_unreachable("unknown GPU");
+}
+
 //===----------------------------------------------------------------------===//
 // AMDGPUTargetAsmStreamer
 //===----------------------------------------------------------------------===//
@@ -126,70 +213,59 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     const MCSubtargetInfo &STI, StringRef KernelName,
     const amdhsa::kernel_descriptor_t &KD, uint64_t NextVGPR, uint64_t NextSGPR,
     bool ReserveVCC, bool ReserveFlatScr, bool ReserveXNACK) {
-  amdhsa::kernel_descriptor_t DefaultKD = getDefaultAmdhsaKernelDescriptor();
-
   IsaVersion IVersion = getIsaVersion(STI.getCPU());
 
   OS << "\t.amdhsa_kernel " << KernelName << '\n';
 
-#define PRINT_IF_NOT_DEFAULT(STREAM, DIRECTIVE, KERNEL_DESC,                   \
-                             DEFAULT_KERNEL_DESC, MEMBER_NAME, FIELD_NAME)     \
-  if (AMDHSA_BITS_GET(KERNEL_DESC.MEMBER_NAME, FIELD_NAME) !=                  \
-      AMDHSA_BITS_GET(DEFAULT_KERNEL_DESC.MEMBER_NAME, FIELD_NAME))            \
-    STREAM << "\t\t" << DIRECTIVE << " "                                       \
-           << AMDHSA_BITS_GET(KERNEL_DESC.MEMBER_NAME, FIELD_NAME) << '\n';
+#define PRINT_FIELD(STREAM, DIRECTIVE, KERNEL_DESC, MEMBER_NAME, FIELD_NAME)   \
+  STREAM << "\t\t" << DIRECTIVE << " "                                         \
+         << AMDHSA_BITS_GET(KERNEL_DESC.MEMBER_NAME, FIELD_NAME) << '\n';
 
-  if (KD.group_segment_fixed_size != DefaultKD.group_segment_fixed_size)
-    OS << "\t\t.amdhsa_group_segment_fixed_size " << KD.group_segment_fixed_size
-       << '\n';
-  if (KD.private_segment_fixed_size != DefaultKD.private_segment_fixed_size)
-    OS << "\t\t.amdhsa_private_segment_fixed_size "
-       << KD.private_segment_fixed_size << '\n';
+  OS << "\t\t.amdhsa_group_segment_fixed_size " << KD.group_segment_fixed_size
+     << '\n';
+  OS << "\t\t.amdhsa_private_segment_fixed_size "
+     << KD.private_segment_fixed_size << '\n';
 
-  PRINT_IF_NOT_DEFAULT(
-      OS, ".amdhsa_user_sgpr_private_segment_buffer", KD, DefaultKD,
-      kernel_code_properties,
-      amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER);
-  PRINT_IF_NOT_DEFAULT(OS, ".amdhsa_user_sgpr_dispatch_ptr", KD, DefaultKD,
-                       kernel_code_properties,
-                       amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR);
-  PRINT_IF_NOT_DEFAULT(OS, ".amdhsa_user_sgpr_queue_ptr", KD, DefaultKD,
-                       kernel_code_properties,
-                       amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR);
-  PRINT_IF_NOT_DEFAULT(
-      OS, ".amdhsa_user_sgpr_kernarg_segment_ptr", KD, DefaultKD,
-      kernel_code_properties,
-      amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR);
-  PRINT_IF_NOT_DEFAULT(OS, ".amdhsa_user_sgpr_dispatch_id", KD, DefaultKD,
-                       kernel_code_properties,
-                       amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID);
-  PRINT_IF_NOT_DEFAULT(
-      OS, ".amdhsa_user_sgpr_flat_scratch_init", KD, DefaultKD,
-      kernel_code_properties,
-      amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT);
-  PRINT_IF_NOT_DEFAULT(
-      OS, ".amdhsa_user_sgpr_private_segment_size", KD, DefaultKD,
-      kernel_code_properties,
-      amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE);
-  PRINT_IF_NOT_DEFAULT(
-      OS, ".amdhsa_system_sgpr_private_segment_wavefront_offset", KD, DefaultKD,
+  PRINT_FIELD(OS, ".amdhsa_user_sgpr_private_segment_buffer", KD,
+              kernel_code_properties,
+              amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER);
+  PRINT_FIELD(OS, ".amdhsa_user_sgpr_dispatch_ptr", KD,
+              kernel_code_properties,
+              amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR);
+  PRINT_FIELD(OS, ".amdhsa_user_sgpr_queue_ptr", KD,
+              kernel_code_properties,
+              amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR);
+  PRINT_FIELD(OS, ".amdhsa_user_sgpr_kernarg_segment_ptr", KD,
+              kernel_code_properties,
+              amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR);
+  PRINT_FIELD(OS, ".amdhsa_user_sgpr_dispatch_id", KD,
+              kernel_code_properties,
+              amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID);
+  PRINT_FIELD(OS, ".amdhsa_user_sgpr_flat_scratch_init", KD,
+              kernel_code_properties,
+              amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT);
+  PRINT_FIELD(OS, ".amdhsa_user_sgpr_private_segment_size", KD,
+              kernel_code_properties,
+              amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE);
+  PRINT_FIELD(
+      OS, ".amdhsa_system_sgpr_private_segment_wavefront_offset", KD,
       compute_pgm_rsrc2,
       amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_PRIVATE_SEGMENT_WAVEFRONT_OFFSET);
-  PRINT_IF_NOT_DEFAULT(OS, ".amdhsa_system_sgpr_workgroup_id_x", KD, DefaultKD,
-                       compute_pgm_rsrc2,
-                       amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X);
-  PRINT_IF_NOT_DEFAULT(OS, ".amdhsa_system_sgpr_workgroup_id_y", KD, DefaultKD,
-                       compute_pgm_rsrc2,
-                       amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_Y);
-  PRINT_IF_NOT_DEFAULT(OS, ".amdhsa_system_sgpr_workgroup_id_z", KD, DefaultKD,
-                       compute_pgm_rsrc2,
-                       amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_Z);
-  PRINT_IF_NOT_DEFAULT(OS, ".amdhsa_system_sgpr_workgroup_info", KD, DefaultKD,
-                       compute_pgm_rsrc2,
-                       amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_INFO);
-  PRINT_IF_NOT_DEFAULT(OS, ".amdhsa_system_vgpr_workitem_id", KD, DefaultKD,
-                       compute_pgm_rsrc2,
-                       amdhsa::COMPUTE_PGM_RSRC2_ENABLE_VGPR_WORKITEM_ID);
+  PRINT_FIELD(OS, ".amdhsa_system_sgpr_workgroup_id_x", KD,
+              compute_pgm_rsrc2,
+              amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X);
+  PRINT_FIELD(OS, ".amdhsa_system_sgpr_workgroup_id_y", KD,
+              compute_pgm_rsrc2,
+              amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_Y);
+  PRINT_FIELD(OS, ".amdhsa_system_sgpr_workgroup_id_z", KD,
+              compute_pgm_rsrc2,
+              amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_Z);
+  PRINT_FIELD(OS, ".amdhsa_system_sgpr_workgroup_info", KD,
+              compute_pgm_rsrc2,
+              amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_INFO);
+  PRINT_FIELD(OS, ".amdhsa_system_vgpr_workitem_id", KD,
+              compute_pgm_rsrc2,
+              amdhsa::COMPUTE_PGM_RSRC2_ENABLE_VGPR_WORKITEM_ID);
 
   // These directives are required.
   OS << "\t\t.amdhsa_next_free_vgpr " << NextVGPR << '\n';
@@ -202,54 +278,52 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   if (IVersion.Major >= 8 && ReserveXNACK != hasXNACK(STI))
     OS << "\t\t.amdhsa_reserve_xnack_mask " << ReserveXNACK << '\n';
 
-  PRINT_IF_NOT_DEFAULT(OS, ".amdhsa_float_round_mode_32", KD, DefaultKD,
-                       compute_pgm_rsrc1,
-                       amdhsa::COMPUTE_PGM_RSRC1_FLOAT_ROUND_MODE_32);
-  PRINT_IF_NOT_DEFAULT(OS, ".amdhsa_float_round_mode_16_64", KD, DefaultKD,
-                       compute_pgm_rsrc1,
-                       amdhsa::COMPUTE_PGM_RSRC1_FLOAT_ROUND_MODE_16_64);
-  PRINT_IF_NOT_DEFAULT(OS, ".amdhsa_float_denorm_mode_32", KD, DefaultKD,
-                       compute_pgm_rsrc1,
-                       amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_32);
-  PRINT_IF_NOT_DEFAULT(OS, ".amdhsa_float_denorm_mode_16_64", KD, DefaultKD,
-                       compute_pgm_rsrc1,
-                       amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64);
-  PRINT_IF_NOT_DEFAULT(OS, ".amdhsa_dx10_clamp", KD, DefaultKD,
-                       compute_pgm_rsrc1,
-                       amdhsa::COMPUTE_PGM_RSRC1_ENABLE_DX10_CLAMP);
-  PRINT_IF_NOT_DEFAULT(OS, ".amdhsa_ieee_mode", KD, DefaultKD,
-                       compute_pgm_rsrc1,
-                       amdhsa::COMPUTE_PGM_RSRC1_ENABLE_IEEE_MODE);
+  PRINT_FIELD(OS, ".amdhsa_float_round_mode_32", KD,
+              compute_pgm_rsrc1,
+              amdhsa::COMPUTE_PGM_RSRC1_FLOAT_ROUND_MODE_32);
+  PRINT_FIELD(OS, ".amdhsa_float_round_mode_16_64", KD,
+              compute_pgm_rsrc1,
+              amdhsa::COMPUTE_PGM_RSRC1_FLOAT_ROUND_MODE_16_64);
+  PRINT_FIELD(OS, ".amdhsa_float_denorm_mode_32", KD,
+              compute_pgm_rsrc1,
+              amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_32);
+  PRINT_FIELD(OS, ".amdhsa_float_denorm_mode_16_64", KD,
+              compute_pgm_rsrc1,
+              amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64);
+  PRINT_FIELD(OS, ".amdhsa_dx10_clamp", KD,
+              compute_pgm_rsrc1,
+              amdhsa::COMPUTE_PGM_RSRC1_ENABLE_DX10_CLAMP);
+  PRINT_FIELD(OS, ".amdhsa_ieee_mode", KD,
+              compute_pgm_rsrc1,
+              amdhsa::COMPUTE_PGM_RSRC1_ENABLE_IEEE_MODE);
   if (IVersion.Major >= 9)
-    PRINT_IF_NOT_DEFAULT(OS, ".amdhsa_fp16_overflow", KD, DefaultKD,
-                         compute_pgm_rsrc1,
-                         amdhsa::COMPUTE_PGM_RSRC1_FP16_OVFL);
-  PRINT_IF_NOT_DEFAULT(
-      OS, ".amdhsa_exception_fp_ieee_invalid_op", KD, DefaultKD,
+    PRINT_FIELD(OS, ".amdhsa_fp16_overflow", KD,
+                compute_pgm_rsrc1,
+                amdhsa::COMPUTE_PGM_RSRC1_FP16_OVFL);
+  PRINT_FIELD(
+      OS, ".amdhsa_exception_fp_ieee_invalid_op", KD,
       compute_pgm_rsrc2,
       amdhsa::COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION);
-  PRINT_IF_NOT_DEFAULT(
-      OS, ".amdhsa_exception_fp_denorm_src", KD, DefaultKD, compute_pgm_rsrc2,
-      amdhsa::COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_FP_DENORMAL_SOURCE);
-  PRINT_IF_NOT_DEFAULT(
-      OS, ".amdhsa_exception_fp_ieee_div_zero", KD, DefaultKD,
+  PRINT_FIELD(OS, ".amdhsa_exception_fp_denorm_src", KD,
+              compute_pgm_rsrc2,
+              amdhsa::COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_FP_DENORMAL_SOURCE);
+  PRINT_FIELD(
+      OS, ".amdhsa_exception_fp_ieee_div_zero", KD,
       compute_pgm_rsrc2,
       amdhsa::COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_DIVISION_BY_ZERO);
-  PRINT_IF_NOT_DEFAULT(
-      OS, ".amdhsa_exception_fp_ieee_overflow", KD, DefaultKD,
-      compute_pgm_rsrc2,
-      amdhsa::COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_OVERFLOW);
-  PRINT_IF_NOT_DEFAULT(
-      OS, ".amdhsa_exception_fp_ieee_underflow", KD, DefaultKD,
-      compute_pgm_rsrc2,
-      amdhsa::COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_UNDERFLOW);
-  PRINT_IF_NOT_DEFAULT(
-      OS, ".amdhsa_exception_fp_ieee_inexact", KD, DefaultKD, compute_pgm_rsrc2,
-      amdhsa::COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_INEXACT);
-  PRINT_IF_NOT_DEFAULT(
-      OS, ".amdhsa_exception_int_div_zero", KD, DefaultKD, compute_pgm_rsrc2,
-      amdhsa::COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO);
-#undef PRINT_IF_NOT_DEFAULT
+  PRINT_FIELD(OS, ".amdhsa_exception_fp_ieee_overflow", KD,
+              compute_pgm_rsrc2,
+              amdhsa::COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_OVERFLOW);
+  PRINT_FIELD(OS, ".amdhsa_exception_fp_ieee_underflow", KD,
+              compute_pgm_rsrc2,
+              amdhsa::COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_UNDERFLOW);
+  PRINT_FIELD(OS, ".amdhsa_exception_fp_ieee_inexact", KD,
+              compute_pgm_rsrc2,
+              amdhsa::COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_IEEE_754_FP_INEXACT);
+  PRINT_FIELD(OS, ".amdhsa_exception_int_div_zero", KD,
+              compute_pgm_rsrc2,
+              amdhsa::COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO);
+#undef PRINT_FIELD
 
   OS << "\t.end_amdhsa_kernel\n";
 }
