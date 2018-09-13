@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-win32 %s -o %t1.obj
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-win32 %S/Inputs/icf-safe.s -o %t2.obj
 # RUN: lld-link /dll /noentry /out:%t.dll /verbose /opt:noref,icf %t1.obj %t2.obj 2>&1 | FileCheck %s

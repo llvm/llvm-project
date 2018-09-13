@@ -82,7 +82,7 @@ std::vector<std::unique_ptr<Iterator>> createFileProximityIterators(
       // FIXME(kbobyrev): Append LIMIT on top of every BOOST iterator.
       PathProximitySignals.SymbolURI = ParentURI;
       BoostingIterators.push_back(
-          createBoost(create(It->second), PathProximitySignals.evaluate()));
+          createBoost(It->second.iterator(), PathProximitySignals.evaluate()));
     }
   }
   return BoostingIterators;
@@ -112,12 +112,18 @@ void Dex::buildIndex() {
     Symbols[I] = ScoredSymbols[I].second;
   }
 
-  // Populate TempInvertedIndex with posting lists for index symbols.
+  // Populate TempInvertedIndex with lists for index symbols.
+  llvm::DenseMap<Token, std::vector<DocID>> TempInvertedIndex;
   for (DocID SymbolRank = 0; SymbolRank < Symbols.size(); ++SymbolRank) {
     const auto *Sym = Symbols[SymbolRank];
     for (const auto &Token : generateSearchTokens(*Sym))
-      InvertedIndex[Token].push_back(SymbolRank);
+      TempInvertedIndex[Token].push_back(SymbolRank);
   }
+
+  // Convert lists of items to posting lists.
+  for (const auto &TokenToPostingList : TempInvertedIndex)
+    InvertedIndex.insert({TokenToPostingList.first,
+                          PostingList(move(TokenToPostingList.second))});
 
   vlog("Built Dex with estimated memory usage {0} bytes.",
        estimateMemoryUsage());
@@ -142,7 +148,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   for (const auto &Trigram : TrigramTokens) {
     const auto It = InvertedIndex.find(Trigram);
     if (It != InvertedIndex.end())
-      TrigramIterators.push_back(create(It->second));
+      TrigramIterators.push_back(It->second.iterator());
   }
   if (!TrigramIterators.empty())
     TopLevelChildren.push_back(createAnd(move(TrigramIterators)));
@@ -152,7 +158,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   for (const auto &Scope : Req.Scopes) {
     const auto It = InvertedIndex.find(Token(Token::Kind::Scope, Scope));
     if (It != InvertedIndex.end())
-      ScopeIterators.push_back(create(It->second));
+      ScopeIterators.push_back(It->second.iterator());
   }
   // Add OR iterator for scopes if there are any Scope Iterators.
   if (!ScopeIterators.empty())
@@ -233,7 +239,7 @@ size_t Dex::estimateMemoryUsage() const {
   Bytes += LookupTable.getMemorySize();
   Bytes += InvertedIndex.getMemorySize();
   for (const auto &P : InvertedIndex)
-    Bytes += P.second.size() * sizeof(DocID);
+    Bytes += P.second.bytes();
   return Bytes + BackingDataSize;
 }
 
