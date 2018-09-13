@@ -2382,7 +2382,7 @@ bool DWARFExpression::Evaluate(
     case DW_OP_lit29:
     case DW_OP_lit30:
     case DW_OP_lit31:
-      stack.push_back(Scalar(op - DW_OP_lit0));
+      stack.push_back(Scalar((uint64_t)(op - DW_OP_lit0)));
       break;
 
     //----------------------------------------------------------------------
