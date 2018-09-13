@@ -19,56 +19,51 @@
 #include <string>
 
 const char *IndexFilename;
-const char *LogFilename;
+const char *RequestsFilename;
 
 namespace clang {
 namespace clangd {
 namespace {
 
-std::unique_ptr<clang::clangd::SymbolIndex> buildMem() {
-  return clang::clangd::loadIndex(IndexFilename, {}, false);
+std::unique_ptr<SymbolIndex> buildMem() {
+  return loadIndex(IndexFilename, {}, false);
 }
 
-std::unique_ptr<clang::clangd::SymbolIndex> buildDex() {
-  return clang::clangd::loadIndex(IndexFilename, {}, true);
+std::unique_ptr<SymbolIndex> buildDex() {
+  return loadIndex(IndexFilename, {}, true);
 }
 
-// This function processes user-provided Log file with fuzzy find requests in
-// the following format:
-//
-// fuzzyFind("UnqualifiedName", scopes=["clang::", "clang::clangd::"])
-//
-// It constructs vector of FuzzyFindRequests which is later used for the
-// benchmarks.
-std::vector<clang::clangd::FuzzyFindRequest> extractQueriesFromLogs() {
-  llvm::Regex RequestMatcher("fuzzyFind\\(\"([a-zA-Z]*)\", scopes=\\[(.*)\\]");
-  llvm::SmallVector<llvm::StringRef, 200> Matches;
-  std::ifstream InputStream(LogFilename);
+// Reads JSON array of serialized FuzzyFindRequest's from user-provided file.
+std::vector<FuzzyFindRequest> extractQueriesFromLogs() {
+  std::ifstream InputStream(RequestsFilename);
   std::string Log((std::istreambuf_iterator<char>(InputStream)),
                   std::istreambuf_iterator<char>());
-  llvm::StringRef Temporary(Log);
-  llvm::SmallVector<llvm::StringRef, 200> Strings;
-  Temporary.split(Strings, '\n');
 
-  clang::clangd::FuzzyFindRequest R;
-  R.MaxCandidateCount = 100;
+  std::vector<FuzzyFindRequest> Requests;
+  auto JSONArray = llvm::json::parse(Log);
 
-  llvm::SmallVector<llvm::StringRef, 200> CommaSeparatedValues;
-
-  std::vector<clang::clangd::FuzzyFindRequest> RealRequests;
-  for (auto Line : Strings) {
-    if (RequestMatcher.match(Line, &Matches)) {
-      R.Query = Matches[1];
-      CommaSeparatedValues.clear();
-      Line.split(CommaSeparatedValues, ',');
-      R.Scopes.clear();
-      for (auto C : CommaSeparatedValues) {
-        R.Scopes.push_back(C);
-      }
-      RealRequests.push_back(R);
-    }
+  // Panic if the provided file couldn't be parsed.
+  if (!JSONArray) {
+    llvm::errs() << "Error when parsing JSON requests file: "
+                 << llvm::toString(JSONArray.takeError());
+    exit(1);
   }
-  return RealRequests;
+  if (!JSONArray->getAsArray()) {
+    llvm::errs() << "Error: top-level value is not a JSON array: " << Log
+                 << '\n';
+    exit(1);
+  }
+
+  for (const auto &Item : *JSONArray->getAsArray()) {
+    FuzzyFindRequest Request;
+    // Panic if the provided file couldn't be parsed.
+    if (!fromJSON(Item, Request)) {
+      llvm::errs() << "Error when deserializing request: " << Item << '\n';
+      exit(1);
+    }
+    Requests.push_back(Request);
+  }
+  return Requests;
 }
 
 static void MemQueries(benchmark::State &State) {
@@ -100,12 +95,12 @@ BENCHMARK(DexQueries);
 int main(int argc, char *argv[]) {
   if (argc < 3) {
     llvm::errs() << "Usage: " << argv[0]
-                 << " global-symbol-index.yaml fuzzy-find-requests.log "
+                 << " global-symbol-index.yaml requests.json "
                     "BENCHMARK_OPTIONS...\n";
     return -1;
   }
   IndexFilename = argv[1];
-  LogFilename = argv[2];
+  RequestsFilename = argv[2];
   // Trim first two arguments of the benchmark invocation.
   argv += 3;
   argc -= 3;
