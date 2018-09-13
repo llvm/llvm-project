@@ -4,7 +4,7 @@ target triple = "amdgcn-amd-amdhsa"
 ; 1024 work-items means up to 16 work groups
 @__scratch_lds = linkonce_odr hidden addrspace(3) global [16 x i64] undef, align 8
 
-define i64 addrspace(3)* @__get_scratch_lds() #0 {
+define protected i64 addrspace(3)* @__get_scratch_lds() #0 {
   ret i64 addrspace(3)* getelementptr inbounds ([16 x i64], [16 x i64] addrspace(3)* @__scratch_lds, i64 0, i64 0)
 }
 
