@@ -451,7 +451,7 @@ void AArch64Err843419Patcher::init() {
         continue;
       if (!IsCodeMapSymbol(Def) && !IsDataMapSymbol(Def))
         continue;
-      if (auto *Sec = dyn_cast<InputSection>(Def->Section))
+      if (auto *Sec = dyn_cast_or_null<InputSection>(Def->Section))
         if (Sec->Flags & SHF_EXECINSTR)
           SectionMap[Sec].push_back(Def);
     }
