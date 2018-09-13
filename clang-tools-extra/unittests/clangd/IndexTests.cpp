@@ -78,10 +78,11 @@ TEST(MemIndexTest, MemIndexLimitedNumMatches) {
   auto I = MemIndex::build(generateNumSymbols(0, 100), RefSlab());
   FuzzyFindRequest Req;
   Req.Query = "5";
-  Req.MaxCandidateCount = 3;
+  Req.Limit = 3;
   bool Incomplete;
   auto Matches = match(*I, Req, &Incomplete);
-  EXPECT_EQ(Matches.size(), Req.MaxCandidateCount);
+  EXPECT_TRUE(Req.Limit);
+  EXPECT_EQ(Matches.size(), *Req.Limit);
   EXPECT_TRUE(Incomplete);
 }
 
@@ -91,7 +92,7 @@ TEST(MemIndexTest, FuzzyMatch) {
       RefSlab());
   FuzzyFindRequest Req;
   Req.Query = "lol";
-  Req.MaxCandidateCount = 2;
+  Req.Limit = 2;
   EXPECT_THAT(match(*I, Req),
               UnorderedElementsAre("LaughingOutLoud", "LittleOldLady"));
 }

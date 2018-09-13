@@ -482,7 +482,7 @@ TEST(DexTest, FuzzyMatchQ) {
       URISchemes);
   FuzzyFindRequest Req;
   Req.Query = "lol";
-  Req.MaxCandidateCount = 2;
+  Req.Limit = 2;
   EXPECT_THAT(match(*I, Req),
               UnorderedElementsAre("LaughingOutLoud", "LittleOldLady"));
 }
@@ -498,6 +498,7 @@ TEST(DexTest, DexDeduplicate) {
   FuzzyFindRequest Req;
   Req.Query = "2";
   Dex I(Symbols, URISchemes);
+  EXPECT_FALSE(Req.Limit);
   EXPECT_THAT(match(I, Req), ElementsAre("2", "2"));
 }
 
@@ -505,10 +506,11 @@ TEST(DexTest, DexLimitedNumMatches) {
   auto I = Dex::build(generateNumSymbols(0, 100), URISchemes);
   FuzzyFindRequest Req;
   Req.Query = "5";
-  Req.MaxCandidateCount = 3;
+  Req.Limit = 3;
   bool Incomplete;
   auto Matches = match(*I, Req, &Incomplete);
-  EXPECT_EQ(Matches.size(), Req.MaxCandidateCount);
+  EXPECT_TRUE(Req.Limit);
+  EXPECT_EQ(Matches.size(), *Req.Limit);
   EXPECT_TRUE(Incomplete);
 }
 
@@ -518,7 +520,7 @@ TEST(DexTest, FuzzyMatch) {
       URISchemes);
   FuzzyFindRequest Req;
   Req.Query = "lol";
-  Req.MaxCandidateCount = 2;
+  Req.Limit = 2;
   EXPECT_THAT(match(*I, Req),
               UnorderedElementsAre("LaughingOutLoud", "LittleOldLady"));
 }
@@ -596,7 +598,7 @@ TEST(DexTest, ProximityPathsBoosting) {
   FuzzyFindRequest Req;
   Req.Query = "abc";
   // The best candidate can change depending on the proximity paths.
-  Req.MaxCandidateCount = 1;
+  Req.Limit = 1;
 
   // FuzzyFind request comes from the file which is far from the root: expect
   // CloseSymbol to come out.

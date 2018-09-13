@@ -29,7 +29,8 @@ bool MemIndex::fuzzyFind(
   assert(!StringRef(Req.Query).contains("::") &&
          "There must be no :: in query.");
 
-  TopN<std::pair<float, const Symbol *>> Top(Req.MaxCandidateCount);
+  TopN<std::pair<float, const Symbol *>> Top(
+      Req.Limit ? *Req.Limit : std::numeric_limits<size_t>::max());
   FuzzyMatcher Filter(Req.Query);
   bool More = false;
   for (const auto Pair : Index) {

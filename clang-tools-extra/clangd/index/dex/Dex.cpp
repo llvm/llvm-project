@@ -179,8 +179,8 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   // FIXME(kbobyrev): Pre-scoring retrieval threshold should be adjusted as
   // using 100x of the requested number might not be good in practice, e.g.
   // when the requested number of items is small.
-  const size_t ItemsToRetrieve = 100 * Req.MaxCandidateCount;
-  auto Root = createLimit(move(QueryIterator), ItemsToRetrieve);
+  auto Root = Req.Limit ? createLimit(move(QueryIterator), *Req.Limit * 100)
+                        : move(QueryIterator);
 
   using IDAndScore = std::pair<DocID, float>;
   std::vector<IDAndScore> IDAndScores = consume(*Root);
@@ -188,7 +188,8 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   auto Compare = [](const IDAndScore &LHS, const IDAndScore &RHS) {
     return LHS.second > RHS.second;
   };
-  TopN<IDAndScore, decltype(Compare)> Top(Req.MaxCandidateCount, Compare);
+  TopN<IDAndScore, decltype(Compare)> Top(
+      Req.Limit ? *Req.Limit : std::numeric_limits<size_t>::max(), Compare);
   for (const auto &IDAndScore : IDAndScores) {
     const DocID SymbolDocID = IDAndScore.first;
     const auto *Sym = Symbols[SymbolDocID];
@@ -205,7 +206,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
       More = true;
   }
 
-  // Apply callback to the top Req.MaxCandidateCount items in the descending
+  // Apply callback to the top Req.Limit items in the descending
   // order of cumulative score.
   for (const auto &Item : std::move(Top).items())
     Callback(*Symbols[Item.first]);
