@@ -13,6 +13,7 @@ add_lldb_library(lldbBreakpoint
   BreakpointResolverFileLine.cpp
   BreakpointResolverFileRegex.cpp
   BreakpointResolverName.cpp
+  BreakpointResolverScripted.cpp
   BreakpointSite.cpp
   BreakpointSiteList.cpp
   Stoppoint.cpp
