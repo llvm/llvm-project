@@ -418,6 +418,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <type_traits>
 #include <cstddef>
 #include <initializer_list>
+#include <version>
 #ifdef __APPLE__
 #include <Availability.h>
 #endif

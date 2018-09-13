@@ -27,8 +27,6 @@ public:
 
   void dump(raw_ostream &OS, int Indent) const override;
 
-  std::unique_ptr<NativeRawSymbol> clone() const override;
-
   std::unique_ptr<IPDBEnumSymbols>
   findChildren(PDB_SymType Type) const override;
 

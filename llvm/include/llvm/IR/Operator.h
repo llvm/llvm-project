@@ -364,19 +364,26 @@ public:
   /// precision.
   float getFPAccuracy() const;
 
-  static bool classof(const Instruction *I) {
-    return I->getType()->isFPOrFPVectorTy() ||
-      I->getOpcode() == Instruction::FCmp;
-  }
-
-  static bool classof(const ConstantExpr *CE) {
-    return CE->getType()->isFPOrFPVectorTy() ||
-           CE->getOpcode() == Instruction::FCmp;
-  }
-
   static bool classof(const Value *V) {
-    return (isa<Instruction>(V) && classof(cast<Instruction>(V))) ||
-           (isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V)));
+    unsigned Opcode;
+    if (auto *I = dyn_cast<Instruction>(V))
+      Opcode = I->getOpcode();
+    else if (auto *CE = dyn_cast<ConstantExpr>(V))
+      Opcode = CE->getOpcode();
+    else
+      return false;
+
+    switch (Opcode) {
+    case Instruction::FCmp:
+      return true;
+    // non math FP Operators (no FMF)
+    case Instruction::ExtractElement:
+    case Instruction::ShuffleVector:
+    case Instruction::InsertElement:
+      return false;
+    default:
+      return V->getType()->isFPOrFPVectorTy();
+    }
   }
 };
 

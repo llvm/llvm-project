@@ -1130,6 +1130,13 @@ auto lower_bound(R &&Range, ForwardIt I) -> decltype(adl_begin(Range)) {
   return std::lower_bound(adl_begin(Range), adl_end(Range), I);
 }
 
+/// Provide wrappers to std::upper_bound which take ranges instead of having to
+/// pass begin/end explicitly.
+template <typename R, typename ForwardIt>
+auto upper_bound(R &&Range, ForwardIt I) -> decltype(adl_begin(Range)) {
+  return std::upper_bound(adl_begin(Range), adl_end(Range), I);
+}
+
 /// Wrapper function around std::equal to detect if all elements
 /// in a container are same.
 template <typename R>

@@ -54,9 +54,5 @@ std::unique_ptr<PDBSymbol> NativeEnumTypes::getNext() {
 
 void NativeEnumTypes::reset() { Index = 0; }
 
-NativeEnumTypes *NativeEnumTypes::clone() const {
-  return new NativeEnumTypes(Session, Matches, Kind);
-}
-
 } // namespace pdb
 } // namespace llvm

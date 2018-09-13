@@ -26,7 +26,6 @@ public:
   std::unique_ptr<IPDBTable> getChildAtIndex(uint32_t Index) const override;
   std::unique_ptr<IPDBTable> getNext() override;
   void reset() override;
-  DIAEnumTables *clone() const override;
 
 private:
   CComPtr<IDiaEnumTables> Enumerator;

@@ -34,10 +34,6 @@ NativeExeSymbol::NativeExeSymbol(NativeSession &Session, SymIndexId SymbolId)
     : NativeRawSymbol(Session, PDB_SymType::Exe, SymbolId),
       Dbi(getDbiStreamPtr(Session)) {}
 
-std::unique_ptr<NativeRawSymbol> NativeExeSymbol::clone() const {
-  return llvm::make_unique<NativeExeSymbol>(Session, SymbolId);
-}
-
 std::unique_ptr<IPDBEnumSymbols>
 NativeExeSymbol::findChildren(PDB_SymType Type) const {
   switch (Type) {

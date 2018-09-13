@@ -31,13 +31,7 @@ class AMDGPUTargetStreamer : public MCTargetStreamer {
 protected:
   MCContext &getContext() const { return Streamer.getContext(); }
 
-  /// \returns Equivalent EF_AMDGPU_MACH_* value for given \p GPU name.
-  unsigned getMACH(StringRef GPU) const;
-
 public:
-  /// \returns Equivalent GPU name for an EF_AMDGPU_MACH_* value.
-  static const char *getMachName(unsigned Mach);
-
   AMDGPUTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 
   virtual void EmitDirectiveAMDGCNTarget(StringRef Target) = 0;
@@ -71,6 +65,9 @@ public:
       const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
       uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr,
       bool ReserveXNACK) = 0;
+
+  static StringRef getArchNameFromElfMach(unsigned ElfMach);
+  static unsigned getElfMach(StringRef GPU);
 };
 
 class AMDGPUTargetAsmStreamer final : public AMDGPUTargetStreamer {

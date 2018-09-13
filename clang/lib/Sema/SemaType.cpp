@@ -7623,8 +7623,15 @@ bool Sema::hasVisibleDefinition(NamedDecl *D, NamedDecl **Suggested,
 
     // A visible module might have a merged definition instead.
     if (D->isModulePrivate() ? hasMergedDefinitionInCurrentModule(D)
-                             : hasVisibleMergedDefinition(D))
+                             : hasVisibleMergedDefinition(D)) {
+      if (CodeSynthesisContexts.empty() &&
+          !getLangOpts().ModulesLocalVisibility) {
+        // Cache the fact that this definition is implicitly visible because
+        // there is a visible merged definition.
+        D->setVisibleDespiteOwningModule();
+      }
       return true;
+    }
 
     return false;
   };

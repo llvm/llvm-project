@@ -1409,13 +1409,6 @@ bool Sema::hasVisibleMergedDefinition(NamedDecl *Def) {
 }
 
 bool Sema::hasMergedDefinitionInCurrentModule(NamedDecl *Def) {
-  // FIXME: When not in local visibility mode, we can't tell the difference
-  // between a declaration being visible because we merged a local copy of
-  // the same declaration into it, and it being visible because its owning
-  // module is visible.
-  if (Def->getModuleOwnershipKind() == Decl::ModuleOwnershipKind::Visible &&
-      getLangOpts().ModulesLocalVisibility)
-    return true;
   for (const Module *Merged : Context.getModulesWithMergedDefinition(Def))
     if (isInCurrentModule(Merged, getLangOpts()))
       return true;

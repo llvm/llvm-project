@@ -33,6 +33,7 @@ class MSFBuilder;
 }
 namespace object {
 struct coff_section;
+struct FpoData;
 }
 namespace pdb {
 class DbiStream;
@@ -69,7 +70,8 @@ public:
   void setGlobalsStreamIndex(uint32_t Index);
   void setPublicsStreamIndex(uint32_t Index);
   void setSymbolRecordStreamIndex(uint32_t Index);
-  void addFrameData(const codeview::FrameData &FD);
+  void addNewFpoData(const codeview::FrameData &FD);
+  void addOldFpoData(const object::FpoData &Fpo);
 
   Expected<DbiModuleDescriptorBuilder &> addModuleInfo(StringRef ModuleName);
   Error addModuleSourceFile(DbiModuleDescriptorBuilder &Module, StringRef File);
@@ -123,7 +125,8 @@ private:
 
   std::vector<std::unique_ptr<DbiModuleDescriptorBuilder>> ModiList;
 
-  Optional<codeview::DebugFrameDataSubsection> FrameData;
+  Optional<codeview::DebugFrameDataSubsection> NewFpoData;
+  std::vector<object::FpoData> OldFpoData;
 
   StringMap<uint32_t> SourceFileNames;
 
