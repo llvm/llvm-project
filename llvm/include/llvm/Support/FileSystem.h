@@ -1100,38 +1100,51 @@ std::string getMainExecutable(const char *argv0, void *MainExecAddr);
 /// @name Iterators
 /// @{
 
-/// directory_entry - A single entry in a directory. Caches the status either
-/// from the result of the iteration syscall, or the first time status is
-/// called.
+/// directory_entry - A single entry in a directory.
 class directory_entry {
+  // FIXME: different platforms make different information available "for free"
+  // when traversing a directory. The design of this class wraps most of the
+  // information in basic_file_status, so on platforms where we can't populate
+  // that whole structure, callers end up paying for a stat().
+  // std::filesystem::directory_entry may be a better model.
   std::string Path;
-  bool FollowSymlinks;
-  basic_file_status Status;
+  file_type Type;           // Most platforms can provide this.
+  bool FollowSymlinks;      // Affects the behavior of status().
+  basic_file_status Status; // If available.
 
 public:
-  explicit directory_entry(const Twine &path, bool follow_symlinks = true,
-                           basic_file_status st = basic_file_status())
-      : Path(path.str()), FollowSymlinks(follow_symlinks), Status(st) {}
+  explicit directory_entry(const Twine &Path, bool FollowSymlinks = true,
+                           file_type Type = file_type::type_unknown,
+                           basic_file_status Status = basic_file_status())
+      : Path(Path.str()), Type(Type), FollowSymlinks(FollowSymlinks),
+        Status(Status) {}
 
   directory_entry() = default;
 
-  void assign(const Twine &path, basic_file_status st = basic_file_status()) {
-    Path = path.str();
-    Status = st;
-  }
-
-  void replace_filename(const Twine &filename,
-                        basic_file_status st = basic_file_status());
+  void replace_filename(const Twine &Filename, file_type Type,
+                        basic_file_status Status = basic_file_status());
 
   const std::string &path() const { return Path; }
+  // Get basic information about entry file (a subset of fs::status()).
+  // On most platforms this is a stat() call.
+  // On windows the information was already retrieved from the directory.
   ErrorOr<basic_file_status> status() const;
+  // Get the type of this file.
+  // On most platforms (Linux/Mac/Windows/BSD), this was already retrieved.
+  // On some platforms (e.g. Solaris) this is a stat() call.
+  file_type type() const {
+    if (Type != file_type::type_unknown)
+      return Type;
+    auto S = status();
+    return S ? S->type() : file_type::type_unknown;
+  }
 
-  bool operator==(const directory_entry& rhs) const { return Path == rhs.Path; }
-  bool operator!=(const directory_entry& rhs) const { return !(*this == rhs); }
-  bool operator< (const directory_entry& rhs) const;
-  bool operator<=(const directory_entry& rhs) const;
-  bool operator> (const directory_entry& rhs) const;
-  bool operator>=(const directory_entry& rhs) const;
+  bool operator==(const directory_entry& RHS) const { return Path == RHS.Path; }
+  bool operator!=(const directory_entry& RHS) const { return !(*this == RHS); }
+  bool operator< (const directory_entry& RHS) const;
+  bool operator<=(const directory_entry& RHS) const;
+  bool operator> (const directory_entry& RHS) const;
+  bool operator>=(const directory_entry& RHS) const;
 };
 
 namespace detail {

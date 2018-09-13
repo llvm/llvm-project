@@ -102,6 +102,7 @@ private:
   bool isNoNanSrc(SDValue N) const;
   bool isInlineImmediate(const SDNode *N) const;
   bool isVGPRImm(const SDNode *N) const;
+  bool isUniformLoad(const SDNode *N) const;
   bool isUniformBr(const SDNode *N) const;
 
   MachineSDNode *buildSMovImm64(SDLoc &DL, uint64_t Val, EVT VT) const;
@@ -2117,6 +2118,30 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
   return !AllUsesAcceptSReg && (Limit < 10);
 }
 
+bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode * N) const {
+  auto Ld = cast<LoadSDNode>(N);
+
+  return Ld->getAlignment() >= 4 &&
+        (
+          (
+            (
+              Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS       ||
+              Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT
+            )
+            &&
+            !N->isDivergent()
+          )
+          ||
+          (
+            Subtarget->getScalarizeGlobalBehavior() &&
+            Ld->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
+            !Ld->isVolatile() &&
+            !N->isDivergent() &&
+            static_cast<const SITargetLowering *>(
+              getTargetLowering())->isMemOpHasNoClobberedMemOperand(N)
+          )
+        );
+}
 
 void AMDGPUDAGToDAGISel::PostprocessISelDAG() {
   const AMDGPUTargetLowering& Lowering =

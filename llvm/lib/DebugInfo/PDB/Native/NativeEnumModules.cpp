@@ -40,9 +40,5 @@ std::unique_ptr<PDBSymbol> NativeEnumModules::getNext() {
 
 void NativeEnumModules::reset() { Index = 0; }
 
-NativeEnumModules *NativeEnumModules::clone() const {
-  return new NativeEnumModules(Session, Index);
-}
-
 }
 }

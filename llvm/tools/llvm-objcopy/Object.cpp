@@ -1121,15 +1121,13 @@ template <class ELFT> void ELFWriter<ELFT>::writeEhdr() {
   Ehdr.e_machine = Obj.Machine;
   Ehdr.e_version = Obj.Version;
   Ehdr.e_entry = Obj.Entry;
-  // TODO: Only set phoff when a program header exists, to avoid tools
-  // thinking this is corrupt data.
-  Ehdr.e_phoff = Obj.ProgramHdrSegment.Offset;
+  Ehdr.e_phnum = size(Obj.segments());
+  Ehdr.e_phoff = (Ehdr.e_phnum != 0) ? Obj.ProgramHdrSegment.Offset : 0;
+  Ehdr.e_phentsize = (Ehdr.e_phnum != 0) ? sizeof(Elf_Phdr) : 0;
   Ehdr.e_flags = Obj.Flags;
   Ehdr.e_ehsize = sizeof(Elf_Ehdr);
-  Ehdr.e_phentsize = sizeof(Elf_Phdr);
-  Ehdr.e_phnum = size(Obj.segments());
-  Ehdr.e_shentsize = sizeof(Elf_Shdr);
-  if (WriteSectionHeaders) {
+  if (WriteSectionHeaders && size(Obj.sections()) != 0) {
+    Ehdr.e_shentsize = sizeof(Elf_Shdr);
     Ehdr.e_shoff = Obj.SHOffset;
     // """
     // If the number of sections is greater than or equal to
@@ -1153,6 +1151,7 @@ template <class ELFT> void ELFWriter<ELFT>::writeEhdr() {
     else
       Ehdr.e_shstrndx = Obj.SectionNames->Index;
   } else {
+    Ehdr.e_shentsize = 0;
     Ehdr.e_shoff = 0;
     Ehdr.e_shnum = 0;
     Ehdr.e_shstrndx = 0;

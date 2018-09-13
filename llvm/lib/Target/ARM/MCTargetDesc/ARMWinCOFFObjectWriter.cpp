@@ -75,8 +75,8 @@ unsigned ARMWinCOFFObjectWriter::getRelocType(MCContext &Ctx,
   case ARM::fixup_t2_condbranch:
     return COFF::IMAGE_REL_ARM_BRANCH20T;
   case ARM::fixup_t2_uncondbranch:
-    return COFF::IMAGE_REL_ARM_BRANCH24T;
   case ARM::fixup_arm_thumb_bl:
+    return COFF::IMAGE_REL_ARM_BRANCH24T;
   case ARM::fixup_arm_thumb_blx:
     return COFF::IMAGE_REL_ARM_BLX23T;
   case ARM::fixup_t2_movw_lo16:

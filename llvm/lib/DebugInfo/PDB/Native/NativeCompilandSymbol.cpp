@@ -33,10 +33,6 @@ void NativeCompilandSymbol::dump(raw_ostream &OS, int Indent) const {
                   Indent);
 }
 
-std::unique_ptr<NativeRawSymbol> NativeCompilandSymbol::clone() const {
-  return llvm::make_unique<NativeCompilandSymbol>(Session, SymbolId, Module);
-}
-
 bool NativeCompilandSymbol::isEditAndContinueEnabled() const {
   return Module.hasECInfo();
 }

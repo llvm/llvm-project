@@ -815,4 +815,14 @@ TEST_F(CoreAPIsStandardTest, TestMaterializeWeakSymbol) {
   FooResponsibility->emit();
 }
 
+TEST_F(CoreAPIsStandardTest, TestMainJITDylibAndDefaultLookupOrder) {
+  cantFail(ES.getMainJITDylib().define(absoluteSymbols({{Foo, FooSym}})));
+  auto Results = cantFail(ES.lookup({Foo}));
+
+  EXPECT_EQ(Results.size(), 1U) << "Incorrect number of results";
+  EXPECT_EQ(Results.count(Foo), 1U) << "Expected result for 'Foo'";
+  EXPECT_EQ(Results[Foo].getAddress(), FooSym.getAddress())
+      << "Expected result address to match Foo's address";
+}
+
 } // namespace

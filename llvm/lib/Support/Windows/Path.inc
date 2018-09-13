@@ -902,28 +902,28 @@ static basic_file_status status_from_find_data(WIN32_FIND_DATAW *FindData) {
                            FindData->nFileSizeHigh, FindData->nFileSizeLow);
 }
 
-std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
-                                                     StringRef path,
-                                                     bool follow_symlinks) {
-  SmallVector<wchar_t, 128> path_utf16;
+std::error_code detail::directory_iterator_construct(detail::DirIterState &IT,
+                                                     StringRef Path,
+                                                     bool FollowSymlinks) {
+  SmallVector<wchar_t, 128> PathUTF16;
 
-  if (std::error_code ec = widenPath(path, path_utf16))
-    return ec;
+  if (std::error_code EC = widenPath(Path, PathUTF16))
+    return EC;
 
   // Convert path to the format that Windows is happy with.
-  if (path_utf16.size() > 0 &&
-      !is_separator(path_utf16[path.size() - 1]) &&
-      path_utf16[path.size() - 1] != L':') {
-    path_utf16.push_back(L'\\');
-    path_utf16.push_back(L'*');
+  if (PathUTF16.size() > 0 &&
+      !is_separator(PathUTF16[Path.size() - 1]) &&
+      PathUTF16[Path.size() - 1] != L':') {
+    PathUTF16.push_back(L'\\');
+    PathUTF16.push_back(L'*');
   } else {
-    path_utf16.push_back(L'*');
+    PathUTF16.push_back(L'*');
   }
 
   //  Get the first directory entry.
   WIN32_FIND_DATAW FirstFind;
   ScopedFindHandle FindHandle(::FindFirstFileExW(
-      c_str(path_utf16), FindExInfoBasic, &FirstFind, FindExSearchNameMatch,
+      c_str(PathUTF16), FindExInfoBasic, &FirstFind, FindExSearchNameMatch,
       NULL, FIND_FIRST_EX_LARGE_FETCH));
   if (!FindHandle)
     return mapWindowsError(::GetLastError());
@@ -936,43 +936,45 @@ std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
       DWORD LastError = ::GetLastError();
       // Check for end.
       if (LastError == ERROR_NO_MORE_FILES)
-        return detail::directory_iterator_destruct(it);
+        return detail::directory_iterator_destruct(IT);
       return mapWindowsError(LastError);
     } else
       FilenameLen = ::wcslen(FirstFind.cFileName);
 
   // Construct the current directory entry.
-  SmallString<128> directory_entry_name_utf8;
-  if (std::error_code ec =
+  SmallString<128> DirectoryEntryNameUTF8;
+  if (std::error_code EC =
           UTF16ToUTF8(FirstFind.cFileName, ::wcslen(FirstFind.cFileName),
-                      directory_entry_name_utf8))
-    return ec;
+                      DirectoryEntryNameUTF8))
+    return EC;
 
-  it.IterationHandle = intptr_t(FindHandle.take());
-  SmallString<128> directory_entry_path(path);
-  path::append(directory_entry_path, directory_entry_name_utf8);
-  it.CurrentEntry = directory_entry(directory_entry_path, follow_symlinks,
-                                    status_from_find_data(&FirstFind));
+  IT.IterationHandle = intptr_t(FindHandle.take());
+  SmallString<128> DirectoryEntryPath(Path);
+  path::append(DirectoryEntryPath, DirectoryEntryNameUTF8);
+  IT.CurrentEntry =
+      directory_entry(DirectoryEntryPath, FollowSymlinks,
+                      file_type_from_attrs(FirstFind.dwFileAttributes),
+                      status_from_find_data(&FirstFind));
 
   return std::error_code();
 }
 
-std::error_code detail::directory_iterator_destruct(detail::DirIterState &it) {
-  if (it.IterationHandle != 0)
+std::error_code detail::directory_iterator_destruct(detail::DirIterState &IT) {
+  if (IT.IterationHandle != 0)
     // Closes the handle if it's valid.
-    ScopedFindHandle close(HANDLE(it.IterationHandle));
-  it.IterationHandle = 0;
-  it.CurrentEntry = directory_entry();
+    ScopedFindHandle close(HANDLE(IT.IterationHandle));
+  IT.IterationHandle = 0;
+  IT.CurrentEntry = directory_entry();
   return std::error_code();
 }
 
-std::error_code detail::directory_iterator_increment(detail::DirIterState &it) {
+std::error_code detail::directory_iterator_increment(detail::DirIterState &IT) {
   WIN32_FIND_DATAW FindData;
-  if (!::FindNextFileW(HANDLE(it.IterationHandle), &FindData)) {
+  if (!::FindNextFileW(HANDLE(IT.IterationHandle), &FindData)) {
     DWORD LastError = ::GetLastError();
     // Check for end.
     if (LastError == ERROR_NO_MORE_FILES)
-      return detail::directory_iterator_destruct(it);
+      return detail::directory_iterator_destruct(IT);
     return mapWindowsError(LastError);
   }
 
@@ -980,16 +982,18 @@ std::error_code detail::directory_iterator_increment(detail::DirIterState &it) {
   if ((FilenameLen == 1 && FindData.cFileName[0] == L'.') ||
       (FilenameLen == 2 && FindData.cFileName[0] == L'.' &&
                            FindData.cFileName[1] == L'.'))
-    return directory_iterator_increment(it);
+    return directory_iterator_increment(IT);
 
-  SmallString<128> directory_entry_path_utf8;
-  if (std::error_code ec =
+  SmallString<128> DirectoryEntryPathUTF8;
+  if (std::error_code EC =
           UTF16ToUTF8(FindData.cFileName, ::wcslen(FindData.cFileName),
-                      directory_entry_path_utf8))
-    return ec;
+                      DirectoryEntryPathUTF8))
+    return EC;
 
-  it.CurrentEntry.replace_filename(Twine(directory_entry_path_utf8),
-                                   status_from_find_data(&FindData));
+  IT.CurrentEntry.replace_filename(
+      Twine(DirectoryEntryPathUTF8),
+      file_type_from_attrs(FindData.dwFileAttributes),
+      status_from_find_data(&FindData));
   return std::error_code();
 }
 

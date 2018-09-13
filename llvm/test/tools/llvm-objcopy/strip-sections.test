@@ -44,7 +44,7 @@ ProgramHeaders:
 #CHECK-NEXT:   HeaderSize: 64
 #CHECK-NEXT:   ProgramHeaderEntrySize: 56
 #CHECK-NEXT:   ProgramHeaderCount: 1
-#CHECK-NEXT:   SectionHeaderEntrySize: 64
+#CHECK-NEXT:   SectionHeaderEntrySize: 0
 #CHECK-NEXT:   SectionHeaderCount: 0
 #CHECK-NEXT:   StringTableSectionIndex: 0
 #CHECK-NEXT: }

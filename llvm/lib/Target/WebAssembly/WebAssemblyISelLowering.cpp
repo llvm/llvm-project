@@ -87,7 +87,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setOperationAction(ISD::VACOPY, MVT::Other, Expand);
   setOperationAction(ISD::VAEND, MVT::Other, Expand);
 
-  for (auto T : {MVT::f32, MVT::f64}) {
+  for (auto T : {MVT::f32, MVT::f64, MVT::v4f32, MVT::v2f64}) {
     // Don't expand the floating-point types to constant pools.
     setOperationAction(ISD::ConstantFP, T, Legal);
     // Expand floating-point comparisons.

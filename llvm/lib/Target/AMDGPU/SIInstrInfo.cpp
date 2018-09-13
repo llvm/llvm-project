@@ -4084,6 +4084,7 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst) const {
       // V_ADD will be removed by "Remove dead machine instructions".
       if (Add &&
           (Add->getOpcode() == AMDGPU::V_ADD_I32_e32 ||
+           Add->getOpcode() == AMDGPU::V_ADD_U32_e32 ||
            Add->getOpcode() == AMDGPU::V_ADD_U32_e64)) {
         static const unsigned SrcNames[2] = {
           AMDGPU::OpName::src0,

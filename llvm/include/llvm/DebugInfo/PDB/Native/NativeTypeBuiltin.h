@@ -25,8 +25,6 @@ public:
                     uint64_t L);
   ~NativeTypeBuiltin() override;
 
-  virtual std::unique_ptr<NativeRawSymbol> clone() const override;
-
   void dump(raw_ostream &OS, int Indent) const override;
 
   PDB_SymType getSymTag() const override;

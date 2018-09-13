@@ -50,8 +50,7 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (MF->getFunction().getCallingConv() == CallingConv::AnyReg)
     return CSR_AArch64_AllRegs_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall)
-    // FIXME: default to AAPCS until we add full support.
-    return CSR_AArch64_AAPCS_SaveList;
+    return CSR_AArch64_AAVPCS_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS)
     return MF->getInfo<AArch64FunctionInfo>()->isSplitCSR() ?
            CSR_AArch64_CXX_TLS_Darwin_PE_SaveList :
@@ -102,8 +101,7 @@ AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return SCS ? CSR_AArch64_CXX_TLS_Darwin_SCS_RegMask
                : CSR_AArch64_CXX_TLS_Darwin_RegMask;
   if (CC == CallingConv::AArch64_VectorCall)
-    // FIXME: default to AAPCS until we add full support.
-    return SCS ? CSR_AArch64_AAPCS_SCS_RegMask : CSR_AArch64_AAPCS_RegMask;
+    return SCS ? CSR_AArch64_AAVPCS_SCS_RegMask : CSR_AArch64_AAVPCS_RegMask;
   if (MF.getSubtarget<AArch64Subtarget>().getTargetLowering()
           ->supportSwiftError() &&
       MF.getFunction().getAttributes().hasAttrSomewhere(Attribute::SwiftError))

@@ -1307,22 +1307,18 @@ let Predicates = [HasBMI2] in {
 //===----------------------------------------------------------------------===//
 // ADCX and ADOX Instructions
 //
+// We don't have patterns for these as there is no advantage over ADC for
+// most code.
 let Predicates = [HasADX], Defs = [EFLAGS], Uses = [EFLAGS],
-    Constraints = "$src1 = $dst", AddedComplexity = 10 in {
+    Constraints = "$src1 = $dst", hasSideEffects = 0 in {
   let SchedRW = [WriteADC], isCommutable = 1 in {
   def ADCX32rr : I<0xF6, MRMSrcReg, (outs GR32:$dst),
                    (ins GR32:$src1, GR32:$src2),
-                   "adcx{l}\t{$src2, $dst|$dst, $src2}",
-                   [(set GR32:$dst, EFLAGS,
-                     (X86adc_flag GR32:$src1, GR32:$src2, EFLAGS))]>, T8PD;
+                   "adcx{l}\t{$src2, $dst|$dst, $src2}", []>, T8PD;
   def ADCX64rr : RI<0xF6, MRMSrcReg, (outs GR64:$dst),
                     (ins GR64:$src1, GR64:$src2),
-                    "adcx{q}\t{$src2, $dst|$dst, $src2}",
-                    [(set GR64:$dst, EFLAGS,
-                      (X86adc_flag GR64:$src1, GR64:$src2, EFLAGS))]>, T8PD;
+                    "adcx{q}\t{$src2, $dst|$dst, $src2}", []>, T8PD;
 
-  // We don't have patterns for ADOX yet.
-  let hasSideEffects = 0 in {
   def ADOX32rr : I<0xF6, MRMSrcReg, (outs GR32:$dst),
                    (ins GR32:$src1, GR32:$src2),
                    "adox{l}\t{$src2, $dst|$dst, $src2}", []>, T8XS;
@@ -1330,26 +1326,17 @@ let Predicates = [HasADX], Defs = [EFLAGS], Uses = [EFLAGS],
   def ADOX64rr : RI<0xF6, MRMSrcReg, (outs GR64:$dst),
                     (ins GR64:$src1, GR64:$src2),
                     "adox{q}\t{$src2, $dst|$dst, $src2}", []>, T8XS;
-  } // hasSideEffects = 0
   } // SchedRW
 
   let mayLoad = 1, SchedRW = [WriteADCLd, ReadAfterLd] in {
   def ADCX32rm : I<0xF6, MRMSrcMem, (outs GR32:$dst),
                    (ins GR32:$src1, i32mem:$src2),
-                   "adcx{l}\t{$src2, $dst|$dst, $src2}",
-                   [(set GR32:$dst, EFLAGS,
-                     (X86adc_flag GR32:$src1, (loadi32 addr:$src2), EFLAGS))]>,
-                   T8PD;
+                   "adcx{l}\t{$src2, $dst|$dst, $src2}", []>, T8PD;
 
   def ADCX64rm : RI<0xF6, MRMSrcMem, (outs GR64:$dst),
                     (ins GR64:$src1, i64mem:$src2),
-                    "adcx{q}\t{$src2, $dst|$dst, $src2}",
-                    [(set GR64:$dst, EFLAGS,
-                      (X86adc_flag GR64:$src1, (loadi64 addr:$src2), EFLAGS))]>,
-                    T8PD;
+                    "adcx{q}\t{$src2, $dst|$dst, $src2}", []>, T8PD;
 
-  // We don't have patterns for ADOX yet.
-  let hasSideEffects = 0 in {
   def ADOX32rm : I<0xF6, MRMSrcMem, (outs GR32:$dst),
                    (ins GR32:$src1, i32mem:$src2),
                    "adox{l}\t{$src2, $dst|$dst, $src2}", []>, T8XS;
@@ -1357,15 +1344,5 @@ let Predicates = [HasADX], Defs = [EFLAGS], Uses = [EFLAGS],
   def ADOX64rm : RI<0xF6, MRMSrcMem, (outs GR64:$dst),
                     (ins GR64:$src1, i64mem:$src2),
                     "adox{q}\t{$src2, $dst|$dst, $src2}", []>, T8XS;
-  } // hasSideEffects = 0
   } // mayLoad = 1, SchedRW = [WriteADCLd]
-}
-
-// Patterns to recognize loads on the LHS of an ADC. We can't make X86adc_flag
-// commutable since it has EFLAGs as an input.
-let Predicates = [HasADX], AddedComplexity = 10 in {
-  def : Pat<(X86adc_flag (loadi32 addr:$src2), GR32:$src1, EFLAGS),
-            (ADCX32rm GR32:$src1, addr:$src2)>;
-  def : Pat<(X86adc_flag (loadi64 addr:$src2), GR64:$src1, EFLAGS),
-            (ADCX64rm GR64:$src1, addr:$src2)>;
 }
