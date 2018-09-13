@@ -44,20 +44,6 @@ namespace dex {
 /// Symbol position in the list of all index symbols sorted by a pre-computed
 /// symbol quality.
 using DocID = uint32_t;
-/// Contains sorted sequence of DocIDs all of which belong to symbols matching
-/// certain criteria, i.e. containing a Search Token. PostingLists are values
-/// for the inverted index.
-// FIXME(kbobyrev): Posting lists for incomplete trigrams (one/two symbols) are
-// likely to be very dense and hence require special attention so that the index
-// doesn't use too much memory. Possible solution would be to construct
-// compressed posting lists which consist of ranges of DocIDs instead of
-// distinct DocIDs. A special case would be the empty query: for that case
-// TrueIterator should be implemented - an iterator which doesn't actually store
-// any PostingList within itself, but "contains" all DocIDs in range
-// [0, IndexSize).
-using PostingList = std::vector<DocID>;
-/// Immutable reference to PostingList object.
-using PostingListRef = llvm::ArrayRef<DocID>;
 
 /// Iterator is the interface for Query Tree node. The simplest type of Iterator
 /// is DocumentIterator which is simply a wrapper around PostingList iterator
@@ -130,11 +116,6 @@ private:
 /// would not be processed. Boosting score is a computationally efficient way
 /// to acquire preliminary scores of requested items.
 std::vector<std::pair<DocID, float>> consume(Iterator &It);
-
-/// Returns a document iterator over given PostingList.
-///
-/// DocumentIterator returns DEFAULT_BOOST_SCORE for each processed item.
-std::unique_ptr<Iterator> create(PostingListRef Documents);
 
 /// Returns AND Iterator which performs the intersection of the PostingLists of
 /// its children.

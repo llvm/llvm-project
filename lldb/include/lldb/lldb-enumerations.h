@@ -57,7 +57,7 @@ enum StateType {
   eStateSuspended, ///< Process or thread is in a suspended state as far
                    ///< as the debugger is concerned while other processes
                    ///< or threads get the chance to run.
-  kLastStateType = eStateSuspended  
+  kLastStateType = eStateSuspended
 };
 
 //----------------------------------------------------------------------
@@ -672,7 +672,8 @@ enum SectionType {
   eSectionTypeDWARFGNUDebugAltLink,
   eSectionTypeDWARFDebugTypes, // DWARF .debug_types section
   eSectionTypeDWARFDebugNames, // DWARF v5 .debug_names
-  eSectionTypeOther
+  eSectionTypeOther,
+  eSectionTypeDWARFDebugLineStr, // DWARF v5 .debug_line_str
 };
 
 FLAGS_ENUM(EmulateInstructionOptions){

@@ -21,6 +21,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_DEX_H
 
 #include "Iterator.h"
+#include "PostingList.h"
 #include "Token.h"
 #include "Trigram.h"
 #include "index/Index.h"

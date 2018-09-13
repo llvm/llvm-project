@@ -48,6 +48,7 @@ add_clang_library(clangDaemon
 
   index/dex/Dex.cpp
   index/dex/Iterator.cpp
+  index/dex/PostingList.cpp
   index/dex/Trigram.cpp
 
   LINK_LIBS

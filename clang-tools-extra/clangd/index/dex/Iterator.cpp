@@ -18,69 +18,6 @@ namespace dex {
 
 namespace {
 
-/// Implements Iterator over a PostingList. DocumentIterator is the most basic
-/// iterator: it doesn't have any children (hence it is the leaf of iterator
-/// tree) and is simply a wrapper around PostingList::const_iterator.
-class DocumentIterator : public Iterator {
-public:
-  explicit DocumentIterator(PostingListRef Documents)
-      : Documents(Documents), Index(std::begin(Documents)) {}
-
-  bool reachedEnd() const override { return Index == std::end(Documents); }
-
-  /// Advances cursor to the next item.
-  void advance() override {
-    assert(!reachedEnd() && "DOCUMENT iterator can't advance() at the end.");
-    ++Index;
-  }
-
-  /// Applies binary search to advance cursor to the next item with DocID equal
-  /// or higher than the given one.
-  void advanceTo(DocID ID) override {
-    assert(!reachedEnd() && "DOCUMENT iterator can't advance() at the end.");
-    // If current ID is beyond requested one, iterator is already in the right
-    // state.
-    if (peek() < ID)
-      Index = std::lower_bound(Index, std::end(Documents), ID);
-  }
-
-  DocID peek() const override {
-    assert(!reachedEnd() && "DOCUMENT iterator can't peek() at the end.");
-    return *Index;
-  }
-
-  float consume() override {
-    assert(!reachedEnd() && "DOCUMENT iterator can't consume() at the end.");
-    return DEFAULT_BOOST_SCORE;
-  }
-
-  size_t estimateSize() const override { return Documents.size(); }
-
-private:
-  llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
-    OS << '[';
-    auto Separator = "";
-    for (auto It = std::begin(Documents); It != std::end(Documents); ++It) {
-      OS << Separator;
-      if (It == Index)
-        OS << '{' << *It << '}';
-      else
-        OS << *It;
-      Separator = ", ";
-    }
-    OS << Separator;
-    if (Index == std::end(Documents))
-      OS << "{END}";
-    else
-      OS << "END";
-    OS << ']';
-    return OS;
-  }
-
-  PostingListRef Documents;
-  PostingListRef::const_iterator Index;
-};
-
 /// Implements Iterator over the intersection of other iterators.
 ///
 /// AndIterator iterates through common items among all children. It becomes
@@ -397,10 +334,6 @@ std::vector<std::pair<DocID, float>> consume(Iterator &It) {
   for (; !It.reachedEnd(); It.advance())
     Result.emplace_back(It.peek(), It.consume());
   return Result;
-}
-
-std::unique_ptr<Iterator> create(PostingListRef Documents) {
-  return llvm::make_unique<DocumentIterator>(Documents);
 }
 
 std::unique_ptr<Iterator>
