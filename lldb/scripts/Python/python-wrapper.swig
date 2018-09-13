@@ -333,6 +333,101 @@ LLDBSWIGPythonCallThreadPlan
     return false;
 }
 
+SWIGEXPORT void *
+LLDBSwigPythonCreateScriptedBreakpointResolver
+(
+    const char *python_class_name,
+    const char *session_dictionary_name,
+    lldb_private::StructuredDataImpl *args_impl,
+    lldb::BreakpointSP &breakpoint_sp
+)
+{
+    using namespace lldb_private;
+
+    if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
+        Py_RETURN_NONE;
+
+    PyErr_Cleaner py_err_cleaner(true);
+
+    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
+    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_class_name, dict);
+
+    if (!pfunc.IsAllocated())
+        return nullptr;
+
+    lldb::SBBreakpoint *bkpt_value = new lldb::SBBreakpoint(breakpoint_sp);
+
+    PythonObject bkpt_arg(PyRefType::Owned, SBTypeToSWIGWrapper(bkpt_value));
+
+    lldb::SBStructuredData *args_value = new lldb::SBStructuredData(args_impl);
+    PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(args_value));
+
+    PythonObject result = pfunc(bkpt_arg, args_arg, dict);
+    // FIXME: At this point we should check that the class we found supports all the methods
+    // that we need.
+
+    if (result.IsAllocated())
+    {
+        // Check that __callback__ is defined:
+        auto callback_func = result.ResolveName<PythonCallable>("__callback__");
+        if (callback_func.IsAllocated())
+            return result.release();
+        else
+            result.release();
+    }
+    Py_RETURN_NONE;
+}
+
+SWIGEXPORT unsigned int
+LLDBSwigPythonCallBreakpointResolver
+(
+    void *implementor,
+    const char *method_name,
+    lldb_private::SymbolContext *sym_ctx
+)
+{
+    using namespace lldb_private;
+
+    PyErr_Cleaner py_err_cleaner(false);
+    PythonObject self(PyRefType::Borrowed, static_cast<PyObject*>(implementor));
+    auto pfunc = self.ResolveName<PythonCallable>(method_name);
+
+    if (!pfunc.IsAllocated())
+        return 0;
+
+    PythonObject result;
+    if (sym_ctx != nullptr) {
+      lldb::SBSymbolContext sb_sym_ctx(sym_ctx);
+      PythonObject sym_ctx_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_sym_ctx));
+      result = pfunc(sym_ctx_arg);
+    } else
+      result = pfunc();
+
+    if (PyErr_Occurred())
+    {
+        PyErr_Print();
+        return 0;
+    }
+
+    // The callback will return a bool, but we're need to also return ints
+    // so we're squirrelling the bool through as an int...  And if you return
+    // nothing, we'll continue.
+    if (strcmp(method_name, "__callback__") == 0) {
+        if (result.get() == Py_False)
+          return 0;
+        else
+          return 1;
+    }
+
+    PythonInteger int_result = result.AsType<PythonInteger>();
+    if (!int_result.IsAllocated())
+        return 0;
+
+    unsigned int ret_val = int_result.GetInteger();
+
+    return ret_val;
+}
+
 // wrapper that calls an optional instance member of an object taking no arguments
 static PyObject*
 LLDBSwigPython_CallOptionalMember

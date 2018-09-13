@@ -219,6 +219,13 @@ public:
                       int max_return_elements,
                       lldb::SBStringList &matches);
 
+    int
+    HandleCompletionWithDescriptions (const char *current_line,
+                                      uint32_t cursor_pos,
+                                      int match_start_point,
+                                      int max_return_elements,
+                                      lldb::SBStringList &matches,
+                                      lldb::SBStringList &descriptions);
     bool
     IsActive ();
 

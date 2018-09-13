@@ -107,6 +107,10 @@ static ScriptInterpreterPython::SWIGPythonCreateScriptedThreadPlan
     g_swig_thread_plan_script = nullptr;
 static ScriptInterpreterPython::SWIGPythonCallThreadPlan
     g_swig_call_thread_plan = nullptr;
+static ScriptInterpreterPython::SWIGPythonCreateScriptedBreakpointResolver
+    g_swig_bkpt_resolver_script = nullptr;
+static ScriptInterpreterPython::SWIGPythonCallBreakpointResolver
+    g_swig_call_bkpt_resolver = nullptr;
 
 static bool g_initialized = false;
 
@@ -1868,6 +1872,84 @@ lldb::StateType ScriptInterpreterPython::ScriptedThreadPlanGetRunState(
     return lldb::eStateRunning;
 }
 
+StructuredData::GenericSP
+ScriptInterpreterPython::CreateScriptedBreakpointResolver(
+    const char *class_name,
+    StructuredDataImpl *args_data,
+    lldb::BreakpointSP &bkpt_sp) {
+    
+  if (class_name == nullptr || class_name[0] == '\0')
+    return StructuredData::GenericSP();
+
+  if (!bkpt_sp.get())
+    return StructuredData::GenericSP();
+
+  Debugger &debugger = bkpt_sp->GetTarget().GetDebugger();
+  ScriptInterpreter *script_interpreter =
+      debugger.GetCommandInterpreter().GetScriptInterpreter();
+  ScriptInterpreterPython *python_interpreter =
+      static_cast<ScriptInterpreterPython *>(script_interpreter);
+
+  if (!script_interpreter)
+    return StructuredData::GenericSP();
+
+  void *ret_val;
+
+  {
+    Locker py_lock(this,
+                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
+
+    ret_val = g_swig_bkpt_resolver_script(
+        class_name, python_interpreter->m_dictionary_name.c_str(),
+        args_data, bkpt_sp);
+  }
+
+  return StructuredData::GenericSP(new StructuredPythonObject(ret_val));
+}
+
+bool
+ScriptInterpreterPython::ScriptedBreakpointResolverSearchCallback(
+    StructuredData::GenericSP implementor_sp,
+    SymbolContext *sym_ctx) {
+  bool should_continue = false;
+  
+  if (implementor_sp) {
+    Locker py_lock(this,
+                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
+    should_continue
+        = g_swig_call_bkpt_resolver(implementor_sp->GetValue(), "__callback__",
+                                    sym_ctx);
+    if (PyErr_Occurred()) {
+      PyErr_Print();
+      PyErr_Clear();
+    }
+  }
+  return should_continue;
+}
+
+lldb::SearchDepth
+ScriptInterpreterPython::ScriptedBreakpointResolverSearchDepth(
+    StructuredData::GenericSP implementor_sp) {
+  int depth_as_int = lldb::eSearchDepthModule;
+  if (implementor_sp) {
+    Locker py_lock(this,
+                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
+    depth_as_int
+        = g_swig_call_bkpt_resolver(implementor_sp->GetValue(), "__get_depth__", nullptr);
+    if (PyErr_Occurred()) {
+      PyErr_Print();
+      PyErr_Clear();
+    }
+  }
+  if (depth_as_int == lldb::eSearchDepthInvalid)
+    return lldb::eSearchDepthModule;
+
+  if (depth_as_int <= lldb::kLastSearchDepthKind)
+    return (lldb::SearchDepth) depth_as_int;
+  else
+    return lldb::eSearchDepthModule;
+}
+
 StructuredData::ObjectSP
 ScriptInterpreterPython::LoadPluginModule(const FileSpec &file_spec,
                                           lldb_private::Status &error) {
@@ -3107,7 +3189,9 @@ void ScriptInterpreterPython::InitializeInterpreter(
     SWIGPythonScriptKeyword_Value swig_run_script_keyword_value,
     SWIGPython_GetDynamicSetting swig_plugin_get,
     SWIGPythonCreateScriptedThreadPlan swig_thread_plan_script,
-    SWIGPythonCallThreadPlan swig_call_thread_plan) {
+    SWIGPythonCallThreadPlan swig_call_thread_plan,
+    SWIGPythonCreateScriptedBreakpointResolver swig_bkpt_resolver_script,
+    SWIGPythonCallBreakpointResolver swig_call_bkpt_resolver) {
   g_swig_init_callback = swig_init_callback;
   g_swig_breakpoint_callback = swig_breakpoint_callback;
   g_swig_watchpoint_callback = swig_watchpoint_callback;
@@ -3134,6 +3218,8 @@ void ScriptInterpreterPython::InitializeInterpreter(
   g_swig_plugin_get = swig_plugin_get;
   g_swig_thread_plan_script = swig_thread_plan_script;
   g_swig_call_thread_plan = swig_call_thread_plan;
+  g_swig_bkpt_resolver_script = swig_bkpt_resolver_script;
+  g_swig_call_bkpt_resolver = swig_call_bkpt_resolver;
 }
 
 void ScriptInterpreterPython::InitializePrivate() {

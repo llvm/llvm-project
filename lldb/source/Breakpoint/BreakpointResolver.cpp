@@ -21,6 +21,7 @@
 #include "lldb/Breakpoint/BreakpointResolverFileLine.h"
 #include "lldb/Breakpoint/BreakpointResolverFileRegex.h"
 #include "lldb/Breakpoint/BreakpointResolverName.h"
+#include "lldb/Breakpoint/BreakpointResolverScripted.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/SearchFilter.h"
@@ -44,9 +45,10 @@ const char *BreakpointResolver::g_ty_to_name[] = {"FileAndLine", "Address",
 
 const char *BreakpointResolver::g_option_names[static_cast<uint32_t>(
     BreakpointResolver::OptionNames::LastOptionName)] = {
-    "AddressOffset", "Exact",       "FileName",     "Inlines",    "Language",
-    "LineNumber",    "Column",      "ModuleName",   "NameMask",   "Offset",
-    "Regex",         "SectionName", "SkipPrologue", "SymbolNames"};
+    "AddressOffset", "Exact",     "FileName",     "Inlines",     "Language",
+    "LineNumber",    "Column",    "ModuleName",   "NameMask",    "Offset",
+    "PythonClass",   "Regex",     "ScriptArgs",   "SectionName", "SearchDepth",
+    "SkipPrologue",  "SymbolNames"};
 
 const char *BreakpointResolver::ResolverTyToName(enum ResolverTy type) {
   if (type > LastKnownResolverType)
@@ -132,6 +134,10 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
     resolver = BreakpointResolverFileRegex::CreateFromStructuredData(
         nullptr, *subclass_options, error);
     break;
+  case PythonResolver:
+    resolver = BreakpointResolverScripted::CreateFromStructuredData(
+        nullptr, *subclass_options, error);
+    break;
   case ExceptionResolver:
     error.SetErrorString("Exception resolvers are hard.");
     break;
@@ -165,6 +171,7 @@ StructuredData::DictionarySP BreakpointResolver::WrapOptionsDict(
 
 void BreakpointResolver::SetBreakpoint(Breakpoint *bkpt) {
   m_breakpoint = bkpt;
+  NotifyBreakpointSet();
 }
 
 void BreakpointResolver::ResolveBreakpointInModules(SearchFilter &filter,
