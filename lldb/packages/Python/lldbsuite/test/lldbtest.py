@@ -2145,6 +2145,35 @@ class TestBase(Base):
 
         return match_object
 
+    def check_completion_with_desc(self, str_input, match_desc_pairs):
+        interp = self.dbg.GetCommandInterpreter()
+        match_strings = lldb.SBStringList()
+        description_strings = lldb.SBStringList()
+        num_matches = interp.HandleCompletionWithDescriptions(str_input, len(str_input), 0, -1, match_strings, description_strings)
+        self.assertEqual(len(description_strings), len(match_strings))
+
+        missing_pairs = []
+        for pair in match_desc_pairs:
+            found_pair = False
+            for i in range(num_matches + 1):
+                match_candidate = match_strings.GetStringAtIndex(i)
+                description_candidate = description_strings.GetStringAtIndex(i)
+                if match_candidate == pair[0] and description_candidate == pair[1]:
+                    found_pair = True
+                    break
+            if not found_pair:
+                missing_pairs.append(pair)
+
+        if len(missing_pairs):
+            error_msg = "Missing pairs:\n"
+            for pair in missing_pairs:
+                error_msg += " [" + pair[0] + ":" + pair[1] + "]\n"
+            error_msg += "Got the following " + str(num_matches) + " completions back:\n"
+            for i in range(num_matches + 1):
+                match_candidate = match_strings.GetStringAtIndex(i)
+                description_candidate = description_strings.GetStringAtIndex(i)
+                error_msg += "[" + match_candidate + ":" + description_candidate + "]\n"
+            self.assertEqual(0, len(missing_pairs), error_msg)
 
     def complete_exactly(self, str_input, patterns):
         self.complete_from_to(str_input, patterns, True)

@@ -37,8 +37,9 @@ namespace lldb_private {
 // number added.
 
 template <typename ValueType>
-int AddNamesMatchingPartialString(const std::map<std::string, ValueType> &in_map,
-                                  llvm::StringRef cmd_str, StringList &matches) {
+int AddNamesMatchingPartialString(
+    const std::map<std::string, ValueType> &in_map, llvm::StringRef cmd_str,
+    StringList &matches, StringList *descriptions = nullptr) {
   int number_added = 0;
 
   const bool add_all = cmd_str.empty();
@@ -47,6 +48,8 @@ int AddNamesMatchingPartialString(const std::map<std::string, ValueType> &in_map
     if (add_all || (iter->first.find(cmd_str, 0) == 0)) {
       ++number_added;
       matches.AppendString(iter->first.c_str());
+      if (descriptions)
+        descriptions->AppendString(iter->second->GetHelp());
     }
   }
 

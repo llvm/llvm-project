@@ -258,13 +258,14 @@ enum ExpressionResults {
 };
 
 enum SearchDepth {
-    eSearchDepthTarget = 0,
+    eSearchDepthInvalid = 0,
+    eSearchDepthTarget,
     eSearchDepthModule,
     eSearchDepthCompUnit,
     eSearchDepthFunction,
     eSearchDepthBlock,
     eSearchDepthAddress,
-    kNumSearchDepthKinds = eSearchDepthAddress
+    kLastSearchDepthKind = eSearchDepthAddress
 };
 
 //----------------------------------------------------------------------

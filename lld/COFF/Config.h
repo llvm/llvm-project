@@ -94,7 +94,8 @@ struct Configuration {
   bool DoICF = true;
   bool TailMerge;
   bool Relocatable = true;
-  bool Force = false;
+  bool ForceMultiple = false;
+  bool ForceUnresolved = false;
   bool Debug = false;
   bool DebugDwarf = false;
   bool DebugGHashes = false;

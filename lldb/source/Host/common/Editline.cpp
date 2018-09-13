@@ -853,19 +853,45 @@ unsigned char Editline::BufferEndCommand(int ch) {
   return CC_NEWLINE;
 }
 
+//------------------------------------------------------------------------------
+/// Prints completions and their descriptions to the given file. Only the
+/// completions in the interval [start, end) are printed.
+//------------------------------------------------------------------------------
+static void PrintCompletion(FILE *output_file, size_t start, size_t end,
+                            StringList &completions, StringList &descriptions) {
+  // This is an 'int' because of printf.
+  int max_len = 0;
+
+  for (size_t i = start; i < end; i++) {
+    const char *completion_str = completions.GetStringAtIndex(i);
+    max_len = std::max((int)strlen(completion_str), max_len);
+  }
+
+  for (size_t i = start; i < end; i++) {
+    const char *completion_str = completions.GetStringAtIndex(i);
+    const char *description_str = descriptions.GetStringAtIndex(i);
+
+    fprintf(output_file, "\n\t%-*s", max_len, completion_str);
+
+    // Print the description if we got one.
+    if (strlen(description_str))
+      fprintf(output_file, " -- %s", description_str);
+  }
+}
+
 unsigned char Editline::TabCommand(int ch) {
   if (m_completion_callback == nullptr)
     return CC_ERROR;
 
   const LineInfo *line_info = el_line(m_editline);
-  StringList completions;
+  StringList completions, descriptions;
   int page_size = 40;
 
   const int num_completions = m_completion_callback(
       line_info->buffer, line_info->cursor, line_info->lastchar,
       0,  // Don't skip any matches (start at match zero)
       -1, // Get all the matches
-      completions, m_completion_callback_baton);
+      completions, descriptions, m_completion_callback_baton);
 
   if (num_completions == 0)
     return CC_ERROR;
@@ -893,10 +919,8 @@ unsigned char Editline::TabCommand(int ch) {
     int num_elements = num_completions + 1;
     fprintf(m_output_file, "\n" ANSI_CLEAR_BELOW "Available completions:");
     if (num_completions < page_size) {
-      for (int i = 1; i < num_elements; i++) {
-        completion_str = completions.GetStringAtIndex(i);
-        fprintf(m_output_file, "\n\t%s", completion_str);
-      }
+      PrintCompletion(m_output_file, 1, num_elements, completions,
+                      descriptions);
       fprintf(m_output_file, "\n");
     } else {
       int cur_pos = 1;
@@ -906,10 +930,10 @@ unsigned char Editline::TabCommand(int ch) {
         int endpoint = cur_pos + page_size;
         if (endpoint > num_elements)
           endpoint = num_elements;
-        for (; cur_pos < endpoint; cur_pos++) {
-          completion_str = completions.GetStringAtIndex(cur_pos);
-          fprintf(m_output_file, "\n\t%s", completion_str);
-        }
+
+        PrintCompletion(m_output_file, cur_pos, endpoint, completions,
+                        descriptions);
+        cur_pos = endpoint;
 
         if (cur_pos >= num_elements) {
           fprintf(m_output_file, "\n");

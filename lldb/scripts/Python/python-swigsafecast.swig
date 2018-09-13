@@ -147,3 +147,17 @@ SBTypeToSWIGWrapper (lldb::SBTypeSummaryOptions* summary_options_sb)
 {
     return SWIG_NewPointerObj((void *) summary_options_sb, SWIGTYPE_p_lldb__SBTypeSummaryOptions, 0);
 }
+
+template <>
+PyObject*
+SBTypeToSWIGWrapper (lldb::SBStructuredData* structured_data_sb)
+{
+    return SWIG_NewPointerObj((void *) structured_data_sb, SWIGTYPE_p_lldb__SBStructuredData, 0);
+}
+
+template <>
+PyObject*
+SBTypeToSWIGWrapper (lldb::SBSymbolContext* sym_ctx_sb)
+{
+    return SWIG_NewPointerObj((void *) sym_ctx_sb, SWIGTYPE_p_lldb__SBSymbolContext, 0);
+}

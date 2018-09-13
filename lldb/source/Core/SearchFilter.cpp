@@ -311,7 +311,7 @@ SearchFilter::DoCUIteration(const ModuleSP &module_sp,
             return Searcher::eCallbackReturnContinue;
           else if (shouldContinue == Searcher::eCallbackReturnStop)
             return shouldContinue;
-        } else {
+        } else if (searcher.GetDepth() == lldb::eSearchDepthFunction) {
           // FIXME Descend to block.
         }
       }
@@ -748,7 +748,15 @@ SearchFilterByModuleListAndCU::SerializeToStructuredData() {
 }
 
 bool SearchFilterByModuleListAndCU::AddressPasses(Address &address) {
-  return true;
+  SymbolContext sym_ctx;
+  address.CalculateSymbolContext(&sym_ctx, eSymbolContextEverything);
+  if (!sym_ctx.comp_unit) {
+    if (m_cu_spec_list.GetSize() != 0)
+      return false; // Has no comp_unit so can't pass the file check.
+  }
+  if (m_cu_spec_list.FindFileIndex(0, sym_ctx.comp_unit, false) == UINT32_MAX)
+        return false; // Fails the file check
+  return SearchFilterByModuleList::ModulePasses(sym_ctx.module_sp); 
 }
 
 bool SearchFilterByModuleListAndCU::CompUnitPasses(FileSpec &fileSpec) {

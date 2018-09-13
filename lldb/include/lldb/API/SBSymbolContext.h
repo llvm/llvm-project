@@ -26,6 +26,8 @@ public:
 
   SBSymbolContext(const lldb::SBSymbolContext &rhs);
 
+  SBSymbolContext(const lldb_private::SymbolContext *sc_ptr);
+
   ~SBSymbolContext();
 
   bool IsValid() const;
@@ -68,8 +70,6 @@ protected:
   const lldb_private::SymbolContext &operator*() const;
 
   lldb_private::SymbolContext *get() const;
-
-  SBSymbolContext(const lldb_private::SymbolContext *sc_ptr);
 
   void SetSymbolContext(const lldb_private::SymbolContext *sc_ptr);
 
