@@ -17,14 +17,14 @@
 
 #include "BenchmarkRunner.h"
 #include "MCInstrDescView.h"
+#include "SnippetGenerator.h"
 
 namespace exegesis {
 
-class LatencyBenchmarkRunner : public BenchmarkRunner {
+class LatencySnippetGenerator : public SnippetGenerator {
 public:
-  LatencyBenchmarkRunner(const LLVMState &State)
-      : BenchmarkRunner(State, InstructionBenchmark::Latency) {}
-  ~LatencyBenchmarkRunner() override;
+  LatencySnippetGenerator(const LLVMState &State) : SnippetGenerator(State) {}
+  ~LatencySnippetGenerator() override;
 
   llvm::Expected<CodeTemplate>
   generateCodeTemplate(unsigned Opcode) const override;
@@ -34,14 +34,21 @@ private:
 
   llvm::Expected<CodeTemplate>
   generateTwoInstructionPrototype(const Instruction &Instr) const;
+};
 
+class LatencyBenchmarkRunner : public BenchmarkRunner {
+public:
+  LatencyBenchmarkRunner(const LLVMState &State)
+      : BenchmarkRunner(State, InstructionBenchmark::Latency) {}
+  ~LatencyBenchmarkRunner() override;
+
+private:
   std::vector<BenchmarkMeasure>
   runMeasurements(const ExecutableFunction &EF, ScratchSpace &Scratch,
                   const unsigned NumRepetitions) const override;
 
   virtual const char *getCounterName() const;
 };
-
 } // namespace exegesis
 
 #endif // LLVM_TOOLS_LLVM_EXEGESIS_LATENCY_H

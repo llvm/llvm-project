@@ -207,9 +207,8 @@ define void @f1() {
 ; 686-O0-NEXT:    subl $-1, %esi
 ; 686-O0-NEXT:    sete %bl
 ; 686-O0-NEXT:    movzbl %bl, %edi
-; 686-O0-NEXT:    xorl %ebp, %ebp
 ; 686-O0-NEXT:    addl $7093, %ecx # imm = 0x1BB5
-; 686-O0-NEXT:    adcxl %ebp, %edx
+; 686-O0-NEXT:    adcl $0, %edx
 ; 686-O0-NEXT:    subl %edi, %ecx
 ; 686-O0-NEXT:    sbbl $0, %edx
 ; 686-O0-NEXT:    setl %bl
@@ -223,8 +222,8 @@ define void @f1() {
 ; 686-O0-NEXT:    movl %ebp, _ZN8struct_210member_2_0E
 ; 686-O0-NEXT:    movl $0, _ZN8struct_210member_2_0E+4
 ; 686-O0-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; 686-O0-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; 686-O0-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; 686-O0-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; 686-O0-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; 686-O0-NEXT:    movl %edi, (%esp) # 4-byte Spill
 ; 686-O0-NEXT:    addl $24, %esp
@@ -241,14 +240,11 @@ define void @f1() {
 ;
 ; 686-LABEL: f1:
 ; 686:       # %bb.0: # %entry
-; 686-NEXT:    pushl %edi
-; 686-NEXT:    .cfi_def_cfa_offset 8
 ; 686-NEXT:    pushl %esi
-; 686-NEXT:    .cfi_def_cfa_offset 12
+; 686-NEXT:    .cfi_def_cfa_offset 8
 ; 686-NEXT:    subl $1, %esp
-; 686-NEXT:    .cfi_def_cfa_offset 13
-; 686-NEXT:    .cfi_offset %esi, -12
-; 686-NEXT:    .cfi_offset %edi, -8
+; 686-NEXT:    .cfi_def_cfa_offset 9
+; 686-NEXT:    .cfi_offset %esi, -8
 ; 686-NEXT:    movl var_5, %edx
 ; 686-NEXT:    movl %edx, %eax
 ; 686-NEXT:    xorl $208307499, %eax # imm = 0xC6A852B
@@ -266,11 +262,10 @@ define void @f1() {
 ; 686-NEXT:    xorl %ecx, %ecx
 ; 686-NEXT:    cmpl $-1, %edx
 ; 686-NEXT:    sete %cl
-; 686-NEXT:    xorl %edi, %edi
 ; 686-NEXT:    addl $7093, %edx # imm = 0x1BB5
-; 686-NEXT:    adcxl %esi, %edi
+; 686-NEXT:    adcl $0, %esi
 ; 686-NEXT:    cmpl %ecx, %edx
-; 686-NEXT:    sbbl $0, %edi
+; 686-NEXT:    sbbl $0, %esi
 ; 686-NEXT:    setl %cl
 ; 686-NEXT:    movzbl %cl, %ecx
 ; 686-NEXT:    movl %ecx, var_57
@@ -278,10 +273,8 @@ define void @f1() {
 ; 686-NEXT:    movl %eax, _ZN8struct_210member_2_0E
 ; 686-NEXT:    movl $0, _ZN8struct_210member_2_0E+4
 ; 686-NEXT:    addl $1, %esp
-; 686-NEXT:    .cfi_def_cfa_offset 12
-; 686-NEXT:    popl %esi
 ; 686-NEXT:    .cfi_def_cfa_offset 8
-; 686-NEXT:    popl %edi
+; 686-NEXT:    popl %esi
 ; 686-NEXT:    .cfi_def_cfa_offset 4
 ; 686-NEXT:    retl
 entry:

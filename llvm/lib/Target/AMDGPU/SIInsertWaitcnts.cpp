@@ -369,7 +369,7 @@ private:
   const SIRegisterInfo *TRI = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
   const MachineLoopInfo *MLI = nullptr;
-  AMDGPU::IsaInfo::IsaVersion IV;
+  AMDGPU::IsaVersion IV;
 
   DenseSet<MachineBasicBlock *> BlockVisitedSet;
   DenseSet<MachineInstr *> TrackedWaitcntSet;
@@ -1841,7 +1841,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
   MLI = &getAnalysis<MachineLoopInfo>();
-  IV = AMDGPU::IsaInfo::getIsaVersion(ST->getFeatureBits());
+  IV = AMDGPU::getIsaVersion(ST->getCPU());
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   ForceEmitZeroWaitcnts = ForceEmitZeroFlag;

@@ -253,7 +253,7 @@ protected:
   /// Instruction info.
   const SIInstrInfo *TII = nullptr;
 
-  IsaInfo::IsaVersion IV;
+  IsaVersion IV;
 
   SICacheControl(const GCNSubtarget &ST);
 
@@ -605,7 +605,7 @@ Optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
 
 SICacheControl::SICacheControl(const GCNSubtarget &ST) {
   TII = ST.getInstrInfo();
-  IV = IsaInfo::getIsaVersion(ST.getFeatureBits());
+  IV = getIsaVersion(ST.getCPU());
 }
 
 /* static */

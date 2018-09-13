@@ -594,6 +594,8 @@ enum class coff_guard_flags : uint32_t {
   FidTableHasFlags = 0x10000000, // Indicates that fid tables are 5 bytes
 };
 
+enum class frame_type : uint16_t { Fpo = 0, Trap = 1, Tss = 2, NonFpo = 3 };
+
 struct coff_load_config_code_integrity {
   support::ulittle16_t Flags;
   support::ulittle16_t Catalog;
@@ -1228,7 +1230,7 @@ struct FpoData {
   bool useBP() const { return (Attributes >> 10) & 1; }
 
   // cbFrame: frame pointer
-  int getFP() const { return Attributes >> 14; }
+  frame_type getFP() const { return static_cast<frame_type>(Attributes >> 14); }
 };
 
 } // end namespace object

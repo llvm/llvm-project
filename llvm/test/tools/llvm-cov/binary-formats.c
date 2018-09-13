@@ -8,6 +8,4 @@ int main(int argc, const char *argv[]) {}
 // RUN: llvm-cov show %S/Inputs/binary-formats.macho64l -instr-profile %t.profdata -path-equivalence=/tmp,%S %s | FileCheck %s
 // RUN: llvm-cov show %S/Inputs/binary-formats.macho32b -instr-profile %t.profdata -path-equivalence=/tmp,%S %s | FileCheck %s
 
-// RUN: llvm-cov export %S/Inputs/binary-formats.macho32l -instr-profile %t.profdata | FileCheck %S/Inputs/binary-formats.canonical.json
 // RUN: llvm-cov export %S/Inputs/binary-formats.macho64l -instr-profile %t.profdata | FileCheck %S/Inputs/binary-formats.canonical.json
-// RUN: llvm-cov export %S/Inputs/binary-formats.macho32b -instr-profile %t.profdata | FileCheck %S/Inputs/binary-formats.canonical.json

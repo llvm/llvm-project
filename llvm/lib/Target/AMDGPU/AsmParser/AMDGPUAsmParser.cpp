@@ -49,6 +49,7 @@
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -917,8 +918,7 @@ public:
       // Currently there is none suitable machinery in the core llvm-mc for this.
       // MCSymbol::isRedefinable is intended for another purpose, and
       // AsmParser::parseDirectiveSet() cannot be specialized for specific target.
-      AMDGPU::IsaInfo::IsaVersion ISA =
-          AMDGPU::IsaInfo::getIsaVersion(getFeatureBits());
+      AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
       MCContext &Ctx = getContext();
       if (ISA.Major >= 6 && AMDGPU::IsaInfo::hasCodeObjectV3(&getSTI())) {
         MCSymbol *Sym =
@@ -1826,7 +1826,7 @@ bool AMDGPUAsmParser::updateGprCountSymbols(RegisterKind RegKind,
                                             unsigned DwordRegIndex,
                                             unsigned RegWidth) {
   // Symbols are only defined for GCN targets
-  if (AMDGPU::IsaInfo::getIsaVersion(getFeatureBits()).Major < 6)
+  if (AMDGPU::getIsaVersion(getSTI().getCPU()).Major < 6)
     return true;
 
   auto SymbolName = getGprCountSymbolName(RegKind);
@@ -2637,18 +2637,18 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
     unsigned &SGPRBlocks) {
   // TODO(scott.linder): These calculations are duplicated from
   // AMDGPUAsmPrinter::getSIProgramInfo and could be unified.
-  IsaInfo::IsaVersion Version = IsaInfo::getIsaVersion(Features);
+  IsaVersion Version = getIsaVersion(getSTI().getCPU());
 
   unsigned NumVGPRs = NextFreeVGPR;
   unsigned NumSGPRs = NextFreeSGPR;
-  unsigned MaxAddressableNumSGPRs = IsaInfo::getAddressableNumSGPRs(Features);
+  unsigned MaxAddressableNumSGPRs = IsaInfo::getAddressableNumSGPRs(&getSTI());
 
   if (Version.Major >= 8 && !Features.test(FeatureSGPRInitBug) &&
       NumSGPRs > MaxAddressableNumSGPRs)
     return OutOfRangeError(SGPRRange);
 
   NumSGPRs +=
-      IsaInfo::getNumExtraSGPRs(Features, VCCUsed, FlatScrUsed, XNACKUsed);
+      IsaInfo::getNumExtraSGPRs(&getSTI(), VCCUsed, FlatScrUsed, XNACKUsed);
 
   if ((Version.Major <= 7 || Features.test(FeatureSGPRInitBug)) &&
       NumSGPRs > MaxAddressableNumSGPRs)
@@ -2657,8 +2657,8 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
   if (Features.test(FeatureSGPRInitBug))
     NumSGPRs = IsaInfo::FIXED_NUM_SGPRS_FOR_INIT_BUG;
 
-  VGPRBlocks = IsaInfo::getNumVGPRBlocks(Features, NumVGPRs);
-  SGPRBlocks = IsaInfo::getNumSGPRBlocks(Features, NumSGPRs);
+  VGPRBlocks = IsaInfo::getNumVGPRBlocks(&getSTI(), NumVGPRs);
+  SGPRBlocks = IsaInfo::getNumSGPRBlocks(&getSTI(), NumSGPRs);
 
   return false;
 }
@@ -2678,8 +2678,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
 
   StringSet<> Seen;
 
-  IsaInfo::IsaVersion IVersion =
-      IsaInfo::getIsaVersion(getSTI().getFeatureBits());
+  IsaVersion IVersion = getIsaVersion(getSTI().getCPU());
 
   SMRange VGPRRange;
   uint64_t NextFreeVGPR = 0;
@@ -2938,8 +2937,7 @@ bool AMDGPUAsmParser::ParseDirectiveHSACodeObjectISA() {
   // If this directive has no arguments, then use the ISA version for the
   // targeted GPU.
   if (getLexer().is(AsmToken::EndOfStatement)) {
-    AMDGPU::IsaInfo::IsaVersion ISA =
-        AMDGPU::IsaInfo::getIsaVersion(getFeatureBits());
+    AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
     getTargetStreamer().EmitDirectiveHSACodeObjectISA(ISA.Major, ISA.Minor,
                                                       ISA.Stepping,
                                                       "AMD", "AMDGPU");
@@ -3001,7 +2999,7 @@ bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
 
 bool AMDGPUAsmParser::ParseDirectiveAMDKernelCodeT() {
   amd_kernel_code_t Header;
-  AMDGPU::initDefaultAMDKernelCodeT(Header, getFeatureBits());
+  AMDGPU::initDefaultAMDKernelCodeT(Header, &getSTI());
 
   while (true) {
     // Lex EndOfStatement.  This is in a while loop, because lexing a comment
@@ -3679,12 +3677,12 @@ void AMDGPUAsmParser::cvtExp(MCInst &Inst, const OperandVector &Operands) {
 
 static bool
 encodeCnt(
-  const AMDGPU::IsaInfo::IsaVersion ISA,
+  const AMDGPU::IsaVersion ISA,
   int64_t &IntVal,
   int64_t CntVal,
   bool Saturate,
-  unsigned (*encode)(const IsaInfo::IsaVersion &Version, unsigned, unsigned),
-  unsigned (*decode)(const IsaInfo::IsaVersion &Version, unsigned))
+  unsigned (*encode)(const IsaVersion &Version, unsigned, unsigned),
+  unsigned (*decode)(const IsaVersion &Version, unsigned))
 {
   bool Failed = false;
 
@@ -3715,8 +3713,7 @@ bool AMDGPUAsmParser::parseCnt(int64_t &IntVal) {
   if (getParser().parseAbsoluteExpression(CntVal))
     return true;
 
-  AMDGPU::IsaInfo::IsaVersion ISA =
-      AMDGPU::IsaInfo::getIsaVersion(getFeatureBits());
+  AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
 
   bool Failed = true;
   bool Sat = CntName.endswith("_sat");
@@ -3751,8 +3748,7 @@ bool AMDGPUAsmParser::parseCnt(int64_t &IntVal) {
 
 OperandMatchResultTy
 AMDGPUAsmParser::parseSWaitCntOps(OperandVector &Operands) {
-  AMDGPU::IsaInfo::IsaVersion ISA =
-      AMDGPU::IsaInfo::getIsaVersion(getFeatureBits());
+  AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
   int64_t Waitcnt = getWaitcntBitMask(ISA);
   SMLoc S = Parser.getTok().getLoc();
 

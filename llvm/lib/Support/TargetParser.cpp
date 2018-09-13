@@ -22,6 +22,7 @@
 using namespace llvm;
 using namespace ARM;
 using namespace AArch64;
+using namespace AMDGPU;
 
 namespace {
 
@@ -947,6 +948,8 @@ bool llvm::AArch64::isX18ReservedByDefault(const Triple &TT) {
          TT.isOSWindows();
 }
 
+namespace {
+
 struct GPUInfo {
   StringLiteral Name;
   StringLiteral CanonicalName;
@@ -954,11 +957,9 @@ struct GPUInfo {
   unsigned Features;
 };
 
-using namespace AMDGPU;
-static constexpr GPUInfo R600GPUs[26] = {
-  // Name         Canonical    Kind       Features
-  //              Name
-  //
+constexpr GPUInfo R600GPUs[26] = {
+  // Name       Canonical    Kind        Features
+  //            Name
   {{"r600"},    {"r600"},    GK_R600,    FEATURE_NONE },
   {{"rv630"},   {"r600"},    GK_R600,    FEATURE_NONE },
   {{"rv635"},   {"r600"},    GK_R600,    FEATURE_NONE },
@@ -989,9 +990,9 @@ static constexpr GPUInfo R600GPUs[26] = {
 
 // This table should be sorted by the value of GPUKind
 // Don't bother listing the implicitly true features
-static constexpr GPUInfo AMDGCNGPUs[32] = {
-  // Name           Canonical    Kind      Features
-  //                Name
+constexpr GPUInfo AMDGCNGPUs[32] = {
+  // Name         Canonical    Kind        Features
+  //              Name
   {{"gfx600"},    {"gfx600"},  GK_GFX600,  FEATURE_FAST_FMA_F32},
   {{"tahiti"},    {"gfx600"},  GK_GFX600,  FEATURE_FAST_FMA_F32},
   {{"gfx601"},    {"gfx601"},  GK_GFX601,  FEATURE_NONE},
@@ -1026,8 +1027,7 @@ static constexpr GPUInfo AMDGCNGPUs[32] = {
   {{"gfx906"},    {"gfx906"},  GK_GFX906,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32},
 };
 
-static const GPUInfo *getArchEntry(AMDGPU::GPUKind AK,
-                                   ArrayRef<GPUInfo> Table) {
+const GPUInfo *getArchEntry(AMDGPU::GPUKind AK, ArrayRef<GPUInfo> Table) {
   GPUInfo Search = { {""}, {""}, AK, AMDGPU::FEATURE_NONE };
 
   auto I = std::lower_bound(Table.begin(), Table.end(), Search,
@@ -1039,6 +1039,8 @@ static const GPUInfo *getArchEntry(AMDGPU::GPUKind AK,
     return nullptr;
   return I;
 }
+
+} // namespace
 
 StringRef llvm::AMDGPU::getArchNameAMDGCN(GPUKind AK) {
   if (const auto *Entry = getArchEntry(AK, AMDGCNGPUs))
@@ -1091,4 +1093,32 @@ void AMDGPU::fillValidArchListAMDGCN(SmallVectorImpl<StringRef> &Values) {
 void AMDGPU::fillValidArchListR600(SmallVectorImpl<StringRef> &Values) {
   for (const auto C : R600GPUs)
     Values.push_back(C.Name);
+}
+
+AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
+  if (GPU == "generic")
+    return {7, 0, 0};
+
+  AMDGPU::GPUKind AK = parseArchAMDGCN(GPU);
+  if (AK == AMDGPU::GPUKind::GK_NONE)
+    return {0, 0, 0};
+
+  switch (AK) {
+  case GK_GFX600: return {6, 0, 0};
+  case GK_GFX601: return {6, 0, 1};
+  case GK_GFX700: return {7, 0, 0};
+  case GK_GFX701: return {7, 0, 1};
+  case GK_GFX702: return {7, 0, 2};
+  case GK_GFX703: return {7, 0, 3};
+  case GK_GFX704: return {7, 0, 4};
+  case GK_GFX801: return {8, 0, 1};
+  case GK_GFX802: return {8, 0, 2};
+  case GK_GFX803: return {8, 0, 3};
+  case GK_GFX810: return {8, 1, 0};
+  case GK_GFX900: return {9, 0, 0};
+  case GK_GFX902: return {9, 0, 2};
+  case GK_GFX904: return {9, 0, 4};
+  case GK_GFX906: return {9, 0, 6};
+  default:        return {0, 0, 0};
+  }
 }

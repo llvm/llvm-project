@@ -19,6 +19,7 @@ add_library(LLVMExegesis
   MCInstrDescView.cpp
   PerfHelper.cpp
   RegisterAliasing.cpp
+  SnippetGenerator.cpp
   Target.cpp
   Uops.cpp
   )

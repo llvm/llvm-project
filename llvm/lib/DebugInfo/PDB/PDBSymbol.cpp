@@ -135,10 +135,6 @@ void PDBSymbol::dumpChildStats() const {
   outs().flush();
 }
 
-std::unique_ptr<PDBSymbol> PDBSymbol::clone() const {
-  return Session.getSymbolById(getSymIndexId());
-}
-
 PDB_SymType PDBSymbol::getSymTag() const { return RawSymbol->getSymTag(); }
 uint32_t PDBSymbol::getSymIndexId() const { return RawSymbol->getSymIndexId(); }
 

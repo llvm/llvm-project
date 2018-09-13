@@ -59,10 +59,6 @@ void NativeTypeEnum::dump(raw_ostream &OS, int Indent) const {
   dumpSymbolField(OS, "volatileType", isVolatileType(), Indent);
 }
 
-std::unique_ptr<NativeRawSymbol> NativeTypeEnum::clone() const {
-  return llvm::make_unique<NativeTypeEnum>(Session, SymbolId, CV);
-}
-
 std::unique_ptr<IPDBEnumSymbols>
 NativeTypeEnum::findChildren(PDB_SymType Type) const {
   switch (Type) {

@@ -779,6 +779,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::v2i64, Subtarget.hasVLX() ? &X86::VR128XRegClass
                                                     : &X86::VR128RegClass);
 
+    setOperationAction(ISD::SDIV, MVT::v2i32, Custom);
+    setOperationAction(ISD::SREM, MVT::v2i32, Custom);
+    setOperationAction(ISD::UDIV, MVT::v2i32, Custom);
+    setOperationAction(ISD::UREM, MVT::v2i32, Custom);
+
     setOperationAction(ISD::MUL,                MVT::v16i8, Custom);
     setOperationAction(ISD::MUL,                MVT::v4i32, Custom);
     setOperationAction(ISD::MUL,                MVT::v2i64, Custom);
@@ -25828,6 +25833,18 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::UDIV:
   case ISD::SREM:
   case ISD::UREM:
+    if (N->getValueType(0) == MVT::v2i32) {
+      // If we're already legalizing via widening, we don't need this since
+      // that will scalarize div/rem.
+      if (getTypeAction(*DAG.getContext(), MVT::v2i32) == TypeWidenVector)
+        return;
+      // Legalize v2i32 div/rem by unrolling. Otherwise we promote to the
+      // v2i64 and unroll later. But then we create i64 scalar ops which
+      // might be slow in 64-bit mode or require a libcall in 32-bit mode.
+      Results.push_back(DAG.UnrollVectorOp(N));
+      return;
+    }
+    LLVM_FALLTHROUGH;
   case ISD::SDIVREM:
   case ISD::UDIVREM: {
     SDValue V = LowerWin64_i128OP(SDValue(N,0), DAG);

@@ -35,7 +35,7 @@ JITSymbolResolverAdapter::lookup(const LookupSet &Symbols) {
   };
 
   auto InternedResult =
-      ES.legacyLookup(ES, std::move(LookupFn), std::move(InternedSymbols),
+      ES.legacyLookup(std::move(LookupFn), std::move(InternedSymbols),
                       false, RegisterDependencies);
 
   if (!InternedResult)

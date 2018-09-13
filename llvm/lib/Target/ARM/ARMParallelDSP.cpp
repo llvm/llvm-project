@@ -521,7 +521,7 @@ static void MatchParallelMACSequences(Reduction &R,
     [&Candidates, &Match](Value *V) -> bool {
 
     auto *I = dyn_cast<Instruction>(V);
-    if (!V)
+    if (!I)
       return false;
 
     Value *MulOp0, *MulOp1;

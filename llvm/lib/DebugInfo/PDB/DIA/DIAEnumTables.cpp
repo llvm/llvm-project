@@ -44,10 +44,3 @@ std::unique_ptr<IPDBTable> DIAEnumTables::getNext() {
 }
 
 void DIAEnumTables::reset() { Enumerator->Reset(); }
-
-DIAEnumTables *DIAEnumTables::clone() const {
-  CComPtr<IDiaEnumTables> EnumeratorClone;
-  if (S_OK != Enumerator->Clone(&EnumeratorClone))
-    return nullptr;
-  return new DIAEnumTables(EnumeratorClone);
-}

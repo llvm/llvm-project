@@ -379,14 +379,7 @@ defm S_DCACHE_DISCARD_X2 : SM_Pseudo_Discards <"s_dcache_discard_x2">;
 //===----------------------------------------------------------------------===//
 
 
-def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{
-  auto Ld = cast<LoadSDNode>(N);
-  return Ld->getAlignment() >= 4  &&
-    ((((Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS) || (Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT)) && !N->isDivergent()) ||
-    (Subtarget->getScalarizeGlobalBehavior() && Ld->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
-     !Ld->isVolatile() && !N->isDivergent() &&
-    static_cast<const SITargetLowering *>(getTargetLowering())->isMemOpHasNoClobberedMemOperand(N)));
-}]>;
+def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{ return isUniformLoad(N);}]>;
 
 def SMRDImm         : ComplexPattern<i64, 2, "SelectSMRDImm">;
 def SMRDImm32       : ComplexPattern<i64, 2, "SelectSMRDImm32">;

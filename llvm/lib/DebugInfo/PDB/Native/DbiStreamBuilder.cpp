@@ -75,11 +75,15 @@ void DbiStreamBuilder::setPublicsStreamIndex(uint32_t Index) {
   PublicsStreamIndex = Index;
 }
 
-void DbiStreamBuilder::addFrameData(const codeview::FrameData &FD) {
-  if (!FrameData.hasValue())
-    FrameData.emplace(false);
+void DbiStreamBuilder::addNewFpoData(const codeview::FrameData &FD) {
+  if (!NewFpoData.hasValue())
+    NewFpoData.emplace(false);
 
-  FrameData->addFrameData(FD);
+  NewFpoData->addFrameData(FD);
+}
+
+void DbiStreamBuilder::addOldFpoData(const object::FpoData &FD) {
+  OldFpoData.push_back(FD);
 }
 
 Error DbiStreamBuilder::addDbgStream(pdb::DbgHeaderType Type,
@@ -286,13 +290,23 @@ Error DbiStreamBuilder::finalize() {
 }
 
 Error DbiStreamBuilder::finalizeMsfLayout() {
-  if (FrameData.hasValue()) {
+  if (NewFpoData.hasValue()) {
     DbgStreams[(int)DbgHeaderType::NewFPO].emplace();
     DbgStreams[(int)DbgHeaderType::NewFPO]->Size =
-        FrameData->calculateSerializedSize();
+        NewFpoData->calculateSerializedSize();
     DbgStreams[(int)DbgHeaderType::NewFPO]->WriteFn =
         [this](BinaryStreamWriter &Writer) {
-          return FrameData->commit(Writer);
+          return NewFpoData->commit(Writer);
+        };
+  }
+
+  if (!OldFpoData.empty()) {
+    DbgStreams[(int)DbgHeaderType::FPO].emplace();
+    DbgStreams[(int)DbgHeaderType::FPO]->Size =
+        sizeof(object::FpoData) * OldFpoData.size();
+    DbgStreams[(int)DbgHeaderType::FPO]->WriteFn =
+        [this](BinaryStreamWriter &Writer) {
+          return Writer.writeArray(makeArrayRef(OldFpoData));
         };
   }
 

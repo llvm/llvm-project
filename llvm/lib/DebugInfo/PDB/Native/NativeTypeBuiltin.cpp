@@ -20,10 +20,6 @@ NativeTypeBuiltin::NativeTypeBuiltin(NativeSession &PDBSession, SymIndexId Id,
 
 NativeTypeBuiltin::~NativeTypeBuiltin() {}
 
-std::unique_ptr<NativeRawSymbol> NativeTypeBuiltin::clone() const {
-  return llvm::make_unique<NativeTypeBuiltin>(Session, SymbolId, Type, Length);
-}
-
 void NativeTypeBuiltin::dump(raw_ostream &OS, int Indent) const {
 }
 
