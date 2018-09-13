@@ -348,7 +348,7 @@ void ClangdLSPServer::onCodeAction(CodeActionParams &Params) {
 
 void ClangdLSPServer::onCompletion(TextDocumentPositionParams &Params) {
   CreateSpaceForTaskHandle();
-  TaskHandle TH = Server.codeComplete(
+  Canceler Cancel = Server.codeComplete(
       Params.textDocument.uri.file(), Params.position, CCOpts,
       [this](llvm::Expected<CodeCompleteResult> List) {
         auto _ = llvm::make_scope_exit([this]() { CleanupTaskHandle(); });
@@ -361,7 +361,7 @@ void ClangdLSPServer::onCompletion(TextDocumentPositionParams &Params) {
           LSPList.items.push_back(R.render(CCOpts));
         return reply(std::move(LSPList));
       });
-  StoreTaskHandle(std::move(TH));
+  StoreTaskHandle(std::move(Cancel));
 }
 
 void ClangdLSPServer::onSignatureHelp(TextDocumentPositionParams &Params) {
@@ -635,8 +635,7 @@ void ClangdLSPServer::onCancelRequest(CancelParams &Params) {
   const auto &It = TaskHandles.find(Params.ID);
   if (It == TaskHandles.end())
     return;
-  if (It->second)
-    It->second->cancel();
+  It->second();
   TaskHandles.erase(It);
 }
 
@@ -659,7 +658,7 @@ void ClangdLSPServer::CreateSpaceForTaskHandle() {
     elog("Creation of space for task handle: {0} failed.", NormalizedID);
 }
 
-void ClangdLSPServer::StoreTaskHandle(TaskHandle TH) {
+void ClangdLSPServer::StoreTaskHandle(Canceler TH) {
   const json::Value *ID = getRequestId();
   if (!ID)
     return;

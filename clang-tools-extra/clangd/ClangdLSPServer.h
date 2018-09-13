@@ -170,9 +170,9 @@ private:
   // destructed instance of ClangdLSPServer.
   ClangdServer Server;
 
-  // Holds task handles for running requets. Key of the map is a serialized
-  // request id.
-  llvm::StringMap<TaskHandle> TaskHandles;
+  // Holds cancelers for running requets. Key of the map is a serialized
+  // request id. FIXME: handle cancellation generically in JSONRPCDispatcher.
+  llvm::StringMap<Canceler> TaskHandles;
   std::mutex TaskHandlesMutex;
 
   // Following three functions are for managing TaskHandles map. They store or
@@ -183,7 +183,7 @@ private:
   // request.
   void CleanupTaskHandle();
   void CreateSpaceForTaskHandle();
-  void StoreTaskHandle(TaskHandle TH);
+  void StoreTaskHandle(Canceler TH);
 };
 } // namespace clangd
 } // namespace clang

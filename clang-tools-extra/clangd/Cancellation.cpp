@@ -13,21 +13,21 @@
 namespace clang {
 namespace clangd {
 
-namespace {
-static Key<ConstTaskHandle> TaskKey;
-} // namespace
-
 char CancelledError::ID = 0;
+static Key<std::shared_ptr<std::atomic<bool>>> FlagKey;
 
-const Task &getCurrentTask() {
-  const auto TH = Context::current().getExisting(TaskKey);
-  assert(TH && "Fetched a nullptr for TaskHandle from context.");
-  return *TH;
+std::pair<Context, Canceler> cancelableTask() {
+  auto Flag = std::make_shared<std::atomic<bool>>();
+  return {
+      Context::current().derive(FlagKey, Flag),
+      [Flag] { *Flag = true; },
+  };
 }
 
-Context setCurrentTask(ConstTaskHandle TH) {
-  assert(TH && "Trying to stash a nullptr as TaskHandle into context.");
-  return Context::current().derive(TaskKey, std::move(TH));
+bool isCancelled() {
+  if (auto *Flag = Context::current().get(FlagKey))
+    return **Flag;
+  return false; // Not in scope of a task.
 }
 
 } // namespace clangd
