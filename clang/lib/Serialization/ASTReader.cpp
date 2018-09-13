@@ -3780,22 +3780,15 @@ void ASTReader::makeModuleVisible(Module *Mod,
 /// visible.
 void ASTReader::mergeDefinitionVisibility(NamedDecl *Def,
                                           NamedDecl *MergedDef) {
-  // FIXME: This doesn't correctly handle the case where MergedDef is visible
-  // in modules other than its owning module. We should instead give the
-  // ASTContext a list of merged definitions for Def.
   if (Def->isHidden()) {
     // If MergedDef is visible or becomes visible, make the definition visible.
     if (!MergedDef->isHidden())
       Def->setVisibleDespiteOwningModule();
-    else if (getContext().getLangOpts().ModulesLocalVisibility) {
+    else {
       getContext().mergeDefinitionIntoModule(
           Def, MergedDef->getImportedOwningModule(),
           /*NotifyListeners*/ false);
       PendingMergedDefinitionsToDeduplicate.insert(Def);
-    } else {
-      auto SubmoduleID = MergedDef->getOwningModuleID();
-      assert(SubmoduleID && "hidden definition in no module");
-      HiddenNamesMap[getSubmodule(SubmoduleID)].push_back(Def);
     }
   }
 }

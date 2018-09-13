@@ -119,10 +119,10 @@ llvm::GlobalVariable *CodeGenVTables::GetAddrOfVTT(const CXXRecordDecl *RD) {
 
   llvm::ArrayType *ArrayType =
     llvm::ArrayType::get(CGM.Int8PtrTy, Builder.getVTTComponents().size());
+  unsigned Align = CGM.getDataLayout().getABITypeAlignment(CGM.Int8PtrTy);
 
-  llvm::GlobalVariable *GV =
-    CGM.CreateOrReplaceCXXRuntimeVariable(Name, ArrayType,
-                                          llvm::GlobalValue::ExternalLinkage);
+  llvm::GlobalVariable *GV = CGM.CreateOrReplaceCXXRuntimeVariable(
+      Name, ArrayType, llvm::GlobalValue::ExternalLinkage, Align);
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   return GV;
 }

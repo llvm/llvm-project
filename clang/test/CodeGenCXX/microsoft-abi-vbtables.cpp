@@ -19,7 +19,7 @@ D d; // Force vbtable emission.
 // C: vbptr C
 //    int c
 
-// CHECK-DAG: @"??_8D@Test1@@7B01@@" = linkonce_odr unnamed_addr constant [4 x i32] [i32 0, i32 8, i32 12, i32 20]
+// CHECK-DAG: @"??_8D@Test1@@7B01@@" = linkonce_odr unnamed_addr constant [4 x i32] [i32 0, i32 8, i32 12, i32 20], comdat, align 4
 // CHECK-DAG: @"??_8D@Test1@@7BB@1@@" = {{.*}} [2 x i32] [i32 0, i32 -4]
 // CHECK-DAG: @"??_8D@Test1@@7BC@1@@" = {{.*}} [2 x i32] [i32 0, i32 -12]
 // CHECK-DAG: @"??_8C@Test1@@7B@" = {{.*}} [2 x i32] [i32 0, i32 8]
