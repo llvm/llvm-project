@@ -87,7 +87,6 @@ static bool isSingleEntrySingleExit(BasicBlock *Entry, const BasicBlock *Exit,
   if (!PDT->dominates(Exit, Entry))
     return false;
 
-  Region.push_back(Entry);
   for (auto I = df_begin(Entry), E = df_end(Entry); I != E;) {
     if (*I == Exit) {
       I.skipChildren();
@@ -230,9 +229,7 @@ private:
                           const BasicBlock *Exit) const {
     if (!Exit)
       return false;
-    // TODO: Find a better metric to compute the size of region being outlined.
-    if (Region.size() == 1)
-      return false;
+
     // Regions with landing pads etc.
     for (const BasicBlock *BB : Region) {
       if (BB->isEHPad() || BB->hasAddressTaken())
@@ -344,8 +341,7 @@ Function *HotColdSplitting::outlineColdBlocks(Function &F,
     BasicBlock *BB = *I;
     if (PSI->isColdBB(BB, BFI) || !HotBlocks.count(BB)) {
       SmallVector<BasicBlock *, 4> ValidColdRegion, Region;
-      auto *BBNode = (*PDT)[BB];
-      auto Exit = BBNode->getIDom()->getBlock();
+      BasicBlock *Exit = (*PDT)[BB]->getIDom()->getBlock();
       // We might need a virtual exit which post-dominates all basic blocks.
       if (!Exit)
         continue;
@@ -360,12 +356,12 @@ Function *HotColdSplitting::outlineColdBlocks(Function &F,
         Exit = (*PDT)[Exit]->getIDom()->getBlock();
       }
       if (ExitColdRegion) {
+        // Do not outline a region with only one block.
+        if (ValidColdRegion.size() == 1)
+          continue;
+
         ++NumColdSESEFound;
         // Candidate for outlining. FIXME: Continue outlining.
-        // FIXME: Shouldn't need uniquing, debug isSingleEntrySingleExit
-        //std::sort(ValidColdRegion.begin(), ValidColdRegion.end());
-        auto last = std::unique(ValidColdRegion.begin(), ValidColdRegion.end());
-        ValidColdRegion.erase(last, ValidColdRegion.end());
         return extractColdRegion(ValidColdRegion, DT, BFI, ORE);
       }
     }
