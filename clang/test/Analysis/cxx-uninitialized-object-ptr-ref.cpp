@@ -22,6 +22,24 @@ void fConcreteIntLocTest() {
 }
 
 //===----------------------------------------------------------------------===//
+// nonloc::LocAsInteger tests.
+//===----------------------------------------------------------------------===//
+
+using intptr_t = long;
+
+struct LocAsIntegerTest {
+  intptr_t ptr; // expected-note{{uninitialized pointee 'reinterpret_cast<char *>(this->ptr)'}}
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  LocAsIntegerTest(void *ptr) : ptr(reinterpret_cast<intptr_t>(ptr)) {} // expected-warning{{1 uninitialized field}}
+};
+
+void fLocAsIntegerTest() {
+  char c;
+  LocAsIntegerTest t(&c);
+}
+
+//===----------------------------------------------------------------------===//
 // Null pointer tests.
 //===----------------------------------------------------------------------===//
 

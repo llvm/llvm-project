@@ -57,9 +57,9 @@ public:
   }
 };
 
-/// Represents a void* field that needs to be casted back to its dynamic type
-/// for a correct note message.
-class NeedsCastLocField final : public FieldNode {
+/// Represents a nonloc::LocAsInteger or void* field, that point to objects, but
+/// needs to be casted back to its dynamic type for a correct note message.
+class NeedsCastLocField : public FieldNode {
   QualType CastBackType;
 
 public:
@@ -71,7 +71,13 @@ public:
   }
 
   virtual void printPrefix(llvm::raw_ostream &Out) const override {
-    Out << "static_cast" << '<' << CastBackType.getAsString() << ">(";
+    // If this object is a nonloc::LocAsInteger.
+    if (getDecl()->getType()->isIntegerType())
+      Out << "reinterpret_cast";
+    // If this pointer's dynamic type is different then it's static type.
+    else
+      Out << "static_cast";
+    Out << '<' << CastBackType.getAsString() << ">(";
   }
 
   virtual void printNode(llvm::raw_ostream &Out) const override {
@@ -106,10 +112,11 @@ static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
 bool FindUninitializedFields::isDereferencableUninit(
     const FieldRegion *FR, FieldChainInfo LocalChain) {
 
-  assert(isDereferencableType(FR->getDecl()->getType()) &&
-         "This method only checks dereferencable objects!");
-
   SVal V = State->getSVal(FR);
+
+  assert((isDereferencableType(FR->getDecl()->getType()) ||
+          V.getAs<nonloc::LocAsInteger>()) &&
+         "This method only checks dereferencable objects!");
 
   if (V.isUnknown() || V.getAs<loc::ConcreteInt>()) {
     IsAnyFieldInitialized = true;
@@ -196,12 +203,14 @@ static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
 
   llvm::SmallSet<const TypedValueRegion *, 5> VisitedRegions;
 
-  // If the static type of the field is a void pointer, we need to cast it back
-  // to the dynamic type before dereferencing.
-  bool NeedsCastBack = isVoidPointer(FR->getDecl()->getType());
-
   SVal V = State->getSVal(FR);
   assert(V.getAsRegion() && "V must have an underlying region!");
+
+  // If the static type of the field is a void pointer, or it is a
+  // nonloc::LocAsInteger, we need to cast it back to the dynamic type before
+  // dereferencing.
+  bool NeedsCastBack = isVoidPointer(FR->getDecl()->getType()) ||
+                       V.getAs<nonloc::LocAsInteger>();
 
   // The region we'd like to acquire.
   const auto *R = V.getAsRegion()->getAs<TypedValueRegion>();
