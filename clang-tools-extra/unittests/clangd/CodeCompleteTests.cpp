@@ -671,7 +671,7 @@ TEST(CompletionTest, CompletionInPreamble) {
     )cpp")
                      .Completions;
   EXPECT_THAT(Results, ElementsAre(Named("ifndef")));
-};
+}
 
 TEST(CompletionTest, DynamicIndexMultiFile) {
   MockFSProvider FS;
