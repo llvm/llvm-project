@@ -25,7 +25,7 @@ void fConcreteIntLocTest() {
 // nonloc::LocAsInteger tests.
 //===----------------------------------------------------------------------===//
 
-using intptr_t = long;
+using intptr_t = unsigned long long;
 
 struct LocAsIntegerTest {
   intptr_t ptr; // expected-note{{uninitialized pointee 'reinterpret_cast<char *>(this->ptr)'}}
