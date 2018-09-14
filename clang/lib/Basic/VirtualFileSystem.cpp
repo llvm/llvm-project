@@ -315,27 +315,16 @@ class RealFSDirIter : public clang::vfs::detail::DirIterImpl {
 
 public:
   RealFSDirIter(const Twine &Path, std::error_code &EC) : Iter(Path, EC) {
-    if (Iter != llvm::sys::fs::directory_iterator()) {
-      llvm::sys::fs::file_status S;
-      std::error_code ErrorCode = llvm::sys::fs::status(Iter->path(), S, true);
-      CurrentEntry = Status::copyWithNewName(S, Iter->path());
-      if (!EC)
-        EC = ErrorCode;
-    }
+    if (Iter != llvm::sys::fs::directory_iterator())
+      CurrentEntry = directory_entry(Iter->path(), Iter->type());
   }
 
   std::error_code increment() override {
     std::error_code EC;
     Iter.increment(EC);
-    if (Iter == llvm::sys::fs::directory_iterator()) {
-      CurrentEntry = Status();
-    } else {
-      llvm::sys::fs::file_status S;
-      std::error_code ErrorCode = llvm::sys::fs::status(Iter->path(), S, true);
-      CurrentEntry = Status::copyWithNewName(S, Iter->path());
-      if (!EC)
-        EC = ErrorCode;
-    }
+    CurrentEntry = (Iter == llvm::sys::fs::directory_iterator())
+                       ? directory_entry()
+                       : directory_entry(Iter->path(), Iter->type());
     return EC;
   }
 };
@@ -446,11 +435,11 @@ class OverlayFSDirIterImpl : public clang::vfs::detail::DirIterImpl {
     while (true) {
       std::error_code EC = incrementDirIter(IsFirstTime);
       if (EC || CurrentDirIter == directory_iterator()) {
-        CurrentEntry = Status();
+        CurrentEntry = directory_entry();
         return EC;
       }
       CurrentEntry = *CurrentDirIter;
-      StringRef Name = llvm::sys::path::filename(CurrentEntry.getName());
+      StringRef Name = llvm::sys::path::filename(CurrentEntry.path());
       if (SeenNames.insert(Name).second)
         return EC; // name not seen before
     }
@@ -850,11 +839,21 @@ class InMemoryDirIterator : public clang::vfs::detail::DirIterImpl {
     if (I != E) {
       SmallString<256> Path(RequestedDirName);
       llvm::sys::path::append(Path, I->second->getFileName());
-      CurrentEntry = detail::getNodeStatus(I->second.get(), Path);
+      sys::fs::file_type Type;
+      switch (I->second->getKind()) {
+        case detail::IME_File:
+        case detail::IME_HardLink:
+          Type = sys::fs::file_type::regular_file;
+          break;
+        case detail::IME_Directory:
+          Type = sys::fs::file_type::directory_file;
+          break;
+      }
+      CurrentEntry = directory_entry(Path.str(), Type);
     } else {
       // When we're at the end, make CurrentEntry invalid and DirIterImpl will
       // do the rest.
-      CurrentEntry = Status();
+      CurrentEntry = directory_entry();
     }
   }
 
@@ -1010,17 +1009,14 @@ public:
   static bool classof(const Entry *E) { return E->getKind() == EK_File; }
 };
 
-class RedirectingFileSystem;
-
 class VFSFromYamlDirIterImpl : public clang::vfs::detail::DirIterImpl {
   std::string Dir;
-  RedirectingFileSystem &FS;
   RedirectingDirectoryEntry::iterator Current, End;
 
   std::error_code incrementImpl();
 
 public:
-  VFSFromYamlDirIterImpl(const Twine &Path, RedirectingFileSystem &FS,
+  VFSFromYamlDirIterImpl(const Twine &Path,
                          RedirectingDirectoryEntry::iterator Begin,
                          RedirectingDirectoryEntry::iterator End,
                          std::error_code &EC);
@@ -1184,8 +1180,8 @@ public:
     }
 
     auto *D = cast<RedirectingDirectoryEntry>(*E);
-    return directory_iterator(std::make_shared<VFSFromYamlDirIterImpl>(Dir,
-        *this, D->contents_begin(), D->contents_end(), EC));
+    return directory_iterator(std::make_shared<VFSFromYamlDirIterImpl>(
+        Dir, D->contents_begin(), D->contents_end(), EC));
   }
 
   void setExternalContentsPrefixDir(StringRef PrefixDir) {
@@ -2079,10 +2075,9 @@ void YAMLVFSWriter::write(llvm::raw_ostream &OS) {
 }
 
 VFSFromYamlDirIterImpl::VFSFromYamlDirIterImpl(
-    const Twine &_Path, RedirectingFileSystem &FS,
-    RedirectingDirectoryEntry::iterator Begin,
+    const Twine &_Path, RedirectingDirectoryEntry::iterator Begin,
     RedirectingDirectoryEntry::iterator End, std::error_code &EC)
-    : Dir(_Path.str()), FS(FS), Current(Begin), End(End) {
+    : Dir(_Path.str()), Current(Begin), End(End) {
   EC = incrementImpl();
 }
 
@@ -2096,23 +2091,21 @@ std::error_code VFSFromYamlDirIterImpl::incrementImpl() {
   while (Current != End) {
     SmallString<128> PathStr(Dir);
     llvm::sys::path::append(PathStr, (*Current)->getName());
-    llvm::ErrorOr<vfs::Status> S = FS.status(PathStr);
-    if (!S) {
-      // Skip entries which do not map to a reliable external content.
-      if (FS.ignoreNonExistentContents() &&
-          S.getError() == llvm::errc::no_such_file_or_directory) {
-        ++Current;
-        continue;
-      } else {
-        return S.getError();
-      }
+    sys::fs::file_type Type;
+    switch ((*Current)->getKind()) {
+      case EK_Directory:
+        Type = sys::fs::file_type::directory_file;
+        break;
+      case EK_File:
+        Type = sys::fs::file_type::regular_file;
+        break;
     }
-    CurrentEntry = *S;
+    CurrentEntry = directory_entry(PathStr.str(), Type);
     break;
   }
 
   if (Current == End)
-    CurrentEntry = Status();
+    CurrentEntry = directory_entry();
   return {};
 }
 
@@ -2130,10 +2123,10 @@ vfs::recursive_directory_iterator::recursive_directory_iterator(FileSystem &FS_,
 vfs::recursive_directory_iterator &
 recursive_directory_iterator::increment(std::error_code &EC) {
   assert(FS && State && !State->empty() && "incrementing past end");
-  assert(State->top()->isStatusKnown() && "non-canonical end iterator");
+  assert(!State->top()->path().empty() && "non-canonical end iterator");
   vfs::directory_iterator End;
-  if (State->top()->isDirectory()) {
-    vfs::directory_iterator I = FS->dir_begin(State->top()->getName(), EC);
+  if (State->top()->type() == sys::fs::file_type::directory_file) {
+    vfs::directory_iterator I = FS->dir_begin(State->top()->path(), EC);
     if (I != End) {
       State->push(I);
       return *this;

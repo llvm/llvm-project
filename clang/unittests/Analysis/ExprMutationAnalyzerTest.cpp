@@ -595,6 +595,96 @@ TEST(ExprMutationAnalyzerTest, FollowConditionalRefNotModified) {
   EXPECT_FALSE(isMutated(Results, AST.get()));
 }
 
+TEST(ExprMutationAnalyzerTest, FollowFuncArgModified) {
+  auto AST =
+      tooling::buildASTFromCode("template <class T> void g(T&& t) { t = 10; }"
+                                "void f() { int x; g(x); }");
+  auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("g(x)"));
+
+  AST = tooling::buildASTFromCode(
+      "void h(int&);"
+      "template <class... Args> void g(Args&&... args) { h(args...); }"
+      "void f() { int x; g(x); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("g(x)"));
+
+  AST = tooling::buildASTFromCode(
+      "void h(int&, int);"
+      "template <class... Args> void g(Args&&... args) { h(args...); }"
+      "void f() { int x, y; g(x, y); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("g(x, y)"));
+  Results = match(withEnclosingCompound(declRefTo("y")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCode(
+      "void h(int, int&);"
+      "template <class... Args> void g(Args&&... args) { h(args...); }"
+      "void f() { int x, y; g(y, x); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("g(y, x)"));
+  Results = match(withEnclosingCompound(declRefTo("y")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCode(
+      "struct S { template <class T> S(T&& t) { t = 10; } };"
+      "void f() { int x; S s(x); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x"));
+
+  AST = tooling::buildASTFromCode(
+      "struct S { template <class T> S(T&& t) : m(++t) { } int m; };"
+      "void f() { int x; S s(x); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x"));
+}
+
+TEST(ExprMutationAnalyzerTest, FollowFuncArgNotModified) {
+  auto AST = tooling::buildASTFromCode("template <class T> void g(T&&) {}"
+                                       "void f() { int x; g(x); }");
+  auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCode("template <class T> void g(T&& t) { t; }"
+                                  "void f() { int x; g(x); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST =
+      tooling::buildASTFromCode("template <class... Args> void g(Args&&...) {}"
+                                "void f() { int x; g(x); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST =
+      tooling::buildASTFromCode("template <class... Args> void g(Args&&...) {}"
+                                "void f() { int y, x; g(y, x); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCode(
+      "void h(int, int&);"
+      "template <class... Args> void g(Args&&... args) { h(args...); }"
+      "void f() { int x, y; g(x, y); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCode(
+      "struct S { template <class T> S(T&& t) { t; } };"
+      "void f() { int x; S s(x); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = tooling::buildASTFromCode(
+      "struct S { template <class T> S(T&& t) : m(t) { } int m; };"
+      "void f() { int x; S s(x); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+}
+
 TEST(ExprMutationAnalyzerTest, ArrayElementModified) {
   const auto AST =
       tooling::buildASTFromCode("void f() { int x[2]; x[0] = 10; }");

@@ -1001,11 +1001,11 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
   for (vfs::directory_iterator Dir = FS.dir_begin(SubframeworksDirName, EC),
                                DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
-    if (!StringRef(Dir->getName()).endswith(".framework"))
+    if (!StringRef(Dir->path()).endswith(".framework"))
       continue;
 
     if (const DirectoryEntry *SubframeworkDir =
-            FileMgr.getDirectory(Dir->getName())) {
+            FileMgr.getDirectory(Dir->path())) {
       // Note: as an egregious but useful hack, we use the real path here and
       // check whether it is actually a subdirectory of the parent directory.
       // This will not be the case if the 'subframework' is actually a symlink
@@ -2377,10 +2377,9 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
     vfs::FileSystem &FS = *SourceMgr.getFileManager().getVirtualFileSystem();
     for (vfs::recursive_directory_iterator I(FS, Dir->getName(), EC), E;
          I != E && !EC; I.increment(EC)) {
-      if (const FileEntry *FE =
-              SourceMgr.getFileManager().getFile(I->getName())) {
+      if (const FileEntry *FE = SourceMgr.getFileManager().getFile(I->path())) {
 
-        Module::Header Header = {I->getName(), FE};
+        Module::Header Header = {I->path(), FE};
         Headers.push_back(std::move(Header));
       }
     }

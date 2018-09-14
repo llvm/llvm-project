@@ -356,6 +356,13 @@ It has several options:
     whether the object itself is initialized. Defaults to false. <br>
     <code>-analyzer-config alpha.cplusplus.UninitializedObject:CheckPointeeInitialization=true</code>.
   </li>
+  <li>
+    "<code>IgnoreRecordsWithField</code>" (string). If supplied, the checker will not
+     analyze structures that have a field with a name or type name that
+     matches the given pattern. Defaults to <code>""</code>.
+
+     <code>-analyzer-config alpha.cplusplus.UninitializedObject:IgnoreRecordsWithField="[Tt]ag|[Kk]ind"</code>.
+  </li>
 </ul></div></div></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>

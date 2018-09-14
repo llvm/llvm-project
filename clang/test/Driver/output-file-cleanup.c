@@ -41,3 +41,4 @@ invalid C code
 // RUN: not %clang -S %t-dir/1.c %t-dir/2.c
 // RUN: test -f %t-dir/1.s
 // RUN: test ! -f %t-dir/2.s
+// RUN: rm -f %t-dir/2.c

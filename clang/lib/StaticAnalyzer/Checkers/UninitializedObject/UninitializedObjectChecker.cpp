@@ -109,6 +109,10 @@ getObjectVal(const CXXConstructorDecl *CtorDecl, CheckerContext &Context);
 static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
                                       CheckerContext &Context);
 
+/// Checks whether RD contains a field with a name or type name that matches
+/// \p Pattern.
+static bool shouldIgnoreRecord(const RecordDecl *RD, StringRef Pattern);
+
 //===----------------------------------------------------------------------===//
 //                  Methods for UninitializedObjectChecker.
 //===----------------------------------------------------------------------===//
@@ -228,6 +232,12 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
     return true;
   }
 
+  if (!Opts.IgnoredRecordsWithFieldPattern.empty() &&
+      shouldIgnoreRecord(RD, Opts.IgnoredRecordsWithFieldPattern)) {
+    IsAnyFieldInitialized = true;
+    return false;
+  }
+
   bool ContainsUninitField = false;
 
   // Are all of this non-union's fields initialized?
@@ -264,15 +274,15 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
       continue;
     }
 
-    if (isDereferencableType(T)) {
+    SVal V = State->getSVal(FieldVal);
+
+    if (isDereferencableType(T) || V.getAs<nonloc::LocAsInteger>()) {
       if (isDereferencableUninit(FR, LocalChain))
         ContainsUninitField = true;
       continue;
     }
 
     if (isPrimitiveType(T)) {
-      SVal V = State->getSVal(FieldVal);
-
       if (isPrimitiveUninit(V)) {
         if (addFieldToUninits(LocalChain.add(RegularField(FR))))
           ContainsUninitField = true;
@@ -442,6 +452,19 @@ static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
   return false;
 }
 
+static bool shouldIgnoreRecord(const RecordDecl *RD, StringRef Pattern) {
+  llvm::Regex R(Pattern);
+
+  for (const FieldDecl *FD : RD->fields()) {
+    if (R.match(FD->getType().getAsString()))
+      return true;
+    if (R.match(FD->getName()))
+      return true;
+  }
+
+  return false;
+}
+
 std::string clang::ento::getVariableName(const FieldDecl *Field) {
   // If Field is a captured lambda variable, Field->getName() will return with
   // an empty string. We can however acquire it's name from the lambda's
@@ -472,10 +495,13 @@ void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
   AnalyzerOptions &AnOpts = Mgr.getAnalyzerOptions();
   UninitObjCheckerOptions &ChOpts = Chk->Opts;
 
-  ChOpts.IsPedantic = AnOpts.getBooleanOption(
-      "Pedantic", /*DefaultVal*/ false, Chk);
-  ChOpts.ShouldConvertNotesToWarnings = AnOpts.getBooleanOption(
-      "NotesAsWarnings", /*DefaultVal*/ false, Chk);
+  ChOpts.IsPedantic =
+      AnOpts.getBooleanOption("Pedantic", /*DefaultVal*/ false, Chk);
+  ChOpts.ShouldConvertNotesToWarnings =
+      AnOpts.getBooleanOption("NotesAsWarnings", /*DefaultVal*/ false, Chk);
   ChOpts.CheckPointeeInitialization = AnOpts.getBooleanOption(
       "CheckPointeeInitialization", /*DefaultVal*/ false, Chk);
+  ChOpts.IgnoredRecordsWithFieldPattern =
+      AnOpts.getOptionAsString("IgnoreRecordsWithField",
+                               /*DefaultVal*/ "", Chk);
 }

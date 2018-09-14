@@ -699,7 +699,8 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
       "/usr/include/mips64el-linux-gnu",
       "/usr/include/mips64el-linux-gnuabi64"};
   const StringRef PPCMultiarchIncludeDirs[] = {
-      "/usr/include/powerpc-linux-gnu"};
+      "/usr/include/powerpc-linux-gnu",
+      "/usr/include/powerpc-linux-gnuspe"};
   const StringRef PPC64MultiarchIncludeDirs[] = {
       "/usr/include/powerpc64-linux-gnu"};
   const StringRef PPC64LEMultiarchIncludeDirs[] = {
