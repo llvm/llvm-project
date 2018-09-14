@@ -1,4 +1,4 @@
-//===----- UninitializedPointer.cpp ------------------------------*- C++ -*-==//
+//===----- UninitializedPointee.cpp ------------------------------*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -90,9 +90,8 @@ public:
 
 // Utility function declarations.
 
-/// Returns whether T can be (transitively) dereferenced to a void pointer type
-/// (void*, void**, ...). The type of the region behind a void pointer isn't
-/// known, and thus FD can not be analyzed.
+/// Returns whether \p T can be (transitively) dereferenced to a void pointer
+/// type (void*, void**, ...).
 static bool isVoidPointer(QualType T);
 
 using DereferenceInfo = std::pair<const TypedValueRegion *, bool>;
@@ -107,9 +106,7 @@ static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
 //                   Methods for FindUninitializedFields.
 //===----------------------------------------------------------------------===//
 
-// Note that pointers/references don't contain fields themselves, so in this
-// function we won't add anything to LocalChain.
-bool FindUninitializedFields::isPointerOrReferenceUninit(
+bool FindUninitializedFields::isDereferencableUninit(
     const FieldRegion *FR, FieldChainInfo LocalChain) {
 
   assert(isDereferencableType(FR->getDecl()->getType()) &&
@@ -222,12 +219,11 @@ static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
   while (const MemRegion *Tmp = State->getSVal(R, DynT).getAsRegion()) {
 
     R = Tmp->getAs<TypedValueRegion>();
-
     if (!R)
       return None;
 
     // We found a cyclic pointer, like int *ptr = (int *)&ptr.
-    // TODO: Report these fields too.
+    // TODO: Should we report these fields too?
     if (!VisitedRegions.insert(R).second)
       return None;
 

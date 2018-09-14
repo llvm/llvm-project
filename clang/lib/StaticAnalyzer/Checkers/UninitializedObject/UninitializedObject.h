@@ -26,31 +26,36 @@
 namespace clang {
 namespace ento {
 
-/// Represent a single field. This is only an interface to abstract away special
-/// cases like pointers/references.
+/// A lightweight polymorphic wrapper around FieldRegion *. We'll use this
+/// interface to store addinitional information about fields. As described
+/// later, a list of these objects (i.e. "fieldchain") will be constructed and
+/// used for printing note messages should an uninitialized value be found.
 class FieldNode {
 protected:
   const FieldRegion *FR;
 
+  /// FieldNodes are never meant to be created on the heap, see
+  /// FindUninitializedFields::addFieldToUninits().
   /* non-virtual */ ~FieldNode() = default;
 
 public:
   FieldNode(const FieldRegion *FR) : FR(FR) {}
 
+  // We'll delete all of these special member functions to force the users of
+  // this interface to only store references to FieldNode objects in containers.
   FieldNode() = delete;
   FieldNode(const FieldNode &) = delete;
   FieldNode(FieldNode &&) = delete;
   FieldNode &operator=(const FieldNode &) = delete;
   FieldNode &operator=(const FieldNode &&) = delete;
 
-  /// Profile - Used to profile the contents of this object for inclusion in a
-  /// FoldingSet.
   void Profile(llvm::FoldingSetNodeID &ID) const { ID.AddPointer(this); }
 
-  // Helper method for uniqueing.
+  /// Helper method for uniqueing.
   bool isSameRegion(const FieldRegion *OtherFR) const {
-    // Special FieldNode descendants may wrap nullpointers -- we wouldn't like
-    // to unique these objects.
+    // Special FieldNode descendants may wrap nullpointers (for example if they
+    // describe a special relationship between two elements of the fieldchain)
+    // -- we wouldn't like to unique these objects.
     if (FR == nullptr)
       return false;
 
@@ -63,19 +68,22 @@ public:
     return FR->getDecl();
   }
 
-  // When a fieldchain is printed (a list of FieldNode objects), it will have
-  // the following format:
-  // <note message>'<prefix>this-><node><separator><node><separator>...<node>'
+  // When a fieldchain is printed, it will have the following format (without
+  // newline, indices are in order of insertion, from 1 to n):
+  //
+  // <note_message_n>'<prefix_n><prefix_n-1>...<prefix_1>
+  //       this-><node_1><separator_1><node_2><separator_2>...<node_n>'
 
-  /// If this is the last element of the fieldchain, this method will be called.
+  /// If this is the last element of the fieldchain, this method will print the
+  /// note message associated with it.
   /// The note message should state something like "uninitialized field" or
   /// "uninitialized pointee" etc.
   virtual void printNoteMsg(llvm::raw_ostream &Out) const = 0;
 
-  /// Print any prefixes before the fieldchain.
+  /// Print any prefixes before the fieldchain. Could contain casts, etc.
   virtual void printPrefix(llvm::raw_ostream &Out) const = 0;
 
-  /// Print the node. Should contain the name of the field stored in getRegion.
+  /// Print the node. Should contain the name of the field stored in FR.
   virtual void printNode(llvm::raw_ostream &Out) const = 0;
 
   /// Print the separator. For example, fields may be separated with '.' or
@@ -89,14 +97,14 @@ public:
 /// even if Field is a captured lambda variable.
 std::string getVariableName(const FieldDecl *Field);
 
-/// Represents a field chain. A field chain is a vector of fields where the
-/// first element of the chain is the object under checking (not stored), and
-/// every other element is a field, and the element that precedes it is the
-/// object that contains it.
+/// Represents a field chain. A field chain is a list of fields where the first
+/// element of the chain is the object under checking (not stored), and every
+/// other element is a field, and the element that precedes it is the object
+/// that contains it.
 ///
 /// Note that this class is immutable (essentially a wrapper around an
-/// ImmutableList), and new elements can only be added by creating new
-/// FieldChainInfo objects through add().
+/// ImmutableList), new FieldChainInfo objects may be created by member
+/// functions such as add() and replaceHead().
 class FieldChainInfo {
 public:
   using FieldChainImpl = llvm::ImmutableListImpl<const FieldNode &>;
@@ -116,7 +124,11 @@ public:
   FieldChainInfo(FieldChain::Factory &F) : ChainFactory(F) {}
   FieldChainInfo(const FieldChainInfo &Other) = default;
 
+  /// Constructs a new FieldChainInfo object with \p FN appended.
   template <class FieldNodeT> FieldChainInfo add(const FieldNodeT &FN);
+
+  /// Constructs a new FieldChainInfo object with \p FN as the new head of the
+  /// list.
   template <class FieldNodeT> FieldChainInfo replaceHead(const FieldNodeT &FN);
 
   bool contains(const FieldRegion *FR) const;
@@ -124,6 +136,7 @@ public:
 
   const FieldRegion *getUninitRegion() const;
   const FieldNode &getHead() { return Chain.getHead(); }
+
   void printNoteMsg(llvm::raw_ostream &Out) const;
 };
 
@@ -161,19 +174,21 @@ public:
   const UninitFieldMap &getUninitFields() { return UninitFields; }
 
   /// Returns whether the analyzed region contains at least one initialized
-  /// field.
+  /// field. Note that this includes subfields as well, not just direct ones,
+  /// and will return false if an uninitialized pointee is found with
+  /// CheckPointeeInitialization enabled.
   bool isAnyFieldInitialized() { return IsAnyFieldInitialized; }
 
 private:
-  // For the purposes of this checker, we'll regard the object under checking as
-  // a directed tree, where
+  // For the purposes of this checker, we'll regard the analyzed region as a
+  // directed tree, where
   //   * the root is the object under checking
   //   * every node is an object that is
   //     - a union
   //     - a non-union record
-  //     - a pointer/reference
+  //     - dereferencable (see isDereferencableType())
   //     - an array
-  //     - of a primitive type, which we'll define later in a helper function.
+  //     - of a primitive type (see isPrimitiveType())
   //   * the parent of each node is the object that contains it
   //   * every leaf is an array, a primitive object, a nullptr or an undefined
   //   pointer.
@@ -215,22 +230,20 @@ private:
   // We'll traverse each node of the above graph with the appropiate one of
   // these methods:
 
-  /// This method checks a region of a union object, and returns true if no
-  /// field is initialized within the region.
+  /// Checks the region of a union object, and returns true if no field is
+  /// initialized within the region.
   bool isUnionUninit(const TypedValueRegion *R);
 
-  /// This method checks a region of a non-union object, and returns true if
-  /// an uninitialized field is found within the region.
+  /// Checks a region of a non-union object, and returns true if an
+  /// uninitialized field is found within the region.
   bool isNonUnionUninit(const TypedValueRegion *R, FieldChainInfo LocalChain);
 
-  /// This method checks a region of a pointer or reference object, and returns
-  /// true if the ptr/ref object itself or any field within the pointee's region
-  /// is uninitialized.
-  bool isPointerOrReferenceUninit(const FieldRegion *FR,
-                                  FieldChainInfo LocalChain);
-
-  /// This method returns true if the value of a primitive object is
+  /// Checks a region of a pointer or reference object, and returns true if the
+  /// ptr/ref object itself or any field within the pointee's region is
   /// uninitialized.
+  bool isDereferencableUninit(const FieldRegion *FR, FieldChainInfo LocalChain);
+
+  /// Returns true if the value of a primitive object is uninitialized.
   bool isPrimitiveUninit(const SVal &V);
 
   // Note that we don't have a method for arrays -- the elements of an array are
@@ -249,11 +262,8 @@ private:
   bool addFieldToUninits(FieldChainInfo LocalChain);
 };
 
-/// Returns true if T is a primitive type. We defined this type so that for
-/// objects that we'd only like analyze as much as checking whether their
-/// value is undefined or not, such as ints and doubles, can be analyzed with
-/// ease. This also helps ensuring that every special field type is handled
-/// correctly.
+/// Returns true if T is a primitive type. An object of a primitive type only
+/// needs to be analyzed as much as checking whether their value is undefined.
 inline bool isPrimitiveType(const QualType &T) {
   return T->isBuiltinType() || T->isEnumeralType() ||
          T->isMemberPointerType() || T->isBlockPointerType() ||

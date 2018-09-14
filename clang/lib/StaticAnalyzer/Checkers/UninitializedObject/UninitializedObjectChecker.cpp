@@ -94,7 +94,9 @@ public:
 };
 
 /// Represents that the FieldNode that comes after this is declared in a base
-/// of the previous FieldNode.
+/// of the previous FieldNode. As such, this descendant doesn't wrap a
+/// FieldRegion, and is purely a tool to describe a relation between two other
+/// FieldRegion wrapping descendants.
 class BaseClass final : public FieldNode {
   const QualType BaseClassT;
 
@@ -296,7 +298,7 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
     }
 
     if (isDereferencableType(T)) {
-      if (isPointerOrReferenceUninit(FR, LocalChain))
+      if (isDereferencableUninit(FR, LocalChain))
         ContainsUninitField = true;
       continue;
     }
@@ -314,7 +316,8 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
     llvm_unreachable("All cases are handled!");
   }
 
-  // Checking bases.
+  // Checking bases. The checker will regard inherited data members as direct
+  // fields.
   const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
   if (!CXXRD)
     return ContainsUninitField;
@@ -361,6 +364,9 @@ bool FindUninitializedFields::isPrimitiveUninit(const SVal &V) {
 
 const FieldRegion *FieldChainInfo::getUninitRegion() const {
   assert(!Chain.isEmpty() && "Empty fieldchain!");
+
+  // ImmutableList::getHead() isn't a const method, hence the not too nice
+  // implementation.
   return (*Chain.begin()).getRegion();
 }
 
@@ -375,31 +381,11 @@ bool FieldChainInfo::contains(const FieldRegion *FR) const {
 /// Prints every element except the last to `Out`. Since ImmutableLists store
 /// elements in reverse order, and have no reverse iterators, we use a
 /// recursive function to print the fieldchain correctly. The last element in
-/// the chain is to be printed by `print`.
+/// the chain is to be printed by `FieldChainInfo::print`.
 static void printTail(llvm::raw_ostream &Out,
                       const FieldChainInfo::FieldChainImpl *L);
 
-// TODO: This function constructs an incorrect string if a void pointer is a
-// part of the chain:
-//
-//   struct B { int x; }
-//
-//   struct A {
-//     void *vptr;
-//     A(void* vptr) : vptr(vptr) {}
-//   };
-//
-//   void f() {
-//     B b;
-//     A a(&b);
-//   }
-//
-// The note message will be "uninitialized field 'this->vptr->x'", even though
-// void pointers can't be dereferenced. This should be changed to "uninitialized
-// field 'static_cast<B*>(this->vptr)->x'".
-//
-// TODO: This function constructs an incorrect fieldchain string in the
-// following case:
+// FIXME: This function constructs an incorrect string in the following case:
 //
 //   struct Base { int x; };
 //   struct D1 : Base {}; struct D2 : Base {};
@@ -515,6 +501,7 @@ std::string clang::ento::getVariableName(const FieldDecl *Field) {
 
 void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
   auto Chk = Mgr.registerChecker<UninitializedObjectChecker>();
+
   Chk->IsPedantic = Mgr.getAnalyzerOptions().getBooleanOption(
       "Pedantic", /*DefaultVal*/ false, Chk);
   Chk->ShouldConvertNotesToWarnings = Mgr.getAnalyzerOptions().getBooleanOption(
