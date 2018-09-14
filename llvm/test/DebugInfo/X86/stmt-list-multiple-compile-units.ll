@@ -15,7 +15,7 @@
 ; CHECK: DW_AT_high_pc [DW_FORM_data4]          (0x00000010)
 
 ; CHECK: DW_TAG_compile_unit
-; CHECK: DW_AT_stmt_list [DW_FORM_sec_offset]   (0x0000003c)
+; CHECK: DW_AT_stmt_list [DW_FORM_sec_offset]   (0x0000003d)
 ; CHECK: DW_AT_low_pc [DW_FORM_addr]            (0x0000000000000010)
 ; CHECK: DW_AT_high_pc [DW_FORM_data4]          (0x00000009)
 ; CHECK: DW_TAG_subprogram
@@ -26,13 +26,13 @@
 ; CHECK: .debug_line contents:
 ; CHECK-NEXT: debug_line[{{.*}}]
 ; CHECK-NEXT: Line table prologue:
-; CHECK-NEXT: total_length: 0x00000038
+; CHECK-NEXT: total_length: 0x00000039
 ; CHECK: file_names[  1]:
 ; CHECK-NEXT: name: "simple.c"
 ; CHECK-NEXT: dir_index: 0
 ; CHECK: debug_line[{{.*}}]
 ; CHECK-NEXT: Line table prologue:
-; CHECK-NEXT: total_length: 0x00000039
+; CHECK-NEXT: total_length: 0x0000003a
 ; CHECK: file_names[  1]:
 ; CHECK-NEXT: name: "simple2.c"
 ; CHECK-NEXT: dir_index: 0
