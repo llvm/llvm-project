@@ -657,6 +657,22 @@ TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
               UnorderedElementsAre(Named("local"), Named("preamble")));
 }
 
+// This verifies that we get normal preprocessor completions in the preamble.
+// This is a regression test for an old bug: if we override the preamble and
+// try to complete inside it, clang kicks our completion point just outside the
+// preamble, resulting in always getting top-level completions.
+TEST(CompletionTest, CompletionInPreamble) {
+  EXPECT_THAT(completions(R"cpp(
+    #ifnd^ef FOO_H_
+    #define BAR_H_
+    #include <bar.h>
+    int foo() {}
+    #endif
+    )cpp")
+                  .Completions,
+              ElementsAre(Named("ifndef")));
+};
+
 TEST(CompletionTest, DynamicIndexMultiFile) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
