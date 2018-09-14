@@ -696,8 +696,10 @@ LLVM_DUMP_METHOD void SDDbgValue::dump(raw_ostream &OS) const {
  if (kind==SDNODE)
    OS << '(' << u.s.ResNo << ')';
  OS << ":\"" << Var->getName() << '"';
+#ifndef NDEBUG
  if (Expr->getNumElements())
    Expr->dump();
+#endif
 }
 
 /// Return true if this node is so simple that we should just print it inline
