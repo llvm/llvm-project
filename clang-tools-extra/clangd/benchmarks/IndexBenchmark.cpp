@@ -101,9 +101,11 @@ int main(int argc, char *argv[]) {
   }
   IndexFilename = argv[1];
   RequestsFilename = argv[2];
-  // Trim first two arguments of the benchmark invocation.
-  argv += 3;
-  argc -= 3;
+  // Trim first two arguments of the benchmark invocation and pretend no
+  // arguments were passed in the first place.
+  argv[2] = argv[0];
+  argv += 2;
+  argc -= 2;
   ::benchmark::Initialize(&argc, argv);
   ::benchmark::RunSpecifiedBenchmarks();
 }
