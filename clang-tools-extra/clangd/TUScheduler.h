@@ -176,7 +176,7 @@ private:
 };
 
 /// Runs \p Action asynchronously with a new std::thread. The context will be
-/// propogated.
+/// propagated.
 template <typename T>
 std::future<T> runAsync(llvm::unique_function<T()> Action) {
   return std::async(std::launch::async,
