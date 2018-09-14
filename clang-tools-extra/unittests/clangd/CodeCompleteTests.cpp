@@ -662,15 +662,15 @@ TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
 // try to complete inside it, clang kicks our completion point just outside the
 // preamble, resulting in always getting top-level completions.
 TEST(CompletionTest, CompletionInPreamble) {
-  EXPECT_THAT(completions(R"cpp(
+  auto Results = completions(R"cpp(
     #ifnd^ef FOO_H_
     #define BAR_H_
     #include <bar.h>
     int foo() {}
     #endif
     )cpp")
-                  .Completions,
-              ElementsAre(Named("ifndef")));
+                     .Completions;
+  EXPECT_THAT(Results, ElementsAre(Named("ifndef")));
 };
 
 TEST(CompletionTest, DynamicIndexMultiFile) {
