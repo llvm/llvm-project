@@ -252,9 +252,12 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
          !R->getValueType()->isUnionType() &&
          "This method only checks non-union record objects!");
 
-  const RecordDecl *RD =
-      R->getValueType()->getAs<RecordType>()->getDecl()->getDefinition();
-  assert(RD && "Referred record has no definition");
+  const RecordDecl *RD = R->getValueType()->getAsRecordDecl()->getDefinition();
+
+  if (!RD) {
+    IsAnyFieldInitialized = true;
+    return true;
+  }
 
   bool ContainsUninitField = false;
 
@@ -292,8 +295,7 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
       continue;
     }
 
-    if (T->isAnyPointerType() || T->isReferenceType() ||
-        T->isBlockPointerType()) {
+    if (isDereferencableType(T)) {
       if (isPointerOrReferenceUninit(FR, LocalChain))
         ContainsUninitField = true;
       continue;
@@ -487,7 +489,7 @@ static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
   return false;
 }
 
-StringRef clang::ento::getVariableName(const FieldDecl *Field) {
+std::string clang::ento::getVariableName(const FieldDecl *Field) {
   // If Field is a captured lambda variable, Field->getName() will return with
   // an empty string. We can however acquire it's name from the lambda's
   // captures.
@@ -496,7 +498,16 @@ StringRef clang::ento::getVariableName(const FieldDecl *Field) {
   if (CXXParent && CXXParent->isLambda()) {
     assert(CXXParent->captures_begin());
     auto It = CXXParent->captures_begin() + Field->getFieldIndex();
-    return It->getCapturedVar()->getName();
+
+    if (It->capturesVariable())
+      return llvm::Twine("/*captured variable*/" +
+                         It->getCapturedVar()->getName())
+          .str();
+
+    if (It->capturesThis())
+      return "/*'this' capture*/";
+
+    llvm_unreachable("No other capture type is expected!");
   }
 
   return Field->getName();

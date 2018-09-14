@@ -87,7 +87,7 @@ public:
 
 /// Returns with Field's name. This is a helper function to get the correct name
 /// even if Field is a captured lambda variable.
-StringRef getVariableName(const FieldDecl *Field);
+std::string getVariableName(const FieldDecl *Field);
 
 /// Represents a field chain. A field chain is a vector of fields where the
 /// first element of the chain is the object under checking (not stored), and
@@ -255,7 +255,13 @@ private:
 /// ease. This also helps ensuring that every special field type is handled
 /// correctly.
 inline bool isPrimitiveType(const QualType &T) {
-  return T->isBuiltinType() || T->isEnumeralType() || T->isMemberPointerType();
+  return T->isBuiltinType() || T->isEnumeralType() ||
+         T->isMemberPointerType() || T->isBlockPointerType() ||
+         T->isFunctionType();
+}
+
+inline bool isDereferencableType(const QualType &T) {
+  return T->isAnyPointerType() || T->isReferenceType();
 }
 
 // Template method definitions.
