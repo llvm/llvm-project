@@ -317,6 +317,23 @@ namespace MemcpyEtc {
   static_assert(test_wmemmove(0, 3, 2) == 4234); // expected-error {{constant}} expected-note {{in call}}
   static_assert(test_wmemmove(2, 0, 3) == 4234); // expected-error {{constant}} expected-note {{in call}}
 
+#define fold(x) (__builtin_constant_p(0) ? (x) : (x))
+
+  wchar_t global;
+  constexpr wchar_t *null = 0;
+  static_assert(__builtin_memcpy(&global, null, sizeof(wchar_t))); // expected-error {{}} expected-note {{source of 'memcpy' is nullptr}}
+  static_assert(__builtin_memmove(&global, null, sizeof(wchar_t))); // expected-error {{}} expected-note {{source of 'memmove' is nullptr}}
+  static_assert(__builtin_wmemcpy(&global, null, sizeof(wchar_t))); // expected-error {{}} expected-note {{source of 'wmemcpy' is nullptr}}
+  static_assert(__builtin_wmemmove(&global, null, sizeof(wchar_t))); // expected-error {{}} expected-note {{source of 'wmemmove' is nullptr}}
+  static_assert(__builtin_memcpy(null, &global, sizeof(wchar_t))); // expected-error {{}} expected-note {{destination of 'memcpy' is nullptr}}
+  static_assert(__builtin_memmove(null, &global, sizeof(wchar_t))); // expected-error {{}} expected-note {{destination of 'memmove' is nullptr}}
+  static_assert(__builtin_wmemcpy(null, &global, sizeof(wchar_t))); // expected-error {{}} expected-note {{destination of 'wmemcpy' is nullptr}}
+  static_assert(__builtin_wmemmove(null, &global, sizeof(wchar_t))); // expected-error {{}} expected-note {{destination of 'wmemmove' is nullptr}}
+  static_assert(__builtin_memcpy(&global, fold((wchar_t*)123), sizeof(wchar_t))); // expected-error {{}} expected-note {{source of 'memcpy' is (void *)123}}
+  static_assert(__builtin_memcpy(fold(reinterpret_cast<wchar_t*>(123)), &global, sizeof(wchar_t))); // expected-error {{}} expected-note {{destination of 'memcpy' is (void *)123}}
+  constexpr struct Incomplete *null_incomplete = 0;
+  static_assert(__builtin_memcpy(null_incomplete, null_incomplete, sizeof(wchar_t))); // expected-error {{}} expected-note {{source of 'memcpy' is nullptr}}
+
   // Copying is permitted for any trivially-copyable type.
   struct Trivial { char k; short s; constexpr bool ok() { return k == 3 && s == 4; } };
   constexpr bool test_trivial() {

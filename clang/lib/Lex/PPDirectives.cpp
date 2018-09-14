@@ -1879,9 +1879,37 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
             Callbacks ? &RelativePath : nullptr, &SuggestedModule, &IsMapped);
         if (File) {
           SourceRange Range(FilenameTok.getLocation(), CharEnd);
-          Diag(FilenameTok, diag::err_pp_file_not_found_not_fatal) <<
+          Diag(FilenameTok, diag::err_pp_file_not_found_angled_include_not_fatal) <<
             Filename <<
             FixItHint::CreateReplacement(Range, "\"" + Filename.str() + "\"");
+        }
+      }
+
+      // Check for likely typos due to leading or trailing non-isAlphanumeric
+      // characters
+      if (!File) {
+        StringRef OriginalFilename = Filename;
+        while (!isAlphanumeric(Filename.front())) {
+          Filename = Filename.drop_front();
+        }
+        while (!isAlphanumeric(Filename.back())) {
+          Filename = Filename.drop_back();
+        }
+
+        File = LookupFile(
+            FilenameLoc,
+            LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename, isAngled,
+            LookupFrom, LookupFromFile, CurDir,
+            Callbacks ? &SearchPath : nullptr,
+            Callbacks ? &RelativePath : nullptr, &SuggestedModule, &IsMapped);
+        if (File) {
+          SourceRange Range(FilenameTok.getLocation(), CharEnd);
+          auto Hint = isAngled ? FixItHint::CreateReplacement(
+                                     Range, "<" + Filename.str() + ">")
+                               : FixItHint::CreateReplacement(
+                                     Range, "\"" + Filename.str() + "\"");
+          Diag(FilenameTok, diag::err_pp_file_not_found_typo_not_fatal)
+              << OriginalFilename << Filename << Hint;
         }
       }
 
