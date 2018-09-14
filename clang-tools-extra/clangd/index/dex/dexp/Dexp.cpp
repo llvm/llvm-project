@@ -54,7 +54,7 @@ void reportTime(StringRef Name, llvm::function_ref<void()> F) {
 
 void fuzzyFind(llvm::StringRef UnqualifiedName, const SymbolIndex &Index) {
   FuzzyFindRequest Request;
-  Request.MaxCandidateCount = 10;
+  Request.Limit = 10;
   Request.Query = UnqualifiedName;
   // FIXME(kbobyrev): Print symbol final scores to see the distribution.
   static const auto OutputFormat = "{0,-4} | {1,-40} | {2,-25}\n";

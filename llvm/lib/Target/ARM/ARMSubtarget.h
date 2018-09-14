@@ -438,6 +438,9 @@ protected:
   /// operand cycle returned by the itinerary data for pre-ISel operands.
   int PreISelOperandLatencyAdjustment = 2;
 
+  /// What alignment is preferred for loop bodies, in log2(bytes).
+  unsigned PrefLoopAlignment = 0;
+
   /// IsLittle - The target is Little Endian
   bool IsLittle;
 
@@ -803,6 +806,10 @@ public:
   /// ROPI does not use GOT.
   bool allowPositionIndependentMovt() const {
     return isROPI() || !isTargetELF();
+  }
+
+  unsigned getPrefLoopAlignment() const {
+    return PrefLoopAlignment;
   }
 };
 

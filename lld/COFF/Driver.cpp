@@ -888,7 +888,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Handle /force or /force:unresolved
   if (Args.hasArg(OPT_force, OPT_force_unresolved))
-    Config->Force = true;
+    Config->ForceUnresolved = true;
+
+  // Handle /force or /force:multiple
+  if (Args.hasArg(OPT_force, OPT_force_multiple))
+    Config->ForceMultiple = true;
 
   // Handle /debug
   if (Args.hasArg(OPT_debug, OPT_debug_dwarf, OPT_debug_ghash)) {
@@ -1235,6 +1239,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Read all input files given via the command line.
   run();
+
+  if (errorCount())
+    return;
 
   // We should have inferred a machine type by now from the input files, but if
   // not we assume x64.

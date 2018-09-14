@@ -16,14 +16,14 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_UOPS_H
 
 #include "BenchmarkRunner.h"
+#include "SnippetGenerator.h"
 
 namespace exegesis {
 
-class UopsBenchmarkRunner : public BenchmarkRunner {
+class UopsSnippetGenerator : public SnippetGenerator {
 public:
-  UopsBenchmarkRunner(const LLVMState &State)
-      : BenchmarkRunner(State, InstructionBenchmark::Uops) {}
-  ~UopsBenchmarkRunner() override;
+  UopsSnippetGenerator(const LLVMState &State) : SnippetGenerator(State) {}
+  ~UopsSnippetGenerator() override;
 
   llvm::Expected<CodeTemplate>
   generateCodeTemplate(unsigned Opcode) const override;
@@ -32,10 +32,6 @@ public:
 
 private:
   llvm::Error isInfeasible(const llvm::MCInstrDesc &MCInstrDesc) const;
-
-  std::vector<BenchmarkMeasure>
-  runMeasurements(const ExecutableFunction &EF, ScratchSpace &Scratch,
-                  const unsigned NumRepetitions) const override;
 
   // Instantiates memory operands within a snippet.
   // To make computations as parallel as possible, we generate independant
@@ -63,6 +59,20 @@ private:
   void
   instantiateMemoryOperands(unsigned ScratchSpaceReg,
                             std::vector<InstructionBuilder> &Snippet) const;
+};
+
+class UopsBenchmarkRunner : public BenchmarkRunner {
+public:
+  UopsBenchmarkRunner(const LLVMState &State)
+      : BenchmarkRunner(State, InstructionBenchmark::Uops) {}
+  ~UopsBenchmarkRunner() override;
+
+  static constexpr const size_t kMinNumDifferentAddresses = 6;
+
+private:
+  std::vector<BenchmarkMeasure>
+  runMeasurements(const ExecutableFunction &EF, ScratchSpace &Scratch,
+                  const unsigned NumRepetitions) const override;
 };
 
 } // namespace exegesis

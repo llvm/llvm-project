@@ -17,10 +17,10 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_BENCHMARKRUNNER_H
 
 #include "Assembler.h"
+#include "BenchmarkCode.h"
 #include "BenchmarkResult.h"
 #include "LlvmState.h"
 #include "MCInstrDescView.h"
-#include "RegisterAliasing.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Error.h"
 #include <cstdlib>
@@ -36,23 +36,6 @@ public:
   BenchmarkFailure(const llvm::Twine &S);
 };
 
-// A collection of instructions that are to be assembled, executed and measured.
-struct BenchmarkCode {
-  // The sequence of instructions that are to be repeated.
-  std::vector<llvm::MCInst> Instructions;
-
-  // Before the code is executed some instructions are added to setup the
-  // registers initial values.
-  std::vector<unsigned> RegsToDef;
-
-  // We also need to provide the registers that are live on entry for the
-  // assembler to generate proper prologue/epilogue.
-  std::vector<unsigned> LiveIns;
-
-  // Informations about how this configuration was built.
-  std::string Info;
-};
-
 // Common code for all benchmark modes.
 class BenchmarkRunner {
 public:
@@ -61,12 +44,8 @@ public:
 
   virtual ~BenchmarkRunner();
 
-  llvm::Expected<std::vector<InstructionBenchmark>>
-  run(unsigned Opcode, unsigned NumRepetitions);
-
-  // Given a snippet, computes which registers the setup code needs to define.
-  std::vector<unsigned>
-  computeRegsToDef(const std::vector<InstructionBuilder> &Snippet) const;
+  InstructionBenchmark runConfiguration(const BenchmarkCode &Configuration,
+                                        unsigned NumRepetitions) const;
 
   // Scratch space to run instructions that touch memory.
   struct ScratchSpace {
@@ -87,32 +66,11 @@ public:
 
 protected:
   const LLVMState &State;
-  const RegisterAliasingTrackerCache RATC;
-
-  // Generates a single code template that has a self-dependency.
-  llvm::Expected<CodeTemplate>
-  generateSelfAliasingCodeTemplate(const Instruction &Instr) const;
-  // Generates a single code template without assignment constraints.
-  llvm::Expected<CodeTemplate>
-  generateUnconstrainedCodeTemplate(const Instruction &Instr,
-                                    llvm::StringRef Msg) const;
 
 private:
-  // API to be implemented by subclasses.
-  virtual llvm::Expected<CodeTemplate>
-  generateCodeTemplate(unsigned Opcode) const = 0;
-
   virtual std::vector<BenchmarkMeasure>
   runMeasurements(const ExecutableFunction &EF, ScratchSpace &Scratch,
                   const unsigned NumRepetitions) const = 0;
-
-  // Internal helpers.
-  InstructionBenchmark runConfiguration(const BenchmarkCode &Configuration,
-                                        unsigned NumRepetitions) const;
-
-  // Calls generateCodeTemplate and expands it into one or more BenchmarkCode.
-  llvm::Expected<std::vector<BenchmarkCode>>
-  generateConfigurations(unsigned Opcode) const;
 
   llvm::Expected<std::string>
   writeObjectFile(const BenchmarkCode &Configuration,

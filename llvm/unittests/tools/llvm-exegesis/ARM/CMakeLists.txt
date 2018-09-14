@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   Symbolize
   ARM
+  Core
   )
 
 add_llvm_unittest(LLVMExegesisARMTests

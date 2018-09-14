@@ -86,7 +86,7 @@ static bool hasUnknownOperand(const llvm::MCOperandInfo &OpInfo) {
 }
 
 llvm::Error
-UopsBenchmarkRunner::isInfeasible(const llvm::MCInstrDesc &MCInstrDesc) const {
+UopsSnippetGenerator::isInfeasible(const llvm::MCInstrDesc &MCInstrDesc) const {
   if (llvm::any_of(MCInstrDesc.operands(), hasUnknownOperand))
     return llvm::make_error<BenchmarkFailure>(
         "Infeasible : has unknown operands");
@@ -123,8 +123,9 @@ static void remove(llvm::BitVector &a, const llvm::BitVector &b) {
 }
 
 UopsBenchmarkRunner::~UopsBenchmarkRunner() = default;
+UopsSnippetGenerator::~UopsSnippetGenerator() = default;
 
-void UopsBenchmarkRunner::instantiateMemoryOperands(
+void UopsSnippetGenerator::instantiateMemoryOperands(
     const unsigned ScratchSpacePointerInReg,
     std::vector<InstructionBuilder> &Instructions) const {
   if (ScratchSpacePointerInReg == 0)
@@ -144,11 +145,12 @@ void UopsBenchmarkRunner::instantiateMemoryOperands(
     ++I;
     Instructions.push_back(std::move(IB));
   }
-  assert(I * MemStep < ScratchSpace::kSize && "not enough scratch space");
+  assert(I * MemStep < BenchmarkRunner::ScratchSpace::kSize &&
+         "not enough scratch space");
 }
 
 llvm::Expected<CodeTemplate>
-UopsBenchmarkRunner::generateCodeTemplate(unsigned Opcode) const {
+UopsSnippetGenerator::generateCodeTemplate(unsigned Opcode) const {
   const auto &InstrDesc = State.getInstrInfo().get(Opcode);
   if (auto E = isInfeasible(InstrDesc))
     return std::move(E);
@@ -285,6 +287,6 @@ UopsBenchmarkRunner::runMeasurements(const ExecutableFunction &Function,
   return Result;
 }
 
-constexpr const size_t UopsBenchmarkRunner::kMinNumDifferentAddresses;
+constexpr const size_t UopsSnippetGenerator::kMinNumDifferentAddresses;
 
 } // namespace exegesis

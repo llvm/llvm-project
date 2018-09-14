@@ -1435,6 +1435,12 @@ public:
     return PrefLoopAlignment;
   }
 
+  /// Should loops be aligned even when the function is marked OptSize (but not
+  /// MinSize).
+  virtual bool alignLoopsWithOptSize() const {
+    return false;
+  }
+
   /// If the target has a standard location for the stack protector guard,
   /// returns the address of that location. Otherwise, returns nullptr.
   /// DEPRECATED: please override useLoadStackGuardNode and customize

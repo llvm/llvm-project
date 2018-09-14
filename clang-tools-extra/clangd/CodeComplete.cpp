@@ -1375,7 +1375,7 @@ private:
     // Build the query.
     FuzzyFindRequest Req;
     if (Opts.Limit)
-      Req.MaxCandidateCount = Opts.Limit;
+      Req.Limit = Opts.Limit;
     Req.Query = Filter->pattern();
     Req.RestrictForCodeCompletion = true;
     Req.Scopes = QueryScopes;

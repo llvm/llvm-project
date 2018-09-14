@@ -122,18 +122,25 @@ bool DWARFDebugInfoEntry::FastExtract(
           case DW_FORM_data1:
           case DW_FORM_flag:
           case DW_FORM_ref1:
+          case DW_FORM_strx1:
             form_size = 1;
             break;
 
           // 2 byte values
           case DW_FORM_data2:
           case DW_FORM_ref2:
+          case DW_FORM_strx2:
             form_size = 2;
+            break;
+
+          case DW_FORM_strx3:
+            form_size = 3;
             break;
 
           // 4 byte values
           case DW_FORM_data4:
           case DW_FORM_ref4:
+          case DW_FORM_strx4:
             form_size = 4;
             break;
 
@@ -150,6 +157,7 @@ bool DWARFDebugInfoEntry::FastExtract(
           case DW_FORM_ref_udata:
           case DW_FORM_GNU_addr_index:
           case DW_FORM_GNU_str_index:
+          case DW_FORM_strx:
             debug_info_data.Skip_LEB128(&offset);
             break;
 

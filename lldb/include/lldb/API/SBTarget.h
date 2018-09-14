@@ -662,6 +662,37 @@ public:
   lldb::SBBreakpoint BreakpointCreateByAddress(addr_t address);
 
   lldb::SBBreakpoint BreakpointCreateBySBAddress(SBAddress &address);
+  
+  //------------------------------------------------------------------
+  /// Create a breakpoint using a scripted resolver.
+  ///
+  /// @param[in] class_name
+  ///    This is the name of the class that implements a scripted resolver.
+  ///
+  /// @param[in] extra_args
+  ///    This is an SBStructuredData object that will get passed to the
+  ///    constructor of the class in class_name.  You can use this to 
+  ///    reuse the same class, parametrizing with entries from this 
+  ///    dictionary.
+  ///
+  /// @param module_list
+  ///    If this is non-empty, this will be used as the module filter in the 
+  ///    SearchFilter created for this breakpoint.
+  ///
+  /// @param file_list
+  ///    If this is non-empty, this will be used as the comp unit filter in the 
+  ///    SearchFilter created for this breakpoint.
+  ///
+  /// @return
+  ///     An SBBreakpoint that will set locations based on the logic in the
+  ///     resolver's search callback.
+  //------------------------------------------------------------------
+  lldb::SBBreakpoint BreakpointCreateFromScript(
+      const char *class_name,
+      SBStructuredData &extra_args,
+      const SBFileSpecList &module_list,
+      const SBFileSpecList &file_list,
+      bool request_hardware = false);
 
   //------------------------------------------------------------------
   /// Read breakpoints from source_file and return the newly created

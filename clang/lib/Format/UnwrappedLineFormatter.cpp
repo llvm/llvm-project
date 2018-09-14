@@ -323,6 +323,10 @@ private:
           kwId == clang::tok::objc_synchronized)
         return 0;
     }
+    // Don't merge block with left brace wrapped after case labels
+    if (TheLine->First->is(tok::l_brace) && I != AnnotatedLines.begin() &&
+        I[-1]->First->isOneOf(tok::kw_case, tok::kw_default))
+      return 0;
     // Try to merge a block with left brace wrapped that wasn't yet covered
     if (TheLine->Last->is(tok::l_brace)) {
       return !Style.BraceWrapping.AfterFunction ||

@@ -60,7 +60,7 @@ void SymbolTable::addFile(InputFile *File) {
 }
 
 static void errorOrWarn(const Twine &S) {
-  if (Config->Force)
+  if (Config->ForceUnresolved)
     warn(S);
   else
     error(S);
@@ -237,7 +237,7 @@ void SymbolTable::reportRemainingUndefines() {
 
     // Remaining undefined symbols are not fatal if /force is specified.
     // They are replaced with dummy defined symbols.
-    if (Config->Force)
+    if (Config->ForceUnresolved)
       replaceSymbol<DefinedAbsolute>(Sym, Name, 0);
     Undefs.insert(Sym);
   }
@@ -326,8 +326,14 @@ void SymbolTable::addLazy(ArchiveFile *F, const Archive::Symbol Sym) {
 }
 
 void SymbolTable::reportDuplicate(Symbol *Existing, InputFile *NewFile) {
-  error("duplicate symbol: " + toString(*Existing) + " in " +
-        toString(Existing->getFile()) + " and in " + toString(NewFile));
+  std::string Msg = "duplicate symbol: " + toString(*Existing) + " in " +
+                    toString(Existing->getFile()) + " and in " +
+                    toString(NewFile);
+
+  if (Config->ForceMultiple)
+    warn(Msg);
+  else
+    error(Msg);
 }
 
 Symbol *SymbolTable::addAbsolute(StringRef N, COFFSymbolRef Sym) {

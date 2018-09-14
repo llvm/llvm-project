@@ -731,6 +731,74 @@ public:
 
     lldb::SBBreakpoint
     BreakpointCreateBySBAddress (SBAddress &sb_address);
+    
+    %feature("docstring", "
+  //------------------------------------------------------------------
+  /// Create a breakpoint using a scripted resolver.
+  ///
+  /// @param[in] class_name
+  ///    This is the name of the class that implements a scripted resolver.
+  ///    The class should have the following signature:
+  ///    class Resolver:
+  ///        def __init__(self, bkpt, extra_args):
+  ///            # bkpt - the breakpoint for which this is the resolver.  When
+  ///            # the resolver finds an interesting address, call AddLocation
+  ///            # on this breakpoint to add it.
+  ///            #
+  ///            # extra_args - an SBStructuredData that can be used to 
+  ///            # parametrize this instance.  Same as the extra_args passed
+  ///            # to BreakpointCreateFromScript.
+  ///
+  ///        def __get_depth__ (self):
+  ///            # This is optional, but if defined, you should return the
+  ///            # depth at which you want the callback to be called.  The
+  ///            # available options are:
+  ///            #    lldb.eSearchDepthModule
+  ///            #    lldb.eSearchDepthCompUnit
+  ///            # The default if you don't implement this method is
+  ///            # eSearchDepthModule.
+  ///            
+  ///        def __callback__(self, sym_ctx):
+  ///            # sym_ctx - an SBSymbolContext that is the cursor in the 
+  ///            # search through the program to resolve breakpoints.  
+  ///            # The sym_ctx will be filled out to the depth requested in
+  ///            # __get_depth__.
+  ///            # Look in this sym_ctx for new breakpoint locations,
+  ///            # and if found use bkpt.AddLocation to add them.
+  ///            # Note, you will only get called for modules/compile_units that
+  ///            # pass the SearchFilter provided by the module_list & file_list
+  ///            # passed into BreakpointCreateFromScript.
+  ///
+  ///        def get_short_help(self):
+  ///            # Optional, but if implemented return a short string that will
+  ///            # be printed at the beginning of the break list output for the
+  ///            # breakpoint.
+  ///
+  /// @param[in] extra_args
+  ///    This is an SBStructuredData object that will get passed to the
+  ///    constructor of the class in class_name.  You can use this to 
+  ///    reuse the same class, parametrizing it with entries from this 
+  ///    dictionary.
+  ///
+  /// @param module_list
+  ///    If this is non-empty, this will be used as the module filter in the 
+  ///    SearchFilter created for this breakpoint.
+  ///
+  /// @param file_list
+  ///    If this is non-empty, this will be used as the comp unit filter in the 
+  ///    SearchFilter created for this breakpoint.
+  ///
+  /// @return
+  ///     An SBBreakpoint that will set locations based on the logic in the
+  ///     resolver's search callback.
+  //------------------------------------------------------------------
+    ") BreakpointCreateFromScript;
+    lldb::SBBreakpoint BreakpointCreateFromScript(
+      const char *class_name,
+      SBStructuredData &extra_args,
+      const SBFileSpecList &module_list,
+      const SBFileSpecList &file_list,
+      bool request_hardware = false);
 
     uint32_t
     GetNumBreakpoints () const;

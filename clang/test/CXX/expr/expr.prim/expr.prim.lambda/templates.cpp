@@ -88,8 +88,8 @@ namespace p2 {
   template<typename R, typename T>
   void odr_used2(R &r, Boom<T> boom) {
     const std::type_info &ti
-      = typeid([=,&r] () -> R& {
-          boom.tickle(); // expected-note{{in instantiation of member function}}
+      = typeid([=,&r] () -> R& { // expected-note{{in instantiation of member function 'p2::Boom<float>::Boom' requested here}}
+          boom.tickle();
           return r; 
         }()); 
   }

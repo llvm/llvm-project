@@ -4910,7 +4910,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_pg))
-    if (Args.hasArg(options::OPT_fomit_frame_pointer))
+    if (Args.hasFlag(options::OPT_fomit_frame_pointer,
+                     options::OPT_fno_omit_frame_pointer, /*default=*/false))
       D.Diag(diag::err_drv_argument_not_allowed_with) << "-fomit-frame-pointer"
                                                       << A->getAsString(Args);
 

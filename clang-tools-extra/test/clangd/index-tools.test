@@ -1,3 +1,5 @@
-# RUN: global-symbol-builder %p/Inputs/BenchmarkSource.cpp -- -I%p/Inputs > %t.index
+# RUN: clangd-indexer %p/Inputs/BenchmarkSource.cpp -- -I%p/Inputs > %t.index
 # FIXME: By default, benchmarks are excluded from the list of default targets hence not built. Find a way to depend on benchmarks to run the next command.
-# RUN: if [ -f %clangd-benchmark-dir/IndexBenchmark ]; then %clangd-benchmark-dir/IndexBenchmark %t.index %p/Inputs/requests.log --benchmark_min_time=0.01 ; fi
+# RUN: if [ -f %clangd-benchmark-dir/IndexBenchmark ]; then %clangd-benchmark-dir/IndexBenchmark %t.index %p/Inputs/requests.json --benchmark_min_time=0.01 ; fi
+# Pass invalid JSON file and check that IndexBenchmark fails to parse it.
+# RUN: if [ -f %clangd-benchmark-dir/IndexBenchmark ]; then not %clangd-benchmark-dir/IndexBenchmark %t.index %t --benchmark_min_time=0.01 ; fi

@@ -117,7 +117,7 @@ public:
   int IOHandlerComplete(IOHandler &io_handler, const char *current_line,
                         const char *cursor, const char *last_char,
                         int skip_first_n_matches, int max_matches,
-                        StringList &matches) override;
+                        StringList &matches, StringList &descriptions) override;
 
 protected:
   static int CalculateActualIndentation(const StringList &lines);

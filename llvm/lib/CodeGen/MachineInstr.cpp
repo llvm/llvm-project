@@ -1766,7 +1766,8 @@ bool MachineInstr::addRegisterKilled(unsigned IncomingReg,
   // Trim unneeded kill operands.
   while (!DeadOps.empty()) {
     unsigned OpIdx = DeadOps.back();
-    if (getOperand(OpIdx).isImplicit())
+    if (getOperand(OpIdx).isImplicit() &&
+        (!isInlineAsm() || findInlineAsmFlagIdx(OpIdx) < 0))
       RemoveOperand(OpIdx);
     else
       getOperand(OpIdx).setIsKill(false);
@@ -1830,7 +1831,8 @@ bool MachineInstr::addRegisterDead(unsigned Reg,
   // Trim unneeded dead operands.
   while (!DeadOps.empty()) {
     unsigned OpIdx = DeadOps.back();
-    if (getOperand(OpIdx).isImplicit())
+    if (getOperand(OpIdx).isImplicit() &&
+        (!isInlineAsm() || findInlineAsmFlagIdx(OpIdx) < 0))
       RemoveOperand(OpIdx);
     else
       getOperand(OpIdx).setIsDead(false);

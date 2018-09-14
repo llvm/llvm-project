@@ -30,9 +30,9 @@
 #include "Inputs/relative-dep-gen-1.h"
 
 // CHECK-BUILD: mod.pcm:
-// CHECK-BUILD:   {{[ \t]}}Inputs/relative-dep-gen{{(-cwd)?}}.modulemap
-// CHECK-BUILD:   {{[ \t]}}Inputs/relative-dep-gen-1.h
-// CHECK-BUILD:   {{[ \t]}}Inputs/relative-dep-gen-2.h
+// CHECK-BUILD:   {{[ \t]}}Inputs{{[/\\]}}relative-dep-gen{{(-cwd)?}}.modulemap
+// CHECK-BUILD:   {{[ \t]}}Inputs{{[/\\]}}relative-dep-gen-1.h
+// CHECK-BUILD:   {{[ \t]}}Inputs{{[/\\]}}relative-dep-gen-2.h
 // CHECK-USE: use.o:
 // CHECK-USE-DAG:   {{[ \t]}}relative-dep-gen.cpp
 // CHECK-EXPLICIT-DAG:   mod.pcm

@@ -192,14 +192,17 @@ static void PrintTagsAroundAddr(tag_t *tag_ptr) {
       RoundDownTo(reinterpret_cast<uptr>(tag_ptr), row_len));
   tag_t *beg_row = center_row_beg - row_len * (num_rows / 2);
   tag_t *end_row = center_row_beg + row_len * (num_rows / 2);
+  InternalScopedString s(GetPageSizeCached());
   for (tag_t *row = beg_row; row < end_row; row += row_len) {
-    Printf("%s", row == center_row_beg ? "=>" : "  ");
+    s.append("%s", row == center_row_beg ? "=>" : "  ");
     for (uptr i = 0; i < row_len; i++) {
-      Printf("%s", row + i == tag_ptr ? "[" : " ");
-      Printf("%02x", row[i]);
-      Printf("%s", row + i == tag_ptr ? "]" : " ");
+      s.append("%s", row + i == tag_ptr ? "[" : " ");
+      s.append("%02x", row[i]);
+      s.append("%s", row + i == tag_ptr ? "]" : " ");
     }
-    Printf("%s\n", row == center_row_beg ? "<=" : "  ");
+    s.append("%s\n", row == center_row_beg ? "<=" : "  ");
+    Printf("%s", s.data());
+    s.clear();
   }
 }
 

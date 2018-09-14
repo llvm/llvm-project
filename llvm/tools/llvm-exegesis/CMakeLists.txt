@@ -1,11 +1,15 @@
 
 set(LLVM_LINK_COMPONENTS
+  MC
   Support
   native
   )
 
 add_llvm_tool(llvm-exegesis
   llvm-exegesis.cpp
+
+  DEPENDS
+  intrinsics_gen
   )
 
 add_subdirectory(lib)

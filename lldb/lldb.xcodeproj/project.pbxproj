@@ -134,6 +134,7 @@
 		2689000313353DB600698AC0 /* BreakpointResolverFileLine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26D0DD5410FE555900271C65 /* BreakpointResolverFileLine.cpp */; };
 		4C3ADCD61810D88B00357218 /* BreakpointResolverFileRegex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CAA56141422D986001FFA01 /* BreakpointResolverFileRegex.cpp */; };
 		2689000513353DB600698AC0 /* BreakpointResolverName.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26D0DD5510FE555900271C65 /* BreakpointResolverName.cpp */; };
+		4CCF9F612143014D006CC7EA /* BreakpointResolverScripted.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CCF9F5E2143012F006CC7EA /* BreakpointResolverScripted.cpp */; };
 		2689000713353DB600698AC0 /* BreakpointSite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E1310F1B83100F91463 /* BreakpointSite.cpp */; };
 		2689000913353DB600698AC0 /* BreakpointSiteList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E1410F1B83100F91463 /* BreakpointSiteList.cpp */; };
 		2689003113353E0400698AC0 /* Broadcaster.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E6D10F1B85900F91463 /* Broadcaster.cpp */; };
@@ -1483,6 +1484,8 @@
 		4CAA56121422D96A001FFA01 /* BreakpointResolverFileRegex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BreakpointResolverFileRegex.h; path = include/lldb/Breakpoint/BreakpointResolverFileRegex.h; sourceTree = "<group>"; };
 		26D0DD5510FE555900271C65 /* BreakpointResolverName.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BreakpointResolverName.cpp; path = source/Breakpoint/BreakpointResolverName.cpp; sourceTree = "<group>"; };
 		26D0DD5210FE554D00271C65 /* BreakpointResolverName.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BreakpointResolverName.h; path = include/lldb/Breakpoint/BreakpointResolverName.h; sourceTree = "<group>"; };
+		4CCF9F5E2143012F006CC7EA /* BreakpointResolverScripted.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BreakpointResolverScripted.cpp; path = source/Breakpoint/BreakpointResolverScripted.cpp; sourceTree = "<group>"; };
+		4CCF9F6021430141006CC7EA /* BreakpointResolverScripted.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = BreakpointResolverScripted.h; path = include/lldb/Breakpoint/BreakpointResolverScripted.h; sourceTree = "<group>"; };
 		26BC7E1310F1B83100F91463 /* BreakpointSite.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BreakpointSite.cpp; path = source/Breakpoint/BreakpointSite.cpp; sourceTree = "<group>"; };
 		26BC7CF710F1B71400F91463 /* BreakpointSite.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BreakpointSite.h; path = include/lldb/Breakpoint/BreakpointSite.h; sourceTree = "<group>"; };
 		26BC7E1410F1B83100F91463 /* BreakpointSiteList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BreakpointSiteList.cpp; path = source/Breakpoint/BreakpointSiteList.cpp; sourceTree = "<group>"; };
@@ -5279,6 +5282,8 @@
 		26BC7CEB10F1B70800F91463 /* Breakpoint */ = {
 			isa = PBXGroup;
 			children = (
+				4CCF9F6021430141006CC7EA /* BreakpointResolverScripted.h */,
+				4CCF9F5E2143012F006CC7EA /* BreakpointResolverScripted.cpp */,
 				26BC7CEE10F1B71400F91463 /* Breakpoint.h */,
 				26BC7E0A10F1B83100F91463 /* Breakpoint.cpp */,
 				26BC7CEF10F1B71400F91463 /* BreakpointID.h */,
@@ -7962,6 +7967,7 @@
 				233B007F1960CB280090E598 /* ProcessLaunchInfo.cpp in Sources */,
 				6D0F61591C80AB3500A4ECEE /* JavaFormatterFunctions.cpp in Sources */,
 				2689005913353E0400698AC0 /* ValueObjectConstResult.cpp in Sources */,
+				4CCF9F612143014D006CC7EA /* BreakpointResolverScripted.cpp in Sources */,
 				2689005A13353E0400698AC0 /* ValueObjectList.cpp in Sources */,
 				492DB7EB1EC662E200B9E9AF /* Status.cpp in Sources */,
 				2689005B13353E0400698AC0 /* ValueObjectRegister.cpp in Sources */,

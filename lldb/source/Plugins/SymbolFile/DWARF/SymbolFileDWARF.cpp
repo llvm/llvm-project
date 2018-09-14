@@ -494,7 +494,7 @@ void SymbolFileDWARF::InitializeObject() {
 }
 
 bool SymbolFileDWARF::SupportedVersion(uint16_t version) {
-  return version == 2 || version == 3 || version == 4;
+  return version >= 2 && version <= 5;
 }
 
 uint32_t SymbolFileDWARF::CalculateAbilities() {
@@ -643,6 +643,10 @@ const DWARFDataExtractor &SymbolFileDWARF::get_debug_info_data() {
 
 const DWARFDataExtractor &SymbolFileDWARF::get_debug_line_data() {
   return GetCachedSectionData(eSectionTypeDWARFDebugLine, m_data_debug_line);
+}
+
+const DWARFDataExtractor &SymbolFileDWARF::get_debug_line_str_data() {
+ return GetCachedSectionData(eSectionTypeDWARFDebugLineStr, m_data_debug_line_str);
 }
 
 const DWARFDataExtractor &SymbolFileDWARF::get_debug_macro_data() {
@@ -933,7 +937,7 @@ bool SymbolFileDWARF::ParseCompileUnitSupportFiles(
         support_files.Append(*sc.comp_unit);
         return DWARFDebugLine::ParseSupportFiles(
             sc.comp_unit->GetModule(), get_debug_line_data(), cu_comp_dir,
-            stmt_list, support_files);
+            stmt_list, support_files, dwarf_cu);
       }
     }
   }
@@ -1070,7 +1074,7 @@ bool SymbolFileDWARF::ParseCompileUnitLineTable(const SymbolContext &sc) {
           lldb::offset_t offset = cu_line_offset;
           DWARFDebugLine::ParseStatementTable(get_debug_line_data(), &offset,
                                               ParseDWARFLineTableCallback,
-                                              &info);
+                                              &info, dwarf_cu);
           SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
           if (debug_map_symfile) {
             // We have an object file that has a line table with addresses that

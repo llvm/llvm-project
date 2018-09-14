@@ -6,124 +6,82 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-// Cancellation mechanism for async tasks. Roughly all the clients of this code
-// can be classified into three categories:
-// 1. The code that creates and schedules async tasks, e.g. TUScheduler.
-// 2. The callers of the async method that can cancel some of the running tasks,
-// e.g. `ClangdLSPServer`
-// 3. The code running inside the async task itself, i.e. code completion or
-// find definition implementation that run clang, etc.
+// Cancellation mechanism for long-running tasks.
 //
-// For (1), the guideline is to accept a callback for the result of async
-// operation and return a `TaskHandle` to allow cancelling the request.
+// This manages interactions between:
 //
-//  TaskHandle someAsyncMethod(Runnable T,
-//  function<void(llvm::Expected<ResultType>)> Callback) {
-//   auto TH = Task::createHandle();
-//   WithContext ContextWithCancellationToken(TH);
-//   auto run = [](){
-//     Callback(T());
+// 1. Client code that starts some long-running work, and maybe cancels later.
+//
+//   std::pair<Context, Canceler> Task = cancelableTask();
+//   {
+//     WithContext Cancelable(std::move(Task.first));
+//     Expected
+//     deepThoughtAsync([](int answer){ errs() << answer; });
 //   }
-//   // Start run() in a new async thread, and make sure to propagate Context.
-//   return TH;
-// }
+//   // ...some time later...
+//   if (User.fellAsleep())
+//     Task.second();
 //
-// The callers of async methods (2) can issue cancellations and should be
-// prepared to handle `TaskCancelledError` result:
+//  (This example has an asynchronous computation, but synchronous examples
+//  work similarly - the Canceler should be invoked from another thread).
 //
-// void Caller() {
-//   // You should store this handle if you wanna cancel the task later on.
-//   TaskHandle TH = someAsyncMethod(Task, [](llvm::Expected<ResultType> R) {
-//     if(/*check for task cancellation error*/)
-//       // Handle the error
-//     // Do other things on R.
-//   });
-//   // To cancel the task:
-//   sleep(5);
-//   TH->cancel();
-// }
+// 2. Library code that executes long-running work, and can exit early if the
+//   result is not needed.
 //
-// The worker code itself (3) should check for cancellations using
-// `Task::isCancelled` that can be retrieved via `getCurrentTask()`.
+//   void deepThoughtAsync(std::function<void(int)> Callback) {
+//     runAsync([Callback]{
+//       int A = ponder(6);
+//       if (isCancelled())
+//         return;
+//       int B = ponder(9);
+//       if (isCancelled())
+//         return;
+//       Callback(A * B);
+//     });
+//   }
 //
-// llvm::Expected<ResultType> AsyncTask() {
-//    // You can either store the read only TaskHandle by calling getCurrentTask
-//    // once and just use the variable everytime you want to check for
-//    // cancellation, or call isCancelled everytime. The former is more
-//    // efficient if you are going to have multiple checks.
-//    const auto T = getCurrentTask();
-//    // DO SMTHNG...
-//    if(T.isCancelled()) {
-//      // Task has been cancelled, lets get out.
-//      return llvm::makeError<CancelledError>();
-//    }
-//    // DO SOME MORE THING...
-//    if(T.isCancelled()) {
-//      // Task has been cancelled, lets get out.
-//      return llvm::makeError<CancelledError>();
-//    }
-//    return ResultType(...);
-// }
-// If the operation was cancelled before task could run to completion, it should
-// propagate the TaskCancelledError as a result.
+//   (A real example may invoke the callback with an error on cancellation,
+//   the CancelledError is provided for this purpose).
+//
+// Cancellation has some caveats:
+//   - the work will only stop when/if the library code next checks for it.
+//     Code outside clangd such as Sema will not do this.
+//   - it's inherently racy: client code must be prepared to accept results
+//     even after requesting cancellation.
+//   - it's Context-based, so async work must be dispatched to threads in
+//     ways that preserve the context. (Like runAsync() or TUScheduler).
+//
+// FIXME: We could add timestamps to isCancelled() and CancelledError.
+//        Measuring the start -> cancel -> acknowledge -> finish timeline would
+//        help find where libraries' cancellation should be improved.
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CANCELLATION_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CANCELLATION_H
 
 #include "Context.h"
 #include "llvm/Support/Error.h"
-#include <atomic>
-#include <memory>
+#include <functional>
 #include <system_error>
 
 namespace clang {
 namespace clangd {
 
-/// Enables signalling a cancellation on an async task or checking for
-/// cancellation. It is thread-safe to trigger cancellation from multiple
-/// threads or check for cancellation. Task object for the currently running
-/// task can be obtained via clangd::getCurrentTask().
-class Task {
-public:
-  void cancel() { CT = true; }
-  /// If cancellation checks are rare, one could use the isCancelled() helper in
-  /// the namespace to simplify the code. However, if cancellation checks are
-  /// frequent, the guideline is first obtain the Task object for the currently
-  /// running task with getCurrentTask() and do cancel checks using it to avoid
-  /// extra lookups in the Context.
-  bool isCancelled() const { return CT; }
+/// A canceller requests cancellation of a task, when called.
+/// Calling it again has no effect.
+using Canceler = std::function<void()>;
 
-  /// Creates a task handle that can be used by an async task to check for
-  /// information that can change during it's runtime, like Cancellation.
-  static std::shared_ptr<Task> createHandle() {
-    return std::shared_ptr<Task>(new Task());
-  }
+/// Defines a new task whose cancellation may be requested.
+/// The returned Context defines the scope of the task.
+/// When the context is active, isCancelled() is false until the Canceler is
+/// invoked, and true afterwards.
+std::pair<Context, Canceler> cancelableTask();
 
-  Task(const Task &) = delete;
-  Task &operator=(const Task &) = delete;
-  Task(Task &&) = delete;
-  Task &operator=(Task &&) = delete;
+/// True if the current context is within a cancelable task which was cancelled.
+/// Always false if there is no active cancelable task.
+/// This isn't free (context lookup) - don't call it in a tight loop.
+bool isCancelled();
 
-private:
-  Task() : CT(false) {}
-  std::atomic<bool> CT;
-};
-using ConstTaskHandle = std::shared_ptr<const Task>;
-using TaskHandle = std::shared_ptr<Task>;
-
-/// Fetches current task information from Context. TaskHandle must have been
-/// stashed into context beforehand.
-const Task &getCurrentTask();
-
-/// Stashes current task information within the context.
-LLVM_NODISCARD Context setCurrentTask(ConstTaskHandle TH);
-
-/// Checks whether the current task has been cancelled or not.
-/// Consider storing the task handler returned by getCurrentTask and then
-/// calling isCancelled through it. getCurrentTask is expensive since it does a
-/// lookup in the context.
-inline bool isCancelled() { return getCurrentTask().isCancelled(); }
-
+/// Conventional error when no result is returned due to cancellation.
 class CancelledError : public llvm::ErrorInfo<CancelledError> {
 public:
   static char ID;
