@@ -59,7 +59,7 @@ public:
 
 /// Represents a nonloc::LocAsInteger or void* field, that point to objects, but
 /// needs to be casted back to its dynamic type for a correct note message.
-class NeedsCastLocField : public FieldNode {
+class NeedsCastLocField final : public FieldNode {
   QualType CastBackType;
 
 public:
