@@ -46,6 +46,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
+#include "SDNodeDbgValue.h"
 #include <cstdint>
 #include <iterator>
 
@@ -681,7 +682,22 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
     OS << ':' << L->getLine();
     if (unsigned C = L->getColumn())
       OS << ':' << C;
+
+    for (SDDbgValue *Dbg : G->GetDbgValues(this)) {
+      if (Dbg->getKind() != SDDbgValue::SDNODE || Dbg->isInvalidated())
+        continue;
+      Dbg->dump(OS);
+    }
   }
+}
+
+LLVM_DUMP_METHOD void SDDbgValue::dump(raw_ostream &OS) const {
+ OS << " DbgVal";
+ if (kind==SDNODE)
+   OS << '(' << u.s.ResNo << ')';
+ OS << ":\"" << Var->getName() << '"';
+ if (Expr->getNumElements())
+   Expr->dump();
 }
 
 /// Return true if this node is so simple that we should just print it inline
