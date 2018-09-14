@@ -11,6 +11,7 @@ set (CLANG_OCL_LINK_FLAGS "-target ${AMDGPU_TARGET_TRIPLE} -mcpu=fiji")
 
 set (LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/llvm-link")
 set (LLVM_OBJDUMP "${LLVM_TOOLS_BINARY_DIR}/llvm-objdump")
+set (LLVM_OPT "${LLVM_TOOLS_BINARY_DIR}/opt")
 
 set (BC_EXT .bc)
 set (LIB_SUFFIX ".lib${BC_EXT}")
@@ -68,7 +69,8 @@ macro(opencl_bc_lib name)
 
   add_custom_command(TARGET ${lib_tgt}
     POST_BUILD
-    COMMAND ${PREPARE_BUILTINS} $<TARGET_FILE:${lib_tgt}> -o ${output_name}
+    COMMAND ${LLVM_OPT} -strip -o ${name}.strip.bc $<TARGET_FILE:${lib_tgt}>
+    COMMAND ${PREPARE_BUILTINS} ${name}.strip.bc -o ${output_name}
     DEPENDS ${lib_tgt}
     COMMENT "Generating ${output_name}")
 
