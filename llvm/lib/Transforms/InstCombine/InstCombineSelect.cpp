@@ -1084,11 +1084,13 @@ Instruction *InstCombiner::foldSPFofSPF(Instruction *Inner,
   if (C == A || C == B) {
     // MAX(MAX(A, B), B) -> MAX(A, B)
     // MIN(MIN(a, b), a) -> MIN(a, b)
+    // TODO: This could be done in instsimplify.
     if (SPF1 == SPF2 && SelectPatternResult::isMinOrMax(SPF1))
       return replaceInstUsesWith(Outer, Inner);
 
     // MAX(MIN(a, b), a) -> a
     // MIN(MAX(a, b), a) -> a
+    // TODO: This could be done in instsimplify.
     if ((SPF1 == SPF_SMIN && SPF2 == SPF_SMAX) ||
         (SPF1 == SPF_SMAX && SPF2 == SPF_SMIN) ||
         (SPF1 == SPF_UMIN && SPF2 == SPF_UMAX) ||
@@ -1101,6 +1103,7 @@ Instruction *InstCombiner::foldSPFofSPF(Instruction *Inner,
     if (match(B, m_APInt(CB)) && match(C, m_APInt(CC))) {
       // MIN(MIN(A, 23), 97) -> MIN(A, 23)
       // MAX(MAX(A, 97), 23) -> MAX(A, 97)
+      // TODO: This could be done in instsimplify.
       if ((SPF1 == SPF_UMIN && CB->ule(*CC)) ||
           (SPF1 == SPF_SMIN && CB->sle(*CC)) ||
           (SPF1 == SPF_UMAX && CB->uge(*CC)) ||
@@ -1121,6 +1124,7 @@ Instruction *InstCombiner::foldSPFofSPF(Instruction *Inner,
 
   // ABS(ABS(X)) -> ABS(X)
   // NABS(NABS(X)) -> NABS(X)
+  // TODO: This could be done in instsimplify.
   if (SPF1 == SPF2 && (SPF1 == SPF_ABS || SPF1 == SPF_NABS)) {
     return replaceInstUsesWith(Outer, Inner);
   }
@@ -1793,6 +1797,19 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     Instruction::CastOps CastOp;
     SelectPatternResult SPR = matchSelectPattern(&SI, LHS, RHS, &CastOp);
     auto SPF = SPR.Flavor;
+    if (SPF) {
+      Value *LHS2, *RHS2;
+      if (SelectPatternFlavor SPF2 = matchSelectPattern(LHS, LHS2, RHS2).Flavor)
+        if (Instruction *R = foldSPFofSPF(cast<Instruction>(LHS), SPF2, LHS2,
+                                          RHS2, SI, SPF, RHS))
+          return R;
+      if (SelectPatternFlavor SPF2 = matchSelectPattern(RHS, LHS2, RHS2).Flavor)
+        if (Instruction *R = foldSPFofSPF(cast<Instruction>(RHS), SPF2, LHS2,
+                                          RHS2, SI, SPF, LHS))
+          return R;
+      // TODO.
+      // ABS(-X) -> ABS(X)
+    }
 
     if (SelectPatternResult::isMinOrMax(SPF)) {
       // Canonicalize so that
@@ -1830,6 +1847,8 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
       // MIN(~a, ~b) -> ~MAX(a, b)
       Value *A, *B;
       if (match(LHS, m_Not(m_Value(A))) && match(RHS, m_Not(m_Value(B))) &&
+          !IsFreeToInvert(A, A->hasOneUse()) &&
+          !IsFreeToInvert(B, B->hasOneUse()) &&
           (!LHS->hasNUsesOrMore(3) || !RHS->hasNUsesOrMore(3))) {
         CmpInst::Predicate InvertedPred = getInverseMinMaxPred(SPF);
         Value *InvertedCmp = Builder.CreateICmp(InvertedPred, A, B);
@@ -1840,27 +1859,6 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
       if (Instruction *I = factorizeMinMaxTree(SPF, LHS, RHS, Builder))
         return I;
     }
-
-    if (SPF) {
-      // MAX(MAX(a, b), a) -> MAX(a, b)
-      // MIN(MIN(a, b), a) -> MIN(a, b)
-      // MAX(MIN(a, b), a) -> a
-      // MIN(MAX(a, b), a) -> a
-      // ABS(ABS(a)) -> ABS(a)
-      // NABS(NABS(a)) -> NABS(a)
-      Value *LHS2, *RHS2;
-      if (SelectPatternFlavor SPF2 = matchSelectPattern(LHS, LHS2, RHS2).Flavor)
-        if (Instruction *R = foldSPFofSPF(cast<Instruction>(LHS),SPF2,LHS2,RHS2,
-                                          SI, SPF, RHS))
-          return R;
-      if (SelectPatternFlavor SPF2 = matchSelectPattern(RHS, LHS2, RHS2).Flavor)
-        if (Instruction *R = foldSPFofSPF(cast<Instruction>(RHS),SPF2,LHS2,RHS2,
-                                          SI, SPF, LHS))
-          return R;
-    }
-
-    // TODO.
-    // ABS(-X) -> ABS(X)
   }
 
   // See if we can fold the select into a phi node if the condition is a select.

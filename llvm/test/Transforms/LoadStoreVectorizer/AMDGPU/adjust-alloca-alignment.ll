@@ -1,7 +1,8 @@
-; RUN: opt -data-layout=A5 -S -load-store-vectorizer -mattr=-unaligned-buffer-access,+max-private-element-size-16 < %s | FileCheck -check-prefix=ALIGNED -check-prefix=ALL %s
-; RUN: opt -data-layout=A5 -S -load-store-vectorizer -mattr=+unaligned-buffer-access,+unaligned-scratch-access,+max-private-element-size-16 < %s | FileCheck -check-prefix=UNALIGNED -check-prefix=ALL %s
+; RUN: opt -S -load-store-vectorizer -mattr=-unaligned-buffer-access,+max-private-element-size-16 < %s | FileCheck -check-prefix=ALIGNED -check-prefix=ALL %s
+; RUN: opt -S -load-store-vectorizer -mattr=+unaligned-buffer-access,+unaligned-scratch-access,+max-private-element-size-16 < %s | FileCheck -check-prefix=UNALIGNED -check-prefix=ALL %s
 
 target triple = "amdgcn--"
+target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
 
 ; ALL-LABEL: @load_unknown_offset_align1_i8(
 ; ALL: alloca [128 x i8], align 1

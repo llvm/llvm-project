@@ -2073,18 +2073,12 @@ bool GVN::processBlock(BasicBlock *BB) {
     if (!AtStart)
       --BI;
 
-    const Instruction *MaybeFirstICF = ICF->getFirstICFI(BB);
     for (auto *I : InstrsToErase) {
       assert(I->getParent() == BB && "Removing instruction from wrong block?");
       LLVM_DEBUG(dbgs() << "GVN removed: " << *I << '\n');
       salvageDebugInfo(*I);
       if (MD) MD->removeInstruction(I);
       LLVM_DEBUG(verifyRemoved(I));
-      if (MaybeFirstICF == I) {
-        // We have erased the first ICF in block. The map needs to be updated.
-        // Do not keep dangling pointer on the erased instruction.
-        MaybeFirstICF = nullptr;
-      }
       I->eraseFromParent();
     }
 

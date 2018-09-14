@@ -38,6 +38,9 @@ class VPUser;
 // and live-outs which the VPlan will need to fix accordingly.
 class VPValue {
   friend class VPBuilder;
+  friend class VPlanHCFGTransforms;
+  friend class VPBasicBlock;
+
 private:
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 

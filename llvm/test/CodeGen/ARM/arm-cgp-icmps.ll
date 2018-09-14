@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=thumbv8.main -mcpu=cortex-m33 %s -arm-disable-cgp=false -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-NODSP
+; RUN: llc -mtriple=thumbv8m.main -mcpu=cortex-m33 %s -arm-disable-cgp=false -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-NODSP
 ; RUN: llc -mtriple=thumbv7em %s -arm-disable-cgp=false -arm-enable-scalar-dsp=true -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-DSP
 ; RUN: llc -mtriple=thumbv8 %s -arm-disable-cgp=false -arm-enable-scalar-dsp=true -arm-enable-scalar-dsp-imms=true -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-DSP-IMM
 
@@ -276,6 +276,15 @@ entry:
   %add = add nuw i7 %load, 1
   %cmp = icmp ult i7 %arg1, %add
   %res = select i1 %cmp, i32 %a, i32 %b
+  ret i32 %res
+}
+
+; CHECK-COMMON-LABEL: icmp_i15
+; CHECK-COMMON: movw [[MINUS_ONE:r[0-9]+]], #32767
+define i32 @icmp_i15(i15 zeroext %arg0, i15 zeroext %arg1) {
+  %xor = xor i15 %arg0, -1
+  %cmp = icmp eq i15 %xor, %arg1
+  %res = select i1 %cmp, i32 21, i32 42
   ret i32 %res
 }
 

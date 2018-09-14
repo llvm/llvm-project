@@ -4,18 +4,18 @@
 
 ; Check that we emit ranges for this which has a non-traditional section and a normal section.
 
-; CHECK: DW_TAG_compile_unit
-; CHECK: DW_AT_ranges
-; CHECK: DW_TAG_subprogram
-; CHECK: DW_AT_low_pc
-; CHECK: DW_AT_high_pc
-; CHECK: DW_TAG_subprogram
-; CHECK: DW_AT_low_pc
-; CHECK: DW_AT_high_pc
-
-; CHECK: .debug_ranges contents:
-; FIXME: When we get better dumping facilities we'll want to elaborate here.
-; CHECK: 00000000 <End of list>
+; CHECK:      .debug_info contents:
+; CHECK:      DW_TAG_compile_unit
+; CHECK-NOT:  DW_TAG
+; CHECK:      DW_AT_ranges [DW_FORM_sec_offset] (0x
+; CHECK-NEXT: [0x{{[0-9A-Fa-f]+}}, 0x{{[0-9A-Fa-f]+}})
+; CHECK-NEXT: [0x{{[0-9A-Fa-f]+}}, 0x{{[0-9A-Fa-f]+}}){{.*}})
+; CHECK:      DW_TAG_subprogram
+; CHECK:      DW_AT_low_pc
+; CHECK:      DW_AT_high_pc
+; CHECK:      DW_TAG_subprogram
+; CHECK:      DW_AT_low_pc
+; CHECK:      DW_AT_high_pc
 
 ; Function Attrs: nounwind uwtable
 define i32 @foo(i32 %a) #0 section "__TEXT,__foo" !dbg !4 {

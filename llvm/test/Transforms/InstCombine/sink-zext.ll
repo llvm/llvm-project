@@ -328,4 +328,37 @@ define <2 x i64> @test10_vec(<2 x i32> %V) {
   ret <2 x i64> %mul
 }
 
+define i64 @test11(i32 %V) {
+; CHECK-LABEL: @test11(
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range !1
+; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @callee(), !range !1
+; CHECK-NEXT:    [[ADDCONV:%.*]] = add nsw i32 [[CALL1]], [[CALL2]]
+; CHECK-NEXT:    [[ADD:%.*]] = sext i32 [[ADDCONV]] to i64
+; CHECK-NEXT:    ret i64 [[ADD]]
+;
+  %call1 = call i32 @callee(), !range !1
+  %call2 = call i32 @callee(), !range !1
+  %sext1 = sext i32 %call1 to i64
+  %sext2 = sext i32 %call2 to i64
+  %add = add i64 %sext1, %sext2
+  ret i64 %add
+}
+
+define i64 @test12(i32 %V) {
+; CHECK-LABEL: @test12(
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range !1
+; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @callee(), !range !1
+; CHECK-NEXT:    [[MULCONV:%.*]] = mul nsw i32 [[CALL1]], [[CALL2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[MULCONV]] to i64
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %call1 = call i32 @callee(), !range !1
+  %call2 = call i32 @callee(), !range !1
+  %sext1 = sext i32 %call1 to i64
+  %sext2 = sext i32 %call2 to i64
+  %add = mul i64 %sext1, %sext2
+  ret i64 %add
+}
+
 !0 = !{ i32 0, i32 2000 }
+!1 = !{ i32 -2000, i32 0 }

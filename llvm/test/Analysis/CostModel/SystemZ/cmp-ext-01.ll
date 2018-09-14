@@ -8,7 +8,7 @@ define i8 @fun0(i8 %val1, i8 %val2) {
 
 ; CHECK: fun0
 ; CHECK: cost of 3 for instruction:   %cmp = icmp eq i8 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = sext i1 %cmp to i8
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i8
 }
 
 define i16 @fun1(i8 %val1, i8 %val2) {
@@ -18,7 +18,7 @@ define i16 @fun1(i8 %val1, i8 %val2) {
 
 ; CHECK: fun1
 ; CHECK: cost of 3 for instruction:   %cmp = icmp eq i8 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = sext i1 %cmp to i16
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i16
 }
 
 define i32 @fun2(i8 %val1, i8 %val2) {
@@ -28,7 +28,7 @@ define i32 @fun2(i8 %val1, i8 %val2) {
 
 ; CHECK: fun2
 ; CHECK: cost of 3 for instruction:   %cmp = icmp eq i8 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = sext i1 %cmp to i32
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i32
 }
 
 define i64 @fun3(i8 %val1, i8 %val2) {
@@ -38,7 +38,7 @@ define i64 @fun3(i8 %val1, i8 %val2) {
 
 ; CHECK: fun3
 ; CHECK: cost of 3 for instruction:   %cmp = icmp eq i8 %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = sext i1 %cmp to i64
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i64
 }
 
 define i8 @fun4(i16 %val1, i16 %val2) {
@@ -48,7 +48,7 @@ define i8 @fun4(i16 %val1, i16 %val2) {
 
 ; CHECK: fun4
 ; CHECK: cost of 3 for instruction:   %cmp = icmp eq i16 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = sext i1 %cmp to i8
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i8
 }
 
 define i16 @fun5(i16 %val1, i16 %val2) {
@@ -58,7 +58,7 @@ define i16 @fun5(i16 %val1, i16 %val2) {
 
 ; CHECK: fun5
 ; CHECK: cost of 3 for instruction:   %cmp = icmp eq i16 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = sext i1 %cmp to i16
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i16
 }
 
 define i32 @fun6(i16 %val1, i16 %val2) {
@@ -68,7 +68,7 @@ define i32 @fun6(i16 %val1, i16 %val2) {
 
 ; CHECK: fun6
 ; CHECK: cost of 3 for instruction:   %cmp = icmp eq i16 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = sext i1 %cmp to i32
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i32
 }
 
 define i64 @fun7(i16 %val1, i16 %val2) {
@@ -78,7 +78,7 @@ define i64 @fun7(i16 %val1, i16 %val2) {
 
 ; CHECK: fun7
 ; CHECK: cost of 3 for instruction:   %cmp = icmp eq i16 %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = sext i1 %cmp to i64
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i64
 }
 
 define i8 @fun8(i32 %val1, i32 %val2) {
@@ -88,7 +88,7 @@ define i8 @fun8(i32 %val1, i32 %val2) {
 
 ; CHECK: fun8
 ; CHECK: cost of 1 for instruction:   %cmp = icmp eq i32 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = sext i1 %cmp to i8
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i8
 }
 
 define i16 @fun9(i32 %val1, i32 %val2) {
@@ -98,7 +98,7 @@ define i16 @fun9(i32 %val1, i32 %val2) {
 
 ; CHECK: fun9
 ; CHECK: cost of 1 for instruction:   %cmp = icmp eq i32 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = sext i1 %cmp to i16
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i16
 }
 
 define i32 @fun10(i32 %val1, i32 %val2) {
@@ -108,7 +108,7 @@ define i32 @fun10(i32 %val1, i32 %val2) {
 
 ; CHECK: fun10
 ; CHECK: cost of 1 for instruction:   %cmp = icmp eq i32 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = sext i1 %cmp to i32
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i32
 }
 
 define i64 @fun11(i32 %val1, i32 %val2) {
@@ -118,7 +118,7 @@ define i64 @fun11(i32 %val1, i32 %val2) {
 
 ; CHECK: fun11
 ; CHECK: cost of 1 for instruction:   %cmp = icmp eq i32 %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = sext i1 %cmp to i64
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i64
 }
 
 define i8 @fun12(i64 %val1, i64 %val2) {
@@ -128,7 +128,7 @@ define i8 @fun12(i64 %val1, i64 %val2) {
 
 ; CHECK: fun12
 ; CHECK: cost of 1 for instruction:   %cmp = icmp eq i64 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = sext i1 %cmp to i8
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i8
 }
 
 define i16 @fun13(i64 %val1, i64 %val2) {
@@ -138,7 +138,7 @@ define i16 @fun13(i64 %val1, i64 %val2) {
 
 ; CHECK: fun13
 ; CHECK: cost of 1 for instruction:   %cmp = icmp eq i64 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = sext i1 %cmp to i16
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i16
 }
 
 define i32 @fun14(i64 %val1, i64 %val2) {
@@ -148,7 +148,7 @@ define i32 @fun14(i64 %val1, i64 %val2) {
 
 ; CHECK: fun14
 ; CHECK: cost of 1 for instruction:   %cmp = icmp eq i64 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = sext i1 %cmp to i32
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i32
 }
 
 define i64 @fun15(i64 %val1, i64 %val2) {
@@ -158,7 +158,7 @@ define i64 @fun15(i64 %val1, i64 %val2) {
 
 ; CHECK: fun15
 ; CHECK: cost of 1 for instruction:   %cmp = icmp eq i64 %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = sext i1 %cmp to i64
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i64
 }
 
 define i8 @fun16(float %val1, float %val2) {
@@ -168,7 +168,7 @@ define i8 @fun16(float %val1, float %val2) {
 
 ; CHECK: fun16
 ; CHECK: cost of 1 for instruction:   %cmp = fcmp ogt float %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = sext i1 %cmp to i8
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i8
 }
 
 define i16 @fun17(float %val1, float %val2) {
@@ -178,7 +178,7 @@ define i16 @fun17(float %val1, float %val2) {
 
 ; CHECK: fun17
 ; CHECK: cost of 1 for instruction:   %cmp = fcmp ogt float %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = sext i1 %cmp to i16
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i16
 }
 
 define i32 @fun18(float %val1, float %val2) {
@@ -188,7 +188,7 @@ define i32 @fun18(float %val1, float %val2) {
 
 ; CHECK: fun18
 ; CHECK: cost of 1 for instruction:   %cmp = fcmp ogt float %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = sext i1 %cmp to i32
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i32
 }
 
 define i64 @fun19(float %val1, float %val2) {
@@ -198,7 +198,7 @@ define i64 @fun19(float %val1, float %val2) {
 
 ; CHECK: fun19
 ; CHECK: cost of 1 for instruction:   %cmp = fcmp ogt float %val1, %val2
-; CHECK: cost of 5 for instruction:   %v = sext i1 %cmp to i64
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i64
 }
 
 define i8 @fun20(double %val1, double %val2) {
@@ -208,7 +208,7 @@ define i8 @fun20(double %val1, double %val2) {
 
 ; CHECK: fun20
 ; CHECK: cost of 1 for instruction:   %cmp = fcmp ogt double %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = sext i1 %cmp to i8
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i8
 }
 
 define i16 @fun21(double %val1, double %val2) {
@@ -218,7 +218,7 @@ define i16 @fun21(double %val1, double %val2) {
 
 ; CHECK: fun21
 ; CHECK: cost of 1 for instruction:   %cmp = fcmp ogt double %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = sext i1 %cmp to i16
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i16
 }
 
 define i32 @fun22(double %val1, double %val2) {
@@ -228,7 +228,7 @@ define i32 @fun22(double %val1, double %val2) {
 
 ; CHECK: fun22
 ; CHECK: cost of 1 for instruction:   %cmp = fcmp ogt double %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = sext i1 %cmp to i32
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i32
 }
 
 define i64 @fun23(double %val1, double %val2) {
@@ -238,7 +238,7 @@ define i64 @fun23(double %val1, double %val2) {
 
 ; CHECK: fun23
 ; CHECK: cost of 1 for instruction:   %cmp = fcmp ogt double %val1, %val2
-; CHECK: cost of 5 for instruction:   %v = sext i1 %cmp to i64
+; CHECK: cost of 2 for instruction:   %v = sext i1 %cmp to i64
 }
 
 define <2 x i8> @fun24(<2 x i8> %val1, <2 x i8> %val2) {
@@ -1208,7 +1208,7 @@ define i8 @fun120(i8 %val1, i8 %val2) {
 
 ; CHECK: fun120
 ; CHECK: cost of 3 for instruction:   %cmp = icmp eq i8 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = zext i1 %cmp to i8
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i8
 }
 
 define i16 @fun121(i8 %val1, i8 %val2) {
@@ -1218,7 +1218,7 @@ define i16 @fun121(i8 %val1, i8 %val2) {
 
 ; CHECK: fun121
 ; CHECK: cost of 3 for instruction:   %cmp = icmp eq i8 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = zext i1 %cmp to i16
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i16
 }
 
 define i32 @fun122(i8 %val1, i8 %val2) {
@@ -1228,7 +1228,7 @@ define i32 @fun122(i8 %val1, i8 %val2) {
 
 ; CHECK: fun122
 ; CHECK: cost of 3 for instruction:   %cmp = icmp eq i8 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = zext i1 %cmp to i32
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i32
 }
 
 define i64 @fun123(i8 %val1, i8 %val2) {
@@ -1238,7 +1238,7 @@ define i64 @fun123(i8 %val1, i8 %val2) {
 
 ; CHECK: fun123
 ; CHECK: cost of 3 for instruction:   %cmp = icmp eq i8 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = zext i1 %cmp to i64
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i64
 }
 
 define i8 @fun124(i16 %val1, i16 %val2) {
@@ -1248,7 +1248,7 @@ define i8 @fun124(i16 %val1, i16 %val2) {
 
 ; CHECK: fun124
 ; CHECK: cost of 3 for instruction:   %cmp = icmp eq i16 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = zext i1 %cmp to i8
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i8
 }
 
 define i16 @fun125(i16 %val1, i16 %val2) {
@@ -1258,7 +1258,7 @@ define i16 @fun125(i16 %val1, i16 %val2) {
 
 ; CHECK: fun125
 ; CHECK: cost of 3 for instruction:   %cmp = icmp eq i16 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = zext i1 %cmp to i16
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i16
 }
 
 define i32 @fun126(i16 %val1, i16 %val2) {
@@ -1268,7 +1268,7 @@ define i32 @fun126(i16 %val1, i16 %val2) {
 
 ; CHECK: fun126
 ; CHECK: cost of 3 for instruction:   %cmp = icmp eq i16 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = zext i1 %cmp to i32
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i32
 }
 
 define i64 @fun127(i16 %val1, i16 %val2) {
@@ -1278,7 +1278,7 @@ define i64 @fun127(i16 %val1, i16 %val2) {
 
 ; CHECK: fun127
 ; CHECK: cost of 3 for instruction:   %cmp = icmp eq i16 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = zext i1 %cmp to i64
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i64
 }
 
 define i8 @fun128(i32 %val1, i32 %val2) {
@@ -1288,7 +1288,7 @@ define i8 @fun128(i32 %val1, i32 %val2) {
 
 ; CHECK: fun128
 ; CHECK: cost of 1 for instruction:   %cmp = icmp eq i32 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = zext i1 %cmp to i8
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i8
 }
 
 define i16 @fun129(i32 %val1, i32 %val2) {
@@ -1298,7 +1298,7 @@ define i16 @fun129(i32 %val1, i32 %val2) {
 
 ; CHECK: fun129
 ; CHECK: cost of 1 for instruction:   %cmp = icmp eq i32 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = zext i1 %cmp to i16
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i16
 }
 
 define i32 @fun130(i32 %val1, i32 %val2) {
@@ -1308,7 +1308,7 @@ define i32 @fun130(i32 %val1, i32 %val2) {
 
 ; CHECK: fun130
 ; CHECK: cost of 1 for instruction:   %cmp = icmp eq i32 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = zext i1 %cmp to i32
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i32
 }
 
 define i64 @fun131(i32 %val1, i32 %val2) {
@@ -1318,7 +1318,7 @@ define i64 @fun131(i32 %val1, i32 %val2) {
 
 ; CHECK: fun131
 ; CHECK: cost of 1 for instruction:   %cmp = icmp eq i32 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = zext i1 %cmp to i64
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i64
 }
 
 define i8 @fun132(i64 %val1, i64 %val2) {
@@ -1328,7 +1328,7 @@ define i8 @fun132(i64 %val1, i64 %val2) {
 
 ; CHECK: fun132
 ; CHECK: cost of 1 for instruction:   %cmp = icmp eq i64 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = zext i1 %cmp to i8
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i8
 }
 
 define i16 @fun133(i64 %val1, i64 %val2) {
@@ -1338,7 +1338,7 @@ define i16 @fun133(i64 %val1, i64 %val2) {
 
 ; CHECK: fun133
 ; CHECK: cost of 1 for instruction:   %cmp = icmp eq i64 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = zext i1 %cmp to i16
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i16
 }
 
 define i32 @fun134(i64 %val1, i64 %val2) {
@@ -1348,7 +1348,7 @@ define i32 @fun134(i64 %val1, i64 %val2) {
 
 ; CHECK: fun134
 ; CHECK: cost of 1 for instruction:   %cmp = icmp eq i64 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = zext i1 %cmp to i32
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i32
 }
 
 define i64 @fun135(i64 %val1, i64 %val2) {
@@ -1358,7 +1358,7 @@ define i64 @fun135(i64 %val1, i64 %val2) {
 
 ; CHECK: fun135
 ; CHECK: cost of 1 for instruction:   %cmp = icmp eq i64 %val1, %val2
-; CHECK: cost of 3 for instruction:   %v = zext i1 %cmp to i64
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i64
 }
 
 define i8 @fun136(float %val1, float %val2) {
@@ -1368,7 +1368,7 @@ define i8 @fun136(float %val1, float %val2) {
 
 ; CHECK: fun136
 ; CHECK: cost of 1 for instruction:   %cmp = fcmp ogt float %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = zext i1 %cmp to i8
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i8
 }
 
 define i16 @fun137(float %val1, float %val2) {
@@ -1378,7 +1378,7 @@ define i16 @fun137(float %val1, float %val2) {
 
 ; CHECK: fun137
 ; CHECK: cost of 1 for instruction:   %cmp = fcmp ogt float %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = zext i1 %cmp to i16
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i16
 }
 
 define i32 @fun138(float %val1, float %val2) {
@@ -1388,7 +1388,7 @@ define i32 @fun138(float %val1, float %val2) {
 
 ; CHECK: fun138
 ; CHECK: cost of 1 for instruction:   %cmp = fcmp ogt float %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = zext i1 %cmp to i32
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i32
 }
 
 define i64 @fun139(float %val1, float %val2) {
@@ -1398,7 +1398,7 @@ define i64 @fun139(float %val1, float %val2) {
 
 ; CHECK: fun139
 ; CHECK: cost of 1 for instruction:   %cmp = fcmp ogt float %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = zext i1 %cmp to i64
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i64
 }
 
 define i8 @fun140(double %val1, double %val2) {
@@ -1408,7 +1408,7 @@ define i8 @fun140(double %val1, double %val2) {
 
 ; CHECK: fun140
 ; CHECK: cost of 1 for instruction:   %cmp = fcmp ogt double %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = zext i1 %cmp to i8
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i8
 }
 
 define i16 @fun141(double %val1, double %val2) {
@@ -1418,7 +1418,7 @@ define i16 @fun141(double %val1, double %val2) {
 
 ; CHECK: fun141
 ; CHECK: cost of 1 for instruction:   %cmp = fcmp ogt double %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = zext i1 %cmp to i16
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i16
 }
 
 define i32 @fun142(double %val1, double %val2) {
@@ -1428,7 +1428,7 @@ define i32 @fun142(double %val1, double %val2) {
 
 ; CHECK: fun142
 ; CHECK: cost of 1 for instruction:   %cmp = fcmp ogt double %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = zext i1 %cmp to i32
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i32
 }
 
 define i64 @fun143(double %val1, double %val2) {
@@ -1438,7 +1438,7 @@ define i64 @fun143(double %val1, double %val2) {
 
 ; CHECK: fun143
 ; CHECK: cost of 1 for instruction:   %cmp = fcmp ogt double %val1, %val2
-; CHECK: cost of 4 for instruction:   %v = zext i1 %cmp to i64
+; CHECK: cost of 2 for instruction:   %v = zext i1 %cmp to i64
 }
 
 define <2 x i8> @fun144(<2 x i8> %val1, <2 x i8> %val2) {

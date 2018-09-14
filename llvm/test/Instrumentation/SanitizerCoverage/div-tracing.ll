@@ -10,7 +10,7 @@ entry:
   ret i32 %div
 }
 
-; CHECK-LABEL: div_a_b
+; CHECK-LABEL: @div_a_b
 ; CHECK: call void @__sanitizer_cov_trace_div4(i32 %b)
 ; CHECK: ret
 
@@ -21,7 +21,7 @@ entry:
   ret i32 %div
 }
 
-; CHECK-LABEL: div_a_10
+; CHECK-LABEL: @div_a_10
 ; CHECK-NOT: __sanitizer_cov_trace_div
 ; CHECK: ret
 
@@ -31,7 +31,7 @@ entry:
   ret i64 %div
 }
 
-; CHECK-LABEL: div_a_b
+; CHECK-LABEL: @div_a_b_64
 ; CHECK: call void @__sanitizer_cov_trace_div8(i64 %b)
 ; CHECK: ret
 

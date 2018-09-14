@@ -141,9 +141,6 @@ private:
                          SDValue &Offset, SDValue &SLC) const;
   bool SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc, SDValue &Soffset,
                          SDValue &Offset) const;
-  bool SelectMUBUFConstant(SDValue Constant,
-                           SDValue &SOffset,
-                           SDValue &ImmOffset) const;
 
   bool SelectFlatAtomic(SDValue Addr, SDValue &VAddr,
                         SDValue &Offset, SDValue &SLC) const;
@@ -1279,25 +1276,6 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc,
   SDValue GLC, TFE;
 
   return SelectMUBUFOffset(Addr, SRsrc, Soffset, Offset, GLC, SLC, TFE);
-}
-
-bool AMDGPUDAGToDAGISel::SelectMUBUFConstant(SDValue Constant,
-                                             SDValue &SOffset,
-                                             SDValue &ImmOffset) const {
-  SDLoc DL(Constant);
-  uint32_t Imm = cast<ConstantSDNode>(Constant)->getZExtValue();
-  uint32_t Overflow;
-  if (!AMDGPU::splitMUBUFOffset(Imm, Overflow, Imm, Subtarget))
-    return false;
-  ImmOffset = CurDAG->getTargetConstant(Imm, DL, MVT::i16);
-  if (Overflow <= 64)
-    SOffset = CurDAG->getTargetConstant(Overflow, DL, MVT::i32);
-  else
-    SOffset = SDValue(CurDAG->getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32,
-                      CurDAG->getTargetConstant(Overflow, DL, MVT::i32)),
-                      0);
-
-  return true;
 }
 
 template <bool IsSigned>
