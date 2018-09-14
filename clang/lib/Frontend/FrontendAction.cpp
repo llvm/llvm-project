@@ -347,12 +347,12 @@ static std::error_code collectModuleHeaderIncludes(
          Dir != End && !EC; Dir.increment(EC)) {
       // Check whether this entry has an extension typically associated with
       // headers.
-      if (!llvm::StringSwitch<bool>(llvm::sys::path::extension(Dir->getName()))
-          .Cases(".h", ".H", ".hh", ".hpp", true)
-          .Default(false))
+      if (!llvm::StringSwitch<bool>(llvm::sys::path::extension(Dir->path()))
+               .Cases(".h", ".H", ".hh", ".hpp", true)
+               .Default(false))
         continue;
 
-      const FileEntry *Header = FileMgr.getFile(Dir->getName());
+      const FileEntry *Header = FileMgr.getFile(Dir->path());
       // FIXME: This shouldn't happen unless there is a file system race. Is
       // that worth diagnosing?
       if (!Header)
@@ -365,7 +365,7 @@ static std::error_code collectModuleHeaderIncludes(
 
       // Compute the relative path from the directory to this file.
       SmallVector<StringRef, 16> Components;
-      auto PathIt = llvm::sys::path::rbegin(Dir->getName());
+      auto PathIt = llvm::sys::path::rbegin(Dir->path());
       for (int I = 0; I != Dir.level() + 1; ++I, ++PathIt)
         Components.push_back(*PathIt);
       SmallString<128> RelativeHeader(UmbrellaDir.NameAsWritten);
@@ -696,10 +696,10 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
            Dir != DirEnd && !EC; Dir.increment(EC)) {
         // Check whether this is an acceptable AST file.
         if (ASTReader::isAcceptableASTFile(
-                Dir->getName(), FileMgr, CI.getPCHContainerReader(),
+                Dir->path(), FileMgr, CI.getPCHContainerReader(),
                 CI.getLangOpts(), CI.getTargetOpts(), CI.getPreprocessorOpts(),
                 SpecificModuleCachePath)) {
-          PPOpts.ImplicitPCHInclude = Dir->getName();
+          PPOpts.ImplicitPCHInclude = Dir->path();
           Found = true;
           break;
         }

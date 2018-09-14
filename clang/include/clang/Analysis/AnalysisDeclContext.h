@@ -40,7 +40,6 @@ class ImplicitParamDecl;
 class LocationContext;
 class LocationContextManager;
 class ParentMap;
-class PseudoConstantAnalysis;
 class StackFrameContext;
 class Stmt;
 class VarDecl;
@@ -84,7 +83,6 @@ class AnalysisDeclContext {
   bool builtCFG = false;
   bool builtCompleteCFG = false;
   std::unique_ptr<ParentMap> PM;
-  std::unique_ptr<PseudoConstantAnalysis> PCA;
   std::unique_ptr<CFGReverseBlockReachabilityAnalysis> CFA;
 
   llvm::BumpPtrAllocator A;
@@ -175,7 +173,6 @@ public:
   bool isCFGBuilt() const { return builtCFG; }
 
   ParentMap &getParentMap();
-  PseudoConstantAnalysis *getPseudoConstantAnalysis();
 
   using referenced_decls_iterator = const VarDecl * const *;
 

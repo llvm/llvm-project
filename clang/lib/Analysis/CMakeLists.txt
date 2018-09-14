@@ -23,7 +23,6 @@ add_clang_library(clangAnalysis
   PostOrderCFGView.cpp
   PrintfFormatString.cpp
   ProgramPoint.cpp
-  PseudoConstantAnalysis.cpp
   ReachableCode.cpp
   ScanfFormatString.cpp
   ThreadSafety.cpp

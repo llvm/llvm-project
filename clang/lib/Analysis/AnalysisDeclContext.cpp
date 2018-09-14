@@ -27,7 +27,6 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
-#include "clang/Analysis/Analyses/PseudoConstantAnalysis.h"
 #include "clang/Analysis/BodyFarm.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
@@ -290,12 +289,6 @@ ParentMap &AnalysisDeclContext::getParentMap() {
       addParentsForSyntheticStmts(getUnoptimizedCFG(), *PM);
   }
   return *PM;
-}
-
-PseudoConstantAnalysis *AnalysisDeclContext::getPseudoConstantAnalysis() {
-  if (!PCA)
-    PCA.reset(new PseudoConstantAnalysis(getBody()));
-  return PCA.get();
 }
 
 AnalysisDeclContext *AnalysisDeclContextManager::getContext(const Decl *D) {
