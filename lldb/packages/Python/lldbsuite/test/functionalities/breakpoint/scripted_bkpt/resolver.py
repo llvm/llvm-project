@@ -24,10 +24,9 @@ class Resolver:
       if sym_ctx.function.IsValid():
         Resolver.got_files = 3
         func_name = sym_ctx.function.GetName()
-        print("got called with: ", func_name)
         Resolver.func_list.append(func_name)
         if sym_name == func_name:
-          self.bkpt.AddLocations(func.GetStartAddress())
+          self.bkpt.AddLocation(sym_ctx.function.GetStartAddress())
         return
 
       if sym_ctx.module.IsValid():
