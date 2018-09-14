@@ -1,4 +1,4 @@
-//===--- GlobalSymbolBuilderMain.cpp -----------------------------*- C++-*-===//
+//===--- IndexerMain.cpp -----------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
