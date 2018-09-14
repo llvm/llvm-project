@@ -112,9 +112,17 @@ public:
 private:
   friend class ASTDeclReader;
   /// Combiner for declare reduction construct.
-  Expr *Combiner;
+  Expr *Combiner = nullptr;
   /// Initializer for declare reduction construct.
-  Expr *Initializer;
+  Expr *Initializer = nullptr;
+  /// In parameter of the combiner.
+  Expr *In = nullptr;
+  /// Out parameter of the combiner.
+  Expr *Out = nullptr;
+  /// Priv parameter of the initializer.
+  Expr *Priv = nullptr;
+  /// Orig parameter of the initializer.
+  Expr *Orig = nullptr;
 
   /// Reference to the previous declare reduction construct in the same
   /// scope with the same name. Required for proper templates instantiation if
@@ -143,8 +151,19 @@ public:
   /// Get combiner expression of the declare reduction construct.
   Expr *getCombiner() { return Combiner; }
   const Expr *getCombiner() const { return Combiner; }
+  /// Get In variable of the combiner.
+  Expr *getCombinerIn() { return In; }
+  const Expr *getCombinerIn() const { return In; }
+  /// Get Out variable of the combiner.
+  Expr *getCombinerOut() { return Out; }
+  const Expr *getCombinerOut() const { return Out; }
   /// Set combiner expression for the declare reduction construct.
   void setCombiner(Expr *E) { Combiner = E; }
+  /// Set combiner In and Out vars.
+  void setCombinerData(Expr *InE, Expr *OutE) {
+    In = InE;
+    Out = OutE;
+  }
 
   /// Get initializer expression (if specified) of the declare reduction
   /// construct.
@@ -154,10 +173,21 @@ public:
   InitKind getInitializerKind() const {
     return static_cast<InitKind>(OMPDeclareReductionDeclBits.InitializerKind);
   }
+  /// Get Orig variable of the initializer.
+  Expr *getInitOrig() { return Orig; }
+  const Expr *getInitOrig() const { return Orig; }
+  /// Get Priv variable of the initializer.
+  Expr *getInitPriv() { return Priv; }
+  const Expr *getInitPriv() const { return Priv; }
   /// Set initializer expression for the declare reduction construct.
   void setInitializer(Expr *E, InitKind IK) {
     Initializer = E;
     OMPDeclareReductionDeclBits.InitializerKind = IK;
+  }
+  /// Set initializer Orig and Priv vars.
+  void setInitializerData(Expr *OrigE, Expr *PrivE) {
+    Orig = OrigE;
+    Priv = PrivE;
   }
 
   /// Get reference to previous declare reduction construct in the same

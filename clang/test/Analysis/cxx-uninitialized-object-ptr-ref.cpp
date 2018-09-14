@@ -46,6 +46,50 @@ void fNullPtrTest() {
 }
 
 //===----------------------------------------------------------------------===//
+// Alloca tests.
+//===----------------------------------------------------------------------===//
+
+struct UntypedAllocaTest {
+  void *allocaPtr;
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  UntypedAllocaTest() : allocaPtr(__builtin_alloca(sizeof(int))) {
+    // All good!
+  }
+};
+
+void fUntypedAllocaTest() {
+  UntypedAllocaTest();
+}
+
+struct TypedAllocaTest1 {
+  int *allocaPtr; // expected-note{{uninitialized pointee 'this->allocaPtr'}}
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  TypedAllocaTest1() // expected-warning{{1 uninitialized field}}
+      : allocaPtr(static_cast<int *>(__builtin_alloca(sizeof(int)))) {}
+};
+
+void fTypedAllocaTest1() {
+  TypedAllocaTest1();
+}
+
+struct TypedAllocaTest2 {
+  int *allocaPtr;
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  TypedAllocaTest2()
+      : allocaPtr(static_cast<int *>(__builtin_alloca(sizeof(int)))) {
+    *allocaPtr = 55555;
+    // All good!
+  }
+};
+
+void fTypedAllocaTest2() {
+  TypedAllocaTest2();
+}
+
+//===----------------------------------------------------------------------===//
 // Heap pointer tests.
 //===----------------------------------------------------------------------===//
 
@@ -203,18 +247,14 @@ void fCyclicPointerTest1() {
   CyclicPointerTest1();
 }
 
-// TODO: Currently, the checker ends up in an infinite loop for the following
-// test case.
-/*
 struct CyclicPointerTest2 {
-  int **pptr;
+  int **pptr; // no-crash
   CyclicPointerTest2() : pptr(reinterpret_cast<int **>(&pptr)) {}
 };
 
 void fCyclicPointerTest2() {
   CyclicPointerTest2();
 }
-*/
 
 //===----------------------------------------------------------------------===//
 // Void pointer tests.
@@ -471,6 +511,39 @@ void fMultiPointerTest3() {
 }
 
 //===----------------------------------------------------------------------===//
+// Incomplete pointee tests.
+//===----------------------------------------------------------------------===//
+
+class IncompleteType;
+
+struct IncompletePointeeTypeTest {
+  IncompleteType *pImpl; //no-crash
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  IncompletePointeeTypeTest(IncompleteType *A) : pImpl(A) {}
+};
+
+void fIncompletePointeeTypeTest(void *ptr) {
+  IncompletePointeeTypeTest(reinterpret_cast<IncompleteType *>(ptr));
+}
+
+//===----------------------------------------------------------------------===//
+// Function pointer tests.
+//===----------------------------------------------------------------------===//
+
+struct FunctionPointerWithDifferentDynTypeTest {
+  using Func1 = void *(*)();
+  using Func2 = int *(*)();
+
+  Func1 f; // no-crash
+  FunctionPointerWithDifferentDynTypeTest(Func2 f) : f((Func1)f) {}
+};
+
+// Note that there isn't a function calling the constructor of
+// FunctionPointerWithDifferentDynTypeTest, because a crash could only be
+// reproduced without it.
+
+//===----------------------------------------------------------------------===//
 // Member pointer tests.
 //===----------------------------------------------------------------------===//
 
@@ -643,6 +716,15 @@ void fCyclicList() {
   n1.next = &n3;
   // note that n1.i is uninitialized
   CyclicList(&n1, int());
+}
+
+struct RingListTest {
+  RingListTest *next; // no-crash
+  RingListTest() : next(this) {}
+};
+
+void fRingListTest() {
+  RingListTest();
 }
 
 //===----------------------------------------------------------------------===//
