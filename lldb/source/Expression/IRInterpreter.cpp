@@ -613,6 +613,18 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
         }
         }
 
+        // The IR interpreter currently doesn't know about
+        // 128-bit integers. As they're not that frequent,
+        // we can just fall back to the JIT rather than
+        // choking.
+        if (operand_type->getPrimitiveSizeInBits() > 64) {
+          if (log)
+            log->Printf("Unsupported operand type: %s",
+                        PrintType(operand_type).c_str());
+          error.SetErrorString(unsupported_operand_error);
+          return false;
+        }
+
         if (Constant *constant = llvm::dyn_cast<Constant>(operand)) {
           if (!CanResolveConstant(constant)) {
             if (log)

@@ -106,10 +106,35 @@ class TestScriptedResolver(TestBase):
         wrong.append(target.BreakpointCreateFromScript("resolver.Resolver", extra_args, module_list, file_list))
 
         # one with the wrong file - also should not fire:
+        file_list.Clear()
         module_list.Clear()
         file_list.Append(lldb.SBFileSpec("noFileOfThisName.xxx"))
         wrong.append(target.BreakpointCreateFromScript("resolver.Resolver", extra_args, module_list, file_list))
         
+        # Now make sure the CU level iteration obeys the file filters:
+        file_list.Clear()
+        module_list.Clear()
+        file_list.Append(lldb.SBFileSpec("no_such_file.xxx"))
+        wrong.append(target.BreakpointCreateFromScript("resolver.ResolverCUDepth", extra_args, module_list, file_list))
+
+        # And the Module filters:
+        file_list.Clear()
+        module_list.Clear()
+        module_list.Append(lldb.SBFileSpec("NoSuchModule.dylib"))
+        wrong.append(target.BreakpointCreateFromScript("resolver.ResolverCUDepth", extra_args, module_list, file_list))
+
+        # Now make sure the Function level iteration obeys the file filters:
+        file_list.Clear()
+        module_list.Clear()
+        file_list.Append(lldb.SBFileSpec("no_such_file.xxx"))
+        wrong.append(target.BreakpointCreateFromScript("resolver.ResolverFuncDepth", extra_args, module_list, file_list))
+
+        # And the Module filters:
+        file_list.Clear()
+        module_list.Clear()
+        module_list.Append(lldb.SBFileSpec("NoSuchModule.dylib"))
+        wrong.append(target.BreakpointCreateFromScript("resolver.ResolverFuncDepth", extra_args, module_list, file_list))
+
         # Make sure these didn't get locations:
         for i in range(0, len(wrong)):
             self.assertEqual(wrong[i].GetNumLocations(), 0, "Breakpoint %d has locations."%(i))
@@ -158,12 +183,11 @@ class TestScriptedResolver(TestBase):
         self.assertTrue(bkpt.GetNumLocations() > 0, "ResolverBadDepth got no locations.")
         self.expect("script print resolver.Resolver.got_files", substrs=["2"], msg="Was only passed modules")
 
-        # Make a breakpoint that searches at function depth - FIXME: uncomment this when I fix the function
-        # depth search.
-        #bkpt = target.BreakpointCreateFromScript("resolver.ResolverFuncDepth", extra_args, module_list, file_list)
-        #self.assertTrue(bkpt.GetNumLocations() > 0, "ResolverFuncDepth got no locations.")
-        #self.expect("script print resolver.Resolver.got_files", substrs=["3"], msg="Was only passed modules")
-        #self.expect("script print resolver.Resolver.func_list", substrs=["break_on_me", "main", "test_func"], msg="Saw all the functions")
+        # Make a breakpoint that searches at function depth:
+        bkpt = target.BreakpointCreateFromScript("resolver.ResolverFuncDepth", extra_args, module_list, file_list)
+        self.assertTrue(bkpt.GetNumLocations() > 0, "ResolverFuncDepth got no locations.")
+        self.expect("script print resolver.Resolver.got_files", substrs=["3"], msg="Was only passed modules")
+        self.expect("script print resolver.Resolver.func_list", substrs=["break_on_me", "main", "test_func"], msg="Saw all the functions")
 
     def do_test_cli(self):
         target = self.make_target_and_import()

@@ -3,7 +3,7 @@
 .\"
 .\" This man page documents only lld's ELF linking support, obtained originally
 .\" from FreeBSD.
-.Dd July 30, 2018
+.Dd September 14, 2018
 .Dt LD.LLD 1
 .Os
 .Sh NAME
@@ -446,6 +446,12 @@ segment.
 Sets the
 .Dv DF_1_INITFIRST
 flag to indicate the module should be initialized first.
+.It Cm interpose
+Set the
+.Dv DF_1_INTERPOSE
+flag to indicate to the runtime linker that the object is an interposer.
+During symbol resolution interposers are searched after the application
+but before other dependencies.
 .It Cm muldefs
 Do not error if a symbol is defined multiple times.
 The first definition will be used.
