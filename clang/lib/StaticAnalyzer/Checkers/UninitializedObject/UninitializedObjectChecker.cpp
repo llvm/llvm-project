@@ -10,36 +10,8 @@
 // This file defines a checker that reports uninitialized fields in objects
 // created after a constructor call.
 //
-// This checker has several options:
-//   - "Pedantic" (boolean). If its not set or is set to false, the checker
-//     won't emit warnings for objects that don't have at least one initialized
-//     field. This may be set with
-//
-//     `-analyzer-config alpha.cplusplus.UninitializedObject:Pedantic=true`.
-//
-//   - "NotesAsWarnings" (boolean). If set to true, the checker will emit a
-//     warning for each uninitalized field, as opposed to emitting one warning
-//     per constructor call, and listing the uninitialized fields that belongs
-//     to it in notes. Defaults to false.
-//
-//     `-analyzer-config \
-//         alpha.cplusplus.UninitializedObject:NotesAsWarnings=true`.
-//
-//   - "CheckPointeeInitialization" (boolean). If set to false, the checker will
-//     not analyze the pointee of pointer/reference fields, and will only check
-//     whether the object itself is initialized. Defaults to false.
-//
-//     `-analyzer-config \
-//         alpha.cplusplus.UninitializedObject:CheckPointeeInitialization=true`.
-//
-//     TODO: With some clever heuristics, some pointers should be dereferenced
-//     by default. For example, if the pointee is constructed within the
-//     constructor call, it's reasonable to say that no external object
-//     references it, and we wouldn't generate multiple report on the same
-//     pointee.
-//
-// To read about how the checker works, refer to the comments in
-// UninitializedObject.h.
+// To read about command line options and how the checker works, refer to the
+// top of the file and inline comments in UninitializedObject.h.
 //
 // Some of the logic is implemented in UninitializedPointee.cpp, to reduce the
 // complexity of this file.
@@ -62,10 +34,8 @@ class UninitializedObjectChecker : public Checker<check::EndFunction> {
   std::unique_ptr<BuiltinBug> BT_uninitField;
 
 public:
-  // These fields will be initialized when registering the checker.
-  bool IsPedantic;
-  bool ShouldConvertNotesToWarnings;
-  bool CheckPointeeInitialization;
+  // The fields of this struct will be initialized when registering the checker.
+  UninitObjCheckerOptions Opts;
 
   UninitializedObjectChecker()
       : BT_uninitField(new BuiltinBug(this, "Uninitialized fields")) {}
@@ -165,18 +135,11 @@ void UninitializedObjectChecker::checkEndFunction(
   if (!Object)
     return;
 
-  FindUninitializedFields F(Context.getState(), Object->getRegion(),
-                            CheckPointeeInitialization);
+  FindUninitializedFields F(Context.getState(), Object->getRegion(), Opts);
 
   const UninitFieldMap &UninitFields = F.getUninitFields();
 
   if (UninitFields.empty())
-    return;
-
-  // In non-pedantic mode, if Object's region doesn't contain a single
-  // initialized field, we'll assume that Object was intentionally left
-  // uninitialized.
-  if (!IsPedantic && !F.isAnyFieldInitialized())
     return;
 
   // There are uninitialized fields in the record.
@@ -193,7 +156,7 @@ void UninitializedObjectChecker::checkEndFunction(
 
   // For Plist consumers that don't support notes just yet, we'll convert notes
   // to warnings.
-  if (ShouldConvertNotesToWarnings) {
+  if (Opts.ShouldConvertNotesToWarnings) {
     for (const auto &Pair : UninitFields) {
 
       auto Report = llvm::make_unique<BugReport>(
@@ -228,11 +191,15 @@ void UninitializedObjectChecker::checkEndFunction(
 
 FindUninitializedFields::FindUninitializedFields(
     ProgramStateRef State, const TypedValueRegion *const R,
-    bool CheckPointeeInitialization)
-    : State(State), ObjectR(R),
-      CheckPointeeInitialization(CheckPointeeInitialization) {
+    const UninitObjCheckerOptions &Opts)
+    : State(State), ObjectR(R), Opts(Opts) {
 
   isNonUnionUninit(ObjectR, FieldChainInfo(ChainFactory));
+
+  // In non-pedantic mode, if ObjectR doesn't contain a single initialized
+  // field, we'll assume that Object was intentionally left uninitialized.
+  if (!Opts.IsPedantic && !isAnyFieldInitialized())
+    UninitFields.clear();
 }
 
 bool FindUninitializedFields::addFieldToUninits(FieldChainInfo Chain) {
@@ -502,10 +469,13 @@ std::string clang::ento::getVariableName(const FieldDecl *Field) {
 void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
   auto Chk = Mgr.registerChecker<UninitializedObjectChecker>();
 
-  Chk->IsPedantic = Mgr.getAnalyzerOptions().getBooleanOption(
+  AnalyzerOptions &AnOpts = Mgr.getAnalyzerOptions();
+  UninitObjCheckerOptions &ChOpts = Chk->Opts;
+
+  ChOpts.IsPedantic = AnOpts.getBooleanOption(
       "Pedantic", /*DefaultVal*/ false, Chk);
-  Chk->ShouldConvertNotesToWarnings = Mgr.getAnalyzerOptions().getBooleanOption(
+  ChOpts.ShouldConvertNotesToWarnings = AnOpts.getBooleanOption(
       "NotesAsWarnings", /*DefaultVal*/ false, Chk);
-  Chk->CheckPointeeInitialization = Mgr.getAnalyzerOptions().getBooleanOption(
+  ChOpts.CheckPointeeInitialization = AnOpts.getBooleanOption(
       "CheckPointeeInitialization", /*DefaultVal*/ false, Chk);
 }
