@@ -439,9 +439,11 @@ int SystemZTTIImpl::getArithmeticInstrCost(
     if (Opcode == Instruction::Or)
       return 1;
 
-    if (Opcode == Instruction::Xor && ScalarBits == 1)
-      // 2 * ipm sequences ; xor ; shift ; compare
-      return 7;
+    if (Opcode == Instruction::Xor && ScalarBits == 1) {
+      if (ST->hasLoadStoreOnCond2())
+        return 5; // 2 * (li 0; loc 1); xor
+      return 7; // 2 * ipm sequences ; xor ; shift ; compare
+    }
 
     if (UDivPow2)
       return 1;
@@ -707,6 +709,9 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
 
     if ((Opcode == Instruction::ZExt || Opcode == Instruction::SExt) &&
         Src->isIntegerTy(1)) {
+      if (ST->hasLoadStoreOnCond2())
+        return 2; // li 0; loc 1
+
       // This should be extension of a compare i1 result, which is done with
       // ipm and a varying sequence of instructions.
       unsigned Cost = 0;
@@ -718,7 +723,6 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
       if (CmpOpTy != nullptr && CmpOpTy->isFloatingPointTy())
         // If operands of an fp-type was compared, this costs +1.
         Cost++;
-
       return Cost;
     }
   }

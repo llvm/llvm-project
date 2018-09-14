@@ -269,23 +269,49 @@ static std::unique_ptr<llvm::pdb::PDBSymbol>
 GetClassOrFunctionParent(const llvm::pdb::PDBSymbol &symbol) {
   const IPDBSession &session = symbol.getSession();
   const IPDBRawSymbol &raw = symbol.getRawSymbol();
+  auto tag = symbol.getSymTag();
 
-  auto class_parent_id = raw.getClassParentId();
-  if (auto class_parent = session.getSymbolById(class_parent_id))
-    return class_parent;
+  // For items that are nested inside of a class, return the class that it is
+  // nested inside of.
+  // Note that only certain items can be nested inside of classes.
+  switch (tag) {
+  case PDB_SymType::Function:
+  case PDB_SymType::Data:
+  case PDB_SymType::UDT:
+  case PDB_SymType::Enum:
+  case PDB_SymType::FunctionSig:
+  case PDB_SymType::Typedef:
+  case PDB_SymType::BaseClass:
+  case PDB_SymType::VTable: {
+    auto class_parent_id = raw.getClassParentId();
+    if (auto class_parent = session.getSymbolById(class_parent_id))
+      return class_parent;
+  }
+  default:
+    break;
+  }
 
-  auto lexical_parent_id = raw.getLexicalParentId();
-  auto lexical_parent = session.getSymbolById(lexical_parent_id);
-  if (!lexical_parent)
+  // Otherwise, if it is nested inside of a function, return the function.
+  // Note that only certain items can be nested inside of functions.
+  switch (tag) {
+  case PDB_SymType::Block:
+  case PDB_SymType::Data: {
+    auto lexical_parent_id = raw.getLexicalParentId();
+    auto lexical_parent = session.getSymbolById(lexical_parent_id);
+    if (!lexical_parent)
+      return nullptr;
+
+    auto lexical_parent_tag = lexical_parent->getSymTag();
+    if (lexical_parent_tag == PDB_SymType::Function)
+      return lexical_parent;
+    if (lexical_parent_tag == PDB_SymType::Exe)
+      return nullptr;
+
+    return GetClassOrFunctionParent(*lexical_parent);
+  }
+  default:
     return nullptr;
-
-  auto lexical_parent_tag = lexical_parent->getSymTag();
-  if (lexical_parent_tag == PDB_SymType::Function)
-    return lexical_parent;
-  if (lexical_parent_tag == PDB_SymType::Exe)
-    return nullptr;
-
-  return GetClassOrFunctionParent(*lexical_parent);
+  }
 }
 
 static clang::NamedDecl *

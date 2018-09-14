@@ -1,13 +1,12 @@
-add_library(LLVMCFIVerify
-  STATIC
+add_llvm_library(LLVMCFIVerify
   FileAnalysis.cpp
   FileAnalysis.h
   GraphBuilder.cpp
   GraphBuilder.h
-  )
 
-llvm_update_compile_flags(LLVMCFIVerify)
-llvm_map_components_to_libnames(libs
+  STATIC
+
+  LINK_COMPONENTS
   DebugInfoDWARF
   MC
   MCParser
@@ -15,5 +14,3 @@ llvm_map_components_to_libnames(libs
   Support
   Symbolize
   )
-target_link_libraries(LLVMCFIVerify ${libs})
-set_target_properties(LLVMCFIVerify PROPERTIES FOLDER "Libraries")

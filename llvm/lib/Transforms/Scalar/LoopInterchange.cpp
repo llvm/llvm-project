@@ -454,6 +454,7 @@ struct LoopInterchange : public FunctionPass {
 
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
+    AU.addPreserved<ScalarEvolutionWrapperPass>();
   }
 
   bool runOnFunction(Function &F) override {
@@ -1231,6 +1232,10 @@ void LoopInterchangeTransform::restructureLoops(
   // outer loop.
   NewOuter->addBlockEntry(OrigOuterPreHeader);
   LI->changeLoopFor(OrigOuterPreHeader, NewOuter);
+
+  // Tell SE that we move the loops around.
+  SE->forgetLoop(NewOuter);
+  SE->forgetLoop(NewInner);
 }
 
 bool LoopInterchangeTransform::transform() {

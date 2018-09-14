@@ -575,6 +575,8 @@ class VectorType;
     bool isLegalInterleavedAccessType(VectorType *VecTy,
                                       const DataLayout &DL) const;
 
+    bool alignLoopsWithOptSize() const override;
+
     /// Returns the number of interleaved accesses that will be generated when
     /// lowering accesses of the given type.
     unsigned getNumInterleavedAccesses(VectorType *VecTy,

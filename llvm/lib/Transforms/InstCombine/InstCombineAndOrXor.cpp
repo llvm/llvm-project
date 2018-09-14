@@ -2898,6 +2898,17 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
         return SelectInst::Create(
             Builder.CreateICmp(getInverseMinMaxPred(SPF), NotX, Y), NotX, Y);
       }
+
+      // If both sides are freely invertible, then we can get rid of the xor
+      // completely.
+      if (IsFreeToInvert(LHS, !LHS->hasNUsesOrMore(3)) &&
+          IsFreeToInvert(RHS, !RHS->hasNUsesOrMore(3))) {
+        Value *NotLHS = Builder.CreateNot(LHS);
+        Value *NotRHS = Builder.CreateNot(RHS);
+        return SelectInst::Create(
+            Builder.CreateICmp(getInverseMinMaxPred(SPF), NotLHS, NotRHS),
+            NotLHS, NotRHS);
+      }
     }
   }
 

@@ -637,7 +637,7 @@ class ArrayType final : public Node {
   NodeOrString Dimension;
 
 public:
-  ArrayType(const Node *Base_, NodeOrString Dimension_ = NodeOrString())
+  ArrayType(const Node *Base_, NodeOrString Dimension_)
       : Node(KArrayType,
              /*RHSComponentCache=*/Cache::Yes,
              /*ArrayCache=*/Cache::Yes),
@@ -1360,12 +1360,14 @@ public:
 class CtorDtorName final : public Node {
   const Node *Basename;
   const bool IsDtor;
+  const int Variant;
 
 public:
-  CtorDtorName(const Node *Basename_, bool IsDtor_)
-      : Node(KCtorDtorName), Basename(Basename_), IsDtor(IsDtor_) {}
+  CtorDtorName(const Node *Basename_, bool IsDtor_, int Variant_)
+      : Node(KCtorDtorName), Basename(Basename_), IsDtor(IsDtor_),
+        Variant(Variant_) {}
 
-  template<typename Fn> void match(Fn F) const { F(Basename, IsDtor); }
+  template<typename Fn> void match(Fn F) const { F(Basename, IsDtor, Variant); }
 
   void printLeft(OutputStream &S) const override {
     if (IsDtor)
@@ -2800,20 +2802,22 @@ Node *Db<Alloc>::parseCtorDtorName(Node *&SoFar, NameState *State) {
     bool IsInherited = consumeIf('I');
     if (look() != '1' && look() != '2' && look() != '3' && look() != '5')
       return nullptr;
+    int Variant = look() - '0';
     ++First;
     if (State) State->CtorDtorConversion = true;
     if (IsInherited) {
       if (parseName(State) == nullptr)
         return nullptr;
     }
-    return make<CtorDtorName>(SoFar, false);
+    return make<CtorDtorName>(SoFar, false, Variant);
   }
 
   if (look() == 'D' &&
       (look(1) == '0' || look(1) == '1' || look(1) == '2' || look(1) == '5')) {
+    int Variant = look(1) - '0';
     First += 2;
     if (State) State->CtorDtorConversion = true;
-    return make<CtorDtorName>(SoFar, true);
+    return make<CtorDtorName>(SoFar, true, Variant);
   }
 
   return nullptr;
@@ -3292,32 +3296,25 @@ template<typename Alloc> Node *Db<Alloc>::parseArrayType() {
   if (!consumeIf('A'))
     return nullptr;
 
+  NodeOrString Dimension;
+
   if (std::isdigit(look())) {
-    StringView Dimension = parseNumber();
+    Dimension = parseNumber();
     if (!consumeIf('_'))
       return nullptr;
-    Node *Ty = parseType();
-    if (Ty == nullptr)
-      return nullptr;
-    return make<ArrayType>(Ty, Dimension);
-  }
-
-  if (!consumeIf('_')) {
+  } else if (!consumeIf('_')) {
     Node *DimExpr = parseExpr();
     if (DimExpr == nullptr)
       return nullptr;
     if (!consumeIf('_'))
       return nullptr;
-    Node *ElementType = parseType();
-    if (ElementType == nullptr)
-      return nullptr;
-    return make<ArrayType>(ElementType, DimExpr);
+    Dimension = DimExpr;
   }
 
   Node *Ty = parseType();
   if (Ty == nullptr)
     return nullptr;
-  return make<ArrayType>(Ty);
+  return make<ArrayType>(Ty, Dimension);
 }
 
 // <pointer-to-member-type> ::= M <class type> <member type>

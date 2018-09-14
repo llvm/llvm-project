@@ -83,7 +83,7 @@
 ; written in relocation places (dumper needs to	be fixed to read the
 ; relocations rather than interpret that as the end of a range list))
 
-; CHECK: 00000000 <End of list>
+; CHECK: 0x{{[0-9A-Fa-f]+}}: 0x{{0+}}, 0x{{0+}}
 
 
 ; Check that we don't emit any pubnames or pubtypes under -gmlt

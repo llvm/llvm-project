@@ -58,6 +58,7 @@
 #include "LoopVectorizationPlanner.h"
 #include "VPRecipeBuilder.h"
 #include "VPlanHCFGBuilder.h"
+#include "VPlanHCFGTransforms.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -234,7 +235,7 @@ static cl::opt<unsigned> MaxNestedScalarReductionIC(
     cl::desc("The maximum interleave count to use when interleaving a scalar "
              "reduction in a nested loop."));
 
-static cl::opt<bool> EnableVPlanNativePath(
+cl::opt<bool> EnableVPlanNativePath(
     "enable-vplan-native-path", cl::init(false), cl::Hidden,
     cl::desc("Enable VPlan-native vectorization path with "
              "support for outer loop vectorization."));
@@ -418,6 +419,9 @@ public:
   /// Set the debug location in the builder using the debug location in
   /// the instruction.
   void setDebugLocFromInst(IRBuilder<> &B, const Value *Ptr);
+
+  /// Fix the non-induction PHIs in the OrigPHIsToFix vector.
+  void fixNonInductionPHIs(void);
 
 protected:
   friend class LoopVectorizationPlanner;
@@ -686,6 +690,10 @@ protected:
   // Holds the end values for each induction variable. We save the end values
   // so we can later fix-up the external users of the induction variables.
   DenseMap<PHINode *, Value *> IVEndValues;
+
+  // Vector of original scalar PHIs whose corresponding widened PHIs need to be
+  // fixed up at the end of vector code generation.
+  SmallVector<PHINode *, 8> OrigPHIsToFix;
 };
 
 class InnerLoopUnroller : public InnerLoopVectorizer {
@@ -888,6 +896,12 @@ public:
   /// vectorization factor \p VF.
   bool isProfitableToScalarize(Instruction *I, unsigned VF) const {
     assert(VF > 1 && "Profitable to scalarize relevant only for VF > 1.");
+
+    // Cost model is not run in the VPlan-native path - return conservative
+    // result until this changes.
+    if (EnableVPlanNativePath)
+      return false;
+
     auto Scalars = InstsToScalarize.find(VF);
     assert(Scalars != InstsToScalarize.end() &&
            "VF not yet analyzed for scalarization profitability");
@@ -898,6 +912,12 @@ public:
   bool isUniformAfterVectorization(Instruction *I, unsigned VF) const {
     if (VF == 1)
       return true;
+
+    // Cost model is not run in the VPlan-native path - return conservative
+    // result until this changes.
+    if (EnableVPlanNativePath)
+      return false;
+
     auto UniformsPerVF = Uniforms.find(VF);
     assert(UniformsPerVF != Uniforms.end() &&
            "VF not yet analyzed for uniformity");
@@ -908,6 +928,12 @@ public:
   bool isScalarAfterVectorization(Instruction *I, unsigned VF) const {
     if (VF == 1)
       return true;
+
+    // Cost model is not run in the VPlan-native path - return conservative
+    // result until this changes.
+    if (EnableVPlanNativePath)
+      return false;
+
     auto ScalarsPerVF = Scalars.find(VF);
     assert(ScalarsPerVF != Scalars.end() &&
            "Scalar values are not calculated for VF");
@@ -962,6 +988,12 @@ public:
   /// through the cost modeling.
   InstWidening getWideningDecision(Instruction *I, unsigned VF) {
     assert(VF >= 2 && "Expected VF >=2");
+
+    // Cost model is not run in the VPlan-native path - return conservative
+    // result until this changes.
+    if (EnableVPlanNativePath)
+      return CM_GatherScatter;
+
     std::pair<Instruction *, unsigned> InstOnVF = std::make_pair(I, VF);
     auto Itr = WideningDecisions.find(InstOnVF);
     if (Itr == WideningDecisions.end())
@@ -1397,8 +1429,16 @@ struct LoopVectorize : public FunctionPass {
     AU.addRequired<LoopAccessLegacyAnalysis>();
     AU.addRequired<DemandedBitsWrapperPass>();
     AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
+
+    // We currently do not preserve loopinfo/dominator analyses with outer loop
+    // vectorization. Until this is addressed, mark these analyses as preserved
+    // only for non-VPlan-native path.
+    // TODO: Preserve Loop and Dominator analyses for VPlan-native path.
+    if (!EnableVPlanNativePath) {
+      AU.addPreserved<LoopInfoWrapperPass>();
+      AU.addPreserved<DominatorTreeWrapperPass>();
+    }
+
     AU.addPreserved<BasicAAWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
@@ -1749,8 +1789,9 @@ Value *InnerLoopVectorizer::getOrCreateVectorValue(Value *V, unsigned Part) {
   assert(!V->getType()->isVectorTy() && "Can't widen a vector");
   assert(!V->getType()->isVoidTy() && "Type does not produce a value");
 
-  // If we have a stride that is replaced by one, do it here.
-  if (Legal->hasStride(V))
+  // If we have a stride that is replaced by one, do it here. Defer this for
+  // the VPlan-native path until we start running Legal checks in that path.
+  if (!EnableVPlanNativePath && Legal->hasStride(V))
     V = ConstantInt::get(V->getType(), 1);
 
   // If we have a vector mapped to this value, return it.
@@ -2416,6 +2457,10 @@ void InnerLoopVectorizer::emitSCEVChecks(Loop *L, BasicBlock *Bypass) {
 }
 
 void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass) {
+  // VPlan-native path does not do any analysis for runtime checks currently.
+  if (EnableVPlanNativePath)
+    return;
+
   BasicBlock *BB = L->getLoopPreheader();
 
   // Generate the code that checks in runtime if arrays overlap. We put the
@@ -3060,6 +3105,13 @@ void InnerLoopVectorizer::fixVectorizedLoop() {
   if (VF > 1)
     truncateToMinimalBitwidths();
 
+  // Fix widened non-induction PHIs by setting up the PHI operands.
+  if (OrigPHIsToFix.size()) {
+    assert(EnableVPlanNativePath &&
+           "Unexpected non-induction PHIs for fixup in non VPlan-native path");
+    fixNonInductionPHIs();
+  }
+
   // At this point every instruction in the original loop is widened to a
   // vector form. Now we need to fix the recurrences in the loop. These PHI
   // nodes are currently empty because we did not want to introduce cycles.
@@ -3532,12 +3584,62 @@ void InnerLoopVectorizer::sinkScalarOperands(Instruction *PredInst) {
   } while (Changed);
 }
 
+void InnerLoopVectorizer::fixNonInductionPHIs() {
+  for (PHINode *OrigPhi : OrigPHIsToFix) {
+    PHINode *NewPhi =
+        cast<PHINode>(VectorLoopValueMap.getVectorValue(OrigPhi, 0));
+    unsigned NumIncomingValues = OrigPhi->getNumIncomingValues();
+
+    SmallVector<BasicBlock *, 2> ScalarBBPredecessors(
+        predecessors(OrigPhi->getParent()));
+    SmallVector<BasicBlock *, 2> VectorBBPredecessors(
+        predecessors(NewPhi->getParent()));
+    assert(ScalarBBPredecessors.size() == VectorBBPredecessors.size() &&
+           "Scalar and Vector BB should have the same number of predecessors");
+
+    // The insertion point in Builder may be invalidated by the time we get
+    // here. Force the Builder insertion point to something valid so that we do
+    // not run into issues during insertion point restore in
+    // getOrCreateVectorValue calls below.
+    Builder.SetInsertPoint(NewPhi);
+
+    // The predecessor order is preserved and we can rely on mapping between
+    // scalar and vector block predecessors.
+    for (unsigned i = 0; i < NumIncomingValues; ++i) {
+      BasicBlock *NewPredBB = VectorBBPredecessors[i];
+
+      // When looking up the new scalar/vector values to fix up, use incoming
+      // values from original phi.
+      Value *ScIncV =
+          OrigPhi->getIncomingValueForBlock(ScalarBBPredecessors[i]);
+
+      // Scalar incoming value may need a broadcast
+      Value *NewIncV = getOrCreateVectorValue(ScIncV, 0);
+      NewPhi->addIncoming(NewIncV, NewPredBB);
+    }
+  }
+}
+
 void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
                                               unsigned VF) {
+  PHINode *P = cast<PHINode>(PN);
+  if (EnableVPlanNativePath) {
+    // Currently we enter here in the VPlan-native path for non-induction
+    // PHIs where all control flow is uniform. We simply widen these PHIs.
+    // Create a vector phi with no operands - the vector phi operands will be
+    // set at the end of vector code generation.
+    Type *VecTy =
+        (VF == 1) ? PN->getType() : VectorType::get(PN->getType(), VF);
+    Value *VecPhi = Builder.CreatePHI(VecTy, PN->getNumOperands(), "vec.phi");
+    VectorLoopValueMap.setVectorValue(P, 0, VecPhi);
+    OrigPHIsToFix.push_back(P);
+
+    return;
+  }
+
   assert(PN->getParent() == OrigLoop->getHeader() &&
          "Non-header phis should have been handled elsewhere");
 
-  PHINode *P = cast<PHINode>(PN);
   // In order to support recurrences we need to be able to vectorize Phi nodes.
   // Phi nodes have cycles, so we need to vectorize them in two stages. This is
   // stage #1: We create a new vector PHI node with no incoming edges. We'll use
@@ -3892,6 +3994,10 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I) {
 void InnerLoopVectorizer::updateAnalysis() {
   // Forget the original basic block.
   PSE.getSE()->forgetLoop(OrigLoop);
+
+  // DT is not kept up-to-date for outer loop vectorization
+  if (EnableVPlanNativePath)
+    return;
 
   // Update the dominator tree information.
   assert(DT->properlyDominates(LoopBypassBlocks.front(), LoopExitBlock) &&
@@ -6527,6 +6633,13 @@ LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);
   HCFGBuilder.buildHierarchicalCFG();
 
+  SmallPtrSet<Instruction *, 1> DeadInstructions;
+  VPlanHCFGTransforms::VPInstructionsToVPRecipes(
+      Plan, Legal->getInductionVars(), DeadInstructions);
+
+  for (unsigned VF = Range.Start; VF < Range.End; VF *= 2)
+    Plan->addVF(VF);
+
   return Plan;
 }
 
@@ -6728,11 +6841,26 @@ static bool processLoopInVPlanNativePath(
       Hints.getForce() != LoopVectorizeHints::FK_Enabled && F->optForSize();
 
   // Plan how to best vectorize, return the best VF and its cost.
-  LVP.planInVPlanNativePath(OptForSize, UserVF);
+  VectorizationFactor VF = LVP.planInVPlanNativePath(OptForSize, UserVF);
 
-  // Returning false. We are currently not generating vector code in the VPlan
-  // native path.
-  return false;
+  // If we are stress testing VPlan builds, do not attempt to generate vector
+  // code.
+  if (VPlanBuildStressTest)
+    return false;
+
+  LVP.setBestPlan(VF.Width, 1);
+
+  InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, UserVF, 1, LVL,
+                         &CM);
+  LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \""
+                    << L->getHeader()->getParent()->getName() << "\"\n");
+  LVP.executePlan(LB, DT);
+
+  // Mark the loop as already vectorized to avoid vectorizing again.
+  Hints.setAlreadyVectorized();
+
+  LLVM_DEBUG(verifyFunction(*L->getHeader()->getParent()));
+  return true;
 }
 
 bool LoopVectorizePass::processLoop(Loop *L) {
@@ -7123,8 +7251,15 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
     if (!Changed)
       return PreservedAnalyses::all();
     PreservedAnalyses PA;
-    PA.preserve<LoopAnalysis>();
-    PA.preserve<DominatorTreeAnalysis>();
+
+    // We currently do not preserve loopinfo/dominator analyses with outer loop
+    // vectorization. Until this is addressed, mark these analyses as preserved
+    // only for non-VPlan-native path.
+    // TODO: Preserve Loop and Dominator analyses for VPlan-native path.
+    if (!EnableVPlanNativePath) {
+      PA.preserve<LoopAnalysis>();
+      PA.preserve<DominatorTreeAnalysis>();
+    }
     PA.preserve<BasicAA>();
     PA.preserve<GlobalsAA>();
     return PA;

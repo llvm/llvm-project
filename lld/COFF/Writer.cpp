@@ -469,7 +469,7 @@ void Writer::createSections() {
   // '$' and all following characters in input section names are
   // discarded when determining output section. So, .text$foo
   // contributes to .text, for example. See PE/COFF spec 3.2.
-  for (auto Pair : Map) {
+  for (auto &Pair : Map) {
     StringRef Name = getOutputSectionName(Pair.first.first);
     uint32_t OutChars = Pair.first.second;
 

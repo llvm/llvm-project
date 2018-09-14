@@ -190,7 +190,6 @@ exit:
 ; CHECK-COMMON-LABEL: phi_feeding_switch
 ; CHECK-COMMON: ldrb
 ; CHECK-COMMON: uxtb
-; CHECK-COMMON: uxtb
 define void @phi_feeding_switch(i8* %memblock, i8* %store, i16 %arg) {
 entry:
   %pre = load i8, i8* %memblock, align 1

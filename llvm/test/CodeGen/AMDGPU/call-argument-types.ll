@@ -721,6 +721,56 @@ define amdgpu_kernel void @test_call_external_void_func_v16i8() #0 {
   ret void
 }
 
+; GCN-LABEL: {{^}}stack_passed_arg_alignment_v32i32_f64:
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, s32 offset:8
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, s32 offset:4
+; GCN: s_swappc_b64
+define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val, double %tmp) #0 {
+entry:
+  call void @stack_passed_f64_arg(<32 x i32> %val, double %tmp)
+  ret void
+}
+
+; GCN-LABEL: {{^}}tail_call_byval_align16:
+; GCN: s_mov_b32 s5, s32
+; GCN: buffer_store_dword v32, off, s[0:3], s5 offset:28 ; 4-byte Folded Spill
+; GCN: buffer_store_dword v33, off, s[0:3], s5 offset:24 ; 4-byte Folded Spill
+; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:32
+; GCN: buffer_load_dword v33, off, s[0:3], s5 offset:36
+; GCN: buffer_store_dword v33, off, s[0:3], s5 offset:20
+; GCN: buffer_store_dword v32, off, s[0:3], s5 offset:16
+; GCN: s_getpc_b64
+; GCN: buffer_load_dword v33, off, s[0:3], s5 offset:24 ; 4-byte Folded Reload
+; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:28 ; 4-byte Folded Reload
+; GCN: s_setpc_b64
+define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
+entry:
+  %alloca = alloca double, align 8, addrspace(5)
+  tail call void @byval_align16_f64_arg(<32 x i32> %val, double addrspace(5)* byval align 16 %alloca)
+  ret void
+}
+
+; GCN-LABEL: {{^}}tail_call_stack_passed_arg_alignment_v32i32_f64:
+; GCN: s_mov_b32 s5, s32
+; GCN: buffer_store_dword v32, off, s[0:3], s5 offset:16 ; 4-byte Folded Spill
+; GCN: buffer_store_dword v33, off, s[0:3], s5 offset:12 ; 4-byte Folded Spill
+; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:4
+; GCN: buffer_load_dword v33, off, s[0:3], s5 offset:8
+; GCN: buffer_store_dword v33, off, s[0:3], s5 offset:8
+; GCN: buffer_store_dword v32, off, s[0:3], s5 offset:4
+; GCN: s_getpc_b64
+; GCN: buffer_load_dword v33, off, s[0:3], s5 offset:12 ; 4-byte Folded Reload
+; GCN: buffer_load_dword v32, off, s[0:3], s5 offset:16 ; 4-byte Folded Reload
+; GCN: s_setpc_b64
+define void @tail_call_stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val, double %tmp) #0 {
+entry:
+  tail call void @stack_passed_f64_arg(<32 x i32> %val, double %tmp)
+  ret void
+}
+
+declare void @byval_align16_f64_arg(<32 x i32>, double addrspace(5)* byval align 16) #0
+declare void @stack_passed_f64_arg(<32 x i32>, double) #0
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind noinline }

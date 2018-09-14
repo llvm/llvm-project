@@ -693,6 +693,10 @@ static bool isWhitespace(char C) {
   return C == ' ' || C == '\t' || C == '\r' || C == '\n';
 }
 
+static bool isWhitespaceOrNull(char C) {
+  return isWhitespace(C) || C == '\0';
+}
+
 static bool isQuote(char C) { return C == '\"' || C == '\''; }
 
 void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
@@ -808,7 +812,7 @@ void cl::TokenizeWindowsCommandLine(StringRef Src, StringSaver &Saver,
     // INIT state indicates that the current input index is at the start of
     // the string or between tokens.
     if (State == INIT) {
-      if (isWhitespace(C)) {
+      if (isWhitespaceOrNull(C)) {
         // Mark the end of lines in response files
         if (MarkEOLs && C == '\n')
           NewArgv.push_back(nullptr);
@@ -832,7 +836,7 @@ void cl::TokenizeWindowsCommandLine(StringRef Src, StringSaver &Saver,
     // quotes.
     if (State == UNQUOTED) {
       // Whitespace means the end of the token.
-      if (isWhitespace(C)) {
+      if (isWhitespaceOrNull(C)) {
         NewArgv.push_back(Saver.save(StringRef(Token)).data());
         Token.clear();
         State = INIT;

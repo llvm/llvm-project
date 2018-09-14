@@ -4624,34 +4624,51 @@ static Instruction *canonicalizeICmpBool(ICmpInst &I,
 }
 
 // Transform pattern like:
-//   (1 << Y) u<= X
-//   (1 << Y) u>  X
+//   (1 << Y) u<= X  or  ~(-1 << Y) u<  X
+//   (1 << Y) u>  X  or  ~(-1 << Y) u>= X
 // Into:
 //   (X l>> Y) != 0
 //   (X l>> Y) == 0
 static Instruction *foldICmpWithHighBitMask(ICmpInst &Cmp,
                                             InstCombiner::BuilderTy &Builder) {
-  ICmpInst::Predicate Pred;
+  ICmpInst::Predicate Pred, NewPred;
   Value *X, *Y;
-  if (!match(&Cmp,
-             m_c_ICmp(Pred, m_OneUse(m_Shl(m_One(), m_Value(Y))), m_Value(X))))
-    return nullptr;
+  if (match(&Cmp,
+            m_c_ICmp(Pred, m_OneUse(m_Shl(m_One(), m_Value(Y))), m_Value(X)))) {
+    // We want X to be the icmp's second operand, so swap predicate if it isn't.
+    if (Cmp.getOperand(0) == X)
+      Pred = Cmp.getSwappedPredicate();
 
-  // We want X to be the icmp's second operand, so swap predicate if it is not.
-  if (Cmp.getOperand(0) == X)
-    Pred = Cmp.getSwappedPredicate();
+    switch (Pred) {
+    case ICmpInst::ICMP_ULE:
+      NewPred = ICmpInst::ICMP_NE;
+      break;
+    case ICmpInst::ICMP_UGT:
+      NewPred = ICmpInst::ICMP_EQ;
+      break;
+    default:
+      return nullptr;
+    }
+  } else if (match(&Cmp,
+                   m_c_ICmp(Pred,
+                            m_OneUse(m_Not(m_Shl(m_AllOnes(), m_Value(Y)))),
+                            m_Value(X)))) {
+    // We want X to be the icmp's second operand, so swap predicate if it isn't.
+    if (Cmp.getOperand(0) == X)
+      Pred = Cmp.getSwappedPredicate();
 
-  ICmpInst::Predicate NewPred;
-  switch (Pred) {
-  case ICmpInst::ICMP_ULE:
-    NewPred = ICmpInst::ICMP_NE;
-    break;
-  case ICmpInst::ICMP_UGT:
-    NewPred = ICmpInst::ICMP_EQ;
-    break;
-  default:
+    switch (Pred) {
+    case ICmpInst::ICMP_ULT:
+      NewPred = ICmpInst::ICMP_NE;
+      break;
+    case ICmpInst::ICMP_UGE:
+      NewPred = ICmpInst::ICMP_EQ;
+      break;
+    default:
+      return nullptr;
+    }
+  } else
     return nullptr;
-  }
 
   Value *NewX = Builder.CreateLShr(X, Y, X->getName() + ".highbits");
   Constant *Zero = Constant::getNullValue(NewX->getType());
