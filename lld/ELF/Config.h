@@ -184,6 +184,7 @@ struct Configuration {
   bool ZGlobal;
   bool ZHazardplt;
   bool ZInitfirst;
+  bool ZInterpose;
   bool ZKeepTextSectionPrefix;
   bool ZNodelete;
   bool ZNodlopen;

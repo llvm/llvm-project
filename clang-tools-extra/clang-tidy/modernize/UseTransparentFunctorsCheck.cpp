@@ -121,6 +121,8 @@ void UseTransparentFunctorsCheck::check(
     return;
 
   SourceLocation ReportLoc = FunctorLoc.getLocation();
+  if (ReportLoc.isInvalid())
+    return;
   diag(ReportLoc, Message) << (FuncClass->getName() + "<>").str()
                            << FixItHint::CreateRemoval(
                                   FunctorTypeLoc.getArgLoc(0).getSourceRange());
