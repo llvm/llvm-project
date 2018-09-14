@@ -3107,8 +3107,13 @@ bool AMDGPUAsmParser::ParseDirectiveHSAMetadata() {
 
   YamlStream.flush();
 
-  if (!getTargetStreamer().EmitHSAMetadata(HSAMetadataString))
-    return Error(getParser().getTok().getLoc(), "invalid HSA metadata");
+  if (IsaInfo::hasCodeObjectV3(&getSTI())) {
+    if (!getTargetStreamer().EmitHSAMetadataV3(HSAMetadataString))
+      return Error(getParser().getTok().getLoc(), "invalid HSA metadata");
+  } else {
+    if (!getTargetStreamer().EmitHSAMetadataV2(HSAMetadataString))
+      return Error(getParser().getTok().getLoc(), "invalid HSA metadata");
+  }
 
   return false;
 }

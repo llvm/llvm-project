@@ -32,7 +32,6 @@
 ; OSABI-AMDHSA-ASM-NOT: .hsa_code_object_version
 ; OSABI-AMDHSA-ASM-NOT: .hsa_code_object_isa
 ; OSABI-AMDHSA-ASM-NOT: .amd_amdgpu_isa
-; OSABI-AMDHSA-ASM-NOT: .amd_amdgpu_hsa_metadata
 ; OSABI-AMDHSA-ASM-NOT: .amd_amdgpu_pal_metadata
 
 ; OSABI-AMDHSA-ELF: Section Headers
@@ -41,15 +40,13 @@
 
 ; OSABI-AMDHSA-ELF: Relocation section '.rela.rodata' at offset
 ; OSABI-AMDHSA-ELF: 0000000000000010 0000000300000005 R_AMDGPU_REL64 0000000000000000 .text + 10
-; OSABI-AMDHSA-ELF: 0000000000000050 0000000300000005 R_AMDGPU_REL64 0000000000000000 .text + 110
+; OSABI-AMDHSA-ELF: 0000000000000050 0000000300000005 R_AMDGPU_REL64 0000000000000000 .text + 210
 
 ; OSABI-AMDHSA-ELF: Symbol table '.symtab' contains {{[0-9]+}} entries
 ; OSABI-AMDHSA-ELF: {{[0-9]+}}: 0000000000000000 {{[0-9]+}} FUNC   LOCAL  DEFAULT {{[0-9]+}} fadd
-; OSABI-AMDHSA-ELF: {{[0-9]+}}: 0000000000000100 {{[0-9]+}} FUNC   LOCAL  DEFAULT {{[0-9]+}} fsub
+; OSABI-AMDHSA-ELF: {{[0-9]+}}: 0000000000000200 {{[0-9]+}} FUNC   LOCAL  DEFAULT {{[0-9]+}} fsub
 ; OSABI-AMDHSA-ELF: {{[0-9]+}}: 0000000000000000 64         OBJECT GLOBAL DEFAULT {{[0-9]+}} fadd.kd
 ; OSABI-AMDHSA-ELF: {{[0-9]+}}: 0000000000000040 64         OBJECT GLOBAL DEFAULT {{[0-9]+}} fsub.kd
-
-; OSABI-AMDHSA-ELF-NOT: Displaying notes found
 
 define amdgpu_kernel void @fadd(
     float addrspace(1)* %r,

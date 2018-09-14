@@ -22,13 +22,15 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/MsgPackTypes.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
@@ -3583,7 +3585,7 @@ static std::string getFreeBSDNoteTypeName(const uint32_t NT) {
   return OS.str();
 }
 
-static std::string getAMDGPUNoteTypeName(const uint32_t NT) {
+static std::string getAMDNoteTypeName(const uint32_t NT) {
   static const struct {
     uint32_t ID;
     const char *Name;
@@ -3599,6 +3601,16 @@ static std::string getAMDGPUNoteTypeName(const uint32_t NT) {
   for (const auto &Note : Notes)
     if (Note.ID == NT)
       return std::string(Note.Name);
+
+  std::string string;
+  raw_string_ostream OS(string);
+  OS << format("Unknown note type (0x%08x)", NT);
+  return OS.str();
+}
+
+static std::string getAMDGPUNoteTypeName(const uint32_t NT) {
+  if (NT == ELF::NT_AMDGPU_METADATA)
+    return std::string("NT_AMDGPU_METADATA (AMDGPU Metadata)");
 
   std::string string;
   raw_string_ostream OS(string);
@@ -3726,8 +3738,8 @@ static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
 }
 
 template <typename ELFT>
-static void printAMDGPUNote(raw_ostream &OS, uint32_t NoteType,
-                            ArrayRef<typename ELFT::Word> Words, size_t Size) {
+static void printAMDNote(raw_ostream &OS, uint32_t NoteType,
+                         ArrayRef<typename ELFT::Word> Words, size_t Size) {
   switch (NoteType) {
   default:
     return;
@@ -3757,6 +3769,33 @@ static void printAMDGPUNote(raw_ostream &OS, uint32_t NoteType,
   OS.flush();
 }
 
+template <typename ELFT>
+static void printAMDGPUNote(raw_ostream &OS, uint32_t NoteType,
+                            ArrayRef<typename ELFT::Word> Words, size_t Size) {
+  OS << "    AMDGPU Metadata:\n";
+  auto MsgPackString =
+      StringRef(reinterpret_cast<const char *>(Words.data()), Size);
+  msgpack::Reader MsgPackReader(MsgPackString);
+  auto OptMsgPackNodeOrErr = msgpack::Node::read(MsgPackReader);
+  if (auto Err = OptMsgPackNodeOrErr.takeError())
+    return error(std::move(Err));
+  auto &OptMsgPackNode = *OptMsgPackNodeOrErr;
+  if (!OptMsgPackNode)
+    return;
+  auto &MsgPackNode = *OptMsgPackNode;
+
+  AMDGPU::HSAMD::V3::MetadataVerifier Verifier(true);
+  if (!Verifier.verify(*MsgPackNode))
+    reportError("invalid AMDGPU metadata");
+
+  std::string HSAMetadataString;
+  raw_string_ostream StrOS(HSAMetadataString);
+  yaml::Output YOut(StrOS);
+  YOut << MsgPackNode;
+  OS << StrOS.str();
+  OS.flush();
+}
+
 template <class ELFT>
 void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
   const Elf_Ehdr *e = Obj->getHeader();
@@ -3783,6 +3822,9 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
     } else if (Name == "FreeBSD") {
       OS << getFreeBSDNoteTypeName(Type) << '\n';
     } else if (Name == "AMD") {
+      OS << getAMDNoteTypeName(Type) << '\n';
+      printAMDNote<ELFT>(OS, Type, Descriptor, Descriptor.size());
+    } else if (Name == "AMDGPU") {
       OS << getAMDGPUNoteTypeName(Type) << '\n';
       printAMDGPUNote<ELFT>(OS, Type, Descriptor, Descriptor.size());
     } else {
