@@ -8,7 +8,7 @@
 #include "ockl.h"
 #include "irif.h"
 
-#define ATTR __attribute__((always_inline, const))
+#define ATTR __attribute__((const))
 
 //-------- T __nv_brev
 ATTR int __nv_brev(int x) { return __builtin_bitreverse32(x); }

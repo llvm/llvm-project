@@ -7,7 +7,7 @@
 
 #include "int.h"
 
-#define TEXPATTR __attribute__((always_inline, overloadable, const))
+#define TEXPATTR __attribute__((overloadable, const))
 
 TEXP(int,mad24)
 TEXP(uint,mad24)

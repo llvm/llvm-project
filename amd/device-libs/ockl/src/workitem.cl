@@ -8,7 +8,7 @@
 #include "irif.h"
 #include "device_amd_hsa.h"
 
-#define ATTR __attribute__((always_inline, const))
+#define ATTR __attribute__((const))
 
 ATTR size_t
 __ockl_get_global_offset(uint dim)

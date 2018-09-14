@@ -16,7 +16,7 @@
 #define reduce_max atomic_fetch_max_explicit
 
 #define AGEN(T,OP) \
-__attribute__((overloadable, always_inline)) T \
+__attribute__((overloadable)) T \
 work_group_reduce_##OP(T a) \
 { \
     uint n = get_num_sub_groups(); \
@@ -65,7 +65,7 @@ AGEN(ulong,min)
 #define add(X,Y) (X + Y)
 
 #define SGEN(T,OP,ID) \
-__attribute__((overloadable, always_inline)) T \
+__attribute__((overloadable)) T \
 work_group_reduce_##OP(T a) \
 { \
     uint n = get_num_sub_groups(); \

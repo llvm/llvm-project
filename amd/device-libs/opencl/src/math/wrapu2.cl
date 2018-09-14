@@ -12,7 +12,7 @@
 #define _C(X,Y) X##Y
 #define C(X,Y) _C(X,Y)
 
-#define ATTR __attribute__((always_inline, overloadable))
+#define ATTR __attribute__((overloadable))
 
 #define float_ssuf _f32
 #define double_ssuf _f64

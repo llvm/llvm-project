@@ -8,7 +8,7 @@
 #define _C(X,Y) X##Y
 #define C(X,Y) _C(X,Y)
 
-#define ATTR __attribute__((always_inline, overloadable, const))
+#define ATTR __attribute__((overloadable, const))
 
 #define char_shift 8
 #define short_shift 16

@@ -15,7 +15,7 @@
 #define double_radians 0x1.1df46a2529d39p-6
 #define half_radians 0x1.1df46ap-6h
 
-#define ATTR __attribute__((always_inline, overloadable, const))
+#define ATTR __attribute__((overloadable, const))
 
 #define GENN(N,T,F) \
 ATTR T##N \

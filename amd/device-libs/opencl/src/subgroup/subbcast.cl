@@ -8,7 +8,7 @@
 #include "ockl.h"
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-#define ATTR __attribute__((overloadable, always_inline))
+#define ATTR __attribute__((overloadable))
 
 ATTR int
 sub_group_broadcast(int x, uint i)

@@ -11,9 +11,9 @@
 #define _C(A,B) A##B
 #define C(A,B) _C(A,B)
 
-#define ATTR __attribute__((always_inline, overloadable, const))
-#define IATTR __attribute__((always_inline, const))
-#define AATTR(S) __attribute__((always_inline, overloadable, const, alias(S)))
+#define ATTR __attribute__((overloadable, const))
+#define IATTR __attribute__((const))
+#define AATTR(S) __attribute__((overloadable, const, alias(S)))
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
@@ -43,7 +43,7 @@ sels_##T(T a, T b, T##_itype c) \
     return c ? b : a; \
 } \
 extern AATTR(S(sels_##T)) T select(T, T, T##_itype); \
-extern AATTR(S(sels_##T)) T select(T, T, T##_utype); 
+extern AATTR(S(sels_##T)) T select(T, T, T##_utype);
 
 #define FGENV(N,T) \
 IATTR static T##N \
@@ -75,7 +75,7 @@ sels_##T(T a, T b, T c) \
 extern AATTR(S(sels_##T)) T select(T, T, T); \
 extern AATTR(S(sels_##T)) T select(T, T, T##_utype); \
 extern AATTR(S(sels_##T)) T##_utype select(T##_utype, T##_utype, T); \
-extern AATTR(S(sels_##T)) T##_utype select(T##_utype, T##_utype, T##_utype); 
+extern AATTR(S(sels_##T)) T##_utype select(T##_utype, T##_utype, T##_utype);
 
 #define IGENV(N,T) \
 IATTR static T##N \

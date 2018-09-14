@@ -8,7 +8,7 @@
 #include "mathH.h"
 
 #define GEN(LN,UN) \
-CONSTATTR INLINEATTR half \
+CONSTATTR half \
 MATH_MANGLE(LN)(half x, half y) \
 { \
     return BUILTIN_##UN##_F16(x, y); \

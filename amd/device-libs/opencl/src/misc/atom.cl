@@ -8,7 +8,7 @@
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
 
-#define ATTR __attribute__((overloadable, always_inline))
+#define ATTR __attribute__((overloadable))
 
 // Cast away volatile before calling clang builtin
 #define VOLATILE

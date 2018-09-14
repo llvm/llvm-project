@@ -83,7 +83,7 @@ EnqueueScheduler(__global SchedulerParam* param)
     __ockl_hsa_signal_store(child_queue->doorbell_signal, index, __ockl_memory_order_release);
 }
 
-__attribute__((always_inline)) void
+void
 __amd_scheduler_rocm(__global SchedulerParam* param)
 {
     __global AmdVQueueHeader* queue = (__global AmdVQueueHeader*)(param->vqueue_header);

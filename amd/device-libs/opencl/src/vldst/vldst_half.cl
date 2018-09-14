@@ -6,8 +6,8 @@
  *===------------------------------------------------------------------------*/
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#define LATTR __attribute__((always_inline, overloadable, pure))
-#define SATTR __attribute__((always_inline, overloadable))
+#define LATTR __attribute__((overloadable, pure))
+#define SATTR __attribute__((overloadable))
 
 #define LGENAN(N,A) \
 LATTR float##N \
@@ -33,7 +33,7 @@ vload_half(size_t i, const A half *p) \
 
 LGENA(__constant)
 LGENA()
-    
+
 #define LAGENAN(N,A) \
 LATTR float##N \
 vloada_half##N(size_t i, const A half *p) \

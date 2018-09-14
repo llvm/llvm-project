@@ -54,15 +54,13 @@
 #define BASEDIGITS_HP16   5
 
 #define UGEN(N) \
-INLINEATTR half2 \
-MATH_MANGLE2(N)(half2 x) \
+half2 MATH_MANGLE2(N)(half2 x) \
 { \
     return (half2)(MATH_MANGLE(N)(x.lo), MATH_MANGLE(N)(x.hi)); \
 }
 
 #define BGEN(N) \
-INLINEATTR half2 \
-MATH_MANGLE2(N)(half2 x, half2 y) \
+half2 MATH_MANGLE2(N)(half2 x, half2 y) \
 { \
     return (half2)(MATH_MANGLE(N)(x.lo, y.lo), MATH_MANGLE(N)(x.hi, y.hi)); \
 }

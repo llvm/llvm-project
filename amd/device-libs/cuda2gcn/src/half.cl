@@ -7,7 +7,7 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-#define ATTR __attribute__((always_inline, const))
+#define ATTR __attribute__((const))
 
 //-------- T __nv_float2half_rn
 half __nv_float2half_rn(float x)

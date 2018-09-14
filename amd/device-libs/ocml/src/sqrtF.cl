@@ -18,7 +18,7 @@ MATH_MANGLE(sqrt)(float x)
 }
 
 #define GEN(LN,UN) \
-CONSTATTR INLINEATTR float \
+CONSTATTR float \
 MATH_MANGLE(LN)(float x) \
 { \
     return BUILTIN_##UN##_F32(x); \

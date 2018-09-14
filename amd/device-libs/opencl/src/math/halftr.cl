@@ -7,7 +7,7 @@
 
 #include "irif.h"
 
-__attribute__((always_inline, const)) float
+__attribute__((const)) float
 __half_tr(float x, int regn)
 {
     float r = x * x;

@@ -7,7 +7,7 @@
 
 #include "int.h"
 
-#define ATTR __attribute__((always_inline, overloadable, const))
+#define ATTR __attribute__((overloadable, const))
 
 #define char_lb CHAR_MIN
 #define char_ub CHAR_MAX
@@ -42,7 +42,7 @@ sub_sat(u##T##N x, u##T##N y) \
 GEN(char)
 GEN(short)
 
-#define BEXPATTR __attribute__((always_inline, overloadable))
+#define BEXPATTR __attribute__((overloadable))
 BEXP(int,sub_sat)
 BEXP(uint,sub_sat)
 BEXP(long,sub_sat)

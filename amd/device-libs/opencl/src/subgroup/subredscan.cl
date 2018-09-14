@@ -16,7 +16,7 @@
 #define scan_full scan
 
 #define PFX __ockl_wf
-#define ATTR __attribute__((overloadable, always_inline))
+#define ATTR __attribute__((overloadable))
 
 #define i32_tn int
 #define u32_tn uint

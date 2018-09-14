@@ -7,7 +7,7 @@
 
 #include "ockl.h"
 
-#define ATTR __attribute__((overloadable, always_inline, const))
+#define ATTR __attribute__((overloadable, const))
 
 #define F OCKL_MANGLE_F32(median3)
 
@@ -31,6 +31,6 @@ GEN(8)
 GEN(4)
 GEN(3)
 GEN(2)
-           
+
 ATTR float amd_median3(float a, float b, float c) { return F(a, b, c); }
 

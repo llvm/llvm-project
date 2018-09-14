@@ -13,12 +13,12 @@
 #define _S(X) #X
 #define S(X) _S(X)
 
-#define LATTR __attribute__((always_inline, overloadable, pure))
-#define SATTR __attribute__((always_inline, overloadable))
-#define ILATTR __attribute__((always_inline, pure))
-#define ISATTR __attribute__((always_inline))
-#define ALATTR(A) __attribute__((always_inline, overloadable, pure, alias(A)))
-#define ASATTR(A) __attribute__((always_inline, overloadable, alias(A)))
+#define LATTR __attribute__((overloadable, pure))
+#define SATTR __attribute__((overloadable))
+#define ILATTR __attribute__((pure))
+#define ISATTR
+#define ALATTR(A) __attribute__((overloadable, pure, alias(A)))
+#define ASATTR(A) __attribute__((overloadable, alias(A)))
 
 #define char_align 1
 #define short_align 2

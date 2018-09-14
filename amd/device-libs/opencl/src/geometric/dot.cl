@@ -7,7 +7,7 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-#define ATTR __attribute__((overloadable, always_inline, const))
+#define ATTR __attribute__((overloadable, const))
 
 #define GEN(T) \
 ATTR T \

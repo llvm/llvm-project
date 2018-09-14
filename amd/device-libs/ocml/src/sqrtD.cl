@@ -14,7 +14,7 @@ MATH_MANGLE(sqrt)(double x)
 }
 
 #define GEN(LN,UN) \
-CONSTATTR INLINEATTR double \
+CONSTATTR double \
 MATH_MANGLE(LN)(double x) \
 { \
     return BUILTIN_##UN##_F64(x); \

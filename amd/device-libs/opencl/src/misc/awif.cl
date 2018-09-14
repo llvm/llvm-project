@@ -8,26 +8,26 @@
 #include "irif.h"
 #pragma OPENCL EXTENSIOM cl_khr_subgroups : enable
 
-__attribute__((overloadable, always_inline)) void
+__attribute__((overloadable)) void
 mem_fence(cl_mem_fence_flags flags)
 {
     atomic_work_item_fence(flags, memory_order_acq_rel, memory_scope_work_group);
 }
 
-__attribute__((overloadable, always_inline)) void
+__attribute__((overloadable)) void
 read_mem_fence(cl_mem_fence_flags flags)
 {
     atomic_work_item_fence(flags, memory_order_acquire, memory_scope_work_group);
 }
 
-__attribute__((overloadable, always_inline)) void
+__attribute__((overloadable)) void
 write_mem_fence(cl_mem_fence_flags flags)
 {
     atomic_work_item_fence(flags, memory_order_release, memory_scope_work_group);
 }
 
 #if !defined LOW_LEVEL_APPROACH
-__attribute__((overloadable, always_inline)) void
+__attribute__((overloadable)) void
 atomic_work_item_fence(cl_mem_fence_flags flags, memory_order order, memory_scope scope)
 {
     // We're tying global-happens-before and local-happens-before together as does HSA
@@ -84,7 +84,7 @@ atomic_work_item_fence(cl_mem_fence_flags flags, memory_order order, memory_scop
 #define WAITCNT_IMM(LGKMC, EXPC, VMC) ((LGKMC << 8) | (EXPC << 4) | VMC)
 
 __attribute__((target("vi-insts,ci-insts")))
-__attribute__((overloadable, always_inline)) void
+__attribute__((overloadable)) void
 atomic_work_item_fence(cl_mem_fence_flags flags, memory_order order, memory_scope scope)
 {
     if (order != memory_order_relaxed) {

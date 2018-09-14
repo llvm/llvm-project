@@ -7,7 +7,7 @@
 
 #include "int.h"
 
-#define BEXPATTR __attribute__((always_inline, overloadable, const))
+#define BEXPATTR __attribute__((overloadable, const))
 
 BEXP(int,mul24)
 BEXP(uint,mul24)

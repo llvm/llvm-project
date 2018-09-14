@@ -8,7 +8,7 @@
 #include "irif.h"
 #include "ockl.h"
 
-__attribute__((always_inline)) int
+int
 OCKL_MANGLE_I32(add_sat)(int x, int y)
 {
     int s;
@@ -17,7 +17,7 @@ OCKL_MANGLE_I32(add_sat)(int x, int y)
     return c ? lim : s;
 }
 
-__attribute__((always_inline)) uint
+uint
 OCKL_MANGLE_U32(add_sat)(uint x, uint y)
 {
     uint s;
@@ -25,7 +25,7 @@ OCKL_MANGLE_U32(add_sat)(uint x, uint y)
     return c ? UINT_MAX : s;
 }
 
-__attribute__((always_inline)) long
+long
 OCKL_MANGLE_I64(add_sat)(long x, long y)
 {
     long s;
@@ -34,7 +34,7 @@ OCKL_MANGLE_I64(add_sat)(long x, long y)
     return c ? lim : s;
 }
 
-__attribute__((always_inline)) ulong
+ulong
 OCKL_MANGLE_U64(add_sat)(ulong x, ulong y)
 {
     ulong s;

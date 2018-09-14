@@ -20,7 +20,7 @@ MATH_MANGLE(fma)(half a, half b, half c)
 }
 
 #define GEN(LN,UN) \
-CONSTATTR INLINEATTR half \
+CONSTATTR half \
 MATH_MANGLE(LN)(half a, half b, half c) \
 { \
     return BUILTIN_##UN##_F16(a, b, c); \
