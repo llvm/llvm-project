@@ -162,10 +162,11 @@ defm : SBWriteResPair<WriteLZCNT,          [SBPort1], 3, [1], 1, 5>;
 defm : SBWriteResPair<WriteTZCNT,          [SBPort1], 3, [1], 1, 5>;
 defm : SBWriteResPair<WritePOPCNT,         [SBPort1], 3, [1], 1, 6>;
 
-// BMI1 BEXTR, BMI2 BZHI
+// BMI1 BEXTR/BLS, BMI2 BZHI
 // NOTE: These don't exist on Sandy Bridge. Ports are guesses.
 defm : SBWriteResPair<WriteBEXTR, [SBPort05,SBPort1], 2, [1,1], 2>;
-defm : SBWriteResPair<WriteBZHI, [SBPort1], 1>;
+defm : SBWriteResPair<WriteBLS,   [SBPort015], 1>;
+defm : SBWriteResPair<WriteBZHI,  [SBPort1], 1>;
 
 // Scalar and vector floating point.
 defm : X86WriteRes<WriteFLD0,          [SBPort5], 1, [1], 1>;

@@ -402,6 +402,12 @@ def FeatureCodeObjectV3 : SubtargetFeature <
   "Generate code object version 3"
 >;
 
+def FeatureTrigReducedRange : SubtargetFeature<"trig-reduced-range",
+  "HasTrigReducedRange",
+  "true",
+  "Requires use of fract on arguments to trig instructions"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -421,13 +427,13 @@ class GCNSubtargetFeatureGeneration <string Value,
 def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize32768, FeatureMIMG_R128,
   FeatureWavefrontSize64, FeatureGCN,
-  FeatureLDSBankCount32, FeatureMovrel]
+  FeatureLDSBankCount32, FeatureMovrel, FeatureTrigReducedRange]
 >;
 
 def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize65536, FeatureMIMG_R128,
   FeatureWavefrontSize64, FeatureGCN, FeatureFlatAddressSpace,
-  FeatureCIInsts, FeatureMovrel]
+  FeatureCIInsts, FeatureMovrel, FeatureTrigReducedRange]
 >;
 
 def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
@@ -437,7 +443,7 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureSMemRealTime, FeatureVGPRIndexMode, FeatureMovrel,
    FeatureScalarStores, FeatureInv2PiInlineImm,
    FeatureSDWA, FeatureSDWAOutModsVOPC, FeatureSDWAMac, FeatureDPP,
-   FeatureIntClamp
+   FeatureIntClamp, FeatureTrigReducedRange
   ]
 >;
 

@@ -13,31 +13,31 @@
 
 # IMPORTS: Import {
 # IMPORTS-NEXT: Name: autoimport-x86.s.tmp-lib.dll
-# IMPORTS-NEXT: ImportLookupTableRVA: 0x2050
-# IMPORTS-NEXT: ImportAddressTableRVA: 0x2060
+# IMPORTS-NEXT: ImportLookupTableRVA: 0x2070
+# IMPORTS-NEXT: ImportAddressTableRVA: 0x2080
 # IMPORTS-NEXT: Symbol: variable (0)
 # IMPORTS-NEXT: }
 
 # DISASM: Disassembly of section .text:
 # DISASM: .text:
-# Relative offset at 0x1002 pointing at the IAT at 0x2060.
-# DISASM: 140001000:      8b 05 5a 10 00 00       movl    4186(%rip), %eax
+# Relative offset at 0x1002 pointing at the IAT at 0x2080.
+# DISASM: 140001000:      8b 05 7a 10 00 00       movl    4218(%rip), %eax
 # DISASM: 140001006:      c3      retq
 
 # Runtime pseudo reloc list header consisting of 0x0, 0x0, 0x1.
-# First runtime pseudo reloc, with import from 0x2060,
+# First runtime pseudo reloc, with import from 0x2080,
 # applied at 0x1002, with a size of 32 bits.
-# Second runtime pseudo reloc, with import from 0x2060,
+# Second runtime pseudo reloc, with import from 0x2080,
 # applied at 0x3000, with a size of 64 bits.
 # CONTENTS: Contents of section .rdata:
-# CONTENTS:  140002000 00000000 00000000 01000000 60200000
-# CONTENTS:  140002010 02100000 20000000 60200000 00300000
+# CONTENTS:  140002000 00000000 00000000 01000000 80200000
+# CONTENTS:  140002010 02100000 20000000 80200000 00300000
 # CONTENTS:  140002020 40000000
-# ptr: pointing at the IAT RVA at 0x2060
+# ptr: pointing at the IAT RVA at 0x2080
 # relocs: pointing at the runtime pseudo reloc list at
 # 0x2000 - 0x2024.
 # CONTENTS: Contents of section .data:
-# CONTENTS:  140003000 60200040 01000000 00200040 01000000
+# CONTENTS:  140003000 80200040 01000000 00200040 01000000
 # CONTENTS:  140003010 24200040 01000000
 
     .global main

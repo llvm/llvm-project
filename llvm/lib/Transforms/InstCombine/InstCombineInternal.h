@@ -496,6 +496,12 @@ private:
            OverflowResult::NeverOverflows;
   }
 
+  bool willNotOverflowAdd(const Value *LHS, const Value *RHS,
+                          const Instruction &CxtI, bool IsSigned) const {
+    return IsSigned ? willNotOverflowSignedAdd(LHS, RHS, CxtI)
+                    : willNotOverflowUnsignedAdd(LHS, RHS, CxtI);
+  }
+
   bool willNotOverflowSignedSub(const Value *LHS, const Value *RHS,
                                 const Instruction &CxtI) const {
     return computeOverflowForSignedSub(LHS, RHS, &CxtI) ==
@@ -506,6 +512,12 @@ private:
                                   const Instruction &CxtI) const {
     return computeOverflowForUnsignedSub(LHS, RHS, &CxtI) ==
            OverflowResult::NeverOverflows;
+  }
+
+  bool willNotOverflowSub(const Value *LHS, const Value *RHS,
+                          const Instruction &CxtI, bool IsSigned) const {
+    return IsSigned ? willNotOverflowSignedSub(LHS, RHS, CxtI)
+                    : willNotOverflowUnsignedSub(LHS, RHS, CxtI);
   }
 
   bool willNotOverflowSignedMul(const Value *LHS, const Value *RHS,
@@ -520,12 +532,30 @@ private:
            OverflowResult::NeverOverflows;
   }
 
+  bool willNotOverflowMul(const Value *LHS, const Value *RHS,
+                          const Instruction &CxtI, bool IsSigned) const {
+    return IsSigned ? willNotOverflowSignedMul(LHS, RHS, CxtI)
+                    : willNotOverflowUnsignedMul(LHS, RHS, CxtI);
+  }
+
+  bool willNotOverflow(BinaryOperator::BinaryOps Opcode, const Value *LHS,
+                       const Value *RHS, const Instruction &CxtI,
+                       bool IsSigned) const {
+    switch (Opcode) {
+    case Instruction::Add: return willNotOverflowAdd(LHS, RHS, CxtI, IsSigned);
+    case Instruction::Sub: return willNotOverflowSub(LHS, RHS, CxtI, IsSigned);
+    case Instruction::Mul: return willNotOverflowMul(LHS, RHS, CxtI, IsSigned);
+    default: llvm_unreachable("Unexpected opcode for overflow query");
+    }
+  }
+
   Value *EmitGEPOffset(User *GEP);
   Instruction *scalarizePHI(ExtractElementInst &EI, PHINode *PN);
   Value *EvaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask);
   Instruction *foldCastedBitwiseLogic(BinaryOperator &I);
   Instruction *narrowBinOp(TruncInst &Trunc);
   Instruction *narrowMaskedBinOp(BinaryOperator &And);
+  Instruction *narrowMathIfNoOverflow(BinaryOperator &I);
   Instruction *narrowRotate(TruncInst &Trunc);
   Instruction *optimizeBitCastFromPhi(CastInst &CI, PHINode *PN);
 

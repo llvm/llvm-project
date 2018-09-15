@@ -222,7 +222,7 @@ TpiStream:
         VBPtrType:       0x1001      # const int *
         VBPtrOffset:     0
         VTableIndex:     1
-  # class Inherit : public FooClass {};             [Index: 0x1014]
+  # struct Inherit : public FooClass {};             [Index: 0x1014]
   - Kind:            LF_STRUCTURE
     Class:
       MemberCount:     1
@@ -242,6 +242,26 @@ TpiStream:
       DerivationList:  0x1012
       VTableShape:     0
       Size:            4
+  # const volatile enum FooClass::Enum : uint32_t {          [Index: 0x1016]
+  - Kind:            LF_MODIFIER
+    Modifier:
+      ModifiedType:  0x100D
+      Modifiers:     [ Const, Volatile ]
+  # const volatile struct Inherit : public FooClass {} {     [Index: 0x1017]
+  - Kind:            LF_MODIFIER
+    Modifier:
+      ModifiedType:  0x1014
+      Modifiers:     [ Const, Volatile ]
+  # const volatile class FooClass {                          [Index: 0x1018]
+  - Kind:            LF_MODIFIER
+    Modifier:
+      ModifiedType:  0x100F
+      Modifiers:     [ Const, Volatile ]
+  # const volatile interface FooInterface {                  [Index: 0x1019]
+  - Kind:            LF_MODIFIER
+    Modifier:
+      ModifiedType:  0x1011
+      Modifiers:     [ Const, Volatile ]
 
 # // Member type records. These are generally not length prefixed, and appear
 # // inside of a field list record.

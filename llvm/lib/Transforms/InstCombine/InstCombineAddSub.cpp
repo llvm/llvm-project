@@ -1191,77 +1191,8 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
     }
   }
 
-  // Check for (add (sext x), y), see if we can merge this into an
-  // integer add followed by a sext.
-  if (SExtInst *LHSConv = dyn_cast<SExtInst>(LHS)) {
-    // (add (sext x), cst) --> (sext (add x, cst'))
-    if (auto *RHSC = dyn_cast<Constant>(RHS)) {
-      if (LHSConv->hasOneUse()) {
-        Constant *CI =
-            ConstantExpr::getTrunc(RHSC, LHSConv->getOperand(0)->getType());
-        if (ConstantExpr::getSExt(CI, Ty) == RHSC &&
-            willNotOverflowSignedAdd(LHSConv->getOperand(0), CI, I)) {
-          // Insert the new, smaller add.
-          Value *NewAdd =
-              Builder.CreateNSWAdd(LHSConv->getOperand(0), CI, "addconv");
-          return new SExtInst(NewAdd, Ty);
-        }
-      }
-    }
-
-    // (add (sext x), (sext y)) --> (sext (add int x, y))
-    if (SExtInst *RHSConv = dyn_cast<SExtInst>(RHS)) {
-      // Only do this if x/y have the same type, if at least one of them has a
-      // single use (so we don't increase the number of sexts), and if the
-      // integer add will not overflow.
-      if (LHSConv->getOperand(0)->getType() ==
-              RHSConv->getOperand(0)->getType() &&
-          (LHSConv->hasOneUse() || RHSConv->hasOneUse()) &&
-          willNotOverflowSignedAdd(LHSConv->getOperand(0),
-                                   RHSConv->getOperand(0), I)) {
-        // Insert the new integer add.
-        Value *NewAdd = Builder.CreateNSWAdd(LHSConv->getOperand(0),
-                                             RHSConv->getOperand(0), "addconv");
-        return new SExtInst(NewAdd, Ty);
-      }
-    }
-  }
-
-  // Check for (add (zext x), y), see if we can merge this into an
-  // integer add followed by a zext.
-  if (auto *LHSConv = dyn_cast<ZExtInst>(LHS)) {
-    // (add (zext x), cst) --> (zext (add x, cst'))
-    if (auto *RHSC = dyn_cast<Constant>(RHS)) {
-      if (LHSConv->hasOneUse()) {
-        Constant *CI =
-            ConstantExpr::getTrunc(RHSC, LHSConv->getOperand(0)->getType());
-        if (ConstantExpr::getZExt(CI, Ty) == RHSC &&
-            willNotOverflowUnsignedAdd(LHSConv->getOperand(0), CI, I)) {
-          // Insert the new, smaller add.
-          Value *NewAdd =
-              Builder.CreateNUWAdd(LHSConv->getOperand(0), CI, "addconv");
-          return new ZExtInst(NewAdd, Ty);
-        }
-      }
-    }
-
-    // (add (zext x), (zext y)) --> (zext (add int x, y))
-    if (auto *RHSConv = dyn_cast<ZExtInst>(RHS)) {
-      // Only do this if x/y have the same type, if at least one of them has a
-      // single use (so we don't increase the number of zexts), and if the
-      // integer add will not overflow.
-      if (LHSConv->getOperand(0)->getType() ==
-              RHSConv->getOperand(0)->getType() &&
-          (LHSConv->hasOneUse() || RHSConv->hasOneUse()) &&
-          willNotOverflowUnsignedAdd(LHSConv->getOperand(0),
-                                     RHSConv->getOperand(0), I)) {
-        // Insert the new integer add.
-        Value *NewAdd = Builder.CreateNUWAdd(
-            LHSConv->getOperand(0), RHSConv->getOperand(0), "addconv");
-        return new ZExtInst(NewAdd, Ty);
-      }
-    }
-  }
+  if (Instruction *Ext = narrowMathIfNoOverflow(I))
+    return Ext;
 
   // (add (xor A, B) (and A, B)) --> (or A, B)
   // (add (and A, B) (xor A, B)) --> (or A, B)

@@ -10030,6 +10030,72 @@ static SDValue lowerVectorShuffleAsBlendAndPermute(const SDLoc &DL, MVT VT,
   return DAG.getVectorShuffle(VT, DL, V, DAG.getUNDEF(VT), PermuteMask);
 }
 
+/// Try to lower as an unpack of elements from two inputs followed by
+/// a single-input permutation.
+///
+/// This matches the pattern where we can unpack elements from two inputs and
+/// then reduce the shuffle to a single-input (wider) permutation.
+static SDValue lowerVectorShuffleAsUNPCKAndPermute(const SDLoc &DL, MVT VT,
+                                                   SDValue V1, SDValue V2,
+                                                   ArrayRef<int> Mask,
+                                                   SelectionDAG &DAG) {
+  int NumElts = Mask.size();
+  int NumLanes = VT.getSizeInBits() / 128;
+  int NumLaneElts = NumElts / NumLanes;
+  int NumHalfLaneElts = NumLaneElts / 2;
+
+  bool MatchLo = true, MatchHi = true;
+  SDValue Ops[2] = {DAG.getUNDEF(VT), DAG.getUNDEF(VT)};
+
+  // Determine UNPCKL/UNPCKH type and operand order.
+  for (int Lane = 0; Lane != NumElts; Lane += NumLaneElts) {
+    for (int Elt = 0; Elt != NumLaneElts; ++Elt) {
+      int M = Mask[Lane + Elt];
+      if (M < 0)
+        continue;
+
+      SDValue &Op = Ops[Elt & 1];
+      if (M < NumElts && (Op.isUndef() || Op == V1))
+        Op = V1;
+      else if (NumElts <= M && (Op.isUndef() || Op == V2))
+        Op = V2;
+      else
+        return SDValue();
+
+      int Lo = Lane, Mid = Lane + NumHalfLaneElts, Hi = Lane + NumLaneElts;
+      MatchLo &= isUndefOrInRange(M, Lo, Mid) ||
+                 isUndefOrInRange(M, NumElts + Lo, NumElts + Mid);
+      MatchHi &= isUndefOrInRange(M, Mid, Hi) ||
+                 isUndefOrInRange(M, NumElts + Mid, NumElts + Hi);
+      if (!MatchLo && !MatchHi)
+        return SDValue();
+    }
+  }
+  assert((MatchLo ^ MatchHi) && "Failed to match UNPCKLO/UNPCKHI");
+
+  // Now check that each pair of elts come from the same unpack pair
+  // and set the permute mask based on each pair.
+  // TODO - Investigate cases where we permute individual elements.
+  SmallVector<int, 32> PermuteMask(NumElts, -1);
+  for (int Lane = 0; Lane != NumElts; Lane += NumLaneElts) {
+    for (int Elt = 0; Elt != NumLaneElts; Elt += 2) {
+      int M0 = Mask[Lane + Elt + 0];
+      int M1 = Mask[Lane + Elt + 1];
+      if (0 <= M0 && 0 <= M1 &&
+          (M0 % NumHalfLaneElts) != (M1 % NumHalfLaneElts))
+        return SDValue();
+      if (0 <= M0)
+        PermuteMask[Lane + Elt + 0] = Lane + (2 * (M0 % NumHalfLaneElts));
+      if (0 <= M1)
+        PermuteMask[Lane + Elt + 1] = Lane + (2 * (M1 % NumHalfLaneElts)) + 1;
+    }
+  }
+
+  unsigned UnpckOp = MatchLo ? X86ISD::UNPCKL : X86ISD::UNPCKH;
+  SDValue Unpck = DAG.getNode(UnpckOp, DL, VT, Ops);
+  return DAG.getVectorShuffle(VT, DL, Unpck, DAG.getUNDEF(VT), PermuteMask);
+}
+
 /// Generic routine to decompose a shuffle and blend into independent
 /// blends and permutes.
 ///
@@ -10056,15 +10122,19 @@ static SDValue lowerVectorShuffleAsDecomposedShuffleBlend(const SDLoc &DL,
       BlendMask[i] = i + Size;
     }
 
-  // Try to lower with the simpler initial blend strategy unless one of the
-  // input shuffles would be a no-op. We prefer to shuffle inputs as the
+  // Try to lower with the simpler initial blend/unpack strategies unless one of
+  // the input shuffles would be a no-op. We prefer to shuffle inputs as the
   // shuffle may be able to fold with a load or other benefit. However, when
-  // we'll have to do 2x as many shuffles in order to achieve this, blending
-  // first is a better strategy.
-  if (!isNoopShuffleMask(V1Mask) && !isNoopShuffleMask(V2Mask))
+  // we'll have to do 2x as many shuffles in order to achieve this,
+  // blending/unpacking first is a better strategy.
+  if (!isNoopShuffleMask(V1Mask) && !isNoopShuffleMask(V2Mask)) {
     if (SDValue BlendPerm =
             lowerVectorShuffleAsBlendAndPermute(DL, VT, V1, V2, Mask, DAG))
       return BlendPerm;
+    if (SDValue UnpackPerm =
+            lowerVectorShuffleAsUNPCKAndPermute(DL, VT, V1, V2, Mask, DAG))
+      return UnpackPerm;
+  }
 
   V1 = DAG.getVectorShuffle(VT, DL, V1, DAG.getUNDEF(VT), V1Mask);
   V2 = DAG.getVectorShuffle(VT, DL, V2, DAG.getUNDEF(VT), V2Mask);
