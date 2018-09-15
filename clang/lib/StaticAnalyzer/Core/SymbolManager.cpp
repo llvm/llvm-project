@@ -83,7 +83,10 @@ void SymbolCast::dumpToStream(raw_ostream &os) const {
 }
 
 void SymbolConjured::dumpToStream(raw_ostream &os) const {
-  os << "conj_$" << getSymbolID() << '{' << T.getAsString() << '}';
+  os << "conj_$" << getSymbolID() << '{' << T.getAsString()
+    << ", LC" << LCtx->getID() << ", S" << S->getID(
+      LCtx->getDecl()->getASTContext()) << ", #" << Count
+    << '}';
 }
 
 void SymbolDerived::dumpToStream(raw_ostream &os) const {
