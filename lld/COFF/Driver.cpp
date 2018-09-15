@@ -1387,6 +1387,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (Config->MinGW) {
     Symtab->addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST__"), 0);
     Symtab->addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST_END__"), 0);
+    Symtab->addAbsolute(mangle("__CTOR_LIST__"), 0);
+    Symtab->addAbsolute(mangle("__DTOR_LIST__"), 0);
   }
 
   // This code may add new undefined symbols to the link, which may enqueue more

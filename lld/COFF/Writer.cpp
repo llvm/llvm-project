@@ -176,6 +176,7 @@ private:
   template <typename PEHeaderTy> void writeHeader();
   void createSEHTable();
   void createRuntimePseudoRelocs();
+  void insertCtorDtorSymbols();
   void createGuardCFTables();
   void markSymbolsForRVATable(ObjFile *File,
                               ArrayRef<SectionChunk *> SymIdxChunks,
@@ -227,6 +228,8 @@ private:
   OutputSection *DidatSec;
   OutputSection *RsrcSec;
   OutputSection *RelocSec;
+  OutputSection *CtorsSec;
+  OutputSection *DtorsSec;
 
   // The first and last .pdata sections in the output file.
   //
@@ -252,6 +255,11 @@ void writeResult() { Writer().run(); }
 
 void OutputSection::addChunk(Chunk *C) {
   Chunks.push_back(C);
+  C->setOutputSection(this);
+}
+
+void OutputSection::insertChunkAtStart(Chunk *C) {
+  Chunks.insert(Chunks.begin(), C);
   C->setOutputSection(this);
 }
 
@@ -447,6 +455,8 @@ void Writer::createSections() {
   DidatSec = CreateSection(".didat", DATA | R);
   RsrcSec = CreateSection(".rsrc", DATA | R);
   RelocSec = CreateSection(".reloc", DATA | DISCARDABLE | R);
+  CtorsSec = CreateSection(".ctors", DATA | R | W);
+  DtorsSec = CreateSection(".dtors", DATA | R | W);
 
   // Then bin chunks by name and output characteristics.
   std::map<std::pair<StringRef, uint32_t>, std::vector<Chunk *>> Map;
@@ -543,8 +553,11 @@ void Writer::createMiscChunks() {
   if (Config->GuardCF != GuardCFLevel::Off)
     createGuardCFTables();
 
-  if (Config->MinGW)
+  if (Config->MinGW) {
     createRuntimePseudoRelocs();
+
+    insertCtorDtorSymbols();
+  }
 }
 
 // Create .idata section for the DLL-imported symbol table.
@@ -1186,6 +1199,29 @@ void Writer::createRuntimePseudoRelocs() {
   Symbol *EndSym = Symtab->findUnderscore("__RUNTIME_PSEUDO_RELOC_LIST_END__");
   replaceSymbol<DefinedSynthetic>(HeadSym, HeadSym->getName(), Table);
   replaceSymbol<DefinedSynthetic>(EndSym, EndSym->getName(), EndOfList);
+}
+
+// MinGW specific.
+// The MinGW .ctors and .dtors lists have sentinels at each end;
+// a (uintptr_t)-1 at the start and a (uintptr_t)0 at the end.
+// There's a symbol pointing to the start sentinel pointer, __CTOR_LIST__
+// and __DTOR_LIST__ respectively.
+void Writer::insertCtorDtorSymbols() {
+  AbsolutePointerChunk *CtorListHead = make<AbsolutePointerChunk>(-1);
+  AbsolutePointerChunk *CtorListEnd = make<AbsolutePointerChunk>(0);
+  AbsolutePointerChunk *DtorListHead = make<AbsolutePointerChunk>(-1);
+  AbsolutePointerChunk *DtorListEnd = make<AbsolutePointerChunk>(0);
+  CtorsSec->insertChunkAtStart(CtorListHead);
+  CtorsSec->addChunk(CtorListEnd);
+  DtorsSec->insertChunkAtStart(DtorListHead);
+  DtorsSec->addChunk(DtorListEnd);
+
+  Symbol *CtorListSym = Symtab->findUnderscore("__CTOR_LIST__");
+  Symbol *DtorListSym = Symtab->findUnderscore("__DTOR_LIST__");
+  replaceSymbol<DefinedSynthetic>(CtorListSym, CtorListSym->getName(),
+                                  CtorListHead);
+  replaceSymbol<DefinedSynthetic>(DtorListSym, DtorListSym->getName(),
+                                  DtorListHead);
 }
 
 // Handles /section options to allow users to overwrite

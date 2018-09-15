@@ -1,4 +1,4 @@
-//===- GdbIndex.cpp -------------------------------------------------------===//
+//===- DWARF.cpp ----------------------------------------------------------===//
 //
 //                             The LLVM Linker
 //
@@ -14,7 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "GdbIndex.h"
+#include "DWARF.h"
 #include "Symbols.h"
 #include "lld/Common/Memory.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
