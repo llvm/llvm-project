@@ -3072,12 +3072,14 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
             if (const auto *C = dyn_cast<CaseStmt>(Label)) {
               Out << "\\lcase ";
               if (C->getLHS())
-                C->getLHS()->printPretty(Out, nullptr,
-                                         Context.getPrintingPolicy());
+                C->getLHS()->printPretty(
+                    Out, nullptr, Context.getPrintingPolicy(),
+                    /*Indentation=*/0, /*NewlineSymbol=*/"\\l");
 
               if (const Stmt *RHS = C->getRHS()) {
                 Out << " .. ";
-                RHS->printPretty(Out, nullptr, Context.getPrintingPolicy());
+                RHS->printPretty(Out, nullptr, Context.getPrintingPolicy(),
+                                 /*Indetation=*/0, /*NewlineSymbol=*/"\\l");
               }
 
               Out << ":";
@@ -3109,7 +3111,8 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
 
       Out << S->getStmtClassName() << ' '
           << S->getID(Context) << " (" << (const void *)S << ") ";
-      S->printPretty(Out, nullptr, Context.getPrintingPolicy());
+      S->printPretty(Out, /*helper=*/nullptr, Context.getPrintingPolicy(),
+                     /*Indentation=*/2, /*NewlineSymbol=*/"\\l");
       printLocation(Out, S->getBeginLoc());
 
       if (Loc.getAs<PreStmt>())
