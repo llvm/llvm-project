@@ -34,6 +34,7 @@ public:
     Header.Characteristics = Chars;
   }
   void addChunk(Chunk *C);
+  void insertChunkAtStart(Chunk *C);
   void merge(OutputSection *Other);
   ArrayRef<Chunk *> getChunks() { return Chunks; }
   void addPermissions(uint32_t C);

@@ -12,7 +12,7 @@ DUMP-NEXT:   symIndexId: 2
 DUMP-NEXT:   symTag: 12
 DUMP-NEXT:   baseType: 6
 DUMP-NEXT:   lexicalParentId: 0
-DUMP-NEXT:   name: __vc_attributes::event_sourceAttribute::type_e
+DUMP-NEXT:   name: FooClass::NestedEnum
 DUMP-NEXT:   typeId: 3
 DUMP-NEXT:   length: 4
 DUMP-NEXT:   constructor: 0
@@ -36,7 +36,7 @@ DUMP-NEXT:   symIndexId: 4
 DUMP-NEXT:   symTag: 12
 DUMP-NEXT:   baseType: 6
 DUMP-NEXT:   lexicalParentId: 0
-DUMP-NEXT:   name: __vc_attributes::event_sourceAttribute::optimize_e
+DUMP-NEXT:   name: __vc_attributes::event_sourceAttribute::type_e
 DUMP-NEXT:   typeId: 3
 DUMP-NEXT:   length: 4
 DUMP-NEXT:   constructor: 0
@@ -60,7 +60,7 @@ DUMP-NEXT:   symIndexId: 5
 DUMP-NEXT:   symTag: 12
 DUMP-NEXT:   baseType: 6
 DUMP-NEXT:   lexicalParentId: 0
-DUMP-NEXT:   name: __vc_attributes::helper_attributes::v1_alttypeAttribute::type_e
+DUMP-NEXT:   name: __vc_attributes::event_sourceAttribute::optimize_e
 DUMP-NEXT:   typeId: 3
 DUMP-NEXT:   length: 4
 DUMP-NEXT:   constructor: 0
@@ -84,7 +84,7 @@ DUMP-NEXT:   symIndexId: 6
 DUMP-NEXT:   symTag: 12
 DUMP-NEXT:   baseType: 6
 DUMP-NEXT:   lexicalParentId: 0
-DUMP-NEXT:   name: __vc_attributes::helper_attributes::usageAttribute::usage_e
+DUMP-NEXT:   name: __vc_attributes::helper_attributes::v1_alttypeAttribute::type_e
 DUMP-NEXT:   typeId: 3
 DUMP-NEXT:   length: 4
 DUMP-NEXT:   constructor: 0
@@ -108,7 +108,7 @@ DUMP-NEXT:   symIndexId: 7
 DUMP-NEXT:   symTag: 12
 DUMP-NEXT:   baseType: 6
 DUMP-NEXT:   lexicalParentId: 0
-DUMP-NEXT:   name: __vc_attributes::threadingAttribute::threading_e
+DUMP-NEXT:   name: __vc_attributes::helper_attributes::usageAttribute::usage_e
 DUMP-NEXT:   typeId: 3
 DUMP-NEXT:   length: 4
 DUMP-NEXT:   constructor: 0
@@ -132,7 +132,7 @@ DUMP-NEXT:   symIndexId: 8
 DUMP-NEXT:   symTag: 12
 DUMP-NEXT:   baseType: 6
 DUMP-NEXT:   lexicalParentId: 0
-DUMP-NEXT:   name: __vc_attributes::aggregatableAttribute::type_e
+DUMP-NEXT:   name: __vc_attributes::threadingAttribute::threading_e
 DUMP-NEXT:   typeId: 3
 DUMP-NEXT:   length: 4
 DUMP-NEXT:   constructor: 0
@@ -156,7 +156,7 @@ DUMP-NEXT:   symIndexId: 9
 DUMP-NEXT:   symTag: 12
 DUMP-NEXT:   baseType: 6
 DUMP-NEXT:   lexicalParentId: 0
-DUMP-NEXT:   name: __vc_attributes::event_receiverAttribute::type_e
+DUMP-NEXT:   name: __vc_attributes::aggregatableAttribute::type_e
 DUMP-NEXT:   typeId: 3
 DUMP-NEXT:   length: 4
 DUMP-NEXT:   constructor: 0
@@ -180,7 +180,7 @@ DUMP-NEXT:   symIndexId: 10
 DUMP-NEXT:   symTag: 12
 DUMP-NEXT:   baseType: 6
 DUMP-NEXT:   lexicalParentId: 0
-DUMP-NEXT:   name: __vc_attributes::moduleAttribute::type_e
+DUMP-NEXT:   name: __vc_attributes::event_receiverAttribute::type_e
 DUMP-NEXT:   typeId: 3
 DUMP-NEXT:   length: 4
 DUMP-NEXT:   constructor: 0
@@ -204,7 +204,7 @@ DUMP-NEXT:   symIndexId: 11
 DUMP-NEXT:   symTag: 12
 DUMP-NEXT:   baseType: 6
 DUMP-NEXT:   lexicalParentId: 0
-DUMP-NEXT:   name: FooClass::NestedEnum
+DUMP-NEXT:   name: __vc_attributes::moduleAttribute::type_e
 DUMP-NEXT:   typeId: 3
 DUMP-NEXT:   length: 4
 DUMP-NEXT:   constructor: 0

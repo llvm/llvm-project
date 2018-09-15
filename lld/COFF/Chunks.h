@@ -458,6 +458,19 @@ public:
   int Flags;
 };
 
+// MinGW specific. A Chunk that contains one pointer-sized absolute value.
+class AbsolutePointerChunk : public Chunk {
+public:
+  AbsolutePointerChunk(uint64_t Value) : Value(Value) {
+    Alignment = getSize();
+  }
+  size_t getSize() const override;
+  void writeTo(uint8_t *Buf) const override;
+
+private:
+  uint64_t Value;
+};
+
 void applyMOV32T(uint8_t *Off, uint32_t V);
 void applyBranch24T(uint8_t *Off, int32_t V);
 

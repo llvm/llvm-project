@@ -128,11 +128,51 @@ multiclass SIMDBinaryFP<SDNode node, string name, bits<32> baseInst> {
   defm "" : SIMDBinary<v4f32, "f32x4", node, name, baseInst>;
   defm "" : SIMDBinary<v2f64, "f64x2", node, name, !add(baseInst, 1)>;
 }
+multiclass SIMDShift<ValueType vec_t, string vec, SDNode node, dag shift_vec,
+                     string name, bits<32> simdop> {
+  defm _#vec_t : SIMD_I<(outs V128:$dst), (ins V128:$vec, I32:$x),
+                        (outs), (ins),
+                        [(set (vec_t V128:$dst),
+                          (node V128:$vec, (vec_t shift_vec)))],
+                        vec#"."#name#"\t$dst, $vec, $x", vec#"."#name, simdop>;
+}
+multiclass SIMDShiftInt<SDNode node, string name, bits<32> baseInst, int skip> {
+  defm "" : SIMDShift<v16i8, "i8x16", node, (splat16 I32:$x), name, baseInst>;
+  defm "" : SIMDShift<v8i16, "i16x8", node, (splat8 I32:$x), name,
+                      !add(baseInst, !if(skip, 2, 1))>;
+  defm "" : SIMDShift<v4i32, "i32x4", node, (splat4 I32:$x), name,
+                      !add(baseInst, !if(skip, 4, 2))>;
+  defm "" : SIMDShift<v2i64, "i64x2", node, (splat2 (i64 (zext I32:$x))),
+                      name, !add(baseInst, !if(skip, 6, 3))>;
+}
 multiclass SIMDBitwise<SDNode node, string name, bits<32> simdop> {
   defm "" : SIMDBinary<v16i8, "v128", node, name, simdop>;
   defm "" : SIMDBinary<v8i16, "v128", node, name, simdop>;
   defm "" : SIMDBinary<v4i32, "v128", node, name, simdop>;
   defm "" : SIMDBinary<v2i64, "v128", node, name, simdop>;
+}
+multiclass SIMDNeg<ValueType vec_t, string vec, PatFrag splat_pat,
+                   ValueType lane_t, SDNode node, dag lane, bits<32> simdop> {
+  defm NEG_#vec_t : SIMD_I<(outs V128:$dst), (ins V128:$vec),
+                           (outs), (ins),
+                           [(set
+                             (vec_t V128:$dst),
+                             (vec_t (node
+                               (vec_t (splat_pat lane)),
+                               (vec_t V128:$vec)
+                             ))
+                           )],
+                           vec#".neg\t$dst, $vec", vec#".neg", simdop>;
+}
+multiclass SIMDNegInt<ValueType vec_t, string vec, PatFrag splat_pat,
+                      ValueType lane_t, bits<32> simdop> {
+  defm "" : SIMDNeg<vec_t, vec, splat_pat, lane_t, sub, (lane_t 0), simdop>;
+}
+def fpimm0 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(+0.0); }]>;
+multiclass SIMDNegFP<ValueType vec_t, string vec, PatFrag splat_pat,
+                     ValueType lane_t, bits<32> simdop> {
+  defm "" : SIMDNeg<vec_t, vec, splat_pat, lane_t, fsub, (lane_t fpimm0),
+                    simdop>;
 }
 multiclass SIMDNot<ValueType vec_t, PatFrag splat_pat, ValueType lane_t> {
   defm NOT_#vec_t : SIMD_I<(outs V128:$dst), (ins V128:$vec),
@@ -281,6 +321,17 @@ defm SUB : SIMDBinaryInt<sub, "sub", 28>;
 defm SUB : SIMDBinaryFP<fsub, "sub", 124>;
 defm DIV : SIMDBinaryFP<fdiv, "div", 126>;
 
+defm "" : SIMDNegInt<v16i8, "i8x16", splat16, i32, 35>;
+defm "" : SIMDNegInt<v8i16, "i16x8", splat8, i32, 36>;
+defm "" : SIMDNegInt<v4i32, "i32x4", splat4, i32, 37>;
+defm "" : SIMDNegInt<v2i64, "i64x2", splat2, i64, 38>;
+defm "" : SIMDNegFP<v4f32, "f32x4", splat4, f32, 114>;
+defm "" : SIMDNegFP<v2f64, "f64x2", splat2, f64, 115>;
+
+defm SHL : SIMDShiftInt<shl, "shl", 47, 0>;
+defm SHR_S : SIMDShiftInt<sra, "shr_s", 51, 1>;
+defm SHR_U : SIMDShiftInt<srl, "shr_u", 52, 1>;
+
 let isCommutable = 1 in {
 defm AND : SIMDBitwise<and, "and", 59>;
 defm OR : SIMDBitwise<or, "or", 60>;
@@ -366,6 +417,11 @@ foreach t2 = !foldl(
   )
 ) in
 def : Pat<(t1 (bitconvert (t2 V128:$v))), (t1 V128:$v)>;
+
+// Truncate i64 shift operands to i32s
+foreach shifts = [[shl, SHL_v2i64], [sra, SHR_S_v2i64], [srl, SHR_U_v2i64]] in
+def : Pat<(v2i64 (shifts[0] (v2i64 V128:$vec), (v2i64 (splat2 I64:$x)))),
+          (v2i64 (shifts[1] (v2i64 V128:$vec), (I32_WRAP_I64 I64:$x)))>;
 
 // Shuffles after custom lowering
 def wasm_shuffle_t : SDTypeProfile<1, 18, []>;
