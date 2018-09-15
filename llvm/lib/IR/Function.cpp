@@ -586,7 +586,7 @@ static std::string getMangledTypeStr(Type* Ty) {
     if (FT->isVarArg())
       Result += "vararg";
     // Ensure nested function types are distinguishable.
-    Result += "f"; 
+    Result += "f";
   } else if (isa<VectorType>(Ty)) {
     Result += "v" + utostr(Ty->getVectorNumElements()) +
       getMangledTypeStr(Ty->getVectorElementType());

@@ -37,6 +37,10 @@ let hasSideEffects = 0, isNotDuplicable = 1, Uses = [ESP, SSP],
   def MOVPC32r : Ii32<0xE8, Pseudo, (outs GR32:$reg), (ins i32imm:$label),
                       "", []>;
 
+// 64-bit large code model PIC base construction.
+let hasSideEffects = 0, mayLoad = 1, isNotDuplicable = 1, SchedRW = [WriteJump] in
+  def MOVGOT64r : PseudoI<(outs GR64:$reg),
+                          (ins GR64:$scratch, i64i32imm_pcrel:$got), []>;
 
 // ADJCALLSTACKDOWN/UP implicitly use/def ESP because they may be expanded into
 // a stack adjustment and the codegen must know that they may modify the stack

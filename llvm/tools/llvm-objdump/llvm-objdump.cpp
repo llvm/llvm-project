@@ -1651,7 +1651,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
             }
             Byte = Bytes.slice(Index)[0];
             outs() << format(" %02x", Byte);
-            AsciiData[NumBytes] = isprint(Byte) ? Byte : '.';
+            AsciiData[NumBytes] = isPrint(Byte) ? Byte : '.';
 
             uint8_t IndentOffset = 0;
             NumBytes++;
@@ -1899,7 +1899,7 @@ void llvm::PrintSectionContents(const ObjectFile *Obj) {
       // Print ascii.
       outs() << "  ";
       for (std::size_t i = 0; i < 16 && addr + i < end; ++i) {
-        if (std::isprint(static_cast<unsigned char>(Contents[addr + i]) & 0xFF))
+        if (isPrint(static_cast<unsigned char>(Contents[addr + i]) & 0xFF))
           outs() << Contents[addr + i];
         else
           outs() << ".";
@@ -2153,8 +2153,10 @@ static void printFaultMaps(const ObjectFile *Obj) {
 }
 
 static void printPrivateFileHeaders(const ObjectFile *o, bool onlyFirst) {
-  if (o->isELF())
-    return printELFFileHeader(o);
+  if (o->isELF()) {
+    printELFFileHeader(o);
+    return printELFDynamicSection(o);
+  }
   if (o->isCOFF())
     return printCOFFFileHeader(o);
   if (o->isWasm())

@@ -1,5 +1,8 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.o
-# RUN: llvm-dwarfdump -v %t.o | FileCheck --check-prefix=COMMON --check-prefix=SPLIT %s
+# RUN: llvm-dwarfdump -v %t.o 2> %t.err | FileCheck --check-prefix=COMMON --check-prefix=SPLIT %s
+# 
+# Check that we don't report an error on a non-existent range list table.
+# RUN: FileCheck -allow-empty --check-prefix ERR %s < %t.err
 
 # Test object to verify dwarfdump handles v5 string offset tables.
 # We have 2 v5 CUs, a v5 TU, and a split v5 CU and TU.
@@ -382,3 +385,5 @@ TU_split_5_end:
 # SPLIT-NEXT:  0x00000010: 00000034 "/home/test/splitCU"
 # SPLIT-NEXT:  0x00000014: 00000047 "V5_split_type_unit"
 # SPLIT-NEXT:  0x00000018: 0000005a "V5_split_Mystruct"
+
+# ERR-NOT: parsing a range list table:

@@ -16,7 +16,7 @@
 
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
-#include <cassert> 
+#include <cassert>
 #include <string>
 
 namespace llvm {

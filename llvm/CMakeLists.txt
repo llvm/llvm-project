@@ -231,10 +231,6 @@ if(WIN32 AND NOT UNIX)
   set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\cmake\\\\nsis_icon.ico")
   set(CPACK_NSIS_MODIFY_PATH "ON")
   set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL "ON")
-  set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS
-    "ExecWait '$INSTDIR/tools/msbuild/install.bat'")
-  set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
-    "ExecWait '$INSTDIR/tools/msbuild/uninstall.bat'")
   if( CMAKE_CL_64 )
     set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES64")
   endif()
@@ -438,6 +434,16 @@ if( LLVM_USE_OPROFILE )
     message(FATAL_ERROR "OProfile support is available on Linux only.")
   endif( NOT CMAKE_SYSTEM_NAME MATCHES "Linux" )
 endif( LLVM_USE_OPROFILE )
+
+option(LLVM_USE_PERF
+  "Use perf JIT interface to inform perf about JIT code" OFF)
+
+# If enabled, verify we are on a platform that supports perf.
+if( LLVM_USE_PERF )
+  if( NOT CMAKE_SYSTEM_NAME MATCHES "Linux" )
+    message(FATAL_ERROR "perf support is available on Linux only.")
+  endif( NOT CMAKE_SYSTEM_NAME MATCHES "Linux" )
+endif( LLVM_USE_PERF )
 
 set(LLVM_USE_SANITIZER "" CACHE STRING
   "Define the sanitizer used to build binaries and tests.")
@@ -652,6 +658,9 @@ endif (LLVM_USE_INTEL_JITEVENTS)
 if (LLVM_USE_OPROFILE)
   set(LLVMOPTIONALCOMPONENTS ${LLVMOPTIONALCOMPONENTS} OProfileJIT)
 endif (LLVM_USE_OPROFILE)
+if (LLVM_USE_PERF)
+  set(LLVMOPTIONALCOMPONENTS ${LLVMOPTIONALCOMPONENTS} PerfJITEvents)
+endif (LLVM_USE_PERF)
 
 message(STATUS "Constructing LLVMBuild project information")
 execute_process(

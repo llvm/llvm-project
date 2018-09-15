@@ -175,14 +175,14 @@ SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
   std::pair<unsigned, unsigned> LineAndCol;
   StringRef BufferID = "<unknown>";
   std::string LineStr;
-  
+
   if (Loc.isValid()) {
     unsigned CurBuf = FindBufferContainingLoc(Loc);
     assert(CurBuf && "Invalid or unspecified location!");
 
     const MemoryBuffer *CurMB = getMemoryBuffer(CurBuf);
     BufferID = CurMB->getBufferIdentifier();
-    
+
     // Scan backward to find the start of the line.
     const char *LineStart = Loc.getPointer();
     const char *BufStart = CurMB->getBufferStart();
@@ -202,17 +202,17 @@ SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
     for (unsigned i = 0, e = Ranges.size(); i != e; ++i) {
       SMRange R = Ranges[i];
       if (!R.isValid()) continue;
-      
+
       // If the line doesn't contain any part of the range, then ignore it.
       if (R.Start.getPointer() > LineEnd || R.End.getPointer() < LineStart)
         continue;
-     
+
       // Ignore pieces of the range that go onto other lines.
       if (R.Start.getPointer() < LineStart)
         R.Start = SMLoc::getFromPointer(LineStart);
       if (R.End.getPointer() > LineEnd)
         R.End = SMLoc::getFromPointer(LineEnd);
-      
+
       // Translate from SMLoc ranges to column ranges.
       // FIXME: Handle multibyte characters.
       ColRanges.push_back(std::make_pair(R.Start.getPointer()-LineStart,
@@ -221,7 +221,7 @@ SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
 
     LineAndCol = getLineAndColumn(Loc, CurBuf);
   }
-    
+
   return SMDiagnostic(*this, Loc, BufferID, LineAndCol.first,
                       LineAndCol.second-1, Kind, Msg.str(),
                       LineStr, ColRanges, FixIts);
@@ -440,7 +440,7 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &S, bool ShowColors,
 
   // Build the line with the caret and ranges.
   std::string CaretLine(NumColumns+1, ' ');
-  
+
   // Expand any ranges.
   for (unsigned r = 0, e = Ranges.size(); r != e; ++r) {
     std::pair<unsigned, unsigned> R = Ranges[r];
@@ -459,14 +459,14 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &S, bool ShowColors,
   // Finally, plop on the caret.
   if (unsigned(ColumnNo) <= NumColumns)
     CaretLine[ColumnNo] = '^';
-  else 
+  else
     CaretLine[NumColumns] = '^';
-  
+
   // ... and remove trailing whitespace so the output doesn't wrap for it.  We
   // know that the line isn't completely empty because it has the caret in it at
   // least.
   CaretLine.erase(CaretLine.find_last_not_of(' ')+1);
-  
+
   printSourceLine(S, LineContents);
 
   if (ShowColors)
@@ -479,7 +479,7 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &S, bool ShowColors,
       ++OutCol;
       continue;
     }
-    
+
     // Okay, we have a tab.  Insert the appropriate number of characters.
     do {
       S << CaretLine[i];
@@ -494,7 +494,7 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &S, bool ShowColors,
   // Print out the replacement line, matching tabs in the source line.
   if (FixItInsertionLine.empty())
     return;
-  
+
   for (size_t i = 0, e = FixItInsertionLine.size(), OutCol = 0; i < e; ++i) {
     if (i >= LineContents.size() || LineContents[i] != '\t') {
       S << FixItInsertionLine[i];

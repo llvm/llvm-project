@@ -89,6 +89,7 @@ entry:
 ; CHECKM1-NOT: %jump-table.1
 ; CHECKM3-NEXT: %jump-table.0:  %bb.1 %bb.2 %bb.3 %bb.4 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.5 %bb.6{{$}}
 ; CHECKM3-NOT: %jump-table.1
+; CHECK-DAG: End machine code for function jt2.
 
 bb1: tail call void @ext(i32 1) br label %return
 bb2: tail call void @ext(i32 2) br label %return

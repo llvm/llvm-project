@@ -14,16 +14,12 @@ define <2 x double> @fpext_4f32_to_2f64(<4 x float> %a) {
 ;
 ; AVX-LABEL: fpext_4f32_to_2f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vcvtps2pd %xmm0, %ymm0 # encoding: [0xc5,0xfc,0x5a,0xc0]
-; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; AVX-NEXT:    vcvtps2pd %xmm0, %xmm0 # encoding: [0xc5,0xf8,0x5a,0xc0]
 ; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
 ; AVX512VL-LABEL: fpext_4f32_to_2f64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vcvtps2pd %xmm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x5a,0xc0]
-; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX512VL-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; AVX512VL-NEXT:    vcvtps2pd %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x5a,0xc0]
 ; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %cvt = fpext <4 x float> %a to <4 x double>
   %shuf = shufflevector <4 x double> %cvt, <4 x double> undef, <2 x i32> <i32 0, i32 1>
@@ -38,8 +34,7 @@ define <2 x double> @fpext_8f32_to_2f64(<8 x float> %a) {
 ;
 ; AVX-LABEL: fpext_8f32_to_2f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vcvtps2pd %xmm0, %ymm0 # encoding: [0xc5,0xfc,0x5a,0xc0]
-; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX-NEXT:    vcvtps2pd %xmm0, %xmm0 # encoding: [0xc5,0xf8,0x5a,0xc0]
 ; AVX-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;

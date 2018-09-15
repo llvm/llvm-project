@@ -201,7 +201,7 @@ unsigned PPCTTIImpl::getUserCost(const User *U,
     std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, U->getType());
     return LT.first * BaseT::getUserCost(U, Operands);
   }
-  
+
   return BaseT::getUserCost(U, Operands);
 }
 

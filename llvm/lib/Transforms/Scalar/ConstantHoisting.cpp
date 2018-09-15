@@ -781,7 +781,7 @@ bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
   this->TTI = &TTI;
   this->DT = &DT;
   this->BFI = BFI;
-  this->Entry = &Entry;  
+  this->Entry = &Entry;
   // Collect all constant candidates.
   collectConstantCandidates(Fn);
 

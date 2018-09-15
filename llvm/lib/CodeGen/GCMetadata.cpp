@@ -159,7 +159,7 @@ GCStrategy *GCModuleInfo::getGCStrategy(const StringRef Name) {
   auto NMI = GCStrategyMap.find(Name);
   if (NMI != GCStrategyMap.end())
     return NMI->getValue();
-  
+
   for (auto& Entry : GCRegistry::entries()) {
     if (Name == Entry.getName()) {
       std::unique_ptr<GCStrategy> S = Entry.instantiate();
@@ -171,11 +171,11 @@ GCStrategy *GCModuleInfo::getGCStrategy(const StringRef Name) {
   }
 
   if (GCRegistry::begin() == GCRegistry::end()) {
-    // In normal operation, the registry should not be empty.  There should 
+    // In normal operation, the registry should not be empty.  There should
     // be the builtin GCs if nothing else.  The most likely scenario here is
-    // that we got here without running the initializers used by the Registry 
+    // that we got here without running the initializers used by the Registry
     // itself and it's registration mechanism.
-    const std::string error = ("unsupported GC: " + Name).str() + 
+    const std::string error = ("unsupported GC: " + Name).str() +
       " (did you remember to link and initialize the CodeGen library?)";
     report_fatal_error(error);
   } else

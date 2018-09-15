@@ -36,11 +36,8 @@ using namespace llvm;
 STATISTIC(NumCSROpt,
           "Number of functions optimized for callee saved registers");
 
-namespace llvm {
-void initializeRegUsageInfoCollectorPass(PassRegistry &);
-}
-
 namespace {
+
 class RegUsageInfoCollector : public MachineFunctionPass {
 public:
   RegUsageInfoCollector() : MachineFunctionPass(ID) {
@@ -52,7 +49,11 @@ public:
     return "Register Usage Information Collector Pass";
   }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<PhysicalRegisterUsageInfo>();
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -62,6 +63,7 @@ public:
 
   static char ID;
 };
+
 } // end of anonymous namespace
 
 char RegUsageInfoCollector::ID = 0;
@@ -74,12 +76,6 @@ INITIALIZE_PASS_END(RegUsageInfoCollector, "RegUsageInfoCollector",
 
 FunctionPass *llvm::createRegUsageInfoCollector() {
   return new RegUsageInfoCollector();
-}
-
-void RegUsageInfoCollector::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<PhysicalRegisterUsageInfo>();
-  AU.setPreservesAll();
-  MachineFunctionPass::getAnalysisUsage(AU);
 }
 
 bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
@@ -96,14 +92,13 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
   // Compute the size of the bit vector to represent all the registers.
   // The bit vector is broken into 32-bit chunks, thus takes the ceil of
   // the number of registers divided by 32 for the size.
-  unsigned RegMaskSize = (TRI->getNumRegs() + 31) / 32;
-  RegMask.resize(RegMaskSize, 0xFFFFFFFF);
+  unsigned RegMaskSize = MachineOperand::getRegMaskSize(TRI->getNumRegs());
+  RegMask.resize(RegMaskSize, ~((uint32_t)0));
 
   const Function &F = MF.getFunction();
 
-  PhysicalRegisterUsageInfo *PRUI = &getAnalysis<PhysicalRegisterUsageInfo>();
-
-  PRUI->setTargetMachine(&TM);
+  PhysicalRegisterUsageInfo &PRUI = getAnalysis<PhysicalRegisterUsageInfo>();
+  PRUI.setTargetMachine(TM);
 
   LLVM_DEBUG(dbgs() << "Clobbered Registers: ");
 
@@ -147,37 +142,37 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
 
   LLVM_DEBUG(dbgs() << " \n----------------------------------------\n");
 
-  PRUI->storeUpdateRegUsageInfo(&F, std::move(RegMask));
+  PRUI.storeUpdateRegUsageInfo(F, RegMask);
 
   return false;
 }
 
 void RegUsageInfoCollector::
 computeCalleeSavedRegs(BitVector &SavedRegs, MachineFunction &MF) {
-  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
 
   // Target will return the set of registers that it saves/restores as needed.
   SavedRegs.clear();
-  TFI->determineCalleeSaves(MF, SavedRegs);
+  TFI.determineCalleeSaves(MF, SavedRegs);
 
   // Insert subregs.
-  const MCPhysReg *CSRegs = TRI->getCalleeSavedRegs(&MF);
+  const MCPhysReg *CSRegs = TRI.getCalleeSavedRegs(&MF);
   for (unsigned i = 0; CSRegs[i]; ++i) {
     unsigned Reg = CSRegs[i];
     if (SavedRegs.test(Reg))
-      for (MCSubRegIterator SR(Reg, TRI, false); SR.isValid(); ++SR)
+      for (MCSubRegIterator SR(Reg, &TRI, false); SR.isValid(); ++SR)
         SavedRegs.set(*SR);
   }
 
   // Insert any register fully saved via subregisters.
-  for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg) {
+  for (unsigned PReg = 1, PRegE = TRI.getNumRegs(); PReg < PRegE; ++PReg) {
     if (SavedRegs.test(PReg))
       continue;
 
     // Check if PReg is fully covered by its subregs.
     bool CoveredBySubRegs = false;
-    for (const TargetRegisterClass *RC : TRI->regclasses())
+    for (const TargetRegisterClass *RC : TRI.regclasses())
       if (RC->CoveredBySubRegs && RC->contains(PReg)) {
         CoveredBySubRegs = true;
         break;
@@ -187,7 +182,7 @@ computeCalleeSavedRegs(BitVector &SavedRegs, MachineFunction &MF) {
 
     // Add PReg to SavedRegs if all subregs are saved.
     bool AllSubRegsSaved = true;
-    for (MCSubRegIterator SR(PReg, TRI, false); SR.isValid(); ++SR)
+    for (MCSubRegIterator SR(PReg, &TRI, false); SR.isValid(); ++SR)
       if (!SavedRegs.test(*SR)) {
         AllSubRegsSaved = false;
         break;

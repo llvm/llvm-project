@@ -8,7 +8,7 @@ define void @f1(i32 *%ptr) {
 ; CHECK-LABEL: f1:
 ; CHECK: asi 0(%r2), 1
 ; CHECK: br %r14
-  %val = load i32 , i32 *%ptr
+  %val = load i32, i32 *%ptr
   %add = add i32 %val, 127
   store i32 %add, i32 *%ptr
   ret void
@@ -19,7 +19,7 @@ define void @f2(i32 *%ptr) {
 ; CHECK-LABEL: f2:
 ; CHECK: asi 0(%r2), 127
 ; CHECK: br %r14
-  %val = load i32 , i32 *%ptr
+  %val = load i32, i32 *%ptr
   %add = add i32 %val, 127
   store i32 %add, i32 *%ptr
   ret void
@@ -32,7 +32,7 @@ define void @f3(i32 *%ptr) {
 ; CHECK-NOT: asi
 ; CHECK: st %r0, 0(%r2)
 ; CHECK: br %r14
-  %val = load i32 , i32 *%ptr
+  %val = load i32, i32 *%ptr
   %add = add i32 %val, 128
   store i32 %add, i32 *%ptr
   ret void
@@ -43,7 +43,7 @@ define void @f4(i32 *%ptr) {
 ; CHECK-LABEL: f4:
 ; CHECK: asi 0(%r2), -128
 ; CHECK: br %r14
-  %val = load i32 , i32 *%ptr
+  %val = load i32, i32 *%ptr
   %add = add i32 %val, -128
   store i32 %add, i32 *%ptr
   ret void
@@ -55,7 +55,7 @@ define void @f5(i32 *%ptr) {
 ; CHECK-NOT: asi
 ; CHECK: st %r0, 0(%r2)
 ; CHECK: br %r14
-  %val = load i32 , i32 *%ptr
+  %val = load i32, i32 *%ptr
   %add = add i32 %val, -129
   store i32 %add, i32 *%ptr
   ret void
@@ -67,7 +67,7 @@ define void @f6(i32 *%base) {
 ; CHECK: asi 524284(%r2), 1
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%base, i64 131071
-  %val = load i32 , i32 *%ptr
+  %val = load i32, i32 *%ptr
   %add = add i32 %val, 1
   store i32 %add, i32 *%ptr
   ret void
@@ -81,7 +81,7 @@ define void @f7(i32 *%base) {
 ; CHECK: asi 0(%r2), 1
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%base, i64 131072
-  %val = load i32 , i32 *%ptr
+  %val = load i32, i32 *%ptr
   %add = add i32 %val, 1
   store i32 %add, i32 *%ptr
   ret void
@@ -93,7 +93,7 @@ define void @f8(i32 *%base) {
 ; CHECK: asi -524288(%r2), 1
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%base, i64 -131072
-  %val = load i32 , i32 *%ptr
+  %val = load i32, i32 *%ptr
   %add = add i32 %val, 1
   store i32 %add, i32 *%ptr
   ret void
@@ -107,7 +107,7 @@ define void @f9(i32 *%base) {
 ; CHECK: asi 0(%r2), 1
 ; CHECK: br %r14
   %ptr = getelementptr i32, i32 *%base, i64 -131073
-  %val = load i32 , i32 *%ptr
+  %val = load i32, i32 *%ptr
   %add = add i32 %val, 1
   store i32 %add, i32 *%ptr
   ret void
@@ -122,7 +122,7 @@ define void @f10(i64 %base, i64 %index) {
   %add1 = add i64 %base, %index
   %add2 = add i64 %add1, 4
   %ptr = inttoptr i64 %add2 to i32 *
-  %val = load i32 , i32 *%ptr
+  %val = load i32, i32 *%ptr
   %add = add i32 %val, 1
   store i32 %add, i32 *%ptr
   ret void
@@ -134,22 +134,22 @@ define void @f11(i32 *%ptr, i32 %sel) {
 ; CHECK: asi {{[0-9]+}}(%r15), 127
 ; CHECK: br %r14
 entry:
-  %val0 = load volatile i32 , i32 *%ptr
-  %val1 = load volatile i32 , i32 *%ptr
-  %val2 = load volatile i32 , i32 *%ptr
-  %val3 = load volatile i32 , i32 *%ptr
-  %val4 = load volatile i32 , i32 *%ptr
-  %val5 = load volatile i32 , i32 *%ptr
-  %val6 = load volatile i32 , i32 *%ptr
-  %val7 = load volatile i32 , i32 *%ptr
-  %val8 = load volatile i32 , i32 *%ptr
-  %val9 = load volatile i32 , i32 *%ptr
-  %val10 = load volatile i32 , i32 *%ptr
-  %val11 = load volatile i32 , i32 *%ptr
-  %val12 = load volatile i32 , i32 *%ptr
-  %val13 = load volatile i32 , i32 *%ptr
-  %val14 = load volatile i32 , i32 *%ptr
-  %val15 = load volatile i32 , i32 *%ptr
+  %val0 = load volatile i32, i32 *%ptr
+  %val1 = load volatile i32, i32 *%ptr
+  %val2 = load volatile i32, i32 *%ptr
+  %val3 = load volatile i32, i32 *%ptr
+  %val4 = load volatile i32, i32 *%ptr
+  %val5 = load volatile i32, i32 *%ptr
+  %val6 = load volatile i32, i32 *%ptr
+  %val7 = load volatile i32, i32 *%ptr
+  %val8 = load volatile i32, i32 *%ptr
+  %val9 = load volatile i32, i32 *%ptr
+  %val10 = load volatile i32, i32 *%ptr
+  %val11 = load volatile i32, i32 *%ptr
+  %val12 = load volatile i32, i32 *%ptr
+  %val13 = load volatile i32, i32 *%ptr
+  %val14 = load volatile i32, i32 *%ptr
+  %val15 = load volatile i32, i32 *%ptr
 
   %test = icmp ne i32 %sel, 0
   br i1 %test, label %add, label %store
@@ -217,22 +217,22 @@ define void @f12(i32 *%ptr, i32 %sel) {
 ; CHECK: asi {{[0-9]+}}(%r15), -128
 ; CHECK: br %r14
 entry:
-  %val0 = load volatile i32 , i32 *%ptr
-  %val1 = load volatile i32 , i32 *%ptr
-  %val2 = load volatile i32 , i32 *%ptr
-  %val3 = load volatile i32 , i32 *%ptr
-  %val4 = load volatile i32 , i32 *%ptr
-  %val5 = load volatile i32 , i32 *%ptr
-  %val6 = load volatile i32 , i32 *%ptr
-  %val7 = load volatile i32 , i32 *%ptr
-  %val8 = load volatile i32 , i32 *%ptr
-  %val9 = load volatile i32 , i32 *%ptr
-  %val10 = load volatile i32 , i32 *%ptr
-  %val11 = load volatile i32 , i32 *%ptr
-  %val12 = load volatile i32 , i32 *%ptr
-  %val13 = load volatile i32 , i32 *%ptr
-  %val14 = load volatile i32 , i32 *%ptr
-  %val15 = load volatile i32 , i32 *%ptr
+  %val0 = load volatile i32, i32 *%ptr
+  %val1 = load volatile i32, i32 *%ptr
+  %val2 = load volatile i32, i32 *%ptr
+  %val3 = load volatile i32, i32 *%ptr
+  %val4 = load volatile i32, i32 *%ptr
+  %val5 = load volatile i32, i32 *%ptr
+  %val6 = load volatile i32, i32 *%ptr
+  %val7 = load volatile i32, i32 *%ptr
+  %val8 = load volatile i32, i32 *%ptr
+  %val9 = load volatile i32, i32 *%ptr
+  %val10 = load volatile i32, i32 *%ptr
+  %val11 = load volatile i32, i32 *%ptr
+  %val12 = load volatile i32, i32 *%ptr
+  %val13 = load volatile i32, i32 *%ptr
+  %val14 = load volatile i32, i32 *%ptr
+  %val15 = load volatile i32, i32 *%ptr
 
   %test = icmp ne i32 %sel, 0
   br i1 %test, label %add, label %store

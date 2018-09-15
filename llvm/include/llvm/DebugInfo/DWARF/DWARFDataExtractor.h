@@ -51,6 +51,8 @@ public:
   /// reflect the absolute address of this pointer.
   Optional<uint64_t> getEncodedPointer(uint32_t *Offset, uint8_t Encoding,
                                        uint64_t AbsPosOffset = 0) const;
+
+  size_t size() const { return Section == nullptr ? 0 : Section->Data.size(); }
 };
 
 } // end namespace llvm

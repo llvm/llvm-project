@@ -66,6 +66,22 @@ def MIMGDimInfoTable : GenericTable {
   let PrimaryKeyName = "getMIMGDimInfo";
 }
 
+class MIMGLZMapping<MIMGBaseOpcode l, MIMGBaseOpcode lz> {
+  MIMGBaseOpcode L = l;
+  MIMGBaseOpcode LZ = lz;
+}
+
+def MIMGLZMappingTable : GenericTable {
+  let FilterClass = "MIMGLZMapping";
+  let CppTypeName = "MIMGLZMappingInfo";
+  let Fields = ["L", "LZ"];
+  GenericEnum TypeOf_L = MIMGBaseOpcode;
+  GenericEnum TypeOf_LZ = MIMGBaseOpcode;
+
+  let PrimaryKey = ["L"];
+  let PrimaryKeyName = "getMIMGLZMappingInfo";
+}
+
 class mimg <bits<7> si, bits<7> vi = si> {
   field bits<7> SI = si;
   field bits<7> VI = vi;
@@ -547,3 +563,13 @@ foreach intr = !listconcat(AMDGPUImageDimIntrinsics,
                            AMDGPUImageDimAtomicIntrinsics) in {
   def : ImageDimIntrinsicInfo<intr>;
 }
+
+// L to LZ Optimization Mapping
+def : MIMGLZMapping<IMAGE_SAMPLE_L, IMAGE_SAMPLE_LZ>;
+def : MIMGLZMapping<IMAGE_SAMPLE_C_L, IMAGE_SAMPLE_C_LZ>;
+def : MIMGLZMapping<IMAGE_SAMPLE_L_O, IMAGE_SAMPLE_LZ_O>;
+def : MIMGLZMapping<IMAGE_SAMPLE_C_L_O, IMAGE_SAMPLE_C_LZ_O>;
+def : MIMGLZMapping<IMAGE_GATHER4_L, IMAGE_GATHER4_LZ>;
+def : MIMGLZMapping<IMAGE_GATHER4_C_L, IMAGE_GATHER4_C_LZ>;
+def : MIMGLZMapping<IMAGE_GATHER4_L_O, IMAGE_GATHER4_LZ_O>;
+def : MIMGLZMapping<IMAGE_GATHER4_C_L_O, IMAGE_GATHER4_C_LZ_O>;

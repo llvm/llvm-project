@@ -389,7 +389,7 @@ int ARMTTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
   unsigned NumVectorInstToHideOverhead = 10;
   int MaxMergeDistance = 64;
 
-  if (Ty->isVectorTy() && SE && 
+  if (Ty->isVectorTy() && SE &&
       !BaseT::isConstantStridedAccessLessThan(SE, Ptr, MaxMergeDistance + 1))
     return NumVectorInstToHideOverhead;
 

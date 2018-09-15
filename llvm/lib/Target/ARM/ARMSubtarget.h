@@ -327,6 +327,10 @@ protected:
   /// pairs faster.
   bool HasFuseAES = false;
 
+  /// HasFuseLiterals - if true, processor executes back to back
+  /// bottom and top halves of literal generation faster.
+  bool HasFuseLiterals = false;
+
   /// If true, if conversion may decide to leave some instructions unpredicated.
   bool IsProfitableToUnpredicate = false;
 
@@ -352,8 +356,11 @@ protected:
   /// If true, the AGU and NEON/FPU units are multiplexed.
   bool HasMuxedUnits = false;
 
-  /// If true, VMOVS will never be widened to VMOVD
+  /// If true, VMOVS will never be widened to VMOVD.
   bool DontWidenVMOVS = false;
+
+  /// If true, splat a register between VFP and NEON instructions.
+  bool SplatVFPToNeon = false;
 
   /// If true, run the MLx expansion pass.
   bool ExpandMLx = false;
@@ -594,6 +601,7 @@ public:
   bool hasSlowLoadDSubregister() const { return SlowLoadDSubregister; }
   bool hasMuxedUnits() const { return HasMuxedUnits; }
   bool dontWidenVMOVS() const { return DontWidenVMOVS; }
+  bool useSplatVFPToNeon() const { return SplatVFPToNeon; }
   bool useNEONForFPMovs() const { return UseNEONForFPMovs; }
   bool checkVLDnAccessAlignment() const { return CheckVLDnAlign; }
   bool nonpipelinedVFP() const { return NonpipelinedVFP; }
@@ -615,8 +623,9 @@ public:
   bool hasFullFP16() const { return HasFullFP16; }
 
   bool hasFuseAES() const { return HasFuseAES; }
+  bool hasFuseLiterals() const { return HasFuseLiterals; }
   /// Return true if the CPU supports any kind of instruction fusion.
-  bool hasFusion() const { return hasFuseAES(); }
+  bool hasFusion() const { return hasFuseAES() || hasFuseLiterals(); }
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 

@@ -392,7 +392,7 @@ Instruction *llvm::promoteCall(CallSite CS, Function *Callee,
   auto CalleeType = Callee->getFunctionType();
   auto CalleeParamNum = CalleeType->getNumParams();
   for (unsigned ArgNo = 0; ArgNo < CalleeParamNum; ++ArgNo) {
-    auto *Arg = CS.getArgument(ArgNo); 
+    auto *Arg = CS.getArgument(ArgNo);
     Type *FormalTy = CalleeType->getParamType(ArgNo);
     Type *ActualTy = Arg->getType();
     if (FormalTy != ActualTy) {

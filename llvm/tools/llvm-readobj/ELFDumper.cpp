@@ -152,7 +152,6 @@ public:
   void printDynamicTable() override;
   void printNeededLibraries() override;
   void printProgramHeaders() override;
-  void printSectionAsHex(StringRef StringName) override;
   void printHashTable() override;
   void printGnuHashTable() override;
   void printLoadName() override;
@@ -284,23 +283,6 @@ public:
   const Elf_Hash *getHashTable() const { return HashTable; }
   const Elf_GnuHash *getGnuHashTable() const { return GnuHashTable; }
 };
-
-template <class ELFT>
-void ELFDumper<ELFT>::printSectionAsHex(StringRef SectionName) {
-  char *StrPtr;
-  long SectionIndex = strtol(SectionName.data(), &StrPtr, 10);
-  const Elf_Shdr *Sec;
-  if (*StrPtr)
-    Sec = unwrapOrError(Obj->getSection(SectionName));
-  else
-    Sec = unwrapOrError(Obj->getSection((unsigned int)SectionIndex));
-
-  StringRef SecName = unwrapOrError(Obj->getSectionName(Sec));
-  const uint8_t *SecContent =
-      reinterpret_cast<const uint8_t *>(Obj->base() + Sec->sh_offset);
-
-  SectionHexDump(SecName, SecContent, Sec->sh_size);
-}
 
 template <class ELFT>
 void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {

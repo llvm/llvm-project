@@ -842,7 +842,7 @@ static void maybeSetDSOLocal(bool DSOLocal, GlobalValue &GV) {
 }
 
 /// parseIndirectSymbol:
-///   ::= GlobalVar '=' OptionalLinkage OptionalPreemptionSpecifier 
+///   ::= GlobalVar '=' OptionalLinkage OptionalPreemptionSpecifier
 ///                     OptionalVisibility OptionalDLLStorageClass
 ///                     OptionalThreadLocal OptionalUnnamedAddr
 //                      'alias|ifunc' IndirectSymbol
@@ -3935,7 +3935,7 @@ bool LLParser::ParseMDField(LocTy Loc, StringRef Name, EmissionKindField &Result
   Lex.Lex();
   return false;
 }
-  
+
 template <>
 bool LLParser::ParseMDField(LocTy Loc, StringRef Name,
                             DwarfAttEncodingField &Result) {

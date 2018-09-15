@@ -1,8 +1,5 @@
 ; MD5 checksums provided by IR should be passed through to asm.
 ; They'll be emitted to an object file only for DWARF 5 or later.
-;
-; Note that on Darwin for DWARF 4 or earlier, the line table version is clamped
-; to version 2. However that doesn't affect the output checked in this test.
 
 ; REQUIRES: object-emission
 ; RUN: %llc_dwarf -dwarf-version 4 -filetype=asm -o - %s | FileCheck %s --check-prefix=ASM-4

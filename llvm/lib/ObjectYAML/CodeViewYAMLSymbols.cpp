@@ -550,6 +550,10 @@ template <> void SymbolRecordImpl<ThreadLocalDataSym>::map(IO &IO) {
   IO.mapRequired("DisplayName", Symbol.Name);
 }
 
+template <> void SymbolRecordImpl<UsingNamespaceSym>::map(IO &IO) {
+  IO.mapRequired("Namespace", Symbol.Name);
+}
+
 } // end namespace detail
 } // end namespace CodeViewYAML
 } // end namespace llvm

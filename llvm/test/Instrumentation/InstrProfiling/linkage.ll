@@ -1,13 +1,13 @@
 ;; Check that runtime symbols get appropriate linkage.
 
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -instrprof -S | FileCheck %s --check-prefix=OTHER --check-prefix=COMMON
-; RUN: opt < %s -mtriple=x86_64-unknown-linux -instrprof -S | FileCheck %s --check-prefix=LINUX --check-prefix=COMMON
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -passes=instrprof -S | FileCheck %s --check-prefix=OTHER --check-prefix=COMMON
-; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefix=LINUX --check-prefix=COMMON
-; RUN: opt < %s  -mtriple=x86_64-pc-win32-coff -instrprof -S | FileCheck %s --check-prefix=COFF
-; RUN: opt < %s  -mtriple=x86_64-pc-win32-coff -passes=instrprof -S | FileCheck %s --check-prefix=COFF
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -instrprof -S | FileCheck %s --check-prefixes=COMMON,MACHO
+; RUN: opt < %s -mtriple=x86_64-unknown-linux -instrprof -S | FileCheck %s --check-prefixes=COMMON,LINUX
+; RUN: opt < %s  -mtriple=x86_64-pc-win32-coff -instrprof -S | FileCheck %s --check-prefixes=COMMON,COFF
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -passes=instrprof -S | FileCheck %s --check-prefixes=COMMON,MACHO
+; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefixes=COMMON,LINUX
+; RUN: opt < %s  -mtriple=x86_64-pc-win32-coff -passes=instrprof -S | FileCheck %s --check-prefixes=COMMON,COFF
 
-; OTHER: @__llvm_profile_runtime = external global i32
+; MACHO: @__llvm_profile_runtime = external global i32
 ; LINUX-NOT: @__llvm_profile_runtime = external global i32
 
 @__profn_foo = hidden constant [3 x i8] c"foo"
@@ -38,7 +38,9 @@ define internal void @foo_internal() {
 }
 
 ; COMMON: @__profc_foo_inline = linkonce_odr hidden global
+; COFF-SAME: section ".lprfc", align 8
 ; COMMON: @__profd_foo_inline = linkonce_odr hidden global
+; COFF-SAME: section ".lprfd", align 8
 define linkonce_odr void @foo_inline() {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @__profn_foo_inline, i32 0, i32 0), i64 0, i32 1, i32 0)
   ret void
@@ -46,8 +48,10 @@ define linkonce_odr void @foo_inline() {
 
 ; LINUX: @__profc_foo_extern = linkonce_odr hidden global {{.*}}section "__llvm_prf_cnts", comdat($__profv_foo_extern), align 8
 ; LINUX: @__profd_foo_extern = linkonce_odr hidden global {{.*}}section "__llvm_prf_data", comdat($__profv_foo_extern), align 8
-; OTHER: @__profc_foo_extern = linkonce_odr hidden global
-; OTHER: @__profd_foo_extern = linkonce_odr hidden global
+; MACHO: @__profc_foo_extern = linkonce_odr hidden global
+; MACHO: @__profd_foo_extern = linkonce_odr hidden global
+; COFF: @__profc_foo_extern = linkonce_odr hidden global {{.*}}section ".lprfc", comdat, align 8
+; COFF: @__profd_foo_extern = linkonce_odr hidden global {{.*}}section ".lprfd", comdat($__profc_foo_extern), align 8
 define available_externally void @foo_extern() {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @__profn_foo_extern, i32 0, i32 0), i64 0, i32 1, i32 0)
   ret void
@@ -55,10 +59,10 @@ define available_externally void @foo_extern() {
 
 declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
 
-; OTHER: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
-; OTHER:   %[[REG:.*]] = load i32, i32* @__llvm_profile_runtime
-; OTHER:   ret i32 %[[REG]]
-; OTHER: }
+; MACHO: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
+; MACHO:   %[[REG:.*]] = load i32, i32* @__llvm_profile_runtime
+; MACHO:   ret i32 %[[REG]]
+; MACHO: }
 ; COFF: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} comdat {
 ; LINUX-NOT: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
 ; LINUX-NOT:   %[[REG:.*]] = load i32, i32* @__llvm_profile_runtime

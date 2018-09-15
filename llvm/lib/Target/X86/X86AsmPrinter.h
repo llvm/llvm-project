@@ -130,9 +130,6 @@ public:
                              unsigned AsmVariant, const char *ExtraCode,
                              raw_ostream &OS) override;
 
-  /// Return the symbol for the specified constant pool entry.
-  MCSymbol *GetCPISymbol(unsigned CPID) const override;
-
   bool doInitialization(Module &M) override {
     SMShadowTracker.reset(0);
     SM.reset();

@@ -115,7 +115,7 @@ static SPCC::CondCodes GetOppositeBranchCondition(SPCC::CondCodes CC)
   case SPCC::FCC_UE:   return SPCC::FCC_LG;
   case SPCC::FCC_NE:   return SPCC::FCC_E;
   case SPCC::FCC_E:    return SPCC::FCC_NE;
-  
+
   case SPCC::CPCC_A:   return SPCC::CPCC_N;
   case SPCC::CPCC_N:   return SPCC::CPCC_A;
   case SPCC::CPCC_3:   LLVM_FALLTHROUGH;

@@ -98,3 +98,35 @@ define void @vect_zext_bitcast_negative_ptr_delta(i32 addrspace(1)* %p, i32 %bas
   %b.val = load i32, i32 addrspace(1)* %b.ptr.bitcasted
   ret void
 }
+
+; Check i1 corner case
+; CHECK-LABEL: @zexted_i1_gep_index
+; CHECK: load i32
+; CHECK: load i32
+define void @zexted_i1_gep_index(i32 addrspace(1)* %p, i32 %val) {
+  %selector = icmp eq i32 %val, 0
+  %flipped = xor i1 %selector, 1
+  %index.0 = zext i1 %selector to i64
+  %index.1 = zext i1 %flipped to i64
+  %gep.0 = getelementptr inbounds i32, i32 addrspace(1)* %p, i64 %index.0
+  %gep.1 = getelementptr inbounds i32, i32 addrspace(1)* %p, i64 %index.1
+  %val0 = load i32, i32 addrspace(1)* %gep.0
+  %val1 = load i32, i32 addrspace(1)* %gep.1
+  ret void
+}
+
+; Check i1 corner case
+; CHECK-LABEL: @sexted_i1_gep_index
+; CHECK: load i32
+; CHECK: load i32
+define void @sexted_i1_gep_index(i32 addrspace(1)* %p, i32 %val) {
+  %selector = icmp eq i32 %val, 0
+  %flipped = xor i1 %selector, 1
+  %index.0 = sext i1 %selector to i64
+  %index.1 = sext i1 %flipped to i64
+  %gep.0 = getelementptr inbounds i32, i32 addrspace(1)* %p, i64 %index.0
+  %gep.1 = getelementptr inbounds i32, i32 addrspace(1)* %p, i64 %index.1
+  %val0 = load i32, i32 addrspace(1)* %gep.0
+  %val1 = load i32, i32 addrspace(1)* %gep.1
+  ret void
+}

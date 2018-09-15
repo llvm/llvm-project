@@ -101,7 +101,6 @@ private:
 
 template <typename T> const char Any::TypeId<T>::Id = 0;
 
-
 template <typename T> bool any_isa(const Any &Value) {
   if (!Value.Storage)
     return false;

@@ -328,17 +328,6 @@ define i32 @test25(i32 %g, i32 %h) {
   ret i32 %t4
 }
 
-define i32 @test26(i32 %a, i32 %b) {
-; CHECK-LABEL: @test26(
-; CHECK-NEXT:    [[T4:%.*]] = and i32 %b, %a
-; CHECK-NEXT:    ret i32 [[T4]]
-;
-  %b2 = xor i32 %b, -1
-  %t2 = xor i32 %a, %b2
-  %t4 = and i32 %t2, %a
-  ret i32 %t4
-}
-
 define i32 @test27(i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @test27(
 ; CHECK-NEXT:    [[T6:%.*]] = icmp eq i32 %b, %c

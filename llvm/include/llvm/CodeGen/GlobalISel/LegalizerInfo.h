@@ -786,7 +786,7 @@ public:
   /// setAction ({G_ADD, 0, LLT::scalar(32)}, Legal);
   /// setLegalizeScalarToDifferentSizeStrategy(
   ///   G_ADD, 0, widenToLargerTypesAndNarrowToLargest);
-  /// will end up defining getAction({G_ADD, 0, T}) to return the following 
+  /// will end up defining getAction({G_ADD, 0, T}) to return the following
   /// actions for different scalar types T:
   ///  LLT::scalar(1)..LLT::scalar(31): {WidenScalar, 0, LLT::scalar(32)}
   ///  LLT::scalar(32):                 {Legal, 0, LLT::scalar(32)}
@@ -814,7 +814,7 @@ public:
     VectorElementSizeChangeStrategies[OpcodeIdx][TypeIdx] = S;
   }
 
-  /// A SizeChangeStrategy for the common case where legalization for a 
+  /// A SizeChangeStrategy for the common case where legalization for a
   /// particular operation consists of only supporting a specific set of type
   /// sizes. E.g.
   ///   setAction ({G_DIV, 0, LLT::scalar(32)}, Legal);

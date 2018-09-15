@@ -1,6 +1,6 @@
-; RUN: llc %s -mtriple=arm64-apple-darwin -o - | \
-; RUN:   FileCheck --check-prefixes=CHECK,CHECK-DARWIN %s
-; RUN: llc %s -mtriple=arm64-linux-gnu -o - | \
+; RUN: llc %s -enable-machine-outliner=never -mtriple=arm64-apple-darwin -o - \
+; RUN: | FileCheck --check-prefixes=CHECK,CHECK-DARWIN %s
+; RUN: llc %s -enable-machine-outliner=never -mtriple=arm64-linux-gnu -o - | \
 ; RUN:   FileCheck --check-prefixes=CHECK,CHECK-LINUX %s
 ; <rdar://problem/14199482> ARM64: Calls to bzero() replaced with calls to memset()
 

@@ -538,6 +538,34 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
     ID.AddInteger(ST->getPointerInfo().getAddrSpace());
     break;
   }
+  case ISD::MLOAD: {
+    const MaskedLoadSDNode *MLD = cast<MaskedLoadSDNode>(N);
+    ID.AddInteger(MLD->getMemoryVT().getRawBits());
+    ID.AddInteger(MLD->getRawSubclassData());
+    ID.AddInteger(MLD->getPointerInfo().getAddrSpace());
+    break;
+  }
+  case ISD::MSTORE: {
+    const MaskedStoreSDNode *MST = cast<MaskedStoreSDNode>(N);
+    ID.AddInteger(MST->getMemoryVT().getRawBits());
+    ID.AddInteger(MST->getRawSubclassData());
+    ID.AddInteger(MST->getPointerInfo().getAddrSpace());
+    break;
+  }
+  case ISD::MGATHER: {
+    const MaskedGatherSDNode *MG = cast<MaskedGatherSDNode>(N);
+    ID.AddInteger(MG->getMemoryVT().getRawBits());
+    ID.AddInteger(MG->getRawSubclassData());
+    ID.AddInteger(MG->getPointerInfo().getAddrSpace());
+    break;
+  }
+  case ISD::MSCATTER: {
+    const MaskedScatterSDNode *MS = cast<MaskedScatterSDNode>(N);
+    ID.AddInteger(MS->getMemoryVT().getRawBits());
+    ID.AddInteger(MS->getRawSubclassData());
+    ID.AddInteger(MS->getPointerInfo().getAddrSpace());
+    break;
+  }
   case ISD::ATOMIC_CMP_SWAP:
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
   case ISD::ATOMIC_SWAP:
@@ -7660,7 +7688,7 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, const SDValue *To) {
 
   // Preserve Debug Info.
   for (unsigned i = 0, e = From->getNumValues(); i != e; ++i)
-    transferDbgValues(SDValue(From, i), *To);
+    transferDbgValues(SDValue(From, i), To[i]);
 
   // Iterate over just the existing users of From. See the comments in
   // the ReplaceAllUsesWith above.

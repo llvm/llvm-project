@@ -21,18 +21,6 @@ define i32 @test3(i32 %X, i32 %Y) {
   ret i32 %b
 }
 
-; Make sure we don't go into an infinite loop with this test
-define <4 x i32> @test5(<4 x i32> %A) {
-; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> %A, <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
-;
-  %1 = xor <4 x i32> %A, <i32 1, i32 2, i32 3, i32 4>
-  %2 = and <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %1
-  ret <4 x i32> %2
-}
-
 define i1 @test7(i32 %i, i1 %b) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 %i, 0

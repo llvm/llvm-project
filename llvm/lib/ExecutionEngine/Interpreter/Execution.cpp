@@ -85,7 +85,7 @@ static void executeFMulInst(GenericValue &Dest, GenericValue Src1,
   }
 }
 
-static void executeFDivInst(GenericValue &Dest, GenericValue Src1, 
+static void executeFDivInst(GenericValue &Dest, GenericValue Src1,
                             GenericValue Src2, Type *Ty) {
   switch (Ty->getTypeID()) {
     IMPLEMENT_BINARY_OPERATOR(/, Float);
@@ -96,7 +96,7 @@ static void executeFDivInst(GenericValue &Dest, GenericValue Src1,
   }
 }
 
-static void executeFRemInst(GenericValue &Dest, GenericValue Src1, 
+static void executeFRemInst(GenericValue &Dest, GenericValue Src1,
                             GenericValue Src2, Type *Ty) {
   switch (Ty->getTypeID()) {
   case Type::FloatTyID:
@@ -281,7 +281,7 @@ void Interpreter::visitICmpInst(ICmpInst &I) {
   GenericValue Src1 = getOperandValue(I.getOperand(0), SF);
   GenericValue Src2 = getOperandValue(I.getOperand(1), SF);
   GenericValue R;   // Result
-  
+
   switch (I.getPredicate()) {
   case ICmpInst::ICMP_EQ:  R = executeICMP_EQ(Src1,  Src2, Ty); break;
   case ICmpInst::ICMP_NE:  R = executeICMP_NE(Src1,  Src2, Ty); break;
@@ -297,7 +297,7 @@ void Interpreter::visitICmpInst(ICmpInst &I) {
     dbgs() << "Don't know how to handle this ICmp predicate!\n-->" << I;
     llvm_unreachable(nullptr);
   }
- 
+
   SetValue(&I, R, SF);
 }
 
@@ -552,10 +552,10 @@ static GenericValue executeFCMP_ORD(GenericValue Src1, GenericValue Src2,
         Src2.AggregateVal[_i].DoubleVal)));
     }
   } else if (Ty->isFloatTy())
-    Dest.IntVal = APInt(1,(Src1.FloatVal == Src1.FloatVal && 
+    Dest.IntVal = APInt(1,(Src1.FloatVal == Src1.FloatVal &&
                            Src2.FloatVal == Src2.FloatVal));
   else {
-    Dest.IntVal = APInt(1,(Src1.DoubleVal == Src1.DoubleVal && 
+    Dest.IntVal = APInt(1,(Src1.DoubleVal == Src1.DoubleVal &&
                            Src2.DoubleVal == Src2.DoubleVal));
   }
   return Dest;
@@ -583,10 +583,10 @@ static GenericValue executeFCMP_UNO(GenericValue Src1, GenericValue Src2,
              Src2.AggregateVal[_i].DoubleVal)));
       }
   } else if (Ty->isFloatTy())
-    Dest.IntVal = APInt(1,(Src1.FloatVal != Src1.FloatVal || 
+    Dest.IntVal = APInt(1,(Src1.FloatVal != Src1.FloatVal ||
                            Src2.FloatVal != Src2.FloatVal));
   else {
-    Dest.IntVal = APInt(1,(Src1.DoubleVal != Src1.DoubleVal || 
+    Dest.IntVal = APInt(1,(Src1.DoubleVal != Src1.DoubleVal ||
                            Src2.DoubleVal != Src2.DoubleVal));
   }
   return Dest;
@@ -613,15 +613,15 @@ void Interpreter::visitFCmpInst(FCmpInst &I) {
   GenericValue Src1 = getOperandValue(I.getOperand(0), SF);
   GenericValue Src2 = getOperandValue(I.getOperand(1), SF);
   GenericValue R;   // Result
-  
+
   switch (I.getPredicate()) {
   default:
     dbgs() << "Don't know how to handle this FCmp predicate!\n-->" << I;
     llvm_unreachable(nullptr);
   break;
-  case FCmpInst::FCMP_FALSE: R = executeFCMP_BOOL(Src1, Src2, Ty, false); 
+  case FCmpInst::FCMP_FALSE: R = executeFCMP_BOOL(Src1, Src2, Ty, false);
   break;
-  case FCmpInst::FCMP_TRUE:  R = executeFCMP_BOOL(Src1, Src2, Ty, true); 
+  case FCmpInst::FCMP_TRUE:  R = executeFCMP_BOOL(Src1, Src2, Ty, true);
   break;
   case FCmpInst::FCMP_ORD:   R = executeFCMP_ORD(Src1, Src2, Ty); break;
   case FCmpInst::FCMP_UNO:   R = executeFCMP_UNO(Src1, Src2, Ty); break;
@@ -638,11 +638,11 @@ void Interpreter::visitFCmpInst(FCmpInst &I) {
   case FCmpInst::FCMP_UGE:   R = executeFCMP_UGE(Src1, Src2, Ty); break;
   case FCmpInst::FCMP_OGE:   R = executeFCMP_OGE(Src1, Src2, Ty); break;
   }
- 
+
   SetValue(&I, R, SF);
 }
 
-static GenericValue executeCmpInst(unsigned predicate, GenericValue Src1, 
+static GenericValue executeCmpInst(unsigned predicate, GenericValue Src1,
                                    GenericValue Src2, Type *Ty) {
   GenericValue Result;
   switch (predicate) {
@@ -747,12 +747,12 @@ void Interpreter::visitBinaryOperator(BinaryOperator &I) {
     case Instruction::FRem:
       if (cast<VectorType>(Ty)->getElementType()->isFloatTy())
         for (unsigned i = 0; i < R.AggregateVal.size(); ++i)
-          R.AggregateVal[i].FloatVal = 
+          R.AggregateVal[i].FloatVal =
           fmod(Src1.AggregateVal[i].FloatVal, Src2.AggregateVal[i].FloatVal);
       else {
         if (cast<VectorType>(Ty)->getElementType()->isDoubleTy())
           for (unsigned i = 0; i < R.AggregateVal.size(); ++i)
-            R.AggregateVal[i].DoubleVal = 
+            R.AggregateVal[i].DoubleVal =
             fmod(Src1.AggregateVal[i].DoubleVal, Src2.AggregateVal[i].DoubleVal);
         else {
           dbgs() << "Unhandled type for Rem instruction: " << *Ty << "\n";
@@ -965,7 +965,7 @@ void Interpreter::visitAllocaInst(AllocaInst &I) {
   Type *Ty = I.getType()->getElementType();  // Type to be allocated
 
   // Get the number of elements being allocated by the array...
-  unsigned NumElements = 
+  unsigned NumElements =
     getOperandValue(I.getOperand(0), SF).IntVal.getZExtValue();
 
   unsigned TypeSize = (size_t)getDataLayout().getTypeAllocSize(Ty);
@@ -1011,7 +1011,7 @@ GenericValue Interpreter::executeGEPOperation(Value *Ptr, gep_type_iterator I,
       GenericValue IdxGV = getOperandValue(I.getOperand(), SF);
 
       int64_t Idx;
-      unsigned BitWidth = 
+      unsigned BitWidth =
         cast<IntegerType>(I.getOperand()->getType())->getBitWidth();
       if (BitWidth == 32)
         Idx = (int64_t)(int32_t)IdxGV.IntVal.getZExtValue();
@@ -2037,13 +2037,13 @@ GenericValue Interpreter::getConstantExprValue (ConstantExpr *CE,
   case Instruction::And:  Dest.IntVal = Op0.IntVal & Op1.IntVal; break;
   case Instruction::Or:   Dest.IntVal = Op0.IntVal | Op1.IntVal; break;
   case Instruction::Xor:  Dest.IntVal = Op0.IntVal ^ Op1.IntVal; break;
-  case Instruction::Shl:  
+  case Instruction::Shl:
     Dest.IntVal = Op0.IntVal.shl(Op1.IntVal.getZExtValue());
     break;
-  case Instruction::LShr: 
+  case Instruction::LShr:
     Dest.IntVal = Op0.IntVal.lshr(Op1.IntVal.getZExtValue());
     break;
-  case Instruction::AShr: 
+  case Instruction::AShr:
     Dest.IntVal = Op0.IntVal.ashr(Op1.IntVal.getZExtValue());
     break;
   default:
@@ -2100,7 +2100,7 @@ void Interpreter::callFunction(Function *F, ArrayRef<GenericValue> ArgVals) {
 
   // Handle non-varargs arguments...
   unsigned i = 0;
-  for (Function::arg_iterator AI = F->arg_begin(), E = F->arg_end(); 
+  for (Function::arg_iterator AI = F->arg_begin(), E = F->arg_end();
        AI != E; ++AI, ++i)
     SetValue(&*AI, ArgVals[i], StackFrame);
 

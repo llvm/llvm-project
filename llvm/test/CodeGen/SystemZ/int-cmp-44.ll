@@ -128,7 +128,7 @@ define i32 @f7(i32 %a, i32 %b, i32 *%dest) {
 ; CHECK-NEXT: bner %r14
 ; CHECK: br %r14
 entry:
-  %cur = load i32 , i32 *%dest
+  %cur = load i32, i32 *%dest
   %res = sub i32 %a, %cur
   %cmp = icmp ne i32 %res, 0
   br i1 %cmp, label %exit, label %store
@@ -148,7 +148,7 @@ define i32 @f8(i32 %a, i32 %b, i32 *%dest) {
 ; CHECK-NEXT: cibl %r2, 0, 0(%r14)
 ; CHECK: br %r14
 entry:
-  %cur = load i32 , i32 *%dest
+  %cur = load i32, i32 *%dest
   %res = sub i32 %a, %cur
   %cmp = icmp slt i32 %res, 0
   br i1 %cmp, label %exit, label %store
@@ -469,7 +469,7 @@ define void @f24(i32 *%ptr) {
 ; CHECK-NEXT: cijlh [[REG]], 0, .L{{.*}}
 ; CHECK: br %r14
 entry:
-  %val = load i32 , i32 *%ptr
+  %val = load i32, i32 *%ptr
   %xor = xor i32 %val, 1
   %add = add i32 %xor, 1000000
   call void @foo()
@@ -562,7 +562,7 @@ define void @f28(i64 %a, i64 *%dest) {
 ; CHECK: br %r14
 entry:
   %ptr = inttoptr i64 %a to i8 *
-  %val = load i8 , i8 *%ptr
+  %val = load i8, i8 *%ptr
   %xor = xor i8 %val, 15
   store i8 %xor, i8 *%ptr
   %cmp = icmp eq i64 %a, 0
@@ -585,7 +585,7 @@ define i32 @f29(i64 %base, i64 %index, i32 *%dest) {
 entry:
   %add = add i64 %base, %index
   %ptr = inttoptr i64 %add to i32 *
-  %res = load i32 , i32 *%ptr
+  %res = load i32, i32 *%ptr
   %cmp = icmp sle i32 %res, 0
   br i1 %cmp, label %exit, label %store
 
@@ -607,7 +607,7 @@ entry:
   %add1 = add i64 %base, %index
   %add2 = add i64 %add1, 100000
   %ptr = inttoptr i64 %add2 to i32 *
-  %res = load i32 , i32 *%ptr
+  %res = load i32, i32 *%ptr
   %cmp = icmp sle i32 %res, 0
   br i1 %cmp, label %exit, label %store
 
@@ -628,7 +628,7 @@ define i64 @f31(i64 %base, i64 %index, i64 *%dest) {
 entry:
   %add = add i64 %base, %index
   %ptr = inttoptr i64 %add to i64 *
-  %res = load i64 , i64 *%ptr
+  %res = load i64, i64 *%ptr
   %cmp = icmp sge i64 %res, 0
   br i1 %cmp, label %exit, label %store
 
@@ -649,7 +649,7 @@ define i64 @f32(i64 %base, i64 %index, i64 *%dest) {
 entry:
   %add = add i64 %base, %index
   %ptr = inttoptr i64 %add to i32 *
-  %val = load i32 , i32 *%ptr
+  %val = load i32, i32 *%ptr
   %res = sext i32 %val to i64
   %cmp = icmp sgt i64 %res, 0
   br i1 %cmp, label %exit, label %store
@@ -854,7 +854,7 @@ define i32 @f41(i32 %a, i32 %b, i32 *%dest) {
 ; CHECK-NEXT: bner %r14
 ; CHECK: br %r14
 entry:
-  %cur = load i32 , i32 *%dest
+  %cur = load i32, i32 *%dest
   %res = sub i32 %a, %cur
   %cmp = icmp ne i32 %a, %cur
   br i1 %cmp, label %exit, label %store
@@ -876,7 +876,7 @@ define i64 @f42(i64 %base, i64 %index, i64 *%dest) {
 entry:
   %add = add i64 %base, %index
   %ptr = inttoptr i64 %add to i32 *
-  %val = load i32 , i32 *%ptr
+  %val = load i32, i32 *%ptr
   %res = sext i32 %val to i64
   %cmp = icmp sgt i32 %val, 0
   br i1 %cmp, label %exit, label %store

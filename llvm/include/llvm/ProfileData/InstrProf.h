@@ -1021,7 +1021,7 @@ template <> inline uint64_t getMagic<uint32_t>() {
 // compiler-rt/lib/profile/InstrProfiling.h.
 // It should also match the synthesized type in
 // Transforms/Instrumentation/InstrProfiling.cpp:getOrCreateRegionCounters.
-template <class IntPtrT> struct LLVM_ALIGNAS(8) ProfileData {
+template <class IntPtrT> struct alignas(8) ProfileData {
   #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Type Name;
   #include "llvm/ProfileData/InstrProfData.inc"
 };

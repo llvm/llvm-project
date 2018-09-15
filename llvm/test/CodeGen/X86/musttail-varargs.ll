@@ -43,7 +43,7 @@ define void @f_thunk(i8* %this, ...) {
 ; LINUX-NEXT:    movq %rdx, %rbp
 ; LINUX-NEXT:    movq %rsi, %rbx
 ; LINUX-NEXT:    movq %rdi, %r14
-; LINUX-NEXT:    movb %al, {{[0-9]+}}(%rsp) # 1-byte Spill
+; LINUX-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; LINUX-NEXT:    testb %al, %al
 ; LINUX-NEXT:    je .LBB0_2
 ; LINUX-NEXT:  # %bb.1:
@@ -68,14 +68,14 @@ define void @f_thunk(i8* %this, ...) {
 ; LINUX-NEXT:    movabsq $206158430216, %rax # imm = 0x3000000008
 ; LINUX-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; LINUX-NEXT:    movq %r14, %rdi
-; LINUX-NEXT:    movaps %xmm7, {{[0-9]+}}(%rsp) # 16-byte Spill
-; LINUX-NEXT:    movaps %xmm6, {{[0-9]+}}(%rsp) # 16-byte Spill
-; LINUX-NEXT:    movaps %xmm5, {{[0-9]+}}(%rsp) # 16-byte Spill
-; LINUX-NEXT:    movaps %xmm4, {{[0-9]+}}(%rsp) # 16-byte Spill
-; LINUX-NEXT:    movaps %xmm3, {{[0-9]+}}(%rsp) # 16-byte Spill
-; LINUX-NEXT:    movaps %xmm2, {{[0-9]+}}(%rsp) # 16-byte Spill
-; LINUX-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
-; LINUX-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
+; LINUX-NEXT:    movaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; LINUX-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; LINUX-NEXT:    movaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; LINUX-NEXT:    movaps %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; LINUX-NEXT:    movaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; LINUX-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; LINUX-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; LINUX-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; LINUX-NEXT:    callq get_f
 ; LINUX-NEXT:    movq %rax, %r11
 ; LINUX-NEXT:    movq %r14, %rdi
@@ -84,15 +84,15 @@ define void @f_thunk(i8* %this, ...) {
 ; LINUX-NEXT:    movq %r13, %rcx
 ; LINUX-NEXT:    movq %r12, %r8
 ; LINUX-NEXT:    movq %r15, %r9
-; LINUX-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
-; LINUX-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
-; LINUX-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
-; LINUX-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm3 # 16-byte Reload
-; LINUX-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm4 # 16-byte Reload
-; LINUX-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm5 # 16-byte Reload
-; LINUX-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm6 # 16-byte Reload
-; LINUX-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm7 # 16-byte Reload
-; LINUX-NEXT:    movb {{[0-9]+}}(%rsp), %al # 1-byte Reload
+; LINUX-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; LINUX-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; LINUX-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
+; LINUX-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
+; LINUX-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
+; LINUX-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
+; LINUX-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
+; LINUX-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
+; LINUX-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al # 1-byte Reload
 ; LINUX-NEXT:    addq $360, %rsp # imm = 0x168
 ; LINUX-NEXT:    .cfi_def_cfa_offset 56
 ; LINUX-NEXT:    popq %rbx
@@ -137,7 +137,7 @@ define void @f_thunk(i8* %this, ...) {
 ; LINUX-X32-NEXT:    movq %rdx, %rbp
 ; LINUX-X32-NEXT:    movq %rsi, %rbx
 ; LINUX-X32-NEXT:    movl %edi, %r14d
-; LINUX-X32-NEXT:    movb %al, {{[0-9]+}}(%esp) # 1-byte Spill
+; LINUX-X32-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; LINUX-X32-NEXT:    testb %al, %al
 ; LINUX-X32-NEXT:    je .LBB0_2
 ; LINUX-X32-NEXT:  # %bb.1:
@@ -162,14 +162,14 @@ define void @f_thunk(i8* %this, ...) {
 ; LINUX-X32-NEXT:    movabsq $206158430216, %rax # imm = 0x3000000008
 ; LINUX-X32-NEXT:    movq %rax, {{[0-9]+}}(%esp)
 ; LINUX-X32-NEXT:    movl %r14d, %edi
-; LINUX-X32-NEXT:    movaps %xmm7, {{[0-9]+}}(%esp) # 16-byte Spill
-; LINUX-X32-NEXT:    movaps %xmm6, {{[0-9]+}}(%esp) # 16-byte Spill
-; LINUX-X32-NEXT:    movaps %xmm5, {{[0-9]+}}(%esp) # 16-byte Spill
-; LINUX-X32-NEXT:    movaps %xmm4, {{[0-9]+}}(%esp) # 16-byte Spill
-; LINUX-X32-NEXT:    movaps %xmm3, {{[0-9]+}}(%esp) # 16-byte Spill
-; LINUX-X32-NEXT:    movaps %xmm2, {{[0-9]+}}(%esp) # 16-byte Spill
-; LINUX-X32-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp) # 16-byte Spill
-; LINUX-X32-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp) # 16-byte Spill
+; LINUX-X32-NEXT:    movaps %xmm7, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; LINUX-X32-NEXT:    movaps %xmm6, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; LINUX-X32-NEXT:    movaps %xmm5, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; LINUX-X32-NEXT:    movaps %xmm4, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; LINUX-X32-NEXT:    movaps %xmm3, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; LINUX-X32-NEXT:    movaps %xmm2, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; LINUX-X32-NEXT:    movaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; LINUX-X32-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; LINUX-X32-NEXT:    callq get_f
 ; LINUX-X32-NEXT:    movl %eax, %r11d
 ; LINUX-X32-NEXT:    movl %r14d, %edi
@@ -178,15 +178,15 @@ define void @f_thunk(i8* %this, ...) {
 ; LINUX-X32-NEXT:    movq %r13, %rcx
 ; LINUX-X32-NEXT:    movq %r12, %r8
 ; LINUX-X32-NEXT:    movq %r15, %r9
-; LINUX-X32-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0 # 16-byte Reload
-; LINUX-X32-NEXT:    movaps {{[0-9]+}}(%esp), %xmm1 # 16-byte Reload
-; LINUX-X32-NEXT:    movaps {{[0-9]+}}(%esp), %xmm2 # 16-byte Reload
-; LINUX-X32-NEXT:    movaps {{[0-9]+}}(%esp), %xmm3 # 16-byte Reload
-; LINUX-X32-NEXT:    movaps {{[0-9]+}}(%esp), %xmm4 # 16-byte Reload
-; LINUX-X32-NEXT:    movaps {{[0-9]+}}(%esp), %xmm5 # 16-byte Reload
-; LINUX-X32-NEXT:    movaps {{[0-9]+}}(%esp), %xmm6 # 16-byte Reload
-; LINUX-X32-NEXT:    movaps {{[0-9]+}}(%esp), %xmm7 # 16-byte Reload
-; LINUX-X32-NEXT:    movb {{[0-9]+}}(%esp), %al # 1-byte Reload
+; LINUX-X32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; LINUX-X32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
+; LINUX-X32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm2 # 16-byte Reload
+; LINUX-X32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm3 # 16-byte Reload
+; LINUX-X32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm4 # 16-byte Reload
+; LINUX-X32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm5 # 16-byte Reload
+; LINUX-X32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm6 # 16-byte Reload
+; LINUX-X32-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm7 # 16-byte Reload
+; LINUX-X32-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %al # 1-byte Reload
 ; LINUX-X32-NEXT:    addl $344, %esp # imm = 0x158
 ; LINUX-X32-NEXT:    .cfi_def_cfa_offset 56
 ; LINUX-X32-NEXT:    popq %rbx
@@ -271,18 +271,18 @@ define void @f_thunk(i8* %this, ...) {
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    andl $-16, %esp
 ; X86-SSE-NEXT:    subl $96, %esp
-; X86-SSE-NEXT:    movaps %xmm2, {{[0-9]+}}(%esp) # 16-byte Spill
-; X86-SSE-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp) # 16-byte Spill
-; X86-SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp) # 16-byte Spill
+; X86-SSE-NEXT:    movaps %xmm2, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-SSE-NEXT:    movl 8(%ebp), %esi
 ; X86-SSE-NEXT:    leal 12(%ebp), %eax
 ; X86-SSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    movl %esi, (%esp)
 ; X86-SSE-NEXT:    calll _get_f
 ; X86-SSE-NEXT:    movl %esi, 8(%ebp)
-; X86-SSE-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0 # 16-byte Reload
-; X86-SSE-NEXT:    movaps {{[0-9]+}}(%esp), %xmm1 # 16-byte Reload
-; X86-SSE-NEXT:    movaps {{[0-9]+}}(%esp), %xmm2 # 16-byte Reload
+; X86-SSE-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-SSE-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
+; X86-SSE-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm2 # 16-byte Reload
 ; X86-SSE-NEXT:    leal -4(%ebp), %esp
 ; X86-SSE-NEXT:    popl %esi
 ; X86-SSE-NEXT:    popl %ebp

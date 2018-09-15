@@ -24,6 +24,18 @@
 ; CHECK-LI-INVALIDATE: Invalidating analysis: BasicAA
 ; CHECK-LI-INVALIDATE: Running pass: AAEvaluator
 ; CHECK-LI-INVALIDATE: Running analysis: BasicAA
+;
+; Check PhiValues specifically.
+; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
+; RUN:     -passes='require<phi-values>,require<aa>,invalidate<phi-values>,aa-eval' -aa-pipeline='basic-aa' \
+; RUN:     | FileCheck %s --check-prefix=CHECK-PV-INVALIDATE
+; CHECK-PV-INVALIDATE: Running pass: RequireAnalysisPass
+; CHECK-PV-INVALIDATE: Running analysis: BasicAA
+; CHECK-PV-INVALIDATE: Running pass: InvalidateAnalysisPass
+; CHECK-PV-INVALIDATE: Invalidating analysis: PhiValuesAnalysis
+; CHECK-PV-INVALIDATE: Invalidating analysis: BasicAA
+; CHECK-PV-INVALIDATE: Running pass: AAEvaluator
+; CHECK-PV-INVALIDATE: Running analysis: BasicAA
 
 ; Some code that will result in actual AA queries, including inside of a loop.
 ; FIXME: Sadly, none of these queries managed to use either the domtree or

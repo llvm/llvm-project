@@ -269,14 +269,15 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned &ValNo, MVT &ValVT,
   for (auto Reg : RegList)
     State.AllocateReg(Reg);
 
+  // After the first item has been allocated, the rest are packed as tightly as
+  // possible. (E.g. an incoming i64 would have starting Align of 8, but we'll
+  // be allocating a bunch of i32 slots).
+  unsigned RestAlign = std::min(Align, Size);
+
   for (auto &It : PendingMembers) {
     It.convertToMem(State.AllocateStack(Size, Align));
     State.addLoc(It);
-
-    // After the first item has been allocated, the rest are packed as tightly
-    // as possible. (E.g. an incoming i64 would have starting Align of 8, but
-    // we'll be allocating a bunch of i32 slots).
-    Align = Size;
+    Align = RestAlign;
   }
 
   // All pending members have now been allocated

@@ -547,7 +547,7 @@ public:
   /// may have side effects cannot be removed without semantically changing the
   /// generated program.
   bool isSafeToRemove() const;
-  
+
   /// Return true if the instruction is a variety of EH-block.
   bool isEHPad() const {
     switch (getOpcode()) {

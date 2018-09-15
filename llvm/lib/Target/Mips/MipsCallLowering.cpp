@@ -187,6 +187,8 @@ bool OutgoingValueHandler::handle(ArrayRef<CCValAssign> ArgLocs,
 static bool isSupportedType(Type *T) {
   if (T->isIntegerTy() && T->getScalarSizeInBits() == 32)
     return true;
+  if (T->isPointerTy())
+    return true;
   return false;
 }
 
@@ -426,7 +428,8 @@ void MipsCallLowering::subTargetRegTypeForCallingConv(
   for (auto &Arg : Args) {
 
     EVT VT = TLI.getValueType(DL, Arg.Ty);
-    MVT RegisterVT = TLI.getRegisterTypeForCallingConv(F.getContext(), VT);
+    MVT RegisterVT = TLI.getRegisterTypeForCallingConv(F.getContext(),
+                                                       F.getCallingConv(), VT);
 
     ISD::ArgFlagsTy Flags = Arg.Flags;
     Flags.setOrigAlign(TLI.getABIAlignmentForCallingConv(Arg.Ty, DL));

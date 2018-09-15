@@ -1752,7 +1752,7 @@ IEEEFloat::opStatus IEEEFloat::mod(const IEEEFloat &rhs) {
     if (compareAbsoluteValue(V) == cmpLessThan)
       V = scalbn(V, -1, rmNearestTiesToEven);
     V.sign = sign;
-  
+
     fs = subtract(V, rmNearestTiesToEven);
     assert(fs==opOK);
   }

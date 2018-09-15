@@ -1725,6 +1725,26 @@ define amdgpu_kernel void @v_fneg_nearbyint_f32(float addrspace(1)* %out, float 
 }
 
 ; --------------------------------------------------------------------------------
+; fcanonicalize tests
+; --------------------------------------------------------------------------------
+
+; GCN-LABEL: {{^}}v_fneg_canonicalize_f32:
+; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
+; GCN: v_mul_f32_e32 [[RESULT:v[0-9]+]], -1.0, [[A]]
+; GCN: buffer_store_dword [[RESULT]]
+define amdgpu_kernel void @v_fneg_canonicalize_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.ext = sext i32 %tid to i64
+  %a.gep = getelementptr inbounds float, float addrspace(1)* %a.ptr, i64 %tid.ext
+  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
+  %a = load volatile float, float addrspace(1)* %a.gep
+  %trunc = call float @llvm.canonicalize.f32(float %a)
+  %fneg = fsub float -0.0, %trunc
+  store float %fneg, float addrspace(1)* %out.gep
+  ret void
+}
+
+; --------------------------------------------------------------------------------
 ; vintrp tests
 ; --------------------------------------------------------------------------------
 
@@ -2117,6 +2137,7 @@ declare float @llvm.trunc.f32(float) #1
 declare float @llvm.round.f32(float) #1
 declare float @llvm.rint.f32(float) #1
 declare float @llvm.nearbyint.f32(float) #1
+declare float @llvm.canonicalize.f32(float) #1
 declare float @llvm.minnum.f32(float, float) #1
 declare float @llvm.maxnum.f32(float, float) #1
 

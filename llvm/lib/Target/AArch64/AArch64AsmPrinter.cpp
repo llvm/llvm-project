@@ -242,9 +242,7 @@ MCSymbol *AArch64AsmPrinter::GetCPISymbol(unsigned CPID) const {
         Twine(getDataLayout().getLinkerPrivateGlobalPrefix()) + "CPI" +
         Twine(getFunctionNumber()) + "_" + Twine(CPID));
 
-  return OutContext.getOrCreateSymbol(
-      Twine(getDataLayout().getPrivateGlobalPrefix()) + "CPI" +
-      Twine(getFunctionNumber()) + "_" + Twine(CPID));
+  return AsmPrinter::GetCPISymbol(CPID);
 }
 
 void AArch64AsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNum,

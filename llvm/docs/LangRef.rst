@@ -1048,7 +1048,7 @@ Currently, only the following parameter attributes are defined:
 
     When the call site is reached, the argument allocation must have
     been the most recent stack allocation that is still live, or the
-    results are undefined. It is possible to allocate additional stack
+    behavior is undefined. It is possible to allocate additional stack
     space after an argument allocation and before its call site, but it
     must be cleared off with :ref:`llvm.stackrestore
     <int_stackrestore>`.
@@ -1122,9 +1122,8 @@ Currently, only the following parameter attributes are defined:
 ``nonnull``
     This indicates that the parameter or return pointer is not null. This
     attribute may only be applied to pointer typed parameters. This is not
-    checked or enforced by LLVM, the caller must ensure that the pointer
-    passed in is non-null, or the callee must ensure that the returned pointer
-    is non-null.
+    checked or enforced by LLVM; if the parameter or return pointer is null,
+    the behavior is undefined.
 
 ``dereferenceable(<n>)``
     This indicates that the parameter or return pointer is dereferenceable. This
@@ -1387,11 +1386,13 @@ example:
 ``inaccessiblememonly``
     This attribute indicates that the function may only access memory that
     is not accessible by the module being compiled. This is a weaker form
-    of ``readnone``.
+    of ``readnone``. If the function reads or writes other memory, the
+    behavior is undefined.
 ``inaccessiblemem_or_argmemonly``
     This attribute indicates that the function may only access memory that is
     either not accessible by the module being compiled, or is pointed to
-    by its pointer arguments. This is a weaker form of  ``argmemonly``
+    by its pointer arguments. This is a weaker form of  ``argmemonly``. If the
+    function reads or writes other memory, the behavior is undefined.
 ``inlinehint``
     This attribute indicates that the source code contained a hint that
     inlining this function is desirable (such as the "inline" keyword in
@@ -1542,6 +1543,10 @@ example:
     On an argument, this attribute indicates that the function does not
     dereference that pointer argument, even though it may read or write the
     memory that the pointer points to if accessed through other pointers.
+
+    If a readnone function reads or writes memory visible to the program, or
+    has other side-effects, the behavior is undefined. If a function reads from
+    or writes to a readnone pointer argument, the behavior is undefined.
 ``readonly``
     On a function, this attribute indicates that the function does not write
     through any pointer arguments (including ``byval`` arguments) or otherwise
@@ -1557,6 +1562,10 @@ example:
     On an argument, this attribute indicates that the function does not write
     through this pointer argument, even though it may write to the memory that
     the pointer points to.
+
+    If a readonly function writes memory visible to the program, or
+    has other side-effects, the behavior is undefined. If a function writes to
+    a readonly pointer argument, the behavior is undefined.
 ``"stack-probe-size"``
     This attribute controls the behavior of stack probes: either
     the ``"probe-stack"`` attribute, or ABI-required stack probes, if any.
@@ -1581,14 +1590,22 @@ example:
     On an argument, this attribute indicates that the function may write to but
     does not read through this pointer argument (even though it may read from
     the memory that the pointer points to).
+
+    If a writeonly function reads memory visible to the program, or
+    has other side-effects, the behavior is undefined. If a function reads
+    from a writeonly pointer argument, the behavior is undefined.
 ``argmemonly``
     This attribute indicates that the only memory accesses inside function are
     loads and stores from objects pointed to by its pointer-typed arguments,
     with arbitrary offsets. Or in other words, all memory operations in the
     function can refer to memory only using pointers based on its function
     arguments.
+
     Note that ``argmemonly`` can be used together with ``readonly`` attribute
     in order to specify that function reads only from its arguments.
+
+    If an argmemonly function reads or writes memory other than the pointer
+    arguments, or has other side-effects, the behavior is undefined.
 ``returns_twice``
     This attribute indicates that this function can return twice. The C
     ``setjmp`` is an example of such a function. The compiler disables
@@ -4571,9 +4588,12 @@ DIExpression
 ``DIExpression`` nodes represent expressions that are inspired by the DWARF
 expression language. They are used in :ref:`debug intrinsics<dbg_intrinsics>`
 (such as ``llvm.dbg.declare`` and ``llvm.dbg.value``) to describe how the
-referenced LLVM variable relates to the source language variable.
+referenced LLVM variable relates to the source language variable. Debug
+intrinsics are interpreted left-to-right: start by pushing the value/address
+operand of the intrinsic onto a stack, then repeatedly push and evaluate
+opcodes from the DIExpression until the final variable description is produced.
 
-The current supported vocabulary is limited:
+The current supported opcode vocabulary is limited:
 
 - ``DW_OP_deref`` dereferences the top of the expression stack.
 - ``DW_OP_plus`` pops the last two entries from the expression stack, adds
@@ -4593,12 +4613,30 @@ The current supported vocabulary is limited:
 - ``DW_OP_stack_value`` marks a constant value.
 
 DWARF specifies three kinds of simple location descriptions: Register, memory,
-and implicit location descriptions. Register and memory location descriptions
-describe the *location* of a source variable (in the sense that a debugger might
-modify its value), whereas implicit locations describe merely the *value* of a
-source variable. DIExpressions also follow this model: A DIExpression that
-doesn't have a trailing ``DW_OP_stack_value`` will describe an *address* when
-combined with a concrete location.
+and implicit location descriptions.  Note that a location description is
+defined over certain ranges of a program, i.e the location of a variable may
+change over the course of the program. Register and memory location
+descriptions describe the *concrete location* of a source variable (in the
+sense that a debugger might modify its value), whereas *implicit locations*
+describe merely the actual *value* of a source variable which might not exist
+in registers or in memory (see ``DW_OP_stack_value``).
+
+A ``llvm.dbg.addr`` or ``llvm.dbg.declare`` intrinsic describes an indirect
+value (the address) of a source variable. The first operand of the intrinsic
+must be an address of some kind. A DIExpression attached to the intrinsic
+refines this address to produce a concrete location for the source variable.
+
+A ``llvm.dbg.value`` intrinsic describes the direct value of a source variable.
+The first operand of the intrinsic may be a direct or indirect value. A
+DIExpresion attached to the intrinsic refines the first operand to produce a
+direct value. For example, if the first operand is an indirect value, it may be
+necessary to insert ``DW_OP_deref`` into the DIExpresion in order to produce a
+valid debug intrinsic.
+
+.. note::
+
+   A DIExpression is interpreted in the same way regardless of which kind of
+   debug intrinsic it's attached to.
 
 .. code-block:: text
 

@@ -46,7 +46,7 @@ public:
                                          MachineBasicBlock::iterator End,
                                          unsigned InsertPosIndex,
                                          DbgValueVector &DbgValues) = 0;
-  
+
   /// Update liveness information to account for the current
   /// instruction, which will not be scheduled.
   virtual void Observe(MachineInstr &MI, unsigned Count,

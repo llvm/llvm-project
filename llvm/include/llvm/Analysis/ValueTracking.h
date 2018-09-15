@@ -102,7 +102,10 @@ class Value;
                       const DominatorTree *DT = nullptr);
 
   /// Return true if the two given values are negation.
-  bool isKnownNegation(const Value *X, const Value *Y);
+  /// Currently can recoginze Value pair:
+  /// 1: <X, Y> if X = sub (0, Y) or Y = sub (0, X)
+  /// 2: <X, Y> if X = sub (A, B) and Y = sub (B, A)
+  bool isKnownNegation(const Value *X, const Value *Y, bool NeedNSW = false);
 
   /// Returns true if the give value is known to be non-negative.
   bool isKnownNonNegative(const Value *V, const DataLayout &DL,
@@ -461,7 +464,7 @@ class Value;
   /// This is equivelent to saying that all instructions within the basic block
   /// are guaranteed to transfer execution to their successor within the basic
   /// block. This has the same assumptions w.r.t. undefined behavior as the
-  /// instruction variant of this function. 
+  /// instruction variant of this function.
   bool isGuaranteedToTransferExecutionToSuccessor(const BasicBlock *BB);
 
   /// Return true if this function can prove that the instruction I

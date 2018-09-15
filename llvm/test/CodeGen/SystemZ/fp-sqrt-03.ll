@@ -13,7 +13,7 @@ define void @f1(fp128 *%ptr) {
 ; CHECK: std %f0, 0(%r2)
 ; CHECK: std %f2, 8(%r2)
 ; CHECK: br %r14
-  %orig = load fp128 , fp128 *%ptr
+  %orig = load fp128, fp128 *%ptr
   %sqrt = call fp128 @llvm.sqrt.f128(fp128 %orig)
   store fp128 %sqrt, fp128 *%ptr
   ret void

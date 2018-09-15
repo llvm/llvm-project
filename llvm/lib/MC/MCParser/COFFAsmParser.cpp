@@ -69,6 +69,7 @@ class COFFAsmParser : public MCAsmParserExtension {
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveSafeSEH>(".safeseh");
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveSecIdx>(".secidx");
     addDirectiveHandler<&COFFAsmParser::ParseDirectiveLinkOnce>(".linkonce");
+    addDirectiveHandler<&COFFAsmParser::ParseDirectiveRVA>(".rva");
 
     // Win64 EH directives.
     addDirectiveHandler<&COFFAsmParser::ParseSEHDirectiveStartProc>(
@@ -134,6 +135,7 @@ class COFFAsmParser : public MCAsmParserExtension {
   bool ParseDirectiveSymIdx(StringRef, SMLoc);
   bool parseCOMDATType(COFF::COMDATType &Type);
   bool ParseDirectiveLinkOnce(StringRef, SMLoc);
+  bool ParseDirectiveRVA(StringRef, SMLoc);
 
   // Win64 EH directives.
   bool ParseSEHDirectiveStartProc(StringRef, SMLoc);
@@ -489,6 +491,37 @@ bool COFFAsmParser::ParseDirectiveSecRel32(StringRef, SMLoc) {
 
   Lex();
   getStreamer().EmitCOFFSecRel32(Symbol, Offset);
+  return false;
+}
+
+bool COFFAsmParser::ParseDirectiveRVA(StringRef, SMLoc) {
+  auto parseOp = [&]() -> bool {
+    StringRef SymbolID;
+    if (getParser().parseIdentifier(SymbolID))
+      return TokError("expected identifier in directive");
+
+    int64_t Offset = 0;
+    SMLoc OffsetLoc;
+    if (getLexer().is(AsmToken::Plus) || getLexer().is(AsmToken::Minus)) {
+      OffsetLoc = getLexer().getLoc();
+      if (getParser().parseAbsoluteExpression(Offset))
+        return true;
+    }
+
+    if (Offset < std::numeric_limits<int32_t>::min() ||
+        Offset > std::numeric_limits<int32_t>::max())
+      return Error(OffsetLoc, "invalid '.rva' directive offset, can't be less "
+                              "than -2147483648 or greater than "
+                              "2147483647");
+
+    MCSymbol *Symbol = getContext().getOrCreateSymbol(SymbolID);
+
+    getStreamer().EmitCOFFImgRel32(Symbol, Offset);
+    return false;
+  };
+
+  if (getParser().parseMany(parseOp))
+    return addErrorSuffix(" in directive");
   return false;
 }
 

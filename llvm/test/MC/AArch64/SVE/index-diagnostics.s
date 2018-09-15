@@ -56,3 +56,43 @@ index z17.d, w9, w7
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-16, 15].
 // CHECK-NEXT: index z17.d, w9, w7
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z21.d, p0/z, z28.d
+index   z21.d, x10, x21
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: index   z21.d, x10, x21
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z21, z28
+index   z21.d, x10, x21
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: index   z21.d, x10, x21
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z23.d, p0/z, z30.d
+index   z23.d, x13, #8
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: index   z23.d, x13, #8
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z23, z30
+index   z23.d, x13, #8
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: index   z23.d, x13, #8
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z23.d, p0/z, z30.d
+index   z23.d, #13, x8
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: index   z23.d, #13, x8
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z23, z30
+index   z23.d, #13, x8
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: index   z23.d, #13, x8
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

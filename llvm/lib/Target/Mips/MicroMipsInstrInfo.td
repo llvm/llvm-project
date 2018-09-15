@@ -1172,6 +1172,9 @@ def : MipsPat<(MipsGotHi tglobaladdr:$in), (LUi_MM tglobaladdr:$in)>,
 def : MipsPat<(MipsGotHi texternalsym:$in), (LUi_MM texternalsym:$in)>,
       ISA_MICROMIPS;
 
+def : MipsPat<(MipsTlsHi tglobaltlsaddr:$in), (LUi_MM tglobaltlsaddr:$in)>,
+      ISA_MICROMIPS;
+
 // gp_rel relocs
 def : MipsPat<(add GPR32:$gp, (MipsGPRel tglobaladdr:$in)),
               (ADDiu_MM GPR32:$gp, tglobaladdr:$in)>, ISA_MICROMIPS;

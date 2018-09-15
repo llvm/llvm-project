@@ -67,7 +67,7 @@
 # RUN: llvm-objcopy --strip-debug %t.thin.a %t2.thin.a
 # RUN: cat %t.thin.a | FileCheck %s --check-prefix=VERIFY-THIN-ARCHIVE
 # RUN: cat %t2.thin.a | FileCheck %s --check-prefix=VERIFY-THIN-ARCHIVE
- 
+
 # VERIFY-THIN-ARCHIVE: !<thin>
 
 # Verify that the member of a thin archive was properly modified.
@@ -92,6 +92,12 @@ FileHeader:
   Machine:         EM_X86_64
 Sections:
   - Name:            .debugfoo
+    Type:            SHT_PROGBITS
+    Content:         "00000000"
+  - Name:            .zdebugfoo
+    Type:            SHT_PROGBITS
+    Content:         "00000000"
+  - Name:            .gdb_index
     Type:            SHT_PROGBITS
     Content:         "00000000"
   - Name:            .text

@@ -26,7 +26,6 @@ module LLVM_Backend {
     // These are intended for (repeated) textual inclusion.
     textual header "CodeGen/CommandFlags.inc"
     textual header "CodeGen/DIEValue.def"
-    textual header "CodeGen/RuntimeLibcalls.def"
   }
 
   module Target {
@@ -222,6 +221,7 @@ module LLVM_IR {
   textual header "IR/Instruction.def"
   textual header "IR/Metadata.def"
   textual header "IR/Value.def"
+  textual header "IR/RuntimeLibcalls.def"
 }
 
 module LLVM_IRReader { requires cplusplus umbrella "IRReader" module * { export * } }

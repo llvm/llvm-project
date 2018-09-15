@@ -35,7 +35,6 @@ Error LLJIT::addIRModule(VSO &V, std::unique_ptr<Module> M) {
     return Err;
 
   auto K = ES->allocateVModule();
-  Resolvers[K] = createResolverFor(V);
   return CompileLayer.add(V, K, std::move(M));
 }
 
@@ -49,23 +48,13 @@ LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES,
     : ES(std::move(ES)), Main(this->ES->createVSO("main")), TM(std::move(TM)),
       DL(std::move(DL)),
       ObjLinkingLayer(*this->ES,
-                      [this](VModuleKey K) { return getRTDyldResources(K); }),
+                      [this](VModuleKey K) { return getMemoryManager(K); }),
       CompileLayer(*this->ES, ObjLinkingLayer, SimpleCompiler(*this->TM)),
-      CtorRunner(Main), DtorRunner(Main) {
-  VSOLookupOrder[&Main] = VSOList({&Main});
-}
+      CtorRunner(Main), DtorRunner(Main) {}
 
-std::shared_ptr<SymbolResolver> LLJIT::takeSymbolResolver(VModuleKey K) {
-  auto ResolverI = Resolvers.find(K);
-  assert(ResolverI != Resolvers.end() && "Missing resolver");
-  auto Resolver = std::move(ResolverI->second);
-  Resolvers.erase(ResolverI);
-  return Resolver;
-}
-
-RTDyldObjectLinkingLayer2::Resources LLJIT::getRTDyldResources(VModuleKey K) {
-  return orc::RTDyldObjectLinkingLayer2::Resources(
-      {llvm::make_unique<SectionMemoryManager>(), takeSymbolResolver(K)});
+std::shared_ptr<RuntimeDyld::MemoryManager>
+LLJIT::getMemoryManager(VModuleKey K) {
+  return llvm::make_unique<SectionMemoryManager>();
 }
 
 std::string LLJIT::mangle(StringRef UnmangledName) {
@@ -75,21 +64,6 @@ std::string LLJIT::mangle(StringRef UnmangledName) {
     Mangler::getNameWithPrefix(MangledNameStream, UnmangledName, DL);
   }
   return MangledName;
-}
-
-std::unique_ptr<SymbolResolver> LLJIT::createResolverFor(VSO &V) {
-  return createSymbolResolver(
-      [&](SymbolFlagsMap &Flags, const SymbolNameSet &Symbols) {
-        return V.lookupFlags(Flags, Symbols);
-      },
-      [&, this](std::shared_ptr<AsynchronousSymbolQuery> Q,
-                SymbolNameSet Symbols) {
-        assert(VSOLookupOrder.count(&V) && "No VSO lookup order for V");
-        SymbolNameSet Unresolved = std::move(Symbols);
-        for (auto *LV : VSOLookupOrder[&V])
-          Unresolved = LV->lookup(Q, std::move(Unresolved));
-        return Unresolved;
-      });
 }
 
 Error LLJIT::applyDataLayout(Module &M) {
@@ -143,7 +117,6 @@ Error LLLazyJIT::addLazyIRModule(VSO &V, std::unique_ptr<Module> M) {
   recordCtorDtors(*M);
 
   auto K = ES->allocateVModule();
-  setSymbolResolver(K, createResolverFor(V));
   return CODLayer.add(V, K, std::move(M));
 }
 
@@ -155,17 +128,7 @@ LLLazyJIT::LLLazyJIT(
     : LLJIT(std::move(ES), std::move(TM), std::move(DL)),
       CCMgr(std::move(CCMgr)), TransformLayer(*this->ES, CompileLayer),
       CODLayer(*this->ES, TransformLayer, *this->CCMgr, std::move(ISMBuilder),
-               [this](VModuleKey K) { return takeSymbolResolver(K); },
-               [this](VModuleKey K, std::shared_ptr<SymbolResolver> R) {
-                 setSymbolResolver(K, std::move(R));
-               },
                [&]() -> LLVMContext & { return Ctx; }) {}
-
-void LLLazyJIT::setSymbolResolver(VModuleKey K,
-                                  std::shared_ptr<SymbolResolver> R) {
-  assert(!Resolvers.count(K) && "Resolver already present for VModule K");
-  Resolvers[K] = std::move(R);
-}
 
 } // End namespace orc.
 } // End namespace llvm.

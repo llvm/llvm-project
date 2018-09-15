@@ -219,16 +219,16 @@ define zeroext i1 @f11(i32 *%ptr0) {
   %ptr8 = getelementptr i32, i32 *%ptr0, i64 16
   %ptr9 = getelementptr i32, i32 *%ptr0, i64 18
 
-  %val0 = load i32 , i32 *%ptr0
-  %val1 = load i32 , i32 *%ptr1
-  %val2 = load i32 , i32 *%ptr2
-  %val3 = load i32 , i32 *%ptr3
-  %val4 = load i32 , i32 *%ptr4
-  %val5 = load i32 , i32 *%ptr5
-  %val6 = load i32 , i32 *%ptr6
-  %val7 = load i32 , i32 *%ptr7
-  %val8 = load i32 , i32 *%ptr8
-  %val9 = load i32 , i32 *%ptr9
+  %val0 = load i32, i32 *%ptr0
+  %val1 = load i32, i32 *%ptr1
+  %val2 = load i32, i32 *%ptr2
+  %val3 = load i32, i32 *%ptr3
+  %val4 = load i32, i32 *%ptr4
+  %val5 = load i32, i32 *%ptr5
+  %val6 = load i32, i32 *%ptr6
+  %val7 = load i32, i32 *%ptr7
+  %val8 = load i32, i32 *%ptr8
+  %val9 = load i32, i32 *%ptr9
 
   %frob0 = add i32 %val0, 100
   %frob1 = add i32 %val1, 100

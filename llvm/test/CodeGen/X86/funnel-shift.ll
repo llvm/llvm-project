@@ -127,31 +127,33 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X64-AVX2-LABEL: fshl_i37:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    pushq %rbx
-; X64-AVX2-NEXT:    movq %rdx, %r9
-; X64-AVX2-NEXT:    movabsq $137438953471, %r10 # imm = 0x1FFFFFFFFF
-; X64-AVX2-NEXT:    andq %r10, %rsi
-; X64-AVX2-NEXT:    movl $37, %r8d
-; X64-AVX2-NEXT:    subq %rdx, %r8
-; X64-AVX2-NEXT:    andq %r10, %r9
+; X64-AVX2-NEXT:    movq %rdx, %r10
+; X64-AVX2-NEXT:    movabsq $137438953471, %r8 # imm = 0x1FFFFFFFFF
+; X64-AVX2-NEXT:    andq %r8, %rsi
+; X64-AVX2-NEXT:    movl $37, %r9d
+; X64-AVX2-NEXT:    subq %rdx, %r9
+; X64-AVX2-NEXT:    andq %r8, %r10
 ; X64-AVX2-NEXT:    movabsq $-2492803253203993461, %r11 # imm = 0xDD67C8A60DD67C8B
-; X64-AVX2-NEXT:    movq %r9, %rax
+; X64-AVX2-NEXT:    movq %r10, %rax
 ; X64-AVX2-NEXT:    mulq %r11
 ; X64-AVX2-NEXT:    shrq $5, %rdx
-; X64-AVX2-NEXT:    imulq $37, %rdx, %rax
-; X64-AVX2-NEXT:    subq %rax, %r9
+; X64-AVX2-NEXT:    leaq (%rdx,%rdx,8), %rax
+; X64-AVX2-NEXT:    leaq (%rdx,%rax,4), %rax
+; X64-AVX2-NEXT:    subq %rax, %r10
 ; X64-AVX2-NEXT:    movq %rdi, %rbx
-; X64-AVX2-NEXT:    movl %r9d, %ecx
+; X64-AVX2-NEXT:    movl %r10d, %ecx
 ; X64-AVX2-NEXT:    shlq %cl, %rbx
+; X64-AVX2-NEXT:    andq %r9, %r8
 ; X64-AVX2-NEXT:    movq %r8, %rax
-; X64-AVX2-NEXT:    andq %r10, %rax
 ; X64-AVX2-NEXT:    mulq %r11
-; X64-AVX2-NEXT:    shrl $5, %edx
-; X64-AVX2-NEXT:    imull $37, %edx, %eax
-; X64-AVX2-NEXT:    subl %eax, %r8d
-; X64-AVX2-NEXT:    movl %r8d, %ecx
+; X64-AVX2-NEXT:    shrq $5, %rdx
+; X64-AVX2-NEXT:    leaq (%rdx,%rdx,8), %rax
+; X64-AVX2-NEXT:    leal (%rdx,%rax,4), %eax
+; X64-AVX2-NEXT:    subl %eax, %r9d
+; X64-AVX2-NEXT:    movl %r9d, %ecx
 ; X64-AVX2-NEXT:    shrq %cl, %rsi
 ; X64-AVX2-NEXT:    orq %rbx, %rsi
-; X64-AVX2-NEXT:    testq %r9, %r9
+; X64-AVX2-NEXT:    testq %r10, %r10
 ; X64-AVX2-NEXT:    cmoveq %rdi, %rsi
 ; X64-AVX2-NEXT:    movq %rsi, %rax
 ; X64-AVX2-NEXT:    popq %rbx
@@ -359,31 +361,33 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X64-AVX2-LABEL: fshr_i37:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    pushq %rbx
-; X64-AVX2-NEXT:    movq %rdx, %r9
-; X64-AVX2-NEXT:    movabsq $137438953471, %r11 # imm = 0x1FFFFFFFFF
-; X64-AVX2-NEXT:    movq %rsi, %r10
-; X64-AVX2-NEXT:    andq %r11, %r10
-; X64-AVX2-NEXT:    movl $37, %r8d
-; X64-AVX2-NEXT:    subq %rdx, %r8
-; X64-AVX2-NEXT:    andq %r11, %r9
+; X64-AVX2-NEXT:    movq %rdx, %r10
+; X64-AVX2-NEXT:    movabsq $137438953471, %r8 # imm = 0x1FFFFFFFFF
+; X64-AVX2-NEXT:    movq %rsi, %r11
+; X64-AVX2-NEXT:    andq %r8, %r11
+; X64-AVX2-NEXT:    movl $37, %r9d
+; X64-AVX2-NEXT:    subq %rdx, %r9
+; X64-AVX2-NEXT:    andq %r8, %r10
 ; X64-AVX2-NEXT:    movabsq $-2492803253203993461, %rbx # imm = 0xDD67C8A60DD67C8B
-; X64-AVX2-NEXT:    movq %r9, %rax
+; X64-AVX2-NEXT:    movq %r10, %rax
 ; X64-AVX2-NEXT:    mulq %rbx
 ; X64-AVX2-NEXT:    shrq $5, %rdx
-; X64-AVX2-NEXT:    imulq $37, %rdx, %rax
-; X64-AVX2-NEXT:    subq %rax, %r9
-; X64-AVX2-NEXT:    movl %r9d, %ecx
-; X64-AVX2-NEXT:    shrq %cl, %r10
+; X64-AVX2-NEXT:    leaq (%rdx,%rdx,8), %rax
+; X64-AVX2-NEXT:    leaq (%rdx,%rax,4), %rax
+; X64-AVX2-NEXT:    subq %rax, %r10
+; X64-AVX2-NEXT:    movl %r10d, %ecx
+; X64-AVX2-NEXT:    shrq %cl, %r11
+; X64-AVX2-NEXT:    andq %r9, %r8
 ; X64-AVX2-NEXT:    movq %r8, %rax
-; X64-AVX2-NEXT:    andq %r11, %rax
 ; X64-AVX2-NEXT:    mulq %rbx
-; X64-AVX2-NEXT:    shrl $5, %edx
-; X64-AVX2-NEXT:    imull $37, %edx, %eax
-; X64-AVX2-NEXT:    subl %eax, %r8d
-; X64-AVX2-NEXT:    movl %r8d, %ecx
+; X64-AVX2-NEXT:    shrq $5, %rdx
+; X64-AVX2-NEXT:    leaq (%rdx,%rdx,8), %rax
+; X64-AVX2-NEXT:    leal (%rdx,%rax,4), %eax
+; X64-AVX2-NEXT:    subl %eax, %r9d
+; X64-AVX2-NEXT:    movl %r9d, %ecx
 ; X64-AVX2-NEXT:    shlq %cl, %rdi
-; X64-AVX2-NEXT:    orq %r10, %rdi
-; X64-AVX2-NEXT:    testq %r9, %r9
+; X64-AVX2-NEXT:    orq %r11, %rdi
+; X64-AVX2-NEXT:    testq %r10, %r10
 ; X64-AVX2-NEXT:    cmoveq %rsi, %rdi
 ; X64-AVX2-NEXT:    movq %rdi, %rax
 ; X64-AVX2-NEXT:    popq %rbx

@@ -115,6 +115,9 @@ public:
                              SmallVectorImpl<char> &Result) const;
   uint32_t getRelrRelocationType() const;
 
+  const char *getDynamicTagAsString(unsigned Arch, uint64_t Type) const;
+  const char *getDynamicTagAsString(uint64_t Type) const;
+
   /// Get the symbol for a given relocation.
   Expected<const Elf_Sym *> getRelocationSymbol(const Elf_Rel *Rel,
                                                 const Elf_Shdr *SymTab) const;
@@ -132,6 +135,10 @@ public:
   }
 
   Expected<Elf_Shdr_Range> sections() const;
+
+  Expected<Elf_Dyn_Range> dynamicEntries() const;
+
+  Expected<const uint8_t *> toMappedAddr(uint64_t VAddr) const;
 
   Expected<Elf_Sym_Range> symbols(const Elf_Shdr *Sec) const {
     if (!Sec)

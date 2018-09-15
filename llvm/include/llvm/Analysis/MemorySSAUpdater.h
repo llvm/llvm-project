@@ -124,6 +124,14 @@ public:
   /// |------|        |------|
   void moveAllAfterMergeBlocks(BasicBlock *From, BasicBlock *To,
                                Instruction *Start);
+  /// BasicBlock Old had New, an empty BasicBlock, added directly before it,
+  /// and the predecessors in Preds that used to point to Old, now point to
+  /// New. If New is the only predecessor, move Old's Phi, if present, to New.
+  /// Otherwise, add a new Phi in New with appropriate incoming values, and
+  /// update the incoming values in Old's Phi node too, if present.
+  void
+  wireOldPredecessorsToNewImmediatePredecessor(BasicBlock *Old, BasicBlock *New,
+                                               ArrayRef<BasicBlock *> Preds);
 
   // The below are utility functions. Other than creation of accesses to pass
   // to insertDef, and removeAccess to remove accesses, you should generally

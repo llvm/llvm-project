@@ -54,13 +54,13 @@ define float @v_mad_mix_f32_f16hi_f16hi_f16hi_elt(<2 x half> %src0, <2 x half> %
 }
 
 ; GCN-LABEL: {{^}}v_mad_mix_v2f32:
-; GFX900: v_mov_b32_e32 v3, v1
-; GFX900-NEXT: v_mad_mix_f32 v1, v0, v3, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
-; GFX900-NEXT: v_mad_mix_f32 v0, v0, v3, v2 op_sel_hi:[1,1,1]
+; GFX900: v_mad_mix_f32 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GFX900-NEXT: v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1]
+; GFX900-NEXT: v_mov_b32_e32 v1, v3
 
-; GFX906: v_mov_b32_e32 v3, v1
-; GFX906-NEXT: v_fma_mix_f32 v1, v0, v3, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
-; GFX906-NEXT: v_fma_mix_f32 v0, v0, v3, v2 op_sel_hi:[1,1,1]
+; GFX906: v_fma_mix_f32 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GFX906-NEXT: v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1]
+; GFX906-NEXT: v_mov_b32_e32 v1, v3
 
 ; CIVI: v_mac_f32
 define <2 x float> @v_mad_mix_v2f32(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
@@ -73,14 +73,14 @@ define <2 x float> @v_mad_mix_v2f32(<2 x half> %src0, <2 x half> %src1, <2 x hal
 
 ; GCN-LABEL: {{^}}v_mad_mix_v2f32_shuffle:
 ; GCN: s_waitcnt
-; GFX900-NEXT: v_mov_b32_e32 v3, v1
-; GFX900-NEXT: v_mad_mix_f32 v1, v0, v3, v2 op_sel:[0,1,1] op_sel_hi:[1,1,1]
-; GFX900-NEXT: v_mad_mix_f32 v0, v0, v3, v2 op_sel:[1,0,1] op_sel_hi:[1,1,1]
+; GFX900: v_mad_mix_f32 v3, v0, v1, v2 op_sel:[1,0,1] op_sel_hi:[1,1,1]
+; GFX900-NEXT: v_mad_mix_f32 v1, v0, v1, v2 op_sel:[0,1,1] op_sel_hi:[1,1,1]
+; GFX900-NEXT: v_mov_b32_e32 v0, v3
 ; GFX900-NEXT: s_setpc_b64
 
-; GFX906-NEXT: v_mov_b32_e32 v3, v1
-; GFX906-NEXT: v_fma_mix_f32 v1, v0, v3, v2 op_sel:[0,1,1] op_sel_hi:[1,1,1]
-; GFX906-NEXT: v_fma_mix_f32 v0, v0, v3, v2 op_sel:[1,0,1] op_sel_hi:[1,1,1]
+; GFX906-NEXT: v_fma_mix_f32 v3, v0, v1, v2 op_sel:[1,0,1] op_sel_hi:[1,1,1]
+; GFX906-NEXT: v_fma_mix_f32 v1, v0, v1, v2 op_sel:[0,1,1] op_sel_hi:[1,1,1]
+; GFX906-NEXT: v_mov_b32_e32 v0, v3
 ; GFX906-NEXT: s_setpc_b64
 
 ; CIVI: v_mac_f32
@@ -274,13 +274,14 @@ define float @v_mad_mix_f32_f16lo_f16lo_cvtf16imm63(half %src0, half %src1) #0 {
 }
 
 ; GCN-LABEL: {{^}}v_mad_mix_v2f32_f32imm1:
-; GFX9: v_mov_b32_e32 v2, v1
 ; GFX9: v_mov_b32_e32 v3, 1.0
-; GFX900: v_mad_mix_f32 v1, v0, v2, v3 op_sel:[1,1,0] op_sel_hi:[1,1,0] ; encoding
-; GFX900: v_mad_mix_f32 v0, v0, v2, v3 op_sel_hi:[1,1,0] ; encoding
+; GFX900: v_mad_mix_f32 v2, v0, v1, v3 op_sel:[1,1,0] op_sel_hi:[1,1,0] ; encoding
+; GFX900: v_mad_mix_f32 v0, v0, v1, v3 op_sel_hi:[1,1,0] ; encoding
+; GFX900: v_mov_b32_e32 v1, v2
 
-; GFX906: v_fma_mix_f32 v1, v0, v2, v3 op_sel:[1,1,0] op_sel_hi:[1,1,0] ; encoding
-; GFX906: v_fma_mix_f32 v0, v0, v2, v3 op_sel_hi:[1,1,0] ; encoding
+; GFX906: v_fma_mix_f32 v2, v0, v1, v3 op_sel:[1,1,0] op_sel_hi:[1,1,0] ; encoding
+; GFX906: v_fma_mix_f32 v0, v0, v1, v3 op_sel_hi:[1,1,0] ; encoding
+; GFX906: v_mov_b32_e32 v1, v2
 define <2 x float> @v_mad_mix_v2f32_f32imm1(<2 x half> %src0, <2 x half> %src1) #0 {
   %src0.ext = fpext <2 x half> %src0 to <2 x float>
   %src1.ext = fpext <2 x half> %src1 to <2 x float>
@@ -289,13 +290,15 @@ define <2 x float> @v_mad_mix_v2f32_f32imm1(<2 x half> %src0, <2 x half> %src1) 
 }
 
 ; GCN-LABEL: {{^}}v_mad_mix_v2f32_cvtf16imminv2pi:
-; GFX9: v_mov_b32_e32 v2, v1
 ; GFX9: v_mov_b32_e32 v3, 0x3e230000
-; GFX900: v_mad_mix_f32 v1, v0, v2, v3 op_sel:[1,1,0] op_sel_hi:[1,1,0] ; encoding
-; GFX900: v_mad_mix_f32 v0, v0, v2, v3 op_sel_hi:[1,1,0] ; encoding
 
-; GFX906: v_fma_mix_f32 v1, v0, v2, v3 op_sel:[1,1,0] op_sel_hi:[1,1,0] ; encoding
-; GFX906: v_fma_mix_f32 v0, v0, v2, v3 op_sel_hi:[1,1,0] ; encoding
+; GFX900: v_mad_mix_f32 v2, v0, v1, v3 op_sel:[1,1,0] op_sel_hi:[1,1,0] ; encoding
+; GFX900: v_mad_mix_f32 v0, v0, v1, v3 op_sel_hi:[1,1,0] ; encoding
+; GFX900: v_mov_b32_e32 v1, v2
+
+; GFX906: v_fma_mix_f32 v2, v0, v1, v3 op_sel:[1,1,0] op_sel_hi:[1,1,0] ; encoding
+; GFX906: v_fma_mix_f32 v0, v0, v1, v3 op_sel_hi:[1,1,0] ; encoding
+; GFX906: v_mov_b32_e32 v1, v2
 define <2 x float> @v_mad_mix_v2f32_cvtf16imminv2pi(<2 x half> %src0, <2 x half> %src1) #0 {
   %src0.ext = fpext <2 x half> %src0 to <2 x float>
   %src1.ext = fpext <2 x half> %src1 to <2 x float>
@@ -305,14 +308,15 @@ define <2 x float> @v_mad_mix_v2f32_cvtf16imminv2pi(<2 x half> %src0, <2 x half>
 }
 
 ; GCN-LABEL: {{^}}v_mad_mix_v2f32_f32imminv2pi:
-; GFX9: v_mov_b32_e32 v2, v1
 ; GFX9: v_mov_b32_e32 v3, 0.15915494
 
-; GFX900: v_mad_mix_f32 v1, v0, v2, v3 op_sel:[1,1,0] op_sel_hi:[1,1,0] ; encoding
-; GFX900: v_mad_mix_f32 v0, v0, v2, v3 op_sel_hi:[1,1,0] ; encoding
+; GFX900: v_mad_mix_f32 v2, v0, v1, v3 op_sel:[1,1,0] op_sel_hi:[1,1,0] ; encoding
+; GFX900: v_mad_mix_f32 v0, v0, v1, v3 op_sel_hi:[1,1,0] ; encoding
+; GFX900: v_mov_b32_e32 v1, v2
 
-; GFX906: v_fma_mix_f32 v1, v0, v2, v3 op_sel:[1,1,0] op_sel_hi:[1,1,0] ; encoding
-; GFX906: v_fma_mix_f32 v0, v0, v2, v3 op_sel_hi:[1,1,0] ; encoding
+; GFX906: v_fma_mix_f32 v2, v0, v1, v3 op_sel:[1,1,0] op_sel_hi:[1,1,0] ; encoding
+; GFX906: v_fma_mix_f32 v0, v0, v1, v3 op_sel_hi:[1,1,0] ; encoding
+; GFX906: v_mov_b32_e32 v1, v2
 define <2 x float> @v_mad_mix_v2f32_f32imminv2pi(<2 x half> %src0, <2 x half> %src1) #0 {
   %src0.ext = fpext <2 x half> %src0 to <2 x float>
   %src1.ext = fpext <2 x half> %src1 to <2 x float>

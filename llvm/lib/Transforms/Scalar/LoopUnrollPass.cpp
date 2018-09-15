@@ -888,7 +888,7 @@ bool llvm::computeUnrollCount(
     UP.Count = 0;
     return false;
   }
-  
+
   // Check if the runtime trip count is too small when profile is available.
   if (L->getHeader()->getParent()->hasProfileData()) {
     if (auto ProfileTripCount = getLoopEstimatedTripCount(L)) {
@@ -897,7 +897,7 @@ bool llvm::computeUnrollCount(
       else
         UP.AllowExpensiveTripCount = true;
     }
-  }  
+  }
 
   // Reduce count based on the type of unrolling and the threshold values.
   UP.Runtime |= PragmaEnableUnroll || PragmaCount > 0 || UserUnrollCount;

@@ -3,6 +3,6 @@
 
         sha1h s0, s1
 
-// CHECK-ERROR: error: instruction requires: crypto
+// CHECK-ERROR: error: instruction requires: sha2
 // CHECK-ERROR-NEXT:    sha1h s0, s1
 // CHECK-ERROR-NEXT:    ^

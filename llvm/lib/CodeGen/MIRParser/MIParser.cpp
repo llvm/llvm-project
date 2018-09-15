@@ -1958,13 +1958,11 @@ bool MIParser::parseTargetIndexOperand(MachineOperand &Dest) {
 
 bool MIParser::parseCustomRegisterMaskOperand(MachineOperand &Dest) {
   assert(Token.stringValue() == "CustomRegMask" && "Expected a custom RegMask");
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  assert(TRI && "Expected target register info");
   lex();
   if (expectAndConsume(MIToken::lparen))
     return true;
 
-  uint32_t *Mask = MF.allocateRegisterMask(TRI->getNumRegs());
+  uint32_t *Mask = MF.allocateRegMask();
   while (true) {
     if (Token.isNot(MIToken::NamedRegister))
       return error("expected a named register");
@@ -1987,9 +1985,7 @@ bool MIParser::parseCustomRegisterMaskOperand(MachineOperand &Dest) {
 
 bool MIParser::parseLiveoutRegisterMaskOperand(MachineOperand &Dest) {
   assert(Token.is(MIToken::kw_liveout));
-  const auto *TRI = MF.getSubtarget().getRegisterInfo();
-  assert(TRI && "Expected target register info");
-  uint32_t *Mask = MF.allocateRegisterMask(TRI->getNumRegs());
+  uint32_t *Mask = MF.allocateRegMask();
   lex();
   if (expectAndConsume(MIToken::lparen))
     return true;

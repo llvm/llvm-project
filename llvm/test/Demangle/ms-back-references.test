@@ -1,0 +1,53 @@
+; RUN: llvm-undname < %s | FileCheck %s
+
+; CHECK-NOT: Invalid mangled name
+
+?f1@@YAXPBD0@Z
+; CHECK: void __cdecl f1(char const *, char const *)
+
+?f2@@YAXPBDPAD@Z
+; CHECK: void __cdecl f2(char const *, char *)
+
+?f3@@YAXHPBD0@Z
+; CHECK: void __cdecl f3(int, char const *, char const *)
+
+?f4@@YAPBDPBD0@Z
+; CHECK: char const * __cdecl f4(char const *, char const *)
+
+?f5@@YAXPBDIDPBX0I@Z
+; CHECK: void __cdecl f5(char const *, unsigned int, char, void const *, char const *, unsigned int)
+
+?f6@@YAX_N0@Z
+; CHECK: void __cdecl f6(bool, bool)
+
+?f7@@YAXHPAHH0_N1PA_N@Z
+; CHECK: void __cdecl f7(int, int *, int, int *, bool, bool, bool *)
+
+; FIXME: tests for more than 10 types?
+
+?g1@@YAXUS@@@Z
+; CHECK: void __cdecl g1(struct S)
+
+?g2@@YAXUS@@0@Z
+; CHECK: void __cdecl g2(struct S, struct S)
+
+?g3@@YAXUS@@0PAU1@1@Z
+; CHECK: void __cdecl g3(struct S, struct S, struct S *, struct S *)
+
+?g4@@YAXPBDPAUS@@01@Z
+; CHECK: void __cdecl g4(char const *, struct S *, char const *, struct S *)
+
+?mbb@S@@QAEX_N0@Z
+; CHECK: void __thiscall S::mbb(bool, bool)
+
+?h1@@YAXPBD0P6AXXZ1@Z
+; CHECK: void __cdecl h1(char const *, char const *, void (__cdecl *)(void), void (__cdecl *)(void))
+
+?h2@@YAXP6AXPAX@Z0@Z
+; CHECK: void __cdecl h2(void (__cdecl *)(void *), void *)
+
+?h3@@YAP6APAHPAH0@ZP6APAH00@Z10@Z
+; CHECK: int * (__cdecl * __cdecl h3(int * (__cdecl *)(int *, int *), int * (__cdecl *)(int *, int *), int *))(int *, int *)
+
+?foo@0@YAXXZ
+; CHECK: void __cdecl foo::foo(void)

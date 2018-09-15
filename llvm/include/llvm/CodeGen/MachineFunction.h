@@ -709,13 +709,7 @@ public:
   }
 
   /// Allocate and initialize a register mask with @p NumRegister bits.
-  uint32_t *allocateRegisterMask(unsigned NumRegister) {
-    unsigned Size = (NumRegister + 31) / 32;
-    uint32_t *Mask = Allocator.Allocate<uint32_t>(Size);
-    for (unsigned i = 0; i != Size; ++i)
-      Mask[i] = 0;
-    return Mask;
-  }
+  uint32_t *allocateRegMask();
 
   /// allocateMemRefsArray - Allocate an array to hold MachineMemOperand
   /// pointers.  This array is owned by the MachineFunction.

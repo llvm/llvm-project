@@ -252,7 +252,7 @@ class TargetRegisterInfo;
     MachineInstr *Instr = nullptr; ///< Alternatively, a MachineInstr.
 
   public:
-    SUnit *OrigNode = nullptr; ///< If not this, the node from which this node 
+    SUnit *OrigNode = nullptr; ///< If not this, the node from which this node
                                /// was cloned. (SD scheduling only)
 
     const MCSchedClassDesc *SchedClass =

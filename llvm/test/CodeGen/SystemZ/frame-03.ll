@@ -39,22 +39,22 @@ define void @f1(double *%ptr) {
 ; CHECK: ld %f15, 160(%r15)
 ; CHECK: aghi %r15, 224
 ; CHECK: br %r14
-  %l0 = load volatile double , double *%ptr
-  %l1 = load volatile double , double *%ptr
-  %l2 = load volatile double , double *%ptr
-  %l3 = load volatile double , double *%ptr
-  %l4 = load volatile double , double *%ptr
-  %l5 = load volatile double , double *%ptr
-  %l6 = load volatile double , double *%ptr
-  %l7 = load volatile double , double *%ptr
-  %l8 = load volatile double , double *%ptr
-  %l9 = load volatile double , double *%ptr
-  %l10 = load volatile double , double *%ptr
-  %l11 = load volatile double , double *%ptr
-  %l12 = load volatile double , double *%ptr
-  %l13 = load volatile double , double *%ptr
-  %l14 = load volatile double , double *%ptr
-  %l15 = load volatile double , double *%ptr
+  %l0 = load volatile double, double *%ptr
+  %l1 = load volatile double, double *%ptr
+  %l2 = load volatile double, double *%ptr
+  %l3 = load volatile double, double *%ptr
+  %l4 = load volatile double, double *%ptr
+  %l5 = load volatile double, double *%ptr
+  %l6 = load volatile double, double *%ptr
+  %l7 = load volatile double, double *%ptr
+  %l8 = load volatile double, double *%ptr
+  %l9 = load volatile double, double *%ptr
+  %l10 = load volatile double, double *%ptr
+  %l11 = load volatile double, double *%ptr
+  %l12 = load volatile double, double *%ptr
+  %l13 = load volatile double, double *%ptr
+  %l14 = load volatile double, double *%ptr
+  %l15 = load volatile double, double *%ptr
   %add0 = fadd double %l0, %l0
   %add1 = fadd double %l1, %add0
   %add2 = fadd double %l2, %add1
@@ -121,21 +121,21 @@ define void @f2(double *%ptr) {
 ; CHECK: ld %f14, 160(%r15)
 ; CHECK: aghi %r15, 216
 ; CHECK: br %r14
-  %l0 = load volatile double , double *%ptr
-  %l1 = load volatile double , double *%ptr
-  %l2 = load volatile double , double *%ptr
-  %l3 = load volatile double , double *%ptr
-  %l4 = load volatile double , double *%ptr
-  %l5 = load volatile double , double *%ptr
-  %l6 = load volatile double , double *%ptr
-  %l7 = load volatile double , double *%ptr
-  %l8 = load volatile double , double *%ptr
-  %l9 = load volatile double , double *%ptr
-  %l10 = load volatile double , double *%ptr
-  %l11 = load volatile double , double *%ptr
-  %l12 = load volatile double , double *%ptr
-  %l13 = load volatile double , double *%ptr
-  %l14 = load volatile double , double *%ptr
+  %l0 = load volatile double, double *%ptr
+  %l1 = load volatile double, double *%ptr
+  %l2 = load volatile double, double *%ptr
+  %l3 = load volatile double, double *%ptr
+  %l4 = load volatile double, double *%ptr
+  %l5 = load volatile double, double *%ptr
+  %l6 = load volatile double, double *%ptr
+  %l7 = load volatile double, double *%ptr
+  %l8 = load volatile double, double *%ptr
+  %l9 = load volatile double, double *%ptr
+  %l10 = load volatile double, double *%ptr
+  %l11 = load volatile double, double *%ptr
+  %l12 = load volatile double, double *%ptr
+  %l13 = load volatile double, double *%ptr
+  %l14 = load volatile double, double *%ptr
   %add0 = fadd double %l0, %l0
   %add1 = fadd double %l1, %add0
   %add2 = fadd double %l2, %add1
@@ -187,15 +187,15 @@ define void @f3(double *%ptr) {
 ; CHECK: ld %f8, 160(%r15)
 ; CHECK: aghi %r15, 168
 ; CHECK: br %r14
-  %l0 = load volatile double , double *%ptr
-  %l1 = load volatile double , double *%ptr
-  %l2 = load volatile double , double *%ptr
-  %l3 = load volatile double , double *%ptr
-  %l4 = load volatile double , double *%ptr
-  %l5 = load volatile double , double *%ptr
-  %l6 = load volatile double , double *%ptr
-  %l7 = load volatile double , double *%ptr
-  %l8 = load volatile double , double *%ptr
+  %l0 = load volatile double, double *%ptr
+  %l1 = load volatile double, double *%ptr
+  %l2 = load volatile double, double *%ptr
+  %l3 = load volatile double, double *%ptr
+  %l4 = load volatile double, double *%ptr
+  %l5 = load volatile double, double *%ptr
+  %l6 = load volatile double, double *%ptr
+  %l7 = load volatile double, double *%ptr
+  %l8 = load volatile double, double *%ptr
   %add0 = fadd double %l0, %l0
   %add1 = fadd double %l1, %add0
   %add2 = fadd double %l2, %add1
@@ -231,14 +231,14 @@ define void @f4(double *%ptr) {
 ; CHECK-NOT: %f14
 ; CHECK-NOT: %f15
 ; CHECK: br %r14
-  %l0 = load volatile double , double *%ptr
-  %l1 = load volatile double , double *%ptr
-  %l2 = load volatile double , double *%ptr
-  %l3 = load volatile double , double *%ptr
-  %l4 = load volatile double , double *%ptr
-  %l5 = load volatile double , double *%ptr
-  %l6 = load volatile double , double *%ptr
-  %l7 = load volatile double , double *%ptr
+  %l0 = load volatile double, double *%ptr
+  %l1 = load volatile double, double *%ptr
+  %l2 = load volatile double, double *%ptr
+  %l3 = load volatile double, double *%ptr
+  %l4 = load volatile double, double *%ptr
+  %l5 = load volatile double, double *%ptr
+  %l6 = load volatile double, double *%ptr
+  %l7 = load volatile double, double *%ptr
   %add0 = fadd double %l0, %l0
   %add1 = fadd double %l1, %add0
   %add2 = fadd double %l2, %add1

@@ -100,7 +100,7 @@ SparcTargetMachine::SparcTargetMachine(
 
 SparcTargetMachine::~SparcTargetMachine() {}
 
-const SparcSubtarget * 
+const SparcSubtarget *
 SparcTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
@@ -119,7 +119,7 @@ SparcTargetMachine::getSubtargetImpl(const Function &F) const {
       F.hasFnAttribute("use-soft-float") &&
       F.getFnAttribute("use-soft-float").getValueAsString() == "true";
 
-  if (softFloat)         
+  if (softFloat)
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
 
   auto &I = SubtargetMap[CPU + FS];

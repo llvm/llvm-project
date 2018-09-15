@@ -50,6 +50,7 @@ subdirectories =
  llvm-rtdyld
  llvm-size
  llvm-split
+ llvm-undname
  opt
  verify-uselistorder
 

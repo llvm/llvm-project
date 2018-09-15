@@ -99,6 +99,15 @@ inline bool isASCII(llvm::StringRef S) {
   return true;
 }
 
+/// Checks whether character \p C is printable.
+///
+/// Locale-independent version of the C standard library isprint whose results
+/// may differ on different platforms.
+inline bool isPrint(char C) {
+  unsigned char UC = static_cast<unsigned char>(C);
+  return (0x20 <= UC) && (UC <= 0x7E);
+}
+
 /// Returns the corresponding lowercase character if \p x is uppercase.
 inline char toLower(char x) {
   if (x >= 'A' && x <= 'Z')

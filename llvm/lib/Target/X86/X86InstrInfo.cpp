@@ -19,6 +19,7 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -4652,6 +4653,32 @@ static void addOperands(MachineInstrBuilder &MIB, ArrayRef<MachineOperand> MOs,
   }
 }
 
+static void updateOperandRegConstraints(MachineFunction &MF,
+                                        MachineInstr &NewMI,
+                                        const TargetInstrInfo &TII) {
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
+
+  for (int Idx : llvm::seq<int>(0, NewMI.getNumOperands())) {
+    MachineOperand &MO = NewMI.getOperand(Idx);
+    // We only need to update constraints on virtual register operands.
+    if (!MO.isReg())
+      continue;
+    unsigned Reg = MO.getReg();
+    if (!TRI.isVirtualRegister(Reg))
+      continue;
+
+    auto *NewRC = MRI.constrainRegClass(
+        Reg, TII.getRegClass(NewMI.getDesc(), Idx, &TRI, MF));
+    if (!NewRC) {
+      LLVM_DEBUG(
+          dbgs() << "WARNING: Unable to update register constraint for operand "
+                 << Idx << " of instruction:\n";
+          NewMI.dump(); dbgs() << "\n");
+    }
+  }
+}
+
 static MachineInstr *FuseTwoAddrInst(MachineFunction &MF, unsigned Opcode,
                                      ArrayRef<MachineOperand> MOs,
                                      MachineBasicBlock::iterator InsertPt,
@@ -4674,6 +4701,8 @@ static MachineInstr *FuseTwoAddrInst(MachineFunction &MF, unsigned Opcode,
     MachineOperand &MO = MI.getOperand(i);
     MIB.add(MO);
   }
+
+  updateOperandRegConstraints(MF, *NewMI, TII);
 
   MachineBasicBlock *MBB = InsertPt->getParent();
   MBB->insert(InsertPt, NewMI);
@@ -4700,6 +4729,8 @@ static MachineInstr *FuseInst(MachineFunction &MF, unsigned Opcode,
       MIB.add(MO);
     }
   }
+
+  updateOperandRegConstraints(MF, *NewMI, TII);
 
   MachineBasicBlock *MBB = InsertPt->getParent();
   MBB->insert(InsertPt, NewMI);
@@ -5851,7 +5882,9 @@ isSafeToMoveRegClassDefs(const TargetRegisterClass *RC) const {
 /// TODO: Eliminate this and move the code to X86MachineFunctionInfo.
 ///
 unsigned X86InstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
-  assert(!Subtarget.is64Bit() &&
+  assert((!Subtarget.is64Bit() ||
+          MF->getTarget().getCodeModel() == CodeModel::Medium ||
+          MF->getTarget().getCodeModel() == CodeModel::Large) &&
          "X86-64 PIC uses RIP relative addressing");
 
   X86MachineFunctionInfo *X86FI = MF->getInfo<X86MachineFunctionInfo>();
@@ -5862,7 +5895,8 @@ unsigned X86InstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
   // Create the register. The code to initialize it is inserted
   // later, by the CGBR pass (below).
   MachineRegisterInfo &RegInfo = MF->getRegInfo();
-  GlobalBaseReg = RegInfo.createVirtualRegister(&X86::GR32_NOSPRegClass);
+  GlobalBaseReg = RegInfo.createVirtualRegister(
+      Subtarget.is64Bit() ? &X86::GR64_NOSPRegClass : &X86::GR32_NOSPRegClass);
   X86FI->setGlobalBaseReg(GlobalBaseReg);
   return GlobalBaseReg;
 }
@@ -7321,9 +7355,10 @@ namespace {
         static_cast<const X86TargetMachine *>(&MF.getTarget());
       const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
 
-      // Don't do anything if this is 64-bit as 64-bit PIC
-      // uses RIP relative addressing.
-      if (STI.is64Bit())
+      // Don't do anything in the 64-bit small and kernel code models. They use
+      // RIP-relative addressing for everything.
+      if (STI.is64Bit() && (TM->getCodeModel() == CodeModel::Small ||
+                            TM->getCodeModel() == CodeModel::Kernel))
         return false;
 
       // Only emit a global base reg in PIC mode.
@@ -7350,17 +7385,41 @@ namespace {
       else
         PC = GlobalBaseReg;
 
-      // Operand of MovePCtoStack is completely ignored by asm printer. It's
-      // only used in JIT code emission as displacement to pc.
-      BuildMI(FirstMBB, MBBI, DL, TII->get(X86::MOVPC32r), PC).addImm(0);
+      if (STI.is64Bit()) {
+        if (TM->getCodeModel() == CodeModel::Medium) {
+          // In the medium code model, use a RIP-relative LEA to materialize the
+          // GOT.
+          BuildMI(FirstMBB, MBBI, DL, TII->get(X86::LEA64r), PC)
+              .addReg(X86::RIP)
+              .addImm(0)
+              .addReg(0)
+              .addExternalSymbol("_GLOBAL_OFFSET_TABLE_")
+              .addReg(0);
+        } else if (TM->getCodeModel() == CodeModel::Large) {
+          // Loading the GOT in the large code model requires math with labels,
+          // so we use a pseudo instruction and expand it during MC emission.
+          unsigned Scratch = RegInfo.createVirtualRegister(&X86::GR64RegClass);
+          BuildMI(FirstMBB, MBBI, DL, TII->get(X86::MOVGOT64r), PC)
+              .addReg(Scratch, RegState::Undef | RegState::Define)
+              .addExternalSymbol("_GLOBAL_OFFSET_TABLE_");
+        } else {
+          llvm_unreachable("unexpected code model");
+        }
+      } else {
+        // Operand of MovePCtoStack is completely ignored by asm printer. It's
+        // only used in JIT code emission as displacement to pc.
+        BuildMI(FirstMBB, MBBI, DL, TII->get(X86::MOVPC32r), PC).addImm(0);
 
-      // If we're using vanilla 'GOT' PIC style, we should use relative addressing
-      // not to pc, but to _GLOBAL_OFFSET_TABLE_ external.
-      if (STI.isPICStyleGOT()) {
-        // Generate addl $__GLOBAL_OFFSET_TABLE_ + [.-piclabel], %some_register
-        BuildMI(FirstMBB, MBBI, DL, TII->get(X86::ADD32ri), GlobalBaseReg)
-          .addReg(PC).addExternalSymbol("_GLOBAL_OFFSET_TABLE_",
-                                        X86II::MO_GOT_ABSOLUTE_ADDRESS);
+        // If we're using vanilla 'GOT' PIC style, we should use relative
+        // addressing not to pc, but to _GLOBAL_OFFSET_TABLE_ external.
+        if (STI.isPICStyleGOT()) {
+          // Generate addl $__GLOBAL_OFFSET_TABLE_ + [.-piclabel],
+          // %some_register
+          BuildMI(FirstMBB, MBBI, DL, TII->get(X86::ADD32ri), GlobalBaseReg)
+              .addReg(PC)
+              .addExternalSymbol("_GLOBAL_OFFSET_TABLE_",
+                                 X86II::MO_GOT_ABSOLUTE_ADDRESS);
+        }
       }
 
       return true;
@@ -7529,30 +7588,36 @@ enum MachineOutlinerClass {
   MachineOutlinerTailCall
 };
 
-outliner::TargetCostInfo
-X86InstrInfo::getOutliningCandidateInfo(
-  std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
-  unsigned SequenceSize = std::accumulate(
-      RepeatedSequenceLocs[0].front(), std::next(RepeatedSequenceLocs[0].back()),
-      0, [](unsigned Sum, const MachineInstr &MI) {
-        // FIXME: x86 doesn't implement getInstSizeInBytes, so we can't
-        // tell the cost.  Just assume each instruction is one byte.
-        if (MI.isDebugInstr() || MI.isKill())
-          return Sum;
-        return Sum + 1;
-      });
+outliner::OutlinedFunction X86InstrInfo::getOutliningCandidateInfo(
+    std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
+  unsigned SequenceSize =
+      std::accumulate(RepeatedSequenceLocs[0].front(),
+                      std::next(RepeatedSequenceLocs[0].back()), 0,
+                      [](unsigned Sum, const MachineInstr &MI) {
+                        // FIXME: x86 doesn't implement getInstSizeInBytes, so
+                        // we can't tell the cost.  Just assume each instruction
+                        // is one byte.
+                        if (MI.isDebugInstr() || MI.isKill())
+                          return Sum;
+                        return Sum + 1;
+                      });
 
   // FIXME: Use real size in bytes for call and ret instructions.
-  if (RepeatedSequenceLocs[0].back()->isTerminator())
-    return outliner::TargetCostInfo(SequenceSize,
-                               1, // Number of bytes to emit call.
-                               0, // Number of bytes to emit frame.
-                               MachineOutlinerTailCall, // Type of call.
-                               MachineOutlinerTailCall // Type of frame.
-                              );
+  if (RepeatedSequenceLocs[0].back()->isTerminator()) {
+    for (outliner::Candidate &C : RepeatedSequenceLocs)
+      C.setCallInfo(MachineOutlinerTailCall, 1);
 
-  return outliner::TargetCostInfo(SequenceSize, 1, 1, MachineOutlinerDefault,
-                             MachineOutlinerDefault);
+    return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
+                                      0, // Number of bytes to emit frame.
+                                      MachineOutlinerTailCall // Type of frame.
+    );
+  }
+
+  for (outliner::Candidate &C : RepeatedSequenceLocs)
+    C.setCallInfo(MachineOutlinerDefault, 1);
+
+  return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize, 1,
+                                    MachineOutlinerDefault);
 }
 
 bool X86InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF,
@@ -7639,10 +7704,10 @@ X86InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,  unsigned Flags
 
 void X86InstrInfo::buildOutlinedFrame(MachineBasicBlock &MBB,
                                           MachineFunction &MF,
-                                          const outliner::TargetCostInfo &TCI)
+                                          const outliner::OutlinedFunction &OF)
                                           const {
   // If we're a tail call, we already have a return, so don't do anything.
-  if (TCI.FrameConstructionID == MachineOutlinerTailCall)
+  if (OF.FrameConstructionID == MachineOutlinerTailCall)
     return;
 
   // We're a normal call, so our sequence doesn't have a return instruction.
@@ -7655,12 +7720,12 @@ MachineBasicBlock::iterator
 X86InstrInfo::insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator &It,
                                  MachineFunction &MF,
-                                 const outliner::TargetCostInfo &TCI) const {
+                                 const outliner::Candidate &C) const {
   // Is it a tail call?
-  if (TCI.CallConstructionID == MachineOutlinerTailCall) {
+  if (C.CallConstructionID == MachineOutlinerTailCall) {
     // Yes, just insert a JMP.
     It = MBB.insert(It,
-                  BuildMI(MF, DebugLoc(), get(X86::JMP_1))
+                  BuildMI(MF, DebugLoc(), get(X86::TAILJMPd64))
                       .addGlobalAddress(M.getNamedValue(MF.getName())));
   } else {
     // No, insert a call.

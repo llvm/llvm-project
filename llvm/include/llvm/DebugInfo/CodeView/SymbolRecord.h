@@ -942,6 +942,19 @@ public:
   uint32_t RecordOffset;
 };
 
+// S_UNAMESPACE
+class UsingNamespaceSym : public SymbolRecord {
+public:
+  explicit UsingNamespaceSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
+  explicit UsingNamespaceSym(uint32_t RecordOffset)
+      : SymbolRecord(SymbolRecordKind::RegRelativeSym),
+        RecordOffset(RecordOffset) {}
+
+  StringRef Name;
+
+  uint32_t RecordOffset;
+};
+
 // S_ANNOTATION
 
 using CVSymbol = CVRecord<SymbolKind>;

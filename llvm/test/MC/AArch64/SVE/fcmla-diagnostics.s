@@ -50,3 +50,13 @@ fcmla z0.d, z1.d, z2.d[0], #0
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: fcmla z0.d, z1.d, z2.d[0], #0
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z21.s, p0/z, z28.s
+fcmla   z21.s, z10.s, z5.s[1], #90
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a predicated movprfx, suggest using unpredicated movprfx
+// CHECK-NEXT: fcmla   z21.s, z10.s, z5.s[1], #90
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

@@ -30,3 +30,31 @@ msb z0.d, p7/m, z1.d, z31.d
 // CHECK-ENCODING: [0xe0,0xff,0xc1,0x04]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: e0 ff c1 04 <unknown>
+
+
+// --------------------------------------------------------------------------//
+// Test compatibility with MOVPRFX instruction.
+
+movprfx z0.d, p7/z, z7.d
+// CHECK-INST: movprfx	z0.d, p7/z, z7.d
+// CHECK-ENCODING: [0xe0,0x3c,0xd0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 3c d0 04 <unknown>
+
+msb z0.d, p7/m, z1.d, z31.d
+// CHECK-INST: msb	z0.d, p7/m, z1.d, z31.d
+// CHECK-ENCODING: [0xe0,0xff,0xc1,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 ff c1 04 <unknown>
+
+movprfx z0, z7
+// CHECK-INST: movprfx	z0, z7
+// CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+
+msb z0.d, p7/m, z1.d, z31.d
+// CHECK-INST: msb	z0.d, p7/m, z1.d, z31.d
+// CHECK-ENCODING: [0xe0,0xff,0xc1,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 ff c1 04 <unknown>

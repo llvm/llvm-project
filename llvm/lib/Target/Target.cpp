@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the common infrastructure (including C bindings) for 
+// This file implements the common infrastructure (including C bindings) for
 // libLLVMTarget.a, which implements target information.
 //
 //===----------------------------------------------------------------------===//

@@ -1275,7 +1275,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
       // we're minimizing code size.
       if (!MBB.getParent()->getFunction().optForMinSize() || !BaseKill)
         return false;
-      
+
       bool HighRegsUsed = false;
       for (unsigned i = 2, e = MI->getNumOperands(); i != e; ++i)
         if (MI->getOperand(i).getReg() >= ARM::R8) {

@@ -24,6 +24,11 @@ bool MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
   return false;
 }
 
+bool MCInstrAnalysis::isDependencyBreaking(const MCSubtargetInfo &STI,
+                                           const MCInst &Inst) const {
+  return false;
+}
+
 bool MCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
                                      uint64_t Size, uint64_t &Target) const {
   if (Inst.getNumOperands() == 0 ||

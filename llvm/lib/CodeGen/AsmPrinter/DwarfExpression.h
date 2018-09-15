@@ -112,7 +112,7 @@ protected:
   uint64_t OffsetInBits = 0;
   unsigned DwarfVersion;
 
-  /// Sometimes we need to add a DW_OP_bit_piece to describe a subregister. 
+  /// Sometimes we need to add a DW_OP_bit_piece to describe a subregister.
   unsigned SubRegisterSizeInBits = 0;
   unsigned SubRegisterOffsetInBits = 0;
 

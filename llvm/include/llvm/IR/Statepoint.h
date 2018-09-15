@@ -325,7 +325,7 @@ public:
   explicit Statepoint(CallSite CS) : Base(CS) {}
 };
 
-/// Common base class for representing values projected from a statepoint.  
+/// Common base class for representing values projected from a statepoint.
 /// Currently, the only projections available are gc.result and gc.relocate.
 class GCProjectionInst : public IntrinsicInst {
 public:

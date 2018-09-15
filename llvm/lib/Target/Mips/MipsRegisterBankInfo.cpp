@@ -88,6 +88,7 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   case G_CONSTANT:
   case G_FRAME_INDEX:
+  case G_GLOBAL_VALUE:
     OperandsMapping =
         getOperandsMapping({&Mips::ValueMappings[Mips::GPRIdx], nullptr});
     break;

@@ -299,6 +299,21 @@ def : MipsPat<(select (i32 (seteq i32:$cond, immz)), immz, i64:$f),
               (SELNEZ64 i64:$f, (SLL64_32 i32:$cond))>,
               ISA_MIPS64R6;
 
+// Patterns used for matching away redundant sign extensions.
+// MIPS32 arithmetic instructions sign extend their result implicitly.
+def : MipsPat<(i64 (sext (i32 (sdiv GPR32:$src, GPR32:$src2)))),
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (DIV GPR32:$src, GPR32:$src2), sub_32)>, ISA_MIPS64R6;
+def : MipsPat<(i64 (sext (i32 (udiv GPR32:$src, GPR32:$src2)))),
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (DIVU GPR32:$src, GPR32:$src2), sub_32)>, ISA_MIPS64R6;
+def : MipsPat<(i64 (sext (i32 (srem GPR32:$src, GPR32:$src2)))),
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (MOD GPR32:$src, GPR32:$src2), sub_32)>, ISA_MIPS64R6;
+def : MipsPat<(i64 (sext (i32 (urem GPR32:$src, GPR32:$src2)))),
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (MODU GPR32:$src, GPR32:$src2), sub_32)>, ISA_MIPS64R6;
+
 // Pseudo instructions
 
 let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,

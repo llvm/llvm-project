@@ -106,10 +106,14 @@ def : WriteRes<WriteLoad,    [SBPort23]> { let Latency = 5; }
 def : WriteRes<WriteMove,    [SBPort015]>;
 def : WriteRes<WriteZero,    []>;
 
+// Arithmetic.
 defm : SBWriteResPair<WriteALU,    [SBPort015], 1>;
 defm : SBWriteResPair<WriteADC,    [SBPort05,SBPort015], 2, [1,1], 2>;
 defm : SBWriteResPair<WriteIMul,   [SBPort1],   3>;
 defm : SBWriteResPair<WriteIMul64, [SBPort1],   3>;
+
+defm : X86WriteRes<WriteBSWAP32,   [SBPort1], 1, [1], 1>;
+defm : X86WriteRes<WriteBSWAP64,   [SBPort1,SBPort05], 2, [1,1], 2>;
 
 defm : SBWriteResPair<WriteDiv8,   [SBPort0, SBDivider], 25, [1, 10]>;
 defm : SBWriteResPair<WriteDiv16,  [SBPort0, SBDivider], 25, [1, 10]>;
@@ -122,8 +126,13 @@ defm : SBWriteResPair<WriteIDiv64, [SBPort0, SBDivider], 25, [1, 10]>;
 
 def  : WriteRes<WriteIMulH, []> { let Latency = 3; }
 
+// SHLD/SHRD.
+defm : X86WriteRes<WriteSHDrri, [SBPort05, SBPort015], 2, [1, 1], 2>;
+defm : X86WriteRes<WriteSHDrrcl,[SBPort05, SBPort015], 4, [3, 1], 4>;
+defm : X86WriteRes<WriteSHDmri, [SBPort4,SBPort23,SBPort05,SBPort015], 8, [1, 2, 1, 1], 5>;
+defm : X86WriteRes<WriteSHDmrcl,[SBPort4,SBPort23,SBPort05,SBPort015], 10, [1, 2, 3, 1], 7>;
+
 defm : SBWriteResPair<WriteShift, [SBPort05],  1>;
-defm : SBWriteResPair<WriteShiftDouble, [SBPort05],  1>;
 defm : SBWriteResPair<WriteJump,  [SBPort5],   1>;
 defm : SBWriteResPair<WriteCRC32, [SBPort1],   3, [1], 1, 5>;
 
@@ -136,6 +145,7 @@ def  : WriteRes<WriteSETCCStore, [SBPort05,SBPort4,SBPort23]> {
   let NumMicroOps = 3;
 }
 def  : WriteRes<WriteLAHFSAHF, [SBPort05]>;
+def  : WriteRes<WriteBitTest,[SBPort05]>;
 
 // This is for simple LEAs with one or two input operands.
 // The complex ones can only execute on port 1, and they require two cycles on
@@ -561,14 +571,6 @@ def SBWriteResGroup4 : SchedWriteRes<[SBPort05]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[SBWriteResGroup4], (instrs CDQ, CQO)>;
-def: InstRW<[SBWriteResGroup4], (instregex "BT(16|32|64)ri8",
-                                           "BT(16|32|64)rr",
-                                           "BTC(16|32|64)ri8",
-                                           "BTC(16|32|64)rr",
-                                           "BTR(16|32|64)ri8",
-                                           "BTR(16|32|64)rr",
-                                           "BTS(16|32|64)ri8",
-                                           "BTS(16|32|64)rr")>;
 
 def SBWriteResGroup5 : SchedWriteRes<[SBPort15]> {
   let Latency = 1;
@@ -619,20 +621,6 @@ def SBWriteResGroup15 : SchedWriteRes<[SBPort0,SBPort015]> {
 def: InstRW<[SBWriteResGroup15], (instrs CWD,
                                          FNSTSW16r)>;
 
-def SBWriteResGroup16 : SchedWriteRes<[SBPort1,SBPort05]> {
-  let Latency = 2;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1];
-}
-def: InstRW<[SBWriteResGroup16], (instrs BSWAP64r)>;
-
-def SBWriteResGroup16_1 : SchedWriteRes<[SBPort1]> {
-  let Latency = 1;
-  let NumMicroOps = 1;
-  let ResourceCycles = [1];
-}
-def: InstRW<[SBWriteResGroup16_1], (instrs BSWAP32r)>;
-
 def SBWriteResGroup18 : SchedWriteRes<[SBPort5,SBPort015]> {
   let Latency = 2;
   let NumMicroOps = 2;
@@ -640,14 +628,6 @@ def SBWriteResGroup18 : SchedWriteRes<[SBPort5,SBPort015]> {
 }
 def: InstRW<[SBWriteResGroup18], (instrs JCXZ, JECXZ, JRCXZ)>;
 def: InstRW<[SBWriteResGroup18], (instregex "MMX_MOVDQ2Qrr")>;
-
-def SBWriteResGroup19 : SchedWriteRes<[SBPort05,SBPort015]> {
-  let Latency = 2;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1];
-}
-def: InstRW<[SBWriteResGroup19], (instregex "SHLD(16|32|64)rri8",
-                                            "SHRD(16|32|64)rri8")>;
 
 def SBWriteResGroup21 : SchedWriteRes<[SBPort1]> {
   let Latency = 3;
@@ -738,14 +718,6 @@ def SBWriteResGroup29_2 : SchedWriteRes<[SBPort5,SBPort015]> {
   let ResourceCycles = [1,3];
 }
 def: InstRW<[SBWriteResGroup29_2], (instrs PAUSE)>;
-
-def SBWriteResGroup29_3 : SchedWriteRes<[SBPort05,SBPort015]> {
-  let Latency = 4;
-  let NumMicroOps = 4;
-  let ResourceCycles = [3,1];
-}
-def: InstRW<[SBWriteResGroup29_3], (instregex "SHLD(16|32|64)rrCL",
-                                              "SHRD(16|32|64)rrCL")>;
 
 def SBWriteResGroup30 : SchedWriteRes<[SBPort0]> {
   let Latency = 5;
@@ -1038,14 +1010,6 @@ def SBWriteResGroup87 : SchedWriteRes<[SBPort4,SBPort5,SBPort01,SBPort23]> {
 }
 def: InstRW<[SBWriteResGroup87], (instrs FARCALL64)>;
 
-def SBWriteResGroup88 : SchedWriteRes<[SBPort4,SBPort23,SBPort05,SBPort015]> {
-  let Latency = 8;
-  let NumMicroOps = 5;
-  let ResourceCycles = [1,2,1,1];
-}
-def: InstRW<[SBWriteResGroup88], (instregex "SHLD(16|32|64)mri8",
-                                            "SHRD(16|32|64)mri8")>;
-
 def SBWriteResGroup93 : SchedWriteRes<[SBPort0,SBPort1,SBPort23]> {
   let Latency = 9;
   let NumMicroOps = 3;
@@ -1140,14 +1104,6 @@ def SBWriteResGroup101 : SchedWriteRes<[SBPort1,SBPort23]> {
 }
 def: InstRW<[SBWriteResGroup101], (instregex "(ADD|SUB|SUBR)_F(32|64)m",
                                              "ILD_F(16|32|64)m")>;
-
-def SBWriteResGroup103_2 : SchedWriteRes<[SBPort4,SBPort23,SBPort05,SBPort015]> {
-  let Latency = 10;
-  let NumMicroOps = 7;
-  let ResourceCycles = [1,2,3,1];
-}
-def: InstRW<[SBWriteResGroup103_2], (instregex "SHLD(16|32|64)mrCL",
-                                               "SHRD(16|32|64)mrCL")>;
 
 def SBWriteResGroup104 : SchedWriteRes<[SBPort0,SBPort23]> {
   let Latency = 11;

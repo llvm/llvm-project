@@ -52,7 +52,7 @@ void LSUnit::assignSQSlot(unsigned Index) {
 }
 
 bool LSUnit::reserve(const InstRef &IR) {
-  const InstrDesc Desc = IR.getInstruction()->getDesc();
+  const InstrDesc &Desc = IR.getInstruction()->getDesc();
   unsigned MayLoad = Desc.MayLoad;
   unsigned MayStore = Desc.MayStore;
   unsigned IsMemBarrier = Desc.HasSideEffects;

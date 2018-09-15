@@ -1,0 +1,11 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(VCTargetsPath)\LLVM.Cpp.Common.props"/>
+
+  <PropertyGroup>
+    <ExecutablePath Condition="'$(ExecutablePath)' == ''">$(VC_ExecutablePath_x64);$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(MSBuild_ExecutablePath);$(FxCopDir);$(PATH);</ExecutablePath>
+    <ReferencePath Condition="'$(ReferencePath)' == ''">$(VC_ReferencesPath_x64);</ReferencePath>
+    <LibraryPath Condition="'$(LibraryPath)' == ''">$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
+    <ExcludePath Condition="'$(ExcludePath)' == ''">$(VC_IncludePath);$(WindowsSDK_IncludePath);$(MSBuild_ExecutablePath);$(VC_LibraryPath_x64);</ExcludePath>
+    <DebugCppRuntimeFilesPath Condition="'$(DebugCppRuntimeFilesPath)' == ''">$(VCToolsInstallDir)redist\Debug_NonRedist\x64</DebugCppRuntimeFilesPath>
+  </PropertyGroup>
+</Project>

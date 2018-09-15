@@ -567,6 +567,7 @@ int PI = 0x40490fdb;
 int TWO_PI_INV = 0x3e22f983;
 int FP_UINT_MAX_PLUS_1 = 0x4f800000;    // 1 << 32 in floating point encoding
 int FP16_ONE = 0x3C00;
+int FP16_NEG_ONE = 0xBC00;
 int V2FP16_ONE = 0x3C003C00;
 int FP32_ONE = 0x3f800000;
 int FP32_NEG_ONE = 0xbf800000;
@@ -753,30 +754,30 @@ multiclass BFEPattern <Instruction UBFE, Instruction SBFE, Instruction MOV> {
   // x & ((1 << y) - 1)
   def : AMDGPUPat <
     (and i32:$src, (add_oneuse (shl_oneuse 1, i32:$width), -1)),
-    (UBFE $src, (i32 0), $width)
+    (UBFE $src, (MOV (i32 0)), $width)
   >;
 
   // x & ~(-1 << y)
   def : AMDGPUPat <
     (and i32:$src, (xor_oneuse (shl_oneuse -1, i32:$width), -1)),
-    (UBFE $src, (i32 0), $width)
+    (UBFE $src, (MOV (i32 0)), $width)
   >;
 
   // x & (-1 >> (bitwidth - y))
   def : AMDGPUPat <
     (and i32:$src, (srl_oneuse -1, (sub 32, i32:$width))),
-    (UBFE $src, (i32 0), $width)
+    (UBFE $src, (MOV (i32 0)), $width)
   >;
 
   // x << (bitwidth - y) >> (bitwidth - y)
   def : AMDGPUPat <
     (srl (shl_oneuse i32:$src, (sub 32, i32:$width)), (sub 32, i32:$width)),
-    (UBFE $src, (i32 0), $width)
+    (UBFE $src, (MOV (i32 0)), $width)
   >;
 
   def : AMDGPUPat <
     (sra (shl_oneuse i32:$src, (sub 32, i32:$width)), (sub 32, i32:$width)),
-    (SBFE $src, (i32 0), $width)
+    (SBFE $src, (MOV (i32 0)), $width)
   >;
 }
 

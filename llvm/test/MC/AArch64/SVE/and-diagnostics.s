@@ -92,3 +92,25 @@ and p0.b, p0/m, p1.b, p2.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: and p0.b, p0/m, p1.b, p2.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z0.d, p0/z, z7.d
+and     z0.d, z0.d, #0x6
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a predicated movprfx, suggest using unpredicated movprfx
+// CHECK-NEXT: and     z0.d, z0.d, #0x6
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z23.d, p0/z, z30.d
+and     z23.d, z13.d, z8.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: and     z23.d, z13.d, z8.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z23, z30
+and     z23.d, z13.d, z8.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: and     z23.d, z13.d, z8.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

@@ -31,7 +31,7 @@ namespace mca {
 /// this RetireControlUnit (RCU) gets notified.
 ///
 /// On instruction retired, register updates are all architecturally
-/// committed, and any temporary registers originally allocated for the
+/// committed, and any physicall registers previously allocated for the
 /// retired instruction are freed.
 struct RetireControlUnit : public HardwareUnit {
   // A RUToken is created by the RCU for every instruction dispatched to the

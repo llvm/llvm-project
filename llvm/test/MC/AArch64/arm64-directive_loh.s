@@ -1,5 +1,7 @@
 # RUN: not llvm-mc -triple arm64-apple-darwin < %s 2> %t | FileCheck %s
 # RUN: FileCheck --check-prefix=CHECK-ERRORS < %t %s
+# RUN: not llvm-mc -triple aarch64-linux-gnu < %s 2>&1 | FileCheck --check-prefix=UNKNOWN %s
+# RUN: not llvm-mc -triple aarch64-win32-gnu < %s 2>&1 | FileCheck --check-prefix=UNKNOWN %s
 
 .globl _fct1
 _fct1:
@@ -15,6 +17,8 @@ _fct1:
 
 # CHECK: .loh AdrpAdrp L1, L2
 # CHECK: .loh AdrpAdrp L1, L2
+# UNKNOWN: error: unknown directive
+# UNKNOWN-NEXT: .loh AdrpAdrp L1, L2
 .loh AdrpAdrp L1, L2
 .loh 1 L1, L2
 

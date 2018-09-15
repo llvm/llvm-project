@@ -1113,7 +1113,7 @@ bool Scanner::scanDirective() {
   Current = skip_while(&Scanner::skip_ns_char, Current);
   StringRef Name(NameStart, Current - NameStart);
   Current = skip_while(&Scanner::skip_s_white, Current);
-  
+
   Token T;
   if (Name == "YAML") {
     Current = skip_while(&Scanner::skip_ns_char, Current);

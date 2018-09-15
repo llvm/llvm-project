@@ -297,8 +297,8 @@ public:
   /// If the comment includes embedded \n's, they will each get the comment
   /// prefix as appropriate.  The added comment should not end with a \n.
   /// By default, each comment is terminated with an end of line, i.e. the
-  /// EOL param is set to true by default. If one prefers not to end the 
-  /// comment with a new line then the EOL param should be passed 
+  /// EOL param is set to true by default. If one prefers not to end the
+  /// comment with a new line then the EOL param should be passed
   /// with a false value.
   virtual void AddComment(const Twine &T, bool EOL = true) {}
 
@@ -521,6 +521,11 @@ public:
   ///
   /// \param Symbol - Symbol the section relative relocation should point to.
   virtual void EmitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset);
+
+  /// Emits a COFF image relative relocation.
+  ///
+  /// \param Symbol - Symbol the image relative relocation should point to.
+  virtual void EmitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset);
 
   /// Emit an ELF .size directive.
   ///

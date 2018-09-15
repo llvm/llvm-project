@@ -79,6 +79,7 @@ void printMachOBindTable(object::MachOObjectFile* o);
 void printMachOLazyBindTable(object::MachOObjectFile* o);
 void printMachOWeakBindTable(object::MachOObjectFile* o);
 void printELFFileHeader(const object::ObjectFile *o);
+void printELFDynamicSection(const object::ObjectFile *Obj);
 void printCOFFFileHeader(const object::ObjectFile *o);
 void printCOFFSymbolTable(const object::COFFImportFile *i);
 void printCOFFSymbolTable(const object::COFFObjectFile *o);

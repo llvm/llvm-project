@@ -39,7 +39,7 @@ define i32 @f3(fp128 *%src) {
 ; CHECK: cfxbr
 ; CHECK: xilf
 ; CHECK: br %r14
-  %f = load fp128 , fp128 *%src
+  %f = load fp128, fp128 *%src
   %conv = fptoui fp128 %f to i32
   ret i32 %conv
 }

@@ -655,7 +655,7 @@ static bool getDataDeps(const MachineInstr &UseMI,
   // Debug values should not be included in any calculations.
   if (UseMI.isDebugInstr())
     return false;
-  
+
   bool HasPhysRegs = false;
   for (MachineInstr::const_mop_iterator I = UseMI.operands_begin(),
        E = UseMI.operands_end(); I != E; ++I) {
@@ -1167,7 +1167,7 @@ MachineTraceMetrics::Ensemble::getTrace(const MachineBasicBlock *MBB) {
     computeInstrDepths(MBB);
   if (!TBI.HasValidInstrHeights)
     computeInstrHeights(MBB);
-  
+
   return Trace(*this, TBI);
 }
 

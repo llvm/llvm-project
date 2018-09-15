@@ -61,12 +61,12 @@ static bool PropagateConstantsIntoArguments(Function &F) {
     User *UR = U.getUser();
     // Ignore blockaddress uses.
     if (isa<BlockAddress>(UR)) continue;
-    
+
     // Used by a non-instruction, or not the callee of a function, do not
     // transform.
     if (!isa<CallInst>(UR) && !isa<InvokeInst>(UR))
       return false;
-    
+
     CallSite CS(cast<Instruction>(UR));
     if (!CS.isCallee(&U))
       return false;
@@ -77,11 +77,11 @@ static bool PropagateConstantsIntoArguments(Function &F) {
     Function::arg_iterator Arg = F.arg_begin();
     for (unsigned i = 0, e = ArgumentConstants.size(); i != e;
          ++i, ++AI, ++Arg) {
-      
+
       // If this argument is known non-constant, ignore it.
       if (ArgumentConstants[i].second)
         continue;
-      
+
       Constant *C = dyn_cast<Constant>(*AI);
       if (C && ArgumentConstants[i].first == nullptr) {
         ArgumentConstants[i].first = C;   // First constant seen.
@@ -108,7 +108,7 @@ static bool PropagateConstantsIntoArguments(Function &F) {
     if (ArgumentConstants[i].second || AI->use_empty() ||
         AI->hasInAllocaAttr() || (AI->hasByValAttr() && !F.onlyReadsMemory()))
       continue;
-  
+
     Value *V = ArgumentConstants[i].first;
     if (!V) V = UndefValue::get(AI->getType());
     AI->replaceAllUsesWith(V);
@@ -147,7 +147,7 @@ static bool PropagateConstantReturn(Function &F) {
   SmallVector<Value *,4> RetVals;
   StructType *STy = dyn_cast<StructType>(F.getReturnType());
   if (STy)
-    for (unsigned i = 0, e = STy->getNumElements(); i < e; ++i) 
+    for (unsigned i = 0, e = STy->getNumElements(); i < e; ++i)
       RetVals.push_back(UndefValue::get(STy->getElementType(i)));
   else
     RetVals.push_back(UndefValue::get(F.getReturnType()));
@@ -172,7 +172,7 @@ static bool PropagateConstantReturn(Function &F) {
           // Ignore undefs, we can change them into anything
           if (isa<UndefValue>(V))
             continue;
-          
+
           // Try to see if all the rets return the same constant or argument.
           if (isa<Constant>(V) || isa<Argument>(V)) {
             if (isa<UndefValue>(RV)) {
@@ -206,7 +206,7 @@ static bool PropagateConstantReturn(Function &F) {
     // directly?
     if (!Call || !CS.isCallee(&U))
       continue;
-    
+
     // Call result not used?
     if (Call->use_empty())
       continue;

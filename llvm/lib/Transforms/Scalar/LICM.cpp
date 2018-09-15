@@ -455,7 +455,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
 
     // Keep track of whether the prefix of instructions visited so far are such
     // that the next instruction visited is guaranteed to execute if the loop
-    // is entered.  
+    // is entered.
     bool IsMustExecute = CurLoop->getHeader() == BB;
 
     for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E;) {
@@ -1186,9 +1186,9 @@ bool isKnownNonEscaping(Value *Object, const TargetLibraryInfo *TLI) {
   if (isa<AllocaInst>(Object))
     // Since the alloca goes out of scope, we know the caller can't retain a
     // reference to it and be well defined.  Thus, we don't need to check for
-    // capture. 
+    // capture.
     return true;
-  
+
   // For all other objects we need to know that the caller can't possibly
   // have gotten a reference to the object.  There are two components of
   // that:
@@ -1282,7 +1282,7 @@ bool llvm::promoteLoopAccessesToScalars(
     // That said, we can't actually make the unwind edge explicit. Therefore,
     // we have to prove that the store is dead along the unwind edge.  We do
     // this by proving that the caller can't have a reference to the object
-    // after return and thus can't possibly load from the object.  
+    // after return and thus can't possibly load from the object.
     Value *Object = GetUnderlyingObject(SomePtr, MDL);
     if (!isKnownNonEscaping(Object, TLI))
       return false;

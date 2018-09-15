@@ -59,9 +59,9 @@ namespace llvm {
   public:
     SparcTargetLowering(const TargetMachine &TM, const SparcSubtarget &STI);
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
-    
+
     bool useSoftFloat() const override;
-    
+
     /// computeKnownBitsForTargetNode - Determine which of the bits specified
     /// in Mask are known to be either zero or one and return them in the
     /// KnownZero/KnownOne bitsets.

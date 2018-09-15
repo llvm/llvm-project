@@ -2243,6 +2243,12 @@ Instruction *InstCombiner::visitBitCast(BitCastInst &CI) {
     Type *DstElTy = DstPTy->getElementType();
     Type *SrcElTy = SrcPTy->getElementType();
 
+    // Casting pointers between the same type, but with different address spaces
+    // is an addrspace cast rather than a bitcast.
+    if ((DstElTy == SrcElTy) &&
+        (DstPTy->getAddressSpace() != SrcPTy->getAddressSpace()))
+      return new AddrSpaceCastInst(Src, DestTy);
+
     // If we are casting a alloca to a pointer to a type of the same
     // size, rewrite the allocation instruction to allocate the "right" type.
     // There is no need to modify malloc calls because it is their bitcast that

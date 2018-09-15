@@ -597,6 +597,9 @@ public:
     return !RI.isSGPRReg(MRI, Dest);
   }
 
+  /// Whether we must prevent this instruction from executing with EXEC = 0.
+  bool hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const;
+
   bool isInlineConstant(const APInt &Imm) const;
 
   bool isInlineConstant(const MachineOperand &MO, uint8_t OperandType) const;

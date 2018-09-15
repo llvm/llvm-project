@@ -86,6 +86,7 @@ set(LLVM_TEST_DEPENDS
           llvm-strip
           llvm-symbolizer
           llvm-tblgen
+          llvm-undname
           llvm-xray
           not
           obj2yaml

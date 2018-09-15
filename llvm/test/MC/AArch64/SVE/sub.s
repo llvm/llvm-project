@@ -286,3 +286,43 @@ sub     z31.d, z31.d, #65280
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff ff e1 25 <unknown>
 
+
+
+// --------------------------------------------------------------------------//
+// Test compatibility with MOVPRFX instruction.
+
+movprfx z23.b, p3/z, z30.b
+// CHECK-INST: movprfx	z23.b, p3/z, z30.b
+// CHECK-ENCODING: [0xd7,0x2f,0x10,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: d7 2f 10 04 <unknown>
+
+sub     z23.b, p3/m, z23.b, z13.b
+// CHECK-INST: sub	z23.b, p3/m, z23.b, z13.b
+// CHECK-ENCODING: [0xb7,0x0d,0x01,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: b7 0d 01 04 <unknown>
+
+movprfx z23, z30
+// CHECK-INST: movprfx	z23, z30
+// CHECK-ENCODING: [0xd7,0xbf,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: d7 bf 20 04 <unknown>
+
+sub     z23.b, p3/m, z23.b, z13.b
+// CHECK-INST: sub	z23.b, p3/m, z23.b, z13.b
+// CHECK-ENCODING: [0xb7,0x0d,0x01,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: b7 0d 01 04 <unknown>
+
+movprfx z31, z6
+// CHECK-INST: movprfx	z31, z6
+// CHECK-ENCODING: [0xdf,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: df bc 20 04 <unknown>
+
+sub     z31.d, z31.d, #65280
+// CHECK-INST: sub	z31.d, z31.d, #65280
+// CHECK-ENCODING: [0xff,0xff,0xe1,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff ff e1 25 <unknown>

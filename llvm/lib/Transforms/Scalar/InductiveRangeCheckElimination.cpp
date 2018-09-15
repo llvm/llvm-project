@@ -735,7 +735,7 @@ static bool isSafeDecreasingBound(const SCEV *Start,
 
   assert(LatchBrExitIdx == 0 &&
          "LatchBrExitIdx should be either 0 or 1");
-            
+
   const SCEV *StepPlusOne = SE.getAddExpr(Step, SE.getOne(Step->getType()));
   unsigned BitWidth = cast<IntegerType>(BoundSCEV->getType())->getBitWidth();
   APInt Min = IsSigned ? APInt::getSignedMinValue(BitWidth) :
@@ -786,7 +786,7 @@ static bool isSafeIncreasingBound(const SCEV *Start,
   const SCEV *StepMinusOne =
     SE.getMinusSCEV(Step, SE.getOne(Step->getType()));
   unsigned BitWidth = cast<IntegerType>(BoundSCEV->getType())->getBitWidth();
-  APInt Max = IsSigned ? APInt::getSignedMaxValue(BitWidth) : 
+  APInt Max = IsSigned ? APInt::getSignedMaxValue(BitWidth) :
     APInt::getMaxValue(BitWidth);
   const SCEV *Limit = SE.getMinusSCEV(SE.getConstant(Max), StepMinusOne);
 
@@ -798,7 +798,7 @@ static bool isSafeIncreasingBound(const SCEV *Start,
 static bool CannotBeMinInLoop(const SCEV *BoundSCEV, Loop *L,
                               ScalarEvolution &SE, bool Signed) {
   unsigned BitWidth = cast<IntegerType>(BoundSCEV->getType())->getBitWidth();
-  APInt Min = Signed ? APInt::getSignedMinValue(BitWidth) : 
+  APInt Min = Signed ? APInt::getSignedMinValue(BitWidth) :
     APInt::getMinValue(BitWidth);
   auto Predicate = Signed ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
   return SE.isAvailableAtLoopEntry(BoundSCEV, L) &&

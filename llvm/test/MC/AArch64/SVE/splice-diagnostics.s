@@ -25,3 +25,13 @@ splice  z0.b, p8, z0.b, z1.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
 // CHECK-NEXT: splice  z0.b, p8, z0.b, z1.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z4.d, p7/z, z6.d
+splice  z4.d, p7, z4.d, z31.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a predicated movprfx, suggest using unpredicated movprfx
+// CHECK-NEXT: splice  z4.d, p7, z4.d, z31.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

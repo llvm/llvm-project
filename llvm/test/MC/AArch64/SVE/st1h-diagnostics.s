@@ -189,3 +189,19 @@ st1h z0.d, p0, [z0.d, #3]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [0, 62].
 // CHECK-NEXT: st1h z0.d, p0, [z0.d, #3]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z31.d, p7/z, z6.d
+st1h    { z31.d }, p7, [z31.d, #62]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: st1h    { z31.d }, p7, [z31.d, #62]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z31, z6
+st1h    { z31.d }, p7, [z31.d, #62]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: st1h    { z31.d }, p7, [z31.d, #62]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

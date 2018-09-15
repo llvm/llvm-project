@@ -104,12 +104,12 @@ public:
   const std::string &getName() const { return Name; }
 
   /// By default, write barriers are replaced with simple store
-  /// instructions. If true, you must provide a custom pass to lower 
+  /// instructions. If true, you must provide a custom pass to lower
   /// calls to \@llvm.gcwrite.
   bool customWriteBarrier() const { return CustomWriteBarriers; }
 
   /// By default, read barriers are replaced with simple load
-  /// instructions. If true, you must provide a custom pass to lower 
+  /// instructions. If true, you must provide a custom pass to lower
   /// calls to \@llvm.gcread.
   bool customReadBarrier() const { return CustomReadBarriers; }
 
@@ -146,7 +146,7 @@ public:
   }
 
   /// By default, roots are left for the code generator so it can generate a
-  /// stack map. If true, you must provide a custom pass to lower 
+  /// stack map. If true, you must provide a custom pass to lower
   /// calls to \@llvm.gcroot.
   bool customRoots() const { return CustomRoots; }
 

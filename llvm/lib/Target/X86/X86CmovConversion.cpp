@@ -622,7 +622,7 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
 
   // If the CMOV group is not packed, e.g., there are debug instructions between
   // first CMOV and last CMOV, then pack the group and make the CMOV instruction
-  // consecutive by moving the debug instructions to after the last CMOV. 
+  // consecutive by moving the debug instructions to after the last CMOV.
   packCmovGroup(Group.front(), Group.back());
 
   // To convert a CMOVcc instruction, we actually have to insert the diamond

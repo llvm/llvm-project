@@ -605,7 +605,7 @@ static Instruction *foldInsSequenceIntoBroadcast(InsertElementInst &InsElt) {
     return nullptr;
 
   Value *SplatVal = InsElt.getOperand(1);
-  InsertElementInst *CurrIE = &InsElt;  
+  InsertElementInst *CurrIE = &InsElt;
   SmallVector<bool, 16> ElementPresent(NumElements, false);
   InsertElementInst *FirstIE = nullptr;
 

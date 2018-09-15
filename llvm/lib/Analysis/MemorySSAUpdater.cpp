@@ -65,7 +65,7 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefRecursive(
 
   if (VisitedBlocks.insert(BB).second) {
     // Mark us visited so we can detect a cycle
-    SmallVector<MemoryAccess *, 8> PhiOps;
+    SmallVector<TrackingVH<MemoryAccess>, 8> PhiOps;
 
     // Recurse to get the values in our predecessors for placement of a
     // potential phi node. This will insert phi nodes if we cycle in order to
@@ -76,14 +76,6 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefRecursive(
     // Now try to simplify the ops to avoid placing a phi.
     // This may return null if we never created a phi yet, that's okay
     MemoryPhi *Phi = dyn_cast_or_null<MemoryPhi>(MSSA->getMemoryAccess(BB));
-    bool PHIExistsButNeedsUpdate = false;
-    // See if the existing phi operands match what we need.
-    // Unlike normal SSA, we only allow one phi node per block, so we can't just
-    // create a new one.
-    if (Phi && Phi->getNumOperands() != 0)
-      if (!std::equal(Phi->op_begin(), Phi->op_end(), PhiOps.begin())) {
-        PHIExistsButNeedsUpdate = true;
-      }
 
     // See if we can avoid the phi by simplifying it.
     auto *Result = tryRemoveTrivialPhi(Phi, PhiOps);
@@ -92,14 +84,20 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefRecursive(
       if (!Phi)
         Phi = MSSA->createMemoryPhi(BB);
 
-      // These will have been filled in by the recursive read we did above.
-      if (PHIExistsButNeedsUpdate) {
-        std::copy(PhiOps.begin(), PhiOps.end(), Phi->op_begin());
-        std::copy(pred_begin(BB), pred_end(BB), Phi->block_begin());
+      // See if the existing phi operands match what we need.
+      // Unlike normal SSA, we only allow one phi node per block, so we can't just
+      // create a new one.
+      if (Phi->getNumOperands() != 0) {
+        // FIXME: Figure out whether this is dead code and if so remove it.
+        if (!std::equal(Phi->op_begin(), Phi->op_end(), PhiOps.begin())) {
+          // These will have been filled in by the recursive read we did above.
+          std::copy(PhiOps.begin(), PhiOps.end(), Phi->op_begin());
+          std::copy(pred_begin(BB), pred_end(BB), Phi->block_begin());
+        }
       } else {
         unsigned i = 0;
         for (auto *Pred : predecessors(BB))
-          Phi->addIncoming(PhiOps[i++], Pred);
+          Phi->addIncoming(&*PhiOps[i++], Pred);
         InsertedPHIs.push_back(Phi);
       }
       Result = Phi;
@@ -199,7 +197,7 @@ MemoryAccess *MemorySSAUpdater::tryRemoveTrivialPhi(MemoryPhi *Phi,
     // not the same, return the phi since it's not eliminatable by us
     if (Same)
       return Phi;
-    Same = cast<MemoryAccess>(Op);
+    Same = cast<MemoryAccess>(&*Op);
   }
   // Never found a non-self reference, the phi is undef
   if (Same == nullptr)
@@ -497,6 +495,35 @@ static MemoryAccess *onlySingleValue(MemoryPhi *MP) {
       return nullptr;
   }
   return MA;
+}
+
+void MemorySSAUpdater::wireOldPredecessorsToNewImmediatePredecessor(
+    BasicBlock *Old, BasicBlock *New, ArrayRef<BasicBlock *> Preds) {
+  assert(!MSSA->getWritableBlockAccesses(New) &&
+         "Access list should be null for a new block.");
+  MemoryPhi *Phi = MSSA->getMemoryAccess(Old);
+  if (!Phi)
+    return;
+  if (pred_size(Old) == 1) {
+    assert(pred_size(New) == Preds.size() &&
+           "Should have moved all predecessors.");
+    MSSA->moveTo(Phi, New, MemorySSA::Beginning);
+  } else {
+    assert(!Preds.empty() && "Must be moving at least one predecessor to the "
+                             "new immediate predecessor.");
+    MemoryPhi *NewPhi = MSSA->createMemoryPhi(New);
+    SmallPtrSet<BasicBlock *, 16> PredsSet(Preds.begin(), Preds.end());
+    Phi->unorderedDeleteIncomingIf([&](MemoryAccess *MA, BasicBlock *B) {
+      if (PredsSet.count(B)) {
+        NewPhi->addIncoming(MA, B);
+        return true;
+      }
+      return false;
+    });
+    Phi->addIncoming(NewPhi, New);
+    if (onlySingleValue(NewPhi))
+      removeMemoryAccess(NewPhi);
+  }
 }
 
 void MemorySSAUpdater::removeMemoryAccess(MemoryAccess *MA) {

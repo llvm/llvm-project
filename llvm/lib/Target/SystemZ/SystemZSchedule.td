@@ -8,75 +8,57 @@
 //===----------------------------------------------------------------------===//
 
 // Scheduler resources
-// Resources ending with a '2' use that resource for 2 cycles. An instruction
-// using two such resources use the mapped unit for 4 cycles, and 2 is added
-// to the total number of uops of the sched class.
 
-// These three resources are used to express decoder grouping rules.
-// The number of decoder slots needed by an instructions is normally
-// one. For a cracked instruction (BeginGroup && !EndGroup) it is
-// two. Expanded instructions (BeginGroup && EndGroup) group alone.
+// These resources are used to express decoder grouping rules.  The number of
+// decoder slots needed by an instructions is normally one, but there are
+// exceptions.
+def NormalGr   : SchedWrite;
+def Cracked    : SchedWrite;
 def GroupAlone : SchedWrite;
 def BeginGroup : SchedWrite;
 def EndGroup   : SchedWrite;
 
-// Latencies, to make code a bit neater. If more than one resource is
-// used for an instruction, the greatest latency (not the sum) will be
-// output by Tablegen. Therefore, in such cases one of these resources
-// is needed.
-def Lat2 : SchedWrite;
-def Lat3 : SchedWrite;
-def Lat4 : SchedWrite;
-def Lat5 : SchedWrite;
-def Lat6 : SchedWrite;
-def Lat7 : SchedWrite;
-def Lat8 : SchedWrite;
-def Lat9 : SchedWrite;
-def Lat10 : SchedWrite;
-def Lat11 : SchedWrite;
-def Lat12 : SchedWrite;
-def Lat15 : SchedWrite;
-def Lat20 : SchedWrite;
-def Lat30 : SchedWrite;
+// A SchedWrite added to other SchedWrites to make LSU latency parameterizable.
+def LSULatency : SchedWrite;
 
-// Fixed-point
-def FXa         : SchedWrite;
-def FXa2        : SchedWrite;
-def FXb         : SchedWrite;
-def FXU         : SchedWrite;
+// Operand WriteLatencies.
+foreach L = 1 - 30 in def "WLat"#L : SchedWrite;
 
-// Load/store unit
-def LSU         : SchedWrite;
+foreach L = 1 - 16 in
+  def "WLat"#L#"LSU" : WriteSequence<[!cast<SchedWrite>("WLat"#L),
+                                      LSULatency]>;
 
-// Model a return without latency, otherwise if-converter will model
-// extra cost and abort (currently there is an assert that checks that
-// all instructions have at least one uop).
-def LSU_lat1    : SchedWrite;
+// ReadAdvances, used for the register operand next to a memory operand,
+// modelling that the register operand is needed later than the address
+// operands.
+def RegReadAdv : SchedRead;
 
-// Floating point unit (zEC12 and earlier)
-def FPU  : SchedWrite;
-def FPU2 : SchedWrite;
-def DFU  : SchedWrite;
-def DFU2 : SchedWrite;
+foreach Num = ["", "2", "3", "4", "5", "6"] in {
+  // Fixed-point units
+  def "FXa"#Num : SchedWrite;
+  def "FXb"#Num : SchedWrite;
+  def "FXU"#Num : SchedWrite;
+  // Load/store unit
+  def "LSU"#Num : SchedWrite;
+  // Vector sub units (z13 and later)
+  def "VecBF"#Num : SchedWrite;
+  def "VecDF"#Num : SchedWrite;
+  def "VecDFX"#Num : SchedWrite;
+  def "VecMul"#Num : SchedWrite;
+  def "VecStr"#Num : SchedWrite;
+  def "VecXsPm"#Num : SchedWrite;
+  // Floating point unit (zEC12 and earlier)
+  def "FPU"#Num : SchedWrite;
+  def "DFU"#Num : SchedWrite;
+}
 
-// Vector sub units (z13 and later)
-def VecBF     : SchedWrite;
-def VecBF2    : SchedWrite;
-def VecDF     : SchedWrite;
-def VecDF2    : SchedWrite;
-def VecDFX    : SchedWrite;
-def VecDFX2   : SchedWrite;
-def VecFPd    : SchedWrite; // Blocking BFP div/sqrt unit.
-def VecMul    : SchedWrite;
-def VecStr    : SchedWrite;
-def VecXsPm   : SchedWrite;
+def VecFPd : SchedWrite; // Blocking BFP div/sqrt unit.
 
-// Virtual branching unit
-def VBU         : SchedWrite;
+def VBU : SchedWrite; // Virtual branching unit
 
+def MCD : SchedWrite; // Millicode
 
 include "SystemZScheduleZ14.td"
 include "SystemZScheduleZ13.td"
 include "SystemZScheduleZEC12.td"
 include "SystemZScheduleZ196.td"
-

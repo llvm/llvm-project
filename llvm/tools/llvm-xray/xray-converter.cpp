@@ -313,6 +313,9 @@ void TraceConverter::exportAsChromeTraceEventFormat(const Trace &Records,
       // (And/Or in loop termination below)
       StackTrieNode *PreviousCursor = nullptr;
       do {
+        if (PreviousCursor != nullptr) {
+          OS << ",\n";
+        }
         writeTraceViewerRecord(Version, OS, StackCursor->FuncId, R.TId, R.PId,
                                Symbolize, FuncIdHelper, EventTimestampUs,
                                *StackCursor, "E");
