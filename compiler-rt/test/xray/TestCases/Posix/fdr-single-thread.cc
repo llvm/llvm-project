@@ -13,16 +13,10 @@
 #include "xray/xray_log_interface.h"
 #include <cassert>
 
-constexpr auto kBufferSize = 16384;
-constexpr auto kBufferMax = 10;
-
 [[clang::xray_always_instrument]] void __attribute__((noinline)) fn() { }
 
 int main(int argc, char *argv[]) {
-  using namespace __xray;
-  FDRLoggingOptions Opts;
-
-  auto status = __xray_log_init(kBufferSize, kBufferMax, &Opts, sizeof(Opts));
+  auto status = __xray_log_init_mode("xray-fdr", "");
   assert(status == XRayLogInitStatus::XRAY_LOG_INITIALIZED);
 
   __xray_patch();

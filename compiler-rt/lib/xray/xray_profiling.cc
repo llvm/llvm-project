@@ -242,15 +242,8 @@ XRayLogInitStatus profilingFinalize() XRAY_NEVER_INSTRUMENT {
 }
 
 XRayLogInitStatus
-profilingLoggingInit(size_t BufferSize, size_t BufferMax, void *Options,
-                     size_t OptionsSize) XRAY_NEVER_INSTRUMENT {
-  if (BufferSize != 0 || BufferMax != 0) {
-    if (Verbosity())
-      Report("__xray_log_init() being used, and is unsupported. Use "
-             "__xray_log_init_mode(...) instead. Bailing out.");
-    return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
-  }
-
+profilingLoggingInit(UNUSED size_t BufferSize, UNUSED size_t BufferMax,
+                     void *Options, size_t OptionsSize) XRAY_NEVER_INSTRUMENT {
   s32 CurrentStatus = XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
   if (!atomic_compare_exchange_strong(&ProfilerLogStatus, &CurrentStatus,
                                       XRayLogInitStatus::XRAY_LOG_INITIALIZING,
