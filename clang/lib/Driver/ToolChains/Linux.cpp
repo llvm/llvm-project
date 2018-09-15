@@ -376,7 +376,14 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   }
 
   addPathIfExists(D, SysRoot + "/usr/lib/" + MultiarchTriple, Paths);
-  addPathIfExists(D, SysRoot + "/usr/lib/../" + OSLibDir, Paths);
+  // 64-bit OpenEmbedded sysroots may not have a /usr/lib dir. So they cannot
+  // find /usr/lib64 as it is referenced as /usr/lib/../lib64. So we handle
+  // this here.
+  if (Triple.getVendor() == llvm::Triple::OpenEmbedded &&
+      Triple.isArch64Bit())
+    addPathIfExists(D, SysRoot + "/usr/" + OSLibDir, Paths);
+  else
+    addPathIfExists(D, SysRoot + "/usr/lib/../" + OSLibDir, Paths);
   if (IsRISCV) {
     StringRef ABIName = tools::riscv::getRISCVABI(Args, Triple);
     addPathIfExists(D, SysRoot + "/" + OSLibDir + "/" + ABIName, Paths);

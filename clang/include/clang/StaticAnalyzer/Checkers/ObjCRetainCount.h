@@ -136,7 +136,7 @@ public:
     // by inlining the function
     NoRetHard
   };
-  
+
   /// Determines the object kind of a tracked object.
   enum ObjKind {
     /// Indicates that the tracked object is a CF object.  This is
@@ -153,30 +153,30 @@ public:
 private:
   Kind K;
   ObjKind O;
-  
+
   RetEffect(Kind k, ObjKind o = AnyObj) : K(k), O(o) {}
-  
+
 public:
   Kind getKind() const { return K; }
-  
+
   ObjKind getObjKind() const { return O; }
-  
+
   bool isOwned() const {
     return K == OwnedSymbol || K == OwnedWhenTrackedReceiver;
   }
-  
+
   bool notOwned() const {
     return K == NotOwnedSymbol;
   }
-  
+
   bool operator==(const RetEffect &Other) const {
     return K == Other.K && O == Other.O;
   }
-  
+
   static RetEffect MakeOwnedWhenTrackedReceiver() {
     return RetEffect(OwnedWhenTrackedReceiver, ObjC);
   }
-  
+
   static RetEffect MakeOwned(ObjKind o) {
     return RetEffect(OwnedSymbol, o);
   }

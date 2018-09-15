@@ -54,7 +54,7 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
   SmallString<256> TypeName;
   llvm::raw_svector_ostream OS(TypeName);
   OS << RD->getKindName() << '.';
-  
+
   // Name the codegen type after the typedef name
   // if there is no tag type name available
   if (RD->getIdentifier()) {
@@ -100,7 +100,7 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
 /// isRecordLayoutComplete - Return true if the specified type is already
 /// completely laid out.
 bool CodeGenTypes::isRecordLayoutComplete(const Type *Ty) const {
-  llvm::DenseMap<const Type*, llvm::StructType *>::const_iterator I = 
+  llvm::DenseMap<const Type*, llvm::StructType *>::const_iterator I =
   RecordDeclTypes.find(Ty);
   return I != RecordDeclTypes.end() && !I->second->isOpaque();
 }
@@ -113,7 +113,7 @@ isSafeToConvert(QualType T, CodeGenTypes &CGT,
 /// isSafeToConvert - Return true if it is safe to convert the specified record
 /// decl to IR and lay it out, false if doing so would cause us to get into a
 /// recursive compilation mess.
-static bool 
+static bool
 isSafeToConvert(const RecordDecl *RD, CodeGenTypes &CGT,
                 llvm::SmallPtrSet<const RecordDecl*, 16> &AlreadyChecked) {
   // If we have already checked this type (maybe the same type is used by-value
@@ -122,14 +122,14 @@ isSafeToConvert(const RecordDecl *RD, CodeGenTypes &CGT,
     return true;
 
   const Type *Key = CGT.getContext().getTagDeclType(RD).getTypePtr();
-  
+
   // If this type is already laid out, converting it is a noop.
   if (CGT.isRecordLayoutComplete(Key)) return true;
-  
+
   // If this type is currently being laid out, we can't recursively compile it.
   if (CGT.isRecordBeingLaidOut(Key))
     return false;
-  
+
   // If this type would require laying out bases that are currently being laid
   // out, don't do it.  This includes virtual base classes which get laid out
   // when a class is translated, even though they aren't embedded by-value into
@@ -140,13 +140,13 @@ isSafeToConvert(const RecordDecl *RD, CodeGenTypes &CGT,
                            CGT, AlreadyChecked))
         return false;
   }
-  
+
   // If this type would require laying out members that are currently being laid
   // out, don't do it.
   for (const auto *I : RD->fields())
     if (!isSafeToConvert(I->getType(), CGT, AlreadyChecked))
       return false;
-  
+
   // If there are no problems, lets do it.
   return true;
 }
@@ -170,7 +170,7 @@ isSafeToConvert(QualType T, CodeGenTypes &CGT,
     return isSafeToConvert(AT->getElementType(), CGT, AlreadyChecked);
 
   // Otherwise, there is no concern about transforming this.  We only care about
-  // things that are contained by-value in a structure that can have another 
+  // things that are contained by-value in a structure that can have another
   // structure as a member.
   return true;
 }
@@ -182,7 +182,7 @@ isSafeToConvert(QualType T, CodeGenTypes &CGT,
 static bool isSafeToConvert(const RecordDecl *RD, CodeGenTypes &CGT) {
   // If no structs are being laid out, we can certainly do this one.
   if (CGT.noRecordsBeingLaidOut()) return true;
-  
+
   llvm::SmallPtrSet<const RecordDecl*, 16> AlreadyChecked;
   return isSafeToConvert(RD, CGT, AlreadyChecked);
 }
@@ -229,7 +229,7 @@ bool CodeGenTypes::isFuncParamTypeConvertible(QualType Ty) {
 bool CodeGenTypes::isFuncTypeConvertible(const FunctionType *FT) {
   if (!isFuncParamTypeConvertible(FT->getReturnType()))
     return false;
-  
+
   if (const FunctionProtoType *FPT = dyn_cast<FunctionProtoType>(FT))
     for (unsigned i = 0, e = FPT->getNumParams(); i != e; i++)
       if (!isFuncParamTypeConvertible(FPT->getParamType(i)))
@@ -259,7 +259,7 @@ void CodeGenTypes::UpdateCompletedType(const TagDecl *TD) {
       DI->completeType(ED);
     return;
   }
-  
+
   // If we completed a RecordDecl that we previously used and converted to an
   // anonymous type, then go ahead and complete it now.
   const RecordDecl *RD = cast<RecordDecl>(TD);
@@ -388,7 +388,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   // RecordTypes are cached and processed specially.
   if (const RecordType *RT = dyn_cast<RecordType>(Ty))
     return ConvertRecordDeclType(RT->getDecl());
-  
+
   // See if type is already cached.
   llvm::DenseMap<const Type *, llvm::Type *>::iterator TCI = TypeCache.find(Ty);
   // If type is found in map then use it. Otherwise, convert type T.
@@ -494,7 +494,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       // Model std::nullptr_t as i8*
       ResultType = llvm::Type::getInt8PtrTy(getLLVMContext());
       break;
-        
+
     case BuiltinType::UInt128:
     case BuiltinType::Int128:
       ResultType = llvm::IntegerType::get(getLLVMContext(), 128);
@@ -510,7 +510,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     case BuiltinType::OCLReserveID:
       ResultType = CGM.getOpenCLRuntime().convertOpenCLSpecificType(Ty);
       break;
-    
+
     case BuiltinType::Dependent:
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \
@@ -574,8 +574,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::ConstantArray: {
     const ConstantArrayType *A = cast<ConstantArrayType>(Ty);
     llvm::Type *EltTy = ConvertTypeForMem(A->getElementType());
-    
-    // Lower arrays of undefined struct type to arrays of i8 just to have a 
+
+    // Lower arrays of undefined struct type to arrays of i8 just to have a
     // concrete type.
     if (!EltTy->isSized()) {
       SkippedLayout = true;
@@ -674,9 +674,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     break;
   }
   }
-  
+
   assert(ResultType && "Didn't convert a type?");
-  
+
   TypeCache[Ty] = ResultType;
   return ResultType;
 }
@@ -709,7 +709,7 @@ llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
   RD = RD->getDefinition();
   if (!RD || !RD->isCompleteDefinition() || !Ty->isOpaque())
     return Ty;
-  
+
   // If converting this type would cause us to infinitely loop, don't do it!
   if (!isSafeToConvert(RD, *this)) {
     DeferredRecords.push_back(RD);
@@ -720,12 +720,12 @@ llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
   bool InsertResult = RecordsBeingLaidOut.insert(Key).second;
   (void)InsertResult;
   assert(InsertResult && "Recursively compiling a struct?");
-  
+
   // Force conversion of non-virtual base classes recursively.
   if (const CXXRecordDecl *CRD = dyn_cast<CXXRecordDecl>(RD)) {
     for (const auto &I : CRD->bases()) {
       if (I.isVirtual()) continue;
-      
+
       ConvertRecordDeclType(I.getType()->getAs<RecordType>()->getDecl());
     }
   }
@@ -737,13 +737,13 @@ llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
   // We're done laying out this struct.
   bool EraseResult = RecordsBeingLaidOut.erase(Key); (void)EraseResult;
   assert(EraseResult && "struct not in RecordsBeingLaidOut set?");
-   
+
   // If this struct blocked a FunctionType conversion, then recompute whatever
   // was derived from that.
   // FIXME: This is hugely overconservative.
   if (SkippedLayout)
     TypeCache.clear();
-    
+
   // If we're done converting the outer-most record, then convert any deferred
   // structs as well.
   if (RecordsBeingLaidOut.empty())
@@ -799,7 +799,7 @@ bool CodeGenTypes::isZeroInitializable(QualType T) {
   // We have to ask the ABI about member pointers.
   if (const MemberPointerType *MPT = T->getAs<MemberPointerType>())
     return getCXXABI().isZeroInitializable(MPT);
-  
+
   // Everything else is okay.
   return true;
 }

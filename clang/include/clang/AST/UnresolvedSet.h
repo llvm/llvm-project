@@ -146,7 +146,7 @@ template <unsigned InlineCapacity> class UnresolvedSet :
   SmallVector<DeclAccessPair, InlineCapacity> Decls;
 };
 
- 
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_UNRESOLVEDSET_H

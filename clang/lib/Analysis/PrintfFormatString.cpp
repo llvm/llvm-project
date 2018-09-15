@@ -348,7 +348,7 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
       if (Target.getTriple().isOSMSVCRT())
         k = ConversionSpecifier::ZArg;
   }
-  
+
   // Check to see if we used the Objective-C modifier flags with
   // a conversion specifier other than '@'.
   if (k != ConversionSpecifier::ObjCObjArg &&
@@ -416,9 +416,9 @@ bool clang::analyze_format_string::ParseFormatStringHasSArg(const char *I,
                                                             const char *E,
                                                             const LangOptions &LO,
                                                             const TargetInfo &Target) {
-  
+
   unsigned argIndex = 0;
-  
+
   // Keep looking for a %s format specifier until we have exhausted the string.
   FormatStringHandler H;
   while (I != E) {

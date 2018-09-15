@@ -1,4 +1,4 @@
-//===--- IndexDataConsumer.h - Abstract index data consumer ---------------===//
+//===--- IndexDataConsumer.h - Abstract index data consumer -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

@@ -1792,3 +1792,61 @@
 // CHECK-LD-RHLE7-DTS: Selected GCC installation: [[GCC_INSTALL:[[SYSROOT]]/lib/gcc/x86_64-redhat-linux/7]]
 // CHECK-LD-RHEL7-DTS-NOT: /usr/bin/ld
 // CHECK-LD-RHLE7-DTS: [[GCC_INSTALL]/../../../bin/ld
+
+// Check whether gcc7 install works fine on Amazon Linux AMI
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-amazon-linux -rtlib=libgcc \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/ami_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD-AMI %s
+// CHECK-LD-AMI-NOT: warning:
+// CHECK-LD-AMI: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-LD-AMI: "--eh-frame-hdr"
+// CHECK-LD-AMI: "-m" "elf_x86_64"
+// CHECK-LD-AMI: "-dynamic-linker"
+// CHECK-LD-AMI: "{{.*}}/usr/lib/gcc/x86_64-amazon-linux/7{{/|\\\\}}crtbegin.o"
+// CHECK-LD-AMI: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-amazon-linux/7"
+// CHECK-LD-AMI: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-amazon-linux/7/../../../../lib64"
+// CHECK-LD-AMI: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-amazon-linux/7/../../.."
+// CHECK-LD-AMI: "-L[[SYSROOT]]/lib"
+// CHECK-LD-AMI: "-L[[SYSROOT]]/usr/lib"
+// CHECK-LD-AMI: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-LD-AMI: "-lc"
+// CHECK-LD-AMI: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+
+// Check whether the OpenEmbedded ARM libs are added correctly.
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=arm-oe-linux-gnueabi -rtlib=libgcc \
+// RUN:     --sysroot=%S/Inputs/openembedded_arm_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-OE-ARM %s
+
+// CHECK-OE-ARM: "-cc1" "-triple" "armv4t-oe-linux-gnueabi"
+// CHECK-OE-ARM: ld{{.*}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-OE-ARM: "-m" "armelf_linux_eabi" "-dynamic-linker"
+// CHECK-OE-ARM: "[[SYSROOT]]/usr/lib/arm-oe-linux-gnueabi/6.3.0/../../../lib{{/|\\\\}}crt1.o"
+// CHECK-OE-ARM: "[[SYSROOT]]/usr/lib/arm-oe-linux-gnueabi/6.3.0/../../../lib{{/|\\\\}}crti.o"
+// CHECK-OE-ARM: "[[SYSROOT]]/usr/lib/arm-oe-linux-gnueabi/6.3.0{{/|\\\\}}crtbegin.o"
+// CHECK-OE-ARM: "-L[[SYSROOT]]/usr/lib/arm-oe-linux-gnueabi/6.3.0"
+// CHECK-OE-ARM: "-L[[SYSROOT]]/usr/lib/arm-oe-linux-gnueabi"
+// CHECK-OE-ARM: "-L[[SYSROOT]]/usr/lib"
+// CHECK-OE-ARM: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-OE-ARM: "[[SYSROOT]]/usr/lib/arm-oe-linux-gnueabi/6.3.0{{/|\\\\}}crtend.o"
+// CHECK-OE-ARM: "[[SYSROOT]]/usr/lib/arm-oe-linux-gnueabi/6.3.0/../../../lib{{/|\\\\}}crtn.o"
+
+// Check whether the OpenEmbedded AArch64 libs are added correctly.
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=aarch64-oe-linux -rtlib=libgcc \
+// RUN:     --sysroot=%S/Inputs/openembedded_aarch64_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-OE-AARCH64 %s
+
+// CHECK-OE-AARCH64: "-cc1" "-triple" "aarch64-oe-linux"
+// CHECK-OE-AARCH64: ld{{.*}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-OE-AARCH64: "-m" "aarch64linux" "-dynamic-linker"
+// CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../lib64{{/|\\\\}}crt1.o"
+// CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../lib64{{/|\\\\}}crti.o"
+// CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0{{/|\\\\}}crtbegin.o"
+// CHECK-OE-AARCH64: "-L[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0"
+// CHECK-OE-AARCH64: "-L[[SYSROOT]]/usr/lib64"
+// CHECK-OE-AARCH64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0{{/|\\\\}}crtend.o"
+// CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../lib64{{/|\\\\}}crtn.o"

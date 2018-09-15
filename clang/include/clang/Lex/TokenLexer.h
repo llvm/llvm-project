@@ -65,7 +65,7 @@ class TokenLexer {
   /// Source location pointing at the source location entry chunk that
   /// was reserved for the current macro expansion.
   SourceLocation MacroExpansionStart;
-  
+
   /// The offset of the macro expansion in the
   /// "source location address space".
   unsigned MacroStartSLocOffset;

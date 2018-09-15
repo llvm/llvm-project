@@ -2,10 +2,6 @@
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules -Wno-private-module -fdisable-module-hash -fsyntax-only -I %S/Inputs/Headers -F %S/Inputs/Frameworks %s -verify
 // RUN: %clang_cc1 -ast-print %t/ModulesCache/SimpleKit.pcm | FileCheck %s
 
-// REQUIRES: rdar40296113
-// This test relies on -ast-print including implicit attributes, but it no
-// longer does that as of https://reviews.llvm.org/D46894.
-
 #import <SomeKit/SomeKit.h>
 #import <SimpleKit/SimpleKit.h>
 

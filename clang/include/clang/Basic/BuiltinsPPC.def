@@ -58,7 +58,7 @@ BUILTIN(__builtin_altivec_vctuxs, "V4UiV4fIi", "")
 
 BUILTIN(__builtin_altivec_dss, "vUi", "")
 BUILTIN(__builtin_altivec_dssall, "v", "")
-BUILTIN(__builtin_altivec_dst, "vvC*iUi", "") 
+BUILTIN(__builtin_altivec_dst, "vvC*iUi", "")
 BUILTIN(__builtin_altivec_dstt, "vvC*iUi", "")
 BUILTIN(__builtin_altivec_dstst, "vvC*iUi", "")
 BUILTIN(__builtin_altivec_dststt, "vvC*iUi", "")

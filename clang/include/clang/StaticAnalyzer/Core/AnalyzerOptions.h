@@ -130,23 +130,23 @@ public:
 
   /// Pair of checker name and enable/disable.
   std::vector<std::pair<std::string, bool>> CheckersControlList;
-  
+
   /// A key-value table of use-specified configuration values.
   ConfigTable Config;
   AnalysisStores AnalysisStoreOpt = RegionStoreModel;
   AnalysisConstraints AnalysisConstraintsOpt = RangeConstraintsModel;
   AnalysisDiagClients AnalysisDiagOpt = PD_HTML;
   AnalysisPurgeMode AnalysisPurgeOpt = PurgeStmt;
-  
+
   std::string AnalyzeSpecificFunction;
 
   /// Store full compiler invocation for reproducible instructions in the
   /// generated report.
   std::string FullCompilerInvocation;
-  
+
   /// The maximum number of times the analyzer visits a block.
   unsigned maxBlockVisitOnPath;
-  
+
   /// Disable all analyzer checks.
   ///
   /// This flag allows one to disable analyzer checks on the code processed by
@@ -170,21 +170,21 @@ public:
   /// precision until we have a better way to lazily evaluate such logic.  The
   /// downside is that it eagerly bifurcates paths.
   unsigned eagerlyAssumeBinOpBifurcation : 1;
-  
+
   unsigned TrimGraph : 1;
   unsigned visualizeExplodedGraphWithGraphViz : 1;
   unsigned visualizeExplodedGraphWithUbiGraph : 1;
   unsigned UnoptimizedCFG : 1;
   unsigned PrintStats : 1;
-  
+
   /// Do not re-analyze paths leading to exhausted nodes with a different
   /// strategy. We get better code coverage when retry is enabled.
   unsigned NoRetryExhausted : 1;
-  
+
   /// The inlining stack depth limit.
   // Cap the stack depth at 4 calls (5 stack frames, base + 4 calls).
   unsigned InlineMaxStackDepth = 5;
-  
+
   /// The mode of function selection used during inlining.
   AnalysisInliningMode InliningMode = NoRedundancy;
 
@@ -211,7 +211,7 @@ private:
     UMK_Deep = 2
   };
 
-  /// Controls the high-level analyzer mode, which influences the default 
+  /// Controls the high-level analyzer mode, which influences the default
   /// settings for some of the lower-level config options (such as IPAMode).
   /// \sa getUserMode
   UserModeKind UserMode = UMK_NotSet;
@@ -221,7 +221,7 @@ private:
 
   /// Controls which C++ member functions will be considered for inlining.
   CXXInlineableMemberKind CXXMemberInliningMode;
-  
+
   /// \sa includeImplicitDtorsInCFG
   Optional<bool> IncludeImplicitDtorsInCFG;
 
@@ -239,7 +239,7 @@ private:
 
   /// \sa mayInlineCXXStandardLibrary
   Optional<bool> InlineCXXStandardLibrary;
-  
+
   /// \sa includeScopesInCFG
   Optional<bool> IncludeScopesInCFG;
 
@@ -318,8 +318,8 @@ private:
   /// \sa shouldDisplayNotesAsEvents
   Optional<bool> DisplayNotesAsEvents;
 
-  /// \sa shouldAggressivelySimplifyRelationalComparison
-  Optional<bool> AggressiveRelationalComparisonSimplification;
+  /// \sa shouldAggressivelySimplifyBinaryOperation
+  Optional<bool> AggressiveBinaryOperationSimplification;
 
   /// \sa getCTUDir
   Optional<StringRef> CTUDir;
@@ -690,19 +690,19 @@ public:
   /// to false when unset.
   bool shouldDisplayNotesAsEvents();
 
-  /// Returns true if SValBuilder should rearrange comparisons of symbolic
-  /// expressions which consist of a sum of a symbol and a concrete integer
-  /// into the format where symbols are on the left-hand side and the integer
-  /// is on the right. This is only done if both symbols and both concrete
-  /// integers are signed, greater than or equal to the quarter of the minimum
-  /// value of the type and less than or equal to the quarter of the maximum
-  /// value of that type.
+  /// Returns true if SValBuilder should rearrange comparisons and additive
+  /// operations of symbolic expressions which consist of a sum of a symbol and
+  /// a concrete integer into the format where symbols are on the left-hand
+  /// side and the integer is on the right. This is only done if both symbols
+  /// and both concrete integers are signed, greater than or equal to the
+  /// quarter of the minimum value of the type and less than or equal to the
+  /// quarter of the maximum value of that type.
   ///
-  /// A + n <REL> B + m becomes A - B <REL> m - n, where A and B symbolic,
-  /// n and m are integers. <REL> is any of '==', '!=', '<', '<=', '>' or '>='.
-  /// The rearrangement also happens with '-' instead of '+' on either or both
-  /// side and also if any or both integers are missing.
-  bool shouldAggressivelySimplifyRelationalComparison();
+  /// A + n <OP> B + m becomes A - B <OP> m - n, where A and B symbolic,
+  /// n and m are integers. <OP> is any of '==', '!=', '<', '<=', '>', '>=',
+  /// '+' or '-'. The rearrangement also happens with '-' instead of '+' on
+  // either or both side and also if any or both integers are missing.
+  bool shouldAggressivelySimplifyBinaryOperation();
 
   /// Returns the directory containing the CTU related files.
   StringRef getCTUDir();
@@ -722,9 +722,9 @@ public:
   /// the option will be ignored.
   bool shouldElideConstructors();
 };
-  
+
 using AnalyzerOptionsRef = IntrusiveRefCntPtr<AnalyzerOptions>;
-  
+
 } // namespace clang
 
 #endif // LLVM_CLANG_STATICANALYZER_CORE_ANALYZEROPTIONS_H

@@ -46,7 +46,9 @@ sections with improvements to Clang's support for those languages.
 Major New Features
 ------------------
 
--  ...
+- A new Implicit Conversion Sanitizer (``-fsanitize=implicit-conversion``) group
+  was added. Please refer to the :ref:`release-notes-ubsan` section of the
+  release notes for the details.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -173,7 +175,7 @@ Windows Support
      the pch file (matching cl.exe).  This speeds up builds using pch files
      by around 30%.
 
-   - The /Ycfoo.h and /Yufoo.h flags an now be used without /FIfoo.h when
+   - The /Ycfoo.h and /Yufoo.h flags can now be used without /FIfoo.h when
      foo.h is instead included by an explicit `#include` directive. This means
      Visual Studio's default stdafx.h setup now uses precompiled headers with
      clang-cl.
@@ -216,7 +218,21 @@ OpenCL C Language Changes in Clang
 OpenMP Support in Clang
 ----------------------------------
 
-- ...
+- Clang gained basic support for OpenMP 4.5 offloading for NVPTX target.
+   To compile your program for NVPTX target use the following options:
+   `-fopenmp -fopenmp-targets=nvptx64-nvidia-cuda` for 64 bit platforms or
+   `-fopenmp -fopenmp-targets=nvptx-nvidia-cuda` for 32 bit platform.
+
+- Passing options to the OpenMP device offloading toolchain can be done using
+  the `-Xopenmp-target=<triple> -opt=val` flag. In this way the `-opt=val`
+  option will be forwarded to the respective OpenMP device offloading toolchain
+  described by the triple. For example passing the compute capability to
+  the OpenMP NVPTX offloading toolchain can be done as follows:
+  `-Xopenmp-target=nvptx64-nvidia-cuda -march=sm_60`. For the case when only one
+  target offload toolchain is specified under the `-fopenmp-targets=<triples>`
+  option, then the triple can be skipped: `-Xopenmp-target -march=sm_60`.
+
+- Other bugfixes.
 
 CUDA Support in Clang
 ---------------------
@@ -266,10 +282,36 @@ Static Analyzer
 
 ...
 
+.. _release-notes-ubsan:
+
 Undefined Behavior Sanitizer (UBSan)
 ------------------------------------
 
-* ...
+* A new Implicit Conversion Sanitizer (``-fsanitize=implicit-conversion``) group
+  was added.
+
+  Currently, only one type of issues is caught - implicit integer truncation
+  (``-fsanitize=implicit-integer-truncation``), also known as integer demotion.
+  While there is a ``-Wconversion`` diagnostic group that catches this kind of
+  issues, it is both noisy, and does not catch **all** the cases.
+
+  .. code-block:: c++
+
+      unsigned char store = 0;
+
+      bool consume(unsigned int val);
+
+      void test(unsigned long val) {
+        if (consume(val)) // the value may have been silently truncated.
+          store = store + 768; // before addition, 'store' was promoted to int.
+        (void)consume((unsigned int)val); // OK, the truncation is explicit.
+      }
+
+  Just like other ``-fsanitize=integer`` checks, these issues are **not**
+  undefined behaviour. But they are not *always* intentional, and are somewhat
+  hard to track down. This group is **not** enabled by ``-fsanitize=undefined``,
+  but the ``-fsanitize=implicit-integer-truncation`` check
+  is enabled by ``-fsanitize=integer``.
 
 Core Analysis Improvements
 ==========================

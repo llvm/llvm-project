@@ -312,11 +312,11 @@ def compareStats(resultsA, resultsB):
             # Only apply highlighting when writing to TTY and it's not Windows
             if sys.stdout.isatty() and os.name != 'nt':
                 if valB != 0:
-                  ratio = (valB - valA) / valB
-                  if ratio < -0.2:
-                      report = Colors.GREEN + report + Colors.CLEAR
-                  elif ratio > 0.2:
-                      report = Colors.RED + report + Colors.CLEAR
+                    ratio = (valB - valA) / valB
+                    if ratio < -0.2:
+                        report = Colors.GREEN + report + Colors.CLEAR
+                    elif ratio > 0.2:
+                        report = Colors.RED + report + Colors.CLEAR
             print "\t %s %s" % (kkey, report)
 
 def dumpScanBuildResultsDiff(dirA, dirB, opts, deleteEmpty=True,
@@ -324,7 +324,7 @@ def dumpScanBuildResultsDiff(dirA, dirB, opts, deleteEmpty=True,
     # Load the run results.
     resultsA = loadResults(dirA, opts, opts.rootA, deleteEmpty)
     resultsB = loadResults(dirB, opts, opts.rootB, deleteEmpty)
-    if resultsA.stats:
+    if opts.show_stats:
         compareStats(resultsA, resultsB)
     if opts.stats_only:
         return
@@ -399,6 +399,8 @@ def generate_option_parser():
                             Requires matplotlib")
     parser.add_option("--stats-only", action="store_true", dest="stats_only",
                       default=False, help="Only show statistics on reports")
+    parser.add_option("--show-stats", action="store_true", dest="show_stats",
+                      default=False, help="Show change in statistics")
     return parser
 
 

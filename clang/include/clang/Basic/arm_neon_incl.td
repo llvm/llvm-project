@@ -9,7 +9,7 @@
 //
 //  This file defines data structures shared by arm_neon.td and arm_fp16.td.
 //  It constains base operation classes, operations, instructions, instruction
-//  modifiers, etc.  
+//  modifiers, etc.
 //
 //===----------------------------------------------------------------------===//
 //

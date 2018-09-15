@@ -32,7 +32,7 @@ class SourceManager;
 
 using DiagOrStoredDiag =
     llvm::PointerUnion<const Diagnostic *, const StoredDiagnostic *>;
-  
+
 /// Class to encapsulate the logic for formatting a diagnostic message.
 ///
 /// Actual "printing" logic is implemented by subclasses.
@@ -49,20 +49,20 @@ class DiagnosticRenderer {
 protected:
   const LangOptions &LangOpts;
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
-  
+
   /// The location of the previous diagnostic if known.
   ///
   /// This will be invalid in cases where there is no (known) previous
   /// diagnostic location, or that location itself is invalid or comes from
   /// a different source manager than SM.
   SourceLocation LastLoc;
-  
+
   /// The location of the last include whose stack was printed if known.
   ///
   /// Same restriction as LastLoc essentially, but tracking include stack
   /// root locations rather than diagnostic locations.
   SourceLocation LastIncludeLoc;
-  
+
   /// The level of the last diagnostic emitted.
   ///
   /// The level of the last diagnostic emitted. Used to detect level changes
@@ -71,7 +71,7 @@ protected:
 
   DiagnosticRenderer(const LangOptions &LangOpts,
                      DiagnosticOptions *DiagOpts);
-  
+
   virtual ~DiagnosticRenderer();
 
   virtual void emitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
@@ -137,7 +137,7 @@ public:
 
   void emitStoredDiagnostic(StoredDiagnostic &Diag);
 };
-  
+
 /// Subclass of DiagnosticRender that turns all subdiagostics into explicit
 /// notes.  It is up to subclasses to further define the behavior.
 class DiagnosticNoteRenderer : public DiagnosticRenderer {

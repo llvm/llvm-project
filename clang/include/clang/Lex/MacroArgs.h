@@ -27,7 +27,7 @@ namespace clang {
 
 /// MacroArgs - An instance of this class captures information about
 /// the formal arguments specified to a function-like macro invocation.
-class MacroArgs final 
+class MacroArgs final
     : private llvm::TrailingObjects<MacroArgs, Token> {
 
   friend TrailingObjects;
@@ -43,7 +43,7 @@ class MacroArgs final
   /// if in strict mode and the C99 varargs macro had only a ... argument, this
   /// is false.
   bool VarargsElided;
-  
+
   /// PreExpArgTokens - Pre-expanded tokens for arguments that need them.  Empty
   /// if not yet computed.  This includes the EOF marker at the end of the
   /// stream.
@@ -115,7 +115,7 @@ public:
   /// Returns true if the macro was defined with a variadic (ellipsis) parameter
   /// AND was invoked with at least one token supplied as a variadic argument.
   ///
-  /// \code 
+  /// \code
   ///   #define F(a)  a
   ///   #define V(a, ...) __VA_OPT__(a)
   ///   F()    <-- returns false on this invocation.
@@ -123,7 +123,7 @@ public:
   ///   V(,)   <-- returns false on this invocation.
   /// \endcode
   ///
- 
+
   bool invokedWithVariadicArgument(const MacroInfo *const MI) const;
 
   /// StringifyArgument - Implement C99 6.10.3.2p2, converting a sequence of
@@ -135,8 +135,8 @@ public:
                                  Preprocessor &PP, bool Charify,
                                  SourceLocation ExpansionLocStart,
                                  SourceLocation ExpansionLocEnd);
-  
-  
+
+
   /// deallocate - This should only be called by the Preprocessor when managing
   /// its freelist.
   MacroArgs *deallocate();

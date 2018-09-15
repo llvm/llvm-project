@@ -114,7 +114,7 @@ protected:
   /// contains the receiver (object) and the expected class.
   llvm::StructType *ObjCSuperTy;
   /// struct objc_super*.  The type of the argument to the superclass message
-  /// lookup functions.  
+  /// lookup functions.
   llvm::PointerType *PtrToObjCSuperTy;
   /// LLVM type for selectors.  Opaque pointer (i8*) unless a header declaring
   /// SEL is included in a header somewhere, in which case it will be whatever
@@ -159,7 +159,7 @@ protected:
   llvm::IntegerType *LongTy;
   /// LLVM type for C size_t.  Used in various runtime data structures.
   llvm::IntegerType *SizeTy;
-  /// LLVM type for C intptr_t.  
+  /// LLVM type for C intptr_t.
   llvm::IntegerType *IntPtrTy;
   /// LLVM type for C ptrdiff_t.  Mainly used in property accessor functions.
   llvm::IntegerType *PtrDiffTy;
@@ -197,7 +197,7 @@ protected:
 
   /// Helper function that generates a constant string and returns a pointer to
   /// the start of the string.  The result of this function can be used anywhere
-  /// where the C code specifies const char*.  
+  /// where the C code specifies const char*.
   llvm::Constant *MakeConstantString(StringRef Str, const char *Name = "") {
     ConstantAddress Array = CGM.GetAddrOfConstantCString(Str, Name);
     return llvm::ConstantExpr::getGetElementPtr(Array.getElementType(),
@@ -243,7 +243,7 @@ protected:
     return MakeConstantString(PD->getNameAsString());
   }
 
-  /// Push the property attributes into two structure fields. 
+  /// Push the property attributes into two structure fields.
   void PushPropertyAttributes(ConstantStructBuilder &Fields,
       const ObjCPropertyDecl *property, bool isSynthesized=true, bool
       isDynamic=true) {
@@ -377,7 +377,7 @@ protected:
   /// Runtime functions used for memory management in GC mode.  Note that clang
   /// supports code generation for calling these functions, but neither GNU
   /// runtime actually supports this API properly yet.
-  LazyRuntimeFunction IvarAssignFn, StrongCastAssignFn, MemMoveFn, WeakReadFn, 
+  LazyRuntimeFunction IvarAssignFn, StrongCastAssignFn, MemMoveFn, WeakReadFn,
     WeakAssignFn, GlobalAssignFn;
 
   typedef std::pair<std::string, std::string> ClassAliasPair;
@@ -554,7 +554,7 @@ protected:
   /// stored in a 64-bit value with the low bit set to 1 and the remaining 63
   /// bits set to their values, LSB first, while larger ones are stored in a
   /// structure of this / form:
-  /// 
+  ///
   /// struct { int32_t length; int32_t values[length]; };
   ///
   /// The values in the array are stored in host-endian format, with the least
@@ -810,7 +810,7 @@ class CGObjCGNUstep : public CGObjCGNU {
       // Slot_t objc_slot_lookup_super(struct objc_super*, SEL);
       SlotLookupSuperFn.init(&CGM, "objc_slot_lookup_super", SlotTy,
                              PtrToObjCSuperTy, SelectorTy);
-      // If we're in ObjC++ mode, then we want to make 
+      // If we're in ObjC++ mode, then we want to make
       if (CGM.getLangOpts().CPlusPlus) {
         llvm::Type *VoidTy = llvm::Type::getVoidTy(VMContext);
         // void *__cxa_begin_catch(void *e)
@@ -892,7 +892,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   static constexpr const char *const SelSection = "__objc_selectors";
   /// The section for classes.
   static constexpr const char *const ClsSection = "__objc_classes";
-  /// The section for references to classes.  
+  /// The section for references to classes.
   static constexpr const char *const ClsRefSection = "__objc_class_refs";
   /// The section for categories.
   static constexpr const char *const CatSection = "__objc_cats";
@@ -956,8 +956,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
 
     bool isNonASCII = SL->containsNonAscii();
 
-    auto LiteralLength = SL->getLength(); 
-   
+    auto LiteralLength = SL->getLength();
+
     if ((CGM.getTarget().getPointerWidth(0) == 64) &&
         (LiteralLength < 9) && !isNonASCII) {
       // Tiny strings are only used on 64-bit platforms.  They store 8 7-bit
@@ -1224,7 +1224,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     std::string Name = SymbolForProtocol(ProtocolName);
     auto *GV = TheModule.getGlobalVariable(Name);
     if (!GV) {
-      // Emit a placeholder symbol.  
+      // Emit a placeholder symbol.
       GV = new llvm::GlobalVariable(TheModule, ProtocolTy, false,
           llvm::GlobalValue::ExternalLinkage, nullptr, Name);
       GV->setAlignment(CGM.getPointerAlign().getQuantity());
@@ -1281,7 +1281,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
       return Protocol;
 
     EmittedProtocol = true;
-    
+
     // Use the protocol definition, if there is one.
     if (const ObjCProtocolDecl *Def = PD->getDefinition())
       PD = Def;
@@ -1680,7 +1680,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
           OffsetVar = new llvm::GlobalVariable(TheModule, IntTy,
             false, llvm::GlobalValue::ExternalLinkage,
             OffsetValue, OffsetName);
-        auto ivarVisibility = 
+        auto ivarVisibility =
             (IVD->getAccessControl() == ObjCIvarDecl::Private ||
              IVD->getAccessControl() == ObjCIvarDecl::Package ||
              classDecl->getVisibility() == HiddenVisibility) ?
@@ -1700,14 +1700,14 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
         // Bits 0-1 are ownership.
         // Bit 2 indicates an extended type encoding
         // Bits 3-8 contain log2(aligment)
-        ivarBuilder.addInt(Int32Ty, 
+        ivarBuilder.addInt(Int32Ty,
             (align << 3) | (1<<2) |
             FlagsForOwnership(ivarTy.getQualifiers().getObjCLifetime()));
         ivarBuilder.finishAndAddTo(ivarArrayBuilder);
       }
       ivarArrayBuilder.finishAndAddTo(ivarListBuilder);
       auto ivarList = ivarListBuilder.finishAndCreateGlobal(".objc_ivar_list",
-          CGM.getPointerAlign(), /*constant*/ false, 
+          CGM.getPointerAlign(), /*constant*/ false,
           llvm::GlobalValue::PrivateLinkage);
       classFields.add(ivarList);
     }
@@ -2448,7 +2448,7 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
   // returns.  With GCC, this generates a random return value (whatever happens
   // to be on the stack / in those registers at the time) on most platforms,
   // and generates an illegal instruction trap on SPARC.  With LLVM it corrupts
-  // the stack.  
+  // the stack.
   bool isPointerSizedReturn = (ResultType->isAnyPointerType() ||
       ResultType->isIntegralOrEnumerationType() || ResultType->isVoidType());
 
@@ -2461,7 +2461,7 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
     messageBB = CGF.createBasicBlock("msgSend");
     continueBB = CGF.createBasicBlock("continue");
 
-    llvm::Value *isNil = Builder.CreateICmpEQ(Receiver, 
+    llvm::Value *isNil = Builder.CreateICmpEQ(Receiver,
             llvm::Constant::getNullValue(Receiver->getType()));
     Builder.CreateCondBr(isNil, continueBB, messageBB);
     CGF.EmitBlock(messageBB);
@@ -2495,7 +2495,7 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
 
   // If we have non-legacy dispatch specified, we try using the objc_msgSend()
   // functions.  These are not supported on all platforms (or all runtimes on a
-  // given platform), so we 
+  // given platform), so we
   switch (CGM.getCodeGenOpts().getObjCDispatchMethod()) {
     case CodeGenOptions::Legacy:
       imp = LookupIMP(CGF, Receiver, cmd, node, MSI);
@@ -2720,7 +2720,7 @@ llvm::Constant *CGObjCGNU::GenerateClassStructure(
 
   // Fill in the structure
 
-  // isa 
+  // isa
   Elements.addBitCast(MetaClass, PtrToInt8Ty);
   // super_class
   Elements.add(SuperClass);
@@ -2869,7 +2869,7 @@ CGObjCGNU::GenerateEmptyProtocol(StringRef ProtocolName) {
 
 void CGObjCGNU::GenerateProtocol(const ObjCProtocolDecl *PD) {
   std::string ProtocolName = PD->getNameAsString();
-  
+
   // Use the protocol definition, if there is one.
   if (const ObjCProtocolDecl *Def = PD->getDefinition())
     PD = Def;
@@ -2977,7 +2977,7 @@ void CGObjCGNU::GenerateProtocolHolderCategory() {
 /// stored in a 64-bit value with the low bit set to 1 and the remaining 63
 /// bits set to their values, LSB first, while larger ones are stored in a
 /// structure of this / form:
-/// 
+///
 /// struct { int32_t length; int32_t values[length]; };
 ///
 /// The values in the array are stored in host-endian format, with the least
@@ -3200,7 +3200,7 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
   }
 
   // Get the size of instances.
-  int instanceSize = 
+  int instanceSize =
     Context.getASTObjCImplementationLayout(OID).getSize().getQuantity();
 
   // Collect information about instance variables.
@@ -3291,7 +3291,7 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
   // Collect the same information about synthesized properties, which don't
   // show up in the instance method lists.
   for (auto *propertyImpl : OID->property_impls())
-    if (propertyImpl->getPropertyImplementation() == 
+    if (propertyImpl->getPropertyImplementation() ==
         ObjCPropertyImplDecl::Synthesize) {
       ObjCPropertyDecl *property = propertyImpl->getPropertyDecl();
       auto addPropertyMethod = [&](const ObjCMethodDecl *accessor) {
@@ -3718,7 +3718,7 @@ void CGObjCGNU::EmitTryStmt(CodeGenFunction &CGF,
   // interoperate very well with foreign exceptions.
   //
   // In Objective-C++ mode, we actually emit something equivalent to the C++
-  // exception handler. 
+  // exception handler.
   EmitTryCatchStmt(CGF, S, EnterCatchFn, ExitCatchFn, ExceptionReThrowFn);
 }
 

@@ -107,7 +107,7 @@ private:
   void moveStateToNewBlock(LineState &State);
 
   /// Reformats a raw string literal.
-  /// 
+  ///
   /// \returns An extra penalty induced by reformatting the token.
   unsigned reformatRawStringLiteral(const FormatToken &Current,
                                     LineState &State,

@@ -131,9 +131,14 @@ SANITIZER_GROUP("undefined", Undefined,
 // -fsanitize=undefined-trap is an alias for -fsanitize=undefined.
 SANITIZER_GROUP("undefined-trap", UndefinedTrap, Undefined)
 
+// ImplicitConversionSanitizer
+SANITIZER("implicit-integer-truncation", ImplicitIntegerTruncation)
+SANITIZER_GROUP("implicit-conversion", ImplicitConversion,
+                ImplicitIntegerTruncation)
+
 SANITIZER_GROUP("integer", Integer,
-                SignedIntegerOverflow | UnsignedIntegerOverflow | Shift |
-                IntegerDivideByZero)
+                ImplicitIntegerTruncation | IntegerDivideByZero | Shift |
+                    SignedIntegerOverflow | UnsignedIntegerOverflow)
 
 SANITIZER("local-bounds", LocalBounds)
 SANITIZER_GROUP("bounds", Bounds, ArrayBounds | LocalBounds)

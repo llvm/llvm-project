@@ -167,7 +167,7 @@ public:
 ///  SubRegion::getExtent instead -- the value returned may not be a symbol.
 class SymbolExtent : public SymbolData {
   const SubRegion *R;
-  
+
 public:
   SymbolExtent(SymbolID sym, const SubRegion *r)
       : SymbolData(SymbolExtentKind, sym), R(r) {
@@ -300,7 +300,7 @@ public:
   }
 };
 
-/// Represents a symbolic expression involving a binary operator 
+/// Represents a symbolic expression involving a binary operator
 class BinarySymExpr : public SymExpr {
   BinaryOperator::Opcode Op;
   QualType T;
@@ -558,7 +558,7 @@ class SymbolReaper {
   SymbolSetTy TheDead;
 
   RegionSetTy RegionRoots;
-  
+
   const StackFrameContext *LCtx;
   const Stmt *Loc;
   SymbolManager& SymMgr;
@@ -614,7 +614,7 @@ public:
   bool hasDeadSymbols() const {
     return !TheDead.empty();
   }
-  
+
   using region_iterator = RegionSetTy::const_iterator;
 
   region_iterator region_begin() const { return RegionRoots.begin(); }
@@ -627,10 +627,10 @@ public:
   bool isDead(SymbolRef sym) const {
     return TheDead.count(sym);
   }
-  
+
   void markLive(const MemRegion *region);
   void markElementIndicesLive(const MemRegion *region);
-  
+
   /// Set to the value of the symbolic store after
   /// StoreManager::removeDeadBindings has been called.
   void setReapedStore(StoreRef st) { reapedStore = st; }

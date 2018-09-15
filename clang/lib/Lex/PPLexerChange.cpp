@@ -82,10 +82,10 @@ bool Preprocessor::EnterSourceFile(FileID FID, const DirectoryLookup *CurDir,
       return false;
     }
   }
-  
+
   // Get the MemoryBuffer for this FID, if it fails, we fail.
   bool Invalid = false;
-  const llvm::MemoryBuffer *InputFile = 
+  const llvm::MemoryBuffer *InputFile =
     getSourceManager().getBuffer(FID, Loc, &Invalid);
   if (Invalid) {
     SourceLocation FileStart = SourceMgr.getLocForStartOfFile(FID);
@@ -145,7 +145,7 @@ void Preprocessor::EnterSourceFileWithPTH(PTHLexer *PL,
   CurLexerSubmodule = nullptr;
   if (CurLexerKind != CLK_LexAfterModuleImport)
     CurLexerKind = CLK_PTHLexer;
-  
+
   // Notify the client, if desired, that we are in a new source file.
   if (Callbacks) {
     FileID FID = CurPPLexer->getFileID();
@@ -240,15 +240,15 @@ static void computeRelativePath(FileManager &FM, const DirectoryEntry *Dir,
     if (const DirectoryEntry *CurDir = FM.getDirectory(Path)) {
       if (CurDir == Dir) {
         Result = FilePath.substr(Path.size());
-        llvm::sys::path::append(Result, 
+        llvm::sys::path::append(Result,
                                 llvm::sys::path::filename(File->getName()));
         return;
       }
     }
-    
+
     Path = llvm::sys::path::parent_path(Path);
   }
-  
+
   Result = File->getName();
 }
 
@@ -553,7 +553,7 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
     CurPTHLexer->getEOF(Result);
     CurPTHLexer.reset();
   }
-  
+
   if (!isIncrementalProcessingEnabled())
     CurPPLexer = nullptr;
 

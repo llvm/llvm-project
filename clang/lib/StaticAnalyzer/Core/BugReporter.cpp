@@ -2605,8 +2605,6 @@ std::pair<BugReport*, std::unique_ptr<VisitorsDiagnosticsTy>> findValidReport(
     // Register refutation visitors first, if they mark the bug invalid no
     // further analysis is required
     R->addVisitor(llvm::make_unique<LikelyFalsePositiveSuppressionBRVisitor>());
-    if (Opts.shouldCrosscheckWithZ3())
-      R->addVisitor(llvm::make_unique<FalsePositiveRefutationBRVisitor>());
 
     // Register additional node visitors.
     R->addVisitor(llvm::make_unique<NilReceiverBRVisitor>());
@@ -2619,9 +2617,24 @@ std::pair<BugReport*, std::unique_ptr<VisitorsDiagnosticsTy>> findValidReport(
     std::unique_ptr<VisitorsDiagnosticsTy> visitorNotes =
         generateVisitorsDiagnostics(R, ErrorNode, BRC);
 
-    if (R->isValid())
-      return std::make_pair(R, std::move(visitorNotes));
+    if (R->isValid()) {
+      if (Opts.shouldCrosscheckWithZ3()) {
+        // If crosscheck is enabled, remove all visitors, add the refutation
+        // visitor and check again
+        R->clearVisitors();
+        R->addVisitor(llvm::make_unique<FalsePositiveRefutationBRVisitor>());
+
+        // We don't overrite the notes inserted by other visitors because the
+        // refutation manager does not add any new note to the path
+        generateVisitorsDiagnostics(R, ErrorGraph.ErrorNode, BRC);
+      }
+
+      // Check if the bug is still valid
+      if (R->isValid())
+        return std::make_pair(R, std::move(visitorNotes));
+    }
   }
+
   return std::make_pair(nullptr, llvm::make_unique<VisitorsDiagnosticsTy>());
 }
 

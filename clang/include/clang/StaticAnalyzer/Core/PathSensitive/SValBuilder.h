@@ -55,7 +55,7 @@ class SValBuilder {
 
 protected:
   ASTContext &Context;
-  
+
   /// Manager of APSInt values.
   BasicValueFactory BasicVals;
 
@@ -69,7 +69,7 @@ protected:
 
   /// The scalar type to use for array indices.
   const QualType ArrayIndexTy;
-  
+
   /// The width of the scalar type used for array indices.
   const unsigned ArrayIndexWidth;
 
@@ -137,7 +137,7 @@ public:
   /// that represents the same value, but is hopefully easier to work with
   /// than the original SVal.
   virtual SVal simplifySVal(ProgramStateRef State, SVal Val) = 0;
-  
+
   /// Constructs a symbolic expression for two non-location values.
   SVal makeSymExprValNN(ProgramStateRef state, BinaryOperator::Opcode op,
                       NonLoc lhs, NonLoc rhs, QualType resultTy);
@@ -157,11 +157,11 @@ public:
   const ASTContext &getContext() const { return Context; }
 
   ProgramStateManager &getStateManager() { return StateMgr; }
-  
+
   QualType getConditionType() const {
     return Context.getLangOpts().CPlusPlus ? Context.BoolTy : Context.IntTy;
   }
-  
+
   QualType getArrayIndexType() const {
     return ArrayIndexTy;
   }
@@ -237,7 +237,7 @@ public:
   DefinedSVal getMemberPointer(const DeclaratorDecl *DD);
 
   DefinedSVal getFunctionPointer(const FunctionDecl *func);
-  
+
   DefinedSVal getBlockPointer(const BlockDecl *block, CanQualType locTy,
                               const LocationContext *locContext,
                               unsigned blockCount);
@@ -252,7 +252,7 @@ public:
     return nonloc::CompoundVal(BasicVals.getCompoundValData(type, vals));
   }
 
-  NonLoc makeLazyCompoundVal(const StoreRef &store, 
+  NonLoc makeLazyCompoundVal(const StoreRef &store,
                              const TypedValueRegion *region) {
     return nonloc::LazyCompoundVal(
         BasicVals.getLazyCompoundValData(store, region));

@@ -72,6 +72,7 @@ def UnsupportedNan : DiagGroup<"unsupported-nan">;
 def UnsupportedAbs : DiagGroup<"unsupported-abs">;
 def UnsupportedCB : DiagGroup<"unsupported-cb">;
 def UnsupportedGPOpt : DiagGroup<"unsupported-gpopt">;
+def UnsupportedTargetOpt : DiagGroup<"unsupported-target-opt">;
 def NonLiteralNullConversion : DiagGroup<"non-literal-null-conversion">;
 def NullConversion : DiagGroup<"null-conversion">;
 def ImplicitConversionFloatingPointToBool :
@@ -273,6 +274,10 @@ def OverloadedShiftOpParentheses: DiagGroup<"overloaded-shift-op-parentheses">;
 def DanglingElse: DiagGroup<"dangling-else">;
 def DanglingField : DiagGroup<"dangling-field">;
 def DanglingInitializerList : DiagGroup<"dangling-initializer-list">;
+def ReturnStackAddress : DiagGroup<"return-stack-address">;
+def Dangling : DiagGroup<"dangling", [DanglingField,
+                                      DanglingInitializerList,
+                                      ReturnStackAddress]>;
 def DistributedObjectModifiers : DiagGroup<"distributed-object-modifiers">;
 def ExpansionToDefined : DiagGroup<"expansion-to-defined">;
 def FlagEnum : DiagGroup<"flag-enum">;
@@ -283,7 +288,7 @@ def IgnoredQualifiers : DiagGroup<"ignored-qualifiers">;
 def : DiagGroup<"import">;
 def GNUIncludeNext : DiagGroup<"gnu-include-next">;
 def IncompatibleMSStruct : DiagGroup<"incompatible-ms-struct">;
-def IncompatiblePointerTypesDiscardsQualifiers 
+def IncompatiblePointerTypesDiscardsQualifiers
   : DiagGroup<"incompatible-pointer-types-discards-qualifiers">;
 def IncompatibleFunctionPointerTypes
   : DiagGroup<"incompatible-function-pointer-types">;
@@ -407,7 +412,6 @@ def RedeclaredClassMember : DiagGroup<"redeclared-class-member">;
 def GNURedeclaredEnum : DiagGroup<"gnu-redeclared-enum">;
 def RedundantMove : DiagGroup<"redundant-move">;
 def Register : DiagGroup<"register", [DeprecatedRegister]>;
-def ReturnStackAddress : DiagGroup<"return-stack-address">;
 def ReturnTypeCLinkage : DiagGroup<"return-type-c-linkage">;
 def ReturnType : DiagGroup<"return-type", [ReturnTypeCLinkage]>;
 def BindToTemporaryCopy : DiagGroup<"bind-to-temporary-copy",
@@ -797,14 +801,14 @@ def Most : DiagGroup<"most", [
     UserDefinedWarnings
  ]>;
 
-// Thread Safety warnings 
+// Thread Safety warnings
 def ThreadSafetyAttributes : DiagGroup<"thread-safety-attributes">;
 def ThreadSafetyAnalysis   : DiagGroup<"thread-safety-analysis">;
 def ThreadSafetyPrecise    : DiagGroup<"thread-safety-precise">;
 def ThreadSafetyReference  : DiagGroup<"thread-safety-reference">;
 def ThreadSafetyNegative   : DiagGroup<"thread-safety-negative">;
 def ThreadSafety : DiagGroup<"thread-safety",
-                             [ThreadSafetyAttributes, 
+                             [ThreadSafetyAttributes,
                               ThreadSafetyAnalysis,
                               ThreadSafetyPrecise,
                               ThreadSafetyReference]>;
@@ -1023,3 +1027,7 @@ def SpirCompat : DiagGroup<"spir-compat">;
 
 // Warning for the experimental-isel options.
 def ExperimentalISel : DiagGroup<"experimental-isel">;
+
+// A warning group specifically for warnings related to function
+// multiversioning.
+def FunctionMultiVersioning : DiagGroup<"function-multiversion">;

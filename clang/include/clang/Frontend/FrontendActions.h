@@ -18,7 +18,7 @@ namespace clang {
 
 class Module;
 class FileEntry;
-  
+
 //===----------------------------------------------------------------------===//
 // Custom Consumer Actions
 //===----------------------------------------------------------------------===//
@@ -198,7 +198,7 @@ protected:
 class ASTMergeAction : public FrontendAction {
   /// The action that the merge action adapts.
   std::unique_ptr<FrontendAction> AdaptedAction;
-  
+
   /// The set of AST files to merge.
   std::vector<std::string> ASTFiles;
 
@@ -233,7 +233,7 @@ protected:
 
   bool usesPreprocessorOnly() const override { return true; }
 };
-  
+
 //===----------------------------------------------------------------------===//
 // Preprocessor Actions
 //===----------------------------------------------------------------------===//
@@ -264,7 +264,7 @@ protected:
 
   bool hasPCHSupport() const override { return true; }
 };
-  
+
 }  // end namespace clang
 
 #endif

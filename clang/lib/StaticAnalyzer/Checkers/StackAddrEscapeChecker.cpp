@@ -129,7 +129,7 @@ bool StackAddrEscapeChecker::isSemaphoreCaptured(const BlockDecl &B) const {
   for (const auto &C : B.captures()) {
     const auto *T = C.getVariable()->getType()->getAs<TypedefType>();
     if (T && T->getDecl()->getIdentifier() == dispatch_semaphore_tII)
-      return true; 
+      return true;
   }
   return false;
 }
@@ -175,9 +175,9 @@ void StackAddrEscapeChecker::checkAsyncExecutedBlockCaptures(
   // There is a not-too-uncommon idiom
   // where a block passed to dispatch_async captures a semaphore
   // and then the thread (which called dispatch_async) is blocked on waiting
-  // for the completion of the execution of the block 
-  // via dispatch_semaphore_wait. To avoid false-positives (for now) 
-  // we ignore all the blocks which have captured 
+  // for the completion of the execution of the block
+  // via dispatch_semaphore_wait. To avoid false-positives (for now)
+  // we ignore all the blocks which have captured
   // a variable of the type "dispatch_semaphore_t".
   if (isSemaphoreCaptured(*B.getDecl()))
     return;
@@ -263,7 +263,7 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
   if (const BlockDataRegion *B = dyn_cast<BlockDataRegion>(R))
     checkReturnedBlockCaptures(*B, C);
 
-  if (!isa<StackSpaceRegion>(R->getMemorySpace()) || 
+  if (!isa<StackSpaceRegion>(R->getMemorySpace()) ||
       isNotInCurrentFrame(R, C) || isArcManagedBlock(R, C))
     return;
 

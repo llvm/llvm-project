@@ -617,8 +617,10 @@ protected:
         Builder.defineMacro("_HAS_CHAR16_T_LANGUAGE_SUPPORT", Twine(1));
 
       if (Opts.isCompatibleWithMSVC(LangOptions::MSVC2015)) {
-        if (Opts.CPlusPlus17)
-          Builder.defineMacro("_MSVC_LANG", "201403L");
+        if (Opts.CPlusPlus2a)
+          Builder.defineMacro("_MSVC_LANG", "201704L");
+        else if (Opts.CPlusPlus17)
+          Builder.defineMacro("_MSVC_LANG", "201703L");
         else if (Opts.CPlusPlus14)
           Builder.defineMacro("_MSVC_LANG", "201402L");
       }

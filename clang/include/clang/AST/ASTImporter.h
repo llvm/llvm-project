@@ -63,7 +63,7 @@ class Attr;
   private:
     /// The contexts we're importing to and from.
     ASTContext &ToContext, &FromContext;
-    
+
     /// The file managers we're importing to and from.
     FileManager &ToFileManager, &FromFileManager;
 
@@ -72,11 +72,11 @@ class Attr;
 
     /// Whether the last diagnostic came from the "from" context.
     bool LastDiagFromFrom = false;
-    
+
     /// Mapping from the already-imported types in the "from" context
     /// to the corresponding types in the "to" context.
     llvm::DenseMap<const Type *, const Type *> ImportedTypes;
-    
+
     /// Mapping from the already-imported declarations in the "from"
     /// context to the corresponding declarations in the "to" context.
     llvm::DenseMap<Decl *, Decl *> ImportedDecls;
@@ -93,11 +93,11 @@ class Attr;
     ///  the "from" source manager to the corresponding CXXBasesSpecifier
     ///  in the "to" source manager.
     ImportedCXXBaseSpecifierMap ImportedCXXBaseSpecifiers;
-    
+
     /// Declaration (from, to) pairs that are known not to be equivalent
     /// (which we have already complained about).
     NonEquivalentDeclSet NonEquivalentDecls;
-    
+
   public:
     /// Create a new AST importer.
     ///
@@ -115,13 +115,13 @@ class Attr;
     ASTImporter(ASTContext &ToContext, FileManager &ToFileManager,
                 ASTContext &FromContext, FileManager &FromFileManager,
                 bool MinimalImport);
-    
+
     virtual ~ASTImporter();
-    
+
     /// Whether the importer will perform a minimal import, creating
     /// to-be-completed forward declarations when possible.
     bool isMinimalImport() const { return Minimal; }
-    
+
     /// Import the given type from the "from" context into the "to"
     /// context.
     ///
@@ -142,10 +142,10 @@ class Attr;
     /// \returns the equivalent attribute in the "to" context.
     Attr *Import(const Attr *FromAttr);
 
-    /// Import the given declaration from the "from" context into the 
+    /// Import the given declaration from the "from" context into the
     /// "to" context.
     ///
-    /// \returns the equivalent declaration in the "to" context, or a NULL type 
+    /// \returns the equivalent declaration in the "to" context, or a NULL type
     /// if an error occurred.
     Decl *Import(Decl *FromD);
     Decl *Import(const Decl *FromD) {
@@ -163,7 +163,7 @@ class Attr;
     /// \returns the equivalent declaration context in the "to"
     /// context, or a NULL type if an error occurred.
     DeclContext *ImportContext(DeclContext *FromDC);
-    
+
     /// Import the given expression from the "from" context into the
     /// "to" context.
     ///
@@ -195,7 +195,7 @@ class Attr;
     /// Import the goven template name from the "from" context into the
     /// "to" context.
     TemplateName Import(TemplateName From);
-    
+
     /// Import the given source location from the "from" context into
     /// the "to" context.
     ///
@@ -229,7 +229,7 @@ class Attr;
     /// \returns the equivalent selector in the "to" context.
     Selector Import(Selector FromSel);
 
-    /// Import the given file ID from the "from" context into the 
+    /// Import the given file ID from the "from" context into the
     /// "to" context.
     ///
     /// \returns the equivalent file ID in the source manager of the "to"
@@ -252,13 +252,13 @@ class Attr;
     /// Import the definition of the given declaration, including all of
     /// the declarations it contains.
     ///
-    /// This routine is intended to be used 
+    /// This routine is intended to be used
     void ImportDefinition(Decl *From);
 
     /// Cope with a name conflict when importing a declaration into the
     /// given context.
     ///
-    /// This routine is invoked whenever there is a name conflict while 
+    /// This routine is invoked whenever there is a name conflict while
     /// importing a declaration. The returned name will become the name of the
     /// imported declaration. By default, the returned name is the same as the
     /// original name, leaving the conflict unresolve such that name lookup
@@ -270,7 +270,7 @@ class Attr;
     /// \param Name the name of the declaration being imported, which conflicts
     /// with other declarations.
     ///
-    /// \param DC the declaration context (in the "to" AST context) in which 
+    /// \param DC the declaration context (in the "to" AST context) in which
     /// the name is being imported.
     ///
     /// \param IDNS the identifier namespace in which the name will be found.
@@ -286,25 +286,25 @@ class Attr;
                                                unsigned IDNS,
                                                NamedDecl **Decls,
                                                unsigned NumDecls);
-    
+
     /// Retrieve the context that AST nodes are being imported into.
     ASTContext &getToContext() const { return ToContext; }
-    
+
     /// Retrieve the context that AST nodes are being imported from.
     ASTContext &getFromContext() const { return FromContext; }
-    
+
     /// Retrieve the file manager that AST nodes are being imported into.
     FileManager &getToFileManager() const { return ToFileManager; }
 
     /// Retrieve the file manager that AST nodes are being imported from.
     FileManager &getFromFileManager() const { return FromFileManager; }
-    
+
     /// Report a diagnostic in the "to" context.
     DiagnosticBuilder ToDiag(SourceLocation Loc, unsigned DiagID);
-    
+
     /// Report a diagnostic in the "from" context.
     DiagnosticBuilder FromDiag(SourceLocation Loc, unsigned DiagID);
-    
+
     /// Return the set of declarations that we know are not equivalent.
     NonEquivalentDeclSet &getNonEquivalentDecls() { return NonEquivalentDecls; }
 
@@ -313,7 +313,7 @@ class Attr;
     ///
     /// \param D A declaration in the "to" context.
     virtual void CompleteDecl(Decl* D);
-    
+
     /// Subclasses can override this function to observe all of the \c From ->
     /// \c To declaration mappings as they are imported.
     virtual Decl *Imported(Decl *From, Decl *To) { return To; }
@@ -328,7 +328,7 @@ class Attr;
     /// RecordDecl can be found, we can complete it without the need for
     /// importation, eliminating this loop.
     virtual Decl *GetOriginalDecl(Decl *To) { return nullptr; }
-    
+
     /// Determine whether the given types are structurally
     /// equivalent.
     bool IsStructurallyEquivalent(QualType From, QualType To,

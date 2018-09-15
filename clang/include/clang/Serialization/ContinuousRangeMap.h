@@ -72,14 +72,14 @@ public:
            "Must insert keys in order.");
     Rep.push_back(Val);
   }
-  
+
   void insertOrReplace(const value_type &Val) {
     iterator I = std::lower_bound(Rep.begin(), Rep.end(), Val, Compare());
     if (I != Rep.end() && I->first == Val.first) {
       I->second = Val.second;
       return;
     }
-    
+
     Rep.insert(I, Val);
   }
 
@@ -106,7 +106,7 @@ public:
 
   reference back() { return Rep.back(); }
   const_reference back() const { return Rep.back(); }
-  
+
   /// An object that helps properly build a continuous range map
   /// from a set of values.
   class Builder {
@@ -116,7 +116,7 @@ public:
     explicit Builder(ContinuousRangeMap &Self) : Self(Self) {}
     Builder(const Builder&) = delete;
     Builder &operator=(const Builder&) = delete;
-    
+
     ~Builder() {
       llvm::sort(Self.Rep.begin(), Self.Rep.end(), Compare());
       std::unique(Self.Rep.begin(), Self.Rep.end(),
@@ -128,7 +128,7 @@ public:
         return A == B;
       });
     }
-    
+
     void insert(const value_type &Val) {
       Self.Rep.push_back(Val);
     }

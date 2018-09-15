@@ -335,7 +335,7 @@ void CodeGenModule::SimplifyPersonality() {
 
   // Nothing to do if it's unused.
   if (!Fn || Fn->use_empty()) return;
-  
+
   // Can't do the optimization if it has non-C++ uses.
   if (!PersonalityHasOnlyCXXUses(Fn)) return;
 
@@ -443,7 +443,7 @@ void CodeGenFunction::EmitCXXThrowExpr(const CXXThrowExpr *E,
 void CodeGenFunction::EmitStartEHSpec(const Decl *D) {
   if (!CGM.getLangOpts().CXXExceptions)
     return;
-  
+
   const FunctionDecl* FD = dyn_cast_or_null<FunctionDecl>(D);
   if (!FD) {
     // Check if CapturedDecl is nothrow and create terminate scope for it.
@@ -520,7 +520,7 @@ static void emitFilterDispatchBlock(CodeGenFunction &CGF,
 void CodeGenFunction::EmitEndEHSpec(const Decl *D) {
   if (!CGM.getLangOpts().CXXExceptions)
     return;
-  
+
   const FunctionDecl* FD = dyn_cast_or_null<FunctionDecl>(D);
   if (!FD) {
     // Check if CapturedDecl is nothrow and pop terminate scope for it.
@@ -1345,7 +1345,7 @@ namespace {
         CGF.PopCleanupBlock();
         CGF.Builder.restoreIP(SavedIP);
       }
-    
+
       // Now make sure we actually have an insertion point or the
       // cleanup gods will hate us.
       CGF.EnsureInsertPoint();

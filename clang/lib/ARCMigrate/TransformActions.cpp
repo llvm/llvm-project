@@ -76,7 +76,7 @@ class TransformActionsImpl {
         End = FullSourceLoc(srcMgr.getExpansionLoc(endLoc), srcMgr);
       }
       assert(Begin.isValid() && End.isValid());
-    } 
+    }
 
     RangeComparison compareWith(const CharRange &RHS) const {
       if (End.isBeforeInTranslationUnitThan(RHS.Begin))
@@ -94,7 +94,7 @@ class TransformActionsImpl {
       else
         return Range_ExtendsEnd;
     }
-    
+
     static RangeComparison compare(SourceRange LHS, SourceRange RHS,
                                    SourceManager &SrcMgr, Preprocessor &PP) {
       return CharRange(CharSourceRange::getTokenRange(LHS), SrcMgr, PP)
@@ -485,7 +485,7 @@ void TransformActionsImpl::commitReplaceText(SourceLocation loc,
   SourceLocation afterText = loc.getLocWithOffset(text.size());
 
   addRemoval(CharSourceRange::getCharRange(loc, afterText));
-  commitInsert(loc, replacementText);  
+  commitInsert(loc, replacementText);
 }
 
 void TransformActionsImpl::commitIncreaseIndentation(SourceRange range,

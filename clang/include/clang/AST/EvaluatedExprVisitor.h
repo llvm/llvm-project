@@ -21,9 +21,9 @@
 #include "clang/AST/StmtVisitor.h"
 
 namespace clang {
-  
+
 class ASTContext;
-  
+
 /// Given a potentially-evaluated expression, this visitor visits all
 /// of its potentially-evaluated subexpressions, recursively.
 template<template <typename> class Ptr, typename ImplClass>

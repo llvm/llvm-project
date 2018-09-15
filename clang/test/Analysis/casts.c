@@ -171,3 +171,14 @@ void testCastVoidPtrToIntPtrThroughUIntTypedAssignment() {
   (*((int *)(&x))) = (int)(unsigned *)getVoidPtr();
   *x = 1; // no-crash
 }
+
+void testLocNonLocSymbolAssume(int a, int *b) {
+  if ((int)b < a) {} // no-crash
+}
+
+void testLocNonLocSymbolRemainder(int a, int *b) {
+  int c = ((int)b) % a;
+  if (a == 1) {
+    c += 1;
+  }
+}

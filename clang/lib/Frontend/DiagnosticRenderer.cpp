@@ -172,9 +172,9 @@ void DiagnosticRenderer::emitIncludeStack(FullSourceLoc Loc, PresumedLoc PLoc,
   // Skip redundant include stacks altogether.
   if (LastIncludeLoc == IncludeLoc)
     return;
-  
+
   LastIncludeLoc = IncludeLoc;
-  
+
   if (!DiagOpts->ShowNoteIncludeStack && Level == DiagnosticsEngine::Note)
     return;
 
@@ -199,7 +199,7 @@ void DiagnosticRenderer::emitIncludeStackRecursively(FullSourceLoc Loc) {
     return;
 
   // If this source location was imported from a module, print the module
-  // import stack rather than the 
+  // import stack rather than the
   // FIXME: We want submodule granularity here.
   std::pair<FullSourceLoc, StringRef> Imported = Loc.getModuleImportLoc();
   if (!Imported.second.empty()) {

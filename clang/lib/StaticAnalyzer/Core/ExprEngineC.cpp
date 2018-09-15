@@ -684,7 +684,7 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
       // known to be false, 1 if the value is known to be true and a new symbol
       // when the assumption is unknown.
       nonloc::ConcreteInt Zero(getBasicVals().getValue(0, B->getType()));
-      X = evalBinOp(N->getState(), BO_NE, 
+      X = evalBinOp(N->getState(), BO_NE,
                     svalBuilder.evalCast(RHSVal, B->getType(), RHS->getType()),
                     Zero, B->getType());
     }

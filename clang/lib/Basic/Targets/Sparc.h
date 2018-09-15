@@ -1,4 +1,4 @@
-//===--- Sparc.h - Declare Sparc target feature support -------------------===//
+//===--- Sparc.h - declare sparc target feature support ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

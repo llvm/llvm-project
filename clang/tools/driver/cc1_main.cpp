@@ -140,9 +140,11 @@ static void ensureSufficientStack() {
 
   // Increase the soft stack limit to our desired level, if necessary and
   // possible.
-  if (rlim.rlim_cur != RLIM_INFINITY && rlim.rlim_cur < DesiredStackSize) {
+  if (rlim.rlim_cur != RLIM_INFINITY &&
+      rlim.rlim_cur < rlim_t(DesiredStackSize)) {
     // Try to allocate sufficient stack.
-    if (rlim.rlim_max == RLIM_INFINITY || rlim.rlim_max >= DesiredStackSize)
+    if (rlim.rlim_max == RLIM_INFINITY ||
+        rlim.rlim_max >= rlim_t(DesiredStackSize))
       rlim.rlim_cur = DesiredStackSize;
     else if (rlim.rlim_cur == rlim.rlim_max)
       return;

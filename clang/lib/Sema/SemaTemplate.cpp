@@ -888,7 +888,7 @@ ParsedTemplateArgument Sema::ActOnTemplateTypeArgument(TypeResult ParsedType) {
 
   // This is a normal type template argument. Note, if the type template
   // argument is an injected-class-name for a template, it has a dual nature
-  // and can be used as either a type or a template. We handle that in 
+  // and can be used as either a type or a template. We handle that in
   // convertTypeTemplateArgumentToTemplate.
   return ParsedTemplateArgument(ParsedTemplateArgument::Type,
                                 ParsedType.get().getAsOpaquePtr(),
@@ -1044,14 +1044,14 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
   // Check that we have valid decl-specifiers specified.
   auto CheckValidDeclSpecifiers = [this, &D] {
     // C++ [temp.param]
-    // p1 
+    // p1
     //   template-parameter:
     //     ...
     //     parameter-declaration
-    // p2 
+    // p2
     //   ... A storage class shall not be specified in a template-parameter
     //   declaration.
-    // [dcl.typedef]p1: 
+    // [dcl.typedef]p1:
     //   The typedef specifier [...] shall not be used in the decl-specifier-seq
     //   of a parameter-declaration
     const DeclSpec &DS = D.getDeclSpec();
@@ -1061,22 +1061,22 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
     };
     if (DS.getStorageClassSpec() != DeclSpec::SCS_unspecified)
       EmitDiag(DS.getStorageClassSpecLoc());
-    
+
     if (DS.getThreadStorageClassSpec() != TSCS_unspecified)
       EmitDiag(DS.getThreadStorageClassSpecLoc());
-    
-    // [dcl.inline]p1: 
-    //   The inline specifier can be applied only to the declaration or 
+
+    // [dcl.inline]p1:
+    //   The inline specifier can be applied only to the declaration or
     //   definition of a variable or function.
-    
+
     if (DS.isInlineSpecified())
       EmitDiag(DS.getInlineSpecLoc());
-    
+
     // [dcl.constexpr]p1:
-    //   The constexpr specifier shall be applied only to the definition of a 
-    //   variable or variable template or the declaration of a function or 
+    //   The constexpr specifier shall be applied only to the definition of a
+    //   variable or variable template or the declaration of a function or
     //   function template.
-    
+
     if (DS.isConstexprSpecified())
       EmitDiag(DS.getConstexprSpecLoc());
 
@@ -1094,7 +1094,7 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
   };
 
   CheckValidDeclSpecifiers();
-  
+
   if (TInfo->getType()->isUndeducedType()) {
     Diag(D.getIdentifierLoc(),
          diag::warn_cxx14_compat_template_nontype_parm_auto_type)
@@ -1660,6 +1660,23 @@ DeclResult Sema::CheckClassTemplate(
 }
 
 namespace {
+/// Tree transform to "extract" a transformed type from a class template's
+/// constructor to a deduction guide.
+class ExtractTypeForDeductionGuide
+  : public TreeTransform<ExtractTypeForDeductionGuide> {
+public:
+  typedef TreeTransform<ExtractTypeForDeductionGuide> Base;
+  ExtractTypeForDeductionGuide(Sema &SemaRef) : Base(SemaRef) {}
+
+  TypeSourceInfo *transform(TypeSourceInfo *TSI) { return TransformType(TSI); }
+
+  QualType TransformTypedefType(TypeLocBuilder &TLB, TypedefTypeLoc TL) {
+    return TransformType(
+        TLB,
+        TL.getTypedefNameDecl()->getTypeSourceInfo()->getTypeLoc());
+  }
+};
+
 /// Transform to convert portions of a constructor declaration into the
 /// corresponding deduction guide, per C++1z [over.match.class.deduct]p1.
 struct ConvertConstructorToDeductionGuideTransform {
@@ -1881,9 +1898,7 @@ private:
                              MultiLevelTemplateArgumentList &Args) {
     TypeSourceInfo *OldDI = OldParam->getTypeSourceInfo();
     TypeSourceInfo *NewDI;
-    if (!Args.getNumLevels())
-      NewDI = OldDI;
-    else if (auto PackTL = OldDI->getTypeLoc().getAs<PackExpansionTypeLoc>()) {
+    if (auto PackTL = OldDI->getTypeLoc().getAs<PackExpansionTypeLoc>()) {
       // Expand out the one and only element in each inner pack.
       Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, 0);
       NewDI =
@@ -1899,23 +1914,17 @@ private:
     if (!NewDI)
       return nullptr;
 
-    // Canonicalize the type. This (for instance) replaces references to
-    // typedef members of the current instantiations with the definitions of
-    // those typedefs, avoiding triggering instantiation of the deduced type
-    // during deduction.
-    // FIXME: It would be preferable to retain type sugar and source
-    // information here (and handle this in substitution instead).
-    NewDI = SemaRef.Context.getTrivialTypeSourceInfo(
-        SemaRef.Context.getCanonicalType(NewDI->getType()),
-        OldParam->getLocation());
+    // Extract the type. This (for instance) replaces references to typedef
+    // members of the current instantiations with the definitions of those
+    // typedefs, avoiding triggering instantiation of the deduced type during
+    // deduction.
+    NewDI = ExtractTypeForDeductionGuide(SemaRef).transform(NewDI);
 
     // Resolving a wording defect, we also inherit default arguments from the
     // constructor.
     ExprResult NewDefArg;
     if (OldParam->hasDefaultArg()) {
-      NewDefArg = Args.getNumLevels()
-                      ? SemaRef.SubstExpr(OldParam->getDefaultArg(), Args)
-                      : OldParam->getDefaultArg();
+      NewDefArg = SemaRef.SubstExpr(OldParam->getDefaultArg(), Args);
       if (NewDefArg.isInvalid())
         return nullptr;
     }
@@ -1930,6 +1939,7 @@ private:
                                                 NewDefArg.get());
     NewParam->setScopeInfo(OldParam->getFunctionScopeDepth(),
                            OldParam->getFunctionScopeIndex());
+    SemaRef.CurrentInstantiationScope->InstantiatedLocal(OldParam, NewParam);
     return NewParam;
   }
 

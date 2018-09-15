@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.cstring,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.cstring.NullArg,alpha.unix.cstring,debug.ExprInspection -analyzer-store=region -verify %s
 
 #define NULL ((void *)0)
 

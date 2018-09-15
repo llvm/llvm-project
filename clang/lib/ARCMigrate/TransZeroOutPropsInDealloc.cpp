@@ -56,7 +56,7 @@ public:
 
     bool BackedBySynthesizeSetter = false;
     for (llvm::DenseMap<ObjCPropertyDecl*, ObjCPropertyImplDecl*>::iterator
-         P = SynthesizedProperties.begin(), 
+         P = SynthesizedProperties.begin(),
          E = SynthesizedProperties.end(); P != E; ++P) {
       ObjCPropertyDecl *PropDecl = P->first;
       if (PropDecl->getSetterName() == ME->getSelector()) {
@@ -66,11 +66,11 @@ public:
     }
     if (!BackedBySynthesizeSetter)
       return true;
-    
+
     // Remove the setter message if RHS is null
     Transaction Trans(TA);
     Expr *RHS = ME->getArg(0);
-    bool RHSIsNull = 
+    bool RHSIsNull =
       RHS->isNullPointerConstant(Ctx,
                                  Expr::NPC_ValueDependentIsNull);
     if (RHSIsNull && isRemovable(ME))
@@ -119,10 +119,10 @@ public:
         ObjCPropertyDecl *PD = PID->getPropertyDecl();
         ObjCMethodDecl *setterM = PD->getSetterMethodDecl();
         if (!(setterM && setterM->isDefined())) {
-          ObjCPropertyDecl::PropertyAttributeKind AttrKind = 
+          ObjCPropertyDecl::PropertyAttributeKind AttrKind =
             PD->getPropertyAttributes();
-            if (AttrKind & 
-                (ObjCPropertyDecl::OBJC_PR_retain | 
+            if (AttrKind &
+                (ObjCPropertyDecl::OBJC_PR_retain |
                   ObjCPropertyDecl::OBJC_PR_copy   |
                   ObjCPropertyDecl::OBJC_PR_strong))
               SynthesizedProperties[PD] = PID;
@@ -173,7 +173,7 @@ private:
         return false;
       bool IvarBacksPropertySynthesis = false;
       for (llvm::DenseMap<ObjCPropertyDecl*, ObjCPropertyImplDecl*>::iterator
-           P = SynthesizedProperties.begin(), 
+           P = SynthesizedProperties.begin(),
            E = SynthesizedProperties.end(); P != E; ++P) {
         ObjCPropertyImplDecl *PropImpDecl = P->second;
         if (PropImpDecl && PropImpDecl->getPropertyIvarDecl() == IVDecl) {

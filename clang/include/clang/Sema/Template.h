@@ -46,7 +46,7 @@ class VarDecl;
   /// Data structure that captures multiple levels of template argument
   /// lists for use in template instantiation.
   ///
-  /// Multiple levels of template arguments occur when instantiating the 
+  /// Multiple levels of template arguments occur when instantiating the
   /// definitions of member templates. For example:
   ///
   /// \code
@@ -63,7 +63,7 @@ class VarDecl;
   /// list will contain a template argument list (int) at depth 0 and a
   /// template argument list (17) at depth 1.
   class MultiLevelTemplateArgumentList {
-    /// The template argument list at a certain template depth 
+    /// The template argument list at a certain template depth
     using ArgList = ArrayRef<TemplateArgument>;
 
     /// The template argument lists, stored from the innermost template
@@ -73,17 +73,17 @@ class VarDecl;
     /// The number of outer levels of template arguments that are not
     /// being substituted.
     unsigned NumRetainedOuterLevels = 0;
-    
+
   public:
     /// Construct an empty set of template argument lists.
     MultiLevelTemplateArgumentList() = default;
-    
+
     /// Construct a single-level template argument list.
-    explicit 
+    explicit
     MultiLevelTemplateArgumentList(const TemplateArgumentList &TemplateArgs) {
       addOuterTemplateArguments(&TemplateArgs);
     }
-    
+
     /// Determine the number of levels in this template argument
     /// list.
     unsigned getNumLevels() const {
@@ -102,7 +102,7 @@ class VarDecl;
       assert(Index < TemplateArgumentLists[getNumLevels() - Depth - 1].size());
       return TemplateArgumentLists[getNumLevels() - Depth - 1][Index];
     }
-    
+
     /// Determine whether there is a non-NULL template argument at the
     /// given depth and index.
     ///
@@ -112,13 +112,13 @@ class VarDecl;
 
       if (Depth < NumRetainedOuterLevels)
         return false;
-      
+
       if (Index >= TemplateArgumentLists[getNumLevels() - Depth - 1].size())
         return false;
-      
+
       return !(*this)(Depth, Index).isNull();
     }
-    
+
     /// Clear out a specific template argument.
     void setArgument(unsigned Depth, unsigned Index,
                      TemplateArgument Arg) {
@@ -128,8 +128,8 @@ class VarDecl;
                 TemplateArgumentLists[getNumLevels() - Depth - 1][Index])
         = Arg;
     }
-    
-    /// Add a new outermost level to the multi-level template argument 
+
+    /// Add a new outermost level to the multi-level template argument
     /// list.
     void addOuterTemplateArguments(const TemplateArgumentList *TemplateArgs) {
       addOuterTemplateArguments(ArgList(TemplateArgs->data(),
@@ -153,21 +153,21 @@ class VarDecl;
 
     /// Retrieve the innermost template argument list.
     const ArgList &getInnermost() const {
-      return TemplateArgumentLists.front(); 
+      return TemplateArgumentLists.front();
     }
   };
-  
+
   /// The context in which partial ordering of function templates occurs.
   enum TPOC {
     /// Partial ordering of function templates for a function call.
     TPOC_Call,
 
-    /// Partial ordering of function templates for a call to a 
+    /// Partial ordering of function templates for a call to a
     /// conversion function.
     TPOC_Conversion,
 
     /// Partial ordering of function templates in other contexts, e.g.,
-    /// taking the address of a function template or matching a function 
+    /// taking the address of a function template or matching a function
     /// template specialization to a function template.
     TPOC_Other
   };
@@ -261,7 +261,7 @@ class VarDecl;
 
     /// The set of argument packs we've allocated.
     SmallVector<DeclArgumentPack *, 1> ArgumentPacks;
-    
+
     /// The outer scope, which contains local variable
     /// definitions from some other instantiation (that may not be
     /// relevant to this particular scope).
@@ -273,17 +273,17 @@ class VarDecl;
     /// Whether to combine this scope with the outer scope, such that
     /// lookup will search our outer scope.
     bool CombineWithOuterScope;
-    
+
     /// If non-NULL, the template parameter pack that has been
     /// partially substituted per C++0x [temp.arg.explicit]p9.
     NamedDecl *PartiallySubstitutedPack = nullptr;
-    
+
     /// If \c PartiallySubstitutedPack is non-null, the set of
     /// explicitly-specified template arguments in that pack.
-    const TemplateArgument *ArgsInPartiallySubstitutedPack;    
-    
-    /// If \c PartiallySubstitutedPack, the number of 
-    /// explicitly-specified template arguments in 
+    const TemplateArgument *ArgsInPartiallySubstitutedPack;
+
+    /// If \c PartiallySubstitutedPack, the number of
+    /// explicitly-specified template arguments in
     /// ArgsInPartiallySubstitutedPack.
     unsigned NumArgsInPartiallySubstitutedPack;
 
@@ -301,17 +301,17 @@ class VarDecl;
     ~LocalInstantiationScope() {
       Exit();
     }
-    
+
     const Sema &getSema() const { return SemaRef; }
 
     /// Exit this local instantiation scope early.
     void Exit() {
       if (Exited)
         return;
-      
+
       for (unsigned I = 0, N = ArgumentPacks.size(); I != N; ++I)
         delete ArgumentPacks[I];
-        
+
       SemaRef.CurrentInstantiationScope = Outer;
       Exited = true;
     }
@@ -381,9 +381,9 @@ class VarDecl;
     void InstantiatedLocal(const Decl *D, Decl *Inst);
     void InstantiatedLocalPackArg(const Decl *D, ParmVarDecl *Inst);
     void MakeInstantiatedLocalArgPack(const Decl *D);
-    
+
     /// Note that the given parameter pack has been partially substituted
-    /// via explicit specification of template arguments 
+    /// via explicit specification of template arguments
     /// (C++0x [temp.arg.explicit]p9).
     ///
     /// \param Pack The parameter pack, which will always be a template
@@ -394,7 +394,7 @@ class VarDecl;
     ///
     /// \param NumExplicitArgs The number of explicitly-specified template
     /// arguments provided for this parameter pack.
-    void SetPartiallySubstitutedPack(NamedDecl *Pack, 
+    void SetPartiallySubstitutedPack(NamedDecl *Pack,
                                      const TemplateArgument *ExplicitArgs,
                                      unsigned NumExplicitArgs);
 
@@ -416,7 +416,7 @@ class VarDecl;
   };
 
   class TemplateDeclInstantiator
-    : public DeclVisitor<TemplateDeclInstantiator, Decl *> 
+    : public DeclVisitor<TemplateDeclInstantiator, Decl *>
   {
     Sema &SemaRef;
     Sema::ArgumentPackSubstitutionIndexRAII SubstIndex;
@@ -562,7 +562,7 @@ class VarDecl;
     template<typename T>
     Decl *instantiateUnresolvedUsingDecl(T *D,
                                          bool InstantiatingPackElement = false);
-  };  
+  };
 
 } // namespace clang
 

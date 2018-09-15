@@ -769,6 +769,7 @@ ASTStmtReader::VisitBinaryConditionalOperator(BinaryConditionalOperator *E) {
 
 void ASTStmtReader::VisitImplicitCastExpr(ImplicitCastExpr *E) {
   VisitCastExpr(E);
+  E->setIsPartOfExplicitCast(Record.readInt());
 }
 
 void ASTStmtReader::VisitExplicitCastExpr(ExplicitCastExpr *E) {

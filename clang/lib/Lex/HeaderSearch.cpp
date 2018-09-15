@@ -246,9 +246,9 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
           break;
       }
     }
-    
+
     // FIXME: Figure out how header maps and module maps will work together.
-    
+
     // Only deal with normal search directories.
     if (!SearchDirs[Idx].isNormalDir())
       continue;
@@ -263,7 +263,7 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
       if (Module)
         break;
     }
-              
+
     // Search for a module map in a subdirectory with the same name as the
     // module.
     SmallString<128> NestedModuleMapDirName;
@@ -530,7 +530,7 @@ const FileEntry *DirectoryLookup::DoFrameworkLookup(
     RelativePath->clear();
     RelativePath->append(Filename.begin()+SlashPos+1, Filename.end());
   }
-  
+
   // Check "/System/Library/Frameworks/Cocoa.framework/Headers/file.h"
   unsigned OrigSize = FrameworkName.size();
 
@@ -709,7 +709,7 @@ const FileEntry *HeaderSearch::LookupFile(
 
   if (SuggestedModule)
     *SuggestedModule = ModuleMap::KnownHeader();
-    
+
   // If 'Filename' is absolute, check to see if it exists and no searching.
   if (llvm::sys::path::is_absolute(Filename)) {
     CurDir = nullptr;
@@ -898,7 +898,7 @@ const FileEntry *HeaderSearch::LookupFile(
       size_t SlashPos = Filename.find('/');
       if (SlashPos != StringRef::npos) {
         HFI.IndexHeaderMapHeader = 1;
-        HFI.Framework = getUniqueFrameworkName(StringRef(Filename.begin(), 
+        HFI.Framework = getUniqueFrameworkName(StringRef(Filename.begin(),
                                                          SlashPos));
       }
     }
@@ -1079,7 +1079,7 @@ LookupSubframeworkHeader(StringRef Filename,
 
 /// Merge the header file info provided by \p OtherHFI into the current
 /// header file info (\p HFI)
-static void mergeHeaderFileInfo(HeaderFileInfo &HFI, 
+static void mergeHeaderFileInfo(HeaderFileInfo &HFI,
                                 const HeaderFileInfo &OtherHFI) {
   assert(OtherHFI.External && "expected to merge external HFI");
 
@@ -1101,7 +1101,7 @@ static void mergeHeaderFileInfo(HeaderFileInfo &HFI,
   if (HFI.Framework.empty())
     HFI.Framework = OtherHFI.Framework;
 }
-                                
+
 /// getFileInfo - Return the HeaderFileInfo structure for the specified
 /// FileEntry.
 HeaderFileInfo &HeaderSearch::getFileInfo(const FileEntry *FE) {
@@ -1285,14 +1285,14 @@ StringRef HeaderSearch::getUniqueFrameworkName(StringRef Framework) {
   return FrameworkNames.insert(Framework).first->first();
 }
 
-bool HeaderSearch::hasModuleMap(StringRef FileName, 
+bool HeaderSearch::hasModuleMap(StringRef FileName,
                                 const DirectoryEntry *Root,
                                 bool IsSystem) {
   if (!HSOpts->ImplicitModuleMaps)
     return false;
 
   SmallVector<const DirectoryEntry *, 2> FixUpDirectories;
-  
+
   StringRef DirName = FileName;
   do {
     // Get the parent directory name.
@@ -1325,7 +1325,7 @@ bool HeaderSearch::hasModuleMap(StringRef FileName,
     // If we hit the top of our search, we're done.
     if (Dir == Root)
       return false;
-        
+
     // Keep track of all of the directories we checked, so we can mark them as
     // having module maps if we eventually do find a module map.
     FixUpDirectories.push_back(Dir);
@@ -1385,7 +1385,7 @@ bool HeaderSearch::findUsableModuleForFrameworkHeader(
     SmallVector<std::string, 4> SubmodulePath;
     const DirectoryEntry *TopFrameworkDir
       = ::getTopFrameworkDir(FileMgr, FrameworkName, SubmodulePath);
-    
+
     // Determine the name of the top-level framework.
     StringRef ModuleName = llvm::sys::path::stem(TopFrameworkDir->getName());
 
@@ -1532,16 +1532,16 @@ Module *HeaderSearch::loadFrameworkModule(StringRef Name,
   return ModMap.findModule(Name);
 }
 
-HeaderSearch::LoadModuleMapResult 
+HeaderSearch::LoadModuleMapResult
 HeaderSearch::loadModuleMapFile(StringRef DirName, bool IsSystem,
                                 bool IsFramework) {
   if (const DirectoryEntry *Dir = FileMgr.getDirectory(DirName))
     return loadModuleMapFile(Dir, IsSystem, IsFramework);
-  
+
   return LMM_NoDirectory;
 }
 
-HeaderSearch::LoadModuleMapResult 
+HeaderSearch::LoadModuleMapResult
 HeaderSearch::loadModuleMapFile(const DirectoryEntry *Dir, bool IsSystem,
                                 bool IsFramework) {
   auto KnownDir = DirectoryHasModuleMap.find(Dir);
@@ -1610,7 +1610,7 @@ void HeaderSearch::collectAllModules(SmallVectorImpl<Module *> &Modules) {
   }
 
   // Populate the list of modules.
-  for (ModuleMap::module_iterator M = ModMap.module_begin(), 
+  for (ModuleMap::module_iterator M = ModMap.module_begin(),
                                MEnd = ModMap.module_end();
        M != MEnd; ++M) {
     Modules.push_back(M->getValue());

@@ -232,6 +232,8 @@ void HIPToolChain::addClangTargetOptions(
   assert(DeviceOffloadingKind == Action::OFK_HIP &&
          "Only HIP offloading kinds are supported for GPUs.");
 
+  CC1Args.push_back("-target-cpu");
+  CC1Args.push_back(DriverArgs.MakeArgStringRef(GpuArch));
   CC1Args.push_back("-fcuda-is-device");
 
   if (DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,

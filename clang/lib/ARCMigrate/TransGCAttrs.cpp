@@ -48,7 +48,7 @@ public:
       return true;
 
     SaveAndRestore<bool> Save(FullyMigratable, isMigratable(D));
-    
+
     if (ObjCPropertyDecl *PropD = dyn_cast<ObjCPropertyDecl>(D)) {
       lookForAttribute(PropD, PropD->getTypeSourceInfo());
       AllProps.push_back(PropD);
@@ -107,7 +107,7 @@ public:
       Kind = MigrationContext::GCAttrOccurrence::Weak;
     else
       return false;
- 
+
     MigrateCtx.AttrSet.insert(RawLoc);
     MigrateCtx.GCAttrs.push_back(MigrationContext::GCAttrOccurrence());
     MigrationContext::GCAttrOccurrence &Attr = MigrateCtx.GCAttrs.back();
@@ -164,7 +164,7 @@ public:
     for (auto I : D->redecls())
       if (!isInMainFile(I->getLocation()))
         return false;
-    
+
     return true;
   }
 

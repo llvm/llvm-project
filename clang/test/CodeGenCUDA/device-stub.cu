@@ -19,7 +19,7 @@
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=NOGLOBALS,HIPNOGLOBALS
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-rdc -fcuda-include-gpubinary %t -o - -x hip \
-// RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,RDC,HIP,HIPRDC
+// RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,NORDC,HIP
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - -x hip\
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=NOGPUBIN
 
@@ -79,11 +79,11 @@ void use_pointers() {
 // CUDA-SAME: section ".nvFatBinSegment"
 // HIP-SAME: section ".hipFatBinSegment"
 // * variable to save GPU binary handle after initialization
-// NORDC: @__[[PREFIX]]_gpubin_handle = internal global i8** null
+// CUDANORDC: @__[[PREFIX]]_gpubin_handle = internal global i8** null
+// HIP: @__[[PREFIX]]_gpubin_handle = linkonce global i8** null
 // * constant unnamed string with NVModuleID
 // RDC: [[MODULE_ID_GLOBAL:@.*]] = private constant
 // CUDARDC-SAME: c"[[MODULE_ID:.+]]\00", section "__nv_module_id", align 32
-// HIPRDC-SAME: c"[[MODULE_ID:.+]]\00", section "__hip_module_id", align 32
 // * Make sure our constructor was added to global ctor list.
 // ALL: @llvm.global_ctors = appending global {{.*}}@__[[PREFIX]]_module_ctor
 // * Alias to global symbol containing the NVModuleID.
@@ -120,10 +120,18 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // ALL: define internal void @__[[PREFIX]]_module_ctor
 
 // In separate mode it calls __[[PREFIX]]RegisterFatBinary(&__[[PREFIX]]_fatbin_wrapper)
+// HIP only register fat binary once.
+// HIP: load i8**, i8*** @__hip_gpubin_handle
+// HIP-NEXT: icmp eq i8** {{.*}}, null
+// HIP-NEXT: br i1 {{.*}}, label %if, label %exit
+// HIP: if:
 // NORDC: call{{.*}}[[PREFIX]]RegisterFatBinary{{.*}}__[[PREFIX]]_fatbin_wrapper
 //   .. stores return value in __[[PREFIX]]_gpubin_handle
 // NORDC-NEXT: store{{.*}}__[[PREFIX]]_gpubin_handle
 //   .. and then calls __[[PREFIX]]_register_globals
+// HIP-NEXT: br label %exit
+// HIP: exit:
+// HIP-NEXT: load i8**, i8*** @__hip_gpubin_handle
 // NORDC-NEXT: call void @__[[PREFIX]]_register_globals
 // * In separate mode we also register a destructor.
 // NORDC-NEXT: call i32 @atexit(void (i8*)* @__[[PREFIX]]_module_dtor)
@@ -136,7 +144,14 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // Test that we've created destructor.
 // NORDC: define internal void @__[[PREFIX]]_module_dtor
 // NORDC: load{{.*}}__[[PREFIX]]_gpubin_handle
-// NORDC-NEXT: call void @__[[PREFIX]]UnregisterFatBinary
+// CUDANORDC-NEXT: call void @__[[PREFIX]]UnregisterFatBinary
+// HIP-NEXT: icmp ne i8** {{.*}}, null
+// HIP-NEXT: br i1 {{.*}}, label %if, label %exit
+// HIP: if:
+// HIP-NEXT: call void @__[[PREFIX]]UnregisterFatBinary
+// HIP-NEXT: store i8** null, i8*** @__hip_gpubin_handle
+// HIP-NEXT: br label %exit
+// HIP: exit:
 
 // There should be no __[[PREFIX]]_register_globals if we have no
 // device-side globals, but we still need to register GPU binary.

@@ -343,9 +343,11 @@ bool RangeConstraintManager::canReasonAbout(SVal X) const {
       if (BinaryOperator::isEqualityOp(SSE->getOpcode()) ||
           BinaryOperator::isRelationalOp(SSE->getOpcode())) {
         // We handle Loc <> Loc comparisons, but not (yet) NonLoc <> NonLoc.
+        // We've recently started producing Loc <> NonLoc comparisons (that
+        // result from casts of one of the operands between eg. intptr_t and
+        // void *), but we can't reason about them yet.
         if (Loc::isLocType(SSE->getLHS()->getType())) {
-          assert(Loc::isLocType(SSE->getRHS()->getType()));
-          return true;
+          return Loc::isLocType(SSE->getRHS()->getType());
         }
       }
     }

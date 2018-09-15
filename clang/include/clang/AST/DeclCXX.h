@@ -264,7 +264,7 @@ public:
     return EllipsisLoc;
   }
 
-  /// Returns the access specifier for this base specifier. 
+  /// Returns the access specifier for this base specifier.
   ///
   /// This is the actual base specifier as used for semantic analysis, so
   /// the result can never be AS_none. To retrieve the access specifier as
@@ -564,7 +564,7 @@ class CXXRecordDecl : public RecordDecl {
     CXXRecordDecl *Definition;
 
     /// The first friend declaration in this class, or null if there
-    /// aren't any. 
+    /// aren't any.
     ///
     /// This is actually currently stored in reverse order.
     LazyDeclPtr FirstFriend;
@@ -606,14 +606,14 @@ class CXXRecordDecl : public RecordDecl {
 
     /// Whether this lambda is known to be dependent, even if its
     /// context isn't dependent.
-    /// 
+    ///
     /// A lambda with a non-dependent context can be dependent if it occurs
     /// within the default argument of a function template, because the
     /// lambda will have been created with the enclosing context as its
     /// declaration context, rather than function. This is an unfortunate
-    /// artifact of having to parse the default arguments before. 
+    /// artifact of having to parse the default arguments before.
     unsigned Dependent : 1;
-    
+
     /// Whether this lambda is a generic lambda.
     unsigned IsGenericLambda : 1;
 
@@ -626,28 +626,28 @@ class CXXRecordDecl : public RecordDecl {
     /// The number of explicit captures in this lambda.
     unsigned NumExplicitCaptures : 13;
 
-    /// The number used to indicate this lambda expression for name 
+    /// The number used to indicate this lambda expression for name
     /// mangling in the Itanium C++ ABI.
     unsigned ManglingNumber = 0;
-    
+
     /// The declaration that provides context for this lambda, if the
     /// actual DeclContext does not suffice. This is used for lambdas that
     /// occur within default arguments of function parameters within the class
     /// or within a data member initializer.
     LazyDeclPtr ContextDecl;
-    
-    /// The list of captures, both explicit and implicit, for this 
+
+    /// The list of captures, both explicit and implicit, for this
     /// lambda.
     Capture *Captures = nullptr;
 
     /// The type of the call method.
     TypeSourceInfo *MethodTyInfo;
 
-    LambdaDefinitionData(CXXRecordDecl *D, TypeSourceInfo *Info, 
-                         bool Dependent, bool IsGeneric, 
-                         LambdaCaptureDefault CaptureDefault) 
-      : DefinitionData(D), Dependent(Dependent), IsGenericLambda(IsGeneric), 
-        CaptureDefault(CaptureDefault), NumCaptures(0), NumExplicitCaptures(0), 
+    LambdaDefinitionData(CXXRecordDecl *D, TypeSourceInfo *Info,
+                         bool Dependent, bool IsGeneric,
+                         LambdaCaptureDefault CaptureDefault)
+      : DefinitionData(D), Dependent(Dependent), IsGenericLambda(IsGeneric),
+        CaptureDefault(CaptureDefault), NumCaptures(0), NumExplicitCaptures(0),
         MethodTyInfo(Info) {
       IsLambda = true;
 
@@ -1205,22 +1205,22 @@ public:
     return DD && DD->IsLambda;
   }
 
-  /// Determine whether this class describes a generic 
+  /// Determine whether this class describes a generic
   /// lambda function object (i.e. function call operator is
-  /// a template). 
-  bool isGenericLambda() const; 
+  /// a template).
+  bool isGenericLambda() const;
 
   /// Retrieve the lambda call operator of the closure type
   /// if this is a closure type.
-  CXXMethodDecl *getLambdaCallOperator() const; 
+  CXXMethodDecl *getLambdaCallOperator() const;
 
   /// Retrieve the lambda static invoker, the address of which
   /// is returned by the conversion operator, and the body of which
-  /// is forwarded to the lambda call operator. 
-  CXXMethodDecl *getLambdaStaticInvoker() const; 
+  /// is forwarded to the lambda call operator.
+  CXXMethodDecl *getLambdaStaticInvoker() const;
 
   /// Retrieve the generic lambda's template parameter list.
-  /// Returns null if the class does not represent a lambda or a generic 
+  /// Returns null if the class does not represent a lambda or a generic
   /// lambda.
   TemplateParameterList *getGenericLambdaTemplateParameterList() const;
 
@@ -1345,11 +1345,11 @@ public:
   /// not overridden.
   bool isAbstract() const { return data().Abstract; }
 
-  /// Determine whether this class is standard-layout per 
+  /// Determine whether this class is standard-layout per
   /// C++ [class]p7.
   bool isStandardLayout() const { return data().IsStandardLayout; }
 
-  /// Determine whether this class was standard-layout per 
+  /// Determine whether this class was standard-layout per
   /// C++11 [class]p7, specifically using the C++11 rules without any DRs.
   bool isCXX11StandardLayout() const { return data().IsCXX11StandardLayout; }
 
@@ -1900,25 +1900,25 @@ public:
   /// If this is the closure type of a lambda expression, retrieve the
   /// number to be used for name mangling in the Itanium C++ ABI.
   ///
-  /// Zero indicates that this closure type has internal linkage, so the 
+  /// Zero indicates that this closure type has internal linkage, so the
   /// mangling number does not matter, while a non-zero value indicates which
   /// lambda expression this is in this particular context.
   unsigned getLambdaManglingNumber() const {
     assert(isLambda() && "Not a lambda closure type!");
     return getLambdaData().ManglingNumber;
   }
-  
-  /// Retrieve the declaration that provides additional context for a 
+
+  /// Retrieve the declaration that provides additional context for a
   /// lambda, when the normal declaration context is not specific enough.
   ///
-  /// Certain contexts (default arguments of in-class function parameters and 
+  /// Certain contexts (default arguments of in-class function parameters and
   /// the initializers of data members) have separate name mangling rules for
   /// lambdas within the Itanium C++ ABI. For these cases, this routine provides
-  /// the declaration in which the lambda occurs, e.g., the function parameter 
+  /// the declaration in which the lambda occurs, e.g., the function parameter
   /// or the non-static data member. Otherwise, it returns NULL to imply that
   /// the declaration context suffices.
   Decl *getLambdaContextDecl() const;
-  
+
   /// Set the mangling number and context declaration for a lambda
   /// class.
   void setLambdaMangling(unsigned ManglingNumber, Decl *ContextDecl) {
@@ -2799,7 +2799,7 @@ public:
   /// Determine whether this conversion function is a conversion from
   /// a lambda closure type to a block pointer.
   bool isLambdaToBlockPointerConversion() const;
-  
+
   CXXConversionDecl *getCanonicalDecl() override {
     return cast<CXXConversionDecl>(FunctionDecl::getCanonicalDecl());
   }
@@ -2812,7 +2812,7 @@ public:
   static bool classofKind(Kind K) { return K == CXXConversion; }
 };
 
-/// Represents a linkage specification. 
+/// Represents a linkage specification.
 ///
 /// For example:
 /// \code
@@ -2862,7 +2862,7 @@ public:
                                  SourceLocation LangLoc, LanguageIDs Lang,
                                  bool HasBraces);
   static LinkageSpecDecl *CreateDeserialized(ASTContext &C, unsigned ID);
-  
+
   /// Return the language specified by this linkage specification.
   LanguageIDs getLanguage() const { return LanguageIDs(Language); }
 
@@ -3770,7 +3770,7 @@ public:
                                   Expr *AssertExpr, StringLiteral *Message,
                                   SourceLocation RParenLoc, bool Failed);
   static StaticAssertDecl *CreateDeserialized(ASTContext &C, unsigned ID);
-  
+
   Expr *getAssertExpr() { return AssertExprAndFailed.getPointer(); }
   const Expr *getAssertExpr() const { return AssertExprAndFailed.getPointer(); }
 

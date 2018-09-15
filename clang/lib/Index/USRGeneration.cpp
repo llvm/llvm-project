@@ -62,9 +62,9 @@ class USRGenerator : public ConstDeclVisitor<USRGenerator> {
   bool IgnoreResults;
   ASTContext *Context;
   bool generatedLoc;
-  
+
   llvm::DenseMap<const Type *, unsigned> TypeSubstitutions;
-  
+
 public:
   explicit USRGenerator(ASTContext *Ctx, SmallVectorImpl<char> &Buf)
   : Buf(Buf),
@@ -159,7 +159,7 @@ public:
   void VisitTemplateParameterList(const TemplateParameterList *Params);
   void VisitTemplateName(TemplateName Name);
   void VisitTemplateArgument(const TemplateArgument &Arg);
-  
+
   /// Emit a Decl's name using NamedDecl::printName() and return true if
   ///  the decl had no name.
   bool EmitDeclName(const NamedDecl *D);
@@ -366,7 +366,7 @@ void USRGenerator::VisitClassTemplateDecl(const ClassTemplateDecl *D) {
 void USRGenerator::VisitNamespaceAliasDecl(const NamespaceAliasDecl *D) {
   VisitDeclContext(D->getDeclContext());
   if (!IgnoreResults)
-    Out << "@NA@" << D->getName();  
+    Out << "@NA@" << D->getName();
 }
 
 void USRGenerator::VisitObjCMethodDecl(const ObjCMethodDecl *D) {
@@ -493,7 +493,7 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
   if (const CXXRecordDecl *CXXRecord = dyn_cast<CXXRecordDecl>(D)) {
     if (ClassTemplateDecl *ClassTmpl = CXXRecord->getDescribedClassTemplate()) {
       AlreadyStarted = true;
-      
+
       switch (D->getTagKind()) {
       case TTK_Interface:
       case TTK_Class:
@@ -505,18 +505,18 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
     } else if (const ClassTemplatePartialSpecializationDecl *PartialSpec
                 = dyn_cast<ClassTemplatePartialSpecializationDecl>(CXXRecord)) {
       AlreadyStarted = true;
-      
+
       switch (D->getTagKind()) {
       case TTK_Interface:
       case TTK_Class:
       case TTK_Struct: Out << "@SP"; break;
       case TTK_Union:  Out << "@UP"; break;
       case TTK_Enum: llvm_unreachable("enum partial specialization");
-      }      
+      }
       VisitTemplateParameterList(PartialSpec->getTemplateParameters());
     }
   }
-  
+
   if (!AlreadyStarted) {
     switch (D->getTagKind()) {
       case TTK_Interface:
@@ -526,7 +526,7 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
       case TTK_Enum:   Out << "@E"; break;
     }
   }
-  
+
   Out << '@';
   assert(Buf.size() > 0);
   const unsigned off = Buf.size() - 1;
@@ -551,7 +551,7 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
     }
   }
   }
-  
+
   // For a class template specialization, mangle the template arguments.
   if (const ClassTemplateSpecializationDecl *Spec
                               = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
@@ -640,7 +640,7 @@ void USRGenerator::VisitType(QualType T) {
       Out << 'P';
       T = Expansion->getPattern();
     }
-    
+
     if (const BuiltinType *BT = T->getAs<BuiltinType>()) {
       unsigned char c = '\0';
       switch (BT->getKind()) {
@@ -758,7 +758,7 @@ void USRGenerator::VisitType(QualType T) {
       unsigned Number = TypeSubstitutions.size();
       TypeSubstitutions[T.getTypePtr()] = Number;
     }
-    
+
     if (const PointerType *PT = T->getAs<PointerType>()) {
       Out << '*';
       T = PT->getPointeeType();
@@ -889,7 +889,7 @@ void USRGenerator::VisitTemplateParameterList(
       Out << 'T';
       continue;
     }
-    
+
     if (NonTypeTemplateParmDecl *NTTP = dyn_cast<NonTypeTemplateParmDecl>(*P)) {
       if (NTTP->isParameterPack())
         Out << 'p';
@@ -897,7 +897,7 @@ void USRGenerator::VisitTemplateParameterList(
       VisitType(NTTP->getType());
       continue;
     }
-    
+
     TemplateTemplateParmDecl *TTP = cast<TemplateTemplateParmDecl>(*P);
     if (TTP->isParameterPack())
       Out << 'p';
@@ -913,11 +913,11 @@ void USRGenerator::VisitTemplateName(TemplateName Name) {
       Out << 't' << TTP->getDepth() << '.' << TTP->getIndex();
       return;
     }
-    
+
     Visit(Template);
     return;
   }
-  
+
   // FIXME: Visit dependent template names.
 }
 
@@ -939,21 +939,21 @@ void USRGenerator::VisitTemplateArgument(const TemplateArgument &Arg) {
   case TemplateArgument::Template:
     VisitTemplateName(Arg.getAsTemplateOrTemplatePattern());
     break;
-      
+
   case TemplateArgument::Expression:
     // FIXME: Visit expressions.
     break;
-      
+
   case TemplateArgument::Pack:
     Out << 'p' << Arg.pack_size();
     for (const auto &P : Arg.pack_elements())
       VisitTemplateArgument(P);
     break;
-      
+
   case TemplateArgument::Type:
     VisitType(Arg.getAsType());
     break;
-      
+
   case TemplateArgument::Integral:
     Out << 'V';
     VisitType(Arg.getIntegralType());

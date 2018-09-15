@@ -1660,9 +1660,9 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
       if (Expr *NumElts = (Expr *)Array.NumElts) {
         if (!NumElts->isTypeDependent() && !NumElts->isValueDependent()) {
           if (getLangOpts().CPlusPlus14) {
-	    // C++1y [expr.new]p6: Every constant-expression in a noptr-new-declarator
-	    //   shall be a converted constant expression (5.19) of type std::size_t
-	    //   and shall evaluate to a strictly positive value.
+            // C++1y [expr.new]p6: Every constant-expression in a noptr-new-declarator
+            //   shall be a converted constant expression (5.19) of type std::size_t
+            //   and shall evaluate to a strictly positive value.
             unsigned IntWidth = Context.getTargetInfo().getIntWidth();
             assert(IntWidth && "Builtin type of size 0?");
             llvm::APSInt Value(IntWidth);
@@ -1893,7 +1893,7 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       assert(Context.getTargetInfo().getIntWidth() && "Builtin type of size 0?");
 
       ConvertedSize = PerformImplicitConversion(ArraySize, Context.getSizeType(),
-						AA_Converting);
+                                                AA_Converting);
 
       if (!ConvertedSize.isInvalid() &&
           ArraySize->getType()->getAs<RecordType>())
@@ -7114,10 +7114,17 @@ ExprResult Sema::ActOnPseudoDestructorExpr(Scope *S, Expr *Base,
 ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,
                                         CXXConversionDecl *Method,
                                         bool HadMultipleCandidates) {
+  // Convert the expression to match the conversion function's implicit object
+  // parameter.
+  ExprResult Exp = PerformObjectArgumentInitialization(E, /*Qualifier=*/nullptr,
+                                          FoundDecl, Method);
+  if (Exp.isInvalid())
+    return true;
+
   if (Method->getParent()->isLambda() &&
       Method->getConversionType()->isBlockPointerType()) {
     // This is a lambda coversion to block pointer; check if the argument
-    // is a LambdaExpr.
+    // was a LambdaExpr.
     Expr *SubE = E;
     CastExpr *CE = dyn_cast<CastExpr>(SubE);
     if (CE && CE->getCastKind() == CK_NoOp)
@@ -7134,21 +7141,15 @@ ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,
       DiagnosticErrorTrap Trap(Diags);
       PushExpressionEvaluationContext(
           ExpressionEvaluationContext::PotentiallyEvaluated);
-      ExprResult Exp = BuildBlockForLambdaConversion(E->getExprLoc(),
-                                                     E->getExprLoc(),
-                                                     Method, E);
+      ExprResult BlockExp = BuildBlockForLambdaConversion(
+          Exp.get()->getExprLoc(), Exp.get()->getExprLoc(), Method, Exp.get());
       PopExpressionEvaluationContext();
 
-      if (Exp.isInvalid())
-        Diag(E->getExprLoc(), diag::note_lambda_to_block_conv);
-      return Exp;
+      if (BlockExp.isInvalid())
+        Diag(Exp.get()->getExprLoc(), diag::note_lambda_to_block_conv);
+      return BlockExp;
     }
   }
-
-  ExprResult Exp = PerformObjectArgumentInitialization(E, /*Qualifier=*/nullptr,
-                                          FoundDecl, Method);
-  if (Exp.isInvalid())
-    return true;
 
   MemberExpr *ME = new (Context) MemberExpr(
       Exp.get(), /*IsArrow=*/false, SourceLocation(), Method, SourceLocation(),

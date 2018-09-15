@@ -53,11 +53,11 @@ struct S {
 // CHECK-NEXT: |       |-OMPScheduleClause {{.+}} <col:61, col:79>
 // CHECK-NEXT: |       | `-ImplicitCastExpr {{.+}} <col:78> 'int' <LValueToRValue>
 // CHECK-NEXT: |       |   `-DeclRefExpr {{.+}} <col:78> 'int' lvalue OMPCapturedExpr {{.+}} '.capture_expr.' 'int'
-// CHECK-NEXT: |       |-CapturedStmt {{.+}} <line:41:5, line:42:9>
-// CHECK-NEXT: |       | |-CapturedDecl {{.+}} <<invalid sloc>> <invalid sloc>
-// CHECK-NEXT: |       | | |-ForStmt {{.+}} <line:41:5, line:42:9>
-// CHECK:      |       | | | `-UnaryOperator {{.+}} <line:42:7, col:9> 'int' lvalue prefix '++'
-// CHECK-NEXT: |       | | |   `-DeclRefExpr {{.+}} <col:9> 'int' lvalue OMPCapturedExpr {{.+}} 'a' 'int &'
+// CHECK-NEXT: |       `-CapturedStmt {{.+}} <line:41:5, line:42:9>
+// CHECK-NEXT: |         |-CapturedDecl {{.+}} <<invalid sloc>> <invalid sloc>
+// CHECK-NEXT: |         | |-ForStmt {{.+}} <line:41:5, line:42:9>
+// CHECK:      |         | | `-UnaryOperator {{.+}} <line:42:7, col:9> 'int' lvalue prefix '++'
+// CHECK-NEXT: |         | |   `-DeclRefExpr {{.+}} <col:9> 'int' lvalue OMPCapturedExpr {{.+}} 'a' 'int &'
 
 #pragma omp declare simd
 #pragma omp declare simd inbranch

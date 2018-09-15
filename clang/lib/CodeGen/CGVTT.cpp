@@ -30,8 +30,8 @@ GetAddrOfVTTVTable(CodeGenVTables &CGVT, CodeGenModule &CGM,
     // This is a regular vtable.
     return CGM.getCXXABI().getAddrOfVTable(MostDerivedClass, CharUnits());
   }
-  
-  return CGVT.GenerateConstructionVTable(MostDerivedClass, 
+
+  return CGVT.GenerateConstructionVTable(MostDerivedClass,
                                          VTable.getBaseSubobject(),
                                          VTable.isVirtual(),
                                          Linkage,
@@ -45,7 +45,7 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
   VTTBuilder Builder(CGM.getContext(), RD, /*GenerateDefinition=*/true);
 
   llvm::Type *Int8PtrTy = CGM.Int8PtrTy, *Int32Ty = CGM.Int32Ty;
-  llvm::ArrayType *ArrayType = 
+  llvm::ArrayType *ArrayType =
     llvm::ArrayType::get(Int8PtrTy, Builder.getVTTComponents().size());
 
   SmallVector<llvm::GlobalVariable *, 8> VTables;
@@ -117,42 +117,42 @@ llvm::GlobalVariable *CodeGenVTables::GetAddrOfVTT(const CXXRecordDecl *RD) {
 
   VTTBuilder Builder(CGM.getContext(), RD, /*GenerateDefinition=*/false);
 
-  llvm::ArrayType *ArrayType = 
+  llvm::ArrayType *ArrayType =
     llvm::ArrayType::get(CGM.Int8PtrTy, Builder.getVTTComponents().size());
 
   llvm::GlobalVariable *GV =
-    CGM.CreateOrReplaceCXXRuntimeVariable(Name, ArrayType, 
+    CGM.CreateOrReplaceCXXRuntimeVariable(Name, ArrayType,
                                           llvm::GlobalValue::ExternalLinkage);
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   return GV;
 }
 
-uint64_t CodeGenVTables::getSubVTTIndex(const CXXRecordDecl *RD, 
+uint64_t CodeGenVTables::getSubVTTIndex(const CXXRecordDecl *RD,
                                         BaseSubobject Base) {
   BaseSubobjectPairTy ClassSubobjectPair(RD, Base);
 
   SubVTTIndiciesMapTy::iterator I = SubVTTIndicies.find(ClassSubobjectPair);
   if (I != SubVTTIndicies.end())
     return I->second;
-  
+
   VTTBuilder Builder(CGM.getContext(), RD, /*GenerateDefinition=*/false);
 
   for (llvm::DenseMap<BaseSubobject, uint64_t>::const_iterator I =
-       Builder.getSubVTTIndicies().begin(), 
+       Builder.getSubVTTIndicies().begin(),
        E = Builder.getSubVTTIndicies().end(); I != E; ++I) {
     // Insert all indices.
     BaseSubobjectPairTy ClassSubobjectPair(RD, I->first);
-    
+
     SubVTTIndicies.insert(std::make_pair(ClassSubobjectPair, I->second));
   }
-    
+
   I = SubVTTIndicies.find(ClassSubobjectPair);
   assert(I != SubVTTIndicies.end() && "Did not find index!");
-  
+
   return I->second;
 }
 
-uint64_t 
+uint64_t
 CodeGenVTables::getSecondaryVirtualPointerIndex(const CXXRecordDecl *RD,
                                                 BaseSubobject Base) {
   SecondaryVirtualPointerIndicesMapTy::iterator I =
@@ -164,17 +164,17 @@ CodeGenVTables::getSecondaryVirtualPointerIndex(const CXXRecordDecl *RD,
   VTTBuilder Builder(CGM.getContext(), RD, /*GenerateDefinition=*/false);
 
   // Insert all secondary vpointer indices.
-  for (llvm::DenseMap<BaseSubobject, uint64_t>::const_iterator I = 
+  for (llvm::DenseMap<BaseSubobject, uint64_t>::const_iterator I =
        Builder.getSecondaryVirtualPointerIndices().begin(),
        E = Builder.getSecondaryVirtualPointerIndices().end(); I != E; ++I) {
     std::pair<const CXXRecordDecl *, BaseSubobject> Pair =
       std::make_pair(RD, I->first);
-    
+
     SecondaryVirtualPointerIndices.insert(std::make_pair(Pair, I->second));
   }
 
   I = SecondaryVirtualPointerIndices.find(std::make_pair(RD, Base));
   assert(I != SecondaryVirtualPointerIndices.end() && "Did not find index!");
-  
+
   return I->second;
 }

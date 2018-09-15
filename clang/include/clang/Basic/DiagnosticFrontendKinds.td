@@ -36,7 +36,7 @@ def remark_fe_backend_plugin: Remark<"%0">, BackendInfo, InGroup<RemarkBackendPl
 def note_fe_backend_plugin: Note<"%0">, BackendInfo;
 
 def warn_fe_override_module : Warning<
-    "overriding the module target triple with %0">, 
+    "overriding the module target triple with %0">,
     InGroup<DiagGroup<"override-module">>;
 
 def remark_fe_backend_optimization_remark : Remark<"%0">, BackendInfo,
@@ -190,10 +190,10 @@ def err_module_interface_requires_modules_ts : Error<
 def warn_module_config_mismatch : Warning<
   "module file %0 cannot be loaded due to a configuration mismatch with the current "
   "compilation">, InGroup<DiagGroup<"module-file-config-mismatch">>, DefaultError;
-def err_module_map_not_found : Error<"module map file '%0' not found">, 
+def err_module_map_not_found : Error<"module map file '%0' not found">,
   DefaultFatal;
 def err_missing_module_name : Error<
-  "no module name provided; specify one with -fmodule-name=">, 
+  "no module name provided; specify one with -fmodule-name=">,
   DefaultFatal;
 def err_missing_module : Error<
   "no module named '%0' declared in module map file '%1'">, DefaultFatal;

@@ -63,7 +63,7 @@ class IdentifierInfo {
   bool IsPoisoned             : 1; // True if identifier is poisoned.
   bool IsCPPOperatorKeyword   : 1; // True if ident is a C++ operator keyword.
   bool NeedsHandleIdentifier  : 1; // See "RecomputeNeedsHandleIdentifier".
-  bool IsFromAST              : 1; // True if identifier was loaded (at least 
+  bool IsFromAST              : 1; // True if identifier was loaded (at least
                                    // partially) from an AST file.
   bool ChangedAfterLoad       : 1; // True if identifier has changed from the
                                    // definition loaded from an AST file.
@@ -305,7 +305,7 @@ public:
   bool hasChangedSinceDeserialization() const {
     return ChangedAfterLoad;
   }
-  
+
   /// Note that this identifier has changed since it was loaded from
   /// an AST file.
   void setChangedSinceDeserialization() {
@@ -315,7 +315,7 @@ public:
   /// Determine whether the information for this identifier is out of
   /// date with respect to the external source.
   bool isOutOfDate() const { return OutOfDate; }
-  
+
   /// Set whether the information for this identifier is out of
   /// date with respect to the external source.
   void setOutOfDate(bool OOD) {
@@ -325,10 +325,10 @@ public:
     else
       RecomputeNeedsHandleIdentifier();
   }
-  
+
   /// Determine whether this is the contextual keyword \c import.
   bool isModulesImport() const { return IsModulesImport; }
-  
+
   /// Set whether this identifier is the contextual keyword \c import.
   void setModulesImport(bool I) {
     IsModulesImport = I;
@@ -404,7 +404,7 @@ public:
 class IdentifierIterator {
 protected:
   IdentifierIterator() = default;
-  
+
 public:
   IdentifierIterator(const IdentifierIterator &) = delete;
   IdentifierIterator &operator=(const IdentifierIterator &) = delete;
@@ -475,7 +475,7 @@ public:
   IdentifierInfoLookup *getExternalIdentifierLookup() const {
     return ExternalLookup;
   }
-  
+
   llvm::BumpPtrAllocator& getAllocator() {
     return HashTable.getAllocator();
   }
@@ -557,7 +557,7 @@ public:
   void AddKeywords(const LangOptions &LangOpts);
 };
 
-/// A family of Objective-C methods. 
+/// A family of Objective-C methods.
 ///
 /// These families have no inherent meaning in the language, but are
 /// nonetheless central enough in the existing implementations to
@@ -672,13 +672,13 @@ class Selector {
   MultiKeywordSelector *getMultiKeywordSelector() const {
     return reinterpret_cast<MultiKeywordSelector *>(InfoPtr & ~ArgFlags);
   }
-  
+
   unsigned getIdentifierInfoFlag() const {
     return InfoPtr & ArgFlags;
   }
 
   static ObjCMethodFamily getMethodFamilyImpl(Selector sel);
-  
+
   static ObjCStringFormatFamily getStringFormatFamilyImpl(Selector sel);
 
 public:
@@ -715,11 +715,11 @@ public:
   }
 
   unsigned getNumArgs() const;
-  
+
   /// Retrieve the identifier at a given position in the selector.
   ///
   /// Note that the identifier pointer returned may be NULL. Clients that only
-  /// care about the text of the identifier string, and not the specific, 
+  /// care about the text of the identifier string, and not the specific,
   /// uniqued identifier pointer, should use \c getNameForSlot(), which returns
   /// an empty string when the identifier pointer would be NULL.
   ///
@@ -730,7 +730,7 @@ public:
   /// \returns the uniqued identifier for this slot, or NULL if this slot has
   /// no corresponding identifier.
   IdentifierInfo *getIdentifierInfoForSlot(unsigned argIndex) const;
-  
+
   /// Retrieve the name at a given position in the selector.
   ///
   /// \param argIndex The index for which we want to retrieve the name.
@@ -740,7 +740,7 @@ public:
   /// \returns the name for this slot, which may be the empty string if no
   /// name was supplied.
   StringRef getNameForSlot(unsigned argIndex) const;
-  
+
   /// Derive the full selector name (e.g. "foo:bar:") and return
   /// it as an std::string.
   std::string getAsString() const;
@@ -754,11 +754,11 @@ public:
   ObjCMethodFamily getMethodFamily() const {
     return getMethodFamilyImpl(*this);
   }
-  
+
   ObjCStringFormatFamily getStringFormatFamily() const {
     return getStringFormatFamilyImpl(*this);
   }
-  
+
   static Selector getEmptyMarker() {
     return Selector(uintptr_t(-1));
   }
@@ -766,7 +766,7 @@ public:
   static Selector getTombstoneMarker() {
     return Selector(uintptr_t(-2));
   }
-  
+
   static ObjCInstanceTypeFamily getInstTypeMethodFamily(Selector sel);
 };
 
@@ -886,7 +886,7 @@ struct PointerLikeTypeTraits<clang::Selector> {
     return clang::Selector(reinterpret_cast<uintptr_t>(P));
   }
 
-  enum { NumLowBitsAvailable = 0 };  
+  enum { NumLowBitsAvailable = 0 };
 };
 
 // Provide PointerLikeTypeTraits for IdentifierInfo pointers, which

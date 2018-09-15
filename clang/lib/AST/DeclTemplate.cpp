@@ -117,7 +117,7 @@ unsigned TemplateParameterList::getMinRequiredArguments() const {
 unsigned TemplateParameterList::getDepth() const {
   if (size() == 0)
     return 0;
-  
+
   const NamedDecl *FirstParm = getParam(0);
   if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(FirstParm))
     return TTP->getDepth();
@@ -338,13 +338,13 @@ llvm::FoldingSetVector<ClassTemplateSpecializationDecl> &
 ClassTemplateDecl::getSpecializations() const {
   LoadLazySpecializations();
   return getCommonPtr()->Specializations;
-}  
+}
 
 llvm::FoldingSetVector<ClassTemplatePartialSpecializationDecl> &
 ClassTemplateDecl::getPartialSpecializations() {
   LoadLazySpecializations();
   return getCommonPtr()->PartialSpecializations;
-}  
+}
 
 RedeclarableTemplateDecl::CommonBase *
 ClassTemplateDecl::newCommon(ASTContext &C) const {
@@ -427,11 +427,11 @@ ClassTemplateDecl::getInjectedClassNameSpecialization() {
     return CommonPtr->InjectedClassNameType;
 
   // C++0x [temp.dep.type]p2:
-  //  The template argument list of a primary template is a template argument 
+  //  The template argument list of a primary template is a template argument
   //  list in which the nth template argument has the value of the nth template
-  //  parameter of the class template. If the nth template parameter is a 
-  //  template parameter pack (14.5.3), the nth template argument is a pack 
-  //  expansion (14.5.3) whose pattern is the name of the template parameter 
+  //  parameter of the class template. If the nth template parameter is a
+  //  template parameter pack (14.5.3), the nth template argument is a pack
+  //  expansion (14.5.3) whose pattern is the name of the template parameter
   //  pack.
   ASTContext &Context = getASTContext();
   TemplateParameterList *Params = getTemplateParameters();

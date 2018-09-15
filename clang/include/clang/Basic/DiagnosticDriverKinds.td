@@ -208,7 +208,7 @@ def err_drv_omp_host_target_not_supported : Error<
 def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<
   "The option -fopenmp-targets must be used in conjunction with a -fopenmp option compatible with offloading, please use -fopenmp=libomp or -fopenmp=libiomp5.">;
 def warn_drv_omp_offload_target_duplicate : Warning<
-  "The OpenMP offloading target '%0' is similar to target '%1' already specified - will be ignored.">, 
+  "The OpenMP offloading target '%0' is similar to target '%1' already specified - will be ignored.">,
   InGroup<OpenMPTarget>;
 def warn_drv_omp_offload_target_missingbcruntime : Warning<
   "No library '%0' found in the default clang lib directory or in LIBRARY_PATH. Expect degraded performance due to no inlining of runtime functions on target devices.">,
@@ -226,6 +226,9 @@ def warn_ignored_clang_option : Warning<"the flag '%0' has been deprecated and w
 def warn_drv_unsupported_opt_for_target : Warning<
   "optimization flag '%0' is not supported for target '%1'">,
   InGroup<IgnoredOptimizationArgument>;
+def warn_drv_unsupported_debug_info_opt_for_target : Warning<
+  "debug information option '%0' is not supported for target '%1'">,
+  InGroup<UnsupportedTargetOpt>;
 def warn_c_kext : Warning<
   "ignoring -fapple-kext which is valid for C++ and Objective-C++ only">;
 def warn_drv_input_file_unused : Warning<

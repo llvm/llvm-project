@@ -236,7 +236,7 @@ public:
   const char *toString() const;
 
   bool isPrintfKind() const { return IsPrintf; }
-  
+
   Optional<ConversionSpecifier> getStandardSpecifier() const;
 
 protected:

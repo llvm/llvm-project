@@ -46,7 +46,7 @@ struct CaseInfo {
     St_CannotFix,
     St_Fixed
   } State;
-  
+
   CaseInfo() : SC(nullptr), State(St_Unchecked) {}
   CaseInfo(SwitchCase *S, SourceRange Range)
     : SC(S), Range(Range), State(St_Unchecked) {}

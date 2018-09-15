@@ -1222,9 +1222,9 @@ OMPTargetParallelForSimdDirective *OMPTargetParallelForSimdDirective::Create(
                                 alignof(OMPClause *));
   void *Mem = C.Allocate(
       Size + sizeof(OMPClause *) * Clauses.size() +
-      sizeof(Stmt *) * 
+      sizeof(Stmt *) *
           numLoopChildren(CollapsedNum, OMPD_target_parallel_for_simd));
-  OMPTargetParallelForSimdDirective *Dir = 
+  OMPTargetParallelForSimdDirective *Dir =
       new (Mem) OMPTargetParallelForSimdDirective(StartLoc, EndLoc,
                                                   CollapsedNum, Clauses.size());
   Dir->setClauses(Clauses);
@@ -1262,20 +1262,20 @@ OMPTargetParallelForSimdDirective::CreateEmpty(const ASTContext &C,
                                 alignof(OMPClause *));
   void *Mem = C.Allocate(
       Size + sizeof(OMPClause *) * NumClauses +
-      sizeof(Stmt *) * 
+      sizeof(Stmt *) *
           numLoopChildren(CollapsedNum, OMPD_target_parallel_for_simd));
   return new (Mem) OMPTargetParallelForSimdDirective(CollapsedNum, NumClauses);
 }
 
 OMPTargetSimdDirective *
-OMPTargetSimdDirective::Create(const ASTContext &C, SourceLocation StartLoc, 
+OMPTargetSimdDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                                SourceLocation EndLoc, unsigned CollapsedNum,
                                ArrayRef<OMPClause *> Clauses,
                                Stmt *AssociatedStmt, const HelperExprs &Exprs) {
   unsigned Size =
       llvm::alignTo(sizeof(OMPTargetSimdDirective), alignof(OMPClause *));
   void *Mem = C.Allocate(Size + sizeof(OMPClause *) * Clauses.size() +
-                         sizeof(Stmt *) * 
+                         sizeof(Stmt *) *
                              numLoopChildren(CollapsedNum, OMPD_target_simd));
   OMPTargetSimdDirective *Dir = new (Mem)
       OMPTargetSimdDirective(StartLoc, EndLoc, CollapsedNum, Clauses.size());
@@ -1303,7 +1303,7 @@ OMPTargetSimdDirective::CreateEmpty(const ASTContext &C, unsigned NumClauses,
   unsigned Size =
       llvm::alignTo(sizeof(OMPTargetSimdDirective), alignof(OMPClause *));
   void *Mem = C.Allocate(Size + sizeof(OMPClause *) * NumClauses +
-                         sizeof(Stmt *) * 
+                         sizeof(Stmt *) *
                              numLoopChildren(CollapsedNum, OMPD_target_simd));
   return new (Mem) OMPTargetSimdDirective(CollapsedNum, NumClauses);
 }

@@ -140,7 +140,7 @@ CreateFrontendAction(CompilerInstance &CI) {
   if (FEOpts.FixAndRecompile) {
     Act = llvm::make_unique<FixItRecompile>(std::move(Act));
   }
-  
+
 #if CLANG_ENABLE_ARCMT
   if (CI.getFrontendOpts().ProgramAction != frontend::MigrateSource &&
       CI.getFrontendOpts().ProgramAction != frontend::GeneratePCH) {
@@ -266,4 +266,4 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   return Success;
 }
 
-} // namespace clang 
+} // namespace clang

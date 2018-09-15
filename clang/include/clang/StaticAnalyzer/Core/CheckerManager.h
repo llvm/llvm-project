@@ -86,7 +86,7 @@ enum PointerEscapeKind {
   /// argument to a function.
   PSK_IndirectEscapeOnCall,
 
-  /// The reason for pointer escape is unknown. For example, 
+  /// The reason for pointer escape is unknown. For example,
   /// a region containing this pointer is invalidated.
   PSK_EscapeOther
 };
@@ -353,18 +353,18 @@ public:
   ///
   /// This notifies the checkers about pointer escape, which occurs whenever
   /// the analyzer cannot track the symbol any more. For example, as a
-  /// result of assigning a pointer into a global or when it's passed to a 
+  /// result of assigning a pointer into a global or when it's passed to a
   /// function call the analyzer cannot model.
-  /// 
+  ///
   /// \param State The state at the point of escape.
   /// \param Escaped The list of escaped symbols.
-  /// \param Call The corresponding CallEvent, if the symbols escape as 
+  /// \param Call The corresponding CallEvent, if the symbols escape as
   ///        parameters to the given call.
   /// \param Kind The reason of pointer escape.
-  /// \param ITraits Information about invalidation for a particular 
+  /// \param ITraits Information about invalidation for a particular
   ///        region/symbol.
   /// \returns Checkers can modify the state by returning a new one.
-  ProgramStateRef 
+  ProgramStateRef
   runCheckersForPointerEscape(ProgramStateRef State,
                               const InvalidatedSymbols &Escaped,
                               const CallEvent *Call,
@@ -381,7 +381,7 @@ public:
   void runCheckersForEvalCall(ExplodedNodeSet &Dst,
                               const ExplodedNodeSet &Src,
                               const CallEvent &CE, ExprEngine &Eng);
-  
+
   /// Run checkers for the entire Translation Unit.
   void runCheckersOnEndOfTranslationUnit(const TranslationUnitDecl *TU,
                                          AnalysisManager &mgr,
@@ -419,21 +419,21 @@ public:
 //===----------------------------------------------------------------------===//
 
   using CheckStmtFunc = CheckerFn<void (const Stmt *, CheckerContext &)>;
-  
+
   using CheckObjCMessageFunc =
       CheckerFn<void (const ObjCMethodCall &, CheckerContext &)>;
 
   using CheckCallFunc =
       CheckerFn<void (const CallEvent &, CheckerContext &)>;
-  
+
   using CheckLocationFunc =
       CheckerFn<void (const SVal &location, bool isLoad, const Stmt *S,
                       CheckerContext &)>;
-  
+
   using CheckBindFunc =
       CheckerFn<void (const SVal &location, const SVal &val, const Stmt *S,
                       CheckerContext &)>;
-  
+
   using CheckEndAnalysisFunc =
       CheckerFn<void (ExplodedGraph &, BugReporter &, ExprEngine &)>;
 
@@ -441,18 +441,18 @@ public:
 
   using CheckEndFunctionFunc =
       CheckerFn<void (const ReturnStmt *, CheckerContext &)>;
-  
+
   using CheckBranchConditionFunc =
       CheckerFn<void (const Stmt *, CheckerContext &)>;
 
   using CheckNewAllocatorFunc =
       CheckerFn<void (const CXXNewExpr *, SVal, CheckerContext &)>;
-  
+
   using CheckDeadSymbolsFunc =
       CheckerFn<void (SymbolReaper &, CheckerContext &)>;
-  
+
   using CheckLiveSymbolsFunc = CheckerFn<void (ProgramStateRef,SymbolReaper &)>;
-  
+
   using CheckRegionChangesFunc =
       CheckerFn<ProgramStateRef (ProgramStateRef,
                                  const InvalidatedSymbols *symbols,
@@ -460,17 +460,17 @@ public:
                                  ArrayRef<const MemRegion *> Regions,
                                  const LocationContext *LCtx,
                                  const CallEvent *Call)>;
-  
+
   using CheckPointerEscapeFunc =
       CheckerFn<ProgramStateRef (ProgramStateRef,
                                  const InvalidatedSymbols &Escaped,
                                  const CallEvent *Call, PointerEscapeKind Kind,
                                  RegionAndSymbolInvalidationTraits *ITraits)>;
-  
+
   using EvalAssumeFunc =
       CheckerFn<ProgramStateRef (ProgramStateRef, const SVal &cond,
                                  bool assumption)>;
-  
+
   using EvalCallFunc = CheckerFn<bool (const CallExpr *, CheckerContext &)>;
 
   using CheckEndOfTranslationUnit =
@@ -531,7 +531,7 @@ public:
   template <typename EVENT>
   void _registerListenerForEvent(CheckEventFunc checkfn) {
     EventInfo &info = Events[getTag<EVENT>()];
-    info.Checkers.push_back(checkfn);    
+    info.Checkers.push_back(checkfn);
   }
 
   template <typename EVENT>
@@ -636,7 +636,7 @@ private:
 
     EventInfo() = default;
   };
-  
+
   using EventsTy = llvm::DenseMap<EventTag, EventInfo>;
   EventsTy Events;
 };

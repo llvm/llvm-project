@@ -47,7 +47,7 @@
 // The clang_registerCheckers function may add any number of checkers to the
 // registry. If any checkers require additional initialization, use the three-
 // argument form of CheckerRegistry::addChecker.
-// 
+//
 // To load a checker plugin, specify the full path to the dynamic library as
 // the argument to the -load option in the cc1 frontend. You can then enable
 // your custom checker using the -analyzer-checker:

@@ -207,17 +207,22 @@ __device__ void df_sema() {
   // expected-error@-1 {{initialization is not supported for __shared__ variables.}}
 
   static __device__ int ds;
-  // expected-error@-1 {{within a __device__ function, only __shared__ variables may be marked 'static'}}
+  // expected-error@-1 {{within a __device__ function, only __shared__ variables or const variables without device memory qualifier may be marked 'static'}}
   static __constant__ int dc;
-  // expected-error@-1 {{within a __device__ function, only __shared__ variables may be marked 'static'}}
+  // expected-error@-1 {{within a __device__ function, only __shared__ variables or const variables without device memory qualifier may be marked 'static'}}
   static int v;
-  // expected-error@-1 {{within a __device__ function, only __shared__ variables may be marked 'static'}}
+  // expected-error@-1 {{within a __device__ function, only __shared__ variables or const variables without device memory qualifier may be marked 'static'}}
+  static const int cv = 1;
+  static const __device__ int cds = 1;
+  // expected-error@-1 {{within a __device__ function, only __shared__ variables or const variables without device memory qualifier may be marked 'static'}}
+  static const __constant__ int cdc = 1;
+  // expected-error@-1 {{within a __device__ function, only __shared__ variables or const variables without device memory qualifier may be marked 'static'}}
 }
 
 __host__ __device__ void hd_sema() {
   static int x = 42;
 #ifdef __CUDA_ARCH__
-  // expected-error@-2 {{within a __host__ __device__ function, only __shared__ variables may be marked 'static'}}
+  // expected-error@-2 {{within a __host__ __device__ function, only __shared__ variables or const variables without device memory qualifier may be marked 'static'}}
 #endif
 }
 

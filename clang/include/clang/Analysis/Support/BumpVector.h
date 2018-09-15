@@ -29,7 +29,7 @@
 #include <type_traits>
 
 namespace clang {
-  
+
 class BumpVectorContext {
   llvm::PointerIntPair<llvm::BumpPtrAllocator*, 1> Alloc;
 
@@ -47,15 +47,15 @@ public:
   /// BumpPtrAllocator.  This BumpPtrAllocator is not destroyed when the
   /// BumpVectorContext object is destroyed.
   BumpVectorContext(llvm::BumpPtrAllocator &A) : Alloc(&A, 0) {}
-  
+
   ~BumpVectorContext() {
     if (Alloc.getInt())
       delete Alloc.getPointer();
   }
-  
+
   llvm::BumpPtrAllocator &getAllocator() { return *Alloc.getPointer(); }
 };
-  
+
 template<typename T>
 class BumpVector {
   T *Begin = nullptr;
@@ -67,34 +67,34 @@ public:
   explicit BumpVector(BumpVectorContext &C, unsigned N) {
     reserve(C, N);
   }
-  
+
   ~BumpVector() {
     if (std::is_class<T>::value) {
       // Destroy the constructed elements in the vector.
       destroy_range(Begin, End);
     }
   }
-  
+
   using size_type = size_t;
   using difference_type = ptrdiff_t;
   using value_type = T;
   using iterator = T *;
   using const_iterator = const T *;
-  
+
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
   using reverse_iterator = std::reverse_iterator<iterator>;
-  
+
   using reference = T &;
   using const_reference = const T &;
   using pointer = T *;
   using const_pointer = const T *;
-  
+
   // forward iterator creation methods.
   iterator begin() { return Begin; }
   const_iterator begin() const { return Begin; }
   iterator end() { return End; }
   const_iterator end() const { return End; }
-  
+
   // reverse iterator creation methods.
   reverse_iterator rbegin() { return reverse_iterator(end()); }
   const_reverse_iterator rbegin() const{ return const_reverse_iterator(end()); }
@@ -102,7 +102,7 @@ public:
   const_reverse_iterator rend() const {
     return const_reverse_iterator(begin());
   }
-    
+
   bool empty() const { return Begin == End; }
   size_type size() const { return End-Begin; }
 
@@ -114,49 +114,49 @@ public:
     assert(Begin + idx < End);
     return Begin[idx];
   }
-  
+
   reference front() {
     return begin()[0];
   }
   const_reference front() const {
     return begin()[0];
   }
-  
+
   reference back() {
     return end()[-1];
   }
   const_reference back() const {
     return end()[-1];
   }
-  
+
   void pop_back() {
     --End;
     End->~T();
   }
-  
+
   T pop_back_val() {
     T Result = back();
     pop_back();
     return Result;
   }
-  
+
   void clear() {
     if (std::is_class<T>::value) {
       destroy_range(Begin, End);
     }
     End = Begin;
   }
-  
+
   /// data - Return a pointer to the vector's buffer, even if empty().
   pointer data() {
     return pointer(Begin);
   }
-  
+
   /// data - Return a pointer to the vector's buffer, even if empty().
   const_pointer data() const {
     return const_pointer(Begin);
   }
-  
+
   void push_back(const_reference Elt, BumpVectorContext &C) {
     if (End < Capacity) {
     Retry:
@@ -165,7 +165,7 @@ public:
       return;
     }
     grow(C);
-    goto Retry;    
+    goto Retry;
   }
 
   /// insert - Insert some number of copies of element into a position. Return
@@ -193,18 +193,18 @@ public:
 
   /// capacity - Return the total number of elements in the currently allocated
   /// buffer.
-  size_t capacity() const { return Capacity - Begin; }  
-    
+  size_t capacity() const { return Capacity - Begin; }
+
 private:
   /// grow - double the size of the allocated memory, guaranteeing space for at
   /// least one more element or MinSize if specified.
   void grow(BumpVectorContext &C, size_type MinSize = 1);
-  
+
   void construct_range(T *S, T *E, const T &Elt) {
     for (; S != E; ++S)
       new (S) T(Elt);
   }
-  
+
   void destroy_range(T *S, T *E) {
     while (S != E) {
       --E;
@@ -220,7 +220,7 @@ private:
     }
   }
 };
-  
+
 // Define this out-of-line to dissuade the C++ compiler from inlining it.
 template <typename T>
 void BumpVector<T>::grow(BumpVectorContext &C, size_t MinSize) {
@@ -232,7 +232,7 @@ void BumpVector<T>::grow(BumpVectorContext &C, size_t MinSize) {
 
   // Allocate the memory from the BumpPtrAllocator.
   T *NewElts = C.getAllocator().template Allocate<T>(NewCapacity);
-  
+
   // Copy the elements over.
   if (Begin != End) {
     if (std::is_class<T>::value) {

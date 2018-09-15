@@ -1,0 +1,18 @@
+
+*** Dumping AST Record Layout
+Type: class B<0>
+
+Layout: <ASTRecordLayout
+  FieldOffsets: [0, 32]>
+
+*** Dumping AST Record Layout
+Type: class B<1>
+
+Layout: <ASTRecordLayout
+  FieldOffsets: [0, 32]>
+
+*** Dumping AST Record Layout
+Type: class C
+
+Layout: <ASTRecordLayout
+  FieldOffsets: [80]>
