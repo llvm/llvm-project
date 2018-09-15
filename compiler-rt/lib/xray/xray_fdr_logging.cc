@@ -86,10 +86,6 @@ static BufferQueue *BQ = nullptr;
 static atomic_sint32_t LogFlushStatus = {
     XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING};
 
-static FDRLoggingOptions FDROptions;
-
-static SpinMutex FDROptionsMutex;
-
 // This function will initialize the thread-local data structure used by the FDR
 // logging implementation and return a reference to it. The implementation
 // details require a bit of care to maintain.
@@ -875,15 +871,7 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
   //      (fixed-sized) and let the tools reading the buffers deal with the data
   //      afterwards.
   //
-  int Fd = -1;
-  {
-    // FIXME: Remove this section of the code, when we remove the struct-based
-    // configuration API.
-    SpinMutexLock Guard(&FDROptionsMutex);
-    Fd = FDROptions.Fd;
-  }
-  if (Fd == -1)
-    Fd = getLogFD();
+  int Fd = getLogFD();
   if (Fd == -1) {
     auto Result = XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
     atomic_store(&LogFlushStatus, Result, memory_order_release);
@@ -1089,8 +1077,8 @@ void fdrLoggingHandleTypedEvent(
   endBufferIfFull();
 }
 
-XRayLogInitStatus fdrLoggingInit(size_t BufferSize, size_t BufferMax,
-                                 void *Options,
+XRayLogInitStatus fdrLoggingInit(UNUSED size_t BufferSize,
+                                 UNUSED size_t BufferMax, void *Options,
                                  size_t OptionsSize) XRAY_NEVER_INSTRUMENT {
   if (Options == nullptr)
     return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
@@ -1104,64 +1092,41 @@ XRayLogInitStatus fdrLoggingInit(size_t BufferSize, size_t BufferMax,
     return static_cast<XRayLogInitStatus>(CurrentStatus);
   }
 
-  // Because of __xray_log_init_mode(...) which guarantees that this will be
-  // called with BufferSize == 0 and BufferMax == 0 we parse the configuration
-  // provided in the Options pointer as a string instead.
-  if (BufferSize == 0 && BufferMax == 0) {
-    if (Verbosity())
-      Report("Initializing FDR mode with options: %s\n",
-             static_cast<const char *>(Options));
+  if (Verbosity())
+    Report("Initializing FDR mode with options: %s\n",
+           static_cast<const char *>(Options));
 
-    // TODO: Factor out the flags specific to the FDR mode implementation. For
-    // now, use the global/single definition of the flags, since the FDR mode
-    // flags are already defined there.
-    FlagParser FDRParser;
-    FDRFlags FDRFlags;
-    registerXRayFDRFlags(&FDRParser, &FDRFlags);
-    FDRFlags.setDefaults();
+  // TODO: Factor out the flags specific to the FDR mode implementation. For
+  // now, use the global/single definition of the flags, since the FDR mode
+  // flags are already defined there.
+  FlagParser FDRParser;
+  FDRFlags FDRFlags;
+  registerXRayFDRFlags(&FDRParser, &FDRFlags);
+  FDRFlags.setDefaults();
 
-    // Override first from the general XRAY_DEFAULT_OPTIONS compiler-provided
-    // options until we migrate everyone to use the XRAY_FDR_OPTIONS
-    // compiler-provided options.
-    FDRParser.ParseString(useCompilerDefinedFlags());
-    FDRParser.ParseString(useCompilerDefinedFDRFlags());
-    auto *EnvOpts = GetEnv("XRAY_FDR_OPTIONS");
-    if (EnvOpts == nullptr)
-      EnvOpts = "";
-    FDRParser.ParseString(EnvOpts);
+  // Override first from the general XRAY_DEFAULT_OPTIONS compiler-provided
+  // options until we migrate everyone to use the XRAY_FDR_OPTIONS
+  // compiler-provided options.
+  FDRParser.ParseString(useCompilerDefinedFlags());
+  FDRParser.ParseString(useCompilerDefinedFDRFlags());
+  auto *EnvOpts = GetEnv("XRAY_FDR_OPTIONS");
+  if (EnvOpts == nullptr)
+    EnvOpts = "";
+  FDRParser.ParseString(EnvOpts);
 
-    // FIXME: Remove this when we fully remove the deprecated flags.
-    if (internal_strlen(EnvOpts) == 0) {
-      FDRFlags.func_duration_threshold_us =
-          flags()->xray_fdr_log_func_duration_threshold_us;
-      FDRFlags.grace_period_ms = flags()->xray_fdr_log_grace_period_ms;
-    }
-
-    // The provided options should always override the compiler-provided and
-    // environment-variable defined options.
-    FDRParser.ParseString(static_cast<const char *>(Options));
-    *fdrFlags() = FDRFlags;
-    BufferSize = FDRFlags.buffer_size;
-    BufferMax = FDRFlags.buffer_max;
-    SpinMutexLock Guard(&FDROptionsMutex);
-    FDROptions.Fd = -1;
-    FDROptions.ReportErrors = true;
-  } else if (OptionsSize != sizeof(FDRLoggingOptions)) {
-    // FIXME: This is deprecated, and should really be removed.
-    // At this point we use the flag parser specific to the FDR mode
-    // implementation.
-    if (Verbosity())
-      Report("Cannot initialize FDR logging; wrong size for options: %d\n",
-             OptionsSize);
-    return static_cast<XRayLogInitStatus>(
-        atomic_load(&LoggingStatus, memory_order_acquire));
-  } else {
-    if (Verbosity())
-      Report("XRay FDR: struct-based init is deprecated, please use "
-             "string-based configuration instead.\n");
-    SpinMutexLock Guard(&FDROptionsMutex);
-    internal_memcpy(&FDROptions, Options, OptionsSize);
+  // FIXME: Remove this when we fully remove the deprecated flags.
+  if (internal_strlen(EnvOpts) == 0) {
+    FDRFlags.func_duration_threshold_us =
+        flags()->xray_fdr_log_func_duration_threshold_us;
+    FDRFlags.grace_period_ms = flags()->xray_fdr_log_grace_period_ms;
   }
+
+  // The provided options should always override the compiler-provided and
+  // environment-variable defined options.
+  FDRParser.ParseString(static_cast<const char *>(Options));
+  *fdrFlags() = FDRFlags;
+  BufferSize = FDRFlags.buffer_size;
+  BufferMax = FDRFlags.buffer_max;
 
   bool Success = false;
 

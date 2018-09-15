@@ -42,7 +42,6 @@ thread_local uint64_t var = 0;
 void __attribute__((noinline)) fArg(int) { }
 
 int main(int argc, char *argv[]) {
-  using namespace __xray;
   std::cout << "Logging before init." << std::endl;
   // CHECK: Logging before init.
   assert(__xray_log_select_mode("xray-fdr") ==
