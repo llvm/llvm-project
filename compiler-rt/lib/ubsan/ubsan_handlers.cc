@@ -451,6 +451,49 @@ void __ubsan::__ubsan_handle_load_invalid_value_abort(InvalidValueData *Data,
   Die();
 }
 
+static void handleImplicitConversion(ImplicitConversionData *Data,
+                                     ReportOptions Opts, ValueHandle Src,
+                                     ValueHandle Dst) {
+  SourceLocation Loc = Data->Loc.acquire();
+  ErrorType ET = ErrorType::GenericUB;
+
+  switch (Data->Kind) {
+  case ICCK_IntegerTruncation:
+    ET = ErrorType::ImplicitIntegerTruncation;
+    break;
+  }
+
+  if (ignoreReport(Loc, Opts, ET))
+    return;
+
+  const TypeDescriptor &SrcTy = Data->FromType;
+  const TypeDescriptor &DstTy = Data->ToType;
+
+  ScopedReport R(Opts, Loc, ET);
+
+  // FIXME: is it possible to dump the values as hex with fixed width?
+
+  Diag(Loc, DL_Error, ET,
+       "implicit conversion from type %0 of value %1 (%2-bit, %3signed) to "
+       "type %4 changed the value to %5 (%6-bit, %7signed)")
+      << SrcTy << Value(SrcTy, Src) << SrcTy.getIntegerBitWidth()
+      << (SrcTy.isSignedIntegerTy() ? "" : "un") << DstTy << Value(DstTy, Dst)
+      << DstTy.getIntegerBitWidth() << (DstTy.isSignedIntegerTy() ? "" : "un");
+}
+
+void __ubsan::__ubsan_handle_implicit_conversion(ImplicitConversionData *Data,
+                                                 ValueHandle Src,
+                                                 ValueHandle Dst) {
+  GET_REPORT_OPTIONS(false);
+  handleImplicitConversion(Data, Opts, Src, Dst);
+}
+void __ubsan::__ubsan_handle_implicit_conversion_abort(
+    ImplicitConversionData *Data, ValueHandle Src, ValueHandle Dst) {
+  GET_REPORT_OPTIONS(true);
+  handleImplicitConversion(Data, Opts, Src, Dst);
+  Die();
+}
+
 static void handleInvalidBuiltin(InvalidBuiltinData *Data, ReportOptions Opts) {
   SourceLocation Loc = Data->Loc.acquire();
   ErrorType ET = ErrorType::InvalidBuiltin;

@@ -2,7 +2,7 @@
 // RUN: %clangxx_xray -g -std=c++11 %s -o %t
 // RUN: rm -f fork-basic-logging-test-*
 // RUN: XRAY_OPTIONS="patch_premain=true xray_logfile_base=fork-basic-logging-test- \
-// RUN:     xray_mode=xray-basic verbosity=1" \
+// RUN:     xray_mode=xray-basic verbosity=1 xray_naive_log_func_duration_threshold_us=0" \
 // RUN:     %run %t 2>&1 | FileCheck %s
 // RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t \
 // RUN:     "`ls -S fork-basic-logging-test-* | head -1`" \
@@ -85,16 +85,16 @@ int main()
 
 // TRACE-DAG: - { type: 0, func-id: [[PPOC:[0-9]+]], function: {{.*print_parent_or_child.*}}, cpu: {{.*}}, thread: [[THREAD1]], process: [[PROCESS1]], kind: function-enter, tsc: {{[0-9]+}} }
 //
-// The parent will print its pid first
+// The parent will print its pid
 // TRACE-DAG: - { type: 0, func-id: [[PPTARG:[0-9]+]], function: {{.*print_parent_tid.*}}, args: [ [[THREAD1]] ], cpu: {{.*}}, thread: [[THREAD1]], process: [[PROCESS1]], kind: function-enter-arg, tsc: {{[0-9]+}} }
 // TRACE-DAG: - { type: 0, func-id: [[PPTARG]], function: {{.*print_parent_tid.*}}, cpu: {{.*}}, thread: [[THREAD1]], process: [[PROCESS1]], kind: function-exit, tsc: {{[0-9]+}} }
 //
-// TRACE:     - { type: 0, func-id: [[PPOC]], function: {{.*print_parent_or_child.*}}, cpu: {{.*}}, thread: [[THREAD1]], process: [[PROCESS1]], kind: function-{{exit|tail-exit}}, tsc: {{[0-9]+}} }
+// TRACE-DAG  - { type: 0, func-id: [[PPOC]], function: {{.*print_parent_or_child.*}}, cpu: {{.*}}, thread: [[THREAD1]], process: [[PROCESS1]], kind: function-{{exit|tail-exit}}, tsc: {{[0-9]+}} }
 
 // TRACE-DAG: - { type: 0, func-id: [[PPOC]], function: {{.*print_parent_or_child.*}}, cpu: {{.*}}, thread: [[THREAD2:[0-9]+]], process: [[PROCESS2:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
 //
-// The child will print its pid now
+// The child will print its pid
 // TRACE-DAG: - { type: 0, func-id: [[PCTARG:[0-9]+]], function: {{.*print_child_tid.*}}, args: [ [[THREAD2]] ], cpu: {{.*}}, thread: [[THREAD2]], process: [[PROCESS2]], kind: function-enter-arg, tsc: {{[0-9]+}} }
 // TRACE-DAG: - { type: 0, func-id: [[PCTARG]], function: {{.*print_child_tid.*}}, cpu: {{.*}}, thread: [[THREAD2]], process: [[PROCESS2]], kind: function-exit, tsc: {{[0-9]+}} }
 //
-// TRACE:     - { type: 0, func-id: [[PPOC]], function: {{.*print_parent_or_child.*}}, cpu: {{.*}}, thread: [[THREAD2]], process: [[PROCESS2]], kind: function-{{exit|tail-exit}}, tsc: {{[0-9]+}} }
+// TRACE-DAG: - { type: 0, func-id: [[PPOC]], function: {{.*print_parent_or_child.*}}, cpu: {{.*}}, thread: [[THREAD2]], process: [[PROCESS2]], kind: function-{{exit|tail-exit}}, tsc: {{[0-9]+}} }

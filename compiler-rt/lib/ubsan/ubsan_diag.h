@@ -178,7 +178,7 @@ public:
   };
 
 private:
-  static const unsigned MaxArgs = 5;
+  static const unsigned MaxArgs = 8;
   static const unsigned MaxRanges = 1;
 
   /// The arguments which have been added to this diagnostic so far.

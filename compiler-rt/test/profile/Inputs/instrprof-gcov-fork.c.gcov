@@ -1,0 +1,23 @@
+// CHECK:        -:    0:Source:{{.*}}Inputs/instrprof-gcov-fork.c
+// CHECK-NEXT:        -:    0:Graph:instrprof-gcov-fork.gcno
+// CHECK-NEXT:        -:    0:Data:instrprof-gcov-fork.gcda
+// CHECK-NEXT:        -:    0:Runs:1
+// CHECK-NEXT:        -:    0:Programs:1
+// CHECK-NEXT:        -:    1:#include <unistd.h>
+// CHECK-NEXT:        -:    2:
+// CHECK-NEXT:function func1 called 1 returned 100% blocks executed 100%
+// CHECK-NEXT:        1:    3:void func1() {}
+// CHECK-NEXT:function func2 called 2 returned 100% blocks executed 100%
+// CHECK-NEXT:        2:    4:void func2() {}
+// CHECK-NEXT:        -:    5:
+// CHECK-NEXT:function main called 1 returned 100% blocks executed 100%
+// CHECK-NEXT:        -:    6:int main(void)
+// CHECK-NEXT:        -:    7:{
+// CHECK-NEXT:        1:    8:  func1();
+// CHECK-NEXT:        -:    9:
+// CHECK-NEXT:        1:   10:  fork();
+// CHECK-NEXT:        -:   11:
+// CHECK-NEXT:        2:   12:  func2();
+// CHECK-NEXT:        -:   13:
+// CHECK-NEXT:        2:   14:  return 0;
+// CHECK-NEXT:        -:   15:}

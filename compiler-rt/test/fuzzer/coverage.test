@@ -5,7 +5,7 @@ RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable %S/DSO2.cpp -fPIC %ld_f
 RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable %S/DSOTestMain.cpp %S/DSOTestExtra.cpp %ld_flags_rpath_exe1 %ld_flags_rpath_exe2 -o %t-DSOTest
 
 CHECK: COVERAGE:
-CHECK: COVERED_FUNC: {{.*}}in LLVMFuzzerTestOneInput {{.*}}NullDerefTest.cpp:13
+CHECK: COVERED_FUNC: {{.*}}LLVMFuzzerTestOneInput {{.*}}NullDerefTest.cpp:13
 RUN: not %run %t-NullDerefTest -print_coverage=1 2>&1 | FileCheck %s
 
 RUN: %run %t-DSOTest -print_coverage=1 -runs=0 2>&1 | FileCheck %s --check-prefix=DSO

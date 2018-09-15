@@ -1,0 +1,5 @@
+RUN: rm -f %t-ImplicitIntegerTruncationTest-Ubsan
+RUN: %cpp_compiler -fsanitize=implicit-integer-truncation -fno-sanitize-recover=all %S/ImplicitIntegerTruncationTest.cpp -o %t-ImplicitIntegerTruncationTest-Ubsan
+RUN: not %run %t-ImplicitIntegerTruncationTest-Ubsan 2>&1 | FileCheck %s
+CHECK: runtime error: implicit conversion from type 'int' of value 256 (32-bit, signed) to type 'unsigned char' changed the value to 0 (8-bit, unsigned)
+CHECK: Test unit written to ./crash-
