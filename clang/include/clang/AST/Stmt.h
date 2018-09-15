@@ -424,6 +424,7 @@ public:
   void dumpPretty(const ASTContext &Context) const;
   void printPretty(raw_ostream &OS, PrinterHelper *Helper,
                    const PrintingPolicy &Policy, unsigned Indentation = 0,
+                   StringRef NewlineSymbol = "\n",
                    const ASTContext *Context = nullptr) const;
 
   /// viewAST - Visualize an AST rooted at this Stmt* using GraphViz.  Only
