@@ -784,5 +784,18 @@ void MergeChunk::writeTo(uint8_t *Buf) const {
   Builder.write(Buf + OutputSectionOff);
 }
 
+// MinGW specific.
+size_t AbsolutePointerChunk::getSize() const {
+  return Config->is64() ? 8 : 4;
+}
+
+void AbsolutePointerChunk::writeTo(uint8_t *Buf) const {
+  if (Config->is64()) {
+    write64le(Buf + OutputSectionOff, Value);
+  } else {
+    write32le(Buf + OutputSectionOff, Value);
+  }
+}
+
 } // namespace coff
 } // namespace lld
