@@ -45,12 +45,21 @@ c.srai a0, 0  # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the
 
 ## simm6
 c.li t0, 128 # CHECK: :[[@LINE]]:10: error: immediate must be an integer in the range [-32, 31]
+c.li t0, foo # CHECK: :[[@LINE]]:10: error: immediate must be an integer in the range [-32, 31]
+c.li t0, %lo(foo) # CHECK: :[[@LINE]]:10: error: immediate must be an integer in the range [-32, 31]
+c.li t0, %hi(foo) # CHECK: :[[@LINE]]:10: error: immediate must be an integer in the range [-32, 31]
 c.andi a0, -33 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [-32, 31]
+c.andi a0, foo # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [-32, 31]
+c.andi a0, %lo(foo) # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [-32, 31]
+c.andi a0, %hi(foo) # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [-32, 31]
 
 ## simm6nonzero
 c.addi t0, 0 # CHECK: :[[@LINE]]:12: error: immediate must be non-zero in the range [-32, 31]
 c.addi t0, -33 # CHECK: :[[@LINE]]:12: error: immediate must be non-zero in the range [-32, 31]
 c.addi t0, 32 # CHECK: :[[@LINE]]:12: error: immediate must be non-zero in the range [-32, 31]
+c.addi t0, foo # CHECK: :[[@LINE]]:12: error: immediate must be non-zero in the range [-32, 31]
+c.addi t0, %lo(foo) # CHECK: :[[@LINE]]:12: error: immediate must be non-zero in the range [-32, 31]
+c.addi t0, %hi(foo) # CHECK: :[[@LINE]]:12: error: immediate must be non-zero in the range [-32, 31]
 
 ## c_lui_imm
 c.lui t0, 0 # CHECK: :[[@LINE]]:11: error: immediate must be in [0xfffe0, 0xfffff] or [1, 31]

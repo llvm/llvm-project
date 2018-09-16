@@ -213,9 +213,10 @@ defm : ZnWriteResPair<WritePOPCNT,         [ZnALU], 1>;
 // Treat misc copies as a move.
 def : InstRW<[WriteMove], (instrs COPY)>;
 
-// BMI1 BEXTR, BMI2 BZHI
+// BMI1 BEXTR/BLS, BMI2 BZHI
 defm : ZnWriteResPair<WriteBEXTR, [ZnALU], 1>;
-defm : ZnWriteResPair<WriteBZHI, [ZnALU], 1>;
+//defm : ZnWriteResPair<WriteBLS,   [ZnALU], 2>;
+defm : ZnWriteResPair<WriteBZHI,  [ZnALU], 1>;
 
 // IDIV
 defm : ZnWriteResPair<WriteDiv8,   [ZnALU2, ZnDivider], 15, [1,15], 1>;
@@ -713,9 +714,9 @@ def : InstRW<[ZnWriteBTRSCm], (instregex "BT(R|S|C)(16|32|64)m(r|i8)")>;
 
 // BLSI BLSMSK BLSR.
 // r,r.
-def : InstRW<[ZnWriteALULat2], (instregex "BLS(I|MSK|R)(32|64)rr")>;
+def : SchedAlias<WriteBLS, ZnWriteALULat2>;
 // r,m.
-def : InstRW<[ZnWriteALULat2Ld], (instregex "BLS(I|MSK|R)(32|64)rm")>;
+def : SchedAlias<WriteBLSLd, ZnWriteALULat2Ld>;
 
 // CLD STD.
 def : InstRW<[WriteALU], (instrs STD, CLD)>;

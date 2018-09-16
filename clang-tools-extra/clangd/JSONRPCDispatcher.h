@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_JSONRPCDISPATCHER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_JSONRPCDISPATCHER_H
 
+#include "Cancellation.h"
 #include "Logger.h"
 #include "Protocol.h"
 #include "Trace.h"
@@ -77,23 +78,37 @@ void call(llvm::StringRef Method, llvm::json::Value &&Params);
 
 /// Main JSONRPC entry point. This parses the JSONRPC "header" and calls the
 /// registered Handler for the method received.
+///
+/// The `$/cancelRequest` notification is handled by the dispatcher itself.
+/// It marks the matching request as cancelled, if it's still running.
 class JSONRPCDispatcher {
 public:
-  // A handler responds to requests for a particular method name.
+  /// A handler responds to requests for a particular method name.
+  ///
+  /// JSONRPCDispatcher will mark the handler's context as cancelled if a
+  /// matching cancellation request is received. Handlers are encouraged to
+  /// check for cancellation and fail quickly in this case.
   using Handler = std::function<void(const llvm::json::Value &)>;
 
   /// Create a new JSONRPCDispatcher. UnknownHandler is called when an unknown
   /// method is received.
-  JSONRPCDispatcher(Handler UnknownHandler)
-      : UnknownHandler(std::move(UnknownHandler)) {}
+  JSONRPCDispatcher(Handler UnknownHandler);
 
   /// Registers a Handler for the specified Method.
   void registerHandler(StringRef Method, Handler H);
 
   /// Parses a JSONRPC message and calls the Handler for it.
-  bool call(const llvm::json::Value &Message, JSONOutput &Out) const;
+  bool call(const llvm::json::Value &Message, JSONOutput &Out);
 
 private:
+  // Tracking cancellations needs a mutex: handlers may finish on a different
+  // thread, and that's when we clean up entries in the map.
+  mutable std::mutex RequestCancelersMutex;
+  llvm::StringMap<std::pair<Canceler, unsigned>> RequestCancelers;
+  unsigned NextRequestCookie = 0;
+  Context cancelableRequestContext(const llvm::json::Value &ID);
+  void cancelRequest(const llvm::json::Value &ID);
+
   llvm::StringMap<Handler> Handlers;
   Handler UnknownHandler;
 };

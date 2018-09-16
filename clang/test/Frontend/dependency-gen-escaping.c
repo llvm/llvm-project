@@ -21,7 +21,7 @@
 // Backslash followed by # or space should escape both characters, because
 // that's what GNU Make wants.  GCC does the right thing with space, but not
 // #, so Clang does too. (There should be 3 backslashes before the #.)
-// SEP2F: a\b\\#c\\\ d.h
+// SEP2F: a{{[/\\]}}b{{[/\\]}}\#c{{/|\\\\}}\ d.h
 // With -fms-compatibility, Backslashes in #include are treated as path separators.
 // Backslashes are given in the emission for special characters, like 0x20 or 0x23.
 // SEP5C: a{{[/\\]}}b{{[/\\]}}\#c{{/|\\\\}}\ d.h

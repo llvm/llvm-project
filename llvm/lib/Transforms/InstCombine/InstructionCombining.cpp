@@ -1446,6 +1446,62 @@ Instruction *InstCombiner::foldShuffledBinop(BinaryOperator &Inst) {
   return nullptr;
 }
 
+/// Try to narrow the width of a binop if at least 1 operand is an extend of
+/// of a value. This requires a potentially expensive known bits check to make
+/// sure the narrow op does not overflow.
+Instruction *InstCombiner::narrowMathIfNoOverflow(BinaryOperator &BO) {
+  // We need at least one extended operand.
+  Value *Op0 = BO.getOperand(0), *Op1 = BO.getOperand(1);
+
+  // If this is a sub, we swap the operands since we always want an extension
+  // on the RHS. The LHS can be an extension or a constant.
+  if (BO.getOpcode() == Instruction::Sub)
+    std::swap(Op0, Op1);
+
+  Value *X;
+  bool IsSext = match(Op0, m_SExt(m_Value(X)));
+  if (!IsSext && !match(Op0, m_ZExt(m_Value(X))))
+    return nullptr;
+
+  // If both operands are the same extension from the same source type and we
+  // can eliminate at least one (hasOneUse), this might work.
+  CastInst::CastOps CastOpc = IsSext ? Instruction::SExt : Instruction::ZExt;
+  Value *Y;
+  if (!(match(Op1, m_ZExtOrSExt(m_Value(Y))) && X->getType() == Y->getType() &&
+        cast<Operator>(Op1)->getOpcode() == CastOpc &&
+        (Op0->hasOneUse() || Op1->hasOneUse()))) {
+    // If that did not match, see if we have a suitable constant operand.
+    // Truncating and extending must produce the same constant.
+    Constant *WideC;
+    if (!Op0->hasOneUse() || !match(Op1, m_Constant(WideC)))
+      return nullptr;
+    Constant *NarrowC = ConstantExpr::getTrunc(WideC, X->getType());
+    if (ConstantExpr::getCast(CastOpc, NarrowC, BO.getType()) != WideC)
+      return nullptr;
+    Y = NarrowC;
+  }
+
+  // Swap back now that we found our operands.
+  if (BO.getOpcode() == Instruction::Sub)
+    std::swap(X, Y);
+
+  // Both operands have narrow versions. Last step: the math must not overflow
+  // in the narrow width.
+  if (!willNotOverflow(BO.getOpcode(), X, Y, BO, IsSext))
+    return nullptr;
+
+  // bo (ext X), (ext Y) --> ext (bo X, Y)
+  // bo (ext X), C       --> ext (bo X, C')
+  Value *NarrowBO = Builder.CreateBinOp(BO.getOpcode(), X, Y, "narrow");
+  if (auto *NewBinOp = dyn_cast<BinaryOperator>(NarrowBO)) {
+    if (IsSext)
+      NewBinOp->setHasNoSignedWrap();
+    else
+      NewBinOp->setHasNoUnsignedWrap();
+  }
+  return CastInst::Create(CastOpc, NarrowBO, BO.getType());
+}
+
 Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   SmallVector<Value*, 8> Ops(GEP.op_begin(), GEP.op_end());
   Type *GEPType = GEP.getType();

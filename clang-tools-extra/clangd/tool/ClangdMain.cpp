@@ -130,10 +130,11 @@ static llvm::cl::opt<Path> InputMirrorFile(
 
 static llvm::cl::opt<bool> EnableIndex(
     "index",
-    llvm::cl::desc("Enable index-based features such as global code completion "
-                   "and searching for symbols. "
-                   "Clang uses an index built from symbols in opened files"),
-    llvm::cl::init(true));
+    llvm::cl::desc(
+        "Enable index-based features. By default, clangd maintains an index "
+        "built from symbols in opened files. Global index support needs to "
+        "enabled separatedly."),
+    llvm::cl::init(true), llvm::cl::Hidden);
 
 static llvm::cl::opt<bool>
     ShowOrigins("debug-origin",

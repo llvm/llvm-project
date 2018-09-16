@@ -53,6 +53,7 @@ set(LLVM_TEST_DEPENDS
           llvm-cvtres
           llvm-cxxdump
           llvm-cxxfilt
+          llvm-cxxmap
           llvm-diff
           llvm-dis
           llvm-dlltool

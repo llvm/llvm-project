@@ -326,14 +326,9 @@ public:
       return false;
     RISCVMCExpr::VariantKind VK;
     int64_t Imm;
-    bool IsValid;
     bool IsConstantImm = evaluateConstantImm(Imm, VK);
-    if (!IsConstantImm)
-      IsValid = RISCVAsmParser::classifySymbolRef(getImm(), VK, Imm);
-    else
-      IsValid = isInt<6>(Imm);
-    return IsValid &&
-           (VK == RISCVMCExpr::VK_RISCV_None || VK == RISCVMCExpr::VK_RISCV_LO);
+    return IsConstantImm && isInt<6>(Imm) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isSImm6NonZero() const {
@@ -341,14 +336,9 @@ public:
       return false;
     RISCVMCExpr::VariantKind VK;
     int64_t Imm;
-    bool IsValid;
     bool IsConstantImm = evaluateConstantImm(Imm, VK);
-    if (!IsConstantImm)
-      IsValid = RISCVAsmParser::classifySymbolRef(getImm(), VK, Imm);
-    else
-      IsValid = ((Imm != 0) && isInt<6>(Imm));
-    return IsValid &&
-           (VK == RISCVMCExpr::VK_RISCV_None || VK == RISCVMCExpr::VK_RISCV_LO);
+    return IsConstantImm && isInt<6>(Imm) && (Imm != 0) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isCLUIImm() const {

@@ -32,8 +32,11 @@ constexpr bool testConstexprSpan(Span s)
     }
     else
     {
+    	typename Span::const_pointer last = &*(s.cbegin() + s.size() - 1);
         ret = ret &&  ( e !=  s.begin());
         ret = ret &&  (ce != s.cbegin());
+        ret = ret &&  (&*( e-1) == last);
+        ret = ret &&  (&*(ce-1) == last);
     }
 
     ret = ret &&  (( e -  s.begin()) == s.size());
@@ -55,8 +58,11 @@ void testRuntimeSpan(Span s)
     }
     else
     {
+    	typename Span::const_pointer last = &*(s.cbegin() + s.size() - 1);
         assert( e !=  s.begin());
         assert(ce != s.cbegin());
+        assert( &*( e-1) == last);
+        assert( &*(ce-1) == last);
     }
 
     assert(( e -  s.begin()) == s.size());

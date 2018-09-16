@@ -332,6 +332,11 @@ private:
   /// If false, good old LV code.
   bool canVectorizeLoopNestCFG(Loop *Lp, bool UseVPlanNativePath);
 
+  /// Set up outer loop inductions by checking Phis in outer loop header for
+  /// supported inductions (int inductions). Return false if any of these Phis
+  /// is not a supported induction or if we fail to find an induction.
+  bool setupOuterLoopInductions();
+
   /// Return true if the pre-header, exiting and latch blocks of \p Lp
   /// (non-recursive) are considered legal for vectorization.
   /// Temporarily taking UseVPlanNativePath parameter. If true, take

@@ -407,7 +407,7 @@ DIASession::getInjectedSources() const {
   if (!Files)
     return nullptr;
 
-  return llvm::make_unique<DIAEnumInjectedSources>(*this, Files);
+  return llvm::make_unique<DIAEnumInjectedSources>(Files);
 }
 
 std::unique_ptr<IPDBEnumSectionContribs>

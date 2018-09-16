@@ -79,7 +79,8 @@ const Stmt *ExprMutationAnalyzer::findMutation(const Expr *Exp) {
                              &ExprMutationAnalyzer::findArrayElementMutation,
                              &ExprMutationAnalyzer::findCastMutation,
                              &ExprMutationAnalyzer::findRangeLoopMutation,
-                             &ExprMutationAnalyzer::findReferenceMutation}) {
+                             &ExprMutationAnalyzer::findReferenceMutation,
+                             &ExprMutationAnalyzer::findFunctionArgMutation}) {
     if (const Stmt *S = (this->*Finder)(Exp))
       return Results[Exp] = S;
   }
@@ -130,13 +131,13 @@ ExprMutationAnalyzer::findExprMutation(ArrayRef<BoundNodes> Matches) {
 const Stmt *
 ExprMutationAnalyzer::findDeclMutation(ArrayRef<BoundNodes> Matches) {
   for (const auto &DeclNodes : Matches) {
-    if (const Stmt *S = findDeclMutation(DeclNodes.getNodeAs<Decl>("decl")))
+    if (const Stmt *S = findMutation(DeclNodes.getNodeAs<Decl>("decl")))
       return S;
   }
   return nullptr;
 }
 
-const Stmt *ExprMutationAnalyzer::findDeclMutation(const Decl *Dec) {
+const Stmt *ExprMutationAnalyzer::findMutation(const Decl *Dec) {
   const auto Refs = match(
       findAll(declRefExpr(to(equalsNode(Dec))).bind("expr")), Stm, Context);
   for (const auto &RefNodes : Refs) {
@@ -192,10 +193,15 @@ const Stmt *ExprMutationAnalyzer::findDirectMutation(const Expr *Exp) {
 
   // Used as non-const-ref argument when calling a function.
   // An argument is assumed to be non-const-ref when the function is unresolved.
+  // Instantiated template functions are not handled here but in
+  // findFunctionArgMutation which has additional smarts for handling forwarding
+  // references.
   const auto NonConstRefParam = forEachArgumentWithParam(
       equalsNode(Exp), parmVarDecl(hasType(nonConstReferenceType())));
+  const auto NotInstantiated = unless(hasDeclaration(isInstantiated()));
   const auto AsNonConstRefArg = anyOf(
-      callExpr(NonConstRefParam), cxxConstructExpr(NonConstRefParam),
+      callExpr(NonConstRefParam, NotInstantiated),
+      cxxConstructExpr(NonConstRefParam, NotInstantiated),
       callExpr(callee(expr(anyOf(unresolvedLookupExpr(), unresolvedMemberExpr(),
                                  cxxDependentScopeMemberExpr(),
                                  hasType(templateTypeParmType())))),
@@ -274,15 +280,14 @@ const Stmt *ExprMutationAnalyzer::findReferenceMutation(const Expr *Exp) {
   // Follow non-const reference returned by `operator*()` of move-only classes.
   // These are typically smart pointers with unique ownership so we treat
   // mutation of pointee as mutation of the smart pointer itself.
-  const auto Ref = match(
-      findAll(cxxOperatorCallExpr(
-                  hasOverloadedOperatorName("*"),
-                  callee(cxxMethodDecl(ofClass(isMoveOnly()),
-                                       returns(hasUnqualifiedDesugaredType(
-                                           nonConstReferenceType())))),
-                  argumentCountIs(1), hasArgument(0, equalsNode(Exp)))
-                  .bind("expr")),
-      Stm, Context);
+  const auto Ref =
+      match(findAll(cxxOperatorCallExpr(
+                        hasOverloadedOperatorName("*"),
+                        callee(cxxMethodDecl(ofClass(isMoveOnly()),
+                                             returns(nonConstReferenceType()))),
+                        argumentCountIs(1), hasArgument(0, equalsNode(Exp)))
+                        .bind("expr")),
+            Stm, Context);
   if (const Stmt *S = findExprMutation(Ref))
     return S;
 
@@ -303,6 +308,84 @@ const Stmt *ExprMutationAnalyzer::findReferenceMutation(const Expr *Exp) {
               .bind("decl"))),
       Stm, Context);
   return findDeclMutation(Refs);
+}
+
+const Stmt *ExprMutationAnalyzer::findFunctionArgMutation(const Expr *Exp) {
+  const auto NonConstRefParam = forEachArgumentWithParam(
+      equalsNode(Exp),
+      parmVarDecl(hasType(nonConstReferenceType())).bind("parm"));
+  const auto IsInstantiated = hasDeclaration(isInstantiated());
+  const auto FuncDecl = hasDeclaration(functionDecl().bind("func"));
+  const auto Matches = match(
+      findAll(expr(anyOf(callExpr(NonConstRefParam, IsInstantiated, FuncDecl),
+                         cxxConstructExpr(NonConstRefParam, IsInstantiated,
+                                          FuncDecl)))
+                  .bind("expr")),
+      Stm, Context);
+  for (const auto &Nodes : Matches) {
+    const auto *Exp = Nodes.getNodeAs<Expr>("expr");
+    const auto *Func = Nodes.getNodeAs<FunctionDecl>("func");
+    if (!Func->getBody())
+      return Exp;
+
+    const auto *Parm = Nodes.getNodeAs<ParmVarDecl>("parm");
+    const ArrayRef<ParmVarDecl *> AllParams =
+        Func->getPrimaryTemplate()->getTemplatedDecl()->parameters();
+    QualType ParmType =
+        AllParams[std::min<size_t>(Parm->getFunctionScopeIndex(),
+                                   AllParams.size() - 1)]
+            ->getType();
+    if (const auto *T = ParmType->getAs<PackExpansionType>())
+      ParmType = T->getPattern();
+
+    // If param type is forwarding reference, follow into the function
+    // definition and see whether the param is mutated inside.
+    if (const auto *RefType = ParmType->getAs<RValueReferenceType>()) {
+      if (!RefType->getPointeeType().getQualifiers() &&
+          RefType->getPointeeType()->getAs<TemplateTypeParmType>()) {
+        std::unique_ptr<FunctionParmMutationAnalyzer> &Analyzer =
+            FuncParmAnalyzer[Func];
+        if (!Analyzer)
+          Analyzer.reset(new FunctionParmMutationAnalyzer(*Func, Context));
+        if (Analyzer->findMutation(Parm))
+          return Exp;
+        continue;
+      }
+    }
+    // Not forwarding reference.
+    return Exp;
+  }
+  return nullptr;
+}
+
+FunctionParmMutationAnalyzer::FunctionParmMutationAnalyzer(
+    const FunctionDecl &Func, ASTContext &Context)
+    : BodyAnalyzer(*Func.getBody(), Context) {
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(&Func)) {
+    // CXXCtorInitializer might also mutate Param but they're not part of
+    // function body, check them eagerly here since they're typically trivial.
+    for (const CXXCtorInitializer *Init : Ctor->inits()) {
+      ExprMutationAnalyzer InitAnalyzer(*Init->getInit(), Context);
+      for (const ParmVarDecl *Parm : Ctor->parameters()) {
+        if (Results.find(Parm) != Results.end())
+          continue;
+        if (const Stmt *S = InitAnalyzer.findMutation(Parm))
+          Results[Parm] = S;
+      }
+    }
+  }
+}
+
+const Stmt *
+FunctionParmMutationAnalyzer::findMutation(const ParmVarDecl *Parm) {
+  const auto Memoized = Results.find(Parm);
+  if (Memoized != Results.end())
+    return Memoized->second;
+
+  if (const Stmt *S = BodyAnalyzer.findMutation(Parm))
+    return Results[Parm] = S;
+
+  return Results[Parm] = nullptr;
 }
 
 } // namespace clang

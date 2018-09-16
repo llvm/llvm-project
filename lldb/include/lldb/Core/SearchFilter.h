@@ -184,6 +184,18 @@ public:
   virtual bool CompUnitPasses(CompileUnit &compUnit);
 
   //------------------------------------------------------------------
+  /// Call this method with a Function to see if \a function passes the
+  /// filter.
+  ///
+  /// @param[in] function
+  ///    The Functions to check against the filter.
+  ///
+  /// @return
+  ///    \b true if \a function passes, and \b false otherwise.
+  //------------------------------------------------------------------
+  virtual bool FunctionPasses(Function &function);
+
+  //------------------------------------------------------------------
   /// Call this method to do the search using the Searcher.
   ///
   /// @param[in] searcher

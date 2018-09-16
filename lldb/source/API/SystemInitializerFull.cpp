@@ -176,6 +176,18 @@ extern "C" void *LLDBSwigPythonCreateScriptedThreadPlan(
 extern "C" bool LLDBSWIGPythonCallThreadPlan(void *implementor,
                                              const char *method_name,
                                              Event *event_sp, bool &got_error);
+                                             
+extern "C" void *LLDBSwigPythonCreateScriptedBreakpointResolver(
+    const char *python_class_name,
+    const char *session_dictionary_name,
+    lldb_private::StructuredDataImpl *args,
+    lldb::BreakpointSP &bkpt_sp);
+
+extern "C" unsigned int LLDBSwigPythonCallBreakpointResolver(
+    void *implementor,
+    const char *method_name,
+    lldb_private::SymbolContext *sym_ctx
+);
 
 extern "C" size_t LLDBSwigPython_CalculateNumChildren(void *implementor,
                                                       uint32_t max);
@@ -413,7 +425,8 @@ void SystemInitializerFull::InitializeSWIG() {
       LLDBSWIGPythonRunScriptKeywordThread,
       LLDBSWIGPythonRunScriptKeywordTarget, LLDBSWIGPythonRunScriptKeywordFrame,
       LLDBSWIGPythonRunScriptKeywordValue, LLDBSWIGPython_GetDynamicSetting,
-      LLDBSwigPythonCreateScriptedThreadPlan, LLDBSWIGPythonCallThreadPlan);
+      LLDBSwigPythonCreateScriptedThreadPlan, LLDBSWIGPythonCallThreadPlan,
+      LLDBSwigPythonCreateScriptedBreakpointResolver, LLDBSwigPythonCallBreakpointResolver);
 #endif
 }
 

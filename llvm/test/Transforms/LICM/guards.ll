@@ -1,5 +1,6 @@
-; RUN: opt -licm -basicaa < %s -S | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s
+; REQUIRES: asserts
+; RUN: opt -licm -basicaa -ipt-expensive-asserts=true < %s -S | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' -ipt-expensive-asserts=true < %s -S | FileCheck %s
 
 ; Hoist guard and load.
 define void @test1(i1 %cond, i32* %ptr) {

@@ -99,8 +99,11 @@ def verbose : F<"verbose">;
 def wholearchive_flag : F<"wholearchive">;
 
 def force : F<"force">,
+    HelpText<"Allow undefined and multiply defined symbols when creating executables">;
+def force_unresolved : F<"force:unresolved">,
     HelpText<"Allow undefined symbols when creating executables">;
-def force_unresolved : F<"force:unresolved">;
+def force_multiple : F<"force:multiple">,
+    HelpText<"Allow multiply defined symbols when creating executables">;
 defm WX : B<"WX", "Treat warnings as errors", "Don't treat warnings as errors">;
 
 defm allowbind : B<"allowbind", "Enable DLL binding (default)",

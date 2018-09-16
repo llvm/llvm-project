@@ -52,26 +52,27 @@ protected:
   const llvm::MCRegisterInfo &MCRegisterInfo;
 };
 
-template <typename BenchmarkRunner>
+template <typename SnippetGeneratorT>
 class SnippetGeneratorTest : public X86SnippetGeneratorTest {
 protected:
-  SnippetGeneratorTest() : Runner(State) {}
+  SnippetGeneratorTest() : Generator(State) {}
 
   CodeTemplate checkAndGetCodeTemplate(unsigned Opcode) {
     randomGenerator().seed(0); // Initialize seed.
-    auto CodeTemplateOrError = Runner.generateCodeTemplate(Opcode);
+    auto CodeTemplateOrError = Generator.generateCodeTemplate(Opcode);
     EXPECT_FALSE(CodeTemplateOrError.takeError()); // Valid configuration.
     return std::move(CodeTemplateOrError.get());
   }
 
-  BenchmarkRunner Runner;
+  SnippetGeneratorT Generator;
 };
 
-using LatencyBenchmarkRunnerTest = SnippetGeneratorTest<LatencyBenchmarkRunner>;
+using LatencySnippetGeneratorTest =
+    SnippetGeneratorTest<LatencySnippetGenerator>;
 
-using UopsBenchmarkRunnerTest = SnippetGeneratorTest<UopsBenchmarkRunner>;
+using UopsSnippetGeneratorTest = SnippetGeneratorTest<UopsSnippetGenerator>;
 
-TEST_F(LatencyBenchmarkRunnerTest, ImplicitSelfDependency) {
+TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependency) {
   // ADC16i16 self alias because of implicit use and def.
 
   // explicit use 0       : imm
@@ -93,7 +94,7 @@ TEST_F(LatencyBenchmarkRunnerTest, ImplicitSelfDependency) {
   EXPECT_THAT(IB.VariableValues[0], IsInvalid()) << "Immediate is not set";
 }
 
-TEST_F(LatencyBenchmarkRunnerTest, ExplicitSelfDependency) {
+TEST_F(LatencySnippetGeneratorTest, ExplicitSelfDependency) {
   // ADD16ri self alias because Op0 and Op1 are tied together.
 
   // explicit def 0       : reg RegClass=GR16
@@ -112,7 +113,7 @@ TEST_F(LatencyBenchmarkRunnerTest, ExplicitSelfDependency) {
   EXPECT_THAT(IB.VariableValues[1], IsInvalid()) << "Operand 2 is not set";
 }
 
-TEST_F(LatencyBenchmarkRunnerTest, DependencyThroughOtherOpcode) {
+TEST_F(LatencySnippetGeneratorTest, DependencyThroughOtherOpcode) {
   // CMP64rr
   // explicit use 0       : reg RegClass=GR64
   // explicit use 1       : reg RegClass=GR64
@@ -131,7 +132,7 @@ TEST_F(LatencyBenchmarkRunnerTest, DependencyThroughOtherOpcode) {
   // TODO: check that the two instructions alias each other.
 }
 
-TEST_F(LatencyBenchmarkRunnerTest, LAHF) {
+TEST_F(LatencySnippetGeneratorTest, LAHF) {
   const unsigned Opcode = llvm::X86::LAHF;
   const CodeTemplate CT = checkAndGetCodeTemplate(Opcode);
   EXPECT_THAT(CT.Info, HasSubstr("cycle through"));
@@ -141,7 +142,7 @@ TEST_F(LatencyBenchmarkRunnerTest, LAHF) {
   ASSERT_THAT(IB.VariableValues, SizeIs(0));
 }
 
-TEST_F(UopsBenchmarkRunnerTest, ParallelInstruction) {
+TEST_F(UopsSnippetGeneratorTest, ParallelInstruction) {
   // BNDCL32rr is parallel no matter what.
 
   // explicit use 0       : reg RegClass=BNDR
@@ -158,7 +159,7 @@ TEST_F(UopsBenchmarkRunnerTest, ParallelInstruction) {
   EXPECT_THAT(IB.VariableValues[1], IsInvalid());
 }
 
-TEST_F(UopsBenchmarkRunnerTest, SerialInstruction) {
+TEST_F(UopsSnippetGeneratorTest, SerialInstruction) {
   // CDQ is serial no matter what.
 
   // implicit def         : EAX
@@ -173,7 +174,7 @@ TEST_F(UopsBenchmarkRunnerTest, SerialInstruction) {
   ASSERT_THAT(IB.VariableValues, SizeIs(0));
 }
 
-TEST_F(UopsBenchmarkRunnerTest, StaticRenaming) {
+TEST_F(UopsSnippetGeneratorTest, StaticRenaming) {
   // CMOVA32rr has tied variables, we enumarate the possible values to execute
   // as many in parallel as possible.
 
@@ -195,7 +196,7 @@ TEST_F(UopsBenchmarkRunnerTest, StaticRenaming) {
       << "Each instruction writes to a different register";
 }
 
-TEST_F(UopsBenchmarkRunnerTest, NoTiedVariables) {
+TEST_F(UopsSnippetGeneratorTest, NoTiedVariables) {
   // CMOV_GR32 has no tied variables, we make sure def and use are different
   // from each other.
 
@@ -218,13 +219,13 @@ TEST_F(UopsBenchmarkRunnerTest, NoTiedVariables) {
   EXPECT_THAT(IB.VariableValues[3], IsInvalid());
 }
 
-TEST_F(UopsBenchmarkRunnerTest, MemoryUse) {
+TEST_F(UopsSnippetGeneratorTest, MemoryUse) {
   // Mov32rm reads from memory.
   const unsigned Opcode = llvm::X86::MOV32rm;
   const CodeTemplate CT = checkAndGetCodeTemplate(Opcode);
   EXPECT_THAT(CT.Info, HasSubstr("no tied variables"));
   ASSERT_THAT(CT.Instructions,
-              SizeIs(UopsBenchmarkRunner::kMinNumDifferentAddresses));
+              SizeIs(UopsSnippetGenerator::kMinNumDifferentAddresses));
   const InstructionBuilder &IB = CT.Instructions[0];
   EXPECT_THAT(IB.getOpcode(), Opcode);
   ASSERT_THAT(IB.VariableValues, SizeIs(6));
@@ -234,18 +235,17 @@ TEST_F(UopsBenchmarkRunnerTest, MemoryUse) {
   EXPECT_EQ(IB.VariableValues[5].getReg(), 0u);
 }
 
-TEST_F(UopsBenchmarkRunnerTest, MemoryUse_Movsb) {
+TEST_F(UopsSnippetGeneratorTest, MemoryUse_Movsb) {
   // MOVSB writes to scratch memory register.
   const unsigned Opcode = llvm::X86::MOVSB;
-  auto Error = Runner.generateCodeTemplate(Opcode).takeError();
+  auto Error = Generator.generateCodeTemplate(Opcode).takeError();
   EXPECT_TRUE((bool)Error);
   llvm::consumeError(std::move(Error));
 }
 
-class FakeBenchmarkRunner : public BenchmarkRunner {
+class FakeSnippetGenerator : public SnippetGenerator {
 public:
-  FakeBenchmarkRunner(const LLVMState &State)
-      : BenchmarkRunner(State, InstructionBenchmark::Unknown) {}
+  FakeSnippetGenerator(const LLVMState &State) : SnippetGenerator(State) {}
 
   Instruction createInstruction(unsigned Opcode) {
     return Instruction(State.getInstrInfo().get(Opcode), RATC);
@@ -257,15 +257,9 @@ private:
     return llvm::make_error<llvm::StringError>("not implemented",
                                                llvm::inconvertibleErrorCode());
   }
-
-  std::vector<BenchmarkMeasure>
-  runMeasurements(const ExecutableFunction &EF, ScratchSpace &Scratch,
-                  const unsigned NumRepetitions) const override {
-    return {};
-  }
 };
 
-using FakeSnippetGeneratorTest = SnippetGeneratorTest<FakeBenchmarkRunner>;
+using FakeSnippetGeneratorTest = SnippetGeneratorTest<FakeSnippetGenerator>;
 
 TEST_F(FakeSnippetGeneratorTest, ComputeRegsToDefAdd16ri) {
   // ADD16ri:
@@ -273,12 +267,12 @@ TEST_F(FakeSnippetGeneratorTest, ComputeRegsToDefAdd16ri) {
   // explicit use 1       : reg RegClass=GR16 | TIED_TO:0
   // explicit use 2       : imm
   // implicit def         : EFLAGS
-  InstructionBuilder IB(Runner.createInstruction(llvm::X86::ADD16ri));
+  InstructionBuilder IB(Generator.createInstruction(llvm::X86::ADD16ri));
   IB.getValueFor(IB.Instr.Variables[0]) =
       llvm::MCOperand::createReg(llvm::X86::AX);
   std::vector<InstructionBuilder> Snippet;
   Snippet.push_back(std::move(IB));
-  const auto RegsToDef = Runner.computeRegsToDef(Snippet);
+  const auto RegsToDef = Generator.computeRegsToDef(Snippet);
   EXPECT_THAT(RegsToDef, UnorderedElementsAre(llvm::X86::AX));
 }
 
@@ -289,14 +283,14 @@ TEST_F(FakeSnippetGeneratorTest, ComputeRegsToDefAdd64rr) {
   // -> only rbx needs defining.
   std::vector<InstructionBuilder> Snippet;
   {
-    InstructionBuilder Mov(Runner.createInstruction(llvm::X86::MOV64ri));
+    InstructionBuilder Mov(Generator.createInstruction(llvm::X86::MOV64ri));
     Mov.getValueFor(Mov.Instr.Variables[0]) =
         llvm::MCOperand::createReg(llvm::X86::RAX);
     Mov.getValueFor(Mov.Instr.Variables[1]) = llvm::MCOperand::createImm(42);
     Snippet.push_back(std::move(Mov));
   }
   {
-    InstructionBuilder Add(Runner.createInstruction(llvm::X86::ADD64rr));
+    InstructionBuilder Add(Generator.createInstruction(llvm::X86::ADD64rr));
     Add.getValueFor(Add.Instr.Variables[0]) =
         llvm::MCOperand::createReg(llvm::X86::RAX);
     Add.getValueFor(Add.Instr.Variables[1]) =
@@ -304,7 +298,7 @@ TEST_F(FakeSnippetGeneratorTest, ComputeRegsToDefAdd64rr) {
     Snippet.push_back(std::move(Add));
   }
 
-  const auto RegsToDef = Runner.computeRegsToDef(Snippet);
+  const auto RegsToDef = Generator.computeRegsToDef(Snippet);
   EXPECT_THAT(RegsToDef, UnorderedElementsAre(llvm::X86::RBX));
 }
 

@@ -84,8 +84,8 @@ public:
   virtual Status ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                             size_t &bytes_read) = 0;
 
-  virtual Status ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf,
-                                       size_t size, size_t &bytes_read) = 0;
+  Status ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf, size_t size,
+                               size_t &bytes_read);
 
   virtual Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
                              size_t &bytes_written) = 0;

@@ -95,8 +95,6 @@ DirectoryBasedGlobalCompilationDatabase::getCDBInDirLocked(PathRef Dir) const {
     return CachedIt->second.get();
   std::string Error = "";
   auto CDB = tooling::CompilationDatabase::loadFromDirectory(Dir, Error);
-  if (CDB)
-    CDB = tooling::inferMissingCompileCommands(std::move(CDB));
   auto Result = CDB.get();
   CompilationDatabases.insert(std::make_pair(Dir, std::move(CDB)));
   return Result;

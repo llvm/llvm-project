@@ -41,7 +41,6 @@ private:
   std::vector<codeview::TypeIndex> Matches;
   uint32_t Index;
   NativeSession &Session;
-  codeview::TypeLeafKind Kind;
 };
 
 } // namespace pdb

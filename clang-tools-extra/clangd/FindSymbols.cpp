@@ -117,8 +117,9 @@ getWorkspaceSymbols(StringRef Query, int Limit, const SymbolIndex *const Index,
   if (IsGlobalQuery || !Names.first.empty())
     Req.Scopes = {Names.first};
   if (Limit)
-    Req.MaxCandidateCount = Limit;
-  TopN<ScoredSymbolInfo, ScoredSymbolGreater> Top(Req.MaxCandidateCount);
+    Req.Limit = Limit;
+  TopN<ScoredSymbolInfo, ScoredSymbolGreater> Top(
+      Req.Limit ? *Req.Limit : std::numeric_limits<size_t>::max());
   FuzzyMatcher Filter(Req.Query);
   Index->fuzzyFind(Req, [HintPath, &Top, &Filter](const Symbol &Sym) {
     // Prefer the definition over e.g. a function declaration in a header

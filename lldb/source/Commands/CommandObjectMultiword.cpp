@@ -193,9 +193,10 @@ int CommandObjectMultiword::HandleCompletion(CompletionRequest &request) {
 
   auto arg0 = request.GetParsedLine()[0].ref;
   if (request.GetCursorIndex() == 0) {
-    StringList new_matches;
-    AddNamesMatchingPartialString(m_subcommand_dict, arg0, new_matches);
-    request.AddCompletions(new_matches);
+    StringList new_matches, descriptions;
+    AddNamesMatchingPartialString(m_subcommand_dict, arg0, new_matches,
+                                  &descriptions);
+    request.AddCompletions(new_matches, descriptions);
 
     if (new_matches.GetSize() == 1 &&
         new_matches.GetStringAtIndex(0) != nullptr &&

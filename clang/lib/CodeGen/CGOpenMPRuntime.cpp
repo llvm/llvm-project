@@ -1295,27 +1295,19 @@ void CGOpenMPRuntime::emitUserDefinedReduction(
     CodeGenFunction *CGF, const OMPDeclareReductionDecl *D) {
   if (UDRMap.count(D) > 0)
     return;
-  ASTContext &C = CGM.getContext();
-  if (!In || !Out) {
-    In = &C.Idents.get("omp_in");
-    Out = &C.Idents.get("omp_out");
-  }
   llvm::Function *Combiner = emitCombinerOrInitializer(
-      CGM, D->getType(), D->getCombiner(), cast<VarDecl>(D->lookup(In).front()),
-      cast<VarDecl>(D->lookup(Out).front()),
+      CGM, D->getType(), D->getCombiner(),
+      cast<VarDecl>(cast<DeclRefExpr>(D->getCombinerIn())->getDecl()),
+      cast<VarDecl>(cast<DeclRefExpr>(D->getCombinerOut())->getDecl()),
       /*IsCombiner=*/true);
   llvm::Function *Initializer = nullptr;
   if (const Expr *Init = D->getInitializer()) {
-    if (!Priv || !Orig) {
-      Priv = &C.Idents.get("omp_priv");
-      Orig = &C.Idents.get("omp_orig");
-    }
     Initializer = emitCombinerOrInitializer(
         CGM, D->getType(),
         D->getInitializerKind() == OMPDeclareReductionDecl::CallInit ? Init
                                                                      : nullptr,
-        cast<VarDecl>(D->lookup(Orig).front()),
-        cast<VarDecl>(D->lookup(Priv).front()),
+        cast<VarDecl>(cast<DeclRefExpr>(D->getInitOrig())->getDecl()),
+        cast<VarDecl>(cast<DeclRefExpr>(D->getInitPriv())->getDecl()),
         /*IsCombiner=*/false);
   }
   UDRMap.try_emplace(D, Combiner, Initializer);
@@ -8052,19 +8044,19 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
 }
 
 bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
-  const auto *FD = cast<FunctionDecl>(GD.getDecl());
-
   // If emitting code for the host, we do not process FD here. Instead we do
   // the normal code generation.
   if (!CGM.getLangOpts().OpenMPIsDevice)
     return false;
 
   // Try to detect target regions in the function.
-  scanForTargetRegionsFunctions(FD->getBody(), CGM.getMangledName(GD));
+  const ValueDecl *VD = cast<ValueDecl>(GD.getDecl());
+  if (const auto *FD = dyn_cast<FunctionDecl>(VD))
+    scanForTargetRegionsFunctions(FD->getBody(), CGM.getMangledName(GD));
 
   // Do not to emit function if it is not marked as declare target.
-  return !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(FD) &&
-         AlreadyEmittedTargetFunctions.count(FD->getCanonicalDecl()) == 0;
+  return !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD) &&
+         AlreadyEmittedTargetFunctions.count(VD->getCanonicalDecl()) == 0;
 }
 
 bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
@@ -8152,7 +8144,8 @@ void CGOpenMPRuntime::registerTargetGlobalVariable(const VarDecl *VD,
 }
 
 bool CGOpenMPRuntime::emitTargetGlobal(GlobalDecl GD) {
-  if (isa<FunctionDecl>(GD.getDecl()))
+  if (isa<FunctionDecl>(GD.getDecl()) ||
+      isa<OMPDeclareReductionDecl>(GD.getDecl()))
     return emitTargetFunctions(GD);
 
   return emitTargetGlobalVariable(GD);

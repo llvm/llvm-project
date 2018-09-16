@@ -2,15 +2,15 @@
 # RUN: llvm-mc -triple=x86_64-windows-msvc -filetype=obj -o %t.obj %s
 # RUN: not lld-link /out:%t.exe %t.obj 2>&1 | FileCheck %s
 
-# CHECK: error: undefined symbol: ?foo@@YAHXZ
+# CHECK: error: undefined symbol: "int __cdecl foo(void)" (?foo@@YAHXZ)
 # CHECK-NEXT: >>> referenced by {{.*}}.obj:(main)
 # CHECK-NEXT: >>> referenced by {{.*}}.obj:(main)
 # CHECK-EMPTY:
-# CHECK-NEXT: error: undefined symbol: ?bar@@YAHXZ
+# CHECK-NEXT: error: undefined symbol: "int __cdecl bar(void)" (?bar@@YAHXZ)
 # CHECK-NEXT: >>> referenced by {{.*}}.obj:(main)
 # CHECK-NEXT: >>> referenced by {{.*}}.obj:(f1)
 # CHECK-EMPTY:
-# CHECK-NEXT: error: undefined symbol: ?baz@@YAHXZ
+# CHECK-NEXT: error: undefined symbol: "int __cdecl baz(void)" (?baz@@YAHXZ)
 # CHECK-NEXT: >>> referenced by {{.*}}.obj:(f2)
 
         .section        .text,"xr",one_only,main

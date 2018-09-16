@@ -14,9 +14,8 @@
 
 define i1 @p0(i8 %val, i8 %bits) {
 ; CHECK-LABEL: @p0(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[BITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr i8 [[VAL:%.*]], [[BITS:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[VAL_HIGHBITS]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = shl i8 -1, %bits
@@ -31,9 +30,8 @@ define i1 @p0(i8 %val, i8 %bits) {
 
 define <2 x i1> @p1_vec(<2 x i8> %val, <2 x i8> %bits) {
 ; CHECK-LABEL: @p1_vec(
-; CHECK-NEXT:    [[T0:%.*]] = shl <2 x i8> <i8 -1, i8 -1>, [[BITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = xor <2 x i8> [[T0]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = icmp uge <2 x i8> [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr <2 x i8> [[VAL:%.*]], [[BITS:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[VAL_HIGHBITS]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %t0 = shl <2 x i8> <i8 -1, i8 -1>, %bits
@@ -44,9 +42,8 @@ define <2 x i1> @p1_vec(<2 x i8> %val, <2 x i8> %bits) {
 
 define <3 x i1> @p2_vec_undef0(<3 x i8> %val, <3 x i8> %bits) {
 ; CHECK-LABEL: @p2_vec_undef0(
-; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i8> <i8 -1, i8 undef, i8 -1>, [[BITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = xor <3 x i8> [[T0]], <i8 -1, i8 -1, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = icmp uge <3 x i8> [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr <3 x i8> [[VAL:%.*]], [[BITS:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <3 x i8> [[VAL_HIGHBITS]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
   %t0 = shl <3 x i8> <i8 -1, i8 undef, i8 -1>, %bits
@@ -57,9 +54,8 @@ define <3 x i1> @p2_vec_undef0(<3 x i8> %val, <3 x i8> %bits) {
 
 define <3 x i1> @p2_vec_undef1(<3 x i8> %val, <3 x i8> %bits) {
 ; CHECK-LABEL: @p2_vec_undef1(
-; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i8> <i8 -1, i8 -1, i8 -1>, [[BITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = xor <3 x i8> [[T0]], <i8 -1, i8 undef, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = icmp uge <3 x i8> [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr <3 x i8> [[VAL:%.*]], [[BITS:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <3 x i8> [[VAL_HIGHBITS]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
   %t0 = shl <3 x i8> <i8 -1, i8 -1, i8 -1>, %bits
@@ -70,9 +66,8 @@ define <3 x i1> @p2_vec_undef1(<3 x i8> %val, <3 x i8> %bits) {
 
 define <3 x i1> @p2_vec_undef2(<3 x i8> %val, <3 x i8> %bits) {
 ; CHECK-LABEL: @p2_vec_undef2(
-; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i8> <i8 -1, i8 undef, i8 -1>, [[BITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = xor <3 x i8> [[T0]], <i8 -1, i8 undef, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = icmp uge <3 x i8> [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr <3 x i8> [[VAL:%.*]], [[BITS:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <3 x i8> [[VAL_HIGHBITS]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
   %t0 = shl <3 x i8> <i8 -1, i8 undef, i8 -1>, %bits
@@ -89,16 +84,31 @@ declare i8 @gen8()
 
 define i1 @c0(i8 %bits) {
 ; CHECK-LABEL: @c0(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[BITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    [[VAL:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[VAL]], [[T1]]
+; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr i8 [[VAL]], [[BITS:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[VAL_HIGHBITS]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = shl i8 -1, %bits
   %t1 = xor i8 %t0, -1
   %val = call i8 @gen8()
   %r = icmp ule i8 %val, %t1 ; swapped order and predicate
+  ret i1 %r
+}
+
+; What if we have the same pattern on both sides?
+define i1 @both(i8 %bits0, i8 %bits1) {
+; CHECK-LABEL: @both(
+; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[BITS0:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = shl i8 -1, [[BITS1:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[T2]], [[T0]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t0 = shl i8 -1, %bits0
+  %t1 = xor i8 %t0, -1
+  %t2 = shl i8 -1, %bits1
+  %t3 = xor i8 %t2, -1
+  %r = icmp uge i8 %t1, %t3
   ret i1 %r
 }
 
@@ -112,8 +122,8 @@ define i1 @oneuse0(i8 %val, i8 %bits) {
 ; CHECK-LABEL: @oneuse0(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[BITS:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr i8 [[VAL:%.*]], [[BITS]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[VAL_HIGHBITS]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = shl i8 -1, %bits

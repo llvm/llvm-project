@@ -279,6 +279,8 @@ public:
   /// Print the profile for \p FName on stream \p OS.
   void dumpFunctionProfile(StringRef FName, raw_ostream &OS = dbgs());
 
+  virtual void collectFuncsToUse(const Module &M) {}
+
   /// Print all the profiles on stream \p OS.
   void dump(raw_ostream &OS = dbgs());
 
@@ -364,7 +366,7 @@ public:
       : SampleProfileReader(std::move(B), C, Format) {}
 
   /// Read and validate the file header.
-  std::error_code readHeader() override;
+  virtual std::error_code readHeader() override;
 
   /// Read sample profiles from the associated file.
   std::error_code read() override;
@@ -377,6 +379,10 @@ protected:
   ///
   /// \returns the read value.
   template <typename T> ErrorOr<T> readNumber();
+
+  /// Read a numeric value of type T from the profile. The value is saved
+  /// without encoded.
+  template <typename T> ErrorOr<T> readUnencodedNumber();
 
   /// Read a string from the profile.
   ///
@@ -391,6 +397,9 @@ protected:
 
   /// Return true if we've reached the end of file.
   bool at_eof() const { return Data >= End; }
+
+  /// Read the next function profile instance.
+  std::error_code readFuncProfile();
 
   /// Read the contents of the given profile instance.
   std::error_code readProfile(FunctionSamples &FProfile);
@@ -436,10 +445,17 @@ class SampleProfileReaderCompactBinary : public SampleProfileReaderBinary {
 private:
   /// Function name table.
   std::vector<std::string> NameTable;
+  /// The table mapping from function name to the offset of its FunctionSample
+  /// towards file start.
+  DenseMap<StringRef, uint64_t> FuncOffsetTable;
+  /// The set containing the functions to use when compiling a module.
+  DenseSet<StringRef> FuncsToUse;
   virtual std::error_code verifySPMagic(uint64_t Magic) override;
   virtual std::error_code readNameTable() override;
   /// Read a string indirectly via the name table.
   virtual ErrorOr<StringRef> readStringFromTable() override;
+  virtual std::error_code readHeader() override;
+  std::error_code readFuncOffsetTable();
 
 public:
   SampleProfileReaderCompactBinary(std::unique_ptr<MemoryBuffer> B,
@@ -448,6 +464,12 @@ public:
 
   /// \brief Return true if \p Buffer is in the format supported by this class.
   static bool hasFormat(const MemoryBuffer &Buffer);
+
+  /// Read samples only for functions to use.
+  std::error_code read() override;
+
+  /// Collect functions to be used when compiling Module \p M.
+  void collectFuncsToUse(const Module &M) override;
 };
 
 using InlineCallStack = SmallVector<FunctionSamples *, 10>;

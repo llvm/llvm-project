@@ -102,6 +102,7 @@ private:
   bool isNoNanSrc(SDValue N) const;
   bool isInlineImmediate(const SDNode *N) const;
   bool isVGPRImm(const SDNode *N) const;
+  bool isUniformLoad(const SDNode *N) const;
   bool isUniformBr(const SDNode *N) const;
 
   MachineSDNode *buildSMovImm64(SDLoc &DL, uint64_t Val, EVT VT) const;
@@ -140,9 +141,6 @@ private:
                          SDValue &Offset, SDValue &SLC) const;
   bool SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc, SDValue &Soffset,
                          SDValue &Offset) const;
-  bool SelectMUBUFConstant(SDValue Constant,
-                           SDValue &SOffset,
-                           SDValue &ImmOffset) const;
 
   bool SelectFlatAtomic(SDValue Addr, SDValue &VAddr,
                         SDValue &Offset, SDValue &SLC) const;
@@ -1280,25 +1278,6 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc,
   return SelectMUBUFOffset(Addr, SRsrc, Soffset, Offset, GLC, SLC, TFE);
 }
 
-bool AMDGPUDAGToDAGISel::SelectMUBUFConstant(SDValue Constant,
-                                             SDValue &SOffset,
-                                             SDValue &ImmOffset) const {
-  SDLoc DL(Constant);
-  uint32_t Imm = cast<ConstantSDNode>(Constant)->getZExtValue();
-  uint32_t Overflow;
-  if (!AMDGPU::splitMUBUFOffset(Imm, Overflow, Imm, Subtarget))
-    return false;
-  ImmOffset = CurDAG->getTargetConstant(Imm, DL, MVT::i16);
-  if (Overflow <= 64)
-    SOffset = CurDAG->getTargetConstant(Overflow, DL, MVT::i32);
-  else
-    SOffset = SDValue(CurDAG->getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32,
-                      CurDAG->getTargetConstant(Overflow, DL, MVT::i32)),
-                      0);
-
-  return true;
-}
-
 template <bool IsSigned>
 bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDValue Addr,
                                           SDValue &VAddr,
@@ -2117,6 +2096,30 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
   return !AllUsesAcceptSReg && (Limit < 10);
 }
 
+bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode * N) const {
+  auto Ld = cast<LoadSDNode>(N);
+
+  return Ld->getAlignment() >= 4 &&
+        (
+          (
+            (
+              Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS       ||
+              Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT
+            )
+            &&
+            !N->isDivergent()
+          )
+          ||
+          (
+            Subtarget->getScalarizeGlobalBehavior() &&
+            Ld->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
+            !Ld->isVolatile() &&
+            !N->isDivergent() &&
+            static_cast<const SITargetLowering *>(
+              getTargetLowering())->isMemOpHasNoClobberedMemOperand(N)
+          )
+        );
+}
 
 void AMDGPUDAGToDAGISel::PostprocessISelDAG() {
   const AMDGPUTargetLowering& Lowering =

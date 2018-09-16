@@ -1044,7 +1044,7 @@ SBTarget::BreakpointCreateForException(lldb::LanguageType language,
   }
 
   if (log)
-    log->Printf("SBTarget(%p)::BreakpointCreateByRegex (Language: %s, catch: "
+    log->Printf("SBTarget(%p)::BreakpointCreateForException (Language: %s, catch: "
                 "%s throw: %s) => SBBreakpoint(%p)",
                 static_cast<void *>(target_sp.get()),
                 Language::GetNameForLanguageType(language),
@@ -1053,6 +1053,42 @@ SBTarget::BreakpointCreateForException(lldb::LanguageType language,
 
   return sb_bp;
 }
+
+lldb::SBBreakpoint
+SBTarget::BreakpointCreateFromScript(const char *class_name,
+                                     SBStructuredData &extra_args,
+                                     const SBFileSpecList &module_list,
+                                     const SBFileSpecList &file_list,
+                                     bool request_hardware)
+{
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
+
+  SBBreakpoint sb_bp;
+  TargetSP target_sp(GetSP());
+  if (target_sp) {
+    std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+    Status error;
+    
+    StructuredData::ObjectSP obj_sp = extra_args.m_impl_up->GetObjectSP();
+    sb_bp =
+        target_sp->CreateScriptedBreakpoint(class_name,
+                                            module_list.get(),
+                                            file_list.get(),
+                                            false, /* internal */
+                                            request_hardware,
+                                            obj_sp,
+                                            &error);
+  }
+  if (log)
+    log->Printf("SBTarget(%p)::BreakpointCreateFromScript (class name: %s) "
+                " => SBBreakpoint(%p)",
+                static_cast<void *>(target_sp.get()),
+                class_name,
+                static_cast<void *>(sb_bp.GetSP().get()));
+
+  return sb_bp;
+}
+
 
 uint32_t SBTarget::GetNumBreakpoints() const {
   TargetSP target_sp(GetSP());

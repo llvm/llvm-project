@@ -70,22 +70,6 @@ public:
     BufferCapacity = BufferCapacity_;
   }
 
-  /// Create an OutputStream from a buffer and a size.  If either of these are
-  /// null a buffer is allocated.
-  static OutputStream create(char *StartBuf, size_t *Size, size_t AllocSize) {
-    OutputStream Result;
-
-    if (!StartBuf || !Size) {
-      StartBuf = static_cast<char *>(std::malloc(AllocSize));
-      if (StartBuf == nullptr)
-        std::terminate();
-      Size = &AllocSize;
-    }
-
-    Result.reset(StartBuf, *Size);
-    return Result;
-  }
-
   /// If a ParameterPackExpansion (or similar type) is encountered, the offset
   /// into the pack that we're currently printing.
   unsigned CurrentPackIndex = std::numeric_limits<unsigned>::max();
@@ -184,5 +168,20 @@ public:
   SwapAndRestore(const SwapAndRestore &) = delete;
   SwapAndRestore &operator=(const SwapAndRestore &) = delete;
 };
+
+inline bool initializeOutputStream(char *Buf, size_t *N, OutputStream &S,
+                                   size_t InitSize) {
+  size_t BufferSize;
+  if (Buf == nullptr) {
+    Buf = static_cast<char *>(std::malloc(InitSize));
+    if (Buf == nullptr)
+      return true;
+    BufferSize = InitSize;
+  } else
+    BufferSize = *N;
+
+  S.reset(Buf, BufferSize);
+  return false;
+}
 
 #endif

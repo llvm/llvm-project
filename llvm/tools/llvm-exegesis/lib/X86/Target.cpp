@@ -22,7 +22,7 @@ namespace exegesis {
 namespace {
 
 // Common code for X86 Uops and Latency runners.
-template <typename Impl> class X86BenchmarkRunner : public Impl {
+template <typename Impl> class X86SnippetGenerator : public Impl {
   using Impl::Impl;
 
   llvm::Expected<CodeTemplate>
@@ -71,21 +71,23 @@ template <typename Impl> class X86BenchmarkRunner : public Impl {
   }
 };
 
-class X86LatencyImpl : public LatencyBenchmarkRunner {
+class X86LatencyImpl : public LatencySnippetGenerator {
 protected:
-  using Base = LatencyBenchmarkRunner;
+  using Base = LatencySnippetGenerator;
   using Base::Base;
   llvm::Expected<CodeTemplate> handleCompareFP(const Instruction &Instr) const {
-    return llvm::make_error<BenchmarkFailure>("Unsupported x87 CompareFP");
+    return llvm::make_error<SnippetGeneratorFailure>(
+        "Unsupported x87 CompareFP");
   }
   llvm::Expected<CodeTemplate> handleCondMovFP(const Instruction &Instr) const {
-    return llvm::make_error<BenchmarkFailure>("Unsupported x87 CondMovFP");
+    return llvm::make_error<SnippetGeneratorFailure>(
+        "Unsupported x87 CondMovFP");
   }
 };
 
-class X86UopsImpl : public UopsBenchmarkRunner {
+class X86UopsImpl : public UopsSnippetGenerator {
 protected:
-  using Base = UopsBenchmarkRunner;
+  using Base = UopsSnippetGenerator;
   using Base::Base;
   // We can compute uops for any FP instruction that does not grow or shrink the
   // stack (either do not touch the stack or push as much as they pop).
@@ -193,14 +195,14 @@ class ExegesisX86Target : public ExegesisTarget {
     return {};
   }
 
-  std::unique_ptr<BenchmarkRunner>
-  createLatencyBenchmarkRunner(const LLVMState &State) const override {
-    return llvm::make_unique<X86BenchmarkRunner<X86LatencyImpl>>(State);
+  std::unique_ptr<SnippetGenerator>
+  createLatencySnippetGenerator(const LLVMState &State) const override {
+    return llvm::make_unique<X86SnippetGenerator<X86LatencyImpl>>(State);
   }
 
-  std::unique_ptr<BenchmarkRunner>
-  createUopsBenchmarkRunner(const LLVMState &State) const override {
-    return llvm::make_unique<X86BenchmarkRunner<X86UopsImpl>>(State);
+  std::unique_ptr<SnippetGenerator>
+  createUopsSnippetGenerator(const LLVMState &State) const override {
+    return llvm::make_unique<X86SnippetGenerator<X86UopsImpl>>(State);
   }
 
   bool matchesArch(llvm::Triple::ArchType Arch) const override {

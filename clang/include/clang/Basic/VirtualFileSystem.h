@@ -126,6 +126,21 @@ public:
   virtual std::error_code close() = 0;
 };
 
+/// A member of a directory, yielded by a directory_iterator.
+/// Only information available on most platforms is included.
+class directory_entry {
+  std::string Path;
+  llvm::sys::fs::file_type Type;
+
+public:
+  directory_entry() = default;
+  directory_entry(std::string Path, llvm::sys::fs::file_type Type)
+      : Path(std::move(Path)), Type(Type) {}
+
+  llvm::StringRef path() const { return Path; }
+  llvm::sys::fs::file_type type() const { return Type; }
+};
+
 namespace detail {
 
 /// An interface for virtual file systems to provide an iterator over the
@@ -134,10 +149,10 @@ struct DirIterImpl {
   virtual ~DirIterImpl();
 
   /// Sets \c CurrentEntry to the next entry in the directory on success,
-  /// or returns a system-defined \c error_code.
+  /// to directory_entry() at end,  or returns a system-defined \c error_code.
   virtual std::error_code increment() = 0;
 
-  Status CurrentEntry;
+  directory_entry CurrentEntry;
 };
 
 } // namespace detail
@@ -151,7 +166,7 @@ public:
   directory_iterator(std::shared_ptr<detail::DirIterImpl> I)
       : Impl(std::move(I)) {
     assert(Impl.get() != nullptr && "requires non-null implementation");
-    if (!Impl->CurrentEntry.isStatusKnown())
+    if (Impl->CurrentEntry.path().empty())
       Impl.reset(); // Normalize the end iterator to Impl == nullptr.
   }
 
@@ -162,17 +177,17 @@ public:
   directory_iterator &increment(std::error_code &EC) {
     assert(Impl && "attempting to increment past end");
     EC = Impl->increment();
-    if (!Impl->CurrentEntry.isStatusKnown())
+    if (Impl->CurrentEntry.path().empty())
       Impl.reset(); // Normalize the end iterator to Impl == nullptr.
     return *this;
   }
 
-  const Status &operator*() const { return Impl->CurrentEntry; }
-  const Status *operator->() const { return &Impl->CurrentEntry; }
+  const directory_entry &operator*() const { return Impl->CurrentEntry; }
+  const directory_entry *operator->() const { return &Impl->CurrentEntry; }
 
   bool operator==(const directory_iterator &RHS) const {
     if (Impl && RHS.Impl)
-      return Impl->CurrentEntry.equivalent(RHS.Impl->CurrentEntry);
+      return Impl->CurrentEntry.path() == RHS.Impl->CurrentEntry.path();
     return !Impl && !RHS.Impl;
   }
   bool operator!=(const directory_iterator &RHS) const {
@@ -201,8 +216,8 @@ public:
   /// Equivalent to operator++, with an error code.
   recursive_directory_iterator &increment(std::error_code &EC);
 
-  const Status &operator*() const { return *State->top(); }
-  const Status *operator->() const { return &*State->top(); }
+  const directory_entry &operator*() const { return *State->top(); }
+  const directory_entry *operator->() const { return &*State->top(); }
 
   bool operator==(const recursive_directory_iterator &Other) const {
     return State == Other.State; // identity

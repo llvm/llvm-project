@@ -21,6 +21,7 @@
 #include "lldb/Breakpoint/BreakpointResolverFileLine.h"
 #include "lldb/Breakpoint/BreakpointResolverFileRegex.h"
 #include "lldb/Breakpoint/BreakpointResolverName.h"
+#include "lldb/Breakpoint/BreakpointResolverScripted.h"
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Event.h"
@@ -28,8 +29,10 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/Expression/UserExpression.h"
@@ -578,6 +581,48 @@ Target::CreateExceptionBreakpoint(enum lldb::LanguageType language,
   }
   return exc_bkpt_sp;
 }
+
+lldb::BreakpointSP
+Target::CreateScriptedBreakpoint(const llvm::StringRef class_name,
+                                 const FileSpecList *containingModules,
+                                 const FileSpecList *containingSourceFiles,
+                                 bool internal,
+                                 bool request_hardware,
+                                 StructuredData::ObjectSP extra_args_sp,
+                                 Status *creation_error)
+{
+  SearchFilterSP filter_sp;
+  
+  lldb::SearchDepth depth = lldb::eSearchDepthTarget;
+  bool has_files = containingSourceFiles && containingSourceFiles->GetSize() > 0;
+  bool has_modules = containingModules && containingModules->GetSize() > 0;
+  
+  if (has_files && has_modules) {
+    filter_sp = GetSearchFilterForModuleAndCUList(
+      containingModules, containingSourceFiles);
+  } else if (has_files) {
+    filter_sp = GetSearchFilterForModuleAndCUList(
+      nullptr, containingSourceFiles);
+  } else if (has_modules) {
+    filter_sp = GetSearchFilterForModuleList(containingModules);
+  } else {
+    filter_sp.reset(new SearchFilterForUnconstrainedSearches(shared_from_this()));
+  }
+  
+  StructuredDataImpl *extra_args_impl = new StructuredDataImpl();
+  if (extra_args_sp)
+    extra_args_impl->SetObjectSP(extra_args_sp);
+  
+  BreakpointResolverSP resolver_sp(new 
+                                   BreakpointResolverScripted(nullptr, class_name,
+                                   depth,
+                                   extra_args_impl,
+                                   *GetDebugger().GetCommandInterpreter()
+                                       .GetScriptInterpreter()));
+  return CreateBreakpoint(filter_sp, resolver_sp, internal, false, true);
+
+}
+
 
 BreakpointSP Target::CreateBreakpoint(SearchFilterSP &filter_sp,
                                       BreakpointResolverSP &resolver_sp,

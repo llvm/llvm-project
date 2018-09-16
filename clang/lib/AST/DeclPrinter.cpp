@@ -544,7 +544,7 @@ void DeclPrinter::VisitEnumConstantDecl(EnumConstantDecl *D) {
   prettyPrintAttributes(D);
   if (Expr *Init = D->getInitExpr()) {
     Out << " = ";
-    Init->printPretty(Out, nullptr, Policy, Indentation, &Context);
+    Init->printPretty(Out, nullptr, Policy, Indentation, "\n", &Context);
   }
 }
 

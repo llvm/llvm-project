@@ -4153,7 +4153,8 @@ TargetLowering::expandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG) const {
   if (VT.isFloatingPoint() || VT.isVector()) {
     EVT intVT = EVT::getIntegerVT(*DAG.getContext(), LoadedVT.getSizeInBits());
     if (isTypeLegal(intVT) && isTypeLegal(LoadedVT)) {
-      if (!isOperationLegalOrCustom(ISD::LOAD, intVT)) {
+      if (!isOperationLegalOrCustom(ISD::LOAD, intVT) &&
+          LoadedVT.isVector()) {
         // Scalarize the load and let the individual components be handled.
         SDValue Scalarized = scalarizeVectorLoad(LD, DAG);
         if (Scalarized->getOpcode() == ISD::MERGE_VALUES)
@@ -4303,13 +4304,14 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
   EVT VT = Val.getValueType();
   int Alignment = ST->getAlignment();
   auto &MF = DAG.getMachineFunction();
+  EVT MemVT = ST->getMemoryVT();
 
   SDLoc dl(ST);
-  if (ST->getMemoryVT().isFloatingPoint() ||
-      ST->getMemoryVT().isVector()) {
+  if (MemVT.isFloatingPoint() || MemVT.isVector()) {
     EVT intVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
     if (isTypeLegal(intVT)) {
-      if (!isOperationLegalOrCustom(ISD::STORE, intVT)) {
+      if (!isOperationLegalOrCustom(ISD::STORE, intVT) &&
+          MemVT.isVector()) {
         // Scalarize the store and let the individual components be handled.
         SDValue Result = scalarizeVectorStore(ST, DAG);
 

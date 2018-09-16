@@ -85,10 +85,6 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   };
 
   static LocalVarDefRange createDefRangeMem(uint16_t CVRegister, int Offset);
-  static LocalVarDefRange createDefRangeGeneral(uint16_t CVRegister,
-                                                bool InMemory, int Offset,
-                                                bool IsSubfield,
-                                                uint16_t StructOffset);
 
   /// Similar to DbgVariable in DwarfDebug, but not dwarf-specific.
   struct LocalVariable {

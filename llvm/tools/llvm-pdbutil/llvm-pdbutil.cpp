@@ -803,7 +803,8 @@ static void yamlToPdb(StringRef Path) {
 
   Builder.getStringTableBuilder().setStrings(*Strings.strings());
 
-  ExitOnErr(Builder.commit(opts::yaml2pdb::YamlPdbOutputFile));
+  codeview::GUID IgnoredOutGuid;
+  ExitOnErr(Builder.commit(opts::yaml2pdb::YamlPdbOutputFile, &IgnoredOutGuid));
 }
 
 static PDBFile &loadPDB(StringRef Path, std::unique_ptr<IPDBSession> &Session) {
@@ -1263,7 +1264,9 @@ static void mergePdbs() {
     OutFile = opts::merge::InputFilenames[0];
     llvm::sys::path::replace_extension(OutFile, "merged.pdb");
   }
-  ExitOnErr(Builder.commit(OutFile));
+
+  codeview::GUID IgnoredOutGuid;
+  ExitOnErr(Builder.commit(OutFile, &IgnoredOutGuid));
 }
 
 static void explain() {

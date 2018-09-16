@@ -17,6 +17,8 @@
 
 namespace clang {
 
+class FunctionParmMutationAnalyzer;
+
 /// Analyzes whether any mutative operations are applied to an expression within
 /// a given statement.
 class ExprMutationAnalyzer {
@@ -24,16 +26,18 @@ public:
   ExprMutationAnalyzer(const Stmt &Stm, ASTContext &Context)
       : Stm(Stm), Context(Context) {}
 
-  bool isMutated(const Decl *Dec) { return findDeclMutation(Dec) != nullptr; }
   bool isMutated(const Expr *Exp) { return findMutation(Exp) != nullptr; }
+  bool isMutated(const Decl *Dec) { return findMutation(Dec) != nullptr; }
   const Stmt *findMutation(const Expr *Exp);
+  const Stmt *findMutation(const Decl *Dec);
 
 private:
+  using ResultMap = llvm::DenseMap<const Expr *, const Stmt *>;
+
   bool isUnevaluated(const Expr *Exp);
 
   const Stmt *findExprMutation(ArrayRef<ast_matchers::BoundNodes> Matches);
   const Stmt *findDeclMutation(ArrayRef<ast_matchers::BoundNodes> Matches);
-  const Stmt *findDeclMutation(const Decl *Dec);
 
   const Stmt *findDirectMutation(const Expr *Exp);
   const Stmt *findMemberMutation(const Expr *Exp);
@@ -41,10 +45,30 @@ private:
   const Stmt *findCastMutation(const Expr *Exp);
   const Stmt *findRangeLoopMutation(const Expr *Exp);
   const Stmt *findReferenceMutation(const Expr *Exp);
+  const Stmt *findFunctionArgMutation(const Expr *Exp);
 
   const Stmt &Stm;
   ASTContext &Context;
-  llvm::DenseMap<const Expr *, const Stmt *> Results;
+  llvm::DenseMap<const FunctionDecl *,
+                 std::unique_ptr<FunctionParmMutationAnalyzer>>
+      FuncParmAnalyzer;
+  ResultMap Results;
+};
+
+// A convenient wrapper around ExprMutationAnalyzer for analyzing function
+// params.
+class FunctionParmMutationAnalyzer {
+public:
+  FunctionParmMutationAnalyzer(const FunctionDecl &Func, ASTContext &Context);
+
+  bool isMutated(const ParmVarDecl *Parm) {
+    return findMutation(Parm) != nullptr;
+  }
+  const Stmt *findMutation(const ParmVarDecl *Parm);
+
+private:
+  ExprMutationAnalyzer BodyAnalyzer;
+  llvm::DenseMap<const ParmVarDecl *, const Stmt *> Results;
 };
 
 } // namespace clang

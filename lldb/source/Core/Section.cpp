@@ -73,6 +73,8 @@ const char *Section::GetTypeAsCString() const {
     return "dwarf-info";
   case eSectionTypeDWARFDebugLine:
     return "dwarf-line";
+  case eSectionTypeDWARFDebugLineStr:
+    return "dwarf-line-str";
   case eSectionTypeDWARFDebugLoc:
     return "dwarf-loc";
   case eSectionTypeDWARFDebugMacInfo:

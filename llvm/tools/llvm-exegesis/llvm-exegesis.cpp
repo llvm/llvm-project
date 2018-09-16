@@ -119,6 +119,29 @@ getBenchmarkResultContext(const LLVMState &State) {
   return Ctx;
 }
 
+// Generates code snippets for opcode `Opcode`.
+llvm::Expected<std::vector<BenchmarkCode>>
+generateSnippets(const LLVMState &State, unsigned Opcode) {
+  const std::unique_ptr<SnippetGenerator> Generator =
+      State.getExegesisTarget().createSnippetGenerator(BenchmarkMode, State);
+  if (!Generator) {
+    llvm::report_fatal_error("cannot create snippet generator");
+  }
+
+  const llvm::MCInstrDesc &InstrDesc = State.getInstrInfo().get(Opcode);
+  // Ignore instructions that we cannot run.
+  if (InstrDesc.isPseudo())
+    return llvm::make_error<BenchmarkFailure>("Unsupported opcode: isPseudo");
+  if (InstrDesc.isBranch() || InstrDesc.isIndirectBranch())
+    return llvm::make_error<BenchmarkFailure>(
+        "Unsupported opcode: isBranch/isIndirectBranch");
+  if (InstrDesc.isCall() || InstrDesc.isReturn())
+    return llvm::make_error<BenchmarkFailure>(
+        "Unsupported opcode: isCall/isReturn");
+
+  return Generator->generateConfigurations(Opcode);
+}
+
 void benchmarkMain() {
   if (exegesis::pfm::pfmInitialize())
     llvm::report_fatal_error("cannot initialize libpfm");
@@ -140,6 +163,10 @@ void benchmarkMain() {
     return;
   }
 
+  // FIXME: Allow arbitrary code.
+  const std::vector<BenchmarkCode> Configurations =
+      ExitOnErr(generateSnippets(State, Opcode));
+
   const std::unique_ptr<BenchmarkRunner> Runner =
       State.getExegesisTarget().createBenchmarkRunner(BenchmarkMode, State);
   if (!Runner) {
@@ -154,11 +181,12 @@ void benchmarkMain() {
     BenchmarkFile = "-";
 
   const BenchmarkResultContext Context = getBenchmarkResultContext(State);
-  std::vector<InstructionBenchmark> Results =
-      ExitOnErr(Runner->run(Opcode, NumRepetitions));
-  for (InstructionBenchmark &Result : Results)
-    ExitOnErr(Result.writeYaml(Context, BenchmarkFile));
 
+  for (const BenchmarkCode &Conf : Configurations) {
+    InstructionBenchmark Result =
+        Runner->runConfiguration(Conf, NumRepetitions);
+    ExitOnErr(Result.writeYaml(Context, BenchmarkFile));
+  }
   exegesis::pfm::pfmTerminate();
 }
 

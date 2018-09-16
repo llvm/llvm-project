@@ -594,6 +594,15 @@ int main(int argc, const char *argv[]) {
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
+  // Make some commonly used short options visibile in -help.
+  opts::DynamicTableShort.setHiddenFlag(cl::NotHidden);
+  opts::FileHeadersShort.setHiddenFlag(cl::NotHidden);
+  opts::ProgramHeadersShort.setHiddenFlag(cl::NotHidden);
+  opts::RelocationsShort.setHiddenFlag(cl::NotHidden);
+  opts::SectionsShort.setHiddenFlag(cl::NotHidden);
+  opts::SectionsShortUpper.setHiddenFlag(cl::NotHidden);
+  opts::SymbolsShort.setHiddenFlag(cl::NotHidden);
+
   opts::WideOutput.setHiddenFlag(cl::Hidden);
 
   if (sys::path::stem(argv[0]).find("readelf") != StringRef::npos)

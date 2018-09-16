@@ -21,7 +21,7 @@ namespace pdb {
 NativeEnumTypes::NativeEnumTypes(NativeSession &PDBSession,
                                  codeview::LazyRandomTypeCollection &Types,
                                  codeview::TypeLeafKind Kind)
-    : Matches(), Index(0), Session(PDBSession), Kind(Kind) {
+    : Matches(), Index(0), Session(PDBSession) {
   for (auto Index = Types.getFirst(); Index;
        Index = Types.getNext(Index.getValue())) {
     if (Types.getType(Index.getValue()).kind() == Kind)
@@ -32,7 +32,7 @@ NativeEnumTypes::NativeEnumTypes(NativeSession &PDBSession,
 NativeEnumTypes::NativeEnumTypes(
     NativeSession &PDBSession, const std::vector<codeview::TypeIndex> &Matches,
     codeview::TypeLeafKind Kind)
-    : Matches(Matches), Index(0), Session(PDBSession), Kind(Kind) {}
+    : Matches(Matches), Index(0), Session(PDBSession) {}
 
 uint32_t NativeEnumTypes::getChildCount() const {
   return static_cast<uint32_t>(Matches.size());

@@ -13,15 +13,15 @@
 
 # IMPORTS: Import {
 # IMPORTS-NEXT: Name: autoimport-refptr.s.tmp-lib.dll
-# IMPORTS-NEXT: ImportLookupTableRVA: 0x2030
-# IMPORTS-NEXT: ImportAddressTableRVA: 0x2040
+# IMPORTS-NEXT: ImportLookupTableRVA: 0x2050
+# IMPORTS-NEXT: ImportAddressTableRVA: 0x2060
 # IMPORTS-NEXT: Symbol: variable (0)
 # IMPORTS-NEXT: }
 
 # DISASM: Disassembly of section .text:
 # DISASM: .text:
-# Relative offset at 0x1002 pointing at the IAT at 0x2040
-# DISASM: 140001000:      48 8b 05 39 10 00 00    movq    4153(%rip), %rax
+# Relative offset at 0x1002 pointing at the IAT at 0x2060
+# DISASM: 140001000:      48 8b 05 59 10 00 00    movq    4185(%rip), %rax
 # DISASM: 140001007:      8b 00   movl    (%rax), %eax
 # Relative offset at 0x100b pointing at the .refptr.localvar stub at
 # 0x2000
