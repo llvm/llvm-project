@@ -1016,7 +1016,10 @@ NamedIdentifierNode *Demangler::demangleBackRefName(StringView &MangledName) {
 void Demangler::memorizeIdentifier(IdentifierNode *Identifier) {
   // Render this class template name into a string buffer so that we can
   // memorize it for the purpose of back-referencing.
-  OutputStream OS = OutputStream::create(nullptr, nullptr, 1024);
+  OutputStream OS;
+  if (initializeOutputStream(nullptr, nullptr, OS, 1024))
+    // FIXME: Propagate out-of-memory as an error?
+    std::terminate();
   Identifier->output(OS, OF_Default);
   OS << '\0';
   char *Name = OS.getBuffer();
@@ -1346,7 +1349,9 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
   if (MangledName.empty())
     goto StringLiteralError;
 
-  OS = OutputStream::create(nullptr, nullptr, 1024);
+  if (initializeOutputStream(nullptr, nullptr, OS, 1024))
+    // FIXME: Propagate out-of-memory as an error?
+    std::terminate();
   if (IsWcharT) {
     Result->Char = CharKind::Wchar;
     if (StringByteSize > 64)
@@ -1466,7 +1471,10 @@ Demangler::demangleLocallyScopedNamePiece(StringView &MangledName) {
     return nullptr;
 
   // Render the parent symbol's name into a buffer.
-  OutputStream OS = OutputStream::create(nullptr, nullptr, 1024);
+  OutputStream OS;
+  if (initializeOutputStream(nullptr, nullptr, OS, 1024))
+    // FIXME: Propagate out-of-memory as an error?
+    std::terminate();
   OS << '`';
   Scope->output(OS, OF_Default);
   OS << '\'';
@@ -2289,7 +2297,9 @@ void Demangler::dumpBackReferences() {
               (int)Backrefs.FunctionParamCount);
 
   // Create an output stream so we can render each type.
-  OutputStream OS = OutputStream::create(nullptr, 0, 1024);
+  OutputStream OS;
+  if (initializeOutputStream(nullptr, nullptr, OS, 1024))
+    std::terminate();
   for (size_t I = 0; I < Backrefs.FunctionParamCount; ++I) {
     OS.setCurrentPosition(0);
 
@@ -2314,21 +2324,29 @@ void Demangler::dumpBackReferences() {
 
 char *llvm::microsoftDemangle(const char *MangledName, char *Buf, size_t *N,
                               int *Status, MSDemangleFlags Flags) {
+  int InternalStatus = demangle_success;
   Demangler D;
+  OutputStream S;
+
   StringView Name{MangledName};
-  SymbolNode *S = D.parse(Name);
+  SymbolNode *AST = D.parse(Name);
 
   if (Flags & MSDF_DumpBackrefs)
     D.dumpBackReferences();
-  OutputStream OS = OutputStream::create(Buf, N, 1024);
-  if (D.Error) {
-    OS << MangledName;
-    *Status = llvm::demangle_invalid_mangled_name;
-  } else {
-    S->output(OS, OF_Default);
-    *Status = llvm::demangle_success;
+
+  if (D.Error)
+    InternalStatus = demangle_invalid_mangled_name;
+  else if (initializeOutputStream(Buf, N, S, 1024))
+    InternalStatus = demangle_memory_alloc_failure;
+  else {
+    AST->output(S, OF_Default);
+    S += '\0';
+    if (N != nullptr)
+      *N = S.getCurrentPosition();
+    Buf = S.getBuffer();
   }
 
-  OS << '\0';
-  return OS.getBuffer();
+  if (Status)
+    *Status = InternalStatus;
+  return InternalStatus == demangle_success ? Buf : nullptr;
 }

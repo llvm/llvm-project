@@ -56,11 +56,6 @@ public:
 
   void reset() override { Enumerator->reset(); }
 
-  MyType *clone() const override {
-    std::unique_ptr<ArgEnumeratorType> Clone(Enumerator->clone());
-    return new FunctionArgEnumerator(Session, std::move(Clone));
-  }
-
 private:
   const IPDBSession &Session;
   std::unique_ptr<ArgEnumeratorType> Enumerator;

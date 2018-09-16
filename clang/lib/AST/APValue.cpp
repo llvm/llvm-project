@@ -416,17 +416,25 @@ void APValue::printPretty(raw_ostream &Out, ASTContext &Ctx, QualType Ty) const{
         << GetApproxValue(getComplexFloatImag()) << "i";
     return;
   case APValue::LValue: {
-    LValueBase Base = getLValueBase();
-    if (!Base) {
-      Out << "0";
-      return;
-    }
-
     bool IsReference = Ty->isReferenceType();
     QualType InnerTy
       = IsReference ? Ty.getNonReferenceType() : Ty->getPointeeType();
     if (InnerTy.isNull())
       InnerTy = Ty;
+
+    LValueBase Base = getLValueBase();
+    if (!Base) {
+      if (isNullPointer()) {
+        Out << (Ctx.getLangOpts().CPlusPlus11 ? "nullptr" : "0");
+      } else if (IsReference) {
+        Out << "*(" << InnerTy.stream(Ctx.getPrintingPolicy()) << "*)"
+            << getLValueOffset().getQuantity();
+      } else {
+        Out << "(" << Ty.stream(Ctx.getPrintingPolicy()) << ")"
+            << getLValueOffset().getQuantity();
+      }
+      return;
+    }
 
     if (!hasLValuePath()) {
       // No lvalue path: just print the offset.

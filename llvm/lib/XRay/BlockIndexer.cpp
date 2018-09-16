@@ -16,22 +16,7 @@
 namespace llvm {
 namespace xray {
 
-Error BlockIndexer::visit(BufferExtents &) {
-  if (CurrentState == State::ThreadIDFound) {
-    Index::iterator It;
-    std::tie(It, std::ignore) =
-        Indices.insert({{CurrentBlock.ProcessID, CurrentBlock.ThreadID}, {}});
-    It->second.push_back({CurrentBlock.ProcessID, CurrentBlock.ThreadID,
-                          CurrentBlock.WallclockTime,
-                          std::move(CurrentBlock.Records)});
-    CurrentBlock.ProcessID = 0;
-    CurrentBlock.ThreadID = 0;
-    CurrentBlock.WallclockTime = nullptr;
-    CurrentBlock.Records = {};
-  }
-  CurrentState = State::ExtentsFound;
-  return Error::success();
-}
+Error BlockIndexer::visit(BufferExtents &) { return Error::success(); }
 
 Error BlockIndexer::visit(WallclockRecord &R) {
   CurrentBlock.Records.push_back(&R);
@@ -66,14 +51,16 @@ Error BlockIndexer::visit(PIDRecord &R) {
 }
 
 Error BlockIndexer::visit(NewBufferRecord &R) {
-  CurrentState = State::ThreadIDFound;
+  if (!CurrentBlock.Records.empty())
+    if (auto E = flush())
+      return E;
+
   CurrentBlock.ThreadID = R.tid();
   CurrentBlock.Records.push_back(&R);
   return Error::success();
 }
 
 Error BlockIndexer::visit(EndBufferRecord &R) {
-  CurrentState = State::SeekExtents;
   CurrentBlock.Records.push_back(&R);
   return Error::success();
 }
@@ -84,7 +71,6 @@ Error BlockIndexer::visit(FunctionRecord &R) {
 }
 
 Error BlockIndexer::flush() {
-  CurrentState = State::SeekExtents;
   Index::iterator It;
   std::tie(It, std::ignore) =
       Indices.insert({{CurrentBlock.ProcessID, CurrentBlock.ThreadID}, {}});
@@ -94,6 +80,7 @@ Error BlockIndexer::flush() {
   CurrentBlock.ProcessID = 0;
   CurrentBlock.ThreadID = 0;
   CurrentBlock.Records = {};
+  CurrentBlock.WallclockTime = nullptr;
   return Error::success();
 }
 

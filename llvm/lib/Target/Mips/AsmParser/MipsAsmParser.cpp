@@ -6371,6 +6371,9 @@ bool MipsAsmParser::parseBracketSuffix(StringRef Name,
   return false;
 }
 
+static std::string MipsMnemonicSpellCheck(StringRef S, uint64_t FBS,
+                                          unsigned VariantID = 0);
+
 bool MipsAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                      SMLoc NameLoc, OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
@@ -6381,7 +6384,9 @@ bool MipsAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   // Check if we have valid mnemonic
   if (!mnemonicIsValid(Name, 0)) {
-    return Error(NameLoc, "unknown instruction");
+    uint64_t FBS = ComputeAvailableFeatures(getSTI().getFeatureBits());
+    std::string Suggestion = MipsMnemonicSpellCheck(Name, FBS);
+    return Error(NameLoc, "unknown instruction" + Suggestion);
   }
   // First operand in MCInst is instruction mnemonic.
   Operands.push_back(MipsOperand::CreateToken(Name, NameLoc, *this));
@@ -8257,6 +8262,7 @@ extern "C" void LLVMInitializeMipsAsmParser() {
 
 #define GET_REGISTER_MATCHER
 #define GET_MATCHER_IMPLEMENTATION
+#define GET_MNEMONIC_SPELL_CHECKER
 #include "MipsGenAsmMatcher.inc"
 
 bool MipsAsmParser::mnemonicIsValid(StringRef Mnemonic, unsigned VariantID) {

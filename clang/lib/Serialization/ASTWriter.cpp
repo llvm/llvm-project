@@ -6467,3 +6467,468 @@ void ASTWriter::AddedCXXTemplateSpecialization(const FunctionTemplateDecl *TD,
 
   DeclsToEmitEvenIfUnreferenced.push_back(D);
 }
+
+//===----------------------------------------------------------------------===//
+//// OMPClause Serialization
+////===----------------------------------------------------------------------===//
+
+void OMPClauseWriter::writeClause(OMPClause *C) {
+  Record.push_back(C->getClauseKind());
+  Visit(C);
+  Record.AddSourceLocation(C->getBeginLoc());
+  Record.AddSourceLocation(C->getEndLoc());
+}
+
+void OMPClauseWriter::VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C) {
+  Record.push_back(C->getCaptureRegion());
+  Record.AddStmt(C->getPreInitStmt());
+}
+
+void OMPClauseWriter::VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C) {
+  VisitOMPClauseWithPreInit(C);
+  Record.AddStmt(C->getPostUpdateExpr());
+}
+
+void OMPClauseWriter::VisitOMPIfClause(OMPIfClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  Record.push_back(C->getNameModifier());
+  Record.AddSourceLocation(C->getNameModifierLoc());
+  Record.AddSourceLocation(C->getColonLoc());
+  Record.AddStmt(C->getCondition());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPFinalClause(OMPFinalClause *C) {
+  Record.AddStmt(C->getCondition());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPNumThreadsClause(OMPNumThreadsClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  Record.AddStmt(C->getNumThreads());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPSafelenClause(OMPSafelenClause *C) {
+  Record.AddStmt(C->getSafelen());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
+  Record.AddStmt(C->getSimdlen());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPCollapseClause(OMPCollapseClause *C) {
+  Record.AddStmt(C->getNumForLoops());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPDefaultClause(OMPDefaultClause *C) {
+  Record.push_back(C->getDefaultKind());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getDefaultKindKwLoc());
+}
+
+void OMPClauseWriter::VisitOMPProcBindClause(OMPProcBindClause *C) {
+  Record.push_back(C->getProcBindKind());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getProcBindKindKwLoc());
+}
+
+void OMPClauseWriter::VisitOMPScheduleClause(OMPScheduleClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  Record.push_back(C->getScheduleKind());
+  Record.push_back(C->getFirstScheduleModifier());
+  Record.push_back(C->getSecondScheduleModifier());
+  Record.AddStmt(C->getChunkSize());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getFirstScheduleModifierLoc());
+  Record.AddSourceLocation(C->getSecondScheduleModifierLoc());
+  Record.AddSourceLocation(C->getScheduleKindLoc());
+  Record.AddSourceLocation(C->getCommaLoc());
+}
+
+void OMPClauseWriter::VisitOMPOrderedClause(OMPOrderedClause *C) {
+  Record.push_back(C->getLoopNumIterations().size());
+  Record.AddStmt(C->getNumForLoops());
+  for (Expr *NumIter : C->getLoopNumIterations())
+    Record.AddStmt(NumIter);
+  for (unsigned I = 0, E = C->getLoopNumIterations().size(); I <E; ++I)
+    Record.AddStmt(C->getLoopCunter(I));
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPNowaitClause(OMPNowaitClause *) {}
+
+void OMPClauseWriter::VisitOMPUntiedClause(OMPUntiedClause *) {}
+
+void OMPClauseWriter::VisitOMPMergeableClause(OMPMergeableClause *) {}
+
+void OMPClauseWriter::VisitOMPReadClause(OMPReadClause *) {}
+
+void OMPClauseWriter::VisitOMPWriteClause(OMPWriteClause *) {}
+
+void OMPClauseWriter::VisitOMPUpdateClause(OMPUpdateClause *) {}
+
+void OMPClauseWriter::VisitOMPCaptureClause(OMPCaptureClause *) {}
+
+void OMPClauseWriter::VisitOMPSeqCstClause(OMPSeqCstClause *) {}
+
+void OMPClauseWriter::VisitOMPThreadsClause(OMPThreadsClause *) {}
+
+void OMPClauseWriter::VisitOMPSIMDClause(OMPSIMDClause *) {}
+
+void OMPClauseWriter::VisitOMPNogroupClause(OMPNogroupClause *) {}
+
+void OMPClauseWriter::VisitOMPPrivateClause(OMPPrivateClause *C) {
+  Record.push_back(C->varlist_size());
+  Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *VE : C->varlists()) {
+    Record.AddStmt(VE);
+  }
+  for (auto *VE : C->private_copies()) {
+    Record.AddStmt(VE);
+  }
+}
+
+void OMPClauseWriter::VisitOMPFirstprivateClause(OMPFirstprivateClause *C) {
+  Record.push_back(C->varlist_size());
+  VisitOMPClauseWithPreInit(C);
+  Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *VE : C->varlists()) {
+    Record.AddStmt(VE);
+  }
+  for (auto *VE : C->private_copies()) {
+    Record.AddStmt(VE);
+  }
+  for (auto *VE : C->inits()) {
+    Record.AddStmt(VE);
+  }
+}
+
+void OMPClauseWriter::VisitOMPLastprivateClause(OMPLastprivateClause *C) {
+  Record.push_back(C->varlist_size());
+  VisitOMPClauseWithPostUpdate(C);
+  Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *VE : C->varlists())
+    Record.AddStmt(VE);
+  for (auto *E : C->private_copies())
+    Record.AddStmt(E);
+  for (auto *E : C->source_exprs())
+    Record.AddStmt(E);
+  for (auto *E : C->destination_exprs())
+    Record.AddStmt(E);
+  for (auto *E : C->assignment_ops())
+    Record.AddStmt(E);
+}
+
+void OMPClauseWriter::VisitOMPSharedClause(OMPSharedClause *C) {
+  Record.push_back(C->varlist_size());
+  Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *VE : C->varlists())
+    Record.AddStmt(VE);
+}
+
+void OMPClauseWriter::VisitOMPReductionClause(OMPReductionClause *C) {
+  Record.push_back(C->varlist_size());
+  VisitOMPClauseWithPostUpdate(C);
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getColonLoc());
+  Record.AddNestedNameSpecifierLoc(C->getQualifierLoc());
+  Record.AddDeclarationNameInfo(C->getNameInfo());
+  for (auto *VE : C->varlists())
+    Record.AddStmt(VE);
+  for (auto *VE : C->privates())
+    Record.AddStmt(VE);
+  for (auto *E : C->lhs_exprs())
+    Record.AddStmt(E);
+  for (auto *E : C->rhs_exprs())
+    Record.AddStmt(E);
+  for (auto *E : C->reduction_ops())
+    Record.AddStmt(E);
+}
+
+void OMPClauseWriter::VisitOMPTaskReductionClause(OMPTaskReductionClause *C) {
+  Record.push_back(C->varlist_size());
+  VisitOMPClauseWithPostUpdate(C);
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getColonLoc());
+  Record.AddNestedNameSpecifierLoc(C->getQualifierLoc());
+  Record.AddDeclarationNameInfo(C->getNameInfo());
+  for (auto *VE : C->varlists())
+    Record.AddStmt(VE);
+  for (auto *VE : C->privates())
+    Record.AddStmt(VE);
+  for (auto *E : C->lhs_exprs())
+    Record.AddStmt(E);
+  for (auto *E : C->rhs_exprs())
+    Record.AddStmt(E);
+  for (auto *E : C->reduction_ops())
+    Record.AddStmt(E);
+}
+
+void OMPClauseWriter::VisitOMPInReductionClause(OMPInReductionClause *C) {
+  Record.push_back(C->varlist_size());
+  VisitOMPClauseWithPostUpdate(C);
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getColonLoc());
+  Record.AddNestedNameSpecifierLoc(C->getQualifierLoc());
+  Record.AddDeclarationNameInfo(C->getNameInfo());
+  for (auto *VE : C->varlists())
+    Record.AddStmt(VE);
+  for (auto *VE : C->privates())
+    Record.AddStmt(VE);
+  for (auto *E : C->lhs_exprs())
+    Record.AddStmt(E);
+  for (auto *E : C->rhs_exprs())
+    Record.AddStmt(E);
+  for (auto *E : C->reduction_ops())
+    Record.AddStmt(E);
+  for (auto *E : C->taskgroup_descriptors())
+    Record.AddStmt(E);
+}
+
+void OMPClauseWriter::VisitOMPLinearClause(OMPLinearClause *C) {
+  Record.push_back(C->varlist_size());
+  VisitOMPClauseWithPostUpdate(C);
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getColonLoc());
+  Record.push_back(C->getModifier());
+  Record.AddSourceLocation(C->getModifierLoc());
+  for (auto *VE : C->varlists()) {
+    Record.AddStmt(VE);
+  }
+  for (auto *VE : C->privates()) {
+    Record.AddStmt(VE);
+  }
+  for (auto *VE : C->inits()) {
+    Record.AddStmt(VE);
+  }
+  for (auto *VE : C->updates()) {
+    Record.AddStmt(VE);
+  }
+  for (auto *VE : C->finals()) {
+    Record.AddStmt(VE);
+  }
+  Record.AddStmt(C->getStep());
+  Record.AddStmt(C->getCalcStep());
+}
+
+void OMPClauseWriter::VisitOMPAlignedClause(OMPAlignedClause *C) {
+  Record.push_back(C->varlist_size());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getColonLoc());
+  for (auto *VE : C->varlists())
+    Record.AddStmt(VE);
+  Record.AddStmt(C->getAlignment());
+}
+
+void OMPClauseWriter::VisitOMPCopyinClause(OMPCopyinClause *C) {
+  Record.push_back(C->varlist_size());
+  Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *VE : C->varlists())
+    Record.AddStmt(VE);
+  for (auto *E : C->source_exprs())
+    Record.AddStmt(E);
+  for (auto *E : C->destination_exprs())
+    Record.AddStmt(E);
+  for (auto *E : C->assignment_ops())
+    Record.AddStmt(E);
+}
+
+void OMPClauseWriter::VisitOMPCopyprivateClause(OMPCopyprivateClause *C) {
+  Record.push_back(C->varlist_size());
+  Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *VE : C->varlists())
+    Record.AddStmt(VE);
+  for (auto *E : C->source_exprs())
+    Record.AddStmt(E);
+  for (auto *E : C->destination_exprs())
+    Record.AddStmt(E);
+  for (auto *E : C->assignment_ops())
+    Record.AddStmt(E);
+}
+
+void OMPClauseWriter::VisitOMPFlushClause(OMPFlushClause *C) {
+  Record.push_back(C->varlist_size());
+  Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *VE : C->varlists())
+    Record.AddStmt(VE);
+}
+
+void OMPClauseWriter::VisitOMPDependClause(OMPDependClause *C) {
+  Record.push_back(C->varlist_size());
+  Record.push_back(C->getNumLoops());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.push_back(C->getDependencyKind());
+  Record.AddSourceLocation(C->getDependencyLoc());
+  Record.AddSourceLocation(C->getColonLoc());
+  for (auto *VE : C->varlists())
+    Record.AddStmt(VE);
+  for (unsigned I = 0, E = C->getNumLoops(); I < E; ++I)
+    Record.AddStmt(C->getLoopData(I));
+}
+
+void OMPClauseWriter::VisitOMPDeviceClause(OMPDeviceClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  Record.AddStmt(C->getDevice());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPMapClause(OMPMapClause *C) {
+  Record.push_back(C->varlist_size());
+  Record.push_back(C->getUniqueDeclarationsNum());
+  Record.push_back(C->getTotalComponentListNum());
+  Record.push_back(C->getTotalComponentsNum());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.push_back(C->getMapTypeModifier());
+  Record.push_back(C->getMapType());
+  Record.AddSourceLocation(C->getMapLoc());
+  Record.AddSourceLocation(C->getColonLoc());
+  for (auto *E : C->varlists())
+    Record.AddStmt(E);
+  for (auto *D : C->all_decls())
+    Record.AddDeclRef(D);
+  for (auto N : C->all_num_lists())
+    Record.push_back(N);
+  for (auto N : C->all_lists_sizes())
+    Record.push_back(N);
+  for (auto &M : C->all_components()) {
+    Record.AddStmt(M.getAssociatedExpression());
+    Record.AddDeclRef(M.getAssociatedDeclaration());
+  }
+}
+
+void OMPClauseWriter::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  Record.AddStmt(C->getNumTeams());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  Record.AddStmt(C->getThreadLimit());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPPriorityClause(OMPPriorityClause *C) {
+  Record.AddStmt(C->getPriority());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPGrainsizeClause(OMPGrainsizeClause *C) {
+  Record.AddStmt(C->getGrainsize());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPNumTasksClause(OMPNumTasksClause *C) {
+  Record.AddStmt(C->getNumTasks());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPHintClause(OMPHintClause *C) {
+  Record.AddStmt(C->getHint());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPDistScheduleClause(OMPDistScheduleClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  Record.push_back(C->getDistScheduleKind());
+  Record.AddStmt(C->getChunkSize());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getDistScheduleKindLoc());
+  Record.AddSourceLocation(C->getCommaLoc());
+}
+
+void OMPClauseWriter::VisitOMPDefaultmapClause(OMPDefaultmapClause *C) {
+  Record.push_back(C->getDefaultmapKind());
+  Record.push_back(C->getDefaultmapModifier());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getDefaultmapModifierLoc());
+  Record.AddSourceLocation(C->getDefaultmapKindLoc());
+}
+
+void OMPClauseWriter::VisitOMPToClause(OMPToClause *C) {
+  Record.push_back(C->varlist_size());
+  Record.push_back(C->getUniqueDeclarationsNum());
+  Record.push_back(C->getTotalComponentListNum());
+  Record.push_back(C->getTotalComponentsNum());
+  Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *E : C->varlists())
+    Record.AddStmt(E);
+  for (auto *D : C->all_decls())
+    Record.AddDeclRef(D);
+  for (auto N : C->all_num_lists())
+    Record.push_back(N);
+  for (auto N : C->all_lists_sizes())
+    Record.push_back(N);
+  for (auto &M : C->all_components()) {
+    Record.AddStmt(M.getAssociatedExpression());
+    Record.AddDeclRef(M.getAssociatedDeclaration());
+  }
+}
+
+void OMPClauseWriter::VisitOMPFromClause(OMPFromClause *C) {
+  Record.push_back(C->varlist_size());
+  Record.push_back(C->getUniqueDeclarationsNum());
+  Record.push_back(C->getTotalComponentListNum());
+  Record.push_back(C->getTotalComponentsNum());
+  Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *E : C->varlists())
+    Record.AddStmt(E);
+  for (auto *D : C->all_decls())
+    Record.AddDeclRef(D);
+  for (auto N : C->all_num_lists())
+    Record.push_back(N);
+  for (auto N : C->all_lists_sizes())
+    Record.push_back(N);
+  for (auto &M : C->all_components()) {
+    Record.AddStmt(M.getAssociatedExpression());
+    Record.AddDeclRef(M.getAssociatedDeclaration());
+  }
+}
+
+void OMPClauseWriter::VisitOMPUseDevicePtrClause(OMPUseDevicePtrClause *C) {
+  Record.push_back(C->varlist_size());
+  Record.push_back(C->getUniqueDeclarationsNum());
+  Record.push_back(C->getTotalComponentListNum());
+  Record.push_back(C->getTotalComponentsNum());
+  Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *E : C->varlists())
+    Record.AddStmt(E);
+  for (auto *VE : C->private_copies())
+    Record.AddStmt(VE);
+  for (auto *VE : C->inits())
+    Record.AddStmt(VE);
+  for (auto *D : C->all_decls())
+    Record.AddDeclRef(D);
+  for (auto N : C->all_num_lists())
+    Record.push_back(N);
+  for (auto N : C->all_lists_sizes())
+    Record.push_back(N);
+  for (auto &M : C->all_components()) {
+    Record.AddStmt(M.getAssociatedExpression());
+    Record.AddDeclRef(M.getAssociatedDeclaration());
+  }
+}
+
+void OMPClauseWriter::VisitOMPIsDevicePtrClause(OMPIsDevicePtrClause *C) {
+  Record.push_back(C->varlist_size());
+  Record.push_back(C->getUniqueDeclarationsNum());
+  Record.push_back(C->getTotalComponentListNum());
+  Record.push_back(C->getTotalComponentsNum());
+  Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *E : C->varlists())
+    Record.AddStmt(E);
+  for (auto *D : C->all_decls())
+    Record.AddDeclRef(D);
+  for (auto N : C->all_num_lists())
+    Record.push_back(N);
+  for (auto N : C->all_lists_sizes())
+    Record.push_back(N);
+  for (auto &M : C->all_components()) {
+    Record.AddStmt(M.getAssociatedExpression());
+    Record.AddDeclRef(M.getAssociatedDeclaration());
+  }
+}

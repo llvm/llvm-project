@@ -315,10 +315,6 @@ private:
                          SmallVector<const OMPDeclareReductionDecl *, 4>>
       FunctionUDRMapTy;
   FunctionUDRMapTy FunctionUDRMap;
-  IdentifierInfo *In = nullptr;
-  IdentifierInfo *Out = nullptr;
-  IdentifierInfo *Priv = nullptr;
-  IdentifierInfo *Orig = nullptr;
   /// Type kmp_critical_name, originally defined as typedef kmp_int32
   /// kmp_critical_name[8];
   llvm::ArrayType *KmpCriticalNameTy;
@@ -600,7 +596,7 @@ private:
   OffloadEntriesInfoManagerTy OffloadEntriesInfoManager;
 
   bool ShouldMarkAsGlobal = true;
-  llvm::SmallDenseSet<const FunctionDecl *> AlreadyEmittedTargetFunctions;
+  llvm::SmallDenseSet<const Decl *> AlreadyEmittedTargetFunctions;
 
   /// List of variables that can become declare target implicitly and, thus,
   /// must be emitted.

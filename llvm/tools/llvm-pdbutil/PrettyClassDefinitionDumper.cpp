@@ -51,6 +51,13 @@ void ClassDefinitionDumper::prettyPrintClassIntro(const ClassLayout &Layout) {
   uint32_t Size = Layout.getSize();
   const PDBSymbolTypeUDT &Class = Layout.getClass();
 
+  if (Layout.getClass().isConstType())
+    WithColor(Printer, PDB_ColorItem::Keyword).get() << "const ";
+  if (Layout.getClass().isVolatileType())
+    WithColor(Printer, PDB_ColorItem::Keyword).get() << "volatile ";
+  if (Layout.getClass().isUnalignedType())
+    WithColor(Printer, PDB_ColorItem::Keyword).get() << "unaligned ";
+
   WithColor(Printer, PDB_ColorItem::Keyword).get() << Class.getUdtKind() << " ";
   WithColor(Printer, PDB_ColorItem::Type).get() << Class.getName();
   WithColor(Printer, PDB_ColorItem::Comment).get() << " [sizeof = " << Size

@@ -14,6 +14,7 @@
 #include "lldb/Core/ModuleList.h" // for ModuleList
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolContext.h" // for SymbolContext
+#include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h" // for ConstString
 #include "lldb/Utility/Status.h"      // for Status
@@ -146,6 +147,15 @@ bool SearchFilter::AddressPasses(Address &address) { return true; }
 bool SearchFilter::CompUnitPasses(FileSpec &fileSpec) { return true; }
 
 bool SearchFilter::CompUnitPasses(CompileUnit &compUnit) { return true; }
+
+bool SearchFilter::FunctionPasses(Function &function) {
+  // This is a slightly cheesy job, but since we don't have finer grained 
+  // filters yet, just checking that the start address passes is probably
+  // good enough for the base class behavior.
+  Address addr = function.GetAddressRange().GetBaseAddress();
+  return AddressPasses(addr);
+}
+
 
 uint32_t SearchFilter::GetFilterRequiredItems() {
   return (lldb::SymbolContextItem)0;
@@ -312,7 +322,32 @@ SearchFilter::DoCUIteration(const ModuleSP &module_sp,
           else if (shouldContinue == Searcher::eCallbackReturnStop)
             return shouldContinue;
         } else {
-          // FIXME Descend to block.
+          // First make sure this compile unit's functions are parsed
+          // since CompUnit::ForeachFunction only iterates over already
+          // parsed functions.
+          SymbolVendor *sym_vendor = module_sp->GetSymbolVendor();
+          if (!sym_vendor)
+            continue;
+          SymbolContext sym_ctx;
+          cu_sp->CalculateSymbolContext(&sym_ctx);
+          if (!sym_vendor->ParseCompileUnitFunctions(sym_ctx))
+            continue;
+          // If we got any functions, use ForeachFunction to do the iteration.
+          cu_sp->ForeachFunction([&](const FunctionSP &func_sp) {
+            if (!FunctionPasses(*func_sp.get()))
+              return false; // Didn't pass the filter, just keep going.
+            if (searcher.GetDepth() == lldb::eSearchDepthFunction) {
+              SymbolContext matchingContext(m_target_sp, module_sp, 
+                                            cu_sp.get(), func_sp.get());
+              shouldContinue = searcher.SearchCallback(*this, 
+                                                       matchingContext, 
+                                                       nullptr, false);
+            } else {
+              shouldContinue = DoFunctionIteration(func_sp.get(), context, 
+                                                   searcher);
+            }
+            return shouldContinue != Searcher::eCallbackReturnContinue;
+          });
         }
       }
     }
@@ -748,7 +783,15 @@ SearchFilterByModuleListAndCU::SerializeToStructuredData() {
 }
 
 bool SearchFilterByModuleListAndCU::AddressPasses(Address &address) {
-  return true;
+  SymbolContext sym_ctx;
+  address.CalculateSymbolContext(&sym_ctx, eSymbolContextEverything);
+  if (!sym_ctx.comp_unit) {
+    if (m_cu_spec_list.GetSize() != 0)
+      return false; // Has no comp_unit so can't pass the file check.
+  }
+  if (m_cu_spec_list.FindFileIndex(0, sym_ctx.comp_unit, false) == UINT32_MAX)
+        return false; // Fails the file check
+  return SearchFilterByModuleList::ModulePasses(sym_ctx.module_sp); 
 }
 
 bool SearchFilterByModuleListAndCU::CompUnitPasses(FileSpec &fileSpec) {

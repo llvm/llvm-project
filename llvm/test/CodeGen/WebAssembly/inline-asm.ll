@@ -97,6 +97,15 @@ entry:
   ret i32 %t0
 }
 
+; CHECK-LABEL: tied_operands
+; CHECK: get_local  $push0=, 0
+; CHECK: return    $pop0
+define i32 @tied_operands(i32 %var) {
+entry:
+  %ret = call i32 asm "", "=r,0"(i32 %var)
+  ret i32 %ret
+}
+
 attributes #0 = { nounwind }
 
 !0 = !{i32 47}

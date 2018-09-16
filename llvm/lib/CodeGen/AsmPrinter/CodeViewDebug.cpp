@@ -1034,19 +1034,6 @@ CodeViewDebug::createDefRangeMem(uint16_t CVRegister, int Offset) {
   return DR;
 }
 
-CodeViewDebug::LocalVarDefRange
-CodeViewDebug::createDefRangeGeneral(uint16_t CVRegister, bool InMemory,
-                                     int Offset, bool IsSubfield,
-                                     uint16_t StructOffset) {
-  LocalVarDefRange DR;
-  DR.InMemory = InMemory;
-  DR.DataOffset = Offset;
-  DR.IsSubfield = IsSubfield;
-  DR.StructOffset = StructOffset;
-  DR.CVRegister = CVRegister;
-  return DR;
-}
-
 void CodeViewDebug::collectVariableInfoFromMFTable(
     DenseSet<InlinedEntity> &Processed) {
   const MachineFunction &MF = *Asm->MF;

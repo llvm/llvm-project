@@ -14,6 +14,7 @@
 #include <stddef.h> // for NULL
 
 class DWARFUnit;
+class SymbolFileDWARF;
 
 class DWARFFormValue {
 public:

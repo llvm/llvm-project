@@ -48,7 +48,7 @@ struct PassConcept {
                                 ExtraArgTs... ExtraArgs) = 0;
 
   /// Polymorphic method to access the name of a pass.
-  virtual StringRef name() = 0;
+  virtual StringRef name() const = 0;
 };
 
 /// A template wrapper used to implement the polymorphic API.
@@ -80,7 +80,7 @@ struct PassModel : PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...> {
     return Pass.run(IR, AM, ExtraArgs...);
   }
 
-  StringRef name() override { return PassT::name(); }
+  StringRef name() const override { return PassT::name(); }
 
   PassT Pass;
 };
@@ -250,7 +250,7 @@ struct AnalysisPassConcept {
       ExtraArgTs... ExtraArgs) = 0;
 
   /// Polymorphic method to access the name of a pass.
-  virtual StringRef name() = 0;
+  virtual StringRef name() const = 0;
 };
 
 /// Wrapper to model the analysis pass concept.
@@ -290,13 +290,14 @@ struct AnalysisPassModel : AnalysisPassConcept<IRUnitT, PreservedAnalysesT,
       AnalysisResultConcept<IRUnitT, PreservedAnalysesT, InvalidatorT>>
   run(IRUnitT &IR, AnalysisManager<IRUnitT, ExtraArgTs...> &AM,
       ExtraArgTs... ExtraArgs) override {
-    return llvm::make_unique<ResultModelT>(Pass.run(IR, AM, ExtraArgs...));
+    return llvm::make_unique<ResultModelT>(
+        Pass.run(IR, AM, std::forward<ExtraArgTs>(ExtraArgs)...));
   }
 
   /// The model delegates to a static \c PassT::name method.
   ///
   /// The returned string ref must point to constant immutable data!
-  StringRef name() override { return PassT::name(); }
+  StringRef name() const override { return PassT::name(); }
 
   PassT Pass;
 };

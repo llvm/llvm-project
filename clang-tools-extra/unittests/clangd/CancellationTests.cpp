@@ -13,57 +13,48 @@ namespace clangd {
 namespace {
 
 TEST(CancellationTest, CancellationTest) {
-  TaskHandle TH = Task::createHandle();
-  WithContext ContextWithCancellation(setCurrentTask(TH));
+  auto Task = cancelableTask();
+  WithContext ContextWithCancellation(std::move(Task.first));
   EXPECT_FALSE(isCancelled());
-  TH->cancel();
+  Task.second();
   EXPECT_TRUE(isCancelled());
 }
 
-TEST(CancellationTest, TaskTestHandleDiesContextLives) {
+TEST(CancellationTest, CancelerDiesContextLives) {
   llvm::Optional<WithContext> ContextWithCancellation;
   {
-    TaskHandle TH = Task::createHandle();
-    ContextWithCancellation.emplace(setCurrentTask(TH));
+    auto Task = cancelableTask();
+    ContextWithCancellation.emplace(std::move(Task.first));
     EXPECT_FALSE(isCancelled());
-    TH->cancel();
+    Task.second();
     EXPECT_TRUE(isCancelled());
   }
   EXPECT_TRUE(isCancelled());
 }
 
 TEST(CancellationTest, TaskContextDiesHandleLives) {
-  TaskHandle TH = Task::createHandle();
+  auto Task = cancelableTask();
   {
-    WithContext ContextWithCancellation(setCurrentTask(TH));
+    WithContext ContextWithCancellation(std::move(Task.first));
     EXPECT_FALSE(isCancelled());
-    TH->cancel();
+    Task.second();
     EXPECT_TRUE(isCancelled());
   }
   // Still should be able to cancel without any problems.
-  TH->cancel();
-}
-
-TEST(CancellationTest, CancellationToken) {
-  TaskHandle TH = Task::createHandle();
-  WithContext ContextWithCancellation(setCurrentTask(TH));
-  const auto &CT = getCurrentTask();
-  EXPECT_FALSE(CT.isCancelled());
-  TH->cancel();
-  EXPECT_TRUE(CT.isCancelled());
+  Task.second();
 }
 
 TEST(CancellationTest, AsynCancellationTest) {
   std::atomic<bool> HasCancelled(false);
   Notification Cancelled;
-  auto TaskToBeCancelled = [&](ConstTaskHandle CT) {
-    WithContext ContextGuard(setCurrentTask(std::move(CT)));
+  auto TaskToBeCancelled = [&](Context Ctx) {
+    WithContext ContextGuard(std::move(Ctx));
     Cancelled.wait();
     HasCancelled = isCancelled();
   };
-  TaskHandle TH = Task::createHandle();
-  std::thread AsyncTask(TaskToBeCancelled, TH);
-  TH->cancel();
+  auto Task = cancelableTask();
+  std::thread AsyncTask(TaskToBeCancelled, std::move(Task.first));
+  Task.second();
   Cancelled.notify();
   AsyncTask.join();
 

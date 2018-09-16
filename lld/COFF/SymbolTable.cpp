@@ -60,16 +60,16 @@ void SymbolTable::addFile(InputFile *File) {
 }
 
 static void errorOrWarn(const Twine &S) {
-  if (Config->Force)
+  if (Config->ForceUnresolved)
     warn(S);
   else
     error(S);
 }
 
-// Returns the name of the symbol in SC whose value is <= Addr that is closest
-// to Addr. This is generally the name of the global variable or function whose
-// definition contains Addr.
-static StringRef getSymbolName(SectionChunk *SC, uint32_t Addr) {
+// Returns the symbol in SC whose value is <= Addr that is closest to Addr.
+// This is generally the global variable or function whose definition contains
+// Addr.
+static Symbol *getSymbol(SectionChunk *SC, uint32_t Addr) {
   DefinedRegular *Candidate = nullptr;
 
   for (Symbol *S : SC->File->getSymbols()) {
@@ -81,14 +81,12 @@ static StringRef getSymbolName(SectionChunk *SC, uint32_t Addr) {
     Candidate = D;
   }
 
-  if (!Candidate)
-    return "";
-  return Candidate->getName();
+  return Candidate;
 }
 
 static std::string getSymbolLocations(ObjFile *File, uint32_t SymIndex) {
   struct Location {
-    StringRef SymName;
+    Symbol *Sym;
     std::pair<StringRef, uint32_t> FileLine;
   };
   std::vector<Location> Locations;
@@ -102,9 +100,9 @@ static std::string getSymbolLocations(ObjFile *File, uint32_t SymIndex) {
         continue;
       std::pair<StringRef, uint32_t> FileLine =
           getFileLine(SC, R.VirtualAddress);
-      StringRef SymName = getSymbolName(SC, R.VirtualAddress);
-      if (!FileLine.first.empty() || !SymName.empty())
-        Locations.push_back({SymName, FileLine});
+      Symbol *Sym = getSymbol(SC, R.VirtualAddress);
+      if (!FileLine.first.empty() || Sym)
+        Locations.push_back({Sym, FileLine});
     }
   }
 
@@ -119,8 +117,8 @@ static std::string getSymbolLocations(ObjFile *File, uint32_t SymIndex) {
       OS << Loc.FileLine.first << ":" << Loc.FileLine.second
          << "\n>>>               ";
     OS << toString(File);
-    if (!Loc.SymName.empty())
-      OS << ":(" << Loc.SymName << ')';
+    if (Loc.Sym)
+      OS << ":(" << toString(*Loc.Sym) << ')';
   }
   return OS.str();
 }
@@ -237,7 +235,7 @@ void SymbolTable::reportRemainingUndefines() {
 
     // Remaining undefined symbols are not fatal if /force is specified.
     // They are replaced with dummy defined symbols.
-    if (Config->Force)
+    if (Config->ForceUnresolved)
       replaceSymbol<DefinedAbsolute>(Sym, Name, 0);
     Undefs.insert(Sym);
   }
@@ -247,10 +245,10 @@ void SymbolTable::reportRemainingUndefines() {
 
   for (Symbol *B : Config->GCRoot) {
     if (Undefs.count(B))
-      errorOrWarn("<root>: undefined symbol: " + B->getName());
+      errorOrWarn("<root>: undefined symbol: " + toString(*B));
     if (Config->WarnLocallyDefinedImported)
       if (Symbol *Imp = LocalImports.lookup(B))
-        warn("<root>: locally defined symbol imported: " + Imp->getName() +
+        warn("<root>: locally defined symbol imported: " + toString(*Imp) +
              " (defined in " + toString(Imp->getFile()) + ") [LNK4217]");
   }
 
@@ -261,13 +259,13 @@ void SymbolTable::reportRemainingUndefines() {
       if (!Sym)
         continue;
       if (Undefs.count(Sym))
-        errorOrWarn("undefined symbol: " + Sym->getName() +
+        errorOrWarn("undefined symbol: " + toString(*Sym) +
                     getSymbolLocations(File, SymIndex));
       if (Config->WarnLocallyDefinedImported)
         if (Symbol *Imp = LocalImports.lookup(Sym))
-          warn(toString(File) + ": locally defined symbol imported: " +
-               Imp->getName() + " (defined in " + toString(Imp->getFile()) +
-               ") [LNK4217]");
+          warn(toString(File) +
+               ": locally defined symbol imported: " + toString(*Imp) +
+               " (defined in " + toString(Imp->getFile()) + ") [LNK4217]");
     }
   }
 }
@@ -326,8 +324,14 @@ void SymbolTable::addLazy(ArchiveFile *F, const Archive::Symbol Sym) {
 }
 
 void SymbolTable::reportDuplicate(Symbol *Existing, InputFile *NewFile) {
-  error("duplicate symbol: " + toString(*Existing) + " in " +
-        toString(Existing->getFile()) + " and in " + toString(NewFile));
+  std::string Msg = "duplicate symbol: " + toString(*Existing) + " in " +
+                    toString(Existing->getFile()) + " and in " +
+                    toString(NewFile);
+
+  if (Config->ForceMultiple)
+    warn(Msg);
+  else
+    error(Msg);
 }
 
 Symbol *SymbolTable::addAbsolute(StringRef N, COFFSymbolRef Sym) {

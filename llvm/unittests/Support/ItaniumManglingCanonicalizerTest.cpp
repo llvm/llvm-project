@@ -233,6 +233,23 @@ static std::vector<Testcase> getTestcases() {
       },
       {}
     },
+
+    // Check that ctor and dtor variants are considered distinct.
+    {
+      {},
+      {{"_ZN1XC1Ev"}, {"_ZN1XC2Ev"}, {"_ZN1XD1Ev"}, {"_ZN1XD2Ev"}}
+    },
+
+    // Ensure array types with and without bounds are handled properly.
+    {
+      {
+        {FragmentKind::Type, "A_i", "A1_f"},
+      },
+      {
+        {"_Z1fRA_i", "_Z1fRA_i", "_Z1fRA1_f"},
+        {"_Z1fRA1_i"}, {"_Z1fRA_f"},
+      }
+    },
   };
 }
 

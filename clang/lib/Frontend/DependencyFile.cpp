@@ -386,28 +386,32 @@ bool DFGImpl::AddFilename(StringRef Filename) {
 /// for Windows file-naming info.
 static void PrintFilename(raw_ostream &OS, StringRef Filename,
                           DependencyOutputFormat OutputFormat) {
+  // Convert filename to platform native path
+  llvm::SmallString<256> NativePath;
+  llvm::sys::path::native(Filename.str(), NativePath);
+
   if (OutputFormat == DependencyOutputFormat::NMake) {
     // Add quotes if needed. These are the characters listed as "special" to
     // NMake, that are legal in a Windows filespec, and that could cause
     // misinterpretation of the dependency string.
-    if (Filename.find_first_of(" #${}^!") != StringRef::npos)
-      OS << '\"' << Filename << '\"';
+    if (NativePath.find_first_of(" #${}^!") != StringRef::npos)
+      OS << '\"' << NativePath << '\"';
     else
-      OS << Filename;
+      OS << NativePath;
     return;
   }
   assert(OutputFormat == DependencyOutputFormat::Make);
-  for (unsigned i = 0, e = Filename.size(); i != e; ++i) {
-    if (Filename[i] == '#') // Handle '#' the broken gcc way.
+  for (unsigned i = 0, e = NativePath.size(); i != e; ++i) {
+    if (NativePath[i] == '#') // Handle '#' the broken gcc way.
       OS << '\\';
-    else if (Filename[i] == ' ') { // Handle space correctly.
+    else if (NativePath[i] == ' ') { // Handle space correctly.
       OS << '\\';
       unsigned j = i;
-      while (j > 0 && Filename[--j] == '\\')
+      while (j > 0 && NativePath[--j] == '\\')
         OS << '\\';
-    } else if (Filename[i] == '$') // $ is escaped by $$.
+    } else if (NativePath[i] == '$') // $ is escaped by $$.
       OS << '$';
-    OS << Filename[i];
+    OS << NativePath[i];
   }
 }
 

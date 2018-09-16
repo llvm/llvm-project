@@ -149,14 +149,16 @@ def  WriteBitTest  : SchedWrite; // Bit Test - TODO add memory folding support
 
 // Integer shifts and rotates.
 defm WriteShift : X86SchedWritePair;
+
 // Double shift instructions.
 def  WriteSHDrri  : SchedWrite;
 def  WriteSHDrrcl : SchedWrite;
 def  WriteSHDmri  : SchedWrite;
 def  WriteSHDmrcl : SchedWrite;
 
-// BMI1 BEXTR, BMI2 BZHI
+// BMI1 BEXTR/BLS, BMI2 BZHI
 defm WriteBEXTR : X86SchedWritePair;
+defm WriteBLS   : X86SchedWritePair;
 defm WriteBZHI  : X86SchedWritePair;
 
 // Idioms that clear a register, like xorps %xmm0, %xmm0.

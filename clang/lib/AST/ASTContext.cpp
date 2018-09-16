@@ -932,10 +932,7 @@ void ASTContext::mergeDefinitionIntoModule(NamedDecl *ND, Module *M,
     if (auto *Listener = getASTMutationListener())
       Listener->RedefinedHiddenDefinition(ND, M);
 
-  if (getLangOpts().ModulesLocalVisibility)
-    MergedDefModules[cast<NamedDecl>(ND->getCanonicalDecl())].push_back(M);
-  else
-    ND->setVisibleDespiteOwningModule();
+  MergedDefModules[cast<NamedDecl>(ND->getCanonicalDecl())].push_back(M);
 }
 
 void ASTContext::deduplicateMergedDefinitonsFor(NamedDecl *ND) {
@@ -9725,6 +9722,14 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     bool IsExpInstDef =
         isa<FunctionDecl>(D) &&
         cast<FunctionDecl>(D)->getTemplateSpecializationKind() ==
+            TSK_ExplicitInstantiationDefinition;
+
+    // Implicit member function definitions, such as operator= might not be
+    // marked as template specializations, since they're not coming from a
+    // template but synthesized directly on the class.
+    IsExpInstDef |=
+        isa<CXXMethodDecl>(D) &&
+        cast<CXXMethodDecl>(D)->getParent()->getTemplateSpecializationKind() ==
             TSK_ExplicitInstantiationDefinition;
 
     if (getExternalSource()->DeclIsFromPCHWithObjectFile(D) && !IsExpInstDef)

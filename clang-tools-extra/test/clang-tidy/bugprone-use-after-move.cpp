@@ -339,7 +339,7 @@ void lambdas() {
     A a;
     std::move(a);
     auto lambda = [=]() { a.foo(); };
-    // CHECK-MESSAGES: [[@LINE-1]]:27: warning: 'a' used after it was moved
+    // CHECK-MESSAGES: [[@LINE-1]]:20: warning: 'a' used after it was moved
     // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
   }
   // Same tests but for capture by reference.
@@ -354,7 +354,7 @@ void lambdas() {
     A a;
     std::move(a);
     auto lambda = [&]() { a.foo(); };
-    // CHECK-MESSAGES: [[@LINE-1]]:27: warning: 'a' used after it was moved
+    // CHECK-MESSAGES: [[@LINE-1]]:20: warning: 'a' used after it was moved
     // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
   }
   // But don't warn if the move happened after the capture.

@@ -46,10 +46,3 @@ std::unique_ptr<PDBSymbol> DIAEnumSymbols::getNext() {
 }
 
 void DIAEnumSymbols::reset() { Enumerator->Reset(); }
-
-DIAEnumSymbols *DIAEnumSymbols::clone() const {
-  CComPtr<IDiaEnumSymbols> EnumeratorClone;
-  if (S_OK != Enumerator->Clone(&EnumeratorClone))
-    return nullptr;
-  return new DIAEnumSymbols(Session, EnumeratorClone);
-}

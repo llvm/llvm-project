@@ -162,6 +162,20 @@ public:
                        int match_start_point, int max_return_elements,
                        lldb::SBStringList &matches);
 
+  // Same as HandleCompletion, but also fills out `descriptions` with
+  // descriptions for each match.
+  int HandleCompletionWithDescriptions(
+      const char *current_line, const char *cursor, const char *last_char,
+      int match_start_point, int max_return_elements,
+      lldb::SBStringList &matches, lldb::SBStringList &descriptions);
+
+  int HandleCompletionWithDescriptions(const char *current_line,
+                                       uint32_t cursor_pos,
+                                       int match_start_point,
+                                       int max_return_elements,
+                                       lldb::SBStringList &matches,
+                                       lldb::SBStringList &descriptions);
+
   bool WasInterrupted() const;
 
   // Catch commands before they execute by registering a callback that will get

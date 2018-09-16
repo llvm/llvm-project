@@ -108,6 +108,41 @@ extension to the protocol.
 | Gen. Getters/Setters                | No         |   No     |
 +-------------------------------------+------------+----------+
 
+Editor Integration
+==================
+
+Any full-featured Language Server Protocol Client implementation should work
+with :program:`Clangd`. This `list
+<https://langserver.org/#implementations-client>` contains information about
+extensions and plugins that are known to work for different editors.
+
+Vim Integration
+---------------
+
+LanguageClient-neovim
+~~~~~~~~~~~~~~~~~~~~~
+
+One of the options of using :program:`Clangd` in :program:`vim` (or
+:program:`nvim`) is to utilize `LanguageClient-neovim
+<https://github.com/autozimu/LanguageClient-neovim>`_ plugin. Please see the
+`Clangd Wiki page
+<https://github.com/autozimu/LanguageClient-neovim/wiki/Clangd>`_ for
+instructions.
+
+VSCode Integration
+------------------
+
+:program:`VSCode` provides `vscode-clangd
+<https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd>`
+which is published in Visual Studio Marketplace and can be installed direcetly
+from :program:`VSCode`.
+
+Emacs Integration
+-----------------
+
+:program:`Emacs` provides `lsp-mode <github.com/emacs-lsp/lsp-mode>` and
+`Eglot <https://github.com/joaotavora/eglot>` plugins for LSP integration.
+
 Getting Involved
 ==================
 

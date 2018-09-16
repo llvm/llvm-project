@@ -126,8 +126,6 @@ public:
     return Enumerator->getNext();
   }
 
-  std::unique_ptr<PDBSymbol> clone() const;
-
   template <typename T>
   std::unique_ptr<ConcreteSymbolEnumerator<T>> findAllChildren() const {
     auto BaseIter = RawSymbol->findChildren(T::Tag);

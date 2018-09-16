@@ -8,7 +8,7 @@
 # Even if we didn't actually write any pseudo relocations,
 # check that the synthetic pointers still are set to a non-null value
 # CONTENTS: Contents of section .data:
-# CONTENTS:  140002000 00200040 01000000 00200040 01000000
+# CONTENTS:  140003000 00200040 01000000 00200040 01000000
 
     .global main
     .text

@@ -1764,7 +1764,7 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     std::error_code EC;
     for (vfs::directory_iterator LI = D.getVFS().dir_begin(PrefixDir, EC), LE;
          !EC && LI != LE; LI = LI.increment(EC)) {
-      StringRef VersionText = llvm::sys::path::filename(LI->getName());
+      StringRef VersionText = llvm::sys::path::filename(LI->path());
       GCCVersion CandidateVersion = GCCVersion::Parse(VersionText);
 
       // Filter out obviously bad entries.
@@ -2209,17 +2209,17 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
              LI = D.getVFS().dir_begin(LibDir + "/" + LibSuffix, EC),
              LE;
          !EC && LI != LE; LI = LI.increment(EC)) {
-      StringRef VersionText = llvm::sys::path::filename(LI->getName());
+      StringRef VersionText = llvm::sys::path::filename(LI->path());
       GCCVersion CandidateVersion = GCCVersion::Parse(VersionText);
       if (CandidateVersion.Major != -1) // Filter obviously bad entries.
-        if (!CandidateGCCInstallPaths.insert(LI->getName()).second)
+        if (!CandidateGCCInstallPaths.insert(LI->path()).second)
           continue; // Saw this path before; no need to look at it again.
       if (CandidateVersion.isOlderThan(4, 1, 1))
         continue;
       if (CandidateVersion <= Version)
         continue;
 
-      if (!ScanGCCForMultilibs(TargetTriple, Args, LI->getName(),
+      if (!ScanGCCForMultilibs(TargetTriple, Args, LI->path(),
                                NeedsBiarchSuffix))
         continue;
 

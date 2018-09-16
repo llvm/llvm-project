@@ -245,10 +245,10 @@ public:
 
 // If an additional option set beyond LLDB_OPTION_SET_10 is added, make sure to
 // update the numbers passed to LLDB_OPT_SET_FROM_TO(...) appropriately.
-#define LLDB_OPT_FILE (LLDB_OPT_SET_FROM_TO(1, 9) & ~LLDB_OPT_SET_2)
-#define LLDB_OPT_NOT_10 (LLDB_OPT_SET_FROM_TO(1, 10) & ~LLDB_OPT_SET_10)
+#define LLDB_OPT_NOT_10 (LLDB_OPT_SET_FROM_TO(1, 11) & ~LLDB_OPT_SET_10)
 #define LLDB_OPT_SKIP_PROLOGUE (LLDB_OPT_SET_1 | LLDB_OPT_SET_FROM_TO(3, 8))
-#define LLDB_OPT_OFFSET_APPLIES (LLDB_OPT_SET_1 | LLDB_OPT_SET_FROM_TO(3, 8))
+#define LLDB_OPT_FILE (LLDB_OPT_SET_FROM_TO(1, 11) & ~LLDB_OPT_SET_2 & ~LLDB_OPT_SET_10)
+#define LLDB_OPT_OFFSET_APPLIES (LLDB_OPT_SET_FROM_TO(1, 8) & ~LLDB_OPT_SET_2)
 #define LLDB_OPT_MOVE_TO_NEAREST_CODE (LLDB_OPT_SET_1 | LLDB_OPT_SET_9)
 #define LLDB_OPT_EXPR_LANGUAGE (LLDB_OPT_SET_FROM_TO(3, 8))
 
@@ -301,6 +301,9 @@ static OptionDefinition g_breakpoint_set_options[] = {
   "are specified, uses the current \"default source file\".  If you want to "
   "match against all source files, pass the \"--all-files\" option." },
   { LLDB_OPT_SET_9,                false, "all-files",              'A', OptionParser::eNoArgument,       nullptr, nullptr, 0,                                         eArgTypeNone,                "All files are searched for source pattern matches." },
+  { LLDB_OPT_SET_11,               true, "python-class",           'P', OptionParser::eRequiredArgument, nullptr, nullptr,            0,                              eArgTypePythonClass,       "The name of the class that implement a scripted breakpoint." },
+  { LLDB_OPT_SET_11,               false, "python-class-key",       'k', OptionParser::eRequiredArgument, nullptr, nullptr,            0,                              eArgTypeNone,                "The key for a key/value pair passed to the class that implements a scripted breakpoint.  Can be specified more than once." },
+  { LLDB_OPT_SET_11,               false, "python-class-value",     'v', OptionParser::eRequiredArgument, nullptr, nullptr,            0,                              eArgTypeNone,                "The value for the previous key in the pair passed to the class that implements a scripted breakpoint.    Can be specified more than once." },
   { LLDB_OPT_SET_10,               true,  "language-exception",     'E', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeLanguage,            "Set the breakpoint on exceptions thrown by the specified language (without "
   "options, on throw but not catch.)" },
   { LLDB_OPT_SET_10,               false, "on-throw",               'w', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeBoolean,             "Set the breakpoint on exception throW." },
@@ -336,7 +339,8 @@ public:
     eSetTypeFunctionName,
     eSetTypeFunctionRegexp,
     eSetTypeSourceRegexp,
-    eSetTypeException
+    eSetTypeException,
+    eSetTypeScripted,
   } BreakpointSetType;
 
   CommandObjectBreakpointSet(CommandInterpreter &interpreter)
@@ -454,7 +458,15 @@ public:
       case 'H':
         m_hardware = true;
         break;
-
+        
+      case 'k': {
+          if (m_current_key.empty())
+            m_current_key.assign(option_arg);
+          else
+            error.SetErrorStringWithFormat("Key: %s missing value.",
+                                            m_current_key.c_str());
+        
+      } break;
       case 'K': {
         bool success;
         bool value;
@@ -535,6 +547,10 @@ public:
       case 'p':
         m_source_text_regexp.assign(option_arg);
         break;
+        
+      case 'P':
+        m_python_class.assign(option_arg);
+        break;
 
       case 'r':
         m_func_regexp.assign(option_arg);
@@ -549,6 +565,16 @@ public:
         m_func_name_type_mask |= eFunctionNameTypeSelector;
         break;
 
+      case 'v': {
+          if (!m_current_key.empty()) {
+              m_extra_args_sp->AddStringItem(m_current_key, option_arg);
+              m_current_key.clear();
+          }
+          else
+            error.SetErrorStringWithFormat("Value \"%s\" missing matching key.",
+                                           option_arg.str().c_str());
+      } break;
+        
       case 'w': {
         bool success;
         m_throw_bp = OptionArgParser::ToBoolean(option_arg, true, &success);
@@ -593,6 +619,9 @@ public:
       m_exception_extra_args.Clear();
       m_move_to_nearest_code = eLazyBoolCalculate;
       m_source_regex_func_names.clear();
+      m_python_class.clear();
+      m_extra_args_sp.reset(new StructuredData::Dictionary());
+      m_current_key.clear();
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -623,6 +652,9 @@ public:
     Args m_exception_extra_args;
     LazyBool m_move_to_nearest_code;
     std::unordered_set<std::string> m_source_regex_func_names;
+    std::string m_python_class;
+    StructuredData::DictionarySP m_extra_args_sp;
+    std::string m_current_key;
   };
 
 protected:
@@ -649,7 +681,9 @@ protected:
 
     BreakpointSetType break_type = eSetTypeInvalid;
 
-    if (m_options.m_line_num != 0)
+    if (!m_options.m_python_class.empty())
+      break_type = eSetTypeScripted;
+    else if (m_options.m_line_num != 0)
       break_type = eSetTypeFileAndLine;
     else if (m_options.m_load_addr != LLDB_INVALID_ADDRESS)
       break_type = eSetTypeAddress;
@@ -819,6 +853,25 @@ protected:
         result.AppendErrorWithFormat(
             "Error setting extra exception arguments: %s",
             precond_error.AsCString());
+        target->RemoveBreakpointByID(bp_sp->GetID());
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+    } break;
+    case eSetTypeScripted: {
+
+      Status error;
+      bp_sp = target->CreateScriptedBreakpoint(m_options.m_python_class,
+                                               &(m_options.m_modules), 
+                                               &(m_options.m_filenames),
+                                               false,
+                                               m_options.m_hardware,
+                                               m_options.m_extra_args_sp,
+                                               &error);
+      if (error.Fail()) {
+        result.AppendErrorWithFormat(
+            "Error setting extra exception arguments: %s",
+            error.AsCString());
         target->RemoveBreakpointByID(bp_sp->GetID());
         result.SetStatus(eReturnStatusFailed);
         return false;

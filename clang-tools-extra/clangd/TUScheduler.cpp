@@ -18,7 +18,7 @@
 // preamble. However, unlike AST, the same preamble can be read concurrently, so
 // we run each of async preamble reads on its own thread.
 //
-// To limit the concurrent load that clangd produces we mantain a semaphore that
+// To limit the concurrent load that clangd produces we maintain a semaphore that
 // keeps more than a fixed number of threads from running concurrently.
 //
 // Rationale for cancelling updates.
@@ -165,7 +165,7 @@ public:
   /// The processing thread is spawned using \p Tasks. However, when \p Tasks
   /// is null, all requests will be processed on the calling thread
   /// synchronously instead. \p Barrier is acquired when processing each
-  /// request, it is be used to limit the number of actively running threads.
+  /// request, it is used to limit the number of actively running threads.
   static ASTWorkerHandle create(PathRef FileName,
                                 TUScheduler::ASTCache &IdleASTs,
                                 AsyncTaskRunner *Tasks, Semaphore &Barrier,
@@ -188,7 +188,7 @@ public:
   void getCurrentPreamble(
       llvm::unique_function<void(std::shared_ptr<const PreambleData>)>);
   /// Wait for the first build of preamble to finish. Preamble itself can be
-  /// accessed via getPossibleStalePreamble(). Note that this function will
+  /// accessed via getPossiblyStalePreamble(). Note that this function will
   /// return after an unsuccessful build of the preamble too, i.e. result of
   /// getPossiblyStalePreamble() can be null even after this function returns.
   void waitForFirstPreamble() const;
@@ -207,7 +207,7 @@ private:
   void startTask(llvm::StringRef Name, llvm::unique_function<void()> Task,
                  llvm::Optional<WantDiagnostics> UpdateType);
   /// Determines the next action to perform.
-  /// All actions that should never run are disarded.
+  /// All actions that should never run are discarded.
   /// Returns a deadline for the next action. If it's expired, run now.
   /// scheduleLocked() is called again at the deadline, or if requests arrive.
   Deadline scheduleLocked();
@@ -227,7 +227,7 @@ private:
   const bool RunSync;
   /// Time to wait after an update to see whether another update obsoletes it.
   const steady_clock::duration UpdateDebounce;
-  /// File that ASTWorker is reponsible for.
+  /// File that ASTWorker is responsible for.
   const Path FileName;
   /// Whether to keep the built preambles in memory or on disk.
   const bool StorePreambleInMemory;
@@ -417,7 +417,7 @@ void ASTWorker::update(
     // We want to report the diagnostics even if this update was cancelled.
     // It seems more useful than making the clients wait indefinitely if they
     // spam us with updates.
-    // Note *AST can be still be null if buildAST fails.
+    // Note *AST can still be null if buildAST fails.
     if (*AST) {
       OnUpdated((*AST)->getDiagnostics());
       trace::Span Span("Running main AST callback");

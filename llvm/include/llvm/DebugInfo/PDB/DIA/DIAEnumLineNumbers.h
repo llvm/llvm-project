@@ -26,7 +26,6 @@ public:
   ChildTypePtr getChildAtIndex(uint32_t Index) const override;
   ChildTypePtr getNext() override;
   void reset() override;
-  DIAEnumLineNumbers *clone() const override;
 
 private:
   CComPtr<IDiaEnumLineNumbers> Enumerator;

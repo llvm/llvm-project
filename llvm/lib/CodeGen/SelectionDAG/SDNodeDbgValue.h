@@ -24,6 +24,7 @@ class DIVariable;
 class DIExpression;
 class SDNode;
 class Value;
+class raw_ostream;
 
 /// Holds the information from a dbg_value node through SDISel.
 /// We do not use SDValue here to avoid including its header.
@@ -124,6 +125,8 @@ public:
   /// deleted.
   void setIsInvalidated() { Invalid = true; }
   bool isInvalidated() const { return Invalid; }
+
+  LLVM_DUMP_METHOD void dump(raw_ostream &OS) const;
 };
 
 /// Holds the information from a dbg_label node through SDISel.

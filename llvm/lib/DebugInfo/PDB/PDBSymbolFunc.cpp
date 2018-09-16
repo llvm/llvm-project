@@ -69,10 +69,6 @@ public:
 
   void reset() override { CurIter = Args.empty() ? Args.end() : Args.begin(); }
 
-  FunctionArgEnumerator *clone() const override {
-    return new FunctionArgEnumerator(Session, Func);
-  }
-
 private:
   typedef std::vector<std::unique_ptr<PDBSymbolData>> ArgListType;
   const IPDBSession &Session;

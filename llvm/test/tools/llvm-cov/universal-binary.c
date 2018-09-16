@@ -5,7 +5,6 @@ int main(int argc, const char *argv[]) {}
 
 // RUN: llvm-profdata merge %S/Inputs/universal-binary.proftext -o %t.profdata
 // RUN: llvm-cov show %S/Inputs/universal-binary -instr-profile %t.profdata -path-equivalence=/tmp,%S %s -arch x86_64 | FileCheck %s
-// RUN: llvm-cov export %S/Inputs/universal-binary -instr-profile %t.profdata -arch x86_64 2>&1 | FileCheck %S/Inputs/universal-binary.json
 
 // RUN: llvm-cov report %S/Inputs/universal-binary -arch x86_64 -object %S/Inputs/templateInstantiations.covmapping -arch i386 -instr-profile %t.profdata 2>&1 | FileCheck %s --check-prefix=COMBINED
 // COMBINED: showTemplateInstantiations.cpp

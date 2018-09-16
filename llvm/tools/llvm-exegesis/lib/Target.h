@@ -20,6 +20,7 @@
 #include "BenchmarkResult.h"
 #include "BenchmarkRunner.h"
 #include "LlvmState.h"
+#include "SnippetGenerator.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/CallingConv.h"
@@ -61,6 +62,10 @@ public:
   // matter as long as it's large enough.
   virtual unsigned getMaxMemoryAccessSize() const { return 0; }
 
+  // Creates a snippet generator for the given mode.
+  std::unique_ptr<SnippetGenerator>
+  createSnippetGenerator(InstructionBenchmark::ModeE Mode,
+                         const LLVMState &State) const;
   // Creates a benchmark runner for the given mode.
   std::unique_ptr<BenchmarkRunner>
   createBenchmarkRunner(InstructionBenchmark::ModeE Mode,
@@ -79,8 +84,12 @@ public:
 private:
   virtual bool matchesArch(llvm::Triple::ArchType Arch) const = 0;
 
-  // Targets can implement their own Latency/Uops benchmarks runners by
+  // Targets can implement their own snippet generators/benchmarks runners by
   // implementing these.
+  std::unique_ptr<SnippetGenerator> virtual createLatencySnippetGenerator(
+      const LLVMState &State) const;
+  std::unique_ptr<SnippetGenerator> virtual createUopsSnippetGenerator(
+      const LLVMState &State) const;
   std::unique_ptr<BenchmarkRunner> virtual createLatencyBenchmarkRunner(
       const LLVMState &State) const;
   std::unique_ptr<BenchmarkRunner> virtual createUopsBenchmarkRunner(

@@ -74,6 +74,7 @@ struct PostDomTree : PostDomTreeBase<BasicBlock> {
 };
 
 typedef DenseSet<const BasicBlock *> DenseSetBB;
+typedef DenseMap<const BasicBlock *, uint64_t> DenseMapBBInt;
 
 // From: https://reviews.llvm.org/D22558
 // Exit is not part of the region.
@@ -86,7 +87,6 @@ static bool isSingleEntrySingleExit(BasicBlock *Entry, const BasicBlock *Exit,
   if (!PDT->dominates(Exit, Entry))
     return false;
 
-  Region.push_back(Entry);
   for (auto I = df_begin(Entry), E = df_end(Entry); I != E;) {
     if (*I == Exit) {
       I.skipChildren();
@@ -132,35 +132,80 @@ bool unlikelyExecuted(const BasicBlock &BB) {
 }
 
 static DenseSetBB getHotBlocks(Function &F) {
-  // First mark all function basic blocks as hot or cold.
-  DenseSet<const BasicBlock *> ColdBlocks;
+
+  // Mark all cold basic blocks.
+  DenseSetBB ColdBlocks;
   for (BasicBlock &BB : F)
     if (unlikelyExecuted(BB))
-      ColdBlocks.insert(&BB);
-  // Forward propagation.
-  DenseSetBB AllColdBlocks;
+      ColdBlocks.insert((const BasicBlock *)&BB);
+
+  // Forward propagation: basic blocks are hot when they are reachable from the
+  // beginning of the function through a path that does not contain cold blocks.
   SmallVector<const BasicBlock *, 8> WL;
-  DenseSetBB Visited; // Track hot blocks.
+  DenseSetBB HotBlocks;
 
   const BasicBlock *It = &F.front();
-  const TerminatorInst *TI = It->getTerminator();
   if (!ColdBlocks.count(It)) {
-    Visited.insert(It);
-    // Breadth First Search to mark edges not reachable from cold.
+    HotBlocks.insert(It);
+    // Breadth First Search to mark edges reachable from hot.
     WL.push_back(It);
     while (WL.size() > 0) {
       It = WL.pop_back_val();
-      for (const BasicBlock *Succ : successors(TI)) {
+
+      for (const BasicBlock *Succ : successors(It)) {
         // Do not visit blocks that are cold.
-        if (!ColdBlocks.count(Succ) && !Visited.count(Succ)) {
-          Visited.insert(Succ);
+        if (!ColdBlocks.count(Succ) && !HotBlocks.count(Succ)) {
+          HotBlocks.insert(Succ);
           WL.push_back(Succ);
         }
       }
     }
   }
 
-  return Visited;
+  assert(WL.empty() && "work list should be empty");
+
+  DenseMapBBInt NumHotSuccessors;
+  // Back propagation: when all successors of a basic block are cold, the
+  // basic block is cold as well.
+  for (BasicBlock &BBRef : F) {
+    const BasicBlock *BB = &BBRef;
+    if (HotBlocks.count(BB)) {
+      // Keep a count of hot successors for every hot block.
+      NumHotSuccessors[BB] = 0;
+      for (const BasicBlock *Succ : successors(BB))
+        if (!ColdBlocks.count(Succ))
+          NumHotSuccessors[BB] += 1;
+
+      // Add to work list the blocks with all successors cold. Those are the
+      // root nodes in the next loop, where we will move those blocks from
+      // HotBlocks to ColdBlocks and iterate over their predecessors.
+      if (NumHotSuccessors[BB] == 0)
+        WL.push_back(BB);
+    }
+  }
+
+  while (WL.size() > 0) {
+    It = WL.pop_back_val();
+    if (ColdBlocks.count(It))
+      continue;
+
+    // Move the block from HotBlocks to ColdBlocks.
+    HotBlocks.erase(It);
+    ColdBlocks.insert(It);
+
+    // Iterate over the predecessors.
+    for (const BasicBlock *Pred : predecessors(It)) {
+      if (HotBlocks.count(Pred)) {
+        NumHotSuccessors[Pred] -= 1;
+
+        // If Pred has no more hot successors, add it to the work list.
+        if (NumHotSuccessors[Pred] == 0)
+          WL.push_back(Pred);
+      }
+    }
+  }
+
+  return HotBlocks;
 }
 
 class HotColdSplitting {
@@ -174,9 +219,8 @@ public:
 
 private:
   bool shouldOutlineFrom(const Function &F) const;
-  Function *outlineColdBlocks(Function &F,
-                              const DenseSet<const BasicBlock *> &ColdBlock,
-                              DominatorTree *DT, PostDomTree *PDT);
+  const Function *outlineColdBlocks(Function &F, const DenseSetBB &ColdBlock,
+                                    DominatorTree *DT, PostDomTree *PDT);
   Function *extractColdRegion(const SmallVectorImpl<BasicBlock *> &Region,
                               DominatorTree *DT, BlockFrequencyInfo *BFI,
                               OptimizationRemarkEmitter &ORE);
@@ -184,9 +228,7 @@ private:
                           const BasicBlock *Exit) const {
     if (!Exit)
       return false;
-    // TODO: Find a better metric to compute the size of region being outlined.
-    if (Region.size() == 1)
-      return false;
+
     // Regions with landing pads etc.
     for (const BasicBlock *BB : Region) {
       if (BB->isEHPad() || BB->hasAddressTaken())
@@ -221,9 +263,12 @@ public:
 } // end anonymous namespace
 
 // Returns false if the function should not be considered for hot-cold split
-// optimization. Already outlined functions have coldcc so no need to check
-// for them here.
+// optimization.
 bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
+  // Do not try to outline again from an already outlined cold function.
+  if (OutlinedFunctions.count(&F))
+    return false;
+
   if (F.size() <= 2)
     return false;
 
@@ -250,9 +295,9 @@ HotColdSplitting::extractColdRegion(const SmallVectorImpl<BasicBlock *> &Region,
                                     OptimizationRemarkEmitter &ORE) {
   LLVM_DEBUG(for (auto *BB : Region)
           llvm::dbgs() << "\nExtracting: " << *BB;);
+
   // TODO: Pass BFI and BPI to update profile information.
-  CodeExtractor CE(Region, DT, /*AggregateArgs*/ false, nullptr, nullptr,
-                   /* AllowVarargs */ false);
+  CodeExtractor CE(Region, DT);
 
   SetVector<Value *> Inputs, Outputs, Sinks;
   CE.findInputsOutputs(Inputs, Outputs, Sinks);
@@ -271,7 +316,7 @@ HotColdSplitting::extractColdRegion(const SmallVectorImpl<BasicBlock *> &Region,
       CS.setCallingConv(CallingConv::Cold);
     }
     CI->setIsNoInline();
-    LLVM_DEBUG(llvm::dbgs() << "Outlined Region at block: " << Region.front());
+    LLVM_DEBUG(llvm::dbgs() << "Outlined Region: " << *OutF);
     return OutF;
   }
 
@@ -285,10 +330,10 @@ HotColdSplitting::extractColdRegion(const SmallVectorImpl<BasicBlock *> &Region,
 }
 
 // Return the function created after outlining, nullptr otherwise.
-Function *HotColdSplitting::outlineColdBlocks(Function &F,
-                                              const  DenseSetBB &HotBlock,
-                                              DominatorTree *DT,
-                                              PostDomTree *PDT) {
+const Function *HotColdSplitting::outlineColdBlocks(Function &F,
+                                                    const DenseSetBB &HotBlocks,
+                                                    DominatorTree *DT,
+                                                    PostDomTree *PDT) {
   auto BFI = GetBFI(F);
   auto &ORE = (*GetORE)(F);
   // Walking the dominator tree allows us to find the largest
@@ -296,16 +341,13 @@ Function *HotColdSplitting::outlineColdBlocks(Function &F,
   BasicBlock *Begin = DT->getRootNode()->getBlock();
   for (auto I = df_begin(Begin), E = df_end(Begin); I != E; ++I) {
     BasicBlock *BB = *I;
-    if (PSI->isColdBB(BB, BFI) || !HotBlock.count(BB)) {
+    if (PSI->isColdBB(BB, BFI) || !HotBlocks.count(BB)) {
       SmallVector<BasicBlock *, 4> ValidColdRegion, Region;
-      auto *BBNode = (*PDT)[BB];
-      auto Exit = BBNode->getIDom()->getBlock();
-      // We might need a virtual exit which post-dominates all basic blocks.
-      if (!Exit)
-        continue;
+      BasicBlock *Exit = (*PDT)[BB]->getIDom()->getBlock();
       BasicBlock *ExitColdRegion = nullptr;
+
       // Estimated cold region between a BB and its dom-frontier.
-      while (isSingleEntrySingleExit(BB, Exit, DT, PDT, Region) &&
+      while (Exit && isSingleEntrySingleExit(BB, Exit, DT, PDT, Region) &&
              isOutlineCandidate(Region, Exit)) {
         ExitColdRegion = Exit;
         ValidColdRegion = Region;
@@ -314,12 +356,13 @@ Function *HotColdSplitting::outlineColdBlocks(Function &F,
         Exit = (*PDT)[Exit]->getIDom()->getBlock();
       }
       if (ExitColdRegion) {
+        // Do not outline a region with only one block.
+        if (ValidColdRegion.size() == 1)
+          continue;
+
         ++NumColdSESEFound;
+        ValidColdRegion.push_back(ExitColdRegion);
         // Candidate for outlining. FIXME: Continue outlining.
-        // FIXME: Shouldn't need uniquing, debug isSingleEntrySingleExit
-        //std::sort(ValidColdRegion.begin(), ValidColdRegion.end());
-        auto last = std::unique(ValidColdRegion.begin(), ValidColdRegion.end());
-        ValidColdRegion.erase(last, ValidColdRegion.end());
         return extractColdRegion(ValidColdRegion, DT, BFI, ORE);
       }
     }
@@ -338,7 +381,7 @@ bool HotColdSplitting::run(Module &M) {
     if (EnableStaticAnalyis) // Static analysis of cold blocks.
       HotBlocks = getHotBlocks(F);
 
-    auto Outlined = outlineColdBlocks(F, HotBlocks, &DT, &PDT);
+    const Function *Outlined = outlineColdBlocks(F, HotBlocks, &DT, &PDT);
     if (Outlined)
       OutlinedFunctions.insert(Outlined);
   }

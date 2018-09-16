@@ -21,13 +21,11 @@ namespace pdb {
 class NativeTypeEnum : public NativeRawSymbol,
                        public codeview::TypeVisitorCallbacks {
 public:
-  NativeTypeEnum(NativeSession &Session, SymIndexId Id,
-                 const codeview::CVType &CV);
+  NativeTypeEnum(NativeSession &Session, SymIndexId Id, codeview::TypeIndex TI,
+                 codeview::EnumRecord Record);
   ~NativeTypeEnum() override;
 
   void dump(raw_ostream &OS, int Indent) const override;
-
-  std::unique_ptr<NativeRawSymbol> clone() const override;
 
   std::unique_ptr<IPDBEnumSymbols>
   findChildren(PDB_SymType Type) const override;
@@ -57,7 +55,7 @@ public:
   bool isInterfaceUdt() const override;
 
 protected:
-  codeview::CVType CV;
+  codeview::TypeIndex Index;
   codeview::EnumRecord Record;
 };
 

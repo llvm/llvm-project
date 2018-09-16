@@ -39,9 +39,6 @@ public:
 private:
   Index &Indices;
 
-  enum class State : unsigned { SeekExtents, ExtentsFound, ThreadIDFound };
-
-  State CurrentState = State::SeekExtents;
   Block CurrentBlock{0, 0, nullptr, {}};
 
 public:

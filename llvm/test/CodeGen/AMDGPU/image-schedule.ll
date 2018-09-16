@@ -1,7 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
-
-target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64"
-target triple = "amdgcn--amdpal"
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
 
 ; The first image store and the second image load use the same descriptor and
 ; the same coordinate. Check that they do not get swapped by the machine

@@ -19,9 +19,6 @@
 #include <cassert>
 #include <thread>
 
-constexpr auto kBufferSize = 16384;
-constexpr auto kBufferMax = 10;
-
 std::atomic<uint64_t> var{0};
 
 [[clang::xray_always_instrument]] void __attribute__((noinline)) f1() {
@@ -35,11 +32,8 @@ std::atomic<uint64_t> var{0};
 }
 
 int main(int argc, char *argv[]) {
-  using namespace __xray;
-  FDRLoggingOptions Options;
   __xray_patch();
-  assert(__xray_log_init(kBufferSize, kBufferMax, &Options,
-                         sizeof(FDRLoggingOptions)) ==
+  assert(__xray_log_init_mode("xray-fdr", "") ==
          XRayLogInitStatus::XRAY_LOG_INITIALIZED);
 
   std::atomic_thread_fence(std::memory_order_acq_rel);

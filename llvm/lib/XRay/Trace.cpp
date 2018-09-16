@@ -289,16 +289,15 @@ Error loadFDRLog(StringRef Data, bool IsLittleEndian,
 
   // Then we verify the consistency of the blocks.
   {
-    BlockVerifier Verifier;
     for (auto &PTB : Index) {
       auto &Blocks = PTB.second;
       for (auto &B : Blocks) {
+        BlockVerifier Verifier;
         for (auto *R : B.Records)
           if (auto E = R->apply(Verifier))
             return E;
         if (auto E = Verifier.verify())
           return E;
-        Verifier.reset();
       }
     }
   }

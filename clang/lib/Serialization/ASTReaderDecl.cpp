@@ -2633,10 +2633,17 @@ void ASTDeclReader::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
 void ASTDeclReader::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
   VisitValueDecl(D);
   D->setLocation(ReadSourceLocation());
-  D->setCombiner(Record.readExpr());
-  D->setInitializer(
-      Record.readExpr(),
-      static_cast<OMPDeclareReductionDecl::InitKind>(Record.readInt()));
+  Expr *In = Record.readExpr();
+  Expr *Out = Record.readExpr();
+  D->setCombinerData(In, Out);
+  Expr *Combiner = Record.readExpr();
+  D->setCombiner(Combiner);
+  Expr *Orig = Record.readExpr();
+  Expr *Priv = Record.readExpr();
+  D->setInitializerData(Orig, Priv);
+  Expr *Init = Record.readExpr();
+  auto IK = static_cast<OMPDeclareReductionDecl::InitKind>(Record.readInt());
+  D->setInitializer(Init, IK);
   D->PrevDeclInScope = ReadDeclID();
 }
 
@@ -4419,22 +4426,9 @@ void ASTDeclReader::UpdateDecl(Decl *D,
     case UPD_DECL_EXPORTED: {
       unsigned SubmoduleID = readSubmoduleID();
       auto *Exported = cast<NamedDecl>(D);
-      if (auto *TD = dyn_cast<TagDecl>(Exported))
-        Exported = TD->getDefinition();
       Module *Owner = SubmoduleID ? Reader.getSubmodule(SubmoduleID) : nullptr;
-      if (Reader.getContext().getLangOpts().ModulesLocalVisibility) {
-        Reader.getContext().mergeDefinitionIntoModule(cast<NamedDecl>(Exported),
-                                                      Owner);
-        Reader.PendingMergedDefinitionsToDeduplicate.insert(
-            cast<NamedDecl>(Exported));
-      } else if (Owner && Owner->NameVisibility != Module::AllVisible) {
-        // If Owner is made visible at some later point, make this declaration
-        // visible too.
-        Reader.HiddenNamesMap[Owner].push_back(Exported);
-      } else {
-        // The declaration is now visible.
-        Exported->setVisibleDespiteOwningModule();
-      }
+      Reader.getContext().mergeDefinitionIntoModule(Exported, Owner);
+      Reader.PendingMergedDefinitionsToDeduplicate.insert(Exported);
       break;
     }
 

@@ -45,10 +45,3 @@ std::unique_ptr<IPDBDataStream> DIAEnumDebugStreams::getNext() {
 }
 
 void DIAEnumDebugStreams::reset() { Enumerator->Reset(); }
-
-DIAEnumDebugStreams *DIAEnumDebugStreams::clone() const {
-  CComPtr<IDiaEnumDebugStreams> EnumeratorClone;
-  if (S_OK != Enumerator->Clone(&EnumeratorClone))
-    return nullptr;
-  return new DIAEnumDebugStreams(EnumeratorClone);
-}

@@ -21,13 +21,11 @@ namespace pdb {
 
 class NativeTypePointer : public NativeRawSymbol {
 public:
-  NativeTypePointer(NativeSession &Session, SymIndexId Id, codeview::CVType CV);
   NativeTypePointer(NativeSession &Session, SymIndexId Id,
-                    codeview::PointerRecord PR);
+                    codeview::TypeIndex TI, codeview::PointerRecord PR);
   ~NativeTypePointer() override;
 
   void dump(raw_ostream &OS, int Indent) const override;
-  std::unique_ptr<NativeRawSymbol> clone() const override;
 
   bool isConstType() const override;
   uint64_t getLength() const override;
@@ -41,6 +39,7 @@ public:
   bool isUnalignedType() const override;
 
 protected:
+  codeview::TypeIndex TI;
   codeview::PointerRecord Record;
 };
 

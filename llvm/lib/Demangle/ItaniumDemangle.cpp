@@ -310,21 +310,6 @@ public:
     return Alloc.allocate(sizeof(Node *) * sz);
   }
 };
-
-bool initializeOutputStream(char *Buf, size_t *N, OutputStream &S,
-                            size_t InitSize) {
-  size_t BufferSize;
-  if (Buf == nullptr) {
-    Buf = static_cast<char *>(std::malloc(InitSize));
-    if (Buf == nullptr)
-      return true;
-    BufferSize = InitSize;
-  } else
-    BufferSize = *N;
-
-  S.reset(Buf, BufferSize);
-  return false;
-}
 }  // unnamed namespace
 
 //===----------------------------------------------------------------------===//

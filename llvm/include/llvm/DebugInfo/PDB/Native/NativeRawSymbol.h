@@ -24,8 +24,6 @@ public:
   NativeRawSymbol(NativeSession &PDBSession, PDB_SymType Tag,
                   SymIndexId SymbolId);
 
-  virtual std::unique_ptr<NativeRawSymbol> clone() const = 0;
-
   void dump(raw_ostream &OS, int Indent) const override;
 
   std::unique_ptr<IPDBEnumSymbols>

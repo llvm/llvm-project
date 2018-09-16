@@ -1,5 +1,6 @@
 #include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
 
+#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/NativeCompilandSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
@@ -15,6 +16,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
 
 using namespace llvm;
+using namespace llvm::codeview;
 using namespace llvm::pdb;
 
 // Maps codeview::SimpleTypeKind of a built-in type to the parameters necessary
@@ -44,12 +46,6 @@ SymbolCache::SymbolCache(NativeSession &Session, DbiStream *Dbi)
 
   if (Dbi)
     Compilands.resize(Dbi->modules().getModuleCount());
-}
-
-std::unique_ptr<PDBSymbolTypeEnum>
-SymbolCache::createEnumSymbol(codeview::TypeIndex Index) {
-  const auto Id = findSymbolByTypeIndex(Index);
-  return PDBSymbol::createAs<PDBSymbolTypeEnum>(Session, *Cache[Id]);
 }
 
 std::unique_ptr<IPDBEnumSymbols>
@@ -98,21 +94,23 @@ SymIndexId SymbolCache::findSymbolByTypeIndex(codeview::TypeIndex Index) {
     return 0;
   }
   codeview::LazyRandomTypeCollection &Types = Tpi->typeCollection();
-  const codeview::CVType &CVT = Types.getType(Index);
-  // TODO(amccarth):  Make this handle all types, not just LF_ENUMs.
+  codeview::CVType CVT = Types.getType(Index);
+  // TODO(amccarth):  Make this handle all types.
   SymIndexId Id = 0;
   switch (CVT.kind()) {
   case codeview::LF_ENUM:
-    Id = createSymbol<NativeTypeEnum>(CVT);
+    Id = createSymbolForType<NativeTypeEnum, EnumRecord>(Index, std::move(CVT));
     break;
   case codeview::LF_POINTER:
-    Id = createSymbol<NativeTypePointer>(CVT);
+    Id = createSymbolForType<NativeTypePointer, PointerRecord>(Index,
+                                                               std::move(CVT));
     break;
   default:
     Id = createSymbolPlaceholder();
     break;
   }
-  TypeIndexToSymbolId[Index] = Id;
+  if (Id != 0)
+    TypeIndexToSymbolId[Index] = Id;
   return Id;
 }
 

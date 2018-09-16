@@ -203,8 +203,9 @@ defm : JWriteResIntPair<WritePOPCNT,         [JALU01], 1>;
 defm : JWriteResIntPair<WriteLZCNT,          [JALU01], 1>;
 defm : JWriteResIntPair<WriteTZCNT,          [JALU01], 2, [2]>;
 
-// BMI1 BEXTR, BMI2 BZHI
+// BMI1 BEXTR/BLS, BMI2 BZHI
 defm : JWriteResIntPair<WriteBEXTR, [JALU01], 1>;
+defm : JWriteResIntPair<WriteBLS,   [JALU01], 2, [2]>;
 defm : X86WriteResPairUnsupported<WriteBZHI>;
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -1742,7 +1742,11 @@ void ASTDeclWriter::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
 void ASTDeclWriter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
   VisitValueDecl(D);
   Record.AddSourceLocation(D->getBeginLoc());
+  Record.AddStmt(D->getCombinerIn());
+  Record.AddStmt(D->getCombinerOut());
   Record.AddStmt(D->getCombiner());
+  Record.AddStmt(D->getInitOrig());
+  Record.AddStmt(D->getInitPriv());
   Record.AddStmt(D->getInitializer());
   Record.push_back(D->getInitializerKind());
   Record.AddDeclRef(D->getPrevDeclInScope());

@@ -17,6 +17,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
@@ -24,6 +25,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "partially-inline-libcalls"
 
+DEBUG_COUNTER(PILCounter, "partially-inline-libcalls-transform",
+              "Controls transformations in partially-inline-libcalls");
 
 static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
                          BasicBlock &CurrBB, Function::iterator &BB,
@@ -31,6 +34,9 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
   // There is no need to change the IR, since backend will emit sqrt
   // instruction if the call has already been marked read-only.
   if (Call->onlyReadsMemory())
+    return false;
+
+  if (!DebugCounter::shouldExecute(PILCounter))
     return false;
 
   // Do the following transformation:
