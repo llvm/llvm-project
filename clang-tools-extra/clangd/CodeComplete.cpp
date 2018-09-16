@@ -40,6 +40,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Index/USRGeneration.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Tooling/Core/Replacement.h"
@@ -1053,11 +1054,19 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   // We reuse the preamble whether it's valid or not. This is a
   // correctness/performance tradeoff: building without a preamble is slow, and
   // completion is latency-sensitive.
+  // However, if we're completing *inside* the preamble section of the draft,
+  // overriding the preamble will break sema completion. Fortunately we can just
+  // skip all includes in this case; these completions are really simple.
+  bool CompletingInPreamble =
+      ComputePreambleBounds(*CI->getLangOpts(), ContentsBuffer.get(), 0).Size >
+      *Offset;
   // NOTE: we must call BeginSourceFile after prepareCompilerInstance. Otherwise
   // the remapped buffers do not get freed.
   auto Clang = prepareCompilerInstance(
-      std::move(CI), Input.Preamble, std::move(ContentsBuffer),
-      std::move(Input.PCHs), std::move(Input.VFS), DummyDiagsConsumer);
+      std::move(CI), CompletingInPreamble ? nullptr : Input.Preamble,
+      std::move(ContentsBuffer), std::move(Input.PCHs), std::move(Input.VFS),
+      DummyDiagsConsumer);
+  Clang->getPreprocessorOpts().SingleFileParseMode = CompletingInPreamble;
   Clang->setCodeCompletionConsumer(Consumer.release());
 
   SyntaxOnlyAction Action;

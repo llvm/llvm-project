@@ -15,9 +15,8 @@ using namespace llvm;
 using namespace llvm::pdb;
 
 DIAEnumInjectedSources::DIAEnumInjectedSources(
-    const DIASession &PDBSession,
     CComPtr<IDiaEnumInjectedSources> DiaEnumerator)
-    : Session(PDBSession), Enumerator(DiaEnumerator) {}
+    : Enumerator(DiaEnumerator) {}
 
 uint32_t DIAEnumInjectedSources::getChildCount() const {
   LONG Count = 0;

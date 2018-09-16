@@ -158,8 +158,8 @@ struct XRayLogImpl {
   /// The log initialization routine provided by the implementation, always
   /// provided with the following parameters:
   ///
-  ///   - buffer size
-  ///   - maximum number of buffers
+  ///   - buffer size (unused)
+  ///   - maximum number of buffers (unused)
   ///   - a pointer to an argument struct that the implementation MUST handle
   ///   - the size of the argument struct
   ///
@@ -354,26 +354,5 @@ XRayLogFlushStatus __xray_log_process_buffers(void (*Processor)(const char *,
                                                                 XRayBuffer));
 
 } // extern "C"
-
-namespace __xray {
-
-/// DEPRECATED: Use __xray_log_init_mode(...) instead, and provide flag
-/// configuration strings to set the options instead.
-/// Options used by the LLVM XRay FDR logging implementation.
-struct FDRLoggingOptions {
-  bool ReportErrors = false;
-  int Fd = -1;
-};
-
-/// DEPRECATED: Use __xray_log_init_mode(...) instead, and provide flag
-/// configuration strings to set the options instead.
-/// Options used by the LLVM XRay Basic (Naive) logging implementation.
-struct BasicLoggingOptions {
-  int DurationFilterMicros = 0;
-  size_t MaxStackDepth = 0;
-  size_t ThreadBufferSize = 0;
-};
-
-} // namespace __xray
 
 #endif // XRAY_XRAY_LOG_INTERFACE_H

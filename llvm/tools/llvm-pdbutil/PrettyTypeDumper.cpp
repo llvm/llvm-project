@@ -196,11 +196,22 @@ void TypeDumper::start(const PDBSymbolExe &Exe) {
           dumpClassLayout(*Class);
       } else {
         while (auto Class = Classes->getNext()) {
-          if (Class->getUnmodifiedTypeId() != 0)
-            continue;
-
           if (Printer.IsTypeExcluded(Class->getName(), Class->getLength()))
             continue;
+
+          if (Class->getUnmodifiedTypeId() != 0) {
+            Printer.NewLine();
+            if (Class->isConstType())
+              WithColor(Printer, PDB_ColorItem::Keyword).get() << "const ";
+            if (Class->isVolatileType())
+              WithColor(Printer, PDB_ColorItem::Keyword).get() << "volatile ";
+            if (Class->isUnalignedType())
+              WithColor(Printer, PDB_ColorItem::Keyword).get() << "unaligned ";
+            WithColor(Printer, PDB_ColorItem::Keyword).get()
+                << Class->getUdtKind() << " ";
+            WithColor(Printer, PDB_ColorItem::Type).get() << Class->getName();
+            continue;
+          }
 
           auto Layout = llvm::make_unique<ClassLayout>(std::move(Class));
           if (Layout->deepPaddingSize() < opts::pretty::PaddingThreshold)
@@ -244,9 +255,9 @@ void TypeDumper::dumpClassLayout(const ClassLayout &Class) {
   assert(opts::pretty::Classes);
 
   if (opts::pretty::ClassFormat == opts::pretty::ClassDefinitionFormat::None) {
-    Printer.NewLine();
-    WithColor(Printer, PDB_ColorItem::Keyword).get() << "class ";
-    WithColor(Printer, PDB_ColorItem::Identifier).get() << Class.getName();
+    WithColor(Printer, PDB_ColorItem::Keyword).get()
+        << Class.getClass().getUdtKind() << " ";
+    WithColor(Printer, PDB_ColorItem::Type).get() << Class.getName();
   } else {
     ClassDefinitionDumper Dumper(Printer);
     Dumper.start(Class);

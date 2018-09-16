@@ -144,8 +144,9 @@ defm : X86WriteResPairUnsupported<WritePOPCNT>;
 defm : X86WriteResPairUnsupported<WriteLZCNT>;
 defm : X86WriteResPairUnsupported<WriteTZCNT>;
 
-// BMI1 BEXTR, BMI2 BZHI
+// BMI1 BEXTR/BLS, BMI2 BZHI
 defm : X86WriteResPairUnsupported<WriteBEXTR>;
+defm : X86WriteResPairUnsupported<WriteBLS>;
 defm : X86WriteResPairUnsupported<WriteBZHI>;
 
 ////////////////////////////////////////////////////////////////////////////////

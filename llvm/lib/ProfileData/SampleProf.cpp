@@ -67,6 +67,8 @@ class SampleProfErrorCategoryType : public std::error_category {
       return "Unimplemented feature";
     case sampleprof_error::counter_overflow:
       return "Counter overflow";
+    case sampleprof_error::ostream_seek_unsupported:
+      return "Ostream does not support seek";
     }
     llvm_unreachable("A value of sampleprof_error has no message.");
   }

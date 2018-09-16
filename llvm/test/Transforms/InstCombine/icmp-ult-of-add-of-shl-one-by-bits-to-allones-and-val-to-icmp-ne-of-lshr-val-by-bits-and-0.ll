@@ -22,8 +22,8 @@ define i1 @p0(i8 %val, i8 %bits) {
 ; CHECK-LABEL: @p0(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i8 1, [[BITS:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = add i8 [[T0]], -1
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr i8 [[VAL:%.*]], [[BITS]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[VAL_HIGHBITS]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = shl i8 1, %bits
@@ -41,8 +41,8 @@ define <2 x i1> @p1_vec(<2 x i8> %val, <2 x i8> %bits) {
 ; CHECK-LABEL: @p1_vec(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <2 x i8> <i8 1, i8 1>, [[BITS:%.*]]
 ; CHECK-NEXT:    call void @use2i8(<2 x i8> [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = add <2 x i8> [[T0]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i8> [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr <2 x i8> [[VAL:%.*]], [[BITS]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[VAL_HIGHBITS]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %t0 = shl <2 x i8> <i8 1, i8 1>, %bits
@@ -56,8 +56,8 @@ define <3 x i1> @p2_vec_undef0(<3 x i8> %val, <3 x i8> %bits) {
 ; CHECK-LABEL: @p2_vec_undef0(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i8> <i8 1, i8 undef, i8 1>, [[BITS:%.*]]
 ; CHECK-NEXT:    call void @use3i8(<3 x i8> [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = add <3 x i8> [[T0]], <i8 -1, i8 -1, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <3 x i8> [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr <3 x i8> [[VAL:%.*]], [[BITS]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <3 x i8> [[VAL_HIGHBITS]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
   %t0 = shl <3 x i8> <i8 1, i8 undef, i8 1>, %bits
@@ -71,8 +71,8 @@ define <3 x i1> @p2_vec_undef1(<3 x i8> %val, <3 x i8> %bits) {
 ; CHECK-LABEL: @p2_vec_undef1(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i8> <i8 1, i8 1, i8 1>, [[BITS:%.*]]
 ; CHECK-NEXT:    call void @use3i8(<3 x i8> [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = add <3 x i8> [[T0]], <i8 -1, i8 undef, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <3 x i8> [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr <3 x i8> [[VAL:%.*]], [[BITS]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <3 x i8> [[VAL_HIGHBITS]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
   %t0 = shl <3 x i8> <i8 1, i8 1, i8 1>, %bits
@@ -86,8 +86,8 @@ define <3 x i1> @p2_vec_undef2(<3 x i8> %val, <3 x i8> %bits) {
 ; CHECK-LABEL: @p2_vec_undef2(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i8> <i8 1, i8 undef, i8 1>, [[BITS:%.*]]
 ; CHECK-NEXT:    call void @use3i8(<3 x i8> [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = add <3 x i8> [[T0]], <i8 -1, i8 undef, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <3 x i8> [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr <3 x i8> [[VAL:%.*]], [[BITS]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <3 x i8> [[VAL_HIGHBITS]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
   %t0 = shl <3 x i8> <i8 1, i8 undef, i8 1>, %bits
@@ -107,9 +107,9 @@ define i1 @c0(i8 %bits) {
 ; CHECK-LABEL: @c0(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i8 1, [[BITS:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = add i8 [[T0]], -1
 ; CHECK-NEXT:    [[VAL:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[VAL]], [[T1]]
+; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr i8 [[VAL]], [[BITS]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[VAL_HIGHBITS]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = shl i8 1, %bits
@@ -125,11 +125,11 @@ define i1 @both(i8 %bits0, i8 %bits1) {
 ; CHECK-LABEL: @both(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i8 1, [[BITS0:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = add i8 [[T0]], -1
 ; CHECK-NEXT:    [[T2:%.*]] = shl i8 1, [[BITS1:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T2]])
 ; CHECK-NEXT:    [[T3:%.*]] = add i8 [[T2]], -1
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[T1]], [[T3]]
+; CHECK-NEXT:    [[T3_HIGHBITS:%.*]] = lshr i8 [[T3]], [[BITS0]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[T3_HIGHBITS]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = shl i8 1, %bits0

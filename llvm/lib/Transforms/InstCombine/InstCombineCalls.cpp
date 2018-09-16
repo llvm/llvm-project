@@ -2929,16 +2929,10 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::x86_avx_blendv_ps_256:
   case Intrinsic::x86_avx_blendv_pd_256:
   case Intrinsic::x86_avx2_pblendvb: {
-    // Convert blendv* to vector selects if the mask is constant.
-    // This optimization is convoluted because the intrinsic is defined as
-    // getting a vector of floats or doubles for the ps and pd versions.
-    // FIXME: That should be changed.
-
+    // fold (blend A, A, Mask) -> A
     Value *Op0 = II->getArgOperand(0);
     Value *Op1 = II->getArgOperand(1);
     Value *Mask = II->getArgOperand(2);
-
-    // fold (blend A, A, Mask) -> A
     if (Op0 == Op1)
       return replaceInstUsesWith(CI, Op0);
 
@@ -2951,6 +2945,20 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       Constant *NewSelector = getNegativeIsTrueBoolVec(ConstantMask);
       return SelectInst::Create(NewSelector, Op1, Op0, "blendv");
     }
+
+    // Convert to a vector select if we can bypass casts and find a boolean
+    // vector condition value.
+    Value *BoolVec;
+    if (match(peekThroughBitcast(Mask), m_SExt(m_Value(BoolVec)))) {
+      auto *VTy = dyn_cast<VectorType>(BoolVec->getType());
+      if (VTy && VTy->getScalarSizeInBits() == 1 &&
+          VTy->getVectorNumElements() == II->getType()->getVectorNumElements())
+        return SelectInst::Create(BoolVec, Op1, Op0);
+      // TODO: If we can find a boolean vector condition with less elements,
+      //       then we can form a vector select by bitcasting Op0/Op1 to a
+      //       vector type with wider elements and bitcasting the result.
+    }
+
     break;
   }
 

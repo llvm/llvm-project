@@ -283,12 +283,12 @@ define <4 x i32> @mul_v4i32spill(<4 x i32> %i, <4 x i32> %j) nounwind  {
 ; SSE2-LABEL: mul_v4i32spill:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    subq $40, %rsp
-; SSE2-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE2-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE2-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; SSE2-NEXT:    callq foo
 ; SSE2-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
+; SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
 ; SSE2-NEXT:    pmuludq %xmm2, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
@@ -301,22 +301,22 @@ define <4 x i32> @mul_v4i32spill(<4 x i32> %i, <4 x i32> %j) nounwind  {
 ; SSE41-LABEL: mul_v4i32spill:
 ; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    subq $40, %rsp
-; SSE41-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE41-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE41-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; SSE41-NEXT:    callq foo
 ; SSE41-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; SSE41-NEXT:    pmulld {{[0-9]+}}(%rsp), %xmm0 # 16-byte Folded Reload
+; SSE41-NEXT:    pmulld {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; SSE41-NEXT:    addq $40, %rsp
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: mul_v4i32spill:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    subq $40, %rsp
-; AVX-NEXT:    vmovaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    callq foo
 ; AVX-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
-; AVX-NEXT:    vpmulld {{[0-9]+}}(%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX-NEXT:    vpmulld {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; AVX-NEXT:    addq $40, %rsp
 ; AVX-NEXT:    retq
 entry:
@@ -330,13 +330,13 @@ define <2 x i64> @mul_v2i64spill(<2 x i64> %i, <2 x i64> %j) nounwind  {
 ; SSE-LABEL: mul_v2i64spill:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    subq $40, %rsp
-; SSE-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
+; SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; SSE-NEXT:    callq foo
 ; SSE-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movdqa %xmm0, %xmm2
 ; SSE-NEXT:    psrlq $32, %xmm2
-; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm3 # 16-byte Reload
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
 ; SSE-NEXT:    pmuludq %xmm3, %xmm2
 ; SSE-NEXT:    movdqa %xmm3, %xmm1
 ; SSE-NEXT:    psrlq $32, %xmm1
@@ -351,12 +351,12 @@ define <2 x i64> @mul_v2i64spill(<2 x i64> %i, <2 x i64> %j) nounwind  {
 ; AVX-LABEL: mul_v2i64spill:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    subq $40, %rsp
-; AVX-NEXT:    vmovaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
+; AVX-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    callq foo
 ; AVX-NEXT:    vmovdqa (%rsp), %xmm3 # 16-byte Reload
 ; AVX-NEXT:    vpsrlq $32, %xmm3, %xmm0
-; AVX-NEXT:    vmovdqa {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
+; AVX-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
 ; AVX-NEXT:    vpmuludq %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrlq $32, %xmm2, %xmm1
 ; AVX-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1

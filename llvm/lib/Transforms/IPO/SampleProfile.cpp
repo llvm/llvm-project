@@ -1515,6 +1515,7 @@ bool SampleProfileLoader::doInitialization(Module &M) {
     return false;
   }
   Reader = std::move(ReaderOrErr.get());
+  Reader->collectFuncsToUse(M);
   ProfileIsValid = (Reader->read() == sampleprof_error::success);
   return true;
 }

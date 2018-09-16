@@ -98,7 +98,7 @@ public:
   }
 
   /// Emit the basic PDB structure: initial streams, headers, etc.
-  void initialize(const llvm::codeview::DebugInfo &BuildId);
+  void initialize(llvm::codeview::DebugInfo *BuildId);
 
   /// Add natvis files specified on the command line.
   void addNatvisFiles();
@@ -130,8 +130,8 @@ public:
   void addSections(ArrayRef<OutputSection *> OutputSections,
                    ArrayRef<uint8_t> SectionTable);
 
-  /// Write the PDB to disk.
-  void commit();
+  /// Write the PDB to disk and store the Guid generated for it in *Guid.
+  void commit(codeview::GUID *Guid);
 
 private:
   BumpPtrAllocator Alloc;
@@ -380,8 +380,8 @@ tryToLoadPDB(const GUID &GuidFromObj, StringRef TSPath) {
   return std::move(NS);
 }
 
-Expected<const CVIndexMap&> PDBLinker::maybeMergeTypeServerPDB(ObjFile *File,
-                                                               TypeServer2Record &TS) {
+Expected<const CVIndexMap &>
+PDBLinker::maybeMergeTypeServerPDB(ObjFile *File, TypeServer2Record &TS) {
   const GUID &TSId = TS.getGuid();
   StringRef TSPath = TS.getName();
 
@@ -1230,7 +1230,7 @@ static void addLinkerModuleSectionSymbol(pdb::DbiModuleDescriptorBuilder &Mod,
 void coff::createPDB(SymbolTable *Symtab,
                      ArrayRef<OutputSection *> OutputSections,
                      ArrayRef<uint8_t> SectionTable,
-                     const llvm::codeview::DebugInfo &BuildId) {
+                     llvm::codeview::DebugInfo *BuildId) {
   ScopedTimer T1(TotalPdbLinkTimer);
   PDBLinker PDB(Symtab);
 
@@ -1240,11 +1240,18 @@ void coff::createPDB(SymbolTable *Symtab,
   PDB.addNatvisFiles();
 
   ScopedTimer T2(DiskCommitTimer);
-  PDB.commit();
+  codeview::GUID Guid;
+  PDB.commit(&Guid);
+  memcpy(&BuildId->PDB70.Signature, &Guid, 16);
 }
 
-void PDBLinker::initialize(const llvm::codeview::DebugInfo &BuildId) {
+void PDBLinker::initialize(llvm::codeview::DebugInfo *BuildId) {
   ExitOnErr(Builder.initialize(4096)); // 4096 is blocksize
+
+  BuildId->Signature.CVSignature = OMF::Signature::PDB70;
+  // Signature is set to a hash of the PDB contents when the PDB is done.
+  memset(BuildId->PDB70.Signature, 0, 16);
+  BuildId->PDB70.Age = 1;
 
   // Create streams in MSF for predefined streams, namely
   // PDB, TPI, DBI and IPI.
@@ -1253,15 +1260,12 @@ void PDBLinker::initialize(const llvm::codeview::DebugInfo &BuildId) {
 
   // Add an Info stream.
   auto &InfoBuilder = Builder.getInfoBuilder();
-  GUID uuid;
-  memcpy(&uuid, &BuildId.PDB70.Signature, sizeof(uuid));
-  InfoBuilder.setAge(BuildId.PDB70.Age);
-  InfoBuilder.setGuid(uuid);
   InfoBuilder.setVersion(pdb::PdbRaw_ImplVer::PdbImplVC70);
+  InfoBuilder.setHashPDBContentsToGUID(true);
 
   // Add an empty DBI stream.
   pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
-  DbiBuilder.setAge(BuildId.PDB70.Age);
+  DbiBuilder.setAge(BuildId->PDB70.Age);
   DbiBuilder.setVersionHeader(pdb::PdbDbiV70);
   DbiBuilder.setMachineType(Config->Machine);
   // Technically we are not link.exe 14.11, but there are known cases where
@@ -1305,9 +1309,9 @@ void PDBLinker::addSections(ArrayRef<OutputSection *> OutputSections,
       DbiBuilder.addDbgStream(pdb::DbgHeaderType::SectionHdr, SectionTable));
 }
 
-void PDBLinker::commit() {
+void PDBLinker::commit(codeview::GUID *Guid) {
   // Write to a file.
-  ExitOnErr(Builder.commit(Config->PDBPath));
+  ExitOnErr(Builder.commit(Config->PDBPath, Guid));
 }
 
 static Expected<StringRef>

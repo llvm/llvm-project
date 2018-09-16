@@ -137,6 +137,7 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) :
   HasInv2PiInlineImm(false),
   HasFminFmaxLegacy(true),
   EnablePromoteAlloca(false),
+  HasTrigReducedRange(false),
   LocalMemorySize(0),
   WavefrontSize(0)
   { }

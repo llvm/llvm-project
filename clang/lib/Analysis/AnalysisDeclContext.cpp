@@ -27,7 +27,6 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
-#include "clang/Analysis/Analyses/PseudoConstantAnalysis.h"
 #include "clang/Analysis/BodyFarm.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
@@ -292,12 +291,6 @@ ParentMap &AnalysisDeclContext::getParentMap() {
   return *PM;
 }
 
-PseudoConstantAnalysis *AnalysisDeclContext::getPseudoConstantAnalysis() {
-  if (!PCA)
-    PCA.reset(new PseudoConstantAnalysis(getBody()));
-  return PCA.get();
-}
-
 AnalysisDeclContext *AnalysisDeclContextManager::getContext(const Decl *D) {
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     // Calling 'hasBody' replaces 'FD' in place with the FunctionDecl
@@ -392,7 +385,7 @@ LocationContextManager::getLocationContext(AnalysisDeclContext *ctx,
   LOC *L = cast_or_null<LOC>(Contexts.FindNodeOrInsertPos(ID, InsertPos));
 
   if (!L) {
-    L = new LOC(ctx, parent, d);
+    L = new LOC(ctx, parent, d, ++NewID);
     Contexts.InsertNode(L, InsertPos);
   }
   return L;
@@ -409,7 +402,7 @@ LocationContextManager::getStackFrame(AnalysisDeclContext *ctx,
   auto *L =
    cast_or_null<StackFrameContext>(Contexts.FindNodeOrInsertPos(ID, InsertPos));
   if (!L) {
-    L = new StackFrameContext(ctx, parent, s, blk, idx);
+    L = new StackFrameContext(ctx, parent, s, blk, idx, ++NewID);
     Contexts.InsertNode(L, InsertPos);
   }
   return L;
@@ -434,7 +427,7 @@ LocationContextManager::getBlockInvocationContext(AnalysisDeclContext *ctx,
     cast_or_null<BlockInvocationContext>(Contexts.FindNodeOrInsertPos(ID,
                                                                     InsertPos));
   if (!L) {
-    L = new BlockInvocationContext(ctx, parent, BD, ContextData);
+    L = new BlockInvocationContext(ctx, parent, BD, ContextData, ++NewID);
     Contexts.InsertNode(L, InsertPos);
   }
   return L;

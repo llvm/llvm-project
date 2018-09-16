@@ -1,4 +1,6 @@
 ; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=z13 | FileCheck %s
+; RUN: opt < %s -cost-model -analyze -mtriple=systemz-unknown -mcpu=zEC12 \
+; RUN:  | FileCheck %s --check-prefix=IPMSQ
 ;
 ; TODO: add more tests for differing operand types of the two compares.
 
@@ -1093,7 +1095,8 @@ define i8 @fun72(i8 %val1, i8 %val2, i8 %val3, i8 %val4,
 ; CHECK: fun72
 ; CHECK: cost of 3 for instruction:   %cmp0 = icmp eq i8 %val1, %val2
 ; CHECK: cost of 3 for instruction:   %cmp1 = icmp eq i8 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i8 %val5, i8 %val6
 }
 
@@ -1108,7 +1111,8 @@ define i16 @fun73(i8 %val1, i8 %val2, i8 %val3, i8 %val4,
 ; CHECK: fun73
 ; CHECK: cost of 3 for instruction:   %cmp0 = icmp eq i8 %val1, %val2
 ; CHECK: cost of 3 for instruction:   %cmp1 = icmp eq i8 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i16 %val5, i16 %val6
 }
 
@@ -1123,7 +1127,8 @@ define i32 @fun74(i8 %val1, i8 %val2, i8 %val3, i8 %val4,
 ; CHECK: fun74
 ; CHECK: cost of 3 for instruction:   %cmp0 = icmp eq i8 %val1, %val2
 ; CHECK: cost of 3 for instruction:   %cmp1 = icmp eq i8 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i32 %val5, i32 %val6
 }
 
@@ -1138,7 +1143,8 @@ define i64 @fun75(i8 %val1, i8 %val2, i8 %val3, i8 %val4,
 ; CHECK: fun75
 ; CHECK: cost of 3 for instruction:   %cmp0 = icmp eq i8 %val1, %val2
 ; CHECK: cost of 3 for instruction:   %cmp1 = icmp eq i8 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i64 %val5, i64 %val6
 }
 
@@ -1153,7 +1159,8 @@ define float @fun76(i8 %val1, i8 %val2, i8 %val3, i8 %val4,
 ; CHECK: fun76
 ; CHECK: cost of 3 for instruction:   %cmp0 = icmp eq i8 %val1, %val2
 ; CHECK: cost of 3 for instruction:   %cmp1 = icmp eq i8 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 4 for instruction:   %sel = select i1 %and, float %val5, float %val6
 }
 
@@ -1168,7 +1175,8 @@ define double @fun77(i8 %val1, i8 %val2, i8 %val3, i8 %val4,
 ; CHECK: fun77
 ; CHECK: cost of 3 for instruction:   %cmp0 = icmp eq i8 %val1, %val2
 ; CHECK: cost of 3 for instruction:   %cmp1 = icmp eq i8 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 4 for instruction:   %sel = select i1 %and, double %val5, double %val6
 }
 
@@ -1183,7 +1191,8 @@ define i8 @fun78(i16 %val1, i16 %val2, i16 %val3, i16 %val4,
 ; CHECK: fun78
 ; CHECK: cost of 3 for instruction:   %cmp0 = icmp eq i16 %val1, %val2
 ; CHECK: cost of 3 for instruction:   %cmp1 = icmp eq i16 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i8 %val5, i8 %val6
 }
 
@@ -1198,7 +1207,8 @@ define i16 @fun79(i16 %val1, i16 %val2, i16 %val3, i16 %val4,
 ; CHECK: fun79
 ; CHECK: cost of 3 for instruction:   %cmp0 = icmp eq i16 %val1, %val2
 ; CHECK: cost of 3 for instruction:   %cmp1 = icmp eq i16 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i16 %val5, i16 %val6
 }
 
@@ -1213,7 +1223,8 @@ define i32 @fun80(i16 %val1, i16 %val2, i16 %val3, i16 %val4,
 ; CHECK: fun80
 ; CHECK: cost of 3 for instruction:   %cmp0 = icmp eq i16 %val1, %val2
 ; CHECK: cost of 3 for instruction:   %cmp1 = icmp eq i16 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i32 %val5, i32 %val6
 }
 
@@ -1228,7 +1239,8 @@ define i64 @fun81(i16 %val1, i16 %val2, i16 %val3, i16 %val4,
 ; CHECK: fun81
 ; CHECK: cost of 3 for instruction:   %cmp0 = icmp eq i16 %val1, %val2
 ; CHECK: cost of 3 for instruction:   %cmp1 = icmp eq i16 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i64 %val5, i64 %val6
 }
 
@@ -1243,7 +1255,8 @@ define float @fun82(i16 %val1, i16 %val2, i16 %val3, i16 %val4,
 ; CHECK: fun82
 ; CHECK: cost of 3 for instruction:   %cmp0 = icmp eq i16 %val1, %val2
 ; CHECK: cost of 3 for instruction:   %cmp1 = icmp eq i16 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 4 for instruction:   %sel = select i1 %and, float %val5, float %val6
 }
 
@@ -1258,7 +1271,8 @@ define double @fun83(i16 %val1, i16 %val2, i16 %val3, i16 %val4,
 ; CHECK: fun83
 ; CHECK: cost of 3 for instruction:   %cmp0 = icmp eq i16 %val1, %val2
 ; CHECK: cost of 3 for instruction:   %cmp1 = icmp eq i16 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 4 for instruction:   %sel = select i1 %and, double %val5, double %val6
 }
 
@@ -1273,7 +1287,8 @@ define i8 @fun84(i32 %val1, i32 %val2, i32 %val3, i32 %val4,
 ; CHECK: fun84
 ; CHECK: cost of 1 for instruction:   %cmp0 = icmp eq i32 %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = icmp eq i32 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i8 %val5, i8 %val6
 }
 
@@ -1288,7 +1303,8 @@ define i16 @fun85(i32 %val1, i32 %val2, i32 %val3, i32 %val4,
 ; CHECK: fun85
 ; CHECK: cost of 1 for instruction:   %cmp0 = icmp eq i32 %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = icmp eq i32 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i16 %val5, i16 %val6
 }
 
@@ -1303,7 +1319,8 @@ define i32 @fun86(i32 %val1, i32 %val2, i32 %val3, i32 %val4,
 ; CHECK: fun86
 ; CHECK: cost of 1 for instruction:   %cmp0 = icmp eq i32 %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = icmp eq i32 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i32 %val5, i32 %val6
 }
 
@@ -1318,7 +1335,8 @@ define i64 @fun87(i32 %val1, i32 %val2, i32 %val3, i32 %val4,
 ; CHECK: fun87
 ; CHECK: cost of 1 for instruction:   %cmp0 = icmp eq i32 %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = icmp eq i32 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i64 %val5, i64 %val6
 }
 
@@ -1333,7 +1351,8 @@ define float @fun88(i32 %val1, i32 %val2, i32 %val3, i32 %val4,
 ; CHECK: fun88
 ; CHECK: cost of 1 for instruction:   %cmp0 = icmp eq i32 %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = icmp eq i32 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 4 for instruction:   %sel = select i1 %and, float %val5, float %val6
 }
 
@@ -1348,7 +1367,8 @@ define double @fun89(i32 %val1, i32 %val2, i32 %val3, i32 %val4,
 ; CHECK: fun89
 ; CHECK: cost of 1 for instruction:   %cmp0 = icmp eq i32 %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = icmp eq i32 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 4 for instruction:   %sel = select i1 %and, double %val5, double %val6
 }
 
@@ -1363,7 +1383,8 @@ define i8 @fun90(i64 %val1, i64 %val2, i64 %val3, i64 %val4,
 ; CHECK: fun90
 ; CHECK: cost of 1 for instruction:   %cmp0 = icmp eq i64 %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = icmp eq i64 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i8 %val5, i8 %val6
 }
 
@@ -1378,7 +1399,8 @@ define i16 @fun91(i64 %val1, i64 %val2, i64 %val3, i64 %val4,
 ; CHECK: fun91
 ; CHECK: cost of 1 for instruction:   %cmp0 = icmp eq i64 %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = icmp eq i64 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i16 %val5, i16 %val6
 }
 
@@ -1393,7 +1415,8 @@ define i32 @fun92(i64 %val1, i64 %val2, i64 %val3, i64 %val4,
 ; CHECK: fun92
 ; CHECK: cost of 1 for instruction:   %cmp0 = icmp eq i64 %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = icmp eq i64 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i32 %val5, i32 %val6
 }
 
@@ -1408,7 +1431,8 @@ define i64 @fun93(i64 %val1, i64 %val2, i64 %val3, i64 %val4,
 ; CHECK: fun93
 ; CHECK: cost of 1 for instruction:   %cmp0 = icmp eq i64 %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = icmp eq i64 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i64 %val5, i64 %val6
 }
 
@@ -1423,7 +1447,8 @@ define float @fun94(i64 %val1, i64 %val2, i64 %val3, i64 %val4,
 ; CHECK: fun94
 ; CHECK: cost of 1 for instruction:   %cmp0 = icmp eq i64 %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = icmp eq i64 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 4 for instruction:   %sel = select i1 %and, float %val5, float %val6
 }
 
@@ -1438,7 +1463,8 @@ define double @fun95(i64 %val1, i64 %val2, i64 %val3, i64 %val4,
 ; CHECK: fun95
 ; CHECK: cost of 1 for instruction:   %cmp0 = icmp eq i64 %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = icmp eq i64 %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 4 for instruction:   %sel = select i1 %and, double %val5, double %val6
 }
 
@@ -1453,7 +1479,8 @@ define i8 @fun96(float %val1, float %val2, float %val3, float %val4,
 ; CHECK: fun96
 ; CHECK: cost of 1 for instruction:   %cmp0 = fcmp ogt float %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = fcmp ogt float %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i8 %val5, i8 %val6
 }
 
@@ -1468,7 +1495,8 @@ define i16 @fun97(float %val1, float %val2, float %val3, float %val4,
 ; CHECK: fun97
 ; CHECK: cost of 1 for instruction:   %cmp0 = fcmp ogt float %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = fcmp ogt float %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i16 %val5, i16 %val6
 }
 
@@ -1483,7 +1511,8 @@ define i32 @fun98(float %val1, float %val2, float %val3, float %val4,
 ; CHECK: fun98
 ; CHECK: cost of 1 for instruction:   %cmp0 = fcmp ogt float %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = fcmp ogt float %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i32 %val5, i32 %val6
 }
 
@@ -1498,7 +1527,8 @@ define i64 @fun99(float %val1, float %val2, float %val3, float %val4,
 ; CHECK: fun99
 ; CHECK: cost of 1 for instruction:   %cmp0 = fcmp ogt float %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = fcmp ogt float %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i64 %val5, i64 %val6
 }
 
@@ -1513,7 +1543,8 @@ define float @fun100(float %val1, float %val2, float %val3, float %val4,
 ; CHECK: fun100
 ; CHECK: cost of 1 for instruction:   %cmp0 = fcmp ogt float %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = fcmp ogt float %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 4 for instruction:   %sel = select i1 %and, float %val5, float %val6
 }
 
@@ -1528,7 +1559,8 @@ define double @fun101(float %val1, float %val2, float %val3, float %val4,
 ; CHECK: fun101
 ; CHECK: cost of 1 for instruction:   %cmp0 = fcmp ogt float %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = fcmp ogt float %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 4 for instruction:   %sel = select i1 %and, double %val5, double %val6
 }
 
@@ -1543,7 +1575,8 @@ define i8 @fun102(double %val1, double %val2, double %val3, double %val4,
 ; CHECK: fun102
 ; CHECK: cost of 1 for instruction:   %cmp0 = fcmp ogt double %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = fcmp ogt double %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i8 %val5, i8 %val6
 }
 
@@ -1558,7 +1591,8 @@ define i16 @fun103(double %val1, double %val2, double %val3, double %val4,
 ; CHECK: fun103
 ; CHECK: cost of 1 for instruction:   %cmp0 = fcmp ogt double %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = fcmp ogt double %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i16 %val5, i16 %val6
 }
 
@@ -1573,7 +1607,8 @@ define i32 @fun104(double %val1, double %val2, double %val3, double %val4,
 ; CHECK: fun104
 ; CHECK: cost of 1 for instruction:   %cmp0 = fcmp ogt double %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = fcmp ogt double %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i32 %val5, i32 %val6
 }
 
@@ -1588,7 +1623,8 @@ define i64 @fun105(double %val1, double %val2, double %val3, double %val4,
 ; CHECK: fun105
 ; CHECK: cost of 1 for instruction:   %cmp0 = fcmp ogt double %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = fcmp ogt double %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 1 for instruction:   %sel = select i1 %and, i64 %val5, i64 %val6
 }
 
@@ -1603,7 +1639,8 @@ define float @fun106(double %val1, double %val2, double %val3, double %val4,
 ; CHECK: fun106
 ; CHECK: cost of 1 for instruction:   %cmp0 = fcmp ogt double %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = fcmp ogt double %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 4 for instruction:   %sel = select i1 %and, float %val5, float %val6
 }
 
@@ -1618,7 +1655,8 @@ define double @fun107(double %val1, double %val2, double %val3, double %val4,
 ; CHECK: fun107
 ; CHECK: cost of 1 for instruction:   %cmp0 = fcmp ogt double %val1, %val2
 ; CHECK: cost of 1 for instruction:   %cmp1 = fcmp ogt double %val3, %val4
-; CHECK: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
+; CHECK: cost of 5 for instruction:   %and = xor i1 %cmp0, %cmp1
+; IPMSQ: cost of 7 for instruction:   %and = xor i1 %cmp0, %cmp1
 ; CHECK: cost of 4 for instruction:   %sel = select i1 %and, double %val5, double %val6
 }
 

@@ -3144,17 +3144,54 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Check number of inputs for sanity. We need at least one input.
   assert(Inputs.size() >= 1 && "Must have at least one input.");
-  const InputInfo &Input = Inputs[0];
   // CUDA/HIP compilation may have multiple inputs (source file + results of
   // device-side compilations). OpenMP device jobs also take the host IR as a
-  // second input. All other jobs are expected to have exactly one
-  // input.
+  // second input. Module precompilation accepts a list of header files to
+  // include as part of the module. All other jobs are expected to have exactly
+  // one input.
   bool IsCuda = JA.isOffloading(Action::OFK_Cuda);
   bool IsHIP = JA.isOffloading(Action::OFK_HIP);
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
-  assert((IsCuda || IsHIP || (IsOpenMPDevice && Inputs.size() == 2) ||
-          Inputs.size() == 1) &&
-         "Unable to handle multiple inputs.");
+  bool IsModulePrecompile =
+      isa<PrecompileJobAction>(JA) && JA.getType() == types::TY_ModuleFile;
+  bool IsHeaderModulePrecompile = isa<HeaderModulePrecompileJobAction>(JA);
+
+  // A header module compilation doesn't have a main input file, so invent a
+  // fake one as a placeholder.
+  // FIXME: Pick the language based on the header file language.
+  const char *ModuleName = [&]{
+    auto *ModuleNameArg = Args.getLastArg(options::OPT_fmodule_name_EQ);
+    return ModuleNameArg ? ModuleNameArg->getValue() : "";
+  }();
+  InputInfo HeaderModuleInput(types::TY_CXXModule, ModuleName, ModuleName);
+
+  const InputInfo &Input =
+      IsHeaderModulePrecompile ? HeaderModuleInput : Inputs[0];
+
+  InputInfoList ModuleHeaderInputs;
+  const InputInfo *CudaDeviceInput = nullptr;
+  const InputInfo *OpenMPDeviceInput = nullptr;
+  for (const InputInfo &I : Inputs) {
+    if (&I == &Input) {
+      // This is the primary input.
+    } else if (IsModulePrecompile &&
+               types::getPrecompiledType(I.getType()) == types::TY_PCH) {
+      types::ID Expected =
+          types::lookupHeaderTypeForSourceType(Inputs[0].getType());
+      if (I.getType() != Expected) {
+        D.Diag(diag::err_drv_module_header_wrong_kind)
+            << I.getFilename() << types::getTypeName(I.getType())
+            << types::getTypeName(Expected);
+      }
+      ModuleHeaderInputs.push_back(I);
+    } else if ((IsCuda || IsHIP) && !CudaDeviceInput) {
+      CudaDeviceInput = &I;
+    } else if (IsOpenMPDevice && !OpenMPDeviceInput) {
+      OpenMPDeviceInput = &I;
+    } else {
+      llvm_unreachable("unexpectedly given multiple inputs");
+    }
+  }
 
   const llvm::Triple *AuxTriple =
       IsCuda ? getToolChain().getAuxTriple() : nullptr;
@@ -3267,7 +3304,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (JA.getType() == types::TY_Nothing)
       CmdArgs.push_back("-fsyntax-only");
     else if (JA.getType() == types::TY_ModuleFile)
-      CmdArgs.push_back("-emit-module-interface");
+      CmdArgs.push_back(IsHeaderModulePrecompile
+                            ? "-emit-header-module"
+                            : "-emit-module-interface");
     else if (UsePCH)
       CmdArgs.push_back("-emit-pch");
     else
@@ -4729,10 +4768,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   addDashXForInput(Args, Input, CmdArgs);
 
-  if (Input.isFilename())
-    CmdArgs.push_back(Input.getFilename());
-  else
-    Input.getInputArg().renderAsInput(Args, CmdArgs);
+  ArrayRef<InputInfo> FrontendInputs = Input;
+  if (IsHeaderModulePrecompile)
+    FrontendInputs = ModuleHeaderInputs;
+  else if (Input.isNothing())
+    FrontendInputs = {};
+
+  for (const InputInfo &Input : FrontendInputs) {
+    if (Input.isFilename())
+      CmdArgs.push_back(Input.getFilename());
+    else
+      Input.getInputArg().renderAsInput(Args, CmdArgs);
+  }
 
   Args.AddAllArgs(CmdArgs, options::OPT_undef);
 
@@ -4765,10 +4812,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (IsCuda) {
     // Host-side cuda compilation receives all device-side outputs in a single
     // fatbin as Inputs[1]. Include the binary with -fcuda-include-gpubinary.
-    if (Inputs.size() > 1) {
-      assert(Inputs.size() == 2 && "More than one GPU binary!");
+    if (CudaDeviceInput) {
       CmdArgs.push_back("-fcuda-include-gpubinary");
-      CmdArgs.push_back(Inputs[1].getFilename());
+      CmdArgs.push_back(CudaDeviceInput->getFilename());
     }
 
     if (Args.hasFlag(options::OPT_fcuda_rdc, options::OPT_fno_cuda_rdc, false))
@@ -4785,9 +4831,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // only the relevant declarations are emitted.
   if (IsOpenMPDevice) {
     CmdArgs.push_back("-fopenmp-is-device");
-    if (Inputs.size() == 2) {
+    if (OpenMPDeviceInput) {
       CmdArgs.push_back("-fopenmp-host-ir-file-path");
-      CmdArgs.push_back(Args.MakeArgString(Inputs.back().getFilename()));
+      CmdArgs.push_back(Args.MakeArgString(OpenMPDeviceInput->getFilename()));
     }
   }
 

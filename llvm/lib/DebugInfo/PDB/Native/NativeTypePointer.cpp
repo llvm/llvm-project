@@ -18,17 +18,10 @@ using namespace llvm::codeview;
 using namespace llvm::pdb;
 
 NativeTypePointer::NativeTypePointer(NativeSession &Session, SymIndexId Id,
-                                     codeview::CVType CVT)
-    : NativeRawSymbol(Session, PDB_SymType::PointerType, Id),
-      Record(TypeRecordKind::Pointer) {
-  assert(CVT.kind() == TypeLeafKind::LF_POINTER);
-  cantFail(TypeDeserializer::deserializeAs<PointerRecord>(CVT, Record));
-}
-
-NativeTypePointer::NativeTypePointer(NativeSession &Session, SymIndexId Id,
-                                     PointerRecord PR)
-    : NativeRawSymbol(Session, PDB_SymType::PointerType, Id),
-      Record(std::move(PR)) {}
+                                     codeview::TypeIndex TI,
+                                     codeview::PointerRecord Record)
+    : NativeRawSymbol(Session, PDB_SymType::PointerType, Id), TI(TI),
+      Record(std::move(Record)) {}
 
 NativeTypePointer::~NativeTypePointer() {}
 

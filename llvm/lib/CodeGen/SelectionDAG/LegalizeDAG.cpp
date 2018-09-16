@@ -3959,7 +3959,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     return false;
   }
 
-  LLVM_DEBUG(dbgs() << "Succesfully expanded node\n");
+  LLVM_DEBUG(dbgs() << "Successfully expanded node\n");
   ReplaceNode(Node, Results.data());
   return true;
 }

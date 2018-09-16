@@ -137,8 +137,9 @@ defm : SLMWriteResPair<WriteLZCNT,          [SLM_IEC_RSV0], 3>;
 defm : SLMWriteResPair<WriteTZCNT,          [SLM_IEC_RSV0], 3>;
 defm : SLMWriteResPair<WritePOPCNT,         [SLM_IEC_RSV0], 3>;
 
-// BMI1 BEXTR, BMI2 BZHI
+// BMI1 BEXTR/BLS, BMI2 BZHI
 defm : X86WriteResPairUnsupported<WriteBEXTR>;
+defm : X86WriteResPairUnsupported<WriteBLS>;
 defm : X86WriteResPairUnsupported<WriteBZHI>;
 
 defm : SLMWriteResPair<WriteDiv8,   [SLM_IEC_RSV01, SLMDivider], 25, [1,25], 1, 4>;

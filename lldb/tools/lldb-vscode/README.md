@@ -2,15 +2,15 @@
 # Table of Contents
 
 - [Introduction](#Introduction)
-- [Intallation](#Intallation Visual Studio Code)
+- [Installation](#Installation-Visual-Studio-Code)
 - [Configurations](#configurations)
-	- [Launch Configuration Settings](#launch configuration settings)
-	- [Attach Configuration Settings](#attach configuration settings)
-	- [Example configurations](#example configurations)
+	- [Launch Configuration Settings](#launch-configuration-settings)
+	- [Attach Configuration Settings](#attach-configuration-settings)
+	- [Example configurations](#example-configurations)
 		- [Launching](#launching)
-		- [Attach to process using process ID](#attach using pid)
-		- [Attach to process by name](#attach by name)
-		- [Loading a core file](#loading a core file)
+		- [Attach to process using process ID](#attach-using-pid)
+		- [Attach to process by name](#attach-by-name)
+		- [Loading a core file](#loading-a-core-file)
 
 # Introduction
 
@@ -20,7 +20,7 @@ It can be installed as an extension for the Visual Studio Code and Nuclide IDE.
 The protocol is easy to run remotely and also can allow other tools and IDEs to
 get a full featured debugger with a well defined protocol. 
 
-# Intallation for Visual Studio Code
+# Installation for Visual Studio Code
 
 Installing the plug-in involves creating a directory in the `~/.vscode/extensions` folder and copying the package.json file that is in the same directory as this
 documentation into it, and copying to symlinking a lldb-vscode binary into 

@@ -1,4 +1,4 @@
-//===----- UninitializedPointer.cpp ------------------------------*- C++ -*-==//
+//===----- UninitializedPointee.cpp ------------------------------*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,11 +10,8 @@
 // This file defines functions and methods for handling pointers and references
 // to reduce the size and complexity of UninitializedObjectChecker.cpp.
 //
-// To read about command line options and a description what this checker does,
-// refer to UninitializedObjectChecker.cpp.
-//
-// To read about how the checker works, refer to the comments in
-// UninitializedObject.h.
+// To read about command line options and documentation about how the checker
+// works, refer to UninitializedObjectChecker.h.
 //
 //===----------------------------------------------------------------------===//
 
@@ -60,8 +57,8 @@ public:
   }
 };
 
-/// Represents a void* field that needs to be casted back to its dynamic type
-/// for a correct note message.
+/// Represents a nonloc::LocAsInteger or void* field, that point to objects, but
+/// needs to be casted back to its dynamic type for a correct note message.
 class NeedsCastLocField final : public FieldNode {
   QualType CastBackType;
 
@@ -74,7 +71,13 @@ public:
   }
 
   virtual void printPrefix(llvm::raw_ostream &Out) const override {
-    Out << "static_cast" << '<' << CastBackType.getAsString() << ">(";
+    // If this object is a nonloc::LocAsInteger.
+    if (getDecl()->getType()->isIntegerType())
+      Out << "reinterpret_cast";
+    // If this pointer's dynamic type is different then it's static type.
+    else
+      Out << "static_cast";
+    Out << '<' << CastBackType.getAsString() << ">(";
   }
 
   virtual void printNode(llvm::raw_ostream &Out) const override {
@@ -90,32 +93,30 @@ public:
 
 // Utility function declarations.
 
-/// Returns whether T can be (transitively) dereferenced to a void pointer type
-/// (void*, void**, ...). The type of the region behind a void pointer isn't
-/// known, and thus FD can not be analyzed.
+/// Returns whether \p T can be (transitively) dereferenced to a void pointer
+/// type (void*, void**, ...).
 static bool isVoidPointer(QualType T);
 
-/// Dereferences \p V and returns the value and dynamic type of the pointee, as
-/// well as whether \p FR needs to be casted back to that type. If for whatever
-/// reason dereferencing fails, returns with None.
-static llvm::Optional<std::tuple<SVal, QualType, bool>>
-dereference(ProgramStateRef State, const FieldRegion *FR);
+using DereferenceInfo = std::pair<const TypedValueRegion *, bool>;
+
+/// Dereferences \p FR and returns with the pointee's region, and whether it
+/// needs to be casted back to it's location type. If for whatever reason
+/// dereferencing fails, returns with None.
+static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
+                                                   const FieldRegion *FR);
 
 //===----------------------------------------------------------------------===//
 //                   Methods for FindUninitializedFields.
 //===----------------------------------------------------------------------===//
 
-// Note that pointers/references don't contain fields themselves, so in this
-// function we won't add anything to LocalChain.
-bool FindUninitializedFields::isPointerOrReferenceUninit(
+bool FindUninitializedFields::isDereferencableUninit(
     const FieldRegion *FR, FieldChainInfo LocalChain) {
 
-  assert((FR->getDecl()->getType()->isAnyPointerType() ||
-          FR->getDecl()->getType()->isReferenceType() ||
-          FR->getDecl()->getType()->isBlockPointerType()) &&
-         "This method only checks pointer/reference objects!");
-
   SVal V = State->getSVal(FR);
+
+  assert((isDereferencableType(FR->getDecl()->getType()) ||
+          V.getAs<nonloc::LocAsInteger>()) &&
+         "This method only checks dereferencable objects!");
 
   if (V.isUnknown() || V.getAs<loc::ConcreteInt>()) {
     IsAnyFieldInitialized = true;
@@ -127,61 +128,54 @@ bool FindUninitializedFields::isPointerOrReferenceUninit(
         LocalChain.add(LocField(FR, /*IsDereferenced*/ false)));
   }
 
-  if (!CheckPointeeInitialization) {
+  if (!Opts.CheckPointeeInitialization) {
     IsAnyFieldInitialized = true;
     return false;
   }
 
   // At this point the pointer itself is initialized and points to a valid
   // location, we'll now check the pointee.
-  llvm::Optional<std::tuple<SVal, QualType, bool>> DerefInfo =
-      dereference(State, FR);
+  llvm::Optional<DereferenceInfo> DerefInfo = dereference(State, FR);
   if (!DerefInfo) {
     IsAnyFieldInitialized = true;
     return false;
   }
 
-  V = std::get<0>(*DerefInfo);
-  QualType DynT = std::get<1>(*DerefInfo);
-  bool NeedsCastBack = std::get<2>(*DerefInfo);
+  const TypedValueRegion *R = DerefInfo->first;
+  const bool NeedsCastBack = DerefInfo->second;
 
-  // If FR is a pointer pointing to a non-primitive type.
-  if (Optional<nonloc::LazyCompoundVal> RecordV =
-          V.getAs<nonloc::LazyCompoundVal>()) {
+  QualType DynT = R->getLocationType();
+  QualType PointeeT = DynT->getPointeeType();
 
-    const TypedValueRegion *R = RecordV->getRegion();
+  if (PointeeT->isStructureOrClassType()) {
+    if (NeedsCastBack)
+      return isNonUnionUninit(R, LocalChain.add(NeedsCastLocField(FR, DynT)));
+    return isNonUnionUninit(R, LocalChain.add(LocField(FR)));
+  }
 
-    if (DynT->getPointeeType()->isStructureOrClassType()) {
+  if (PointeeT->isUnionType()) {
+    if (isUnionUninit(R)) {
       if (NeedsCastBack)
-        return isNonUnionUninit(R, LocalChain.add(NeedsCastLocField(FR, DynT)));
-      return isNonUnionUninit(R, LocalChain.add(LocField(FR)));
-    }
-
-    if (DynT->getPointeeType()->isUnionType()) {
-      if (isUnionUninit(R)) {
-        if (NeedsCastBack)
-          return addFieldToUninits(LocalChain.add(NeedsCastLocField(FR, DynT)));
-        return addFieldToUninits(LocalChain.add(LocField(FR)));
-      } else {
-        IsAnyFieldInitialized = true;
-        return false;
-      }
-    }
-
-    if (DynT->getPointeeType()->isArrayType()) {
+        return addFieldToUninits(LocalChain.add(NeedsCastLocField(FR, DynT)));
+      return addFieldToUninits(LocalChain.add(LocField(FR)));
+    } else {
       IsAnyFieldInitialized = true;
       return false;
     }
-
-    llvm_unreachable("All cases are handled!");
   }
 
-  assert((isPrimitiveType(DynT->getPointeeType()) || DynT->isAnyPointerType() ||
-          DynT->isReferenceType()) &&
+  if (PointeeT->isArrayType()) {
+    IsAnyFieldInitialized = true;
+    return false;
+  }
+
+  assert((isPrimitiveType(PointeeT) || isDereferencableType(PointeeT)) &&
          "At this point FR must either have a primitive dynamic type, or it "
          "must be a null, undefined, unknown or concrete pointer!");
 
-  if (isPrimitiveUninit(V)) {
+  SVal PointeeV = State->getSVal(R);
+
+  if (isPrimitiveUninit(PointeeV)) {
     if (NeedsCastBack)
       return addFieldToUninits(LocalChain.add(NeedsCastLocField(FR, DynT)));
     return addFieldToUninits(LocalChain.add(LocField(FR)));
@@ -204,47 +198,55 @@ static bool isVoidPointer(QualType T) {
   return false;
 }
 
-static llvm::Optional<std::tuple<SVal, QualType, bool>>
-dereference(ProgramStateRef State, const FieldRegion *FR) {
+static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
+                                                   const FieldRegion *FR) {
 
-  DynamicTypeInfo DynTInfo;
-  QualType DynT;
-
-  // If the static type of the field is a void pointer, we need to cast it back
-  // to the dynamic type before dereferencing.
-  bool NeedsCastBack = isVoidPointer(FR->getDecl()->getType());
+  llvm::SmallSet<const TypedValueRegion *, 5> VisitedRegions;
 
   SVal V = State->getSVal(FR);
-  assert(V.getAs<loc::MemRegionVal>() && "V must be loc::MemRegionVal!");
+  assert(V.getAsRegion() && "V must have an underlying region!");
 
-  // If V is multiple pointer value, we'll dereference it again (e.g.: int** ->
-  // int*).
-  // TODO: Dereference according to the dynamic type to avoid infinite loop for
-  // these kind of fields:
-  //   int **ptr = reinterpret_cast<int **>(&ptr);
-  while (auto Tmp = V.getAs<loc::MemRegionVal>()) {
-    // We can't reason about symbolic regions, assume its initialized.
-    // Note that this also avoids a potential infinite recursion, because
-    // constructors for list-like classes are checked without being called, and
-    // the Static Analyzer will construct a symbolic region for Node *next; or
-    // similar code snippets.
-    if (Tmp->getRegion()->getSymbolicBase()) {
+  // If the static type of the field is a void pointer, or it is a
+  // nonloc::LocAsInteger, we need to cast it back to the dynamic type before
+  // dereferencing.
+  bool NeedsCastBack = isVoidPointer(FR->getDecl()->getType()) ||
+                       V.getAs<nonloc::LocAsInteger>();
+
+  // The region we'd like to acquire.
+  const auto *R = V.getAsRegion()->getAs<TypedValueRegion>();
+  if (!R)
+    return None;
+
+  VisitedRegions.insert(R);
+
+  // We acquire the dynamic type of R,
+  QualType DynT = R->getLocationType();
+
+  while (const MemRegion *Tmp = State->getSVal(R, DynT).getAsRegion()) {
+
+    R = Tmp->getAs<TypedValueRegion>();
+    if (!R)
       return None;
-    }
 
-    DynTInfo = getDynamicTypeInfo(State, Tmp->getRegion());
-    if (!DynTInfo.isValid()) {
+    // We found a cyclic pointer, like int *ptr = (int *)&ptr.
+    // TODO: Should we report these fields too?
+    if (!VisitedRegions.insert(R).second)
       return None;
-    }
 
-    DynT = DynTInfo.getType();
-
-    if (isVoidPointer(DynT)) {
-      return None;
-    }
-
-    V = State->getSVal(*Tmp, DynT);
+    DynT = R->getLocationType();
+    // In order to ensure that this loop terminates, we're also checking the
+    // dynamic type of R, since type hierarchy is finite.
+    if (isDereferencableType(DynT->getPointeeType()))
+      break;
   }
 
-  return std::make_tuple(V, DynT, NeedsCastBack);
+  while (R->getAs<CXXBaseObjectRegion>()) {
+    NeedsCastBack = true;
+
+    if (!isa<TypedValueRegion>(R->getSuperRegion()))
+      break;
+    R = R->getSuperRegion()->getAs<TypedValueRegion>();
+  }
+
+  return std::make_pair(R, NeedsCastBack);
 }

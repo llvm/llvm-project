@@ -157,9 +157,10 @@ defm : SKXWriteResPair<WriteLZCNT,          [SKXPort1], 3>;
 defm : SKXWriteResPair<WriteTZCNT,          [SKXPort1], 3>;
 defm : SKXWriteResPair<WritePOPCNT,         [SKXPort1], 3>;
 
-// BMI1 BEXTR, BMI2 BZHI
+// BMI1 BEXTR/BLS, BMI2 BZHI
 defm : SKXWriteResPair<WriteBEXTR, [SKXPort06,SKXPort15], 2, [1,1], 2>;
-defm : SKXWriteResPair<WriteBZHI, [SKXPort15], 1>;
+defm : SKXWriteResPair<WriteBLS,   [SKXPort15], 1>;
+defm : SKXWriteResPair<WriteBZHI,  [SKXPort15], 1>;
 
 // Loads, stores, and moves, not folded with other operations.
 defm : X86WriteRes<WriteLoad,    [SKXPort23], 5, [1], 1>;
@@ -628,10 +629,7 @@ def SKXWriteResGroup8 : SchedWriteRes<[SKXPort15]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup8], (instregex "ANDN(32|64)rr",
-                                            "BLSI(32|64)rr",
-                                            "BLSMSK(32|64)rr",
-                                            "BLSR(32|64)rr")>;
+def: InstRW<[SKXWriteResGroup8], (instregex "ANDN(32|64)rr")>;
 
 def SKXWriteResGroup9 : SchedWriteRes<[SKXPort015]> {
   let Latency = 1;
@@ -1207,9 +1205,6 @@ def SKXWriteResGroup79 : SchedWriteRes<[SKXPort23,SKXPort15]> {
   let ResourceCycles = [1,1];
 }
 def: InstRW<[SKXWriteResGroup79], (instregex "ANDN(32|64)rm",
-                                             "BLSI(32|64)rm",
-                                             "BLSMSK(32|64)rm",
-                                             "BLSR(32|64)rm",
                                              "MOVBE(16|32|64)rm")>;
 
 def SKXWriteResGroup80 : SchedWriteRes<[SKXPort23,SKXPort015]> {
