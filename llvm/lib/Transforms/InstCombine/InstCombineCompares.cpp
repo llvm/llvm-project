@@ -4624,8 +4624,8 @@ static Instruction *canonicalizeICmpBool(ICmpInst &I,
 }
 
 // Transform pattern like:
-//   (1 << Y) u<= X  or  ~(-1 << Y) u<  X
-//   (1 << Y) u>  X  or  ~(-1 << Y) u>= X
+//   (1 << Y) u<= X  or  ~(-1 << Y) u<  X  or  ((1 << Y)+(-1)) u<  X
+//   (1 << Y) u>  X  or  ~(-1 << Y) u>= X  or  ((1 << Y)+(-1)) u>= X
 // Into:
 //   (X l>> Y) != 0
 //   (X l>> Y) == 0
@@ -4649,10 +4649,15 @@ static Instruction *foldICmpWithHighBitMask(ICmpInst &Cmp,
     default:
       return nullptr;
     }
-  } else if (match(&Cmp,
-                   m_c_ICmp(Pred,
-                            m_OneUse(m_Not(m_Shl(m_AllOnes(), m_Value(Y)))),
-                            m_Value(X)))) {
+  } else if (match(&Cmp, m_c_ICmp(Pred,
+                                  m_OneUse(m_CombineOr(
+                                      m_Not(m_Shl(m_AllOnes(), m_Value(Y))),
+                                      m_Add(m_Shl(m_One(), m_Value(Y)),
+                                            m_AllOnes()))),
+                                  m_Value(X)))) {
+    // The variant with 'add' is not canonical, (the variant with 'not' is)
+    // we only get it because it has extra uses, and can't be canonicalized,
+
     // We want X to be the icmp's second operand, so swap predicate if it isn't.
     if (Cmp.getOperand(0) == X)
       Pred = Cmp.getSwappedPredicate();

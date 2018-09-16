@@ -100,14 +100,24 @@ available_targets = {
                 {'gpu' : 'barts',   'aliases' : ['turks', 'caicos'] },
                 {'gpu' : 'cayman',  'aliases' : ['aruba']} ]},
   'amdgcn--': { 'devices' :
-                [{'gpu' : 'tahiti', 'aliases' : ['pitcairn', 'verde', 'oland', 'hainan', 'bonaire', 'kabini', 'kaveri', 'hawaii', 'mullins', 'tonga', 'iceland', 'carrizo', 'fiji', 'stoney', 'polaris10', 'polaris11', 'gfx900']} ]},
+                [{'gpu' : 'tahiti', 'aliases' : ['pitcairn', 'verde', 'oland', 'hainan', 'bonaire', 'kabini', 'kaveri', 'hawaii', 'mullins', 'tonga', 'iceland', 'carrizo', 'fiji', 'stoney', 'polaris10', 'polaris11']} ]},
   'amdgcn--amdhsa': { 'devices' :
-                      [{'gpu' : '', 'aliases' : ['bonaire', 'kabini', 'kaveri', 'hawaii', 'mullins', 'tonga', 'iceland', 'carrizo', 'fiji', 'stoney', 'polaris10', 'polaris11', 'gfx900']} ]},
+                      [{'gpu' : '', 'aliases' : ['bonaire', 'kabini', 'kaveri', 'hawaii', 'mullins', 'tonga', 'iceland', 'carrizo', 'fiji', 'stoney', 'polaris10', 'polaris11']} ]},
   'nvptx--'   : { 'devices' : [{'gpu' : '', 'aliases' : []} ]},
   'nvptx64--' : { 'devices' : [{'gpu' : '', 'aliases' : []} ]},
   'nvptx--nvidiacl'   : { 'devices' : [{'gpu' : '', 'aliases' : []} ]},
   'nvptx64--nvidiacl' : { 'devices' : [{'gpu' : '', 'aliases' : []} ]},
 }
+
+# Support for gfx9 was added in LLVM 5 (r295554)
+if llvm_int_version >= 500:
+    available_targets['amdgcn--']['devices'][0]['aliases'] += ['gfx900', 'gfx902']
+    available_targets['amdgcn--amdhsa']['devices'][0]['aliases'] += ['gfx900', 'gfx902']
+
+# Support for Vega12 and Vega20 was added in LLVM 7 (r331215)
+if llvm_int_version >= 700:
+    available_targets['amdgcn--']['devices'][0]['aliases'] += ['gfx904', 'gfx906']
+    available_targets['amdgcn--amdhsa']['devices'][0]['aliases'] += ['gfx904', 'gfx906']
 
 
 default_targets = ['nvptx--nvidiacl', 'nvptx64--nvidiacl', 'r600--', 'amdgcn--', 'amdgcn--amdhsa']

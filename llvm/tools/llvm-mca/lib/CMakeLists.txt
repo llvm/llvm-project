@@ -1,6 +1,7 @@
 include_directories(${LLVM_MCA_SOURCE_DIR}/include)
 
-add_llvm_library(LLVMMCA
+add_library(LLVMMCA
+  STATIC
   Context.cpp
   HWEventListener.cpp
   HardwareUnits/HardwareUnit.cpp
@@ -19,11 +20,14 @@ add_llvm_library(LLVMMCA
   Stages/RetireStage.cpp
   Stages/Stage.cpp
   Support.cpp
+  )
 
-  STATIC
-
-  LINK_COMPONENTS
+llvm_update_compile_flags(LLVMMCA)
+llvm_map_components_to_libnames(libs
   CodeGen
   MC
   Support
   )
+
+target_link_libraries(LLVMMCA ${libs})
+set_target_properties(LLVMMCA PROPERTIES FOLDER "Libraries")

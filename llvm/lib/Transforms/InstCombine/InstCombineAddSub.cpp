@@ -1697,6 +1697,9 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     return SelectInst::Create(Cmp, Neg, A);
   }
 
+  if (Instruction *Ext = narrowMathIfNoOverflow(I))
+    return Ext;
+
   bool Changed = false;
   if (!I.hasNoSignedWrap() && willNotOverflowSignedSub(Op0, Op1, I)) {
     Changed = true;

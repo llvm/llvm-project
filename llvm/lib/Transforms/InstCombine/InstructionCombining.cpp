@@ -1451,29 +1451,40 @@ Instruction *InstCombiner::foldShuffledBinop(BinaryOperator &Inst) {
 /// sure the narrow op does not overflow.
 Instruction *InstCombiner::narrowMathIfNoOverflow(BinaryOperator &BO) {
   // We need at least one extended operand.
-  Value *LHS = BO.getOperand(0), *RHS = BO.getOperand(1);
+  Value *Op0 = BO.getOperand(0), *Op1 = BO.getOperand(1);
+
+  // If this is a sub, we swap the operands since we always want an extension
+  // on the RHS. The LHS can be an extension or a constant.
+  if (BO.getOpcode() == Instruction::Sub)
+    std::swap(Op0, Op1);
+
   Value *X;
-  bool IsSext = match(LHS, m_SExt(m_Value(X)));
-  if (!IsSext && !match(LHS, m_ZExt(m_Value(X))))
+  bool IsSext = match(Op0, m_SExt(m_Value(X)));
+  if (!IsSext && !match(Op0, m_ZExt(m_Value(X))))
     return nullptr;
 
   // If both operands are the same extension from the same source type and we
   // can eliminate at least one (hasOneUse), this might work.
   CastInst::CastOps CastOpc = IsSext ? Instruction::SExt : Instruction::ZExt;
   Value *Y;
-  if (!(match(RHS, m_ZExtOrSExt(m_Value(Y))) && X->getType() == Y->getType() &&
-        cast<Operator>(RHS)->getOpcode() == CastOpc &&
-        (LHS->hasOneUse() || RHS->hasOneUse()))) {
+  if (!(match(Op1, m_ZExtOrSExt(m_Value(Y))) && X->getType() == Y->getType() &&
+        cast<Operator>(Op1)->getOpcode() == CastOpc &&
+        (Op0->hasOneUse() || Op1->hasOneUse()))) {
     // If that did not match, see if we have a suitable constant operand.
     // Truncating and extending must produce the same constant.
     Constant *WideC;
-    if (!LHS->hasOneUse() || !match(RHS, m_Constant(WideC)))
+    if (!Op0->hasOneUse() || !match(Op1, m_Constant(WideC)))
       return nullptr;
     Constant *NarrowC = ConstantExpr::getTrunc(WideC, X->getType());
     if (ConstantExpr::getCast(CastOpc, NarrowC, BO.getType()) != WideC)
       return nullptr;
     Y = NarrowC;
   }
+
+  // Swap back now that we found our operands.
+  if (BO.getOpcode() == Instruction::Sub)
+    std::swap(X, Y);
+
   // Both operands have narrow versions. Last step: the math must not overflow
   // in the narrow width.
   if (!willNotOverflow(BO.getOpcode(), X, Y, BO, IsSext))
