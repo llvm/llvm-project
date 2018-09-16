@@ -32,7 +32,7 @@ entry:
 ; CHECK_PC: ret void
 ; CHECK_PC-NOT: call void @__sanitizer_cov_module_init
 
-; CHECK_PC_GUARD: section "__sancov_guards", align 4
+; CHECK_PC_GUARD: section "__sancov_guards", comdat($foo), align 4
 ; CHECK_PC_GUARD-LABEL: define void @foo
 ; CHECK_PC_GUARD: call void @__sanitizer_cov_trace_pc_guard
 ; CHECK_PC_GUARD: call void @__sanitizer_cov_trace_pc_guard

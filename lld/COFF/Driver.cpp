@@ -888,7 +888,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Handle /force or /force:unresolved
   if (Args.hasArg(OPT_force, OPT_force_unresolved))
-    Config->Force = true;
+    Config->ForceUnresolved = true;
+
+  // Handle /force or /force:multiple
+  if (Args.hasArg(OPT_force, OPT_force_multiple))
+    Config->ForceMultiple = true;
 
   // Handle /debug
   if (Args.hasArg(OPT_debug, OPT_debug_dwarf, OPT_debug_ghash)) {
@@ -1236,6 +1240,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Read all input files given via the command line.
   run();
 
+  if (errorCount())
+    return;
+
   // We should have inferred a machine type by now from the input files, but if
   // not we assume x64.
   if (Config->Machine == IMAGE_FILE_MACHINE_UNKNOWN) {
@@ -1380,6 +1387,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (Config->MinGW) {
     Symtab->addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST__"), 0);
     Symtab->addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST_END__"), 0);
+    Symtab->addAbsolute(mangle("__CTOR_LIST__"), 0);
+    Symtab->addAbsolute(mangle("__DTOR_LIST__"), 0);
   }
 
   // This code may add new undefined symbols to the link, which may enqueue more

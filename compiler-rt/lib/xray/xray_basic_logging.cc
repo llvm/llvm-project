@@ -66,7 +66,13 @@ static pthread_key_t PThreadKey;
 
 static atomic_uint8_t BasicInitialized{0};
 
-BasicLoggingOptions GlobalOptions;
+struct BasicLoggingOptions {
+  int DurationFilterMicros = 0;
+  size_t MaxStackDepth = 0;
+  size_t ThreadBufferSize = 0;
+};
+
+struct BasicLoggingOptions GlobalOptions;
 
 thread_local atomic_uint8_t Guard{0};
 
@@ -360,8 +366,8 @@ static void TLDDestructor(void *P) XRAY_NEVER_INSTRUMENT {
   fsync(TLD.Fd);
 }
 
-XRayLogInitStatus basicLoggingInit(size_t BufferSize, size_t BufferMax,
-                                   void *Options,
+XRayLogInitStatus basicLoggingInit(UNUSED size_t BufferSize,
+                                   UNUSED size_t BufferMax, void *Options,
                                    size_t OptionsSize) XRAY_NEVER_INSTRUMENT {
   uint8_t Expected = 0;
   if (!atomic_compare_exchange_strong(&BasicInitialized, &Expected, 1,
@@ -385,42 +391,31 @@ XRayLogInitStatus basicLoggingInit(size_t BufferSize, size_t BufferMax,
              "using emulation instead.\n");
   });
 
-  if (BufferSize == 0 && BufferMax == 0 && Options != nullptr) {
-    FlagParser P;
-    BasicFlags F;
-    F.setDefaults();
-    registerXRayBasicFlags(&P, &F);
-    P.ParseString(useCompilerDefinedBasicFlags());
-    auto *EnvOpts = GetEnv("XRAY_BASIC_OPTIONS");
-    if (EnvOpts == nullptr)
-      EnvOpts = "";
+  FlagParser P;
+  BasicFlags F;
+  F.setDefaults();
+  registerXRayBasicFlags(&P, &F);
+  P.ParseString(useCompilerDefinedBasicFlags());
+  auto *EnvOpts = GetEnv("XRAY_BASIC_OPTIONS");
+  if (EnvOpts == nullptr)
+    EnvOpts = "";
 
-    P.ParseString(EnvOpts);
+  P.ParseString(EnvOpts);
 
-    // If XRAY_BASIC_OPTIONS was not defined, then we use the deprecated options
-    // set through XRAY_OPTIONS instead.
-    if (internal_strlen(EnvOpts) == 0) {
-      F.func_duration_threshold_us =
-          flags()->xray_naive_log_func_duration_threshold_us;
-      F.max_stack_depth = flags()->xray_naive_log_max_stack_depth;
-      F.thread_buffer_size = flags()->xray_naive_log_thread_buffer_size;
-    }
-
-    P.ParseString(static_cast<const char *>(Options));
-    GlobalOptions.ThreadBufferSize = F.thread_buffer_size;
-    GlobalOptions.DurationFilterMicros = F.func_duration_threshold_us;
-    GlobalOptions.MaxStackDepth = F.max_stack_depth;
-    *basicFlags() = F;
-  } else if (OptionsSize != sizeof(BasicLoggingOptions)) {
-    Report("Invalid options size, potential ABI mismatch; expected %d got %d",
-           sizeof(BasicLoggingOptions), OptionsSize);
-    return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
-  } else {
-    if (Verbosity())
-      Report("XRay Basic: struct-based init is deprecated, please use "
-             "string-based configuration instead.\n");
-    GlobalOptions = *reinterpret_cast<BasicLoggingOptions *>(Options);
+  // If XRAY_BASIC_OPTIONS was not defined, then we use the deprecated options
+  // set through XRAY_OPTIONS instead.
+  if (internal_strlen(EnvOpts) == 0) {
+    F.func_duration_threshold_us =
+        flags()->xray_naive_log_func_duration_threshold_us;
+    F.max_stack_depth = flags()->xray_naive_log_max_stack_depth;
+    F.thread_buffer_size = flags()->xray_naive_log_thread_buffer_size;
   }
+
+  P.ParseString(static_cast<const char *>(Options));
+  GlobalOptions.ThreadBufferSize = F.thread_buffer_size;
+  GlobalOptions.DurationFilterMicros = F.func_duration_threshold_us;
+  GlobalOptions.MaxStackDepth = F.max_stack_depth;
+  *basicFlags() = F;
 
   atomic_store(&ThresholdTicks,
                atomic_load(&TicksPerSec, memory_order_acquire) *

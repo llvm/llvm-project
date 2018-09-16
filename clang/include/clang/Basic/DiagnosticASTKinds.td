@@ -163,6 +163,10 @@ def note_constexpr_unsupported_unsized_array : Note<
 def note_constexpr_unsized_array_indexed : Note<
   "indexing of array without known bound is not allowed "
   "in a constant expression">;
+def note_constexpr_memcpy_null : Note<
+  "%select{source|destination}2 of "
+  "'%select{%select{memcpy|wmemcpy}1|%select{memmove|wmemmove}1}0' "
+  "is %3">;
 def note_constexpr_memcpy_type_pun : Note<
   "cannot constant evaluate '%select{memcpy|memmove}0' from object of "
   "type %1 to object of type %2">;

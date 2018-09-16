@@ -462,14 +462,8 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   emitAbsValue(*MCOS,
                MakeStartMinusEndExpr(*MCOS, *LineStartSym, *LineEndSym, 4), 4);
 
-  unsigned LineTableVersion = context.getDwarfVersion();
-
-  // On Darwin we default to v2 for anything before DWARF v5.
-  if (context.getObjectFileInfo()->getTargetTriple().isOSDarwin() &&
-      LineTableVersion < 5)
-    LineTableVersion = 2;
-
   // Next 2 bytes is the Version.
+  unsigned LineTableVersion = context.getDwarfVersion();
   MCOS->EmitIntValue(LineTableVersion, 2);
 
   // Keep track of the bytes between the very start and where the header length

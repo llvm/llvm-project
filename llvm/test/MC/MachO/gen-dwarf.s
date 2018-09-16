@@ -89,7 +89,7 @@ _x:	.long 1
 // CHECK: .debug_line contents:
 // CHECK: Line table prologue:
 // We don't check the total_length as it includes lengths of temp paths
-// CHECK:         version: 2
+// CHECK:         version: 4
 // We don't check the prologue_length as it too includes lengths of temp paths
 // CHECK: min_inst_length: 1
 // CHECK: default_is_stmt: 1

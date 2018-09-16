@@ -9724,6 +9724,14 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
         cast<FunctionDecl>(D)->getTemplateSpecializationKind() ==
             TSK_ExplicitInstantiationDefinition;
 
+    // Implicit member function definitions, such as operator= might not be
+    // marked as template specializations, since they're not coming from a
+    // template but synthesized directly on the class.
+    IsExpInstDef |=
+        isa<CXXMethodDecl>(D) &&
+        cast<CXXMethodDecl>(D)->getParent()->getTemplateSpecializationKind() ==
+            TSK_ExplicitInstantiationDefinition;
+
     if (getExternalSource()->DeclIsFromPCHWithObjectFile(D) && !IsExpInstDef)
       return false;
   }

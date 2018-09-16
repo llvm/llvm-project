@@ -499,6 +499,16 @@ def LOW32_ADDR_ACCESS_RBP : RegisterClass<"X86", [i32], 32,
 def GR32_AD : RegisterClass<"X86", [i32], 32, (add EAX, EDX)>;
 def GR64_AD : RegisterClass<"X86", [i64], 64, (add RAX, RDX)>;
 
+// Classes to support the 64-bit assembler constraint tied to a fixed
+// register in 32-bit mode. The second register is always the next in
+// the list. Wrap around causes an error.
+def GR32_DC : RegisterClass<"X86", [i32], 32, (add EDX, ECX)>;
+def GR32_CB : RegisterClass<"X86", [i32], 32, (add ECX, EBX)>;
+def GR32_BSI : RegisterClass<"X86", [i32], 32, (add EBX, ESI)>;
+def GR32_SIDI : RegisterClass<"X86", [i32], 32, (add ESI, EDI)>;
+def GR32_DIBP : RegisterClass<"X86", [i32], 32, (add EDI, EBP)>;
+def GR32_BPSP : RegisterClass<"X86", [i32], 32, (add EBP, ESP)>;
+
 // Scalar SSE2 floating point registers.
 def FR32 : RegisterClass<"X86", [f32], 32, (sequence "XMM%u", 0, 15)>;
 

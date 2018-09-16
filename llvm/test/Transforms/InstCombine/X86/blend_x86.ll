@@ -157,9 +157,7 @@ define <32 x i8> @constant_pblendvb_avx2_dup(<32 x i8> %xyzw, <32 x i8> %sel) {
 
 define <4 x float> @sel_v4f32(<4 x float> %x, <4 x float> %y, <4 x i1> %cond) {
 ; CHECK-LABEL: @sel_v4f32(
-; CHECK-NEXT:    [[S:%.*]] = sext <4 x i1> [[COND:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i32> [[S]] to <4 x float>
-; CHECK-NEXT:    [[R:%.*]] = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[B]])
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[COND:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %s = sext <4 x i1> %cond to <4 x i32>
@@ -170,9 +168,7 @@ define <4 x float> @sel_v4f32(<4 x float> %x, <4 x float> %y, <4 x i1> %cond) {
 
 define <2 x double> @sel_v2f64(<2 x double> %x, <2 x double> %y, <2 x i1> %cond) {
 ; CHECK-LABEL: @sel_v2f64(
-; CHECK-NEXT:    [[S:%.*]] = sext <2 x i1> [[COND:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i64> [[S]] to <2 x double>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x double> @llvm.x86.sse41.blendvpd(<2 x double> [[X:%.*]], <2 x double> [[Y:%.*]], <2 x double> [[B]])
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[COND:%.*]], <2 x double> [[Y:%.*]], <2 x double> [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x double> [[R]]
 ;
   %s = sext <2 x i1> %cond to <2 x i64>
@@ -180,6 +176,8 @@ define <2 x double> @sel_v2f64(<2 x double> %x, <2 x double> %y, <2 x i1> %cond)
   %r = call <2 x double> @llvm.x86.sse41.blendvpd(<2 x double> %x, <2 x double> %y, <2 x double> %b)
   ret <2 x double> %r
 }
+
+; TODO: We can bitcast X, Y, and the select and remove the intrinsic.
 
 define <16 x i8> @sel_v4i32(<16 x i8> %x, <16 x i8> %y, <4 x i1> %cond) {
 ; CHECK-LABEL: @sel_v4i32(
@@ -196,13 +194,97 @@ define <16 x i8> @sel_v4i32(<16 x i8> %x, <16 x i8> %y, <4 x i1> %cond) {
 
 define <16 x i8> @sel_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i1> %cond) {
 ; CHECK-LABEL: @sel_v16i8(
-; CHECK-NEXT:    [[S:%.*]] = sext <16 x i1> [[COND:%.*]] to <16 x i8>
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[X:%.*]], <16 x i8> [[Y:%.*]], <16 x i8> [[S]])
+; CHECK-NEXT:    [[R:%.*]] = select <16 x i1> [[COND:%.*]], <16 x i8> [[Y:%.*]], <16 x i8> [[X:%.*]]
 ; CHECK-NEXT:    ret <16 x i8> [[R]]
 ;
   %s = sext <16 x i1> %cond to <16 x i8>
   %r = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> %x, <16 x i8> %y, <16 x i8> %s)
   ret <16 x i8> %r
+}
+
+; PR38814: https://bugs.llvm.org/show_bug.cgi?id=38814
+; Repeat the tests above using the minimal form that we expect when using C intrinsics in code.
+; This verifies that nothing is interfering with the blend transform. This also tests the
+; expected IR when 1 of the blend operands is a constant 0 vector. Potentially, this could
+; be transformed to bitwise logic in IR, but currently that transform is left to the backend.
+
+define <4 x float> @sel_v4f32_sse_reality(<4 x float>* %x, <4 x float> %y, <4 x float> %z) {
+; CHECK-LABEL: @sel_v4f32_sse_reality(
+; CHECK-NEXT:    [[LD:%.*]] = load <4 x float>, <4 x float>* [[X:%.*]], align 16
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <4 x float> [[Z:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[CMP]], <4 x float> zeroinitializer, <4 x float> [[LD]]
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %ld = load <4 x float>, <4 x float>* %x, align 16
+  %cmp = fcmp olt <4 x float> %z, %y
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %cond = bitcast <4 x i32> %sext to <4 x float>
+  %r = tail call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %ld, <4 x float> zeroinitializer, <4 x float> %cond)
+  ret <4 x float> %r
+}
+
+define <2 x double> @sel_v2f64_sse_reality(<2 x double>* nocapture readonly %x, <2 x double> %y, <2 x double> %z) {
+; CHECK-LABEL: @sel_v2f64_sse_reality(
+; CHECK-NEXT:    [[LD:%.*]] = load <2 x double>, <2 x double>* [[X:%.*]], align 16
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <2 x double> [[Z:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP]], <2 x double> zeroinitializer, <2 x double> [[LD]]
+; CHECK-NEXT:    ret <2 x double> [[R]]
+;
+  %ld = load <2 x double>, <2 x double>* %x, align 16
+  %cmp = fcmp olt <2 x double> %z, %y
+  %sext = sext <2 x i1> %cmp to <2 x i64>
+  %cond = bitcast <2 x i64> %sext to <2 x double>
+  %r = tail call <2 x double> @llvm.x86.sse41.blendvpd(<2 x double> %ld, <2 x double> zeroinitializer, <2 x double> %cond)
+  ret <2 x double> %r
+}
+
+; TODO: We can bitcast the inputs to the select and the result and remove the intrinsic.
+
+define <2 x i64> @sel_v4i32_sse_reality(<2 x i64>* nocapture readonly %x, <2 x i64> %y, <2 x i64> %z) {
+; CHECK-LABEL: @sel_v4i32_sse_reality(
+; CHECK-NEXT:    [[XCAST:%.*]] = bitcast <2 x i64>* [[X:%.*]] to <16 x i8>*
+; CHECK-NEXT:    [[LD:%.*]] = load <16 x i8>, <16 x i8>* [[XCAST]], align 16
+; CHECK-NEXT:    [[YCAST:%.*]] = bitcast <2 x i64> [[Y:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[ZCAST:%.*]] = bitcast <2 x i64> [[Z:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i32> [[YCAST]], [[ZCAST]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
+; CHECK-NEXT:    [[COND:%.*]] = bitcast <4 x i32> [[SEXT]] to <16 x i8>
+; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[LD]], <16 x i8> zeroinitializer, <16 x i8> [[COND]])
+; CHECK-NEXT:    [[RCAST:%.*]] = bitcast <16 x i8> [[R]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[RCAST]]
+;
+  %xcast = bitcast <2 x i64>* %x to <16 x i8>*
+  %ld = load <16 x i8>, <16 x i8>* %xcast, align 16
+  %ycast = bitcast <2 x i64> %y to <4 x i32>
+  %zcast = bitcast <2 x i64> %z to <4 x i32>
+  %cmp = icmp sgt <4 x i32> %ycast, %zcast
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %cond = bitcast <4 x i32> %sext to <16 x i8>
+  %r = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> %ld, <16 x i8> zeroinitializer, <16 x i8> %cond)
+  %rcast = bitcast <16 x i8> %r to <2 x i64>
+  ret <2 x i64> %rcast
+}
+
+define <2 x i64> @sel_v16i8_sse_reality(<2 x i64>* nocapture readonly %x, <2 x i64> %y, <2 x i64> %z) {
+; CHECK-LABEL: @sel_v16i8_sse_reality(
+; CHECK-NEXT:    [[XCAST:%.*]] = bitcast <2 x i64>* [[X:%.*]] to <16 x i8>*
+; CHECK-NEXT:    [[LD:%.*]] = load <16 x i8>, <16 x i8>* [[XCAST]], align 16
+; CHECK-NEXT:    [[YCAST:%.*]] = bitcast <2 x i64> [[Y:%.*]] to <16 x i8>
+; CHECK-NEXT:    [[ZCAST:%.*]] = bitcast <2 x i64> [[Z:%.*]] to <16 x i8>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <16 x i8> [[YCAST]], [[ZCAST]]
+; CHECK-NEXT:    [[R:%.*]] = select <16 x i1> [[CMP]], <16 x i8> zeroinitializer, <16 x i8> [[LD]]
+; CHECK-NEXT:    [[RCAST:%.*]] = bitcast <16 x i8> [[R]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[RCAST]]
+;
+  %xcast = bitcast <2 x i64>* %x to <16 x i8>*
+  %ld = load <16 x i8>, <16 x i8>* %xcast, align 16
+  %ycast = bitcast <2 x i64> %y to <16 x i8>
+  %zcast = bitcast <2 x i64> %z to <16 x i8>
+  %cmp = icmp sgt <16 x i8> %ycast, %zcast
+  %sext = sext <16 x i1> %cmp to <16 x i8>
+  %r = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> %ld, <16 x i8> zeroinitializer, <16 x i8> %sext)
+  %rcast = bitcast <16 x i8> %r to <2 x i64>
+  ret <2 x i64> %rcast
 }
 
 declare <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8>, <16 x i8>, <16 x i8>)

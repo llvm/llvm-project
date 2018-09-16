@@ -73,8 +73,11 @@ public:
     /// Compiling a module from a module map.
     CMK_ModuleMap,
 
+    /// Compiling a module from a list of header files.
+    CMK_HeaderModule,
+
     /// Compiling a C++ modules TS module interface unit.
-    CMK_ModuleInterface
+    CMK_ModuleInterface,
   };
 
   enum PragmaMSPointersToMembersKind {

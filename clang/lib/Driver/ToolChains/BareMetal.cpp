@@ -122,7 +122,7 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(
     for (vfs::directory_iterator LI =
            getDriver().getVFS().dir_begin(Dir.str(), EC), LE;
          !EC && LI != LE; LI = LI.increment(EC)) {
-      StringRef VersionText = llvm::sys::path::filename(LI->getName());
+      StringRef VersionText = llvm::sys::path::filename(LI->path());
       auto CandidateVersion = Generic_GCC::GCCVersion::Parse(VersionText);
       if (CandidateVersion.Major == -1)
         continue;

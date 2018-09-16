@@ -11,12 +11,14 @@
 #include "Cancellation.h"
 #include "ProtocolHandlers.h"
 #include "Trace.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/SourceMgr.h"
 #include <istream>
 
@@ -158,6 +160,16 @@ void clangd::call(StringRef Method, json::Value &&Params) {
       });
 }
 
+JSONRPCDispatcher::JSONRPCDispatcher(Handler UnknownHandler)
+    : UnknownHandler(std::move(UnknownHandler)) {
+  registerHandler("$/cancelRequest", [this](const json::Value &Params) {
+    if (auto *O = Params.getAsObject())
+      if (auto *ID = O->get("id"))
+        return cancelRequest(*ID);
+    log("Bad cancellation request: {0}", Params);
+  });
+}
+
 void JSONRPCDispatcher::registerHandler(StringRef Method, Handler H) {
   assert(!Handlers.count(Method) && "Handler already registered!");
   Handlers[Method] = std::move(H);
@@ -180,8 +192,7 @@ static void logIncomingMessage(const llvm::Optional<json::Value> &ID,
   }
 }
 
-bool JSONRPCDispatcher::call(const json::Value &Message,
-                             JSONOutput &Out) const {
+bool JSONRPCDispatcher::call(const json::Value &Message, JSONOutput &Out) {
   // Message must be an object with "jsonrpc":"2.0".
   auto *Object = Message.getAsObject();
   if (!Object || Object->getString("jsonrpc") != Optional<StringRef>("2.0"))
@@ -214,10 +225,45 @@ bool JSONRPCDispatcher::call(const json::Value &Message,
     SPAN_ATTACH(Tracer, "ID", *ID);
   SPAN_ATTACH(Tracer, "Params", Params);
 
+  // Requests with IDs can be canceled by the client. Add cancellation context.
+  llvm::Optional<WithContext> WithCancel;
+  if (ID)
+    WithCancel.emplace(cancelableRequestContext(*ID));
+
   // Stash a reference to the span args, so later calls can add metadata.
   WithContext WithRequestSpan(RequestSpan::stash(Tracer));
   Handler(std::move(Params));
   return true;
+}
+
+// We run cancelable requests in a context that does two things:
+//  - allows cancellation using RequestCancelers[ID]
+//  - cleans up the entry in RequestCancelers when it's no longer needed
+// If a client reuses an ID, the last one wins and the first cannot be canceled.
+Context JSONRPCDispatcher::cancelableRequestContext(const json::Value &ID) {
+  auto Task = cancelableTask();
+  auto StrID = llvm::to_string(ID);  // JSON-serialize ID for map key.
+  auto Cookie = NextRequestCookie++; // No lock, only called on main thread.
+  {
+    std::lock_guard<std::mutex> Lock(RequestCancelersMutex);
+    RequestCancelers[StrID] = {std::move(Task.second), Cookie};
+  }
+  // When the request ends, we can clean up the entry we just added.
+  // The cookie lets us check that it hasn't been overwritten due to ID reuse.
+  return Task.first.derive(make_scope_exit([this, StrID, Cookie] {
+    std::lock_guard<std::mutex> Lock(RequestCancelersMutex);
+    auto It = RequestCancelers.find(StrID);
+    if (It != RequestCancelers.end() && It->second.second == Cookie)
+      RequestCancelers.erase(It);
+  }));
+}
+
+void JSONRPCDispatcher::cancelRequest(const json::Value &ID) {
+  auto StrID = llvm::to_string(ID);
+  std::lock_guard<std::mutex> Lock(RequestCancelersMutex);
+  auto It = RequestCancelers.find(StrID);
+  if (It != RequestCancelers.end())
+    It->second.first(); // Invoke the canceler.
 }
 
 // Tries to read a line up to and including \n.

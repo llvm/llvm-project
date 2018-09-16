@@ -4,10 +4,12 @@
 void *__purecall = 0;
 
 void __cdecl operator delete(void *,unsigned int) {}
+void __cdecl operator delete(void *,unsigned __int64) {}
 
 struct FooStruct { };                      // LF_STRUCTURE
 
 class FooClass {                           // LF_CLASS
+public:
                                            // LF_FIELDLIST
   enum NestedEnum {                        // LF_ENUM
                                            // LF_NESTTYPE
@@ -50,6 +52,15 @@ union TheUnion {
 
 int SomeArray[7] = {1, 2, 3, 4, 5, 6, 7};   // LF_ARRAY
 
+template<typename T>
+void Reference(T &t) { }
+
+const volatile FooStruct FS;             // LF_MODIFIER with struct
+const volatile FooClass FC;              // LF_MODIFIER with class
+const volatile TheUnion TU;              // LF_MODIFIER with union
+const volatile FooClass::NestedEnum FCNE = FooClass::A;  // LF_MODIFIER with enum
+
+
 int main(int argc, char **argv) {           // LF_PROCEDURE
   const int X = 7;                          // LF_MODIFIER
 
@@ -59,5 +70,9 @@ int main(int argc, char **argv) {           // LF_PROCEDURE
   VInherit VInheritInstance;
   IVInherit IVInheritInstance;
   TheUnion UnionInstance;
+  Reference(FS);             // LF_MODIFIER with struct
+  Reference(FC);              // LF_MODIFIER with class
+  Reference(TU);              // LF_MODIFIER with union
+  Reference(FCNE);  // LF_MODIFIER with enum
   return SomeArray[argc];
 }

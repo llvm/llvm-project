@@ -30,6 +30,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/LineIterator.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -320,6 +321,21 @@ ErrorOr<StringRef> SampleProfileReaderBinary::readString() {
 }
 
 template <typename T>
+ErrorOr<T> SampleProfileReaderBinary::readUnencodedNumber() {
+  std::error_code EC;
+
+  if (Data + sizeof(T) > End) {
+    EC = sampleprof_error::truncated;
+    reportError(0, EC.message());
+    return EC;
+  }
+
+  using namespace support;
+  T Val = endian::readNext<T, little, unaligned>(Data);
+  return Val;
+}
+
+template <typename T>
 inline ErrorOr<uint32_t> SampleProfileReaderBinary::readStringIndex(T &Table) {
   std::error_code EC;
   auto Idx = readNumber<uint32_t>();
@@ -423,26 +439,48 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
   return sampleprof_error::success;
 }
 
+std::error_code SampleProfileReaderBinary::readFuncProfile() {
+  auto NumHeadSamples = readNumber<uint64_t>();
+  if (std::error_code EC = NumHeadSamples.getError())
+    return EC;
+
+  auto FName(readStringFromTable());
+  if (std::error_code EC = FName.getError())
+    return EC;
+
+  Profiles[*FName] = FunctionSamples();
+  FunctionSamples &FProfile = Profiles[*FName];
+  FProfile.setName(*FName);
+
+  FProfile.addHeadSamples(*NumHeadSamples);
+
+  if (std::error_code EC = readProfile(FProfile))
+    return EC;
+  return sampleprof_error::success;
+}
+
 std::error_code SampleProfileReaderBinary::read() {
   while (!at_eof()) {
-    auto NumHeadSamples = readNumber<uint64_t>();
-    if (std::error_code EC = NumHeadSamples.getError())
-      return EC;
-
-    auto FName(readStringFromTable());
-    if (std::error_code EC = FName.getError())
-      return EC;
-
-    Profiles[*FName] = FunctionSamples();
-    FunctionSamples &FProfile = Profiles[*FName];
-    FProfile.setName(*FName);
-
-    FProfile.addHeadSamples(*NumHeadSamples);
-
-    if (std::error_code EC = readProfile(FProfile))
+    if (std::error_code EC = readFuncProfile())
       return EC;
   }
 
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderCompactBinary::read() {
+  for (auto Name : FuncsToUse) {
+    auto GUID = std::to_string(MD5Hash(Name));
+    auto iter = FuncOffsetTable.find(StringRef(GUID));
+    if (iter == FuncOffsetTable.end())
+      continue;
+    const uint8_t *SavedData = Data;
+    Data = reinterpret_cast<const uint8_t *>(Buffer->getBufferStart()) +
+           iter->second;
+    if (std::error_code EC = readFuncProfile())
+      return EC;
+    Data = SavedData;
+  }
   return sampleprof_error::success;
 }
 
@@ -512,6 +550,53 @@ std::error_code SampleProfileReaderBinary::readHeader() {
   if (std::error_code EC = readNameTable())
     return EC;
   return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderCompactBinary::readHeader() {
+  SampleProfileReaderBinary::readHeader();
+  if (std::error_code EC = readFuncOffsetTable())
+    return EC;
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderCompactBinary::readFuncOffsetTable() {
+  auto TableOffset = readUnencodedNumber<uint64_t>();
+  if (std::error_code EC = TableOffset.getError())
+    return EC;
+
+  const uint8_t *SavedData = Data;
+  const uint8_t *TableStart =
+      reinterpret_cast<const uint8_t *>(Buffer->getBufferStart()) +
+      *TableOffset;
+  Data = TableStart;
+
+  auto Size = readNumber<uint64_t>();
+  if (std::error_code EC = Size.getError())
+    return EC;
+
+  FuncOffsetTable.reserve(*Size);
+  for (uint32_t I = 0; I < *Size; ++I) {
+    auto FName(readStringFromTable());
+    if (std::error_code EC = FName.getError())
+      return EC;
+
+    auto Offset = readNumber<uint64_t>();
+    if (std::error_code EC = Offset.getError())
+      return EC;
+
+    FuncOffsetTable[*FName] = *Offset;
+  }
+  End = TableStart;
+  Data = SavedData;
+  return sampleprof_error::success;
+}
+
+void SampleProfileReaderCompactBinary::collectFuncsToUse(const Module &M) {
+  FuncsToUse.clear();
+  for (auto &F : M) {
+    StringRef Fname = F.getName().split('.').first;
+    FuncsToUse.insert(Fname);
+  }
 }
 
 std::error_code SampleProfileReaderBinary::readSummaryEntry(

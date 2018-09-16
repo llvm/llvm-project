@@ -38,6 +38,8 @@ namespace lldb {
 
         size_t GetSize() const;
 
+        bool GetKeys(lldb::SBStringList &keys) const;
+
         lldb::SBStructuredData GetValueForKey(const char *key) const;
 
         lldb::SBStructuredData GetItemAtIndex(size_t idx) const;

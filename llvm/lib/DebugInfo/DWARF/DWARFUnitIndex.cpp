@@ -166,7 +166,7 @@ const DWARFUnitIndex::Entry *
 DWARFUnitIndex::getFromOffset(uint32_t Offset) const {
   if (OffsetLookup.empty()) {
     for (uint32_t i = 0; i != Header.NumBuckets; ++i)
-      if (const auto &Contribs = Rows[i].Contributions)
+      if (Rows[i].Contributions)
         OffsetLookup.push_back(&Rows[i]);
     llvm::sort(OffsetLookup, [&](Entry *E1, Entry *E2) {
       return E1->Contributions[InfoColumn].Offset <

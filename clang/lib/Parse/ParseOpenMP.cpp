@@ -353,8 +353,14 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
         // Check if initializer is omp_priv <init_expr> or something else.
         if (Tok.is(tok::identifier) &&
             Tok.getIdentifierInfo()->isStr("omp_priv")) {
-          ConsumeToken();
-          ParseOpenMPReductionInitializerForDecl(OmpPrivParm);
+          if (Actions.getLangOpts().CPlusPlus) {
+            InitializerResult = Actions.ActOnFinishFullExpr(
+                ParseAssignmentExpression().get(), D->getLocation(),
+                /*DiscardedValue=*/true);
+          } else {
+            ConsumeToken();
+            ParseOpenMPReductionInitializerForDecl(OmpPrivParm);
+          }
         } else {
           InitializerResult = Actions.ActOnFinishFullExpr(
               ParseAssignmentExpression().get(), D->getLocation(),

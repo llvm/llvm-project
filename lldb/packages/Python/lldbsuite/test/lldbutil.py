@@ -330,6 +330,20 @@ def sort_stopped_threads(process,
 # Utility functions for setting breakpoints
 # ==================================================
 
+def run_break_set_by_script(
+        test,
+        class_name,
+        extra_options=None,
+        num_expected_locations=1):
+    """Set a scripted breakpoint.  Check that it got the right number of locations."""
+    test.assertTrue(class_name is not None, "Must pass in a class name.")
+    command = "breakpoint set -P " + class_name
+    if extra_options is not None:
+        command += " " + extra_options
+
+    break_results = run_break_set_command(test, command)
+    check_breakpoint_result(test, break_results, num_locations=num_expected_locations)
+    return get_bpno_from_match(break_results)
 
 def run_break_set_by_file_and_line(
         test,
@@ -737,7 +751,7 @@ def get_crashed_threads(test, process):
 
 # Helper functions for run_to_{source,name}_breakpoint:
 
-def run_to_breakpoint_make_target(test, exe_name, in_cwd):
+def run_to_breakpoint_make_target(test, exe_name = "a.out", in_cwd = True):
     if in_cwd:
         exe = test.getBuildArtifact(exe_name)
 
@@ -746,7 +760,7 @@ def run_to_breakpoint_make_target(test, exe_name, in_cwd):
     test.assertTrue(target, "Target: %s is not valid."%(exe_name))
     return target
 
-def run_to_breakpoint_do_run(test, target, bkpt, launch_info):
+def run_to_breakpoint_do_run(test, target, bkpt, launch_info = None):
 
     # Launch the process, and do not stop at the entry point.
     if not launch_info:

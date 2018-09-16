@@ -12763,6 +12763,11 @@ void Sema::ActOnOpenMPDeclareReductionCombinerStart(Scope *S, Decl *D) {
     DRD->addDecl(OmpInParm);
     DRD->addDecl(OmpOutParm);
   }
+  Expr *InE =
+      ::buildDeclRefExpr(*this, OmpInParm, ReductionType, D->getLocation());
+  Expr *OutE =
+      ::buildDeclRefExpr(*this, OmpOutParm, ReductionType, D->getLocation());
+  DRD->setCombinerData(InE, OutE);
 }
 
 void Sema::ActOnOpenMPDeclareReductionCombinerEnd(Decl *D, Expr *Combiner) {
@@ -12818,6 +12823,11 @@ VarDecl *Sema::ActOnOpenMPDeclareReductionInitializerStart(Scope *S, Decl *D) {
     DRD->addDecl(OmpPrivParm);
     DRD->addDecl(OmpOrigParm);
   }
+  Expr *OrigE =
+      ::buildDeclRefExpr(*this, OmpOrigParm, ReductionType, D->getLocation());
+  Expr *PrivE =
+      ::buildDeclRefExpr(*this, OmpPrivParm, ReductionType, D->getLocation());
+  DRD->setInitializerData(OrigE, PrivE);
   return OmpPrivParm;
 }
 

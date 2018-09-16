@@ -49,7 +49,8 @@ enum class sampleprof_error {
   unsupported_writing_format,
   truncated_name_table,
   not_implemented,
-  counter_overflow
+  counter_overflow,
+  ostream_seek_unsupported
 };
 
 inline std::error_code make_error_code(sampleprof_error E) {

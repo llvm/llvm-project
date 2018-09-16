@@ -25,7 +25,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
@@ -267,24 +266,29 @@ static void dumpAddrSection(raw_ostream &OS, DWARFDataExtractor &AddrData,
   }
 }
 
-// Dump the .debug_rnglists or .debug_rnglists.dwo section (DWARF v5).
-static void dumpRnglistsSection(raw_ostream &OS,
-                                DWARFDataExtractor &rnglistData,
-                                DIDumpOptions DumpOpts) {
+// Dump a section that contains a sequence of tables of lists, such as range
+// or location list tables. In DWARF v5 we expect to find properly formatted
+// tables with headers. In DWARF v4 and earlier we simply expect a sequence of
+// lists, which we treat, mutatis mutandis, like DWARF v5 tables.
+template <typename ListTable>
+static void dumpListSection(raw_ostream &OS, DWARFContext *C,
+                            StringRef SectionName, uint16_t MaxVersion,
+                            DWARFDataExtractor &ListData,
+                            DIDumpOptions DumpOpts, bool isDWO = false) {
   uint32_t Offset = 0;
-  while (rnglistData.isValidOffset(Offset)) {
-    llvm::DWARFDebugRnglistTable Rnglists;
-    uint32_t TableOffset = Offset;
-    if (Error Err = Rnglists.extract(rnglistData, &Offset)) {
+  while (ListData.isValidOffset(Offset)) {
+    ListTable Table(C, SectionName, isDWO);
+    if (Error Err = Table.extract(ListData, MaxVersion, &Offset)) {
       WithColor::error() << toString(std::move(Err)) << '\n';
-      uint64_t Length = Rnglists.length();
-      // Keep going after an error, if we can, assuming that the length field
-      // could be read. If it couldn't, stop reading the section.
-      if (Length == 0)
+      // If table extraction set Offset to 0, it indicates that we cannot
+      // continue to read the section.
+      if (Offset == 0)
         break;
-      Offset = TableOffset + Length;
+      // In DWARF v4 and earlier, dump as much of the lists as we can.
+      if (MaxVersion < 5)
+        Table.dump(OS, DumpOpts);
     } else {
-      Rnglists.dump(OS, DumpOpts);
+      Table.dump(OS, DumpOpts);
     }
   }
 }
@@ -484,29 +488,25 @@ void DWARFContext::dump(
     uint8_t savedAddressByteSize = getCUAddrSize();
     DWARFDataExtractor rangesData(*DObj, DObj->getRangeSection(),
                                   isLittleEndian(), savedAddressByteSize);
-    uint32_t offset = 0;
-    DWARFDebugRangeList rangeList;
-    while (rangesData.isValidOffset(offset)) {
-      if (Error E = rangeList.extract(rangesData, &offset)) {
-        WithColor::error() << toString(std::move(E)) << '\n';
-        break;
-      }
-      rangeList.dump(OS);
-    }
+    dumpListSection<DWARFDebugRnglistTable>(
+        OS, this, ".debug_ranges", /* MaxVersion = */ 4, rangesData, DumpOpts);
   }
 
   if (shouldDump(Explicit, ".debug_rnglists", DIDT_ID_DebugRnglists,
                  DObj->getRnglistsSection().Data)) {
     DWARFDataExtractor RnglistData(*DObj, DObj->getRnglistsSection(),
-                                   isLittleEndian(), 0);
-    dumpRnglistsSection(OS, RnglistData, DumpOpts);
+                                   isLittleEndian(), getCUAddrSize());
+    dumpListSection<DWARFDebugRnglistTable>(
+        OS, this, ".debug_rnglists", getMaxVersion(5), RnglistData, DumpOpts);
   }
 
   if (shouldDump(ExplicitDWO, ".debug_rnglists.dwo", DIDT_ID_DebugRnglists,
                  DObj->getRnglistsDWOSection().Data)) {
     DWARFDataExtractor RnglistData(*DObj, DObj->getRnglistsDWOSection(),
-                                   isLittleEndian(), 0);
-    dumpRnglistsSection(OS, RnglistData, DumpOpts);
+                                   isLittleEndian(), getCUAddrSize());
+    dumpListSection<DWARFDebugRnglistTable>(OS, this, ".debug_rnglists.dwo",
+                                            getMaxVersion(5), RnglistData,
+                                            DumpOpts);
   }
 
   if (shouldDump(Explicit, ".debug_pubnames", DIDT_ID_DebugPubnames,

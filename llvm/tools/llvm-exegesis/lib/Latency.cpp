@@ -29,9 +29,9 @@ static bool hasMemoryOperand(const llvm::MCOperandInfo &OpInfo) {
   return OpInfo.OperandType == llvm::MCOI::OPERAND_MEMORY;
 }
 
-LatencyBenchmarkRunner::~LatencyBenchmarkRunner() = default;
+LatencySnippetGenerator::~LatencySnippetGenerator() = default;
 
-llvm::Error LatencyBenchmarkRunner::isInfeasible(
+llvm::Error LatencySnippetGenerator::isInfeasible(
     const llvm::MCInstrDesc &MCInstrDesc) const {
   if (llvm::any_of(MCInstrDesc.operands(), hasUnknownOperand))
     return llvm::make_error<BenchmarkFailure>(
@@ -43,7 +43,7 @@ llvm::Error LatencyBenchmarkRunner::isInfeasible(
 }
 
 llvm::Expected<CodeTemplate>
-LatencyBenchmarkRunner::generateTwoInstructionPrototype(
+LatencySnippetGenerator::generateTwoInstructionPrototype(
     const Instruction &Instr) const {
   std::vector<unsigned> Opcodes;
   Opcodes.resize(State.getInstrInfo().getNumOpcodes());
@@ -80,7 +80,7 @@ LatencyBenchmarkRunner::generateTwoInstructionPrototype(
 }
 
 llvm::Expected<CodeTemplate>
-LatencyBenchmarkRunner::generateCodeTemplate(unsigned Opcode) const {
+LatencySnippetGenerator::generateCodeTemplate(unsigned Opcode) const {
   const auto &InstrDesc = State.getInstrInfo().get(Opcode);
   if (auto E = isInfeasible(InstrDesc))
     return std::move(E);
@@ -104,6 +104,8 @@ const char *LatencyBenchmarkRunner::getCounterName() const {
     llvm::report_fatal_error("sched model does not define a cycle counter");
   return CounterName;
 }
+
+LatencyBenchmarkRunner::~LatencyBenchmarkRunner() = default;
 
 std::vector<BenchmarkMeasure>
 LatencyBenchmarkRunner::runMeasurements(const ExecutableFunction &Function,

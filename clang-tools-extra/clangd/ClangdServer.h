@@ -45,15 +45,25 @@ public:
                                   std::vector<Diag> Diagnostics) = 0;
 };
 
-/// Provides API to manage ASTs for a collection of C++ files and request
-/// various language features.
-/// Currently supports async diagnostics, code completion, formatting and goto
-/// definition.
+/// Manages a collection of source files and derived data (ASTs, indexes),
+/// and provides language-aware features such as code completion.
+///
+/// The primary client is ClangdLSPServer which exposes these features via
+/// the Language Server protocol. ClangdServer may also be embedded directly,
+/// though its API is not stable over time.
+///
+/// ClangdServer should be used from a single thread. Many potentially-slow
+/// operations have asynchronous APIs and deliver their results on another
+/// thread.
+/// Such operations support cancellation: if the caller sets up a cancelable
+/// context, many operations will notice cancellation and fail early.
+/// (ClangdLSPServer uses this to implement $/cancelRequest).
 class ClangdServer {
 public:
   struct Options {
     /// To process requests asynchronously, ClangdServer spawns worker threads.
-    /// If 0, all requests are processed on the calling thread.
+    /// If this is zero, no threads are spawned. All work is done on the calling
+    /// thread, and callbacks are invoked before "async" functions return.
     unsigned AsyncThreadsCount = getDefaultAsyncThreadsCount();
 
     /// AST caching policy. The default is to keep up to 3 ASTs in memory.
@@ -125,9 +135,9 @@ public:
   /// while returned future is not yet ready.
   /// A version of `codeComplete` that runs \p Callback on the processing thread
   /// when codeComplete results become available.
-  TaskHandle codeComplete(PathRef File, Position Pos,
-                          const clangd::CodeCompleteOptions &Opts,
-                          Callback<CodeCompleteResult> CB);
+  void codeComplete(PathRef File, Position Pos,
+                    const clangd::CodeCompleteOptions &Opts,
+                    Callback<CodeCompleteResult> CB);
 
   /// Provide signature help for \p File at \p Pos.  This method should only be
   /// called for tracked files.

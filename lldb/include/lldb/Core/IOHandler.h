@@ -205,7 +205,7 @@ public:
   virtual int IOHandlerComplete(IOHandler &io_handler, const char *current_line,
                                 const char *cursor, const char *last_char,
                                 int skip_first_n_matches, int max_matches,
-                                StringList &matches);
+                                StringList &matches, StringList &descriptions);
 
   virtual const char *IOHandlerGetFixIndentationCharacters() { return nullptr; }
 
@@ -430,7 +430,8 @@ private:
   static int AutoCompleteCallback(const char *current_line, const char *cursor,
                                   const char *last_char,
                                   int skip_first_n_matches, int max_matches,
-                                  StringList &matches, void *baton);
+                                  StringList &matches, StringList &descriptions,
+                                  void *baton);
 #endif
 
 protected:
@@ -464,7 +465,7 @@ public:
   int IOHandlerComplete(IOHandler &io_handler, const char *current_line,
                         const char *cursor, const char *last_char,
                         int skip_first_n_matches, int max_matches,
-                        StringList &matches) override;
+                        StringList &matches, StringList &descriptions) override;
 
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override;

@@ -22,11 +22,11 @@ add_lld_library(lldELF
   Arch/X86.cpp
   Arch/X86_64.cpp
   CallGraphSort.cpp
+  DWARF.cpp
   Driver.cpp
   DriverUtils.cpp
   EhFrame.cpp
   Filesystem.cpp
-  GdbIndex.cpp
   ICF.cpp
   InputFiles.cpp
   InputSection.cpp

@@ -48,6 +48,12 @@ protected:
   /// @name Implementation Action Interface
   /// @{
 
+  /// Prepare to execute the action on the given CompilerInstance.
+  ///
+  /// This is called before executing the action on any inputs, and can modify
+  /// the configuration as needed (including adjusting the input list).
+  virtual bool PrepareToExecuteAction(CompilerInstance &CI) { return true; }
+
   /// Create the AST consumer object for this action, if supported.
   ///
   /// This routine is called as part of BeginSourceFile(), which will
@@ -130,9 +136,16 @@ public:
     return CurrentInput;
   }
 
-  const StringRef getCurrentFile() const {
+  StringRef getCurrentFile() const {
     assert(!CurrentInput.isEmpty() && "No current file!");
     return CurrentInput.getFile();
+  }
+
+  StringRef getCurrentFileOrBufferName() const {
+    assert(!CurrentInput.isEmpty() && "No current file!");
+    return CurrentInput.isFile()
+               ? CurrentInput.getFile()
+               : CurrentInput.getBuffer()->getBufferIdentifier();
   }
 
   InputKind getCurrentFileKind() const {
@@ -189,6 +202,11 @@ public:
   /// @}
   /// @name Public Action Interface
   /// @{
+
+  /// Prepare the action to execute on the given compiler instance.
+  bool PrepareToExecute(CompilerInstance &CI) {
+    return PrepareToExecuteAction(CI);
+  }
 
   /// Prepare the action for processing the input file \p Input.
   ///

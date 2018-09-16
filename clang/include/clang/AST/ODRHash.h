@@ -91,6 +91,9 @@ public:
   void AddBoolean(bool value);
 
   static bool isWhitelistedDecl(const Decl* D, const DeclContext *Parent);
+
+private:
+  void AddDeclarationNameImpl(DeclarationName Name);
 };
 
 }  // end namespace clang

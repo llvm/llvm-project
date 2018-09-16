@@ -781,21 +781,53 @@ void fVirtualDiamondInheritanceTest3() {
 // Dynamic type test.
 //===----------------------------------------------------------------------===//
 
-struct DynTBase {};
-struct DynTDerived : DynTBase {
-  // TODO: we'd expect the note: {{uninitialized field 'this->x'}}
-  int x; // no-note
+struct DynTBase1 {};
+struct DynTDerived1 : DynTBase1 {
+  int y; // expected-note{{uninitialized field 'static_cast<struct DynTDerived1 *>(this->bptr)->y'}}
 };
 
-struct DynamicTypeTest {
-  DynTBase *bptr;
+struct DynamicTypeTest1 {
+  DynTBase1 *bptr;
   int i = 0;
 
-  // TODO: we'd expect the warning: {{1 uninitialized field}}
-  DynamicTypeTest(DynTBase *bptr) : bptr(bptr) {} // no-warning
+  DynamicTypeTest1(DynTBase1 *bptr) : bptr(bptr) {} // expected-warning{{1 uninitialized field}}
 };
 
-void f() {
-  DynTDerived d;
-  DynamicTypeTest t(&d);
+void fDynamicTypeTest1() {
+  DynTDerived1 d;
+  DynamicTypeTest1 t(&d);
 };
+
+struct DynTBase2 {
+  int x; // expected-note{{uninitialized field 'static_cast<struct DynTDerived2 *>(this->bptr)->DynTBase2::x'}}
+};
+struct DynTDerived2 : DynTBase2 {
+  int y; // expected-note{{uninitialized field 'static_cast<struct DynTDerived2 *>(this->bptr)->y'}}
+};
+
+struct DynamicTypeTest2 {
+  DynTBase2 *bptr;
+  int i = 0;
+
+  DynamicTypeTest2(DynTBase2 *bptr) : bptr(bptr) {} // expected-warning{{2 uninitialized fields}}
+};
+
+void fDynamicTypeTest2() {
+  DynTDerived2 d;
+  DynamicTypeTest2 t(&d);
+}
+
+struct SymbolicSuperRegionBase {
+  SymbolicSuperRegionBase() {}
+};
+
+struct SymbolicSuperRegionDerived : SymbolicSuperRegionBase {
+  SymbolicSuperRegionBase *bptr; // no-crash
+  SymbolicSuperRegionDerived(SymbolicSuperRegionBase *bptr) : bptr(bptr) {}
+};
+
+SymbolicSuperRegionDerived *getSymbolicRegion();
+
+void fSymbolicSuperRegionTest() {
+  SymbolicSuperRegionDerived test(getSymbolicRegion());
+}
