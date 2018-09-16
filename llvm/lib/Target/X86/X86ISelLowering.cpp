@@ -16737,13 +16737,11 @@ static SDValue LowerUINT_TO_FP_i64(SDValue Op, SelectionDAG &DAG,
   SDValue Result;
 
   if (Subtarget.hasSSE3()) {
-    // FIXME: The 'haddpd' instruction may be slower than 'movhlps + addsd'.
+    // FIXME: The 'haddpd' instruction may be slower than 'shuffle + addsd'.
     Result = DAG.getNode(X86ISD::FHADD, dl, MVT::v2f64, Sub, Sub);
   } else {
-    SDValue S2F = DAG.getBitcast(MVT::v4i32, Sub);
-    SDValue Shuffle = DAG.getVectorShuffle(MVT::v4i32, dl, S2F, S2F, {2,3,0,1});
-    Result = DAG.getNode(ISD::FADD, dl, MVT::v2f64,
-                         DAG.getBitcast(MVT::v2f64, Shuffle), Sub);
+    SDValue Shuffle = DAG.getVectorShuffle(MVT::v2f64, dl, Sub, Sub, {1,-1});
+    Result = DAG.getNode(ISD::FADD, dl, MVT::v2f64, Shuffle, Sub);
   }
 
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::f64, Result,
@@ -38810,6 +38808,32 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
   if (TLI.SimplifyDemandedBits(Src, DemandedMask, Known, TLO)) {
     DCI.CommitTargetLoweringOpt(TLO);
     return SDValue(N, 0);
+  }
+
+  // Combine (movmsk (setne (and X, (1 << C)), 0)) -> (movmsk (X << C)).
+  // Only do this when the setcc input and output types are the same and the
+  // setcc and the 'and' node have a single use.
+  // FIXME: Support i8 shifts. The lowering produces an extra and.
+  // FIXME: Support 256-bits with AVX1. The movmsk is split, but the and isn't.
+  APInt SplatVal;
+  if (Src.getOpcode() == ISD::SETCC && Src.hasOneUse() &&
+      Src.getOperand(0).getValueType() == Src.getValueType() &&
+      Src.getValueType().getScalarSizeInBits() >= 32 &&
+      cast<CondCodeSDNode>(Src.getOperand(2))->get() == ISD::SETNE &&
+      ISD::isBuildVectorAllZeros(Src.getOperand(1).getNode())) {
+    SDValue In = Src.getOperand(0);
+    if (In.getOpcode() == ISD::AND && In.hasOneUse() &&
+        ISD::isConstantSplatVector(In.getOperand(1).getNode(), SplatVal) &&
+        SplatVal.isPowerOf2()) {
+      MVT VT = Src.getSimpleValueType();
+      unsigned BitWidth = VT.getScalarSizeInBits();
+      unsigned ShAmt = BitWidth - SplatVal.logBase2() - 1;
+      SDLoc DL(Src.getOperand(0));
+      SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, In.getOperand(0),
+                                DAG.getConstant(ShAmt, DL, VT));
+      SDValue Cast = DAG.getBitcast(SrcVT, Shl);
+      return DAG.getNode(X86ISD::MOVMSK, SDLoc(N), N->getValueType(0), Cast);
+    }
   }
 
   return SDValue();

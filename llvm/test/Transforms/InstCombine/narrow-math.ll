@@ -491,5 +491,140 @@ define i64 @test12(i32 %V) {
   ret i64 %add
 }
 
+define i64 @test13(i32 %V) {
+; CHECK-LABEL: @test13(
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range !2
+; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @callee(), !range !3
+; CHECK-NEXT:    [[SUBCONV:%.*]] = sub nsw i32 [[CALL1]], [[CALL2]]
+; CHECK-NEXT:    [[SUB:%.*]] = sext i32 [[SUBCONV]] to i64
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+  %call1 = call i32 @callee(), !range !2
+  %call2 = call i32 @callee(), !range !3
+  %sext1 = sext i32 %call1 to i64
+  %sext2 = sext i32 %call2 to i64
+  %sub = sub i64 %sext1, %sext2
+  ret i64 %sub
+}
+
+define i64 @test14(i32 %V) {
+; CHECK-LABEL: @test14(
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range !2
+; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @callee(), !range !0
+; CHECK-NEXT:    [[SUBCONV:%.*]] = sub nuw nsw i32 [[CALL1]], [[CALL2]]
+; CHECK-NEXT:    [[SUB:%.*]] = zext i32 [[SUBCONV]] to i64
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+  %call1 = call i32 @callee(), !range !2
+  %call2 = call i32 @callee(), !range !0
+  %zext1 = zext i32 %call1 to i64
+  %zext2 = zext i32 %call2 to i64
+  %sub = sub i64 %zext1, %zext2
+  ret i64 %sub
+}
+
+define i64 @test15(i32 %V) {
+; CHECK-LABEL: @test15(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i32 [[V:%.*]], 1
+; CHECK-NEXT:    [[SUBCONV:%.*]] = sub nsw i32 8, [[ASHR]]
+; CHECK-NEXT:    [[SUB:%.*]] = sext i32 [[SUBCONV]] to i64
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+  %ashr = ashr i32 %V, 1
+  %sext = sext i32 %ashr to i64
+  %sub = sub i64 8, %sext
+  ret i64 %sub
+}
+
+define <2 x i64> @test15vec(<2 x i32> %V) {
+; CHECK-LABEL: @test15vec(
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[V:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[SUBCONV:%.*]] = sub nsw <2 x i32> <i32 8, i32 8>, [[ASHR]]
+; CHECK-NEXT:    [[SUB:%.*]] = sext <2 x i32> [[SUBCONV]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[SUB]]
+;
+  %ashr = ashr <2 x i32> %V, <i32 1, i32 1>
+  %sext = sext <2 x i32> %ashr to <2 x i64>
+  %sub = sub <2 x i64> <i64 8, i64 8>, %sext
+  ret <2 x i64> %sub
+}
+
+define i64 @test16(i32 %V) {
+; CHECK-LABEL: @test16(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[V:%.*]], 1
+; CHECK-NEXT:    [[SUBCONV:%.*]] = sub nuw i32 -2, [[LSHR]]
+; CHECK-NEXT:    [[SUB:%.*]] = zext i32 [[SUBCONV]] to i64
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+  %lshr = lshr i32 %V, 1
+  %zext = zext i32 %lshr to i64
+  %sub = sub i64 4294967294, %zext
+  ret i64 %sub
+}
+
+define <2 x i64> @test16vec(<2 x i32> %V) {
+; CHECK-LABEL: @test16vec(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[V:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[SUBCONV:%.*]] = sub nuw <2 x i32> <i32 -2, i32 -2>, [[LSHR]]
+; CHECK-NEXT:    [[SUB:%.*]] = zext <2 x i32> [[SUBCONV]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[SUB]]
+;
+  %lshr = lshr <2 x i32> %V, <i32 1, i32 1>
+  %zext = zext <2 x i32> %lshr to <2 x i64>
+  %sub = sub <2 x i64> <i64 4294967294, i64 4294967294>, %zext
+  ret <2 x i64> %sub
+}
+
+; Negative test. Both have the same range so we can't guarantee the subtract
+; won't wrap.
+define i64 @test17(i32 %V) {
+; CHECK-LABEL: @test17(
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range !0
+; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @callee(), !range !0
+; CHECK-NEXT:    [[SEXT1:%.*]] = zext i32 [[CALL1]] to i64
+; CHECK-NEXT:    [[SEXT2:%.*]] = zext i32 [[CALL2]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i64 [[SEXT1]], [[SEXT2]]
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+  %call1 = call i32 @callee(), !range !0
+  %call2 = call i32 @callee(), !range !0
+  %sext1 = zext i32 %call1 to i64
+  %sext2 = zext i32 %call2 to i64
+  %sub = sub i64 %sext1, %sext2
+  ret i64 %sub
+}
+
+; Negative test. LHS is large positive 32-bit number. Range of callee can
+; cause overflow.
+define i64 @test18(i32 %V) {
+; CHECK-LABEL: @test18(
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range !1
+; CHECK-NEXT:    [[SEXT1:%.*]] = sext i32 [[CALL1]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i64 2147481648, [[SEXT1]]
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+  %call1 = call i32 @callee(), !range !1
+  %sext1 = sext i32 %call1 to i64
+  %sub = sub i64 2147481648, %sext1
+  ret i64 %sub
+}
+
+; Negative test. LHS is large negative 32-bit number. Range of callee can
+; cause overflow.
+define i64 @test19(i32 %V) {
+; CHECK-LABEL: @test19(
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range !0
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[CALL1]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i64 -2147481648, [[TMP1]]
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+  %call1 = call i32 @callee(), !range !0
+  %sext1 = sext i32 %call1 to i64
+  %sub = sub i64 -2147481648, %sext1
+  ret i64 %sub
+}
+
 !0 = !{ i32 0, i32 2000 }
 !1 = !{ i32 -2000, i32 0 }
+!2 = !{ i32 -512, i32 -255 }
+!3 = !{ i32 -128, i32 0 }

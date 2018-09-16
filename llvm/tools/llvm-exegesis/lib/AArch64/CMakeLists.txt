@@ -3,15 +3,16 @@ include_directories(
   ${LLVM_BINARY_DIR}/lib/Target/AArch64
   )
 
-add_llvm_library(LLVMExegesisAArch64
-  Target.cpp
-
+add_library(LLVMExegesisAArch64
   STATIC
+  Target.cpp
+  )
 
-  DEPENDS
-  intrinsics_gen
-
-  LINK_COMPONENTS
+llvm_update_compile_flags(LLVMExegesisAArch64)
+llvm_map_components_to_libnames(libs
   AArch64
   Exegesis
   )
+
+target_link_libraries(LLVMExegesisAArch64 ${libs})
+set_target_properties(LLVMExegesisAArch64 PROPERTIES FOLDER "Libraries")
