@@ -26,12 +26,14 @@ public:
   ExprMutationAnalyzer(const Stmt &Stm, ASTContext &Context)
       : Stm(Stm), Context(Context) {}
 
-  bool isMutated(const Decl *Dec) { return findDeclMutation(Dec) != nullptr; }
   bool isMutated(const Expr *Exp) { return findMutation(Exp) != nullptr; }
+  bool isMutated(const Decl *Dec) { return findMutation(Dec) != nullptr; }
   const Stmt *findMutation(const Expr *Exp);
-  const Stmt *findDeclMutation(const Decl *Dec);
+  const Stmt *findMutation(const Decl *Dec);
 
 private:
+  using ResultMap = llvm::DenseMap<const Expr *, const Stmt *>;
+
   bool isUnevaluated(const Expr *Exp);
 
   const Stmt *findExprMutation(ArrayRef<ast_matchers::BoundNodes> Matches);
@@ -50,7 +52,7 @@ private:
   llvm::DenseMap<const FunctionDecl *,
                  std::unique_ptr<FunctionParmMutationAnalyzer>>
       FuncParmAnalyzer;
-  llvm::DenseMap<const Expr *, const Stmt *> Results;
+  ResultMap Results;
 };
 
 // A convenient wrapper around ExprMutationAnalyzer for analyzing function

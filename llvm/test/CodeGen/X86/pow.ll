@@ -7,6 +7,8 @@ declare <4 x float> @llvm.pow.v4f32(<4 x float>, <4 x float>)
 declare double @llvm.pow.f64(double, double)
 declare <2 x double> @llvm.pow.v2f64(<2 x double>, <2 x double>)
 
+declare x86_fp80 @llvm.pow.f80(x86_fp80, x86_fp80)
+
 define float @pow_f32_one_fourth_fmf(float %x) nounwind {
 ; CHECK-LABEL: pow_f32_one_fourth_fmf:
 ; CHECK:       # %bb.0:
@@ -165,8 +167,7 @@ define <2 x double> @pow_v2f64_one_fourth_not_enough_fmf(<2 x double> %x) nounwi
 define float @pow_f32_one_third_fmf(float %x) nounwind {
 ; CHECK-LABEL: pow_f32_one_third_fmf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    jmp powf # TAILCALL
+; CHECK-NEXT:    jmp cbrtf # TAILCALL
   %one = uitofp i32 1 to float
   %three = uitofp i32 3 to float
   %exp = fdiv float %one, %three
@@ -177,12 +178,53 @@ define float @pow_f32_one_third_fmf(float %x) nounwind {
 define double @pow_f64_one_third_fmf(double %x) nounwind {
 ; CHECK-LABEL: pow_f64_one_third_fmf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    jmp pow # TAILCALL
+; CHECK-NEXT:    jmp cbrt # TAILCALL
   %one = uitofp i32 1 to double
   %three = uitofp i32 3 to double
   %exp = fdiv double %one, %three
   %r = call nsz nnan ninf afn double @llvm.pow.f64(double %x, double %exp)
+  ret double %r
+}
+
+; TODO: We could turn this into cbrtl, but currently we only handle float/double types.
+
+define x86_fp80 @pow_f80_one_third_fmf(x86_fp80 %x) nounwind {
+; CHECK-LABEL: pow_f80_one_third_fmf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subq $40, %rsp
+; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    fldt {{.*}}(%rip)
+; CHECK-NEXT:    fstpt {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    fstpt (%rsp)
+; CHECK-NEXT:    callq powl
+; CHECK-NEXT:    addq $40, %rsp
+; CHECK-NEXT:    retq
+  %one = uitofp i32 1 to x86_fp80
+  %three = uitofp i32 3 to x86_fp80
+  %exp = fdiv x86_fp80 %one, %three
+  %r = call nsz nnan ninf afn x86_fp80 @llvm.pow.f80(x86_fp80 %x, x86_fp80 %exp)
+  ret x86_fp80 %r
+}
+
+; We might want to allow this. The exact hex value for 1/3 as a double is 0x3fd5555555555555.
+
+define double @pow_f64_not_exactly_one_third_fmf(double %x) nounwind {
+; CHECK-LABEL: pow_f64_not_exactly_one_third_fmf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    jmp pow # TAILCALL
+  %r = call nsz nnan ninf afn double @llvm.pow.f64(double %x, double 0x3fd5555555555556)
+  ret double %r
+}
+
+; We require all 4 of nsz, ninf, nnan, afn.
+
+define double @pow_f64_not_enough_fmf(double %x) nounwind {
+; CHECK-LABEL: pow_f64_not_enough_fmf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    jmp pow # TAILCALL
+  %r = call nsz ninf afn double @llvm.pow.f64(double %x, double 0x3fd5555555555555)
   ret double %r
 }
 

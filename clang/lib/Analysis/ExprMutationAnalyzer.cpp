@@ -131,13 +131,13 @@ ExprMutationAnalyzer::findExprMutation(ArrayRef<BoundNodes> Matches) {
 const Stmt *
 ExprMutationAnalyzer::findDeclMutation(ArrayRef<BoundNodes> Matches) {
   for (const auto &DeclNodes : Matches) {
-    if (const Stmt *S = findDeclMutation(DeclNodes.getNodeAs<Decl>("decl")))
+    if (const Stmt *S = findMutation(DeclNodes.getNodeAs<Decl>("decl")))
       return S;
   }
   return nullptr;
 }
 
-const Stmt *ExprMutationAnalyzer::findDeclMutation(const Decl *Dec) {
+const Stmt *ExprMutationAnalyzer::findMutation(const Decl *Dec) {
   const auto Refs = match(
       findAll(declRefExpr(to(equalsNode(Dec))).bind("expr")), Stm, Context);
   for (const auto &RefNodes : Refs) {
@@ -280,15 +280,14 @@ const Stmt *ExprMutationAnalyzer::findReferenceMutation(const Expr *Exp) {
   // Follow non-const reference returned by `operator*()` of move-only classes.
   // These are typically smart pointers with unique ownership so we treat
   // mutation of pointee as mutation of the smart pointer itself.
-  const auto Ref = match(
-      findAll(cxxOperatorCallExpr(
-                  hasOverloadedOperatorName("*"),
-                  callee(cxxMethodDecl(ofClass(isMoveOnly()),
-                                       returns(hasUnqualifiedDesugaredType(
-                                           nonConstReferenceType())))),
-                  argumentCountIs(1), hasArgument(0, equalsNode(Exp)))
-                  .bind("expr")),
-      Stm, Context);
+  const auto Ref =
+      match(findAll(cxxOperatorCallExpr(
+                        hasOverloadedOperatorName("*"),
+                        callee(cxxMethodDecl(ofClass(isMoveOnly()),
+                                             returns(nonConstReferenceType()))),
+                        argumentCountIs(1), hasArgument(0, equalsNode(Exp)))
+                        .bind("expr")),
+            Stm, Context);
   if (const Stmt *S = findExprMutation(Ref))
     return S;
 
@@ -370,7 +369,7 @@ FunctionParmMutationAnalyzer::FunctionParmMutationAnalyzer(
       for (const ParmVarDecl *Parm : Ctor->parameters()) {
         if (Results.find(Parm) != Results.end())
           continue;
-        if (const Stmt *S = InitAnalyzer.findDeclMutation(Parm))
+        if (const Stmt *S = InitAnalyzer.findMutation(Parm))
           Results[Parm] = S;
       }
     }
@@ -383,7 +382,7 @@ FunctionParmMutationAnalyzer::findMutation(const ParmVarDecl *Parm) {
   if (Memoized != Results.end())
     return Memoized->second;
 
-  if (const Stmt *S = BodyAnalyzer.findDeclMutation(Parm))
+  if (const Stmt *S = BodyAnalyzer.findMutation(Parm))
     return Results[Parm] = S;
 
   return Results[Parm] = nullptr;

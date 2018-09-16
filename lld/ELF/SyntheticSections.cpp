@@ -30,6 +30,7 @@
 #include "lld/Common/Threads.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
 #include "llvm/Object/Decompressor.h"
@@ -2338,7 +2339,7 @@ unsigned PltSection::getPltRelocOff() const {
 static uint32_t computeGdbHash(StringRef S) {
   uint32_t H = 0;
   for (uint8_t C : S)
-    H = H * 67 + tolower(C) - 113;
+    H = H * 67 + toLower(C) - 113;
   return H;
 }
 
