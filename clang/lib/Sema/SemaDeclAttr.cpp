@@ -5512,38 +5512,45 @@ static void handleAMDGPUFlatWorkGroupSizeAttr(Sema &S, Decl *D,
                                               const ParsedAttr &AL) {
   uint32_t Min = 0;
   Expr *MinExpr = AL.getArgAsExpr(0);
-  if (!checkUInt32Argument(S, AL, MinExpr, Min))
+  if (MinExpr->isEvaluatable(S.Context) &&
+      !checkUInt32Argument(S, AL, MinExpr, Min))
     return;
 
   uint32_t Max = 0;
   Expr *MaxExpr = AL.getArgAsExpr(1);
-  if (!checkUInt32Argument(S, AL, MaxExpr, Max))
+  if (MaxExpr->isEvaluatable(S.Context) &&
+      !checkUInt32Argument(S, AL, MaxExpr, Max))
     return;
 
-  if (Min == 0 && Max != 0) {
-    S.Diag(AL.getLoc(), diag::err_attribute_argument_invalid) << AL << 0;
-    return;
-  }
-  if (Min > Max) {
-    S.Diag(AL.getLoc(), diag::err_attribute_argument_invalid) << AL << 1;
-    return;
+  if (MinExpr->isEvaluatable(S.Context) && MaxExpr->isEvaluatable(S.Context)) {
+    if (Min == 0 && Max != 0) {
+      S.Diag(AL.getLoc(), diag::err_attribute_argument_invalid) << AL << 0;
+      return;
+    }
+    if (Min > Max) {
+      S.Diag(AL.getLoc(), diag::err_attribute_argument_invalid) << AL << 1;
+      return;
+    }
   }
 
-  D->addAttr(::new (S.Context)
-             AMDGPUFlatWorkGroupSizeAttr(AL.getLoc(), S.Context, Min, Max,
-                                         AL.getAttributeSpellingListIndex()));
+  D->addAttr(::new (S.Context) AMDGPUFlatWorkGroupSizeAttr(
+      AL.getLoc(), S.Context, MinExpr, MaxExpr,
+      AL.getAttributeSpellingListIndex()));
 }
 
 static void handleAMDGPUWavesPerEUAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   uint32_t Min = 0;
   Expr *MinExpr = AL.getArgAsExpr(0);
-  if (!checkUInt32Argument(S, AL, MinExpr, Min))
+  if (MinExpr->isEvaluatable(S.Context) &&
+      !checkUInt32Argument(S, AL, MinExpr, Min))
     return;
 
+  Expr *MaxExpr = nullptr;
   uint32_t Max = 0;
   if (AL.getNumArgs() == 2) {
-    Expr *MaxExpr = AL.getArgAsExpr(1);
-    if (!checkUInt32Argument(S, AL, MaxExpr, Max))
+    MaxExpr = AL.getArgAsExpr(1);
+    if (MaxExpr->isEvaluatable(S.Context) &&
+        !checkUInt32Argument(S, AL, MaxExpr, Max))
       return;
   }
 
@@ -5557,8 +5564,8 @@ static void handleAMDGPUWavesPerEUAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   D->addAttr(::new (S.Context)
-             AMDGPUWavesPerEUAttr(AL.getLoc(), S.Context, Min, Max,
-                                  AL.getAttributeSpellingListIndex()));
+                 AMDGPUWavesPerEUAttr(AL.getLoc(), S.Context, MinExpr, MaxExpr,
+                                      AL.getAttributeSpellingListIndex()));
 }
 
 static void handleAMDGPUNumSGPRAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
