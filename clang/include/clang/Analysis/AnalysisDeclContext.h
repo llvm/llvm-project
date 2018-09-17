@@ -227,16 +227,22 @@ private:
   AnalysisDeclContext *Ctx;
 
   const LocationContext *Parent;
+  int64_t ID;
 
 protected:
   LocationContext(ContextKind k, AnalysisDeclContext *ctx,
-                  const LocationContext *parent)
-      : Kind(k), Ctx(ctx), Parent(parent) {}
+                  const LocationContext *parent,
+                  int64_t ID)
+      : Kind(k), Ctx(ctx), Parent(parent), ID(ID) {}
 
 public:
   virtual ~LocationContext();
 
   ContextKind getKind() const { return Kind; }
+
+  int64_t getID() const {
+    return ID;
+  }
 
   AnalysisDeclContext *getAnalysisDeclContext() const { return Ctx; }
 
@@ -297,8 +303,9 @@ class StackFrameContext : public LocationContext {
 
   StackFrameContext(AnalysisDeclContext *ctx, const LocationContext *parent,
                     const Stmt *s, const CFGBlock *blk,
-                    unsigned idx)
-      : LocationContext(StackFrame, ctx, parent), CallSite(s),
+                    unsigned idx,
+                    int64_t ID)
+      : LocationContext(StackFrame, ctx, parent, ID), CallSite(s),
         Block(blk), Index(idx) {}
 
 public:
@@ -334,8 +341,8 @@ class ScopeContext : public LocationContext {
   const Stmt *Enter;
 
   ScopeContext(AnalysisDeclContext *ctx, const LocationContext *parent,
-               const Stmt *s)
-      : LocationContext(Scope, ctx, parent), Enter(s) {}
+               const Stmt *s, int64_t ID)
+      : LocationContext(Scope, ctx, parent, ID), Enter(s) {}
 
 public:
   ~ScopeContext() override = default;
@@ -361,9 +368,10 @@ class BlockInvocationContext : public LocationContext {
   const void *ContextData;
 
   BlockInvocationContext(AnalysisDeclContext *ctx,
-                         const LocationContext *parent,
-                         const BlockDecl *bd, const void *contextData)
-      : LocationContext(Block, ctx, parent), BD(bd), ContextData(contextData) {}
+                         const LocationContext *parent, const BlockDecl *bd,
+                         const void *contextData, int64_t ID)
+      : LocationContext(Block, ctx, parent, ID), BD(bd),
+        ContextData(contextData) {}
 
 public:
   ~BlockInvocationContext() override = default;
@@ -388,6 +396,9 @@ public:
 
 class LocationContextManager {
   llvm::FoldingSet<LocationContext> Contexts;
+
+  /// ID used for generating a new location context.
+  int64_t NewID = 0;
 
 public:
   ~LocationContextManager();

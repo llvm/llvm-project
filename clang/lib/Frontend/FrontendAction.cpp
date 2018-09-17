@@ -523,7 +523,6 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   setCurrentInput(Input);
   setCompilerInstance(&CI);
 
-  StringRef InputFile = Input.getFile();
   bool HasBegunSourceFile = false;
   bool ReplayASTFile = Input.getKind().getFormat() == InputKind::Precompiled &&
                        usesPreprocessorOnly();
@@ -540,6 +539,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         new DiagnosticsEngine(Diags->getDiagnosticIDs(),
                               &Diags->getDiagnosticOptions()));
     ASTDiags->setClient(Diags->getClient(), /*OwnsClient*/false);
+
+    // FIXME: What if the input is a memory buffer?
+    StringRef InputFile = Input.getFile();
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         InputFile, CI.getPCHContainerReader(), ASTUnit::LoadPreprocessorOnly,
@@ -585,12 +587,12 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       assert(ASTModule && "module file does not define its own module");
       Input = FrontendInputFile(ASTModule->PresumedModuleMapFile, Kind);
     } else {
-      auto &SM = CI.getSourceManager();
-      FileID ID = SM.getMainFileID();
-      if (auto *File = SM.getFileEntryForID(ID))
+      auto &OldSM = AST->getSourceManager();
+      FileID ID = OldSM.getMainFileID();
+      if (auto *File = OldSM.getFileEntryForID(ID))
         Input = FrontendInputFile(File->getName(), Kind);
       else
-        Input = FrontendInputFile(SM.getBuffer(ID), Kind);
+        Input = FrontendInputFile(OldSM.getBuffer(ID), Kind);
     }
     setCurrentInput(Input, std::move(AST));
   }
@@ -603,6 +605,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
            "This action does not have AST file support!");
 
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags(&CI.getDiagnostics());
+
+    // FIXME: What if the input is a memory buffer?
+    StringRef InputFile = Input.getFile();
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything, Diags,
@@ -791,7 +796,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     // For preprocessed files, check if the first line specifies the original
     // source file name with a linemarker.
-    std::string PresumedInputFile = InputFile;
+    std::string PresumedInputFile = getCurrentFileOrBufferName();
     if (Input.isPreprocessed())
       ReadOriginalFileName(CI, PresumedInputFile);
 

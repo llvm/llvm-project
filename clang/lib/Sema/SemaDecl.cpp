@@ -16852,6 +16852,10 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
   case LangOptions::CMK_ModuleMap:
     Diag(ModuleLoc, diag::err_module_decl_in_module_map_module);
     return nullptr;
+
+  case LangOptions::CMK_HeaderModule:
+    Diag(ModuleLoc, diag::err_module_decl_in_header_module);
+    return nullptr;
   }
 
   assert(ModuleScopes.size() == 1 && "expected to be at global module scope");
@@ -16920,7 +16924,8 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
   case ModuleDeclKind::Implementation:
     std::pair<IdentifierInfo *, SourceLocation> ModuleNameLoc(
         PP.getIdentifierInfo(ModuleName), Path[0].second);
-    Mod = getModuleLoader().loadModule(ModuleLoc, Path, Module::AllVisible,
+    Mod = getModuleLoader().loadModule(ModuleLoc, {ModuleNameLoc},
+                                       Module::AllVisible,
                                        /*IsIncludeDirective=*/false);
     if (!Mod) {
       Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
@@ -16950,6 +16955,19 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
 DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
                                    SourceLocation ImportLoc,
                                    ModuleIdPath Path) {
+  // Flatten the module path for a Modules TS module name.
+  std::pair<IdentifierInfo *, SourceLocation> ModuleNameLoc;
+  if (getLangOpts().ModulesTS) {
+    std::string ModuleName;
+    for (auto &Piece : Path) {
+      if (!ModuleName.empty())
+        ModuleName += ".";
+      ModuleName += Piece.first->getName();
+    }
+    ModuleNameLoc = {PP.getIdentifierInfo(ModuleName), Path[0].second};
+    Path = ModuleIdPath(ModuleNameLoc);
+  }
+
   Module *Mod =
       getModuleLoader().loadModule(ImportLoc, Path, Module::AllVisible,
                                    /*IsIncludeDirective=*/false);

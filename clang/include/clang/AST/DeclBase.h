@@ -1141,6 +1141,9 @@ public:
 
   void dump(raw_ostream &Out, bool Deserialize = false) const;
 
+  /// \return Unique reproducible object identifier
+  int64_t getID() const;
+
   /// Looks through the Decl's underlying type to extract a FunctionType
   /// when possible. Will return null if the type underlying the Decl does not
   /// have a FunctionType.
