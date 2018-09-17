@@ -316,6 +316,195 @@ Enter your Python command(s). Type 'DONE' to end.
             </div>
 
       	</div>
+      	</div>
+		<div class="post">
+			<h1 class ="postheader">Using the Python API's to create custom breakpoints</h1>
+			<div class="postcontent">
+
+                <p>Another use of the Python API's in lldb is to create a custom breakpoint resolver.  This facility
+                  was added in r342259.  
+                </p>
+                <p>
+                  It allows you to provide the algorithm which will be used in the breakpoint's 
+                  search of the space of the code in a given Target
+                  to determine where to set the breakpoint locations - the actual places where the breakpoint will trigger.  
+                  To understand how this works you need to know a little about how lldb handles breakpoints.  
+                </p>
+                <p>
+                  In lldb, a breakpoint is composed of three parts: the Searcher, the Resolver, and the Stop Options. The Searcher and 
+                  Resolver cooperate to determine how breakpoint locations are set and differ between each breakpoint type. 
+                  Stop options determine what happens when a location triggers and includes the commands, conditions, ignore counts, etc. 
+                  Stop options are common between all breakpoint types, so for our purposes only the Searcher and Resolver are relevant.
+                </p>
+                <p>
+                  The Searcher's job is to traverse in a structured way the code in the current target.  It 
+                  proceeds from the Target, to search all the Modules in the Target, in each Module it can recurse
+                  into the Compile Units in that module, and within each Compile Unit it can recurse over the Functions
+                  it contains.
+                </p>
+                <p>
+                  The Searcher can be provided with a SearchFilter that it will use to restrict this search.  For instance, if the
+                  SearchFilter specifies a list of Modules, the Searcher will not recurse into Modules that aren't on the list.
+                  When you pass the <b>-s modulename</b> flag to <b>break set</b> you are creating a Module-based search filter.
+                  When you pass <b>-f filename.c</b> to <b>break set -n</b> you are creating a file based search filter.  If neither
+                  of these is specified, the breakpoint will have a no-op search filter, so all parts of the program are searched 
+                  and all locations accepted. 
+                </p>
+                <p>
+                  The Resolver has two functions.  The most important one is the callback it provides.  This will get called at the appropriate time 
+                  in the course of the search.  The callback is where the job of adding locations to the breakpoint gets done.
+                </p>
+                <p>
+                  The other function is specifying to the Searcher at what depth in the above described recursion it wants to be
+                  called.  Setting a search depth also provides a stop for the recursion.  For instance, if you request a Module depth
+                  search, then the callback will be called for each Module as it gets added to the Target, but the searcher will not recurse into the
+                  Compile Units in the module.
+                </p>
+                <p>
+                  One other slight sublety is that the depth at which you get called back is not necessarily the depth at which the
+                  the SearchFilter is specified.  For instance, if you are doing symbol searches, it is convenient to use the Module
+                  depth for the search, since symbols are stored in the module.  
+                  But the SearchFilter might specify some subset of CompileUnits, so not all the symbols you might find in each module
+                  will pass the search.  You don't need to 
+                  handle this situation yourself, since <b>SBBreakpoint::AddLocation</b> will only add locations that pass the Search Filter.
+                  This API returns an SBError to inform you whether your location was added.
+                </p>
+                <p>
+                  When the breakpoint is originally created, its Searcher will process all the currently loaded modules.  
+                  The Searcher will also visit any new modules as they are added to the target.  This happens, for instance, when
+                  a new shared library gets added to the target in the course of running, or on rerunning if any of the currently
+                  loaded modules have been changed.  Note, in the latter case, all the locations set in the old module will get 
+                  deleted and you will be asked to recreate them in the new version of the module when your callback gets called
+                  with that module.  For this reason, you shouldn't
+                  try to manage the locations you add to the breakpoint yourself.  Note that the Breakpoint takes care of 
+                  deduplicating equal addresses in AddLocation, so you shouldn't need to worry about that anyway.
+                </p>
+                <p>
+                  At present, when adding a scripted Breakpoint type, you can only provide a custom Resolver, not a custom SearchFilter.
+                </p> 
+                <p>
+                  The custom Resolver is provided as a Python class with the following methods:
+                </p>
+</tt></pre></code>
+                    <p><table class="stats" width="620" cellspacing="0">
+                    <tr>
+                        <td class="hed" width="10%">Name</td>
+                        <td class="hed" width="10%">Arguments</td>
+                        <td class="hed" width="80%">Description</td>
+                    </tr>
+
+
+                    <tr>
+                        <td class="content">
+                            <b>__init__</b>
+                        </td>
+                        <td class="content">
+                            <b>bkpt: lldb.SBBreakpoint</b>
+                            <b>extra_args: lldb.SBStructuredData</b>
+                        </td>
+                        <td class="content">
+                          <p>
+                            This is the constructor for the new Resolver.  
+                          </p>
+                          <p>
+                            <b>bkpt</b> is the breakpoint owning this Resolver.
+                          </p>
+                          <p>
+                            <b>extra_args</b> is an SBStructuredData object that the user can pass in when creating instances of this
+                            breakpoint.  It is not required, but is quite handy.  For instance if you were implementing a breakpoint on some
+                            symbol name, you could write a generic symbol name based Resolver, and then allow the user to pass
+                            in the particular symbol in the extra_args
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="content">
+                            <b>__callback__</b>
+                        </td>
+                        <td class="content">
+                            <b>sym_ctx: lldb.SBSymbolContext</b>
+                        </td>
+                        <td class="content">
+                            This is the Resolver callback.  
+                            The <b>sym_ctx</b> argument will be filled with the current stage
+                            of the search.  
+                          </p>
+                          <p>
+                            For instance, if you asked for a search depth of lldb.eSearchDepthCompUnit, then the
+                            target, module and compile_unit fields of the sym_ctx will be filled.  The callback should look just in the
+                            context passed in <b>sym_ctx</b> for new locations.  If the callback finds an address of interest, it
+                            can add it to the breakpoint with the <b>SBBreakpoint::AddLocation</b> method, using the breakpoint passed
+                            in to the <b>__init__</b> method.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="content">
+                            <b>__get_depth__</b>
+                        </td>
+                        <td class="content">
+                            <b>None</b>
+                        </td>
+                        <td class="content">
+                            Specify the depth at which you wish your callback to get called.  The currently supported options are:
+                            <dl>
+                              <dt>lldb.eSearchDepthModule</dt> 
+                              <dt>lldb.eSearchDepthCompUnit</dt>
+                              <dt>lldb.eSearchDepthFunction</dt>
+                            </dl>  
+                            For instance, if you are looking
+                            up symbols, which are stored at the Module level, you will want to get called back module by module.
+                            So you would want to return <b>lldb.eSearchDepthModule</b>.  This method is optional.  If not provided the search
+                            will be done at Module depth.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="content">
+                            <b>get_short_help</b>
+                        </td>
+                        <td class="content">
+                            <b>None</b>
+                        </td>
+                        <td class="content">
+                            This is an optional method.  If provided, the returned string will be printed at the beginning of
+                            the description for this breakpoint.
+                        </td>
+                    </tr>
+                    </table>
+                   
+                    <p>To define a new breakpoint command defined by this class from the lldb command line, use the command:</p>
+
+<code><pre><tt>(lldb) <strong>breakpoint set -P MyModule.MyResolverClass</strong>
+</tt></pre></code>
+                   <p>You can also populate the extra_args SBStructuredData with a dictionary of key/value pairs with:</p>
+
+<code><pre><tt>(lldb) <strong>breakpoint set -P MyModule.MyResolverClass -k key_1 -v value_1 -k key_2 -v value_2</strong>
+</tt></pre></code>
+                   <p>Although you can't write a scripted SearchFilter, both the command line and the SB API's for adding a
+                     scripted resolver allow you to specify a SearchFilter restricted to certain modules or certain compile 
+                     units.  When using the command line to create the resolver, you can specify a Module specific SearchFilter
+                     by passing the <b>-s ModuleName</b> option - which can be specified multiple times.  
+                     You can also specify a SearchFilter restricted to certain
+                     compile units by passing in the <b>-f CompUnitName</b> option.  This can also be specified more than
+                     once.  And you can mix the two to specify &quotthis comp unit in this module&quot.  So, for instance,
+                   </p>
+
+<code><pre><tt>(lldb) <strong>breakpoint set -P MyModule.MyResolverClass -s a.out</strong>
+</tt></pre></code>
+                   <p>
+                     will use your resolver, but will only recurse into or accept new locations in the module a.out.
+                   </p>
+                     
+                   <p>Another option for creating scripted breakpoints is to  use the <b>SBTarget.CreateBreakpointFromScript</b> API.  
+                     This one has the advantage that you can pass in an arbitrary SBStructuredData object, so you can 
+                     create more complex parametrizations.
+                     SBStructuredData has a handy SetFromJSON method which you can use for this purpose.
+                     Your __init__ function gets passed this SBStructuredData object.
+                     This API also allows you to directly provide the list of Modules and the list of CompileUnits that will
+                     make up the SearchFilter.  If you pass in empty lists, the breakpoint will use the default &quotsearch everywhere,accept
+                     everything&quot filter.
+                   </p>
+
+            </div>
 		<div class="post">
 			<h1 class ="postheader">Using the Python API's to create custom stepping logic</h1>
 			<div class="postcontent">
