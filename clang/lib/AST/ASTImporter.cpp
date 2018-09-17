@@ -107,9 +107,11 @@ namespace clang {
   }
 
   SmallVector<Decl*, 2> getCanonicalForwardRedeclChain(Decl* D) {
-    // Currently only FunctionDecl is supported
-    auto FD = cast<FunctionDecl>(D);
-    return getCanonicalForwardRedeclChain<FunctionDecl>(FD);
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      return getCanonicalForwardRedeclChain<FunctionDecl>(FD);
+    if (auto *VD = dyn_cast<VarDecl>(D))
+      return getCanonicalForwardRedeclChain<VarDecl>(VD);
+    llvm_unreachable("Bad declaration kind");
   }
 
   void updateFlags(const Decl *From, Decl *To) {
@@ -280,9 +282,8 @@ namespace clang {
              (IDK == IDK_Default && !Importer.isMinimalImport());
     }
 
+    bool ImportInitializer(VarDecl *From, VarDecl *To);
     bool ImportDefinition(RecordDecl *From, RecordDecl *To,
-                          ImportDefinitionKind Kind = IDK_Default);
-    bool ImportDefinition(VarDecl *From, VarDecl *To,
                           ImportDefinitionKind Kind = IDK_Default);
     bool ImportDefinition(EnumDecl *From, EnumDecl *To,
                           ImportDefinitionKind Kind = IDK_Default);
@@ -1424,18 +1425,26 @@ bool ASTNodeImporter::ImportDefinition(RecordDecl *From, RecordDecl *To,
   return false;
 }
 
-bool ASTNodeImporter::ImportDefinition(VarDecl *From, VarDecl *To,
-                                       ImportDefinitionKind Kind) {
+bool ASTNodeImporter::ImportInitializer(VarDecl *From, VarDecl *To) {
   if (To->getAnyInitializer())
     return false;
 
-  // FIXME: Can we really import any initializer? Alternatively, we could force
-  // ourselves to import every declaration of a variable and then only use
-  // getInit() here.
-  To->setInit(Importer.Import(const_cast<Expr *>(From->getAnyInitializer())));
+  Expr *FromInit = From->getInit();
+  if (!FromInit)
+    return false;
+
+  Expr *ToInit = Importer.Import(const_cast<Expr *>(FromInit));
+  if (!ToInit)
+    return true;
+
+  To->setInit(ToInit);
+  if (From->isInitKnownICE()) {
+    EvaluatedStmt *Eval = To->ensureEvaluatedStmt();
+    Eval->CheckedICE = true;
+    Eval->IsICE = From->isInitICE();
+  }
 
   // FIXME: Other bits to merge?
-
   return false;
 }
 
@@ -3138,6 +3147,16 @@ Decl *ASTNodeImporter::VisitObjCIvarDecl(ObjCIvarDecl *D) {
 }
 
 Decl *ASTNodeImporter::VisitVarDecl(VarDecl *D) {
+
+  SmallVector<Decl*, 2> Redecls = getCanonicalForwardRedeclChain(D);
+  auto RedeclIt = Redecls.begin();
+  // Import the first part of the decl chain. I.e. import all previous
+  // declarations starting from the canonical decl.
+  for (; RedeclIt != Redecls.end() && *RedeclIt != D; ++RedeclIt)
+    if (!Importer.Import(*RedeclIt))
+      return nullptr;
+  assert(*RedeclIt == D);
+
   // Import the major distinguishing characteristics of a variable.
   DeclContext *DC, *LexicalDC;
   DeclarationName Name;
@@ -3150,8 +3169,8 @@ Decl *ASTNodeImporter::VisitVarDecl(VarDecl *D) {
 
   // Try to find a variable in our own ("to") context with the same name and
   // in the same context as the variable we're importing.
+  VarDecl *FoundByLookup = nullptr;
   if (D->isFileVarDecl()) {
-    VarDecl *MergeWithVar = nullptr;
     SmallVector<NamedDecl *, 4> ConflictingDecls;
     unsigned IDNS = Decl::IDNS_Ordinary;
     SmallVector<NamedDecl *, 2> FoundDecls;
@@ -3166,7 +3185,23 @@ Decl *ASTNodeImporter::VisitVarDecl(VarDecl *D) {
             D->hasExternalFormalLinkage()) {
           if (Importer.IsStructurallyEquivalent(D->getType(),
                                                 FoundVar->getType())) {
-            MergeWithVar = FoundVar;
+
+            // The VarDecl in the "From" context has a definition, but in the
+            // "To" context we already have a definition.
+            VarDecl *FoundDef = FoundVar->getDefinition();
+            if (D->isThisDeclarationADefinition() && FoundDef)
+              // FIXME Check for ODR error if the two definitions have
+              // different initializers?
+              return Importer.MapImported(D, FoundDef);
+
+            // The VarDecl in the "From" context has an initializer, but in the
+            // "To" context we already have an initializer.
+            const VarDecl *FoundDInit = nullptr;
+            if (D->getInit() && FoundVar->getAnyInitializer(FoundDInit))
+              // FIXME Diagnose ODR error if the two initializers are different?
+              return Importer.MapImported(D, const_cast<VarDecl*>(FoundDInit));
+
+            FoundByLookup = FoundVar;
             break;
           }
 
@@ -3183,11 +3218,11 @@ Decl *ASTNodeImporter::VisitVarDecl(VarDecl *D) {
                 return nullptr;
 
               FoundVar->setType(T);
-              MergeWithVar = FoundVar;
+              FoundByLookup = FoundVar;
               break;
             } else if (isa<IncompleteArrayType>(TArray) &&
                        isa<ConstantArrayType>(FoundArray)) {
-              MergeWithVar = FoundVar;
+              FoundByLookup = FoundVar;
               break;
             }
           }
@@ -3200,32 +3235,6 @@ Decl *ASTNodeImporter::VisitVarDecl(VarDecl *D) {
       }
 
       ConflictingDecls.push_back(FoundDecl);
-    }
-
-    if (MergeWithVar) {
-      // An equivalent variable with external linkage has been found. Link
-      // the two declarations, then merge them.
-      Importer.MapImported(D, MergeWithVar);
-      updateFlags(D, MergeWithVar);
-
-      if (VarDecl *DDef = D->getDefinition()) {
-        if (VarDecl *ExistingDef = MergeWithVar->getDefinition()) {
-          Importer.ToDiag(ExistingDef->getLocation(),
-                          diag::err_odr_variable_multiple_def)
-            << Name;
-          Importer.FromDiag(DDef->getLocation(), diag::note_odr_defined_here);
-        } else {
-          Expr *Init = Importer.Import(DDef->getInit());
-          MergeWithVar->setInit(Init);
-          if (DDef->isInitKnownICE()) {
-            EvaluatedStmt *Eval = MergeWithVar->ensureEvaluatedStmt();
-            Eval->CheckedICE = true;
-            Eval->IsICE = DDef->isInitICE();
-          }
-        }
-      }
-
-      return MergeWithVar;
     }
 
     if (!ConflictingDecls.empty()) {
@@ -3255,16 +3264,26 @@ Decl *ASTNodeImporter::VisitVarDecl(VarDecl *D) {
   ToVar->setAccess(D->getAccess());
   ToVar->setLexicalDeclContext(LexicalDC);
 
-  // Templated declarations should never appear in the enclosing DeclContext.
-  if (!D->getDescribedVarTemplate())
-    LexicalDC->addDeclInternal(ToVar);
+  if (FoundByLookup) {
+    auto *Recent = const_cast<VarDecl *>(FoundByLookup->getMostRecentDecl());
+    ToVar->setPreviousDecl(Recent);
+  }
 
-  // Merge the initializer.
-  if (ImportDefinition(D, ToVar))
+  if (ImportInitializer(D, ToVar))
     return nullptr;
 
   if (D->isConstexpr())
     ToVar->setConstexpr(true);
+
+  if (D->getDeclContext()->containsDeclAndLoad(D))
+    DC->addDeclInternal(ToVar);
+  if (DC != LexicalDC && D->getLexicalDeclContext()->containsDeclAndLoad(D))
+    LexicalDC->addDeclInternal(ToVar);
+
+  // Import the rest of the chain. I.e. import all subsequent declarations.
+  for (++RedeclIt; RedeclIt != Redecls.end(); ++RedeclIt)
+    if (!Importer.Import(*RedeclIt))
+      return nullptr;
 
   return ToVar;
 }
@@ -4914,12 +4933,7 @@ Decl *ASTNodeImporter::VisitVarTemplateSpecializationDecl(
     D2->setAccess(D->getAccess());
   }
 
-  // NOTE: isThisDeclarationADefinition() can return DeclarationOnly even if
-  // declaration has initializer. Should this be fixed in the AST?.. Anyway,
-  // we have to check the declaration for initializer - otherwise, it won't be
-  // imported.
-  if ((D->isThisDeclarationADefinition() || D->hasInit()) &&
-      ImportDefinition(D, D2))
+  if (ImportInitializer(D, D2))
     return nullptr;
 
   return D2;
@@ -7084,6 +7098,7 @@ Decl *ASTImporter::Import(Decl *FromD) {
   // Notify subclasses.
   Imported(FromD, ToD);
 
+  updateFlags(FromD, ToD);
   return ToD;
 }
 

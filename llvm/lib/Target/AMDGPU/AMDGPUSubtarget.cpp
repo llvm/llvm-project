@@ -149,6 +149,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     TargetTriple(TT),
     Gen(SOUTHERN_ISLANDS),
     IsaVersion(ISAVersion0_0_0),
+    InstrItins(getInstrItineraryForCPU(GPU)),
     LDSBankCount(0),
     MaxPrivateElementSize(0),
 
