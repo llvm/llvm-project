@@ -491,7 +491,7 @@ void lambda_expression_with_macro_test(){
 
 struct S_1 {
   void g_1(void) const {
-    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: redundant void argument list in function definition [modernize-redundant-void-arg]
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant void argument list in function definition [modernize-redundant-void-arg]
     // CHECK-FIXES: void g_1() const {
     int a;
     (void)a;
@@ -506,7 +506,7 @@ struct S_1 {
 template <typename T0>
 struct S_2 {
   void g_1(void) const {
-    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: redundant void argument list in function definition [modernize-redundant-void-arg]
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant void argument list in function definition [modernize-redundant-void-arg]
     // CHECK-FIXES: void g_1() const {
     int a;
     (void)a;
@@ -522,7 +522,7 @@ template <typename T0>
 struct S_3 {
   template <typename T1>
   void g_1(void) const {
-    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: redundant void argument list in function definition [modernize-redundant-void-arg]
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant void argument list in function definition [modernize-redundant-void-arg]
     // CHECK-FIXES: void g_1() const {
     int a;
     (void)a;
@@ -537,7 +537,7 @@ struct S_3 {
 template <typename T1>
 void g_3(void) {
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: redundant void argument list in function definition [modernize-redundant-void-arg]
-  // CHECK-FIXES: void g_3(){
+  // CHECK-FIXES: void g_3() {
   int a;
   (void)a;
 }
