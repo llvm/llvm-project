@@ -601,13 +601,17 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
         Value *operand = ii->getOperand(oi);
         Type *operand_type = operand->getType();
 
-        // Vectors are currently unsupported, give up.
-        if (operand_type->getTypeID() == Type::VectorTyID)
+        switch (operand_type->getTypeID()) {
+        default:
+          break;
+        case Type::VectorTyID: {
           if (log)
             log->Printf("Unsupported operand type: %s",
                         PrintType(operand_type).c_str());
           error.SetErrorString(unsupported_operand_error);
           return false;
+        }
+        }
 
         // The IR interpreter currently doesn't know about
         // 128-bit integers. As they're not that frequent,
@@ -621,7 +625,7 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
           return false;
         }
 
-        if (auto *constant = llvm::dyn_cast<Constant>(operand)) {
+        if (Constant *constant = llvm::dyn_cast<Constant>(operand)) {
           if (!CanResolveConstant(constant)) {
             if (log)
               log->Printf("Unsupported constant: %s",
