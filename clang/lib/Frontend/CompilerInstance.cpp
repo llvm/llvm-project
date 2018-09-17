@@ -934,6 +934,9 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   // taking it as an input instead of hard-coding llvm::errs.
   raw_ostream &OS = llvm::errs();
 
+  if (!Act.PrepareToExecute(*this))
+    return false;
+
   // Create the target instance.
   setTarget(TargetInfo::CreateTargetInfo(getDiagnostics(),
                                          getInvocation().TargetOpts));
@@ -1650,22 +1653,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
                              Module::NameVisibilityKind Visibility,
                              bool IsInclusionDirective) {
   // Determine what file we're searching from.
-  // FIXME: Should we be deciding whether this is a submodule (here and
-  // below) based on -fmodules-ts or should we pass a flag and make the
-  // caller decide?
-  std::string ModuleName;
-  if (getLangOpts().ModulesTS) {
-    // FIXME: Same code as Sema::ActOnModuleDecl() so there is probably a
-    // better place/way to do this.
-    for (auto &Piece : Path) {
-      if (!ModuleName.empty())
-        ModuleName += ".";
-      ModuleName += Piece.first->getName();
-    }
-  }
-  else
-    ModuleName = Path[0].first->getName();
-
+  StringRef ModuleName = Path[0].first->getName();
   SourceLocation ModuleNameLoc = Path[0].second;
 
   // If we've already handled this import, just return the cached result.
@@ -1894,7 +1882,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   // Verify that the rest of the module path actually corresponds to
   // a submodule.
   bool MapPrivateSubModToTopLevel = false;
-  if (!getLangOpts().ModulesTS && Path.size() > 1) {
+  if (Path.size() > 1) {
     for (unsigned I = 1, N = Path.size(); I != N; ++I) {
       StringRef Name = Path[I].first->getName();
       clang::Module *Sub = Module->findSubmodule(Name);

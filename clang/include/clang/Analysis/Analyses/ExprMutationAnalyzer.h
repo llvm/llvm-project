@@ -26,16 +26,37 @@ public:
   ExprMutationAnalyzer(const Stmt &Stm, ASTContext &Context)
       : Stm(Stm), Context(Context) {}
 
-  bool isMutated(const Decl *Dec) { return findDeclMutation(Dec) != nullptr; }
   bool isMutated(const Expr *Exp) { return findMutation(Exp) != nullptr; }
+  bool isMutated(const Decl *Dec) { return findMutation(Dec) != nullptr; }
   const Stmt *findMutation(const Expr *Exp);
-  const Stmt *findDeclMutation(const Decl *Dec);
+  const Stmt *findMutation(const Decl *Dec);
+
+  bool isPointeeMutated(const Expr *Exp) {
+    return findPointeeMutation(Exp) != nullptr;
+  }
+  bool isPointeeMutated(const Decl *Dec) {
+    return findPointeeMutation(Dec) != nullptr;
+  }
+  const Stmt *findPointeeMutation(const Expr *Exp);
+  const Stmt *findPointeeMutation(const Decl *Dec);
 
 private:
+  using MutationFinder = const Stmt *(ExprMutationAnalyzer::*)(const Expr *);
+  using ResultMap = llvm::DenseMap<const Expr *, const Stmt *>;
+
+  const Stmt *findMutationMemoized(const Expr *Exp,
+                                   llvm::ArrayRef<MutationFinder> Finders,
+                                   ResultMap &MemoizedResults);
+  const Stmt *tryEachDeclRef(const Decl *Dec, MutationFinder Finder);
+
   bool isUnevaluated(const Expr *Exp);
 
   const Stmt *findExprMutation(ArrayRef<ast_matchers::BoundNodes> Matches);
   const Stmt *findDeclMutation(ArrayRef<ast_matchers::BoundNodes> Matches);
+  const Stmt *
+  findExprPointeeMutation(ArrayRef<ast_matchers::BoundNodes> Matches);
+  const Stmt *
+  findDeclPointeeMutation(ArrayRef<ast_matchers::BoundNodes> Matches);
 
   const Stmt *findDirectMutation(const Expr *Exp);
   const Stmt *findMemberMutation(const Expr *Exp);
@@ -50,7 +71,8 @@ private:
   llvm::DenseMap<const FunctionDecl *,
                  std::unique_ptr<FunctionParmMutationAnalyzer>>
       FuncParmAnalyzer;
-  llvm::DenseMap<const Expr *, const Stmt *> Results;
+  ResultMap Results;
+  ResultMap PointeeResults;
 };
 
 // A convenient wrapper around ExprMutationAnalyzer for analyzing function

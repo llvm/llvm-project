@@ -806,12 +806,11 @@ std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
 }
 
 Module *ModuleMap::createGlobalModuleForInterfaceUnit(SourceLocation Loc) {
-  assert(!PendingGlobalModule && "created multiple global modules");
-  PendingGlobalModule.reset(
+  PendingSubmodules.emplace_back(
       new Module("<global>", Loc, nullptr, /*IsFramework*/ false,
                  /*IsExplicit*/ true, NumCreatedModules++));
-  PendingGlobalModule->Kind = Module::GlobalModuleFragment;
-  return PendingGlobalModule.get();
+  PendingSubmodules.back()->Kind = Module::GlobalModuleFragment;
+  return PendingSubmodules.back().get();
 }
 
 Module *ModuleMap::createModuleForInterfaceUnit(SourceLocation Loc,
@@ -827,16 +826,40 @@ Module *ModuleMap::createModuleForInterfaceUnit(SourceLocation Loc,
   Modules[Name] = SourceModule = Result;
 
   // Reparent the current global module fragment as a submodule of this module.
-  assert(GlobalModule == PendingGlobalModule.get() &&
-         "unexpected global module");
-  GlobalModule->setParent(Result);
-  PendingGlobalModule.release(); // now owned by parent
+  for (auto &Submodule : PendingSubmodules) {
+    Submodule->setParent(Result);
+    Submodule.release(); // now owned by parent
+  }
+  PendingSubmodules.clear();
 
   // Mark the main source file as being within the newly-created module so that
   // declarations and macros are properly visibility-restricted to it.
   auto *MainFile = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
   assert(MainFile && "no input file for module interface");
   Headers[MainFile].push_back(KnownHeader(Result, PrivateHeader));
+
+  return Result;
+}
+
+Module *ModuleMap::createHeaderModule(StringRef Name,
+                                      ArrayRef<Module::Header> Headers) {
+  assert(LangOpts.CurrentModule == Name && "module name mismatch");
+  assert(!Modules[Name] && "redefining existing module");
+
+  auto *Result =
+      new Module(Name, SourceLocation(), nullptr, /*IsFramework*/ false,
+                 /*IsExplicit*/ false, NumCreatedModules++);
+  Result->Kind = Module::ModuleInterfaceUnit;
+  Modules[Name] = SourceModule = Result;
+
+  for (const Module::Header &H : Headers) {
+    auto *M = new Module(H.NameAsWritten, SourceLocation(), Result,
+                         /*IsFramework*/ false,
+                         /*IsExplicit*/ true, NumCreatedModules++);
+    // Header modules are implicitly 'export *'.
+    M->Exports.push_back(Module::ExportDecl(nullptr, true));
+    addHeader(M, H, NormalHeader);
+  }
 
   return Result;
 }
