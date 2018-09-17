@@ -13727,17 +13727,26 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
              Val.getOpcode() == ISD::EXTRACT_SUBVECTOR)) {
           SDValue Vec = Val.getOperand(0);
           EVT MemVTScalarTy = MemVT.getScalarType();
+          SDValue Idx = Val.getOperand(1);
           // We may need to add a bitcast here to get types to line up.
           if (MemVTScalarTy != Vec.getValueType()) {
             unsigned Elts = Vec.getValueType().getSizeInBits() /
                             MemVTScalarTy.getSizeInBits();
+            if (Val.getValueType().isVector() && MemVT.isVector()) {
+              unsigned IdxC = cast<ConstantSDNode>(Idx)->getZExtValue();
+              unsigned NewIdx =
+                  ((uint64_t)IdxC * MemVT.getVectorNumElements()) / Elts;
+              Idx = DAG.getConstant(NewIdx, SDLoc(Val), Idx.getValueType());
+            }
+            if (!MemVT.isVector() && Val.getValueType().isVector())
+              dbgs() << "hit!\n";
             EVT NewVecTy =
                 EVT::getVectorVT(*DAG.getContext(), MemVTScalarTy, Elts);
             Vec = DAG.getBitcast(NewVecTy, Vec);
           }
           auto OpC = (MemVT.isVector()) ? ISD::EXTRACT_SUBVECTOR
                                         : ISD::EXTRACT_VECTOR_ELT;
-          Val = DAG.getNode(OpC, SDLoc(Val), MemVT, Vec, Val.getOperand(1));
+          Val = DAG.getNode(OpC, SDLoc(Val), MemVT, Vec, Idx);
         }
         Ops.push_back(Val);
       }
