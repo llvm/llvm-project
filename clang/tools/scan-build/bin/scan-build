@@ -1079,7 +1079,7 @@ sub RunBuildCommand {
   if ($Cmd =~ /(.*\/?gcc[^\/]*$)/ or
       $Cmd =~ /(.*\/?cc[^\/]*$)/ or
       $Cmd =~ /(.*\/?llvm-gcc[^\/]*$)/ or
-      $Cmd =~ /(.*\/?clang$)/ or
+      $Cmd =~ /(.*\/?clang[^\/]*$)/ or
       $Cmd =~ /(.*\/?ccc-analyzer[^\/]*$)/) {
 
     if (!($Cmd =~ /ccc-analyzer/) and !defined $ENV{"CCC_CC"}) {
@@ -1813,13 +1813,13 @@ Diag("Using '$Clang' for static analysis\n");
 SetHtmlEnv(\@ARGV, $Options{OutputDir});
 
 my @AnalysesToRun;
-foreach (sort { $Options{EnableCheckers}{$a} <=> $Options{EnableCheckers}{$b} } 
-         keys %{$Options{EnableCheckers}}) { 
+foreach (sort { $Options{EnableCheckers}{$a} <=> $Options{EnableCheckers}{$b} }
+         keys %{$Options{EnableCheckers}}) {
   # Push checkers in order they were enabled.
   push @AnalysesToRun, "-analyzer-checker", $_;
 }
-foreach (sort { $Options{DisableCheckers}{$a} <=> $Options{DisableCheckers}{$b} } 
-         keys %{$Options{DisableCheckers}}) { 
+foreach (sort { $Options{DisableCheckers}{$a} <=> $Options{DisableCheckers}{$b} }
+         keys %{$Options{DisableCheckers}}) {
   # Push checkers in order they were disabled.
   push @AnalysesToRun, "-analyzer-disable-checker", $_;
 }
