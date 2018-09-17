@@ -4,6 +4,10 @@ namespace std {
 
 template <typename _Tp>
 struct remove_reference { typedef _Tp type; };
+template <typename _Tp>
+struct remove_reference<_Tp&> { typedef _Tp type; };
+template <typename _Tp>
+struct remove_reference<_Tp&&> { typedef _Tp type; };
 
 template <typename _Tp>
 constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
@@ -103,6 +107,7 @@ void f() {
 struct Mutable {
   Mutable() {}
   Mutable(const Mutable &) = default;
+  Mutable(Mutable&&) = default;
   Mutable(const Mutable &, const Mutable &) {}
   void setBool(bool B) {}
   bool constMethod() const {
