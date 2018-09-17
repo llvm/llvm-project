@@ -530,7 +530,7 @@ indexstore_record_reader_search_symbols_f(indexstore_record_reader_t rdr,
   return reader->searchDecls(filterFn, receiverFn);
 }
 
-INDEXSTORE_PUBLIC bool
+bool
 indexstore_record_reader_symbols_apply_f(indexstore_record_reader_t rdr,
                                          bool nocache,
                                          void *context,
@@ -542,7 +542,7 @@ indexstore_record_reader_symbols_apply_f(indexstore_record_reader_t rdr,
   return reader->foreachDecl(nocache, receiverFn);
 }
 
-INDEXSTORE_PUBLIC bool
+bool
 indexstore_record_reader_occurrences_apply_f(indexstore_record_reader_t rdr,
                                              void *context,
                  bool(*applier)(void *context, indexstore_occurrence_t occur)) {
@@ -553,7 +553,7 @@ indexstore_record_reader_occurrences_apply_f(indexstore_record_reader_t rdr,
   return reader->foreachOccurrence(receiverFn);
 }
 
-INDEXSTORE_PUBLIC bool
+bool
 indexstore_record_reader_occurrences_in_line_range_apply_f(indexstore_record_reader_t rdr,
                                                            unsigned line_start,
                                                            unsigned line_count,
@@ -566,7 +566,7 @@ indexstore_record_reader_occurrences_in_line_range_apply_f(indexstore_record_rea
   return reader->foreachOccurrenceInLineRange(line_start, line_count, receiverFn);
 }
 
-INDEXSTORE_PUBLIC bool
+bool
 indexstore_record_reader_occurrences_of_symbols_apply_f(indexstore_record_reader_t rdr,
         indexstore_symbol_t *symbols, size_t symbols_count,
         indexstore_symbol_t *related_symbols, size_t related_symbols_count,
