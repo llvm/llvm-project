@@ -210,7 +210,6 @@ private:
   DebugDirectoryChunk *DebugDirectory = nullptr;
   std::vector<Chunk *> DebugRecords;
   CVDebugRecordChunk *BuildId = nullptr;
-  Optional<codeview::DebugInfo> PreviousBuildId;
   ArrayRef<uint8_t> SectionTable;
 
   uint64_t FileSize;
@@ -293,67 +292,6 @@ void OutputSection::writeHeaderTo(uint8_t *Buf) {
 } // namespace coff
 } // namespace lld
 
-// PDBs are matched against executables using a build id which consists of three
-// components:
-//   1. A 16-bit GUID
-//   2. An age
-//   3. A time stamp.
-//
-// Debuggers and symbol servers match executables against debug info by checking
-// each of these components of the EXE/DLL against the corresponding value in
-// the PDB and failing a match if any of the components differ.  In the case of
-// symbol servers, symbols are cached in a folder that is a function of the
-// GUID.  As a result, in order to avoid symbol cache pollution where every
-// incremental build copies a new PDB to the symbol cache, we must try to re-use
-// the existing GUID if one exists, but bump the age.  This way the match will
-// fail, so the symbol cache knows to use the new PDB, but the GUID matches, so
-// it overwrites the existing item in the symbol cache rather than making a new
-// one.
-static Optional<codeview::DebugInfo> loadExistingBuildId(StringRef Path) {
-  // We don't need to incrementally update a previous build id if we're not
-  // writing codeview debug info.
-  if (!Config->Debug)
-    return None;
-
-  auto ExpectedBinary = llvm::object::createBinary(Path);
-  if (!ExpectedBinary) {
-    consumeError(ExpectedBinary.takeError());
-    return None;
-  }
-
-  auto Binary = std::move(*ExpectedBinary);
-  if (!Binary.getBinary()->isCOFF())
-    return None;
-
-  std::error_code EC;
-  COFFObjectFile File(Binary.getBinary()->getMemoryBufferRef(), EC);
-  if (EC)
-    return None;
-
-  // If the machine of the binary we're outputting doesn't match the machine
-  // of the existing binary, don't try to re-use the build id.
-  if (File.is64() != Config->is64() || File.getMachine() != Config->Machine)
-    return None;
-
-  for (const auto &DebugDir : File.debug_directories()) {
-    if (DebugDir.Type != IMAGE_DEBUG_TYPE_CODEVIEW)
-      continue;
-
-    const codeview::DebugInfo *ExistingDI = nullptr;
-    StringRef PDBFileName;
-    if (auto EC = File.getDebugPDBInfo(ExistingDI, PDBFileName)) {
-      (void)EC;
-      return None;
-    }
-    // We only support writing PDBs in v70 format.  So if this is not a build
-    // id that we recognize / support, ignore it.
-    if (ExistingDI->Signature.CVSignature != OMF::Signature::PDB70)
-      return None;
-    return *ExistingDI;
-  }
-  return None;
-}
-
 // The main function of the writer.
 void Writer::run() {
   ScopedTimer T1(CodeLayoutTimer);
@@ -372,9 +310,6 @@ void Writer::run() {
     fatal("image size (" + Twine(FileSize) + ") " +
         "exceeds maximum allowable size (" + Twine(UINT32_MAX) + ")");
 
-  // We must do this before opening the output file, as it depends on being able
-  // to read the contents of the existing output file.
-  PreviousBuildId = loadExistingBuildId(Config->OutputFile);
   openFile(Config->OutputFile);
   if (Config->is64()) {
     writeHeader<pe32plus_header>();
@@ -383,14 +318,14 @@ void Writer::run() {
   }
   writeSections();
   sortExceptionTable();
-  writeBuildId();
 
   T1.stop();
 
   if (!Config->PDBPath.empty() && Config->Debug) {
     assert(BuildId);
-    createPDB(Symtab, OutputSections, SectionTable, *BuildId->BuildId);
+    createPDB(Symtab, OutputSections, SectionTable, BuildId->BuildId);
   }
+  writeBuildId();
 
   writeMapFile(OutputSections);
 
@@ -1261,25 +1196,10 @@ void Writer::writeBuildId() {
   //    timestamp as well as a Guid and Age of the PDB.
   // 2) In all cases, the PE COFF file header also contains a timestamp.
   // For reproducibility, instead of a timestamp we want to use a hash of the
-  // binary, however when building with debug info the hash needs to take into
-  // account the debug info, since it's possible to add blank lines to a file
-  // which causes the debug info to change but not the generated code.
-  //
-  // To handle this, we first set the Guid and Age in the debug directory (but
-  // only if we're doing a debug build).  Then, we hash the binary (thus causing
-  // the hash to change if only the debug info changes, since the Age will be
-  // different).  Finally, we write that hash into the debug directory (if
-  // present) as well as the COFF file header (always).
+  // PE contents.
   if (Config->Debug) {
     assert(BuildId && "BuildId is not set!");
-    if (PreviousBuildId.hasValue()) {
-      *BuildId->BuildId = *PreviousBuildId;
-      BuildId->BuildId->PDB70.Age = BuildId->BuildId->PDB70.Age + 1;
-    } else {
-      BuildId->BuildId->Signature.CVSignature = OMF::Signature::PDB70;
-      BuildId->BuildId->PDB70.Age = 1;
-      llvm::getRandomBytes(BuildId->BuildId->PDB70.Signature, 16);
-    }
+    // BuildId->BuildId was filled in when the PDB was written.
   }
 
   // At this point the only fields in the COFF file which remain unset are the
