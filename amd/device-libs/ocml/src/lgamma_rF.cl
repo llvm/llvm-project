@@ -87,8 +87,13 @@
  *
  */
 
-float
-MATH_MANGLE(lgamma_r)(float x, __private int *signp)
+struct ret_t {
+    float result;
+    int signp;
+};
+
+static struct ret_t
+MATH_MANGLE(lgamma_r_impl)(float x)
 {
     const float two52 =  4.50359962737049600000e+15f;
     const float pi  =  3.14159265358979311600e+00f;
@@ -274,7 +279,17 @@ MATH_MANGLE(lgamma_r)(float x, __private int *signp)
         ret = uax > PINFBITPATT_SP32 ? x : ret;
     }
 
-    *signp = s;
-    return ret;
+    struct ret_t result;
+    result.result = ret;
+    result.signp = s;
+
+    return result;
 }
 
+float
+MATH_MANGLE(lgamma_r)(float x, __private int *signp)
+{
+    struct ret_t ret = MATH_MANGLE(lgamma_r_impl)(x);
+    *signp = ret.signp;
+    return ret.result;
+}

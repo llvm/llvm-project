@@ -90,9 +90,13 @@
  */
 
 
+struct ret_t {
+    double result;
+    int signp;
+};
 
-double
-MATH_MANGLE(lgamma_r)(double x, __private int *signp)
+static struct ret_t
+MATH_MANGLE(lgamma_r_impl)(double x)
 {
     const double two52=  4.50359962737049600000e+15;
     const double pi  =  3.14159265358979311600e+00;
@@ -282,7 +286,17 @@ MATH_MANGLE(lgamma_r)(double x, __private int *signp)
         ret = BUILTIN_ISNAN_F64(x) ? x : ret;
     }
 
-    *signp = s;
-    return ret;
+    struct ret_t result;
+    result.result = ret;
+    result.signp = s;
+    return result;
 }
 
+
+double
+MATH_MANGLE(lgamma_r)(double x, __private int *signp)
+{
+    struct ret_t ret = MATH_MANGLE(lgamma_r_impl)(x);
+    *signp = ret.signp;
+    return ret.result;
+}
