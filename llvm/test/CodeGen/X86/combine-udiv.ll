@@ -592,43 +592,26 @@ define <8 x i16> @combine_vec_udiv_uniform(<8 x i16> %x) {
 define <8 x i16> @combine_vec_udiv_nonuniform(<8 x i16> %x) {
 ; SSE2-LABEL: combine_vec_udiv_nonuniform:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,0,65535,65535,65535,65535]
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    pand %xmm1, %xmm2
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65535,65535,65535,0,65535,65535,65535,65535]
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    pand %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-NEXT:    psrlw $3, %xmm3
-; SSE2-NEXT:    pandn %xmm3, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    pmulhuw {{.*}}(%rip), %xmm1
-; SSE2-NEXT:    psubw %xmm1, %xmm0
+; SSE2-NEXT:    pandn %xmm3, %xmm2
+; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    pmulhuw {{.*}}(%rip), %xmm2
+; SSE2-NEXT:    psubw %xmm2, %xmm0
 ; SSE2-NEXT:    movl $32768, %eax # imm = 0x8000
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    pmulhuw %xmm0, %xmm2
-; SSE2-NEXT:    paddw %xmm1, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,0,65535,65535,0,0,65535]
-; SSE2-NEXT:    movdqa %xmm2, %xmm0
-; SSE2-NEXT:    pand %xmm1, %xmm0
-; SSE2-NEXT:    psrlw $8, %xmm2
-; SSE2-NEXT:    pandn %xmm2, %xmm1
-; SSE2-NEXT:    por %xmm0, %xmm1
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    pmulhuw %xmm0, %xmm1
+; SSE2-NEXT:    paddw %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [65535,65535,65535,0,0,65535,65535,0]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    pandn %xmm1, %xmm2
-; SSE2-NEXT:    psrlw $4, %xmm1
+; SSE2-NEXT:    pmulhuw {{.*}}(%rip), %xmm1
 ; SSE2-NEXT:    pand %xmm0, %xmm1
 ; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [65535,65535,65535,65535,65535,0,0,65535]
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    pand %xmm0, %xmm2
-; SSE2-NEXT:    psrlw $2, %xmm1
-; SSE2-NEXT:    pandn %xmm1, %xmm0
-; SSE2-NEXT:    por %xmm2, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,65535,65535,0,0,65535,65535,0]
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm0, %xmm2
-; SSE2-NEXT:    psrlw $1, %xmm0
-; SSE2-NEXT:    pand %xmm1, %xmm0
-; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: combine_vec_udiv_nonuniform:
@@ -867,33 +850,21 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 define <8 x i16> @pr38477(<8 x i16> %a0) {
 ; SSE2-LABEL: pr38477:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,4957,57457,4103,16385,35545,2048,2115]
-; SSE2-NEXT:    pmulhuw %xmm0, %xmm1
-; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    psubw %xmm1, %xmm3
-; SSE2-NEXT:    pmulhuw {{.*}}(%rip), %xmm3
-; SSE2-NEXT:    paddw %xmm1, %xmm3
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65535,65535,65535,0,0,65535,65535,65535]
-; SSE2-NEXT:    movdqa %xmm3, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [0,4957,57457,4103,16385,35545,2048,2115]
+; SSE2-NEXT:    pmulhuw %xmm0, %xmm2
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    psubw %xmm2, %xmm1
+; SSE2-NEXT:    pmulhuw {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    paddw %xmm2, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [0,65535,65535,65535,65535,65535,0,65535]
+; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    pandn %xmm1, %xmm3
+; SSE2-NEXT:    pmulhuw {{.*}}(%rip), %xmm1
 ; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    psrlw $8, %xmm3
-; SSE2-NEXT:    pandn %xmm3, %xmm2
-; SSE2-NEXT:    por %xmm1, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,65535,65535,65535,65535,65535,0,65535]
-; SSE2-NEXT:    movdqa %xmm1, %xmm3
-; SSE2-NEXT:    pandn %xmm2, %xmm3
-; SSE2-NEXT:    psrlw $4, %xmm2
-; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    por %xmm3, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,65535,65535,0,65535,65535,0,0]
-; SSE2-NEXT:    movdqa %xmm1, %xmm3
-; SSE2-NEXT:    pandn %xmm2, %xmm3
-; SSE2-NEXT:    psrlw $2, %xmm2
-; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    por %xmm3, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,65535,65535,65535,65535,65535,65535,65535]
-; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm0, %xmm1
+; SSE2-NEXT:    por %xmm3, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [0,65535,65535,65535,65535,65535,65535,65535]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pandn %xmm0, %xmm2
 ; SSE2-NEXT:    por %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    retq

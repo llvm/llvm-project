@@ -601,8 +601,8 @@ bool IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
         //  - no use outside of the loop can take advantage of hoisting the
         //    computation out of the loop
         if (ExitValue->getSCEVType()>=scMulExpr) {
-          unsigned NumHardInternalUses = 0;
-          unsigned NumSoftExternalUses = 0;
+          bool HasHardInternalUses = false;
+          bool HasSoftExternalUses = false;
           unsigned NumUses = 0;
           for (auto IB = Inst->user_begin(), IE = Inst->user_end();
                IB != IE && NumUses <= 6; ++IB) {
@@ -611,7 +611,7 @@ bool IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
             NumUses++;
             if (L->contains(UseInstr)) {
               if (Opc == Instruction::Call)
-                NumHardInternalUses++;
+                HasHardInternalUses = true;
             } else {
               if (Opc == Instruction::PHI) {
                 // Do not count the Phi as a use. LCSSA may have inserted
@@ -621,16 +621,21 @@ bool IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
                           PE = UseInstr->user_end();
                      PB != PE && NumUses <= 6; ++PB, ++NumUses) {
                   unsigned PhiOpc = cast<Instruction>(*PB)->getOpcode();
-                  if (PhiOpc != Instruction::Call && PhiOpc != Instruction::Ret)
-                    NumSoftExternalUses++;
+                  if (PhiOpc != Instruction::Call &&
+                      PhiOpc != Instruction::Ret) {
+                    HasSoftExternalUses = true;
+                    break;
+                  }
                 }
                 continue;
               }
-              if (Opc != Instruction::Call && Opc != Instruction::Ret)
-                NumSoftExternalUses++;
+              if (Opc != Instruction::Call && Opc != Instruction::Ret) {
+                HasSoftExternalUses = true;
+                break;
+              }
             }
           }
-          if (NumUses <= 6 && NumHardInternalUses && !NumSoftExternalUses)
+          if (NumUses <= 6 && HasHardInternalUses && !HasSoftExternalUses)
             continue;
         }
 

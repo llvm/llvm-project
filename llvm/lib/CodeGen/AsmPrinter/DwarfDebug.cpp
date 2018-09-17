@@ -2186,7 +2186,7 @@ void DwarfDebug::emitDebugRanges() {
 
   auto NoRangesPresent = [this]() {
     return llvm::all_of(
-        CUMap, [](const decltype(CUMap)::const_iterator::value_type &Pair) {
+        CUMap, [](const decltype(CUMap)::value_type &Pair) {
           return Pair.second->getRangeLists().empty();
         });
   };

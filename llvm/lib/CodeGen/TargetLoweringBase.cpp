@@ -666,6 +666,7 @@ void TargetLoweringBase::initActions() {
 
   // These library functions default to expand.
   for (MVT VT : {MVT::f32, MVT::f64, MVT::f128}) {
+    setOperationAction(ISD::FCBRT,      VT, Expand);
     setOperationAction(ISD::FLOG ,      VT, Expand);
     setOperationAction(ISD::FLOG2,      VT, Expand);
     setOperationAction(ISD::FLOG10,     VT, Expand);
