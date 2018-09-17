@@ -50,21 +50,31 @@ template <class T> void deallocate(T *B) XRAY_NEVER_INSTRUMENT {
   internal_munmap(B, sizeof(T));
 }
 
-inline void *allocateBuffer(size_t S) XRAY_NEVER_INSTRUMENT {
-  auto B = reinterpret_cast<void *>(internal_mmap(
-      NULL, S, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+template <class T = uint8_t> T *allocateBuffer(size_t S) XRAY_NEVER_INSTRUMENT {
+  auto B = reinterpret_cast<void *>(
+      internal_mmap(NULL, S * sizeof(T), PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
   if (B == MAP_FAILED) {
     if (Verbosity())
       Report("XRay Profiling: Failed to allocate memory of size %d.\n", S);
     return nullptr;
   }
-  return B;
+  return reinterpret_cast<T *>(B);
 }
 
-inline void deallocateBuffer(void *B, size_t S) XRAY_NEVER_INSTRUMENT {
+template <class T> void deallocateBuffer(T *B, size_t S) XRAY_NEVER_INSTRUMENT {
   if (B == nullptr)
     return;
   internal_munmap(B, S);
+}
+
+template <class T, class... U>
+T *initArray(size_t N, U &&... Us) XRAY_NEVER_INSTRUMENT {
+  auto A = allocateBuffer<T>(N);
+  if (A != nullptr)
+    while (N > 0)
+      new (A + (--N)) T(std::forward<U>(Us)...);
+  return A;
 }
 
 /// The Allocator type hands out fixed-sized chunks of memory that are
