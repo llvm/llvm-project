@@ -38,14 +38,20 @@ Optional<std::string> lld::demangleItanium(StringRef Name) {
 }
 
 Optional<std::string> lld::demangleMSVC(StringRef Name) {
+  std::string Prefix;
+  if (Name.consume_front("__imp_"))
+    Prefix = "__declspec(dllimport) ";
+
+  // Demangle only C++ names.
   if (!Name.startswith("?"))
     return None;
+
   char *Buf = microsoftDemangle(Name.str().c_str(), nullptr, nullptr, nullptr);
   if (!Buf)
     return None;
   std::string S(Buf);
   free(Buf);
-  return S;
+  return Prefix + S;
 }
 
 StringMatcher::StringMatcher(ArrayRef<StringRef> Pat) {
