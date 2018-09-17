@@ -325,6 +325,14 @@ struct FormatToken {
   }
   template <typename T> bool isNot(T Kind) const { return !is(Kind); }
 
+  bool closesScopeAfterBlock() const {
+    if (BlockKind == BK_Block)
+      return true;
+    if (closesScope())
+      return Previous->closesScopeAfterBlock();
+    return false;
+  }
+
   /// \c true if this token starts a sequence with the given tokens in order,
   /// following the ``Next`` pointers, ignoring comments.
   template <typename A, typename... Ts>
