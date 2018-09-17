@@ -39,7 +39,6 @@
 #include "CxxStringTypes.h"
 #include "LibCxx.h"
 #include "LibCxxAtomic.h"
-#include "LibCxxVariant.h"
 #include "LibStdcpp.h"
 
 using namespace lldb;
@@ -517,10 +516,6 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                   "libc++ std::optional synthetic children",
                   ConstString("^std::__(ndk)?1::optional<.+>(( )?&)?$"),
                   stl_synth_flags, true);
-  AddCXXSynthetic(cpp_category_sp, LibcxxVariantFrontEndCreator,
-                  "libc++ std::variant synthetic children",
-                  ConstString("^std::__(ndk)?1::variant<.+>(( )?&)?$"),
-                  stl_synth_flags, true);
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibcxxAtomicSyntheticFrontEndCreator,
@@ -621,11 +616,6 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::LibcxxOptionalSummaryProvider,
                 "libc++ std::optional summary provider",
                 ConstString("^std::__(ndk)?1::optional<.+>(( )?&)?$"),
-                stl_summary_flags, true);
-  AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::LibcxxVariantSummaryProvider,
-                "libc++ std::variant summary provider",
-                ConstString("^std::__(ndk)?1::variant<.+>(( )?&)?$"),
                 stl_summary_flags, true);
 
   stl_summary_flags.SetSkipPointers(true);
