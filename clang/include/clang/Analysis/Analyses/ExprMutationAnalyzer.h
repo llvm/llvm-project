@@ -31,13 +31,32 @@ public:
   const Stmt *findMutation(const Expr *Exp);
   const Stmt *findMutation(const Decl *Dec);
 
+  bool isPointeeMutated(const Expr *Exp) {
+    return findPointeeMutation(Exp) != nullptr;
+  }
+  bool isPointeeMutated(const Decl *Dec) {
+    return findPointeeMutation(Dec) != nullptr;
+  }
+  const Stmt *findPointeeMutation(const Expr *Exp);
+  const Stmt *findPointeeMutation(const Decl *Dec);
+
 private:
+  using MutationFinder = const Stmt *(ExprMutationAnalyzer::*)(const Expr *);
   using ResultMap = llvm::DenseMap<const Expr *, const Stmt *>;
+
+  const Stmt *findMutationMemoized(const Expr *Exp,
+                                   llvm::ArrayRef<MutationFinder> Finders,
+                                   ResultMap &MemoizedResults);
+  const Stmt *tryEachDeclRef(const Decl *Dec, MutationFinder Finder);
 
   bool isUnevaluated(const Expr *Exp);
 
   const Stmt *findExprMutation(ArrayRef<ast_matchers::BoundNodes> Matches);
   const Stmt *findDeclMutation(ArrayRef<ast_matchers::BoundNodes> Matches);
+  const Stmt *
+  findExprPointeeMutation(ArrayRef<ast_matchers::BoundNodes> Matches);
+  const Stmt *
+  findDeclPointeeMutation(ArrayRef<ast_matchers::BoundNodes> Matches);
 
   const Stmt *findDirectMutation(const Expr *Exp);
   const Stmt *findMemberMutation(const Expr *Exp);
@@ -53,6 +72,7 @@ private:
                  std::unique_ptr<FunctionParmMutationAnalyzer>>
       FuncParmAnalyzer;
   ResultMap Results;
+  ResultMap PointeeResults;
 };
 
 // A convenient wrapper around ExprMutationAnalyzer for analyzing function

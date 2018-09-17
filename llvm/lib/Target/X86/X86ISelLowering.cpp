@@ -23896,10 +23896,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
 
   // Constant ISD::SRL can be performed efficiently on vXi16 vectors as we
   // can replace with ISD::MULHU, creating scale factor from (NumEltBits - Amt).
-  // TODO: Improve support for the shift by zero special case.
   if (Opc == ISD::SRL && ConstantAmt &&
-      ((Subtarget.hasSSE41() && VT == MVT::v8i16) ||
-       DAG.isKnownNeverZero(Amt)) &&
       (VT == MVT::v8i16 || (VT == MVT::v16i16 && Subtarget.hasInt256()))) {
     SDValue EltBits = DAG.getConstant(EltSizeInBits, dl, VT);
     SDValue RAmt = DAG.getNode(ISD::SUB, dl, VT, EltBits, Amt);
