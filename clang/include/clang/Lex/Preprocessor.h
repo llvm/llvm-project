@@ -1128,6 +1128,10 @@ public:
     CodeComplete = nullptr;
   }
 
+  /// Hook used by the lexer to invoke the "included file" code
+  /// completion point.
+  void CodeCompleteIncludedFile(llvm::StringRef Dir, bool IsAngled);
+
   /// Hook used by the lexer to invoke the "natural language" code
   /// completion point.
   void CodeCompleteNaturalLanguage();
