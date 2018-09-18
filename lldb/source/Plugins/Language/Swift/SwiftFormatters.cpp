@@ -15,9 +15,10 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
+#include "swift/Demangling/ManglingMacros.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -486,8 +487,7 @@ bool lldb_private::formatters::swift::NSContiguousString_SummaryProvider(
   if (guts_sp)
     return StringGuts_SummaryProvider(*guts_sp, stream, options);
 
-  static ConstString g_StringGutsType(
-      SwiftLanguageRuntime::GetCurrentMangledName("$Ss11_StringGutsVD"));
+  static ConstString g_StringGutsType(MANGLING_PREFIX_STR "s11_StringGutsVD");
   lldb::addr_t guts_location = valobj.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
   if (guts_location == LLDB_INVALID_ADDRESS)
     return false;

@@ -19,6 +19,7 @@
 #include "SymbolFileDWARF.h"
 
 #include "swift/AST/ASTContext.h"
+#include "swift/Demangling/Demangle.h"
 
 #include "lldb/Utility/Status.h"
 #include "lldb/Core/Module.h"
@@ -110,7 +111,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   }
 
   if (!compiler_type && die.Tag() == DW_TAG_structure_type &&
-      mangled_name.GetStringRef().startswith("$SSo")) {
+      swift::Demangle::isObjCSymbol(mangled_name.GetStringRef())) {
     // When we failed to look up the type because no .swiftmodule is
     // present or it couldn't be read, fall back to presenting objects
     // that look like they might be come from Objective-C as Clang
