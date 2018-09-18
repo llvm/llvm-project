@@ -73,9 +73,9 @@ public:
   void updatePreamble(PathRef Path, ASTContext &AST,
                       std::shared_ptr<Preprocessor> PP);
 
-  /// Update symbols from main file \p Path with symbols in \p TopLevelDecls.
-  void updateMain(PathRef Path, ParsedAST &AST,
-                  llvm::ArrayRef<Decl *> TopLevelDecls);
+  /// Update symbols and references from main file \p Path with
+  /// `indexMainDecls`.
+  void updateMain(PathRef Path, ParsedAST &AST);
 
 private:
   std::vector<std::string> URISchemes;
@@ -106,12 +106,12 @@ private:
   std::unique_ptr<SymbolIndex> MergedIndex;  // Merge preamble and main index.
 };
 
-/// Retrieves symbols and refs of \p Decls in \p AST.
+/// Retrieves symbols and refs of local top level decls in \p AST (i.e.
+/// `AST.getLocalTopLevelDecls()`).
 /// Exposed to assist in unit tests.
 /// If URISchemes is empty, the default schemes in SymbolCollector will be used.
 std::pair<SymbolSlab, RefSlab>
-indexMainDecls(ParsedAST &AST, llvm::ArrayRef<Decl *> Decls,
-               llvm::ArrayRef<std::string> URISchemes = {});
+indexMainDecls(ParsedAST &AST, llvm::ArrayRef<std::string> URISchemes = {});
 
 /// Idex declarations from \p AST and macros from \p PP that are declared in
 /// included headers.
