@@ -43,6 +43,7 @@ bool IndexDataConsumer::handleMacroOccurence(const IdentifierInfo *Name,
 }
 
 bool IndexDataConsumer::handleModuleOccurence(const ImportDecl *ImportD,
+                                              const Module *Mod,
                                               SymbolRoleSet Roles,
                                               SourceLocation Loc) {
   return true;
