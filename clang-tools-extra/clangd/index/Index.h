@@ -91,12 +91,12 @@ public:
     return StringRef(reinterpret_cast<const char *>(HashValue.data()), RawSize);
   }
   static SymbolID fromRaw(llvm::StringRef);
+
   // Returns a 40-bytes hex encoded string.
   std::string str() const;
+  static llvm::Expected<SymbolID> fromStr(llvm::StringRef);
 
 private:
-  friend void operator>>(llvm::StringRef Str, SymbolID &ID);
-
   std::array<uint8_t, RawSize> HashValue;
 };
 
@@ -108,14 +108,8 @@ inline llvm::hash_code hash_value(const SymbolID &ID) {
   return llvm::hash_code(Result);
 }
 
-// Write SymbolID into the given stream. SymbolID is encoded as a 40-bytes
-// hex string.
+// Write SymbolID into the given stream. SymbolID is encoded as ID.str().
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SymbolID &ID);
-
-// Construct SymbolID from a hex string.
-// The HexStr is required to be a 40-bytes hex string, which is encoded from the
-// "<<" operator.
-void operator>>(llvm::StringRef HexStr, SymbolID &ID);
 
 } // namespace clangd
 } // namespace clang

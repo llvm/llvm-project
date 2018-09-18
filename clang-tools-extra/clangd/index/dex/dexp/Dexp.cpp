@@ -144,14 +144,14 @@ class Lookup : public Command {
   };
 
   void run() override {
-    auto Raw = fromHex(ID);
-    if (Raw.size() != clang::clangd::SymbolID::RawSize) {
-      llvm::outs() << "invalid SymbolID\n";
+    auto SID = clang::clangd::SymbolID::fromStr(ID);
+    if (!SID) {
+      llvm::outs() << llvm::toString(SID.takeError()) << "\n";
       return;
     }
 
     clang::clangd::LookupRequest Request;
-    Request.IDs = {clang::clangd::SymbolID::fromRaw(Raw)};
+    Request.IDs = {*SID};
     bool FoundSymbol = false;
     Index->lookup(Request, [&](const Symbol &Sym) {
       FoundSymbol = true;
