@@ -970,6 +970,14 @@ static void dumpDia(StringRef Path) {
     while (auto Child = Children->getNext()) {
       outs() << "{";
       Child->defaultDump(outs(), 2);
+      if (auto Enum = dyn_cast<PDBSymbolTypeEnum>(Child.get())) {
+        auto Enumerators = Enum->findAllChildren<PDBSymbolData>();
+        while (auto Enumerator = Enumerators->getNext()) {
+          outs() << "  {";
+          Enumerator->defaultDump(outs(), 4);
+          outs() << "\n  }\n";
+        }
+      }
       outs() << "\n}\n";
     }
   }

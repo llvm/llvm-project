@@ -590,8 +590,10 @@ def CC_X86_64_HHVM_C : CallingConv<[
 
 // Calling convention used on Win64
 def CC_X86_Win64_C : CallingConv<[
-  // FIXME: Handle byval stuff.
   // FIXME: Handle varargs.
+
+  // Byval aggregates are passed by pointer
+  CCIfByVal<CCPassIndirect<i64>>,
 
   // Promote i1/v1i1 arguments to i8.
   CCIfType<[i1, v1i1], CCPromoteToType<i8>>,

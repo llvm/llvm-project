@@ -1,4 +1,4 @@
-; RUN: llc -relocation-model=pic < %s | grep ":$" | sort | uniq -d | count 0
+; RUN: llc -relocation-model=pic < %s | grep -E ': ?\s*$' | sort | uniq -d | count 0
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:64:64-v128:128:128-a0:0:32-n32"
 target triple = "thumbv7-apple-darwin10"
 

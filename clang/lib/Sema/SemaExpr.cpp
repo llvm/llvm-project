@@ -14627,8 +14627,10 @@ static bool captureInBlock(BlockScopeInfo *BSI, VarDecl *Var,
   Expr *CopyExpr = nullptr;
   bool ByRef = false;
 
-  // Blocks are not allowed to capture arrays.
-  if (CaptureType->isArrayType()) {
+  // Blocks are not allowed to capture arrays, excepting OpenCL.
+  // OpenCL v2.0 s1.12.5 (revision 40): arrays are captured by reference
+  // (decayed to pointers).
+  if (!S.getLangOpts().OpenCL && CaptureType->isArrayType()) {
     if (BuildAndDiagnose) {
       S.Diag(Loc, diag::err_ref_array_type);
       S.Diag(Var->getLocation(), diag::note_previous_decl)

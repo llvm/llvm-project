@@ -16,6 +16,7 @@
 \*===----------------------------------------------------------------------===*/
 
 #include "llvm-c/Transforms/Scalar.h"
+#include "llvm-c/Transforms/Utils.h"
 #include "caml/mlvalues.h"
 #include "caml/misc.h"
 

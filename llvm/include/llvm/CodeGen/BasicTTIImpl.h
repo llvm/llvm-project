@@ -1036,6 +1036,9 @@ public:
     case Intrinsic::fabs:
       ISDs.push_back(ISD::FABS);
       break;
+    case Intrinsic::canonicalize:
+      ISDs.push_back(ISD::FCANONICALIZE);
+      break;
     case Intrinsic::minnum:
       ISDs.push_back(ISD::FMINNUM);
       if (FMF.noNaNs())

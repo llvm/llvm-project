@@ -4557,6 +4557,40 @@ TEST_F(FormatTest, FormatsBuilderPattern) {
   verifyFormat("aaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "        aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)\n"
                "    .aaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
+
+  // Dont break if only closing statements before member call
+  verifyFormat("test() {\n"
+               "  ([]() -> {\n"
+               "    int b = 32;\n"
+               "    return 3;\n"
+               "  }).foo();\n"
+               "}");
+  verifyFormat("test() {\n"
+               "  (\n"
+               "      []() -> {\n"
+               "        int b = 32;\n"
+               "        return 3;\n"
+               "      },\n"
+               "      foo, bar)\n"
+               "      .foo();\n"
+               "}");
+  verifyFormat("test() {\n"
+               "  ([]() -> {\n"
+               "    int b = 32;\n"
+               "    return 3;\n"
+               "  })\n"
+               "      .foo()\n"
+               "      .bar();\n"
+               "}");
+  verifyFormat("test() {\n"
+               "  ([]() -> {\n"
+               "    int b = 32;\n"
+               "    return 3;\n"
+               "  })\n"
+               "      .foo(\"aaaaaaaaaaaaaaaaa\"\n"
+               "           \"bbbb\");\n"
+               "}",
+               getLLVMStyleWithColumns(30));
 }
 
 TEST_F(FormatTest, BreaksAccordingToOperatorPrecedence) {

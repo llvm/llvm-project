@@ -601,36 +601,35 @@ bool IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
         //  - no use outside of the loop can take advantage of hoisting the
         //    computation out of the loop
         if (ExitValue->getSCEVType()>=scMulExpr) {
-          unsigned NumHardInternalUses = 0;
-          unsigned NumSoftExternalUses = 0;
-          unsigned NumUses = 0;
-          for (auto IB = Inst->user_begin(), IE = Inst->user_end();
-               IB != IE && NumUses <= 6; ++IB) {
-            Instruction *UseInstr = cast<Instruction>(*IB);
+          bool HasHardInternalUses = false;
+          bool HasSoftExternalUses = false;
+          for (auto *IB : Inst->users()) {
+            Instruction *UseInstr = cast<Instruction>(IB);
             unsigned Opc = UseInstr->getOpcode();
-            NumUses++;
             if (L->contains(UseInstr)) {
               if (Opc == Instruction::Call)
-                NumHardInternalUses++;
+                HasHardInternalUses = true;
             } else {
               if (Opc == Instruction::PHI) {
                 // Do not count the Phi as a use. LCSSA may have inserted
                 // plenty of trivial ones.
-                NumUses--;
-                for (auto PB = UseInstr->user_begin(),
-                          PE = UseInstr->user_end();
-                     PB != PE && NumUses <= 6; ++PB, ++NumUses) {
-                  unsigned PhiOpc = cast<Instruction>(*PB)->getOpcode();
-                  if (PhiOpc != Instruction::Call && PhiOpc != Instruction::Ret)
-                    NumSoftExternalUses++;
+                for (auto *PB : UseInstr->users()) {
+                  unsigned PhiOpc = cast<Instruction>(PB)->getOpcode();
+                  if (PhiOpc != Instruction::Call &&
+                      PhiOpc != Instruction::Ret) {
+                    HasSoftExternalUses = true;
+                    break;
+                  }
                 }
                 continue;
               }
-              if (Opc != Instruction::Call && Opc != Instruction::Ret)
-                NumSoftExternalUses++;
+              if (Opc != Instruction::Call && Opc != Instruction::Ret) {
+                HasSoftExternalUses = true;
+                break;
+              }
             }
           }
-          if (NumUses <= 6 && NumHardInternalUses && !NumSoftExternalUses)
+          if (HasHardInternalUses && !HasSoftExternalUses)
             continue;
         }
 

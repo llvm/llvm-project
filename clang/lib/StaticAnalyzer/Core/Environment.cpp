@@ -226,7 +226,7 @@ void Environment::print(raw_ostream &Out, const char *NL,
 
   PrintingPolicy PP = Context.getPrintingPolicy();
 
-  Out << NL << NL << "Expressions by stack frame:" << NL;
+  Out << NL << "Expressions by stack frame:" << NL;
   WithLC->dumpStack(Out, "", NL, Sep, [&](const LocationContext *LC) {
     for (auto I : ExprBindings) {
       if (I.first.getLocationContext() != LC)

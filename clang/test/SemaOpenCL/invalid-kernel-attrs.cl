@@ -38,8 +38,8 @@ __attribute__((intel_reqd_sub_group_size(8))) void kernel14(){} // expected-erro
 kernel __attribute__((intel_reqd_sub_group_size(0))) void kernel15(){} // expected-error {{'intel_reqd_sub_group_size' attribute must be greater than 0}}
 kernel __attribute__((intel_reqd_sub_group_size(8))) __attribute__((intel_reqd_sub_group_size(16))) void kernel16() {}  //expected-warning{{attribute 'intel_reqd_sub_group_size' is already applied with different parameters}}
 
-__kernel __attribute__((work_group_size_hint(8,-16,32))) void neg1() {} //expected-error{{negative argument is not allowed for 'work_group_size_hint' attribute}}
-__kernel __attribute__((reqd_work_group_size(8,16,-32))) void neg2(){} // expected-error{{negative argument is not allowed for 'reqd_work_group_size' attribute}}
+__kernel __attribute__((work_group_size_hint(8,-16,32))) void neg1() {} //expected-error{{'work_group_size_hint' attribute requires a non-negative integral compile time constant expression}}
+__kernel __attribute__((reqd_work_group_size(8,16,-32))) void neg2(){} // expected-error{{'reqd_work_group_size' attribute requires a non-negative integral compile time constant expression}}
 
 // 4294967294 is a negative integer if treated as signed.
 // Should compile successfully, since we expect an unsigned.

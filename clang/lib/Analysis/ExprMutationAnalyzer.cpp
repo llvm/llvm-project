@@ -304,7 +304,16 @@ const Stmt *ExprMutationAnalyzer::findCastMutation(const Expr *Exp) {
                                        nonConstReferenceType()))))
                         .bind(NodeID<Expr>::value)),
             Stm, Context);
-  return findExprMutation(Casts);
+  if (const Stmt *S = findExprMutation(Casts))
+    return S;
+  // Treat std::{move,forward} as cast.
+  const auto Calls =
+      match(findAll(callExpr(callee(namedDecl(
+                                 hasAnyName("::std::move", "::std::forward"))),
+                             hasArgument(0, equalsNode(Exp)))
+                        .bind("expr")),
+            Stm, Context);
+  return findExprMutation(Calls);
 }
 
 const Stmt *ExprMutationAnalyzer::findRangeLoopMutation(const Expr *Exp) {
@@ -360,7 +369,9 @@ const Stmt *ExprMutationAnalyzer::findFunctionArgMutation(const Expr *Exp) {
   const auto IsInstantiated = hasDeclaration(isInstantiated());
   const auto FuncDecl = hasDeclaration(functionDecl().bind("func"));
   const auto Matches = match(
-      findAll(expr(anyOf(callExpr(NonConstRefParam, IsInstantiated, FuncDecl),
+      findAll(expr(anyOf(callExpr(NonConstRefParam, IsInstantiated, FuncDecl,
+                                  unless(callee(namedDecl(hasAnyName(
+                                      "::std::move", "::std::forward"))))),
                          cxxConstructExpr(NonConstRefParam, IsInstantiated,
                                           FuncDecl)))
                   .bind(NodeID<Expr>::value)),
