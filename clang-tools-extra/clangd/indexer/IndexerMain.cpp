@@ -172,8 +172,7 @@ public:
         [&](llvm::StringRef Key, llvm::StringRef Value) {
           llvm::yaml::Input Yin(Value);
           auto Sym = clang::clangd::SymbolFromYAML(Yin);
-          clang::clangd::SymbolID ID;
-          Key >> ID;
+          auto ID = cantFail(clang::clangd::SymbolID::fromStr(Key));
           if (const auto *Existing = UniqueSymbols.find(ID))
             UniqueSymbols.insert(mergeSymbol(*Existing, Sym));
           else

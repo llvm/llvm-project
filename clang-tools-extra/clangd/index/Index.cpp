@@ -41,8 +41,13 @@ SymbolID SymbolID::fromRaw(llvm::StringRef Raw) {
 
 std::string SymbolID::str() const { return toHex(raw()); }
 
-void operator>>(StringRef Str, SymbolID &ID) {
-  ID = SymbolID::fromRaw(fromHex(Str));
+llvm::Expected<SymbolID> SymbolID::fromStr(llvm::StringRef Str) {
+  if (Str.size() != RawSize * 2)
+    return createStringError(llvm::inconvertibleErrorCode(), "Bad ID length");
+  for (char C : Str)
+    if (!isHexDigit(C))
+      return createStringError(llvm::inconvertibleErrorCode(), "Bad hex ID");
+  return fromRaw(fromHex(Str));
 }
 
 raw_ostream &operator<<(raw_ostream &OS, SymbolOrigin O) {
