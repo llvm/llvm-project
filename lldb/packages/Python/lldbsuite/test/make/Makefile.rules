@@ -507,6 +507,15 @@ ifeq "$(SWIFT_OBJC_INTEROP)" "1"
 
 endif
 
+
+#----------------------------------------------------------------------
+# Set up variables to run the Swift frontend directly.
+#----------------------------------------------------------------------
+SWIFT_FEFLAGS = $(patsubst -save-temps,,$(patsubst -Xfrontend,,$(SWIFTFLAGS))) \
+                -sdk $(SDKROOT)
+SWIFT=$(shell dirname $(SWIFTC))/swift
+SWIFT_FE=$(SWIFT) -frontend
+
 #----------------------------------------------------------------------
 # Check if we have any ObjC++ source files
 #----------------------------------------------------------------------

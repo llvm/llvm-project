@@ -1,8 +1,6 @@
 LEVEL = ../../../../make
 SRCDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 SWIFT_OBJC_INTEROP := 1
-FE_SWIFTFLAGS = $(patsubst -save-temps,,$(patsubst -Xfrontend,,$(SWIFTFLAGS))) -sdk $(SDKROOT)
-SWIFT=$(shell dirname $(SWIFTC))/swift
 
 all: a.out
 
@@ -10,10 +8,10 @@ include $(LEVEL)/Makefile.rules
 
 
 libLibrary.dylib: Library.swift
-	$(SWIFT) -frontend -c -primary-file $^ $(FE_SWIFTFLAGS) \
+	$(SWIFT_FE) -c -primary-file $^ $(SWIFT_FEFLAGS) \
           -emit-module-path Library.part.swiftmodule \
           -parse-as-library -module-name Library -o Library.o -I.
-	$(SWIFT) -frontend $(FE_SWIFTFLAGS) -merge-modules -emit-module \
+	$(SWIFT_FE) $(SWIFT_FEFLAGS) -merge-modules -emit-module \
           -parse-as-library -sil-merge-partial-modules \
           -disable-diagnostic-passes -disable-sil-perf-optzns \
           -module-name Library Library.part.swiftmodule -o Library.swiftmodule \
@@ -23,11 +21,11 @@ libLibrary.dylib: Library.swift
 	  -Xlinker -install_name -Xlinker @executable_path/libLibrary.dylib
 
 a.out: main.swift libLibrary.dylib
-	$(SWIFT) -frontend -c -primary-file $< $(FE_SWIFTFLAGS) -module-name main -o main.o \
+	$(SWIFT_FE) -c -primary-file $< $(SWIFT_FEFLAGS) -module-name main -o main.o \
           -emit-module-path main.part.swiftmodule \
           -import-objc-header $(VPATH)/BridgingHeader.h \
           -I. -Xcc -DSYNTAX_ERROR=1
-	$(SWIFT) -frontend $(FE_SWIFTFLAGS) \
+	$(SWIFT_FE) $(SWIFT_FEFLAGS) \
 	  -merge-modules -emit-module main.part.swiftmodule \
 	  -parse-as-library -sil-merge-partial-modules \
 	  -disable-diagnostic-passes -disable-sil-perf-optzns \
