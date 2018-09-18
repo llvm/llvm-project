@@ -16,68 +16,42 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_posix.h"
+#include "xray_allocator.h"
+#include "xray_defs.h"
 #include <memory>
 #include <sys/mman.h>
 
 using namespace __xray;
 using namespace __sanitizer;
 
-template <class T> static T *allocRaw(size_t N) {
-  // TODO: Report errors?
-  void *A = reinterpret_cast<void *>(
-      internal_mmap(NULL, N * sizeof(T), PROT_WRITE | PROT_READ,
-                    MAP_ANONYMOUS | MAP_PRIVATE, -1, 0));
-  return (A == MAP_FAILED) ? nullptr : reinterpret_cast<T *>(A);
-}
-
-template <class T> static void deallocRaw(T *ptr, size_t N) {
-  // TODO: Report errors?
-  if (ptr != nullptr)
-    internal_munmap(ptr, N);
-}
-
-template <class T> static T *initArray(size_t N) {
-  auto A = allocRaw<T>(N);
-  if (A != nullptr)
-    while (N > 0)
-      new (A + (--N)) T();
-  return A;
-}
-
-BufferQueue::BufferQueue(size_t B, size_t N, bool &Success)
-    : BufferSize(B), Buffers(initArray<BufferQueue::BufferRep>(N)),
-      BufferCount(N), Finalizing{0}, OwnedBuffers(initArray<void *>(N)),
-      Next(Buffers), First(Buffers), LiveBuffers(0) {
-  if (Buffers == nullptr) {
+BufferQueue::BufferQueue(size_t B, size_t N,
+                         bool &Success) XRAY_NEVER_INSTRUMENT
+    : BufferSize(B),
+      BufferCount(N),
+      Mutex(),
+      Finalizing{0},
+      BackingStore(allocateBuffer(B *N)),
+      Buffers(initArray<BufferQueue::BufferRep>(N)),
+      Next(Buffers),
+      First(Buffers),
+      LiveBuffers(0) {
+  if (BackingStore == nullptr) {
     Success = false;
     return;
   }
-  if (OwnedBuffers == nullptr) {
-    // Clean up the buffers we've already allocated.
-    for (auto B = Buffers, E = Buffers + BufferCount; B != E; ++B)
-      B->~BufferRep();
-    deallocRaw(Buffers, N);
+  if (Buffers == nullptr) {
+    deallocateBuffer(BackingStore, BufferSize * BufferCount);
     Success = false;
     return;
-  };
+  }
 
   for (size_t i = 0; i < N; ++i) {
     auto &T = Buffers[i];
-    void *Tmp = allocRaw<char>(BufferSize);
-    if (Tmp == nullptr) {
-      Success = false;
-      return;
-    }
-    auto *Extents = allocRaw<BufferExtents>(1);
-    if (Extents == nullptr) {
-      Success = false;
-      return;
-    }
     auto &Buf = T.Buff;
-    Buf.Data = Tmp;
+    Buf.Data = reinterpret_cast<char *>(BackingStore) + (BufferSize * i);
     Buf.Size = B;
-    Buf.Extents = Extents;
-    OwnedBuffers[i] = Tmp;
+    atomic_store(&Buf.Extents, 0, memory_order_release);
+    T.Used = false;
   }
   Success = true;
 }
@@ -85,13 +59,17 @@ BufferQueue::BufferQueue(size_t B, size_t N, bool &Success)
 BufferQueue::ErrorCode BufferQueue::getBuffer(Buffer &Buf) {
   if (atomic_load(&Finalizing, memory_order_acquire))
     return ErrorCode::QueueFinalizing;
+
   SpinMutexLock Guard(&Mutex);
   if (LiveBuffers == BufferCount)
     return ErrorCode::NotEnoughMemory;
 
   auto &T = *Next;
   auto &B = T.Buff;
-  Buf = B;
+  auto Extents = atomic_load(&B.Extents, memory_order_acquire);
+  atomic_store(&Buf.Extents, Extents, memory_order_release);
+  Buf.Data = B.Data;
+  Buf.Size = B.Size;
   T.Used = true;
   ++LiveBuffers;
 
@@ -102,15 +80,11 @@ BufferQueue::ErrorCode BufferQueue::getBuffer(Buffer &Buf) {
 }
 
 BufferQueue::ErrorCode BufferQueue::releaseBuffer(Buffer &Buf) {
-  // Blitz through the buffers array to find the buffer.
-  bool Found = false;
-  for (auto I = OwnedBuffers, E = OwnedBuffers + BufferCount; I != E; ++I) {
-    if (*I == Buf.Data) {
-      Found = true;
-      break;
-    }
-  }
-  if (!Found)
+  // Check whether the buffer being referred to is within the bounds of the
+  // backing store's range.
+  if (Buf.Data < BackingStore ||
+      Buf.Data >
+          reinterpret_cast<char *>(BackingStore) + (BufferCount * BufferSize))
     return ErrorCode::UnrecognizedBuffer;
 
   SpinMutexLock Guard(&Mutex);
@@ -121,10 +95,14 @@ BufferQueue::ErrorCode BufferQueue::releaseBuffer(Buffer &Buf) {
     return ErrorCode::NotEnoughMemory;
 
   // Now that the buffer has been released, we mark it as "used".
-  First->Buff = Buf;
+  auto Extents = atomic_load(&Buf.Extents, memory_order_acquire);
+  atomic_store(&First->Buff.Extents, Extents, memory_order_release);
+  First->Buff.Data = Buf.Data;
+  First->Buff.Size = Buf.Size;
   First->Used = true;
   Buf.Data = nullptr;
   Buf.Size = 0;
+  atomic_store(&Buf.Extents, 0, memory_order_release);
   --LiveBuffers;
   if (++First == (Buffers + BufferCount))
     First = Buffers;
@@ -139,14 +117,8 @@ BufferQueue::ErrorCode BufferQueue::finalize() {
 }
 
 BufferQueue::~BufferQueue() {
-  for (auto I = Buffers, E = Buffers + BufferCount; I != E; ++I) {
-    auto &T = *I;
-    auto &Buf = T.Buff;
-    deallocRaw(Buf.Data, Buf.Size);
-    deallocRaw(Buf.Extents, 1);
-  }
   for (auto B = Buffers, E = Buffers + BufferCount; B != E; ++B)
     B->~BufferRep();
-  deallocRaw(Buffers, BufferCount);
-  deallocRaw(OwnedBuffers, BufferCount);
+  deallocateBuffer(Buffers, BufferCount);
+  deallocateBuffer(BackingStore, BufferSize * BufferCount);
 }

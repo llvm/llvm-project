@@ -29,6 +29,21 @@ public:
   virtual void reset() = 0;
 };
 
+template <typename ChildType>
+class NullEnumerator : public IPDBEnumChildren<ChildType> {
+  virtual uint32_t getChildCount() const override { return 0; }
+  virtual std::unique_ptr<ChildType>
+  getChildAtIndex(uint32_t Index) const override {
+    assert(false);
+    return nullptr;
+  }
+  virtual std::unique_ptr<ChildType> getNext() override {
+    assert(false);
+    return nullptr;
+  }
+  virtual void reset() override {}
+};
+
 } // end namespace pdb
 } // end namespace llvm
 

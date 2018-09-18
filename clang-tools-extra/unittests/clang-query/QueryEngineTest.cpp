@@ -115,7 +115,7 @@ TEST_F(QueryEngineTest, Basic) {
 
   Str.clear();
 
-  EXPECT_FALSE(MatchQuery(isArrow()).run(OS, S));
+  EXPECT_FALSE(MatchQuery(isMain()).run(OS, S));
 
   EXPECT_EQ("Not a valid top-level matcher.\n", OS.str());
 }

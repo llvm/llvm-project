@@ -18,6 +18,7 @@
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_mutex.h"
+#include "xray_defs.h"
 #include <cstddef>
 
 namespace __xray {
@@ -29,14 +30,10 @@ namespace __xray {
 /// trace collection.
 class BufferQueue {
 public:
-  struct alignas(64) BufferExtents {
-    atomic_uint64_t Size;
-  };
-
   struct Buffer {
+    atomic_uint64_t Extents{0};
     void *Data = nullptr;
     size_t Size = 0;
-    BufferExtents *Extents;
   };
 
   struct BufferRep {
@@ -76,8 +73,10 @@ private:
 
     T *operator->() const { return &(Buffers[Offset].Buff); }
 
-    Iterator(BufferRep *Root, size_t O, size_t M)
-        : Buffers(Root), Offset(O), Max(M) {
+    Iterator(BufferRep *Root, size_t O, size_t M) XRAY_NEVER_INSTRUMENT
+        : Buffers(Root),
+          Offset(O),
+          Max(M) {
       // We want to advance to the first Offset where the 'Used' property is
       // true, or to the end of the list/queue.
       while (!Buffers[Offset].Used && Offset != Max) {
@@ -107,16 +106,18 @@ private:
   // Size of each individual Buffer.
   size_t BufferSize;
 
-  BufferRep *Buffers;
-
   // Amount of pre-allocated buffers.
   size_t BufferCount;
 
   SpinMutex Mutex;
   atomic_uint8_t Finalizing;
 
-  // Pointers to buffers managed/owned by the BufferQueue.
-  void **OwnedBuffers;
+  // A pointer to a contiguous block of memory to serve as the backing store for
+  // all the individual buffers handed out.
+  void *BackingStore;
+
+  // A dynamically allocated array of BufferRep instances.
+  BufferRep *Buffers;
 
   // Pointer to the next buffer to be handed out.
   BufferRep *Next;
@@ -198,7 +199,7 @@ public:
   /// Applies the provided function F to each Buffer in the queue, only if the
   /// Buffer is marked 'used' (i.e. has been the result of getBuffer(...) and a
   /// releaseBuffer(...) operation).
-  template <class F> void apply(F Fn) {
+  template <class F> void apply(F Fn) XRAY_NEVER_INSTRUMENT {
     SpinMutexLock G(&Mutex);
     for (auto I = begin(), E = end(); I != E; ++I)
       Fn(*I);

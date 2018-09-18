@@ -13,30 +13,19 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
 Error RangeListEntry::extract(DWARFDataExtractor Data, uint32_t End,
-                              uint16_t Version, StringRef /* SectionName */,
-                              uint32_t *OffsetPtr, bool /* isDWO */) {
+                              uint32_t *OffsetPtr) {
   Offset = *OffsetPtr;
   SectionIndex = -1ULL;
-
-  assert((Data.getAddressSize() == 4 || Data.getAddressSize() == 8) &&
-         "Unsupported address size");
-
-  // We model a DWARF v4 range list entry like DWARF v5 DW_RLE_offset_pair,
-  // since it is subject to base adjustment.
-  uint8_t Encoding = dwarf::DW_RLE_offset_pair;
-  if (Version > 4) {
-    // The caller should guarantee that we have at least 1 byte available, so
-    // we just assert instead of revalidate.
-    assert(*OffsetPtr < End &&
-           "not enough space to extract a rangelist encoding");
-    Encoding = Data.getU8(OffsetPtr);
-  }
+  // The caller should guarantee that we have at least 1 byte available, so
+  // we just assert instead of revalidate.
+  assert(*OffsetPtr < End &&
+         "not enough space to extract a rangelist encoding");
+  uint8_t Encoding = Data.getU8(OffsetPtr);
 
   switch (Encoding) {
   case dwarf::DW_RLE_end_of_list:
@@ -59,23 +48,6 @@ Error RangeListEntry::extract(DWARFDataExtractor Data, uint32_t End,
                        "at offset 0x%" PRIx32,
                        *OffsetPtr - 1);
   case dwarf::DW_RLE_offset_pair: {
-    if (Version < 5) {
-      if ((End - *OffsetPtr) < unsigned(Data.getAddressSize() * 2))
-        return createStringError(
-            errc::illegal_byte_sequence,
-            "invalid range list entry at offset 0x%" PRIx32, *OffsetPtr);
-      Value0 = Data.getRelocatedAddress(OffsetPtr);
-      Value1 = Data.getRelocatedAddress(OffsetPtr, &SectionIndex);
-      // Adjust the EntryKind for end-of-list and base_address based on the
-      // contents.
-      if (Value0 == maxUIntN(Data.getAddressSize() * 8)) {
-        Encoding = dwarf::DW_RLE_base_address;
-        Value0 = Value1;
-        Value1 = 0;
-      } else if (Value0 == 0 && Value1 == 0)
-        Encoding = dwarf::DW_RLE_end_of_list;
-      break;
-    }
     uint32_t PreviousOffset = *OffsetPtr - 1;
     Value0 = Data.getULEB128(OffsetPtr);
     Value1 = Data.getULEB128(OffsetPtr);
@@ -86,7 +58,7 @@ Error RangeListEntry::extract(DWARFDataExtractor Data, uint32_t End,
                          PreviousOffset);
     break;
   }
-  case dwarf::DW_RLE_base_address:
+  case dwarf::DW_RLE_base_address: {
     if ((End - *OffsetPtr) < Data.getAddressSize())
       return createStringError(errc::invalid_argument,
                          "insufficient space remaining in table for "
@@ -94,16 +66,18 @@ Error RangeListEntry::extract(DWARFDataExtractor Data, uint32_t End,
                          *OffsetPtr - 1);
     Value0 = Data.getRelocatedAddress(OffsetPtr, &SectionIndex);
     break;
-  case dwarf::DW_RLE_start_end:
+  }
+  case dwarf::DW_RLE_start_end: {
     if ((End - *OffsetPtr) < unsigned(Data.getAddressSize() * 2))
       return createStringError(errc::invalid_argument,
                          "insufficient space remaining in table for "
                          "DW_RLE_start_end encoding "
                          "at offset 0x%" PRIx32,
                          *OffsetPtr - 1);
-    Value0 = Data.getRelocatedAddress(OffsetPtr);
-    Value1 = Data.getRelocatedAddress(OffsetPtr, &SectionIndex);
+    Value0 = Data.getRelocatedAddress(OffsetPtr, &SectionIndex);
+    Value1 = Data.getRelocatedAddress(OffsetPtr);
     break;
+  }
   case dwarf::DW_RLE_start_length: {
     uint32_t PreviousOffset = *OffsetPtr - 1;
     Value0 = Data.getRelocatedAddress(OffsetPtr, &SectionIndex);
@@ -169,10 +143,9 @@ DWARFAddressRangesVector DWARFDebugRnglist::getAbsoluteRanges(
   return Res;
 }
 
-void RangeListEntry::dump(raw_ostream &OS, DWARFContext *, uint8_t AddrSize,
-                          uint64_t &CurrentBase, unsigned Indent,
-                          uint16_t Version, uint8_t MaxEncodingStringLength,
-                          DIDumpOptions DumpOpts) const {
+void RangeListEntry::dump(raw_ostream &OS, uint8_t AddrSize,
+                          uint8_t MaxEncodingStringLength,
+                          uint64_t &CurrentBase, DIDumpOptions DumpOpts) const {
   auto PrintRawEntry = [](raw_ostream &OS, const RangeListEntry &Entry,
                           uint8_t AddrSize, DIDumpOptions DumpOpts) {
     if (DumpOpts.Verbose) {
@@ -183,49 +156,27 @@ void RangeListEntry::dump(raw_ostream &OS, DWARFContext *, uint8_t AddrSize,
     }
   };
 
-  // Output indentations before we print the actual entry. We only print
-  // anything for DW_RLE_base_address when we are in verbose mode.
-  if (DumpOpts.Verbose || !isBaseAddressSelectionEntry())
-    OS.indent(Indent);
-
   if (DumpOpts.Verbose) {
     // Print the section offset in verbose mode.
     OS << format("0x%8.8" PRIx32 ":", Offset);
-    if (Version > 4) {
-      auto EncodingString = dwarf::RangeListEncodingString(EntryKind);
-      // Unsupported encodings should have been reported during parsing.
-      assert(!EncodingString.empty() && "Unknown range entry encoding");
-      OS << format(" [%s%*c", EncodingString.data(),
-                   MaxEncodingStringLength - EncodingString.size() + 1, ']');
-      if (!isEndOfList())
-        OS << ": ";
-    }
+    auto EncodingString = dwarf::RangeListEncodingString(EntryKind);
+    // Unsupported encodings should have been reported during parsing.
+    assert(!EncodingString.empty() && "Unknown range entry encoding");
+    OS << format(" [%s%*c", EncodingString.data(),
+                 MaxEncodingStringLength - EncodingString.size() + 1, ']');
+    if (EntryKind != dwarf::DW_RLE_end_of_list)
+      OS << ": ";
   }
 
   switch (EntryKind) {
   case dwarf::DW_RLE_end_of_list:
-    if (DumpOpts.Verbose) {
-      // For DWARF v4 and earlier, we print the raw entry, i.e. 2 zeros.
-      if (Version < 5) {
-        OS << format(" 0x%*.*" PRIx64, AddrSize * 2, AddrSize * 2, Value0);
-        OS << format(", 0x%*.*" PRIx64, AddrSize * 2, AddrSize * 2, Value1);
-      }
-      break;
-    }
-    OS << "<End of list>";
+    OS << (DumpOpts.Verbose ? "" : "<End of list>");
     break;
   case dwarf::DW_RLE_base_address:
-    // In non-verbose mode, we do not print anything for this entry.
+    // In non-verbose mode we do not print anything for this entry.
     CurrentBase = Value0;
     if (!DumpOpts.Verbose)
       return;
-    if (Version < 5) {
-      // Dump the entry in pre-DWARF v5 format, i.e. with a -1 as Value0.
-      uint64_t allOnes = maxUIntN(AddrSize * 8);
-      OS << format(" 0x%*.*" PRIx64, AddrSize * 2, AddrSize * 2, allOnes);
-      OS << format(", 0x%*.*" PRIx64, AddrSize * 2, AddrSize * 2, Value0);
-      break;
-    }
     OS << format(" 0x%*.*" PRIx64, AddrSize * 2, AddrSize * 2, Value0);
     break;
   case dwarf::DW_RLE_start_length:

@@ -195,6 +195,39 @@ class CommandLineExprCompletionTestCase(TestBase):
         self.complete_exactly('expr some_expr.Self(). FooNoArgs',
                               'expr some_expr.Self(). FooNoArgsBar()')
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
+    def test_expr_completion_with_descriptions(self):
+        self.build()
+        self.main_source = "main.cpp"
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
+        self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
+                                          '// Break here', self.main_source_spec)
+
+        self.check_completion_with_desc("expr ", [
+            # VarDecls have their type as description.
+            ["some_expr", "Expr &"],
+            # builtin types have no description.
+            ["int", ""],
+            ["float", ""]
+        ])
+        self.check_completion_with_desc("expr some_expr.", [
+            # Functions have their signature as description.
+            ["some_expr.Self()", "Expr &Self()"],
+            ["some_expr.operator=(", "inline Expr &operator=(const Expr &)"],
+            ["some_expr.FooNumbersBar1()", "int FooNumbersBar1()"],
+            ["some_expr.StaticMemberMethodBar()", "static int StaticMemberMethodBar()"],
+            ["some_expr.FooWithArgsBar(", "int FooWithArgsBar(int)"],
+            ["some_expr.FooNoArgsBar()", "int FooNoArgsBar()"],
+            ["some_expr.FooUnderscoreBar_()", "int FooUnderscoreBar_()"],
+            ["some_expr.FooWithMultipleArgsBar(", "int FooWithMultipleArgsBar(int, int)"],
+            ["some_expr.~Expr()", "inline ~Expr()"],
+            # FieldDecls have their type as description.
+            ["some_expr.MemberVariableBar", "int"],
+        ])
+
+
     def assume_no_completions(self, str_input, cursor_pos = None):
         interp = self.dbg.GetCommandInterpreter()
         match_strings = lldb.SBStringList()

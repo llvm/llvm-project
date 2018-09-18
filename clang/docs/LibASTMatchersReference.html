@@ -2235,6 +2235,32 @@ cxxConstructorDecl(hasAnyConstructorInitializer(isWritten()))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXDependentScopeMemberExpr.html">CXXDependentScopeMemberExpr</a>&gt;</td><td class="name" onclick="toggle('isArrow2')"><a name="isArrow2Anchor">isArrow</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isArrow2"><pre>Matches member expressions that are called with '-&gt;' as opposed
+to '.'.
+
+Member calls on the implicit this pointer match as called with '-&gt;'.
+
+Given
+  class Y {
+    void x() { this-&gt;x(); x(); Y y; y.x(); a; this-&gt;b; Y::b; }
+    template &lt;class T&gt; void f() { this-&gt;f&lt;T&gt;(); f&lt;T&gt;(); }
+    int a;
+    static int b;
+  };
+  template &lt;class T&gt;
+  class Z {
+    void x() { this-&gt;m; }
+  };
+memberExpr(isArrow())
+  matches this-&gt;x, x, y.x, a, this-&gt;b
+cxxDependentScopeMemberExpr(isArrow())
+  matches this-&gt;m
+unresolvedMemberExpr(isArrow())
+  matches this-&gt;f&lt;T&gt;, f&lt;T&gt;
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXMethodDecl.html">CXXMethodDecl</a>&gt;</td><td class="name" onclick="toggle('isConst0')"><a name="isConst0Anchor">isConst</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isConst0"><pre>Matches if the given method declaration is const.
 
@@ -3228,11 +3254,20 @@ Member calls on the implicit this pointer match as called with '-&gt;'.
 Given
   class Y {
     void x() { this-&gt;x(); x(); Y y; y.x(); a; this-&gt;b; Y::b; }
+    template &lt;class T&gt; void f() { this-&gt;f&lt;T&gt;(); f&lt;T&gt;(); }
     int a;
     static int b;
   };
+  template &lt;class T&gt;
+  class Z {
+    void x() { this-&gt;m; }
+  };
 memberExpr(isArrow())
   matches this-&gt;x, x, y.x, a, this-&gt;b
+cxxDependentScopeMemberExpr(isArrow())
+  matches this-&gt;m
+unresolvedMemberExpr(isArrow())
+  matches this-&gt;f&lt;T&gt;, f&lt;T&gt;
 </pre></td></tr>
 
 
@@ -3883,6 +3918,32 @@ unary).
 
 Example matches a || b (matcher = binaryOperator(hasOperatorName("||")))
   !(a || b)
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedMemberExpr.html">UnresolvedMemberExpr</a>&gt;</td><td class="name" onclick="toggle('isArrow1')"><a name="isArrow1Anchor">isArrow</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isArrow1"><pre>Matches member expressions that are called with '-&gt;' as opposed
+to '.'.
+
+Member calls on the implicit this pointer match as called with '-&gt;'.
+
+Given
+  class Y {
+    void x() { this-&gt;x(); x(); Y y; y.x(); a; this-&gt;b; Y::b; }
+    template &lt;class T&gt; void f() { this-&gt;f&lt;T&gt;(); f&lt;T&gt;(); }
+    int a;
+    static int b;
+  };
+  template &lt;class T&gt;
+  class Z {
+    void x() { this-&gt;m; }
+  };
+memberExpr(isArrow())
+  matches this-&gt;x, x, y.x, a, this-&gt;b
+cxxDependentScopeMemberExpr(isArrow())
+  matches this-&gt;m
+unresolvedMemberExpr(isArrow())
+  matches this-&gt;f&lt;T&gt;, f&lt;T&gt;
 </pre></td></tr>
 
 

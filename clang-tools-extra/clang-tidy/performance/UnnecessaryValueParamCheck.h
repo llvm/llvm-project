@@ -12,6 +12,7 @@
 
 #include "../ClangTidy.h"
 #include "../utils/IncludeInserter.h"
+#include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
 
 namespace clang {
 namespace tidy {
@@ -29,11 +30,14 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void registerPPCallbacks(CompilerInstance &Compiler) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+  void onEndOfTranslationUnit() override;
 
 private:
   void handleMoveFix(const ParmVarDecl &Var, const DeclRefExpr &CopyArgument,
                      const ASTContext &Context);
 
+  llvm::DenseMap<const FunctionDecl *, FunctionParmMutationAnalyzer>
+      MutationAnalyzers;
   std::unique_ptr<utils::IncludeInserter> Inserter;
   const utils::IncludeSorter::IncludeStyle IncludeStyle;
 };

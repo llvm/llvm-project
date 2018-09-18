@@ -42,7 +42,7 @@ struct SampleProfTest : ::testing::Test {
 
   SampleProfTest() : Writer(), Reader() {}
 
-  void createWriter(SampleProfileFormat Format, const std::string &Profile) {
+  void createWriter(SampleProfileFormat Format, StringRef Profile) {
     std::error_code EC;
     std::unique_ptr<raw_ostream> OS(
         new raw_fd_ostream(Profile, EC, sys::fs::F_None));
@@ -51,7 +51,7 @@ struct SampleProfTest : ::testing::Test {
     Writer = std::move(WriterOrErr.get());
   }
 
-  void readProfile(const Module &M, const std::string &Profile) {
+  void readProfile(const Module &M, StringRef Profile) {
     auto ReaderOrErr = SampleProfileReader::create(Profile, Context);
     ASSERT_TRUE(NoError(ReaderOrErr.getError()));
     Reader = std::move(ReaderOrErr.get());
@@ -59,7 +59,9 @@ struct SampleProfTest : ::testing::Test {
   }
 
   void testRoundTrip(SampleProfileFormat Format) {
-    std::string Profile = std::string("profile.") + std::to_string(Format);
+    SmallVector<char, 128> ProfilePath;
+    ASSERT_TRUE(NoError(llvm::sys::fs::createTemporaryFile("profile", "", ProfilePath)));
+    StringRef Profile(ProfilePath.data(), ProfilePath.size());
     createWriter(Format, Profile);
 
     StringRef FooName("_Z3fooi");

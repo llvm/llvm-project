@@ -15,12 +15,16 @@
 #include "Logger.h"
 #include "SourceCode.h"
 #include "URI.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Index/USRGeneration.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -235,6 +239,13 @@ RefKind toRefKind(index::SymbolRoleSet Roles) {
   return static_cast<RefKind>(static_cast<unsigned>(RefKind::All) & Roles);
 }
 
+template <class T> bool explicitTemplateSpecialization(const NamedDecl &ND) {
+  if (const auto *TD = llvm::dyn_cast<T>(&ND))
+    if (TD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+      return true;
+  return false;
+}
+
 } // namespace
 
 SymbolCollector::SymbolCollector(Options Opts) : Opts(std::move(Opts)) {}
@@ -271,21 +282,33 @@ bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
   // FunctionDecl, BlockDecl, ObjCMethodDecl and OMPDeclareReductionDecl.
   // FIXME: Need a matcher for ExportDecl in order to include symbols declared
   // within an export.
-  auto InNonLocalContext = hasDeclContext(anyOf(
-      translationUnitDecl(), namespaceDecl(), linkageSpecDecl(), recordDecl(),
-      enumDecl(), objcProtocolDecl(), objcInterfaceDecl(), objcCategoryDecl(),
-      objcCategoryImplDecl(), objcImplementationDecl()));
-  // Don't index template specializations and expansions in main files.
-  auto IsSpecialization =
-      anyOf(functionDecl(isExplicitTemplateSpecialization()),
-            cxxRecordDecl(isExplicitTemplateSpecialization()),
-            varDecl(isExplicitTemplateSpecialization()));
-  if (match(decl(allOf(unless(isExpansionInMainFile()), InNonLocalContext,
-                       unless(IsSpecialization))),
-            ND, ASTCtx)
-          .empty())
+  const auto *DeclCtx = ND.getDeclContext();
+  switch (DeclCtx->getDeclKind()) {
+  case Decl::TranslationUnit:
+  case Decl::Namespace:
+  case Decl::LinkageSpec:
+  case Decl::Enum:
+  case Decl::ObjCProtocol:
+  case Decl::ObjCInterface:
+  case Decl::ObjCCategory:
+  case Decl::ObjCCategoryImpl:
+  case Decl::ObjCImplementation:
+    break;
+  default:
+    // Record has a few derivations (e.g. CXXRecord, Class specialization), it's
+    // easier to cast.
+    if (!llvm::isa<RecordDecl>(DeclCtx))
+      return false;
+  }
+  if (explicitTemplateSpecialization<FunctionDecl>(ND) ||
+      explicitTemplateSpecialization<CXXRecordDecl>(ND) ||
+      explicitTemplateSpecialization<VarDecl>(ND))
     return false;
 
+  const auto &SM = ASTCtx.getSourceManager();
+  // Skip decls in the main file.
+  if (SM.isInMainFile(SM.getExpansionLoc(ND.getBeginLoc())))
+    return false;
   // Avoid indexing internal symbols in protobuf generated headers.
   if (isPrivateProtoDecl(ND))
     return false;

@@ -2947,35 +2947,37 @@ void ExprEngine::VisitMSAsmStmt(const MSAsmStmt *A, ExplodedNode *Pred,
 //===----------------------------------------------------------------------===//
 
 #ifndef NDEBUG
-static ExprEngine* GraphPrintCheckerState;
-static SourceManager* GraphPrintSourceManager;
-
 namespace llvm {
 
 template<>
-struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
+struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
   DOTGraphTraits (bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
   // FIXME: Since we do not cache error nodes in ExprEngine now, this does not
   // work.
-  static std::string getNodeAttributes(const ExplodedNode *N, void*) {
+  static std::string getNodeAttributes(const ExplodedNode *N,
+                                       ExplodedGraph *G) {
     return {};
   }
 
   // De-duplicate some source location pretty-printing.
-  static void printLocation(raw_ostream &Out, SourceLocation SLoc) {
+  static void printLocation(raw_ostream &Out,
+                            SourceLocation SLoc,
+                            const SourceManager &SM,
+                            StringRef Postfix="\\l") {
     if (SLoc.isFileID()) {
       Out << "\\lline="
-        << GraphPrintSourceManager->getExpansionLineNumber(SLoc)
+        << SM.getExpansionLineNumber(SLoc)
         << " col="
-        << GraphPrintSourceManager->getExpansionColumnNumber(SLoc)
-        << "\\l";
+        << SM.getExpansionColumnNumber(SLoc)
+        << Postfix;
     }
   }
 
   static void dumpProgramPoint(ProgramPoint Loc,
                                const ASTContext &Context,
                                llvm::raw_string_ostream &Out) {
+    const SourceManager &SM = Context.getSourceManager();
     switch (Loc.getKind()) {
     case ProgramPoint::BlockEntranceKind:
       Out << "Block Entrance: B"
@@ -3020,7 +3022,7 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
       ImplicitCallPoint PC = Loc.castAs<ImplicitCallPoint>();
       Out << "PreCall: ";
       PC.getDecl()->print(Out, Context.getLangOpts());
-      printLocation(Out, PC.getLocation());
+      printLocation(Out, PC.getLocation(), SM);
       break;
     }
 
@@ -3028,7 +3030,7 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
       ImplicitCallPoint PC = Loc.castAs<ImplicitCallPoint>();
       Out << "PostCall: ";
       PC.getDecl()->print(Out, Context.getLangOpts());
-      printLocation(Out, PC.getLocation());
+      printLocation(Out, PC.getLocation(), SM);
       break;
     }
 
@@ -3056,13 +3058,7 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
 
         Out << "\\|Terminator: ";
         E.getSrc()->printTerminator(Out, Context.getLangOpts());
-
-        if (SLoc.isFileID()) {
-          Out << "\\lline="
-              << GraphPrintSourceManager->getExpansionLineNumber(SLoc)
-              << " col="
-              << GraphPrintSourceManager->getExpansionColumnNumber(SLoc);
-        }
+        printLocation(Out, SLoc, SM, /*Postfix=*/"");
 
         if (isa<SwitchStmt>(T)) {
           const Stmt *Label = E.getDst()->getLabel();
@@ -3112,7 +3108,7 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
           << S->getID(Context) << " <" << (const void *)S << "> ";
       S->printPretty(Out, /*helper=*/nullptr, Context.getPrintingPolicy(),
                      /*Indentation=*/2, /*NewlineSymbol=*/"\\l");
-      printLocation(Out, S->getBeginLoc());
+      printLocation(Out, S->getBeginLoc(), SM, /*Postfix=*/"");
 
       if (Loc.getAs<PreStmt>())
         Out << "\\lPreStmt\\l";
@@ -3134,7 +3130,7 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
     return N->isTrivial();
   }
 
-  static std::string getNodeLabel(const ExplodedNode *N, void*){
+  static std::string getNodeLabel(const ExplodedNode *N, ExplodedGraph *G){
     std::string sbuf;
     llvm::raw_string_ostream Out(sbuf);
 
@@ -3167,11 +3163,7 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
 
     Out << "\\l\\|";
 
-    ExplodedGraph &Graph =
-        static_cast<ExprEngine *>(State->getStateManager().getOwningEngine())
-            ->getGraph();
-
-    Out << "StateID: ST" << State->getID() << ", NodeID: N" << N->getID(&Graph)
+    Out << "StateID: ST" << State->getID() << ", NodeID: N" << N->getID(G)
         << " <" << (const void *)N << ">\\|";
 
     bool SameAsAllPredecessors =
@@ -3205,32 +3197,20 @@ void ExprEngine::ViewGraph(bool trim) {
     }
 
     ViewGraph(Src);
-  }
-  else {
-    GraphPrintCheckerState = this;
-    GraphPrintSourceManager = &getContext().getSourceManager();
-
-    llvm::ViewGraph(*G.roots_begin(), "ExprEngine");
-
-    GraphPrintCheckerState = nullptr;
-    GraphPrintSourceManager = nullptr;
+  } else {
+    llvm::ViewGraph(&G, "ExprEngine");
   }
 #endif
 }
 
 void ExprEngine::ViewGraph(ArrayRef<const ExplodedNode*> Nodes) {
 #ifndef NDEBUG
-  GraphPrintCheckerState = this;
-  GraphPrintSourceManager = &getContext().getSourceManager();
-
   std::unique_ptr<ExplodedGraph> TrimmedG(G.trim(Nodes));
 
-  if (!TrimmedG.get())
+  if (!TrimmedG.get()) {
     llvm::errs() << "warning: Trimmed ExplodedGraph is empty.\n";
-  else
-    llvm::ViewGraph(*TrimmedG->roots_begin(), "TrimmedExprEngine");
-
-  GraphPrintCheckerState = nullptr;
-  GraphPrintSourceManager = nullptr;
+  } else {
+    llvm::ViewGraph(TrimmedG.get(), "TrimmedExprEngine");
+  }
 #endif
 }
