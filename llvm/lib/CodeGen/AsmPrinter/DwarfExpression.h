@@ -138,6 +138,9 @@ protected:
   /// Emit a raw unsigned value.
   virtual void emitUnsigned(uint64_t Value) = 0;
 
+  /// Emit a normalized unsigned constant.
+  void emitConstu(uint64_t Value);
+
   /// Return whether the given machine register is the frame register in the
   /// current function.
   virtual bool isFrameRegister(const TargetRegisterInfo &TRI, unsigned MachineReg) = 0;
