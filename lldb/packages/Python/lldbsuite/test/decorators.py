@@ -603,8 +603,10 @@ def skipUnlessDarwin(func):
 
 def swiftTest(func):
     """Decorate the item as a Swift test (Darwin/Linux only, no i386)."""
-
     def is_not_swift_compatible(self):
+        if self.getDebugInfo() == "gmodules":
+            return "skipping (gmodules only makes sense for clang tests)"
+
         if "i386" == self.getArchitecture():
             return "skipping Swift test because i386 is not a supported architecture"
         elif not(any(x in sys.platform for x in ['darwin', 'linux'])):
@@ -613,18 +615,6 @@ def swiftTest(func):
             # This configuration is Swift-compatible
             return None
     return skipTestIfFn(is_not_swift_compatible)(func)
-
-
-def skipIfSmooshbase(func):
-    """Decorate the item to skip tests that should be skipped on the smooshbase buildbot."""
-
-    def is_smooshbase(self):
-        if os.environ.get('IS_SMOOSHBASE', 'FAIL') != 'FAIL':
-            return 'skip on the smooshbase buildbot'
-        else:
-            return None
-    return skipTestIfFn(is_smooshbase)(func)
-
 
 def skipUnlessGoInstalled(func):
     """Decorate the item to skip tests when no Go compiler is available."""
