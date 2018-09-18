@@ -385,6 +385,9 @@ static StyleKind findStyleKind(
     const NamedDecl *D,
     const std::vector<llvm::Optional<IdentifierNamingCheck::NamingStyle>>
         &NamingStyles) {
+  assert(D && D->getIdentifier() && !D->getName().empty() && !D->isImplicit() &&
+         "Decl must be an explicit identifier with a name.");
+
   if (isa<ObjCIvarDecl>(D) && NamingStyles[SK_ObjcIvar])
     return SK_ObjcIvar;
   
@@ -548,8 +551,6 @@ static StyleKind findStyleKind(
 
   if (const auto *Decl = dyn_cast<CXXMethodDecl>(D)) {
     if (Decl->isMain() || !Decl->isUserProvided() ||
-        Decl->isUsualDeallocationFunction() ||
-        Decl->isCopyAssignmentOperator() || Decl->isMoveAssignmentOperator() ||
         Decl->size_overridden_methods() > 0)
       return SK_Invalid;
 

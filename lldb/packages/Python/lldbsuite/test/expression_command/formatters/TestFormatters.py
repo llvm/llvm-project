@@ -57,14 +57,21 @@ class ExprFormattersTestCase(TestBase):
             self.runCmd("frame variable foo1.b --show-types")
             self.runCmd("frame variable foo1.b.b_ref --show-types")
 
-        self.expect(
-            "expression --show-types -- *(new foo(47))",
-            substrs=[
-                '(int) a = 47',
-                '(bar) b = {',
-                '(int) i = 94',
-                '(baz) b = {',
-                '(int) k = 99'])
+        self.filecheck("expression --show-types -- *(new foo(47))", __file__,
+                '-check-prefix=EXPR-TYPES-NEW-FOO')
+        # EXPR-TYPES-NEW-FOO: (foo) ${{.*}} = {
+        # EXPR-TYPES-NEW-FOO-NEXT:   (int) a = 47
+        # EXPR-TYPES-NEW-FOO-NEXT:   (int *) a_ptr = 0x
+        # EXPR-TYPES-NEW-FOO-NEXT:   (bar) b = {
+        # EXPR-TYPES-NEW-FOO-NEXT:     (int) i = 94
+        # EXPR-TYPES-NEW-FOO-NEXT:     (int *) i_ptr = 0x
+        # EXPR-TYPES-NEW-FOO-NEXT:     (baz) b = {
+        # EXPR-TYPES-NEW-FOO-NEXT:       (int) h = 97
+        # EXPR-TYPES-NEW-FOO-NEXT:       (int) k = 99
+        # EXPR-TYPES-NEW-FOO-NEXT:     }
+        # EXPR-TYPES-NEW-FOO-NEXT:     (baz &) b_ref = 0x
+        # EXPR-TYPES-NEW-FOO-NEXT:   }
+        # EXPR-TYPES-NEW-FOO-NEXT: }
 
         self.runCmd("type summary add -F formatters.foo_SummaryProvider foo")
 
@@ -80,68 +87,49 @@ class ExprFormattersTestCase(TestBase):
         self.expect("expression foo1.a_ptr",
                     substrs=['(int *) $', '= 0x', ' -> 13'])
 
-        self.expect(
-            "expression foo1",
-            substrs=[
-                '(foo) $',
-                ' a = 12',
-                'a_ptr = ',
-                ' -> 13',
-                'i = 24',
-                'i_ptr = ',
-                ' -> 25'])
+        self.filecheck("expression foo1", __file__, '-check-prefix=EXPR-FOO1')
+        # EXPR-FOO1: (foo) $
+        # EXPR-FOO1-SAME: a = 12
+        # EXPR-FOO1-SAME: a_ptr = {{[0-9]+}} -> 13
+        # EXPR-FOO1-SAME: i = 24
+        # EXPR-FOO1-SAME: i_ptr = {{[0-9]+}} -> 25
+        # EXPR-FOO1-SAME: b_ref = {{[0-9]+}}
+        # EXPR-FOO1-SAME: h = 27
+        # EXPR-FOO1-SAME: k = 29
 
-        self.expect(
-            "expression --ptr-depth=1 -- new foo(47)",
-            substrs=[
-                '(foo *) $',
-                'a = 47',
-                'a_ptr = ',
-                ' -> 48',
-                'i = 94',
-                'i_ptr = ',
-                ' -> 95'])
+        self.filecheck("expression --ptr-depth=1 -- new foo(47)", __file__,
+                '-check-prefix=EXPR-PTR-DEPTH1')
+        # EXPR-PTR-DEPTH1: (foo *) $
+        # EXPR-PTR-DEPTH1-SAME: a = 47
+        # EXPR-PTR-DEPTH1-SAME: a_ptr = {{[0-9]+}} -> 48
+        # EXPR-PTR-DEPTH1-SAME: i = 94
+        # EXPR-PTR-DEPTH1-SAME: i_ptr = {{[0-9]+}} -> 95
 
-        self.expect(
-            "expression foo2",
-            substrs=[
-                '(foo) $',
-                'a = 121',
-                'a_ptr = ',
-                ' -> 122',
-                'i = 242',
-                'i_ptr = ',
-                ' -> 243'])
+        self.filecheck("expression foo2", __file__, '-check-prefix=EXPR-FOO2')
+        # EXPR-FOO2: (foo) $
+        # EXPR-FOO2-SAME: a = 121
+        # EXPR-FOO2-SAME: a_ptr = {{[0-9]+}} -> 122
+        # EXPR-FOO2-SAME: i = 242
+        # EXPR-FOO2-SAME: i_ptr = {{[0-9]+}} -> 243
+        # EXPR-FOO2-SAME: h = 245
+        # EXPR-FOO2-SAME: k = 247
 
         object_name = self.res.GetOutput()
         object_name = object_name[7:]
         object_name = object_name[0:object_name.find(' =')]
 
-        self.expect(
-            "frame variable foo2",
-            substrs=[
-                '(foo)',
-                'foo2',
-                'a = 121',
-                'a_ptr = ',
-                ' -> 122',
-                'i = 242',
-                'i_ptr = ',
-                ' -> 243'])
+        self.filecheck("frame variable foo2", __file__, '-check-prefix=VAR-FOO2')
+        # VAR-FOO2: (foo) foo2
+        # VAR-FOO2-SAME: a = 121
+        # VAR-FOO2-SAME: a_ptr = {{[0-9]+}} -> 122
+        # VAR-FOO2-SAME: i = 242
+        # VAR-FOO2-SAME: i_ptr = {{[0-9]+}} -> 243
+        # VAR-FOO2-SAME: h = 245
+        # VAR-FOO2-SAME: k = 247
 
-        self.expect(
-            "expression $" +
-            object_name,
-            substrs=[
-                '(foo) $',
-                'a = 121',
-                'a_ptr = ',
-                ' -> 122',
-                'i = 242',
-                'i_ptr = ',
-                ' -> 243',
-                'h = 245',
-                'k = 247'])
+        # The object is the same as foo2, so use the EXPR-FOO2 checks.
+        self.filecheck("expression $" + object_name, __file__,
+                '-check-prefix=EXPR-FOO2')
 
         self.runCmd("type summary delete foo")
         self.runCmd(

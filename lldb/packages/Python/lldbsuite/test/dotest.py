@@ -307,6 +307,13 @@ def parseOptionsAndInitTestdirs():
       os.environ['DSYMUTIL'] = seven.get_command_output(
           'xcrun -find -toolchain default dsymutil')
 
+    if args.filecheck:
+        # The CMake build passes in a path to a working FileCheck binary.
+        configuration.filecheck = os.path.abspath(args.filecheck)
+    else:
+        logging.error('No valid FileCheck executable; aborting...')
+        sys.exit(-1)
+
     if args.channels:
         lldbtest_config.channels = args.channels
 
