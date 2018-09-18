@@ -254,7 +254,8 @@ static bool checkUInt32Argument(Sema &S, const AttrInfo &AI, const Expr *Expr,
   }
 
   if (StrictlyUnsigned && I.isSigned() && I.isNegative()) {
-    S.Diag(getAttrLoc(AI), diag::err_attribute_argument_negative) << AI;
+    S.Diag(getAttrLoc(AI), diag::err_attribute_requires_positive_integer)
+        << AI << /*non-negative*/ 1;
     return false;
   }
 

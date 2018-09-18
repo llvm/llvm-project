@@ -461,12 +461,15 @@ public:
 
 namespace llvm {
 
-  template<> struct GraphTraits<clang::ento::ExplodedNode*> {
+  template <> struct GraphTraits<clang::ento::ExplodedGraph *> {
+    using GraphTy = clang::ento::ExplodedGraph *;
     using NodeRef = clang::ento::ExplodedNode *;
     using ChildIteratorType = clang::ento::ExplodedNode::succ_iterator;
-    using nodes_iterator = llvm::df_iterator<NodeRef>;
+    using nodes_iterator = llvm::df_iterator<GraphTy>;
 
-    static NodeRef getEntryNode(NodeRef N) { return N; }
+    static NodeRef getEntryNode(const GraphTy G) {
+      return *G->roots_begin();
+    }
 
     static ChildIteratorType child_begin(NodeRef N) {
       if (N->succ_size() == 1 && (*N->succ_begin())->isTrivial()) {
@@ -482,27 +485,14 @@ namespace llvm {
       return N->succ_end();
     }
 
-    static nodes_iterator nodes_begin(NodeRef N) { return df_begin(N); }
+    static nodes_iterator nodes_begin(const GraphTy G) {
+      return df_begin(G);
+    }
 
-    static nodes_iterator nodes_end(NodeRef N) { return df_end(N); }
+    static nodes_iterator nodes_end(const GraphTy G) {
+      return df_end(G);
+    }
   };
-
-  template<> struct GraphTraits<const clang::ento::ExplodedNode*> {
-    using NodeRef = const clang::ento::ExplodedNode *;
-    using ChildIteratorType = clang::ento::ExplodedNode::const_succ_iterator;
-    using nodes_iterator = llvm::df_iterator<NodeRef>;
-
-    static NodeRef getEntryNode(NodeRef N) { return N; }
-
-    static ChildIteratorType child_begin(NodeRef N) { return N->succ_begin(); }
-
-    static ChildIteratorType child_end(NodeRef N) { return N->succ_end(); }
-
-    static nodes_iterator nodes_begin(NodeRef N) { return df_begin(N); }
-
-    static nodes_iterator nodes_end(NodeRef N) { return df_end(N); }
-  };
-
 } // namespace llvm
 
 #endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_EXPLODEDGRAPH_H

@@ -27,7 +27,7 @@ TEST(Finder, DynamicOnlyAcceptsSomeMatchers) {
                                        nullptr));
 
   // Do not accept non-toplevel matchers.
-  EXPECT_FALSE(Finder.addDynamicMatcher(isArrow(), nullptr));
+  EXPECT_FALSE(Finder.addDynamicMatcher(isMain(), nullptr));
   EXPECT_FALSE(Finder.addDynamicMatcher(hasName("x"), nullptr));
 }
 

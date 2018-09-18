@@ -323,6 +323,9 @@ public:
     /// Code completion where an Objective-C category name is expected.
     CCC_ObjCCategoryName,
 
+    /// Code completion inside the filename part of a #include directive.
+    CCC_IncludedFile,
+
     /// An unknown context, in which we are recovering from a parsing
     /// error and don't know which completions we should give.
     CCC_Recovery
