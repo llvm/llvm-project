@@ -206,8 +206,8 @@ IdentifiedSymbol getSymbolAtPosition(ParsedAST &AST, SourceLocation Pos) {
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
   IndexOpts.IndexFunctionLocals = true;
-  indexTopLevelDecls(AST.getASTContext(), AST.getLocalTopLevelDecls(),
-                     DeclMacrosFinder, IndexOpts);
+  indexTopLevelDecls(AST.getASTContext(), AST.getPreprocessor(),
+                     AST.getLocalTopLevelDecls(), DeclMacrosFinder, IndexOpts);
 
   return {DeclMacrosFinder.getFoundDecls(), DeclMacrosFinder.takeMacroInfos()};
 }
@@ -414,8 +414,8 @@ findRefs(const std::vector<const Decl *> &Decls, ParsedAST &AST) {
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
   IndexOpts.IndexFunctionLocals = true;
-  indexTopLevelDecls(AST.getASTContext(), AST.getLocalTopLevelDecls(),
-                     RefFinder, IndexOpts);
+  indexTopLevelDecls(AST.getASTContext(), AST.getPreprocessor(),
+                     AST.getLocalTopLevelDecls(), RefFinder, IndexOpts);
   return std::move(RefFinder).take();
 }
 
