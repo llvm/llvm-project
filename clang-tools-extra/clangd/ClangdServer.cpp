@@ -83,7 +83,7 @@ std::unique_ptr<ParsingCallbacks> makeUpdateCallbacks(FileIndex *FIndex) {
     }
 
     void onMainAST(PathRef Path, ParsedAST &AST) override {
-      FIndex->updateMain(Path, AST, AST.getLocalTopLevelDecls());
+      FIndex->updateMain(Path, AST);
     }
   };
   return llvm::make_unique<CB>(FIndex);

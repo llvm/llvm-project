@@ -51,7 +51,7 @@ SymbolSlab TestTU::headerSymbols() const {
 // FIXME: This should return a FileIndex with both preamble and main index.
 std::unique_ptr<SymbolIndex> TestTU::index() const {
   auto AST = build();
-  auto Content = indexMainDecls(AST, AST.getLocalTopLevelDecls());
+  auto Content = indexMainDecls(AST);
   return MemIndex::build(std::move(Content.first), std::move(Content.second));
 }
 

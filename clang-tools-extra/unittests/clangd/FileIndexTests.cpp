@@ -314,14 +314,14 @@ TEST(FileIndexTest, Refs) {
   Test.Code = MainCode.code();
   Test.Filename = "test.cc";
   auto AST = Test.build();
-  Index.updateMain(Test.Filename, AST, AST.getLocalTopLevelDecls());
+  Index.updateMain(Test.Filename, AST);
   // Add test2.cc
   TestTU Test2;
   Test2.HeaderCode = HeaderCode;
   Test2.Code = MainCode.code();
   Test2.Filename = "test2.cc";
   AST = Test2.build();
-  Index.updateMain(Test2.Filename, AST, AST.getLocalTopLevelDecls());
+  Index.updateMain(Test2.Filename, AST);
 
   EXPECT_THAT(getRefs(Index.index(), Foo.ID),
               RefsAre({AllOf(RefRange(MainCode.range("foo")),

@@ -244,7 +244,7 @@ TEST(MergeIndexTest, Refs) {
   Test.Code = Test1Code.code();
   Test.Filename = "test.cc";
   auto AST = Test.build();
-  Dyn.updateMain(Test.Filename, AST, AST.getLocalTopLevelDecls());
+  Dyn.updateMain(Test.Filename, AST);
 
   // Build static index for test.cc.
   Test.HeaderCode = HeaderCode;
@@ -252,8 +252,7 @@ TEST(MergeIndexTest, Refs) {
   Test.Filename = "test.cc";
   auto StaticAST = Test.build();
   // Add stale refs for test.cc.
-  StaticIndex.updateMain(Test.Filename, StaticAST,
-                         StaticAST.getLocalTopLevelDecls());
+  StaticIndex.updateMain(Test.Filename, StaticAST);
 
   // Add refs for test2.cc
   Annotations Test2Code(R"(class $Foo[[Foo]] {};)");
@@ -262,8 +261,7 @@ TEST(MergeIndexTest, Refs) {
   Test2.Code = Test2Code.code();
   Test2.Filename = "test2.cc";
   StaticAST = Test2.build();
-  StaticIndex.updateMain(Test2.Filename, StaticAST,
-                         StaticAST.getLocalTopLevelDecls());
+  StaticIndex.updateMain(Test2.Filename, StaticAST);
 
   RefsRequest Request;
   Request.IDs = {Foo.ID};

@@ -65,10 +65,9 @@ indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
 }
 
 std::pair<SymbolSlab, RefSlab>
-indexMainDecls(ParsedAST &AST, llvm::ArrayRef<Decl *> TopLevelDecls,
-               llvm::ArrayRef<std::string> URISchemes) {
+indexMainDecls(ParsedAST &AST, llvm::ArrayRef<std::string> URISchemes) {
   return indexSymbols(AST.getASTContext(), AST.getPreprocessorPtr(),
-                      TopLevelDecls,
+                      AST.getLocalTopLevelDecls(),
                       /*IsIndexMainAST=*/true, URISchemes);
 }
 
@@ -163,9 +162,8 @@ void FileIndex::updatePreamble(PathRef Path, ASTContext &AST,
   PreambleIndex.reset(PreambleSymbols.buildMemIndex());
 }
 
-void FileIndex::updateMain(PathRef Path, ParsedAST &AST,
-                           llvm::ArrayRef<Decl *> TopLevelDecls) {
-  auto Contents = indexMainDecls(AST, TopLevelDecls, URISchemes);
+void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
+  auto Contents = indexMainDecls(AST, URISchemes);
   MainFileSymbols.update(
       Path, llvm::make_unique<SymbolSlab>(std::move(Contents.first)),
       llvm::make_unique<RefSlab>(std::move(Contents.second)));
