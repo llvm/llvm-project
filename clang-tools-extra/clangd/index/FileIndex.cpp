@@ -54,7 +54,7 @@ indexAST(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
 
   SymbolCollector Collector(std::move(CollectorOpts));
   Collector.setPreprocessor(PP);
-  index::indexTopLevelDecls(AST, DeclsToIndex, Collector, IndexOpts);
+  index::indexTopLevelDecls(AST, *PP, DeclsToIndex, Collector, IndexOpts);
 
   const auto &SM = AST.getSourceManager();
   const auto *MainFileEntry = SM.getFileEntryForID(SM.getMainFileID());
