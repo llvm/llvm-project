@@ -51,7 +51,11 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   HasLegalHalfType = true;
   HasFloat16 = true;
 
-  LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
+  if (Triple.isArch64Bit())
+    LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
+  else
+    LongWidth = LongAlign = PointerWidth = PointerAlign = 32;
+
   MaxVectorAlign = 128;
   MaxAtomicInlineWidth = 128;
   MaxAtomicPromoteWidth = 128;
@@ -160,7 +164,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ELF__");
 
   // Target properties.
-  if (!getTriple().isOSWindows()) {
+  if (!getTriple().isOSWindows() && getTriple().isArch64Bit()) {
     Builder.defineMacro("_LP64");
     Builder.defineMacro("__LP64__");
   }
@@ -506,14 +510,19 @@ int AArch64TargetInfo::getEHDataRegisterNumber(unsigned RegNo) const {
   return -1;
 }
 
+bool AArch64TargetInfo::hasInt128Type() const { return true; }
+
 AArch64leTargetInfo::AArch64leTargetInfo(const llvm::Triple &Triple,
                                          const TargetOptions &Opts)
     : AArch64TargetInfo(Triple, Opts) {}
 
 void AArch64leTargetInfo::setDataLayout() {
-  if (getTriple().isOSBinFormatMachO())
-    resetDataLayout("e-m:o-i64:64-i128:128-n32:64-S128");
-  else
+  if (getTriple().isOSBinFormatMachO()) {
+    if(getTriple().isArch32Bit())
+      resetDataLayout("e-m:o-p:32:32-i64:64-i128:128-n32:64-S128");
+    else
+      resetDataLayout("e-m:o-i64:64-i128:128-n32:64-S128");
+  } else
     resetDataLayout("e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128");
 }
 
@@ -631,19 +640,34 @@ DarwinAArch64TargetInfo::DarwinAArch64TargetInfo(const llvm::Triple &Triple,
                                                  const TargetOptions &Opts)
     : DarwinTargetInfo<AArch64leTargetInfo>(Triple, Opts) {
   Int64Type = SignedLongLong;
+  if (getTriple().isArch32Bit())
+    IntMaxType = SignedLongLong;
+
+  WCharType = SignedInt;
   UseSignedCharForObjCBool = false;
 
   LongDoubleWidth = LongDoubleAlign = SuitableAlign = 64;
   LongDoubleFormat = &llvm::APFloat::IEEEdouble();
 
-  TheCXXABI.set(TargetCXXABI::iOS64);
+  UseZeroLengthBitfieldAlignment = false;
+
+  if (getTriple().isArch32Bit()) {
+    UseBitFieldTypeAlignment = false;
+    ZeroLengthBitfieldBoundary = 32;
+    UseZeroLengthBitfieldAlignment = true;
+    TheCXXABI.set(TargetCXXABI::WatchOS);
+  } else
+    TheCXXABI.set(TargetCXXABI::iOS64);
 }
 
 void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
                                            const llvm::Triple &Triple,
                                            MacroBuilder &Builder) const {
   Builder.defineMacro("__AARCH64_SIMD__");
-  Builder.defineMacro("__ARM64_ARCH_8__");
+  if (Triple.isArch32Bit())
+    Builder.defineMacro("__ARM64_ARCH_8_32__");
+  else
+    Builder.defineMacro("__ARM64_ARCH_8__");
   Builder.defineMacro("__ARM_NEON__");
   Builder.defineMacro("__LITTLE_ENDIAN__");
   Builder.defineMacro("__REGISTER_PREFIX__", "");

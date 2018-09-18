@@ -122,6 +122,11 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
   case llvm::Triple::lanai:
     return new LanaiTargetInfo(Triple, Opts);
 
+  case llvm::Triple::aarch64_32:
+    if (Triple.isOSDarwin())
+      return new DarwinAArch64TargetInfo(Triple, Opts);
+
+    return nullptr;
   case llvm::Triple::aarch64:
     if (Triple.isOSDarwin())
       return new DarwinAArch64TargetInfo(Triple, Opts);
