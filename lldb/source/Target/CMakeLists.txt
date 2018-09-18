@@ -1,8 +1,12 @@
 include_directories(../Plugins/Process/Utility)
 
-set(REFLECTION_LIB "swiftReflection")
+set(REFLECTION_LIB "")
 
-if(LLVM_HOST_TRIPLE MATCHES "^((\\?!linux).)*$")
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+    set(REFLECTION_LIB "swiftReflection-linux-x86_64")
+endif()
+
+if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
     # libswiftReflection is placed in a subdirectory which depends
     # on the host we're currently running on.
     # FIXME: There must be a better way to get at libswiftReflection.a
