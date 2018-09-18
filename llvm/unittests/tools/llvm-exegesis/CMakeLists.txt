@@ -15,6 +15,7 @@ add_llvm_unittest(LLVMExegesisTests
   BenchmarkRunnerTest.cpp
   ClusteringTest.cpp
   PerfHelperTest.cpp
+  RegisterValueTest.cpp
   )
 target_link_libraries(LLVMExegesisTests PRIVATE LLVMExegesis)
 

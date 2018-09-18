@@ -70,6 +70,7 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::ctlz:
   case Intrinsic::cttz:
   case Intrinsic::powi:
+  case Intrinsic::canonicalize:
     return true;
   default:
     return false;

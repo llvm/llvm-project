@@ -591,6 +591,13 @@ void thinlto_codegen_set_cache_size_bytes(
   return unwrap(cg)->setCacheMaxSizeBytes(MaxSizeBytes);
 }
 
+void thinlto_codegen_set_cache_size_megabytes(
+    thinlto_code_gen_t cg, unsigned MaxSizeMegabytes) {
+  uint64_t MaxSizeBytes = MaxSizeMegabytes;
+  MaxSizeBytes *= 1024 * 1024;
+  return unwrap(cg)->setCacheMaxSizeBytes(MaxSizeBytes);
+}
+
 void thinlto_codegen_set_cache_size_files(
     thinlto_code_gen_t cg, unsigned MaxSizeFiles) {
   return unwrap(cg)->setCacheMaxSizeFiles(MaxSizeFiles);

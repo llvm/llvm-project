@@ -345,6 +345,9 @@ private:
   void visitInst(Instruction &I,
                  DenseMap<CVPLatticeKey, CVPLatticeVal> &ChangedValues,
                  SparseSolver<CVPLatticeKey, CVPLatticeVal> &SS) {
+    // Simply bail if this instruction has no user.
+    if (I.use_empty())
+      return;
     auto RegI = CVPLatticeKey(&I, IPOGrouping::Register);
     ChangedValues[RegI] = getOverdefinedVal();
   }

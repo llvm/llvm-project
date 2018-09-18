@@ -603,12 +603,9 @@ bool IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
         if (ExitValue->getSCEVType()>=scMulExpr) {
           bool HasHardInternalUses = false;
           bool HasSoftExternalUses = false;
-          unsigned NumUses = 0;
-          for (auto IB = Inst->user_begin(), IE = Inst->user_end();
-               IB != IE && NumUses <= 6; ++IB) {
-            Instruction *UseInstr = cast<Instruction>(*IB);
+          for (auto *IB : Inst->users()) {
+            Instruction *UseInstr = cast<Instruction>(IB);
             unsigned Opc = UseInstr->getOpcode();
-            NumUses++;
             if (L->contains(UseInstr)) {
               if (Opc == Instruction::Call)
                 HasHardInternalUses = true;
@@ -616,11 +613,8 @@ bool IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
               if (Opc == Instruction::PHI) {
                 // Do not count the Phi as a use. LCSSA may have inserted
                 // plenty of trivial ones.
-                NumUses--;
-                for (auto PB = UseInstr->user_begin(),
-                          PE = UseInstr->user_end();
-                     PB != PE && NumUses <= 6; ++PB, ++NumUses) {
-                  unsigned PhiOpc = cast<Instruction>(*PB)->getOpcode();
+                for (auto *PB : UseInstr->users()) {
+                  unsigned PhiOpc = cast<Instruction>(PB)->getOpcode();
                   if (PhiOpc != Instruction::Call &&
                       PhiOpc != Instruction::Ret) {
                     HasSoftExternalUses = true;
@@ -635,7 +629,7 @@ bool IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
               }
             }
           }
-          if (NumUses <= 6 && HasHardInternalUses && !HasSoftExternalUses)
+          if (HasHardInternalUses && !HasSoftExternalUses)
             continue;
         }
 
