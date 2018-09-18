@@ -19,8 +19,8 @@
 ; AS in 26163, we expect two ranges (as opposed to one), the first one being zero sized
 ;
 ;
-; CHECK: [0x0000000000000004, 0x0000000000000004): DW_OP_constu 0x3, DW_OP_piece 0x4, DW_OP_reg5 RDI, DW_OP_piece 0x2
-; CHECK: [0x0000000000000004, 0x0000000000000014): DW_OP_constu 0x3, DW_OP_piece 0x4, DW_OP_constu 0x0, DW_OP_piece 0x4
+; CHECK: [0x0000000000000004, 0x0000000000000004): DW_OP_lit3, DW_OP_piece 0x4, DW_OP_reg5 RDI, DW_OP_piece 0x2
+; CHECK: [0x0000000000000004, 0x0000000000000014): DW_OP_lit3, DW_OP_piece 0x4, DW_OP_lit0, DW_OP_piece 0x4
 
 source_filename = "test/DebugInfo/X86/PR26148.ll"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
