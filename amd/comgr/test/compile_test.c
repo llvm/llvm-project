@@ -97,10 +97,10 @@ int main(int argc, char *argv[]) {
 
   status = amd_comgr_create_action_info(&dataAction);
   checkError(status, "amd_comgr_create_action_info");
-  amd_comgr_action_info_set_language(dataAction, AMD_COMGR_LANGUAGE_OPENCL_1_2);
+  status = amd_comgr_action_info_set_language(dataAction, AMD_COMGR_LANGUAGE_OPENCL_1_2);
   checkError(status, "amd_comgr_action_info_set_language");
-  amd_comgr_action_info_set_isa_name(dataAction, "amdgcn-amd-amdhsa-opencl-gfx803");
-  checkError(status, "amd_comgr_action_info_set_language");
+  status = amd_comgr_action_info_set_isa_name(dataAction, "amdgcn-amd-amdhsa--gfx803");
+  checkError(status, "amd_comgr_action_info_set_isa_name");
   status = amd_comgr_action_info_set_options(dataAction, "-mllvm -amdgpu-early-inline-all");
   checkError(status, "amd_comgr_action_info_set_options");
 

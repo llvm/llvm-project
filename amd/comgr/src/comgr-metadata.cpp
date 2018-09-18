@@ -182,16 +182,14 @@ size_t getIsaCount() {
 
 const char *getIsaName(size_t Index) { return SupportedIsas[Index]; }
 
-amd_comgr_status_t getIsaMetadata(const char *IsaName, DataMeta *Meta) {
-  StringRef IsaNameRef(IsaName);
-
-  auto IsaIterator = find(SupportedIsas, IsaNameRef);
+amd_comgr_status_t getIsaMetadata(StringRef IsaName, DataMeta *Meta) {
+  auto IsaIterator = find(SupportedIsas, IsaName);
   if (IsaIterator == std::end(SupportedIsas))
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   auto IsaIndex = std::distance(std::begin(SupportedIsas), IsaIterator);
 
   TargetIdentifier Ident;
-  if (auto Status = ParseTargetIdentifier(IsaNameRef, Ident))
+  if (auto Status = ParseTargetIdentifier(IsaName, Ident))
     return Status;
 
   auto Root = std::make_shared<COMGR::msgpack::Map>();
@@ -248,6 +246,15 @@ amd_comgr_status_t getIsaMetadata(const char *IsaName, DataMeta *Meta) {
   Meta->msgpack_node = Root;
 
   return AMD_COMGR_STATUS_SUCCESS;
+}
+
+bool isValidIsaName(StringRef IsaName) {
+  auto IsaIterator = find(SupportedIsas, IsaName);
+  if (IsaIterator == std::end(SupportedIsas))
+    return false;
+
+  TargetIdentifier Ident;
+  return ParseTargetIdentifier(IsaName, Ident) == AMD_COMGR_STATUS_SUCCESS;
 }
 
 } // namespace COMGR

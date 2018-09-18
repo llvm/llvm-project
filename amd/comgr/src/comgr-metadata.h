@@ -50,7 +50,9 @@ size_t getIsaCount();
 
 const char *getIsaName(size_t Index);
 
-amd_comgr_status_t getIsaMetadata(const char *IsaName, DataMeta *Meta);
+amd_comgr_status_t getIsaMetadata(llvm::StringRef IsaName, DataMeta *Meta);
+
+bool isValidIsaName(llvm::StringRef IsaName);
 
 } // namespace COMGR
 } // namespace metadata

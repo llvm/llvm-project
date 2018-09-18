@@ -367,7 +367,7 @@ amd_comgr_get_isa_name(
  * include information about the limits for resources such as
  * registers and memory addressing.
  *
- * @param[in] name The isa name to query.
+ * @param[in] isa_name The isa name to query.
  *
  * @param[out] metadata A handle to the metadata of the isa name. If
  * the isa name has no metadata then the returned handle has a kind of
@@ -386,7 +386,7 @@ amd_comgr_get_isa_name(
  */
 amd_comgr_status_t AMD_API
 amd_comgr_get_isa_metadata(
-  const char *name,
+  const char *isa_name,
   amd_comgr_metadata_node_t *metadata);
 
  /**
@@ -894,9 +894,9 @@ amd_comgr_destroy_action_info(
  * @param[in] action_info A handle to the action info object to be
  * updated.
  *
- * @param[in] isa_name A null terminated string that is the isa name. If
- * NULL or the empty string then the isa name is cleared. The isa name is
- * defined as the Code Object Target Identification string, described at
+ * @param[in] isa_name A null terminated string that is the isa name. If NULL
+ * or the empty string then the isa name is cleared. The isa name is defined as
+ * the Code Object Target Identification string, described at
  * https://llvm.org/docs/AMDGPUUsage.html#code-object-target-identification
  *
  * @retval ::AMD_COMGR_STATUS_SUCCESS The function has

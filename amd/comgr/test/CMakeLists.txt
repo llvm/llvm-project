@@ -92,6 +92,11 @@ add_executable(link_test link_test.c)
 target_link_libraries(link_test amd_comgr)
 add_test(NAME link_test COMMAND link_test)
 
+# Test : ISA Name Parsing
+add_executable(isa_name_parsing_test isa_name_parsing_test.c)
+target_link_libraries(isa_name_parsing_test amd_comgr)
+add_test(NAME isa_name_parsing_test COMMAND isa_name_parsing_test)
+
 # Windows binaries have no equivalent to -rpath, so we must set their PATH to
 # include the .lib/.dll directory.
 if (NOT(UNIX))
@@ -108,5 +113,6 @@ if (NOT(UNIX))
     compile_minimal_test
     assemble_test
     link_test
+    isa_name_parsing_test
     PROPERTIES ENVIRONMENT "PATH=$<TARGET_LINKER_FILE_DIR:amd_comgr>")
 endif()

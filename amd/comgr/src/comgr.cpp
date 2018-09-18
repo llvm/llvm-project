@@ -127,20 +127,6 @@ static amd_comgr_status_t print_entry(amd_comgr_metadata_node_t key,
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-static bool isa_name_is_valid(char *name) {
-  // Ensure name is valid per compiler allowed isa_name.
-  //
-  // TBD:
-  // I'm not adding code to this check, because I believe it's too expensive
-  // as a check in amd_comgr_action_info_set_isa_name().
-  // If the user cares, he/she should implement it by calling
-  // amd_comgr_get_isa_count() to get the number of isa supported by the
-  // compiler, then iterates the list to ensure the arugment name is in the
-  // the list using amd_comgr_get_isa_name().
-
-  return true;
-}
-
 static bool language_is_valid(amd_comgr_language_t language) {
   if (language >= AMD_COMGR_LANGUAGE_NONE &&
       language <= AMD_COMGR_LANGUAGE_LAST)
@@ -481,19 +467,19 @@ amd_comgr_status_t AMD_API amd_comgr_get_isa_name(size_t index,
 
 amd_comgr_status_t AMD_API
 amd_comgr_get_isa_metadata(
-  const char *name,
+  const char *isa_name,
   amd_comgr_metadata_node_t *metadata)
 {
   amd_comgr_status_t status;
 
-  if (name == NULL || metadata == NULL)
+  if (isa_name == NULL || metadata == NULL)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
   DataMeta *metap = new (std::nothrow) DataMeta();
   if (metap == NULL)
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
 
-  status = metadata::getIsaMetadata(name, metap);
+  status = metadata::getIsaMetadata(isa_name, metap);
   if (status)
     return status;
 
@@ -830,9 +816,16 @@ amd_comgr_action_info_set_isa_name(
 {
   DataAction *actionp = DataAction::Convert(action_info);
 
-  if (actionp == NULL ||
-      !isa_name_is_valid(actionp->isa_name))  // TBD: see comment in
-                                              // isa_name_is_valid
+  if (!actionp)
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+  if (!isa_name || StringRef(isa_name) == "") {
+    free(actionp->isa_name);
+    actionp->isa_name = nullptr;
+    return AMD_COMGR_STATUS_SUCCESS;
+  }
+
+  if (!metadata::isValidIsaName(isa_name))
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
   return actionp->SetIsaName(isa_name);
