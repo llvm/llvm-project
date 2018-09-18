@@ -603,8 +603,10 @@ def skipUnlessDarwin(func):
 
 def swiftTest(func):
     """Decorate the item as a Swift test (Darwin/Linux only, no i386)."""
-
     def is_not_swift_compatible(self):
+        if self.getDebugInfo() == "gmodules":
+            return "skipping (gmodules only makes sense for clang tests)"
+
         if "i386" == self.getArchitecture():
             return "skipping Swift test because i386 is not a supported architecture"
         elif not(any(x in sys.platform for x in ['darwin', 'linux'])):
