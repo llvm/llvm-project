@@ -616,18 +616,6 @@ def swiftTest(func):
             return None
     return skipTestIfFn(is_not_swift_compatible)(func)
 
-
-def skipIfSmooshbase(func):
-    """Decorate the item to skip tests that should be skipped on the smooshbase buildbot."""
-
-    def is_smooshbase(self):
-        if os.environ.get('IS_SMOOSHBASE', 'FAIL') != 'FAIL':
-            return 'skip on the smooshbase buildbot'
-        else:
-            return None
-    return skipTestIfFn(is_smooshbase)(func)
-
-
 def skipUnlessGoInstalled(func):
     """Decorate the item to skip tests when no Go compiler is available."""
 

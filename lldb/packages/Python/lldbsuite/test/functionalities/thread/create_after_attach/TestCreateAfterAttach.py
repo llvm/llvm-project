@@ -22,7 +22,6 @@ class CreateAfterAttachTestCase(TestBase):
     # is implemented for FreeBSD.
     # Occasionally hangs on Windows, may be same as other issues.
     @skipIfWindows
-    @skipIfSmooshbase
     @skipIfiOSSimulator
     @expectedFailureAll(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], bugnumber="<rdar://problem/34538611>") # old lldb-server has race condition, launching an inferior and then launching debugserver in quick succession sometimes fails
     def test_create_after_attach_with_popen(self):
