@@ -41,6 +41,7 @@
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/ClangImporter/ClangImporterOptions.h"
 #include "swift/Demangling/Demangle.h"
+#include "swift/Demangling/ManglingMacros.h"
 #include "swift/Driver/Util.h"
 #include "swift/Frontend/Frontend.h"
 #include "swift/Frontend/PrintingDiagnosticConsumer.h"
@@ -3862,9 +3863,10 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
 
   if (!mangled_typename ||
       !SwiftLanguageRuntime::IsSwiftMangledName(mangled_typename)) {
-    error.SetErrorStringWithFormat("typename '%s' is not a valid Swift mangled "
-                                   "typename, it should begin with $S",
-                                   mangled_typename);
+    error.SetErrorStringWithFormat(
+        "typename '%s' is not a valid Swift mangled "
+        "typename, it should begin with " MANGLING_PREFIX_STR,
+        mangled_typename);
     return CompilerType();
   }
 
