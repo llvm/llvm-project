@@ -38,7 +38,7 @@ void AutoExporter::initSymbolExcludes() {
     };
   } else {
     ExcludeSymbols = {
-        "_NULL_IMPORT_DESCRIPTOR",
+        "__NULL_IMPORT_DESCRIPTOR",
         "_pei386_runtime_relocator",
         "do_pseudo_reloc",
         "impure_ptr",

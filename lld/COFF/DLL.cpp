@@ -230,6 +230,36 @@ static const uint8_t ThunkARM[] = {
     0x60, 0x47,             // bx      ip
 };
 
+static const uint8_t ThunkARM64[] = {
+    0x11, 0x00, 0x00, 0x90, // adrp    x17, #0      __imp_<FUNCNAME>
+    0x31, 0x02, 0x00, 0x91, // add     x17, x17, #0 :lo12:__imp_<FUNCNAME>
+    0xfd, 0x7b, 0xb3, 0xa9, // stp     x29, x30, [sp, #-208]!
+    0xfd, 0x03, 0x00, 0x91, // mov     x29, sp
+    0xe0, 0x07, 0x01, 0xa9, // stp     x0, x1, [sp, #16]
+    0xe2, 0x0f, 0x02, 0xa9, // stp     x2, x3, [sp, #32]
+    0xe4, 0x17, 0x03, 0xa9, // stp     x4, x5, [sp, #48]
+    0xe6, 0x1f, 0x04, 0xa9, // stp     x6, x7, [sp, #64]
+    0xe0, 0x87, 0x02, 0xad, // stp     q0, q1, [sp, #80]
+    0xe2, 0x8f, 0x03, 0xad, // stp     q2, q3, [sp, #112]
+    0xe4, 0x97, 0x04, 0xad, // stp     q4, q5, [sp, #144]
+    0xe6, 0x9f, 0x05, 0xad, // stp     q6, q7, [sp, #176]
+    0xe1, 0x03, 0x11, 0xaa, // mov     x1, x17
+    0x00, 0x00, 0x00, 0x90, // adrp    x0, #0     DELAY_IMPORT_DESCRIPTOR
+    0x00, 0x00, 0x00, 0x91, // add     x0, x0, #0 :lo12:DELAY_IMPORT_DESCRIPTOR
+    0x00, 0x00, 0x00, 0x94, // bl      #0 __delayLoadHelper2
+    0xf0, 0x03, 0x00, 0xaa, // mov     x16, x0
+    0xe6, 0x9f, 0x45, 0xad, // ldp     q6, q7, [sp, #176]
+    0xe4, 0x97, 0x44, 0xad, // ldp     q4, q5, [sp, #144]
+    0xe2, 0x8f, 0x43, 0xad, // ldp     q2, q3, [sp, #112]
+    0xe0, 0x87, 0x42, 0xad, // ldp     q0, q1, [sp, #80]
+    0xe6, 0x1f, 0x44, 0xa9, // ldp     x6, x7, [sp, #64]
+    0xe4, 0x17, 0x43, 0xa9, // ldp     x4, x5, [sp, #48]
+    0xe2, 0x0f, 0x42, 0xa9, // ldp     x2, x3, [sp, #32]
+    0xe0, 0x07, 0x41, 0xa9, // ldp     x0, x1, [sp, #16]
+    0xfd, 0x7b, 0xcd, 0xa8, // ldp     x29, x30, [sp], #208
+    0x00, 0x02, 0x1f, 0xd6, // br      x16
+};
+
 // A chunk for the delay import thunk.
 class ThunkChunkX64 : public Chunk {
 public:
@@ -291,6 +321,28 @@ public:
   void getBaserels(std::vector<Baserel> *Res) override {
     Res->emplace_back(RVA + 0, IMAGE_REL_BASED_ARM_MOV32T);
     Res->emplace_back(RVA + 22, IMAGE_REL_BASED_ARM_MOV32T);
+  }
+
+  Defined *Imp = nullptr;
+  Chunk *Desc = nullptr;
+  Defined *Helper = nullptr;
+};
+
+class ThunkChunkARM64 : public Chunk {
+public:
+  ThunkChunkARM64(Defined *I, Chunk *D, Defined *H)
+      : Imp(I), Desc(D), Helper(H) {}
+
+  size_t getSize() const override { return sizeof(ThunkARM64); }
+
+  void writeTo(uint8_t *Buf) const override {
+    memcpy(Buf + OutputSectionOff, ThunkARM64, sizeof(ThunkARM64));
+    applyArm64Addr(Buf + OutputSectionOff + 0, Imp->getRVA(), RVA + 0, 12);
+    applyArm64Imm(Buf + OutputSectionOff + 4, Imp->getRVA() & 0xfff, 0);
+    applyArm64Addr(Buf + OutputSectionOff + 52, Desc->getRVA(), RVA + 52, 12);
+    applyArm64Imm(Buf + OutputSectionOff + 56, Desc->getRVA() & 0xfff, 0);
+    applyArm64Branch26(Buf + OutputSectionOff + 60,
+                       Helper->getRVA() - RVA - 60);
   }
 
   Defined *Imp = nullptr;
@@ -555,6 +607,8 @@ Chunk *DelayLoadContents::newThunkChunk(DefinedImportData *S, Chunk *Dir) {
     return make<ThunkChunkX86>(S, Dir, Helper);
   case ARMNT:
     return make<ThunkChunkARM>(S, Dir, Helper);
+  case ARM64:
+    return make<ThunkChunkARM64>(S, Dir, Helper);
   default:
     llvm_unreachable("unsupported machine type");
   }

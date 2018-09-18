@@ -51,6 +51,9 @@ compiler = None    # Must be initialized after option parsing
 swiftCompiler = None
 swiftLibrary = None
 
+# Path to the FileCheck testing tool. Not optional.
+filecheck = None
+
 # The arch might dictate some specific CFLAGS to be passed to the toolchain to build
 # the inferior programs.  The global variable cflags_extras provides a hook to do
 # just that.
@@ -184,3 +187,11 @@ def get_absolute_path_to_root_test_dir():
         return test_subdir
 
     return os.path.dirname(os.path.realpath(__file__))
+
+
+def get_filecheck_path():
+    """
+    Get the path to the FileCheck testing tool.
+    """
+    assert os.path.lexists(filecheck)
+    return filecheck
