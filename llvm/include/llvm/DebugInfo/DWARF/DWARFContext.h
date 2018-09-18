@@ -231,9 +231,7 @@ public:
   /// Get a DIE given an exact offset.
   DWARFDie getDIEForOffset(uint32_t Offset);
 
-  unsigned getMaxVersion(uint16_t DefaultVersion = 0) const {
-    return MaxVersion ? MaxVersion : DefaultVersion;
-  }
+  unsigned getMaxVersion() const { return MaxVersion; }
 
   void setMaxVersionIfGreater(unsigned Version) {
     if (Version > MaxVersion)

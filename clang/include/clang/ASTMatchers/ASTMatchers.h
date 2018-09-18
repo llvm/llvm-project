@@ -4697,13 +4697,24 @@ AST_MATCHER(CXXMethodDecl, isUserProvided) {
 /// \code
 ///   class Y {
 ///     void x() { this->x(); x(); Y y; y.x(); a; this->b; Y::b; }
+///     template <class T> void f() { this->f<T>(); f<T>(); }
 ///     int a;
 ///     static int b;
+///   };
+///   template <class T>
+///   class Z {
+///     void x() { this->m; }
 ///   };
 /// \endcode
 /// memberExpr(isArrow())
 ///   matches this->x, x, y.x, a, this->b
-AST_MATCHER(MemberExpr, isArrow) {
+/// cxxDependentScopeMemberExpr(isArrow())
+///   matches this->m
+/// unresolvedMemberExpr(isArrow())
+///   matches this->f<T>, f<T>
+AST_POLYMORPHIC_MATCHER(
+    isArrow, AST_POLYMORPHIC_SUPPORTED_TYPES(MemberExpr, UnresolvedMemberExpr,
+                                             CXXDependentScopeMemberExpr)) {
   return Node.isArrow();
 }
 

@@ -30,6 +30,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "xray/xray_interface.h"
 #include "xray/xray_records.h"
+#include "xray_allocator.h"
 #include "xray_buffer_queue.h"
 #include "xray_defs.h"
 #include "xray_fdr_flags.h"
@@ -47,7 +48,7 @@ atomic_sint32_t LoggingStatus = {XRayLogInitStatus::XRAY_LOG_UNINITIALIZED};
 // force the alignment to 64-bytes for x86 cache line alignment, as this
 // structure is used in the hot path of implementation.
 struct alignas(64) ThreadLocalData {
-  BufferQueue::Buffer Buffer;
+  BufferQueue::Buffer Buffer{};
   char *RecordPtr = nullptr;
   // The number of FunctionEntry records immediately preceding RecordPtr.
   uint8_t NumConsecutiveFnEnters = 0;
@@ -81,6 +82,7 @@ static constexpr auto FunctionRecSize = sizeof(FunctionRecord);
 static pthread_key_t Key;
 
 // Global BufferQueue.
+static std::aligned_storage<sizeof(BufferQueue)>::type BufferQueueStorage;
 static BufferQueue *BQ = nullptr;
 
 static atomic_sint32_t LogFlushStatus = {
@@ -184,11 +186,10 @@ static void writeNewBufferPreamble(tid_t Tid, timespec TS,
   TLD.NumTailCalls = 0;
   if (TLD.BQ == nullptr || TLD.BQ->finalizing())
     return;
-  internal_memcpy(TLD.RecordPtr, Metadata, sizeof(Metadata));
-  TLD.RecordPtr += sizeof(Metadata);
-  // Since we write out the extents as the first metadata record of the
-  // buffer, we need to write out the extents including the extents record.
-  atomic_store(&TLD.Buffer.Extents->Size, sizeof(Metadata),
+  internal_memcpy(TLD.RecordPtr, Metadata,
+                  sizeof(MetadataRecord) * InitRecordsCount);
+  TLD.RecordPtr += sizeof(MetadataRecord) * InitRecordsCount;
+  atomic_store(&TLD.Buffer.Extents, sizeof(MetadataRecord) * InitRecordsCount,
                memory_order_release);
 }
 
@@ -209,12 +210,12 @@ static void setupNewBuffer(int (*wall_clock_reader)(
 
 static void incrementExtents(size_t Add) {
   auto &TLD = getThreadLocalData();
-  atomic_fetch_add(&TLD.Buffer.Extents->Size, Add, memory_order_acq_rel);
+  atomic_fetch_add(&TLD.Buffer.Extents, Add, memory_order_acq_rel);
 }
 
 static void decrementExtents(size_t Subtract) {
   auto &TLD = getThreadLocalData();
-  atomic_fetch_sub(&TLD.Buffer.Extents->Size, Subtract, memory_order_acq_rel);
+  atomic_fetch_sub(&TLD.Buffer.Extents, Subtract, memory_order_acq_rel);
 }
 
 static void writeNewCPUIdMetadata(uint16_t CPU,
@@ -583,7 +584,7 @@ static void processFunctionHook(int32_t FuncId, XRayEntryType Entry,
 
   auto &TLD = getThreadLocalData();
 
-  if (TLD.BQ == nullptr)
+  if (TLD.BQ == nullptr && BQ != nullptr)
     TLD.BQ = BQ;
 
   if (!isLogInitializedAndReady(TLD.BQ, TSC, CPU, wall_clock_reader))
@@ -758,6 +759,7 @@ XRayBuffer fdrIterator(const XRayBuffer B) {
   static BufferQueue::const_iterator It{};
   static BufferQueue::const_iterator End{};
   static void *CurrentBuffer{nullptr};
+  static size_t SerializedBufferSize = 0;
   if (B.Data == static_cast<void *>(&Header) && B.Size == sizeof(Header)) {
     // From this point on, we provide raw access to the raw buffer we're getting
     // from the BufferQueue. We're relying on the iterators from the current
@@ -767,7 +769,7 @@ XRayBuffer fdrIterator(const XRayBuffer B) {
   }
 
   if (CurrentBuffer != nullptr) {
-    InternalFree(CurrentBuffer);
+    deallocateBuffer(CurrentBuffer, SerializedBufferSize);
     CurrentBuffer = nullptr;
   }
 
@@ -778,9 +780,9 @@ XRayBuffer fdrIterator(const XRayBuffer B) {
   // out to disk. The difference here would be that we still write "empty"
   // buffers, or at least go through the iterators faithfully to let the
   // handlers see the empty buffers in the queue.
-  auto BufferSize = atomic_load(&It->Extents->Size, memory_order_acquire);
-  auto SerializedBufferSize = BufferSize + sizeof(MetadataRecord);
-  CurrentBuffer = InternalAlloc(SerializedBufferSize);
+  auto BufferSize = atomic_load(&It->Extents, memory_order_acquire);
+  SerializedBufferSize = BufferSize + sizeof(MetadataRecord);
+  CurrentBuffer = allocateBuffer(SerializedBufferSize);
   if (CurrentBuffer == nullptr)
     return {nullptr, 0};
 
@@ -848,7 +850,6 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
       if (TLD.RecordPtr != nullptr && TLD.BQ != nullptr)
         releaseThreadLocalBuffer(*TLD.BQ);
       BQ->~BufferQueue();
-      InternalFree(BQ);
       BQ = nullptr;
     }
   });
@@ -883,6 +884,13 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
   retryingWriteAll(Fd, reinterpret_cast<char *>(&Header),
                    reinterpret_cast<char *>(&Header) + sizeof(Header));
 
+  // Release the current thread's buffer before we attempt to write out all the
+  // buffers. This ensures that in case we had only a single thread going, that
+  // we are able to capture the data nonetheless.
+  auto &TLD = getThreadLocalData();
+  if (TLD.RecordPtr != nullptr && TLD.BQ != nullptr)
+    releaseThreadLocalBuffer(*TLD.BQ);
+
   BQ->apply([&](const BufferQueue::Buffer &B) {
     // Starting at version 2 of the FDR logging implementation, we only write
     // the records identified by the extents of the buffer. We use the Extents
@@ -890,7 +898,7 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
     // still use a Metadata record, but fill in the extents instead for the
     // data.
     MetadataRecord ExtentsRecord;
-    auto BufferExtents = atomic_load(&B.Extents->Size, memory_order_acquire);
+    auto BufferExtents = atomic_load(&B.Extents, memory_order_acquire);
     DCHECK(BufferExtents <= B.Size);
     ExtentsRecord.Type = uint8_t(RecordType::Metadata);
     ExtentsRecord.RecordKind =
@@ -922,7 +930,12 @@ XRayLogInitStatus fdrLoggingFinalize() XRAY_NEVER_INSTRUMENT {
 
   // Do special things to make the log finalize itself, and not allow any more
   // operations to be performed until re-initialized.
-  BQ->finalize();
+  if (BQ == nullptr) {
+    if (Verbosity())
+      Report("Attempting to finalize an uninitialized global buffer!\n");
+  } else {
+    BQ->finalize();
+  }
 
   atomic_store(&LoggingStatus, XRayLogInitStatus::XRAY_LOG_FINALIZED,
                memory_order_release);
@@ -1132,13 +1145,11 @@ XRayLogInitStatus fdrLoggingInit(UNUSED size_t BufferSize,
 
   if (BQ != nullptr) {
     BQ->~BufferQueue();
-    InternalFree(BQ);
     BQ = nullptr;
   }
 
   if (BQ == nullptr) {
-    BQ = reinterpret_cast<BufferQueue *>(
-        InternalAlloc(sizeof(BufferQueue), nullptr, 64));
+    BQ = reinterpret_cast<BufferQueue *>(&BufferQueueStorage);
     new (BQ) BufferQueue(BufferSize, BufferMax, Success);
   }
 
@@ -1146,7 +1157,6 @@ XRayLogInitStatus fdrLoggingInit(UNUSED size_t BufferSize,
     Report("BufferQueue init failed.\n");
     if (BQ != nullptr) {
       BQ->~BufferQueue();
-      InternalFree(BQ);
       BQ = nullptr;
     }
     return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
@@ -1203,11 +1213,22 @@ bool fdrLogDynamicInitializer() XRAY_NEVER_INSTRUMENT {
   };
   auto RegistrationResult = __xray_log_register_mode("xray-fdr", Impl);
   if (RegistrationResult != XRayLogRegisterStatus::XRAY_REGISTRATION_OK &&
-      Verbosity())
+      Verbosity()) {
     Report("Cannot register XRay FDR mode to 'xray-fdr'; error = %d\n",
            RegistrationResult);
-  if (flags()->xray_fdr_log || !internal_strcmp(flags()->xray_mode, "xray-fdr"))
-    __xray_set_log_impl(Impl);
+    return false;
+  }
+
+  if (flags()->xray_fdr_log ||
+      !internal_strcmp(flags()->xray_mode, "xray-fdr")) {
+    auto SelectResult = __xray_log_select_mode("xray-fdr");
+    if (SelectResult != XRayLogRegisterStatus::XRAY_REGISTRATION_OK &&
+        Verbosity()) {
+      Report("Cannot select XRay FDR mode as 'xray-fdr'; error = %d\n",
+             SelectResult);
+      return false;
+    }
+  }
   return true;
 }
 

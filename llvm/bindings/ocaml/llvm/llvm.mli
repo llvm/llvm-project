@@ -77,6 +77,7 @@ module TypeKind : sig
   | Vector
   | Metadata
   | X86_mmx
+  | Token
 end
 
 (** The linkage of a global value, accessed with {!linkage} and
@@ -260,6 +261,12 @@ module Opcode : sig
   | AtomicRMW
   | Resume
   | LandingPad
+  | AddrSpaceCast
+  | CleanupRet
+  | CatchRet
+  | CatchPad
+  | CleanupPad
+  | CatchSwitch
 end
 
 (** The type of a clause of a [landingpad] instruction.
@@ -336,6 +343,7 @@ module ValueKind : sig
   | ConstantVector
   | Function
   | GlobalAlias
+  | GlobalIFunc
   | GlobalVariable
   | UndefValue
   | Instruction of Opcode.t

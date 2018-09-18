@@ -91,10 +91,15 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
     uint64_t VA = IS->getVA(Offset);
 
     if (D.isTls() && !Config->Relocatable) {
-      if (!Out::TlsPhdr)
+      // Use the address of the TLS segment's first section rather than the
+      // segment's address, because segment addresses aren't initialized until
+      // after sections are finalized. (e.g. Measuring the size of .rela.dyn
+      // for Android relocation packing requires knowing TLS symbol addresses
+      // during section finalization.)
+      if (!Out::TlsPhdr || !Out::TlsPhdr->FirstSec)
         fatal(toString(D.File) +
               " has an STT_TLS symbol but doesn't have an SHF_TLS section");
-      return VA - Out::TlsPhdr->p_vaddr;
+      return VA - Out::TlsPhdr->FirstSec->Addr;
     }
     return VA;
   }

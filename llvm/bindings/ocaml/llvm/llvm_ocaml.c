@@ -619,6 +619,7 @@ enum ValueKind {
   ConstantVector,
   Function,
   GlobalAlias,
+  GlobalIFunc,
   GlobalVariable,
   UndefValue,
   Instruction
@@ -654,6 +655,7 @@ CAMLprim value llvm_classify_value(LLVMValueRef Val) {
   if (LLVMIsAGlobalValue(Val)) {
     DEFINE_CASE(Val, Function);
     DEFINE_CASE(Val, GlobalAlias);
+    DEFINE_CASE(Val, GlobalIFunc);
     DEFINE_CASE(Val, GlobalVariable);
   }
   DEFINE_CASE(Val, Argument);
@@ -1515,7 +1517,7 @@ CAMLprim value llvm_instr_get_opcode(LLVMValueRef Inst) {
   if (!LLVMIsAInstruction(Inst))
       failwith("Not an instruction");
   o = LLVMGetInstructionOpcode(Inst);
-  assert (o <= LLVMLandingPad);
+  assert (o <= LLVMCatchSwitch);
   return Val_int(o);
 }
 

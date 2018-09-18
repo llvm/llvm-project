@@ -181,6 +181,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FNEG:                       return "fneg";
   case ISD::FSQRT:                      return "fsqrt";
   case ISD::STRICT_FSQRT:               return "strict_fsqrt";
+  case ISD::FCBRT:                      return "fcbrt";
   case ISD::FSIN:                       return "fsin";
   case ISD::STRICT_FSIN:                return "strict_fsin";
   case ISD::FCOS:                       return "fcos";

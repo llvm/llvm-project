@@ -121,6 +121,19 @@
 ; RUN: not ls %t.cache/llvmcache-foo-100k
 ; RUN: not ls %t.cache/llvmcache-foo-77k
 
+; Verify that specifying a max size > 4GB for the cache directory does not
+; prematurely prune, due to an integer overflow.
+; RUN: rm -Rf %t.cache && mkdir %t.cache
+; RUN: %python -c "with open(r'%t.cache/llvmcache-foo-10', 'w') as file: file.truncate(10)"
+; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache --thinlto-cache-max-size-bytes 4294967297
+; RUN: ls %t.cache/llvmcache-foo-10
+
+; Verify that negative numbers aren't accepted for the
+; --thinlto-cache-max-size-bytes switch
+; RUN: rm -Rf %t.cache && mkdir %t.cache
+; RUN: not llvm-lto %t.bc --thinlto-cache-max-size-bytes -1 2>&1 | FileCheck %s
+; CHECK: -thinlto-cache-max-size-bytes option: '-1' value invalid
+
 ; Verify that specifying max number of files in the cache directory prunes
 ; it to this amount, removing the oldest files first.
 ; RUN: rm -Rf %t.cache && mkdir %t.cache

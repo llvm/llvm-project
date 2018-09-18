@@ -222,10 +222,12 @@ TEST(Local, MergeBasicBlockIntoOnlyPred) {
       if (Term && !Term->isConditional())
         MergeBasicBlockIntoOnlyPred(BB, &DTU);
     }
-    if (DTU.hasDomTree())
+    if (DTU.hasDomTree()) {
       EXPECT_TRUE(DTU.getDomTree().verify());
-    if (DTU.hasPostDomTree())
+    }
+    if (DTU.hasPostDomTree()) {
       EXPECT_TRUE(DTU.getPostDomTree().verify());
+    }
   };
 
   // Test MergeBasicBlockIntoOnlyPred working under Eager UpdateStrategy with

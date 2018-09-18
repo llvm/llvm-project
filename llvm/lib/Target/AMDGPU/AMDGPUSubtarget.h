@@ -297,6 +297,7 @@ protected:
   Triple TargetTriple;
   unsigned Gen;
   unsigned IsaVersion;
+  InstrItineraryData InstrItins;
   int LDSBankCount;
   unsigned MaxPrivateElementSize;
 
@@ -418,6 +419,10 @@ public:
   // Nothing implemented, just prevent crashes on use.
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
+  }
+
+  const InstrItineraryData *getInstrItineraryData() const override {
+    return &InstrItins;
   }
 
   void ParseSubtargetFeatures(StringRef CPU, StringRef FS);

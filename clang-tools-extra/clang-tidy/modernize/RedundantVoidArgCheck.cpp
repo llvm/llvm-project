@@ -49,7 +49,7 @@ void RedundantVoidArgCheck::registerMatchers(MatchFinder *Finder) {
     return;
 
   Finder->addMatcher(functionDecl(parameterCountIs(0), unless(isImplicit()),
-                                  unless(isExternC()))
+                                  unless(isInstantiated()), unless(isExternC()))
                          .bind(FunctionId),
                      this);
   Finder->addMatcher(typedefNameDecl().bind(TypedefId), this);

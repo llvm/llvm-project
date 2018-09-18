@@ -9,29 +9,44 @@
 
 #include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
 
+#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypeEnum.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
 
-namespace llvm {
-namespace pdb {
+using namespace llvm;
+using namespace llvm::codeview;
+using namespace llvm::pdb;
 
 NativeEnumTypes::NativeEnumTypes(NativeSession &PDBSession,
-                                 codeview::LazyRandomTypeCollection &Types,
-                                 codeview::TypeLeafKind Kind)
+                                 LazyRandomTypeCollection &Types,
+                                 TypeLeafKind Kind)
     : Matches(), Index(0), Session(PDBSession) {
-  for (auto Index = Types.getFirst(); Index;
-       Index = Types.getNext(Index.getValue())) {
-    if (Types.getType(Index.getValue()).kind() == Kind)
-      Matches.push_back(Index.getValue());
+  Optional<TypeIndex> TI = Types.getFirst();
+  while (TI) {
+    CVType CVT = Types.getType(*TI);
+    TypeLeafKind K = CVT.kind();
+    if (K == Kind)
+      Matches.push_back(*TI);
+    else if (K == TypeLeafKind::LF_MODIFIER) {
+      ModifierRecord MR;
+      if (auto EC = TypeDeserializer::deserializeAs<ModifierRecord>(CVT, MR)) {
+        consumeError(std::move(EC));
+      } else if (!MR.ModifiedType.isSimple()) {
+        CVType UnmodifiedCVT = Types.getType(MR.ModifiedType);
+        if (UnmodifiedCVT.kind() == Kind)
+          Matches.push_back(*TI);
+      }
+    }
+    TI = Types.getNext(*TI);
   }
 }
 
-NativeEnumTypes::NativeEnumTypes(
-    NativeSession &PDBSession, const std::vector<codeview::TypeIndex> &Matches,
-    codeview::TypeLeafKind Kind)
+NativeEnumTypes::NativeEnumTypes(NativeSession &PDBSession,
+                                 const std::vector<TypeIndex> &Matches,
+                                 TypeLeafKind Kind)
     : Matches(Matches), Index(0), Session(PDBSession) {}
 
 uint32_t NativeEnumTypes::getChildCount() const {
@@ -53,6 +68,3 @@ std::unique_ptr<PDBSymbol> NativeEnumTypes::getNext() {
 }
 
 void NativeEnumTypes::reset() { Index = 0; }
-
-} // namespace pdb
-} // namespace llvm

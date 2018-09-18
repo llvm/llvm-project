@@ -187,7 +187,7 @@ public:
   /// Cache policy: the maximum size for the cache directory in bytes. A value
   /// over the amount of available space on the disk will be reduced to the
   /// amount of available space. A value of 0 will be ignored.
-  void setCacheMaxSizeBytes(unsigned MaxSizeBytes) {
+  void setCacheMaxSizeBytes(uint64_t MaxSizeBytes) {
     if (MaxSizeBytes)
       CacheOptions.Policy.MaxSizeBytes = MaxSizeBytes;
   }

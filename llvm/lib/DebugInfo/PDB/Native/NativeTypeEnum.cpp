@@ -12,7 +12,11 @@
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSymbolEnumerator.h"
+#include "llvm/DebugInfo/PDB/Native/NativeTypeBuiltin.h"
+#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
+#include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 
 #include "llvm/Support/FormatVariadic.h"
@@ -23,10 +27,106 @@ using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::pdb;
 
+namespace {
+// Yea, this is a pretty terrible class name.  But if we have an enum:
+//
+// enum Foo {
+//  A,
+//  B
+// };
+//
+// then A and B are the "enumerators" of the "enum" Foo.  And we need
+// to enumerate them.
+class NativeEnumEnumEnumerators : public IPDBEnumSymbols, TypeVisitorCallbacks {
+public:
+  NativeEnumEnumEnumerators(NativeSession &Session,
+                            const NativeTypeEnum &ClassParent,
+                            const codeview::EnumRecord &CVEnum);
+
+  uint32_t getChildCount() const override;
+  std::unique_ptr<PDBSymbol> getChildAtIndex(uint32_t Index) const override;
+  std::unique_ptr<PDBSymbol> getNext() override;
+  void reset() override;
+
+private:
+  Error visitKnownMember(CVMemberRecord &CVM,
+                         EnumeratorRecord &Record) override;
+  Error visitKnownMember(CVMemberRecord &CVM,
+                         ListContinuationRecord &Record) override;
+
+  NativeSession &Session;
+  const NativeTypeEnum &ClassParent;
+  const codeview::EnumRecord &CVEnum;
+  std::vector<EnumeratorRecord> Enumerators;
+  Optional<TypeIndex> ContinuationIndex;
+  uint32_t Index = 0;
+};
+} // namespace
+
+NativeEnumEnumEnumerators::NativeEnumEnumEnumerators(
+    NativeSession &Session, const NativeTypeEnum &ClassParent,
+    const codeview::EnumRecord &CVEnum)
+    : Session(Session), ClassParent(ClassParent), CVEnum(CVEnum) {
+  TpiStream &Tpi = cantFail(Session.getPDBFile().getPDBTpiStream());
+  LazyRandomTypeCollection &Types = Tpi.typeCollection();
+
+  ContinuationIndex = CVEnum.FieldList;
+  while (ContinuationIndex) {
+    CVType FieldList = Types.getType(*ContinuationIndex);
+    assert(FieldList.kind() == LF_FIELDLIST);
+    ContinuationIndex.reset();
+    cantFail(visitMemberRecordStream(FieldList.data(), *this));
+  }
+}
+
+Error NativeEnumEnumEnumerators::visitKnownMember(CVMemberRecord &CVM,
+                                                  EnumeratorRecord &Record) {
+  Enumerators.push_back(Record);
+  return Error::success();
+}
+
+Error NativeEnumEnumEnumerators::visitKnownMember(
+    CVMemberRecord &CVM, ListContinuationRecord &Record) {
+  ContinuationIndex = Record.ContinuationIndex;
+  return Error::success();
+}
+
+uint32_t NativeEnumEnumEnumerators::getChildCount() const {
+  return Enumerators.size();
+}
+
+std::unique_ptr<PDBSymbol>
+NativeEnumEnumEnumerators::getChildAtIndex(uint32_t Index) const {
+  if (Index >= getChildCount())
+    return nullptr;
+
+  SymIndexId Id =
+      Session.getSymbolCache()
+          .getOrCreateFieldListMember<NativeSymbolEnumerator>(
+              CVEnum.FieldList, Index, ClassParent, Enumerators[Index]);
+  return Session.getSymbolCache().getSymbolById(Id);
+}
+
+std::unique_ptr<PDBSymbol> NativeEnumEnumEnumerators::getNext() {
+  if (Index >= getChildCount())
+    return nullptr;
+
+  return getChildAtIndex(Index++);
+}
+
+void NativeEnumEnumEnumerators::reset() { Index = 0; }
+
 NativeTypeEnum::NativeTypeEnum(NativeSession &Session, SymIndexId Id,
                                TypeIndex Index, EnumRecord Record)
     : NativeRawSymbol(Session, PDB_SymType::Enum, Id), Index(Index),
       Record(std::move(Record)) {}
+
+NativeTypeEnum::NativeTypeEnum(NativeSession &Session, SymIndexId Id,
+                               codeview::TypeIndex ModifierTI,
+                               codeview::ModifierRecord Modifier,
+                               codeview::EnumRecord EnumRecord)
+    : NativeRawSymbol(Session, PDB_SymType::Enum, Id), Index(ModifierTI),
+      Record(std::move(EnumRecord)), Modifiers(std::move(Modifier)) {}
 
 NativeTypeEnum::~NativeTypeEnum() {}
 
@@ -38,6 +138,8 @@ void NativeTypeEnum::dump(raw_ostream &OS, int Indent) const {
   dumpSymbolField(OS, "lexicalParentId", 0, Indent);
   dumpSymbolField(OS, "name", getName(), Indent);
   dumpSymbolField(OS, "typeId", getTypeId(), Indent);
+  if (Modifiers.hasValue())
+    dumpSymbolField(OS, "unmodifiedTypeId", getUnmodifiedTypeId(), Indent);
   dumpSymbolField(OS, "length", getLength(), Indent);
   dumpSymbolField(OS, "constructor", hasConstructor(), Indent);
   dumpSymbolField(OS, "constType", isConstType(), Indent);
@@ -58,25 +160,20 @@ void NativeTypeEnum::dump(raw_ostream &OS, int Indent) const {
 
 std::unique_ptr<IPDBEnumSymbols>
 NativeTypeEnum::findChildren(PDB_SymType Type) const {
-  switch (Type) {
-  case PDB_SymType::Data: {
-    // TODO(amccarth) :  Provide an actual implementation.
-    return nullptr;
-  }
-  default:
-    return nullptr;
-  }
-}
+  if (Type != PDB_SymType::Data)
+    return llvm::make_unique<NullEnumerator<PDBSymbol>>();
 
-Error NativeTypeEnum::visitKnownRecord(codeview::CVType &CVR,
-                                       codeview::EnumRecord &ER) {
-  Record = ER;
-  return Error::success();
-}
-
-Error NativeTypeEnum::visitKnownMember(codeview::CVMemberRecord &CVM,
-                                       codeview::EnumeratorRecord &R) {
-  return Error::success();
+  const NativeTypeEnum *ClassParent = nullptr;
+  if (!Modifiers)
+    ClassParent = this;
+  else {
+    NativeRawSymbol &NRS =
+        Session.getSymbolCache().getNativeSymbolById(getUnmodifiedTypeId());
+    assert(NRS.getSymTag() == PDB_SymType::Enum);
+    ClassParent = static_cast<NativeTypeEnum *>(&NRS);
+  }
+  return llvm::make_unique<NativeEnumEnumEnumerators>(Session, *ClassParent,
+                                                      Record);
 }
 
 PDB_SymType NativeTypeEnum::getSymTag() const { return PDB_SymType::Enum; }
@@ -88,8 +185,9 @@ PDB_BuiltinType NativeTypeEnum::getBuiltinType() const {
 
   // This indicates a corrupt record.
   if (!Underlying.isSimple() ||
-      Underlying.getSimpleMode() != SimpleTypeMode::Direct)
+      Underlying.getSimpleMode() != SimpleTypeMode::Direct) {
     return PDB_BuiltinType::None;
+  }
 
   switch (Underlying.getSimpleKind()) {
   case SimpleTypeKind::Boolean128:
@@ -100,6 +198,7 @@ PDB_BuiltinType NativeTypeEnum::getBuiltinType() const {
     return PDB_BuiltinType::Bool;
   case SimpleTypeKind::NarrowCharacter:
   case SimpleTypeKind::UnsignedCharacter:
+  case SimpleTypeKind::SignedCharacter:
     return PDB_BuiltinType::Char;
   case SimpleTypeKind::WideCharacter:
     return PDB_BuiltinType::WCharT;
@@ -149,9 +248,11 @@ PDB_BuiltinType NativeTypeEnum::getBuiltinType() const {
 }
 
 SymIndexId NativeTypeEnum::getUnmodifiedTypeId() const {
-  // FIXME: If this is const, volatile, or unaligned, we should return the
-  // SymIndexId of the unmodified type here.
-  return 0;
+  if (!Modifiers)
+    return 0;
+
+  return Session.getSymbolCache().findSymbolByTypeIndex(
+      Modifiers->ModifiedType);
 }
 
 bool NativeTypeEnum::hasConstructor() const {
@@ -215,3 +316,29 @@ bool NativeTypeEnum::isRefUdt() const { return false; }
 bool NativeTypeEnum::isValueUdt() const { return false; }
 
 bool NativeTypeEnum::isInterfaceUdt() const { return false; }
+
+bool NativeTypeEnum::isConstType() const {
+  if (!Modifiers)
+    return false;
+  return ((Modifiers->getModifiers() & ModifierOptions::Const) !=
+          ModifierOptions::None);
+}
+
+bool NativeTypeEnum::isVolatileType() const {
+  if (!Modifiers)
+    return false;
+  return ((Modifiers->getModifiers() & ModifierOptions::Volatile) !=
+          ModifierOptions::None);
+}
+
+bool NativeTypeEnum::isUnalignedType() const {
+  if (!Modifiers)
+    return false;
+  return ((Modifiers->getModifiers() & ModifierOptions::Unaligned) !=
+          ModifierOptions::None);
+}
+
+const NativeTypeBuiltin &NativeTypeEnum::getUnderlyingBuiltinType() const {
+  return Session.getSymbolCache().getNativeSymbolById<NativeTypeBuiltin>(
+      getTypeId());
+}

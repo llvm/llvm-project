@@ -42,6 +42,7 @@ module TypeKind = struct
   | Vector
   | Metadata
   | X86_mmx
+  | Token
 end
 
 module Linkage = struct
@@ -238,6 +239,12 @@ module Opcode  = struct
   | AtomicRMW
   | Resume
   | LandingPad
+  | AddrSpaceCast
+  | CleanupRet
+  | CatchRet
+  | CatchPad
+  | CleanupPad
+  | CatchSwitch
 end
 
 module LandingPadClauseTy = struct
@@ -303,6 +310,7 @@ module ValueKind = struct
   | ConstantVector
   | Function
   | GlobalAlias
+  | GlobalIFunc
   | GlobalVariable
   | UndefValue
   | Instruction of Opcode.t

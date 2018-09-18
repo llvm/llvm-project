@@ -42,8 +42,6 @@ void NativeTypePointer::dump(raw_ostream &OS, int Indent) const {
   dumpSymbolField(OS, "volatileType", isVolatileType(), Indent);
 }
 
-bool NativeTypePointer::isConstType() const { return false; }
-
 uint64_t NativeTypePointer::getLength() const { return Record.getSize(); }
 
 SymIndexId NativeTypePointer::getTypeId() const {
@@ -68,8 +66,21 @@ bool NativeTypePointer::isPointerToMemberFunction() const {
   return Record.getMode() == PointerMode::PointerToMemberFunction;
 }
 
-bool NativeTypePointer::isRestrictedType() const { return false; }
+bool NativeTypePointer::isConstType() const {
+  return (Record.getOptions() & PointerOptions::Const) != PointerOptions::None;
+}
 
-bool NativeTypePointer::isVolatileType() const { return false; }
+bool NativeTypePointer::isRestrictedType() const {
+  return (Record.getOptions() & PointerOptions::Restrict) !=
+         PointerOptions::None;
+}
 
-bool NativeTypePointer::isUnalignedType() const { return false; }
+bool NativeTypePointer::isVolatileType() const {
+  return (Record.getOptions() & PointerOptions::Volatile) !=
+         PointerOptions::None;
+}
+
+bool NativeTypePointer::isUnalignedType() const {
+  return (Record.getOptions() & PointerOptions::Unaligned) !=
+         PointerOptions::None;
+}

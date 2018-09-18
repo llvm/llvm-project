@@ -20,6 +20,7 @@ add_library(LLVMExegesis
   PerfHelper.cpp
   RegisterAliasing.cpp
   SnippetGenerator.cpp
+  RegisterValue.cpp
   Target.cpp
   Uops.cpp
   )
