@@ -43,6 +43,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
@@ -1575,7 +1576,7 @@ DIE *DwarfLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
 void DwarfLinker::patchRangesForUnit(const CompileUnit &Unit,
                                      DWARFContext &OrigDwarf,
                                      const DebugMapObject &DMO) const {
-  DWARFDebugRnglist RangeList;
+  DWARFDebugRangeList RangeList;
   const auto &FunctionRanges = Unit.getFunctionRanges();
   unsigned AddressSize = Unit.getOrigUnit().getAddressByteSize();
   DWARFDataExtractor RangeExtractor(OrigDwarf.getDWARFObj(),
@@ -1595,30 +1596,28 @@ void DwarfLinker::patchRangesForUnit(const CompileUnit &Unit,
   for (const auto &RangeAttribute : Unit.getRangesAttributes()) {
     uint32_t Offset = RangeAttribute.get();
     RangeAttribute.set(Streamer->getRangesSectionSize());
-    if (Error E = RangeList.extract(RangeExtractor, /* HeaderOffset = */0,
-                                    RangeExtractor.size(),
-                                    Unit.getOrigUnit().getVersion(), &Offset,
-                                    ".debug_ranges", "range")) {
+    if (Error E = RangeList.extract(RangeExtractor, &Offset)) {
       llvm::consumeError(std::move(E));
       reportWarning("invalid range list ignored.", DMO);
       RangeList.clear();
     }
     const auto &Entries = RangeList.getEntries();
-    if (!RangeList.empty()) {
-      const auto &First = Entries.front();
+    if (!Entries.empty()) {
+      const DWARFDebugRangeList::RangeListEntry &First = Entries.front();
+
       if (CurrRange == InvalidRange ||
-          First.getStartAddress() + OrigLowPc < CurrRange.start() ||
-          First.getStartAddress() + OrigLowPc >= CurrRange.stop()) {
-        CurrRange = FunctionRanges.find(First.getStartAddress() + OrigLowPc);
+          First.StartAddress + OrigLowPc < CurrRange.start() ||
+          First.StartAddress + OrigLowPc >= CurrRange.stop()) {
+        CurrRange = FunctionRanges.find(First.StartAddress + OrigLowPc);
         if (CurrRange == InvalidRange ||
-            CurrRange.start() > First.getStartAddress() + OrigLowPc) {
+            CurrRange.start() > First.StartAddress + OrigLowPc) {
           reportWarning("no mapping for range.", DMO);
           continue;
         }
       }
     }
 
-    Streamer->emitRangesEntries(UnitPcOffset, OrigLowPc, CurrRange, RangeList,
+    Streamer->emitRangesEntries(UnitPcOffset, OrigLowPc, CurrRange, Entries,
                                 AddressSize);
   }
 }

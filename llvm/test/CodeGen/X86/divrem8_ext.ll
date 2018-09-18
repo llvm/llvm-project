@@ -150,8 +150,8 @@ define i8 @test_srem_noext_ah(i8 %x, i8 %y) {
 ; X32-LABEL: test_srem_noext_ah:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    cbtw
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    idivb %cl
 ; X32-NEXT:    movsbl %ah, %eax
 ; X32-NEXT:    addb %cl, %al

@@ -141,6 +141,15 @@ PrivateGetDIAValue(IDiaSymbol *Symbol,
   return IdResult;
 }
 
+template <typename PrintType, typename ArgType>
+void DumpDIAValueAs(llvm::raw_ostream &OS, int Indent, StringRef Name,
+                    IDiaSymbol *Symbol,
+                    HRESULT (__stdcall IDiaSymbol::*Method)(ArgType *)) {
+  ArgType Value;
+  if (S_OK == (Symbol->*Method)(&Value))
+    dumpSymbolField(OS, Name, static_cast<PrintType>(Value), Indent);
+}
+
 template <typename ArgType>
 void DumpDIAValue(llvm::raw_ostream &OS, int Indent, StringRef Name,
                   IDiaSymbol *Symbol,
@@ -193,6 +202,10 @@ DIARawSymbol::DIARawSymbol(const DIASession &PDBSession,
 #define RAW_METHOD_DUMP(Stream, Method)                                        \
   DumpDIAValue(Stream, Indent, StringRef{#Method}, Symbol,                     \
                &IDiaSymbol::get_##Method);
+
+#define RAW_METHOD_DUMP_AS(Stream, Method, Type)                               \
+  DumpDIAValueAs<Type>(Stream, Indent, StringRef{#Method}, Symbol,             \
+                       &IDiaSymbol::get_##Method);
 
 void DIARawSymbol::dump(raw_ostream &OS, int Indent) const {
   RAW_METHOD_DUMP(OS, symIndexId);
@@ -267,12 +280,12 @@ void DIARawSymbol::dump(raw_ostream &OS, int Indent) const {
   RAW_METHOD_DUMP(OS, virtualBaseDispIndex);
   RAW_METHOD_DUMP(OS, virtualBaseOffset);
   RAW_METHOD_DUMP(OS, virtualTableShapeId);
-  RAW_METHOD_DUMP(OS, dataKind);
+  RAW_METHOD_DUMP_AS(OS, dataKind, PDB_DataKind);
   RAW_METHOD_DUMP(OS, guid);
   RAW_METHOD_DUMP(OS, offset);
   RAW_METHOD_DUMP(OS, thisAdjust);
   RAW_METHOD_DUMP(OS, virtualBasePointerOffset);
-  RAW_METHOD_DUMP(OS, locationType);
+  RAW_METHOD_DUMP_AS(OS, locationType, PDB_LocType);
   RAW_METHOD_DUMP(OS, machineType);
   RAW_METHOD_DUMP(OS, thunkOrdinal);
   RAW_METHOD_DUMP(OS, length);

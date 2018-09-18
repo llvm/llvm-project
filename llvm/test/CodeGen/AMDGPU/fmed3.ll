@@ -951,6 +951,68 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f16_pat0(half addrspace(1)* %out, 
   ret void
 }
 
+; GCN-LABEL: {{^}}two_non_inline_constant:
+; GCN: v_add_f32_e32 [[ADD:v[0-9]+]], 0.5,
+; GCN: v_max_f32_e32 [[MAX:v[0-9]+]], 0x41000000, [[ADD]]
+; GCN: v_min_f32_e32 v{{[0-9]+}}, 0x41800000, [[MAX]]
+define amdgpu_kernel void @two_non_inline_constant(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
+  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %a = load float, float addrspace(1)* %gep0
+  %add = fadd nnan float %a, 0.5
+  %max = call float @llvm.maxnum.f32(float %add, float 8.0)
+  %med = call float @llvm.minnum.f32(float %max, float 16.0)
+
+  store float %med, float addrspace(1)* %out.gep
+  ret void
+}
+
+; FIXME: Simple stores do not work as a multiple use because they are bitcasted to integer constants.
+; GCN-LABEL: {{^}}one_non_inline_constant:
+; GCN-DAG: s_mov_b32 [[K1:s[0-9]+]], 0x41800000
+; GCN-DAG: v_add_f32_e32 [[ADD:v[0-9]+]], 0.5,
+; GCN: v_med3_f32 v{{[0-9]+}}, [[ADD]], 1.0, [[K1]]
+define amdgpu_kernel void @one_non_inline_constant(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
+  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %a = load float, float addrspace(1)* %gep0
+  %add = fadd nnan float %a, 0.5
+  %max = call float @llvm.maxnum.f32(float %add, float 1.0)
+  %med = call float @llvm.minnum.f32(float %max, float 16.0)
+
+  store float %med, float addrspace(1)* %out.gep
+
+  %extra.use = fadd float %a, 16.0
+  store volatile float %extra.use, float addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}two_non_inline_constant_multi_use:
+; GCN-DAG: s_mov_b32 [[K1:s[0-9]+]], 0x41800000
+; GCN-DAG: s_mov_b32 [[K0:s[0-9]+]], 0x41000000
+; GCN-DAG: v_mov_b32_e32 [[VK1:v[0-9]+]], [[K1]]
+; GCN-DAG: v_add_f32_e32 [[ADD:v[0-9]+]], 0.5,
+; GCN: v_med3_f32 v{{[0-9]+}}, [[ADD]], [[K0]], [[VK1]]
+define amdgpu_kernel void @two_non_inline_constant_multi_use(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
+  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %a = load float, float addrspace(1)* %gep0
+  %add = fadd nnan float %a, 0.5
+  %max = call float @llvm.maxnum.f32(float %add, float 8.0)
+  %med = call float @llvm.minnum.f32(float %max, float 16.0)
+
+  store float %med, float addrspace(1)* %out.gep
+
+  %extra.use0 = fadd float %a, 16.0
+  store volatile float %extra.use0, float addrspace(1)* undef
+  %extra.use1 = fadd float %a, 8.0
+  store volatile float %extra.use1, float addrspace(1)* undef
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare float @llvm.fabs.f32(float) #0
 declare float @llvm.minnum.f32(float, float) #0
