@@ -625,27 +625,38 @@ struct InstructionMapper {
                             const TargetInstrInfo &TII) {
     unsigned Flags = TII.getMachineOutlinerMBBFlags(MBB);
 
+    // Set to true whenever we map an illegal number.
+    bool AddedIllegalLastTime = false;
     for (MachineBasicBlock::iterator It = MBB.begin(), Et = MBB.end(); It != Et;
          It++) {
 
       // Keep track of where this instruction is in the module.
       switch (TII.getOutliningType(It, Flags)) {
       case InstrType::Illegal:
+        // If we added an illegal number last time, then don't add more of them.
+        // One number is all that is necessary to prevent matches on illegal
+        // instructions.
+        if (AddedIllegalLastTime)
+          break;
+        AddedIllegalLastTime = true;
         mapToIllegalUnsigned(It);
         break;
 
       case InstrType::Legal:
+        AddedIllegalLastTime = false;
         mapToLegalUnsigned(It);
         break;
 
       case InstrType::LegalTerminator:
         mapToLegalUnsigned(It);
         InstrList.push_back(It);
+        AddedIllegalLastTime = true;
         UnsignedVec.push_back(IllegalInstrNumber);
         IllegalInstrNumber--;
         break;
 
       case InstrType::Invisible:
+        AddedIllegalLastTime = false;
         break;
       }
     }

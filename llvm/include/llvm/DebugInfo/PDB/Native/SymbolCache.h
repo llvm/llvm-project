@@ -31,6 +31,8 @@ class SymbolCache {
 
   std::vector<std::unique_ptr<NativeRawSymbol>> Cache;
   DenseMap<codeview::TypeIndex, SymIndexId> TypeIndexToSymbolId;
+  DenseMap<std::pair<codeview::TypeIndex, uint32_t>, SymIndexId>
+      FieldListMembersToSymbolId;
   std::vector<SymIndexId> Compilands;
 
   SymIndexId createSymbolPlaceholder() {
@@ -53,6 +55,12 @@ class SymbolCache {
         TI, std::move(Record), std::forward<Args>(ConstructorArgs)...);
   }
 
+  SymIndexId createSymbolForModifiedType(codeview::TypeIndex ModifierTI,
+                                         codeview::CVType CVT);
+
+  SymIndexId createSimpleType(codeview::TypeIndex TI,
+                              codeview::ModifierOptions Mods);
+
 public:
   SymbolCache(NativeSession &Session, DbiStream *Dbi);
 
@@ -70,6 +78,23 @@ public:
   createTypeEnumerator(codeview::TypeLeafKind Kind);
 
   SymIndexId findSymbolByTypeIndex(codeview::TypeIndex TI);
+
+  template <typename ConcreteSymbolT, typename... Args>
+  SymIndexId getOrCreateFieldListMember(codeview::TypeIndex FieldListTI,
+                                        uint32_t Index,
+                                        Args &&... ConstructorArgs) {
+    SymIndexId SymId = Cache.size();
+    std::pair<codeview::TypeIndex, uint32_t> Key{FieldListTI, Index};
+    auto Result = FieldListMembersToSymbolId.try_emplace(Key, SymId);
+    if (Result.second) {
+      auto NewSymbol = llvm::make_unique<ConcreteSymbolT>(
+          Session, SymId, std::forward<Args>(ConstructorArgs)...);
+      Cache.push_back(std::move(NewSymbol));
+    } else {
+      SymId = Result.first->second;
+    }
+    return SymId;
+  }
 
   std::unique_ptr<PDBSymbolCompiland> getOrCreateCompiland(uint32_t Index);
   uint32_t getNumCompilands() const;

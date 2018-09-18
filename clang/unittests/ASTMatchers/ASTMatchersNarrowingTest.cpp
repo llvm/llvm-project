@@ -765,6 +765,11 @@ TEST(IsArrow, MatchesMemberVariablesViaArrow) {
                       memberExpr(isArrow())));
   EXPECT_TRUE(notMatches("class Y { void x() { (*this).y; } int y; };",
                          memberExpr(isArrow())));
+  EXPECT_TRUE(matches("template <class T> class Y { void x() { this->m; } };",
+                      cxxDependentScopeMemberExpr(isArrow())));
+  EXPECT_TRUE(
+      notMatches("template <class T> class Y { void x() { (*this).m; } };",
+                 cxxDependentScopeMemberExpr(isArrow())));
 }
 
 TEST(IsArrow, MatchesStaticMemberVariablesViaArrow) {
@@ -783,6 +788,14 @@ TEST(IsArrow, MatchesMemberCallsViaArrow) {
                       memberExpr(isArrow())));
   EXPECT_TRUE(notMatches("class Y { void x() { Y y; y.x(); } };",
                          memberExpr(isArrow())));
+  EXPECT_TRUE(
+      matches("class Y { template <class T> void x() { this->x<T>(); } };",
+              unresolvedMemberExpr(isArrow())));
+  EXPECT_TRUE(matches("class Y { template <class T> void x() { x<T>(); } };",
+                      unresolvedMemberExpr(isArrow())));
+  EXPECT_TRUE(
+      notMatches("class Y { template <class T> void x() { (*this).x<T>(); } };",
+                 unresolvedMemberExpr(isArrow())));
 }
 
 TEST(ConversionDeclaration, IsExplicit) {

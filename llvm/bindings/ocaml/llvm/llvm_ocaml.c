@@ -510,6 +510,11 @@ CAMLprim value llvm_is_opaque(LLVMTypeRef StructTy) {
   return Val_bool(LLVMIsOpaqueStruct(StructTy));
 }
 
+/* lltype -> bool */
+CAMLprim value llvm_is_literal(LLVMTypeRef StructTy) {
+  return Val_bool(LLVMIsLiteralStruct(StructTy));
+}
+
 /*--... Operations on array, pointer, and vector types .....................--*/
 
 /* lltype -> lltype array */
@@ -619,6 +624,7 @@ enum ValueKind {
   ConstantVector,
   Function,
   GlobalAlias,
+  GlobalIFunc,
   GlobalVariable,
   UndefValue,
   Instruction
@@ -654,6 +660,7 @@ CAMLprim value llvm_classify_value(LLVMValueRef Val) {
   if (LLVMIsAGlobalValue(Val)) {
     DEFINE_CASE(Val, Function);
     DEFINE_CASE(Val, GlobalAlias);
+    DEFINE_CASE(Val, GlobalIFunc);
     DEFINE_CASE(Val, GlobalVariable);
   }
   DEFINE_CASE(Val, Argument);
@@ -1515,7 +1522,7 @@ CAMLprim value llvm_instr_get_opcode(LLVMValueRef Inst) {
   if (!LLVMIsAInstruction(Inst))
       failwith("Not an instruction");
   o = LLVMGetInstructionOpcode(Inst);
-  assert (o <= LLVMLandingPad);
+  assert (o <= LLVMCatchSwitch);
   return Val_int(o);
 }
 
@@ -1596,6 +1603,11 @@ CAMLprim value llvm_remove_string_call_site_attr(LLVMValueRef F, value Kind,
 }
 
 /*--... Operations on call instructions (only) .............................--*/
+
+/* llvalue -> int */
+CAMLprim value llvm_num_arg_operands(LLVMValueRef V) {
+  return Val_int(LLVMGetNumArgOperands(V));
+}
 
 /* llvalue -> bool */
 CAMLprim value llvm_is_tail_call(LLVMValueRef CallInst) {
@@ -1902,6 +1914,11 @@ CAMLprim value llvm_add_clause(LLVMValueRef LandingPadInst, LLVMValueRef ClauseV
     return Val_unit;
 }
 
+/* llvalue -> bool */
+CAMLprim value llvm_is_cleanup(LLVMValueRef LandingPadInst)
+{
+    return Val_bool(LLVMIsCleanup(LandingPadInst));
+}
 
 /* llvalue -> bool -> unit */
 CAMLprim value llvm_set_cleanup(LLVMValueRef LandingPadInst, value flag)

@@ -13,7 +13,6 @@
 #include "../utils/FixItHintUtils.h"
 #include "../utils/Matchers.h"
 #include "../utils/TypeTraits.h"
-#include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
@@ -92,21 +91,11 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Param = Result.Nodes.getNodeAs<ParmVarDecl>("param");
   const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("functionDecl");
 
-  // Do not trigger on non-const value parameters when they are mutated either
-  // within the function body or within init expression(s) when the function is
-  // a ctor.
-  if (ExprMutationAnalyzer(*Function->getBody(), *Result.Context)
-          .isMutated(Param))
+  FunctionParmMutationAnalyzer &Analyzer =
+      MutationAnalyzers.try_emplace(Function, *Function, *Result.Context)
+          .first->second;
+  if (Analyzer.isMutated(Param))
     return;
-  // CXXCtorInitializer might also mutate Param but they're not part of function
-  // body, so check them separately here.
-  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(Function)) {
-    for (const auto *Init : Ctor->inits()) {
-      if (ExprMutationAnalyzer(*Init->getInit(), *Result.Context)
-              .isMutated(Param))
-        return;
-    }
-  }
 
   const bool IsConstQualified =
       Param->getType().getCanonicalType().isConstQualified();
@@ -184,6 +173,10 @@ void UnnecessaryValueParamCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle",
                 utils::IncludeSorter::toString(IncludeStyle));
+}
+
+void UnnecessaryValueParamCheck::onEndOfTranslationUnit() {
+  MutationAnalyzers.clear();
 }
 
 void UnnecessaryValueParamCheck::handleMoveFix(const ParmVarDecl &Var,

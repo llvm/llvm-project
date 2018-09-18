@@ -1,4 +1,4 @@
-/*===-- vectorize_ocaml.c - LLVM OCaml Glue ---------------------*- C++ -*-===*\
+/*===-- transform_utils_ocaml.c - LLVM OCaml Glue ---------------*- C++ -*-===*\
 |*                                                                            *|
 |*                     The LLVM Compiler Infrastructure                       *|
 |*                                                                            *|

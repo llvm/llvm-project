@@ -22,7 +22,7 @@
 extern "C" {
 // Declare these symbols as weak to allow them to be optionally defined.
 #define EXT_FUNC(NAME, RETURN_TYPE, FUNC_SIG, WARN)                            \
-  __attribute__((weak)) RETURN_TYPE NAME FUNC_SIG
+  __attribute__((weak, visibility("default"))) RETURN_TYPE NAME FUNC_SIG
 
 #include "FuzzerExtFunctions.def"
 

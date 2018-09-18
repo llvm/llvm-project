@@ -293,7 +293,7 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS, const Variant &Value) {
       OS << Value.Value.Single;
       break;
     case PDB_VariantType::UInt16:
-      OS << Value.Value.Double;
+      OS << Value.Value.UInt16;
       break;
     case PDB_VariantType::UInt32:
       OS << Value.Value.UInt32;

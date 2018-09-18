@@ -85,40 +85,6 @@ exit:
   ret i8 %2
 }
 
-; TODO: We should be able to remove both extends from this example, by looking
-; back through the zexts and accepting a type size <= than the icmp.
-; CHECK-COMMON-LABEL: icmp_i16_zext
-; CHECK-COMMON: uxt
-; CHECK-COMMON: uxt
-define i8 @icmp_i16_zext(i8* %ptr) {
-entry:
-  %gep = getelementptr inbounds i8, i8* %ptr, i32 0
-  %0 = load i8, i8* %gep, align 1
-  %1 = sub nuw nsw i8 %0, 1
-  %conv44 = zext i8 %0 to i16
-  br label %preheader
-
-preheader:
-  br label %body
-
-body:
-  %2 = phi i8 [ %1, %preheader ], [ %3, %if.end ]
-  %si.0274 = phi i16 [ %conv44, %preheader ], [ %inc, %if.end ]
-  %conv51266 = zext i8 %2 to i16
-  %cmp52267 = icmp eq i16 %si.0274, %conv51266
-  br i1 %cmp52267, label %if.end, label %exit
-
-if.end:
-  %inc = add nuw i16 %si.0274, 1
-  %conv = zext i16 %inc to i32
-  %gep1 = getelementptr inbounds i8, i8* %ptr, i32 %conv
-  %3 = load i8, i8* %gep1, align 1
-  br label %body
-
-exit:
-  ret i8 %2
-}
-
 ; Won't don't handle sext
 ; CHECK-COMMON-LABEL: icmp_sext_zext_store_i8_i16
 ; CHECK-COMMON: ldrb
