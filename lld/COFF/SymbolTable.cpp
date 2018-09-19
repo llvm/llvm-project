@@ -179,9 +179,9 @@ bool SymbolTable::handleMinGWAutomaticImport(Symbol *Sym, StringRef Name) {
   if (Refptr && Refptr->getChunk()->getSize() == PtrSize) {
     SectionChunk *SC = dyn_cast_or_null<SectionChunk>(Refptr->getChunk());
     if (SC && SC->Relocs.size() == 1 && *SC->symbols().begin() == Sym) {
-        log("Replacing .refptr." + Name + " with " + Imp->getName());
-        Refptr->getChunk()->Live = false;
-        Refptr->replaceKeepingName(Imp, sizeof(DefinedImportData));
+      log("Replacing .refptr." + Name + " with " + Imp->getName());
+      Refptr->getChunk()->Live = false;
+      Refptr->replaceKeepingName(Imp, sizeof(DefinedImportData));
     }
   }
   return true;

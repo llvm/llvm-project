@@ -21,8 +21,9 @@ NativeTypeBuiltin::NativeTypeBuiltin(NativeSession &PDBSession, SymIndexId Id,
 
 NativeTypeBuiltin::~NativeTypeBuiltin() {}
 
-void NativeTypeBuiltin::dump(raw_ostream &OS, int Indent) const {
-}
+void NativeTypeBuiltin::dump(raw_ostream &OS, int Indent,
+                             PdbSymbolIdField ShowIdFields,
+                             PdbSymbolIdField RecurseIdFields) const {}
 
 PDB_SymType NativeTypeBuiltin::getSymTag() const {
   return PDB_SymType::BuiltinType;

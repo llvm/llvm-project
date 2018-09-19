@@ -42,6 +42,7 @@ module TypeKind = struct
   | Vector
   | Metadata
   | X86_mmx
+  | Token
 end
 
 module Linkage = struct
@@ -238,6 +239,12 @@ module Opcode  = struct
   | AtomicRMW
   | Resume
   | LandingPad
+  | AddrSpaceCast
+  | CleanupRet
+  | CatchRet
+  | CatchPad
+  | CleanupPad
+  | CatchSwitch
 end
 
 module LandingPadClauseTy = struct
@@ -303,6 +310,7 @@ module ValueKind = struct
   | ConstantVector
   | Function
   | GlobalAlias
+  | GlobalIFunc
   | GlobalVariable
   | UndefValue
   | Instruction of Opcode.t
@@ -461,6 +469,7 @@ external struct_element_types : lltype -> lltype array
                               = "llvm_struct_element_types"
 external is_packed : lltype -> bool = "llvm_is_packed"
 external is_opaque : lltype -> bool = "llvm_is_opaque"
+external is_literal : lltype -> bool = "llvm_is_literal"
 
 (*--... Operations on pointer, vector, and array types .....................--*)
 
@@ -529,6 +538,7 @@ external operand : llvalue -> int -> llvalue = "llvm_operand"
 external operand_use : llvalue -> int -> lluse = "llvm_operand_use"
 external set_operand : llvalue -> int -> llvalue -> unit = "llvm_set_operand"
 external num_operands : llvalue -> int = "llvm_num_operands"
+external indices : llvalue -> int array = "llvm_indices"
 
 (*--... Operations on constants of (mostly) any type .......................--*)
 external is_constant : llvalue -> bool = "llvm_is_constant"
@@ -1044,9 +1054,12 @@ let remove_enum_call_site_attr f k i =
 let remove_string_call_site_attr f k i =
   llvm_remove_string_call_site_attr f k (AttrIndex.to_int i)
 
-(*--... Operations on call instructions (only) .............................--*)
+(*--... Operations on call and invoke instructions (only) ..................--*)
+external num_arg_operands : llvalue -> int = "llvm_num_arg_operands"
 external is_tail_call : llvalue -> bool = "llvm_is_tail_call"
 external set_tail_call : bool -> llvalue -> unit = "llvm_set_tail_call"
+external get_normal_dest : llvalue -> llbasicblock = "LLVMGetNormalDest"
+external get_unwind_dest : llvalue -> llbasicblock = "LLVMGetUnwindDest"
 
 (*--... Operations on load/store instructions (only) .......................--*)
 external is_volatile : llvalue -> bool = "llvm_is_volatile"
@@ -1175,6 +1188,7 @@ external build_invoke : llvalue -> llvalue array -> llbasicblock ->
                       = "llvm_build_invoke_bc" "llvm_build_invoke_nat"
 external build_landingpad : lltype -> llvalue -> int -> string -> llbuilder ->
                             llvalue = "llvm_build_landingpad"
+external is_cleanup : llvalue -> bool = "llvm_is_cleanup"
 external set_cleanup : llvalue -> bool -> unit = "llvm_set_cleanup"
 external add_clause : llvalue -> llvalue -> unit = "llvm_add_clause"
 external build_resume : llvalue -> llbuilder -> llvalue = "llvm_build_resume"

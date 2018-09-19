@@ -32,6 +32,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Path.h"
 #include <list>
 #include <map>
 #include <vector>
@@ -7992,6 +7994,115 @@ void Sema::CodeCompletePreprocessorMacroArgument(Scope *S,
 
   // Now just ignore this. There will be another code-completion callback
   // for the expanded tokens.
+}
+
+// This handles completion inside an #include filename, e.g. #include <foo/ba
+// We look for the directory "foo" under each directory on the include path,
+// list its files, and reassemble the appropriate #include.
+void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
+  // RelDir should use /, but unescaped \ is possible on windows!
+  // Our completions will normalize to / for simplicity, this case is rare.
+  std::string RelDir = llvm::sys::path::convert_to_slash(Dir);
+  // We need the native slashes for the actual file system interactions.
+  SmallString<128> NativeRelDir = StringRef(RelDir);
+  llvm::sys::path::native(NativeRelDir);
+  auto FS = getSourceManager().getFileManager().getVirtualFileSystem();
+
+  ResultBuilder Results(*this, CodeCompleter->getAllocator(),
+                        CodeCompleter->getCodeCompletionTUInfo(),
+                        CodeCompletionContext::CCC_IncludedFile);
+  llvm::DenseSet<StringRef> SeenResults; // To deduplicate results.
+
+  // Helper: adds one file or directory completion result.
+  auto AddCompletion = [&](StringRef Filename, bool IsDirectory) {
+    SmallString<64> TypedChunk = Filename;
+    // Directory completion is up to the slash, e.g. <sys/
+    TypedChunk.push_back(IsDirectory ? '/' : Angled ? '>' : '"');
+    auto R = SeenResults.insert(TypedChunk);
+    if (R.second) { // New completion
+      const char *InternedTyped = Results.getAllocator().CopyString(TypedChunk);
+      *R.first = InternedTyped; // Avoid dangling StringRef.
+      CodeCompletionBuilder Builder(CodeCompleter->getAllocator(),
+                                    CodeCompleter->getCodeCompletionTUInfo());
+      Builder.AddTypedTextChunk(InternedTyped);
+      // The result is a "Pattern", which is pretty opaque.
+      // We may want to include the real filename to allow smart ranking.
+      Results.AddResult(CodeCompletionResult(Builder.TakeString()));
+    }
+  };
+
+  // Helper: scans IncludeDir for nice files, and adds results for each.
+  auto AddFilesFromIncludeDir = [&](StringRef IncludeDir, bool IsSystem) {
+    llvm::SmallString<128> Dir = IncludeDir;
+    if (!NativeRelDir.empty())
+      llvm::sys::path::append(Dir, NativeRelDir);
+
+    std::error_code EC;
+    unsigned Count = 0;
+    for (auto It = FS->dir_begin(Dir, EC);
+         !EC && It != vfs::directory_iterator(); It.increment(EC)) {
+      if (++Count == 2500) // If we happen to hit a huge directory,
+        break;             // bail out early so we're not too slow.
+      StringRef Filename = llvm::sys::path::filename(It->path());
+      switch (It->type()) {
+      case llvm::sys::fs::file_type::directory_file:
+        AddCompletion(Filename, /*IsDirectory=*/true);
+        break;
+      case llvm::sys::fs::file_type::regular_file:
+        // Only files that really look like headers. (Except in system dirs).
+        if (!IsSystem) {
+          // Header extensions from Types.def, which we can't depend on here.
+          if (!(Filename.endswith_lower(".h") ||
+                Filename.endswith_lower(".hh") ||
+                Filename.endswith_lower(".hpp") ||
+                Filename.endswith_lower(".inc")))
+            break;
+        }
+        AddCompletion(Filename, /*IsDirectory=*/false);
+        break;
+      default:
+        break;
+      }
+    }
+  };
+
+  // Helper: adds results relative to IncludeDir, if possible.
+  auto AddFilesFromDirLookup = [&](const DirectoryLookup &IncludeDir,
+                                   bool IsSystem) {
+    llvm::SmallString<128> Dir;
+    switch (IncludeDir.getLookupType()) {
+    case DirectoryLookup::LT_HeaderMap:
+      // header maps are not (currently) enumerable.
+      break;
+    case DirectoryLookup::LT_NormalDir:
+      AddFilesFromIncludeDir(IncludeDir.getDir()->getName(), IsSystem);
+      break;
+    case DirectoryLookup::LT_Framework:
+      AddFilesFromIncludeDir(IncludeDir.getFrameworkDir()->getName(), IsSystem);
+      break;
+    }
+  };
+
+  // Finally with all our helpers, we can scan the include path.
+  // Do this in standard order so deduplication keeps the right file.
+  // (In case we decide to add more details to the results later).
+  const auto &S = PP.getHeaderSearchInfo();
+  using llvm::make_range;
+  if (!Angled) {
+    // The current directory is on the include path for "quoted" includes.
+    auto *CurFile = PP.getCurrentFileLexer()->getFileEntry();
+    if (CurFile && CurFile->getDir())
+      AddFilesFromIncludeDir(CurFile->getDir()->getName(), false);
+    for (const auto &D : make_range(S.quoted_dir_begin(), S.quoted_dir_end()))
+      AddFilesFromDirLookup(D, false);
+  }
+  for (const auto &D : make_range(S.angled_dir_begin(), S.angled_dir_end()))
+    AddFilesFromDirLookup(D, true);
+  for (const auto &D : make_range(S.system_dir_begin(), S.system_dir_end()))
+    AddFilesFromDirLookup(D, true);
+
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteNaturalLanguage() {

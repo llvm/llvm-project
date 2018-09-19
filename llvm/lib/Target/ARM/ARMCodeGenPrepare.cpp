@@ -165,9 +165,6 @@ static bool generateSignBits(Value *V) {
   if (!isa<Instruction>(V))
     return false;
 
-  if (isa<SExtInst>(V))
-    return true;
-
   unsigned Opc = cast<Instruction>(V)->getOpcode();
   return Opc == Instruction::AShr || Opc == Instruction::SDiv ||
          Opc == Instruction::SRem;
@@ -204,10 +201,17 @@ static bool isSupportedType(Value *V) {
 static bool isSource(Value *V) {
   if (!isa<IntegerType>(V->getType()))
     return false;
-  else if (isa<Argument>(V) || isa<LoadInst>(V) || isa<CallInst>(V))
+  // TODO Allow zext to be sources.
+  if (isa<Argument>(V))
     return true;
-  else if (isa<CastInst>(V))
-    return isSupportedType(V);
+  else if (isa<LoadInst>(V))
+    return true;
+  else if (isa<BitCastInst>(V))
+    return true;
+  else if (auto *Call = dyn_cast<CallInst>(V))
+    return Call->hasRetAttr(Attribute::AttrKind::ZExt);
+  else if (auto *Trunc = dyn_cast<TruncInst>(V))
+    return isSupportedType(Trunc);
   return false;
 }
 
@@ -522,22 +526,31 @@ void IRPromoter::Mutate(Type *OrigTy,
 /// return value is zeroext. We don't allow opcodes that can introduce sign
 /// bits.
 bool ARMCodeGenPrepare::isSupportedValue(Value *V) {
-  if (generateSignBits(V))
-    return false;
-
-  // Disallow for simplicity.
-  if (isa<ConstantExpr>(V))
-    return false;
-
-  // Special case because they generate an i1, which we don't generally
-  // support.
   if (isa<ICmpInst>(V))
     return true;
 
-  // Both ZExts and Truncs can be either sources and sinks. BitCasts are also
-  // sources and SExts are disallowed through their sign bit generation.
-  if (auto *Cast = dyn_cast<CastInst>(V))
-    return isSupportedType(Cast) || isSupportedType(Cast->getOperand(0));
+  // Memory instructions
+  if (isa<StoreInst>(V) || isa<GetElementPtrInst>(V))
+    return true;
+
+  // Branches and targets.
+  if( isa<BranchInst>(V) || isa<SwitchInst>(V) || isa<BasicBlock>(V))
+    return true;
+
+  // Non-instruction values that we can handle.
+  if ((isa<Constant>(V) && !isa<ConstantExpr>(V)) || isa<Argument>(V))
+    return isSupportedType(V);
+
+  if (isa<PHINode>(V) || isa<SelectInst>(V) || isa<ReturnInst>(V) ||
+      isa<LoadInst>(V))
+    return isSupportedType(V);
+
+  // Truncs can be either sources or sinks.
+  if (auto *Trunc = dyn_cast<TruncInst>(V))
+    return isSupportedType(Trunc) || isSupportedType(Trunc->getOperand(0));
+
+  if (isa<CastInst>(V) && !isa<SExtInst>(V))
+    return isSupportedType(cast<CastInst>(V)->getOperand(0));
 
   // Special cases for calls as we need to check for zeroext
   // TODO We should accept calls even if they don't have zeroext, as they can
@@ -546,7 +559,17 @@ bool ARMCodeGenPrepare::isSupportedValue(Value *V) {
     return isSupportedType(Call) &&
            Call->hasRetAttr(Attribute::AttrKind::ZExt);
 
-  return isSupportedType(V);
+  if (!isa<BinaryOperator>(V))
+    return false;
+
+  if (!isSupportedType(V))
+    return false;
+
+  if (generateSignBits(V)) {
+    LLVM_DEBUG(dbgs() << "ARM CGP: No, instruction can generate sign bits.\n");
+    return false;
+  }
+  return true;
 }
 
 /// Check that the type of V would be promoted and that the original type is

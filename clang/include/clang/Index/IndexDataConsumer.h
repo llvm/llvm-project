@@ -50,7 +50,12 @@ public:
                                     SourceLocation Loc);
 
   /// \returns true to continue indexing, or false to abort.
+  ///
+  /// This will be called for each module reference in an import decl.
+  /// For "@import MyMod.SubMod", there will be a call for 'MyMod' with the
+  /// 'reference' role, and a call for 'SubMod' with the 'declaration' role.
   virtual bool handleModuleOccurence(const ImportDecl *ImportD,
+                                     const Module *Mod,
                                      SymbolRoleSet Roles, SourceLocation Loc);
 
   virtual void finish() {}

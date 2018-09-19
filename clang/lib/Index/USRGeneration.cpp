@@ -1094,3 +1094,29 @@ bool clang::index::generateUSRForMacro(StringRef MacroName, SourceLocation Loc,
   Out << MacroName;
   return false;
 }
+
+bool clang::index::generateFullUSRForModule(const Module *Mod,
+                                            raw_ostream &OS) {
+  if (!Mod->Parent)
+    return generateFullUSRForTopLevelModuleName(Mod->Name, OS);
+  if (generateFullUSRForModule(Mod->Parent, OS))
+    return true;
+  return generateUSRFragmentForModule(Mod, OS);
+}
+
+bool clang::index::generateFullUSRForTopLevelModuleName(StringRef ModName,
+                                                        raw_ostream &OS) {
+  OS << getUSRSpacePrefix();
+  return generateUSRFragmentForModuleName(ModName, OS);
+}
+
+bool clang::index::generateUSRFragmentForModule(const Module *Mod,
+                                                raw_ostream &OS) {
+  return generateUSRFragmentForModuleName(Mod->Name, OS);
+}
+
+bool clang::index::generateUSRFragmentForModuleName(StringRef ModName,
+                                                    raw_ostream &OS) {
+  OS << "@M@" << ModName;
+  return false;
+}

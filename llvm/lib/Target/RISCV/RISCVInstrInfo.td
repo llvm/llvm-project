@@ -143,8 +143,7 @@ def simm13_lsb0 : Operand<OtherVT> {
   }];
 }
 
-def uimm20 : Operand<XLenVT> {
-  let ParserMatchClass = UImmAsmOperand<20>;
+class UImm20Operand : Operand<XLenVT> {
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<20>";
   let MCOperandPredicate = [{
@@ -153,6 +152,13 @@ def uimm20 : Operand<XLenVT> {
       return isUInt<20>(Imm);
     return MCOp.isBareSymbolRef();
   }];
+}
+
+def uimm20_lui : UImm20Operand {
+  let ParserMatchClass = UImmAsmOperand<20, "LUI">;
+}
+def uimm20_auipc : UImm20Operand {
+  let ParserMatchClass = UImmAsmOperand<20, "AUIPC">;
 }
 
 // A 21-bit signed immediate where the least significant bit is zero.
@@ -172,14 +178,12 @@ def BareSymbol : AsmOperandClass {
   let Name = "BareSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidBareSymbol";
+  let ParserMethod = "parseBareSymbol";
 }
 
 // A bare symbol.
 def bare_symbol : Operand<XLenVT> {
   let ParserMatchClass = BareSymbol;
-  let MCOperandPredicate = [{
-     return MCOp.isBareSymbolRef();
-  }];
 }
 
 // A parameterized register class alternative to i32imm/i64imm from Target.td.
@@ -285,10 +289,10 @@ class Priv<string opcodestr, bits<7> funct7>
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 0, isReMaterializable = 1, mayLoad = 0, mayStore = 0 in {
-def LUI : RVInstU<OPC_LUI, (outs GPR:$rd), (ins uimm20:$imm20),
+def LUI : RVInstU<OPC_LUI, (outs GPR:$rd), (ins uimm20_lui:$imm20),
                   "lui", "$rd, $imm20">;
 
-def AUIPC : RVInstU<OPC_AUIPC, (outs GPR:$rd), (ins uimm20:$imm20),
+def AUIPC : RVInstU<OPC_AUIPC, (outs GPR:$rd), (ins uimm20_auipc:$imm20),
                     "auipc", "$rd, $imm20">;
 
 let isCall = 1 in

@@ -15,3 +15,5 @@ Changes:
   is applied to comply with the LLVM's required CMake version
 * https://github.com/google/benchmark/commit/f0901417c89d123474e6b91365029cfe32cf89dc
   is applied to fix 32-bit build failure on macOS
+* https://github.com/google/benchmark/commit/52613079824ac58d06c070aa9fbbb186a5859e2c
+  is applied to fix cross compilation with MinGW headers

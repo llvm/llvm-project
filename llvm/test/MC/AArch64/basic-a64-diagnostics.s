@@ -180,6 +180,11 @@
 // CHECK-ERROR-NEXT:         add x3, x9, #variable-16
 // CHECK-ERROR-NEXT:                 ^
 
+        // Relocation on a sub
+        sub x1, x0, :lo12:loc
+// CHECK-ERROR: error: invalid immediate expression
+// CHECK-ERROR:         sub x1, x0, :lo12:loc
+// CHECK-ERROR:                     ^
 
 
 //------------------------------------------------------------------------------
@@ -3316,6 +3321,7 @@
 
         adr sp, loc             // expects xzr
         adr x0, :got:loc        // bad relocation type
+        adr x1, :lo12:loc
         adrp x3, #20            // Immediate unaligned
         adrp w2, loc            // 64-bit register needed
         adrp x5, :got_lo12:loc  // bad relocation type
@@ -3324,6 +3330,9 @@
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: unexpected adr label
 // CHECK-ERROR-NEXT:         adr x0, :got:loc
+// CHECK-ERROR-NEXT:             ^
+// CHECK-ERROR-NEXT: error: unexpected adr label
+// CHECK-ERROR-NEXT:         adr x1, :lo12:loc
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: expected label or encodable integer pc offset
 // CHECK-ERROR-NEXT:         adrp x3, #20

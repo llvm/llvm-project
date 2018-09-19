@@ -604,6 +604,8 @@ private:
   void removeMSSA(Instruction *Inst) {
     if (!MSSA)
       return;
+    if (VerifyMemorySSA)
+      MSSA->verifyMemorySSA();
     // Removing a store here can leave MemorySSA in an unoptimized state by
     // creating MemoryPhis that have identical arguments and by creating
     // MemoryUses whose defining access is not an actual clobber.  We handle the

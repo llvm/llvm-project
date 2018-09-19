@@ -26,7 +26,8 @@ public:
 
   ~NativeSymbolEnumerator() override;
 
-  void dump(raw_ostream &OS, int Indent) const override;
+  void dump(raw_ostream &OS, int Indent, PdbSymbolIdField ShowIdFields,
+            PdbSymbolIdField RecurseIdFields) const override;
 
   SymIndexId getClassParentId() const override;
   SymIndexId getLexicalParentId() const override;

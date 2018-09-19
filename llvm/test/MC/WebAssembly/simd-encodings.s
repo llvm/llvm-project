@@ -325,6 +325,12 @@
     # CHECK: f64x2.neg # encoding: [0xfd,0x73]
     f64x2.neg
 
+    # CHECK: f32x4.abs # encoding: [0xfd,0x74]
+    f32x4.abs
+
+    # CHECK: f64x2.abs # encoding: [0xfd,0x75]
+    f64x2.abs
+
     # CHECK: f32x4.add # encoding: [0xfd,0x7a]
     f32x4.add
 

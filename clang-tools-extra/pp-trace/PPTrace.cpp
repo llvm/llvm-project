@@ -73,11 +73,8 @@
 #include <vector>
 
 using namespace clang;
-using namespace clang::driver;
-using namespace clang::driver::options;
 using namespace clang::tooling;
 using namespace llvm;
-using namespace llvm::opt;
 
 // Options:
 

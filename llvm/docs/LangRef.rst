@@ -5827,19 +5827,19 @@ causes the building of a compact summary of the module that is emitted into
 the bitcode. The summary is emitted into the LLVM assembly and identified
 in syntax by a caret ('``^``').
 
-*Note that temporarily the summary entries are skipped when parsing the
-assembly, although the parsing support is actively being implemented. The
-following describes when the summary entries will be parsed once implemented.*
-The summary will be parsed into a ModuleSummaryIndex object under the
-same conditions where summary index is currently built from bitcode.
-Specifically, tools that test the Thin Link portion of a ThinLTO compile
-(i.e. llvm-lto and llvm-lto2), or when parsing a combined index
-for a distributed ThinLTO backend via clang's "``-fthinlto-index=<>``" flag.
-Additionally, it will be parsed into a bitcode output, along with the Module
+The summary is parsed into a bitcode output, along with the Module
 IR, via the "``llvm-as``" tool. Tools that parse the Module IR for the purposes
 of optimization (e.g. "``clang -x ir``" and "``opt``"), will ignore the
 summary entries (just as they currently ignore summary entries in a bitcode
 input file).
+
+Eventually, the summary will be parsed into a ModuleSummaryIndex object under
+the same conditions where summary index is currently built from bitcode.
+Specifically, tools that test the Thin Link portion of a ThinLTO compile
+(i.e. llvm-lto and llvm-lto2), or when parsing a combined index
+for a distributed ThinLTO backend via clang's "``-fthinlto-index=<>``" flag
+(this part is not yet implemented, use llvm-as to create a bitcode object
+before feeding into thin link tools for now).
 
 There are currently 3 types of summary entries in the LLVM assembly:
 :ref:`module paths<module_path_summary>`,
@@ -6051,7 +6051,7 @@ Where each ConstVCall has the format:
 
 .. code-block:: text
 
-    VFuncId, args: (Arg[, Arg]*)
+    (VFuncId, args: (Arg[, Arg]*))
 
 and where each VFuncId has the format described for ``TypeTestAssumeVCalls``,
 and each Arg is an integer argument number.

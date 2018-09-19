@@ -15,10 +15,10 @@
 #include "internal_macros.h"
 
 #ifdef BENCHMARK_OS_WINDOWS
-#include <Shlwapi.h>
+#include <shlwapi.h>
 #undef StrCat  // Don't let StrCat in string_util.h be renamed to lstrcatA
-#include <VersionHelpers.h>
-#include <Windows.h>
+#include <versionhelpers.h>
+#include <windows.h>
 #else
 #include <fcntl.h>
 #ifndef BENCHMARK_OS_FUCHSIA

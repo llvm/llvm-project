@@ -89,6 +89,30 @@ namespace {
 // Default implementation.
 class ExegesisDefaultTarget : public ExegesisTarget {
 private:
+  std::vector<llvm::MCInst> setRegToConstant(const llvm::MCSubtargetInfo &STI,
+                                             unsigned Reg) const override {
+    llvm_unreachable("Not yet implemented");
+  }
+
+  std::vector<llvm::MCInst> setRegTo(const llvm::MCSubtargetInfo &STI,
+                                     const llvm::APInt &Value,
+                                     unsigned Reg) const override {
+    llvm_unreachable("Not yet implemented");
+  }
+
+  unsigned getScratchMemoryRegister(const llvm::Triple &) const override {
+    llvm_unreachable("Not yet implemented");
+  }
+
+  void fillMemoryOperands(InstructionBuilder &IB, unsigned Reg,
+                          unsigned Offset) const override {
+    llvm_unreachable("Not yet implemented");
+  }
+
+  unsigned getMaxMemoryAccessSize() const override {
+    llvm_unreachable("Not yet implemented");
+  }
+
   bool matchesArch(llvm::Triple::ArchType Arch) const override {
     llvm_unreachable("never called");
     return false;

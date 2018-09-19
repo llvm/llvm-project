@@ -299,25 +299,31 @@ Expected<std::string> BugDriver::executeProgram(const Module &Program,
   if (!AI)
     AI = Interpreter;
   assert(AI && "Interpreter should have been created already!");
+  bool CreatedBitcode = false;
   if (BitcodeFile.empty()) {
     // Emit the program to a bitcode file...
-    auto File =
-        sys::fs::TempFile::create(OutputPrefix + "-test-program-%%%%%%%.bc");
-    if (!File) {
-      errs() << ToolName
-             << ": Error making unique filename: " << toString(File.takeError())
+    SmallString<128> UniqueFilename;
+    int UniqueFD;
+    std::error_code EC = sys::fs::createUniqueFile(
+        OutputPrefix + "-test-program-%%%%%%%.bc", UniqueFD, UniqueFilename);
+    if (EC) {
+      errs() << ToolName << ": Error making unique filename: " << EC.message()
              << "!\n";
       exit(1);
     }
-    DiscardTemp Discard{*File};
-    BitcodeFile = File->TmpName;
+    BitcodeFile = UniqueFilename.str();
 
-    if (writeProgramToFile(File->FD, Program)) {
+    if (writeProgramToFile(BitcodeFile, UniqueFD, Program)) {
       errs() << ToolName << ": Error emitting bitcode to file '" << BitcodeFile
              << "'!\n";
       exit(1);
     }
+    CreatedBitcode = true;
   }
+
+  // Remove the temporary bitcode file when we are done.
+  std::string BitcodePath(BitcodeFile);
+  FileRemover BitcodeFileRemover(BitcodePath, CreatedBitcode && !SaveTemps);
 
   if (OutputFile.empty())
     OutputFile = OutputPrefix + "-execution-output-%%%%%%%";

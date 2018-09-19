@@ -365,7 +365,7 @@ void ScheduleDAGRRList::Schedule() {
   // Build the scheduling graph.
   BuildSchedGraph(nullptr);
 
-  LLVM_DEBUG(for (SUnit &SU : SUnits) SU.dumpAll(this));
+  LLVM_DEBUG(dump());
   Topo.InitDAGTopologicalSorting();
 
   AvailableQueue->initNodes(SUnits);
@@ -396,7 +396,7 @@ void ScheduleDAGRRList::ReleasePred(SUnit *SU, const SDep *PredEdge) {
 #ifndef NDEBUG
   if (PredSU->NumSuccsLeft == 0) {
     dbgs() << "*** Scheduling failed! ***\n";
-    PredSU->dump(this);
+    dumpNode(*PredSU);
     dbgs() << " has been released too many times!\n";
     llvm_unreachable(nullptr);
   }
@@ -729,7 +729,7 @@ static void resetVRegCycle(SUnit *SU);
 /// the Available queue.
 void ScheduleDAGRRList::ScheduleNodeBottomUp(SUnit *SU) {
   LLVM_DEBUG(dbgs() << "\n*** Scheduling [" << CurCycle << "]: ");
-  LLVM_DEBUG(SU->dump(this));
+  LLVM_DEBUG(dumpNode(*SU));
 
 #ifndef NDEBUG
   if (CurCycle < SU->getHeight())
@@ -828,7 +828,7 @@ void ScheduleDAGRRList::CapturePred(SDep *PredEdge) {
 /// its predecessor states to reflect the change.
 void ScheduleDAGRRList::UnscheduleNodeBottomUp(SUnit *SU) {
   LLVM_DEBUG(dbgs() << "*** Unscheduling [" << SU->getHeight() << "]: ");
-  LLVM_DEBUG(SU->dump(this));
+  LLVM_DEBUG(dumpNode(*SU));
 
   for (SDep &Pred : SU->Preds) {
     CapturePred(&Pred);
@@ -1130,7 +1130,7 @@ SUnit *ScheduleDAGRRList::CopyAndMoveSuccessors(SUnit *SU) {
     return nullptr;
 
   LLVM_DEBUG(dbgs() << "Considering duplicating the SU\n");
-  LLVM_DEBUG(SU->dump(this));
+  LLVM_DEBUG(dumpNode(*SU));
 
   if (N->getGluedNode() &&
       !TII->canCopyGluedNodeDuringSchedule(N)) {
@@ -1888,7 +1888,7 @@ public:
     while (!DumpQueue.empty()) {
       SUnit *SU = popFromQueue(DumpQueue, DumpPicker, scheduleDAG);
       dbgs() << "Height " << SU->getHeight() << ": ";
-      SU->dump(DAG);
+      DAG->dumpNode(*SU);
     }
   }
 #endif
