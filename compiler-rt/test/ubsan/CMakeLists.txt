@@ -117,7 +117,7 @@ if(APPLE)
       string(REPLACE ";" " " UBSAN_TEST_TARGET_ARCH_FLAGS "${UBSAN_TEST_TARGET_ARCH_FLAGS_AS_LIST}")
       set(UBSAN_TEST_TARGET_CFLAGS
         "${UBSAN_TEST_TARGET_ARCH_FLAGS} -isysroot ${DARWIN_${platform}_SYSROOT}")
-      if (";${UBSAN_SUPPORTED_ARCH};" MATCHES ";${arch}")
+      if (";${UBSAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
         add_ubsan_device_testsuite("Standalone" ubsan ${platform} ${arch})
       endif()
 
