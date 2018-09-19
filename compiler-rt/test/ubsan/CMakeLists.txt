@@ -62,6 +62,31 @@ foreach(arch ${UBSAN_TEST_ARCH})
   endif()
 endforeach()
 
+macro(add_ubsan_device_testsuite test_mode sanitizer platform arch)
+  # Note we expect the caller to have already set UBSAN_TEST_TARGET_CFLAGS
+  set(UBSAN_LIT_TEST_MODE "${test_mode}")
+  set(CONFIG_NAME ${UBSAN_LIT_TEST_MODE}-${platform}-${arch})
+  set(UBSAN_TEST_TARGET_ARCH ${arch})
+  set(UBSAN_TEST_USE_LLD "False")
+  set(UBSAN_TEST_USE_THINLTO "False")
+  if (APPLE)
+    set(UBSAN_TEST_APPLE_PLATFORM "${platform}")
+  else()
+    unset(UBSAN_TEST_APPLE_PLATFORM)
+  endif()
+  configure_lit_site_cfg(
+    ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
+    ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg)
+  #list(APPEND UBSAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
+  if(NOT COMPILER_RT_STANDALONE_BUILD)
+    list(APPEND UBSAN_TEST_DEPS ${sanitizer})
+  endif()
+  add_lit_testsuite(check-ubsan-${test_mode}-${platform}-${arch}
+    "UBSan ${CONFIG_NAME} tests"
+    ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/
+    DEPENDS ${UBSAN_TEST_DEPS})
+endmacro()
+
 if(APPLE)
   foreach(arch ${UBSAN_TEST_ARCH})
     set(UBSAN_TEST_TARGET_ARCH ${arch})
@@ -69,9 +94,47 @@ if(APPLE)
     set(UBSAN_TEST_TARGET_CFLAGS "${UBSAN_TEST_TARGET_CFLAGS} -lc++abi")
     add_ubsan_testsuites("StandaloneStatic" ubsan ${arch})
   endforeach()
+
+  # Device and simulator test suites.
+  # These are not added into "check-all", in order to run these tests, use
+  # "check-asan-iossim-x86_64" and similar. They also require that an extra env
+  # variable to select which iOS device or simulator to use, e.g.:
+  # SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER="iPhone 6"
+  set(EXCLUDE_FROM_ALL ON)
+  set(UBSAN_APPLE_PLATFORMS "")
+  if (COMPILER_RT_ENABLE_IOS)
+    list(APPEND UBSAN_APPLE_PLATFORMS ios iossim)
+  endif()
+  if (COMPILER_RT_ENABLE_WATCHOS)
+    list(APPEND UBSAN_APPLE_PLATFORMS watchos watchossim)
+  endif()
+  if (COMPILER_RT_ENABLE_TVOS)
+    list(APPEND UBSAN_APPLE_PLATFORMS tvos tvossim)
+  endif()
+  foreach(platform ${UBSAN_APPLE_PLATFORMS})
+    foreach(arch ${DARWIN_${platform}_ARCHS})
+      get_target_flags_for_arch(${arch} UBSAN_TEST_TARGET_ARCH_FLAGS_AS_LIST)
+      string(REPLACE ";" " " UBSAN_TEST_TARGET_ARCH_FLAGS "${UBSAN_TEST_TARGET_ARCH_FLAGS_AS_LIST}")
+      set(UBSAN_TEST_TARGET_CFLAGS
+        "${UBSAN_TEST_TARGET_ARCH_FLAGS} -isysroot ${DARWIN_${platform}_SYSROOT}")
+      if (";${UBSAN_SUPPORTED_ARCH};" MATCHES ";${arch}")
+        add_ubsan_device_testsuite("Standalone" ubsan ${platform} ${arch})
+      endif()
+
+      if(COMPILER_RT_HAS_ASAN AND ";${ASAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
+        add_ubsan_device_testsuite("AddressSanitizer" asan ${platform} ${arch})
+      endif()
+
+      if(COMPILER_RT_HAS_TSAN AND ";${TSAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
+        add_ubsan_device_testsuite("ThreadSanitizer" tsan ${platform} ${arch})
+      endif()
+    endforeach()
+  endforeach()
+  set(EXCLUDE_FROM_ALL OFF)
 endif()
 
 add_lit_testsuite(check-ubsan "Running UndefinedBehaviorSanitizer tests"
   ${UBSAN_TESTSUITES}
   DEPENDS ${UBSAN_TEST_DEPS})
 set_target_properties(check-ubsan PROPERTIES FOLDER "Compiler-RT Misc")
+
