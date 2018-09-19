@@ -6,7 +6,6 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
@@ -368,9 +367,8 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   if (IntersectingChild != ParentRI.Children.end()) {
     ++NumErrors;
     error() << "DIEs have overlapping address ranges:";
-    Die.dump(OS, 0);
-    IntersectingChild->Die.dump(OS, 0);
-    OS << "\n";
+    dump(Die);
+    dump(IntersectingChild->Die) << '\n';
   }
 
   // Verify that ranges are contained within their parent.
@@ -380,9 +378,8 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   if (ShouldBeContained && !ParentRI.contains(RI)) {
     ++NumErrors;
     error() << "DIE address ranges are not contained in its parent's ranges:";
-    ParentRI.Die.dump(OS, 0);
-    Die.dump(OS, 2);
-    OS << "\n";
+    dump(ParentRI.Die);
+    dump(Die, 2) << '\n';
   }
 
   // Recursively check children.
@@ -398,8 +395,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
   auto ReportError = [&](const Twine &TitleMsg) {
     ++NumErrors;
     error() << TitleMsg << '\n';
-    Die.dump(OS, 0, DumpOpts);
-    OS << "\n";
+    dump(Die) << '\n';
   };
 
   const DWARFObject &DObj = DCtx.getDWARFObj();
@@ -480,7 +476,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
                 << " is invalid (must be less than CU size of "
                 << format("0x%08" PRIx32, CUSize) << "):\n";
         Die.dump(OS, 0, DumpOpts);
-        OS << "\n";
+        dump(Die) << '\n';
       } else {
         // Valid reference, but we will verify it points to an actual
         // DIE later.
@@ -499,8 +495,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
         ++NumErrors;
         error() << "DW_FORM_ref_addr offset beyond .debug_info "
                    "bounds:\n";
-        Die.dump(OS, 0, DumpOpts);
-        OS << "\n";
+        dump(Die) << '\n';
       } else {
         // Valid reference, but we will verify it points to an actual
         // DIE later.
@@ -515,8 +510,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
     if (SecOffset && *SecOffset >= DObj.getStringSection().size()) {
       ++NumErrors;
       error() << "DW_FORM_strp offset beyond .debug_str bounds:\n";
-      Die.dump(OS, 0, DumpOpts);
-      OS << "\n";
+      dump(Die) << '\n';
     }
     break;
   }
@@ -538,11 +532,8 @@ unsigned DWARFVerifier::verifyDebugInfoReferences() {
     ++NumErrors;
     error() << "invalid DIE reference " << format("0x%08" PRIx64, Pair.first)
             << ". Offset is in between DIEs:\n";
-    for (auto Offset : Pair.second) {
-      auto ReferencingDie = DCtx.getDIEForOffset(Offset);
-      ReferencingDie.dump(OS, 0, DumpOpts);
-      OS << "\n";
-    }
+    for (auto Offset : Pair.second)
+      dump(DCtx.getDIEForOffset(Offset)) << '\n';
     OS << "\n";
   }
   return NumErrors;
@@ -565,8 +556,7 @@ void DWARFVerifier::verifyDebugLineStmtOffsets() {
         ++NumDebugLineErrors;
         error() << ".debug_line[" << format("0x%08" PRIx32, LineTableOffset)
                 << "] was not able to be parsed for CU:\n";
-        Die.dump(OS, 0, DumpOpts);
-        OS << '\n';
+        dump(Die) << '\n';
         continue;
       }
     } else {
@@ -583,9 +573,8 @@ void DWARFVerifier::verifyDebugLineStmtOffsets() {
               << format("0x%08" PRIx32, Iter->second.getOffset()) << " and "
               << format("0x%08" PRIx32, Die.getOffset())
               << ", have the same DW_AT_stmt_list section offset:\n";
-      Iter->second.dump(OS, 0, DumpOpts);
-      Die.dump(OS, 0, DumpOpts);
-      OS << '\n';
+      dump(Iter->second);
+      dump(Die) << '\n';
       // Already verified this line table before, no need to do it again.
       continue;
     }
@@ -1369,3 +1358,8 @@ raw_ostream &DWARFVerifier::error() const { return WithColor::error(OS); }
 raw_ostream &DWARFVerifier::warn() const { return WithColor::warning(OS); }
 
 raw_ostream &DWARFVerifier::note() const { return WithColor::note(OS); }
+
+raw_ostream &DWARFVerifier::dump(const DWARFDie &Die, unsigned indent) const {
+  Die.dump(OS, indent, DumpOpts);
+  return OS;
+}
