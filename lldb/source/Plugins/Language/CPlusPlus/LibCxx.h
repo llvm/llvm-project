@@ -142,6 +142,10 @@ SyntheticChildrenFrontEnd *
 LibcxxOptionalFrontEndCreator(CXXSyntheticChildren *,
                               lldb::ValueObjectSP valobj_sp);
 
+SyntheticChildrenFrontEnd *
+LibcxxVariantFrontEndCreator(CXXSyntheticChildren *,
+                             lldb::ValueObjectSP valobj_sp);
+
 } // namespace formatters
 } // namespace lldb_private
 
