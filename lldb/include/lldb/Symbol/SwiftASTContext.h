@@ -44,6 +44,10 @@ namespace irgen {
 class FixedTypeInfo;
 class TypeInfo;
 }
+namespace serialization {
+struct ValidationInfo;
+struct ExtendedValidationInfo;
+}
 }
 
 class DWARFASTParser;
@@ -906,6 +910,12 @@ public:
 private:
   std::unique_ptr<SwiftPersistentExpressionState> m_persistent_state_up;
 };
+
+void printASTValidationInfo(
+    const swift::serialization::ValidationInfo &ast_info,
+    const swift::serialization::ExtendedValidationInfo &ext_ast_info,
+    const Module &module, llvm::StringRef module_buf);
+
 }
 
 #endif // #ifndef liblldb_SwiftASTContext_h_
