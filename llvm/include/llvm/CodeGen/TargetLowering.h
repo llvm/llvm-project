@@ -163,6 +163,7 @@ public:
     LLOnly,  // Expand the (load) instruction into just a load-linked, which has
              // greater atomic guarantees than a normal load.
     CmpXChg, // Expand the instruction into cmpxchg; used by at least X86.
+    MaskedIntrinsic, // Use a target-specific intrinsic for the LL/SC loop.
   };
 
   /// Enum that specifies when a multiplication should be expanded.
@@ -1562,6 +1563,26 @@ public:
     llvm_unreachable("Store conditional unimplemented on this target");
   }
 
+  /// Perform a masked atomicrmw using a target-specific intrinsic. This
+  /// represents the core LL/SC loop which will be lowered at a late stage by
+  /// the backend.
+  virtual Value *emitMaskedAtomicRMWIntrinsic(IRBuilder<> &Builder,
+                                              AtomicRMWInst *AI,
+                                              Value *AlignedAddr, Value *Incr,
+                                              Value *Mask, Value *ShiftAmt,
+                                              AtomicOrdering Ord) const {
+    llvm_unreachable("Masked atomicrmw expansion unimplemented on this target");
+  }
+
+  /// Perform a masked cmpxchg using a target-specific intrinsic. This
+  /// represents the core LL/SC loop which will be lowered at a late stage by
+  /// the backend.
+  virtual Value *emitMaskedAtomicCmpXchgIntrinsic(
+      IRBuilder<> &Builder, AtomicCmpXchgInst *CI, Value *AlignedAddr,
+      Value *CmpVal, Value *NewVal, Value *Mask, AtomicOrdering Ord) const {
+    llvm_unreachable("Masked cmpxchg expansion unimplemented on this target");
+  }
+
   /// Inserts in the IR a target-specific intrinsic specifying a fence.
   /// It is called by AtomicExpandPass before expanding an
   ///   AtomicRMW/AtomicCmpXchg/AtomicStore/AtomicLoad
@@ -1638,11 +1659,11 @@ public:
     return AtomicExpansionKind::None;
   }
 
-  /// Returns true if the given atomic cmpxchg should be expanded by the
-  /// IR-level AtomicExpand pass into a load-linked/store-conditional sequence
-  /// (through emitLoadLinked() and emitStoreConditional()).
-  virtual bool shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
-    return false;
+  /// Returns how the given atomic cmpxchg should be expanded by the IR-level
+  /// AtomicExpand pass.
+  virtual AtomicExpansionKind
+  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
+    return AtomicExpansionKind::None;
   }
 
   /// Returns how the IR-level AtomicExpand pass should expand the given
@@ -1697,6 +1718,15 @@ public:
   /// transformed into simple math ops with the condition value. For example:
   /// select Cond, C1, C1-1 --> add (zext Cond), C1-1
   virtual bool convertSelectOfConstantsToMath(EVT VT) const {
+    return false;
+  }
+
+  /// Return true if it is profitable to transform an integer
+  /// multiplication-by-constant into simpler operations like shifts and adds.
+  /// This may be true if the target does not directly support the
+  /// multiplication operation for the specified type or the sequence of simpler
+  /// ops is faster than the multiply.
+  virtual bool decomposeMulByConstant(EVT VT, SDValue C) const {
     return false;
   }
 

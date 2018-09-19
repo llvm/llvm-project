@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_TARGETSUBTARGETINFO_H
 #define LLVM_CODEGEN_TARGETSUBTARGETINFO_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -142,6 +143,31 @@ public:
                                      const MachineInstr *MI,
                                      const TargetSchedModel *SchedModel) const {
     return 0;
+  }
+
+  /// Returns true if \param MI is a dependency breaking zero-idiom instruction
+  /// for the subtarget.
+  ///
+  /// This function also sets bits in \param Mask related to input operands that
+  /// are not in a data dependency relationship.  There is one bit for each
+  /// machine operand; implicit operands follow explicit operands in the bit
+  /// representation used for \param Mask.  An empty \param Mask (i.e. a mask
+  /// with all bits cleared) means: data dependencies are "broken" for all the
+  /// explicit input machine operands of \param MI.
+  virtual bool isZeroIdiom(const MachineInstr *MI, APInt &Mask) const {
+    return false;
+  }
+
+  /// Returns true if \param MI is a dependency breaking instruction for the
+  /// subtarget.
+  ///
+  /// Similar in behavior to `isZeroIdiom`. However, it knows how to identify
+  /// all dependency breaking instructions (i.e. not just zero-idioms).
+  /// 
+  /// As for `isZeroIdiom`, this method returns a mask of "broken" dependencies.
+  /// (See method `isZeroIdiom` for a detailed description of \param Mask).
+  virtual bool isDependencyBreaking(const MachineInstr *MI, APInt &Mask) const {
+    return isZeroIdiom(MI, Mask);
   }
 
   /// True if the subtarget should run MachineScheduler after aggressive

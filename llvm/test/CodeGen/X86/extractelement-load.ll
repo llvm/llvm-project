@@ -51,30 +51,30 @@ define i32 @t2(<8 x i32>* %xp) {
 ; low alignment load of the vector which prevents us from reliably forming a
 ; narrow load.
 
-; The expected codegen is identical for the AVX case except
-; load/store instructions will have a leading 'v', so we don't
-; need to special-case the checks.
-
-define void @t3() {
+define void @t3(<2 x double>* %a0) {
 ; X32-SSE2-LABEL: t3:
 ; X32-SSE2:       # %bb.0: # %bb
+; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE2-NEXT:    movupd (%eax), %xmm0
 ; X32-SSE2-NEXT:    movhpd %xmm0, (%eax)
+; X32-SSE2-NEXT:    retl
 ;
 ; X64-SSSE3-LABEL: t3:
 ; X64-SSSE3:       # %bb.0: # %bb
 ; X64-SSSE3-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-SSSE3-NEXT:    movlpd %xmm0, (%rax)
+; X64-SSSE3-NEXT:    retq
 ;
 ; X64-AVX-LABEL: t3:
 ; X64-AVX:       # %bb.0: # %bb
 ; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-AVX-NEXT:    vmovlpd %xmm0, (%rax)
+; X64-AVX-NEXT:    retq
 bb:
-  %tmp13 = load <2 x double>, <2 x double>* undef, align 1
+  %tmp13 = load <2 x double>, <2 x double>* %a0, align 1
   %.sroa.3.24.vec.extract = extractelement <2 x double> %tmp13, i32 1
   store double %.sroa.3.24.vec.extract, double* undef, align 8
-  unreachable
+  ret void
 }
 
 ; Case where a load is unary shuffled, then bitcast (to a type with the same

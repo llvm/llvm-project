@@ -1553,7 +1553,7 @@
 // AARCH64-MSVC: #define __SIZEOF_SHORT__ 2
 // AARCH64-MSVC: #define __SIZEOF_SIZE_T__ 8
 // AARCH64-MSVC: #define __SIZEOF_WCHAR_T__ 2
-// AARCH64-MSVC: #define __SIZEOF_WINT_T__ 4
+// AARCH64-MSVC: #define __SIZEOF_WINT_T__ 2
 // AARCH64-MSVC: #define __SIZE_MAX__ 18446744073709551615ULL
 // AARCH64-MSVC: #define __SIZE_TYPE__ long long unsigned int
 // AARCH64-MSVC: #define __SIZE_WIDTH__ 64
@@ -1602,8 +1602,8 @@
 // AARCH64-MSVC: #define __WCHAR_TYPE__ unsigned short
 // AARCH64-MSVC: #define __WCHAR_UNSIGNED__ 1
 // AARCH64-MSVC: #define __WCHAR_WIDTH__ 16
-// AARCH64-MSVC: #define __WINT_TYPE__ int
-// AARCH64-MSVC: #define __WINT_WIDTH__ 32
+// AARCH64-MSVC: #define __WINT_TYPE__ unsigned short
+// AARCH64-MSVC: #define __WINT_WIDTH__ 16
 // AARCH64-MSVC: #define __aarch64__ 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-none-none < /dev/null | FileCheck -match-full-lines -check-prefix ARM %s

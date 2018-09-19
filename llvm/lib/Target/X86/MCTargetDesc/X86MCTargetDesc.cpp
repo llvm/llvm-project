@@ -380,8 +380,9 @@ class X86MCInstrAnalysis : public MCInstrAnalysis {
 public:
   X86MCInstrAnalysis(const MCInstrInfo *MCII) : MCInstrAnalysis(MCII) {}
 
-  bool isDependencyBreaking(const MCSubtargetInfo &STI,
-                            const MCInst &Inst) const override;
+#define GET_STIPREDICATE_DECLS_FOR_MC_ANALYSIS
+#include "X86GenSubtargetInfo.inc"
+
   bool clearsSuperRegisters(const MCRegisterInfo &MRI, const MCInst &Inst,
                             APInt &Mask) const override;
   std::vector<std::pair<uint64_t, uint64_t>>
@@ -390,77 +391,8 @@ public:
                  const Triple &TargetTriple) const override;
 };
 
-bool X86MCInstrAnalysis::isDependencyBreaking(const MCSubtargetInfo &STI,
-                                              const MCInst &Inst) const {
-  if (STI.getCPU() == "btver2") {
-    // Reference: Agner Fog's microarchitecture.pdf - Section 20 "AMD Bobcat and
-    // Jaguar pipeline", subsection 8 "Dependency-breaking instructions".
-    switch (Inst.getOpcode()) {
-    default:
-      return false;
-    case X86::SUB32rr:
-    case X86::SUB64rr:
-    case X86::SBB32rr:
-    case X86::SBB64rr:
-    case X86::XOR32rr:
-    case X86::XOR64rr:
-    case X86::XORPSrr:
-    case X86::XORPDrr:
-    case X86::VXORPSrr:
-    case X86::VXORPDrr:
-    case X86::ANDNPSrr:
-    case X86::VANDNPSrr:
-    case X86::ANDNPDrr:
-    case X86::VANDNPDrr:
-    case X86::PXORrr:
-    case X86::VPXORrr:
-    case X86::PANDNrr:
-    case X86::VPANDNrr:
-    case X86::PSUBBrr:
-    case X86::PSUBWrr:
-    case X86::PSUBDrr:
-    case X86::PSUBQrr:
-    case X86::VPSUBBrr:
-    case X86::VPSUBWrr:
-    case X86::VPSUBDrr:
-    case X86::VPSUBQrr:
-    case X86::PCMPEQBrr:
-    case X86::PCMPEQWrr:
-    case X86::PCMPEQDrr:
-    case X86::PCMPEQQrr:
-    case X86::VPCMPEQBrr:
-    case X86::VPCMPEQWrr:
-    case X86::VPCMPEQDrr:
-    case X86::VPCMPEQQrr:
-    case X86::PCMPGTBrr:
-    case X86::PCMPGTWrr:
-    case X86::PCMPGTDrr:
-    case X86::PCMPGTQrr:
-    case X86::VPCMPGTBrr:
-    case X86::VPCMPGTWrr:
-    case X86::VPCMPGTDrr:
-    case X86::VPCMPGTQrr:
-    case X86::MMX_PXORirr:
-    case X86::MMX_PANDNirr:
-    case X86::MMX_PSUBBirr:
-    case X86::MMX_PSUBDirr:
-    case X86::MMX_PSUBQirr:
-    case X86::MMX_PSUBWirr:
-    case X86::MMX_PCMPGTBirr:
-    case X86::MMX_PCMPGTDirr:
-    case X86::MMX_PCMPGTWirr:
-    case X86::MMX_PCMPEQBirr:
-    case X86::MMX_PCMPEQDirr:
-    case X86::MMX_PCMPEQWirr:
-      return Inst.getOperand(1).getReg() == Inst.getOperand(2).getReg();
-    case X86::CMP32rr:
-    case X86::CMP64rr:
-      return Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg();
-    }
-  }
-
-  return false;
-}
+#define GET_STIPREDICATE_DEFS_FOR_MC_ANALYSIS
+#include "X86GenSubtargetInfo.inc"
 
 bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
                                               const MCInst &Inst,

@@ -54,6 +54,11 @@ if (NOT APPLE)
   append_list_if(COMPILER_RT_HAS_LIBRT -lrt XRAY_UNITTEST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBDL -ldl XRAY_UNITTEST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread XRAY_UNITTEST_LINK_FLAGS)
+
+  # Needed by LLVMSupport.
+  append_list_if(
+    COMPILER_RT_HAS_TERMINFO
+    -l${COMPILER_RT_TERMINFO_LIB} XRAY_UNITTEST_LINK_FLAGS)
 endif()
 
 macro(add_xray_unittest testname)
@@ -75,7 +80,7 @@ macro(add_xray_unittest testname)
         DEPS gtest xray llvm-xray LLVMXRay LLVMTestingSupport
         CFLAGS ${XRAY_UNITTEST_CFLAGS}
         LINK_FLAGS ${TARGET_LINK_FLAGS} ${XRAY_UNITTEST_LINK_FLAGS}
-        -lLLVMXRay -lLLVMSupport -lLLVMTestingSupport -ltinfo
+        -lLLVMXRay -lLLVMSupport -lLLVMTestingSupport
         )
       set_target_properties(XRayUnitTests
         PROPERTIES

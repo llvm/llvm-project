@@ -2883,15 +2883,25 @@ Instruction *InstCombiner::foldICmpInstWithConstantNotInt(ICmpInst &I) {
 /// In this case, we are looking for comparisons that look like
 /// a check for a lossy truncation.
 /// Folds:
-///   x & (-1 >> y) SrcPred x    to    x DstPred (-1 >> y)
+///   icmp SrcPred (x & Mask), x    to    icmp DstPred x, Mask
+/// Where Mask is some pattern that produces all-ones in low bits:
+///    (-1 >> y)
+///    ((-1 << y) >> y)     <- non-canonical, has extra uses
+///   ~(-1 << y)
+///    ((1 << y) + (-1))    <- non-canonical, has extra uses
 /// The Mask can be a constant, too.
 /// For some predicates, the operands are commutative.
 /// For others, x can only be on a specific side.
 static Value *foldICmpWithLowBitMaskedVal(ICmpInst &I,
                                           InstCombiner::BuilderTy &Builder) {
   ICmpInst::Predicate SrcPred;
-  Value *X, *M;
-  auto m_Mask = m_CombineOr(m_LShr(m_AllOnes(), m_Value()), m_LowBitMask());
+  Value *X, *M, *Y;
+  auto m_VariableMask = m_CombineOr(
+      m_CombineOr(m_Not(m_Shl(m_AllOnes(), m_Value())),
+                  m_Add(m_Shl(m_One(), m_Value()), m_AllOnes())),
+      m_CombineOr(m_LShr(m_AllOnes(), m_Value()),
+                  m_LShr(m_Shl(m_AllOnes(), m_Value(Y)), m_Deferred(Y))));
+  auto m_Mask = m_CombineOr(m_VariableMask, m_LowBitMask());
   if (!match(&I, m_c_ICmp(SrcPred,
                           m_c_And(m_CombineAnd(m_Mask, m_Value(M)), m_Value(X)),
                           m_Deferred(X))))
