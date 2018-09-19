@@ -261,7 +261,7 @@ endif
 DEBUG_INFO_FLAG ?= -g
 
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0 -fno-builtin
-SWIFTFLAGS ?= -g -Onone -save-temps -Xfrontend -serialize-debugging-options
+SWIFTFLAGS ?= -g -Onone -Xfrontend -serialize-debugging-options
 
 ifneq (,$(findstring arm,$(ARCH)))
 	SWIFTFLAGS += -static-stdlib
@@ -508,9 +508,8 @@ endif
 #----------------------------------------------------------------------
 # Set up variables to run the Swift frontend directly.
 #----------------------------------------------------------------------
-SWIFT_FEFLAGS = $(patsubst -save-temps,,$(patsubst -Xfrontend,,$(SWIFTFLAGS))) \
-                -sdk $(SDKROOT)
 SWIFT=$(shell dirname $(SWIFTC))/swift
+SWIFT_FEFLAGS = $(shell echo $(patsubst -Xfrontend,,$(SWIFTFLAGS)) | sed -e 's/-Xlinker [^ ]*//g')
 SWIFT_FE=$(SWIFT) -frontend
 
 #----------------------------------------------------------------------
@@ -595,9 +594,43 @@ endif
 # Compile the executable from all the objects.
 #----------------------------------------------------------------------
 ifeq "$(USESWIFTDRIVER)" "1"
-$(EXE) : $(SWIFT_SOURCES)
-	$(SWIFTC) $^ $(SWIFTFLAGS) -o "$(EXE)"
-else
+#----------------------------------------------------------------------
+MODULENAME=$(shell basename $(EXE) .out)
+VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES))
+%.o: %.swift
+	@echo "### Compiling" $<
+	$(SWIFT_FE) -c -primary-file $^ \
+	  $(filter-out $(VPATH)/$^,$(filter-out $^,$(VPATHSOURCES))) \
+	  $(SWIFT_FEFLAGS) -module-name $(MODULENAME) -emit-module-path \
+	  $(patsubst %.o,$(BUILDDIR)/%.partial.swiftmodule,$@) \
+	  -o $(BUILDDIR)/$@
+
+ifeq "$(OS)" "Darwin"
+$(EXE): $(EXE).swiftmodule $(patsubst %.swift,%.o,$(SWIFT_SOURCES))
+	@echo "### Linking" $(EXE)
+	$(SWIFTC) \
+	  $(patsubst $<,-Xlinker -add_ast_path -Xlinker $(BUILDDIR)/$<,$^) \
+	  $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+else # OS = Linux
+$(EXE): $(EXE).swiftmodule.o $(patsubst %.swift,%.o,$(SWIFT_SOURCES))
+	@echo "### Linking" $(EXE)
+	$(SWIFTC) $^ $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+
+$(EXE).swiftmodule.o: $(EXE).swiftmodule
+	@echo "### Wrapping swift module"
+	$(SWIFT) -modulewrap $^ -o $(BUILDDIR)/$@
+endif
+$(EXE).swiftmodule: $(patsubst %.swift,%.o,$(SWIFT_SOURCES))
+	@echo "### Merging swift modules"
+	$(SWIFT_FE) $(SWIFT_FEFLAGS) -merge-modules \
+	  -emit-module $(patsubst %.o,%.partial.swiftmodule,$^) \
+	  -parse-as-library -sil-merge-partial-modules \
+	  -disable-diagnostic-passes -disable-sil-perf-optzns \
+	  -module-name $(MODULENAME) \
+	  -o $(BUILDDIR)/$@
+else # USESWIFTDRIVER = 0
+#----------------------------------------------------------------------
+
 ifneq "$(DYLIB_NAME)" ""
 ifeq "$(DYLIB_ONLY)" ""
 $(EXE) : $(OBJECTS) $(ARCHIVE_NAME) $(DYLIB_FILENAME)

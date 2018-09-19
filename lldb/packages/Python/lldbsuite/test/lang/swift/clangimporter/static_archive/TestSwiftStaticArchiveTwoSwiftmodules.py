@@ -12,7 +12,7 @@
 
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -25,9 +25,10 @@ class TestSwiftStaticArchiveTwoSwiftmodules(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
-    @decorators.skipUnlessDarwin
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @skipUnlessDarwin
+    @swiftTest
+    @skipIf(debug_info=no_match(["dwarf"]))
+    @add_test_categories(["swiftpr"])
     def test(self):
         self.build()
         exe_name = "a.out"
