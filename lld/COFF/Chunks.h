@@ -474,6 +474,10 @@ private:
 void applyMOV32T(uint8_t *Off, uint32_t V);
 void applyBranch24T(uint8_t *Off, int32_t V);
 
+void applyArm64Addr(uint8_t *Off, uint64_t S, uint64_t P, int Shift);
+void applyArm64Imm(uint8_t *Off, uint64_t Imm, uint32_t RangeLimit);
+void applyArm64Branch26(uint8_t *Off, int64_t V);
+
 } // namespace coff
 } // namespace lld
 

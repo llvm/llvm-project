@@ -954,11 +954,6 @@ bool Vectorizer::vectorizeStoreChain(
   // try again.
   unsigned EltSzInBytes = Sz / 8;
   unsigned SzInBytes = EltSzInBytes * ChainSize;
-  if (!TTI.isLegalToVectorizeStoreChain(SzInBytes, Alignment, AS)) {
-    auto Chains = splitOddVectorElts(Chain, Sz);
-    return vectorizeStoreChain(Chains.first, InstructionsProcessed) |
-           vectorizeStoreChain(Chains.second, InstructionsProcessed);
-  }
 
   VectorType *VecTy;
   VectorType *VecStoreTy = dyn_cast<VectorType>(StoreTy);
@@ -991,14 +986,23 @@ bool Vectorizer::vectorizeStoreChain(
 
   // If the store is going to be misaligned, don't vectorize it.
   if (accessIsMisaligned(SzInBytes, AS, Alignment)) {
-    if (S0->getPointerAddressSpace() != 0)
-      return false;
+    if (S0->getPointerAddressSpace() != DL.getAllocaAddrSpace()) {
+      auto Chains = splitOddVectorElts(Chain, Sz);
+      return vectorizeStoreChain(Chains.first, InstructionsProcessed) |
+             vectorizeStoreChain(Chains.second, InstructionsProcessed);
+    }
 
     unsigned NewAlign = getOrEnforceKnownAlignment(S0->getPointerOperand(),
                                                    StackAdjustedAlignment,
                                                    DL, S0, nullptr, &DT);
-    if (NewAlign < StackAdjustedAlignment)
-      return false;
+    if (NewAlign != 0)
+      Alignment = NewAlign;
+  }
+
+  if (!TTI.isLegalToVectorizeStoreChain(SzInBytes, Alignment, AS)) {
+    auto Chains = splitOddVectorElts(Chain, Sz);
+    return vectorizeStoreChain(Chains.first, InstructionsProcessed) |
+           vectorizeStoreChain(Chains.second, InstructionsProcessed);
   }
 
   BasicBlock::iterator First, Last;
@@ -1037,13 +1041,11 @@ bool Vectorizer::vectorizeStoreChain(
     }
   }
 
-  // This cast is safe because Builder.CreateStore() always creates a bona fide
-  // StoreInst.
-  StoreInst *SI = cast<StoreInst>(
-      Builder.CreateStore(Vec, Builder.CreateBitCast(S0->getPointerOperand(),
-                                                     VecTy->getPointerTo(AS))));
+  StoreInst *SI = Builder.CreateAlignedStore(
+    Vec,
+    Builder.CreateBitCast(S0->getPointerOperand(), VecTy->getPointerTo(AS)),
+    Alignment);
   propagateMetadata(SI, Chain);
-  SI->setAlignment(Alignment);
 
   eraseInstructions(Chain);
   ++NumVectorInstructions;
@@ -1102,12 +1104,6 @@ bool Vectorizer::vectorizeLoadChain(
   // try again.
   unsigned EltSzInBytes = Sz / 8;
   unsigned SzInBytes = EltSzInBytes * ChainSize;
-  if (!TTI.isLegalToVectorizeLoadChain(SzInBytes, Alignment, AS)) {
-    auto Chains = splitOddVectorElts(Chain, Sz);
-    return vectorizeLoadChain(Chains.first, InstructionsProcessed) |
-           vectorizeLoadChain(Chains.second, InstructionsProcessed);
-  }
-
   VectorType *VecTy;
   VectorType *VecLoadTy = dyn_cast<VectorType>(LoadTy);
   if (VecLoadTy)
@@ -1132,16 +1128,25 @@ bool Vectorizer::vectorizeLoadChain(
 
   // If the load is going to be misaligned, don't vectorize it.
   if (accessIsMisaligned(SzInBytes, AS, Alignment)) {
-    if (L0->getPointerAddressSpace() != 0)
-      return false;
+    if (L0->getPointerAddressSpace() != DL.getAllocaAddrSpace()) {
+      auto Chains = splitOddVectorElts(Chain, Sz);
+      return vectorizeLoadChain(Chains.first, InstructionsProcessed) |
+             vectorizeLoadChain(Chains.second, InstructionsProcessed);
+    }
 
     unsigned NewAlign = getOrEnforceKnownAlignment(L0->getPointerOperand(),
                                                    StackAdjustedAlignment,
                                                    DL, L0, nullptr, &DT);
-    if (NewAlign < StackAdjustedAlignment)
-      return false;
+    if (NewAlign != 0)
+      Alignment = NewAlign;
 
     Alignment = NewAlign;
+  }
+
+  if (!TTI.isLegalToVectorizeLoadChain(SzInBytes, Alignment, AS)) {
+    auto Chains = splitOddVectorElts(Chain, Sz);
+    return vectorizeLoadChain(Chains.first, InstructionsProcessed) |
+           vectorizeLoadChain(Chains.second, InstructionsProcessed);
   }
 
   LLVM_DEBUG({
@@ -1159,11 +1164,8 @@ bool Vectorizer::vectorizeLoadChain(
 
   Value *Bitcast =
       Builder.CreateBitCast(L0->getPointerOperand(), VecTy->getPointerTo(AS));
-  // This cast is safe because Builder.CreateLoad always creates a bona fide
-  // LoadInst.
-  LoadInst *LI = cast<LoadInst>(Builder.CreateLoad(Bitcast));
+  LoadInst *LI = Builder.CreateAlignedLoad(Bitcast, Alignment);
   propagateMetadata(LI, Chain);
-  LI->setAlignment(Alignment);
 
   if (VecLoadTy) {
     SmallVector<Instruction *, 16> InstrsToErase;

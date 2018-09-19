@@ -191,7 +191,7 @@ void SectionChunk::applyRelARM(uint8_t *Off, uint16_t Type, OutputSection *OS,
 // Interpret the existing immediate value as a byte offset to the
 // target symbol, then update the instruction with the immediate as
 // the page offset from the current instruction to the target.
-static void applyArm64Addr(uint8_t *Off, uint64_t S, uint64_t P, int Shift) {
+void applyArm64Addr(uint8_t *Off, uint64_t S, uint64_t P, int Shift) {
   uint32_t Orig = read32le(Off);
   uint64_t Imm = ((Orig >> 29) & 0x3) | ((Orig >> 3) & 0x1FFFFC);
   S += Imm;
@@ -205,7 +205,7 @@ static void applyArm64Addr(uint8_t *Off, uint64_t S, uint64_t P, int Shift) {
 // Update the immediate field in a AARCH64 ldr, str, and add instruction.
 // Optionally limit the range of the written immediate by one or more bits
 // (RangeLimit).
-static void applyArm64Imm(uint8_t *Off, uint64_t Imm, uint32_t RangeLimit) {
+void applyArm64Imm(uint8_t *Off, uint64_t Imm, uint32_t RangeLimit) {
   uint32_t Orig = read32le(Off);
   Imm += (Orig >> 10) & 0xFFF;
   Orig &= ~(0xFFF << 10);
@@ -257,7 +257,7 @@ static void applySecRelLdr(const SectionChunk *Sec, uint8_t *Off,
     applyArm64Ldr(Off, (S - OS->getRVA()) & 0xfff);
 }
 
-static void applyArm64Branch26(uint8_t *Off, int64_t V) {
+void applyArm64Branch26(uint8_t *Off, int64_t V) {
   if (!isInt<28>(V))
     error("relocation out of range");
   or32(Off, (V & 0x0FFFFFFC) >> 2);
