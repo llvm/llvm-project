@@ -335,7 +335,7 @@ GCNILPScheduler::schedule(ArrayRef<const SUnit*> BotRoots,
     assert(C);
     AvailQueue.remove(*C);
     auto SU = C->SU;
-    LLVM_DEBUG(dbgs() << "Selected "; SU->dump(&DAG));
+    LLVM_DEBUG(dbgs() << "Selected "; DAG.dumpNode(*SU));
 
     advanceToCycle(SU->getHeight());
 
