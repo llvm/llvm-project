@@ -169,6 +169,13 @@ static llvm::cl::opt<CompileArgsFrom> CompileArgsFrom(
                                 "'compile_commands.json' files")),
     llvm::cl::init(FilesystemCompileArgs), llvm::cl::Hidden);
 
+static llvm::cl::opt<bool> EnableFunctionArgSnippets(
+    "function-arg-placeholders",
+    llvm::cl::desc("When disabled, completions contain only parentheses for "
+                   "function calls. When enabled, completions also contain "
+                   "placeholders for method parameters."),
+    llvm::cl::init(clangd::CodeCompleteOptions().EnableFunctionArgSnippets));
+
 int main(int argc, char *argv[]) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::cl::SetVersionPrinter([](llvm::raw_ostream &OS) {
@@ -296,6 +303,7 @@ int main(int argc, char *argv[]) {
     CCOpts.IncludeIndicator.NoInsert.clear();
   }
   CCOpts.SpeculativeIndexRequest = Opts.StaticIndex;
+  CCOpts.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
 
   // Initialize and run ClangdLSPServer.
   ClangdLSPServer LSPServer(
