@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/NativeCompilandSymbol.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 
 #include "llvm/ADT/STLExtras.h"
 
@@ -23,10 +24,14 @@ PDB_SymType NativeCompilandSymbol::getSymTag() const {
   return PDB_SymType::Compiland;
 }
 
-void NativeCompilandSymbol::dump(raw_ostream &OS, int Indent) const {
-  NativeRawSymbol::dump(OS, Indent);
+void NativeCompilandSymbol::dump(raw_ostream &OS, int Indent,
+                                 PdbSymbolIdField ShowIdFields,
+                                 PdbSymbolIdField RecurseIdFields) const {
+  NativeRawSymbol::dump(OS, Indent, ShowIdFields, RecurseIdFields);
 
-  dumpSymbolField(OS, "lexicalParentId", 0, Indent);
+  dumpSymbolIdField(OS, "lexicalParentId", 0, Indent, Session,
+                    PdbSymbolIdField::LexicalParent, ShowIdFields,
+                    RecurseIdFields);
   dumpSymbolField(OS, "libraryName", getLibraryName(), Indent);
   dumpSymbolField(OS, "name", getName(), Indent);
   dumpSymbolField(OS, "editAndContinueEnabled", isEditAndContinueEnabled(),

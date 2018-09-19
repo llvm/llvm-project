@@ -64,7 +64,7 @@ namespace {
     std::unique_ptr<CodeGen::CodeGenModule> Builder;
 
   private:
-    SmallVector<CXXMethodDecl *, 8> DeferredInlineMethodDefinitions;
+    SmallVector<FunctionDecl *, 8> DeferredInlineMemberFuncDefs;
 
   public:
     CodeGeneratorImpl(DiagnosticsEngine &diags, llvm::StringRef ModuleName,
@@ -80,7 +80,7 @@ namespace {
 
     ~CodeGeneratorImpl() override {
       // There should normally not be any leftover inline method definitions.
-      assert(DeferredInlineMethodDefinitions.empty() ||
+      assert(DeferredInlineMemberFuncDefs.empty() ||
              Diags.hasErrorOccurred());
     }
 
@@ -163,16 +163,16 @@ namespace {
     }
 
     void EmitDeferredDecls() {
-      if (DeferredInlineMethodDefinitions.empty())
+      if (DeferredInlineMemberFuncDefs.empty())
         return;
 
       // Emit any deferred inline method definitions. Note that more deferred
       // methods may be added during this loop, since ASTConsumer callbacks
       // can be invoked if AST inspection results in declarations being added.
       HandlingTopLevelDeclRAII HandlingDecl(*this);
-      for (unsigned I = 0; I != DeferredInlineMethodDefinitions.size(); ++I)
-        Builder->EmitTopLevelDecl(DeferredInlineMethodDefinitions[I]);
-      DeferredInlineMethodDefinitions.clear();
+      for (unsigned I = 0; I != DeferredInlineMemberFuncDefs.size(); ++I)
+        Builder->EmitTopLevelDecl(DeferredInlineMemberFuncDefs[I]);
+      DeferredInlineMemberFuncDefs.clear();
     }
 
     void HandleInlineFunctionDefinition(FunctionDecl *D) override {
@@ -180,17 +180,6 @@ namespace {
         return;
 
       assert(D->doesThisDeclarationHaveABody());
-
-      // Handle friend functions.
-      if (D->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend)) {
-        if (Ctx->getTargetInfo().getCXXABI().isMicrosoft()
-            && !D->getLexicalDeclContext()->isDependentContext())
-          Builder->EmitTopLevelDecl(D);
-        return;
-      }
-
-      // Otherwise, must be a method.
-      auto MD = cast<CXXMethodDecl>(D);
 
       // We may want to emit this definition. However, that decision might be
       // based on computing the linkage, and we have to defer that in case we
@@ -200,13 +189,13 @@ namespace {
       //     void bar();
       //     void foo() { bar(); }
       //   } A;
-      DeferredInlineMethodDefinitions.push_back(MD);
+      DeferredInlineMemberFuncDefs.push_back(D);
 
       // Provide some coverage mapping even for methods that aren't emitted.
       // Don't do this for templated classes though, as they may not be
       // instantiable.
-      if (!MD->getParent()->isDependentContext())
-        Builder->AddDeferredUnusedCoverageMapping(MD);
+      if (!D->getLexicalDeclContext()->isDependentContext())
+        Builder->AddDeferredUnusedCoverageMapping(D);
     }
 
     /// HandleTagDeclDefinition - This callback is invoked each time a TagDecl

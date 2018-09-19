@@ -25,12 +25,19 @@ NativeSymbolEnumerator::NativeSymbolEnumerator(
 
 NativeSymbolEnumerator::~NativeSymbolEnumerator() {}
 
-void NativeSymbolEnumerator::dump(raw_ostream &OS, int Indent) const {
-  NativeRawSymbol::dump(OS, Indent);
-  dumpSymbolField(OS, "classParentId", getClassParentId(), Indent);
-  dumpSymbolField(OS, "lexicalParentId", getLexicalParentId(), Indent);
+void NativeSymbolEnumerator::dump(raw_ostream &OS, int Indent,
+                                  PdbSymbolIdField ShowIdFields,
+                                  PdbSymbolIdField RecurseIdFields) const {
+  NativeRawSymbol::dump(OS, Indent, ShowIdFields, RecurseIdFields);
+  dumpSymbolIdField(OS, "classParentId", getClassParentId(), Indent, Session,
+                    PdbSymbolIdField::ClassParent, ShowIdFields,
+                    RecurseIdFields);
+  dumpSymbolIdField(OS, "lexicalParentId", getLexicalParentId(), Indent,
+                    Session, PdbSymbolIdField::LexicalParent, ShowIdFields,
+                    RecurseIdFields);
   dumpSymbolField(OS, "name", getName(), Indent);
-  dumpSymbolField(OS, "typeId", getTypeId(), Indent);
+  dumpSymbolIdField(OS, "typeId", getTypeId(), Indent, Session,
+                    PdbSymbolIdField::Type, ShowIdFields, RecurseIdFields);
   dumpSymbolField(OS, "dataKind", getDataKind(), Indent);
   dumpSymbolField(OS, "locationType", getLocationType(), Indent);
   dumpSymbolField(OS, "constType", isConstType(), Indent);

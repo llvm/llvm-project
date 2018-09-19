@@ -14,6 +14,7 @@
 #include "SourceCode.h"
 #include "Trace.h"
 #include "XRefs.h"
+#include "index/FileIndex.h"
 #include "index/Merge.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -70,59 +71,23 @@ public:
 };
 } // namespace
 
-/// The dynamic index tracks symbols visible in open files.
-/// For boring reasons, it doesn't implement SymbolIndex directly - use index().
-class ClangdServer::DynamicIndex {
-public:
-  DynamicIndex(std::vector<std::string> URISchemes)
-      : PreambleIdx(URISchemes), MainFileIdx(URISchemes),
-        MergedIndex(mergeIndex(&MainFileIdx, &PreambleIdx)) {}
+// Returns callbacks that can be used to update the FileIndex with new ASTs.
+std::unique_ptr<ParsingCallbacks> makeUpdateCallbacks(FileIndex *FIndex) {
+  struct CB : public ParsingCallbacks {
+    CB(FileIndex *FIndex) : FIndex(FIndex) {}
+    FileIndex *FIndex;
 
-  const SymbolIndex &index() const { return *MergedIndex; }
+    void onPreambleAST(PathRef Path, ASTContext &Ctx,
+                       std::shared_ptr<clang::Preprocessor> PP) override {
+      FIndex->updatePreamble(Path, Ctx, std::move(PP));
+    }
 
-  // Returns callbacks that can be used to update the index with new ASTs.
-  // Index() presents a merged view of the supplied main-file and preamble ASTs.
-  std::unique_ptr<ParsingCallbacks> makeUpdateCallbacks() {
-    struct CB : public ParsingCallbacks {
-      CB(ClangdServer::DynamicIndex *This) : This(This) {}
-      DynamicIndex *This;
-
-      void onPreambleAST(PathRef Path, ASTContext &Ctx,
-                         std::shared_ptr<clang::Preprocessor> PP) override {
-        This->PreambleIdx.update(Path, &Ctx, std::move(PP));
-      }
-
-      void onMainAST(PathRef Path, ParsedAST &AST) override {
-        This->MainFileIdx.update(Path, &AST.getASTContext(),
-                                 AST.getPreprocessorPtr(),
-                                 AST.getLocalTopLevelDecls());
-      }
-    };
-    return llvm::make_unique<CB>(this);
+    void onMainAST(PathRef Path, ParsedAST &AST) override {
+      FIndex->updateMain(Path, AST);
+    }
   };
-
-private:
-  // Contains information from each file's preamble only.
-  // These are large, but update fairly infrequently (preambles are stable).
-  // Missing information:
-  //  - symbol refs (these are always "from the main file")
-  //  - definition locations in the main file
-  //
-  // FIXME: Because the preambles for different TUs have large overlap and
-  // FileIndex doesn't deduplicate, this uses lots of extra RAM.
-  // The biggest obstacle in fixing this: the obvious approach of partitioning
-  // by declaring file (rather than main file) fails if headers provide
-  // different symbols based on preprocessor state.
-  FileIndex PreambleIdx;
-  // Contains information from each file's main AST.
-  // These are updated frequently (on file change), but are relatively small.
-  // Mostly contains:
-  //  - refs to symbols declared in the preamble and referenced from main
-  //  - symbols declared both in the main file and the preamble
-  // (Note that symbols *only* in the main file are not indexed).
-  FileIndex MainFileIdx;
-  std::unique_ptr<SymbolIndex> MergedIndex;
-};
+  return llvm::make_unique<CB>(FIndex);
+}
 
 ClangdServer::Options ClangdServer::optsForTest() {
   ClangdServer::Options Opts;
@@ -139,9 +104,8 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
     : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),
       ResourceDir(Opts.ResourceDir ? Opts.ResourceDir->str()
                                    : getStandardResourceDir()),
-      DynamicIdx(Opts.BuildDynamicSymbolIndex
-                     ? new DynamicIndex(Opts.URISchemes)
-                     : nullptr),
+      DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex(Opts.URISchemes)
+                                              : nullptr),
       PCHs(std::make_shared<PCHContainerOperations>()),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
       // parsed file and rebuild the file index synchronously each time an AST
@@ -149,7 +113,8 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
       // FIXME(ioeric): this can be slow and we may be able to index on less
       // critical paths.
       WorkScheduler(Opts.AsyncThreadsCount, Opts.StorePreamblesInMemory,
-                    DynamicIdx ? DynamicIdx->makeUpdateCallbacks() : nullptr,
+                    DynamicIdx ? makeUpdateCallbacks(DynamicIdx.get())
+                               : nullptr,
                     Opts.UpdateDebounce, Opts.RetentionPolicy) {
   if (DynamicIdx && Opts.StaticIndex) {
     MergedIndex = mergeIndex(&DynamicIdx->index(), Opts.StaticIndex);
@@ -161,10 +126,6 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
   else
     Index = nullptr;
 }
-
-// Destructor has to be in .cpp file to see the definition of
-// ClangdServer::DynamicIndex.
-ClangdServer::~ClangdServer() = default;
 
 const SymbolIndex *ClangdServer::dynamicIndex() const {
   return DynamicIdx ? &DynamicIdx->index() : nullptr;

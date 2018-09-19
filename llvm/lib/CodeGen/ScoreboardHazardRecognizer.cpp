@@ -157,8 +157,7 @@ ScoreboardHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
 
       if (!freeUnits) {
         LLVM_DEBUG(dbgs() << "*** Hazard in cycle +" << StageCycle << ", ");
-        LLVM_DEBUG(dbgs() << "SU(" << SU->NodeNum << "): ");
-        LLVM_DEBUG(DAG->dumpNode(SU));
+        LLVM_DEBUG(DAG->dumpNode(*SU));
         return Hazard;
       }
     }

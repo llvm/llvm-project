@@ -41,13 +41,5 @@ protected:
   const ExegesisTarget *const ExegesisTarget_;
 };
 
-TEST_F(AArch64TargetTest, SetRegToConstant) {
-  const std::unique_ptr<llvm::MCSubtargetInfo> STI(
-      Target_->createMCSubtargetInfo(kTriple, "generic", ""));
-  // The AArch64 target currently doesn't know how to set register values
-  const auto Insts = ExegesisTarget_->setRegToConstant(*STI, llvm::AArch64::X0);
-  EXPECT_THAT(Insts, SizeIs(0));
-}
-
 } // namespace
 } // namespace exegesis

@@ -65,18 +65,20 @@ SymbolCache::createTypeEnumerator(codeview::TypeLeafKind Kind) {
 
 SymIndexId SymbolCache::createSimpleType(TypeIndex Index,
                                          ModifierOptions Mods) {
-  // FIXME:  We will eventually need to handle pointers to other simple types,
-  // which are still simple types in the world of CodeView TypeIndexes.
-  if (Index.getSimpleMode() != codeview::SimpleTypeMode::Direct)
-    return 0;
+  if (Index.getSimpleMode() != codeview::SimpleTypeMode::Direct) {
+    SymIndexId Id = Cache.size();
+    Cache.emplace_back(
+        llvm::make_unique<NativeTypePointer>(Session, Id, Index));
+    return Id;
+  }
 
+  SymIndexId Id = Cache.size();
   const auto Kind = Index.getSimpleKind();
   const auto It = std::find_if(
       std::begin(BuiltinTypes), std::end(BuiltinTypes),
       [Kind](const BuiltinTypeEntry &Builtin) { return Builtin.Kind == Kind; });
   if (It == std::end(BuiltinTypes))
     return 0;
-  SymIndexId Id = Cache.size();
   Cache.emplace_back(llvm::make_unique<NativeTypeBuiltin>(Session, Id, Mods,
                                                           It->Type, It->Size));
   TypeIndexToSymbolId[Index] = Id;
@@ -175,12 +177,16 @@ SymbolCache::getSymbolById(SymIndexId SymbolId) const {
   assert(SymbolId < Cache.size());
 
   // Id 0 is reserved.
-  if (SymbolId == 0)
+  if (SymbolId == 0 || SymbolId >= Cache.size())
     return nullptr;
 
-  // If the caller has a SymbolId, it'd better be in our SymbolCache.
-  return SymbolId < Cache.size() ? PDBSymbol::create(Session, *Cache[SymbolId])
-                                 : nullptr;
+  // Make sure to handle the case where we've inserted a placeholder symbol
+  // for types we don't yet suppport.
+  NativeRawSymbol *NRS = Cache[SymbolId].get();
+  if (!NRS)
+    return nullptr;
+
+  return PDBSymbol::create(Session, *NRS);
 }
 
 NativeRawSymbol &SymbolCache::getNativeSymbolById(SymIndexId SymbolId) const {

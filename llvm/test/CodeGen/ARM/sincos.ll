@@ -3,6 +3,8 @@
 ; RUN: llc < %s -mtriple=armv7-linux-gnu -mcpu=cortex-a8 | FileCheck %s --check-prefix=SINCOS-GNU
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=cortex-a8 \
 ; RUN:   --enable-unsafe-fp-math | FileCheck %s --check-prefix=SINCOS-GNU
+; RUN: llc < %s -mtriple=armv7-linux-android -mcpu=cortex-a8 | FileCheck %s --check-prefix=NOOPT-ANDROID
+; RUN: llc < %s -mtriple=armv7-linux-android9 -mcpu=cortex-a8 | FileCheck %s --check-prefix=SINCOS-GNU
 
 ; Combine sin / cos into a single call unless they may write errno (as
 ; captured by readnone attrbiute, controlled by clang -fmath-errno
@@ -20,6 +22,10 @@ entry:
 ; NOOPT-LABEL: test1:
 ; NOOPT: bl _sinf
 ; NOOPT: bl _cosf
+
+; NOOPT-ANDROID-LABEL: test1:
+; NOOPT-ANDROID: bl sinf
+; NOOPT-ANDROID: bl cosf
 
   %call = tail call float @sinf(float %x) readnone
   %call1 = tail call float @cosf(float %x) readnone
@@ -41,6 +47,10 @@ entry:
 ; NOOPT: bl _sinf
 ; NOOPT: bl _cosf
 
+; NOOPT-ANDROID-LABEL: test1_errno:
+; NOOPT-ANDROID: bl sinf
+; NOOPT-ANDROID: bl cosf
+
   %call = tail call float @sinf(float %x)
   %call1 = tail call float @cosf(float %x)
   %add = fadd float %call, %call1
@@ -58,6 +68,10 @@ entry:
 ; NOOPT-LABEL: test2:
 ; NOOPT: bl _sin
 ; NOOPT: bl _cos
+
+; NOOPT-ANDROID-LABEL: test2:
+; NOOPT-ANDROID: bl sin
+; NOOPT-ANDROID: bl cos
 
   %call = tail call double @sin(double %x) readnone
   %call1 = tail call double @cos(double %x) readnone
@@ -78,6 +92,10 @@ entry:
 ; NOOPT-LABEL: test2_errno:
 ; NOOPT: bl _sin
 ; NOOPT: bl _cos
+
+; NOOPT-ANDROID-LABEL: test2_errno:
+; NOOPT-ANDROID: bl sin
+; NOOPT-ANDROID: bl cos
 
   %call = tail call double @sin(double %x)
   %call1 = tail call double @cos(double %x)

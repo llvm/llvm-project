@@ -5606,9 +5606,14 @@ enum CXCompletionContext {
   CXCompletionContext_NaturalLanguage = 1 << 21,
 
   /**
+   * #include file completions should be included in the results.
+   */
+  CXCompletionContext_IncludedFile = 1 << 22,
+
+  /**
    * The current context is unknown, so set all contexts.
    */
-  CXCompletionContext_Unknown = ((1 << 22) - 1)
+  CXCompletionContext_Unknown = ((1 << 23) - 1)
 };
 
 /**

@@ -423,6 +423,11 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
   const InstrDesc &D = *DescOrErr;
   std::unique_ptr<Instruction> NewIS = llvm::make_unique<Instruction>(D);
 
+  // Check if this is a dependency breaking instruction.
+  bool IsDepBreaking = MCIA.isDependencyBreaking(STI, MCI);
+  // FIXME: this is a temporary hack to identify zero-idioms.
+  bool IsZeroIdiom = D.isZeroLatency() && IsDepBreaking;
+
   // Initialize Reads first.
   for (const ReadDescriptor &RD : D.Reads) {
     int RegID = -1;
@@ -444,7 +449,11 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
 
     // Okay, this is a register operand. Create a ReadState for it.
     assert(RegID > 0 && "Invalid register ID found!");
-    NewIS->getUses().emplace_back(llvm::make_unique<ReadState>(RD, RegID));
+    auto RS = llvm::make_unique<ReadState>(RD, RegID);
+
+    if (IsDepBreaking && !RD.isImplicitRead())
+      RS->setIndependentFromDef();
+    NewIS->getUses().emplace_back(std::move(RS));
   }
 
   // Early exit if there are no writes.
@@ -459,10 +468,6 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
   // register writes implicitly clear the upper portion of a super-register.
   MCIA.clearsSuperRegisters(MRI, MCI, WriteMask);
 
-  // Check if this is a dependency breaking instruction.
-  if (MCIA.isDependencyBreaking(STI, MCI))
-    NewIS->setDependencyBreaking();
-
   // Initialize writes.
   unsigned WriteIndex = 0;
   for (const WriteDescriptor &WD : D.Writes) {
@@ -476,7 +481,8 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
 
     assert(RegID && "Expected a valid register ID!");
     NewIS->getDefs().emplace_back(llvm::make_unique<WriteState>(
-        WD, RegID, /* ClearsSuperRegs */ WriteMask[WriteIndex]));
+        WD, RegID, /* ClearsSuperRegs */ WriteMask[WriteIndex],
+        /* WritesZero */ IsZeroIdiom));
     ++WriteIndex;
   }
 

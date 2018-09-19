@@ -7091,7 +7091,7 @@
 /* Begin PBXLegacyTarget section */
 		2387551E1C24974600CCE8C3 /* lldb-python-test-suite */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u $(SRCROOT)/test/dotest.py --apple-sdk $(PLATFORM_NAME) --executable=$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/lldb -C $(LLDB_PYTHON_TESTSUITE_CC) --arch $(LLDB_PYTHON_TESTSUITE_ARCH) --session-file-format fm --results-formatter lldbsuite.test_event.formatter.xunit.XunitFormatter --build-dir $(BUILD_DIR)/lldb-test-build.noindex --results-file $(BUILD_DIR)/test-results-$(LLDB_PYTHON_TESTSUITE_ARCH).xml --rerun-all-issues --env TERM=vt100 -O--xpass=ignore";
+			buildArgumentsString = "-u $(SRCROOT)/test/dotest.py --apple-sdk $(PLATFORM_NAME) --executable=$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/lldb -C $(LLDB_PYTHON_TESTSUITE_CC) --arch $(LLDB_PYTHON_TESTSUITE_ARCH) --filecheck $(LLVM_BUILD_DIR)/x86_64/bin/FileCheck --session-file-format fm --results-formatter lldbsuite.test_event.formatter.xunit.XunitFormatter --build-dir $(BUILD_DIR)/lldb-test-build.noindex --results-file $(BUILD_DIR)/test-results-$(LLDB_PYTHON_TESTSUITE_ARCH).xml --rerun-all-issues --env TERM=vt100 -O--xpass=ignore";
 			buildConfigurationList = 238755241C24974600CCE8C3 /* Build configuration list for PBXLegacyTarget "lldb-python-test-suite" */;
 			buildPhases = (
 			);

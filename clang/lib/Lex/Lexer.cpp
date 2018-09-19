@@ -1896,6 +1896,7 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
 /// either " or L" or u8" or u" or U".
 bool Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
                              tok::TokenKind Kind) {
+  const char *AfterQuote = CurPtr;
   // Does this string contain the \0 character?
   const char *NulCharacter = nullptr;
 
@@ -1924,8 +1925,11 @@ bool Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
 
     if (C == 0) {
       if (isCodeCompletionPoint(CurPtr-1)) {
-        PP->CodeCompleteNaturalLanguage();
-        FormTokenWithChars(Result, CurPtr-1, tok::unknown);
+        if (ParsingFilename)
+          codeCompleteIncludedFile(AfterQuote, CurPtr - 1, /*IsAngled=*/false);
+        else
+          PP->CodeCompleteNaturalLanguage();
+        FormTokenWithChars(Result, CurPtr - 1, tok::unknown);
         cutOffLexing();
         return true;
       }
@@ -2043,9 +2047,8 @@ bool Lexer::LexAngledStringLiteral(Token &Result, const char *CurPtr) {
     if (C == '\\')
       C = getAndAdvanceChar(CurPtr, Result);
 
-    if (C == '\n' || C == '\r' ||             // Newline.
-        (C == 0 && (CurPtr-1 == BufferEnd ||  // End of file.
-                    isCodeCompletionPoint(CurPtr-1)))) {
+    if (C == '\n' || C == '\r' ||                // Newline.
+        (C == 0 && (CurPtr - 1 == BufferEnd))) { // End of file.
       // If the filename is unterminated, then it must just be a lone <
       // character.  Return this as such.
       FormTokenWithChars(Result, AfterLessPos, tok::less);
@@ -2053,6 +2056,12 @@ bool Lexer::LexAngledStringLiteral(Token &Result, const char *CurPtr) {
     }
 
     if (C == 0) {
+      if (isCodeCompletionPoint(CurPtr - 1)) {
+        codeCompleteIncludedFile(AfterLessPos, CurPtr - 1, /*IsAngled=*/true);
+        cutOffLexing();
+        FormTokenWithChars(Result, CurPtr - 1, tok::unknown);
+        return true;
+      }
       NulCharacter = CurPtr-1;
     }
     C = getAndAdvanceChar(CurPtr, Result);
@@ -2067,6 +2076,34 @@ bool Lexer::LexAngledStringLiteral(Token &Result, const char *CurPtr) {
   FormTokenWithChars(Result, CurPtr, tok::angle_string_literal);
   Result.setLiteralData(TokStart);
   return true;
+}
+
+void Lexer::codeCompleteIncludedFile(const char *PathStart,
+                                     const char *CompletionPoint,
+                                     bool IsAngled) {
+  // Completion only applies to the filename, after the last slash.
+  StringRef PartialPath(PathStart, CompletionPoint - PathStart);
+  auto Slash = PartialPath.find_last_of(LangOpts.MSVCCompat ? "/\\" : "/");
+  StringRef Dir =
+      (Slash == StringRef::npos) ? "" : PartialPath.take_front(Slash);
+  const char *StartOfFilename =
+      (Slash == StringRef::npos) ? PathStart : PathStart + Slash + 1;
+  // Code completion filter range is the filename only, up to completion point.
+  PP->setCodeCompletionIdentifierInfo(&PP->getIdentifierTable().get(
+      StringRef(StartOfFilename, CompletionPoint - StartOfFilename)));
+  // We should replace the characters up to the closing quote, if any.
+  while (CompletionPoint < BufferEnd) {
+    char Next = *(CompletionPoint + 1);
+    if (Next == 0 || Next == '\r' || Next == '\n')
+      break;
+    ++CompletionPoint;
+    if (Next == (IsAngled ? '>' : '"'))
+      break;
+  }
+  PP->setCodeCompletionTokenRange(
+      FileLoc.getLocWithOffset(StartOfFilename - BufferStart),
+      FileLoc.getLocWithOffset(CompletionPoint - BufferStart));
+  PP->CodeCompleteIncludedFile(Dir, IsAngled);
 }
 
 /// LexCharConstant - Lex the remainder of a character constant, after having

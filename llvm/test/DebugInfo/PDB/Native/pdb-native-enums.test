@@ -10,7 +10,7 @@
 
 ; RUN: llvm-pdbutil pretty -native -enums %p/../Inputs/every-enum.pdb \
 ; RUN:   | FileCheck -check-prefix=ENUMS %s
-; RUN: llvm-pdbutil diadump -native -enums %p/../Inputs/every-enum.pdb \
+; RUN: llvm-pdbutil diadump -hierarchy -native -enums %p/../Inputs/every-enum.pdb \
 ; RUN:   | FileCheck -check-prefix=DUMP %s
 
 
@@ -81,7 +81,7 @@ ENUMS: const volatile enum EC
 
 DUMP: {
 DUMP:   symIndexId: 2
-DUMP:   symTag: 12
+DUMP:   symTag: Enum
 DUMP:   baseType: 2
 DUMP:   lexicalParentId: 0
 DUMP:   name: I8
@@ -104,7 +104,7 @@ DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
 DUMP:   {
 DUMP:     symIndexId: 4
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 2
 DUMP:     lexicalParentId: 0
 DUMP:     name: I8A
@@ -118,7 +118,7 @@ DUMP:     value: -128
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 5
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 2
 DUMP:     lexicalParentId: 0
 DUMP:     name: I8B
@@ -132,7 +132,7 @@ DUMP:     value: 0
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 6
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 2
 DUMP:     lexicalParentId: 0
 DUMP:     name: I8C
@@ -147,7 +147,7 @@ DUMP:   }
 DUMP: }
 DUMP: {
 DUMP:   symIndexId: 7
-DUMP:   symTag: 12
+DUMP:   symTag: Enum
 DUMP:   baseType: 6
 DUMP:   lexicalParentId: 0
 DUMP:   name: I16
@@ -170,7 +170,7 @@ DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
 DUMP:   {
 DUMP:     symIndexId: 9
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 7
 DUMP:     lexicalParentId: 0
 DUMP:     name: I16A
@@ -184,7 +184,7 @@ DUMP:     value: -32768
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 10
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 7
 DUMP:     lexicalParentId: 0
 DUMP:     name: I16B
@@ -198,7 +198,7 @@ DUMP:     value: 0
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 11
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 7
 DUMP:     lexicalParentId: 0
 DUMP:     name: I16C
@@ -213,7 +213,7 @@ DUMP:   }
 DUMP: }
 DUMP: {
 DUMP:   symIndexId: 12
-DUMP:   symTag: 12
+DUMP:   symTag: Enum
 DUMP:   baseType: 6
 DUMP:   lexicalParentId: 0
 DUMP:   name: I32
@@ -236,7 +236,7 @@ DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
 DUMP:   {
 DUMP:     symIndexId: 14
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 12
 DUMP:     lexicalParentId: 0
 DUMP:     name: I32A
@@ -250,7 +250,7 @@ DUMP:     value: -2147483648
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 15
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 12
 DUMP:     lexicalParentId: 0
 DUMP:     name: I32B
@@ -264,7 +264,7 @@ DUMP:     value: 0
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 16
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 12
 DUMP:     lexicalParentId: 0
 DUMP:     name: I32C
@@ -279,7 +279,7 @@ DUMP:   }
 DUMP: }
 DUMP: {
 DUMP:   symIndexId: 17
-DUMP:   symTag: 12
+DUMP:   symTag: Enum
 DUMP:   baseType: 6
 DUMP:   lexicalParentId: 0
 DUMP:   name: I64
@@ -302,7 +302,7 @@ DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
 DUMP:   {
 DUMP:     symIndexId: 19
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 17
 DUMP:     lexicalParentId: 0
 DUMP:     name: I64A
@@ -316,7 +316,7 @@ DUMP:     value: -9223372036854775808
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 20
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 17
 DUMP:     lexicalParentId: 0
 DUMP:     name: I64B
@@ -330,7 +330,7 @@ DUMP:     value: 0
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 21
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 17
 DUMP:     lexicalParentId: 0
 DUMP:     name: I64C
@@ -345,7 +345,7 @@ DUMP:   }
 DUMP: }
 DUMP: {
 DUMP:   symIndexId: 22
-DUMP:   symTag: 12
+DUMP:   symTag: Enum
 DUMP:   baseType: 2
 DUMP:   lexicalParentId: 0
 DUMP:   name: U8
@@ -368,7 +368,7 @@ DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
 DUMP:   {
 DUMP:     symIndexId: 24
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 22
 DUMP:     lexicalParentId: 0
 DUMP:     name: U8A
@@ -382,7 +382,7 @@ DUMP:     value: 0
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 25
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 22
 DUMP:     lexicalParentId: 0
 DUMP:     name: U8B
@@ -397,7 +397,7 @@ DUMP:   }
 DUMP: }
 DUMP: {
 DUMP:   symIndexId: 26
-DUMP:   symTag: 12
+DUMP:   symTag: Enum
 DUMP:   baseType: 7
 DUMP:   lexicalParentId: 0
 DUMP:   name: U16
@@ -420,7 +420,7 @@ DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
 DUMP:   {
 DUMP:     symIndexId: 28
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 26
 DUMP:     lexicalParentId: 0
 DUMP:     name: U16A
@@ -434,7 +434,7 @@ DUMP:     value: 0
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 29
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 26
 DUMP:     lexicalParentId: 0
 DUMP:     name: U16B
@@ -449,7 +449,7 @@ DUMP:   }
 DUMP: }
 DUMP: {
 DUMP:   symIndexId: 30
-DUMP:   symTag: 12
+DUMP:   symTag: Enum
 DUMP:   baseType: 7
 DUMP:   lexicalParentId: 0
 DUMP:   name: U32
@@ -472,7 +472,7 @@ DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
 DUMP:   {
 DUMP:     symIndexId: 32
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 30
 DUMP:     lexicalParentId: 0
 DUMP:     name: U32A
@@ -486,7 +486,7 @@ DUMP:     value: 0
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 33
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 30
 DUMP:     lexicalParentId: 0
 DUMP:     name: U32B
@@ -501,7 +501,7 @@ DUMP:   }
 DUMP: }
 DUMP: {
 DUMP:   symIndexId: 34
-DUMP:   symTag: 12
+DUMP:   symTag: Enum
 DUMP:   baseType: 7
 DUMP:   lexicalParentId: 0
 DUMP:   name: U64
@@ -524,7 +524,7 @@ DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
 DUMP:   {
 DUMP:     symIndexId: 36
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 34
 DUMP:     lexicalParentId: 0
 DUMP:     name: U64A
@@ -538,7 +538,7 @@ DUMP:     value: 0
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 37
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 34
 DUMP:     lexicalParentId: 0
 DUMP:     name: U64B
@@ -553,7 +553,7 @@ DUMP:   }
 DUMP: }
 DUMP: {
 DUMP:   symIndexId: 38
-DUMP:   symTag: 12
+DUMP:   symTag: Enum
 DUMP:   baseType: 7
 DUMP:   lexicalParentId: 0
 DUMP:   name: Char16
@@ -576,7 +576,7 @@ DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
 DUMP:   {
 DUMP:     symIndexId: 39
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 38
 DUMP:     lexicalParentId: 0
 DUMP:     name: C16A
@@ -590,7 +590,7 @@ DUMP:     value: 97
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 40
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 38
 DUMP:     lexicalParentId: 0
 DUMP:     name: C16B
@@ -605,7 +605,7 @@ DUMP:   }
 DUMP: }
 DUMP: {
 DUMP:   symIndexId: 41
-DUMP:   symTag: 12
+DUMP:   symTag: Enum
 DUMP:   baseType: 7
 DUMP:   lexicalParentId: 0
 DUMP:   name: Char32
@@ -628,7 +628,7 @@ DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
 DUMP:   {
 DUMP:     symIndexId: 43
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 41
 DUMP:     lexicalParentId: 0
 DUMP:     name: C32A
@@ -642,7 +642,7 @@ DUMP:     value: 97
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 44
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 41
 DUMP:     lexicalParentId: 0
 DUMP:     name: C32B
@@ -657,7 +657,7 @@ DUMP:   }
 DUMP: }
 DUMP: {
 DUMP:   symIndexId: 45
-DUMP:   symTag: 12
+DUMP:   symTag: Enum
 DUMP:   baseType: 7
 DUMP:   lexicalParentId: 0
 DUMP:   name: WChar
@@ -680,7 +680,7 @@ DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
 DUMP:   {
 DUMP:     symIndexId: 46
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 45
 DUMP:     lexicalParentId: 0
 DUMP:     name: WCA
@@ -694,7 +694,7 @@ DUMP:     value: 97
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 47
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 45
 DUMP:     lexicalParentId: 0
 DUMP:     name: WCB
@@ -709,7 +709,7 @@ DUMP:   }
 DUMP: }
 DUMP: {
 DUMP:   symIndexId: 48
-DUMP:   symTag: 12
+DUMP:   symTag: Enum
 DUMP:   baseType: 10
 DUMP:   lexicalParentId: 0
 DUMP:   name: Bool
@@ -732,7 +732,7 @@ DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
 DUMP:   {
 DUMP:     symIndexId: 50
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 48
 DUMP:     lexicalParentId: 0
 DUMP:     name: BA
@@ -746,7 +746,7 @@ DUMP:     value: true
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 51
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 48
 DUMP:     lexicalParentId: 0
 DUMP:     name: BB
@@ -760,7 +760,7 @@ DUMP:     value: false
 DUMP:   }
 DUMP: {
 DUMP:   symIndexId: 113
-DUMP:   symTag: 12
+DUMP:   symTag: Enum
 DUMP:   baseType: 6
 DUMP:   lexicalParentId: 0
 DUMP:   name: EC
@@ -783,7 +783,7 @@ DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
 DUMP:   {
 DUMP:     symIndexId: 114
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 113
 DUMP:     lexicalParentId: 0
 DUMP:     name: A
@@ -797,7 +797,7 @@ DUMP:     value: 1
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 115
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 113
 DUMP:     lexicalParentId: 0
 DUMP:     name: B
@@ -812,7 +812,7 @@ DUMP:   }
 DUMP: }
 DUMP: {
 DUMP:   symIndexId: 116
-DUMP:   symTag: 12
+DUMP:   symTag: Enum
 DUMP:   baseType: 6
 DUMP:   lexicalParentId: 0
 DUMP:   name: Struct::Nested
@@ -835,7 +835,7 @@ DUMP:   isValueUdt: 0
 DUMP:   volatileType: 0
 DUMP:   {
 DUMP:     symIndexId: 114
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 113
 DUMP:     lexicalParentId: 0
 DUMP:     name: A
@@ -849,7 +849,7 @@ DUMP:     value: 1
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 115
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 113
 DUMP:     lexicalParentId: 0
 DUMP:     name: B
@@ -864,7 +864,7 @@ DUMP:   }
 DUMP: }
 DUMP: {
 DUMP:   symIndexId: 117
-DUMP:   symTag: 12
+DUMP:   symTag: Enum
 DUMP:   baseType: 6
 DUMP:   lexicalParentId: 0
 DUMP:   name: EC
@@ -887,7 +887,7 @@ DUMP:   unalignedType: 0
 DUMP:   isValueUdt: 0
 DUMP:   volatileType: 1  {
 DUMP:     symIndexId: 114
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 113
 DUMP:     lexicalParentId: 0
 DUMP:     name: A
@@ -901,7 +901,7 @@ DUMP:     value: 1
 DUMP:   }
 DUMP:   {
 DUMP:     symIndexId: 115
-DUMP:     symTag: 7
+DUMP:     symTag: Data
 DUMP:     classParentId: 113
 DUMP:     lexicalParentId: 0
 DUMP:     name: B

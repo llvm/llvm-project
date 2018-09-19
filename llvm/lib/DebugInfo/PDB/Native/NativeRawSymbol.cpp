@@ -9,6 +9,7 @@
 
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -19,9 +20,13 @@ NativeRawSymbol::NativeRawSymbol(NativeSession &PDBSession, PDB_SymType Tag,
                                  SymIndexId SymbolId)
     : Session(PDBSession), Tag(Tag), SymbolId(SymbolId) {}
 
-void NativeRawSymbol::dump(raw_ostream &OS, int Indent) const {
-  dumpSymbolField(OS, "symIndexId", SymbolId, Indent);
-  dumpSymbolField(OS, "symTag", static_cast<uint32_t>(Tag), Indent);
+void NativeRawSymbol::dump(raw_ostream &OS, int Indent,
+                           PdbSymbolIdField ShowIdFields,
+                           PdbSymbolIdField RecurseIdFields) const {
+  dumpSymbolIdField(OS, "symIndexId", SymbolId, Indent, Session,
+                    PdbSymbolIdField::SymIndexId, ShowIdFields,
+                    RecurseIdFields);
+  dumpSymbolField(OS, "symTag", Tag, Indent);
 }
 
 std::unique_ptr<IPDBEnumSymbols>
