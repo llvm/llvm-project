@@ -15,12 +15,12 @@ target triple = "powerpc64le-grtev4-linux-gnu"
 ;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 1
 ;CHECK-NEXT: bc 12, 1, [[BODY1LABEL:[._0-9A-Za-z]+]]
 ;CHECK-NEXT: # %test2
-;CHECK-NEXT: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 30, 30
+;CHECK-NEXT: andi. {{[0-9]+}}, [[TAGREG]], 2
 ;CHECK-NEXT: bne 0, [[BODY2LABEL:[._0-9A-Za-z]+]]
 ;CHECK: [[EXITLABEL:[._0-9A-Za-z]+]]: # %exit
 ;CHECK: blr
 ;CHECK-NEXT: [[BODY1LABEL]]
-;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 30, 30
+;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 2
 ;CHECK-NEXT: beq 0, [[EXITLABEL]]
 ;CHECK-NEXT: [[BODY2LABEL:[._0-9A-Za-z]+]]:
 ;CHECK: b [[EXITLABEL]]
@@ -58,7 +58,7 @@ exit:
 ;CHECK-NEXT: bc 4, 1, [[TEST2LABEL:[._0-9A-Za-z]+]]
 ;CHECK-NEXT: # %body1
 ;CHECK: [[TEST2LABEL]]: # %test2
-;CHECK-NEXT: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 30, 30
+;CHECK-NEXT: andi. {{[0-9]+}}, [[TAGREG]], 2
 ;CHECK-NEXT: beq 0, [[EXITLABEL:[._0-9A-Za-z]+]]
 ;CHECK-NEXT: # %body2
 ;CHECK: [[EXITLABEL:[._0-9A-Za-z]+]]: # %exit
@@ -106,7 +106,7 @@ declare void @d()
 ; CHECK: # %succ
 ; CHECK: # %c
 ; CHECK: bl c
-; CHECK: rlwinm. {{[0-9]+}}, {{[0-9]+}}, 0, 29, 29
+; CHECK: andi. {{[0-9]+}}, {{[0-9]+}}, 4
 ; CHECK: beq
 ; CHECK: b
 define void @tail_dup_no_succ(i32 %tag) {

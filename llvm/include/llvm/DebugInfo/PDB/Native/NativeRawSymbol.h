@@ -24,7 +24,8 @@ public:
   NativeRawSymbol(NativeSession &PDBSession, PDB_SymType Tag,
                   SymIndexId SymbolId);
 
-  void dump(raw_ostream &OS, int Indent) const override;
+  void dump(raw_ostream &OS, int Indent, PdbSymbolIdField ShowIdFields,
+            PdbSymbolIdField RecurseIdFields) const override;
 
   std::unique_ptr<IPDBEnumSymbols>
     findChildren(PDB_SymType Type) const override;

@@ -189,7 +189,7 @@ multiclass SIMDNot<ValueType vec_t, PatFrag splat_pat, ValueType lane_t> {
 multiclass SIMDCondition<ValueType vec_t, ValueType out_t, string vec,
                              string name, CondCode cond, bits<32> simdop> {
   defm _#vec_t :
-    SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128: $rhs), (outs), (ins),
+    SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs), (outs), (ins),
            [(set (out_t V128:$dst),
              (setcc (vec_t V128:$lhs), (vec_t V128:$rhs), cond))],
            vec#"."#name#"\t$dst, $lhs, $rhs", vec#"."#name, simdop>;
@@ -206,6 +206,11 @@ multiclass SIMDConditionFP<string name, CondCode cond, bits<32> baseInst> {
   defm "" : SIMDCondition<v4f32, v4i32, "f32x4", name, cond, baseInst>;
   defm "" : SIMDCondition<v2f64, v2i64, "f64x2", name, cond,
                               !add(baseInst, 1)>;
+}
+multiclass SIMDAbs<ValueType vec_t, string vec, bits<32> simdop> {
+  defm ABS_#vec_t : SIMD_I<(outs V128:$dst), (ins V128:$vec), (outs), (ins),
+                           [(set (vec_t V128:$dst), (vec_t (fabs V128:$vec)))],
+                           vec#".abs\t$dst, $vec", vec#".abs", simdop>;
 }
 
 let Defs = [ARGUMENTS] in {
@@ -362,6 +367,9 @@ defm GT : SIMDConditionFP<"gt", SETOGT, 104>;
 defm GE_S : SIMDConditionInt<"ge_s", SETGE, 106, 2>;
 defm GE_U : SIMDConditionInt<"ge_u", SETUGE, 107, 2>;
 defm GE : SIMDConditionFP<"ge", SETOGE, 112>;
+
+defm "" : SIMDAbs<v4f32, "f32x4", 116>;
+defm "" : SIMDAbs<v2f64, "f64x2", 117>;
 
 } // Defs = [ARGUMENTS]
 

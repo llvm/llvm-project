@@ -648,18 +648,20 @@ void ScheduleDAGSDNodes::computeOperandLatency(SDNode *Def, SDNode *Use,
     dep.setLatency(Latency);
 }
 
-void ScheduleDAGSDNodes::dumpNode(const SUnit *SU) const {
-  // Cannot completely remove virtual function even in release mode.
+void ScheduleDAGSDNodes::dumpNode(const SUnit &SU) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  if (!SU->getNode()) {
+  dumpNodeName(SU);
+  dbgs() << ": ";
+
+  if (!SU.getNode()) {
     dbgs() << "PHYS REG COPY\n";
     return;
   }
 
-  SU->getNode()->dump(DAG);
+  SU.getNode()->dump(DAG);
   dbgs() << "\n";
   SmallVector<SDNode *, 4> GluedNodes;
-  for (SDNode *N = SU->getNode()->getGluedNode(); N; N = N->getGluedNode())
+  for (SDNode *N = SU.getNode()->getGluedNode(); N; N = N->getGluedNode())
     GluedNodes.push_back(N);
   while (!GluedNodes.empty()) {
     dbgs() << "    ";
@@ -670,11 +672,22 @@ void ScheduleDAGSDNodes::dumpNode(const SUnit *SU) const {
 #endif
 }
 
+void ScheduleDAGSDNodes::dump() const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  if (EntrySU.getNode() != nullptr)
+    dumpNodeAll(EntrySU);
+  for (const SUnit &SU : SUnits)
+    dumpNodeAll(SU);
+  if (ExitSU.getNode() != nullptr)
+    dumpNodeAll(ExitSU);
+#endif
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void ScheduleDAGSDNodes::dumpSchedule() const {
   for (unsigned i = 0, e = Sequence.size(); i != e; i++) {
     if (SUnit *SU = Sequence[i])
-      SU->dump(this);
+      dumpNode(*SU);
     else
       dbgs() << "**** NOOP ****\n";
   }

@@ -81,8 +81,9 @@ BCEAtom visitICmpLoadOperand(Value *const Val) {
       LLVM_DEBUG(dbgs() << "used outside of block\n");
       return {};
     }
-    if (LoadI->isVolatile()) {
-      LLVM_DEBUG(dbgs() << "volatile\n");
+    // Do not optimize atomic loads to non-atomic memcmp
+    if (!LoadI->isSimple()) {
+      LLVM_DEBUG(dbgs() << "volatile or atomic\n");
       return {};
     }
     Value *const Addr = LoadI->getOperand(0);
