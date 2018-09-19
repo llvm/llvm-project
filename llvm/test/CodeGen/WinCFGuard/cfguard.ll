@@ -1,5 +1,7 @@
 ; RUN: llc < %s | FileCheck %s
 
+; CHECK: .set @feat.00, 2048
+
 ; CHECK: .section .gfids$y
 ; CHECK: .symidx "?address_taken@@YAXXZ"
 ; CHECK: .symidx "?virt_method@Derived@@UEBAHXZ"

@@ -105,4 +105,129 @@ defm : LdPat<atomic_load_32, LW>;
 defm : AtomicStPat<atomic_store_8,  SB, GPR>;
 defm : AtomicStPat<atomic_store_16, SH, GPR>;
 defm : AtomicStPat<atomic_store_32, SW, GPR>;
+
+/// AMOs
+
+multiclass AMOPat<string AtomicOp, string BaseInst> {
+  def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_monotonic"),
+                  !cast<RVInst>(BaseInst)>;
+  def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_acquire"),
+                  !cast<RVInst>(BaseInst#"_AQ")>;
+  def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_release"),
+                  !cast<RVInst>(BaseInst#"_RL")>;
+  def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_acq_rel"),
+                  !cast<RVInst>(BaseInst#"_AQ_RL")>;
+  def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_seq_cst"),
+                  !cast<RVInst>(BaseInst#"_AQ_RL")>;
+}
+
+defm : AMOPat<"atomic_swap_32", "AMOSWAP_W">;
+defm : AMOPat<"atomic_load_add_32", "AMOADD_W">;
+defm : AMOPat<"atomic_load_and_32", "AMOAND_W">;
+defm : AMOPat<"atomic_load_or_32", "AMOOR_W">;
+defm : AMOPat<"atomic_load_xor_32", "AMOXOR_W">;
+defm : AMOPat<"atomic_load_max_32", "AMOMAX_W">;
+defm : AMOPat<"atomic_load_min_32", "AMOMIN_W">;
+defm : AMOPat<"atomic_load_umax_32", "AMOMAXU_W">;
+defm : AMOPat<"atomic_load_umin_32", "AMOMINU_W">;
+
+def : Pat<(atomic_load_sub_32_monotonic GPR:$addr, GPR:$incr),
+          (AMOADD_W GPR:$addr, (SUB X0, GPR:$incr))>;
+def : Pat<(atomic_load_sub_32_acquire GPR:$addr, GPR:$incr),
+          (AMOADD_W_AQ GPR:$addr, (SUB X0, GPR:$incr))>;
+def : Pat<(atomic_load_sub_32_release GPR:$addr, GPR:$incr),
+          (AMOADD_W_RL GPR:$addr, (SUB X0, GPR:$incr))>;
+def : Pat<(atomic_load_sub_32_acq_rel GPR:$addr, GPR:$incr),
+          (AMOADD_W_AQ_RL GPR:$addr, (SUB X0, GPR:$incr))>;
+def : Pat<(atomic_load_sub_32_seq_cst GPR:$addr, GPR:$incr),
+          (AMOADD_W_AQ_RL GPR:$addr, (SUB X0, GPR:$incr))>;
+
+/// Pseudo AMOs
+
+class PseudoAMO : Pseudo<(outs GPR:$res, GPR:$scratch),
+                         (ins GPR:$addr, GPR:$incr, i32imm:$ordering), []> {
+  let Constraints = "@earlyclobber $res,@earlyclobber $scratch";
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+}
+
+def PseudoAtomicLoadNand32 : PseudoAMO;
+// Ordering constants must be kept in sync with the AtomicOrdering enum in 
+// AtomicOrdering.h.
+def : Pat<(atomic_load_nand_32_monotonic GPR:$addr, GPR:$incr),
+          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 2)>;
+def : Pat<(atomic_load_nand_32_acquire GPR:$addr, GPR:$incr),
+          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 4)>;
+def : Pat<(atomic_load_nand_32_release GPR:$addr, GPR:$incr),
+          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 5)>;
+def : Pat<(atomic_load_nand_32_acq_rel GPR:$addr, GPR:$incr),
+          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 6)>;
+def : Pat<(atomic_load_nand_32_seq_cst GPR:$addr, GPR:$incr),
+          (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 7)>;
+
+class PseudoMaskedAMO
+    : Pseudo<(outs GPR:$res, GPR:$scratch),
+             (ins GPR:$addr, GPR:$incr, GPR:$mask, i32imm:$ordering), []> {
+  let Constraints = "@earlyclobber $res,@earlyclobber $scratch";
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+}
+
+class PseudoMaskedAMOMinMax
+    : Pseudo<(outs GPR:$res, GPR:$scratch1, GPR:$scratch2),
+             (ins GPR:$addr, GPR:$incr, GPR:$mask, i32imm:$sextshamt,
+              i32imm:$ordering), []> {
+  let Constraints = "@earlyclobber $res,@earlyclobber $scratch1,"
+                    "@earlyclobber $scratch2";
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+}
+
+class PseudoMaskedAMOUMinUMax
+    : Pseudo<(outs GPR:$res, GPR:$scratch1, GPR:$scratch2),
+             (ins GPR:$addr, GPR:$incr, GPR:$mask, i32imm:$ordering), []> {
+  let Constraints = "@earlyclobber $res,@earlyclobber $scratch1,"
+                    "@earlyclobber $scratch2";
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+}
+
+class PseudoMaskedAMOPat<Intrinsic intrin, Pseudo AMOInst>
+    : Pat<(intrin GPR:$addr, GPR:$incr, GPR:$mask, imm:$ordering),
+          (AMOInst GPR:$addr, GPR:$incr, GPR:$mask, imm:$ordering)>;
+
+class PseudoMaskedAMOMinMaxPat<Intrinsic intrin, Pseudo AMOInst>
+    : Pat<(intrin GPR:$addr, GPR:$incr, GPR:$mask, GPR:$shiftamt,
+           imm:$ordering),
+          (AMOInst GPR:$addr, GPR:$incr, GPR:$mask, GPR:$shiftamt,
+           imm:$ordering)>;
+
+def PseudoMaskedAtomicSwap32 : PseudoMaskedAMO;
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_xchg_i32,
+                         PseudoMaskedAtomicSwap32>;
+def PseudoMaskedAtomicLoadAdd32 : PseudoMaskedAMO;
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_add_i32,
+                         PseudoMaskedAtomicLoadAdd32>;
+def PseudoMaskedAtomicLoadSub32 : PseudoMaskedAMO;
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_sub_i32,
+                         PseudoMaskedAtomicLoadSub32>;
+def PseudoMaskedAtomicLoadNand32 : PseudoMaskedAMO;
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_nand_i32,
+                         PseudoMaskedAtomicLoadNand32>;
+def PseudoMaskedAtomicLoadMax32 : PseudoMaskedAMOMinMax;
+def : PseudoMaskedAMOMinMaxPat<int_riscv_masked_atomicrmw_max_i32,
+                               PseudoMaskedAtomicLoadMax32>;
+def PseudoMaskedAtomicLoadMin32 : PseudoMaskedAMOMinMax;
+def : PseudoMaskedAMOMinMaxPat<int_riscv_masked_atomicrmw_min_i32,
+                               PseudoMaskedAtomicLoadMin32>;
+def PseudoMaskedAtomicLoadUMax32 : PseudoMaskedAMOUMinUMax;
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_umax_i32,
+                         PseudoMaskedAtomicLoadUMax32>;
+def PseudoMaskedAtomicLoadUMin32 : PseudoMaskedAMOUMinUMax;
+def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_umin_i32,
+                         PseudoMaskedAtomicLoadUMin32>;
 } // Predicates = [HasStdExtA]

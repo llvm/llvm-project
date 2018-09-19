@@ -11377,16 +11377,20 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   return (Subtarget->hasLSE() && Size < 128) ? AtomicExpansionKind::None : AtomicExpansionKind::LLSC;
 }
 
-bool AArch64TargetLowering::shouldExpandAtomicCmpXchgInIR(
+TargetLowering::AtomicExpansionKind
+AArch64TargetLowering::shouldExpandAtomicCmpXchgInIR(
     AtomicCmpXchgInst *AI) const {
   // If subtarget has LSE, leave cmpxchg intact for codegen.
-  if (Subtarget->hasLSE()) return false;
+  if (Subtarget->hasLSE())
+    return AtomicExpansionKind::None;
   // At -O0, fast-regalloc cannot cope with the live vregs necessary to
   // implement cmpxchg without spilling. If the address being exchanged is also
   // on the stack and close enough to the spill slot, this can lead to a
   // situation where the monitor always gets cleared and the atomic operation
   // can never succeed. So at -O0 we need a late-expanded pseudo-inst instead.
-  return getTargetMachine().getOptLevel() != 0;
+  if (getTargetMachine().getOptLevel() == 0)
+    return AtomicExpansionKind::None;
+  return AtomicExpansionKind::LLSC;
 }
 
 Value *AArch64TargetLowering::emitLoadLinked(IRBuilder<> &Builder, Value *Addr,

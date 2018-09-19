@@ -19,14 +19,10 @@ define <4 x i32> @test_urem_odd_vec_i32(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,3,2,3]
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm2
-; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [5,5,5,5]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm3
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[0,2,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; CHECK-SSE2-NEXT:    psubd %xmm2, %xmm0
+; CHECK-SSE2-NEXT:    movdqa %xmm2, %xmm1
+; CHECK-SSE2-NEXT:    pslld $2, %xmm1
+; CHECK-SSE2-NEXT:    paddd %xmm2, %xmm1
+; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0
@@ -116,14 +112,10 @@ define <4 x i16> @test_urem_odd_vec_i16(<4 x i16> %X) nounwind readnone {
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,3,2,3]
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm2
-; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [5,5,5,5]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm3
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[0,2,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; CHECK-SSE2-NEXT:    psubd %xmm2, %xmm0
+; CHECK-SSE2-NEXT:    movdqa %xmm2, %xmm1
+; CHECK-SSE2-NEXT:    pslld $2, %xmm1
+; CHECK-SSE2-NEXT:    paddd %xmm2, %xmm1
+; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0

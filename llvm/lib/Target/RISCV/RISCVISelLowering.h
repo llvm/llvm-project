@@ -43,6 +43,9 @@ public:
   explicit RISCVTargetLowering(const TargetMachine &TM,
                                const RISCVSubtarget &STI);
 
+  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
+                          MachineFunction &MF,
+                          unsigned Intrinsic) const override;
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
                              unsigned AS,
                              Instruction *I = nullptr) const override;
@@ -115,6 +118,12 @@ private:
   bool IsEligibleForTailCallOptimization(CCState &CCInfo,
     CallLoweringInfo &CLI, MachineFunction &MF,
     const SmallVector<CCValAssign, 16> &ArgLocs) const;
+
+  TargetLowering::AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+  virtual Value *emitMaskedAtomicRMWIntrinsic(
+      IRBuilder<> &Builder, AtomicRMWInst *AI, Value *AlignedAddr, Value *Incr,
+      Value *Mask, Value *ShiftAmt, AtomicOrdering Ord) const override;
 };
 }
 

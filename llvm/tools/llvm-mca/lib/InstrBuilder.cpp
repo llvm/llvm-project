@@ -424,9 +424,12 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
   std::unique_ptr<Instruction> NewIS = llvm::make_unique<Instruction>(D);
 
   // Check if this is a dependency breaking instruction.
-  bool IsDepBreaking = MCIA.isDependencyBreaking(STI, MCI);
-  // FIXME: this is a temporary hack to identify zero-idioms.
-  bool IsZeroIdiom = D.isZeroLatency() && IsDepBreaking;
+  APInt Mask;
+
+  unsigned ProcID = STI.getSchedModel().getProcessorID();
+  bool IsZeroIdiom = MCIA.isZeroIdiom(MCI, Mask, ProcID);
+  bool IsDepBreaking =
+      IsZeroIdiom || MCIA.isDependencyBreaking(MCI, Mask, ProcID);
 
   // Initialize Reads first.
   for (const ReadDescriptor &RD : D.Reads) {
@@ -451,8 +454,25 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
     assert(RegID > 0 && "Invalid register ID found!");
     auto RS = llvm::make_unique<ReadState>(RD, RegID);
 
-    if (IsDepBreaking && !RD.isImplicitRead())
-      RS->setIndependentFromDef();
+    if (IsDepBreaking) {
+      // A mask of all zeroes means: explicit input operands are not
+      // independent.
+      if (Mask.isNullValue()) {
+        if (!RD.isImplicitRead())
+          RS->setIndependentFromDef();
+      } else {
+        // Check if this register operand is independent according to `Mask`.
+        // Note that Mask may not have enough bits to describe all explicit and
+        // implicit input operands. If this register operand doesn't have a
+        // corresponding bit in Mask, then conservatively assume that it is
+        // dependent.
+        if (Mask.getBitWidth() > RD.UseIndex) {
+          // Okay. This map describe register use `RD.UseIndex`.
+          if (Mask[RD.UseIndex])
+            RS->setIndependentFromDef();
+        }
+      }
+    }
     NewIS->getUses().emplace_back(std::move(RS));
   }
 

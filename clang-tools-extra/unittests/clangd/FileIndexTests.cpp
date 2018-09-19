@@ -15,6 +15,7 @@
 #include "index/FileIndex.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
+#include "clang/Index/IndexSymbol.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "gtest/gtest.h"
@@ -328,6 +329,21 @@ TEST(FileIndexTest, Refs) {
                              FileURI("unittest:///test.cc")),
                        AllOf(RefRange(MainCode.range("foo")),
                              FileURI("unittest:///test2.cc"))}));
+}
+
+TEST(FileIndexTest, CollectMacros) {
+  FileIndex M;
+  update(M, "f", "#define CLANGD 1");
+
+  FuzzyFindRequest Req;
+  Req.Query = "";
+  bool SeenSymbol = false;
+  M.index().fuzzyFind(Req, [&](const Symbol &Sym) {
+    EXPECT_EQ(Sym.Name, "CLANGD");
+    EXPECT_EQ(Sym.SymInfo.Kind, index::SymbolKind::Macro);
+    SeenSymbol = true;
+  });
+  EXPECT_TRUE(SeenSymbol);
 }
 
 } // namespace

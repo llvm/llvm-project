@@ -1071,10 +1071,12 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
   MCTargetStreamer &TS = *OutStreamer->getTargetStreamer();
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);
   const MachineFunction &MF = *MI->getParent()->getParent();
-  const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
+  const TargetRegisterInfo *TargetRegInfo =
+    MF.getSubtarget().getRegisterInfo();
+  const MachineRegisterInfo &MachineRegInfo = MF.getRegInfo();
   const ARMFunctionInfo &AFI = *MF.getInfo<ARMFunctionInfo>();
 
-  unsigned FramePtr = RegInfo->getFrameRegister(MF);
+  unsigned FramePtr = TargetRegInfo->getFrameRegister(MF);
   unsigned Opc = MI->getOpcode();
   unsigned SrcReg, DstReg;
 
@@ -1131,7 +1133,9 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
         if (MO.isUndef()) {
           assert(RegList.empty() &&
                  "Pad registers must come before restored ones");
-          Pad += 4;
+          unsigned Width =
+            TargetRegInfo->getRegSizeInBits(MO.getReg(), MachineRegInfo) / 8;
+          Pad += Width;
           continue;
         }
         RegList.push_back(MO.getReg());

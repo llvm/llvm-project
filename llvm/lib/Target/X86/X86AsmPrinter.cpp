@@ -587,21 +587,28 @@ void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
   if (TT.isOSBinFormatCOFF()) {
     // Emit an absolute @feat.00 symbol.  This appears to be some kind of
     // compiler features bitfield read by link.exe.
+    MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
+    OutStreamer->BeginCOFFSymbolDef(S);
+    OutStreamer->EmitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
+    OutStreamer->EmitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
+    OutStreamer->EndCOFFSymbolDef();
+    int64_t Feat00Flags = 0;
+
     if (TT.getArch() == Triple::x86) {
-      MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
-      OutStreamer->BeginCOFFSymbolDef(S);
-      OutStreamer->EmitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
-      OutStreamer->EmitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
-      OutStreamer->EndCOFFSymbolDef();
       // According to the PE-COFF spec, the LSB of this value marks the object
       // for "registered SEH".  This means that all SEH handler entry points
       // must be registered in .sxdata.  Use of any unregistered handlers will
       // cause the process to terminate immediately.  LLVM does not know how to
       // register any SEH handlers, so its object files should be safe.
-      OutStreamer->EmitSymbolAttribute(S, MCSA_Global);
-      OutStreamer->EmitAssignment(
-          S, MCConstantExpr::create(int64_t(1), MMI->getContext()));
+      Feat00Flags |= 1;
     }
+
+    if (M.getModuleFlag("cfguardtable"))
+      Feat00Flags |= 0x800; // Object is CFG-aware.
+
+    OutStreamer->EmitSymbolAttribute(S, MCSA_Global);
+    OutStreamer->EmitAssignment(
+        S, MCConstantExpr::create(Feat00Flags, MMI->getContext()));
   }
   OutStreamer->EmitSyntaxDirective();
 

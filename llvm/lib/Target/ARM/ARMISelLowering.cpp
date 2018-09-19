@@ -14561,16 +14561,18 @@ ARMTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
              : AtomicExpansionKind::None;
 }
 
-bool ARMTargetLowering::shouldExpandAtomicCmpXchgInIR(
-    AtomicCmpXchgInst *AI) const {
+TargetLowering::AtomicExpansionKind
+ARMTargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
   // At -O0, fast-regalloc cannot cope with the live vregs necessary to
   // implement cmpxchg without spilling. If the address being exchanged is also
   // on the stack and close enough to the spill slot, this can lead to a
   // situation where the monitor always gets cleared and the atomic operation
   // can never succeed. So at -O0 we need a late-expanded pseudo-inst instead.
-  bool hasAtomicCmpXchg =
+  bool HasAtomicCmpXchg =
       !Subtarget->isThumb() || Subtarget->hasV8MBaselineOps();
-  return getTargetMachine().getOptLevel() != 0 && hasAtomicCmpXchg;
+  if (getTargetMachine().getOptLevel() != 0 && HasAtomicCmpXchg)
+    return AtomicExpansionKind::LLSC;
+  return AtomicExpansionKind::None;
 }
 
 bool ARMTargetLowering::shouldInsertFencesForAtomic(

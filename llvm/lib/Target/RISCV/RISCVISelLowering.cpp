@@ -137,10 +137,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BlockAddress, XLenVT, Custom);
   setOperationAction(ISD::ConstantPool, XLenVT, Custom);
 
-  if (Subtarget.hasStdExtA())
+  if (Subtarget.hasStdExtA()) {
     setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
-  else
+    setMinCmpXchgSizeInBits(32);
+  } else {
     setMaxAtomicSizeInBitsSupported(0);
+  }
 
   setBooleanContents(ZeroOrOneBooleanContent);
 
@@ -158,6 +160,33 @@ EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
   if (!VT.isVector())
     return getPointerTy(DL);
   return VT.changeVectorElementTypeToInteger();
+}
+
+bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
+                                             const CallInst &I,
+                                             MachineFunction &MF,
+                                             unsigned Intrinsic) const {
+  switch (Intrinsic) {
+  default:
+    return false;
+  case Intrinsic::riscv_masked_atomicrmw_xchg_i32:
+  case Intrinsic::riscv_masked_atomicrmw_add_i32:
+  case Intrinsic::riscv_masked_atomicrmw_sub_i32:
+  case Intrinsic::riscv_masked_atomicrmw_nand_i32:
+  case Intrinsic::riscv_masked_atomicrmw_max_i32:
+  case Intrinsic::riscv_masked_atomicrmw_min_i32:
+  case Intrinsic::riscv_masked_atomicrmw_umax_i32:
+  case Intrinsic::riscv_masked_atomicrmw_umin_i32:
+    PointerType *PtrTy = cast<PointerType>(I.getArgOperand(0)->getType());
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(PtrTy->getElementType());
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = 4;
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
+                 MachineMemOperand::MOVolatile;
+    return true;
+  }
 }
 
 bool RISCVTargetLowering::isLegalAddressingMode(const DataLayout &DL,
@@ -1595,4 +1624,64 @@ Instruction *RISCVTargetLowering::emitTrailingFence(IRBuilder<> &Builder,
   if (isa<LoadInst>(Inst) && isAcquireOrStronger(Ord))
     return Builder.CreateFence(AtomicOrdering::Acquire);
   return nullptr;
+}
+
+TargetLowering::AtomicExpansionKind
+RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+  unsigned Size = AI->getType()->getPrimitiveSizeInBits();
+  if (Size == 8 || Size == 16)
+    return AtomicExpansionKind::MaskedIntrinsic;
+  return AtomicExpansionKind::None;
+}
+
+static Intrinsic::ID
+getIntrinsicForMaskedAtomicRMWBinOp32(AtomicRMWInst::BinOp BinOp) {
+  switch (BinOp) {
+  default:
+    llvm_unreachable("Unexpected AtomicRMW BinOp");
+  case AtomicRMWInst::Xchg:
+    return Intrinsic::riscv_masked_atomicrmw_xchg_i32;
+  case AtomicRMWInst::Add:
+    return Intrinsic::riscv_masked_atomicrmw_add_i32;
+  case AtomicRMWInst::Sub:
+    return Intrinsic::riscv_masked_atomicrmw_sub_i32;
+  case AtomicRMWInst::Nand:
+    return Intrinsic::riscv_masked_atomicrmw_nand_i32;
+  case AtomicRMWInst::Max:
+    return Intrinsic::riscv_masked_atomicrmw_max_i32;
+  case AtomicRMWInst::Min:
+    return Intrinsic::riscv_masked_atomicrmw_min_i32;
+  case AtomicRMWInst::UMax:
+    return Intrinsic::riscv_masked_atomicrmw_umax_i32;
+  case AtomicRMWInst::UMin:
+    return Intrinsic::riscv_masked_atomicrmw_umin_i32;
+  }
+}
+
+Value *RISCVTargetLowering::emitMaskedAtomicRMWIntrinsic(
+    IRBuilder<> &Builder, AtomicRMWInst *AI, Value *AlignedAddr, Value *Incr,
+    Value *Mask, Value *ShiftAmt, AtomicOrdering Ord) const {
+  Value *Ordering = Builder.getInt32(static_cast<uint32_t>(AI->getOrdering()));
+  Type *Tys[] = {AlignedAddr->getType()};
+  Function *LrwOpScwLoop = Intrinsic::getDeclaration(
+      AI->getModule(),
+      getIntrinsicForMaskedAtomicRMWBinOp32(AI->getOperation()), Tys);
+
+  // Must pass the shift amount needed to sign extend the loaded value prior
+  // to performing a signed comparison for min/max. ShiftAmt is the number of
+  // bits to shift the value into position. Pass XLen-ShiftAmt-ValWidth, which
+  // is the number of bits to left+right shift the value in order to
+  // sign-extend.
+  if (AI->getOperation() == AtomicRMWInst::Min ||
+      AI->getOperation() == AtomicRMWInst::Max) {
+    const DataLayout &DL = AI->getModule()->getDataLayout();
+    unsigned ValWidth =
+        DL.getTypeStoreSizeInBits(AI->getValOperand()->getType());
+    Value *SextShamt = Builder.CreateSub(
+        Builder.getInt32(Subtarget.getXLen() - ValWidth), ShiftAmt);
+    return Builder.CreateCall(LrwOpScwLoop,
+                              {AlignedAddr, Incr, Mask, SextShamt, Ordering});
+  }
+
+  return Builder.CreateCall(LrwOpScwLoop, {AlignedAddr, Incr, Mask, Ordering});
 }

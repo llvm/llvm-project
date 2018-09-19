@@ -116,6 +116,7 @@ class SubtargetEmitter {
   void emitSchedModelHelpersImpl(raw_ostream &OS,
                                  bool OnlyExpandMCInstPredicates = false);
   void emitGenMCSubtargetInfo(raw_ostream &OS);
+  void EmitMCInstrAnalysisPredicateFunctions(raw_ostream &OS);
 
   void EmitSchedModel(raw_ostream &OS);
   void EmitHwModeCheck(const std::string &ClassName, raw_ostream &OS);
@@ -1672,7 +1673,16 @@ void SubtargetEmitter::EmitSchedModelHelpers(const std::string &ClassName,
      << " unsigned CPUID) const {\n"
      << "  return " << Target << "_MC"
      << "::resolveVariantSchedClassImpl(SchedClass, MI, CPUID);\n"
-     << "} // " << ClassName << "::resolveVariantSchedClass\n";
+     << "} // " << ClassName << "::resolveVariantSchedClass\n\n";
+
+  STIPredicateExpander PE(Target);
+  PE.setClassPrefix(ClassName);
+  PE.setExpandDefinition(true);
+  PE.setByRef(false);
+  PE.setIndentLevel(0);
+
+  for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
+    PE.expandSTIPredicate(OS, Fn);
 }
 
 void SubtargetEmitter::EmitHwModeCheck(const std::string &ClassName,
@@ -1764,6 +1774,31 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "::resolveVariantSchedClassImpl(SchedClass, MI, CPUID); \n";
   OS << "  }\n";
   OS << "};\n";
+}
+
+void SubtargetEmitter::EmitMCInstrAnalysisPredicateFunctions(raw_ostream &OS) {
+  OS << "\n#ifdef GET_STIPREDICATE_DECLS_FOR_MC_ANALYSIS\n";
+  OS << "#undef GET_STIPREDICATE_DECLS_FOR_MC_ANALYSIS\n\n";
+
+  STIPredicateExpander PE(Target);
+  PE.setExpandForMC(true);
+  PE.setByRef(true);
+  for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
+    PE.expandSTIPredicate(OS, Fn);
+
+  OS << "#endif // GET_STIPREDICATE_DECLS_FOR_MC_ANALYSIS\n\n";
+
+  OS << "\n#ifdef GET_STIPREDICATE_DEFS_FOR_MC_ANALYSIS\n";
+  OS << "#undef GET_STIPREDICATE_DEFS_FOR_MC_ANALYSIS\n\n";
+
+  std::string ClassPrefix = Target + "MCInstrAnalysis";
+  PE.setExpandDefinition(true);
+  PE.setClassPrefix(ClassPrefix);
+  PE.setIndentLevel(0);
+  for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
+    PE.expandSTIPredicate(OS, Fn);
+
+  OS << "#endif // GET_STIPREDICATE_DEFS_FOR_MC_ANALYSIS\n\n";
 }
 
 //
@@ -1863,6 +1898,12 @@ void SubtargetEmitter::run(raw_ostream &OS) {
      << " const;\n";
   if (TGT.getHwModes().getNumModeIds() > 1)
     OS << "  unsigned getHwMode() const override;\n";
+
+  STIPredicateExpander PE(Target);
+  PE.setByRef(false);
+  for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
+    PE.expandSTIPredicate(OS, Fn);
+
   OS << "};\n"
      << "} // end namespace llvm\n\n";
 
@@ -1920,6 +1961,8 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   OS << "} // end namespace llvm\n\n";
 
   OS << "#endif // GET_SUBTARGETINFO_CTOR\n\n";
+
+  EmitMCInstrAnalysisPredicateFunctions(OS);
 }
 
 namespace llvm {
