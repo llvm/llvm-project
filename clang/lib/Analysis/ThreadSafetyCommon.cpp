@@ -354,15 +354,17 @@ til::SExpr *SExprBuilder::translateCallExpr(const CallExpr *CE,
                                             const Expr *SelfE) {
   if (CapabilityExprMode) {
     // Handle LOCK_RETURNED
-    const FunctionDecl *FD = CE->getDirectCallee()->getMostRecentDecl();
-    if (LockReturnedAttr* At = FD->getAttr<LockReturnedAttr>()) {
-      CallingContext LRCallCtx(Ctx);
-      LRCallCtx.AttrDecl = CE->getDirectCallee();
-      LRCallCtx.SelfArg  = SelfE;
-      LRCallCtx.NumArgs  = CE->getNumArgs();
-      LRCallCtx.FunArgs  = CE->getArgs();
-      return const_cast<til::SExpr *>(
-          translateAttrExpr(At->getArg(), &LRCallCtx).sexpr());
+    if (const FunctionDecl *FD = CE->getDirectCallee()) {
+      FD = FD->getMostRecentDecl();
+      if (LockReturnedAttr *At = FD->getAttr<LockReturnedAttr>()) {
+        CallingContext LRCallCtx(Ctx);
+        LRCallCtx.AttrDecl = CE->getDirectCallee();
+        LRCallCtx.SelfArg = SelfE;
+        LRCallCtx.NumArgs = CE->getNumArgs();
+        LRCallCtx.FunArgs = CE->getArgs();
+        return const_cast<til::SExpr *>(
+            translateAttrExpr(At->getArg(), &LRCallCtx).sexpr());
+      }
     }
   }
 
