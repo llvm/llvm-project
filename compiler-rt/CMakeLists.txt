@@ -123,9 +123,6 @@ if (COMPILER_RT_STANDALONE_BUILD)
 
       foreach(lang ${languages})
         set(CMAKE_${lang}_CREATE_STATIC_LIBRARY "\"${CMAKE_LIBTOOL}\" -static ${LIBTOOL_NO_WARNING_FLAG} -o <TARGET> <LINK_FLAGS> <OBJECTS>")
-        # Replace the finish target so that ranlib is not invoked on the
-        # archive.
-        set(CMAKE_${lang}_ARCHIVE_FINISH "")
       endforeach()
     endif()
 
@@ -136,8 +133,6 @@ if (COMPILER_RT_STANDALONE_BUILD)
         foreach(cmd ${CMAKE_${lang}_CREATE_STATIC_LIBRARY})
           list(APPEND CMAKE_${lang}_CREATE_STATIC_LIBRARY_NEW "${dyld_envar} ${cmd}")
         endforeach()
-        set(CMAKE_${lang}_CREATE_STATIC_LIBRARY ${CMAKE_${lang}_CREATE_STATIC_LIBRARY_NEW})
-        set(CMAKE_${lang}_ARCHIVE_FINISH " ")
       endforeach()
     endif()
   endif()

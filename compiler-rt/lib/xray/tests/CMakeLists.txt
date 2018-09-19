@@ -19,9 +19,13 @@ set(XRAY_UNITTEST_CFLAGS
   ${XRAY_CFLAGS}
   ${COMPILER_RT_UNITTEST_CFLAGS}
   ${COMPILER_RT_GTEST_CFLAGS}
+  ${COMPILER_RT_GMOCK_CFLAGS}
   -I${COMPILER_RT_SOURCE_DIR}/include
   -I${COMPILER_RT_SOURCE_DIR}/lib/xray
-  -I${COMPILER_RT_SOURCE_DIR}/lib)
+  -I${COMPILER_RT_SOURCE_DIR}/lib
+  -I${LLVM_MAIN_SRC_DIR}/include
+  -I${LLVM_INCLUDE_DIR}
+  )
 
 function(add_xray_lib library)
   add_library(${library} STATIC ${ARGN})
@@ -50,6 +54,11 @@ if (NOT APPLE)
   append_list_if(COMPILER_RT_HAS_LIBRT -lrt XRAY_UNITTEST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBDL -ldl XRAY_UNITTEST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread XRAY_UNITTEST_LINK_FLAGS)
+
+  # Needed by LLVMSupport.
+  append_list_if(
+    COMPILER_RT_HAS_TERMINFO
+    -l${COMPILER_RT_TERMINFO_LIB} XRAY_UNITTEST_LINK_FLAGS)
 endif()
 
 macro(add_xray_unittest testname)
@@ -68,11 +77,14 @@ macro(add_xray_unittest testname)
         COMPILE_DEPS ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
         ${XRAY_HEADERS} ${XRAY_ALL_SOURCE_FILES_ABS_PATHS}
         RUNTIME "${XRAY_RUNTIME_LIBS}"
-        DEPS gtest xray llvm-xray
+        DEPS gtest xray llvm-xray LLVMXRay LLVMTestingSupport
         CFLAGS ${XRAY_UNITTEST_CFLAGS}
-        LINK_FLAGS ${TARGET_LINK_FLAGS} ${XRAY_UNITTEST_LINK_FLAGS})
+        LINK_FLAGS ${TARGET_LINK_FLAGS} ${XRAY_UNITTEST_LINK_FLAGS}
+        -lLLVMXRay -lLLVMSupport -lLLVMTestingSupport
+        )
       set_target_properties(XRayUnitTests
-        PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+        PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
     endforeach()
   endif()
 endmacro()
