@@ -125,8 +125,7 @@ void ScheduleDAGFast::Schedule() {
   // Build the scheduling graph.
   BuildSchedGraph(nullptr);
 
-  LLVM_DEBUG(for (unsigned su = 0, e = SUnits.size(); su != e; ++su) SUnits[su]
-                 .dumpAll(this));
+  LLVM_DEBUG(dump());
 
   // Execute the actual scheduling loop.
   ListScheduleBottomUp();
@@ -144,7 +143,7 @@ void ScheduleDAGFast::ReleasePred(SUnit *SU, SDep *PredEdge) {
 #ifndef NDEBUG
   if (PredSU->NumSuccsLeft == 0) {
     dbgs() << "*** Scheduling failed! ***\n";
-    PredSU->dump(this);
+    dumpNode(*PredSU);
     dbgs() << " has been released too many times!\n";
     llvm_unreachable(nullptr);
   }
@@ -182,7 +181,7 @@ void ScheduleDAGFast::ReleasePredecessors(SUnit *SU, unsigned CurCycle) {
 /// the Available queue.
 void ScheduleDAGFast::ScheduleNodeBottomUp(SUnit *SU, unsigned CurCycle) {
   LLVM_DEBUG(dbgs() << "*** Scheduling [" << CurCycle << "]: ");
-  LLVM_DEBUG(SU->dump(this));
+  LLVM_DEBUG(dumpNode(*SU));
 
   assert(CurCycle >= SU->getHeight() && "Node scheduled below its height!");
   SU->setHeightToAtLeast(CurCycle);

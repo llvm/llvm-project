@@ -256,7 +256,7 @@ void SchedulePostRATDList::exitRegion() {
 LLVM_DUMP_METHOD void SchedulePostRATDList::dumpSchedule() const {
   for (unsigned i = 0, e = Sequence.size(); i != e; i++) {
     if (SUnit *SU = Sequence[i])
-      SU->dump(this);
+      dumpNode(*SU);
     else
       dbgs() << "**** NOOP ****\n";
   }
@@ -414,11 +414,7 @@ void SchedulePostRATDList::schedule() {
   postprocessDAG();
 
   LLVM_DEBUG(dbgs() << "********** List Scheduling **********\n");
-  LLVM_DEBUG(for (const SUnit &SU
-                  : SUnits) {
-    SU.dumpAll(this);
-    dbgs() << '\n';
-  });
+  LLVM_DEBUG(dump());
 
   AvailableQueue.initNodes(SUnits);
   ListScheduleTopDown();
@@ -465,7 +461,7 @@ void SchedulePostRATDList::ReleaseSucc(SUnit *SU, SDep *SuccEdge) {
 #ifndef NDEBUG
   if (SuccSU->NumPredsLeft == 0) {
     dbgs() << "*** Scheduling failed! ***\n";
-    SuccSU->dump(this);
+    dumpNode(*SuccSU);
     dbgs() << " has been released too many times!\n";
     llvm_unreachable(nullptr);
   }
@@ -502,7 +498,7 @@ void SchedulePostRATDList::ReleaseSuccessors(SUnit *SU) {
 /// the Available queue.
 void SchedulePostRATDList::ScheduleNodeTopDown(SUnit *SU, unsigned CurCycle) {
   LLVM_DEBUG(dbgs() << "*** Scheduling [" << CurCycle << "]: ");
-  LLVM_DEBUG(SU->dump(this));
+  LLVM_DEBUG(dumpNode(*SU));
 
   Sequence.push_back(SU);
   assert(CurCycle >= SU->getDepth() &&

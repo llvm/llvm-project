@@ -100,8 +100,11 @@ static cl::opt<std::string> SchedOnlyFunc("misched-only-func", cl::Hidden,
   cl::desc("Only schedule this function"));
 static cl::opt<unsigned> SchedOnlyBlock("misched-only-block", cl::Hidden,
                                         cl::desc("Only schedule this MBB#"));
+static cl::opt<bool> PrintDAGs("misched-print-dags", cl::Hidden,
+                              cl::desc("Print schedule DAGs"));
 #else
-static bool ViewMISchedDAGs = false;
+static const bool ViewMISchedDAGs = false;
+static const bool PrintDAGs = false;
 #endif // NDEBUG
 
 /// Avoid quadratic complexity in unusually large basic blocks by limiting the
@@ -633,7 +636,7 @@ void ScheduleDAGMI::releaseSucc(SUnit *SU, SDep *SuccEdge) {
 #ifndef NDEBUG
   if (SuccSU->NumPredsLeft == 0) {
     dbgs() << "*** Scheduling failed! ***\n";
-    SuccSU->dump(this);
+    dumpNode(*SuccSU);
     dbgs() << " has been released too many times!\n";
     llvm_unreachable(nullptr);
   }
@@ -670,7 +673,7 @@ void ScheduleDAGMI::releasePred(SUnit *SU, SDep *PredEdge) {
 #ifndef NDEBUG
   if (PredSU->NumSuccsLeft == 0) {
     dbgs() << "*** Scheduling failed! ***\n";
-    PredSU->dump(this);
+    dumpNode(*PredSU);
     dbgs() << " has been released too many times!\n";
     llvm_unreachable(nullptr);
   }
@@ -764,10 +767,8 @@ void ScheduleDAGMI::schedule() {
   SmallVector<SUnit*, 8> TopRoots, BotRoots;
   findRootsAndBiasEdges(TopRoots, BotRoots);
 
-  LLVM_DEBUG(if (EntrySU.getInstr() != nullptr) EntrySU.dumpAll(this);
-             for (const SUnit &SU
-                  : SUnits) SU.dumpAll(this);
-             if (ExitSU.getInstr() != nullptr) ExitSU.dumpAll(this););
+  LLVM_DEBUG(dump());
+  if (PrintDAGs) dump();
   if (ViewMISchedDAGs) viewGraph();
 
   // Initialize the strategy before modifying the DAG.
@@ -920,7 +921,7 @@ void ScheduleDAGMI::placeDebugValues() {
 LLVM_DUMP_METHOD void ScheduleDAGMI::dumpSchedule() const {
   for (MachineBasicBlock::iterator MI = begin(), ME = end(); MI != ME; ++MI) {
     if (SUnit *SU = getSUnit(&(*MI)))
-      SU->dump(this);
+      dumpNode(*SU);
     else
       dbgs() << "Missing SUnit\n";
   }
@@ -1171,6 +1172,29 @@ void ScheduleDAGMILive::updatePressureDiffs(
   }
 }
 
+void ScheduleDAGMILive::dump() const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  if (EntrySU.getInstr() != nullptr)
+    dumpNodeAll(EntrySU);
+  for (const SUnit &SU : SUnits) {
+    dumpNodeAll(SU);
+    if (ShouldTrackPressure) {
+      dbgs() << "  Pressure Diff      : ";
+      getPressureDiff(&SU).dump(*TRI);
+    }
+    dbgs() << "  Single Issue       : ";
+    if (SchedModel.mustBeginGroup(SU.getInstr()) &&
+        SchedModel.mustEndGroup(SU.getInstr()))
+      dbgs() << "true;";
+    else
+      dbgs() << "false;";
+    dbgs() << '\n';
+  }
+  if (ExitSU.getInstr() != nullptr)
+    dumpNodeAll(ExitSU);
+#endif
+}
+
 /// schedule - Called back from MachineScheduler::runOnMachineFunction
 /// after setting up the current scheduling region. [RegionBegin, RegionEnd)
 /// only includes instructions that have DAG nodes, not scheduling boundaries.
@@ -1197,22 +1221,8 @@ void ScheduleDAGMILive::schedule() {
   // This may initialize a DFSResult to be used for queue priority.
   SchedImpl->initialize(this);
 
-  LLVM_DEBUG(if (EntrySU.getInstr() != nullptr) EntrySU.dumpAll(this);
-             for (const SUnit &SU
-                  : SUnits) {
-               SU.dumpAll(this);
-               if (ShouldTrackPressure) {
-                 dbgs() << "  Pressure Diff      : ";
-                 getPressureDiff(&SU).dump(*TRI);
-               }
-               dbgs() << "  Single Issue       : ";
-               if (SchedModel.mustBeginGroup(SU.getInstr()) &&
-                   SchedModel.mustEndGroup(SU.getInstr()))
-                 dbgs() << "true;";
-               else
-                 dbgs() << "false;";
-               dbgs() << '\n';
-             } if (ExitSU.getInstr() != nullptr) ExitSU.dumpAll(this););
+  LLVM_DEBUG(dump());
+  if (PrintDAGs) dump();
   if (ViewMISchedDAGs) viewGraph();
 
   // Initialize ready queues now that the DAG and priority data are finalized.
@@ -3154,7 +3164,7 @@ void GenericScheduler::reschedulePhysRegCopies(SUnit *SU, bool isTop) {
     if (!Copy->isCopy())
       continue;
     LLVM_DEBUG(dbgs() << "  Rescheduling physreg copy ";
-               Dep.getSUnit()->dump(DAG));
+               DAG->dumpNode(*Dep.getSUnit()));
     DAG->moveInstruction(Copy, InsertPos);
   }
 }
