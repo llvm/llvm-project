@@ -63,12 +63,14 @@ add_test(NAME metadata_yaml_test COMMAND metadata_yaml_test)
 # Test : Symbols
 add_executable(symbols_test symbols_test.c)
 target_link_libraries(symbols_test amd_comgr)
-add_test(NAME symbols_test COMMAND symbols_test)
+# FIXME: Add this test again when upstream LLVM emits kernel symbols to .dynsym
+#add_test(NAME symbols_test COMMAND symbols_test)
 
 # Test : Iterate Symbols
 add_executable(symbols_iterate_test symbols_iterate_test.c)
 target_link_libraries(symbols_iterate_test amd_comgr)
-add_test(NAME symbols_iterate_test COMMAND symbols_iterate_test)
+# FIXME: Add this test again when upstream LLVM emits kernel symbols to .dynsym
+#add_test(NAME symbols_iterate_test COMMAND symbols_iterate_test)
 
 # Test : Compile
 add_executable(compile_test compile_test.c)
@@ -99,8 +101,9 @@ if (NOT(UNIX))
     disasm_llvm_so_test
     metadata_tp_test
     metadata_yaml_test
-    symbols_test
-    symbols_iterate_test
+    # FIXME: Add these tests again when upstream LLVM emits kernel symbols to .dynsym
+    #symbols_test
+    #symbols_iterate_test
     compile_test
     compile_minimal_test
     assemble_test
