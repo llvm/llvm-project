@@ -150,6 +150,17 @@ void DumpDIAValueAs(llvm::raw_ostream &OS, int Indent, StringRef Name,
     dumpSymbolField(OS, Name, static_cast<PrintType>(Value), Indent);
 }
 
+void DumpDIAIdValue(llvm::raw_ostream &OS, int Indent, StringRef Name,
+                    IDiaSymbol *Symbol,
+                    HRESULT (__stdcall IDiaSymbol::*Method)(DWORD *),
+                    const IPDBSession &Session, PdbSymbolIdField FieldId,
+                    PdbSymbolIdField ShowFlags, PdbSymbolIdField RecurseFlags) {
+  DWORD Value;
+  if (S_OK == (Symbol->*Method)(&Value))
+    dumpSymbolIdField(OS, Name, Value, Indent, Session, FieldId, ShowFlags,
+                      RecurseFlags);
+}
+
 template <typename ArgType>
 void DumpDIAValue(llvm::raw_ostream &OS, int Indent, StringRef Name,
                   IDiaSymbol *Symbol,
@@ -199,6 +210,12 @@ DIARawSymbol::DIARawSymbol(const DIASession &PDBSession,
                            CComPtr<IDiaSymbol> DiaSymbol)
     : Session(PDBSession), Symbol(DiaSymbol) {}
 
+#define RAW_ID_METHOD_DUMP(Stream, Method, Session, FieldId, ShowFlags,        \
+                           RecurseFlags)                                       \
+  DumpDIAIdValue(Stream, Indent, StringRef{#Method}, Symbol,                   \
+                 &IDiaSymbol::get_##Method, Session, FieldId, ShowFlags,       \
+                 RecurseFlags);
+
 #define RAW_METHOD_DUMP(Stream, Method)                                        \
   DumpDIAValue(Stream, Indent, StringRef{#Method}, Symbol,                     \
                &IDiaSymbol::get_##Method);
@@ -207,9 +224,12 @@ DIARawSymbol::DIARawSymbol(const DIASession &PDBSession,
   DumpDIAValueAs<Type>(Stream, Indent, StringRef{#Method}, Symbol,             \
                        &IDiaSymbol::get_##Method);
 
-void DIARawSymbol::dump(raw_ostream &OS, int Indent) const {
-  RAW_METHOD_DUMP(OS, symIndexId);
-  RAW_METHOD_DUMP(OS, symTag);
+void DIARawSymbol::dump(raw_ostream &OS, int Indent,
+                        PdbSymbolIdField ShowIdFields,
+                        PdbSymbolIdField RecurseIdFields) const {
+  RAW_ID_METHOD_DUMP(OS, symIndexId, Session, PdbSymbolIdField::SymIndexId,
+                     ShowIdFields, RecurseIdFields);
+  RAW_METHOD_DUMP_AS(OS, symTag, PDB_SymType);
 
   RAW_METHOD_DUMP(OS, access);
   RAW_METHOD_DUMP(OS, addressOffset);
@@ -226,7 +246,8 @@ void DIARawSymbol::dump(raw_ostream &OS, int Indent) const {
   RAW_METHOD_DUMP(OS, baseType);
   RAW_METHOD_DUMP(OS, bitPosition);
   RAW_METHOD_DUMP(OS, callingConvention);
-  RAW_METHOD_DUMP(OS, classParentId);
+  RAW_ID_METHOD_DUMP(OS, classParentId, Session, PdbSymbolIdField::ClassParent,
+                     ShowIdFields, RecurseIdFields);
   RAW_METHOD_DUMP(OS, compilerName);
   RAW_METHOD_DUMP(OS, count);
   RAW_METHOD_DUMP(OS, countLiveRanges);
@@ -234,7 +255,9 @@ void DIARawSymbol::dump(raw_ostream &OS, int Indent) const {
   RAW_METHOD_DUMP(OS, frontEndMinor);
   RAW_METHOD_DUMP(OS, frontEndBuild);
   RAW_METHOD_DUMP(OS, frontEndQFE);
-  RAW_METHOD_DUMP(OS, lexicalParentId);
+  RAW_ID_METHOD_DUMP(OS, lexicalParentId, Session,
+                     PdbSymbolIdField::LexicalParent, ShowIdFields,
+                     RecurseIdFields);
   RAW_METHOD_DUMP(OS, libraryName);
   RAW_METHOD_DUMP(OS, liveRangeStartAddressOffset);
   RAW_METHOD_DUMP(OS, liveRangeStartAddressSection);
@@ -272,10 +295,13 @@ void DIARawSymbol::dump(raw_ostream &OS, int Indent) const {
   RAW_METHOD_DUMP(OS, textureSlot);
   RAW_METHOD_DUMP(OS, timeStamp);
   RAW_METHOD_DUMP(OS, token);
-  RAW_METHOD_DUMP(OS, typeId);
+  RAW_ID_METHOD_DUMP(OS, typeId, Session, PdbSymbolIdField::Type, ShowIdFields,
+                     RecurseIdFields);
   RAW_METHOD_DUMP(OS, uavSlot);
   RAW_METHOD_DUMP(OS, undecoratedName);
-  RAW_METHOD_DUMP(OS, unmodifiedTypeId);
+  RAW_ID_METHOD_DUMP(OS, unmodifiedTypeId, Session,
+                     PdbSymbolIdField::UnmodifiedType, ShowIdFields,
+                     RecurseIdFields);
   RAW_METHOD_DUMP(OS, upperBoundId);
   RAW_METHOD_DUMP(OS, virtualBaseDispIndex);
   RAW_METHOD_DUMP(OS, virtualBaseOffset);

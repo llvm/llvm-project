@@ -11,6 +11,7 @@
 ; RUN:   -r=%t.o,_ZN1A1nEi,p \
 ; RUN:   -r=%t.o,_ZN1B1fEi,p \
 ; RUN:   -r=%t.o,_ZN1C1fEi,p \
+; RUN:   -r=%t.o,empty,p \
 ; RUN:   -r=%t.o,_ZTV1B, \
 ; RUN:   -r=%t.o,_ZTV1C, \
 ; RUN:   -r=%t.o,_ZN1A1nEi, \
@@ -27,6 +28,7 @@
 ; RUN:   -r=%t.o,_ZN1A1nEi,p \
 ; RUN:   -r=%t.o,_ZN1B1fEi,p \
 ; RUN:   -r=%t.o,_ZN1C1fEi,p \
+; RUN:   -r=%t.o,empty,p \
 ; RUN:   -r=%t.o,_ZTV1B, \
 ; RUN:   -r=%t.o,_ZTV1C, \
 ; RUN:   -r=%t.o,_ZN1A1nEi, \
@@ -47,6 +49,10 @@ target triple = "x86_64-grtev4-linux-gnu"
 
 @_ZTV1B = constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.B*, i32)* @_ZN1B1fEi to i8*), i8* bitcast (i32 (%struct.A*, i32)* @_ZN1A1nEi to i8*)] }, !type !0, !type !1
 @_ZTV1C = constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.C*, i32)* @_ZN1C1fEi to i8*), i8* bitcast (i32 (%struct.A*, i32)* @_ZN1A1nEi to i8*)] }, !type !0, !type !2
+
+; Put declaration first to test handling of remarks when the first
+; function has no basic blocks.
+declare void @empty()
 
 ; CHECK-IR-LABEL: define i32 @test
 define i32 @test(%struct.A* %obj, i32 %a) {

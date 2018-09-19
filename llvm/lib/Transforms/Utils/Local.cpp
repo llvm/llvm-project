@@ -2522,6 +2522,13 @@ void llvm::copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
   }
 }
 
+void llvm::dropDebugUsers(Instruction &I) {
+  SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
+  findDbgUsers(DbgUsers, &I);
+  for (auto *DII : DbgUsers)
+    DII->eraseFromParent();
+}
+
 namespace {
 
 /// A potential constituent of a bitreverse or bswap expression. See

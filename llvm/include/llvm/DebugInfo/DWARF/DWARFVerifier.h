@@ -101,6 +101,7 @@ private:
   raw_ostream &error() const;
   raw_ostream &warn() const;
   raw_ostream &note() const;
+  raw_ostream &dump(const DWARFDie &Die, unsigned indent = 0) const;
 
   /// Verifies the abbreviations section.
   ///

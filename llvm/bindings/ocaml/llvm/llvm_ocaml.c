@@ -732,6 +732,19 @@ CAMLprim value llvm_num_operands(LLVMValueRef V) {
   return Val_int(LLVMGetNumOperands(V));
 }
 
+/* llvalue -> int array */
+CAMLprim value llvm_indices(LLVMValueRef Instr) {
+  CAMLparam0();
+  CAMLlocal1(indices);
+  unsigned n = LLVMGetNumIndices(Instr);
+  const unsigned *Indices = LLVMGetIndices(Instr);
+  indices = caml_alloc(n, 0);
+  for (unsigned i = 0; i < n; i++) {
+    Op_val(indices)[i] = Val_int(Indices[i]);
+  }
+  CAMLreturn(indices);
+}
+
 /*--... Operations on constants of (mostly) any type .......................--*/
 
 /* llvalue -> bool */

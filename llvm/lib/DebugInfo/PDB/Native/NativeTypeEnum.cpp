@@ -130,16 +130,23 @@ NativeTypeEnum::NativeTypeEnum(NativeSession &Session, SymIndexId Id,
 
 NativeTypeEnum::~NativeTypeEnum() {}
 
-void NativeTypeEnum::dump(raw_ostream &OS, int Indent) const {
-  NativeRawSymbol::dump(OS, Indent);
+void NativeTypeEnum::dump(raw_ostream &OS, int Indent,
+                          PdbSymbolIdField ShowIdFields,
+                          PdbSymbolIdField RecurseIdFields) const {
+  NativeRawSymbol::dump(OS, Indent, ShowIdFields, RecurseIdFields);
 
   dumpSymbolField(OS, "baseType", static_cast<uint32_t>(getBuiltinType()),
                   Indent);
-  dumpSymbolField(OS, "lexicalParentId", 0, Indent);
+  dumpSymbolIdField(OS, "lexicalParentId", 0, Indent, Session,
+                    PdbSymbolIdField::LexicalParent, ShowIdFields,
+                    RecurseIdFields);
   dumpSymbolField(OS, "name", getName(), Indent);
-  dumpSymbolField(OS, "typeId", getTypeId(), Indent);
+  dumpSymbolIdField(OS, "typeId", getTypeId(), Indent, Session,
+                    PdbSymbolIdField::Type, ShowIdFields, RecurseIdFields);
   if (Modifiers.hasValue())
-    dumpSymbolField(OS, "unmodifiedTypeId", getUnmodifiedTypeId(), Indent);
+    dumpSymbolIdField(OS, "unmodifiedTypeId", getUnmodifiedTypeId(), Indent,
+                      Session, PdbSymbolIdField::UnmodifiedType, ShowIdFields,
+                      RecurseIdFields);
   dumpSymbolField(OS, "length", getLength(), Indent);
   dumpSymbolField(OS, "constructor", hasConstructor(), Indent);
   dumpSymbolField(OS, "constType", isConstType(), Indent);

@@ -18,6 +18,13 @@ using namespace llvm::codeview;
 using namespace llvm::pdb;
 
 NativeTypePointer::NativeTypePointer(NativeSession &Session, SymIndexId Id,
+                                     codeview::TypeIndex TI)
+    : NativeRawSymbol(Session, PDB_SymType::PointerType, Id), TI(TI) {
+  assert(TI.isSimple());
+  assert(TI.getSimpleMode() != SimpleTypeMode::Direct);
+}
+
+NativeTypePointer::NativeTypePointer(NativeSession &Session, SymIndexId Id,
                                      codeview::TypeIndex TI,
                                      codeview::PointerRecord Record)
     : NativeRawSymbol(Session, PDB_SymType::PointerType, Id), TI(TI),
@@ -25,11 +32,16 @@ NativeTypePointer::NativeTypePointer(NativeSession &Session, SymIndexId Id,
 
 NativeTypePointer::~NativeTypePointer() {}
 
-void NativeTypePointer::dump(raw_ostream &OS, int Indent) const {
-  NativeRawSymbol::dump(OS, Indent);
+void NativeTypePointer::dump(raw_ostream &OS, int Indent,
+                             PdbSymbolIdField ShowIdFields,
+                             PdbSymbolIdField RecurseIdFields) const {
+  NativeRawSymbol::dump(OS, Indent, ShowIdFields, RecurseIdFields);
 
-  dumpSymbolField(OS, "lexicalParentId", 0, Indent);
-  dumpSymbolField(OS, "typeId", getTypeId(), Indent);
+  dumpSymbolIdField(OS, "lexicalParentId", 0, Indent, Session,
+                    PdbSymbolIdField::LexicalParent, ShowIdFields,
+                    RecurseIdFields);
+  dumpSymbolIdField(OS, "typeId", getTypeId(), Indent, Session,
+                    PdbSymbolIdField::Type, ShowIdFields, RecurseIdFields);
   dumpSymbolField(OS, "length", getLength(), Indent);
   dumpSymbolField(OS, "constType", isConstType(), Indent);
   dumpSymbolField(OS, "isPointerToDataMember", isPointerToDataMember(), Indent);
@@ -42,45 +54,82 @@ void NativeTypePointer::dump(raw_ostream &OS, int Indent) const {
   dumpSymbolField(OS, "volatileType", isVolatileType(), Indent);
 }
 
-uint64_t NativeTypePointer::getLength() const { return Record.getSize(); }
+uint64_t NativeTypePointer::getLength() const {
+  if (Record)
+    return Record->getSize();
+
+  switch (TI.getSimpleMode()) {
+  case SimpleTypeMode::NearPointer:
+  case SimpleTypeMode::FarPointer:
+  case SimpleTypeMode::HugePointer:
+    return 2;
+  case SimpleTypeMode::NearPointer32:
+  case SimpleTypeMode::FarPointer32:
+    return 4;
+  case SimpleTypeMode::NearPointer64:
+    return 8;
+  case SimpleTypeMode::NearPointer128:
+    return 16;
+  default:
+    assert(false && "invalid simple type mode!");
+  }
+  return 0;
+}
 
 SymIndexId NativeTypePointer::getTypeId() const {
   // This is the pointee SymIndexId.
-  return Session.getSymbolCache().findSymbolByTypeIndex(Record.ReferentType);
+  TypeIndex Referent = Record ? Record->ReferentType : TI.makeDirect();
+
+  return Session.getSymbolCache().findSymbolByTypeIndex(Referent);
 }
 
 bool NativeTypePointer::isReference() const {
-  return Record.getMode() == PointerMode::LValueReference ||
-         isRValueReference();
+  if (!Record)
+    return false;
+  return Record->getMode() == PointerMode::LValueReference;
 }
 
 bool NativeTypePointer::isRValueReference() const {
-  return Record.getMode() == PointerMode::RValueReference;
+  if (!Record)
+    return false;
+  return Record->getMode() == PointerMode::RValueReference;
 }
 
 bool NativeTypePointer::isPointerToDataMember() const {
-  return Record.getMode() == PointerMode::PointerToDataMember;
+  if (!Record)
+    return false;
+  return Record->getMode() == PointerMode::PointerToDataMember;
 }
 
 bool NativeTypePointer::isPointerToMemberFunction() const {
-  return Record.getMode() == PointerMode::PointerToMemberFunction;
+  if (!Record)
+    return false;
+  return Record->getMode() == PointerMode::PointerToMemberFunction;
 }
 
 bool NativeTypePointer::isConstType() const {
-  return (Record.getOptions() & PointerOptions::Const) != PointerOptions::None;
+  if (!Record)
+    return false;
+  return (Record->getOptions() & PointerOptions::Const) != PointerOptions::None;
 }
 
 bool NativeTypePointer::isRestrictedType() const {
-  return (Record.getOptions() & PointerOptions::Restrict) !=
+  if (!Record)
+    return false;
+  return (Record->getOptions() & PointerOptions::Restrict) !=
          PointerOptions::None;
 }
 
 bool NativeTypePointer::isVolatileType() const {
-  return (Record.getOptions() & PointerOptions::Volatile) !=
+  if (!Record)
+    return false;
+  return (Record->getOptions() & PointerOptions::Volatile) !=
          PointerOptions::None;
 }
 
 bool NativeTypePointer::isUnalignedType() const {
-  return (Record.getOptions() & PointerOptions::Unaligned) !=
+  if (!Record)
+    return false;
+  return (Record->getOptions() & PointerOptions::Unaligned) !=
          PointerOptions::None;
 }

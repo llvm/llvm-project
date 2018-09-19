@@ -136,16 +136,15 @@ public:
   // This method updates the register mappings inserting a new register
   // definition. This method is also responsible for updating the number of
   // allocated physical registers in each register file modified by the write.
-  // No physical regiser is allocated when flag ShouldAllocatePhysRegs is set.
+  // No physical regiser is allocated if this write is from a zero-idiom.
   void addRegisterWrite(WriteRef Write,
-                        llvm::MutableArrayRef<unsigned> UsedPhysRegs,
-                        bool ShouldAllocatePhysRegs = true);
+                        llvm::MutableArrayRef<unsigned> UsedPhysRegs);
 
   // Removes write \param WS from the register mappings.
   // Physical registers may be released to reflect this update.
+  // No registers are released if this write is from a zero-idiom.
   void removeRegisterWrite(const WriteState &WS,
-                           llvm::MutableArrayRef<unsigned> FreedPhysRegs,
-                           bool ShouldFreePhysRegs = true);
+                           llvm::MutableArrayRef<unsigned> FreedPhysRegs);
 
   // Checks if there are enough physical registers in the register files.
   // Returns a "response mask" where each bit represents the response from a

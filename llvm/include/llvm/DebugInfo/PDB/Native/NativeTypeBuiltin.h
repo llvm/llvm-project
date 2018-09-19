@@ -26,7 +26,8 @@ public:
                     uint64_t L);
   ~NativeTypeBuiltin() override;
 
-  void dump(raw_ostream &OS, int Indent) const override;
+  void dump(raw_ostream &OS, int Indent, PdbSymbolIdField ShowIdFields,
+            PdbSymbolIdField RecurseIdFields) const override;
 
   PDB_SymType getSymTag() const override;
 

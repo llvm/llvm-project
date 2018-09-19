@@ -134,6 +134,8 @@ public:
     return static_cast<SimpleTypeMode>(Index & SimpleModeMask);
   }
 
+  TypeIndex makeDirect() const { return TypeIndex{getSimpleKind()}; }
+
   static TypeIndex None() { return TypeIndex(SimpleTypeKind::None); }
   static TypeIndex Void() { return TypeIndex(SimpleTypeKind::Void); }
   static TypeIndex VoidPointer32() {
