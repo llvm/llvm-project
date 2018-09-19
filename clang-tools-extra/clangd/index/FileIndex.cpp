@@ -14,6 +14,7 @@
 #include "index/Index.h"
 #include "index/Merge.h"
 #include "clang/Index/IndexingAction.h"
+#include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include <memory>
 
@@ -41,10 +42,13 @@ indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::DeclarationsOnly;
   IndexOpts.IndexFunctionLocals = false;
-
-  if (IsIndexMainAST)
+  if (IsIndexMainAST) {
     // We only collect refs when indexing main AST.
     CollectorOpts.RefFilter = RefKind::All;
+  }else {
+    IndexOpts.IndexMacrosInPreprocessor = true;
+    CollectorOpts.CollectMacro = true;
+  }
 
   SymbolCollector Collector(std::move(CollectorOpts));
   Collector.setPreprocessor(PP);
