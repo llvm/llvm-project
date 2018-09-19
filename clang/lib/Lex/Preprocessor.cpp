@@ -445,6 +445,13 @@ bool Preprocessor::SetCodeCompletionPoint(const FileEntry *File,
   return false;
 }
 
+void Preprocessor::CodeCompleteIncludedFile(llvm::StringRef Dir,
+                                            bool IsAngled) {
+  if (CodeComplete)
+    CodeComplete->CodeCompleteIncludedFile(Dir, IsAngled);
+  setCodeCompletionReached();
+}
+
 void Preprocessor::CodeCompleteNaturalLanguage() {
   if (CodeComplete)
     CodeComplete->CodeCompleteNaturalLanguage();

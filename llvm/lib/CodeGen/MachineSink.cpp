@@ -1037,8 +1037,11 @@ static void clearKillFlags(MachineInstr *MI, MachineBasicBlock &CurBB,
 static void updateLiveIn(MachineInstr *MI, MachineBasicBlock *SuccBB,
                          SmallVectorImpl<unsigned> &UsedOpsInCopy,
                          SmallVectorImpl<unsigned> &DefedRegsInCopy) {
-  for (auto DefReg : DefedRegsInCopy)
-    SuccBB->removeLiveIn(DefReg);
+  MachineFunction &MF = *SuccBB->getParent();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  for (unsigned DefReg : DefedRegsInCopy)
+    for (MCSubRegIterator S(DefReg, TRI, true); S.isValid(); ++S)
+      SuccBB->removeLiveIn(*S);
   for (auto U : UsedOpsInCopy) {
     unsigned Reg = MI->getOperand(U).getReg();
     if (!SuccBB->isLiveIn(Reg))

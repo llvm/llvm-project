@@ -180,9 +180,8 @@ void PPCDispatchGroupSBHazardRecognizer::EmitInstruction(SUnit *SU) {
       CurGroup.clear();
       CurSlots = CurBranches = 0;
     } else {
-      LLVM_DEBUG(dbgs() << "**** Adding to dispatch group: SU(" << SU->NodeNum
-                        << "): ");
-      LLVM_DEBUG(DAG->dumpNode(SU));
+      LLVM_DEBUG(dbgs() << "**** Adding to dispatch group: ");
+      LLVM_DEBUG(DAG->dumpNode(*SU));
 
       unsigned NSlots;
       bool MustBeFirst = mustComeFirst(MCID, NSlots);

@@ -347,35 +347,6 @@ TEST(Support, HomeDirectoryWithNoEnv) {
 }
 #endif
 
-TEST(Support, UserCacheDirectory) {
-  SmallString<13> CacheDir;
-  SmallString<20> CacheDir2;
-  auto Status = path::user_cache_directory(CacheDir, "");
-  EXPECT_TRUE(Status ^ CacheDir.empty());
-
-  if (Status) {
-    EXPECT_TRUE(path::user_cache_directory(CacheDir2, "")); // should succeed
-    EXPECT_EQ(CacheDir, CacheDir2); // and return same paths
-
-    EXPECT_TRUE(path::user_cache_directory(CacheDir, "A", "B", "file.c"));
-    auto It = path::rbegin(CacheDir);
-    EXPECT_EQ("file.c", *It);
-    EXPECT_EQ("B", *++It);
-    EXPECT_EQ("A", *++It);
-    auto ParentDir = *++It;
-
-    // Test Unicode: "<user_cache_dir>/(pi)r^2/aleth.0"
-    EXPECT_TRUE(path::user_cache_directory(CacheDir2, "\xCF\x80r\xC2\xB2",
-                                           "\xE2\x84\xB5.0"));
-    auto It2 = path::rbegin(CacheDir2);
-    EXPECT_EQ("\xE2\x84\xB5.0", *It2);
-    EXPECT_EQ("\xCF\x80r\xC2\xB2", *++It2);
-    auto ParentDir2 = *++It2;
-
-    EXPECT_EQ(ParentDir, ParentDir2);
-  }
-}
-
 TEST(Support, TempDirectory) {
   SmallString<32> TempDir;
   path::system_temp_directory(false, TempDir);

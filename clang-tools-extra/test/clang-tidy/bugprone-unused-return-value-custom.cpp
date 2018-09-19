@@ -47,32 +47,40 @@ void fun(int);
 
 void warning() {
   fun();
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value returned by this function should be used
+  // CHECK-NOTES: [[@LINE-2]]:3: note: cast the expression to void to silence this warning
 
   (fun());
-  // CHECK-MESSAGES: [[@LINE-1]]:4: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:4: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:4: note: cast {{.*}} this warning
 
   ns::Outer::Inner ObjA1;
   ObjA1.memFun();
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
 
   ns::AliasName::Inner ObjA2;
   ObjA2.memFun();
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
 
   ns::Derived ObjA3;
   ObjA3.memFun();
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
 
   ns::Type::staticFun();
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
 
   ns::ClassTemplate<int> ObjA4;
   ObjA4.memFun();
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
 
   ns::ClassTemplate<int>::staticFun();
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should be used [bugprone-unused-return-value]
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: the value {{.*}} should be used
+  // CHECK-NOTES: [[@LINE-2]]:3: note: cast {{.*}} this warning
 }
 
 void noWarning() {

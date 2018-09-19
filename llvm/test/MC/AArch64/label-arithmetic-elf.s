@@ -13,6 +13,7 @@ end:
   cmp x0, #(end - start)
   sub w0, w1, #(end - start)
   sub x0, x1, #(end - start)
+  // FIXME: adr x1, #(end - start) // This could be supported, but currently doesn't work
   // CHECK: adds w0, w1, #8
   // CHECK: adds x0, x1, #8
   // CHECK: add w0, w1, #8
@@ -21,6 +22,7 @@ end:
   // CHECK: cmp x0, #8
   // CHECK: sub w0, w1, #8
   // CHECK: sub x0, x1, #8
+  // FIXME: adr x1, #8
 
   add w0, w1, #(end - start), lsl #12
   cmp w0, #(end - start), lsl #12

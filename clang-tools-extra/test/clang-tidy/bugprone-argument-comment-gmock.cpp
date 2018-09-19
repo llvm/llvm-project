@@ -83,17 +83,41 @@ class MockStandalone {
 void test_gmock_expectations() {
   MockDerived m;
   EXPECT_CALL(m, Method(/*param_one=*/1, /*param_tw=*/2));
-// CHECK-MESSAGES: [[@LINE-1]]:42: warning: argument name 'param_tw' in comment does not match parameter name 'param_two'
+// CHECK-NOTES: [[@LINE-1]]:42: warning: argument name 'param_tw' in comment does not match parameter name 'param_two'
+// CHECK-NOTES: [[@LINE-2]]:42: note: FIX-IT applied suggested code changes
+// CHECK-NOTES: [[@LINE-19]]:42: note: 'param_two' declared here
+// CHECK-NOTES: [[@LINE-15]]:3: note: actual callee ('gmock_Method') is declared here
+// CHECK-NOTES: [[@LINE-33]]:30: note: expanded from macro 'MOCK_METHOD2'
+// CHECK-NOTES: [[@LINE-36]]:7: note: expanded from macro 'GMOCK_METHOD2_'
+// CHECK-NOTES: note: expanded from here
 // CHECK-FIXES:   EXPECT_CALL(m, Method(/*param_one=*/1, /*param_two=*/2));
   EXPECT_CALL(m, Method2(/*p_on=*/3, /*p_two=*/4));
-// CHECK-MESSAGES: [[@LINE-1]]:26: warning: argument name 'p_on' in comment does not match parameter name 'p_one'
+// CHECK-NOTES: [[@LINE-1]]:26: warning: argument name 'p_on' in comment does not match parameter name 'p_one'
+// CHECK-NOTES: [[@LINE-2]]:26: note: FIX-IT applied suggested code changes
+// CHECK-NOTES: [[@LINE-27]]:28: note: 'p_one' declared here
+// CHECK-NOTES: [[@LINE-23]]:3: note: actual callee ('gmock_Method2') is declared here
+// CHECK-NOTES: [[@LINE-41]]:36: note: expanded from macro 'MOCK_CONST_METHOD2'
+// CHECK-NOTES: [[@LINE-45]]:7: note: expanded from macro 'GMOCK_METHOD2_'
+// CHECK-NOTES: note: expanded from here
 // CHECK-FIXES:   EXPECT_CALL(m, Method2(/*p_one=*/3, /*p_two=*/4));
 
   #define PARAM1 11
   #define PARAM2 22
   EXPECT_CALL(m, Method2(/*p_on1=*/PARAM1, /*p_tw2=*/PARAM2));
-// CHECK-MESSAGES: [[@LINE-1]]:26: warning: argument name 'p_on1' in comment does not match parameter name 'p_one'
-// CHECK-MESSAGES: [[@LINE-2]]:44: warning: argument name 'p_tw2' in comment does not match parameter name 'p_two'
+// CHECK-NOTES: [[@LINE-1]]:26: warning: argument name 'p_on1' in comment does not match parameter name 'p_one'
+// CHECK-NOTES: [[@LINE-2]]:26: note: FIX-IT applied suggested code changes
+// CHECK-NOTES: [[@LINE-39]]:28: note: 'p_one' declared here
+// CHECK-NOTES: [[@LINE-35]]:3: note: actual callee ('gmock_Method2') is declared here
+// CHECK-NOTES: [[@LINE-53]]:36: note: expanded from macro 'MOCK_CONST_METHOD2'
+// CHECK-NOTES: [[@LINE-57]]:7: note: expanded from macro 'GMOCK_METHOD2_'
+// CHECK-NOTES: note: expanded from here
+// CHECK-NOTES: [[@LINE-8]]:44: warning: argument name 'p_tw2' in comment does not match parameter name 'p_two'
+// CHECK-NOTES: [[@LINE-9]]:44: note: FIX-IT applied suggested code changes
+// CHECK-NOTES: [[@LINE-46]]:39: note: 'p_two' declared here
+// CHECK-NOTES: [[@LINE-42]]:3: note: actual callee ('gmock_Method2') is declared here
+// CHECK-NOTES: [[@LINE-60]]:36: note: expanded from macro 'MOCK_CONST_METHOD2'
+// CHECK-NOTES: [[@LINE-64]]:7: note: expanded from macro 'GMOCK_METHOD2_'
+// CHECK-NOTES: note: expanded from here
 // CHECK-FIXES:   EXPECT_CALL(m, Method2(/*p_one=*/PARAM1, /*p_two=*/PARAM2));
 
   MockStandalone m2;
@@ -103,6 +127,9 @@ void test_gmock_expectations() {
 void test_gmock_direct_calls() {
   MockDerived m;
   m.Method(/*param_one=*/1, /*param_tw=*/2);
-// CHECK-MESSAGES: [[@LINE-1]]:29: warning: argument name 'param_tw' in comment does not match parameter name 'param_two'
+// CHECK-NOTES: [[@LINE-1]]:29: warning: argument name 'param_tw' in comment does not match parameter name 'param_two'
+// CHECK-NOTES: [[@LINE-2]]:29: note: FIX-IT applied suggested code changes
+// CHECK-NOTES: [[@LINE-63]]:42: note: 'param_two' declared here
+// CHECK-NOTES: [[@LINE-59]]:16: note: actual callee ('Method') is declared here
 // CHECK-FIXES:   m.Method(/*param_one=*/1, /*param_two=*/2);
 }

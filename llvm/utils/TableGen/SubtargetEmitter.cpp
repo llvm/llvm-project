@@ -780,7 +780,7 @@ void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
                                               raw_ostream &OS) {
   EmitProcessorResourceSubUnits(ProcModel, OS);
 
-  OS << "\n// {Name, NumUnits, SuperIdx, IsBuffered, SubUnitsIdxBegin}\n";
+  OS << "\n// {Name, NumUnits, SuperIdx, BufferSize, SubUnitsIdxBegin}\n";
   OS << "static const llvm::MCProcResourceDesc " << ProcModel.ModelName
      << "ProcResources"
      << "[] = {\n"

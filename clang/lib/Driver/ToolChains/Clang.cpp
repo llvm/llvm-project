@@ -2085,6 +2085,11 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   StringRef DenormalFPMath = "";
   StringRef FPContract = "";
 
+  if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
+    CmdArgs.push_back("-mlimit-float-precision");
+    CmdArgs.push_back(A->getValue());
+  }
+
   for (const Arg *A : Args) {
     switch (A->getOption().getID()) {
     // If this isn't an FP option skip the claim below
@@ -3133,13 +3138,14 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
 void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, const char *LinkingOutput) const {
-  const llvm::Triple &RawTriple = getToolChain().getTriple();
-  const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
+  const auto &TC = getToolChain();
+  const llvm::Triple &RawTriple = TC.getTriple();
+  const llvm::Triple &Triple = TC.getEffectiveTriple();
   const std::string &TripleStr = Triple.getTriple();
 
   bool KernelOrKext =
       Args.hasArg(options::OPT_mkernel, options::OPT_fapple_kext);
-  const Driver &D = getToolChain().getDriver();
+  const Driver &D = TC.getDriver();
   ArgStringList CmdArgs;
 
   // Check number of inputs for sanity. We need at least one input.
@@ -3193,9 +3199,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  const llvm::Triple *AuxTriple =
-      IsCuda ? getToolChain().getAuxTriple() : nullptr;
-
+  const llvm::Triple *AuxTriple = IsCuda ? TC.getAuxTriple() : nullptr;
   bool IsWindowsGNU = RawTriple.isWindowsGNUEnvironment();
   bool IsWindowsCygnus = RawTriple.isWindowsCygwinEnvironment();
   bool IsWindowsMSVC = RawTriple.isWindowsMSVCEnvironment();
@@ -3271,7 +3275,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Push all default warning arguments that are specific to
   // the given target.  These come before user provided warning options
   // are provided.
-  getToolChain().addClangWarningOptions(CmdArgs);
+  TC.addClangWarningOptions(CmdArgs);
 
   // Select the appropriate action.
   RewriteKind rewriteKind = RK_None;
@@ -3423,7 +3427,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   CheckCodeGenerationOptions(D, Args);
 
-  unsigned FunctionAlignment = ParseFunctionAlignment(getToolChain(), Args);
+  unsigned FunctionAlignment = ParseFunctionAlignment(TC, Args);
   assert(FunctionAlignment <= 31 && "function alignment will be truncated!");
   if (FunctionAlignment) {
     CmdArgs.push_back("-function-alignment");
@@ -3433,8 +3437,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   llvm::Reloc::Model RelocationModel;
   unsigned PICLevel;
   bool IsPIE;
-  std::tie(RelocationModel, PICLevel, IsPIE) =
-      ParsePICArgs(getToolChain(), Args);
+  std::tie(RelocationModel, PICLevel, IsPIE) = ParsePICArgs(TC, Args);
 
   const char *RMName = RelocationModelName(RelocationModel);
 
@@ -3462,13 +3465,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   CmdArgs.push_back("-mthread-model");
   if (Arg *A = Args.getLastArg(options::OPT_mthread_model)) {
-    if (!getToolChain().isThreadModelSupported(A->getValue()))
+    if (!TC.isThreadModelSupported(A->getValue()))
       D.Diag(diag::err_drv_invalid_thread_model_for_target)
           << A->getValue() << A->getAsString(Args);
     CmdArgs.push_back(A->getValue());
   }
   else
-    CmdArgs.push_back(Args.MakeArgString(getToolChain().getThreadModel()));
+    CmdArgs.push_back(Args.MakeArgString(TC.getThreadModel()));
 
   Args.AddLastArg(CmdArgs, options::OPT_fveclib);
 
@@ -3523,7 +3526,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Arg *A = Args.getLastArg(options::OPT_fpcc_struct_return,
                                options::OPT_freg_struct_return)) {
-    if (getToolChain().getArch() != llvm::Triple::x86) {
+    if (TC.getArch() != llvm::Triple::x86) {
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getSpelling() << RawTriple.str();
     } else if (A->getOption().matches(options::OPT_fpcc_struct_return)) {
@@ -3588,18 +3591,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_fsplit_stack))
     CmdArgs.push_back("-split-stacks");
 
-  RenderFloatingPointOptions(getToolChain(), D, OFastEnabled, Args, CmdArgs);
+  RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs);
 
   // Decide whether to use verbose asm. Verbose assembly is the default on
   // toolchains which have the integrated assembler on by default.
-  bool IsIntegratedAssemblerDefault =
-      getToolChain().IsIntegratedAssemblerDefault();
+  bool IsIntegratedAssemblerDefault = TC.IsIntegratedAssemblerDefault();
   if (Args.hasFlag(options::OPT_fverbose_asm, options::OPT_fno_verbose_asm,
                    IsIntegratedAssemblerDefault) ||
       Args.hasArg(options::OPT_dA))
     CmdArgs.push_back("-masm-verbose");
 
-  if (!getToolChain().useIntegratedAs())
+  if (!TC.useIntegratedAs())
     CmdArgs.push_back("-no-integrated-as");
 
   if (Args.hasArg(options::OPT_fdebug_pass_structure)) {
@@ -3652,20 +3654,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool AsynchronousUnwindTables =
       Args.hasFlag(options::OPT_fasynchronous_unwind_tables,
                    options::OPT_fno_asynchronous_unwind_tables,
-                   (getToolChain().IsUnwindTablesDefault(Args) ||
-                    getToolChain().getSanitizerArgs().needsUnwindTables()) &&
+                   (TC.IsUnwindTablesDefault(Args) ||
+                    TC.getSanitizerArgs().needsUnwindTables()) &&
                        !Freestanding);
   if (Args.hasFlag(options::OPT_funwind_tables, options::OPT_fno_unwind_tables,
                    AsynchronousUnwindTables))
     CmdArgs.push_back("-munwind-tables");
 
-  getToolChain().addClangTargetOptions(Args, CmdArgs,
-                                       JA.getOffloadingDeviceKind());
-
-  if (Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
-    CmdArgs.push_back("-mlimit-float-precision");
-    CmdArgs.push_back(A->getValue());
-  }
+  TC.addClangTargetOptions(Args, CmdArgs, JA.getOffloadingDeviceKind());
 
   // FIXME: Handle -mtune=.
   (void)Args.hasArg(options::OPT_mtune_EQ);
@@ -3696,8 +3692,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     EmitCodeView = Args.hasArg(options::OPT_gcodeview);
 
   const Arg *SplitDWARFArg = nullptr;
-  RenderDebugOptions(getToolChain(), D, RawTriple, Args, EmitCodeView,
-                     IsWindowsMSVC, CmdArgs, DebugInfoKind, SplitDWARFArg);
+  RenderDebugOptions(TC, D, RawTriple, Args, EmitCodeView, IsWindowsMSVC,
+                     CmdArgs, DebugInfoKind, SplitDWARFArg);
 
   // Add the split debug info name to the command lines here so we
   // can propagate it to the backend.
@@ -3725,7 +3721,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_fallow_unsupported)) {
     Arg *Unsupported;
     if (types::isCXX(InputType) && RawTriple.isOSDarwin() &&
-        getToolChain().getArch() == llvm::Triple::x86) {
+        TC.getArch() == llvm::Triple::x86) {
       if ((Unsupported = Args.getLastArg(options::OPT_fapple_kext)) ||
           (Unsupported = Args.getLastArg(options::OPT_mkernel)))
         D.Diag(diag::err_drv_clang_unsupported_opt_cxx_darwin_i386)
@@ -3790,8 +3786,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add runtime flag for PS4 when PGO, coverage, or sanitizers are enabled.
   if (RawTriple.isPS4CPU()) {
-    PS4cpu::addProfileRTArgs(getToolChain(), Args, CmdArgs);
-    PS4cpu::addSanitizerArgs(getToolChain(), CmdArgs);
+    PS4cpu::addProfileRTArgs(TC, Args, CmdArgs);
+    PS4cpu::addSanitizerArgs(TC, CmdArgs);
   }
 
   // Pass options for controlling the default header search paths.
@@ -3939,10 +3935,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fno-gnu-keywords");
   }
 
-  if (ShouldDisableDwarfDirectory(Args, getToolChain()))
+  if (ShouldDisableDwarfDirectory(Args, TC))
     CmdArgs.push_back("-fno-dwarf-directory-asm");
 
-  if (ShouldDisableAutolink(Args, getToolChain()))
+  if (ShouldDisableAutolink(Args, TC))
     CmdArgs.push_back("-fno-autolink");
 
   // Add in -fdebug-compilation-dir if necessary.
@@ -4124,16 +4120,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_version_EQ);
   }
 
-  const SanitizerArgs &Sanitize = getToolChain().getSanitizerArgs();
-  Sanitize.addArgs(getToolChain(), Args, CmdArgs, InputType);
+  const SanitizerArgs &Sanitize = TC.getSanitizerArgs();
+  Sanitize.addArgs(TC, Args, CmdArgs, InputType);
 
-  const XRayArgs &XRay = getToolChain().getXRayArgs();
-  XRay.addArgs(getToolChain(), Args, CmdArgs, InputType);
+  const XRayArgs &XRay = TC.getXRayArgs();
+  XRay.addArgs(TC, Args, CmdArgs, InputType);
 
-  if (getToolChain().SupportsProfiling())
+  if (TC.SupportsProfiling())
     Args.AddLastArg(CmdArgs, options::OPT_pg);
 
-  if (getToolChain().SupportsProfiling())
+  if (TC.SupportsProfiling())
     Args.AddLastArg(CmdArgs, options::OPT_mfentry);
 
   // -flax-vector-conversions is default.
@@ -4183,7 +4179,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_mspeculative_load_hardening,
                   options::OPT_mno_speculative_load_hardening);
 
-  RenderSSPOptions(getToolChain(), Args, CmdArgs, KernelOrKext);
+  RenderSSPOptions(TC, Args, CmdArgs, KernelOrKext);
 
   // Translate -mstackrealign
   if (Args.hasFlag(options::OPT_mstackrealign, options::OPT_mno_stackrealign,
@@ -4243,7 +4239,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       A->render(Args, CmdArgs);
   }
 
-  RenderBuiltinOptions(getToolChain(), RawTriple, Args, CmdArgs);
+  RenderBuiltinOptions(TC, RawTriple, Args, CmdArgs);
 
   if (!Args.hasFlag(options::OPT_fassume_sane_operator_new,
                     options::OPT_fno_assume_sane_operator_new))
@@ -4251,19 +4247,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -fblocks=0 is default.
   if (Args.hasFlag(options::OPT_fblocks, options::OPT_fno_blocks,
-                   getToolChain().IsBlocksDefault()) ||
+                   TC.IsBlocksDefault()) ||
       (Args.hasArg(options::OPT_fgnu_runtime) &&
        Args.hasArg(options::OPT_fobjc_nonfragile_abi) &&
        !Args.hasArg(options::OPT_fno_blocks))) {
     CmdArgs.push_back("-fblocks");
 
-    if (!Args.hasArg(options::OPT_fgnu_runtime) &&
-        !getToolChain().hasBlocksRuntime())
+    if (!Args.hasArg(options::OPT_fgnu_runtime) && !TC.hasBlocksRuntime())
       CmdArgs.push_back("-fblocks-runtime-optional");
   }
 
   // -fencode-extended-block-signature=1 is default.
-  if (getToolChain().IsEncodeExtendedBlockSignatureDefault())
+  if (TC.IsEncodeExtendedBlockSignatureDefault())
     CmdArgs.push_back("-fencode-extended-block-signature");
 
   if (Args.hasFlag(options::OPT_fcoroutines_ts, options::OPT_fno_coroutines_ts,
@@ -4288,7 +4283,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_felide_constructors, false))
     CmdArgs.push_back("-fno-elide-constructors");
 
-  ToolChain::RTTIMode RTTIMode = getToolChain().getRTTIMode();
+  ToolChain::RTTIMode RTTIMode = TC.getRTTIMode();
 
   if (KernelOrKext || (types::isCXX(InputType) &&
                        (RTTIMode == ToolChain::RM_Disabled)))
@@ -4296,7 +4291,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -fshort-enums=0 is default for all architectures except Hexagon.
   if (Args.hasFlag(options::OPT_fshort_enums, options::OPT_fno_short_enums,
-                   getToolChain().getArch() == llvm::Triple::hexagon))
+                   TC.getArch() == llvm::Triple::hexagon))
     CmdArgs.push_back("-fshort-enums");
 
   RenderCharacterOptions(Args, AuxTriple ? *AuxTriple : RawTriple, CmdArgs);
@@ -4306,7 +4301,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           options::OPT_fuse_cxa_atexit, options::OPT_fno_use_cxa_atexit,
           !RawTriple.isOSWindows() &&
               RawTriple.getOS() != llvm::Triple::Solaris &&
-              getToolChain().getArch() != llvm::Triple::xcore &&
+              TC.getArch() != llvm::Triple::xcore &&
               ((RawTriple.getVendor() != llvm::Triple::MipsTechnologies) ||
                RawTriple.hasEnvironment())) ||
       KernelOrKext)
@@ -4335,7 +4330,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                  options::OPT_fno_ms_extensions, true))))
     CmdArgs.push_back("-fms-compatibility");
 
-  VersionTuple MSVT = getToolChain().computeMSVCVersion(&D, Args);
+  VersionTuple MSVT = TC.computeMSVCVersion(&D, Args);
   if (!MSVT.empty())
     CmdArgs.push_back(
         Args.MakeArgString("-fms-compatibility-version=" + MSVT.getAsString()));
@@ -4413,8 +4408,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                   options::OPT_fno_experimental_new_pass_manager);
 
   ObjCRuntime Runtime = AddObjCRuntimeArgs(Args, CmdArgs, rewriteKind);
-  RenderObjCOptions(getToolChain(), D, RawTriple, Args, Runtime,
-                    rewriteKind != RK_None, Input, CmdArgs);
+  RenderObjCOptions(TC, D, RawTriple, Args, Runtime, rewriteKind != RK_None,
+                    Input, CmdArgs);
 
   if (Args.hasFlag(options::OPT_fapplication_extension,
                    options::OPT_fno_application_extension, false))
@@ -4422,8 +4417,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Handle GCC-style exception args.
   if (!C.getDriver().IsCLMode())
-    addExceptionArgs(Args, InputType, getToolChain(), KernelOrKext, Runtime,
-                     CmdArgs);
+    addExceptionArgs(Args, InputType, TC, KernelOrKext, Runtime, CmdArgs);
 
   // Handle exception personalities
   Arg *A = Args.getLastArg(options::OPT_fsjlj_exceptions,
@@ -4438,7 +4432,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (Opt.matches(options::OPT_fdwarf_exceptions))
       CmdArgs.push_back("-fdwarf-exceptions");
   } else {
-    switch (getToolChain().GetExceptionModel(Args)) {
+    switch (TC.GetExceptionModel(Args)) {
     default:
       break;
     case llvm::ExceptionHandling::DwarfCFI:
@@ -4790,7 +4784,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Also record command line arguments into the debug info if
   // -grecord-gcc-switches options is set on.
   // By default, -gno-record-gcc-switches is set on and no recording.
-  if (getToolChain().UseDwarfDebugFlags() ||
+  if (TC.UseDwarfDebugFlags() ||
       Args.hasFlag(options::OPT_grecord_gcc_switches,
                    options::OPT_gno_record_gcc_switches, false)) {
     ArgStringList OriginalArgs;
@@ -4932,9 +4926,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Args.hasFlag(options::OPT_faddrsig, options::OPT_fno_addrsig,
-                   (getToolChain().getTriple().isOSBinFormatELF() ||
-                    getToolChain().getTriple().isOSBinFormatCOFF()) &&
-                       getToolChain().useIntegratedAs()))
+                   (TC.getTriple().isOSBinFormatELF() ||
+                    TC.getTriple().isOSBinFormatCOFF()) &&
+                       TC.useIntegratedAs()))
     CmdArgs.push_back("-faddrsig");
 
   // Finally add the compile command to the compilation.
@@ -4956,8 +4950,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_pg))
-    if (Args.hasFlag(options::OPT_fomit_frame_pointer,
-                     options::OPT_fno_omit_frame_pointer, /*default=*/false))
+    if (!shouldUseFramePointer(Args, Triple))
       D.Diag(diag::err_drv_argument_not_allowed_with) << "-fomit-frame-pointer"
                                                       << A->getAsString(Args);
 

@@ -231,7 +231,7 @@ TEST(MergeTest, PreferSymbolWithDefn) {
 TEST(MergeIndexTest, Refs) {
   FileIndex Dyn({"unittest"});
   FileIndex StaticIndex({"unittest"});
-  auto MergedIndex = mergeIndex(&Dyn, &StaticIndex);
+  auto MergedIndex = mergeIndex(&Dyn.index(), &StaticIndex.index());
 
   const char *HeaderCode = "class Foo;";
   auto HeaderSymbols = TestTU::withHeaderCode("class Foo;").headerSymbols();
@@ -244,8 +244,7 @@ TEST(MergeIndexTest, Refs) {
   Test.Code = Test1Code.code();
   Test.Filename = "test.cc";
   auto AST = Test.build();
-  Dyn.update(Test.Filename, &AST.getASTContext(), AST.getPreprocessorPtr(),
-             AST.getLocalTopLevelDecls());
+  Dyn.updateMain(Test.Filename, AST);
 
   // Build static index for test.cc.
   Test.HeaderCode = HeaderCode;
@@ -253,9 +252,7 @@ TEST(MergeIndexTest, Refs) {
   Test.Filename = "test.cc";
   auto StaticAST = Test.build();
   // Add stale refs for test.cc.
-  StaticIndex.update(Test.Filename, &StaticAST.getASTContext(),
-                     StaticAST.getPreprocessorPtr(),
-                     StaticAST.getLocalTopLevelDecls());
+  StaticIndex.updateMain(Test.Filename, StaticAST);
 
   // Add refs for test2.cc
   Annotations Test2Code(R"(class $Foo[[Foo]] {};)");
@@ -264,9 +261,7 @@ TEST(MergeIndexTest, Refs) {
   Test2.Code = Test2Code.code();
   Test2.Filename = "test2.cc";
   StaticAST = Test2.build();
-  StaticIndex.update(Test2.Filename, &StaticAST.getASTContext(),
-                     StaticAST.getPreprocessorPtr(),
-                     StaticAST.getLocalTopLevelDecls());
+  StaticIndex.updateMain(Test2.Filename, StaticAST);
 
   RefsRequest Request;
   Request.IDs = {Foo.ID};

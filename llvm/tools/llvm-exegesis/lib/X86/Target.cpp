@@ -101,6 +101,105 @@ protected:
   }
 };
 
+static unsigned GetLoadImmediateOpcode(const llvm::APInt &Value) {
+  switch (Value.getBitWidth()) {
+  case 8:
+    return llvm::X86::MOV8ri;
+  case 16:
+    return llvm::X86::MOV16ri;
+  case 32:
+    return llvm::X86::MOV32ri;
+  case 64:
+    return llvm::X86::MOV64ri;
+  }
+  llvm_unreachable("Invalid Value Width");
+}
+
+static llvm::MCInst loadImmediate(unsigned Reg, const llvm::APInt &Value) {
+  return llvm::MCInstBuilder(GetLoadImmediateOpcode(Value))
+      .addReg(Reg)
+      .addImm(Value.getZExtValue());
+}
+
+// Allocates scratch memory on the stack.
+static llvm::MCInst allocateStackSpace(unsigned Bytes) {
+  return llvm::MCInstBuilder(llvm::X86::SUB64ri8)
+      .addReg(llvm::X86::RSP)
+      .addReg(llvm::X86::RSP)
+      .addImm(Bytes);
+}
+
+// Fills scratch memory at offset `OffsetBytes` with value `Imm`.
+static llvm::MCInst fillStackSpace(unsigned MovOpcode, unsigned OffsetBytes,
+                                   uint64_t Imm) {
+  return llvm::MCInstBuilder(MovOpcode)
+      // Address = ESP
+      .addReg(llvm::X86::RSP) // BaseReg
+      .addImm(1)              // ScaleAmt
+      .addReg(0)              // IndexReg
+      .addImm(OffsetBytes)    // Disp
+      .addReg(0)              // Segment
+      // Immediate.
+      .addImm(Imm);
+}
+
+// Loads scratch memory into register `Reg` using opcode `RMOpcode`.
+static llvm::MCInst loadToReg(unsigned Reg, unsigned RMOpcode) {
+  return llvm::MCInstBuilder(RMOpcode)
+      .addReg(Reg)
+      // Address = ESP
+      .addReg(llvm::X86::RSP) // BaseReg
+      .addImm(1)              // ScaleAmt
+      .addReg(0)              // IndexReg
+      .addImm(0)              // Disp
+      .addReg(0);             // Segment
+}
+
+// Releases scratch memory.
+static llvm::MCInst releaseStackSpace(unsigned Bytes) {
+  return llvm::MCInstBuilder(llvm::X86::ADD64ri8)
+      .addReg(llvm::X86::RSP)
+      .addReg(llvm::X86::RSP)
+      .addImm(Bytes);
+}
+
+struct ConstantInliner {
+  explicit ConstantInliner(const llvm::APInt &Constant)
+      : StackSize(Constant.getBitWidth() / 8) {
+    assert(Constant.getBitWidth() % 8 == 0 && "Must be a multiple of 8");
+    Add(allocateStackSpace(StackSize));
+    size_t ByteOffset = 0;
+    for (; StackSize - ByteOffset >= 4; ByteOffset += 4)
+      Add(fillStackSpace(
+          llvm::X86::MOV32mi, ByteOffset,
+          Constant.extractBits(32, ByteOffset * 8).getZExtValue()));
+    if (StackSize - ByteOffset >= 2) {
+      Add(fillStackSpace(
+          llvm::X86::MOV16mi, ByteOffset,
+          Constant.extractBits(16, ByteOffset * 8).getZExtValue()));
+      ByteOffset += 2;
+    }
+    if (StackSize - ByteOffset >= 1)
+      Add(fillStackSpace(
+          llvm::X86::MOV8mi, ByteOffset,
+          Constant.extractBits(8, ByteOffset * 8).getZExtValue()));
+  }
+
+  ConstantInliner &Add(const llvm::MCInst &Inst) {
+    Instructions.push_back(Inst);
+    return *this;
+  }
+
+  std::vector<llvm::MCInst> finalize() {
+    Add(releaseStackSpace(StackSize));
+    return std::move(Instructions);
+  }
+
+private:
+  const size_t StackSize;
+  std::vector<llvm::MCInst> Instructions;
+};
+
 class ExegesisX86Target : public ExegesisTarget {
   void addTargetSpecificPasses(llvm::PassManagerBase &PM) const override {
     // Lowers FP pseudo-instructions, e.g. ABS_Fp32 -> ABS_F.
@@ -192,7 +291,21 @@ class ExegesisX86Target : public ExegesisTarget {
       Result.push_back(llvm::MCInstBuilder(llvm::X86::POPF64)); // Also pops.
       return Result;
     }
-    return {};
+    llvm_unreachable("Not yet implemented");
+  }
+
+  std::vector<llvm::MCInst> setRegTo(const llvm::MCSubtargetInfo &STI,
+                                     const llvm::APInt &Value,
+                                     unsigned Reg) const override {
+    if (llvm::X86::GR8RegClass.contains(Reg) ||
+        llvm::X86::GR16RegClass.contains(Reg) ||
+        llvm::X86::GR32RegClass.contains(Reg) ||
+        llvm::X86::GR64RegClass.contains(Reg))
+      return {loadImmediate(Reg, Value)};
+    ConstantInliner CI(Value);
+    if (llvm::X86::VR64RegClass.contains(Reg))
+      return CI.Add(loadToReg(Reg, llvm::X86::MMX_MOVQ64rm)).finalize();
+    llvm_unreachable("Not yet implemented");
   }
 
   std::unique_ptr<SnippetGenerator>
@@ -232,48 +345,6 @@ private:
     Result.push_back(loadToReg(Reg, RMOpcode));
     Result.push_back(releaseStackSpace(RegSizeBytes));
     return Result;
-  }
-
-  // Allocates scratch memory on the stack.
-  static llvm::MCInst allocateStackSpace(unsigned Bytes) {
-    return llvm::MCInstBuilder(llvm::X86::SUB64ri8)
-        .addReg(llvm::X86::RSP)
-        .addReg(llvm::X86::RSP)
-        .addImm(Bytes);
-  }
-
-  // Fills scratch memory at offset `OffsetBytes` with value `Imm`.
-  static llvm::MCInst fillStackSpace(unsigned MovOpcode, unsigned OffsetBytes,
-                                     uint64_t Imm) {
-    return llvm::MCInstBuilder(MovOpcode)
-        // Address = ESP
-        .addReg(llvm::X86::RSP) // BaseReg
-        .addImm(1)              // ScaleAmt
-        .addReg(0)              // IndexReg
-        .addImm(OffsetBytes)    // Disp
-        .addReg(0)              // Segment
-        // Immediate.
-        .addImm(Imm);
-  }
-
-  // Loads scratch memory into register `Reg` using opcode `RMOpcode`.
-  static llvm::MCInst loadToReg(unsigned Reg, unsigned RMOpcode) {
-    return llvm::MCInstBuilder(RMOpcode)
-        .addReg(Reg)
-        // Address = ESP
-        .addReg(llvm::X86::RSP) // BaseReg
-        .addImm(1)              // ScaleAmt
-        .addReg(0)              // IndexReg
-        .addImm(0)              // Disp
-        .addReg(0);             // Segment
-  }
-
-  // Releases scratch memory.
-  static llvm::MCInst releaseStackSpace(unsigned Bytes) {
-    return llvm::MCInstBuilder(llvm::X86::ADD64ri8)
-        .addReg(llvm::X86::RSP)
-        .addReg(llvm::X86::RSP)
-        .addImm(Bytes);
   }
 };
 

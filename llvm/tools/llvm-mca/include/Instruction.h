@@ -102,6 +102,9 @@ class WriteState {
   // super-registers.
   bool ClearsSuperRegs;
 
+  // True if this write is from a dependency breaking zero-idiom instruction.
+  bool WritesZero;
+
   // This field is set if this is a partial register write, and it has a false
   // dependency on any previous write of the same register (or a portion of it).
   // DependentWrite must be able to complete before this write completes, so
@@ -121,10 +124,10 @@ class WriteState {
 
 public:
   WriteState(const WriteDescriptor &Desc, unsigned RegID,
-             bool clearsSuperRegs = false)
+             bool clearsSuperRegs = false, bool writesZero = false)
       : WD(Desc), CyclesLeft(UNKNOWN_CYCLES), RegisterID(RegID),
-        ClearsSuperRegs(clearsSuperRegs), DependentWrite(nullptr),
-        NumWriteUsers(0U) {}
+        ClearsSuperRegs(clearsSuperRegs), WritesZero(writesZero),
+        DependentWrite(nullptr), NumWriteUsers(0U) {}
   WriteState(const WriteState &Other) = delete;
   WriteState &operator=(const WriteState &Other) = delete;
 
@@ -137,6 +140,7 @@ public:
 
   unsigned getNumUsers() const { return Users.size() + NumWriteUsers; }
   bool clearsSuperRegisters() const { return ClearsSuperRegs; }
+  bool isWriteZero() const { return WritesZero; }
 
   const WriteState *getDependentWrite() const { return DependentWrite; }
   void setDependentWrite(WriteState *Other) {
@@ -177,11 +181,14 @@ class ReadState {
   // This field is set to true only if there are no dependent writes, and
   // there are no `CyclesLeft' to wait.
   bool IsReady;
+  // True if this register read is from a dependency-breaking instruction.
+  bool IndependentFromDef;
 
 public:
   ReadState(const ReadDescriptor &Desc, unsigned RegID)
       : RD(Desc), RegisterID(RegID), DependentWrites(0),
-        CyclesLeft(UNKNOWN_CYCLES), TotalCycles(0), IsReady(true) {}
+        CyclesLeft(UNKNOWN_CYCLES), TotalCycles(0), IsReady(true),
+        IndependentFromDef(false) {}
   ReadState(const ReadState &Other) = delete;
   ReadState &operator=(const ReadState &Other) = delete;
 
@@ -191,6 +198,9 @@ public:
 
   bool isReady() const { return IsReady; }
   bool isImplicitRead() const { return RD.isImplicitRead(); }
+
+  bool isIndependentFromDef() const { return IndependentFromDef; }
+  void setIndependentFromDef() { IndependentFromDef = true; }
 
   void cycleEvent();
   void writeStartEvent(unsigned Cycles);
@@ -281,6 +291,10 @@ struct InstrDesc {
 
   // A zero latency instruction doesn't consume any scheduler resources.
   bool isZeroLatency() const { return !MaxLatency && Resources.empty(); }
+
+  InstrDesc() = default;
+  InstrDesc(const InstrDesc &Other) = delete;
+  InstrDesc &operator=(const InstrDesc &Other) = delete;
 };
 
 /// An instruction propagated through the simulated instruction pipeline.
@@ -309,8 +323,6 @@ class Instruction {
   // Retire Unit token ID for this instruction.
   unsigned RCUTokenID;
 
-  bool IsDepBreaking;
-
   using UniqueDef = std::unique_ptr<WriteState>;
   using UniqueUse = std::unique_ptr<ReadState>;
   using VecDefs = std::vector<UniqueDef>;
@@ -326,8 +338,7 @@ class Instruction {
 
 public:
   Instruction(const InstrDesc &D)
-      : Desc(D), Stage(IS_INVALID), CyclesLeft(UNKNOWN_CYCLES), RCUTokenID(0),
-        IsDepBreaking(false) {}
+      : Desc(D), Stage(IS_INVALID), CyclesLeft(UNKNOWN_CYCLES), RCUTokenID(0) {}
   Instruction(const Instruction &Other) = delete;
   Instruction &operator=(const Instruction &Other) = delete;
 
@@ -344,9 +355,6 @@ public:
       return Def->getNumUsers() > 0;
     });
   }
-
-  bool isDependencyBreaking() const { return IsDepBreaking; }
-  void setDependencyBreaking() { IsDepBreaking = true; }
 
   unsigned getNumUsers() const {
     unsigned NumUsers = 0;
@@ -389,21 +397,24 @@ public:
 /// An InstRef contains both a SourceMgr index and Instruction pair.  The index
 /// is used as a unique identifier for the instruction.  MCA will make use of
 /// this index as a key throughout MCA.
-class InstRef : public std::pair<unsigned, Instruction *> {
-public:
-  InstRef() : std::pair<unsigned, Instruction *>(0, nullptr) {}
-  InstRef(unsigned Index, Instruction *I)
-      : std::pair<unsigned, Instruction *>(Index, I) {}
+class InstRef {
+  std::pair<unsigned, Instruction *> Data;
 
-  unsigned getSourceIndex() const { return first; }
-  Instruction *getInstruction() { return second; }
-  const Instruction *getInstruction() const { return second; }
+public:
+  InstRef() : Data(std::make_pair(0, nullptr)) {}
+  InstRef(unsigned Index, Instruction *I) : Data(std::make_pair(Index, I)) {}
+
+  bool operator==(const InstRef &Other) const { return Data == Other.Data; }
+
+  unsigned getSourceIndex() const { return Data.first; }
+  Instruction *getInstruction() { return Data.second; }
+  const Instruction *getInstruction() const { return Data.second; }
 
   /// Returns true if this references a valid instruction.
-  bool isValid() const { return second != nullptr; }
+  bool isValid() const { return Data.second; }
 
   /// Invalidate this reference.
-  void invalidate() { second = nullptr; }
+  void invalidate() { Data.second = nullptr; }
 
 #ifndef NDEBUG
   void print(llvm::raw_ostream &OS) const { OS << getSourceIndex(); }

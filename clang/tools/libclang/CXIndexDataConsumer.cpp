@@ -222,9 +222,11 @@ bool CXIndexDataConsumer::handleDeclOccurence(
 }
 
 bool CXIndexDataConsumer::handleModuleOccurence(const ImportDecl *ImportD,
+                                                const Module *Mod,
                                                 SymbolRoleSet Roles,
                                                 SourceLocation Loc) {
-  IndexingDeclVisitor(*this, SourceLocation(), nullptr).Visit(ImportD);
+  if (Roles & (SymbolRoleSet)SymbolRole::Declaration)
+    IndexingDeclVisitor(*this, SourceLocation(), nullptr).Visit(ImportD);
   return !shouldAbort();
 }
 

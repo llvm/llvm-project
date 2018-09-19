@@ -111,7 +111,6 @@ public:
   /// synchronize access to shared state.
   ClangdServer(GlobalCompilationDatabase &CDB, FileSystemProvider &FSProvider,
                DiagnosticsConsumer &DiagConsumer, const Options &Opts);
-  ~ClangdServer();
 
   /// Set the root path of the workspace.
   void setRootPath(PathRef RootPath);
@@ -221,7 +220,6 @@ private:
   formatCode(llvm::StringRef Code, PathRef File,
              ArrayRef<tooling::Range> Ranges);
 
-  class DynamicIndex;
   typedef uint64_t DocVersion;
 
   void consumeDiagnostics(PathRef File, DocVersion Version,
@@ -244,7 +242,7 @@ private:
   //   - a merged view of a static and dynamic index (MergedIndex)
   const SymbolIndex *Index;
   // If present, an index of symbols in open files. Read via *Index.
-  std::unique_ptr<DynamicIndex> DynamicIdx;
+  std::unique_ptr<FileIndex> DynamicIdx;
   // If present, storage for the merged static/dynamic index. Read via *Index.
   std::unique_ptr<SymbolIndex> MergedIndex;
 

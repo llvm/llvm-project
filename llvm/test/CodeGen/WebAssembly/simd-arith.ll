@@ -667,6 +667,18 @@ define <4 x float> @neg_v4f32(<4 x float> %x) {
   ret <4 x float> %a
 }
 
+; CHECK-LABEL: abs_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .param v128{{$}}
+; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: f32x4.abs $push0=, $0{{$}}
+; SIMD128-NEXT: return $pop0{{$}}
+declare <4 x float> @llvm.fabs.v4f32(<4 x float>) nounwind readnone
+define <4 x float> @abs_v4f32(<4 x float> %x) {
+  %a = call <4 x float> @llvm.fabs.v4f32(<4 x float> %x)
+  ret <4 x float> %a
+}
+
 ; CHECK-LABEL: add_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .param v128, v128{{$}}
@@ -724,6 +736,19 @@ define <2 x double> @neg_v2f64(<2 x double> %x) {
   %a = fsub <2 x double> <double 0., double 0.>, %x
   ret <2 x double> %a
 }
+
+; CHECK-LABEL: abs_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-NEXT: .param v128{{$}}
+; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: f64x2.abs $push0=, $0{{$}}
+; SIMD128-NEXT: return $pop0{{$}}
+declare <2 x double> @llvm.fabs.v2f64(<2 x double>) nounwind readnone
+define <2 x double> @abs_v2f64(<2 x double> %x) {
+  %a = call <2 x double> @llvm.fabs.v2f64(<2 x double> %x)
+  ret <2 x double> %a
+}
+
 
 ; CHECK-LABEL: add_v2f64:
 ; NO-SIMD128-NOT: f64x2

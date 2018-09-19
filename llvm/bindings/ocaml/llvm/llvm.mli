@@ -814,6 +814,11 @@ val set_operand : llvalue -> int -> llvalue -> unit
 val num_operands : llvalue -> int
 
 
+(** [indices i] returns the indices for the ExtractValue or InsertValue
+    instruction [i].
+    See the [llvm::getIndices] methods. *)
+val indices : llvalue -> int array
+
 (** {7 Operations on constants of (mostly) any type} *)
 
 (** [is_constant v] returns [true] if the value [v] is a constant, [false]

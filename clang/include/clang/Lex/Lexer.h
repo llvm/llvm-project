@@ -711,6 +711,9 @@ private:
 
   bool isHexaLiteral(const char *Start, const LangOptions &LangOpts);
 
+  void codeCompleteIncludedFile(const char *PathStart,
+                                const char *CompletionPoint, bool IsAngled);
+
   /// Read a universal character name.
   ///
   /// \param StartPtr The position in the source buffer after the initial '\'.
