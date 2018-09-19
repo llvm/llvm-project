@@ -2323,6 +2323,7 @@ Foo& getBarFoo(Bar &bar, int c) { return bar.getFoo2(c); }
 void test() {
   Foo foo;
   Foo *fooArray;
+  Foo &(*fooFuncPtr)();
   Bar bar;
   int a;
   int b;
@@ -2359,6 +2360,10 @@ void test() {
   (a > 0 ? fooArray[1] : fooArray[b]).mu_.Lock();
   (a > 0 ? fooArray[1] : fooArray[b]).a = 0;
   (a > 0 ? fooArray[1] : fooArray[b]).mu_.Unlock();
+
+  fooFuncPtr().mu_.Lock();
+  fooFuncPtr().a = 0;
+  fooFuncPtr().mu_.Unlock();
 }
 
 

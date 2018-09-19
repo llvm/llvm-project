@@ -3256,14 +3256,14 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
 }
 
 static void AddMacroResults(Preprocessor &PP, ResultBuilder &Results,
-                            bool IncludeUndefined,
+                            bool LoadExternal, bool IncludeUndefined,
                             bool TargetTypeIsPointer = false) {
   typedef CodeCompletionResult Result;
 
   Results.EnterNewScope();
 
-  for (Preprocessor::macro_iterator M = PP.macro_begin(),
-                                 MEnd = PP.macro_end();
+  for (Preprocessor::macro_iterator M = PP.macro_begin(LoadExternal),
+                                    MEnd = PP.macro_end(LoadExternal);
        M != MEnd; ++M) {
     auto MD = PP.getMacroDefinition(M->first);
     if (IncludeUndefined || MD) {
@@ -3279,7 +3279,6 @@ static void AddMacroResults(Preprocessor &PP, ResultBuilder &Results,
   }
 
   Results.ExitScope();
-
 }
 
 static void AddPrettyFunctionResults(const LangOptions &LangOpts,
@@ -3562,7 +3561,7 @@ void Sema::CodeCompleteOrdinaryName(Scope *S,
   }
 
   if (CodeCompleter->includeMacros())
-    AddMacroResults(PP, Results, false);
+    AddMacroResults(PP, Results, CodeCompleter->loadExternal(), false);
 
   HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
                             Results.data(),Results.size());
@@ -3700,7 +3699,8 @@ void Sema::CodeCompleteExpression(Scope *S,
     AddPrettyFunctionResults(getLangOpts(), Results);
 
   if (CodeCompleter->includeMacros())
-    AddMacroResults(PP, Results, false, PreferredTypeIsPointer);
+    AddMacroResults(PP, Results, CodeCompleter->loadExternal(), false,
+                    PreferredTypeIsPointer);
   HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
                             Results.data(), Results.size());
 }
@@ -4324,7 +4324,7 @@ void Sema::CodeCompleteCase(Scope *S) {
   Results.ExitScope();
 
   if (CodeCompleter->includeMacros()) {
-    AddMacroResults(PP, Results, false);
+    AddMacroResults(PP, Results, CodeCompleter->loadExternal(), false);
   }
   HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
                             Results.data(), Results.size());
@@ -4640,7 +4640,7 @@ void Sema::CodeCompleteAfterIf(Scope *S) {
     AddPrettyFunctionResults(getLangOpts(), Results);
 
   if (CodeCompleter->includeMacros())
-    AddMacroResults(PP, Results, false);
+    AddMacroResults(PP, Results, CodeCompleter->loadExternal(), false);
 
   HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
                             Results.data(),Results.size());
@@ -5674,7 +5674,7 @@ void Sema::CodeCompleteObjCPassingType(Scope *S, ObjCDeclSpec &DS,
                      CodeCompleter->loadExternal());
 
   if (CodeCompleter->includeMacros())
-    AddMacroResults(PP, Results, false);
+    AddMacroResults(PP, Results, CodeCompleter->loadExternal(), false);
 
   HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
                             Results.data(), Results.size());
@@ -5903,10 +5903,9 @@ void Sema::CodeCompleteObjCMessageReceiver(Scope *S) {
   Results.ExitScope();
 
   if (CodeCompleter->includeMacros())
-    AddMacroResults(PP, Results, false);
+    AddMacroResults(PP, Results, CodeCompleter->loadExternal(), false);
   HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
                             Results.data(), Results.size());
-
 }
 
 void Sema::CodeCompleteObjCSuperMessage(Scope *S, SourceLocation SuperLoc,
@@ -7919,7 +7918,9 @@ void Sema::CodeCompletePreprocessorExpression() {
                         CodeCompletionContext::CCC_PreprocessorExpression);
 
   if (!CodeCompleter || CodeCompleter->includeMacros())
-    AddMacroResults(PP, Results, true);
+    AddMacroResults(PP, Results,
+                    CodeCompleter ? CodeCompleter->loadExternal() : false,
+                    true);
 
     // defined (<macro>)
   Results.EnterNewScope();
@@ -8093,7 +8094,9 @@ void Sema::GatherGlobalCodeCompletions(CodeCompletionAllocator &Allocator,
   }
 
   if (!CodeCompleter || CodeCompleter->includeMacros())
-    AddMacroResults(PP, Builder, true);
+    AddMacroResults(PP, Builder,
+                    CodeCompleter ? CodeCompleter->loadExternal() : false,
+                    true);
 
   Results.clear();
   Results.insert(Results.end(),
