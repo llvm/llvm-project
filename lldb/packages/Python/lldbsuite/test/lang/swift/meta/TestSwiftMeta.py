@@ -14,6 +14,7 @@ Test the Swift test decorator itself.
 """
 import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbtest as lldbtest
+import os
 
 class TestSwiftMeta(lldbtest.TestBase):
 
@@ -23,3 +24,15 @@ class TestSwiftMeta(lldbtest.TestBase):
     def test_swiftDecorator(self):
         self.assertTrue(self.getDebugInfo() <> "gmodules")
 
+    @decorators.swiftTest
+    def test_swiftBuild(self):
+        self.build()
+        exe = self.getBuildArtifact()
+        dsym = exe+'.dSYM'
+        self.assertTrue(os.path.isfile(exe))
+        if self.getDebugInfo() == "dwarf":
+            self.assertFalse(os.path.isdir(dsym),
+                             'testing DWARF, but .dSYM present')
+        if self.getDebugInfo() == "dsym":
+            self.assertTrue(os.path.isdir(dsym),
+                            '.dSYM is missing in dsym config')

@@ -261,7 +261,7 @@ endif
 DEBUG_INFO_FLAG ?= -g
 
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0 -fno-builtin
-SWIFTFLAGS ?= -g -Onone -save-temps -Xfrontend -serialize-debugging-options
+SWIFTFLAGS ?= -g -Onone -Xfrontend -serialize-debugging-options
 
 # Setup a default per-user Swift module cache directory.
 SWIFT_MODULE_CACHE_PATH ?= /tmp/lldbtest.swift.modulecache.$(USER)
@@ -598,8 +598,27 @@ endif
 # Compile the executable from all the objects.
 #----------------------------------------------------------------------
 ifeq "$(USESWIFTDRIVER)" "1"
-$(EXE) : $(SWIFT_SOURCES)
-	$(SWIFTC) $^ $(SWIFTFLAGS) -o "$(EXE)"
+MODULENAME=$(shell basename $(EXE) .out)
+VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES))
+%.o: %.swift
+	@echo "### Compiling" $<
+	$(SWIFT_FE) $(SWIFT_FEFLAGS) -c -primary-file $^ \
+          $(filter-out $(VPATH)/$^,$(filter-out $^,$(VPATHSOURCES))) \
+          -o $(BUILDDIR)/$@ \
+          -module-name $(MODULENAME) -emit-module-path \
+	  $(patsubst %.o,$(BUILDDIR)/%.partial.swiftmodule,$@)
+
+$(EXE) : $(patsubst %.swift,%.o,$(SWIFT_SOURCES))
+	@echo "### Merging swift modules"
+	$(SWIFT_FE) $(SWIFT_FEFLAGS) -merge-modules \
+	  -emit-module $(patsubst %.o,%.partial.swiftmodule,$^) \
+	  -parse-as-library -sil-merge-partial-modules \
+          -disable-diagnostic-passes -disable-sil-perf-optzns \
+          -module-name $(MODULENAME) \
+	  -o $(BUILDDIR)/$@.swiftmodule
+	@echo "### Linking" $(EXE)
+	$(SWIFTC) $^ $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)" \
+	  -Xlinker -add_ast_path -Xlinker $(BUILDDIR)/$@.swiftmodule
 else
 ifneq "$(DYLIB_NAME)" ""
 ifeq "$(DYLIB_ONLY)" ""
