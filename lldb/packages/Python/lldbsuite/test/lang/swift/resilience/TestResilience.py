@@ -39,10 +39,35 @@ class TestResilience(TestBase):
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
     @decorators.skipIf(debug_info=decorators.no_match("dsym"))
-    def test_cross_module_extension(self):
+    def test_cross_module_extension_a_a(self):
         """Test that LLDB can debug across resilient boundaries"""
         self.build()
-        self.do_test()
+        self.doTestWithFlavor("a", "a")
+
+    @decorators.skipUnlessDarwin
+    @decorators.swiftTest
+    @decorators.skipIf(debug_info=decorators.no_match("dsym"))
+    def test_cross_module_extension_a_b(self):
+        """Test that LLDB can debug across resilient boundaries"""
+        self.build()
+        self.doTestWithFlavor("a", "b")
+
+    @decorators.skipUnlessDarwin
+    @decorators.swiftTest
+    @decorators.skipIf(debug_info=decorators.no_match("dsym"))
+    def test_cross_module_extension_b_a(self):
+        """Test that LLDB can debug across resilient boundaries"""
+        self.build()
+        self.doTestWithFlavor("b", "a")
+
+    @decorators.skipUnlessDarwin
+    @decorators.swiftTest
+    @decorators.skipIf(debug_info=decorators.no_match("dsym"))
+    def test_cross_module_extension_b_b(self):
+        """Test that LLDB can debug across resilient boundaries"""
+        self.build()
+        self.doTestWithFlavor("b", "b")
+
 
     def setUp(self):
         TestBase.setUp(self)
@@ -103,13 +128,6 @@ class TestResilience(TestBase):
         process.Kill()
 
         self.cleanupSymlinks()
-
-    def do_test(self):
-        """Test that LLDB can debug across resilient boundaries"""
-
-        for exe_flavor in ["a", "b"]:
-            for mod_flavor in ["a", "b"]:
-                self.doTestWithFlavor(exe_flavor, mod_flavor)
 
 if __name__ == '__main__':
     import atexit
