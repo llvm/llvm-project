@@ -10,6 +10,6 @@
 #
 # ------------------------------------------------------------------------------
 import lldbsuite.test.lldbinline as lldbinline
-import lldbsuite.test.lldbtest as lldbtest
+from lldbsuite.test.decorators import *
 
-lldbinline.MakeInlineTest(__file__, globals(), [])
+lldbinline.MakeInlineTest(__file__, globals(), decorators=[swiftTest])

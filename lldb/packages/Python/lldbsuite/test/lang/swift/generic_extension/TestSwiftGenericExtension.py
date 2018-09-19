@@ -10,8 +10,8 @@
 #
 # ------------------------------------------------------------------------------
 import lldbsuite.test.lldbinline as lldbinline
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 
-lldbinline.MakeInlineTest(__file__, globals(), decorators=[
-    decorators.skipIfLinux  # <rdar://problem/30899355> 
+lldbinline.MakeInlineTest(__file__, globals(),
+                          decorators=[swiftTest,skipIfLinux  # <rdar://problem/30899355> 
     ])

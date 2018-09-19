@@ -20,11 +20,11 @@ import unittest2
 class TestSwiftRemoteASTImport(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-
+    NO_DEBUG_INFO_TESTCASE = True
+    
     def setUp(self):
         TestBase.setUp(self)
 
-    @decorators.skipIf(debug_info=decorators.no_match(["dwarf"]))
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
     @decorators.add_test_categories(["swiftpr"])
