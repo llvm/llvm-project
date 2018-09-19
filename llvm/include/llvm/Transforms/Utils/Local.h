@@ -443,6 +443,9 @@ void copyNonnullMetadata(const LoadInst &OldLI, MDNode *N, LoadInst &NewLI);
 void copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI, MDNode *N,
                        LoadInst &NewLI);
 
+/// Remove the debug intrinsic instructions for the given instruction.
+void dropDebugUsers(Instruction &I);
+
 //===----------------------------------------------------------------------===//
 //  Intrinsic pattern matching
 //

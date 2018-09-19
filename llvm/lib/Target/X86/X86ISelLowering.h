@@ -1034,6 +1034,8 @@ namespace llvm {
 
     bool convertSelectOfConstantsToMath(EVT VT) const override;
 
+    bool decomposeMulByConstant(EVT VT, SDValue C) const override;
+
     /// Return true if EXTRACT_SUBVECTOR is cheap for this result type
     /// with this index.
     bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,

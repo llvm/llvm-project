@@ -390,7 +390,8 @@ public:
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
 
-  bool shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
+  TargetLoweringBase::AtomicExpansionKind
+  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
 
   bool useLoadStackGuardNode() const override;
   TargetLoweringBase::LegalizeTypeAction
