@@ -128,7 +128,7 @@ void SwiftLanguageRuntime::SetupSwiftError() {
   if (m_SwiftNativeNSErrorISA.hasValue())
     return;
 
-  ConstString g_SwiftNativeNSError("_SwiftNativeNSError");
+  ConstString g_SwiftNativeNSError("__SwiftNativeNSError");
 
   m_SwiftNativeNSErrorISA = FindSymbolForSwiftObject(
       target, g_SwiftNativeNSError, eSymbolTypeObjCClass);
@@ -1566,7 +1566,7 @@ bool SwiftLanguageRuntime::IsValidErrorValue(
       if (auto descriptor =
               objc_runtime->GetClassDescriptor(*instance_type_sp)) {
         if (descriptor->GetISA() != m_SwiftNativeNSErrorISA.getValue()) {
-          // not a _SwiftNativeNSError - but statically typed as ErrorType
+          // not a __SwiftNativeNSError - but statically typed as ErrorType
           // return true here
           if (out_error_descriptor) {
             *out_error_descriptor = SwiftErrorDescriptor();

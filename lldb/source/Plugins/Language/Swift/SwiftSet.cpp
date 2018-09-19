@@ -54,8 +54,8 @@ SetConfig::SetConfig()
     ConstString("^Swift\\._HashableTypedNativeSetStorage<.+>$");
 
   // Type-punned empty set
-  m_emptyStorage_mangled_ObjC = ConstString("_TtCs20_RawNativeSetStorage");
-  m_emptyStorage_demangled = ConstString("Swift._RawNativeSetStorage");
+  m_emptyStorage_mangled_ObjC = ConstString("_TtCs21__RawNativeSetStorage");
+  m_emptyStorage_demangled = ConstString("Swift.__RawNativeSetStorage");
 
   // Deferred non-verbatim bridged set
   m_deferredBridgedStorage_mangledRegex_ObjC

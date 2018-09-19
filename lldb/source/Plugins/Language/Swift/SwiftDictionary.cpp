@@ -54,9 +54,9 @@ DictionaryConfig::DictionaryConfig()
 
   // Type-punned empty dictionary
   m_emptyStorage_mangled_ObjC =
-    ConstString("_TtCs27_RawNativeDictionaryStorage");
+    ConstString("_TtCs28__RawNativeDictionaryStorage");
   m_emptyStorage_demangled
-    = ConstString("Swift._RawNativeDictionaryStorage");
+    = ConstString("Swift.__RawNativeDictionaryStorage");
 
   // Deferred non-verbatim bridged dictionary
   m_deferredBridgedStorage_mangledRegex_ObjC
