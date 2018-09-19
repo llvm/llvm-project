@@ -56,7 +56,6 @@ public:
     basic_ostream& operator<<(double f);
     basic_ostream& operator<<(long double f);
     basic_ostream& operator<<(const void* p);
-    basic_ostream<charT, traits>& operator<<(nullptr_t);   // C++17
     basic_ostream& operator<<(basic_streambuf<char_type,traits>* sb);
 
     // 27.7.2.7 Unformatted output:
@@ -217,7 +216,6 @@ public:
     basic_ostream& operator<<(double __f);
     basic_ostream& operator<<(long double __f);
     basic_ostream& operator<<(const void* __p);
-    basic_ostream& operator<<(nullptr_t);
     basic_ostream& operator<<(basic_streambuf<char_type, traits_type>* __sb);
 
     // 27.7.2.7 Unformatted output:
@@ -711,14 +709,6 @@ basic_ostream<_CharT, _Traits>::operator<<(const void* __n)
     return *this;
 }
 
-template <class _CharT, class _Traits>
-basic_ostream<_CharT, _Traits>&
-basic_ostream<_CharT, _Traits>::operator<<(nullptr_t)
-{
-	return *this << "(nullptr)";
-}
-
-
 template<class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>&
 __put_character_sequence(basic_ostream<_CharT, _Traits>& __os,
@@ -751,6 +741,7 @@ __put_character_sequence(basic_ostream<_CharT, _Traits>& __os,
 #endif  // _LIBCPP_NO_EXCEPTIONS
     return __os;
 }
+
 
 template<class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>&
