@@ -222,10 +222,9 @@ static Error make_string_error(const char *Format, Args &&... args) {
 
 TargetSP opts::createTarget(Debugger &Dbg, const std::string &Filename) {
   TargetSP Target;
-  Status ST =
-      Dbg.GetTargetList().CreateTarget(Dbg, Filename, /*triple*/ "",
-                                       /*get_dependent_modules*/ false,
-                                       /*platform_options*/ nullptr, Target);
+  Status ST = Dbg.GetTargetList().CreateTarget(
+      Dbg, Filename, /*triple*/ "", eLoadDependentsNo,
+      /*platform_options*/ nullptr, Target);
   if (ST.Fail()) {
     errs() << formatv("Failed to create target '{0}: {1}\n", Filename, ST);
     exit(1);

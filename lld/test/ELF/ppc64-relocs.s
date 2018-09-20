@@ -63,7 +63,7 @@ _start:
 
 # CHECK: Disassembly of section .R_PPC64_TOC16_HA:
 # CHECK: .FR_PPC64_TOC16_HA:
-# CHECK: 10010018: {{.*}} addis 1, 2, 0
+# CHECK: 10010018: {{.*}} nop
 
 .section .R_PPC64_REL24,"ax",@progbits
 .globl .FR_PPC64_REL24
@@ -160,8 +160,8 @@ _start:
 # 0x10000190 + 0xfeb4 = 0x10010044
 # CHECK: Disassembly of section .R_PPC64_REL32:
 # CHECK: .FR_PPC64_REL32:
-# CHECK: 1001003c: {{.*}} addis 5, 2, 0
-# CHECK: 10010040: {{.*}} ld 5, -32736(5)
+# CHECK: 1001003c: {{.*}} nop
+# CHECK: 10010040: {{.*}} ld 5, -32736(2)
 # CHECK: 10010044: {{.*}} add 3, 3, 4
 
 .section .R_PPC64_REL64, "ax",@progbits
