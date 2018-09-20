@@ -5,9 +5,14 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
+struct redret {
+    int i;
+    float r;
+} redret;
+
 // For trigs
-extern int __half_red(float, __private float *);
-extern float __half_scr(float, __private float *);
+extern struct redret __half_red(float);
+extern float2 __half_scr(float);
 extern float __half_tr(float, int);
 
 #define IATTR __attribute__((always_inline, overloadable))
@@ -90,11 +95,14 @@ half_cos(float x)
     float dx = fabs(x);
     int ax = as_int(dx);
 
-    float r0;
-    int regn = __half_red(dx, &r0);
 
-    float cc;
-    float ss = -__half_scr(r0, &cc);
+    struct redret red =__half_red(dx);
+    float r0 = red.r;
+    int regn = red.i;
+
+    float2 scr = __half_scr(r0);
+    float cc = scr.y;
+    float ss = -scr.x;
 
     float c = (regn & 1) != 0 ? ss : cc;
     c = as_float(as_int(c) ^ ((regn > 1) << 31));
@@ -159,11 +167,13 @@ half_sin(float x)
     float dx = fabs(x);
     int ax = as_int(dx);
 
-    float r0;
-    int regn = __half_red(dx, &r0);
+    struct redret red = __half_red(dx);
+    float r0 = red.r;
+    int regn = red.i;
 
-    float cc;
-    float ss = __half_scr(r0, &cc);
+    float2 scr = __half_scr(r0);
+    float ss = scr.x;
+    float cc = scr.y;
 
     float s = (regn & 1) != 0 ? cc : ss;
     s = as_float(as_int(s) ^ ((regn > 1) << 31));
@@ -188,8 +198,9 @@ half_tan(float x)
     float dx = fabs(x);
     int ax = as_int(dx);
 
-    float r0;
-    int regn = __half_red(dx, &r0);
+    struct redret red = __half_red(dx);
+    float r0 = red.r;
+    int regn = red.i;
     float t = __half_tr(r0, regn);
 
     t = as_float(as_int(t) ^ (ix ^ ax));
