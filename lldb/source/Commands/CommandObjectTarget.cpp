@@ -138,6 +138,72 @@ static uint32_t DumpTargetList(TargetList &target_list,
   return num_targets;
 }
 
+// Note that the negation in the argument name causes a slightly confusing
+// mapping of the enum values,
+static OptionEnumValueElement g_dependents_enumaration[4] = {
+    {eLoadDependentsDefault, "default",
+     "Only load dependents when the target is an executable."},
+    {eLoadDependentsNo, "true",
+     "Don't load dependents, even if the target is an executable."},
+    {eLoadDependentsYes, "false",
+     "Load dependents, even if the target is not an executable."},
+    {0, nullptr, nullptr}};
+
+static OptionDefinition g_dependents_options[1] = {
+    {LLDB_OPT_SET_1, false, "no-dependents", 'd',
+     OptionParser::eOptionalArgument, nullptr, g_dependents_enumaration, 0,
+     eArgTypeValue,
+     "Whether or not to load dependents when creating a target. If the option "
+     "is not specified, the value is implicitly 'default'. If the option is "
+     "specified but without a value, the value is implicitly 'true'."}};
+
+class OptionGroupDependents : public OptionGroup {
+public:
+  OptionGroupDependents() {}
+
+  ~OptionGroupDependents() override {}
+
+  llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+    return llvm::makeArrayRef(g_dependents_options);
+  }
+
+  Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
+                        ExecutionContext *execution_context) override {
+    Status error;
+
+    // For compatibility no value means don't load dependents.
+    if (option_value.empty()) {
+      m_load_dependent_files = eLoadDependentsNo;
+      return error;
+    }
+
+    const char short_option = g_dependents_options[option_idx].short_option;
+    if (short_option == 'd') {
+      LoadDependentFiles tmp_load_dependents;
+      tmp_load_dependents = (LoadDependentFiles)OptionArgParser::ToOptionEnum(
+          option_value, g_dependents_options[option_idx].enum_values, 0, error);
+      if (error.Success())
+        m_load_dependent_files = tmp_load_dependents;
+    } else {
+      error.SetErrorStringWithFormat("unrecognized short option '%c'",
+                                     short_option);
+    }
+
+    return error;
+  }
+
+  Status SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
+
+  void OptionParsingStarting(ExecutionContext *execution_context) override {
+    m_load_dependent_files = eLoadDependentsDefault;
+  }
+
+  LoadDependentFiles m_load_dependent_files;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(OptionGroupDependents);
+};
+
 #pragma mark CommandObjectTargetCreate
 
 //-------------------------------------------------------------------------
@@ -158,16 +224,14 @@ public:
                         eArgTypePath,
                         "Path to the remote file to use for this target."),
         m_symbol_file(LLDB_OPT_SET_1, false, "symfile", 's', 0,
-                      eArgTypeFilename, "Fullpath to a stand alone debug "
-                                        "symbols file for when debug symbols "
-                                        "are not in the executable."),
+                      eArgTypeFilename,
+                      "Fullpath to a stand alone debug "
+                      "symbols file for when debug symbols "
+                      "are not in the executable."),
         m_remote_file(
             LLDB_OPT_SET_1, false, "remote-file", 'r', 0, eArgTypeFilename,
             "Fullpath to the file on the remote host if debugging remotely."),
-        m_add_dependents(LLDB_OPT_SET_1, false, "no-dependents", 'd',
-                         "Don't load dependent files when creating the target, "
-                         "just add the specified executable.",
-                         true, true) {
+        m_add_dependents() {
     CommandArgumentEntry arg;
     CommandArgumentData file_arg;
 
@@ -259,12 +323,9 @@ protected:
 
       TargetSP target_sp;
       llvm::StringRef arch_cstr = m_arch_option.GetArchitectureName();
-      const bool get_dependent_files =
-          m_add_dependents.GetOptionValue().GetCurrentValue();
       Status error(debugger.GetTargetList().CreateTarget(
           debugger, file_path, arch_cstr,
-          get_dependent_files ? eLoadDependentsYes : eLoadDependentsNo, nullptr,
-          target_sp));
+          m_add_dependents.m_load_dependent_files, nullptr, target_sp));
 
       if (target_sp) {
         // Only get the platform after we create the target because we might
@@ -412,7 +473,7 @@ private:
   OptionGroupFile m_platform_path;
   OptionGroupFile m_symbol_file;
   OptionGroupFile m_remote_file;
-  OptionGroupBoolean m_add_dependents;
+  OptionGroupDependents m_add_dependents;
 };
 
 #pragma mark CommandObjectTargetList
