@@ -172,9 +172,9 @@ endif
 #   o cxx_compiler
 #   o cxx_linker
 #----------------------------------------------------------------------
-SWIFTC ?= $(shell $(LEVEL)/find-swift.py)
+SWIFTC ?= $(shell $(VPATH)/$(LEVEL)/find-swift.py)
 ifeq "$(SDKROOT)" ""
-	SWIFTSDKROOT = $(shell $(LEVEL)/find-swift.py -s)
+	SWIFTSDKROOT = $(shell $(VPATH)/$(LEVEL)/find-swift.py -s)
 else
 	SWIFTSDKROOT = $(SDKROOT)
 endif
