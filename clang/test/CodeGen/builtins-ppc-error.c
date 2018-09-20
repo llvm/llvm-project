@@ -14,6 +14,7 @@ extern vector signed int vsi;
 extern vector signed int vui;
 extern vector float vf;
 extern vector unsigned char vuc;
+extern vector signed __int128 vsllli;
 
 void testInsertWord(void) {
   int index = 5;
@@ -66,4 +67,9 @@ void testCTU(int index) {
 
 void testVCTUXS(int index) {
   vec_vctuxs(vf, index); //expected-error {{argument to '__builtin_altivec_vctuxs' must be a constant integer}}
+}
+
+void testUnpack128(int index) {
+  __builtin_unpack_vector_int128(vsllli, index); //expected-error {{argument to '__builtin_unpack_vector_int128' must be a constant integer}}
+  __builtin_unpack_vector_int128(vsllli, 5); //expected-error {{argument value 5 is outside the valid range [0, 1]}}
 }

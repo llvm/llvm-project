@@ -397,6 +397,8 @@ private:
                                    CallingContext *Ctx) ;
   til::SExpr *translateCXXThisExpr(const CXXThisExpr *TE, CallingContext *Ctx);
   til::SExpr *translateMemberExpr(const MemberExpr *ME, CallingContext *Ctx);
+  til::SExpr *translateObjCIVarRefExpr(const ObjCIvarRefExpr *IVRE,
+                                       CallingContext *Ctx);
   til::SExpr *translateCallExpr(const CallExpr *CE, CallingContext *Ctx,
                                 const Expr *SelfE = nullptr);
   til::SExpr *translateCXXMemberCallExpr(const CXXMemberCallExpr *ME,
