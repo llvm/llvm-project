@@ -25,12 +25,18 @@ using namespace lld::elf;
 namespace {
 class Hexagon final : public TargetInfo {
 public:
+  Hexagon();
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
   void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
 };
 } // namespace
+
+Hexagon::Hexagon() {
+  // Hexagon Linux uses 64K pages by default.
+  DefaultMaxPageSize = 0x10000;
+}
 
 // Support V60 only at the moment.
 uint32_t Hexagon::calcEFlags() const { return 0x60; }
