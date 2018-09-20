@@ -254,7 +254,7 @@ Status ProcessElfCore::DoLoadCore() {
       if (exe_module_spec.GetFileSpec()) {
         exe_module_sp = GetTarget().GetSharedModule(exe_module_spec);
         if (exe_module_sp)
-          GetTarget().SetExecutableModule(exe_module_sp, false);
+          GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
       }
     }
   }

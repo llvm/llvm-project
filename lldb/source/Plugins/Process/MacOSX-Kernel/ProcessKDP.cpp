@@ -319,7 +319,7 @@ Status ProcessKDP::DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
                   // Make sure you don't already have the right module loaded
                   // and they will be uniqued
                   if (exe_module_sp.get() != module_sp.get())
-                    target.SetExecutableModule(module_sp, false);
+                    target.SetExecutableModule(module_sp, eLoadDependentsNo);
                 }
               }
             }
