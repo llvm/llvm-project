@@ -109,7 +109,6 @@ check_library_exists(pthread pthread_create "" COMPILER_RT_HAS_LIBPTHREAD)
 # Look for terminfo library, used in unittests that depend on LLVMSupport.
 if(LLVM_ENABLE_TERMINFO)
   foreach(library tinfo terminfo curses ncurses ncursesw)
-    string(TOUPPER ${library} library_suffix)
     check_library_exists(
       ${library} setupterm "" COMPILER_RT_HAS_TERMINFO)
     if(COMPILER_RT_HAS_TERMINFO)

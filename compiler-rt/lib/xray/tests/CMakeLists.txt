@@ -23,9 +23,12 @@ set(XRAY_UNITTEST_CFLAGS
   -I${COMPILER_RT_SOURCE_DIR}/include
   -I${COMPILER_RT_SOURCE_DIR}/lib/xray
   -I${COMPILER_RT_SOURCE_DIR}/lib
-  -I${LLVM_MAIN_SRC_DIR}/include
-  -I${LLVM_INCLUDE_DIR}
   )
+
+# We add the include directories one at a time in our CFLAGS.
+foreach (DIR ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})
+  list(APPEND XRAY_UNITTEST_CFLAGS -I${DIR})
+endforeach()
 
 function(add_xray_lib library)
   add_library(${library} STATIC ${ARGN})
@@ -46,7 +49,7 @@ endfunction()
 set(XRAY_TEST_ARCH ${XRAY_SUPPORTED_ARCH})
 set(XRAY_UNITTEST_LINK_FLAGS
   ${CMAKE_THREAD_LIBS_INIT}
-	-l${SANITIZER_CXX_ABI_LIBRARY}
+  -l${SANITIZER_CXX_ABI_LIBRARY}
   -fxray-instrument
   )
 if (NOT APPLE)
@@ -71,6 +74,8 @@ macro(add_xray_unittest testname)
       generate_compiler_rt_tests(TEST_OBJECTS
         XRayUnitTests "${testname}-${arch}-Test" "${arch}"
         SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
+                ${COMPILER_RT_GMOCK_SOURCE}
+
         # Note that any change in the implementations will cause all the unit
         # tests to be re-built. This is by design, but may be cumbersome during
         # the build/test cycle.
@@ -80,8 +85,7 @@ macro(add_xray_unittest testname)
         DEPS gtest xray llvm-xray LLVMXRay LLVMTestingSupport
         CFLAGS ${XRAY_UNITTEST_CFLAGS}
         LINK_FLAGS ${TARGET_LINK_FLAGS} ${XRAY_UNITTEST_LINK_FLAGS}
-        -lLLVMXRay -lLLVMSupport -lLLVMTestingSupport
-        )
+        -lLLVMXRay -lLLVMSupport -lLLVMTestingSupport)
       set_target_properties(XRayUnitTests
         PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
