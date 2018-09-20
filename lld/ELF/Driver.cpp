@@ -63,6 +63,7 @@ using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
 using namespace llvm::sys;
+using namespace llvm::support;
 
 using namespace lld;
 using namespace lld::elf;
@@ -341,7 +342,7 @@ static bool getZFlag(opt::InputArgList &Args, StringRef K1, StringRef K2,
   return Default;
 }
 
-static bool isKnown(StringRef S) {
+static bool isKnownZFlag(StringRef S) {
   return S == "combreloc" || S == "copyreloc" || S == "defs" ||
          S == "execstack" || S == "global" || S == "hazardplt" ||
          S == "initfirst" || S == "interpose" ||
@@ -357,7 +358,7 @@ static bool isKnown(StringRef S) {
 // Report an error for an unknown -z option.
 static void checkZOptions(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_z))
-    if (!isKnown(Arg->getValue()))
+    if (!isKnownZFlag(Arg->getValue()))
       error("unknown -z value: " + StringRef(Arg->getValue()));
 }
 
@@ -961,21 +962,16 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 // This function initialize such members. See Config.h for the details
 // of these values.
 static void setConfigs(opt::InputArgList &Args) {
-  ELFKind Kind = Config->EKind;
-  uint16_t Machine = Config->EMachine;
+  ELFKind K = Config->EKind;
+  uint16_t M = Config->EMachine;
 
   Config->CopyRelocs = (Config->Relocatable || Config->EmitRelocs);
-  Config->Is64 = (Kind == ELF64LEKind || Kind == ELF64BEKind);
-  Config->IsLE = (Kind == ELF32LEKind || Kind == ELF64LEKind);
-  Config->Endianness =
-      Config->IsLE ? support::endianness::little : support::endianness::big;
-  Config->IsMips64EL = (Kind == ELF64LEKind && Machine == EM_MIPS);
+  Config->Is64 = (K == ELF64LEKind || K == ELF64BEKind);
+  Config->IsLE = (K == ELF32LEKind || K == ELF64LEKind);
+  Config->Endianness = Config->IsLE ? endianness::little : endianness::big;
+  Config->IsMips64EL = (K == ELF64LEKind && M == EM_MIPS);
   Config->Pic = Config->Pie || Config->Shared;
   Config->Wordsize = Config->Is64 ? 8 : 4;
-
-  // There is an ILP32 ABI for x86-64, although it's not very popular.
-  // It is called the x32 ABI.
-  bool IsX32 = (Kind == ELF32LEKind && Machine == EM_X86_64);
 
   // ELF defines two different ways to store relocation addends as shown below:
   //
@@ -990,9 +986,8 @@ static void setConfigs(opt::InputArgList &Args) {
   // You cannot choose which one, Rel or Rela, you want to use. Instead each
   // ABI defines which one you need to use. The following expression expresses
   // that.
-  Config->IsRela =
-      (Config->Is64 || IsX32 || Machine == EM_PPC || Machine == EM_RISCV) &&
-      Machine != EM_MIPS;
+  Config->IsRela = M == EM_AARCH64 || M == EM_AMDGPU || M == EM_PPC ||
+                   M == EM_PPC64 || M == EM_RISCV || M == EM_X86_64;
 
   // If the output uses REL relocations we must store the dynamic relocation
   // addends to the output sections. We also store addends for RELA relocations
@@ -1004,7 +999,7 @@ static void setConfigs(opt::InputArgList &Args) {
                          !Config->IsRela;
 
   Config->TocOptimize =
-      Args.hasFlag(OPT_toc_optimize, OPT_no_toc_optimize, Machine == EM_PPC64);
+      Args.hasFlag(OPT_toc_optimize, OPT_no_toc_optimize, M == EM_PPC64);
 }
 
 // Returns a value of "-format" option.
