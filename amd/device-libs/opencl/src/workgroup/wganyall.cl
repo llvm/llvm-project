@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "wg.h"
+#include "../wgscratch/wgscratch.h"
 
 #define update_any atomic_fetch_or_explicit
 #define update_all atomic_fetch_and_explicit

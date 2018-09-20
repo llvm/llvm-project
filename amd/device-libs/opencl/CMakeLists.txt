@@ -23,7 +23,7 @@ file(GLOB cl_sources
 )
 
 file(GLOB ll_sources
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/workgroup/*.ll
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/wgscratch/*.ll
 )
 
 file(GLOB sources ${cl_sources} ${ll_sources})

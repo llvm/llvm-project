@@ -7,7 +7,7 @@
 
 #pragma OPENCL EXTENSION cl_khr_subgroups : enable
 #include "pipes.h"
-#include "../workgroup/wg.h"
+#include "../wgscratch/wgscratch.h"
 
 #define ATTR __attribute__((always_inline))
 
