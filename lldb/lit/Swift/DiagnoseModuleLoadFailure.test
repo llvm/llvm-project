@@ -1,9 +1,0 @@
-# REQUIRES: darwin
-# Test the diagnostic for failing to load a module.
-
-# RUN: %lldb %S/Inputs/too-old/main -s %s 2>&1 | tee %t.log
-# RUN: FileCheck %S/Inputs/too-old/main.swift -input-file %t.log
-
-br set -f "main.swift" -l 8
-run
-expr p
