@@ -172,9 +172,9 @@ endif
 #   o cxx_compiler
 #   o cxx_linker
 #----------------------------------------------------------------------
-SWIFTC ?= $(shell $(LEVEL)/find-swift.py)
+SWIFTC ?= $(shell $(VPATH)/$(LEVEL)/find-swift.py)
 ifeq "$(SDKROOT)" ""
-	SWIFTSDKROOT = $(shell $(LEVEL)/find-swift.py -s)
+	SWIFTSDKROOT = $(shell $(VPATH)/$(LEVEL)/find-swift.py -s)
 else
 	SWIFTSDKROOT = $(SDKROOT)
 endif
@@ -263,11 +263,6 @@ DEBUG_INFO_FLAG ?= -g
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0 -fno-builtin
 SWIFTFLAGS ?= -g -Onone -save-temps -Xfrontend -serialize-debugging-options
 
-# Setup a default per-user Swift module cache directory.
-SWIFT_MODULE_CACHE_PATH ?= /tmp/lldbtest.swift.modulecache.$(USER)
-SWIFT_MODULE_CACHE_FLAGS = -module-cache-path $(SWIFT_MODULE_CACHE_PATH)
-SWIFTFLAGS += $(SWIFT_MODULE_CACHE_FLAGS)
-
 ifneq (,$(findstring arm,$(ARCH)))
 	SWIFTFLAGS += -static-stdlib
 endif
@@ -301,6 +296,8 @@ ifeq "$(MAKE_DWO)" "YES"
 endif
 
 CLANG_MODULE_CACHE_DIR := $(BUILDDIR)/module-cache
+SWIFT_MODULE_CACHE_FLAGS = -module-cache-path $(CLANG_MODULE_CACHE_DIR)
+SWIFTFLAGS += $(SWIFT_MODULE_CACHE_FLAGS)
 
 MANDATORY_MODULE_BUILD_CFLAGS := -fmodules -gmodules -fmodules-cache-path=$(CLANG_MODULE_CACHE_DIR)
 
