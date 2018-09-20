@@ -2173,11 +2173,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_GenericTypeParam(
   auto instance_type =
       remote_ast.getTypeForRemoteTypeMetadata(metadata_address,
                                               /*skipArtificial*/ true);
-  if (!instance_type)
-    return false;
-  // The read lock must have been acquired by the caller.
-  class_type_or_name.SetCompilerType(
-      {&scratch_ctx, instance_type.getValue().getPointer()});
+  if (instance_type)
+    class_type_or_name.SetCompilerType(
+        {&scratch_ctx, instance_type.getValue().getPointer()});
   return true;
 }
 
