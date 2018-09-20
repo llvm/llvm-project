@@ -195,21 +195,21 @@ define <16 x i32> @test11(<16 x i32>%a, <16 x i32>%b) {
 define i64 @test12(<16 x i64>%a, <16 x i64>%b, i64 %a1, i64 %b1) {
 ; KNL-LABEL: test12:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpcmpgtq %zmm0, %zmm2, %k0
-; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    testb $1, %al
-; KNL-NEXT:    cmoveq %rsi, %rdi
 ; KNL-NEXT:    movq %rdi, %rax
+; KNL-NEXT:    vpcmpgtq %zmm0, %zmm2, %k0
+; KNL-NEXT:    kmovw %k0, %ecx
+; KNL-NEXT:    testb $1, %cl
+; KNL-NEXT:    cmoveq %rsi, %rax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test12:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpcmpgtq %zmm0, %zmm2, %k0
-; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    testb $1, %al
-; SKX-NEXT:    cmoveq %rsi, %rdi
 ; SKX-NEXT:    movq %rdi, %rax
+; SKX-NEXT:    vpcmpgtq %zmm0, %zmm2, %k0
+; SKX-NEXT:    kmovd %k0, %ecx
+; SKX-NEXT:    testb $1, %cl
+; SKX-NEXT:    cmoveq %rsi, %rax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %cmpvector_func.i = icmp slt <16 x i64> %a, %b
@@ -257,23 +257,23 @@ define i16 @test13(i32 %a, i32 %b) {
 define i64 @test14(<8 x i64>%a, <8 x i64>%b, i64 %a1, i64 %b1) {
 ; KNL-LABEL: test14:
 ; KNL:       ## %bb.0:
+; KNL-NEXT:    movq %rdi, %rax
 ; KNL-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
 ; KNL-NEXT:    kshiftrw $4, %k0, %k0
-; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    testb $1, %al
-; KNL-NEXT:    cmoveq %rsi, %rdi
-; KNL-NEXT:    movq %rdi, %rax
+; KNL-NEXT:    kmovw %k0, %ecx
+; KNL-NEXT:    testb $1, %cl
+; KNL-NEXT:    cmoveq %rsi, %rax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test14:
 ; SKX:       ## %bb.0:
+; SKX-NEXT:    movq %rdi, %rax
 ; SKX-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
 ; SKX-NEXT:    kshiftrw $4, %k0, %k0
-; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    testb $1, %al
-; SKX-NEXT:    cmoveq %rsi, %rdi
-; SKX-NEXT:    movq %rdi, %rax
+; SKX-NEXT:    kmovd %k0, %ecx
+; SKX-NEXT:    testb $1, %cl
+; SKX-NEXT:    cmoveq %rsi, %rax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %cmpvector_func.i = icmp slt <8 x i64> %a, %b

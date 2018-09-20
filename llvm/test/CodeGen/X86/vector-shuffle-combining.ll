@@ -1624,8 +1624,8 @@ define void @combine_test23(<8 x float> %v, <2 x float>* %ptr) {
 define <4 x float> @combine_test1b(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: combine_test1b:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1,2,0]
 ; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_test1b:
@@ -1640,8 +1640,8 @@ define <4 x float> @combine_test1b(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @combine_test2b(<4 x float> %a, <4 x float> %b) {
 ; SSE2-LABEL: combine_test2b:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0,0]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: combine_test2b:
@@ -1695,8 +1695,8 @@ define <4 x float> @combine_test3b(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @combine_test4b(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: combine_test4b:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
 ; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[2,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_test4b:
@@ -2766,9 +2766,9 @@ entry:
 define <8 x float> @PR22412(<8 x float> %a, <8 x float> %b) {
 ; SSE-LABEL: PR22412:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm3[3,2]
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,0],xmm2[3,2]
 ; SSE-NEXT:    movaps %xmm3, %xmm1
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0],xmm3[3,2]
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,0],xmm2[3,2]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR22412:

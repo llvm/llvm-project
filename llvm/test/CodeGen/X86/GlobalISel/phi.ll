@@ -4,15 +4,18 @@
 define i8 @test_i8(i32 %a, i8 %f, i8 %t) {
 ; ALL-LABEL: test_i8:
 ; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    xorl %eax, %eax
-; ALL-NEXT:    cmpl %eax, %edi
-; ALL-NEXT:    setg %al
-; ALL-NEXT:    testb $1, %al
-; ALL-NEXT:    jne .LBB0_2
-; ALL-NEXT:  # %bb.1: # %cond.false
-; ALL-NEXT:    movl %edx, %esi
-; ALL-NEXT:  .LBB0_2: # %cond.end
+; ALL-NEXT:    xorl %ecx, %ecx
+; ALL-NEXT:    cmpl %ecx, %edi
+; ALL-NEXT:    setg %cl
+; ALL-NEXT:    testb $1, %cl
+; ALL-NEXT:    je .LBB0_2
+; ALL-NEXT:  # %bb.1:
 ; ALL-NEXT:    movl %esi, %eax
+; ALL-NEXT:    # kill: def $al killed $al killed $eax
+; ALL-NEXT:    retq
+; ALL-NEXT:  .LBB0_2: # %cond.false
+; ALL-NEXT:    movl %edx, %eax
+; ALL-NEXT:    # kill: def $al killed $al killed $eax
 ; ALL-NEXT:    retq
 entry:
   %cmp = icmp sgt i32 %a, 0
@@ -32,15 +35,18 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 define i16 @test_i16(i32 %a, i16 %f, i16 %t) {
 ; ALL-LABEL: test_i16:
 ; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    xorl %eax, %eax
-; ALL-NEXT:    cmpl %eax, %edi
-; ALL-NEXT:    setg %al
-; ALL-NEXT:    testb $1, %al
-; ALL-NEXT:    jne .LBB1_2
-; ALL-NEXT:  # %bb.1: # %cond.false
-; ALL-NEXT:    movl %edx, %esi
-; ALL-NEXT:  .LBB1_2: # %cond.end
+; ALL-NEXT:    xorl %ecx, %ecx
+; ALL-NEXT:    cmpl %ecx, %edi
+; ALL-NEXT:    setg %cl
+; ALL-NEXT:    testb $1, %cl
+; ALL-NEXT:    je .LBB1_2
+; ALL-NEXT:  # %bb.1:
 ; ALL-NEXT:    movl %esi, %eax
+; ALL-NEXT:    # kill: def $ax killed $ax killed $eax
+; ALL-NEXT:    retq
+; ALL-NEXT:  .LBB1_2: # %cond.false
+; ALL-NEXT:    movl %edx, %eax
+; ALL-NEXT:    # kill: def $ax killed $ax killed $eax
 ; ALL-NEXT:    retq
 entry:
   %cmp = icmp sgt i32 %a, 0
@@ -60,15 +66,15 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 define i32 @test_i32(i32 %a, i32 %f, i32 %t) {
 ; ALL-LABEL: test_i32:
 ; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    xorl %eax, %eax
-; ALL-NEXT:    cmpl %eax, %edi
-; ALL-NEXT:    setg %al
-; ALL-NEXT:    testb $1, %al
+; ALL-NEXT:    movl %esi, %eax
+; ALL-NEXT:    xorl %ecx, %ecx
+; ALL-NEXT:    cmpl %ecx, %edi
+; ALL-NEXT:    setg %cl
+; ALL-NEXT:    testb $1, %cl
 ; ALL-NEXT:    jne .LBB2_2
 ; ALL-NEXT:  # %bb.1: # %cond.false
-; ALL-NEXT:    movl %edx, %esi
+; ALL-NEXT:    movl %edx, %eax
 ; ALL-NEXT:  .LBB2_2: # %cond.end
-; ALL-NEXT:    movl %esi, %eax
 ; ALL-NEXT:    retq
 entry:
   %cmp = icmp sgt i32 %a, 0
@@ -88,15 +94,15 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 define i64 @test_i64(i32 %a, i64 %f, i64 %t) {
 ; ALL-LABEL: test_i64:
 ; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    xorl %eax, %eax
-; ALL-NEXT:    cmpl %eax, %edi
-; ALL-NEXT:    setg %al
-; ALL-NEXT:    testb $1, %al
+; ALL-NEXT:    movq %rsi, %rax
+; ALL-NEXT:    xorl %ecx, %ecx
+; ALL-NEXT:    cmpl %ecx, %edi
+; ALL-NEXT:    setg %cl
+; ALL-NEXT:    testb $1, %cl
 ; ALL-NEXT:    jne .LBB3_2
 ; ALL-NEXT:  # %bb.1: # %cond.false
-; ALL-NEXT:    movq %rdx, %rsi
+; ALL-NEXT:    movq %rdx, %rax
 ; ALL-NEXT:  .LBB3_2: # %cond.end
-; ALL-NEXT:    movq %rsi, %rax
 ; ALL-NEXT:    retq
 entry:
   %cmp = icmp sgt i32 %a, 0

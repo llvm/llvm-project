@@ -38,6 +38,7 @@ define i8 @test_arg_i8(i8 %a) {
 ; X64-LABEL: test_arg_i8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   ret i8 %a
 }
@@ -51,6 +52,7 @@ define i16 @test_arg_i16(i16 %a) {
 ; X64-LABEL: test_arg_i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   ret i16 %a
 }
@@ -114,8 +116,8 @@ define <8 x i32> @test_v8i32_args(<8 x i32> %arg1, <8 x i32> %arg2) {
 ; X32:       # %bb.0:
 ; X32-NEXT:    subl $12, %esp
 ; X32-NEXT:    .cfi_def_cfa_offset 16
-; X32-NEXT:    movups {{[0-9]+}}(%esp), %xmm1
 ; X32-NEXT:    movaps %xmm2, %xmm0
+; X32-NEXT:    movups {{[0-9]+}}(%esp), %xmm1
 ; X32-NEXT:    addl $12, %esp
 ; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
@@ -257,8 +259,8 @@ define <8 x i32> @test_split_return_callee(<8 x i32> %arg1, <8 x i32> %arg2) {
 ; X32-NEXT:    .cfi_def_cfa_offset 48
 ; X32-NEXT:    movaps %xmm0, (%esp) # 16-byte Spill
 ; X32-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp) # 16-byte Spill
-; X32-NEXT:    movdqu {{[0-9]+}}(%esp), %xmm1
 ; X32-NEXT:    movdqa %xmm2, %xmm0
+; X32-NEXT:    movdqu {{[0-9]+}}(%esp), %xmm1
 ; X32-NEXT:    calll split_return_callee
 ; X32-NEXT:    paddd (%esp), %xmm0 # 16-byte Folded Reload
 ; X32-NEXT:    paddd {{[0-9]+}}(%esp), %xmm1 # 16-byte Folded Reload

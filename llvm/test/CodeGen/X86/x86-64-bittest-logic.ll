@@ -124,8 +124,8 @@ define i64 @xor4(i64 %x) {
 define i64 @and1_optsize(i64 %x) optsize {
 ; CHECK-LABEL: and1_optsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    btrq $31, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btrq $31, %rax
 ; CHECK-NEXT:    retq
   %a = and i64 %x, 18446744071562067967 ; clear bit 31
   ret i64 %a
@@ -134,8 +134,8 @@ define i64 @and1_optsize(i64 %x) optsize {
 define i64 @and2_optsize(i64 %x) optsize {
 ; CHECK-LABEL: and2_optsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    btrq $32, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btrq $32, %rax
 ; CHECK-NEXT:    retq
   %a = and i64 %x, 18446744069414584319 ; clear bit 32
   ret i64 %a
@@ -144,8 +144,8 @@ define i64 @and2_optsize(i64 %x) optsize {
 define i64 @and3_optsize(i64 %x) optsize {
 ; CHECK-LABEL: and3_optsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    btrq $62, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btrq $62, %rax
 ; CHECK-NEXT:    retq
   %a = and i64 %x, 13835058055282163711 ; clear bit 62
   ret i64 %a
@@ -154,8 +154,8 @@ define i64 @and3_optsize(i64 %x) optsize {
 define i64 @and4_optsize(i64 %x) optsize {
 ; CHECK-LABEL: and4_optsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    btrq $63, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btrq $63, %rax
 ; CHECK-NEXT:    retq
   %a = and i64 %x, 9223372036854775807 ; clear bit 63
   ret i64 %a
@@ -164,8 +164,8 @@ define i64 @and4_optsize(i64 %x) optsize {
 define i64 @or1_optsize(i64 %x) optsize {
 ; CHECK-LABEL: or1_optsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    btsq $31, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btsq $31, %rax
 ; CHECK-NEXT:    retq
   %a = or i64 %x, 2147483648 ; set bit 31
   ret i64 %a
@@ -174,8 +174,8 @@ define i64 @or1_optsize(i64 %x) optsize {
 define i64 @or2_optsize(i64 %x) optsize {
 ; CHECK-LABEL: or2_optsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    btsq $32, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btsq $32, %rax
 ; CHECK-NEXT:    retq
   %a = or i64 %x, 4294967296 ; set bit 32
   ret i64 %a
@@ -184,8 +184,8 @@ define i64 @or2_optsize(i64 %x) optsize {
 define i64 @or3_optsize(i64 %x) optsize {
 ; CHECK-LABEL: or3_optsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    btsq $62, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btsq $62, %rax
 ; CHECK-NEXT:    retq
   %a = or i64 %x, 4611686018427387904 ; set bit 62
   ret i64 %a
@@ -194,8 +194,8 @@ define i64 @or3_optsize(i64 %x) optsize {
 define i64 @or4_optsize(i64 %x) optsize {
 ; CHECK-LABEL: or4_optsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    btsq $63, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btsq $63, %rax
 ; CHECK-NEXT:    retq
   %a = or i64 %x, 9223372036854775808 ; set bit 63
   ret i64 %a
@@ -204,8 +204,8 @@ define i64 @or4_optsize(i64 %x) optsize {
 define i64 @xor1_optsize(i64 %x) optsize {
 ; CHECK-LABEL: xor1_optsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    btcq $31, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btcq $31, %rax
 ; CHECK-NEXT:    retq
   %a = xor i64 %x, 2147483648 ; toggle bit 31
   ret i64 %a
@@ -214,8 +214,8 @@ define i64 @xor1_optsize(i64 %x) optsize {
 define i64 @xor2_optsize(i64 %x) optsize {
 ; CHECK-LABEL: xor2_optsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    btcq $32, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btcq $32, %rax
 ; CHECK-NEXT:    retq
   %a = xor i64 %x, 4294967296 ; toggle bit 32
   ret i64 %a
@@ -224,8 +224,8 @@ define i64 @xor2_optsize(i64 %x) optsize {
 define i64 @xor3_optsize(i64 %x) optsize {
 ; CHECK-LABEL: xor3_optsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    btcq $62, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btcq $62, %rax
 ; CHECK-NEXT:    retq
   %a = xor i64 %x, 4611686018427387904 ; toggle bit 62
   ret i64 %a
@@ -234,8 +234,8 @@ define i64 @xor3_optsize(i64 %x) optsize {
 define i64 @xor4_optsize(i64 %x) optsize {
 ; CHECK-LABEL: xor4_optsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    btcq $63, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    btcq $63, %rax
 ; CHECK-NEXT:    retq
   %a = xor i64 %x, 9223372036854775808 ; toggle bit 63
   ret i64 %a

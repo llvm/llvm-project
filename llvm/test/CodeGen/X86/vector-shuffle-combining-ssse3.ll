@@ -574,8 +574,8 @@ define <16 x i8> @combine_unpckl_arg0_pshufb(<16 x i8> %a0, <16 x i8> %a1) {
 define <16 x i8> @combine_unpckl_arg1_pshufb(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE-LABEL: combine_unpckl_arg1_pshufb:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[0],zero,zero,zero,xmm1[0],zero,zero,zero,xmm1[0],zero,zero,zero
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_unpckl_arg1_pshufb:

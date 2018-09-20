@@ -20,8 +20,8 @@ define i1 @pcmpestri_reg_eq_i8(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32
 ;
 ; X64-LABEL: pcmpestri_reg_eq_i8:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    pcmpestri $24, %xmm1, %xmm0
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
@@ -42,8 +42,8 @@ define i32 @pcmpestri_reg_idx_i8(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i
 ;
 ; X64-LABEL: pcmpestri_reg_idx_i8:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    pcmpestri $24, %xmm1, %xmm0
 ; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
@@ -81,8 +81,8 @@ define i32 @pcmpestri_reg_diff_i8(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, 
 ;
 ; X64-LABEL: pcmpestri_reg_diff_i8:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    pcmpestri $24, %xmm1, %xmm0
 ; X64-NEXT:    # kill: def $ecx killed $ecx def $rcx
 ; X64-NEXT:    cmpl $16, %ecx
@@ -133,8 +133,8 @@ define i1 @pcmpestri_mem_eq_i8(i8* %lhs_ptr, i32 %lhs_len, i8* %rhs_ptr, i32 %rh
 ; X64-LABEL: pcmpestri_mem_eq_i8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rdx, %r8
-; X64-NEXT:    movdqu (%rdi), %xmm0
 ; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    movdqu (%rdi), %xmm0
 ; X64-NEXT:    movl %ecx, %edx
 ; X64-NEXT:    pcmpestri $24, (%r8), %xmm0
 ; X64-NEXT:    setae %al
@@ -166,8 +166,8 @@ define i32 @pcmpestri_mem_idx_i8(i8* %lhs_ptr, i32 %lhs_len, i8* %rhs_ptr, i32 %
 ; X64-LABEL: pcmpestri_mem_idx_i8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rdx, %r8
-; X64-NEXT:    movdqu (%rdi), %xmm0
 ; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    movdqu (%rdi), %xmm0
 ; X64-NEXT:    movl %ecx, %edx
 ; X64-NEXT:    pcmpestri $24, (%r8), %xmm0
 ; X64-NEXT:    movl %ecx, %eax
@@ -216,9 +216,9 @@ define i32 @pcmpestri_mem_diff_i8(i8* %lhs_ptr, i32 %lhs_len, i8* %rhs_ptr, i32 
 ;
 ; X64-LABEL: pcmpestri_mem_diff_i8:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    movdqu (%rdi), %xmm1
 ; X64-NEXT:    movdqu (%rdx), %xmm0
-; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    movl %ecx, %edx
 ; X64-NEXT:    pcmpestri $24, %xmm0, %xmm1
 ; X64-NEXT:    # kill: def $ecx killed $ecx def $rcx
@@ -268,8 +268,8 @@ define i1 @pcmpestri_reg_eq_i16(<8 x i16> %lhs, i32 %lhs_len, <8 x i16> %rhs, i3
 ;
 ; X64-LABEL: pcmpestri_reg_eq_i16:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    pcmpestri $24, %xmm1, %xmm0
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
@@ -292,8 +292,8 @@ define i32 @pcmpestri_reg_idx_i16(<8 x i16> %lhs, i32 %lhs_len, <8 x i16> %rhs, 
 ;
 ; X64-LABEL: pcmpestri_reg_idx_i16:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    pcmpestri $24, %xmm1, %xmm0
 ; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
@@ -334,8 +334,8 @@ define i32 @pcmpestri_reg_diff_i16(<8 x i16> %lhs, i32 %lhs_len, <8 x i16> %rhs,
 ;
 ; X64-LABEL: pcmpestri_reg_diff_i16:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    pcmpestri $24, %xmm1, %xmm0
 ; X64-NEXT:    # kill: def $ecx killed $ecx def $rcx
 ; X64-NEXT:    cmpl $16, %ecx
@@ -388,8 +388,8 @@ define i1 @pcmpestri_mem_eq_i16(i16* %lhs_ptr, i32 %lhs_len, i16* %rhs_ptr, i32 
 ; X64-LABEL: pcmpestri_mem_eq_i16:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rdx, %r8
-; X64-NEXT:    movdqu (%rdi), %xmm0
 ; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    movdqu (%rdi), %xmm0
 ; X64-NEXT:    movl %ecx, %edx
 ; X64-NEXT:    pcmpestri $25, (%r8), %xmm0
 ; X64-NEXT:    setae %al
@@ -423,8 +423,8 @@ define i32 @pcmpestri_mem_idx_i16(i16* %lhs_ptr, i32 %lhs_len, i16* %rhs_ptr, i3
 ; X64-LABEL: pcmpestri_mem_idx_i16:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rdx, %r8
-; X64-NEXT:    movdqu (%rdi), %xmm0
 ; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    movdqu (%rdi), %xmm0
 ; X64-NEXT:    movl %ecx, %edx
 ; X64-NEXT:    pcmpestri $25, (%r8), %xmm0
 ; X64-NEXT:    movl %ecx, %eax
@@ -476,9 +476,9 @@ define i32 @pcmpestri_mem_diff_i16(i16* %lhs_ptr, i32 %lhs_len, i16* %rhs_ptr, i
 ;
 ; X64-LABEL: pcmpestri_mem_diff_i16:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    movdqu (%rdi), %xmm1
 ; X64-NEXT:    movdqu (%rdx), %xmm0
-; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    movl %ecx, %edx
 ; X64-NEXT:    pcmpestri $25, %xmm0, %xmm1
 ; X64-NEXT:    # kill: def $ecx killed $ecx def $rcx
@@ -989,13 +989,13 @@ define void @pcmpestr_index_flag(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rcx, %r8
 ; X64-NEXT:    movq %rdx, %r9
-; X64-NEXT:    xorl %r10d, %r10d
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %esi, %esi
 ; X64-NEXT:    pcmpestri $24, %xmm1, %xmm0
-; X64-NEXT:    setb %r10b
+; X64-NEXT:    setb %sil
 ; X64-NEXT:    movl %ecx, (%r9)
-; X64-NEXT:    movl %r10d, (%r8)
+; X64-NEXT:    movl %esi, (%r8)
 ; X64-NEXT:    retq
 entry:
   %flag = call i32 @llvm.x86.sse42.pcmpestric128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
@@ -1026,13 +1026,13 @@ define void @pcmpestr_mask_flag(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i3
 ; X64-LABEL: pcmpestr_mask_flag:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rdx, %r8
-; X64-NEXT:    xorl %r9d, %r9d
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %esi, %esi
 ; X64-NEXT:    pcmpestrm $24, %xmm1, %xmm0
-; X64-NEXT:    setb %r9b
+; X64-NEXT:    setb %sil
 ; X64-NEXT:    movdqa %xmm0, (%r8)
-; X64-NEXT:    movl %r9d, (%rcx)
+; X64-NEXT:    movl %esi, (%rcx)
 ; X64-NEXT:    retq
 entry:
   %flag = call i32 @llvm.x86.sse42.pcmpestric128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
@@ -1064,9 +1064,9 @@ define void @pcmpestr_mask_index(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rcx, %r8
 ; X64-NEXT:    movq %rdx, %r9
-; X64-NEXT:    movdqa %xmm0, %xmm2
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movdqa %xmm0, %xmm2
 ; X64-NEXT:    pcmpestrm $24, %xmm1, %xmm0
 ; X64-NEXT:    pcmpestri $24, %xmm1, %xmm2
 ; X64-NEXT:    movdqa %xmm0, (%r9)
@@ -1110,9 +1110,9 @@ define void @pcmpestr_mask_index_flag(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %r
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rcx, %r9
 ; X64-NEXT:    movq %rdx, %r10
-; X64-NEXT:    movdqa %xmm0, %xmm2
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movdqa %xmm0, %xmm2
 ; X64-NEXT:    pcmpestrm $24, %xmm1, %xmm0
 ; X64-NEXT:    xorl %esi, %esi
 ; X64-NEXT:    pcmpestri $24, %xmm1, %xmm2
@@ -1321,9 +1321,9 @@ define i32 @pcmpestri_nontemporal(<16 x i8> %lhs, i32 %lhs_len, <16 x i8>* %rhsp
 ;
 ; X64-LABEL: pcmpestri_nontemporal:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movntdqa (%rsi), %xmm1
 ; X64-NEXT:    xorl %esi, %esi
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    pcmpestri $24, %xmm1, %xmm0
 ; X64-NEXT:    setb %sil
 ; X64-NEXT:    movl %esi, %eax

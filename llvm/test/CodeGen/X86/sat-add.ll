@@ -10,13 +10,14 @@
 define i8 @unsigned_sat_constant_i8_using_min(i8 %x) {
 ; ANY-LABEL: unsigned_sat_constant_i8_using_min:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    cmpb $-43, %dil
+; ANY-NEXT:    movl %edi, %eax
+; ANY-NEXT:    cmpb $-43, %al
 ; ANY-NEXT:    jb .LBB0_2
 ; ANY-NEXT:  # %bb.1:
-; ANY-NEXT:    movb $-43, %dil
+; ANY-NEXT:    movb $-43, %al
 ; ANY-NEXT:  .LBB0_2:
-; ANY-NEXT:    addb $42, %dil
-; ANY-NEXT:    movl %edi, %eax
+; ANY-NEXT:    addb $42, %al
+; ANY-NEXT:    # kill: def $al killed $al killed $eax
 ; ANY-NEXT:    retq
   %c = icmp ult i8 %x, -43
   %s = select i1 %c, i8 %x, i8 -43
@@ -190,15 +191,16 @@ define i64 @unsigned_sat_constant_i64_using_cmp_notval(i64 %x) {
 define i8 @unsigned_sat_variable_i8_using_min(i8 %x, i8 %y) {
 ; ANY-LABEL: unsigned_sat_variable_i8_using_min:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movl %esi, %eax
-; ANY-NEXT:    notb %al
-; ANY-NEXT:    cmpb %al, %dil
+; ANY-NEXT:    movl %edi, %eax
+; ANY-NEXT:    movl %esi, %ecx
+; ANY-NEXT:    notb %cl
+; ANY-NEXT:    cmpb %cl, %al
 ; ANY-NEXT:    jb .LBB12_2
 ; ANY-NEXT:  # %bb.1:
-; ANY-NEXT:    movl %eax, %edi
+; ANY-NEXT:    movl %ecx, %eax
 ; ANY-NEXT:  .LBB12_2:
-; ANY-NEXT:    addb %sil, %dil
-; ANY-NEXT:    movl %edi, %eax
+; ANY-NEXT:    addb %sil, %al
+; ANY-NEXT:    # kill: def $al killed $al killed $eax
 ; ANY-NEXT:    retq
   %noty = xor i8 %y, -1
   %c = icmp ult i8 %x, %noty

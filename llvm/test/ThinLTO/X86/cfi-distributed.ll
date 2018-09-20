@@ -12,21 +12,33 @@
 ; RUN:   -r=%t1.o,_ZTV1B, \
 ; RUN:   -r=%t1.o,_ZTV1B,px \
 ; RUN:   -r=%t1.o,test2, \
+; RUN:   -r=%t1.o,test3, \
+; RUN:   -r=%t2.o,test1, \
+; RUN:   -r=%t2.o,test3,p \
 ; RUN:   -r=%t2.o,test2,px \
 ; RUN:   -r=%t2.o,_ZTV1B2, \
-; RUN:   -r=%t2.o,_ZTV1B2,px
+; RUN:   -r=%t2.o,_ZTV1B2,px \
+; RUN:   -r=%t2.o,_ZTV1B3, \
+; RUN:   -r=%t2.o,_ZTV1B3,px
 
-; Since @test calls @test2, the latter should be imported here and the
-; first index file should reference both type ids.
+; Check that we have all needed type IDs.
 ; RUN: llvm-dis %t1.o.thinlto.bc -o - | FileCheck %s --check-prefix=INDEX1
+
+; Used by @llvm.type.test in @test
 ; INDEX1: typeid: (name: "_ZTS1A"
+
+; Used by @llvm.type.test in @test2 imported to be called from @test
 ; INDEX1: typeid: (name: "_ZTS1A2"
 
-; The second index file, corresponding to @test2, should only contain the
-; typeid for _ZTS1A.
+; Used by @llvm.type.test in @test1 imported to be called by alias
+; @test3 from @test
+; INDEX1: typeid: (name: "_ZTS1A3"
+
+; The second index file, should only contain the type IDs used in @test1 and @test2.
 ; RUN: llvm-dis %t2.o.thinlto.bc -o - | FileCheck %s --check-prefix=INDEX2
 ; INDEX2-NOT: typeid: (name: "_ZTS1A"
 ; INDEX2: typeid: (name: "_ZTS1A2"
+; INDEX2: typeid: (name: "_ZTS1A3"
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
@@ -39,6 +51,7 @@ target triple = "x86_64-grtev4-linux-gnu"
 define void @test(i8* %b) {
 entry:
   tail call void @test2(i8* %b)
+  tail call void @test3(i8* %b)
   %0 = bitcast i8* %b to i8**
   %vtable2 = load i8*, i8** %0
   %1 = tail call i1 @llvm.type.test(i8* %vtable2, metadata !"_ZTS1A")
@@ -53,6 +66,7 @@ cont:
 }
 
 declare void @test2(i8*)
+declare void @test3(i8*)
 declare i1 @llvm.type.test(i8*, metadata)
 declare void @llvm.trap()
 

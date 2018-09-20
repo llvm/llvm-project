@@ -13,7 +13,6 @@ void non_iso_warning_test(__int32 i32, __int64 i64, wchar_t c, void *p) {
   printf("%I32d", i32); // expected-warning{{'I32' length modifier is not supported by ISO C}}
   printf("%I64d", i64); // expected-warning{{'I64' length modifier is not supported by ISO C}}
   printf("%wc", c); // expected-warning{{'w' length modifier is not supported by ISO C}}
-  // expected-warning@-1{{format specifies type 'wint_t' (aka 'unsigned short') but the argument has type 'wchar_t' (aka 'unsigned short')}}
   printf("%Z", p); // expected-warning{{'Z' conversion specifier is not supported by ISO C}}
 }
 
@@ -36,7 +35,7 @@ void unsigned_test() {
 }
 
 void w_test(wchar_t c, wchar_t *s) {
-  printf("%wc", c); // expected-warning{{format specifies type 'wint_t' (aka 'unsigned short') but the argument has type 'wchar_t' (aka 'unsigned short')}}
+  printf("%wc", c);
   printf("%wC", c);
   printf("%C", c);
   printf("%ws", s);

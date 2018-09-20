@@ -336,17 +336,17 @@ define i64 @mul1(i64 %n, i64* nocapture %z, i64* nocapture %x, i64 %y) nounwind 
 ; X64-BMI-NEXT:    movq %rcx, %r8
 ; X64-BMI-NEXT:    movq %rdx, %r9
 ; X64-BMI-NEXT:    xorl %r10d, %r10d
-; X64-BMI-NEXT:    xorl %eax, %eax
+; X64-BMI-NEXT:    xorl %ecx, %ecx
 ; X64-BMI-NEXT:    .p2align 4, 0x90
 ; X64-BMI-NEXT:  .LBB1_2: # %for.body
 ; X64-BMI-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-BMI-NEXT:    movq %r8, %rdx
-; X64-BMI-NEXT:    mulxq (%r9,%rax,8), %rcx, %rdx
-; X64-BMI-NEXT:    addq %r10, %rcx
+; X64-BMI-NEXT:    mulxq (%r9,%rcx,8), %rax, %rdx
+; X64-BMI-NEXT:    addq %r10, %rax
 ; X64-BMI-NEXT:    adcq $0, %rdx
-; X64-BMI-NEXT:    movq %rcx, (%rsi,%rax,8)
-; X64-BMI-NEXT:    incq %rax
-; X64-BMI-NEXT:    cmpq %rax, %rdi
+; X64-BMI-NEXT:    movq %rax, (%rsi,%rcx,8)
+; X64-BMI-NEXT:    incq %rcx
+; X64-BMI-NEXT:    cmpq %rcx, %rdi
 ; X64-BMI-NEXT:    movq %rdx, %r10
 ; X64-BMI-NEXT:    jne .LBB1_2
 ; X64-BMI-NEXT:  .LBB1_3: # %for.end

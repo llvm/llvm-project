@@ -58,6 +58,7 @@ struct PGOOptions {
 class PassBuilder {
   TargetMachine *TM;
   Optional<PGOOptions> PGOOpt;
+  PassInstrumentationCallbacks *PIC;
 
 public:
   /// A struct to capture parsed pass pipeline names.
@@ -172,8 +173,9 @@ public:
   };
 
   explicit PassBuilder(TargetMachine *TM = nullptr,
-                       Optional<PGOOptions> PGOOpt = None)
-      : TM(TM), PGOOpt(PGOOpt) {}
+                       Optional<PGOOptions> PGOOpt = None,
+                       PassInstrumentationCallbacks *PIC = nullptr)
+      : TM(TM), PGOOpt(PGOOpt), PIC(PIC) {}
 
   /// Cross register the analysis managers through their proxies.
   ///

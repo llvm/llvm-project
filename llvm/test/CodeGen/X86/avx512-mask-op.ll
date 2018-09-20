@@ -9,8 +9,9 @@
 define i16 @mask16(i16 %x) {
 ; CHECK-LABEL: mask16:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    notl %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    notl %eax
+; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 ;
 ; X86-LABEL: mask16:
@@ -47,8 +48,9 @@ define i32 @mask16_zext(i16 %x) {
 define i8 @mask8(i8 %x) {
 ; CHECK-LABEL: mask8:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    notb %dil
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    notb %al
+; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
 ;
 ; X86-LABEL: mask8:
@@ -149,10 +151,11 @@ define i16 @mand16(i16 %x, i16 %y) {
 ; CHECK-LABEL: mand16:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    xorl %esi, %eax
-; CHECK-NEXT:    andl %esi, %edi
-; CHECK-NEXT:    orl %eax, %edi
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    xorl %esi, %ecx
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 ;
 ; X86-LABEL: mand16:

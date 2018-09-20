@@ -61,14 +61,14 @@ define void @t3(<2 x double>* %a0) {
 ;
 ; X64-SSSE3-LABEL: t3:
 ; X64-SSSE3:       # %bb.0: # %bb
-; X64-SSSE3-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
-; X64-SSSE3-NEXT:    movlpd %xmm0, (%rax)
+; X64-SSSE3-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X64-SSSE3-NEXT:    movsd %xmm0, (%rax)
 ; X64-SSSE3-NEXT:    retq
 ;
 ; X64-AVX-LABEL: t3:
 ; X64-AVX:       # %bb.0: # %bb
-; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; X64-AVX-NEXT:    vmovlpd %xmm0, (%rax)
+; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX-NEXT:    vmovsd %xmm0, (%rax)
 ; X64-AVX-NEXT:    retq
 bb:
   %tmp13 = load <2 x double>, <2 x double>* %a0, align 1
@@ -93,7 +93,8 @@ define i64 @t4(<2 x double>* %a) {
 ;
 ; X64-SSSE3-LABEL: t4:
 ; X64-SSSE3:       # %bb.0:
-; X64-SSSE3-NEXT:    movq (%rdi), %rax
+; X64-SSSE3-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X64-SSSE3-NEXT:    movq %xmm0, %rax
 ; X64-SSSE3-NEXT:    retq
 ;
 ; X64-AVX-LABEL: t4:

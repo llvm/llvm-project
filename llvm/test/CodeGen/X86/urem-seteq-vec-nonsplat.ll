@@ -431,12 +431,9 @@ define <4 x i32> @test_urem_one_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm4[2,3],xmm1[4,5],xmm4[6,7]
 ; CHECK-SSE41-NEXT:    movdqa %xmm1, %xmm2
-; CHECK-SSE41-NEXT:    psrld $2, %xmm2
-; CHECK-SSE41-NEXT:    movdqa %xmm1, %xmm3
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm2[4,5,6,7]
-; CHECK-SSE41-NEXT:    psrld $3, %xmm1
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm2[0,1,2,3],xmm1[4,5,6,7]
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
+; CHECK-SSE41-NEXT:    psrld $3, %xmm2
+; CHECK-SSE41-NEXT:    psrld $2, %xmm1
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5],xmm1[6,7]
 ; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3],xmm1[4,5,6,7]
 ; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm1
 ; CHECK-SSE41-NEXT:    psubd %xmm1, %xmm0
@@ -456,11 +453,9 @@ define <4 x i32> @test_urem_one_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; CHECK-AVX1-NEXT:    vpsrld $2, %xmm1, %xmm2
-; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm1[0,1,2,3],xmm2[4,5,6,7]
-; CHECK-AVX1-NEXT:    vpsrld $3, %xmm1, %xmm1
-; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3],xmm1[4,5,6,7]
-; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
+; CHECK-AVX1-NEXT:    vpsrld $3, %xmm1, %xmm2
+; CHECK-AVX1-NEXT:    vpsrld $2, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5],xmm1[6,7]
 ; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3],xmm1[4,5,6,7]
 ; CHECK-AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0

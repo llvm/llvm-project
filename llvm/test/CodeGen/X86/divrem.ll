@@ -101,6 +101,7 @@ define void @si16(i16 %x, i16 %y, i16* %p, i16* %q) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdx, %r8
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    cwtd
 ; X64-NEXT:    idivw %si
 ; X64-NEXT:    movw %ax, (%r8)
@@ -131,6 +132,7 @@ define void @si8(i8 %x, i8 %y, i8* %p, i8* %q) nounwind {
 ; X64-LABEL: si8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    cbtw
 ; X64-NEXT:    idivb %sil
 ; X64-NEXT:    movsbl %ah, %esi
@@ -182,8 +184,8 @@ define void @ui64(i64 %x, i64 %y, i64* %p, i64* %q) nounwind {
 ; X64-LABEL: ui64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdx, %r8
-; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divq %rsi
 ; X64-NEXT:    movq %rax, (%r8)
 ; X64-NEXT:    movq %rdx, (%rcx)
@@ -212,8 +214,8 @@ define void @ui32(i32 %x, i32 %y, i32* %p, i32* %q) nounwind {
 ; X64-LABEL: ui32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdx, %r8
-; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divl %esi
 ; X64-NEXT:    movl %eax, (%r8)
 ; X64-NEXT:    movl %edx, (%rcx)
@@ -242,8 +244,9 @@ define void @ui16(i16 %x, i16 %y, i16* %p, i16* %q) nounwind {
 ; X64-LABEL: ui16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdx, %r8
-; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    divw %si
 ; X64-NEXT:    movw %ax, (%r8)
 ; X64-NEXT:    movw %dx, (%rcx)

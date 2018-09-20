@@ -1071,6 +1071,7 @@ static uint8_t getBitcodeMachineKind(StringRef Path, const Triple &T) {
   case Triple::ppc:
     return EM_PPC;
   case Triple::ppc64:
+  case Triple::ppc64le:
     return EM_PPC64;
   case Triple::x86:
     return T.isOSIAMCU() ? EM_IAMCU : EM_386;

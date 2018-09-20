@@ -233,16 +233,16 @@ define i32 @vectest512(<16 x i32> %input) {
 define i32 @vecsel128(<4 x i32> %input, i32 %a, i32 %b) {
 ; SSE41-LABEL: vecsel128:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    ptest %xmm0, %xmm0
-; SSE41-NEXT:    cmovel %esi, %edi
 ; SSE41-NEXT:    movl %edi, %eax
+; SSE41-NEXT:    ptest %xmm0, %xmm0
+; SSE41-NEXT:    cmovel %esi, %eax
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: vecsel128:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vptest %xmm0, %xmm0
-; AVX-NEXT:    cmovel %esi, %edi
 ; AVX-NEXT:    movl %edi, %eax
+; AVX-NEXT:    vptest %xmm0, %xmm0
+; AVX-NEXT:    cmovel %esi, %eax
 ; AVX-NEXT:    retq
   %t0 = bitcast <4 x i32> %input to i128
   %t1 = icmp ne i128 %t0, 0
@@ -253,17 +253,17 @@ define i32 @vecsel128(<4 x i32> %input, i32 %a, i32 %b) {
 define i32 @vecsel256(<8 x i32> %input, i32 %a, i32 %b) {
 ; SSE41-LABEL: vecsel256:
 ; SSE41:       # %bb.0:
+; SSE41-NEXT:    movl %edi, %eax
 ; SSE41-NEXT:    por %xmm1, %xmm0
 ; SSE41-NEXT:    ptest %xmm0, %xmm0
-; SSE41-NEXT:    cmovel %esi, %edi
-; SSE41-NEXT:    movl %edi, %eax
+; SSE41-NEXT:    cmovel %esi, %eax
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: vecsel256:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vptest %ymm0, %ymm0
-; AVX-NEXT:    cmovel %esi, %edi
 ; AVX-NEXT:    movl %edi, %eax
+; AVX-NEXT:    vptest %ymm0, %ymm0
+; AVX-NEXT:    cmovel %esi, %eax
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
   %t0 = bitcast <8 x i32> %input to i256
@@ -275,45 +275,45 @@ define i32 @vecsel256(<8 x i32> %input, i32 %a, i32 %b) {
 define i32 @vecsel512(<16 x i32> %input, i32 %a, i32 %b) {
 ; SSE41-LABEL: vecsel512:
 ; SSE41:       # %bb.0:
+; SSE41-NEXT:    movl %edi, %eax
 ; SSE41-NEXT:    por %xmm3, %xmm1
 ; SSE41-NEXT:    por %xmm2, %xmm1
 ; SSE41-NEXT:    por %xmm0, %xmm1
 ; SSE41-NEXT:    ptest %xmm1, %xmm1
-; SSE41-NEXT:    cmovel %esi, %edi
-; SSE41-NEXT:    movl %edi, %eax
+; SSE41-NEXT:    cmovel %esi, %eax
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: vecsel512:
 ; AVX1:       # %bb.0:
+; AVX1-NEXT:    movl %edi, %eax
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vptest %ymm0, %ymm0
-; AVX1-NEXT:    cmovel %esi, %edi
-; AVX1-NEXT:    movl %edi, %eax
+; AVX1-NEXT:    cmovel %esi, %eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: vecsel512:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
-; AVX512-NEXT:    vmovq %xmm1, %rax
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX512-NEXT:    vmovq %xmm2, %rcx
-; AVX512-NEXT:    orq %rax, %rcx
-; AVX512-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
-; AVX512-NEXT:    vmovq %xmm3, %rax
-; AVX512-NEXT:    orq %rcx, %rax
-; AVX512-NEXT:    vmovq %xmm0, %rcx
-; AVX512-NEXT:    orq %rax, %rcx
-; AVX512-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX512-NEXT:    vpextrq $1, %xmm2, %rdx
-; AVX512-NEXT:    orq %rax, %rdx
-; AVX512-NEXT:    vpextrq $1, %xmm3, %rax
-; AVX512-NEXT:    orq %rdx, %rax
-; AVX512-NEXT:    vpextrq $1, %xmm0, %rdx
-; AVX512-NEXT:    orq %rax, %rdx
-; AVX512-NEXT:    orq %rcx, %rdx
-; AVX512-NEXT:    cmovel %esi, %edi
 ; AVX512-NEXT:    movl %edi, %eax
+; AVX512-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
+; AVX512-NEXT:    vmovq %xmm1, %rcx
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX512-NEXT:    vmovq %xmm2, %rdx
+; AVX512-NEXT:    orq %rcx, %rdx
+; AVX512-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
+; AVX512-NEXT:    vmovq %xmm3, %rcx
+; AVX512-NEXT:    orq %rdx, %rcx
+; AVX512-NEXT:    vmovq %xmm0, %rdx
+; AVX512-NEXT:    orq %rcx, %rdx
+; AVX512-NEXT:    vpextrq $1, %xmm1, %rcx
+; AVX512-NEXT:    vpextrq $1, %xmm2, %rdi
+; AVX512-NEXT:    orq %rcx, %rdi
+; AVX512-NEXT:    vpextrq $1, %xmm3, %rcx
+; AVX512-NEXT:    orq %rdi, %rcx
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rdi
+; AVX512-NEXT:    orq %rcx, %rdi
+; AVX512-NEXT:    orq %rdx, %rdi
+; AVX512-NEXT:    cmovel %esi, %eax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %t0 = bitcast <16 x i32> %input to i512

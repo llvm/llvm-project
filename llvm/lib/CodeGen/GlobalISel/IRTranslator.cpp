@@ -279,7 +279,12 @@ bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U,
   unsigned Op0 = getOrCreateVReg(*U.getOperand(0));
   unsigned Op1 = getOrCreateVReg(*U.getOperand(1));
   unsigned Res = getOrCreateVReg(U);
-  MIRBuilder.buildInstr(Opcode).addDef(Res).addUse(Op0).addUse(Op1);
+  auto FBinOp = MIRBuilder.buildInstr(Opcode).addDef(Res).addUse(Op0).addUse(Op1);
+  if (isa<Instruction>(U)) {
+    MachineInstr *FBinOpMI = FBinOp.getInstr();
+    const Instruction &I = cast<Instruction>(U);
+    FBinOpMI->copyIRFlags(I);
+  }
   return true;
 }
 

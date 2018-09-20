@@ -868,6 +868,15 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
 
     if (Flags.hasAllowReassociation())
       MI->setFlag(MachineInstr::MIFlag::FmReassoc);
+
+    if (Flags.hasNoUnsignedWrap())
+      MI->setFlag(MachineInstr::MIFlag::NoUWrap);
+
+    if (Flags.hasNoSignedWrap())
+      MI->setFlag(MachineInstr::MIFlag::NoSWrap);
+
+    if (Flags.hasExact())
+      MI->setFlag(MachineInstr::MIFlag::IsExact);
   }
 
   // Emit all of the actual operands of this instruction, adding them to the

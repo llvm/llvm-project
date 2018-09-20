@@ -11901,7 +11901,8 @@ static SDValue combineBVOfConsecutiveLoads(SDNode *N, SelectionDAG &DAG) {
     IsRoundOfExtLoad = LD->getExtensionType() == ISD::EXTLOAD;
   }
   // Not a build vector of (possibly fp_rounded) loads.
-  if (!IsRoundOfExtLoad && FirstInput.getOpcode() != ISD::LOAD)
+  if ((!IsRoundOfExtLoad && FirstInput.getOpcode() != ISD::LOAD) ||
+      N->getNumOperands() == 1)
     return SDValue();
 
   for (int i = 1, e = N->getNumOperands(); i < e; ++i) {

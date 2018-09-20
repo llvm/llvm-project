@@ -947,16 +947,16 @@ define <8 x double> @test_broadcast_vaddpd(<8 x double> %i, double* %j) nounwind
 define <8 x double> @test_mask_broadcast_vaddpd(<8 x double> %dst, <8 x double> %i, double* %j, <8 x i64> %mask1) nounwind {
 ; GENERIC-LABEL: test_mask_broadcast_vaddpd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vptestmq %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vaddpd (%rdi){1to8}, %zmm1, %zmm1 {%k1} # sched: [10:1.00]
 ; GENERIC-NEXT:    vmovapd %zmm1, %zmm0 # sched: [1:1.00]
+; GENERIC-NEXT:    vptestmq %zmm2, %zmm2, %k1 # sched: [1:0.33]
+; GENERIC-NEXT:    vaddpd (%rdi){1to8}, %zmm1, %zmm0 {%k1} # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_mask_broadcast_vaddpd:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vptestmq %zmm2, %zmm2, %k1 # sched: [3:1.00]
-; SKX-NEXT:    vaddpd (%rdi){1to8}, %zmm1, %zmm1 {%k1} # sched: [11:0.50]
 ; SKX-NEXT:    vmovapd %zmm1, %zmm0 # sched: [1:0.33]
+; SKX-NEXT:    vptestmq %zmm2, %zmm2, %k1 # sched: [3:1.00]
+; SKX-NEXT:    vaddpd (%rdi){1to8}, %zmm1, %zmm0 {%k1} # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %mask = icmp ne <8 x i64> %mask1, zeroinitializer
   %tmp = load double, double* %j
@@ -6669,14 +6669,16 @@ define <8 x double> @mov_test47(i8 * %addr, <8 x double> %mask1) {
 define i16 @mask16(i16 %x) {
 ; GENERIC-LABEL: mask16:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    notl %edi # sched: [1:0.33]
 ; GENERIC-NEXT:    movl %edi, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    notl %eax # sched: [1:0.33]
+; GENERIC-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mask16:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    notl %edi # sched: [1:0.25]
 ; SKX-NEXT:    movl %edi, %eax # sched: [1:0.25]
+; SKX-NEXT:    notl %eax # sched: [1:0.25]
+; SKX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %m0 = bitcast i16 %x to <16 x i1>
   %m1 = xor <16 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
@@ -6706,14 +6708,16 @@ define i32 @mask16_zext(i16 %x) {
 define i8 @mask8(i8 %x) {
 ; GENERIC-LABEL: mask8:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    notb %dil # sched: [1:0.33]
 ; GENERIC-NEXT:    movl %edi, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    notb %al # sched: [1:0.33]
+; GENERIC-NEXT:    # kill: def $al killed $al killed $eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mask8:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    notb %dil # sched: [1:0.25]
 ; SKX-NEXT:    movl %edi, %eax # sched: [1:0.25]
+; SKX-NEXT:    notb %al # sched: [1:0.25]
+; SKX-NEXT:    # kill: def $al killed $al killed $eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = xor <8 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
@@ -6788,19 +6792,21 @@ define i16 @mand16(i16 %x, i16 %y) {
 ; GENERIC-LABEL: mand16:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movl %edi, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    xorl %esi, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    andl %esi, %edi # sched: [1:0.33]
-; GENERIC-NEXT:    orl %eax, %edi # sched: [1:0.33]
-; GENERIC-NEXT:    movl %edi, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    movl %edi, %ecx # sched: [1:0.33]
+; GENERIC-NEXT:    xorl %esi, %ecx # sched: [1:0.33]
+; GENERIC-NEXT:    andl %esi, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mand16:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    movl %edi, %eax # sched: [1:0.25]
-; SKX-NEXT:    xorl %esi, %eax # sched: [1:0.25]
-; SKX-NEXT:    andl %esi, %edi # sched: [1:0.25]
-; SKX-NEXT:    orl %eax, %edi # sched: [1:0.25]
-; SKX-NEXT:    movl %edi, %eax # sched: [1:0.25]
+; SKX-NEXT:    movl %edi, %ecx # sched: [1:0.25]
+; SKX-NEXT:    xorl %esi, %ecx # sched: [1:0.25]
+; SKX-NEXT:    andl %esi, %eax # sched: [1:0.25]
+; SKX-NEXT:    orl %ecx, %eax # sched: [1:0.25]
+; SKX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %ma = bitcast i16 %x to <16 x i1>
   %mb = bitcast i16 %y to <16 x i1>

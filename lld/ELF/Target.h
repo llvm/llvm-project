@@ -171,6 +171,15 @@ static inline std::string getErrorLocation(const uint8_t *Loc) {
   return getErrorPlace(Loc).Loc;
 }
 
+// In the PowerPC64 Elf V2 abi a function can have 2 entry points.  The first is
+// a global entry point (GEP) which typically is used to intiailzie the TOC
+// pointer in general purpose register 2.  The second is a local entry
+// point (LEP) which bypasses the TOC pointer initialization code. The
+// offset between GEP and LEP is encoded in a function's st_other flags.
+// This function will return the offset (in bytes) from the global entry-point
+// to the local entry-point.
+unsigned getPPC64GlobalEntryToLocalEntryOffset(uint8_t StOther);
+
 uint64_t getPPC64TocBase();
 uint64_t getAArch64Page(uint64_t Expr);
 

@@ -1923,7 +1923,6 @@ define <8 x i16> @PR32160(<8 x i32> %x) {
 ; AVX2-SLOW-LABEL: PR32160:
 ; AVX2-SLOW:       # %bb.0:
 ; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
-; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-SLOW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[2,2,2,3,4,5,6,7]
 ; AVX2-SLOW-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    vzeroupper
@@ -1932,7 +1931,6 @@ define <8 x i16> @PR32160(<8 x i32> %x) {
 ; AVX2-FAST-LABEL: PR32160:
 ; AVX2-FAST:       # %bb.0:
 ; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
-; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,4,5,4,5,4,5,4,5,4,5,4,5,4,5]
 ; AVX2-FAST-NEXT:    vzeroupper
 ; AVX2-FAST-NEXT:    retq

@@ -184,7 +184,7 @@ multiclass SIMDNot<ValueType vec_t, PatFrag splat_pat, ValueType lane_t> {
                                (vec_t (splat_pat (lane_t -1)))
                              ))
                            )],
-                           "v128.not\t$dst, $vec", "v128.not", 62>;
+                           "v128.not\t$dst, $vec", "v128.not", 63>;
 }
 multiclass SIMDCondition<ValueType vec_t, ValueType out_t, string vec,
                              string name, CondCode cond, bits<32> simdop> {
@@ -317,30 +317,30 @@ defm SHUFFLE_v16i8 :
 
 let isCommutable = 1 in {
 defm ADD : SIMDBinaryInt<add, "add", 24>;
-defm ADD : SIMDBinaryFP<fadd, "add", 122>;
+defm ADD : SIMDBinaryFP<fadd, "add", 133>;
 defm MUL : SIMDBinaryIntNoI64x2<mul, "mul", 32>;
-defm MUL : SIMDBinaryFP<fmul, "mul", 128>;
+defm MUL : SIMDBinaryFP<fmul, "mul", 139>;
 } // isCommutable = 1
 
 defm SUB : SIMDBinaryInt<sub, "sub", 28>;
-defm SUB : SIMDBinaryFP<fsub, "sub", 124>;
-defm DIV : SIMDBinaryFP<fdiv, "div", 126>;
+defm SUB : SIMDBinaryFP<fsub, "sub", 135>;
+defm DIV : SIMDBinaryFP<fdiv, "div", 137>;
 
-defm "" : SIMDNegInt<v16i8, "i8x16", splat16, i32, 35>;
-defm "" : SIMDNegInt<v8i16, "i16x8", splat8, i32, 36>;
-defm "" : SIMDNegInt<v4i32, "i32x4", splat4, i32, 37>;
-defm "" : SIMDNegInt<v2i64, "i64x2", splat2, i64, 38>;
-defm "" : SIMDNegFP<v4f32, "f32x4", splat4, f32, 114>;
-defm "" : SIMDNegFP<v2f64, "f64x2", splat2, f64, 115>;
+defm "" : SIMDNegInt<v16i8, "i8x16", splat16, i32, 36>;
+defm "" : SIMDNegInt<v8i16, "i16x8", splat8, i32, 37>;
+defm "" : SIMDNegInt<v4i32, "i32x4", splat4, i32, 38>;
+defm "" : SIMDNegInt<v2i64, "i64x2", splat2, i64, 39>;
+defm "" : SIMDNegFP<v4f32, "f32x4", splat4, f32, 125>;
+defm "" : SIMDNegFP<v2f64, "f64x2", splat2, f64, 126>;
 
-defm SHL : SIMDShiftInt<shl, "shl", 47, 0>;
-defm SHR_S : SIMDShiftInt<sra, "shr_s", 51, 1>;
-defm SHR_U : SIMDShiftInt<srl, "shr_u", 52, 1>;
+defm SHL : SIMDShiftInt<shl, "shl", 48, 0>;
+defm SHR_S : SIMDShiftInt<sra, "shr_s", 52, 1>;
+defm SHR_U : SIMDShiftInt<srl, "shr_u", 53, 1>;
 
 let isCommutable = 1 in {
-defm AND : SIMDBitwise<and, "and", 59>;
-defm OR : SIMDBitwise<or, "or", 60>;
-defm XOR : SIMDBitwise<xor, "xor", 61>;
+defm AND : SIMDBitwise<and, "and", 60>;
+defm OR : SIMDBitwise<or, "or", 61>;
+defm XOR : SIMDBitwise<xor, "xor", 62>;
 } // isCommutable = 1
 
 defm "" : SIMDNot<v16i8, splat16, i32>;
@@ -349,27 +349,27 @@ defm "" : SIMDNot<v4i32, splat4, i32>;
 defm "" : SIMDNot<v2i64, splat2, i64>;
 
 let isCommutable = 1 in {
-defm EQ : SIMDConditionInt<"eq", SETEQ, 72>;
-defm EQ : SIMDConditionFP<"eq", SETOEQ, 75>;
-defm NE : SIMDConditionInt<"ne", SETNE, 77>;
-defm NE : SIMDConditionFP<"ne", SETUNE, 80>;
+defm EQ : SIMDConditionInt<"eq", SETEQ, 73>;
+defm EQ : SIMDConditionFP<"eq", SETOEQ, 77>;
+defm NE : SIMDConditionInt<"ne", SETNE, 79>;
+defm NE : SIMDConditionFP<"ne", SETUNE, 83>;
 } // isCommutable = 1
 
-defm LT_S : SIMDConditionInt<"lt_s", SETLT, 82, 2>;
-defm LT_U : SIMDConditionInt<"lt_u", SETULT, 83, 2>;
-defm LT : SIMDConditionFP<"lt", SETOLT, 88>;
-defm LE_S : SIMDConditionInt<"le_s", SETLE, 90, 2>;
-defm LE_U : SIMDConditionInt<"le_u", SETULE, 91, 2>;
-defm LE : SIMDConditionFP<"le", SETOLE, 96>;
-defm GT_S : SIMDConditionInt<"gt_s", SETGT, 98, 2>;
-defm GT_U : SIMDConditionInt<"gt_u", SETUGT, 99, 2>;
-defm GT : SIMDConditionFP<"gt", SETOGT, 104>;
-defm GE_S : SIMDConditionInt<"ge_s", SETGE, 106, 2>;
-defm GE_U : SIMDConditionInt<"ge_u", SETUGE, 107, 2>;
-defm GE : SIMDConditionFP<"ge", SETOGE, 112>;
+defm LT_S : SIMDConditionInt<"lt_s", SETLT, 85, 2>;
+defm LT_U : SIMDConditionInt<"lt_u", SETULT, 86, 2>;
+defm LT : SIMDConditionFP<"lt", SETOLT, 93>;
+defm LE_S : SIMDConditionInt<"le_s", SETLE, 95, 2>;
+defm LE_U : SIMDConditionInt<"le_u", SETULE, 96, 2>;
+defm LE : SIMDConditionFP<"le", SETOLE, 103>;
+defm GT_S : SIMDConditionInt<"gt_s", SETGT, 105, 2>;
+defm GT_U : SIMDConditionInt<"gt_u", SETUGT, 106, 2>;
+defm GT : SIMDConditionFP<"gt", SETOGT, 113>;
+defm GE_S : SIMDConditionInt<"ge_s", SETGE, 115, 2>;
+defm GE_U : SIMDConditionInt<"ge_u", SETUGE, 116, 2>;
+defm GE : SIMDConditionFP<"ge", SETOGE, 123>;
 
-defm "" : SIMDAbs<v4f32, "f32x4", 116>;
-defm "" : SIMDAbs<v2f64, "f64x2", 117>;
+defm "" : SIMDAbs<v4f32, "f32x4", 127>;
+defm "" : SIMDAbs<v2f64, "f64x2", 128>;
 
 } // Defs = [ARGUMENTS]
 
