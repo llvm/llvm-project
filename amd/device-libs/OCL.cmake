@@ -53,7 +53,7 @@ macro(opencl_bc_lib name)
   add_dependencies(${impl_lib_tgt} irif_lib)
 
   if(NOT ROCM_DEVICELIB_STANDALONE_BUILD)
-    add_dependencies(${impl_lib_tgt} llvm-link clang)
+    add_dependencies(${impl_lib_tgt} llvm-link clang opt llvm-objdump)
   endif()
 
   set_target_properties(${impl_lib_tgt} PROPERTIES
