@@ -83,9 +83,7 @@ declare i32 @doSomething(i32, i32*)
 ; DISABLE: testl %edi, %edi
 ; DISABLE: je [[ELSE_LABEL:LBB[0-9_]+]]
 ;
-; SUM is in %esi because it is coalesced with the second
-; argument on the else path.
-; CHECK: xorl [[SUM:%esi]], [[SUM]]
+; CHECK: xorl [[SUM:%eax]], [[SUM]]
 ; CHECK-NEXT: movl $10, [[IV:%e[a-z]+]]
 ;
 ; Next BB.
@@ -99,23 +97,22 @@ declare i32 @doSomething(i32, i32*)
 ; SUM << 3.
 ; CHECK: shll $3, [[SUM]]
 ;
-; Jump to epilogue.
-; DISABLE: jmp [[EPILOG_BB:LBB[0-9_]+]]
+; DISABLE: popq
+; DISABLE: retq
 ;
 ; DISABLE: [[ELSE_LABEL]]: ## %if.else
-; Shift second argument by one and store into returned register.
-; DISABLE: addl %esi, %esi
-; DISABLE: [[EPILOG_BB]]: ## %if.end
+; Shift second argument by one in returned register.
+; DISABLE: movl %esi, %eax
+; DISABLE: addl %esi, %eax
 ;
 ; Epilogue code.
 ; CHECK-DAG: popq %rbx
-; CHECK-DAG: movl %esi, %eax
 ; CHECK: retq
 ;
 ; ENABLE: [[ELSE_LABEL]]: ## %if.else
 ; Shift second argument by one and store into returned register.
-; ENABLE: addl %esi, %esi
-; ENABLE-NEXT: movl %esi, %eax
+; ENABLE: movl %esi, %eax
+; ENABLE: addl %esi, %eax
 ; ENABLE-NEXT: retq
 define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) {
 entry:
@@ -210,7 +207,7 @@ for.end:                                          ; preds = %for.body
 ; DISABLE-NEXT: je [[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: nop
-; CHECK: xorl [[SUM:%esi]], [[SUM]]
+; CHECK: xorl [[SUM:%eax]], [[SUM]]
 ; CHECK-NEXT: movl $10, [[IV:%e[a-z]+]]
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ## %for.body
@@ -222,22 +219,22 @@ for.end:                                          ; preds = %for.body
 ; CHECK: nop
 ; CHECK: shll $3, [[SUM]]
 ;
-; DISABLE: jmp [[EPILOG_BB:LBB[0-9_]+]]
+; DISABLE: popq
+; DISABLE: retq
 ;
 ; DISABLE: [[ELSE_LABEL]]: ## %if.else
-; Shift second argument by one and store into returned register.
-; DISABLE: addl %esi, %esi
-; DISABLE: [[EPILOG_BB]]: ## %if.end
+; Shift second argument by one in returned register.
+; DISABLE: movl %esi, %eax
+; DISABLE: addl %esi, %eax
 ;
 ; Epilogue code.
 ; CHECK-DAG: popq %rbx
-; CHECK-DAG: movl %esi, %eax
 ; CHECK: retq
 ;
 ; ENABLE: [[ELSE_LABEL]]: ## %if.else
 ; Shift second argument by one and store into returned register.
-; ENABLE: addl %esi, %esi
-; ENABLE-NEXT: movl %esi, %eax
+; ENABLE: movl %esi, %eax
+; ENABLE: addl %esi, %eax
 ; ENABLE-NEXT: retq
 define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) {
 entry:
@@ -286,7 +283,7 @@ if.end:                                           ; preds = %if.else, %for.end
 ; DISABLE-NEXT: je [[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: nop
-; CHECK: xorl [[SUM:%esi]], [[SUM]]
+; CHECK: xorl [[SUM:%eax]], [[SUM]]
 ; CHECK-NEXT: movl $10, [[IV:%e[a-z]+]]
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ## %for.body
@@ -297,23 +294,23 @@ if.end:                                           ; preds = %if.else, %for.end
 ; Next BB.
 ; CHECK: shll $3, [[SUM]]
 ;
-; DISABLE: jmp [[EPILOG_BB:LBB[0-9_]+]]
+; DISABLE: popq
+; DISABLE: retq
 ;
 ; DISABLE: [[ELSE_LABEL]]: ## %if.else
 
-; Shift second argument by one and store into returned register.
-; DISABLE: addl %esi, %esi
-; DISABLE: [[EPILOG_BB]]: ## %if.end
+; Shift second argument by one in returned register.
+; DISABLE: movl %esi, %eax
+; DISABLE: addl %esi, %eax
 ;
 ; Epilogue code.
 ; CHECK-DAG: popq %rbx
-; CHECK-DAG: movl %esi, %eax
 ; CHECK: retq
 ;
 ; ENABLE: [[ELSE_LABEL]]: ## %if.else
 ; Shift second argument by one and store into returned register.
-; ENABLE: addl %esi, %esi
-; ENABLE-NEXT: movl %esi, %eax
+; ENABLE: movl %esi, %eax
+; ENABLE: addl %esi, %eax
 ; ENABLE-NEXT: retq
 define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
 entry:
@@ -379,24 +376,24 @@ entry:
 ; CHECK-NEXT: jne [[LOOP_LABEL]]
 ; Next BB.
 ; CHECK: nop
-; CHECK: xorl %esi, %esi
+; CHECK: xorl %eax, %eax
 ;
-; DISABLE: jmp [[EPILOG_BB:LBB[0-9_]+]]
+; DISABLE: popq
+; DISABLE: retq
 ;
 ; DISABLE: [[ELSE_LABEL]]: ## %if.else
-; Shift second argument by one and store into returned register.
-; DISABLE: addl %esi, %esi
-; DISABLE: [[EPILOG_BB]]: ## %if.end
+; Shift second argument by one in returned register.
+; DISABLE: movl %esi, %eax
+; DISABLE: addl %esi, %eax
 ;
 ; Epilogue code.
 ; CHECK-DAG: popq %rbx
-; CHECK-DAG: movl %esi, %eax
 ; CHECK: retq
 ;
 ; ENABLE: [[ELSE_LABEL]]: ## %if.else
 ; Shift second argument by one and store into returned register.
-; ENABLE: addl %esi, %esi
-; ENABLE-NEXT: movl %esi, %eax
+; ENABLE: movl %esi, %eax
+; ENABLE: addl %esi, %eax
 ; ENABLE-NEXT: retq
 define i32 @inlineAsm(i32 %cond, i32 %N) {
 entry:

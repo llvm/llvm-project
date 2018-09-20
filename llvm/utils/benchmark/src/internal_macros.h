@@ -35,6 +35,9 @@
   #define BENCHMARK_OS_CYGWIN 1
 #elif defined(_WIN32)
   #define BENCHMARK_OS_WINDOWS 1
+  #if defined(__MINGW32__)
+    #define BENCHMARK_OS_MINGW 1
+  #endif
 #elif defined(__APPLE__)
   #define BENCHMARK_OS_APPLE 1
   #include "TargetConditionals.h"

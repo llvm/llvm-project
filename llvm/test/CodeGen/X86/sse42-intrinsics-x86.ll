@@ -626,8 +626,8 @@ define i32 @crc32_32_8(i32 %a, i8 %b) nounwind {
 ;
 ; X64-LABEL: crc32_32_8:
 ; X64:       ## %bb.0:
-; X64-NEXT:    crc32b %sil, %edi ## encoding: [0xf2,0x40,0x0f,0x38,0xf0,0xfe]
 ; X64-NEXT:    movl %edi, %eax ## encoding: [0x89,0xf8]
+; X64-NEXT:    crc32b %sil, %eax ## encoding: [0xf2,0x40,0x0f,0x38,0xf0,0xc6]
 ; X64-NEXT:    retq ## encoding: [0xc3]
   %tmp = call i32 @llvm.x86.sse42.crc32.32.8(i32 %a, i8 %b)
   ret i32 %tmp
@@ -643,8 +643,8 @@ define i32 @crc32_32_16(i32 %a, i16 %b) nounwind {
 ;
 ; X64-LABEL: crc32_32_16:
 ; X64:       ## %bb.0:
-; X64-NEXT:    crc32w %si, %edi ## encoding: [0x66,0xf2,0x0f,0x38,0xf1,0xfe]
 ; X64-NEXT:    movl %edi, %eax ## encoding: [0x89,0xf8]
+; X64-NEXT:    crc32w %si, %eax ## encoding: [0x66,0xf2,0x0f,0x38,0xf1,0xc6]
 ; X64-NEXT:    retq ## encoding: [0xc3]
   %tmp = call i32 @llvm.x86.sse42.crc32.32.16(i32 %a, i16 %b)
   ret i32 %tmp
@@ -660,8 +660,8 @@ define i32 @crc32_32_32(i32 %a, i32 %b) nounwind {
 ;
 ; X64-LABEL: crc32_32_32:
 ; X64:       ## %bb.0:
-; X64-NEXT:    crc32l %esi, %edi ## encoding: [0xf2,0x0f,0x38,0xf1,0xfe]
 ; X64-NEXT:    movl %edi, %eax ## encoding: [0x89,0xf8]
+; X64-NEXT:    crc32l %esi, %eax ## encoding: [0xf2,0x0f,0x38,0xf1,0xc6]
 ; X64-NEXT:    retq ## encoding: [0xc3]
   %tmp = call i32 @llvm.x86.sse42.crc32.32.32(i32 %a, i32 %b)
   ret i32 %tmp

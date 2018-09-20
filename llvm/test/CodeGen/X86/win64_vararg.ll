@@ -121,10 +121,10 @@ entry:
 }
 ; CHECK-LABEL: sret_arg:
 ; CHECK: pushq
+; CHECK: movq %rcx, %rax
 ; CHECK-DAG: movq %r9, 40(%rsp)
 ; CHECK-DAG: movq %r8, 32(%rsp)
 ; CHECK: movl 32(%rsp), %[[tmp:[^ ]*]]
-; CHECK: movl %[[tmp]], (%[[sret:[^ ]*]])
-; CHECK: movq %[[sret]], %rax
+; CHECK: movl %[[tmp]], (%rax)
 ; CHECK: popq
 ; CHECK: retq

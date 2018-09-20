@@ -1526,6 +1526,9 @@ public:
   /// not modify the MIFlags of this MachineInstr.
   uint16_t mergeFlagsWith(const MachineInstr& Other) const;
 
+  /// Copy all flags to MachineInst MIFlags
+  void copyIRFlags(const Instruction &I);
+
   /// Break any tie involving OpIdx.
   void untieRegOperand(unsigned OpIdx) {
     MachineOperand &MO = getOperand(OpIdx);

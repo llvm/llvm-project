@@ -904,9 +904,9 @@ define <8 x double> @test_broadcast_vaddpd(<8 x double> %i, double* %j) nounwind
 define <8 x double> @test_mask_broadcast_vaddpd(<8 x double> %dst, <8 x double> %i,
 ; CHECK-LABEL: test_mask_broadcast_vaddpd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vptestmq %zmm2, %zmm2, %k1
-; CHECK-NEXT:    vaddpd (%rdi){1to8}, %zmm1, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
+; CHECK-NEXT:    vptestmq %zmm2, %zmm2, %k1
+; CHECK-NEXT:    vaddpd (%rdi){1to8}, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
                                       double* %j, <8 x i64> %mask1) nounwind {
   %mask = icmp ne <8 x i64> %mask1, zeroinitializer

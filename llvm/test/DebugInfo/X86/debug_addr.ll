@@ -31,7 +31,7 @@
 ; DWARF5: DW_TAG_compile_unit
 ; DWARF5-NOT: DW_TAG_{{.*}}
 ; DWARF5: DW_AT_GNU_dwo_name{{.*}}test.dwo
-; DWARF5: DW_AT_GNU_addr_base{{.*}}0x00000000
+; DWARF5: DW_AT_GNU_addr_base{{.*}}0x00000008
 ; DWARF5: .debug_addr contents:
 ; DWARF5-NEXT: 0x00000000: Addr Section: length = 0x0000000c, version = 0x0005, addr_size = 0x04, seg_size = 0x00
 ; DWARF5-NEXT: Addrs: [

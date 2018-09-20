@@ -1115,7 +1115,7 @@ define <4 x float> @shuffle_v4f32_0z24(<4 x float> %a, <4 x float> %b) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[2,0]
 ; SSE2-NEXT:    xorps %xmm2, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm0[0,0]
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,0],xmm0[0,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm1[2,0]
 ; SSE2-NEXT:    movaps %xmm2, %xmm0
 ; SSE2-NEXT:    retq
@@ -1124,7 +1124,7 @@ define <4 x float> @shuffle_v4f32_0z24(<4 x float> %a, <4 x float> %b) {
 ; SSE3:       # %bb.0:
 ; SSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[2,0]
 ; SSE3-NEXT:    xorps %xmm2, %xmm2
-; SSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm0[0,0]
+; SSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,0],xmm0[0,0]
 ; SSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm1[2,0]
 ; SSE3-NEXT:    movaps %xmm2, %xmm0
 ; SSE3-NEXT:    retq
@@ -1133,7 +1133,7 @@ define <4 x float> @shuffle_v4f32_0z24(<4 x float> %a, <4 x float> %b) {
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[2,0]
 ; SSSE3-NEXT:    xorps %xmm2, %xmm2
-; SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm0[0,0]
+; SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,0],xmm0[0,0]
 ; SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm1[2,0]
 ; SSSE3-NEXT:    movaps %xmm2, %xmm0
 ; SSSE3-NEXT:    retq

@@ -86,10 +86,10 @@ define <2 x i64> @test_pcmpgtq(<2 x i64> %x) {
 define <1 x i128> @test_strange_type(<1 x i128> %x) {
 ; CHECK-LABEL: test_strange_type:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sarq $63, %rsi
-; CHECK-NEXT:    notq %rsi
 ; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    movq %rsi, %rdx
+; CHECK-NEXT:    sarq $63, %rax
+; CHECK-NEXT:    notq %rax
+; CHECK-NEXT:    movq %rax, %rdx
 ; CHECK-NEXT:    retq
   %sign = ashr <1 x i128> %x, <i128 127>
   %not = xor <1 x i128> %sign, <i128 -1>

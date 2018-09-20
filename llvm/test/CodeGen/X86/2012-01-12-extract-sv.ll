@@ -6,9 +6,8 @@ define void @endless_loop() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovaps (%eax), %ymm0
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,0,1,1]
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
+; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vblendps {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2

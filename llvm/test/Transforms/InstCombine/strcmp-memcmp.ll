@@ -542,4 +542,19 @@ define i32 @strncmp_memcmp_bad4([4 x i8]* dereferenceable (4) %buf) {
   ret i32 0
 }
 
+define i32 @strcmp_memcmp_msan([12 x i8]* dereferenceable (12) %buf) sanitize_memory {
+; CHECK-LABEL: @strcmp_memcmp_msan(
+; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(i8* nonnull [[STRING]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0))
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
+; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
+  %call = call i32 @strcmp(i8* nonnull %string, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0))
+  %cmp = icmp eq i32 %call, 0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
 declare i32 @memcmp(i8* nocapture, i8* nocapture, i64)

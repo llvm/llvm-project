@@ -19,8 +19,9 @@ define i16 @W(i16 %A) {
 ;
 ; CHECK64-LABEL: W:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    rolw $8, %di
 ; CHECK64-NEXT:    movl %edi, %eax
+; CHECK64-NEXT:    rolw $8, %ax
+; CHECK64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK64-NEXT:    retq
         %Z = call i16 @llvm.bswap.i16( i16 %A )         ; <i16> [#uses=1]
         ret i16 %Z
@@ -35,8 +36,8 @@ define i32 @X(i32 %A) {
 ;
 ; CHECK64-LABEL: X:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    bswapl %edi
 ; CHECK64-NEXT:    movl %edi, %eax
+; CHECK64-NEXT:    bswapl %eax
 ; CHECK64-NEXT:    retq
         %Z = call i32 @llvm.bswap.i32( i32 %A )         ; <i32> [#uses=1]
         ret i32 %Z
@@ -53,8 +54,8 @@ define i64 @Y(i64 %A) {
 ;
 ; CHECK64-LABEL: Y:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    bswapq %rdi
 ; CHECK64-NEXT:    movq %rdi, %rax
+; CHECK64-NEXT:    bswapq %rax
 ; CHECK64-NEXT:    retq
         %Z = call i64 @llvm.bswap.i64( i64 %A )         ; <i64> [#uses=1]
         ret i64 %Z
@@ -71,9 +72,9 @@ define i32 @test1(i32 %a) nounwind readnone {
 ;
 ; CHECK64-LABEL: test1:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    bswapl %edi
-; CHECK64-NEXT:    shrl $16, %edi
 ; CHECK64-NEXT:    movl %edi, %eax
+; CHECK64-NEXT:    bswapl %eax
+; CHECK64-NEXT:    shrl $16, %eax
 ; CHECK64-NEXT:    retq
 entry:
 
@@ -95,9 +96,9 @@ define i32 @test2(i32 %a) nounwind readnone {
 ;
 ; CHECK64-LABEL: test2:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    bswapl %edi
-; CHECK64-NEXT:    sarl $16, %edi
 ; CHECK64-NEXT:    movl %edi, %eax
+; CHECK64-NEXT:    bswapl %eax
+; CHECK64-NEXT:    sarl $16, %eax
 ; CHECK64-NEXT:    retq
 entry:
 

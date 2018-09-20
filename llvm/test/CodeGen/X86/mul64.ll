@@ -19,8 +19,8 @@ define i64 @foo(i64 %t, i64 %u) nounwind {
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0:
-; X64-NEXT:    imulq %rsi, %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    imulq %rsi, %rax
 ; X64-NEXT:    retq
   %k = mul i64 %t, %u
   ret i64 %k

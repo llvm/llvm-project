@@ -130,15 +130,15 @@ define i32 @mulx32(i32 %x, i32 %y, i32* %p)   {
 ;
 ; X64-LABEL: mulx32:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    addl %edi, %edi
-; X64-NEXT:    addl %esi, %esi
-; X64-NEXT:    imulq %rdi, %rsi
-; X64-NEXT:    movq %rsi, %rax
-; X64-NEXT:    shrq $32, %rax
-; X64-NEXT:    movl %eax, (%rdx)
-; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    imulq %rdi, %rax
+; X64-NEXT:    movq %rax, %rcx
+; X64-NEXT:    shrq $32, %rcx
+; X64-NEXT:    movl %ecx, (%rdx)
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %x1 = add i32 %x, %x
   %y1 = add i32 %y, %y
@@ -165,14 +165,14 @@ define i32 @mulx32_load(i32 %x, i32* %y, i32* %p)   {
 ;
 ; X64-LABEL: mulx32_load:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    addl %edi, %edi
-; X64-NEXT:    movl (%rsi), %eax
-; X64-NEXT:    imulq %rax, %rdi
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shrq $32, %rax
-; X64-NEXT:    movl %eax, (%rdx)
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    movl (%rsi), %ecx
+; X64-NEXT:    imulq %rcx, %rax
+; X64-NEXT:    movq %rax, %rcx
+; X64-NEXT:    shrq $32, %rcx
+; X64-NEXT:    movl %ecx, (%rdx)
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %x1 = add i32 %x, %x
   %y1 = load i32, i32* %y

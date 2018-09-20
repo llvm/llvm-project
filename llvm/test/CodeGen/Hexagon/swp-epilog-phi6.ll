@@ -9,7 +9,7 @@
 
 ; CHECK: New block
 ; CHECK: %[[REG:([0-9]+)]]:intregs = PHI %{{.*}}, %[[REG1:([0-9]+)]]
-; CHECK: %[[REG1]]:intregs = A2_addi
+; CHECK: %[[REG1]]:intregs = nuw A2_addi
 ; CHECK: epilog:
 ; CHECK: %{{[0-9]+}}:intregs = PHI %{{.*}}, %[[REG]]
 

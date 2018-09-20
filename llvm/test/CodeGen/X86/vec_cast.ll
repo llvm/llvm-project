@@ -175,11 +175,13 @@ define <1 x i16> @i(<1 x i32> %a) nounwind {
 ; CHECK-LIN-LABEL: i:
 ; CHECK-LIN:       # %bb.0:
 ; CHECK-LIN-NEXT:    movl %edi, %eax
+; CHECK-LIN-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-LIN-NEXT:    retq
 ;
 ; CHECK-WIN-LABEL: i:
 ; CHECK-WIN:       # %bb.0:
 ; CHECK-WIN-NEXT:    movl %ecx, %eax
+; CHECK-WIN-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-WIN-NEXT:    retq
   %c = trunc <1 x i32> %a to <1 x i16>
   ret <1 x i16> %c

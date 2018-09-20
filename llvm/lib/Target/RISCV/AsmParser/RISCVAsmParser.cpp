@@ -92,6 +92,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseMemOpBaseReg(OperandVector &Operands);
   OperandMatchResultTy parseOperandWithModifier(OperandVector &Operands);
   OperandMatchResultTy parseBareSymbol(OperandVector &Operands);
+  OperandMatchResultTy parseJALOffset(OperandVector &Operands);
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
@@ -476,7 +477,7 @@ public:
     }
   }
 
-  bool isSImm21Lsb0() const { return isBareSimmNLsb0<21>(); }
+  bool isSImm21Lsb0JAL() const { return isBareSimmNLsb0<21>(); }
 
   /// getStartLoc - Gets location of the first token of this operand
   SMLoc getStartLoc() const override { return StartLoc; }
@@ -809,7 +810,7 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         Operands, ErrorInfo, 0, (1 << 20) - 1,
         "operand must be a symbol with %pcrel_hi() modifier or an integer in "
         "the range");
-  case Match_InvalidSImm21Lsb0:
+  case Match_InvalidSImm21Lsb0JAL:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 20), (1 << 20) - 2,
         "immediate must be a multiple of 2 bytes in the range");
@@ -983,6 +984,23 @@ OperandMatchResultTy RISCVAsmParser::parseBareSymbol(OperandVector &Operands) {
   Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
   Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
   return MatchOperand_Success;
+}
+
+OperandMatchResultTy RISCVAsmParser::parseJALOffset(OperandVector &Operands) {
+  // Parsing jal operands is fiddly due to the `jal foo` and `jal ra, foo`
+  // both being acceptable forms. When parsing `jal ra, foo` this function
+  // will be called for the `ra` register operand in an attempt to match the
+  // single-operand alias. parseJALOffset must fail for this case. It would
+  // seem logical to try parse the operand using parseImmediate and return
+  // NoMatch if the next token is a comma (meaning we must be parsing a jal in
+  // the second form rather than the first). We can't do this as there's no
+  // way of rewinding the lexer state. Instead, return NoMatch if this operand
+  // is an identifier and is followed by a comma.
+  if (getLexer().is(AsmToken::Identifier) &&
+      getLexer().peekTok().is(AsmToken::Comma))
+    return MatchOperand_NoMatch;
+
+  return parseImmediate(Operands);
 }
 
 OperandMatchResultTy

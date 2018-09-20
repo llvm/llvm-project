@@ -64,8 +64,8 @@ define <4 x i32> @combine_vec_udiv_by_negone(<4 x i32> %x) {
 define i32 @combine_udiv_by_minsigned(i32 %x) {
 ; CHECK-LABEL: combine_udiv_by_minsigned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shrl $31, %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shrl $31, %eax
 ; CHECK-NEXT:    retq
   %1 = udiv i32 %x, -2147483648
   ret i32 %1

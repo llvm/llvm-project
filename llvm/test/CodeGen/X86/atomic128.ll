@@ -12,10 +12,9 @@ define i128 @val_compare_and_swap(i128* %p, i128 %oldval, i128 %newval) {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movq %rcx, %r9
+; CHECK-NEXT:    movq %rcx, %rbx
 ; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    movq %r9, %rbx
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq

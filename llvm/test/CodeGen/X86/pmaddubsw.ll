@@ -89,6 +89,7 @@ define <16 x i16> @pmaddubsw_256(<32 x i8>* %Aptr, <32 x i8>* %Bptr) {
 define <64 x i16> @pmaddubsw_512(<128 x i8>* %Aptr, <128 x i8>* %Bptr) {
 ; SSE-LABEL: pmaddubsw_512:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    movdqa 112(%rdx), %xmm0
 ; SSE-NEXT:    movdqa 96(%rdx), %xmm1
 ; SSE-NEXT:    movdqa 80(%rdx), %xmm2
@@ -113,7 +114,6 @@ define <64 x i16> @pmaddubsw_512(<128 x i8>* %Aptr, <128 x i8>* %Bptr) {
 ; SSE-NEXT:    movdqa %xmm6, 32(%rdi)
 ; SSE-NEXT:    movdqa %xmm5, 16(%rdi)
 ; SSE-NEXT:    movdqa %xmm4, (%rdi)
-; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: pmaddubsw_512:

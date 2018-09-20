@@ -1656,3 +1656,10 @@ void DwarfUnit::addRnglistsBase() {
                   DU->getRnglistsTableBaseSym(),
                   TLOF.getDwarfRnglistsSection()->getBeginSymbol());
 }
+
+void DwarfUnit::addAddrTableBase() {
+  const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
+  MCSymbol *Label = DD->getAddressPool().getLabel();
+  addSectionLabel(getUnitDie(), dwarf::DW_AT_GNU_addr_base, Label,
+                  TLOF.getDwarfAddrSection()->getBeginSymbol());
+}
