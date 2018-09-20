@@ -164,8 +164,8 @@ define i32 @select_0_or_1s_signext(i1 signext %cond) {
 ;
 ; X64-LABEL: select_0_or_1s_signext:
 ; X64:       # %bb.0:
-; X64-NEXT:    notl %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    notl %eax
 ; X64-NEXT:    retq
   %not = xor i1 %cond, 1
   %sext = sext i1 %not to i32

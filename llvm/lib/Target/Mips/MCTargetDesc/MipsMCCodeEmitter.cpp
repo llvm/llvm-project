@@ -213,6 +213,12 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
       TmpInst.setOpcode (NewOpcode);
       Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
     }
+
+    if (((MI.getOpcode() == Mips::MOVEP_MM) ||
+         (MI.getOpcode() == Mips::MOVEP_MMR6))) {
+      unsigned RegPair = getMovePRegPairOpValue(MI, 0, Fixups, STI);
+      Binary = (Binary & 0xFFFFFC7F) | (RegPair << 7);
+    }
   }
 
   const MCInstrDesc &Desc = MCII.get(TmpInst.getOpcode());

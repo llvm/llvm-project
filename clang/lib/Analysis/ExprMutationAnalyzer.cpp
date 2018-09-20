@@ -379,7 +379,7 @@ const Stmt *ExprMutationAnalyzer::findFunctionArgMutation(const Expr *Exp) {
   for (const auto &Nodes : Matches) {
     const auto *Exp = Nodes.getNodeAs<Expr>(NodeID<Expr>::value);
     const auto *Func = Nodes.getNodeAs<FunctionDecl>("func");
-    if (!Func->getBody())
+    if (!Func->getBody() || !Func->getPrimaryTemplate())
       return Exp;
 
     const auto *Parm = Nodes.getNodeAs<ParmVarDecl>("parm");

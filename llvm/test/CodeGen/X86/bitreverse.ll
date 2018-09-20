@@ -341,20 +341,21 @@ define i8 @test_bitreverse_i8(i8 %a) {
 ;
 ; X64-LABEL: test_bitreverse_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    rolb $4, %dil
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andb $51, %al
-; X64-NEXT:    shlb $2, %al
-; X64-NEXT:    andb $-52, %dil
-; X64-NEXT:    shrb $2, %dil
-; X64-NEXT:    orb %al, %dil
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andb $85, %al
-; X64-NEXT:    addb %al, %al
-; X64-NEXT:    andb $-86, %dil
-; X64-NEXT:    shrb %dil
-; X64-NEXT:    orb %al, %dil
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    rolb $4, %al
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    andb $51, %cl
+; X64-NEXT:    shlb $2, %cl
+; X64-NEXT:    andb $-52, %al
+; X64-NEXT:    shrb $2, %al
+; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    andb $85, %cl
+; X64-NEXT:    addb %cl, %cl
+; X64-NEXT:    andb $-86, %al
+; X64-NEXT:    shrb %al
+; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %b = call i8 @llvm.bitreverse.i8(i8 %a)
   ret i8 %b
@@ -384,21 +385,22 @@ define i4 @test_bitreverse_i4(i4 %a) {
 ;
 ; X64-LABEL: test_bitreverse_i4:
 ; X64:       # %bb.0:
-; X64-NEXT:    rolb $4, %dil
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andb $51, %al
-; X64-NEXT:    shlb $2, %al
-; X64-NEXT:    andb $-52, %dil
-; X64-NEXT:    shrb $2, %dil
-; X64-NEXT:    orb %al, %dil
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andb $80, %al
-; X64-NEXT:    addb %al, %al
-; X64-NEXT:    andb $-96, %dil
-; X64-NEXT:    shrb %dil
-; X64-NEXT:    orb %al, %dil
-; X64-NEXT:    shrb $4, %dil
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    rolb $4, %al
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    andb $51, %cl
+; X64-NEXT:    shlb $2, %cl
+; X64-NEXT:    andb $-52, %al
+; X64-NEXT:    shrb $2, %al
+; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    andb $80, %cl
+; X64-NEXT:    addb %cl, %cl
+; X64-NEXT:    andb $-96, %al
+; X64-NEXT:    shrb %al
+; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    shrb $4, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %b = call i4 @llvm.bitreverse.i4(i4 %a)
   ret i4 %b
@@ -474,6 +476,7 @@ define i8 @identity_i8(i8 %a) {
 ; X64-LABEL: identity_i8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %b = call i8 @llvm.bitreverse.i8(i8 %a)
   %c = call i8 @llvm.bitreverse.i8(i8 %b)

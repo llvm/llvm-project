@@ -20,8 +20,8 @@ define float @test_v2f32(float %a0, <2 x float> %a1) {
 ;
 ; SSE41-LABEL: test_v2f32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    haddps %xmm1, %xmm1
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
+; SSE41-NEXT:    haddps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_v2f32:
@@ -527,8 +527,8 @@ define double @test_v2f64(double %a0, <2 x double> %a1) {
 ;
 ; SSE41-LABEL: test_v2f64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    haddpd %xmm1, %xmm1
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
+; SSE41-NEXT:    haddpd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_v2f64:
@@ -555,9 +555,9 @@ define double @test_v4f64(double %a0, <4 x double> %a1) {
 ;
 ; SSE41-LABEL: test_v4f64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    addpd %xmm2, %xmm1
-; SSE41-NEXT:    haddpd %xmm1, %xmm1
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
+; SSE41-NEXT:    addpd %xmm2, %xmm0
+; SSE41-NEXT:    haddpd %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_v4f64:
@@ -594,11 +594,11 @@ define double @test_v8f64(double %a0, <8 x double> %a1) {
 ;
 ; SSE41-LABEL: test_v8f64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    addpd %xmm4, %xmm2
-; SSE41-NEXT:    addpd %xmm3, %xmm1
-; SSE41-NEXT:    addpd %xmm2, %xmm1
-; SSE41-NEXT:    haddpd %xmm1, %xmm1
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
+; SSE41-NEXT:    addpd %xmm4, %xmm2
+; SSE41-NEXT:    addpd %xmm3, %xmm0
+; SSE41-NEXT:    addpd %xmm2, %xmm0
+; SSE41-NEXT:    haddpd %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_v8f64:
@@ -643,15 +643,15 @@ define double @test_v16f64(double %a0, <16 x double> %a1) {
 ;
 ; SSE41-LABEL: test_v16f64:
 ; SSE41:       # %bb.0:
+; SSE41-NEXT:    movapd %xmm4, %xmm0
 ; SSE41-NEXT:    addpd %xmm6, %xmm2
 ; SSE41-NEXT:    addpd %xmm7, %xmm3
 ; SSE41-NEXT:    addpd %xmm5, %xmm1
 ; SSE41-NEXT:    addpd %xmm3, %xmm1
-; SSE41-NEXT:    addpd {{[0-9]+}}(%rsp), %xmm4
-; SSE41-NEXT:    addpd %xmm2, %xmm4
-; SSE41-NEXT:    addpd %xmm1, %xmm4
-; SSE41-NEXT:    haddpd %xmm4, %xmm4
-; SSE41-NEXT:    movapd %xmm4, %xmm0
+; SSE41-NEXT:    addpd {{[0-9]+}}(%rsp), %xmm0
+; SSE41-NEXT:    addpd %xmm2, %xmm0
+; SSE41-NEXT:    addpd %xmm1, %xmm0
+; SSE41-NEXT:    haddpd %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_v16f64:

@@ -2123,6 +2123,7 @@ entry:
 define <32 x i32> @zext_32i8_to_32i32(<32 x i8> %x) {
 ; SSE2-LABEL: zext_32i8_to_32i32:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq %rdi, %rax
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
@@ -2150,11 +2151,11 @@ define <32 x i32> @zext_32i8_to_32i32(<32 x i8> %x) {
 ; SSE2-NEXT:    movdqa %xmm5, 32(%rdi)
 ; SSE2-NEXT:    movdqa %xmm3, 16(%rdi)
 ; SSE2-NEXT:    movdqa %xmm8, (%rdi)
-; SSE2-NEXT:    movq %rdi, %rax
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: zext_32i8_to_32i32:
 ; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movq %rdi, %rax
 ; SSSE3-NEXT:    pxor %xmm2, %xmm2
 ; SSSE3-NEXT:    movdqa %xmm0, %xmm3
 ; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
@@ -2182,11 +2183,11 @@ define <32 x i32> @zext_32i8_to_32i32(<32 x i8> %x) {
 ; SSSE3-NEXT:    movdqa %xmm5, 32(%rdi)
 ; SSSE3-NEXT:    movdqa %xmm3, 16(%rdi)
 ; SSSE3-NEXT:    movdqa %xmm8, (%rdi)
-; SSSE3-NEXT:    movq %rdi, %rax
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: zext_32i8_to_32i32:
 ; SSE41:       # %bb.0:
+; SSE41-NEXT:    movq %rdi, %rax
 ; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm2 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,2,3]
 ; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero
@@ -2209,7 +2210,6 @@ define <32 x i32> @zext_32i8_to_32i32(<32 x i8> %x) {
 ; SSE41-NEXT:    movdqa %xmm4, 32(%rdi)
 ; SSE41-NEXT:    movdqa %xmm3, 16(%rdi)
 ; SSE41-NEXT:    movdqa %xmm2, (%rdi)
-; SSE41-NEXT:    movq %rdi, %rax
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: zext_32i8_to_32i32:

@@ -768,120 +768,120 @@ declare <16 x i8> @llvm.x86.sse3.ldu.dq(i8*) nounwind readonly
 define void @test_monitor(i8* %a0, i32 %a1, i32 %a2) {
 ; GENERIC-LABEL: test_monitor:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; GENERIC-NEXT:    movl %esi, %ecx # sched: [1:0.33]
+; GENERIC-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; GENERIC-NEXT:    monitor # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_monitor:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    leaq (%rdi), %rax # sched: [1:1.00]
 ; ATOM-NEXT:    movl %esi, %ecx # sched: [1:0.50]
+; ATOM-NEXT:    leaq (%rdi), %rax # sched: [1:1.00]
 ; ATOM-NEXT:    monitor # sched: [45:22.50]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_monitor:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    leaq (%rdi), %rax # sched: [1:1.00]
 ; SLM-NEXT:    movl %esi, %ecx # sched: [1:0.50]
+; SLM-NEXT:    leaq (%rdi), %rax # sched: [1:1.00]
 ; SLM-NEXT:    monitor # sched: [100:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-SSE-LABEL: test_monitor:
 ; SANDY-SSE:       # %bb.0:
-; SANDY-SSE-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; SANDY-SSE-NEXT:    movl %esi, %ecx # sched: [1:0.33]
+; SANDY-SSE-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; SANDY-SSE-NEXT:    monitor # sched: [100:0.33]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_monitor:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; SANDY-NEXT:    movl %esi, %ecx # sched: [1:0.33]
+; SANDY-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; SANDY-NEXT:    monitor # sched: [100:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_monitor:
 ; HASWELL-SSE:       # %bb.0:
-; HASWELL-SSE-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; HASWELL-SSE-NEXT:    movl %esi, %ecx # sched: [1:0.25]
+; HASWELL-SSE-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; HASWELL-SSE-NEXT:    monitor # sched: [100:0.25]
 ; HASWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; HASWELL-LABEL: test_monitor:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    movl %esi, %ecx # sched: [1:0.25]
+; HASWELL-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; HASWELL-NEXT:    monitor # sched: [100:0.25]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-SSE-LABEL: test_monitor:
 ; BROADWELL-SSE:       # %bb.0:
-; BROADWELL-SSE-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; BROADWELL-SSE-NEXT:    movl %esi, %ecx # sched: [1:0.25]
+; BROADWELL-SSE-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; BROADWELL-SSE-NEXT:    monitor # sched: [100:0.25]
 ; BROADWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_monitor:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; BROADWELL-NEXT:    movl %esi, %ecx # sched: [1:0.25]
+; BROADWELL-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; BROADWELL-NEXT:    monitor # sched: [100:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-SSE-LABEL: test_monitor:
 ; SKYLAKE-SSE:       # %bb.0:
-; SKYLAKE-SSE-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; SKYLAKE-SSE-NEXT:    movl %esi, %ecx # sched: [1:0.25]
+; SKYLAKE-SSE-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; SKYLAKE-SSE-NEXT:    monitor # sched: [100:0.25]
 ; SKYLAKE-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_monitor:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    movl %esi, %ecx # sched: [1:0.25]
+; SKYLAKE-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; SKYLAKE-NEXT:    monitor # sched: [100:0.25]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-SSE-LABEL: test_monitor:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; SKX-SSE-NEXT:    movl %esi, %ecx # sched: [1:0.25]
+; SKX-SSE-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; SKX-SSE-NEXT:    monitor # sched: [100:0.25]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_monitor:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; SKX-NEXT:    movl %esi, %ecx # sched: [1:0.25]
+; SKX-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; SKX-NEXT:    monitor # sched: [100:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_monitor:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; BTVER2-SSE-NEXT:    movl %esi, %ecx # sched: [1:0.50]
+; BTVER2-SSE-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; BTVER2-SSE-NEXT:    monitor # sched: [100:0.50]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_monitor:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    movl %esi, %ecx # sched: [1:0.50]
+; BTVER2-NEXT:    leaq (%rdi), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    monitor # sched: [100:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-SSE-LABEL: test_monitor:
 ; ZNVER1-SSE:       # %bb.0:
-; ZNVER1-SSE-NEXT:    leaq (%rdi), %rax # sched: [1:0.25]
 ; ZNVER1-SSE-NEXT:    movl %esi, %ecx # sched: [1:0.25]
+; ZNVER1-SSE-NEXT:    leaq (%rdi), %rax # sched: [1:0.25]
 ; ZNVER1-SSE-NEXT:    monitor # sched: [100:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_monitor:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    leaq (%rdi), %rax # sched: [1:0.25]
 ; ZNVER1-NEXT:    movl %esi, %ecx # sched: [1:0.25]
+; ZNVER1-NEXT:    leaq (%rdi), %rax # sched: [1:0.25]
 ; ZNVER1-NEXT:    monitor # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void @llvm.x86.sse3.monitor(i8* %a0, i32 %a1, i32 %a2)
@@ -1273,120 +1273,120 @@ define <4 x float> @test_movsldup(<4 x float> %a0, <4 x float> *%a1) {
 define void @test_mwait(i32 %a0, i32 %a1) {
 ; GENERIC-LABEL: test_mwait:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movl %edi, %ecx # sched: [1:0.33]
 ; GENERIC-NEXT:    movl %esi, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    movl %edi, %ecx # sched: [1:0.33]
 ; GENERIC-NEXT:    mwait # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_mwait:
 ; ATOM:       # %bb.0:
-; ATOM-NEXT:    movl %edi, %ecx # sched: [1:0.50]
 ; ATOM-NEXT:    movl %esi, %eax # sched: [1:0.50]
+; ATOM-NEXT:    movl %edi, %ecx # sched: [1:0.50]
 ; ATOM-NEXT:    mwait # sched: [46:23.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_mwait:
 ; SLM:       # %bb.0:
-; SLM-NEXT:    movl %edi, %ecx # sched: [1:0.50]
 ; SLM-NEXT:    movl %esi, %eax # sched: [1:0.50]
+; SLM-NEXT:    movl %edi, %ecx # sched: [1:0.50]
 ; SLM-NEXT:    mwait # sched: [100:1.00]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-SSE-LABEL: test_mwait:
 ; SANDY-SSE:       # %bb.0:
-; SANDY-SSE-NEXT:    movl %edi, %ecx # sched: [1:0.33]
 ; SANDY-SSE-NEXT:    movl %esi, %eax # sched: [1:0.33]
+; SANDY-SSE-NEXT:    movl %edi, %ecx # sched: [1:0.33]
 ; SANDY-SSE-NEXT:    mwait # sched: [100:0.33]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_mwait:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    movl %edi, %ecx # sched: [1:0.33]
 ; SANDY-NEXT:    movl %esi, %eax # sched: [1:0.33]
+; SANDY-NEXT:    movl %edi, %ecx # sched: [1:0.33]
 ; SANDY-NEXT:    mwait # sched: [100:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_mwait:
 ; HASWELL-SSE:       # %bb.0:
-; HASWELL-SSE-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; HASWELL-SSE-NEXT:    movl %esi, %eax # sched: [1:0.25]
+; HASWELL-SSE-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; HASWELL-SSE-NEXT:    mwait # sched: [20:2.50]
 ; HASWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; HASWELL-LABEL: test_mwait:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; HASWELL-NEXT:    movl %esi, %eax # sched: [1:0.25]
+; HASWELL-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; HASWELL-NEXT:    mwait # sched: [20:2.50]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-SSE-LABEL: test_mwait:
 ; BROADWELL-SSE:       # %bb.0:
-; BROADWELL-SSE-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; BROADWELL-SSE-NEXT:    movl %esi, %eax # sched: [1:0.25]
+; BROADWELL-SSE-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; BROADWELL-SSE-NEXT:    mwait # sched: [100:0.25]
 ; BROADWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_mwait:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; BROADWELL-NEXT:    movl %esi, %eax # sched: [1:0.25]
+; BROADWELL-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; BROADWELL-NEXT:    mwait # sched: [100:0.25]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-SSE-LABEL: test_mwait:
 ; SKYLAKE-SSE:       # %bb.0:
-; SKYLAKE-SSE-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; SKYLAKE-SSE-NEXT:    movl %esi, %eax # sched: [1:0.25]
+; SKYLAKE-SSE-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; SKYLAKE-SSE-NEXT:    mwait # sched: [20:2.50]
 ; SKYLAKE-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_mwait:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; SKYLAKE-NEXT:    movl %esi, %eax # sched: [1:0.25]
+; SKYLAKE-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; SKYLAKE-NEXT:    mwait # sched: [20:2.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-SSE-LABEL: test_mwait:
 ; SKX-SSE:       # %bb.0:
-; SKX-SSE-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; SKX-SSE-NEXT:    movl %esi, %eax # sched: [1:0.25]
+; SKX-SSE-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; SKX-SSE-NEXT:    mwait # sched: [20:2.50]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_mwait:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; SKX-NEXT:    movl %esi, %eax # sched: [1:0.25]
+; SKX-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; SKX-NEXT:    mwait # sched: [20:2.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_mwait:
 ; BTVER2-SSE:       # %bb.0:
-; BTVER2-SSE-NEXT:    movl %edi, %ecx # sched: [1:0.50]
 ; BTVER2-SSE-NEXT:    movl %esi, %eax # sched: [1:0.50]
+; BTVER2-SSE-NEXT:    movl %edi, %ecx # sched: [1:0.50]
 ; BTVER2-SSE-NEXT:    mwait # sched: [100:0.50]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_mwait:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl %edi, %ecx # sched: [1:0.50]
 ; BTVER2-NEXT:    movl %esi, %eax # sched: [1:0.50]
+; BTVER2-NEXT:    movl %edi, %ecx # sched: [1:0.50]
 ; BTVER2-NEXT:    mwait # sched: [100:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-SSE-LABEL: test_mwait:
 ; ZNVER1-SSE:       # %bb.0:
-; ZNVER1-SSE-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; ZNVER1-SSE-NEXT:    movl %esi, %eax # sched: [1:0.25]
+; ZNVER1-SSE-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; ZNVER1-SSE-NEXT:    mwait # sched: [100:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_mwait:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; ZNVER1-NEXT:    movl %esi, %eax # sched: [1:0.25]
+; ZNVER1-NEXT:    movl %edi, %ecx # sched: [1:0.25]
 ; ZNVER1-NEXT:    mwait # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   tail call void @llvm.x86.sse3.mwait(i32 %a0, i32 %a1)

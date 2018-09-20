@@ -228,6 +228,7 @@ define <32 x i16> @mulhw_v32i16(<32 x i16> %a, <32 x i16> %b) {
 define <64 x i16> @mulhuw_v64i16(<64 x i16> %a, <64 x i16> %b) {
 ; SSE-LABEL: mulhuw_v64i16:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    pmulhuw {{[0-9]+}}(%rsp), %xmm0
 ; SSE-NEXT:    pmulhuw {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    pmulhuw {{[0-9]+}}(%rsp), %xmm2
@@ -244,7 +245,6 @@ define <64 x i16> @mulhuw_v64i16(<64 x i16> %a, <64 x i16> %b) {
 ; SSE-NEXT:    movdqa %xmm2, 32(%rdi)
 ; SSE-NEXT:    movdqa %xmm1, 16(%rdi)
 ; SSE-NEXT:    movdqa %xmm0, (%rdi)
-; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: mulhuw_v64i16:
@@ -279,6 +279,7 @@ define <64 x i16> @mulhuw_v64i16(<64 x i16> %a, <64 x i16> %b) {
 define <64 x i16> @mulhw_v64i16(<64 x i16> %a, <64 x i16> %b) {
 ; SSE-LABEL: mulhw_v64i16:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    pmulhw {{[0-9]+}}(%rsp), %xmm0
 ; SSE-NEXT:    pmulhw {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    pmulhw {{[0-9]+}}(%rsp), %xmm2
@@ -295,7 +296,6 @@ define <64 x i16> @mulhw_v64i16(<64 x i16> %a, <64 x i16> %b) {
 ; SSE-NEXT:    movdqa %xmm2, 32(%rdi)
 ; SSE-NEXT:    movdqa %xmm1, 16(%rdi)
 ; SSE-NEXT:    movdqa %xmm0, (%rdi)
-; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: mulhw_v64i16:

@@ -26,10 +26,10 @@ define i32 @test_minsize(i32 %X) optsize minsize nounwind readnone {
 ;
 ; X64-LABEL: test_minsize:
 ; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    pushq $5
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    divl %ecx
 ; X64-NEXT:    testl %edx, %edx
 ; X64-NEXT:    pushq $42

@@ -37,15 +37,25 @@ void Func6(void) __attribute__((requires_shared_capability(BadCapability))) {}  
 void Func7(void) __attribute__((assert_capability(GUI))) {}
 void Func8(void) __attribute__((assert_shared_capability(GUI))) {}
 
+void Func9(void) __attribute__((assert_capability())) {} // expected-warning {{'assert_capability' attribute without capability arguments can only be applied to non-static methods of a class}}
+void Func10(void) __attribute__((assert_shared_capability())) {} // expected-warning {{'assert_shared_capability' attribute without capability arguments can only be applied to non-static methods of a class}}
+
 void Func11(void) __attribute__((acquire_capability(GUI))) {}
 void Func12(void) __attribute__((acquire_shared_capability(GUI))) {}
+
+void Func13(void) __attribute__((acquire_capability())) {} // expected-warning {{'acquire_capability' attribute without capability arguments can only be applied to non-static methods of a class}}
+void Func14(void) __attribute__((acquire_shared_capability())) {} // expected-warning {{'acquire_shared_capability' attribute without capability arguments can only be applied to non-static methods of a class}}
 
 void Func15(void) __attribute__((release_capability(GUI))) {}
 void Func16(void) __attribute__((release_shared_capability(GUI))) {}
 void Func17(void) __attribute__((release_generic_capability(GUI))) {}
 
-void Func21(void) __attribute__((try_acquire_capability(1))) {}
-void Func22(void) __attribute__((try_acquire_shared_capability(1))) {}
+void Func18(void) __attribute__((release_capability())) {} // expected-warning {{'release_capability' attribute without capability arguments can only be applied to non-static methods of a class}}
+void Func19(void) __attribute__((release_shared_capability())) {} // expected-warning {{'release_shared_capability' attribute without capability arguments can only be applied to non-static methods of a class}}
+void Func20(void) __attribute__((release_generic_capability())) {} // expected-warning {{'release_generic_capability' attribute without capability arguments can only be applied to non-static methods of a class}}
+
+void Func21(void) __attribute__((try_acquire_capability(1))) {} // expected-warning {{'try_acquire_capability' attribute without capability arguments can only be applied to non-static methods of a class}}
+void Func22(void) __attribute__((try_acquire_shared_capability(1))) {} // expected-warning {{'try_acquire_shared_capability' attribute without capability arguments can only be applied to non-static methods of a class}}
 
 void Func23(void) __attribute__((try_acquire_capability(1, GUI))) {}
 void Func24(void) __attribute__((try_acquire_shared_capability(1, GUI))) {}

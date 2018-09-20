@@ -19,8 +19,8 @@ declare i64 @llvm.x86.sse42.crc32.64.8(i64, i8) nounwind readnone
 define i64 @test_mm_crc64_u64(i64 %a0, i64 %a1) nounwind{
 ; CHECK-LABEL: test_mm_crc64_u64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    crc32q %rsi, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    crc32q %rsi, %rax
 ; CHECK-NEXT:    retq
   %res = call i64 @llvm.x86.sse42.crc32.64.64(i64 %a0, i64 %a1)
   ret i64 %res

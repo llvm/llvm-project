@@ -401,6 +401,8 @@
 		AF9FF1F71FAA79FE00474976 /* LibCxxQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9FF1F61FAA79FE00474976 /* LibCxxQueue.cpp */; };
 		AF9FF1F51FAA79A400474976 /* LibCxxTuple.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF9FF1F41FAA79A400474976 /* LibCxxTuple.cpp */; };
 		945261C41B9A11FC00BF138D /* LibCxxUnorderedMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 945261BA1B9A11E800BF138D /* LibCxxUnorderedMap.cpp */; };
+		E414F6F121388F6C00C50BC6 /* LibCxxVariant.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E414F6F021388F6B00C50BC6 /* LibCxxVariant.cpp */; };
+		E414F6EE21388F0300C50BC6 /* LibCxxVariant.h in Headers */ = {isa = PBXBuildFile; fileRef = E414F6ED21388F0200C50BC6 /* LibCxxVariant.h */; };
 		945261C51B9A11FC00BF138D /* LibCxxVector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 945261BB1B9A11E800BF138D /* LibCxxVector.cpp */; };
 		945261C61B9A11FC00BF138D /* LibStdcpp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 945261BC1B9A11E800BF138D /* LibStdcpp.cpp */; };
 		4CDB8D6E1DBA91B6006C5B13 /* LibStdcppTuple.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDB8D681DBA91A6006C5B13 /* LibStdcppTuple.cpp */; };
@@ -2056,6 +2058,8 @@
 		AF9FF1F61FAA79FE00474976 /* LibCxxQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxQueue.cpp; path = Language/CPlusPlus/LibCxxQueue.cpp; sourceTree = "<group>"; };
 		AF9FF1F41FAA79A400474976 /* LibCxxTuple.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxTuple.cpp; path = Language/CPlusPlus/LibCxxTuple.cpp; sourceTree = "<group>"; };
 		945261BA1B9A11E800BF138D /* LibCxxUnorderedMap.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxUnorderedMap.cpp; path = Language/CPlusPlus/LibCxxUnorderedMap.cpp; sourceTree = "<group>"; };
+		E414F6F021388F6B00C50BC6 /* LibCxxVariant.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxVariant.cpp; path = Language/CPlusPlus/LibCxxVariant.cpp; sourceTree = "<group>"; };
+		E414F6ED21388F0200C50BC6 /* LibCxxVariant.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LibCxxVariant.h; path = Language/CPlusPlus/LibCxxVariant.h; sourceTree = "<group>"; };
 		945261BB1B9A11E800BF138D /* LibCxxVector.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = LibCxxVector.cpp; path = Language/CPlusPlus/LibCxxVector.cpp; sourceTree = "<group>"; };
 		945261BC1B9A11E800BF138D /* LibStdcpp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = LibStdcpp.cpp; path = Language/CPlusPlus/LibStdcpp.cpp; sourceTree = "<group>"; };
 		945261BD1B9A11E800BF138D /* LibStdcpp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = LibStdcpp.h; path = Language/CPlusPlus/LibStdcpp.h; sourceTree = "<group>"; };
@@ -6475,6 +6479,8 @@
 				AF9FF1F61FAA79FE00474976 /* LibCxxQueue.cpp */,
 				AF9FF1F41FAA79A400474976 /* LibCxxTuple.cpp */,
 				945261BA1B9A11E800BF138D /* LibCxxUnorderedMap.cpp */,
+				E414F6ED21388F0200C50BC6 /* LibCxxVariant.h */,
+				E414F6F021388F6B00C50BC6 /* LibCxxVariant.cpp */,
 				945261BB1B9A11E800BF138D /* LibCxxVector.cpp */,
 				945261BD1B9A11E800BF138D /* LibStdcpp.h */,
 				945261BC1B9A11E800BF138D /* LibStdcpp.cpp */,
@@ -7081,6 +7087,7 @@
 				6D0F614F1C80AB0C00A4ECEE /* JavaLanguageRuntime.h in Headers */,
 				AF27AD561D3603EA00CF2833 /* DynamicLoaderDarwin.h in Headers */,
 				AFCB2BBE1BF577F40018B553 /* PythonExceptionState.h in Headers */,
+				E414F6EE21388F0300C50BC6 /* LibCxxVariant.h in Headers */,
 				267F684B1CC02DED0086832B /* ABISysV_s390x.h in Headers */,
 				AF8AD6311BEC28A400150209 /* PlatformAppleWatchSimulator.h in Headers */,
 			);
@@ -7936,6 +7943,7 @@
 				AF0C112818580CD800C4C45B /* QueueItem.cpp in Sources */,
 				AF254E31170CCC33007AE5C9 /* PlatformDarwinKernel.cpp in Sources */,
 				2689004913353E0400698AC0 /* Scalar.cpp in Sources */,
+				E414F6F121388F6C00C50BC6 /* LibCxxVariant.cpp in Sources */,
 				263FDE601A79A01500E68013 /* FormatEntity.cpp in Sources */,
 				AF8AD62E1BEC28A400150209 /* PlatformAppleTVSimulator.cpp in Sources */,
 				2689004A13353E0400698AC0 /* SearchFilter.cpp in Sources */,

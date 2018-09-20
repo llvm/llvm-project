@@ -470,6 +470,10 @@ BUILTIN(__builtin_divde, "SLLiSLLiSLLi", "")
 BUILTIN(__builtin_divdeu, "ULLiULLiULLi", "")
 BUILTIN(__builtin_bpermd, "SLLiSLLiSLLi", "")
 
+// Vector int128 (un)pack
+BUILTIN(__builtin_unpack_vector_int128, "ULLiV1LLLii", "")
+BUILTIN(__builtin_pack_vector_int128, "V1LLLiULLiULLi", "")
+
 // FIXME: Obviously incomplete.
 
 #undef BUILTIN

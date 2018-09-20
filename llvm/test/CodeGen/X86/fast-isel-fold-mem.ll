@@ -5,8 +5,8 @@
 define i64 @fold_load(i64* %a, i64 %b) {
 ; CHECK-LABEL: fold_load:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    addq (%rdi), %rsi
 ; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    addq (%rdi), %rax
 ; CHECK-NEXT:    retq
   %1 = load i64, i64* %a, align 8
   %2 = add i64 %1, %b

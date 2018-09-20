@@ -92,6 +92,7 @@ define zeroext i1 @smuloi8(i8 %v1, i8 %v2, i8* %res) {
 ; SDAG-LABEL: smuloi8:
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    movl %edi, %eax
+; SDAG-NEXT:    ## kill: def $al killed $al killed $eax
 ; SDAG-NEXT:    imulb %sil
 ; SDAG-NEXT:    seto %cl
 ; SDAG-NEXT:    movb %al, (%rdx)
@@ -101,6 +102,7 @@ define zeroext i1 @smuloi8(i8 %v1, i8 %v2, i8* %res) {
 ; FAST-LABEL: smuloi8:
 ; FAST:       ## %bb.0:
 ; FAST-NEXT:    movl %edi, %eax
+; FAST-NEXT:    ## kill: def $al killed $al killed $eax
 ; FAST-NEXT:    imulb %sil
 ; FAST-NEXT:    seto %cl
 ; FAST-NEXT:    movb %al, (%rdx)
@@ -111,6 +113,7 @@ define zeroext i1 @smuloi8(i8 %v1, i8 %v2, i8* %res) {
 ; KNL-LABEL: smuloi8:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    movl %edi, %eax
+; KNL-NEXT:    ## kill: def $al killed $al killed $eax
 ; KNL-NEXT:    imulb %sil
 ; KNL-NEXT:    seto %cl
 ; KNL-NEXT:    movb %al, (%rdx)
@@ -218,6 +221,7 @@ define zeroext i1 @umuloi8(i8 %v1, i8 %v2, i8* %res) {
 ; SDAG-LABEL: umuloi8:
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    movl %edi, %eax
+; SDAG-NEXT:    ## kill: def $al killed $al killed $eax
 ; SDAG-NEXT:    mulb %sil
 ; SDAG-NEXT:    seto %cl
 ; SDAG-NEXT:    movb %al, (%rdx)
@@ -227,6 +231,7 @@ define zeroext i1 @umuloi8(i8 %v1, i8 %v2, i8* %res) {
 ; FAST-LABEL: umuloi8:
 ; FAST:       ## %bb.0:
 ; FAST-NEXT:    movl %edi, %eax
+; FAST-NEXT:    ## kill: def $al killed $al killed $eax
 ; FAST-NEXT:    mulb %sil
 ; FAST-NEXT:    seto %cl
 ; FAST-NEXT:    movb %al, (%rdx)
@@ -237,6 +242,7 @@ define zeroext i1 @umuloi8(i8 %v1, i8 %v2, i8* %res) {
 ; KNL-LABEL: umuloi8:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    movl %edi, %eax
+; KNL-NEXT:    ## kill: def $al killed $al killed $eax
 ; KNL-NEXT:    mulb %sil
 ; KNL-NEXT:    seto %cl
 ; KNL-NEXT:    movb %al, (%rdx)
@@ -254,6 +260,7 @@ define zeroext i1 @umuloi16(i16 %v1, i16 %v2, i16* %res) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    movq %rdx, %rcx
 ; SDAG-NEXT:    movl %edi, %eax
+; SDAG-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; SDAG-NEXT:    mulw %si
 ; SDAG-NEXT:    seto %dl
 ; SDAG-NEXT:    movw %ax, (%rcx)
@@ -264,6 +271,7 @@ define zeroext i1 @umuloi16(i16 %v1, i16 %v2, i16* %res) {
 ; FAST:       ## %bb.0:
 ; FAST-NEXT:    movq %rdx, %rcx
 ; FAST-NEXT:    movl %edi, %eax
+; FAST-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; FAST-NEXT:    mulw %si
 ; FAST-NEXT:    seto %dl
 ; FAST-NEXT:    movw %ax, (%rcx)
@@ -275,6 +283,7 @@ define zeroext i1 @umuloi16(i16 %v1, i16 %v2, i16* %res) {
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    movq %rdx, %rcx
 ; KNL-NEXT:    movl %edi, %eax
+; KNL-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; KNL-NEXT:    mulw %si
 ; KNL-NEXT:    seto %dl
 ; KNL-NEXT:    movw %ax, (%rcx)
@@ -369,26 +378,26 @@ define zeroext i1 @umuloi64(i64 %v1, i64 %v2, i64* %res) {
 define i32 @smuloselecti32(i32 %v1, i32 %v2) {
 ; SDAG-LABEL: smuloselecti32:
 ; SDAG:       ## %bb.0:
-; SDAG-NEXT:    movl %edi, %eax
-; SDAG-NEXT:    imull %esi, %eax
-; SDAG-NEXT:    cmovol %edi, %esi
 ; SDAG-NEXT:    movl %esi, %eax
+; SDAG-NEXT:    movl %edi, %ecx
+; SDAG-NEXT:    imull %esi, %ecx
+; SDAG-NEXT:    cmovol %edi, %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: smuloselecti32:
 ; FAST:       ## %bb.0:
-; FAST-NEXT:    movl %edi, %eax
-; FAST-NEXT:    imull %esi, %eax
-; FAST-NEXT:    cmovol %edi, %esi
 ; FAST-NEXT:    movl %esi, %eax
+; FAST-NEXT:    movl %edi, %ecx
+; FAST-NEXT:    imull %esi, %ecx
+; FAST-NEXT:    cmovol %edi, %eax
 ; FAST-NEXT:    retq
 ;
 ; KNL-LABEL: smuloselecti32:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movl %edi, %eax
-; KNL-NEXT:    imull %esi, %eax
-; KNL-NEXT:    cmovol %edi, %esi
 ; KNL-NEXT:    movl %esi, %eax
+; KNL-NEXT:    movl %edi, %ecx
+; KNL-NEXT:    imull %esi, %ecx
+; KNL-NEXT:    cmovol %edi, %eax
 ; KNL-NEXT:    retq
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
   %obit = extractvalue {i32, i1} %t, 1
@@ -399,26 +408,26 @@ define i32 @smuloselecti32(i32 %v1, i32 %v2) {
 define i64 @smuloselecti64(i64 %v1, i64 %v2) {
 ; SDAG-LABEL: smuloselecti64:
 ; SDAG:       ## %bb.0:
-; SDAG-NEXT:    movq %rdi, %rax
-; SDAG-NEXT:    imulq %rsi, %rax
-; SDAG-NEXT:    cmovoq %rdi, %rsi
 ; SDAG-NEXT:    movq %rsi, %rax
+; SDAG-NEXT:    movq %rdi, %rcx
+; SDAG-NEXT:    imulq %rsi, %rcx
+; SDAG-NEXT:    cmovoq %rdi, %rax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: smuloselecti64:
 ; FAST:       ## %bb.0:
-; FAST-NEXT:    movq %rdi, %rax
-; FAST-NEXT:    imulq %rsi, %rax
-; FAST-NEXT:    cmovoq %rdi, %rsi
 ; FAST-NEXT:    movq %rsi, %rax
+; FAST-NEXT:    movq %rdi, %rcx
+; FAST-NEXT:    imulq %rsi, %rcx
+; FAST-NEXT:    cmovoq %rdi, %rax
 ; FAST-NEXT:    retq
 ;
 ; KNL-LABEL: smuloselecti64:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movq %rdi, %rax
-; KNL-NEXT:    imulq %rsi, %rax
-; KNL-NEXT:    cmovoq %rdi, %rsi
 ; KNL-NEXT:    movq %rsi, %rax
+; KNL-NEXT:    movq %rdi, %rcx
+; KNL-NEXT:    imulq %rsi, %rcx
+; KNL-NEXT:    cmovoq %rdi, %rax
 ; KNL-NEXT:    retq
   %t = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %v1, i64 %v2)
   %obit = extractvalue {i64, i1} %t, 1
@@ -694,8 +703,8 @@ continue:
 define i1 @bug27873(i64 %c1, i1 %c2) {
 ; SDAG-LABEL: bug27873:
 ; SDAG:       ## %bb.0:
-; SDAG-NEXT:    movl $160, %ecx
 ; SDAG-NEXT:    movq %rdi, %rax
+; SDAG-NEXT:    movl $160, %ecx
 ; SDAG-NEXT:    mulq %rcx
 ; SDAG-NEXT:    seto %al
 ; SDAG-NEXT:    orb %sil, %al
@@ -703,8 +712,8 @@ define i1 @bug27873(i64 %c1, i1 %c2) {
 ;
 ; FAST-LABEL: bug27873:
 ; FAST:       ## %bb.0:
-; FAST-NEXT:    movl $160, %ecx
 ; FAST-NEXT:    movq %rdi, %rax
+; FAST-NEXT:    movl $160, %ecx
 ; FAST-NEXT:    mulq %rcx
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    orb %sil, %al
@@ -712,8 +721,8 @@ define i1 @bug27873(i64 %c1, i1 %c2) {
 ;
 ; KNL-LABEL: bug27873:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movl $160, %ecx
 ; KNL-NEXT:    movq %rdi, %rax
+; KNL-NEXT:    movl $160, %ecx
 ; KNL-NEXT:    mulq %rcx
 ; KNL-NEXT:    seto %al
 ; KNL-NEXT:    orb %sil, %al

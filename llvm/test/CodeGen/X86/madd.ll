@@ -2219,6 +2219,7 @@ define <16 x i32> @jumbled_indices16(<32 x i16> %A, <32 x i16> %B) {
 define <32 x i32> @jumbled_indices32(<64 x i16> %A, <64 x i16> %B) {
 ; SSE2-LABEL: jumbled_indices32:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq %rdi, %rax
 ; SSE2-NEXT:    pmaddwd {{[0-9]+}}(%rsp), %xmm0
 ; SSE2-NEXT:    pmaddwd {{[0-9]+}}(%rsp), %xmm1
 ; SSE2-NEXT:    pmaddwd {{[0-9]+}}(%rsp), %xmm2
@@ -2235,7 +2236,6 @@ define <32 x i32> @jumbled_indices32(<64 x i16> %A, <64 x i16> %B) {
 ; SSE2-NEXT:    movdqa %xmm2, 32(%rdi)
 ; SSE2-NEXT:    movdqa %xmm1, 16(%rdi)
 ; SSE2-NEXT:    movdqa %xmm0, (%rdi)
-; SSE2-NEXT:    movq %rdi, %rax
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: jumbled_indices32:
@@ -2437,6 +2437,7 @@ define <16 x i32> @pmaddwd_512(<32 x i16>* %Aptr, <32 x i16>* %Bptr) {
 define <32 x i32> @pmaddwd_1024(<64 x i16>* %Aptr, <64 x i16>* %Bptr) {
 ; SSE2-LABEL: pmaddwd_1024:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq %rdi, %rax
 ; SSE2-NEXT:    movdqa 112(%rsi), %xmm0
 ; SSE2-NEXT:    movdqa 96(%rsi), %xmm1
 ; SSE2-NEXT:    movdqa 80(%rsi), %xmm2
@@ -2461,7 +2462,6 @@ define <32 x i32> @pmaddwd_1024(<64 x i16>* %Aptr, <64 x i16>* %Bptr) {
 ; SSE2-NEXT:    movdqa %xmm6, 32(%rdi)
 ; SSE2-NEXT:    movdqa %xmm5, 16(%rdi)
 ; SSE2-NEXT:    movdqa %xmm4, (%rdi)
-; SSE2-NEXT:    movq %rdi, %rax
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: pmaddwd_1024:

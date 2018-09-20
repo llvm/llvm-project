@@ -1062,16 +1062,18 @@ entry:
 define i8 @test18(i32 %x, i8 zeroext %a, i8 zeroext %b) nounwind {
 ; GENERIC-LABEL: test18:
 ; GENERIC:       ## %bb.0:
-; GENERIC-NEXT:    cmpl $15, %edi
-; GENERIC-NEXT:    cmovgel %edx, %esi
 ; GENERIC-NEXT:    movl %esi, %eax
+; GENERIC-NEXT:    cmpl $15, %edi
+; GENERIC-NEXT:    cmovgel %edx, %eax
+; GENERIC-NEXT:    ## kill: def $al killed $al killed $eax
 ; GENERIC-NEXT:    retq
 ;
 ; ATOM-LABEL: test18:
 ; ATOM:       ## %bb.0:
-; ATOM-NEXT:    cmpl $15, %edi
-; ATOM-NEXT:    cmovgel %edx, %esi
 ; ATOM-NEXT:    movl %esi, %eax
+; ATOM-NEXT:    cmpl $15, %edi
+; ATOM-NEXT:    cmovgel %edx, %eax
+; ATOM-NEXT:    ## kill: def $al killed $al killed $eax
 ; ATOM-NEXT:    nop
 ; ATOM-NEXT:    nop
 ; ATOM-NEXT:    retq
@@ -1102,10 +1104,11 @@ define i8 @test18(i32 %x, i8 zeroext %a, i8 zeroext %b) nounwind {
 define i32 @trunc_select_miscompile(i32 %a, i1 zeroext %cc) {
 ; CHECK-LABEL: trunc_select_miscompile:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    orb $2, %sil
 ; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    shll %cl, %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    orb $2, %cl
+; CHECK-NEXT:    ## kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    retq
 ;
 ; ATHLON-LABEL: trunc_select_miscompile:
@@ -1118,8 +1121,9 @@ define i32 @trunc_select_miscompile(i32 %a, i1 zeroext %cc) {
 ;
 ; MCU-LABEL: trunc_select_miscompile:
 ; MCU:       # %bb.0:
-; MCU-NEXT:    orb $2, %dl
 ; MCU-NEXT:    movl %edx, %ecx
+; MCU-NEXT:    orb $2, %cl
+; MCU-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; MCU-NEXT:    shll %cl, %eax
 ; MCU-NEXT:    retl
   %tmp1 = select i1 %cc, i32 3, i32 2
@@ -1438,10 +1442,10 @@ entry:
 define i32 @select_xor_2(i32 %A, i32 %B, i8 %cond) {
 ; CHECK-LABEL: select_xor_2:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    xorl %edi, %esi
-; CHECK-NEXT:    testb $1, %dl
-; CHECK-NEXT:    cmovel %edi, %esi
 ; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    xorl %edi, %eax
+; CHECK-NEXT:    testb $1, %dl
+; CHECK-NEXT:    cmovel %edi, %eax
 ; CHECK-NEXT:    retq
 ;
 ; ATHLON-LABEL: select_xor_2:
@@ -1473,10 +1477,10 @@ entry:
 define i32 @select_xor_2b(i32 %A, i32 %B, i8 %cond) {
 ; CHECK-LABEL: select_xor_2b:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    xorl %edi, %esi
-; CHECK-NEXT:    testb $1, %dl
-; CHECK-NEXT:    cmovel %edi, %esi
 ; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    xorl %edi, %eax
+; CHECK-NEXT:    testb $1, %dl
+; CHECK-NEXT:    cmovel %edi, %eax
 ; CHECK-NEXT:    retq
 ;
 ; ATHLON-LABEL: select_xor_2b:
@@ -1507,10 +1511,10 @@ entry:
 define i32 @select_or(i32 %A, i32 %B, i8 %cond) {
 ; CHECK-LABEL: select_or:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    orl %edi, %esi
-; CHECK-NEXT:    testb $1, %dl
-; CHECK-NEXT:    cmovel %edi, %esi
 ; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    orl %edi, %eax
+; CHECK-NEXT:    testb $1, %dl
+; CHECK-NEXT:    cmovel %edi, %eax
 ; CHECK-NEXT:    retq
 ;
 ; ATHLON-LABEL: select_or:
@@ -1542,10 +1546,10 @@ entry:
 define i32 @select_or_b(i32 %A, i32 %B, i8 %cond) {
 ; CHECK-LABEL: select_or_b:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    orl %edi, %esi
-; CHECK-NEXT:    testb $1, %dl
-; CHECK-NEXT:    cmovel %edi, %esi
 ; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    orl %edi, %eax
+; CHECK-NEXT:    testb $1, %dl
+; CHECK-NEXT:    cmovel %edi, %eax
 ; CHECK-NEXT:    retq
 ;
 ; ATHLON-LABEL: select_or_b:
@@ -1576,10 +1580,10 @@ entry:
 define i32 @select_or_1(i32 %A, i32 %B, i32 %cond) {
 ; CHECK-LABEL: select_or_1:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    orl %edi, %esi
-; CHECK-NEXT:    testb $1, %dl
-; CHECK-NEXT:    cmovel %edi, %esi
 ; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    orl %edi, %eax
+; CHECK-NEXT:    testb $1, %dl
+; CHECK-NEXT:    cmovel %edi, %eax
 ; CHECK-NEXT:    retq
 ;
 ; ATHLON-LABEL: select_or_1:
@@ -1611,10 +1615,10 @@ entry:
 define i32 @select_or_1b(i32 %A, i32 %B, i32 %cond) {
 ; CHECK-LABEL: select_or_1b:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    orl %edi, %esi
-; CHECK-NEXT:    testb $1, %dl
-; CHECK-NEXT:    cmovel %edi, %esi
 ; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    orl %edi, %eax
+; CHECK-NEXT:    testb $1, %dl
+; CHECK-NEXT:    cmovel %edi, %eax
 ; CHECK-NEXT:    retq
 ;
 ; ATHLON-LABEL: select_or_1b:

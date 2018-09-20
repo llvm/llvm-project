@@ -11,8 +11,8 @@
 
 define i32 @test1(i32 %X) nounwind {
 ; CHECK-LABEL: test1:
-; CHECK-NOT: mov
-; CHECK: leal 1(%rdi)
+; CHECK: movl %edi, %eax
+; CHECK: leal 1(%rax)
         %Z = add i32 %X, 1
         store volatile i32 %Z, i32* @G
         ret i32 %X

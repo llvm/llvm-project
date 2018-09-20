@@ -281,11 +281,14 @@ define i8 @select_icmp_sle_i8(i64 %a, i64 %b, i8 %c, i8 %d) {
 ; CHECK-LABEL: select_icmp_sle_i8:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    jle LBB12_2
-; CHECK-NEXT:  ## %bb.1:
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:  LBB12_2:
+; CHECK-NEXT:    jle LBB12_1
+; CHECK-NEXT:  ## %bb.2:
+; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  LBB12_1:
 ; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %1 = icmp sle i64 %a, %b
   %2 = select i1 %1, i8 %c, i8 %d

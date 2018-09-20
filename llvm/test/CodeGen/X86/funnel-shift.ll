@@ -33,11 +33,11 @@ define i32 @fshl_i32(i32 %x, i32 %y, i32 %z) nounwind {
 ;
 ; X64-AVX2-LABEL: fshl_i32:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    andl $31, %edx
-; X64-AVX2-NEXT:    movl %edi, %eax
 ; X64-AVX2-NEXT:    movl %edx, %ecx
+; X64-AVX2-NEXT:    andl $31, %ecx
+; X64-AVX2-NEXT:    movl %edi, %eax
 ; X64-AVX2-NEXT:    shldl %cl, %esi, %eax
-; X64-AVX2-NEXT:    testl %edx, %edx
+; X64-AVX2-NEXT:    testl %ecx, %ecx
 ; X64-AVX2-NEXT:    cmovel %edi, %eax
 ; X64-AVX2-NEXT:    retq
   %f = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %z)
@@ -152,8 +152,8 @@ define i32 @fshl_i32_const_shift(i32 %x, i32 %y) nounwind {
 ;
 ; X64-AVX2-LABEL: fshl_i32_const_shift:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    shldl $9, %esi, %edi
 ; X64-AVX2-NEXT:    movl %edi, %eax
+; X64-AVX2-NEXT:    shldl $9, %esi, %eax
 ; X64-AVX2-NEXT:    retq
   %f = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 9)
   ret i32 %f
@@ -171,8 +171,8 @@ define i32 @fshl_i32_const_overshift(i32 %x, i32 %y) nounwind {
 ;
 ; X64-AVX2-LABEL: fshl_i32_const_overshift:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    shldl $9, %esi, %edi
 ; X64-AVX2-NEXT:    movl %edi, %eax
+; X64-AVX2-NEXT:    shldl $9, %esi, %eax
 ; X64-AVX2-NEXT:    retq
   %f = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 41)
   ret i32 %f
@@ -192,8 +192,8 @@ define i64 @fshl_i64_const_overshift(i64 %x, i64 %y) nounwind {
 ;
 ; X64-AVX2-LABEL: fshl_i64_const_overshift:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    shldq $41, %rsi, %rdi
 ; X64-AVX2-NEXT:    movq %rdi, %rax
+; X64-AVX2-NEXT:    shldq $41, %rsi, %rax
 ; X64-AVX2-NEXT:    retq
   %f = call i64 @llvm.fshl.i64(i64 %x, i64 %y, i64 105)
   ret i64 %f
@@ -231,11 +231,11 @@ define i32 @fshr_i32(i32 %x, i32 %y, i32 %z) nounwind {
 ;
 ; X64-AVX2-LABEL: fshr_i32:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    andl $31, %edx
-; X64-AVX2-NEXT:    movl %esi, %eax
 ; X64-AVX2-NEXT:    movl %edx, %ecx
+; X64-AVX2-NEXT:    andl $31, %ecx
+; X64-AVX2-NEXT:    movl %esi, %eax
 ; X64-AVX2-NEXT:    shrdl %cl, %edi, %eax
-; X64-AVX2-NEXT:    testl %edx, %edx
+; X64-AVX2-NEXT:    testl %ecx, %ecx
 ; X64-AVX2-NEXT:    cmovel %esi, %eax
 ; X64-AVX2-NEXT:    retq
   %f = call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %z)
@@ -346,8 +346,8 @@ define i32 @fshr_i32_const_shift(i32 %x, i32 %y) nounwind {
 ;
 ; X64-AVX2-LABEL: fshr_i32_const_shift:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    shldl $23, %esi, %edi
 ; X64-AVX2-NEXT:    movl %edi, %eax
+; X64-AVX2-NEXT:    shldl $23, %esi, %eax
 ; X64-AVX2-NEXT:    retq
   %f = call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 9)
   ret i32 %f
@@ -365,8 +365,8 @@ define i32 @fshr_i32_const_overshift(i32 %x, i32 %y) nounwind {
 ;
 ; X64-AVX2-LABEL: fshr_i32_const_overshift:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    shldl $23, %esi, %edi
 ; X64-AVX2-NEXT:    movl %edi, %eax
+; X64-AVX2-NEXT:    shldl $23, %esi, %eax
 ; X64-AVX2-NEXT:    retq
   %f = call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 41)
   ret i32 %f
@@ -386,8 +386,8 @@ define i64 @fshr_i64_const_overshift(i64 %x, i64 %y) nounwind {
 ;
 ; X64-AVX2-LABEL: fshr_i64_const_overshift:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    shldq $23, %rsi, %rdi
 ; X64-AVX2-NEXT:    movq %rdi, %rax
+; X64-AVX2-NEXT:    shldq $23, %rsi, %rax
 ; X64-AVX2-NEXT:    retq
   %f = call i64 @llvm.fshr.i64(i64 %x, i64 %y, i64 105)
   ret i64 %f

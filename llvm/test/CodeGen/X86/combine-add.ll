@@ -103,8 +103,8 @@ define <4 x i32> @combine_vec_add_sub1(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i32> @combine_vec_add_sub_add0(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; SSE-LABEL: combine_vec_add_sub_add0:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    psubd %xmm2, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    psubd %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_add_sub_add0:
@@ -121,8 +121,8 @@ define <4 x i32> @combine_vec_add_sub_add0(<4 x i32> %a, <4 x i32> %b, <4 x i32>
 define <4 x i32> @combine_vec_add_sub_add1(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; SSE-LABEL: combine_vec_add_sub_add1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    psubd %xmm2, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    psubd %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_add_sub_add1:
@@ -139,8 +139,8 @@ define <4 x i32> @combine_vec_add_sub_add1(<4 x i32> %a, <4 x i32> %b, <4 x i32>
 define <4 x i32> @combine_vec_add_sub_add2(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; SSE-LABEL: combine_vec_add_sub_add2:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    paddd %xmm2, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    paddd %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_add_sub_add2:
@@ -157,8 +157,8 @@ define <4 x i32> @combine_vec_add_sub_add2(<4 x i32> %a, <4 x i32> %b, <4 x i32>
 define <4 x i32> @combine_vec_add_sub_add3(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; SSE-LABEL: combine_vec_add_sub_add3:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    psubd %xmm2, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    psubd %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_add_sub_add3:
@@ -203,9 +203,9 @@ define <4 x i32> @combine_vec_add_uniquebits(<4 x i32> %a, <4 x i32> %b) {
 ;
 ; AVX-LABEL: combine_vec_add_uniquebits:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [61680,61680,61680,61680]
 ; AVX-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm2
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [3855,3855,3855,3855]
 ; AVX-NEXT:    vandps %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq

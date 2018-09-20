@@ -7,8 +7,8 @@
 define i64 @test_sub_i64(i64 %arg1, i64 %arg2) {
 ; ALL-LABEL: test_sub_i64:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    subq %rsi, %rdi
 ; ALL-NEXT:    movq %rdi, %rax
+; ALL-NEXT:    subq %rsi, %rax
 ; ALL-NEXT:    retq
   %ret = sub i64 %arg1, %arg2
   ret i64 %ret
@@ -17,8 +17,8 @@ define i64 @test_sub_i64(i64 %arg1, i64 %arg2) {
 define i32 @test_sub_i32(i32 %arg1, i32 %arg2) {
 ; ALL-LABEL: test_sub_i32:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    subl %esi, %edi
 ; ALL-NEXT:    movl %edi, %eax
+; ALL-NEXT:    subl %esi, %eax
 ; ALL-NEXT:    retq
   %ret = sub i32 %arg1, %arg2
   ret i32 %ret

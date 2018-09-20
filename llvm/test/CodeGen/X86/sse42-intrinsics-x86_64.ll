@@ -9,8 +9,8 @@ declare i64 @llvm.x86.sse42.crc32.64.64(i64, i64) nounwind
 define i64 @crc32_64_8(i64 %a, i8 %b) nounwind {
 ; CHECK-LABEL: crc32_64_8:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    crc32b %sil, %edi ## encoding: [0xf2,0x40,0x0f,0x38,0xf0,0xfe]
 ; CHECK-NEXT:    movq %rdi, %rax ## encoding: [0x48,0x89,0xf8]
+; CHECK-NEXT:    crc32b %sil, %eax ## encoding: [0xf2,0x40,0x0f,0x38,0xf0,0xc6]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %tmp = call i64 @llvm.x86.sse42.crc32.64.8(i64 %a, i8 %b)
   ret i64 %tmp
@@ -19,8 +19,8 @@ define i64 @crc32_64_8(i64 %a, i8 %b) nounwind {
 define i64 @crc32_64_64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: crc32_64_64:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    crc32q %rsi, %rdi ## encoding: [0xf2,0x48,0x0f,0x38,0xf1,0xfe]
 ; CHECK-NEXT:    movq %rdi, %rax ## encoding: [0x48,0x89,0xf8]
+; CHECK-NEXT:    crc32q %rsi, %rax ## encoding: [0xf2,0x48,0x0f,0x38,0xf1,0xc6]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %tmp = call i64 @llvm.x86.sse42.crc32.64.64(i64 %a, i64 %b)
   ret i64 %tmp
