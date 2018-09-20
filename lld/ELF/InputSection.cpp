@@ -631,16 +631,12 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
       return 0;
 
     // PPC64 V2 ABI describes two entry points to a function. The global entry
-    // point sets up the TOC base pointer. When calling a local function, the
-    // call should branch to the local entry point rather than the global entry
-    // point. Section 3.4.1 describes using the 3 most significant bits of the
-    // st_other field to find out how many instructions there are between the
-    // local and global entry point.
-    uint8_t StOther = (Sym.StOther >> 5) & 7;
-    if (StOther == 0 || StOther == 1)
-      return SymVA - P;
-
-    return SymVA - P + (1LL << StOther);
+    // point is used for calls where the caller and callee (may) have different
+    // TOC base pointers and r2 needs to be modified to hold the TOC base for
+    // the callee. For local calls the caller and callee share the same
+    // TOC base and so the TOC pointer initialization code should be skipped by
+    // branching to the local entry point.
+    return SymVA - P + getPPC64GlobalEntryToLocalEntryOffset(Sym.StOther);
   }
   case R_PPC_TOC:
     return getPPC64TocBase() + A;
