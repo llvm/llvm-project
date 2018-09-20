@@ -4651,8 +4651,3 @@ Target::TargetEventData::GetModuleListFromEvent(const Event *event_ptr) {
     module_list = event_data->m_module_list;
   return module_list;
 }
-
-bool Target::RegisterSwiftContextMessageKey(std::string Key) {
-  std::unique_lock<std::mutex> guard{m_swift_messages_mutex};
-  return m_swift_messages_issued.insert(std::move(Key)).second;
-}
