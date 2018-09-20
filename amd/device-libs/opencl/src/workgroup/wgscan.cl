@@ -7,6 +7,8 @@
 
 #include "wg.h"
 
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
 // TODO Use a special scan for per-sub-group results since there
 // are fewer of them than work-items in a sub group
 

@@ -7,6 +7,9 @@
 
 #include "wg.h"
 
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+
 #define GEN_BROADCAST(T) \
 __attribute__((overloadable, always_inline)) T \
 work_group_broadcast(T a, size_t local_id_x) \
