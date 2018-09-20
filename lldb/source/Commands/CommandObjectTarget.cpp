@@ -262,7 +262,8 @@ protected:
       const bool get_dependent_files =
           m_add_dependents.GetOptionValue().GetCurrentValue();
       Status error(debugger.GetTargetList().CreateTarget(
-          debugger, file_path, arch_cstr, get_dependent_files, nullptr,
+          debugger, file_path, arch_cstr,
+          get_dependent_files ? eLoadDependentsYes : eLoadDependentsNo, nullptr,
           target_sp));
 
       if (target_sp) {
