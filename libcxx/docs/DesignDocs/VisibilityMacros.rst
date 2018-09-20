@@ -82,9 +82,9 @@ Visibility Macros
 **_LIBCPP_HIDE_FROM_ABI_PER_TU_BY_DEFAULT**
   This macro controls the default value for `_LIBCPP_HIDE_FROM_ABI_PER_TU`.
   When the macro is defined, per TU ABI insulation is enabled by default, and
-  `_LIBCPP_HIDE_FROM_ABI_PER_TU` is defined to 1 unless overriden by users.
+  `_LIBCPP_HIDE_FROM_ABI_PER_TU` is defined to 1 unless overridden by users.
   Otherwise, per TU ABI insulation is disabled by default, and
-  `_LIBCPP_HIDE_FROM_ABI_PER_TU` is defined to 0 unless overriden by users.
+  `_LIBCPP_HIDE_FROM_ABI_PER_TU` is defined to 0 unless overridden by users.
 
   This macro is intended for vendors to control whether they want to ship
   libc++ with per TU ABI insulation enabled by default. Users can always
@@ -92,7 +92,7 @@ Visibility Macros
   appropriately.
 
   By default, this macro is not defined, which means that per TU ABI insulation
-  is not provided unless explicitly overriden by users.
+  is not provided unless explicitly overridden by users.
 
 **_LIBCPP_TYPE_VIS**
   Mark a type's typeinfo, vtable and members as having default visibility.
