@@ -7,5 +7,5 @@
 
 #include "oclc.h"
 
-__attribute__((always_inline, const)) int __oclc_ISA_version(void) { return 702; }
+const __constant int __oclc_ISA_version = 702;
 

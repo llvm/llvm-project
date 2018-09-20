@@ -7,5 +7,5 @@
 
 #include "oclc.h"
 
-__attribute__((always_inline, const)) bool __oclc_correctly_rounded_sqrt32(void) { return 1; }
+const __constant bool __oclc_correctly_rounded_sqrt32 = 1;
 

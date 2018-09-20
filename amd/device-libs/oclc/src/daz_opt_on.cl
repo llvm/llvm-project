@@ -7,5 +7,5 @@
 
 #include "oclc.h"
 
-__attribute__((always_inline, const)) bool __oclc_daz_opt(void) { return 1; }
+const __constant bool __oclc_daz_opt = 1;
 
