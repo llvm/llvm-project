@@ -1,15 +1,15 @@
 set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyMiscModule
-  MisplacedConstCheck.cpp
-  UnconventionalAssignOperatorCheck.cpp
   DefinitionsInHeadersCheck.cpp
   MiscTidyModule.cpp
+  MisplacedConstCheck.cpp
   NewDeleteOverloadsCheck.cpp
   NonCopyableObjects.cpp
   RedundantExpressionCheck.cpp
   StaticAssertCheck.cpp
   ThrowByValueCatchByReferenceCheck.cpp
+  UnconventionalAssignOperatorCheck.cpp
   UniqueptrResetReleaseCheck.cpp
   UnusedAliasDeclsCheck.cpp
   UnusedParametersCheck.cpp

@@ -22,8 +22,8 @@ add_clang_library(clangTidyReadabilityModule
   RedundantDeclarationCheck.cpp
   RedundantFunctionPtrDereferenceCheck.cpp
   RedundantMemberInitCheck.cpp
-  RedundantStringCStrCheck.cpp
   RedundantSmartptrGetCheck.cpp
+  RedundantStringCStrCheck.cpp
   RedundantStringInitCheck.cpp
   SimplifyBooleanExprCheck.cpp
   SimplifySubscriptExprCheck.cpp
