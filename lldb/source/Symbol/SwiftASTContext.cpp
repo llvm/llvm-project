@@ -780,15 +780,13 @@ static bool IsDeviceSupport(const char *path) {
 }
 
 SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
-    : TypeSystem(TypeSystem::eKindSwift), m_source_manager_ap(),
-      m_diagnostic_engine_ap(), m_ast_context_ap(), m_ir_gen_module_ap(),
+    : TypeSystem(TypeSystem::eKindSwift),
       m_compiler_invocation_ap(new swift::CompilerInvocation()),
-      m_dwarf_ast_parser_ap(), m_scratch_module(NULL), m_sil_module_ap(),
-      m_serialized_module_loader(NULL), m_clang_importer(NULL),
-      m_swift_module_cache(), m_mangled_name_to_type_map(),
-      m_type_to_mangled_name_map(), m_pointer_byte_size(0),
-      m_pointer_bit_align(0), m_void_function_type(), m_target_wp(),
-      m_process(NULL), m_platform_sdk_path(), m_resource_dir(),
+      m_scratch_module(NULL), m_serialized_module_loader(NULL),
+      m_clang_importer(NULL), m_swift_module_cache(),
+      m_mangled_name_to_type_map(), m_type_to_mangled_name_map(),
+      m_pointer_byte_size(0), m_pointer_bit_align(0), m_void_function_type(),
+      m_target_wp(), m_process(NULL), m_platform_sdk_path(), m_resource_dir(),
       m_ast_file_data_map(), m_initialized_language_options(false),
       m_initialized_search_path_options(false),
       m_initialized_clang_importer_options(false),
@@ -816,15 +814,13 @@ SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
 }
 
 SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
-    : TypeSystem(rhs.getKind()), m_source_manager_ap(),
-      m_diagnostic_engine_ap(), m_ast_context_ap(), m_ir_gen_module_ap(),
+    : TypeSystem(rhs.getKind()),
       m_compiler_invocation_ap(new swift::CompilerInvocation()),
-      m_dwarf_ast_parser_ap(), m_scratch_module(NULL), m_sil_module_ap(),
-      m_serialized_module_loader(NULL), m_clang_importer(NULL),
-      m_swift_module_cache(), m_mangled_name_to_type_map(),
-      m_type_to_mangled_name_map(), m_pointer_byte_size(0),
-      m_pointer_bit_align(0), m_void_function_type(), m_target_wp(),
-      m_process(NULL), m_platform_sdk_path(), m_resource_dir(),
+      m_scratch_module(NULL), m_serialized_module_loader(NULL),
+      m_clang_importer(NULL), m_swift_module_cache(),
+      m_mangled_name_to_type_map(), m_type_to_mangled_name_map(),
+      m_pointer_byte_size(0), m_pointer_bit_align(0), m_void_function_type(),
+      m_target_wp(), m_process(NULL), m_platform_sdk_path(), m_resource_dir(),
       m_ast_file_data_map(), m_initialized_language_options(false),
       m_initialized_search_path_options(false),
       m_initialized_clang_importer_options(false),
