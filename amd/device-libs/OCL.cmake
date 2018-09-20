@@ -44,7 +44,21 @@ macro(set_inc_options)
   endforeach()
 endmacro()
 
-macro(opencl_bc_lib name)
+# called with NAME: library name
+#             SOURCES: .cl and .ll source files
+#             INTERNAL_LINK_LIBS: Extra .lls to be linked and internalized into final library
+macro(opencl_bc_lib)
+  set(parse_options)
+  set(one_value_args NAME)
+  set(multi_value_args SOURCES INTERNAL_LINK_LIBS)
+
+  cmake_parse_arguments(OPENCL_BC_LIB "${parse_options}" "${one_value_args}"
+                                      "${multi_value_args}" ${ARGN})
+
+  set(name ${OPENCL_BC_LIB_NAME})
+  set(sources ${OPENCL_BC_LIB_SOURCES})
+  set(internal_link_libs ${OPENCL_BC_LIB_INTERNAL_LINK_LIBS})
+
   get_target_property(irif_lib_output irif_lib OUTPUT_NAME)
 
   set(OUT_NAME "${CMAKE_CURRENT_BINARY_DIR}/${name}")
@@ -59,7 +73,7 @@ macro(opencl_bc_lib name)
 
   set_inc_options()
   set(deps)
-  foreach(file ${ARGN})
+  foreach(file ${OPENCL_BC_LIB_SOURCES})
     get_filename_component(fname_we "${file}" NAME_WE)
     get_filename_component(fext "${file}" EXT)
     if (fext STREQUAL ".cl")
@@ -89,16 +103,21 @@ macro(opencl_bc_lib name)
     "${OUT_NAME}_response" @ONLY)
 
   add_custom_command(OUTPUT "${OUT_NAME}${FINAL_SUFFIX}"
+    # Link regular library dependencies
     COMMAND "${LLVM_LINK}"
-      -o "${OUT_NAME}${LIB_SUFFIX}" "@${OUT_NAME}_response"
+      -o "${OUT_NAME}.link0${LIB_SUFFIX}" "@${OUT_NAME}_response"
+    # Extra link step with internalize
+    COMMAND "${LLVM_LINK}" -internalize -only-needed "${OUT_NAME}.link0${LIB_SUFFIX}"
+      -o "${OUT_NAME}${LIB_SUFFIX}" ${internal_link_libs}
     COMMAND "${LLVM_OPT}" -strip
       -o "${OUT_NAME}${STRIP_SUFFIX}" "${OUT_NAME}${LIB_SUFFIX}"
     COMMAND "${PREPARE_BUILTINS}"
       -o "${OUT_NAME}${FINAL_SUFFIX}" "${OUT_NAME}${STRIP_SUFFIX}"
-    DEPENDS "${deps}" "${OUT_NAME}_response" "${PREPARE_BUILTINS}")
+    DEPENDS "${deps}" "${OUT_NAME}_response" "${PREPARE_BUILTINS}" ${internal_link_libs})
+
   add_custom_target("${LIB_TGT}" ALL
     DEPENDS "${OUT_NAME}${FINAL_SUFFIX}"
-    SOURCES ${ARGN})
+    SOURCES ${OPENCL_BC_LIB_SOURCES})
   set_target_properties(${LIB_TGT} PROPERTIES
     OUTPUT_NAME "${OUT_NAME}${FINAL_SUFFIX}"
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"

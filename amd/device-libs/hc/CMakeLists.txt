@@ -18,4 +18,5 @@ file(GLOB sources ${cl_sources} ${ll_sources})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../ocml/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../ockl/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../irif/inc)
-opencl_bc_lib(hc ${sources})
+opencl_bc_lib(NAME hc
+              SOURCES ${sources})

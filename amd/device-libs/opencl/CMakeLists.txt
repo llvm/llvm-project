@@ -20,13 +20,11 @@ file(GLOB cl_sources
   ${CMAKE_CURRENT_SOURCE_DIR}/src/subgroup/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/vldst/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/workgroup/*.cl
-)
+  )
 
-file(GLOB ll_sources
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/wgscratch/*.ll
-)
+file(GLOB wgscratch_src ${CMAKE_CURRENT_SOURCE_DIR}/src/wgscratch/*.ll)
 
-file(GLOB sources ${cl_sources} ${ll_sources})
+file(GLOB sources ${cl_sources})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/integer)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/workgroup)
@@ -34,4 +32,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../irif/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../ocml/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../ockl/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../oclc/inc)
-opencl_bc_lib(opencl ${sources})
+opencl_bc_lib(NAME opencl
+              SOURCES ${sources}
+              INTERNAL_LINK_LIBS ${wgscratch_src})

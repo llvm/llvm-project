@@ -13,7 +13,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../irif/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../oclc/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/inc)
 
-opencl_bc_lib(ockl ${sources})
+opencl_bc_lib(NAME ockl SOURCES ${sources})
 
 install(FILES
         inc/amd_hsa_common.h
