@@ -52,6 +52,7 @@
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -515,6 +516,41 @@ uint16_t MachineInstr::mergeFlagsWith(const MachineInstr &Other) const {
   // For now, the just return the union of the flags. If the flags get more
   // complicated over time, we might need more logic here.
   return getFlags() | Other.getFlags();
+}
+
+void MachineInstr::copyIRFlags(const Instruction &I) {
+  // Copy the wrapping flags.
+  if (const OverflowingBinaryOperator *OB =
+          dyn_cast<OverflowingBinaryOperator>(&I)) {
+    if (OB->hasNoSignedWrap())
+      setFlag(MachineInstr::MIFlag::NoSWrap);
+    if (OB->hasNoUnsignedWrap())
+      setFlag(MachineInstr::MIFlag::NoUWrap);
+  }
+
+  // Copy the exact flag.
+  if (const PossiblyExactOperator *PE = dyn_cast<PossiblyExactOperator>(&I))
+    if (PE->isExact())
+      setFlag(MachineInstr::MIFlag::IsExact);
+
+  // Copy the fast-math flags.
+  if (const FPMathOperator *FP = dyn_cast<FPMathOperator>(&I)) {
+    const FastMathFlags Flags = FP->getFastMathFlags();
+    if (Flags.noNaNs())
+      setFlag(MachineInstr::MIFlag::FmNoNans);
+    if (Flags.noInfs())
+      setFlag(MachineInstr::MIFlag::FmNoInfs);
+    if (Flags.noSignedZeros())
+      setFlag(MachineInstr::MIFlag::FmNsz);
+    if (Flags.allowReciprocal())
+      setFlag(MachineInstr::MIFlag::FmArcp);
+    if (Flags.allowContract())
+      setFlag(MachineInstr::MIFlag::FmContract);
+    if (Flags.approxFunc())
+      setFlag(MachineInstr::MIFlag::FmAfn);
+    if (Flags.allowReassoc())
+      setFlag(MachineInstr::MIFlag::FmReassoc);
+  }
 }
 
 bool MachineInstr::hasPropertyInBundle(uint64_t Mask, QueryType Type) const {

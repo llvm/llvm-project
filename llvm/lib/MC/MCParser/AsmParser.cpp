@@ -1808,6 +1808,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       Lex();
     }
 
+    getTargetParser().doBeforeLabelEmit(Sym);
+
     // Emit the label.
     if (!getTargetParser().isParsingInlineAsm())
       Out.EmitLabel(Sym, IDLoc);

@@ -1422,7 +1422,7 @@ void Target::DidExec() {
 }
 
 void Target::SetExecutableModule(ModuleSP &executable_sp,
-                                 bool get_dependent_files) {
+                                 LoadDependentFiles load_dependent_files) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
   ClearModules(false);
 
@@ -1446,8 +1446,20 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
 
     FileSpecList dependent_files;
     ObjectFile *executable_objfile = executable_sp->GetObjectFile();
+    bool load_dependens;
+    switch (load_dependent_files) {
+    case eLoadDependentsDefault:
+      load_dependens = executable_sp->IsExecutable();
+      break;
+    case eLoadDependentsYes:
+      load_dependens = true;
+      break;
+    case eLoadDependentsNo:
+      load_dependens = false;
+      break;
+    }
 
-    if (executable_objfile && get_dependent_files) {
+    if (executable_objfile && load_dependens) {
       executable_objfile->GetDependentModules(dependent_files);
       for (uint32_t i = 0; i < dependent_files.GetSize(); i++) {
         FileSpec dependent_file_spec(
@@ -1552,7 +1564,7 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform) {
                                                nullptr, nullptr);
 
     if (!error.Fail() && executable_sp) {
-      SetExecutableModule(executable_sp, true);
+      SetExecutableModule(executable_sp, eLoadDependentsYes);
       return true;
     }
   }
@@ -2122,7 +2134,7 @@ void Target::ImageSearchPathsChanged(const PathMappingList &path_list,
   Target *target = (Target *)baton;
   ModuleSP exe_module_sp(target->GetExecutableModule());
   if (exe_module_sp)
-    target->SetExecutableModule(exe_module_sp, true);
+    target->SetExecutableModule(exe_module_sp, eLoadDependentsYes);
 }
 
 TypeSystem *Target::GetScratchTypeSystemForLanguage(Status *error,

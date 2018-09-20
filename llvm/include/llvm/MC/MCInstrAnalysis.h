@@ -88,18 +88,53 @@ public:
                                     const MCInst &Inst,
                                     APInt &Writes) const;
 
-  /// Returns true if \param Inst is a dependency breaking instruction for the
+  /// Returns true if \param MI is a dependency breaking zero-idiom for the
   /// given subtarget.
+  ///
+  /// \param Mask is used to identify input operands that have their dependency
+  /// broken. Each bit of the mask is associated with a specific input operand.
+  /// Bits associated with explicit input operands are laid out first in the
+  /// mask; implicit operands come after explicit operands.
+  /// 
+  /// Dependencies are broken only for operands that have their corresponding bit
+  /// set. Operands that have their bit cleared, or that don't have a
+  /// corresponding bit in the mask don't have their dependency broken.
+  /// Note that \param Mask may not be big enough to describe all operands.
+  /// The assumption for operands that don't have a correspondent bit in the
+  /// mask is that those are still data dependent.
+  /// 
+  /// The only exception to the rule is for when \param Mask has all zeroes.
+  /// A zero mask means: dependencies are broken for all explicit register
+  /// operands.
+  virtual bool isZeroIdiom(const MCInst &MI, APInt &Mask,
+                           unsigned CPUID) const {
+    return false;
+  }
+
+  /// Returns true if \param MI is a dependency breaking instruction for the
+  /// subtarget associated with \param CPUID.
   ///
   /// The value computed by a dependency breaking instruction is not dependent
   /// on the inputs. An example of dependency breaking instruction on X86 is
   /// `XOR %eax, %eax`.
-  /// TODO: In future, we could implement an alternative approach where this
-  /// method returns `true` if the input instruction is not dependent on
-  /// some/all of its input operands. An APInt mask could then be used to
-  /// identify independent operands.
-  virtual bool isDependencyBreaking(const MCSubtargetInfo &STI,
-                                    const MCInst &Inst) const;
+  ///
+  /// If \param MI is a dependency breaking instruction for subtarget \param
+  /// CPUID, then \param Mask can be inspected to identify independent operands.
+  ///
+  /// Essentially, each bit of the mask corresponds to an input operand.
+  /// Explicit operands are laid out first in the mask; implicit operands follow
+  /// explicit operands. Bits are set for operands that are independent.
+  ///
+  /// Note that the number of bits in Mask may not be equivalent to the sum of
+  /// explicit and implicit operands in \param MI. Operands that don't have a
+  /// corresponding bit in Mask are assumed "not independente".
+  ///
+  /// The only exception is for when \param Mask is all zeroes. That means:
+  /// explicit input operands of \param MI are independent.
+  virtual bool isDependencyBreaking(const MCInst &MI, APInt &Mask,
+                                    unsigned CPUID) const {
+    return isZeroIdiom(MI, Mask, CPUID);
+  }
 
   /// Given a branch instruction try to get the address the branch
   /// targets. Return true on success, and the address in Target.

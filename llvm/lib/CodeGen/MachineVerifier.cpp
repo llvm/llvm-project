@@ -262,6 +262,7 @@ namespace {
                             LaneBitmask LaneMask = LaneBitmask::getNone());
     void checkLivenessAtDef(const MachineOperand *MO, unsigned MONum,
                             SlotIndex DefIdx, const LiveRange &LR, unsigned VRegOrUnit,
+                            bool SubRangeCheck = false,
                             LaneBitmask LaneMask = LaneBitmask::getNone());
 
     void markReachable(const MachineBasicBlock *MBB);
@@ -1396,7 +1397,7 @@ void MachineVerifier::checkLivenessAtUse(const MachineOperand *MO,
 
 void MachineVerifier::checkLivenessAtDef(const MachineOperand *MO,
     unsigned MONum, SlotIndex DefIdx, const LiveRange &LR, unsigned VRegOrUnit,
-    LaneBitmask LaneMask) {
+    bool SubRangeCheck, LaneBitmask LaneMask) {
   if (const VNInfo *VNI = LR.getVNInfoAt(DefIdx)) {
     assert(VNI && "NULL valno is not allowed");
     if (VNI->def != DefIdx) {
@@ -1420,25 +1421,14 @@ void MachineVerifier::checkLivenessAtDef(const MachineOperand *MO,
   if (MO->isDead()) {
     LiveQueryResult LRQ = LR.Query(DefIdx);
     if (!LRQ.isDeadDef()) {
-      // In case of physregs we can have a non-dead definition on another
-      // operand.
-      bool otherDef = false;
-      if (!TargetRegisterInfo::isVirtualRegister(VRegOrUnit)) {
-        const MachineInstr &MI = *MO->getParent();
-        for (const MachineOperand &MO : MI.operands()) {
-          if (!MO.isReg() || !MO.isDef() || MO.isDead())
-            continue;
-          unsigned Reg = MO.getReg();
-          for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units) {
-            if (*Units == VRegOrUnit) {
-              otherDef = true;
-              break;
-            }
-          }
-        }
-      }
-
-      if (!otherDef) {
+      assert(TargetRegisterInfo::isVirtualRegister(VRegOrUnit) &&
+             "Expecting a virtual register.");
+      // A dead subreg def only tells us that the specific subreg is dead. There
+      // could be other non-dead defs of other subregs, or we could have other
+      // parts of the register being live through the instruction. So unless we
+      // are checking liveness for a subrange it is ok for the live range to
+      // continue, given that we have a dead def of a subregister.
+      if (SubRangeCheck || MO->getSubReg() == 0) {
         report("Live range continues after dead def flag", MO, MONum);
         report_context_liverange(LR);
         report_context_vreg_regunit(VRegOrUnit);
@@ -1596,7 +1586,7 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
             for (const LiveInterval::SubRange &SR : LI.subranges()) {
               if ((SR.LaneMask & MOMask).none())
                 continue;
-              checkLivenessAtDef(MO, MONum, DefIdx, SR, Reg, SR.LaneMask);
+              checkLivenessAtDef(MO, MONum, DefIdx, SR, Reg, true, SR.LaneMask);
             }
           }
         } else {

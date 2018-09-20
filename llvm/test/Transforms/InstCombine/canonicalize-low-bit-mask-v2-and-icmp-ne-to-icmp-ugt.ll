@@ -16,11 +16,9 @@
 
 define i1 @p0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @p0(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
-; CHECK-NEXT:    [[T2:%.*]] = and i8 [[T1]], [[X:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[T2]], [[X]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    [[X_HIGHBITS:%.*]] = lshr i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[X_HIGHBITS]], 0
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %t0 = shl i8 -1, %y
   %t1 = xor i8 %t0, -1
@@ -35,11 +33,9 @@ define i1 @p0(i8 %x, i8 %y) {
 
 define <2 x i1> @p1_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @p1_vec(
-; CHECK-NEXT:    [[T0:%.*]] = shl <2 x i8> <i8 -1, i8 -1>, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = xor <2 x i8> [[T0]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[T2:%.*]] = and <2 x i8> [[T1]], [[X:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne <2 x i8> [[T2]], [[X]]
-; CHECK-NEXT:    ret <2 x i1> [[RET]]
+; CHECK-NEXT:    [[X_HIGHBITS:%.*]] = lshr <2 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i8> [[X_HIGHBITS]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
 ;
   %t0 = shl <2 x i8> <i8 -1, i8 -1>, %y
   %t1 = xor <2 x i8> %t0, <i8 -1, i8 -1>
@@ -50,11 +46,9 @@ define <2 x i1> @p1_vec(<2 x i8> %x, <2 x i8> %y) {
 
 define <3 x i1> @p2_vec_undef0(<3 x i8> %x, <3 x i8> %y) {
 ; CHECK-LABEL: @p2_vec_undef0(
-; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i8> <i8 -1, i8 undef, i8 -1>, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = xor <3 x i8> [[T0]], <i8 -1, i8 -1, i8 -1>
-; CHECK-NEXT:    [[T2:%.*]] = and <3 x i8> [[T1]], [[X:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne <3 x i8> [[T2]], [[X]]
-; CHECK-NEXT:    ret <3 x i1> [[RET]]
+; CHECK-NEXT:    [[X_HIGHBITS:%.*]] = lshr <3 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <3 x i8> [[X_HIGHBITS]], zeroinitializer
+; CHECK-NEXT:    ret <3 x i1> [[TMP1]]
 ;
   %t0 = shl <3 x i8> <i8 -1, i8 undef, i8 -1>, %y
   %t1 = xor <3 x i8> %t0, <i8 -1, i8 -1, i8 -1>
@@ -65,11 +59,9 @@ define <3 x i1> @p2_vec_undef0(<3 x i8> %x, <3 x i8> %y) {
 
 define <3 x i1> @p3_vec_undef0(<3 x i8> %x, <3 x i8> %y) {
 ; CHECK-LABEL: @p3_vec_undef0(
-; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i8> <i8 -1, i8 -1, i8 -1>, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = xor <3 x i8> [[T0]], <i8 -1, i8 undef, i8 -1>
-; CHECK-NEXT:    [[T2:%.*]] = and <3 x i8> [[T1]], [[X:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne <3 x i8> [[T2]], [[X]]
-; CHECK-NEXT:    ret <3 x i1> [[RET]]
+; CHECK-NEXT:    [[X_HIGHBITS:%.*]] = lshr <3 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <3 x i8> [[X_HIGHBITS]], zeroinitializer
+; CHECK-NEXT:    ret <3 x i1> [[TMP1]]
 ;
   %t0 = shl <3 x i8> <i8 -1, i8 -1, i8 -1>, %y
   %t1 = xor <3 x i8> %t0, <i8 -1, i8 undef, i8 -1>
@@ -80,11 +72,9 @@ define <3 x i1> @p3_vec_undef0(<3 x i8> %x, <3 x i8> %y) {
 
 define <3 x i1> @p4_vec_undef2(<3 x i8> %x, <3 x i8> %y) {
 ; CHECK-LABEL: @p4_vec_undef2(
-; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i8> <i8 -1, i8 undef, i8 -1>, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = xor <3 x i8> [[T0]], <i8 -1, i8 undef, i8 -1>
-; CHECK-NEXT:    [[T2:%.*]] = and <3 x i8> [[T1]], [[X:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne <3 x i8> [[T2]], [[X]]
-; CHECK-NEXT:    ret <3 x i1> [[RET]]
+; CHECK-NEXT:    [[X_HIGHBITS:%.*]] = lshr <3 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <3 x i8> [[X_HIGHBITS]], zeroinitializer
+; CHECK-NEXT:    ret <3 x i1> [[TMP1]]
 ;
   %t0 = shl <3 x i8> <i8 -1, i8 undef, i8 -1>, %y
   %t1 = xor <3 x i8> %t0, <i8 -1, i8 undef, i8 -1>
@@ -101,12 +91,10 @@ declare i8 @gen8()
 
 define i1 @c0(i8 %y) {
 ; CHECK-LABEL: @c0(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[T2:%.*]] = and i8 [[X]], [[T1]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[T2]], [[X]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    [[X_HIGHBITS:%.*]] = lshr i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[X_HIGHBITS]], 0
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %t0 = shl i8 -1, %y
   %t1 = xor i8 %t0, -1
@@ -118,12 +106,10 @@ define i1 @c0(i8 %y) {
 
 define i1 @c1(i8 %y) {
 ; CHECK-LABEL: @c1(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[T2:%.*]] = and i8 [[X]], [[T1]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[X]], [[T2]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    [[X_HIGHBITS:%.*]] = lshr i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[X_HIGHBITS]], 0
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %t0 = shl i8 -1, %y
   %t1 = xor i8 %t0, -1
@@ -135,12 +121,10 @@ define i1 @c1(i8 %y) {
 
 define i1 @c2(i8 %y) {
 ; CHECK-LABEL: @c2(
-; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[T2:%.*]] = and i8 [[X]], [[T1]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[X]], [[T2]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    [[X_HIGHBITS:%.*]] = lshr i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[X_HIGHBITS]], 0
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %t0 = shl i8 -1, %y
   %t1 = xor i8 %t0, -1
@@ -160,10 +144,9 @@ define i1 @oneuse0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @oneuse0(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
-; CHECK-NEXT:    [[T2:%.*]] = and i8 [[T1]], [[X:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[T2]], [[X]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    [[X_HIGHBITS:%.*]] = lshr i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[X_HIGHBITS]], 0
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %t0 = shl i8 -1, %y
   call void @use8(i8 %t0)
@@ -178,9 +161,8 @@ define i1 @oneuse1(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[T0:%.*]] = shl i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[T1]])
-; CHECK-NEXT:    [[T2:%.*]] = and i8 [[T1]], [[X:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[T2]], [[X]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[T1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %t0 = shl i8 -1, %y
   %t1 = xor i8 %t0, -1
@@ -196,8 +178,8 @@ define i1 @oneuse2(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    [[T2:%.*]] = and i8 [[T1]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T2]])
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[T2]], [[X]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[T1]], [[X]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %t0 = shl i8 -1, %y
   %t1 = xor i8 %t0, -1
@@ -213,9 +195,8 @@ define i1 @oneuse3(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[T1]])
-; CHECK-NEXT:    [[T2:%.*]] = and i8 [[T1]], [[X:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[T2]], [[X]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[T1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %t0 = shl i8 -1, %y
   call void @use8(i8 %t0)
@@ -233,8 +214,8 @@ define i1 @oneuse4(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    [[T2:%.*]] = and i8 [[T1]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T2]])
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[T2]], [[X]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[T1]], [[X]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %t0 = shl i8 -1, %y
   call void @use8(i8 %t0)
@@ -253,8 +234,8 @@ define i1 @oneuse5(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @use8(i8 [[T1]])
 ; CHECK-NEXT:    [[T2:%.*]] = and i8 [[T1]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T2]])
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[T2]], [[X]]
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[T1]], [[X]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %t0 = shl i8 -1, %y
   call void @use8(i8 %t0)

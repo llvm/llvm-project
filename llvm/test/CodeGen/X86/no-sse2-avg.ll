@@ -5,9 +5,9 @@
 define <16 x i8> @PR27973() {
 ; CHECK-LABEL: PR27973:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    movq $0, 8(%rdi)
 ; CHECK-NEXT:    movq $0, (%rdi)
-; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
   %t0 = zext <16 x i8> zeroinitializer to <16 x i32>
   %t1 = add nuw nsw <16 x i32> %t0, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>

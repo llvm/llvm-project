@@ -538,6 +538,9 @@ static DecodeStatus DecodeMovePRegPair(MCInst &Inst, unsigned RegPair,
                                        uint64_t Address,
                                        const void *Decoder);
 
+static DecodeStatus DecodeMovePOperands(MCInst &Inst, unsigned Insn,
+                                        uint64_t Address, const void *Decoder);
+
 namespace llvm {
 
 Target &getTheMipselTarget();
@@ -2446,6 +2449,32 @@ static DecodeStatus DecodeRegListOperand16(MCInst &Inst, unsigned Insn,
     Inst.addOperand(MCOperand::createReg(Regs[i]));
 
   Inst.addOperand(MCOperand::createReg(Mips::RA));
+
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeMovePOperands(MCInst &Inst, unsigned Insn,
+                                          uint64_t Address,
+                                          const void *Decoder) {
+  unsigned RegPair = fieldFromInstruction(Insn, 7, 3);
+  if (DecodeMovePRegPair(Inst, RegPair, Address, Decoder) ==
+      MCDisassembler::Fail)
+    return MCDisassembler::Fail;
+
+  unsigned RegRs;
+  if (static_cast<const MipsDisassembler*>(Decoder)->hasMips32r6())
+    RegRs = fieldFromInstruction(Insn, 0, 2) |
+            (fieldFromInstruction(Insn, 3, 1) << 2);
+  else
+    RegRs = fieldFromInstruction(Insn, 1, 3);
+  if (DecodeGPRMM16MovePRegisterClass(Inst, RegRs, Address, Decoder) ==
+      MCDisassembler::Fail)
+    return MCDisassembler::Fail;
+
+  unsigned RegRt = fieldFromInstruction(Insn, 4, 3);
+  if (DecodeGPRMM16MovePRegisterClass(Inst, RegRt, Address, Decoder) ==
+      MCDisassembler::Fail)
+    return MCDisassembler::Fail;
 
   return MCDisassembler::Success;
 }

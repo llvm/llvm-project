@@ -33,8 +33,8 @@ define <8 x i16> @combine_extrqi_pshufb_8i16(<8 x i16> %a0) {
 define <16 x i8> @combine_insertqi_pshufb_16i8(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSSE3-LABEL: combine_insertqi_pshufb_16i8:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    extrq {{.*#+}} xmm1 = xmm1[0,1],zero,zero,zero,zero,zero,zero,xmm1[u,u,u,u,u,u,u,u]
 ; SSSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSSE3-NEXT:    extrq {{.*#+}} xmm0 = xmm0[0,1],zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE42-LABEL: combine_insertqi_pshufb_16i8:
@@ -54,8 +54,8 @@ define <16 x i8> @combine_insertqi_pshufb_16i8(<16 x i8> %a0, <16 x i8> %a1) {
 define <8 x i16> @combine_insertqi_pshufb_8i16(<8 x i16> %a0, <8 x i16> %a1) {
 ; SSSE3-LABEL: combine_insertqi_pshufb_8i16:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    extrq {{.*#+}} xmm1 = xmm1[0,1],zero,zero,zero,zero,zero,zero,xmm1[u,u,u,u,u,u,u,u]
 ; SSSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSSE3-NEXT:    extrq {{.*#+}} xmm0 = xmm0[0,1],zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE42-LABEL: combine_insertqi_pshufb_8i16:

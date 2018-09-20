@@ -15,8 +15,8 @@ define zeroext i1 @a(i32 %x)  nounwind {
 ;
 ; X64-LABEL: a:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $3, %ecx
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl $3, %ecx
 ; X64-NEXT:    mull %ecx
 ; X64-NEXT:    seto %al
 ; X64-NEXT:    retq

@@ -4,11 +4,10 @@
 
 define void @zap(i64 %a, i64 %b) nounwind {
 entry:
-  ; CHECK:      movq %rsi, %rax
+  ; CHECK:      movq %rsi, %rdx
   ; CHECK-NEXT: movl $8, %ecx
   ; CHECK-NEXT: movl $9, %r8d
   ; CHECK-NEXT: movq %rdi, %rsi
-  ; CHECK-NEXT: movq %rax, %rdx
   ; CHECK-NEXT: callq addfour
   %0 = call cc 11 {i64, i64, i64} @addfour(i64 undef, i64 undef, i64 %a, i64 %b, i64 8, i64 9)
   %res = extractvalue {i64, i64, i64} %0, 2

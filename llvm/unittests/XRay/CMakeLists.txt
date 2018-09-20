@@ -1,7 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   Support
   XRay
-  TestingSupport
   )
 
 add_llvm_unittest(XRayTests

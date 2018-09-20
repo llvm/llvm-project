@@ -10,9 +10,9 @@
 define i64 @test__andn_u64(i64 %a0, i64 %a1) {
 ; X64-LABEL: test__andn_u64:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorq $-1, %rdi
-; X64-NEXT:    andq %rsi, %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    xorq $-1, %rax
+; X64-NEXT:    andq %rsi, %rax
 ; X64-NEXT:    retq
   %xor = xor i64 %a0, -1
   %res = and i64 %xor, %a1
@@ -84,9 +84,9 @@ define i64 @test__tzcnt_u64(i64 %a0) {
 define i64 @test_andn_u64(i64 %a0, i64 %a1) {
 ; X64-LABEL: test_andn_u64:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorq $-1, %rdi
-; X64-NEXT:    andq %rsi, %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    xorq $-1, %rax
+; X64-NEXT:    andq %rsi, %rax
 ; X64-NEXT:    retq
   %xor = xor i64 %a0, -1
   %res = and i64 %xor, %a1

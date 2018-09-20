@@ -41,9 +41,10 @@ define zeroext i1 @all_bits_set(i32 %P, i32 %Q) nounwind {
 define zeroext i1 @all_sign_bits_set(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: all_sign_bits_set:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl %esi, %edi
-; CHECK-NEXT:    shrl $31, %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    shrl $31, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %a = icmp slt i32 %P, 0
   %b = icmp slt i32 %Q, 0
@@ -66,9 +67,10 @@ define zeroext i1 @any_bits_set(i32 %P, i32 %Q) nounwind {
 define zeroext i1 @any_sign_bits_set(i32 %P, i32 %Q) nounwind {
 ; CHECK-LABEL: any_sign_bits_set:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orl %esi, %edi
-; CHECK-NEXT:    shrl $31, %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    shrl $31, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %a = icmp slt i32 %P, 0
   %b = icmp slt i32 %Q, 0

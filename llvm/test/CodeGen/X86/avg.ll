@@ -1638,6 +1638,7 @@ define <64 x i8> @avg_v64i8_3(<64 x i8> %a, <64 x i8> %b) nounwind {
 define <512 x i8> @avg_v512i8_3(<512 x i8> %a, <512 x i8> %b) nounwind {
 ; SSE2-LABEL: avg_v512i8_3:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq %rdi, %rax
 ; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm8
 ; SSE2-NEXT:    pavgb {{[0-9]+}}(%rsp), %xmm8
 ; SSE2-NEXT:    movdqa %xmm8, 496(%rdi)
@@ -1726,7 +1727,6 @@ define <512 x i8> @avg_v512i8_3(<512 x i8> %a, <512 x i8> %b) nounwind {
 ; SSE2-NEXT:    movdqa %xmm1, 16(%rdi)
 ; SSE2-NEXT:    pavgb {{[0-9]+}}(%rsp), %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, (%rdi)
-; SSE2-NEXT:    movq %rdi, %rax
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: avg_v512i8_3:
@@ -1735,6 +1735,7 @@ define <512 x i8> @avg_v512i8_3(<512 x i8> %a, <512 x i8> %b) nounwind {
 ; AVX1-NEXT:    movq %rsp, %rbp
 ; AVX1-NEXT:    andq $-32, %rsp
 ; AVX1-NEXT:    subq $128, %rsp
+; AVX1-NEXT:    movq %rdi, %rax
 ; AVX1-NEXT:    vmovdqa 144(%rbp), %ymm8
 ; AVX1-NEXT:    vmovdqa 112(%rbp), %ymm9
 ; AVX1-NEXT:    vmovdqa 80(%rbp), %ymm10
@@ -1861,7 +1862,6 @@ define <512 x i8> @avg_v512i8_3(<512 x i8> %a, <512 x i8> %b) nounwind {
 ; AVX1-NEXT:    vmovaps %ymm0, 32(%rdi)
 ; AVX1-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    vmovaps %ymm0, (%rdi)
-; AVX1-NEXT:    movq %rdi, %rax
 ; AVX1-NEXT:    movq %rbp, %rsp
 ; AVX1-NEXT:    popq %rbp
 ; AVX1-NEXT:    vzeroupper
@@ -1873,6 +1873,7 @@ define <512 x i8> @avg_v512i8_3(<512 x i8> %a, <512 x i8> %b) nounwind {
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
 ; AVX2-NEXT:    subq $32, %rsp
+; AVX2-NEXT:    movq %rdi, %rax
 ; AVX2-NEXT:    vmovdqa 240(%rbp), %ymm8
 ; AVX2-NEXT:    vmovdqa 208(%rbp), %ymm9
 ; AVX2-NEXT:    vmovdqa 176(%rbp), %ymm10
@@ -1913,7 +1914,6 @@ define <512 x i8> @avg_v512i8_3(<512 x i8> %a, <512 x i8> %b) nounwind {
 ; AVX2-NEXT:    vmovdqa %ymm2, 64(%rdi)
 ; AVX2-NEXT:    vmovdqa %ymm1, 32(%rdi)
 ; AVX2-NEXT:    vmovdqa %ymm0, (%rdi)
-; AVX2-NEXT:    movq %rdi, %rax
 ; AVX2-NEXT:    movq %rbp, %rsp
 ; AVX2-NEXT:    popq %rbp
 ; AVX2-NEXT:    vzeroupper
@@ -1925,6 +1925,7 @@ define <512 x i8> @avg_v512i8_3(<512 x i8> %a, <512 x i8> %b) nounwind {
 ; AVX512F-NEXT:    movq %rsp, %rbp
 ; AVX512F-NEXT:    andq $-32, %rsp
 ; AVX512F-NEXT:    subq $32, %rsp
+; AVX512F-NEXT:    movq %rdi, %rax
 ; AVX512F-NEXT:    vmovdqa 240(%rbp), %ymm8
 ; AVX512F-NEXT:    vmovdqa 208(%rbp), %ymm9
 ; AVX512F-NEXT:    vmovdqa 176(%rbp), %ymm10
@@ -1965,7 +1966,6 @@ define <512 x i8> @avg_v512i8_3(<512 x i8> %a, <512 x i8> %b) nounwind {
 ; AVX512F-NEXT:    vmovdqa %ymm2, 64(%rdi)
 ; AVX512F-NEXT:    vmovdqa %ymm1, 32(%rdi)
 ; AVX512F-NEXT:    vmovdqa %ymm0, (%rdi)
-; AVX512F-NEXT:    movq %rdi, %rax
 ; AVX512F-NEXT:    movq %rbp, %rsp
 ; AVX512F-NEXT:    popq %rbp
 ; AVX512F-NEXT:    vzeroupper
@@ -1977,6 +1977,7 @@ define <512 x i8> @avg_v512i8_3(<512 x i8> %a, <512 x i8> %b) nounwind {
 ; AVX512BW-NEXT:    movq %rsp, %rbp
 ; AVX512BW-NEXT:    andq $-64, %rsp
 ; AVX512BW-NEXT:    subq $64, %rsp
+; AVX512BW-NEXT:    movq %rdi, %rax
 ; AVX512BW-NEXT:    vpavgb 16(%rbp), %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpavgb 80(%rbp), %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpavgb 144(%rbp), %zmm2, %zmm2
@@ -1993,7 +1994,6 @@ define <512 x i8> @avg_v512i8_3(<512 x i8> %a, <512 x i8> %b) nounwind {
 ; AVX512BW-NEXT:    vmovdqa64 %zmm2, 128(%rdi)
 ; AVX512BW-NEXT:    vmovdqa64 %zmm1, 64(%rdi)
 ; AVX512BW-NEXT:    vmovdqa64 %zmm0, (%rdi)
-; AVX512BW-NEXT:    movq %rdi, %rax
 ; AVX512BW-NEXT:    movq %rbp, %rsp
 ; AVX512BW-NEXT:    popq %rbp
 ; AVX512BW-NEXT:    vzeroupper

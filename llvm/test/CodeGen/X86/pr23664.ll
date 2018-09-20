@@ -7,8 +7,9 @@ define i2 @f(i32 %arg) {
   ret i2 %or
 
 ; CHECK-LABEL: f:
-; CHECK:      addb    %dil, %dil
-; CHECK-NEXT: orb     $1, %dil
-; CHECK-NEXT: movl    %edi, %eax
+; CHECK:      movl    %edi, %eax
+; CHECK-NEXT: addb    %al, %al
+; CHECK-NEXT: orb     $1, %al
+; CHECK-NEXT: # kill
 ; CHECK-NEXT: retq
 }

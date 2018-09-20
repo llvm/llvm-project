@@ -17,3 +17,5 @@ Changes:
   is applied to fix 32-bit build failure on macOS
 * https://github.com/google/benchmark/commit/52613079824ac58d06c070aa9fbbb186a5859e2c
   is applied to fix cross compilation with MinGW headers
+* https://github.com/google/benchmark/commit/439d6b1c2a6da5cb6adc4c4dfc555af235722396
+  is applied to fix building with MinGW headers for ARM

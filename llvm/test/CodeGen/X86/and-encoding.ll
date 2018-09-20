@@ -46,9 +46,9 @@ define void @f3(i32 %x, i1 *%y) nounwind {
 define i32 @lopped32_32to8(i32 %x) {
 ; CHECK-LABEL: lopped32_32to8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shrl $4, %edi # encoding: [0xc1,0xef,0x04]
-; CHECK-NEXT:    andl $-16, %edi # encoding: [0x83,0xe7,0xf0]
 ; CHECK-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; CHECK-NEXT:    shrl $4, %eax # encoding: [0xc1,0xe8,0x04]
+; CHECK-NEXT:    andl $-16, %eax # encoding: [0x83,0xe0,0xf0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %shr = lshr i32 %x, 4
   %and = and i32 %shr, 268435440
@@ -60,9 +60,9 @@ define i32 @lopped32_32to8(i32 %x) {
 define i64 @lopped64_32to8(i64 %x) {
 ; CHECK-LABEL: lopped64_32to8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shrq $36, %rdi # encoding: [0x48,0xc1,0xef,0x24]
-; CHECK-NEXT:    andl $-16, %edi # encoding: [0x83,0xe7,0xf0]
 ; CHECK-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; CHECK-NEXT:    shrq $36, %rax # encoding: [0x48,0xc1,0xe8,0x24]
+; CHECK-NEXT:    andl $-16, %eax # encoding: [0x83,0xe0,0xf0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %shr = lshr i64 %x, 36
   %and = and i64 %shr, 268435440
@@ -74,9 +74,9 @@ define i64 @lopped64_32to8(i64 %x) {
 define i64 @lopped64_64to8(i64 %x) {
 ; CHECK-LABEL: lopped64_64to8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shrq $4, %rdi # encoding: [0x48,0xc1,0xef,0x04]
-; CHECK-NEXT:    andq $-16, %rdi # encoding: [0x48,0x83,0xe7,0xf0]
 ; CHECK-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; CHECK-NEXT:    shrq $4, %rax # encoding: [0x48,0xc1,0xe8,0x04]
+; CHECK-NEXT:    andq $-16, %rax # encoding: [0x48,0x83,0xe0,0xf0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %shr = lshr i64 %x, 4
   %and = and i64 %shr, 1152921504606846960
@@ -88,10 +88,10 @@ define i64 @lopped64_64to8(i64 %x) {
 define i64 @lopped64_64to32(i64 %x) {
 ; CHECK-LABEL: lopped64_64to32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shrq $4, %rdi # encoding: [0x48,0xc1,0xef,0x04]
-; CHECK-NEXT:    andq $-983056, %rdi # encoding: [0x48,0x81,0xe7,0xf0,0xff,0xf0,0xff]
-; CHECK-NEXT:    # imm = 0xFFF0FFF0
 ; CHECK-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; CHECK-NEXT:    shrq $4, %rax # encoding: [0x48,0xc1,0xe8,0x04]
+; CHECK-NEXT:    andq $-983056, %rax # encoding: [0x48,0x25,0xf0,0xff,0xf0,0xff]
+; CHECK-NEXT:    # imm = 0xFFF0FFF0
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %shr = lshr i64 %x, 4
   %and = and i64 %shr, 1152921504605863920

@@ -19,8 +19,9 @@ define i32 @test_or_i1(i32 %arg1, i32 %arg2) {
 define i8 @test_or_i8(i8 %arg1, i8 %arg2) {
 ; ALL-LABEL: test_or_i8:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    orb %dil, %sil
 ; ALL-NEXT:    movl %esi, %eax
+; ALL-NEXT:    orb %dil, %al
+; ALL-NEXT:    # kill: def $al killed $al killed $eax
 ; ALL-NEXT:    retq
   %ret = or i8 %arg1, %arg2
   ret i8 %ret
@@ -29,8 +30,9 @@ define i8 @test_or_i8(i8 %arg1, i8 %arg2) {
 define i16 @test_or_i16(i16 %arg1, i16 %arg2) {
 ; ALL-LABEL: test_or_i16:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    orw %di, %si
 ; ALL-NEXT:    movl %esi, %eax
+; ALL-NEXT:    orw %di, %ax
+; ALL-NEXT:    # kill: def $ax killed $ax killed $eax
 ; ALL-NEXT:    retq
   %ret = or i16 %arg1, %arg2
   ret i16 %ret
@@ -39,8 +41,8 @@ define i16 @test_or_i16(i16 %arg1, i16 %arg2) {
 define i32 @test_or_i32(i32 %arg1, i32 %arg2) {
 ; ALL-LABEL: test_or_i32:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    orl %edi, %esi
 ; ALL-NEXT:    movl %esi, %eax
+; ALL-NEXT:    orl %edi, %eax
 ; ALL-NEXT:    retq
   %ret = or i32 %arg1, %arg2
   ret i32 %ret
@@ -49,8 +51,8 @@ define i32 @test_or_i32(i32 %arg1, i32 %arg2) {
 define i64 @test_or_i64(i64 %arg1, i64 %arg2) {
 ; ALL-LABEL: test_or_i64:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    orq %rdi, %rsi
 ; ALL-NEXT:    movq %rsi, %rax
+; ALL-NEXT:    orq %rdi, %rax
 ; ALL-NEXT:    retq
   %ret = or i64 %arg1, %arg2
   ret i64 %ret

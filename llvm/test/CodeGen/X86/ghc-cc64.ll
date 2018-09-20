@@ -22,8 +22,8 @@
 
 define void @zap(i64 %a, i64 %b) nounwind {
 entry:
-  ; CHECK:      movq %rdi, %r13
-  ; CHECK-NEXT: movq %rsi, %rbp
+  ; CHECK:      movq %rsi, %rbp
+  ; CHECK-NEXT: movq %rdi, %r13
   ; CHECK-NEXT: callq addtwo
   %0 = call ghccc i64 @addtwo(i64 %a, i64 %b)
   ; CHECK:      callq foo

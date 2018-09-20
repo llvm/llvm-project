@@ -421,9 +421,9 @@ define i32 @non_bextr32(i32 %x) {
 ;
 ; X64-LABEL: non_bextr32:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    shrl $2, %edi
-; X64-NEXT:    andl $111, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shrl $2, %eax
+; X64-NEXT:    andl $111, %eax
 ; X64-NEXT:    retq
 entry:
   %shr = lshr i32 %x, 2

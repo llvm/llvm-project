@@ -4,9 +4,9 @@
 define i128 @sub128(i128 %a, i128 %b) nounwind {
 ; CHECK-LABEL: sub128:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq %rdx, %rdi
-; CHECK-NEXT:    sbbq %rcx, %rsi
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    subq %rdx, %rax
+; CHECK-NEXT:    sbbq %rcx, %rsi
 ; CHECK-NEXT:    movq %rsi, %rdx
 ; CHECK-NEXT:    retq
 entry:
@@ -17,6 +17,7 @@ entry:
 define i256 @sub256(i256 %a, i256 %b) nounwind {
 ; CHECK-LABEL: sub256:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    subq %r9, %rsi
 ; CHECK-NEXT:    sbbq {{[0-9]+}}(%rsp), %rdx
 ; CHECK-NEXT:    sbbq {{[0-9]+}}(%rsp), %rcx
@@ -25,7 +26,6 @@ define i256 @sub256(i256 %a, i256 %b) nounwind {
 ; CHECK-NEXT:    movq %rsi, (%rdi)
 ; CHECK-NEXT:    movq %rcx, 16(%rdi)
 ; CHECK-NEXT:    movq %r8, 24(%rdi)
-; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:
   %0 = sub i256 %a, %b
@@ -37,19 +37,19 @@ entry:
 define %S @negate(%S* nocapture readonly %this) {
 ; CHECK-LABEL: negate:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %r8d, %r8d
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    subq (%rsi), %rcx
-; CHECK-NEXT:    movl $0, %edx
-; CHECK-NEXT:    sbbq 8(%rsi), %rdx
-; CHECK-NEXT:    movl $0, %eax
-; CHECK-NEXT:    sbbq 16(%rsi), %rax
-; CHECK-NEXT:    sbbq 24(%rsi), %r8
-; CHECK-NEXT:    movq %rcx, (%rdi)
-; CHECK-NEXT:    movq %rdx, 8(%rdi)
-; CHECK-NEXT:    movq %rax, 16(%rdi)
-; CHECK-NEXT:    movq %r8, 24(%rdi)
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    xorl %r8d, %r8d
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    subq (%rsi), %rdx
+; CHECK-NEXT:    movl $0, %edi
+; CHECK-NEXT:    sbbq 8(%rsi), %rdi
+; CHECK-NEXT:    movl $0, %ecx
+; CHECK-NEXT:    sbbq 16(%rsi), %rcx
+; CHECK-NEXT:    sbbq 24(%rsi), %r8
+; CHECK-NEXT:    movq %rdx, (%rax)
+; CHECK-NEXT:    movq %rdi, 8(%rax)
+; CHECK-NEXT:    movq %rcx, 16(%rax)
+; CHECK-NEXT:    movq %r8, 24(%rax)
 ; CHECK-NEXT:    retq
 entry:
   %0 = getelementptr inbounds %S, %S* %this, i64 0, i32 0, i64 0
@@ -90,29 +90,29 @@ entry:
 define %S @sub(%S* nocapture readonly %this, %S %arg.b) local_unnamed_addr {
 ; CHECK-LABEL: sub:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    notq %rdx
-; CHECK-NEXT:    xorl %r10d, %r10d
-; CHECK-NEXT:    addq (%rsi), %rdx
-; CHECK-NEXT:    setb %r10b
-; CHECK-NEXT:    addq $1, %rdx
-; CHECK-NEXT:    adcq 8(%rsi), %r10
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    movzbl %al, %r11d
-; CHECK-NEXT:    notq %rcx
-; CHECK-NEXT:    addq %r10, %rcx
-; CHECK-NEXT:    adcq 16(%rsi), %r11
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    notq %r8
-; CHECK-NEXT:    addq %r11, %r8
-; CHECK-NEXT:    adcq 24(%rsi), %rax
-; CHECK-NEXT:    notq %r9
-; CHECK-NEXT:    addq %rax, %r9
-; CHECK-NEXT:    movq %rdx, (%rdi)
-; CHECK-NEXT:    movq %rcx, 8(%rdi)
-; CHECK-NEXT:    movq %r8, 16(%rdi)
-; CHECK-NEXT:    movq %r9, 24(%rdi)
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    notq %rdx
+; CHECK-NEXT:    xorl %edi, %edi
+; CHECK-NEXT:    addq (%rsi), %rdx
+; CHECK-NEXT:    setb %dil
+; CHECK-NEXT:    addq $1, %rdx
+; CHECK-NEXT:    adcq 8(%rsi), %rdi
+; CHECK-NEXT:    setb %r10b
+; CHECK-NEXT:    movzbl %r10b, %r10d
+; CHECK-NEXT:    notq %rcx
+; CHECK-NEXT:    addq %rdi, %rcx
+; CHECK-NEXT:    adcq 16(%rsi), %r10
+; CHECK-NEXT:    setb %dil
+; CHECK-NEXT:    movzbl %dil, %edi
+; CHECK-NEXT:    notq %r8
+; CHECK-NEXT:    addq %r10, %r8
+; CHECK-NEXT:    adcq 24(%rsi), %rdi
+; CHECK-NEXT:    notq %r9
+; CHECK-NEXT:    addq %rdi, %r9
+; CHECK-NEXT:    movq %rdx, (%rax)
+; CHECK-NEXT:    movq %rcx, 8(%rax)
+; CHECK-NEXT:    movq %r8, 16(%rax)
+; CHECK-NEXT:    movq %r9, 24(%rax)
 ; CHECK-NEXT:    retq
 entry:
   %0 = extractvalue %S %arg.b, 0

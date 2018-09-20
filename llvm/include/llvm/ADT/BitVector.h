@@ -503,6 +503,23 @@ public:
     return (*this)[Idx];
   }
 
+  // Push single bit to end of vector.
+  void push_back(bool Val) {
+    unsigned OldSize = Size;
+    unsigned NewSize = Size + 1;
+
+    // Resize, which will insert zeros.
+    // If we already fit then the unused bits will be already zero.
+    if (NewSize > getBitCapacity())
+      resize(NewSize, false);
+    else
+      Size = NewSize;
+
+    // If true, set single bit.
+    if (Val)
+      set(OldSize);
+  }
+
   /// Test if any common bits are set.
   bool anyCommon(const BitVector &RHS) const {
     unsigned ThisWords = NumBitWords(size());

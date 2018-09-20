@@ -30,8 +30,8 @@ declare void @llvm.x86.incsspq(i64)
 define i32 @test_rdsspd(i32 %a) {
 ; CHECK-LABEL: test_rdsspd:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    rdsspd %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    rdsspd %eax
 ; CHECK-NEXT:    retq
 entry:
   %0 = call i32 @llvm.x86.rdsspd(i32 %a)
@@ -43,8 +43,8 @@ declare i32 @llvm.x86.rdsspd(i32)
 define i64 @test_rdsspq(i64 %a) {
 ; CHECK-LABEL: test_rdsspq:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    rdsspq %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    rdsspq %rax
 ; CHECK-NEXT:    retq
 entry:
   %0 = call i64 @llvm.x86.rdsspq(i64 %a)

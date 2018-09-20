@@ -95,8 +95,8 @@ define i32 @test5(i32 %A) nounwind {
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl $365384439, %eax # imm = 0x15C752F7
 ; X32-NEXT:    mull {{[0-9]+}}(%esp)
-; X32-NEXT:    shrl $27, %edx
 ; X32-NEXT:    movl %edx, %eax
+; X32-NEXT:    shrl $27, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test5:
@@ -217,9 +217,9 @@ define i32 @testsize1(i32 %x) minsize nounwind {
 ;
 ; X64-LABEL: testsize1:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    pushq $32
 ; X64-NEXT:    popq %rcx
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    cltd
 ; X64-NEXT:    idivl %ecx
 ; X64-NEXT:    retq
@@ -240,9 +240,9 @@ define i32 @testsize2(i32 %x) minsize nounwind {
 ;
 ; X64-LABEL: testsize2:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    pushq $33
 ; X64-NEXT:    popq %rcx
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    cltd
 ; X64-NEXT:    idivl %ecx
 ; X64-NEXT:    retq
@@ -260,8 +260,8 @@ define i32 @testsize3(i32 %x) minsize nounwind {
 ;
 ; X64-LABEL: testsize3:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    shrl $5, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shrl $5, %eax
 ; X64-NEXT:    retq
 entry:
 	%div = udiv i32 %x, 32
@@ -280,10 +280,10 @@ define i32 @testsize4(i32 %x) minsize nounwind {
 ;
 ; X64-LABEL: testsize4:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    pushq $33
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    divl %ecx
 ; X64-NEXT:    retq
 entry:
@@ -311,38 +311,36 @@ define i64 @PR23590(i64 %x) nounwind {
 ;
 ; X64-FAST-LABEL: PR23590:
 ; X64-FAST:       # %bb.0: # %entry
-; X64-FAST-NEXT:    movq %rdi, %rcx
-; X64-FAST-NEXT:    movabsq $6120523590596543007, %rdx # imm = 0x54F077C718E7C21F
+; X64-FAST-NEXT:    movabsq $6120523590596543007, %rcx # imm = 0x54F077C718E7C21F
 ; X64-FAST-NEXT:    movq %rdi, %rax
-; X64-FAST-NEXT:    mulq %rdx
+; X64-FAST-NEXT:    mulq %rcx
 ; X64-FAST-NEXT:    shrq $12, %rdx
 ; X64-FAST-NEXT:    imulq $12345, %rdx, %rax # imm = 0x3039
-; X64-FAST-NEXT:    subq %rax, %rcx
-; X64-FAST-NEXT:    movabsq $2635249153387078803, %rdx # imm = 0x2492492492492493
-; X64-FAST-NEXT:    movq %rcx, %rax
-; X64-FAST-NEXT:    mulq %rdx
-; X64-FAST-NEXT:    subq %rdx, %rcx
-; X64-FAST-NEXT:    shrq %rcx
-; X64-FAST-NEXT:    leaq (%rcx,%rdx), %rax
+; X64-FAST-NEXT:    subq %rax, %rdi
+; X64-FAST-NEXT:    movabsq $2635249153387078803, %rcx # imm = 0x2492492492492493
+; X64-FAST-NEXT:    movq %rdi, %rax
+; X64-FAST-NEXT:    mulq %rcx
+; X64-FAST-NEXT:    subq %rdx, %rdi
+; X64-FAST-NEXT:    shrq %rdi
+; X64-FAST-NEXT:    leaq (%rdi,%rdx), %rax
 ; X64-FAST-NEXT:    shrq $2, %rax
 ; X64-FAST-NEXT:    retq
 ;
 ; X64-SLOW-LABEL: PR23590:
 ; X64-SLOW:       # %bb.0: # %entry
-; X64-SLOW-NEXT:    movq %rdi, %rcx
-; X64-SLOW-NEXT:    movabsq $6120523590596543007, %rdx # imm = 0x54F077C718E7C21F
+; X64-SLOW-NEXT:    movabsq $6120523590596543007, %rcx # imm = 0x54F077C718E7C21F
 ; X64-SLOW-NEXT:    movq %rdi, %rax
-; X64-SLOW-NEXT:    mulq %rdx
+; X64-SLOW-NEXT:    mulq %rcx
 ; X64-SLOW-NEXT:    shrq $12, %rdx
 ; X64-SLOW-NEXT:    imulq $12345, %rdx, %rax # imm = 0x3039
-; X64-SLOW-NEXT:    subq %rax, %rcx
-; X64-SLOW-NEXT:    imulq $613566757, %rcx, %rax # imm = 0x24924925
+; X64-SLOW-NEXT:    subq %rax, %rdi
+; X64-SLOW-NEXT:    imulq $613566757, %rdi, %rax # imm = 0x24924925
 ; X64-SLOW-NEXT:    shrq $32, %rax
-; X64-SLOW-NEXT:    subl %eax, %ecx
-; X64-SLOW-NEXT:    shrl %ecx
-; X64-SLOW-NEXT:    addl %eax, %ecx
-; X64-SLOW-NEXT:    shrl $2, %ecx
-; X64-SLOW-NEXT:    movq %rcx, %rax
+; X64-SLOW-NEXT:    subl %eax, %edi
+; X64-SLOW-NEXT:    shrl %edi
+; X64-SLOW-NEXT:    addl %eax, %edi
+; X64-SLOW-NEXT:    shrl $2, %edi
+; X64-SLOW-NEXT:    movq %rdi, %rax
 ; X64-SLOW-NEXT:    retq
 entry:
 	%rem = urem i64 %x, 12345
@@ -390,10 +388,10 @@ define { i64, i32 } @PR38622(i64) nounwind {
 ; X64-NEXT:    shrq $11, %rax
 ; X64-NEXT:    movabsq $4835703278458517, %rcx # imm = 0x112E0BE826D695
 ; X64-NEXT:    mulq %rcx
-; X64-NEXT:    shrq $9, %rdx
-; X64-NEXT:    imull $-294967296, %edx, %eax # imm = 0xEE6B2800
-; X64-NEXT:    subl %eax, %edi
 ; X64-NEXT:    movq %rdx, %rax
+; X64-NEXT:    shrq $9, %rax
+; X64-NEXT:    imull $-294967296, %eax, %ecx # imm = 0xEE6B2800
+; X64-NEXT:    subl %ecx, %edi
 ; X64-NEXT:    movl %edi, %edx
 ; X64-NEXT:    retq
   %2 = udiv i64 %0, 4000000000
