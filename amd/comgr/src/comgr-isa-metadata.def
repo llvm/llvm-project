@@ -1,0 +1,60 @@
+/*******************************************************************************
+*
+* University of Illinois/NCSA
+* Open Source License
+*
+* Copyright (c) 2018 Advanced Micro Devices, Inc. All Rights Reserved.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* with the Software without restriction, including without limitation the
+* rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+* sell copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+*     * Redistributions of source code must retain the above copyright notice,
+*       this list of conditions and the following disclaimers.
+*
+*     * Redistributions in binary form must reproduce the above copyright
+*       notice, this list of conditions and the following disclaimers in the
+*       documentation and/or other materials provided with the distribution.
+*
+*     * Neither the names of Advanced Micro Devices, Inc. nor the names of its
+*       contributors may be used to endorse or promote products derived from
+*       this Software without specific prior written permission.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
+* THE SOFTWARE.
+*
+*******************************************************************************/
+
+#if !(defined HANDLE_ISA)
+#error "Missing macro definition of HANDLE_ISA"
+#endif
+
+/*
+* HANDLE_ISA(NAME, TRAP_HANDLER_ENABLED, LOCAL_MEMORY_SIZE, EUS_PER_CU,
+*            MAX_WAVES_PER_CU, MAX_FLAT_WORK_GROUP_SIZE,
+*            SGPR_ALLOC_GRANULE, TOTAL_NUM_SGPRS, ADDRESSABLE_NUM_SGPRS,
+*            VGPR_ALLOC_GRANULE, TOTAL_NUM_VGPRS, ADDRESSABLE_NUM_VGPRS,
+*            LDS_BANK_COUNT)
+*/
+
+HANDLE_ISA("amdgcn-amd-amdhsa--gfx700", false, 65536, 4, 40, 2048, 8, 512, 104, 4, 256, 256, 32)
+HANDLE_ISA("amdgcn-amd-amdhsa--gfx701", false, 65536, 4, 40, 2048, 8, 512, 104, 4, 256, 256, 32)
+HANDLE_ISA("amdgcn-amd-amdhsa--gfx702", false, 65536, 4, 40, 2048, 8, 512, 104, 4, 256, 256, 16)
+HANDLE_ISA("amdgcn-amd-amdhsa--gfx801+xnack", false, 65536, 4, 40, 2048, 16, 800, 102, 4, 256, 256, 32)
+HANDLE_ISA("amdgcn-amd-amdhsa--gfx802", false, 65536, 4, 40, 2048, 16, 800, 96, 4, 256, 256, 32)
+HANDLE_ISA("amdgcn-amd-amdhsa--gfx803", false, 65536, 4, 40, 2048, 16, 800, 102, 4, 256, 256, 32)
+HANDLE_ISA("amdgcn-amd-amdhsa--gfx810+xnack", false, 65536, 4, 40, 2048, 16, 800, 102, 4, 256, 256, 16)
+HANDLE_ISA("amdgcn-amd-amdhsa--gfx900", false, 65536, 4, 40, 2048, 16, 800, 102, 4, 256, 256, 32)
+HANDLE_ISA("amdgcn-amd-amdhsa--gfx902+xnack", false, 65536, 4, 40, 2048, 16, 800, 102, 4, 256, 256, 32)
+HANDLE_ISA("amdgcn-amd-amdhsa--gfx904", false, 65536, 4, 40, 2048, 16, 800, 102, 4, 256, 256, 32)
+HANDLE_ISA("amdgcn-amd-amdhsa--gfx906", false, 65536, 4, 40, 2048, 16, 800, 102, 4, 256, 256, 32)
+
+#undef HANDLE_ISA

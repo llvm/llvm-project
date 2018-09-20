@@ -1,0 +1,50 @@
+# CodeDocs.xyz Configuration File
+
+# Optional project name, if left empty the GitHub repository name will be used.
+PROJECT_NAME =
+
+# One or more directories and files that contain example code to be included.
+EXAMPLE_PATH =
+
+# One or more directories and files to exclude from documentation generation.
+# Use relative paths with respect to the repository root directory.
+EXCLUDE = test/gtest-1.8.0/
+
+# One or more wildcard patterns to exclude files and directories from document
+# generation.
+EXCLUDE_PATTERNS =
+
+# One or more symbols to exclude from document generation. Symbols can be
+# namespaces, classes, or functions.
+EXCLUDE_SYMBOLS =
+
+# Override the default parser (language) used for each file extension.
+EXTENSION_MAPPING =
+
+# Set the wildcard patterns used to filter out the source-files.
+# If left blank the default is:
+# *.c, *.cc, *.cxx, *.cpp, *.c++, *.java, *.ii, *.ixx, *.ipp, *.i++, *.inl,
+# *.idl, *.ddl, *.odl, *.h, *.hh, *.hxx, *.hpp, *.h++, *.cs, *.d, *.php,
+# *.php4, *.php5, *.phtml, *.inc, *.m, *.markdown, *.md, *.mm, *.dox, *.py,
+# *.f90, *.f, *.for, *.tcl, *.vhd, *.vhdl, *.ucf, *.qsf, *.as and *.js.
+FILE_PATTERNS =
+
+# Hide undocumented class members.
+HIDE_UNDOC_MEMBERS =
+
+# Hide undocumented classes.
+HIDE_UNDOC_CLASSES =
+
+# Specify a markdown page whose contents should be used as the main page
+# (index.html). This will override a page marked as \mainpage. For example, a
+# README.md file usually serves as a useful main page.
+USE_MDFILE_AS_MAINPAGE = README.md
+
+# Specify external repository to link documentation with.
+# This is similar to Doxygen's TAGFILES option, but will automatically link to
+# tags of other repositories already using CodeDocs. List each repository to
+# link with by giving its location in the form of owner/repository.
+# For example:
+#   TAGLINKS = doxygen/doxygen CodeDocs/osg
+# Note: these repositories must already be built on CodeDocs.
+TAGLINKS =

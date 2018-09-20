@@ -1,0 +1,2 @@
+# Ignore CI build directory
+build/
