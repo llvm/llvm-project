@@ -42,6 +42,7 @@ static void emutls_shutdown(emutls_address_array *array);
 
 static pthread_mutex_t emutls_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_key_t emutls_pthread_key;
+static bool emutls_key_created = false;
 
 typedef unsigned int gcc_word __attribute__((mode(word)));
 typedef unsigned int gcc_pointer __attribute__((mode(pointer)));
@@ -109,6 +110,7 @@ static void emutls_key_destructor(void* ptr) {
 static __inline void emutls_init(void) {
     if (pthread_key_create(&emutls_pthread_key, emutls_key_destructor) != 0)
         abort();
+    emutls_key_created = true;
 }
 
 static __inline void emutls_init_once(void) {
@@ -390,3 +392,14 @@ void* __emutls_get_address(__emutls_control* control) {
         array->data[index] = emutls_allocate_object(control);
     return array->data[index];
 }
+
+#ifdef __BIONIC__
+/* Called by Bionic on dlclose to delete the emutls pthread key. */
+__attribute__((visibility("hidden")))
+void __emutls_unregister_key(void) {
+    if (emutls_key_created) {
+        pthread_key_delete(emutls_pthread_key);
+        emutls_key_created = false;
+    }
+}
+#endif
