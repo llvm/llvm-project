@@ -277,14 +277,22 @@ void UnmapOrDieVmar(void *addr, uptr size, zx_handle_t target_vmar) {
 
 void ReservedAddressRange::Unmap(uptr addr, uptr size) {
   CHECK_LE(size, size_);
-  if (addr == reinterpret_cast<uptr>(base_))
-    // If we unmap the whole range, just null out the base.
-    base_ = (size == size_) ? nullptr : reinterpret_cast<void*>(addr + size);
-  else
+  const zx_handle_t vmar = static_cast<zx_handle_t>(os_handle_);
+  if (addr == reinterpret_cast<uptr>(base_)) {
+    if (size == size_) {
+      // Destroying the vmar effectively unmaps the whole mapping.
+      _zx_vmar_destroy(vmar);
+      _zx_handle_close(vmar);
+      os_handle_ = static_cast<uptr>(ZX_HANDLE_INVALID);
+      DecreaseTotalMmap(size);
+      return;
+    }
+  } else {
     CHECK_EQ(addr + size, reinterpret_cast<uptr>(base_) + size_);
-  size_ -= size;
-  UnmapOrDieVmar(reinterpret_cast<void *>(addr), size,
-                 static_cast<zx_handle_t>(os_handle_));
+  }
+  // Partial unmapping does not affect the fact that the initial range is still
+  // reserved, and the resulting unmapped memory can't be reused.
+  UnmapOrDieVmar(reinterpret_cast<void *>(addr), size, vmar);
 }
 
 // This should never be called.

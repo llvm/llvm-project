@@ -56,8 +56,8 @@ def write_header(module_path, module, check_name, check_name_camel):
                     + check_name_camel.upper() + '_H')
     f.write('//===--- ')
     f.write(os.path.basename(filename))
-    f.write(' - clang-tidy')
-    f.write('-' * max(0, 43 - len(os.path.basename(filename))))
+    f.write(' - clang-tidy ')
+    f.write('-' * max(0, 42 - len(os.path.basename(filename))))
     f.write('*- C++ -*-===//')
     f.write("""
 //
@@ -107,8 +107,8 @@ def write_implementation(module_path, module, check_name_camel):
   with open(filename, 'w') as f:
     f.write('//===--- ')
     f.write(os.path.basename(filename))
-    f.write(' - clang-tidy')
-    f.write('-' * max(0, 52 - len(os.path.basename(filename))))
+    f.write(' - clang-tidy ')
+    f.write('-' * max(0, 51 - len(os.path.basename(filename))))
     f.write('-===//')
     f.write("""
 //

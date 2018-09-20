@@ -3214,9 +3214,12 @@ bool HexagonTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() > 64;
 }
 
-bool HexagonTargetLowering::shouldExpandAtomicCmpXchgInIR(
-      AtomicCmpXchgInst *AI) const {
+TargetLowering::AtomicExpansionKind
+HexagonTargetLowering::shouldExpandAtomicCmpXchgInIR(
+    AtomicCmpXchgInst *AI) const {
   const DataLayout &DL = AI->getModule()->getDataLayout();
   unsigned Size = DL.getTypeStoreSize(AI->getCompareOperand()->getType());
-  return Size >= 4 && Size <= 8;
+  if (Size >= 4 && Size <= 8)
+    return AtomicExpansionKind::LLSC;
+  return AtomicExpansionKind::None;
 }

@@ -7,8 +7,8 @@ add_clang_library(clangTidyAbseilModule
   NoInternalDependenciesCheck.cpp
   NoNamespaceCheck.cpp
   RedundantStrcatCallsCheck.cpp
-  StringFindStartswithCheck.cpp
   StrCatAppendCheck.cpp
+  StringFindStartswithCheck.cpp
 
   LINK_LIBS
   clangAST

@@ -457,6 +457,7 @@ define <4 x float> @select_of_shuffles_0(<2 x float> %a0, <2 x float> %b0, <2 x 
 define <16 x double> @select_illegal(<16 x double> %a, <16 x double> %b) {
 ; SSE-LABEL: select_illegal:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm4
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm5
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm6
@@ -469,13 +470,12 @@ define <16 x double> @select_illegal(<16 x double> %a, <16 x double> %b) {
 ; SSE-NEXT:    movaps %xmm2, 32(%rdi)
 ; SSE-NEXT:    movaps %xmm1, 16(%rdi)
 ; SSE-NEXT:    movaps %xmm0, (%rdi)
-; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_illegal:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps %ymm6, %ymm2
 ; AVX-NEXT:    vmovaps %ymm7, %ymm3
+; AVX-NEXT:    vmovaps %ymm6, %ymm2
 ; AVX-NEXT:    retq
   %sel = select <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x double> %a, <16 x double> %b
   ret <16 x double> %sel

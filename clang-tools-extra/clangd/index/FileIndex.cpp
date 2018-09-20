@@ -8,18 +8,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "FileIndex.h"
+#include "ClangdUnit.h"
 #include "Logger.h"
 #include "SymbolCollector.h"
+#include "index/Index.h"
+#include "index/Merge.h"
 #include "clang/Index/IndexingAction.h"
+#include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include <memory>
 
 namespace clang {
 namespace clangd {
 
-std::pair<SymbolSlab, RefSlab>
-indexAST(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
-         llvm::Optional<llvm::ArrayRef<Decl *>> TopLevelDecls,
-         llvm::ArrayRef<std::string> URISchemes) {
+static std::pair<SymbolSlab, RefSlab>
+indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
+             llvm::ArrayRef<Decl *> DeclsToIndex, bool IsIndexMainAST,
+             llvm::ArrayRef<std::string> URISchemes) {
   SymbolCollector::Options CollectorOpts;
   // FIXME(ioeric): we might also want to collect include headers. We would need
   // to make sure all includes are canonicalized (with CanonicalIncludes), which
@@ -28,33 +33,26 @@ indexAST(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
   // CommentHandler for IWYU pragma) to canonicalize includes.
   CollectorOpts.CollectIncludePath = false;
   CollectorOpts.CountReferences = false;
+  CollectorOpts.Origin = SymbolOrigin::Dynamic;
   if (!URISchemes.empty())
     CollectorOpts.URISchemes = URISchemes;
-  CollectorOpts.Origin = SymbolOrigin::Dynamic;
 
   index::IndexingOptions IndexOpts;
   // We only need declarations, because we don't count references.
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::DeclarationsOnly;
   IndexOpts.IndexFunctionLocals = false;
-
-  std::vector<Decl *> DeclsToIndex;
-  if (TopLevelDecls)
-    DeclsToIndex.assign(TopLevelDecls->begin(), TopLevelDecls->end());
-  else
-    DeclsToIndex.assign(AST.getTranslationUnitDecl()->decls().begin(),
-                        AST.getTranslationUnitDecl()->decls().end());
-
-  // We only collect refs when indexing main AST.
-  // FIXME: this is a hacky way to detect whether we are indexing preamble AST
-  // or main AST, we should make it explicitly.
-  bool IsIndexMainAST = TopLevelDecls.hasValue();
-  if (IsIndexMainAST)
+  if (IsIndexMainAST) {
+    // We only collect refs when indexing main AST.
     CollectorOpts.RefFilter = RefKind::All;
+  }else {
+    IndexOpts.IndexMacrosInPreprocessor = true;
+    CollectorOpts.CollectMacro = true;
+  }
 
   SymbolCollector Collector(std::move(CollectorOpts));
   Collector.setPreprocessor(PP);
-  index::indexTopLevelDecls(AST, DeclsToIndex, Collector, IndexOpts);
+  index::indexTopLevelDecls(AST, *PP, DeclsToIndex, Collector, IndexOpts);
 
   const auto &SM = AST.getSourceManager();
   const auto *MainFileEntry = SM.getFileEntryForID(SM.getMainFileID());
@@ -62,17 +60,29 @@ indexAST(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
 
   auto Syms = Collector.takeSymbols();
   auto Refs = Collector.takeRefs();
-  vlog("index {0}AST for {1}: \n"
+  vlog("index AST for {0} (main={1}): \n"
        "  symbol slab: {2} symbols, {3} bytes\n"
        "  ref slab: {4} symbols, {5} bytes",
-       IsIndexMainAST ? "Main" : "Preamble", FileName, Syms.size(),
-       Syms.bytes(), Refs.size(), Refs.bytes());
+       FileName, IsIndexMainAST, Syms.size(), Syms.bytes(), Refs.size(),
+       Refs.bytes());
   return {std::move(Syms), std::move(Refs)};
 }
 
-FileIndex::FileIndex(std::vector<std::string> URISchemes)
-    : URISchemes(std::move(URISchemes)) {
-  reset(FSymbols.buildMemIndex());
+std::pair<SymbolSlab, RefSlab>
+indexMainDecls(ParsedAST &AST, llvm::ArrayRef<std::string> URISchemes) {
+  return indexSymbols(AST.getASTContext(), AST.getPreprocessorPtr(),
+                      AST.getLocalTopLevelDecls(),
+                      /*IsIndexMainAST=*/true, URISchemes);
+}
+
+SymbolSlab indexHeaderSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
+                              llvm::ArrayRef<std::string> URISchemes) {
+  std::vector<Decl *> DeclsToIndex(
+      AST.getTranslationUnitDecl()->decls().begin(),
+      AST.getTranslationUnitDecl()->decls().end());
+  return indexSymbols(AST, std::move(PP), DeclsToIndex,
+                      /*IsIndexMainAST=*/false, URISchemes)
+      .first;
 }
 
 void FileSymbols::update(PathRef Path, std::unique_ptr<SymbolSlab> Symbols,
@@ -141,19 +151,27 @@ std::unique_ptr<SymbolIndex> FileSymbols::buildMemIndex() {
       StorageSize);
 }
 
-void FileIndex::update(PathRef Path, ASTContext *AST,
-                       std::shared_ptr<Preprocessor> PP,
-                       llvm::Optional<llvm::ArrayRef<Decl *>> TopLevelDecls) {
-  if (!AST) {
-    FSymbols.update(Path, nullptr, nullptr);
-  } else {
-    assert(PP);
-    auto Contents = indexAST(*AST, PP, TopLevelDecls, URISchemes);
-    FSymbols.update(Path,
-                    llvm::make_unique<SymbolSlab>(std::move(Contents.first)),
-                    llvm::make_unique<RefSlab>(std::move(Contents.second)));
-  }
-  reset(FSymbols.buildMemIndex());
+FileIndex::FileIndex(std::vector<std::string> URISchemes)
+    : URISchemes(std::move(URISchemes)),
+      PreambleIndex(PreambleSymbols.buildMemIndex()),
+      MainFileIndex(MainFileSymbols.buildMemIndex()),
+      MergedIndex(mergeIndex(&MainFileIndex, &PreambleIndex)) {}
+
+void FileIndex::updatePreamble(PathRef Path, ASTContext &AST,
+                               std::shared_ptr<Preprocessor> PP) {
+  auto Symbols = indexHeaderSymbols(AST, std::move(PP), URISchemes);
+  PreambleSymbols.update(Path,
+                         llvm::make_unique<SymbolSlab>(std::move(Symbols)),
+                         llvm::make_unique<RefSlab>());
+  PreambleIndex.reset(PreambleSymbols.buildMemIndex());
+}
+
+void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
+  auto Contents = indexMainDecls(AST, URISchemes);
+  MainFileSymbols.update(
+      Path, llvm::make_unique<SymbolSlab>(std::move(Contents.first)),
+      llvm::make_unique<RefSlab>(std::move(Contents.second)));
+  MainFileIndex.reset(MainFileSymbols.buildMemIndex());
 }
 
 } // namespace clangd

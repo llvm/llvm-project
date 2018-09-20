@@ -116,9 +116,12 @@ CompletionItemKind toCompletionItemKind(index::SymbolKind Kind) {
 
 CompletionItemKind
 toCompletionItemKind(CodeCompletionResult::ResultKind ResKind,
-                     const NamedDecl *Decl) {
+                     const NamedDecl *Decl,
+                     CodeCompletionContext::Kind CtxKind) {
   if (Decl)
     return toCompletionItemKind(index::getSymbolInfo(Decl).Kind);
+  if (CtxKind == CodeCompletionContext::CCC_IncludedFile)
+    return CompletionItemKind::File;
   switch (ResKind) {
   case CodeCompletionResult::RK_Declaration:
     llvm_unreachable("RK_Declaration without Decl");
@@ -328,6 +331,7 @@ struct CodeCompletionBuilder {
   CodeCompletionBuilder(ASTContext &ASTCtx, const CompletionCandidate &C,
                         CodeCompletionString *SemaCCS,
                         const IncludeInserter &Includes, StringRef FileName,
+                        CodeCompletionContext::Kind ContextKind,
                         const CodeCompleteOptions &Opts)
       : ASTCtx(ASTCtx), ExtractDocumentation(Opts.IncludeComments),
         EnableFunctionArgSnippets(Opts.EnableFunctionArgSnippets) {
@@ -343,8 +347,8 @@ struct CodeCompletionBuilder {
               Completion.Scope =
                   splitQualifiedName(printQualifiedName(*ND)).first;
       }
-      Completion.Kind =
-          toCompletionItemKind(C.SemaResult->Kind, C.SemaResult->Declaration);
+      Completion.Kind = toCompletionItemKind(
+          C.SemaResult->Kind, C.SemaResult->Declaration, ContextKind);
       for (const auto &FixIt : C.SemaResult->FixIts) {
         Completion.FixIts.push_back(
             toTextEdit(FixIt, ASTCtx.getSourceManager(), ASTCtx.getLangOpts()));
@@ -653,6 +657,7 @@ bool contextAllowsIndex(enum CodeCompletionContext::Kind K) {
   case CodeCompletionContext::CCC_TypeQualifiers:
   case CodeCompletionContext::CCC_ObjCInstanceMessage:
   case CodeCompletionContext::CCC_ObjCClassMessage:
+  case CodeCompletionContext::CCC_IncludedFile:
   case CodeCompletionContext::CCC_Recovery:
     return false;
   }
@@ -1547,7 +1552,8 @@ private:
                           : nullptr;
       if (!Builder)
         Builder.emplace(Recorder->CCSema->getASTContext(), Item, SemaCCS,
-                        *Inserter, FileName, Opts);
+                        *Inserter, FileName, Recorder->CCContext.getKind(),
+                        Opts);
       else
         Builder->add(Item, SemaCCS);
     }

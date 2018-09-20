@@ -231,6 +231,13 @@ public:
     MAM.registerPass([&] { return TargetLibraryAnalysis(); });
     MAM.registerPass([&] { return LazyCallGraphAnalysis(); });
     MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
+
+    // Register required pass instrumentation analysis.
+    MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
+    CGAM.registerPass([&] { return PassInstrumentationAnalysis(); });
+    FAM.registerPass([&] { return PassInstrumentationAnalysis(); });
+
+    // Cross-register proxies.
     MAM.registerPass([&] { return CGSCCAnalysisManagerModuleProxy(CGAM); });
     CGAM.registerPass([&] { return FunctionAnalysisManagerCGSCCProxy(); });
     CGAM.registerPass([&] { return ModuleAnalysisManagerCGSCCProxy(MAM); });

@@ -6,13 +6,13 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; X64-LABEL: muloti_test:
 ; X64:       # %bb.0: # %start
 ; X64-NEXT:    movq %rdx, %r8
+; X64-NEXT:    movq %rsi, %rax
 ; X64-NEXT:    testq %rcx, %rcx
-; X64-NEXT:    setne %al
+; X64-NEXT:    setne %dl
 ; X64-NEXT:    testq %rsi, %rsi
 ; X64-NEXT:    setne %r9b
-; X64-NEXT:    andb %al, %r9b
-; X64-NEXT:    movq %rsi, %rax
-; X64-NEXT:    mulq %rdx
+; X64-NEXT:    andb %dl, %r9b
+; X64-NEXT:    mulq %r8
 ; X64-NEXT:    movq %rax, %rsi
 ; X64-NEXT:    seto %r10b
 ; X64-NEXT:    movq %rcx, %rax

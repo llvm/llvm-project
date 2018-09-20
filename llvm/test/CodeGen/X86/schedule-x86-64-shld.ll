@@ -12,20 +12,20 @@
 define i64 @lshift10_optsize(i64 %a, i64 %b) nounwind readnone optsize {
 ; GENERIC-LABEL: lshift10_optsize:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    shldq $10, %rsi, %rdi # sched: [2:0.67]
 ; GENERIC-NEXT:    movq %rdi, %rax # sched: [1:0.33]
+; GENERIC-NEXT:    shldq $10, %rsi, %rax # sched: [2:0.67]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BTVER2-LABEL: lshift10_optsize:
 ; BTVER2:       # %bb.0: # %entry
-; BTVER2-NEXT:    shldq $10, %rsi, %rdi # sched: [3:3.00]
 ; BTVER2-NEXT:    movq %rdi, %rax # sched: [1:0.50]
+; BTVER2-NEXT:    shldq $10, %rsi, %rax # sched: [3:3.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; BDVER1-LABEL: lshift10_optsize:
 ; BDVER1:       # %bb.0: # %entry
-; BDVER1-NEXT:    shldq $10, %rsi, %rdi
 ; BDVER1-NEXT:    movq %rdi, %rax
+; BDVER1-NEXT:    shldq $10, %rsi, %rax
 ; BDVER1-NEXT:    retq
 entry:
   %shl = shl i64 %a, 10
@@ -37,8 +37,8 @@ entry:
 define i64 @lshift10(i64 %a, i64 %b) nounwind readnone {
 ; GENERIC-LABEL: lshift10:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    shldq $10, %rsi, %rdi # sched: [2:0.67]
 ; GENERIC-NEXT:    movq %rdi, %rax # sched: [1:0.33]
+; GENERIC-NEXT:    shldq $10, %rsi, %rax # sched: [2:0.67]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BTVER2-LABEL: lshift10:
@@ -70,20 +70,20 @@ entry:
 define i64 @rshift10_optsize(i64 %a, i64 %b) nounwind readnone optsize {
 ; GENERIC-LABEL: rshift10_optsize:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    shrdq $62, %rsi, %rdi # sched: [2:0.67]
 ; GENERIC-NEXT:    movq %rdi, %rax # sched: [1:0.33]
+; GENERIC-NEXT:    shrdq $62, %rsi, %rax # sched: [2:0.67]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BTVER2-LABEL: rshift10_optsize:
 ; BTVER2:       # %bb.0: # %entry
-; BTVER2-NEXT:    shrdq $62, %rsi, %rdi # sched: [3:3.00]
 ; BTVER2-NEXT:    movq %rdi, %rax # sched: [1:0.50]
+; BTVER2-NEXT:    shrdq $62, %rsi, %rax # sched: [3:3.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; BDVER1-LABEL: rshift10_optsize:
 ; BDVER1:       # %bb.0: # %entry
-; BDVER1-NEXT:    shrdq $62, %rsi, %rdi
 ; BDVER1-NEXT:    movq %rdi, %rax
+; BDVER1-NEXT:    shrdq $62, %rsi, %rax
 ; BDVER1-NEXT:    retq
 entry:
   %shl = lshr i64 %a, 62
@@ -96,8 +96,8 @@ entry:
 define i64 @rshift10(i64 %a, i64 %b) nounwind readnone {
 ; GENERIC-LABEL: rshift10:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    shrdq $62, %rsi, %rdi # sched: [2:0.67]
 ; GENERIC-NEXT:    movq %rdi, %rax # sched: [1:0.33]
+; GENERIC-NEXT:    shrdq $62, %rsi, %rax # sched: [2:0.67]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BTVER2-LABEL: rshift10:
@@ -126,23 +126,26 @@ entry:
 define i64 @lshift_cl_optsize(i64 %a, i64 %b, i64 %c) nounwind readnone optsize {
 ; GENERIC-LABEL: lshift_cl_optsize:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    movl %edx, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    shldq %cl, %rsi, %rdi # sched: [4:1.50]
+; GENERIC-NEXT:    movq %rdx, %rcx # sched: [1:0.33]
 ; GENERIC-NEXT:    movq %rdi, %rax # sched: [1:0.33]
+; GENERIC-NEXT:    # kill: def $cl killed $cl killed $rcx
+; GENERIC-NEXT:    shldq %cl, %rsi, %rax # sched: [4:1.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BTVER2-LABEL: lshift_cl_optsize:
 ; BTVER2:       # %bb.0: # %entry
-; BTVER2-NEXT:    movl %edx, %ecx # sched: [1:0.50]
-; BTVER2-NEXT:    shldq %cl, %rsi, %rdi # sched: [4:4.00]
+; BTVER2-NEXT:    movq %rdx, %rcx # sched: [1:0.50]
 ; BTVER2-NEXT:    movq %rdi, %rax # sched: [1:0.50]
+; BTVER2-NEXT:    # kill: def $cl killed $cl killed $rcx
+; BTVER2-NEXT:    shldq %cl, %rsi, %rax # sched: [4:4.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; BDVER1-LABEL: lshift_cl_optsize:
 ; BDVER1:       # %bb.0: # %entry
-; BDVER1-NEXT:    movl %edx, %ecx
-; BDVER1-NEXT:    shldq %cl, %rsi, %rdi
+; BDVER1-NEXT:    movq %rdx, %rcx
 ; BDVER1-NEXT:    movq %rdi, %rax
+; BDVER1-NEXT:    # kill: def $cl killed $cl killed $rcx
+; BDVER1-NEXT:    shldq %cl, %rsi, %rax
 ; BDVER1-NEXT:    retq
 entry:
   %shl = shl i64 %a, %c
@@ -155,31 +158,32 @@ entry:
 define i64 @lshift_cl(i64 %a, i64 %b, i64 %c) nounwind readnone {
 ; GENERIC-LABEL: lshift_cl:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    movl %edx, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    shldq %cl, %rsi, %rdi # sched: [4:1.50]
+; GENERIC-NEXT:    movq %rdx, %rcx # sched: [1:0.33]
 ; GENERIC-NEXT:    movq %rdi, %rax # sched: [1:0.33]
+; GENERIC-NEXT:    # kill: def $cl killed $cl killed $rcx
+; GENERIC-NEXT:    shldq %cl, %rsi, %rax # sched: [4:1.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BTVER2-LABEL: lshift_cl:
 ; BTVER2:       # %bb.0: # %entry
 ; BTVER2-NEXT:    movq %rdx, %rcx # sched: [1:0.50]
+; BTVER2-NEXT:    movq %rsi, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    shlq %cl, %rdi # sched: [1:0.50]
 ; BTVER2-NEXT:    negl %ecx # sched: [1:0.50]
 ; BTVER2-NEXT:    # kill: def $cl killed $cl killed $rcx
-; BTVER2-NEXT:    shrq %cl, %rsi # sched: [1:0.50]
-; BTVER2-NEXT:    orq %rdi, %rsi # sched: [1:0.50]
-; BTVER2-NEXT:    movq %rsi, %rax # sched: [1:0.50]
+; BTVER2-NEXT:    shrq %cl, %rax # sched: [1:0.50]
+; BTVER2-NEXT:    orq %rdi, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; BDVER1-LABEL: lshift_cl:
 ; BDVER1:       # %bb.0: # %entry
 ; BDVER1-NEXT:    movq %rdx, %rcx
+; BDVER1-NEXT:    movq %rsi, %rax
 ; BDVER1-NEXT:    shlq %cl, %rdi
 ; BDVER1-NEXT:    negl %ecx
 ; BDVER1-NEXT:    # kill: def $cl killed $cl killed $rcx
-; BDVER1-NEXT:    shrq %cl, %rsi
-; BDVER1-NEXT:    orq %rdi, %rsi
-; BDVER1-NEXT:    movq %rsi, %rax
+; BDVER1-NEXT:    shrq %cl, %rax
+; BDVER1-NEXT:    orq %rdi, %rax
 ; BDVER1-NEXT:    retq
 entry:
   %shl = shl i64 %a, %c
@@ -198,23 +202,26 @@ entry:
 define i64 @rshift_cl_optsize(i64 %a, i64 %b, i64 %c) nounwind readnone optsize {
 ; GENERIC-LABEL: rshift_cl_optsize:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    movl %edx, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    shrdq %cl, %rsi, %rdi # sched: [4:1.50]
+; GENERIC-NEXT:    movq %rdx, %rcx # sched: [1:0.33]
 ; GENERIC-NEXT:    movq %rdi, %rax # sched: [1:0.33]
+; GENERIC-NEXT:    # kill: def $cl killed $cl killed $rcx
+; GENERIC-NEXT:    shrdq %cl, %rsi, %rax # sched: [4:1.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BTVER2-LABEL: rshift_cl_optsize:
 ; BTVER2:       # %bb.0: # %entry
-; BTVER2-NEXT:    movl %edx, %ecx # sched: [1:0.50]
-; BTVER2-NEXT:    shrdq %cl, %rsi, %rdi # sched: [4:4.00]
+; BTVER2-NEXT:    movq %rdx, %rcx # sched: [1:0.50]
 ; BTVER2-NEXT:    movq %rdi, %rax # sched: [1:0.50]
+; BTVER2-NEXT:    # kill: def $cl killed $cl killed $rcx
+; BTVER2-NEXT:    shrdq %cl, %rsi, %rax # sched: [4:4.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; BDVER1-LABEL: rshift_cl_optsize:
 ; BDVER1:       # %bb.0: # %entry
-; BDVER1-NEXT:    movl %edx, %ecx
-; BDVER1-NEXT:    shrdq %cl, %rsi, %rdi
+; BDVER1-NEXT:    movq %rdx, %rcx
 ; BDVER1-NEXT:    movq %rdi, %rax
+; BDVER1-NEXT:    # kill: def $cl killed $cl killed $rcx
+; BDVER1-NEXT:    shrdq %cl, %rsi, %rax
 ; BDVER1-NEXT:    retq
 entry:
   %shr = lshr i64 %a, %c
@@ -227,31 +234,32 @@ entry:
 define i64 @rshift_cl(i64 %a, i64 %b, i64 %c) nounwind readnone {
 ; GENERIC-LABEL: rshift_cl:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    movl %edx, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    shrdq %cl, %rsi, %rdi # sched: [4:1.50]
+; GENERIC-NEXT:    movq %rdx, %rcx # sched: [1:0.33]
 ; GENERIC-NEXT:    movq %rdi, %rax # sched: [1:0.33]
+; GENERIC-NEXT:    # kill: def $cl killed $cl killed $rcx
+; GENERIC-NEXT:    shrdq %cl, %rsi, %rax # sched: [4:1.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BTVER2-LABEL: rshift_cl:
 ; BTVER2:       # %bb.0: # %entry
 ; BTVER2-NEXT:    movq %rdx, %rcx # sched: [1:0.50]
+; BTVER2-NEXT:    movq %rsi, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    shrq %cl, %rdi # sched: [1:0.50]
 ; BTVER2-NEXT:    negl %ecx # sched: [1:0.50]
 ; BTVER2-NEXT:    # kill: def $cl killed $cl killed $rcx
-; BTVER2-NEXT:    shlq %cl, %rsi # sched: [1:0.50]
-; BTVER2-NEXT:    orq %rdi, %rsi # sched: [1:0.50]
-; BTVER2-NEXT:    movq %rsi, %rax # sched: [1:0.50]
+; BTVER2-NEXT:    shlq %cl, %rax # sched: [1:0.50]
+; BTVER2-NEXT:    orq %rdi, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; BDVER1-LABEL: rshift_cl:
 ; BDVER1:       # %bb.0: # %entry
 ; BDVER1-NEXT:    movq %rdx, %rcx
+; BDVER1-NEXT:    movq %rsi, %rax
 ; BDVER1-NEXT:    shrq %cl, %rdi
 ; BDVER1-NEXT:    negl %ecx
 ; BDVER1-NEXT:    # kill: def $cl killed $cl killed $rcx
-; BDVER1-NEXT:    shlq %cl, %rsi
-; BDVER1-NEXT:    orq %rdi, %rsi
-; BDVER1-NEXT:    movq %rsi, %rax
+; BDVER1-NEXT:    shlq %cl, %rax
+; BDVER1-NEXT:    orq %rdi, %rax
 ; BDVER1-NEXT:    retq
 entry:
   %shr = lshr i64 %a, %c
@@ -271,19 +279,22 @@ entry:
 define void @lshift_mem_cl_optsize(i64 %a, i64 %c) nounwind readnone optsize {
 ; GENERIC-LABEL: lshift_mem_cl_optsize:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    movl %esi, %ecx # sched: [1:0.33]
+; GENERIC-NEXT:    movq %rsi, %rcx # sched: [1:0.33]
+; GENERIC-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; GENERIC-NEXT:    shldq %cl, %rdi, {{.*}}(%rip) # sched: [10:1.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BTVER2-LABEL: lshift_mem_cl_optsize:
 ; BTVER2:       # %bb.0: # %entry
-; BTVER2-NEXT:    movl %esi, %ecx # sched: [1:0.50]
+; BTVER2-NEXT:    movq %rsi, %rcx # sched: [1:0.50]
+; BTVER2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; BTVER2-NEXT:    shldq %cl, %rdi, {{.*}}(%rip) # sched: [9:11.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; BDVER1-LABEL: lshift_mem_cl_optsize:
 ; BDVER1:       # %bb.0: # %entry
-; BDVER1-NEXT:    movl %esi, %ecx
+; BDVER1-NEXT:    movq %rsi, %rcx
+; BDVER1-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; BDVER1-NEXT:    shldq %cl, %rdi, {{.*}}(%rip)
 ; BDVER1-NEXT:    retq
 entry:
@@ -299,7 +310,8 @@ entry:
 define void @lshift_mem_cl(i64 %a, i64 %c) nounwind readnone {
 ; GENERIC-LABEL: lshift_mem_cl:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    movl %esi, %ecx # sched: [1:0.33]
+; GENERIC-NEXT:    movq %rsi, %rcx # sched: [1:0.33]
+; GENERIC-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; GENERIC-NEXT:    shldq %cl, %rdi, {{.*}}(%rip) # sched: [10:1.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;

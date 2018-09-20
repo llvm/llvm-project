@@ -211,6 +211,8 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
     return translateCXXThisExpr(cast<CXXThisExpr>(S), Ctx);
   case Stmt::MemberExprClass:
     return translateMemberExpr(cast<MemberExpr>(S), Ctx);
+  case Stmt::ObjCIvarRefExprClass:
+    return translateObjCIVarRefExpr(cast<ObjCIvarRefExpr>(S), Ctx);
   case Stmt::CallExprClass:
     return translateCallExpr(cast<CallExpr>(S), Ctx);
   case Stmt::CXXMemberCallExprClass:
@@ -311,9 +313,9 @@ static const ValueDecl *getValueDeclFromSExpr(const til::SExpr *E) {
   return nullptr;
 }
 
-static bool hasCppPointerType(const til::SExpr *E) {
+static bool hasAnyPointerType(const til::SExpr *E) {
   auto *VD = getValueDeclFromSExpr(E);
-  if (VD && VD->getType()->isPointerType())
+  if (VD && VD->getType()->isAnyPointerType())
     return true;
   if (const auto *C = dyn_cast<til::Cast>(E))
     return C->castOpcode() == til::CAST_objToPtr;
@@ -344,7 +346,20 @@ til::SExpr *SExprBuilder::translateMemberExpr(const MemberExpr *ME,
     D = getFirstVirtualDecl(VD);
 
   til::Project *P = new (Arena) til::Project(E, D);
-  if (hasCppPointerType(BE))
+  if (hasAnyPointerType(BE))
+    P->setArrow(true);
+  return P;
+}
+
+til::SExpr *SExprBuilder::translateObjCIVarRefExpr(const ObjCIvarRefExpr *IVRE,
+                                                   CallingContext *Ctx) {
+  til::SExpr *BE = translate(IVRE->getBase(), Ctx);
+  til::SExpr *E = new (Arena) til::SApply(BE);
+
+  const auto *D = cast<ObjCIvarDecl>(IVRE->getDecl()->getCanonicalDecl());
+
+  til::Project *P = new (Arena) til::Project(E, D);
+  if (hasAnyPointerType(BE))
     P->setArrow(true);
   return P;
 }
@@ -354,15 +369,17 @@ til::SExpr *SExprBuilder::translateCallExpr(const CallExpr *CE,
                                             const Expr *SelfE) {
   if (CapabilityExprMode) {
     // Handle LOCK_RETURNED
-    const FunctionDecl *FD = CE->getDirectCallee()->getMostRecentDecl();
-    if (LockReturnedAttr* At = FD->getAttr<LockReturnedAttr>()) {
-      CallingContext LRCallCtx(Ctx);
-      LRCallCtx.AttrDecl = CE->getDirectCallee();
-      LRCallCtx.SelfArg  = SelfE;
-      LRCallCtx.NumArgs  = CE->getNumArgs();
-      LRCallCtx.FunArgs  = CE->getArgs();
-      return const_cast<til::SExpr *>(
-          translateAttrExpr(At->getArg(), &LRCallCtx).sexpr());
+    if (const FunctionDecl *FD = CE->getDirectCallee()) {
+      FD = FD->getMostRecentDecl();
+      if (LockReturnedAttr *At = FD->getAttr<LockReturnedAttr>()) {
+        CallingContext LRCallCtx(Ctx);
+        LRCallCtx.AttrDecl = CE->getDirectCallee();
+        LRCallCtx.SelfArg = SelfE;
+        LRCallCtx.NumArgs = CE->getNumArgs();
+        LRCallCtx.FunArgs = CE->getArgs();
+        return const_cast<til::SExpr *>(
+            translateAttrExpr(At->getArg(), &LRCallCtx).sexpr());
+      }
     }
   }
 

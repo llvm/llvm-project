@@ -32,8 +32,9 @@ entry:
 define zeroext i1 @f3(i1 %x) {
 ; CHECK-LABEL: f3:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    andb $1, %dil
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
 
 entry:

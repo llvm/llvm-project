@@ -156,6 +156,10 @@ def FeatureFuseAES : SubtargetFeature<
     "fuse-aes", "HasFuseAES", "true",
     "CPU fuses AES crypto operations">;
 
+def FeatureFuseCryptoEOR : SubtargetFeature<
+    "fuse-crypto-eor", "HasFuseCryptoEOR", "true",
+    "CPU fuses AES/PMULL and EOR operations">;
+
 def FeatureFuseCCSelect : SubtargetFeature<
     "fuse-csel", "HasFuseCCSelect", "true",
     "CPU fuses conditional select operations">;
@@ -343,6 +347,7 @@ def ProcCyclone : SubtargetFeature<"cyclone", "ARMProcFamily", "Cyclone",
                                    FeatureDisableLatencySchedHeuristic,
                                    FeatureFPARMv8,
                                    FeatureFuseAES,
+                                   FeatureFuseCryptoEOR,
                                    FeatureNEON,
                                    FeaturePerfMon,
                                    FeatureZCRegMove,

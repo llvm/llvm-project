@@ -40,3 +40,64 @@ for.body.i.i.i.i.i.i.i:                           ; preds = %for.body.i.i.i.i.i.
 exitBB: ; preds = %for.body.i.i.i.i.i.i.i.prol.loopexit
   ret void
 }
+
+define signext i32 @andis_bot(i32 signext %a, i32 signext %b) {
+; CHECK-LABEL: andis_bot:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andis. 5, 3, 1
+; CHECK-NEXT:    li 5, 1
+; CHECK-NEXT:    isel 4, 4, 5, 2
+; CHECK-NEXT:    mullw 3, 4, 3
+; CHECK-NEXT:    extsw 3, 3
+; CHECK-NEXT:    blr
+entry:
+  %and = and i32 %a, 65536
+  %tobool = icmp eq i32 %and, 0
+  %mul = select i1 %tobool, i32 %b, i32 1
+  %cond = mul nsw i32 %mul, %a
+  ret i32 %cond
+}
+
+; Function Attrs: norecurse nounwind readnone
+define signext i32 @andis_mid(i32 signext %a, i32 signext %b) {
+; CHECK-LABEL: andis_mid:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andis. 5, 3, 252
+; CHECK-NEXT:    li 5, 1
+; CHECK-NEXT:    isel 4, 4, 5, 2
+; CHECK-NEXT:    mullw 3, 4, 3
+; CHECK-NEXT:    extsw 3, 3
+; CHECK-NEXT:    blr
+entry:
+  %and = and i32 %a, 16515072
+  %tobool = icmp eq i32 %and, 0
+  %mul = select i1 %tobool, i32 %b, i32 1
+  %cond = mul nsw i32 %mul, %a
+  ret i32 %cond
+}
+
+; Function Attrs: norecurse nounwind readnone
+define signext i32 @andis_top(i32 signext %a, i32 signext %b) {
+; CHECK-LABEL: andis_top:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andis. 5, 3, 64512
+; CHECK-NEXT:    li 5, 1
+; CHECK-NEXT:    isel 4, 4, 5, 2
+; CHECK-NEXT:    mullw 3, 4, 3
+; CHECK-NEXT:    extsw 3, 3
+; CHECK-NEXT:    blr
+entry:
+  %tobool = icmp ugt i32 %a, 67108863
+  %mul = select i1 %tobool, i32 1, i32 %b
+  %cond = mul nsw i32 %mul, %a
+  ret i32 %cond
+}
+
+define i64 @andis_no_cmp(i64 %a, i64 %b) {
+entry:
+  %and = and i64 %a, 65536
+  %tobool = icmp eq i64 %and, 0
+  %mul = select i1 %tobool, i64 %b, i64 1
+  %cond = mul nsw i64 %mul, %a
+  ret i64 %cond
+}

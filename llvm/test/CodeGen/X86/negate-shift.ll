@@ -4,8 +4,8 @@
 define i32 @neg_lshr_signbit(i32 %x) {
 ; X64-LABEL: neg_lshr_signbit:
 ; X64:       # %bb.0:
-; X64-NEXT:    sarl $31, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    sarl $31, %eax
 ; X64-NEXT:    retq
   %sh = lshr i32 %x, 31
   %neg = sub i32 0, %sh
@@ -15,8 +15,8 @@ define i32 @neg_lshr_signbit(i32 %x) {
 define i64 @neg_ashr_signbit(i64 %x) {
 ; X64-LABEL: neg_ashr_signbit:
 ; X64:       # %bb.0:
-; X64-NEXT:    shrq $63, %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shrq $63, %rax
 ; X64-NEXT:    retq
   %sh = ashr i64 %x, 63
   %neg = sub i64 0, %sh

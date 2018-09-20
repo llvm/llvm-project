@@ -26,6 +26,7 @@ MODULE_ANALYSIS("no-op-module", NoOpModuleAnalysis())
 MODULE_ANALYSIS("profile-summary", ProfileSummaryAnalysis())
 MODULE_ANALYSIS("targetlibinfo", TargetLibraryAnalysis())
 MODULE_ANALYSIS("verify", VerifierAnalysis())
+MODULE_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 
 #ifndef MODULE_ALIAS_ANALYSIS
 #define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS)                               \
@@ -84,6 +85,7 @@ MODULE_PASS("verify", VerifierPass())
 #endif
 CGSCC_ANALYSIS("no-op-cgscc", NoOpCGSCCAnalysis())
 CGSCC_ANALYSIS("fam-proxy", FunctionAnalysisManagerCGSCCProxy())
+CGSCC_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 #undef CGSCC_ANALYSIS
 
 #ifndef CGSCC_PASS
@@ -121,6 +123,7 @@ FUNCTION_ANALYSIS("targetlibinfo", TargetLibraryAnalysis())
 FUNCTION_ANALYSIS("targetir",
                   TM ? TM->getTargetIRAnalysis() : TargetIRAnalysis())
 FUNCTION_ANALYSIS("verify", VerifierAnalysis())
+FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 
 #ifndef FUNCTION_ALIAS_ANALYSIS
 #define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS)                             \
@@ -226,6 +229,7 @@ FUNCTION_PASS("view-cfg-only", CFGOnlyViewerPass())
 LOOP_ANALYSIS("no-op-loop", NoOpLoopAnalysis())
 LOOP_ANALYSIS("access-info", LoopAccessAnalysis())
 LOOP_ANALYSIS("ivusers", IVUsersAnalysis())
+LOOP_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 #undef LOOP_ANALYSIS
 
 #ifndef LOOP_PASS

@@ -139,8 +139,7 @@ void RegisterFile::freePhysRegs(const RegisterRenamingInfo &Entry,
 }
 
 void RegisterFile::addRegisterWrite(WriteRef Write,
-                                    MutableArrayRef<unsigned> UsedPhysRegs,
-                                    bool ShouldAllocatePhysRegs) {
+                                    MutableArrayRef<unsigned> UsedPhysRegs) {
   WriteState &WS = *Write.getWriteState();
   unsigned RegID = WS.getRegisterID();
   assert(RegID && "Adding an invalid register definition?");
@@ -163,6 +162,7 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
   // a false dependency on RenameAs. The only exception is for when the write
   // implicitly clears the upper portion of the underlying register.
   // If a write clears its super-registers, then it is renamed as `RenameAs`.
+  bool ShouldAllocatePhysRegs = !WS.isWriteZero();
   const RegisterRenamingInfo &RRI = RegisterMappings[RegID].second;
   if (RRI.RenameAs && RRI.RenameAs != RegID) {
     RegID = RRI.RenameAs;
@@ -200,9 +200,8 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
     RegisterMappings[*I].first = Write;
 }
 
-void RegisterFile::removeRegisterWrite(const WriteState &WS,
-                                       MutableArrayRef<unsigned> FreedPhysRegs,
-                                       bool ShouldFreePhysRegs) {
+void RegisterFile::removeRegisterWrite(
+    const WriteState &WS, MutableArrayRef<unsigned> FreedPhysRegs) {
   unsigned RegID = WS.getRegisterID();
 
   assert(RegID != 0 && "Invalidating an already invalid register?");
@@ -210,6 +209,7 @@ void RegisterFile::removeRegisterWrite(const WriteState &WS,
          "Invalidating a write of unknown cycles!");
   assert(WS.getCyclesLeft() <= 0 && "Invalid cycles left for this write!");
 
+  bool ShouldFreePhysRegs = !WS.isWriteZero();
   unsigned RenameAs = RegisterMappings[RegID].second.RenameAs;
   if (RenameAs && RenameAs != RegID) {
     RegID = RenameAs;

@@ -86,6 +86,9 @@ public:
   /// Runs all not-yet-run static destructors.
   Error runDestructors() { return DtorRunner.run(); }
 
+  /// Returns a reference to the ObjLinkingLayer
+  RTDyldObjectLinkingLayer2 &getObjLinkingLayer() { return ObjLinkingLayer; }
+
 protected:
   LLJIT(std::unique_ptr<ExecutionSession> ES, std::unique_ptr<TargetMachine> TM,
         DataLayout DL);

@@ -85,6 +85,8 @@ def create_parser():
 
     group.add_argument('--dsymutil', metavar='dsymutil', dest='dsymutil', help=textwrap.dedent('Specify which dsymutil to use.'))
 
+    group.add_argument('--filecheck', metavar='filecheck', dest='filecheck', help=textwrap.dedent('Specify which FileCheck binary to use.'))
+
     # Test filtering options
     group = parser.add_argument_group('Test filtering options')
     group.add_argument(

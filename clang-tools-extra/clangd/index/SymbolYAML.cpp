@@ -40,10 +40,13 @@ struct NormalizedSymbolID {
     OS << ID;
   }
 
-  SymbolID denormalize(IO &) {
-    SymbolID ID;
-    HexString >> ID;
-    return ID;
+  SymbolID denormalize(IO &I) {
+    auto ID = SymbolID::fromStr(HexString);
+    if (!ID) {
+      I.setError(llvm::toString(ID.takeError()));
+      return SymbolID();
+    }
+    return *ID;
   }
 
   std::string HexString;

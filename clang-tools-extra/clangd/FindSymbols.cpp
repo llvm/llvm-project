@@ -270,8 +270,9 @@ getDocumentSymbols(ParsedAST &AST) {
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::DeclarationsOnly;
   IndexOpts.IndexFunctionLocals = false;
-  indexTopLevelDecls(AST.getASTContext(), AST.getLocalTopLevelDecls(),
-                     DocumentSymbolsCons, IndexOpts);
+  indexTopLevelDecls(AST.getASTContext(), AST.getPreprocessor(),
+                     AST.getLocalTopLevelDecls(), DocumentSymbolsCons,
+                     IndexOpts);
 
   return DocumentSymbolsCons.takeSymbols();
 }

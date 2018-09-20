@@ -2214,6 +2214,54 @@ class TestBase(Base):
                     compare_string, msg=COMPLETION_MSG(
                         str_input, p, match_strings), exe=False, patterns=[p])
 
+    def filecheck(
+            self,
+            command,
+            check_file,
+            filecheck_options = ''):
+        # Run the command.
+        self.runCmd(
+                command,
+                msg="FileCheck'ing result of `{0}`".format(command))
+
+        # Get the error text if there was an error, and the regular text if not.
+        output = self.res.GetOutput() if self.res.Succeeded() \
+                else self.res.GetError()
+
+        # Assemble the absolute path to the check file. As a convenience for
+        # LLDB inline tests, assume that the check file is a relative path to
+        # a file within the inline test directory.
+        if check_file.endswith('.pyc'):
+            check_file = check_file[:-1]
+        if hasattr(self, 'test_filename'):
+            check_file_abs = os.path.join(os.path.dirname(self.test_filename),
+                    check_file)
+        else:
+            check_file_abs = os.path.abspath(check_file)
+
+        # Run FileCheck.
+        filecheck_bin = configuration.get_filecheck_path()
+        filecheck_args = [filecheck_bin, check_file_abs]
+        if filecheck_options:
+            filecheck_args.append(filecheck_options)
+        subproc = Popen(filecheck_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        cmd_stdout, cmd_stderr = subproc.communicate(input=output)
+        cmd_status = subproc.returncode
+
+        if cmd_status != 0:
+            filecheck_cmd = " ".join(filecheck_args)
+            self.assertTrue(cmd_status == 0, """
+--- FileCheck failed (code={0}) ---
+{1}
+
+FileCheck input:
+{2}
+
+FileCheck output:
+{3}
+{4}
+""".format(cmd_status, filecheck_cmd, output, cmd_stdout, cmd_stderr))
+
     def expect(
             self,
             str,

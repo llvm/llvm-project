@@ -538,6 +538,7 @@ external operand : llvalue -> int -> llvalue = "llvm_operand"
 external operand_use : llvalue -> int -> lluse = "llvm_operand_use"
 external set_operand : llvalue -> int -> llvalue -> unit = "llvm_set_operand"
 external num_operands : llvalue -> int = "llvm_num_operands"
+external indices : llvalue -> int array = "llvm_indices"
 
 (*--... Operations on constants of (mostly) any type .......................--*)
 external is_constant : llvalue -> bool = "llvm_is_constant"

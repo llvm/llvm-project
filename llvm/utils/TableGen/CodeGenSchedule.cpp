@@ -225,7 +225,219 @@ CodeGenSchedModels::CodeGenSchedModels(RecordKeeper &RK,
   // Check MCInstPredicate definitions.
   checkMCInstPredicates();
 
+  // Check STIPredicate definitions.
+  checkSTIPredicates();
+
+  // Find STIPredicate definitions for each processor model, and construct
+  // STIPredicateFunction objects.
+  collectSTIPredicates();
+
   checkCompleteness();
+}
+
+void CodeGenSchedModels::checkSTIPredicates() const {
+  DenseMap<StringRef, const Record *> Declarations;
+
+  // There cannot be multiple declarations with the same name.
+  const RecVec Decls = Records.getAllDerivedDefinitions("STIPredicateDecl");
+  for (const Record *R : Decls) {
+    StringRef Name = R->getValueAsString("Name");
+    const auto It = Declarations.find(Name);
+    if (It == Declarations.end()) {
+      Declarations[Name] = R;
+      continue;
+    }
+
+    PrintError(R->getLoc(), "STIPredicate " + Name + " multiply declared.");
+    PrintNote(It->second->getLoc(), "Previous declaration was here.");
+    PrintFatalError(R->getLoc(), "Invalid STIPredicateDecl found.");
+  }
+
+  // Disallow InstructionEquivalenceClasses with an empty instruction list.
+  const RecVec Defs =
+      Records.getAllDerivedDefinitions("InstructionEquivalenceClass");
+  for (const Record *R : Defs) {
+    RecVec Opcodes = R->getValueAsListOfDefs("Opcodes");
+    if (Opcodes.empty()) {
+      PrintFatalError(R->getLoc(), "Invalid InstructionEquivalenceClass "
+                                   "defined with an empty opcode list.");
+    }
+  }
+}
+
+// Used by function `processSTIPredicate` to construct a mask of machine
+// instruction operands.
+static APInt constructOperandMask(ArrayRef<int64_t> Indices) {
+  APInt OperandMask;
+  if (Indices.empty())
+    return OperandMask;
+
+  int64_t MaxIndex = *std::max_element(Indices.begin(), Indices.end());
+  assert(MaxIndex >= 0 && "Invalid negative indices in input!");
+  OperandMask = OperandMask.zext(MaxIndex + 1);
+  for (const int64_t Index : Indices) {
+    assert(Index >= 0 && "Invalid negative indices!");
+    OperandMask.setBit(Index);
+  }
+
+  return OperandMask;
+}
+
+static void
+processSTIPredicate(STIPredicateFunction &Fn,
+                    const DenseMap<Record *, unsigned> &ProcModelMap) {
+  DenseMap<const Record *, unsigned> Opcode2Index;
+  using OpcodeMapPair = std::pair<const Record *, OpcodeInfo>;
+  std::vector<OpcodeMapPair> OpcodeMappings;
+  std::vector<std::pair<APInt, APInt>> OpcodeMasks;
+
+  DenseMap<const Record *, unsigned> Predicate2Index;
+  unsigned NumUniquePredicates = 0;
+
+  // Number unique predicates and opcodes used by InstructionEquivalenceClass
+  // definitions. Each unique opcode will be associated with an OpcodeInfo
+  // object.
+  for (const Record *Def : Fn.getDefinitions()) {
+    RecVec Classes = Def->getValueAsListOfDefs("Classes");
+    for (const Record *EC : Classes) {
+      const Record *Pred = EC->getValueAsDef("Predicate");
+      if (Predicate2Index.find(Pred) == Predicate2Index.end())
+        Predicate2Index[Pred] = NumUniquePredicates++;
+
+      RecVec Opcodes = EC->getValueAsListOfDefs("Opcodes");
+      for (const Record *Opcode : Opcodes) {
+        if (Opcode2Index.find(Opcode) == Opcode2Index.end()) {
+          Opcode2Index[Opcode] = OpcodeMappings.size();
+          OpcodeMappings.emplace_back(Opcode, OpcodeInfo());
+        }
+      }
+    }
+  }
+
+  // Initialize vector `OpcodeMasks` with default values.  We want to keep track
+  // of which processors "use" which opcodes.  We also want to be able to
+  // identify predicates that are used by different processors for a same
+  // opcode.
+  // This information is used later on by this algorithm to sort OpcodeMapping
+  // elements based on their processor and predicate sets.
+  OpcodeMasks.resize(OpcodeMappings.size());
+  APInt DefaultProcMask(ProcModelMap.size(), 0);
+  APInt DefaultPredMask(NumUniquePredicates, 0);
+  for (std::pair<APInt, APInt> &MaskPair : OpcodeMasks)
+    MaskPair = std::make_pair(DefaultProcMask, DefaultPredMask);
+
+  // Construct a OpcodeInfo object for every unique opcode declared by an
+  // InstructionEquivalenceClass definition.
+  for (const Record *Def : Fn.getDefinitions()) {
+    RecVec Classes = Def->getValueAsListOfDefs("Classes");
+    const Record *SchedModel = Def->getValueAsDef("SchedModel");
+    unsigned ProcIndex = ProcModelMap.find(SchedModel)->second;
+    APInt ProcMask(ProcModelMap.size(), 0);
+    ProcMask.setBit(ProcIndex);
+
+    for (const Record *EC : Classes) {
+      RecVec Opcodes = EC->getValueAsListOfDefs("Opcodes");
+
+      std::vector<int64_t> OpIndices =
+          EC->getValueAsListOfInts("OperandIndices");
+      APInt OperandMask = constructOperandMask(OpIndices);
+
+      const Record *Pred = EC->getValueAsDef("Predicate");
+      APInt PredMask(NumUniquePredicates, 0);
+      PredMask.setBit(Predicate2Index[Pred]);
+
+      for (const Record *Opcode : Opcodes) {
+        unsigned OpcodeIdx = Opcode2Index[Opcode];
+        if (OpcodeMasks[OpcodeIdx].first[ProcIndex]) {
+          std::string Message =
+              "Opcode " + Opcode->getName().str() + 
+              " used by multiple InstructionEquivalenceClass definitions.";
+          PrintFatalError(EC->getLoc(), Message);
+        }
+        OpcodeMasks[OpcodeIdx].first |= ProcMask;
+        OpcodeMasks[OpcodeIdx].second |= PredMask;
+        OpcodeInfo &OI = OpcodeMappings[OpcodeIdx].second;
+
+        OI.addPredicateForProcModel(ProcMask, OperandMask, Pred);
+      }
+    }
+  }
+
+  // Sort OpcodeMappings elements based on their CPU and predicate masks.
+  // As a last resort, order elements by opcode identifier.
+  llvm::sort(OpcodeMappings.begin(), OpcodeMappings.end(),
+             [&](const OpcodeMapPair &Lhs, const OpcodeMapPair &Rhs) {
+               unsigned LhsIdx = Opcode2Index[Lhs.first];
+               unsigned RhsIdx = Opcode2Index[Rhs.first];
+               std::pair<APInt, APInt> &LhsMasks = OpcodeMasks[LhsIdx];
+               std::pair<APInt, APInt> &RhsMasks = OpcodeMasks[RhsIdx];
+
+               if (LhsMasks.first != RhsMasks.first) {
+                 if (LhsMasks.first.countPopulation() <
+                     RhsMasks.first.countPopulation())
+                   return true;
+                 return LhsMasks.first.countLeadingZeros() >
+                        RhsMasks.first.countLeadingZeros();
+               }
+
+               if (LhsMasks.second != RhsMasks.second) {
+                 if (LhsMasks.second.countPopulation() <
+                     RhsMasks.second.countPopulation())
+                   return true;
+                 return LhsMasks.second.countLeadingZeros() >
+                        RhsMasks.second.countLeadingZeros();
+               }
+
+               return LhsIdx < RhsIdx;
+             });
+
+  // Now construct opcode groups. Groups are used by the SubtargetEmitter when
+  // expanding the body of a STIPredicate function. In particular, each opcode
+  // group is expanded into a sequence of labels in a switch statement.
+  // It identifies opcodes for which different processors define same predicates
+  // and same opcode masks.
+  for (OpcodeMapPair &Info : OpcodeMappings)
+    Fn.addOpcode(Info.first, std::move(Info.second));
+}
+
+void CodeGenSchedModels::collectSTIPredicates() {
+  // Map STIPredicateDecl records to elements of vector
+  // CodeGenSchedModels::STIPredicates.
+  DenseMap<const Record *, unsigned> Decl2Index;
+
+  RecVec RV = Records.getAllDerivedDefinitions("STIPredicate");
+  for (const Record *R : RV) {
+    const Record *Decl = R->getValueAsDef("Declaration");
+
+    const auto It = Decl2Index.find(Decl);
+    if (It == Decl2Index.end()) {
+      Decl2Index[Decl] = STIPredicates.size();
+      STIPredicateFunction Predicate(Decl);
+      Predicate.addDefinition(R);
+      STIPredicates.emplace_back(std::move(Predicate));
+      continue;
+    }
+
+    STIPredicateFunction &PreviousDef = STIPredicates[It->second];
+    PreviousDef.addDefinition(R);
+  }
+
+  for (STIPredicateFunction &Fn : STIPredicates)
+    processSTIPredicate(Fn, ProcModelMap);
+}
+
+void OpcodeInfo::addPredicateForProcModel(const llvm::APInt &CpuMask,
+                                          const llvm::APInt &OperandMask,
+                                          const Record *Predicate) {
+  auto It = llvm::find_if(
+      Predicates, [&OperandMask, &Predicate](const PredicateInfo &P) {
+        return P.Predicate == Predicate && P.OperandMask == OperandMask;
+      });
+  if (It == Predicates.end()) {
+    Predicates.emplace_back(CpuMask, OperandMask, Predicate);
+    return;
+  }
+  It->ProcModelMask |= CpuMask;
 }
 
 void CodeGenSchedModels::checkMCInstPredicates() const {

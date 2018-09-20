@@ -335,6 +335,35 @@ define <8 x i32> @and_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z
   ret <8 x i32> %t
 }
 
+define <8 x i32> @andn_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z) {
+; AVX1-LABEL: andn_disguised_i8_elts:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
+; AVX1-NEXT:    vpaddd %xmm3, %xmm4, %xmm3
+; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; AVX1-NEXT:    vandnps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
+; AVX1-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; INT256-LABEL: andn_disguised_i8_elts:
+; INT256:       # %bb.0:
+; INT256-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
+; INT256-NEXT:    vpandn {{.*}}(%rip), %ymm0, %ymm0
+; INT256-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
+; INT256-NEXT:    retq
+  %add = add <8 x i32> %y, %x
+  %neg = and <8 x i32> %add, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
+  %and = xor <8 x i32> %neg, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
+  %add1 = add <8 x i32> %and, %z
+  ret <8 x i32> %add1
+}
+
 define <8 x i32> @or_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z) {
 ; AVX1-LABEL: or_disguised_i8_elts:
 ; AVX1:       # %bb.0:

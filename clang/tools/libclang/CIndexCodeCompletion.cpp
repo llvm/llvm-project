@@ -499,6 +499,10 @@ static unsigned long long getContextsForContextKind(
       contexts = CXCompletionContext_NaturalLanguage;
       break;
     }
+    case CodeCompletionContext::CCC_IncludedFile: {
+      contexts = CXCompletionContext_IncludedFile;
+      break;
+    }
     case CodeCompletionContext::CCC_SelectorName: {
       contexts = CXCompletionContext_ObjCSelectorName;
       break;

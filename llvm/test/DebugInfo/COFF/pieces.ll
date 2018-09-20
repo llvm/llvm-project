@@ -65,15 +65,15 @@
 
 
 ; ASM-LABEL: pad_right: # @pad_right
-; ASM:         #DEBUG_VALUE: pad_right:o <- [DW_OP_LLVM_fragment 32 32] $ecx
-; ASM:         movl    %ecx, %eax
+; ASM:         movq    %rcx, %rax
+; ASM:         #DEBUG_VALUE: pad_right:o <- [DW_OP_LLVM_fragment 32 32] $eax
 ; ASM:         retq
 
 
 ; ASM-LABEL: pad_left: # @pad_left
-; ASM:         #DEBUG_VALUE: pad_left:o <- [DW_OP_LLVM_fragment 0 32] $ecx
 ; ASM:         .cv_loc 2 1 24 3                # t.c:24:3
-; ASM:         movl    %ecx, %eax
+; ASM:         movq    %rcx, %rax
+; ASM:         #DEBUG_VALUE: pad_left:o <- [DW_OP_LLVM_fragment 0 32] $eax
 ; ASM:         retq
 
 
@@ -136,7 +136,7 @@
 ; ASM:        .asciz  "pad_right"             # Function name
 ; ASM:        .short  4414                    # Record kind: S_LOCAL
 ; ASM:        .asciz  "o"
-; ASM:        .cv_def_range    .Lfunc_begin1 .Lfunc_end1, "C\021\022\000\000\000\004\000\000\000"
+; ASM:        .cv_def_range    .Lfunc_begin1 .Ltmp8, "C\021\021\000\000\000\004\000\000\000"
 
 ; OBJ-LABEL: {{.*}}Proc{{.*}}Sym {
 ; OBJ:         Kind: S_GPROC32_ID (0x1147)
@@ -146,7 +146,7 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: ECX (0x12)
+; OBJ:         Register: EAX (0x11)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 4
 ; OBJ:         LocalVariableAddrRange {
@@ -159,7 +159,7 @@
 ; ASM:        .asciz  "pad_left"              # Function name
 ; ASM:        .short  4414                    # Record kind: S_LOCAL
 ; ASM:        .asciz  "o"
-; ASM:        .cv_def_range    .Lfunc_begin2 .Lfunc_end2, "C\021\022\000\000\000\000\000\000\000"
+; ASM:        .cv_def_range    .Lfunc_begin2 .Ltmp10, "C\021\021\000\000\000\000\000\000\000"
 
 ; OBJ-LABEL: {{.*}}Proc{{.*}}Sym {
 ; OBJ:         Kind: S_GPROC32_ID (0x1147)
@@ -169,7 +169,7 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: ECX (0x12)
+; OBJ:         Register: EAX (0x11)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 0
 ; OBJ:         LocalVariableAddrRange {

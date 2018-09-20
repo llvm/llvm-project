@@ -1976,6 +1976,7 @@ static void CalculateHiddenNames(const CodeCompletionContext &Context,
   case CodeCompletionContext::CCC_ObjCInstanceMessage:
   case CodeCompletionContext::CCC_ObjCClassMessage:
   case CodeCompletionContext::CCC_ObjCCategoryName:
+  case CodeCompletionContext::CCC_IncludedFile:
     // We're looking for nothing, or we're looking for names that cannot
     // be hidden.
     return;

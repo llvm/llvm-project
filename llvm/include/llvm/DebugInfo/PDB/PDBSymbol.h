@@ -112,7 +112,8 @@ public:
   /// normally goes on the right side of the symbol.
   virtual void dumpRight(PDBSymDumper &Dumper) const {}
 
-  void defaultDump(raw_ostream &OS, int Indent) const;
+  void defaultDump(raw_ostream &OS, int Indent, PdbSymbolIdField ShowFlags,
+                   PdbSymbolIdField RecurseFlags) const;
   void dumpProperties() const;
   void dumpChildStats() const;
 

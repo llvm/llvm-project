@@ -15,6 +15,7 @@
 #include "index/FileIndex.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
+#include "clang/Index/IndexSymbol.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "gtest/gtest.h"
@@ -119,10 +120,10 @@ TEST(FileSymbolsTest, SnapshotAliveAfterRemove) {
   EXPECT_THAT(getRefs(*Symbols, ID), RefsAre({FileURI("f1.cc")}));
 }
 
-std::vector<std::string> match(const SymbolIndex &I,
+std::vector<std::string> match(const FileIndex &I,
                                const FuzzyFindRequest &Req) {
   std::vector<std::string> Matches;
-  I.fuzzyFind(Req, [&](const Symbol &Sym) {
+  I.index().fuzzyFind(Req, [&](const Symbol &Sym) {
     Matches.push_back((Sym.Scope + Sym.Name).str());
   });
   return Matches;
@@ -135,7 +136,8 @@ void update(FileIndex &M, llvm::StringRef Basename, llvm::StringRef Code) {
   File.HeaderFilename = (Basename + ".h").str();
   File.HeaderCode = Code;
   auto AST = File.build();
-  M.update(File.Filename, &AST.getASTContext(), AST.getPreprocessorPtr());
+  M.updatePreamble(File.Filename, AST.getASTContext(),
+                   AST.getPreprocessorPtr());
 }
 
 TEST(FileIndexTest, CustomizedURIScheme) {
@@ -145,7 +147,7 @@ TEST(FileIndexTest, CustomizedURIScheme) {
   FuzzyFindRequest Req;
   Req.Query = "";
   bool SeenSymbol = false;
-  M.fuzzyFind(Req, [&](const Symbol &Sym) {
+  M.index().fuzzyFind(Req, [&](const Symbol &Sym) {
     EXPECT_EQ(Sym.CanonicalDeclaration.FileURI, "unittest:///f.h");
     SeenSymbol = true;
   });
@@ -182,25 +184,6 @@ TEST(FileIndexTest, IndexMultiASTAndDeduplicate) {
   EXPECT_THAT(match(M, Req), UnorderedElementsAre("ns::f", "ns::X", "ns::ff"));
 }
 
-TEST(FileIndexTest, RemoveAST) {
-  FileIndex M;
-  update(M, "f1", "namespace ns { void f() {} class X {}; }");
-
-  FuzzyFindRequest Req;
-  Req.Query = "";
-  Req.Scopes = {"ns::"};
-  EXPECT_THAT(match(M, Req), UnorderedElementsAre("ns::f", "ns::X"));
-
-  M.update("f1.cpp", nullptr, nullptr);
-  EXPECT_THAT(match(M, Req), UnorderedElementsAre());
-}
-
-TEST(FileIndexTest, RemoveNonExisting) {
-  FileIndex M;
-  M.update("no.cpp", nullptr, nullptr);
-  EXPECT_THAT(match(M, FuzzyFindRequest()), UnorderedElementsAre());
-}
-
 TEST(FileIndexTest, ClassMembers) {
   FileIndex M;
   update(M, "f1", "class X { static int m1; int m2; static void f(); };");
@@ -218,7 +201,7 @@ TEST(FileIndexTest, NoIncludeCollected) {
   FuzzyFindRequest Req;
   Req.Query = "";
   bool SeenSymbol = false;
-  M.fuzzyFind(Req, [&](const Symbol &Sym) {
+  M.index().fuzzyFind(Req, [&](const Symbol &Sym) {
     EXPECT_TRUE(Sym.IncludeHeaders.empty());
     SeenSymbol = true;
   });
@@ -242,7 +225,7 @@ vector<Ty> make_vector(Arg A) {}
   Req.Query = "";
   bool SeenVector = false;
   bool SeenMakeVector = false;
-  M.fuzzyFind(Req, [&](const Symbol &Sym) {
+  M.index().fuzzyFind(Req, [&](const Symbol &Sym) {
     if (Sym.Name == "vector") {
       EXPECT_EQ(Sym.Signature, "<class Ty>");
       EXPECT_EQ(Sym.CompletionSnippetSuffix, "<${1:class Ty}>");
@@ -296,7 +279,7 @@ TEST(FileIndexTest, RebuildWithPreamble) {
       [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP) {
         EXPECT_FALSE(IndexUpdated) << "Expected only a single index update";
         IndexUpdated = true;
-        Index.update(FooCpp, &Ctx, std::move(PP));
+        Index.updatePreamble(FooCpp, Ctx, std::move(PP));
       });
   ASSERT_TRUE(IndexUpdated);
 
@@ -332,22 +315,35 @@ TEST(FileIndexTest, Refs) {
   Test.Code = MainCode.code();
   Test.Filename = "test.cc";
   auto AST = Test.build();
-  Index.update(Test.Filename, &AST.getASTContext(), AST.getPreprocessorPtr(),
-               AST.getLocalTopLevelDecls());
+  Index.updateMain(Test.Filename, AST);
   // Add test2.cc
   TestTU Test2;
   Test2.HeaderCode = HeaderCode;
   Test2.Code = MainCode.code();
   Test2.Filename = "test2.cc";
   AST = Test2.build();
-  Index.update(Test2.Filename, &AST.getASTContext(), AST.getPreprocessorPtr(),
-               AST.getLocalTopLevelDecls());
+  Index.updateMain(Test2.Filename, AST);
 
-  EXPECT_THAT(getRefs(Index, Foo.ID),
+  EXPECT_THAT(getRefs(Index.index(), Foo.ID),
               RefsAre({AllOf(RefRange(MainCode.range("foo")),
                              FileURI("unittest:///test.cc")),
                        AllOf(RefRange(MainCode.range("foo")),
                              FileURI("unittest:///test2.cc"))}));
+}
+
+TEST(FileIndexTest, CollectMacros) {
+  FileIndex M;
+  update(M, "f", "#define CLANGD 1");
+
+  FuzzyFindRequest Req;
+  Req.Query = "";
+  bool SeenSymbol = false;
+  M.index().fuzzyFind(Req, [&](const Symbol &Sym) {
+    EXPECT_EQ(Sym.Name, "CLANGD");
+    EXPECT_EQ(Sym.SymInfo.Kind, index::SymbolKind::Macro);
+    SeenSymbol = true;
+  });
+  EXPECT_TRUE(SeenSymbol);
 }
 
 } // namespace

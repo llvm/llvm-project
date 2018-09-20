@@ -122,8 +122,8 @@ define intel_ocl_bicc <16 x float> @test_prolog_epilog(<16 x float> %a, <16 x fl
 
 ; pass parameters in registers for 64-bit platform
 ; X64-LABEL: test_int
-; X64: leal {{.*}}, %edi
 ; X64: movl {{.*}}, %esi
+; X64: leal {{.*}}, %edi
 ; X64: call
 ; X64: addl {{.*}}, %eax
 define i32 @test_int(i32 %a, i32 %b) nounwind {

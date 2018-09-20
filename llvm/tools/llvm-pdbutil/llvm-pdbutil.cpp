@@ -165,6 +165,20 @@ cl::list<std::string> InputFilenames(cl::Positional,
 cl::opt<bool> Native("native", cl::desc("Use native PDB reader instead of DIA"),
                      cl::sub(DiaDumpSubcommand));
 
+static cl::opt<bool>
+    ShowClassHierarchy("hierarchy", cl::desc("Show lexical and class parents"),
+                       cl::sub(DiaDumpSubcommand));
+static cl::opt<bool> NoSymIndexIds(
+    "no-ids",
+    cl::desc("Don't show any SymIndexId fields (overrides -hierarchy)"),
+    cl::sub(DiaDumpSubcommand));
+
+static cl::opt<bool>
+    Recurse("recurse",
+            cl::desc("When dumping a SymIndexId, dump the full details of the "
+                     "corresponding record"),
+            cl::sub(DiaDumpSubcommand));
+
 static cl::opt<bool> Enums("enums", cl::desc("Dump enum types"),
                            cl::sub(DiaDumpSubcommand));
 static cl::opt<bool> Pointers("pointers", cl::desc("Dump enum types"),
@@ -965,16 +979,24 @@ static void dumpDia(StringRef Path) {
   if (opts::diadump::Pointers)
     SymTypes.push_back(PDB_SymType::PointerType);
 
+  PdbSymbolIdField Ids = opts::diadump::NoSymIndexIds ? PdbSymbolIdField::None
+                                                      : PdbSymbolIdField::All;
+  PdbSymbolIdField Recurse = PdbSymbolIdField::None;
+  if (opts::diadump::Recurse)
+    Recurse = PdbSymbolIdField::All;
+  if (!opts::diadump::ShowClassHierarchy)
+    Ids &= ~(PdbSymbolIdField::ClassParent | PdbSymbolIdField::LexicalParent);
+
   for (PDB_SymType ST : SymTypes) {
     auto Children = GlobalScope->findAllChildren(ST);
     while (auto Child = Children->getNext()) {
       outs() << "{";
-      Child->defaultDump(outs(), 2);
+      Child->defaultDump(outs(), 2, Ids, Recurse);
       if (auto Enum = dyn_cast<PDBSymbolTypeEnum>(Child.get())) {
         auto Enumerators = Enum->findAllChildren<PDBSymbolData>();
         while (auto Enumerator = Enumerators->getNext()) {
           outs() << "  {";
-          Enumerator->defaultDump(outs(), 4);
+          Enumerator->defaultDump(outs(), 4, Ids, Recurse);
           outs() << "\n  }\n";
         }
       }

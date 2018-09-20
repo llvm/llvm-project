@@ -16,9 +16,9 @@ define void @test_x86_wrpkru(i32 %src) {
 ;
 ; X64-LABEL: test_x86_wrpkru:
 ; X64:       ## %bb.0:
+; X64-NEXT:    movl %edi, %eax ## encoding: [0x89,0xf8]
 ; X64-NEXT:    xorl %ecx, %ecx ## encoding: [0x31,0xc9]
 ; X64-NEXT:    xorl %edx, %edx ## encoding: [0x31,0xd2]
-; X64-NEXT:    movl %edi, %eax ## encoding: [0x89,0xf8]
 ; X64-NEXT:    wrpkru ## encoding: [0x0f,0x01,0xef]
 ; X64-NEXT:    retq ## encoding: [0xc3]
   call void @llvm.x86.wrpkru(i32 %src)

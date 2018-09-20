@@ -1351,14 +1351,13 @@ define <16 x float> @test_v16f32(<16 x float> %a, <16 x float> %b, <16 x float> 
 ; FMACALL64-NEXT:    ## xmm2 = xmm2[1,1,2,3]
 ; FMACALL64-NEXT:    callq _fmaf ## encoding: [0xe8,A,A,A,A]
 ; FMACALL64-NEXT:    ## fixup A - offset: 1, value: _fmaf-4, kind: reloc_branch_4byte_pcrel
-; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
-; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x4c,0x24,0x40]
-; FMACALL64-NEXT:    unpcklps %xmm0, %xmm1 ## encoding: [0x0f,0x14,0xc8]
-; FMACALL64-NEXT:    ## xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; FMACALL64-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Folded Reload
-; FMACALL64-NEXT:    ## encoding: [0x66,0x0f,0x14,0x4c,0x24,0x20]
-; FMACALL64-NEXT:    ## xmm1 = xmm1[0],mem[0]
-; FMACALL64-NEXT:    movaps %xmm1, %xmm3 ## encoding: [0x0f,0x28,0xd9]
+; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 ## 16-byte Reload
+; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x5c,0x24,0x40]
+; FMACALL64-NEXT:    unpcklps %xmm0, %xmm3 ## encoding: [0x0f,0x14,0xd8]
+; FMACALL64-NEXT:    ## xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1]
+; FMACALL64-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 ## 16-byte Folded Reload
+; FMACALL64-NEXT:    ## encoding: [0x66,0x0f,0x14,0x5c,0x24,0x20]
+; FMACALL64-NEXT:    ## xmm3 = xmm3[0],mem[0]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
 ; FMACALL64-NEXT:    ## encoding: [0x0f,0x28,0x44,0x24,0x60]
 ; FMACALL64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload

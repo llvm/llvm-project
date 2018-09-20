@@ -11,8 +11,9 @@ define i8 @test() {
 define i8 @test2(i8 %a) {
 ; ALL-LABEL: test2:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    addb %al, %dil
 ; ALL-NEXT:    movl %edi, %eax
+; ALL-NEXT:    addb %al, %al
+; ALL-NEXT:    # kill: def $al killed $al killed $eax
 ; ALL-NEXT:    retq
   %r = add i8 %a, undef
   ret i8 %r

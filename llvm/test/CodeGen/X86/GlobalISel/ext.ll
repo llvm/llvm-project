@@ -5,8 +5,9 @@
 define i8 @test_zext_i1toi8(i32 %a) {
 ; X64-LABEL: test_zext_i1toi8:
 ; X64:       # %bb.0:
-; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andb $1, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_zext_i1toi8:
@@ -23,8 +24,9 @@ define i8 @test_zext_i1toi8(i32 %a) {
 define i16 @test_zext_i1toi16(i32 %a) {
 ; X64-LABEL: test_zext_i1toi16:
 ; X64:       # %bb.0:
-; X64-NEXT:    andw $1, %di
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andw $1, %ax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_zext_i1toi16:
@@ -41,8 +43,8 @@ define i16 @test_zext_i1toi16(i32 %a) {
 define i32 @test_zext_i1(i32 %a) {
 ; X64-LABEL: test_zext_i1:
 ; X64:       # %bb.0:
-; X64-NEXT:    andl $1, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_zext_i1:
@@ -86,13 +88,13 @@ define i32 @test_zext_i16(i16 %val) {
 define i32 @test_sext_i8(i8 %val) {
 ; X64-LABEL: test_sext_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $24, %ecx
-; X64-NEXT:    # kill: def $cl killed $ecx
-; X64-NEXT:    shll %cl, %edi
-; X64-NEXT:    movl $24, %ecx
-; X64-NEXT:    # kill: def $cl killed $ecx
-; X64-NEXT:    sarl %cl, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl $24, %ecx
+; X64-NEXT:    # kill: def $cl killed $ecx
+; X64-NEXT:    shll %cl, %eax
+; X64-NEXT:    movl $24, %ecx
+; X64-NEXT:    # kill: def $cl killed $ecx
+; X64-NEXT:    sarl %cl, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_sext_i8:
@@ -106,13 +108,13 @@ define i32 @test_sext_i8(i8 %val) {
 define i32 @test_sext_i16(i16 %val) {
 ; X64-LABEL: test_sext_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $16, %ecx
-; X64-NEXT:    # kill: def $cl killed $ecx
-; X64-NEXT:    shll %cl, %edi
-; X64-NEXT:    movl $16, %ecx
-; X64-NEXT:    # kill: def $cl killed $ecx
-; X64-NEXT:    sarl %cl, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movl $16, %ecx
+; X64-NEXT:    # kill: def $cl killed $ecx
+; X64-NEXT:    shll %cl, %eax
+; X64-NEXT:    movl $16, %ecx
+; X64-NEXT:    # kill: def $cl killed $ecx
+; X64-NEXT:    sarl %cl, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_sext_i16:

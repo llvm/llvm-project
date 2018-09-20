@@ -80,11 +80,27 @@ bool IndexingContext::handleReference(const NamedDecl *D, SourceLocation Loc,
                               RefE, RefD, DC);
 }
 
+static void reportModuleReferences(const Module *Mod,
+                                   ArrayRef<SourceLocation> IdLocs,
+                                   const ImportDecl *ImportD,
+                                   IndexDataConsumer &DataConsumer) {
+  if (!Mod)
+    return;
+  reportModuleReferences(Mod->Parent, IdLocs.drop_back(), ImportD,
+                         DataConsumer);
+  DataConsumer.handleModuleOccurence(ImportD, Mod,
+                                     (SymbolRoleSet)SymbolRole::Reference,
+                                     IdLocs.back());
+}
+
 bool IndexingContext::importedModule(const ImportDecl *ImportD) {
+  if (ImportD->isInvalidDecl())
+    return true;
+
   SourceLocation Loc;
   auto IdLocs = ImportD->getIdentifierLocs();
   if (!IdLocs.empty())
-    Loc = IdLocs.front();
+    Loc = IdLocs.back();
   else
     Loc = ImportD->getLocation();
 
@@ -108,11 +124,17 @@ bool IndexingContext::importedModule(const ImportDecl *ImportD) {
     }
   }
 
+  const Module *Mod = ImportD->getImportedModule();
+  if (!ImportD->isImplicit() && Mod->Parent && !IdLocs.empty()) {
+    reportModuleReferences(Mod->Parent, IdLocs.drop_back(), ImportD,
+                           DataConsumer);
+  }
+
   SymbolRoleSet Roles = (unsigned)SymbolRole::Declaration;
   if (ImportD->isImplicit())
     Roles |= (unsigned)SymbolRole::Implicit;
 
-  return DataConsumer.handleModuleOccurence(ImportD, Roles, Loc);
+  return DataConsumer.handleModuleOccurence(ImportD, Mod, Roles, Loc);
 }
 
 bool IndexingContext::isTemplateImplicitInstantiation(const Decl *D) {

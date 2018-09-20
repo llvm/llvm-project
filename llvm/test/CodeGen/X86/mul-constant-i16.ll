@@ -11,6 +11,7 @@ define i16 @test_mul_by_1(i16 %x) {
 ; X64-LABEL: test_mul_by_1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %mul = mul nsw i16 %x, 1
   ret i16 %mul
@@ -297,8 +298,9 @@ define i16 @test_mul_by_16(i16 %x) {
 ;
 ; X64-LABEL: test_mul_by_16:
 ; X64:       # %bb.0:
-; X64-NEXT:    shll $4, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shll $4, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %mul = mul nsw i16 %x, 16
   ret i16 %mul
@@ -632,8 +634,9 @@ define i16 @test_mul_by_32(i16 %x) {
 ;
 ; X64-LABEL: test_mul_by_32:
 ; X64:       # %bb.0:
-; X64-NEXT:    shll $5, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shll $5, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %mul = mul nsw i16 %x, 32
   ret i16 %mul
