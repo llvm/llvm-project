@@ -322,7 +322,7 @@ struct PredicateInfo {
 /// There is at least one OpcodeInfo object for every opcode specified by a
 /// TIPredicate definition.
 class OpcodeInfo {
-  llvm::SmallVector<PredicateInfo, 8> Predicates;
+  std::vector<PredicateInfo> Predicates;
 
   OpcodeInfo(const OpcodeInfo &Other) = delete;
   OpcodeInfo &operator=(const OpcodeInfo &Other) = delete;

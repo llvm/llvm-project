@@ -98,8 +98,8 @@ define <4 x i32> @combine_vec_rot_rot_splat_zero(<4 x i32> %x) {
 define i32 @combine_rot_select_zero(i32, i32) {
 ; CHECK-LABEL: combine_rot_select_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    roll %cl, %eax
 ; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    cmovel %edi, %eax

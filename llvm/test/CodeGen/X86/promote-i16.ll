@@ -12,8 +12,9 @@ define signext i16 @foo(i16 signext %x) nounwind {
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    xorl $21998, %edi # imm = 0x55EE
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl $21998, %eax # imm = 0x55EE
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
   %0 = xor i16 %x, 21998
@@ -30,8 +31,9 @@ define signext i16 @bar(i16 signext %x) nounwind {
 ;
 ; X64-LABEL: bar:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    xorl $54766, %edi # imm = 0xD5EE
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl $54766, %eax # imm = 0xD5EE
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
   %0 = xor i16 %x, 54766

@@ -5,6 +5,7 @@ define i1 @trunc_i32toi1(i32 %a) {
 ; CHECK-LABEL: trunc_i32toi1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %r = trunc i32 %a to i1
   ret i1 %r
@@ -14,6 +15,7 @@ define i8 @trunc_i32toi8(i32 %a) {
 ; CHECK-LABEL: trunc_i32toi8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %r = trunc i32 %a to i8
   ret i8 %r
@@ -23,6 +25,7 @@ define i16 @trunc_i32toi16(i32 %a) {
 ; CHECK-LABEL: trunc_i32toi16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %r = trunc i32 %a to i16
   ret i16 %r
@@ -31,7 +34,8 @@ define i16 @trunc_i32toi16(i32 %a) {
 define i8 @trunc_i64toi8(i64 %a) {
 ; CHECK-LABEL: trunc_i64toi8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    # kill: def $al killed $al killed $rax
 ; CHECK-NEXT:    retq
   %r = trunc i64 %a to i8
   ret i8 %r
@@ -40,7 +44,8 @@ define i8 @trunc_i64toi8(i64 %a) {
 define i16 @trunc_i64toi16(i64 %a) {
 ; CHECK-LABEL: trunc_i64toi16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $rax
 ; CHECK-NEXT:    retq
   %r = trunc i64 %a to i16
   ret i16 %r
@@ -49,7 +54,8 @@ define i16 @trunc_i64toi16(i64 %a) {
 define i32 @trunc_i64toi32(i64 %a) {
 ; CHECK-LABEL: trunc_i64toi32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
   %r = trunc i64 %a to i32
   ret i32 %r

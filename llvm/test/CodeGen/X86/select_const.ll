@@ -43,8 +43,8 @@ define i32 @select_0_or_1_signext(i1 signext %cond) {
 define i32 @select_1_or_0(i1 %cond) {
 ; CHECK-LABEL: select_1_or_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 1, i32 0
   ret i32 %sel
@@ -62,8 +62,8 @@ define i32 @select_1_or_0_zeroext(i1 zeroext %cond) {
 define i32 @select_1_or_0_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_1_or_0_signext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 1, i32 0
   ret i32 %sel
@@ -95,8 +95,8 @@ define i32 @select_0_or_neg1_zeroext(i1 zeroext %cond) {
 define i32 @select_0_or_neg1_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_0_or_neg1_signext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    notl %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    notl %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 0, i32 -1
   ret i32 %sel
@@ -107,9 +107,9 @@ define i32 @select_0_or_neg1_signext(i1 signext %cond) {
 define i32 @select_neg1_or_0(i1 %cond) {
 ; CHECK-LABEL: select_neg1_or_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    negl %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 -1, i32 0
   ret i32 %sel
@@ -118,8 +118,8 @@ define i32 @select_neg1_or_0(i1 %cond) {
 define i32 @select_neg1_or_0_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_neg1_or_0_zeroext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    negl %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 -1, i32 0
   ret i32 %sel
@@ -329,9 +329,10 @@ define i32 @sel_neg1_1_32(i32 %x) {
 define i8 @select_pow2_diff(i1 zeroext %cond) {
 ; CHECK-LABEL: select_pow2_diff:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shlb $4, %dil
-; CHECK-NEXT:    orb $3, %dil
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shlb $4, %al
+; CHECK-NEXT:    orb $3, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i8 19, i8 3
   ret i8 %sel

@@ -5853,9 +5853,10 @@ define i16 @test_kand(i16 %a0, i16 %a1) {
 ;
 ; X64-LABEL: test_kand:
 ; X64:       ## %bb.0:
-; X64-NEXT:    andl %esi, %edi ## encoding: [0x21,0xf7]
-; X64-NEXT:    andl $8, %edi ## encoding: [0x83,0xe7,0x08]
 ; X64-NEXT:    movl %edi, %eax ## encoding: [0x89,0xf8]
+; X64-NEXT:    andl %esi, %eax ## encoding: [0x21,0xf0]
+; X64-NEXT:    andl $8, %eax ## encoding: [0x83,0xe0,0x08]
+; X64-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq ## encoding: [0xc3]
   %t1 = call i16 @llvm.x86.avx512.kand.w(i16 %a0, i16 8)
   %t2 = call i16 @llvm.x86.avx512.kand.w(i16 %t1, i16 %a1)
@@ -5875,9 +5876,10 @@ define i16 @test_kandn(i16 %a0, i16 %a1) {
 ;
 ; X64-LABEL: test_kandn:
 ; X64:       ## %bb.0:
-; X64-NEXT:    orl $-9, %edi ## encoding: [0x83,0xcf,0xf7]
-; X64-NEXT:    andl %esi, %edi ## encoding: [0x21,0xf7]
 ; X64-NEXT:    movl %edi, %eax ## encoding: [0x89,0xf8]
+; X64-NEXT:    orl $-9, %eax ## encoding: [0x83,0xc8,0xf7]
+; X64-NEXT:    andl %esi, %eax ## encoding: [0x21,0xf0]
+; X64-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq ## encoding: [0xc3]
   %t1 = call i16 @llvm.x86.avx512.kandn.w(i16 %a0, i16 8)
   %t2 = call i16 @llvm.x86.avx512.kandn.w(i16 %t1, i16 %a1)
@@ -5895,8 +5897,9 @@ define i16 @test_knot(i16 %a0) {
 ;
 ; X64-LABEL: test_knot:
 ; X64:       ## %bb.0:
-; X64-NEXT:    notl %edi ## encoding: [0xf7,0xd7]
 ; X64-NEXT:    movl %edi, %eax ## encoding: [0x89,0xf8]
+; X64-NEXT:    notl %eax ## encoding: [0xf7,0xd0]
+; X64-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq ## encoding: [0xc3]
   %res = call i16 @llvm.x86.avx512.knot.w(i16 %a0)
   ret i16 %res
@@ -5914,9 +5917,10 @@ define i16 @test_kor(i16 %a0, i16 %a1) {
 ;
 ; X64-LABEL: test_kor:
 ; X64:       ## %bb.0:
-; X64-NEXT:    orl %esi, %edi ## encoding: [0x09,0xf7]
-; X64-NEXT:    orl $8, %edi ## encoding: [0x83,0xcf,0x08]
 ; X64-NEXT:    movl %edi, %eax ## encoding: [0x89,0xf8]
+; X64-NEXT:    orl %esi, %eax ## encoding: [0x09,0xf0]
+; X64-NEXT:    orl $8, %eax ## encoding: [0x83,0xc8,0x08]
+; X64-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq ## encoding: [0xc3]
   %t1 = call i16 @llvm.x86.avx512.kor.w(i16 %a0, i16 8)
   %t2 = call i16 @llvm.x86.avx512.kor.w(i16 %t1, i16 %a1)
@@ -5937,9 +5941,10 @@ define i16 @test_kxnor(i16 %a0, i16 %a1) {
 ;
 ; X64-LABEL: test_kxnor:
 ; X64:       ## %bb.0:
-; X64-NEXT:    xorl %esi, %edi ## encoding: [0x31,0xf7]
-; X64-NEXT:    xorl $8, %edi ## encoding: [0x83,0xf7,0x08]
 ; X64-NEXT:    movl %edi, %eax ## encoding: [0x89,0xf8]
+; X64-NEXT:    xorl %esi, %eax ## encoding: [0x31,0xf0]
+; X64-NEXT:    xorl $8, %eax ## encoding: [0x83,0xf0,0x08]
+; X64-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq ## encoding: [0xc3]
   %t1 = call i16 @llvm.x86.avx512.kxnor.w(i16 %a0, i16 8)
   %t2 = call i16 @llvm.x86.avx512.kxnor.w(i16 %t1, i16 %a1)
@@ -5958,9 +5963,10 @@ define i16 @test_kxor(i16 %a0, i16 %a1) {
 ;
 ; X64-LABEL: test_kxor:
 ; X64:       ## %bb.0:
-; X64-NEXT:    xorl %esi, %edi ## encoding: [0x31,0xf7]
-; X64-NEXT:    xorl $8, %edi ## encoding: [0x83,0xf7,0x08]
 ; X64-NEXT:    movl %edi, %eax ## encoding: [0x89,0xf8]
+; X64-NEXT:    xorl %esi, %eax ## encoding: [0x31,0xf0]
+; X64-NEXT:    xorl $8, %eax ## encoding: [0x83,0xf0,0x08]
+; X64-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq ## encoding: [0xc3]
   %t1 = call i16 @llvm.x86.avx512.kxor.w(i16 %a0, i16 8)
   %t2 = call i16 @llvm.x86.avx512.kxor.w(i16 %t1, i16 %a1)

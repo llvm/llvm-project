@@ -34,10 +34,10 @@ public:
     CheckFactories.registerCheck<NoNamespaceCheck>("abseil-no-namespace");
     CheckFactories.registerCheck<RedundantStrcatCallsCheck>(
         "abseil-redundant-strcat-calls");
-    CheckFactories.registerCheck<StringFindStartswithCheck>(
-        "abseil-string-find-startswith");
     CheckFactories.registerCheck<StrCatAppendCheck>(
         "abseil-str-cat-append");
+    CheckFactories.registerCheck<StringFindStartswithCheck>(
+        "abseil-string-find-startswith");
   }
 };
 

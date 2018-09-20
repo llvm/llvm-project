@@ -272,9 +272,9 @@ define i1 @test9(double %a, double %b) {
 define i32 @test10(i32 %a, i32 %b, i1 %cond) {
 ; ALL_X64-LABEL: test10:
 ; ALL_X64:       ## %bb.0:
-; ALL_X64-NEXT:    testb $1, %dl
-; ALL_X64-NEXT:    cmovel %esi, %edi
 ; ALL_X64-NEXT:    movl %edi, %eax
+; ALL_X64-NEXT:    testb $1, %dl
+; ALL_X64-NEXT:    cmovel %esi, %eax
 ; ALL_X64-NEXT:    retq
 ;
 ; KNL_X32-LABEL: test10:

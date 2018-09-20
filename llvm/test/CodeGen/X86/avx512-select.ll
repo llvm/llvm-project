@@ -135,8 +135,9 @@ define i8 @select05(i8 %a.0, i8 %m) {
 ;
 ; X64-LABEL: select05:
 ; X64:       # %bb.0:
-; X64-NEXT:    orl %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    orl %esi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %mask = bitcast i8 %m to <8 x i1>
   %a = bitcast i8 %a.0 to <8 x i1>
@@ -185,8 +186,9 @@ define i8 @select06(i8 %a.0, i8 %m) {
 ;
 ; X64-LABEL: select06:
 ; X64:       # %bb.0:
-; X64-NEXT:    andl %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl %esi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %mask = bitcast i8 %m to <8 x i1>
   %a = bitcast i8 %a.0 to <8 x i1>

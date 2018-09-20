@@ -17,8 +17,8 @@ define void @foo(i8* %P, i32 %E, i32 %H) nounwind {
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    leaq (%rdi), %rax
 ; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    leaq (%rdi), %rax
 ; X64-NEXT:    monitor
 ; X64-NEXT:    retq
 ;
@@ -46,8 +46,8 @@ define void @bar(i32 %E, i32 %H) nounwind {
 ;
 ; X64-LABEL: bar:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl %edi, %ecx
 ; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    movl %edi, %ecx
 ; X64-NEXT:    mwait
 ; X64-NEXT:    retq
 ;

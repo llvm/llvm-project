@@ -47,9 +47,9 @@ define i32 @test__andn_u32(i32 %a0, i32 %a1) {
 ;
 ; X64-LABEL: test__andn_u32:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl $-1, %edi
-; X64-NEXT:    andl %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl $-1, %eax
+; X64-NEXT:    andl %esi, %eax
 ; X64-NEXT:    retq
   %xor = xor i32 %a0, -1
   %res = and i32 %xor, %a1
@@ -199,9 +199,9 @@ define i32 @test_andn_u32(i32 %a0, i32 %a1) {
 ;
 ; X64-LABEL: test_andn_u32:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl $-1, %edi
-; X64-NEXT:    andl %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl $-1, %eax
+; X64-NEXT:    andl %esi, %eax
 ; X64-NEXT:    retq
   %xor = xor i32 %a0, -1
   %res = and i32 %xor, %a1

@@ -719,26 +719,26 @@ define zeroext i1 @usuboi64(i64 %v1, i64 %v2, i64* %res) {
 define i32 @saddoselecti32(i32 %v1, i32 %v2) {
 ; SDAG-LABEL: saddoselecti32:
 ; SDAG:       ## %bb.0:
-; SDAG-NEXT:    movl %edi, %eax
-; SDAG-NEXT:    addl %esi, %eax
-; SDAG-NEXT:    cmovol %edi, %esi
 ; SDAG-NEXT:    movl %esi, %eax
+; SDAG-NEXT:    movl %edi, %ecx
+; SDAG-NEXT:    addl %esi, %ecx
+; SDAG-NEXT:    cmovol %edi, %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: saddoselecti32:
 ; FAST:       ## %bb.0:
-; FAST-NEXT:    movl %edi, %eax
-; FAST-NEXT:    addl %esi, %eax
-; FAST-NEXT:    cmovol %edi, %esi
 ; FAST-NEXT:    movl %esi, %eax
+; FAST-NEXT:    movl %edi, %ecx
+; FAST-NEXT:    addl %esi, %ecx
+; FAST-NEXT:    cmovol %edi, %eax
 ; FAST-NEXT:    retq
 ;
 ; KNL-LABEL: saddoselecti32:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movl %edi, %eax
-; KNL-NEXT:    addl %esi, %eax
-; KNL-NEXT:    cmovol %edi, %esi
 ; KNL-NEXT:    movl %esi, %eax
+; KNL-NEXT:    movl %edi, %ecx
+; KNL-NEXT:    addl %esi, %ecx
+; KNL-NEXT:    cmovol %edi, %eax
 ; KNL-NEXT:    retq
   %t = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %v1, i32 %v2)
   %obit = extractvalue {i32, i1} %t, 1
@@ -749,26 +749,26 @@ define i32 @saddoselecti32(i32 %v1, i32 %v2) {
 define i64 @saddoselecti64(i64 %v1, i64 %v2) {
 ; SDAG-LABEL: saddoselecti64:
 ; SDAG:       ## %bb.0:
-; SDAG-NEXT:    movq %rdi, %rax
-; SDAG-NEXT:    addq %rsi, %rax
-; SDAG-NEXT:    cmovoq %rdi, %rsi
 ; SDAG-NEXT:    movq %rsi, %rax
+; SDAG-NEXT:    movq %rdi, %rcx
+; SDAG-NEXT:    addq %rsi, %rcx
+; SDAG-NEXT:    cmovoq %rdi, %rax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: saddoselecti64:
 ; FAST:       ## %bb.0:
-; FAST-NEXT:    movq %rdi, %rax
-; FAST-NEXT:    addq %rsi, %rax
-; FAST-NEXT:    cmovoq %rdi, %rsi
 ; FAST-NEXT:    movq %rsi, %rax
+; FAST-NEXT:    movq %rdi, %rcx
+; FAST-NEXT:    addq %rsi, %rcx
+; FAST-NEXT:    cmovoq %rdi, %rax
 ; FAST-NEXT:    retq
 ;
 ; KNL-LABEL: saddoselecti64:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movq %rdi, %rax
-; KNL-NEXT:    addq %rsi, %rax
-; KNL-NEXT:    cmovoq %rdi, %rsi
 ; KNL-NEXT:    movq %rsi, %rax
+; KNL-NEXT:    movq %rdi, %rcx
+; KNL-NEXT:    addq %rsi, %rcx
+; KNL-NEXT:    cmovoq %rdi, %rax
 ; KNL-NEXT:    retq
   %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %v1, i64 %v2)
   %obit = extractvalue {i64, i1} %t, 1
@@ -779,26 +779,26 @@ define i64 @saddoselecti64(i64 %v1, i64 %v2) {
 define i32 @uaddoselecti32(i32 %v1, i32 %v2) {
 ; SDAG-LABEL: uaddoselecti32:
 ; SDAG:       ## %bb.0:
-; SDAG-NEXT:    movl %edi, %eax
-; SDAG-NEXT:    addl %esi, %eax
-; SDAG-NEXT:    cmovbl %edi, %esi
 ; SDAG-NEXT:    movl %esi, %eax
+; SDAG-NEXT:    movl %edi, %ecx
+; SDAG-NEXT:    addl %esi, %ecx
+; SDAG-NEXT:    cmovbl %edi, %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: uaddoselecti32:
 ; FAST:       ## %bb.0:
-; FAST-NEXT:    movl %edi, %eax
-; FAST-NEXT:    addl %esi, %eax
-; FAST-NEXT:    cmovbl %edi, %esi
 ; FAST-NEXT:    movl %esi, %eax
+; FAST-NEXT:    movl %edi, %ecx
+; FAST-NEXT:    addl %esi, %ecx
+; FAST-NEXT:    cmovbl %edi, %eax
 ; FAST-NEXT:    retq
 ;
 ; KNL-LABEL: uaddoselecti32:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movl %edi, %eax
-; KNL-NEXT:    addl %esi, %eax
-; KNL-NEXT:    cmovbl %edi, %esi
 ; KNL-NEXT:    movl %esi, %eax
+; KNL-NEXT:    movl %edi, %ecx
+; KNL-NEXT:    addl %esi, %ecx
+; KNL-NEXT:    cmovbl %edi, %eax
 ; KNL-NEXT:    retq
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %v1, i32 %v2)
   %obit = extractvalue {i32, i1} %t, 1
@@ -809,26 +809,26 @@ define i32 @uaddoselecti32(i32 %v1, i32 %v2) {
 define i64 @uaddoselecti64(i64 %v1, i64 %v2) {
 ; SDAG-LABEL: uaddoselecti64:
 ; SDAG:       ## %bb.0:
-; SDAG-NEXT:    movq %rdi, %rax
-; SDAG-NEXT:    addq %rsi, %rax
-; SDAG-NEXT:    cmovbq %rdi, %rsi
 ; SDAG-NEXT:    movq %rsi, %rax
+; SDAG-NEXT:    movq %rdi, %rcx
+; SDAG-NEXT:    addq %rsi, %rcx
+; SDAG-NEXT:    cmovbq %rdi, %rax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: uaddoselecti64:
 ; FAST:       ## %bb.0:
-; FAST-NEXT:    movq %rdi, %rax
-; FAST-NEXT:    addq %rsi, %rax
-; FAST-NEXT:    cmovbq %rdi, %rsi
 ; FAST-NEXT:    movq %rsi, %rax
+; FAST-NEXT:    movq %rdi, %rcx
+; FAST-NEXT:    addq %rsi, %rcx
+; FAST-NEXT:    cmovbq %rdi, %rax
 ; FAST-NEXT:    retq
 ;
 ; KNL-LABEL: uaddoselecti64:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movq %rdi, %rax
-; KNL-NEXT:    addq %rsi, %rax
-; KNL-NEXT:    cmovbq %rdi, %rsi
 ; KNL-NEXT:    movq %rsi, %rax
+; KNL-NEXT:    movq %rdi, %rcx
+; KNL-NEXT:    addq %rsi, %rcx
+; KNL-NEXT:    cmovbq %rdi, %rax
 ; KNL-NEXT:    retq
   %t = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %v1, i64 %v2)
   %obit = extractvalue {i64, i1} %t, 1
@@ -839,23 +839,23 @@ define i64 @uaddoselecti64(i64 %v1, i64 %v2) {
 define i32 @ssuboselecti32(i32 %v1, i32 %v2) {
 ; SDAG-LABEL: ssuboselecti32:
 ; SDAG:       ## %bb.0:
-; SDAG-NEXT:    cmpl %esi, %edi
-; SDAG-NEXT:    cmovol %edi, %esi
 ; SDAG-NEXT:    movl %esi, %eax
+; SDAG-NEXT:    cmpl %esi, %edi
+; SDAG-NEXT:    cmovol %edi, %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: ssuboselecti32:
 ; FAST:       ## %bb.0:
-; FAST-NEXT:    cmpl %esi, %edi
-; FAST-NEXT:    cmovol %edi, %esi
 ; FAST-NEXT:    movl %esi, %eax
+; FAST-NEXT:    cmpl %esi, %edi
+; FAST-NEXT:    cmovol %edi, %eax
 ; FAST-NEXT:    retq
 ;
 ; KNL-LABEL: ssuboselecti32:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    cmpl %esi, %edi
-; KNL-NEXT:    cmovol %edi, %esi
 ; KNL-NEXT:    movl %esi, %eax
+; KNL-NEXT:    cmpl %esi, %edi
+; KNL-NEXT:    cmovol %edi, %eax
 ; KNL-NEXT:    retq
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %v1, i32 %v2)
   %obit = extractvalue {i32, i1} %t, 1
@@ -866,23 +866,23 @@ define i32 @ssuboselecti32(i32 %v1, i32 %v2) {
 define i64 @ssuboselecti64(i64 %v1, i64 %v2) {
 ; SDAG-LABEL: ssuboselecti64:
 ; SDAG:       ## %bb.0:
-; SDAG-NEXT:    cmpq %rsi, %rdi
-; SDAG-NEXT:    cmovoq %rdi, %rsi
 ; SDAG-NEXT:    movq %rsi, %rax
+; SDAG-NEXT:    cmpq %rsi, %rdi
+; SDAG-NEXT:    cmovoq %rdi, %rax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: ssuboselecti64:
 ; FAST:       ## %bb.0:
-; FAST-NEXT:    cmpq %rsi, %rdi
-; FAST-NEXT:    cmovoq %rdi, %rsi
 ; FAST-NEXT:    movq %rsi, %rax
+; FAST-NEXT:    cmpq %rsi, %rdi
+; FAST-NEXT:    cmovoq %rdi, %rax
 ; FAST-NEXT:    retq
 ;
 ; KNL-LABEL: ssuboselecti64:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    cmpq %rsi, %rdi
-; KNL-NEXT:    cmovoq %rdi, %rsi
 ; KNL-NEXT:    movq %rsi, %rax
+; KNL-NEXT:    cmpq %rsi, %rdi
+; KNL-NEXT:    cmovoq %rdi, %rax
 ; KNL-NEXT:    retq
   %t = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %v1, i64 %v2)
   %obit = extractvalue {i64, i1} %t, 1
@@ -893,23 +893,23 @@ define i64 @ssuboselecti64(i64 %v1, i64 %v2) {
 define i32 @usuboselecti32(i32 %v1, i32 %v2) {
 ; SDAG-LABEL: usuboselecti32:
 ; SDAG:       ## %bb.0:
-; SDAG-NEXT:    cmpl %esi, %edi
-; SDAG-NEXT:    cmovbl %edi, %esi
 ; SDAG-NEXT:    movl %esi, %eax
+; SDAG-NEXT:    cmpl %esi, %edi
+; SDAG-NEXT:    cmovbl %edi, %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: usuboselecti32:
 ; FAST:       ## %bb.0:
-; FAST-NEXT:    cmpl %esi, %edi
-; FAST-NEXT:    cmovbl %edi, %esi
 ; FAST-NEXT:    movl %esi, %eax
+; FAST-NEXT:    cmpl %esi, %edi
+; FAST-NEXT:    cmovbl %edi, %eax
 ; FAST-NEXT:    retq
 ;
 ; KNL-LABEL: usuboselecti32:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    cmpl %esi, %edi
-; KNL-NEXT:    cmovbl %edi, %esi
 ; KNL-NEXT:    movl %esi, %eax
+; KNL-NEXT:    cmpl %esi, %edi
+; KNL-NEXT:    cmovbl %edi, %eax
 ; KNL-NEXT:    retq
   %t = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %v1, i32 %v2)
   %obit = extractvalue {i32, i1} %t, 1
@@ -920,23 +920,23 @@ define i32 @usuboselecti32(i32 %v1, i32 %v2) {
 define i64 @usuboselecti64(i64 %v1, i64 %v2) {
 ; SDAG-LABEL: usuboselecti64:
 ; SDAG:       ## %bb.0:
-; SDAG-NEXT:    cmpq %rsi, %rdi
-; SDAG-NEXT:    cmovbq %rdi, %rsi
 ; SDAG-NEXT:    movq %rsi, %rax
+; SDAG-NEXT:    cmpq %rsi, %rdi
+; SDAG-NEXT:    cmovbq %rdi, %rax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: usuboselecti64:
 ; FAST:       ## %bb.0:
-; FAST-NEXT:    cmpq %rsi, %rdi
-; FAST-NEXT:    cmovbq %rdi, %rsi
 ; FAST-NEXT:    movq %rsi, %rax
+; FAST-NEXT:    cmpq %rsi, %rdi
+; FAST-NEXT:    cmovbq %rdi, %rax
 ; FAST-NEXT:    retq
 ;
 ; KNL-LABEL: usuboselecti64:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    cmpq %rsi, %rdi
-; KNL-NEXT:    cmovbq %rdi, %rsi
 ; KNL-NEXT:    movq %rsi, %rax
+; KNL-NEXT:    cmpq %rsi, %rdi
+; KNL-NEXT:    cmovbq %rdi, %rax
 ; KNL-NEXT:    retq
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %v1, i64 %v2)
   %obit = extractvalue {i64, i1} %t, 1
@@ -1372,23 +1372,23 @@ define {i64, i1} @uaddoovf(i64 %a, i64 %b) {
 define {i64, i1} @usuboovf(i64 %a, i64 %b) {
 ; SDAG-LABEL: usuboovf:
 ; SDAG:       ## %bb.0:
-; SDAG-NEXT:    notq %rsi
-; SDAG-NEXT:    xorl %edx, %edx
 ; SDAG-NEXT:    movq %rsi, %rax
+; SDAG-NEXT:    notq %rax
+; SDAG-NEXT:    xorl %edx, %edx
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: usuboovf:
 ; FAST:       ## %bb.0:
-; FAST-NEXT:    notq %rsi
-; FAST-NEXT:    xorl %edx, %edx
 ; FAST-NEXT:    movq %rsi, %rax
+; FAST-NEXT:    notq %rax
+; FAST-NEXT:    xorl %edx, %edx
 ; FAST-NEXT:    retq
 ;
 ; KNL-LABEL: usuboovf:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    notq %rsi
-; KNL-NEXT:    xorl %edx, %edx
 ; KNL-NEXT:    movq %rsi, %rax
+; KNL-NEXT:    notq %rax
+; KNL-NEXT:    xorl %edx, %edx
 ; KNL-NEXT:    retq
   %t0 = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %a)
   %v0 = extractvalue {i64, i1} %t0, 0

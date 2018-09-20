@@ -4,8 +4,8 @@
 define i32 @mask_negated_zext_bool1(i1 %x) {
 ; CHECK-LABEL: mask_negated_zext_bool1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq
   %ext = zext i1 %x to i32
   %neg = sub i32 0, %ext
@@ -38,8 +38,8 @@ define <4 x i32> @mask_negated_zext_bool_vec(<4 x i1> %x) {
 define i32 @mask_negated_sext_bool1(i1 %x) {
 ; CHECK-LABEL: mask_negated_sext_bool1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq
   %ext = sext i1 %x to i32
   %neg = sub i32 0, %ext

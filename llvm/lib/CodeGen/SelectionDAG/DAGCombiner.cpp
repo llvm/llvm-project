@@ -2009,10 +2009,8 @@ static SDValue foldAddSubOfSignBit(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   // The shift must be of a 'not' value.
-  // TODO: Use isBitwiseNot() if it works with vectors.
   SDValue Not = ShiftOp.getOperand(0);
-  if (!Not.hasOneUse() || Not.getOpcode() != ISD::XOR ||
-      !isAllOnesConstantOrAllOnesSplatConstant(Not.getOperand(1)))
+  if (!Not.hasOneUse() || !isBitwiseNot(Not))
     return SDValue();
 
   // The shift must be moving the sign bit to the least-significant-bit.

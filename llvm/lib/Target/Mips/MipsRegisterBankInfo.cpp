@@ -57,7 +57,10 @@ const RegisterBank &MipsRegisterBankInfo::getRegBankFromRegClass(
   switch (RC.getID()) {
   case Mips::GPR32RegClassID:
   case Mips::CPU16Regs_and_GPRMM16ZeroRegClassID:
+  case Mips::GPRMM16MovePPairFirstRegClassID:
+  case Mips::CPU16Regs_and_GPRMM16MovePPairSecondRegClassID:
   case Mips::GPRMM16MoveP_and_CPU16Regs_and_GPRMM16ZeroRegClassID:
+  case Mips::GPRMM16MovePPairFirst_and_GPRMM16MovePPairSecondRegClassID:
   case Mips::SP32RegClassID:
     return getRegBank(Mips::GPRBRegBankID);
   default:

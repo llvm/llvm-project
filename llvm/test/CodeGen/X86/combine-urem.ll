@@ -62,8 +62,8 @@ define <4 x i32> @combine_vec_urem_by_negone(<4 x i32> %x) {
 define i32 @combine_urem_by_minsigned(i32 %x) {
 ; CHECK-LABEL: combine_urem_by_minsigned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $2147483647, %edi # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    retq
   %1 = urem i32 %x, -2147483648
   ret i32 %1

@@ -25,8 +25,9 @@ define i8 @rotl_i8_const_shift(i8 %x) nounwind {
 ;
 ; X64-AVX2-LABEL: rotl_i8_const_shift:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    rolb $3, %dil
 ; X64-AVX2-NEXT:    movl %edi, %eax
+; X64-AVX2-NEXT:    rolb $3, %al
+; X64-AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-AVX2-NEXT:    retq
   %f = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 3)
   ret i8 %f
@@ -44,8 +45,8 @@ define i64 @rotl_i64_const_shift(i64 %x) nounwind {
 ;
 ; X64-AVX2-LABEL: rotl_i64_const_shift:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    rolq $3, %rdi
 ; X64-AVX2-NEXT:    movq %rdi, %rax
+; X64-AVX2-NEXT:    rolq $3, %rax
 ; X64-AVX2-NEXT:    retq
   %f = call i64 @llvm.fshl.i64(i64 %x, i64 %x, i64 3)
   ret i64 %f
@@ -62,8 +63,10 @@ define i16 @rotl_i16(i16 %x, i16 %z) nounwind {
 ; X64-AVX2-LABEL: rotl_i16:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    movl %esi, %ecx
-; X64-AVX2-NEXT:    rolw %cl, %di
 ; X64-AVX2-NEXT:    movl %edi, %eax
+; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-AVX2-NEXT:    rolw %cl, %ax
+; X64-AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-AVX2-NEXT:    retq
   %f = call i16 @llvm.fshl.i16(i16 %x, i16 %x, i16 %z)
   ret i16 %f
@@ -80,8 +83,9 @@ define i32 @rotl_i32(i32 %x, i32 %z) nounwind {
 ; X64-AVX2-LABEL: rotl_i32:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    movl %esi, %ecx
-; X64-AVX2-NEXT:    roll %cl, %edi
 ; X64-AVX2-NEXT:    movl %edi, %eax
+; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-AVX2-NEXT:    roll %cl, %eax
 ; X64-AVX2-NEXT:    retq
   %f = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 %z)
   ret i32 %f
@@ -174,8 +178,9 @@ define i8 @rotr_i8_const_shift(i8 %x) nounwind {
 ;
 ; X64-AVX2-LABEL: rotr_i8_const_shift:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    rorb $3, %dil
 ; X64-AVX2-NEXT:    movl %edi, %eax
+; X64-AVX2-NEXT:    rorb $3, %al
+; X64-AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-AVX2-NEXT:    retq
   %f = call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 3)
   ret i8 %f
@@ -190,8 +195,8 @@ define i32 @rotr_i32_const_shift(i32 %x) nounwind {
 ;
 ; X64-AVX2-LABEL: rotr_i32_const_shift:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    rorl $3, %edi
 ; X64-AVX2-NEXT:    movl %edi, %eax
+; X64-AVX2-NEXT:    rorl $3, %eax
 ; X64-AVX2-NEXT:    retq
   %f = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 3)
   ret i32 %f
@@ -210,8 +215,10 @@ define i16 @rotr_i16(i16 %x, i16 %z) nounwind {
 ; X64-AVX2-LABEL: rotr_i16:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    movl %esi, %ecx
-; X64-AVX2-NEXT:    rorw %cl, %di
 ; X64-AVX2-NEXT:    movl %edi, %eax
+; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-AVX2-NEXT:    rorw %cl, %ax
+; X64-AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-AVX2-NEXT:    retq
   %f = call i16 @llvm.fshr.i16(i16 %x, i16 %x, i16 %z)
   ret i16 %f
@@ -257,9 +264,10 @@ define i64 @rotr_i64(i64 %x, i64 %z) nounwind {
 ;
 ; X64-AVX2-LABEL: rotr_i64:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    movl %esi, %ecx
-; X64-AVX2-NEXT:    rorq %cl, %rdi
+; X64-AVX2-NEXT:    movq %rsi, %rcx
 ; X64-AVX2-NEXT:    movq %rdi, %rax
+; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $rcx
+; X64-AVX2-NEXT:    rorq %cl, %rax
 ; X64-AVX2-NEXT:    retq
   %f = call i64 @llvm.fshr.i64(i64 %x, i64 %x, i64 %z)
   ret i64 %f
