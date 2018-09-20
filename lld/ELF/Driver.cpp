@@ -280,6 +280,9 @@ static void checkOptions(opt::InputArgList &Args) {
   if (Config->FixCortexA53Errata843419 && Config->EMachine != EM_AARCH64)
     error("--fix-cortex-a53-843419 is only supported on AArch64 targets.");
 
+  if (Config->TocOptimize && Config->EMachine != EM_PPC64)
+      error("--toc-optimize is only supported on the PowerPC64 target.");
+
   if (Config->Pie && Config->Shared)
     error("-shared and -pie may not be used together");
 
@@ -999,6 +1002,9 @@ static void setConfigs(opt::InputArgList &Args) {
   Config->WriteAddends = Args.hasFlag(OPT_apply_dynamic_relocs,
                                       OPT_no_apply_dynamic_relocs, false) ||
                          !Config->IsRela;
+
+  Config->TocOptimize =
+      Args.hasFlag(OPT_toc_optimize, OPT_no_toc_optimize, Machine == EM_PPC64);
 }
 
 // Returns a value of "-format" option.

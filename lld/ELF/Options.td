@@ -315,6 +315,10 @@ defm threads: B<"threads",
     "Run the linker multi-threaded (default)",
     "Do not run the linker multi-threaded">;
 
+defm toc_optimize : B<"toc-optimize",
+    "(PowerPC64) Enable TOC related optimizations (default)",
+    "(PowerPC64) Disable TOC related optimizations">;
+
 def trace: F<"trace">, HelpText<"Print the names of the input files">;
 
 defm trace_symbol: Eq<"trace-symbol", "Trace references to symbols">;
