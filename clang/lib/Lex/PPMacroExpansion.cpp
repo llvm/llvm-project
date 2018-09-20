@@ -23,6 +23,7 @@
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/DirectoryLookup.h"
 #include "clang/Lex/ExternalPreprocessorSource.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/LexDiagnostic.h"
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/MacroInfo.h"
@@ -1241,6 +1242,13 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
   const FileEntry *File =
       PP.LookupFile(FilenameLoc, Filename, isAngled, LookupFrom, LookupFromFile,
                     CurDir, nullptr, nullptr, nullptr, nullptr);
+
+  if (PPCallbacks *Callbacks = PP.getPPCallbacks()) {
+    SrcMgr::CharacteristicKind FileType = SrcMgr::C_User;
+    if (File)
+      FileType = PP.getHeaderSearchInfo().getFileDirFlavor(File);
+    Callbacks->HasInclude(FilenameLoc, Filename, isAngled, File, FileType);
+  }
 
   // Get the result value.  A result of true means the file exists.
   return File != nullptr;

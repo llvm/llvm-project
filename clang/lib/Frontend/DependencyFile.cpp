@@ -202,6 +202,10 @@ public:
                           const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
 
+  void HasInclude(SourceLocation Loc, StringRef SpelledFilename, bool IsAngled,
+                  const FileEntry *File,
+                  SrcMgr::CharacteristicKind FileType) override;
+
   void EndOfMainFile() override {
     OutputDependencyFile();
   }
@@ -337,6 +341,17 @@ void DFGImpl::InclusionDirective(SourceLocation HashLoc,
     else
       SeenMissingHeader = true;
   }
+}
+
+void DFGImpl::HasInclude(SourceLocation Loc, StringRef SpelledFilename,
+                         bool IsAngled, const FileEntry *File,
+                         SrcMgr::CharacteristicKind FileType) {
+  if (!File)
+    return;
+  StringRef Filename = File->getName();
+  if (!FileMatchesDepCriteria(Filename.data(), FileType))
+    return;
+  AddFilename(llvm::sys::path::remove_leading_dotslash(Filename));
 }
 
 bool DFGImpl::AddFilename(StringRef Filename) {
