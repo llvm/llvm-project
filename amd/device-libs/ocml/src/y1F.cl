@@ -11,7 +11,7 @@ extern float MATH_PRIVATE(sinb)(float, int, float);
 extern CONSTATTR float MATH_PRIVATE(bp1)(float);
 extern CONSTATTR float MATH_PRIVATE(ba1)(float);
 
-float
+CONSTATTR float
 MATH_MANGLE(y1)(float x)
 {
     const float b0 = 0.5f;

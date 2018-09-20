@@ -113,7 +113,7 @@
  *                   erfc/erf(NaN) is NaN
  */
 
-PUREATTR double
+CONSTATTR double
 MATH_MANGLE(erfc)(double x)
 {
     double ret;

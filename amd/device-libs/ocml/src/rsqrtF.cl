@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-PUREATTR float
+CONSTATTR float
 MATH_MANGLE(rsqrt)(float x)
 {
     if (DAZ_OPT()) {

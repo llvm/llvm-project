@@ -7,9 +7,9 @@
 
 #include "mathH.h"
 
-PUREATTR UGEN(erfinv)
+CONSTATTR UGEN(erfinv)
 
-PUREATTR half
+CONSTATTR half
 MATH_MANGLE(erfinv)(half x)
 {
     return (half)MATH_UPMANGLE(erfinv)((float)x);

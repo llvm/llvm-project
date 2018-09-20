@@ -1,7 +1,7 @@
 
 #include "mathD.h"
 
-PUREATTR double
+CONSTATTR double
 MATH_MANGLE(erfcx)(double x)
 {
     double ax = BUILTIN_ABS_F64(x);

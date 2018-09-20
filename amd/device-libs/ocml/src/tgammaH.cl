@@ -9,7 +9,7 @@
 
 UGEN(tgamma)
 
-half
+CONSTATTR half
 MATH_MANGLE(tgamma)(half x)
 {
     return (half)MATH_UPMANGLE(tgamma)((float)x);

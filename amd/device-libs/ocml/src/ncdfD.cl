@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-PUREATTR double
+CONSTATTR double
 MATH_MANGLE(ncdf)(double x)
 {
     double ret;

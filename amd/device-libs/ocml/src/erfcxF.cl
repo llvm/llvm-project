@@ -1,7 +1,7 @@
 
 #include "mathF.h"
 
-PUREATTR float
+CONSTATTR float
 MATH_MANGLE(erfcx)(float x)
 {
     float ax = BUILTIN_ABS_F32(x);

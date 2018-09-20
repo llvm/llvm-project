@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-double
+CONSTATTR double
 MATH_MANGLE(tgamma)(double x)
 {
     const double pi = 3.14159265358979323846;
@@ -24,7 +24,7 @@ MATH_MANGLE(tgamma)(double x)
         double dterm = 1.0;
         double z = ax;
         if (ax < 4.5) {
-            if (ax < 1.0) { 
+            if (ax < 1.0) {
                 dterm = z;
                 z += 1.0;
             } else if (ax < 3.0) {
@@ -45,9 +45,9 @@ MATH_MANGLE(tgamma)(double x)
         if (x < 0.0) {
             negadj = -x * MATH_MANGLE(sinpi)(x);
         }
-    
+
         double etonegz = MATH_MANGLE(exp)(-z);
-            
+
         if (z < 4.5) {
             const double rn0 =     297.312130630940277;
             const double rn1 =   16926.1409177878806;

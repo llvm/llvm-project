@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-float
+CONSTATTR float
 MATH_MANGLE(tgamma)(float x)
 {
     const float pi = 0x1.921fb6p+1f;
@@ -29,7 +29,7 @@ MATH_MANGLE(tgamma)(float x)
             d = ax;
             ax = ax + 1.0f;
         }
-    
+
         // x^x e^-x (1 + poly(1/x)) sqrt(twopi / x) / d
         // Split x^x into a product since it overflows faster than gamma(x)
         float t1 = MATH_MANGLE(powr)(ax, MATH_MAD(ax, 0.5f, -0.25f));

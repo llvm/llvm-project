@@ -7,9 +7,9 @@
 
 #include "mathH.h"
 
-PUREATTR UGEN(log)
+CONSTATTR UGEN(log)
 
-PUREATTR half
+CONSTATTR half
 MATH_MANGLE(log)(half x)
 {
     return (half)(BUILTIN_LOG2_F32((float)x) * 0x1.62e430p-1f);

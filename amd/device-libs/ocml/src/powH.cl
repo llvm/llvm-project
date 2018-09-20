@@ -7,7 +7,7 @@
 
 #include "mathH.h"
 
-PUREATTR BGEN(pow)
+CONSTATTR BGEN(pow)
 
 #define COMPILING_POW
 #include "powH_base.h"

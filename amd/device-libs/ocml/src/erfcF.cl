@@ -20,7 +20,7 @@
 
 #include "mathF.h"
 
-PUREATTR float
+CONSTATTR float
 MATH_MANGLE(erfc)(float x)
 {
     float ret;
