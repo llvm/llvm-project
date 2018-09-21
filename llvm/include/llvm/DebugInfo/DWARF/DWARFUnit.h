@@ -104,10 +104,13 @@ public:
 const DWARFUnitIndex &getDWARFUnitIndex(DWARFContext &Context,
                                         DWARFSectionKind Kind);
 
-/// Describes one section's Units.
+/// Describe a collection of units. Intended to hold all units either from
+/// .debug_info and .debug_types, or from .debug_info.dwo and .debug_types.dwo.
 class DWARFUnitVector final : public SmallVector<std::unique_ptr<DWARFUnit>, 1> {
-  std::function<std::unique_ptr<DWARFUnit>(uint32_t, const DWARFSection *)>
+  std::function<std::unique_ptr<DWARFUnit>(uint32_t, DWARFSectionKind,
+                                           const DWARFSection *)>
       Parser;
+  unsigned NumInfoUnits = 0;
 
 public:
   using UnitVector = SmallVectorImpl<std::unique_ptr<DWARFUnit>>;
@@ -116,10 +119,30 @@ public:
 
   DWARFUnit *getUnitForOffset(uint32_t Offset) const;
   DWARFUnit *getUnitForIndexEntry(const DWARFUnitIndex::Entry &E);
+
+  /// Read units from a .debug_info or .debug_types section.  Calls made
+  /// before finishedInfoUnits() are assumed to be for .debug_info sections,
+  /// calls after finishedInfoUnits() are for .debug_types sections.  Caller
+  /// must not mix calls to addUnitsForSection and addUnitsForDWOSection.
   void addUnitsForSection(DWARFContext &C, const DWARFSection &Section,
                           DWARFSectionKind SectionKind);
+  /// Read units from a .debug_info.dwo or .debug_types.dwo section.  Calls
+  /// made before finishedInfoUnits() are assumed to be for .debug_info.dwo
+  /// sections, calls after finishedInfoUnits() are for .debug_types.dwo
+  /// sections.  Caller must not mix calls to addUnitsForSection and
+  /// addUnitsForDWOSection.
   void addUnitsForDWOSection(DWARFContext &C, const DWARFSection &DWOSection,
                              DWARFSectionKind SectionKind, bool Lazy = false);
+
+  /// Returns number of all units held by this instance.
+  unsigned getNumUnits() { return size(); }
+  /// Returns number of units from all .debug_info[.dwo] sections.
+  unsigned getNumInfoUnits() { return NumInfoUnits; }
+  /// Returns number of units from all .debug_types[.dwo] sections.
+  unsigned getNumTypesUnits() { return size() - NumInfoUnits; }
+  /// Indicate that parsing .debug_info[.dwo] is done, and remaining units
+  /// will be from .debug_types[.dwo].
+  void finishedInfoUnits() { NumInfoUnits = size(); }
 
 private:
   void addUnitsImpl(DWARFContext &Context, const DWARFObject &Obj,
@@ -238,6 +261,7 @@ public:
   virtual ~DWARFUnit();
 
   DWARFContext& getContext() const { return Context; }
+  const DWARFSection &getInfoSection() const { return InfoSection; }
   uint32_t getOffset() const { return Header.getOffset(); }
   const dwarf::FormParams &getFormParams() const {
     return Header.getFormParams();

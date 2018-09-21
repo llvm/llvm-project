@@ -351,9 +351,9 @@ void DWARFContext::dump(
     }
   };
   dumpDebugInfo(Explicit, ".debug_info", DObj->getInfoSection(),
-                compile_units());
+                info_section_units());
   dumpDebugInfo(ExplicitDWO, ".debug_info.dwo", DObj->getInfoDWOSection(),
-                dwo_compile_units());
+                dwo_info_section_units());
 
   auto dumpDebugType = [&](const char *Name, tu_iterator_range TUs) {
     OS << '\n' << Name << " contents:\n";
@@ -367,9 +367,9 @@ void DWARFContext::dump(
   };
   if ((DumpType & DIDT_DebugTypes)) {
     if (Explicit || getNumTypeUnits())
-      dumpDebugType(".debug_types", type_units());
+      dumpDebugType(".debug_types", types_section_units());
     if (ExplicitDWO || getNumDWOTypeUnits())
-      dumpDebugType(".debug_types.dwo", dwo_type_units());
+      dumpDebugType(".debug_types.dwo", dwo_types_section_units());
   }
 
   if (shouldDump(Explicit, ".debug_loc", DIDT_ID_DebugLoc,
@@ -581,13 +581,12 @@ void DWARFContext::dump(
 }
 
 DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
-  if (DWOCUs.empty())
-    DWOCUs.addUnitsForDWOSection(*this, DObj->getInfoDWOSection(), DW_SECT_INFO,
-                                 true);
+  parseDWOUnits(LazyParse);
 
   if (const auto &CUI = getCUIndex()) {
     if (const auto *R = CUI.getFromHash(Hash))
-      return dyn_cast_or_null<DWARFCompileUnit>(DWOCUs.getUnitForIndexEntry(*R));
+      return dyn_cast_or_null<DWARFCompileUnit>(
+          DWOUnits.getUnitForIndexEntry(*R));
     return nullptr;
   }
 
@@ -612,8 +611,8 @@ DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
 }
 
 DWARFDie DWARFContext::getDIEForOffset(uint32_t Offset) {
-  parseCompileUnits();
-  if (auto *CU = CUs.getUnitForOffset(Offset))
+  parseNormalUnits();
+  if (auto *CU = NormalUnits.getUnitForOffset(Offset))
     return CU->getDIEForOffset(Offset);
   return DWARFDie();
 }
@@ -842,37 +841,31 @@ Expected<const DWARFDebugLine::LineTable *> DWARFContext::getLineTableForUnit(
                                    RecoverableErrorCallback);
 }
 
-void DWARFContext::parseCompileUnits() {
-  if (!CUs.empty())
+void DWARFContext::parseNormalUnits() {
+  if (!NormalUnits.empty())
     return;
-  CUs.addUnitsForSection(*this, DObj->getInfoSection(), DW_SECT_INFO);
-}
-
-void DWARFContext::parseTypeUnits() {
-  if (!TUs.empty())
-    return;
+  NormalUnits.addUnitsForSection(*this, DObj->getInfoSection(), DW_SECT_INFO);
+  NormalUnits.finishedInfoUnits();
   DObj->forEachTypesSections([&](const DWARFSection &S) {
-    TUs.addUnitsForSection(*this, S, DW_SECT_TYPES);
+    NormalUnits.addUnitsForSection(*this, S, DW_SECT_TYPES);
   });
 }
 
-void DWARFContext::parseDWOCompileUnits() {
-  if (!DWOCUs.empty())
+void DWARFContext::parseDWOUnits(bool Lazy) {
+  if (!DWOUnits.empty())
     return;
-  DWOCUs.addUnitsForDWOSection(*this, DObj->getInfoDWOSection(), DW_SECT_INFO);
-}
-
-void DWARFContext::parseDWOTypeUnits() {
-  if (!DWOTUs.empty())
-    return;
+  DWOUnits.addUnitsForDWOSection(*this, DObj->getInfoDWOSection(), DW_SECT_INFO,
+                                 Lazy);
+  DWOUnits.finishedInfoUnits();
   DObj->forEachTypesDWOSections([&](const DWARFSection &S) {
-    DWOTUs.addUnitsForDWOSection(*this, S, DW_SECT_TYPES);
+    DWOUnits.addUnitsForDWOSection(*this, S, DW_SECT_TYPES, Lazy);
   });
 }
 
 DWARFCompileUnit *DWARFContext::getCompileUnitForOffset(uint32_t Offset) {
-  parseCompileUnits();
-  return dyn_cast_or_null<DWARFCompileUnit>(CUs.getUnitForOffset(Offset));
+  parseNormalUnits();
+  return dyn_cast_or_null<DWARFCompileUnit>(
+      NormalUnits.getUnitForOffset(Offset));
 }
 
 DWARFCompileUnit *DWARFContext::getCompileUnitForAddress(uint64_t Address) {
