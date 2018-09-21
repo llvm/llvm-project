@@ -2109,10 +2109,15 @@ public:
         Base, IsAppleKext);
   }
 
-  /// Determine whether this is a usual deallocation function
-  /// (C++ [basic.stc.dynamic.deallocation]p2), which is an overloaded
-  /// delete or delete[] operator with a particular signature.
-  bool isUsualDeallocationFunction() const;
+  /// Determine whether this is a usual deallocation function (C++
+  /// [basic.stc.dynamic.deallocation]p2), which is an overloaded delete or
+  /// delete[] operator with a particular signature. Populates \p PreventedBy
+  /// with the declarations of the functions of the same kind if they were the
+  /// reason for this function returning false. This is used by
+  /// Sema::isUsualDeallocationFunction to reconsider the answer based on the
+  /// context.
+  bool isUsualDeallocationFunction(
+      SmallVectorImpl<const FunctionDecl *> &PreventedBy) const;
 
   /// Determine whether this is a copy-assignment operator, regardless
   /// of whether it was declared implicitly or explicitly.
