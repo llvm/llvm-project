@@ -44,19 +44,22 @@ DictionaryConfig::DictionaryConfig()
   // Note: We need have use the old _Tt names here because those are
   // still used to name classes in the ObjC runtime.
 
+  m_nativeStorageRoot_demangled =
+    ConstString("Swift._RawDictionaryStorage");
+
   // Native storage class
   m_nativeStorage_mangledRegex_ObjC =
-    ConstString("^_TtGCs37_HashableTypedNativeDictionaryStorage.*");
+    ConstString("^_TtGCs18_DictionaryStorage.*");
   m_nativeStorage_demangledPrefix =
-    ConstString("Swift._HashableTypedNativeDictionaryStorage<");
+    ConstString("Swift._DictionaryStorage<");
   m_nativeStorage_demangledRegex =
-    ConstString("^Swift\\._HashableTypedNativeDictionaryStorage<.+,.+>$");
+    ConstString("^Swift\\._DictionaryStorage<.+,.+>$");
 
   // Type-punned empty dictionary
   m_emptyStorage_mangled_ObjC =
-    ConstString("_TtCs27_RawNativeDictionaryStorage");
+    ConstString("_TtCs25_EmptyDictionarySingleton");
   m_emptyStorage_demangled
-    = ConstString("Swift._RawNativeDictionaryStorage");
+    = ConstString("Swift._EmptyDictionarySingleton");
 
   // Deferred non-verbatim bridged dictionary
   m_deferredBridgedStorage_mangledRegex_ObjC
@@ -65,6 +68,18 @@ DictionaryConfig::DictionaryConfig()
     = ConstString("Swift._SwiftDeferredNSDictionary<");
   m_deferredBridgedStorage_demangledRegex
     = ConstString("^Swift\\._SwiftDeferredNSDictionary<.+,.+>$");
+
+  // Legacy Swift 4.2 storage class names
+  m_legacy_nativeStorage_mangledRegex_ObjC =
+    ConstString("^_TtGCs37_HashableTypedNativeDictionaryStorage.*");
+  m_legacy_nativeStorage_demangledPrefix =
+    ConstString("Swift._HashableTypedNativeDictionaryStorage<");
+  m_legacy_nativeStorage_demangledRegex =
+    ConstString("^Swift\\._HashableTypedNativeDictionaryStorage<.+,.+>$");
+  m_legacy_emptyStorage_mangled_ObjC =
+    ConstString("_TtCs27_RawNativeDictionaryStorage");
+  m_legacy_emptyStorage_demangled
+    = ConstString("Swift._RawNativeDictionaryStorage");
 }
 
 bool
