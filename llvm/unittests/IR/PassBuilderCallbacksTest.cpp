@@ -24,17 +24,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-/// Provide an ostream operator for StringRef.
-///
-/// For convenience we provide a custom matcher below for IRUnit's and analysis
-/// result's getName functions, which most of the time returns a StringRef. The
-/// matcher makes use of this operator.
-static std::ostream &operator<<(std::ostream &O, StringRef S) {
-  return O << S.str();
-}
-}
-
 namespace {
 using testing::AnyNumber;
 using testing::AtLeast;
@@ -270,19 +259,19 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
 
 /// Helper for HasName matcher that returns getName both for IRUnit and
 /// for IRUnit pointer wrapper into llvm::Any (wrapped by PassInstrumentation).
-template <typename IRUnitT> StringRef getName(const IRUnitT &IR) {
+template <typename IRUnitT> std::string getName(const IRUnitT &IR) {
   return IR.getName();
 }
 
-template <> StringRef getName(const StringRef &name) { return name; }
+template <> std::string getName(const StringRef &name) { return name; }
 
-template <> StringRef getName(const llvm::Any &WrappedIR) {
+template <> std::string getName(const llvm::Any &WrappedIR) {
   if (any_isa<const Module *>(WrappedIR))
-    return any_cast<const Module *>(WrappedIR)->getName();
+    return any_cast<const Module *>(WrappedIR)->getName().str();
   if (any_isa<const Function *>(WrappedIR))
-    return any_cast<const Function *>(WrappedIR)->getName();
+    return any_cast<const Function *>(WrappedIR)->getName().str();
   if (any_isa<const Loop *>(WrappedIR))
-    return any_cast<const Loop *>(WrappedIR)->getName();
+    return any_cast<const Loop *>(WrappedIR)->getName().str();
   if (any_isa<const LazyCallGraph::SCC *>(WrappedIR))
     return any_cast<const LazyCallGraph::SCC *>(WrappedIR)->getName();
   return "<UNKNOWN>";

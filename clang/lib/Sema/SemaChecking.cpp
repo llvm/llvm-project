@@ -849,6 +849,13 @@ static bool SemaOpenCLBuiltinToAddr(Sema &S, unsigned BuiltinID,
     return true;
   }
 
+  if (RT->getPointeeType().getAddressSpace() != LangAS::opencl_generic) {
+    S.Diag(Call->getArg(0)->getBeginLoc(),
+           diag::warn_opencl_generic_address_space_arg)
+        << Call->getDirectCallee()->getNameInfo().getAsString()
+        << Call->getArg(0)->getSourceRange();
+  }
+
   RT = RT->getPointeeType();
   auto Qual = RT.getQualifiers();
   switch (BuiltinID) {
@@ -2970,6 +2977,13 @@ bool Sema::CheckPPCBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     return Diag(TheCall->getBeginLoc(), diag::err_ppc_builtin_only_on_pwr7)
            << TheCall->getSourceRange();
 
+  auto SemaVSXCheck = [&](CallExpr *TheCall) -> bool {
+    if (!Context.getTargetInfo().hasFeature("vsx"))
+      return Diag(TheCall->getBeginLoc(), diag::err_ppc_builtin_only_on_pwr7)
+             << TheCall->getSourceRange();
+    return false;
+  };
+
   switch (BuiltinID) {
   default: return false;
   case PPC::BI__builtin_altivec_crypto_vshasigmaw:
@@ -2988,6 +3002,11 @@ bool Sema::CheckPPCBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case PPC::BI__builtin_vsx_xxpermdi:
   case PPC::BI__builtin_vsx_xxsldwi:
     return SemaBuiltinVSX(TheCall);
+  case PPC::BI__builtin_unpack_vector_int128:
+    return SemaVSXCheck(TheCall) ||
+           SemaBuiltinConstantArgRange(TheCall, 1, 0, 1);
+  case PPC::BI__builtin_pack_vector_int128:
+    return SemaVSXCheck(TheCall);
   }
   return SemaBuiltinConstantArgRange(TheCall, i, l, u);
 }

@@ -15,8 +15,8 @@ class GCNPat<dag pattern, dag result> : Pat<pattern, result>, GCNPredicateContro
   let SubtargetPredicate = isGCN;
 }
 
-include "VOPInstructions.td"
 include "SOPInstructions.td"
+include "VOPInstructions.td"
 include "SMInstructions.td"
 include "FLATInstructions.td"
 include "BUFInstructions.td"
@@ -727,12 +727,14 @@ defm : SelectPat <i32, V_CNDMASK_B32_e64>;
 defm : SelectPat <f16, V_CNDMASK_B32_e64>;
 defm : SelectPat <f32, V_CNDMASK_B32_e64>;
 
+let AddedComplexity = 1 in {
 def : GCNPat <
-  (i32 (add (i32 (ctpop i32:$popcnt)), i32:$val)),
+  (i32 (add (i32 (getDivergentFrag<ctpop>.ret i32:$popcnt)), i32:$val)),
   (V_BCNT_U32_B32_e64 $popcnt, $val)
 >;
+}
 def : GCNPat <
-  (i16 (add (i16 (trunc (ctpop i32:$popcnt))), i16:$val)),
+  (i16 (add (i16 (trunc (getDivergentFrag<ctpop>.ret i32:$popcnt))), i16:$val)),
   (V_BCNT_U32_B32_e64 $popcnt, $val)
 >;
 

@@ -429,7 +429,22 @@ instruction.  One can extract line number information encoded in LLVM IR using
     unsigned Line = Loc->getLine();
     StringRef File = Loc->getFilename();
     StringRef Dir = Loc->getDirectory();
+    bool ImplicitCode = Loc->isImplicitCode();
   }
+
+When the flag ImplicitCode is true then it means that the Instruction has been
+added by the front-end but doesn't correspond to source code written by the user. For example
+
+.. code-block:: c++
+
+  if (MyBoolean) {
+    MyObject MO;
+    ...
+  }
+
+At the end of the scope the MyObject's destructor is called but it isn't written
+explicitly. This information is useful to avoid to have counters on brackets when
+making code coverage.
 
 C/C++ global variable information
 ---------------------------------

@@ -20,6 +20,7 @@
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "xray_defs.h"
 #include <cstddef>
+#include <cstdint>
 
 namespace __xray {
 
@@ -114,7 +115,7 @@ private:
 
   // A pointer to a contiguous block of memory to serve as the backing store for
   // all the individual buffers handed out.
-  void *BackingStore;
+  uint8_t *BackingStore;
 
   // A dynamically allocated array of BufferRep instances.
   BufferRep *Buffers;

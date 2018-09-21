@@ -175,11 +175,24 @@ unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit) {
   unsigned NumDies = Unit.getNumDIEs();
   for (unsigned I = 0; I < NumDies; ++I) {
     auto Die = Unit.getDIEAtIndex(I);
+
     if (Die.getTag() == DW_TAG_null)
       continue;
+
+    bool HasTypeAttr = false;
     for (auto AttrValue : Die.attributes()) {
       NumUnitErrors += verifyDebugInfoAttribute(Die, AttrValue);
       NumUnitErrors += verifyDebugInfoForm(Die, AttrValue);
+      HasTypeAttr |= (AttrValue.Attr == DW_AT_type);
+    }
+
+    if (!HasTypeAttr && (Die.getTag() == DW_TAG_formal_parameter ||
+                         Die.getTag() == DW_TAG_variable ||
+                         Die.getTag() == DW_TAG_array_type)) {
+      error() << "DIE with tag " << TagString(Die.getTag())
+              << " is missing type attribute:\n";
+      dump(Die) << '\n';
+      NumUnitErrors++;
     }
   }
 
@@ -261,7 +274,8 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
   bool isUnitDWARF64 = false;
   bool isHeaderChainValid = true;
   bool hasDIE = DebugInfoData.isValidOffset(Offset);
-  DWARFUnitVector UnitVector{};
+  DWARFUnitVector TypeUnitVector;
+  DWARFUnitVector CompileUnitVector;
   while (hasDIE) {
     OffsetStart = Offset;
     if (!verifyUnitHeader(DebugInfoData, &Offset, UnitIdx, UnitType,
@@ -272,15 +286,15 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
     } else {
       DWARFUnitHeader Header;
       Header.extract(DCtx, DebugInfoData, &OffsetStart, SectionKind);
-      std::unique_ptr<DWARFUnit> Unit;
+      DWARFUnit *Unit;
       switch (UnitType) {
       case dwarf::DW_UT_type:
       case dwarf::DW_UT_split_type: {
-        Unit.reset(new DWARFTypeUnit(
+        Unit = TypeUnitVector.addUnit(llvm::make_unique<DWARFTypeUnit>(
             DCtx, S, Header, DCtx.getDebugAbbrev(), &DObj.getRangeSection(),
             DObj.getStringSection(), DObj.getStringOffsetSection(),
             &DObj.getAppleObjCSection(), DObj.getLineSection(),
-            DCtx.isLittleEndian(), false, UnitVector));
+            DCtx.isLittleEndian(), false, TypeUnitVector));
         break;
       }
       case dwarf::DW_UT_skeleton:
@@ -289,11 +303,11 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
       case dwarf::DW_UT_partial:
       // UnitType = 0 means that we are verifying a compile unit in DWARF v4.
       case 0: {
-        Unit.reset(new DWARFCompileUnit(
+        Unit = CompileUnitVector.addUnit(llvm::make_unique<DWARFCompileUnit>(
             DCtx, S, Header, DCtx.getDebugAbbrev(), &DObj.getRangeSection(),
             DObj.getStringSection(), DObj.getStringOffsetSection(),
             &DObj.getAppleObjCSection(), DObj.getLineSection(),
-            DCtx.isLittleEndian(), false, UnitVector));
+            DCtx.isLittleEndian(), false, CompileUnitVector));
         break;
       }
       default: { llvm_unreachable("Invalid UnitType."); }
@@ -444,7 +458,32 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     }
     break;
   }
-
+  case DW_AT_specification:
+  case DW_AT_abstract_origin: {
+    if (auto ReferencedDie = Die.getAttributeValueAsReferencedDie(Attr)) {
+      auto DieTag = Die.getTag();
+      auto RefTag = ReferencedDie.getTag();
+      if (DieTag == RefTag)
+        break;
+      if (DieTag == DW_TAG_inlined_subroutine && RefTag == DW_TAG_subprogram)
+        break;
+      if (DieTag == DW_TAG_variable && RefTag == DW_TAG_member)
+        break;
+      ReportError("DIE with tag " + TagString(DieTag) + " has " +
+                  AttributeString(Attr) +
+                  " that points to DIE with "
+                  "incompatible tag " +
+                  TagString(RefTag));
+    }
+  }
+  case DW_AT_type: {
+    DWARFDie TypeDie = Die.getAttributeValueAsReferencedDie(DW_AT_type);
+    if (TypeDie && !isType(TypeDie.getTag())) {
+      ReportError("DIE has " + AttributeString(Attr) +
+                  " with incompatible tag " + TagString(TypeDie.getTag()));
+      break;
+    }
+  }
   default:
     break;
   }

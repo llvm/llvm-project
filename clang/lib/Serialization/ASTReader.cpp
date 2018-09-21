@@ -908,7 +908,7 @@ static bool isInterestingIdentifier(ASTReader &Reader, IdentifierInfo &II,
          (IsModule ? II.hasRevertedBuiltin() : II.getObjCOrBuiltinID()) ||
          II.hasRevertedTokenIDToIdentifier() ||
          (!(IsModule && Reader.getPreprocessor().getLangOpts().CPlusPlus) &&
-          II.getFETokenInfo<void>());
+          II.getFETokenInfo());
 }
 
 static bool readBit(unsigned &Bits) {

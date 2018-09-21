@@ -14918,7 +14918,8 @@ void Sema::MarkVTableUsed(SourceLocation Loc, CXXRecordDecl *Class,
   // Do not mark as used if compiling for the device outside of the target
   // region.
   if (LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
-      !isInOpenMPDeclareTargetContext() && !getCurFunctionDecl())
+      !isInOpenMPDeclareTargetContext() &&
+      !isInOpenMPTargetExecutionDirective())
     return;
 
   // Try to insert this class into the map.

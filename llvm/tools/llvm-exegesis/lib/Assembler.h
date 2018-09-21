@@ -39,6 +39,12 @@ class ExegesisTarget;
 // convention and target machine).
 llvm::BitVector getFunctionReservedRegs(const llvm::TargetMachine &TM);
 
+// A simple object storing the value for a particular register.
+struct RegisterValue {
+  unsigned Register;
+  llvm::APInt Value;
+};
+
 // Creates a temporary `void foo(char*)` function containing the provided
 // Instructions. Runs a set of llvm Passes to provide correct prologue and
 // epilogue. Once the MachineFunction is ready, it is assembled for TM to
@@ -46,7 +52,7 @@ llvm::BitVector getFunctionReservedRegs(const llvm::TargetMachine &TM);
 void assembleToStream(const ExegesisTarget &ET,
                       std::unique_ptr<llvm::LLVMTargetMachine> TM,
                       llvm::ArrayRef<unsigned> LiveIns,
-                      llvm::ArrayRef<unsigned> RegsToDef,
+                      llvm::ArrayRef<RegisterValue> RegisterInitialValues,
                       llvm::ArrayRef<llvm::MCInst> Instructions,
                       llvm::raw_pwrite_stream &AsmStream);
 

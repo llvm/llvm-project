@@ -83,7 +83,7 @@
 ; CHECK-NEXT: !32 = !DIFile(filename: "file", directory: "dir", checksumkind: CSK_MD5, checksum: "000102030405060708090a0b0c0d0e0f")
 !35 = !DIFile(filename: "file", directory: "dir", checksumkind: CSK_MD5, checksum: "000102030405060708090a0b0c0d0e0f")
 
-; CHECK-NEXT: !33 = !DICompositeType(tag: DW_TAG_variant_part, name: "A", scope: !14, size: 64)
+; CHECK-NEXT: !33 = !DICompositeType(tag: DW_TAG_variant_part, name: "A", scope: !14, size: 64, discriminator: !34)
 ; CHECK-NEXT: !34 = !DIDerivedType(tag: DW_TAG_member, scope: !33, baseType: !35, size: 64, align: 64, flags: DIFlagArtificial)
 ; CHECK-NEXT: !35 = !DIBasicType(name: "u64", size: 64, encoding: DW_ATE_unsigned)
 !36 = !DICompositeType(tag: DW_TAG_variant_part, name: "A", scope: !16, size: 64, discriminator: !37)

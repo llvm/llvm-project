@@ -8,3 +8,7 @@ add_xray_unittest(XRayFunctionCallTrieTest SOURCES
   function_call_trie_test.cc xray_unit_test_main.cc)
 add_xray_unittest(XRayProfileCollectorTest SOURCES
   profile_collector_test.cc xray_unit_test_main.cc)
+
+add_xray_unittest(XRayFDRLoggingTest SOURCES
+  fdr_log_writer_test.cc
+  xray_unit_test_main.cc)

@@ -115,6 +115,7 @@ void BPFPassConfig::addMachineSSAOptimization() {
 void BPFPassConfig::addPreEmitPass() {
   const BPFSubtarget *Subtarget = getBPFTargetMachine().getSubtargetImpl();
 
+  addPass(createBPFMIPreEmitCheckingPass());
   if (getOptLevel() != CodeGenOpt::None)
     if (Subtarget->getHasAlu32() && !DisableMIPeephole)
       addPass(createBPFMIPreEmitPeepholePass());

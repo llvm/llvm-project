@@ -4802,7 +4802,7 @@ size_t ProcessGDBRemote::LoadModules(LoadedModuleInfoList &module_list) {
         return true;
 
       lldb::ModuleSP module_copy_sp = module_sp;
-      target.SetExecutableModule(module_copy_sp, false);
+      target.SetExecutableModule(module_copy_sp, eLoadDependentsNo);
       return false;
     });
 

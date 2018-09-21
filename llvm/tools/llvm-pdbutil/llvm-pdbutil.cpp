@@ -183,6 +183,8 @@ static cl::opt<bool> Enums("enums", cl::desc("Dump enum types"),
                            cl::sub(DiaDumpSubcommand));
 static cl::opt<bool> Pointers("pointers", cl::desc("Dump enum types"),
                               cl::sub(DiaDumpSubcommand));
+static cl::opt<bool> UDTs("udts", cl::desc("Dump udt types"),
+                          cl::sub(DiaDumpSubcommand));
 static cl::opt<bool> Compilands("compilands",
                                 cl::desc("Dump compiland information"),
                                 cl::sub(DiaDumpSubcommand));
@@ -464,6 +466,12 @@ cl::opt<bool> DumpTypeData(
 cl::opt<bool> DumpTypeExtras("type-extras",
                              cl::desc("dump type hashes and index offsets"),
                              cl::cat(TypeOptions), cl::sub(DumpSubcommand));
+
+cl::opt<bool> DontResolveForwardRefs(
+    "dont-resolve-forward-refs",
+    cl::desc("When dumping type records for classes, unions, enums, and "
+             "structs, don't try to resolve forward references"),
+    cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 
 cl::list<uint32_t> DumpTypeIndex(
     "type-index", cl::ZeroOrMore, cl::CommaSeparated,

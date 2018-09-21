@@ -5,7 +5,7 @@
         -:    0:Programs:1
 function _ZN1AC1Ev called 2 returned 100% blocks executed 100%
 function _ZN1AC2Ev called 2 returned 100% blocks executed 100%
-        2:    1:struct A {
+        4:    1:struct A {
         2:    1-block  0
         2:    1-block  1
         -:    2:  virtual void B();

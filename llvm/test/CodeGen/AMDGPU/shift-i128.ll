@@ -5,24 +5,22 @@ define i128 @v_shl_i128_vv(i128 %lhs, i128 %rhs) {
 ; GCN-LABEL: v_shl_i128_vv:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_lshl_b64 v[5:6], v[0:1], v4
-; GCN-NEXT:    v_lshl_b64 v[7:8], v[2:3], v4
+; GCN-NEXT:    v_lshl_b64 v[5:6], v[2:3], v4
 ; GCN-NEXT:    v_sub_i32_e32 v9, vcc, 64, v4
 ; GCN-NEXT:    v_subrev_i32_e32 v11, vcc, 64, v4
-; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v4
-; GCN-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; GCN-NEXT:    v_lshl_b64 v[7:8], v[0:1], v4
 ; GCN-NEXT:    v_lshr_b64 v[9:10], v[0:1], v9
 ; GCN-NEXT:    v_lshl_b64 v[0:1], v[0:1], v11
-; GCN-NEXT:    v_or_b32_e32 v7, v7, v9
-; GCN-NEXT:    v_or_b32_e32 v8, v8, v10
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v8, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v7, vcc
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v4
-; GCN-NEXT:    v_cndmask_b32_e32 v3, v1, v3, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v2, v0, v2, vcc
-; GCN-NEXT:    v_mov_b32_e32 v0, v5
-; GCN-NEXT:    v_mov_b32_e32 v1, v6
+; GCN-NEXT:    v_or_b32_e32 v6, v6, v10
+; GCN-NEXT:    v_or_b32_e32 v5, v5, v9
+; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v4
+; GCN-NEXT:    v_cndmask_b32_e32 v6, v1, v6, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v1, 0, v8, vcc
+; GCN-NEXT:    v_cmp_eq_u32_e64 s[6:7], 0, v4
+; GCN-NEXT:    v_cndmask_b32_e64 v3, v6, v3, s[6:7]
+; GCN-NEXT:    v_cndmask_b32_e64 v2, v0, v2, s[6:7]
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v7, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %shl = shl i128 %lhs, %rhs
   ret i128 %shl
@@ -32,25 +30,24 @@ define i128 @v_lshr_i128_vv(i128 %lhs, i128 %rhs) {
 ; GCN-LABEL: v_lshr_i128_vv:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_lshr_b64 v[5:6], v[2:3], v4
-; GCN-NEXT:    v_lshr_b64 v[7:8], v[0:1], v4
+; GCN-NEXT:    v_lshr_b64 v[5:6], v[0:1], v4
 ; GCN-NEXT:    v_sub_i32_e32 v9, vcc, 64, v4
 ; GCN-NEXT:    v_subrev_i32_e32 v11, vcc, 64, v4
-; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v4
-; GCN-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
+; GCN-NEXT:    v_lshr_b64 v[7:8], v[2:3], v4
 ; GCN-NEXT:    v_lshl_b64 v[9:10], v[2:3], v9
 ; GCN-NEXT:    v_lshr_b64 v[2:3], v[2:3], v11
-; GCN-NEXT:    v_or_b32_e32 v7, v7, v9
-; GCN-NEXT:    v_or_b32_e32 v8, v8, v10
-; GCN-NEXT:    v_cndmask_b32_e32 v3, v3, v8, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v2, v2, v7, vcc
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v4
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; GCN-NEXT:    v_mov_b32_e32 v2, v5
-; GCN-NEXT:    v_mov_b32_e32 v3, v6
+; GCN-NEXT:    v_or_b32_e32 v6, v6, v10
+; GCN-NEXT:    v_or_b32_e32 v5, v5, v9
+; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v4
+; GCN-NEXT:    v_cndmask_b32_e32 v6, v3, v6, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v2, v2, v5, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v3, 0, v8, vcc
+; GCN-NEXT:    v_cmp_eq_u32_e64 s[6:7], 0, v4
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v6, v1, s[6:7]
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[6:7]
+; GCN-NEXT:    v_cndmask_b32_e32 v2, 0, v7, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
+
   %shl = lshr i128 %lhs, %rhs
   ret i128 %shl
 }
@@ -69,8 +66,8 @@ define i128 @v_ashr_i128_vv(i128 %lhs, i128 %rhs) {
 ; GCN-NEXT:    v_cndmask_b32_e32 v5, v9, v5, vcc
 ; GCN-NEXT:    v_lshl_b64 v[9:10], v[2:3], v10
 ; GCN-NEXT:    v_ashr_i64 v[2:3], v[2:3], v11
-; GCN-NEXT:    v_or_b32_e32 v7, v7, v9
 ; GCN-NEXT:    v_or_b32_e32 v8, v8, v10
+; GCN-NEXT:    v_or_b32_e32 v7, v7, v9
 ; GCN-NEXT:    v_cndmask_b32_e32 v3, v3, v8, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v2, v7, vcc
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v4
@@ -497,19 +494,19 @@ define <2 x i128> @v_shl_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GCN-NEXT:    v_lshl_b64 v[16:17], v[2:3], v8
 ; GCN-NEXT:    v_sub_i32_e32 v18, vcc, 64, v8
 ; GCN-NEXT:    v_lshr_b64 v[18:19], v[0:1], v18
-; GCN-NEXT:    v_or_b32_e32 v20, v16, v18
-; GCN-NEXT:    v_or_b32_e32 v21, v17, v19
+; GCN-NEXT:    v_or_b32_e32 v20, v17, v19
+; GCN-NEXT:    v_or_b32_e32 v21, v16, v18
 ; GCN-NEXT:    v_sub_i32_e32 v16, vcc, 64, v12
 ; GCN-NEXT:    v_lshr_b64 v[16:17], v[4:5], v16
 ; GCN-NEXT:    v_lshl_b64 v[18:19], v[6:7], v12
-; GCN-NEXT:    v_or_b32_e32 v16, v18, v16
 ; GCN-NEXT:    v_or_b32_e32 v17, v19, v17
+; GCN-NEXT:    v_or_b32_e32 v16, v18, v16
 ; GCN-NEXT:    v_cmp_eq_u64_e64 s[6:7], 0, v[10:11]
-; GCN-NEXT:    v_or_b32_e32 v10, v8, v10
 ; GCN-NEXT:    v_or_b32_e32 v11, v9, v11
+; GCN-NEXT:    v_or_b32_e32 v10, v8, v10
 ; GCN-NEXT:    v_cmp_eq_u64_e64 s[8:9], 0, v[14:15]
-; GCN-NEXT:    v_or_b32_e32 v14, v12, v14
 ; GCN-NEXT:    v_or_b32_e32 v15, v13, v15
+; GCN-NEXT:    v_or_b32_e32 v14, v12, v14
 ; GCN-NEXT:    v_cmp_gt_u64_e64 s[10:11], 64, v[8:9]
 ; GCN-NEXT:    v_subrev_i32_e32 v18, vcc, 64, v8
 ; GCN-NEXT:    v_lshl_b64 v[8:9], v[0:1], v8
@@ -519,8 +516,8 @@ define <2 x i128> @v_shl_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GCN-NEXT:    v_lshl_b64 v[12:13], v[4:5], v12
 ; GCN-NEXT:    v_lshl_b64 v[4:5], v[4:5], v18
 ; GCN-NEXT:    s_and_b64 vcc, s[6:7], s[10:11]
-; GCN-NEXT:    v_cndmask_b32_e32 v18, v1, v21, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v19, v0, v20, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v18, v1, v20, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v19, v0, v21, vcc
 ; GCN-NEXT:    s_and_b64 s[6:7], s[8:9], s[12:13]
 ; GCN-NEXT:    v_cndmask_b32_e64 v17, v5, v17, s[6:7]
 ; GCN-NEXT:    v_cndmask_b32_e64 v4, v4, v16, s[6:7]
@@ -546,19 +543,19 @@ define <2 x i128> @v_lshr_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GCN-NEXT:    v_lshr_b64 v[16:17], v[0:1], v8
 ; GCN-NEXT:    v_sub_i32_e32 v18, vcc, 64, v8
 ; GCN-NEXT:    v_lshl_b64 v[18:19], v[2:3], v18
-; GCN-NEXT:    v_or_b32_e32 v20, v16, v18
-; GCN-NEXT:    v_or_b32_e32 v21, v17, v19
+; GCN-NEXT:    v_or_b32_e32 v20, v17, v19
+; GCN-NEXT:    v_or_b32_e32 v21, v16, v18
 ; GCN-NEXT:    v_sub_i32_e32 v16, vcc, 64, v12
 ; GCN-NEXT:    v_lshl_b64 v[16:17], v[6:7], v16
 ; GCN-NEXT:    v_lshr_b64 v[18:19], v[4:5], v12
-; GCN-NEXT:    v_or_b32_e32 v16, v18, v16
 ; GCN-NEXT:    v_or_b32_e32 v17, v19, v17
+; GCN-NEXT:    v_or_b32_e32 v16, v18, v16
 ; GCN-NEXT:    v_cmp_eq_u64_e64 s[6:7], 0, v[10:11]
-; GCN-NEXT:    v_or_b32_e32 v10, v8, v10
 ; GCN-NEXT:    v_or_b32_e32 v11, v9, v11
+; GCN-NEXT:    v_or_b32_e32 v10, v8, v10
 ; GCN-NEXT:    v_cmp_eq_u64_e64 s[8:9], 0, v[14:15]
-; GCN-NEXT:    v_or_b32_e32 v14, v12, v14
 ; GCN-NEXT:    v_or_b32_e32 v15, v13, v15
+; GCN-NEXT:    v_or_b32_e32 v14, v12, v14
 ; GCN-NEXT:    v_cmp_gt_u64_e64 s[10:11], 64, v[8:9]
 ; GCN-NEXT:    v_subrev_i32_e32 v18, vcc, 64, v8
 ; GCN-NEXT:    v_lshr_b64 v[8:9], v[2:3], v8
@@ -568,8 +565,8 @@ define <2 x i128> @v_lshr_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GCN-NEXT:    v_lshr_b64 v[12:13], v[6:7], v12
 ; GCN-NEXT:    v_lshr_b64 v[6:7], v[6:7], v18
 ; GCN-NEXT:    s_and_b64 vcc, s[6:7], s[10:11]
-; GCN-NEXT:    v_cndmask_b32_e32 v18, v3, v21, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v19, v2, v20, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v18, v3, v20, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v19, v2, v21, vcc
 ; GCN-NEXT:    s_and_b64 s[6:7], s[8:9], s[12:13]
 ; GCN-NEXT:    v_cndmask_b32_e64 v17, v7, v17, s[6:7]
 ; GCN-NEXT:    v_cndmask_b32_e64 v6, v6, v16, s[6:7]
@@ -595,25 +592,25 @@ define <2 x i128> @v_ashr_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GCN-NEXT:    v_lshr_b64 v[16:17], v[0:1], v8
 ; GCN-NEXT:    v_sub_i32_e32 v18, vcc, 64, v8
 ; GCN-NEXT:    v_lshl_b64 v[18:19], v[2:3], v18
-; GCN-NEXT:    v_or_b32_e32 v20, v16, v18
-; GCN-NEXT:    v_or_b32_e32 v21, v17, v19
+; GCN-NEXT:    v_or_b32_e32 v20, v17, v19
+; GCN-NEXT:    v_or_b32_e32 v21, v16, v18
 ; GCN-NEXT:    v_sub_i32_e32 v16, vcc, 64, v12
 ; GCN-NEXT:    v_lshl_b64 v[16:17], v[6:7], v16
 ; GCN-NEXT:    v_lshr_b64 v[18:19], v[4:5], v12
-; GCN-NEXT:    v_or_b32_e32 v18, v18, v16
 ; GCN-NEXT:    v_or_b32_e32 v19, v19, v17
+; GCN-NEXT:    v_or_b32_e32 v18, v18, v16
 ; GCN-NEXT:    v_cmp_eq_u64_e64 s[6:7], 0, v[10:11]
-; GCN-NEXT:    v_or_b32_e32 v10, v8, v10
 ; GCN-NEXT:    v_or_b32_e32 v11, v9, v11
+; GCN-NEXT:    v_or_b32_e32 v10, v8, v10
 ; GCN-NEXT:    v_cmp_eq_u64_e64 s[8:9], 0, v[14:15]
-; GCN-NEXT:    v_or_b32_e32 v14, v12, v14
 ; GCN-NEXT:    v_or_b32_e32 v15, v13, v15
+; GCN-NEXT:    v_or_b32_e32 v14, v12, v14
 ; GCN-NEXT:    v_cmp_gt_u64_e64 s[10:11], 64, v[8:9]
 ; GCN-NEXT:    v_subrev_i32_e32 v9, vcc, 64, v8
 ; GCN-NEXT:    v_ashr_i64 v[16:17], v[2:3], v9
 ; GCN-NEXT:    s_and_b64 s[6:7], s[6:7], s[10:11]
-; GCN-NEXT:    v_cndmask_b32_e64 v17, v17, v21, s[6:7]
-; GCN-NEXT:    v_cndmask_b32_e64 v16, v16, v20, s[6:7]
+; GCN-NEXT:    v_cndmask_b32_e64 v17, v17, v20, s[6:7]
+; GCN-NEXT:    v_cndmask_b32_e64 v16, v16, v21, s[6:7]
 ; GCN-NEXT:    v_cmp_gt_u64_e64 s[10:11], 64, v[12:13]
 ; GCN-NEXT:    v_ashr_i64 v[8:9], v[2:3], v8
 ; GCN-NEXT:    v_ashrrev_i32_e32 v20, 31, v3

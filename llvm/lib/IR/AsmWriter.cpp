@@ -1754,6 +1754,8 @@ static void writeDILocation(raw_ostream &Out, const DILocation *DL,
   Printer.printInt("column", DL->getColumn());
   Printer.printMetadata("scope", DL->getRawScope(), /* ShouldSkipNull */ false);
   Printer.printMetadata("inlinedAt", DL->getRawInlinedAt());
+  Printer.printBool("isImplicitCode", DL->isImplicitCode(),
+                    /* Default */ false);
   Out << ")";
 }
 

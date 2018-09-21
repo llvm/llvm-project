@@ -1,5 +1,3 @@
-# FIXME: Disabled on Windows since LLVMFuzzerCustomCrossOver does not yet work.
-UNSUPPORTED: windows
 RUN: %cpp_compiler %S/CustomCrossOverTest.cpp -o %t-CustomCrossOverTest
 
 RUN: not %run %t-CustomCrossOverTest -seed=1 -runs=1000000                2>&1 | FileCheck %s --check-prefix=CHECK_CO

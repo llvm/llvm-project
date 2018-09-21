@@ -12,21 +12,21 @@
 # 0x1102c - 16 = 0x1101c
 # CHECK:      Disassembly of section .text:
 # CHECK-NEXT: _foo:
-# CHECK-NEXT:    20000: {{.*}} nop
-# CHECK-NEXT:    20004: {{.*}} nop
-# CHECK-NEXT:    20008: {{.*}} nop
-# CHECK-NEXT:    2000c: {{.*}} nop
+# CHECK-NEXT:    210000: {{.*}} nop
+# CHECK-NEXT:    210004: {{.*}} nop
+# CHECK-NEXT:    210008: {{.*}} nop
+# CHECK-NEXT:    21000c: {{.*}} nop
 # CHECK:      _bar:
-# CHECK-NEXT:    20010: {{.*}} nop
-# CHECK-NEXT:    20014: {{.*}} nop
-# CHECK-NEXT:    20018: {{.*}} nop
+# CHECK-NEXT:    210010: {{.*}} nop
+# CHECK-NEXT:    210014: {{.*}} nop
+# CHECK-NEXT:    210018: {{.*}} nop
 # CHECK:      _dah:
-# CHECK-NEXT:    2001c: {{.*}} nop
-# CHECK-NEXT:    20020: {{.*}} nop
+# CHECK-NEXT:    21001c: {{.*}} nop
+# CHECK-NEXT:    210020: {{.*}} nop
 # CHECK:      _start:
-# CHECK-NEXT:    20024: {{.*}} b.eq #-36
-# CHECK-NEXT:    20028: {{.*}} b.eq #-24
-# CHECK-NEXT:    2002c: {{.*}} b.eq #-16
+# CHECK-NEXT:    210024: {{.*}} b.eq #-36
+# CHECK-NEXT:    210028: {{.*}} b.eq #-24
+# CHECK-NEXT:    21002c: {{.*}} b.eq #-16
 
 #DSOREL:      Section {
 #DSOREL:        Index:

@@ -8,12 +8,11 @@
 #ifndef HEADER
 #define HEADER
 
-// Check that the execution mode of the target region with lastprivates on the gpu is set to Non-SPMD Mode.
-// CHECK-DAG: {{@__omp_offloading_.+l31}}_exec_mode = weak constant i8 1
-// Check that the execution mode of all 3 target regions on the gpu is set to SPMD Mode.
-// CHECK-DAG: {{@__omp_offloading_.+l37}}_exec_mode = weak constant i8 0
-// CHECK-DAG: {{@__omp_offloading_.+l42}}_exec_mode = weak constant i8 0
-// CHECK-DAG: {{@__omp_offloading_.+l47}}_exec_mode = weak constant i8 0
+// Check that the execution mode of all 4 target regions on the gpu is set to SPMD Mode.
+// CHECK-DAG: {{@__omp_offloading_.+l30}}_exec_mode = weak constant i8 0
+// CHECK-DAG: {{@__omp_offloading_.+l36}}_exec_mode = weak constant i8 0
+// CHECK-DAG: {{@__omp_offloading_.+l41}}_exec_mode = weak constant i8 0
+// CHECK-DAG: {{@__omp_offloading_.+l46}}_exec_mode = weak constant i8 0
 
 #define N 1000
 #define M 10
@@ -63,14 +62,16 @@ int bar(int n){
   return a;
 }
 
-// CHECK_LABEL: define internal void @__omp_offloading_{{.+}}_l31_worker()
-
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}_l31(
-// CHECK: call void @__kmpc_kernel_init(i32 %{{.+}}, i16 1)
+// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}_l30(
+// CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 0)
+// CHECK: [[TEAM_ALLOC:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{[0-9]+}} 4, i16 0)
+// CHECK: [[BC:%.+]] = bitcast i8* [[TEAM_ALLOC]] to [[REC:%.+]]*
+// CHECK: getelementptr inbounds [[REC]], [[REC]]* [[BC]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 91,
-// CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[OUTL1:@__omp_outlined.*]]_wrapper to i8*), i16 1)
+// CHECK: {{call|invoke}} void [[OUTL1:@.+]](
 // CHECK: call void @__kmpc_for_static_fini(
-// CHECK: call void @__kmpc_kernel_deinit(i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_deinit()
 // CHECK: ret void
 
 // CHECK: define internal void [[OUTL1]](

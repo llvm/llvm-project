@@ -51,7 +51,6 @@ public:
 namespace WebAssembly {
 
 const char *TypeToString(MVT Ty);
-const char *TypeToString(wasm::ValType Type);
 
 } // end namespace WebAssembly
 

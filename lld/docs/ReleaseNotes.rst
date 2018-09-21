@@ -1,5 +1,5 @@
 =======================
-LLD 8.0.0 Release Notes
+lld 8.0.0 Release Notes
 =======================
 
 .. contents::
@@ -24,7 +24,11 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* Item 1.
+* Default image base address has changed from 65536 to 2 MiB for i386
+  and 4 MiB for AArch64 to make lld-generated executables work better
+  with automatic superpage promotion. FreeBSD can promotes contiguous
+  non-superpages to a superpage if they are aligned to the superpage
+  size. (`r342746 <https://reviews.llvm.org/rL342746>`_)
 
 COFF Improvements
 -----------------

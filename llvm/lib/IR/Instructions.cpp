@@ -1801,6 +1801,23 @@ bool ShuffleVectorInst::isIdentityWithExtract() const {
   return isIdentityMaskImpl(getShuffleMask(), NumOpElts);
 }
 
+bool ShuffleVectorInst::isConcat() const {
+  // Vector concatenation is differentiated from identity with padding.
+  if (isa<UndefValue>(Op<0>()) || isa<UndefValue>(Op<1>()))
+    return false;
+
+  int NumOpElts = Op<0>()->getType()->getVectorNumElements();
+  int NumMaskElts = getType()->getVectorNumElements();
+  if (NumMaskElts != NumOpElts * 2)
+    return false;
+
+  // Use the mask length rather than the operands' vector lengths here. We
+  // already know that the shuffle returns a vector twice as long as the inputs,
+  // and neither of the inputs are undef vectors. If the mask picks consecutive
+  // elements from both inputs, then this is a concatenation of the inputs.
+  return isIdentityMaskImpl(getShuffleMask(), NumMaskElts);
+}
+
 //===----------------------------------------------------------------------===//
 //                             InsertValueInst Class
 //===----------------------------------------------------------------------===//

@@ -58,27 +58,27 @@ TargetList::~TargetList() {
 Status TargetList::CreateTarget(Debugger &debugger,
                                 llvm::StringRef user_exe_path,
                                 llvm::StringRef triple_str,
-                                bool get_dependent_files,
+                                LoadDependentFiles load_dependent_files,
                                 const OptionGroupPlatform *platform_options,
                                 TargetSP &target_sp) {
   return CreateTargetInternal(debugger, user_exe_path, triple_str,
-                              get_dependent_files, platform_options, target_sp,
+                              load_dependent_files, platform_options, target_sp,
                               false);
 }
 
 Status TargetList::CreateTarget(Debugger &debugger,
                                 llvm::StringRef user_exe_path,
                                 const ArchSpec &specified_arch,
-                                bool get_dependent_files,
+                                LoadDependentFiles load_dependent_files,
                                 PlatformSP &platform_sp, TargetSP &target_sp) {
   return CreateTargetInternal(debugger, user_exe_path, specified_arch,
-                              get_dependent_files, platform_sp, target_sp,
+                              load_dependent_files, platform_sp, target_sp,
                               false);
 }
 
 Status TargetList::CreateTargetInternal(
     Debugger &debugger, llvm::StringRef user_exe_path,
-    llvm::StringRef triple_str, bool get_dependent_files,
+    llvm::StringRef triple_str, LoadDependentFiles load_dependent_files,
     const OptionGroupPlatform *platform_options, TargetSP &target_sp,
     bool is_dummy_target) {
   Status error;
@@ -292,7 +292,7 @@ Status TargetList::CreateTargetInternal(
     platform_arch = arch;
 
   error = TargetList::CreateTargetInternal(
-      debugger, user_exe_path, platform_arch, get_dependent_files, platform_sp,
+      debugger, user_exe_path, platform_arch, load_dependent_files, platform_sp,
       target_sp, is_dummy_target);
   return error;
 }
@@ -315,14 +315,14 @@ Status TargetList::CreateDummyTarget(Debugger &debugger,
                                      lldb::TargetSP &target_sp) {
   PlatformSP host_platform_sp(Platform::GetHostPlatform());
   return CreateTargetInternal(
-      debugger, (const char *)nullptr, specified_arch_name, false,
+      debugger, (const char *)nullptr, specified_arch_name, eLoadDependentsNo,
       (const OptionGroupPlatform *)nullptr, target_sp, true);
 }
 
 Status TargetList::CreateTargetInternal(Debugger &debugger,
                                         llvm::StringRef user_exe_path,
                                         const ArchSpec &specified_arch,
-                                        bool get_dependent_files,
+                                        LoadDependentFiles load_dependent_files,
                                         lldb::PlatformSP &platform_sp,
                                         lldb::TargetSP &target_sp,
                                         bool is_dummy_target) {
@@ -401,7 +401,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
         return error;
       }
       target_sp.reset(new Target(debugger, arch, platform_sp, is_dummy_target));
-      target_sp->SetExecutableModule(exe_module_sp, get_dependent_files);
+      target_sp->SetExecutableModule(exe_module_sp, load_dependent_files);
       if (user_exe_path_is_bundle)
         exe_module_sp->GetFileSpec().GetPath(resolved_bundle_exe_path,
                                              sizeof(resolved_bundle_exe_path));

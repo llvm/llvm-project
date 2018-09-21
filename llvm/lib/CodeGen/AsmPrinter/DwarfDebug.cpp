@@ -675,6 +675,10 @@ void DwarfDebug::beginModule() {
     (useSplitDwarf() ? SkeletonHolder : InfoHolder)
         .setRnglistsTableBaseSym(Asm->createTempSymbol("rnglists_table_base"));
 
+  // Create the symbol that points to the first entry following the debug
+  // address table (.debug_addr) header.
+  AddrPool.setLabel(Asm->createTempSymbol("addr_table_base"));
+
   for (DICompileUnit *CUNode : M->debug_compile_units()) {
     // FIXME: Move local imported entities into a list attached to the
     // subprogram, then this search won't be needed and a
@@ -792,11 +796,9 @@ void DwarfDebug::finalizeModuleInfo() {
       }
       // We don't keep track of which addresses are used in which CU so this
       // is a bit pessimistic under LTO.
-      if (!AddrPool.isEmpty()) {
-        const MCSymbol *Sym = TLOF.getDwarfAddrSection()->getBeginSymbol();
-        SkCU->addSectionLabel(SkCU->getUnitDie(), dwarf::DW_AT_GNU_addr_base,
-                              Sym, Sym);
-      }
+      if (!AddrPool.isEmpty())
+        SkCU->addAddrTableBase();
+
       if (getDwarfVersion() < 5 && !SkCU->getRangeLists().empty()) {
         const MCSymbol *Sym = TLOF.getDwarfRangesSection()->getBeginSymbol();
         SkCU->addSectionLabel(SkCU->getUnitDie(), dwarf::DW_AT_GNU_ranges_base,

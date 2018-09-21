@@ -9,12 +9,14 @@ we claim to understand.  We then test this in two ways:
 
 
 RUN: llvm-pdbutil dump -type-index=0x101A,0x102C,0x103D,0x104D,0x1098,0x10AA,0x10AC \
-RUN:   -dependents %p/Inputs/every-type.pdb | FileCheck --check-prefix=TYPES %s
+RUN:   -dont-resolve-forward-refs -dependents %p/Inputs/every-type.pdb \
+RUN:   | FileCheck --check-prefix=TYPES %s
 
 RUN: llvm-pdbutil pdb2yaml -tpi-stream -ipi-stream %p/Inputs/every-type.pdb > %t.pdb.yaml
 RUN: llvm-pdbutil yaml2pdb -pdb=%t.yaml.pdb %t.pdb.yaml
 RUN: llvm-pdbutil dump -type-index=0x101A,0x102C,0x103D,0x104D,0x1098,0x10AA,0x10AC \
-RUN:   -dependents %t.yaml.pdb | FileCheck --check-prefix=TYPES %s
+RUN:   -dependents -dont-resolve-forward-refs %t.yaml.pdb \
+RUN:   | FileCheck --check-prefix=TYPES %s
 
 TYPES:                           Types (TPI Stream)
 TYPES-NEXT: ============================================================
