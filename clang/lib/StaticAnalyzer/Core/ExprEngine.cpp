@@ -2985,6 +2985,17 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
           << Loc.castAs<BlockEntrance>().getBlock()->getBlockID();
       break;
 
+    case ProgramPoint::FunctionExitKind: {
+      auto FEP = Loc.getAs<FunctionExitPoint>();
+      Out << "Function Exit: B"
+          << FEP->getBlock()->getBlockID();
+      if (const ReturnStmt *RS = FEP->getStmt()) {
+        Out << "\\l Return: S" << RS->getID(Context) << "\\l";
+        RS->printPretty(Out, /*helper=*/nullptr, Context.getPrintingPolicy(),
+                       /*Indentation=*/2, /*NewlineSymbol=*/"\\l");
+      }
+      break;
+    }
     case ProgramPoint::BlockExitKind:
       assert(false);
       break;
