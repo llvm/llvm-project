@@ -171,8 +171,8 @@ bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
   return Success;
 }
 
-bool DWARFVerifier::verifyUnitContents(DWARFUnit &Unit, uint8_t UnitType) {
-  uint32_t NumUnitErrors = 0;
+unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit, uint8_t UnitType) {
+  unsigned NumUnitErrors = 0;
   unsigned NumDies = Unit.getNumDIEs();
   for (unsigned I = 0; I < NumDies; ++I) {
     auto Die = Unit.getDIEAtIndex(I);
@@ -188,7 +188,7 @@ bool DWARFVerifier::verifyUnitContents(DWARFUnit &Unit, uint8_t UnitType) {
   if (!Die) {
     error() << "Compilation unit without DIE.\n";
     NumUnitErrors++;
-    return NumUnitErrors == 0;
+    return NumUnitErrors;
   }
 
   if (!dwarf::isUnitType(Die.getTag())) {
@@ -208,7 +208,7 @@ bool DWARFVerifier::verifyUnitContents(DWARFUnit &Unit, uint8_t UnitType) {
   DieRangeInfo RI;
   NumUnitErrors += verifyDieRanges(Die, RI);
 
-  return NumUnitErrors == 0;
+  return NumUnitErrors;
 }
 
 unsigned DWARFVerifier::verifyAbbrevSection(const DWARFDebugAbbrev *Abbrev) {
@@ -252,13 +252,11 @@ bool DWARFVerifier::handleDebugAbbrev() {
   return NumErrors == 0;
 }
 
-bool DWARFVerifier::handleDebugInfo() {
-  OS << "Verifying .debug_info Unit Header Chain...\n";
-
+unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
+                                          DWARFSectionKind SectionKind) {
   const DWARFObject &DObj = DCtx.getDWARFObj();
-  DWARFDataExtractor DebugInfoData(DObj, DObj.getInfoSection(),
-                                   DCtx.isLittleEndian(), 0);
-  uint32_t NumDebugInfoErrors = 0;
+  DWARFDataExtractor DebugInfoData(DObj, S, DCtx.isLittleEndian(), 0);
+  unsigned NumDebugInfoErrors = 0;
   uint32_t OffsetStart = 0, Offset = 0, UnitIdx = 0;
   uint8_t UnitType = 0;
   bool isUnitDWARF64 = false;
@@ -274,16 +272,16 @@ bool DWARFVerifier::handleDebugInfo() {
         break;
     } else {
       DWARFUnitHeader Header;
-      Header.extract(DCtx, DebugInfoData, &OffsetStart);
+      Header.extract(DCtx, DebugInfoData, &OffsetStart, SectionKind);
       std::unique_ptr<DWARFUnit> Unit;
       switch (UnitType) {
       case dwarf::DW_UT_type:
       case dwarf::DW_UT_split_type: {
         Unit.reset(new DWARFTypeUnit(
-            DCtx, DObj.getInfoSection(), Header, DCtx.getDebugAbbrev(),
-            &DObj.getRangeSection(), DObj.getStringSection(),
-            DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
-            DObj.getLineSection(), DCtx.isLittleEndian(), false, UnitVector));
+            DCtx, S, Header, DCtx.getDebugAbbrev(), &DObj.getRangeSection(),
+            DObj.getStringSection(), DObj.getStringOffsetSection(),
+            &DObj.getAppleObjCSection(), DObj.getLineSection(),
+            DCtx.isLittleEndian(), false, UnitVector));
         break;
       }
       case dwarf::DW_UT_skeleton:
@@ -294,26 +292,40 @@ bool DWARFVerifier::handleDebugInfo() {
       // verifying a compile unit in DWARF v4.
       case 0: {
         Unit.reset(new DWARFCompileUnit(
-            DCtx, DObj.getInfoSection(), Header, DCtx.getDebugAbbrev(),
-            &DObj.getRangeSection(), DObj.getStringSection(),
-            DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
-            DObj.getLineSection(), DCtx.isLittleEndian(), false, UnitVector));
+            DCtx, S, Header, DCtx.getDebugAbbrev(), &DObj.getRangeSection(),
+            DObj.getStringSection(), DObj.getStringOffsetSection(),
+            &DObj.getAppleObjCSection(), DObj.getLineSection(),
+            DCtx.isLittleEndian(), false, UnitVector));
         break;
       }
       default: { llvm_unreachable("Invalid UnitType."); }
       }
-      if (!verifyUnitContents(*Unit, UnitType))
-        ++NumDebugInfoErrors;
+      NumDebugInfoErrors += verifyUnitContents(*Unit, UnitType);
     }
     hasDIE = DebugInfoData.isValidOffset(Offset);
     ++UnitIdx;
   }
   if (UnitIdx == 0 && !hasDIE) {
-    warn() << ".debug_info is empty.\n";
+    warn() << "Section is empty.\n";
     isHeaderChainValid = true;
   }
+  if (!isHeaderChainValid)
+    ++NumDebugInfoErrors;
   NumDebugInfoErrors += verifyDebugInfoReferences();
-  return (isHeaderChainValid && NumDebugInfoErrors == 0);
+  return NumDebugInfoErrors;
+}
+
+bool DWARFVerifier::handleDebugInfo() {
+  const DWARFObject &DObj = DCtx.getDWARFObj();
+
+  OS << "Verifying .debug_info Unit Header Chain...\n";
+  unsigned result = verifyUnitSection(DObj.getInfoSection(), DW_SECT_INFO);
+
+  OS << "Verifying .debug_types Unit Header Chain...\n";
+  DObj.forEachTypesSections([&](const DWARFSection &S) {
+    result += verifyUnitSection(S, DW_SECT_TYPES);
+  });
+  return result == 0;
 }
 
 unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
