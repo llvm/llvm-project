@@ -27,8 +27,6 @@ unsigned AddressPool::getIndex(const MCSymbol *Sym, bool TLS) {
 
 void AddressPool::emitHeader(AsmPrinter &Asm, MCSection *Section) {
   static const uint8_t AddrSize = Asm.getDataLayout().getPointerSize();
-  Asm.OutStreamer->SwitchSection(Section);
-
   uint64_t Length = sizeof(uint16_t) // version
                   + sizeof(uint8_t)  // address_size
                   + sizeof(uint8_t)  // segment_selector_size
@@ -41,14 +39,18 @@ void AddressPool::emitHeader(AsmPrinter &Asm, MCSection *Section) {
 
 // Emit addresses into the section given.
 void AddressPool::emit(AsmPrinter &Asm, MCSection *AddrSection) {
+  // Start the dwarf addr section.
+  Asm.OutStreamer->SwitchSection(AddrSection);
+
   if (Asm.getDwarfVersion() >= 5)
     emitHeader(Asm, AddrSection);
 
+  // Define the symbol that marks the start of the contribution.
+  // It is referenced via DW_AT_addr_base.
+  Asm.OutStreamer->EmitLabel(AddressTableBaseSym);
+
   if (Pool.empty())
     return;
-
-  // Start the dwarf addr section.
-  Asm.OutStreamer->SwitchSection(AddrSection);
 
   // Order the address pool entries by ID
   SmallVector<const MCExpr *, 64> Entries(Pool.size());

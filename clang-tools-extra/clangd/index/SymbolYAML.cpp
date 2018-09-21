@@ -27,6 +27,7 @@ namespace yaml {
 
 using clang::clangd::Symbol;
 using clang::clangd::SymbolID;
+using clang::clangd::SymbolOrigin;
 using clang::clangd::SymbolLocation;
 using clang::index::SymbolInfo;
 using clang::index::SymbolKind;
@@ -63,6 +64,17 @@ struct NormalizedSymbolFlag {
   }
 
   uint8_t Flag = 0;
+};
+
+struct NormalizedSymbolOrigin {
+  NormalizedSymbolOrigin(IO &) {}
+  NormalizedSymbolOrigin(IO &, SymbolOrigin O) {
+    Origin = static_cast<uint8_t>(O);
+  }
+
+  SymbolOrigin denormalize(IO &) { return static_cast<SymbolOrigin>(Origin); }
+
+  uint8_t Origin = 0;
 };
 
 template <> struct MappingTraits<SymbolLocation::Position> {
@@ -102,6 +114,8 @@ template <> struct MappingTraits<Symbol> {
     MappingNormalization<NormalizedSymbolID, SymbolID> NSymbolID(IO, Sym.ID);
     MappingNormalization<NormalizedSymbolFlag, Symbol::SymbolFlag> NSymbolFlag(
         IO, Sym.Flags);
+    MappingNormalization<NormalizedSymbolOrigin, SymbolOrigin> NSymbolOrigin(
+        IO, Sym.Origin);
     IO.mapRequired("ID", NSymbolID->HexString);
     IO.mapRequired("Name", Sym.Name);
     IO.mapRequired("Scope", Sym.Scope);
@@ -110,6 +124,7 @@ template <> struct MappingTraits<Symbol> {
                    SymbolLocation());
     IO.mapOptional("Definition", Sym.Definition, SymbolLocation());
     IO.mapOptional("References", Sym.References, 0u);
+    IO.mapOptional("Origin", NSymbolOrigin->Origin);
     IO.mapOptional("Flags", NSymbolFlag->Flag);
     IO.mapOptional("Signature", Sym.Signature);
     IO.mapOptional("CompletionSnippetSuffix", Sym.CompletionSnippetSuffix);

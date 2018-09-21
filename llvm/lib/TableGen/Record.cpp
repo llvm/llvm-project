@@ -487,7 +487,7 @@ Init *IntInit::convertInitializerTo(RecTy *Ty) const {
 
     SmallVector<Init *, 16> NewBits(BRT->getNumBits());
     for (unsigned i = 0; i != BRT->getNumBits(); ++i)
-      NewBits[i] = BitInit::get(Value & (1LL << i));
+      NewBits[i] = BitInit::get(Value & ((i < 64) ? (1LL << i) : 0));
 
     return BitsInit::get(NewBits);
   }

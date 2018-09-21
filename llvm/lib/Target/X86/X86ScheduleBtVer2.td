@@ -595,6 +595,10 @@ def JWriteZeroLatency : SchedWriteRes<[]> {
   let Latency = 0;
 }
 
+def JWriteZeroIdiomYmm : SchedWriteRes<[JFPU01, JFPX]> {
+  let NumMicroOps = 2;
+}
+
 // Certain instructions that use the same register for both source
 // operands do not have a real dependency on the previous contents of the
 // register, and thus, do not have to wait before completing. They can be
@@ -618,6 +622,13 @@ def JWriteFZeroIdiom : SchedWriteVariant<[
 def : InstRW<[JWriteFZeroIdiom], (instrs XORPSrr, VXORPSrr, XORPDrr, VXORPDrr,
                                          ANDNPSrr, VANDNPSrr,
                                          ANDNPDrr, VANDNPDrr)>;
+
+def JWriteFZeroIdiomY : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroIdiomYmm]>,
+    SchedVar<NoSchedPred,                          [WriteFLogicY]>
+]>;
+def : InstRW<[JWriteFZeroIdiomY], (instrs VXORPSYrr, VXORPDYrr,
+                                          VANDNPSYrr, VANDNPDYrr)>;
 
 def JWriteVZeroIdiomLogic : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,

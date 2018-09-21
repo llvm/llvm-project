@@ -215,4 +215,19 @@ void XRayArgs::addArgs(const ToolChain &TC, const ArgList &Args,
     ModeOpt += Mode;
     CmdArgs.push_back(Args.MakeArgString(ModeOpt));
   }
+
+  SmallString<64> Bundle("-fxray-instrumentation-bundle=");
+  if (InstrumentationBundle.full()) {
+    Bundle += "all";
+  } else if (InstrumentationBundle.empty()) {
+    Bundle += "none";
+  } else {
+    if (InstrumentationBundle.has(XRayInstrKind::Function))
+      Bundle += "function";
+    if (InstrumentationBundle.has(XRayInstrKind::Custom))
+      Bundle += "custom";
+    if (InstrumentationBundle.has(XRayInstrKind::Typed))
+      Bundle += "typed";
+  }
+  CmdArgs.push_back(Args.MakeArgString(Bundle));
 }

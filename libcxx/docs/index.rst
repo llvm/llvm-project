@@ -80,8 +80,8 @@ reasons, but some of the major ones are:
 Platform and Compiler Support
 -----------------------------
 
-libc++ is known to work on the following platforms, using gcc-4.2 and
-clang  (lack of C++11 language support disables some functionality).
+libc++ is known to work on the following platforms, using gcc and
+clang.
 Note that functionality provided by ``<atomic>`` is only functional with clang
 and GCC.
 
@@ -105,7 +105,7 @@ C++ Dialect Support
 
 * C++11 - Complete
 * `C++14 - Complete <http://libcxx.llvm.org/cxx1y_status.html>`__
-* `C++1z - In Progress <http://libcxx.llvm.org/cxx1z_status.html>`__
+* `C++17 - In Progress <http://libcxx.llvm.org/cxx1z_status.html>`__
 * `Post C++14 Technical Specifications - In Progress <http://libcxx.llvm.org/ts1z_status.html>`__
 
 Notes and Known Issues

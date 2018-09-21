@@ -976,7 +976,7 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
 
       if (NumDifferences == 0)   // SAME GEP?
         return replaceInstUsesWith(I, // No comparison is needed here.
-                             Builder.getInt1(ICmpInst::isTrueWhenEqual(Cond)));
+          ConstantInt::get(I.getType(), ICmpInst::isTrueWhenEqual(Cond)));
 
       else if (NumDifferences == 1 && GEPsInBounds) {
         Value *LHSV = GEPLHS->getOperand(DiffOperand);

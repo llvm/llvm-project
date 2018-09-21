@@ -1139,7 +1139,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_LOCATION: {
-    if (Record.size() != 5)
+    if (Record.size() != 5 && Record.size() != 6)
       return error("Invalid record");
 
     IsDistinct = Record[0];
@@ -1147,8 +1147,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     unsigned Column = Record[2];
     Metadata *Scope = getMD(Record[3]);
     Metadata *InlinedAt = getMDOrNull(Record[4]);
+    bool ImplicitCode = Record.size() == 6 && Record[5];
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DILocation, (Context, Line, Column, Scope, InlinedAt)),
+        GET_OR_DISTINCT(DILocation, (Context, Line, Column, Scope, InlinedAt,
+                                     ImplicitCode)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1311,7 +1313,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                            (Context, Tag, Name, File, Line, Scope, BaseType,
                             SizeInBits, AlignInBits, OffsetInBits, Flags,
                             Elements, RuntimeLang, VTableHolder, TemplateParams,
-                            Identifier));
+                            Identifier, Discriminator));
     if (!IsNotUsedInTypeRef && Identifier)
       MetadataList.addTypeRef(*Identifier, *cast<DICompositeType>(CT));
 

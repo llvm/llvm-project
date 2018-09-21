@@ -1241,13 +1241,13 @@ static void
 dumpFullTypeStream(LinePrinter &Printer, LazyRandomTypeCollection &Types,
                    uint32_t NumTypeRecords, uint32_t NumHashBuckets,
                    FixedStreamArray<support::ulittle32_t> HashValues,
-                   bool Bytes, bool Extras) {
+                   TpiStream *Stream, bool Bytes, bool Extras) {
 
   Printer.formatLine("Showing {0:N} records", NumTypeRecords);
   uint32_t Width = NumDigits(TypeIndex::FirstNonSimpleIndex + NumTypeRecords);
 
   MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types,
-                           NumHashBuckets, HashValues);
+                           NumHashBuckets, HashValues, Stream);
 
   if (auto EC = codeview::visitTypeStream(Types, V)) {
     Printer.formatLine("An error occurred dumping type records: {0}",
@@ -1263,7 +1263,8 @@ static void dumpPartialTypeStream(LinePrinter &Printer,
       NumDigits(TypeIndex::FirstNonSimpleIndex + Stream.getNumTypeRecords());
 
   MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types,
-                           Stream.getNumHashBuckets(), Stream.getHashValues());
+                           Stream.getNumHashBuckets(), Stream.getHashValues(),
+                           &Stream);
 
   if (opts::dump::DumpTypeDependents) {
     // If we need to dump all dependents, then iterate each index and find
@@ -1325,7 +1326,8 @@ Error DumpOutputStyle::dumpTypesFromObjectFile() {
     Types.reset(Reader, 100);
 
     if (opts::dump::DumpTypes) {
-      dumpFullTypeStream(P, Types, 0, 0, {}, opts::dump::DumpTypeData, false);
+      dumpFullTypeStream(P, Types, 0, 0, {}, nullptr, opts::dump::DumpTypeData,
+                         false);
     } else if (opts::dump::DumpTypeExtras) {
       auto LocalHashes = LocallyHashedType::hashTypeCollection(Types);
       auto GlobalHashes = GloballyHashedType::hashTypeCollection(Types);
@@ -1394,11 +1396,14 @@ Error DumpOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
 
   auto &Types = (StreamIdx == StreamTPI) ? File.types() : File.ids();
 
+  // Enable resolving forward decls.
+  Stream.buildHashMap();
+
   if (DumpTypes || !Indices.empty()) {
     if (Indices.empty())
       dumpFullTypeStream(P, Types, Stream.getNumTypeRecords(),
                          Stream.getNumHashBuckets(), Stream.getHashValues(),
-                         DumpBytes, DumpExtras);
+                         &Stream, DumpBytes, DumpExtras);
     else {
       std::vector<TypeIndex> TiList(Indices.begin(), Indices.end());
       dumpPartialTypeStream(P, Types, Stream, TiList, DumpBytes, DumpExtras,

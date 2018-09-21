@@ -1822,8 +1822,8 @@ lldb::ProcessSP Platform::ConnectProcess(llvm::StringRef connect_url,
 
   if (!target) {
     TargetSP new_target_sp;
-    error = debugger.GetTargetList().CreateTarget(debugger, "", "", false,
-                                                  nullptr, new_target_sp);
+    error = debugger.GetTargetList().CreateTarget(
+        debugger, "", "", eLoadDependentsNo, nullptr, new_target_sp);
     target = new_target_sp.get();
   }
 

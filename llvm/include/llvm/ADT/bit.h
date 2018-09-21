@@ -20,8 +20,19 @@
 
 namespace llvm {
 
+// This implementation of bit_cast is different from the C++17 one in two ways:
+//  - It isn't constexpr because that requires compiler support.
+//  - It requires trivially-constructible To, to avoid UB in the implementation.
 template <typename To, typename From
           , typename = typename std::enable_if<sizeof(To) == sizeof(From)>::type
+#if (__has_feature(is_trivially_constructible) && defined(_LIBCPP_VERSION)) || \
+    (defined(__GNUC__) && __GNUC__ >= 5)
+          , typename = typename std::is_trivially_constructible<To>::type
+#elif __has_feature(is_trivially_constructible)
+          , typename = typename std::enable_if<__is_trivially_constructible(To)>::type
+#else
+  // See comment below.
+#endif
 #if (__has_feature(is_trivially_copyable) && defined(_LIBCPP_VERSION)) || \
     (defined(__GNUC__) && __GNUC__ >= 5)
           , typename = typename std::enable_if<std::is_trivially_copyable<To>::value>::type
@@ -38,17 +49,9 @@ template <typename To, typename From
 #endif
 >
 inline To bit_cast(const From &from) noexcept {
-  alignas(To) unsigned char storage[sizeof(To)];
-  std::memcpy(&storage, &from, sizeof(To));
-#if defined(__GNUC__)
-  // Before GCC 7.2, GCC thought that this violated strict aliasing.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#endif
-  return reinterpret_cast<To &>(storage);
-#if defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
+  To to;
+  std::memcpy(&to, &from, sizeof(To));
+  return to;
 }
 
 } // namespace llvm

@@ -275,8 +275,6 @@ typedef thread_return_t (THREAD_CALLING_CONV *thread_callback_t)(void* arg);
 // NOTE: Functions below must be defined in each run-time.
 void NORETURN Die();
 
-// FIXME: No, this shouldn't be in the sanitizer interface.
-SANITIZER_INTERFACE_ATTRIBUTE
 void NORETURN CheckFailed(const char *file, int line, const char *cond,
                           u64 v1, u64 v2);
 

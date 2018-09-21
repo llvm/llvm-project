@@ -35,8 +35,8 @@
        12:   30:}
         -:   31:
         -:   32:void initialize_grid() {
-       21:   33:  for (int ii = 0; ii < 2; ii++)
-       36:   34:    for (int jj = 0; jj < 2; jj++)
+        9:   33:  for (int ii = 0; ii < 2; ii++)
+       18:   34:    for (int jj = 0; jj < 2; jj++)
        18:   35:      assign(ii, jj);
         3:   36:}
         -:   37:
@@ -53,7 +53,7 @@
     #####:   48:    a += rand();
         -:   49:  }
         -:   50:
-       66:   51:  for (int ii = 0; ii < 10; ++ii) {
+       33:   51:  for (int ii = 0; ii < 10; ++ii) {
        30:   52:    switch (rand() % 5) {
         -:   53:      case 0:
         6:   54:        a += rand();
@@ -71,7 +71,7 @@
        30:   66:  }
         -:   67:
         3:   68:  A thing;
-25769803782:   69:  for (uint64_t ii = 0; ii < 4294967296; ++ii)
+12884901891:   69:  for (uint64_t ii = 0; ii < 4294967296; ++ii)
 12884901888:   70:    thing.B();
         -:   71:
         3:   72:  return a + 8 + grid[2][3] + len;

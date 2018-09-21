@@ -15,9 +15,8 @@ define amdgpu_kernel void @dpp_test(i32 addrspace(1)* %out, i32 %in1, i32 %in2) 
 }
 
 ; VI-LABEL: {{^}}dpp_test1:
-; VI-OPT: v_add_u32_e32 [[REG:v[0-9]+]], vcc, v{{[0-9]+}}, v{{[0-9]+}}
+; VI: v_add_u32_e32 [[REG:v[0-9]+]], vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; VI-NOOPT: v_mov_b32_e32 v{{[0-9]+}}, 0
-; VI-NOOPT: v_mov_b32_e32 [[REG:v[0-9]+]], v{{[0-9]+}}
 ; VI-NEXT: s_nop 0
 ; VI-NEXT: s_nop 0
 ; VI-NEXT: v_mov_b32_dpp v2, [[REG]] quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf

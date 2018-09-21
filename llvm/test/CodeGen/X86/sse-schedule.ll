@@ -6120,7 +6120,7 @@ define <4 x float> @test_fnop() nounwind {
 ; GENERIC-NEXT:    #APP
 ; GENERIC-NEXT:    nop # sched: [1:0.25]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    xorps %xmm0, %xmm0 # sched: [1:1.00]
+; GENERIC-NEXT:    xorps %xmm0, %xmm0 # sched: [0:0.25]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_fnop:
@@ -6148,7 +6148,7 @@ define <4 x float> @test_fnop() nounwind {
 ; SANDY-SSE-NEXT:    #APP
 ; SANDY-SSE-NEXT:    nop # sched: [1:0.25]
 ; SANDY-SSE-NEXT:    #NO_APP
-; SANDY-SSE-NEXT:    xorps %xmm0, %xmm0 # sched: [1:1.00]
+; SANDY-SSE-NEXT:    xorps %xmm0, %xmm0 # sched: [0:0.25]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_fnop:
@@ -6156,7 +6156,7 @@ define <4 x float> @test_fnop() nounwind {
 ; SANDY-NEXT:    #APP
 ; SANDY-NEXT:    nop # sched: [1:0.25]
 ; SANDY-NEXT:    #NO_APP
-; SANDY-NEXT:    vxorps %xmm0, %xmm0, %xmm0 # sched: [1:1.00]
+; SANDY-NEXT:    vxorps %xmm0, %xmm0, %xmm0 # sched: [0:0.25]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_fnop:

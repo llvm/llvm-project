@@ -5513,19 +5513,6 @@ static SDValue getShuffleVectorZeroOrUndef(SDValue V2, int Idx,
   return DAG.getVectorShuffle(VT, SDLoc(V2), V1, V2, MaskVec);
 }
 
-static SDValue peekThroughBitcasts(SDValue V) {
-  while (V.getNode() && V.getOpcode() == ISD::BITCAST)
-    V = V.getOperand(0);
-  return V;
-}
-
-static SDValue peekThroughOneUseBitcasts(SDValue V) {
-  while (V.getNode() && V.getOpcode() == ISD::BITCAST &&
-         V.getOperand(0).hasOneUse())
-    V = V.getOperand(0);
-  return V;
-}
-
 // Peek through EXTRACT_SUBVECTORs - typically used for AVX1 256-bit intops.
 static SDValue peekThroughEXTRACT_SUBVECTORs(SDValue V) {
   while (V.getOpcode() == ISD::EXTRACT_SUBVECTOR)
@@ -31021,74 +31008,6 @@ combineRedundantDWordShuffle(SDValue N, MutableArrayRef<int> Mask,
   return V;
 }
 
-/// Search for a combinable shuffle across a chain ending in pshuflw or
-/// pshufhw.
-///
-/// We walk up the chain, skipping shuffles of the other half and looking
-/// through shuffles which switch halves trying to find a shuffle of the same
-/// pair of dwords.
-static bool combineRedundantHalfShuffle(SDValue N, MutableArrayRef<int> Mask,
-                                        SelectionDAG &DAG,
-                                        TargetLowering::DAGCombinerInfo &DCI) {
-  assert(
-      (N.getOpcode() == X86ISD::PSHUFLW || N.getOpcode() == X86ISD::PSHUFHW) &&
-      "Called with something other than an x86 128-bit half shuffle!");
-  SDLoc DL(N);
-  unsigned CombineOpcode = N.getOpcode();
-
-  // Walk up a single-use chain looking for a combinable shuffle.
-  SDValue V = N.getOperand(0);
-  for (; V.hasOneUse(); V = V.getOperand(0)) {
-    switch (V.getOpcode()) {
-    default:
-      return false; // Nothing combined!
-
-    case ISD::BITCAST:
-      // Skip bitcasts as we always know the type for the target specific
-      // instructions.
-      continue;
-
-    case X86ISD::PSHUFLW:
-    case X86ISD::PSHUFHW:
-      if (V.getOpcode() == CombineOpcode)
-        break;
-
-      // Other-half shuffles are no-ops.
-      continue;
-    }
-    // Break out of the loop if we break out of the switch.
-    break;
-  }
-
-  if (!V.hasOneUse())
-    // We fell out of the loop without finding a viable combining instruction.
-    return false;
-
-  // Combine away the bottom node as its shuffle will be accumulated into
-  // a preceding shuffle.
-  DCI.CombineTo(N.getNode(), N.getOperand(0), /*AddTo*/ true);
-
-  // Record the old value.
-  SDValue Old = V;
-
-  // Merge this node's mask and our incoming mask (adjusted to account for all
-  // the pshufd instructions encountered).
-  SmallVector<int, 4> VMask = getPSHUFShuffleMask(V);
-  for (int &M : Mask)
-    M = VMask[M];
-  V = DAG.getNode(V.getOpcode(), DL, MVT::v8i16, V.getOperand(0),
-                  getV4X86ShuffleImm8ForMask(Mask, DL, DAG));
-
-  // Check that the shuffles didn't cancel each other out. If not, we need to
-  // combine to the new one.
-  if (Old != V)
-    // Replace the combinable shuffle with the combined one, updating all users
-    // so that we re-evaluate the chain here.
-    DCI.CombineTo(Old.getNode(), V, /*AddTo*/ true);
-
-  return true;
-}
-
 /// Try to combine x86 target specific shuffles.
 static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
                                     TargetLowering::DAGCombinerInfo &DCI,
@@ -31155,40 +31074,6 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     Mask = getPSHUFShuffleMask(N);
     assert(Mask.size() == 4);
     break;
-  case X86ISD::UNPCKL: {
-    // Combine X86ISD::UNPCKL and ISD::VECTOR_SHUFFLE into X86ISD::UNPCKH, in
-    // which X86ISD::UNPCKL has a ISD::UNDEF operand, and ISD::VECTOR_SHUFFLE
-    // moves upper half elements into the lower half part. For example:
-    //
-    // t2: v16i8 = vector_shuffle<8,9,10,11,12,13,14,15,u,u,u,u,u,u,u,u> t1,
-    //     undef:v16i8
-    // t3: v16i8 = X86ISD::UNPCKL undef:v16i8, t2
-    //
-    // will be combined to:
-    //
-    // t3: v16i8 = X86ISD::UNPCKH undef:v16i8, t1
-
-    // This is only for 128-bit vectors. From SSE4.1 onward this combine may not
-    // happen due to advanced instructions.
-    if (!VT.is128BitVector())
-      return SDValue();
-
-    auto Op0 = N.getOperand(0);
-    auto Op1 = N.getOperand(1);
-    if (Op0.isUndef() && Op1.getOpcode() == ISD::VECTOR_SHUFFLE) {
-      ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(Op1.getNode())->getMask();
-
-      unsigned NumElts = VT.getVectorNumElements();
-      SmallVector<int, 8> ExpectedMask(NumElts, -1);
-      std::iota(ExpectedMask.begin(), ExpectedMask.begin() + NumElts / 2,
-                NumElts / 2);
-
-      auto ShufOp = Op1.getOperand(0);
-      if (isShuffleEquivalent(Op1, ShufOp, Mask, ExpectedMask))
-        return DAG.getNode(X86ISD::UNPCKH, DL, VT, N.getOperand(0), ShufOp);
-    }
-    return SDValue();
-  }
   case X86ISD::MOVSD:
   case X86ISD::MOVSS: {
     SDValue N0 = N.getOperand(0);
@@ -31319,9 +31204,6 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
   case X86ISD::PSHUFLW:
   case X86ISD::PSHUFHW:
     assert(VT.getVectorElementType() == MVT::i16 && "Bad word shuffle type!");
-
-    if (combineRedundantHalfShuffle(N, Mask, DAG, DCI))
-      return SDValue(); // We combined away this shuffle, so we're done.
 
     // See if this reduces to a PSHUFD which is no more expensive and can
     // combine with more operations. Note that it has to at least flip the
