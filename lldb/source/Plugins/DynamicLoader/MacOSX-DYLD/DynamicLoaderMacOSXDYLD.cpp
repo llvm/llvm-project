@@ -975,8 +975,9 @@ void DynamicLoaderMacOSXDYLD::UpdateImageInfosHeaderAndLoadCommands(
         // re-add it back to make sure it is always in the list.
         ModuleSP dyld_module_sp(GetDYLDModule());
 
+        const bool get_dependent_images = false;
         m_process->GetTarget().SetExecutableModule(exe_module_sp,
-                                                   eLoadDependentsNo);
+                                                   get_dependent_images);
 
         if (dyld_module_sp) {
           if (target.GetImages().AppendIfNeeded(dyld_module_sp)) {

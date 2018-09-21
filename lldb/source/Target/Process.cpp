@@ -3345,8 +3345,7 @@ void Process::CompleteAttach() {
     }
   }
   if (new_executable_module_sp) {
-    GetTarget().SetExecutableModule(new_executable_module_sp,
-                                    eLoadDependentsNo);
+    GetTarget().SetExecutableModule(new_executable_module_sp, false);
     if (log) {
       ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
       log->Printf(
