@@ -34,6 +34,8 @@
 
 namespace clang {
 
+class DeclarationName;
+class DeclarationNameTable;
 class IdentifierInfo;
 class LangOptions;
 class MultiKeywordSelector;
@@ -42,12 +44,18 @@ class SourceLocation;
 /// A simple pair of identifier info and location.
 using IdentifierLocPair = std::pair<IdentifierInfo *, SourceLocation>;
 
+/// IdentifierInfo and other related classes are aligned to
+/// 8 bytes so that DeclarationName can use the lower 3 bits
+/// of a pointer to one of these classes.
+enum { IdentifierInfoAlignment = 8 };
+
 /// One of these records is kept for each identifier that
 /// is lexed.  This contains information about whether the token was \#define'd,
 /// is a language keyword, or if it is a front-end token of some sort (e.g. a
 /// variable or function name).  The preprocessor keeps this information in a
 /// set, and all tok::identifier tokens have a pointer to one of these.
-class IdentifierInfo {
+/// It is aligned to 8 bytes because DeclarationName needs the lower 3 bits.
+class alignas(IdentifierInfoAlignment) IdentifierInfo {
   friend class IdentifierTable;
 
   // Front-end token ID or tok::identifier.
@@ -308,10 +316,9 @@ public:
   /// language.
   bool isCPlusPlusKeyword(const LangOptions &LangOpts) const;
 
-  /// getFETokenInfo/setFETokenInfo - The language front-end is allowed to
-  /// associate arbitrary metadata with this token.
-  template<typename T>
-  T *getFETokenInfo() const { return static_cast<T*>(FETokenInfo); }
+  /// Get and set FETokenInfo. The language front-end is allowed to associate
+  /// arbitrary metadata with this token.
+  void *getFETokenInfo() const { return FETokenInfo; }
   void setFETokenInfo(void *T) { FETokenInfo = T; }
 
   /// Return true if the Preprocessor::HandleIdentifier must be called
@@ -677,16 +684,22 @@ enum ObjCStringFormatFamily {
 /// accounts for 78% of all selectors in Cocoa.h.
 class Selector {
   friend class Diagnostic;
+  friend class SelectorTable; // only the SelectorTable can create these
+  friend class DeclarationName; // and the AST's DeclarationName.
 
   enum IdentifierInfoFlag {
-    // Empty selector = 0.
-    ZeroArg  = 0x1,
-    OneArg   = 0x2,
-    MultiArg = 0x3,
-    ArgFlags = ZeroArg|OneArg
+    // Empty selector = 0. Note that these enumeration values must
+    // correspond to the enumeration values of DeclarationName::StoredNameKind
+    ZeroArg  = 0x01,
+    OneArg   = 0x02,
+    MultiArg = 0x07,
+    ArgFlags = 0x07
   };
 
-  // a pointer to the MultiKeywordSelector or IdentifierInfo.
+  /// A pointer to the MultiKeywordSelector or IdentifierInfo. We use the low
+  /// three bits of InfoPtr to store an IdentifierInfoFlag. Note that in any
+  /// case IdentifierInfo and MultiKeywordSelector are already aligned to
+  /// 8 bytes even on 32 bits archs because of DeclarationName.
   uintptr_t InfoPtr = 0;
 
   Selector(IdentifierInfo *II, unsigned nArgs) {
@@ -721,13 +734,10 @@ class Selector {
   static ObjCStringFormatFamily getStringFormatFamilyImpl(Selector sel);
 
 public:
-  friend class SelectorTable; // only the SelectorTable can create these
-  friend class DeclarationName; // and the AST's DeclarationName.
-
   /// The default ctor should only be used when creating data structures that
   ///  will contain selectors.
   Selector() = default;
-  Selector(uintptr_t V) : InfoPtr(V) {}
+  explicit Selector(uintptr_t V) : InfoPtr(V) {}
 
   /// operator==/!= - Indicate whether the specified selectors are identical.
   bool operator==(Selector RHS) const {
@@ -856,38 +866,67 @@ public:
   static std::string getPropertyNameFromSetterSelector(Selector Sel);
 };
 
-/// DeclarationNameExtra - Common base of the MultiKeywordSelector,
-/// CXXSpecialName, and CXXOperatorIdName classes, all of which are
-/// private classes that describe different kinds of names.
-class DeclarationNameExtra {
-public:
-  /// ExtraKind - The kind of "extra" information stored in the
-  /// DeclarationName. See @c ExtraKindOrNumArgs for an explanation of
-  /// how these enumerator values are used.
+namespace detail {
+
+/// DeclarationNameExtra is used as a base of various uncommon special names.
+/// This class is needed since DeclarationName has not enough space to store
+/// the kind of every possible names. Therefore the kind of common names is
+/// stored directly in DeclarationName, and the kind of uncommon names is
+/// stored in DeclarationNameExtra. It is aligned to 8 bytes because
+/// DeclarationName needs the lower 3 bits to store the kind of common names.
+/// DeclarationNameExtra is tightly coupled to DeclarationName and any change
+/// here is very likely to require changes in DeclarationName(Table).
+class alignas(IdentifierInfoAlignment) DeclarationNameExtra {
+  friend class clang::DeclarationName;
+  friend class clang::DeclarationNameTable;
+
+protected:
+  /// The kind of "extra" information stored in the DeclarationName. See
+  /// @c ExtraKindOrNumArgs for an explanation of how these enumerator values
+  /// are used. Note that DeclarationName depends on the numerical values
+  /// of the enumerators in this enum. See DeclarationName::StoredNameKind
+  /// for more info.
   enum ExtraKind {
-    CXXConstructor = 0,
-    CXXDestructor,
-    CXXConversionFunction,
-#define OVERLOADED_OPERATOR(Name,Spelling,Token,Unary,Binary,MemberOnly) \
-    CXXOperator##Name,
-#include "clang/Basic/OperatorKinds.def"
-    CXXDeductionGuide,
-    CXXLiteralOperator,
+    CXXDeductionGuideName,
+    CXXLiteralOperatorName,
     CXXUsingDirective,
-    NUM_EXTRA_KINDS
+    ObjCMultiArgSelector
   };
 
-  /// ExtraKindOrNumArgs - Either the kind of C++ special name or
-  /// operator-id (if the value is one of the CXX* enumerators of
-  /// ExtraKind), in which case the DeclarationNameExtra is also a
-  /// CXXSpecialName, (for CXXConstructor, CXXDestructor, or
-  /// CXXConversionFunction) CXXOperatorIdName, or CXXLiteralOperatorName,
-  /// it may be also name common to C++ using-directives (CXXUsingDirective),
-  /// otherwise it is NUM_EXTRA_KINDS+NumArgs, where NumArgs is the number of
-  /// arguments in the Objective-C selector, in which case the
-  /// DeclarationNameExtra is also a MultiKeywordSelector.
+  /// ExtraKindOrNumArgs has one of the following meaning:
+  ///  * The kind of an uncommon C++ special name. This DeclarationNameExtra
+  ///    is in this case in fact either a CXXDeductionGuideNameExtra or
+  ///    a CXXLiteralOperatorIdName.
+  ///
+  ///  * It may be also name common to C++ using-directives (CXXUsingDirective),
+  ///
+  ///  * Otherwise it is ObjCMultiArgSelector+NumArgs, where NumArgs is
+  ///    the number of arguments in the Objective-C selector, in which
+  ///    case the DeclarationNameExtra is also a MultiKeywordSelector.
   unsigned ExtraKindOrNumArgs;
+
+  DeclarationNameExtra(ExtraKind Kind) : ExtraKindOrNumArgs(Kind) {}
+  DeclarationNameExtra(unsigned NumArgs)
+      : ExtraKindOrNumArgs(ObjCMultiArgSelector + NumArgs) {}
+
+  /// Return the corresponding ExtraKind.
+  ExtraKind getKind() const {
+    return static_cast<ExtraKind>(ExtraKindOrNumArgs >
+                                          (unsigned)ObjCMultiArgSelector
+                                      ? (unsigned)ObjCMultiArgSelector
+                                      : ExtraKindOrNumArgs);
+  }
+
+  /// Return the number of arguments in an ObjC selector. Only valid when this
+  /// is indeed an ObjCMultiArgSelector.
+  unsigned getNumArgs() const {
+    assert(ExtraKindOrNumArgs >= (unsigned)ObjCMultiArgSelector &&
+           "getNumArgs called but this is not an ObjC selector!");
+    return ExtraKindOrNumArgs - (unsigned)ObjCMultiArgSelector;
+  }
 };
+
+} // namespace detail
 
 }  // namespace clang
 

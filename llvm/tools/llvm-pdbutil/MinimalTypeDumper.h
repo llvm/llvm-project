@@ -20,15 +20,18 @@ class LazyRandomTypeCollection;
 
 namespace pdb {
 class LinePrinter;
+class TpiStream;
 
 class MinimalTypeDumpVisitor : public codeview::TypeVisitorCallbacks {
 public:
   MinimalTypeDumpVisitor(LinePrinter &P, uint32_t Width, bool RecordBytes,
                          bool Hashes, codeview::LazyRandomTypeCollection &Types,
                          uint32_t NumHashBuckets,
-                         FixedStreamArray<support::ulittle32_t> HashValues)
+                         FixedStreamArray<support::ulittle32_t> HashValues,
+                         pdb::TpiStream *Stream)
       : P(P), Width(Width), RecordBytes(RecordBytes), Hashes(Hashes),
-        Types(Types), NumHashBuckets(NumHashBuckets), HashValues(HashValues) {}
+        Types(Types), NumHashBuckets(NumHashBuckets), HashValues(HashValues),
+        Stream(Stream) {}
 
   Error visitTypeBegin(codeview::CVType &Record,
                        codeview::TypeIndex Index) override;
@@ -55,7 +58,9 @@ private:
   bool Hashes = false;
   codeview::LazyRandomTypeCollection &Types;
   uint32_t NumHashBuckets;
+  codeview::TypeIndex CurrentTypeIndex;
   FixedStreamArray<support::ulittle32_t> HashValues;
+  pdb::TpiStream *Stream = nullptr;
 };
 } // namespace pdb
 } // namespace llvm

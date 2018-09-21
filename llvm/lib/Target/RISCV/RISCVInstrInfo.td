@@ -161,9 +161,13 @@ def uimm20_auipc : UImm20Operand {
   let ParserMatchClass = UImmAsmOperand<20, "AUIPC">;
 }
 
+def Simm21Lsb0JALAsmOperand : SImmAsmOperand<21, "Lsb0JAL"> {
+  let ParserMethod = "parseJALOffset";
+}
+
 // A 21-bit signed immediate where the least significant bit is zero.
-def simm21_lsb0 : Operand<OtherVT> {
-  let ParserMatchClass = SImmAsmOperand<21, "Lsb0">;
+def simm21_lsb0_jal : Operand<OtherVT> {
+  let ParserMatchClass = Simm21Lsb0JALAsmOperand;
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<21>";
   let MCOperandPredicate = [{
@@ -296,7 +300,7 @@ def AUIPC : RVInstU<OPC_AUIPC, (outs GPR:$rd), (ins uimm20_auipc:$imm20),
                     "auipc", "$rd, $imm20">;
 
 let isCall = 1 in
-def JAL : RVInstJ<OPC_JAL, (outs GPR:$rd), (ins simm21_lsb0:$imm20),
+def JAL : RVInstJ<OPC_JAL, (outs GPR:$rd), (ins simm21_lsb0_jal:$imm20),
                   "jal", "$rd, $imm20">;
 
 let isCall = 1 in
@@ -520,8 +524,8 @@ def : InstAlias<"bleu $rs, $rt, $offset",
                 (BGEU GPR:$rt, GPR:$rs, simm13_lsb0:$offset), 0>;
 
 // "ret" has more weight since "ret" and "jr" alias the same "jalr" instruction.
-def : InstAlias<"j $offset",   (JAL  X0, simm21_lsb0:$offset)>;
-def : InstAlias<"jal $offset", (JAL  X1, simm21_lsb0:$offset)>;
+def : InstAlias<"j $offset",   (JAL  X0, simm21_lsb0_jal:$offset)>;
+def : InstAlias<"jal $offset", (JAL  X1, simm21_lsb0_jal:$offset)>;
 def : InstAlias<"jr $rs",      (JALR X0, GPR:$rs, 0)>;
 def : InstAlias<"jalr $rs",    (JALR X1, GPR:$rs, 0)>;
 def : InstAlias<"ret",         (JALR X0,      X1, 0), 2>;
@@ -707,8 +711,8 @@ def : BccSwapPat<setule, BGEU>;
 def : Pat<(brcond GPR:$cond, bb:$imm12), (BNE GPR:$cond, X0, bb:$imm12)>;
 
 let isBarrier = 1, isBranch = 1, isTerminator = 1 in
-def PseudoBR : Pseudo<(outs), (ins simm21_lsb0:$imm20), [(br bb:$imm20)]>,
-               PseudoInstExpansion<(JAL X0, simm21_lsb0:$imm20)>;
+def PseudoBR : Pseudo<(outs), (ins simm21_lsb0_jal:$imm20), [(br bb:$imm20)]>,
+               PseudoInstExpansion<(JAL X0, simm21_lsb0_jal:$imm20)>;
 
 let isCall = 1, Defs=[X1] in
 let isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in

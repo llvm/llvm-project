@@ -60,7 +60,7 @@ branch  1 taken 33%
 branch  0 taken 67%
 branch  1 taken 33%
         8:   34-block  2
-        8:   35:      assign(ii, jj);
+       12:   35:      assign(ii, jj);
         8:   35-block  0
         4:   35-block  1
         2:   36:}

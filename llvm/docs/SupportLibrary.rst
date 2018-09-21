@@ -58,10 +58,11 @@ Don't Expose System Headers
 ---------------------------
 
 The Support Library must shield LLVM from **all** system headers. To obtain
-system level functionality, LLVM source must ``#include "llvm/System/Thing.h"``
-and nothing else. This means that ``Thing.h`` cannot expose any system header
-files. This protects LLVM from accidentally using system specific functionality
-and only allows it via the ``lib/Support`` interface.
+system level functionality, LLVM source must 
+``#include "llvm/Support/Thing.h"`` and nothing else. This means that
+``Thing.h`` cannot expose any system header files. This protects LLVM from
+accidentally using system specific functionality and only allows it via
+the ``lib/Support`` interface.
 
 Use Standard C Headers
 ----------------------
@@ -213,20 +214,20 @@ the ``LLVM_ON_UNIX`` and ``_WIN32`` ``#defines``.  Each source file in
 ``lib/Support``, after implementing the generic (operating system independent)
 functionality needs to include the correct implementation using a set of
 ``#if defined(LLVM_ON_XYZ)`` directives. For example, if we had
-``lib/Support/File.cpp``, we'd expect to see in that file:
+``lib/Support/Path.cpp``, we'd expect to see in that file:
 
 .. code-block:: c++
 
   #if defined(LLVM_ON_UNIX)
-  #include "Unix/File.inc"
+  #include "Unix/Path.inc"
   #endif
   #if defined(_WIN32)
-  #include "Windows/File.inc"
+  #include "Windows/Path.inc"
   #endif
 
-The implementation in ``lib/Support/Unix/File.cpp`` should handle all Unix
-variants. The implementation in ``lib/Support/Windows/File.cpp`` should handle 
-all Windows variants.  What this does is quickly differentiate the basic class
+The implementation in ``lib/Support/Unix/Path.inc`` should handle all Unix
+variants. The implementation in ``lib/Support/Windows/Path.inc`` should handle 
+all Windows variants.  What this does is quickly inc the basic class
 of operating system that will provide the implementation. The specific details
 for a given platform must still be determined through the use of ``#ifdef``.
 

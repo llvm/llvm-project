@@ -476,6 +476,9 @@ public:
     return nullptr;
   }
 
+  // For actions that have to be performed before a label is emitted
+  virtual void doBeforeLabelEmit(MCSymbol *Symbol) {}
+  
   virtual void onLabelParsed(MCSymbol *Symbol) {}
 
   /// Ensure that all previously parsed instructions have been emitted to the

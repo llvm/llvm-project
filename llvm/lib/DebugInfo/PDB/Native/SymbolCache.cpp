@@ -26,6 +26,7 @@ static const struct BuiltinTypeEntry {
   PDB_BuiltinType Type;
   uint32_t Size;
 } BuiltinTypes[] = {
+    {codeview::SimpleTypeKind::None, PDB_BuiltinType::None, 0},
     {codeview::SimpleTypeKind::Int16Short, PDB_BuiltinType::Int, 2},
     {codeview::SimpleTypeKind::UInt16Short, PDB_BuiltinType::UInt, 2},
     {codeview::SimpleTypeKind::Int32, PDB_BuiltinType::Int, 4},

@@ -16,6 +16,7 @@
 
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
@@ -1557,13 +1558,6 @@ class DeclContext {
   /// methods in ObjCMethodDecl should be updated appropriately.
   class ObjCMethodDeclBitfields {
     friend class ObjCMethodDecl;
-
-    /// This is needed for the bitwidth of Family below but
-    /// is defined in Basic/IdentifierTable.h which we do not include.
-    /// To avoid mismatches between the two definitions we have
-    /// a static_assert in the ctor of ObjCMethodDecl which checks
-    /// that these two ObjCMethodFamilyBitWidth are equal.
-    enum { ObjCMethodFamilyBitWidth = 4 };
 
     /// For the bits in DeclContextBitfields.
     uint64_t : NumDeclContextBits;

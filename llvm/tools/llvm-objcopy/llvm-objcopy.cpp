@@ -892,6 +892,11 @@ static DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
     exit(0);
   }
 
+  if (InputArgs.hasArg(OBJCOPY_version)) {
+    cl::PrintVersionMessage();
+    exit(0);
+  }
+
   SmallVector<const char *, 2> Positional;
 
   for (auto Arg : InputArgs.filtered(OBJCOPY_UNKNOWN))
@@ -1016,6 +1021,11 @@ static DriverConfig parseStripOptions(ArrayRef<const char *> ArgsArr) {
 
   if (InputArgs.hasArg(STRIP_help)) {
     T.PrintHelp(outs(), "llvm-strip", "strip tool");
+    exit(0);
+  }
+
+  if (InputArgs.hasArg(STRIP_version)) {
+    cl::PrintVersionMessage();
     exit(0);
   }
 

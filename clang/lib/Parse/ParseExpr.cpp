@@ -1766,6 +1766,8 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
 
         Expr *Base = LHS.get();
         Expr *CorrectedBase = CorrectedLHS.get();
+        if (!CorrectedBase && !getLangOpts().CPlusPlus)
+          CorrectedBase = Base;
 
         // Code completion for a member access expression.
         Actions.CodeCompleteMemberReferenceExpr(

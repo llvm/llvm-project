@@ -1,5 +1,3 @@
-# FIXME: Disabled on Windows since LLVMFuzzerInitialize does not yet work.
-UNSUPPORTED: windows
 CHECK: BINGO
 RUN: %cpp_compiler %S/InitializeTest.cpp -o %t-InitializeTest
 RUN: not %run %t-InitializeTest -use_value_profile=1 2>&1 | FileCheck %s

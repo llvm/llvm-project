@@ -258,19 +258,3 @@ const char *llvm::WebAssembly::TypeToString(MVT Ty) {
     llvm_unreachable("unsupported type");
   }
 }
-
-const char *llvm::WebAssembly::TypeToString(wasm::ValType Type) {
-  switch (Type) {
-  case wasm::ValType::I32:
-    return "i32";
-  case wasm::ValType::I64:
-    return "i64";
-  case wasm::ValType::F32:
-    return "f32";
-  case wasm::ValType::F64:
-    return "f64";
-  case wasm::ValType::EXCEPT_REF:
-    return "except_ref";
-  }
-  llvm_unreachable("unsupported type");
-}

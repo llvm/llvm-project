@@ -24,6 +24,7 @@ using TagStats = std::unordered_map<PDB_SymType, int>;
 
 raw_ostream &operator<<(raw_ostream &OS, const PDB_VariantType &Value);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_CallingConv &Conv);
+raw_ostream &operator<<(raw_ostream &OS, const PDB_BuiltinType &Type);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_DataKind &Data);
 raw_ostream &operator<<(raw_ostream &OS, const codeview::RegisterId &Reg);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_LocType &Loc);

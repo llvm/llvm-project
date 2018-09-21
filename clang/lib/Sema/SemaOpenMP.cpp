@@ -12333,6 +12333,26 @@ static bool checkMapConflicts(
         // An expression is a subset of the other.
         if (CurrentRegionOnly && (CI == CE || SI == SE)) {
           if (CKind == OMPC_map) {
+            if (CI != CE || SI != SE) {
+              // Allow constructs like this: map(s, s.ptr[0:1]), where s.ptr is
+              // a pointer.
+              auto Begin =
+                  CI != CE ? CurComponents.begin() : StackComponents.begin();
+              auto End = CI != CE ? CurComponents.end() : StackComponents.end();
+              auto It = Begin;
+              while (It != End && !It->getAssociatedDeclaration())
+                std::advance(It, 1);
+              assert(It != End &&
+                     "Expected at least one component with the declaration.");
+              if (It != Begin && It->getAssociatedDeclaration()
+                                     ->getType()
+                                     .getCanonicalType()
+                                     ->isAnyPointerType()) {
+                IsEnclosedByDataEnvironmentExpr = false;
+                EnclosingExpr = nullptr;
+                return false;
+              }
+            }
             SemaRef.Diag(ELoc, diag::err_omp_map_shared_storage) << ERange;
           } else {
             assert(CKind == OMPC_to || CKind == OMPC_from);

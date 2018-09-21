@@ -990,8 +990,8 @@ public:
   /// Set loop counter for the specified loop.
   void setLoopCounter(unsigned NumLoop, Expr *Counter);
   /// Get loops counter for the specified loop.
-  Expr *getLoopCunter(unsigned NumLoop);
-  const Expr *getLoopCunter(unsigned NumLoop) const;
+  Expr *getLoopCounter(unsigned NumLoop);
+  const Expr *getLoopCounter(unsigned NumLoop) const;
 
   child_range children() { return child_range(&NumForLoops, &NumForLoops + 1); }
 

@@ -591,9 +591,7 @@ int main(int argc, char **argv) {
 #pragma omp target map(s.b[:5])
 // expected-error@+1 {{variable already marked as mapped in current construct}}
   { s.a++; }
-// expected-note@+1 {{used here}}
 #pragma omp target map(s.p[:5])
-// expected-error@+1 {{variable already marked as mapped in current construct}}
   { s.a++; }
 // expected-note@+1 {{used here}}
 #pragma omp target map(s.s.sa[3].a)

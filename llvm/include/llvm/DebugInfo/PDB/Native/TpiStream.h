@@ -58,9 +58,16 @@ public:
 
   codeview::LazyRandomTypeCollection &typeCollection() { return *Types; }
 
+  Expected<codeview::TypeIndex>
+  findFullDeclForForwardRef(codeview::TypeIndex ForwardRefTI) const;
+
   BinarySubstreamRef getTypeRecordsSubstream() const;
 
   Error commit();
+
+  void buildHashMap();
+
+  bool supportsTypeLookup() const;
 
 private:
   PDBFile &Pdb;
@@ -76,6 +83,8 @@ private:
   FixedStreamArray<support::ulittle32_t> HashValues;
   FixedStreamArray<codeview::TypeIndexOffset> TypeIndexOffsets;
   HashTable<support::ulittle32_t> HashAdjusters;
+
+  std::vector<std::vector<codeview::TypeIndex>> HashMap;
 
   const TpiStreamHeader *Header;
 };

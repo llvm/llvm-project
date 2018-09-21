@@ -666,28 +666,10 @@ SBValue SBFrame::FindVariable(const char *name,
     if (stop_locker.TryLock(&process->GetRunLock())) {
       frame = exe_ctx.GetFramePtr();
       if (frame) {
-        VariableList variable_list;
-        SymbolContext sc(frame->GetSymbolContext(eSymbolContextBlock));
+        value_sp = frame->FindVariable(ConstString(name));
 
-        if (sc.block) {
-          const bool can_create = true;
-          const bool get_parent_variables = true;
-          const bool stop_if_block_is_inlined_function = true;
-
-          if (sc.block->AppendVariables(
-                  can_create, get_parent_variables,
-                  stop_if_block_is_inlined_function,
-                  [frame](Variable *v) { return v->IsInScope(frame); },
-                  &variable_list)) {
-            var_sp = variable_list.FindVariable(ConstString(name));
-          }
-        }
-
-        if (var_sp) {
-          value_sp =
-              frame->GetValueObjectForFrameVariable(var_sp, eNoDynamicValues);
+        if (value_sp)
           sb_value.SetSP(value_sp, use_dynamic);
-        }
       } else {
         if (log)
           log->Printf("SBFrame::FindVariable () => error: could not "

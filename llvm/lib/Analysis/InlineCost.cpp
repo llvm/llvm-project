@@ -137,7 +137,7 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   bool HasReturn;
   bool HasIndirectBr;
   bool HasUninlineableIntrinsic;
-  bool UsesVarArgs;
+  bool InitsVargArgs;
 
   /// Number of bytes allocated statically by the callee.
   uint64_t AllocatedSize;
@@ -283,7 +283,7 @@ public:
         IsCallerRecursive(false), IsRecursiveCall(false),
         ExposesReturnsTwice(false), HasDynamicAlloca(false),
         ContainsNoDuplicateCall(false), HasReturn(false), HasIndirectBr(false),
-        HasUninlineableIntrinsic(false), UsesVarArgs(false), AllocatedSize(0),
+        HasUninlineableIntrinsic(false), InitsVargArgs(false), AllocatedSize(0),
         NumInstructions(0), NumVectorInstructions(0), VectorBonus(0),
         SingleBBBonus(0), EnableLoadElimination(true), LoadEliminationCost(0),
         NumConstantArgs(0), NumConstantOffsetPtrArgs(0), NumAllocaArgs(0),
@@ -1239,8 +1239,7 @@ bool CallAnalyzer::visitCallSite(CallSite CS) {
         HasUninlineableIntrinsic = true;
         return false;
       case Intrinsic::vastart:
-      case Intrinsic::vaend:
-        UsesVarArgs = true;
+        InitsVargArgs = true;
         return false;
       }
     }
@@ -1587,7 +1586,7 @@ CallAnalyzer::analyzeBlock(BasicBlock *BB,
       IR = "indirect branch";
     else if (HasUninlineableIntrinsic)
       IR = "uninlinable intrinsic";
-    else if (UsesVarArgs)
+    else if (InitsVargArgs)
       IR = "varargs";
     if (!IR) {
       if (ORE)
@@ -2079,9 +2078,8 @@ bool llvm::isInlineViable(Function &F) {
         // Disallow inlining functions that call @llvm.localescape. Doing this
         // correctly would require major changes to the inliner.
         case llvm::Intrinsic::localescape:
-        // Disallow inlining of functions that access VarArgs.
+        // Disallow inlining of functions that initialize VarArgs with va_start.
         case llvm::Intrinsic::vastart:
-        case llvm::Intrinsic::vaend:
           return false;
         }
     }

@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "index/Index.h"
 #include "index/Serialization.h"
 #include "index/SymbolYAML.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -35,6 +36,7 @@ CanonicalDeclaration:
   End:
     Line: 1
     Column: 1
+Origin:    4
 Flags:    1
 Documentation:    'Foo doc'
 ReturnType:    'int'
@@ -82,6 +84,7 @@ TEST(SerializationTest, YAMLConversions) {
   EXPECT_EQ(Sym1.Documentation, "Foo doc");
   EXPECT_EQ(Sym1.ReturnType, "int");
   EXPECT_EQ(Sym1.CanonicalDeclaration.FileURI, "file:///path/foo.h");
+  EXPECT_EQ(Sym1.Origin, SymbolOrigin::Static);
   EXPECT_TRUE(Sym1.Flags & Symbol::IndexedForCodeCompletion);
   EXPECT_FALSE(Sym1.Flags & Symbol::Deprecated);
   EXPECT_THAT(Sym1.IncludeHeaders,

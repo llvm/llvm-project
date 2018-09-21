@@ -49,7 +49,7 @@ SnippetGenerator::generateConfigurations(unsigned Opcode) const {
       }
       if (CT.ScratchSpacePointerInReg)
         BC.LiveIns.push_back(CT.ScratchSpacePointerInReg);
-      BC.RegsToDef = computeRegsToDef(CT.Instructions);
+      BC.RegisterInitialValues = computeRegisterInitialValues(CT.Instructions);
       Output.push_back(std::move(BC));
     }
     return Output;
@@ -57,14 +57,14 @@ SnippetGenerator::generateConfigurations(unsigned Opcode) const {
     return E.takeError();
 }
 
-std::vector<unsigned> SnippetGenerator::computeRegsToDef(
+std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
     const std::vector<InstructionBuilder> &Instructions) const {
   // Collect all register uses and create an assignment for each of them.
   // Ignore memory operands which are handled separately.
   // Loop invariant: DefinedRegs[i] is true iif it has been set at least once
   // before the current instruction.
   llvm::BitVector DefinedRegs = RATC.emptyRegisters();
-  std::vector<unsigned> RegsToDef;
+  std::vector<RegisterValue> RIV;
   for (const InstructionBuilder &IB : Instructions) {
     // Returns the register that this Operand sets or uses, or 0 if this is not
     // a register.
@@ -82,7 +82,7 @@ std::vector<unsigned> SnippetGenerator::computeRegsToDef(
       if (!Op.IsDef) {
         const unsigned Reg = GetOpReg(Op);
         if (Reg > 0 && !DefinedRegs.test(Reg)) {
-          RegsToDef.push_back(Reg);
+          RIV.push_back(RegisterValue{Reg, llvm::APInt()});
           DefinedRegs.set(Reg);
         }
       }
@@ -96,7 +96,7 @@ std::vector<unsigned> SnippetGenerator::computeRegsToDef(
       }
     }
   }
-  return RegsToDef;
+  return RIV;
 }
 
 llvm::Expected<CodeTemplate> SnippetGenerator::generateSelfAliasingCodeTemplate(

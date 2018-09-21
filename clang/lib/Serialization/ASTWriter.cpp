@@ -3574,7 +3574,7 @@ class ASTIdentifierTableTrait {
         II->isPoisoned() ||
         (IsModule ? II->hasRevertedBuiltin() : II->getObjCOrBuiltinID()) ||
         II->hasRevertedTokenIDToIdentifier() ||
-        (NeedDecls && II->getFETokenInfo<void>()))
+        (NeedDecls && II->getFETokenInfo()))
       return true;
 
     return false;
@@ -6555,7 +6555,7 @@ void OMPClauseWriter::VisitOMPOrderedClause(OMPOrderedClause *C) {
   for (Expr *NumIter : C->getLoopNumIterations())
     Record.AddStmt(NumIter);
   for (unsigned I = 0, E = C->getLoopNumIterations().size(); I <E; ++I)
-    Record.AddStmt(C->getLoopCunter(I));
+    Record.AddStmt(C->getLoopCounter(I));
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
