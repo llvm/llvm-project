@@ -849,6 +849,13 @@ static bool SemaOpenCLBuiltinToAddr(Sema &S, unsigned BuiltinID,
     return true;
   }
 
+  if (RT->getPointeeType().getAddressSpace() != LangAS::opencl_generic) {
+    S.Diag(Call->getArg(0)->getBeginLoc(),
+           diag::warn_opencl_generic_address_space_arg)
+        << Call->getDirectCallee()->getNameInfo().getAsString()
+        << Call->getArg(0)->getSourceRange();
+  }
+
   RT = RT->getPointeeType();
   auto Qual = RT.getQualifiers();
   switch (BuiltinID) {

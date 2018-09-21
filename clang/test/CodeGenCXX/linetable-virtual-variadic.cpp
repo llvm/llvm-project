@@ -17,6 +17,6 @@ void Derived::VariadicFunction(...) { }
 // CHECK: ret void, !dbg ![[LOC_I:[0-9]+]]
 //
 // CHECK: ![[SP]] = distinct !DISubprogram(name: "VariadicFunction"
-// CHECK: ![[LOC]] = !DILocation({{.*}}scope: ![[SP]])
+// CHECK: ![[LOC]] = !DILocation({{.*}}scope: ![[SP]], isImplicitCode: true)
 // CHECK: ![[SP_I]] = distinct !DISubprogram(name: "VariadicFunction"
-// CHECK: ![[LOC_I]] = !DILocation({{.*}}scope: ![[SP_I]])
+// CHECK: ![[LOC_I]] = !DILocation({{.*}}scope: ![[SP_I]], isImplicitCode: true)

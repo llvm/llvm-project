@@ -1887,8 +1887,8 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
 
       // Check for likely typos due to leading or trailing non-isAlphanumeric
       // characters
+      StringRef OriginalFilename = Filename;
       if (!File) {
-        StringRef OriginalFilename = Filename;
         while (!isAlphanumeric(Filename.front())) {
           Filename = Filename.drop_front();
         }
@@ -1915,7 +1915,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
 
       // If the file is still not found, just go with the vanilla diagnostic
       if (!File)
-        Diag(FilenameTok, diag::err_pp_file_not_found) << Filename
+        Diag(FilenameTok, diag::err_pp_file_not_found) << OriginalFilename
                                                        << FilenameRange;
     }
   }
