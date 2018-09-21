@@ -101,125 +101,31 @@ public:
   uint32_t getNextUnitOffset() const { return Offset + Length + 4; }
 };
 
-/// Base class for all DWARFUnitSection classes. This provides the
-/// functionality common to all unit types.
-class DWARFUnitSectionBase {
-public:
-  /// Returns the Unit that contains the given section offset in the
-  /// same section this Unit originated from.
-  virtual DWARFUnit *getUnitForOffset(uint32_t Offset) const = 0;
-  virtual DWARFUnit *getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) = 0;
-
-  void parse(DWARFContext &C, const DWARFSection &Section);
-  void parseDWO(DWARFContext &C, const DWARFSection &DWOSection,
-                bool Lazy = false);
-
-protected:
-  ~DWARFUnitSectionBase() = default;
-
-  virtual void parseImpl(DWARFContext &Context, const DWARFObject &Obj,
-                         const DWARFSection &Section,
-                         const DWARFDebugAbbrev *DA, const DWARFSection *RS,
-                         StringRef SS, const DWARFSection &SOS,
-                         const DWARFSection *AOS, const DWARFSection &LS,
-                         bool isLittleEndian, bool isDWO, bool Lazy) = 0;
-};
-
 const DWARFUnitIndex &getDWARFUnitIndex(DWARFContext &Context,
                                         DWARFSectionKind Kind);
 
-/// Concrete instance of DWARFUnitSection, specialized for one Unit type.
-template<typename UnitType>
-class DWARFUnitSection final : public SmallVector<std::unique_ptr<UnitType>, 1>,
-                               public DWARFUnitSectionBase {
+/// Describes one section's Units.
+class DWARFUnitSection final : public SmallVector<std::unique_ptr<DWARFUnit>, 1> {
   bool Parsed = false;
-  std::function<std::unique_ptr<UnitType>(uint32_t)> Parser;
+  std::function<std::unique_ptr<DWARFUnit>(uint32_t)> Parser;
 
 public:
-  using UnitVector = SmallVectorImpl<std::unique_ptr<UnitType>>;
+  using UnitVector = SmallVectorImpl<std::unique_ptr<DWARFUnit>>;
   using iterator = typename UnitVector::iterator;
   using iterator_range = llvm::iterator_range<typename UnitVector::iterator>;
 
-  UnitType *getUnitForOffset(uint32_t Offset) const override {
-    auto *CU = std::upper_bound(
-        this->begin(), this->end(), Offset,
-        [](uint32_t LHS, const std::unique_ptr<UnitType> &RHS) {
-          return LHS < RHS->getNextUnitOffset();
-        });
-    if (CU != this->end() && (*CU)->getOffset() <= Offset)
-      return CU->get();
-    return nullptr;
-  }
-  UnitType *getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) override {
-    const auto *CUOff = E.getOffset(DW_SECT_INFO);
-    if (!CUOff)
-      return nullptr;
-
-    auto Offset = CUOff->Offset;
-
-    auto *CU = std::upper_bound(
-        this->begin(), this->end(), CUOff->Offset,
-        [](uint32_t LHS, const std::unique_ptr<UnitType> &RHS) {
-          return LHS < RHS->getNextUnitOffset();
-        });
-    if (CU != this->end() && (*CU)->getOffset() <= Offset)
-      return CU->get();
-
-    if (!Parser)
-      return nullptr;
-
-    auto U = Parser(Offset);
-    if (!U)
-      U = nullptr;
-
-    auto *NewCU = U.get();
-    this->insert(CU, std::move(U));
-    return NewCU;
-  }
-
+  DWARFUnit *getUnitForOffset(uint32_t Offset) const;
+  DWARFUnit *getUnitForIndexEntry(const DWARFUnitIndex::Entry &E);
+  void parse(DWARFContext &C, const DWARFSection &Section,
+             DWARFSectionKind SectionKind);
+  void parseDWO(DWARFContext &C, const DWARFSection &DWOSection,
+                DWARFSectionKind SectionKind, bool Lazy = false);
 private:
   void parseImpl(DWARFContext &Context, const DWARFObject &Obj,
                  const DWARFSection &Section, const DWARFDebugAbbrev *DA,
                  const DWARFSection *RS, StringRef SS, const DWARFSection &SOS,
                  const DWARFSection *AOS, const DWARFSection &LS, bool LE,
-                 bool IsDWO, bool Lazy) override {
-    if (Parsed)
-      return;
-    DWARFDataExtractor Data(Obj, Section, LE, 0);
-    if (!Parser) {
-      const DWARFUnitIndex *Index = nullptr;
-      if (IsDWO)
-        Index = &getDWARFUnitIndex(Context, UnitType::Section);
-      Parser = [=, &Context, &Section, &SOS,
-                &LS](uint32_t Offset) -> std::unique_ptr<UnitType> {
-        if (!Data.isValidOffset(Offset))
-          return nullptr;
-        DWARFUnitHeader Header;
-        if (!Header.extract(Context, Data, &Offset, UnitType::Section, Index))
-          return nullptr;
-        auto U = llvm::make_unique<UnitType>(
-            Context, Section, Header, DA, RS, SS, SOS, AOS, LS, LE, IsDWO,
-            *this);
-        return U;
-      };
-    }
-    if (Lazy)
-      return;
-    auto I = this->begin();
-    uint32_t Offset = 0;
-    while (Data.isValidOffset(Offset)) {
-      if (I != this->end() && (*I)->getOffset() == Offset) {
-        ++I;
-        continue;
-      }
-      auto U = Parser(Offset);
-      if (!U)
-        break;
-      Offset = U->getNextUnitOffset();
-      I = std::next(this->insert(I, std::move(U)));
-    }
-    Parsed = true;
-  }
+                 bool IsDWO, bool Lazy, DWARFSectionKind SectionKind);
 };
 
 /// Represents base address of the CU.
@@ -268,7 +174,7 @@ class DWARFUnit {
   uint32_t AddrOffsetSectionBase = 0;
   bool isLittleEndian;
   bool isDWO;
-  const DWARFUnitSectionBase &UnitSection;
+  const DWARFUnitSection &UnitSection;
 
   /// Start, length, and DWARF format of the unit's contribution to the string
   /// offsets table (DWARF v5).
@@ -325,7 +231,7 @@ public:
             const DWARFDebugAbbrev *DA, const DWARFSection *RS, StringRef SS,
             const DWARFSection &SOS, const DWARFSection *AOS,
             const DWARFSection &LS, bool LE, bool IsDWO,
-            const DWARFUnitSectionBase &UnitSection);
+            const DWARFUnitSection &UnitSection);
 
   virtual ~DWARFUnit();
 
@@ -342,6 +248,7 @@ public:
   }
   uint32_t getLength() const { return Header.getLength(); }
   uint8_t getUnitType() const { return Header.getUnitType(); }
+  bool isTypeUnit() const { return Header.isTypeUnit(); }
   uint32_t getNextUnitOffset() const { return Header.getNextUnitOffset(); }
   const DWARFSection &getLineSection() const { return LineSection; }
   StringRef getStringSection() const { return StringSection; }
@@ -481,7 +388,7 @@ public:
                                  SmallVectorImpl<DWARFDie> &InlinedChain);
 
   /// getUnitSection - Return the DWARFUnitSection containing this unit.
-  const DWARFUnitSectionBase &getUnitSection() const { return UnitSection; }
+  const DWARFUnitSection &getUnitSection() const { return UnitSection; }
 
   /// Returns the number of DIEs in the unit. Parses the unit
   /// if necessary.
@@ -541,6 +448,7 @@ public:
     return die_iterator_range(DieArray.begin(), DieArray.end());
   }
 
+  virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts) = 0;
 private:
   /// Size in bytes of the .debug_info data associated with this compile unit.
   size_t getDebugInfoSize() const {

@@ -57,8 +57,8 @@ enum class ErrorPolicy { Halt, Continue };
 /// This data structure is the top level entity that deals with dwarf debug
 /// information parsing. The actual data is supplied through DWARFObj.
 class DWARFContext : public DIContext {
-  DWARFUnitSection<DWARFCompileUnit> CUs;
-  std::deque<DWARFUnitSection<DWARFTypeUnit>> TUs;
+  DWARFUnitSection CUs;
+  std::deque<DWARFUnitSection> TUs;
   std::unique_ptr<DWARFUnitIndex> CUIndex;
   std::unique_ptr<DWARFGdbIndex> GdbIndex;
   std::unique_ptr<DWARFUnitIndex> TUIndex;
@@ -75,8 +75,8 @@ class DWARFContext : public DIContext {
   std::unique_ptr<AppleAcceleratorTable> AppleNamespaces;
   std::unique_ptr<AppleAcceleratorTable> AppleObjC;
 
-  DWARFUnitSection<DWARFCompileUnit> DWOCUs;
-  std::deque<DWARFUnitSection<DWARFTypeUnit>> DWOTUs;
+  DWARFUnitSection DWOCUs;
+  std::deque<DWARFUnitSection> DWOTUs;
   std::unique_ptr<DWARFDebugAbbrev> AbbrevDWO;
   std::unique_ptr<DWARFDebugLocDWO> LocDWO;
 
@@ -139,8 +139,8 @@ public:
 
   bool verify(raw_ostream &OS, DIDumpOptions DumpOpts = {}) override;
 
-  using cu_iterator_range = DWARFUnitSection<DWARFCompileUnit>::iterator_range;
-  using tu_iterator_range = DWARFUnitSection<DWARFTypeUnit>::iterator_range;
+  using cu_iterator_range = DWARFUnitSection::iterator_range;
+  using tu_iterator_range = DWARFUnitSection::iterator_range;
   using tu_section_iterator_range = iterator_range<decltype(TUs)::iterator>;
 
   /// Get compile units in this context.
@@ -191,14 +191,14 @@ public:
     return DWOTUs.size();
   }
 
-  /// Get the compile unit at the specified index for this compile unit.
-  DWARFCompileUnit *getCompileUnitAtIndex(unsigned index) {
+  /// Get the unit at the specified index.
+  DWARFUnit *getUnitAtIndex(unsigned index) {
     parseCompileUnits();
     return CUs[index].get();
   }
 
-  /// Get the compile unit at the specified index for the DWO compile units.
-  DWARFCompileUnit *getDWOCompileUnitAtIndex(unsigned index) {
+  /// Get the unit at the specified index for the DWO units.
+  DWARFUnit *getDWOUnitAtIndex(unsigned index) {
     parseDWOCompileUnits();
     return DWOCUs[index].get();
   }

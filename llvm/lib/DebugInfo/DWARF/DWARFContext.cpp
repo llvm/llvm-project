@@ -584,11 +584,11 @@ void DWARFContext::dump(
 }
 
 DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
-  DWOCUs.parseDWO(*this, DObj->getInfoDWOSection(), true);
+  DWOCUs.parseDWO(*this, DObj->getInfoDWOSection(), DW_SECT_INFO, true);
 
   if (const auto &CUI = getCUIndex()) {
     if (const auto *R = CUI.getFromHash(Hash))
-      return DWOCUs.getUnitForIndexEntry(*R);
+      return dyn_cast_or_null<DWARFCompileUnit>(DWOCUs.getUnitForIndexEntry(*R));
     return nullptr;
   }
 
@@ -607,7 +607,7 @@ DWARFCompileUnit *DWARFContext::getDWOCompileUnitForHash(uint64_t Hash) {
         continue;
     }
     if (DWOCU->getDWOId() == Hash)
-      return DWOCU.get();
+      return dyn_cast<DWARFCompileUnit>(DWOCU.get());
   }
   return nullptr;
 }
@@ -690,10 +690,10 @@ const DWARFDebugLoc *DWARFContext::getDebugLoc() {
     return Loc.get();
 
   Loc.reset(new DWARFDebugLoc);
-  // Assume all compile units have the same address byte size.
+  // Assume all units have the same address byte size.
   if (getNumCompileUnits()) {
     DWARFDataExtractor LocData(*DObj, DObj->getLocSection(), isLittleEndian(),
-                               getCompileUnitAtIndex(0)->getAddressByteSize());
+                               getUnitAtIndex(0)->getAddressByteSize());
     Loc->parse(LocData);
   }
   return Loc.get();
@@ -707,7 +707,7 @@ const DWARFDebugLocDWO *DWARFContext::getDebugLocDWO() {
   // Assume all compile units have the same address byte size.
   if (getNumCompileUnits()) {
     DataExtractor LocData(DObj->getLocDWOSection().Data, isLittleEndian(),
-                          getCompileUnitAtIndex(0)->getAddressByteSize());
+                          getUnitAtIndex(0)->getAddressByteSize());
     LocDWO->parse(LocData);
   }
   return LocDWO.get();
@@ -844,7 +844,7 @@ Expected<const DWARFDebugLine::LineTable *> DWARFContext::getLineTableForUnit(
 }
 
 void DWARFContext::parseCompileUnits() {
-  CUs.parse(*this, DObj->getInfoSection());
+  CUs.parse(*this, DObj->getInfoSection(), DW_SECT_INFO);
 }
 
 void DWARFContext::parseTypeUnits() {
@@ -852,12 +852,12 @@ void DWARFContext::parseTypeUnits() {
     return;
   DObj->forEachTypesSections([&](const DWARFSection &S) {
     TUs.emplace_back();
-    TUs.back().parse(*this, S);
+    TUs.back().parse(*this, S, DW_SECT_TYPES);
   });
 }
 
 void DWARFContext::parseDWOCompileUnits() {
-  DWOCUs.parseDWO(*this, DObj->getInfoDWOSection());
+  DWOCUs.parseDWO(*this, DObj->getInfoDWOSection(), DW_SECT_INFO);
 }
 
 void DWARFContext::parseDWOTypeUnits() {
@@ -865,13 +865,13 @@ void DWARFContext::parseDWOTypeUnits() {
     return;
   DObj->forEachTypesDWOSections([&](const DWARFSection &S) {
     DWOTUs.emplace_back();
-    DWOTUs.back().parseDWO(*this, S);
+    DWOTUs.back().parseDWO(*this, S, DW_SECT_TYPES);
   });
 }
 
 DWARFCompileUnit *DWARFContext::getCompileUnitForOffset(uint32_t Offset) {
   parseCompileUnits();
-  return CUs.getUnitForOffset(Offset);
+  return dyn_cast_or_null<DWARFCompileUnit>(CUs.getUnitForOffset(Offset));
 }
 
 DWARFCompileUnit *DWARFContext::getCompileUnitForAddress(uint64_t Address) {
