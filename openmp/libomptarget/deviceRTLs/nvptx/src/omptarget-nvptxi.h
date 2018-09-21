@@ -202,3 +202,36 @@ INLINE omptarget_nvptx_TaskDescr *getMyTopTaskDescriptor(int threadId) {
 INLINE omptarget_nvptx_TaskDescr *getMyTopTaskDescriptor() {
   return getMyTopTaskDescriptor(GetLogicalThreadIdInBlock());
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Lightweight runtime functions.
+////////////////////////////////////////////////////////////////////////////////
+
+// Shared memory buffer for globalization support.
+static __align__(16) __device__ __shared__ char
+    omptarget_static_buffer[DS_Shared_Memory_Size];
+static __device__ __shared__ void *omptarget_spmd_allocated;
+
+extern __device__ __shared__ void *omptarget_nvptx_simpleGlobalData;
+
+INLINE void *
+omptarget_nvptx_SimpleThreadPrivateContext::Allocate(size_t DataSize) {
+  if (DataSize <= DS_Shared_Memory_Size)
+    return ::omptarget_static_buffer;
+  if (DataSize <= sizeof(omptarget_nvptx_ThreadPrivateContext))
+    return ::omptarget_nvptx_simpleGlobalData;
+  if (threadIdx.x == 0)
+    omptarget_spmd_allocated = SafeMalloc(DataSize, "SPMD teams alloc");
+  __syncthreads();
+  return omptarget_spmd_allocated;
+}
+
+INLINE void
+omptarget_nvptx_SimpleThreadPrivateContext::Deallocate(void *Ptr) {
+  if (Ptr != ::omptarget_static_buffer &&
+      Ptr != ::omptarget_nvptx_simpleGlobalData) {
+    __syncthreads();
+    if (threadIdx.x == 0)
+      SafeFree(Ptr, "SPMD teams dealloc");
+  }
+}

@@ -38,6 +38,8 @@ __device__ __shared__
 __device__ __shared__ omptarget_nvptx_SimpleThreadPrivateContext
     *omptarget_nvptx_simpleThreadPrivateContext;
 
+__device__ __shared__ void *omptarget_nvptx_simpleGlobalData;
+
 ////////////////////////////////////////////////////////////////////////////////
 // The team master sets the outlined parallel function in this variable to
 // communicate with the workers.  Since it is in shared memory, there is one
