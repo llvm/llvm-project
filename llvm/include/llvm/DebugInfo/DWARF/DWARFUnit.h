@@ -105,7 +105,7 @@ const DWARFUnitIndex &getDWARFUnitIndex(DWARFContext &Context,
                                         DWARFSectionKind Kind);
 
 /// Describes one section's Units.
-class DWARFUnitSection final : public SmallVector<std::unique_ptr<DWARFUnit>, 1> {
+class DWARFUnitVector final : public SmallVector<std::unique_ptr<DWARFUnit>, 1> {
   std::function<std::unique_ptr<DWARFUnit>(uint32_t, const DWARFSection *)>
       Parser;
 
@@ -176,7 +176,7 @@ class DWARFUnit {
   uint32_t AddrOffsetSectionBase = 0;
   bool isLittleEndian;
   bool isDWO;
-  const DWARFUnitSection &UnitSection;
+  const DWARFUnitVector &UnitVector;
 
   /// Start, length, and DWARF format of the unit's contribution to the string
   /// offsets table (DWARF v5).
@@ -233,7 +233,7 @@ public:
             const DWARFDebugAbbrev *DA, const DWARFSection *RS, StringRef SS,
             const DWARFSection &SOS, const DWARFSection *AOS,
             const DWARFSection &LS, bool LE, bool IsDWO,
-            const DWARFUnitSection &UnitSection);
+            const DWARFUnitVector &UnitVector);
 
   virtual ~DWARFUnit();
 
@@ -389,8 +389,8 @@ public:
   void getInlinedChainForAddress(uint64_t Address,
                                  SmallVectorImpl<DWARFDie> &InlinedChain);
 
-  /// getUnitSection - Return the DWARFUnitSection containing this unit.
-  const DWARFUnitSection &getUnitSection() const { return UnitSection; }
+  /// Return the DWARFUnitVector containing this unit.
+  const DWARFUnitVector &getUnitVector() const { return UnitVector; }
 
   /// Returns the number of DIEs in the unit. Parses the unit
   /// if necessary.

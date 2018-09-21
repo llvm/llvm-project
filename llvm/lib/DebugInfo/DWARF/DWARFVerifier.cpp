@@ -264,7 +264,7 @@ bool DWARFVerifier::handleDebugInfo() {
   bool isUnitDWARF64 = false;
   bool isHeaderChainValid = true;
   bool hasDIE = DebugInfoData.isValidOffset(Offset);
-  DWARFUnitSection UnitSection{};
+  DWARFUnitVector UnitVector{};
   while (hasDIE) {
     OffsetStart = Offset;
     if (!verifyUnitHeader(DebugInfoData, &Offset, UnitIdx, UnitType,
@@ -283,7 +283,7 @@ bool DWARFVerifier::handleDebugInfo() {
             DCtx, DObj.getInfoSection(), Header, DCtx.getDebugAbbrev(),
             &DObj.getRangeSection(), DObj.getStringSection(),
             DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
-            DObj.getLineSection(), DCtx.isLittleEndian(), false, UnitSection));
+            DObj.getLineSection(), DCtx.isLittleEndian(), false, UnitVector));
         break;
       }
       case dwarf::DW_UT_skeleton:
@@ -297,7 +297,7 @@ bool DWARFVerifier::handleDebugInfo() {
             DCtx, DObj.getInfoSection(), Header, DCtx.getDebugAbbrev(),
             &DObj.getRangeSection(), DObj.getStringSection(),
             DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
-            DObj.getLineSection(), DCtx.isLittleEndian(), false, UnitSection));
+            DObj.getLineSection(), DCtx.isLittleEndian(), false, UnitVector));
         break;
       }
       default: { llvm_unreachable("Invalid UnitType."); }

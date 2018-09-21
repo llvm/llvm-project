@@ -33,9 +33,9 @@
 using namespace llvm;
 using namespace dwarf;
 
-void DWARFUnitSection::addUnitsForSection(DWARFContext &C,
-                                          const DWARFSection &Section,
-                                          DWARFSectionKind SectionKind) {
+void DWARFUnitVector::addUnitsForSection(DWARFContext &C,
+                                         const DWARFSection &Section,
+                                         DWARFSectionKind SectionKind) {
   const DWARFObject &D = C.getDWARFObj();
   addUnitsImpl(C, D, Section, C.getDebugAbbrev(), &D.getRangeSection(),
                D.getStringSection(), D.getStringOffsetSection(),
@@ -43,10 +43,10 @@ void DWARFUnitSection::addUnitsForSection(DWARFContext &C,
                false, false, SectionKind);
 }
 
-void DWARFUnitSection::addUnitsForDWOSection(DWARFContext &C,
-                                             const DWARFSection &DWOSection,
-                                             DWARFSectionKind SectionKind,
-                                             bool Lazy) {
+void DWARFUnitVector::addUnitsForDWOSection(DWARFContext &C,
+                                            const DWARFSection &DWOSection,
+                                            DWARFSectionKind SectionKind,
+                                            bool Lazy) {
   const DWARFObject &D = C.getDWARFObj();
   addUnitsImpl(C, D, DWOSection, C.getDebugAbbrevDWO(), &D.getRangeDWOSection(),
                D.getStringDWOSection(), D.getStringOffsetDWOSection(),
@@ -54,7 +54,7 @@ void DWARFUnitSection::addUnitsForDWOSection(DWARFContext &C,
                true, Lazy, SectionKind);
 }
 
-void DWARFUnitSection::addUnitsImpl(
+void DWARFUnitVector::addUnitsImpl(
     DWARFContext &Context, const DWARFObject &Obj, const DWARFSection &Section,
     const DWARFDebugAbbrev *DA, const DWARFSection *RS, StringRef SS,
     const DWARFSection &SOS, const DWARFSection *AOS, const DWARFSection &LS,
@@ -104,7 +104,7 @@ void DWARFUnitSection::addUnitsImpl(
   }
 }
 
-DWARFUnit *DWARFUnitSection::getUnitForOffset(uint32_t Offset) const {
+DWARFUnit *DWARFUnitVector::getUnitForOffset(uint32_t Offset) const {
   auto *CU = std::upper_bound(
     this->begin(), this->end(), Offset,
     [](uint32_t LHS, const std::unique_ptr<DWARFUnit> &RHS) {
@@ -116,7 +116,7 @@ DWARFUnit *DWARFUnitSection::getUnitForOffset(uint32_t Offset) const {
 }
 
 DWARFUnit *
-DWARFUnitSection::getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) {
+DWARFUnitVector::getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) {
   const auto *CUOff = E.getOffset(DW_SECT_INFO);
   if (!CUOff)
     return nullptr;
@@ -148,11 +148,11 @@ DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
                      const DWARFDebugAbbrev *DA, const DWARFSection *RS,
                      StringRef SS, const DWARFSection &SOS,
                      const DWARFSection *AOS, const DWARFSection &LS, bool LE,
-                     bool IsDWO, const DWARFUnitSection &UnitSection)
+                     bool IsDWO, const DWARFUnitVector &UnitVector)
     : Context(DC), InfoSection(Section), Header(Header), Abbrev(DA),
       RangeSection(RS), LineSection(LS), StringSection(SS),
       StringOffsetSection(SOS),  AddrOffsetSection(AOS), isLittleEndian(LE),
-      isDWO(IsDWO), UnitSection(UnitSection) {
+      isDWO(IsDWO), UnitVector(UnitVector) {
   clear();
 }
 
