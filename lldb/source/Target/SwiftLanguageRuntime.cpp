@@ -2173,6 +2173,10 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_GenericTypeParam(
   auto instance_type =
       remote_ast.getTypeForRemoteTypeMetadata(metadata_address,
                                               /*skipArtificial*/ true);
+
+  // If we got this far, we know we already have a valid dynamic type
+  // in our hand. If RemoteAST gives us a different answer, update the
+  // type, otherwise return what we have.
   if (instance_type)
     class_type_or_name.SetCompilerType(
         {&scratch_ctx, instance_type.getValue().getPointer()});
