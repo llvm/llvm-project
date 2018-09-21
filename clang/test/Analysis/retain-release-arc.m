@@ -95,8 +95,7 @@ void _dispatch_object_validate(dispatch_object_t object);
   return (__bridge NSDictionary *)testDict;
 #if HAS_ARC
       // expected-warning@-2 {{Potential leak of an object stored into 'testDict'}}
-      // expected-note@-3 {{Object returned to caller as an owning reference (single retain count transferred to caller)}}
-      // expected-note@-4 {{Object leaked: object allocated and stored into 'testDict' is returned from a method managed by Automatic Reference Counting}}
+      // expected-note@-3 {{Object leaked: object allocated and stored into 'testDict' is returned from a method managed by Automatic Reference Counting}}
 #endif
 }
 
