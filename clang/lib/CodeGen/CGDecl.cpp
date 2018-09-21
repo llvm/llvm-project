@@ -30,6 +30,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Frontend/CodeGenOptions.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Intrinsics.h"
@@ -948,111 +949,17 @@ static bool shouldUseBZeroPlusStoresToInitialize(llvm::Constant *Init,
          canEmitInitWithFewStoresAfterBZero(Init, StoreBudget);
 }
 
-/// A byte pattern.
-///
-/// Can be "any" pattern if the value was padding or known to be undef.
-/// Can be "none" pattern if a sequence doesn't exist.
-class BytePattern {
-  uint8_t Val;
-  enum class ValueType : uint8_t { Specific, Any, None } Type;
-  BytePattern(ValueType Type) : Type(Type) {}
-
-public:
-  BytePattern(uint8_t Value) : Val(Value), Type(ValueType::Specific) {}
-  static BytePattern Any() { return BytePattern(ValueType::Any); }
-  static BytePattern None() { return BytePattern(ValueType::None); }
-  bool isAny() const { return Type == ValueType::Any; }
-  bool isNone() const { return Type == ValueType::None; }
-  bool isValued() const { return Type == ValueType::Specific; }
-  uint8_t getValue() const {
-    assert(isValued());
-    return Val;
-  }
-  BytePattern merge(const BytePattern Other) const {
-    if (isNone() || Other.isNone())
-      return None();
-    if (isAny())
-      return Other;
-    if (Other.isAny())
-      return *this;
-    if (getValue() == Other.getValue())
-      return *this;
-    return None();
-  }
-};
-
-/// Figures out whether the constant can be initialized with memset.
-static BytePattern constantIsRepeatedBytePattern(llvm::Constant *C) {
-  if (isa<llvm::ConstantAggregateZero>(C) || isa<llvm::ConstantPointerNull>(C))
-    return BytePattern(0x00);
-  if (isa<llvm::UndefValue>(C))
-    return BytePattern::Any();
-
-  if (isa<llvm::ConstantInt>(C)) {
-    auto *Int = cast<llvm::ConstantInt>(C);
-    if (Int->getBitWidth() % 8 != 0)
-      return BytePattern::None();
-    const llvm::APInt &Value = Int->getValue();
-    if (Value.isSplat(8))
-      return BytePattern(Value.getLoBits(8).getLimitedValue());
-    return BytePattern::None();
-  }
-
-  if (isa<llvm::ConstantFP>(C)) {
-    auto *FP = cast<llvm::ConstantFP>(C);
-    llvm::APInt Bits = FP->getValueAPF().bitcastToAPInt();
-    if (Bits.getBitWidth() % 8 != 0)
-      return BytePattern::None();
-    if (!Bits.isSplat(8))
-      return BytePattern::None();
-    return BytePattern(Bits.getLimitedValue() & 0xFF);
-  }
-
-  if (isa<llvm::ConstantVector>(C)) {
-    llvm::Constant *Splat = cast<llvm::ConstantVector>(C)->getSplatValue();
-    if (Splat)
-      return constantIsRepeatedBytePattern(Splat);
-    return BytePattern::None();
-  }
-
-  if (isa<llvm::ConstantArray>(C) || isa<llvm::ConstantStruct>(C)) {
-    BytePattern Pattern(BytePattern::Any());
-    for (unsigned I = 0, E = C->getNumOperands(); I != E; ++I) {
-      llvm::Constant *Elt = cast<llvm::Constant>(C->getOperand(I));
-      Pattern = Pattern.merge(constantIsRepeatedBytePattern(Elt));
-      if (Pattern.isNone())
-        return Pattern;
-    }
-    return Pattern;
-  }
-
-  if (llvm::ConstantDataSequential *CDS =
-          dyn_cast<llvm::ConstantDataSequential>(C)) {
-    BytePattern Pattern(BytePattern::Any());
-    for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
-      llvm::Constant *Elt = CDS->getElementAsConstant(I);
-      Pattern = Pattern.merge(constantIsRepeatedBytePattern(Elt));
-      if (Pattern.isNone())
-        return Pattern;
-    }
-    return Pattern;
-  }
-
-  // BlockAddress, ConstantExpr, and everything else is scary.
-  return BytePattern::None();
-}
-
 /// Decide whether we should use memset to initialize a local variable instead
 /// of using a memcpy from a constant global. Assumes we've already decided to
 /// not user bzero.
 /// FIXME We could be more clever, as we are for bzero above, and generate
 ///       memset followed by stores. It's unclear that's worth the effort.
-static BytePattern shouldUseMemSetToInitialize(llvm::Constant *Init,
-                                               uint64_t GlobalSize) {
+static llvm::Value *shouldUseMemSetToInitialize(llvm::Constant *Init,
+                                                uint64_t GlobalSize) {
   uint64_t SizeLimit = 32;
   if (GlobalSize <= SizeLimit)
-    return BytePattern::None();
-  return constantIsRepeatedBytePattern(Init);
+    return nullptr;
+  return llvm::isBytewiseValue(Init);
 }
 
 static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
@@ -1081,9 +988,14 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
     return;
   }
 
-  BytePattern Pattern = shouldUseMemSetToInitialize(constant, ConstantSize);
-  if (!Pattern.isNone()) {
-    uint8_t Value = Pattern.isAny() ? 0x00 : Pattern.getValue();
+  llvm::Value *Pattern = shouldUseMemSetToInitialize(constant, ConstantSize);
+  if (Pattern) {
+    uint64_t Value = 0x00;
+    if (!isa<llvm::UndefValue>(Pattern)) {
+      const llvm::APInt &AP = cast<llvm::ConstantInt>(Pattern)->getValue();
+      assert(AP.getBitWidth() <= 8);
+      Value = AP.getLimitedValue();
+    }
     Builder.CreateMemSet(Loc, llvm::ConstantInt::get(Int8Ty, Value), SizeVal,
                          isVolatile);
     return;
