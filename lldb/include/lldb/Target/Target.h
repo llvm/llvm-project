@@ -811,7 +811,7 @@ public:
   //------------------------------------------------------------------
   lldb::addr_t
   GetOpcodeLoadAddress(lldb::addr_t load_addr,
-      AddressClass addr_class = AddressClass::eInvalid) const;
+                       AddressClass addr_class = AddressClass::eInvalid) const;
 
   // Get load_addr as breakable load address for this target. Take a addr and
   // check if for any reason there is a better address than this to put a
