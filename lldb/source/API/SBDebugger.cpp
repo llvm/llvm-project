@@ -558,7 +558,8 @@ lldb::SBTarget SBDebugger::CreateTarget(const char *filename,
     platform_options.SetPlatformName(platform_name);
 
     sb_error.ref() = m_opaque_sp->GetTargetList().CreateTarget(
-        *m_opaque_sp, filename, target_triple, add_dependent_modules,
+        *m_opaque_sp, filename, target_triple,
+        add_dependent_modules ? eLoadDependentsYes : eLoadDependentsNo,
         &platform_options, target_sp);
 
     if (sb_error.Success())
@@ -587,7 +588,8 @@ SBDebugger::CreateTargetWithFileAndTargetTriple(const char *filename,
   if (m_opaque_sp) {
     const bool add_dependent_modules = true;
     Status error(m_opaque_sp->GetTargetList().CreateTarget(
-        *m_opaque_sp, filename, target_triple, add_dependent_modules, nullptr,
+        *m_opaque_sp, filename, target_triple,
+        add_dependent_modules ? eLoadDependentsYes : eLoadDependentsNo, nullptr,
         target_sp));
     sb_target.SetSP(target_sp);
   }
@@ -613,7 +615,8 @@ SBTarget SBDebugger::CreateTargetWithFileAndArch(const char *filename,
     const bool add_dependent_modules = true;
 
     error = m_opaque_sp->GetTargetList().CreateTarget(
-        *m_opaque_sp, filename, arch_cstr, add_dependent_modules, nullptr,
+        *m_opaque_sp, filename, arch_cstr,
+        add_dependent_modules ? eLoadDependentsYes : eLoadDependentsNo, nullptr,
         target_sp);
 
     if (error.Success()) {
@@ -638,7 +641,9 @@ SBTarget SBDebugger::CreateTarget(const char *filename) {
     Status error;
     const bool add_dependent_modules = true;
     error = m_opaque_sp->GetTargetList().CreateTarget(
-        *m_opaque_sp, filename, "", add_dependent_modules, nullptr, target_sp);
+        *m_opaque_sp, filename, "",
+        add_dependent_modules ? eLoadDependentsYes : eLoadDependentsNo, nullptr,
+        target_sp);
 
     if (error.Success()) {
       m_opaque_sp->GetTargetList().SetSelectedTarget(target_sp.get());
