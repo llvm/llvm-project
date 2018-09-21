@@ -11,7 +11,7 @@
 # ------------------------------------------------------------------------------
 
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import unittest2
 import os
 
@@ -23,6 +23,7 @@ class TestREPLImportDispatch(TestBase):
         TestBase.setUp(self)
 
     @decorators.swiftTest
+    @skipIf(debug_info=no_match(["dwarf"]))
     @decorators.add_test_categories(["swiftpr"])
     def test(self):
         self.build()
