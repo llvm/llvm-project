@@ -648,7 +648,7 @@ static bool isFrameworkStylePath(StringRef Path, bool &IsPrivateHeader,
     ++I;
   }
 
-  return FoundComp >= 2;
+  return !FrameworkName.empty() && FoundComp >= 2;
 }
 
 static void

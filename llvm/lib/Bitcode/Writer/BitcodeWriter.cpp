@@ -1403,6 +1403,7 @@ unsigned ModuleBitcodeWriter::createDILocationAbbrev() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
   return Stream.EmitAbbrev(std::move(Abbv));
 }
 
@@ -1417,6 +1418,7 @@ void ModuleBitcodeWriter::writeDILocation(const DILocation *N,
   Record.push_back(N->getColumn());
   Record.push_back(VE.getMetadataID(N->getScope()));
   Record.push_back(VE.getMetadataOrNullID(N->getInlinedAt()));
+  Record.push_back(N->isImplicitCode());
 
   Stream.EmitRecord(bitc::METADATA_LOCATION, Record, Abbrev);
   Record.clear();
@@ -3093,6 +3095,7 @@ void ModuleBitcodeWriter::writeFunction(
       Vals.push_back(DL->getColumn());
       Vals.push_back(VE.getMetadataOrNullID(DL->getScope()));
       Vals.push_back(VE.getMetadataOrNullID(DL->getInlinedAt()));
+      Vals.push_back(DL->isImplicitCode());
       Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_LOC, Vals);
       Vals.clear();
 

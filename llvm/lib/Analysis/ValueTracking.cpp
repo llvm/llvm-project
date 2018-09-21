@@ -3042,62 +3042,92 @@ bool llvm::isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
   return true;
 }
 
-/// If the specified value can be set by repeating the same byte in memory,
-/// return the i8 value that it is represented with.  This is
-/// true for all i8 values obviously, but is also true for i32 0, i32 -1,
-/// i16 0xF0F0, double 0.0 etc.  If the value can't be handled with a repeated
-/// byte store (e.g. i16 0x1234), return null.
 Value *llvm::isBytewiseValue(Value *V) {
+
   // All byte-wide stores are splatable, even of arbitrary variables.
-  if (V->getType()->isIntegerTy(8)) return V;
+  if (V->getType()->isIntegerTy(8))
+    return V;
+
+  LLVMContext &Ctx = V->getContext();
+
+  // Undef don't care.
+  auto *UndefInt8 = UndefValue::get(Type::getInt8Ty(Ctx));
+  if (isa<UndefValue>(V))
+    return UndefInt8;
+
+  Constant *C = dyn_cast<Constant>(V);
+  if (!C) {
+    // Conceptually, we could handle things like:
+    //   %a = zext i8 %X to i16
+    //   %b = shl i16 %a, 8
+    //   %c = or i16 %a, %b
+    // but until there is an example that actually needs this, it doesn't seem
+    // worth worrying about.
+    return nullptr;
+  }
 
   // Handle 'null' ConstantArrayZero etc.
-  if (Constant *C = dyn_cast<Constant>(V))
-    if (C->isNullValue())
-      return Constant::getNullValue(Type::getInt8Ty(V->getContext()));
+  if (C->isNullValue())
+    return Constant::getNullValue(Type::getInt8Ty(Ctx));
 
-  // Constant float and double values can be handled as integer values if the
+  // Constant floating-point values can be handled as integer values if the
   // corresponding integer value is "byteable".  An important case is 0.0.
-  if (ConstantFP *CFP = dyn_cast<ConstantFP>(V)) {
-    if (CFP->getType()->isFloatTy())
-      V = ConstantExpr::getBitCast(CFP, Type::getInt32Ty(V->getContext()));
-    if (CFP->getType()->isDoubleTy())
-      V = ConstantExpr::getBitCast(CFP, Type::getInt64Ty(V->getContext()));
+  if (ConstantFP *CFP = dyn_cast<ConstantFP>(C)) {
+    Type *Ty = nullptr;
+    if (CFP->getType()->isHalfTy())
+      Ty = Type::getInt16Ty(Ctx);
+    else if (CFP->getType()->isFloatTy())
+      Ty = Type::getInt32Ty(Ctx);
+    else if (CFP->getType()->isDoubleTy())
+      Ty = Type::getInt64Ty(Ctx);
     // Don't handle long double formats, which have strange constraints.
+    return Ty ? isBytewiseValue(ConstantExpr::getBitCast(CFP, Ty)) : nullptr;
   }
 
   // We can handle constant integers that are multiple of 8 bits.
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
+  if (ConstantInt *CI = dyn_cast<ConstantInt>(C)) {
     if (CI->getBitWidth() % 8 == 0) {
       assert(CI->getBitWidth() > 8 && "8 bits should be handled above!");
-
       if (!CI->getValue().isSplat(8))
         return nullptr;
-      return ConstantInt::get(V->getContext(), CI->getValue().trunc(8));
+      return ConstantInt::get(Ctx, CI->getValue().trunc(8));
     }
   }
 
-  // A ConstantDataArray/Vector is splatable if all its members are equal and
-  // also splatable.
-  if (ConstantDataSequential *CA = dyn_cast<ConstantDataSequential>(V)) {
-    Value *Elt = CA->getElementAsConstant(0);
-    Value *Val = isBytewiseValue(Elt);
-    if (!Val)
+  auto Merge = [&](Value *LHS, Value *RHS) -> Value * {
+    if (LHS == RHS)
+      return LHS;
+    if (!LHS || !RHS)
       return nullptr;
+    if (LHS == UndefInt8)
+      return RHS;
+    if (RHS == UndefInt8)
+      return LHS;
+    return nullptr;
+  };
 
-    for (unsigned I = 1, E = CA->getNumElements(); I != E; ++I)
-      if (CA->getElementAsConstant(I) != Elt)
+  if (ConstantDataSequential *CA = dyn_cast<ConstantDataSequential>(C)) {
+    Value *Val = UndefInt8;
+    for (unsigned I = 0, E = CA->getNumElements(); I != E; ++I)
+      if (!(Val = Merge(Val, isBytewiseValue(CA->getElementAsConstant(I)))))
         return nullptr;
-
     return Val;
   }
 
-  // Conceptually, we could handle things like:
-  //   %a = zext i8 %X to i16
-  //   %b = shl i16 %a, 8
-  //   %c = or i16 %a, %b
-  // but until there is an example that actually needs this, it doesn't seem
-  // worth worrying about.
+  if (isa<ConstantVector>(C)) {
+    Constant *Splat = cast<ConstantVector>(C)->getSplatValue();
+    return Splat ? isBytewiseValue(Splat) : nullptr;
+  }
+
+  if (isa<ConstantArray>(C) || isa<ConstantStruct>(C)) {
+    Value *Val = UndefInt8;
+    for (unsigned I = 0, E = C->getNumOperands(); I != E; ++I)
+      if (!(Val = Merge(Val, isBytewiseValue(C->getOperand(I)))))
+        return nullptr;
+    return Val;
+  }
+
+  // Don't try to handle the handful of other constants.
   return nullptr;
 }
 

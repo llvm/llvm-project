@@ -3,4 +3,4 @@
 // CHECK-NEXT:        -:    0:Data:instrprof-dlopen-func.gcda
 // CHECK-NEXT:        -:    0:Runs:1
 // CHECK-NEXT:        -:    0:Programs:1
-// CHECK-NEXT:        1:    1:void func(int K) {}
+// CHECK-NEXT:        -:    1:void func(int K) {}

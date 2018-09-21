@@ -46,20 +46,25 @@ namespace xray {
 ///
 class Trace {
   XRayFileHeader FileHeader;
-  std::vector<XRayRecord> Records;
+  using RecordVector = std::vector<XRayRecord>;
+  RecordVector Records;
 
   typedef std::vector<XRayRecord>::const_iterator citerator;
 
   friend Expected<Trace> loadTrace(const DataExtractor &, bool);
 
 public:
+  using size_type = RecordVector::size_type;
+  using value_type = RecordVector::value_type;
+  using const_iterator = RecordVector::const_iterator;
+
   /// Provides access to the loaded XRay trace file header.
   const XRayFileHeader &getFileHeader() const { return FileHeader; }
 
-  citerator begin() const { return Records.begin(); }
-  citerator end() const { return Records.end(); }
+  const_iterator begin() const { return Records.begin(); }
+  const_iterator end() const { return Records.end(); }
   bool empty() const { return Records.empty(); }
-  size_t size() const { return Records.size(); }
+  size_type size() const { return Records.size(); }
 };
 
 /// This function will attempt to load XRay trace records from the provided

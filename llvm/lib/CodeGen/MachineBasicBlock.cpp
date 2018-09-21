@@ -110,6 +110,7 @@ void ilist_traits<MachineInstr>::addNodeToList(MachineInstr *N) {
   // use/def lists.
   MachineFunction *MF = Parent->getParent();
   N->AddRegOperandsToUseLists(MF->getRegInfo());
+  MF->handleInsertion(*N);
 }
 
 /// When we remove an instruction from a basic block list, we update its parent
@@ -118,8 +119,10 @@ void ilist_traits<MachineInstr>::removeNodeFromList(MachineInstr *N) {
   assert(N->getParent() && "machine instruction not in a basic block");
 
   // Remove from the use/def lists.
-  if (MachineFunction *MF = N->getMF())
+  if (MachineFunction *MF = N->getMF()) {
+    MF->handleRemoval(*N);
     N->RemoveRegOperandsFromUseLists(MF->getRegInfo());
+  }
 
   N->setParent(nullptr);
 }

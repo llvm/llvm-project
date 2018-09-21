@@ -452,6 +452,7 @@ void ScalarEnumerationTraits<WasmYAML::ValueType>::enumeration(
   ECase(I64);
   ECase(F32);
   ECase(F64);
+  ECase(V128);
   ECase(ANYFUNC);
   ECase(FUNC);
   ECase(NORESULT);

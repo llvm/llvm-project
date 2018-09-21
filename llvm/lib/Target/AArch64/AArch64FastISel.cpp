@@ -3742,6 +3742,9 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
               TII.get(TargetOpcode::COPY), ResultReg1).addReg(MulReg);
     }
 
+    if (!ResultReg1)
+      return false;
+
     ResultReg2 = fastEmitInst_rri(AArch64::CSINCWr, &AArch64::GPR32RegClass,
                                   AArch64::WZR, /*IsKill=*/true, AArch64::WZR,
                                   /*IsKill=*/true, getInvertedCondCode(CC));

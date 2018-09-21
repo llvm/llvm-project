@@ -48,8 +48,8 @@ public:
   generateConfigurations(unsigned Opcode) const;
 
   // Given a snippet, computes which registers the setup code needs to define.
-  std::vector<unsigned>
-  computeRegsToDef(const std::vector<InstructionBuilder> &Snippet) const;
+  std::vector<RegisterValue> computeRegisterInitialValues(
+      const std::vector<InstructionBuilder> &Snippet) const;
 
 protected:
   const LLVMState &State;

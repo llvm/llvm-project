@@ -703,9 +703,6 @@ struct MachineOutliner : public ModulePass {
   /// Set when the pass is constructed in TargetPassConfig.
   bool RunOnAllFunctions = true;
 
-  // Collection of IR functions created by the outliner.
-  std::vector<Function *> CreatedIRFunctions;
-
   StringRef getPassName() const override { return "Machine Outliner"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -1205,9 +1202,6 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
   F->addFnAttr(Attribute::OptimizeForSize);
   F->addFnAttr(Attribute::MinSize);
 
-  // Save F so that we can add debug info later if we need to.
-  CreatedIRFunctions.push_back(F);
-
   BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);
   IRBuilder<> Builder(EntryBB);
   Builder.CreateRetVoid();
@@ -1235,6 +1229,10 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
 
   TII.buildOutlinedFrame(MBB, MF, OF);
 
+  // Outlined functions shouldn't preserve liveness.
+  MF.getProperties().reset(MachineFunctionProperties::Property::TracksLiveness);
+  MF.getRegInfo().freezeReservedRegs(MF);
+
   // If there's a DISubprogram associated with this outlined function, then
   // emit debug info for the outlined function.
   if (DISubprogram *SP = getSubprogramOrNull(OF)) {
@@ -1243,39 +1241,29 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
     DIBuilder DB(M, true, CU);
     DIFile *Unit = SP->getFile();
     Mangler Mg;
+    // Get the mangled name of the function for the linkage name.
+    std::string Dummy;
+    llvm::raw_string_ostream MangledNameStream(Dummy);
+    Mg.getNameWithPrefix(MangledNameStream, F, false);
 
-    // Walk over each IR function we created in the outliner and create
-    // DISubprograms for each function.
-    for (Function *F : CreatedIRFunctions) {
-      // Get the mangled name of the function for the linkage name.
-      std::string Dummy;
-      llvm::raw_string_ostream MangledNameStream(Dummy);
-      Mg.getNameWithPrefix(MangledNameStream, F, false);
+    DISubprogram *OutlinedSP = DB.createFunction(
+        Unit /* Context */, F->getName(), StringRef(MangledNameStream.str()),
+        Unit /* File */,
+        0 /* Line 0 is reserved for compiler-generated code. */,
+        DB.createSubroutineType(DB.getOrCreateTypeArray(None)), /* void type */
+        false, true, 0, /* Line 0 is reserved for compiler-generated code. */
+        DINode::DIFlags::FlagArtificial /* Compiler-generated code. */,
+        true /* Outlined code is optimized code by definition. */);
 
-      DISubprogram *SP = DB.createFunction(
-          Unit /* Context */, F->getName(), StringRef(MangledNameStream.str()),
-          Unit /* File */,
-          0 /* Line 0 is reserved for compiler-generated code. */,
-          DB.createSubroutineType(
-              DB.getOrCreateTypeArray(None)), /* void type */
-          false, true, 0, /* Line 0 is reserved for compiler-generated code. */
-          DINode::DIFlags::FlagArtificial /* Compiler-generated code. */,
-          true /* Outlined code is optimized code by definition. */);
+    // Don't add any new variables to the subprogram.
+    DB.finalizeSubprogram(OutlinedSP);
 
-      // Don't add any new variables to the subprogram.
-      DB.finalizeSubprogram(SP);
-
-      // Attach subprogram to the function.
-      F->setSubprogram(SP);
-    }
-
+    // Attach subprogram to the function.
+    F->setSubprogram(OutlinedSP);
     // We're done with the DIBuilder.
     DB.finalize();
   }
 
-  // Outlined functions shouldn't preserve liveness.
-  MF.getProperties().reset(MachineFunctionProperties::Property::TracksLiveness);
-  MF.getRegInfo().freezeReservedRegs(MF);
   return &MF;
 }
 
@@ -1398,7 +1386,11 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
     for (MachineBasicBlock &MBB : *MF) {
       // If there isn't anything in MBB, then there's no point in outlining from
       // it.
-      if (MBB.empty())
+      // If there are fewer than 2 instructions in the MBB, then it can't ever
+      // contain something worth outlining.
+      // FIXME: This should be based off of the maximum size in B of an outlined
+      // call versus the size in B of the MBB.
+      if (MBB.empty() || MBB.size() < 2)
         continue;
 
       // Check if MBB could be the target of an indirect branch. If it is, then

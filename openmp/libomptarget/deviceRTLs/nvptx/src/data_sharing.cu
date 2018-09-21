@@ -378,6 +378,12 @@ EXTERN void __kmpc_data_sharing_init_stack_spmd() {
 // as long as the size requested fits the pre-allocated size.
 EXTERN void* __kmpc_data_sharing_push_stack(size_t DataSize,
     int16_t UseSharedMemory) {
+  if (isRuntimeUninitialized()) {
+    ASSERT0(LT_FUSSY, isSPMDMode(),
+            "Expected SPMD mode with uninitialized runtime.");
+    return omptarget_nvptx_SimpleThreadPrivateContext::Allocate(DataSize);
+  }
+
   // Frame pointer must be visible to all workers in the same warp.
   unsigned WID = getWarpId();
   void *&FrameP = DataSharingState.FramePtr[WID];
@@ -456,6 +462,12 @@ EXTERN void* __kmpc_data_sharing_push_stack(size_t DataSize,
 // reclaim all outstanding global memory slots since it is
 // likely we have reached the end of the kernel.
 EXTERN void __kmpc_data_sharing_pop_stack(void *FrameStart) {
+  if (isRuntimeUninitialized()) {
+    ASSERT0(LT_FUSSY, isSPMDMode(),
+            "Expected SPMD mode with uninitialized runtime.");
+    return omptarget_nvptx_SimpleThreadPrivateContext::Deallocate(FrameStart);
+  }
+
   if (IsWarpMasterActiveThread()) {
     unsigned WID = getWarpId();
 

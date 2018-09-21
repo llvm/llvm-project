@@ -4637,7 +4637,7 @@ define <8 x float> @test_subps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a
 define i32 @test_testpd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ; GENERIC-LABEL: test_testpd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    xorl %eax, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    xorl %eax, %eax # sched: [0:0.25]
 ; GENERIC-NEXT:    vtestpd %xmm1, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    setb %al # sched: [1:0.50]
 ; GENERIC-NEXT:    vtestpd (%rdi), %xmm0 # sched: [7:1.00]
@@ -4646,7 +4646,7 @@ define i32 @test_testpd(<2 x double> %a0, <2 x double> %a1, <2 x double> *%a2) {
 ;
 ; SANDY-LABEL: test_testpd:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    xorl %eax, %eax # sched: [1:0.33]
+; SANDY-NEXT:    xorl %eax, %eax # sched: [0:0.25]
 ; SANDY-NEXT:    vtestpd %xmm1, %xmm0 # sched: [1:1.00]
 ; SANDY-NEXT:    setb %al # sched: [1:0.50]
 ; SANDY-NEXT:    vtestpd (%rdi), %xmm0 # sched: [7:1.00]
@@ -4717,7 +4717,7 @@ declare i32 @llvm.x86.avx.vtestc.pd(<2 x double>, <2 x double>) nounwind readnon
 define i32 @test_testpd_ymm(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a2) {
 ; GENERIC-LABEL: test_testpd_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    xorl %eax, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    xorl %eax, %eax # sched: [0:0.25]
 ; GENERIC-NEXT:    vtestpd %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    setb %al # sched: [1:0.50]
 ; GENERIC-NEXT:    vtestpd (%rdi), %ymm0 # sched: [8:1.00]
@@ -4727,7 +4727,7 @@ define i32 @test_testpd_ymm(<4 x double> %a0, <4 x double> %a1, <4 x double> *%a
 ;
 ; SANDY-LABEL: test_testpd_ymm:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    xorl %eax, %eax # sched: [1:0.33]
+; SANDY-NEXT:    xorl %eax, %eax # sched: [0:0.25]
 ; SANDY-NEXT:    vtestpd %ymm1, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    setb %al # sched: [1:0.50]
 ; SANDY-NEXT:    vtestpd (%rdi), %ymm0 # sched: [8:1.00]
@@ -4804,7 +4804,7 @@ declare i32 @llvm.x86.avx.vtestc.pd.256(<4 x double>, <4 x double>) nounwind rea
 define i32 @test_testps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ; GENERIC-LABEL: test_testps:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    xorl %eax, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    xorl %eax, %eax # sched: [0:0.25]
 ; GENERIC-NEXT:    vtestps %xmm1, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    setb %al # sched: [1:0.50]
 ; GENERIC-NEXT:    vtestps (%rdi), %xmm0 # sched: [7:1.00]
@@ -4813,7 +4813,7 @@ define i32 @test_testps(<4 x float> %a0, <4 x float> %a1, <4 x float> *%a2) {
 ;
 ; SANDY-LABEL: test_testps:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    xorl %eax, %eax # sched: [1:0.33]
+; SANDY-NEXT:    xorl %eax, %eax # sched: [0:0.25]
 ; SANDY-NEXT:    vtestps %xmm1, %xmm0 # sched: [1:1.00]
 ; SANDY-NEXT:    setb %al # sched: [1:0.50]
 ; SANDY-NEXT:    vtestps (%rdi), %xmm0 # sched: [7:1.00]
@@ -4884,7 +4884,7 @@ declare i32 @llvm.x86.avx.vtestc.ps(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_testps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) {
 ; GENERIC-LABEL: test_testps_ymm:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    xorl %eax, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    xorl %eax, %eax # sched: [0:0.25]
 ; GENERIC-NEXT:    vtestps %ymm1, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    setb %al # sched: [1:0.50]
 ; GENERIC-NEXT:    vtestps (%rdi), %ymm0 # sched: [8:1.00]
@@ -4894,7 +4894,7 @@ define i32 @test_testps_ymm(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a2) 
 ;
 ; SANDY-LABEL: test_testps_ymm:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    xorl %eax, %eax # sched: [1:0.33]
+; SANDY-NEXT:    xorl %eax, %eax # sched: [0:0.25]
 ; SANDY-NEXT:    vtestps %ymm1, %ymm0 # sched: [1:1.00]
 ; SANDY-NEXT:    setb %al # sched: [1:0.50]
 ; SANDY-NEXT:    vtestps (%rdi), %ymm0 # sched: [8:1.00]
@@ -5422,6 +5422,90 @@ define void @test_zeroupper() {
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   call void @llvm.x86.avx.vzeroupper()
+  ret void
+}
+
+define void @test_avx256_zero_idioms() {
+; GENERIC-LABEL: test_avx256_zero_idioms:
+; GENERIC:       # %bb.0:
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    vxorps %ymm0, %ymm0, %ymm0 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorpd %ymm1, %ymm1, %ymm1 # sched: [1:1.00]
+; GENERIC-NEXT:    vandnps %ymm2, %ymm2, %ymm2 # sched: [1:1.00]
+; GENERIC-NEXT:    vandnpd %ymm3, %ymm3, %ymm3 # sched: [1:1.00]
+; GENERIC-NEXT:    #NO_APP
+; GENERIC-NEXT:    retq # sched: [1:1.00]
+;
+; SANDY-LABEL: test_avx256_zero_idioms:
+; SANDY:       # %bb.0:
+; SANDY-NEXT:    #APP
+; SANDY-NEXT:    vxorps %ymm0, %ymm0, %ymm0 # sched: [1:1.00]
+; SANDY-NEXT:    vxorpd %ymm1, %ymm1, %ymm1 # sched: [1:1.00]
+; SANDY-NEXT:    vandnps %ymm2, %ymm2, %ymm2 # sched: [1:1.00]
+; SANDY-NEXT:    vandnpd %ymm3, %ymm3, %ymm3 # sched: [1:1.00]
+; SANDY-NEXT:    #NO_APP
+; SANDY-NEXT:    retq # sched: [1:1.00]
+;
+; HASWELL-LABEL: test_avx256_zero_idioms:
+; HASWELL:       # %bb.0:
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    vxorps %ymm0, %ymm0, %ymm0 # sched: [1:1.00]
+; HASWELL-NEXT:    vxorpd %ymm1, %ymm1, %ymm1 # sched: [1:1.00]
+; HASWELL-NEXT:    vandnps %ymm2, %ymm2, %ymm2 # sched: [1:1.00]
+; HASWELL-NEXT:    vandnpd %ymm3, %ymm3, %ymm3 # sched: [1:1.00]
+; HASWELL-NEXT:    #NO_APP
+; HASWELL-NEXT:    retq # sched: [7:1.00]
+;
+; BROADWELL-LABEL: test_avx256_zero_idioms:
+; BROADWELL:       # %bb.0:
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    vxorps %ymm0, %ymm0, %ymm0 # sched: [1:1.00]
+; BROADWELL-NEXT:    vxorpd %ymm1, %ymm1, %ymm1 # sched: [1:1.00]
+; BROADWELL-NEXT:    vandnps %ymm2, %ymm2, %ymm2 # sched: [1:1.00]
+; BROADWELL-NEXT:    vandnpd %ymm3, %ymm3, %ymm3 # sched: [1:1.00]
+; BROADWELL-NEXT:    #NO_APP
+; BROADWELL-NEXT:    retq # sched: [7:1.00]
+;
+; SKYLAKE-LABEL: test_avx256_zero_idioms:
+; SKYLAKE:       # %bb.0:
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    vxorps %ymm0, %ymm0, %ymm0 # sched: [1:0.33]
+; SKYLAKE-NEXT:    vxorpd %ymm1, %ymm1, %ymm1 # sched: [1:0.33]
+; SKYLAKE-NEXT:    vandnps %ymm2, %ymm2, %ymm2 # sched: [1:0.33]
+; SKYLAKE-NEXT:    vandnpd %ymm3, %ymm3, %ymm3 # sched: [1:0.33]
+; SKYLAKE-NEXT:    #NO_APP
+; SKYLAKE-NEXT:    retq # sched: [7:1.00]
+;
+; SKX-LABEL: test_avx256_zero_idioms:
+; SKX:       # %bb.0:
+; SKX-NEXT:    #APP
+; SKX-NEXT:    vxorps %ymm0, %ymm0, %ymm0 # sched: [1:0.33]
+; SKX-NEXT:    vxorpd %ymm1, %ymm1, %ymm1 # sched: [1:0.33]
+; SKX-NEXT:    vandnps %ymm2, %ymm2, %ymm2 # sched: [1:0.33]
+; SKX-NEXT:    vandnpd %ymm3, %ymm3, %ymm3 # sched: [1:0.33]
+; SKX-NEXT:    #NO_APP
+; SKX-NEXT:    retq # sched: [7:1.00]
+;
+; BTVER2-LABEL: test_avx256_zero_idioms:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    #APP
+; BTVER2-NEXT:    vxorps %ymm0, %ymm0, %ymm0 # sched: [1:0.50]
+; BTVER2-NEXT:    vxorpd %ymm1, %ymm1, %ymm1 # sched: [1:0.50]
+; BTVER2-NEXT:    vandnps %ymm2, %ymm2, %ymm2 # sched: [1:0.50]
+; BTVER2-NEXT:    vandnpd %ymm3, %ymm3, %ymm3 # sched: [1:0.50]
+; BTVER2-NEXT:    #NO_APP
+; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_avx256_zero_idioms:
+; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    vxorps %ymm0, %ymm0, %ymm0 # sched: [1:0.25]
+; ZNVER1-NEXT:    vxorpd %ymm1, %ymm1, %ymm1 # sched: [1:0.25]
+; ZNVER1-NEXT:    vandnps %ymm2, %ymm2, %ymm2 # sched: [1:0.25]
+; ZNVER1-NEXT:    vandnpd %ymm3, %ymm3, %ymm3 # sched: [1:0.25]
+; ZNVER1-NEXT:    #NO_APP
+; ZNVER1-NEXT:    retq # sched: [1:0.50]
+  call void asm sideeffect "vxorps %ymm0, %ymm0, %ymm0\0Avxorpd %ymm1, %ymm1, %ymm1\0Avandnps %ymm2, %ymm2, %ymm2\0Avandnpd %ymm3, %ymm3, %ymm3", ""()
   ret void
 }
 declare void @llvm.x86.avx.vzeroupper() nounwind

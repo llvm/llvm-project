@@ -105,6 +105,19 @@ check_library_exists(dl dlopen "" COMPILER_RT_HAS_LIBDL)
 check_library_exists(rt shm_open "" COMPILER_RT_HAS_LIBRT)
 check_library_exists(m pow "" COMPILER_RT_HAS_LIBM)
 check_library_exists(pthread pthread_create "" COMPILER_RT_HAS_LIBPTHREAD)
+
+# Look for terminfo library, used in unittests that depend on LLVMSupport.
+if(LLVM_ENABLE_TERMINFO)
+  foreach(library tinfo terminfo curses ncurses ncursesw)
+    check_library_exists(
+      ${library} setupterm "" COMPILER_RT_HAS_TERMINFO)
+    if(COMPILER_RT_HAS_TERMINFO)
+      set(COMPILER_RT_TERMINFO_LIB "${library}")
+      break()
+    endif()
+  endforeach()
+endif()
+
 if (ANDROID AND COMPILER_RT_HAS_LIBDL)
   # Android's libstdc++ has a dependency on libdl.
   list(APPEND CMAKE_REQUIRED_LIBRARIES dl)

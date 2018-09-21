@@ -99,6 +99,9 @@ static const char *getPropertyName(MachineFunctionProperties::Property Prop) {
   llvm_unreachable("Invalid machine function property");
 }
 
+// Pin the vtable to this file.
+void MachineFunction::Delegate::anchor() {}
+
 void MachineFunctionProperties::print(raw_ostream &OS) const {
   const char *Separator = "";
   for (BitVector::size_type I = 0; I < Properties.size(); ++I) {
@@ -133,6 +136,16 @@ MachineFunction::MachineFunction(const Function &F, const TargetMachine &Target,
     : F(F), Target(Target), STI(&STI), Ctx(mmi.getContext()), MMI(mmi) {
   FunctionNumber = FunctionNum;
   init();
+}
+
+void MachineFunction::handleInsertion(const MachineInstr &MI) {
+  if (TheDelegate)
+    TheDelegate->MF_HandleInsertion(MI);
+}
+
+void MachineFunction::handleRemoval(const MachineInstr &MI) {
+  if (TheDelegate)
+    TheDelegate->MF_HandleRemoval(MI);
 }
 
 void MachineFunction::init() {

@@ -6,7 +6,7 @@ target datalayout = "A5"
 ; FIXME: Why is this commuted only sometimes?
 ; GCN-LABEL: {{^}}i32_fastcc_i32_i32:
 ; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CIVI-NEXT: v_add_{{i|u}}32_e32 v0, vcc, v1, v0
+; CIVI-NEXT: v_add_{{i|u}}32_e32 v0, vcc, v0, v1
 ; GFX9-NEXT: v_add_u32_e32 v0, v0, v1
 ; GCN-NEXT: s_setpc_b64
 define fastcc i32 @i32_fastcc_i32_i32(i32 %arg0, i32 %arg1) #1 {
@@ -16,7 +16,7 @@ define fastcc i32 @i32_fastcc_i32_i32(i32 %arg0, i32 %arg1) #1 {
 
 ; GCN-LABEL: {{^}}i32_fastcc_i32_i32_stack_object:
 ; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CIVI-NEXT: v_add_{{i|u}}32_e32 v0, vcc, v1, v0
+; CIVI-NEXT: v_add_{{i|u}}32_e32 v0, vcc, v0, v1
 ; GFX9-NEXT: v_add_u32_e32 v0, v0, v1
 ; GCN: s_mov_b32 s5, s32
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s5 offset:24
@@ -88,7 +88,7 @@ entry:
 ; GCN-NEXT: buffer_load_dword v1, off, s[0:3], s5 offset:4
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 
-; CIVI-NEXT: v_add_{{i|u}}32_e32 v0, vcc, v1, v0
+; CIVI-NEXT: v_add_{{i|u}}32_e32 v0, vcc, v0, v1
 ; GFX9-NEXT: v_add_u32_e32 v0, v0, v1
 
 ; GCN-NEXT: s_setpc_b64 s[30:31]
@@ -130,9 +130,9 @@ entry:
 ; GCN-DAG: buffer_load_dword [[LOAD_0:v[0-9]+]], off, s[0:3], s5 offset:4
 ; GCN-DAG: buffer_load_dword [[LOAD_1:v[0-9]+]], off, s[0:3], s5 offset:8
 
-; CIVI-NEXT: v_add_{{i|u}}32_e32 v0, vcc, v1, v0
-; CIVI: v_add_{{i|u}}32_e32 v0, vcc, [[LOAD_0]], v0
-; CIVI: v_add_{{i|u}}32_e32 v0, vcc, [[LOAD_1]], v0
+; CIVI-NEXT: v_add_{{i|u}}32_e32 v0, vcc, v0, v1
+; CIVI: v_add_{{i|u}}32_e32 v0, vcc, v0, [[LOAD_0]]
+; CIVI: v_add_{{i|u}}32_e32 v0, vcc, v0, [[LOAD_1]]
 
 
 ; GFX9-NEXT: v_add_u32_e32 v0, v0, v1

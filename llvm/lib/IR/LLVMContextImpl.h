@@ -280,21 +280,24 @@ template <> struct MDNodeKeyImpl<DILocation> {
   unsigned Column;
   Metadata *Scope;
   Metadata *InlinedAt;
+  bool ImplicitCode;
 
   MDNodeKeyImpl(unsigned Line, unsigned Column, Metadata *Scope,
-                Metadata *InlinedAt)
-      : Line(Line), Column(Column), Scope(Scope), InlinedAt(InlinedAt) {}
+                Metadata *InlinedAt, bool ImplicitCode)
+      : Line(Line), Column(Column), Scope(Scope), InlinedAt(InlinedAt),
+        ImplicitCode(ImplicitCode) {}
   MDNodeKeyImpl(const DILocation *L)
       : Line(L->getLine()), Column(L->getColumn()), Scope(L->getRawScope()),
-        InlinedAt(L->getRawInlinedAt()) {}
+        InlinedAt(L->getRawInlinedAt()), ImplicitCode(L->isImplicitCode()) {}
 
   bool isKeyOf(const DILocation *RHS) const {
     return Line == RHS->getLine() && Column == RHS->getColumn() &&
-           Scope == RHS->getRawScope() && InlinedAt == RHS->getRawInlinedAt();
+           Scope == RHS->getRawScope() && InlinedAt == RHS->getRawInlinedAt() &&
+           ImplicitCode == RHS->isImplicitCode();
   }
 
   unsigned getHashValue() const {
-    return hash_combine(Line, Column, Scope, InlinedAt);
+    return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode);
   }
 };
 

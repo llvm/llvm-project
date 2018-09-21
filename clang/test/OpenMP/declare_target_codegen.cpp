@@ -157,6 +157,16 @@ struct Bake {
 template class Bake<int>;
 #pragma omp end declare target
 
+struct BaseNonT {
+  virtual ~BaseNonT() {}
+};
+
+#pragma omp declare target
+struct BakeNonT {
+  virtual ~BakeNonT() {}
+};
+#pragma omp end declare target
+
 // CHECK-DAG: declare extern_weak signext i32 @__create()
 
 // CHECK-NOT: define {{.*}}{{baz1|baz4|maini1|Base}}

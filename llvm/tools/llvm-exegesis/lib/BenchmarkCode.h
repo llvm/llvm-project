@@ -23,7 +23,7 @@ struct BenchmarkCode {
 
   // Before the code is executed some instructions are added to setup the
   // registers initial values.
-  std::vector<unsigned> RegsToDef;
+  std::vector<RegisterValue> RegisterInitialValues;
 
   // We also need to provide the registers that are live on entry for the
   // assembler to generate proper prologue/epilogue.

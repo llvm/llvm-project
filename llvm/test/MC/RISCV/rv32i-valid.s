@@ -60,6 +60,16 @@ jal a2, 1048574
 # CHECK-ASM-AND-OBJ: jal a3, 256
 # CHECK-ASM: encoding: [0xef,0x06,0x00,0x10]
 jal a3, 256
+# CHECK-ASM: jal a0, foo
+# CHECK-ASM: encoding: [0x6f,0bAAAA0101,A,A]
+# CHECK-OBJ: jal a0, 0
+# CHECK-OBJ: R_RISCV_JAL foo
+jal a0, foo
+# CHECK-ASM: jal a0, a0
+# CHECK-ASM: encoding: [0x6f,0bAAAA0101,A,A]
+# CHECK-OBJ: jal a0, 0
+# CHECK-OBJ: R_RISCV_JAL a0
+jal a0, a0
 
 # CHECK-ASM-AND-OBJ: jalr a0, a1, -2048
 # CHECK-ASM: encoding: [0x67,0x85,0x05,0x80]

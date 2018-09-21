@@ -34,6 +34,7 @@
 #include "xray_buffer_queue.h"
 #include "xray_defs.h"
 #include "xray_fdr_flags.h"
+#include "xray_fdr_log_writer.h"
 #include "xray_flags.h"
 #include "xray_recursion_guard.h"
 #include "xray_tsc.h"
@@ -138,59 +139,35 @@ static ThreadLocalData &getThreadLocalData() {
 
 static void writeNewBufferPreamble(tid_t Tid, timespec TS,
                                    pid_t Pid) XRAY_NEVER_INSTRUMENT {
-  static constexpr int InitRecordsCount = 3;
+  static_assert(sizeof(time_t) <= 8, "time_t needs to be at most 8 bytes");
   auto &TLD = getThreadLocalData();
-  MetadataRecord Metadata[InitRecordsCount];
-  {
-    // Write out a MetadataRecord to signify that this is the start of a new
-    // buffer, associated with a particular thread, with a new CPU.  For the
-    // data, we have 15 bytes to squeeze as much information as we can.  At this
-    // point we only write down the following bytes:
-    //   - Thread ID (tid_t, cast to 4 bytes type due to Darwin being 8 bytes)
-    auto &NewBuffer = Metadata[0];
-    NewBuffer.Type = uint8_t(RecordType::Metadata);
-    NewBuffer.RecordKind = uint8_t(MetadataRecord::RecordKinds::NewBuffer);
-    int32_t tid = static_cast<int32_t>(Tid);
-    internal_memcpy(&NewBuffer.Data, &tid, sizeof(tid));
-  }
+  MetadataRecord Metadata[] = {
+      // Write out a MetadataRecord to signify that this is the start of a new
+      // buffer, associated with a particular thread, with a new CPU. For the
+      // data, we have 15 bytes to squeeze as much information as we can. At
+      // this point we only write down the following bytes:
+      //   - Thread ID (tid_t, cast to 4 bytes type due to Darwin being 8 bytes)
+      createMetadataRecord<MetadataRecord::RecordKinds::NewBuffer>(
+          static_cast<int32_t>(Tid)),
 
-  // Also write the WalltimeMarker record.
-  {
-    static_assert(sizeof(time_t) <= 8, "time_t needs to be at most 8 bytes");
-    auto &WalltimeMarker = Metadata[1];
-    WalltimeMarker.Type = uint8_t(RecordType::Metadata);
-    WalltimeMarker.RecordKind =
-        uint8_t(MetadataRecord::RecordKinds::WalltimeMarker);
+      // Also write the WalltimeMarker record. We only really need microsecond
+      // precision here, and enforce across platforms that we need 64-bit
+      // seconds and 32-bit microseconds encoded in the Metadata record.
+      createMetadataRecord<MetadataRecord::RecordKinds::WalltimeMarker>(
+          static_cast<int64_t>(TS.tv_sec),
+          static_cast<int32_t>(TS.tv_nsec / 1000)),
 
-    // We only really need microsecond precision here, and enforce across
-    // platforms that we need 64-bit seconds and 32-bit microseconds encoded in
-    // the Metadata record.
-    int32_t Micros = TS.tv_nsec / 1000;
-    int64_t Seconds = TS.tv_sec;
-    internal_memcpy(WalltimeMarker.Data, &Seconds, sizeof(Seconds));
-    internal_memcpy(WalltimeMarker.Data + sizeof(Seconds), &Micros,
-                    sizeof(Micros));
-  }
-
-  // Also write the Pid record.
-  {
-    // Write out a MetadataRecord that contains the current pid
-    auto &PidMetadata = Metadata[2];
-    PidMetadata.Type = uint8_t(RecordType::Metadata);
-    PidMetadata.RecordKind = uint8_t(MetadataRecord::RecordKinds::Pid);
-    int32_t pid = static_cast<int32_t>(Pid);
-    internal_memcpy(&PidMetadata.Data, &pid, sizeof(pid));
-  }
+      // Also write the Pid record.
+      createMetadataRecord<MetadataRecord::RecordKinds::Pid>(
+          static_cast<int32_t>(Pid)),
+  };
 
   TLD.NumConsecutiveFnEnters = 0;
   TLD.NumTailCalls = 0;
   if (TLD.BQ == nullptr || TLD.BQ->finalizing())
     return;
-  internal_memcpy(TLD.RecordPtr, Metadata,
-                  sizeof(MetadataRecord) * InitRecordsCount);
-  TLD.RecordPtr += sizeof(MetadataRecord) * InitRecordsCount;
-  atomic_store(&TLD.Buffer.Extents, sizeof(MetadataRecord) * InitRecordsCount,
-               memory_order_release);
+  FDRLogWriter Writer(TLD.Buffer);
+  TLD.RecordPtr += Writer.writeMetadataRecords(Metadata);
 }
 
 static void setupNewBuffer(int (*wall_clock_reader)(
@@ -198,6 +175,7 @@ static void setupNewBuffer(int (*wall_clock_reader)(
   auto &TLD = getThreadLocalData();
   auto &B = TLD.Buffer;
   TLD.RecordPtr = static_cast<char *>(B.Data);
+  atomic_store(&B.Extents, 0, memory_order_release);
   tid_t Tid = GetTid();
   timespec TS{0, 0};
   pid_t Pid = internal_getpid();
@@ -221,52 +199,38 @@ static void decrementExtents(size_t Subtract) {
 static void writeNewCPUIdMetadata(uint16_t CPU,
                                   uint64_t TSC) XRAY_NEVER_INSTRUMENT {
   auto &TLD = getThreadLocalData();
-  MetadataRecord NewCPUId;
-  NewCPUId.Type = uint8_t(RecordType::Metadata);
-  NewCPUId.RecordKind = uint8_t(MetadataRecord::RecordKinds::NewCPUId);
+  FDRLogWriter W(TLD.Buffer, TLD.RecordPtr);
 
   // The data for the New CPU will contain the following bytes:
   //   - CPU ID (uint16_t, 2 bytes)
   //   - Full TSC (uint64_t, 8 bytes)
   // Total = 10 bytes.
-  internal_memcpy(&NewCPUId.Data, &CPU, sizeof(CPU));
-  internal_memcpy(&NewCPUId.Data[sizeof(CPU)], &TSC, sizeof(TSC));
-  internal_memcpy(TLD.RecordPtr, &NewCPUId, sizeof(MetadataRecord));
-  TLD.RecordPtr += sizeof(MetadataRecord);
+  W.writeMetadata<MetadataRecord::RecordKinds::NewCPUId>(CPU, TSC);
+  TLD.RecordPtr = W.getNextRecord();
   TLD.NumConsecutiveFnEnters = 0;
   TLD.NumTailCalls = 0;
-  incrementExtents(sizeof(MetadataRecord));
 }
 
 static void writeTSCWrapMetadata(uint64_t TSC) XRAY_NEVER_INSTRUMENT {
   auto &TLD = getThreadLocalData();
-  MetadataRecord TSCWrap;
-  TSCWrap.Type = uint8_t(RecordType::Metadata);
-  TSCWrap.RecordKind = uint8_t(MetadataRecord::RecordKinds::TSCWrap);
+  FDRLogWriter W(TLD.Buffer, TLD.RecordPtr);
 
   // The data for the TSCWrap record contains the following bytes:
   //   - Full TSC (uint64_t, 8 bytes)
   // Total = 8 bytes.
-  internal_memcpy(&TSCWrap.Data, &TSC, sizeof(TSC));
-  internal_memcpy(TLD.RecordPtr, &TSCWrap, sizeof(MetadataRecord));
-  TLD.RecordPtr += sizeof(MetadataRecord);
+  W.writeMetadata<MetadataRecord::RecordKinds::TSCWrap>(TSC);
+  TLD.RecordPtr = W.getNextRecord();
   TLD.NumConsecutiveFnEnters = 0;
   TLD.NumTailCalls = 0;
-  incrementExtents(sizeof(MetadataRecord));
 }
 
 // Call Argument metadata records store the arguments to a function in the
 // order of their appearance; holes are not supported by the buffer format.
 static void writeCallArgumentMetadata(uint64_t A) XRAY_NEVER_INSTRUMENT {
   auto &TLD = getThreadLocalData();
-  MetadataRecord CallArg;
-  CallArg.Type = uint8_t(RecordType::Metadata);
-  CallArg.RecordKind = uint8_t(MetadataRecord::RecordKinds::CallArgument);
-
-  internal_memcpy(CallArg.Data, &A, sizeof(A));
-  internal_memcpy(TLD.RecordPtr, &CallArg, sizeof(MetadataRecord));
-  TLD.RecordPtr += sizeof(MetadataRecord);
-  incrementExtents(sizeof(MetadataRecord));
+  FDRLogWriter W(TLD.Buffer, TLD.RecordPtr);
+  W.writeMetadata<MetadataRecord::RecordKinds::CallArgument>(A);
+  TLD.RecordPtr = W.getNextRecord();
 }
 
 static void writeFunctionRecord(int32_t FuncId, uint32_t TSCDelta,
@@ -279,8 +243,8 @@ static void writeFunctionRecord(int32_t FuncId, uint32_t TSCDelta,
     return;
   }
 
-  FunctionRecord FuncRecord;
-  FuncRecord.Type = uint8_t(RecordType::Function);
+  auto &TLD = getThreadLocalData();
+  FDRLogWriter W(TLD.Buffer, TLD.RecordPtr);
 
   // Only take 28 bits of the function id.
   //
@@ -289,27 +253,25 @@ static void writeFunctionRecord(int32_t FuncId, uint32_t TSCDelta,
   // to the first 28 bits. To do this properly, this means we need to mask the
   // function id with (2 ^ 28) - 1 == 0x0fffffff.
   //
-  FuncRecord.FuncId = FuncId & MaxFuncId;
-  FuncRecord.TSCDelta = TSCDelta;
+  auto TruncatedId = FuncId & MaxFuncId;
+  auto Kind = FDRLogWriter::FunctionRecordKind::Enter;
 
-  auto &TLD = getThreadLocalData();
   switch (EntryType) {
   case XRayEntryType::ENTRY:
     ++TLD.NumConsecutiveFnEnters;
-    FuncRecord.RecordKind = uint8_t(FunctionRecord::RecordKinds::FunctionEnter);
     break;
   case XRayEntryType::LOG_ARGS_ENTRY:
     // We should not rewind functions with logged args.
     TLD.NumConsecutiveFnEnters = 0;
     TLD.NumTailCalls = 0;
-    FuncRecord.RecordKind = uint8_t(FunctionRecord::RecordKinds::FunctionEnter);
+    Kind = FDRLogWriter::FunctionRecordKind::EnterArg;
     break;
   case XRayEntryType::EXIT:
     // If we've decided to log the function exit, we will never erase the log
     // before it.
     TLD.NumConsecutiveFnEnters = 0;
     TLD.NumTailCalls = 0;
-    FuncRecord.RecordKind = uint8_t(FunctionRecord::RecordKinds::FunctionExit);
+    Kind = FDRLogWriter::FunctionRecordKind::Exit;
     break;
   case XRayEntryType::TAIL:
     // If we just entered the function we're tail exiting from or erased every
@@ -324,8 +286,7 @@ static void writeFunctionRecord(int32_t FuncId, uint32_t TSCDelta,
       TLD.NumTailCalls = 0;
       TLD.NumConsecutiveFnEnters = 0;
     }
-    FuncRecord.RecordKind =
-        uint8_t(FunctionRecord::RecordKinds::FunctionTailExit);
+    Kind = FDRLogWriter::FunctionRecordKind::TailExit;
     break;
   case XRayEntryType::CUSTOM_EVENT: {
     // This is a bug in patching, so we'll report it once and move on.
@@ -346,9 +307,8 @@ static void writeFunctionRecord(int32_t FuncId, uint32_t TSCDelta,
   }
   }
 
-  internal_memcpy(TLD.RecordPtr, &FuncRecord, sizeof(FunctionRecord));
-  TLD.RecordPtr += sizeof(FunctionRecord);
-  incrementExtents(sizeof(FunctionRecord));
+  W.writeFunction(Kind, TruncatedId, TSCDelta);
+  TLD.RecordPtr = W.getNextRecord();
 }
 
 static atomic_uint64_t TicksPerSec{0};
@@ -423,6 +383,9 @@ static void rewindRecentCall(uint64_t TSC, uint64_t &LastTSC,
 static bool releaseThreadLocalBuffer(BufferQueue &BQArg) {
   auto &TLD = getThreadLocalData();
   auto EC = BQArg.releaseBuffer(TLD.Buffer);
+  if (TLD.Buffer.Data == nullptr)
+    return true;
+
   if (EC != BufferQueue::ErrorCode::Ok) {
     Report("Failed to release buffer at %p; error=%s\n", TLD.Buffer.Data,
            BufferQueue::getErrorString(EC));
@@ -1173,6 +1136,8 @@ XRayLogInitStatus fdrLoggingInit(UNUSED size_t BufferSize,
         return;
       auto &TLD = *reinterpret_cast<ThreadLocalData *>(TLDPtr);
       if (TLD.BQ == nullptr)
+        return;
+      if (TLD.Buffer.Data == nullptr)
         return;
       auto EC = TLD.BQ->releaseBuffer(TLD.Buffer);
       if (EC != BufferQueue::ErrorCode::Ok)

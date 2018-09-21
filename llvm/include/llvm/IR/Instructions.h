@@ -2513,6 +2513,11 @@ public:
   /// source vector.
   bool isIdentityWithExtract() const;
 
+  /// Return true if this shuffle concatenates its 2 source vectors. This
+  /// returns false if either input is undefined. In that case, the shuffle is
+  /// is better classified as an identity with padding operation.
+  bool isConcat() const;
+
   /// Return true if this shuffle mask chooses elements from its source vectors
   /// without lane crossings. A shuffle using this mask would be
   /// equivalent to a vector select with a constant condition operand.

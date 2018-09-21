@@ -1888,6 +1888,42 @@ static void findReturnsToZap(Function &F,
   }
 }
 
+// Update the condition for terminators that are branching on indeterminate
+// values, forcing them to use a specific edge.
+static void forceIndeterminateEdge(Instruction* I, SCCPSolver &Solver) {
+  BasicBlock *Dest = nullptr;
+  Constant *C = nullptr;
+  if (SwitchInst *SI = dyn_cast<SwitchInst>(I)) {
+    if (!isa<ConstantInt>(SI->getCondition())) {
+      // Indeterminate switch; use first case value.
+      Dest = SI->case_begin()->getCaseSuccessor();
+      C = SI->case_begin()->getCaseValue();
+    }
+  } else if (BranchInst *BI = dyn_cast<BranchInst>(I)) {
+    if (!isa<ConstantInt>(BI->getCondition())) {
+      // Indeterminate branch; use false.
+      Dest = BI->getSuccessor(1);
+      C = ConstantInt::getFalse(BI->getContext());
+    }
+  } else if (IndirectBrInst *IBR = dyn_cast<IndirectBrInst>(I)) {
+    if (!isa<BlockAddress>(IBR->getAddress()->stripPointerCasts())) {
+      // Indeterminate indirectbr; use successor 0.
+      Dest = IBR->getSuccessor(0);
+      C = BlockAddress::get(IBR->getSuccessor(0));
+    }
+  } else {
+    llvm_unreachable("Unexpected terminator instruction");
+  }
+  if (C) {
+    assert(Solver.isEdgeFeasible(I->getParent(), Dest) &&
+           "Didn't find feasible edge?");
+    (void)Dest;
+
+    I->setOperand(0, C);
+  }
+}
+
+
 bool llvm::runIPSCCP(
     Module &M, const DataLayout &DL, const TargetLibraryInfo *TLI,
     function_ref<std::unique_ptr<PredicateInfo>(Function &)> getPredicateInfo) {
@@ -2017,32 +2053,10 @@ bool llvm::runIPSCCP(
         // Ignore blockaddress users; BasicBlock's dtor will handle them.
         if (!I) continue;
 
+        // If we have forced an edge for an indeterminate value, then force the
+        // terminator to fold to that edge.
+        forceIndeterminateEdge(I, Solver);
         bool Folded = ConstantFoldTerminator(I->getParent());
-        if (!Folded) {
-          // If the branch can't be folded, we must have forced an edge
-          // for an indeterminate value. Force the terminator to fold
-          // to that edge.
-          Constant *C;
-          BasicBlock *Dest;
-          if (SwitchInst *SI = dyn_cast<SwitchInst>(I)) {
-            Dest = SI->case_begin()->getCaseSuccessor();
-            C = SI->case_begin()->getCaseValue();
-          } else if (BranchInst *BI = dyn_cast<BranchInst>(I)) {
-            Dest = BI->getSuccessor(1);
-            C = ConstantInt::getFalse(BI->getContext());
-          } else if (IndirectBrInst *IBR = dyn_cast<IndirectBrInst>(I)) {
-            Dest = IBR->getSuccessor(0);
-            C = BlockAddress::get(IBR->getSuccessor(0));
-          } else {
-            llvm_unreachable("Unexpected terminator instruction");
-          }
-          assert(Solver.isEdgeFeasible(I->getParent(), Dest) &&
-                 "Didn't find feasible edge?");
-          (void)Dest;
-
-          I->setOperand(0, C);
-          Folded = ConstantFoldTerminator(I->getParent());
-        }
         assert(Folded &&
               "Expect TermInst on constantint or blockaddress to be folded");
         (void) Folded;

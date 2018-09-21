@@ -133,6 +133,13 @@ wasm::ValType WebAssembly::toValType(const MVT &Ty) {
     return wasm::ValType::F32;
   case MVT::f64:
     return wasm::ValType::F64;
+  case MVT::v16i8:
+  case MVT::v8i16:
+  case MVT::v4i32:
+  case MVT::v2i64:
+  case MVT::v4f32:
+  case MVT::v2f64:
+    return wasm::ValType::V128;
   case MVT::ExceptRef:
     return wasm::ValType::EXCEPT_REF;
   default:

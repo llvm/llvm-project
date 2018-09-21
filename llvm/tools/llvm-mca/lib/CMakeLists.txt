@@ -24,7 +24,6 @@ add_library(LLVMMCA
 
 llvm_update_compile_flags(LLVMMCA)
 llvm_map_components_to_libnames(libs
-  CodeGen
   MC
   Support
   )

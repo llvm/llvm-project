@@ -8613,6 +8613,10 @@ def err_opencl_variadic_function : Error<
   "invalid prototype, variadic arguments are not allowed in OpenCL">;
 def err_opencl_requires_extension : Error<
   "use of %select{type|declaration}0 %1 requires %2 extension to be enabled">;
+def warn_opencl_generic_address_space_arg : Warning<
+  "passing non-generic address space pointer to %0"
+  " may cause dynamic conversion affecting performance">,
+  InGroup<Conversion>, DefaultIgnore;
 
 // OpenCL v2.0 s6.13.6 -- Builtin Pipe Functions
 def err_opencl_builtin_pipe_first_arg : Error<

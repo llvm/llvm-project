@@ -2233,11 +2233,7 @@ class TestBase(Base):
         # a file within the inline test directory.
         if check_file.endswith('.pyc'):
             check_file = check_file[:-1]
-        if hasattr(self, 'test_filename'):
-            check_file_abs = os.path.join(os.path.dirname(self.test_filename),
-                    check_file)
-        else:
-            check_file_abs = os.path.abspath(check_file)
+        check_file_abs = os.path.abspath(check_file)
 
         # Run FileCheck.
         filecheck_bin = configuration.get_filecheck_path()
@@ -2248,10 +2244,9 @@ class TestBase(Base):
         cmd_stdout, cmd_stderr = subproc.communicate(input=output)
         cmd_status = subproc.returncode
 
-        if cmd_status != 0:
-            filecheck_cmd = " ".join(filecheck_args)
-            self.assertTrue(cmd_status == 0, """
---- FileCheck failed (code={0}) ---
+        filecheck_cmd = " ".join(filecheck_args)
+        filecheck_trace = """
+--- FileCheck trace (code={0}) ---
 {1}
 
 FileCheck input:
@@ -2260,7 +2255,13 @@ FileCheck input:
 FileCheck output:
 {3}
 {4}
-""".format(cmd_status, filecheck_cmd, output, cmd_stdout, cmd_stderr))
+""".format(cmd_status, filecheck_cmd, output, cmd_stdout, cmd_stderr)
+
+        trace = cmd_status != 0 or traceAlways
+        with recording(self, trace) as sbuf:
+            print(filecheck_trace, file=sbuf)
+
+        self.assertTrue(cmd_status == 0)
 
     def expect(
             self,

@@ -13,7 +13,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; GCN-LABEL: {{^}}work_item_info:
 ; GCN-NOT: v0
-; GCN: v_add_{{[iu]}}32_e32 [[RESULT:v[0-9]+]], vcc, v0, v{{[0-9]+}}
+; GCN: v_add_{{[iu]}}32_e32 [[RESULT:v[0-9]+]], vcc, v{{[0-9]+}}, v0
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @work_item_info(i32 addrspace(1)* %out, i32 %in) {
 entry:

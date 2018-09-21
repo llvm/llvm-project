@@ -221,7 +221,8 @@ class Value;
   /// return the i8 value that it is represented with. This is true for all i8
   /// values obviously, but is also true for i32 0, i32 -1, i16 0xF0F0, double
   /// 0.0 etc. If the value can't be handled with a repeated byte store (e.g.
-  /// i16 0x1234), return null.
+  /// i16 0x1234), return null. If the value is entirely undef and padding,
+  /// return undef.
   Value *isBytewiseValue(Value *V);
 
   /// Given an aggregrate and an sequence of indices, see if the scalar value

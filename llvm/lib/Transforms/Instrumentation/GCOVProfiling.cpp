@@ -593,7 +593,8 @@ void GCOVProfiler::emitProfileNotes() {
             continue;
 
           // Artificial lines such as calls to the global constructors.
-          if (Loc.getLine() == 0) continue;
+          if (Loc.getLine() == 0 || Loc.isImplicitCode())
+            continue;
 
           if (Line == Loc.getLine()) continue;
           Line = Loc.getLine();

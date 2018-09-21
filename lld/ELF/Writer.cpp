@@ -77,7 +77,6 @@ private:
   void addRelIpltSymbols();
   void addStartEndSymbols();
   void addStartStopSymbols(OutputSection *Sec);
-  uint64_t getEntryAddr();
 
   std::vector<PhdrEntry *> Phdrs;
 
@@ -2206,7 +2205,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
 // 4. the number represented by the entry symbol, if it is a number;
 // 5. the address of the first byte of the .text section, if present;
 // 6. the address 0.
-template <class ELFT> uint64_t Writer<ELFT>::getEntryAddr() {
+static uint64_t getEntryAddr() {
   // Case 1, 2 or 3
   if (Symbol *B = Symtab->find(Config->Entry))
     return B->getVA();
