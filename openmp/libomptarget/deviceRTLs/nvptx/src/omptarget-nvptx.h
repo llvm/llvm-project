@@ -113,6 +113,8 @@ enum DATA_SHARING_SIZES {
   DS_Worker_Warp_Slot_Size = WARPSIZE * DS_Slot_Size,
   // The maximum number of warps in use
   DS_Max_Warp_Number = 32,
+  // The size of the preallocated shared memory buffer per team
+  DS_Shared_Memory_Size = 128,
 };
 
 // Data structure to keep in shared memory that traces the current slot, stack,
@@ -386,12 +388,15 @@ struct omptarget_device_environmentTy {
 
 class omptarget_nvptx_SimpleThreadPrivateContext {
   uint16_t par_level[MAX_THREADS_PER_TEAM];
+
 public:
   INLINE void Init() {
     ASSERT0(LT_FUSSY, isSPMDMode() && isRuntimeUninitialized(),
             "Expected SPMD + uninitialized runtime modes.");
     par_level[GetThreadIdInBlock()] = 0;
   }
+  static INLINE void *Allocate(size_t DataSize);
+  static INLINE void Deallocate(void *Ptr);
   INLINE void IncParLevel() {
     ASSERT0(LT_FUSSY, isSPMDMode() && isRuntimeUninitialized(),
             "Expected SPMD + uninitialized runtime modes.");

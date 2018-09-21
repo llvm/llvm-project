@@ -55,3 +55,7 @@ add_lldb_library(lldbInterpreter
   LINK_COMPONENTS
     Support
   )
+
+if (NOT LLDB_DISABLE_LIBEDIT)
+  target_include_directories(lldbInterpreter PRIVATE ${libedit_INCLUDE_DIRS})
+endif()

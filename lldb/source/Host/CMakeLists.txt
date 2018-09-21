@@ -174,3 +174,7 @@ add_lldb_library(lldbHost
     Object
     Support
   )
+
+if (NOT LLDB_DISABLE_LIBEDIT)
+  target_include_directories(lldbHost PUBLIC ${libedit_INCLUDE_DIRS})
+endif()
