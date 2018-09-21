@@ -126,3 +126,33 @@ void ArchitectureArm::OverrideStopInfo(Thread &thread) const {
     }
   }
 }
+
+addr_t ArchitectureArm::GetCallableLoadAddress(addr_t code_addr,
+                                               AddressClass addr_class) const {
+  bool is_alternate_isa = false;
+
+  switch (addr_class) {
+  case AddressClass::eData:
+  case AddressClass::eDebug:
+    return LLDB_INVALID_ADDRESS;
+  case AddressClass::eCodeAlternateISA:
+    is_alternate_isa = true;
+    break;
+  default: break;
+  }
+
+  if ((code_addr & 2u) || is_alternate_isa)
+    return code_addr | 1u;
+  return code_addr;
+}
+
+addr_t ArchitectureArm::GetOpcodeLoadAddress(addr_t opcode_addr,
+                                             AddressClass addr_class) const {
+  switch (addr_class) {
+  case AddressClass::eData:
+  case AddressClass::eDebug:
+    return LLDB_INVALID_ADDRESS;
+  default: break;
+  }
+  return opcode_addr & ~(1ull);
+}
