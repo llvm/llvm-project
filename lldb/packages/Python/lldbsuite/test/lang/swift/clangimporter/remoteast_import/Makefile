@@ -6,8 +6,9 @@ all: a.out
 
 include $(LEVEL)/Makefile.rules
 
+.PHONY: libLibrary
 
-libLibrary.dylib: Library.swift
+libLibrary: Library.swift
 	$(SWIFT_FE) -c -primary-file $^ $(SWIFT_FEFLAGS) \
           -emit-module-path Library.part.swiftmodule \
           -parse-as-library -module-name Library -o Library.o -I.
@@ -16,12 +17,13 @@ libLibrary.dylib: Library.swift
           -disable-diagnostic-passes -disable-sil-perf-optzns \
           -module-name Library Library.part.swiftmodule -o Library.swiftmodule \
 	  -I$(shell pwd)
-	$(SWIFTC) -Xlinker -dylib -o $@ Library.o \
+	$(SWIFTC) -Xlinker -dylib -o $@.dylib Library.o \
 	  -Xlinker -add_ast_path -Xlinker Library.swiftmodule \
 	  -Xlinker -install_name -Xlinker @executable_path/libLibrary.dylib
 
-a.out: main.swift libLibrary.dylib
-	$(SWIFT_FE) -c -primary-file $< $(SWIFT_FEFLAGS) -module-name main -o main.o \
+a.out: main.swift libLibrary
+	$(SWIFT_FE) -c -primary-file $< $(SWIFT_FEFLAGS) \
+	  -module-name main -o main.o \
           -emit-module-path main.part.swiftmodule \
           -import-objc-header $(VPATH)/BridgingHeader.h \
           -I. -Xcc -DSYNTAX_ERROR=1
@@ -38,3 +40,5 @@ a.out: main.swift libLibrary.dylib
 clean::
 	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out *.o
 
+
+SWIFTFLAGS += -sdk "$(SDKROOT)"

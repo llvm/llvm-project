@@ -1,6 +1,8 @@
 LEVEL = ../../../../make
 SRCDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 SWIFT_OBJC_INTEROP := 1
+# This Makefile overwrites the default rules.
+EXE=a.out
 
 # This test builds a .dylib whose .swiftmodule imports a Clang module
 # which uses a header file "Foo.h". The main swift program also
@@ -8,11 +10,11 @@ SWIFT_OBJC_INTEROP := 1
 # but it is in a different directory. We are using a headermap to
 # switch between the two versions of "Foo.h" during build time.
 
-all: libDylib.dylib a.out
-
 include $(LEVEL)/Makefile.rules
 
-a.out: main.swift
+.PHONY: libDylib
+
+a.out: main.swift libDylib
 #       Avoid building a dSYM for the main application.
 #	$(SWIFTC) -g -Onone $^ -lDylib -L$(shell pwd) -o $@ -I$(SRCDIR) $(SWIFTFLAGS) -import-objc-header $(SRCDIR)/bridging-header.h -Xcc -I$(SRCDIR)/foo.hmap
 	$(SWIFT_FE) -c -primary-file $< $(SWIFT_FEFLAGS) \
@@ -30,10 +32,11 @@ a.out: main.swift
 	$(SWIFTC) -o $@ main.o -Xlinker -add_ast_path -Xlinker main.swiftmodule \
           -lDylib -L.
 
-libDylib.dylib: dylib.swift
-	$(SWIFTC) -g -Onone $^ -emit-library -module-name Dylib -emit-module -Xlinker -install_name -Xlinker @executable_path/$@ $(SWIFTFLAGS)
+libDylib: dylib.swift
+	$(SWIFTC) -g -Onone $^ -emit-library -module-name Dylib -emit-module \
+	  -Xlinker -install_name -Xlinker @executable_path/$@.dylib $(SWIFTFLAGS)
 
 clean::
 	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out *.o
 
-SWIFTFLAGS += -I.
+SWIFTFLAGS += -I. -sdk "$(SDKROOT)"

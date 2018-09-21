@@ -84,8 +84,8 @@ swift_sdk_root = None
 def getSwiftSDKRoot():
     """Returns the SDK root to be used for compiling Swift/ObjC interop code."""
     global swift_sdk_root
-    import platform
     if swift_sdk_root is None:
+        import platform
         if "SDKROOT" in os.environ:
             swift_sdk_root = os.environ["SDKROOT"]
         if "SWIFTSDKROOT" in os.environ:
