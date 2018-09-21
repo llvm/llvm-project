@@ -18,6 +18,8 @@ class BreakpointByLineAndColumnTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    ## Skip gcc version less 7.1 since it doesn't support -gcolumn-info
+    @skipIf(compiler="gcc", compiler_version=['<', '7.1'])
     def testBreakpointByLineAndColumn(self):
         self.build()
         main_c = lldb.SBFileSpec("main.c")
@@ -31,6 +33,8 @@ class BreakpointByLineAndColumnTestCase(TestBase):
             in_then |= b_loc.GetColumn() == 50
         self.assertTrue(in_then)
 
+    ## Skip gcc version less 7.1 since it doesn't support -gcolumn-info
+    @skipIf(compiler="gcc", compiler_version=['<', '7.1'])
     def testBreakpointByLine(self):
         self.build()
         main_c = lldb.SBFileSpec("main.c")
