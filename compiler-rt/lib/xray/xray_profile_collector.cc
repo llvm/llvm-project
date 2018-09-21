@@ -162,34 +162,34 @@ populateRecords(ProfileRecordArray &PRs, ProfileRecord::PathAllocator &PA,
 static void serializeRecords(ProfileBuffer *Buffer, const BlockHeader &Header,
                              const ProfileRecordArray &ProfileRecords)
     XRAY_NEVER_INSTRUMENT {
-  auto NextPtr = static_cast<char *>(
+  auto NextPtr = static_cast<uint8_t *>(
                      internal_memcpy(Buffer->Data, &Header, sizeof(Header))) +
                  sizeof(Header);
   for (const auto &Record : ProfileRecords) {
     // List of IDs follow:
     for (const auto FId : Record.Path)
       NextPtr =
-          static_cast<char *>(internal_memcpy(NextPtr, &FId, sizeof(FId))) +
+          static_cast<uint8_t *>(internal_memcpy(NextPtr, &FId, sizeof(FId))) +
           sizeof(FId);
 
     // Add the sentinel here.
     constexpr int32_t SentinelFId = 0;
-    NextPtr = static_cast<char *>(
+    NextPtr = static_cast<uint8_t *>(
                   internal_memset(NextPtr, SentinelFId, sizeof(SentinelFId))) +
               sizeof(SentinelFId);
 
     // Add the node data here.
     NextPtr =
-        static_cast<char *>(internal_memcpy(NextPtr, &Record.Node->CallCount,
-                                            sizeof(Record.Node->CallCount))) +
+        static_cast<uint8_t *>(internal_memcpy(
+            NextPtr, &Record.Node->CallCount, sizeof(Record.Node->CallCount))) +
         sizeof(Record.Node->CallCount);
-    NextPtr = static_cast<char *>(
+    NextPtr = static_cast<uint8_t *>(
                   internal_memcpy(NextPtr, &Record.Node->CumulativeLocalTime,
                                   sizeof(Record.Node->CumulativeLocalTime))) +
               sizeof(Record.Node->CumulativeLocalTime);
   }
 
-  DCHECK_EQ(NextPtr - static_cast<char *>(Buffer->Data), Buffer->Size);
+  DCHECK_EQ(NextPtr - static_cast<uint8_t *>(Buffer->Data), Buffer->Size);
 }
 
 } // namespace
@@ -203,7 +203,7 @@ void serialize() XRAY_NEVER_INSTRUMENT {
 
   // Clear out the global ProfileBuffers, if it's not empty.
   for (auto &B : *ProfileBuffers)
-    deallocateBuffer(B.Data, B.Size);
+    deallocateBuffer(reinterpret_cast<uint8_t *>(B.Data), B.Size);
   ProfileBuffers->trim(ProfileBuffers->size());
 
   if (ThreadTries->empty())
@@ -259,7 +259,7 @@ void reset() XRAY_NEVER_INSTRUMENT {
   if (ProfileBuffers != nullptr) {
     // Clear out the profile buffers that have been serialized.
     for (auto &B : *ProfileBuffers)
-      deallocateBuffer(B.Data, B.Size);
+      deallocateBuffer(reinterpret_cast<uint8_t *>(B.Data), B.Size);
     ProfileBuffers->trim(ProfileBuffers->size());
   }
 

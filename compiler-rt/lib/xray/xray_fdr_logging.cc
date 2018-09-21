@@ -721,7 +721,7 @@ XRayBuffer fdrIterator(const XRayBuffer B) {
 
   static BufferQueue::const_iterator It{};
   static BufferQueue::const_iterator End{};
-  static void *CurrentBuffer{nullptr};
+  static uint8_t *CurrentBuffer{nullptr};
   static size_t SerializedBufferSize = 0;
   if (B.Data == static_cast<void *>(&Header) && B.Size == sizeof(Header)) {
     // From this point on, we provide raw access to the raw buffer we're getting
