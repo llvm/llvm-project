@@ -41,11 +41,14 @@
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/ClangImporter/ClangImporterOptions.h"
 #include "swift/Demangling/Demangle.h"
+#include "swift/Demangling/ManglingMacros.h"
 #include "swift/Driver/Util.h"
 #include "swift/Frontend/Frontend.h"
 #include "swift/Frontend/PrintingDiagnosticConsumer.h"
 #include "swift/IDE/Utils.h"
 #include "swift/IRGen/Linking.h"
+#include "swift/Serialization/ModuleFile.h"
+#include "swift/Serialization/Validation.h"
 #include "swift/SIL/SILModule.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
@@ -779,15 +782,13 @@ static bool IsDeviceSupport(const char *path) {
 }
 
 SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
-    : TypeSystem(TypeSystem::eKindSwift), m_source_manager_ap(),
-      m_diagnostic_engine_ap(), m_ast_context_ap(), m_ir_gen_module_ap(),
+    : TypeSystem(TypeSystem::eKindSwift),
       m_compiler_invocation_ap(new swift::CompilerInvocation()),
-      m_dwarf_ast_parser_ap(), m_scratch_module(NULL), m_sil_module_ap(),
-      m_serialized_module_loader(NULL), m_clang_importer(NULL),
-      m_swift_module_cache(), m_mangled_name_to_type_map(),
-      m_type_to_mangled_name_map(), m_pointer_byte_size(0),
-      m_pointer_bit_align(0), m_void_function_type(), m_target_wp(),
-      m_process(NULL), m_platform_sdk_path(), m_resource_dir(),
+      m_scratch_module(NULL), m_serialized_module_loader(NULL),
+      m_clang_importer(NULL), m_swift_module_cache(),
+      m_mangled_name_to_type_map(), m_type_to_mangled_name_map(),
+      m_pointer_byte_size(0), m_pointer_bit_align(0), m_void_function_type(),
+      m_target_wp(), m_process(NULL), m_platform_sdk_path(), m_resource_dir(),
       m_ast_file_data_map(), m_initialized_language_options(false),
       m_initialized_search_path_options(false),
       m_initialized_clang_importer_options(false),
@@ -815,15 +816,13 @@ SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
 }
 
 SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
-    : TypeSystem(rhs.getKind()), m_source_manager_ap(),
-      m_diagnostic_engine_ap(), m_ast_context_ap(), m_ir_gen_module_ap(),
+    : TypeSystem(rhs.getKind()),
       m_compiler_invocation_ap(new swift::CompilerInvocation()),
-      m_dwarf_ast_parser_ap(), m_scratch_module(NULL), m_sil_module_ap(),
-      m_serialized_module_loader(NULL), m_clang_importer(NULL),
-      m_swift_module_cache(), m_mangled_name_to_type_map(),
-      m_type_to_mangled_name_map(), m_pointer_byte_size(0),
-      m_pointer_bit_align(0), m_void_function_type(), m_target_wp(),
-      m_process(NULL), m_platform_sdk_path(), m_resource_dir(),
+      m_scratch_module(NULL), m_serialized_module_loader(NULL),
+      m_clang_importer(NULL), m_swift_module_cache(),
+      m_mangled_name_to_type_map(), m_type_to_mangled_name_map(),
+      m_pointer_byte_size(0), m_pointer_bit_align(0), m_void_function_type(),
+      m_target_wp(), m_process(NULL), m_platform_sdk_path(), m_resource_dir(),
       m_ast_file_data_map(), m_initialized_language_options(false),
       m_initialized_search_path_options(false),
       m_initialized_clang_importer_options(false),
@@ -986,13 +985,29 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
                         ast_file_data_sp->GetByteSize());
     while (!buf.empty()) {
       std::string last_sdk_path;
-      auto info = swift::serialization::validateSerializedAST(buf);
-      if ((info.status != swift::serialization::Status::Valid) ||
-          (info.bytes == 0) || (info.bytes > buf.size())) {
-        if (log)
-          log->Printf("Unable to load AST for module %s from library: %s.",
-                      info.name.str().c_str(),
-                      module.GetSpecificationDescription().c_str());
+      swift::serialization::ExtendedValidationInfo extended_validation_info;
+      swift::serialization::ValidationInfo info =
+          swift::serialization::validateSerializedAST(
+              buf, &extended_validation_info);
+      bool InvalidAST = info.status != swift::serialization::Status::Valid;
+      bool InvalidSize = (info.bytes == 0) || (info.bytes > buf.size());
+      if (InvalidAST) {
+        swift::ASTContext &ast_ctx = *swift_ast.GetASTContext();
+        StringRef module_spec = module.GetSpecificationDescription();
+        swift::Identifier module_id = ast_ctx.getIdentifier(module_spec);
+        std::unique_ptr<swift::ModuleFile> loaded_module_file;
+        std::unique_ptr<llvm::MemoryBuffer> module_input_buffer =
+            llvm::MemoryBuffer::getMemBuffer(buf, module_spec,
+                                             /*NullTerminator=*/false);
+        swift::ModuleFile::load(std::move(module_input_buffer), {}, false,
+                                loaded_module_file);
+        swift::serialization::diagnoseSerializedASTLoadFailure(
+            ast_ctx, swift::SourceLoc(), info, extended_validation_info,
+            module_spec, "<invalid-doc-id>", loaded_module_file.get(),
+            module_id);
+      }
+      if (InvalidAST || InvalidSize) {
+        printASTValidationInfo(info, extended_validation_info, module, buf);
         return true;
       }
 
@@ -1367,12 +1382,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       // this is the only reliable point where we can show this.
       // But only do it once per UUID so we don't overwhelm the user with
       // warnings...
-      std::unordered_set<std::string> m_swift_warnings_issued;
-
       UUID module_uuid(module_sp->GetUUID());
-      std::pair<std::unordered_set<std::string>::iterator, bool> result(
-          m_swift_warnings_issued.insert(module_uuid.GetAsString()));
-      if (result.second) {
+      bool unique_message =
+          target.RegisterSwiftContextMessageKey(module_uuid.GetAsString());
+      if (unique_message) {
         StreamString ss;
         module_sp->GetDescription(&ss, eDescriptionLevelBrief);
         if (module_swift_ast && module_swift_ast->HasFatalErrors())
@@ -1380,7 +1393,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
              << module_swift_ast->GetFatalErrors().AsCString("unknown error");
 
         target.GetDebugger().GetErrorFile()->Printf(
-            "warning: Swift error in module %s.\n"
+            "Error while loading Swift module:\n%s\n"
             "Debug info from this module will be unavailable in the "
             "debugger.\n\n",
             ss.GetData());
@@ -3862,9 +3875,10 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
 
   if (!mangled_typename ||
       !SwiftLanguageRuntime::IsSwiftMangledName(mangled_typename)) {
-    error.SetErrorStringWithFormat("typename '%s' is not a valid Swift mangled "
-                                   "typename, it should begin with $S",
-                                   mangled_typename);
+    error.SetErrorStringWithFormat(
+        "typename '%s' is not a valid Swift mangled "
+        "typename, it should begin with " MANGLING_PREFIX_STR,
+        mangled_typename);
     return CompilerType();
   }
 
@@ -8004,4 +8018,23 @@ UserExpression *SwiftASTContextForExpressions::GetUserExpression(
 PersistentExpressionState *
 SwiftASTContextForExpressions::GetPersistentExpressionState() {
   return m_persistent_state_up.get();
+}
+
+void lldb_private::printASTValidationInfo(
+    const swift::serialization::ValidationInfo &ast_info,
+    const swift::serialization::ExtendedValidationInfo &ext_ast_info,
+    const Module &module, StringRef module_buf) {
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  LLDB_LOG(log, R"(Unable to load AST for module {0} from library: {1}.
+  - targetTriple: {2}
+  - shortVersion: {3}
+  - bytes: {4} (module_buf bytes: {5})
+  - SDK path: {6}
+  - Clang Importer Options:
+)",
+           ast_info.name, module.GetSpecificationDescription(),
+           ast_info.targetTriple, ast_info.shortVersion, ast_info.bytes,
+           module_buf.size(), ext_ast_info.getSDKPath());
+  for (StringRef ExtraOpt : ext_ast_info.getExtraClangImporterOptions())
+    LLDB_LOG(log, "  -- {0}", ExtraOpt);
 }

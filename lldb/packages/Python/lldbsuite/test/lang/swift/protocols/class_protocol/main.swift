@@ -22,7 +22,7 @@ class ClassByWhy<T> where T : ClassHasWhy
   let myWhy : Int
   init(input : T)
   {
-    myWhy = input.why  // Break here and print input
+    myWhy = input.why // FIXME <rdar://problem/43057063>
   }
 }
 
@@ -31,7 +31,8 @@ class ByWhy<T> where T : HasWhy
   let myWhy : Int
   init(input : T)
   {
-    myWhy = input.why  // Break here and print input
+    myWhy = input.why //%self.expect('expr -d run -- input', substrs=['a.ShouldBeWhy', 'isa = a.ShouldBeWhy', 'before_why = 4277009102', 'why = 10'])
+                      //%self.expect('expr -d run -- input', substrs=['a.ShouldBeWhy', 'isa = a.ShouldBeWhy', 'before_why = 4277009102', 'why = 10'])
   }
 }
 

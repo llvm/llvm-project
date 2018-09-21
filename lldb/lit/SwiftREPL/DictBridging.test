@@ -11,7 +11,7 @@ let d0: Dictionary<Int, Int> = [:]
 
 // All empty dictionaries use the same type-punned storage class.
 let d0b = d0 as NSDictionary
-// DICT-LABEL: d0b: __RawNativeDictionaryStorage = 0 key/value pairs
+// DICT-LABEL: d0b: {{(__RawNativeDictionaryStorage|_EmptyDictionarySingleton)}} = 0 key/value pairs
 
 // Baseline case: native Dictionary of non-verbatim bridged elements
 let d1: Dictionary<Int,Int> = [1:2]
@@ -44,7 +44,7 @@ let d2: Dictionary<NSObject,AnyObject> = [
 
 // Verbatim bridging from Swift to Objective-C
 let d2b = d2 as NSDictionary
-// DICT-LABEL: d2b: _HashableTypedNativeDictionaryStorage<NSObject, AnyObject> = 1 key/value pair {
+// DICT-LABEL: d2b: {{(_HashableTypedNativeDictionaryStorage|_DictionaryStorage)}}<NSObject, AnyObject> = 1 key/value pair {
 // DICT-NEXT:    [0] = {
 // DICT-NEXT:      key = Int64(1)
 // DICT-NEXT:      value = Int64(2)

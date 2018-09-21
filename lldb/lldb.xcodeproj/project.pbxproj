@@ -7212,7 +7212,7 @@
 /* Begin PBXLegacyTarget section */
 		2387551E1C24974600CCE8C3 /* lldb-python-test-suite */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-u $(SRCROOT)/test/dotest.py --apple-sdk $(PLATFORM_NAME) --executable=$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/lldb -C $(LLDB_PYTHON_TESTSUITE_CC) --arch $(LLDB_PYTHON_TESTSUITE_ARCH) --session-file-format fm --results-formatter lldbsuite.test_event.formatter.xunit.XunitFormatter --build-dir $(BUILD_DIR)/lldb-test-build.noindex --results-file $(BUILD_DIR)/test-results-$(LLDB_PYTHON_TESTSUITE_ARCH).xml --rerun-all-issues --env TERM=vt100 -O--xpass=ignore";
+			buildArgumentsString = "-u $(SRCROOT)/test/dotest.py --apple-sdk $(PLATFORM_NAME) --executable=$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)/lldb -C $(LLDB_PYTHON_TESTSUITE_CC) --filecheck $(LLVM_BUILD_DIR)/x86_64/bin/FileCheck --arch $(LLDB_PYTHON_TESTSUITE_ARCH) --session-file-format fm --results-formatter lldbsuite.test_event.formatter.xunit.XunitFormatter --build-dir $(BUILD_DIR)/lldb-test-build.noindex --results-file $(BUILD_DIR)/test-results-$(LLDB_PYTHON_TESTSUITE_ARCH).xml --rerun-all-issues --env TERM=vt100 -O--xpass=ignore";
 			buildConfigurationList = 238755241C24974600CCE8C3 /* Build configuration list for PBXLegacyTarget "lldb-python-test-suite" */;
 			buildPhases = (
 			);
@@ -9535,7 +9535,7 @@
 				);
 				OTHER_LDFLAGS = "";
 				PATH = /opt/local/bin;
-				PRODUCT_NAME = "lib$(TARGET_NAME)";
+				PRODUCT_NAME = "lldb-gtest";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
@@ -9954,7 +9954,7 @@
 					"-framework",
 					Foundation,
 				);
-				PRODUCT_NAME = LLDB;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -9996,7 +9996,7 @@
 					"-framework",
 					Foundation,
 				);
-				PRODUCT_NAME = LLDB;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};

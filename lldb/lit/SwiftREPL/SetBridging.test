@@ -11,7 +11,7 @@ let s0: Set<Int> = []
 
 // All empty sets use the same type-punned storage class.
 let s0b = s0 as NSSet
-// DICT-LABEL: s0b: __RawNativeSetStorage = 0 values
+// DICT-LABEL: s0b: {{(__RawNativeSetStorage|_EmptySetSingleton)}} = 0 values
 
 // Baseline case: native Set of non-verbatim bridged elements
 let s1: Set<Int> = [1]
@@ -33,7 +33,7 @@ let s2: Set<NSObject> = [NSNumber(value: 1)]
 
 // Verbatim bridging from Swift to Objective-C
 let s2b = s2 as NSSet
-// SET-LABEL: s2b: _HashableTypedNativeSetStorage<NSObject> = 1 value {
+// SET-LABEL: s2b: {{(_HashableTypedNativeSetStorage|_SetStorage)}}<NSObject> = 1 value {
 // SET-NEXT:    [0] = Int64(1)
 // SET-NEXT:  }
 

@@ -47,6 +47,7 @@ set(LLDB_TEST_USER_ARGS
 # the build directory.
 set(LLDB_TEST_COMMON_ARGS
   --arch=${LLDB_TEST_ARCH}
+  --executable $<TARGET_FILE:lldb>
   -s
   ${CMAKE_BINARY_DIR}/lldb-test-traces
   --build-dir
@@ -59,6 +60,7 @@ set(LLDB_TEST_COMMON_ARGS
 list(APPEND LLDB_TEST_COMMON_ARGS
   --executable ${LLDB_TEST_EXECUTABLE}
   --dsymutil ${LLDB_TEST_DSYMUTIL}
+  --filecheck ${LLDB_TEST_FILECHECK}
   -C ${LLDB_TEST_C_COMPILER}
   ${SWIFT_TEST_ARGS}
   )
