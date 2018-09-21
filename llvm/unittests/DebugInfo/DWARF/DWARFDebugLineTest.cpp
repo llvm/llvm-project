@@ -130,7 +130,7 @@ struct CommonFixture {
   std::function<void(Error)> RecordUnrecoverable;
 
   SmallVector<std::unique_ptr<DWARFUnit>, 2> CUs;
-  std::deque<DWARFUnitSection> TUs;
+  SmallVector<std::unique_ptr<DWARFUnit>, 2> TUs;
 };
 
 // Fixtures must derive from "Test", but parameterised fixtures from

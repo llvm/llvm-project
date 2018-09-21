@@ -279,7 +279,7 @@ public:
   class SectionParser {
   public:
     using cu_range = DWARFUnitSection::iterator_range;
-    using tu_range = iterator_range<std::deque<DWARFUnitSection>::iterator>;
+    using tu_range = DWARFUnitSection::iterator_range;
     using LineToUnitMap = std::map<uint64_t, DWARFUnit *>;
 
     SectionParser(DWARFDataExtractor &Data, const DWARFContext &C, cu_range CUs,
