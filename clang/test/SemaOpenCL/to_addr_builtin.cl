@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -verify -fsyntax-only %s
-// RUN: %clang_cc1 -verify -fsyntax-only -cl-std=CL2.0 %s
+// RUN: %clang_cc1 -Wconversion -verify -fsyntax-only -cl-std=CL2.0 %s
 
 void test(void) {
   global int *glob;
@@ -43,6 +43,7 @@ void test(void) {
   // expected-warning@-2{{incompatible integer to pointer conversion assigning to '__local int *' from 'int'}}
 #else
   // expected-error@-4{{assigning '__global int *' to '__local int *' changes address space of pointer}}
+  // expected-warning@-5{{passing non-generic address space pointer to to_global may cause dynamic conversion affecting performance}}
 #endif
 
   global char *glob_c = to_global(loc);
@@ -50,6 +51,7 @@ void test(void) {
   // expected-warning@-2{{incompatible integer to pointer conversion initializing '__global char *' with an expression of type 'int'}}
 #else
   // expected-warning@-4{{incompatible pointer types initializing '__global char *' with an expression of type '__global int *'}}
+  // expected-warning@-5{{passing non-generic address space pointer to to_global may cause dynamic conversion affecting performance}}
 #endif
 
 }

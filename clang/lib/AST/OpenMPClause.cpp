@@ -222,12 +222,12 @@ void OMPOrderedClause::setLoopCounter(unsigned NumLoop, Expr *Counter) {
   getTrailingObjects<Expr *>()[NumberOfLoops + NumLoop] = Counter;
 }
 
-Expr *OMPOrderedClause::getLoopCunter(unsigned NumLoop) {
+Expr *OMPOrderedClause::getLoopCounter(unsigned NumLoop) {
   assert(NumLoop < NumberOfLoops && "out of loops number.");
   return getTrailingObjects<Expr *>()[NumberOfLoops + NumLoop];
 }
 
-const Expr *OMPOrderedClause::getLoopCunter(unsigned NumLoop) const {
+const Expr *OMPOrderedClause::getLoopCounter(unsigned NumLoop) const {
   assert(NumLoop < NumberOfLoops && "out of loops number.");
   return getTrailingObjects<Expr *>()[NumberOfLoops + NumLoop];
 }

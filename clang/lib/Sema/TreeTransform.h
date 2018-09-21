@@ -4252,14 +4252,20 @@ QualType TreeTransform<Derived>::RebuildQualifiedType(QualType T,
   // C++ [dcl.fct]p7:
   //   [When] adding cv-qualifications on top of the function type [...] the
   //   cv-qualifiers are ignored.
+  if (T->isFunctionType())
+    return T;
+
   // C++ [dcl.ref]p1:
   //   when the cv-qualifiers are introduced through the use of a typedef-name
   //   or decltype-specifier [...] the cv-qualifiers are ignored.
   // Note that [dcl.ref]p1 lists all cases in which cv-qualifiers can be
   // applied to a reference type.
-  // FIXME: This removes all qualifiers, not just cv-qualifiers!
-  if (T->isFunctionType() || T->isReferenceType())
-    return T;
+  if (T->isReferenceType()) {
+    // The only qualifier that applies to a reference type is restrict.
+    if (!Quals.hasRestrict())
+      return T;
+    Quals = Qualifiers::fromCVRMask(Qualifiers::Restrict);
+  }
 
   // Suppress Objective-C lifetime qualifiers if they don't make sense for the
   // resulting type.

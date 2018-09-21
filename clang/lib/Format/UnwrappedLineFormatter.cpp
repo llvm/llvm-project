@@ -428,6 +428,8 @@ private:
     if (Limit == 0 || I + 1 == E ||
         I[1]->First->isOneOf(tok::kw_case, tok::kw_default))
       return 0;
+    if (I[0]->Last->is(tok::l_brace) || I[1]->First->is(tok::l_brace))
+      return 0;
     unsigned NumStmts = 0;
     unsigned Length = 0;
     bool EndsWithComment = false;
