@@ -848,7 +848,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
         target.GetImages().AppendIfNeeded(m_module_sp);
         if (IsKernel() &&
             target.GetExecutableModulePointer() != m_module_sp.get()) {
-          target.SetExecutableModule(m_module_sp, false);
+          target.SetExecutableModule(m_module_sp, eLoadDependentsNo);
         }
       }
     }

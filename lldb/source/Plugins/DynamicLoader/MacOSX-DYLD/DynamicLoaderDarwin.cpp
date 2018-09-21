@@ -555,8 +555,7 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
       target.GetImages().AppendIfNeeded(exe_module_sp);
       UpdateImageLoadAddress(exe_module_sp.get(), image_infos[exe_idx]);
       if (exe_module_sp.get() != target.GetExecutableModulePointer()) {
-        const bool get_dependent_images = false;
-        target.SetExecutableModule(exe_module_sp, get_dependent_images);
+        target.SetExecutableModule(exe_module_sp, eLoadDependentsNo);
       }
     }
   }
