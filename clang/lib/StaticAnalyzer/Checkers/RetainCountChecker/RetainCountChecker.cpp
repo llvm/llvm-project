@@ -750,9 +750,8 @@ void RetainCountChecker::processNonLeakError(ProgramStateRef St,
   }
 
   assert(BT);
-  auto report = std::unique_ptr<BugReport>(
-      new CFRefReport(*BT, C.getASTContext().getLangOpts(),
-                      SummaryLog, N, Sym));
+  auto report = llvm::make_unique<CFRefReport>(
+      *BT, C.getASTContext().getLangOpts(), SummaryLog, N, Sym);
   report->addRange(ErrorRange);
   C.emitReport(std::move(report));
 }
@@ -951,9 +950,9 @@ void RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
         ExplodedNode *N = C.addTransition(state, Pred, &ReturnOwnLeakTag);
         if (N) {
           const LangOptions &LOpts = C.getASTContext().getLangOpts();
-          C.emitReport(std::unique_ptr<BugReport>(new CFRefLeakReport(
-              *getLeakAtReturnBug(LOpts), LOpts,
-              SummaryLog, N, Sym, C, IncludeAllocationLine)));
+          C.emitReport(llvm::make_unique<CFRefLeakReport>(
+              *getLeakAtReturnBug(LOpts), LOpts, SummaryLog, N, Sym, C,
+              IncludeAllocationLine));
         }
       }
     }
@@ -978,9 +977,9 @@ void RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
           if (!returnNotOwnedForOwned)
             returnNotOwnedForOwned.reset(new ReturnedNotOwnedForOwned(this));
 
-          C.emitReport(std::unique_ptr<BugReport>(new CFRefReport(
+          C.emitReport(llvm::make_unique<CFRefReport>(
               *returnNotOwnedForOwned, C.getASTContext().getLangOpts(),
-              SummaryLog, N, Sym)));
+              SummaryLog, N, Sym));
         }
       }
     }
@@ -1182,9 +1181,8 @@ RetainCountChecker::handleAutoreleaseCounts(ProgramStateRef state,
       overAutorelease.reset(new OverAutorelease(this));
 
     const LangOptions &LOpts = Ctx.getASTContext().getLangOpts();
-    Ctx.emitReport(std::unique_ptr<BugReport>(
-        new CFRefReport(*overAutorelease, LOpts,
-                        SummaryLog, N, Sym, os.str())));
+    Ctx.emitReport(llvm::make_unique<CFRefReport>(
+        *overAutorelease, LOpts, SummaryLog, N, Sym, os.str()));
   }
 
   return nullptr;
@@ -1235,9 +1233,8 @@ RetainCountChecker::processLeaks(ProgramStateRef state,
                           : getLeakAtReturnBug(LOpts);
       assert(BT && "BugType not initialized.");
 
-      Ctx.emitReport(std::unique_ptr<BugReport>(
-          new CFRefLeakReport(*BT, LOpts, SummaryLog, N, *I, Ctx,
-                              IncludeAllocationLine)));
+      Ctx.emitReport(llvm::make_unique<CFRefLeakReport>(
+          *BT, LOpts, SummaryLog, N, *I, Ctx, IncludeAllocationLine));
     }
   }
 
