@@ -459,7 +459,7 @@ protected:
       Status error;
 
       error = m_interpreter.GetDebugger().GetTargetList().CreateTarget(
-          m_interpreter.GetDebugger(), "", "", false,
+          m_interpreter.GetDebugger(), "", "", eLoadDependentsNo,
           nullptr, // No platform options
           new_target_sp);
       target = new_target_sp.get();
