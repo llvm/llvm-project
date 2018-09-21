@@ -25,22 +25,22 @@ _start:  mrs x8, TPIDR_EL0
         ldrb w0, [x8, :tprel_lo12_nc:var4]
 
 // CHECK: _start:
-// CHECK-NEXT:    20000:       48 d0 3b d5     mrs     x8, TPIDR_EL0
+// CHECK-NEXT:    210000:       48 d0 3b d5     mrs     x8, TPIDR_EL0
 // 0x0 + c10 = 0xc10       = tcb (16-bytes) + var0
-// CHECK-NEXT:    20004:       08 01 40 91     add     x8, x8, #0, lsl #12
-// CHECK-NEXT:    20008:       14 05 c3 3d     ldr     q20, [x8, #3088]
+// CHECK-NEXT:    210004:       08 01 40 91     add     x8, x8, #0, lsl #12
+// CHECK-NEXT:    210008:       14 05 c3 3d     ldr     q20, [x8, #3088]
 // 0x1000 + 0x820 = 0x1820 = tcb + var1
-// CHECK-NEXT:    2000c:       08 05 40 91     add     x8, x8, #1, lsl #12
-// CHECK-NEXT:    20010:       00 11 44 f9     ldr     x0, [x8, #2080]
+// CHECK-NEXT:    21000c:       08 05 40 91     add     x8, x8, #1, lsl #12
+// CHECK-NEXT:    210010:       00 11 44 f9     ldr     x0, [x8, #2080]
 // 0x2000 + 0x428 = 0x2428 = tcb + var2
-// CHECK-NEXT:    20014:       08 09 40 91     add     x8, x8, #2, lsl #12
-// CHECK-NEXT:    20018:       00 29 44 b9     ldr     w0, [x8, #1064]
+// CHECK-NEXT:    210014:       08 09 40 91     add     x8, x8, #2, lsl #12
+// CHECK-NEXT:    210018:       00 29 44 b9     ldr     w0, [x8, #1064]
 // 0x3000 + 0x2c  = 0x302c = tcb + var3
-// CHECK-NEXT:    2001c:       08 0d 40 91     add     x8, x8, #3, lsl #12
-// CHECK-NEXT:    20020:       00 59 40 79     ldrh    w0, [x8, #44]
+// CHECK-NEXT:    21001c:       08 0d 40 91     add     x8, x8, #3, lsl #12
+// CHECK-NEXT:    210020:       00 59 40 79     ldrh    w0, [x8, #44]
 // 0x3000 + 0xc2e = 0x32ce = tcb + var4
-// CHECK-NEXT:    20024:       08 0d 40 91     add     x8, x8, #3, lsl #12
-// CHECK-NEXT:    20028:       00 b9 70 39     ldrb    w0, [x8, #3118]
+// CHECK-NEXT:    210024:       08 0d 40 91     add     x8, x8, #3, lsl #12
+// CHECK-NEXT:    210028:       00 b9 70 39     ldrb    w0, [x8, #3118]
 
 // CHECK-SYMS:      0000000000000c00     0 TLS     GLOBAL DEFAULT    2 var0
 // CHECK-SYMS-NEXT: 0000000000001810     4 TLS     GLOBAL DEFAULT    2 var1
