@@ -230,11 +230,11 @@ void * __sanitizer_malloc(uptr size) {
 }
 
 #if HWASAN_WITH_INTERCEPTORS
-#define INTERCEPTOR_ALIAS(RET, FN, ARGS...)                                 \
-  extern "C" SANITIZER_INTERFACE_ATTRIBUTE RET WRAP(FN)(ARGS)               \
-      ALIAS("__sanitizer_" #FN);                                            \
-  extern "C" SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE RET FN( \
-      ARGS) ALIAS("__sanitizer_" #FN);
+#define INTERCEPTOR_ALIAS(RET, FN, ARGS...)                                  \
+  extern "C" SANITIZER_INTERFACE_ATTRIBUTE RET WRAP(FN)(ARGS)                \
+      ALIAS("__sanitizer_" #FN);                                             \
+  extern "C" SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE RET FN(  \
+      ARGS) ALIAS("__sanitizer_" #FN)
 
 INTERCEPTOR_ALIAS(int, posix_memalign, void **memptr, SIZE_T alignment,
                   SIZE_T size);
