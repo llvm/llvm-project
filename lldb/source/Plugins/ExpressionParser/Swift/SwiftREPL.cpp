@@ -128,7 +128,7 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   os << version.getAsString();
   target_triple.setOSName(os.str());
 
-  bool add_dependent_modules = true;
+  LoadDependentFiles add_dependent_modules = eLoadDependentsYes;
   TargetSP target_sp;
   err = debugger.GetTargetList().CreateTarget(
       debugger, repl_exe_path.c_str(), target_triple.getTriple(),
