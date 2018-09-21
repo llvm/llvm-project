@@ -756,7 +756,7 @@ void DynamicLoaderPOSIXDYLD::ResolveExecutableModule(
     return;
   }
 
-  target.SetExecutableModule(module_sp, eLoadDependentsNo);
+  target.SetExecutableModule(module_sp, false);
 }
 
 bool DynamicLoaderPOSIXDYLD::AlwaysRelyOnEHUnwindInfo(

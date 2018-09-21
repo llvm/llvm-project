@@ -128,16 +128,17 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   os << version.getAsString();
   target_triple.setOSName(os.str());
 
+  bool add_dependent_modules = true;
   TargetSP target_sp;
   err = debugger.GetTargetList().CreateTarget(
       debugger, repl_exe_path.c_str(), target_triple.getTriple(),
-      eLoadDependentsYes, nullptr, target_sp);
+      add_dependent_modules, nullptr, target_sp);
   if (!err.Success()) {
     err.SetErrorStringWithFormat("failed to create REPL target: %s",
                                  err.AsCString());
     return nullptr;
   }
-
+  
   // Limit the breakpoint to our executable module
   ModuleSP exe_module_sp(target_sp->GetExecutableModule());
   if (!exe_module_sp) {

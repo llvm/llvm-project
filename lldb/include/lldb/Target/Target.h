@@ -71,11 +71,6 @@ typedef enum LoadCWDlldbinitFile {
   eLoadCWDlldbinitWarn
 } LoadCWDlldbinitFile;
 
-typedef enum LoadDependentFiles {
-  eLoadDependentsDefault,
-  eLoadDependentsYes,
-  eLoadDependentsNo,
-} LoadDependentFiles;
 
 //----------------------------------------------------------------------
 // TargetProperties
@@ -713,6 +708,7 @@ public:
                                const BreakpointOptions &options,
                                const BreakpointName::Permissions &permissions);
  void ApplyNameToBreakpoints(BreakpointName &bp_name);
+   
   
   // This takes ownership of the name obj passed in.
   void AddBreakpointName(BreakpointName *bp_name);
@@ -800,9 +796,9 @@ public:
   /// that doesn't have code in it, LLDB_INVALID_ADDRESS will be
   /// returned.
   //------------------------------------------------------------------
-  lldb::addr_t
-  GetOpcodeLoadAddress(lldb::addr_t load_addr,
-                       AddressClass addr_class = AddressClass::eInvalid) const;
+  lldb::addr_t GetOpcodeLoadAddress(
+      lldb::addr_t load_addr,
+      AddressClass addr_class = AddressClass::eInvalid) const;
 
   // Get load_addr as breakable load address for this target. Take a addr and
   // check if for any reason there is a better address than this to put a
@@ -873,16 +869,14 @@ public:
   ///     A shared pointer reference to the module that will become
   ///     the main executable for this process.
   ///
-  /// @param[in] load_dependent_files
+  /// @param[in] get_dependent_files
   ///     If \b true then ask the object files to track down any
   ///     known dependent files.
   ///
   /// @see ObjectFile::GetDependentModules (FileSpecList&)
   /// @see Process::GetImages()
   //------------------------------------------------------------------
-  void SetExecutableModule(
-      lldb::ModuleSP &module_sp,
-      LoadDependentFiles load_dependent_files = eLoadDependentsDefault);
+  void SetExecutableModule(lldb::ModuleSP &module_sp, bool get_dependent_files);
 
   bool LoadScriptingResources(std::list<Status> &errors,
                               Stream *feedback_stream = nullptr,
