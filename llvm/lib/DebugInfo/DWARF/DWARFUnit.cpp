@@ -112,6 +112,15 @@ void DWARFUnitVector::addUnitsImpl(
   }
 }
 
+DWARFUnit *DWARFUnitVector::addUnit(std::unique_ptr<DWARFUnit> Unit) {
+  auto I = std::upper_bound(begin(), end(), Unit,
+                            [](const std::unique_ptr<DWARFUnit> &LHS,
+                               const std::unique_ptr<DWARFUnit> &RHS) {
+                              return LHS->getOffset() < RHS->getOffset();
+                            });
+  return this->insert(I, std::move(Unit))->get();
+}
+
 DWARFUnit *DWARFUnitVector::getUnitForOffset(uint32_t Offset) const {
   auto end = begin() + getNumInfoUnits();
   auto *CU =

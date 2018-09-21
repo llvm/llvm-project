@@ -23,7 +23,8 @@
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O2 \
 ; RUN:     --check-prefix=CHECK-O3 --check-prefix=CHECK-EP-Peephole
 
-; CHECK-O: Starting llvm::Module pass manager run.
+; CHECK-O: Running analysis: PassInstrumentationAnalysis
+; CHECK-O-NEXT: Starting llvm::Module pass manager run.
 ; CHECK-O-NEXT: Running pass: PassManager<{{.*}}Module
 ; CHECK-O-NEXT: Starting llvm::Module pass manager run.
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
@@ -32,6 +33,7 @@
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-O2-NEXT: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
 ; CHECK-O2-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}Module
+; CHECK-O2-NEXT: Running analysis: PassInstrumentationAnalysis
 ; CHECK-O2-NEXT: Starting llvm::Function pass manager run.
 ; CHECK-O2-NEXT: Running pass: CallSiteSplittingPass on foo
 ; CHECK-O2-NEXT: Running analysis: TargetLibraryAnalysis on foo

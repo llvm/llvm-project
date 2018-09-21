@@ -185,6 +185,8 @@ std::string lld::toString(ValType Type) {
     return "F32";
   case ValType::F64:
     return "F64";
+  case ValType::V128:
+    return "V128";
   case ValType::EXCEPT_REF:
     return "except_ref";
   }

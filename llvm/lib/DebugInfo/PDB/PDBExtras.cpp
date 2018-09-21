@@ -43,6 +43,33 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
 }
 
 raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
+                                   const PDB_BuiltinType &Type) {
+  switch (Type) {
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, None, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Void, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Char, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, WCharT, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Int, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, UInt, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Float, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, BCD, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Bool, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Long, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, ULong, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Currency, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Date, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Variant, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Complex, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Bitfield, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, BSTR, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, HResult, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Char16, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_BuiltinType, Char32, OS)
+  }
+  return OS;
+}
+
+raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
                                    const PDB_CallingConv &Conv) {
   OS << "__";
   switch (Conv) {

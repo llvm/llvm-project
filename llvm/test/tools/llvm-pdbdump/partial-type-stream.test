@@ -1,7 +1,7 @@
 ; RUN: llvm-pdbutil dump -type-index=0x1019 %p/Inputs/ClassLayoutTest.pdb \
-; RUN: | FileCheck --check-prefix=NODEPS %s
-; RUN: llvm-pdbutil dump -type-index=0x1019 -dependents %p/Inputs/ClassLayoutTest.pdb \
-; RUN: | FileCheck --check-prefix=DEPS %s
+; RUN:     | FileCheck --check-prefix=NODEPS %s
+; RUN: llvm-pdbutil dump -type-index=0x1019 -dependents -dont-resolve-forward-refs \
+; RUN:     %p/Inputs/ClassLayoutTest.pdb | FileCheck --check-prefix=DEPS %s
 
 
 NODEPS:                          Types (TPI Stream)

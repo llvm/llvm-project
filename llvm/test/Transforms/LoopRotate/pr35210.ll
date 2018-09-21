@@ -21,6 +21,7 @@
 ; CHECK-NEXT: Running analysis: TargetIRAnalysis on f
 ; CHECK-NEXT: Running analysis: InnerAnalysisManagerProxy{{.*}} on f
 ; CHECK-NEXT: Starting Loop pass manager run.
+; CHECK-NEXT: Running analysis: PassInstrumentationAnalysis on bb
 ; CHECK-NEXT: Running pass: LoopRotatePass on Loop at depth 1 containing: %bb<header><exiting>,%bb4<latch>
 ; CHECK-NEXT: Folding loop latch bb4 into bb
 ; CHECK-NEXT: Invalidating all non-preserved analyses for: bb

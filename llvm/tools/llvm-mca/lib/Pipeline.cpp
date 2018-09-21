@@ -15,7 +15,6 @@
 
 #include "Pipeline.h"
 #include "HWEventListener.h"
-#include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/Debug.h"
 
 namespace mca {

@@ -8190,6 +8190,18 @@ bool llvm::isOneConstant(SDValue V) {
   return Const != nullptr && Const->isOne();
 }
 
+SDValue llvm::peekThroughBitcasts(SDValue V) {
+  while (V.getOpcode() == ISD::BITCAST)
+    V = V.getOperand(0);
+  return V;
+}
+
+SDValue llvm::peekThroughOneUseBitcasts(SDValue V) {
+  while (V.getOpcode() == ISD::BITCAST && V.getOperand(0).hasOneUse())
+    V = V.getOperand(0);
+  return V;
+}
+
 bool llvm::isBitwiseNot(SDValue V) {
   if (V.getOpcode() != ISD::XOR)
     return false;

@@ -261,7 +261,13 @@ private:
 
 using FakeSnippetGeneratorTest = SnippetGeneratorTest<FakeSnippetGenerator>;
 
-TEST_F(FakeSnippetGeneratorTest, ComputeRegsToDefAdd16ri) {
+testing::Matcher<const RegisterValue &> IsRegisterValue(unsigned Reg,
+                                                        llvm::APInt Value) {
+  return testing::AllOf(testing::Field(&RegisterValue::Register, Reg),
+                        testing::Field(&RegisterValue::Value, Value));
+}
+
+TEST_F(FakeSnippetGeneratorTest, ComputeRegisterInitialValuesAdd16ri) {
   // ADD16ri:
   // explicit def 0       : reg RegClass=GR16
   // explicit use 1       : reg RegClass=GR16 | TIED_TO:0
@@ -272,11 +278,11 @@ TEST_F(FakeSnippetGeneratorTest, ComputeRegsToDefAdd16ri) {
       llvm::MCOperand::createReg(llvm::X86::AX);
   std::vector<InstructionBuilder> Snippet;
   Snippet.push_back(std::move(IB));
-  const auto RegsToDef = Generator.computeRegsToDef(Snippet);
-  EXPECT_THAT(RegsToDef, UnorderedElementsAre(llvm::X86::AX));
+  const auto RIV = Generator.computeRegisterInitialValues(Snippet);
+  EXPECT_THAT(RIV, ElementsAre(IsRegisterValue(llvm::X86::AX, llvm::APInt())));
 }
 
-TEST_F(FakeSnippetGeneratorTest, ComputeRegsToDefAdd64rr) {
+TEST_F(FakeSnippetGeneratorTest, ComputeRegisterInitialValuesAdd64rr) {
   // ADD64rr:
   //  mov64ri rax, 42
   //  add64rr rax, rax, rbx
@@ -298,8 +304,8 @@ TEST_F(FakeSnippetGeneratorTest, ComputeRegsToDefAdd64rr) {
     Snippet.push_back(std::move(Add));
   }
 
-  const auto RegsToDef = Generator.computeRegsToDef(Snippet);
-  EXPECT_THAT(RegsToDef, UnorderedElementsAre(llvm::X86::RBX));
+  const auto RIV = Generator.computeRegisterInitialValues(Snippet);
+  EXPECT_THAT(RIV, ElementsAre(IsRegisterValue(llvm::X86::RBX, llvm::APInt())));
 }
 
 } // namespace

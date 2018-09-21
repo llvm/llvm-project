@@ -89,12 +89,12 @@ let Uses = [SP32, SP64], isCall = 1 in {
   defm "" : CALL<F32, "f32.">;
   defm "" : CALL<F64, "f64.">;
   defm "" : CALL<EXCEPT_REF, "except_ref.">;
-  defm "" : SIMD_CALL<v16i8, "i8x16.">;
-  defm "" : SIMD_CALL<v8i16, "i16x8.">;
-  defm "" : SIMD_CALL<v4i32, "i32x4.">;
-  defm "" : SIMD_CALL<v2i64, "i64x2.">;
-  defm "" : SIMD_CALL<v4f32, "f32x4.">;
-  defm "" : SIMD_CALL<v2f64, "f64x2.">;
+  defm "" : SIMD_CALL<v16i8, "v128.">;
+  defm "" : SIMD_CALL<v8i16, "v128.">;
+  defm "" : SIMD_CALL<v4i32, "v128.">;
+  defm "" : SIMD_CALL<v2i64, "v128.">;
+  defm "" : SIMD_CALL<v4f32, "v128.">;
+  defm "" : SIMD_CALL<v2f64, "v128.">;
 
   defm CALL_VOID : I<(outs), (ins function32_op:$callee, variable_ops),
                      (outs), (ins function32_op:$callee),

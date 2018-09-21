@@ -243,7 +243,7 @@ void DIARawSymbol::dump(raw_ostream &OS, int Indent,
   RAW_METHOD_DUMP(OS, baseDataOffset);
   RAW_METHOD_DUMP(OS, baseDataSlot);
   RAW_METHOD_DUMP(OS, baseSymbolId);
-  RAW_METHOD_DUMP(OS, baseType);
+  RAW_METHOD_DUMP_AS(OS, baseType, PDB_BuiltinType);
   RAW_METHOD_DUMP(OS, bitPosition);
   RAW_METHOD_DUMP(OS, callingConvention);
   RAW_ID_METHOD_DUMP(OS, classParentId, Session, PdbSymbolIdField::ClassParent,
@@ -317,7 +317,7 @@ void DIARawSymbol::dump(raw_ostream &OS, int Indent,
   RAW_METHOD_DUMP(OS, length);
   RAW_METHOD_DUMP(OS, liveRangeLength);
   RAW_METHOD_DUMP(OS, virtualAddress);
-  RAW_METHOD_DUMP(OS, udtKind);
+  RAW_METHOD_DUMP_AS(OS, udtKind, PDB_UdtType);
   RAW_METHOD_DUMP(OS, constructor);
   RAW_METHOD_DUMP(OS, customCallingConvention);
   RAW_METHOD_DUMP(OS, farReturn);
