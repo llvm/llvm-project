@@ -134,6 +134,10 @@ public:
   void addUnitsForDWOSection(DWARFContext &C, const DWARFSection &DWOSection,
                              DWARFSectionKind SectionKind, bool Lazy = false);
 
+  /// Add an existing DWARFUnit to this UnitVector. This is used by the DWARF
+  /// verifier to process unit separately.
+  DWARFUnit *addUnit(std::unique_ptr<DWARFUnit> Unit);
+
   /// Returns number of all units held by this instance.
   unsigned getNumUnits() const { return size(); }
   /// Returns number of units from all .debug_info[.dwo] sections.

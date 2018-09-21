@@ -22,13 +22,13 @@ vblendpd $2, %ymm1, %ymm2, %ymm3
 # LLVM-MCA-END
 
 # LLVM-MCA-BEGIN ZERO-IDIOM-3
-vaddps %xmm0, %xmm1, %xmm2
-vandnps %xmm2, %xmm2, %xmm3
+vaddps %ymm0, %ymm1, %ymm2
+vandnps %ymm2, %ymm2, %ymm3
 # LLVM-MCA-END
 
 # LLVM-MCA-BEGIN ZERO-IDIOM-4
-vaddps %xmm0, %xmm1, %xmm2
-vandnps %xmm2, %xmm2, %xmm3
+vaddps %ymm0, %ymm1, %ymm2
+vandnps %ymm2, %ymm2, %ymm3
 # LLVM-MCA-END
 
 # CHECK:      [0] Code Region - ZERO-IDIOM-1
@@ -187,13 +187,13 @@ vandnps %xmm2, %xmm2, %xmm3
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      105
-# CHECK-NEXT: Total uOps:        200
+# CHECK-NEXT: Total Cycles:      204
+# CHECK-NEXT: Total uOps:        400
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.90
-# CHECK-NEXT: IPC:               1.90
-# CHECK-NEXT: Block RThroughput: 1.0
+# CHECK-NEXT: uOps Per Cycle:    1.96
+# CHECK-NEXT: IPC:               0.98
+# CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -204,8 +204,8 @@ vandnps %xmm2, %xmm2, %xmm3
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      3     1.00                        vaddps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  1      0     0.50                        vandnps	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT:  2      3     2.00                        vaddps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      1     1.00                        vandnps	%ymm2, %ymm2, %ymm3
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - JALU0
@@ -225,22 +225,22 @@ vandnps %xmm2, %xmm2, %xmm3
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -     2.00   2.00   2.00   2.00    -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     vaddps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     vandnps	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT:  -      -      -     2.00    -     2.00    -      -      -      -      -      -      -      -     vaddps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -     2.00    -     2.00    -      -      -      -      -      -      -     vandnps	%ymm2, %ymm2, %ymm3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234567
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeER .   vaddps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [0,1]     D----R .   vandnps	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [1,0]     .DeeeER.   vaddps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [1,1]     .D----R.   vandnps	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [2,0]     . DeeeER   vaddps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [2,1]     . D----R   vandnps	%xmm2, %xmm2, %xmm3
+# CHECK:      [0,0]     DeeeER   .   vaddps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT: [0,1]     .DeE-R   .   vandnps	%ymm2, %ymm2, %ymm3
+# CHECK-NEXT: [1,0]     . DeeeER .   vaddps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT: [1,1]     .  DeE-R .   vandnps	%ymm2, %ymm2, %ymm3
+# CHECK-NEXT: [2,0]     .   DeeeER   vaddps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT: [2,1]     .    DeE-R   vandnps	%ymm2, %ymm2, %ymm3
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -249,20 +249,20 @@ vandnps %xmm2, %xmm2, %xmm3
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     3     1.0    1.0    0.0       vaddps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: 1.     3     0.0    0.0    4.0       vandnps	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: 0.     3     1.0    1.0    0.0       vaddps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT: 1.     3     1.0    1.0    1.0       vandnps	%ymm2, %ymm2, %ymm3
 
 # CHECK:      [3] Code Region - ZERO-IDIOM-4
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      105
-# CHECK-NEXT: Total uOps:        200
+# CHECK-NEXT: Total Cycles:      204
+# CHECK-NEXT: Total uOps:        400
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.90
-# CHECK-NEXT: IPC:               1.90
-# CHECK-NEXT: Block RThroughput: 1.0
+# CHECK-NEXT: uOps Per Cycle:    1.96
+# CHECK-NEXT: IPC:               0.98
+# CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -273,8 +273,8 @@ vandnps %xmm2, %xmm2, %xmm3
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      3     1.00                        vaddps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  1      0     0.50                        vandnps	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT:  2      3     2.00                        vaddps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      1     1.00                        vandnps	%ymm2, %ymm2, %ymm3
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - JALU0
@@ -294,22 +294,22 @@ vandnps %xmm2, %xmm2, %xmm3
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -     2.00   2.00   2.00   2.00    -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     vaddps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     vandnps	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT:  -      -      -     2.00    -     2.00    -      -      -      -      -      -      -      -     vaddps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -     2.00    -     2.00    -      -      -      -      -      -      -     vandnps	%ymm2, %ymm2, %ymm3
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234567
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeER .   vaddps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [0,1]     D----R .   vandnps	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [1,0]     .DeeeER.   vaddps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [1,1]     .D----R.   vandnps	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [2,0]     . DeeeER   vaddps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: [2,1]     . D----R   vandnps	%xmm2, %xmm2, %xmm3
+# CHECK:      [0,0]     DeeeER   .   vaddps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT: [0,1]     .DeE-R   .   vandnps	%ymm2, %ymm2, %ymm3
+# CHECK-NEXT: [1,0]     . DeeeER .   vaddps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT: [1,1]     .  DeE-R .   vandnps	%ymm2, %ymm2, %ymm3
+# CHECK-NEXT: [2,0]     .   DeeeER   vaddps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT: [2,1]     .    DeE-R   vandnps	%ymm2, %ymm2, %ymm3
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -318,5 +318,5 @@ vandnps %xmm2, %xmm2, %xmm3
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     3     1.0    1.0    0.0       vaddps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: 1.     3     0.0    0.0    4.0       vandnps	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: 0.     3     1.0    1.0    0.0       vaddps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT: 1.     3     1.0    1.0    1.0       vandnps	%ymm2, %ymm2, %ymm3

@@ -19,4 +19,4 @@
 type = Library
 name = MCA
 parent = Libraries
-required_libraries = CodeGen MC Support
+required_libraries = MC Support

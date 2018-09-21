@@ -363,6 +363,25 @@ public:
                     int Slot, const DILocation *Loc)
         : Var(Var), Expr(Expr), Slot(Slot), Loc(Loc) {}
   };
+
+  class Delegate {
+    virtual void anchor();
+
+  public:
+    virtual ~Delegate() = default;
+    virtual void MF_HandleInsertion(const MachineInstr &MI) = 0;
+    virtual void MF_HandleRemoval(const MachineInstr &MI) = 0;
+  };
+
+private:
+  Delegate *TheDelegate = nullptr;
+
+  // Callbacks for insertion and removal.
+  void handleInsertion(const MachineInstr &MI);
+  void handleRemoval(const MachineInstr &MI);
+  friend struct ilist_traits<MachineInstr>;
+
+public:
   using VariableDbgInfoMapTy = SmallVector<VariableDbgInfo, 4>;
   VariableDbgInfoMapTy VariableDbgInfos;
 
@@ -377,6 +396,23 @@ public:
   void reset() {
     clear();
     init();
+  }
+
+  /// Reset the currently registered delegate - otherwise assert.
+  void resetDelegate(Delegate *delegate) {
+    assert(TheDelegate == delegate &&
+           "Only the current delegate can perform reset!");
+    TheDelegate = nullptr;
+  }
+
+  /// Set the delegate. resetDelegate must be called before attempting
+  /// to set.
+  void setDelegate(Delegate *delegate) {
+    assert(delegate && !TheDelegate &&
+           "Attempted to set delegate to null, or to change it without "
+           "first resetting it!");
+
+    TheDelegate = delegate;
   }
 
   MachineModuleInfo &getMMI() const { return MMI; }

@@ -101,8 +101,8 @@ protected:
   }
 };
 
-static unsigned GetLoadImmediateOpcode(const llvm::APInt &Value) {
-  switch (Value.getBitWidth()) {
+static unsigned GetLoadImmediateOpcode(unsigned RegBitWidth) {
+  switch (RegBitWidth) {
   case 8:
     return llvm::X86::MOV8ri;
   case 16:
@@ -115,8 +115,12 @@ static unsigned GetLoadImmediateOpcode(const llvm::APInt &Value) {
   llvm_unreachable("Invalid Value Width");
 }
 
-static llvm::MCInst loadImmediate(unsigned Reg, const llvm::APInt &Value) {
-  return llvm::MCInstBuilder(GetLoadImmediateOpcode(Value))
+// Generates instruction to load an immediate value into a register.
+static llvm::MCInst loadImmediate(unsigned Reg, unsigned RegBitWidth,
+                                  const llvm::APInt &Value) {
+  if (Value.getBitWidth() > RegBitWidth)
+    llvm_unreachable("Value must fit in the Register");
+  return llvm::MCInstBuilder(GetLoadImmediateOpcode(RegBitWidth))
       .addReg(Reg)
       .addImm(Value.getZExtValue());
 }
@@ -163,39 +167,67 @@ static llvm::MCInst releaseStackSpace(unsigned Bytes) {
       .addImm(Bytes);
 }
 
+// Reserves some space on the stack, fills it with the content of the provided
+// constant and provide methods to load the stack value into a register.
 struct ConstantInliner {
   explicit ConstantInliner(const llvm::APInt &Constant)
       : StackSize(Constant.getBitWidth() / 8) {
     assert(Constant.getBitWidth() % 8 == 0 && "Must be a multiple of 8");
-    Add(allocateStackSpace(StackSize));
+    add(allocateStackSpace(StackSize));
     size_t ByteOffset = 0;
     for (; StackSize - ByteOffset >= 4; ByteOffset += 4)
-      Add(fillStackSpace(
+      add(fillStackSpace(
           llvm::X86::MOV32mi, ByteOffset,
           Constant.extractBits(32, ByteOffset * 8).getZExtValue()));
     if (StackSize - ByteOffset >= 2) {
-      Add(fillStackSpace(
+      add(fillStackSpace(
           llvm::X86::MOV16mi, ByteOffset,
           Constant.extractBits(16, ByteOffset * 8).getZExtValue()));
       ByteOffset += 2;
     }
     if (StackSize - ByteOffset >= 1)
-      Add(fillStackSpace(
+      add(fillStackSpace(
           llvm::X86::MOV8mi, ByteOffset,
           Constant.extractBits(8, ByteOffset * 8).getZExtValue()));
   }
 
-  ConstantInliner &Add(const llvm::MCInst &Inst) {
-    Instructions.push_back(Inst);
-    return *this;
+  std::vector<llvm::MCInst> loadAndFinalize(unsigned Reg, unsigned RegBitWidth,
+                                            unsigned Opcode) {
+    assert(StackSize * 8 == RegBitWidth &&
+           "Value does not have the correct size");
+    add(loadToReg(Reg, Opcode));
+    add(releaseStackSpace(StackSize));
+    return std::move(Instructions);
   }
 
-  std::vector<llvm::MCInst> finalize() {
-    Add(releaseStackSpace(StackSize));
+  std::vector<llvm::MCInst>
+  loadX87AndFinalize(unsigned Reg, unsigned RegBitWidth, unsigned Opcode) {
+    assert(StackSize * 8 == RegBitWidth &&
+           "Value does not have the correct size");
+    add(llvm::MCInstBuilder(Opcode)
+            .addReg(llvm::X86::RSP) // BaseReg
+            .addImm(1)              // ScaleAmt
+            .addReg(0)              // IndexReg
+            .addImm(0)              // Disp
+            .addReg(0));            // Segment
+    if (Reg != llvm::X86::ST0)
+      add(llvm::MCInstBuilder(llvm::X86::ST_Frr).addReg(Reg));
+    add(releaseStackSpace(StackSize));
+    return std::move(Instructions);
+  }
+
+  std::vector<llvm::MCInst> popFlagAndFinalize() {
+    assert(StackSize * 8 == 64 && "Value does not have the correct size");
+    add(llvm::MCInstBuilder(llvm::X86::POPF64));
     return std::move(Instructions);
   }
 
 private:
+  ConstantInliner &add(const llvm::MCInst &Inst) {
+    Instructions.push_back(Inst);
+    return *this;
+  }
+
   const size_t StackSize;
   std::vector<llvm::MCInst> Instructions;
 };
@@ -248,64 +280,47 @@ class ExegesisX86Target : public ExegesisTarget {
     }
   }
 
-  std::vector<llvm::MCInst> setRegToConstant(const llvm::MCSubtargetInfo &STI,
-                                             unsigned Reg) const override {
-    // GPR.
+  std::vector<llvm::MCInst> setRegTo(const llvm::MCSubtargetInfo &STI,
+                                     unsigned Reg,
+                                     const llvm::APInt &Value) const override {
     if (llvm::X86::GR8RegClass.contains(Reg))
-      return {llvm::MCInstBuilder(llvm::X86::MOV8ri).addReg(Reg).addImm(1)};
+      return {loadImmediate(Reg, 8, Value)};
     if (llvm::X86::GR16RegClass.contains(Reg))
-      return {llvm::MCInstBuilder(llvm::X86::MOV16ri).addReg(Reg).addImm(1)};
+      return {loadImmediate(Reg, 16, Value)};
     if (llvm::X86::GR32RegClass.contains(Reg))
-      return {llvm::MCInstBuilder(llvm::X86::MOV32ri).addReg(Reg).addImm(1)};
+      return {loadImmediate(Reg, 32, Value)};
     if (llvm::X86::GR64RegClass.contains(Reg))
-      return {llvm::MCInstBuilder(llvm::X86::MOV64ri32).addReg(Reg).addImm(1)};
-    // MMX.
+      return {loadImmediate(Reg, 64, Value)};
+    ConstantInliner CI(Value);
     if (llvm::X86::VR64RegClass.contains(Reg))
-      return setVectorRegToConstant(Reg, 8, llvm::X86::MMX_MOVQ64rm);
-    // {X,Y,Z}MM.
+      return CI.loadAndFinalize(Reg, 64, llvm::X86::MMX_MOVQ64rm);
     if (llvm::X86::VR128XRegClass.contains(Reg)) {
       if (STI.getFeatureBits()[llvm::X86::FeatureAVX512])
-        return setVectorRegToConstant(Reg, 16, llvm::X86::VMOVDQU32Z128rm);
+        return CI.loadAndFinalize(Reg, 128, llvm::X86::VMOVDQU32Z128rm);
       if (STI.getFeatureBits()[llvm::X86::FeatureAVX])
-        return setVectorRegToConstant(Reg, 16, llvm::X86::VMOVDQUrm);
-      return setVectorRegToConstant(Reg, 16, llvm::X86::MOVDQUrm);
+        return CI.loadAndFinalize(Reg, 128, llvm::X86::VMOVDQUrm);
+      return CI.loadAndFinalize(Reg, 128, llvm::X86::MOVDQUrm);
     }
     if (llvm::X86::VR256XRegClass.contains(Reg)) {
       if (STI.getFeatureBits()[llvm::X86::FeatureAVX512])
-        return setVectorRegToConstant(Reg, 32, llvm::X86::VMOVDQU32Z256rm);
-      return setVectorRegToConstant(Reg, 32, llvm::X86::VMOVDQUYrm);
+        return CI.loadAndFinalize(Reg, 256, llvm::X86::VMOVDQU32Z256rm);
+      if (STI.getFeatureBits()[llvm::X86::FeatureAVX])
+        return CI.loadAndFinalize(Reg, 256, llvm::X86::VMOVDQUYrm);
     }
     if (llvm::X86::VR512RegClass.contains(Reg))
-      return setVectorRegToConstant(Reg, 64, llvm::X86::VMOVDQU32Zrm);
-    // X87.
-    if (llvm::X86::RFP32RegClass.contains(Reg) ||
-        llvm::X86::RFP64RegClass.contains(Reg) ||
-        llvm::X86::RFP80RegClass.contains(Reg))
-      return setVectorRegToConstant(Reg, 8, llvm::X86::LD_Fp64m);
-    if (Reg == llvm::X86::EFLAGS) {
-      // Set all flags to 0 but the bits that are "reserved and set to 1".
-      constexpr const uint32_t kImmValue = 0x00007002u;
-      std::vector<llvm::MCInst> Result;
-      Result.push_back(allocateStackSpace(8));
-      Result.push_back(fillStackSpace(llvm::X86::MOV64mi32, 0, kImmValue));
-      Result.push_back(llvm::MCInstBuilder(llvm::X86::POPF64)); // Also pops.
-      return Result;
+      if (STI.getFeatureBits()[llvm::X86::FeatureAVX512])
+        return CI.loadAndFinalize(Reg, 512, llvm::X86::VMOVDQU32Zrm);
+    if (llvm::X86::RSTRegClass.contains(Reg)) {
+      if (Value.getBitWidth() == 32)
+        return CI.loadX87AndFinalize(Reg, 32, llvm::X86::LD_F32m);
+      if (Value.getBitWidth() == 64)
+        return CI.loadX87AndFinalize(Reg, 64, llvm::X86::LD_F64m);
+      if (Value.getBitWidth() == 80)
+        return CI.loadX87AndFinalize(Reg, 80, llvm::X86::LD_F80m);
     }
-    llvm_unreachable("Not yet implemented");
-  }
-
-  std::vector<llvm::MCInst> setRegTo(const llvm::MCSubtargetInfo &STI,
-                                     const llvm::APInt &Value,
-                                     unsigned Reg) const override {
-    if (llvm::X86::GR8RegClass.contains(Reg) ||
-        llvm::X86::GR16RegClass.contains(Reg) ||
-        llvm::X86::GR32RegClass.contains(Reg) ||
-        llvm::X86::GR64RegClass.contains(Reg))
-      return {loadImmediate(Reg, Value)};
-    ConstantInliner CI(Value);
-    if (llvm::X86::VR64RegClass.contains(Reg))
-      return CI.Add(loadToReg(Reg, llvm::X86::MMX_MOVQ64rm)).finalize();
-    llvm_unreachable("Not yet implemented");
+    if (Reg == llvm::X86::EFLAGS)
+      return CI.popFlagAndFinalize();
+    return {}; // Not yet implemented.
   }
 
   std::unique_ptr<SnippetGenerator>
@@ -320,31 +335,6 @@ class ExegesisX86Target : public ExegesisTarget {
 
   bool matchesArch(llvm::Triple::ArchType Arch) const override {
     return Arch == llvm::Triple::x86_64 || Arch == llvm::Triple::x86;
-  }
-
-private:
-  // setRegToConstant() specialized for a vector register of size
-  // `RegSizeBytes`. `RMOpcode` is the opcode used to do a memory -> vector
-  // register load.
-  static std::vector<llvm::MCInst>
-  setVectorRegToConstant(const unsigned Reg, const unsigned RegSizeBytes,
-                         const unsigned RMOpcode) {
-    // There is no instruction to directly set XMM, go through memory.
-    // Since vector values can be interpreted as integers of various sizes (8
-    // to 64 bits) as well as floats and double, so we chose an immediate
-    // value that has set bits for all byte values and is a normal float/
-    // double. 0x40404040 is ~32.5 when interpreted as a double and ~3.0f when
-    // interpreted as a float.
-    constexpr const uint32_t kImmValue = 0x40404040u;
-    std::vector<llvm::MCInst> Result;
-    Result.push_back(allocateStackSpace(RegSizeBytes));
-    constexpr const unsigned kMov32NumBytes = 4;
-    for (unsigned Disp = 0; Disp < RegSizeBytes; Disp += kMov32NumBytes) {
-      Result.push_back(fillStackSpace(llvm::X86::MOV32mi, Disp, kImmValue));
-    }
-    Result.push_back(loadToReg(Reg, RMOpcode));
-    Result.push_back(releaseStackSpace(RegSizeBytes));
-    return Result;
   }
 };
 

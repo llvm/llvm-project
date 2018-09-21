@@ -145,27 +145,26 @@ public:
     return 0;
   }
 
-  /// Returns true if \param MI is a dependency breaking zero-idiom instruction
-  /// for the subtarget.
+  /// Returns true if MI is a dependency breaking zero-idiom instruction for the
+  /// subtarget.
   ///
-  /// This function also sets bits in \param Mask related to input operands that
+  /// This function also sets bits in Mask related to input operands that
   /// are not in a data dependency relationship.  There is one bit for each
   /// machine operand; implicit operands follow explicit operands in the bit
-  /// representation used for \param Mask.  An empty \param Mask (i.e. a mask
-  /// with all bits cleared) means: data dependencies are "broken" for all the
-  /// explicit input machine operands of \param MI.
+  /// representation used for Mask.  An empty (i.e. a mask with all bits
+  /// cleared) means: data dependencies are "broken" for all the explicit input
+  /// machine operands of MI.
   virtual bool isZeroIdiom(const MachineInstr *MI, APInt &Mask) const {
     return false;
   }
 
-  /// Returns true if \param MI is a dependency breaking instruction for the
-  /// subtarget.
+  /// Returns true if MI is a dependency breaking instruction for the subtarget.
   ///
   /// Similar in behavior to `isZeroIdiom`. However, it knows how to identify
   /// all dependency breaking instructions (i.e. not just zero-idioms).
   /// 
   /// As for `isZeroIdiom`, this method returns a mask of "broken" dependencies.
-  /// (See method `isZeroIdiom` for a detailed description of \param Mask).
+  /// (See method `isZeroIdiom` for a detailed description of Mask).
   virtual bool isDependencyBreaking(const MachineInstr *MI, APInt &Mask) const {
     return isZeroIdiom(MI, Mask);
   }

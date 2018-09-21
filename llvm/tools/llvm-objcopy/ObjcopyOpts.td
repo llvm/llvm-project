@@ -107,6 +107,9 @@ defm keep_global_symbols
 	  "with '#'. Leading and trailing whitespace is stripped from each "
 	  "line. May be repeated to read symbols from many files.">;
 
+def version : Flag<[ "-", "--" ], "version">,
+              HelpText<"Print the version and exit.">;
+
 defm weaken_symbol : Eq<"weaken-symbol">,
                        MetaVarName<"symbol">,
                        HelpText<"Mark <symbol> as weak">;

@@ -47,6 +47,10 @@ def K : JoinedOrSeparate<["-"], "K">,
 
 def discard_all : Flag<["-", "--"], "discard-all">,
                   HelpText<"Remove all local symbols except file and section symbols">;
+
+def version : Flag<[ "-", "--" ], "version">,
+              HelpText<"Print the version and exit.">;
+
 def x : Flag<["-"], "x">,
         Alias<discard_all>;
 
