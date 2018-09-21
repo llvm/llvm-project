@@ -87,5 +87,5 @@
 // CHECK-NEXT:    #####:   82:    g2++;
 // CHECK-NEXT:        -:   83:
 // CHECK-NEXT:        1:   84:  return EXIT_SUCCESS;
-// CHECK-NEXT:        1:   85:}
+// CHECK-NEXT:        -:   85:}
 // CHECK-NEXT:        -:   86:
