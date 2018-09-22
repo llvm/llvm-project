@@ -21,6 +21,7 @@
 
 int main() {
   {
-    std::get_temporary_buffer<int>(1);
+    const auto p = std::get_temporary_buffer<int>(1);
+    std::return_temporary_buffer(p.first);
   }
 }
