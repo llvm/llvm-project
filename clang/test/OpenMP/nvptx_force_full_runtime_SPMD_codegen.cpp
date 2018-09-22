@@ -9,8 +9,6 @@
 #define HEADER
 
 // CHECK-NOT: @__omp_offloading_{{.+}}_exec_mode = weak constant i8 1
-// CHECK: @__omp_offloading_{{.+}}_l52_exec_mode = weak constant i8 1
-// CHECK-NOT: @__omp_offloading_{{.+}}_exec_mode = weak constant i8 1
 
 void foo() {
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
@@ -42,7 +40,7 @@ void foo() {
   for (int i = 0; i < 10; ++i)
     ;
 int a;
-// CHECK: call void @__kmpc_kernel_init(
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})

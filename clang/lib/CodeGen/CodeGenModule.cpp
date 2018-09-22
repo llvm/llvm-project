@@ -44,6 +44,7 @@
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "clang/Frontend/CodeGenOptions.h"
 #include "clang/Sema/SemaDiagnostic.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/CallSite.h"
@@ -53,6 +54,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/ProfileData/InstrProfReader.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
@@ -554,6 +556,20 @@ void CodeGenModule::Release() {
     getModule().setPICLevel(static_cast<llvm::PICLevel::Level>(PLevel));
     if (Context.getLangOpts().PIE)
       getModule().setPIELevel(static_cast<llvm::PIELevel::Level>(PLevel));
+  }
+
+  if (getCodeGenOpts().CodeModel.size() > 0) {
+    unsigned CM = llvm::StringSwitch<unsigned>(getCodeGenOpts().CodeModel)
+                  .Case("tiny", llvm::CodeModel::Tiny)
+                  .Case("small", llvm::CodeModel::Small)
+                  .Case("kernel", llvm::CodeModel::Kernel)
+                  .Case("medium", llvm::CodeModel::Medium)
+                  .Case("large", llvm::CodeModel::Large)
+                  .Default(~0u);
+    if (CM != ~0u) {
+      llvm::CodeModel::Model codeModel = static_cast<llvm::CodeModel::Model>(CM);
+      getModule().setCodeModel(codeModel);
+    }
   }
 
   if (CodeGenOpts.NoPLT)

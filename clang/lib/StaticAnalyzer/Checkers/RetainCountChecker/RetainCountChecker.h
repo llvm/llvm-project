@@ -252,7 +252,6 @@ class RetainCountChecker
                     check::PostStmt<ObjCBoxedExpr>,
                     check::PostStmt<ObjCIvarRefExpr>,
                     check::PostCall,
-                    check::PreStmt<ReturnStmt>,
                     check::RegionChanges,
                     eval::Assume,
                     eval::Call > {
@@ -388,8 +387,7 @@ public:
                      const LocationContext* LCtx,
                      const CallEvent *Call) const;
 
-  void checkPreStmt(const ReturnStmt *S, CheckerContext &C) const;
-  void checkReturnWithRetEffect(const ReturnStmt *S, CheckerContext &C,
+  ExplodedNode* checkReturnWithRetEffect(const ReturnStmt *S, CheckerContext &C,
                                 ExplodedNode *Pred, RetEffect RE, RefVal X,
                                 SymbolRef Sym, ProgramStateRef state) const;
 
@@ -416,12 +414,20 @@ public:
   ProgramStateRef
   handleAutoreleaseCounts(ProgramStateRef state, ExplodedNode *Pred,
                           const ProgramPointTag *Tag, CheckerContext &Ctx,
-                          SymbolRef Sym, RefVal V) const;
+                          SymbolRef Sym,
+                          RefVal V,
+                          const ReturnStmt *S=nullptr) const;
 
   ExplodedNode *processLeaks(ProgramStateRef state,
                              SmallVectorImpl<SymbolRef> &Leaked,
                              CheckerContext &Ctx,
                              ExplodedNode *Pred = nullptr) const;
+
+private:
+  /// Perform the necessary checks and state adjustments at the end of the
+  /// function.
+  /// \p S Return statement, may be null.
+  ExplodedNode * processReturn(const ReturnStmt *S, CheckerContext &C) const;
 };
 
 //===----------------------------------------------------------------------===//

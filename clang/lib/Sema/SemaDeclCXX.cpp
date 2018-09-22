@@ -13186,7 +13186,8 @@ CheckOperatorDeleteDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
   // C++ P0722:
   //   A destroying operator delete shall be a usual deallocation function.
   if (MD && !MD->getParent()->isDependentContext() &&
-      MD->isDestroyingOperatorDelete() && !MD->isUsualDeallocationFunction()) {
+      MD->isDestroyingOperatorDelete() &&
+      !SemaRef.isUsualDeallocationFunction(MD)) {
     SemaRef.Diag(MD->getLocation(),
                  diag::err_destroying_operator_delete_not_usual);
     return true;
@@ -14921,7 +14922,8 @@ void Sema::MarkVTableUsed(SourceLocation Loc, CXXRecordDecl *Class,
   // Do not mark as used if compiling for the device outside of the target
   // region.
   if (LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
-      !isInOpenMPDeclareTargetContext() && !getCurFunctionDecl())
+      !isInOpenMPDeclareTargetContext() &&
+      !isInOpenMPTargetExecutionDirective())
     return;
 
   // Try to insert this class into the map.

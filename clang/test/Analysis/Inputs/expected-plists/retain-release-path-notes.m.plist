@@ -2066,47 +2066,6 @@
          <key>file</key><integer>0</integer>
         </dict>
        </array>
-       <array>
-        <dict>
-         <key>line</key><integer>110</integer>
-         <key>col</key><integer>10</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-        <dict>
-         <key>line</key><integer>110</integer>
-         <key>col</key><integer>15</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-       </array>
-     </array>
-     <key>depth</key><integer>0</integer>
-     <key>extended_message</key>
-     <string>Object returned to caller with a +0 retain count</string>
-     <key>message</key>
-     <string>Object returned to caller with a +0 retain count</string>
-    </dict>
-    <dict>
-     <key>kind</key><string>event</string>
-     <key>location</key>
-     <dict>
-      <key>line</key><integer>110</integer>
-      <key>col</key><integer>3</integer>
-      <key>file</key><integer>0</integer>
-     </dict>
-     <key>ranges</key>
-     <array>
-       <array>
-        <dict>
-         <key>line</key><integer>110</integer>
-         <key>col</key><integer>3</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-        <dict>
-         <key>line</key><integer>110</integer>
-         <key>col</key><integer>15</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-       </array>
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
@@ -2205,47 +2164,6 @@
          </array>
        </dict>
       </array>
-    </dict>
-    <dict>
-     <key>kind</key><string>event</string>
-     <key>location</key>
-     <dict>
-      <key>line</key><integer>115</integer>
-      <key>col</key><integer>3</integer>
-      <key>file</key><integer>0</integer>
-     </dict>
-     <key>ranges</key>
-     <array>
-       <array>
-        <dict>
-         <key>line</key><integer>115</integer>
-         <key>col</key><integer>3</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-        <dict>
-         <key>line</key><integer>115</integer>
-         <key>col</key><integer>15</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-       </array>
-       <array>
-        <dict>
-         <key>line</key><integer>115</integer>
-         <key>col</key><integer>10</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-        <dict>
-         <key>line</key><integer>115</integer>
-         <key>col</key><integer>15</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-       </array>
-     </array>
-     <key>depth</key><integer>0</integer>
-     <key>extended_message</key>
-     <string>Object returned to caller as an owning reference (single retain count transferred to caller)</string>
-     <key>message</key>
-     <string>Object returned to caller as an owning reference (single retain count transferred to caller)</string>
     </dict>
     <dict>
      <key>kind</key><string>event</string>
@@ -2390,47 +2308,6 @@
          <key>file</key><integer>0</integer>
         </dict>
        </array>
-       <array>
-        <dict>
-         <key>line</key><integer>121</integer>
-         <key>col</key><integer>10</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-        <dict>
-         <key>line</key><integer>121</integer>
-         <key>col</key><integer>15</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-       </array>
-     </array>
-     <key>depth</key><integer>0</integer>
-     <key>extended_message</key>
-     <string>Object returned to caller with a +0 retain count</string>
-     <key>message</key>
-     <string>Object returned to caller with a +0 retain count</string>
-    </dict>
-    <dict>
-     <key>kind</key><string>event</string>
-     <key>location</key>
-     <dict>
-      <key>line</key><integer>121</integer>
-      <key>col</key><integer>3</integer>
-      <key>file</key><integer>0</integer>
-     </dict>
-     <key>ranges</key>
-     <array>
-       <array>
-        <dict>
-         <key>line</key><integer>121</integer>
-         <key>col</key><integer>3</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-        <dict>
-         <key>line</key><integer>121</integer>
-         <key>col</key><integer>15</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-       </array>
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
@@ -2529,47 +2406,6 @@
          </array>
        </dict>
       </array>
-    </dict>
-    <dict>
-     <key>kind</key><string>event</string>
-     <key>location</key>
-     <dict>
-      <key>line</key><integer>126</integer>
-      <key>col</key><integer>3</integer>
-      <key>file</key><integer>0</integer>
-     </dict>
-     <key>ranges</key>
-     <array>
-       <array>
-        <dict>
-         <key>line</key><integer>126</integer>
-         <key>col</key><integer>3</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-        <dict>
-         <key>line</key><integer>126</integer>
-         <key>col</key><integer>15</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-       </array>
-       <array>
-        <dict>
-         <key>line</key><integer>126</integer>
-         <key>col</key><integer>10</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-        <dict>
-         <key>line</key><integer>126</integer>
-         <key>col</key><integer>15</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-       </array>
-     </array>
-     <key>depth</key><integer>0</integer>
-     <key>extended_message</key>
-     <string>Object returned to caller with a +0 retain count</string>
-     <key>message</key>
-     <string>Object returned to caller with a +0 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>event</string>
@@ -2714,47 +2550,6 @@
          <key>file</key><integer>0</integer>
         </dict>
        </array>
-       <array>
-        <dict>
-         <key>line</key><integer>131</integer>
-         <key>col</key><integer>10</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-        <dict>
-         <key>line</key><integer>131</integer>
-         <key>col</key><integer>15</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-       </array>
-     </array>
-     <key>depth</key><integer>0</integer>
-     <key>extended_message</key>
-     <string>Object returned to caller with a +0 retain count</string>
-     <key>message</key>
-     <string>Object returned to caller with a +0 retain count</string>
-    </dict>
-    <dict>
-     <key>kind</key><string>event</string>
-     <key>location</key>
-     <dict>
-      <key>line</key><integer>131</integer>
-      <key>col</key><integer>3</integer>
-      <key>file</key><integer>0</integer>
-     </dict>
-     <key>ranges</key>
-     <array>
-       <array>
-        <dict>
-         <key>line</key><integer>131</integer>
-         <key>col</key><integer>3</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-        <dict>
-         <key>line</key><integer>131</integer>
-         <key>col</key><integer>15</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-       </array>
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
@@ -2853,47 +2648,6 @@
          </array>
        </dict>
       </array>
-    </dict>
-    <dict>
-     <key>kind</key><string>event</string>
-     <key>location</key>
-     <dict>
-      <key>line</key><integer>136</integer>
-      <key>col</key><integer>3</integer>
-      <key>file</key><integer>0</integer>
-     </dict>
-     <key>ranges</key>
-     <array>
-       <array>
-        <dict>
-         <key>line</key><integer>136</integer>
-         <key>col</key><integer>3</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-        <dict>
-         <key>line</key><integer>136</integer>
-         <key>col</key><integer>15</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-       </array>
-       <array>
-        <dict>
-         <key>line</key><integer>136</integer>
-         <key>col</key><integer>10</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-        <dict>
-         <key>line</key><integer>136</integer>
-         <key>col</key><integer>15</integer>
-         <key>file</key><integer>0</integer>
-        </dict>
-       </array>
-     </array>
-     <key>depth</key><integer>0</integer>
-     <key>extended_message</key>
-     <string>Object returned to caller as an owning reference (single retain count transferred to caller)</string>
-     <key>message</key>
-     <string>Object returned to caller as an owning reference (single retain count transferred to caller)</string>
     </dict>
     <dict>
      <key>kind</key><string>event</string>
@@ -5262,7 +5016,7 @@
  </array>
  <key>files</key>
  <array>
-   <string>/clang/test/Analysis/retain-release-path-notes.m</string>
+  <string>/test/Analysis/retain-release-path-notes.m</string>
  </array>
 </dict>
 </plist>

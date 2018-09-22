@@ -3585,7 +3585,7 @@ class ASTIdentifierTableTrait {
         II->isPoisoned() ||
         (IsModule ? II->hasRevertedBuiltin() : II->getObjCOrBuiltinID()) ||
         II->hasRevertedTokenIDToIdentifier() ||
-        (NeedDecls && II->getFETokenInfo<void>()))
+        (NeedDecls && II->getFETokenInfo()))
       return true;
 
     return false;
