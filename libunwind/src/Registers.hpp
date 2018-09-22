@@ -517,6 +517,7 @@ inline bool Registers_x86_64::validVectorRegister(int regNum) const {
     return false;
   return true;
 #else
+  (void)regNum; // suppress unused parameter warning
   return false;
 #endif
 }
@@ -526,6 +527,7 @@ inline v128 Registers_x86_64::getVectorRegister(int regNum) const {
   assert(validVectorRegister(regNum));
   return _xmm[regNum - UNW_X86_64_XMM0];
 #else
+  (void)regNum; // suppress unused parameter warning
   _LIBUNWIND_ABORT("no x86_64 vector registers");
 #endif
 }
@@ -535,6 +537,7 @@ inline void Registers_x86_64::setVectorRegister(int regNum, v128 value) {
   assert(validVectorRegister(regNum));
   _xmm[regNum - UNW_X86_64_XMM0] = value;
 #else
+  (void)regNum; (void)value; // suppress unused parameter warnings
   _LIBUNWIND_ABORT("no x86_64 vector registers");
 #endif
 }
@@ -2149,7 +2152,7 @@ inline Registers_arm::Registers_arm()
   memset(&_vfp_d16_d31, 0, sizeof(_vfp_d16_d31));
 #if defined(__ARM_WMMX)
   _saved_iwmmx = false;
-  _saved_iwmmx_control = false;  
+  _saved_iwmmx_control = false;
   memset(&_iwmmx, 0, sizeof(_iwmmx));
   memset(&_iwmmx_control, 0, sizeof(_iwmmx_control));
 #endif

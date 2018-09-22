@@ -1,12 +1,16 @@
 
 if (DEFINED TARGET_TRIPLE)
-    # Ignore the major, minor, and patchlevel versions of darwin targets.
-    string(REGEX REPLACE "darwin[0-9]+\\.[0-9]+\\.[0-9]+" "darwin"
-           GENERIC_TARGET_TRIPLE "${TARGET_TRIPLE}")
-
-    # Ignore the major and minor versions of freebsd targets.
-    string(REGEX REPLACE "freebsd[0-9]+\\.[0-9]+" "freebsd"
-           GENERIC_TARGET_TRIPLE "${TARGET_TRIPLE}")
+    if (TARGET_TRIPLE MATCHES "darwin")
+        # Ignore the major, minor, and patchlevel versions of darwin targets.
+        string(REGEX REPLACE "darwin[0-9]+\\.[0-9]+\\.[0-9]+" "darwin"
+               GENERIC_TARGET_TRIPLE "${TARGET_TRIPLE}")
+    elseif(TARGET_TRIPLE MATCHES "freebsd")
+        # Ignore the major and minor versions of freebsd targets.
+        string(REGEX REPLACE "freebsd[0-9]+\\.[0-9]+" "freebsd"
+               GENERIC_TARGET_TRIPLE "${TARGET_TRIPLE}")
+    else()
+        set(GENERIC_TARGET_TRIPLE "${TARGET_TRIPLE}")
+    endif()
 endif()
 
 # Detect if we are building in the same configuration used to generate
