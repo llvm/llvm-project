@@ -718,7 +718,6 @@ def SBWriteResGroup30 : SchedWriteRes<[SBPort0]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SBWriteResGroup30], (instregex "(V?)PCMPGTQrr")>;
 
 def SBWriteResGroup31 : SchedWriteRes<[SBPort23]> {
   let Latency = 5;
@@ -1137,5 +1136,56 @@ def SBWriteResGroup131 : SchedWriteRes<[SBPort0,SBPort1,SBPort23]> {
 def: InstRW<[SBWriteResGroup131], (instregex "DIV(R?)_FI(16|32)m")>;
 
 def: InstRW<[WriteZero], (instrs CLC)>;
+
+// Intruction variants handled by the renamer. These might not need execution
+// ports in certain conditions.
+// See Agner's Fog "The microarchitecture of Intel, AMD and VIA CPUs",
+// section "Sandy Bridge and Ivy Bridge Pipeline" > "Register allocation and
+// renaming".
+// These can be investigated with llvm-exegesis, e.g.
+// echo 'pxor %mm0, %mm0' | /tmp/llvm-exegesis -mode=uops -snippets-file=-
+// echo 'vxorpd %xmm0, %xmm0, %xmm1' | /tmp/llvm-exegesis -mode=uops -snippets-file=-
+
+def SBWriteZeroLatency : SchedWriteRes<[]> {
+  let Latency = 0;
+}
+
+def SBWriteZeroIdiom : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [SBWriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteALU]>
+]>;
+def : InstRW<[SBWriteZeroIdiom], (instrs SUB32rr, SUB64rr,
+                                         XOR32rr, XOR64rr)>;
+
+def SBWriteFZeroIdiom : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [SBWriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteFLogic]>
+]>;
+def : InstRW<[SBWriteFZeroIdiom], (instrs XORPSrr, VXORPSrr, XORPDrr,
+                                          VXORPDrr)>;
+
+def SBWriteVZeroIdiomLogicX : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [SBWriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteVecLogicX]>
+]>;
+def : InstRW<[SBWriteVZeroIdiomLogicX], (instrs PXORrr, VPXORrr)>;
+
+def SBWriteVZeroIdiomALUX : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [SBWriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteVecALUX]>
+]>;
+def : InstRW<[SBWriteVZeroIdiomALUX], (instrs PSUBBrr, VPSUBBrr,
+                                              PSUBDrr, VPSUBDrr,
+                                              PSUBQrr, VPSUBQrr,
+                                              PSUBWrr, VPSUBWrr,
+                                              PCMPGTBrr, VPCMPGTBrr,
+                                              PCMPGTDrr, VPCMPGTDrr,
+                                              PCMPGTWrr, VPCMPGTWrr)>;
+
+def SBWriteVZeroIdiomPCMPGTQ : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [SBWriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [SBWriteResGroup30]>
+]>;
+def : InstRW<[SBWriteVZeroIdiomPCMPGTQ], (instrs PCMPGTQrr, VPCMPGTQrr)>;
 
 } // SchedModel

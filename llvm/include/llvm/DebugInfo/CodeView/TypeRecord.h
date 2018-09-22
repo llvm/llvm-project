@@ -923,6 +923,7 @@ public:
 
   uint32_t Signature;
 };
+
 } // end namespace codeview
 } // end namespace llvm
 

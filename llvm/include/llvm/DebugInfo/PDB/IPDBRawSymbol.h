@@ -37,13 +37,6 @@ enum class PdbSymbolIdField : uint32_t {
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ All)
 };
 
-template <typename T>
-void dumpSymbolField(raw_ostream &OS, StringRef Name, T Value, int Indent) {
-  OS << "\n";
-  OS.indent(Indent);
-  OS << Name << ": " << Value;
-}
-
 void dumpSymbolIdField(raw_ostream &OS, StringRef Name, SymIndexId Value,
                        int Indent, const IPDBSession &Session,
                        PdbSymbolIdField FieldId, PdbSymbolIdField ShowFlags,

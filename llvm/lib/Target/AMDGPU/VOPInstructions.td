@@ -528,6 +528,50 @@ class VOP_DPP <string OpName, VOPProfile P> :
   let DecoderNamespace = "DPP";
 }
 
+class getNumNodeArgs<SDPatternOperator Op> {
+  SDNode N = !cast<SDNode>(Op);
+  SDTypeProfile TP = N.TypeProfile;
+  int ret = TP.NumOperands;
+}
+
+
+class getDivergentFrag<SDPatternOperator Op> {
+
+  int NumSrcArgs = getNumNodeArgs<Op>.ret;
+  PatFrag ret = PatFrag <
+    !if(!eq(NumSrcArgs, 1),
+             (ops node:$src0),
+             !if(!eq(NumSrcArgs, 2),
+               (ops node:$src0, node:$src1),
+               (ops node:$src0, node:$src1, node:$src2))),
+    !if(!eq(NumSrcArgs, 1),
+             (Op $src0),
+             !if(!eq(NumSrcArgs, 2),
+               (Op $src0, $src1),
+               (Op $src0, $src1, $src2))),
+    [{ return N->isDivergent(); }]
+  >;
+}
+
+class VOPPatGen<SDPatternOperator Op, VOPProfile P> {
+
+  PatFrag Operator = getDivergentFrag < Op >.ret;
+
+  dag Ins = !foreach(tmp, P.Ins32, !subst(ins, Operator,
+                                         !subst(P.Src0RC32, P.Src0VT,
+                                               !subst(P.Src1RC32, P.Src1VT, tmp))));
+
+
+  dag Outs = !foreach(tmp, P.Outs32, !subst(outs, set,
+                                           !subst(P.DstRC, P.DstVT, tmp)));
+
+  list<dag> ret =  [!con(Outs, (set Ins))];
+}
+
+class VOPPatOrNull<SDPatternOperator Op, VOPProfile P> {
+  list<dag> ret = !if(!ne(P.NeedPatGen,PatGenMode.NoPattern), VOPPatGen<Op, P>.ret, []);
+}
+
 include "VOPCInstructions.td"
 include "VOP1Instructions.td"
 include "VOP2Instructions.td"

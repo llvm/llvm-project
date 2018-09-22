@@ -309,6 +309,8 @@ struct MockPassInstrumentationCallbacks {
   }
   MOCK_METHOD2(runBeforePass, bool(StringRef PassID, llvm::Any));
   MOCK_METHOD2(runAfterPass, void(StringRef PassID, llvm::Any));
+  MOCK_METHOD2(runBeforeAnalysis, void(StringRef PassID, llvm::Any));
+  MOCK_METHOD2(runAfterAnalysis, void(StringRef PassID, llvm::Any));
 
   void registerPassInstrumentation() {
     Callbacks.registerBeforePassCallback([this](StringRef P, llvm::Any IR) {
@@ -316,6 +318,11 @@ struct MockPassInstrumentationCallbacks {
     });
     Callbacks.registerAfterPassCallback(
         [this](StringRef P, llvm::Any IR) { this->runAfterPass(P, IR); });
+    Callbacks.registerBeforeAnalysisCallback([this](StringRef P, llvm::Any IR) {
+      return this->runBeforeAnalysis(P, IR);
+    });
+    Callbacks.registerAfterAnalysisCallback(
+        [this](StringRef P, llvm::Any IR) { this->runAfterAnalysis(P, IR); });
   }
 
   void ignoreNonMockPassInstrumentation(StringRef IRName) {
@@ -328,6 +335,12 @@ struct MockPassInstrumentationCallbacks {
                 runBeforePass(Not(HasNameRegex("Mock")), HasName(IRName)))
         .Times(AnyNumber());
     EXPECT_CALL(*this, runAfterPass(Not(HasNameRegex("Mock")), HasName(IRName)))
+        .Times(AnyNumber());
+    EXPECT_CALL(*this,
+                runBeforeAnalysis(Not(HasNameRegex("Mock")), HasName(IRName)))
+        .Times(AnyNumber());
+    EXPECT_CALL(*this,
+                runAfterAnalysis(Not(HasNameRegex("Mock")), HasName(IRName)))
         .Times(AnyNumber());
   }
 };
@@ -469,6 +482,14 @@ TEST_F(ModuleCallbacksTest, InstrumentedPasses) {
                                              HasName("<string>")))
       .InSequence(PISequence);
   EXPECT_CALL(CallbacksHandle,
+              runBeforeAnalysis(HasNameRegex("MockAnalysisHandle"),
+                                HasName("<string>")))
+      .InSequence(PISequence);
+  EXPECT_CALL(
+      CallbacksHandle,
+      runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), HasName("<string>")))
+      .InSequence(PISequence);
+  EXPECT_CALL(CallbacksHandle,
               runAfterPass(HasNameRegex("MockPassHandle"), HasName("<string>")))
       .InSequence(PISequence);
 
@@ -492,8 +513,15 @@ TEST_F(ModuleCallbacksTest, InstrumentedSkippedPasses) {
   EXPECT_CALL(AnalysisHandle, run(HasName("<string>"), _)).Times(0);
   EXPECT_CALL(PassHandle, run(HasName("<string>"), _)).Times(0);
 
-  // As the pass is skipped there is no afterPass as well.
+  // As the pass is skipped there is no afterPass, beforeAnalysis/afterAnalysis
+  // as well.
   EXPECT_CALL(CallbacksHandle, runAfterPass(HasNameRegex("MockPassHandle"), _))
+      .Times(0);
+  EXPECT_CALL(CallbacksHandle,
+              runBeforeAnalysis(HasNameRegex("MockAnalysisHandle"), _))
+      .Times(0);
+  EXPECT_CALL(CallbacksHandle,
+              runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), _))
       .Times(0);
 
   StringRef PipelineText = "test-transform";
@@ -530,6 +558,14 @@ TEST_F(FunctionCallbacksTest, InstrumentedPasses) {
   EXPECT_CALL(CallbacksHandle,
               runBeforePass(HasNameRegex("MockPassHandle"), HasName("foo")))
       .InSequence(PISequence);
+  EXPECT_CALL(
+      CallbacksHandle,
+      runBeforeAnalysis(HasNameRegex("MockAnalysisHandle"), HasName("foo")))
+      .InSequence(PISequence);
+  EXPECT_CALL(
+      CallbacksHandle,
+      runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), HasName("foo")))
+      .InSequence(PISequence);
   EXPECT_CALL(CallbacksHandle,
               runAfterPass(HasNameRegex("MockPassHandle"), HasName("foo")))
       .InSequence(PISequence);
@@ -554,8 +590,17 @@ TEST_F(FunctionCallbacksTest, InstrumentedSkippedPasses) {
   EXPECT_CALL(AnalysisHandle, run(HasName("foo"), _)).Times(0);
   EXPECT_CALL(PassHandle, run(HasName("foo"), _)).Times(0);
 
-  // As the pass is skipped there is no afterPass as well.
+  // As the pass is skipped there is no afterPass, beforeAnalysis/afterAnalysis
+  // as well.
   EXPECT_CALL(CallbacksHandle, runAfterPass(HasNameRegex("MockPassHandle"), _))
+      .Times(0);
+  EXPECT_CALL(CallbacksHandle, runAfterPass(HasNameRegex("MockPassHandle"), _))
+      .Times(0);
+  EXPECT_CALL(CallbacksHandle,
+              runBeforeAnalysis(HasNameRegex("MockAnalysisHandle"), _))
+      .Times(0);
+  EXPECT_CALL(CallbacksHandle,
+              runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), _))
       .Times(0);
 
   StringRef PipelineText = "test-transform";
@@ -592,6 +637,14 @@ TEST_F(LoopCallbacksTest, InstrumentedPasses) {
   EXPECT_CALL(CallbacksHandle,
               runBeforePass(HasNameRegex("MockPassHandle"), HasName("loop")))
       .InSequence(PISequence);
+  EXPECT_CALL(
+      CallbacksHandle,
+      runBeforeAnalysis(HasNameRegex("MockAnalysisHandle"), HasName("loop")))
+      .InSequence(PISequence);
+  EXPECT_CALL(
+      CallbacksHandle,
+      runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), HasName("loop")))
+      .InSequence(PISequence);
   EXPECT_CALL(CallbacksHandle,
               runAfterPass(HasNameRegex("MockPassHandle"), HasName("loop")))
       .InSequence(PISequence);
@@ -617,8 +670,15 @@ TEST_F(LoopCallbacksTest, InstrumentedSkippedPasses) {
   EXPECT_CALL(AnalysisHandle, run(HasName("loop"), _, _)).Times(0);
   EXPECT_CALL(PassHandle, run(HasName("loop"), _, _, _)).Times(0);
 
-  // As the pass is skipped there is no afterPass as well.
+  // As the pass is skipped there is no afterPass, beforeAnalysis/afterAnalysis
+  // as well.
   EXPECT_CALL(CallbacksHandle, runAfterPass(HasNameRegex("MockPassHandle"), _))
+      .Times(0);
+  EXPECT_CALL(CallbacksHandle,
+              runBeforeAnalysis(HasNameRegex("MockAnalysisHandle"), _))
+      .Times(0);
+  EXPECT_CALL(CallbacksHandle,
+              runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), _))
       .Times(0);
 
   StringRef PipelineText = "test-transform";
@@ -654,6 +714,14 @@ TEST_F(CGSCCCallbacksTest, InstrumentedPasses) {
   EXPECT_CALL(CallbacksHandle,
               runBeforePass(HasNameRegex("MockPassHandle"), HasName("(foo)")))
       .InSequence(PISequence);
+  EXPECT_CALL(
+      CallbacksHandle,
+      runBeforeAnalysis(HasNameRegex("MockAnalysisHandle"), HasName("(foo)")))
+      .InSequence(PISequence);
+  EXPECT_CALL(
+      CallbacksHandle,
+      runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), HasName("(foo)")))
+      .InSequence(PISequence);
   EXPECT_CALL(CallbacksHandle,
               runAfterPass(HasNameRegex("MockPassHandle"), HasName("(foo)")))
       .InSequence(PISequence);
@@ -679,8 +747,15 @@ TEST_F(CGSCCCallbacksTest, InstrumentedSkippedPasses) {
   EXPECT_CALL(AnalysisHandle, run(HasName("(foo)"), _, _)).Times(0);
   EXPECT_CALL(PassHandle, run(HasName("(foo)"), _, _, _)).Times(0);
 
-  // As the pass is skipped there is no afterPass as well.
+  // As the pass is skipped there is no afterPass, beforeAnalysis/afterAnalysis
+  // as well.
   EXPECT_CALL(CallbacksHandle, runAfterPass(HasNameRegex("MockPassHandle"), _))
+      .Times(0);
+  EXPECT_CALL(CallbacksHandle,
+              runBeforeAnalysis(HasNameRegex("MockAnalysisHandle"), _))
+      .Times(0);
+  EXPECT_CALL(CallbacksHandle,
+              runAfterAnalysis(HasNameRegex("MockAnalysisHandle"), _))
       .Times(0);
 
   StringRef PipelineText = "test-transform";

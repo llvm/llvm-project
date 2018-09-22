@@ -1329,7 +1329,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                            (Context, Tag, Name, File, Line, Scope, BaseType,
                             SizeInBits, AlignInBits, OffsetInBits, Flags,
                             Elements, RuntimeLang, VTableHolder, TemplateParams,
-                            Identifier));
+                            Identifier, Discriminator));
     if (!IsNotUsedInTypeRef && Identifier)
       MetadataList.addTypeRef(*Identifier, *cast<DICompositeType>(CT));
 

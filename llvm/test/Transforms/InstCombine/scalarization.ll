@@ -56,3 +56,31 @@ define float @extract_element_constant_index(<4 x float> %x) {
   ret float %r
 }
 
+define float @extract_element_variable_index(<4 x float> %x, i32 %y) {
+; CHECK-LABEL: @extract_element_variable_index(
+; CHECK-NEXT:    [[R_LHS:%.*]] = extractelement <4 x float> [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[R_LHS]], 1.000000e+00
+; CHECK-NEXT:    ret float [[R]]
+;
+  %add = fadd <4 x float> %x, <float 1.0, float 1.0, float 1.0, float 1.0>
+  %r = extractelement <4 x float> %add, i32 %y
+  ret float %r
+}
+
+define float @extract_element_splat_constant_vector_variable_index(i32 %y) {
+; CHECK-LABEL: @extract_element_splat_constant_vector_variable_index(
+; CHECK-NEXT:    ret float 2.000000e+00
+;
+  %r = extractelement <4 x float> <float 2.0, float 2.0, float 2.0, float 2.0>, i32 %y
+  ret float %r
+}
+
+define float @extract_element_constant_vector_variable_index(i32 %y) {
+; CHECK-LABEL: @extract_element_constant_vector_variable_index(
+; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>, i32 [[Y:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = extractelement <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, i32 %y
+  ret float %r
+}
+

@@ -10,6 +10,7 @@
 #include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
 
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
+#include "llvm/DebugInfo/CodeView/TypeRecordHelpers.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypeEnum.h"
@@ -22,21 +23,24 @@ using namespace llvm::pdb;
 
 NativeEnumTypes::NativeEnumTypes(NativeSession &PDBSession,
                                  LazyRandomTypeCollection &Types,
-                                 TypeLeafKind Kind)
+                                 std::vector<codeview::TypeLeafKind> Kinds)
     : Matches(), Index(0), Session(PDBSession) {
   Optional<TypeIndex> TI = Types.getFirst();
   while (TI) {
     CVType CVT = Types.getType(*TI);
     TypeLeafKind K = CVT.kind();
-    if (K == Kind)
-      Matches.push_back(*TI);
-    else if (K == TypeLeafKind::LF_MODIFIER) {
-      ModifierRecord MR;
-      if (auto EC = TypeDeserializer::deserializeAs<ModifierRecord>(CVT, MR)) {
-        consumeError(std::move(EC));
-      } else if (!MR.ModifiedType.isSimple()) {
-        CVType UnmodifiedCVT = Types.getType(MR.ModifiedType);
-        if (UnmodifiedCVT.kind() == Kind)
+    if (llvm::is_contained(Kinds, K)) {
+      // Don't add forward refs, we'll find those later while enumerating.
+      if (!isUdtForwardRef(CVT))
+        Matches.push_back(*TI);
+    } else if (K == TypeLeafKind::LF_MODIFIER) {
+      TypeIndex ModifiedTI = getModifiedType(CVT);
+      if (!ModifiedTI.isSimple()) {
+        CVType UnmodifiedCVT = Types.getType(ModifiedTI);
+        // LF_MODIFIERs point to forward refs, but don't worry about that
+        // here.  We're pushing the TypeIndex of the LF_MODIFIER itself,
+        // so we'll worry about resolving forward refs later.
+        if (llvm::is_contained(Kinds, UnmodifiedCVT.kind()))
           Matches.push_back(*TI);
       }
     }
@@ -45,19 +49,16 @@ NativeEnumTypes::NativeEnumTypes(NativeSession &PDBSession,
 }
 
 NativeEnumTypes::NativeEnumTypes(NativeSession &PDBSession,
-                                 const std::vector<TypeIndex> &Matches,
-                                 TypeLeafKind Kind)
-    : Matches(Matches), Index(0), Session(PDBSession) {}
+                                 std::vector<codeview::TypeIndex> Indices)
+    : Matches(std::move(Indices)), Index(0), Session(PDBSession) {}
 
 uint32_t NativeEnumTypes::getChildCount() const {
   return static_cast<uint32_t>(Matches.size());
 }
 
-std::unique_ptr<PDBSymbol>
-NativeEnumTypes::getChildAtIndex(uint32_t Index) const {
-  if (Index < Matches.size()) {
-    SymIndexId Id =
-        Session.getSymbolCache().findSymbolByTypeIndex(Matches[Index]);
+std::unique_ptr<PDBSymbol> NativeEnumTypes::getChildAtIndex(uint32_t N) const {
+  if (N < Matches.size()) {
+    SymIndexId Id = Session.getSymbolCache().findSymbolByTypeIndex(Matches[N]);
     return Session.getSymbolCache().getSymbolById(Id);
   }
   return nullptr;

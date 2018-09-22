@@ -93,7 +93,7 @@ define amdgpu_kernel void @test_sub_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32
 }
 
 ; FUNC-LABEL: {{^}}test_sub_i16:
-; SI: v_subrev_i32_e32 v{{[0-9]+}}, vcc,
+; SI: v_sub_i32_e32 v{{[0-9]+}}, vcc,
 ; GFX89: v_sub_u16_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
 define amdgpu_kernel void @test_sub_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %in) {
   %tid = call i32 @llvm.r600.read.tidig.x()

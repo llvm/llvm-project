@@ -364,6 +364,79 @@ define <8 x i32> @andn_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %
   ret <8 x i32> %add1
 }
 
+define <8 x i32> @andn_variable_mask_operand_no_concat(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z) {
+; AVX1-LABEL: andn_variable_mask_operand_no_concat:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vandnps %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; INT256-LABEL: andn_variable_mask_operand_no_concat:
+; INT256:       # %bb.0:
+; INT256-NEXT:    vpandn %ymm2, %ymm0, %ymm0
+; INT256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; INT256-NEXT:    retq
+  %and = and <8 x i32> %x, %z
+  %xor = xor <8 x i32> %and, %z ; demanded bits will make this a 'not'
+  %add = add <8 x i32> %xor, %y
+  ret <8 x i32> %add
+}
+
+define <8 x i32> @andn_constant_mask_operand_no_concat(<8 x i32> %x, <8 x i32> %y) {
+; AVX1-LABEL: andn_constant_mask_operand_no_concat:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vandnps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; INT256-LABEL: andn_constant_mask_operand_no_concat:
+; INT256:       # %bb.0:
+; INT256-NEXT:    vpandn {{.*}}(%rip), %ymm0, %ymm0
+; INT256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; INT256-NEXT:    retq
+  %xor = xor <8 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  %and = and <8 x i32> %xor, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
+  %r = add <8 x i32> %and, %y
+  ret <8 x i32> %r
+}
+
+define <8 x i32> @andn_variable_mask_operand_concat(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z, <8 x i32> %w) {
+; AVX1-LABEL: andn_variable_mask_operand_concat:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
+; AVX1-NEXT:    vpaddd %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
+; AVX1-NEXT:    vandnps %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm2
+; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; INT256-LABEL: andn_variable_mask_operand_concat:
+; INT256:       # %bb.0:
+; INT256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; INT256-NEXT:    vpandn %ymm2, %ymm0, %ymm0
+; INT256-NEXT:    vpaddd %ymm3, %ymm0, %ymm0
+; INT256-NEXT:    retq
+  %add = add <8 x i32> %x, %y
+  %xor = xor <8 x i32> %add, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  %and = and <8 x i32> %xor, %z
+  %r = add <8 x i32> %and, %w
+  ret <8 x i32> %r
+}
+
 define <8 x i32> @or_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z) {
 ; AVX1-LABEL: or_disguised_i8_elts:
 ; AVX1:       # %bb.0:

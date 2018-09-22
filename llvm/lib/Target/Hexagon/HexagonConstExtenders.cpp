@@ -1933,6 +1933,11 @@ const MachineOperand &HCE::getStoredValueOp(const MachineInstr &MI) const {
 bool HCE::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
+  if (MF.getFunction().hasPersonalityFn()) {
+    LLVM_DEBUG(dbgs() << getPassName() << ": skipping " << MF.getName()
+                      << " due to exception handling\n");
+    return false;
+  }
   LLVM_DEBUG(MF.print(dbgs() << "Before " << getPassName() << '\n', nullptr));
 
   HII = MF.getSubtarget<HexagonSubtarget>().getInstrInfo();

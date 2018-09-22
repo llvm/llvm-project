@@ -38811,23 +38811,30 @@ static SDValue combineMOVMSK(SDNode *N, SelectionDAG &DAG,
   // Combine (movmsk (setne (and X, (1 << C)), 0)) -> (movmsk (X << C)).
   // Only do this when the setcc input and output types are the same and the
   // setcc and the 'and' node have a single use.
-  // FIXME: Support i8 shifts. The lowering produces an extra and.
   // FIXME: Support 256-bits with AVX1. The movmsk is split, but the and isn't.
   APInt SplatVal;
   if (Src.getOpcode() == ISD::SETCC && Src.hasOneUse() &&
       Src.getOperand(0).getValueType() == Src.getValueType() &&
-      Src.getValueType().getScalarSizeInBits() >= 32 &&
       cast<CondCodeSDNode>(Src.getOperand(2))->get() == ISD::SETNE &&
-      ISD::isBuildVectorAllZeros(Src.getOperand(1).getNode())) {
-    SDValue In = Src.getOperand(0);
-    if (In.getOpcode() == ISD::AND && In.hasOneUse() &&
-        ISD::isConstantSplatVector(In.getOperand(1).getNode(), SplatVal) &&
+      ISD::isBuildVectorAllZeros(Src.getOperand(1).getNode()) &&
+      Src.getOperand(0).getOpcode() == ISD::AND) {
+    SDValue And = Src.getOperand(0);
+    if (And.hasOneUse() &&
+        ISD::isConstantSplatVector(And.getOperand(1).getNode(), SplatVal) &&
         SplatVal.isPowerOf2()) {
       MVT VT = Src.getSimpleValueType();
       unsigned BitWidth = VT.getScalarSizeInBits();
       unsigned ShAmt = BitWidth - SplatVal.logBase2() - 1;
-      SDLoc DL(Src.getOperand(0));
-      SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, In.getOperand(0),
+      SDLoc DL(And);
+      SDValue X = And.getOperand(0);
+      // If the element type is i8, we need to bitcast to i16 to use a legal
+      // shift. If we wait until lowering we end up with an extra and to bits
+      // from crossing the 8-bit elements, but we don't care about that here.
+      if (VT.getVectorElementType() == MVT::i8) {
+        VT = MVT::getVectorVT(MVT::i16, VT.getVectorNumElements() / 2);
+        X = DAG.getBitcast(VT, X);
+      }
+      SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X,
                                 DAG.getConstant(ShAmt, DL, VT));
       SDValue Cast = DAG.getBitcast(SrcVT, Shl);
       return DAG.getNode(X86ISD::MOVMSK, SDLoc(N), N->getValueType(0), Cast);

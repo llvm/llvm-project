@@ -943,8 +943,17 @@ private:
       if (DebugLogging)
         dbgs() << "Running analysis: " << P.name() << " on " << IR.getName()
                << "\n";
+
+      PassInstrumentation PI;
+      if (ID != PassInstrumentationAnalysis::ID()) {
+        PI = getResult<PassInstrumentationAnalysis>(IR, ExtraArgs...);
+        PI.runBeforeAnalysis(P, IR);
+      }
+
       AnalysisResultListT &ResultList = AnalysisResultLists[&IR];
       ResultList.emplace_back(ID, P.run(IR, *this, ExtraArgs...));
+
+      PI.runAfterAnalysis(P, IR);
 
       // P.run may have inserted elements into AnalysisResults and invalidated
       // RI.
