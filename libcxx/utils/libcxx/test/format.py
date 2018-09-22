@@ -250,9 +250,8 @@ class LibcxxTestFormat(object):
             #
             # Therefore, we check if the test was expected to fail because of
             # nodiscard before enabling it
-            test_str = "ignoring return value of function declared with " \
-              + "'nodiscard' attribute"
-            if test_str in contents:
+            test_str_list = ['ignoring return value', 'nodiscard', 'NODISCARD']
+            if any(test_str in contents for test_str in test_str_list):
                 test_cxx.flags += ['-Werror=unused-result']
         cmd, out, err, rc = test_cxx.compile(source_path, out=os.devnull)
         expected_rc = 0 if use_verify else 1

@@ -1049,8 +1049,30 @@ template <unsigned> struct __static_assert_check {};
 #  define _LIBCPP_CONSTEXPR_AFTER_CXX17
 #endif
 
-#if __has_cpp_attribute(nodiscard) && _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17)
-#  define _LIBCPP_NODISCARD_AFTER_CXX17 [[nodiscard]]
+// The _LIBCPP_NODISCARD_ATTRIBUTE should only be used to define other
+// NODISCARD macros to the correct attribute.
+#if __has_cpp_attribute(nodiscard) || defined(_LIBCPP_COMPILER_MSVC)
+#  define _LIBCPP_NODISCARD_ATTRIBUTE [[nodiscard]]
+#elif defined(_LIBCPP_COMPILER_CLANG) && !defined(_LIBCPP_CXX03_LANG)
+#  define _LIBCPP_NODISCARD_ATTRIBUTE [[clang::warn_unused_result]]
+#else
+// We can't use GCC's [[gnu::warn_unused_result]] and
+// __attribute__((warn_unused_result)), because GCC does not silence them via
+// (void) cast.
+#  define _LIBCPP_NODISCARD_ATTRIBUTE
+#endif
+
+// _LIBCPP_NODISCARD_EXT may be used to apply [[nodiscard]] to entities not
+// specified as such as an extension.
+#if defined(_LIBCPP_ENABLE_NODISCARD) && !defined(_LIBCPP_DISABLE_NODISCARD_EXT)
+#  define _LIBCPP_NODISCARD_EXT _LIBCPP_NODISCARD_ATTRIBUTE
+#else
+#  define _LIBCPP_NODISCARD_EXT
+#endif
+
+#if !defined(_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17) && \
+    (_LIBCPP_STD_VER > 17 || defined(_LIBCPP_ENABLE_NODISCARD))
+#  define _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_NODISCARD_ATTRIBUTE
 #else
 #  define _LIBCPP_NODISCARD_AFTER_CXX17
 #endif

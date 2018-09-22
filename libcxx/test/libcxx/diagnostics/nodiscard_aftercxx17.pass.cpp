@@ -8,13 +8,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Test that _LIBCPP_NODISCARD_EXT is not defined to [[nodiscard]] unless
-// explicitly enabled by _LIBCPP_ENABLE_NODISCARD
+// Test that _LIBCPP_NODISCARD_AFTER_CXX17 is disabled whenever
+// _LIBCPP_DISABLE_NODISCARD_AFTER_CXX17 is defined by the user.
 
+// MODULES_DEFINES: _LIBCPP_DISABLE_NODISCARD_AFTER_CXX17
+#define _LIBCPP_DISABLE_NODISCARD_AFTER_CXX17
 #include <__config>
 
-_LIBCPP_NODISCARD_EXT int foo() { return 42; }
+_LIBCPP_NODISCARD_AFTER_CXX17 int foo() { return 6; }
 
-int main() {
-  foo(); // OK.
+int main ()
+{
+	foo();	// no error here!
 }
