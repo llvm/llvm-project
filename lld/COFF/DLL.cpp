@@ -470,30 +470,6 @@ private:
 
 } // anonymous namespace
 
-uint64_t IdataContents::getDirSize() {
-  return Dirs.size() * sizeof(ImportDirectoryTableEntry);
-}
-
-uint64_t IdataContents::getIATSize() {
-  return Addresses.size() * ptrSize();
-}
-
-// Returns a list of .idata contents.
-// See Microsoft PE/COFF spec 5.4 for details.
-std::vector<Chunk *> IdataContents::getChunks() {
-  create();
-
-  // The loader assumes a specific order of data.
-  // Add each type in the correct order.
-  std::vector<Chunk *> V;
-  V.insert(V.end(), Dirs.begin(), Dirs.end());
-  V.insert(V.end(), Lookups.begin(), Lookups.end());
-  V.insert(V.end(), Addresses.begin(), Addresses.end());
-  V.insert(V.end(), Hints.begin(), Hints.end());
-  V.insert(V.end(), DLLNames.begin(), DLLNames.end());
-  return V;
-}
-
 void IdataContents::create() {
   std::vector<std::vector<DefinedImportData *>> V = binImports(Imports);
 
