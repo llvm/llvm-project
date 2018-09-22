@@ -10,6 +10,9 @@
 
 // UNSUPPORTED: c++98, c++03
 
+// GCC versions prior to 7.0 don't provide the required [[nodiscard]] attribute.
+// UNSUPPORTED: gcc-4, gcc-5, gcc-6
+
 // Test that entities declared [[nodiscard]] as at extension by libc++, are
 // only actually declared such when _LIBCPP_ENABLE_NODISCARD is specified.
 
