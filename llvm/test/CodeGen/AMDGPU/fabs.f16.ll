@@ -102,11 +102,10 @@ define amdgpu_kernel void @fabs_free_v2f16(<2 x half> addrspace(1)* %out, i32 %i
 ; GCN-LABEL: {{^}}v_fabs_fold_self_v2f16:
 ; GCN: {{flat|global}}_load_dword [[VAL:v[0-9]+]]
 
-; CI: v_lshrrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
-; CI: v_lshrrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
-; CI: v_cvt_f32_f16_e32
-; CI: v_cvt_f32_f16_e32
-; CI: v_mul_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; CI: v_lshrrev_b32_e32 [[VREG:v[0-9]+]], 16, v{{[0-9]+}}
+; CI: v_cvt_f32_f16_e32 [[NORM:v[0-9]+]], [[VREG]]
+; CI: v_cvt_f32_f16_e64 [[ABS:v[0-9]+]], {{\|}}[[VREG]]{{\|}}
+; CI: v_mul_f32_e32 v{{[0-9]+}}, [[ABS]], [[NORM]]
 ; CI: v_cvt_f16_f32
 ; CI: v_mul_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; CI: v_cvt_f16_f32

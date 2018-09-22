@@ -130,7 +130,10 @@ template <typename T> struct OptionalStorage<T, true> {
 } // namespace optional_detail
 
 template <typename T> class Optional {
-  optional_detail::OptionalStorage<T, isPodLike<T>::value> Storage;
+  // GCC 5.4 miscompiles the trivially copyable OptionalStorage. Blacklist it.
+  optional_detail::OptionalStorage<T, isPodLike<T>::value &&
+                                          !std::is_enum<T>::value>
+      Storage;
 
 public:
   using value_type = T;

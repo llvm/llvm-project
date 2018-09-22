@@ -1639,6 +1639,11 @@ class BitAnd<bit a, bit b> {
   bit ret = !if(a, !if(b, 1, 0), 0);
 }
 
+def PatGenMode {
+  int NoPattern = 0;
+  int Pattern   = 1;
+}
+
 class VOPProfile <list<ValueType> _ArgVT> {
 
   field list<ValueType> ArgVT = _ArgVT;
@@ -1706,6 +1711,7 @@ class VOPProfile <list<ValueType> _ArgVT> {
 
   field bit HasExt = getHasExt<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
   field bit HasSDWA9 = HasExt;
+  field int NeedPatGen = PatGenMode.NoPattern;
 
   field Operand Src0PackedMod = !if(HasSrc0FloatMods, PackedF16InputMods, PackedI16InputMods);
   field Operand Src1PackedMod = !if(HasSrc1FloatMods, PackedF16InputMods, PackedI16InputMods);
@@ -1756,6 +1762,10 @@ class VOPProfile <list<ValueType> _ArgVT> {
 class VOP_NO_EXT <VOPProfile p> : VOPProfile <p.ArgVT> {
   let HasExt = 0;
   let HasSDWA9 = 0;
+}
+
+class VOP_PAT_GEN <VOPProfile p, int mode=PatGenMode.Pattern> : VOPProfile <p.ArgVT> {
+  let NeedPatGen = mode;
 }
 
 def VOP_F16_F16 : VOPProfile <[f16, f16, untyped, untyped]>;

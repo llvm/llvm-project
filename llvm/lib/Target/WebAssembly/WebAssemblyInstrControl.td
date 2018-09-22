@@ -47,6 +47,7 @@ let Defs = [ARGUMENTS] in {
 // FIXME: this can't inherit from I<> since there is no way to inherit from a
 // multiclass and still have the let statements.
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
+let isCodeGenOnly = 1 in
 def BR_TABLE_I32 : NI<(outs), (ins I32:$index, variable_ops),
                       [(WebAssemblybr_table I32:$index)], 0,
                       "br_table \t$index", 0x0e> {
@@ -59,6 +60,7 @@ def BR_TABLE_I32_S : NI<(outs), (ins variable_ops),
   let TSFlags{0} = 1;
   let TSFlags{1} = 1;
 }
+let isCodeGenOnly = 1 in
 def BR_TABLE_I64 : NI<(outs), (ins I64:$index, variable_ops),
                       [(WebAssemblybr_table I64:$index)], 0,
                       "br_table \t$index"> {

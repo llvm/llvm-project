@@ -13,6 +13,7 @@
 
 #include "llvm/IR/Module.h"
 #include "SymbolTableListTraitsImpl.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -505,6 +506,24 @@ PIELevel::Level Module::getPIELevel() const {
 
 void Module::setPIELevel(PIELevel::Level PL) {
   addModuleFlag(ModFlagBehavior::Max, "PIE Level", PL);
+}
+
+Optional<CodeModel::Model> Module::getCodeModel() const {
+  auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("Code Model"));
+
+  if (!Val)
+    return None;
+
+  return static_cast<CodeModel::Model>(
+      cast<ConstantInt>(Val->getValue())->getZExtValue());
+}
+
+void Module::setCodeModel(CodeModel::Model CL) {
+  // Linking object files with different code models is undefined behavior
+  // because the compiler would have to generate additional code (to span
+  // longer jumps) if a larger code model is used with a smaller one.
+  // Therefore we will treat attempts to mix code models as an error.
+  addModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
 }
 
 void Module::setProfileSummary(Metadata *M) {
