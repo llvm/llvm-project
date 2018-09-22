@@ -16,6 +16,18 @@ New entries should be added directly below the "Version" header.
 Version 7.0
 -----------
 
+* r338479 - Elementary string conversions for integral types
+
+  The change emits __u64toa and __u32toa under std::__1::__itoa.
+
+  x86_64-linux-gnu
+  ----------------
+  Symbol added: _ZNSt3__16__itoa8__u64toaEmPc
+  Symbol added: _ZNSt3__16__itoa8__u32toaEjPc
+
+  x86_64-apple-darwin16.0
+  -----------------------
+
 * r333467 - Fix embarrasing typo in uncaught_exceptions.
 
   This bug caused __uncaught_exception to be ODR used instead of
