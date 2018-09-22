@@ -2023,8 +2023,6 @@ static std::unique_ptr<PathDiagnostic> generatePathDiagnosticForConsumer(
 
 void BugType::anchor() {}
 
-void BugType::FlushReports(BugReporter &BR) {}
-
 void BuiltinBug::anchor() {}
 
 //===----------------------------------------------------------------------===//
@@ -2252,14 +2250,6 @@ BugReporter::~BugReporter() {
 void BugReporter::FlushReports() {
   if (BugTypes.isEmpty())
     return;
-
-  // First flush the warnings for each BugType.  This may end up creating new
-  // warnings and new BugTypes.
-  // FIXME: Only NSErrorChecker needs BugType's FlushReports.
-  // Turn NSErrorChecker into a proper checker and remove this.
-  SmallVector<const BugType *, 16> bugTypes(BugTypes.begin(), BugTypes.end());
-  for (const auto I : bugTypes)
-    const_cast<BugType*>(I)->FlushReports(*this);
 
   // We need to flush reports in deterministic order to ensure the order
   // of the reports is consistent between runs.
@@ -2822,16 +2812,15 @@ static bool isInevitablySinking(const ExplodedNode *N) {
     DFSWorkList.pop_back();
     Visited.insert(Blk);
 
+    // If at least one path reaches the CFG exit, it means that control is
+    // returned to the caller. For now, say that we are not sure what
+    // happens next. If necessary, this can be improved to analyze
+    // the parent StackFrameContext's call site in a similar manner.
+    if (Blk == &Cfg.getExit())
+      return false;
+
     for (const auto &Succ : Blk->succs()) {
       if (const CFGBlock *SuccBlk = Succ.getReachableBlock()) {
-        if (SuccBlk == &Cfg.getExit()) {
-          // If at least one path reaches the CFG exit, it means that control is
-          // returned to the caller. For now, say that we are not sure what
-          // happens next. If necessary, this can be improved to analyze
-          // the parent StackFrameContext's call site in a similar manner.
-          return false;
-        }
-
         if (!isImmediateSinkBlock(SuccBlk) && !Visited.count(SuccBlk)) {
           // If the block has reachable child blocks that aren't no-return,
           // add them to the worklist.

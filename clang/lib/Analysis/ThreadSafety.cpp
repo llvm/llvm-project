@@ -64,13 +64,6 @@ using namespace threadSafety;
 // Key method definition
 ThreadSafetyHandler::~ThreadSafetyHandler() = default;
 
-namespace {
-
-class TILPrinter :
-    public til::PrettyPrinter<TILPrinter, llvm::raw_ostream> {};
-
-} // namespace
-
 /// Issue a warning about an invalid lock expression
 static void warnInvalidLock(ThreadSafetyHandler &Handler,
                             const Expr *MutexExp, const NamedDecl *D,
@@ -151,7 +144,7 @@ public:
                             StringRef DiagKind) const = 0;
 
   // Return true if LKind >= LK, where exclusive > shared
-  bool isAtLeast(LockKind LK) {
+  bool isAtLeast(LockKind LK) const {
     return  (LKind == LK_Exclusive) || (LK == LK_Shared);
   }
 };
@@ -162,7 +155,7 @@ using FactID = unsigned short;
 /// the analysis of a single routine.
 class FactManager {
 private:
-  std::vector<std::unique_ptr<FactEntry>> Facts;
+  std::vector<std::unique_ptr<const FactEntry>> Facts;
 
 public:
   FactID newFact(std::unique_ptr<FactEntry> Entry) {
@@ -171,7 +164,6 @@ public:
   }
 
   const FactEntry &operator[](FactID F) const { return *Facts[F]; }
-  FactEntry &operator[](FactID F) { return *Facts[F]; }
 };
 
 /// A FactSet is the set of facts that are known to be true at a
@@ -241,22 +233,23 @@ public:
     });
   }
 
-  FactEntry *findLock(FactManager &FM, const CapabilityExpr &CapE) const {
+  const FactEntry *findLock(FactManager &FM, const CapabilityExpr &CapE) const {
     auto I = std::find_if(begin(), end(), [&](FactID ID) {
       return FM[ID].matches(CapE);
     });
     return I != end() ? &FM[*I] : nullptr;
   }
 
-  FactEntry *findLockUniv(FactManager &FM, const CapabilityExpr &CapE) const {
+  const FactEntry *findLockUniv(FactManager &FM,
+                                const CapabilityExpr &CapE) const {
     auto I = std::find_if(begin(), end(), [&](FactID ID) -> bool {
       return FM[ID].matchesUniv(CapE);
     });
     return I != end() ? &FM[*I] : nullptr;
   }
 
-  FactEntry *findPartialMatch(FactManager &FM,
-                              const CapabilityExpr &CapE) const {
+  const FactEntry *findPartialMatch(FactManager &FM,
+                                    const CapabilityExpr &CapE) const {
     auto I = std::find_if(begin(), end(), [&](FactID ID) -> bool {
       return FM[ID].partiallyMatches(CapE);
     });
@@ -1258,7 +1251,7 @@ void ThreadSafetyAnalyzer::addLock(FactSet &FSet,
   if (!ReqAttr && !Entry->negative()) {
     // look for the negative capability, and remove it from the fact set.
     CapabilityExpr NegC = !*Entry;
-    FactEntry *Nen = FSet.findLock(FactMan, NegC);
+    const FactEntry *Nen = FSet.findLock(FactMan, NegC);
     if (Nen) {
       FSet.removeLock(FactMan, NegC);
     }
@@ -1277,7 +1270,7 @@ void ThreadSafetyAnalyzer::addLock(FactSet &FSet,
   }
 
   // FIXME: Don't always warn when we have support for reentrant locks.
-  if (FactEntry *Cp = FSet.findLock(FactMan, *Entry)) {
+  if (const FactEntry *Cp = FSet.findLock(FactMan, *Entry)) {
     if (!Entry->asserted())
       Cp->handleLock(FSet, FactMan, *Entry, Handler, DiagKind);
   } else {
@@ -1575,7 +1568,7 @@ void BuildLockset::warnIfMutexNotHeld(const NamedDecl *D, const Expr *Exp,
 
   if (Cp.negative()) {
     // Negative capabilities act like locks excluded
-    FactEntry *LDat = FSet.findLock(Analyzer->FactMan, !Cp);
+    const FactEntry *LDat = FSet.findLock(Analyzer->FactMan, !Cp);
     if (LDat) {
       Analyzer->Handler.handleFunExcludesLock(
           DiagKind, D->getNameAsString(), (!Cp).toString(), Loc);
@@ -1596,7 +1589,7 @@ void BuildLockset::warnIfMutexNotHeld(const NamedDecl *D, const Expr *Exp,
     return;
   }
 
-  FactEntry* LDat = FSet.findLockUniv(Analyzer->FactMan, Cp);
+  const FactEntry *LDat = FSet.findLockUniv(Analyzer->FactMan, Cp);
   bool NoError = true;
   if (!LDat) {
     // No exact match found.  Look for a partial match.
@@ -1632,7 +1625,7 @@ void BuildLockset::warnIfMutexHeld(const NamedDecl *D, const Expr *Exp,
     return;
   }
 
-  FactEntry* LDat = FSet.findLock(Analyzer->FactMan, Cp);
+  const FactEntry *LDat = FSet.findLock(Analyzer->FactMan, Cp);
   if (LDat) {
     Analyzer->Handler.handleFunExcludesLock(
         DiagKind, D->getNameAsString(), Cp.toString(), Exp->getExprLoc());

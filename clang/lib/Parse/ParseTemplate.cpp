@@ -946,7 +946,9 @@ Parser::ParseTemplateIdAfterTemplateName(bool ConsumeLastToken,
   bool Invalid = false;
   {
     GreaterThanIsOperatorScope G(GreaterThanIsOperator, false);
-    if (Tok.isNot(tok::greater) && Tok.isNot(tok::greatergreater))
+    if (!Tok.isOneOf(tok::greater, tok::greatergreater,
+                     tok::greatergreatergreater, tok::greaterequal,
+                     tok::greatergreaterequal))
       Invalid = ParseTemplateArgumentList(TemplateArgs);
 
     if (Invalid) {
