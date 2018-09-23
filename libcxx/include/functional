@@ -2106,53 +2106,53 @@ __mu(_Ti& __ti, _Uj&)
 
 template <class _Ti, bool IsReferenceWrapper, bool IsBindEx, bool IsPh,
           class _TupleUj>
-struct ____mu_return;
+struct __mu_return_impl;
 
 template <bool _Invokable, class _Ti, class ..._Uj>
-struct ____mu_return_invokable  // false
+struct __mu_return_invokable  // false
 {
     typedef __nat type;
 };
 
 template <class _Ti, class ..._Uj>
-struct ____mu_return_invokable<true, _Ti, _Uj...>
+struct __mu_return_invokable<true, _Ti, _Uj...>
 {
     typedef typename __invoke_of<_Ti&, _Uj...>::type type;
 };
 
 template <class _Ti, class ..._Uj>
-struct ____mu_return<_Ti, false, true, false, tuple<_Uj...> >
-    : public ____mu_return_invokable<__invokable<_Ti&, _Uj...>::value, _Ti, _Uj...>
+struct __mu_return_impl<_Ti, false, true, false, tuple<_Uj...> >
+    : public __mu_return_invokable<__invokable<_Ti&, _Uj...>::value, _Ti, _Uj...>
 {
 };
 
 template <class _Ti, class _TupleUj>
-struct ____mu_return<_Ti, false, false, true, _TupleUj>
+struct __mu_return_impl<_Ti, false, false, true, _TupleUj>
 {
     typedef typename tuple_element<is_placeholder<_Ti>::value - 1,
                                    _TupleUj>::type&& type;
 };
 
 template <class _Ti, class _TupleUj>
-struct ____mu_return<_Ti, true, false, false, _TupleUj>
+struct __mu_return_impl<_Ti, true, false, false, _TupleUj>
 {
     typedef typename _Ti::type& type;
 };
 
 template <class _Ti, class _TupleUj>
-struct ____mu_return<_Ti, false, false, false, _TupleUj>
+struct __mu_return_impl<_Ti, false, false, false, _TupleUj>
 {
     typedef _Ti& type;
 };
 
 template <class _Ti, class _TupleUj>
 struct __mu_return
-    : public ____mu_return<_Ti,
-                           __is_reference_wrapper<_Ti>::value,
-                           is_bind_expression<_Ti>::value,
-                           0 < is_placeholder<_Ti>::value &&
-                           is_placeholder<_Ti>::value <= tuple_size<_TupleUj>::value,
-                           _TupleUj>
+    : public __mu_return_impl<_Ti,
+                              __is_reference_wrapper<_Ti>::value,
+                              is_bind_expression<_Ti>::value,
+                              0 < is_placeholder<_Ti>::value &&
+                              is_placeholder<_Ti>::value <= tuple_size<_TupleUj>::value,
+                              _TupleUj>
 {
 };
 
