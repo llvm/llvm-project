@@ -134,6 +134,7 @@ def  : WriteRes<WriteIMulH, []> { let Latency = 3; }
 
 // Integer shifts and rotates.
 defm : HWWriteResPair<WriteShift,  [HWPort06],  1>;
+defm : HWWriteResPair<WriteRotate, [HWPort06],  2, [2], 2>;
 
 // SHLD/SHRD.
 defm : X86WriteRes<WriteSHDrri, [HWPort1], 3, [1], 1>;
@@ -1099,14 +1100,6 @@ def HWWriteResGroup28 : SchedWriteRes<[HWPort01]> {
   let ResourceCycles = [2];
 }
 def: InstRW<[HWWriteResGroup28], (instrs FDECSTP)>;
-
-def HWWriteResGroup29 : SchedWriteRes<[HWPort06]> {
-  let Latency = 2;
-  let NumMicroOps = 2;
-  let ResourceCycles = [2];
-}
-def: InstRW<[HWWriteResGroup29], (instregex "ROL(8|16|32|64)r(1|i)",
-                                            "ROR(8|16|32|64)r(1|i)")>;
 
 def HWWriteResGroup30 : SchedWriteRes<[HWPort0156]> {
   let Latency = 2;

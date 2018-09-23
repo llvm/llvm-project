@@ -153,7 +153,8 @@ defm : X86WriteResPairUnsupported<WriteBZHI>;
 // Integer shifts and rotates.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : AtomWriteResPair<WriteShift, [AtomPort0], [AtomPort0]>;
+defm : AtomWriteResPair<WriteShift,  [AtomPort0], [AtomPort0]>;
+defm : AtomWriteResPair<WriteRotate, [AtomPort0], [AtomPort0]>;
 
 defm : X86WriteRes<WriteSHDrri, [AtomPort01], 2, [2], 1>;
 defm : X86WriteRes<WriteSHDrrcl,[AtomPort01], 2, [2], 1>;

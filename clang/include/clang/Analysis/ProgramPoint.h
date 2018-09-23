@@ -80,6 +80,7 @@ public:
               CallEnterKind,
               CallExitBeginKind,
               CallExitEndKind,
+              FunctionExitKind,
               PreImplicitCallKind,
               PostImplicitCallKind,
               MinImplicitCallKind = PreImplicitCallKind,
@@ -326,6 +327,29 @@ private:
   static bool isKind(const ProgramPoint &Location) {
     unsigned k = Location.getKind();
     return k >= MinPostStmtKind && k <= MaxPostStmtKind;
+  }
+};
+
+class FunctionExitPoint : public ProgramPoint {
+public:
+  explicit FunctionExitPoint(const ReturnStmt *S,
+                             const LocationContext *LC,
+                             const ProgramPointTag *tag = nullptr)
+      : ProgramPoint(S, FunctionExitKind, LC, tag) {}
+
+  const CFGBlock *getBlock() const {
+    return &getLocationContext()->getCFG()->getExit();
+  }
+
+  const ReturnStmt *getStmt() const {
+    return reinterpret_cast<const ReturnStmt *>(getData1());
+  }
+
+private:
+  friend class ProgramPoint;
+  FunctionExitPoint() = default;
+  static bool isKind(const ProgramPoint &Location) {
+    return Location.getKind() == FunctionExitKind;
   }
 };
 

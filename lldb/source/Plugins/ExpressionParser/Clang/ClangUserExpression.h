@@ -204,7 +204,7 @@ private:
   /// The absolute character position in the transformed source code where the
   /// user code (as typed by the user) starts. If the variable is empty, then we
   /// were not able to calculate this position.
-  llvm::Optional<unsigned> m_user_expression_start_pos;
+  llvm::Optional<size_t> m_user_expression_start_pos;
   ResultDelegate m_result_delegate;
 };
 

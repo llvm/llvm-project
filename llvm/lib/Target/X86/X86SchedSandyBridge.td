@@ -135,7 +135,9 @@ defm : X86WriteRes<WriteSHDrrcl,[SBPort05, SBPort015], 4, [3, 1], 4>;
 defm : X86WriteRes<WriteSHDmri, [SBPort4,SBPort23,SBPort05,SBPort015], 8, [1, 2, 1, 1], 5>;
 defm : X86WriteRes<WriteSHDmrcl,[SBPort4,SBPort23,SBPort05,SBPort015], 10, [1, 2, 3, 1], 7>;
 
-defm : SBWriteResPair<WriteShift, [SBPort05],  1>;
+defm : SBWriteResPair<WriteShift,  [SBPort05],  1>;
+defm : SBWriteResPair<WriteRotate, [SBPort05],  1>;
+
 defm : SBWriteResPair<WriteJump,  [SBPort5],   1>;
 defm : SBWriteResPair<WriteCRC32, [SBPort1],   3, [1], 1, 5>;
 

@@ -446,9 +446,8 @@ void CheckerManager::runCheckersForEndFunction(NodeBuilderContext &BC,
   // autotransition for it.
   NodeBuilder Bldr(Pred, Dst, BC);
   for (const auto checkFn : EndFunctionCheckers) {
-    const ProgramPoint &L = BlockEntrance(BC.Block,
-                                          Pred->getLocationContext(),
-                                          checkFn.Checker);
+    const ProgramPoint &L =
+        FunctionExitPoint(RS, Pred->getLocationContext(), checkFn.Checker);
     CheckerContext C(Bldr, Eng, Pred, L);
     checkFn(RS, C);
   }

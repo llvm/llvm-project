@@ -165,7 +165,7 @@ void test_access() {
     }
     {
       auto c = a;
-      (void)(a[0] + (c[0] <<= a[0]));
+      (void)(a[0] + (c[0] <<= b[0]));
     }
     {
       auto c = a;

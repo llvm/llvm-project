@@ -139,10 +139,11 @@ def  : WriteRes<WriteSETCCStore, [SKXPort06,SKXPort4,SKXPort237]> {
   let NumMicroOps = 3;
 }
 def  : WriteRes<WriteLAHFSAHF, [SKXPort06]>;
-def  : WriteRes<WriteBitTest,[SKXPort06]>; //
+def  : WriteRes<WriteBitTest,  [SKXPort06]>; //
 
 // Integer shifts and rotates.
-defm : SKXWriteResPair<WriteShift, [SKXPort06],  1>;
+defm : SKXWriteResPair<WriteShift,  [SKXPort06],  1>;
+defm : SKXWriteResPair<WriteRotate, [SKXPort06],  2, [2], 2>;
 
 // SHLD/SHRD.
 defm : X86WriteRes<WriteSHDrri, [SKXPort1], 3, [1], 1>;
@@ -692,9 +693,7 @@ def SKXWriteResGroup15 : SchedWriteRes<[SKXPort06]> {
   let NumMicroOps = 2;
   let ResourceCycles = [2];
 }
-def: InstRW<[SKXWriteResGroup15], (instregex "ROL(8|16|32|64)r(1|i)",
-                                             "ROR(8|16|32|64)r(1|i)",
-                                             "SET(A|BE)r")>;
+def: InstRW<[SKXWriteResGroup15], (instregex "SET(A|BE)r")>;
 
 def SKXWriteResGroup17 : SchedWriteRes<[SKXPort0156]> {
   let Latency = 2;

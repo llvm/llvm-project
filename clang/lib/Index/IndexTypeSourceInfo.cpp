@@ -130,14 +130,15 @@ public:
   bool HandleTemplateSpecializationTypeLoc(TypeLocType TL) {
     if (const auto *T = TL.getTypePtr()) {
       if (IndexCtx.shouldIndexImplicitInstantiation()) {
-        if (CXXRecordDecl *RD = T->getAsCXXRecordDecl())
+        if (CXXRecordDecl *RD = T->getAsCXXRecordDecl()) {
           IndexCtx.handleReference(RD, TL.getTemplateNameLoc(),
                                    Parent, ParentDC, SymbolRoleSet(), Relations);
-      } else {
-        if (const TemplateDecl *D = T->getTemplateName().getAsTemplateDecl())
-          IndexCtx.handleReference(D, TL.getTemplateNameLoc(),
-                                   Parent, ParentDC, SymbolRoleSet(), Relations);
+          return true;
+        }
       }
+      if (const TemplateDecl *D = T->getTemplateName().getAsTemplateDecl())
+        IndexCtx.handleReference(D, TL.getTemplateNameLoc(), Parent, ParentDC,
+                                 SymbolRoleSet(), Relations);
     }
     return true;
   }

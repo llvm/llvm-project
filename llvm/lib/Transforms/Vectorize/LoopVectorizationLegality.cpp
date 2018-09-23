@@ -789,6 +789,10 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
       ORE->emit(createMissedAnalysis("NoInductionVariable")
                 << "loop induction variable could not be identified");
       return false;
+    } else if (!WidestIndTy) {
+      ORE->emit(createMissedAnalysis("NoIntegerInductionVariable")
+                << "integer loop induction variable could not be identified");
+      return false;
     }
   }
 

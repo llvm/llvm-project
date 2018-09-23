@@ -153,6 +153,7 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
                                    const TargetMachine &TM, bool LittleEndian)
     : AArch64GenSubtargetInfo(TT, CPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
+      CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
       IsLittle(LittleEndian),
       TargetTriple(TT), FrameLowering(),
       InstrInfo(initializeSubtargetDependencies(FS, CPU)), TSInfo(),

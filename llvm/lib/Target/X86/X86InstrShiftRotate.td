@@ -325,7 +325,7 @@ def SAR64m1 : RI<0xD1, MRM7m, (outs), (ins i64mem:$dst),
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 0 in {
-let Constraints = "$src1 = $dst", SchedRW = [WriteShift] in {
+let Constraints = "$src1 = $dst", SchedRW = [WriteRotate] in {
 
 let Uses = [CL, EFLAGS] in {
 def RCL8rCL : I<0xD2, MRM2r, (outs GR8:$dst), (ins GR8:$src1),
@@ -389,7 +389,7 @@ def RCR64ri : RIi8<0xC1, MRM3r, (outs GR64:$dst), (ins GR64:$src1, u8imm:$cnt),
 
 } // Constraints = "$src = $dst"
 
-let SchedRW = [WriteShiftLd, WriteRMW], mayStore = 1 in {
+let SchedRW = [WriteRotateLd, WriteRMW], mayStore = 1 in {
 let Uses = [EFLAGS] in {
 def RCL8m1 : I<0xD0, MRM2m, (outs), (ins i8mem:$dst),
                "rcl{b}\t$dst", []>;
@@ -452,7 +452,7 @@ def RCR64mCL : RI<0xD3, MRM3m, (outs), (ins i64mem:$dst),
 } // SchedRW
 } // hasSideEffects = 0
 
-let Constraints = "$src1 = $dst", SchedRW = [WriteShift] in {
+let Constraints = "$src1 = $dst", SchedRW = [WriteRotate] in {
 // FIXME: provide shorter instructions when imm8 == 1
 let Uses = [CL] in {
 def ROL8rCL  : I<0xD2, MRM0r, (outs GR8 :$dst), (ins GR8 :$src1),
@@ -498,7 +498,7 @@ def ROL64r1  : RI<0xD1, MRM0r, (outs GR64:$dst), (ins GR64:$src1),
                   [(set GR64:$dst, (rotl GR64:$src1, (i8 1)))]>;
 } // Constraints = "$src = $dst", SchedRW
 
-let SchedRW = [WriteShiftLd, WriteRMW] in {
+let SchedRW = [WriteRotateLd, WriteRMW] in {
 let Uses = [CL] in {
 def ROL8mCL  : I<0xD2, MRM0m, (outs), (ins i8mem :$dst),
                  "rol{b}\t{%cl, $dst|$dst, cl}",
@@ -548,7 +548,7 @@ def ROL64m1  : RI<0xD1, MRM0m, (outs), (ins i64mem:$dst),
                  Requires<[In64BitMode]>;
 } // SchedRW
 
-let Constraints = "$src1 = $dst", SchedRW = [WriteShift] in {
+let Constraints = "$src1 = $dst", SchedRW = [WriteRotate] in {
 let Uses = [CL] in {
 def ROR8rCL  : I<0xD2, MRM1r, (outs GR8 :$dst), (ins GR8 :$src1),
                  "ror{b}\t{%cl, $dst|$dst, cl}",
@@ -595,7 +595,7 @@ def ROR64r1  : RI<0xD1, MRM1r, (outs GR64:$dst), (ins GR64:$src1),
                   [(set GR64:$dst, (rotl GR64:$src1, (i8 63)))]>;
 } // Constraints = "$src = $dst", SchedRW
 
-let SchedRW = [WriteShiftLd, WriteRMW] in {
+let SchedRW = [WriteRotateLd, WriteRMW] in {
 let Uses = [CL] in {
 def ROR8mCL  : I<0xD2, MRM1m, (outs), (ins i8mem :$dst),
                  "ror{b}\t{%cl, $dst|$dst, cl}",
@@ -822,6 +822,8 @@ def ROT64L2R_imm8  : SDNodeXForm<imm, [{
   return getI8Imm(64 - N->getZExtValue(), SDLoc(N));
 }]>;
 
+// NOTE: We use WriteShift for these rotates as they avoid the stalls
+// of many of the older x86 rotate instructions.
 multiclass bmi_rotate<string asm, RegisterClass RC, X86MemOperand x86memop> {
 let hasSideEffects = 0 in {
   def ri : Ii8<0xF0, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, u8imm:$src2),

@@ -479,19 +479,25 @@ static void printObjectSectionSizes(ObjectFile *Obj) {
     }
 
     if (!BerkeleyHeaderPrinted) {
-      outs() << "   text    data     bss     "
-             << (Radix == octal ? "oct" : "dec") << "     hex filename\n";
+      outs() << "   text\t"
+                "   data\t"
+                "    bss\t"
+                "    "
+             << (Radix == octal ? "oct" : "dec")
+             << "\t"
+                "    hex\t"
+                "filename\n";
       BerkeleyHeaderPrinted = true;
     }
 
     // Print result.
-    fmt << "%#7" << radix_fmt << " "
-        << "%#7" << radix_fmt << " "
-        << "%#7" << radix_fmt << " ";
+    fmt << "%#7" << radix_fmt << "\t"
+        << "%#7" << radix_fmt << "\t"
+        << "%#7" << radix_fmt << "\t";
     outs() << format(fmt.str().c_str(), total_text, total_data, total_bss);
     fmtbuf.clear();
-    fmt << "%7" << (Radix == octal ? PRIo64 : PRIu64) << " "
-        << "%7" PRIx64 " ";
+    fmt << "%7" << (Radix == octal ? PRIo64 : PRIu64) << "\t"
+        << "%7" PRIx64 "\t";
     outs() << format(fmt.str().c_str(), total, total);
   }
 }
@@ -839,14 +845,14 @@ static void printBerkelyTotals() {
   std::string fmtbuf;
   raw_string_ostream fmt(fmtbuf);
   const char *radix_fmt = getRadixFmt();
-  fmt << "%#7" << radix_fmt << " "
-      << "%#7" << radix_fmt << " "
-      << "%#7" << radix_fmt << " ";
+  fmt << "%#7" << radix_fmt << "\t"
+      << "%#7" << radix_fmt << "\t"
+      << "%#7" << radix_fmt << "\t";
   outs() << format(fmt.str().c_str(), TotalObjectText, TotalObjectData,
                    TotalObjectBss);
   fmtbuf.clear();
-  fmt << "%7" << (Radix == octal ? PRIo64 : PRIu64) << " "
-      << "%7" PRIx64 " ";
+  fmt << "%7" << (Radix == octal ? PRIo64 : PRIu64) << "\t"
+      << "%7" PRIx64 "\t";
   outs() << format(fmt.str().c_str(), TotalObjectTotal, TotalObjectTotal)
          << "(TOTALS)\n";
 }

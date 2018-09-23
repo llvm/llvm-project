@@ -107,33 +107,33 @@ void makeCollectableIgnored() {
 
 CFTypeRef CFCopyRuleViolation () {
   CFTypeRef object = CFGetSomething(); // expected-note{{Call to function 'CFGetSomething' returns a Core Foundation object of type CFTypeRef with a +0 retain count}}
-  return object; // expected-warning{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}} expected-note{{Object returned to caller with a +0 retain count}} expected-note{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}}
+  return object; // expected-warning{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}} expected-note{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}}
 }
 
 CFTypeRef CFGetRuleViolation () {
   CFTypeRef object = CFCreateSomething(); // expected-note{{Call to function 'CFCreateSomething' returns a Core Foundation object of type CFTypeRef with a +1 retain count}}
-  return object; // expected-warning{{leak}} expected-note{{Object returned to caller as an owning reference (single retain count transferred to caller)}} expected-note{{Object leaked: object allocated and stored into 'object' is returned from a function whose name ('CFGetRuleViolation') does not contain 'Copy' or 'Create'.  This violates the naming convention rules given in the Memory Management Guide for Core Foundation}}
+  return object; // expected-warning{{leak}} expected-note{{Object leaked: object allocated and stored into 'object' is returned from a function whose name ('CFGetRuleViolation') does not contain 'Copy' or 'Create'.  This violates the naming convention rules given in the Memory Management Guide for Core Foundation}}
 }
 
 @implementation Foo (FundamentalMemoryManagementRules)
 - (id)copyViolation {
   id result = self.propertyValue; // expected-note{{Property returns an Objective-C object with a +0 retain count}}
-  return result; // expected-warning{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}} expected-note{{Object returned to caller with a +0 retain count}} expected-note{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}}
+  return result; // expected-warning{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}} expected-note{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}}
 }
 
 - (id)copyViolationIndexedSubscript {
   id result = self[0]; // expected-note{{Subscript returns an Objective-C object with a +0 retain count}}
-  return result; // expected-warning{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}} expected-note{{Object returned to caller with a +0 retain count}} expected-note{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}}
+  return result; // expected-warning{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}} expected-note{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}}
 }
 
 - (id)copyViolationKeyedSubscript {
   id result = self[self]; // expected-note{{Subscript returns an Objective-C object with a +0 retain count}}
-  return result; // expected-warning{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}} expected-note{{Object returned to caller with a +0 retain count}} expected-note{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}}
+  return result; // expected-warning{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}} expected-note{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}}
 }
 
 - (id)getViolation {
   id result = [[Foo alloc] init]; // expected-note{{Method returns an instance of Foo with a +1 retain count}}
-  return result; // expected-warning{{leak}} expected-note{{Object returned to caller as an owning reference (single retain count transferred to caller)}} expected-note{{Object leaked: object allocated and stored into 'result' is returned from a method whose name ('getViolation') does not start with 'copy', 'mutableCopy', 'alloc' or 'new'.  This violates the naming convention rules given in the Memory Management Guide for Cocoa}}
+  return result; // expected-warning{{leak}} expected-note{{Object leaked: object allocated and stored into 'result' is returned from a method whose name ('getViolation') does not start with 'copy', 'mutableCopy', 'alloc' or 'new'.  This violates the naming convention rules given in the Memory Management Guide for Cocoa}}
 }
 
 - (id)copyAutorelease {

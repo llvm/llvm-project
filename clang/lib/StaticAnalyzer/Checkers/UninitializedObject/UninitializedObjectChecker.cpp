@@ -339,14 +339,6 @@ bool FindUninitializedFields::isPrimitiveUninit(const SVal &V) {
 //                       Methods for FieldChainInfo.
 //===----------------------------------------------------------------------===//
 
-const FieldRegion *FieldChainInfo::getUninitRegion() const {
-  assert(!Chain.isEmpty() && "Empty fieldchain!");
-
-  // ImmutableList::getHead() isn't a const method, hence the not too nice
-  // implementation.
-  return (*Chain.begin()).getRegion();
-}
-
 bool FieldChainInfo::contains(const FieldRegion *FR) const {
   for (const FieldNode &Node : Chain) {
     if (Node.isSameRegion(FR))
@@ -360,7 +352,7 @@ bool FieldChainInfo::contains(const FieldRegion *FR) const {
 /// recursive function to print the fieldchain correctly. The last element in
 /// the chain is to be printed by `FieldChainInfo::print`.
 static void printTail(llvm::raw_ostream &Out,
-                      const FieldChainInfo::FieldChainImpl *L);
+                      const FieldChainInfo::FieldChain L);
 
 // FIXME: This function constructs an incorrect string in the following case:
 //
@@ -379,8 +371,7 @@ void FieldChainInfo::printNoteMsg(llvm::raw_ostream &Out) const {
   if (Chain.isEmpty())
     return;
 
-  const FieldChainImpl *L = Chain.getInternalPointer();
-  const FieldNode &LastField = L->getHead();
+  const FieldNode &LastField = getHead();
 
   LastField.printNoteMsg(Out);
   Out << '\'';
@@ -389,20 +380,20 @@ void FieldChainInfo::printNoteMsg(llvm::raw_ostream &Out) const {
     Node.printPrefix(Out);
 
   Out << "this->";
-  printTail(Out, L->getTail());
+  printTail(Out, Chain.getTail());
   LastField.printNode(Out);
   Out << '\'';
 }
 
 static void printTail(llvm::raw_ostream &Out,
-                      const FieldChainInfo::FieldChainImpl *L) {
-  if (!L)
+                      const FieldChainInfo::FieldChain L) {
+  if (L.isEmpty())
     return;
 
-  printTail(Out, L->getTail());
+  printTail(Out, L.getTail());
 
-  L->getHead().printNode(Out);
-  L->getHead().printSeparator(Out);
+  L.getHead().printNode(Out);
+  L.getHead().printSeparator(Out);
 }
 
 //===----------------------------------------------------------------------===//

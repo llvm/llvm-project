@@ -13,6 +13,7 @@
 #include "PrettyBuiltinDumper.h"
 #include "PrettyClassDefinitionDumper.h"
 #include "PrettyEnumDumper.h"
+#include "PrettyFunctionDumper.h"
 #include "PrettyTypedefDumper.h"
 #include "llvm-pdbutil.h"
 
@@ -20,6 +21,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeTypedef.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 #include "llvm/DebugInfo/PDB/UDTLayout.h"
@@ -147,6 +149,19 @@ void TypeDumper::start(const PDBSymbolExe &Exe) {
     }
   }
 
+  if (opts::pretty::Funcsigs) {
+    if (auto Funcsigs = Exe.findAllChildren<PDBSymbolTypeFunctionSig>()) {
+      Printer.NewLine();
+      WithColor(Printer, PDB_ColorItem::Identifier).get()
+          << "Function Signatures";
+      Printer << ": (" << Funcsigs->getChildCount() << " items)";
+      Printer.Indent();
+      while (auto FS = Funcsigs->getNext())
+        FS->dump(*this);
+      Printer.Unindent();
+    }
+  }
+
   if (opts::pretty::Typedefs) {
     if (auto Typedefs = Exe.findAllChildren<PDBSymbolTypeTypedef>()) {
       Printer.NewLine();
@@ -249,6 +264,12 @@ void TypeDumper::dump(const PDBSymbolTypeTypedef &Symbol) {
   Printer.NewLine();
   TypedefDumper Dumper(Printer);
   Dumper.start(Symbol);
+}
+
+void TypeDumper::dump(const PDBSymbolTypeFunctionSig &Symbol) {
+  Printer.NewLine();
+  FunctionDumper Dumper(Printer);
+  Dumper.start(Symbol, nullptr, FunctionDumper::PointerType::None);
 }
 
 void TypeDumper::dumpClassLayout(const ClassLayout &Class) {

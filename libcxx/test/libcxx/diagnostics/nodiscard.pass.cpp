@@ -8,18 +8,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Test that _LIBCPP_NODISCARD_AFTER_CXX17 works
-//	#define _LIBCPP_NODISCARD_AFTER_CXX17 [[nodiscard]]
+// Test that _LIBCPP_NODISCARD_EXT is not defined to [[nodiscard]] unless
+// explicitly enabled by _LIBCPP_ENABLE_NODISCARD
 
-// UNSUPPORTED: c++98, c++03, c++11, c++14
-
-// MODULES_DEFINES: _LIBCPP_DISABLE_NODISCARD_AFTER_CXX17
-#define _LIBCPP_DISABLE_NODISCARD_AFTER_CXX17
 #include <__config>
 
-_LIBCPP_NODISCARD_AFTER_CXX17 int foo() { return 6; }
+_LIBCPP_NODISCARD_EXT int foo() { return 42; }
 
-int main ()
-{
-	foo();	// no error here!
+int main() {
+  foo(); // OK.
 }

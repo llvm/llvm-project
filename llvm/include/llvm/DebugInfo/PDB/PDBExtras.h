@@ -12,6 +12,8 @@
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/Support/raw_ostream.h"
+
 #include <unordered_map>
 
 namespace llvm {
@@ -41,6 +43,15 @@ raw_ostream &operator<<(raw_ostream &OS,
 raw_ostream &operator<<(raw_ostream &OS, const Variant &Value);
 raw_ostream &operator<<(raw_ostream &OS, const VersionInfo &Version);
 raw_ostream &operator<<(raw_ostream &OS, const TagStats &Stats);
+
+
+template <typename T>
+void dumpSymbolField(raw_ostream &OS, StringRef Name, T Value, int Indent) {
+  OS << "\n";
+  OS.indent(Indent);
+  OS << Name << ": " << Value;
+}
+
 
 } // end namespace pdb
 

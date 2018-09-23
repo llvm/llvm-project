@@ -20,6 +20,9 @@ namespace pdb {
 class NativeSession;
 
 class NativeRawSymbol : public IPDBRawSymbol {
+  friend class SymbolCache;
+  virtual void initialize() {}
+
 public:
   NativeRawSymbol(NativeSession &PDBSession, PDB_SymType Tag,
                   SymIndexId SymbolId);

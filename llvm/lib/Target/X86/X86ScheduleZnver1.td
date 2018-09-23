@@ -186,7 +186,8 @@ defm : X86WriteRes<WriteCMPXCHG, [ZnALU], 1, [1], 1>;
 defm : X86WriteRes<WriteCMPXCHGRMW,[ZnALU,ZnAGU], 8, [1,1], 5>;
 defm : X86WriteRes<WriteXCHG, [ZnALU], 1, [2], 2>;
 
-defm : ZnWriteResPair<WriteShift, [ZnALU], 1>;
+defm : ZnWriteResPair<WriteShift,  [ZnALU], 1>;
+defm : ZnWriteResPair<WriteRotate, [ZnALU], 1>;
 
 defm : X86WriteRes<WriteSHDrri, [ZnALU], 1, [1], 1>;
 defm : X86WriteResUnsupported<WriteSHDrrcl>;

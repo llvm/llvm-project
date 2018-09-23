@@ -29,18 +29,26 @@ int main(int argc, char **argv)
   if (pthread_join(t1, &t1_buffer))
     abort();
 
+  // Stack has not yet been deallocated
   memset(t1_buffer, 0, kBufferSize);
 
   if (arg == 0)
     return 0;
 
-  if (pthread_create(&t2, NULL, start, NULL))
-    abort();
-  // Second thread destructor cleans up the first thread's stack.
-  if (pthread_join(t2, NULL))
-    abort();
+  for (int i = 0; i < 3; i++) {
+    if (pthread_create(&t2, NULL, start, NULL))
+      abort();
+    // Second thread destructor cleans up the first thread's stack.
+    if (pthread_join(t2, NULL))
+      abort();
 
-  // should segfault here
-  memset(t1_buffer, 0, kBufferSize);
+    // Should segfault here
+    memset(t1_buffer, 0, kBufferSize);
+
+    // PR39001: Re-try in the rare case that pthread_join() returns before the
+    // thread finishes exiting in the kernel--hence the tgkill() check for t1
+    // returns that it's alive despite pthread_join() returning.
+    sleep(1);
+  }
   return 0;
 }
