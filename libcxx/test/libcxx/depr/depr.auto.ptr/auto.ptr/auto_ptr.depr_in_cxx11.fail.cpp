@@ -20,6 +20,7 @@
 // Deprecated in C++11
 
 // UNSUPPORTED: clang-4.0
+// UNSUPPORTED: c++98, c++03
 // REQUIRES: verify-support
 
 // MODULES_DEFINES: _LIBCPP_ENABLE_DEPRECATION_WARNINGS
@@ -32,14 +33,7 @@
 
 int main()
 {
-#if TEST_STD_VER < 11
-    // expected-no-diagnostics
-#else
-    // expected-error@* 1 {{'auto_ptr<int>' is deprecated}}
-    // expected-error@* 1 {{'auto_ptr<void>' is deprecated}}
-    // expected-error@* 1 {{'auto_ptr_ref<int>' is deprecated}}
-#endif
-    typedef std::auto_ptr<int> AP;
-    typedef std::auto_ptr<void> APV;
-    typedef std::auto_ptr_ref<int> APR;
+    typedef std::auto_ptr<int> AP; // expected-error{{'auto_ptr<int>' is deprecated}}
+    typedef std::auto_ptr<void> APV; // expected-error{{'auto_ptr<void>' is deprecated}}
+    typedef std::auto_ptr_ref<int> APR; // expected-error{{'auto_ptr_ref<int>' is deprecated}}
 }

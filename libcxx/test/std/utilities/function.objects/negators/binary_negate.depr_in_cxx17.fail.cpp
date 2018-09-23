@@ -13,6 +13,7 @@
 //  deprecated in C++17
 
 // UNSUPPORTED: clang-4.0
+// UNSUPPORTED: c++98, c++03, c++11, c++14
 // REQUIRES: verify-support
 
 // MODULES_DEFINES: _LIBCPP_ENABLE_DEPRECATION_WARNINGS
@@ -29,11 +30,6 @@ struct Predicate {
 };
 
 int main() {
-#if TEST_STD_VER < 17
-    // expected-no-diagnostics
-#else
-    // expected-error@* 1 {{'binary_negate<Predicate>' is deprecated}}
-#endif
-    std::binary_negate<Predicate> f((Predicate()));
+    std::binary_negate<Predicate> f((Predicate())); // expected-error{{'binary_negate<Predicate>' is deprecated}}
     (void)f;
 }

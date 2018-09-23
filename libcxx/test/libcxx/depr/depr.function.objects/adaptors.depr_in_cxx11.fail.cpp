@@ -10,6 +10,7 @@
 // <functional>
 
 // UNSUPPORTED: clang-4.0
+// UNSUPPORTED: c++98, c++03
 // REQUIRES: verify-support
 
 // MODULES_DEFINES: _LIBCPP_ENABLE_DEPRECATION_WARNINGS
@@ -33,48 +34,26 @@ struct Foo {
 
 int main()
 {
-#if TEST_STD_VER < 11
-    // expected-no-diagnostics
-#else
-    // expected-error@* 1 {{'pointer_to_unary_function<int, int>' is deprecated}}
-    // expected-error@* 1 {{'pointer_to_binary_function<int, int, int>' is deprecated}}
-    // expected-error@* 1 {{'ptr_fun<int, int>' is deprecated}}
-    // expected-error@* 1 {{'ptr_fun<int, int, int>' is deprecated}}
+    typedef std::pointer_to_unary_function<int, int> PUF; // expected-error{{'pointer_to_unary_function<int, int>' is deprecated}}
+    typedef std::pointer_to_binary_function<int, int, int> PBF; // expected-error{{'pointer_to_binary_function<int, int, int>' is deprecated}}
+    std::ptr_fun<int, int>(identity); // expected-error{{'ptr_fun<int, int>' is deprecated}}
+    std::ptr_fun<int, int, int>(sum); // expected-error{{'ptr_fun<int, int, int>' is deprecated}}
 
-    // expected-error@* 1 {{'mem_fun_t<int, Foo>' is deprecated}}
-    // expected-error@* 1 {{'mem_fun1_t<int, Foo, int>' is deprecated}}
-    // expected-error@* 1 {{'const_mem_fun_t<int, Foo>' is deprecated}}
-    // expected-error@* 1 {{'const_mem_fun1_t<int, Foo, int>' is deprecated}}
-    // expected-error@* 2 {{'mem_fun<int, Foo>' is deprecated}}
-    // expected-error@* 2 {{'mem_fun<int, Foo, int>' is deprecated}}
+    typedef std::mem_fun_t<int, Foo> MFT0; // expected-error{{'mem_fun_t<int, Foo>' is deprecated}}
+    typedef std::mem_fun1_t<int, Foo, int> MFT1; // expected-error{{'mem_fun1_t<int, Foo, int>' is deprecated}}
+    typedef std::const_mem_fun_t<int, Foo> CMFT0; // expected-error{{'const_mem_fun_t<int, Foo>' is deprecated}}
+    typedef std::const_mem_fun1_t<int, Foo, int> CMFT1; // expected-error{{'const_mem_fun1_t<int, Foo, int>' is deprecated}}
+    std::mem_fun<int, Foo>(&Foo::zero); // expected-error{{'mem_fun<int, Foo>' is deprecated}}
+    std::mem_fun<int, Foo, int>(&Foo::identity); // expected-error{{'mem_fun<int, Foo, int>' is deprecated}}
+    std::mem_fun<int, Foo>(&Foo::const_zero); // expected-error{{'mem_fun<int, Foo>' is deprecated}}
+    std::mem_fun<int, Foo, int>(&Foo::const_identity); // expected-error{{'mem_fun<int, Foo, int>' is deprecated}}
 
-    // expected-error@* 1 {{'mem_fun_ref_t<int, Foo>' is deprecated}}
-    // expected-error@* 1 {{'mem_fun1_ref_t<int, Foo, int>' is deprecated}}
-    // expected-error@* 1 {{'const_mem_fun_ref_t<int, Foo>' is deprecated}}
-    // expected-error@* 1 {{'const_mem_fun1_ref_t<int, Foo, int>' is deprecated}}
-    // expected-error@* 2 {{'mem_fun_ref<int, Foo>' is deprecated}}
-    // expected-error@* 2 {{'mem_fun_ref<int, Foo, int>' is deprecated}}
-#endif
-    typedef std::pointer_to_unary_function<int, int> PUF;
-    typedef std::pointer_to_binary_function<int, int, int> PBF;
-    std::ptr_fun<int, int>(identity);
-    std::ptr_fun<int, int, int>(sum);
-
-    typedef std::mem_fun_t<int, Foo> MFT0;
-    typedef std::mem_fun1_t<int, Foo, int> MFT1;
-    typedef std::const_mem_fun_t<int, Foo> CMFT0;
-    typedef std::const_mem_fun1_t<int, Foo, int> CMFT1;
-    std::mem_fun<int, Foo>(&Foo::zero);
-    std::mem_fun<int, Foo, int>(&Foo::identity);
-    std::mem_fun<int, Foo>(&Foo::const_zero);
-    std::mem_fun<int, Foo, int>(&Foo::const_identity);
-
-    typedef std::mem_fun_ref_t<int, Foo> MFR0;
-    typedef std::mem_fun1_ref_t<int, Foo, int> MFR1;
-    typedef std::const_mem_fun_ref_t<int, Foo> CMFR0;
-    typedef std::const_mem_fun1_ref_t<int, Foo, int> CMFR1;
-    std::mem_fun_ref<int, Foo>(&Foo::zero);
-    std::mem_fun_ref<int, Foo, int>(&Foo::identity);
-    std::mem_fun_ref<int, Foo>(&Foo::const_zero);
-    std::mem_fun_ref<int, Foo, int>(&Foo::const_identity);
+    typedef std::mem_fun_ref_t<int, Foo> MFR0; // expected-error{{'mem_fun_ref_t<int, Foo>' is deprecated}}
+    typedef std::mem_fun1_ref_t<int, Foo, int> MFR1; // expected-error{{'mem_fun1_ref_t<int, Foo, int>' is deprecated}}
+    typedef std::const_mem_fun_ref_t<int, Foo> CMFR0; // expected-error{{'const_mem_fun_ref_t<int, Foo>' is deprecated}}
+    typedef std::const_mem_fun1_ref_t<int, Foo, int> CMFR1; // expected-error{{'const_mem_fun1_ref_t<int, Foo, int>' is deprecated}}
+    std::mem_fun_ref<int, Foo>(&Foo::zero); // expected-error{{'mem_fun_ref<int, Foo>' is deprecated}}
+    std::mem_fun_ref<int, Foo, int>(&Foo::identity); // expected-error{{'mem_fun_ref<int, Foo, int>' is deprecated}}
+    std::mem_fun_ref<int, Foo>(&Foo::const_zero); // expected-error{{'mem_fun_ref<int, Foo>' is deprecated}}
+    std::mem_fun_ref<int, Foo, int>(&Foo::const_identity); // expected-error{{'mem_fun_ref<int, Foo, int>' is deprecated}}
 }

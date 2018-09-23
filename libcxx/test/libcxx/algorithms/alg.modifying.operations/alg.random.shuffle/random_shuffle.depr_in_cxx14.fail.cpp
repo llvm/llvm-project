@@ -19,6 +19,7 @@
 //                    RandomNumberGenerator& rand);
 
 // UNSUPPORTED: clang-4.0
+// UNSUPPORTED: c++98, c++03, c++11
 // REQUIRES: verify-support
 
 // MODULES_DEFINES: _LIBCPP_ENABLE_DEPRECATION_WARNINGS
@@ -42,14 +43,8 @@ struct gen
 
 int main()
 {
-#if TEST_STD_VER < 14
-    // expected-no-diagnostics
-#else
-    // expected-error@* 1 {{'random_shuffle<int *>' is deprecated}}
-    // expected-error@* 1 {{'random_shuffle<int *, gen &>' is deprecated}}
-#endif
     int v[1] = {1};
-    std::random_shuffle(&v[0], &v[1]);
+    std::random_shuffle(&v[0], &v[1]); // expected-error{{'random_shuffle<int *>' is deprecated}}
     gen r;
-    std::random_shuffle(&v[0], &v[1], r);
+    std::random_shuffle(&v[0], &v[1], r); // expected-error{{'random_shuffle<int *, gen &>' is deprecated}}
 }
