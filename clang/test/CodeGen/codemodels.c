@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -emit-llvm -mcode-model tiny %s -o - | FileCheck %s -check-prefix=CHECK-TINY
 // RUN: %clang_cc1 -emit-llvm -mcode-model small %s -o - | FileCheck %s -check-prefix=CHECK-SMALL
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -mcode-model kernel %s -o - | FileCheck %s -check-prefix=CHECK-KERNEL
-// RUN: %clang_cc1 -emit-llvm -mcode-model medium %s -o - | FileCheck %s -check-prefix=CHECK-MEDIUM
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -mcode-model medium %s -o - | FileCheck %s -check-prefix=CHECK-MEDIUM
 // RUN: %clang_cc1 -emit-llvm -mcode-model large %s -o - | FileCheck %s -check-prefix=CHECK-LARGE
 
 // CHECK-TINY: !llvm.module.flags = !{{{.*}}}

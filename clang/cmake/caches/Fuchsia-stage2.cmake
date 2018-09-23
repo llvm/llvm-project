@@ -109,6 +109,8 @@ if(FUCHSIA_SDK)
     set(RUNTIMES_${target}-fuchsia_LIBCXX_USE_COMPILER_RT ON CACHE BOOL "")
     set(RUNTIMES_${target}-fuchsia_LIBCXX_ENABLE_STATIC_ABI_LIBRARY ON CACHE BOOL "")
     set(RUNTIMES_${target}-fuchsia_LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY OFF CACHE BOOL "")
+    # TODO: this is a workaround for PR39053 which was uncovered by D50652.
+    set(RUNTIMES_${target}-fuchsia_LIBCXX_HIDE_FROM_ABI_PER_TU_BY_DEFAULT ON CACHE BOOL "")
   endforeach()
 
   set(LLVM_RUNTIME_SANITIZERS "Address" CACHE STRING "")
