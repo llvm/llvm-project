@@ -5,6 +5,12 @@ module Clang_Analysis {
   textual header "Analysis/Analyses/ThreadSafetyOps.def"
 
   module * { export * }
+
+  // FIXME: Exclude these headers to avoid pulling all of the AST matchers
+  // library into clang. Due to inline key functions in the headers,
+  // importing the AST matchers library gives a link dependency on the AST
+  // matchers (and thus the AST), which clang-format should not have.
+  exclude header "Analysis/Analyses/ExprMutationAnalyzer.h"
 }
 
 module Clang_AST {

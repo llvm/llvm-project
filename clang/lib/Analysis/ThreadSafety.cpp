@@ -730,7 +730,7 @@ void LocalVariableMap::traverseCFG(CFG *CFGraph,
   CtxIndices.resize(CFGraph->getNumBlockIDs());
 
   for (const auto *CurrBlock : *SortedGraph) {
-    int CurrBlockID = CurrBlock->getBlockID();
+    unsigned CurrBlockID = CurrBlock->getBlockID();
     CFGBlockInfo *CurrBlockInfo = &BlockInfo[CurrBlockID];
 
     VisitedBlocks.insert(CurrBlock);
@@ -746,7 +746,7 @@ void LocalVariableMap::traverseCFG(CFG *CFGraph,
         continue;
       }
 
-      int PrevBlockID = (*PI)->getBlockID();
+      unsigned PrevBlockID = (*PI)->getBlockID();
       CFGBlockInfo *PrevBlockInfo = &BlockInfo[PrevBlockID];
 
       if (CtxInit) {
@@ -2302,7 +2302,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
   }
 
   for (const auto *CurrBlock : *SortedGraph) {
-    int CurrBlockID = CurrBlock->getBlockID();
+    unsigned CurrBlockID = CurrBlock->getBlockID();
     CFGBlockInfo *CurrBlockInfo = &BlockInfo[CurrBlockID];
 
     // Use the default initial lockset in case there are no predecessors.
@@ -2329,7 +2329,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
       if (*PI == nullptr || !VisitedBlocks.alreadySet(*PI))
         continue;
 
-      int PrevBlockID = (*PI)->getBlockID();
+      unsigned PrevBlockID = (*PI)->getBlockID();
       CFGBlockInfo *PrevBlockInfo = &BlockInfo[PrevBlockID];
 
       // Ignore edges from blocks that can't return.
@@ -2370,7 +2370,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
     // Process continue and break blocks. Assume that the lockset for the
     // resulting block is unaffected by any discrepancies in them.
     for (const auto *PrevBlock : SpecialBlocks) {
-      int PrevBlockID = PrevBlock->getBlockID();
+      unsigned PrevBlockID = PrevBlock->getBlockID();
       CFGBlockInfo *PrevBlockInfo = &BlockInfo[PrevBlockID];
 
       if (!LocksetInitialized) {
