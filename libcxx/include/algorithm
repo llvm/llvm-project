@@ -2952,7 +2952,7 @@ public:
 _LIBCPP_FUNC_VIS __rs_default __rs_get();
 
 template <class _RandomAccessIterator>
-void
+_LIBCPP_DEPRECATED_IN_CXX14 void
 random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last)
 {
     typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
@@ -2973,7 +2973,7 @@ random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last)
 }
 
 template <class _RandomAccessIterator, class _RandomNumberGenerator>
-void
+_LIBCPP_DEPRECATED_IN_CXX14 void
 random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last,
 #ifndef _LIBCPP_CXX03_LANG
                _RandomNumberGenerator&& __rand)

@@ -183,7 +183,7 @@ struct bit_xor : unary_function<T, bool>
 };
 
 template <class Predicate>
-class unary_negate
+class unary_negate // deprecated in C++17
     : public unary_function<typename Predicate::argument_type, bool>
 {
 public:
@@ -191,10 +191,11 @@ public:
     bool operator()(const typename Predicate::argument_type& x) const;
 };
 
-template <class Predicate> unary_negate<Predicate> not1(const Predicate& pred);
+template <class Predicate> // deprecated in C++17
+unary_negate<Predicate> not1(const Predicate& pred);
 
 template <class Predicate>
-class binary_negate
+class binary_negate // deprecated in C++17
     : public binary_function<typename Predicate::first_argument_type,
                              typename Predicate::second_argument_type,
                              bool>
@@ -205,7 +206,8 @@ public:
                     const typename Predicate::second_argument_type& y) const;
 };
 
-template <class Predicate> binary_negate<Predicate> not2(const Predicate& pred);
+template <class Predicate> // deprecated in C++17
+binary_negate<Predicate> not2(const Predicate& pred);
 
 template <class F> unspecified not_fn(F&& f); // C++17
 
@@ -981,7 +983,7 @@ struct _LIBCPP_TEMPLATE_VIS bit_not<void>
 #endif
 
 template <class _Predicate>
-class _LIBCPP_TEMPLATE_VIS unary_negate
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 unary_negate
     : public unary_function<typename _Predicate::argument_type, bool>
 {
     _Predicate __pred_;
@@ -995,12 +997,12 @@ public:
 };
 
 template <class _Predicate>
-inline _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX17 inline _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 unary_negate<_Predicate>
 not1(const _Predicate& __pred) {return unary_negate<_Predicate>(__pred);}
 
 template <class _Predicate>
-class _LIBCPP_TEMPLATE_VIS binary_negate
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 binary_negate
     : public binary_function<typename _Predicate::first_argument_type,
                              typename _Predicate::second_argument_type,
                              bool>
@@ -1017,13 +1019,13 @@ public:
 };
 
 template <class _Predicate>
-inline _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX17 inline _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 binary_negate<_Predicate>
 not2(const _Predicate& __pred) {return binary_negate<_Predicate>(__pred);}
 
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_BINDERS)
 template <class __Operation>
-class _LIBCPP_TEMPLATE_VIS binder1st
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 binder1st
     : public unary_function<typename __Operation::second_argument_type,
                             typename __Operation::result_type>
 {
@@ -1043,13 +1045,13 @@ public:
 };
 
 template <class __Operation, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_INLINE_VISIBILITY
 binder1st<__Operation>
 bind1st(const __Operation& __op, const _Tp& __x)
     {return binder1st<__Operation>(__op, __x);}
 
 template <class __Operation>
-class _LIBCPP_TEMPLATE_VIS binder2nd
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 binder2nd
     : public unary_function<typename __Operation::first_argument_type,
                             typename __Operation::result_type>
 {
@@ -1069,13 +1071,13 @@ public:
 };
 
 template <class __Operation, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_INLINE_VISIBILITY
 binder2nd<__Operation>
 bind2nd(const __Operation& __op, const _Tp& __x)
     {return binder2nd<__Operation>(__op, __x);}
 
 template <class _Arg, class _Result>
-class _LIBCPP_TEMPLATE_VIS pointer_to_unary_function
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 pointer_to_unary_function
     : public unary_function<_Arg, _Result>
 {
     _Result (*__f_)(_Arg);
@@ -1087,13 +1089,13 @@ public:
 };
 
 template <class _Arg, class _Result>
-inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_INLINE_VISIBILITY
 pointer_to_unary_function<_Arg,_Result>
 ptr_fun(_Result (*__f)(_Arg))
     {return pointer_to_unary_function<_Arg,_Result>(__f);}
 
 template <class _Arg1, class _Arg2, class _Result>
-class _LIBCPP_TEMPLATE_VIS pointer_to_binary_function
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 pointer_to_binary_function
     : public binary_function<_Arg1, _Arg2, _Result>
 {
     _Result (*__f_)(_Arg1, _Arg2);
@@ -1105,13 +1107,14 @@ public:
 };
 
 template <class _Arg1, class _Arg2, class _Result>
-inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_INLINE_VISIBILITY
 pointer_to_binary_function<_Arg1,_Arg2,_Result>
 ptr_fun(_Result (*__f)(_Arg1,_Arg2))
     {return pointer_to_binary_function<_Arg1,_Arg2,_Result>(__f);}
 
 template<class _Sp, class _Tp>
-class _LIBCPP_TEMPLATE_VIS mem_fun_t : public unary_function<_Tp*, _Sp>
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 mem_fun_t
+    : public unary_function<_Tp*, _Sp>
 {
     _Sp (_Tp::*__p_)();
 public:
@@ -1122,7 +1125,8 @@ public:
 };
 
 template<class _Sp, class _Tp, class _Ap>
-class _LIBCPP_TEMPLATE_VIS mem_fun1_t : public binary_function<_Tp*, _Ap, _Sp>
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 mem_fun1_t
+    : public binary_function<_Tp*, _Ap, _Sp>
 {
     _Sp (_Tp::*__p_)(_Ap);
 public:
@@ -1133,19 +1137,20 @@ public:
 };
 
 template<class _Sp, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_INLINE_VISIBILITY
 mem_fun_t<_Sp,_Tp>
 mem_fun(_Sp (_Tp::*__f)())
     {return mem_fun_t<_Sp,_Tp>(__f);}
 
 template<class _Sp, class _Tp, class _Ap>
-inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_INLINE_VISIBILITY
 mem_fun1_t<_Sp,_Tp,_Ap>
 mem_fun(_Sp (_Tp::*__f)(_Ap))
     {return mem_fun1_t<_Sp,_Tp,_Ap>(__f);}
 
 template<class _Sp, class _Tp>
-class _LIBCPP_TEMPLATE_VIS mem_fun_ref_t : public unary_function<_Tp, _Sp>
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 mem_fun_ref_t
+    : public unary_function<_Tp, _Sp>
 {
     _Sp (_Tp::*__p_)();
 public:
@@ -1156,7 +1161,8 @@ public:
 };
 
 template<class _Sp, class _Tp, class _Ap>
-class _LIBCPP_TEMPLATE_VIS mem_fun1_ref_t : public binary_function<_Tp, _Ap, _Sp>
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 mem_fun1_ref_t
+    : public binary_function<_Tp, _Ap, _Sp>
 {
     _Sp (_Tp::*__p_)(_Ap);
 public:
@@ -1167,19 +1173,20 @@ public:
 };
 
 template<class _Sp, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_INLINE_VISIBILITY
 mem_fun_ref_t<_Sp,_Tp>
 mem_fun_ref(_Sp (_Tp::*__f)())
     {return mem_fun_ref_t<_Sp,_Tp>(__f);}
 
 template<class _Sp, class _Tp, class _Ap>
-inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_INLINE_VISIBILITY
 mem_fun1_ref_t<_Sp,_Tp,_Ap>
 mem_fun_ref(_Sp (_Tp::*__f)(_Ap))
     {return mem_fun1_ref_t<_Sp,_Tp,_Ap>(__f);}
 
 template <class _Sp, class _Tp>
-class _LIBCPP_TEMPLATE_VIS const_mem_fun_t : public unary_function<const _Tp*, _Sp>
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 const_mem_fun_t
+    : public unary_function<const _Tp*, _Sp>
 {
     _Sp (_Tp::*__p_)() const;
 public:
@@ -1190,7 +1197,8 @@ public:
 };
 
 template <class _Sp, class _Tp, class _Ap>
-class _LIBCPP_TEMPLATE_VIS const_mem_fun1_t : public binary_function<const _Tp*, _Ap, _Sp>
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 const_mem_fun1_t
+    : public binary_function<const _Tp*, _Ap, _Sp>
 {
     _Sp (_Tp::*__p_)(_Ap) const;
 public:
@@ -1201,19 +1209,20 @@ public:
 };
 
 template <class _Sp, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_INLINE_VISIBILITY
 const_mem_fun_t<_Sp,_Tp>
 mem_fun(_Sp (_Tp::*__f)() const)
     {return const_mem_fun_t<_Sp,_Tp>(__f);}
 
 template <class _Sp, class _Tp, class _Ap>
-inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_INLINE_VISIBILITY
 const_mem_fun1_t<_Sp,_Tp,_Ap>
 mem_fun(_Sp (_Tp::*__f)(_Ap) const)
     {return const_mem_fun1_t<_Sp,_Tp,_Ap>(__f);}
 
 template <class _Sp, class _Tp>
-class _LIBCPP_TEMPLATE_VIS const_mem_fun_ref_t : public unary_function<_Tp, _Sp>
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 const_mem_fun_ref_t
+    : public unary_function<_Tp, _Sp>
 {
     _Sp (_Tp::*__p_)() const;
 public:
@@ -1224,7 +1233,7 @@ public:
 };
 
 template <class _Sp, class _Tp, class _Ap>
-class _LIBCPP_TEMPLATE_VIS const_mem_fun1_ref_t
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 const_mem_fun1_ref_t
     : public binary_function<_Tp, _Ap, _Sp>
 {
     _Sp (_Tp::*__p_)(_Ap) const;
@@ -1236,13 +1245,13 @@ public:
 };
 
 template <class _Sp, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_INLINE_VISIBILITY
 const_mem_fun_ref_t<_Sp,_Tp>
 mem_fun_ref(_Sp (_Tp::*__f)() const)
     {return const_mem_fun_ref_t<_Sp,_Tp>(__f);}
 
 template <class _Sp, class _Tp, class _Ap>
-inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_INLINE_VISIBILITY
 const_mem_fun1_ref_t<_Sp,_Tp,_Ap>
 mem_fun_ref(_Sp (_Tp::*__f)(_Ap) const)
     {return const_mem_fun1_ref_t<_Sp,_Tp,_Ap>(__f);}
