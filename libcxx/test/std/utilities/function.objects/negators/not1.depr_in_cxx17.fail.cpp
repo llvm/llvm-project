@@ -13,6 +13,7 @@
 //  deprecated in C++17
 
 // UNSUPPORTED: clang-4.0
+// UNSUPPORTED: c++98, c++03, c++11, c++14
 // REQUIRES: verify-support
 
 // MODULES_DEFINES: _LIBCPP_ENABLE_DEPRECATION_WARNINGS
@@ -28,10 +29,5 @@ struct Predicate {
 };
 
 int main() {
-#if TEST_STD_VER < 17
-    // expected-no-diagnostics
-#else
-    // expected-error@* 1 {{'not1<Predicate>' is deprecated}}
-#endif
-    std::not1(Predicate());
+    std::not1(Predicate()); // expected-error{{'not1<Predicate>' is deprecated}}
 }

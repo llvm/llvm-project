@@ -12,6 +12,7 @@
 // bind1st
 
 // UNSUPPORTED: clang-4.0
+// UNSUPPORTED: c++98, c++03
 // REQUIRES: verify-support
 
 // MODULES_DEFINES: _LIBCPP_ENABLE_DEPRECATION_WARNINGS
@@ -26,10 +27,5 @@
 
 int main()
 {
-#if TEST_STD_VER < 11
-    // expected-no-diagnostics
-#else
-    // expected-error@* 1 {{'bind1st<test_func, int>' is deprecated}}
-#endif
-    std::bind1st(test_func(1), 5);
+    std::bind1st(test_func(1), 5); // expected-error{{'bind1st<test_func, int>' is deprecated}}
 }
