@@ -18,6 +18,7 @@
 //     random_shuffle(RandomAccessIterator first, RandomAccessIterator last,
 //                    RandomNumberGenerator& rand);
 
+// UNSUPPORTED: clang-4.0
 // REQUIRES: verify-support
 
 // MODULES_DEFINES: _LIBCPP_ENABLE_DEPRECATION_WARNINGS
