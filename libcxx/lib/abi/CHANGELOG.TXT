@@ -27,6 +27,9 @@ Version 7.0
 
   x86_64-apple-darwin16.0
   -----------------------
+  Symbol added: __ZNSt3__16__itoa8__u64toaEyPc
+  Symbol added: __ZNSt3__16__itoa8__u32toaEjPc
+
 
 * r333467 - Fix embarrasing typo in uncaught_exceptions.
 
