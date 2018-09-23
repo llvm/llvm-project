@@ -12,6 +12,7 @@
 // not2
 //  deprecated in C++17
 
+// UNSUPPORTED: clang-4.0
 // REQUIRES: verify-support
 
 // MODULES_DEFINES: _LIBCPP_ENABLE_DEPRECATION_WARNINGS

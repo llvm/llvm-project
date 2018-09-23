@@ -11,6 +11,7 @@
 //
 // bind2nd
 
+// UNSUPPORTED: clang-4.0
 // REQUIRES: verify-support
 
 // MODULES_DEFINES: _LIBCPP_ENABLE_DEPRECATION_WARNINGS
