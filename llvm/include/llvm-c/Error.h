@@ -18,6 +18,8 @@
 extern "C" {
 #endif
 
+#define LLVMErrorSuccess 0
+
 /**
  * Opaque reference to an error instance. Null serves as the 'success' value.
  */
