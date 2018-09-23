@@ -17308,7 +17308,7 @@ static  SDValue LowerZERO_EXTEND_Mask(SDValue Op,
   SDLoc DL(Op);
   unsigned NumElts = VT.getVectorNumElements();
 
-  // For all vectors, but vXi8 we can just emit a sign_extend a shift. This
+  // For all vectors, but vXi8 we can just emit a sign_extend and a shift. This
   // avoids a constant pool load.
   if (VT.getVectorElementType() != MVT::i8) {
     SDValue Extend = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, In);
@@ -19520,7 +19520,7 @@ static SDValue LowerSIGN_EXTEND_Mask(SDValue Op,
 
   unsigned NumElts = VT.getVectorNumElements();
 
-  // Extend VT if the scalar type is v8/v16 and BWI is not supported.
+  // Extend VT if the scalar type is i8/i16 and BWI is not supported.
   MVT ExtVT = VT;
   if (!Subtarget.hasBWI() && VTElt.getSizeInBits() <= 16) {
     // If v16i32 is to be avoided, we'll need to split and concatenate.
