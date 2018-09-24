@@ -25,7 +25,7 @@ ELF Improvements
 ----------------
 
 * lld now supports RISC-V. (`r339364
-  <https://reviews.llvm.org/rL342746>`_)
+  <https://reviews.llvm.org/rL339364>`_)
 
 * Default image base address has changed from 65536 to 2 MiB for i386
   and 4 MiB for AArch64 to make lld-generated executables work better
