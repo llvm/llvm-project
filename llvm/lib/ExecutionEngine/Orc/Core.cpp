@@ -18,6 +18,8 @@
 #include <future>
 #endif
 
+#define DEBUG_TYPE "orc"
+
 namespace llvm {
 namespace orc {
 
@@ -333,6 +335,8 @@ void MaterializationResponsibility::replace(
     std::unique_ptr<MaterializationUnit> MU) {
   for (auto &KV : MU->getSymbols())
     SymbolFlags.erase(KV.first);
+
+  LLVM_DEBUG(dbgs() << "For " << JD.getName() << " replacing " << MU->getSymbols() << "\n");
 
   JD.replace(std::move(MU));
 }

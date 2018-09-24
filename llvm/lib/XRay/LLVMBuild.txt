@@ -1,4 +1,4 @@
-;===- ./lib/LLVMBuild.txt --------------------------------------*- Conf -*--===;
+;===- ./lib/XRay/LLVMBuild.txt ---------------------------------*- Conf -*--===;
 ;
 ;                     The LLVM Compiler Infrastructure
 ;
@@ -15,38 +15,9 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories =
- Analysis
- AsmParser
- Bitcode
- CodeGen
- DebugInfo
- Demangle
- ExecutionEngine
- FuzzMutate
- LineEditor
- Linker
- IR
- IRReader
- LTO
- MC
- Object
- BinaryFormat
- ObjectYAML
- Option
- Passes
- ProfileData
- Support
- TableGen
- Target
- Testing
- ToolDrivers
- Transforms
- WindowsManifest
- XRay
-
 [component_0]
-type = Group
-name = Libraries
-parent = $ROOT
+type = Library
+name = XRay
+parent = Libraries
+required_libraries = Support Object
+installed = 1

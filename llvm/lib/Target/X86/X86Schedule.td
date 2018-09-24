@@ -148,7 +148,10 @@ def  WriteLAHFSAHF : SchedWrite; // Load/Store flags in AH.
 def  WriteBitTest  : SchedWrite; // Bit Test - TODO add memory folding support
 
 // Integer shifts and rotates.
-defm WriteShift : X86SchedWritePair;
+defm WriteShift    : X86SchedWritePair;
+defm WriteShiftCL  : X86SchedWritePair;
+defm WriteRotate   : X86SchedWritePair;
+defm WriteRotateCL : X86SchedWritePair;
 
 // Double shift instructions.
 def  WriteSHDrri  : SchedWrite;

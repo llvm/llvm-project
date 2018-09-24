@@ -18,12 +18,15 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Debug.h"
 
 #include <list>
 #include <map>
 #include <memory>
 #include <set>
 #include <vector>
+
+#define DEBUG_TYPE "orc"
 
 namespace llvm {
 namespace orc {
@@ -736,6 +739,8 @@ public:
   /// Materialize the given unit.
   void dispatchMaterialization(JITDylib &JD,
                                std::unique_ptr<MaterializationUnit> MU) {
+    LLVM_DEBUG(dbgs() << "For " << JD.getName() << " compiling "
+                      << MU->getSymbols() << "\n");
     DispatchMaterialization(JD, std::move(MU));
   }
 
@@ -831,5 +836,7 @@ private:
 
 } // End namespace orc
 } // End namespace llvm
+
+#undef DEBUG_TYPE // "orc"
 
 #endif // LLVM_EXECUTIONENGINE_ORC_CORE_H

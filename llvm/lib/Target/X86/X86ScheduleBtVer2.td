@@ -212,7 +212,10 @@ defm : X86WriteResPairUnsupported<WriteBZHI>;
 // Integer shifts and rotates.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResIntPair<WriteShift, [JALU01], 1>;
+defm : JWriteResIntPair<WriteShift,    [JALU01], 1>;
+defm : JWriteResIntPair<WriteShiftCL,  [JALU01], 1>;
+defm : JWriteResIntPair<WriteRotate,   [JALU01], 1>;
+defm : JWriteResIntPair<WriteRotateCL, [JALU01], 1>;
 
 // SHLD/SHRD.
 defm : X86WriteRes<WriteSHDrri, [JALU01], 3, [6], 6>;
