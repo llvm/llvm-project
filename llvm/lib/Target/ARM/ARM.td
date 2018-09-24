@@ -508,6 +508,8 @@ def ProcExynos  : SubtargetFeature<"exynos", "ARMProcFamily", "Exynos",
                                     FeatureHWDivARM,
                                     FeatureHasSlowFPVMLx,
                                     FeatureHasRetAddrStack,
+                                    FeatureFuseLiterals,
+                                    FeatureFuseAES,
                                     FeatureExpandMLx,
                                     FeatureCrypto,
                                     FeatureCRC]>;
@@ -966,6 +968,7 @@ def : ProcessorModel<"cortex-m4", CortexM3Model,        [ARMv7em,
                                                          FeatureVFPOnlySP,
                                                          FeatureD16,
                                                          FeaturePrefLoopAlign32,
+                                                         FeatureHasSlowFPVMLx,
                                                          FeatureHasNoBranchPredictor]>;
 
 def : ProcNoItin<"cortex-m7",                           [ARMv7em,
@@ -981,6 +984,7 @@ def : ProcessorModel<"cortex-m33", CortexM3Model,       [ARMv8mMainline,
                                                          FeatureD16,
                                                          FeatureVFPOnlySP,
                                                          FeaturePrefLoopAlign32,
+                                                         FeatureHasSlowFPVMLx,
                                                          FeatureHasNoBranchPredictor]>;
 
 def : ProcNoItin<"cortex-a32",                           [ARMv8a,

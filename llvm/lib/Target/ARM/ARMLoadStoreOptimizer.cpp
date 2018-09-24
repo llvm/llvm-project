@@ -1027,6 +1027,18 @@ void ARMLoadStoreOpt::FormCandidates(const MemOpQueue &MemOps) {
     if (AssumeMisalignedLoadStores && !mayCombineMisaligned(*STI, *MI))
       CanMergeToLSMulti = CanMergeToLSDouble = false;
 
+    // vldm / vstm limit are 32 for S variants, 16 for D variants.
+    unsigned Limit;
+    switch (Opcode) {
+    default:
+      Limit = UINT_MAX;
+      break;
+    case ARM::VLDRD:
+    case ARM::VSTRD:
+      Limit = 16;
+      break;
+    }
+
     // Merge following instructions where possible.
     for (unsigned I = SIndex+1; I < EIndex; ++I, ++Count) {
       int NewOffset = MemOps[I].Offset;
@@ -1035,6 +1047,8 @@ void ARMLoadStoreOpt::FormCandidates(const MemOpQueue &MemOps) {
       const MachineOperand &MO = getLoadStoreRegOp(*MemOps[I].MI);
       unsigned Reg = MO.getReg();
       if (Reg == ARM::SP || Reg == ARM::PC)
+        break;
+      if (Count == Limit)
         break;
 
       // See if the current load/store may be part of a multi load/store.

@@ -327,7 +327,7 @@ void DAGTypeLegalizer::IntegerToVector(SDValue Op, unsigned NumElements,
     NumElements >>= 1;
     SplitInteger(Op, Parts[0], Parts[1]);
     if (DAG.getDataLayout().isBigEndian())
-        std::swap(Parts[0], Parts[1]);
+      std::swap(Parts[0], Parts[1]);
     IntegerToVector(Parts[0], NumElements, Ops, EltVT);
     IntegerToVector(Parts[1], NumElements, Ops, EltVT);
   } else {

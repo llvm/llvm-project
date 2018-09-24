@@ -4736,7 +4736,9 @@ bool X86TargetLowering::decomposeMulByConstant(EVT VT, SDValue C) const {
   if (isOperationLegal(ISD::MUL, VT))
     return false;
 
-  return (MulC + 1).isPowerOf2() || (MulC - 1).isPowerOf2();
+  // shl+add, shl+sub, shl+add+neg
+  return (MulC + 1).isPowerOf2() || (MulC - 1).isPowerOf2() ||
+         (1 - MulC).isPowerOf2() || (-(MulC + 1)).isPowerOf2();
 }
 
 bool X86TargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,

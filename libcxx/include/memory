@@ -212,10 +212,10 @@ template <class ForwardIterator>
 template <class ForwardIterator, class Size>
  ForwardIterator uninitialized_default_construct_n(ForwardIterator first, Size n);
 
-template <class Y> struct auto_ptr_ref {};      // removed in C++17
+template <class Y> struct auto_ptr_ref {};      // deprecated in C++11, removed in C++17
 
 template<class X>
-class auto_ptr                                  // removed in C++17
+class auto_ptr                                  // deprecated in C++11, removed in C++17
 {
 public:
     typedef X element_type;
@@ -1783,7 +1783,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     allocator() _NOEXCEPT {}
 
-    template <class _Up> 
+    template <class _Up>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     allocator(const allocator<_Up>&) _NOEXCEPT {}
 
@@ -1791,7 +1791,7 @@ public:
         {return _VSTD::addressof(__x);}
     _LIBCPP_INLINE_VISIBILITY const_pointer address(const_reference __x) const _NOEXCEPT
         {return _VSTD::addressof(__x);}
-    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY 
+    _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_INLINE_VISIBILITY
     pointer allocate(size_type __n, allocator<void>::const_pointer = 0)
         {
         if (__n > max_size())
@@ -1888,7 +1888,7 @@ public:
     allocator() _NOEXCEPT {}
 
     template <class _Up>
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     allocator(const allocator<_Up>&) _NOEXCEPT {}
 
     _LIBCPP_INLINE_VISIBILITY const_pointer address(const_reference __x) const _NOEXCEPT
@@ -2057,13 +2057,13 @@ void return_temporary_buffer(_Tp* __p) _NOEXCEPT
 
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
 template <class _Tp>
-struct auto_ptr_ref
+struct _LIBCPP_DEPRECATED_IN_CXX11 auto_ptr_ref
 {
     _Tp* __ptr_;
 };
 
 template<class _Tp>
-class _LIBCPP_TEMPLATE_VIS auto_ptr
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 auto_ptr
 {
 private:
     _Tp* __ptr_;
@@ -2107,7 +2107,7 @@ public:
 };
 
 template <>
-class _LIBCPP_TEMPLATE_VIS auto_ptr<void>
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 auto_ptr<void>
 {
 public:
     typedef void element_type;

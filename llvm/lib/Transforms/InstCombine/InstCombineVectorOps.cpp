@@ -181,10 +181,10 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
   if (ConstantInt *IdxC = dyn_cast<ConstantInt>(EI.getOperand(1))) {
-    unsigned VectorWidth = EI.getVectorOperandType()->getNumElements();
+    unsigned NumElts = EI.getVectorOperandType()->getNumElements();
 
     // InstSimplify should handle cases where the index is invalid.
-    if (!IdxC->getValue().ule(VectorWidth))
+    if (!IdxC->getValue().ule(NumElts))
       return nullptr;
 
     unsigned IndexVal = IdxC->getZExtValue();
@@ -192,9 +192,9 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
     // This instruction only demands the single element from the input vector.
     // If the input vector has a single use, simplify it based on this use
     // property.
-    if (EI.getOperand(0)->hasOneUse() && VectorWidth != 1) {
-      APInt UndefElts(VectorWidth, 0);
-      APInt DemandedMask(VectorWidth, 0);
+    if (EI.getOperand(0)->hasOneUse() && NumElts != 1) {
+      APInt UndefElts(NumElts, 0);
+      APInt DemandedMask(NumElts, 0);
       DemandedMask.setBit(IndexVal);
       if (Value *V = SimplifyDemandedVectorElts(EI.getOperand(0), DemandedMask,
                                                 UndefElts)) {
@@ -203,14 +203,16 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
       }
     }
 
-    // If this extractelement is directly using a bitcast from a vector of
-    // the same number of elements, see if we can find the source element from
-    // it.  In this case, we will end up needing to bitcast the scalars.
-    if (BitCastInst *BCI = dyn_cast<BitCastInst>(EI.getOperand(0))) {
-      if (VectorType *VT = dyn_cast<VectorType>(BCI->getOperand(0)->getType()))
-        if (VT->getNumElements() == VectorWidth)
-          if (Value *Elt = findScalarElement(BCI->getOperand(0), IndexVal))
-            return new BitCastInst(Elt, EI.getType());
+    Value *X;
+    if (match(EI.getVectorOperand(), m_BitCast(m_Value(X))) &&
+        X->getType()->isVectorTy()) {
+      // If this extractelement is using a bitcast from a vector of the same
+      // number of elements, see if we can find the source element from the
+      // source vector:
+      // extelt (bitcast VecX), IdxC --> bitcast X[IdxC]
+      if (X->getType()->getVectorNumElements() == NumElts)
+        if (Value *Elt = findScalarElement(X, IndexVal))
+          return new BitCastInst(Elt, EI.getType());
     }
 
     // If there's a vector PHI feeding a scalar use through this extractelement

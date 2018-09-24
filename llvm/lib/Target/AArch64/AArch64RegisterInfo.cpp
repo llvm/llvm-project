@@ -143,7 +143,7 @@ void AArch64RegisterInfo::UpdateCustomCallPreservedMask(MachineFunction &MF,
                                                  const uint32_t **Mask) const {
   uint32_t *UpdatedMask = MF.allocateRegMask();
   unsigned RegMaskSize = MachineOperand::getRegMaskSize(getNumRegs());
-  memcpy(UpdatedMask, *Mask, sizeof(Mask[0]) * RegMaskSize);
+  memcpy(UpdatedMask, *Mask, sizeof(UpdatedMask[0]) * RegMaskSize);
 
   for (size_t i = 0; i < AArch64::GPR64commonRegClass.getNumRegs(); ++i) {
     if (MF.getSubtarget<AArch64Subtarget>().isXRegCustomCalleeSaved(i)) {

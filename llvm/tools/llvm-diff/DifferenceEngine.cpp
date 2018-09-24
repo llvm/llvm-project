@@ -686,9 +686,18 @@ void DifferenceEngine::diff(Module *L, Module *R) {
   StringSet<> LNames;
   SmallVector<std::pair<Function*,Function*>, 20> Queue;
 
+  unsigned LeftAnonCount = 0;
+  unsigned RightAnonCount = 0;
+
   for (Module::iterator I = L->begin(), E = L->end(); I != E; ++I) {
     Function *LFn = &*I;
-    LNames.insert(LFn->getName());
+    StringRef Name = LFn->getName();
+    if (Name.empty()) {
+      ++LeftAnonCount;
+      continue;
+    }
+
+    LNames.insert(Name);
 
     if (Function *RFn = R->getFunction(LFn->getName()))
       Queue.push_back(std::make_pair(LFn, RFn));
@@ -698,8 +707,23 @@ void DifferenceEngine::diff(Module *L, Module *R) {
 
   for (Module::iterator I = R->begin(), E = R->end(); I != E; ++I) {
     Function *RFn = &*I;
-    if (!LNames.count(RFn->getName()))
+    StringRef Name = RFn->getName();
+    if (Name.empty()) {
+      ++RightAnonCount;
+      continue;
+    }
+
+    if (!LNames.count(Name))
       logf("function %r exists only in right module") << RFn;
+  }
+
+
+  if (LeftAnonCount != 0 || RightAnonCount != 0) {
+    SmallString<32> Tmp;
+    logf(("not comparing " + Twine(LeftAnonCount) +
+          " anonymous functions in the left module and " +
+          Twine(RightAnonCount) + " in the right module")
+             .toStringRef(Tmp));
   }
 
   for (SmallVectorImpl<std::pair<Function*,Function*> >::iterator
