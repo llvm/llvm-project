@@ -391,6 +391,33 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
   } else if (HDivArg)
     getARMHWDivFeatures(D, HDivArg, Args, HDivArg->getValue(), Features);
 
+  // Handle (arch-dependent) fp16fml/fullfp16 relationship.
+  // Must happen before any features are disabled due to soft-float.
+  // FIXME: this fp16fml option handling will be reimplemented after the
+  // TargetParser rewrite.
+  const auto ItRNoFullFP16 = std::find(Features.rbegin(), Features.rend(), "-fullfp16");
+  const auto ItRFP16FML = std::find(Features.rbegin(), Features.rend(), "+fp16fml");
+  if (Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v8_4a) {
+    const auto ItRFullFP16  = std::find(Features.rbegin(), Features.rend(), "+fullfp16");
+    if (ItRFullFP16 < ItRNoFullFP16 && ItRFullFP16 < ItRFP16FML) {
+      // Only entangled feature that can be to the right of this +fullfp16 is -fp16fml.
+      // Only append the +fp16fml if there is no -fp16fml after the +fullfp16.
+      if (std::find(Features.rbegin(), ItRFullFP16, "-fp16fml") == ItRFullFP16)
+        Features.push_back("+fp16fml");
+    }
+    else
+      goto fp16_fml_fallthrough;
+  }
+  else {
+fp16_fml_fallthrough:
+    // In both of these cases, putting the 'other' feature on the end of the vector will
+    // result in the same effect as placing it immediately after the current feature.
+    if (ItRNoFullFP16 < ItRFP16FML)
+      Features.push_back("-fp16fml");
+    else if (ItRNoFullFP16 > ItRFP16FML)
+      Features.push_back("+fullfp16");
+  }
+
   // Setting -msoft-float/-mfloat-abi=soft effectively disables the FPU (GCC
   // ignores the -mfpu options in this case).
   // Note that the ABI can also be set implicitly by the target selected.
@@ -404,7 +431,7 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
     //        now just be explicit and disable all known dependent features
     //        as well.
     for (std::string Feature : {"vfp2", "vfp3", "vfp4", "fp-armv8", "fullfp16",
-                                "neon", "crypto", "dotprod"})
+                                "neon", "crypto", "dotprod", "fp16fml"})
       if (std::find(std::begin(Features), std::end(Features), "+" + Feature) != std::end(Features))
         Features.push_back(Args.MakeArgString("-" + Feature));
   }

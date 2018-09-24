@@ -10,12 +10,13 @@
 #include "llvm/DebugInfo/PDB/Native/NativeTypeBuiltin.h"
 #include "llvm/Support/FormatVariadic.h"
 
-namespace llvm {
-namespace pdb {
+using namespace llvm;
+using namespace llvm::codeview;
+using namespace llvm::pdb;
 
 NativeTypeBuiltin::NativeTypeBuiltin(NativeSession &PDBSession, SymIndexId Id,
-                                     codeview::ModifierOptions Mods,
-                                     PDB_BuiltinType T, uint64_t L)
+                                     ModifierOptions Mods, PDB_BuiltinType T,
+                                     uint64_t L)
     : NativeRawSymbol(PDBSession, PDB_SymType::BuiltinType, Id),
       Session(PDBSession), Mods(Mods), Type(T), Length(L) {}
 
@@ -31,13 +32,16 @@ PDB_SymType NativeTypeBuiltin::getSymTag() const {
 
 PDB_BuiltinType NativeTypeBuiltin::getBuiltinType() const { return Type; }
 
-bool NativeTypeBuiltin::isConstType() const { return false; }
+bool NativeTypeBuiltin::isConstType() const {
+  return (Mods & ModifierOptions::Const) != ModifierOptions::None;
+}
 
 uint64_t NativeTypeBuiltin::getLength() const { return Length; }
 
-bool NativeTypeBuiltin::isUnalignedType() const { return false; }
+bool NativeTypeBuiltin::isUnalignedType() const {
+  return (Mods & ModifierOptions::Unaligned) != ModifierOptions::None;
+}
 
-bool NativeTypeBuiltin::isVolatileType() const { return false; }
-
-} // namespace pdb
-} // namespace llvm
+bool NativeTypeBuiltin::isVolatileType() const {
+  return (Mods & ModifierOptions::Volatile) != ModifierOptions::None;
+}

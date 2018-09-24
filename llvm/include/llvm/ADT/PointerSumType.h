@@ -10,6 +10,7 @@
 #ifndef LLVM_ADT_POINTERSUMTYPE_H
 #define LLVM_ADT_POINTERSUMTYPE_H
 
+#include "llvm/ADT/bit.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <cassert>
@@ -186,11 +187,9 @@ public:
   }
 
   uintptr_t getOpaqueValue() const {
-    uintptr_t Value;
     // Read the underlying storage of the union, regardless of the active
     // member.
-    memcpy(&Value, &Storage, sizeof(Value));
-    return Value;
+    return bit_cast<uintptr_t>(Storage);
   }
 
 protected:

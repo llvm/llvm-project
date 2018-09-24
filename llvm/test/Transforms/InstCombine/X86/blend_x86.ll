@@ -177,13 +177,14 @@ define <2 x double> @sel_v2f64(<2 x double> %x, <2 x double> %y, <2 x i1> %cond)
   ret <2 x double> %r
 }
 
-; TODO: We can bitcast X, Y, and the select and remove the intrinsic.
+; Bitcast X, Y, and the select and remove the intrinsic.
 
 define <16 x i8> @sel_v4i32(<16 x i8> %x, <16 x i8> %y, <4 x i1> %cond) {
 ; CHECK-LABEL: @sel_v4i32(
-; CHECK-NEXT:    [[S:%.*]] = sext <4 x i1> [[COND:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i32> [[S]] to <16 x i8>
-; CHECK-NEXT:    [[R:%.*]] = call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[X:%.*]], <16 x i8> [[Y:%.*]], <16 x i8> [[B]])
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[X:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[Y:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[COND:%.*]], <4 x i32> [[TMP2]], <4 x i32> [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = bitcast <4 x i32> [[TMP3]] to <16 x i8>
 ; CHECK-NEXT:    ret <16 x i8> [[R]]
 ;
   %s = sext <4 x i1> %cond to <4 x i32>
@@ -238,19 +239,17 @@ define <2 x double> @sel_v2f64_sse_reality(<2 x double>* nocapture readonly %x, 
   ret <2 x double> %r
 }
 
-; TODO: We can bitcast the inputs to the select and the result and remove the intrinsic.
+; Bitcast the inputs and the result and remove the intrinsic.
 
 define <2 x i64> @sel_v4i32_sse_reality(<2 x i64>* nocapture readonly %x, <2 x i64> %y, <2 x i64> %z) {
 ; CHECK-LABEL: @sel_v4i32_sse_reality(
-; CHECK-NEXT:    [[XCAST:%.*]] = bitcast <2 x i64>* [[X:%.*]] to <16 x i8>*
-; CHECK-NEXT:    [[LD:%.*]] = load <16 x i8>, <16 x i8>* [[XCAST]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64>* [[X:%.*]] to <4 x i32>*
+; CHECK-NEXT:    [[LD1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 16
 ; CHECK-NEXT:    [[YCAST:%.*]] = bitcast <2 x i64> [[Y:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[ZCAST:%.*]] = bitcast <2 x i64> [[Z:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i32> [[YCAST]], [[ZCAST]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
-; CHECK-NEXT:    [[COND:%.*]] = bitcast <4 x i32> [[SEXT]] to <16 x i8>
-; CHECK-NEXT:    [[R:%.*]] = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[LD]], <16 x i8> zeroinitializer, <16 x i8> [[COND]])
-; CHECK-NEXT:    [[RCAST:%.*]] = bitcast <16 x i8> [[R]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[CMP]], <4 x i32> zeroinitializer, <4 x i32> [[LD1]]
+; CHECK-NEXT:    [[RCAST:%.*]] = bitcast <4 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[RCAST]]
 ;
   %xcast = bitcast <2 x i64>* %x to <16 x i8>*

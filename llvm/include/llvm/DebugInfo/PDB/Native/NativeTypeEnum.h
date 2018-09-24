@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEENUM_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEENUM_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
@@ -26,9 +27,8 @@ public:
                  codeview::EnumRecord Record);
 
   NativeTypeEnum(NativeSession &Session, SymIndexId Id,
-                 codeview::TypeIndex ModifierTI,
-                 codeview::ModifierRecord Modifier,
-                 codeview::EnumRecord EnumRecord);
+                 NativeTypeEnum &UnmodifiedType,
+                 codeview::ModifierRecord Modifier);
   ~NativeTypeEnum() override;
 
   void dump(raw_ostream &OS, int Indent, PdbSymbolIdField ShowIdFields,
@@ -60,10 +60,12 @@ public:
   bool isInterfaceUdt() const override;
 
   const NativeTypeBuiltin &getUnderlyingBuiltinType() const;
+  const codeview::EnumRecord &getEnumRecord() const { return *Record; }
 
 protected:
   codeview::TypeIndex Index;
-  codeview::EnumRecord Record;
+  Optional<codeview::EnumRecord> Record;
+  NativeTypeEnum *UnmodifiedType = nullptr;
   Optional<codeview::ModifierRecord> Modifiers;
 };
 

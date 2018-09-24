@@ -110,8 +110,8 @@ define void @test_mulx_i32(i32 %a0, i32 %a1, i32* %a2) optsize {
 ; GENERIC-LABEL: test_mulx_i32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    mulxl %esi, %esi, %edi # sched: [3:1.00]
-; GENERIC-NEXT:    mulxl (%rdx), %esi, %edi # sched: [8:1.00]
+; GENERIC-NEXT:    mulxl %esi, %esi, %edi # sched: [4:1.00]
+; GENERIC-NEXT:    mulxl (%rdx), %esi, %edi # sched: [9:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -163,8 +163,8 @@ define i64 @test_mulx_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movq %rdx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    movq %rdi, %rdx # sched: [1:0.33]
-; GENERIC-NEXT:    mulxq %rsi, %rsi, %rcx # sched: [3:1.00]
-; GENERIC-NEXT:    mulxq (%rax), %rdx, %rax # sched: [8:1.00]
+; GENERIC-NEXT:    mulxq %rsi, %rsi, %rcx # sched: [4:1.00]
+; GENERIC-NEXT:    mulxq (%rax), %rdx, %rax # sched: [9:1.00]
 ; GENERIC-NEXT:    orq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;

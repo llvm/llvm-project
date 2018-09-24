@@ -64,6 +64,7 @@ is_equal(const std::type_info* x, const std::type_info* y, bool use_strcmp)
         return x == y;
     return strcmp(x->name(), y->name()) == 0;
 #else
+    (void) use_strcmp;
     return (x == y) || (strcmp(x->name(), y->name()) == 0);
 #endif
 }

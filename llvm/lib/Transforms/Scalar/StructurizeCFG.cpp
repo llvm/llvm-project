@@ -275,7 +275,6 @@ public:
     AU.addRequired<LoopInfoWrapperPass>();
 
     AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreservedID(LowerSwitchID);
     RegionPass::getAnalysisUsage(AU);
   }
 };

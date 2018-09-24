@@ -2918,6 +2918,9 @@ bool AArch64FastISel::fastLowerArguments() {
   if (CC != CallingConv::C && CC != CallingConv::Swift)
     return false;
 
+  if (Subtarget->hasCustomCallingConv())
+    return false;
+
   // Only handle simple cases of up to 8 GPR and FPR each.
   unsigned GPRCnt = 0;
   unsigned FPRCnt = 0;
@@ -3741,6 +3744,9 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
               TII.get(TargetOpcode::COPY), ResultReg1).addReg(MulReg);
     }
+
+    if (!ResultReg1)
+      return false;
 
     ResultReg2 = fastEmitInst_rri(AArch64::CSINCWr, &AArch64::GPR32RegClass,
                                   AArch64::WZR, /*IsKill=*/true, AArch64::WZR,

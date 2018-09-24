@@ -164,15 +164,24 @@ def : WriteRes<WriteRMW, [JSAGU]>;
 
 defm : JWriteResIntPair<WriteALU,    [JALU01], 1>;
 defm : JWriteResIntPair<WriteADC,    [JALU01], 1, [2]>;
-defm : JWriteResIntPair<WriteIMul,   [JALU1, JMul], 3, [1, 1], 2>; // i8/i16/i32 multiplication
-defm : JWriteResIntPair<WriteIMul64, [JALU1, JMul], 6, [1, 4], 2>; // i64 multiplication
-defm : X86WriteRes<WriteIMulH,       [JALU1], 6, [4], 1>;
 
 defm : X86WriteRes<WriteBSWAP32, [JALU01], 1, [1], 1>;
 defm : X86WriteRes<WriteBSWAP64, [JALU01], 1, [1], 1>;
 defm : X86WriteRes<WriteCMPXCHG,[JALU01], 1, [1], 1>;
 defm : X86WriteRes<WriteCMPXCHGRMW,[JALU01, JSAGU, JLAGU], 4, [1, 1, 1], 2>;
 defm : X86WriteRes<WriteXCHG,        [JALU01], 1, [1], 1>;
+
+defm : JWriteResIntPair<WriteIMul8,     [JALU1, JMul], 3, [1, 1], 2>;
+defm : JWriteResIntPair<WriteIMul16,    [JALU1, JMul], 3, [1, 1], 2>;
+defm : JWriteResIntPair<WriteIMul16Imm, [JALU1, JMul], 3, [1, 1], 2>;
+defm : JWriteResIntPair<WriteIMul16Reg, [JALU1, JMul], 3, [1, 1], 2>;
+defm : JWriteResIntPair<WriteIMul32,    [JALU1, JMul], 3, [1, 1], 2>;
+defm : JWriteResIntPair<WriteIMul32Imm, [JALU1, JMul], 3, [1, 1], 2>;
+defm : JWriteResIntPair<WriteIMul32Reg, [JALU1, JMul], 3, [1, 1], 2>;
+defm : JWriteResIntPair<WriteIMul64,    [JALU1, JMul], 6, [1, 4], 2>;
+defm : JWriteResIntPair<WriteIMul64Imm, [JALU1, JMul], 6, [1, 4], 2>;
+defm : JWriteResIntPair<WriteIMul64Reg, [JALU1, JMul], 6, [1, 4], 2>;
+defm : X86WriteRes<WriteIMulH,          [JALU1], 6, [4], 1>;
 
 defm : JWriteResIntPair<WriteDiv8,   [JALU1, JDiv], 12, [1, 12], 1>;
 defm : JWriteResIntPair<WriteDiv16,  [JALU1, JDiv], 17, [1, 17], 2>;
@@ -212,7 +221,10 @@ defm : X86WriteResPairUnsupported<WriteBZHI>;
 // Integer shifts and rotates.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResIntPair<WriteShift, [JALU01], 1>;
+defm : JWriteResIntPair<WriteShift,    [JALU01], 1>;
+defm : JWriteResIntPair<WriteShiftCL,  [JALU01], 1>;
+defm : JWriteResIntPair<WriteRotate,   [JALU01], 1>;
+defm : JWriteResIntPair<WriteRotateCL, [JALU01], 1>;
 
 // SHLD/SHRD.
 defm : X86WriteRes<WriteSHDrri, [JALU01], 3, [6], 6>;

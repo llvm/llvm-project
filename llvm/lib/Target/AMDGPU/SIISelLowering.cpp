@@ -1069,7 +1069,11 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
   if (!Subtarget->hasUnalignedScratchAccess() &&
       (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ||
        AddrSpace == AMDGPUAS::FLAT_ADDRESS)) {
-    return false;
+    bool AlignedBy4 = Align >= 4;
+    if (IsFast)
+      *IsFast = AlignedBy4;
+
+    return AlignedBy4;
   }
 
   if (Subtarget->hasUnalignedBufferAccess()) {

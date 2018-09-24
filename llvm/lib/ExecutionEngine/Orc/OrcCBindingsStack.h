@@ -244,14 +244,14 @@ public:
         CXXRuntimeOverrides(
             [this](const std::string &S) { return mangle(S); }) {}
 
-  LLVMOrcErrorCode shutdown() {
+  Error shutdown() {
     // Run any destructors registered with __cxa_atexit.
     CXXRuntimeOverrides.runDestructors();
     // Run any IR destructors.
     for (auto &DtorRunner : IRStaticDestructorRunners)
       if (auto Err = DtorRunner.runViaLayer(*this))
-        return mapError(std::move(Err));
-    return LLVMOrcErrSuccess;
+        return Err;
+    return Error::success();
   }
 
   std::string mangle(StringRef Name) {
@@ -268,35 +268,27 @@ public:
     return reinterpret_cast<PtrTy>(static_cast<uintptr_t>(Addr));
   }
 
-
-  LLVMOrcErrorCode
-  createLazyCompileCallback(JITTargetAddress &RetAddr,
-                            LLVMOrcLazyCompileCallbackFn Callback,
+  Expected<JITTargetAddress>
+  createLazyCompileCallback(LLVMOrcLazyCompileCallbackFn Callback,
                             void *CallbackCtx) {
     auto WrappedCallback = [=]() -> JITTargetAddress {
       return Callback(wrap(this), CallbackCtx);
     };
 
-    if (auto CCAddr = CCMgr->getCompileCallback(std::move(WrappedCallback))) {
-      RetAddr = *CCAddr;
-      return LLVMOrcErrSuccess;
-    } else
-      return mapError(CCAddr.takeError());
+    return CCMgr->getCompileCallback(std::move(WrappedCallback));
   }
 
-  LLVMOrcErrorCode createIndirectStub(StringRef StubName,
-                                      JITTargetAddress Addr) {
-    return mapError(
-        IndirectStubsMgr->createStub(StubName, Addr, JITSymbolFlags::Exported));
+  Error createIndirectStub(StringRef StubName, JITTargetAddress Addr) {
+    return IndirectStubsMgr->createStub(StubName, Addr,
+                                        JITSymbolFlags::Exported);
   }
 
-  LLVMOrcErrorCode setIndirectStubPointer(StringRef Name,
-                                          JITTargetAddress Addr) {
-    return mapError(IndirectStubsMgr->updatePointer(Name, Addr));
+  Error setIndirectStubPointer(StringRef Name, JITTargetAddress Addr) {
+    return IndirectStubsMgr->updatePointer(Name, Addr);
   }
   template <typename LayerT>
-  LLVMOrcErrorCode
-  addIRModule(orc::VModuleKey &RetKey, LayerT &Layer, std::unique_ptr<Module> M,
+  Expected<orc::VModuleKey>
+  addIRModule(LayerT &Layer, std::unique_ptr<Module> M,
               std::unique_ptr<RuntimeDyld::MemoryManager> MemMgr,
               LLVMOrcSymbolResolverFn ExternalResolver,
               void *ExternalResolverCtx) {
@@ -314,72 +306,70 @@ public:
       DtorNames.push_back(mangle(Dtor.Func->getName()));
 
     // Add the module to the JIT.
-    RetKey = ES.allocateVModule();
-    Resolvers[RetKey] = std::make_shared<CBindingsResolver>(
-        *this, ExternalResolver, ExternalResolverCtx);
-    if (auto Err = Layer.addModule(RetKey, std::move(M)))
-      return mapError(std::move(Err));
+    auto K = ES.allocateVModule();
+    Resolvers[K] = std::make_shared<CBindingsResolver>(*this, ExternalResolver,
+                                                       ExternalResolverCtx);
+    if (auto Err = Layer.addModule(K, std::move(M)))
+      return std::move(Err);
 
-    KeyLayers[RetKey] = detail::createGenericLayer(Layer);
+    KeyLayers[K] = detail::createGenericLayer(Layer);
 
     // Run the static constructors, and save the static destructor runner for
     // execution when the JIT is torn down.
-    orc::CtorDtorRunner<OrcCBindingsStack> CtorRunner(std::move(CtorNames),
-                                                      RetKey);
+    orc::CtorDtorRunner<OrcCBindingsStack> CtorRunner(std::move(CtorNames), K);
     if (auto Err = CtorRunner.runViaLayer(*this))
-      return mapError(std::move(Err));
+      return std::move(Err);
 
-    IRStaticDestructorRunners.emplace_back(std::move(DtorNames), RetKey);
+    IRStaticDestructorRunners.emplace_back(std::move(DtorNames), K);
 
-    return LLVMOrcErrSuccess;
+    return K;
   }
 
-  LLVMOrcErrorCode addIRModuleEager(orc::VModuleKey &RetKey,
-                                    std::unique_ptr<Module> M,
-                                    LLVMOrcSymbolResolverFn ExternalResolver,
-                                    void *ExternalResolverCtx) {
-    return addIRModule(RetKey, CompileLayer, std::move(M),
+  Expected<orc::VModuleKey>
+  addIRModuleEager(std::unique_ptr<Module> M,
+                   LLVMOrcSymbolResolverFn ExternalResolver,
+                   void *ExternalResolverCtx) {
+    return addIRModule(CompileLayer, std::move(M),
                        llvm::make_unique<SectionMemoryManager>(),
                        std::move(ExternalResolver), ExternalResolverCtx);
   }
 
-  LLVMOrcErrorCode addIRModuleLazy(orc::VModuleKey &RetKey,
-                                   std::unique_ptr<Module> M,
-                                   LLVMOrcSymbolResolverFn ExternalResolver,
-                                   void *ExternalResolverCtx) {
-    return addIRModule(RetKey, CODLayer, std::move(M),
+  Expected<orc::VModuleKey>
+  addIRModuleLazy(std::unique_ptr<Module> M,
+                  LLVMOrcSymbolResolverFn ExternalResolver,
+                  void *ExternalResolverCtx) {
+    return addIRModule(CODLayer, std::move(M),
                        llvm::make_unique<SectionMemoryManager>(),
                        std::move(ExternalResolver), ExternalResolverCtx);
   }
 
-  LLVMOrcErrorCode removeModule(orc::VModuleKey K) {
+  Error removeModule(orc::VModuleKey K) {
     // FIXME: Should error release the module key?
     if (auto Err = KeyLayers[K]->removeModule(K))
-      return mapError(std::move(Err));
+      return Err;
     ES.releaseVModule(K);
     KeyLayers.erase(K);
-    return LLVMOrcErrSuccess;
+    return Error::success();
   }
 
-  LLVMOrcErrorCode addObject(orc::VModuleKey &RetKey,
-                             std::unique_ptr<MemoryBuffer> ObjBuffer,
-                             LLVMOrcSymbolResolverFn ExternalResolver,
-                             void *ExternalResolverCtx) {
+  Expected<orc::VModuleKey> addObject(std::unique_ptr<MemoryBuffer> ObjBuffer,
+                                      LLVMOrcSymbolResolverFn ExternalResolver,
+                                      void *ExternalResolverCtx) {
     if (auto Obj = object::ObjectFile::createObjectFile(
             ObjBuffer->getMemBufferRef())) {
 
-      RetKey = ES.allocateVModule();
-      Resolvers[RetKey] = std::make_shared<CBindingsResolver>(
+      auto K = ES.allocateVModule();
+      Resolvers[K] = std::make_shared<CBindingsResolver>(
           *this, ExternalResolver, ExternalResolverCtx);
 
-      if (auto Err = ObjectLayer.addObject(RetKey, std::move(ObjBuffer)))
-        return mapError(std::move(Err));
+      if (auto Err = ObjectLayer.addObject(K, std::move(ObjBuffer)))
+        return std::move(Err);
 
-      KeyLayers[RetKey] = detail::createGenericLayer(ObjectLayer);
+      KeyLayers[K] = detail::createGenericLayer(ObjectLayer);
 
-      return LLVMOrcErrSuccess;
+      return K;
     } else
-      return mapError(Obj.takeError());
+      return Obj.takeError();
   }
 
   JITSymbol findSymbol(const std::string &Name,
@@ -395,45 +385,39 @@ public:
     return KeyLayers[K]->findSymbolIn(K, mangle(Name), ExportedSymbolsOnly);
   }
 
-  LLVMOrcErrorCode findSymbolAddress(JITTargetAddress &RetAddr,
-                                     const std::string &Name,
-                                     bool ExportedSymbolsOnly) {
-    RetAddr = 0;
+  Expected<JITTargetAddress> findSymbolAddress(const std::string &Name,
+                                               bool ExportedSymbolsOnly) {
     if (auto Sym = findSymbol(Name, ExportedSymbolsOnly)) {
       // Successful lookup, non-null symbol:
-      if (auto AddrOrErr = Sym.getAddress()) {
-        RetAddr = *AddrOrErr;
-        return LLVMOrcErrSuccess;
-      } else
-        return mapError(AddrOrErr.takeError());
+      if (auto AddrOrErr = Sym.getAddress())
+        return *AddrOrErr;
+      else
+        return AddrOrErr.takeError();
     } else if (auto Err = Sym.takeError()) {
       // Lookup failure - report error.
-      return mapError(std::move(Err));
+      return std::move(Err);
     }
-    // Otherwise we had a successful lookup but got a null result. We already
-    // set RetAddr to '0' above, so just return success.
-    return LLVMOrcErrSuccess;
+
+    // No symbol not found. Return 0.
+    return 0;
   }
 
-  LLVMOrcErrorCode findSymbolAddressIn(JITTargetAddress &RetAddr,
-                                       orc::VModuleKey K,
-                                       const std::string &Name,
-                                       bool ExportedSymbolsOnly) {
-    RetAddr = 0;
+  Expected<JITTargetAddress> findSymbolAddressIn(orc::VModuleKey K,
+                                                 const std::string &Name,
+                                                 bool ExportedSymbolsOnly) {
     if (auto Sym = findSymbolIn(K, Name, ExportedSymbolsOnly)) {
       // Successful lookup, non-null symbol:
-      if (auto AddrOrErr = Sym.getAddress()) {
-        RetAddr = *AddrOrErr;
-        return LLVMOrcErrSuccess;
-      } else
-        return mapError(AddrOrErr.takeError());
+      if (auto AddrOrErr = Sym.getAddress())
+        return *AddrOrErr;
+      else
+        return AddrOrErr.takeError();
     } else if (auto Err = Sym.takeError()) {
       // Lookup failure - report error.
-      return mapError(std::move(Err));
+      return std::move(Err);
     }
-    // Otherwise we had a successful lookup but got a null result. We already
-    // set RetAddr to '0' above, so just return success.
-    return LLVMOrcErrSuccess;
+
+    // Symbol not found. Return 0.
+    return 0;
   }
 
   const std::string &getErrorMessage() const { return ErrMsg; }
@@ -456,18 +440,6 @@ public:
   }
 
 private:
-
-  LLVMOrcErrorCode mapError(Error Err) {
-    LLVMOrcErrorCode Result = LLVMOrcErrSuccess;
-    handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
-      // Handler of last resort.
-      Result = LLVMOrcErrGeneric;
-      ErrMsg = "";
-      raw_string_ostream ErrStream(ErrMsg);
-      EIB.log(ErrStream);
-    });
-    return Result;
-  }
 
   void reportError(Error Err) {
     // FIXME: Report errors on the execution session.

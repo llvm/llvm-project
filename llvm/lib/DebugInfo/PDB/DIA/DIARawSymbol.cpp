@@ -245,7 +245,7 @@ void DIARawSymbol::dump(raw_ostream &OS, int Indent,
   RAW_METHOD_DUMP(OS, baseSymbolId);
   RAW_METHOD_DUMP_AS(OS, baseType, PDB_BuiltinType);
   RAW_METHOD_DUMP(OS, bitPosition);
-  RAW_METHOD_DUMP(OS, callingConvention);
+  RAW_METHOD_DUMP_AS(OS, callingConvention, PDB_CallingConv);
   RAW_ID_METHOD_DUMP(OS, classParentId, Session, PdbSymbolIdField::ClassParent,
                      ShowIdFields, RecurseIdFields);
   RAW_METHOD_DUMP(OS, compilerName);

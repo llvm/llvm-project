@@ -13,19 +13,19 @@
 # 0x11028 - 24 = 0x20010
 # CHECK:      Disassembly of section .text:
 # CHECK-NEXT: _foo:
-# CHECK-NEXT:  20000: {{.*}} nop
-# CHECK-NEXT:  20004: {{.*}} nop
-# CHECK-NEXT:  20008: {{.*}} nop
-# CHECK-NEXT:  2000c: {{.*}} nop
+# CHECK-NEXT:  210000: {{.*}} nop
+# CHECK-NEXT:  210004: {{.*}} nop
+# CHECK-NEXT:  210008: {{.*}} nop
+# CHECK-NEXT:  21000c: {{.*}} nop
 # CHECK:      _bar:
-# CHECK-NEXT:  20010: {{.*}} nop
-# CHECK-NEXT:  20014: {{.*}} nop
-# CHECK-NEXT:  20018: {{.*}} nop
+# CHECK-NEXT:  210010: {{.*}} nop
+# CHECK-NEXT:  210014: {{.*}} nop
+# CHECK-NEXT:  210018: {{.*}} nop
 # CHECK:      _start:
-# CHECK-NEXT:  2001c: {{.*}} tbnz w3, #15, #-28
-# CHECK-NEXT:  20020: {{.*}} tbnz w3, #15, #-16
-# CHECK-NEXT:  20024: {{.*}} tbz x6, #45, #-36
-# CHECK-NEXT:  20028: {{.*}} tbz x6, #45, #-24
+# CHECK-NEXT:  21001c: {{.*}} tbnz w3, #15, #-28
+# CHECK-NEXT:  210020: {{.*}} tbnz w3, #15, #-16
+# CHECK-NEXT:  210024: {{.*}} tbz x6, #45, #-36
+# CHECK-NEXT:  210028: {{.*}} tbz x6, #45, #-24
 
 #DSOREL:      Section {
 #DSOREL:        Index:

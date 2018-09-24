@@ -67,6 +67,10 @@ AArch64::AArch64() {
   PltHeaderSize = 32;
   DefaultMaxPageSize = 65536;
 
+  // Align to the 2 MiB page size (known as a superpage or huge page).
+  // FreeBSD automatically promotes 2 MiB-aligned allocations.
+  DefaultImageBase = 0x200000;
+
   // It doesn't seem to be documented anywhere, but tls on aarch64 uses variant
   // 1 of the tls structures and the tcb size is 16.
   TcbSize = 16;

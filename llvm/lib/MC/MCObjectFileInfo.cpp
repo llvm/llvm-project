@@ -435,22 +435,22 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
 
   // Fission Sections
   DwarfInfoDWOSection =
-      Ctx->getELFSection(".debug_info.dwo", DebugSecType, 0);
+      Ctx->getELFSection(".debug_info.dwo", DebugSecType, ELF::SHF_EXCLUDE);
   DwarfTypesDWOSection =
-      Ctx->getELFSection(".debug_types.dwo", DebugSecType, 0);
+      Ctx->getELFSection(".debug_types.dwo", DebugSecType, ELF::SHF_EXCLUDE);
   DwarfAbbrevDWOSection =
-      Ctx->getELFSection(".debug_abbrev.dwo", DebugSecType, 0);
-  DwarfStrDWOSection =
-      Ctx->getELFSection(".debug_str.dwo", DebugSecType,
-                         ELF::SHF_MERGE | ELF::SHF_STRINGS, 1, "");
+      Ctx->getELFSection(".debug_abbrev.dwo", DebugSecType, ELF::SHF_EXCLUDE);
+  DwarfStrDWOSection = Ctx->getELFSection(
+      ".debug_str.dwo", DebugSecType,
+      ELF::SHF_MERGE | ELF::SHF_STRINGS | ELF::SHF_EXCLUDE, 1, "");
   DwarfLineDWOSection =
-      Ctx->getELFSection(".debug_line.dwo", DebugSecType, 0);
+      Ctx->getELFSection(".debug_line.dwo", DebugSecType, ELF::SHF_EXCLUDE);
   DwarfLocDWOSection =
-      Ctx->getELFSection(".debug_loc.dwo", DebugSecType, 0);
-  DwarfStrOffDWOSection =
-      Ctx->getELFSection(".debug_str_offsets.dwo", DebugSecType, 0);
+      Ctx->getELFSection(".debug_loc.dwo", DebugSecType, ELF::SHF_EXCLUDE);
+  DwarfStrOffDWOSection = Ctx->getELFSection(".debug_str_offsets.dwo",
+                                             DebugSecType, ELF::SHF_EXCLUDE);
   DwarfRnglistsDWOSection =
-      Ctx->getELFSection(".debug_rnglists.dwo", DebugSecType, 0);
+      Ctx->getELFSection(".debug_rnglists.dwo", DebugSecType, ELF::SHF_EXCLUDE);
 
   // DWP Sections
   DwarfCUIndexSection =

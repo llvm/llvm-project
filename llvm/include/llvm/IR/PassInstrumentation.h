@@ -68,7 +68,7 @@ class PreservedAnalyses;
 /// PassInstrumentation to pass control to the registered callbacks.
 class PassInstrumentationCallbacks {
 public:
-  // Before/After Pass callbacks accept IRUnits, so they need to take them
+  // Before/After callbacks accept IRUnits, so they need to take them
   // as pointers, wrapped with llvm::Any
   using BeforePassFunc = bool(StringRef, Any);
   using AfterPassFunc = void(StringRef, Any);
@@ -90,11 +90,25 @@ public:
     AfterPassCallbacks.emplace_back(std::move(C));
   }
 
+  template <typename CallableT>
+  void registerBeforeAnalysisCallback(CallableT C) {
+    BeforeAnalysisCallbacks.emplace_back(std::move(C));
+  }
+
+  template <typename CallableT>
+  void registerAfterAnalysisCallback(CallableT C) {
+    AfterAnalysisCallbacks.emplace_back(std::move(C));
+  }
+
 private:
   friend class PassInstrumentation;
 
   SmallVector<llvm::unique_function<BeforePassFunc>, 4> BeforePassCallbacks;
   SmallVector<llvm::unique_function<AfterPassFunc>, 4> AfterPassCallbacks;
+  SmallVector<llvm::unique_function<BeforeAnalysisFunc>, 4>
+      BeforeAnalysisCallbacks;
+  SmallVector<llvm::unique_function<AfterAnalysisFunc>, 4>
+      AfterAnalysisCallbacks;
 };
 
 /// This class provides instrumentation entry points for the Pass Manager,
@@ -131,6 +145,24 @@ public:
     if (Callbacks)
       for (auto &C : Callbacks->AfterPassCallbacks)
         C(Pass.name(), llvm::Any(&IR));
+  }
+
+  /// BeforeAnalysis instrumentation point - takes \p Analysis instance
+  /// to be executed and constant reference to IR it operates on.
+  template <typename IRUnitT, typename PassT>
+  void runBeforeAnalysis(const PassT &Analysis, const IRUnitT &IR) const {
+    if (Callbacks)
+      for (auto &C : Callbacks->BeforeAnalysisCallbacks)
+        C(Analysis.name(), llvm::Any(&IR));
+  }
+
+  /// AfterAnalysis instrumentation point - takes \p Analysis instance
+  /// that has just been executed and constant reference to IR it operated on.
+  template <typename IRUnitT, typename PassT>
+  void runAfterAnalysis(const PassT &Analysis, const IRUnitT &IR) const {
+    if (Callbacks)
+      for (auto &C : Callbacks->AfterAnalysisCallbacks)
+        C(Analysis.name(), llvm::Any(&IR));
   }
 
   /// Handle invalidation from the pass manager when PassInstrumentation
