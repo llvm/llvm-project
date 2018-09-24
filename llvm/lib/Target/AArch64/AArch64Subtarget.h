@@ -142,6 +142,9 @@ protected:
   // ReserveXRegister[i] - X#i is not available as a general purpose register.
   BitVector ReserveXRegister;
 
+  // CustomCallUsedXRegister[i] - X#i call saved.
+  BitVector CustomCallSavedXRegs;
+
   bool IsLittle;
 
   /// TargetTriple - What processor and OS we're targeting.
@@ -229,6 +232,10 @@ public:
 
   bool isXRegisterReserved(size_t i) const { return ReserveXRegister[i]; }
   unsigned getNumXRegisterReserved() const { return ReserveXRegister.count(); }
+  bool isXRegCustomCalleeSaved(size_t i) const {
+    return CustomCallSavedXRegs[i];
+  }
+  bool hasCustomCallingConv() const { return CustomCallSavedXRegs.any(); }
   bool hasFPARMv8() const { return HasFPARMv8; }
   bool hasNEON() const { return HasNEON; }
   bool hasCrypto() const { return HasCrypto; }

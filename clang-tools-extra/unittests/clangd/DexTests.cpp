@@ -583,6 +583,20 @@ TEST(DexTest, Lookup) {
   EXPECT_THAT(lookup(*I, SymbolID("ns::nonono")), UnorderedElementsAre());
 }
 
+TEST(DexTest, SymbolIndexOptionsFilter) {
+  auto CodeCompletionSymbol = symbol("Completion");
+  auto NonCodeCompletionSymbol = symbol("NoCompletion");
+  CodeCompletionSymbol.Flags = Symbol::SymbolFlag::IndexedForCodeCompletion;
+  NonCodeCompletionSymbol.Flags = Symbol::SymbolFlag::None;
+  std::vector<Symbol> Symbols{CodeCompletionSymbol, NonCodeCompletionSymbol};
+  Dex I(Symbols, URISchemes);
+  FuzzyFindRequest Req;
+  Req.RestrictForCodeCompletion = false;
+  EXPECT_THAT(match(I, Req), ElementsAre("Completion", "NoCompletion"));
+  Req.RestrictForCodeCompletion = true;
+  EXPECT_THAT(match(I, Req), ElementsAre("Completion"));
+}
+
 TEST(DexTest, ProximityPathsBoosting) {
   auto RootSymbol = symbol("root::abc");
   RootSymbol.CanonicalDeclaration.FileURI = "unittest:///file.h";

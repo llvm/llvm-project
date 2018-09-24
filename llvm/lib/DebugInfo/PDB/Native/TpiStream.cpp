@@ -11,9 +11,8 @@
 
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
-#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
-#include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeRecordHelpers.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/Hash.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
@@ -160,35 +159,6 @@ void TpiStream::buildHashMap() {
 }
 
 bool TpiStream::supportsTypeLookup() const { return !HashMap.empty(); }
-
-template <typename RecordT> static ClassOptions getUdtOptions(CVType CVT) {
-  RecordT Record;
-  if (auto EC = TypeDeserializer::deserializeAs<RecordT>(CVT, Record)) {
-    consumeError(std::move(EC));
-    return ClassOptions::None;
-  }
-  return Record.getOptions();
-}
-
-static bool isUdtForwardRef(CVType CVT) {
-  ClassOptions UdtOptions = ClassOptions::None;
-  switch (CVT.kind()) {
-  case LF_STRUCTURE:
-  case LF_CLASS:
-  case LF_INTERFACE:
-    UdtOptions = getUdtOptions<ClassRecord>(std::move(CVT));
-    break;
-  case LF_ENUM:
-    UdtOptions = getUdtOptions<EnumRecord>(std::move(CVT));
-    break;
-  case LF_UNION:
-    UdtOptions = getUdtOptions<UnionRecord>(std::move(CVT));
-    break;
-  default:
-    return false;
-  }
-  return (UdtOptions & ClassOptions::ForwardReference) != ClassOptions::None;
-}
 
 Expected<TypeIndex>
 TpiStream::findFullDeclForForwardRef(TypeIndex ForwardRefTI) const {

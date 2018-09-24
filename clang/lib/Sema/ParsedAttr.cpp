@@ -82,7 +82,7 @@ void AttributeFactory::deallocate(ParsedAttr *Attr) {
   if (freeListIndex >= FreeLists.size())
     FreeLists.resize(freeListIndex + 1);
 
-#if !NDEBUG
+#ifndef NDEBUG
   // In debug mode, zero out the attribute to help find memory overwriting.
   memset(Attr, 0, size);
 #endif

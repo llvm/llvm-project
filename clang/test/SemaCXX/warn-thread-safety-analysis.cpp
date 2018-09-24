@@ -5481,3 +5481,98 @@ void f() {
   int &i = i; // expected-warning {{reference 'i' is not yet bound to a value when used within its own initialization}}
 }
 }
+
+namespace Derived_Smart_Pointer {
+template <class T>
+class SmartPtr_Derived : public SmartPtr<T> {};
+
+class Foo {
+public:
+  SmartPtr_Derived<Mutex> mu_;
+  int a GUARDED_BY(mu_);
+  int b GUARDED_BY(mu_.get());
+  int c GUARDED_BY(*mu_);
+
+  void Lock()   EXCLUSIVE_LOCK_FUNCTION(mu_);
+  void Unlock() UNLOCK_FUNCTION(mu_);
+
+  void test0() {
+    a = 1;  // expected-warning {{writing variable 'a' requires holding mutex 'mu_' exclusively}}
+    b = 1;  // expected-warning {{writing variable 'b' requires holding mutex 'mu_' exclusively}}
+    c = 1;  // expected-warning {{writing variable 'c' requires holding mutex 'mu_' exclusively}}
+  }
+
+  void test1() {
+    Lock();
+    a = 1;
+    b = 1;
+    c = 1;
+    Unlock();
+  }
+};
+
+class Bar {
+  SmartPtr_Derived<Foo> foo;
+
+  void test0() {
+    foo->a = 1;        // expected-warning {{writing variable 'a' requires holding mutex 'foo->mu_' exclusively}}
+    (*foo).b = 1;      // expected-warning {{writing variable 'b' requires holding mutex 'foo->mu_' exclusively}}
+    foo.get()->c = 1;  // expected-warning {{writing variable 'c' requires holding mutex 'foo->mu_' exclusively}}
+  }
+
+  void test1() {
+    foo->Lock();
+    foo->a = 1;
+    foo->Unlock();
+
+    foo->mu_->Lock();
+    foo->b = 1;
+    foo->mu_->Unlock();
+
+    MutexLock lock(foo->mu_.get());
+    foo->c = 1;
+  }
+};
+
+class PointerGuard {
+  Mutex mu1;
+  Mutex mu2;
+  SmartPtr_Derived<int> i GUARDED_BY(mu1) PT_GUARDED_BY(mu2);
+
+  void test0() {
+    i.get();  // expected-warning {{reading variable 'i' requires holding mutex 'mu1'}}
+    *i = 2;   // expected-warning {{reading variable 'i' requires holding mutex 'mu1'}} \
+              // expected-warning {{reading the value pointed to by 'i' requires holding mutex 'mu2'}}
+
+  }
+
+  void test1() {
+    mu1.Lock();
+
+    i.get();
+    *i = 2;   // expected-warning {{reading the value pointed to by 'i' requires holding mutex 'mu2'}}
+
+    mu1.Unlock();
+  }
+
+  void test2() {
+    mu2.Lock();
+
+    i.get();  // expected-warning {{reading variable 'i' requires holding mutex 'mu1'}}
+    *i = 2;   // expected-warning {{reading variable 'i' requires holding mutex 'mu1'}}
+
+    mu2.Unlock();
+  }
+
+  void test3() {
+    mu1.Lock();
+    mu2.Lock();
+
+    i.get();
+    *i = 2;
+
+    mu2.Unlock();
+    mu1.Unlock();
+  }
+};
+}

@@ -396,14 +396,61 @@
 // RUN: %clang -target aarch64_be -mbig-endian -march=armv8.2-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-BE %s
 // GENERICV82A-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8.2a"
 
+// RUN: %clang -target aarch64 -march=armv8.2a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-NO-FP16FML %s
+// RUN: %clang -target aarch64 -march=armv8.2-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-NO-FP16FML %s
+// GENERICV82A-NO-FP16FML-NOT: "-target-feature" "{{[+-]}}fp16fml"
+// GENERICV82A-NO-FP16FML-NOT: "-target-feature" "{{[+-]}}fullfp16"
+
+// RUN: %clang -target aarch64 -march=armv8.2a+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-FP16 %s
 // RUN: %clang -target aarch64 -march=armv8.2-a+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-FP16 %s
 // GENERICV82A-FP16: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8.2a" "-target-feature" "+fullfp16"
+// GENERICV82A-FP16-NOT: "-target-feature" "{{[+-]}}fp16fml"
+// GENERICV82A-FP16-SAME: {{$}}
 
 // RUN: %clang -target aarch64 -march=armv8.2-a+profile -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-SPE %s
 // GENERICV82A-SPE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8.2a" "-target-feature" "+spe"
-//
+
+// RUN: %clang -target aarch64 -march=armv8a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV8A-NO-FP16FML %s
+// RUN: %clang -target aarch64 -march=armv8-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV8A-NO-FP16FML %s
+// GENERICV8A-NO-FP16FML-NOT: "-target-feature" "{{[+-]}}fp16fml"
+// GENERICV8A-NO-FP16FML-NOT: "-target-feature" "{{[+-]}}fullfp16"
+
+// RUN: %clang -target aarch64 -march=armv8a+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV8A-FP16 %s
+// RUN: %clang -target aarch64 -march=armv8-a+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV8A-FP16 %s
+// GENERICV8A-FP16-NOT: "-target-feature" "{{[+-]}}fp16fml"
+// GENERICV8A-FP16: "-target-feature" "+fullfp16"
+// GENERICV8A-FP16-NOT: "-target-feature" "{{[+-]}}fp16fml"
+// GENERICV8A-FP16-SAME: {{$}}
+
+// RUN: %clang -target aarch64 -march=armv8a+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV8A-FP16FML %s
+// RUN: %clang -target aarch64 -march=armv8-a+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV8A-FP16FML %s
+// GENERICV8A-FP16FML: "-target-feature" "+fp16fml" "-target-feature" "+fullfp16"
+
+// RUN: %clang -target aarch64 -march=armv8.2a+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-FP16FML %s
+// RUN: %clang -target aarch64 -march=armv8.2-a+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-FP16FML %s
+// GENERICV82A-FP16FML: "-target-feature" "+fp16fml" "-target-feature" "+fullfp16"
+
+// RUN: %clang -target aarch64 -march=armv8.2a+fp16+nofp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-FP16-NO-FP16FML %s
+// RUN: %clang -target aarch64 -march=armv8.2-a+fp16+nofp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-FP16-NO-FP16FML %s
+// GENERICV82A-FP16-NO-FP16FML: "-target-feature" "+fullfp16" "-target-feature" "-fp16fml"
+
+// RUN: %clang -target aarch64 -march=armv8.2a+nofp16fml+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-NO-FP16FML-FP16 %s
+// RUN: %clang -target aarch64 -march=armv8.2-a+nofp16fml+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-NO-FP16FML-FP16 %s
+// GENERICV82A-NO-FP16FML-FP16: "-target-feature" "-fp16fml" "-target-feature" "+fullfp16"
+
+// RUN: %clang -target aarch64 -march=armv8.2a+fp16fml+nofp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-FP16FML-NO-FP16 %s
+// RUN: %clang -target aarch64 -march=armv8.2-a+fp16fml+nofp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-FP16FML-NO-FP16 %s
+// GENERICV82A-FP16FML-NO-FP16: "-target-feature" "-fullfp16" "-target-feature" "-fp16fml"
+
+// RUN: %clang -target aarch64 -march=armv8.2a+nofp16+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-NO-FP16-FP16FML %s
+// RUN: %clang -target aarch64 -march=armv8.2-a+nofp16+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-NO-FP16-FP16FML %s
+// GENERICV82A-NO-FP16-FP16FML: "-target-feature" "+fp16fml" "-target-feature" "+fullfp16"
+
+// RUN: %clang -target aarch64 -march=armv8.2a+fp16+profile -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-FP16-SPE %s
 // RUN: %clang -target aarch64 -march=armv8.2-a+fp16+profile -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV82A-FP16-SPE %s
 // GENERICV82A-FP16-SPE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8.2a" "-target-feature" "+fullfp16" "-target-feature" "+spe"
+// GENERICV82A-FP16-SPE-NOT:  "-target-feature" "{{[+-]}}fp16fml"
+// GENERICV82A-FP16-SPE-SAME: {{$}}
 
 // RUN: %clang -target aarch64 -march=armv8.3a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A %s
 // RUN: %clang -target aarch64 -march=armv8.3-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A %s
@@ -421,8 +468,34 @@
 // RUN: %clang -target aarch64_be -mbig-endian -march=armv8.3-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A-BE %s
 // GENERICV83A-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8.3a"
 
+// RUN: %clang -target aarch64 -march=armv8.3a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A-NO-FP16FML %s
+// RUN: %clang -target aarch64 -march=armv8.3-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A-NO-FP16FML %s
+// GENERICV83A-NO-FP16FML-NOT: "-target-feature" "{{[+-]}}fp16fml"
+// GENERICV83A-NO-FP16FML-NOT: "-target-feature" "{{[+-]}}fullfp16"
+
+// RUN: %clang -target aarch64 -march=armv8.3a+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A-FP16 %s
 // RUN: %clang -target aarch64 -march=armv8.3-a+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A-FP16 %s
 // GENERICV83A-FP16: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8.3a" "-target-feature" "+fullfp16"
+
+// RUN: %clang -target aarch64 -march=armv8.3a+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A-FP16FML %s
+// RUN: %clang -target aarch64 -march=armv8.3-a+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A-FP16FML %s
+// GENERICV83A-FP16FML: "-target-feature" "+fp16fml" "-target-feature" "+fullfp16"
+
+// RUN: %clang -target aarch64 -march=armv8.3a+fp16+nofp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A-FP16-NO-FP16FML %s
+// RUN: %clang -target aarch64 -march=armv8.3-a+fp16+nofp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A-FP16-NO-FP16FML %s
+// GENERICV83A-FP16-NO-FP16FML: "-target-feature" "+fullfp16" "-target-feature" "-fp16fml"
+
+// RUN: %clang -target aarch64 -march=armv8.3a+nofp16fml+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A-NO-FP16FML-FP16 %s
+// RUN: %clang -target aarch64 -march=armv8.3-a+nofp16fml+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A-NO-FP16FML-FP16 %s
+// GENERICV83A-NO-FP16FML-FP16: "-target-feature" "-fp16fml" "-target-feature" "+fullfp16"
+
+// RUN: %clang -target aarch64 -march=armv8.3a+fp16fml+nofp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A-FP16FML-NO-FP16 %s
+// RUN: %clang -target aarch64 -march=armv8.3-a+fp16fml+nofp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A-FP16FML-NO-FP16 %s
+// GENERICV83A-FP16FML-NO-FP16: "-target-feature" "-fullfp16" "-target-feature" "-fp16fml"
+
+// RUN: %clang -target aarch64 -march=armv8.3a+nofp16+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A-NO-FP16-FP16FML %s
+// RUN: %clang -target aarch64 -march=armv8.3-a+nofp16+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV83A-NO-FP16-FP16FML %s
+// GENERICV83A-NO-FP16-FP16FML: "-target-feature" "+fp16fml" "-target-feature" "+fullfp16"
 
 // RUN: %clang -target aarch64 -march=armv8.4a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A %s
 // RUN: %clang -target aarch64 -march=armv8.4-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A %s
@@ -440,21 +513,40 @@
 // RUN: %clang -target aarch64_be -mbig-endian -march=armv8.4-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A-BE %s
 // GENERICV84A-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8.4a"
 
-// RUN: %clang -target aarch64 -march=armv8.4-a+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A-FP16 %s
-// GENERICV84A-FP16: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8.4a" "-target-feature" "+fullfp16"
+// RUN: %clang -target aarch64 -march=armv8.4a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A-NO-FP16FML %s
+// RUN: %clang -target aarch64 -march=armv8.4-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A-NO-FP16FML %s
+// GENERICV84A-NO-FP16FML-NOT: "-target-feature" "{{[+-]}}fp16fml"
+// GENERICV84A-NO-FP16FML-NOT: "-target-feature" "{{[+-]}}fullfp16"
 
-// fullfp16 is not specified by default for v8.2a, and can be enabled by +fp16
-// RUN: %clang -target aarch64 -march=armv8.2a  -### -c %s 2>&1 | FileCheck -check-prefix=V82ANOFP16 -check-prefix=GENERICV82A %s
-// RUN: %clang -target aarch64 -march=armv8.2-a -### -c %s 2>&1 | FileCheck -check-prefix=V82ANOFP16 -check-prefix=GENERICV82A %s
-// V82ANOFP16-NOT: "-target-feature" "-fullfp16"
-// V82ANOFP16-NOT: "-target-feature" "+fullfp16"
-// RUN: %clang -target aarch64 -march=armv8.2a+fp16  -### -c %s 2>&1 | FileCheck -check-prefix=V82AFP16 -check-prefix=GENERICV82A %s
-// RUN: %clang -target aarch64 -march=armv8.2-a+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=V82AFP16 -check-prefix=GENERICV82A %s
-// V82AFP16: "-target-feature" "+fullfp16"
+// RUN: %clang -target aarch64 -march=armv8.4a+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A-FP16 %s
+// RUN: %clang -target aarch64 -march=armv8.4-a+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A-FP16 %s
+// GENERICV84A-FP16: "-target-feature" "+fullfp16" "-target-feature" "+fp16fml"
+
+// RUN: %clang -target aarch64 -march=armv8.4a+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A-FP16FML %s
+// RUN: %clang -target aarch64 -march=armv8.4-a+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A-FP16FML %s
+// GENERICV84A-FP16FML: "-target-feature" "+fp16fml" "-target-feature" "+fullfp16"
+
+// RUN: %clang -target aarch64 -march=armv8.4a+fp16+nofp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A-FP16-NO-FP16FML %s
+// RUN: %clang -target aarch64 -march=armv8.4-a+fp16+nofp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A-FP16-NO-FP16FML %s
+// GENERICV84A-FP16-NO-FP16FML: "-target-feature" "+fullfp16" "-target-feature" "-fp16fml"
+
+// RUN: %clang -target aarch64 -march=armv8.4a+nofp16fml+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A-NO-FP16FML-FP16 %s
+// RUN: %clang -target aarch64 -march=armv8.4-a+nofp16fml+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A-NO-FP16FML-FP16 %s
+// GENERICV84A-NO-FP16FML-FP16: "-target-feature" "+fullfp16" "-target-feature" "+fp16fml"
+
+// RUN: %clang -target aarch64 -march=armv8.4a+fp16fml+nofp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A-FP16FML-NO-FP16 %s
+// RUN: %clang -target aarch64 -march=armv8.4-a+fp16fml+nofp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A-FP16FML-NO-FP16 %s
+// GENERICV84A-FP16FML-NO-FP16: "-target-feature" "-fullfp16" "-target-feature" "-fp16fml"
+
+// RUN: %clang -target aarch64 -march=armv8.4a+nofp16+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A-NO-FP16-FP16FML %s
+// RUN: %clang -target aarch64 -march=armv8.4-a+nofp16+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A-NO-FP16-FP16FML %s
+// GENERICV84A-NO-FP16-FP16FML: "-target-feature" "+fp16fml" "-target-feature" "+fullfp16"
 
 // fullfp16 is off by default for v8a, feature must not be mentioned
 // RUN: %clang -target aarch64 -march=armv8a  -### -c %s 2>&1 | FileCheck -check-prefix=V82ANOFP16 -check-prefix=GENERIC %s
 // RUN: %clang -target aarch64 -march=armv8-a -### -c %s 2>&1 | FileCheck -check-prefix=V82ANOFP16 -check-prefix=GENERIC %s
+// V82ANOFP16-NOT: "-target-feature" "{{[+-]}}fp16fml"
+// V82ANOFP16-NOT: "-target-feature" "{{[+-]}}fullfp16"
 
 // RAS is on by default for v8.2a, but can be disabled by +noras
 // RUN: %clang -target aarch64 -march=armv8.2a  -### -c %s 2>&1 | FileCheck -check-prefix=V82ARAS -check-prefix=GENERICV82A %s

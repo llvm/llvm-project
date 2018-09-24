@@ -1,5 +1,4 @@
-//===- NativeTypePointer.h - info about pointer type ------------------*- C++
-//-*-===//
+//===- NativeTypePointer.h - info about pointer type -------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

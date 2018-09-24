@@ -1140,6 +1140,7 @@ function(add_benchmark benchmark_name)
   add_llvm_executable(${benchmark_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH ${ARGN})
   set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
   set_output_directory(${benchmark_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
+  set_property(TARGET ${benchmark_name} PROPERTY FOLDER "Utils")
   target_link_libraries(${benchmark_name} PRIVATE benchmark)
 endfunction()
 

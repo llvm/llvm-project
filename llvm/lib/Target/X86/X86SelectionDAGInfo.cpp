@@ -170,10 +170,11 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
     InFlag = Chain.getValue(1);
   }
 
-  Chain = DAG.getCopyToReg(Chain, dl, Subtarget.is64Bit() ? X86::RCX : X86::ECX,
+  bool Use64BitRegs = Subtarget.isTarget64BitLP64();
+  Chain = DAG.getCopyToReg(Chain, dl, Use64BitRegs ? X86::RCX : X86::ECX,
                            Count, InFlag);
   InFlag = Chain.getValue(1);
-  Chain = DAG.getCopyToReg(Chain, dl, Subtarget.is64Bit() ? X86::RDI : X86::EDI,
+  Chain = DAG.getCopyToReg(Chain, dl, Use64BitRegs ? X86::RDI : X86::EDI,
                            Dst, InFlag);
   InFlag = Chain.getValue(1);
 

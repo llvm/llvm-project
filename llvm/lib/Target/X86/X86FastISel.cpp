@@ -3744,21 +3744,13 @@ unsigned X86FastISel::X86MaterializeInt(const ConstantInt *CI, MVT VT) {
   case MVT::i32: Opc = X86::MOV32ri; break;
   case MVT::i64: {
     if (isUInt<32>(Imm))
-      Opc = X86::MOV32ri;
+      Opc = X86::MOV32ri64;
     else if (isInt<32>(Imm))
       Opc = X86::MOV64ri32;
     else
       Opc = X86::MOV64ri;
     break;
   }
-  }
-  if (VT == MVT::i64 && Opc == X86::MOV32ri) {
-    unsigned SrcReg = fastEmitInst_i(Opc, &X86::GR32RegClass, Imm);
-    unsigned ResultReg = createResultReg(&X86::GR64RegClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-            TII.get(TargetOpcode::SUBREG_TO_REG), ResultReg)
-      .addImm(0).addReg(SrcReg).addImm(X86::sub_32bit);
-    return ResultReg;
   }
   return fastEmitInst_i(Opc, TLI.getRegClassFor(VT), Imm);
 }

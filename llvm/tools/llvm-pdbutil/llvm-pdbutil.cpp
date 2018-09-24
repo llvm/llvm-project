@@ -70,6 +70,8 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolPublicSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolThunk.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionArg.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeTypedef.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 #include "llvm/Support/BinaryByteStream.h"
@@ -188,6 +190,9 @@ static cl::opt<bool> UDTs("udts", cl::desc("Dump udt types"),
 static cl::opt<bool> Compilands("compilands",
                                 cl::desc("Dump compiland information"),
                                 cl::sub(DiaDumpSubcommand));
+static cl::opt<bool> Funcsigs("funcsigs",
+                              cl::desc("Dump function signature information"),
+                              cl::sub(DiaDumpSubcommand));
 } // namespace diadump
 
 namespace pretty {
@@ -235,6 +240,8 @@ cl::opt<bool> Classes("classes", cl::desc("Display class types"),
 cl::opt<bool> Enums("enums", cl::desc("Display enum types"),
                     cl::cat(TypeCategory), cl::sub(PrettySubcommand));
 cl::opt<bool> Typedefs("typedefs", cl::desc("Display typedef types"),
+                       cl::cat(TypeCategory), cl::sub(PrettySubcommand));
+cl::opt<bool> Funcsigs("funcsigs", cl::desc("Display function signatures"),
                        cl::cat(TypeCategory), cl::sub(PrettySubcommand));
 cl::opt<SymbolSortMode> SymbolOrder(
     "symbol-order", cl::desc("symbol sort order"),
@@ -969,6 +976,21 @@ static void dumpInjectedSources(LinePrinter &Printer, IPDBSession &Session) {
   }
 }
 
+template <typename OuterT, typename ChildT>
+void diaDumpChildren(PDBSymbol &Outer, PdbSymbolIdField Ids,
+                     PdbSymbolIdField Recurse) {
+  OuterT *ConcreteOuter = dyn_cast<OuterT>(&Outer);
+  if (!ConcreteOuter)
+    return;
+
+  auto Children = ConcreteOuter->template findAllChildren<ChildT>();
+  while (auto Child = Children->getNext()) {
+    outs() << "  {";
+    Child->defaultDump(outs(), 4, Ids, Recurse);
+    outs() << "\n  }\n";
+  }
+}
+
 static void dumpDia(StringRef Path) {
   std::unique_ptr<IPDBSession> Session;
 
@@ -986,6 +1008,10 @@ static void dumpDia(StringRef Path) {
     SymTypes.push_back(PDB_SymType::Enum);
   if (opts::diadump::Pointers)
     SymTypes.push_back(PDB_SymType::PointerType);
+  if (opts::diadump::UDTs)
+    SymTypes.push_back(PDB_SymType::UDT);
+  if (opts::diadump::Funcsigs)
+    SymTypes.push_back(PDB_SymType::FunctionSig);
 
   PdbSymbolIdField Ids = opts::diadump::NoSymIndexIds ? PdbSymbolIdField::None
                                                       : PdbSymbolIdField::All;
@@ -1000,14 +1026,8 @@ static void dumpDia(StringRef Path) {
     while (auto Child = Children->getNext()) {
       outs() << "{";
       Child->defaultDump(outs(), 2, Ids, Recurse);
-      if (auto Enum = dyn_cast<PDBSymbolTypeEnum>(Child.get())) {
-        auto Enumerators = Enum->findAllChildren<PDBSymbolData>();
-        while (auto Enumerator = Enumerators->getNext()) {
-          outs() << "  {";
-          Enumerator->defaultDump(outs(), 4, Ids, Recurse);
-          outs() << "\n  }\n";
-        }
-      }
+
+      diaDumpChildren<PDBSymbolTypeEnum, PDBSymbolData>(*Child, Ids, Recurse);
       outs() << "\n}\n";
     }
   }
@@ -1158,7 +1178,8 @@ static void dumpPretty(StringRef Path) {
     }
   }
 
-  if (opts::pretty::Classes || opts::pretty::Enums || opts::pretty::Typedefs) {
+  if (opts::pretty::Classes || opts::pretty::Enums || opts::pretty::Typedefs ||
+      opts::pretty::Funcsigs) {
     Printer.NewLine();
     WithColor(Printer, PDB_ColorItem::SectionHeader).get() << "---TYPES---";
     Printer.Indent();

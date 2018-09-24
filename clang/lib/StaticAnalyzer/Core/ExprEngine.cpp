@@ -189,7 +189,7 @@ ExprEngine::ExprEngine(cross_tu::CrossTranslationUnitContext &CTU,
                this),
       SymMgr(StateMgr.getSymbolManager()),
       svalBuilder(StateMgr.getSValBuilder()), ObjCNoRet(mgr.getASTContext()),
-      ObjCGCEnabled(gcEnabled), BR(mgr, *this),
+      BR(mgr, *this),
       VisitedCallees(VisitedCalleesIn), HowToInline(HowToInlineIn) {
   unsigned TrimInterval = mgr.options.getGraphTrimInterval();
   if (TrimInterval != 0) {
@@ -2957,6 +2957,8 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
   // work.
   static std::string getNodeAttributes(const ExplodedNode *N,
                                        ExplodedGraph *G) {
+    if (N->isSink())
+      return "color=red";
     return {};
   }
 
@@ -2984,6 +2986,17 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
           << Loc.castAs<BlockEntrance>().getBlock()->getBlockID();
       break;
 
+    case ProgramPoint::FunctionExitKind: {
+      auto FEP = Loc.getAs<FunctionExitPoint>();
+      Out << "Function Exit: B"
+          << FEP->getBlock()->getBlockID();
+      if (const ReturnStmt *RS = FEP->getStmt()) {
+        Out << "\\l Return: S" << RS->getID(Context) << "\\l";
+        RS->printPretty(Out, /*helper=*/nullptr, Context.getPrintingPolicy(),
+                       /*Indentation=*/2, /*NewlineSymbol=*/"\\l");
+      }
+      break;
+    }
     case ProgramPoint::BlockExitKind:
       assert(false);
       break;
@@ -3183,11 +3196,6 @@ void ExprEngine::ViewGraph(bool trim) {
 #ifndef NDEBUG
   if (trim) {
     std::vector<const ExplodedNode *> Src;
-
-    // Flush any outstanding reports to make sure we cover all the nodes.
-    // This does not cause them to get displayed.
-    for (const auto I : BR)
-      const_cast<BugType *>(I)->FlushReports(BR);
 
     // Iterate through the reports and get their nodes.
     for (BugReporter::EQClasses_iterator

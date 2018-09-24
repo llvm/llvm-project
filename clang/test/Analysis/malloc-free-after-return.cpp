@@ -17,5 +17,5 @@ int *freeAfterReturnTemp() {
 
 int *freeAfterReturnLocal() {
   S X;
-  return X.getData();
-} // expected-warning {{Use of memory after it is freed}}
+  return X.getData(); // expected-warning {{Use of memory after it is freed}}
+}

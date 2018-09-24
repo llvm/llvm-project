@@ -89,25 +89,32 @@ bool LSUnit::isReady(const InstRef &IR) const {
 
   if (IsALoad && !LoadBarriers.empty()) {
     unsigned LoadBarrierIndex = *LoadBarriers.begin();
+    // A younger load cannot pass a older load barrier.
     if (Index > LoadBarrierIndex)
       return false;
+    // A load barrier cannot pass a older load.
     if (Index == LoadBarrierIndex && Index != *LoadQueue.begin())
       return false;
   }
 
   if (IsAStore && !StoreBarriers.empty()) {
     unsigned StoreBarrierIndex = *StoreBarriers.begin();
+    // A younger store cannot pass a older store barrier.
     if (Index > StoreBarrierIndex)
       return false;
+    // A store barrier cannot pass a older store.
     if (Index == StoreBarrierIndex && Index != *StoreQueue.begin())
       return false;
   }
 
+  // A load may not pass a previous store unless flag 'NoAlias' is set.
+  // A load may pass a previous load.
   if (NoAlias && IsALoad)
     return true;
 
   if (StoreQueue.size()) {
-    // Check if this memory operation is younger than the older store.
+    // A load may not pass a previous store.
+    // A store may not pass a previous store.
     if (Index > *StoreQueue.begin())
       return false;
   }
@@ -123,6 +130,9 @@ bool LSUnit::isReady(const InstRef &IR) const {
     return true;
 
   // There is at least one younger load.
+  //
+  // A store may not pass a previous load.
+  // A load may pass a previous load.
   return !IsAStore;
 }
 

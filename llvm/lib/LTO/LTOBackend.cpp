@@ -138,9 +138,15 @@ createTargetMachine(Config &Conf, const Target *TheTarget, Module &M) {
     RelocModel =
         M.getPICLevel() == PICLevel::NotPIC ? Reloc::Static : Reloc::PIC_;
 
+  Optional<CodeModel::Model> CodeModel;
+  if (Conf.CodeModel)
+    CodeModel = *Conf.CodeModel;
+  else
+    CodeModel = M.getCodeModel();
+
   return std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
       TheTriple, Conf.CPU, Features.getString(), Conf.Options, RelocModel,
-      Conf.CodeModel, Conf.CGOptLevel));
+      CodeModel, Conf.CGOptLevel));
 }
 
 static void runNewPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,

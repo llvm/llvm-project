@@ -9687,6 +9687,11 @@ let Predicates = [HasDQI, NoBWI] in {
             (VPMOVDWZrr (v16i32 (VPMOVM2DZrr VK16:$src)))>;
 }
 
+let Predicates = [HasDQI, NoBWI, HasVLX] in {
+  def : Pat<(v8i16 (sext (v8i1 VK8:$src))),
+            (VPMOVDWZ256rr (v8i32 (VPMOVM2DZ256rr VK8:$src)))>;
+}
+
 //===----------------------------------------------------------------------===//
 // AVX-512 - COMPRESS and EXPAND
 //
