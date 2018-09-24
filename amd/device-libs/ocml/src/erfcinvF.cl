@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-PUREATTR float
+CONSTATTR float
 MATH_MANGLE(erfcinv)(float y)
 {
     float ret;

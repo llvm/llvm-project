@@ -8,7 +8,7 @@
 #include "mathF.h"
 #include "trigpiredF.h"
 
-float
+CONSTATTR float
 MATH_MANGLE(sinpi)(float x)
 {
     int ix = AS_INT(x);

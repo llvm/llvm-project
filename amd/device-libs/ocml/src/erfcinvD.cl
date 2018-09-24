@@ -7,7 +7,7 @@
 
 #include "mathD.h"
 
-PUREATTR double
+CONSTATTR double
 MATH_MANGLE(erfcinv)(double y)
 {
     double ret;

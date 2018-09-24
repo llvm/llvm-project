@@ -13,7 +13,7 @@ extern CONSTATTR double MATH_PRIVATE(expep)(double2);
 #define DOUBLE_SPECIALIZATION
 #include "ep.h"
 
-PUREATTR double
+CONSTATTR double
 #if defined(COMPILING_POWR)
 MATH_MANGLE(powr)(double x, double y)
 #elif defined(COMPILING_POWN)

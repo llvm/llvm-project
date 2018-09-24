@@ -11,7 +11,7 @@ extern double MATH_PRIVATE(sinb)(double, int, double);
 extern CONSTATTR double MATH_PRIVATE(bp0)(double);
 extern CONSTATTR double MATH_PRIVATE(ba0)(double);
 
-double
+CONSTATTR double
 MATH_MANGLE(y0)(double x)
 {
     const double b0  = 0.3125;
@@ -140,7 +140,7 @@ MATH_MANGLE(y0)(double x)
                p[11]), p[10]), p[9]), p[8]),
                p[7]), p[6]), p[5]), p[4]),
                p[3]), p[2]), p[1]), p[0]);
-              
+
     } else {
         double r = MATH_RCP(x);
         double r2 = r*r;

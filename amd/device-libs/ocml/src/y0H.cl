@@ -9,7 +9,7 @@
 
 UGEN(y0)
 
-half
+CONSTATTR half
 MATH_MANGLE(y0)(half x)
 {
     return (half)MATH_UPMANGLE(y0)((float)x);

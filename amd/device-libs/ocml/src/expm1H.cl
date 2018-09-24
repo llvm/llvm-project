@@ -7,9 +7,9 @@
 
 #include "mathH.h"
 
-PUREATTR UGEN(expm1)
+CONSTATTR UGEN(expm1)
 
-PUREATTR half
+CONSTATTR half
 MATH_MANGLE(expm1)(half x)
 {
     half ret;

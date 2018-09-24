@@ -7,9 +7,9 @@
 
 #include "mathH.h"
 
-PUREATTR UGEN(log1p)
+CONSTATTR UGEN(log1p)
 
-PUREATTR half
+CONSTATTR half
 MATH_MANGLE(log1p)(half x)
 {
     half ret;

@@ -7,9 +7,9 @@
 
 #include "mathH.h"
 
-PUREATTR UGEN(tanh)
+CONSTATTR UGEN(tanh)
 
-PUREATTR half
+CONSTATTR half
 MATH_MANGLE(tanh)(half hx)
 {
     float x = (float)hx * 0x1.715476p+0f;

@@ -7,9 +7,9 @@
 
 #include "mathH.h"
 
-PUREATTR UGEN(cbrt)
+CONSTATTR UGEN(cbrt)
 
-PUREATTR half
+CONSTATTR half
 MATH_MANGLE(cbrt)(half x)
 {
     half ret = (half)BUILTIN_EXP2_F32(0x1.555556p-2f * BUILTIN_LOG2_F32((float)BUILTIN_ABS_F16(x)));

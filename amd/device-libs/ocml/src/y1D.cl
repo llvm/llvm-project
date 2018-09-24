@@ -11,7 +11,7 @@ extern double MATH_PRIVATE(sinb)(double, int, double);
 extern CONSTATTR double MATH_PRIVATE(bp1)(double);
 extern CONSTATTR double MATH_PRIVATE(ba1)(double);
 
-double
+CONSTATTR double
 MATH_MANGLE(y1)(double x)
 {
     const double b0 = 0.5;
@@ -138,7 +138,7 @@ MATH_MANGLE(y1)(double x)
               p[11]), p[10]), p[9]), p[8]),
               p[7]), p[6]), p[5]), p[4]),
               p[3]), p[2]), p[1]), p[0]);
-              
+
         if (x < b0) {
             const double twobypi = 0x1.45f306dc9c883p-1;
             if (x < 0x1.0p-33)

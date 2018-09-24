@@ -7,7 +7,7 @@
 
 #include "mathF.h"
 
-PUREATTR float
+CONSTATTR float
 MATH_MANGLE(ncdf)(float x)
 {
     float ret;
