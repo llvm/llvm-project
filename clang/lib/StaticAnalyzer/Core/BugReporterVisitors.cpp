@@ -1294,8 +1294,7 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
         if (const auto *BDR =
               dyn_cast_or_null<BlockDataRegion>(V.getAsRegion())) {
           if (const VarRegion *OriginalR = BDR->getOriginalRegion(VR)) {
-            if (Optional<KnownSVal> KV =
-                State->getSVal(OriginalR).getAs<KnownSVal>())
+            if (auto KV = State->getSVal(OriginalR).getAs<KnownSVal>())
               BR.addVisitor(llvm::make_unique<FindLastStoreBRVisitor>(
                   *KV, OriginalR, EnableNullFPSuppression));
           }
@@ -1752,8 +1751,18 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
     else
       RVal = state->getSVal(L->getRegion());
 
-    if (auto KV = RVal.getAs<KnownSVal>())
-      report.addVisitor(llvm::make_unique<FindLastStoreBRVisitor>(
+    // FIXME: this is a hack for fixing a later crash when attempting to
+    // dereference a void* pointer.
+    // We should not try to dereference pointers at all when we don't care
+    // what is written inside the pointer.
+    bool ShouldFindLastStore = true;
+    if (const auto *SR = dyn_cast<SymbolicRegion>(L->getRegion()))
+      if (SR->getSymbol()->getType()->getPointeeType()->isVoidType())
+        ShouldFindLastStore = false;
+
+    if (ShouldFindLastStore)
+      if (auto KV = RVal.getAs<KnownSVal>())
+        report.addVisitor(llvm::make_unique<FindLastStoreBRVisitor>(
             *KV, L->getRegion(), EnableNullFPSuppression));
 
     const MemRegion *RegionRVal = RVal.getAsRegion();
