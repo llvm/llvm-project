@@ -482,13 +482,7 @@ public:
 
   const AttrVec &getAttrs() const;
   void dropAttrs();
-
-  void addAttr(Attr *A) {
-    if (hasAttrs())
-      getAttrs().push_back(A);
-    else
-      setAttrs(AttrVec(1, A));
-  }
+  void addAttr(Attr *A);
 
   using attr_iterator = AttrVec::const_iterator;
   using attr_range = llvm::iterator_range<attr_iterator>;
