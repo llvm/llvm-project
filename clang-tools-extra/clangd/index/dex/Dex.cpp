@@ -22,6 +22,10 @@ namespace dex {
 
 namespace {
 
+// Mark symbols which are can be used for code completion.
+static const Token RestrictedForCodeCompletion =
+    Token(Token::Kind::Sentinel, "Restricted For Code Completion");
+
 // Returns the tokens which are given symbol's characteristics. Currently, the
 // generated tokens only contain fuzzy matching trigrams and symbol's scope,
 // but in the future this will also return path proximity tokens and other
@@ -39,6 +43,8 @@ std::vector<Token> generateSearchTokens(const Symbol &Sym) {
     for (const auto &ProximityURI :
          generateProximityURIs(Sym.CanonicalDeclaration.FileURI))
       Result.emplace_back(Token::Kind::ProximityURI, ProximityURI);
+  if (Sym.Flags & Symbol::IndexedForCodeCompletion)
+    Result.emplace_back(RestrictedForCodeCompletion);
   return Result;
 }
 
@@ -174,6 +180,10 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
     BoostingIterators.push_back(createTrue(Symbols.size()));
     TopLevelChildren.push_back(createOr(move(BoostingIterators)));
   }
+
+  if (Req.RestrictForCodeCompletion)
+    TopLevelChildren.push_back(
+        InvertedIndex.find(RestrictedForCodeCompletion)->second.iterator());
 
   // Use TRUE iterator if both trigrams and scopes from the query are not
   // present in the symbol index.
