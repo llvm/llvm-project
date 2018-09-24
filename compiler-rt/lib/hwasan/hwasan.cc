@@ -17,6 +17,7 @@
 #include "hwasan_poisoning.h"
 #include "hwasan_report.h"
 #include "hwasan_thread.h"
+#include "hwasan_thread_list.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
@@ -174,7 +175,8 @@ static void HWAsanCheckFailed(const char *file, int line, const char *cond,
 static constexpr uptr kMemoryUsageBufferSize = 4096;
 
 static void HwasanFormatMemoryUsage(InternalScopedString &s) {
-  auto thread_stats = Thread::GetThreadStats();
+  HwasanThreadList &thread_list = hwasanThreadList();
+  auto thread_stats = thread_list.GetThreadStats();
   auto *sds = StackDepotGetStats();
   AllocatorStatCounters asc;
   GetAllocatorStats(asc);
@@ -184,7 +186,7 @@ static void HwasanFormatMemoryUsage(InternalScopedString &s) {
       " heap: %zd",
       internal_getpid(), GetRSS(), thread_stats.n_live_threads,
       thread_stats.total_stack_size,
-      thread_stats.n_live_threads * Thread::MemoryUsedPerThread(),
+      thread_stats.n_live_threads * thread_list.MemoryUsedPerThread(),
       sds->allocated, sds->n_uniq_ids, asc[AllocatorStatMapped]);
 }
 
@@ -253,7 +255,12 @@ void __hwasan_init() {
   __sanitizer_set_report_path(common_flags()->log_path);
 
   DisableCoreDumperIfNecessary();
+
   __hwasan_shadow_init();
+
+  InitThreads();
+  hwasanThreadList().CreateCurrentThread();
+
   MadviseShadow();
 
   // This may call libc -> needs initialized shadow.
@@ -268,10 +275,9 @@ void __hwasan_init() {
   InitializeCoverage(common_flags()->coverage, common_flags()->coverage_dir);
 
   HwasanTSDInit();
+  HwasanTSDThreadInit();
 
   HwasanAllocatorInit();
-
-  Thread::Create();
 
 #if HWASAN_CONTAINS_UBSAN
   __ubsan::InitAsPlugin();

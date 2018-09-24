@@ -92,12 +92,8 @@
 #endif
 
 #if defined(_MSC_VER) && !defined(__clang__)
-#define crt_logb(x) logb((x))
-#define crt_logbf(x) logbf((x))
 #define crt_logbl(x) logbl((x))
 #else
-#define crt_logb(x) __builtin_logb((x))
-#define crt_logbf(x) __builtin_logbf((x))
 #define crt_logbl(x) __builtin_logbl((x))
 #endif
 
