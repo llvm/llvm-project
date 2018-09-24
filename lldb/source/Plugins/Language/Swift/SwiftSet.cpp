@@ -75,8 +75,8 @@ SetConfig::SetConfig()
     ConstString("Swift._HashableTypedNativeSetStorage<");
   m_legacy_nativeStorage_demangledRegex =
     ConstString("^Swift\\._HashableTypedNativeSetStorage<.+>$");
-  m_legacy_emptyStorage_mangled_ObjC = ConstString("_TtCs20_RawNativeSetStorage");
-  m_legacy_emptyStorage_demangled = ConstString("Swift._RawNativeSetStorage");
+  m_legacy_emptyStorage_mangled_ObjC = ConstString("_TtCs21__RawNativeSetStorage");
+  m_legacy_emptyStorage_demangled = ConstString("Swift.__RawNativeSetStorage");
 }
 
 bool

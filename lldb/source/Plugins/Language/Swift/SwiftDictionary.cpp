@@ -77,9 +77,9 @@ DictionaryConfig::DictionaryConfig()
   m_legacy_nativeStorage_demangledRegex =
     ConstString("^Swift\\._HashableTypedNativeDictionaryStorage<.+,.+>$");
   m_legacy_emptyStorage_mangled_ObjC =
-    ConstString("_TtCs27_RawNativeDictionaryStorage");
+    ConstString("_TtCs28__RawNativeDictionaryStorage");
   m_legacy_emptyStorage_demangled
-    = ConstString("Swift._RawNativeDictionaryStorage");
+    = ConstString("Swift.__RawNativeDictionaryStorage");
 }
 
 bool
