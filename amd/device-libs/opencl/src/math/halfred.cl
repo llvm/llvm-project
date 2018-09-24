@@ -7,8 +7,13 @@
 
 // Trigonometric reduction for half_cos,sin,tan
 
-__attribute__((always_inline)) int
-__half_red(float x, __private float *r)
+struct redret {
+    int i;
+    float r;
+};
+
+__attribute__((always_inline)) struct redret
+__half_red(float x)
 {
     const float twobypi = 0x1.45f306p-1f;
     const float pb2_a = 0x1.92p+0f;
@@ -20,12 +25,15 @@ __half_red(float x, __private float *r)
 
     float fn = rint(x * twobypi);
 
-    *r = mad(fn, -pb2_f,
-	     mad(fn, -pb2_e,
-		 mad(fn, -pb2_d,
-		     mad(fn, -pb2_c,
-			 mad(fn, -pb2_b,
-			     mad(fn, -pb2_a, x))))));
-    return (int)fn & 0x3;
+    struct redret ret;
+    ret.i = (int)fn & 0x3;
+    ret.r = mad(fn, -pb2_f,
+	       mad(fn, -pb2_e,
+		   mad(fn, -pb2_d,
+		       mad(fn, -pb2_c,
+			   mad(fn, -pb2_b,
+			       mad(fn, -pb2_a, x))))));
+
+    return ret;
 }
 
