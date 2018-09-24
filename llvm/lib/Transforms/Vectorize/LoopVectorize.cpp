@@ -2303,6 +2303,7 @@ Value *InnerLoopVectorizer::getOrCreateTripCount(Loop *L) {
          "Invalid loop count");
 
   Type *IdxTy = Legal->getWidestInductionType();
+  assert(IdxTy && "No type for induction");
 
   // The exit count might have the type of i64 while the phi is i32. This can
   // happen if we have an induction variable that is sign extended before the

@@ -944,6 +944,16 @@ void SExprBuilder::exitCFG(const CFGBlock *Last) {
 }
 
 /*
+namespace {
+
+class TILPrinter :
+    public til::PrettyPrinter<TILPrinter, llvm::raw_ostream> {};
+
+} // namespace
+
+namespace clang {
+namespace threadSafety {
+
 void printSCFG(CFGWalker &Walker) {
   llvm::BumpPtrAllocator Bpa;
   til::MemRegionRef Arena(&Bpa);
@@ -951,4 +961,7 @@ void printSCFG(CFGWalker &Walker) {
   til::SCFG *Scfg = SxBuilder.buildCFG(Walker);
   TILPrinter::print(Scfg, llvm::errs());
 }
+
+} // namespace threadSafety
+} // namespace clang
 */

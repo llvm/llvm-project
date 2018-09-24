@@ -77,7 +77,7 @@ option(LIBCXX_ENABLE_FILESYSTEM "Build filesystem as part of libc++fs.a"
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
 
 # Benchmark options -----------------------------------------------------------
-option(LIBCXX_INCLUDE_BENCHMARKS "Build the libc++ benchmarks and their dependancies" ON)
+option(LIBCXX_INCLUDE_BENCHMARKS "Build the libc++ benchmarks and their dependencies" ON)
 set(LIBCXX_BENCHMARK_NATIVE_STDLIB "" CACHE STRING
         "Build the benchmarks against the specified native STL.
          The value must be one of libc++/libstdc++")

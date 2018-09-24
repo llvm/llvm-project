@@ -836,6 +836,29 @@ void Decl::dropAttrs() {
   getASTContext().eraseDeclAttrs(this);
 }
 
+void Decl::addAttr(Attr *A) {
+  if (!hasAttrs()) {
+    setAttrs(AttrVec(1, A));
+    return;
+  }
+
+  AttrVec &Attrs = getAttrs();
+  if (!A->isInherited()) {
+    Attrs.push_back(A);
+    return;
+  }
+
+  // Attribute inheritance is processed after attribute parsing. To keep the
+  // order as in the source code, add inherited attributes before non-inherited
+  // ones.
+  auto I = Attrs.begin(), E = Attrs.end();
+  for (; I != E; ++I) {
+    if (!(*I)->isInherited())
+      break;
+  }
+  Attrs.insert(I, A);
+}
+
 const AttrVec &Decl::getAttrs() const {
   assert(HasAttrs && "No attrs to get!");
   return getASTContext().getDeclAttrs(this);

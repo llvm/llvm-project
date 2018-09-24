@@ -90,5 +90,5 @@ bool generateUSRFragmentForModuleName(StringRef ModName, raw_ostream &OS);
 } // namespace index
 } // namespace clang
 
-#endif // LLVM_CLANG_IDE_USRGENERATION_H
+#endif // LLVM_CLANG_INDEX_USRGENERATION_H
 

@@ -189,6 +189,454 @@ define i32 @eq_i256(<4 x i64> %x, <4 x i64> %y) {
   ret i32 %zext
 }
 
+define i32 @ne_i512(<8 x i64> %x, <8 x i64> %y) {
+; SSE2-LABEL: ne_i512:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm0[2,3,0,1]
+; SSE2-NEXT:    movq %xmm8, %rax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm2[2,3,0,1]
+; SSE2-NEXT:    movq %xmm8, %rcx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm1[2,3,0,1]
+; SSE2-NEXT:    movq %xmm8, %rdx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm3[2,3,0,1]
+; SSE2-NEXT:    movq %xmm8, %rsi
+; SSE2-NEXT:    movq %xmm0, %r11
+; SSE2-NEXT:    movq %xmm2, %r8
+; SSE2-NEXT:    movq %xmm1, %r9
+; SSE2-NEXT:    movq %xmm3, %r10
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[2,3,0,1]
+; SSE2-NEXT:    movq %xmm0, %rdi
+; SSE2-NEXT:    xorq %rax, %rdi
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[2,3,0,1]
+; SSE2-NEXT:    movq %xmm0, %rax
+; SSE2-NEXT:    xorq %rcx, %rax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[2,3,0,1]
+; SSE2-NEXT:    movq %xmm0, %rcx
+; SSE2-NEXT:    xorq %rdx, %rcx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm7[2,3,0,1]
+; SSE2-NEXT:    movq %xmm0, %rdx
+; SSE2-NEXT:    xorq %rsi, %rdx
+; SSE2-NEXT:    orq %rcx, %rdx
+; SSE2-NEXT:    orq %rax, %rdx
+; SSE2-NEXT:    orq %rdi, %rdx
+; SSE2-NEXT:    movq %xmm4, %rax
+; SSE2-NEXT:    xorq %r11, %rax
+; SSE2-NEXT:    movq %xmm6, %rcx
+; SSE2-NEXT:    xorq %r8, %rcx
+; SSE2-NEXT:    movq %xmm5, %rsi
+; SSE2-NEXT:    xorq %r9, %rsi
+; SSE2-NEXT:    movq %xmm7, %rdi
+; SSE2-NEXT:    xorq %r10, %rdi
+; SSE2-NEXT:    orq %rsi, %rdi
+; SSE2-NEXT:    orq %rcx, %rdi
+; SSE2-NEXT:    orq %rax, %rdi
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    orq %rdx, %rdi
+; SSE2-NEXT:    setne %al
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: ne_i512:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    vmovq %xmm1, %rcx
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; AVX1-NEXT:    vmovq %xmm4, %rdx
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
+; AVX1-NEXT:    vmovq %xmm5, %rsi
+; AVX1-NEXT:    vpextrq $1, %xmm0, %r11
+; AVX1-NEXT:    vpextrq $1, %xmm1, %r8
+; AVX1-NEXT:    vpextrq $1, %xmm4, %r9
+; AVX1-NEXT:    vpextrq $1, %xmm5, %r10
+; AVX1-NEXT:    vmovq %xmm2, %rdi
+; AVX1-NEXT:    xorq %rax, %rdi
+; AVX1-NEXT:    vmovq %xmm3, %rax
+; AVX1-NEXT:    xorq %rcx, %rax
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, %rcx
+; AVX1-NEXT:    xorq %rdx, %rcx
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm1
+; AVX1-NEXT:    vmovq %xmm1, %rdx
+; AVX1-NEXT:    xorq %rsi, %rdx
+; AVX1-NEXT:    orq %rcx, %rdx
+; AVX1-NEXT:    orq %rax, %rdx
+; AVX1-NEXT:    orq %rdi, %rdx
+; AVX1-NEXT:    vpextrq $1, %xmm2, %rax
+; AVX1-NEXT:    xorq %r11, %rax
+; AVX1-NEXT:    vpextrq $1, %xmm3, %rcx
+; AVX1-NEXT:    xorq %r8, %rcx
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rsi
+; AVX1-NEXT:    xorq %r9, %rsi
+; AVX1-NEXT:    vpextrq $1, %xmm1, %rdi
+; AVX1-NEXT:    xorq %r10, %rdi
+; AVX1-NEXT:    orq %rsi, %rdi
+; AVX1-NEXT:    orq %rcx, %rdi
+; AVX1-NEXT:    orq %rax, %rdi
+; AVX1-NEXT:    xorl %eax, %eax
+; AVX1-NEXT:    orq %rdx, %rdi
+; AVX1-NEXT:    setne %al
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ne_i512:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq %xmm0, %rax
+; AVX2-NEXT:    vmovq %xmm1, %rcx
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm4
+; AVX2-NEXT:    vmovq %xmm4, %rdx
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm5
+; AVX2-NEXT:    vmovq %xmm5, %rsi
+; AVX2-NEXT:    vpextrq $1, %xmm0, %r11
+; AVX2-NEXT:    vpextrq $1, %xmm1, %r8
+; AVX2-NEXT:    vpextrq $1, %xmm4, %r9
+; AVX2-NEXT:    vpextrq $1, %xmm5, %r10
+; AVX2-NEXT:    vmovq %xmm2, %rdi
+; AVX2-NEXT:    xorq %rax, %rdi
+; AVX2-NEXT:    vmovq %xmm3, %rax
+; AVX2-NEXT:    xorq %rcx, %rax
+; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, %rcx
+; AVX2-NEXT:    xorq %rdx, %rcx
+; AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm1
+; AVX2-NEXT:    vmovq %xmm1, %rdx
+; AVX2-NEXT:    xorq %rsi, %rdx
+; AVX2-NEXT:    orq %rcx, %rdx
+; AVX2-NEXT:    orq %rax, %rdx
+; AVX2-NEXT:    orq %rdi, %rdx
+; AVX2-NEXT:    vpextrq $1, %xmm2, %rax
+; AVX2-NEXT:    xorq %r11, %rax
+; AVX2-NEXT:    vpextrq $1, %xmm3, %rcx
+; AVX2-NEXT:    xorq %r8, %rcx
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rsi
+; AVX2-NEXT:    xorq %r9, %rsi
+; AVX2-NEXT:    vpextrq $1, %xmm1, %rdi
+; AVX2-NEXT:    xorq %r10, %rdi
+; AVX2-NEXT:    orq %rsi, %rdi
+; AVX2-NEXT:    orq %rcx, %rdi
+; AVX2-NEXT:    orq %rax, %rdi
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    orq %rdx, %rdi
+; AVX2-NEXT:    setne %al
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: ne_i512:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX512F-NEXT:    vmovq %xmm2, %rdx
+; AVX512F-NEXT:    vextracti32x4 $3, %zmm0, %xmm3
+; AVX512F-NEXT:    vmovq %xmm3, %rsi
+; AVX512F-NEXT:    vmovq %xmm0, %rdi
+; AVX512F-NEXT:    vextracti32x4 $2, %zmm0, %xmm4
+; AVX512F-NEXT:    vmovq %xmm4, %rax
+; AVX512F-NEXT:    vpextrq $1, %xmm2, %r11
+; AVX512F-NEXT:    vpextrq $1, %xmm3, %r10
+; AVX512F-NEXT:    vpextrq $1, %xmm0, %r9
+; AVX512F-NEXT:    vpextrq $1, %xmm4, %r8
+; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; AVX512F-NEXT:    vmovq %xmm0, %rcx
+; AVX512F-NEXT:    xorq %rdx, %rcx
+; AVX512F-NEXT:    vextracti32x4 $3, %zmm1, %xmm2
+; AVX512F-NEXT:    vmovq %xmm2, %rdx
+; AVX512F-NEXT:    xorq %rsi, %rdx
+; AVX512F-NEXT:    orq %rcx, %rdx
+; AVX512F-NEXT:    vmovq %xmm1, %rcx
+; AVX512F-NEXT:    xorq %rdi, %rcx
+; AVX512F-NEXT:    vextracti32x4 $2, %zmm1, %xmm3
+; AVX512F-NEXT:    vmovq %xmm3, %rsi
+; AVX512F-NEXT:    xorq %rax, %rsi
+; AVX512F-NEXT:    orq %rdx, %rsi
+; AVX512F-NEXT:    orq %rcx, %rsi
+; AVX512F-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512F-NEXT:    xorq %r11, %rax
+; AVX512F-NEXT:    vpextrq $1, %xmm2, %rcx
+; AVX512F-NEXT:    xorq %r10, %rcx
+; AVX512F-NEXT:    orq %rax, %rcx
+; AVX512F-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX512F-NEXT:    xorq %r9, %rax
+; AVX512F-NEXT:    vpextrq $1, %xmm3, %rdx
+; AVX512F-NEXT:    xorq %r8, %rdx
+; AVX512F-NEXT:    orq %rcx, %rdx
+; AVX512F-NEXT:    orq %rax, %rdx
+; AVX512F-NEXT:    xorl %eax, %eax
+; AVX512F-NEXT:    orq %rsi, %rdx
+; AVX512F-NEXT:    setne %al
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: ne_i512:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX512BW-NEXT:    vmovq %xmm2, %rdx
+; AVX512BW-NEXT:    vextracti32x4 $3, %zmm0, %xmm3
+; AVX512BW-NEXT:    vmovq %xmm3, %rsi
+; AVX512BW-NEXT:    vmovq %xmm0, %rdi
+; AVX512BW-NEXT:    vextracti32x4 $2, %zmm0, %xmm4
+; AVX512BW-NEXT:    vmovq %xmm4, %rax
+; AVX512BW-NEXT:    vpextrq $1, %xmm2, %r11
+; AVX512BW-NEXT:    vpextrq $1, %xmm3, %r10
+; AVX512BW-NEXT:    vpextrq $1, %xmm0, %r9
+; AVX512BW-NEXT:    vpextrq $1, %xmm4, %r8
+; AVX512BW-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; AVX512BW-NEXT:    vmovq %xmm0, %rcx
+; AVX512BW-NEXT:    xorq %rdx, %rcx
+; AVX512BW-NEXT:    vextracti32x4 $3, %zmm1, %xmm2
+; AVX512BW-NEXT:    vmovq %xmm2, %rdx
+; AVX512BW-NEXT:    xorq %rsi, %rdx
+; AVX512BW-NEXT:    orq %rcx, %rdx
+; AVX512BW-NEXT:    vmovq %xmm1, %rcx
+; AVX512BW-NEXT:    xorq %rdi, %rcx
+; AVX512BW-NEXT:    vextracti32x4 $2, %zmm1, %xmm3
+; AVX512BW-NEXT:    vmovq %xmm3, %rsi
+; AVX512BW-NEXT:    xorq %rax, %rsi
+; AVX512BW-NEXT:    orq %rdx, %rsi
+; AVX512BW-NEXT:    orq %rcx, %rsi
+; AVX512BW-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512BW-NEXT:    xorq %r11, %rax
+; AVX512BW-NEXT:    vpextrq $1, %xmm2, %rcx
+; AVX512BW-NEXT:    xorq %r10, %rcx
+; AVX512BW-NEXT:    orq %rax, %rcx
+; AVX512BW-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX512BW-NEXT:    xorq %r9, %rax
+; AVX512BW-NEXT:    vpextrq $1, %xmm3, %rdx
+; AVX512BW-NEXT:    xorq %r8, %rdx
+; AVX512BW-NEXT:    orq %rcx, %rdx
+; AVX512BW-NEXT:    orq %rax, %rdx
+; AVX512BW-NEXT:    xorl %eax, %eax
+; AVX512BW-NEXT:    orq %rsi, %rdx
+; AVX512BW-NEXT:    setne %al
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+  %bcx = bitcast <8 x i64> %x to i512
+  %bcy = bitcast <8 x i64> %y to i512
+  %cmp = icmp ne i512 %bcx, %bcy
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
+}
+
+define i32 @eq_i512(<8 x i64> %x, <8 x i64> %y) {
+; SSE2-LABEL: eq_i512:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm0[2,3,0,1]
+; SSE2-NEXT:    movq %xmm8, %rax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm2[2,3,0,1]
+; SSE2-NEXT:    movq %xmm8, %rcx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm1[2,3,0,1]
+; SSE2-NEXT:    movq %xmm8, %rdx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm3[2,3,0,1]
+; SSE2-NEXT:    movq %xmm8, %rsi
+; SSE2-NEXT:    movq %xmm0, %r11
+; SSE2-NEXT:    movq %xmm2, %r8
+; SSE2-NEXT:    movq %xmm1, %r9
+; SSE2-NEXT:    movq %xmm3, %r10
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[2,3,0,1]
+; SSE2-NEXT:    movq %xmm0, %rdi
+; SSE2-NEXT:    xorq %rax, %rdi
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[2,3,0,1]
+; SSE2-NEXT:    movq %xmm0, %rax
+; SSE2-NEXT:    xorq %rcx, %rax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[2,3,0,1]
+; SSE2-NEXT:    movq %xmm0, %rcx
+; SSE2-NEXT:    xorq %rdx, %rcx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm7[2,3,0,1]
+; SSE2-NEXT:    movq %xmm0, %rdx
+; SSE2-NEXT:    xorq %rsi, %rdx
+; SSE2-NEXT:    orq %rcx, %rdx
+; SSE2-NEXT:    orq %rax, %rdx
+; SSE2-NEXT:    orq %rdi, %rdx
+; SSE2-NEXT:    movq %xmm4, %rax
+; SSE2-NEXT:    xorq %r11, %rax
+; SSE2-NEXT:    movq %xmm6, %rcx
+; SSE2-NEXT:    xorq %r8, %rcx
+; SSE2-NEXT:    movq %xmm5, %rsi
+; SSE2-NEXT:    xorq %r9, %rsi
+; SSE2-NEXT:    movq %xmm7, %rdi
+; SSE2-NEXT:    xorq %r10, %rdi
+; SSE2-NEXT:    orq %rsi, %rdi
+; SSE2-NEXT:    orq %rcx, %rdi
+; SSE2-NEXT:    orq %rax, %rdi
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    orq %rdx, %rdi
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: eq_i512:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    vmovq %xmm1, %rcx
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; AVX1-NEXT:    vmovq %xmm4, %rdx
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
+; AVX1-NEXT:    vmovq %xmm5, %rsi
+; AVX1-NEXT:    vpextrq $1, %xmm0, %r11
+; AVX1-NEXT:    vpextrq $1, %xmm1, %r8
+; AVX1-NEXT:    vpextrq $1, %xmm4, %r9
+; AVX1-NEXT:    vpextrq $1, %xmm5, %r10
+; AVX1-NEXT:    vmovq %xmm2, %rdi
+; AVX1-NEXT:    xorq %rax, %rdi
+; AVX1-NEXT:    vmovq %xmm3, %rax
+; AVX1-NEXT:    xorq %rcx, %rax
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, %rcx
+; AVX1-NEXT:    xorq %rdx, %rcx
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm1
+; AVX1-NEXT:    vmovq %xmm1, %rdx
+; AVX1-NEXT:    xorq %rsi, %rdx
+; AVX1-NEXT:    orq %rcx, %rdx
+; AVX1-NEXT:    orq %rax, %rdx
+; AVX1-NEXT:    orq %rdi, %rdx
+; AVX1-NEXT:    vpextrq $1, %xmm2, %rax
+; AVX1-NEXT:    xorq %r11, %rax
+; AVX1-NEXT:    vpextrq $1, %xmm3, %rcx
+; AVX1-NEXT:    xorq %r8, %rcx
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rsi
+; AVX1-NEXT:    xorq %r9, %rsi
+; AVX1-NEXT:    vpextrq $1, %xmm1, %rdi
+; AVX1-NEXT:    xorq %r10, %rdi
+; AVX1-NEXT:    orq %rsi, %rdi
+; AVX1-NEXT:    orq %rcx, %rdi
+; AVX1-NEXT:    orq %rax, %rdi
+; AVX1-NEXT:    xorl %eax, %eax
+; AVX1-NEXT:    orq %rdx, %rdi
+; AVX1-NEXT:    sete %al
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: eq_i512:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq %xmm0, %rax
+; AVX2-NEXT:    vmovq %xmm1, %rcx
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm4
+; AVX2-NEXT:    vmovq %xmm4, %rdx
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm5
+; AVX2-NEXT:    vmovq %xmm5, %rsi
+; AVX2-NEXT:    vpextrq $1, %xmm0, %r11
+; AVX2-NEXT:    vpextrq $1, %xmm1, %r8
+; AVX2-NEXT:    vpextrq $1, %xmm4, %r9
+; AVX2-NEXT:    vpextrq $1, %xmm5, %r10
+; AVX2-NEXT:    vmovq %xmm2, %rdi
+; AVX2-NEXT:    xorq %rax, %rdi
+; AVX2-NEXT:    vmovq %xmm3, %rax
+; AVX2-NEXT:    xorq %rcx, %rax
+; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, %rcx
+; AVX2-NEXT:    xorq %rdx, %rcx
+; AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm1
+; AVX2-NEXT:    vmovq %xmm1, %rdx
+; AVX2-NEXT:    xorq %rsi, %rdx
+; AVX2-NEXT:    orq %rcx, %rdx
+; AVX2-NEXT:    orq %rax, %rdx
+; AVX2-NEXT:    orq %rdi, %rdx
+; AVX2-NEXT:    vpextrq $1, %xmm2, %rax
+; AVX2-NEXT:    xorq %r11, %rax
+; AVX2-NEXT:    vpextrq $1, %xmm3, %rcx
+; AVX2-NEXT:    xorq %r8, %rcx
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rsi
+; AVX2-NEXT:    xorq %r9, %rsi
+; AVX2-NEXT:    vpextrq $1, %xmm1, %rdi
+; AVX2-NEXT:    xorq %r10, %rdi
+; AVX2-NEXT:    orq %rsi, %rdi
+; AVX2-NEXT:    orq %rcx, %rdi
+; AVX2-NEXT:    orq %rax, %rdi
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    orq %rdx, %rdi
+; AVX2-NEXT:    sete %al
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: eq_i512:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX512F-NEXT:    vmovq %xmm2, %rdx
+; AVX512F-NEXT:    vextracti32x4 $3, %zmm0, %xmm3
+; AVX512F-NEXT:    vmovq %xmm3, %rsi
+; AVX512F-NEXT:    vmovq %xmm0, %rdi
+; AVX512F-NEXT:    vextracti32x4 $2, %zmm0, %xmm4
+; AVX512F-NEXT:    vmovq %xmm4, %rax
+; AVX512F-NEXT:    vpextrq $1, %xmm2, %r11
+; AVX512F-NEXT:    vpextrq $1, %xmm3, %r10
+; AVX512F-NEXT:    vpextrq $1, %xmm0, %r9
+; AVX512F-NEXT:    vpextrq $1, %xmm4, %r8
+; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; AVX512F-NEXT:    vmovq %xmm0, %rcx
+; AVX512F-NEXT:    xorq %rdx, %rcx
+; AVX512F-NEXT:    vextracti32x4 $3, %zmm1, %xmm2
+; AVX512F-NEXT:    vmovq %xmm2, %rdx
+; AVX512F-NEXT:    xorq %rsi, %rdx
+; AVX512F-NEXT:    orq %rcx, %rdx
+; AVX512F-NEXT:    vmovq %xmm1, %rcx
+; AVX512F-NEXT:    xorq %rdi, %rcx
+; AVX512F-NEXT:    vextracti32x4 $2, %zmm1, %xmm3
+; AVX512F-NEXT:    vmovq %xmm3, %rsi
+; AVX512F-NEXT:    xorq %rax, %rsi
+; AVX512F-NEXT:    orq %rdx, %rsi
+; AVX512F-NEXT:    orq %rcx, %rsi
+; AVX512F-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512F-NEXT:    xorq %r11, %rax
+; AVX512F-NEXT:    vpextrq $1, %xmm2, %rcx
+; AVX512F-NEXT:    xorq %r10, %rcx
+; AVX512F-NEXT:    orq %rax, %rcx
+; AVX512F-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX512F-NEXT:    xorq %r9, %rax
+; AVX512F-NEXT:    vpextrq $1, %xmm3, %rdx
+; AVX512F-NEXT:    xorq %r8, %rdx
+; AVX512F-NEXT:    orq %rcx, %rdx
+; AVX512F-NEXT:    orq %rax, %rdx
+; AVX512F-NEXT:    xorl %eax, %eax
+; AVX512F-NEXT:    orq %rsi, %rdx
+; AVX512F-NEXT:    sete %al
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: eq_i512:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX512BW-NEXT:    vmovq %xmm2, %rdx
+; AVX512BW-NEXT:    vextracti32x4 $3, %zmm0, %xmm3
+; AVX512BW-NEXT:    vmovq %xmm3, %rsi
+; AVX512BW-NEXT:    vmovq %xmm0, %rdi
+; AVX512BW-NEXT:    vextracti32x4 $2, %zmm0, %xmm4
+; AVX512BW-NEXT:    vmovq %xmm4, %rax
+; AVX512BW-NEXT:    vpextrq $1, %xmm2, %r11
+; AVX512BW-NEXT:    vpextrq $1, %xmm3, %r10
+; AVX512BW-NEXT:    vpextrq $1, %xmm0, %r9
+; AVX512BW-NEXT:    vpextrq $1, %xmm4, %r8
+; AVX512BW-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; AVX512BW-NEXT:    vmovq %xmm0, %rcx
+; AVX512BW-NEXT:    xorq %rdx, %rcx
+; AVX512BW-NEXT:    vextracti32x4 $3, %zmm1, %xmm2
+; AVX512BW-NEXT:    vmovq %xmm2, %rdx
+; AVX512BW-NEXT:    xorq %rsi, %rdx
+; AVX512BW-NEXT:    orq %rcx, %rdx
+; AVX512BW-NEXT:    vmovq %xmm1, %rcx
+; AVX512BW-NEXT:    xorq %rdi, %rcx
+; AVX512BW-NEXT:    vextracti32x4 $2, %zmm1, %xmm3
+; AVX512BW-NEXT:    vmovq %xmm3, %rsi
+; AVX512BW-NEXT:    xorq %rax, %rsi
+; AVX512BW-NEXT:    orq %rdx, %rsi
+; AVX512BW-NEXT:    orq %rcx, %rsi
+; AVX512BW-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512BW-NEXT:    xorq %r11, %rax
+; AVX512BW-NEXT:    vpextrq $1, %xmm2, %rcx
+; AVX512BW-NEXT:    xorq %r10, %rcx
+; AVX512BW-NEXT:    orq %rax, %rcx
+; AVX512BW-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX512BW-NEXT:    xorq %r9, %rax
+; AVX512BW-NEXT:    vpextrq $1, %xmm3, %rdx
+; AVX512BW-NEXT:    xorq %r8, %rdx
+; AVX512BW-NEXT:    orq %rcx, %rdx
+; AVX512BW-NEXT:    orq %rax, %rdx
+; AVX512BW-NEXT:    xorl %eax, %eax
+; AVX512BW-NEXT:    orq %rsi, %rdx
+; AVX512BW-NEXT:    sete %al
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+  %bcx = bitcast <8 x i64> %x to i512
+  %bcy = bitcast <8 x i64> %y to i512
+  %cmp = icmp eq i512 %bcx, %bcy
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
+}
+
 ; This test models the expansion of 'memcmp(a, b, 32) != 0'
 ; if we allowed 2 pairs of 16-byte loads per block.
 
@@ -453,6 +901,146 @@ define i32 @eq_i256_pair(i256* %a, i256* %b) {
   %xor2 = xor i256 %a1, %b1
   %or = or i256 %xor1, %xor2
   %cmp = icmp eq i256 %or, 0
+  %z = zext i1 %cmp to i32
+  ret i32 %z
+}
+
+; This test models the expansion of 'memcmp(a, b, 64) != 0'
+; if we allowed 2 pairs of 64-byte loads per block.
+
+define i32 @ne_i512_pair(i512* %a, i512* %b) {
+; ANY-LABEL: ne_i512_pair:
+; ANY:       # %bb.0:
+; ANY-NEXT:    movq 32(%rdi), %r8
+; ANY-NEXT:    movq 48(%rdi), %r9
+; ANY-NEXT:    movq 40(%rdi), %rdx
+; ANY-NEXT:    movq 56(%rdi), %rcx
+; ANY-NEXT:    xorq 56(%rsi), %rcx
+; ANY-NEXT:    movq 120(%rdi), %rax
+; ANY-NEXT:    xorq 120(%rsi), %rax
+; ANY-NEXT:    orq %rcx, %rax
+; ANY-NEXT:    movq 88(%rdi), %rcx
+; ANY-NEXT:    xorq 88(%rsi), %rcx
+; ANY-NEXT:    orq %rcx, %rax
+; ANY-NEXT:    movq 24(%rdi), %rcx
+; ANY-NEXT:    xorq 24(%rsi), %rcx
+; ANY-NEXT:    xorq 40(%rsi), %rdx
+; ANY-NEXT:    orq %rcx, %rax
+; ANY-NEXT:    movq 104(%rdi), %rcx
+; ANY-NEXT:    xorq 104(%rsi), %rcx
+; ANY-NEXT:    orq %rdx, %rcx
+; ANY-NEXT:    movq 72(%rdi), %rdx
+; ANY-NEXT:    xorq 72(%rsi), %rdx
+; ANY-NEXT:    orq %rdx, %rcx
+; ANY-NEXT:    movq 16(%rdi), %r10
+; ANY-NEXT:    orq %rax, %rcx
+; ANY-NEXT:    movq 8(%rdi), %rax
+; ANY-NEXT:    xorq 8(%rsi), %rax
+; ANY-NEXT:    xorq 48(%rsi), %r9
+; ANY-NEXT:    orq %rax, %rcx
+; ANY-NEXT:    movq 112(%rdi), %rax
+; ANY-NEXT:    xorq 112(%rsi), %rax
+; ANY-NEXT:    orq %r9, %rax
+; ANY-NEXT:    movq 80(%rdi), %rdx
+; ANY-NEXT:    xorq 80(%rsi), %rdx
+; ANY-NEXT:    orq %rdx, %rax
+; ANY-NEXT:    movq (%rdi), %r9
+; ANY-NEXT:    xorq 16(%rsi), %r10
+; ANY-NEXT:    xorq (%rsi), %r9
+; ANY-NEXT:    xorq 32(%rsi), %r8
+; ANY-NEXT:    orq %r10, %rax
+; ANY-NEXT:    movq 96(%rdi), %rdx
+; ANY-NEXT:    movq 64(%rdi), %rdi
+; ANY-NEXT:    xorq 64(%rsi), %rdi
+; ANY-NEXT:    xorq 96(%rsi), %rdx
+; ANY-NEXT:    orq %r8, %rdx
+; ANY-NEXT:    orq %rdi, %rdx
+; ANY-NEXT:    orq %rax, %rdx
+; ANY-NEXT:    orq %r9, %rdx
+; ANY-NEXT:    xorl %eax, %eax
+; ANY-NEXT:    orq %rcx, %rdx
+; ANY-NEXT:    setne %al
+; ANY-NEXT:    retq
+  %a0 = load i512, i512* %a
+  %b0 = load i512, i512* %b
+  %xor1 = xor i512 %a0, %b0
+  %ap1 = getelementptr i512, i512* %a, i512 1
+  %bp1 = getelementptr i512, i512* %b, i512 1
+  %a1 = load i512, i512* %ap1
+  %b1 = load i512, i512* %bp1
+  %xor2 = xor i512 %a1, %b1
+  %or = or i512 %xor1, %xor2
+  %cmp = icmp ne i512 %or, 0
+  %z = zext i1 %cmp to i32
+  ret i32 %z
+}
+
+; This test models the expansion of 'memcmp(a, b, 64) == 0'
+; if we allowed 2 pairs of 64-byte loads per block.
+
+define i32 @eq_i512_pair(i512* %a, i512* %b) {
+; ANY-LABEL: eq_i512_pair:
+; ANY:       # %bb.0:
+; ANY-NEXT:    movq 32(%rdi), %r8
+; ANY-NEXT:    movq 48(%rdi), %r9
+; ANY-NEXT:    movq 40(%rdi), %rdx
+; ANY-NEXT:    movq 56(%rdi), %rcx
+; ANY-NEXT:    xorq 56(%rsi), %rcx
+; ANY-NEXT:    movq 120(%rdi), %rax
+; ANY-NEXT:    xorq 120(%rsi), %rax
+; ANY-NEXT:    orq %rcx, %rax
+; ANY-NEXT:    movq 88(%rdi), %rcx
+; ANY-NEXT:    xorq 88(%rsi), %rcx
+; ANY-NEXT:    orq %rcx, %rax
+; ANY-NEXT:    movq 24(%rdi), %rcx
+; ANY-NEXT:    xorq 24(%rsi), %rcx
+; ANY-NEXT:    xorq 40(%rsi), %rdx
+; ANY-NEXT:    orq %rcx, %rax
+; ANY-NEXT:    movq 104(%rdi), %rcx
+; ANY-NEXT:    xorq 104(%rsi), %rcx
+; ANY-NEXT:    orq %rdx, %rcx
+; ANY-NEXT:    movq 72(%rdi), %rdx
+; ANY-NEXT:    xorq 72(%rsi), %rdx
+; ANY-NEXT:    orq %rdx, %rcx
+; ANY-NEXT:    movq 16(%rdi), %r10
+; ANY-NEXT:    orq %rax, %rcx
+; ANY-NEXT:    movq 8(%rdi), %rax
+; ANY-NEXT:    xorq 8(%rsi), %rax
+; ANY-NEXT:    xorq 48(%rsi), %r9
+; ANY-NEXT:    orq %rax, %rcx
+; ANY-NEXT:    movq 112(%rdi), %rax
+; ANY-NEXT:    xorq 112(%rsi), %rax
+; ANY-NEXT:    orq %r9, %rax
+; ANY-NEXT:    movq 80(%rdi), %rdx
+; ANY-NEXT:    xorq 80(%rsi), %rdx
+; ANY-NEXT:    orq %rdx, %rax
+; ANY-NEXT:    movq (%rdi), %r9
+; ANY-NEXT:    xorq 16(%rsi), %r10
+; ANY-NEXT:    xorq (%rsi), %r9
+; ANY-NEXT:    xorq 32(%rsi), %r8
+; ANY-NEXT:    orq %r10, %rax
+; ANY-NEXT:    movq 96(%rdi), %rdx
+; ANY-NEXT:    movq 64(%rdi), %rdi
+; ANY-NEXT:    xorq 64(%rsi), %rdi
+; ANY-NEXT:    xorq 96(%rsi), %rdx
+; ANY-NEXT:    orq %r8, %rdx
+; ANY-NEXT:    orq %rdi, %rdx
+; ANY-NEXT:    orq %rax, %rdx
+; ANY-NEXT:    orq %r9, %rdx
+; ANY-NEXT:    xorl %eax, %eax
+; ANY-NEXT:    orq %rcx, %rdx
+; ANY-NEXT:    sete %al
+; ANY-NEXT:    retq
+  %a0 = load i512, i512* %a
+  %b0 = load i512, i512* %b
+  %xor1 = xor i512 %a0, %b0
+  %ap1 = getelementptr i512, i512* %a, i512 1
+  %bp1 = getelementptr i512, i512* %b, i512 1
+  %a1 = load i512, i512* %ap1
+  %b1 = load i512, i512* %bp1
+  %xor2 = xor i512 %a1, %b1
+  %or = or i512 %xor1, %xor2
+  %cmp = icmp eq i512 %or, 0
   %z = zext i1 %cmp to i32
   ret i32 %z
 }

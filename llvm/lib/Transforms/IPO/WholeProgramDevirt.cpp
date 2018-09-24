@@ -665,7 +665,7 @@ void DevirtModule::buildTypeIdentifierMap(
   for (GlobalVariable &GV : M.globals()) {
     Types.clear();
     GV.getMetadata(LLVMContext::MD_type, Types);
-    if (Types.empty())
+    if (GV.isDeclaration() || Types.empty())
       continue;
 
     VTableBits *&BitsPtr = GVToBits[&GV];

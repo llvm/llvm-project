@@ -49,9 +49,8 @@ endfunction()
 set(XRAY_TEST_ARCH ${XRAY_SUPPORTED_ARCH})
 set(XRAY_UNITTEST_LINK_FLAGS
   ${CMAKE_THREAD_LIBS_INIT}
-  -l${SANITIZER_CXX_ABI_LIBRARY}
-  -fxray-instrument
-  )
+  -l${SANITIZER_CXX_ABI_LIBRARY})
+
 if (NOT APPLE)
   append_list_if(COMPILER_RT_HAS_LIBM -lm XRAY_UNITTEST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBRT -lrt XRAY_UNITTEST_LINK_FLAGS)
@@ -62,6 +61,19 @@ if (NOT APPLE)
   append_list_if(
     COMPILER_RT_HAS_TERMINFO
     -l${COMPILER_RT_TERMINFO_LIB} XRAY_UNITTEST_LINK_FLAGS)
+
+  if (COMPILER_RT_STANDALONE_BUILD)
+    append_list_if(COMPILER_RT_HAS_LLVMXRAY ${LLVM_XRAY_LDFLAGS} XRAY_UNITTEST_LINK_FLAGS)
+    append_list_if(COMPILER_RT_HAS_LLVMXRAY ${LLVM_XRAY_LIBLIST} XRAY_UNITTEST_LINK_FLAGS)
+  else()
+    # We add the library directories one at a time in our CFLAGS.
+    foreach (DIR ${LLVM_LIBRARY_DIR})
+      list(APPEND XRAY_UNITTEST_LINK_FLAGS -L${DIR})
+    endforeach()
+
+    # We also add the actual libraries to link as dependencies.
+    list(APPEND XRAY_UNITTEST_LINK_FLAGS -lLLVMXRay -lLLVMSupport -lLLVMTestingSupport)
+  endif()
 endif()
 
 macro(add_xray_unittest testname)
@@ -85,7 +97,7 @@ macro(add_xray_unittest testname)
         DEPS gtest xray llvm-xray LLVMXRay LLVMTestingSupport
         CFLAGS ${XRAY_UNITTEST_CFLAGS}
         LINK_FLAGS ${TARGET_LINK_FLAGS} ${XRAY_UNITTEST_LINK_FLAGS}
-        -lLLVMXRay -lLLVMSupport -lLLVMTestingSupport)
+        )
       set_target_properties(XRayUnitTests
         PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})

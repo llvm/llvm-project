@@ -1448,11 +1448,33 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
   return Result;
 }
 
+bool Sema::isUsualDeallocationFunction(const CXXMethodDecl *Method) {
+  // [CUDA] Ignore this function, if we can't call it.
+  const FunctionDecl *Caller = dyn_cast<FunctionDecl>(CurContext);
+  if (getLangOpts().CUDA &&
+      IdentifyCUDAPreference(Caller, Method) <= CFP_WrongSide)
+    return false;
+
+  SmallVector<const FunctionDecl*, 4> PreventedBy;
+  bool Result = Method->isUsualDeallocationFunction(PreventedBy);
+
+  if (Result || !getLangOpts().CUDA || PreventedBy.empty())
+    return Result;
+
+  // In case of CUDA, return true if none of the 1-argument deallocator
+  // functions are actually callable.
+  return llvm::none_of(PreventedBy, [&](const FunctionDecl *FD) {
+    assert(FD->getNumParams() == 1 &&
+           "Only single-operand functions should be in PreventedBy");
+    return IdentifyCUDAPreference(Caller, FD) >= CFP_HostDevice;
+  });
+}
+
 /// Determine whether the given function is a non-placement
 /// deallocation function.
 static bool isNonPlacementDeallocationFunction(Sema &S, FunctionDecl *FD) {
   if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(FD))
-    return Method->isUsualDeallocationFunction();
+    return S.isUsualDeallocationFunction(Method);
 
   if (FD->getOverloadedOperator() != OO_Delete &&
       FD->getOverloadedOperator() != OO_Array_Delete)

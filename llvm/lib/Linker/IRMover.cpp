@@ -978,11 +978,14 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
   // containing a GV from the source module, in which case SGV will be
   // the same as DGV and NewGV, and TypeMap.get() will assert since it
   // assumes it is being invoked on a type in the source module.
-  if (DGV && NewGV != SGV)
-    C = ConstantExpr::getBitCast(NewGV, TypeMap.get(SGV->getType()));
+  if (DGV && NewGV != SGV) {
+    C = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+      NewGV, TypeMap.get(SGV->getType()));
+  }
 
   if (DGV && NewGV != DGV) {
-    DGV->replaceAllUsesWith(ConstantExpr::getBitCast(NewGV, DGV->getType()));
+    DGV->replaceAllUsesWith(
+      ConstantExpr::getPointerBitCastOrAddrSpaceCast(NewGV, DGV->getType()));
     DGV->eraseFromParent();
   }
 

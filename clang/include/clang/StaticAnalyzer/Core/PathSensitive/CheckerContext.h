@@ -162,10 +162,6 @@ public:
     return getSValBuilder().getSymbolManager();
   }
 
-  bool isObjCGCEnabled() const {
-    return Eng.isObjCGCEnabled();
-  }
-
   ProgramStateManager &getStateManager() {
     return Eng.getStateManager();
   }

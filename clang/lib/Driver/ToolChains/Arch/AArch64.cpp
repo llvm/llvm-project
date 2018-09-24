@@ -193,6 +193,32 @@ void aarch64::getAArch64TargetFeatures(const Driver &D, const ArgList &Args,
       Features.push_back("-crc");
   }
 
+  // Handle (arch-dependent) fp16fml/fullfp16 relationship.
+  // FIXME: this fp16fml option handling will be reimplemented after the
+  // TargetParser rewrite.
+  const auto ItRNoFullFP16 = std::find(Features.rbegin(), Features.rend(), "-fullfp16");
+  const auto ItRFP16FML = std::find(Features.rbegin(), Features.rend(), "+fp16fml");
+  if (std::find(Features.begin(), Features.end(), "+v8.4a") != Features.end()) {
+    const auto ItRFullFP16  = std::find(Features.rbegin(), Features.rend(), "+fullfp16");
+    if (ItRFullFP16 < ItRNoFullFP16 && ItRFullFP16 < ItRFP16FML) {
+      // Only entangled feature that can be to the right of this +fullfp16 is -fp16fml.
+      // Only append the +fp16fml if there is no -fp16fml after the +fullfp16.
+      if (std::find(Features.rbegin(), ItRFullFP16, "-fp16fml") == ItRFullFP16)
+        Features.push_back("+fp16fml");
+    }
+    else
+      goto fp16_fml_fallthrough;
+  }
+  else {
+fp16_fml_fallthrough:
+    // In both of these cases, putting the 'other' feature on the end of the vector will
+    // result in the same effect as placing it immediately after the current feature.
+    if (ItRNoFullFP16 < ItRFP16FML)
+      Features.push_back("-fp16fml");
+    else if (ItRNoFullFP16 > ItRFP16FML)
+      Features.push_back("+fullfp16");
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
                                options::OPT_munaligned_access))
     if (A->getOption().matches(options::OPT_mno_unaligned_access))

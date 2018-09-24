@@ -203,7 +203,7 @@ private:
     }
 
     ~ConcreteLinkedObject() override {
-      if (this->Parent.NotifyFreed)
+      if (this->Parent.NotifyFreed && ObjForNotify.getBinary())
         this->Parent.NotifyFreed(K, *ObjForNotify.getBinary());
 
       MemMgr->deregisterEHFrames();

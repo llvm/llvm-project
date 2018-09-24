@@ -6841,6 +6841,15 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
                    "destination operands must be sequential");
     break;
   }
+  case ARM::VLDMDIA:
+  case ARM::VSTMDIA: {
+    ARMOperand &Op = static_cast<ARMOperand&>(*Operands[3]);
+    auto &RegList = Op.getRegList();
+    if (RegList.size() < 1 || RegList.size() > 16)
+      return Error(Operands[3]->getStartLoc(),
+                   "list of registers must be at least 1 and at most 16");
+    break;
+  }
   }
 
   return false;

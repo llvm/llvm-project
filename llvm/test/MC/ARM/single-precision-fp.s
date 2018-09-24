@@ -171,6 +171,21 @@
 @ CHECK-ERRORS: error: instruction requires: double precision VFP
 @ CHECK-ERRORS-NEXT: vrintm.f64 d3, d2
 
+        vstm r4, {}
+        vstm r4, {d15-d30}
+        vstm r4, {d15-d31}
+        vstm r4, {s15-s31}
+        vldm r4, {d15-d30}
+        vldm r4, {d15-d31}
+        vldm r4, {s15-s31}
+@ CHECK-ERRORS: error: register expected
+@ CHECK:  vstmia  r4, {d15, d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30}
+@ CHECK-ERRORS: error: list of registers must be at least 1 and at most 16
+@ CHECK:  vstmia  r4, {s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+@ CHECK:  vldmia  r4, {d15, d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30}
+@ CHECK-ERRORS: error: list of registers must be at least 1 and at most 16
+@ CHECK:  vldmia  r4, {s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
+
         @ Double precisionish operations that actually *are* allowed.
         vldr d0, [sp]
         vstr d3, [sp]

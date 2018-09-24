@@ -32,13 +32,15 @@ namespace __xray {
 // internal allocator. This allows us to manage the memory directly, using
 // mmap'ed memory to back the allocators.
 template <class T> T *allocate() XRAY_NEVER_INSTRUMENT {
-  auto B = reinterpret_cast<void *>(
-      internal_mmap(NULL, sizeof(T), PROT_READ | PROT_WRITE,
-                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
-  if (B == MAP_FAILED) {
+  uptr RoundedSize = RoundUpTo(sizeof(T), GetPageSizeCached());
+  uptr B = internal_mmap(NULL, RoundedSize, PROT_READ | PROT_WRITE,
+                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  int ErrNo;
+  if (UNLIKELY(internal_iserror(B, &ErrNo))) {
     if (Verbosity())
-      Report("XRay Profiling: Failed to allocate memory of size %d.\n",
-             sizeof(T));
+      Report(
+          "XRay Profiling: Failed to allocate memory of size %d; Error = %d.\n",
+          RoundedSize, B);
     return nullptr;
   }
   return reinterpret_cast<T *>(B);
@@ -47,16 +49,20 @@ template <class T> T *allocate() XRAY_NEVER_INSTRUMENT {
 template <class T> void deallocate(T *B) XRAY_NEVER_INSTRUMENT {
   if (B == nullptr)
     return;
-  internal_munmap(B, sizeof(T));
+  uptr RoundedSize = RoundUpTo(sizeof(T), GetPageSizeCached());
+  internal_munmap(B, RoundedSize);
 }
 
 template <class T = uint8_t> T *allocateBuffer(size_t S) XRAY_NEVER_INSTRUMENT {
-  auto B = reinterpret_cast<void *>(
-      internal_mmap(NULL, S * sizeof(T), PROT_READ | PROT_WRITE,
-                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
-  if (B == MAP_FAILED) {
+  uptr RoundedSize = RoundUpTo(S * sizeof(T), GetPageSizeCached());
+  uptr B = internal_mmap(NULL, RoundedSize, PROT_READ | PROT_WRITE,
+                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  int ErrNo;
+  if (UNLIKELY(internal_iserror(B, &ErrNo))) {
     if (Verbosity())
-      Report("XRay Profiling: Failed to allocate memory of size %d.\n", S);
+      Report(
+          "XRay Profiling: Failed to allocate memory of size %d; Error = %d.\n",
+          RoundedSize, B);
     return nullptr;
   }
   return reinterpret_cast<T *>(B);
@@ -65,7 +71,8 @@ template <class T = uint8_t> T *allocateBuffer(size_t S) XRAY_NEVER_INSTRUMENT {
 template <class T> void deallocateBuffer(T *B, size_t S) XRAY_NEVER_INSTRUMENT {
   if (B == nullptr)
     return;
-  internal_munmap(B, S);
+  uptr RoundedSize = RoundUpTo(S * sizeof(T), GetPageSizeCached());
+  internal_munmap(B, RoundedSize);
 }
 
 template <class T, class... U>
@@ -104,19 +111,16 @@ template <size_t N> struct Allocator {
 
 private:
   const size_t MaxMemory{0};
-  void *BackingStore = nullptr;
-  void *AlignedNextBlock = nullptr;
+  uint8_t *BackingStore = nullptr;
+  uint8_t *AlignedNextBlock = nullptr;
   size_t AllocatedBlocks = 0;
   SpinMutex Mutex{};
 
   void *Alloc() XRAY_NEVER_INSTRUMENT {
     SpinMutexLock Lock(&Mutex);
     if (UNLIKELY(BackingStore == nullptr)) {
-      BackingStore = reinterpret_cast<void *>(
-          internal_mmap(NULL, MaxMemory, PROT_READ | PROT_WRITE,
-                        MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
-      if (BackingStore == MAP_FAILED) {
-        BackingStore = nullptr;
+      BackingStore = allocateBuffer(MaxMemory);
+      if (BackingStore == nullptr) {
         if (Verbosity())
           Report("XRay Profiling: Failed to allocate memory for allocator.\n");
         return nullptr;
@@ -129,7 +133,7 @@ private:
       auto AlignedNextBlockNum = nearest_boundary(
           reinterpret_cast<uintptr_t>(AlignedNextBlock), kCacheLineSize);
       if (diff(AlignedNextBlockNum, BackingStoreNum) > ptrdiff_t(MaxMemory)) {
-        munmap(BackingStore, MaxMemory);
+        deallocateBuffer(BackingStore, MaxMemory);
         AlignedNextBlock = BackingStore = nullptr;
         if (Verbosity())
           Report("XRay Profiling: Cannot obtain enough memory from "
@@ -137,7 +141,7 @@ private:
         return nullptr;
       }
 
-      AlignedNextBlock = reinterpret_cast<void *>(AlignedNextBlockNum);
+      AlignedNextBlock = reinterpret_cast<uint8_t *>(AlignedNextBlockNum);
 
       // Assert that AlignedNextBlock is cache-line aligned.
       DCHECK_EQ(reinterpret_cast<uintptr_t>(AlignedNextBlock) % kCacheLineSize,
@@ -150,8 +154,8 @@ private:
     // Align the pointer we'd like to return to an appropriate alignment, then
     // advance the pointer from where to start allocations.
     void *Result = AlignedNextBlock;
-    AlignedNextBlock = reinterpret_cast<void *>(
-        reinterpret_cast<char *>(AlignedNextBlock) + N);
+    AlignedNextBlock = reinterpret_cast<uint8_t *>(
+        reinterpret_cast<uint8_t *>(AlignedNextBlock) + N);
     ++AllocatedBlocks;
     return Result;
   }
@@ -164,7 +168,7 @@ public:
 
   ~Allocator() NOEXCEPT XRAY_NEVER_INSTRUMENT {
     if (BackingStore != nullptr) {
-      internal_munmap(BackingStore, MaxMemory);
+      deallocateBuffer(BackingStore, MaxMemory);
     }
   }
 };

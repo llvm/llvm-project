@@ -38,6 +38,8 @@ FEATURE(hwaddress_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::HWAddress |
                                    SanitizerKind::KernelHWAddress))
 FEATURE(xray_instrument, LangOpts.XRayInstrument)
+FEATURE(undefined_behavior_sanitizer,
+        LangOpts.Sanitize.hasOneOf(SanitizerKind::Undefined))
 FEATURE(assume_nonnull, true)
 FEATURE(attribute_analyzer_noreturn, true)
 FEATURE(attribute_availability, true)

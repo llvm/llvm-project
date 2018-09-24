@@ -508,26 +508,65 @@ static std::string createResponseFile(const opt::InputArgList &Args,
   return Data.str();
 }
 
-static unsigned getDefaultDebugType(const opt::InputArgList &Args) {
-  unsigned DebugTypes = static_cast<unsigned>(DebugType::CV);
+enum class DebugKind { Unknown, None, Full, FastLink, GHash, Dwarf, Symtab };
+
+static DebugKind parseDebugKind(const opt::InputArgList &Args) {
+  auto *A = Args.getLastArg(OPT_debug, OPT_debug_opt);
+  if (!A)
+    return DebugKind::None;
+  if (A->getNumValues() == 0)
+    return DebugKind::Full;
+
+  DebugKind Debug = StringSwitch<DebugKind>(A->getValue())
+                     .CaseLower("none", DebugKind::None)
+                     .CaseLower("full", DebugKind::Full)
+                     .CaseLower("fastlink", DebugKind::FastLink)
+                     // LLD extensions
+                     .CaseLower("ghash", DebugKind::GHash)
+                     .CaseLower("dwarf", DebugKind::Dwarf)
+                     .CaseLower("symtab", DebugKind::Symtab)
+                     .Default(DebugKind::Unknown);
+
+  if (Debug == DebugKind::FastLink) {
+    warn("/debug:fastlink unsupported; using /debug:full");
+    return DebugKind::Full;
+  }
+  if (Debug == DebugKind::Unknown) {
+    error("/debug: unknown option: " + Twine(A->getValue()));
+    return DebugKind::None;
+  }
+  return Debug;
+}
+
+static unsigned parseDebugTypes(const opt::InputArgList &Args) {
+  unsigned DebugTypes = static_cast<unsigned>(DebugType::None);
+
+  if (auto *A = Args.getLastArg(OPT_debugtype)) {
+    SmallVector<StringRef, 3> Types;
+    A->getSpelling().split(Types, ',', /*KeepEmpty=*/false);
+
+    for (StringRef Type : Types) {
+      unsigned V = StringSwitch<unsigned>(Type.lower())
+                       .Case("cv", static_cast<unsigned>(DebugType::CV))
+                       .Case("pdata", static_cast<unsigned>(DebugType::PData))
+                       .Case("fixup", static_cast<unsigned>(DebugType::Fixup))
+                       .Default(0);
+      if (V == 0) {
+        warn("/debugtype: unknown option: " + Twine(A->getValue()));
+        continue;
+      }
+      DebugTypes |= V;
+    }
+    return DebugTypes;
+  }
+
+  // Default debug types
+  DebugTypes = static_cast<unsigned>(DebugType::CV);
   if (Args.hasArg(OPT_driver))
     DebugTypes |= static_cast<unsigned>(DebugType::PData);
   if (Args.hasArg(OPT_profile))
     DebugTypes |= static_cast<unsigned>(DebugType::Fixup);
-  return DebugTypes;
-}
 
-static unsigned parseDebugType(StringRef Arg) {
-  SmallVector<StringRef, 3> Types;
-  Arg.split(Types, ',', /*KeepEmpty=*/false);
-
-  unsigned DebugTypes = static_cast<unsigned>(DebugType::None);
-  for (StringRef Type : Types)
-    DebugTypes |= StringSwitch<unsigned>(Type.lower())
-                      .Case("cv", static_cast<unsigned>(DebugType::CV))
-                      .Case("pdata", static_cast<unsigned>(DebugType::PData))
-                      .Case("fixup", static_cast<unsigned>(DebugType::Fixup))
-                      .Default(0);
   return DebugTypes;
 }
 
@@ -895,17 +934,19 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Config->ForceMultiple = true;
 
   // Handle /debug
-  if (Args.hasArg(OPT_debug, OPT_debug_dwarf, OPT_debug_ghash)) {
+  DebugKind Debug = parseDebugKind(Args);
+  if (Debug == DebugKind::Full || Debug == DebugKind::Dwarf ||
+      Debug == DebugKind::GHash) {
     Config->Debug = true;
     Config->Incremental = true;
-    if (auto *Arg = Args.getLastArg(OPT_debugtype))
-      Config->DebugTypes = parseDebugType(Arg->getValue());
-    else
-      Config->DebugTypes = getDefaultDebugType(Args);
   }
 
+  // Handle /debugtype
+  Config->DebugTypes = parseDebugTypes(Args);
+
   // Handle /pdb
-  bool ShouldCreatePDB = Args.hasArg(OPT_debug, OPT_debug_ghash);
+  bool ShouldCreatePDB =
+      (Debug == DebugKind::Full || Debug == DebugKind::GHash);
   if (ShouldCreatePDB) {
     if (auto *Arg = Args.getLastArg(OPT_pdb))
       Config->PDBPath = Arg->getValue();
@@ -1026,7 +1067,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Config->Implib = Arg->getValue();
 
   // Handle /opt.
-  bool DoGC = !Args.hasArg(OPT_debug) || Args.hasArg(OPT_profile);
+  bool DoGC = Debug == DebugKind::None || Args.hasArg(OPT_profile);
   unsigned ICFLevel =
       Args.hasArg(OPT_profile) ? 0 : 1; // 0: off, 1: limited, 2: on
   unsigned TailMerge = 1;
@@ -1170,9 +1211,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->NxCompat = Args.hasFlag(OPT_nxcompat, OPT_nxcompat_no, true);
   Config->TerminalServerAware =
       !Config->DLL && Args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);
-  Config->DebugDwarf = Args.hasArg(OPT_debug_dwarf);
-  Config->DebugGHashes = Args.hasArg(OPT_debug_ghash);
-  Config->DebugSymtab = Args.hasArg(OPT_debug_symtab);
+  Config->DebugDwarf = Debug == DebugKind::Dwarf;
+  Config->DebugGHashes = Debug == DebugKind::GHash;
+  Config->DebugSymtab = Debug == DebugKind::Symtab;
 
   Config->MapFile = getMapFile(Args);
 

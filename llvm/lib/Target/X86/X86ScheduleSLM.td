@@ -95,8 +95,17 @@ def : InstRW<[WriteMove], (instrs COPY)>;
 
 defm : SLMWriteResPair<WriteALU,    [SLM_IEC_RSV01], 1>;
 defm : SLMWriteResPair<WriteADC,    [SLM_IEC_RSV01], 1>;
-defm : SLMWriteResPair<WriteIMul,   [SLM_IEC_RSV1],  3>;
-defm : SLMWriteResPair<WriteIMul64, [SLM_IEC_RSV1],  3>;
+
+defm : SLMWriteResPair<WriteIMul8,     [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul16,    [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul16Imm, [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul16Reg, [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul32,    [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul32Imm, [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul32Reg, [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul64,    [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul64Imm, [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul64Reg, [SLM_IEC_RSV1],  3>;
 
 defm : X86WriteRes<WriteBSWAP32, [SLM_IEC_RSV01], 1, [1], 1>;
 defm : X86WriteRes<WriteBSWAP64, [SLM_IEC_RSV01], 1, [1], 1>;
@@ -104,7 +113,10 @@ defm : X86WriteRes<WriteCMPXCHG, [SLM_IEC_RSV01], 1, [1], 1>;
 defm : X86WriteRes<WriteCMPXCHGRMW, [SLM_IEC_RSV01, SLM_MEC_RSV], 4, [1, 2], 2>;
 defm : X86WriteRes<WriteXCHG,      [SLM_IEC_RSV01], 1, [1], 1>;
 
-defm : SLMWriteResPair<WriteShift,  [SLM_IEC_RSV0],  1>;
+defm : SLMWriteResPair<WriteShift,    [SLM_IEC_RSV0],  1>;
+defm : SLMWriteResPair<WriteShiftCL,  [SLM_IEC_RSV0],  1>;
+defm : SLMWriteResPair<WriteRotate,   [SLM_IEC_RSV0],  1>;
+defm : SLMWriteResPair<WriteRotateCL, [SLM_IEC_RSV0],  1>;
 
 defm : X86WriteRes<WriteSHDrri, [SLM_IEC_RSV0],  1, [1], 1>;
 defm : X86WriteRes<WriteSHDrrcl,[SLM_IEC_RSV0],  1, [1], 1>;

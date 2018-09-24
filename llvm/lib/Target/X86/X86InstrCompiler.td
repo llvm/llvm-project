@@ -434,37 +434,49 @@ def REP_MOVSQ_64 : RI<0xA5, RawFrm, (outs), (ins),
 // FIXME: Should use "(X86rep_stos AL)" as the pattern.
 let Defs = [ECX,EDI], isCodeGenOnly = 1 in {
   let Uses = [AL,ECX,EDI] in
-  def REP_STOSB_32 : I<0xAA, RawFrm, (outs), (ins), "{rep;stosb|rep stosb}",
-                      [(X86rep_stos i8)]>, REP,
-                     Requires<[Not64BitMode]>;
+  def REP_STOSB_32 : I<0xAA, RawFrm, (outs), (ins),
+                       "{rep;stosb %al, %es:(%edi)|rep stosb es:[edi], al}",
+                      [(X86rep_stos i8)]>, REP, AdSize32,
+                     Requires<[NotLP64]>;
   let Uses = [AX,ECX,EDI] in
-  def REP_STOSW_32 : I<0xAB, RawFrm, (outs), (ins), "{rep;stosw|rep stosw}",
-                      [(X86rep_stos i16)]>, REP, OpSize16,
-                     Requires<[Not64BitMode]>;
+  def REP_STOSW_32 : I<0xAB, RawFrm, (outs), (ins),
+                      "{rep;stosw %ax, %es:(%edi)|rep stosw es:[edi], ax}",
+                      [(X86rep_stos i16)]>, REP, AdSize32, OpSize16,
+                     Requires<[NotLP64]>;
   let Uses = [EAX,ECX,EDI] in
-  def REP_STOSD_32 : I<0xAB, RawFrm, (outs), (ins), "{rep;stosl|rep stosd}",
-                      [(X86rep_stos i32)]>, REP, OpSize32,
-                     Requires<[Not64BitMode]>;
+  def REP_STOSD_32 : I<0xAB, RawFrm, (outs), (ins),
+                      "{rep;stosl %eax, %es:(%edi)|rep stosd es:[edi], eax}",
+                      [(X86rep_stos i32)]>, REP, AdSize32, OpSize32,
+                     Requires<[NotLP64]>;
+  let Uses = [RAX,RCX,RDI] in
+  def REP_STOSQ_32 : RI<0xAB, RawFrm, (outs), (ins),
+                        "{rep;stosq %rax, %es:(%edi)|rep stosq es:[edi], rax}",
+                        [(X86rep_stos i64)]>, REP, AdSize32,
+                        Requires<[NotLP64, In64BitMode]>;
 }
 
 let Defs = [RCX,RDI], isCodeGenOnly = 1 in {
   let Uses = [AL,RCX,RDI] in
-  def REP_STOSB_64 : I<0xAA, RawFrm, (outs), (ins), "{rep;stosb|rep stosb}",
-                       [(X86rep_stos i8)]>, REP,
-                       Requires<[In64BitMode]>;
+  def REP_STOSB_64 : I<0xAA, RawFrm, (outs), (ins),
+                       "{rep;stosb %al, %es:(%rdi)|rep stosb es:[rdi], al}",
+                       [(X86rep_stos i8)]>, REP, AdSize64,
+                       Requires<[IsLP64]>;
   let Uses = [AX,RCX,RDI] in
-  def REP_STOSW_64 : I<0xAB, RawFrm, (outs), (ins), "{rep;stosw|rep stosw}",
-                       [(X86rep_stos i16)]>, REP, OpSize16,
-                       Requires<[In64BitMode]>;
+  def REP_STOSW_64 : I<0xAB, RawFrm, (outs), (ins),
+                       "{rep;stosw %ax, %es:(%rdi)|rep stosw es:[rdi], ax}",
+                       [(X86rep_stos i16)]>, REP, AdSize64, OpSize16,
+                       Requires<[IsLP64]>;
   let Uses = [RAX,RCX,RDI] in
-  def REP_STOSD_64 : I<0xAB, RawFrm, (outs), (ins), "{rep;stosl|rep stosd}",
-                       [(X86rep_stos i32)]>, REP, OpSize32,
-                       Requires<[In64BitMode]>;
+  def REP_STOSD_64 : I<0xAB, RawFrm, (outs), (ins),
+                      "{rep;stosl %eax, %es:(%rdi)|rep stosd es:[rdi], eax}",
+                       [(X86rep_stos i32)]>, REP, AdSize64, OpSize32,
+                       Requires<[IsLP64]>;
 
   let Uses = [RAX,RCX,RDI] in
-  def REP_STOSQ_64 : RI<0xAB, RawFrm, (outs), (ins), "{rep;stosq|rep stosq}",
-                        [(X86rep_stos i64)]>, REP,
-                        Requires<[In64BitMode]>;
+  def REP_STOSQ_64 : RI<0xAB, RawFrm, (outs), (ins),
+                        "{rep;stosq %rax, %es:(%rdi)|rep stosq es:[rdi], rax}",
+                        [(X86rep_stos i64)]>, REP, AdSize64,
+                        Requires<[IsLP64]>;
 }
 } // SchedRW
 
