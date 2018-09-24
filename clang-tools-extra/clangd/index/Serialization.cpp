@@ -33,7 +33,7 @@ Error makeError(const Twine &Msg) {
 // Reads binary data from a StringRef, and keeps track of position.
 class Reader {
   const char *Begin, *End;
-  bool Err;
+  bool Err = false;
 
 public:
   Reader(StringRef Data) : Begin(Data.begin()), End(Data.end()) {}
