@@ -302,9 +302,9 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
     return nullptr;
   }
 
-  if (valobj_typename.startswith(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs21_SwiftDeferredNSArray"))
-      || valobj_typename.startswith("_TtCs21_SwiftDeferredNSArray")
-      || valobj_typename.startswith("Swift._SwiftDeferredNSArray") ) {
+  if (valobj_typename.startswith(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs22__SwiftDeferredNSArray"))
+      || valobj_typename.startswith("_TtCs22__SwiftDeferredNSArray")
+      || valobj_typename.startswith("Swift.__SwiftDeferredNSArray") ) {
     ProcessSP process_sp(valobj.GetProcessSP());
     if (!process_sp)
       return nullptr;
