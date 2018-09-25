@@ -139,30 +139,9 @@
 
 // typemap for an outgoing buffer
 // See also SBEvent::SBEvent(uint32_t event, const char *cstr, uint32_t cstr_len).
-%typemap(in) (const char *cstr, uint32_t cstr_len) {
-   using namespace lldb_private;
-   if (PythonString::Check($input)) {
-      PythonString str(PyRefType::Borrowed, $input);
-      $1 = (char*)str.GetString().data();
-      $2 = str.GetSize();
-   }
-   else if(PythonByteArray::Check($input)) {
-      PythonByteArray bytearray(PyRefType::Borrowed, $input);
-      $1 = (char*)bytearray.GetBytes().data();
-      $2 = bytearray.GetSize();
-   }
-   else if (PythonBytes::Check($input)) {
-      PythonBytes bytes(PyRefType::Borrowed, $input);
-      $1 = (char*)bytes.GetBytes().data();
-      $2 = bytes.GetSize();
-   }
-   else {
-      PyErr_SetString(PyExc_ValueError, "Expecting a string");
-      return NULL;
-   }
-}
 // Ditto for SBProcess::PutSTDIN(const char *src, size_t src_len).
-%typemap(in) (const char *src, size_t src_len) {
+%typemap(in) (const char *cstr, uint32_t cstr_len),
+             (const char *src, size_t src_len) {
    using namespace lldb_private;
    if (PythonString::Check($input)) {
       PythonString str(PyRefType::Borrowed, $input);
@@ -184,32 +163,9 @@
       return NULL;
    }
 }
-// And SBProcess::WriteMemory.
-%typemap(in) (const void *buf, size_t size) {
-   using namespace lldb_private;
-   if (PythonString::Check($input)) {
-      PythonString str(PyRefType::Borrowed, $input);
-      $1 = (void*)str.GetString().data();
-      $2 = str.GetSize();
-   }
-   else if(PythonByteArray::Check($input)) {
-      PythonByteArray bytearray(PyRefType::Borrowed, $input);
-      $1 = (void*)bytearray.GetBytes().data();
-      $2 = bytearray.GetSize();
-   }
-   else if (PythonBytes::Check($input)) {
-      PythonBytes bytes(PyRefType::Borrowed, $input);
-      $1 = (void*)bytes.GetBytes().data();
-      $2 = bytes.GetSize();
-   }
-   else {
-      PyErr_SetString(PyExc_ValueError, "Expecting a buffer");
-      return NULL;
-   }
-}
-
-// For SBDebugger::DispatchInput
-%typemap(in) (const void *data, size_t data_len) {
+// For SBProcess::WriteMemory, SBTarget::GetInstructions and SBDebugger::DispatchInput.
+%typemap(in) (const void *buf, size_t size),
+             (const void *data, size_t data_len) {
    using namespace lldb_private;
    if (PythonString::Check($input)) {
       PythonString str(PyRefType::Borrowed, $input);
@@ -264,25 +220,70 @@
    free($1);
 }
 
+%{
+namespace {
+template <class T>
+T PyLongAsT(PyObject *obj) {
+  static_assert(true, "unsupported type"); 
+}
+
+template <> uint64_t PyLongAsT<uint64_t>(PyObject *obj) {
+  return static_cast<uint64_t>(PyLong_AsUnsignedLongLong(obj));
+}
+
+template <> uint32_t PyLongAsT<uint32_t>(PyObject *obj) {
+  return static_cast<uint32_t>(PyLong_AsUnsignedLong(obj));
+}
+
+template <> int64_t PyLongAsT<int64_t>(PyObject *obj) {
+  return static_cast<int64_t>(PyLong_AsLongLong(obj));
+}
+
+template <> int32_t PyLongAsT<int32_t>(PyObject *obj) {
+  return static_cast<int32_t>(PyLong_AsLong(obj));
+}
+
+template <class T>
+bool SetNumberFromPyObject(T &number, PyObject *obj) {
+  if (PyInt_Check(obj))
+    number = static_cast<T>(PyInt_AsLong(obj));
+  else if (PyLong_Check(obj))
+    number = PyLongAsT<T>(obj);
+  else return false;
+
+  return true;
+}
+
+template <>
+bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
+  if (PyFloat_Check(obj)) {
+    number = PyFloat_AsDouble(obj);
+    return true;
+  }
+
+  return false;
+}
+
+} // namespace
+%}
+
 // these typemaps allow Python users to pass list objects
 // and have them turn into C++ arrays (this is useful, for instance
 // when creating SBData objects from lists of numbers)
-%typemap(in) (uint64_t* array, size_t array_len) {
+%typemap(in) (uint64_t* array, size_t array_len),
+             (uint32_t* array, size_t array_len),
+             (int64_t* array, size_t array_len),
+             (int32_t* array, size_t array_len),
+             (double* array, size_t array_len) {
   /* Check if is a list  */
   if (PyList_Check($input)) {
     int size = PyList_Size($input);
     int i = 0;
     $2 = size;
-    $1 = (uint64_t*) malloc(size * sizeof(uint64_t));
+    $1 = ($1_type) malloc(size * sizeof($*1_type));
     for (i = 0; i < size; i++) {
       PyObject *o = PyList_GetItem($input,i);
-      if (PyInt_Check(o)) {
-        $1[i] = PyInt_AsLong(o);
-      }
-      else if (PyLong_Check(o)) {
-        $1[i] = PyLong_AsUnsignedLongLong(o);
-      }
-      else {
+      if (!SetNumberFromPyObject($1[i], o)) {
         PyErr_SetString(PyExc_TypeError,"list must contain numbers");
         free($1);
         return NULL;
@@ -302,155 +303,11 @@
   }
 }
 
-%typemap(freearg) (uint64_t* array, size_t array_len) {
-  free($1);
-}
-
-%typemap(in) (uint32_t* array, size_t array_len) {
-  /* Check if is a list  */
-  if (PyList_Check($input)) {
-    int size = PyList_Size($input);
-    int i = 0;
-    $2 = size;
-    $1 = (uint32_t*) malloc(size * sizeof(uint32_t));
-    for (i = 0; i < size; i++) {
-      PyObject *o = PyList_GetItem($input,i);
-      if (PyInt_Check(o)) {
-        $1[i] = PyInt_AsLong(o);
-      }
-      else if (PyLong_Check(o)) {
-        $1[i] = PyLong_AsUnsignedLong(o);
-      }
-      else {
-        PyErr_SetString(PyExc_TypeError,"list must contain numbers");
-        free($1);
-        return NULL;
-      }
-
-      if (PyErr_Occurred()) {
-        free($1);
-        return NULL;
-      }
-    }
-  } else if ($input == Py_None) {
-    $1 =  NULL;
-    $2 = 0;
-  } else {
-    PyErr_SetString(PyExc_TypeError,"not a list");
-    return NULL;
-  }
-}
-
-%typemap(freearg) (uint32_t* array, size_t array_len) {
-  free($1);
-}
-
-%typemap(in) (int64_t* array, size_t array_len) {
-  /* Check if is a list  */
-  if (PyList_Check($input)) {
-    int size = PyList_Size($input);
-    int i = 0;
-    $2 = size;
-    $1 = (int64_t*) malloc(size * sizeof(int64_t));
-    for (i = 0; i < size; i++) {
-      PyObject *o = PyList_GetItem($input,i);
-      if (PyInt_Check(o)) {
-        $1[i] = PyInt_AsLong(o);
-      }
-      else if (PyLong_Check(o)) {
-        $1[i] = PyLong_AsLongLong(o);
-      }
-      else {
-        PyErr_SetString(PyExc_TypeError,"list must contain numbers");
-        free($1);
-        return NULL;
-      }
-
-      if (PyErr_Occurred()) {
-        free($1);
-        return NULL;
-      }
-    }
-  } else if ($input == Py_None) {
-    $1 =  NULL;
-    $2 = 0;
-  } else {
-    PyErr_SetString(PyExc_TypeError,"not a list");
-    return NULL;
-  }
-}
-
-%typemap(freearg) (int64_t* array, size_t array_len) {
-  free($1);
-}
-
-%typemap(in) (int32_t* array, size_t array_len) {
-  /* Check if is a list  */
-  if (PyList_Check($input)) {
-    int size = PyList_Size($input);
-    int i = 0;
-    $2 = size;
-    $1 = (int32_t*) malloc(size * sizeof(int32_t));
-    for (i = 0; i < size; i++) {
-      PyObject *o = PyList_GetItem($input,i);
-      if (PyInt_Check(o)) {
-        $1[i] = PyInt_AsLong(o);
-      }
-      else if (PyLong_Check(o)) {
-        $1[i] = PyLong_AsLong(o);
-      }
-      else {
-        PyErr_SetString(PyExc_TypeError,"list must contain numbers");
-        free($1);
-        return NULL;
-      }
-
-      if (PyErr_Occurred()) {
-        free($1);
-        return NULL;
-      }
-    }
-  } else if ($input == Py_None) {
-    $1 =  NULL;
-    $2 = 0;
-  } else {
-    PyErr_SetString(PyExc_TypeError,"not a list");
-    return NULL;
-  }
-}
-
-%typemap(freearg) (int32_t* array, size_t array_len) {
-  free($1);
-}
-
-%typemap(in) (double* array, size_t array_len) {
-  /* Check if is a list  */
-  if (PyList_Check($input)) {
-    int size = PyList_Size($input);
-    int i = 0;
-    $2 = size;
-    $1 = (double*) malloc(size * sizeof(double));
-    for (i = 0; i < size; i++) {
-      PyObject *o = PyList_GetItem($input,i);
-      if (PyFloat_Check(o)) {
-        $1[i] = PyFloat_AsDouble(o);
-      }
-      else {
-        PyErr_SetString(PyExc_TypeError,"list must contain floating-point numbers");
-        free($1);
-        return NULL;
-      }
-    }
-  } else if ($input == Py_None) {
-    $1 =  NULL;
-    $2 = 0;
-  } else {
-    PyErr_SetString(PyExc_TypeError,"not a list");
-    return NULL;
-  }
-}
-
-%typemap(freearg) (double* array, size_t array_len) {
+%typemap(freearg) (uint64_t* array, size_t array_len),
+                  (uint32_t* array, size_t array_len),
+                  (int64_t* array, size_t array_len),
+                  (int32_t* array, size_t array_len),
+                  (double* array, size_t array_len) {
   free($1);
 }
 
