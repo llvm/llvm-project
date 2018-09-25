@@ -8,10 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "URI.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include <algorithm>
 #include <iomanip>
 #include <sstream>
 
@@ -128,6 +131,16 @@ std::string percentDecode(llvm::StringRef Content) {
   return Result;
 }
 
+bool isValidScheme(llvm::StringRef Scheme) {
+  if (Scheme.empty())
+    return false;
+  if (!llvm::isAlpha(Scheme[0]))
+    return false;
+  return std::all_of(Scheme.begin() + 1, Scheme.end(), [](char C) {
+    return llvm::isAlnum(C) || C == '+' || C == '.' || C == '-';
+  });
+}
+
 } // namespace
 
 URI::URI(llvm::StringRef Scheme, llvm::StringRef Authority,
@@ -158,9 +171,13 @@ llvm::Expected<URI> URI::parse(llvm::StringRef OrigUri) {
   llvm::StringRef Uri = OrigUri;
 
   auto Pos = Uri.find(':');
-  if (Pos == 0 || Pos == llvm::StringRef::npos)
+  if (Pos == llvm::StringRef::npos)
     return make_string_error("Scheme must be provided in URI: " + OrigUri);
-  U.Scheme = percentDecode(Uri.substr(0, Pos));
+  auto SchemeStr = Uri.substr(0, Pos);
+  U.Scheme = percentDecode(SchemeStr);
+  if (!isValidScheme(U.Scheme))
+    return make_string_error(llvm::formatv("Invalid scheme: {0} (decoded: {1})",
+                                           SchemeStr, U.Scheme));
   Uri = Uri.substr(Pos + 1);
   if (Uri.consume_front("//")) {
     Pos = Uri.find('/');

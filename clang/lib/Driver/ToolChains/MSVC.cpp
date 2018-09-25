@@ -1378,6 +1378,7 @@ static void TranslateOptArg(Arg *A, llvm::opt::DerivedArgList &DAL,
       }
       break;
     case 'g':
+      A->claim();
       break;
     case 'i':
       if (I + 1 != E && OptStr[I + 1] == '-') {

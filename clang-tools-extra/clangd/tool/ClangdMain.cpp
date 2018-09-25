@@ -184,7 +184,7 @@ int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(
       argc, argv,
       "clangd is a language server that provides IDE-like features to editors. "
-      "\n\nIt should be used via an editor plugin rather than invoked directly."
+      "\n\nIt should be used via an editor plugin rather than invoked directly. "
       "For more information, see:"
       "\n\thttps://clang.llvm.org/extra/clangd.html"
       "\n\thttps://microsoft.github.io/language-server-protocol/");

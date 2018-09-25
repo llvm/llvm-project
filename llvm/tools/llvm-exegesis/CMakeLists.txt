@@ -1,5 +1,5 @@
-
 set(LLVM_LINK_COMPONENTS
+  MCParser
   Support
   native
   )

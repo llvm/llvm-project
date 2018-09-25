@@ -865,10 +865,9 @@ void DwarfCompileUnit::finishEntityDefinition(const DbgEntity *Entity) {
       llvm_unreachable("DbgEntity must be DbgVariable or DbgLabel.");
   }
 
-  if (Label) {
-    const MCSymbol *Sym = Label->getSymbol();
-    addLabelAddress(*Die, dwarf::DW_AT_low_pc, Sym);
-  }
+  if (Label)
+    if (const auto *Sym = Label->getSymbol())
+      addLabelAddress(*Die, dwarf::DW_AT_low_pc, Sym);
 }
 
 DbgEntity *DwarfCompileUnit::getExistingAbstractEntity(const DINode *Node) {

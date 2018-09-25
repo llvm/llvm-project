@@ -128,14 +128,23 @@ defm : X86WriteRes<WriteCMPXCHG,[SKLPort06, SKLPort0156], 5, [2,3], 5>;
 defm : X86WriteRes<WriteCMPXCHGRMW,[SKLPort23,SKLPort06,SKLPort0156,SKLPort237,SKLPort4], 8, [1,2,1,1,1], 6>;
 defm : X86WriteRes<WriteXCHG, [SKLPort0156], 2, [3], 3>;
 
-defm : SKLWriteResPair<WriteDiv8,   [SKLPort0, SKLDivider], 25, [1,10], 1, 4>;
-defm : SKLWriteResPair<WriteDiv16,  [SKLPort0, SKLDivider], 25, [1,10], 1, 4>;
-defm : SKLWriteResPair<WriteDiv32,  [SKLPort0, SKLDivider], 25, [1,10], 1, 4>;
-defm : SKLWriteResPair<WriteDiv64,  [SKLPort0, SKLDivider], 25, [1,10], 1, 4>;
-defm : SKLWriteResPair<WriteIDiv8,  [SKLPort0, SKLDivider], 25, [1,10], 1, 4>;
-defm : SKLWriteResPair<WriteIDiv16, [SKLPort0, SKLDivider], 25, [1,10], 1, 4>;
-defm : SKLWriteResPair<WriteIDiv32, [SKLPort0, SKLDivider], 25, [1,10], 1, 4>;
-defm : SKLWriteResPair<WriteIDiv64, [SKLPort0, SKLDivider], 25, [1,10], 1, 4>;
+// TODO: Why isn't the SKLDivider used?
+defm : SKLWriteResPair<WriteDiv8,   [SKLPort0,SKLDivider], 25, [1,10], 1, 4>;
+defm : X86WriteRes<WriteDiv16,      [SKLPort0,SKLPort1,SKLPort5,SKLPort6,SKLPort05,SKLPort0156], 76, [7,2,8,3,1,11], 32>;
+defm : X86WriteRes<WriteDiv32,      [SKLPort0,SKLPort1,SKLPort5,SKLPort6,SKLPort05,SKLPort0156], 76, [7,2,8,3,1,11], 32>;
+defm : X86WriteRes<WriteDiv64,      [SKLPort0,SKLPort1,SKLPort5,SKLPort6,SKLPort05,SKLPort0156], 76, [7,2,8,3,1,11], 32>;
+defm : X86WriteRes<WriteDiv16Ld,    [SKLPort0,SKLPort23,SKLDivider], 29, [1,1,10], 2>;
+defm : X86WriteRes<WriteDiv32Ld,    [SKLPort0,SKLPort23,SKLDivider], 29, [1,1,10], 2>;
+defm : X86WriteRes<WriteDiv64Ld,    [SKLPort0,SKLPort23,SKLDivider], 29, [1,1,10], 2>;
+
+defm : X86WriteRes<WriteIDiv8,    [SKLPort0,SKLDivider], 25, [1,10], 1>;
+defm : X86WriteRes<WriteIDiv16,   [SKLPort0,SKLPort1,SKLPort5,SKLPort6,SKLPort06,SKLPort0156], 102, [4,2,4,8,14,34], 66>;
+defm : X86WriteRes<WriteIDiv32,   [SKLPort0,SKLPort1,SKLPort5,SKLPort6,SKLPort06,SKLPort0156], 102, [4,2,4,8,14,34], 66>;
+defm : X86WriteRes<WriteIDiv64,   [SKLPort0,SKLPort1,SKLPort5,SKLPort6,SKLPort06,SKLPort0156], 102, [4,2,4,8,14,34], 66>;
+defm : X86WriteRes<WriteIDiv8Ld,  [SKLPort0,SKLPort5,SKLPort23,SKLPort0156], 28, [2,4,1,1], 8>;
+defm : X86WriteRes<WriteIDiv16Ld, [SKLPort0,SKLPort5,SKLPort23,SKLPort0156], 28, [2,4,1,1], 8>;
+defm : X86WriteRes<WriteIDiv32Ld, [SKLPort0,SKLPort5,SKLPort23,SKLPort0156], 28, [2,4,1,1], 8>;
+defm : X86WriteRes<WriteIDiv64Ld, [SKLPort0,SKLPort5,SKLPort23,SKLPort0156], 28, [2,4,1,1], 8>;
 
 defm : SKLWriteResPair<WriteCRC32, [SKLPort1], 3>;
 
@@ -1631,13 +1640,6 @@ def SKLWriteResGroup206 : SchedWriteRes<[SKLPort0,SKLPort23]> {
 }
 def: InstRW<[SKLWriteResGroup206], (instregex "DIVR_F(32|64)m")>;
 
-def SKLWriteResGroup207 : SchedWriteRes<[SKLPort0,SKLPort5,SKLPort23,SKLPort0156]> {
-  let Latency = 28;
-  let NumMicroOps = 8;
-  let ResourceCycles = [2,4,1,1];
-}
-def: InstRW<[SKLWriteResGroup207], (instregex "IDIV(8|16|32|64)m")>;
-
 def SKLWriteResGroup208 : SchedWriteRes<[SKLPort0,SKLPort5,SKLPort23]> {
   let Latency = 30;
   let NumMicroOps = 3;
@@ -1731,20 +1733,6 @@ def SKLWriteResGroup220 : SchedWriteRes<[SKLPort5,SKLPort05,SKLPort0156]> {
   let ResourceCycles = [6,3,6];
 }
 def: InstRW<[SKLWriteResGroup220], (instrs FNINIT)>;
-
-def SKLWriteResGroup221 : SchedWriteRes<[SKLPort0,SKLPort1,SKLPort5,SKLPort6,SKLPort05,SKLPort0156]> {
-  let Latency = 76;
-  let NumMicroOps = 32;
-  let ResourceCycles = [7,2,8,3,1,11];
-}
-def: InstRW<[SKLWriteResGroup221], (instregex "DIV(16|32|64)r")>;
-
-def SKLWriteResGroup222 : SchedWriteRes<[SKLPort0,SKLPort1,SKLPort5,SKLPort6,SKLPort06,SKLPort0156]> {
-  let Latency = 102;
-  let NumMicroOps = 66;
-  let ResourceCycles = [4,2,4,8,14,34];
-}
-def: InstRW<[SKLWriteResGroup222], (instregex "IDIV(16|32|64)r")>;
 
 def SKLWriteResGroup223 : SchedWriteRes<[SKLPort0,SKLPort1,SKLPort4,SKLPort5,SKLPort6,SKLPort237,SKLPort06,SKLPort0156]> {
   let Latency = 106;

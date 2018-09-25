@@ -10,11 +10,18 @@
 #ifndef LLVM_TOOLS_LLVM_EXEGESIS_BENCHMARKCODE_H
 #define LLVM_TOOLS_LLVM_EXEGESIS_BENCHMARKCODE_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCInst.h"
 #include <string>
 #include <vector>
 
 namespace exegesis {
+
+// A simple object storing the value for a particular register.
+struct RegisterValue {
+  unsigned Register;
+  llvm::APInt Value;
+};
 
 // A collection of instructions that are to be assembled, executed and measured.
 struct BenchmarkCode {

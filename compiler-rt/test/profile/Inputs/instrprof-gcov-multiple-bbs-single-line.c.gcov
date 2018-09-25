@@ -13,7 +13,7 @@
 // CHECK-NEXT:branch  0 taken 1
 // CHECK-NEXT:branch  1 taken 0
 // CHECK-NEXT:        1:    7:    var++;
-// CHECK-NEXT:        -:    8:  }
+// CHECK-NEXT:        1:    8:  }
 // CHECK-NEXT:        -:    9:
 // CHECK-NEXT:        1:   10:  if (a) {}
 // CHECK-NEXT:branch  0 taken 1
@@ -24,7 +24,7 @@
 // CHECK-NEXT:branch  0 taken 0
 // CHECK-NEXT:branch  1 taken 1
 // CHECK-NEXT:    #####:   14:    var++;
-// CHECK-NEXT:        -:   15:  }
+// CHECK-NEXT:    #####:   15:  }
 // CHECK-NEXT:        -:   16:
 // CHECK-NEXT:        1:   17:  if (b) {}
 // CHECK-NEXT:branch  0 taken 0

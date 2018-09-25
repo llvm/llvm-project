@@ -31,12 +31,14 @@ BenchmarkRunner::BenchmarkRunner(const LLVMState &State,
 
 BenchmarkRunner::~BenchmarkRunner() = default;
 
-// Repeat the snippet until there are at least NumInstructions in the resulting
+// Repeat the snippet until there are at least MinInstructions in the resulting
 // code.
 static std::vector<llvm::MCInst>
-GenerateInstructions(const BenchmarkCode &BC, const int MinInstructions) {
+GenerateInstructions(const BenchmarkCode &BC, const size_t MinInstructions) {
+  if (BC.Instructions.empty())
+    return {};
   std::vector<llvm::MCInst> Code = BC.Instructions;
-  for (int I = 0; I < MinInstructions; ++I)
+  for (int I = 0; Code.size() < MinInstructions; ++I)
     Code.push_back(BC.Instructions[I % BC.Instructions.size()]);
   return Code;
 }
@@ -53,12 +55,9 @@ BenchmarkRunner::runConfiguration(const BenchmarkCode &BC,
   InstrBenchmark.Info = BC.Info;
 
   const std::vector<llvm::MCInst> &Instructions = BC.Instructions;
-  if (Instructions.empty()) {
-    InstrBenchmark.Error = "Empty snippet";
-    return InstrBenchmark;
-  }
 
   InstrBenchmark.Key.Instructions = Instructions;
+  InstrBenchmark.Key.RegisterInitialValues = BC.RegisterInitialValues;
 
   // Assemble at least kMinInstructionsForSnippet instructions by repeating the
   // snippet for debug/analysis. This is so that the user clearly understands

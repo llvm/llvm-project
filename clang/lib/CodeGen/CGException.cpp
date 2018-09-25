@@ -767,8 +767,7 @@ llvm::BasicBlock *CodeGenFunction::EmitLandingPad() {
 
   // Save the current IR generation state.
   CGBuilderTy::InsertPoint savedIP = Builder.saveAndClearIP();
-  auto DL = ApplyDebugLocation::CreateDefaultArtificial(
-      *this, CurEHLocation, true /* ImplicitCode */);
+  auto DL = ApplyDebugLocation::CreateDefaultArtificial(*this, CurEHLocation);
 
   // Create and configure the landing pad.
   llvm::BasicBlock *lpad = createBasicBlock("lpad");

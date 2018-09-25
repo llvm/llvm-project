@@ -212,6 +212,12 @@ multiclass SIMDAbs<ValueType vec_t, string vec, bits<32> simdop> {
                            [(set (vec_t V128:$dst), (vec_t (fabs V128:$vec)))],
                            vec#".abs\t$dst, $vec", vec#".abs", simdop>;
 }
+multiclass SIMDSqrt<ValueType vec_t, string vec, bits<32> simdop> {
+  defm SQRT_#vec_t :
+    SIMD_I<(outs V128:$dst), (ins V128:$vec), (outs), (ins),
+           [(set (vec_t V128:$dst), (vec_t (fsqrt V128:$vec)))],
+           vec#".sqrt\t$dst, $vec", vec#".sqrt", simdop>;
+}
 
 let Defs = [ARGUMENTS] in {
 defm "" : ConstVec<v16i8,
@@ -370,6 +376,9 @@ defm GE : SIMDConditionFP<"ge", SETOGE, 123>;
 
 defm "" : SIMDAbs<v4f32, "f32x4", 127>;
 defm "" : SIMDAbs<v2f64, "f64x2", 128>;
+
+defm "" : SIMDSqrt<v4f32, "f32x4", 141>;
+defm "" : SIMDSqrt<v2f64, "f64x2", 142>;
 
 } // Defs = [ARGUMENTS]
 

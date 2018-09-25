@@ -84,11 +84,10 @@ protected: // Can only create subclasses.
   CodeGenOpt::Level OptLevel = CodeGenOpt::Default;
 
   /// Contains target specific asm information.
-  const MCAsmInfo *AsmInfo;
-
-  const MCRegisterInfo *MRI;
-  const MCInstrInfo *MII;
-  const MCSubtargetInfo *STI;
+  std::unique_ptr<const MCAsmInfo> AsmInfo;
+  std::unique_ptr<const MCRegisterInfo> MRI;
+  std::unique_ptr<const MCInstrInfo> MII;
+  std::unique_ptr<const MCSubtargetInfo> STI;
 
   unsigned RequireStructuredCFG : 1;
   unsigned O0WantsFastISel : 1;
@@ -160,11 +159,11 @@ public:
   void resetTargetOptions(const Function &F) const;
 
   /// Return target specific asm information.
-  const MCAsmInfo *getMCAsmInfo() const { return AsmInfo; }
+  const MCAsmInfo *getMCAsmInfo() const { return AsmInfo.get(); }
 
-  const MCRegisterInfo *getMCRegisterInfo() const { return MRI; }
-  const MCInstrInfo *getMCInstrInfo() const { return MII; }
-  const MCSubtargetInfo *getMCSubtargetInfo() const { return STI; }
+  const MCRegisterInfo *getMCRegisterInfo() const { return MRI.get(); }
+  const MCInstrInfo *getMCInstrInfo() const { return MII.get(); }
+  const MCSubtargetInfo *getMCSubtargetInfo() const { return STI.get(); }
 
   /// If intrinsic information is available, return it.  If not, return null.
   virtual const TargetIntrinsicInfo *getIntrinsicInfo() const {

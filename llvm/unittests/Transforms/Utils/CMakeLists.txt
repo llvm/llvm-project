@@ -15,5 +15,6 @@ add_llvm_unittest(UtilsTests
   IntegerDivisionTest.cpp
   LocalTest.cpp
   SSAUpdaterBulkTest.cpp
+  UnrollLoopTest.cpp
   ValueMapperTest.cpp
   )

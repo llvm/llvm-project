@@ -48,3 +48,15 @@ double testTruncOdd() {
 // CHECK-NEXT: ret double
 }
 
+__float128 insert_exp_qp(unsigned long long int b) {
+  return __builtin_vsx_scalar_insert_exp_qp(A, b);
+// CHECK: @llvm.ppc.scalar.insert.exp.qp(fp128 %{{.+}}, i64
+// CHECK-NEXT: ret fp128
+}
+
+unsigned long long int extract_exp() {
+  return __builtin_vsx_scalar_extract_expq(A);
+// CHECK: @llvm.ppc.scalar.extract.expq(fp128
+// CHECK-NEXT: ret i64
+}
+

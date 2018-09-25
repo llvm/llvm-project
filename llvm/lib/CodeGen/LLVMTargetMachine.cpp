@@ -40,14 +40,14 @@ static cl::opt<bool> EnableTrapUnreachable("trap-unreachable",
   cl::desc("Enable generating trap for unreachable"));
 
 void LLVMTargetMachine::initAsmInfo() {
-  MRI = TheTarget.createMCRegInfo(getTargetTriple().str());
-  MII = TheTarget.createMCInstrInfo();
+  MRI.reset(TheTarget.createMCRegInfo(getTargetTriple().str()));
+  MII.reset(TheTarget.createMCInstrInfo());
   // FIXME: Having an MCSubtargetInfo on the target machine is a hack due
   // to some backends having subtarget feature dependent module level
   // code generation. This is similar to the hack in the AsmPrinter for
   // module level assembly etc.
-  STI = TheTarget.createMCSubtargetInfo(getTargetTriple().str(), getTargetCPU(),
-                                        getTargetFeatureString());
+  STI.reset(TheTarget.createMCSubtargetInfo(
+      getTargetTriple().str(), getTargetCPU(), getTargetFeatureString()));
 
   MCAsmInfo *TmpAsmInfo =
       TheTarget.createMCAsmInfo(*MRI, getTargetTriple().str());
@@ -71,7 +71,7 @@ void LLVMTargetMachine::initAsmInfo() {
   if (Options.ExceptionModel != ExceptionHandling::None)
     TmpAsmInfo->setExceptionsType(Options.ExceptionModel);
 
-  AsmInfo = TmpAsmInfo;
+  AsmInfo.reset(TmpAsmInfo);
 }
 
 LLVMTargetMachine::LLVMTargetMachine(const Target &T,

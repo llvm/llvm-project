@@ -18,9 +18,11 @@
 // CHECK: call {{.*}}, !dbg ![[DBG_LINE:[0-9]+]]
 // CHECK-NOT: ret
 // CHECK: load {{.*}}, !dbg ![[COPY_LINE:[0-9]+]]
+// CHECK: ret void, !dbg ![[COPY_LINE]]
 // CHECK: define {{.*}} @__destroy_helper_block_{{.*}}(i8*)
 // CHECK-NOT: ret
 // CHECK: load {{.*}}, !dbg ![[DESTROY_LINE:[0-9]+]]
+// CHECK: ret void, !dbg ![[DESTROY_LINE]]
 
 typedef unsigned int NSUInteger;
 

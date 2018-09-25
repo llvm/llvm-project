@@ -149,8 +149,9 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
     return getGlobalSymbol(Reloc.Index)->getGlobalIndex();
   case R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
     if (auto *Sym = dyn_cast<DefinedFunction>(getFunctionSymbol(Reloc.Index))) {
-      return Sym->Function->OutputOffset +
-             Sym->Function->getFunctionCodeOffset() + Reloc.Addend;
+      if (Sym->isLive())
+        return Sym->Function->OutputOffset +
+               Sym->Function->getFunctionCodeOffset() + Reloc.Addend;
     }
     return 0;
   case R_WEBASSEMBLY_SECTION_OFFSET_I32:

@@ -10,6 +10,7 @@ set(HWASAN_RTL_SOURCES
   hwasan_poisoning.cc
   hwasan_report.cc
   hwasan_thread.cc
+  hwasan_thread_list.cc
   )
 
 set(HWASAN_RTL_CXX_SOURCES
@@ -25,8 +26,9 @@ set(HWASAN_RTL_HEADERS
   hwasan_mapping.h
   hwasan_poisoning.h
   hwasan_report.h
-  hwasan_thread.h)
-
+  hwasan_thread.h
+  hwasan_thread_list.h
+  )
 
 set(HWASAN_DEFINITIONS)
 append_list_if(COMPILER_RT_HWASAN_WITH_INTERCEPTORS HWASAN_WITH_INTERCEPTORS=1 HWASAN_DEFINITIONS)

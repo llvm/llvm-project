@@ -14,7 +14,7 @@
 // CHECK-NEXT:        1:    9:    bar1++;
 // CHECK-NEXT:        -:   10:  else
 // CHECK-NEXT:    #####:   11:    bar2++;
-// CHECK-NEXT:        -:   12:}
+// CHECK-NEXT:        1:   12:}
 // CHECK-NEXT:        -:   13:
 // CHECK-NEXT:        -:   14:int main(int argc, char *argv[]) {
 // CHECK-NEXT:        -:   15:#ifdef SHARED_CALL_BEFORE_GCOV_FLUSH
@@ -38,4 +38,4 @@
 // CHECK-NEXT:        -:   33:  bar(5);
 // CHECK-NEXT:        -:   34:
 // CHECK-NEXT:        -:   35:  return 0;
-// CHECK-NEXT:        -:   36:}
+// CHECK-NEXT:    #####:   36:}

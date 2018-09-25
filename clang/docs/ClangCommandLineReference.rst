@@ -2334,6 +2334,42 @@ Reserve the x18 register (AArch64 only)
 
 Reserve the x20 register (AArch64 only)
 
+.. option:: -fcall-saved-x8
+
+Make the x8 register call-saved (AArch64 only)
+
+.. option:: -fcall-saved-x9
+
+Make the x9 register call-saved (AArch64 only)
+
+.. option:: -fcall-saved-x10
+
+Make the x10 register call-saved (AArch64 only)
+
+.. option:: -fcall-saved-x11
+
+Make the x11 register call-saved (AArch64 only)
+
+.. option:: -fcall-saved-x12
+
+Make the x12 register call-saved (AArch64 only)
+
+.. option:: -fcall-saved-x13
+
+Make the x13 register call-saved (AArch64 only)
+
+.. option:: -fcall-saved-x14
+
+Make the x14 register call-saved (AArch64 only)
+
+.. option:: -fcall-saved-x15
+
+Make the x15 register call-saved (AArch64 only)
+
+.. option:: -fcall-saved-x18
+
+Make the x18 register call-saved (AArch64 only)
+
 .. option:: -mfix-cortex-a53-835769, -mno-fix-cortex-a53-835769
 
 Workaround Cortex-A53 erratum 835769 (AArch64 only)

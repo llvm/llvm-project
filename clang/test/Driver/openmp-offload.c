@@ -358,7 +358,7 @@
 /// ###########################################################################
 
 /// Check separate compilation with offloading - bundling actions
-// RUN:   %clang -### -ccc-print-phases -fopenmp=libomp -c -o %t.o -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %s -no-canonical-prefixes 2>&1 \
+// RUN:   %clang -### -ccc-print-phases -fopenmp=libomp -c -o %t.o  Input/in.so -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %s -no-canonical-prefixes 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-BUACTIONS %s
 
 // CHK-BUACTIONS: 0: input, "[[INPUT:.+\.c]]", c, (host-openmp)
@@ -500,7 +500,7 @@
 // RUN:   touch %t.o
 // RUN:   %clang -###  -fopenmp=libomp -o %t.out -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.o -no-canonical-prefixes 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-UBJOBS2 %s
-// RUN:   %clang -### -fopenmp=libomp -o %t.out -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.o -save-temps -no-canonical-prefixes 2>&1 \
+// RUN:   %clang -### -fopenmp=libomp -o %t.out -lsomelib -target powerpc64le-linux -fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu %t.o %S/Inputs/in.so -save-temps -no-canonical-prefixes 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-UBJOBS2-ST %s
 
 // Unbundle and create host BC.
@@ -574,11 +574,13 @@
 // CHK-UBJOBS2: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-UBJOBS2-SAME: [[HOSTBIN:[^\\/]+\.out]]" {{.*}}"{{.*}}[[HOSTOBJ]]" {{.*}}"-T" "
 // CHK-UBJOBS2-SAME: [[LKS:[^\\/]+\.lk]]"
+// CHK-UBJOBS2-ST-NOT: clang-offload-bundler{{.*}}in.so
 // CHK-UBJOBS2-ST: clang-offload-bundler{{.*}}" "-type=o" "-targets=host-powerpc64le-unknown-linux,openmp-powerpc64le-ibm-linux-gnu,openmp-x86_64-pc-linux-gnu" "-inputs=
 // CHK-UBJOBS2-ST-SAME: [[INPUT:[^\\/]+\.o]]" "-outputs=
 // CHK-UBJOBS2-ST-SAME: [[HOSTOBJ:[^\\/,]+\.o]],
 // CHK-UBJOBS2-ST-SAME: [[T1OBJ:[^\\/,]+\.o]],
 // CHK-UBJOBS2-ST-SAME: [[T2OBJ:[^\\/,]+\.o]]" "-unbundle"
+// CHK-UBJOBS2-ST-NOT: clang-offload-bundler{{.*}}in.so
 // CHK-UBJOBS2-ST: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-UBJOBS2-ST-SAME: [[T1BIN:[^\\/]+\.out-openmp-powerpc64le-ibm-linux-gnu]]" {{.*}}"{{.*}}[[T1OBJ]]"
 // CHK-UBJOBS2-ST: ld{{(\.exe)?}}" {{.*}}"-o" "
