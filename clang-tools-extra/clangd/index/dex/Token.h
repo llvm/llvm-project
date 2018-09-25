@@ -6,17 +6,18 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-// Token objects represent a characteristic of a symbol, which can be used to
-// perform efficient search. Tokens are keys for inverted index which are mapped
-// to the corresponding posting lists.
-//
-// The symbol std::cout might have the tokens:
-// * Scope "std::"
-// * Trigram "cou"
-// * Trigram "out"
-// * Type "std::ostream"
-//
+///
+/// \file
+/// Token objects represent a characteristic of a symbol, which can be used to
+/// perform efficient search. Tokens are keys for inverted index which are
+/// mapped to the corresponding posting lists.
+///
+/// The symbol std::cout might have the tokens:
+/// * Scope "std::"
+/// * Trigram "cou"
+/// * Trigram "out"
+/// * Type "std::ostream"
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_DEX_TOKEN_H

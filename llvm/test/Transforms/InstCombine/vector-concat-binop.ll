@@ -3,9 +3,9 @@
 
 define <4 x i8> @add(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; CHECK-LABEL: @add(
-; CHECK-NEXT:    [[CONCAT1:%.*]] = shufflevector <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[CONCAT2:%.*]] = shufflevector <2 x i8> [[C:%.*]], <2 x i8> [[D:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = and <4 x i8> [[CONCAT1]], [[CONCAT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i8> [[TMP1]], <2 x i8> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %concat1 = shufflevector <2 x i8> %a, <2 x i8> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -18,9 +18,9 @@ define <4 x i8> @add(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 
 define <4 x i8> @sub(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; CHECK-LABEL: @sub(
-; CHECK-NEXT:    [[CONCAT1:%.*]] = shufflevector <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[CONCAT2:%.*]] = shufflevector <2 x i8> [[C:%.*]], <2 x i8> [[D:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = sub nsw <4 x i8> [[CONCAT1]], [[CONCAT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw <2 x i8> [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw <2 x i8> [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i8> [[TMP1]], <2 x i8> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %concat1 = shufflevector <2 x i8> %a, <2 x i8> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -33,9 +33,9 @@ define <4 x i8> @sub(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 
 define <4 x i8> @mul(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; CHECK-LABEL: @mul(
-; CHECK-NEXT:    [[CONCAT1:%.*]] = shufflevector <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[CONCAT2:%.*]] = shufflevector <2 x i8> [[C:%.*]], <2 x i8> [[D:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = mul nuw <4 x i8> [[CONCAT1]], [[CONCAT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw <2 x i8> [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw <2 x i8> [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i8> [[TMP1]], <2 x i8> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %concat1 = shufflevector <2 x i8> %a, <2 x i8> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -91,9 +91,9 @@ define <4 x i8> @xor(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 
 define <4 x i8> @shl(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; CHECK-LABEL: @shl(
-; CHECK-NEXT:    [[CONCAT1:%.*]] = shufflevector <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 undef, i32 3>
-; CHECK-NEXT:    [[CONCAT2:%.*]] = shufflevector <2 x i8> [[C:%.*]], <2 x i8> [[D:%.*]], <4 x i32> <i32 0, i32 1, i32 undef, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = shl nuw <4 x i8> [[CONCAT1]], [[CONCAT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw <2 x i8> [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw <2 x i8> [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i8> [[TMP1]], <2 x i8> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 undef, i32 3>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %concat1 = shufflevector <2 x i8> %a, <2 x i8> %b, <4 x i32> <i32 0, i32 1, i32 undef, i32 3>
@@ -104,9 +104,9 @@ define <4 x i8> @shl(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 
 define <4 x i8> @lshr(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; CHECK-LABEL: @lshr(
-; CHECK-NEXT:    [[CONCAT1:%.*]] = shufflevector <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]], <4 x i32> <i32 0, i32 undef, i32 undef, i32 3>
-; CHECK-NEXT:    [[CONCAT2:%.*]] = shufflevector <2 x i8> [[C:%.*]], <2 x i8> [[D:%.*]], <4 x i32> <i32 0, i32 undef, i32 undef, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = lshr exact <4 x i8> [[CONCAT1]], [[CONCAT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact <2 x i8> [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr exact <2 x i8> [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i8> [[TMP1]], <2 x i8> [[TMP2]], <4 x i32> <i32 0, i32 undef, i32 undef, i32 3>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %concat1 = shufflevector <2 x i8> %a, <2 x i8> %b, <4 x i32> <i32 0, i32 undef, i32 undef, i32 3>
@@ -133,11 +133,13 @@ define <4 x i8> @ashr(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
   ret <4 x i8> %r
 }
 
+; TODO: Div/rem with undef in any element in the divisor is undef, so this should be simplified away?
+
 define <4 x i8> @sdiv(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; CHECK-LABEL: @sdiv(
-; CHECK-NEXT:    [[CONCAT1:%.*]] = shufflevector <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 undef, i32 3>
-; CHECK-NEXT:    [[CONCAT2:%.*]] = shufflevector <2 x i8> [[C:%.*]], <2 x i8> [[D:%.*]], <4 x i32> <i32 0, i32 1, i32 undef, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = sdiv exact <4 x i8> [[CONCAT1]], [[CONCAT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv exact <2 x i8> [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sdiv exact <2 x i8> [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i8> [[TMP1]], <2 x i8> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 undef, i32 3>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %concat1 = shufflevector <2 x i8> %a, <2 x i8> %b, <4 x i32> <i32 0, i32 1, i32 undef, i32 3>
@@ -148,9 +150,9 @@ define <4 x i8> @sdiv(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 
 define <4 x i8> @srem(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; CHECK-LABEL: @srem(
-; CHECK-NEXT:    [[CONCAT1:%.*]] = shufflevector <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[CONCAT2:%.*]] = shufflevector <2 x i8> [[C:%.*]], <2 x i8> [[D:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = srem <4 x i8> [[CONCAT1]], [[CONCAT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = srem <2 x i8> [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = srem <2 x i8> [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i8> [[TMP1]], <2 x i8> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %concat1 = shufflevector <2 x i8> %a, <2 x i8> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -161,9 +163,9 @@ define <4 x i8> @srem(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 
 define <4 x i8> @udiv(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; CHECK-LABEL: @udiv(
-; CHECK-NEXT:    [[CONCAT1:%.*]] = shufflevector <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[CONCAT2:%.*]] = shufflevector <2 x i8> [[C:%.*]], <2 x i8> [[D:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = udiv exact <4 x i8> [[CONCAT1]], [[CONCAT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv exact <2 x i8> [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv exact <2 x i8> [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i8> [[TMP1]], <2 x i8> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %concat1 = shufflevector <2 x i8> %a, <2 x i8> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -172,24 +174,26 @@ define <4 x i8> @udiv(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
   ret <4 x i8> %r
 }
 
+; TODO: Div/rem with undef in any element in the divisor is undef, so this should be simplified away?
+
 define <4 x i8> @urem(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d) {
 ; CHECK-LABEL: @urem(
-; CHECK-NEXT:    [[CONCAT1:%.*]] = shufflevector <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[CONCAT2:%.*]] = shufflevector <2 x i8> [[C:%.*]], <2 x i8> [[D:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = urem <4 x i8> [[CONCAT1]], [[CONCAT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = urem <2 x i8> [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = urem <2 x i8> [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i8> [[TMP1]], <2 x i8> [[TMP2]], <4 x i32> <i32 undef, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
-  %concat1 = shufflevector <2 x i8> %a, <2 x i8> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %concat2 = shufflevector <2 x i8> %c, <2 x i8> %d, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %concat1 = shufflevector <2 x i8> %a, <2 x i8> %b, <4 x i32> <i32 undef, i32 1, i32 2, i32 3>
+  %concat2 = shufflevector <2 x i8> %c, <2 x i8> %d, <4 x i32> <i32 undef, i32 1, i32 2, i32 3>
   %r = urem <4 x i8> %concat1, %concat2
   ret <4 x i8> %r
 }
 
 define <4 x float> @fadd(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x float> %d) {
 ; CHECK-LABEL: @fadd(
-; CHECK-NEXT:    [[CONCAT1:%.*]] = shufflevector <2 x float> [[A:%.*]], <2 x float> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[CONCAT2:%.*]] = shufflevector <2 x float> [[C:%.*]], <2 x float> [[D:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = fadd <4 x float> [[CONCAT1]], [[CONCAT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %concat1 = shufflevector <2 x float> %a, <2 x float> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -202,9 +206,9 @@ define <4 x float> @fadd(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x fl
 
 define <4 x float> @fsub(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x float> %d) {
 ; CHECK-LABEL: @fsub(
-; CHECK-NEXT:    [[CONCAT1:%.*]] = shufflevector <2 x float> [[A:%.*]], <2 x float> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 undef, i32 3>
-; CHECK-NEXT:    [[CONCAT2:%.*]] = shufflevector <2 x float> [[C:%.*]], <2 x float> [[D:%.*]], <4 x i32> <i32 0, i32 1, i32 undef, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = fsub fast <4 x float> [[CONCAT1]], [[CONCAT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast <2 x float> [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub fast <2 x float> [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 undef, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %concat1 = shufflevector <2 x float> %a, <2 x float> %b, <4 x i32> <i32 0, i32 1, i32 undef, i32 3>
@@ -235,9 +239,9 @@ define <4 x float> @fmul(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x fl
 
 define <4 x float> @fdiv(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x float> %d) {
 ; CHECK-LABEL: @fdiv(
-; CHECK-NEXT:    [[CONCAT1:%.*]] = shufflevector <2 x float> [[A:%.*]], <2 x float> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[CONCAT2:%.*]] = shufflevector <2 x float> [[C:%.*]], <2 x float> [[D:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = fdiv ninf arcp <4 x float> [[CONCAT1]], [[CONCAT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv ninf arcp <2 x float> [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fdiv ninf arcp <2 x float> [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %concat1 = shufflevector <2 x float> %a, <2 x float> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -248,9 +252,9 @@ define <4 x float> @fdiv(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x fl
 
 define <4 x float> @frem(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x float> %d) {
 ; CHECK-LABEL: @frem(
-; CHECK-NEXT:    [[CONCAT1:%.*]] = shufflevector <2 x float> [[A:%.*]], <2 x float> [[B:%.*]], <4 x i32> <i32 0, i32 undef, i32 2, i32 3>
-; CHECK-NEXT:    [[CONCAT2:%.*]] = shufflevector <2 x float> [[C:%.*]], <2 x float> [[D:%.*]], <4 x i32> <i32 0, i32 undef, i32 2, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = frem <4 x float> [[CONCAT1]], [[CONCAT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = frem <2 x float> [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = frem <2 x float> [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP2]], <4 x i32> <i32 0, i32 undef, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %concat1 = shufflevector <2 x float> %a, <2 x float> %b, <4 x i32> <i32 0, i32 undef, i32 2, i32 3>
@@ -263,12 +267,9 @@ define <4 x float> @frem(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x fl
 
 define <4 x i32> @PR33026(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
 ; CHECK-LABEL: @PR33026(
-; CHECK-NEXT:    [[CONCAT1:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[CONCAT2:%.*]] = shufflevector <4 x i32> [[C:%.*]], <4 x i32> [[D:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[AND:%.*]] = and <8 x i32> [[CONCAT1]], [[CONCAT2]]
-; CHECK-NEXT:    [[EXTRACT1:%.*]] = shufflevector <8 x i32> [[AND]], <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[EXTRACT2:%.*]] = shufflevector <8 x i32> [[AND]], <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[SUB:%.*]] = sub <4 x i32> [[EXTRACT1]], [[EXTRACT2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[A:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[B:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub <4 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i32> [[SUB]]
 ;
   %concat1 = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

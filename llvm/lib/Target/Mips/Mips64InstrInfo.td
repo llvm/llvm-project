@@ -838,7 +838,7 @@ def : MipsPat<(i64 (sext (i32 (sub GPR32:$src, GPR32:$src2)))),
               (SUBu GPR32:$src, GPR32:$src2), sub_32)>;
 def : MipsPat<(i64 (sext (i32 (mul GPR32:$src, GPR32:$src2)))),
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
-              (MUL GPR32:$src, GPR32:$src2), sub_32)>;
+              (MUL GPR32:$src, GPR32:$src2), sub_32)>, ISA_MIPS3_NOT_32R6_64R6;
 def : MipsPat<(i64 (sext (i32 (MipsMFHI ACC64:$src)))),
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
               (PseudoMFHI ACC64:$src), sub_32)>;

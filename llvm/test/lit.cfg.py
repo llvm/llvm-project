@@ -140,16 +140,17 @@ tools = [
 
 # FIXME: Why do we have both `lli` and `%lli` that do slightly different things?
 tools.extend([
-    'dsymutil', 'lli', 'lli-child-target', 'llvm-ar', 'llvm-as', 'llvm-bcanalyzer',
-    'llvm-config', 'llvm-cov', 'llvm-cxxdump', 'llvm-cvtres', 'llvm-diff', 'llvm-dis',
-    'llvm-dwarfdump', 'llvm-extract', 'llvm-isel-fuzzer', 'llvm-opt-fuzzer', 'llvm-lib',
-    'llvm-link', 'llvm-lto', 'llvm-lto2', 'llvm-mc', 'llvm-mca',
-    'llvm-modextract', 'llvm-nm', 'llvm-objcopy', 'llvm-objdump',
-    'llvm-pdbutil', 'llvm-profdata', 'llvm-ranlib', 'llvm-readobj',
-    'llvm-rtdyld', 'llvm-size', 'llvm-split', 'llvm-strings', 'llvm-strip', 'llvm-tblgen',
-    'llvm-undname', 'llvm-c-test', 'llvm-cxxfilt', 'llvm-xray', 'yaml2obj', 'obj2yaml',
-    'yaml-bench', 'verify-uselistorder',
-    'bugpoint', 'llc', 'llvm-symbolizer', 'opt', 'sancov', 'sanstats'])
+    'dsymutil', 'lli', 'lli-child-target', 'llvm-ar', 'llvm-as',
+    'llvm-bcanalyzer', 'llvm-config', 'llvm-cov', 'llvm-cxxdump', 'llvm-cvtres',
+    'llvm-diff', 'llvm-dis', 'llvm-dwarfdump', 'llvm-exegesis', 'llvm-extract',
+    'llvm-isel-fuzzer', 'llvm-opt-fuzzer', 'llvm-lib', 'llvm-link', 'llvm-lto',
+    'llvm-lto2', 'llvm-mc', 'llvm-mca', 'llvm-modextract', 'llvm-nm',
+    'llvm-objcopy', 'llvm-objdump', 'llvm-pdbutil', 'llvm-profdata',
+    'llvm-ranlib', 'llvm-readobj', 'llvm-rtdyld', 'llvm-size', 'llvm-split',
+    'llvm-strings', 'llvm-strip', 'llvm-tblgen', 'llvm-undname', 'llvm-c-test',
+    'llvm-cxxfilt', 'llvm-xray', 'yaml2obj', 'obj2yaml', 'yaml-bench',
+    'verify-uselistorder', 'bugpoint', 'llc', 'llvm-symbolizer', 'opt',
+    'sancov', 'sanstats'])
 
 # The following tools are optional
 tools.extend([

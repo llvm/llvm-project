@@ -23,7 +23,7 @@ namespace dex {
 namespace {
 
 // Mark symbols which are can be used for code completion.
-static const Token RestrictedForCodeCompletion =
+const Token RestrictedForCodeCompletion =
     Token(Token::Kind::Sentinel, "Restricted For Code Completion");
 
 // Returns the tokens which are given symbol's characteristics. Currently, the
@@ -128,8 +128,8 @@ void Dex::buildIndex() {
 
   // Convert lists of items to posting lists.
   for (const auto &TokenToPostingList : TempInvertedIndex)
-    InvertedIndex.insert({TokenToPostingList.first,
-                          PostingList(move(TokenToPostingList.second))});
+    InvertedIndex.insert(
+        {TokenToPostingList.first, PostingList(TokenToPostingList.second)});
 
   vlog("Built Dex with estimated memory usage {0} bytes.",
        estimateMemoryUsage());
