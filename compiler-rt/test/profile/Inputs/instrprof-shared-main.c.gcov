@@ -10,9 +10,9 @@
 // CHECK-NEXT:        -:    5:  int i, j;
 // CHECK-NEXT:     1001:    6:  for (i = 0; i < 1000; i++)
 // CHECK-NEXT:  1001000:    7:    for (j = 0; j < 1000; j++)
-// CHECK-NEXT:  1000000:    8:      foo(i * j);
+// CHECK-NEXT:  1001000:    8:      foo(i * j);
 // CHECK-NEXT:        -:    9:
 // CHECK-NEXT:        1:   10:  if (g2 - g1 == 280001)
 // CHECK-NEXT:        1:   11:    return 0;
 // CHECK-NEXT:    #####:   12:  return 1;
-// CHECK-NEXT:        -:   13:}
+// CHECK-NEXT:        1:   13:}

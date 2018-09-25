@@ -16,12 +16,15 @@
 
 #include "hwasan_allocator.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_ring_buffer.h"
 
 namespace __hwasan {
 
+typedef __sanitizer::CompactRingBuffer<uptr> StackAllocationsRingBuffer;
+
 class Thread {
  public:
-  static void Create();  // Must be called from the thread itself.
+  void Init(uptr stack_buffer_start, uptr stack_buffer_size);  // Must be called from the thread itself.
   void Destroy();
 
   uptr stack_top() { return stack_top_; }
@@ -48,26 +51,14 @@ class Thread {
   void LeaveInterceptorScope() { in_interceptor_scope_--; }
 
   AllocatorCache *allocator_cache() { return &allocator_cache_; }
-  HeapAllocationsRingBuffer *heap_allocations() {
-    return heap_allocations_;
-  }
+  HeapAllocationsRingBuffer *heap_allocations() { return heap_allocations_; }
+  StackAllocationsRingBuffer *stack_allocations() { return stack_allocations_; }
 
   tag_t GenerateRandomTag();
 
-  int destructor_iterations_;
   void DisableTagging() { tagging_disabled_++; }
   void EnableTagging() { tagging_disabled_--; }
   bool TaggingIsDisabled() const { return tagging_disabled_; }
-
-  template <class CB>
-  static void VisitAllLiveThreads(CB cb) {
-    SpinMutexLock l(&thread_list_mutex);
-    Thread *t = thread_list_head;
-    while (t) {
-      cb(t);
-      t = t->next_;
-    }
-  }
 
   u64 unique_id() const { return unique_id_; }
   void Announce() {
@@ -76,22 +67,9 @@ class Thread {
     Print("Thread: ");
   }
 
-  struct ThreadStats {
-    uptr n_live_threads;
-    uptr total_stack_size;
-  };
-
-  static ThreadStats GetThreadStats() {
-    SpinMutexLock l(&thread_list_mutex);
-    return thread_stats;
-  }
-
-  static uptr MemoryUsedPerThread();
-
  private:
   // NOTE: There is no Thread constructor. It is allocated
   // via mmap() and *must* be valid in zero-initialized state.
-  void Init();
   void ClearShadowForThreadStackAndTLS();
   void Print(const char *prefix);
   uptr stack_top_;
@@ -108,23 +86,23 @@ class Thread {
 
   AllocatorCache allocator_cache_;
   HeapAllocationsRingBuffer *heap_allocations_;
+  StackAllocationsRingBuffer *stack_allocations_;
 
   static void InsertIntoThreadList(Thread *t);
   static void RemoveFromThreadList(Thread *t);
   Thread *next_;  // All live threads form a linked list.
-  static SpinMutex thread_list_mutex;
-  static Thread *thread_list_head;
-  static ThreadStats thread_stats;
 
   u64 unique_id_;  // counting from zero.
 
   u32 tagging_disabled_;  // if non-zero, malloc uses zero tag in this thread.
 
   bool announced_;
+
+  friend struct ThreadListHead;
 };
 
 Thread *GetCurrentThread();
-void SetCurrentThread(Thread *t);
+uptr *GetCurrentThreadLongPtr();
 
 struct ScopedTaggingDisabler {
   ScopedTaggingDisabler() { GetCurrentThread()->DisableTagging(); }

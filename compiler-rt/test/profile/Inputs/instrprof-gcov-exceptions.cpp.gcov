@@ -6,7 +6,7 @@
 // CHECK-NEXT:        -:    1:#include <string>
 // CHECK-NEXT:        -:    2:
 // CHECK-NEXT:        -:    3:void asd(std::string i) {
-// CHECK-NEXT:        -:    4:}
+// CHECK-NEXT:        1:    4:}
 // CHECK-NEXT:        -:    5:
 // CHECK-NEXT:        -:    6:int main(void)
 // CHECK-NEXT:        -:    7:{

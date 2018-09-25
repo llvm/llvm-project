@@ -2254,8 +2254,6 @@ def err_for_range_incomplete_type : Error<
   "cannot use incomplete type %0 as a range">;
 def err_for_range_iter_deduction_failure : Error<
   "cannot use type %0 as an iterator">;
-def err_for_range_member_begin_end_mismatch : Error<
-  "range type %0 has '%select{begin|end}1' member but no '%select{end|begin}1' member">;
 def ext_for_range_begin_end_types_differ : ExtWarn<
   "'begin' and 'end' returning different types (%0 and %1) is a C++17 extension">,
   InGroup<CXX17>;
@@ -2268,6 +2266,8 @@ def note_in_for_range: Note<
 def err_for_range_invalid: Error<
   "invalid range expression of type %0; no viable '%select{begin|end}1' "
   "function available">;
+def note_for_range_member_begin_end_ignored : Note<
+  "member is not a candidate because range type %0 has no '%select{end|begin}1' member">;
 def err_range_on_array_parameter : Error<
   "cannot build range expression with array function parameter %0 since "
   "parameter with array type %1 is treated as pointer type %2">;

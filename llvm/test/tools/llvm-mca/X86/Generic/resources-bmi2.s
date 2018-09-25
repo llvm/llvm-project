@@ -75,21 +75,21 @@ shrx        %rax, (%rbx), %rcx
 # CHECK-NEXT:  1      1     0.33                        pextq	%rax, %rbx, %rcx
 # CHECK-NEXT:  2      6     0.50    *                   pextq	(%rax), %rbx, %rcx
 # CHECK-NEXT:  1      1     0.50                        rorxl	$1, %eax, %ecx
-# CHECK-NEXT:  2      6     0.50    *                   rorxl	$1, (%rax), %ecx
+# CHECK-NEXT:  3      7     0.50    *                   rorxl	$1, (%rax), %ecx
 # CHECK-NEXT:  1      1     0.50                        rorxq	$1, %rax, %rcx
-# CHECK-NEXT:  2      6     0.50    *                   rorxq	$1, (%rax), %rcx
+# CHECK-NEXT:  3      7     0.50    *                   rorxq	$1, (%rax), %rcx
 # CHECK-NEXT:  1      1     0.50                        sarxl	%eax, %ebx, %ecx
-# CHECK-NEXT:  2      6     0.50    *                   sarxl	%eax, (%rbx), %ecx
+# CHECK-NEXT:  3      7     0.50    *                   sarxl	%eax, (%rbx), %ecx
 # CHECK-NEXT:  1      1     0.50                        sarxq	%rax, %rbx, %rcx
-# CHECK-NEXT:  2      6     0.50    *                   sarxq	%rax, (%rbx), %rcx
+# CHECK-NEXT:  3      7     0.50    *                   sarxq	%rax, (%rbx), %rcx
 # CHECK-NEXT:  1      1     0.50                        shlxl	%eax, %ebx, %ecx
-# CHECK-NEXT:  2      6     0.50    *                   shlxl	%eax, (%rbx), %ecx
+# CHECK-NEXT:  3      7     0.50    *                   shlxl	%eax, (%rbx), %ecx
 # CHECK-NEXT:  1      1     0.50                        shlxq	%rax, %rbx, %rcx
-# CHECK-NEXT:  2      6     0.50    *                   shlxq	%rax, (%rbx), %rcx
+# CHECK-NEXT:  3      7     0.50    *                   shlxq	%rax, (%rbx), %rcx
 # CHECK-NEXT:  1      1     0.50                        shrxl	%eax, %ebx, %ecx
-# CHECK-NEXT:  2      6     0.50    *                   shrxl	%eax, (%rbx), %ecx
+# CHECK-NEXT:  3      7     0.50    *                   shrxl	%eax, (%rbx), %ecx
 # CHECK-NEXT:  1      1     0.50                        shrxq	%rax, %rbx, %rcx
-# CHECK-NEXT:  2      6     0.50    *                   shrxq	%rax, (%rbx), %rcx
+# CHECK-NEXT:  3      7     0.50    *                   shrxq	%rax, (%rbx), %rcx
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SBDivider

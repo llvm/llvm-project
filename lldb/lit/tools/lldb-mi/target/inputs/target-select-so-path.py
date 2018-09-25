@@ -3,6 +3,7 @@
 import os
 import sys
 import subprocess
+from threading import Timer
 
 
 hostname = 'localhost'
@@ -19,21 +20,28 @@ filecheck = 'FileCheck ' + test_file
 debugserver_proc = subprocess.Popen(debugserver.split())
 lldbmi_proc = subprocess.Popen(lldbmi, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, shell=True)
-filecheck_proc = subprocess.Popen(filecheck, stdin=lldbmi_proc.stdout,
+filecheck_proc = subprocess.Popen(filecheck, stdin=subprocess.PIPE,
                                   shell=True)
 
-# Get a tcp port chosen by debugserver.
-# The number quite big to get lldb-server's output and to not hang.
-bytes_to_read = 10
-port_bytes = os.read(r, bytes_to_read)
-port = str(port_bytes.decode('utf-8').strip('\x00'))
+timeout_sec = 30
+timer = Timer(timeout_sec, lldbmi_proc.kill)
+try:
+    timer.start()
 
-with open(test_file, 'r') as f:
-    # Replace '$PORT' with a free port number and pass
-    # test's content to lldb-mi.
-    lldbmi_proc.stdin.write(f.read().replace('$PORT', port))
-    lldbmi_proc.wait()
-    filecheck_proc.wait()
+    # Get a tcp port chosen by debugserver.
+    # The number quite big to get lldb-server's output and to not hang.
+    bytes_to_read = 10
+    port_bytes = os.read(r, bytes_to_read)
+    port = str(port_bytes.decode('utf-8').strip('\x00'))
+
+    with open(test_file, 'r') as f:
+        # Replace '$PORT' with a free port number and pass
+        # test's content to lldb-mi.
+        lldbmi_proc.stdin.write(f.read().replace('$PORT', port))
+        out, err = lldbmi_proc.communicate()
+        filecheck_proc.stdin.write(out)
+finally:
+    timer.cancel()
 
 debugserver_proc.kill()
 exit(filecheck_proc.returncode)

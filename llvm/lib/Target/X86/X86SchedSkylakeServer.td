@@ -83,7 +83,7 @@ def : ReadAdvance<ReadAfterLd, 5>;
 multiclass SKXWriteResPair<X86FoldableSchedWrite SchedRW,
                           list<ProcResourceKind> ExePorts,
                           int Lat, list<int> Res = [1], int UOps = 1,
-                          int LoadLat = 5> {
+                          int LoadLat = 5, int LoadUOps = 1> {
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -96,7 +96,7 @@ multiclass SKXWriteResPair<X86FoldableSchedWrite SchedRW,
   def : WriteRes<SchedRW.Folded, !listconcat([SKXPort23], ExePorts)> {
     let Latency = !add(Lat, LoadLat);
     let ResourceCycles = !listconcat([1], Res);
-    let NumMicroOps = !add(UOps, 1);
+    let NumMicroOps = !add(UOps, LoadUOps);
   }
 }
 
@@ -163,10 +163,10 @@ def  : WriteRes<WriteLAHFSAHF, [SKXPort06]>;
 def  : WriteRes<WriteBitTest,  [SKXPort06]>; //
 
 // Integer shifts and rotates.
-defm : SKXWriteResPair<WriteShift,    [SKXPort06],  1>;
-defm : SKXWriteResPair<WriteShiftCL,  [SKXPort06],  3, [3], 3>;
-defm : SKXWriteResPair<WriteRotate,   [SKXPort06],  2, [2], 2>;
-defm : SKXWriteResPair<WriteRotateCL, [SKXPort06],  3, [3], 3>;
+defm : SKXWriteResPair<WriteShift,    [SKXPort06], 1>;
+defm : SKXWriteResPair<WriteShiftCL,  [SKXPort06], 3, [3], 3, 5, 2>;
+defm : SKXWriteResPair<WriteRotate,   [SKXPort06], 2, [2], 2>;
+defm : SKXWriteResPair<WriteRotateCL, [SKXPort06], 3, [3], 3, 5, 2>;
 
 // SHLD/SHRD.
 defm : X86WriteRes<WriteSHDrri, [SKXPort1], 3, [1], 1>;
@@ -1598,17 +1598,6 @@ def SKXWriteResGroup127 : SchedWriteRes<[SKXPort23,SKXPort237,SKXPort06,SKXPort0
 }
 def: InstRW<[SKXWriteResGroup127], (instregex "RCL(8|16|32|64)m(1|i)",
                                               "RCR(8|16|32|64)m(1|i)")>;
-
-def SKXWriteResGroup128 : SchedWriteRes<[SKXPort4,SKXPort23,SKXPort237,SKXPort06]> {
-  let Latency = 8;
-  let NumMicroOps = 6;
-  let ResourceCycles = [1,1,1,3];
-}
-def: InstRW<[SKXWriteResGroup128], (instregex "ROL(8|16|32|64)mCL",
-                                              "ROR(8|16|32|64)mCL",
-                                              "SAR(8|16|32|64)mCL",
-                                              "SHL(8|16|32|64)mCL",
-                                              "SHR(8|16|32|64)mCL")>;
 
 def SKXWriteResGroup130 : SchedWriteRes<[SKXPort4,SKXPort23,SKXPort237,SKXPort06,SKXPort0156]> {
   let Latency = 8;

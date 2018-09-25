@@ -2671,12 +2671,19 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def XSIEXPQP : XForm_18<63, 868, (outs vrrc:$vT), (ins vrrc:$vA, vsfrc:$vB),
                           "xsiexpqp $vT, $vA, $vB", IIC_VecFP, []>;
 
+  def : Pat<(f128 (int_ppc_scalar_insert_exp_qp f128:$vA, i64:$vB)),
+            (f128 (XSIEXPQP $vA, (MTVSRD $vB)))>;
+
   // Extract Exponent/Significand DP/QP
   def XSXEXPDP : XX2_RT5_XO5_XB6<60,  0, 347, "xsxexpdp", []>;
   def XSXSIGDP : XX2_RT5_XO5_XB6<60,  1, 347, "xsxsigdp", []>;
 
   def XSXEXPQP : X_VT5_XO5_VB5  <63,  2, 804, "xsxexpqp", []>;
   def XSXSIGQP : X_VT5_XO5_VB5  <63, 18, 804, "xsxsigqp", []>;
+
+  def : Pat<(i64 (int_ppc_scalar_extract_expq  f128:$vA)),
+            (i64 (MFVSRD (EXTRACT_SUBREG
+                           (v2i64 (XSXEXPQP $vA)), sub_64)))>;
 
   // Vector Insert Word
   let UseVSXReg = 1 in {

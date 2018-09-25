@@ -51,3 +51,7 @@ HWASAN_FLAG(int, heap_history_size, 1023,
           "to find bugs.")
 HWASAN_FLAG(bool, export_memory_stats, true,
             "Export up-to-date memory stats through /proc")
+HWASAN_FLAG(int, stack_history_size, 1024,
+            "The number of stack frames remembered per thread. "
+            "Affects the quality of stack-related reports, but not the ability "
+            "to find bugs.")

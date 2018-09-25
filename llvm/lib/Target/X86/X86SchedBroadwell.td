@@ -84,7 +84,7 @@ def : ReadAdvance<ReadAfterLd, 5>;
 multiclass BWWriteResPair<X86FoldableSchedWrite SchedRW,
                           list<ProcResourceKind> ExePorts,
                           int Lat, list<int> Res = [1], int UOps = 1,
-                          int LoadLat = 5> {
+                          int LoadLat = 5, int LoadUOps = 1> {
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -97,7 +97,7 @@ multiclass BWWriteResPair<X86FoldableSchedWrite SchedRW,
   def : WriteRes<SchedRW.Folded, !listconcat([BWPort23], ExePorts)> {
     let Latency = !add(Lat, LoadLat);
     let ResourceCycles = !listconcat([1], Res);
-    let NumMicroOps = !add(UOps, 1);
+    let NumMicroOps = !add(UOps, LoadUOps);
   }
 }
 
@@ -173,9 +173,9 @@ defm : BWWriteResPair<WritePOPCNT,         [BWPort1], 3>;
 
 // Integer shifts and rotates.
 defm : BWWriteResPair<WriteShift,    [BWPort06],  1>;
-defm : BWWriteResPair<WriteShiftCL,  [BWPort06,BWPort0156],  3, [2,1], 3>;
+defm : BWWriteResPair<WriteShiftCL,  [BWPort06,BWPort0156], 3, [2,1], 3, 5, 2>;
 defm : BWWriteResPair<WriteRotate,   [BWPort06],  2, [2], 2>;
-defm : BWWriteResPair<WriteRotateCL, [BWPort06,BWPort0156],  3, [2,1], 3>;
+defm : BWWriteResPair<WriteRotateCL, [BWPort06,BWPort0156], 3, [2,1], 3, 5, 2>;
 
 // SHLD/SHRD.
 defm : X86WriteRes<WriteSHDrri, [BWPort1], 3, [1], 1>;
@@ -1167,11 +1167,6 @@ def BWWriteResGroup100 : SchedWriteRes<[BWPort4,BWPort23,BWPort237,BWPort06,BWPo
   let ResourceCycles = [1,1,1,2,1];
 }
 def : SchedAlias<WriteADCRMW, BWWriteResGroup100>;
-def: InstRW<[BWWriteResGroup100], (instregex "ROL(8|16|32|64)mCL",
-                                             "ROR(8|16|32|64)mCL",
-                                             "SAR(8|16|32|64)mCL",
-                                             "SHL(8|16|32|64)mCL",
-                                             "SHR(8|16|32|64)mCL")>;
 
 def BWWriteResGroup101 : SchedWriteRes<[BWPort1,BWPort23]> {
   let Latency = 9;

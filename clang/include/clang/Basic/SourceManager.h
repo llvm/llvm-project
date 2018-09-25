@@ -449,7 +449,7 @@ namespace SrcMgr {
     }
 
     static SLocEntry get(unsigned Offset, const FileInfo &FI) {
-      assert(!(Offset & (1 << 31)) && "Offset is too large");
+      assert(!(Offset & (1u << 31)) && "Offset is too large");
       SLocEntry E;
       E.Offset = Offset;
       E.IsExpansion = false;
@@ -458,7 +458,7 @@ namespace SrcMgr {
     }
 
     static SLocEntry get(unsigned Offset, const ExpansionInfo &Expansion) {
-      assert(!(Offset & (1 << 31)) && "Offset is too large");
+      assert(!(Offset & (1u << 31)) && "Offset is too large");
       SLocEntry E;
       E.Offset = Offset;
       E.IsExpansion = true;
