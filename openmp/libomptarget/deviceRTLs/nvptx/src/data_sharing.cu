@@ -389,7 +389,7 @@ EXTERN void* __kmpc_data_sharing_push_stack(size_t DataSize,
   void *&FrameP = DataSharingState.FramePtr[WID];
 
   // Only warp active master threads manage the stack.
-  if (IsWarpMasterActiveThread()) {
+  if (getThreadId() % WARPSIZE == 0) {
     // SlotP will point to either the shared memory slot or an existing
     // global memory slot.
     __kmpc_data_sharing_slot *&SlotP = DataSharingState.SlotPtr[WID];
@@ -468,7 +468,7 @@ EXTERN void __kmpc_data_sharing_pop_stack(void *FrameStart) {
     return omptarget_nvptx_SimpleThreadPrivateContext::Deallocate(FrameStart);
   }
 
-  if (IsWarpMasterActiveThread()) {
+  if (getThreadId() % WARPSIZE == 0) {
     unsigned WID = getWarpId();
 
     // Current slot

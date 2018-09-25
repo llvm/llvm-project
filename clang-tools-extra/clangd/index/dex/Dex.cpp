@@ -23,7 +23,7 @@ namespace dex {
 namespace {
 
 // Mark symbols which are can be used for code completion.
-static const Token RestrictedForCodeCompletion =
+const Token RestrictedForCodeCompletion =
     Token(Token::Kind::Sentinel, "Restricted For Code Completion");
 
 // Returns the tokens which are given symbol's characteristics. Currently, the
