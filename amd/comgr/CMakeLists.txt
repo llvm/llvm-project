@@ -1,70 +1,131 @@
 cmake_minimum_required(VERSION 3.2.0)
 project(code_object_manager)
 
-find_package(LLVM REQUIRED PATHS ${LLVM_DIR} NO_DEFAULT_PATH)
-list(APPEND CMAKE_MODULE_PATH ${LLVM_CMAKE_DIR})
-include(AddLLVM)
-
+find_package(LLVM REQUIRED CONFIG)
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
 
+find_package(AMDDeviceLibs CONFIG)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+# FIXME: Remove when yaml-cpp is removed from the build.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+
+set(AMD_COMGR_PRIVATE_COMPILE_OPTIONS)
+set(AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS)
+set(AMD_COMGR_PUBLIC_LINKER_OPTIONS)
+set(AMD_COMGR_PRIVATE_LINKER_OPTIONS)
+
 if (UNIX)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-rtti -Wall -Wno-attributes")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpic -fms-extensions")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+  list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS
+    -fno-rtti -Wall -Wno-attributes -fms-extensions -fvisibility=hidden)
   # TODO: Confirm this is actually needed due to LLVM/Clang code
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
+  list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS -fno-strict-aliasing)
   if (CMAKE_BUILD_TYPE MATCHES Debug)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+    list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS -g)
   endif()
   if (ENABLE_ASAN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
+    list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS
+      -fno-omit-frame-pointer -fsanitize=address)
   endif()
-  add_definitions(-D_GNU_SOURCE -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS)
-if (APPLE)
-  set(LINKER_OPTS "-pthread ")
+  list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS
+    _GNU_SOURCE __STDC_LIMIT_MACROS __STDC_CONSTANT_MACROS)
+  list(APPEND AMD_COMGR_PUBLIC_LINKER_OPTIONS -pthread)
+  if (NOT APPLE)
+    list(APPEND AMD_COMGR_PRIVATE_LINKER_OPTIONS
+      "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/src/exportmap"
+      -Wl,--no-undefined)
+  endif()
 else()
-  set(LINKER_OPTS "-pthread -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/src/exportmap -Wl,--no-undefined")
-endif()
-
-else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W0")
+  list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS "/W0")
 endif()
 
 # Windows is strict about visibility of exports in shared libraries, so we ask
 # GCC/Clang to also be strict, and then explicitly mark each exported symbol in
 # the shared header.
-add_definitions(-DAMD_EXPORT)
+list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS AMD_EXPORT)
 
 file(GLOB SOURCES "src/*.cpp")
+if (NOT AMDDeviceLibs_FOUND)
+  file(GLOB DEVICE_LIBS_SRC "src/comgr-device-libs.cpp")
+  list(REMOVE_ITEM SOURCES ${DEVICE_LIBS_SRC})
+endif()
 add_library(amd_comgr SHARED ${SOURCES})
 
-install(
-  TARGETS
-  amd_comgr
-  DESTINATION lib
-)
+if (AMDDeviceLibs_FOUND)
+  include(bc2h)
+  include(opencl_pch)
+  include(DeviceLibs)
+  list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS DEVICE_LIBS)
+endif()
 
-install(
-  FILES
+set_target_properties(amd_comgr PROPERTIES
+  CXX_STANDARD 11
+  CXX_STANDARD_REQUIRED Yes
+  CXX_EXTENSIONS No)
+target_compile_options(amd_comgr
+  PRIVATE "${AMD_COMGR_PRIVATE_COMPILE_OPTIONS}")
+target_compile_definitions(amd_comgr
+  PRIVATE "${AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS}")
+target_include_directories(amd_comgr
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
+
+set(AMD_COMGR_CONFIG_NAME amd_comgr-config.cmake)
+set(AMD_COMGR_TARGETS_NAME amd_comgr-targets.cmake)
+set(AMD_COMGR_PACKAGE_PREFIX lib/cmake/amd_comgr)
+
+# Generate the build-tree package.
+set(AMD_COMGR_PREFIX_CODE)
+set(AMD_COMGR_TARGETS_PATH
+  "${CMAKE_CURRENT_BINARY_DIR}/${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_TARGETS_NAME}")
+export(TARGETS amd_comgr
+  FILE "${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_TARGETS_NAME}")
+configure_file("cmake/${AMD_COMGR_CONFIG_NAME}.in"
+  "${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_CONFIG_NAME}"
+  @ONLY)
+
+install(TARGETS amd_comgr
+  EXPORT amd_comgr_export
+  DESTINATION lib)
+
+install(FILES
   "include/amd_comgr.h"
-  DESTINATION include
-)
+  DESTINATION include)
 
-install(
-  FILES
+install(FILES
   "README.md"
   "LICENSE.txt"
   "NOTICES.txt"
-  DESTINATION share/amd_comgr
-)
+  DESTINATION share/amd_comgr)
+
+# Generate the install-tree package.
+set(AMD_COMGR_PREFIX_CODE "
+# Derive absolute install prefix from config file path.
+get_filename_component(AMD_COMGR_PREFIX \"\${CMAKE_CURRENT_LIST_FILE}\" PATH)")
+string(REGEX REPLACE "/" ";" count "${AMD_COMGR_PACKAGE_PREFIX}")
+foreach(p ${count})
+  set(AMD_COMGR_PREFIX_CODE "${AMD_COMGR_PREFIX_CODE}
+get_filename_component(AMD_COMGR_PREFIX \"\${AMD_COMGR_PREFIX}\" PATH)")
+endforeach()
+set(AMD_COMGR_TARGETS_PATH "\${AMD_COMGR_PREFIX}/${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_TARGETS_NAME}")
+configure_file("cmake/${AMD_COMGR_CONFIG_NAME}.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/${AMD_COMGR_CONFIG_NAME}.install"
+  @ONLY)
+install(FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/${AMD_COMGR_CONFIG_NAME}.install"
+  DESTINATION "${AMD_COMGR_PACKAGE_PREFIX}"
+  RENAME "${AMD_COMGR_CONFIG_NAME}")
+install(EXPORT amd_comgr_export
+  DESTINATION "${AMD_COMGR_PACKAGE_PREFIX}"
+  FILE "${AMD_COMGR_TARGETS_NAME}")
 
 set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "Enable testing" FORCE)
 set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "Enable parse tools" FORCE)
 add_subdirectory(yaml-cpp EXCLUDE_FROM_ALL)
-
-include_directories(include)
 include_directories(./yaml-cpp/include)
 
 set(CLANG_LIBS
@@ -88,14 +149,12 @@ set(CLANG_LIBS
   clangLex
   clangAnalysis
   clangAST
-  clangBasic
-)
+  clangBasic)
 
 set(LLD_LIBS
   lldELF
   lldCore
-  lldCommon
-)
+  lldCommon)
 
 llvm_map_components_to_libnames(LLVM_LIBS
   ${LLVM_TARGETS_TO_BUILD}
@@ -131,18 +190,22 @@ llvm_map_components_to_libnames(LLVM_LIBS
   ProfileData
   Coverage
   LTO
-  Coroutines
-)
+  Coroutines)
 
-target_link_libraries(amd_comgr ${LINKER_OPTS}
-  yaml-cpp
-  ${CLANG_LIBS}
-  ${LLD_LIBS}
-  ${LLVM_LIBS}
+target_link_libraries(amd_comgr
+  PUBLIC
+    ${AMD_COMGR_PUBLIC_LINKER_OPTIONS}
+  PRIVATE
+    ${AMD_COMGR_PRIVATE_LINKER_OPTIONS}
+    yaml-cpp
+    ${CLANG_LIBS}
+    ${LLD_LIBS}
+    ${LLVM_LIBS}
 )
 
 if (NOT UNIX)
-  target_link_libraries(amd_comgr version)
+  target_link_libraries(amd_comgr
+    PRIVATE version)
 endif()
 
 enable_testing()
@@ -160,7 +223,7 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 
 # Debian package specific variables
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE
-  "https://github.com/ROCmSoftwarePlatform/ROCm-CodeObjectManager")
+  "https://github.com/ROCmSoftwarePlatform/ROCm-CompilerSupport")
 
 # RPM package specific variables
 if(DEFINED CPACK_PACKAGING_INSTALL_PREFIX)

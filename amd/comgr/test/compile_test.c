@@ -40,18 +40,19 @@
 #include "common.h"
 
 int main(int argc, char *argv[]) {
-  char *bufSource1, *bufSource2, *bufInclude, *bufPCH;
-  size_t sizeSource1, sizeSource2, sizeInclude, sizePCH;
-  amd_comgr_data_t dataSource1, dataSource2, dataInclude, dataPCH;
-  amd_comgr_data_set_t dataSetIn, dataSetPreproc, dataSetBC, dataSetLinked,
-                       dataSetAsm, dataSetReloc, dataSetExec;
+  char *bufSource1, *bufSource2, *bufInclude;
+  size_t sizeSource1, sizeSource2, sizeInclude;
+  amd_comgr_data_t dataSource1, dataSource2, dataInclude;
+  amd_comgr_data_set_t dataSetIn, dataSetPreproc, dataSetBC,
+                       dataSetLinked, dataSetAsm, dataSetReloc,
+                       dataSetExec;
   amd_comgr_action_info_t dataAction;
   amd_comgr_status_t status;
+  size_t count;
 
   sizeSource1 = setBuf(TEST_OBJ_DIR "/source1.cl", &bufSource1);
   sizeSource2 = setBuf(TEST_OBJ_DIR "/source2.cl", &bufSource2);
   sizeInclude = setBuf(TEST_OBJ_DIR "/include-a.h", &bufInclude);
-  sizePCH = setBuf(TEST_OBJ_DIR "/include-b.h.pch", &bufPCH);
 
   status = amd_comgr_create_data_set(&dataSetIn);
   checkError(status, "amd_comgr_create_data_set");
@@ -83,18 +84,6 @@ int main(int argc, char *argv[]) {
   status = amd_comgr_data_set_add(dataSetIn, dataInclude);
   checkError(status, "amd_comgr_data_set_add");
 
-  status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER, &dataPCH);
-  checkError(status, "amd_comgr_create_data");
-  status = amd_comgr_set_data(dataPCH, sizePCH, bufPCH);
-  checkError(status, "amd_comgr_set_data");
-  status = amd_comgr_set_data_name(dataPCH, "include-b.h.pch");
-  checkError(status, "amd_comgr_set_data_name");
-  status = amd_comgr_data_set_add(dataSetIn, dataPCH);
-  checkError(status, "amd_comgr_data_set_add");
-
-  status = amd_comgr_create_data_set(&dataSetPreproc);
-  checkError(status, "amd_comgr_create_data_set");
-
   status = amd_comgr_create_action_info(&dataAction);
   checkError(status, "amd_comgr_create_action_info");
   status = amd_comgr_action_info_set_language(dataAction, AMD_COMGR_LANGUAGE_OPENCL_1_2);
@@ -104,11 +93,13 @@ int main(int argc, char *argv[]) {
   status = amd_comgr_action_info_set_options(dataAction, "-mllvm -amdgpu-early-inline-all");
   checkError(status, "amd_comgr_action_info_set_options");
 
+  status = amd_comgr_create_data_set(&dataSetPreproc);
+  checkError(status, "amd_comgr_create_data_set");
+
   status = amd_comgr_do_action(AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR,
                                dataAction, dataSetIn, dataSetPreproc);
   checkError(status, "amd_comgr_do_action");
 
-  size_t count;
   status =
       amd_comgr_action_data_count(dataSetPreproc, AMD_COMGR_DATA_KIND_SOURCE, &count);
   checkError(status, "amd_comgr_action_data_count");
@@ -118,6 +109,7 @@ int main(int argc, char *argv[]) {
            "produced %zu source objects (expected 2)\n", count);
     exit(1);
   }
+
   status = amd_comgr_create_data_set(&dataSetBC);
   checkError(status, "amd_comgr_create_data_set");
 
@@ -138,12 +130,16 @@ int main(int argc, char *argv[]) {
   status = amd_comgr_create_data_set(&dataSetLinked);
   checkError(status, "amd_comgr_create_data_set");
 
+  status = amd_comgr_action_info_set_options(dataAction,
+                                             "-mllvm -amdgpu-early-inline-all");
+  checkError(status, "amd_comgr_action_info_set_options");
+
   status = amd_comgr_do_action(AMD_COMGR_ACTION_LINK_BC_TO_BC,
                                dataAction, dataSetBC, dataSetLinked);
   checkError(status, "amd_comgr_do_action");
 
-  status =
-      amd_comgr_action_data_count(dataSetLinked, AMD_COMGR_DATA_KIND_BC, &count);
+  status = amd_comgr_action_data_count(dataSetLinked, AMD_COMGR_DATA_KIND_BC,
+                                       &count);
   checkError(status, "amd_comgr_action_data_count");
 
   if (count != 1) {
@@ -209,8 +205,6 @@ int main(int argc, char *argv[]) {
   checkError(status, "amd_comgr_release_data");
   status = amd_comgr_release_data(dataInclude);
   checkError(status, "amd_comgr_release_data");
-  status = amd_comgr_release_data(dataPCH);
-  checkError(status, "amd_comgr_release_data");
   status = amd_comgr_destroy_data_set(dataSetIn);
   checkError(status, "amd_comgr_destroy_data_set");
   status = amd_comgr_destroy_data_set(dataSetPreproc);
@@ -230,5 +224,4 @@ int main(int argc, char *argv[]) {
   free(bufSource1);
   free(bufSource2);
   free(bufInclude);
-  free(bufPCH);
 }

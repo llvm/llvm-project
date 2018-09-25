@@ -389,52 +389,6 @@ amd_comgr_get_isa_metadata(
   const char *isa_name,
   amd_comgr_metadata_node_t *metadata);
 
- /**
- * @brief Add the default device library data objects for a specific
- * isa name, isa specific data kind and language to an existing action
- * data object.
- *
- * Zero or more such device libraries may be added which can be linked
- * with other data objects to provide the functionality expected by
- * the data objects created by the compiler for the specified
- * language.
- *
- * @param[in] isa_name The isa name to query.
- *
- * @param[in] kind The kind of data object requested.
- *
- * @param[in] language The source language for which the default
- * device libraries are requested. If @p
- * AMD_COMGR_LANGUAGE_NONE is specified only the base
- * language independent libraries will be returned.
- *
- * @param[in, out] result If the @p kind is isa specific, then add the
- * default device libraries of that lind for language @p language if
- * any exist. If a device library is already present then it is not
- * added a second time. This allows the device libraries for multiple
- * languages to be added by using this operation multiple times on the
- * same @p result, where the same device library may be required by
- * multiple languages.
- *
- * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
- * been executed successfully.
- *
- * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p
- * name is NULL or is not an isa name supported by this version of the
- * code object manager library. @p kind is an invalid data kind, or @p
- * AMD_COMGR_DATA_KIND_UNDEF. @p language is an invalid
- * language kind. @p result is NULL.
- *
- * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
- * Unable to update the data object as out of resources.
- */
-amd_comgr_status_t AMD_API
-amd_comgr_add_isa_default_device_libraries(
-  const char *isa_name,
-  amd_comgr_data_kind_t kind,
-  amd_comgr_language_t language,
-  amd_comgr_data_set_t *result);
-
 /**
  * @brief Create a data object that can hold data of a specified kind.
  *
@@ -1174,6 +1128,18 @@ typedef enum amd_comgr_action_kind_s {
    */
   AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR,
   /**
+   * Copy all existing data objects in @p input to @p output, then add the
+   * device-specific and language-specific precompiled headers required for
+   * compilation.
+   *
+   * Currently the only supported languages are @p AMD_COMGR_LANGUAGE_OPENCL_1_2
+   * and @p AMD_COMGR_LANGUAGE_OPENCL_2_0.
+   *
+   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT if isa name or language
+   * is not set in @p info, or the language is not supported.
+   */
+  AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS,
+  /**
    * Compile each source data object in @p input in order. For each
    * successful compilation add a bc data object to @p result. Resolve
    * any include source names using the names of include data objects
@@ -1188,6 +1154,33 @@ typedef enum amd_comgr_action_kind_s {
    * if isa name or language is not set in @p info.
    */
   AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC,
+  /**
+   * Copy all existing data objects in @p input to @p output, then add the
+   * device-specific and language-specific bitcode libraries required for
+   * compilation.
+   *
+   * Currently the only supported languages are @p AMD_COMGR_LANGUAGE_OPENCL_1_2
+   * and @p AMD_COMGR_LANGUAGE_OPENCL_2_0.
+   *
+   * The options in @p info should be set to a comma-separated set of
+   * language-specific flags. For OpenCL these include:
+   *
+   *    correctly_rounded_sqrt
+   *    daz_opt
+   *    finite_only
+   *    unsafe_math
+   *
+   * For example, to enable daz_opt and unsafe_math, the options should be set
+   * as:
+   *
+   *    amd_comgr_action_info_set_options(info, "daz_opt,unsafe_math");
+   *
+   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT if isa name or language
+   * is not set in @p info, the language is not supported, an unknown
+   * language-specific flag is supplied, or a language-specific flag is
+   * repeated.
+   */
+  AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES,
   /**
    * Link each bc data object in @p input together and add the linked
    * bc data object to @p result. Any device library bc data object

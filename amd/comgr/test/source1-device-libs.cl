@@ -36,6 +36,6 @@
 #include "include-a.h"
 
 void kernel source1(__global int *j) {
-  *j += 2;
+  *j += BAR;
   source2(j);
 }

@@ -35,6 +35,9 @@
 
 #include "comgr.h" // C++ class header
 #include "comgr-compiler.h"
+#ifdef DEVICE_LIBS
+  #include "comgr-device-libs.h"
+#endif
 #include "comgr-metadata.h"
 #include "comgr-objdump.h"
 #include "comgr-symbol.h"
@@ -241,6 +244,28 @@ dispatch_compiler_action(amd_comgr_action_kind_t action_kind,
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
+}
+
+static amd_comgr_status_t
+dispatch_add_action(amd_comgr_action_kind_t action_kind,
+                    DataAction *action_info, DataSet *input_set,
+                    DataSet *result_set) {
+#ifdef DEVICE_LIBS
+  for (DataObject *datap : input_set->data_objects) {
+    datap->refcount++;
+    result_set->data_objects.insert(datap);
+  }
+  switch (action_kind) {
+  case AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS:
+    return add_precompiled_headers(action_info, input_set, result_set);
+  case AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES:
+    return add_device_libraries(action_info, input_set, result_set);
+  default:
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+#else
+  return AMD_COMGR_STATUS_ERROR;
+#endif
 }
 
 static bool symbol_info_is_valid(amd_comgr_symbol_info_t attr) {
@@ -1026,6 +1051,9 @@ amd_comgr_do_action(
   case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_RELOCATABLE:
   case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE:
     return dispatch_compiler_action(action_kind, actioninfop, insetp, outsetp);
+  case AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS:
+  case AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES:
+    return dispatch_add_action(action_kind, actioninfop, insetp, outsetp);
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }

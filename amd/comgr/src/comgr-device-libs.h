@@ -33,4 +33,22 @@
 *
 *******************************************************************************/
 
-#define BAR 1
+#ifndef COMGR_DEVICE_LIBS_H
+#define COMGR_DEVICE_LIBS_H
+
+namespace COMGR {
+
+struct DataAction;
+struct DataSet;
+
+amd_comgr_status_t
+add_precompiled_headers(DataAction *action_info, DataSet *input_set,
+                        DataSet *result_set);
+
+amd_comgr_status_t
+add_device_libraries(DataAction *action_info, DataSet *input_set,
+                     DataSet *result_set);
+
+}
+
+#endif // COMGR_DEVICE_LIBS_H

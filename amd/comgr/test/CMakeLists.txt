@@ -14,15 +14,10 @@ add_custom_target(shared.so ALL ${CLANG_COMMON}
   "${CMAKE_CURRENT_SOURCE_DIR}/shared.cl" -o
   "${CMAKE_CURRENT_BINARY_DIR}/shared.so"
   SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shared.cl")
-add_custom_target(include-b.h.pch ALL ${CLANG_COMMON}
-  -Xclang -emit-pch
-  "${CMAKE_CURRENT_SOURCE_DIR}/include-b.h" -o
-  "${CMAKE_CURRENT_BINARY_DIR}/include-b.h.pch"
-  SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/include-b.h"
-  VERBATIM)
 # TODO: Where is this from? We could also build this from source, but it is a
 # standard x86-64 ELF SO, so it will probably not change.
 configure_file("source1.cl" "source1.cl" COPYONLY)
+configure_file("source1-device-libs.cl" "source1-device-libs.cl" COPYONLY)
 configure_file("source2.cl" "source2.cl" COPYONLY)
 configure_file("include-a.h" "include-a.h" COPYONLY)
 configure_file("source1.s" "source1.s" COPYONLY)
@@ -82,6 +77,14 @@ add_executable(compile_minimal_test compile_minimal_test.c)
 target_link_libraries(compile_minimal_test amd_comgr)
 add_test(NAME compile_minimal_test COMMAND compile_minimal_test)
 
+if (AMDDeviceLibs_FOUND)
+  # Test : Compile Device Libs
+  add_executable(compile_device_libs_test compile_minimal_test.c)
+  target_link_libraries(compile_device_libs_test amd_comgr)
+  add_test(NAME compile_device_libs_test COMMAND compile_minimal_test)
+  set(COMPILE_DEVICE_LIBS_TEST compile_device_libs_test)
+endif()
+
 # Test : Assemble
 add_executable(assemble_test assemble_test.c)
 target_link_libraries(assemble_test amd_comgr)
@@ -111,6 +114,7 @@ if (NOT(UNIX))
     #symbols_iterate_test
     compile_test
     compile_minimal_test
+    ${COMPILE_DEVICE_LIBS_TEST}
     assemble_test
     link_test
     isa_name_parsing_test
