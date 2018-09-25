@@ -415,18 +415,18 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
 
 void LinkerScript::discard(ArrayRef<InputSection *> V) {
   for (InputSection *S : V) {
-    if (S == InX::ShStrTab || S == InX::Dynamic || S == InX::DynSymTab ||
-        S == InX::DynStrTab || S == InX::RelaPlt || S == InX::RelaDyn ||
-        S == InX::RelrDyn)
+    if (S == In.ShStrTab || S == In.Dynamic || S == In.DynSymTab ||
+        S == In.DynStrTab || S == In.RelaPlt || S == In.RelaDyn ||
+        S == In.RelrDyn)
       error("discarding " + S->Name + " section is not allowed");
 
     // You can discard .hash and .gnu.hash sections by linker scripts. Since
     // they are synthesized sections, we need to handle them differently than
     // other regular sections.
-    if (S == InX::GnuHashTab)
-      InX::GnuHashTab = nullptr;
-    if (S == InX::HashTab)
-      InX::HashTab = nullptr;
+    if (S == In.GnuHashTab)
+      In.GnuHashTab = nullptr;
+    if (S == In.HashTab)
+      In.HashTab = nullptr;
 
     S->Assigned = false;
     S->Live = false;

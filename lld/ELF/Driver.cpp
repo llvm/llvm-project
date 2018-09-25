@@ -85,7 +85,6 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
 
   InputSections.clear();
   OutputSections.clear();
-  Tar = nullptr;
   BinaryFiles.clear();
   BitcodeFiles.clear();
   ObjectFiles.clear();
@@ -95,6 +94,10 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
   Driver = make<LinkerDriver>();
   Script = make<LinkerScript>();
   Symtab = make<SymbolTable>();
+
+  Tar = nullptr;
+  memset(&In, 0, sizeof(In));
+
   Config->ProgName = Args[0];
 
   Driver->main(Args);
@@ -1399,6 +1402,9 @@ static const char *LibcallRoutineNames[] = {
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Target = getTarget();
+  InX<ELFT>::VerDef = nullptr;
+  InX<ELFT>::VerSym = nullptr;
+  InX<ELFT>::VerNeed = nullptr;
 
   Config->MaxPageSize = getMaxPageSize(Args);
   Config->ImageBase = getImageBase(Args);
