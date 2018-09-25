@@ -80,6 +80,8 @@ static PropertyDefinition g_properties[] = {
      nullptr, "A list of libraries that source stepping won't stop in."},
     {"trace-thread", OptionValue::eTypeBoolean, false, false, nullptr, nullptr,
      "If true, this thread will single-step and log execution."},
+    {"max-backtrace-depth", OptionValue::eTypeUInt64, false, 300000, nullptr,
+     nullptr, "Maximum number of frames to backtrace."},
     {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, nullptr, nullptr}};
 
 enum {
@@ -87,7 +89,8 @@ enum {
   ePropertyStepOutAvoidsNoDebug,
   ePropertyStepAvoidRegex,
   ePropertyStepAvoidLibraries,
-  ePropertyEnableThreadTrace
+  ePropertyEnableThreadTrace,
+  ePropertyMaxBacktraceDepth
 };
 
 class ThreadOptionValueProperties : public OptionValueProperties {
@@ -162,6 +165,12 @@ bool ThreadProperties::GetStepInAvoidsNoDebug() const {
 bool ThreadProperties::GetStepOutAvoidsNoDebug() const {
   const uint32_t idx = ePropertyStepOutAvoidsNoDebug;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_properties[idx].default_uint_value != 0);
+}
+
+uint64_t ThreadProperties::GetMaxBacktraceDepth() const {
+  const uint32_t idx = ePropertyMaxBacktraceDepth;
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
       nullptr, idx, g_properties[idx].default_uint_value != 0);
 }
 

@@ -323,8 +323,8 @@ template <class ELFT> static void createSyntheticSections() {
     Add(InX<ELFT>::VerSym);
 
     if (!Config->VersionDefinitions.empty()) {
-      InX<ELFT>::VerDef = make<VersionDefinitionSection<ELFT>>();
-      Add(InX<ELFT>::VerDef);
+      In.VerDef = make<VersionDefinitionSection>();
+      Add(In.VerDef);
     }
 
     InX<ELFT>::VerNeed = make<VersionNeedSection<ELFT>>();
@@ -1675,7 +1675,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
                   In.SymTabShndx,
                   In.ShStrTab,
                   In.StrTab,
-                  InX<ELFT>::VerDef,
+                  In.VerDef,
                   In.DynStrTab,
                   In.Got,
                   In.MipsGot,
