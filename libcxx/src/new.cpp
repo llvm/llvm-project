@@ -135,8 +135,7 @@ _LIBCPP_WEAK
 void
 operator delete(void* ptr) _NOEXCEPT
 {
-    if (ptr)
-        ::free(ptr);
+    ::free(ptr);
 }
 
 _LIBCPP_WEAK
@@ -257,11 +256,10 @@ _LIBCPP_WEAK
 void
 operator delete(void* ptr, std::align_val_t) _NOEXCEPT
 {
-    if (ptr)
 #if defined(_LIBCPP_MSVCRT_LIKE)
-        ::_aligned_free(ptr);
+    ::_aligned_free(ptr);
 #else
-        ::free(ptr);
+    ::free(ptr);
 #endif
 }
 
