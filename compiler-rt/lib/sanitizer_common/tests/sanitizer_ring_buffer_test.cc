@@ -66,6 +66,7 @@ template <class T> void TestRB() {
 #undef EXPECT_RING_BUFFER
 }
 
+#if SANITIZER_WORDSIZE == 64
 TEST(RingBuffer, int64) {
   TestRB<int64_t>();
 }
@@ -74,4 +75,25 @@ TEST(RingBuffer, LargeStruct) {
   TestRB<LargeStruct>();
 }
 
+template<typename T>
+CompactRingBuffer<T> *AllocCompactRingBuffer(size_t count) {
+  size_t sz = sizeof(T) * count;
+  EXPECT_EQ(0ULL, sz % 4096);
+  void *p = MmapAlignedOrDieOnFatalError(sz, sz * 2, "CompactRingBuffer");
+  return new CompactRingBuffer<T>(p, sz);
+}
+
+TEST(CompactRingBuffer, int64) {
+  const size_t page_sizes[] = {1, 2, 4, 128};
+
+  for (size_t pages : page_sizes) {
+    size_t count = 4096 * pages / sizeof(int64_t);
+    auto R = AllocCompactRingBuffer<int64_t>(count);
+    int64_t top = count * 3 + 13;
+    for (int64_t i = 0; i < top; ++i) R->push(i);
+    for (int64_t i = 0; i < (int64_t)count; ++i)
+      EXPECT_EQ(top - i - 1, (*R)[i]);
+  }
+}
+#endif
 }  // namespace __sanitizer

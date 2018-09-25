@@ -44,6 +44,22 @@ SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
   Live = !Config->DoGC || !isCOMDAT();
 }
 
+// Initialize the RelocTargets vector, to allow redirecting certain relocations
+// to a thunk instead of the actual symbol the relocation's symbol table index
+// indicates.
+void SectionChunk::readRelocTargets() {
+  assert(RelocTargets.empty());
+  RelocTargets.reserve(Relocs.size());
+  for (const coff_relocation &Rel : Relocs)
+    RelocTargets.push_back(File->getSymbol(Rel.SymbolTableIndex));
+}
+
+// Reset RelocTargets to their original targets before thunks were added.
+void SectionChunk::resetRelocTargets() {
+  for (size_t I = 0, E = Relocs.size(); I < E; ++I)
+    RelocTargets[I] = File->getSymbol(Relocs[I].SymbolTableIndex);
+}
+
 static void add16(uint8_t *P, int16_t V) { write16le(P, read16le(P) + V); }
 static void add32(uint8_t *P, int32_t V) { write32le(P, read32le(P) + V); }
 static void add64(uint8_t *P, int64_t V) { write64le(P, read64le(P) + V); }
@@ -309,7 +325,9 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
 
   // Apply relocations.
   size_t InputSize = getSize();
-  for (const coff_relocation &Rel : Relocs) {
+  for (size_t I = 0, E = Relocs.size(); I < E; I++) {
+    const coff_relocation &Rel = Relocs[I];
+
     // Check for an invalid relocation offset. This check isn't perfect, because
     // we don't have the relocation size, which is only known after checking the
     // machine and relocation type. As a result, a relocation may overwrite the
@@ -321,8 +339,9 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
 
     uint8_t *Off = Buf + OutputSectionOff + Rel.VirtualAddress;
 
-    auto *Sym =
-        dyn_cast_or_null<Defined>(File->getSymbol(Rel.SymbolTableIndex));
+    // Use the potentially remapped Symbol instead of the one that the
+    // relocation points to.
+    auto *Sym = dyn_cast_or_null<Defined>(RelocTargets[I]);
     if (!Sym) {
       if (isCodeView() || isDWARF())
         continue;
@@ -410,11 +429,14 @@ static uint8_t getBaserelType(const coff_relocation &Rel) {
 // fixed by the loader if load-time relocation is needed.
 // Only called when base relocation is enabled.
 void SectionChunk::getBaserels(std::vector<Baserel> *Res) {
-  for (const coff_relocation &Rel : Relocs) {
+  for (size_t I = 0, E = Relocs.size(); I < E; I++) {
+    const coff_relocation &Rel = Relocs[I];
     uint8_t Ty = getBaserelType(Rel);
     if (Ty == IMAGE_REL_BASED_ABSOLUTE)
       continue;
-    Symbol *Target = File->getSymbol(Rel.SymbolTableIndex);
+    // Use the potentially remapped Symbol instead of the one that the
+    // relocation points to.
+    Symbol *Target = RelocTargets[I];
     if (!Target || isa<DefinedAbsolute>(Target))
       continue;
     Res->emplace_back(RVA + Rel.VirtualAddress, Ty);
@@ -618,6 +640,25 @@ void ImportThunkChunkARM64::writeTo(uint8_t *Buf) const {
   applyArm64Ldr(Buf + OutputSectionOff + 4, Off);
 }
 
+// A Thumb2, PIC, non-interworking range extension thunk.
+const uint8_t ArmThunk[] = {
+    0x40, 0xf2, 0x00, 0x0c, // P:  movw ip,:lower16:S - (P + (L1-P) + 4)
+    0xc0, 0xf2, 0x00, 0x0c, //     movt ip,:upper16:S - (P + (L1-P) + 4)
+    0xe7, 0x44,             // L1: add  pc, ip
+};
+
+size_t RangeExtensionThunk::getSize() const {
+  assert(Config->Machine == ARMNT);
+  return sizeof(ArmThunk);
+}
+
+void RangeExtensionThunk::writeTo(uint8_t *Buf) const {
+  assert(Config->Machine == ARMNT);
+  uint64_t Offset = Target->getRVA() - RVA - 12;
+  memcpy(Buf + OutputSectionOff, ArmThunk, sizeof(ArmThunk));
+  applyMOV32T(Buf + OutputSectionOff, uint32_t(Offset));
+}
+
 void LocalImportChunk::getBaserels(std::vector<Baserel> *Res) {
   Res->emplace_back(getRVA());
 }
@@ -757,10 +798,13 @@ void MergeChunk::addSection(SectionChunk *C) {
 }
 
 void MergeChunk::finalizeContents() {
-  for (SectionChunk *C : Sections)
-    if (C->Live)
-      Builder.add(toStringRef(C->getContents()));
-  Builder.finalize();
+  if (!Finalized) {
+    for (SectionChunk *C : Sections)
+      if (C->Live)
+        Builder.add(toStringRef(C->getContents()));
+    Builder.finalize();
+    Finalized = true;
+  }
 
   for (SectionChunk *C : Sections) {
     if (!C->Live)

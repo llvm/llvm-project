@@ -2054,6 +2054,10 @@ foreach i = {1-7,18,20} in
   def ffixed_x#i : Flag<["-"], "ffixed-x"#i>, Group<m_aarch64_Features_Group>,
     HelpText<"Reserve the "#i#" register (AArch64 only)">;
 
+foreach i = {8-15,18} in
+  def fcall_saved_x#i : Flag<["-"], "fcall-saved-x"#i>, Group<m_aarch64_Features_Group>,
+    HelpText<"Make the x"#i#" register call-saved (AArch64 only)">;
+
 def msign_return_address : Joined<["-"], "msign-return-address=">,
   Flags<[CC1Option]>, Group<m_Group>,
   HelpText<"Select return address signing scope">, Values<"none,all,non-leaf">;

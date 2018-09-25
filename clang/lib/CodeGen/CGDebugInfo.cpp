@@ -76,22 +76,20 @@ CGDebugInfo::~CGDebugInfo() {
 }
 
 ApplyDebugLocation::ApplyDebugLocation(CodeGenFunction &CGF,
-                                       SourceLocation TemporaryLocation,
-                                       bool ImplicitCode)
+                                       SourceLocation TemporaryLocation)
     : CGF(&CGF) {
-  init(TemporaryLocation, false /* DefaultToEmpty */, ImplicitCode);
+  init(TemporaryLocation);
 }
 
 ApplyDebugLocation::ApplyDebugLocation(CodeGenFunction &CGF,
                                        bool DefaultToEmpty,
-                                       SourceLocation TemporaryLocation,
-                                       bool ImplicitCode)
+                                       SourceLocation TemporaryLocation)
     : CGF(&CGF) {
-  init(TemporaryLocation, DefaultToEmpty, ImplicitCode);
+  init(TemporaryLocation, DefaultToEmpty);
 }
 
 void ApplyDebugLocation::init(SourceLocation TemporaryLocation,
-                              bool DefaultToEmpty, bool ImplicitCode) {
+                              bool DefaultToEmpty) {
   auto *DI = CGF->getDebugInfo();
   if (!DI) {
     CGF = nullptr;
@@ -104,7 +102,7 @@ void ApplyDebugLocation::init(SourceLocation TemporaryLocation,
     return;
 
   if (TemporaryLocation.isValid()) {
-    DI->EmitLocation(CGF->Builder, TemporaryLocation, ImplicitCode);
+    DI->EmitLocation(CGF->Builder, TemporaryLocation);
     return;
   }
 
@@ -3486,8 +3484,7 @@ void CGDebugInfo::EmitInlineFunctionEnd(CGBuilderTy &Builder) {
   setInlinedAt(llvm::DebugLoc(CurInlinedAt).getInlinedAt());
 }
 
-void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc,
-                               bool ImplicitCode) {
+void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc) {
   // Update our current location
   setLocation(Loc);
 
@@ -3495,9 +3492,8 @@ void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc,
     return;
 
   llvm::MDNode *Scope = LexicalBlockStack.back();
-  Builder.SetCurrentDebugLocation(
-      llvm::DebugLoc::get(getLineNumber(CurLoc), getColumnNumber(CurLoc), Scope,
-                          CurInlinedAt, ImplicitCode));
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc::get(
+      getLineNumber(CurLoc), getColumnNumber(CurLoc), Scope, CurInlinedAt));
 }
 
 void CGDebugInfo::CreateLexicalBlock(SourceLocation Loc) {
@@ -3544,7 +3540,7 @@ void CGDebugInfo::EmitLexicalBlockEnd(CGBuilderTy &Builder,
   assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
 
   // Provide an entry in the line table for the end of the block.
-  EmitLocation(Builder, Loc, true /* ImplicitCode */);
+  EmitLocation(Builder, Loc);
 
   if (DebugKind <= codegenoptions::DebugLineTablesOnly)
     return;
@@ -3560,7 +3556,7 @@ void CGDebugInfo::EmitFunctionEnd(CGBuilderTy &Builder, llvm::Function *Fn) {
   // Pop all regions for this function.
   while (LexicalBlockStack.size() != RCount) {
     // Provide an entry in the line table for the end of the block.
-    EmitLocation(Builder, CurLoc, true /* ImplicitCode */);
+    EmitLocation(Builder, CurLoc);
     LexicalBlockStack.pop_back();
   }
   FnBeginRegionCount.pop_back();

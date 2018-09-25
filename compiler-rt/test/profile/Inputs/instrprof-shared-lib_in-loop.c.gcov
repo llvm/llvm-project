@@ -11,4 +11,4 @@
 // CHECK-NEXT:   360000:    6:    g1++;
 // CHECK-NEXT:        -:    7:  else
 // CHECK-NEXT:   640000:    8:    g2++;
-// CHECK-NEXT:        -:    9:}
+// CHECK-NEXT:  1000000:    9:}

@@ -306,6 +306,23 @@ define <4 x i32> @test_v16i32_0_1_2_12 (<16 x i32> %v) {
   ret <4 x i32> %res
 }
 
+;PR31451
+;FIXME: can do better with vpcompress
+define <4 x i32> @test_v16i32_0_4_8_12(<16 x i32> %v) {
+; ALL-LABEL: test_v16i32_0_4_8_12:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
+; ALL-NEXT:    vmovaps {{.*#+}} ymm2 = <u,u,0,4,u,u,u,u>
+; ALL-NEXT:    vpermps %ymm1, %ymm2, %ymm1
+; ALL-NEXT:    vmovaps {{.*#+}} ymm2 = <0,4,u,u,u,u,u,u>
+; ALL-NEXT:    vpermps %ymm0, %ymm2, %ymm0
+; ALL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; ALL-NEXT:    vzeroupper
+; ALL-NEXT:    retq
+  %res = shufflevector <16 x i32> %v, <16 x i32> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+  ret <4 x i32> %res
+}
+
 define <8 x float> @shuffle_v16f32_extract_256(float* %RET, float* %a) {
 ; ALL-LABEL: shuffle_v16f32_extract_256:
 ; ALL:       # %bb.0:

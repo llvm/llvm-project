@@ -61,11 +61,11 @@ void f(P x, Q y) {
         cr = tu.codeComplete('fake.cpp', 12, 5, unsaved_files=files)
 
         expected = [
-          "{'const', TypedText} || Priority: 40 || Availability: Available || Brief comment: None",
-          "{'volatile', TypedText} || Priority: 40 || Availability: Available || Brief comment: None",
+          "{'const', TypedText} || Priority: 50 || Availability: Available || Brief comment: None",
+          "{'volatile', TypedText} || Priority: 50 || Availability: Available || Brief comment: None",
           "{'operator', TypedText} || Priority: 40 || Availability: Available || Brief comment: None",
-          "{'P', TypedText} | {'::', Text} || Priority: 75 || Availability: Available || Brief comment: None",
-          "{'Q', TypedText} | {'::', Text} || Priority: 75 || Availability: Available || Brief comment: None"
+          "{'P', TypedText} || Priority: 50 || Availability: Available || Brief comment: None",
+          "{'Q', TypedText} || Priority: 50 || Availability: Available || Brief comment: None"
         ]
         self.check_completion_results(cr, expected)
 

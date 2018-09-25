@@ -16618,9 +16618,8 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   // Legal.
   if (SrcVT == MVT::i32 && isScalarFPTypeInSSEReg(VT))
     return Op;
-  if (SrcVT == MVT::i64 && isScalarFPTypeInSSEReg(VT) && Subtarget.is64Bit()) {
+  if (SrcVT == MVT::i64 && isScalarFPTypeInSSEReg(VT) && Subtarget.is64Bit())
     return Op;
-  }
 
   if (SDValue V = LowerI64IntToFP_AVX512DQ(Op, DAG, Subtarget))
     return V;
@@ -16678,7 +16677,7 @@ SDValue X86TargetLowering::BuildFILD(SDValue Op, EVT SrcVT, SDValue Chain,
     Chain = Result.getValue(1);
     SDValue InFlag = Result.getValue(2);
 
-    // FIXME: Currently the FST is flagged to the FILD_FLAG. This
+    // FIXME: Currently the FST is glued to the FILD_FLAG. This
     // shouldn't be necessary except that RFP cannot be live across
     // multiple blocks. When stackifier is fixed, they can be uncoupled.
     MachineFunction &MF = DAG.getMachineFunction();
@@ -38654,12 +38653,15 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
     return SDValue();
 
   // TODO: Use PXOR + PTEST for SSE4.1 or later?
-  // TODO: Add support for AVX-512.
   EVT VT = SetCC->getValueType(0);
   SDLoc DL(SetCC);
   if ((OpSize == 128 && Subtarget.hasSSE2()) ||
-      (OpSize == 256 && Subtarget.hasAVX2())) {
-    EVT VecVT = OpSize == 128 ? MVT::v16i8 : MVT::v32i8;
+      (OpSize == 256 && Subtarget.hasAVX2()) ||
+      (OpSize == 512 && Subtarget.useAVX512Regs())) {
+    EVT VecVT = OpSize == 512 ? MVT::v16i32 :
+                OpSize == 256 ? MVT::v32i8 :
+                                MVT::v16i8;
+    EVT CmpVT = OpSize == 512 ? MVT::v16i1 : VecVT;
     SDValue Cmp;
     if (IsOrXorXorCCZero) {
       // This is a bitwise-combined equality comparison of 2 pairs of vectors:
@@ -38670,14 +38672,18 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
       SDValue B = DAG.getBitcast(VecVT, X.getOperand(0).getOperand(1));
       SDValue C = DAG.getBitcast(VecVT, X.getOperand(1).getOperand(0));
       SDValue D = DAG.getBitcast(VecVT, X.getOperand(1).getOperand(1));
-      SDValue Cmp1 = DAG.getSetCC(DL, VecVT, A, B, ISD::SETEQ);
-      SDValue Cmp2 = DAG.getSetCC(DL, VecVT, C, D, ISD::SETEQ);
-      Cmp = DAG.getNode(ISD::AND, DL, VecVT, Cmp1, Cmp2);
+      SDValue Cmp1 = DAG.getSetCC(DL, CmpVT, A, B, ISD::SETEQ);
+      SDValue Cmp2 = DAG.getSetCC(DL, CmpVT, C, D, ISD::SETEQ);
+      Cmp = DAG.getNode(ISD::AND, DL, CmpVT, Cmp1, Cmp2);
     } else {
       SDValue VecX = DAG.getBitcast(VecVT, X);
       SDValue VecY = DAG.getBitcast(VecVT, Y);
-      Cmp = DAG.getSetCC(DL, VecVT, VecX, VecY, ISD::SETEQ);
+      Cmp = DAG.getSetCC(DL, CmpVT, VecX, VecY, ISD::SETEQ);
     }
+    // For 512-bits we want to emit a setcc that will lower to kortest.
+    if (OpSize == 512)
+      return DAG.getSetCC(DL, VT, DAG.getBitcast(MVT::i16, Cmp),
+                          DAG.getConstant(0xFFFF, DL, MVT::i16), CC);
     // If all bytes match (bitmask is 0x(FFFF)FFFF), that's equality.
     // setcc i128 X, Y, eq --> setcc (pmovmskb (pcmpeqb X, Y)), 0xFFFF, eq
     // setcc i128 X, Y, ne --> setcc (pmovmskb (pcmpeqb X, Y)), 0xFFFF, ne
@@ -39074,7 +39080,8 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
 
   // Transform (SINT_TO_FP (i64 ...)) into an x87 operation if we have
   // a 32-bit target where SSE doesn't support i64->FP operations.
-  if (!Subtarget.useSoftFloat() && Op0.getOpcode() == ISD::LOAD) {
+  if (!Subtarget.useSoftFloat() && Subtarget.hasX87() &&
+      Op0.getOpcode() == ISD::LOAD) {
     LoadSDNode *Ld = cast<LoadSDNode>(Op0.getNode());
     EVT LdVT = Ld->getValueType(0);
 

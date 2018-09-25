@@ -280,9 +280,10 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
   }
 
   // Extract a value from a vector add operation with a constant zero.
-  Value *Val = nullptr; Constant *Con = nullptr;
-  if (match(V, m_Add(m_Value(Val), m_Constant(Con))))
-    if (Constant *Elt = Con->getAggregateElement(EltNo))
+  // TODO: Use getBinOpIdentity() to generalize this.
+  Value *Val; Constant *C;
+  if (match(V, m_Add(m_Value(Val), m_Constant(C))))
+    if (Constant *Elt = C->getAggregateElement(EltNo))
       if (Elt->isNullValue())
         return findScalarElement(Val, EltNo);
 

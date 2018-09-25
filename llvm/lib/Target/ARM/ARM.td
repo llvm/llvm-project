@@ -508,6 +508,8 @@ def ProcExynos  : SubtargetFeature<"exynos", "ARMProcFamily", "Exynos",
                                     FeatureHWDivARM,
                                     FeatureHasSlowFPVMLx,
                                     FeatureHasRetAddrStack,
+                                    FeatureFuseLiterals,
+                                    FeatureFuseAES,
                                     FeatureExpandMLx,
                                     FeatureCrypto,
                                     FeatureCRC]>;

@@ -1,7 +1,7 @@
 ; Test basic address sanitizer instrumentation.
 ;
-; RUN: opt < %s -hwasan -hwasan-recover=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT,DYNAMIC-SHADOW
-; RUN: opt < %s -hwasan -hwasan-recover=1 -S | FileCheck %s --check-prefixes=CHECK,RECOVER,DYNAMIC-SHADOW
+; RUN: opt < %s -hwasan -hwasan-recover=0 -hwasan-with-ifunc=1 -hwasan-with-tls=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT,DYNAMIC-SHADOW
+; RUN: opt < %s -hwasan -hwasan-recover=1 -hwasan-with-ifunc=1 -hwasan-with-tls=0 -S | FileCheck %s --check-prefixes=CHECK,RECOVER,DYNAMIC-SHADOW
 ; RUN: opt < %s -hwasan -hwasan-recover=0 -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=CHECK,ABORT,ZERO-BASED-SHADOW
 ; RUN: opt < %s -hwasan -hwasan-recover=1 -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=CHECK,RECOVER,ZERO-BASED-SHADOW
 
@@ -342,7 +342,6 @@ entry:
 define i8 @test_load_addrspace(i8 addrspace(256)* %a) sanitize_hwaddress {
 ; CHECK-LABEL: @test_load_addrspace(
 ; CHECK-NEXT: entry:
-; DYNAMIC-SHADOW: %.hwasan.shadow = call i64 asm "", "=r,0"([0 x i8]* @__hwasan_shadow)
 ; CHECK-NEXT: %[[B:[^ ]*]] = load i8, i8 addrspace(256)* %a
 ; CHECK-NEXT: ret i8 %[[B]]
 

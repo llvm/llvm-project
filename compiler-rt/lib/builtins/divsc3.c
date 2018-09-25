@@ -12,6 +12,8 @@
  *===----------------------------------------------------------------------===
  */
 
+#define SINGLE_PRECISION
+#include "fp_lib.h"
 #include "int_lib.h"
 #include "int_math.h"
 
@@ -21,7 +23,8 @@ COMPILER_RT_ABI Fcomplex
 __divsc3(float __a, float __b, float __c, float __d)
 {
     int __ilogbw = 0;
-    float __logbw = crt_logbf(crt_fmaxf(crt_fabsf(__c), crt_fabsf(__d)));
+    float __logbw =
+        __compiler_rt_logbf(crt_fmaxf(crt_fabsf(__c), crt_fabsf(__d)));
     if (crt_isfinite(__logbw))
     {
         __ilogbw = (int)__logbw;

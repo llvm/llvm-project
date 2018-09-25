@@ -706,7 +706,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   // for split stack will include a .note.GNU-split-stack section.
   if (Name == ".note.GNU-split-stack") {
     if (Config->Relocatable) {
-      error("Cannot mix split-stack and non-split-stack in a relocatable link");
+      error("cannot mix split-stack and non-split-stack in a relocatable link");
       return &InputSection::Discarded;
     }
     this->SplitStack = true;

@@ -1404,9 +1404,8 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
   // no successor has it live in.
   if (I == end()) {
     for (MachineBasicBlock *S : successors()) {
-      for (MCSubRegIterator SubReg(Reg, TRI, /*IncludeSelf*/true);
-           SubReg.isValid(); ++SubReg) {
-        if (S->isLiveIn(*SubReg))
+      for (const MachineBasicBlock::RegisterMaskPair &LI : S->liveins()) {
+        if (TRI->regsOverlap(LI.PhysReg, Reg))
           return LQR_Live;
       }
     }
@@ -1460,9 +1459,8 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
   // Did we get to the start of the block?
   if (I == begin()) {
     // If so, the register's state is definitely defined by the live-in state.
-    for (MCRegAliasIterator RAI(Reg, TRI, /*IncludeSelf=*/true); RAI.isValid();
-         ++RAI)
-      if (isLiveIn(*RAI))
+    for (const MachineBasicBlock::RegisterMaskPair &LI : liveins())
+      if (TRI->regsOverlap(LI.PhysReg, Reg))
         return LQR_Live;
 
     return LQR_Dead;
