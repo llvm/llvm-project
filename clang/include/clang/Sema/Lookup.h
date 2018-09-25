@@ -540,7 +540,7 @@ public:
   }
 
   /// Clears out any current state.
-  void clear() {
+  LLVM_ATTRIBUTE_REINITIALIZES void clear() {
     ResultKind = NotFound;
     Decls.clear();
     if (Paths) deletePaths(Paths);
