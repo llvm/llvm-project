@@ -132,7 +132,7 @@ def error_unresolved_symbols: F<"error-unresolved-symbols">,
 defm exclude_libs: Eq<"exclude-libs", "Exclude static libraries from automatic export">;
 
 defm execute_only: B<"execute-only",
-    "Do not mark executable sections readable",
+    "Mark executable sections unreadable",
     "Mark executable sections readable (default)">;
 
 defm export_dynamic: B<"export-dynamic",

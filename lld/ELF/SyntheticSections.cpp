@@ -1383,10 +1383,10 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
       addSym(DT_FINI, B);
 
   bool HasVerNeed = InX<ELFT>::VerNeed->getNeedNum() != 0;
-  if (HasVerNeed || InX<ELFT>::VerDef)
+  if (HasVerNeed || In.VerDef)
     addInSec(DT_VERSYM, InX<ELFT>::VerSym);
-  if (InX<ELFT>::VerDef) {
-    addInSec(DT_VERDEF, InX<ELFT>::VerDef);
+  if (In.VerDef) {
+    addInSec(DT_VERDEF, In.VerDef);
     addInt(DT_VERDEFNUM, getVerDefNum());
   }
   if (HasVerNeed) {
@@ -2627,8 +2627,7 @@ size_t EhFrameHeader::getSize() const {
 
 bool EhFrameHeader::empty() const { return In.EhFrame->empty(); }
 
-template <class ELFT>
-VersionDefinitionSection<ELFT>::VersionDefinitionSection()
+VersionDefinitionSection::VersionDefinitionSection()
     : SyntheticSection(SHF_ALLOC, SHT_GNU_verdef, sizeof(uint32_t),
                        ".gnu.version_d") {}
 
@@ -2638,7 +2637,7 @@ static StringRef getFileDefName() {
   return Config->OutputFile;
 }
 
-template <class ELFT> void VersionDefinitionSection<ELFT>::finalizeContents() {
+void VersionDefinitionSection::finalizeContents() {
   FileDefNameOff = In.DynStrTab->addString(getFileDefName());
   for (VersionDefinition &V : Config->VersionDefinitions)
     V.NameOff = In.DynStrTab->addString(V.Name);
@@ -2651,46 +2650,46 @@ template <class ELFT> void VersionDefinitionSection<ELFT>::finalizeContents() {
   getParent()->Info = getVerDefNum();
 }
 
-template <class ELFT>
-void VersionDefinitionSection<ELFT>::writeOne(uint8_t *Buf, uint32_t Index,
-                                              StringRef Name, size_t NameOff) {
-  auto *Verdef = reinterpret_cast<Elf_Verdef *>(Buf);
-  Verdef->vd_version = 1;
-  Verdef->vd_cnt = 1;
-  Verdef->vd_aux = sizeof(Elf_Verdef);
-  Verdef->vd_next = sizeof(Elf_Verdef) + sizeof(Elf_Verdaux);
-  Verdef->vd_flags = (Index == 1 ? VER_FLG_BASE : 0);
-  Verdef->vd_ndx = Index;
-  Verdef->vd_hash = hashSysV(Name);
+void VersionDefinitionSection::writeOne(uint8_t *Buf, uint32_t Index,
+                                        StringRef Name, size_t NameOff) {
+  uint16_t Flags = Index == 1 ? VER_FLG_BASE : 0;
 
-  auto *Verdaux = reinterpret_cast<Elf_Verdaux *>(Buf + sizeof(Elf_Verdef));
-  Verdaux->vda_name = NameOff;
-  Verdaux->vda_next = 0;
+  // Write a verdef.
+  write16(Buf, 1);                  // vd_version
+  write16(Buf + 2, Flags);          // vd_flags
+  write16(Buf + 4, Index);          // vd_ndx
+  write16(Buf + 6, 1);              // vd_cnt
+  write32(Buf + 8, hashSysV(Name)); // vd_hash
+  write32(Buf + 12, 20);            // vd_aux
+  write32(Buf + 16, 28);            // vd_next
+
+  // Write a veraux.
+  write32(Buf + 20, NameOff); // vda_name
+  write32(Buf + 24, 0);       // vda_next
 }
 
-template <class ELFT>
-void VersionDefinitionSection<ELFT>::writeTo(uint8_t *Buf) {
+void VersionDefinitionSection::writeTo(uint8_t *Buf) {
   writeOne(Buf, 1, getFileDefName(), FileDefNameOff);
 
   for (VersionDefinition &V : Config->VersionDefinitions) {
-    Buf += sizeof(Elf_Verdef) + sizeof(Elf_Verdaux);
+    Buf += EntrySize;
     writeOne(Buf, V.Id, V.Name, V.NameOff);
   }
 
   // Need to terminate the last version definition.
-  Elf_Verdef *Verdef = reinterpret_cast<Elf_Verdef *>(Buf);
-  Verdef->vd_next = 0;
+  write32(Buf + 16, 0); // vd_next
 }
 
-template <class ELFT> size_t VersionDefinitionSection<ELFT>::getSize() const {
-  return (sizeof(Elf_Verdef) + sizeof(Elf_Verdaux)) * getVerDefNum();
+size_t VersionDefinitionSection::getSize() const {
+  return EntrySize * getVerDefNum();
 }
 
+// .gnu.version is a table where each entry is 2 byte long.
 template <class ELFT>
 VersionTableSection<ELFT>::VersionTableSection()
     : SyntheticSection(SHF_ALLOC, SHT_GNU_versym, sizeof(uint16_t),
                        ".gnu.version") {
-  this->Entsize = sizeof(Elf_Versym);
+  this->Entsize = 2;
 }
 
 template <class ELFT> void VersionTableSection<ELFT>::finalizeContents() {
@@ -2700,19 +2699,19 @@ template <class ELFT> void VersionTableSection<ELFT>::finalizeContents() {
 }
 
 template <class ELFT> size_t VersionTableSection<ELFT>::getSize() const {
-  return sizeof(Elf_Versym) * (In.DynSymTab->getSymbols().size() + 1);
+  return (In.DynSymTab->getSymbols().size() + 1) * 2;
 }
 
 template <class ELFT> void VersionTableSection<ELFT>::writeTo(uint8_t *Buf) {
-  auto *OutVersym = reinterpret_cast<Elf_Versym *>(Buf) + 1;
+  Buf += 2;
   for (const SymbolTableEntry &S : In.DynSymTab->getSymbols()) {
-    OutVersym->vs_index = S.Sym->VersionId;
-    ++OutVersym;
+    write16(Buf, S.Sym->VersionId);
+    Buf += 2;
   }
 }
 
 template <class ELFT> bool VersionTableSection<ELFT>::empty() const {
-  return !InX<ELFT>::VerDef && InX<ELFT>::VerNeed->empty();
+  return !In.VerDef && InX<ELFT>::VerNeed->empty();
 }
 
 template <class ELFT>
@@ -3123,8 +3122,3 @@ template class elf::VersionNeedSection<ELF32LE>;
 template class elf::VersionNeedSection<ELF32BE>;
 template class elf::VersionNeedSection<ELF64LE>;
 template class elf::VersionNeedSection<ELF64BE>;
-
-template class elf::VersionDefinitionSection<ELF32LE>;
-template class elf::VersionDefinitionSection<ELF32BE>;
-template class elf::VersionDefinitionSection<ELF64LE>;
-template class elf::VersionDefinitionSection<ELF64BE>;

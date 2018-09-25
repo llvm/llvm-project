@@ -757,11 +757,7 @@ public:
 // shall be contained in the DT_VERDEFNUM entry of the .dynamic section.
 // The section shall contain an array of Elf_Verdef structures, optionally
 // followed by an array of Elf_Verdaux structures.
-template <class ELFT>
 class VersionDefinitionSection final : public SyntheticSection {
-  typedef typename ELFT::Verdef Elf_Verdef;
-  typedef typename ELFT::Verdaux Elf_Verdaux;
-
 public:
   VersionDefinitionSection();
   void finalizeContents() override;
@@ -769,6 +765,7 @@ public:
   void writeTo(uint8_t *Buf) override;
 
 private:
+  enum { EntrySize = 28 };
   void writeOne(uint8_t *Buf, uint32_t Index, StringRef Name, size_t NameOff);
 
   unsigned FileDefNameOff;
@@ -782,8 +779,6 @@ private:
 // the own object or in any of the dependencies.
 template <class ELFT>
 class VersionTableSection final : public SyntheticSection {
-  typedef typename ELFT::Versym Elf_Versym;
-
 public:
   VersionTableSection();
   void finalizeContents() override;
@@ -1012,17 +1007,16 @@ struct InStruct {
   StringTableSection *StrTab;
   SymbolTableBaseSection *SymTab;
   SymtabShndxSection *SymTabShndx;
+  VersionDefinitionSection *VerDef;
 };
 
 extern InStruct In;
 
 template <class ELFT> struct InX {
-  static VersionDefinitionSection<ELFT> *VerDef;
   static VersionTableSection<ELFT> *VerSym;
   static VersionNeedSection<ELFT> *VerNeed;
 };
 
-template <class ELFT> VersionDefinitionSection<ELFT> *InX<ELFT>::VerDef;
 template <class ELFT> VersionTableSection<ELFT> *InX<ELFT>::VerSym;
 template <class ELFT> VersionNeedSection<ELFT> *InX<ELFT>::VerNeed;
 } // namespace elf

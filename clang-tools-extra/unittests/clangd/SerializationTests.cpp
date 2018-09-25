@@ -13,7 +13,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using testing::AllOf;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
 namespace clang {
