@@ -185,7 +185,7 @@ template <class ELFT> RelType MIPS<ELFT>::getDynRel(RelType Type) const {
 
 template <class ELFT>
 void MIPS<ELFT>::writeGotPlt(uint8_t *Buf, const Symbol &) const {
-  uint64_t VA = InX::Plt->getVA();
+  uint64_t VA = In.Plt->getVA();
   if (isMicroMips())
     VA |= 1;
   write32<ELFT::TargetEndianness>(Buf, VA);
@@ -239,8 +239,8 @@ static void writeMicroRelocation16(uint8_t *Loc, uint64_t V, uint8_t BitsSize,
 template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *Buf) const {
   const endianness E = ELFT::TargetEndianness;
   if (isMicroMips()) {
-    uint64_t GotPlt = InX::GotPlt->getVA();
-    uint64_t Plt = InX::Plt->getVA();
+    uint64_t GotPlt = In.GotPlt->getVA();
+    uint64_t Plt = In.Plt->getVA();
     // Overwrite trap instructions written by Writer::writeTrapInstr.
     memset(Buf, 0, PltHeaderSize);
 
@@ -292,7 +292,7 @@ template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *Buf) const {
   write32<E>(Buf + 24, JalrInst); // jalr.hb $25 or jalr $25
   write32<E>(Buf + 28, 0x2718fffe); // subu  $24, $24, 2
 
-  uint64_t GotPlt = InX::GotPlt->getVA();
+  uint64_t GotPlt = In.GotPlt->getVA();
   writeValue<E>(Buf, GotPlt + 0x8000, 16, 16);
   writeValue<E>(Buf + 4, GotPlt, 16, 0);
   writeValue<E>(Buf + 8, GotPlt, 16, 0);
