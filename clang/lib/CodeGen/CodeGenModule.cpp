@@ -4029,37 +4029,48 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
 
   llvm::Constant *Zero = llvm::Constant::getNullValue(Int32Ty);
   llvm::Constant *Zeros[] = { Zero, Zero };
-
+  
   // If we don't already have it, get __CFConstantStringClassReference.
   if (!CFConstantStringClassRef) {
     llvm::Type *Ty = getTypes().ConvertType(getContext().IntTy);
     Ty = llvm::ArrayType::get(Ty, 0);
-    llvm::GlobalValue *GV = cast<llvm::GlobalValue>(
-        CreateRuntimeVariable(Ty, "__CFConstantStringClassReference"));
+    llvm::Constant *C =
+        CreateRuntimeVariable(Ty, "__CFConstantStringClassReference");
+    
+    if (getTriple().isOSBinFormatELF() || getTriple().isOSBinFormatCOFF()) {
+      llvm::GlobalValue *GV = nullptr;
+      
+      if ((GV = dyn_cast<llvm::GlobalValue>(C))) {
+        IdentifierInfo &II = getContext().Idents.get(GV->getName());
+        TranslationUnitDecl *TUDecl = getContext().getTranslationUnitDecl();
+        DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
 
-    if (getTriple().isOSBinFormatCOFF()) {
-      IdentifierInfo &II = getContext().Idents.get(GV->getName());
-      TranslationUnitDecl *TUDecl = getContext().getTranslationUnitDecl();
-      DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
-
-      const VarDecl *VD = nullptr;
-      for (const auto &Result : DC->lookup(&II))
-        if ((VD = dyn_cast<VarDecl>(Result)))
-          break;
-
-      if (!VD || !VD->hasAttr<DLLExportAttr>()) {
-        GV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
-        GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
-      } else {
-        GV->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
-        GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
+        const VarDecl *VD = nullptr;
+        for (const auto &Result : DC->lookup(&II))
+          if ((VD = dyn_cast<VarDecl>(Result)))
+            break;
+          
+        if (getTriple().isOSBinFormatELF()) {
+          if (!VD)
+            GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
+        }
+        else {
+          if (!VD || !VD->hasAttr<DLLExportAttr>()) {
+            GV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
+            GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
+          } else {
+            GV->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+            GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
+          }
+        }
+        
+        setDSOLocal(GV);
       }
     }
-    setDSOLocal(GV);
-
+  
     // Decay array -> ptr
     CFConstantStringClassRef =
-        llvm::ConstantExpr::getGetElementPtr(Ty, GV, Zeros);
+        llvm::ConstantExpr::getGetElementPtr(Ty, C, Zeros);
   }
 
   QualType CFTy = getContext().getCFConstantStringType();
@@ -4105,7 +4116,11 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   if (getTriple().isOSBinFormatMachO())
     GV->setSection(isUTF16 ? "__TEXT,__ustring"
                            : "__TEXT,__cstring,cstring_literals");
-
+  // Make sure the literal ends up in .rodata to allow for safe ICF and for
+  // the static linker to adjust permissions to read-only later on.
+  else if (getTriple().isOSBinFormatELF())
+    GV->setSection(".rodata");
+  
   // String.
   llvm::Constant *Str =
       llvm::ConstantExpr::getGetElementPtr(GV->getValueType(), GV, Zeros);
