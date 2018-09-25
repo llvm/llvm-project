@@ -15,6 +15,7 @@
 #include "RIFF.h"
 #include "index/CanonicalIncludes.h"
 #include "index/Index.h"
+#include "index/IndexAction.h"
 #include "index/Merge.h"
 #include "index/Serialization.h"
 #include "index/SymbolCollector.h"
@@ -86,68 +87,12 @@ public:
   SymbolIndexActionFactory(SymbolsConsumer &Consumer) : Consumer(Consumer) {}
 
   clang::FrontendAction *create() override {
-    // Wraps the index action and reports collected symbols to the execution
-    // context at the end of each translation unit.
-    class WrappedIndexAction : public WrapperFrontendAction {
-    public:
-      WrappedIndexAction(std::shared_ptr<SymbolCollector> C,
-                         std::unique_ptr<CanonicalIncludes> Includes,
-                         const index::IndexingOptions &Opts,
-                         SymbolsConsumer &Consumer)
-          : WrapperFrontendAction(
-                index::createIndexingAction(C, Opts, nullptr)),
-            Consumer(Consumer), Collector(C), Includes(std::move(Includes)),
-            PragmaHandler(collectIWYUHeaderMaps(this->Includes.get())) {}
-
-      std::unique_ptr<ASTConsumer>
-      CreateASTConsumer(CompilerInstance &CI, StringRef InFile) override {
-        CI.getPreprocessor().addCommentHandler(PragmaHandler.get());
-        return WrapperFrontendAction::CreateASTConsumer(CI, InFile);
-      }
-
-      bool BeginInvocation(CompilerInstance &CI) override {
-        // We want all comments, not just the doxygen ones.
-        CI.getLangOpts().CommentOpts.ParseAllComments = true;
-        return WrapperFrontendAction::BeginInvocation(CI);
-      }
-
-      void EndSourceFileAction() override {
-        WrapperFrontendAction::EndSourceFileAction();
-
-        const auto &CI = getCompilerInstance();
-        if (CI.hasDiagnostics() &&
-            CI.getDiagnostics().hasUncompilableErrorOccurred()) {
-          llvm::errs()
-              << "Found uncompilable errors in the translation unit. Igoring "
-                 "collected symbols...\n";
-          return;
-        }
-
-        Consumer.consumeSymbols(Collector->takeSymbols());
-      }
-
-    private:
-      SymbolsConsumer &Consumer;
-      std::shared_ptr<SymbolCollector> Collector;
-      std::unique_ptr<CanonicalIncludes> Includes;
-      std::unique_ptr<CommentHandler> PragmaHandler;
-    };
-
-    index::IndexingOptions IndexOpts;
-    IndexOpts.SystemSymbolFilter =
-        index::IndexingOptions::SystemSymbolFilterKind::All;
-    IndexOpts.IndexFunctionLocals = false;
     auto CollectorOpts = SymbolCollector::Options();
     CollectorOpts.FallbackDir = AssumedHeaderDir;
-    CollectorOpts.CollectIncludePath = true;
-    CollectorOpts.CountReferences = true;
-    CollectorOpts.Origin = SymbolOrigin::Static;
-    auto Includes = llvm::make_unique<CanonicalIncludes>();
-    addSystemHeadersMapping(Includes.get());
-    CollectorOpts.Includes = Includes.get();
-    return new WrappedIndexAction(
-        std::make_shared<SymbolCollector>(std::move(CollectorOpts)),
-        std::move(Includes), IndexOpts, Consumer);
+    return createStaticIndexingAction(
+               CollectorOpts,
+               [&](SymbolSlab S) { Consumer.consumeSymbols(std::move(S)); })
+        .release();
   }
 
   SymbolsConsumer &Consumer;

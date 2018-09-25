@@ -40,23 +40,26 @@ enum class IndexFileFormat {
   YAML, // Human-readable format, suitable for experiments and debugging.
 };
 
+// Holds the contents of an index file that was read.
+struct IndexFileIn {
+  llvm::Optional<SymbolSlab> Symbols;
+};
+// Parse an index file. The input must be a RIFF container chunk.
+llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef);
+
 // Specifies the contents of an index file to be written.
 struct IndexFileOut {
   const SymbolSlab *Symbols;
   // TODO: Support serializing symbol occurrences.
   // TODO: Support serializing Dex posting lists.
   IndexFileFormat Format = IndexFileFormat::RIFF;
-};
-// Serializes an index file. (This is a RIFF container chunk).
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O);
 
-// Holds the contents of an index file that was read.
-struct IndexFileIn {
-  llvm::Optional<SymbolSlab> Symbols;
-  IndexFileFormat Format;
+  IndexFileOut() = default;
+  IndexFileOut(const IndexFileIn &I)
+      : Symbols(I.Symbols ? I.Symbols.getPointer() : nullptr) {}
 };
-// Parse an index file. The input must be a RIFF container chunk.
-llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef);
+// Serializes an index file.
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O);
 
 std::string toYAML(const Symbol &);
 // Returned symbol is backed by the YAML input.
