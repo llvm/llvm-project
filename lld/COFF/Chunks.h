@@ -64,6 +64,13 @@ public:
   // before calling this function.
   virtual void writeTo(uint8_t *Buf) const {}
 
+  // Called by the writer once before assigning addresses and writing
+  // the output.
+  virtual void readRelocTargets() {}
+
+  // Called if restarting thunk addition.
+  virtual void resetRelocTargets() {}
+
   // Called by the writer after an RVA is assigned, but before calling
   // getSize().
   virtual void finalizeContents() {}
@@ -145,6 +152,8 @@ public:
 
   SectionChunk(ObjFile *File, const coff_section *Header);
   static bool classof(const Chunk *C) { return C->kind() == SectionKind; }
+  void readRelocTargets() override;
+  void resetRelocTargets() override;
   size_t getSize() const override { return Header->SizeOfRawData; }
   ArrayRef<uint8_t> getContents() const;
   void writeTo(uint8_t *Buf) const override;
@@ -217,6 +226,10 @@ public:
   // Used by the garbage collector.
   bool Live;
 
+  // When inserting a thunk, we need to adjust a relocation to point to
+  // the thunk instead of the actual original target Symbol.
+  std::vector<Symbol *> RelocTargets;
+
 private:
   StringRef SectionName;
   std::vector<SectionChunk *> AssocChildren;
@@ -251,6 +264,7 @@ public:
 
 private:
   llvm::StringTableBuilder Builder;
+  bool Finalized = false;
 };
 
 // A chunk for common symbols. Common chunks don't have actual data.
@@ -336,6 +350,15 @@ public:
 
 private:
   Defined *ImpSymbol;
+};
+
+class RangeExtensionThunk : public Chunk {
+public:
+  explicit RangeExtensionThunk(Defined *T) : Target(T) {}
+  size_t getSize() const override;
+  void writeTo(uint8_t *Buf) const override;
+
+  Defined *Target;
 };
 
 // Windows-specific.

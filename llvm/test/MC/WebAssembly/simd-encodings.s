@@ -355,4 +355,10 @@
     # CHECK: f64x2.mul # encoding: [0xfd,0x8c]
     f64x2.mul
 
+    # CHECK: f32x4.sqrt # encoding: [0xfd,0x8d]
+    f32x4.sqrt
+
+    # CHECK: f64x2.sqrt # encoding: [0xfd,0x8e]
+    f64x2.sqrt
+
     end_function

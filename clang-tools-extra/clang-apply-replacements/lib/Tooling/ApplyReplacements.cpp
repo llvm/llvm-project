@@ -125,7 +125,8 @@ std::error_code collectReplacementsFromDirectory(
 }
 
 /// \brief Extract replacements from collected TranslationUnitReplacements and
-/// TranslationUnitDiagnostics and group them per file.
+/// TranslationUnitDiagnostics and group them per file. Identical replacements
+/// from diagnostics are deduplicated.
 ///
 /// \param[in] TUs Collection of all found and deserialized
 /// TranslationUnitReplacements.
@@ -142,10 +143,20 @@ groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
   llvm::DenseMap<const FileEntry *, std::vector<tooling::Replacement>>
       GroupedReplacements;
 
-  auto AddToGroup = [&](const tooling::Replacement &R) {
+  // Deduplicate identical replacements in diagnostics.
+  // FIXME: Find an efficient way to deduplicate on diagnostics level.
+  llvm::DenseMap<const FileEntry *, std::set<tooling::Replacement>>
+      DiagReplacements;
+
+  auto AddToGroup = [&](const tooling::Replacement &R, bool FromDiag) {
     // Use the file manager to deduplicate paths. FileEntries are
     // automatically canonicalized.
     if (const FileEntry *Entry = SM.getFileManager().getFile(R.getFilePath())) {
+      if (FromDiag) {
+        auto &Replaces = DiagReplacements[Entry];
+        if (!Replaces.insert(R).second)
+          return;
+      }
       GroupedReplacements[Entry].push_back(R);
     } else if (Warned.insert(R.getFilePath()).second) {
       errs() << "Described file '" << R.getFilePath()
@@ -155,13 +166,13 @@ groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
 
   for (const auto &TU : TUs)
     for (const tooling::Replacement &R : TU.Replacements)
-      AddToGroup(R);
+      AddToGroup(R, false);
 
   for (const auto &TU : TUDs)
     for (const auto &D : TU.Diagnostics)
       for (const auto &Fix : D.Fix)
         for (const tooling::Replacement &R : Fix.second)
-          AddToGroup(R);
+          AddToGroup(R, true);
 
   // Sort replacements per file to keep consistent behavior when
   // clang-apply-replacements run on differents machine.

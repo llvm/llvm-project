@@ -786,7 +786,7 @@ public:
       // If we should perform a cleanup, force them now.  Note that
       // this ends the cleanup scope before rescoping any labels.
       if (PerformCleanup) {
-        ApplyDebugLocation DL(CGF, Range.getEnd(), true /* ImplicitCode */);
+        ApplyDebugLocation DL(CGF, Range.getEnd());
         ForceCleanup();
       }
     }

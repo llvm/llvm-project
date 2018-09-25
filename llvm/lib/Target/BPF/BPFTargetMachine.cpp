@@ -70,7 +70,8 @@ BPFTargetMachine::BPFTargetMachine(const Target &T, const Triple &TT,
       Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();
 
-  BPFMCAsmInfo *MAI = static_cast<BPFMCAsmInfo *>(const_cast<MCAsmInfo *>(AsmInfo));
+  BPFMCAsmInfo *MAI =
+      static_cast<BPFMCAsmInfo *>(const_cast<MCAsmInfo *>(AsmInfo.get()));
   MAI->setDwarfUsesRelocationsAcrossSections(!Subtarget.getUseDwarfRIS());
 }
 namespace {

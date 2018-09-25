@@ -545,13 +545,27 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   BasicBlock *Header = L->getHeader();
 
   BranchInst *LatchBR = cast<BranchInst>(Latch->getTerminator());
+
+  if (!LatchBR || LatchBR->isUnconditional()) {
+    // The loop-rotate pass can be helpful to avoid this in many cases.
+    LLVM_DEBUG(
+        dbgs()
+        << "Loop latch not terminated by a conditional branch.\n");
+    return false;
+  }
+
   unsigned ExitIndex = LatchBR->getSuccessor(0) == Header ? 1 : 0;
   BasicBlock *LatchExit = LatchBR->getSuccessor(ExitIndex);
-  // Cloning the loop basic blocks (`CloneLoopBlocks`) requires that one of the
-  // targets of the Latch be an exit block out of the loop. This needs
-  // to be guaranteed by the callers of UnrollRuntimeLoopRemainder.
-  assert(!L->contains(LatchExit) &&
-         "one of the loop latch successors should be the exit block!");
+
+  if (L->contains(LatchExit)) {
+    // Cloning the loop basic blocks (`CloneLoopBlocks`) requires that one of the
+    // targets of the Latch be an exit block out of the loop.
+    LLVM_DEBUG(
+        dbgs()
+        << "One of the loop latch successors must be the exit block.\n");
+    return false;
+  }
+
   // These are exit blocks other than the target of the latch exiting block.
   SmallVector<BasicBlock *, 4> OtherExits;
   bool isMultiExitUnrollingEnabled =

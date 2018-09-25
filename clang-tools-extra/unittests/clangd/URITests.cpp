@@ -51,9 +51,9 @@ TEST(PercentEncodingTest, Encode) {
 TEST(PercentEncodingTest, Decode) {
   EXPECT_EQ(parseOrDie("x:a/b/c").body(), "a/b/c");
 
-  EXPECT_EQ(parseOrDie("%3a://%3a/%3").scheme(), ":");
-  EXPECT_EQ(parseOrDie("%3a://%3a/%3").authority(), ":");
-  EXPECT_EQ(parseOrDie("%3a://%3a/%3").body(), "/%3");
+  EXPECT_EQ(parseOrDie("s%2b://%3a/%3").scheme(), "s+");
+  EXPECT_EQ(parseOrDie("s%2b://%3a/%3").authority(), ":");
+  EXPECT_EQ(parseOrDie("s%2b://%3a/%3").body(), "/%3");
 
   EXPECT_EQ(parseOrDie("x:a%21b%3ac~").body(), "a!b:c~");
 }
@@ -132,6 +132,7 @@ TEST(URITest, ParseFailed) {
   // Empty.
   EXPECT_TRUE(FailedParse(""));
   EXPECT_TRUE(FailedParse(":/a/b/c"));
+  EXPECT_TRUE(FailedParse("\"/a/b/c\" IWYU pragma: abc"));
 }
 
 TEST(URITest, Resolve) {

@@ -317,7 +317,7 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
     if (OnlySimpleReturnStmts)
       DI->EmitLocation(Builder, LastStopPoint);
     else
-      DI->EmitLocation(Builder, EndLoc, true /* ImplicitCode */);
+      DI->EmitLocation(Builder, EndLoc);
   }
 
   // Pop any cleanups that might have been associated with the
@@ -333,7 +333,7 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
     // the ret after it's been at EndLoc.
     if (CGDebugInfo *DI = getDebugInfo())
       if (OnlySimpleReturnStmts)
-        DI->EmitLocation(Builder, EndLoc, true /* ImplicitCode */);
+        DI->EmitLocation(Builder, EndLoc);
 
     PopCleanupBlocks(PrologueCleanupDepth);
   }
@@ -1179,7 +1179,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
   }
   // Emit a location at the end of the prologue.
   if (CGDebugInfo *DI = getDebugInfo())
-    DI->EmitLocation(Builder, StartLoc, true /* ImplicitCode */);
+    DI->EmitLocation(Builder, StartLoc);
 
   // TODO: Do we need to handle this in two places like we do with
   // target-features/target-cpu?

@@ -1297,21 +1297,28 @@ static bool isNoCommonDefault(const llvm::Triple &Triple) {
   }
 }
 
-void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
-                             ArgStringList &CmdArgs, bool KernelOrKext) const {
+namespace {
+void RenderARMABI(const llvm::Triple &Triple, const ArgList &Args,
+                  ArgStringList &CmdArgs) {
   // Select the ABI to use.
   // FIXME: Support -meabi.
   // FIXME: Parts of this are duplicated in the backend, unify this somehow.
   const char *ABIName = nullptr;
-  if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ))
+  if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
     ABIName = A->getValue();
-  else {
+  } else {
     std::string CPU = getCPUName(Args, Triple, /*FromAs*/ false);
     ABIName = llvm::ARM::computeDefaultTargetABI(Triple, CPU).data();
   }
 
   CmdArgs.push_back("-target-abi");
   CmdArgs.push_back(ABIName);
+}
+}
+
+void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
+                             ArgStringList &CmdArgs, bool KernelOrKext) const {
+  RenderARMABI(Triple, Args, CmdArgs);
 
   // Determine floating point ABI from the options & target defaults.
   arm::FloatABI ABI = arm::getARMFloatABI(getToolChain(), Args);
@@ -1423,6 +1430,22 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
   }
 }
 
+namespace {
+void RenderAArch64ABI(const llvm::Triple &Triple, const ArgList &Args,
+                      ArgStringList &CmdArgs) {
+  const char *ABIName = nullptr;
+  if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ))
+    ABIName = A->getValue();
+  else if (Triple.isOSDarwin())
+    ABIName = "darwinpcs";
+  else
+    ABIName = "aapcs";
+
+  CmdArgs.push_back("-target-abi");
+  CmdArgs.push_back(ABIName);
+}
+}
+
 void Clang::AddAArch64TargetArgs(const ArgList &Args,
                                  ArgStringList &CmdArgs) const {
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
@@ -1436,16 +1459,7 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
                     options::OPT_mno_implicit_float, true))
     CmdArgs.push_back("-no-implicit-float");
 
-  const char *ABIName = nullptr;
-  if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ))
-    ABIName = A->getValue();
-  else if (Triple.isOSDarwin())
-    ABIName = "darwinpcs";
-  else
-    ABIName = "aapcs";
-
-  CmdArgs.push_back("-target-abi");
-  CmdArgs.push_back(ABIName);
+  RenderAArch64ABI(Triple, Args, CmdArgs);
 
   if (Arg *A = Args.getLastArg(options::OPT_mfix_cortex_a53_835769,
                                options::OPT_mno_fix_cortex_a53_835769)) {
@@ -3378,13 +3392,116 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_save_temps_EQ);
 
   // Embed-bitcode option.
+  // Only white-listed flags below are allowed to be embedded.
   if (C.getDriver().embedBitcodeInObject() && !C.getDriver().isUsingLTO() &&
       (isa<BackendJobAction>(JA) || isa<AssembleJobAction>(JA))) {
     // Add flags implied by -fembed-bitcode.
     Args.AddLastArg(CmdArgs, options::OPT_fembed_bitcode_EQ);
     // Disable all llvm IR level optimizations.
     CmdArgs.push_back("-disable-llvm-passes");
+
+    // reject options that shouldn't be supported in bitcode
+    // also reject kernel/kext
+    static const constexpr unsigned kBitcodeOptionBlacklist[] = {
+        options::OPT_mkernel,
+        options::OPT_fapple_kext,
+        options::OPT_ffunction_sections,
+        options::OPT_fno_function_sections,
+        options::OPT_fdata_sections,
+        options::OPT_fno_data_sections,
+        options::OPT_funique_section_names,
+        options::OPT_fno_unique_section_names,
+        options::OPT_mrestrict_it,
+        options::OPT_mno_restrict_it,
+        options::OPT_mstackrealign,
+        options::OPT_mno_stackrealign,
+        options::OPT_mstack_alignment,
+        options::OPT_mcmodel_EQ,
+        options::OPT_mlong_calls,
+        options::OPT_mno_long_calls,
+        options::OPT_ggnu_pubnames,
+        options::OPT_gdwarf_aranges,
+        options::OPT_fdebug_types_section,
+        options::OPT_fno_debug_types_section,
+        options::OPT_fdwarf_directory_asm,
+        options::OPT_fno_dwarf_directory_asm,
+        options::OPT_mrelax_all,
+        options::OPT_mno_relax_all,
+        options::OPT_ftrap_function_EQ,
+        options::OPT_ffixed_r9,
+        options::OPT_mfix_cortex_a53_835769,
+        options::OPT_mno_fix_cortex_a53_835769,
+        options::OPT_ffixed_x18,
+        options::OPT_mglobal_merge,
+        options::OPT_mno_global_merge,
+        options::OPT_mred_zone,
+        options::OPT_mno_red_zone,
+        options::OPT_Wa_COMMA,
+        options::OPT_Xassembler,
+        options::OPT_mllvm,
+    };
+    for (const auto &A : Args)
+      if (std::find(std::begin(kBitcodeOptionBlacklist),
+                    std::end(kBitcodeOptionBlacklist),
+                    A->getOption().getID()) !=
+          std::end(kBitcodeOptionBlacklist))
+        D.Diag(diag::err_drv_unsupported_embed_bitcode) << A->getSpelling();
+
+    // Render the CodeGen options that need to be passed.
+    if (!Args.hasFlag(options::OPT_foptimize_sibling_calls,
+                      options::OPT_fno_optimize_sibling_calls))
+      CmdArgs.push_back("-mdisable-tail-calls");
+
+    RenderFloatingPointOptions(TC, D, isOptimizationLevelFast(Args), Args,
+                               CmdArgs);
+
+    // Render ABI arguments
+    switch (TC.getArch()) {
+    default: break;
+    case llvm::Triple::arm:
+    case llvm::Triple::armeb:
+    case llvm::Triple::thumbeb:
+      RenderARMABI(Triple, Args, CmdArgs);
+      break;
+    case llvm::Triple::aarch64:
+    case llvm::Triple::aarch64_be:
+      RenderAArch64ABI(Triple, Args, CmdArgs);
+      break;
+    }
+
+    // Optimization level for CodeGen.
+    if (const Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+      if (A->getOption().matches(options::OPT_O4)) {
+        CmdArgs.push_back("-O3");
+        D.Diag(diag::warn_O4_is_O3);
+      } else {
+        A->render(Args, CmdArgs);
+      }
+    }
+
+    // Input/Output file.
+    if (Output.getType() == types::TY_Dependencies) {
+      // Handled with other dependency code.
+    } else if (Output.isFilename()) {
+      CmdArgs.push_back("-o");
+      CmdArgs.push_back(Output.getFilename());
+    } else {
+      assert(Output.isNothing() && "Input output.");
+    }
+
+    for (const auto &II : Inputs) {
+      addDashXForInput(Args, II, CmdArgs);
+      if (II.isFilename())
+        CmdArgs.push_back(II.getFilename());
+      else
+        II.getInputArg().renderAsInput(Args, CmdArgs);
+    }
+
+    C.addCommand(llvm::make_unique<Command>(JA, *this, D.getClangProgramPath(),
+                                            CmdArgs, Inputs));
+    return;
   }
+
   if (C.getDriver().embedBitcodeMarkerOnly() && !C.getDriver().isUsingLTO())
     CmdArgs.push_back("-fembed-bitcode=marker");
 

@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include <limits.h>
 #include "int_lib.h"
+#include "int_math.h"
 
 // x86_64 FreeBSD prior v9.3 define fixed-width types incorrectly in
 // 32-bit mode.
@@ -265,6 +266,62 @@ static __inline void wideRightShiftWithSticky(rep_t *hi, rep_t *lo, unsigned int
         *hi = 0;
     }
 }
+
+// Implements logb methods (logb, logbf, logbl) for IEEE-754. This avoids
+// pulling in a libm dependency from compiler-rt, but is not meant to replace
+// it (i.e. code calling logb() should get the one from libm, not this), hence
+// the __compiler_rt prefix.
+static __inline fp_t __compiler_rt_logbX(fp_t x) {
+  rep_t rep = toRep(x);
+  int exp = (rep & exponentMask) >> significandBits;
+
+  // Abnormal cases:
+  // 1) +/- inf returns +inf; NaN returns NaN
+  // 2) 0.0 returns -inf
+  if (exp == maxExponent) {
+    if (((rep & signBit) == 0) || (x != x)) {
+      return x;  // NaN or +inf: return x
+    } else {
+      return -x;  // -inf: return -x
+    }
+  } else if (x == 0.0) {
+    // 0.0: return -inf
+    return fromRep(infRep | signBit);
+  }
+
+  if (exp != 0) {
+    // Normal number
+    return exp - exponentBias;  // Unbias exponent
+  } else {
+    // Subnormal number; normalize and repeat
+    rep &= absMask;
+    const int shift = 1 - normalize(&rep);
+    exp = (rep & exponentMask) >> significandBits;
+    return exp - exponentBias - shift;  // Unbias exponent
+  }
+}
+#endif
+
+#if defined(SINGLE_PRECISION)
+static __inline fp_t __compiler_rt_logbf(fp_t x) {
+  return __compiler_rt_logbX(x);
+}
+#elif defined(DOUBLE_PRECISION)
+static __inline fp_t __compiler_rt_logb(fp_t x) {
+  return __compiler_rt_logbX(x);
+}
+#elif defined(QUAD_PRECISION)
+  #if defined(CRT_LDBL_128BIT)
+static __inline fp_t __compiler_rt_logbl(fp_t x) {
+  return __compiler_rt_logbX(x);
+}
+  #else
+// The generic implementation only works for ieee754 floating point. For other
+// floating point types, continue to rely on the libm implementation for now.
+static __inline long double __compiler_rt_logbl(long double x) {
+  return crt_logbl(x);
+}
+  #endif
 #endif
 
 #endif // FP_LIB_HEADER

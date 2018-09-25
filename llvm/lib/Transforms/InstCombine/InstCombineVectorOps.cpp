@@ -166,6 +166,29 @@ Instruction *InstCombiner::scalarizePHI(ExtractElementInst &EI, PHINode *PN) {
   return &EI;
 }
 
+static Instruction *foldBitcastExtElt(ExtractElementInst &Ext,
+                                      InstCombiner::BuilderTy &Builder) {
+  Value *X;
+  uint64_t ExtIndexC;
+  if (!match(Ext.getVectorOperand(), m_BitCast(m_Value(X))) ||
+      !X->getType()->isVectorTy() ||
+      !match(Ext.getIndexOperand(), m_ConstantInt(ExtIndexC)))
+    return nullptr;
+
+  // If this extractelement is using a bitcast from a vector of the same number
+  // of elements, see if we can find the source element from the source vector:
+  // extelt (bitcast VecX), IndexC --> bitcast X[IndexC]
+  Type *SrcTy = X->getType();
+  Type *DestTy = Ext.getType();
+  unsigned NumSrcElts = SrcTy->getVectorNumElements();
+  unsigned NumElts = Ext.getVectorOperandType()->getNumElements();
+  if (NumSrcElts == NumElts)
+    if (Value *Elt = findScalarElement(X, ExtIndexC))
+      return new BitCastInst(Elt, DestTy);
+
+  return nullptr;
+}
+
 Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
   if (Value *V = SimplifyExtractElementInst(EI.getVectorOperand(),
                                             EI.getIndexOperand(),
@@ -187,15 +210,13 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
     if (!IdxC->getValue().ule(NumElts))
       return nullptr;
 
-    unsigned IndexVal = IdxC->getZExtValue();
-
     // This instruction only demands the single element from the input vector.
     // If the input vector has a single use, simplify it based on this use
     // property.
     if (EI.getOperand(0)->hasOneUse() && NumElts != 1) {
       APInt UndefElts(NumElts, 0);
       APInt DemandedMask(NumElts, 0);
-      DemandedMask.setBit(IndexVal);
+      DemandedMask.setBit(IdxC->getZExtValue());
       if (Value *V = SimplifyDemandedVectorElts(EI.getOperand(0), DemandedMask,
                                                 UndefElts)) {
         EI.setOperand(0, V);
@@ -203,17 +224,8 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
       }
     }
 
-    Value *X;
-    if (match(EI.getVectorOperand(), m_BitCast(m_Value(X))) &&
-        X->getType()->isVectorTy()) {
-      // If this extractelement is using a bitcast from a vector of the same
-      // number of elements, see if we can find the source element from the
-      // source vector:
-      // extelt (bitcast VecX), IdxC --> bitcast X[IdxC]
-      if (X->getType()->getVectorNumElements() == NumElts)
-        if (Value *Elt = findScalarElement(X, IndexVal))
-          return new BitCastInst(Elt, EI.getType());
-    }
+    if (Instruction *I = foldBitcastExtElt(EI, Builder))
+      return I;
 
     // If there's a vector PHI feeding a scalar use through this extractelement
     // instruction, try to scalarize the PHI.

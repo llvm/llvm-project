@@ -8,9 +8,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "BenchmarkResult.h"
+#include "X86InstrInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
@@ -47,28 +50,27 @@ MATCHER(EqMCInst, "") {
 
 namespace {
 
-static constexpr const unsigned kInstrId = 5;
-static constexpr const char kInstrName[] = "Instruction5";
-static constexpr const unsigned kReg1Id = 1;
-static constexpr const char kReg1Name[] = "Reg1";
-static constexpr const unsigned kReg2Id = 2;
-static constexpr const char kReg2Name[] = "Reg2";
-
 TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
+  LLVMInitializeX86TargetInfo();
+  LLVMInitializeX86Target();
+  LLVMInitializeX86TargetMC();
+
+  // Read benchmarks.
+  const LLVMState State("x86_64-unknown-linux", "haswell");
+
   llvm::ExitOnError ExitOnErr;
-  BenchmarkResultContext Ctx;
-  Ctx.addInstrEntry(kInstrId, kInstrName);
-  Ctx.addRegEntry(kReg1Id, kReg1Name);
-  Ctx.addRegEntry(kReg2Id, kReg2Name);
 
   InstructionBenchmark ToDisk;
 
-  ToDisk.Key.Instructions.push_back(llvm::MCInstBuilder(kInstrId)
-                                        .addReg(kReg1Id)
-                                        .addReg(kReg2Id)
+  ToDisk.Key.Instructions.push_back(llvm::MCInstBuilder(llvm::X86::XOR32rr)
+                                        .addReg(llvm::X86::AL)
+                                        .addReg(llvm::X86::AH)
                                         .addImm(123)
                                         .addFPImm(0.5));
   ToDisk.Key.Config = "config";
+  ToDisk.Key.RegisterInitialValues = {
+      RegisterValue{llvm::X86::AL, llvm::APInt(8, "-1", 10)},
+      RegisterValue{llvm::X86::AH, llvm::APInt(8, "123", 10)}};
   ToDisk.Mode = InstructionBenchmark::Latency;
   ToDisk.CpuName = "cpu_name";
   ToDisk.LLVMTriple = "llvm_triple";
@@ -83,12 +85,13 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   EC = llvm::sys::fs::createUniqueDirectory("BenchmarkResultTestDir", Filename);
   ASSERT_FALSE(EC);
   llvm::sys::path::append(Filename, "data.yaml");
-  ExitOnErr(ToDisk.writeYaml(Ctx, Filename));
+  llvm::errs() << Filename << "-------\n";
+  ExitOnErr(ToDisk.writeYaml(State, Filename));
 
   {
     // One-element version.
     const auto FromDisk =
-        ExitOnErr(InstructionBenchmark::readYaml(Ctx, Filename));
+        ExitOnErr(InstructionBenchmark::readYaml(State, Filename));
 
     EXPECT_THAT(FromDisk.Key.Instructions,
                 Pointwise(EqMCInst(), ToDisk.Key.Instructions));
@@ -104,7 +107,7 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   {
     // Vector version.
     const auto FromDiskVector =
-        ExitOnErr(InstructionBenchmark::readYamls(Ctx, Filename));
+        ExitOnErr(InstructionBenchmark::readYamls(State, Filename));
     ASSERT_EQ(FromDiskVector.size(), size_t{1});
     const auto FromDisk = FromDiskVector[0];
     EXPECT_THAT(FromDisk.Key.Instructions,

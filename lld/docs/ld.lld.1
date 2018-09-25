@@ -442,6 +442,12 @@ Make the main stack executable.
 Stack permissions are recorded in the
 .Dv PT_GNU_STACK
 segment.
+.It Cm global
+Sets the
+.Dv DF_1_GLOBAL flag in the
+.Dv DYNAMIC
+section.
+Different loaders can decide how to handle this flag on their own.
 .It Cm initfirst
 Sets the
 .Dv DF_1_INITFIRST

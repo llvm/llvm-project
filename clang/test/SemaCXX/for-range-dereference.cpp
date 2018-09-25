@@ -17,7 +17,7 @@ struct DeletedEnd : public T {
 struct DeletedADLBegin { };
 
 int* begin(DeletedADLBegin) = delete; //expected-note {{candidate function has been explicitly deleted}} \
- expected-note 5 {{candidate function not viable: no known conversion}}
+ expected-note 6 {{candidate function not viable: no known conversion}}
 
 struct PrivateEnd {
   Data *begin();
@@ -27,7 +27,7 @@ struct PrivateEnd {
 };
 
 struct ADLNoEnd { };
-Data * begin(ADLNoEnd); // expected-note 6 {{candidate function not viable: no known conversion}}
+Data * begin(ADLNoEnd); // expected-note 7 {{candidate function not viable: no known conversion}}
 
 struct OverloadedStar {
   T operator*();
@@ -45,7 +45,7 @@ void f() {
   for (auto i : parr) { }// expected-error{{invalid range expression of type 'int (*)[10]'; did you mean to dereference it with '*'?}}
 
   NoBegin NB;
-  for (auto i : NB) { }// expected-error{{range type 'NoBegin' has 'end' member but no 'begin' member}}
+  for (auto i : NB) { }// expected-error{{invalid range expression of type 'NoBegin'; no viable 'begin' function available}}
   NoBegin *pNB;
   for (auto i : pNB) { }// expected-error{{invalid range expression of type 'NoBegin *'; no viable 'begin' function available}}
   NoBegin **ppNB;
