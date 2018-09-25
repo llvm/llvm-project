@@ -57,6 +57,8 @@ public:
   bool GetStepInAvoidsNoDebug() const;
 
   bool GetStepOutAvoidsNoDebug() const;
+  
+  uint64_t GetMaxBacktraceDepth() const;
 };
 
 typedef std::shared_ptr<ThreadProperties> ThreadPropertiesSP;
