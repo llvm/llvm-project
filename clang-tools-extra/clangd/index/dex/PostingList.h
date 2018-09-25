@@ -50,7 +50,7 @@ struct Chunk {
   /// The first element of decompressed Chunk.
   DocID Head;
   /// VByte-encoded deltas.
-  std::array<uint8_t, PayloadSize> Payload = std::array<uint8_t, PayloadSize>();
+  std::array<uint8_t, PayloadSize> Payload;
 };
 static_assert(sizeof(Chunk) == 32, "Chunk should take 32 bytes of memory.");
 
