@@ -69,19 +69,6 @@ TEST(DexIterators, DocumentIterator) {
   EXPECT_TRUE(DocIterator->reachedEnd());
 }
 
-TEST(DexIterators, AndWithEmpty) {
-  const PostingList L0({});
-  const PostingList L1({0, 5, 7, 10, 42, 320, 9000});
-
-  auto AndEmpty = createAnd(L0.iterator());
-  EXPECT_TRUE(AndEmpty->reachedEnd());
-
-  auto AndWithEmpty = createAnd(L0.iterator(), L1.iterator());
-  EXPECT_TRUE(AndWithEmpty->reachedEnd());
-
-  EXPECT_THAT(consumeIDs(*AndWithEmpty), ElementsAre());
-}
-
 TEST(DexIterators, AndTwoLists) {
   const PostingList L0({0, 5, 7, 10, 42, 320, 9000});
   const PostingList L1({0, 4, 7, 10, 30, 60, 320, 9000});
@@ -118,20 +105,6 @@ TEST(DexIterators, AndThreeLists) {
   And->advanceTo(100000);
 
   EXPECT_TRUE(And->reachedEnd());
-}
-
-TEST(DexIterators, OrWithEmpty) {
-  const PostingList L0({});
-  const PostingList L1({0, 5, 7, 10, 42, 320, 9000});
-
-  auto OrEmpty = createOr(L0.iterator());
-  EXPECT_TRUE(OrEmpty->reachedEnd());
-
-  auto OrWithEmpty = createOr(L0.iterator(), L1.iterator());
-  EXPECT_FALSE(OrWithEmpty->reachedEnd());
-
-  EXPECT_THAT(consumeIDs(*OrWithEmpty),
-              ElementsAre(0U, 5U, 7U, 10U, 42U, 320U, 9000U));
 }
 
 TEST(DexIterators, OrTwoLists) {
@@ -211,29 +184,27 @@ TEST(DexIterators, QueryTree) {
   //      |And Iterator: 1, 5, 9|              |Or Iterator: 0, 1, 3, 5|
   //      +----------+----------+              +----------+------------+
   //                 |                                    |
-  //          +------+-----+                    +---------------------+
-  //          |            |                    |         |           |
-  //  +-------v-----+ +----+---+             +--v--+  +---v----+ +----v---+
-  //  |1, 3, 5, 8, 9| |Boost: 2|             |Empty|  |Boost: 3| |Boost: 4|
-  //  +-------------+ +----+---+             +-----+  +---+----+ +----+---+
-  //                       |                              |           |
-  //                  +----v-----+                      +-v--+    +---v---+
-  //                  |1, 5, 7, 9|                      |1, 5|    |0, 3, 5|
-  //                  +----------+                      +----+    +-------+
+  //          +------+-----+                        ------------+
+  //          |            |                        |           |
+  //  +-------v-----+ +----+---+                +---v----+ +----v---+
+  //  |1, 3, 5, 8, 9| |Boost: 2|                |Boost: 3| |Boost: 4|
+  //  +-------------+ +----+---+                +---+----+ +----+---+
+  //                       |                        |           |
+  //                  +----v-----+                +-v--+    +---v---+
+  //                  |1, 5, 7, 9|                |1, 5|    |0, 3, 5|
+  //                  +----------+                +----+    +-------+
   //
   const PostingList L0({1, 3, 5, 8, 9});
   const PostingList L1({1, 5, 7, 9});
-  const PostingList L3({});
-  const PostingList L4({1, 5});
-  const PostingList L5({0, 3, 5});
+  const PostingList L2({1, 5});
+  const PostingList L3({0, 3, 5});
 
   // Root of the query tree: [1, 5]
   auto Root = createAnd(
       // Lower And Iterator: [1, 5, 9]
       createAnd(L0.iterator(), createBoost(L1.iterator(), 2U)),
       // Lower Or Iterator: [0, 1, 5]
-      createOr(L3.iterator(), createBoost(L4.iterator(), 3U),
-               createBoost(L5.iterator(), 4U)));
+      createOr(createBoost(L2.iterator(), 3U), createBoost(L3.iterator(), 4U)));
 
   EXPECT_FALSE(Root->reachedEnd());
   EXPECT_EQ(Root->peek(), 1U);
@@ -260,15 +231,13 @@ TEST(DexIterators, StringRepresentation) {
   const PostingList L2({1, 5, 7, 9});
   const PostingList L3({0, 5});
   const PostingList L4({0, 1, 5});
-  const PostingList L5({});
 
-  EXPECT_EQ(llvm::to_string(*(L0.iterator())), "[4]");
-
-  auto Nested =
-      createAnd(createAnd(L1.iterator(), L2.iterator()),
-                createOr(L3.iterator(), L4.iterator(), L5.iterator()));
-
-  EXPECT_EQ(llvm::to_string(*Nested), "(& (| [5] [1] [END]) (& [1] [1]))");
+  EXPECT_EQ(llvm::to_string(*(L0.iterator())), "[4 ...]");
+  auto It = L0.iterator();
+  It->advanceTo(19);
+  EXPECT_EQ(llvm::to_string(*It), "[... 20 ...]");
+  It->advanceTo(9000);
+  EXPECT_EQ(llvm::to_string(*It), "[... END]");
 }
 
 TEST(DexIterators, Limit) {
