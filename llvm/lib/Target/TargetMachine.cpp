@@ -40,12 +40,7 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
       RequireStructuredCFG(false), DefaultOptions(Options), Options(Options) {
 }
 
-TargetMachine::~TargetMachine() {
-  delete AsmInfo;
-  delete MRI;
-  delete MII;
-  delete STI;
-}
+TargetMachine::~TargetMachine() = default;
 
 bool TargetMachine::isPositionIndependent() const {
   return getRelocationModel() == Reloc::PIC_;

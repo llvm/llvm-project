@@ -113,10 +113,20 @@ defm WriteALU    : X86SchedWritePair; // Simple integer ALU op.
 defm WriteADC    : X86SchedWritePair; // Integer ALU + flags op.
 def  WriteALURMW : WriteSequence<[WriteALULd, WriteStore]>;
 def  WriteADCRMW : WriteSequence<[WriteADCLd, WriteStore]>;
-defm WriteIMul   : X86SchedWritePair; // Integer multiplication.
-defm WriteIMul64 : X86SchedWritePair; // Integer 64-bit multiplication.
-def  WriteIMulH  : SchedWrite;        // Integer multiplication, high part.
 def  WriteLEA    : SchedWrite;        // LEA instructions can't fold loads.
+
+// Integer multiplication
+defm WriteIMul8     : X86SchedWritePair; // Integer 8-bit multiplication.
+defm WriteIMul16    : X86SchedWritePair; // Integer 16-bit multiplication.
+defm WriteIMul16Imm : X86SchedWritePair; // Integer 16-bit multiplication by immediate.
+defm WriteIMul16Reg : X86SchedWritePair; // Integer 16-bit multiplication by register.
+defm WriteIMul32    : X86SchedWritePair; // Integer 32-bit multiplication.
+defm WriteIMul32Imm : X86SchedWritePair; // Integer 32-bit multiplication by immediate.
+defm WriteIMul32Reg : X86SchedWritePair; // Integer 32-bit multiplication by register.
+defm WriteIMul64    : X86SchedWritePair; // Integer 64-bit multiplication.
+defm WriteIMul64Imm : X86SchedWritePair; // Integer 64-bit multiplication by immediate.
+defm WriteIMul64Reg : X86SchedWritePair; // Integer 64-bit multiplication by register.
+def  WriteIMulH     : SchedWrite;        // Integer multiplication, high part.
 
 def  WriteBSWAP32 : SchedWrite; // Byte Order (Endianness) 32-bit Swap.
 def  WriteBSWAP64 : SchedWrite; // Byte Order (Endianness) 64-bit Swap.

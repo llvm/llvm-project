@@ -41,31 +41,31 @@ struct InstrDesc;
 /// This class optimistically assumes that loads don't alias store operations.
 /// Under this assumption, younger loads are always allowed to pass older
 /// stores (this would only affects rule 4).
-/// Essentially, this LSUnit doesn't attempt to run any sort alias analysis to
-/// predict when loads and stores don't alias with eachother.
+/// Essentially, this class doesn't perform any sort alias analysis to
+/// identify aliasing loads and stores.
 ///
 /// To enforce aliasing between loads and stores, flag `AssumeNoAlias` must be
 /// set to `false` by the constructor of LSUnit.
 ///
-/// In the case of write-combining memory, rule 2. could be relaxed to allow
-/// reordering of non-aliasing store operations. At the moment, this is not
-/// allowed.
-/// To put it in another way, there is no option to specify a different memory
-/// type for memory operations (example: write-through, write-combining, etc.).
-/// Also, there is no way to weaken the memory model, and this unit currently
-/// doesn't support write-combining behavior.
+/// Note that this class doesn't know about the existence of different memory
+/// types for memory operations (example: write-through, write-combining, etc.).
+/// Derived classes are responsible for implementing that extra knowledge, and
+/// provide different sets of rules for loads and stores by overriding method
+/// `isReady()`.
+/// To emulate a write-combining memory type, rule 2. must be relaxed in a
+/// derived class to enable the reordering of non-aliasing store operations.
 ///
-/// No assumptions are made on the size of the store buffer.
-/// As mentioned before, this class doesn't perform alias analysis.
-/// Consequently,  LSUnit doesn't know how to identify cases where
-/// store-to-load forwarding may occur.
+/// No assumptions are made by this class on the size of the store buffer.  This
+/// class doesn't know how to identify cases where store-to-load forwarding may
+/// occur.
 ///
 /// LSUnit doesn't attempt to predict whether a load or store hits or misses
 /// the L1 cache. To be more specific, LSUnit doesn't know anything about
-/// the cache hierarchy and memory types.
+/// cache hierarchy and memory types.
 /// It only knows if an instruction "mayLoad" and/or "mayStore". For loads, the
 /// scheduling model provides an "optimistic" load-to-use latency (which usually
 /// matches the load-to-use latency for when there is a hit in the L1D).
+/// Derived classes may expand this knowledge.
 ///
 /// Class MCInstrDesc in LLVM doesn't know about serializing operations, nor
 /// memory-barrier like instructions.

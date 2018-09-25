@@ -100,27 +100,31 @@ static cl::list<std::string>
 /// This is a helper to determine whether to print IR before or
 /// after a pass.
 
-static bool ShouldPrintBeforeOrAfterPass(const PassInfo *PI,
+bool llvm::shouldPrintBeforePass() {
+  return PrintBeforeAll || !PrintBefore.empty();
+}
+
+bool llvm::shouldPrintAfterPass() {
+  return PrintAfterAll || !PrintAfter.empty();
+}
+
+static bool ShouldPrintBeforeOrAfterPass(StringRef PassID,
                                          PassOptionList &PassesToPrint) {
   for (auto *PassInf : PassesToPrint) {
     if (PassInf)
-      if (PassInf->getPassArgument() == PI->getPassArgument()) {
+      if (PassInf->getPassArgument() == PassID) {
         return true;
       }
   }
   return false;
 }
 
-/// This is a utility to check whether a pass should have IR dumped
-/// before it.
-static bool ShouldPrintBeforePass(const PassInfo *PI) {
-  return PrintBeforeAll || ShouldPrintBeforeOrAfterPass(PI, PrintBefore);
+bool llvm::shouldPrintBeforePass(StringRef PassID) {
+  return PrintBeforeAll || ShouldPrintBeforeOrAfterPass(PassID, PrintBefore);
 }
 
-/// This is a utility to check whether a pass should have IR dumped
-/// after it.
-static bool ShouldPrintAfterPass(const PassInfo *PI) {
-  return PrintAfterAll || ShouldPrintBeforeOrAfterPass(PI, PrintAfter);
+bool llvm::shouldPrintAfterPass(StringRef PassID) {
+  return PrintAfterAll || ShouldPrintBeforeOrAfterPass(PassID, PrintAfter);
 }
 
 bool llvm::forcePrintModuleIR() { return PrintModuleScope; }
@@ -780,7 +784,7 @@ void PMTopLevelManager::schedulePass(Pass *P) {
     return;
   }
 
-  if (PI && !PI->isAnalysis() && ShouldPrintBeforePass(PI)) {
+  if (PI && !PI->isAnalysis() && shouldPrintBeforePass(PI->getPassArgument())) {
     Pass *PP = P->createPrinterPass(
         dbgs(), ("*** IR Dump Before " + P->getPassName() + " ***").str());
     PP->assignPassManager(activeStack, getTopLevelPassManagerType());
@@ -789,7 +793,7 @@ void PMTopLevelManager::schedulePass(Pass *P) {
   // Add the requested pass to the best available pass manager.
   P->assignPassManager(activeStack, getTopLevelPassManagerType());
 
-  if (PI && !PI->isAnalysis() && ShouldPrintAfterPass(PI)) {
+  if (PI && !PI->isAnalysis() && shouldPrintAfterPass(PI->getPassArgument())) {
     Pass *PP = P->createPrinterPass(
         dbgs(), ("*** IR Dump After " + P->getPassName() + " ***").str());
     PP->assignPassManager(activeStack, getTopLevelPassManagerType());

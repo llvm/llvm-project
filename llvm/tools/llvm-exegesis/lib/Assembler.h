@@ -18,6 +18,7 @@
 
 #include <memory>
 
+#include "BenchmarkCode.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -38,12 +39,6 @@ class ExegesisTarget;
 // Gather the set of reserved registers (depends on function's calling
 // convention and target machine).
 llvm::BitVector getFunctionReservedRegs(const llvm::TargetMachine &TM);
-
-// A simple object storing the value for a particular register.
-struct RegisterValue {
-  unsigned Register;
-  llvm::APInt Value;
-};
 
 // Creates a temporary `void foo(char*)` function containing the provided
 // Instructions. Runs a set of llvm Passes to provide correct prologue and

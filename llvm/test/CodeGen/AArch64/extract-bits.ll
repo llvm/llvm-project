@@ -715,3 +715,76 @@ define i64 @bextr64_d3_load_indexzext(i64* %w, i8 %numskipbits, i8 %numlowbits) 
   %masked = lshr i64 %highbitscleared, %sh_prom
   ret i64 %masked
 }
+
+; ---------------------------------------------------------------------------- ;
+; Constant
+; ---------------------------------------------------------------------------- ;
+
+; https://bugs.llvm.org/show_bug.cgi?id=38938
+define void @pr38938(i32* %a0, i64* %a1) {
+; CHECK-LABEL: pr38938:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr x8, [x1]
+; CHECK-NEXT:    ubfx x8, x8, #21, #10
+; CHECK-NEXT:    lsl x8, x8, #2
+; CHECK-NEXT:    ldr w9, [x0, x8]
+; CHECK-NEXT:    add w9, w9, #1 // =1
+; CHECK-NEXT:    str w9, [x0, x8]
+; CHECK-NEXT:    ret
+  %tmp = load i64, i64* %a1, align 8
+  %tmp1 = lshr i64 %tmp, 21
+  %tmp2 = and i64 %tmp1, 1023
+  %tmp3 = getelementptr inbounds i32, i32* %a0, i64 %tmp2
+  %tmp4 = load i32, i32* %tmp3, align 4
+  %tmp5 = add nsw i32 %tmp4, 1
+  store i32 %tmp5, i32* %tmp3, align 4
+  ret void
+}
+
+; The most canonical variant
+define i32 @c0_i32(i32 %arg) {
+; CHECK-LABEL: c0_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ubfx w0, w0, #19, #10
+; CHECK-NEXT:    ret
+  %tmp0 = lshr i32 %arg, 19
+  %tmp1 = and i32 %tmp0, 1023
+  ret i32 %tmp1
+}
+
+; Should be still fine, but the mask is shifted
+define i32 @c1_i32(i32 %arg) {
+; CHECK-LABEL: c1_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr w8, w0, #19
+; CHECK-NEXT:    and w0, w8, #0xffc
+; CHECK-NEXT:    ret
+  %tmp0 = lshr i32 %arg, 19
+  %tmp1 = and i32 %tmp0, 4092
+  ret i32 %tmp1
+}
+
+; Should be still fine, but the result is shifted left afterwards
+define i32 @c2_i32(i32 %arg) {
+; CHECK-LABEL: c2_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ubfx w8, w0, #19, #10
+; CHECK-NEXT:    lsl w0, w8, #2
+; CHECK-NEXT:    ret
+  %tmp0 = lshr i32 %arg, 19
+  %tmp1 = and i32 %tmp0, 1023
+  %tmp2 = shl i32 %tmp1, 2
+  ret i32 %tmp2
+}
+
+; The mask covers newly shifted-in bit
+define i32 @c4_i32_bad(i32 %arg) {
+; CHECK-LABEL: c4_i32_bad:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr w8, w0, #19
+; CHECK-NEXT:    and w0, w8, #0x1ffe
+; CHECK-NEXT:    ret
+  %tmp0 = lshr i32 %arg, 19
+  %tmp1 = and i32 %tmp0, 16382
+  ret i32 %tmp1
+}
