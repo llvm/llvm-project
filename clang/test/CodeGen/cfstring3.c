@@ -41,5 +41,5 @@ const CFStringRef two = (CFStringRef)__builtin___CFStringMakeConstantString("\xe
 // CHECK-MACHO64: @_unnamed_cfstring_.2 = private global %struct.__NSConstantString_tag { i32* getelementptr inbounds ([0 x i32], [0 x i32]* @__CFConstantStringClassReference, i32 0, i32 0), i32 2000, i8* bitcast ([7 x i16]* @.str.1 to i8*), i64 6 }, section "__DATA,__cfstring", align 8
 
 // CHECK-ASM-COFF: .section cfstring,"dw"
-// CHECK-ASM-ELF: .section cfstring,"aw",@progbits
+// CHECK-ASM-ELF: .section cfstring,"aw",{{[@%]}}progbits
 // CHECK-ASM-MACHO: .section __DATA,__cfstring
