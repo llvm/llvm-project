@@ -123,9 +123,8 @@ define i32 @unsigned_sat_constant_i32_using_cmp_sum(i32 %x) {
 define i32 @unsigned_sat_constant_i32_using_cmp_notval(i32 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i32_using_cmp_notval:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w0, #42 // =42
-; CHECK-NEXT:    cmn w0, #43 // =43
-; CHECK-NEXT:    csinv w0, w8, wzr, ls
+; CHECK-NEXT:    adds w8, w0, #42 // =42
+; CHECK-NEXT:    csinv w0, w8, wzr, lo
 ; CHECK-NEXT:    ret
   %a = add i32 %x, 42
   %c = icmp ugt i32 %x, -43
@@ -162,9 +161,8 @@ define i64 @unsigned_sat_constant_i64_using_cmp_sum(i64 %x) {
 define i64 @unsigned_sat_constant_i64_using_cmp_notval(i64 %x) {
 ; CHECK-LABEL: unsigned_sat_constant_i64_using_cmp_notval:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, #42 // =42
-; CHECK-NEXT:    cmn x0, #43 // =43
-; CHECK-NEXT:    csinv x0, x8, xzr, ls
+; CHECK-NEXT:    adds x8, x0, #42 // =42
+; CHECK-NEXT:    csinv x0, x8, xzr, lo
 ; CHECK-NEXT:    ret
   %a = add i64 %x, 42
   %c = icmp ugt i64 %x, -43

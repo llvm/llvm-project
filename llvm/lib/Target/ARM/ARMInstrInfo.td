@@ -353,10 +353,10 @@ def UseNegativeImmediates :
 let RecomputePerFunction = 1 in {
   def UseMovt          : Predicate<"Subtarget->useMovt(*MF)">;
   def DontUseMovt      : Predicate<"!Subtarget->useMovt(*MF)">;
-  def UseMovtInPic          : Predicate<"Subtarget->useMovt(*MF) && Subtarget->allowPositionIndependentMovt()">;
-  def DontUseMovtInPic      : Predicate<"!Subtarget->useMovt(*MF) || !Subtarget->allowPositionIndependentMovt()">;
+  def UseMovtInPic     : Predicate<"Subtarget->useMovt(*MF) && Subtarget->allowPositionIndependentMovt()">;
+  def DontUseMovtInPic : Predicate<"!Subtarget->useMovt(*MF) || !Subtarget->allowPositionIndependentMovt()">;
+  def UseFPVMLx        : Predicate<"Subtarget->useFPVMLx() || MF->getFunction().optForMinSize()">;
 }
-def UseFPVMLx        : Predicate<"Subtarget->useFPVMLx()">;
 def UseMulOps        : Predicate<"Subtarget->useMulOps()">;
 
 // Prefer fused MAC for fp mul + add over fp VMLA / VMLS if they are available.

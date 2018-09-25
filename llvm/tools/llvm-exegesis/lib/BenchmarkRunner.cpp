@@ -31,12 +31,12 @@ BenchmarkRunner::BenchmarkRunner(const LLVMState &State,
 
 BenchmarkRunner::~BenchmarkRunner() = default;
 
-// Repeat the snippet until there are at least NumInstructions in the resulting
+// Repeat the snippet until there are at least MinInstructions in the resulting
 // code.
 static std::vector<llvm::MCInst>
-GenerateInstructions(const BenchmarkCode &BC, const int MinInstructions) {
+GenerateInstructions(const BenchmarkCode &BC, const size_t MinInstructions) {
   std::vector<llvm::MCInst> Code = BC.Instructions;
-  for (int I = 0; I < MinInstructions; ++I)
+  for (int I = 0; Code.size() < MinInstructions; ++I)
     Code.push_back(BC.Instructions[I % BC.Instructions.size()]);
   return Code;
 }

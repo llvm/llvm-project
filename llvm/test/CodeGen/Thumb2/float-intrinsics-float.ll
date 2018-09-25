@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mtriple=thumbv7-none-eabi   -mcpu=cortex-m3                    | FileCheck %s -check-prefix=CHECK -check-prefix=SOFT -check-prefix=NONE
-; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m4                    | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=SP -check-prefix=VMLA
+; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m4                    | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=SP -check-prefix=NO-VMLA
+; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m33                   | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=SP -check-prefix=NO-VMLA
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m7                    | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=DP -check-prefix=VFP  -check-prefix=FP-ARMv8  -check-prefix=VMLA
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m7 -mattr=+fp-only-sp | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=SP -check-prefix=FP-ARMv8 -check-prefix=VMLA
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-a7                    | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=DP -check-prefix=NEON -check-prefix=VFP4 -check-prefix=NO-VMLA
@@ -188,8 +189,6 @@ define float @round_f(float %a) {
   ret float %1
 }
 
-; FIXME: why does cortex-m4 use vmla, while cortex-a7 uses vmul+vadd?
-; (these should be equivalent, even the rounding is the same)
 declare float     @llvm.fmuladd.f32(float %a, float %b, float %c)
 define float @fmuladd_f(float %a, float %b, float %c) {
 ; CHECK-LABEL: fmuladd_f:

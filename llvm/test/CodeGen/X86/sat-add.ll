@@ -44,11 +44,10 @@ define i8 @unsigned_sat_constant_i8_using_cmp_sum(i8 %x) {
 define i8 @unsigned_sat_constant_i8_using_cmp_notval(i8 %x) {
 ; ANY-LABEL: unsigned_sat_constant_i8_using_cmp_notval:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    cmpb $-43, %dil
-; ANY-NEXT:    movb $-1, %al
-; ANY-NEXT:    ja .LBB2_2
-; ANY-NEXT:  # %bb.1:
 ; ANY-NEXT:    addb $42, %dil
+; ANY-NEXT:    movb $-1, %al
+; ANY-NEXT:    jb .LBB2_2
+; ANY-NEXT:  # %bb.1:
 ; ANY-NEXT:    movl %edi, %eax
 ; ANY-NEXT:  .LBB2_2:
 ; ANY-NEXT:    retq
@@ -91,12 +90,9 @@ define i16 @unsigned_sat_constant_i16_using_cmp_sum(i16 %x) {
 define i16 @unsigned_sat_constant_i16_using_cmp_notval(i16 %x) {
 ; ANY-LABEL: unsigned_sat_constant_i16_using_cmp_notval:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    # kill: def $edi killed $edi def $rdi
-; ANY-NEXT:    leal 42(%rdi), %ecx
-; ANY-NEXT:    movzwl %di, %eax
-; ANY-NEXT:    cmpl $65493, %eax # imm = 0xFFD5
+; ANY-NEXT:    addw $42, %di
 ; ANY-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; ANY-NEXT:    cmovbel %ecx, %eax
+; ANY-NEXT:    cmovael %edi, %eax
 ; ANY-NEXT:    # kill: def $ax killed $ax killed $eax
 ; ANY-NEXT:    retq
   %a = add i16 %x, 42
@@ -135,11 +131,9 @@ define i32 @unsigned_sat_constant_i32_using_cmp_sum(i32 %x) {
 define i32 @unsigned_sat_constant_i32_using_cmp_notval(i32 %x) {
 ; ANY-LABEL: unsigned_sat_constant_i32_using_cmp_notval:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    # kill: def $edi killed $edi def $rdi
-; ANY-NEXT:    leal 42(%rdi), %ecx
-; ANY-NEXT:    cmpl $-43, %edi
+; ANY-NEXT:    addl $42, %edi
 ; ANY-NEXT:    movl $-1, %eax
-; ANY-NEXT:    cmovbel %ecx, %eax
+; ANY-NEXT:    cmovael %edi, %eax
 ; ANY-NEXT:    retq
   %a = add i32 %x, 42
   %c = icmp ugt i32 %x, -43
@@ -177,10 +171,9 @@ define i64 @unsigned_sat_constant_i64_using_cmp_sum(i64 %x) {
 define i64 @unsigned_sat_constant_i64_using_cmp_notval(i64 %x) {
 ; ANY-LABEL: unsigned_sat_constant_i64_using_cmp_notval:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    cmpq $-43, %rdi
-; ANY-NEXT:    leaq 42(%rdi), %rax
-; ANY-NEXT:    movq $-1, %rcx
-; ANY-NEXT:    cmovaq %rcx, %rax
+; ANY-NEXT:    addq $42, %rdi
+; ANY-NEXT:    movq $-1, %rax
+; ANY-NEXT:    cmovaeq %rdi, %rax
 ; ANY-NEXT:    retq
   %a = add i64 %x, 42
   %c = icmp ugt i64 %x, -43

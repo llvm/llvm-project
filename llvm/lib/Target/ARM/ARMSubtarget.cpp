@@ -289,8 +289,8 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexR52:
     break;
   case Exynos:
-    MaxInterleaveFactor = 2;
-    PartialUpdateClearance = 12;
+    LdStMultipleTiming = SingleIssuePlusExtras;
+    MaxInterleaveFactor = 4;
     if (!isThumb())
       PrefLoopAlignment = 3;
     break;
