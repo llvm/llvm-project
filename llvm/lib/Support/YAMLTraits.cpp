@@ -341,9 +341,23 @@ void Input::scalarString(StringRef &S, QuotingType) {
 
 void Input::blockScalarString(StringRef &S) { scalarString(S, QuotingType::None); }
 
+void Input::scalarTag(std::string &Tag) {
+  Tag = CurrentNode->_node->getVerbatimTag();
+}
+
 void Input::setError(HNode *hnode, const Twine &message) {
   assert(hnode && "HNode must not be NULL");
   this->setError(hnode->_node, message);
+}
+
+NodeKind Input::getNodeKind() {
+  if (isa<ScalarHNode>(CurrentNode))
+    return NodeKind::Scalar;
+  else if (isa<MapHNode>(CurrentNode))
+    return NodeKind::Map;
+  else if (isa<SequenceHNode>(CurrentNode))
+    return NodeKind::Sequence;
+  llvm_unreachable("Unsupported node kind");
 }
 
 void Input::setError(Node *node, const Twine &message) {
@@ -437,8 +451,11 @@ bool Output::mapTag(StringRef Tag, bool Use) {
     // of the sequence before writing the tag, otherwise the tag won't be
     // attached to the element in the sequence, but rather the sequence itself.
     bool SequenceElement =
-        StateStack.size() > 1 && (StateStack[StateStack.size() - 2] == inSeq ||
-          StateStack[StateStack.size() - 2] == inFlowSeq);
+        StateStack.size() > 1 &&
+        (StateStack[StateStack.size() - 2] == inSeqFirstElement ||
+         StateStack[StateStack.size() - 2] == inSeqOtherElement ||
+         StateStack[StateStack.size() - 2] == inFlowSeqFirstElement ||
+         StateStack[StateStack.size() - 2] == inFlowSeqOtherElement);
     if (SequenceElement && StateStack.back() == inMapFirstKey) {
       this->newLineCheck();
     } else {
@@ -461,6 +478,9 @@ bool Output::mapTag(StringRef Tag, bool Use) {
 }
 
 void Output::endMapping() {
+  // If we did not map anything, we should explicitly emit an empty map
+  if (StateStack.back() == inMapFirstKey)
+    output("{}");
   StateStack.pop_back();
 }
 
@@ -524,12 +544,15 @@ void Output::endDocuments() {
 }
 
 unsigned Output::beginSequence() {
-  StateStack.push_back(inSeq);
+  StateStack.push_back(inSeqFirstElement);
   NeedsNewLine = true;
   return 0;
 }
 
 void Output::endSequence() {
+  // If we did not emit anything, we should explicitly emit an empty sequence
+  if (StateStack.back() == inSeqFirstElement)
+    output("[]");
   StateStack.pop_back();
 }
 
@@ -538,10 +561,17 @@ bool Output::preflightElement(unsigned, void *&) {
 }
 
 void Output::postflightElement(void *) {
+  if (StateStack.back() == inSeqFirstElement) {
+    StateStack.pop_back();
+    StateStack.push_back(inSeqOtherElement);
+  } else if (StateStack.back() == inFlowSeqFirstElement) {
+    StateStack.pop_back();
+    StateStack.push_back(inFlowSeqOtherElement);
+  }
 }
 
 unsigned Output::beginFlowSequence() {
-  StateStack.push_back(inFlowSeq);
+  StateStack.push_back(inFlowSeqFirstElement);
   this->newLineCheck();
   ColumnAtFlowStart = Column;
   output("[ ");
@@ -680,6 +710,14 @@ void Output::blockScalarString(StringRef &S) {
   }
 }
 
+void Output::scalarTag(std::string &Tag) {
+  if (Tag.empty())
+    return;
+  this->newLineCheck();
+  this->output(Tag);
+  this->output(" ");
+}
+
 void Output::setError(const Twine &message) {
 }
 
@@ -693,7 +731,8 @@ bool Output::canElideEmptySequence() {
     return true;
   if (StateStack.back() != inMapFirstKey)
     return true;
-  return (StateStack[StateStack.size()-2] != inSeq);
+  return !(StateStack[StateStack.size() - 2] == inSeqFirstElement ||
+           StateStack[StateStack.size() - 2] == inSeqOtherElement);
 }
 
 void Output::output(StringRef s) {
@@ -703,7 +742,8 @@ void Output::output(StringRef s) {
 
 void Output::outputUpToEndOfLine(StringRef s) {
   this->output(s);
-  if (StateStack.empty() || (StateStack.back() != inFlowSeq &&
+  if (StateStack.empty() || (StateStack.back() != inFlowSeqFirstElement &&
+                             StateStack.back() != inFlowSeqOtherElement &&
                              StateStack.back() != inFlowMapFirstKey &&
                              StateStack.back() != inFlowMapOtherKey))
     NeedsNewLine = true;
@@ -725,16 +765,22 @@ void Output::newLineCheck() {
 
   this->outputNewLine();
 
-  assert(StateStack.size() > 0);
+  if (StateStack.size() == 0)
+    return;
+
   unsigned Indent = StateStack.size() - 1;
   bool OutputDash = false;
 
-  if (StateStack.back() == inSeq) {
+  if (StateStack.back() == inSeqFirstElement ||
+      StateStack.back() == inSeqOtherElement) {
     OutputDash = true;
-  } else if ((StateStack.size() > 1) && ((StateStack.back() == inMapFirstKey) ||
-             (StateStack.back() == inFlowSeq) ||
-             (StateStack.back() == inFlowMapFirstKey)) &&
-             (StateStack[StateStack.size() - 2] == inSeq)) {
+  } else if ((StateStack.size() > 1) &&
+             ((StateStack.back() == inMapFirstKey) ||
+              (StateStack.back() == inFlowSeqFirstElement) ||
+              (StateStack.back() == inFlowSeqOtherElement) ||
+              (StateStack.back() == inFlowMapFirstKey)) &&
+             (StateStack[StateStack.size() - 2] == inSeqFirstElement ||
+              StateStack[StateStack.size() - 2] == inSeqOtherElement)) {
     --Indent;
     OutputDash = true;
   }
@@ -771,6 +817,8 @@ void Output::flowKey(StringRef Key) {
   output(Key);
   output(": ");
 }
+
+NodeKind Output::getNodeKind() { report_fatal_error("invalid call"); }
 
 //===----------------------------------------------------------------------===//
 //  traits for built-in types
