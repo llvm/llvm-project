@@ -1,5 +1,6 @@
 LEVEL = ../../make
 SWIFT_OBJC_INTEROP := 1
+LLDB=$(echo $(BUILDDIR)/../../../../[bC]*/lldb)
 # This Makefile overwrites the default rules.
 EXE=None
 
@@ -8,7 +9,7 @@ first: a.out
 include $(LEVEL)/Makefile.rules
 
 a.out: input.swift
-	cat $< | lldb --repl "$(CFLAGS_EXTRAS)"
+	cat $< | $(LLDB) --repl "$(CFLAGS_EXTRAS)"
 	echo "libdispatch could be imported successfully!">$@
 
 input.swift:
