@@ -566,7 +566,7 @@ public:
 
 class InMemoryDirectory : public InMemoryNode {
   Status Stat;
-  std::map<std::string, std::unique_ptr<InMemoryNode>> Entries;
+  llvm::StringMap<std::unique_ptr<InMemoryNode>> Entries;
 
 public:
   InMemoryDirectory(Status Stat)

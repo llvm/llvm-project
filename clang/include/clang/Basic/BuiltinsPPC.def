@@ -431,6 +431,8 @@ BUILTIN(__builtin_mulf128_round_to_odd, "LLdLLdLLd", "")
 BUILTIN(__builtin_divf128_round_to_odd, "LLdLLdLLd", "")
 BUILTIN(__builtin_fmaf128_round_to_odd, "LLdLLdLLdLLd", "")
 BUILTIN(__builtin_truncf128_round_to_odd, "dLLd", "")
+BUILTIN(__builtin_vsx_scalar_extract_expq, "ULLiLLd", "")
+BUILTIN(__builtin_vsx_scalar_insert_exp_qp, "LLdLLdULLi", "")
 
 // HTM builtins
 BUILTIN(__builtin_tbegin, "UiUIi", "")

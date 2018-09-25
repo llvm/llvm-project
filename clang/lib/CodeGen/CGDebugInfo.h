@@ -377,9 +377,7 @@ public:
   /// Emit metadata to indicate a change in line/column information in
   /// the source file. If the location is invalid, the previous
   /// location will be reused.
-  /// \param ImplicitCode  True if the Loc must have coverage information
-  void EmitLocation(CGBuilderTy &Builder, SourceLocation Loc,
-                    bool ImplicitCode = false);
+  void EmitLocation(CGBuilderTy &Builder, SourceLocation Loc);
 
   /// Emit a call to llvm.dbg.function.start to indicate
   /// start of a new function.
@@ -666,19 +664,16 @@ private:
 /// location or preferred location of the specified Expr.
 class ApplyDebugLocation {
 private:
-  void init(SourceLocation TemporaryLocation, bool DefaultToEmpty = false,
-            bool ImplicitCode = false);
+  void init(SourceLocation TemporaryLocation, bool DefaultToEmpty = false);
   ApplyDebugLocation(CodeGenFunction &CGF, bool DefaultToEmpty,
-                     SourceLocation TemporaryLocation,
-                     bool ImplicitCode = false);
+                     SourceLocation TemporaryLocation);
 
   llvm::DebugLoc OriginalLocation;
   CodeGenFunction *CGF;
 
 public:
   /// Set the location to the (valid) TemporaryLocation.
-  ApplyDebugLocation(CodeGenFunction &CGF, SourceLocation TemporaryLocation,
-                     bool ImplicitCode = false);
+  ApplyDebugLocation(CodeGenFunction &CGF, SourceLocation TemporaryLocation);
   ApplyDebugLocation(CodeGenFunction &CGF, const Expr *E);
   ApplyDebugLocation(CodeGenFunction &CGF, llvm::DebugLoc Loc);
   ApplyDebugLocation(ApplyDebugLocation &&Other) : CGF(Other.CGF) {
@@ -701,15 +696,13 @@ public:
   static ApplyDebugLocation CreateArtificial(CodeGenFunction &CGF) {
     return ApplyDebugLocation(CGF, false, SourceLocation());
   }
-
   /// Apply TemporaryLocation if it is valid. Otherwise switch
   /// to an artificial debug location that has a valid scope, but no
   /// line information.
   static ApplyDebugLocation
   CreateDefaultArtificial(CodeGenFunction &CGF,
-                          SourceLocation TemporaryLocation,
-                          bool ImplicitCode = false) {
-    return ApplyDebugLocation(CGF, false, TemporaryLocation, ImplicitCode);
+                          SourceLocation TemporaryLocation) {
+    return ApplyDebugLocation(CGF, false, TemporaryLocation);
   }
 
   /// Set the IRBuilder to not attach debug locations.  Note that

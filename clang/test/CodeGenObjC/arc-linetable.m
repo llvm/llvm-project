@@ -60,7 +60,7 @@ typedef signed char BOOL;
 - (int)testNoSideEffect:(NSString *)foo {
   int x = 1;
   return 1; // Return expression
-  // CHECK: ![[RET1]] = !DILocation(line: [[@LINE+1]], scope: ![[TESTNOSIDEEFFECT]], isImplicitCode: true)
+  // CHECK: ![[RET1]] = !DILocation(line: [[@LINE+1]], scope: ![[TESTNOSIDEEFFECT]])
 }           // Cleanup + Ret
 
 - (int)testNoCleanup {

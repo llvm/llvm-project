@@ -369,7 +369,7 @@ def warn_implicit_function_decl : Warning<
   "implicit declaration of function %0">,
   InGroup<ImplicitFunctionDeclare>, DefaultIgnore;
 def ext_implicit_function_decl : ExtWarn<
-  "implicit declaration of function %0 is invalid in %select{C99|OpenCL}1">,
+  "implicit declaration of function %0 is invalid in C99">,
   InGroup<ImplicitFunctionDeclare>;
 def note_function_suggestion : Note<"did you mean %0?">;
 
@@ -2260,8 +2260,6 @@ def err_for_range_incomplete_type : Error<
   "cannot use incomplete type %0 as a range">;
 def err_for_range_iter_deduction_failure : Error<
   "cannot use type %0 as an iterator">;
-def err_for_range_member_begin_end_mismatch : Error<
-  "range type %0 has '%select{begin|end}1' member but no '%select{end|begin}1' member">;
 def ext_for_range_begin_end_types_differ : ExtWarn<
   "'begin' and 'end' returning different types (%0 and %1) is a C++17 extension">,
   InGroup<CXX17>;
@@ -2274,6 +2272,8 @@ def note_in_for_range: Note<
 def err_for_range_invalid: Error<
   "invalid range expression of type %0; no viable '%select{begin|end}1' "
   "function available">;
+def note_for_range_member_begin_end_ignored : Note<
+  "member is not a candidate because range type %0 has no '%select{end|begin}1' member">;
 def err_range_on_array_parameter : Error<
   "cannot build range expression with array function parameter %0 since "
   "parameter with array type %1 is treated as pointer type %2">;
@@ -8639,6 +8639,8 @@ def err_opencl_scalar_type_rank_greater_than_vector_type : Error<
     "element. (%0 and %1)">;
 def err_bad_kernel_param_type : Error<
   "%0 cannot be used as the type of a kernel parameter">;
+def err_opencl_implicit_function_decl : Error<
+  "implicit declaration of function %0 is invalid in OpenCL">;
 def err_record_with_pointers_kernel_param : Error<
   "%select{struct|union}0 kernel parameters may not contain pointers">;
 def note_within_field_of_type : Note<
