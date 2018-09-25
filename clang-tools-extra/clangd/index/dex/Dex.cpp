@@ -128,8 +128,8 @@ void Dex::buildIndex() {
 
   // Convert lists of items to posting lists.
   for (const auto &TokenToPostingList : TempInvertedIndex)
-    InvertedIndex.insert({TokenToPostingList.first,
-                          PostingList(move(TokenToPostingList.second))});
+    InvertedIndex.insert(
+        {TokenToPostingList.first, PostingList(TokenToPostingList.second)});
 
   vlog("Built Dex with estimated memory usage {0} bytes.",
        estimateMemoryUsage());
