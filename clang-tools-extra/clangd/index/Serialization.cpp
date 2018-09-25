@@ -389,10 +389,10 @@ Expected<IndexFileIn> readYAML(StringRef);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O) {
   switch (O.Format) {
   case IndexFileFormat::RIFF:
-    writeYAML(O, OS);
+    writeRIFF(O, OS);
     break;
   case IndexFileFormat::YAML:
-    writeRIFF(O, OS);
+    writeYAML(O, OS);
     break;
   }
   return OS;

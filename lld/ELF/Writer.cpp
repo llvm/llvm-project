@@ -156,7 +156,7 @@ template <class ELFT> static void combineEhFrameSections() {
     if (!ES || !ES->Live)
       continue;
 
-    InX::EhFrame->addSection<ELFT>(ES);
+    In.EhFrame->addSection<ELFT>(ES);
     S = nullptr;
   }
 
@@ -260,54 +260,52 @@ template <class ELFT> static void createSyntheticSections() {
 
   auto Add = [](InputSectionBase *Sec) { InputSections.push_back(Sec); };
 
-  InX::DynStrTab = make<StringTableSection>(".dynstr", true);
-  InX::Dynamic = make<DynamicSection<ELFT>>();
+  In.DynStrTab = make<StringTableSection>(".dynstr", true);
+  In.Dynamic = make<DynamicSection<ELFT>>();
   if (Config->AndroidPackDynRelocs) {
-    InX::RelaDyn = make<AndroidPackedRelocationSection<ELFT>>(
+    In.RelaDyn = make<AndroidPackedRelocationSection<ELFT>>(
         Config->IsRela ? ".rela.dyn" : ".rel.dyn");
   } else {
-    InX::RelaDyn = make<RelocationSection<ELFT>>(
+    In.RelaDyn = make<RelocationSection<ELFT>>(
         Config->IsRela ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
   }
-  InX::ShStrTab = make<StringTableSection>(".shstrtab", false);
+  In.ShStrTab = make<StringTableSection>(".shstrtab", false);
 
   Out::ProgramHeaders = make<OutputSection>("", 0, SHF_ALLOC);
   Out::ProgramHeaders->Alignment = Config->Wordsize;
 
   if (needsInterpSection()) {
-    InX::Interp = createInterpSection();
-    Add(InX::Interp);
-  } else {
-    InX::Interp = nullptr;
+    In.Interp = createInterpSection();
+    Add(In.Interp);
   }
 
   if (Config->Strip != StripPolicy::All) {
-    InX::StrTab = make<StringTableSection>(".strtab", false);
-    InX::SymTab = make<SymbolTableSection<ELFT>>(*InX::StrTab);
-    InX::SymTabShndx = make<SymtabShndxSection>();
+    In.StrTab = make<StringTableSection>(".strtab", false);
+    In.SymTab = make<SymbolTableSection<ELFT>>(*In.StrTab);
+    In.SymTabShndx = make<SymtabShndxSection>();
   }
 
   if (Config->BuildId != BuildIdKind::None) {
-    InX::BuildId = make<BuildIdSection>();
-    Add(InX::BuildId);
+    In.BuildId = make<BuildIdSection>();
+    Add(In.BuildId);
   }
 
-  InX::Bss = make<BssSection>(".bss", 0, 1);
-  Add(InX::Bss);
+  In.Bss = make<BssSection>(".bss", 0, 1);
+  Add(In.Bss);
 
   // If there is a SECTIONS command and a .data.rel.ro section name use name
   // .data.rel.ro.bss so that we match in the .data.rel.ro output section.
   // This makes sure our relro is contiguous.
   bool HasDataRelRo = Script->HasSectionsCommand && findSection(".data.rel.ro");
-  InX::BssRelRo =
+  In.BssRelRo =
       make<BssSection>(HasDataRelRo ? ".data.rel.ro.bss" : ".bss.rel.ro", 0, 1);
-  Add(InX::BssRelRo);
+  Add(In.BssRelRo);
 
   // Add MIPS-specific sections.
   if (Config->EMachine == EM_MIPS) {
     if (!Config->Shared && Config->HasDynSymTab) {
-      InX::MipsRldMap = make<MipsRldMapSection>();
-      Add(InX::MipsRldMap);
+      In.MipsRldMap = make<MipsRldMapSection>();
+      Add(In.MipsRldMap);
     }
     if (auto *Sec = MipsAbiFlagsSection<ELFT>::create())
       Add(Sec);
@@ -318,65 +316,65 @@ template <class ELFT> static void createSyntheticSections() {
   }
 
   if (Config->HasDynSymTab) {
-    InX::DynSymTab = make<SymbolTableSection<ELFT>>(*InX::DynStrTab);
-    Add(InX::DynSymTab);
+    In.DynSymTab = make<SymbolTableSection<ELFT>>(*In.DynStrTab);
+    Add(In.DynSymTab);
 
-    In<ELFT>::VerSym = make<VersionTableSection<ELFT>>();
-    Add(In<ELFT>::VerSym);
+    InX<ELFT>::VerSym = make<VersionTableSection<ELFT>>();
+    Add(InX<ELFT>::VerSym);
 
     if (!Config->VersionDefinitions.empty()) {
-      In<ELFT>::VerDef = make<VersionDefinitionSection<ELFT>>();
-      Add(In<ELFT>::VerDef);
+      InX<ELFT>::VerDef = make<VersionDefinitionSection<ELFT>>();
+      Add(InX<ELFT>::VerDef);
     }
 
-    In<ELFT>::VerNeed = make<VersionNeedSection<ELFT>>();
-    Add(In<ELFT>::VerNeed);
+    InX<ELFT>::VerNeed = make<VersionNeedSection<ELFT>>();
+    Add(InX<ELFT>::VerNeed);
 
     if (Config->GnuHash) {
-      InX::GnuHashTab = make<GnuHashTableSection>();
-      Add(InX::GnuHashTab);
+      In.GnuHashTab = make<GnuHashTableSection>();
+      Add(In.GnuHashTab);
     }
 
     if (Config->SysvHash) {
-      InX::HashTab = make<HashTableSection>();
-      Add(InX::HashTab);
+      In.HashTab = make<HashTableSection>();
+      Add(In.HashTab);
     }
 
-    Add(InX::Dynamic);
-    Add(InX::DynStrTab);
-    Add(InX::RelaDyn);
+    Add(In.Dynamic);
+    Add(In.DynStrTab);
+    Add(In.RelaDyn);
   }
 
   if (Config->RelrPackDynRelocs) {
-    InX::RelrDyn = make<RelrSection<ELFT>>();
-    Add(InX::RelrDyn);
+    In.RelrDyn = make<RelrSection<ELFT>>();
+    Add(In.RelrDyn);
   }
 
   // Add .got. MIPS' .got is so different from the other archs,
   // it has its own class.
   if (Config->EMachine == EM_MIPS) {
-    InX::MipsGot = make<MipsGotSection>();
-    Add(InX::MipsGot);
+    In.MipsGot = make<MipsGotSection>();
+    Add(In.MipsGot);
   } else {
-    InX::Got = make<GotSection>();
-    Add(InX::Got);
+    In.Got = make<GotSection>();
+    Add(In.Got);
   }
 
-  InX::GotPlt = make<GotPltSection>();
-  Add(InX::GotPlt);
-  InX::IgotPlt = make<IgotPltSection>();
-  Add(InX::IgotPlt);
+  In.GotPlt = make<GotPltSection>();
+  Add(In.GotPlt);
+  In.IgotPlt = make<IgotPltSection>();
+  Add(In.IgotPlt);
 
   if (Config->GdbIndex) {
-    InX::GdbIndex = GdbIndexSection::create<ELFT>();
-    Add(InX::GdbIndex);
+    In.GdbIndex = GdbIndexSection::create<ELFT>();
+    Add(In.GdbIndex);
   }
 
   // We always need to add rel[a].plt to output if it has entries.
   // Even for static linking it can contain R_[*]_IRELATIVE relocations.
-  InX::RelaPlt = make<RelocationSection<ELFT>>(
+  In.RelaPlt = make<RelocationSection<ELFT>>(
       Config->IsRela ? ".rela.plt" : ".rel.plt", false /*Sort*/);
-  Add(InX::RelaPlt);
+  Add(In.RelaPlt);
 
   // The RelaIplt immediately follows .rel.plt (.rel.dyn for ARM) to ensure
   // that the IRelative relocations are processed last by the dynamic loader.
@@ -384,17 +382,17 @@ template <class ELFT> static void createSyntheticSections() {
   // packing is enabled because that would cause a section type mismatch.
   // However, because the Android dynamic loader reads .rel.plt after .rel.dyn,
   // we can get the desired behaviour by placing the iplt section in .rel.plt.
-  InX::RelaIplt = make<RelocationSection<ELFT>>(
+  In.RelaIplt = make<RelocationSection<ELFT>>(
       (Config->EMachine == EM_ARM && !Config->AndroidPackDynRelocs)
           ? ".rel.dyn"
-          : InX::RelaPlt->Name,
+          : In.RelaPlt->Name,
       false /*Sort*/);
-  Add(InX::RelaIplt);
+  Add(In.RelaIplt);
 
-  InX::Plt = make<PltSection>(false);
-  Add(InX::Plt);
-  InX::Iplt = make<PltSection>(true);
-  Add(InX::Iplt);
+  In.Plt = make<PltSection>(false);
+  Add(In.Plt);
+  In.Iplt = make<PltSection>(true);
+  Add(In.Iplt);
 
   // .note.GNU-stack is always added when we are creating a re-linkable
   // object file. Other linkers are using the presence of this marker
@@ -406,20 +404,20 @@ template <class ELFT> static void createSyntheticSections() {
 
   if (!Config->Relocatable) {
     if (Config->EhFrameHdr) {
-      InX::EhFrameHdr = make<EhFrameHeader>();
-      Add(InX::EhFrameHdr);
+      In.EhFrameHdr = make<EhFrameHeader>();
+      Add(In.EhFrameHdr);
     }
-    InX::EhFrame = make<EhFrameSection>();
-    Add(InX::EhFrame);
+    In.EhFrame = make<EhFrameSection>();
+    Add(In.EhFrame);
   }
 
-  if (InX::SymTab)
-    Add(InX::SymTab);
-  if (InX::SymTabShndx)
-    Add(InX::SymTabShndx);
-  Add(InX::ShStrTab);
-  if (InX::StrTab)
-    Add(InX::StrTab);
+  if (In.SymTab)
+    Add(In.SymTab);
+  if (In.SymTabShndx)
+    Add(In.SymTabShndx);
+  Add(In.ShStrTab);
+  if (In.StrTab)
+    Add(In.StrTab);
 
   if (Config->EMachine == EM_ARM && !Config->Relocatable)
     // Add a sentinel to terminate .ARM.exidx. It helps an unwinder
@@ -567,7 +565,7 @@ static bool includeInSymtab(const Symbol &B) {
 // Local symbols are not in the linker's symbol table. This function scans
 // each object file's symbol table to copy local symbols to the output.
 template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
-  if (!InX::SymTab)
+  if (!In.SymTab)
     return;
   for (InputFile *File : ObjectFiles) {
     ObjFile<ELFT> *F = cast<ObjFile<ELFT>>(File);
@@ -586,7 +584,7 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
       SectionBase *Sec = DR->Section;
       if (!shouldKeepInSymtab(Sec, B->getName(), *B))
         continue;
-      InX::SymTab->addSymbol(B);
+      In.SymTab->addSymbol(B);
     }
   }
 }
@@ -622,7 +620,7 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
     auto *Sym =
         make<Defined>(IS->File, "", STB_LOCAL, /*StOther=*/0, STT_SECTION,
                       /*Value=*/0, /*Size=*/0, IS);
-    InX::SymTab->addSymbol(Sym);
+    In.SymTab->addSymbol(Sym);
   }
 }
 
@@ -667,7 +665,7 @@ static bool isRelroSection(const OutputSection *Sec) {
   // .got contains pointers to external symbols. They are resolved by
   // the dynamic linker when a module is loaded into memory, and after
   // that they are not expected to change. So, it can be in RELRO.
-  if (InX::Got && Sec == InX::Got->getParent())
+  if (In.Got && Sec == In.Got->getParent())
     return true;
 
   if (Sec->Name.equals(".toc"))
@@ -677,13 +675,13 @@ static bool isRelroSection(const OutputSection *Sec) {
   // by default resolved lazily, so we usually cannot put it into RELRO.
   // However, if "-z now" is given, the lazy symbol resolution is
   // disabled, which enables us to put it into RELRO.
-  if (Sec == InX::GotPlt->getParent())
+  if (Sec == In.GotPlt->getParent())
     return Config->ZNow;
 
   // .dynamic section contains data for the dynamic linker, and
   // there's no need to write to it at runtime, so it's better to put
   // it into RELRO.
-  if (Sec == InX::Dynamic->getParent())
+  if (Sec == In.Dynamic->getParent())
     return true;
 
   // Sections with some special names are put into RELRO. This is a
@@ -882,11 +880,11 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   if (needsInterpSection())
     return;
   StringRef S = Config->IsRela ? "__rela_iplt_start" : "__rel_iplt_start";
-  addOptionalRegular(S, InX::RelaIplt, 0, STV_HIDDEN, STB_WEAK);
+  addOptionalRegular(S, In.RelaIplt, 0, STV_HIDDEN, STB_WEAK);
 
   S = Config->IsRela ? "__rela_iplt_end" : "__rel_iplt_end";
   ElfSym::RelaIpltEnd =
-      addOptionalRegular(S, InX::RelaIplt, 0, STV_HIDDEN, STB_WEAK);
+      addOptionalRegular(S, In.RelaIplt, 0, STV_HIDDEN, STB_WEAK);
 }
 
 template <class ELFT>
@@ -900,7 +898,7 @@ void Writer<ELFT>::forEachRelSec(
   for (InputSectionBase *IS : InputSections)
     if (IS->Live && isa<InputSection>(IS) && (IS->Flags & SHF_ALLOC))
       Fn(*IS);
-  for (EhInputSection *ES : InX::EhFrame->Sections)
+  for (EhInputSection *ES : In.EhFrame->Sections)
     Fn(*ES);
 }
 
@@ -913,15 +911,15 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   if (ElfSym::GlobalOffsetTable) {
     // The _GLOBAL_OFFSET_TABLE_ symbol is defined by target convention usually
     // to the start of the .got or .got.plt section.
-    InputSection *GotSection = InX::GotPlt;
+    InputSection *GotSection = In.GotPlt;
     if (!Target->GotBaseSymInGotPlt)
-      GotSection = InX::MipsGot ? cast<InputSection>(InX::MipsGot)
-                                : cast<InputSection>(InX::Got);
+      GotSection = In.MipsGot ? cast<InputSection>(In.MipsGot)
+                              : cast<InputSection>(In.Got);
     ElfSym::GlobalOffsetTable->Section = GotSection;
   }
 
   if (ElfSym::RelaIpltEnd)
-    ElfSym::RelaIpltEnd->Value = InX::RelaIplt->getSize();
+    ElfSym::RelaIpltEnd->Value = In.RelaIplt->getSize();
 
   PhdrEntry *Last = nullptr;
   PhdrEntry *LastRO = nullptr;
@@ -1552,9 +1550,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // It should be okay as no one seems to care about the type.
   // Even the author of gold doesn't remember why gold behaves that way.
   // https://sourceware.org/ml/binutils/2002-03/msg00360.html
-  if (InX::DynSymTab)
+  if (In.DynSymTab)
     Symtab->addRegular("_DYNAMIC", STV_HIDDEN, STT_NOTYPE, 0 /*Value*/,
-                       /*Size=*/0, STB_WEAK, InX::Dynamic,
+                       /*Size=*/0, STB_WEAK, In.Dynamic,
                        /*File=*/nullptr);
 
   // Define __rel[a]_iplt_{start,end} symbols if needed.
@@ -1572,7 +1570,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // This responsible for splitting up .eh_frame section into
   // pieces. The relocation scan uses those pieces, so this has to be
   // earlier.
-  applySynthetic({InX::EhFrame},
+  applySynthetic({In.EhFrame},
                  [](SyntheticSection *SS) { SS->finalizeContents(); });
 
   for (Symbol *S : Symtab->getSymbols())
@@ -1583,24 +1581,24 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (!Config->Relocatable)
     forEachRelSec(scanRelocations<ELFT>);
 
-  if (InX::Plt && !InX::Plt->empty())
-    InX::Plt->addSymbols();
-  if (InX::Iplt && !InX::Iplt->empty())
-    InX::Iplt->addSymbols();
+  if (In.Plt && !In.Plt->empty())
+    In.Plt->addSymbols();
+  if (In.Iplt && !In.Iplt->empty())
+    In.Iplt->addSymbols();
 
   // Now that we have defined all possible global symbols including linker-
   // synthesized ones. Visit all symbols to give the finishing touches.
   for (Symbol *Sym : Symtab->getSymbols()) {
     if (!includeInSymtab(*Sym))
       continue;
-    if (InX::SymTab)
-      InX::SymTab->addSymbol(Sym);
+    if (In.SymTab)
+      In.SymTab->addSymbol(Sym);
 
-    if (InX::DynSymTab && Sym->includeInDynsym()) {
-      InX::DynSymTab->addSymbol(Sym);
+    if (In.DynSymTab && Sym->includeInDynsym()) {
+      In.DynSymTab->addSymbol(Sym);
       if (auto *File = dyn_cast_or_null<SharedFile<ELFT>>(Sym->File))
         if (File->IsNeeded && !Sym->isUndefined())
-          In<ELFT>::VerNeed->addSymbol(Sym);
+          InX<ELFT>::VerNeed->addSymbol(Sym);
     }
   }
 
@@ -1608,8 +1606,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (errorCount())
     return;
 
-  if (InX::MipsGot)
-    InX::MipsGot->build<ELFT>();
+  if (In.MipsGot)
+    In.MipsGot->build<ELFT>();
 
   removeUnusedSyntheticSections();
 
@@ -1645,7 +1643,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   unsigned I = 1;
   for (OutputSection *Sec : OutputSections) {
     Sec->SectionIndex = I++;
-    Sec->ShName = InX::ShStrTab->addString(Sec->Name);
+    Sec->ShName = In.ShStrTab->addString(Sec->Name);
   }
 
   // Binary and relocatable output does not have PHDRS.
@@ -1669,14 +1667,31 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // Dynamic section must be the last one in this list and dynamic
   // symbol table section (DynSymTab) must be the first one.
-  applySynthetic(
-      {InX::DynSymTab,   InX::Bss,         InX::BssRelRo,     InX::GnuHashTab,
-       InX::HashTab,     InX::SymTabShndx, InX::ShStrTab,     InX::StrTab,
-       In<ELFT>::VerDef, InX::DynStrTab,   InX::Got,          InX::MipsGot,
-       InX::IgotPlt,     InX::GotPlt,      InX::RelaDyn,      InX::RelrDyn,
-       InX::RelaIplt,    InX::RelaPlt,     InX::Plt,          InX::Iplt,
-       InX::EhFrameHdr,  In<ELFT>::VerSym, In<ELFT>::VerNeed, InX::Dynamic},
-      [](SyntheticSection *SS) { SS->finalizeContents(); });
+  applySynthetic({In.DynSymTab,
+                  In.Bss,
+                  In.BssRelRo,
+                  In.GnuHashTab,
+                  In.HashTab,
+                  In.SymTabShndx,
+                  In.ShStrTab,
+                  In.StrTab,
+                  InX<ELFT>::VerDef,
+                  In.DynStrTab,
+                  In.Got,
+                  In.MipsGot,
+                  In.IgotPlt,
+                  In.GotPlt,
+                  In.RelaDyn,
+                  In.RelrDyn,
+                  In.RelaIplt,
+                  In.RelaPlt,
+                  In.Plt,
+                  In.Iplt,
+                  In.EhFrameHdr,
+                  InX<ELFT>::VerSym,
+                  InX<ELFT>::VerNeed,
+                  In.Dynamic},
+                 [](SyntheticSection *SS) { SS->finalizeContents(); });
 
   if (!Script->HasSectionsCommand && !Config->Relocatable)
     fixSectionAlignments();
@@ -1705,16 +1720,16 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
           Script->assignAddresses();
         Changed |= A64P.createFixes();
       }
-      if (InX::MipsGot)
-        InX::MipsGot->updateAllocSize();
-      Changed |= InX::RelaDyn->updateAllocSize();
-      if (InX::RelrDyn)
-        Changed |= InX::RelrDyn->updateAllocSize();
+      if (In.MipsGot)
+        In.MipsGot->updateAllocSize();
+      Changed |= In.RelaDyn->updateAllocSize();
+      if (In.RelrDyn)
+        Changed |= In.RelrDyn->updateAllocSize();
     } while (Changed);
   }
 
   // createThunks may have added local symbols to the static symbol table
-  applySynthetic({InX::SymTab},
+  applySynthetic({In.SymTab},
                  [](SyntheticSection *SS) { SS->finalizeContents(); });
 
   // Fill other section headers. The dynamic table is finalized
@@ -1860,9 +1875,9 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
     Ret.push_back(TlsHdr);
 
   // Add an entry for .dynamic.
-  if (InX::DynSymTab)
-    AddHdr(PT_DYNAMIC, InX::Dynamic->getParent()->getPhdrFlags())
-        ->add(InX::Dynamic->getParent());
+  if (In.DynSymTab)
+    AddHdr(PT_DYNAMIC, In.Dynamic->getParent()->getPhdrFlags())
+        ->add(In.Dynamic->getParent());
 
   // PT_GNU_RELRO includes all sections that should be marked as
   // read-only by dynamic linker after proccessing relocations.
@@ -1890,10 +1905,10 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
     Ret.push_back(RelRo);
 
   // PT_GNU_EH_FRAME is a special section pointing on .eh_frame_hdr.
-  if (!InX::EhFrame->empty() && InX::EhFrameHdr && InX::EhFrame->getParent() &&
-      InX::EhFrameHdr->getParent())
-    AddHdr(PT_GNU_EH_FRAME, InX::EhFrameHdr->getParent()->getPhdrFlags())
-        ->add(InX::EhFrameHdr->getParent());
+  if (!In.EhFrame->empty() && In.EhFrameHdr && In.EhFrame->getParent() &&
+      In.EhFrameHdr->getParent())
+    AddHdr(PT_GNU_EH_FRAME, In.EhFrameHdr->getParent()->getPhdrFlags())
+        ->add(In.EhFrameHdr->getParent());
 
   // PT_OPENBSD_RANDOMIZE is an OpenBSD-specific feature. That makes
   // the dynamic linker fill the segment with random data.
@@ -2306,7 +2321,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   else
     EHdr->e_shnum = Num;
 
-  uint32_t StrTabIndex = InX::ShStrTab->getParent()->SectionIndex;
+  uint32_t StrTabIndex = In.ShStrTab->getParent()->SectionIndex;
   if (StrTabIndex >= SHN_LORESERVE) {
     SHdrs->sh_link = StrTabIndex;
     EHdr->e_shstrndx = SHN_XINDEX;
@@ -2385,8 +2400,8 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   uint8_t *Buf = Buffer->getBufferStart();
 
   OutputSection *EhFrameHdr = nullptr;
-  if (InX::EhFrameHdr && !InX::EhFrameHdr->empty())
-    EhFrameHdr = InX::EhFrameHdr->getParent();
+  if (In.EhFrameHdr && !In.EhFrameHdr->empty())
+    EhFrameHdr = In.EhFrameHdr->getParent();
 
   // In -r or -emit-relocs mode, write the relocation sections first as in
   // ELf_Rel targets we might find out that we need to modify the relocated
@@ -2406,13 +2421,13 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
 }
 
 template <class ELFT> void Writer<ELFT>::writeBuildId() {
-  if (!InX::BuildId || !InX::BuildId->getParent())
+  if (!In.BuildId || !In.BuildId->getParent())
     return;
 
   // Compute a hash of all sections of the output file.
   uint8_t *Start = Buffer->getBufferStart();
   uint8_t *End = Start + FileSize;
-  InX::BuildId->writeBuildId({Start, End});
+  In.BuildId->writeBuildId({Start, End});
 }
 
 template void elf::writeResult<ELF32LE>();
