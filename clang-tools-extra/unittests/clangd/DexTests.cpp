@@ -475,17 +475,6 @@ TEST(Dex, FuzzyFind) {
                                    "other::A"));
 }
 
-TEST(DexTest, FuzzyMatchQ) {
-  auto I = Dex::build(
-      generateSymbols({"LaughingOutLoud", "LionPopulation", "LittleOldLady"}),
-      URISchemes);
-  FuzzyFindRequest Req;
-  Req.Query = "lol";
-  Req.Limit = 2;
-  EXPECT_THAT(match(*I, Req),
-              UnorderedElementsAre("LaughingOutLoud", "LittleOldLady"));
-}
-
 // FIXME(kbobyrev): This test is different for Dex and MemIndex: while
 // MemIndex manages response deduplication, Dex simply returns all matched
 // symbols which means there might be equivalent symbols in the response.
