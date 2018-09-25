@@ -335,7 +335,7 @@ ProcessFreeBSD::DoAttachToProcessWithID(lldb::pid_t pid,
     GetTarget().SetArchitecture(module_arch);
 
   // Initialize the target module list
-  GetTarget().SetExecutableModule(exe_module_sp, true);
+  GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsYes);
 
   SetSTDIOFileDescriptor(m_monitor->GetTerminalFD());
 
@@ -519,7 +519,7 @@ void ProcessFreeBSD::DoDidExec() {
           executable_search_paths.GetSize() ? &executable_search_paths : NULL);
       if (!error.Success())
         return;
-      target->SetExecutableModule(exe_module_sp, true);
+      target->SetExecutableModule(exe_module_sp, eLoadDependentsYes);
     }
   }
 }

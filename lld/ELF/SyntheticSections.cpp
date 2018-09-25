@@ -2576,8 +2576,9 @@ void GdbIndexSection::writeTo(uint8_t *Buf) {
 
   // Write the string pool.
   Hdr->ConstantPoolOff = Buf - Start;
-  for (GdbSymbol &Sym : Symbols)
+  parallelForEach(Symbols, [&](GdbSymbol &Sym) {
     memcpy(Buf + Sym.NameOff, Sym.Name.data(), Sym.Name.size());
+  });
 
   // Write the CU vectors.
   for (GdbSymbol &Sym : Symbols) {

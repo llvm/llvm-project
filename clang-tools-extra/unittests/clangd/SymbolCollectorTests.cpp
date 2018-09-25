@@ -11,7 +11,6 @@
 #include "TestFS.h"
 #include "TestTU.h"
 #include "index/SymbolCollector.h"
-#include "index/SymbolYAML.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/VirtualFileSystem.h"
