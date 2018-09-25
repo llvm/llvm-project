@@ -64,11 +64,10 @@ public:
 
   float consume() override {
     assert(!reachedEnd() && "AND iterator can't consume() at the end.");
-    return std::accumulate(
-        begin(Children), end(Children), DEFAULT_BOOST_SCORE,
-        [&](float Current, const std::unique_ptr<Iterator> &Child) {
-          return Current * Child->consume();
-        });
+    float Boost = DEFAULT_BOOST_SCORE;
+    for (const auto &Child : Children)
+      Boost *= Child->consume();
+    return Boost;
   }
 
   size_t estimateSize() const override {
@@ -140,10 +139,10 @@ public:
 
   /// Returns true if all children are exhausted.
   bool reachedEnd() const override {
-    return std::all_of(begin(Children), end(Children),
-                       [](const std::unique_ptr<Iterator> &Child) {
-                         return Child->reachedEnd();
-                       });
+    for (const auto &Child : Children)
+      if (!Child->reachedEnd())
+        return false;
+    return true;
   }
 
   /// Moves each child pointing to the smallest DocID to the next item.
@@ -181,21 +180,18 @@ public:
   float consume() override {
     assert(!reachedEnd() && "OR iterator can't consume() at the end.");
     const DocID ID = peek();
-    return std::accumulate(
-        begin(Children), end(Children), DEFAULT_BOOST_SCORE,
-        [&](float Boost, const std::unique_ptr<Iterator> &Child) {
-          return (!Child->reachedEnd() && Child->peek() == ID)
-                     ? std::max(Boost, Child->consume())
-                     : Boost;
-        });
+    float Boost = DEFAULT_BOOST_SCORE;
+    for (const auto &Child : Children)
+      if (!Child->reachedEnd() && Child->peek() == ID)
+        Boost = std::max(Boost, Child->consume());
+    return Boost;
   }
 
   size_t estimateSize() const override {
-    return std::accumulate(
-        begin(Children), end(Children), Children.front()->estimateSize(),
-        [&](size_t Current, const std::unique_ptr<Iterator> &Child) {
-          return std::max(Current, Child->estimateSize());
-        });
+    size_t Size = 0;
+    for (const auto &Child : Children)
+      Size = std::max(Size, Child->estimateSize());
+    return Size;
   }
 
 private:
