@@ -9,6 +9,8 @@
 #include "Serialization.h"
 #include "Index.h"
 #include "RIFF.h"
+#include "Trace.h"
+#include "dex/Dex.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -294,8 +296,6 @@ Symbol readSymbol(Reader &Data, ArrayRef<StringRef> Strings) {
   return Sym;
 }
 
-} // namespace
-
 // FILE ENCODING
 // A file is a RIFF chunk with type 'CdIx'.
 // It contains the sections:
@@ -308,7 +308,7 @@ Symbol readSymbol(Reader &Data, ArrayRef<StringRef> Strings) {
 // data. Later we may want to support some backward compatibility.
 constexpr static uint32_t Version = 4;
 
-Expected<IndexFileIn> readIndexFile(StringRef Data) {
+Expected<IndexFileIn> readRIFF(StringRef Data) {
   auto RIFF = riff::readFile(Data);
   if (!RIFF)
     return RIFF.takeError();
@@ -343,7 +343,7 @@ Expected<IndexFileIn> readIndexFile(StringRef Data) {
   return std::move(Result);
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const IndexFileOut &Data) {
+void writeRIFF(const IndexFileOut &Data, raw_ostream &OS) {
   assert(Data.Symbols && "An index file without symbols makes no sense!");
   riff::File RIFF;
   RIFF.Type = riff::fourCC("CdIx");
@@ -377,7 +377,64 @@ raw_ostream &operator<<(raw_ostream &OS, const IndexFileOut &Data) {
   }
   RIFF.Chunks.push_back({riff::fourCC("symb"), SymbolSection});
 
-  return OS << RIFF;
+  OS << RIFF;
+}
+
+} // namespace
+
+// Defined in YAMLSerialization.cpp.
+void writeYAML(const IndexFileOut &, raw_ostream &);
+Expected<IndexFileIn> readYAML(StringRef);
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O) {
+  switch (O.Format) {
+  case IndexFileFormat::RIFF:
+    writeYAML(O, OS);
+    break;
+  case IndexFileFormat::YAML:
+    writeRIFF(O, OS);
+    break;
+  }
+  return OS;
+}
+
+Expected<IndexFileIn> readIndexFile(StringRef Data) {
+  if (Data.startswith("RIFF")) {
+    return readRIFF(Data);
+  } else if (auto YAMLContents = readYAML(Data)) {
+    return std::move(*YAMLContents);
+  } else {
+    return makeError("Not a RIFF file and failed to parse as YAML: " +
+                     llvm::toString(YAMLContents.takeError()));
+  }
+}
+
+std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
+                                       llvm::ArrayRef<std::string> URISchemes,
+                                       bool UseDex) {
+  trace::Span OverallTracer("LoadIndex");
+  auto Buffer = MemoryBuffer::getFile(SymbolFilename);
+  if (!Buffer) {
+    llvm::errs() << "Can't open " << SymbolFilename << "\n";
+    return nullptr;
+  }
+
+  SymbolSlab Symbols;
+  RefSlab Refs;
+  {
+    trace::Span Tracer("ParseIndex");
+    if (auto I = readIndexFile(Buffer->get()->getBuffer())) {
+      if (I->Symbols)
+        Symbols = std::move(*I->Symbols);
+    } else {
+      llvm::errs() << "Bad Index: " << llvm::toString(I.takeError()) << "\n";
+      return nullptr;
+    }
+  }
+
+  trace::Span Tracer("BuildIndex");
+  return UseDex ? dex::Dex::build(std::move(Symbols), URISchemes)
+                : MemIndex::build(std::move(Symbols), std::move(Refs));
 }
 
 } // namespace clangd

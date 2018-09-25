@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../index/SymbolYAML.h"
+#include "../index/Serialization.h"
 #include "../index/dex/Dex.h"
 #include "benchmark/benchmark.h"
 #include "llvm/ADT/SmallVector.h"

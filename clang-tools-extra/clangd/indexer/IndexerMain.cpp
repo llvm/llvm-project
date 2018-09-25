@@ -18,7 +18,6 @@
 #include "index/Merge.h"
 #include "index/Serialization.h"
 #include "index/SymbolCollector.h"
-#include "index/SymbolYAML.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Index/IndexDataConsumer.h"
@@ -60,12 +59,13 @@ static llvm::cl::opt<bool> MergeOnTheFly(
         "MapReduce."),
     llvm::cl::init(true), llvm::cl::Hidden);
 
-enum IndexFormat { YAML, Binary };
-static llvm::cl::opt<IndexFormat> Format(
-    "format", llvm::cl::desc("Format of the index to be written"),
-    llvm::cl::values(clEnumValN(YAML, "yaml", "human-readable YAML format"),
-                     clEnumValN(Binary, "binary", "binary RIFF format")),
-    llvm::cl::init(YAML));
+static llvm::cl::opt<IndexFileFormat>
+    Format("format", llvm::cl::desc("Format of the index to be written"),
+           llvm::cl::values(clEnumValN(IndexFileFormat::YAML, "yaml",
+                                       "human-readable YAML format"),
+                            clEnumValN(IndexFileFormat::RIFF, "binary",
+                                       "binary RIFF format")),
+           llvm::cl::init(IndexFileFormat::YAML));
 
 /// Responsible for aggregating symbols from each processed file and producing
 /// the final results. All methods in this class must be thread-safe,
@@ -162,8 +162,7 @@ public:
 
   void consumeSymbols(SymbolSlab Symbols) override {
     for (const auto &Sym : Symbols)
-      Executor.getExecutionContext()->reportResult(Sym.ID.str(),
-                                                   SymbolToYAML(Sym));
+      Executor.getExecutionContext()->reportResult(Sym.ID.str(), toYAML(Sym));
   }
 
   SymbolSlab mergeResults() override {
@@ -171,7 +170,7 @@ public:
     Executor.getToolResults()->forEachResult(
         [&](llvm::StringRef Key, llvm::StringRef Value) {
           llvm::yaml::Input Yin(Value);
-          auto Sym = clang::clangd::SymbolFromYAML(Yin);
+          auto Sym = cantFail(clang::clangd::symbolFromYAML(Yin));
           auto ID = cantFail(clang::clangd::SymbolID::fromStr(Key));
           if (const auto *Existing = UniqueSymbols.find(ID))
             UniqueSymbols.insert(mergeSymbol(*Existing, Sym));
@@ -270,15 +269,9 @@ int main(int argc, const char **argv) {
   // Reduce phase: combine symbols with the same IDs.
   auto UniqueSymbols = Consumer->mergeResults();
   // Output phase: emit result symbols.
-  switch (clang::clangd::Format) {
-  case clang::clangd::IndexFormat::YAML:
-    SymbolsToYAML(UniqueSymbols, llvm::outs());
-    break;
-  case clang::clangd::IndexFormat::Binary: {
-    clang::clangd::IndexFileOut Out;
-    Out.Symbols = &UniqueSymbols;
-    llvm::outs() << Out;
-  }
-  }
+  clang::clangd::IndexFileOut Out;
+  Out.Symbols = &UniqueSymbols;
+  Out.Format = clang::clangd::Format;
+  llvm::outs() << Out;
   return 0;
 }
