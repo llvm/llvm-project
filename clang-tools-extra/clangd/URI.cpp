@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "URI.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
@@ -15,7 +16,6 @@
 #include "llvm/Support/Path.h"
 #include <algorithm>
 #include <iomanip>
-#include <locale>
 #include <sstream>
 
 LLVM_INSTANTIATE_REGISTRY(clang::clangd::URISchemeRegistry)
@@ -134,11 +134,10 @@ std::string percentDecode(llvm::StringRef Content) {
 bool isValidScheme(llvm::StringRef Scheme) {
   if (Scheme.empty())
     return false;
-  if (!std::isalpha(Scheme[0]))
+  if (!llvm::isAlpha(Scheme[0]))
     return false;
   return std::all_of(Scheme.begin() + 1, Scheme.end(), [](char C) {
-    return std::isalpha(C) || std::isdigit(C) || C == '+' || C == '.' ||
-           C == '-';
+    return llvm::isAlnum(C) || C == '+' || C == '.' || C == '-';
   });
 }
 
