@@ -80,7 +80,7 @@ protected:
   explicit Symbol(Kind K, StringRef N = "")
       : SymbolKind(K), IsExternal(true), IsCOMDAT(false),
         WrittenToSymtab(false), PendingArchiveLoad(false), IsGCRoot(false),
-        Name(N) {}
+        IsRuntimePseudoReloc(false), Name(N) {}
 
   const unsigned SymbolKind : 8;
   unsigned IsExternal : 1;
@@ -103,6 +103,8 @@ public:
 
   /// True if we've already added this symbol to the list of GC roots.
   unsigned IsGCRoot : 1;
+
+  unsigned IsRuntimePseudoReloc : 1;
 
 protected:
   StringRef Name;
@@ -309,8 +311,6 @@ public:
   uint16_t getOrdinal() { return File->Hdr->OrdinalHint; }
 
   ImportFile *File;
-
-  bool IsRuntimePseudoReloc = false;
 };
 
 // This class represents a symbol for a jump table entry which jumps

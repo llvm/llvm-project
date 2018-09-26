@@ -11,42 +11,42 @@ RUN: test -f instrprof-shared-lib.gcno
 RUN: %clang -DEXIT_ABRUPTLY -DSHARED_CALL_BEFORE_GCOV_FLUSH -DSHARED_CALL_AFTER_GCOV_FLUSH --coverage -o %t -L%t.d -rpath %t.d -lfunc %S/Inputs/instrprof-shared-main-gcov-flush.c
 RUN: test -f instrprof-shared-main-gcov-flush.gcno
 
+RUN: rm -f instrprof-shared-main-gcov-flush.gcda instrprof-shared-lib.gcda
 RUN: %run %t
 RUN: llvm-cov gcov instrprof-shared-main-gcov-flush.gcda
 RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-shared-main-gcov-flush.c.gcov %S/Inputs/instrprof-shared-main-gcov-flush_no-writeout.c.gcov
 RUN: llvm-cov gcov instrprof-shared-lib.gcda
 RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-shared-lib.c.gcov %S/Inputs/instrprof-shared-lib.c.gcov
-RUN: rm instrprof-shared-main-gcov-flush.gcda instrprof-shared-lib.gcda
 
 # Test the case where we exit normally and we have a call to the shared library function before __gcov_flush.
 RUN: %clang -DSHARED_CALL_BEFORE_GCOV_FLUSH --coverage -o %t -L%t.d -rpath %t.d -lfunc %S/Inputs/instrprof-shared-main-gcov-flush.c
 RUN: test -f instrprof-shared-main-gcov-flush.gcno
 
+RUN: rm -f instrprof-shared-main-gcov-flush.gcda instrprof-shared-lib.gcda
 RUN: %run %t
 RUN: llvm-cov gcov instrprof-shared-main-gcov-flush.gcda
 RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-shared-main-gcov-flush.c.gcov %S/Inputs/instrprof-shared-main-gcov-flush_shared-call-before.c.gcov
 RUN: llvm-cov gcov instrprof-shared-lib.gcda
 RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-shared-lib.c.gcov %S/Inputs/instrprof-shared-lib.c.gcov
-RUN: rm instrprof-shared-main-gcov-flush.gcda instrprof-shared-lib.gcda
 
 # Test the case where we exit normally and we have a call to the shared library function after __gcov_flush.
 RUN: %clang -DSHARED_CALL_AFTER_GCOV_FLUSH --coverage -o %t -L%t.d -rpath %t.d -lfunc %S/Inputs/instrprof-shared-main-gcov-flush.c
 RUN: test -f instrprof-shared-main-gcov-flush.gcno
 
+RUN: rm -f instrprof-shared-main-gcov-flush.gcda instrprof-shared-lib.gcda
 RUN: %run %t
 RUN: llvm-cov gcov instrprof-shared-main-gcov-flush.gcda
 RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-shared-main-gcov-flush.c.gcov %S/Inputs/instrprof-shared-main-gcov-flush_shared-call-after.c.gcov
 RUN: llvm-cov gcov instrprof-shared-lib.gcda
 RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-shared-lib.c.gcov %S/Inputs/instrprof-shared-lib.c.gcov
-RUN: rm instrprof-shared-main-gcov-flush.gcda instrprof-shared-lib.gcda
 
 # Test the case where we exit normally and we have calls to the shared library function before and after __gcov_flush.
 RUN: %clang -DSHARED_CALL_BEFORE_GCOV_FLUSH -DSHARED_CALL_AFTER_GCOV_FLUSH --coverage -o %t -L%t.d -rpath %t.d -lfunc %S/Inputs/instrprof-shared-main-gcov-flush.c
 RUN: test -f instrprof-shared-main-gcov-flush.gcno
 
+RUN: rm -f instrprof-shared-main-gcov-flush.gcda instrprof-shared-lib.gcda
 RUN: %run %t
 RUN: llvm-cov gcov instrprof-shared-main-gcov-flush.gcda
 RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-shared-main-gcov-flush.c.gcov %S/Inputs/instrprof-shared-main-gcov-flush_shared-call-before-after.c.gcov
 RUN: llvm-cov gcov instrprof-shared-lib.gcda
 RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-shared-lib.c.gcov %S/Inputs/instrprof-shared-lib_called-twice.c.gcov
-RUN: rm instrprof-shared-main-gcov-flush.gcda instrprof-shared-lib.gcda
