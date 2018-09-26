@@ -112,14 +112,14 @@ void SetGlobalEnableOptions(const DebuggerSP &debugger_sp,
 /// Code to handle the StructuredDataDarwinLog settings
 //------------------------------------------------------------------
 
-static PropertyDefinition g_properties[] = {
+static constexpr PropertyDefinition g_properties[] = {
     {
         "enable-on-startup",       // name
         OptionValue::eTypeBoolean, // type
         true,                      // global
         false,                     // default uint value
         nullptr,                   // default cstring value
-        nullptr,                   // enum values
+        {},                        // enum values
         "Enable Darwin os_log collection when debugged process is launched "
         "or attached." // description
     },
@@ -129,13 +129,13 @@ static PropertyDefinition g_properties[] = {
         true,                     // global
         0,                        // default uint value
         "",                       // default cstring value
-        nullptr,                  // enum values
+        {},                       // enum values
         "Specify the options to 'plugin structured-data darwin-log enable' "
         "that should be applied when automatically enabling logging on "
         "startup/attach." // description
     },
     // Last entry sentinel.
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, nullptr, nullptr}};
+    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, {}, nullptr}};
 
 enum { ePropertyEnableOnStartup = 0, ePropertyAutoEnableOptions = 1 };
 
@@ -402,23 +402,23 @@ static void RegisterFilterOperations() {
 /// This resets the logging with whatever settings are currently set.
 // -------------------------------------------------------------------------
 
-static OptionDefinition g_enable_option_table[] = {
+static constexpr OptionDefinition g_enable_option_table[] = {
     // Source stream include/exclude options (the first-level filter). This one
     // should be made as small as possible as everything that goes through here
     // must be processed by the process monitor.
     {LLDB_OPT_SET_ALL, false, "any-process", 'a', OptionParser::eNoArgument,
-     nullptr, nullptr, 0, eArgTypeNone,
+     nullptr, {}, 0, eArgTypeNone,
      "Specifies log messages from other related processes should be "
      "included."},
     {LLDB_OPT_SET_ALL, false, "debug", 'd', OptionParser::eNoArgument, nullptr,
-     nullptr, 0, eArgTypeNone,
+     {}, 0, eArgTypeNone,
      "Specifies debug-level log messages should be included.  Specifying"
      " --debug implies --info."},
     {LLDB_OPT_SET_ALL, false, "info", 'i', OptionParser::eNoArgument, nullptr,
-     nullptr, 0, eArgTypeNone,
+     {}, 0, eArgTypeNone,
      "Specifies info-level log messages should be included."},
     {LLDB_OPT_SET_ALL, false, "filter", 'f', OptionParser::eRequiredArgument,
-     nullptr, nullptr, 0, eArgRawInput,
+     nullptr, {}, 0, eArgRawInput,
      // There doesn't appear to be a great way for me to have these multi-line,
      // formatted tables in help.  This looks mostly right but there are extra
      // linefeeds added at seemingly random spots, and indentation isn't
@@ -452,52 +452,52 @@ static OptionDefinition g_enable_option_table[] = {
      "Prefer character classes like [[:digit:]] to \\d and the like, as "
      "getting the backslashes escaped through properly is error-prone."},
     {LLDB_OPT_SET_ALL, false, "live-stream", 'l',
-     OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,
+     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean,
      "Specify whether logging events are live-streamed or buffered.  "
      "True indicates live streaming, false indicates buffered.  The "
      "default is true (live streaming).  Live streaming will deliver "
      "log messages with less delay, but buffered capture mode has less "
      "of an observer effect."},
     {LLDB_OPT_SET_ALL, false, "no-match-accepts", 'n',
-     OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,
+     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean,
      "Specify whether a log message that doesn't match any filter rule "
      "is accepted or rejected, where true indicates accept.  The "
      "default is true."},
     {LLDB_OPT_SET_ALL, false, "echo-to-stderr", 'e',
-     OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,
+     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean,
      "Specify whether os_log()/NSLog() messages are echoed to the "
      "target program's stderr.  When DarwinLog is enabled, we shut off "
      "the mirroring of os_log()/NSLog() to the program's stderr.  "
      "Setting this flag to true will restore the stderr mirroring."
      "The default is false."},
     {LLDB_OPT_SET_ALL, false, "broadcast-events", 'b',
-     OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,
+     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean,
      "Specify if the plugin should broadcast events.  Broadcasting "
      "log events is a requirement for displaying the log entries in "
      "LLDB command-line.  It is also required if LLDB clients want to "
      "process log events.  The default is true."},
     // Message formatting options
     {LLDB_OPT_SET_ALL, false, "timestamp-relative", 'r',
-     OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
+     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
      "Include timestamp in the message header when printing a log "
      "message.  The timestamp is relative to the first displayed "
      "message."},
     {LLDB_OPT_SET_ALL, false, "subsystem", 's', OptionParser::eNoArgument,
-     nullptr, nullptr, 0, eArgTypeNone,
+     nullptr, {}, 0, eArgTypeNone,
      "Include the subsystem in the the message header when displaying "
      "a log message."},
     {LLDB_OPT_SET_ALL, false, "category", 'c', OptionParser::eNoArgument,
-     nullptr, nullptr, 0, eArgTypeNone,
-     "Include the category in the message header when displaying "
+     nullptr, {}, 0, eArgTypeNone,
+     "Include the category in the the message header when displaying "
      "a log message."},
     {LLDB_OPT_SET_ALL, false, "activity-chain", 'C', OptionParser::eNoArgument,
-     nullptr, nullptr, 0, eArgTypeNone,
+     nullptr, {}, 0, eArgTypeNone,
      "Include the activity parent-child chain in the message header "
      "when displaying a log message.  The activity hierarchy is "
      "displayed as {grandparent-activity}:"
      "{parent-activity}:{activity}[:...]."},
     {LLDB_OPT_SET_ALL, false, "all-fields", 'A', OptionParser::eNoArgument,
-     nullptr, nullptr, 0, eArgTypeNone,
+     nullptr, {}, 0, eArgTypeNone,
      "Shortcut to specify that all header fields should be displayed."}};
 
 class EnableOptions : public Options {

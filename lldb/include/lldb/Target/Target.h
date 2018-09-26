@@ -51,7 +51,7 @@
 
 namespace lldb_private {
 
-extern OptionEnumValueElement g_dynamic_value_types[];
+OptionEnumValues GetDynamicValueTypes();
 
 typedef enum InlineStrategy {
   eInlineBreakpointsNever = 0,

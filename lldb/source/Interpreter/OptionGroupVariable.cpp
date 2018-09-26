@@ -24,31 +24,31 @@ using namespace lldb_private;
 
 // if you add any options here, remember to update the counters in
 // OptionGroupVariable::GetNumDefinitions()
-static OptionDefinition g_variable_options[] = {
+static constexpr OptionDefinition g_variable_options[] = {
     {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "no-args", 'a',
-     OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
+     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
      "Omit function arguments."},
     {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "no-locals", 'l',
-     OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
+     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
      "Omit local variables."},
     {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "show-globals", 'g',
-     OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
+     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
      "Show the current frame source file global and static variables."},
     {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "show-declaration", 'c',
-     OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
+     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
      "Show variable declaration information (source file and line where the "
      "variable was declared)."},
     {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "regex", 'r',
-     OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeRegularExpression,
+     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeRegularExpression,
      "The <variable-name> argument for name lookups are regular expressions."},
     {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "scope", 's',
-     OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
+     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
      "Show variable scope (argument, local, global, static)."},
     {LLDB_OPT_SET_1, false, "summary", 'y', OptionParser::eRequiredArgument,
-     nullptr, nullptr, 0, eArgTypeName,
+     nullptr, {}, 0, eArgTypeName,
      "Specify the summary that the variable output should use."},
     {LLDB_OPT_SET_2, false, "summary-string", 'z',
-     OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeName,
+     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeName,
      "Specify a summary string to use to format the variable output."},
 };
 

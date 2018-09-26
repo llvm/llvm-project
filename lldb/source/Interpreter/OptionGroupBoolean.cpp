@@ -32,7 +32,7 @@ OptionGroupBoolean::OptionGroupBoolean(uint32_t usage_mask, bool required,
   m_option_definition.option_has_arg = no_argument_toggle_default
                                            ? OptionParser::eNoArgument
                                            : OptionParser::eRequiredArgument;
-  m_option_definition.enum_values = nullptr;
+  m_option_definition.enum_values = {};
   m_option_definition.completion_type = 0;
   m_option_definition.argument_type = eArgTypeBoolean;
   m_option_definition.usage_text = usage_text;
