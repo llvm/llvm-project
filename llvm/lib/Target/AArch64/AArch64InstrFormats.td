@@ -1173,16 +1173,23 @@ def pstatefield4_op : Operand<i32> {
   let PrintMethod = "printSystemPStateField";
 }
 
+// Instructions to modify PSTATE, no input reg
 let Defs = [NZCV] in
+class PstateWriteSimple<dag iops, string asm, string operands>
+  : SimpleSystemI<0, iops, asm, operands> {
+
+  let Inst{20-19} = 0b00;
+  let Inst{15-12} = 0b0100;
+}
+
 class MSRpstateImm0_15
-  : SimpleSystemI<0, (ins pstatefield4_op:$pstatefield, imm0_15:$imm),
-                  "msr", "\t$pstatefield, $imm">,
+  : PstateWriteSimple<(ins pstatefield4_op:$pstatefield, imm0_15:$imm), "msr",
+                  "\t$pstatefield, $imm">,
     Sched<[WriteSys]> {
+
   bits<6> pstatefield;
   bits<4> imm;
-  let Inst{20-19} = 0b00;
   let Inst{18-16} = pstatefield{5-3};
-  let Inst{15-12} = 0b0100;
   let Inst{11-8} = imm;
   let Inst{7-5} = pstatefield{2-0};
 
@@ -1201,16 +1208,15 @@ def pstatefield1_op : Operand<i32> {
   let PrintMethod = "printSystemPStateField";
 }
 
-let Defs = [NZCV] in
 class MSRpstateImm0_1
-  : SimpleSystemI<0, (ins pstatefield1_op:$pstatefield, imm0_1:$imm),
-                  "msr", "\t$pstatefield, $imm">,
+  : PstateWriteSimple<(ins pstatefield1_op:$pstatefield, imm0_1:$imm), "msr",
+                 "\t$pstatefield, $imm">,
     Sched<[WriteSys]> {
+
   bits<6> pstatefield;
   bit imm;
-  let Inst{20-19} = 0b00;
   let Inst{18-16} = pstatefield{5-3};
-  let Inst{15-9} = 0b0100000;
+  let Inst{11-9} = 0b000;
   let Inst{8} = imm;
   let Inst{7-5} = pstatefield{2-0};
 
@@ -4395,7 +4401,7 @@ multiclass FPConversion<string asm> {
 //---
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
-class BaseSingleOperandFPData<bits<4> opcode, RegisterClass regtype,
+class BaseSingleOperandFPData<bits<6> opcode, RegisterClass regtype,
                               ValueType vt, string asm, SDPatternOperator node>
     : I<(outs regtype:$Rd), (ins regtype:$Rn), asm, "\t$Rd, $Rn", "",
          [(set (vt regtype:$Rd), (node (vt regtype:$Rn)))]>,
@@ -4403,8 +4409,8 @@ class BaseSingleOperandFPData<bits<4> opcode, RegisterClass regtype,
   bits<5> Rd;
   bits<5> Rn;
   let Inst{31-24} = 0b00011110;
-  let Inst{21-19} = 0b100;
-  let Inst{18-15} = opcode;
+  let Inst{21}    = 0b1;
+  let Inst{20-15} = opcode;
   let Inst{14-10} = 0b10000;
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Rd;
@@ -4412,16 +4418,17 @@ class BaseSingleOperandFPData<bits<4> opcode, RegisterClass regtype,
 
 multiclass SingleOperandFPData<bits<4> opcode, string asm,
                                SDPatternOperator node = null_frag> {
-  def Hr : BaseSingleOperandFPData<opcode, FPR16, f16, asm, node> {
+
+  def Hr : BaseSingleOperandFPData<{0b00,opcode}, FPR16, f16, asm, node> {
     let Inst{23-22} = 0b11; // 16-bit size flag
     let Predicates = [HasFullFP16];
   }
 
-  def Sr : BaseSingleOperandFPData<opcode, FPR32, f32, asm, node> {
+  def Sr : BaseSingleOperandFPData<{0b00,opcode}, FPR32, f32, asm, node> {
     let Inst{23-22} = 0b00; // 32-bit size flag
   }
 
-  def Dr : BaseSingleOperandFPData<opcode, FPR64, f64, asm, node> {
+  def Dr : BaseSingleOperandFPData<{0b00,opcode}, FPR64, f64, asm, node> {
     let Inst{23-22} = 0b01; // 64-bit size flag
   }
 }

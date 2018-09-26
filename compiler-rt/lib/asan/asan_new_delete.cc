@@ -26,7 +26,7 @@
 // anyway by passing extra -export flags to the linker, which is exactly that
 // dllexport would normally do. We need to export them in order to make the
 // VS2015 dynamic CRT (MD) work.
-#if SANITIZER_WINDOWS
+#if SANITIZER_WINDOWS && defined(_MSC_VER)
 #define CXX_OPERATOR_ATTRIBUTE
 #define COMMENT_EXPORT(sym) __pragma(comment(linker, "/export:" sym))
 #ifdef _WIN64

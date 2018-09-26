@@ -2517,7 +2517,9 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
        Right.MatchingParen->BlockKind != BK_Block))
     return !Style.Cpp11BracedListStyle;
   if (Left.is(TT_BlockComment))
-    return !Left.TokenText.endswith("=*/");
+    // No whitespace in x(/*foo=*/1), except for JavaScript.
+    return Style.Language == FormatStyle::LK_JavaScript ||
+           !Left.TokenText.endswith("=*/");
   if (Right.is(tok::l_paren)) {
     if ((Left.is(tok::r_paren) && Left.is(TT_AttributeParen)) ||
         (Left.is(tok::r_square) && Left.is(TT_AttributeSquare)))

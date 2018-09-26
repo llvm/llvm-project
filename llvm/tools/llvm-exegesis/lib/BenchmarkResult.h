@@ -41,9 +41,17 @@ struct InstructionBenchmarkKey {
 };
 
 struct BenchmarkMeasure {
+  // A helper to create an unscaled BenchmarkMeasure.
+  static BenchmarkMeasure Create(std::string Key, double Value) {
+    return {Key, Value, Value};
+  }
   std::string Key;
-  double Value;
-  std::string DebugString;
+  // This is the per-instruction value, i.e. measured quantity scaled per
+  // instruction.
+  double PerInstructionValue;
+  // This is the per-snippet value, i.e. measured quantity for one repetition of
+  // the whole snippet.
+  double PerSnippetValue;
 };
 
 // The result of an instruction benchmark.
@@ -81,7 +89,7 @@ struct InstructionBenchmark {
 // Utilities to work with Benchmark measures.
 
 // A class that measures stats over benchmark measures.
-class BenchmarkMeasureStats {
+class PerInstructionStats {
 public:
   void push(const BenchmarkMeasure &BM);
 

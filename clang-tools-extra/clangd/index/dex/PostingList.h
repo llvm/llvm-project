@@ -66,10 +66,8 @@ public:
   /// go through the chunks and decompress them on-the-fly when necessary.
   std::unique_ptr<Iterator> iterator() const;
 
-  /// Returns in-memory size.
-  size_t bytes() const {
-    return sizeof(Chunk) + Chunks.capacity() * sizeof(Chunk);
-  }
+  /// Returns in-memory size of external storage.
+  size_t bytes() const { return Chunks.capacity() * sizeof(Chunk); }
 
 private:
   const std::vector<Chunk> Chunks;

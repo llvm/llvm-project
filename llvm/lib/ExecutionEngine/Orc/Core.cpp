@@ -1702,6 +1702,13 @@ ExecutionSession::lookup(const JITDylibList &JDs, const SymbolNameSet &Symbols,
 #endif
 }
 
+void ExecutionSession::dump(raw_ostream &OS) {
+  runSessionLocked([this, &OS]() {
+    for (auto &JD : JDs)
+      JD->dump(OS);
+  });
+}
+
 void ExecutionSession::runOutstandingMUs() {
   while (1) {
     std::pair<JITDylib *, std::unique_ptr<MaterializationUnit>> JITDylibAndMU;

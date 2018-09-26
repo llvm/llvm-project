@@ -1,4 +1,5 @@
-; RUN: lli -jit-kind=orc-lazy -compile-threads=5 -thread-entry hello %s | FileCheck %s
+; RUN: lli -jit-kind=orc-lazy -compile-threads=2 -thread-entry hello %s | FileCheck %s
+; REQUIRES: thread_support
 ;
 ; CHECK: Hello
 

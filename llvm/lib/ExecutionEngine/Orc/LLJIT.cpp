@@ -151,9 +151,9 @@ Expected<std::unique_ptr<LLLazyJIT>>
 
   const Triple &TT = JTMB.getTargetTriple();
 
-  auto CCMgr = createLocalCompileCallbackManager(TT, *ES, 0);
-  if (!CCMgr)
-    return CCMgr.takeError();
+  auto LCTMgr = createLocalLazyCallThroughManager(TT, *ES, 0);
+  if (!LCTMgr)
+    return LCTMgr.takeError();
 
   auto ISMBuilder = createLocalIndirectStubsManagerBuilder(TT);
   if (!ISMBuilder)
@@ -167,12 +167,12 @@ Expected<std::unique_ptr<LLLazyJIT>>
       return TM.takeError();
     return std::unique_ptr<LLLazyJIT>(
         new LLLazyJIT(std::move(ES), std::move(*TM), std::move(DL),
-                      std::move(*CCMgr), std::move(ISMBuilder)));
+                      std::move(*LCTMgr), std::move(ISMBuilder)));
   }
 
   return std::unique_ptr<LLLazyJIT>(new LLLazyJIT(
       std::move(ES), std::move(JTMB), std::move(DL), NumCompileThreads,
-      std::move(*CCMgr), std::move(ISMBuilder)));
+      std::move(*LCTMgr), std::move(ISMBuilder)));
 }
 
 Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
@@ -191,21 +191,22 @@ Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
 
 LLLazyJIT::LLLazyJIT(
     std::unique_ptr<ExecutionSession> ES, std::unique_ptr<TargetMachine> TM,
-    DataLayout DL, std::unique_ptr<JITCompileCallbackManager> CCMgr,
+    DataLayout DL, std::unique_ptr<LazyCallThroughManager> LCTMgr,
     std::function<std::unique_ptr<IndirectStubsManager>()> ISMBuilder)
     : LLJIT(std::move(ES), std::move(TM), std::move(DL)),
-      CCMgr(std::move(CCMgr)), TransformLayer(*this->ES, CompileLayer),
-      CODLayer(*this->ES, TransformLayer, *this->CCMgr, std::move(ISMBuilder)) {
-}
+      LCTMgr(std::move(LCTMgr)), TransformLayer(*this->ES, CompileLayer),
+      CODLayer(*this->ES, TransformLayer, *this->LCTMgr,
+               std::move(ISMBuilder)) {}
 
 LLLazyJIT::LLLazyJIT(
     std::unique_ptr<ExecutionSession> ES, JITTargetMachineBuilder JTMB,
-    DataLayout DL, unsigned NumCompileThreads, std::unique_ptr<JITCompileCallbackManager> CCMgr,
+    DataLayout DL, unsigned NumCompileThreads,
+    std::unique_ptr<LazyCallThroughManager> LCTMgr,
     std::function<std::unique_ptr<IndirectStubsManager>()> ISMBuilder)
     : LLJIT(std::move(ES), std::move(JTMB), std::move(DL), NumCompileThreads),
-      CCMgr(std::move(CCMgr)), TransformLayer(*this->ES, CompileLayer),
-      CODLayer(*this->ES, TransformLayer, *this->CCMgr, std::move(ISMBuilder)) {
-}
+      LCTMgr(std::move(LCTMgr)), TransformLayer(*this->ES, CompileLayer),
+      CODLayer(*this->ES, TransformLayer, *this->LCTMgr,
+               std::move(ISMBuilder)) {}
 
 } // End namespace orc.
 } // End namespace llvm.

@@ -44,8 +44,8 @@ public:
 
 private:
   std::vector<BenchmarkMeasure>
-  runMeasurements(const ExecutableFunction &EF, ScratchSpace &Scratch,
-                  const unsigned NumRepetitions) const override;
+  runMeasurements(const ExecutableFunction &EF,
+                  ScratchSpace &Scratch) const override;
 
   virtual const char *getCounterName() const;
 };

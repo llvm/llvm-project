@@ -1741,31 +1741,64 @@ TEST(CompletionTest, CompletionFunctionArgsDisabled) {
   CodeCompleteOptions Opts;
   Opts.EnableSnippets = true;
   Opts.EnableFunctionArgSnippets = false;
-  const std::string Header =
-      R"cpp(
+
+  {
+    auto Results = completions(
+        R"cpp(
       void xfoo();
       void xfoo(int x, int y);
-      void xbar();
-      void f() {
-    )cpp";
-  {
-    auto Results = completions(Header + "\nxfo^", {}, Opts);
+      void f() { xfo^ })cpp",
+        {}, Opts);
     EXPECT_THAT(
         Results.Completions,
         UnorderedElementsAre(AllOf(Named("xfoo"), SnippetSuffix("()")),
                              AllOf(Named("xfoo"), SnippetSuffix("($0)"))));
   }
   {
-    auto Results = completions(Header + "\nxba^", {}, Opts);
+    auto Results = completions(
+        R"cpp(
+      void xbar();
+      void f() { xba^ })cpp",
+        {}, Opts);
     EXPECT_THAT(Results.Completions, UnorderedElementsAre(AllOf(
                                          Named("xbar"), SnippetSuffix("()"))));
   }
   {
     Opts.BundleOverloads = true;
-    auto Results = completions(Header + "\nxfo^", {}, Opts);
+    auto Results = completions(
+        R"cpp(
+      void xfoo();
+      void xfoo(int x, int y);
+      void f() { xfo^ })cpp",
+        {}, Opts);
     EXPECT_THAT(
         Results.Completions,
         UnorderedElementsAre(AllOf(Named("xfoo"), SnippetSuffix("($0)"))));
+  }
+  {
+    auto Results = completions(
+        R"cpp(
+      template <class T, class U>
+      void xfoo(int a, U b);
+      void f() { xfo^ })cpp",
+        {}, Opts);
+    EXPECT_THAT(
+        Results.Completions,
+        UnorderedElementsAre(AllOf(Named("xfoo"), SnippetSuffix("<$1>($0)"))));
+  }
+  {
+    auto Results = completions(
+        R"cpp(
+      template <class T>
+      class foo_class{};
+      template <class T>
+      using foo_alias = T**;
+      void f() { foo_^ })cpp",
+        {}, Opts);
+    EXPECT_THAT(
+        Results.Completions,
+        UnorderedElementsAre(AllOf(Named("foo_class"), SnippetSuffix("<$0>")),
+                             AllOf(Named("foo_alias"), SnippetSuffix("<$0>"))));
   }
 }
 

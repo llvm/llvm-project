@@ -186,9 +186,9 @@ private:
 };
 
 CompileOnDemandLayer2::CompileOnDemandLayer2(
-    ExecutionSession &ES, IRLayer &BaseLayer, JITCompileCallbackManager &CCMgr,
+    ExecutionSession &ES, IRLayer &BaseLayer, LazyCallThroughManager &LCTMgr,
     IndirectStubsManagerBuilder BuildIndirectStubsManager)
-    : IRLayer(ES), BaseLayer(BaseLayer), CCMgr(CCMgr),
+    : IRLayer(ES), BaseLayer(BaseLayer), LCTMgr(LCTMgr),
       BuildIndirectStubsManager(std::move(BuildIndirectStubsManager)) {}
 
 Error CompileOnDemandLayer2::add(JITDylib &V, VModuleKey K,
@@ -212,12 +212,15 @@ void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
 
   auto GlobalsModule = extractGlobals(TSM);
 
-  // Delete the bodies of any available externally functions, rename the
-  // rest, and build the compile callbacks.
+  // Delete the bodies of any available externally functions and build the
+  // lazy reexports alias map.
   std::map<SymbolStringPtr, std::pair<JITTargetAddress, JITSymbolFlags>>
       StubCallbacksAndLinkages;
   auto &TargetJD = R.getTargetJITDylib();
+  auto &Resources = getPerDylibResources(TargetJD);
+  auto &ImplD = Resources.getImplDylib();
 
+  SymbolAliasMap LazyReexports;
   for (auto &F : M.functions()) {
     if (F.isDeclaration())
       continue;
@@ -228,81 +231,44 @@ void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
       continue;
     }
 
-    assert(F.hasName() && "Function should have a name");
-    std::string StubUnmangledName = F.getName();
-    F.setName(F.getName() + "$body");
-    auto StubDecl = cloneFunctionDecl(*TSM.getModule(), F);
-    StubDecl->setName(StubUnmangledName);
-    StubDecl->setPersonalityFn(nullptr);
-    StubDecl->setLinkage(GlobalValue::ExternalLinkage);
-    F.replaceAllUsesWith(StubDecl);
+    auto Flags = JITSymbolFlags::fromGlobalValue(F);
+    assert(Flags.isCallable() && "Non-callable definition in functions module");
 
-    auto StubName = Mangle(StubUnmangledName);
-    auto BodyName = Mangle(F.getName());
-    if (auto CallbackAddr = CCMgr.getCompileCallback(
-            [BodyName, &TargetJD, &ES]() -> JITTargetAddress {
-              if (auto Sym = lookup({&TargetJD}, BodyName))
-                return Sym->getAddress();
-              else {
-                ES.reportError(Sym.takeError());
-                return 0;
-              }
-            })) {
-      auto Flags = JITSymbolFlags::fromGlobalValue(F);
-      Flags &= ~JITSymbolFlags::Weak;
-      StubCallbacksAndLinkages[std::move(StubName)] =
-          std::make_pair(*CallbackAddr, Flags);
-    } else {
-      ES.reportError(CallbackAddr.takeError());
-      R.failMaterialization();
-      return;
-    }
+    auto MangledName = Mangle(F.getName());
+    LazyReexports[MangledName] = SymbolAliasMapEntry(MangledName, Flags);
   }
 
-  // Build the stub inits map.
-  IndirectStubsManager::StubInitsMap StubInits;
-  for (auto &KV : StubCallbacksAndLinkages)
-    StubInits[*KV.first] = KV.second;
-
-  // Build the function-body-extracting materialization unit.
-  if (auto Err = R.getTargetJITDylib().define(
-          llvm::make_unique<ExtractingIRMaterializationUnit>(ES, *this,
-                                                             std::move(TSM)))) {
+  // Add the functions module to the implementation dylib using an extracting
+  // materialization unit.
+  if (auto Err =
+          ImplD.define(llvm::make_unique<ExtractingIRMaterializationUnit>(
+              ES, *this, std::move(TSM)))) {
     ES.reportError(std::move(Err));
     R.failMaterialization();
     return;
   }
 
-  // Build the stubs.
-  // FIXME: Remove function bodies materialization unit if stub creation fails.
-  auto &StubsMgr = getStubsManager(TargetJD);
-  if (auto Err = StubsMgr.createStubs(StubInits)) {
-    ES.reportError(std::move(Err));
-    R.failMaterialization();
-    return;
-  }
-
-  // Resolve and finalize stubs.
-  SymbolMap ResolvedStubs;
-  for (auto &KV : StubCallbacksAndLinkages) {
-    if (auto Sym = StubsMgr.findStub(*KV.first, false))
-      ResolvedStubs[KV.first] = Sym;
-    else
-      llvm_unreachable("Stub went missing");
-  }
-
-  R.resolve(ResolvedStubs);
+  // Handle responsibility for function symbols by returning lazy reexports.
+  auto &ISMgr = Resources.getISManager();
+  R.replace(lazyReexports(LCTMgr, ISMgr, ImplD, LazyReexports));
 
   BaseLayer.emit(std::move(R), std::move(K), std::move(GlobalsModule));
 }
 
-IndirectStubsManager &
-CompileOnDemandLayer2::getStubsManager(const JITDylib &V) {
-  std::lock_guard<std::mutex> Lock(CODLayerMutex);
-  StubManagersMap::iterator I = StubsMgrs.find(&V);
-  if (I == StubsMgrs.end())
-    I = StubsMgrs.insert(std::make_pair(&V, BuildIndirectStubsManager())).first;
-  return *I->second;
+CompileOnDemandLayer2::PerDylibResources &
+CompileOnDemandLayer2::getPerDylibResources(JITDylib &TargetD) {
+  auto I = DylibResources.find(&TargetD);
+  if (I == DylibResources.end()) {
+    auto &ImplD =
+        getExecutionSession().createJITDylib(TargetD.getName() + ".impl");
+    TargetD.withSearchOrderDo([&](const JITDylibList &TargetSearchOrder) {
+      ImplD.setSearchOrder(TargetSearchOrder, false);
+    });
+    PerDylibResources PDR(ImplD, BuildIndirectStubsManager());
+    I = DylibResources.insert(std::make_pair(&TargetD, std::move(PDR))).first;
+  }
+
+  return I->second;
 }
 
 void CompileOnDemandLayer2::emitExtractedFunctionsModule(

@@ -159,17 +159,16 @@ private:
   // Create a single-threaded LLLazyJIT instance.
   LLLazyJIT(std::unique_ptr<ExecutionSession> ES,
             std::unique_ptr<TargetMachine> TM, DataLayout DL,
-            std::unique_ptr<JITCompileCallbackManager> CCMgr,
+            std::unique_ptr<LazyCallThroughManager> LCTMgr,
             std::function<std::unique_ptr<IndirectStubsManager>()> ISMBuilder);
 
   // Create a multi-threaded LLLazyJIT instance.
-  LLLazyJIT(std::unique_ptr<ExecutionSession> ES,
-            JITTargetMachineBuilder JTMB, DataLayout DL,
-            unsigned NumCompileThreads,
-            std::unique_ptr<JITCompileCallbackManager> CCMgr,
+  LLLazyJIT(std::unique_ptr<ExecutionSession> ES, JITTargetMachineBuilder JTMB,
+            DataLayout DL, unsigned NumCompileThreads,
+            std::unique_ptr<LazyCallThroughManager> LCTMgr,
             std::function<std::unique_ptr<IndirectStubsManager>()> ISMBuilder);
 
-  std::unique_ptr<JITCompileCallbackManager> CCMgr;
+  std::unique_ptr<LazyCallThroughManager> LCTMgr;
   std::function<std::unique_ptr<IndirectStubsManager>()> ISMBuilder;
 
   IRTransformLayer2 TransformLayer;

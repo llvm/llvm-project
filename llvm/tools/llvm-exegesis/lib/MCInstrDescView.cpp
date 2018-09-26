@@ -159,10 +159,6 @@ llvm::MCInst InstructionBuilder::build() const {
   return Result;
 }
 
-CodeTemplate::CodeTemplate(CodeTemplate &&) = default;
-
-CodeTemplate &CodeTemplate::operator=(CodeTemplate &&) = default;
-
 bool RegisterOperandAssignment::
 operator==(const RegisterOperandAssignment &Other) const {
   return std::tie(Op, Reg) == std::tie(Other.Op, Other.Reg);

@@ -111,27 +111,6 @@ struct InstructionBuilder {
   llvm::SmallVector<llvm::MCOperand, 4> VariableValues;
 };
 
-// A CodeTemplate is a set of InstructionBuilders that may not be fully
-// specified (i.e. some variables are not yet set).
-// This allows the BenchmarkRunner to instantiate it many times with specific
-// values to study their impact on instruction's performance.
-struct CodeTemplate {
-  CodeTemplate() = default;
-
-  CodeTemplate(CodeTemplate &&);            // default
-  CodeTemplate &operator=(CodeTemplate &&); // default
-  CodeTemplate(const CodeTemplate &) = delete;
-  CodeTemplate &operator=(const CodeTemplate &) = delete;
-
-  // Some information about how this template has been created.
-  std::string Info;
-  // The list of the instructions for this template.
-  std::vector<InstructionBuilder> Instructions;
-  // If the template uses the provided scratch memory, the register in which
-  // the pointer to this memory is passed in to the function.
-  unsigned ScratchSpacePointerInReg = 0;
-};
-
 // Represents the assignment of a Register to an Operand.
 struct RegisterOperandAssignment {
   RegisterOperandAssignment(const Operand *Operand, llvm::MCPhysReg Reg)

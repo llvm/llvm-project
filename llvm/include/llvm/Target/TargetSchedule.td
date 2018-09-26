@@ -550,3 +550,10 @@ class PfmIssueCounter<ProcResourceUnits resource, list<string> counters>
   // The list of counters that measure issue events.
   list<string> Counters = counters;
 }
+
+// Each processor can define how to measure NumMicroOps by defining a
+// PfmUopsCounter.
+class PfmUopsCounter<string counter> : PfmCounter {
+  string Counter = counter;
+}
+
