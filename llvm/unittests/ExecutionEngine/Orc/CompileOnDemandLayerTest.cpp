@@ -16,13 +16,18 @@ using namespace llvm::orc;
 
 namespace {
 
-class DummyCallbackManager : public orc::JITCompileCallbackManager {
+class DummyTrampolinePool : public orc::TrampolinePool {
+public:
+  Expected<JITTargetAddress> getTrampoline() {
+    llvm_unreachable("Unimplemented");
+  }
+};
+
+class DummyCallbackManager : public JITCompileCallbackManager {
 public:
   DummyCallbackManager(ExecutionSession &ES)
-      : JITCompileCallbackManager(ES, 0) {}
-
-public:
-  Error grow() override { llvm_unreachable("not implemented"); }
+      : JITCompileCallbackManager(llvm::make_unique<DummyTrampolinePool>(), ES,
+                                  0) {}
 };
 
 class DummyStubsManager : public orc::IndirectStubsManager {

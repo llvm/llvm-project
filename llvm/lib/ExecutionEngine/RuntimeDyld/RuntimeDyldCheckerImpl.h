@@ -41,6 +41,9 @@ private:
 
   RuntimeDyldImpl &getRTDyld() const { return *RTDyld.Dyld; }
 
+  Expected<JITSymbolResolver::LookupResult>
+  lookup(const JITSymbolResolver::LookupSet &Symbols) const;
+
   bool isSymbolValid(StringRef Symbol) const;
   uint64_t getSymbolLocalAddr(StringRef Symbol) const;
   uint64_t getSymbolRemoteAddr(StringRef Symbol) const;

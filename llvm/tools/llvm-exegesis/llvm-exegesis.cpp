@@ -123,21 +123,6 @@ static unsigned getOpcodeOrDie(const llvm::MCInstrInfo &MCInstrInfo) {
   llvm::report_fatal_error(llvm::Twine("unknown opcode ").concat(OpcodeName));
 }
 
-static BenchmarkResultContext
-getBenchmarkResultContext(const LLVMState &State) {
-  BenchmarkResultContext Ctx;
-
-  const llvm::MCInstrInfo &InstrInfo = State.getInstrInfo();
-  for (unsigned E = InstrInfo.getNumOpcodes(), I = 0; I < E; ++I)
-    Ctx.addInstrEntry(I, InstrInfo.getName(I).data());
-
-  const llvm::MCRegisterInfo &RegInfo = State.getRegInfo();
-  for (unsigned E = RegInfo.getNumRegs(), I = 0; I < E; ++I)
-    Ctx.addRegEntry(I, RegInfo.getName(I));
-
-  return Ctx;
-}
-
 // Generates code snippets for opcode `Opcode`.
 static llvm::Expected<std::vector<BenchmarkCode>>
 generateSnippets(const LLVMState &State, unsigned Opcode) {
@@ -345,12 +330,10 @@ void benchmarkMain() {
   if (BenchmarkFile.empty())
     BenchmarkFile = "-";
 
-  const BenchmarkResultContext Context = getBenchmarkResultContext(State);
-
   for (const BenchmarkCode &Conf : Configurations) {
     InstructionBenchmark Result =
         Runner->runConfiguration(Conf, NumRepetitions);
-    ExitOnErr(Result.writeYaml(Context, BenchmarkFile));
+    ExitOnErr(Result.writeYaml(State, BenchmarkFile));
   }
   exegesis::pfm::pfmTerminate();
 }
@@ -386,8 +369,7 @@ static void analysisMain() {
   // Read benchmarks.
   const LLVMState State;
   const std::vector<InstructionBenchmark> Points =
-      ExitOnErr(InstructionBenchmark::readYamls(
-          getBenchmarkResultContext(State), BenchmarkFile));
+      ExitOnErr(InstructionBenchmark::readYamls(State, BenchmarkFile));
   llvm::outs() << "Parsed " << Points.size() << " benchmark points\n";
   if (Points.empty()) {
     llvm::errs() << "no benchmarks to analyze\n";

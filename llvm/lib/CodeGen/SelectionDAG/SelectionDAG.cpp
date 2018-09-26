@@ -7955,6 +7955,7 @@ void SelectionDAG::CreateTopologicalOrder(std::vector<SDNode*>& Order) {
   }
 }
 
+#ifndef NDEBUG
 void SelectionDAG::VerifyDAGDiverence()
 {
   std::vector<SDNode*> TopoOrder;
@@ -7981,6 +7982,7 @@ void SelectionDAG::VerifyDAGDiverence()
            "Divergence bit inconsistency detected\n");
   }
 }
+#endif
 
 
 /// ReplaceAllUsesOfValuesWith - Replace any uses of From with To, leaving
@@ -8205,7 +8207,7 @@ SDValue llvm::peekThroughOneUseBitcasts(SDValue V) {
 bool llvm::isBitwiseNot(SDValue V) {
   if (V.getOpcode() != ISD::XOR)
     return false;
-  ConstantSDNode *C = isConstOrConstSplat(V.getOperand(1));
+  ConstantSDNode *C = isConstOrConstSplat(peekThroughBitcasts(V.getOperand(1)));
   return C && C->isAllOnesValue();
 }
 

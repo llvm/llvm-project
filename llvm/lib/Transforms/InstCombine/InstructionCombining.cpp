@@ -1354,16 +1354,39 @@ Value *InstCombiner::Descale(Value *Val, APInt Scale, bool &NoSignedWrap) {
 Instruction *InstCombiner::foldShuffledBinop(BinaryOperator &Inst) {
   if (!Inst.getType()->isVectorTy()) return nullptr;
 
+  unsigned VWidth = cast<VectorType>(Inst.getType())->getNumElements();
+  Value *LHS = Inst.getOperand(0), *RHS = Inst.getOperand(1);
+  assert(cast<VectorType>(LHS->getType())->getNumElements() == VWidth);
+  assert(cast<VectorType>(RHS->getType())->getNumElements() == VWidth);
+
+  // If both operands of the binop are vector concatenations, then perform the
+  // narrow binop on each pair of the source operands followed by concatenation
+  // of the results.
+  Value *L0, *L1, *R0, *R1;
+  Constant *Mask;
+  if (match(LHS, m_ShuffleVector(m_Value(L0), m_Value(L1), m_Constant(Mask))) &&
+      match(RHS, m_ShuffleVector(m_Value(R0), m_Value(R1), m_Specific(Mask))) &&
+      LHS->hasOneUse() && RHS->hasOneUse() &&
+      cast<ShuffleVectorInst>(LHS)->isConcat()) {
+    // This transform does not have the speculative execution constraint as
+    // below because the shuffle is a concatenation. The new binops are
+    // operating on exactly the same elements as the existing binop.
+    // TODO: We could ease the mask requirement to allow different undef lanes,
+    //       but that requires an analysis of the binop-with-undef output value.
+    Value *NewBO0 = Builder.CreateBinOp(Inst.getOpcode(), L0, R0);
+    if (auto *BO = dyn_cast<BinaryOperator>(NewBO0))
+      BO->copyIRFlags(&Inst);
+    Value *NewBO1 = Builder.CreateBinOp(Inst.getOpcode(), L1, R1);
+    if (auto *BO = dyn_cast<BinaryOperator>(NewBO1))
+      BO->copyIRFlags(&Inst);
+    return new ShuffleVectorInst(NewBO0, NewBO1, Mask);
+  }
+
   // It may not be safe to reorder shuffles and things like div, urem, etc.
   // because we may trap when executing those ops on unknown vector elements.
   // See PR20059.
   if (!isSafeToSpeculativelyExecute(&Inst))
     return nullptr;
-
-  unsigned VWidth = cast<VectorType>(Inst.getType())->getNumElements();
-  Value *LHS = Inst.getOperand(0), *RHS = Inst.getOperand(1);
-  assert(cast<VectorType>(LHS->getType())->getNumElements() == VWidth);
-  assert(cast<VectorType>(RHS->getType())->getNumElements() == VWidth);
 
   auto createBinOpShuffle = [&](Value *X, Value *Y, Constant *M) {
     Value *XY = Builder.CreateBinOp(Inst.getOpcode(), X, Y);
@@ -1375,7 +1398,6 @@ Instruction *InstCombiner::foldShuffledBinop(BinaryOperator &Inst) {
   // If both arguments of the binary operation are shuffles that use the same
   // mask and shuffle within a single vector, move the shuffle after the binop.
   Value *V1, *V2;
-  Constant *Mask;
   if (match(LHS, m_ShuffleVector(m_Value(V1), m_Undef(), m_Constant(Mask))) &&
       match(RHS, m_ShuffleVector(m_Value(V2), m_Undef(), m_Specific(Mask))) &&
       V1->getType() == V2->getType() &&

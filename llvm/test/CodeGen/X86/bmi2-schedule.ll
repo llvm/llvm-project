@@ -430,7 +430,7 @@ define i32 @test_rorx_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; GENERIC-LABEL: test_rorx_i32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    rorxl $5, %edi, %ecx # sched: [1:0.50]
-; GENERIC-NEXT:    rorxl $5, (%rdx), %eax # sched: [7:0.50]
+; GENERIC-NEXT:    rorxl $5, (%rdx), %eax # sched: [6:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -483,7 +483,7 @@ define i64 @test_rorx_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-LABEL: test_rorx_i64:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    rorxq $5, %rdi, %rcx # sched: [1:0.50]
-; GENERIC-NEXT:    rorxq $5, (%rdx), %rax # sched: [7:0.50]
+; GENERIC-NEXT:    rorxq $5, (%rdx), %rax # sched: [6:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -536,7 +536,7 @@ define i32 @test_sarx_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; GENERIC-LABEL: test_sarx_i32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    sarxl %esi, %edi, %ecx # sched: [1:0.50]
-; GENERIC-NEXT:    sarxl %esi, (%rdx), %eax # sched: [7:0.50]
+; GENERIC-NEXT:    sarxl %esi, (%rdx), %eax # sched: [6:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -585,7 +585,7 @@ define i64 @test_sarx_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-LABEL: test_sarx_i64:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    sarxq %rsi, %rdi, %rcx # sched: [1:0.50]
-; GENERIC-NEXT:    sarxq %rsi, (%rdx), %rax # sched: [7:0.50]
+; GENERIC-NEXT:    sarxq %rsi, (%rdx), %rax # sched: [6:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -634,7 +634,7 @@ define i32 @test_shlx_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; GENERIC-LABEL: test_shlx_i32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    shlxl %esi, %edi, %ecx # sched: [1:0.50]
-; GENERIC-NEXT:    shlxl %esi, (%rdx), %eax # sched: [7:0.50]
+; GENERIC-NEXT:    shlxl %esi, (%rdx), %eax # sched: [6:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -683,7 +683,7 @@ define i64 @test_shlx_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-LABEL: test_shlx_i64:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    shlxq %rsi, %rdi, %rcx # sched: [1:0.50]
-; GENERIC-NEXT:    shlxq %rsi, (%rdx), %rax # sched: [7:0.50]
+; GENERIC-NEXT:    shlxq %rsi, (%rdx), %rax # sched: [6:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -732,7 +732,7 @@ define i32 @test_shrx_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; GENERIC-LABEL: test_shrx_i32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    shrxl %esi, %edi, %ecx # sched: [1:0.50]
-; GENERIC-NEXT:    shrxl %esi, (%rdx), %eax # sched: [7:0.50]
+; GENERIC-NEXT:    shrxl %esi, (%rdx), %eax # sched: [6:0.50]
 ; GENERIC-NEXT:    addl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -781,7 +781,7 @@ define i64 @test_shrx_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-LABEL: test_shrx_i64:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    shrxq %rsi, %rdi, %rcx # sched: [1:0.50]
-; GENERIC-NEXT:    shrxq %rsi, (%rdx), %rax # sched: [7:0.50]
+; GENERIC-NEXT:    shrxq %rsi, (%rdx), %rax # sched: [6:0.50]
 ; GENERIC-NEXT:    addq %rcx, %rax # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;

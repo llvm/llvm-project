@@ -376,6 +376,7 @@ private:
 class AsynchronousSymbolQuery {
   friend class ExecutionSession;
   friend class JITDylib;
+  friend class JITSymbolResolverAdapter;
 
 public:
 
@@ -743,6 +744,9 @@ public:
                       << MU->getSymbols() << "\n");
     DispatchMaterialization(JD, std::move(MU));
   }
+
+  /// Dump the state of all the JITDylibs in this session.
+  void dump(raw_ostream &OS);
 
 private:
   static void logErrorsToStdErr(Error Err) {

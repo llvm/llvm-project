@@ -447,16 +447,24 @@ public:
     StringMap<std::pair<StubKey, JITSymbolFlags>> StubIndexes;
   };
 
-  /// Remote compile callback manager.
-  class RemoteCompileCallbackManager : public JITCompileCallbackManager {
+  class RemoteTrampolinePool : public TrampolinePool {
   public:
-    RemoteCompileCallbackManager(OrcRemoteTargetClient &Client,
-                                 ExecutionSession &ES,
-                                 JITTargetAddress ErrorHandlerAddress)
-        : JITCompileCallbackManager(ES, ErrorHandlerAddress), Client(Client) {}
+    RemoteTrampolinePool(OrcRemoteTargetClient &Client) : Client(Client) {}
+
+    Expected<JITTargetAddress> getTrampoline() override {
+      std::lock_guard<std::mutex> Lock(RTPMutex);
+      if (AvailableTrampolines.empty()) {
+        if (auto Err = grow())
+          return std::move(Err);
+      }
+      assert(!AvailableTrampolines.empty() && "Failed to grow trampoline pool");
+      auto TrampolineAddr = AvailableTrampolines.back();
+      AvailableTrampolines.pop_back();
+      return TrampolineAddr;
+    }
 
   private:
-    Error grow() override {
+    Error grow() {
       JITTargetAddress BlockAddr = 0;
       uint32_t NumTrampolines = 0;
       if (auto TrampolineInfoOrErr = Client.emitTrampolineBlock())
@@ -471,7 +479,20 @@ public:
       return Error::success();
     }
 
+    std::mutex RTPMutex;
     OrcRemoteTargetClient &Client;
+    std::vector<JITTargetAddress> AvailableTrampolines;
+  };
+
+  /// Remote compile callback manager.
+  class RemoteCompileCallbackManager : public JITCompileCallbackManager {
+  public:
+    RemoteCompileCallbackManager(OrcRemoteTargetClient &Client,
+                                 ExecutionSession &ES,
+                                 JITTargetAddress ErrorHandlerAddress)
+        : JITCompileCallbackManager(
+              llvm::make_unique<RemoteTrampolinePool>(Client), ES,
+              ErrorHandlerAddress) {}
   };
 
   /// Create an OrcRemoteTargetClient.

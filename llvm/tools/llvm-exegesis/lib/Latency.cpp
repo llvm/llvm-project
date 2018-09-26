@@ -109,8 +109,7 @@ LatencyBenchmarkRunner::~LatencyBenchmarkRunner() = default;
 
 std::vector<BenchmarkMeasure>
 LatencyBenchmarkRunner::runMeasurements(const ExecutableFunction &Function,
-                                        ScratchSpace &Scratch,
-                                        const unsigned NumRepetitions) const {
+                                        ScratchSpace &Scratch) const {
   // Cycle measurements include some overhead from the kernel. Repeat the
   // measure several times and take the minimum value.
   constexpr const int NumMeasurements = 30;
@@ -131,7 +130,8 @@ LatencyBenchmarkRunner::runMeasurements(const ExecutableFunction &Function,
     if (Value < MinLatency)
       MinLatency = Value;
   }
-  return {{"latency", static_cast<double>(MinLatency) / NumRepetitions, ""}};
+  return {{"latency", static_cast<double>(MinLatency),
+           static_cast<double>(MinLatency), ""}};
 }
 
 } // namespace exegesis

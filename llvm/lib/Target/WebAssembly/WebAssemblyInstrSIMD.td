@@ -218,6 +218,13 @@ multiclass SIMDSqrt<ValueType vec_t, string vec, bits<32> simdop> {
            [(set (vec_t V128:$dst), (vec_t (fsqrt V128:$vec)))],
            vec#".sqrt\t$dst, $vec", vec#".sqrt", simdop>;
 }
+multiclass SIMDConvert<ValueType vec_t, ValueType arg_t, SDNode op,
+                       string name, bits<32> simdop> {
+  defm op#_#vec_t#_#arg_t :
+    SIMD_I<(outs V128:$dst), (ins V128:$vec), (outs), (ins),
+           [(set (vec_t V128:$dst), (vec_t (op (arg_t V128:$vec))))],
+           name#"\t$dst, $vec", name, simdop>;
+}
 
 let Defs = [ARGUMENTS] in {
 defm "" : ConstVec<v16i8,
@@ -379,6 +386,15 @@ defm "" : SIMDAbs<v2f64, "f64x2", 128>;
 
 defm "" : SIMDSqrt<v4f32, "f32x4", 141>;
 defm "" : SIMDSqrt<v2f64, "f64x2", 142>;
+
+defm "" : SIMDConvert<v4f32, v4i32, sint_to_fp, "f32x4.convert_s?i32x4", 143>;
+defm "" : SIMDConvert<v4f32, v4i32, uint_to_fp, "f32x4.convert_u?i32x4", 144>;
+defm "" : SIMDConvert<v2f64, v2i64, sint_to_fp, "f64x2.convert_s?i64x2", 145>;
+defm "" : SIMDConvert<v2f64, v2i64, uint_to_fp, "f64x2.convert_u?i64x2", 146>;
+defm "" : SIMDConvert<v4i32, v4f32, fp_to_sint, "i32x4.trunc_saturating_s?f32x4", 143>;
+defm "" : SIMDConvert<v4i32, v4f32, fp_to_uint, "i32x4.trunc_saturating_u?f32x4", 144>;
+defm "" : SIMDConvert<v2i64, v2f64, fp_to_sint, "i64x2.trunc_saturating_s?f64x2", 145>;
+defm "" : SIMDConvert<v2i64, v2f64, fp_to_uint, "i64x2.trunc_saturating_u?f64x2", 146>;
 
 } // Defs = [ARGUMENTS]
 
