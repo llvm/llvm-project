@@ -36,6 +36,7 @@ public:
 Hexagon::Hexagon() {
   // Hexagon Linux uses 64K pages by default.
   DefaultMaxPageSize = 0x10000;
+  NoneRel = R_HEX_NONE;
 }
 
 // Support V60 only at the moment.

@@ -21,6 +21,7 @@ namespace {
 
 class RISCV final : public TargetInfo {
 public:
+  RISCV();
   virtual uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
@@ -28,6 +29,8 @@ public:
 };
 
 } // end anonymous namespace
+
+RISCV::RISCV() { NoneRel = R_RISCV_NONE; }
 
 static uint32_t getEFlags(InputFile *F) {
   if (Config->Is64)

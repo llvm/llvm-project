@@ -16,6 +16,7 @@
 
 #include "DWARF.h"
 #include "Symbols.h"
+#include "Target.h"
 #include "lld/Common/Memory.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -73,7 +74,10 @@ LLDDwarfObj<ELFT>::findAux(const InputSectionBase &Sec, uint64_t Pos,
   // Broken debug info can point to a non-Defined symbol.
   auto *DR = dyn_cast<Defined>(&File->getRelocTargetSym(Rel));
   if (!DR) {
-    error("unsupported relocation target while parsing debug info");
+    RelType Type = Rel.getType(Config->IsMips64EL);
+    if (Type != Target->NoneRel)
+      error(toString(File) + ": relocation " + lld::toString(Type) + " at 0x" +
+            llvm::utohexstr(Rel.r_offset) + " has unsupported target");
     return None;
   }
   uint64_t Val = DR->Value + getAddend<ELFT>(Rel);

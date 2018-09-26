@@ -58,6 +58,7 @@ AArch64::AArch64() {
   RelativeRel = R_AARCH64_RELATIVE;
   IRelativeRel = R_AARCH64_IRELATIVE;
   GotRel = R_AARCH64_GLOB_DAT;
+  NoneRel = R_AARCH64_NONE;
   PltRel = R_AARCH64_JUMP_SLOT;
   TlsDescRel = R_AARCH64_TLSDESC;
   TlsGotRel = R_AARCH64_TLS_TPREL64;

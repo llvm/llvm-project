@@ -95,6 +95,7 @@ public:
 
   RelType CopyRel;
   RelType GotRel;
+  RelType NoneRel;
   RelType PltRel;
   RelType RelativeRel;
   RelType IRelativeRel;
