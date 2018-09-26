@@ -130,7 +130,7 @@ llvm::Expected<std::vector<uint8_t>> FakeMemory::Read(addr_t Addr,
   if (Addr >= Data.size())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Address out of range.");
-  Size = std::min(Size, Data.size() - Addr);
+  Size = std::min(Size, Data.size() - (size_t)Addr);
   return std::vector<uint8_t>(&Data[Addr], &Data[Addr + Size]);
 }
 
@@ -139,7 +139,7 @@ llvm::Expected<size_t> FakeMemory::Write(addr_t Addr,
   if (Addr >= Data.size())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Address out of range.");
-  size_t Size = std::min(Chunk.size(), Data.size() - Addr);
+  size_t Size = std::min(Chunk.size(), Data.size() - (size_t)Addr);
   std::copy_n(Chunk.begin(), Size, &Data[Addr]);
   return Size;
 }
