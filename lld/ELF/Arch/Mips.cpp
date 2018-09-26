@@ -53,6 +53,7 @@ template <class ELFT> MIPS<ELFT>::MIPS() {
   PltEntrySize = 16;
   PltHeaderSize = 32;
   CopyRel = R_MIPS_COPY;
+  NoneRel = R_MIPS_NONE;
   PltRel = R_MIPS_JUMP_SLOT;
   NeedsThunks = true;
   TrapInstr = 0xefefefef;
