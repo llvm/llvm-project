@@ -130,9 +130,6 @@ void Dex::buildIndex() {
   for (const auto &TokenToPostingList : TempInvertedIndex)
     InvertedIndex.insert(
         {TokenToPostingList.first, PostingList(TokenToPostingList.second)});
-
-  vlog("Built Dex with estimated memory usage {0} bytes.",
-       estimateMemoryUsage());
 }
 
 /// Constructs iterators over tokens extracted from the query and exhausts it
@@ -248,8 +245,8 @@ size_t Dex::estimateMemoryUsage() const {
   Bytes += SymbolQuality.size() * sizeof(float);
   Bytes += LookupTable.getMemorySize();
   Bytes += InvertedIndex.getMemorySize();
-  for (const auto &P : InvertedIndex)
-    Bytes += P.second.bytes();
+  for (const auto &TokenToPostingList : InvertedIndex)
+    Bytes += TokenToPostingList.second.bytes();
   return Bytes + BackingDataSize;
 }
 
