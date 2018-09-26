@@ -2,11 +2,17 @@
 ; RUN: llc -filetype=obj %S/Inputs/hidden.ll -o %t2.o
 ; RUN: rm -f %t2.a
 ; RUN: llvm-ar rcs %t2.a %t2.o
-; RUN: wasm-ld %t.o %t2.a -o %t.wasm
-; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; Test that hidden symbols are not exported, whether pulled in from an archive
 ; or directly.
+; RUN: wasm-ld %t.o %t2.a -o %t.wasm
+; RUN: obj2yaml %t.wasm | FileCheck %s
+
+; Test that symbols with default visitiblity are not exported when
+; --no-export-default is passed.
+; RUN: wasm-ld --no-export-default %t.o %t2.a -o %t.nodef.wasm
+; RUN: obj2yaml %t.nodef.wasm | FileCheck %s -check-prefix=NO-DEFAULT
+
 
 target triple = "wasm32-unknown-unknown"
 
@@ -53,3 +59,11 @@ entry:
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           5
 ; CHECK-NEXT:   - Type:
+
+
+; NO-DEFAULT:        - Type:            EXPORT
+; NO-DEFAULT-NEXT:     Exports:
+; NO-DEFAULT-NEXT:       - Name:            memory
+; NO-DEFAULT-NEXT:         Kind:            MEMORY
+; NO-DEFAULT-NEXT:         Index:           0
+; NO-DEFAULT-NEXT:   - Type:

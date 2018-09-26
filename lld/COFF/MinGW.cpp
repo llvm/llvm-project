@@ -20,6 +20,22 @@ using namespace llvm;
 using namespace llvm::COFF;
 
 void AutoExporter::initSymbolExcludes() {
+  ExcludeSymbolPrefixes = {
+      // Import symbols
+      "__imp_",
+      "__IMPORT_DESCRIPTOR_",
+      // Extra import symbols from GNU import libraries
+      "__nm_",
+      // C++ symbols
+      "__rtti_",
+      "__builtin_",
+      // Artifical symbols such as .refptr
+      ".",
+  };
+  ExcludeSymbolSuffixes = {
+      "_iname",
+      "_NULL_THUNK_DATA",
+  };
   if (Config->Machine == I386) {
     ExcludeSymbols = {
         "__NULL_IMPORT_DESCRIPTOR",
@@ -36,6 +52,7 @@ void AutoExporter::initSymbolExcludes() {
         "_DllEntryPoint@12",
         "_DllMainCRTStartup@12",
     };
+    ExcludeSymbolPrefixes.insert("__head_");
   } else {
     ExcludeSymbols = {
         "__NULL_IMPORT_DESCRIPTOR",
@@ -52,6 +69,7 @@ void AutoExporter::initSymbolExcludes() {
         "DllEntryPoint",
         "DllMainCRTStartup",
     };
+    ExcludeSymbolPrefixes.insert("_head_");
   }
 }
 
@@ -110,11 +128,12 @@ bool AutoExporter::shouldExport(Defined *Sym) const {
   if (ExcludeSymbols.count(Sym->getName()))
     return false;
 
-  // Don't export anything that looks like an import symbol (which also can be
-  // a manually defined data symbol with such a name); don't export artificial
-  // symbols like .refptr pointer stubs.
-  if (Sym->getName().startswith("__imp_") || Sym->getName().startswith("."))
-    return false;
+  for (StringRef Prefix : ExcludeSymbolPrefixes.keys())
+    if (Sym->getName().startswith(Prefix))
+      return false;
+  for (StringRef Suffix : ExcludeSymbolSuffixes.keys())
+    if (Sym->getName().endswith(Suffix))
+      return false;
 
   // If a corresponding __imp_ symbol exists and is defined, don't export it.
   if (Symtab->find(("__imp_" + Sym->getName()).str()))

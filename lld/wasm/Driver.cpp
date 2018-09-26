@@ -373,6 +373,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->Entry = getEntry(Args, Args.hasArg(OPT_relocatable) ? "" : "_start");
   Config->ExportAll = Args.hasArg(OPT_export_all);
+  Config->ExportDefault = Args.hasFlag(OPT_export_default,
+      OPT_no_export_default, true);
   Config->ExportTable = Args.hasArg(OPT_export_table);
   errorHandler().FatalWarnings =
       Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
