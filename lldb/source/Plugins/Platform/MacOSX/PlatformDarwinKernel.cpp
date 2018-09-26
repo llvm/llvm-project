@@ -188,12 +188,12 @@ const char *PlatformDarwinKernel::GetDescriptionStatic() {
 
 static PropertyDefinition g_properties[] = {
     {"search-locally-for-kexts", OptionValue::eTypeBoolean, true, true, NULL,
-     NULL, "Automatically search for kexts on the local system when doing "
+     {}, "Automatically search for kexts on the local system when doing "
            "kernel debugging."},
-    {"kext-directories", OptionValue::eTypeFileSpecList, false, 0, NULL, NULL,
+    {"kext-directories", OptionValue::eTypeFileSpecList, false, 0, NULL, {},
      "Directories/KDKs to search for kexts in when starting a kernel debug "
      "session."},
-    {NULL, OptionValue::eTypeInvalid, false, 0, NULL, NULL, NULL}};
+    {NULL, OptionValue::eTypeInvalid, false, 0, NULL, {}, NULL}};
 
 enum { ePropertySearchForKexts = 0, ePropertyKextDirectories };
 
