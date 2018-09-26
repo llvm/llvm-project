@@ -55,6 +55,7 @@ private:
 template <class ELFT> X86_64<ELFT>::X86_64() {
   CopyRel = R_X86_64_COPY;
   GotRel = R_X86_64_GLOB_DAT;
+  NoneRel = R_X86_64_NONE;
   PltRel = R_X86_64_JUMP_SLOT;
   RelativeRel = R_X86_64_RELATIVE;
   IRelativeRel = R_X86_64_IRELATIVE;
