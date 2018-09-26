@@ -11606,8 +11606,15 @@ static SDValue CombineBaseUpdate(SDNode *N,
       continue;
 
     // Check that the add is independent of the load/store.  Otherwise, folding
-    // it would create a cycle.
-    if (User->isPredecessorOf(N) || N->isPredecessorOf(User))
+    // it would create a cycle. We can avoid searching through Addr as it's a
+    // predecessor to both.
+    SmallPtrSet<const SDNode *, 32> Visited;
+    SmallVector<const SDNode *, 16> Worklist;
+    Visited.insert(Addr.getNode());
+    Worklist.push_back(N);
+    Worklist.push_back(User);
+    if (SDNode::hasPredecessorHelper(N, Visited, Worklist) ||
+        SDNode::hasPredecessorHelper(User, Visited, Worklist))
       continue;
 
     // Find the new opcode for the updating load/store.

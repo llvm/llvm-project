@@ -252,8 +252,7 @@ UopsSnippetGenerator::generateCodeTemplate(unsigned Opcode) const {
 
 std::vector<BenchmarkMeasure>
 UopsBenchmarkRunner::runMeasurements(const ExecutableFunction &Function,
-                                     ScratchSpace &Scratch,
-                                     const unsigned NumRepetitions) const {
+                                     ScratchSpace &Scratch) const {
   const auto &SchedModel = State.getSubtargetInfo().getSchedModel();
 
   std::vector<BenchmarkMeasure> Result;
@@ -281,7 +280,8 @@ UopsBenchmarkRunner::runMeasurements(const ExecutableFunction &Function,
       CounterValue += Counter.read();
     }
     Result.push_back({llvm::itostr(ProcResIdx),
-                      static_cast<double>(CounterValue) / NumRepetitions,
+                      static_cast<double>(CounterValue),
+                      static_cast<double>(CounterValue),
                       SchedModel.getProcResource(ProcResIdx)->Name});
   }
   return Result;

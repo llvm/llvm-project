@@ -10,7 +10,7 @@
 ;    }
 ;  }
 
-; CHECK: Store to invariant address was found in loop.
+; CHECK: Variant Store to invariant address was found in loop.
 
 define void @foo(i32* nocapture %var1, i32* nocapture %var2, i32 %itr) #0 {
 entry:

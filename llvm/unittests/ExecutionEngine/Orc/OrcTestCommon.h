@@ -85,6 +85,44 @@ private:
   static bool NativeTargetInitialized;
 };
 
+class SimpleMaterializationUnit : public orc::MaterializationUnit {
+public:
+  using MaterializeFunction =
+      std::function<void(orc::MaterializationResponsibility)>;
+  using DiscardFunction =
+      std::function<void(const orc::JITDylib &, orc::SymbolStringPtr)>;
+  using DestructorFunction = std::function<void()>;
+
+  SimpleMaterializationUnit(
+      orc::SymbolFlagsMap SymbolFlags, MaterializeFunction Materialize,
+      DiscardFunction Discard = DiscardFunction(),
+      DestructorFunction Destructor = DestructorFunction())
+      : MaterializationUnit(std::move(SymbolFlags)),
+        Materialize(std::move(Materialize)), Discard(std::move(Discard)),
+        Destructor(std::move(Destructor)) {}
+
+  ~SimpleMaterializationUnit() override {
+    if (Destructor)
+      Destructor();
+  }
+
+  void materialize(orc::MaterializationResponsibility R) override {
+    Materialize(std::move(R));
+  }
+
+  void discard(const orc::JITDylib &JD, orc::SymbolStringPtr Name) override {
+    if (Discard)
+      Discard(JD, std::move(Name));
+    else
+      llvm_unreachable("Discard not supported");
+  }
+
+private:
+  MaterializeFunction Materialize;
+  DiscardFunction Discard;
+  DestructorFunction Destructor;
+};
+
 // Base class for Orc tests that will execute code.
 class OrcExecutionTest {
 public:

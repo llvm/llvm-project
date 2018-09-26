@@ -10175,15 +10175,6 @@ static SDValue performPostLD1Combine(SDNode *N,
         || UI.getUse().getResNo() != Addr.getResNo())
       continue;
 
-    // Check that the add is independent of the load.  Otherwise, folding it
-    // would create a cycle.
-    if (User->isPredecessorOf(LD) || LD->isPredecessorOf(User))
-      continue;
-    // Also check that add is not used in the vector operand.  This would also
-    // create a cycle.
-    if (User->isPredecessorOf(Vector.getNode()))
-      continue;
-
     // If the increment is a constant, it must match the memory ref size.
     SDValue Inc = User->getOperand(User->getOperand(0) == Addr ? 1 : 0);
     if (ConstantSDNode *CInc = dyn_cast<ConstantSDNode>(Inc.getNode())) {
@@ -10194,11 +10185,16 @@ static SDValue performPostLD1Combine(SDNode *N,
       Inc = DAG.getRegister(AArch64::XZR, MVT::i64);
     }
 
-    // Finally, check that the vector doesn't depend on the load.
-    // Again, this would create a cycle.
-    // The load depending on the vector is fine, as that's the case for the
-    // LD1*post we'll eventually generate anyway.
-    if (LoadSDN->isPredecessorOf(Vector.getNode()))
+    // To avoid cycle construction make sure that neither the load nor the add
+    // are predecessors to each other or the Vector.
+    SmallPtrSet<const SDNode *, 32> Visited;
+    SmallVector<const SDNode *, 16> Worklist;
+    Visited.insert(N);
+    Worklist.push_back(User);
+    Worklist.push_back(LD);
+    Worklist.push_back(Vector.getNode());
+    if (SDNode::hasPredecessorHelper(LD, Visited, Worklist) ||
+        SDNode::hasPredecessorHelper(User, Visited, Worklist))
       continue;
 
     SmallVector<SDValue, 8> Ops;
@@ -10284,7 +10280,13 @@ static SDValue performNEONPostLDSTCombine(SDNode *N,
 
     // Check that the add is independent of the load/store.  Otherwise, folding
     // it would create a cycle.
-    if (User->isPredecessorOf(N) || N->isPredecessorOf(User))
+    SmallPtrSet<const SDNode *, 32> Visited;
+    SmallVector<const SDNode *, 16> Worklist;
+    Visited.insert(Addr.getNode());
+    Worklist.push_back(N);
+    Worklist.push_back(User);
+    if (SDNode::hasPredecessorHelper(N, Visited, Worklist) ||
+        SDNode::hasPredecessorHelper(User, Visited, Worklist))
       continue;
 
     // Find the new opcode for the updating load/store.

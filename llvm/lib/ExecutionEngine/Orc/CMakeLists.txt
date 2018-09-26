@@ -5,6 +5,7 @@ add_llvm_library(LLVMOrcJIT
   IndirectionUtils.cpp
   IRCompileLayer.cpp
   IRTransformLayer.cpp
+  LazyReexports.cpp
   Legacy.cpp
   Layer.cpp
   LLJIT.cpp
@@ -16,6 +17,7 @@ add_llvm_library(LLVMOrcJIT
   OrcMCJITReplacement.cpp
   RPCUtils.cpp
   RTDyldObjectLinkingLayer.cpp
+  ThreadSafeModule.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc

@@ -514,6 +514,7 @@ MachineBasicBlock::iterator  SILoadStoreOptimizer::mergeRead2Pair(
   DebugLoc DL = CI.I->getDebugLoc();
 
   unsigned BaseReg = AddrReg->getReg();
+  unsigned BaseSubReg = AddrReg->getSubReg();
   unsigned BaseRegFlags = 0;
   if (CI.BaseOff) {
     unsigned ImmReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
@@ -525,15 +526,16 @@ MachineBasicBlock::iterator  SILoadStoreOptimizer::mergeRead2Pair(
 
     TII->getAddNoCarry(*MBB, CI.Paired, DL, BaseReg)
       .addReg(ImmReg)
-      .addReg(AddrReg->getReg());
+      .addReg(AddrReg->getReg(), 0, BaseSubReg);
+    BaseSubReg = 0;
   }
 
   MachineInstrBuilder Read2 = BuildMI(*MBB, CI.Paired, DL, Read2Desc, DestReg)
-                                  .addReg(BaseReg, BaseRegFlags) // addr
-                                  .addImm(NewOffset0)            // offset0
-                                  .addImm(NewOffset1)            // offset1
-                                  .addImm(0)                     // gds
-                                  .cloneMergedMemRefs({&*CI.I, &*CI.Paired});
+                        .addReg(BaseReg, BaseRegFlags, BaseSubReg) // addr
+                        .addImm(NewOffset0)                        // offset0
+                        .addImm(NewOffset1)                        // offset1
+                        .addImm(0)                                 // gds
+                        .cloneMergedMemRefs({&*CI.I, &*CI.Paired});
 
   (void)Read2;
 
@@ -601,6 +603,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
   DebugLoc DL = CI.I->getDebugLoc();
 
   unsigned BaseReg = AddrReg->getReg();
+  unsigned BaseSubReg = AddrReg->getSubReg();
   unsigned BaseRegFlags = 0;
   if (CI.BaseOff) {
     unsigned ImmReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
@@ -612,17 +615,18 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeWrite2Pair(
 
     TII->getAddNoCarry(*MBB, CI.Paired, DL, BaseReg)
       .addReg(ImmReg)
-      .addReg(AddrReg->getReg());
+      .addReg(AddrReg->getReg(), 0, BaseSubReg);
+    BaseSubReg = 0;
   }
 
   MachineInstrBuilder Write2 = BuildMI(*MBB, CI.Paired, DL, Write2Desc)
-                                   .addReg(BaseReg, BaseRegFlags) // addr
-                                   .add(*Data0)                   // data0
-                                   .add(*Data1)                   // data1
-                                   .addImm(NewOffset0)            // offset0
-                                   .addImm(NewOffset1)            // offset1
-                                   .addImm(0)                     // gds
-                                   .cloneMergedMemRefs({&*CI.I, &*CI.Paired});
+                        .addReg(BaseReg, BaseRegFlags, BaseSubReg) // addr
+                        .add(*Data0)                               // data0
+                        .add(*Data1)                               // data1
+                        .addImm(NewOffset0)                        // offset0
+                        .addImm(NewOffset1)                        // offset1
+                        .addImm(0)                                 // gds
+                        .cloneMergedMemRefs({&*CI.I, &*CI.Paired});
 
   moveInstsAfter(Write2, CI.InstsToMove);
 

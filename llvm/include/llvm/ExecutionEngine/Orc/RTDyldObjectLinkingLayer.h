@@ -103,6 +103,14 @@ public:
   }
 
 private:
+  Error onObjLoad(VModuleKey K, MaterializationResponsibility &R,
+                  object::ObjectFile &Obj,
+                  std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo,
+                  std::map<StringRef, JITEvaluatedSymbol> Resolved,
+                  std::set<StringRef> &InternalSymbols);
+
+  void onObjEmit(VModuleKey K, MaterializationResponsibility &R, Error Err);
+
   mutable std::mutex RTDyldLayerMutex;
   GetMemoryManagerFunction GetMemoryManager;
   NotifyLoadedFunction NotifyLoaded;

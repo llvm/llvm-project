@@ -1323,6 +1323,18 @@ def : GCNPat <
 >;
 
 def : GCNPat <
+  (i1 (add i1:$src0, i1:$src1)),
+  (S_XOR_B64 $src0, $src1)
+>;
+
+let AddedComplexity = 1 in {
+def : GCNPat <
+  (i1 (add i1:$src0, (i1 -1))),
+  (S_NOT_B64 $src0)
+>;
+}
+
+def : GCNPat <
   (f16 (sint_to_fp i1:$src)),
   (V_CVT_F16_F32_e32 (V_CNDMASK_B32_e64 (i32 0), (i32 CONST.FP32_NEG_ONE), $src))
 >;

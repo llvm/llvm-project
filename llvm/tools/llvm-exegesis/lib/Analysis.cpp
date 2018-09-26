@@ -139,7 +139,7 @@ void Analysis::printInstructionRowCsv(const size_t PointId,
 #endif
   for (const auto &Measurement : Point.Measurements) {
     OS << kCsvSep;
-    writeMeasurementValue<kEscapeCsv>(OS, Measurement.Value);
+    writeMeasurementValue<kEscapeCsv>(OS, Measurement.PerInstructionValue);
   }
   OS << "\n";
 }
@@ -410,14 +410,14 @@ bool Analysis::SchedClassCluster::measurementsMatch(
       return false;
     }
     // Find the latency.
-    SchedClassPoint[0].Value = 0.0;
+    SchedClassPoint[0].PerInstructionValue = 0.0;
     for (unsigned I = 0; I < SC.SCDesc->NumWriteLatencyEntries; ++I) {
       const llvm::MCWriteLatencyEntry *const WLE =
           STI.getWriteLatencyEntry(SC.SCDesc, I);
-      SchedClassPoint[0].Value =
-          std::max<double>(SchedClassPoint[0].Value, WLE->Cycles);
+      SchedClassPoint[0].PerInstructionValue =
+          std::max<double>(SchedClassPoint[0].PerInstructionValue, WLE->Cycles);
     }
-    ClusterCenterPoint[0].Value = Representative[0].avg();
+    ClusterCenterPoint[0].PerInstructionValue = Representative[0].avg();
   } else if (Mode == InstructionBenchmark::Uops) {
     for (int I = 0, E = Representative.size(); I < E; ++I) {
       // Find the pressure on ProcResIdx `Key`.
@@ -433,11 +433,11 @@ bool Analysis::SchedClassCluster::measurementsMatch(
                        [ProcResIdx](const std::pair<uint16_t, float> &WPR) {
                          return WPR.first == ProcResIdx;
                        });
-      SchedClassPoint[I].Value =
+      SchedClassPoint[I].PerInstructionValue =
           ProcResPressureIt == SC.IdealizedProcResPressure.end()
               ? 0.0
               : ProcResPressureIt->second;
-      ClusterCenterPoint[I].Value = Representative[I].avg();
+      ClusterCenterPoint[I].PerInstructionValue = Representative[I].avg();
     }
   } else {
     llvm::errs() << "unimplemented measurement matching for mode " << Mode

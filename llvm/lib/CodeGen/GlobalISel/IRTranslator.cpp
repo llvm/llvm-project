@@ -1145,7 +1145,6 @@ bool IRTranslator::translateLandingPad(const User &U,
   const LandingPadInst &LP = cast<LandingPadInst>(U);
 
   MachineBasicBlock &MBB = MIRBuilder.getMBB();
-  addLandingPadInfo(LP, MBB);
 
   MBB.setIsEHPad();
 

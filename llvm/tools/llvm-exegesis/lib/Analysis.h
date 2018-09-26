@@ -69,7 +69,7 @@ private:
     const std::vector<size_t> &getPointIds() const { return PointIds; }
 
     // Return the cluster centroid.
-    const std::vector<BenchmarkMeasureStats> &getRepresentative() const {
+    const std::vector<PerInstructionStats> &getRepresentative() const {
       return Representative;
     }
 
@@ -85,7 +85,7 @@ private:
     InstructionBenchmarkClustering::ClusterId ClusterId;
     std::vector<size_t> PointIds;
     // Measurement stats for the points in the SchedClassCluster.
-    std::vector<BenchmarkMeasureStats> Representative;
+    std::vector<PerInstructionStats> Representative;
   };
 
   void printInstructionRowCsv(size_t PointId, llvm::raw_ostream &OS) const;

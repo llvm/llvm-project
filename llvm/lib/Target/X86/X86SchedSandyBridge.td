@@ -79,7 +79,7 @@ def : ReadAdvance<ReadAfterLd, 5>;
 multiclass SBWriteResPair<X86FoldableSchedWrite SchedRW,
                           list<ProcResourceKind> ExePorts,
                           int Lat, list<int> Res = [1], int UOps = 1,
-                          int LoadLat = 5, int LoadUOps = 1> {
+                          int LoadLat = 5> {
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -92,7 +92,7 @@ multiclass SBWriteResPair<X86FoldableSchedWrite SchedRW,
   def : WriteRes<SchedRW.Folded, !listconcat([SBPort23], ExePorts)> {
     let Latency = !add(Lat, LoadLat);
     let ResourceCycles = !listconcat([1], Res);
-    let NumMicroOps = !add(UOps, LoadUOps);
+    let NumMicroOps = !add(UOps, 1);
   }
 }
 
@@ -144,10 +144,10 @@ defm : X86WriteRes<WriteSHDrrcl,[SBPort05, SBPort015], 4, [3, 1], 4>;
 defm : X86WriteRes<WriteSHDmri, [SBPort4,SBPort23,SBPort05,SBPort015], 8, [1, 2, 1, 1], 5>;
 defm : X86WriteRes<WriteSHDmrcl,[SBPort4,SBPort23,SBPort05,SBPort015], 10, [1, 2, 3, 1], 7>;
 
-defm : SBWriteResPair<WriteShift,    [SBPort05], 1, [1], 1, 6, 2>;
-defm : SBWriteResPair<WriteShiftCL,  [SBPort05], 3, [3], 3, 6, 2>;
-defm : SBWriteResPair<WriteRotate,   [SBPort05], 2, [2], 2, 6, 2>;
-defm : SBWriteResPair<WriteRotateCL, [SBPort05], 3, [3], 3, 6, 2>;
+defm : SBWriteResPair<WriteShift,    [SBPort05],  1>;
+defm : SBWriteResPair<WriteShiftCL,  [SBPort05],  3, [3], 3>;
+defm : SBWriteResPair<WriteRotate,   [SBPort05],  2, [2], 2>;
+defm : SBWriteResPair<WriteRotateCL, [SBPort05],  3, [3], 3>;
 
 defm : SBWriteResPair<WriteJump,  [SBPort5],   1>;
 defm : SBWriteResPair<WriteCRC32, [SBPort1],   3, [1], 1, 5>;
@@ -924,7 +924,10 @@ def SBWriteResGroup69 : SchedWriteRes<[SBPort4,SBPort23,SBPort05]> {
 }
 def: InstRW<[SBWriteResGroup69], (instregex "BTC(16|32|64)mi8",
                                             "BTR(16|32|64)mi8",
-                                            "BTS(16|32|64)mi8")>;
+                                            "BTS(16|32|64)mi8",
+                                            "SAR(8|16|32|64)m(1|i)",
+                                            "SHL(8|16|32|64)m(1|i)",
+                                            "SHR(8|16|32|64)m(1|i)")>;
 
 def SBWriteResGroup77 : SchedWriteRes<[SBPort0,SBPort1,SBPort23]> {
   let Latency = 8;
@@ -956,6 +959,14 @@ def SBWriteResGroup84 : SchedWriteRes<[SBPort4,SBPort5,SBPort23]> {
   let ResourceCycles = [1,2,2];
 }
 def: InstRW<[SBWriteResGroup84], (instrs FLDCW16m)>;
+
+def SBWriteResGroup85 : SchedWriteRes<[SBPort4,SBPort23,SBPort05]> {
+  let Latency = 8;
+  let NumMicroOps = 5;
+  let ResourceCycles = [1,2,2];
+}
+def: InstRW<[SBWriteResGroup85], (instregex "ROL(8|16|32|64)m(1|i)",
+                                            "ROR(8|16|32|64)m(1|i)")>;
 
 def SBWriteResGroup86 : SchedWriteRes<[SBPort4,SBPort23,SBPort015]> {
   let Latency = 8;
@@ -993,6 +1004,17 @@ def SBWriteResGroup97 : SchedWriteRes<[SBPort1,SBPort4,SBPort23]> {
 }
 def: InstRW<[SBWriteResGroup97], (instregex "IST_F(16|32)m",
                                             "IST_FP(16|32|64)m")>;
+
+def SBWriteResGroup97_2 : SchedWriteRes<[SBPort4,SBPort23,SBPort05]> {
+  let Latency = 9;
+  let NumMicroOps = 6;
+  let ResourceCycles = [1,2,3];
+}
+def: InstRW<[SBWriteResGroup97_2], (instregex "ROL(8|16|32|64)mCL",
+                                              "ROR(8|16|32|64)mCL",
+                                              "SAR(8|16|32|64)mCL",
+                                              "SHL(8|16|32|64)mCL",
+                                              "SHR(8|16|32|64)mCL")>;
 
 def SBWriteResGroup98 : SchedWriteRes<[SBPort4,SBPort23,SBPort015]> {
   let Latency = 9;

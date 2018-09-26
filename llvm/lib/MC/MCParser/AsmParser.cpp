@@ -180,6 +180,9 @@ private:
   /// Did we already inform the user about inconsistent MD5 usage?
   bool ReportedInconsistentMD5 = false;
 
+  // Is alt macro mode enabled.
+  bool AltMacroMode = false;
+
 public:
   AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
             const MCAsmInfo &MAI, unsigned CB);
@@ -260,8 +263,6 @@ public:
   /// }
 
 private:
-  bool isAltmacroString(SMLoc &StrLoc, SMLoc &EndLoc);
-  void altMacroString(StringRef AltMacroStr, std::string &Res);
   bool parseStatement(ParseStatementInfo &Info,
                       MCAsmParserSemaCallback *SI);
   bool parseCurlyBlockScope(SmallVectorImpl<AsmRewrite>& AsmStrRewrites);
@@ -1323,11 +1324,12 @@ AsmParser::applyModifierToExpr(const MCExpr *E,
 /// the End argument will be filled with the last location pointed to the '>'
 /// character.
 
-/// There is a gap between the AltMacro's documentation and the single quote implementation.
-/// GCC does not fully support this feature and so we will not support it.
+/// There is a gap between the AltMacro's documentation and the single quote
+/// implementation. GCC does not fully support this feature and so we will not
+/// support it.
 /// TODO: Adding single quote as a string.
-bool AsmParser::isAltmacroString(SMLoc &StrLoc, SMLoc &EndLoc) {
-  assert((StrLoc.getPointer() != NULL) &&
+static bool isAltmacroString(SMLoc &StrLoc, SMLoc &EndLoc) {
+  assert((StrLoc.getPointer() != nullptr) &&
          "Argument to the function cannot be a NULL value");
   const char *CharPtr = StrLoc.getPointer();
   while ((*CharPtr != '>') && (*CharPtr != '\n') && (*CharPtr != '\r') &&
@@ -1344,12 +1346,14 @@ bool AsmParser::isAltmacroString(SMLoc &StrLoc, SMLoc &EndLoc) {
 }
 
 /// creating a string without the escape characters '!'.
-void AsmParser::altMacroString(StringRef AltMacroStr,std::string &Res) {
+static std::string altMacroString(StringRef AltMacroStr) {
+  std::string Res;
   for (size_t Pos = 0; Pos < AltMacroStr.size(); Pos++) {
     if (AltMacroStr[Pos] == '!')
       Pos++;
     Res += AltMacroStr[Pos];
   }
+  return Res;
 }
 
 /// Parse an expression and return it.
@@ -2437,21 +2441,20 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, StringRef Body,
           for (const AsmToken &Token : A[Index])
             // For altmacro mode, you can write '%expr'.
             // The prefix '%' evaluates the expression 'expr'
-            // and uses the result as a string (e.g. replace %(1+2) with the string "3").
+            // and uses the result as a string (e.g. replace %(1+2) with the
+            // string "3").
             // Here, we identify the integer token which is the result of the
-            // absolute expression evaluation and replace it with its string representation.
-            if ((Lexer.IsaAltMacroMode()) &&
-                 (*(Token.getString().begin()) == '%') && Token.is(AsmToken::Integer))
+            // absolute expression evaluation and replace it with its string
+            // representation.
+            if (AltMacroMode && Token.getString().front() == '%' &&
+                Token.is(AsmToken::Integer))
               // Emit an integer value to the buffer.
               OS << Token.getIntVal();
             // Only Token that was validated as a string and begins with '<'
             // is considered altMacroString!!!
-            else if ((Lexer.IsaAltMacroMode()) &&
-                     (*(Token.getString().begin()) == '<') &&
+            else if (AltMacroMode && Token.getString().front() == '<' &&
                      Token.is(AsmToken::String)) {
-              std::string Res;
-              altMacroString(Token.getStringContents(), Res);
-              OS << Res;
+              OS << altMacroString(Token.getStringContents());
             }
             // We expect no quotes around the string's contents when
             // parsing for varargs.
@@ -2633,31 +2636,33 @@ bool AsmParser::parseMacroArguments(const MCAsmMacro *M,
 
     SMLoc StrLoc = Lexer.getLoc();
     SMLoc EndLoc;
-    if (Lexer.IsaAltMacroMode() && Lexer.is(AsmToken::Percent)) {
-        const MCExpr *AbsoluteExp;
-        int64_t Value;
-        /// Eat '%'
-        Lex();
-        if (parseExpression(AbsoluteExp, EndLoc))
-          return false;
-        if (!AbsoluteExp->evaluateAsAbsolute(Value,
-                                             getStreamer().getAssemblerPtr()))
-          return Error(StrLoc, "expected absolute expression");
-        const char *StrChar = StrLoc.getPointer();
-        const char *EndChar = EndLoc.getPointer();
-        AsmToken newToken(AsmToken::Integer, StringRef(StrChar , EndChar - StrChar), Value);
-        FA.Value.push_back(newToken);
-    } else if (Lexer.IsaAltMacroMode() && Lexer.is(AsmToken::Less) &&
+    if (AltMacroMode && Lexer.is(AsmToken::Percent)) {
+      const MCExpr *AbsoluteExp;
+      int64_t Value;
+      /// Eat '%'
+      Lex();
+      if (parseExpression(AbsoluteExp, EndLoc))
+        return false;
+      if (!AbsoluteExp->evaluateAsAbsolute(Value,
+                                           getStreamer().getAssemblerPtr()))
+        return Error(StrLoc, "expected absolute expression");
+      const char *StrChar = StrLoc.getPointer();
+      const char *EndChar = EndLoc.getPointer();
+      AsmToken newToken(AsmToken::Integer,
+                        StringRef(StrChar, EndChar - StrChar), Value);
+      FA.Value.push_back(newToken);
+    } else if (AltMacroMode && Lexer.is(AsmToken::Less) &&
                isAltmacroString(StrLoc, EndLoc)) {
-        const char *StrChar = StrLoc.getPointer();
-        const char *EndChar = EndLoc.getPointer();
-        jumpToLoc(EndLoc, CurBuffer);
-        /// Eat from '<' to '>'
-        Lex();
-        AsmToken newToken(AsmToken::String, StringRef(StrChar, EndChar - StrChar));
-        FA.Value.push_back(newToken);
+      const char *StrChar = StrLoc.getPointer();
+      const char *EndChar = EndLoc.getPointer();
+      jumpToLoc(EndLoc, CurBuffer);
+      /// Eat from '<' to '>'
+      Lex();
+      AsmToken newToken(AsmToken::String,
+                        StringRef(StrChar, EndChar - StrChar));
+      FA.Value.push_back(newToken);
     } else if(parseMacroArgument(FA.Value, Vararg))
-        return true;
+      return true;
 
     unsigned PI = Parameter;
     if (!FA.Name.empty()) {
@@ -4183,10 +4188,7 @@ bool AsmParser::parseDirectiveCFIUndefined(SMLoc DirectiveLoc) {
 bool AsmParser::parseDirectiveAltmacro(StringRef Directive) {
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in '" + Directive + "' directive");
-  if (Directive == ".altmacro")
-    getLexer().SetAltMacroMode(true);
-  else
-    getLexer().SetAltMacroMode(false);
+  AltMacroMode = (Directive == ".altmacro");
   return false;
 }
 

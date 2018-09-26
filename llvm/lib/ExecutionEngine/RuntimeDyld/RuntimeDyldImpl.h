@@ -433,6 +433,9 @@ protected:
                        const ObjectFile &Obj, ObjSectionToIDMap &ObjSectionToID,
                        StubMap &Stubs) = 0;
 
+  void applyExternalSymbolRelocations(
+      const StringMap<JITEvaluatedSymbol> ExternalSymbolMap);
+
   /// Resolve relocations to external symbols.
   Error resolveExternalSymbols();
 
@@ -535,6 +538,12 @@ public:
   }
 
   void resolveRelocations();
+
+  void resolveLocalRelocations();
+
+  static void finalizeAsync(std::unique_ptr<RuntimeDyldImpl> This,
+                            std::function<void(Error)> OnEmitted,
+                            std::unique_ptr<MemoryBuffer> UnderlyingBuffer);
 
   void reassignSectionAddress(unsigned SectionID, uint64_t Addr);
 

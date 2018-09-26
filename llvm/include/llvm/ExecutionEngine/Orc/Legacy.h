@@ -90,12 +90,13 @@ createSymbolResolver(GetResponsibilitySetFn &&GetResponsibilitySet,
       std::forward<LookupFn>(Lookup));
 }
 
+/// Legacy adapter. Remove once we kill off the old ORC layers.
 class JITSymbolResolverAdapter : public JITSymbolResolver {
 public:
   JITSymbolResolverAdapter(ExecutionSession &ES, SymbolResolver &R,
                            MaterializationResponsibility *MR);
   Expected<LookupSet> getResponsibilitySet(const LookupSet &Symbols) override;
-  Expected<LookupResult> lookup(const LookupSet &Symbols) override;
+  void lookup(const LookupSet &Symbols, OnResolvedFunction OnResolved) override;
 
 private:
   ExecutionSession &ES;

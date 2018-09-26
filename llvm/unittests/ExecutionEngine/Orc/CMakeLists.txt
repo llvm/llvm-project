@@ -14,6 +14,7 @@ add_llvm_unittest(OrcJITTests
   CoreAPIsTest.cpp
   IndirectionUtilsTest.cpp
   GlobalMappingLayerTest.cpp
+  LazyCallThroughAndReexportsTest.cpp
   LazyEmittingLayerTest.cpp
   LegacyAPIInteropTest.cpp
   ObjectTransformLayerTest.cpp

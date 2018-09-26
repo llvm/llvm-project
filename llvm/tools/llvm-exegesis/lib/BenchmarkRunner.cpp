@@ -35,6 +35,8 @@ BenchmarkRunner::~BenchmarkRunner() = default;
 // code.
 static std::vector<llvm::MCInst>
 GenerateInstructions(const BenchmarkCode &BC, const size_t MinInstructions) {
+  if (BC.Instructions.empty())
+    return {};
   std::vector<llvm::MCInst> Code = BC.Instructions;
   for (int I = 0; Code.size() < MinInstructions; ++I)
     Code.push_back(BC.Instructions[I % BC.Instructions.size()]);
@@ -53,12 +55,9 @@ BenchmarkRunner::runConfiguration(const BenchmarkCode &BC,
   InstrBenchmark.Info = BC.Info;
 
   const std::vector<llvm::MCInst> &Instructions = BC.Instructions;
-  if (Instructions.empty()) {
-    InstrBenchmark.Error = "Empty snippet";
-    return InstrBenchmark;
-  }
 
   InstrBenchmark.Key.Instructions = Instructions;
+  InstrBenchmark.Key.RegisterInitialValues = BC.RegisterInitialValues;
 
   // Assemble at least kMinInstructionsForSnippet instructions by repeating the
   // snippet for debug/analysis. This is so that the user clearly understands
@@ -89,7 +88,15 @@ BenchmarkRunner::runConfiguration(const BenchmarkCode &BC,
                << *ObjectFilePath << "\n";
   const ExecutableFunction EF(State.createTargetMachine(),
                               getObjectFromFile(*ObjectFilePath));
-  InstrBenchmark.Measurements = runMeasurements(EF, *Scratch, NumRepetitions);
+  InstrBenchmark.Measurements = runMeasurements(EF, *Scratch);
+  assert(InstrBenchmark.NumRepetitions > 0 && "invalid NumRepetitions");
+  for (BenchmarkMeasure &BM : InstrBenchmark.Measurements) {
+    // Scale the measurements by instruction.
+    BM.PerInstructionValue /= InstrBenchmark.NumRepetitions;
+    // Scale the measurements by snippet.
+    BM.PerSnippetValue *= static_cast<double>(BC.Instructions.size()) /
+                   InstrBenchmark.NumRepetitions;
+  }
 
   return InstrBenchmark;
 }

@@ -60,6 +60,7 @@ set(LLVM_TEST_DEPENDS
           dsymutil
           llvm-dwarfdump
           llvm-dwp
+          llvm-exegesis
           llvm-extract
           llvm-isel-fuzzer
           llvm-lib
