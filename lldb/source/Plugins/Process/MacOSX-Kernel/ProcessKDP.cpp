@@ -56,9 +56,9 @@ using namespace lldb_private;
 namespace {
 
 static PropertyDefinition g_properties[] = {
-    {"packet-timeout", OptionValue::eTypeUInt64, true, 5, NULL, NULL,
+    {"packet-timeout", OptionValue::eTypeUInt64, true, 5, NULL, {},
      "Specify the default packet timeout in seconds."},
-    {NULL, OptionValue::eTypeInvalid, false, 0, NULL, NULL, NULL}};
+    {NULL, OptionValue::eTypeInvalid, false, 0, NULL, {}, NULL}};
 
 enum { ePropertyPacketTimeout };
 
