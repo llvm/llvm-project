@@ -195,7 +195,6 @@ def MakeInlineTest(__file, __globals, decorators=None):
 
     # Derive the test name from the current file name
     file_basename = os.path.basename(__file)
-    InlineTest.mydir = TestBase.compute_mydir(__file)
 
     test_name, _ = os.path.splitext(file_basename)
 
@@ -209,4 +208,5 @@ def MakeInlineTest(__file, __globals, decorators=None):
     # Keep track of the original test filename so we report it
     # correctly in test results.
     test_class.test_filename = __file
+    test_class.mydir = TestBase.compute_mydir(__file)
     return test_class

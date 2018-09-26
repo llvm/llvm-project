@@ -39016,7 +39016,7 @@ static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   EVT InVT = Op0.getValueType();
 
-  // UINT_TO_FP(vXi1) -> SINT_TO_FP(SEXT(vXi1 to vXi32))
+  // UINT_TO_FP(vXi1) -> SINT_TO_FP(ZEXT(vXi1 to vXi32))
   // UINT_TO_FP(vXi8) -> SINT_TO_FP(ZEXT(vXi8 to vXi32))
   // UINT_TO_FP(vXi16) -> SINT_TO_FP(ZEXT(vXi16 to vXi32))
   if (InVT.isVector() && InVT.getScalarSizeInBits() < 32) {
@@ -40168,6 +40168,37 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
 static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const X86Subtarget &Subtarget) {
+  // For AVX1 only, if we are extracting from a 256-bit and+not (which will
+  // eventually get combined/lowered into ANDNP) with a concatenated operand,
+  // split the 'and' into 128-bit ops to avoid the concatenate and extract.
+  // We let generic combining take over from there to simplify the
+  // insert/extract and 'not'.
+  // This pattern emerges during AVX1 legalization. We handle it before lowering
+  // to avoid complications like splitting constant vector loads.
+
+  // Capture the original wide type in the likely case that we need to bitcast
+  // back to this type.
+  EVT VT = N->getValueType(0);
+  EVT WideVecVT = N->getOperand(0).getValueType();
+  SDValue WideVec = peekThroughBitcasts(N->getOperand(0));
+  if (Subtarget.hasAVX() && !Subtarget.hasAVX2() && WideVecVT.isSimple() &&
+      WideVecVT.getSizeInBits() == 256 && WideVec.getOpcode() == ISD::AND) {
+    auto isConcatenatedNot = [] (SDValue V) {
+      V = peekThroughBitcasts(V);
+      if (!isBitwiseNot(V))
+        return false;
+      SDValue NotOp = V->getOperand(0);
+      return peekThroughBitcasts(NotOp).getOpcode() == ISD::CONCAT_VECTORS;
+    };
+    if (isConcatenatedNot(WideVec.getOperand(0)) ||
+        isConcatenatedNot(WideVec.getOperand(1))) {
+      // extract (and v4i64 X, (not (concat Y1, Y2))), n -> andnp v2i64 X(n), Y1
+      SDValue Concat = split256IntArith(WideVec, DAG);
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), VT,
+                         DAG.getBitcast(WideVecVT, Concat), N->getOperand(1));
+    }
+  }
+
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 

@@ -1,0 +1,73 @@
+#include "IndexAction.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Index/IndexDataConsumer.h"
+#include "clang/Index/IndexingAction.h"
+#include "clang/Tooling/Tooling.h"
+namespace clang {
+namespace clangd {
+namespace {
+
+// Wraps the index action and reports index data after each translation unit.
+class IndexAction : public WrapperFrontendAction {
+public:
+  IndexAction(std::shared_ptr<SymbolCollector> C,
+              std::unique_ptr<CanonicalIncludes> Includes,
+              const index::IndexingOptions &Opts,
+              std::function<void(SymbolSlab)> &SymbolsCallback)
+      : WrapperFrontendAction(index::createIndexingAction(C, Opts, nullptr)),
+        SymbolsCallback(SymbolsCallback), Collector(C),
+        Includes(std::move(Includes)),
+        PragmaHandler(collectIWYUHeaderMaps(this->Includes.get())) {}
+
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef InFile) override {
+    CI.getPreprocessor().addCommentHandler(PragmaHandler.get());
+    return WrapperFrontendAction::CreateASTConsumer(CI, InFile);
+  }
+
+  bool BeginInvocation(CompilerInstance &CI) override {
+    // We want all comments, not just the doxygen ones.
+    CI.getLangOpts().CommentOpts.ParseAllComments = true;
+    return WrapperFrontendAction::BeginInvocation(CI);
+  }
+
+  void EndSourceFileAction() override {
+    WrapperFrontendAction::EndSourceFileAction();
+
+    const auto &CI = getCompilerInstance();
+    if (CI.hasDiagnostics() &&
+        CI.getDiagnostics().hasUncompilableErrorOccurred()) {
+      llvm::errs() << "Skipping TU due to uncompilable errors\n";
+      return;
+    }
+    SymbolsCallback(Collector->takeSymbols());
+  }
+
+private:
+  std::function<void(SymbolSlab)> SymbolsCallback;
+  std::shared_ptr<SymbolCollector> Collector;
+  std::unique_ptr<CanonicalIncludes> Includes;
+  std::unique_ptr<CommentHandler> PragmaHandler;
+};
+
+} // namespace
+
+std::unique_ptr<FrontendAction>
+createStaticIndexingAction(SymbolCollector::Options Opts,
+                           std::function<void(SymbolSlab)> SymbolsCallback) {
+  index::IndexingOptions IndexOpts;
+  IndexOpts.SystemSymbolFilter =
+      index::IndexingOptions::SystemSymbolFilterKind::All;
+  Opts.CollectIncludePath = true;
+  Opts.CountReferences = true;
+  Opts.Origin = SymbolOrigin::Static;
+  auto Includes = llvm::make_unique<CanonicalIncludes>();
+  addSystemHeadersMapping(Includes.get());
+  Opts.Includes = Includes.get();
+  return llvm::make_unique<IndexAction>(
+      std::make_shared<SymbolCollector>(std::move(Opts)), std::move(Includes),
+      IndexOpts, SymbolsCallback);
+};
+
+} // namespace clangd
+} // namespace clang

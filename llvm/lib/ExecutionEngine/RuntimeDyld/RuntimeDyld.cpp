@@ -19,9 +19,12 @@
 #include "RuntimeDyldMachO.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MutexGuard.h"
+
+#include <future>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -996,42 +999,8 @@ void RuntimeDyldImpl::resolveRelocationList(const RelocationList &Relocs,
   }
 }
 
-Error RuntimeDyldImpl::resolveExternalSymbols() {
-  StringMap<JITEvaluatedSymbol> ExternalSymbolMap;
-
-  // Resolution can trigger emission of more symbols, so iterate until
-  // we've resolved *everything*.
-  {
-    JITSymbolResolver::LookupSet ResolvedSymbols;
-
-    while (true) {
-      JITSymbolResolver::LookupSet NewSymbols;
-
-      for (auto &RelocKV : ExternalSymbolRelocations) {
-        StringRef Name = RelocKV.first();
-        if (!Name.empty() && !GlobalSymbolTable.count(Name) &&
-            !ResolvedSymbols.count(Name))
-          NewSymbols.insert(Name);
-      }
-
-      if (NewSymbols.empty())
-        break;
-
-      auto NewResolverResults = Resolver.lookup(NewSymbols);
-      if (!NewResolverResults)
-        return NewResolverResults.takeError();
-
-      assert(NewResolverResults->size() == NewSymbols.size() &&
-             "Should have errored on unresolved symbols");
-
-      for (auto &RRKV : *NewResolverResults) {
-        assert(!ResolvedSymbols.count(RRKV.first) && "Redundant resolution?");
-        ExternalSymbolMap.insert(RRKV);
-        ResolvedSymbols.insert(RRKV.first);
-      }
-    }
-  }
-
+void RuntimeDyldImpl::applyExternalSymbolRelocations(
+    const StringMap<JITEvaluatedSymbol> ExternalSymbolMap) {
   while (!ExternalSymbolRelocations.empty()) {
 
     StringMap<RelocationList>::iterator i = ExternalSymbolRelocations.begin();
@@ -1093,6 +1062,60 @@ Error RuntimeDyldImpl::resolveExternalSymbols() {
 
     ExternalSymbolRelocations.erase(i);
   }
+}
+
+Error RuntimeDyldImpl::resolveExternalSymbols() {
+  StringMap<JITEvaluatedSymbol> ExternalSymbolMap;
+
+  // Resolution can trigger emission of more symbols, so iterate until
+  // we've resolved *everything*.
+  {
+    JITSymbolResolver::LookupSet ResolvedSymbols;
+
+    while (true) {
+      JITSymbolResolver::LookupSet NewSymbols;
+
+      for (auto &RelocKV : ExternalSymbolRelocations) {
+        StringRef Name = RelocKV.first();
+        if (!Name.empty() && !GlobalSymbolTable.count(Name) &&
+            !ResolvedSymbols.count(Name))
+          NewSymbols.insert(Name);
+      }
+
+      if (NewSymbols.empty())
+        break;
+
+#ifdef _MSC_VER
+      using ExpectedLookupResult =
+          MSVCPExpected<JITSymbolResolver::LookupResult>;
+#else
+      using ExpectedLookupResult = Expected<JITSymbolResolver::LookupResult>;
+#endif
+
+      auto NewSymbolsP = std::make_shared<std::promise<ExpectedLookupResult>>();
+      auto NewSymbolsF = NewSymbolsP->get_future();
+      Resolver.lookup(NewSymbols,
+                      [=](Expected<JITSymbolResolver::LookupResult> Result) {
+                        NewSymbolsP->set_value(std::move(Result));
+                      });
+
+      auto NewResolverResults = NewSymbolsF.get();
+
+      if (!NewResolverResults)
+        return NewResolverResults.takeError();
+
+      assert(NewResolverResults->size() == NewSymbols.size() &&
+             "Should have errored on unresolved symbols");
+
+      for (auto &RRKV : *NewResolverResults) {
+        assert(!ResolvedSymbols.count(RRKV.first) && "Redundant resolution?");
+        ExternalSymbolMap.insert(RRKV);
+        ResolvedSymbols.insert(RRKV.first);
+      }
+    }
+  }
+
+  applyExternalSymbolRelocations(ExternalSymbolMap);
 
   return Error::success();
 }

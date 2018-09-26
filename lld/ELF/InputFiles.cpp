@@ -620,9 +620,9 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     // FIXME: Retain the first attribute section we see. The eglibc ARM
     // dynamic loaders require the presence of an attribute section for dlopen
     // to work. In a full implementation we would merge all attribute sections.
-    if (InX::ARMAttributes == nullptr) {
-      InX::ARMAttributes = make<InputSection>(*this, Sec, Name);
-      return InX::ARMAttributes;
+    if (In.ARMAttributes == nullptr) {
+      In.ARMAttributes = make<InputSection>(*this, Sec, Name);
+      return In.ARMAttributes;
     }
     return &InputSection::Discarded;
   }

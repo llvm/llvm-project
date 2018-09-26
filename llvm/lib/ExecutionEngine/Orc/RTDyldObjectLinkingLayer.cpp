@@ -18,30 +18,42 @@ class JITDylibSearchOrderResolver : public JITSymbolResolver {
 public:
   JITDylibSearchOrderResolver(MaterializationResponsibility &MR) : MR(MR) {}
 
-  Expected<LookupResult> lookup(const LookupSet &Symbols) {
+  void lookup(const LookupSet &Symbols, OnResolvedFunction OnResolved) {
     auto &ES = MR.getTargetJITDylib().getExecutionSession();
     SymbolNameSet InternedSymbols;
 
+    // Intern the requested symbols: lookup takes interned strings.
     for (auto &S : Symbols)
       InternedSymbols.insert(ES.getSymbolStringPool().intern(S));
 
+    // Build an OnResolve callback to unwrap the interned strings and pass them
+    // to the OnResolved callback.
+    // FIXME: Switch to move capture of OnResolved once we have c++14.
+    auto OnResolvedWithUnwrap =
+        [OnResolved](Expected<SymbolMap> InternedResult) {
+          if (!InternedResult) {
+            OnResolved(InternedResult.takeError());
+            return;
+          }
+
+          LookupResult Result;
+          for (auto &KV : *InternedResult)
+            Result[*KV.first] = std::move(KV.second);
+          OnResolved(Result);
+        };
+
+    // We're not waiting for symbols to be ready. Just log any errors.
+    auto OnReady = [&ES](Error Err) { ES.reportError(std::move(Err)); };
+
+    // Register dependencies for all symbols contained in this set.
     auto RegisterDependencies = [&](const SymbolDependenceMap &Deps) {
       MR.addDependenciesForAll(Deps);
     };
 
-    auto InternedResult =
-        MR.getTargetJITDylib().withSearchOrderDo([&](const JITDylibList &JDs) {
-          return ES.lookup(JDs, InternedSymbols, RegisterDependencies, false);
-        });
-
-    if (!InternedResult)
-      return InternedResult.takeError();
-
-    LookupResult Result;
-    for (auto &KV : *InternedResult)
-      Result[*KV.first] = std::move(KV.second);
-
-    return Result;
+    MR.getTargetJITDylib().withSearchOrderDo([&](const JITDylibList &JDs) {
+      ES.lookup(JDs, InternedSymbols, OnResolvedWithUnwrap, OnReady,
+                RegisterDependencies);
+    });
   }
 
   Expected<LookupSet> getResponsibilitySet(const LookupSet &Symbols) {

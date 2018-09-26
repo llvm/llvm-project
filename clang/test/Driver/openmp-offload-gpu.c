@@ -73,15 +73,13 @@
 /// Check cubin file unbundling and usage by nvlink
 // RUN:   touch %t.o
 // RUN:   %clang -### -target powerpc64le-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
-// RUN:          -no-canonical-prefixes -save-temps %t.o %S/Inputs/in.so 2>&1 \
+// RUN:          -no-canonical-prefixes -save-temps %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-CUBIN-UNBUNDLING-NVLINK %s
 
 /// Use DAG to ensure that cubin file has been unbundled.
-// CHK-CUBIN-UNBUNDLING-NVLINK-NOT: clang-offload-bundler{{.*}}" "-type=o"{{.*}}in.so
 // CHK-CUBIN-UNBUNDLING-NVLINK-DAG: nvlink{{.*}}" {{.*}}"[[CUBIN:.*\.cubin]]"
 // CHK-CUBIN-UNBUNDLING-NVLINK-DAG: clang-offload-bundler{{.*}}" "-type=o" {{.*}}"-outputs={{.*}}[[CUBIN]]
 // CHK-CUBIN-UNBUNDLING-NVLINK-DAG-SAME: "-unbundle"
-// CHK-CUBIN-UNBUNDLING-NVLINK-NOT: clang-offload-bundler{{.*}}" "-type=o"{{.*}}in.so
 
 /// ###########################################################################
 

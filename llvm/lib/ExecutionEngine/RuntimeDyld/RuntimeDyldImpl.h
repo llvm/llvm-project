@@ -433,6 +433,9 @@ protected:
                        const ObjectFile &Obj, ObjSectionToIDMap &ObjSectionToID,
                        StubMap &Stubs) = 0;
 
+  void applyExternalSymbolRelocations(
+      const StringMap<JITEvaluatedSymbol> ExternalSymbolMap);
+
   /// Resolve relocations to external symbols.
   Error resolveExternalSymbols();
 

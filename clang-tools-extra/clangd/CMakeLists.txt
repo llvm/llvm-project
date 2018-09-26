@@ -40,11 +40,12 @@ add_clang_library(clangDaemon
   index/CanonicalIncludes.cpp
   index/FileIndex.cpp
   index/Index.cpp
+  index/IndexAction.cpp
   index/MemIndex.cpp
   index/Merge.cpp
   index/Serialization.cpp
   index/SymbolCollector.cpp
-  index/SymbolYAML.cpp
+  index/YAMLSerialization.cpp
 
   index/dex/Dex.cpp
   index/dex/Iterator.cpp

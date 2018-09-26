@@ -2559,8 +2559,6 @@ class OffloadingActionBuilder final {
     getDeviceDependences(OffloadAction::DeviceDependences &DA,
                          phases::ID CurPhase, phases::ID FinalPhase,
                          PhasesTy &Phases) override {
-      if (OpenMPDeviceActions.empty())
-        return ABRT_Inactive;
 
       // We should always have an action for each input.
       assert(OpenMPDeviceActions.size() == ToolChains.size() &&
@@ -2819,16 +2817,6 @@ public:
     if (CanUseBundler && isa<InputAction>(HostAction) &&
         InputArg->getOption().getKind() == llvm::opt::Option::InputClass &&
         !types::isSrcFile(HostAction->getType())) {
-      StringRef FileName = InputArg->getAsString(C.getArgs());
-      // Check if the type of the file is the same as the action. Do not
-      // unbundle it if it is not. Do not unbundle .so files, for example, which
-      // are not object files.
-      if (HostAction->getType() == types::TY_Object &&
-          llvm::sys::path::has_extension(FileName) &&
-          types::lookupTypeForExtension(
-              llvm::sys::path::extension(FileName).drop_front()) !=
-              HostAction->getType())
-        return false;
       auto UnbundlingHostAction =
           C.MakeAction<OffloadUnbundlingJobAction>(HostAction);
       UnbundlingHostAction->registerDependentActionInfo(

@@ -15,10 +15,10 @@
 #include "RIFF.h"
 #include "index/CanonicalIncludes.h"
 #include "index/Index.h"
+#include "index/IndexAction.h"
 #include "index/Merge.h"
 #include "index/Serialization.h"
 #include "index/SymbolCollector.h"
-#include "index/SymbolYAML.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Index/IndexDataConsumer.h"
@@ -60,12 +60,13 @@ static llvm::cl::opt<bool> MergeOnTheFly(
         "MapReduce."),
     llvm::cl::init(true), llvm::cl::Hidden);
 
-enum IndexFormat { YAML, Binary };
-static llvm::cl::opt<IndexFormat> Format(
-    "format", llvm::cl::desc("Format of the index to be written"),
-    llvm::cl::values(clEnumValN(YAML, "yaml", "human-readable YAML format"),
-                     clEnumValN(Binary, "binary", "binary RIFF format")),
-    llvm::cl::init(YAML));
+static llvm::cl::opt<IndexFileFormat>
+    Format("format", llvm::cl::desc("Format of the index to be written"),
+           llvm::cl::values(clEnumValN(IndexFileFormat::YAML, "yaml",
+                                       "human-readable YAML format"),
+                            clEnumValN(IndexFileFormat::RIFF, "binary",
+                                       "binary RIFF format")),
+           llvm::cl::init(IndexFileFormat::YAML));
 
 /// Responsible for aggregating symbols from each processed file and producing
 /// the final results. All methods in this class must be thread-safe,
@@ -86,68 +87,12 @@ public:
   SymbolIndexActionFactory(SymbolsConsumer &Consumer) : Consumer(Consumer) {}
 
   clang::FrontendAction *create() override {
-    // Wraps the index action and reports collected symbols to the execution
-    // context at the end of each translation unit.
-    class WrappedIndexAction : public WrapperFrontendAction {
-    public:
-      WrappedIndexAction(std::shared_ptr<SymbolCollector> C,
-                         std::unique_ptr<CanonicalIncludes> Includes,
-                         const index::IndexingOptions &Opts,
-                         SymbolsConsumer &Consumer)
-          : WrapperFrontendAction(
-                index::createIndexingAction(C, Opts, nullptr)),
-            Consumer(Consumer), Collector(C), Includes(std::move(Includes)),
-            PragmaHandler(collectIWYUHeaderMaps(this->Includes.get())) {}
-
-      std::unique_ptr<ASTConsumer>
-      CreateASTConsumer(CompilerInstance &CI, StringRef InFile) override {
-        CI.getPreprocessor().addCommentHandler(PragmaHandler.get());
-        return WrapperFrontendAction::CreateASTConsumer(CI, InFile);
-      }
-
-      bool BeginInvocation(CompilerInstance &CI) override {
-        // We want all comments, not just the doxygen ones.
-        CI.getLangOpts().CommentOpts.ParseAllComments = true;
-        return WrapperFrontendAction::BeginInvocation(CI);
-      }
-
-      void EndSourceFileAction() override {
-        WrapperFrontendAction::EndSourceFileAction();
-
-        const auto &CI = getCompilerInstance();
-        if (CI.hasDiagnostics() &&
-            CI.getDiagnostics().hasUncompilableErrorOccurred()) {
-          llvm::errs()
-              << "Found uncompilable errors in the translation unit. Igoring "
-                 "collected symbols...\n";
-          return;
-        }
-
-        Consumer.consumeSymbols(Collector->takeSymbols());
-      }
-
-    private:
-      SymbolsConsumer &Consumer;
-      std::shared_ptr<SymbolCollector> Collector;
-      std::unique_ptr<CanonicalIncludes> Includes;
-      std::unique_ptr<CommentHandler> PragmaHandler;
-    };
-
-    index::IndexingOptions IndexOpts;
-    IndexOpts.SystemSymbolFilter =
-        index::IndexingOptions::SystemSymbolFilterKind::All;
-    IndexOpts.IndexFunctionLocals = false;
     auto CollectorOpts = SymbolCollector::Options();
     CollectorOpts.FallbackDir = AssumedHeaderDir;
-    CollectorOpts.CollectIncludePath = true;
-    CollectorOpts.CountReferences = true;
-    CollectorOpts.Origin = SymbolOrigin::Static;
-    auto Includes = llvm::make_unique<CanonicalIncludes>();
-    addSystemHeadersMapping(Includes.get());
-    CollectorOpts.Includes = Includes.get();
-    return new WrappedIndexAction(
-        std::make_shared<SymbolCollector>(std::move(CollectorOpts)),
-        std::move(Includes), IndexOpts, Consumer);
+    return createStaticIndexingAction(
+               CollectorOpts,
+               [&](SymbolSlab S) { Consumer.consumeSymbols(std::move(S)); })
+        .release();
   }
 
   SymbolsConsumer &Consumer;
@@ -162,8 +107,7 @@ public:
 
   void consumeSymbols(SymbolSlab Symbols) override {
     for (const auto &Sym : Symbols)
-      Executor.getExecutionContext()->reportResult(Sym.ID.str(),
-                                                   SymbolToYAML(Sym));
+      Executor.getExecutionContext()->reportResult(Sym.ID.str(), toYAML(Sym));
   }
 
   SymbolSlab mergeResults() override {
@@ -171,7 +115,7 @@ public:
     Executor.getToolResults()->forEachResult(
         [&](llvm::StringRef Key, llvm::StringRef Value) {
           llvm::yaml::Input Yin(Value);
-          auto Sym = clang::clangd::SymbolFromYAML(Yin);
+          auto Sym = cantFail(clang::clangd::symbolFromYAML(Yin));
           auto ID = cantFail(clang::clangd::SymbolID::fromStr(Key));
           if (const auto *Existing = UniqueSymbols.find(ID))
             UniqueSymbols.insert(mergeSymbol(*Existing, Sym));
@@ -270,15 +214,9 @@ int main(int argc, const char **argv) {
   // Reduce phase: combine symbols with the same IDs.
   auto UniqueSymbols = Consumer->mergeResults();
   // Output phase: emit result symbols.
-  switch (clang::clangd::Format) {
-  case clang::clangd::IndexFormat::YAML:
-    SymbolsToYAML(UniqueSymbols, llvm::outs());
-    break;
-  case clang::clangd::IndexFormat::Binary: {
-    clang::clangd::IndexFileOut Out;
-    Out.Symbols = &UniqueSymbols;
-    llvm::outs() << Out;
-  }
-  }
+  clang::clangd::IndexFileOut Out;
+  Out.Symbols = &UniqueSymbols;
+  Out.Format = clang::clangd::Format;
+  llvm::outs() << Out;
   return 0;
 }

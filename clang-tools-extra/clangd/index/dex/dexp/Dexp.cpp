@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../../index/SymbolYAML.h"
+#include "../../Serialization.h"
 #include "../Dex.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -155,7 +155,7 @@ class Lookup : public Command {
     bool FoundSymbol = false;
     Index->lookup(Request, [&](const Symbol &Sym) {
       FoundSymbol = true;
-      llvm::outs() << SymbolToYAML(Sym);
+      llvm::outs() << toYAML(Sym);
     });
     if (!FoundSymbol)
       llvm::outs() << "not found\n";

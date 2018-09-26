@@ -25,6 +25,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/ExecutionEngine/Orc/RPCSerialization.h"
+#include "llvm/Support/MSVCErrorWorkarounds.h"
 
 #include <future>
 
@@ -207,73 +208,6 @@ private:
 
 namespace detail {
 
-// FIXME: Remove MSVCPError/MSVCPExpected once MSVC's future implementation
-//        supports classes without default constructors.
-#ifdef _MSC_VER
-
-namespace msvc_hacks {
-
-// Work around MSVC's future implementation's use of default constructors:
-// A default constructed value in the promise will be overwritten when the
-// real error is set - so the default constructed Error has to be checked
-// already.
-class MSVCPError : public Error {
-public:
-  MSVCPError() { (void)!!*this; }
-
-  MSVCPError(MSVCPError &&Other) : Error(std::move(Other)) {}
-
-  MSVCPError &operator=(MSVCPError Other) {
-    Error::operator=(std::move(Other));
-    return *this;
-  }
-
-  MSVCPError(Error Err) : Error(std::move(Err)) {}
-};
-
-// Work around MSVC's future implementation, similar to MSVCPError.
-template <typename T> class MSVCPExpected : public Expected<T> {
-public:
-  MSVCPExpected()
-      : Expected<T>(make_error<StringError>("", inconvertibleErrorCode())) {
-    consumeError(this->takeError());
-  }
-
-  MSVCPExpected(MSVCPExpected &&Other) : Expected<T>(std::move(Other)) {}
-
-  MSVCPExpected &operator=(MSVCPExpected &&Other) {
-    Expected<T>::operator=(std::move(Other));
-    return *this;
-  }
-
-  MSVCPExpected(Error Err) : Expected<T>(std::move(Err)) {}
-
-  template <typename OtherT>
-  MSVCPExpected(
-      OtherT &&Val,
-      typename std::enable_if<std::is_convertible<OtherT, T>::value>::type * =
-          nullptr)
-      : Expected<T>(std::move(Val)) {}
-
-  template <class OtherT>
-  MSVCPExpected(
-      Expected<OtherT> &&Other,
-      typename std::enable_if<std::is_convertible<OtherT, T>::value>::type * =
-          nullptr)
-      : Expected<T>(std::move(Other)) {}
-
-  template <class OtherT>
-  explicit MSVCPExpected(
-      Expected<OtherT> &&Other,
-      typename std::enable_if<!std::is_convertible<OtherT, T>::value>::type * =
-          nullptr)
-      : Expected<T>(std::move(Other)) {}
-};
-
-} // end namespace msvc_hacks
-
-#endif // _MSC_VER
-
 /// Provides a typedef for a tuple containing the decayed argument types.
 template <typename T> class FunctionArgsTuple;
 
@@ -293,10 +227,10 @@ public:
 
 #ifdef _MSC_VER
   // The ErrorReturnType wrapped in a std::promise.
-  using ReturnPromiseType = std::promise<msvc_hacks::MSVCPExpected<RetT>>;
+  using ReturnPromiseType = std::promise<MSVCPExpected<RetT>>;
 
   // The ErrorReturnType wrapped in a std::future.
-  using ReturnFutureType = std::future<msvc_hacks::MSVCPExpected<RetT>>;
+  using ReturnFutureType = std::future<MSVCPExpected<RetT>>;
 #else
   // The ErrorReturnType wrapped in a std::promise.
   using ReturnPromiseType = std::promise<ErrorReturnType>;
@@ -325,10 +259,10 @@ public:
 
 #ifdef _MSC_VER
   // The ErrorReturnType wrapped in a std::promise.
-  using ReturnPromiseType = std::promise<msvc_hacks::MSVCPError>;
+  using ReturnPromiseType = std::promise<MSVCPError>;
 
   // The ErrorReturnType wrapped in a std::future.
-  using ReturnFutureType = std::future<msvc_hacks::MSVCPError>;
+  using ReturnFutureType = std::future<MSVCPError>;
 #else
   // The ErrorReturnType wrapped in a std::promise.
   using ReturnPromiseType = std::promise<ErrorReturnType>;
