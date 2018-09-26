@@ -192,6 +192,7 @@ static uint32_t readInstrFromHalf16(const uint8_t *Loc) {
 
 PPC64::PPC64() {
   GotRel = R_PPC64_GLOB_DAT;
+  NoneRel = R_PPC64_NONE;
   PltRel = R_PPC64_JMP_SLOT;
   RelativeRel = R_PPC64_RELATIVE;
   IRelativeRel = R_PPC64_IRELATIVE;

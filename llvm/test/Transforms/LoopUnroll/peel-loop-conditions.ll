@@ -23,7 +23,9 @@ define void @test1(i32 %k) {
 ; CHECK:       for.inc.peel:
 ; CHECK-NEXT:    [[INC_PEEL:%.*]] = add nsw i32 0, 1
 ; CHECK-NEXT:    [[CMP_PEEL:%.*]] = icmp slt i32 [[INC_PEEL]], [[K:%.*]]
-; CHECK-NEXT:    br i1 [[CMP_PEEL]], label [[FOR_BODY_PEEL_NEXT:%.*]], label [[FOR_END:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_PEEL]], label [[FOR_BODY_PEEL_NEXT:%.*]], label [[FOR_END:%[^,]*]]
+; Verify that MD_loop metadata is dropped.
+; CHECK-NOT:   , !llvm.loop !{{[0-9]*}}
 ; CHECK:       for.body.peel.next:
 ; CHECK-NEXT:    br label [[FOR_BODY_PEEL2:%.*]]
 ; CHECK:       for.body.peel2:
@@ -39,6 +41,8 @@ define void @test1(i32 %k) {
 ; CHECK-NEXT:    [[INC_PEEL7:%.*]] = add nsw i32 [[INC_PEEL]], 1
 ; CHECK-NEXT:    [[CMP_PEEL8:%.*]] = icmp slt i32 [[INC_PEEL7]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP_PEEL8]], label [[FOR_BODY_PEEL_NEXT1:%.*]], label [[FOR_END]]
+; Verify that MD_loop metadata is dropped.
+; CHECK-NOT:   , !llvm.loop !{{[0-9]*}}
 ; CHECK:       for.body.peel.next1:
 ; CHECK-NEXT:    br label [[FOR_BODY_PEEL_NEXT9:%.*]]
 ; CHECK:       for.body.peel.next9:
@@ -57,7 +61,7 @@ define void @test1(i32 %k) {
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]], !llvm.loop !0
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]], !llvm.loop !{{.*}}
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
@@ -82,11 +86,13 @@ if.else:
 for.inc:
   %inc = add nsw i32 %i.05, 1
   %cmp = icmp slt i32 %inc, %k
-  br i1 %cmp, label %for.body, label %for.end
+  br i1 %cmp, label %for.body, label %for.end, !llvm.loop !1
 
 for.end:
   ret void
 }
+
+!1 = distinct !{!1}
 
 ; Check we peel off the maximum number of iterations that make conditions true.
 define void @test2(i32 %k) {
@@ -113,7 +119,9 @@ define void @test2(i32 %k) {
 ; CHECK:       for.inc.peel:
 ; CHECK-NEXT:    [[INC_PEEL:%.*]] = add nsw i32 0, 1
 ; CHECK-NEXT:    [[CMP_PEEL:%.*]] = icmp slt i32 [[INC_PEEL]], [[K:%.*]]
-; CHECK-NEXT:    br i1 [[CMP_PEEL]], label [[FOR_BODY_PEEL_NEXT:%.*]], label [[FOR_END:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_PEEL]], label [[FOR_BODY_PEEL_NEXT:%.*]], label [[FOR_END:%[^,]*]]
+; Verify that MD_loop metadata is dropped.
+; CHECK-NOT:   , !llvm.loop !{{[0-9]*}}
 ; CHECK:       for.body.peel.next:
 ; CHECK-NEXT:    br label [[FOR_BODY_PEEL2:%.*]]
 ; CHECK:       for.body.peel2:
@@ -135,6 +143,8 @@ define void @test2(i32 %k) {
 ; CHECK-NEXT:    [[INC_PEEL10:%.*]] = add nsw i32 [[INC_PEEL]], 1
 ; CHECK-NEXT:    [[CMP_PEEL11:%.*]] = icmp slt i32 [[INC_PEEL10]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP_PEEL11]], label [[FOR_BODY_PEEL_NEXT1:%.*]], label [[FOR_END]]
+; Verify that MD_loop metadata is dropped.
+; CHECK-NOT:   , !llvm.loop !{{[0-9]*}}
 ; CHECK:       for.body.peel.next1:
 ; CHECK-NEXT:    br label [[FOR_BODY_PEEL13:%.*]]
 ; CHECK:       for.body.peel13:
@@ -156,6 +166,8 @@ define void @test2(i32 %k) {
 ; CHECK-NEXT:    [[INC_PEEL21:%.*]] = add nsw i32 [[INC_PEEL10]], 1
 ; CHECK-NEXT:    [[CMP_PEEL22:%.*]] = icmp slt i32 [[INC_PEEL21]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP_PEEL22]], label [[FOR_BODY_PEEL_NEXT12:%.*]], label [[FOR_END]]
+; Verify that MD_loop metadata is dropped.
+; CHECK-NOT:   , !llvm.loop !{{[0-9]*}}
 ; CHECK:       for.body.peel.next12:
 ; CHECK-NEXT:    br label [[FOR_BODY_PEEL24:%.*]]
 ; CHECK:       for.body.peel24:
@@ -177,6 +189,8 @@ define void @test2(i32 %k) {
 ; CHECK-NEXT:    [[INC_PEEL32:%.*]] = add nsw i32 [[INC_PEEL21]], 1
 ; CHECK-NEXT:    [[CMP_PEEL33:%.*]] = icmp slt i32 [[INC_PEEL32]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP_PEEL33]], label [[FOR_BODY_PEEL_NEXT23:%.*]], label [[FOR_END]]
+; Verify that MD_loop metadata is dropped.
+; CHECK-NOT:   , !llvm.loop !{{[0-9]*}}
 ; CHECK:       for.body.peel.next23:
 ; CHECK-NEXT:    br label [[FOR_BODY_PEEL_NEXT34:%.*]]
 ; CHECK:       for.body.peel.next34:
@@ -200,7 +214,7 @@ define void @test2(i32 %k) {
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]], !llvm.loop !2
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]], !llvm.loop !{{.*}}
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
@@ -233,11 +247,13 @@ if.then2:
 for.inc:
   %inc = add nsw i32 %i.05, 1
   %cmp = icmp slt i32 %inc, %k
-  br i1 %cmp, label %for.body, label %for.end
+  br i1 %cmp, label %for.body, label %for.end, !llvm.loop !2
 
 for.end:
   ret void
 }
+
+!2 = distinct !{!2}
 
 ; Check that we can peel off iterations that make a condition false.
 define void @test3(i32 %k) {
@@ -258,7 +274,9 @@ define void @test3(i32 %k) {
 ; CHECK:       for.inc.peel:
 ; CHECK-NEXT:    [[INC_PEEL:%.*]] = add nsw i32 0, 1
 ; CHECK-NEXT:    [[CMP_PEEL:%.*]] = icmp slt i32 [[INC_PEEL]], [[K:%.*]]
-; CHECK-NEXT:    br i1 [[CMP_PEEL]], label [[FOR_BODY_PEEL_NEXT:%.*]], label [[FOR_END:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_PEEL]], label [[FOR_BODY_PEEL_NEXT:%.*]], label [[FOR_END:%[^,]*]]
+; Verify that MD_loop metadata is dropped.
+; CHECK-NOT:   , !llvm.loop !{{[0-9]*}}
 ; CHECK:       for.body.peel.next:
 ; CHECK-NEXT:    br label [[FOR_BODY_PEEL2:%.*]]
 ; CHECK:       for.body.peel2:
@@ -274,6 +292,8 @@ define void @test3(i32 %k) {
 ; CHECK-NEXT:    [[INC_PEEL7:%.*]] = add nsw i32 [[INC_PEEL]], 1
 ; CHECK-NEXT:    [[CMP_PEEL8:%.*]] = icmp slt i32 [[INC_PEEL7]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP_PEEL8]], label [[FOR_BODY_PEEL_NEXT1:%.*]], label [[FOR_END]]
+; Verify that MD_loop metadata is dropped.
+; CHECK-NOT:   , !llvm.loop !{{[0-9]*}}
 ; CHECK:       for.body.peel.next1:
 ; CHECK-NEXT:    br label [[FOR_BODY_PEEL10:%.*]]
 ; CHECK:       for.body.peel10:
@@ -289,6 +309,8 @@ define void @test3(i32 %k) {
 ; CHECK-NEXT:    [[INC_PEEL15:%.*]] = add nsw i32 [[INC_PEEL7]], 1
 ; CHECK-NEXT:    [[CMP_PEEL16:%.*]] = icmp slt i32 [[INC_PEEL15]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP_PEEL16]], label [[FOR_BODY_PEEL_NEXT9:%.*]], label [[FOR_END]]
+; Verify that MD_loop metadata is dropped.
+; CHECK-NOT:   , !llvm.loop !{{[0-9]*}}
 ; CHECK:       for.body.peel.next9:
 ; CHECK-NEXT:    br label [[FOR_BODY_PEEL_NEXT17:%.*]]
 ; CHECK:       for.body.peel.next17:
@@ -307,7 +329,7 @@ define void @test3(i32 %k) {
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]], !llvm.loop !3
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]], !llvm.loop !{{.*}}
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
@@ -332,11 +354,13 @@ if.else:
 for.inc:
   %inc = add nsw i32 %i.05, 1
   %cmp = icmp slt i32 %inc, %k
-  br i1 %cmp, label %for.body, label %for.end
+  br i1 %cmp, label %for.body, label %for.end, !llvm.loop !3
 
 for.end:
   ret void
 }
+
+!3 = distinct !{!3}
 
 ; Test that we only peel off iterations if it simplifies a condition in the
 ; loop body after peeling at most MaxPeelCount iterations.

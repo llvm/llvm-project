@@ -1728,6 +1728,22 @@ Sema::AccessResult Sema::CheckMemberAccess(SourceLocation UseLoc,
   return CheckAccess(*this, UseLoc, Entity);
 }
 
+/// Checks implicit access to a member in a structured binding.
+Sema::AccessResult
+Sema::CheckStructuredBindingMemberAccess(SourceLocation UseLoc,
+                                         CXXRecordDecl *DecomposedClass,
+                                         DeclAccessPair Field) {
+  if (!getLangOpts().AccessControl ||
+      Field.getAccess() == AS_public)
+    return AR_accessible;
+
+  AccessTarget Entity(Context, AccessTarget::Member, DecomposedClass, Field,
+                      Context.getRecordType(DecomposedClass));
+  Entity.setDiag(diag::err_decomp_decl_inaccessible_field);
+
+  return CheckAccess(*this, UseLoc, Entity);
+}
+
 /// Checks access to an overloaded member operator, including
 /// conversion operators.
 Sema::AccessResult Sema::CheckMemberOperatorAccess(SourceLocation OpLoc,

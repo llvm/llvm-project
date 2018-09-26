@@ -3386,6 +3386,11 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
   if (Construct && Construct->isStdInitListInitialization())
     return TransformInitializer(Construct->getArg(0), NotCopyInit);
 
+  // Enter a list-init context if this was list initialization.
+  EnterExpressionEvaluationContext Context(
+      getSema(), EnterExpressionEvaluationContext::InitList,
+      Construct->isListInitialization());
+
   SmallVector<Expr*, 8> NewArgs;
   bool ArgChanged = false;
   if (getDerived().TransformExprs(Construct->getArgs(), Construct->getNumArgs(),
@@ -8414,6 +8419,12 @@ TreeTransform<Derived>::TransformOMPNogroupClause(OMPNogroupClause *C) {
 }
 
 template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPUnifiedAddressClause(
+    OMPUnifiedAddressClause *C) {
+  llvm_unreachable("unified address clause cannot appear in dependent context");
+}
+
+template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPPrivateClause(OMPPrivateClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;
@@ -9542,6 +9553,9 @@ TreeTransform<Derived>::TransformInitListExpr(InitListExpr *E) {
     E = Syntactic;
 
   bool InitChanged = false;
+
+  EnterExpressionEvaluationContext Context(
+      getSema(), EnterExpressionEvaluationContext::InitList);
 
   SmallVector<Expr*, 4> Inits;
   if (getDerived().TransformExprs(E->getInits(), E->getNumInits(), false,
@@ -10774,9 +10788,14 @@ TreeTransform<Derived>::TransformCXXConstructExpr(CXXConstructExpr *E) {
 
   bool ArgumentChanged = false;
   SmallVector<Expr*, 8> Args;
-  if (getDerived().TransformExprs(E->getArgs(), E->getNumArgs(), true, Args,
-                                  &ArgumentChanged))
-    return ExprError();
+  {
+    EnterExpressionEvaluationContext Context(
+        getSema(), EnterExpressionEvaluationContext::InitList,
+        E->isListInitialization());
+    if (getDerived().TransformExprs(E->getArgs(), E->getNumArgs(), true, Args,
+                                    &ArgumentChanged))
+      return ExprError();
+  }
 
   if (!getDerived().AlwaysRebuild() &&
       T == E->getType() &&
@@ -10859,9 +10878,14 @@ TreeTransform<Derived>::TransformCXXTemporaryObjectExpr(
   bool ArgumentChanged = false;
   SmallVector<Expr*, 8> Args;
   Args.reserve(E->getNumArgs());
-  if (TransformExprs(E->getArgs(), E->getNumArgs(), true, Args,
-                     &ArgumentChanged))
-    return ExprError();
+  {
+    EnterExpressionEvaluationContext Context(
+        getSema(), EnterExpressionEvaluationContext::InitList,
+        E->isListInitialization());
+    if (TransformExprs(E->getArgs(), E->getNumArgs(), true, Args,
+                       &ArgumentChanged))
+      return ExprError();
+  }
 
   if (!getDerived().AlwaysRebuild() &&
       T == E->getTypeSourceInfo() &&
@@ -11153,9 +11177,14 @@ TreeTransform<Derived>::TransformCXXUnresolvedConstructExpr(
   bool ArgumentChanged = false;
   SmallVector<Expr*, 8> Args;
   Args.reserve(E->arg_size());
-  if (getDerived().TransformExprs(E->arg_begin(), E->arg_size(), true, Args,
-                                  &ArgumentChanged))
-    return ExprError();
+  {
+    EnterExpressionEvaluationContext Context(
+        getSema(), EnterExpressionEvaluationContext::InitList,
+        E->isListInitialization());
+    if (getDerived().TransformExprs(E->arg_begin(), E->arg_size(), true, Args,
+                                    &ArgumentChanged))
+      return ExprError();
+  }
 
   if (!getDerived().AlwaysRebuild() &&
       T == E->getTypeSourceInfo() &&

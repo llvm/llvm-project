@@ -152,12 +152,9 @@ void SymbolTable::loadMinGWAutomaticImports() {
 bool SymbolTable::handleMinGWAutomaticImport(Symbol *Sym, StringRef Name) {
   if (Name.startswith("__imp_"))
     return false;
-  DefinedImportData *Imp =
-      dyn_cast_or_null<DefinedImportData>(find(("__imp_" + Name).str()));
+  Defined *Imp = dyn_cast_or_null<Defined>(find(("__imp_" + Name).str()));
   if (!Imp)
     return false;
-
-  log("Automatically importing " + Name + " from " + Imp->getDLLName());
 
   // Replace the reference directly to a variable with a reference
   // to the import address table instead. This obviously isn't right,
@@ -165,8 +162,23 @@ bool SymbolTable::handleMinGWAutomaticImport(Symbol *Sym, StringRef Name) {
   // will add runtime pseudo relocations for every relocation against
   // this Symbol. The runtime pseudo relocation framework expects the
   // reference itself to point at the IAT entry.
-  Sym->replaceKeepingName(Imp, sizeof(DefinedImportData));
-  cast<DefinedImportData>(Sym)->IsRuntimePseudoReloc = true;
+  size_t ImpSize = 0;
+  if (isa<DefinedImportData>(Imp)) {
+    log("Automatically importing " + Name + " from " +
+        cast<DefinedImportData>(Imp)->getDLLName());
+    ImpSize = sizeof(DefinedImportData);
+  } else if (isa<DefinedRegular>(Imp)) {
+    log("Automatically importing " + Name + " from " +
+        toString(cast<DefinedRegular>(Imp)->File));
+    ImpSize = sizeof(DefinedRegular);
+  } else {
+    warn("unable to automatically import " + Name + " from " + Imp->getName() +
+         " from " + toString(cast<DefinedRegular>(Imp)->File) +
+         "; unexpected symbol type");
+    return false;
+  }
+  Sym->replaceKeepingName(Imp, ImpSize);
+  Sym->IsRuntimePseudoReloc = true;
 
   // There may exist symbols named .refptr.<name> which only consist
   // of a single pointer to <name>. If it turns out <name> is
@@ -181,7 +193,7 @@ bool SymbolTable::handleMinGWAutomaticImport(Symbol *Sym, StringRef Name) {
     if (SC && SC->Relocs.size() == 1 && *SC->symbols().begin() == Sym) {
       log("Replacing .refptr." + Name + " with " + Imp->getName());
       Refptr->getChunk()->Live = false;
-      Refptr->replaceKeepingName(Imp, sizeof(DefinedImportData));
+      Refptr->replaceKeepingName(Imp, ImpSize);
     }
   }
   return true;

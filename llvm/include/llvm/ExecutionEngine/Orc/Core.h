@@ -745,6 +745,9 @@ public:
     DispatchMaterialization(JD, std::move(MU));
   }
 
+  /// Dump the state of all the JITDylibs in this session.
+  void dump(raw_ostream &OS);
+
 private:
   static void logErrorsToStdErr(Error Err) {
     logAllUnhandledErrors(std::move(Err), errs(), "JIT session error: ");

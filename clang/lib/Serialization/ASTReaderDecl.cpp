@@ -30,6 +30,7 @@
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/LambdaCapture.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/Redeclarable.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
@@ -446,6 +447,7 @@ namespace clang {
     void VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *D);
     void VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D);
     void VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D);
+    void VisitOMPRequiresDecl(OMPRequiresDecl *D);
     void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
   };
 
@@ -2630,6 +2632,17 @@ void ASTDeclReader::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
   D->setVars(Vars);
 }
 
+void ASTDeclReader::VisitOMPRequiresDecl(OMPRequiresDecl * D) {
+  VisitDecl(D);
+  unsigned NumClauses = D->clauselist_size();
+  SmallVector<OMPClause *, 8> Clauses;
+  Clauses.reserve(NumClauses);
+  OMPClauseReader ClauseReader(Record);
+  for (unsigned I = 0; I != NumClauses; ++I)
+    Clauses.push_back(ClauseReader.readClause());
+  D->setClauses(Clauses);
+}
+
 void ASTDeclReader::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
   VisitValueDecl(D);
   D->setLocation(ReadSourceLocation());
@@ -3829,6 +3842,9 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     break;
   case DECL_OMP_THREADPRIVATE:
     D = OMPThreadPrivateDecl::CreateDeserialized(Context, ID, Record.readInt());
+    break;
+  case DECL_OMP_REQUIRES:
+    D = OMPRequiresDecl::CreateDeserialized(Context, ID, Record.readInt());
     break;
   case DECL_OMP_DECLARE_REDUCTION:
     D = OMPDeclareReductionDecl::CreateDeserialized(Context, ID);

@@ -529,8 +529,8 @@ static int getRuntimePseudoRelocSize(uint16_t Type) {
 void SectionChunk::getRuntimePseudoRelocs(
     std::vector<RuntimePseudoReloc> &Res) {
   for (const coff_relocation &Rel : Relocs) {
-    auto *Target = dyn_cast_or_null<DefinedImportData>(
-        File->getSymbol(Rel.SymbolTableIndex));
+    auto *Target =
+        dyn_cast_or_null<Defined>(File->getSymbol(Rel.SymbolTableIndex));
     if (!Target || !Target->IsRuntimePseudoReloc)
       continue;
     int SizeInBits = getRuntimePseudoRelocSize(Rel.Type);

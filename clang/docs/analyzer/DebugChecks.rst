@@ -255,6 +255,23 @@ ExprInspection checks
       clang_analyzer_hashDump(x); // expected-warning{{hashed string for x}}
     }
 
+- ``void clang_analyzer_denote(int, const char *);``
+
+  Denotes symbols with strings. A subsequent call to clang_analyzer_express()
+  will expresses another symbol in terms of these string. Useful for testing
+  relationships between different symbols.
+
+  Example usage::
+
+    void foo(int x) {
+      clang_analyzer_denote(x, "$x");
+      clang_analyzer_express(x + 1); // expected-warning{{$x + 1}}
+    }
+
+- ``void clang_analyzer_express(int);``
+
+  See clang_analyzer_denote().
+
 Statistics
 ==========
 

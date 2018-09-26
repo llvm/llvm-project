@@ -2207,6 +2207,9 @@ void OMPClauseEnqueue::VisitOMPSIMDClause(const OMPSIMDClause *) {}
 
 void OMPClauseEnqueue::VisitOMPNogroupClause(const OMPNogroupClause *) {}
 
+void OMPClauseEnqueue::VisitOMPUnifiedAddressClause(
+    const OMPUnifiedAddressClause *) {}
+
 void OMPClauseEnqueue::VisitOMPDeviceClause(const OMPDeviceClause *C) {
   Visitor->AddStmt(C->getDevice());
 }
@@ -6220,6 +6223,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::Import:
   case Decl::OMPThreadPrivate:
   case Decl::OMPDeclareReduction:
+  case Decl::OMPRequires:
   case Decl::ObjCTypeParam:
   case Decl::BuiltinTemplate:
   case Decl::PragmaComment:

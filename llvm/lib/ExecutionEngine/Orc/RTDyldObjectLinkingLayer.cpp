@@ -88,20 +88,41 @@ void RTDyldObjectLinkingLayer2::emit(MaterializationResponsibility R,
                                      std::unique_ptr<MemoryBuffer> O) {
   assert(O && "Object must not be null");
 
+  // This method launches an asynchronous link step that will fulfill our
+  // materialization responsibility. We need to switch R to be heap
+  // allocated before that happens so it can live as long as the asynchronous
+  // link needs it to (i.e. it must be able to outlive this method).
+  auto SharedR = std::make_shared<MaterializationResponsibility>(std::move(R));
+
   auto &ES = getExecutionSession();
 
-  auto ObjFile = object::ObjectFile::createObjectFile(*O);
-  if (!ObjFile) {
-    getExecutionSession().reportError(ObjFile.takeError());
-    R.failMaterialization();
+  auto Obj = object::ObjectFile::createObjectFile(*O);
+
+  if (!Obj) {
+    getExecutionSession().reportError(Obj.takeError());
+    SharedR->failMaterialization();
+    return;
+  }
+
+  // Collect the internal symbols from the object file: We will need to
+  // filter these later.
+  auto InternalSymbols = std::make_shared<std::set<StringRef>>();
+  {
+    for (auto &Sym : (*Obj)->symbols()) {
+      if (!(Sym.getFlags() & object::BasicSymbolRef::SF_Global)) {
+        if (auto SymName = Sym.getName())
+          InternalSymbols->insert(*SymName);
+        else {
+          ES.reportError(SymName.takeError());
+          R.failMaterialization();
+          return;
+        }
+      }
+    }
   }
 
   auto MemoryManager = GetMemoryManager(K);
-
-  JITDylibSearchOrderResolver Resolver(R);
-  auto RTDyld = llvm::make_unique<RuntimeDyld>(*MemoryManager, Resolver);
-  RTDyld->setProcessAllSections(ProcessAllSections);
-
+  auto &MemMgr = *MemoryManager;
   {
     std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
 
@@ -110,66 +131,77 @@ void RTDyldObjectLinkingLayer2::emit(MaterializationResponsibility R,
     MemMgrs[K] = std::move(MemoryManager);
   }
 
-  auto Info = RTDyld->loadObject(**ObjFile);
+  JITDylibSearchOrderResolver Resolver(*SharedR);
 
-  {
-    std::set<StringRef> InternalSymbols;
-    for (auto &Sym : (*ObjFile)->symbols()) {
-      if (!(Sym.getFlags() & object::BasicSymbolRef::SF_Global)) {
-        if (auto SymName = Sym.getName())
-          InternalSymbols.insert(*SymName);
-        else {
-          ES.reportError(SymName.takeError());
-          R.failMaterialization();
-          return;
-        }
-      }
+  /* Thoughts on proper cross-dylib weak symbol handling:
+   *
+   * Change selection of canonical defs to be a manually triggered process, and
+   * add a 'canonical' bit to symbol definitions. When canonical def selection
+   * is triggered, sweep the JITDylibs to mark defs as canonical, discard
+   * duplicate defs.
+   */
+  jitLinkForORC(
+      **Obj, std::move(O), MemMgr, Resolver, ProcessAllSections,
+      [this, K, SharedR, &Obj, InternalSymbols](
+          std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo,
+          std::map<StringRef, JITEvaluatedSymbol> ResolvedSymbols) {
+        return onObjLoad(K, *SharedR, **Obj, std::move(LoadedObjInfo),
+                         ResolvedSymbols, *InternalSymbols);
+      },
+      [this, K, SharedR](Error Err) {
+        onObjEmit(K, *SharedR, std::move(Err));
+      });
+}
+
+Error RTDyldObjectLinkingLayer2::onObjLoad(
+    VModuleKey K, MaterializationResponsibility &R, object::ObjectFile &Obj,
+    std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo,
+    std::map<StringRef, JITEvaluatedSymbol> Resolved,
+    std::set<StringRef> &InternalSymbols) {
+  SymbolFlagsMap ExtraSymbolsToClaim;
+  SymbolMap Symbols;
+  for (auto &KV : Resolved) {
+    // Scan the symbols and add them to the Symbols map for resolution.
+
+    // We never claim internal symbols.
+    if (InternalSymbols.count(KV.first))
+      continue;
+
+    auto InternedName =
+        getExecutionSession().getSymbolStringPool().intern(KV.first);
+    auto Flags = KV.second.getFlags();
+
+    // Override object flags and claim responsibility for symbols if
+    // requested.
+    if (OverrideObjectFlags || AutoClaimObjectSymbols) {
+      auto I = R.getSymbols().find(InternedName);
+
+      if (OverrideObjectFlags && I != R.getSymbols().end())
+        Flags = JITSymbolFlags::stripTransientFlags(I->second);
+      else if (AutoClaimObjectSymbols && I == R.getSymbols().end())
+        ExtraSymbolsToClaim[InternedName] = Flags;
     }
 
-    SymbolFlagsMap ExtraSymbolsToClaim;
-    SymbolMap Symbols;
-    for (auto &KV : RTDyld->getSymbolTable()) {
-      // Scan the symbols and add them to the Symbols map for resolution.
-
-      // We never claim internal symbols.
-      if (InternalSymbols.count(KV.first))
-        continue;
-
-      auto InternedName = ES.getSymbolStringPool().intern(KV.first);
-      auto Flags = KV.second.getFlags();
-
-      // Override object flags and claim responsibility for symbols if
-      // requested.
-      if (OverrideObjectFlags || AutoClaimObjectSymbols) {
-        auto I = R.getSymbols().find(InternedName);
-
-        if (OverrideObjectFlags && I != R.getSymbols().end())
-          Flags = JITSymbolFlags::stripTransientFlags(I->second);
-        else if (AutoClaimObjectSymbols && I == R.getSymbols().end())
-          ExtraSymbolsToClaim[InternedName] = Flags;
-      }
-
-      Symbols[InternedName] = JITEvaluatedSymbol(KV.second.getAddress(), Flags);
-    }
-
-    if (!ExtraSymbolsToClaim.empty())
-      if (auto Err = R.defineMaterializing(ExtraSymbolsToClaim)) {
-        ES.reportError(std::move(Err));
-        R.failMaterialization();
-        return;
-      }
-
-    R.resolve(Symbols);
+    Symbols[InternedName] = JITEvaluatedSymbol(KV.second.getAddress(), Flags);
   }
 
+  if (!ExtraSymbolsToClaim.empty())
+    if (auto Err = R.defineMaterializing(ExtraSymbolsToClaim))
+      return Err;
+
+  R.resolve(Symbols);
+
   if (NotifyLoaded)
-    NotifyLoaded(K, **ObjFile, *Info);
+    NotifyLoaded(K, Obj, *LoadedObjInfo);
 
-  RTDyld->finalizeWithMemoryManagerLocking();
+  return Error::success();
+}
 
-  if (RTDyld->hasError()) {
-    ES.reportError(make_error<StringError>(RTDyld->getErrorString(),
-                                           inconvertibleErrorCode()));
+void RTDyldObjectLinkingLayer2::onObjEmit(VModuleKey K,
+                                          MaterializationResponsibility &R,
+                                          Error Err) {
+  if (Err) {
+    getExecutionSession().reportError(std::move(Err));
     R.failMaterialization();
     return;
   }

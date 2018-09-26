@@ -116,8 +116,8 @@ public:
                       [this](std::unique_ptr<Module> M) {
                         return optimizeModule(std::move(M));
                       }),
-        CompileCallbackMgr(orc::createLocalCompileCallbackManager(
-            TM->getTargetTriple(), ES, 0)) {
+        CompileCallbackMgr(cantFail(orc::createLocalCompileCallbackManager(
+            TM->getTargetTriple(), ES, 0))) {
     auto IndirectStubsMgrBuilder =
       orc::createLocalIndirectStubsManagerBuilder(TM->getTargetTriple());
     IndirectStubsMgr = IndirectStubsMgrBuilder();

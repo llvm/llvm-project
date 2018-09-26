@@ -134,6 +134,14 @@ void RuntimeDyldImpl::resolveRelocations() {
     ErrorStr = toString(std::move(Err));
   }
 
+  resolveLocalRelocations();
+
+  // Print out sections after relocation.
+  LLVM_DEBUG(for (int i = 0, e = Sections.size(); i != e; ++i)
+                 dumpSectionMemory(Sections[i], "after relocations"););
+}
+
+void RuntimeDyldImpl::resolveLocalRelocations() {
   // Iterate over all outstanding relocations
   for (auto it = Relocations.begin(), e = Relocations.end(); it != e; ++it) {
     // The Section here (Sections[i]) refers to the section in which the
@@ -146,10 +154,6 @@ void RuntimeDyldImpl::resolveRelocations() {
     resolveRelocationList(it->second, Addr);
   }
   Relocations.clear();
-
-  // Print out sections after relocation.
-  LLVM_DEBUG(for (int i = 0, e = Sections.size(); i != e; ++i)
-                 dumpSectionMemory(Sections[i], "after relocations"););
 }
 
 void RuntimeDyldImpl::mapSectionAddress(const void *LocalAddress,
@@ -1120,6 +1124,56 @@ Error RuntimeDyldImpl::resolveExternalSymbols() {
   return Error::success();
 }
 
+void RuntimeDyldImpl::finalizeAsync(
+    std::unique_ptr<RuntimeDyldImpl> This, std::function<void(Error)> OnEmitted,
+    std::unique_ptr<MemoryBuffer> UnderlyingBuffer) {
+
+  // FIXME: Move-capture OnRelocsApplied and UnderlyingBuffer once we have
+  // c++14.
+  auto SharedUnderlyingBuffer =
+      std::shared_ptr<MemoryBuffer>(std::move(UnderlyingBuffer));
+  auto SharedThis = std::shared_ptr<RuntimeDyldImpl>(std::move(This));
+  auto PostResolveContinuation =
+      [SharedThis, OnEmitted, SharedUnderlyingBuffer](
+          Expected<JITSymbolResolver::LookupResult> Result) {
+        if (!Result) {
+          OnEmitted(Result.takeError());
+          return;
+        }
+
+        /// Copy the result into a StringMap, where the keys are held by value.
+        StringMap<JITEvaluatedSymbol> Resolved;
+        for (auto &KV : *Result)
+          Resolved[KV.first] = KV.second;
+
+        SharedThis->applyExternalSymbolRelocations(Resolved);
+        SharedThis->resolveLocalRelocations();
+        SharedThis->registerEHFrames();
+        std::string ErrMsg;
+        if (SharedThis->MemMgr.finalizeMemory(&ErrMsg))
+          OnEmitted(make_error<StringError>(std::move(ErrMsg),
+                                            inconvertibleErrorCode()));
+        else
+          OnEmitted(Error::success());
+      };
+
+  JITSymbolResolver::LookupSet Symbols;
+
+  for (auto &RelocKV : SharedThis->ExternalSymbolRelocations) {
+    StringRef Name = RelocKV.first();
+    assert(!Name.empty() && "Symbol has no name?");
+    assert(!SharedThis->GlobalSymbolTable.count(Name) &&
+           "Name already processed. RuntimeDyld instances can not be re-used "
+           "when finalizing with finalizeAsync.");
+    Symbols.insert(Name);
+  }
+
+  if (!Symbols.empty()) {
+    SharedThis->Resolver.lookup(Symbols, PostResolveContinuation);
+  } else
+    PostResolveContinuation(std::map<StringRef, JITEvaluatedSymbol>());
+}
+
 //===----------------------------------------------------------------------===//
 // RuntimeDyld class implementation
 
@@ -1266,6 +1320,36 @@ void RuntimeDyld::registerEHFrames() {
 void RuntimeDyld::deregisterEHFrames() {
   if (Dyld)
     Dyld->deregisterEHFrames();
+}
+// FIXME: Kill this with fire once we have a new JIT linker: this is only here
+// so that we can re-use RuntimeDyld's implementation without twisting the
+// interface any further for ORC's purposes.
+void jitLinkForORC(object::ObjectFile &Obj,
+                   std::unique_ptr<MemoryBuffer> UnderlyingBuffer,
+                   RuntimeDyld::MemoryManager &MemMgr,
+                   JITSymbolResolver &Resolver, bool ProcessAllSections,
+                   std::function<Error(
+                       std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObj,
+                       std::map<StringRef, JITEvaluatedSymbol>)>
+                       OnLoaded,
+                   std::function<void(Error)> OnEmitted) {
+
+  RuntimeDyld RTDyld(MemMgr, Resolver);
+  RTDyld.setProcessAllSections(ProcessAllSections);
+
+  auto Info = RTDyld.loadObject(Obj);
+
+  if (RTDyld.hasError()) {
+    OnEmitted(make_error<StringError>(RTDyld.getErrorString(),
+                                      inconvertibleErrorCode()));
+    return;
+  }
+
+  if (auto Err = OnLoaded(std::move(Info), RTDyld.getSymbolTable()))
+    OnEmitted(std::move(Err));
+
+  RuntimeDyldImpl::finalizeAsync(std::move(RTDyld.Dyld), std::move(OnEmitted),
+                                 std::move(UnderlyingBuffer));
 }
 
 } // end namespace llvm

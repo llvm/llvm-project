@@ -31875,23 +31875,19 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
   // For example, t0 := (v8i16 sext(v8i1 x)) needs to be shuffled as:
   // (v16i8 shuffle <0,2,4,6,8,10,12,14,u,u,...,u> (v16i8 bitcast t0), undef)
   MVT SExtVT;
-  MVT FPCastVT = MVT::INVALID_SIMPLE_VALUE_TYPE;
   switch (VecVT.getSimpleVT().SimpleTy) {
   default:
     return SDValue();
   case MVT::v2i1:
     SExtVT = MVT::v2i64;
-    FPCastVT = MVT::v2f64;
     break;
   case MVT::v4i1:
     SExtVT = MVT::v4i32;
-    FPCastVT = MVT::v4f32;
     // For cases such as (i4 bitcast (v4i1 setcc v4i64 v1, v2))
     // sign-extend to a 256-bit operation to avoid truncation.
     if (N0->getOpcode() == ISD::SETCC && Subtarget.hasAVX() &&
         N0->getOperand(0).getValueType().is256BitVector()) {
       SExtVT = MVT::v4i64;
-      FPCastVT = MVT::v4f64;
     }
     break;
   case MVT::v8i1:
@@ -31905,7 +31901,6 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
         (N0->getOperand(0).getValueType().is256BitVector() ||
          N0->getOperand(0).getValueType().is512BitVector())) {
       SExtVT = MVT::v8i32;
-      FPCastVT = MVT::v8f32;
     }
     break;
   case MVT::v16i1:
@@ -31921,23 +31916,16 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
   };
 
   SDLoc DL(BitCast);
-  SDValue V = DAG.getSExtOrTrunc(N0, DL, SExtVT);
+  SDValue V = DAG.getNode(ISD::SIGN_EXTEND, DL, SExtVT, N0);
 
   if (SExtVT == MVT::v16i8 || SExtVT == MVT::v32i8) {
     V = getPMOVMSKB(DL, V, DAG, Subtarget);
-    return DAG.getZExtOrTrunc(V, DL, VT);
+  } else {
+    if (SExtVT == MVT::v8i16)
+      V = DAG.getNode(X86ISD::PACKSS, DL, MVT::v16i8, V,
+                      DAG.getUNDEF(MVT::v8i16));
+    V = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, V);
   }
-
-  if (SExtVT == MVT::v8i16) {
-    assert(16 == DAG.ComputeNumSignBits(V) && "Expected all/none bit vector");
-    V = DAG.getNode(X86ISD::PACKSS, DL, MVT::v16i8, V,
-                    DAG.getUNDEF(MVT::v8i16));
-  } else
-    assert(SExtVT.getScalarType() != MVT::i16 &&
-           "Vectors of i16 must be packed");
-  if (FPCastVT != MVT::INVALID_SIMPLE_VALUE_TYPE)
-    V = DAG.getBitcast(FPCastVT, V);
-  V = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, V);
   return DAG.getZExtOrTrunc(V, DL, VT);
 }
 
