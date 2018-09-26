@@ -822,7 +822,9 @@ public:
   void addInvoke(MachineBasicBlock *LandingPad,
                  MCSymbol *BeginLabel, MCSymbol *EndLabel);
 
-  /// Add a new panding pad.  Returns the label ID for the landing pad entry.
+  /// Add a new panding pad, and extract the exception handling information from
+  /// the landingpad instruction. Returns the label ID for the landing pad
+  /// entry.
   MCSymbol *addLandingPad(MachineBasicBlock *LandingPad);
 
   /// Provide the catch typeinfo for a landing pad.
@@ -913,15 +915,6 @@ public:
     return VariableDbgInfos;
   }
 };
-
-/// \name Exception Handling
-/// \{
-
-/// Extract the exception handling information from the landingpad instruction
-/// and add them to the specified machine module info.
-void addLandingPadInfo(const LandingPadInst &I, MachineBasicBlock &MBB);
-
-/// \}
 
 //===--------------------------------------------------------------------===//
 // GraphTraits specializations for function basic block graphs (CFGs)

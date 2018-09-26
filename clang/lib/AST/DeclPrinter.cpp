@@ -100,6 +100,7 @@ namespace {
     void VisitUsingDecl(UsingDecl *D);
     void VisitUsingShadowDecl(UsingShadowDecl *D);
     void VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D);
+    void VisitOMPRequiresDecl(OMPRequiresDecl *D);
     void VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D);
     void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
 
@@ -422,7 +423,8 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
 
     // FIXME: Need to be able to tell the DeclPrinter when
     const char *Terminator = nullptr;
-    if (isa<OMPThreadPrivateDecl>(*D) || isa<OMPDeclareReductionDecl>(*D))
+    if (isa<OMPThreadPrivateDecl>(*D) || isa<OMPDeclareReductionDecl>(*D) ||
+        isa<OMPRequiresDecl>(*D))
       Terminator = nullptr;
     else if (isa<ObjCMethodDecl>(*D) && cast<ObjCMethodDecl>(*D)->hasBody())
       Terminator = nullptr;
@@ -1541,6 +1543,17 @@ void DeclPrinter::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
       ND->printQualifiedName(Out);
     }
     Out << ")";
+  }
+}
+
+void DeclPrinter::VisitOMPRequiresDecl(OMPRequiresDecl *D) {
+  Out << "#pragma omp requires ";
+  if (!D->clauselist_empty()) {
+    for (auto I = D->clauselist_begin(), E = D->clauselist_end(); I != E; ++I) {
+      if (I != D->clauselist_begin())
+        Out << ',';
+      Out << getOpenMPClauseName((*I)->getClauseKind());
+    }
   }
 }
 

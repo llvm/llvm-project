@@ -375,8 +375,18 @@ SVal StoreManager::attemptDownCast(SVal Base, QualType TargetType,
     MR = Uncasted;
   }
 
+  // If we're casting a symbolic base pointer to a derived class, use
+  // CXXDerivedObjectRegion to represent the cast. If it's a pointer to an
+  // unrelated type, it must be a weird reinterpret_cast and we have to
+  // be fine with ElementRegion. TODO: Should we instead make
+  // Derived{TargetClass, Element{SourceClass, SR}}?
   if (const auto *SR = dyn_cast<SymbolicRegion>(MR)) {
-    return loc::MemRegionVal(MRMgr.getCXXDerivedObjectRegion(TargetClass, SR));
+    QualType T = SR->getSymbol()->getType();
+    const CXXRecordDecl *SourceClass = T->getPointeeCXXRecordDecl();
+    if (TargetClass && SourceClass && TargetClass->isDerivedFrom(SourceClass))
+      return loc::MemRegionVal(
+          MRMgr.getCXXDerivedObjectRegion(TargetClass, SR));
+    return loc::MemRegionVal(GetElementZeroRegion(SR, TargetType));
   }
 
   // We failed if the region we ended up with has perfect type info.

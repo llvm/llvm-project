@@ -30,6 +30,10 @@ defm demangle: B<"demangle",
     "Demangle symbol names",
     "Do not demangle symbol names">;
 
+defm export_default: B<"export-default",
+    "Export symbols marked as 'default' visibility (default)",
+    "Do not export symbols marked as 'default' visibility">;
+
 def entry: S<"entry">, MetaVarName<"<entry>">,
   HelpText<"Name of entry point symbol">;
 

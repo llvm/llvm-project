@@ -361,4 +361,28 @@
     # CHECK: f64x2.sqrt # encoding: [0xfd,0x8e]
     f64x2.sqrt
 
+    # CHECK: f32x4.convert_s?i32x4 # encoding: [0xfd,0x8f]
+    f32x4.convert_s?i32x4
+
+    # CHECK: f32x4.convert_u?i32x4 # encoding: [0xfd,0x90]
+    f32x4.convert_u?i32x4
+
+    # CHECK: f64x2.convert_s?i64x2 # encoding: [0xfd,0x91]
+    f64x2.convert_s?i64x2
+
+    # CHECK: f64x2.convert_u?i64x2 # encoding: [0xfd,0x92]
+    f64x2.convert_u?i64x2
+
+    # CHECK? i32x4.trunc_saturating_s?f32x4 # encoding: [0xfd,0x93]
+    i32x4.trunc_saturating_s?f32x4
+
+    # CHECK? i32x4.trunc_saturating_u?f32x4 # encoding: [0xfd,0x94]
+    i32x4.trunc_saturating_u?f32x4
+
+    # CHECK? i64x2.trunc_saturating_s?f64x2 # encoding: [0xfd,0x95]
+    i64x2.trunc_saturating_s?f64x2
+
+    # CHECK? i64x2.trunc_saturating_u?f64x2 # encoding: [0xfd,0x96]
+    i64x2.trunc_saturating_u?f64x2
+
     end_function

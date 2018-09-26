@@ -67,6 +67,9 @@ public:
   SubtargetFeatures &getFeatures() { return Features; }
   TargetOptions &getOptions() { return Options; }
 
+  Triple& getTargetTriple() { return TT; }
+  const Triple& getTargetTriple() const { return TT; }
+
 private:
   Triple TT;
   std::string Arch;
