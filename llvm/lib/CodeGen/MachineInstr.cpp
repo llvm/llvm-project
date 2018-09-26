@@ -1466,7 +1466,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     assert(getNumOperands() == 1 && "Expected 1 operand in CFI instruction");
 
   SmallBitVector PrintedTypes(8);
-  bool ShouldPrintRegisterTies = hasComplexRegisterTies();
+  bool ShouldPrintRegisterTies = IsStandalone || hasComplexRegisterTies();
   auto getTiedOperandIdx = [&](unsigned OpIdx) {
     if (!ShouldPrintRegisterTies)
       return 0U;

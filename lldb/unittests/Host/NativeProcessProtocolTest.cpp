@@ -70,9 +70,21 @@ public:
                                       llvm::ArrayRef<uint8_t> Data));
 
   using NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode;
+  llvm::Expected<std::vector<uint8_t>> ReadMemoryWithoutTrap(addr_t Addr,
+                                                             size_t Size);
 
 private:
   ArchSpec Arch;
+};
+
+class FakeMemory {
+public:
+  FakeMemory(llvm::ArrayRef<uint8_t> Data) : Data(Data) {}
+  llvm::Expected<std::vector<uint8_t>> Read(addr_t Addr, size_t Size);
+  llvm::Expected<size_t> Write(addr_t Addr, llvm::ArrayRef<uint8_t> Chunk);
+
+private:
+  std::vector<uint8_t> Data;
 };
 } // namespace
 
@@ -99,6 +111,37 @@ Status MockProcess::WriteMemory(addr_t Addr, const void *Buf, size_t Size,
   }
   BytesWritten = *ExpectedBytes;
   return Status();
+}
+
+llvm::Expected<std::vector<uint8_t>>
+MockProcess::ReadMemoryWithoutTrap(addr_t Addr, size_t Size) {
+  std::vector<uint8_t> Data(Size, 0);
+  size_t BytesRead;
+  Status ST = NativeProcessProtocol::ReadMemoryWithoutTrap(
+      Addr, Data.data(), Data.size(), BytesRead);
+  if (ST.Fail())
+    return ST.ToError();
+  Data.resize(BytesRead);
+  return std::move(Data);
+}
+
+llvm::Expected<std::vector<uint8_t>> FakeMemory::Read(addr_t Addr,
+                                                      size_t Size) {
+  if (Addr >= Data.size())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Address out of range.");
+  Size = std::min(Size, Data.size() - (size_t)Addr);
+  return std::vector<uint8_t>(&Data[Addr], &Data[Addr + Size]);
+}
+
+llvm::Expected<size_t> FakeMemory::Write(addr_t Addr,
+                                         llvm::ArrayRef<uint8_t> Chunk) {
+  if (Addr >= Data.size())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Address out of range.");
+  size_t Size = std::min(Chunk.size(), Data.size() - (size_t)Addr);
+  std::copy_n(Chunk.begin(), Size, &Data[Addr]);
+  return Size;
 }
 
 TEST(NativeProcessProtocolTest, SetBreakpoint) {
@@ -151,4 +194,28 @@ TEST(NativeProcessProtocolTest, SetBreakpointFailVerify) {
           llvm::createStringError(llvm::inconvertibleErrorCode(), "Foo"))));
   EXPECT_THAT_ERROR(Process.SetBreakpoint(0x47, 0, false).ToError(),
                     llvm::Failed());
+}
+
+TEST(NativeProcessProtocolTest, ReadMemoryWithoutTrap) {
+  NiceMock<MockDelegate> DummyDelegate;
+  MockProcess Process(DummyDelegate, ArchSpec("aarch64-pc-linux"));
+  FakeMemory M{{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}};
+  EXPECT_CALL(Process, ReadMemory(_, _))
+      .WillRepeatedly(Invoke(&M, &FakeMemory::Read));
+  EXPECT_CALL(Process, WriteMemory(_, _))
+      .WillRepeatedly(Invoke(&M, &FakeMemory::Write));
+
+  EXPECT_THAT_ERROR(Process.SetBreakpoint(0x4, 0, false).ToError(),
+                    llvm::Succeeded());
+  EXPECT_THAT_EXPECTED(
+      Process.ReadMemoryWithoutTrap(0, 10),
+      llvm::HasValue(std::vector<uint8_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}));
+  EXPECT_THAT_EXPECTED(Process.ReadMemoryWithoutTrap(0, 6),
+                       llvm::HasValue(std::vector<uint8_t>{0, 1, 2, 3, 4, 5}));
+  EXPECT_THAT_EXPECTED(Process.ReadMemoryWithoutTrap(6, 4),
+                       llvm::HasValue(std::vector<uint8_t>{6, 7, 8, 9}));
+  EXPECT_THAT_EXPECTED(Process.ReadMemoryWithoutTrap(6, 2),
+                       llvm::HasValue(std::vector<uint8_t>{6, 7}));
+  EXPECT_THAT_EXPECTED(Process.ReadMemoryWithoutTrap(4, 2),
+                       llvm::HasValue(std::vector<uint8_t>{4, 5}));
 }

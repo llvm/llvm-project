@@ -18,15 +18,15 @@ define void @f() {
 ; X64-NEXT:    .cfi_offset %r14, -24
 ; X64-NEXT:    .cfi_offset %rbp, -16
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ebp
-; X64-NEXT:    movq %rbp, %rcx
-; X64-NEXT:    shlq $62, %rcx
-; X64-NEXT:    sarq $62, %rcx
 ; X64-NEXT:    movq (%rsp), %rbx
 ; X64-NEXT:    movb (%rax), %al
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    # kill: def $eax killed $eax def $ax
 ; X64-NEXT:    divb (%rax)
 ; X64-NEXT:    movl %eax, %r14d
+; X64-NEXT:    movq %rbp, %rcx
+; X64-NEXT:    shlq $62, %rcx
+; X64-NEXT:    sarq $62, %rcx
 ; X64-NEXT:    xorl %edi, %edi
 ; X64-NEXT:    xorl %esi, %esi
 ; X64-NEXT:    movq %rbx, %rdx
@@ -86,11 +86,6 @@ define void @f() {
 ; X86-NEXT:    .cfi_offset %edi, -16
 ; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, %ecx
-; X86-NEXT:    shll $30, %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    sarl $30, %edx
-; X86-NEXT:    sarl $31, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movb (%eax), %al
@@ -98,16 +93,21 @@ define void @f() {
 ; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb (%eax)
 ; X86-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    shll $30, %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    sarl $30, %ecx
+; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    pushl %ecx
-; X86-NEXT:    pushl %edx
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $0
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl %edx
 ; X86-NEXT:    calll __modti3
 ; X86-NEXT:    addl $32, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -239,16 +239,16 @@ define void @g() {
 ; X86-NEXT:    .cfi_offset %edi, -16
 ; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, %ecx
-; X86-NEXT:    shll $30, %ecx
-; X86-NEXT:    sarl $30, %ecx
 ; X86-NEXT:    movl (%esp), %edi
 ; X86-NEXT:    movb (%eax), %al
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    # kill: def $eax killed $eax def $ax
 ; X86-NEXT:    divb (%eax)
 ; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    pushl %ecx
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    shll $30, %eax
+; X86-NEXT:    sarl $30, %eax
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $0

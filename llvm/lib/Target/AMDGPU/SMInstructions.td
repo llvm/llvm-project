@@ -777,7 +777,7 @@ def : SMRD_Pattern_ci <"S_LOAD_DWORDX16", v16i32>;
 class SMLoad_Pattern_ci <string Instr, ValueType vt> : GCNPat <
   (vt (SIsbuffer_load v4i32:$sbase, (SMRDBufferImm32 i32:$offset), i1:$glc)),
   (!cast<InstSI>(Instr) $sbase, $offset, (as_i1imm $glc))> {
-  let OtherPredicates = [isCI]; // should this be isCIOnly?
+  let OtherPredicates = [isCIOnly];
 }
 
 def : SMLoad_Pattern_ci <"S_BUFFER_LOAD_DWORD_IMM_ci", i32>;

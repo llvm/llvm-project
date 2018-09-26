@@ -111,12 +111,7 @@ cmake_dependent_option(LIBCXX_INSTALL_FILESYSTEM_LIBRARY
         "Install libc++fs.a" ON
         "LIBCXX_ENABLE_FILESYSTEM;LIBCXX_INSTALL_LIBRARY" OFF)
 
-if (FUCHSIA)
-  set(DEFAULT_ABI_VERSION 2)
-else()
-  set(DEFAULT_ABI_VERSION 1)
-endif()
-set(LIBCXX_ABI_VERSION ${DEFAULT_ABI_VERSION} CACHE STRING "ABI version of libc++.")
+set(LIBCXX_ABI_VERSION "1" CACHE STRING "ABI version of libc++. Can be either 1 or 2, where 2 is currently not stable. Defaults to 1.")
 option(LIBCXX_ABI_UNSTABLE "Unstable ABI of libc++." OFF)
 option(LIBCXX_ABI_FORCE_ITANIUM "Ignore auto-detection and force use of the Itanium ABI.")
 option(LIBCXX_ABI_FORCE_MICROSOFT "Ignore auto-detection and force use of the Microsoft ABI.")
@@ -657,7 +652,7 @@ if (LIBCXX_STANDALONE_BUILD)
 endif()
 
 # Configuration file flags =====================================================
-if (NOT LIBCXX_ABI_VERSION EQUAL DEFAULT_ABI_VERSION)
+if (NOT LIBCXX_ABI_VERSION EQUAL 1)
   config_define(${LIBCXX_ABI_VERSION} _LIBCPP_ABI_VERSION)
 endif()
 config_define_if(LIBCXX_ABI_UNSTABLE _LIBCPP_ABI_UNSTABLE)

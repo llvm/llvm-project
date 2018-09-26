@@ -106,6 +106,7 @@ protected:
     ARMv82a,
     ARMv83a,
     ARMv84a,
+    ARMv85a,
     ARMv8a,
     ARMv8mBaseline,
     ARMv8mMainline,
@@ -153,6 +154,7 @@ protected:
   bool HasV8_2aOps = false;
   bool HasV8_3aOps = false;
   bool HasV8_4aOps = false;
+  bool HasV8_5aOps = false;
   bool HasV8MBaselineOps = false;
   bool HasV8MMainlineOps = false;
 
@@ -538,6 +540,7 @@ public:
   bool hasV8_2aOps() const { return HasV8_2aOps; }
   bool hasV8_3aOps() const { return HasV8_3aOps; }
   bool hasV8_4aOps() const { return HasV8_4aOps; }
+  bool hasV8_5aOps() const { return HasV8_5aOps; }
   bool hasV8MBaselineOps() const { return HasV8MBaselineOps; }
   bool hasV8MMainlineOps() const { return HasV8MMainlineOps; }
 

@@ -2058,7 +2058,8 @@ FunctionDecl *ClangASTContext::CreateFunctionDeclaration(
 
 CompilerType ClangASTContext::CreateFunctionType(
     ASTContext *ast, const CompilerType &result_type, const CompilerType *args,
-    unsigned num_args, bool is_variadic, unsigned type_quals) {
+    unsigned num_args, bool is_variadic, unsigned type_quals,
+    clang::CallingConv cc) {
   if (ast == nullptr)
     return CompilerType(); // invalid AST
 
@@ -2086,6 +2087,7 @@ CompilerType ClangASTContext::CreateFunctionType(
 
   // TODO: Detect calling convention in DWARF?
   FunctionProtoType::ExtProtoInfo proto_info;
+  proto_info.ExtInfo = cc;
   proto_info.Variadic = is_variadic;
   proto_info.ExceptionSpec = EST_None;
   proto_info.TypeQuals = type_quals;

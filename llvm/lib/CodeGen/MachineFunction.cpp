@@ -657,7 +657,7 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
       }
     }
 
-  } else if (const auto *CPI = dyn_cast<CatchPadInst>(FirstI)) {
+  } else if (isa<CatchPadInst>(FirstI)) {
     // TODO
 
   } else {

@@ -6,8 +6,10 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
 #include "Serialization.h"
 #include "Index.h"
+#include "Logger.h"
 #include "RIFF.h"
 #include "Trace.h"
 #include "dex/Dex.h"
@@ -433,8 +435,12 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
   }
 
   trace::Span Tracer("BuildIndex");
-  return UseDex ? dex::Dex::build(std::move(Symbols), URISchemes)
-                : MemIndex::build(std::move(Symbols), std::move(Refs));
+  auto Index = UseDex ? dex::Dex::build(std::move(Symbols), URISchemes)
+                      : MemIndex::build(std::move(Symbols), std::move(Refs));
+  vlog("Loaded {0} from {1} with estimated memory usage {2}",
+       UseDex ? "Dex" : "MemIndex", SymbolFilename,
+       Index->estimateMemoryUsage());
+  return Index;
 }
 
 } // namespace clangd

@@ -90,8 +90,8 @@ def _SLASH_GF_ : CLFlag<"GF-">, HelpText<"Disable string pooling">,
   Alias<fwritable_strings>;
 def _SLASH_GS : CLFlag<"GS">, HelpText<"Enable buffer security check (default)">;
 def _SLASH_GS_ : CLFlag<"GS-">, HelpText<"Disable buffer security check">;
-// FIXME: Not sure /Gs really means /Gs0 (see PR39074).
-def : CLFlag<"Gs">, HelpText<"Same as /Gs0">, Alias<mstack_probe_size>, AliasArgs<["0"]>;
+def : CLFlag<"Gs">, HelpText<"Use stack probes (default)">,
+  Alias<mstack_probe_size>, AliasArgs<["4096"]>;
 def _SLASH_Gs : CLJoined<"Gs">,
   HelpText<"Set stack probe size (default 4096)">, Alias<mstack_probe_size>;
 def _SLASH_Gy : CLFlag<"Gy">, HelpText<"Put each function in its own section">,
@@ -121,9 +121,9 @@ def _SLASH_O : CLJoined<"O">,
 // FIXME: Not sure why we have -O0 here; MSVC doesn't support that.
 def : CLFlag<"O0">, Alias<O0>, HelpText<"Disable optimization">;
 def : CLFlag<"O1">, Alias<_SLASH_O>, AliasArgs<["1"]>,
-  HelpText<"Optimize for size (equivalent to /Og /Os /Oy /Ob2 /Gs /GF /Gy)">;
+  HelpText<"Optimize for size (equivalent to /Og /Os /Oy /Ob2 /GF /Gy)">;
 def : CLFlag<"O2">, Alias<_SLASH_O>, AliasArgs<["2"]>,
-  HelpText<"Optimize for speed (equivalent to /Og /Oi /Ot /Oy /Ob2 /Gs /GF /Gy)">;
+  HelpText<"Optimize for speed (equivalent to /Og /Oi /Ot /Oy /Ob2 /GF /Gy)">;
 def : CLFlag<"Ob0">, Alias<_SLASH_O>, AliasArgs<["b0"]>,
   HelpText<"Disable function inlining">;
 def : CLFlag<"Ob1">, Alias<_SLASH_O>, AliasArgs<["b1"]>,

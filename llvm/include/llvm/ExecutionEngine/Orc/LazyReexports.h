@@ -73,7 +73,7 @@ public:
   createNotifyResolvedFunction(NotifyResolvedImpl NotifyResolved) {
     return llvm::make_unique<NotifyResolvedFunctionImpl<NotifyResolvedImpl>>(
         std::move(NotifyResolved));
-  };
+  }
 
   // Return a free call-through trampoline and bind it to look up and call
   // through to the given symbol.

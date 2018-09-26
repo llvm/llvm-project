@@ -319,6 +319,9 @@ if not re.match(r'^x86_64.*-(windows-gnu|windows-msvc)', config.target_triple):
 if config.have_libxar:
     config.available_features.add('xar')
 
+if config.enable_threads:
+    config.available_features.add('thread_support')
+
 if config.llvm_libxml2_enabled == '1':
     config.available_features.add('libxml2')
 

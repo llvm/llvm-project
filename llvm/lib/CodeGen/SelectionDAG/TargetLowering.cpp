@@ -55,10 +55,12 @@ bool TargetLowering::isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
   const Function &F = DAG.getMachineFunction().getFunction();
 
   // Conservatively require the attributes of the call to match those of
-  // the return. Ignore noalias because it doesn't affect the call sequence.
+  // the return. Ignore NoAlias and NonNull because they don't affect the
+  // call sequence.
   AttributeList CallerAttrs = F.getAttributes();
   if (AttrBuilder(CallerAttrs, AttributeList::ReturnIndex)
           .removeAttribute(Attribute::NoAlias)
+          .removeAttribute(Attribute::NonNull)
           .hasAttributes())
     return false;
 

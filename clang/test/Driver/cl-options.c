@@ -101,7 +101,7 @@
 // Gy_-NOT: -ffunction-sections
 
 // RUN: %clang_cl /Gs -### -- %s 2>&1 | FileCheck -check-prefix=Gs %s
-// Gs: "-mstack-probe-size=0"
+// Gs: "-mstack-probe-size=4096"
 // RUN: %clang_cl /Gs0 -### -- %s 2>&1 | FileCheck -check-prefix=Gs0 %s
 // Gs0: "-mstack-probe-size=0"
 // RUN: %clang_cl /Gs4096 -### -- %s 2>&1 | FileCheck -check-prefix=Gs4096 %s

@@ -28,6 +28,8 @@ public:
   void addWholeArchive(StringRef Path);
 
   llvm::StringSet<> ExcludeSymbols;
+  llvm::StringSet<> ExcludeSymbolPrefixes;
+  llvm::StringSet<> ExcludeSymbolSuffixes;
   llvm::StringSet<> ExcludeLibs;
   llvm::StringSet<> ExcludeObjects;
 
