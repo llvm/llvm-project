@@ -331,6 +331,26 @@ static bool IsAnonymousNamespaceName(const std::string &name) {
   return name == "`anonymous namespace'" || name == "`anonymous-namespace'";
 }
 
+static clang::CallingConv TranslateCallingConvention(PDB_CallingConv pdb_cc) {
+  switch (pdb_cc) {
+  case llvm::codeview::CallingConvention::NearC:
+    return clang::CC_C;
+  case llvm::codeview::CallingConvention::NearStdCall:
+    return clang::CC_X86StdCall;
+  case llvm::codeview::CallingConvention::NearFast:
+    return clang::CC_X86FastCall;
+  case llvm::codeview::CallingConvention::ThisCall:
+    return clang::CC_X86ThisCall;
+  case llvm::codeview::CallingConvention::NearVector:
+    return clang::CC_X86VectorCall;
+  case llvm::codeview::CallingConvention::NearPascal:
+    return clang::CC_X86Pascal;
+  default:
+    assert(false && "Unknown calling convention");
+    return clang::CC_C;
+  }
+}
+
 PDBASTParser::PDBASTParser(lldb_private::ClangASTContext &ast) : m_ast(ast) {}
 
 PDBASTParser::~PDBASTParser() {}
@@ -603,9 +623,10 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       type_quals |= clang::Qualifiers::Const;
     if (func_sig->isVolatileType())
       type_quals |= clang::Qualifiers::Volatile;
+    auto cc = TranslateCallingConvention(func_sig->getCallingConvention());
     CompilerType func_sig_ast_type =
         m_ast.CreateFunctionType(return_ast_type, arg_list.data(),
-                                 arg_list.size(), is_variadic, type_quals);
+                                 arg_list.size(), is_variadic, type_quals, cc);
 
     GetDeclarationForSymbol(type, decl);
     return std::make_shared<lldb_private::Type>(

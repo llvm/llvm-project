@@ -10,7 +10,7 @@
 // This file implements the LLVM Pass Timing infrastructure for both
 // new and legacy pass managers.
 //
-// TimingInfo Class - This class is used to calculate information about the
+// PassTimingInfo Class - This class is used to calculate information about the
 // amount of time each pass takes to execute.  This only happens when
 // -time-passes is enabled on the command line.
 //
@@ -34,30 +34,70 @@ using namespace llvm;
 
 namespace llvm {
 
-//===----------------------------------------------------------------------===//
-// TimingInfo implementation
-
 bool TimePassesIsEnabled = false;
+
 static cl::opt<bool, true> EnableTiming(
     "time-passes", cl::location(TimePassesIsEnabled), cl::Hidden,
     cl::desc("Time each pass, printing elapsed time for each on exit"));
 
 namespace {
-static ManagedStatic<sys::SmartMutex<true>> TimingInfoMutex;
-}
+namespace legacy {
 
-template <typename PassT>
-PassTimingInfo<PassT>::PassTimingInfo()
+//===----------------------------------------------------------------------===//
+// TimingInfo implementation
+
+/// Provides an interface for collecting pass timing information.
+///
+/// It was intended to be generic but now we decided to split
+/// interfaces completely. This is now exclusively for legacy-pass-manager use.
+class PassTimingInfo {
+public:
+  using PassInstanceID = void *;
+
+private:
+  StringMap<unsigned> PassIDCountMap; ///< Map that counts instances of passes
+  DenseMap<PassInstanceID, Timer *> TimingData; ///< timers for pass instances
+  TimerGroup TG;
+
+public:
+  /// Default constructor for yet-inactive timeinfo.
+  /// Use \p init() to activate it.
+  PassTimingInfo();
+
+  /// Print out timing information and release timers.
+  ~PassTimingInfo();
+
+  /// Initializes the static \p TheTimeInfo member to a non-null value when
+  /// -time-passes is enabled. Leaves it null otherwise.
+  ///
+  /// This method may be called multiple times.
+  static void init();
+
+  /// Prints out timing information and then resets the timers.
+  void print();
+
+  /// Returns the timer for the specified pass if it exists.
+  Timer *getPassTimer(Pass *, PassInstanceID);
+
+  static PassTimingInfo *TheTimeInfo;
+
+private:
+  Timer *newPassTimer(StringRef PassID, StringRef PassDesc);
+};
+
+static ManagedStatic<sys::SmartMutex<true>> TimingInfoMutex;
+
+PassTimingInfo::PassTimingInfo()
     : TG("pass", "... Pass execution timing report ...") {}
 
-template <typename PassT> PassTimingInfo<PassT>::~PassTimingInfo() {
+PassTimingInfo::~PassTimingInfo() {
   // Deleting the timers accumulates their info into the TG member.
   // Then TG member is (implicitly) deleted, actually printing the report.
   for (auto &I : TimingData)
     delete I.getSecond();
 }
 
-template <typename PassT> void PassTimingInfo<PassT>::init() {
+void PassTimingInfo::init() {
   if (!TimePassesIsEnabled || TheTimeInfo)
     return;
 
@@ -69,13 +109,9 @@ template <typename PassT> void PassTimingInfo<PassT>::init() {
 }
 
 /// Prints out timing information and then resets the timers.
-template <typename PassT> void PassTimingInfo<PassT>::print() {
-  TG.print(*CreateInfoOutputFile());
-}
+void PassTimingInfo::print() { TG.print(*CreateInfoOutputFile()); }
 
-template <typename PassInfoT>
-Timer *PassTimingInfo<PassInfoT>::newPassTimer(StringRef PassID,
-                                               StringRef PassDesc) {
+Timer *PassTimingInfo::newPassTimer(StringRef PassID, StringRef PassDesc) {
   unsigned &num = PassIDCountMap[PassID];
   num++;
   // Appending description with a pass-instance number for all but the first one
@@ -84,22 +120,7 @@ Timer *PassTimingInfo<PassInfoT>::newPassTimer(StringRef PassID,
   return new Timer(PassID, PassDescNumbered, TG);
 }
 
-/// Returns the timer for the specified pass instance \p Pass.
-/// Instances of the same pass type (uniquely identified by \p PassID) are
-/// numbered by the order of appearance.
-template <>
-Timer *PassTimingInfo<StringRef>::getPassTimer(StringRef PassID,
-                                               PassInstanceID Pass) {
-  init();
-  sys::SmartScopedLock<true> Lock(*TimingInfoMutex);
-  Timer *&T = TimingData[Pass];
-  if (!T)
-    T = newPassTimer(PassID, PassID);
-  return T;
-}
-
-template <>
-Timer *PassTimingInfo<Pass *>::getPassTimer(Pass *P, PassInstanceID Pass) {
+Timer *PassTimingInfo::getPassTimer(Pass *P, PassInstanceID Pass) {
   if (P->getAsPMDataManager())
     return nullptr;
 
@@ -117,34 +138,22 @@ Timer *PassTimingInfo<Pass *>::getPassTimer(Pass *P, PassInstanceID Pass) {
   return T;
 }
 
-template <typename PassInfoT>
-PassTimingInfo<PassInfoT> *PassTimingInfo<PassInfoT>::TheTimeInfo;
-
-template class PassTimingInfo<Pass *>;
-template class PassTimingInfo<StringRef>;
+PassTimingInfo *PassTimingInfo::TheTimeInfo;
+} // namespace legacy
+} // namespace
 
 Timer *getPassTimer(Pass *P) {
-  PassTimingInfo<Pass *>::init();
-  if (PassTimingInfo<Pass *>::TheTimeInfo)
-    return PassTimingInfo<Pass *>::TheTimeInfo->getPassTimer(P, P);
-  return nullptr;
-}
-
-Timer *getPassTimer(StringRef PassName) {
-  PassTimingInfo<StringRef>::init();
-  if (PassTimingInfo<StringRef>::TheTimeInfo)
-    return PassTimingInfo<StringRef>::TheTimeInfo->getPassTimer(PassName,
-                                                                nullptr);
+  legacy::PassTimingInfo::init();
+  if (legacy::PassTimingInfo::TheTimeInfo)
+    return legacy::PassTimingInfo::TheTimeInfo->getPassTimer(P, P);
   return nullptr;
 }
 
 /// If timing is enabled, report the times collected up to now and then reset
 /// them.
 void reportAndResetTimings() {
-  if (PassTimingInfo<StringRef>::TheTimeInfo)
-    PassTimingInfo<StringRef>::TheTimeInfo->print();
-  if (PassTimingInfo<Pass *>::TheTimeInfo)
-    PassTimingInfo<Pass *>::TheTimeInfo->print();
+  if (legacy::PassTimingInfo::TheTimeInfo)
+    legacy::PassTimingInfo::TheTimeInfo->print();
 }
 
 } // namespace llvm

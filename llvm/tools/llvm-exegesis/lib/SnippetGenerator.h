@@ -18,6 +18,7 @@
 
 #include "Assembler.h"
 #include "BenchmarkCode.h"
+#include "CodeTemplate.h"
 #include "LlvmState.h"
 #include "MCInstrDescView.h"
 #include "RegisterAliasing.h"

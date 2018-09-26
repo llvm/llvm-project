@@ -51,6 +51,7 @@ ARM::ARM() {
   RelativeRel = R_ARM_RELATIVE;
   IRelativeRel = R_ARM_IRELATIVE;
   GotRel = R_ARM_GLOB_DAT;
+  NoneRel = R_ARM_NONE;
   PltRel = R_ARM_JUMP_SLOT;
   TlsGotRel = R_ARM_TLS_TPOFF32;
   TlsModuleIndexRel = R_ARM_TLS_DTPMOD32;

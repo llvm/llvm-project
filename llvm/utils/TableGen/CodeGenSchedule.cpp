@@ -1787,6 +1787,15 @@ void CodeGenSchedModels::collectPfmCounters() {
     }
     PM.PfmCycleCounterDef = Def;
   }
+  for (Record *Def : Records.getAllDerivedDefinitions("PfmUopsCounter")) {
+    CodeGenProcModel &PM = getProcModel(Def->getValueAsDef("SchedModel"));
+    if (PM.PfmUopsCounterDef) {
+      PrintFatalError(Def->getLoc(),
+                      "multiple uops counters for " +
+                          Def->getValueAsDef("SchedModel")->getName());
+    }
+    PM.PfmUopsCounterDef = Def;
+  }
 }
 
 // Collect and sort WriteRes, ReadAdvance, and ProcResources.

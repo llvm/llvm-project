@@ -69,8 +69,8 @@ protected:
 
 private:
   virtual std::vector<BenchmarkMeasure>
-  runMeasurements(const ExecutableFunction &EF, ScratchSpace &Scratch,
-                  const unsigned NumRepetitions) const = 0;
+  runMeasurements(const ExecutableFunction &EF,
+                  ScratchSpace &Scratch) const = 0;
 
   llvm::Expected<std::string>
   writeObjectFile(const BenchmarkCode &Configuration,

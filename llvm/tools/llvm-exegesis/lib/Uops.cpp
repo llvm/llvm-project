@@ -252,27 +252,21 @@ UopsSnippetGenerator::generateCodeTemplate(unsigned Opcode) const {
 
 std::vector<BenchmarkMeasure>
 UopsBenchmarkRunner::runMeasurements(const ExecutableFunction &Function,
-                                     ScratchSpace &Scratch,
-                                     const unsigned NumRepetitions) const {
+                                     ScratchSpace &Scratch) const {
   const auto &SchedModel = State.getSubtargetInfo().getSchedModel();
 
-  std::vector<BenchmarkMeasure> Result;
-  for (unsigned ProcResIdx = 1;
-       ProcResIdx < SchedModel.getNumProcResourceKinds(); ++ProcResIdx) {
-    const char *const PfmCounters = SchedModel.getExtraProcessorInfo()
-                                        .PfmCounters.IssueCounters[ProcResIdx];
-    if (!PfmCounters)
-      continue;
+  const auto RunMeasurement = [&Function,
+                               &Scratch](const char *const Counters) {
     // We sum counts when there are several counters for a single ProcRes
     // (e.g. P23 on SandyBridge).
     int64_t CounterValue = 0;
     llvm::SmallVector<llvm::StringRef, 2> CounterNames;
-    llvm::StringRef(PfmCounters).split(CounterNames, ',');
+    llvm::StringRef(Counters).split(CounterNames, ',');
     for (const auto &CounterName : CounterNames) {
       pfm::PerfEvent UopPerfEvent(CounterName);
       if (!UopPerfEvent.valid())
         llvm::report_fatal_error(
-            llvm::Twine("invalid perf event ").concat(PfmCounters));
+            llvm::Twine("invalid perf event ").concat(Counters));
       pfm::Counter Counter(UopPerfEvent);
       Scratch.clear();
       Counter.start();
@@ -280,9 +274,24 @@ UopsBenchmarkRunner::runMeasurements(const ExecutableFunction &Function,
       Counter.stop();
       CounterValue += Counter.read();
     }
-    Result.push_back({llvm::itostr(ProcResIdx),
-                      static_cast<double>(CounterValue) / NumRepetitions,
-                      SchedModel.getProcResource(ProcResIdx)->Name});
+    return CounterValue;
+  };
+
+  std::vector<BenchmarkMeasure> Result;
+  const auto& PfmCounters = SchedModel.getExtraProcessorInfo().PfmCounters;
+  // Uops per port.
+  for (unsigned ProcResIdx = 1;
+       ProcResIdx < SchedModel.getNumProcResourceKinds(); ++ProcResIdx) {
+    const char *const Counters = PfmCounters.IssueCounters[ProcResIdx];
+    if (!Counters)
+      continue;
+    const double CounterValue = RunMeasurement(Counters);
+    Result.push_back(BenchmarkMeasure::Create(SchedModel.getProcResource(ProcResIdx)->Name, CounterValue));
+  }
+  // NumMicroOps.
+  if (const char *const UopsCounter = PfmCounters.UopsCounter) {
+    const double CounterValue = RunMeasurement(UopsCounter);
+    Result.push_back(BenchmarkMeasure::Create("NumMicroOps", CounterValue));
   }
   return Result;
 }

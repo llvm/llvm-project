@@ -471,7 +471,9 @@ public:
     return Root;
   }
 
+#ifndef NDEBUG
   void VerifyDAGDiverence();
+#endif
 
   /// This iterates over the nodes in the SelectionDAG, folding
   /// certain types of nodes together, or eliminating superfluous nodes.  The

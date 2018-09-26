@@ -1871,15 +1871,6 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB) {
     CallInst *CI = TailCalls[i];
     CallSite CS(CI);
 
-    // Conservatively require the attributes of the call to match those of the
-    // return. Ignore noalias because it doesn't affect the call sequence.
-    AttributeList CalleeAttrs = CS.getAttributes();
-    if (AttrBuilder(CalleeAttrs, AttributeList::ReturnIndex)
-            .removeAttribute(Attribute::NoAlias) !=
-        AttrBuilder(CalleeAttrs, AttributeList::ReturnIndex)
-            .removeAttribute(Attribute::NoAlias))
-      continue;
-
     // Make sure the call instruction is followed by an unconditional branch to
     // the return block.
     BasicBlock *CallBB = CI->getParent();
