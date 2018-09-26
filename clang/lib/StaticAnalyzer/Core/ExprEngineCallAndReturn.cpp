@@ -406,9 +406,8 @@ namespace {
   };
 } // end anonymous namespace
 
-REGISTER_TRAIT_WITH_PROGRAMSTATE(DynamicDispatchBifurcationMap,
-                                 CLANG_ENTO_PROGRAMSTATE_MAP(const MemRegion *,
-                                                             unsigned))
+REGISTER_MAP_WITH_PROGRAMSTATE(DynamicDispatchBifurcationMap,
+                               const MemRegion *, unsigned)
 
 bool ExprEngine::inlineCall(const CallEvent &Call, const Decl *D,
                             NodeBuilder &Bldr, ExplodedNode *Pred,

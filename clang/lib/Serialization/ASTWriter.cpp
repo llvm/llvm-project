@@ -6932,3 +6932,5 @@ void OMPClauseWriter::VisitOMPIsDevicePtrClause(OMPIsDevicePtrClause *C) {
     Record.AddDeclRef(M.getAssociatedDeclaration());
   }
 }
+
+void OMPClauseWriter::VisitOMPUnifiedAddressClause(OMPUnifiedAddressClause *) {}

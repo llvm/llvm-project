@@ -1174,8 +1174,11 @@ private:
   /// memory access.
   unsigned getConsecutiveMemOpCost(Instruction *I, unsigned VF);
 
-  /// The cost calculation for Load instruction \p I with uniform pointer -
-  /// scalar load + broadcast.
+  /// The cost calculation for Load/Store instruction \p I with uniform pointer -
+  /// Load: scalar load + broadcast.
+  /// Store: scalar store + (loop invariant value stored? 0 : extract of last
+  /// element)
+  /// TODO: Test the extra cost of the extract when loop variant value stored.
   unsigned getUniformMemOpCost(Instruction *I, unsigned VF);
 
   /// Returns whether the instruction is a load or store and will be a emitted
@@ -5297,15 +5300,23 @@ unsigned LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
 
 unsigned LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
                                                          unsigned VF) {
-  LoadInst *LI = cast<LoadInst>(I);
-  Type *ValTy = LI->getType();
+  Type *ValTy = getMemInstValueType(I);
   Type *VectorTy = ToVectorTy(ValTy, VF);
-  unsigned Alignment = LI->getAlignment();
-  unsigned AS = LI->getPointerAddressSpace();
+  unsigned Alignment = getLoadStoreAlignment(I);
+  unsigned AS = getLoadStoreAddressSpace(I);
+  if (isa<LoadInst>(I)) {
+    return TTI.getAddressComputationCost(ValTy) +
+           TTI.getMemoryOpCost(Instruction::Load, ValTy, Alignment, AS) +
+           TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy);
+  }
+  StoreInst *SI = cast<StoreInst>(I);
 
+  bool isLoopInvariantStoreValue = Legal->isUniform(SI->getValueOperand());
   return TTI.getAddressComputationCost(ValTy) +
-         TTI.getMemoryOpCost(Instruction::Load, ValTy, Alignment, AS) +
-         TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy);
+         TTI.getMemoryOpCost(Instruction::Store, ValTy, Alignment, AS) +
+         (isLoopInvariantStoreValue ? 0 : TTI.getVectorInstrCost(
+                                               Instruction::ExtractElement,
+                                               VectorTy, VF - 1));
 }
 
 unsigned LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
@@ -5404,15 +5415,22 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(unsigned VF) {
       if (!Ptr)
         continue;
 
+      // TODO: We should generate better code and update the cost model for
+      // predicated uniform stores. Today they are treated as any other
+      // predicated store (see added test cases in
+      // invariant-store-vectorization.ll).
       if (isa<StoreInst>(&I) && isScalarWithPredication(&I))
         NumPredStores++;
 
-      if (isa<LoadInst>(&I) && Legal->isUniform(Ptr) &&
-          // Conditional loads should be scalarized and predicated.
+      if (Legal->isUniform(Ptr) &&
+          // Conditional loads and stores should be scalarized and predicated.
           // isScalarWithPredication cannot be used here since masked
           // gather/scatters are not considered scalar with predication.
           !Legal->blockNeedsPredication(I.getParent())) {
-        // Scalar load + broadcast
+        // TODO: Avoid replicating loads and stores instead of
+        // relying on instcombine to remove them.
+        // Load: Scalar load + broadcast
+        // Store: Scalar store + isLoopInvariantStoreValue ? 0 : extract
         unsigned Cost = getUniformMemOpCost(&I, VF);
         setWideningDecision(&I, VF, CM_Scalarize, Cost);
         continue;

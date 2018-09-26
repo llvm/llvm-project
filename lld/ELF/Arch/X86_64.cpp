@@ -124,7 +124,7 @@ template <class ELFT> void X86_64<ELFT>::writeGotPltHeader(uint8_t *Buf) const {
   // required, but it is documented in the psabi and the glibc dynamic linker
   // seems to use it (note that this is relevant for linking ld.so, not any
   // other program).
-  write64le(Buf, InX::Dynamic->getVA());
+  write64le(Buf, In.Dynamic->getVA());
 }
 
 template <class ELFT>
@@ -140,8 +140,8 @@ template <class ELFT> void X86_64<ELFT>::writePltHeader(uint8_t *Buf) const {
       0x0f, 0x1f, 0x40, 0x00, // nop
   };
   memcpy(Buf, PltData, sizeof(PltData));
-  uint64_t GotPlt = InX::GotPlt->getVA();
-  uint64_t Plt = InX::Plt->getVA();
+  uint64_t GotPlt = In.GotPlt->getVA();
+  uint64_t Plt = In.Plt->getVA();
   write32le(Buf + 2, GotPlt - Plt + 2); // GOTPLT+8
   write32le(Buf + 8, GotPlt - Plt + 4); // GOTPLT+16
 }
@@ -569,8 +569,8 @@ template <class ELFT> void Retpoline<ELFT>::writePltHeader(uint8_t *Buf) const {
   };
   memcpy(Buf, Insn, sizeof(Insn));
 
-  uint64_t GotPlt = InX::GotPlt->getVA();
-  uint64_t Plt = InX::Plt->getVA();
+  uint64_t GotPlt = In.GotPlt->getVA();
+  uint64_t Plt = In.Plt->getVA();
   write32le(Buf + 2, GotPlt - Plt - 6 + 8);
   write32le(Buf + 9, GotPlt - Plt - 13 + 16);
 }

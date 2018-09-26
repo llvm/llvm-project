@@ -734,6 +734,37 @@ public:
   }
 };
 
+/// This represents 'unified_address' clause in the '#pragma omp requires'
+/// directive.
+///
+/// \code
+/// #pragma omp requires unified_address
+/// \endcode
+/// In this example directive '#pragma omp requires' has 'unified_address'
+/// clause.
+class OMPUnifiedAddressClause final : public OMPClause {
+public:
+  friend class OMPClauseReader;
+  /// Build 'unified_address' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPUnifiedAddressClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_unified_address, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPUnifiedAddressClause()
+      : OMPClause(OMPC_unified_address, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_unified_address;
+  }
+};
+
 /// This represents 'schedule' clause in the '#pragma omp ...' directive.
 ///
 /// \code

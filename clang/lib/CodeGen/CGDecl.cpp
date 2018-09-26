@@ -105,6 +105,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::Import:
   case Decl::OMPThreadPrivate:
   case Decl::OMPCapturedExpr:
+  case Decl::OMPRequires:
   case Decl::Empty:
     // None of these decls require codegen support.
     return;
@@ -2145,4 +2146,8 @@ void CodeGenModule::EmitOMPDeclareReduction(const OMPDeclareReductionDecl *D,
   if (!LangOpts.OpenMP || (!LangOpts.EmitAllDecls && !D->isUsed()))
     return;
   getOpenMPRuntime().emitUserDefinedReduction(CGF, D);
+}
+
+void CodeGenModule::EmitOMPRequiresDecl(const OMPRequiresDecl *D) {
+  //Do nothing - here to avoid build errors
 }

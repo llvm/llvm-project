@@ -1227,16 +1227,16 @@ static bool checkTupleLikeDecomposition(Sema &S,
 /// Find the base class to decompose in a built-in decomposition of a class type.
 /// This base class search is, unfortunately, not quite like any other that we
 /// perform anywhere else in C++.
-static const CXXRecordDecl *findDecomposableBaseClass(Sema &S,
-                                                      SourceLocation Loc,
-                                                      const CXXRecordDecl *RD,
-                                                      CXXCastPath &BasePath) {
+static DeclAccessPair findDecomposableBaseClass(Sema &S, SourceLocation Loc,
+                                                const CXXRecordDecl *RD,
+                                                CXXCastPath &BasePath) {
   auto BaseHasFields = [](const CXXBaseSpecifier *Specifier,
                           CXXBasePath &Path) {
     return Specifier->getType()->getAsCXXRecordDecl()->hasDirectFields();
   };
 
   const CXXRecordDecl *ClassWithFields = nullptr;
+  AccessSpecifier AS = AS_public;
   if (RD->hasDirectFields())
     // [dcl.decomp]p4:
     //   Otherwise, all of E's non-static data members shall be public direct
@@ -1249,7 +1249,7 @@ static const CXXRecordDecl *findDecomposableBaseClass(Sema &S,
     if (!RD->lookupInBases(BaseHasFields, Paths)) {
       // If no classes have fields, just decompose RD itself. (This will work
       // if and only if zero bindings were provided.)
-      return RD;
+      return DeclAccessPair::make(const_cast<CXXRecordDecl*>(RD), AS_public);
     }
 
     CXXBasePath *BestPath = nullptr;
@@ -1262,7 +1262,7 @@ static const CXXRecordDecl *findDecomposableBaseClass(Sema &S,
         S.Diag(Loc, diag::err_decomp_decl_multiple_bases_with_members)
           << false << RD << BestPath->back().Base->getType()
           << P.back().Base->getType();
-        return nullptr;
+        return DeclAccessPair();
       } else if (P.Access < BestPath->Access) {
         BestPath = &P;
       }
@@ -1273,23 +1273,13 @@ static const CXXRecordDecl *findDecomposableBaseClass(Sema &S,
     if (Paths.isAmbiguous(S.Context.getCanonicalType(BaseType))) {
       S.Diag(Loc, diag::err_decomp_decl_ambiguous_base)
         << RD << BaseType << S.getAmbiguousPathsDisplayString(Paths);
-      return nullptr;
+      return DeclAccessPair();
     }
 
-    //   ... public base class of E.
-    if (BestPath->Access != AS_public) {
-      S.Diag(Loc, diag::err_decomp_decl_non_public_base)
-        << RD << BaseType;
-      for (auto &BS : *BestPath) {
-        if (BS.Base->getAccessSpecifier() != AS_public) {
-          S.Diag(BS.Base->getBeginLoc(), diag::note_access_constrained_by_path)
-              << (BS.Base->getAccessSpecifier() == AS_protected)
-              << (BS.Base->getAccessSpecifierAsWritten() == AS_none);
-          break;
-        }
-      }
-      return nullptr;
-    }
+    //   ... [accessible, implied by other rules] base class of E.
+    S.CheckBaseClassAccess(Loc, BaseType, S.Context.getRecordType(RD),
+                           *BestPath, diag::err_decomp_decl_inaccessible_base);
+    AS = BestPath->Access;
 
     ClassWithFields = BaseType->getAsCXXRecordDecl();
     S.BuildBasePathArray(Paths, BasePath);
@@ -1302,17 +1292,19 @@ static const CXXRecordDecl *findDecomposableBaseClass(Sema &S,
     S.Diag(Loc, diag::err_decomp_decl_multiple_bases_with_members)
       << (ClassWithFields == RD) << RD << ClassWithFields
       << Paths.front().back().Base->getType();
-    return nullptr;
+    return DeclAccessPair();
   }
 
-  return ClassWithFields;
+  return DeclAccessPair::make(const_cast<CXXRecordDecl*>(ClassWithFields), AS);
 }
 
 static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
                                      ValueDecl *Src, QualType DecompType,
-                                     const CXXRecordDecl *RD) {
+                                     const CXXRecordDecl *OrigRD) {
   CXXCastPath BasePath;
-  RD = findDecomposableBaseClass(S, Src->getLocation(), RD, BasePath);
+  DeclAccessPair BasePair =
+      findDecomposableBaseClass(S, Src->getLocation(), OrigRD, BasePath);
+  const CXXRecordDecl *RD = cast_or_null<CXXRecordDecl>(BasePair.getDecl());
   if (!RD)
     return true;
   QualType BaseType = S.Context.getQualifiedType(S.Context.getRecordType(RD),
@@ -1329,7 +1321,8 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
     return true;
   };
 
-  //   all of E's non-static data members shall be public [...] members,
+  //   all of E's non-static data members shall be [...] well-formed
+  //   when named as e.name in the context of the structured binding,
   //   E shall not have an anonymous union member, ...
   unsigned I = 0;
   for (auto *FD : RD->fields()) {
@@ -1347,26 +1340,16 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
     if (I >= Bindings.size())
       return DiagnoseBadNumberOfBindings();
     auto *B = Bindings[I++];
-
     SourceLocation Loc = B->getLocation();
-    if (FD->getAccess() != AS_public) {
-      S.Diag(Loc, diag::err_decomp_decl_non_public_member) << FD << DecompType;
 
-      // Determine whether the access specifier was explicit.
-      bool Implicit = true;
-      for (const auto *D : RD->decls()) {
-        if (declaresSameEntity(D, FD))
-          break;
-        if (isa<AccessSpecDecl>(D)) {
-          Implicit = false;
-          break;
-        }
-      }
-
-      S.Diag(FD->getLocation(), diag::note_access_natural)
-        << (FD->getAccess() == AS_protected) << Implicit;
-      return true;
-    }
+    // The field must be accessible in the context of the structured binding.
+    // We already checked that the base class is accessible.
+    // FIXME: Add 'const' to AccessedEntity's classes so we can remove the
+    // const_cast here.
+    S.CheckStructuredBindingMemberAccess(
+        Loc, const_cast<CXXRecordDecl *>(OrigRD),
+        DeclAccessPair::make(FD, CXXRecordDecl::MergeAccess(
+                                     BasePair.getAccess(), FD->getAccess())));
 
     // Initialize the binding to Src.FD.
     ExprResult E = S.BuildDeclRefExpr(Src, DecompType, VK_LValue, Loc);

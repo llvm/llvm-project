@@ -2736,6 +2736,11 @@ Decl *TemplateDeclInstantiator::VisitOMPThreadPrivateDecl(
   return TD;
 }
 
+Decl *TemplateDeclInstantiator::VisitOMPRequiresDecl(OMPRequiresDecl *D) {
+  llvm_unreachable(
+      "Requires directive cannot be instantiated within a dependent context");
+}
+
 Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
     OMPDeclareReductionDecl *D) {
   // Instantiate type and check if it is allowed.

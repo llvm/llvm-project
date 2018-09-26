@@ -23,6 +23,7 @@
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
+#include "llvm/ExecutionEngine/Orc/LazyReexports.h"
 #include "llvm/ExecutionEngine/Orc/Legacy.h"
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
@@ -68,34 +69,42 @@ public:
   using IndirectStubsManagerBuilder =
       std::function<std::unique_ptr<IndirectStubsManager>()>;
 
-  using GetAvailableContextFunction = std::function<LLVMContext &()>;
-
   CompileOnDemandLayer2(ExecutionSession &ES, IRLayer &BaseLayer,
-                        JITCompileCallbackManager &CCMgr,
-                        IndirectStubsManagerBuilder BuildIndirectStubsManager,
-                        GetAvailableContextFunction GetAvailableContext);
+                        LazyCallThroughManager &LCTMgr,
+                        IndirectStubsManagerBuilder BuildIndirectStubsManager);
 
-  Error add(JITDylib &V, VModuleKey K, std::unique_ptr<Module> M) override;
+  Error add(JITDylib &V, VModuleKey K, ThreadSafeModule TSM) override;
 
   void emit(MaterializationResponsibility R, VModuleKey K,
-            std::unique_ptr<Module> M) override;
+            ThreadSafeModule TSM) override;
 
 private:
-  using StubManagersMap =
-      std::map<const JITDylib *, std::unique_ptr<IndirectStubsManager>>;
+  struct PerDylibResources {
+  public:
+    PerDylibResources(JITDylib &ImplD,
+                      std::unique_ptr<IndirectStubsManager> ISMgr)
+        : ImplD(ImplD), ISMgr(std::move(ISMgr)) {}
+    JITDylib &getImplDylib() { return ImplD; }
+    IndirectStubsManager &getISManager() { return *ISMgr; }
 
-  IndirectStubsManager &getStubsManager(const JITDylib &JD);
+  private:
+    JITDylib &ImplD;
+    std::unique_ptr<IndirectStubsManager> ISMgr;
+  };
+
+  using PerDylibResourcesMap = std::map<const JITDylib *, PerDylibResources>;
+
+  PerDylibResources &getPerDylibResources(JITDylib &TargetD);
 
   void emitExtractedFunctionsModule(MaterializationResponsibility R,
-                                    std::unique_ptr<Module> M);
+                                    ThreadSafeModule TSM);
 
   mutable std::mutex CODLayerMutex;
 
   IRLayer &BaseLayer;
-  JITCompileCallbackManager &CCMgr;
+  LazyCallThroughManager &LCTMgr;
   IndirectStubsManagerBuilder BuildIndirectStubsManager;
-  StubManagersMap StubsMgrs;
-  GetAvailableContextFunction GetAvailableContext;
+  PerDylibResourcesMap DylibResources;
 };
 
 /// Compile-on-demand layer.

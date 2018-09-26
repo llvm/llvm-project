@@ -477,12 +477,12 @@ EXTERN void __kmpc_data_sharing_pop_stack(void *FrameStart) {
     // Pointer to next available stack.
     void *&StackP = DataSharingState.StackPtr[WID];
 
+    // Pop the frame.
+    StackP = FrameStart;
+
     // If the current slot is empty, we need to free the slot after the
     // pop.
     bool SlotEmpty = (StackP == &SlotP->Data[0]);
-
-    // Pop the frame.
-    StackP = FrameStart;
 
     if (SlotEmpty && SlotP->Prev) {
       // Before removing the slot we need to reset StackP.

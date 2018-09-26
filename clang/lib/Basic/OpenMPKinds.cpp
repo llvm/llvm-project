@@ -168,6 +168,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
   case OMPC_from:
   case OMPC_use_device_ptr:
   case OMPC_is_device_ptr:
+  case OMPC_unified_address:
     break;
   }
   llvm_unreachable("Invalid OpenMP simple clause kind");
@@ -309,6 +310,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_from:
   case OMPC_use_device_ptr:
   case OMPC_is_device_ptr:
+  case OMPC_unified_address:
     break;
   }
   llvm_unreachable("Invalid OpenMP simple clause kind");
@@ -435,6 +437,16 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
   case OMPD_target:
     switch (CKind) {
 #define OPENMP_TARGET_CLAUSE(Name)                                             \
+  case OMPC_##Name:                                                            \
+    return true;
+#include "clang/Basic/OpenMPKinds.def"
+    default:
+      break;
+    }
+    break;
+  case OMPD_requires:
+    switch (CKind) {
+#define OPENMP_REQUIRES_CLAUSE(Name)                                             \
   case OMPC_##Name:                                                            \
     return true;
 #include "clang/Basic/OpenMPKinds.def"
@@ -961,6 +973,7 @@ void clang::getOpenMPCaptureRegions(
   case OMPD_declare_simd:
   case OMPD_declare_target:
   case OMPD_end_declare_target:
+  case OMPD_requires:
     llvm_unreachable("OpenMP Directive is not allowed");
   case OMPD_unknown:
     llvm_unreachable("Unknown OpenMP directive");

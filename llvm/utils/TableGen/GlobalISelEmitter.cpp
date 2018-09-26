@@ -1837,6 +1837,12 @@ public:
   static bool classof(const InstructionPredicateMatcher *P) {
     return P->getKind() == IPM_GenericPredicate;
   }
+  bool isIdentical(const PredicateMatcher &B) const override {
+    return InstructionPredicateMatcher::isIdentical(B) &&
+           Predicate ==
+               static_cast<const GenericInstructionPredicateMatcher &>(B)
+                   .Predicate;
+  }
   void emitPredicateOpcodes(MatchTable &Table,
                             RuleMatcher &Rule) const override {
     Table << MatchTable::Opcode("GIM_CheckCxxInsnPredicate")

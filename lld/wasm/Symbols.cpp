@@ -105,6 +105,9 @@ bool Symbol::isExported() const {
   if (ForceExport || Config->ExportAll)
     return true;
 
+  if (!Config->ExportDefault)
+    return false;
+
   return !isHidden();
 }
 

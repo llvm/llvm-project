@@ -698,6 +698,10 @@ void OMPClausePrinter::VisitOMPProcBindClause(OMPProcBindClause *Node) {
      << ")";
 }
 
+void OMPClausePrinter::VisitOMPUnifiedAddressClause(OMPUnifiedAddressClause *) {
+  OS << "unified_address";
+}
+
 void OMPClausePrinter::VisitOMPScheduleClause(OMPScheduleClause *Node) {
   OS << "schedule(";
   if (Node->getFirstScheduleModifier() != OMPC_SCHEDULE_MODIFIER_unknown) {

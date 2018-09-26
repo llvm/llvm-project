@@ -52,12 +52,12 @@ private:
 namespace llvm {
 namespace orc {
 
-void JITCompileCallbackManager::anchor() {}
 void IndirectStubsManager::anchor() {}
+void TrampolinePool::anchor() {}
 
 Expected<JITTargetAddress>
 JITCompileCallbackManager::getCompileCallback(CompileFunction Compile) {
-  if (auto TrampolineAddr = getAvailableTrampolineAddr()) {
+  if (auto TrampolineAddr = TP->getTrampoline()) {
     auto CallbackName = ES.getSymbolStringPool().intern(
         std::string("cc") + std::to_string(++NextCallbackId));
 
@@ -107,44 +107,46 @@ JITTargetAddress JITCompileCallbackManager::executeCompileCallback(
   }
 }
 
-std::unique_ptr<JITCompileCallbackManager>
+Expected<std::unique_ptr<JITCompileCallbackManager>>
 createLocalCompileCallbackManager(const Triple &T, ExecutionSession &ES,
                                   JITTargetAddress ErrorHandlerAddress) {
   switch (T.getArch()) {
-    default: return nullptr;
-
-    case Triple::aarch64: {
-      typedef orc::LocalJITCompileCallbackManager<orc::OrcAArch64> CCMgrT;
-      return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
+  default:
+    return make_error<StringError>(
+        std::string("No callback manager available for ") + T.str(),
+        inconvertibleErrorCode());
+  case Triple::aarch64: {
+    typedef orc::LocalJITCompileCallbackManager<orc::OrcAArch64> CCMgrT;
+    return CCMgrT::Create(ES, ErrorHandlerAddress);
     }
 
     case Triple::x86: {
       typedef orc::LocalJITCompileCallbackManager<orc::OrcI386> CCMgrT;
-      return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
+      return CCMgrT::Create(ES, ErrorHandlerAddress);
     }
 
     case Triple::mips: {
       typedef orc::LocalJITCompileCallbackManager<orc::OrcMips32Be> CCMgrT;
-      return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
+      return CCMgrT::Create(ES, ErrorHandlerAddress);
     }
     case Triple::mipsel: {
       typedef orc::LocalJITCompileCallbackManager<orc::OrcMips32Le> CCMgrT;
-      return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
+      return CCMgrT::Create(ES, ErrorHandlerAddress);
     }
- 
+
     case Triple::mips64:
     case Triple::mips64el: {
       typedef orc::LocalJITCompileCallbackManager<orc::OrcMips64> CCMgrT;
-      return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
+      return CCMgrT::Create(ES, ErrorHandlerAddress);
     }
- 
+
     case Triple::x86_64: {
       if ( T.getOS() == Triple::OSType::Win32 ) {
         typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_Win32> CCMgrT;
-        return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
+        return CCMgrT::Create(ES, ErrorHandlerAddress);
       } else {
         typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_SysV> CCMgrT;
-        return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
+        return CCMgrT::Create(ES, ErrorHandlerAddress);
       }
     }
 

@@ -251,6 +251,33 @@ fp16_fml_fallthrough:
   if (Args.hasArg(options::OPT_ffixed_x20))
     Features.push_back("+reserve-x20");
 
+  if (Args.hasArg(options::OPT_fcall_saved_x8))
+    Features.push_back("+call-saved-x8");
+
+  if (Args.hasArg(options::OPT_fcall_saved_x9))
+    Features.push_back("+call-saved-x9");
+
+  if (Args.hasArg(options::OPT_fcall_saved_x10))
+    Features.push_back("+call-saved-x10");
+
+  if (Args.hasArg(options::OPT_fcall_saved_x11))
+    Features.push_back("+call-saved-x11");
+
+  if (Args.hasArg(options::OPT_fcall_saved_x12))
+    Features.push_back("+call-saved-x12");
+
+  if (Args.hasArg(options::OPT_fcall_saved_x13))
+    Features.push_back("+call-saved-x13");
+
+  if (Args.hasArg(options::OPT_fcall_saved_x14))
+    Features.push_back("+call-saved-x14");
+
+  if (Args.hasArg(options::OPT_fcall_saved_x15))
+    Features.push_back("+call-saved-x15");
+
+  if (Args.hasArg(options::OPT_fcall_saved_x18))
+    Features.push_back("+call-saved-x18");
+
   if (Args.hasArg(options::OPT_mno_neg_immediates))
     Features.push_back("+no-neg-immediates");
 }

@@ -342,9 +342,9 @@ define <8 x i32> @andn_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; AVX1-NEXT:    vandnps {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1095216660735,1095216660735]
+; AVX1-NEXT:    vpandn %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpandn %xmm1, %xmm3, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
@@ -363,6 +363,8 @@ define <8 x i32> @andn_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %
   %add1 = add <8 x i32> %and, %z
   ret <8 x i32> %add1
 }
+
+; Negative test - if we don't have a leading concat_vectors, the transform won't be profitable.
 
 define <8 x i32> @andn_variable_mask_operand_no_concat(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z) {
 ; AVX1-LABEL: andn_variable_mask_operand_no_concat:
@@ -386,6 +388,8 @@ define <8 x i32> @andn_variable_mask_operand_no_concat(<8 x i32> %x, <8 x i32> %
   ret <8 x i32> %add
 }
 
+; Negative test - if we don't have a leading concat_vectors, the transform won't be profitable (even if the mask is a constant).
+
 define <8 x i32> @andn_constant_mask_operand_no_concat(<8 x i32> %x, <8 x i32> %y) {
 ; AVX1-LABEL: andn_constant_mask_operand_no_concat:
 ; AVX1:       # %bb.0:
@@ -408,6 +412,8 @@ define <8 x i32> @andn_constant_mask_operand_no_concat(<8 x i32> %x, <8 x i32> %
   ret <8 x i32> %r
 }
 
+; This is a close call, but we split the 'andn' to reduce the insert/extract.
+
 define <8 x i32> @andn_variable_mask_operand_concat(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z, <8 x i32> %w) {
 ; AVX1-LABEL: andn_variable_mask_operand_concat:
 ; AVX1:       # %bb.0:
@@ -415,9 +421,9 @@ define <8 x i32> @andn_variable_mask_operand_concat(<8 x i32> %x, <8 x i32> %y, 
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm5, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
-; AVX1-NEXT:    vandnps %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpandn %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm1
+; AVX1-NEXT:    vpandn %xmm1, %xmm4, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm2
 ; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm0, %xmm0

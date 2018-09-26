@@ -56,12 +56,6 @@ static cl::opt<bool>
     DumpThinCGSCCs("dump-thin-cg-sccs", cl::init(false), cl::Hidden,
                    cl::desc("Dump the SCCs in the ThinLTO index's callgraph"));
 
-// The values are (type identifier, summary) pairs.
-typedef DenseMap<
-    GlobalValue::GUID,
-    TinyPtrVector<const std::pair<const std::string, TypeIdSummary> *>>
-    TypeIdSummariesByGuidTy;
-
 // Returns a unique hash for the Module considering the current list of
 // export/import and other global analysis results.
 // The hash is produced in \p Key.
@@ -71,7 +65,6 @@ static void computeCacheKey(
     const FunctionImporter::ExportSetTy &ExportList,
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
     const GVSummaryMapTy &DefinedGlobals,
-    const TypeIdSummariesByGuidTy &TypeIdSummariesByGuid,
     const std::set<GlobalValue::GUID> &CfiFunctionDefs,
     const std::set<GlobalValue::GUID> &CfiFunctionDecls) {
   // Compute the unique hash for this entry.
@@ -255,10 +248,9 @@ static void computeCacheKey(
 
   // Include the hash for all type identifiers used by this module.
   for (GlobalValue::GUID TId : UsedTypeIds) {
-    auto SummariesI = TypeIdSummariesByGuid.find(TId);
-    if (SummariesI != TypeIdSummariesByGuid.end())
-      for (auto *Summary : SummariesI->second)
-        AddTypeIdSummary(Summary->first, Summary->second);
+    auto TidIter = Index.typeIds().equal_range(TId);
+    for (auto It = TidIter.first; It != TidIter.second; ++It)
+      AddTypeIdSummary(It->second.first, It->second.second);
   }
 
   AddUnsigned(UsedCfiDefs.size());
@@ -917,7 +909,6 @@ class InProcessThinBackend : public ThinBackendProc {
   ThreadPool BackendThreadPool;
   AddStreamFn AddStream;
   NativeObjectCache Cache;
-  TypeIdSummariesByGuidTy TypeIdSummariesByGuid;
   std::set<GlobalValue::GUID> CfiFunctionDefs;
   std::set<GlobalValue::GUID> CfiFunctionDecls;
 
@@ -933,12 +924,6 @@ public:
       : ThinBackendProc(Conf, CombinedIndex, ModuleToDefinedGVSummaries),
         BackendThreadPool(ThinLTOParallelismLevel),
         AddStream(std::move(AddStream)), Cache(std::move(Cache)) {
-    // Create a mapping from type identifier GUIDs to type identifier summaries.
-    // This allows backends to use the type identifier GUIDs stored in the
-    // function summaries to determine which type identifier summaries affect
-    // each function without needing to compute GUIDs in each backend.
-    for (auto &TId : CombinedIndex.typeIds())
-      TypeIdSummariesByGuid[GlobalValue::getGUID(TId.first)].push_back(&TId);
     for (auto &Name : CombinedIndex.cfiFunctionDefs())
       CfiFunctionDefs.insert(
           GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Name)));
@@ -954,8 +939,7 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGlobals,
-      MapVector<StringRef, BitcodeModule> &ModuleMap,
-      const TypeIdSummariesByGuidTy &TypeIdSummariesByGuid) {
+      MapVector<StringRef, BitcodeModule> &ModuleMap) {
     auto RunThinBackend = [&](AddStreamFn AddStream) {
       LTOLLVMContext BackendContext(Conf);
       Expected<std::unique_ptr<Module>> MOrErr = BM.parseModule(BackendContext);
@@ -978,8 +962,8 @@ public:
     SmallString<40> Key;
     // The module may be cached, this helps handling it.
     computeCacheKey(Key, Conf, CombinedIndex, ModuleID, ImportList, ExportList,
-                    ResolvedODR, DefinedGlobals, TypeIdSummariesByGuid,
-                    CfiFunctionDefs, CfiFunctionDecls);
+                    ResolvedODR, DefinedGlobals, CfiFunctionDefs,
+                    CfiFunctionDecls);
     if (AddStreamFn CacheAddStream = Cache(Task, Key))
       return RunThinBackend(CacheAddStream);
 
@@ -1003,11 +987,10 @@ public:
             const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>
                 &ResolvedODR,
             const GVSummaryMapTy &DefinedGlobals,
-            MapVector<StringRef, BitcodeModule> &ModuleMap,
-            const TypeIdSummariesByGuidTy &TypeIdSummariesByGuid) {
+            MapVector<StringRef, BitcodeModule> &ModuleMap) {
           Error E = runThinLTOBackendThread(
               AddStream, Cache, Task, BM, CombinedIndex, ImportList, ExportList,
-              ResolvedODR, DefinedGlobals, ModuleMap, TypeIdSummariesByGuid);
+              ResolvedODR, DefinedGlobals, ModuleMap);
           if (E) {
             std::unique_lock<std::mutex> L(ErrMu);
             if (Err)
@@ -1017,8 +1000,7 @@ public:
           }
         },
         BM, std::ref(CombinedIndex), std::ref(ImportList), std::ref(ExportList),
-        std::ref(ResolvedODR), std::ref(DefinedGlobals), std::ref(ModuleMap),
-        std::ref(TypeIdSummariesByGuid));
+        std::ref(ResolvedODR), std::ref(DefinedGlobals), std::ref(ModuleMap));
     return Error::success();
   }
 
