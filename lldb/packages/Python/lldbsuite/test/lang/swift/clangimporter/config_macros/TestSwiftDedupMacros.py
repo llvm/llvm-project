@@ -24,11 +24,13 @@ class TestSwiftDedupMacros(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
-    # FIXME: rdar://44201206 - This test is sporadically segfaulting.
-    # @decorators.skipUnlessDarwin
-    # @decorators.swiftTest
-    # @decorators.add_test_categories(["swiftpr"])
-    @decorators.skipIf
+    # NOTE: rdar://44201206 - This test may sporadically segfault. It's likely
+    # that the underlying memory corruption issue has been addressed, but due
+    # to the difficulty of reproducing the crash, we are not sure. If a crash
+    # is observed, try to collect a crashlog before disabling this test.
+    @decorators.skipUnlessDarwin
+    @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def testSwiftDebugMacros(self):
         """This tests that configuration macros get uniqued when building the
         scratch ast context. Note that "-D MACRO" options with a space
