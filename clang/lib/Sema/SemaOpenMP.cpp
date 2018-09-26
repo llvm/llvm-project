@@ -177,6 +177,9 @@ private:
            Stack.back().first.empty();
   }
 
+  /// Vector of previously declared requires directives
+  SmallVector<const OMPRequiresDecl *, 2> RequiresDecls;
+
 public:
   explicit DSAStackTy(Sema &S) : SemaRef(S) {}
 
@@ -351,7 +354,34 @@ public:
       return OMPD_unknown;
     return std::next(Stack.back().first.rbegin())->Directive;
   }
+  
+  /// Add requires decl to internal vector
+  void addRequiresDecl(OMPRequiresDecl *RD) {
+    RequiresDecls.push_back(RD);
+  }
 
+  /// Checks for a duplicate clause amongst previously declared requires
+  /// directives
+  bool hasDuplicateRequiresClause(ArrayRef<OMPClause *> ClauseList) const {
+    bool IsDuplicate = false;
+    for (OMPClause *CNew : ClauseList) {
+      for (const OMPRequiresDecl *D : RequiresDecls) {
+        for (const OMPClause *CPrev : D->clauselists()) {
+          if (CNew->getClauseKind() == CPrev->getClauseKind()) {
+            SemaRef.Diag(CNew->getBeginLoc(),
+                         diag::err_omp_requires_clause_redeclaration)
+                << getOpenMPClauseName(CNew->getClauseKind());
+            SemaRef.Diag(CPrev->getBeginLoc(),
+                         diag::note_omp_requires_previous_clause)
+                << getOpenMPClauseName(CPrev->getClauseKind());
+            IsDuplicate = true;
+          }
+        }
+      }
+    }
+    return IsDuplicate;
+  }
+  
   /// Set default data sharing attribute to none.
   void setDefaultDSANone(SourceLocation Loc) {
     assert(!isStackEmpty());
@@ -1899,6 +1929,30 @@ Sema::CheckOMPThreadPrivateDecl(SourceLocation Loc, ArrayRef<Expr *> VarList) {
   return D;
 }
 
+Sema::DeclGroupPtrTy
+Sema::ActOnOpenMPRequiresDirective(SourceLocation Loc,
+                                   ArrayRef<OMPClause *> ClauseList) {
+  OMPRequiresDecl *D = nullptr;
+  if (!CurContext->isFileContext()) {
+    Diag(Loc, diag::err_omp_invalid_scope) << "requires";
+  } else {
+    D = CheckOMPRequiresDecl(Loc, ClauseList);
+    if (D) {
+      CurContext->addDecl(D);
+      DSAStack->addRequiresDecl(D);
+    }
+  }
+  return DeclGroupPtrTy::make(DeclGroupRef(D));
+}
+
+OMPRequiresDecl *Sema::CheckOMPRequiresDecl(SourceLocation Loc,
+                                            ArrayRef<OMPClause *> ClauseList) {
+  if (!DSAStack->hasDuplicateRequiresClause(ClauseList))
+    return OMPRequiresDecl::Create(Context, getCurLexicalContext(), Loc,
+                                   ClauseList);
+  return nullptr;
+}
+
 static void reportOriginalDsa(Sema &SemaRef, const DSAStackTy *Stack,
                               const ValueDecl *D,
                               const DSAStackTy::DSAVarData &DVar,
@@ -2544,6 +2598,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_declare_simd:
   case OMPD_declare_target:
   case OMPD_end_declare_target:
+  case OMPD_requires:
     llvm_unreachable("OpenMP Directive is not allowed");
   case OMPD_unknown:
     llvm_unreachable("Unknown OpenMP directive");
@@ -3385,6 +3440,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   case OMPD_threadprivate:
   case OMPD_declare_reduction:
   case OMPD_declare_simd:
+  case OMPD_requires:
     llvm_unreachable("OpenMP Directive is not allowed");
   case OMPD_unknown:
     llvm_unreachable("Unknown OpenMP directive");
@@ -7954,6 +8010,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_from:
   case OMPC_use_device_ptr:
   case OMPC_is_device_ptr:
+  case OMPC_unified_address:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -8039,6 +8096,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_distribute_simd:
     case OMPD_teams_distribute:
     case OMPD_teams_distribute_simd:
+    case OMPD_requires:
       llvm_unreachable("Unexpected OpenMP directive with if-clause");
     case OMPD_unknown:
       llvm_unreachable("Unknown OpenMP directive");
@@ -8104,6 +8162,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_distribute_simd:
     case OMPD_teams_distribute:
     case OMPD_teams_distribute_simd:
+    case OMPD_requires:
       llvm_unreachable("Unexpected OpenMP directive with num_threads-clause");
     case OMPD_unknown:
       llvm_unreachable("Unknown OpenMP directive");
@@ -8167,6 +8226,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_ordered:
     case OMPD_atomic:
     case OMPD_distribute_simd:
+    case OMPD_requires:
       llvm_unreachable("Unexpected OpenMP directive with num_teams-clause");
     case OMPD_unknown:
       llvm_unreachable("Unknown OpenMP directive");
@@ -8230,6 +8290,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_ordered:
     case OMPD_atomic:
     case OMPD_distribute_simd:
+    case OMPD_requires:
       llvm_unreachable("Unexpected OpenMP directive with thread_limit-clause");
     case OMPD_unknown:
       llvm_unreachable("Unknown OpenMP directive");
@@ -8293,6 +8354,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_atomic:
     case OMPD_distribute_simd:
     case OMPD_target_teams:
+    case OMPD_requires:
       llvm_unreachable("Unexpected OpenMP directive with schedule clause");
     case OMPD_unknown:
       llvm_unreachable("Unknown OpenMP directive");
@@ -8356,6 +8418,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_ordered:
     case OMPD_atomic:
     case OMPD_target_teams:
+    case OMPD_requires:
       llvm_unreachable("Unexpected OpenMP directive with schedule clause");
     case OMPD_unknown:
       llvm_unreachable("Unknown OpenMP directive");
@@ -8419,6 +8482,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_ordered:
     case OMPD_atomic:
     case OMPD_distribute_simd:
+    case OMPD_requires:
       llvm_unreachable("Unexpected OpenMP directive with num_teams-clause");
     case OMPD_unknown:
       llvm_unreachable("Unknown OpenMP directive");
@@ -8468,6 +8532,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_from:
   case OMPC_use_device_ptr:
   case OMPC_is_device_ptr:
+  case OMPC_unified_address:
     llvm_unreachable("Unexpected OpenMP clause.");
   }
   return CaptureRegion;
@@ -8785,6 +8850,7 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_from:
   case OMPC_use_device_ptr:
   case OMPC_is_device_ptr:
+  case OMPC_unified_address:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -8941,6 +9007,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_from:
   case OMPC_use_device_ptr:
   case OMPC_is_device_ptr:
+  case OMPC_unified_address:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -9096,6 +9163,9 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_nogroup:
     Res = ActOnOpenMPNogroupClause(StartLoc, EndLoc);
     break;
+  case OMPC_unified_address:
+    Res = ActOnOpenMPUnifiedAddressClause(StartLoc, EndLoc);
+    break;
   case OMPC_if:
   case OMPC_final:
   case OMPC_num_threads:
@@ -9194,6 +9264,11 @@ OMPClause *Sema::ActOnOpenMPSIMDClause(SourceLocation StartLoc,
 OMPClause *Sema::ActOnOpenMPNogroupClause(SourceLocation StartLoc,
                                           SourceLocation EndLoc) {
   return new (Context) OMPNogroupClause(StartLoc, EndLoc);
+}
+
+OMPClause *Sema::ActOnOpenMPUnifiedAddressClause(SourceLocation StartLoc,
+                                                 SourceLocation EndLoc) {
+  return new (Context) OMPUnifiedAddressClause(StartLoc, EndLoc);
 }
 
 OMPClause *Sema::ActOnOpenMPVarListClause(
@@ -9303,6 +9378,7 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
   case OMPC_defaultmap:
   case OMPC_unknown:
   case OMPC_uniform:
+  case OMPC_unified_address:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;

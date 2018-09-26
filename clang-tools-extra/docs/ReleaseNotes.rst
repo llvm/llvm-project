@@ -72,7 +72,7 @@ Improvements to clang-tidy
 
 - New :doc:`abseil-no-internal-dependencies
   <clang-tidy/checks/abseil-no-internal-dependencies>` check.
-  
+
   Gives a warning if code using Abseil depends on internal details.
 
 - New :doc:`abseil-no-namespace
@@ -90,8 +90,15 @@ Improvements to clang-tidy
 - New :doc:`abseil-str-cat-append
   <clang-tidy/checks/abseil-str-cat-append>` check.
 
-  Flags uses of ``absl::StrCat()`` to append to a ``std::string``. Suggests 
+  Flags uses of ``absl::StrCat()`` to append to a ``std::string``. Suggests
   ``absl::StrAppend()`` should be used instead.
+
+- New :doc:`modernize-concat-nested-namespaces
+  <clang-tidy/checks/modernize-concat-nested-namespaces>` check.
+
+  Checks for uses of nested namespaces in the form of
+  ``namespace a { namespace b { ... }}`` and offers change to
+  syntax introduced in C++17 standard: ``namespace a::b { ... }``.
 
 - New :doc:`readability-magic-numbers
   <clang-tidy/checks/readability-magic-numbers>` check.

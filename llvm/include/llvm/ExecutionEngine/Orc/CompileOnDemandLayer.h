@@ -68,17 +68,14 @@ public:
   using IndirectStubsManagerBuilder =
       std::function<std::unique_ptr<IndirectStubsManager>()>;
 
-  using GetAvailableContextFunction = std::function<LLVMContext &()>;
-
   CompileOnDemandLayer2(ExecutionSession &ES, IRLayer &BaseLayer,
                         JITCompileCallbackManager &CCMgr,
-                        IndirectStubsManagerBuilder BuildIndirectStubsManager,
-                        GetAvailableContextFunction GetAvailableContext);
+                        IndirectStubsManagerBuilder BuildIndirectStubsManager);
 
-  Error add(JITDylib &V, VModuleKey K, std::unique_ptr<Module> M) override;
+  Error add(JITDylib &V, VModuleKey K, ThreadSafeModule TSM) override;
 
   void emit(MaterializationResponsibility R, VModuleKey K,
-            std::unique_ptr<Module> M) override;
+            ThreadSafeModule TSM) override;
 
 private:
   using StubManagersMap =
@@ -87,7 +84,7 @@ private:
   IndirectStubsManager &getStubsManager(const JITDylib &JD);
 
   void emitExtractedFunctionsModule(MaterializationResponsibility R,
-                                    std::unique_ptr<Module> M);
+                                    ThreadSafeModule TSM);
 
   mutable std::mutex CODLayerMutex;
 
@@ -95,7 +92,6 @@ private:
   JITCompileCallbackManager &CCMgr;
   IndirectStubsManagerBuilder BuildIndirectStubsManager;
   StubManagersMap StubsMgrs;
-  GetAvailableContextFunction GetAvailableContext;
 };
 
 /// Compile-on-demand layer.

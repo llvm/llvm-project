@@ -172,6 +172,7 @@ Clang-Tidy Checks
    misc-unused-parameters
    misc-unused-using-decls
    modernize-avoid-bind
+   modernize-concat-nested-namespaces
    modernize-deprecated-headers
    modernize-loop-convert
    modernize-make-shared

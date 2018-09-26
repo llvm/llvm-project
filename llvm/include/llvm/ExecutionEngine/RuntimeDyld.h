@@ -250,6 +250,16 @@ public:
   void finalizeWithMemoryManagerLocking();
 
 private:
+  friend void
+  jitLinkForORC(object::ObjectFile &Obj,
+                std::unique_ptr<MemoryBuffer> UnderlyingBuffer,
+                RuntimeDyld::MemoryManager &MemMgr, JITSymbolResolver &Resolver,
+                bool ProcessAllSections,
+                std::function<Error(std::unique_ptr<LoadedObjectInfo>,
+                                    std::map<StringRef, JITEvaluatedSymbol>)>
+                    OnLoaded,
+                std::function<void(Error)> OnEmitted);
+
   // RuntimeDyldImpl is the actual class. RuntimeDyld is just the public
   // interface.
   std::unique_ptr<RuntimeDyldImpl> Dyld;
@@ -258,6 +268,21 @@ private:
   bool ProcessAllSections;
   RuntimeDyldCheckerImpl *Checker;
 };
+
+// Asynchronous JIT link for ORC.
+//
+// Warning: This API is experimental and probably should not be used by anyone
+// but ORC's RTDyldObjectLinkingLayer2. Internally it constructs a RuntimeDyld
+// instance and uses continuation passing to perform the fix-up and finalize
+// steps asynchronously.
+void jitLinkForORC(object::ObjectFile &Obj,
+                   std::unique_ptr<MemoryBuffer> UnderlyingBuffer,
+                   RuntimeDyld::MemoryManager &MemMgr,
+                   JITSymbolResolver &Resolver, bool ProcessAllSections,
+                   std::function<Error(std::unique_ptr<LoadedObjectInfo>,
+                                       std::map<StringRef, JITEvaluatedSymbol>)>
+                       OnLoaded,
+                   std::function<void(Error)> OnEmitted);
 
 } // end namespace llvm
 

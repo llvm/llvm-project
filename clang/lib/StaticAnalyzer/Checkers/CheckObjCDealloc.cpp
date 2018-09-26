@@ -178,20 +178,12 @@ private:
 };
 } // End anonymous namespace.
 
-typedef llvm::ImmutableSet<SymbolRef> SymbolSet;
 
 /// Maps from the symbol for a class instance to the set of
 /// symbols remaining that must be released in -dealloc.
+REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(SymbolSet, SymbolRef)
 REGISTER_MAP_WITH_PROGRAMSTATE(UnreleasedIvarMap, SymbolRef, SymbolSet)
 
-namespace clang {
-namespace ento {
-template<> struct ProgramStateTrait<SymbolSet>
-:  public ProgramStatePartialTrait<SymbolSet> {
-  static void *GDMIndex() { static int index = 0; return &index; }
-};
-}
-}
 
 /// An AST check that diagnose when the class requires a -dealloc method and
 /// is missing one.

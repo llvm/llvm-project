@@ -34,7 +34,7 @@ public:
       std::function<Expected<std::unique_ptr<MemoryBuffer>>(Module &)>;
 
   using NotifyCompiledFunction =
-      std::function<void(VModuleKey K, std::unique_ptr<Module>)>;
+      std::function<void(VModuleKey K, ThreadSafeModule TSM)>;
 
   IRCompileLayer2(ExecutionSession &ES, ObjectLayer &BaseLayer,
                   CompileFunction Compile);
@@ -42,7 +42,7 @@ public:
   void setNotifyCompiled(NotifyCompiledFunction NotifyCompiled);
 
   void emit(MaterializationResponsibility R, VModuleKey K,
-            std::unique_ptr<Module> M) override;
+            ThreadSafeModule TSM) override;
 
 private:
   mutable std::mutex IRLayerMutex;

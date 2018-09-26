@@ -626,6 +626,44 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
   MCSymbol *LandingPadLabel = Ctx.createTempSymbol();
   LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
   LP.LandingPadLabel = LandingPadLabel;
+
+  const Instruction *FirstI = LandingPad->getBasicBlock()->getFirstNonPHI();
+  if (const auto *LPI = dyn_cast<LandingPadInst>(FirstI)) {
+    if (const auto *PF =
+            dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts()))
+      getMMI().addPersonality(PF);
+
+    if (LPI->isCleanup())
+      addCleanup(LandingPad);
+
+    // FIXME: New EH - Add the clauses in reverse order. This isn't 100%
+    // correct,
+    //        but we need to do it this way because of how the DWARF EH emitter
+    //        processes the clauses.
+    for (unsigned I = LPI->getNumClauses(); I != 0; --I) {
+      Value *Val = LPI->getClause(I - 1);
+      if (LPI->isCatch(I - 1)) {
+        addCatchTypeInfo(LandingPad,
+                         dyn_cast<GlobalValue>(Val->stripPointerCasts()));
+      } else {
+        // Add filters in a list.
+        auto *CVal = cast<Constant>(Val);
+        SmallVector<const GlobalValue *, 4> FilterList;
+        for (User::op_iterator II = CVal->op_begin(), IE = CVal->op_end();
+             II != IE; ++II)
+          FilterList.push_back(cast<GlobalValue>((*II)->stripPointerCasts()));
+
+        addFilterTypeInfo(LandingPad, FilterList);
+      }
+    }
+
+  } else if (const auto *CPI = dyn_cast<CatchPadInst>(FirstI)) {
+    // TODO
+
+  } else {
+    assert(isa<CleanupPadInst>(FirstI) && "Invalid landingpad!");
+  }
+
   return LandingPadLabel;
 }
 
@@ -752,36 +790,6 @@ try_next:;
   FilterEnds.push_back(FilterIds.size());
   FilterIds.push_back(0); // terminator
   return FilterID;
-}
-
-void llvm::addLandingPadInfo(const LandingPadInst &I, MachineBasicBlock &MBB) {
-  MachineFunction &MF = *MBB.getParent();
-  if (const auto *PF = dyn_cast<Function>(
-          I.getParent()->getParent()->getPersonalityFn()->stripPointerCasts()))
-    MF.getMMI().addPersonality(PF);
-
-  if (I.isCleanup())
-    MF.addCleanup(&MBB);
-
-  // FIXME: New EH - Add the clauses in reverse order. This isn't 100% correct,
-  //        but we need to do it this way because of how the DWARF EH emitter
-  //        processes the clauses.
-  for (unsigned i = I.getNumClauses(); i != 0; --i) {
-    Value *Val = I.getClause(i - 1);
-    if (I.isCatch(i - 1)) {
-      MF.addCatchTypeInfo(&MBB,
-                          dyn_cast<GlobalValue>(Val->stripPointerCasts()));
-    } else {
-      // Add filters in a list.
-      Constant *CVal = cast<Constant>(Val);
-      SmallVector<const GlobalValue *, 4> FilterList;
-      for (User::op_iterator II = CVal->op_begin(), IE = CVal->op_end();
-           II != IE; ++II)
-        FilterList.push_back(cast<GlobalValue>((*II)->stripPointerCasts()));
-
-      MF.addFilterTypeInfo(&MBB, FilterList);
-    }
-  }
 }
 
 /// \}

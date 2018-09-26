@@ -126,7 +126,7 @@ static void printEhFrame(raw_ostream &OS, OutputSection *OSec) {
   };
 
   // Gather section pieces.
-  for (const CieRecord *Rec : InX::EhFrame->getCieRecords()) {
+  for (const CieRecord *Rec : In.EhFrame->getCieRecords()) {
     Add(*Rec->Cie);
     for (const EhSectionPiece *Fde : Rec->Fdes)
       Add(*Fde);
@@ -181,7 +181,7 @@ void elf::writeMapFile() {
     for (BaseCommand *Base : OSec->SectionCommands) {
       if (auto *ISD = dyn_cast<InputSectionDescription>(Base)) {
         for (InputSection *IS : ISD->Sections) {
-          if (IS == InX::EhFrame) {
+          if (IS == In.EhFrame) {
             printEhFrame(OS, OSec);
             continue;
           }

@@ -8205,7 +8205,7 @@ SDValue llvm::peekThroughOneUseBitcasts(SDValue V) {
 bool llvm::isBitwiseNot(SDValue V) {
   if (V.getOpcode() != ISD::XOR)
     return false;
-  ConstantSDNode *C = isConstOrConstSplat(V.getOperand(1));
+  ConstantSDNode *C = isConstOrConstSplat(peekThroughBitcasts(V.getOperand(1)));
   return C && C->isAllOnesValue();
 }
 

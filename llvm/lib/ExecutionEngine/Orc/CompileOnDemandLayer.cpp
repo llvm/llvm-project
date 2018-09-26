@@ -8,12 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
-#include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -71,56 +67,33 @@ static void extractAliases(MaterializationResponsibility &R, Module &M,
   R.replace(symbolAliases(std::move(Aliases)));
 }
 
-static std::unique_ptr<Module>
-extractAndClone(Module &M, LLVMContext &NewContext, StringRef Suffix,
-                function_ref<bool(const GlobalValue *)> ShouldCloneDefinition) {
-  SmallVector<char, 1> ClonedModuleBuffer;
+static ThreadSafeModule extractAndClone(ThreadSafeModule &TSM, StringRef Suffix,
+                                        GVPredicate ShouldCloneDefinition) {
 
-  {
-    std::set<GlobalValue *> ClonedDefsInSrc;
-    ValueToValueMapTy VMap;
-    auto Tmp = CloneModule(M, VMap, [&](const GlobalValue *GV) {
-      if (ShouldCloneDefinition(GV)) {
-        ClonedDefsInSrc.insert(const_cast<GlobalValue *>(GV));
-        return true;
-      }
-      return false;
-    });
+  auto DeleteClonedDefsAndPromoteDeclLinkages = [](GlobalValue &GV) {
+    // Delete the definition and bump the linkage in the source module.
+    if (isa<Function>(GV)) {
+      auto &F = cast<Function>(GV);
+      F.deleteBody();
+      F.setPersonalityFn(nullptr);
+    } else if (isa<GlobalVariable>(GV)) {
+      cast<GlobalVariable>(GV).setInitializer(nullptr);
+    } else
+      llvm_unreachable("Unsupported global type");
 
-    for (auto *GV : ClonedDefsInSrc) {
-      // Delete the definition and bump the linkage in the source module.
-      if (isa<Function>(GV)) {
-        auto &F = *cast<Function>(GV);
-        F.deleteBody();
-        F.setPersonalityFn(nullptr);
-      } else if (isa<GlobalVariable>(GV)) {
-        cast<GlobalVariable>(GV)->setInitializer(nullptr);
-      } else
-        llvm_unreachable("Unsupported global type");
+    GV.setLinkage(GlobalValue::ExternalLinkage);
+  };
 
-      GV->setLinkage(GlobalValue::ExternalLinkage);
-    }
+  auto NewTSMod = cloneToNewContext(TSM, ShouldCloneDefinition,
+                                    DeleteClonedDefsAndPromoteDeclLinkages);
+  auto &M = *NewTSMod.getModule();
+  M.setModuleIdentifier((M.getModuleIdentifier() + Suffix).str());
 
-    BitcodeWriter BCWriter(ClonedModuleBuffer);
-
-    BCWriter.writeModule(*Tmp);
-    BCWriter.writeSymtab();
-    BCWriter.writeStrtab();
-  }
-
-  MemoryBufferRef ClonedModuleBufferRef(
-      StringRef(ClonedModuleBuffer.data(), ClonedModuleBuffer.size()),
-      "cloned module buffer");
-
-  auto ClonedModule =
-      cantFail(parseBitcodeFile(ClonedModuleBufferRef, NewContext));
-  ClonedModule->setModuleIdentifier((M.getName() + Suffix).str());
-  return ClonedModule;
+  return NewTSMod;
 }
 
-static std::unique_ptr<Module> extractGlobals(Module &M,
-                                              LLVMContext &NewContext) {
-  return extractAndClone(M, NewContext, ".globals", [](const GlobalValue *GV) {
+static ThreadSafeModule extractGlobals(ThreadSafeModule &TSM) {
+  return extractAndClone(TSM, ".globals", [](const GlobalValue &GV) {
     return isa<GlobalVariable>(GV);
   });
 }
@@ -132,14 +105,14 @@ class ExtractingIRMaterializationUnit : public IRMaterializationUnit {
 public:
   ExtractingIRMaterializationUnit(ExecutionSession &ES,
                                   CompileOnDemandLayer2 &Parent,
-                                  std::unique_ptr<Module> M)
-      : IRMaterializationUnit(ES, std::move(M)), Parent(Parent) {}
+                                  ThreadSafeModule TSM)
+      : IRMaterializationUnit(ES, std::move(TSM)), Parent(Parent) {}
 
-  ExtractingIRMaterializationUnit(std::unique_ptr<Module> M,
+  ExtractingIRMaterializationUnit(ThreadSafeModule TSM,
                                   SymbolFlagsMap SymbolFlags,
                                   SymbolNameToDefinitionMap SymbolToDefinition,
                                   CompileOnDemandLayer2 &Parent)
-      : IRMaterializationUnit(std::move(M), std::move(SymbolFlags),
+      : IRMaterializationUnit(std::move(TSM), std::move(SymbolFlags),
                               std::move(SymbolToDefinition)),
         Parent(Parent) {}
 
@@ -153,7 +126,7 @@ private:
     auto RequestedSymbols = R.getRequestedSymbols();
 
     // Extract the requested functions into a new module.
-    std::unique_ptr<Module> ExtractedFunctionsModule;
+    ThreadSafeModule ExtractedFunctionsModule;
     if (!RequestedSymbols.empty()) {
       std::string Suffix;
       std::set<const GlobalValue *> FunctionsToClone;
@@ -168,10 +141,9 @@ private:
 
       std::lock_guard<std::mutex> Lock(SourceModuleMutex);
       ExtractedFunctionsModule =
-          extractAndClone(*M, Parent.GetAvailableContext(), Suffix,
-                          [&](const GlobalValue *GV) -> bool {
-                            return FunctionsToClone.count(GV);
-                          });
+          extractAndClone(TSM, Suffix, [&](const GlobalValue &GV) -> bool {
+            return FunctionsToClone.count(&GV);
+          });
     }
 
     // Build a new ExtractingIRMaterializationUnit to delegate the unrequested
@@ -193,7 +165,7 @@ private:
              "SymbolFlags and SymbolToDefinition should have the same number "
              "of entries");
       R.replace(llvm::make_unique<ExtractingIRMaterializationUnit>(
-          std::move(M), std::move(DelegatedSymbolFlags),
+          std::move(TSM), std::move(DelegatedSymbolFlags),
           std::move(DelegatedSymbolToDefinition), Parent));
     }
 
@@ -215,31 +187,30 @@ private:
 
 CompileOnDemandLayer2::CompileOnDemandLayer2(
     ExecutionSession &ES, IRLayer &BaseLayer, JITCompileCallbackManager &CCMgr,
-    IndirectStubsManagerBuilder BuildIndirectStubsManager,
-    GetAvailableContextFunction GetAvailableContext)
+    IndirectStubsManagerBuilder BuildIndirectStubsManager)
     : IRLayer(ES), BaseLayer(BaseLayer), CCMgr(CCMgr),
-      BuildIndirectStubsManager(std::move(BuildIndirectStubsManager)),
-      GetAvailableContext(std::move(GetAvailableContext)) {}
+      BuildIndirectStubsManager(std::move(BuildIndirectStubsManager)) {}
 
 Error CompileOnDemandLayer2::add(JITDylib &V, VModuleKey K,
-                                 std::unique_ptr<Module> M) {
-  return IRLayer::add(V, K, std::move(M));
+                                 ThreadSafeModule TSM) {
+  return IRLayer::add(V, K, std::move(TSM));
 }
 
 void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
-                                 std::unique_ptr<Module> M) {
+                                 ThreadSafeModule TSM) {
   auto &ES = getExecutionSession();
-  assert(M && "M should not be null");
+  assert(TSM && "M should not be null");
+  auto &M = *TSM.getModule();
 
-  for (auto &GV : M->global_values())
+  for (auto &GV : M.global_values())
     if (GV.hasWeakLinkage())
       GV.setLinkage(GlobalValue::ExternalLinkage);
 
-  MangleAndInterner Mangle(ES, M->getDataLayout());
+  MangleAndInterner Mangle(ES, M.getDataLayout());
 
-  extractAliases(R, *M, Mangle);
+  extractAliases(R, *TSM.getModule(), Mangle);
 
-  auto GlobalsModule = extractGlobals(*M, GetAvailableContext());
+  auto GlobalsModule = extractGlobals(TSM);
 
   // Delete the bodies of any available externally functions, rename the
   // rest, and build the compile callbacks.
@@ -247,7 +218,7 @@ void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
       StubCallbacksAndLinkages;
   auto &TargetJD = R.getTargetJITDylib();
 
-  for (auto &F : M->functions()) {
+  for (auto &F : M.functions()) {
     if (F.isDeclaration())
       continue;
 
@@ -260,7 +231,7 @@ void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
     assert(F.hasName() && "Function should have a name");
     std::string StubUnmangledName = F.getName();
     F.setName(F.getName() + "$body");
-    auto StubDecl = cloneFunctionDecl(*M, F);
+    auto StubDecl = cloneFunctionDecl(*TSM.getModule(), F);
     StubDecl->setName(StubUnmangledName);
     StubDecl->setPersonalityFn(nullptr);
     StubDecl->setLinkage(GlobalValue::ExternalLinkage);
@@ -296,7 +267,7 @@ void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
   // Build the function-body-extracting materialization unit.
   if (auto Err = R.getTargetJITDylib().define(
           llvm::make_unique<ExtractingIRMaterializationUnit>(ES, *this,
-                                                             std::move(M)))) {
+                                                             std::move(TSM)))) {
     ES.reportError(std::move(Err));
     R.failMaterialization();
     return;
@@ -335,9 +306,9 @@ CompileOnDemandLayer2::getStubsManager(const JITDylib &V) {
 }
 
 void CompileOnDemandLayer2::emitExtractedFunctionsModule(
-    MaterializationResponsibility R, std::unique_ptr<Module> M) {
+    MaterializationResponsibility R, ThreadSafeModule TSM) {
   auto K = getExecutionSession().allocateVModule();
-  BaseLayer.emit(std::move(R), std::move(K), std::move(M));
+  BaseLayer.emit(std::move(R), std::move(K), std::move(TSM));
 }
 
 } // end namespace orc

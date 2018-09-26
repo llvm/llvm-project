@@ -19,14 +19,14 @@ IRTransformLayer2::IRTransformLayer2(ExecutionSession &ES,
     : IRLayer(ES), BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
 
 void IRTransformLayer2::emit(MaterializationResponsibility R, VModuleKey K,
-                             std::unique_ptr<Module> M) {
-  assert(M && "Module must not be null");
+                             ThreadSafeModule TSM) {
+  assert(TSM.getModule() && "Module must not be null");
 
-  if (auto TransformedMod = Transform(std::move(M)))
-    BaseLayer.emit(std::move(R), std::move(K), std::move(*TransformedMod));
+  if (auto TransformedTSM = Transform(std::move(TSM)))
+    BaseLayer.emit(std::move(R), std::move(K), std::move(*TransformedTSM));
   else {
     R.failMaterialization();
-    getExecutionSession().reportError(TransformedMod.takeError());
+    getExecutionSession().reportError(TransformedTSM.takeError());
   }
 }
 

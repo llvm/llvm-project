@@ -14,8 +14,17 @@
 
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_WINDOWS
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+// Intentionally not including windows.h here, to avoid the risk of
+// pulling in conflicting declarations of these functions. (With mingw-w64,
+// there's a risk of windows.h pulling in stdint.h.)
+typedef int BOOL;
+typedef void *HANDLE;
+typedef const void *LPCVOID;
+typedef void *LPVOID;
+
+#define HEAP_ZERO_MEMORY           0x00000008
+#define HEAP_REALLOC_IN_PLACE_ONLY 0x00000010
+
 
 #include "asan_allocator.h"
 #include "asan_interceptors.h"

@@ -12,13 +12,45 @@
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/Mangler.h"
 
+namespace {
+
+  // A SimpleCompiler that owns its TargetMachine.
+  class TMOwningSimpleCompiler : public llvm::orc::SimpleCompiler {
+  public:
+    TMOwningSimpleCompiler(std::unique_ptr<llvm::TargetMachine> TM)
+      : llvm::orc::SimpleCompiler(*TM), TM(std::move(TM)) {}
+  private:
+    // FIXME: shared because std::functions (and thus
+    // IRCompileLayer2::CompileFunction) are not moveable.
+    std::shared_ptr<llvm::TargetMachine> TM;
+  };
+
+} // end anonymous namespace
+
 namespace llvm {
 namespace orc {
 
+LLJIT::~LLJIT() {
+  if (CompileThreads)
+    CompileThreads->wait();
+}
+
 Expected<std::unique_ptr<LLJIT>>
-LLJIT::Create(std::unique_ptr<TargetMachine> TM, DataLayout DL) {
+LLJIT::Create(JITTargetMachineBuilder JTMB, DataLayout DL,
+              unsigned NumCompileThreads) {
+
+  if (NumCompileThreads == 0) {
+    // If NumCompileThreads == 0 then create a single-threaded LLJIT instance.
+    auto TM = JTMB.createTargetMachine();
+    if (!TM)
+      return TM.takeError();
+    return std::unique_ptr<LLJIT>(new LLJIT(llvm::make_unique<ExecutionSession>(),
+                                            std::move(*TM), std::move(DL)));
+  }
+
   return std::unique_ptr<LLJIT>(new LLJIT(llvm::make_unique<ExecutionSession>(),
-                                          std::move(TM), std::move(DL)));
+                                          std::move(JTMB), std::move(DL),
+                                          NumCompileThreads));
 }
 
 Error LLJIT::defineAbsolute(StringRef Name, JITEvaluatedSymbol Sym) {
@@ -27,14 +59,14 @@ Error LLJIT::defineAbsolute(StringRef Name, JITEvaluatedSymbol Sym) {
   return Main.define(absoluteSymbols(std::move(Symbols)));
 }
 
-Error LLJIT::addIRModule(JITDylib &JD, std::unique_ptr<Module> M) {
-  assert(M && "Can not add null module");
+Error LLJIT::addIRModule(JITDylib &JD, ThreadSafeModule TSM) {
+  assert(TSM && "Can not add null module");
 
-  if (auto Err = applyDataLayout(*M))
+  if (auto Err = applyDataLayout(*TSM.getModule()))
     return Err;
 
   auto K = ES->allocateVModule();
-  return CompileLayer.add(JD, K, std::move(M));
+  return CompileLayer.add(JD, K, std::move(TSM));
 }
 
 Error LLJIT::addObjectFile(JITDylib &JD, std::unique_ptr<MemoryBuffer> Obj) {
@@ -52,11 +84,34 @@ Expected<JITEvaluatedSymbol> LLJIT::lookupLinkerMangled(JITDylib &JD,
 LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES,
              std::unique_ptr<TargetMachine> TM, DataLayout DL)
     : ES(std::move(ES)), Main(this->ES->createJITDylib("main")),
-      TM(std::move(TM)), DL(std::move(DL)),
+      DL(std::move(DL)),
       ObjLinkingLayer(*this->ES,
                       [this](VModuleKey K) { return getMemoryManager(K); }),
-      CompileLayer(*this->ES, ObjLinkingLayer, SimpleCompiler(*this->TM)),
+      CompileLayer(*this->ES, ObjLinkingLayer, TMOwningSimpleCompiler(std::move(TM))),
       CtorRunner(Main), DtorRunner(Main) {}
+
+LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES,
+             JITTargetMachineBuilder JTMB, DataLayout DL,
+             unsigned NumCompileThreads)
+    : ES(std::move(ES)), Main(this->ES->createJITDylib("main")),
+      DL(std::move(DL)),
+      ObjLinkingLayer(*this->ES,
+                      [this](VModuleKey K) { return getMemoryManager(K); }),
+      CompileLayer(*this->ES, ObjLinkingLayer, MultiThreadedSimpleCompiler(std::move(JTMB))),
+      CtorRunner(Main), DtorRunner(Main) {
+  assert(NumCompileThreads != 0 &&
+         "Multithreaded LLJIT instance can not be created with 0 threads");
+
+  CompileThreads = llvm::make_unique<ThreadPool>(NumCompileThreads);
+  this->ES->setDispatchMaterialization([this](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
+      // FIXME: Switch to move capture once we have c++14.
+      auto SharedMU = std::shared_ptr<MaterializationUnit>(std::move(MU));
+      auto Work = [SharedMU, &JD]() {
+        SharedMU->doMaterialize(JD);
+      };
+      CompileThreads->async(std::move(Work));
+    });
+}
 
 std::unique_ptr<RuntimeDyld::MemoryManager>
 LLJIT::getMemoryManager(VModuleKey K) {
@@ -90,17 +145,15 @@ void LLJIT::recordCtorDtors(Module &M) {
 }
 
 Expected<std::unique_ptr<LLLazyJIT>>
-LLLazyJIT::Create(std::unique_ptr<TargetMachine> TM, DataLayout DL,
-                  LLVMContext &Ctx) {
+  LLLazyJIT::Create(JITTargetMachineBuilder JTMB, DataLayout DL,
+                    unsigned NumCompileThreads) {
   auto ES = llvm::make_unique<ExecutionSession>();
 
-  const Triple &TT = TM->getTargetTriple();
+  const Triple &TT = JTMB.getTargetTriple();
 
   auto CCMgr = createLocalCompileCallbackManager(TT, *ES, 0);
   if (!CCMgr)
-    return make_error<StringError>(
-        std::string("No callback manager available for ") + TT.str(),
-        inconvertibleErrorCode());
+    return CCMgr.takeError();
 
   auto ISMBuilder = createLocalIndirectStubsManagerBuilder(TT);
   if (!ISMBuilder)
@@ -108,34 +161,51 @@ LLLazyJIT::Create(std::unique_ptr<TargetMachine> TM, DataLayout DL,
         std::string("No indirect stubs manager builder for ") + TT.str(),
         inconvertibleErrorCode());
 
-  return std::unique_ptr<LLLazyJIT>(
-      new LLLazyJIT(std::move(ES), std::move(TM), std::move(DL), Ctx,
-                    std::move(CCMgr), std::move(ISMBuilder)));
+  if (NumCompileThreads == 0) {
+    auto TM = JTMB.createTargetMachine();
+    if (!TM)
+      return TM.takeError();
+    return std::unique_ptr<LLLazyJIT>(
+        new LLLazyJIT(std::move(ES), std::move(*TM), std::move(DL),
+                      std::move(*CCMgr), std::move(ISMBuilder)));
+  }
+
+  return std::unique_ptr<LLLazyJIT>(new LLLazyJIT(
+      std::move(ES), std::move(JTMB), std::move(DL), NumCompileThreads,
+      std::move(*CCMgr), std::move(ISMBuilder)));
 }
 
-Error LLLazyJIT::addLazyIRModule(JITDylib &JD, std::unique_ptr<Module> M) {
-  assert(M && "Can not add null module");
+Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
+  assert(TSM && "Can not add null module");
 
-  if (auto Err = applyDataLayout(*M))
+  if (auto Err = applyDataLayout(*TSM.getModule()))
     return Err;
 
-  makeAllSymbolsExternallyAccessible(*M);
+  makeAllSymbolsExternallyAccessible(*TSM.getModule());
 
-  recordCtorDtors(*M);
+  recordCtorDtors(*TSM.getModule());
 
   auto K = ES->allocateVModule();
-  return CODLayer.add(JD, K, std::move(M));
+  return CODLayer.add(JD, K, std::move(TSM));
 }
 
 LLLazyJIT::LLLazyJIT(
     std::unique_ptr<ExecutionSession> ES, std::unique_ptr<TargetMachine> TM,
-    DataLayout DL, LLVMContext &Ctx,
-    std::unique_ptr<JITCompileCallbackManager> CCMgr,
+    DataLayout DL, std::unique_ptr<JITCompileCallbackManager> CCMgr,
     std::function<std::unique_ptr<IndirectStubsManager>()> ISMBuilder)
     : LLJIT(std::move(ES), std::move(TM), std::move(DL)),
       CCMgr(std::move(CCMgr)), TransformLayer(*this->ES, CompileLayer),
-      CODLayer(*this->ES, TransformLayer, *this->CCMgr, std::move(ISMBuilder),
-               [&]() -> LLVMContext & { return Ctx; }) {}
+      CODLayer(*this->ES, TransformLayer, *this->CCMgr, std::move(ISMBuilder)) {
+}
+
+LLLazyJIT::LLLazyJIT(
+    std::unique_ptr<ExecutionSession> ES, JITTargetMachineBuilder JTMB,
+    DataLayout DL, unsigned NumCompileThreads, std::unique_ptr<JITCompileCallbackManager> CCMgr,
+    std::function<std::unique_ptr<IndirectStubsManager>()> ISMBuilder)
+    : LLJIT(std::move(ES), std::move(JTMB), std::move(DL), NumCompileThreads),
+      CCMgr(std::move(CCMgr)), TransformLayer(*this->ES, CompileLayer),
+      CODLayer(*this->ES, TransformLayer, *this->CCMgr, std::move(ISMBuilder)) {
+}
 
 } // End namespace orc.
 } // End namespace llvm.

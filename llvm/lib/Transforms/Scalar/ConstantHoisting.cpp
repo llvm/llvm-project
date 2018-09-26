@@ -86,6 +86,12 @@ static cl::opt<bool> ConstHoistGEP(
     "consthoist-gep", cl::init(false), cl::Hidden,
     cl::desc("Try hoisting constant gep expressions"));
 
+static cl::opt<unsigned>
+MinNumOfDependentToRebase("consthoist-min-num-to-rebase",
+    cl::desc("Do not rebase if number of dependent constants of a Base is less "
+             "than this number."),
+    cl::init(0), cl::Hidden);
+
 namespace {
 
 /// The constant hoisting pass.
@@ -822,7 +828,34 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
 
     unsigned UsesNum = 0;
     unsigned ReBasesNum = 0;
+    unsigned NotRebasedNum = 0;
     for (Instruction *IP : IPSet) {
+      // First, collect constants depending on this IP of the base.
+      unsigned Uses = 0;
+      using RebasedUse = std::tuple<Constant *, Type *, ConstantUser>;
+      SmallVector<RebasedUse, 4> ToBeRebased;
+      for (auto const &RCI : ConstInfo.RebasedConstants) {
+        for (auto const &U : RCI.Uses) {
+          Uses++;
+          BasicBlock *OrigMatInsertBB =
+              findMatInsertPt(U.Inst, U.OpndIdx)->getParent();
+          // If Base constant is to be inserted in multiple places,
+          // generate rebase for U using the Base dominating U.
+          if (IPSet.size() == 1 ||
+              DT->dominates(IP->getParent(), OrigMatInsertBB))
+            ToBeRebased.push_back(RebasedUse(RCI.Offset, RCI.Ty, U));
+        }
+      }
+      UsesNum = Uses;
+
+      // If only few constants depend on this IP of base, skip rebasing,
+      // assuming the base and the rebased have the same materialization cost.
+      if (ToBeRebased.size() < MinNumOfDependentToRebase) {
+        NotRebasedNum += ToBeRebased.size();
+        continue;
+      }
+
+      // Emit an instance of the base at this IP.
       Instruction *Base = nullptr;
       // Hoist and hide the base constant behind a bitcast.
       if (ConstInfo.BaseExpr) {
@@ -840,36 +873,27 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
                         << ") to BB " << IP->getParent()->getName() << '\n'
                         << *Base << '\n');
 
-      // Emit materialization code for all rebased constants.
-      unsigned Uses = 0;
-      for (auto const &RCI : ConstInfo.RebasedConstants) {
-        for (auto const &U : RCI.Uses) {
-          Uses++;
-          BasicBlock *OrigMatInsertBB =
-              findMatInsertPt(U.Inst, U.OpndIdx)->getParent();
-          // If Base constant is to be inserted in multiple places,
-          // generate rebase for U using the Base dominating U.
-          if (IPSet.size() == 1 ||
-              DT->dominates(Base->getParent(), OrigMatInsertBB)) {
-            emitBaseConstants(Base, RCI.Offset, RCI.Ty, U);
-            ReBasesNum++;
-          }
-
-          Base->setDebugLoc(DILocation::getMergedLocation(
-              Base->getDebugLoc(), U.Inst->getDebugLoc()));
-        }
+      // Emit materialization code for rebased constants depending on this IP.
+      for (auto const &R : ToBeRebased) {
+        Constant *Off = std::get<0>(R);
+        Type *Ty = std::get<1>(R);
+        ConstantUser U = std::get<2>(R);
+        emitBaseConstants(Base, Off, Ty, U);
+        ReBasesNum++;
+        // Use the same debug location as the last user of the constant.
+        Base->setDebugLoc(DILocation::getMergedLocation(
+            Base->getDebugLoc(), U.Inst->getDebugLoc()));
       }
-      UsesNum = Uses;
-
-      // Use the same debug location as the last user of the constant.
       assert(!Base->use_empty() && "The use list is empty!?");
       assert(isa<Instruction>(Base->user_back()) &&
              "All uses should be instructions.");
     }
     (void)UsesNum;
     (void)ReBasesNum;
+    (void)NotRebasedNum;
     // Expect all uses are rebased after rebase is done.
-    assert(UsesNum == ReBasesNum && "Not all uses are rebased");
+    assert(UsesNum == (ReBasesNum + NotRebasedNum) &&
+           "Not all uses are rebased");
 
     NumConstantsHoisted++;
 

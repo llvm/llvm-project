@@ -16,17 +16,19 @@ namespace orc {
 IRLayer::IRLayer(ExecutionSession &ES) : ES(ES) {}
 IRLayer::~IRLayer() {}
 
-Error IRLayer::add(JITDylib &JD, VModuleKey K, std::unique_ptr<Module> M) {
+Error IRLayer::add(JITDylib &JD, VModuleKey K, ThreadSafeModule TSM) {
   return JD.define(llvm::make_unique<BasicIRLayerMaterializationUnit>(
-      *this, std::move(K), std::move(M)));
+      *this, std::move(K), std::move(TSM)));
 }
 
 IRMaterializationUnit::IRMaterializationUnit(ExecutionSession &ES,
-                                             std::unique_ptr<Module> M)
-  : MaterializationUnit(SymbolFlagsMap()), M(std::move(M)) {
+                                             ThreadSafeModule TSM)
+    : MaterializationUnit(SymbolFlagsMap()), TSM(std::move(TSM)) {
 
-  MangleAndInterner Mangle(ES, this->M->getDataLayout());
-  for (auto &G : this->M->global_values()) {
+  assert(this->TSM && "Module must not be null");
+
+  MangleAndInterner Mangle(ES, this->TSM.getModule()->getDataLayout());
+  for (auto &G : this->TSM.getModule()->global_values()) {
     if (G.hasName() && !G.isDeclaration() && !G.hasLocalLinkage() &&
         !G.hasAvailableExternallyLinkage() && !G.hasAppendingLinkage()) {
       auto MangledName = Mangle(G.getName());
@@ -37,9 +39,9 @@ IRMaterializationUnit::IRMaterializationUnit(ExecutionSession &ES,
 }
 
 IRMaterializationUnit::IRMaterializationUnit(
-    std::unique_ptr<Module> M, SymbolFlagsMap SymbolFlags,
+    ThreadSafeModule TSM, SymbolFlagsMap SymbolFlags,
     SymbolNameToDefinitionMap SymbolToDefinition)
-    : MaterializationUnit(std::move(SymbolFlags)), M(std::move(M)),
+    : MaterializationUnit(std::move(SymbolFlags)), TSM(std::move(TSM)),
       SymbolToDefinition(std::move(SymbolToDefinition)) {}
 
 void IRMaterializationUnit::discard(const JITDylib &JD, SymbolStringPtr Name) {
@@ -53,13 +55,18 @@ void IRMaterializationUnit::discard(const JITDylib &JD, SymbolStringPtr Name) {
 }
 
 BasicIRLayerMaterializationUnit::BasicIRLayerMaterializationUnit(
-    IRLayer &L, VModuleKey K, std::unique_ptr<Module> M)
-  : IRMaterializationUnit(L.getExecutionSession(), std::move(M)),
-      L(L), K(std::move(K)) {}
+    IRLayer &L, VModuleKey K, ThreadSafeModule TSM)
+    : IRMaterializationUnit(L.getExecutionSession(), std::move(TSM)), L(L),
+      K(std::move(K)) {}
 
 void BasicIRLayerMaterializationUnit::materialize(
     MaterializationResponsibility R) {
-  L.emit(std::move(R), std::move(K), std::move(M));
+
+  if (L.getCloneToNewContextOnEmit())
+    TSM = cloneToNewContext(TSM);
+
+  auto Lock = TSM.getContextLock();
+  L.emit(std::move(R), std::move(K), std::move(TSM));
 }
 
 ObjectLayer::ObjectLayer(ExecutionSession &ES) : ES(ES) {}
