@@ -210,20 +210,31 @@ Status NativeBreakpointList::GetBreakpoint(lldb::addr_t addr,
 
 Status NativeBreakpointList::RemoveTrapsFromBuffer(lldb::addr_t addr, void *buf,
                                                    size_t size) const {
+  auto data = llvm::makeMutableArrayRef(static_cast<uint8_t *>(buf), size);
   for (const auto &map : m_breakpoints) {
-    lldb::addr_t bp_addr = map.first;
-    // Breapoint not in range, ignore
-    if (bp_addr < addr || addr + size <= bp_addr)
-      continue;
     const auto &bp_sp = map.second;
     // Not software breakpoint, ignore
     if (!bp_sp->IsSoftwareBreakpoint())
       continue;
     auto software_bp_sp = std::static_pointer_cast<SoftwareBreakpoint>(bp_sp);
-    auto opcode_addr = static_cast<char *>(buf) + bp_addr - addr;
-    auto saved_opcodes = software_bp_sp->m_saved_opcodes;
+
+    lldb::addr_t bp_addr = map.first;
     auto opcode_size = software_bp_sp->m_opcode_size;
-    ::memcpy(opcode_addr, saved_opcodes, opcode_size);
+
+    // Breapoint not in range, ignore
+    if (bp_addr + opcode_size < addr || addr + size <= bp_addr)
+      continue;
+
+    auto saved_opcodes =
+        llvm::makeArrayRef(software_bp_sp->m_saved_opcodes, opcode_size);
+    if (bp_addr < addr) {
+      saved_opcodes = saved_opcodes.drop_front(addr - bp_addr);
+      bp_addr = addr;
+    }
+    auto bp_data = data.drop_front(bp_addr - addr);
+    std::copy_n(saved_opcodes.begin(),
+                std::min(saved_opcodes.size(), bp_data.size()),
+                bp_data.begin());
   }
   return Status();
 }
