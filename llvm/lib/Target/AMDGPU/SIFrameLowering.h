@@ -91,14 +91,14 @@ public:
                              bool emitSpillsToMem) const;
 
   /// Create a CFI index for CFIInst and build a MachineInstr around it.
-  void buildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+  MachineInstr *buildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 const DebugLoc &DL, const MCCFIInstruction &CFIInst) const;
   /// Create a CFI index describing a spill of an SGPR to a single lane of
   /// a VGPR and build a MachineInstr around it.
-  void buildCFIForSGPRToVGPRSpill(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator MBBI,
-                                  const DebugLoc &DL, const Register SGPR,
-                                  const Register VGPR, const int Lane) const;
+  MachineInstr *buildCFIForSGPRToVGPRSpill(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator MBBI,
+                                           const DebugLoc &DL, const Register SGPR,
+                                           const Register VGPR, const int Lane) const;
   /// Create a CFI index describing a spill of an SGPR to multiple lanes of
   /// VGPRs and build a MachineInstr around it.
   void buildCFIForSGPRToVGPRSpill(
