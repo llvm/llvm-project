@@ -482,13 +482,43 @@ private:
     auto *Snippet = onlyValue<&BundledEntry::SnippetSuffix>();
     if (!Snippet)
       // All bundles are function calls.
+      // FIXME(ibiryukov): sometimes add template arguments to a snippet, e.g.
+      // we need to complete 'forward<$1>($0)'.
       return "($0)";
-    if (!Snippet->empty() && !EnableFunctionArgSnippets &&
-        ((Completion.Kind == CompletionItemKind::Function) ||
-         (Completion.Kind == CompletionItemKind::Method)) &&
-        (Snippet->front() == '(') && (Snippet->back() == ')'))
-      // Check whether function has any parameters or not.
-      return Snippet->size() > 2 ? "($0)" : "()";
+    if (EnableFunctionArgSnippets)
+      return *Snippet;
+
+    // Replace argument snippets with a simplified pattern.
+    if (Snippet->empty())
+      return "";
+    if (Completion.Kind == CompletionItemKind::Function ||
+        Completion.Kind == CompletionItemKind::Method) {
+      // Functions snippets can be of 2 types:
+      // - containing only function arguments, e.g.
+      //   foo(${1:int p1}, ${2:int p2});
+      //   We transform this pattern to '($0)' or '()'.
+      // - template arguments and function arguments, e.g.
+      //   foo<${1:class}>(${2:int p1}).
+      //   We transform this pattern to '<$1>()$0' or '<$0>()'.
+
+      bool EmptyArgs = llvm::StringRef(*Snippet).endswith("()");
+      if (Snippet->front() == '<')
+        return EmptyArgs ? "<$1>()$0" : "<$1>($0)";
+      if (Snippet->front() == '(')
+        return EmptyArgs ? "()" : "($0)";
+      return *Snippet; // Not an arg snippet?
+    }
+    if (Completion.Kind == CompletionItemKind::Reference ||
+        Completion.Kind == CompletionItemKind::Class) {
+      if (Snippet->front() != '<')
+        return *Snippet; // Not an arg snippet?
+
+      // Classes and template using aliases can only have template arguments,
+      // e.g. Foo<${1:class}>.
+      if (llvm::StringRef(*Snippet).endswith("<>"))
+        return "<>"; // can happen with defaulted template arguments.
+      return "<$0>";
+    }
     return *Snippet;
   }
 
