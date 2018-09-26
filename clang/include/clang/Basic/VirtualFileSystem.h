@@ -335,6 +335,42 @@ public:
   const_iterator overlays_end() const { return FSList.rend(); }
 };
 
+/// By default, this delegates all calls to the underlying file system. This
+/// is useful when derived file systems want to override some calls and still
+/// proxy other calls.
+class ProxyFileSystem : public FileSystem {
+public:
+  explicit ProxyFileSystem(IntrusiveRefCntPtr<FileSystem> FS)
+      : FS(std::move(FS)) {}
+
+  llvm::ErrorOr<Status> status(const Twine &Path) override {
+    return FS->status(Path);
+  }
+  llvm::ErrorOr<std::unique_ptr<File>>
+  openFileForRead(const Twine &Path) override {
+    return FS->openFileForRead(Path);
+  }
+  directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override {
+    return FS->dir_begin(Dir, EC);
+  }
+  llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override {
+    return FS->getCurrentWorkingDirectory();
+  }
+  std::error_code setCurrentWorkingDirectory(const Twine &Path) override {
+    return FS->setCurrentWorkingDirectory(Path);
+  }
+  std::error_code getRealPath(const Twine &Path,
+                              SmallVectorImpl<char> &Output) const override {
+    return FS->getRealPath(Path, Output);
+  }
+
+protected:
+  FileSystem &getUnderlyingFS() { return *FS; }
+
+private:
+  IntrusiveRefCntPtr<FileSystem> FS;
+};
+
 namespace detail {
 
 class InMemoryDirectory;

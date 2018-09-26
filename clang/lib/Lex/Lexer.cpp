@@ -3114,6 +3114,8 @@ bool Lexer::LexUnicode(Token &Result, uint32_t C, const char *CurPtr) {
       maybeDiagnoseIDCharCompat(PP->getDiagnostics(), C,
                                 makeCharRange(*this, BufferPtr, CurPtr),
                                 /*IsFirst=*/true);
+      maybeDiagnoseUTF8Homoglyph(PP->getDiagnostics(), C,
+                                 makeCharRange(*this, BufferPtr, CurPtr));
     }
 
     MIOpt.ReadToken();
@@ -3908,7 +3910,6 @@ LexNextToken:
     // We can't just reset CurPtr to BufferPtr because BufferPtr may point to
     // an escaped newline.
     --CurPtr;
-    const char *UTF8StartPtr = CurPtr;
     llvm::ConversionResult Status =
         llvm::convertUTF8Sequence((const llvm::UTF8 **)&CurPtr,
                                   (const llvm::UTF8 *)BufferEnd,
@@ -3923,9 +3924,6 @@ LexNextToken:
         // (We manually eliminate the tail call to avoid recursion.)
         goto LexNextToken;
       }
-      if (!isLexingRawMode())
-        maybeDiagnoseUTF8Homoglyph(PP->getDiagnostics(), CodePoint,
-                                   makeCharRange(*this, UTF8StartPtr, CurPtr));
       return LexUnicode(Result, CodePoint, CurPtr);
     }
 

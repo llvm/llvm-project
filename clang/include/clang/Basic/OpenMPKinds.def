@@ -57,6 +57,9 @@
 #ifndef OPENMP_TARGET_CLAUSE
 #  define OPENMP_TARGET_CLAUSE(Name)
 #endif
+#ifndef OPENMP_REQUIRES_CLAUSE
+# define OPENMP_REQUIRES_CLAUSE(Name)
+#endif
 #ifndef OPENMP_TARGET_DATA_CLAUSE
 #  define OPENMP_TARGET_DATA_CLAUSE(Name)
 #endif
@@ -193,6 +196,7 @@ OPENMP_DIRECTIVE(atomic)
 OPENMP_DIRECTIVE(target)
 OPENMP_DIRECTIVE(teams)
 OPENMP_DIRECTIVE(cancel)
+OPENMP_DIRECTIVE(requires)
 OPENMP_DIRECTIVE_EXT(target_data, "target data")
 OPENMP_DIRECTIVE_EXT(target_enter_data, "target enter data")
 OPENMP_DIRECTIVE_EXT(target_exit_data, "target exit data")
@@ -275,6 +279,7 @@ OPENMP_CLAUSE(use_device_ptr, OMPUseDevicePtrClause)
 OPENMP_CLAUSE(is_device_ptr, OMPIsDevicePtrClause)
 OPENMP_CLAUSE(task_reduction,  OMPTaskReductionClause)
 OPENMP_CLAUSE(in_reduction,  OMPInReductionClause)
+OPENMP_CLAUSE(unified_address, OMPUnifiedAddressClause)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)
@@ -455,6 +460,9 @@ OPENMP_TARGET_CLAUSE(defaultmap)
 OPENMP_TARGET_CLAUSE(firstprivate)
 OPENMP_TARGET_CLAUSE(is_device_ptr)
 OPENMP_TARGET_CLAUSE(reduction)
+
+// Clauses allowed for OpenMP directive 'requires'.
+OPENMP_REQUIRES_CLAUSE(unified_address)
 
 // Clauses allowed for OpenMP directive 'target data'.
 OPENMP_TARGET_DATA_CLAUSE(if)
@@ -883,6 +891,7 @@ OPENMP_TASKGROUP_CLAUSE(task_reduction)
 #undef OPENMP_TASK_CLAUSE
 #undef OPENMP_ATOMIC_CLAUSE
 #undef OPENMP_TARGET_CLAUSE
+#undef OPENMP_REQUIRES_CLAUSE
 #undef OPENMP_TARGET_DATA_CLAUSE
 #undef OPENMP_TARGET_ENTER_DATA_CLAUSE
 #undef OPENMP_TARGET_EXIT_DATA_CLAUSE

@@ -14,9 +14,9 @@
 
 
 // RUN: %clang -v --target=i386-unknown-linux \
-// RUN:   --sysroot=%S/Inputs/CUDA 2>&1 | FileCheck %s
+// RUN:   --sysroot=%S/Inputs/CUDA --cuda-path-ignore-env 2>&1 | FileCheck %s
 // RUN: %clang -v --target=i386-apple-macosx \
-// RUN:   --sysroot=%S/Inputs/CUDA 2>&1 | FileCheck %s
+// RUN:   --sysroot=%S/Inputs/CUDA --cuda-path-ignore-env 2>&1 | FileCheck %s
 
 // RUN: %clang -v --target=i386-unknown-linux \
 // RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda 2>&1 | FileCheck %s

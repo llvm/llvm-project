@@ -18,6 +18,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExternalASTSource.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/Type.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -239,6 +240,76 @@ public:
   static bool classofKind(Kind K) { return K == OMPCapturedExpr; }
 };
 
+/// This represents '#pragma omp requires...' directive.
+/// For example
+///
+/// \code
+/// #pragma omp requires unified_address
+/// \endcode
+///
+class OMPRequiresDecl final
+    : public Decl,
+      private llvm::TrailingObjects<OMPRequiresDecl, OMPClause *> {
+  friend class ASTDeclReader;
+  friend TrailingObjects;
+
+  // Number of clauses associated with this requires declaration
+  unsigned NumClauses = 0;
+
+  virtual void anchor();
+
+  OMPRequiresDecl(Kind DK, DeclContext *DC, SourceLocation L)
+      : Decl(DK, DC, L), NumClauses(0) {}
+
+  /// Returns an array of immutable clauses associated with this requires
+  /// declaration
+  ArrayRef<const OMPClause *> getClauses() const {
+    return llvm::makeArrayRef(getTrailingObjects<OMPClause *>(), NumClauses);
+  }
+
+  /// Returns an array of clauses associated with this requires declaration
+  MutableArrayRef<OMPClause *> getClauses() {
+    return MutableArrayRef<OMPClause *>(getTrailingObjects<OMPClause *>(),
+                                        NumClauses);
+  }
+
+  /// Sets an array of clauses to this requires declaration
+  void setClauses(ArrayRef<OMPClause *> CL);
+
+public:
+  /// Create requires node.
+  static OMPRequiresDecl *Create(ASTContext &C, DeclContext *DC,
+                                 SourceLocation L, ArrayRef<OMPClause *> CL);
+  /// Create deserialized requires node.
+  static OMPRequiresDecl *CreateDeserialized(ASTContext &C, unsigned ID,
+                                             unsigned N);
+
+  using clauselist_iterator = MutableArrayRef<OMPClause *>::iterator;
+  using clauselist_const_iterator = ArrayRef<const OMPClause *>::iterator;
+  using clauselist_range = llvm::iterator_range<clauselist_iterator>;
+  using clauselist_const_range = llvm::iterator_range<clauselist_const_iterator>;
+
+  unsigned clauselist_size() const { return NumClauses; }
+  bool clauselist_empty() const { return NumClauses == 0; }
+
+  clauselist_range clauselists() {
+    return clauselist_range(clauselist_begin(), clauselist_end());
+  }
+  clauselist_const_range clauselists() const {
+    return clauselist_const_range(clauselist_begin(), clauselist_end());
+  }
+  clauselist_iterator clauselist_begin() { return getClauses().begin(); }
+  clauselist_iterator clauselist_end() { return getClauses().end(); }
+  clauselist_const_iterator clauselist_begin() const {
+    return getClauses().begin();
+  }
+  clauselist_const_iterator clauselist_end() const {
+    return getClauses().end();
+  }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == OMPRequires; }
+};
 } // end namespace clang
 
 #endif
