@@ -442,75 +442,53 @@ void DeclContextPrinter::PrintDeclContext(const DeclContext* DC,
       PrintDeclContext(DC, Indentation+2);
       break;
     }
-    case Decl::IndirectField: {
-      IndirectFieldDecl* IFD = cast<IndirectFieldDecl>(I);
-      Out << "<IndirectField> " << *IFD << '\n';
+    case Decl::IndirectField:
+      Out << "<IndirectField> " << *cast<IndirectFieldDecl>(I) << '\n';
       break;
-    }
-    case Decl::Label: {
-      LabelDecl *LD = cast<LabelDecl>(I);
-      Out << "<Label> " << *LD << '\n';
+    case Decl::Label:
+      Out << "<Label> " << *cast<LabelDecl>(I) << '\n';
       break;
-    }
-    case Decl::Field: {
-      FieldDecl *FD = cast<FieldDecl>(I);
-      Out << "<field> " << *FD << '\n';
+    case Decl::Field:
+      Out << "<field> " << *cast<FieldDecl>(I) << '\n';
       break;
-    }
     case Decl::Typedef:
-    case Decl::TypeAlias: {
-      TypedefNameDecl* TD = cast<TypedefNameDecl>(I);
-      Out << "<typedef> " << *TD << '\n';
+    case Decl::TypeAlias:
+      Out << "<typedef> " << *cast<TypedefNameDecl>(I) << '\n';
       break;
-    }
-    case Decl::EnumConstant: {
-      EnumConstantDecl* ECD = cast<EnumConstantDecl>(I);
-      Out << "<enum constant> " << *ECD << '\n';
+    case Decl::EnumConstant:
+      Out << "<enum constant> " << *cast<EnumConstantDecl>(I) << '\n';
       break;
-    }
-    case Decl::Var: {
-      VarDecl* VD = cast<VarDecl>(I);
-      Out << "<var> " << *VD << '\n';
+    case Decl::Var:
+      Out << "<var> " << *cast<VarDecl>(I) << '\n';
       break;
-    }
-    case Decl::ImplicitParam: {
-      ImplicitParamDecl* IPD = cast<ImplicitParamDecl>(I);
-      Out << "<implicit parameter> " << *IPD << '\n';
+    case Decl::ImplicitParam:
+      Out << "<implicit parameter> " << *cast<ImplicitParamDecl>(I) << '\n';
       break;
-    }
-    case Decl::ParmVar: {
-      ParmVarDecl* PVD = cast<ParmVarDecl>(I);
-      Out << "<parameter> " << *PVD << '\n';
+    case Decl::ParmVar:
+      Out << "<parameter> " << *cast<ParmVarDecl>(I) << '\n';
       break;
-    }
-    case Decl::ObjCProperty: {
-      ObjCPropertyDecl* OPD = cast<ObjCPropertyDecl>(I);
-      Out << "<objc property> " << *OPD << '\n';
+    case Decl::ObjCProperty:
+      Out << "<objc property> " << *cast<ObjCPropertyDecl>(I) << '\n';
       break;
-    }
-    case Decl::FunctionTemplate: {
-      FunctionTemplateDecl* FTD = cast<FunctionTemplateDecl>(I);
-      Out << "<function template> " << *FTD << '\n';
+    case Decl::FunctionTemplate:
+      Out << "<function template> " << *cast<FunctionTemplateDecl>(I) << '\n';
       break;
-    }
-    case Decl::FileScopeAsm: {
+    case Decl::TypeAliasTemplate:
+      Out << "<type alias template> " << *cast<TypeAliasTemplateDecl>(I)
+          << '\n';
+      break;
+    case Decl::FileScopeAsm:
       Out << "<file-scope asm>\n";
       break;
-    }
-    case Decl::UsingDirective: {
+    case Decl::UsingDirective:
       Out << "<using directive>\n";
       break;
-    }
-    case Decl::NamespaceAlias: {
-      NamespaceAliasDecl* NAD = cast<NamespaceAliasDecl>(I);
-      Out << "<namespace alias> " << *NAD << '\n';
+    case Decl::NamespaceAlias:
+      Out << "<namespace alias> " << *cast<NamespaceAliasDecl>(I) << '\n';
       break;
-    }
-    case Decl::ClassTemplate: {
-      ClassTemplateDecl *CTD = cast<ClassTemplateDecl>(I);
-      Out << "<class template> " << *CTD << '\n';
+    case Decl::ClassTemplate:
+      Out << "<class template> " << *cast<ClassTemplateDecl>(I) << '\n';
       break;
-    }
     case Decl::OMPThreadPrivate: {
       Out << "<omp threadprivate> " << '"' << I << "\"\n";
       break;
@@ -522,30 +500,29 @@ void DeclContextPrinter::PrintDeclContext(const DeclContext* DC,
       Out << "\n";
       break;
     }
-    case Decl::Using: {
+    case Decl::Using:
       Out << "<using> " << *cast<UsingDecl>(I) << "\n";
       break;
-    }
-    case Decl::UsingShadow: {
+    case Decl::UsingShadow:
       Out << "<using shadow> " << *cast<UsingShadowDecl>(I) << "\n";
       break;
-    }
-    case Decl::Empty: {
+    case Decl::UnresolvedUsingValue:
+      Out << "<unresolved using value> " << *cast<UnresolvedUsingValueDecl>(I)
+          << "\n";
+      break;
+    case Decl::Empty:
       Out << "<empty>\n";
       break;
-    }
-    case Decl::AccessSpec: {
+    case Decl::AccessSpec:
       Out << "<access specifier>\n";
       break;
-    }
-    case Decl::VarTemplate: {
+    case Decl::VarTemplate:
       Out << "<var template> " << *cast<VarTemplateDecl>(I) << "\n";
       break;
-    }
-    case Decl::StaticAssert: {
+    case Decl::StaticAssert:
       Out << "<static assert>\n";
       break;
-    }
+
     default:
       Out << "DeclKind: " << DK << '"' << I << "\"\n";
       llvm_unreachable("decl unhandled");

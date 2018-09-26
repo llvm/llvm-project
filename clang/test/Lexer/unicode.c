@@ -45,3 +45,8 @@ int ⁠x﻿x‍;
 // expected-warning@-3 {{identifier contains Unicode character <U+200D> that is invisible in some environments}}
 int foo​bar = 0; // expected-warning {{identifier contains Unicode character <U+200B> that is invisible in some environments}}
 int x = foobar; // expected-error {{undeclared identifier}}
+
+int ∣foo; // expected-error {{non-ASCII character}}
+#ifndef PP_ONLY
+#define ∶ x // expected-error {{macro name must be an identifier}}
+#endif

@@ -28,7 +28,7 @@ MAIN-SAME:    (int *), scope = local
 MAIN:     Variable{{.*}}, name = "p_member_field"
 MAIN-SAME:    (int ST::*), scope = local
 MAIN:     Variable{{.*}}, name = "p_member_method"
-MAIN-SAME:    (int (ST::*)(int)), scope = local
+MAIN-SAME:    (int (ST::*)(int) __attribute__((thiscall))), scope = local
 
 F:   Function{[[FID2:.*]]}, demangled = {{.*}}f(int)
 F-NEXT:  Block{[[FID2]]}
