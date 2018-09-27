@@ -167,6 +167,14 @@ INTERCEPTOR_WINAPI(void, NtTerminateThread, void *rcx) {
 namespace __asan {
 
 void InitializePlatformInterceptors() {
+  // The interceptors were not designed to be removable, so we have to keep this
+  // module alive for the life of the process.
+  HMODULE pinned;
+  CHECK(GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                           GET_MODULE_HANDLE_EX_FLAG_PIN,
+                           (LPCWSTR)&InitializePlatformInterceptors,
+                           &pinned));
+
   ASAN_INTERCEPT_FUNC(CreateThread);
   ASAN_INTERCEPT_FUNC(SetUnhandledExceptionFilter);
   CHECK(::__interception::OverrideFunction("NtTerminateThread",
