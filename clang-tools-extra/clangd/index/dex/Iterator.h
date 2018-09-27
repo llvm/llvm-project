@@ -94,9 +94,8 @@ public:
   ///
   /// Where Type is the iterator type representation: "&" for And, "|" for Or,
   /// ChildN is N-th iterator child. Raw iterators over PostingList are
-  /// represented as "[ID1, ID2, ..., {IDN}, ... END]" where IDN is N-th
-  /// PostingList entry and the element which is pointed to by the PostingList
-  /// iterator is enclosed in {} braces.
+  /// represented as "[... CurID ...]" where CurID is the current PostingList
+  /// entry being inspected.
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                        const Iterator &Iterator) {
     return Iterator.dump(OS);

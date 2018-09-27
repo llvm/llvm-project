@@ -1872,6 +1872,9 @@ def err_reference_bind_init_list : Error<
 def err_init_list_bad_dest_type : Error<
   "%select{|non-aggregate }0type %1 cannot be initialized with an initializer "
   "list">;
+def warn_cxx2a_compat_aggregate_init_with_ctors : Warning<
+  "aggregate initialization of type %0 with user-declared constructors "
+  "is incompatible with C++2a">, DefaultIgnore, InGroup<CXX2aCompat>;
 
 def err_reference_bind_to_bitfield : Error<
   "%select{non-const|volatile}0 reference cannot bind to "

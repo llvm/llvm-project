@@ -3,15 +3,15 @@
 // RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
 // RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/ppc64-tls-ie-le.s -o %t2.o
 // RUN: ld.lld -dynamic-linker /lib64/ld64.so.2 %t.o %t2.o -o %t
-// RUN: llvm-readelf -relocations --wide %t.o | FileCheck --check-prefix=InputRelocs %s
-// RUN: llvm-readelf -relocations --wide %t | FileCheck --check-prefix=OutputRelocs %s
+// RUN: llvm-readelf -r %t.o | FileCheck --check-prefix=InputRelocs %s
+// RUN: llvm-readelf -r %t | FileCheck --check-prefix=OutputRelocs %s
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=Dis %s
 
 // RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
 // RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %p/Inputs/ppc64-tls-ie-le.s -o %t2.o
 // RUN: ld.lld -dynamic-linker /lib64/ld64.so.2 %t.o %t2.o -o %t
-// RUN: llvm-readelf -relocations --wide %t.o | FileCheck --check-prefix=InputRelocs %s
-// RUN: llvm-readelf -relocations --wide %t | FileCheck --check-prefix=OutputRelocs %s
+// RUN: llvm-readelf -r %t.o | FileCheck --check-prefix=InputRelocs %s
+// RUN: llvm-readelf -r %t | FileCheck --check-prefix=OutputRelocs %s
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=Dis %s
 
 	.text

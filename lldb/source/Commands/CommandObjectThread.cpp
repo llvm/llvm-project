@@ -247,11 +247,11 @@ protected:
 // CommandObjectThreadBacktrace
 //-------------------------------------------------------------------------
 
-static OptionDefinition g_thread_backtrace_options[] = {
+static constexpr OptionDefinition g_thread_backtrace_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_1, false, "count",    'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount,      "How many frames to display (-1 for all)" },
-  { LLDB_OPT_SET_1, false, "start",    's', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeFrameIndex, "Frame in which to start the backtrace" },
-  { LLDB_OPT_SET_1, false, "extended", 'e', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,    "Show the extended backtrace, if available" }
+  { LLDB_OPT_SET_1, false, "count",    'c', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeCount,      "How many frames to display (-1 for all)" },
+  { LLDB_OPT_SET_1, false, "start",    's', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeFrameIndex, "Frame in which to start the backtrace" },
+  { LLDB_OPT_SET_1, false, "extended", 'e', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean,    "Show the extended backtrace, if available" }
     // clang-format on
 };
 
@@ -402,28 +402,26 @@ protected:
 
 enum StepScope { eStepScopeSource, eStepScopeInstruction };
 
-static OptionEnumValueElement g_tri_running_mode[] = {
+static constexpr OptionEnumValueElement g_tri_running_mode[] = {
     {eOnlyThisThread, "this-thread", "Run only this thread"},
     {eAllThreads, "all-threads", "Run all threads"},
     {eOnlyDuringStepping, "while-stepping",
-     "Run only this thread while stepping"},
-    {0, nullptr, nullptr}};
+     "Run only this thread while stepping"} };
 
-static OptionEnumValueElement g_duo_running_mode[] = {
-    {eOnlyThisThread, "this-thread", "Run only this thread"},
-    {eAllThreads, "all-threads", "Run all threads"},
-    {0, nullptr, nullptr}};
+static constexpr OptionEnumValues TriRunningModes() {
+  return OptionEnumValues(g_tri_running_mode);
+}
 
-static OptionDefinition g_thread_step_scope_options[] = {
+static constexpr OptionDefinition g_thread_step_scope_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_1, false, "step-in-avoids-no-debug",   'a', OptionParser::eRequiredArgument, nullptr, nullptr,            0, eArgTypeBoolean,           "A boolean value that sets whether stepping into functions will step over functions with no debug information." },
-  { LLDB_OPT_SET_1, false, "step-out-avoids-no-debug",  'A', OptionParser::eRequiredArgument, nullptr, nullptr,            0, eArgTypeBoolean,           "A boolean value, if true stepping out of functions will continue to step out till it hits a function with debug information." },
-  { LLDB_OPT_SET_1, false, "count",                     'c', OptionParser::eRequiredArgument, nullptr, nullptr,            1, eArgTypeCount,             "How many times to perform the stepping operation - currently only supported for step-inst and next-inst." },
-  { LLDB_OPT_SET_1, false, "end-linenumber",            'e', OptionParser::eRequiredArgument, nullptr, nullptr,            1, eArgTypeLineNum,           "The line at which to stop stepping - defaults to the next line and only supported for step-in and step-over.  You can also pass the string 'block' to step to the end of the current block.  This is particularly useful in conjunction with --step-target to step through a complex calling sequence." },
-  { LLDB_OPT_SET_1, false, "run-mode",                  'm', OptionParser::eRequiredArgument, nullptr, g_tri_running_mode, 0, eArgTypeRunMode,           "Determine how to run other threads while stepping the current thread." },
-  { LLDB_OPT_SET_1, false, "step-over-regexp",          'r', OptionParser::eRequiredArgument, nullptr, nullptr,            0, eArgTypeRegularExpression, "A regular expression that defines function names to not to stop at when stepping in." },
-  { LLDB_OPT_SET_1, false, "step-in-target",            't', OptionParser::eRequiredArgument, nullptr, nullptr,            0, eArgTypeFunctionName,      "The name of the directly called function step in should stop at when stepping into." },
-  { LLDB_OPT_SET_2, false, "python-class",              'C', OptionParser::eRequiredArgument, nullptr, nullptr,            0, eArgTypePythonClass,       "The name of the class that will manage this step - only supported for Scripted Step." }
+  { LLDB_OPT_SET_1, false, "step-in-avoids-no-debug",   'a', OptionParser::eRequiredArgument, nullptr, {},                0, eArgTypeBoolean,           "A boolean value that sets whether stepping into functions will step over functions with no debug information." },
+  { LLDB_OPT_SET_1, false, "step-out-avoids-no-debug",  'A', OptionParser::eRequiredArgument, nullptr, {},                0, eArgTypeBoolean,           "A boolean value, if true stepping out of functions will continue to step out till it hits a function with debug information." },
+  { LLDB_OPT_SET_1, false, "count",                     'c', OptionParser::eRequiredArgument, nullptr, {},                1, eArgTypeCount,             "How many times to perform the stepping operation - currently only supported for step-inst and next-inst." },
+  { LLDB_OPT_SET_1, false, "end-linenumber",            'e', OptionParser::eRequiredArgument, nullptr, {},                1, eArgTypeLineNum,           "The line at which to stop stepping - defaults to the next line and only supported for step-in and step-over.  You can also pass the string 'block' to step to the end of the current block.  This is particularly useful in conjunction with --step-target to step through a complex calling sequence." },
+  { LLDB_OPT_SET_1, false, "run-mode",                  'm', OptionParser::eRequiredArgument, nullptr, TriRunningModes(), 0, eArgTypeRunMode,           "Determine how to run other threads while stepping the current thread." },
+  { LLDB_OPT_SET_1, false, "step-over-regexp",          'r', OptionParser::eRequiredArgument, nullptr, {},                0, eArgTypeRegularExpression, "A regular expression that defines function names to not to stop at when stepping in." },
+  { LLDB_OPT_SET_1, false, "step-in-target",            't', OptionParser::eRequiredArgument, nullptr, {},                0, eArgTypeFunctionName,      "The name of the directly called function step in should stop at when stepping into." },
+  { LLDB_OPT_SET_2, false, "python-class",              'C', OptionParser::eRequiredArgument, nullptr, {},                0, eArgTypePythonClass,       "The name of the class that will manage this step - only supported for Scripted Step." }
     // clang-format on
 };
 
@@ -483,8 +481,7 @@ public:
         break;
 
       case 'm': {
-        OptionEnumValueElement *enum_values =
-            GetDefinitions()[option_idx].enum_values;
+        auto enum_values = GetDefinitions()[option_idx].enum_values;
         m_run_mode = (lldb::RunMode)OptionArgParser::ToOptionEnum(
             option_arg, enum_values, eOnlyDuringStepping, error);
       } break;
@@ -997,12 +994,20 @@ public:
 // CommandObjectThreadUntil
 //-------------------------------------------------------------------------
 
-static OptionDefinition g_thread_until_options[] = {
+static constexpr OptionEnumValueElement g_duo_running_mode[] = {
+    {eOnlyThisThread, "this-thread", "Run only this thread"},
+    {eAllThreads, "all-threads", "Run all threads"} };
+
+static constexpr OptionEnumValues DuoRunningModes() {
+  return OptionEnumValues(g_duo_running_mode);
+}
+
+static constexpr OptionDefinition g_thread_until_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_1, false, "frame",   'f', OptionParser::eRequiredArgument, nullptr, nullptr,            0, eArgTypeFrameIndex,          "Frame index for until operation - defaults to 0" },
-  { LLDB_OPT_SET_1, false, "thread",  't', OptionParser::eRequiredArgument, nullptr, nullptr,            0, eArgTypeThreadIndex,         "Thread index for the thread for until operation" },
-  { LLDB_OPT_SET_1, false, "run-mode",'m', OptionParser::eRequiredArgument, nullptr, g_duo_running_mode, 0, eArgTypeRunMode,             "Determine how to run other threads while stepping this one" },
-  { LLDB_OPT_SET_1, false, "address", 'a', OptionParser::eRequiredArgument, nullptr, nullptr,            0, eArgTypeAddressOrExpression, "Run until we reach the specified address, or leave the function - can be specified multiple times." }
+  { LLDB_OPT_SET_1, false, "frame",   'f', OptionParser::eRequiredArgument, nullptr, {},                0, eArgTypeFrameIndex,          "Frame index for until operation - defaults to 0" },
+  { LLDB_OPT_SET_1, false, "thread",  't', OptionParser::eRequiredArgument, nullptr, {},                0, eArgTypeThreadIndex,         "Thread index for the thread for until operation" },
+  { LLDB_OPT_SET_1, false, "run-mode",'m', OptionParser::eRequiredArgument, nullptr, DuoRunningModes(), 0, eArgTypeRunMode,             "Determine how to run other threads while stepping this one" },
+  { LLDB_OPT_SET_1, false, "address", 'a', OptionParser::eRequiredArgument, nullptr, {},                0, eArgTypeAddressOrExpression, "Run until we reach the specified address, or leave the function - can be specified multiple times." }
     // clang-format on
 };
 
@@ -1050,8 +1055,7 @@ public:
         }
         break;
       case 'm': {
-        OptionEnumValueElement *enum_values =
-            GetDefinitions()[option_idx].enum_values;
+        auto enum_values = GetDefinitions()[option_idx].enum_values;
         lldb::RunMode run_mode = (lldb::RunMode)OptionArgParser::ToOptionEnum(
             option_arg, enum_values, eOnlyDuringStepping, error);
 
@@ -1419,10 +1423,10 @@ protected:
 // CommandObjectThreadInfo
 //-------------------------------------------------------------------------
 
-static OptionDefinition g_thread_info_options[] = {
+static constexpr OptionDefinition g_thread_info_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_ALL, false, "json",      'j', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Display the thread info in JSON format." },
-  { LLDB_OPT_SET_ALL, false, "stop-info", 's', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Display the extended stop info in JSON format." }
+  { LLDB_OPT_SET_ALL, false, "json",      'j', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Display the thread info in JSON format." },
+  { LLDB_OPT_SET_ALL, false, "stop-info", 's', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Display the extended stop info in JSON format." }
     // clang-format on
 };
 
@@ -1514,9 +1518,9 @@ public:
 // CommandObjectThreadReturn
 //-------------------------------------------------------------------------
 
-static OptionDefinition g_thread_return_options[] = {
+static constexpr OptionDefinition g_thread_return_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_ALL, false, "from-expression", 'x', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Return from the innermost expression evaluation." }
+  { LLDB_OPT_SET_ALL, false, "from-expression", 'x', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Return from the innermost expression evaluation." }
     // clang-format on
 };
 
@@ -1692,13 +1696,13 @@ protected:
 // CommandObjectThreadJump
 //-------------------------------------------------------------------------
 
-static OptionDefinition g_thread_jump_options[] = {
+static constexpr OptionDefinition g_thread_jump_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_1,                                   false, "file",    'f', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSourceFileCompletion, eArgTypeFilename,            "Specifies the source file to jump to." },
-  { LLDB_OPT_SET_1,                                   true,  "line",    'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeLineNum,             "Specifies the line number to jump to." },
-  { LLDB_OPT_SET_2,                                   true,  "by",      'b', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeOffset,              "Jumps by a relative line offset from the current line." },
-  { LLDB_OPT_SET_3,                                   true,  "address", 'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeAddressOrExpression, "Jumps to a specific address." },
-  { LLDB_OPT_SET_1 | LLDB_OPT_SET_2 | LLDB_OPT_SET_3, false, "force",   'r', OptionParser::eNoArgument,       nullptr, nullptr, 0,                                         eArgTypeNone,                "Allows the PC to leave the current function." }
+  { LLDB_OPT_SET_1,                                   false, "file",    'f', OptionParser::eRequiredArgument, nullptr, {}, CommandCompletions::eSourceFileCompletion, eArgTypeFilename,            "Specifies the source file to jump to." },
+  { LLDB_OPT_SET_1,                                   true,  "line",    'l', OptionParser::eRequiredArgument, nullptr, {}, 0,                                         eArgTypeLineNum,             "Specifies the line number to jump to." },
+  { LLDB_OPT_SET_2,                                   true,  "by",      'b', OptionParser::eRequiredArgument, nullptr, {}, 0,                                         eArgTypeOffset,              "Jumps by a relative line offset from the current line." },
+  { LLDB_OPT_SET_3,                                   true,  "address", 'a', OptionParser::eRequiredArgument, nullptr, {}, 0,                                         eArgTypeAddressOrExpression, "Jumps to a specific address." },
+  { LLDB_OPT_SET_1 | LLDB_OPT_SET_2 | LLDB_OPT_SET_3, false, "force",   'r', OptionParser::eNoArgument,       nullptr, {}, 0,                                         eArgTypeNone,                "Allows the PC to leave the current function." }
     // clang-format on
 };
 
@@ -1844,10 +1848,10 @@ protected:
 // CommandObjectThreadPlanList
 //-------------------------------------------------------------------------
 
-static OptionDefinition g_thread_plan_list_options[] = {
+static constexpr OptionDefinition g_thread_plan_list_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_1, false, "verbose",  'v', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Display more information about the thread plans" },
-  { LLDB_OPT_SET_1, false, "internal", 'i', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Display internal as well as user thread plans" }
+  { LLDB_OPT_SET_1, false, "verbose",  'v', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Display more information about the thread plans" },
+  { LLDB_OPT_SET_1, false, "internal", 'i', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Display internal as well as user thread plans" }
     // clang-format on
 };
 

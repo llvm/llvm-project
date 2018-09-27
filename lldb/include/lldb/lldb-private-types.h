@@ -95,6 +95,8 @@ struct OptionEnumValueElement {
   const char *usage;
 };
 
+using OptionEnumValues = llvm::ArrayRef<OptionEnumValueElement>;
+
 struct OptionValidator {
   virtual ~OptionValidator() {}
   virtual bool IsValid(Platform &platform,
@@ -112,9 +114,8 @@ struct OptionDefinition {
   int short_option;        // Single character for this option.
   int option_has_arg; // no_argument, required_argument or optional_argument
   OptionValidator *validator; // If non-NULL, option is valid iff
-                              // |validator->IsValid()|, otherwise always
-                              // valid.
-  OptionEnumValueElement *enum_values; // If non-NULL an array of enum values.
+                              // |validator->IsValid()|, otherwise always valid.
+  OptionEnumValues enum_values; // If not empty, an array of enum values.
   uint32_t completion_type; // Cookie the option class can use to do define the
                             // argument completion.
   lldb::CommandArgumentType argument_type; // Type of argument this option takes

@@ -18,9 +18,9 @@ OptionGroupArchitecture::OptionGroupArchitecture() : m_arch_str() {}
 
 OptionGroupArchitecture::~OptionGroupArchitecture() {}
 
-static OptionDefinition g_option_table[] = {
+static constexpr OptionDefinition g_option_table[] = {
     {LLDB_OPT_SET_1, false, "arch", 'a', OptionParser::eRequiredArgument,
-     nullptr, nullptr, 0, eArgTypeArchitecture,
+     nullptr, {}, 0, eArgTypeArchitecture,
      "Specify the architecture for the target."},
 };
 

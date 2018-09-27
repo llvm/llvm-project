@@ -46,10 +46,10 @@ using namespace lldb_private;
 
 namespace {
 
-static PropertyDefinition g_properties[] = {
-    {"enable", OptionValue::eTypeBoolean, true, true, nullptr, nullptr,
+static constexpr PropertyDefinition g_properties[] = {
+    {"enable", OptionValue::eTypeBoolean, true, true, nullptr, {},
      "Specify whether goroutines should be treated as threads."},
-    {NULL, OptionValue::eTypeInvalid, false, 0, NULL, NULL, NULL}};
+    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, {}, nullptr}};
 
 enum {
   ePropertyEnableGoroutines,

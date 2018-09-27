@@ -67,12 +67,12 @@ const char *Platform::GetHostPlatformName() { return "host"; }
 
 namespace {
 
-PropertyDefinition g_properties[] = {
+static constexpr PropertyDefinition g_properties[] = {
     {"use-module-cache", OptionValue::eTypeBoolean, true, true, nullptr,
-     nullptr, "Use module cache."},
+     {}, "Use module cache."},
     {"module-cache-directory", OptionValue::eTypeFileSpec, true, 0, nullptr,
-     nullptr, "Root directory for cached modules."},
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, nullptr, nullptr}};
+     {}, "Root directory for cached modules."},
+    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, {}, nullptr}};
 
 enum { ePropertyUseModuleCache, ePropertyModuleCacheDirectory };
 
@@ -1397,32 +1397,32 @@ const char *Platform::GetLocalCacheDirectory() {
   return m_local_cache_directory.c_str();
 }
 
-static OptionDefinition g_rsync_option_table[] = {
+static constexpr OptionDefinition g_rsync_option_table[] = {
     {LLDB_OPT_SET_ALL, false, "rsync", 'r', OptionParser::eNoArgument, nullptr,
-     nullptr, 0, eArgTypeNone, "Enable rsync."},
+     {}, 0, eArgTypeNone, "Enable rsync."},
     {LLDB_OPT_SET_ALL, false, "rsync-opts", 'R',
-     OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCommandName,
+     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeCommandName,
      "Platform-specific options required for rsync to work."},
     {LLDB_OPT_SET_ALL, false, "rsync-prefix", 'P',
-     OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCommandName,
+     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeCommandName,
      "Platform-specific rsync prefix put before the remote path."},
     {LLDB_OPT_SET_ALL, false, "ignore-remote-hostname", 'i',
-     OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
+     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
      "Do not automatically fill in the remote hostname when composing the "
      "rsync command."},
 };
 
-static OptionDefinition g_ssh_option_table[] = {
+static constexpr OptionDefinition g_ssh_option_table[] = {
     {LLDB_OPT_SET_ALL, false, "ssh", 's', OptionParser::eNoArgument, nullptr,
-     nullptr, 0, eArgTypeNone, "Enable SSH."},
+     {}, 0, eArgTypeNone, "Enable SSH."},
     {LLDB_OPT_SET_ALL, false, "ssh-opts", 'S', OptionParser::eRequiredArgument,
-     nullptr, nullptr, 0, eArgTypeCommandName,
+     nullptr, {}, 0, eArgTypeCommandName,
      "Platform-specific options required for SSH to work."},
 };
 
-static OptionDefinition g_caching_option_table[] = {
+static constexpr OptionDefinition g_caching_option_table[] = {
     {LLDB_OPT_SET_ALL, false, "local-cache-dir", 'c',
-     OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypePath,
+     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypePath,
      "Path in which to store local copies of files."},
 };
 

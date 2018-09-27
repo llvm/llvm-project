@@ -302,7 +302,9 @@ function(llvm_expand_dependencies out_libs)
     expand_topologically(${lib} "${required_libs}" "${visited_libs}")
   endforeach()
 
-  list(REVERSE required_libs)
+  if(required_libs)
+    list(REVERSE required_libs)
+  endif()
   set(${out_libs} ${required_libs} PARENT_SCOPE)
 endfunction()
 

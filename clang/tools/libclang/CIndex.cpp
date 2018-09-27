@@ -1044,7 +1044,7 @@ bool CursorVisitor::VisitObjCContainerDecl(ObjCContainerDecl *D) {
   }
 
   // Now sort the Decls so that they appear in lexical order.
-  llvm::sort(DeclsInContainer.begin(), DeclsInContainer.end(),
+  llvm::sort(DeclsInContainer,
              [&SM](Decl *A, Decl *B) {
                SourceLocation L_A = A->getBeginLoc();
                SourceLocation L_B = B->getBeginLoc();
@@ -7803,11 +7803,11 @@ static void getCursorPlatformAvailabilityForDecl(
   if (AvailabilityAttrs.empty())
     return;
 
-  llvm::sort(AvailabilityAttrs.begin(), AvailabilityAttrs.end(),
+  llvm::sort(AvailabilityAttrs,
              [](AvailabilityAttr *LHS, AvailabilityAttr *RHS) {
                return LHS->getPlatform()->getName() <
                       RHS->getPlatform()->getName();
-            });
+             });
   ASTContext &Ctx = D->getASTContext();
   auto It = std::unique(
       AvailabilityAttrs.begin(), AvailabilityAttrs.end(),

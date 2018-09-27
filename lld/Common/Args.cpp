@@ -41,7 +41,7 @@ std::vector<StringRef> lld::args::getStrings(opt::InputArgList &Args, int Id) {
 
 uint64_t lld::args::getZOptionValue(opt::InputArgList &Args, int Id,
                                     StringRef Key, uint64_t Default) {
-  for (auto *Arg : Args.filtered(Id)) {
+  for (auto *Arg : Args.filtered_reverse(Id)) {
     std::pair<StringRef, StringRef> KV = StringRef(Arg->getValue()).split('=');
     if (KV.first == Key) {
       uint64_t Result = Default;

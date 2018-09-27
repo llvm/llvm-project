@@ -2304,5 +2304,9 @@ TEST_F(FormatTestJS, AddsLastLinePenaltyIfEndingIsBroken) {
              "};"));
 }
 
+TEST_F(FormatTestJS, ParameterNamingComment) {
+  verifyFormat("callFoo(/*spaceAfterParameterNamingComment=*/ 1);");
+}
+
 } // end namespace tooling
 } // end namespace clang

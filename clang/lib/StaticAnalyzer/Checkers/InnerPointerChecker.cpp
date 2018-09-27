@@ -26,7 +26,7 @@ using namespace clang;
 using namespace ento;
 
 // Associate container objects with a set of raw pointer symbols.
-REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(PtrSet, SymbolRef);
+REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(PtrSet, SymbolRef)
 REGISTER_MAP_WITH_PROGRAMSTATE(RawPtrMap, const MemRegion *, PtrSet)
 
 

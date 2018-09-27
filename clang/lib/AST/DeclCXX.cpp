@@ -731,9 +731,14 @@ void CXXRecordDecl::addedMember(Decl *D) {
     }
 
     // C++11 [dcl.init.aggr]p1: DR1518
-    //   An aggregate is an array or a class with no user-provided, explicit, or
-    //   inherited constructors
-    if (Constructor->isUserProvided() || Constructor->isExplicit())
+    //   An aggregate is an array or a class with no user-provided [or]
+    //   explicit [...] constructors
+    // C++20 [dcl.init.aggr]p1:
+    //   An aggregate is an array or a class with no user-declared [...]
+    //   constructors
+    if (getASTContext().getLangOpts().CPlusPlus2a
+            ? !Constructor->isImplicit()
+            : (Constructor->isUserProvided() || Constructor->isExplicit()))
       data().Aggregate = false;
   }
 

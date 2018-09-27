@@ -743,6 +743,13 @@ static void EmitPfmCounters(const CodeGenProcModel &ProcModel,
   else
     OS << "    nullptr,  // No cycle counter.\n";
 
+  // Emit the uops counter.
+  if (ProcModel.PfmUopsCounterDef)
+    OS << "    \"" << ProcModel.PfmUopsCounterDef->getValueAsString("Counter")
+       << "\",  // Uops counter.\n";
+  else
+    OS << "    nullptr,  // No uops counter.\n";
+
   // Emit a reference to issue counters table.
   if (HasPfmIssueCounters)
     OS << "    " << ProcModel.ModelName << "PfmIssueCounters\n";

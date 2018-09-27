@@ -88,7 +88,15 @@ BenchmarkRunner::runConfiguration(const BenchmarkCode &BC,
                << *ObjectFilePath << "\n";
   const ExecutableFunction EF(State.createTargetMachine(),
                               getObjectFromFile(*ObjectFilePath));
-  InstrBenchmark.Measurements = runMeasurements(EF, *Scratch, NumRepetitions);
+  InstrBenchmark.Measurements = runMeasurements(EF, *Scratch);
+  assert(InstrBenchmark.NumRepetitions > 0 && "invalid NumRepetitions");
+  for (BenchmarkMeasure &BM : InstrBenchmark.Measurements) {
+    // Scale the measurements by instruction.
+    BM.PerInstructionValue /= InstrBenchmark.NumRepetitions;
+    // Scale the measurements by snippet.
+    BM.PerSnippetValue *= static_cast<double>(BC.Instructions.size()) /
+                   InstrBenchmark.NumRepetitions;
+  }
 
   return InstrBenchmark;
 }

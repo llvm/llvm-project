@@ -17,18 +17,19 @@ using namespace llvm;
 
 namespace {
 const char *ARMArch[] = {
-    "armv2",       "armv2a",       "armv3",       "armv3m",    "armv4",
-    "armv4t",      "armv5",        "armv5t",      "armv5e",    "armv5te",
-    "armv5tej",    "armv6",        "armv6j",      "armv6k",    "armv6hl",
-    "armv6t2",     "armv6kz",      "armv6z",      "armv6zk",   "armv6-m",
-    "armv6m",      "armv6sm",      "armv6s-m",    "armv7-a",   "armv7",
-    "armv7a",      "armv7ve",      "armv7hl",     "armv7l",    "armv7-r",
-    "armv7r",      "armv7-m",      "armv7m",      "armv7k",    "armv7s",
-    "armv7e-m",    "armv7em",      "armv8-a",     "armv8",     "armv8a",
-    "armv8l",      "armv8.1-a",    "armv8.1a",    "armv8.2-a", "armv8.2a",
-    "armv8.3-a",   "armv8.3a",     "armv8-r",     "armv8r",    "armv8-m.base",
-    "armv8m.base", "armv8-m.main", "armv8m.main", "iwmmxt",    "iwmmxt2",
-    "xscale"};
+    "armv2",       "armv2a",       "armv3",       "armv3m",       "armv4",
+    "armv4t",      "armv5",        "armv5t",      "armv5e",       "armv5te",
+    "armv5tej",    "armv6",        "armv6j",      "armv6k",       "armv6hl",
+    "armv6t2",     "armv6kz",      "armv6z",      "armv6zk",      "armv6-m",
+    "armv6m",      "armv6sm",      "armv6s-m",    "armv7-a",      "armv7",
+    "armv7a",      "armv7ve",      "armv7hl",     "armv7l",       "armv7-r",
+    "armv7r",      "armv7-m",      "armv7m",      "armv7k",       "armv7s",
+    "armv7e-m",    "armv7em",      "armv8-a",     "armv8",        "armv8a",
+    "armv8l",      "armv8.1-a",    "armv8.1a",    "armv8.2-a",    "armv8.2a",
+    "armv8.3-a",   "armv8.3a",     "armv8.4-a",   "armv8.4a",     "armv8.5-a",
+    "armv8.5a",     "armv8-r",     "armv8r",      "armv8-m.base", "armv8m.base",
+    "armv8-m.main", "armv8m.main", "iwmmxt",      "iwmmxt2",      "xscale"
+};
 
 bool testARMCPU(StringRef CPUName, StringRef ExpectedArch,
                 StringRef ExpectedFPU, unsigned ExpectedFlags,
@@ -384,6 +385,12 @@ TEST(TargetParserTest, testARMArch) {
       testARMArch("armv8.3-a", "generic", "v8.3a",
                           ARMBuildAttrs::CPUArch::v8_A));
   EXPECT_TRUE(
+      testARMArch("armv8.4-a", "generic", "v8.4a",
+                          ARMBuildAttrs::CPUArch::v8_A));
+  EXPECT_TRUE(
+      testARMArch("armv8.5-a", "generic", "v8.5a",
+                          ARMBuildAttrs::CPUArch::v8_A));
+  EXPECT_TRUE(
       testARMArch("armv8-r", "cortex-r52", "v8r",
                           ARMBuildAttrs::CPUArch::v8_R));
   EXPECT_TRUE(
@@ -601,7 +608,9 @@ TEST(TargetParserTest, ARMparseArchEndianAndISA) {
       "v6kz", "v6z",    "v6zk",  "v6-m",   "v6m",   "v6sm",   "v6s-m", "v7-a",
       "v7",   "v7a",    "v7ve",  "v7hl",   "v7l",   "v7-r",   "v7r",   "v7-m",
       "v7m",  "v7k",    "v7s",   "v7e-m",  "v7em",  "v8-a",   "v8",    "v8a",
-      "v8l",  "v8.1-a", "v8.1a", "v8.2-a", "v8.2a", "v8.3-a", "v8.3a", "v8-r"};
+      "v8l",  "v8.1-a", "v8.1a", "v8.2-a", "v8.2a", "v8.3-a", "v8.3a", "v8.4-a",
+      "v8.4a", "v8.5-a","v8.5a", "v8-r"
+  };
 
   for (unsigned i = 0; i < array_lengthof(Arch); i++) {
     std::string arm_1 = "armeb" + (std::string)(Arch[i]);
@@ -659,6 +668,8 @@ TEST(TargetParserTest, ARMparseArchProfile) {
     case ARM::ArchKind::ARMV8_1A:
     case ARM::ArchKind::ARMV8_2A:
     case ARM::ArchKind::ARMV8_3A:
+    case ARM::ArchKind::ARMV8_4A:
+    case ARM::ArchKind::ARMV8_5A:
       EXPECT_EQ(ARM::ProfileKind::A, ARM::parseArchProfile(ARMArch[i]));
       break;
     default:
@@ -819,6 +830,10 @@ TEST(TargetParserTest, testAArch64Arch) {
   EXPECT_TRUE(testAArch64Arch("armv8.2-a", "generic", "v8.2a",
                               ARMBuildAttrs::CPUArch::v8_A));
   EXPECT_TRUE(testAArch64Arch("armv8.3-a", "generic", "v8.3a",
+                              ARMBuildAttrs::CPUArch::v8_A));
+  EXPECT_TRUE(testAArch64Arch("armv8.4-a", "generic", "v8.4a",
+                              ARMBuildAttrs::CPUArch::v8_A));
+  EXPECT_TRUE(testAArch64Arch("armv8.5-a", "generic", "v8.5a",
                               ARMBuildAttrs::CPUArch::v8_A));
 }
 

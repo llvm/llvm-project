@@ -27,18 +27,18 @@ OptionGroupFormat::OptionGroupFormat(lldb::Format default_format,
 
 OptionGroupFormat::~OptionGroupFormat() {}
 
-static OptionDefinition g_option_table[] = {
+static constexpr OptionDefinition g_option_table[] = {
     {LLDB_OPT_SET_1, false, "format", 'f', OptionParser::eRequiredArgument,
-     nullptr, nullptr, 0, eArgTypeFormat,
+     nullptr, {}, 0, eArgTypeFormat,
      "Specify a format to be used for display."},
     {LLDB_OPT_SET_2, false, "gdb-format", 'G', OptionParser::eRequiredArgument,
-     nullptr, nullptr, 0, eArgTypeGDBFormat,
+     nullptr, {}, 0, eArgTypeGDBFormat,
      "Specify a format using a GDB format specifier string."},
     {LLDB_OPT_SET_3, false, "size", 's', OptionParser::eRequiredArgument,
-     nullptr, nullptr, 0, eArgTypeByteSize,
+     nullptr, {}, 0, eArgTypeByteSize,
      "The size in bytes to use when displaying with the selected format."},
     {LLDB_OPT_SET_4, false, "count", 'c', OptionParser::eRequiredArgument,
-     nullptr, nullptr, 0, eArgTypeCount,
+     nullptr, {}, 0, eArgTypeCount,
      "The number of total items to display."},
 };
 

@@ -2020,7 +2020,7 @@ void NeonEmitter::createIntrinsic(Record *R,
     }
   }
 
-  llvm::sort(NewTypeSpecs.begin(), NewTypeSpecs.end());
+  llvm::sort(NewTypeSpecs);
   NewTypeSpecs.erase(std::unique(NewTypeSpecs.begin(), NewTypeSpecs.end()),
 		     NewTypeSpecs.end());
   auto &Entry = IntrinsicMap[Name];

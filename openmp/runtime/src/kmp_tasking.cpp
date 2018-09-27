@@ -16,6 +16,7 @@
 #include "kmp_itt.h"
 #include "kmp_stats.h"
 #include "kmp_wait_release.h"
+#include "kmp_taskdeps.h"
 
 #if OMPT_SUPPORT
 #include "ompt-specific.h"
@@ -764,15 +765,14 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
 #if OMP_40_ENABLED
     if (taskdata->td_taskgroup)
       KMP_ATOMIC_DEC(&taskdata->td_taskgroup->count);
-#if OMP_45_ENABLED
-  }
-  // if we found proxy tasks there could exist a dependency chain
-  // with the proxy task as origin
-  if (!(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser) ||
-      (task_team && task_team->tt.tt_found_proxy_tasks)) {
-#endif
     __kmp_release_deps(gtid, taskdata);
-#endif
+#if OMP_45_ENABLED
+  } else if (task_team && task_team->tt.tt_found_proxy_tasks) {
+    // if we found proxy tasks there could exist a dependency chain
+    // with the proxy task as origin
+    __kmp_release_deps(gtid, taskdata);
+#endif // OMP_45_ENABLED
+#endif // OMP_40_ENABLED
   }
 
   // td_flags.executing must be marked as 0 after __kmp_release_deps has been
@@ -1855,8 +1855,7 @@ kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid, int end_part) {
   return TASK_CURRENT_NOT_QUEUED;
 }
 
-// TODO: change to OMP_50_ENABLED, need to change build tools for this to work
-#if OMP_45_ENABLED
+#if OMP_50_ENABLED
 // Task Reduction implementation
 
 typedef struct kmp_task_red_flags {
@@ -2059,8 +2058,7 @@ void __kmpc_taskgroup(ident_t *loc, int gtid) {
   KMP_ATOMIC_ST_RLX(&tg_new->count, 0);
   KMP_ATOMIC_ST_RLX(&tg_new->cancel_request, cancel_noreq);
   tg_new->parent = taskdata->td_taskgroup;
-// TODO: change to OMP_50_ENABLED, need to change build tools for this to work
-#if OMP_45_ENABLED
+#if OMP_50_ENABLED
   tg_new->reduce_data = NULL;
   tg_new->reduce_num_data = 0;
 #endif
@@ -2165,8 +2163,7 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
   }
   KMP_DEBUG_ASSERT(taskgroup->count == 0);
 
-// TODO: change to OMP_50_ENABLED, need to change build tools for this to work
-#if OMP_45_ENABLED
+#if OMP_50_ENABLED
   if (taskgroup->reduce_data != NULL) // need to reduce?
     __kmp_task_reduction_fini(thread, taskgroup);
 #endif
