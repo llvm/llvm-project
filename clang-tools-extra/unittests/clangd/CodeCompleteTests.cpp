@@ -2073,6 +2073,27 @@ TEST(SignatureHelpTest, ConstructorInitializeFields) {
   }
 }
 
+TEST(CompletionTest, IncludedCompletionKinds) {
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+  std::string Subdir = testPath("sub");
+  std::string SearchDirArg = (llvm::Twine("-I") + Subdir).str();
+  CDB.ExtraClangFlags = {SearchDirArg.c_str()};
+  std::string BarHeader = testPath("sub/bar.h");
+  FS.Files[BarHeader] = "";
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  auto Results = completions(Server,
+      R"cpp(
+        #include "^"
+      )cpp"
+      );
+  EXPECT_THAT(Results.Completions,
+              AllOf(Has("sub/", CompletionItemKind::Folder),
+                    Has("bar.h\"", CompletionItemKind::File)));
+}
+
+
 } // namespace
 } // namespace clangd
 } // namespace clang
