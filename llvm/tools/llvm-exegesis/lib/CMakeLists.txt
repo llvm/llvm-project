@@ -18,6 +18,7 @@ add_library(LLVMExegesis
   BenchmarkResult.cpp
   BenchmarkRunner.cpp
   Clustering.cpp
+  CodeTemplate.cpp
   Latency.cpp
   LlvmState.cpp
   MCInstrDescView.cpp

@@ -358,7 +358,7 @@ static void filterByAccelName(ArrayRef<std::string> Names, DWARFContext &DICtx,
     getDies(DICtx, DICtx.getAppleNamespaces(), Name, Dies);
     getDies(DICtx, DICtx.getDebugNames(), Name, Dies);
   }
-  llvm::sort(Dies.begin(), Dies.end());
+  llvm::sort(Dies);
   Dies.erase(std::unique(Dies.begin(), Dies.end()), Dies.end());
 
   for (DWARFDie Die : Dies)

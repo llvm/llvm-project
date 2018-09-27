@@ -15,8 +15,15 @@
 //===----------------------------------------------------------------------===//
 
 #include <llvm/ADT/APFloat.h>
+#include <llvm/ADT/APInt.h>
 
 namespace exegesis {
+
+// A simple object storing the value for a particular register.
+struct RegisterValue {
+  unsigned Register;
+  llvm::APInt Value;
+};
 
 enum class PredefinedValues {
   POS_ZERO,       // Positive zero

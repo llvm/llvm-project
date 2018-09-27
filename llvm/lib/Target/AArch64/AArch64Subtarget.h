@@ -67,6 +67,7 @@ protected:
   bool HasV8_2aOps = false;
   bool HasV8_3aOps = false;
   bool HasV8_4aOps = false;
+  bool HasV8_5aOps = false;
 
   bool HasFPARMv8 = false;
   bool HasNEON = false;
@@ -92,6 +93,9 @@ protected:
   bool HasSVE = false;
   bool HasRCPC = false;
   bool HasAggressiveFMA = false;
+
+  // Armv8.5-A Extensions
+  bool HasAlternativeNZCV = false;
 
   // HasZeroCycleRegMove - Has zero-cycle register mov instructions.
   bool HasZeroCycleRegMove = false;
@@ -213,6 +217,7 @@ public:
   bool hasV8_2aOps() const { return HasV8_2aOps; }
   bool hasV8_3aOps() const { return HasV8_3aOps; }
   bool hasV8_4aOps() const { return HasV8_4aOps; }
+  bool hasV8_5aOps() const { return HasV8_5aOps; }
 
   bool hasZeroCycleRegMove() const { return HasZeroCycleRegMove; }
 
@@ -304,6 +309,7 @@ public:
   bool hasSVE() const { return HasSVE; }
   bool hasRCPC() const { return HasRCPC; }
   bool hasAggressiveFMA() const { return HasAggressiveFMA; }
+  bool hasAlternativeNZCV() const { return HasAlternativeNZCV; }
 
   bool isLittleEndian() const { return IsLittle; }
 

@@ -239,7 +239,7 @@ public:
     SmallVector<std::pair<BasicBlock *, Value *>, 4> Ops;
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I)
       Ops.push_back({PN->getIncomingBlock(I), PN->getIncomingValue(I)});
-    llvm::sort(Ops.begin(), Ops.end());
+    llvm::sort(Ops);
     for (auto &P : Ops) {
       Blocks.push_back(P.first);
       Values.push_back(P.second);
@@ -762,7 +762,7 @@ unsigned GVNSink::sinkBB(BasicBlock *BBEnd) {
   }
   if (Preds.size() < 2)
     return 0;
-  llvm::sort(Preds.begin(), Preds.end());
+  llvm::sort(Preds);
 
   unsigned NumOrigPreds = Preds.size();
   // We can only sink instructions through unconditional branches.

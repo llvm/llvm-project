@@ -269,7 +269,7 @@ SMDiagnostic::SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN,
   : SM(&sm), Loc(L), Filename(FN), LineNo(Line), ColumnNo(Col), Kind(Kind),
     Message(Msg), LineContents(LineStr), Ranges(Ranges.vec()),
     FixIts(Hints.begin(), Hints.end()) {
-  llvm::sort(FixIts.begin(), FixIts.end());
+  llvm::sort(FixIts);
 }
 
 static void buildFixItLine(std::string &CaretLine, std::string &FixItLine,

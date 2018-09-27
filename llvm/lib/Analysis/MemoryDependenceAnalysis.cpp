@@ -807,7 +807,7 @@ MemoryDependenceResults::getNonLocalCallDependency(CallSite QueryCS) {
         DirtyBlocks.push_back(Entry.getBB());
 
     // Sort the cache so that we can do fast binary search lookups below.
-    llvm::sort(Cache.begin(), Cache.end());
+    llvm::sort(Cache);
 
     ++NumCacheDirtyNonLocal;
     // cerr << "CACHED CASE: " << DirtyBlocks.size() << " dirty: "
@@ -1070,7 +1070,7 @@ SortNonLocalDepInfoCache(MemoryDependenceResults::NonLocalDepInfo &Cache,
     break;
   default:
     // Added many values, do a full scale sort.
-    llvm::sort(Cache.begin(), Cache.end());
+    llvm::sort(Cache);
     break;
   }
 }
@@ -1662,7 +1662,7 @@ void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
 
       // Re-sort the NonLocalDepInfo.  Changing the dirty entry to its
       // subsequent value may invalidate the sortedness.
-      llvm::sort(NLPDI.begin(), NLPDI.end());
+      llvm::sort(NLPDI);
     }
 
     ReverseNonLocalPtrDeps.erase(ReversePtrDepIt);

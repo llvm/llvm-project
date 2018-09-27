@@ -1861,8 +1861,7 @@ void SwingSchedulerDAG::registerPressureFilter(NodeSetType &NodeSets) {
     RecRPTracker.closeBottom();
 
     std::vector<SUnit *> SUnits(NS.begin(), NS.end());
-    llvm::sort(SUnits.begin(), SUnits.end(),
-               [](const SUnit *A, const SUnit *B) {
+    llvm::sort(SUnits, [](const SUnit *A, const SUnit *B) {
       return A->NodeNum > B->NodeNum;
     });
 
@@ -3981,7 +3980,7 @@ void SwingSchedulerDAG::checkValidNodeOrder(const NodeSetType &Circuits) const {
   };
 
   // sort, so that we can perform a binary search
-  llvm::sort(Indices.begin(), Indices.end(), CompareKey);
+  llvm::sort(Indices, CompareKey);
 
   bool Valid = true;
   (void)Valid;

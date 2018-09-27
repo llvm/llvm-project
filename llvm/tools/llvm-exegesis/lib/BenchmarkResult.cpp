@@ -164,10 +164,13 @@ template <> struct SequenceElementTraits<exegesis::BenchmarkMeasure> {
 // e.g. { "key": "the key", "value": 0123 }
 template <> struct MappingTraits<exegesis::BenchmarkMeasure> {
   static void mapping(IO &Io, exegesis::BenchmarkMeasure &Obj) {
-    Io.mapOptional("debug_string", Obj.DebugString);
+    Io.mapRequired("key", Obj.Key);
+    if (!Io.outputting()) {
+      // For backward compatibility, interpret debug_string as a key.
+      Io.mapOptional("debug_string", Obj.Key);
+    }
     Io.mapRequired("value", Obj.PerInstructionValue);
     Io.mapOptional("per_snippet_value", Obj.PerSnippetValue);
-    Io.mapRequired("key", Obj.Key);
   }
   static const bool flow = true;
 };

@@ -22,6 +22,8 @@ def HasV8_3a         : Predicate<"Subtarget->hasV8_3aOps()">,
                                  AssemblerPredicate<"HasV8_3aOps", "armv8.3a">;
 def HasV8_4a         : Predicate<"Subtarget->hasV8_4aOps()">,
                                  AssemblerPredicate<"HasV8_4aOps", "armv8.4a">;
+def HasV8_5a         : Predicate<"Subtarget->hasV8_5aOps()">,
+                                 AssemblerPredicate<"HasV8_5aOps", "armv8.5a">;
 def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8()">,
                                AssemblerPredicate<"FeatureFPARMv8", "fp-armv8">;
 def HasNEON          : Predicate<"Subtarget->hasNEON()">,
@@ -60,7 +62,8 @@ def HasSVE           : Predicate<"Subtarget->hasSVE()">,
                                  AssemblerPredicate<"FeatureSVE", "sve">;
 def HasRCPC          : Predicate<"Subtarget->hasRCPC()">,
                                  AssemblerPredicate<"FeatureRCPC", "rcpc">;
-
+def HasAltNZCV       : Predicate<"Subtarget->hasAlternativeNZCV()">,
+                       AssemblerPredicate<"FeatureAltFPCmp", "altnzcv">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def UseAlternateSExtLoadCVTF32
@@ -605,6 +608,25 @@ def SETF16 : BaseFlagManipulation<0, 1, (ins GPR32:$Rn), "setf16", "{\t$Rn}">;
 def RMIF   : FlagRotate<(ins GPR64:$Rn, uimm6:$imm, imm0_15:$mask), "rmif",
                         "{\t$Rn, $imm, $mask}">;
 } // HasV8_4a
+
+// v8.5 flag manipulation instructions
+let Predicates = [HasAltNZCV], Uses = [NZCV], Defs = [NZCV] in {
+
+def XAFLAG : PstateWriteSimple<(ins), "xaflag", "">, Sched<[WriteSys]> {
+  let Inst{18-16} = 0b000;
+  let Inst{11-8} = 0b0000;
+  let Unpredictable{11-8} = 0b1111;
+  let Inst{7-5} = 0b001;
+}
+
+def AXFLAG : PstateWriteSimple<(ins), "axflag", "">, Sched<[WriteSys]> {
+  let Inst{18-16} = 0b000;
+  let Inst{11-8} = 0b0000;
+  let Unpredictable{11-8} = 0b1111;
+  let Inst{7-5} = 0b010;
+}
+
+} // HasAltNZCV
 
 def : InstAlias<"clrex", (CLREX 0xf)>;
 def : InstAlias<"isb", (ISB 0xf)>;

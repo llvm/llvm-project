@@ -27,17 +27,17 @@ TEST(ClusteringTest, Clusters3D) {
 
   // Cluster around (x=0, y=1, z=2): points {0, 3}.
   Points[0].Measurements = {
-      {"x", 0.01, 0.0, ""}, {"y", 1.02, 0.0, ""}, {"z", 1.98, 0.0, "A"}};
+      {"x", 0.01, 0.0}, {"y", 1.02, 0.0}, {"z", 1.98, 0.0}};
   Points[3].Measurements = {
-      {"x", -0.01, 0.0, ""}, {"y", 1.02, 0.0, ""}, {"z", 1.98, 0.0, ""}};
+      {"x", -0.01, 0.0}, {"y", 1.02, 0.0}, {"z", 1.98, 0.0}};
   // Cluster around (x=1, y=1, z=2): points {1, 4}.
   Points[1].Measurements = {
-      {"x", 1.01, 0.0, ""}, {"y", 1.02, 0.0, ""}, {"z", 1.98, 0.0, ""}};
+      {"x", 1.01, 0.0}, {"y", 1.02, 0.0}, {"z", 1.98, 0.0}};
   Points[4].Measurements = {
-      {"x", 0.99, 0.0, ""}, {"y", 1.02, 0.0, ""}, {"z", 1.98, 0.0, ""}};
+      {"x", 0.99, 0.0}, {"y", 1.02, 0.0}, {"z", 1.98, 0.0}};
   // Cluster around (x=0, y=0, z=0): points {5}, marked as noise.
   Points[5].Measurements = {
-      {"x", 0.0, 0.0, ""}, {"y", 0.01, 0.0, ""}, {"z", -0.02, 0.0, ""}};
+      {"x", 0.0, 0.0}, {"y", 0.01, 0.0}, {"z", -0.02, 0.0}};
   // Error cluster: points {2}
   Points[2].Error = "oops";
 
@@ -70,8 +70,8 @@ TEST(ClusteringTest, Clusters3D) {
 TEST(ClusteringTest, Clusters3D_InvalidSize) {
   std::vector<InstructionBenchmark> Points(6);
   Points[0].Measurements = {
-      {"x", 0.01, 0.0, ""}, {"y", 1.02, 0.0, ""}, {"z", 1.98, 0.0, ""}};
-  Points[1].Measurements = {{"y", 1.02, 0.0, ""}, {"z", 1.98, 0.0, ""}};
+      {"x", 0.01, 0.0}, {"y", 1.02, 0.0}, {"z", 1.98, 0.0}};
+  Points[1].Measurements = {{"y", 1.02, 0.0}, {"z", 1.98, 0.0}};
   auto Error =
       InstructionBenchmarkClustering::create(Points, 2, 0.25).takeError();
   ASSERT_TRUE((bool)Error);
@@ -80,8 +80,8 @@ TEST(ClusteringTest, Clusters3D_InvalidSize) {
 
 TEST(ClusteringTest, Clusters3D_InvalidOrder) {
   std::vector<InstructionBenchmark> Points(6);
-  Points[0].Measurements = {{"x", 0.01, 0.0, ""}, {"y", 1.02, 0.0, ""}};
-  Points[1].Measurements = {{"y", 1.02, 0.0, ""}, {"x", 1.98, 0.0, ""}};
+  Points[0].Measurements = {{"x", 0.01, 0.0}, {"y", 1.02, 0.0}};
+  Points[1].Measurements = {{"y", 1.02, 0.0}, {"x", 1.98, 0.0}};
   auto Error =
       InstructionBenchmarkClustering::create(Points, 2, 0.25).takeError();
   ASSERT_TRUE((bool)Error);

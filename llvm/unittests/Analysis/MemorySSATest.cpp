@@ -1363,10 +1363,9 @@ TEST_F(MemorySSATest, TestOptimizedDefsAreProperUses) {
   ASSERT_LT(StoreBAccess->getID(), StoreA2Access->getID());
 
   auto SortVecByID = [](std::vector<const MemoryDef *> &Defs) {
-    llvm::sort(Defs.begin(), Defs.end(),
-               [](const MemoryDef *LHS, const MemoryDef *RHS) {
-                 return LHS->getID() < RHS->getID();
-               });
+    llvm::sort(Defs, [](const MemoryDef *LHS, const MemoryDef *RHS) {
+      return LHS->getID() < RHS->getID();
+    });
   };
 
   auto SortedUserList = [&](const MemoryDef *MD) {

@@ -1,0 +1,12 @@
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.5a --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=-v8.5a --disassemble < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NOV85
+
+# Flag manipulation
+[0x3f,0x40,0x00,0xd5]
+[0x5f,0x40,0x00,0xd5]
+
+#CHECK: xaflag
+#CHECK: axflag
+
+#CHECK-NOV85: msr S0_0_C4_C0_1, xzr
+#CHECK-NOV85: msr S0_0_C4_C0_2, xzr
