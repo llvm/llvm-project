@@ -468,31 +468,6 @@ private:
   std::map<uint64_t, ElementInfo *> m_element_indexes;
 };
 
-static CompilerType
-GetFunctionArgumentTuple(const CompilerType &compiler_type) {
-  if (compiler_type.IsValid() &&
-      llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem())) {
-    swift::CanType swift_can_type(
-        GetCanonicalSwiftType(compiler_type.GetOpaqueQualType()));
-    auto func =
-        swift::dyn_cast_or_null<swift::AnyFunctionType>(
-            swift_can_type);
-    if (func) {
-      auto input = func.getInput();
-      // See comment in swift::AnyFunctionType for rationale here:
-      // A function can take either a tuple or a parentype, but if a parentype
-      // (i.e. (Foo)), then it will be reduced down to just Foo, so if the input
-      // is not a tuple, that must mean there is only 1 input.
-      auto tuple = swift::dyn_cast<swift::TupleType>(input);
-      if (tuple)
-        return CompilerType(compiler_type.GetTypeSystem(), tuple);
-      else
-        return CompilerType(compiler_type.GetTypeSystem(), input.getPointer());
-    }
-  }
-  return CompilerType();
-}
-
 class SwiftAllPayloadEnumDescriptor : public SwiftEnumDescriptor {
 public:
   SwiftAllPayloadEnumDescriptor(swift::ASTContext *ast,
@@ -525,10 +500,14 @@ public:
 
       swift::EnumElementDecl *case_decl = enum_case.decl;
       assert(case_decl);
-      CompilerType case_type(
-          ast, swift_can_type->getTypeOfMember(module_ctx, case_decl, nullptr)
-                   .getPointer());
-      case_type = GetFunctionArgumentTuple(case_type.GetFunctionReturnType());
+      auto arg_type = case_decl->getArgumentInterfaceType();
+      CompilerType case_type;
+      if (arg_type) {
+        case_type = CompilerType(
+            ast,
+            swift_can_type->getTypeOfMember(module_ctx, case_decl, arg_type)
+              ->getCanonicalType().getPointer());
+      }
 
       const bool is_indirect = case_decl->isIndirect() 
           || case_decl->getParentEnum()->isIndirect();
@@ -4896,16 +4875,7 @@ size_t SwiftASTContext::GetNumberOfFunctionArguments(void *type) {
         swift::dyn_cast_or_null<swift::AnyFunctionType>(
             swift_can_type);
     if (func) {
-      auto input = func.getInput();
-      // See comment in swift::AnyFunctionType for rationale here:
-      // A function can take either a tuple or a parentype, but if a parentype
-      // (i.e. (Foo)), then it will be reduced down to just Foo, so if the input
-      // is not a tuple, that must mean there is only 1 input.
-      auto tuple = swift::dyn_cast<swift::TupleType>(input);
-      if (tuple)
-        return tuple->getNumElements();
-      else
-        return 1;
+      return func.getParams().size();
     }
   }
   return 0;
@@ -4921,18 +4891,15 @@ CompilerType SwiftASTContext::GetFunctionArgumentAtIndex(void *type,
         swift::dyn_cast<swift::AnyFunctionType>(
             swift_can_type);
     if (func) {
-      auto input = func.getInput();
-      // See comment in swift::AnyFunctionType for rationale here:
-      // A function can take either a tuple or a parentype, but if a parentype
-      // (i.e. (Foo)), then it will be reduced down to just Foo, so if the input
-      // is not a tuple, that must mean there is only 1 input.
-      auto tuple = swift::dyn_cast<swift::TupleType>(input);
-      if (tuple) {
-        if (index < tuple->getNumElements())
-          return CompilerType(GetASTContext(),
-                              tuple->getElementType(index));
-      } else
-        return CompilerType(GetASTContext(), input);
+      auto params = func.getParams();
+      if (index < params.size()) {
+        auto param = params[index];
+        if (param.isInOut())
+          return CompilerType(this,
+                              swift::InOutType::get(param.getParameterType()));
+        return CompilerType(this,
+                            param.getParameterType().getPointer());
+      }
     }
   }
   return CompilerType();
