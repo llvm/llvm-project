@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64_be-- %s -o /dev/null -debug-only=isel -O0 2>&1 | FileCheck %s
+; RUN: llc -mtriple=aarch64_be-- %s -aarch64-enable-global-isel-at-O=0 -o /dev/null -debug-only=isel -O0 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; This test uses big endian in order to force an abort since it's not currently supported for GISel.

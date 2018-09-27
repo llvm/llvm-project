@@ -1,10 +1,10 @@
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   -verify-machineinstrs=0 -O0 \
-; RUN:   | FileCheck %s --check-prefixes=ENABLED,ENABLED-O0,FALLBACK
+; RUN:   | FileCheck %s --check-prefixes=DISABLED
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   -verify-machineinstrs -O0 \
-; RUN:   | FileCheck %s --check-prefixes=ENABLED,ENABLED-O0,FALLBACK,VERIFY,VERIFY-O0
+; RUN:   | FileCheck %s --check-prefixes=DISABLED
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   -verify-machineinstrs=0 -O0 -aarch64-enable-global-isel-at-O=0 -global-isel-abort=1 \

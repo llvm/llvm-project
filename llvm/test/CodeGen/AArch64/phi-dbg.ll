@@ -1,4 +1,4 @@
-; RUN: llc -O0 %s -mtriple=aarch64 -stop-after=phi-node-elimination -o - | FileCheck %s
+; RUN: llc -O0 %s -mtriple=aarch64 -stop-after=phi-node-elimination -o - -global-isel | FileCheck %s
 
 ; Test that a DEBUG_VALUE node is create for variable c after the phi has been
 ; converted to a ldr.    The DEBUG_VALUE must be *after* the ldr and not before it.
