@@ -1970,7 +1970,7 @@ void __kmp_fork_barrier(int gtid, int tid) {
 #if KMP_AFFINITY_SUPPORTED
     // Call dynamic affinity settings
     if (__kmp_affinity_type == affinity_balanced && team->t.t_size_changed) {
-      __kmp_balanced_affinity(tid, team->t.t_nproc);
+      __kmp_balanced_affinity(this_thr, team->t.t_nproc);
     }
 #endif // KMP_AFFINITY_SUPPORTED
 #if OMP_40_ENABLED && KMP_AFFINITY_SUPPORTED

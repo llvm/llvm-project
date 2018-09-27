@@ -28,9 +28,9 @@ using namespace lldb_private;
 // CommandObjectSettingsSet
 //-------------------------------------------------------------------------
 
-static OptionDefinition g_settings_set_options[] = {
+static constexpr OptionDefinition g_settings_set_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_2, false, "global", 'g', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Apply the new value to the global default value." }
+  { LLDB_OPT_SET_2, false, "global", 'g', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Apply the new value to the global default value." }
     // clang-format on
 };
 

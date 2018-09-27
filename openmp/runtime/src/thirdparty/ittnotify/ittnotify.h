@@ -90,11 +90,17 @@ The same ID may not be reused for different instances, unless a previous
 #  define ITT_OS_MAC   3
 #endif /* ITT_OS_MAC */
 
+#ifndef ITT_OS_FREEBSD
+#  define ITT_OS_FREEBSD   4
+#endif /* ITT_OS_FREEBSD */
+
 #ifndef ITT_OS
 #  if defined WIN32 || defined _WIN32
 #    define ITT_OS ITT_OS_WIN
 #  elif defined( __APPLE__ ) && defined( __MACH__ )
 #    define ITT_OS ITT_OS_MAC
+#  elif defined( __FreeBSD__ )
+#    define ITT_OS ITT_OS_FREEBSD
 #  else
 #    define ITT_OS ITT_OS_LINUX
 #  endif
@@ -112,11 +118,17 @@ The same ID may not be reused for different instances, unless a previous
 #  define ITT_PLATFORM_MAC 3
 #endif /* ITT_PLATFORM_MAC */
 
+#ifndef ITT_PLATFORM_FREEBSD
+#  define ITT_PLATFORM_FREEBSD 4
+#endif /* ITT_PLATFORM_FREEBSD */
+
 #ifndef ITT_PLATFORM
 #  if ITT_OS==ITT_OS_WIN
 #    define ITT_PLATFORM ITT_PLATFORM_WIN
 #  elif ITT_OS==ITT_OS_MAC
 #    define ITT_PLATFORM ITT_PLATFORM_MAC
+#  elif ITT_OS==ITT_OS_FREEBSD
+#    define ITT_PLATFORM ITT_PLATFORM_FREEBSD
 #  else
 #    define ITT_PLATFORM ITT_PLATFORM_POSIX
 #  endif
@@ -136,17 +148,17 @@ The same ID may not be reused for different instances, unless a previous
 #endif /* UNICODE || _UNICODE */
 #endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 
-#ifndef CDECL
+#ifndef ITTAPI_CDECL
 #  if ITT_PLATFORM==ITT_PLATFORM_WIN
-#    define CDECL __cdecl
+#    define ITTAPI_CDECL __cdecl
 #  else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 #    if defined _M_IX86 || defined __i386__
-#      define CDECL __attribute__ ((cdecl))
+#      define ITTAPI_CDECL __attribute__ ((cdecl))
 #    else  /* _M_IX86 || __i386__ */
-#      define CDECL /* actual only on x86 platform */
+#      define ITTAPI_CDECL /* actual only on x86 platform */
 #    endif /* _M_IX86 || __i386__ */
 #  endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
-#endif /* CDECL */
+#endif /* ITTAPI_CDECL */
 
 #ifndef STDCALL
 #  if ITT_PLATFORM==ITT_PLATFORM_WIN
@@ -160,12 +172,12 @@ The same ID may not be reused for different instances, unless a previous
 #  endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 #endif /* STDCALL */
 
-#define ITTAPI    CDECL
-#define LIBITTAPI CDECL
+#define ITTAPI    ITTAPI_CDECL
+#define LIBITTAPI ITTAPI_CDECL
 
 /* TODO: Temporary for compatibility! */
-#define ITTAPI_CALL    CDECL
-#define LIBITTAPI_CALL CDECL
+#define ITTAPI_CALL    ITTAPI_CDECL
+#define LIBITTAPI_CALL ITTAPI_CDECL
 
 #if ITT_PLATFORM==ITT_PLATFORM_WIN
 /* use __forceinline (VC++ specific) */
@@ -293,25 +305,33 @@ extern "C" {
 void ITTAPI __itt_pause(void);
 /** @brief Resume collection */
 void ITTAPI __itt_resume(void);
+/** @brief Detach collection */
+void ITTAPI __itt_detach(void);
 
 /** @cond exclude_from_documentation */
 #ifndef INTEL_NO_MACRO_BODY
 #ifndef INTEL_NO_ITTNOTIFY_API
 ITT_STUBV(ITTAPI, void, pause,  (void))
 ITT_STUBV(ITTAPI, void, resume, (void))
+ITT_STUBV(ITTAPI, void, detach, (void))
 #define __itt_pause      ITTNOTIFY_VOID(pause)
 #define __itt_pause_ptr  ITTNOTIFY_NAME(pause)
 #define __itt_resume     ITTNOTIFY_VOID(resume)
 #define __itt_resume_ptr ITTNOTIFY_NAME(resume)
+#define __itt_detach     ITTNOTIFY_VOID(detach)
+#define __itt_detach_ptr ITTNOTIFY_NAME(detach)
 #else  /* INTEL_NO_ITTNOTIFY_API */
 #define __itt_pause()
 #define __itt_pause_ptr  0
 #define __itt_resume()
 #define __itt_resume_ptr 0
+#define __itt_detach()
+#define __itt_detach_ptr 0
 #endif /* INTEL_NO_ITTNOTIFY_API */
 #else  /* INTEL_NO_MACRO_BODY */
 #define __itt_pause_ptr  0
 #define __itt_resume_ptr 0
+#define __itt_detach_ptr 0
 #endif /* INTEL_NO_MACRO_BODY */
 /** @endcond */
 /** @} control group */
@@ -1750,9 +1770,10 @@ static const __itt_id __itt_null = { 0, 0, 0 };
 /**
  * @ingroup ids
  * @brief A convenience function is provided to create an ID without domain control.
- * @brief This is a convenience function to initialize an __itt_id structure.
- * After you make the ID with this function, you still must create it with the
- * __itt_id_create function before using the ID to identify a named entity.
+ * @brief This is a convenience function to initialize an __itt_id structure. This function
+ * does not affect the collector runtime in any way. After you make the ID with this
+ * function, you still must create it with the __itt_id_create function before using the ID
+ * to identify a named entity.
  * @param[in] addr The address of object; high QWORD of the ID value.
  * @param[in] extra The extra data to unique identify object; low QWORD of the ID value.
  */
@@ -1919,7 +1940,7 @@ ITT_STUB(ITTAPI, __itt_string_handle*, string_handle_create,  (const char    *na
 typedef unsigned long long __itt_timestamp;
 /** @endcond */
 
-static const __itt_timestamp __itt_timestamp_none = (__itt_timestamp)-1LL;
+#define __itt_timestamp_none ((__itt_timestamp)-1LL)
 
 /** @cond exclude_from_gpa_documentation */
 
@@ -2158,18 +2179,42 @@ void ITTAPI __itt_task_begin_fn(const __itt_domain *domain, __itt_id taskid, __i
  */
 void ITTAPI __itt_task_end(const __itt_domain *domain);
 
+/**
+ * @ingroup tasks
+ * @brief Begin an overlapped task instance.
+ * @param[in] domain The domain for this task.
+ * @param[in] taskid The identifier for this task instance, *cannot* be __itt_null.
+ * @param[in] parentid The parent of this task, or __itt_null.
+ * @param[in] name The name of this task.
+ */
+void ITTAPI __itt_task_begin_overlapped(const __itt_domain* domain, __itt_id taskid, __itt_id parentid, __itt_string_handle* name);
+
+/**
+ * @ingroup tasks
+ * @brief End an overlapped task instance.
+ * @param[in] domain The domain for this task
+ * @param[in] taskid Explicit ID of finished task
+ */
+void ITTAPI __itt_task_end_overlapped(const __itt_domain *domain, __itt_id taskid);
+
 /** @cond exclude_from_documentation */
 #ifndef INTEL_NO_MACRO_BODY
 #ifndef INTEL_NO_ITTNOTIFY_API
 ITT_STUBV(ITTAPI, void, task_begin,    (const __itt_domain *domain, __itt_id id, __itt_id parentid, __itt_string_handle *name))
 ITT_STUBV(ITTAPI, void, task_begin_fn, (const __itt_domain *domain, __itt_id id, __itt_id parentid, void* fn))
 ITT_STUBV(ITTAPI, void, task_end,      (const __itt_domain *domain))
+ITT_STUBV(ITTAPI, void, task_begin_overlapped, (const __itt_domain *domain, __itt_id taskid, __itt_id parentid, __itt_string_handle *name))
+ITT_STUBV(ITTAPI, void, task_end_overlapped,   (const __itt_domain *domain, __itt_id taskid))
 #define __itt_task_begin(d,x,y,z)    ITTNOTIFY_VOID_D3(task_begin,d,x,y,z)
 #define __itt_task_begin_ptr         ITTNOTIFY_NAME(task_begin)
 #define __itt_task_begin_fn(d,x,y,z) ITTNOTIFY_VOID_D3(task_begin_fn,d,x,y,z)
 #define __itt_task_begin_fn_ptr      ITTNOTIFY_NAME(task_begin_fn)
 #define __itt_task_end(d)            ITTNOTIFY_VOID_D0(task_end,d)
 #define __itt_task_end_ptr           ITTNOTIFY_NAME(task_end)
+#define __itt_task_begin_overlapped(d,x,y,z) ITTNOTIFY_VOID_D3(task_begin_overlapped,d,x,y,z)
+#define __itt_task_begin_overlapped_ptr      ITTNOTIFY_NAME(task_begin_overlapped)
+#define __itt_task_end_overlapped(d,x)       ITTNOTIFY_VOID_D1(task_end_overlapped,d,x)
+#define __itt_task_end_overlapped_ptr        ITTNOTIFY_NAME(task_end_overlapped)
 #else  /* INTEL_NO_ITTNOTIFY_API */
 #define __itt_task_begin(domain,id,parentid,name)
 #define __itt_task_begin_ptr    0
@@ -2177,68 +2222,21 @@ ITT_STUBV(ITTAPI, void, task_end,      (const __itt_domain *domain))
 #define __itt_task_begin_fn_ptr 0
 #define __itt_task_end(domain)
 #define __itt_task_end_ptr      0
+#define __itt_task_begin_overlapped(domain,taskid,parentid,name)
+#define __itt_task_begin_overlapped_ptr         0
+#define __itt_task_end_overlapped(domain,taskid)
+#define __itt_task_end_overlapped_ptr           0
 #endif /* INTEL_NO_ITTNOTIFY_API */
 #else  /* INTEL_NO_MACRO_BODY */
 #define __itt_task_begin_ptr    0
 #define __itt_task_begin_fn_ptr 0
 #define __itt_task_end_ptr      0
+#define __itt_task_begin_overlapped_ptr 0
+#define __itt_task_end_overlapped_ptr   0
 #endif /* INTEL_NO_MACRO_BODY */
 /** @endcond */
 /** @} tasks group */
 
-/**
- * @defgroup counters Counters
- * @ingroup public
- * Counters are user-defined objects with a monotonically increasing
- * value. Counter values are 64-bit unsigned integers. Counter values
- * are tracked per-thread. Counters have names that can be displayed in
- * the tools.
- * @{
- */
-
-/**
- * @ingroup counters
- * @brief Increment a counter by one.
- * The first call with a given name creates a counter by that name and sets its
- * value to zero on every thread. Successive calls increment the counter value
- * on the thread on which the call is issued.
- * @param[in] domain The domain controlling the call. Counter names are not domain specific.
- *            The domain argument is used only to enable or disable the API calls.
- * @param[in] name The name of the counter
- */
-void ITTAPI __itt_counter_inc_v3(const __itt_domain *domain, __itt_string_handle *name);
-
-/**
- * @ingroup counters
- * @brief Increment a counter by the value specified in delta.
- * @param[in] domain The domain controlling the call. Counter names are not domain specific.
- *            The domain argument is used only to enable or disable the API calls.
- * @param[in] name The name of the counter
- * @param[in] delta The amount by which to increment the counter
- */
-void ITTAPI __itt_counter_inc_delta_v3(const __itt_domain *domain, __itt_string_handle *name, unsigned long long delta);
-
-/** @cond exclude_from_documentation */
-#ifndef INTEL_NO_MACRO_BODY
-#ifndef INTEL_NO_ITTNOTIFY_API
-ITT_STUBV(ITTAPI, void, counter_inc_v3,       (const __itt_domain *domain, __itt_string_handle *name))
-ITT_STUBV(ITTAPI, void, counter_inc_delta_v3, (const __itt_domain *domain, __itt_string_handle *name, unsigned long long delta))
-#define __itt_counter_inc_v3(d,x)         ITTNOTIFY_VOID_D1(counter_inc_v3,d,x)
-#define __itt_counter_inc_v3_ptr          ITTNOTIFY_NAME(counter_inc_v3)
-#define __itt_counter_inc_delta_v3(d,x,y) ITTNOTIFY_VOID_D2(counter_inc_delta_v3,d,x,y)
-#define __itt_counter_inc_delta_v3_ptr    ITTNOTIFY_NAME(counter_inc_delta_v3)
-#else  /* INTEL_NO_ITTNOTIFY_API */
-#define __itt_counter_inc_v3(domain,name)
-#define __itt_counter_inc_v3_ptr       0
-#define __itt_counter_inc_delta_v3(domain,name,delta)
-#define __itt_counter_inc_delta_v3_ptr 0
-#endif /* INTEL_NO_ITTNOTIFY_API */
-#else  /* INTEL_NO_MACRO_BODY */
-#define __itt_counter_inc_v3_ptr       0
-#define __itt_counter_inc_delta_v3_ptr 0
-#endif /* INTEL_NO_MACRO_BODY */
-/** @endcond */
-/** @} counters group */
 
 /**
  * @defgroup markers Markers
@@ -2774,6 +2772,371 @@ ITT_STUBV(ITTAPI, void, task_end_ex,          (const __itt_domain *domain, __itt
 /** @endcond */
 
 /**
+ * @defgroup counters Counters
+ * @ingroup public
+ * Counters are user-defined objects with a monotonically increasing
+ * value. Counter values are 64-bit unsigned integers.
+ * Counters have names that can be displayed in
+ * the tools.
+ * @{
+ */
+
+/**
+ * @brief opaque structure for counter identification
+ */
+/** @cond exclude_from_documentation */
+
+typedef struct ___itt_counter* __itt_counter;
+
+/**
+ * @brief Create an unsigned 64 bits integer counter with given name/domain
+ *
+ * After __itt_counter_create() is called, __itt_counter_inc(id), __itt_counter_inc_delta(id, delta),
+ * __itt_counter_set_value(id, value_ptr) or __itt_counter_set_value_ex(id, clock_domain, timestamp, value_ptr)
+ * can be used to change the value of the counter, where value_ptr is a pointer to an unsigned 64 bits integer
+ *
+ * The call is equal to __itt_counter_create_typed(name, domain, __itt_metadata_u64)
+ */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+__itt_counter ITTAPI __itt_counter_createA(const char    *name, const char    *domain);
+__itt_counter ITTAPI __itt_counter_createW(const wchar_t *name, const wchar_t *domain);
+#if defined(UNICODE) || defined(_UNICODE)
+#  define __itt_counter_create     __itt_counter_createW
+#  define __itt_counter_create_ptr __itt_counter_createW_ptr
+#else /* UNICODE */
+#  define __itt_counter_create     __itt_counter_createA
+#  define __itt_counter_create_ptr __itt_counter_createA_ptr
+#endif /* UNICODE */
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+__itt_counter ITTAPI __itt_counter_create(const char *name, const char *domain);
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+ITT_STUB(ITTAPI, __itt_counter, counter_createA, (const char    *name, const char    *domain))
+ITT_STUB(ITTAPI, __itt_counter, counter_createW, (const wchar_t *name, const wchar_t *domain))
+#else  /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+ITT_STUB(ITTAPI, __itt_counter, counter_create,  (const char *name, const char *domain))
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_counter_createA     ITTNOTIFY_DATA(counter_createA)
+#define __itt_counter_createA_ptr ITTNOTIFY_NAME(counter_createA)
+#define __itt_counter_createW     ITTNOTIFY_DATA(counter_createW)
+#define __itt_counter_createW_ptr ITTNOTIFY_NAME(counter_createW)
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_counter_create     ITTNOTIFY_DATA(counter_create)
+#define __itt_counter_create_ptr ITTNOTIFY_NAME(counter_create)
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_counter_createA(name, domain)
+#define __itt_counter_createA_ptr 0
+#define __itt_counter_createW(name, domain)
+#define __itt_counter_createW_ptr 0
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_counter_create(name, domain)
+#define __itt_counter_create_ptr  0
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_counter_createA_ptr 0
+#define __itt_counter_createW_ptr 0
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_counter_create_ptr  0
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/**
+ * @brief Increment the unsigned 64 bits integer counter value
+ *
+ * Calling this function to non-unsigned 64 bits integer counters has no effect
+ */
+void ITTAPI __itt_counter_inc(__itt_counter id);
+
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, counter_inc, (__itt_counter id))
+#define __itt_counter_inc     ITTNOTIFY_VOID(counter_inc)
+#define __itt_counter_inc_ptr ITTNOTIFY_NAME(counter_inc)
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_counter_inc(id)
+#define __itt_counter_inc_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#define __itt_counter_inc_ptr 0
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+/**
+ * @brief Increment the unsigned 64 bits integer counter value with x
+ *
+ * Calling this function to non-unsigned 64 bits integer counters has no effect
+ */
+void ITTAPI __itt_counter_inc_delta(__itt_counter id, unsigned long long value);
+
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, counter_inc_delta, (__itt_counter id, unsigned long long value))
+#define __itt_counter_inc_delta     ITTNOTIFY_VOID(counter_inc_delta)
+#define __itt_counter_inc_delta_ptr ITTNOTIFY_NAME(counter_inc_delta)
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_counter_inc_delta(id, value)
+#define __itt_counter_inc_delta_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#define __itt_counter_inc_delta_ptr 0
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/**
+ * @brief Decrement the unsigned 64 bits integer counter value
+ *
+ * Calling this function to non-unsigned 64 bits integer counters has no effect
+ */
+void ITTAPI __itt_counter_dec(__itt_counter id);
+
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, counter_dec, (__itt_counter id))
+#define __itt_counter_dec     ITTNOTIFY_VOID(counter_dec)
+#define __itt_counter_dec_ptr ITTNOTIFY_NAME(counter_dec)
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_counter_dec(id)
+#define __itt_counter_dec_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#define __itt_counter_dec_ptr 0
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+/**
+ * @brief Decrement the unsigned 64 bits integer counter value with x
+ *
+ * Calling this function to non-unsigned 64 bits integer counters has no effect
+ */
+void ITTAPI __itt_counter_dec_delta(__itt_counter id, unsigned long long value);
+
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, counter_dec_delta, (__itt_counter id, unsigned long long value))
+#define __itt_counter_dec_delta     ITTNOTIFY_VOID(counter_dec_delta)
+#define __itt_counter_dec_delta_ptr ITTNOTIFY_NAME(counter_dec_delta)
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_counter_dec_delta(id, value)
+#define __itt_counter_dec_delta_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#define __itt_counter_dec_delta_ptr 0
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/**
+ * @ingroup counters
+ * @brief Increment a counter by one.
+ * The first call with a given name creates a counter by that name and sets its
+ * value to zero. Successive calls increment the counter value.
+ * @param[in] domain The domain controlling the call. Counter names are not domain specific.
+ *            The domain argument is used only to enable or disable the API calls.
+ * @param[in] name The name of the counter
+ */
+void ITTAPI __itt_counter_inc_v3(const __itt_domain *domain, __itt_string_handle *name);
+
+/**
+ * @ingroup counters
+ * @brief Increment a counter by the value specified in delta.
+ * @param[in] domain The domain controlling the call. Counter names are not domain specific.
+ *            The domain argument is used only to enable or disable the API calls.
+ * @param[in] name The name of the counter
+ * @param[in] delta The amount by which to increment the counter
+ */
+void ITTAPI __itt_counter_inc_delta_v3(const __itt_domain *domain, __itt_string_handle *name, unsigned long long delta);
+
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, counter_inc_v3,       (const __itt_domain *domain, __itt_string_handle *name))
+ITT_STUBV(ITTAPI, void, counter_inc_delta_v3, (const __itt_domain *domain, __itt_string_handle *name, unsigned long long delta))
+#define __itt_counter_inc_v3(d,x)         ITTNOTIFY_VOID_D1(counter_inc_v3,d,x)
+#define __itt_counter_inc_v3_ptr          ITTNOTIFY_NAME(counter_inc_v3)
+#define __itt_counter_inc_delta_v3(d,x,y) ITTNOTIFY_VOID_D2(counter_inc_delta_v3,d,x,y)
+#define __itt_counter_inc_delta_v3_ptr    ITTNOTIFY_NAME(counter_inc_delta_v3)
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_counter_inc_v3(domain,name)
+#define __itt_counter_inc_v3_ptr       0
+#define __itt_counter_inc_delta_v3(domain,name,delta)
+#define __itt_counter_inc_delta_v3_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#define __itt_counter_inc_v3_ptr       0
+#define __itt_counter_inc_delta_v3_ptr 0
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+
+/**
+ * @ingroup counters
+ * @brief Decrement a counter by one.
+ * The first call with a given name creates a counter by that name and sets its
+ * value to zero. Successive calls decrement the counter value.
+ * @param[in] domain The domain controlling the call. Counter names are not domain specific.
+ *            The domain argument is used only to enable or disable the API calls.
+ * @param[in] name The name of the counter
+ */
+void ITTAPI __itt_counter_dec_v3(const __itt_domain *domain, __itt_string_handle *name);
+
+/**
+ * @ingroup counters
+ * @brief Decrement a counter by the value specified in delta.
+ * @param[in] domain The domain controlling the call. Counter names are not domain specific.
+ *            The domain argument is used only to enable or disable the API calls.
+ * @param[in] name The name of the counter
+ * @param[in] delta The amount by which to decrement the counter
+ */
+void ITTAPI __itt_counter_dec_delta_v3(const __itt_domain *domain, __itt_string_handle *name, unsigned long long delta);
+
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, counter_dec_v3,       (const __itt_domain *domain, __itt_string_handle *name))
+ITT_STUBV(ITTAPI, void, counter_dec_delta_v3, (const __itt_domain *domain, __itt_string_handle *name, unsigned long long delta))
+#define __itt_counter_dec_v3(d,x)         ITTNOTIFY_VOID_D1(counter_dec_v3,d,x)
+#define __itt_counter_dec_v3_ptr          ITTNOTIFY_NAME(counter_dec_v3)
+#define __itt_counter_dec_delta_v3(d,x,y) ITTNOTIFY_VOID_D2(counter_dec_delta_v3,d,x,y)
+#define __itt_counter_dec_delta_v3_ptr    ITTNOTIFY_NAME(counter_dec_delta_v3)
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_counter_dec_v3(domain,name)
+#define __itt_counter_dec_v3_ptr       0
+#define __itt_counter_dec_delta_v3(domain,name,delta)
+#define __itt_counter_dec_delta_v3_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#define __itt_counter_dec_v3_ptr       0
+#define __itt_counter_dec_delta_v3_ptr 0
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/** @} counters group */
+
+
+/**
+ * @brief Set the counter value
+ */
+void ITTAPI __itt_counter_set_value(__itt_counter id, void *value_ptr);
+
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, counter_set_value, (__itt_counter id, void *value_ptr))
+#define __itt_counter_set_value     ITTNOTIFY_VOID(counter_set_value)
+#define __itt_counter_set_value_ptr ITTNOTIFY_NAME(counter_set_value)
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_counter_set_value(id, value_ptr)
+#define __itt_counter_set_value_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#define __itt_counter_set_value_ptr 0
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/**
+ * @brief Set the counter value
+ */
+void ITTAPI __itt_counter_set_value_ex(__itt_counter id, __itt_clock_domain *clock_domain, unsigned long long timestamp, void *value_ptr);
+
+/** @cond exclude_from_documentation */
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, counter_set_value_ex, (__itt_counter id, __itt_clock_domain *clock_domain, unsigned long long timestamp, void *value_ptr))
+#define __itt_counter_set_value_ex     ITTNOTIFY_VOID(counter_set_value_ex)
+#define __itt_counter_set_value_ex_ptr ITTNOTIFY_NAME(counter_set_value_ex)
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_counter_set_value_ex(id, clock_domain, timestamp, value_ptr)
+#define __itt_counter_set_value_ex_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#define __itt_counter_set_value_ex_ptr 0
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/**
+ * @brief Create a typed counter with given name/domain
+ *
+ * After __itt_counter_create_typed() is called, __itt_counter_inc(id), __itt_counter_inc_delta(id, delta),
+ * __itt_counter_set_value(id, value_ptr) or __itt_counter_set_value_ex(id, clock_domain, timestamp, value_ptr)
+ * can be used to change the value of the counter
+ */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+__itt_counter ITTAPI __itt_counter_create_typedA(const char    *name, const char    *domain, __itt_metadata_type type);
+__itt_counter ITTAPI __itt_counter_create_typedW(const wchar_t *name, const wchar_t *domain, __itt_metadata_type type);
+#if defined(UNICODE) || defined(_UNICODE)
+#  define __itt_counter_create_typed     __itt_counter_create_typedW
+#  define __itt_counter_create_typed_ptr __itt_counter_create_typedW_ptr
+#else /* UNICODE */
+#  define __itt_counter_create_typed     __itt_counter_create_typedA
+#  define __itt_counter_create_typed_ptr __itt_counter_create_typedA_ptr
+#endif /* UNICODE */
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+__itt_counter ITTAPI __itt_counter_create_typed(const char *name, const char *domain, __itt_metadata_type type);
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+ITT_STUB(ITTAPI, __itt_counter, counter_create_typedA, (const char    *name, const char    *domain, __itt_metadata_type type))
+ITT_STUB(ITTAPI, __itt_counter, counter_create_typedW, (const wchar_t *name, const wchar_t *domain, __itt_metadata_type type))
+#else  /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+ITT_STUB(ITTAPI, __itt_counter, counter_create_typed,  (const char *name, const char *domain, __itt_metadata_type type))
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_counter_create_typedA     ITTNOTIFY_DATA(counter_create_typedA)
+#define __itt_counter_create_typedA_ptr ITTNOTIFY_NAME(counter_create_typedA)
+#define __itt_counter_create_typedW     ITTNOTIFY_DATA(counter_create_typedW)
+#define __itt_counter_create_typedW_ptr ITTNOTIFY_NAME(counter_create_typedW)
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_counter_create_typed     ITTNOTIFY_DATA(counter_create_typed)
+#define __itt_counter_create_typed_ptr ITTNOTIFY_NAME(counter_create_typed)
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_counter_create_typedA(name, domain, type)
+#define __itt_counter_create_typedA_ptr 0
+#define __itt_counter_create_typedW(name, domain, type)
+#define __itt_counter_create_typedW_ptr 0
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_counter_create_typed(name, domain, type)
+#define __itt_counter_create_typed_ptr  0
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_counter_create_typedA_ptr 0
+#define __itt_counter_create_typedW_ptr 0
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_counter_create_typed_ptr  0
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/**
+ * @brief Destroy the counter identified by the pointer previously returned by __itt_counter_create() or
+ * __itt_counter_create_typed()
+ */
+void ITTAPI __itt_counter_destroy(__itt_counter id);
+
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, counter_destroy, (__itt_counter id))
+#define __itt_counter_destroy     ITTNOTIFY_VOID(counter_destroy)
+#define __itt_counter_destroy_ptr ITTNOTIFY_NAME(counter_destroy)
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_counter_destroy(id)
+#define __itt_counter_destroy_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#define __itt_counter_destroy_ptr 0
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+/** @} counters group */
+
+/**
  * @ingroup markers
  * @brief Create a marker instance.
  * @param[in] domain The domain for this marker
@@ -3186,6 +3549,67 @@ ITT_STUBV(ITTAPI, void, enable_attach, (void))
 
 /** @endcond */
 
+/**
+ * @brief Module load info
+ * This API is used to report necessary information in case of module relocation
+ * @param[in] start_addr - relocated module start address
+ * @param[in] end_addr - relocated module end address
+ * @param[in] path - file system path to the module
+ */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+void ITTAPI __itt_module_loadA(void *start_addr, void *end_addr, const char *path);
+void ITTAPI __itt_module_loadW(void *start_addr, void *end_addr, const wchar_t *path);
+#if defined(UNICODE) || defined(_UNICODE)
+#  define __itt_module_load     __itt_module_loadW
+#  define __itt_module_load_ptr __itt_module_loadW_ptr
+#else /* UNICODE */
+#  define __itt_module_load     __itt_module_loadA
+#  define __itt_module_load_ptr __itt_module_loadA_ptr
+#endif /* UNICODE */
+#else  /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+void ITTAPI __itt_module_load(void *start_addr, void *end_addr, const char *path);
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+
+/** @cond exclude_from_documentation */
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+ITT_STUB(ITTAPI, void, module_loadA, (void *start_addr, void *end_addr, const char *path))
+ITT_STUB(ITTAPI, void, module_loadW, (void *start_addr, void *end_addr, const wchar_t *path))
+#else  /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+ITT_STUB(ITTAPI, void, module_load,  (void *start_addr, void *end_addr, const char *path))
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_module_loadA     ITTNOTIFY_VOID(module_loadA)
+#define __itt_module_loadA_ptr ITTNOTIFY_NAME(module_loadA)
+#define __itt_module_loadW     ITTNOTIFY_VOID(module_loadW)
+#define __itt_module_loadW_ptr ITTNOTIFY_NAME(module_loadW)
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_module_load     ITTNOTIFY_VOID(module_load)
+#define __itt_module_load_ptr ITTNOTIFY_NAME(module_load)
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_module_loadA(start_addr, end_addr, path)
+#define __itt_module_loadA_ptr 0
+#define __itt_module_loadW(start_addr, end_addr, path)
+#define __itt_module_loadW_ptr 0
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_module_load(start_addr, end_addr, path)
+#define __itt_module_load_ptr 0
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_module_loadA_ptr 0
+#define __itt_module_loadW_ptr 0
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_module_load_ptr  0
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+
 
 #ifdef __cplusplus
 }
@@ -3203,16 +3627,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 /**
- * @ingroup tasks
- * @brief Begin an overlapped task instance.
- * @param[in] domain The domain for this task.
- * @param[in] taskid The identifier for this task instance, *cannot* be __itt_null.
- * @param[in] parentid The parent of this task, or __itt_null.
- * @param[in] name The name of this task.
- */
-void ITTAPI __itt_task_begin_overlapped(const __itt_domain* domain, __itt_id taskid, __itt_id parentid, __itt_string_handle* name);
-
-/**
  * @ingroup clockdomain
  * @brief Begin an overlapped task instance.
  * @param[in] domain The domain for this task
@@ -3223,14 +3637,6 @@ void ITTAPI __itt_task_begin_overlapped(const __itt_domain* domain, __itt_id tas
  * @param[in] name The name of this task.
  */
 void ITTAPI __itt_task_begin_overlapped_ex(const __itt_domain* domain, __itt_clock_domain* clock_domain, unsigned long long timestamp, __itt_id taskid, __itt_id parentid, __itt_string_handle* name);
-
-/**
- * @ingroup tasks
- * @brief End an overlapped task instance.
- * @param[in] domain The domain for this task
- * @param[in] taskid Explicit ID of finished task
- */
-void ITTAPI __itt_task_end_overlapped(const __itt_domain *domain, __itt_id taskid);
 
 /**
  * @ingroup clockdomain
@@ -3245,30 +3651,19 @@ void ITTAPI __itt_task_end_overlapped_ex(const __itt_domain* domain, __itt_clock
 /** @cond exclude_from_documentation */
 #ifndef INTEL_NO_MACRO_BODY
 #ifndef INTEL_NO_ITTNOTIFY_API
-ITT_STUBV(ITTAPI, void, task_begin_overlapped,          (const __itt_domain *domain, __itt_id taskid, __itt_id parentid, __itt_string_handle *name))
 ITT_STUBV(ITTAPI, void, task_begin_overlapped_ex,       (const __itt_domain* domain, __itt_clock_domain* clock_domain, unsigned long long timestamp, __itt_id taskid, __itt_id parentid, __itt_string_handle* name))
-ITT_STUBV(ITTAPI, void, task_end_overlapped,            (const __itt_domain *domain, __itt_id taskid))
 ITT_STUBV(ITTAPI, void, task_end_overlapped_ex,         (const __itt_domain* domain, __itt_clock_domain* clock_domain, unsigned long long timestamp, __itt_id taskid))
-#define __itt_task_begin_overlapped(d,x,y,z)            ITTNOTIFY_VOID_D3(task_begin_overlapped,d,x,y,z)
-#define __itt_task_begin_overlapped_ptr                 ITTNOTIFY_NAME(task_begin_overlapped)
 #define __itt_task_begin_overlapped_ex(d,x,y,z,a,b)     ITTNOTIFY_VOID_D5(task_begin_overlapped_ex,d,x,y,z,a,b)
 #define __itt_task_begin_overlapped_ex_ptr              ITTNOTIFY_NAME(task_begin_overlapped_ex)
-#define __itt_task_end_overlapped(d,x)                  ITTNOTIFY_VOID_D1(task_end_overlapped,d,x)
-#define __itt_task_end_overlapped_ptr                   ITTNOTIFY_NAME(task_end_overlapped)
 #define __itt_task_end_overlapped_ex(d,x,y,z)           ITTNOTIFY_VOID_D3(task_end_overlapped_ex,d,x,y,z)
 #define __itt_task_end_overlapped_ex_ptr                ITTNOTIFY_NAME(task_end_overlapped_ex)
 #else  /* INTEL_NO_ITTNOTIFY_API */
-#define __itt_task_begin_overlapped(domain,taskid,parentid,name)
-#define __itt_task_begin_overlapped_ptr         0
 #define __itt_task_begin_overlapped_ex(domain,clock_domain,timestamp,taskid,parentid,name)
 #define __itt_task_begin_overlapped_ex_ptr      0
-#define __itt_task_end_overlapped(domain,taskid)
-#define __itt_task_end_overlapped_ptr           0
 #define __itt_task_end_overlapped_ex(domain,clock_domain,timestamp,taskid)
 #define __itt_task_end_overlapped_ex_ptr        0
 #endif /* INTEL_NO_ITTNOTIFY_API */
 #else  /* INTEL_NO_MACRO_BODY */
-#define __itt_task_begin_overlapped_ptr         0
 #define __itt_task_begin_overlapped_ex_ptr      0
 #define __itt_task_end_overlapped_ptr           0
 #define __itt_task_end_overlapped_ex_ptr        0
@@ -3528,130 +3923,7 @@ ITT_STUB(ITTAPI, int, mark_global_off, (__itt_mark_type mt))
  * Counters group
  * @{
  */
-/**
- * @brief opaque structure for counter identification
- */
-typedef struct ___itt_counter *__itt_counter;
 
-/**
- * @brief Create a counter with given name/domain for the calling thread
- *
- * After __itt_counter_create() is called, __itt_counter_inc() / __itt_counter_inc_delta() can be used
- * to increment the counter on any thread
- */
-#if ITT_PLATFORM==ITT_PLATFORM_WIN
-__itt_counter ITTAPI __itt_counter_createA(const char    *name, const char    *domain);
-__itt_counter ITTAPI __itt_counter_createW(const wchar_t *name, const wchar_t *domain);
-#if defined(UNICODE) || defined(_UNICODE)
-#  define __itt_counter_create     __itt_counter_createW
-#  define __itt_counter_create_ptr __itt_counter_createW_ptr
-#else /* UNICODE */
-#  define __itt_counter_create     __itt_counter_createA
-#  define __itt_counter_create_ptr __itt_counter_createA_ptr
-#endif /* UNICODE */
-#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
-__itt_counter ITTAPI __itt_counter_create(const char *name, const char *domain);
-#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
-
-/** @cond exclude_from_documentation */
-#ifndef INTEL_NO_MACRO_BODY
-#ifndef INTEL_NO_ITTNOTIFY_API
-#if ITT_PLATFORM==ITT_PLATFORM_WIN
-ITT_STUB(ITTAPI, __itt_counter, counter_createA, (const char    *name, const char    *domain))
-ITT_STUB(ITTAPI, __itt_counter, counter_createW, (const wchar_t *name, const wchar_t *domain))
-#else  /* ITT_PLATFORM==ITT_PLATFORM_WIN */
-ITT_STUB(ITTAPI, __itt_counter, counter_create,  (const char *name, const char *domain))
-#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
-#if ITT_PLATFORM==ITT_PLATFORM_WIN
-#define __itt_counter_createA     ITTNOTIFY_DATA(counter_createA)
-#define __itt_counter_createA_ptr ITTNOTIFY_NAME(counter_createA)
-#define __itt_counter_createW     ITTNOTIFY_DATA(counter_createW)
-#define __itt_counter_createW_ptr ITTNOTIFY_NAME(counter_createW)
-#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
-#define __itt_counter_create     ITTNOTIFY_DATA(counter_create)
-#define __itt_counter_create_ptr ITTNOTIFY_NAME(counter_create)
-#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
-#else  /* INTEL_NO_ITTNOTIFY_API */
-#if ITT_PLATFORM==ITT_PLATFORM_WIN
-#define __itt_counter_createA(name, domain)
-#define __itt_counter_createA_ptr 0
-#define __itt_counter_createW(name, domain)
-#define __itt_counter_createW_ptr 0
-#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
-#define __itt_counter_create(name, domain)
-#define __itt_counter_create_ptr  0
-#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
-#endif /* INTEL_NO_ITTNOTIFY_API */
-#else  /* INTEL_NO_MACRO_BODY */
-#if ITT_PLATFORM==ITT_PLATFORM_WIN
-#define __itt_counter_createA_ptr 0
-#define __itt_counter_createW_ptr 0
-#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
-#define __itt_counter_create_ptr  0
-#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
-#endif /* INTEL_NO_MACRO_BODY */
-/** @endcond */
-
-/**
- * @brief Destroy the counter identified by the pointer previously returned by __itt_counter_create()
- */
-void ITTAPI __itt_counter_destroy(__itt_counter id);
-
-/** @cond exclude_from_documentation */
-#ifndef INTEL_NO_MACRO_BODY
-#ifndef INTEL_NO_ITTNOTIFY_API
-ITT_STUBV(ITTAPI, void, counter_destroy, (__itt_counter id))
-#define __itt_counter_destroy     ITTNOTIFY_VOID(counter_destroy)
-#define __itt_counter_destroy_ptr ITTNOTIFY_NAME(counter_destroy)
-#else  /* INTEL_NO_ITTNOTIFY_API */
-#define __itt_counter_destroy(id)
-#define __itt_counter_destroy_ptr 0
-#endif /* INTEL_NO_ITTNOTIFY_API */
-#else  /* INTEL_NO_MACRO_BODY */
-#define __itt_counter_destroy_ptr 0
-#endif /* INTEL_NO_MACRO_BODY */
-/** @endcond */
-
-/**
- * @brief Increment the counter value
- */
-void ITTAPI __itt_counter_inc(__itt_counter id);
-
-/** @cond exclude_from_documentation */
-#ifndef INTEL_NO_MACRO_BODY
-#ifndef INTEL_NO_ITTNOTIFY_API
-ITT_STUBV(ITTAPI, void, counter_inc, (__itt_counter id))
-#define __itt_counter_inc     ITTNOTIFY_VOID(counter_inc)
-#define __itt_counter_inc_ptr ITTNOTIFY_NAME(counter_inc)
-#else  /* INTEL_NO_ITTNOTIFY_API */
-#define __itt_counter_inc(id)
-#define __itt_counter_inc_ptr 0
-#endif /* INTEL_NO_ITTNOTIFY_API */
-#else  /* INTEL_NO_MACRO_BODY */
-#define __itt_counter_inc_ptr 0
-#endif /* INTEL_NO_MACRO_BODY */
-/** @endcond */
-
-/**
- * @brief Increment the counter value with x
- */
-void ITTAPI __itt_counter_inc_delta(__itt_counter id, unsigned long long value);
-
-/** @cond exclude_from_documentation */
-#ifndef INTEL_NO_MACRO_BODY
-#ifndef INTEL_NO_ITTNOTIFY_API
-ITT_STUBV(ITTAPI, void, counter_inc_delta, (__itt_counter id, unsigned long long value))
-#define __itt_counter_inc_delta     ITTNOTIFY_VOID(counter_inc_delta)
-#define __itt_counter_inc_delta_ptr ITTNOTIFY_NAME(counter_inc_delta)
-#else  /* INTEL_NO_ITTNOTIFY_API */
-#define __itt_counter_inc_delta(id, value)
-#define __itt_counter_inc_delta_ptr 0
-#endif /* INTEL_NO_ITTNOTIFY_API */
-#else  /* INTEL_NO_MACRO_BODY */
-#define __itt_counter_inc_delta_ptr 0
-#endif /* INTEL_NO_MACRO_BODY */
-/** @endcond */
-/** @} counters group */
 
 /**
  * @defgroup stitch Stack Stitching

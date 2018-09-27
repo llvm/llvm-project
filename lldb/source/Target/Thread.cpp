@@ -64,25 +64,24 @@ const ThreadPropertiesSP &Thread::GetGlobalProperties() {
   return *g_settings_sp_ptr;
 }
 
-static PropertyDefinition g_properties[] = {
+static constexpr PropertyDefinition g_properties[] = {
     {"step-in-avoid-nodebug", OptionValue::eTypeBoolean, true, true, nullptr,
-     nullptr,
+     {},
      "If true, step-in will not stop in functions with no debug information."},
     {"step-out-avoid-nodebug", OptionValue::eTypeBoolean, true, false, nullptr,
-     nullptr, "If true, when step-in/step-out/step-over leave the current "
-              "frame, they will continue to step out till they come to a "
-              "function with "
-              "debug information.  Passing a frame argument to step-out will "
-              "override this option."},
-    {"step-avoid-regexp", OptionValue::eTypeRegex, true, 0, "^std::", nullptr,
+     {}, "If true, when step-in/step-out/step-over leave the current frame, "
+         "they will continue to step out till they come to a function with "
+         "debug information. Passing a frame argument to step-out will "
+         "override this option."},
+    {"step-avoid-regexp", OptionValue::eTypeRegex, true, 0, "^std::", {},
      "A regular expression defining functions step-in won't stop in."},
     {"step-avoid-libraries", OptionValue::eTypeFileSpecList, true, 0, nullptr,
-     nullptr, "A list of libraries that source stepping won't stop in."},
-    {"trace-thread", OptionValue::eTypeBoolean, false, false, nullptr, nullptr,
+     {}, "A list of libraries that source stepping won't stop in."},
+    {"trace-thread", OptionValue::eTypeBoolean, false, false, nullptr, {},
      "If true, this thread will single-step and log execution."},
     {"max-backtrace-depth", OptionValue::eTypeUInt64, false, 300000, nullptr,
-     nullptr, "Maximum number of frames to backtrace."},
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, nullptr, nullptr}};
+     {}, "Maximum number of frames to backtrace."},
+    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, {}, nullptr}};
 
 enum {
   ePropertyStepInAvoidsNoDebug,

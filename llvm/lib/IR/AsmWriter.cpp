@@ -199,7 +199,7 @@ static void predictValueUseListOrderImpl(const Value *V, const Function *F,
       !isa<GlobalVariable>(V) && !isa<Function>(V) && !isa<BasicBlock>(V);
   if (auto *BA = dyn_cast<BlockAddress>(V))
     ID = OM.lookup(BA->getBasicBlock()).first;
-  llvm::sort(List.begin(), List.end(), [&](const Entry &L, const Entry &R) {
+  llvm::sort(List, [&](const Entry &L, const Entry &R) {
     const Use *LU = L.first;
     const Use *RU = R.first;
     if (LU == RU)

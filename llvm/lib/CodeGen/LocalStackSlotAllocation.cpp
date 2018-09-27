@@ -328,7 +328,7 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
 
   // Sort the frame references by local offset.
   // Use frame index as a tie-breaker in case MI's have the same offset.
-  llvm::sort(FrameReferenceInsns.begin(), FrameReferenceInsns.end());
+  llvm::sort(FrameReferenceInsns);
 
   MachineBasicBlock *Entry = &Fn.front();
 

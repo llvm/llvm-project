@@ -428,8 +428,8 @@ static bool OneUseDominatesOtherUses(unsigned Reg, const MachineOperand &OneUse,
         if (!TargetRegisterInfo::isVirtualRegister(DefReg) ||
             !MFI.isVRegStackified(DefReg))
           return false;
-        assert(MRI.hasOneUse(DefReg));
-        const MachineOperand &NewUse = *MRI.use_begin(DefReg);
+        assert(MRI.hasOneNonDBGUse(DefReg));
+        const MachineOperand &NewUse = *MRI.use_nodbg_begin(DefReg);
         const MachineInstr *NewUseInst = NewUse.getParent();
         if (NewUseInst == OneUseInst) {
           if (&OneUse > &NewUse)

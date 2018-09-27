@@ -138,7 +138,7 @@ public:
   uint32_t getFunctionInputOffset() const { return getInputSectionOffset(); }
   uint32_t getFunctionCodeOffset() const { return Function->CodeOffset; }
   uint32_t getSize() const override {
-    if (Config->CompressRelocTargets && File) {
+    if (Config->CompressRelocations && File) {
       assert(CompressedSize);
       return CompressedSize;
     }
@@ -165,7 +165,7 @@ public:
 
 protected:
   ArrayRef<uint8_t> data() const override {
-    assert(!Config->CompressRelocTargets);
+    assert(!Config->CompressRelocations);
     return File->CodeSection->Content.slice(getInputSectionOffset(),
                                             Function->Size);
   }

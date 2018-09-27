@@ -111,16 +111,15 @@ using namespace lldb_private;
 
 namespace {
 
-PropertyDefinition g_properties[] = {
+static constexpr PropertyDefinition g_properties[] = {
     {"comp-dir-symlink-paths", OptionValue::eTypeFileSpecList, true, 0, nullptr,
-     nullptr,
+     {},
      "If the DW_AT_comp_dir matches any of these paths the symbolic "
      "links will be resolved at DWARF parse time."},
-    {"ignore-file-indexes", OptionValue::eTypeBoolean, true, 0, nullptr,
-     nullptr,
+    {"ignore-file-indexes", OptionValue::eTypeBoolean, true, 0, nullptr, {},
      "Ignore indexes present in the object files and always index DWARF "
      "manually."},
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, nullptr, nullptr},
+    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, {}, nullptr},
 };
 
 enum {

@@ -1554,7 +1554,7 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
   if (MemOpRecords.size() < 2)
     return;
 
-  llvm::sort(MemOpRecords.begin(), MemOpRecords.end());
+  llvm::sort(MemOpRecords);
   unsigned ClusterLength = 1;
   for (unsigned Idx = 0, End = MemOpRecords.size(); Idx < (End - 1); ++Idx) {
     SUnit *SUa = MemOpRecords[Idx].SU;

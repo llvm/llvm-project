@@ -475,9 +475,9 @@ LanguageRuntime *AppleObjCRuntimeV2::CreateInstance(Process *process,
     return NULL;
 }
 
-static OptionDefinition g_objc_classtable_dump_options[] = {
+static constexpr OptionDefinition g_objc_classtable_dump_options[] = {
     {LLDB_OPT_SET_ALL, false, "verbose", 'v', OptionParser::eNoArgument,
-     nullptr, nullptr, 0, eArgTypeNone,
+     nullptr, {}, 0, eArgTypeNone,
      "Print ivar and method information in detail"}};
 
 class CommandObjectObjC_ClassTable_Dump : public CommandObjectParsed {

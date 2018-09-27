@@ -5206,7 +5206,7 @@ static void handleAbiTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
 
   // Store tags sorted and without duplicates.
-  llvm::sort(Tags.begin(), Tags.end());
+  llvm::sort(Tags);
   Tags.erase(std::unique(Tags.begin(), Tags.end()), Tags.end());
 
   D->addAttr(::new (S.Context)

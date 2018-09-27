@@ -161,7 +161,7 @@ void ImportedFunctionsInliningStatistics::dump(const bool Verbose) {
 
 void ImportedFunctionsInliningStatistics::calculateRealInlines() {
   // Removing duplicated Callers.
-  llvm::sort(NonImportedCallers.begin(), NonImportedCallers.end());
+  llvm::sort(NonImportedCallers);
   NonImportedCallers.erase(
       std::unique(NonImportedCallers.begin(), NonImportedCallers.end()),
       NonImportedCallers.end());

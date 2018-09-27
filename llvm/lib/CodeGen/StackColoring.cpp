@@ -1231,7 +1231,7 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
   });
 
   for (auto &s : LiveStarts)
-    llvm::sort(s.begin(), s.end());
+    llvm::sort(s);
 
   bool Changed = true;
   while (Changed) {

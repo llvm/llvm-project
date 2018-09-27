@@ -1729,7 +1729,7 @@ static void findBlockCapturedManagedEntities(
   }
 
   // Sort the captures by offset.
-  llvm::sort(ManagedCaptures.begin(), ManagedCaptures.end());
+  llvm::sort(ManagedCaptures);
 }
 
 namespace {

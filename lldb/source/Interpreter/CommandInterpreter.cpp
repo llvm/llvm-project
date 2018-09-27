@@ -76,22 +76,21 @@ using namespace lldb_private;
 
 static const char *k_white_space = " \t\v";
 
-static PropertyDefinition g_properties[] = {
+static constexpr PropertyDefinition g_properties[] = {
     {"expand-regex-aliases", OptionValue::eTypeBoolean, true, false, nullptr,
-     nullptr, "If true, regular expression alias commands will show the "
+     {}, "If true, regular expression alias commands will show the "
               "expanded command that will be executed. This can be used to "
               "debug new regular expression alias commands."},
-    {"prompt-on-quit", OptionValue::eTypeBoolean, true, true, nullptr, nullptr,
+    {"prompt-on-quit", OptionValue::eTypeBoolean, true, true, nullptr, {},
      "If true, LLDB will prompt you before quitting if there are any live "
      "processes being debugged. If false, LLDB will quit without asking in any "
      "case."},
     {"stop-command-source-on-error", OptionValue::eTypeBoolean, true, true,
-     nullptr, nullptr, "If true, LLDB will stop running a 'command source' "
-                       "script upon encountering an error."},
-    {"space-repl-prompts", OptionValue::eTypeBoolean, true, false, nullptr,
-     nullptr,
+     nullptr, {}, "If true, LLDB will stop running a 'command source' "
+                  "script upon encountering an error."},
+    {"space-repl-prompts", OptionValue::eTypeBoolean, true, false, nullptr, {},
      "If true, blank lines will be printed between between REPL submissions."},
-    {nullptr, OptionValue::eTypeInvalid, true, 0, nullptr, nullptr, nullptr}};
+    {nullptr, OptionValue::eTypeInvalid, true, 0, nullptr, {}, nullptr}};
 
 enum {
   ePropertyExpandRegexAliases = 0,

@@ -1022,8 +1022,8 @@ void CodeGenModule::EmitVTableTypeMetadata(llvm::GlobalVariable *VTable,
                                 AP.second.AddressPointIndex));
 
   // Sort the address points for determinism.
-  llvm::sort(AddressPoints.begin(), AddressPoints.end(),
-             [this](const AddressPoint &AP1, const AddressPoint &AP2) {
+  llvm::sort(AddressPoints, [this](const AddressPoint &AP1,
+                                   const AddressPoint &AP2) {
     if (&AP1 == &AP2)
       return false;
 

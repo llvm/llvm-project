@@ -484,7 +484,7 @@ bool DwarfLinker::RelocationManager::findValidRelocs(
   // the file, this allows us to just keep an index in the relocation
   // array that we advance during our walk, rather than resorting to
   // some associative container. See DwarfLinker::NextValidReloc.
-  llvm::sort(ValidRelocs.begin(), ValidRelocs.end());
+  llvm::sort(ValidRelocs);
   return true;
 }
 

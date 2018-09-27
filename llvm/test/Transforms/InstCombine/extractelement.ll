@@ -93,3 +93,49 @@ define i8 @bitcasted_inselt_wide_source_not_modulo_elt_not_half(i32 %x) {
   ret i8 %r
 }
 
+define i3 @bitcasted_inselt_wide_source_not_modulo_elt_not_half_weird_types(i15 %x) {
+; ANY-LABEL: @bitcasted_inselt_wide_source_not_modulo_elt_not_half_weird_types(
+; ANY-NEXT:    [[I:%.*]] = insertelement <3 x i15> undef, i15 [[X:%.*]], i32 0
+; ANY-NEXT:    [[B:%.*]] = bitcast <3 x i15> [[I]] to <15 x i3>
+; ANY-NEXT:    [[R:%.*]] = extractelement <15 x i3> [[B]], i32 1
+; ANY-NEXT:    ret i3 [[R]]
+;
+  %i = insertelement <3 x i15> undef, i15 %x, i32 0
+  %b = bitcast <3 x i15> %i to <15 x i3>
+  %r = extractelement <15 x i3> %b, i32 1
+  ret i3 %r
+}
+
+; Negative test for the above fold, but we can remove the insert here.
+
+define i8 @bitcasted_inselt_wide_source_wrong_insert(<2 x i32> %v, i32 %x) {
+; ANY-LABEL: @bitcasted_inselt_wide_source_wrong_insert(
+; ANY-NEXT:    [[B:%.*]] = bitcast <2 x i32> [[V:%.*]] to <8 x i8>
+; ANY-NEXT:    [[R:%.*]] = extractelement <8 x i8> [[B]], i32 2
+; ANY-NEXT:    ret i8 [[R]]
+;
+  %i = insertelement <2 x i32> %v, i32 %x, i32 1
+  %b = bitcast <2 x i32> %i to <8 x i8>
+  %r = extractelement <8 x i8> %b, i32 2
+  ret i8 %r
+}
+
+; Partial negative test for the above fold, extra uses are not allowed if shift is needed.
+
+declare void @use(<8 x i8>)
+
+define i8 @bitcasted_inselt_wide_source_uses(i32 %x) {
+; ANY-LABEL: @bitcasted_inselt_wide_source_uses(
+; ANY-NEXT:    [[I:%.*]] = insertelement <2 x i32> undef, i32 [[X:%.*]], i32 0
+; ANY-NEXT:    [[B:%.*]] = bitcast <2 x i32> [[I]] to <8 x i8>
+; ANY-NEXT:    call void @use(<8 x i8> [[B]])
+; ANY-NEXT:    [[R:%.*]] = extractelement <8 x i8> [[B]], i32 3
+; ANY-NEXT:    ret i8 [[R]]
+;
+  %i = insertelement <2 x i32> undef, i32 %x, i32 0
+  %b = bitcast <2 x i32> %i to <8 x i8>
+  call void @use(<8 x i8> %b)
+  %r = extractelement <8 x i8> %b, i32 3
+  ret i8 %r
+}
+

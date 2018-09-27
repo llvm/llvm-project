@@ -13250,8 +13250,7 @@ static void adjustCostForPairing(SmallVectorImpl<LoadedSlice> &LoadedSlices,
 
   // Sort the slices so that elements that are likely to be next to each
   // other in memory are next to each other in the list.
-  llvm::sort(LoadedSlices.begin(), LoadedSlices.end(),
-             [](const LoadedSlice &LHS, const LoadedSlice &RHS) {
+  llvm::sort(LoadedSlices, [](const LoadedSlice &LHS, const LoadedSlice &RHS) {
     assert(LHS.Origin == RHS.Origin && "Different bases not implemented.");
     return LHS.getOffsetFromBase() < RHS.getOffsetFromBase();
   });
@@ -14247,10 +14246,9 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
 
   // Sort the memory operands according to their distance from the
   // base pointer.
-  llvm::sort(StoreNodes.begin(), StoreNodes.end(),
-             [](MemOpLink LHS, MemOpLink RHS) {
-               return LHS.OffsetFromBase < RHS.OffsetFromBase;
-             });
+  llvm::sort(StoreNodes, [](MemOpLink LHS, MemOpLink RHS) {
+    return LHS.OffsetFromBase < RHS.OffsetFromBase;
+  });
 
   // Store Merge attempts to merge the lowest stores. This generally
   // works out as if successful, as the remaining stores are checked

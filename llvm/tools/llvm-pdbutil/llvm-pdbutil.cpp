@@ -1216,8 +1216,7 @@ static void dumpPretty(StringRef Path) {
           std::vector<std::unique_ptr<PDBSymbolFunc>> Funcs;
           while (auto Func = Functions->getNext())
             Funcs.push_back(std::move(Func));
-          llvm::sort(Funcs.begin(), Funcs.end(),
-                     opts::pretty::compareFunctionSymbols);
+          llvm::sort(Funcs, opts::pretty::compareFunctionSymbols);
           for (const auto &Func : Funcs) {
             Printer.NewLine();
             Dumper.start(*Func, FunctionDumper::PointerType::None);
@@ -1235,8 +1234,7 @@ static void dumpPretty(StringRef Path) {
           std::vector<std::unique_ptr<PDBSymbolData>> Datas;
           while (auto Var = Vars->getNext())
             Datas.push_back(std::move(Var));
-          llvm::sort(Datas.begin(), Datas.end(),
-                     opts::pretty::compareDataSymbols);
+          llvm::sort(Datas, opts::pretty::compareDataSymbols);
           for (const auto &Var : Datas)
             Dumper.start(*Var);
         }

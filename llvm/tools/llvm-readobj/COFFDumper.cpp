@@ -613,8 +613,7 @@ void COFFDumper::cacheRelocations() {
       RelocMap[Section].push_back(Reloc);
 
     // Sort relocations by address.
-    llvm::sort(RelocMap[Section].begin(), RelocMap[Section].end(),
-               relocAddressLess);
+    llvm::sort(RelocMap[Section], relocAddressLess);
   }
 }
 

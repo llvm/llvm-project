@@ -64,7 +64,7 @@ static void initializeUsedResources(InstrDesc &ID,
 
   // Sort elements by mask popcount, so that we prioritize resource units over
   // resource groups, and smaller groups over larger groups.
-  llvm::sort(Worklist.begin(), Worklist.end(),
+  llvm::sort(Worklist,
              [](const ResourcePlusCycles &A, const ResourcePlusCycles &B) {
                unsigned popcntA = countPopulation(A.first);
                unsigned popcntB = countPopulation(B.first);

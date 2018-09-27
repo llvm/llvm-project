@@ -320,7 +320,7 @@ void DwarfStreamer::emitUnitRangesEntries(CompileUnit &Unit,
 
   // The object addresses where sorted, but again, the linked
   // addresses might end up in a different order.
-  llvm::sort(Ranges.begin(), Ranges.end());
+  llvm::sort(Ranges);
 
   if (!Ranges.empty()) {
     MS->SwitchSection(MC->getObjectFileInfo()->getDwarfARangesSection());

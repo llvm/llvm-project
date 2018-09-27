@@ -151,7 +151,7 @@ static void GetSpillList(SmallVectorImpl<StackSlotInfo> &SpillList,
                                       Offset,
                                       FramePtr));
   }
-  llvm::sort(SpillList.begin(), SpillList.end(), CompareSSIOffset);
+  llvm::sort(SpillList, CompareSSIOffset);
 }
 
 /// Creates an ordered list of EH info register 'spills'.
@@ -170,7 +170,7 @@ static void GetEHSpillList(SmallVectorImpl<StackSlotInfo> &SpillList,
   SpillList.push_back(
       StackSlotInfo(EHSlot[0], MFI.getObjectOffset(EHSlot[1]),
                     TL->getExceptionSelectorRegister(PersonalityFn)));
-  llvm::sort(SpillList.begin(), SpillList.end(), CompareSSIOffset);
+  llvm::sort(SpillList, CompareSSIOffset);
 }
 
 static MachineMemOperand *getFrameIndexMMO(MachineBasicBlock &MBB,
