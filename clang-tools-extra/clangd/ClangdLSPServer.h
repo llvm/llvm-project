@@ -164,6 +164,8 @@ private:
   ClangdDiagnosticOptions DiagOpts;
   /// The supported kinds of the client.
   SymbolKindBitset SupportedSymbolKinds;
+  /// The supported completion item kinds of the client.
+  CompletionItemKindBitset SupportedCompletionItemKinds;
 
   // Store of the current versions of the open documents.
   DraftStore DraftMgr;
