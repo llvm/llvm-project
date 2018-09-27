@@ -18,6 +18,7 @@
 
 #include "Assembler.h"
 #include "BenchmarkCode.h"
+#include "CodeTemplate.h"
 #include "LlvmState.h"
 #include "MCInstrDescView.h"
 #include "RegisterAliasing.h"
@@ -49,7 +50,7 @@ public:
 
   // Given a snippet, computes which registers the setup code needs to define.
   std::vector<RegisterValue> computeRegisterInitialValues(
-      const std::vector<InstructionBuilder> &Snippet) const;
+      const std::vector<InstructionTemplate> &Snippet) const;
 
 protected:
   const LLVMState &State;

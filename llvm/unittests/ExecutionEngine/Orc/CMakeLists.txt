@@ -26,6 +26,7 @@ add_llvm_unittest(OrcJITTests
   RTDyldObjectLinkingLayerTest.cpp
   RTDyldObjectLinkingLayer2Test.cpp
   SymbolStringPoolTest.cpp
+  ThreadSafeModuleTest.cpp
   )
 
 target_link_libraries(OrcJITTests PRIVATE ${ORC_JIT_TEST_LIBS})

@@ -524,7 +524,7 @@ bool PlaceSafepoints::runOnFunction(Function &F) {
     };
     // We need the order of list to be stable so that naming ends up stable
     // when we split edges.  This makes test cases much easier to write.
-    llvm::sort(PollLocations.begin(), PollLocations.end(), OrderByBBName);
+    llvm::sort(PollLocations, OrderByBBName);
 
     // We can sometimes end up with duplicate poll locations.  This happens if
     // a single loop is visited more than once.   The fact this happens seems

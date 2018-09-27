@@ -32,6 +32,7 @@ def HWPort4Counter : PfmIssueCounter<HWPort4, ["uops_dispatched_port:port_4"]>;
 def HWPort5Counter : PfmIssueCounter<HWPort5, ["uops_dispatched_port:port_5"]>;
 def HWPort6Counter : PfmIssueCounter<HWPort6, ["uops_dispatched_port:port_6"]>;
 def HWPort7Counter : PfmIssueCounter<HWPort7, ["uops_dispatched_port:port_7"]>;
+def HWUopsCounter  : PfmUopsCounter<"uops_issued:any">;
 }
 
 let SchedModel = BroadwellModel in {

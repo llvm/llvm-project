@@ -477,7 +477,7 @@ static bool promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
 
   // Sort the stores by their index, making it efficient to do a lookup with a
   // binary search.
-  llvm::sort(StoresByIndex.begin(), StoresByIndex.end(), less_first());
+  llvm::sort(StoresByIndex, less_first());
 
   // Walk all of the loads from this alloca, replacing them with the nearest
   // store above them, if any.
@@ -638,10 +638,9 @@ void PromoteMem2Reg::run() {
     SmallVector<BasicBlock *, 32> PHIBlocks;
     IDF.calculate(PHIBlocks);
     if (PHIBlocks.size() > 1)
-      llvm::sort(PHIBlocks.begin(), PHIBlocks.end(),
-                 [this](BasicBlock *A, BasicBlock *B) {
-                   return BBNumbers.lookup(A) < BBNumbers.lookup(B);
-                 });
+      llvm::sort(PHIBlocks, [this](BasicBlock *A, BasicBlock *B) {
+        return BBNumbers.lookup(A) < BBNumbers.lookup(B);
+      });
 
     unsigned CurrentVersion = 0;
     for (BasicBlock *BB : PHIBlocks)
@@ -752,7 +751,7 @@ void PromoteMem2Reg::run() {
     // Ok, now we know that all of the PHI nodes are missing entries for some
     // basic blocks.  Start by sorting the incoming predecessors for efficient
     // access.
-    llvm::sort(Preds.begin(), Preds.end());
+    llvm::sort(Preds);
 
     // Now we loop through all BB's which have entries in SomePHI and remove
     // them from the Preds list.

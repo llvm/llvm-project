@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=thumbv8.main -mcpu=cortex-m33 -arm-disable-cgp=false -mattr=-use-misched %s -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-NODSP
+; RUN: llc -mtriple=thumbv8m.main -mcpu=cortex-m33 -arm-disable-cgp=false -mattr=-use-misched %s -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-NODSP
 ; RUN: llc -mtriple=thumbv7em %s -arm-disable-cgp=false -arm-enable-scalar-dsp=true -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-DSP
 ; RUN: llc -mtriple=thumbv8 %s -arm-disable-cgp=false -arm-enable-scalar-dsp=true -arm-enable-scalar-dsp-imms=true -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-DSP-IMM
 
@@ -47,13 +47,22 @@ entry:
 ; CHECK-NODSP: cmp
 ; CHECK-NODSP: cmp
 
-; CHECK-DSP: sxth [[ARG:r[0-9]+]], r2
-; CHECK-DSP: subs [[SUB:r[0-9]+]],
-; CHECK-DSP: uadd16 [[ADD:r[0-9]+]],
-; CHECK-DSP: sxth.w [[SEXT:r[0-9]+]], [[ADD]]
-; CHECK-DSP: cmp [[SEXT]], [[ARG]]
-; CHECK-DSP-NOT: uxt
-; CHECK-DSP: cmp [[SUB]], r2
+; CHECK-DSP: sub
+; CHECK-DSP: sxth
+; CHECK-DSP: add
+; CHECK-DSP: uxth
+; CHECK-DSP: sxth
+; CHECK-DSP: cmp
+; CHECK-DSP: cmp
+
+; CHECK-DSP-IMM: sxth [[ARG:r[0-9]+]], r2
+; CHECK-DSP-IMM: uadd16 [[ADD:r[0-9]+]],
+; CHECK-DSP-IMM: sxth.w [[SEXT:r[0-9]+]], [[ADD]]
+; CHECK-DSP-IMM: cmp [[SEXT]], [[ARG]]
+; CHECK-DSP-IMM-NOT: uxt
+; CHECK-DSP-IMM: movs [[ONE:r[0-9]+]], #1
+; CHECK-DSP-IMM: usub16 [[SUB:r[0-9]+]], r1, [[ONE]]
+; CHECK-DSP-IMM: cmp [[SUB]], r2
 define i16 @ugt_slt(i16 *%x, i16 zeroext %y, i16 zeroext %z) {
 entry:
   %load0 = load i16, i16* %x, align 1

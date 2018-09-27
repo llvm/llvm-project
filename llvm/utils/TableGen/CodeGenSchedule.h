@@ -242,6 +242,7 @@ struct CodeGenProcModel {
   // List of PfmCounters.
   RecVec PfmIssueCounterDefs;
   Record *PfmCycleCounterDef = nullptr;
+  Record *PfmUopsCounterDef = nullptr;
 
   CodeGenProcModel(unsigned Idx, std::string Name, Record *MDef,
                    Record *IDef) :
@@ -259,7 +260,8 @@ struct CodeGenProcModel {
   bool hasExtraProcessorInfo() const {
     return RetireControlUnit || !RegisterFiles.empty() ||
         !PfmIssueCounterDefs.empty() ||
-        PfmCycleCounterDef != nullptr;
+        PfmCycleCounterDef != nullptr ||
+        PfmUopsCounterDef != nullptr;
   }
 
   unsigned getProcResourceIdx(Record *PRDef) const;

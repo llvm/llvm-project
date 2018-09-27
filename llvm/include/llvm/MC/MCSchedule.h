@@ -182,6 +182,10 @@ struct MCExtraProcessorInfo {
     // cycles.
     const char *CycleCounter;
 
+    // An optional name of a performance counter that can be used to measure
+    // uops.
+    const char *UopsCounter;
+
     // For each MCProcResourceDesc defined by the processor, an optional list of
     // names of performance counters that can be used to measure the resource
     // utilization.

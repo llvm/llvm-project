@@ -208,11 +208,9 @@ static bool sinkInstruction(Loop &L, Instruction &I,
   SmallVector<BasicBlock *, 2> SortedBBsToSinkInto;
   SortedBBsToSinkInto.insert(SortedBBsToSinkInto.begin(), BBsToSinkInto.begin(),
                              BBsToSinkInto.end());
-  llvm::sort(SortedBBsToSinkInto.begin(), SortedBBsToSinkInto.end(),
-             [&](BasicBlock *A, BasicBlock *B) {
-               return LoopBlockNumber.find(A)->second <
-                      LoopBlockNumber.find(B)->second;
-             });
+  llvm::sort(SortedBBsToSinkInto, [&](BasicBlock *A, BasicBlock *B) {
+    return LoopBlockNumber.find(A)->second < LoopBlockNumber.find(B)->second;
+  });
 
   BasicBlock *MoveBB = *SortedBBsToSinkInto.begin();
   // FIXME: Optimize the efficiency for cloned value replacement. The current

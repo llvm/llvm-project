@@ -2741,6 +2741,29 @@ AArch64AsmParser::tryParseOptionalShiftExtend(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
+static const struct Extension {
+  const char *Name;
+  const FeatureBitset Features;
+} ExtensionMap[] = {
+  { "crc",  {AArch64::FeatureCRC} },
+  { "sm4",  {AArch64::FeatureSM4} },
+  { "sha3", {AArch64::FeatureSHA3} },
+  { "sha2", {AArch64::FeatureSHA2} },
+  { "aes",  {AArch64::FeatureAES} },
+  { "crypto", {AArch64::FeatureCrypto} },
+  { "fp", {AArch64::FeatureFPARMv8} },
+  { "simd", {AArch64::FeatureNEON} },
+  { "ras", {AArch64::FeatureRAS} },
+  { "lse", {AArch64::FeatureLSE} },
+
+  // FIXME: Unsupported extensions
+  { "pan", {} },
+  { "lor", {} },
+  { "rdma", {} },
+  { "profile", {} },
+};
+
+
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
   if (FBS[AArch64::HasV8_1aOps])
     Str += "ARMv8.1a";
@@ -2750,8 +2773,18 @@ static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
     Str += "ARMv8.3a";
   else if (FBS[AArch64::HasV8_4aOps])
     Str += "ARMv8.4a";
-  else
-    Str += "(unknown)";
+  else if (FBS[AArch64::HasV8_5aOps])
+    Str += "ARMv8.5a";
+  else {
+    auto ext = std::find_if(std::begin(ExtensionMap),
+      std::end(ExtensionMap),
+      [&](const Extension& e)
+      // Use & in case multiple features are enabled
+      { return (FBS & e.Features) != FeatureBitset(); }
+    );
+
+    Str += ext != std::end(ExtensionMap) ? ext->Name : "(unknown)";
+  }
 }
 
 void AArch64AsmParser::createSysAlias(uint16_t Encoding, OperandVector &Operands,
@@ -4902,28 +4935,6 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
   return false;
 }
 
-static const struct {
-  const char *Name;
-  const FeatureBitset Features;
-} ExtensionMap[] = {
-  { "crc",  {AArch64::FeatureCRC} },
-  { "sm4",  {AArch64::FeatureSM4} },
-  { "sha3", {AArch64::FeatureSHA3} },
-  { "sha2", {AArch64::FeatureSHA2} },
-  { "aes",  {AArch64::FeatureAES} },
-  { "crypto", {AArch64::FeatureCrypto} },
-  { "fp", {AArch64::FeatureFPARMv8} },
-  { "simd", {AArch64::FeatureNEON} },
-  { "ras", {AArch64::FeatureRAS} },
-  { "lse", {AArch64::FeatureLSE} },
-
-  // FIXME: Unsupported extensions
-  { "pan", {} },
-  { "lor", {} },
-  { "rdma", {} },
-  { "profile", {} },
-};
-
 static void ExpandCryptoAEK(AArch64::ArchKind ArchKind,
                             SmallVector<StringRef, 4> &RequestedExtensions) {
   const bool NoCrypto =
@@ -4945,6 +4956,7 @@ static void ExpandCryptoAEK(AArch64::ArchKind ArchKind,
       RequestedExtensions.push_back("aes");
       break;
     case AArch64::ArchKind::ARMV8_4A:
+    case AArch64::ArchKind::ARMV8_5A:
       RequestedExtensions.push_back("sm4");
       RequestedExtensions.push_back("sha3");
       RequestedExtensions.push_back("sha2");
@@ -4963,6 +4975,7 @@ static void ExpandCryptoAEK(AArch64::ArchKind ArchKind,
       RequestedExtensions.push_back("noaes");
       break;
     case AArch64::ArchKind::ARMV8_4A:
+    case AArch64::ArchKind::ARMV8_5A:
       RequestedExtensions.push_back("nosm4");
       RequestedExtensions.push_back("nosha3");
       RequestedExtensions.push_back("nosha2");

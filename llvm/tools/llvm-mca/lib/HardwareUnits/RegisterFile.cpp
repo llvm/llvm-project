@@ -260,10 +260,9 @@ void RegisterFile::collectWrites(SmallVectorImpl<WriteRef> &Writes,
   }
 
   // Remove duplicate entries and resize the input vector.
-  llvm::sort(Writes.begin(), Writes.end(),
-             [](const WriteRef &Lhs, const WriteRef &Rhs) {
-               return Lhs.getWriteState() < Rhs.getWriteState();
-             });
+  llvm::sort(Writes, [](const WriteRef &Lhs, const WriteRef &Rhs) {
+    return Lhs.getWriteState() < Rhs.getWriteState();
+  });
   auto It = std::unique(Writes.begin(), Writes.end());
   Writes.resize(std::distance(Writes.begin(), It));
 

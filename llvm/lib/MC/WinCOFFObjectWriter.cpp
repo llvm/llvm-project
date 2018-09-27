@@ -558,10 +558,9 @@ void WinCOFFObjectWriter::writeSectionHeaders() {
   std::vector<COFFSection *> Arr;
   for (auto &Section : Sections)
     Arr.push_back(Section.get());
-  llvm::sort(Arr.begin(), Arr.end(),
-             [](const COFFSection *A, const COFFSection *B) {
-               return A->Number < B->Number;
-             });
+  llvm::sort(Arr, [](const COFFSection *A, const COFFSection *B) {
+    return A->Number < B->Number;
+  });
 
   for (auto &Section : Arr) {
     if (Section->Number == -1)

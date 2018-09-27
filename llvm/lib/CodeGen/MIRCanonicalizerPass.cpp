@@ -134,10 +134,10 @@ rescheduleLexographically(std::vector<MachineInstr *> instructions,
     StringInstrMap.push_back({(i == std::string::npos) ? S : S.substr(i), II});
   }
 
-  llvm::sort(StringInstrMap.begin(), StringInstrMap.end(),
-            [](const StringInstrPair &a, const StringInstrPair &b) -> bool {
-              return (a.first < b.first);
-            });
+  llvm::sort(StringInstrMap,
+             [](const StringInstrPair &a, const StringInstrPair &b) -> bool {
+               return (a.first < b.first);
+             });
 
   for (auto &II : StringInstrMap) {
 
