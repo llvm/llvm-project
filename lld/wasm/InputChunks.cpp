@@ -220,7 +220,7 @@ static unsigned getRelocWidth(const WasmRelocation &Rel, uint32_t Value) {
 // This function only computes the final output size.  It must be called
 // before getSize() is used to calculate of layout of the code section.
 void InputFunction::calculateSize() {
-  if (!File || !Config->CompressRelocTargets)
+  if (!File || !Config->CompressRelocations)
     return;
 
   LLVM_DEBUG(dbgs() << "calculateSize: " << getName() << "\n");
@@ -255,7 +255,7 @@ void InputFunction::calculateSize() {
 // Override the default writeTo method so that we can (optionally) write the
 // compressed version of the function.
 void InputFunction::writeTo(uint8_t *Buf) const {
-  if (!File || !Config->CompressRelocTargets)
+  if (!File || !Config->CompressRelocations)
     return InputChunk::writeTo(Buf);
 
   Buf += OutputOffset;

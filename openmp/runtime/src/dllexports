@@ -392,17 +392,18 @@ kmpc_set_defaults                           224
         __kmpc_doacross_post                263
         __kmpc_doacross_fini                264
         __kmpc_taskloop                     266
+        __kmpc_critical_with_hint           270
     %endif
 %endif
 kmpc_aligned_malloc                         265
 kmpc_set_disp_num_buffers                   267
 
 # OpenMP 5.0 entry points
-# TODO: change to OMP_50 once it is implemented
 %ifndef stub
-    %ifdef OMP_45
+    %ifdef OMP_50
         __kmpc_task_reduction_init          268
         __kmpc_task_reduction_get_th_data   269
+# USED FOR 4.5 __kmpc_critical_with_hint    270
         __kmpc_get_target_offload           271
     %endif
 %endif
@@ -557,6 +558,9 @@ kmp_set_disp_num_buffers                    890
     omp_thread_mem_alloc                   DATA
 %endif # OMP_50
 
+%ifdef OMP_50
+    omp_control_tool                        891
+%endif # OMP_50
 %ifndef stub
     # Ordinals between 900 and 999 are reserved
 

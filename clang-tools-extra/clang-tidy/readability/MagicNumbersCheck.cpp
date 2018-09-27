@@ -66,7 +66,7 @@ MagicNumbersCheck::MagicNumbersCheck(StringRef Name, ClangTidyContext *Context)
   IgnoredIntegerValues.resize(IgnoredIntegerValuesInput.size());
   llvm::transform(IgnoredIntegerValuesInput, IgnoredIntegerValues.begin(),
                   [](const std::string &Value) { return std::stoll(Value); });
-  llvm::sort(IgnoredIntegerValues.begin(), IgnoredIntegerValues.end());
+  llvm::sort(IgnoredIntegerValues);
 
   if (!IgnoreAllFloatingPointValues) {
     // Process the set of ignored floating point values.

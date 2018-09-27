@@ -346,7 +346,7 @@ void AArch64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     or32le(Loc, (Val & 0xFFFC) << 3);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
-    checkInt(Loc, Val, 24, Type);
+    checkUInt(Loc, Val, 24, Type);
     or32AArch64Imm(Loc, Val >> 12);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
