@@ -12,6 +12,7 @@
 #include "FuzzyMatch.h"
 #include "Logger.h"
 #include "Quality.h"
+#include "Trace.h"
 #include "llvm/ADT/StringSet.h"
 #include <algorithm>
 #include <queue>
@@ -139,6 +140,8 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
                     llvm::function_ref<void(const Symbol &)> Callback) const {
   assert(!StringRef(Req.Query).contains("::") &&
          "There must be no :: in query.");
+  // FIXME: attach the query tree to the trace span.
+  trace::Span Tracer("Dex fuzzyFind");
   FuzzyMatcher Filter(Req.Query);
   bool More = false;
 
@@ -228,6 +231,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
 
 void Dex::lookup(const LookupRequest &Req,
                  llvm::function_ref<void(const Symbol &)> Callback) const {
+  trace::Span Tracer("Dex lookup");
   for (const auto &ID : Req.IDs) {
     auto I = LookupTable.find(ID);
     if (I != LookupTable.end())
@@ -237,6 +241,7 @@ void Dex::lookup(const LookupRequest &Req,
 
 void Dex::refs(const RefsRequest &Req,
                llvm::function_ref<void(const Ref &)> Callback) const {
+  trace::Span Tracer("Dex refs");
   log("refs is not implemented.");
 }
 

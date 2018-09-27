@@ -9,6 +9,7 @@
 
 #include "Merge.h"
 #include "Logger.h"
+#include "Trace.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/raw_ostream.h"
@@ -38,19 +39,31 @@ class MergedIndex : public SymbolIndex {
      //    a) if it's not in the dynamic slab, yield it directly
      //    b) if it's in the dynamic slab, merge it and yield the result
      //  3) now yield all the dynamic symbols we haven't processed.
+     trace::Span Tracer("MergedIndex fuzzyFind");
      bool More = false; // We'll be incomplete if either source was.
      SymbolSlab::Builder DynB;
-     More |= Dynamic->fuzzyFind(Req, [&](const Symbol &S) { DynB.insert(S); });
+     unsigned DynamicCount = 0;
+     unsigned StaticCount = 0;
+     unsigned MergedCount = 0;
+     More |= Dynamic->fuzzyFind(Req, [&](const Symbol &S) {
+       ++DynamicCount;
+       DynB.insert(S);
+     });
      SymbolSlab Dyn = std::move(DynB).build();
 
      DenseSet<SymbolID> SeenDynamicSymbols;
      More |= Static->fuzzyFind(Req, [&](const Symbol &S) {
        auto DynS = Dyn.find(S.ID);
+       ++StaticCount;
        if (DynS == Dyn.end())
          return Callback(S);
+       ++MergedCount;
        SeenDynamicSymbols.insert(S.ID);
        Callback(mergeSymbol(*DynS, S));
      });
+     SPAN_ATTACH(Tracer, "dynamic", DynamicCount);
+     SPAN_ATTACH(Tracer, "static", StaticCount);
+     SPAN_ATTACH(Tracer, "merged", MergedCount);
      for (const Symbol &S : Dyn)
        if (!SeenDynamicSymbols.count(S.ID))
          Callback(S);
@@ -60,6 +73,7 @@ class MergedIndex : public SymbolIndex {
   void
   lookup(const LookupRequest &Req,
          llvm::function_ref<void(const Symbol &)> Callback) const override {
+    trace::Span Tracer("MergedIndex lookup");
     SymbolSlab::Builder B;
 
     Dynamic->lookup(Req, [&](const Symbol &S) { B.insert(S); });
@@ -80,6 +94,7 @@ class MergedIndex : public SymbolIndex {
 
   void refs(const RefsRequest &Req,
             llvm::function_ref<void(const Ref &)> Callback) const override {
+    trace::Span Tracer("MergedIndex refs");
     // We don't want duplicated refs from the static/dynamic indexes,
     // and we can't reliably duplicate them because offsets may differ slightly.
     // We consider the dynamic index authoritative and report all its refs,
