@@ -888,8 +888,7 @@ public:
     RetE = RetE->IgnoreParenCasts();
 
     // If we're returning 0, we should track where that 0 came from.
-    bugreporter::trackNullOrUndefValue(N, RetE, BR, /*IsArg*/ false,
-                                       EnableNullFPSuppression);
+    bugreporter::trackNullOrUndefValue(N, RetE, BR, EnableNullFPSuppression);
 
     // Build an appropriate message based on the return value.
     SmallString<64> Msg;
@@ -984,7 +983,7 @@ public:
       if (!State->isNull(*ArgV).isConstrainedTrue())
         continue;
 
-      if (bugreporter::trackNullOrUndefValue(N, ArgE, BR, /*IsArg=*/true,
+      if (bugreporter::trackNullOrUndefValue(N, ArgE, BR,
                                              EnableNullFPSuppression))
         ShouldInvalidate = false;
 
@@ -1264,7 +1263,7 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
         V.getAs<loc::ConcreteInt>() || V.getAs<nonloc::ConcreteInt>()) {
       if (!IsParam)
         InitE = InitE->IgnoreParenCasts();
-      bugreporter::trackNullOrUndefValue(StoreSite, InitE, BR, IsParam,
+      bugreporter::trackNullOrUndefValue(StoreSite, InitE, BR,
                                          EnableNullFPSuppression);
     }
     ReturnVisitor::addVisitorIfNecessary(StoreSite, InitE->IgnoreParenCasts(),
@@ -1516,6 +1515,8 @@ static const MemRegion *getLocationRegionIfReference(const Expr *E,
   return nullptr;
 }
 
+/// \return A subexpression of {@code Ex} which represents the
+/// expression-of-interest.
 static const Expr *peelOffOuterExpr(const Expr *Ex,
                                     const ExplodedNode *N) {
   Ex = Ex->IgnoreParenCasts();
@@ -1560,125 +1561,73 @@ static const Expr *peelOffOuterExpr(const Expr *Ex,
     if (const Expr *SubEx = peelOffPointerArithmetic(BO))
       return peelOffOuterExpr(SubEx, N);
 
-  if (auto *UO = dyn_cast<UnaryOperator>(Ex))
+  if (auto *UO = dyn_cast<UnaryOperator>(Ex)) {
     if (UO->getOpcode() == UO_LNot)
       return peelOffOuterExpr(UO->getSubExpr(), N);
 
-  return Ex;
-}
+    // FIXME: There's a hack in our Store implementation that always computes
+    // field offsets around null pointers as if they are always equal to 0.
+    // The idea here is to report accesses to fields as null dereferences
+    // even though the pointer value that's being dereferenced is actually
+    // the offset of the field rather than exactly 0.
+    // See the FIXME in StoreManager's getLValueFieldOrIvar() method.
+    // This code interacts heavily with this hack; otherwise the value
+    // would not be null at all for most fields, so we'd be unable to track it.
+    if (UO->getOpcode() == UO_AddrOf && UO->getSubExpr()->isLValue())
+      if (const Expr *DerefEx = bugreporter::getDerefExpr(UO->getSubExpr()))
+        return peelOffOuterExpr(DerefEx, N);
+  }
 
-/// Walk through nodes until we get one that matches the statement exactly.
-/// Alternately, if we hit a known lvalue for the statement, we know we've
-/// gone too far (though we can likely track the lvalue better anyway).
-static const ExplodedNode* findNodeForStatement(const ExplodedNode *N,
-                                                const Stmt *S,
-                                                const Expr *Inner) {
-  do {
-    const ProgramPoint &pp = N->getLocation();
-    if (auto ps = pp.getAs<StmtPoint>()) {
-      if (ps->getStmt() == S || ps->getStmt() == Inner)
-        break;
-    } else if (auto CEE = pp.getAs<CallExitEnd>()) {
-      if (CEE->getCalleeContext()->getCallSite() == S ||
-          CEE->getCalleeContext()->getCallSite() == Inner)
-        break;
-    }
-    N = N->getFirstPred();
-  } while (N);
-  return N;
+  return Ex;
 }
 
 /// Find the ExplodedNode where the lvalue (the value of 'Ex')
 /// was computed.
 static const ExplodedNode* findNodeForExpression(const ExplodedNode *N,
-    const Expr *Inner) {
+                                                 const Expr *Inner) {
   while (N) {
-    if (auto P = N->getLocation().getAs<PostStmt>()) {
-      if (P->getStmt() == Inner)
-        break;
-    }
+    if (PathDiagnosticLocation::getStmt(N) == Inner)
+      return N;
     N = N->getFirstPred();
   }
-  assert(N && "Unable to find the lvalue node.");
   return N;
 }
 
-/// Performing operator `&' on an lvalue expression is essentially a no-op.
-/// Then, if we are taking addresses of fields or elements, these are also
-/// unlikely to matter.
-static const Expr* peelOfOuterAddrOf(const Expr* Ex) {
-  Ex = Ex->IgnoreParenCasts();
-
-  // FIXME: There's a hack in our Store implementation that always computes
-  // field offsets around null pointers as if they are always equal to 0.
-  // The idea here is to report accesses to fields as null dereferences
-  // even though the pointer value that's being dereferenced is actually
-  // the offset of the field rather than exactly 0.
-  // See the FIXME in StoreManager's getLValueFieldOrIvar() method.
-  // This code interacts heavily with this hack; otherwise the value
-  // would not be null at all for most fields, so we'd be unable to track it.
-  if (const auto *Op = dyn_cast<UnaryOperator>(Ex))
-    if (Op->getOpcode() == UO_AddrOf && Op->getSubExpr()->isLValue())
-      if (const Expr *DerefEx = bugreporter::getDerefExpr(Op->getSubExpr()))
-        return DerefEx;
-  return Ex;
-}
-
-bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
-                                        const Stmt *S,
-                                        BugReport &report, bool IsArg,
+bool bugreporter::trackNullOrUndefValue(const ExplodedNode *InputNode,
+                                        const Stmt *InputS,
+                                        BugReport &report,
                                         bool EnableNullFPSuppression) {
-  if (!S || !N)
+  if (!InputS || !InputNode || !isa<Expr>(InputS))
     return false;
 
-  if (const auto *Ex = dyn_cast<Expr>(S))
-    S = peelOffOuterExpr(Ex, N);
+  const Expr *Inner = peelOffOuterExpr(cast<Expr>(InputS), InputNode);
+  const ExplodedNode *LVNode = findNodeForExpression(InputNode, Inner);
+  if (!LVNode)
+    return false;
 
-  const Expr *Inner = nullptr;
-  if (const auto *Ex = dyn_cast<Expr>(S)) {
-    Ex = peelOfOuterAddrOf(Ex);
-    Ex = Ex->IgnoreParenCasts();
-
-    if (Ex && (ExplodedGraph::isInterestingLValueExpr(Ex)
-          || CallEvent::isCallStmt(Ex)))
-      Inner = Ex;
-  }
-
-  if (IsArg && !Inner) {
-    assert(N->getLocation().getAs<CallEnter>() && "Tracking arg but not at call");
-  } else {
-    N = findNodeForStatement(N, S, Inner);
-    if (!N)
-      return false;
-  }
-
-  ProgramStateRef state = N->getState();
+  ProgramStateRef LVState = LVNode->getState();
 
   // The message send could be nil due to the receiver being nil.
   // At this point in the path, the receiver should be live since we are at the
   // message send expr. If it is nil, start tracking it.
-  if (const Expr *Receiver = NilReceiverBRVisitor::getNilReceiver(S, N))
-    trackNullOrUndefValue(N, Receiver, report, /* IsArg=*/ false,
-        EnableNullFPSuppression);
+  if (const Expr *Receiver = NilReceiverBRVisitor::getNilReceiver(Inner, LVNode))
+    trackNullOrUndefValue(LVNode, Receiver, report, EnableNullFPSuppression);
 
   // See if the expression we're interested refers to a variable.
   // If so, we can track both its contents and constraints on its value.
   if (Inner && ExplodedGraph::isInterestingLValueExpr(Inner)) {
-    const ExplodedNode *LVNode = findNodeForExpression(N, Inner);
-    ProgramStateRef LVState = LVNode->getState();
     SVal LVal = LVNode->getSVal(Inner);
 
-    const MemRegion *RR = getLocationRegionIfReference(Inner, N);
+    const MemRegion *RR = getLocationRegionIfReference(Inner, LVNode);
     bool LVIsNull = LVState->isNull(LVal).isConstrainedTrue();
 
     // If this is a C++ reference to a null pointer, we are tracking the
     // pointer. In addition, we should find the store at which the reference
     // got initialized.
-    if (RR && !LVIsNull) {
+    if (RR && !LVIsNull)
       if (auto KV = LVal.getAs<KnownSVal>())
         report.addVisitor(llvm::make_unique<FindLastStoreBRVisitor>(
               *KV, RR, EnableNullFPSuppression));
-    }
 
     // In case of C++ references, we want to differentiate between a null
     // reference and reference to null pointer.
@@ -1688,7 +1637,6 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
         LVNode->getSVal(Inner).getAsRegion();
 
     if (R) {
-      ProgramStateRef S = N->getState();
 
       // Mark both the variable region and its contents as interesting.
       SVal V = LVState->getRawSVal(loc::MemRegionVal(R));
@@ -1696,9 +1644,8 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
           llvm::make_unique<NoStoreFuncVisitor>(cast<SubRegion>(R)));
 
       MacroNullReturnSuppressionVisitor::addMacroVisitorIfNecessary(
-          N, R, EnableNullFPSuppression, report, V);
+          LVNode, R, EnableNullFPSuppression, report, V);
 
-      report.markInteresting(R);
       report.markInteresting(V);
       report.addVisitor(llvm::make_unique<UndefOrNullArgVisitor>(R));
 
@@ -1708,14 +1655,12 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
               V.castAs<DefinedSVal>(), false));
 
       // Add visitor, which will suppress inline defensive checks.
-      if (auto DV = V.getAs<DefinedSVal>()) {
+      if (auto DV = V.getAs<DefinedSVal>())
         if (!DV->isZeroConstant() && LVState->isNull(*DV).isConstrainedTrue() &&
-            EnableNullFPSuppression) {
+            EnableNullFPSuppression)
           report.addVisitor(
               llvm::make_unique<SuppressInlineDefensiveChecksVisitor>(*DV,
-                LVNode));
-        }
-      }
+                                                                      LVNode));
 
       if (auto KV = V.getAs<KnownSVal>())
         report.addVisitor(llvm::make_unique<FindLastStoreBRVisitor>(
@@ -1726,41 +1671,35 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *N,
 
   // If the expression is not an "lvalue expression", we can still
   // track the constraints on its contents.
-  SVal V = state->getSValAsScalarOrLoc(S, N->getLocationContext());
+  SVal V = LVState->getSValAsScalarOrLoc(Inner, LVNode->getLocationContext());
 
-  // If the value came from an inlined function call, we should at least make
-  // sure that function isn't pruned in our output.
-  if (const auto *E = dyn_cast<Expr>(S))
-    S = E->IgnoreParenCasts();
+  ReturnVisitor::addVisitorIfNecessary(
+    LVNode, Inner, report, EnableNullFPSuppression);
 
-  ReturnVisitor::addVisitorIfNecessary(N, S, report, EnableNullFPSuppression);
-
-  // Uncomment this to find cases where we aren't properly getting the
-  // base value that was dereferenced.
-  // assert(!V.isUnknownOrUndef());
   // Is it a symbolic value?
   if (auto L = V.getAs<loc::MemRegionVal>()) {
     report.addVisitor(llvm::make_unique<UndefOrNullArgVisitor>(L->getRegion()));
-
-    // At this point we are dealing with the region's LValue.
-    // However, if the rvalue is a symbolic region, we should track it as well.
-    // Try to use the correct type when looking up the value.
-    SVal RVal;
-    if (const auto *E = dyn_cast<Expr>(S))
-      RVal = state->getRawSVal(L.getValue(), E->getType());
-    else
-      RVal = state->getSVal(L->getRegion());
 
     // FIXME: this is a hack for fixing a later crash when attempting to
     // dereference a void* pointer.
     // We should not try to dereference pointers at all when we don't care
     // what is written inside the pointer.
-    bool ShouldFindLastStore = true;
+    bool CanDereference = true;
     if (const auto *SR = dyn_cast<SymbolicRegion>(L->getRegion()))
       if (SR->getSymbol()->getType()->getPointeeType()->isVoidType())
-        ShouldFindLastStore = false;
+        CanDereference = false;
 
-    if (ShouldFindLastStore)
+    // At this point we are dealing with the region's LValue.
+    // However, if the rvalue is a symbolic region, we should track it as well.
+    // Try to use the correct type when looking up the value.
+    SVal RVal;
+    if (ExplodedGraph::isInterestingLValueExpr(Inner)) {
+      RVal = LVState->getRawSVal(L.getValue(), Inner->getType());
+    } else if (CanDereference) {
+      RVal = LVState->getSVal(L->getRegion());
+    }
+
+    if (CanDereference)
       if (auto KV = RVal.getAs<KnownSVal>())
         report.addVisitor(llvm::make_unique<FindLastStoreBRVisitor>(
             *KV, L->getRegion(), EnableNullFPSuppression));
@@ -1818,7 +1757,7 @@ NilReceiverBRVisitor::VisitNode(const ExplodedNode *N,
   // The receiver was nil, and hence the method was skipped.
   // Register a BugReporterVisitor to issue a message telling us how
   // the receiver was null.
-  bugreporter::trackNullOrUndefValue(N, Receiver, BR, /*IsArg*/ false,
+  bugreporter::trackNullOrUndefValue(N, Receiver, BR,
                                      /*EnableNullFPSuppression*/ false);
   // Issue a message saying that the method was skipped.
   PathDiagnosticLocation L(Receiver, BRC.getSourceManager(),

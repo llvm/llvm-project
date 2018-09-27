@@ -1391,7 +1391,7 @@ static void diagnoseRepeatedUseOfWeak(Sema &S,
 
   // Sort by first use so that we emit the warnings in a deterministic order.
   SourceManager &SM = S.getSourceManager();
-  llvm::sort(UsesByStmt.begin(), UsesByStmt.end(),
+  llvm::sort(UsesByStmt,
              [&SM](const StmtUsesPair &LHS, const StmtUsesPair &RHS) {
                return SM.isBeforeInTranslationUnit(LHS.first->getBeginLoc(),
                                                    RHS.first->getBeginLoc());

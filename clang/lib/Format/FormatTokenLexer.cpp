@@ -38,7 +38,7 @@ FormatTokenLexer::FormatTokenLexer(const SourceManager &SourceMgr, FileID ID,
 
   for (const std::string &ForEachMacro : Style.ForEachMacros)
     ForEachMacros.push_back(&IdentTable.get(ForEachMacro));
-  llvm::sort(ForEachMacros.begin(), ForEachMacros.end());
+  llvm::sort(ForEachMacros);
 }
 
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {

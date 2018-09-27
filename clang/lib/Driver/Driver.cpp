@@ -481,6 +481,16 @@ static llvm::Triple computeTargetTriple(const Driver &D,
     Target.setVendorName("intel");
   }
 
+  // If target is MIPS adjust the target triple
+  // accordingly to provided ABI name.
+  A = Args.getLastArg(options::OPT_mabi_EQ);
+  if (A && Target.isMIPS())
+    Target = llvm::StringSwitch<llvm::Triple>(A->getValue())
+                 .Case("32", Target.get32BitArchVariant())
+                 .Case("n32", Target.get64BitArchVariant())
+                 .Case("64", Target.get64BitArchVariant())
+                 .Default(Target);
+
   return Target;
 }
 
@@ -1518,12 +1528,11 @@ void Driver::HandleAutocompletions(StringRef PassedFlags) const {
   // deterministic order. We could sort in any way, but we chose
   // case-insensitive sorting for consistency with the -help option
   // which prints out options in the case-insensitive alphabetical order.
-  llvm::sort(SuggestedCompletions.begin(), SuggestedCompletions.end(),
-             [](StringRef A, StringRef B) {
-               if (int X = A.compare_lower(B))
-                 return X < 0;
-               return A.compare(B) > 0;
-            });
+  llvm::sort(SuggestedCompletions, [](StringRef A, StringRef B) {
+    if (int X = A.compare_lower(B))
+      return X < 0;
+    return A.compare(B) > 0;
+  });
 
   llvm::outs() << llvm::join(SuggestedCompletions, "\n") << '\n';
 }

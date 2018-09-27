@@ -44,7 +44,7 @@
 static __inline__ unsigned short __DEFAULT_FN_ATTRS
 __lzcnt16(unsigned short __X)
 {
-  return __X ? __builtin_clzs(__X) : 16;
+  return __builtin_ia32_lzcnt_u16(__X);
 }
 
 /// Counts the number of leading zero bits in the operand.
@@ -61,7 +61,7 @@ __lzcnt16(unsigned short __X)
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
 __lzcnt32(unsigned int __X)
 {
-  return __X ? __builtin_clz(__X) : 32;
+  return __builtin_ia32_lzcnt_u32(__X);
 }
 
 /// Counts the number of leading zero bits in the operand.
@@ -78,7 +78,7 @@ __lzcnt32(unsigned int __X)
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
 _lzcnt_u32(unsigned int __X)
 {
-  return __X ? __builtin_clz(__X) : 32;
+  return __builtin_ia32_lzcnt_u32(__X);
 }
 
 #ifdef __x86_64__
@@ -96,7 +96,7 @@ _lzcnt_u32(unsigned int __X)
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 __lzcnt64(unsigned long long __X)
 {
-  return __X ? __builtin_clzll(__X) : 64;
+  return __builtin_ia32_lzcnt_u64(__X);
 }
 
 /// Counts the number of leading zero bits in the operand.
@@ -113,7 +113,7 @@ __lzcnt64(unsigned long long __X)
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 _lzcnt_u64(unsigned long long __X)
 {
-  return __X ? __builtin_clzll(__X) : 64;
+  return __builtin_ia32_lzcnt_u64(__X);
 }
 #endif
 

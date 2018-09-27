@@ -323,7 +323,7 @@ class CXXNameMangler {
                        AdditionalAbiTags->end());
       }
 
-      llvm::sort(TagList.begin(), TagList.end());
+      llvm::sort(TagList);
       TagList.erase(std::unique(TagList.begin(), TagList.end()), TagList.end());
 
       writeSortedUniqueAbiTags(Out, TagList);
@@ -339,7 +339,7 @@ class CXXNameMangler {
     }
 
     const AbiTagList &getSortedUniqueUsedAbiTags() {
-      llvm::sort(UsedAbiTags.begin(), UsedAbiTags.end());
+      llvm::sort(UsedAbiTags);
       UsedAbiTags.erase(std::unique(UsedAbiTags.begin(), UsedAbiTags.end()),
                         UsedAbiTags.end());
       return UsedAbiTags;

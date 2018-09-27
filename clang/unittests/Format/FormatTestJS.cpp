@@ -2308,5 +2308,14 @@ TEST_F(FormatTestJS, ParameterNamingComment) {
   verifyFormat("callFoo(/*spaceAfterParameterNamingComment=*/ 1);");
 }
 
+TEST_F(FormatTestJS, ConditionalTypes) {
+  // Formatting below is not necessarily intentional, this just ensures that
+  // clang-format does not break the code.
+  verifyFormat( // wrap
+      "type UnionToIntersection<U> =\n"
+      "    (U extends any ? (k: U) => void :\n"
+      "                     never) extends((k: infer I) => void) ? I : never;");
+}
+
 } // end namespace tooling
 } // end namespace clang

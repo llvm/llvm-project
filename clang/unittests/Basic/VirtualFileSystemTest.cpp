@@ -553,8 +553,8 @@ static void checkContents(DirIter I, ArrayRef<StringRef> ExpectedOut) {
   for (DirIter E; !EC && I != E; I.increment(EC))
     InputToCheck.push_back(I->path());
 
-  llvm::sort(InputToCheck.begin(), InputToCheck.end());
-  llvm::sort(Expected.begin(), Expected.end());
+  llvm::sort(InputToCheck);
+  llvm::sort(Expected);
   EXPECT_EQ(InputToCheck.size(), Expected.size());
 
   unsigned LastElt = std::min(InputToCheck.size(), Expected.size());
