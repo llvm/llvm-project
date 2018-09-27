@@ -5720,7 +5720,8 @@ void ARMAsmParser::getMnemonicAcceptInfo(StringRef Mnemonic, StringRef FullInst,
       Mnemonic == "vmovx" || Mnemonic == "vins" ||
       Mnemonic == "vudot" || Mnemonic == "vsdot" ||
       Mnemonic == "vcmla" || Mnemonic == "vcadd" ||
-      Mnemonic == "vfmal" || Mnemonic == "vfmsl") {
+      Mnemonic == "vfmal" || Mnemonic == "vfmsl" ||
+      Mnemonic == "sb") {
     // These mnemonics are never predicable
     CanAcceptPredicationCode = false;
   } else if (!isThumb()) {

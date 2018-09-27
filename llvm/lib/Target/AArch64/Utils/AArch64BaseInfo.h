@@ -388,6 +388,14 @@ namespace AArch64PSBHint {
   #include "AArch64GenSystemOperands.inc"
 }
 
+namespace AArch64BTIHint {
+  struct BTI : SysAlias {
+    using SysAlias::SysAlias;
+  };
+  #define GET_BTI_DECL
+  #include "AArch64GenSystemOperands.inc"
+}
+
 namespace AArch64SE {
     enum ShiftExtSpecifiers {
         Invalid = -1,
@@ -496,6 +504,14 @@ namespace AArch64TLBI {
     using SysAliasReg::SysAliasReg;
   };
   #define GET_TLBI_DECL
+  #include "AArch64GenSystemOperands.inc"
+}
+
+namespace AArch64PRCTX {
+  struct PRCTX : SysAliasReg {
+    using SysAliasReg::SysAliasReg;
+  };
+  #define GET_PRCTX_DECL
   #include "AArch64GenSystemOperands.inc"
 }
 

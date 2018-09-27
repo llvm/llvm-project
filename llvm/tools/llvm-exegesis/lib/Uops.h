@@ -56,9 +56,9 @@ private:
   //   mov eax, [rdi + 128]
   //   add eax, [rdi + 192]
   //   mov eax, [rdi + 256]
-  void
-  instantiateMemoryOperands(unsigned ScratchSpaceReg,
-                            std::vector<InstructionBuilder> &Snippet) const;
+  void instantiateMemoryOperands(
+      unsigned ScratchSpaceReg,
+      std::vector<InstructionTemplate> &SnippetTemplate) const;
 };
 
 class UopsBenchmarkRunner : public BenchmarkRunner {

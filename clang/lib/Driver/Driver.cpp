@@ -481,6 +481,16 @@ static llvm::Triple computeTargetTriple(const Driver &D,
     Target.setVendorName("intel");
   }
 
+  // If target is MIPS adjust the target triple
+  // accordingly to provided ABI name.
+  A = Args.getLastArg(options::OPT_mabi_EQ);
+  if (A && Target.isMIPS())
+    Target = llvm::StringSwitch<llvm::Triple>(A->getValue())
+                 .Case("32", Target.get32BitArchVariant())
+                 .Case("n32", Target.get64BitArchVariant())
+                 .Case("64", Target.get64BitArchVariant())
+                 .Default(Target);
+
   return Target;
 }
 

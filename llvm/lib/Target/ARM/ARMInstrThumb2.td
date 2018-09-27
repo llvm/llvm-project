@@ -3231,6 +3231,14 @@ def t2TSB : T2I<(outs), (ins tsb_opt:$opt), NoItinerary,
 }
 }
 
+// Armv8.5-A speculation barrier
+def t2SB : Thumb2XI<(outs), (ins), AddrModeNone, 4, NoItinerary, "sb", "", []>,
+           Requires<[IsThumb2, HasSpecCtrl]>, Sched<[]> {
+  let Inst{31-0} = 0xf3bf8f70;
+  let Unpredictable = 0x000f2f0f;
+  let hasSideEffects = 1;
+}
+
 class T2I_ldrex<bits<4> opcod, dag oops, dag iops, AddrMode am, int sz,
                 InstrItinClass itin, string opc, string asm, string cstr,
                 list<dag> pattern, bits<4> rt2 = 0b1111>

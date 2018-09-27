@@ -75,36 +75,40 @@ DEBUG_COUNTER(FwdCounter, "machine-cp-fwd",
 namespace {
 
 class CopyTracker {
-  struct CopyInfo {
-    MachineInstr *MI;
-    SmallVector<unsigned, 4> DefRegs;
-    bool Avail;
-  };
+  using RegList = SmallVector<unsigned, 4>;
+  using SourceMap = DenseMap<unsigned, RegList>;
+  using Reg2MIMap = DenseMap<unsigned, MachineInstr *>;
 
-  DenseMap<unsigned, CopyInfo> Copies;
+  /// Def -> available copies map.
+  Reg2MIMap AvailCopyMap;
+
+  /// Def -> copies map.
+  Reg2MIMap CopyMap;
+
+  /// Src -> Def map
+  SourceMap SrcMap;
 
 public:
   /// Mark all of the given registers and their subregisters as unavailable for
   /// copying.
-  void markRegsUnavailable(ArrayRef<unsigned> Regs,
-                           const TargetRegisterInfo &TRI) {
+  void markRegsUnavailable(const RegList &Regs, const TargetRegisterInfo &TRI) {
     for (unsigned Reg : Regs) {
       // Source of copy is no longer available for propagation.
-      for (MCRegUnitIterator RUI(Reg, &TRI); RUI.isValid(); ++RUI) {
-        auto CI = Copies.find(*RUI);
-        if (CI != Copies.end())
-          CI->second.Avail = false;
-      }
+      for (MCSubRegIterator SR(Reg, &TRI, true); SR.isValid(); ++SR)
+        AvailCopyMap.erase(*SR);
     }
   }
 
   /// Clobber a single register, removing it from the tracker's copy maps.
   void clobberRegister(unsigned Reg, const TargetRegisterInfo &TRI) {
-    for (MCRegUnitIterator RUI(Reg, &TRI); RUI.isValid(); ++RUI) {
-      auto I = Copies.find(*RUI);
-      if (I != Copies.end()) {
-        markRegsUnavailable(I->second.DefRegs, TRI);
-        Copies.erase(I);
+    for (MCRegAliasIterator AI(Reg, &TRI, true); AI.isValid(); ++AI) {
+      CopyMap.erase(*AI);
+      AvailCopyMap.erase(*AI);
+
+      SourceMap::iterator SI = SrcMap.find(*AI);
+      if (SI != SrcMap.end()) {
+        markRegsUnavailable(SI->second, TRI);
+        SrcMap.erase(SI);
       }
     }
   }
@@ -117,60 +121,52 @@ public:
     unsigned Src = Copy->getOperand(1).getReg();
 
     // Remember Def is defined by the copy.
-    for (MCRegUnitIterator RUI(Def, &TRI); RUI.isValid(); ++RUI)
-      Copies[*RUI] = {Copy, {}, true};
+    for (MCSubRegIterator SR(Def, &TRI, /*IncludeSelf=*/true); SR.isValid();
+         ++SR) {
+      CopyMap[*SR] = Copy;
+      AvailCopyMap[*SR] = Copy;
+    }
 
     // Remember source that's copied to Def. Once it's clobbered, then
     // it's no longer available for copy propagation.
-    for (MCRegUnitIterator RUI(Src, &TRI); RUI.isValid(); ++RUI) {
-      auto I = Copies.insert({*RUI, {nullptr, {}, false}});
-      auto &Copy = I.first->second;
-      if (!is_contained(Copy.DefRegs, Def))
-        Copy.DefRegs.push_back(Def);
-    }
+    RegList &DestList = SrcMap[Src];
+    if (!is_contained(DestList, Def))
+      DestList.push_back(Def);
   }
 
-  bool hasAnyCopies() {
-    return !Copies.empty();
-  }
+  bool hasAvailableCopies() { return !AvailCopyMap.empty(); }
 
-  MachineInstr *findCopyForUnit(unsigned RegUnit, const TargetRegisterInfo &TRI,
-                         bool MustBeAvailable = false) {
-    auto CI = Copies.find(RegUnit);
-    if (CI == Copies.end())
+  MachineInstr *findAvailCopy(MachineInstr &DestCopy, unsigned Reg) {
+    auto CI = AvailCopyMap.find(Reg);
+    if (CI == AvailCopyMap.end())
       return nullptr;
-    if (MustBeAvailable && !CI->second.Avail)
-      return nullptr;
-    return CI->second.MI;
-  }
-
-  MachineInstr *findAvailCopy(MachineInstr &DestCopy, unsigned Reg,
-                              const TargetRegisterInfo &TRI) {
-    // We check the first RegUnit here, since we'll only be interested in the
-    // copy if it copies the entire register anyway.
-    MCRegUnitIterator RUI(Reg, &TRI);
-    MachineInstr *AvailCopy =
-        findCopyForUnit(*RUI, TRI, /*MustBeAvailable=*/true);
-    if (!AvailCopy ||
-        !TRI.isSubRegisterEq(AvailCopy->getOperand(0).getReg(), Reg))
-      return nullptr;
+    MachineInstr &AvailCopy = *CI->second;
 
     // Check that the available copy isn't clobbered by any regmasks between
     // itself and the destination.
-    unsigned AvailSrc = AvailCopy->getOperand(1).getReg();
-    unsigned AvailDef = AvailCopy->getOperand(0).getReg();
+    unsigned AvailSrc = AvailCopy.getOperand(1).getReg();
+    unsigned AvailDef = AvailCopy.getOperand(0).getReg();
     for (const MachineInstr &MI :
-         make_range(AvailCopy->getIterator(), DestCopy.getIterator()))
+         make_range(AvailCopy.getIterator(), DestCopy.getIterator()))
       for (const MachineOperand &MO : MI.operands())
         if (MO.isRegMask())
           if (MO.clobbersPhysReg(AvailSrc) || MO.clobbersPhysReg(AvailDef))
             return nullptr;
 
-    return AvailCopy;
+    return &AvailCopy;
+  }
+
+  MachineInstr *findCopy(unsigned Reg) {
+    auto CI = CopyMap.find(Reg);
+    if (CI != CopyMap.end())
+      return CI->second;
+    return nullptr;
   }
 
   void clear() {
-    Copies.clear();
+    AvailCopyMap.clear();
+    CopyMap.clear();
+    SrcMap.clear();
   }
 };
 
@@ -228,8 +224,8 @@ INITIALIZE_PASS(MachineCopyPropagation, DEBUG_TYPE,
 void MachineCopyPropagation::ReadRegister(unsigned Reg) {
   // If 'Reg' is defined by a copy, the copy is no longer a candidate
   // for elimination.
-  for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI) {
-    if (MachineInstr *Copy = Tracker.findCopyForUnit(*RUI, *TRI)) {
+  for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI) {
+    if (MachineInstr *Copy = Tracker.findCopy(*AI)) {
       LLVM_DEBUG(dbgs() << "MCP: Copy is used - not dead: "; Copy->dump());
       MaybeDeadCopies.remove(Copy);
     }
@@ -267,7 +263,7 @@ bool MachineCopyPropagation::eraseIfRedundant(MachineInstr &Copy, unsigned Src,
     return false;
 
   // Search for an existing copy.
-  MachineInstr *PrevCopy = Tracker.findAvailCopy(Copy, Def, *TRI);
+  MachineInstr *PrevCopy = Tracker.findAvailCopy(Copy, Def);
   if (!PrevCopy)
     return false;
 
@@ -361,7 +357,7 @@ bool MachineCopyPropagation::hasImplicitOverlap(const MachineInstr &MI,
 /// Look for available copies whose destination register is used by \p MI and
 /// replace the use in \p MI with the copy's source register.
 void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
-  if (!Tracker.hasAnyCopies())
+  if (!Tracker.hasAvailableCopies())
     return;
 
   // Look for non-tied explicit vreg uses that have an active COPY
@@ -388,7 +384,7 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     if (!MOUse.isRenamable())
       continue;
 
-    MachineInstr *Copy = Tracker.findAvailCopy(MI, MOUse.getReg(), *TRI);
+    MachineInstr *Copy = Tracker.findAvailCopy(MI, MOUse.getReg());
     if (!Copy)
       continue;
 

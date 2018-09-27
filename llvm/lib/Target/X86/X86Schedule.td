@@ -156,6 +156,7 @@ def  WriteSETCC : SchedWrite; // Set register based on condition code.
 def  WriteSETCCStore : SchedWrite;
 def  WriteLAHFSAHF : SchedWrite; // Load/Store flags in AH.
 def  WriteBitTest  : SchedWrite; // Bit Test - TODO add memory folding support
+def  WriteBitTestSet  : SchedWrite; // Bit Test + Set - TODO add memory folding support
 
 // Integer shifts and rotates.
 defm WriteShift    : X86SchedWritePair;

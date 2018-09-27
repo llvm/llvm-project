@@ -511,6 +511,11 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-arch");
   CmdArgs.push_back(Args.MakeArgString(GPUArch));
 
+  // Assume that the directory specified with --libomptarget_nvptx_path
+  // contains the static library libomptarget-nvptx.a.
+  if (const Arg *A = Args.getLastArg(options::OPT_libomptarget_nvptx_path_EQ))
+    CmdArgs.push_back(Args.MakeArgString(Twine("-L") + A->getValue()));
+
   // Add paths specified in LIBRARY_PATH environment variable as -L options.
   addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
 
@@ -647,12 +652,9 @@ void CudaToolChain::addClangTargetOptions(
 
   if (DeviceOffloadingKind == Action::OFK_OpenMP) {
     SmallVector<StringRef, 8> LibraryPaths;
-    // Add path to lib and/or lib64 folders.
-    SmallString<256> DefaultLibPath =
-      llvm::sys::path::parent_path(getDriver().Dir);
-    llvm::sys::path::append(DefaultLibPath,
-        Twine("lib") + CLANG_LIBDIR_SUFFIX);
-    LibraryPaths.emplace_back(DefaultLibPath.c_str());
+
+    if (const Arg *A = DriverArgs.getLastArg(options::OPT_libomptarget_nvptx_path_EQ))
+      LibraryPaths.push_back(A->getValue());
 
     // Add user defined library paths from LIBRARY_PATH.
     llvm::Optional<std::string> LibPath =
@@ -664,6 +666,12 @@ void CudaToolChain::addClangTargetOptions(
       for (StringRef Path : Frags)
         LibraryPaths.emplace_back(Path.trim());
     }
+
+    // Add path to lib / lib64 folder.
+    SmallString<256> DefaultLibPath =
+        llvm::sys::path::parent_path(getDriver().Dir);
+    llvm::sys::path::append(DefaultLibPath, Twine("lib") + CLANG_LIBDIR_SUFFIX);
+    LibraryPaths.emplace_back(DefaultLibPath.c_str());
 
     std::string LibOmpTargetName =
       "libomptarget-nvptx-" + GpuArch.str() + ".bc";

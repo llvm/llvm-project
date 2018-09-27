@@ -126,6 +126,12 @@ IncludeStructure::includeDepth(llvm::StringRef Root) const {
   return Result;
 }
 
+void IncludeInserter::addExisting(const Inclusion &Inc) {
+  IncludedHeaders.insert(Inc.Written);
+  if (!Inc.Resolved.empty())
+    IncludedHeaders.insert(Inc.Resolved);
+}
+
 /// FIXME(ioeric): we might not want to insert an absolute include path if the
 /// path is not shortened.
 bool IncludeInserter::shouldInsertInclude(
@@ -133,12 +139,6 @@ bool IncludeInserter::shouldInsertInclude(
   assert(DeclaringHeader.valid() && InsertedHeader.valid());
   if (FileName == DeclaringHeader.File || FileName == InsertedHeader.File)
     return false;
-  llvm::StringSet<> IncludedHeaders;
-  for (const auto &Inc : Inclusions) {
-    IncludedHeaders.insert(Inc.Written);
-    if (!Inc.Resolved.empty())
-      IncludedHeaders.insert(Inc.Resolved);
-  }
   auto Included = [&](llvm::StringRef Header) {
     return IncludedHeaders.find(Header) != IncludedHeaders.end();
   };

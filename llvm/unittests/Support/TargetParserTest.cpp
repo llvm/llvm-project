@@ -967,7 +967,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
                               {"rdm", "nordm", "+rdm", "-rdm"},
                               {"sve", "nosve", "+sve", "-sve"},
                               {"dotprod", "nodotprod", "+dotprod", "-dotprod"},
-                              {"rcpc", "norcpc", "+rcpc", "-rcpc" }};
+                              {"rcpc", "norcpc", "+rcpc", "-rcpc" },
+                              {"rng", "norng", "+rand", "-rand"}};
 
   for (unsigned i = 0; i < array_lengthof(ArchExt); i++) {
     EXPECT_EQ(StringRef(ArchExt[i][2]),

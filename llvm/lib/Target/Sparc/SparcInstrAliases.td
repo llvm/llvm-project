@@ -470,9 +470,14 @@ def : InstAlias<"wr $simm13, %wim", (WRWIMri G0, i32imm:$simm13), 0>;
 def : InstAlias<"wr $rs2, %tbr", (WRTBRrr G0, IntRegs:$rs2), 0>;
 def : InstAlias<"wr $simm13, %tbr", (WRTBRri G0, i32imm:$simm13), 0>;
 
+def : InstAlias<"pwr $rs2, %psr", (PWRPSRrr G0, IntRegs:$rs2), 0>;
+def : InstAlias<"pwr $simm13, %psr", (PWRPSRri G0, i32imm:$simm13), 0>;
 
 // flush -> flush %g0
 def : InstAlias<"flush", (FLUSH), 0>;
+
+// unimp -> unimp 0
+def : InstAlias<"unimp", (UNIMP 0), 0>;
 
 def : MnemonicAlias<"iflush", "flush">;
 

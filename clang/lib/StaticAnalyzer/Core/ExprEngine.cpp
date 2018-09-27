@@ -2953,13 +2953,62 @@ template<>
 struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
   DOTGraphTraits (bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
-  // FIXME: Since we do not cache error nodes in ExprEngine now, this does not
-  // work.
+  static bool nodeHasBugReport(const ExplodedNode *N) {
+    BugReporter &BR = static_cast<ExprEngine *>(
+      N->getState()->getStateManager().getOwningEngine())->getBugReporter();
+
+    const auto EQClasses =
+        llvm::make_range(BR.EQClasses_begin(), BR.EQClasses_end());
+
+    for (const auto &EQ : EQClasses) {
+      for (const BugReport &Report : EQ) {
+        if (Report.getErrorNode() == N)
+          return true;
+      }
+    }
+    return false;
+  }
+
+  /// \p PreCallback: callback before break.
+  /// \p PostCallback: callback after break.
+  /// \p Stop: stop iteration if returns {@code true}
+  /// \return Whether {@code Stop} ever returned {@code true}.
+  static bool traverseHiddenNodes(
+      const ExplodedNode *N,
+      llvm::function_ref<void(const ExplodedNode *)> PreCallback,
+      llvm::function_ref<void(const ExplodedNode *)> PostCallback,
+      llvm::function_ref<bool(const ExplodedNode *)> Stop) {
+    const ExplodedNode *FirstHiddenNode = N;
+    while (FirstHiddenNode->pred_size() == 1 &&
+           isNodeHidden(*FirstHiddenNode->pred_begin())) {
+      FirstHiddenNode = *FirstHiddenNode->pred_begin();
+    }
+    const ExplodedNode *OtherNode = FirstHiddenNode;
+    while (true) {
+      if (Stop(OtherNode))
+        return true;
+
+      if (OtherNode == N)
+        break;
+
+      OtherNode = *OtherNode->succ_begin();
+    }
+    return false;
+  }
+
   static std::string getNodeAttributes(const ExplodedNode *N,
                                        ExplodedGraph *G) {
-    if (N->isSink())
-      return "color=red";
-    return {};
+    SmallVector<StringRef, 10> Out;
+    auto Noop = [](const ExplodedNode*){};
+    if (traverseHiddenNodes(N, Noop, Noop, &nodeHasBugReport)) {
+      Out.push_back("style=filled");
+      Out.push_back("fillcolor=red");
+    }
+
+    if (traverseHiddenNodes(N, Noop, Noop,
+                            [](const ExplodedNode *C) { return C->isSink(); }))
+      Out.push_back("color=blue");
+    return llvm::join(Out, ",");
   }
 
   static bool isNodeHidden(const ExplodedNode *N) {
@@ -2970,31 +3019,22 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
     std::string sbuf;
     llvm::raw_string_ostream Out(sbuf);
 
-    // Find the first node which program point and tag has to be included in
-    // the output.
-    const ExplodedNode *FirstHiddenNode = N;
-    while (FirstHiddenNode->pred_size() == 1 &&
-           isNodeHidden(*FirstHiddenNode->pred_begin())) {
-      FirstHiddenNode = *FirstHiddenNode->pred_begin();
-    }
-
     ProgramStateRef State = N->getState();
 
     // Dump program point for all the previously skipped nodes.
-    const ExplodedNode *OtherNode = FirstHiddenNode;
-    while (true) {
-      OtherNode->getLocation().print(/*CR=*/"\\l", Out);
-
-      if (const ProgramPointTag *Tag = OtherNode->getLocation().getTag())
-        Out << "\\lTag:" << Tag->getTagDescription();
-
-      if (OtherNode == N)
-        break;
-
-      OtherNode = *OtherNode->succ_begin();
-
-      Out << "\\l--------\\l";
-    }
+    traverseHiddenNodes(
+        N,
+        [&](const ExplodedNode *OtherNode) {
+          OtherNode->getLocation().print(/*CR=*/"\\l", Out);
+          if (const ProgramPointTag *Tag = OtherNode->getLocation().getTag())
+            Out << "\\lTag:" << Tag->getTagDescription();
+          if (N->isSink())
+            Out << "\\lNode is sink\\l";
+          if (nodeHasBugReport(N))
+            Out << "\\lBug report attached\\l";
+        },
+        [&](const ExplodedNode *OtherNode) { Out << "\\l--------\\l"; },
+        [&](const ExplodedNode *N) { return false; });
 
     Out << "\\l\\|";
 

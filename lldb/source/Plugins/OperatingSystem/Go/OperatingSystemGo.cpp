@@ -48,8 +48,7 @@ namespace {
 
 static constexpr PropertyDefinition g_properties[] = {
     {"enable", OptionValue::eTypeBoolean, true, true, nullptr, {},
-     "Specify whether goroutines should be treated as threads."},
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, {}, nullptr}};
+     "Specify whether goroutines should be treated as threads."}};
 
 enum {
   ePropertyEnableGoroutines,

@@ -97,7 +97,7 @@ public:
         HeaderSearchInfo(HeaderSearchInfo),
         Inserter(FileName, Code, Style.IncludeStyle) {}
 
-  void addExisting(Inclusion Inc) { Inclusions.push_back(std::move(Inc)); }
+  void addExisting(const Inclusion &Inc);
 
   /// Checks whether to add an #include of the header into \p File.
   /// An #include will not be added if:
@@ -134,8 +134,8 @@ private:
   StringRef Code;
   StringRef BuildDir;
   HeaderSearch &HeaderSearchInfo;
-  std::vector<Inclusion> Inclusions;
-  tooling::HeaderIncludes Inserter; // Computers insertion replacement.
+  llvm::StringSet<> IncludedHeaders; // Both written and resolved.
+  tooling::HeaderIncludes Inserter;  // Computers insertion replacement.
 };
 
 } // namespace clangd

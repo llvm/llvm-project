@@ -89,11 +89,20 @@ struct AP64VeryCompact {
   static const uptr kFlags = 0;
 };
 
+struct AP64Dense {
+  static const uptr kSpaceBeg = kAllocatorSpace;
+  static const uptr kSpaceSize = kAllocatorSize;
+  static const uptr kMetadataSize = 16;
+  typedef DenseSizeClassMap SizeClassMap;
+  typedef NoOpMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+};
 
 typedef SizeClassAllocator64<AP64> Allocator64;
 typedef SizeClassAllocator64<AP64Dyn> Allocator64Dynamic;
 typedef SizeClassAllocator64<AP64Compact> Allocator64Compact;
 typedef SizeClassAllocator64<AP64VeryCompact> Allocator64VeryCompact;
+typedef SizeClassAllocator64<AP64Dense> Allocator64Dense;
 #elif defined(__mips64)
 static const u64 kAddressSpaceSize = 1ULL << 40;
 #elif defined(__aarch64__)
@@ -142,6 +151,10 @@ TEST(SanitizerCommon, VeryCompactSizeClassMap) {
 
 TEST(SanitizerCommon, InternalSizeClassMap) {
   TestSizeClassMap<InternalSizeClassMap>();
+}
+
+TEST(SanitizerCommon, DenseSizeClassMap) {
+  TestSizeClassMap<VeryCompactSizeClassMap>();
 }
 
 template <class Allocator>
@@ -233,6 +246,10 @@ TEST(SanitizerCommon, SizeClassAllocator64Compact) {
 
 TEST(SanitizerCommon, SizeClassAllocator64VeryCompact) {
   TestSizeClassAllocator<Allocator64VeryCompact>();
+}
+
+TEST(SanitizerCommon, SizeClassAllocator64Dense) {
+  TestSizeClassAllocator<Allocator64Dense>();
 }
 #endif
 #endif

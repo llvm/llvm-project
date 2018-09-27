@@ -40,12 +40,12 @@ SnippetGenerator::generateConfigurations(unsigned Opcode) const {
     {
       BenchmarkCode BC;
       BC.Info = CT.Info;
-      for (InstructionBuilder &IB : CT.Instructions) {
-        IB.randomizeUnsetVariables(
+      for (InstructionTemplate &IT : CT.Instructions) {
+        IT.randomizeUnsetVariables(
             CT.ScratchSpacePointerInReg
                 ? RATC.getRegister(CT.ScratchSpacePointerInReg).aliasedBits()
                 : RATC.emptyRegisters());
-        BC.Instructions.push_back(IB.build());
+        BC.Instructions.push_back(IT.build());
       }
       if (CT.ScratchSpacePointerInReg)
         BC.LiveIns.push_back(CT.ScratchSpacePointerInReg);
@@ -58,27 +58,27 @@ SnippetGenerator::generateConfigurations(unsigned Opcode) const {
 }
 
 std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
-    const std::vector<InstructionBuilder> &Instructions) const {
+    const std::vector<InstructionTemplate> &Instructions) const {
   // Collect all register uses and create an assignment for each of them.
   // Ignore memory operands which are handled separately.
   // Loop invariant: DefinedRegs[i] is true iif it has been set at least once
   // before the current instruction.
   llvm::BitVector DefinedRegs = RATC.emptyRegisters();
   std::vector<RegisterValue> RIV;
-  for (const InstructionBuilder &IB : Instructions) {
+  for (const InstructionTemplate &IT : Instructions) {
     // Returns the register that this Operand sets or uses, or 0 if this is not
     // a register.
-    const auto GetOpReg = [&IB](const Operand &Op) -> unsigned {
+    const auto GetOpReg = [&IT](const Operand &Op) -> unsigned {
       if (Op.IsMem)
         return 0;
       if (Op.ImplicitReg)
         return *Op.ImplicitReg;
-      if (Op.IsExplicit && IB.getValueFor(Op).isReg())
-        return IB.getValueFor(Op).getReg();
+      if (Op.IsExplicit && IT.getValueFor(Op).isReg())
+        return IT.getValueFor(Op).getReg();
       return 0;
     };
     // Collect used registers that have never been def'ed.
-    for (const Operand &Op : IB.Instr.Operands) {
+    for (const Operand &Op : IT.Instr.Operands) {
       if (!Op.IsDef) {
         const unsigned Reg = GetOpReg(Op);
         if (Reg > 0 && !DefinedRegs.test(Reg)) {
@@ -88,7 +88,7 @@ std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
       }
     }
     // Mark defs as having been def'ed.
-    for (const Operand &Op : IB.Instr.Operands) {
+    for (const Operand &Op : IT.Instr.Operands) {
       if (Op.IsDef) {
         const unsigned Reg = GetOpReg(Op);
         if (Reg > 0)
@@ -106,16 +106,16 @@ llvm::Expected<CodeTemplate> SnippetGenerator::generateSelfAliasingCodeTemplate(
     return llvm::make_error<SnippetGeneratorFailure>("empty self aliasing");
   }
   CodeTemplate CT;
-  InstructionBuilder IB(Instr);
+  InstructionTemplate IT(Instr);
   if (SelfAliasing.hasImplicitAliasing()) {
     CT.Info = "implicit Self cycles, picking random values.";
   } else {
     CT.Info = "explicit self cycles, selecting one aliasing Conf.";
     // This is a self aliasing instruction so defs and uses are from the same
-    // instance, hence twice IB in the following call.
-    setRandomAliasing(SelfAliasing, IB, IB);
+    // instance, hence twice IT in the following call.
+    setRandomAliasing(SelfAliasing, IT, IT);
   }
-  CT.Instructions.push_back(std::move(IB));
+  CT.Instructions.push_back(std::move(IT));
   return std::move(CT);
 }
 
@@ -127,4 +127,5 @@ SnippetGenerator::generateUnconstrainedCodeTemplate(const Instruction &Instr,
   CT.Instructions.emplace_back(Instr);
   return std::move(CT);
 }
+
 } // namespace exegesis

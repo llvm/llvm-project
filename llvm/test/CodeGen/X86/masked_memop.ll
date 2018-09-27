@@ -66,21 +66,19 @@ define void @storev1(<1 x i32> %trigger, <1 x i32>* %addr, <1 x i32> %val) {
 ; AVX-LABEL: storev1:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    testl %edi, %edi
-; AVX-NEXT:    je LBB1_1
-; AVX-NEXT:  ## %bb.2: ## %else
-; AVX-NEXT:    retq
-; AVX-NEXT:  LBB1_1: ## %cond.store
+; AVX-NEXT:    jne LBB1_2
+; AVX-NEXT:  ## %bb.1: ## %cond.store
 ; AVX-NEXT:    movl %edx, (%rsi)
+; AVX-NEXT:  LBB1_2: ## %else
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: storev1:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    testl %edi, %edi
-; AVX512-NEXT:    je LBB1_1
-; AVX512-NEXT:  ## %bb.2: ## %else
-; AVX512-NEXT:    retq
-; AVX512-NEXT:  LBB1_1: ## %cond.store
+; AVX512-NEXT:    jne LBB1_2
+; AVX512-NEXT:  ## %bb.1: ## %cond.store
 ; AVX512-NEXT:    movl %edx, (%rsi)
+; AVX512-NEXT:  LBB1_2: ## %else
 ; AVX512-NEXT:    retq
   %mask = icmp eq <1 x i32> %trigger, zeroinitializer
   call void @llvm.masked.store.v1i32.p0v1i32(<1 x i32>%val, <1 x i32>* %addr, i32 4, <1 x i1>%mask)

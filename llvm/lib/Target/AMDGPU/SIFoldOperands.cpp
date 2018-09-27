@@ -477,6 +477,20 @@ void SIFoldOperands::foldOperand(
     UseMI->setDesc(TII->get(MovOp));
     CopiesToReplace.push_back(UseMI);
   } else {
+    if (UseMI->isCopy() && OpToFold.isReg() &&
+        TargetRegisterInfo::isVirtualRegister(UseMI->getOperand(0).getReg()) &&
+        TargetRegisterInfo::isVirtualRegister(UseMI->getOperand(1).getReg()) &&
+        TRI->isVGPR(*MRI, UseMI->getOperand(0).getReg()) &&
+        TRI->isVGPR(*MRI, UseMI->getOperand(1).getReg()) &&
+        !UseMI->getOperand(1).getSubReg()) {
+      UseMI->getOperand(1).setReg(OpToFold.getReg());
+      UseMI->getOperand(1).setSubReg(OpToFold.getSubReg());
+      UseMI->getOperand(1).setIsKill(false);
+      CopiesToReplace.push_back(UseMI);
+      OpToFold.setIsKill(false);
+      return;
+    }
+
     const MCInstrDesc &UseDesc = UseMI->getDesc();
 
     // Don't fold into target independent nodes.  Target independent opcodes

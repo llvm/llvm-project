@@ -30,6 +30,22 @@
 
 /// ###########################################################################
 
+/// Check that -lomptarget-nvptx is passed to nvlink.
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp \
+// RUN:          -fopenmp-targets=nvptx64-nvidia-cuda %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-NVLINK %s
+/// Check that the value of --libomptarget-nvptx-path is forwarded to nvlink.
+// RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp \
+// RUN:          --libomptarget-nvptx-path=/path/to/libomptarget/ \
+// RUN:          -fopenmp-targets=nvptx64-nvidia-cuda %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-NVLINK,CHK-LIBOMPTARGET-NVPTX-PATH %s
+
+// CHK-NVLINK: nvlink
+// CHK-LIBOMPTARGET-NVPTX-PATH-SAME: "-L/path/to/libomptarget/"
+// CHK-NVLINK-SAME: "-lomptarget-nvptx"
+
+/// ###########################################################################
+
 /// Check cubin file generation and usage by nvlink
 // RUN:   %clang -### -no-canonical-prefixes -target powerpc64le-unknown-linux-gnu -fopenmp=libomp \
 // RUN:          -fopenmp-targets=nvptx64-nvidia-cuda -save-temps %s 2>&1 \
@@ -148,6 +164,11 @@
 /// Check that the runtime bitcode library is part of the compile line. Create a bogus
 /// bitcode library and add it to the LIBRARY_PATH.
 // RUN:   env LIBRARY_PATH=%S/Inputs/libomptarget %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
+// RUN:   -Xopenmp-target -march=sm_20 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda \
+// RUN:   -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-BCLIB %s
+/// The user can override default detection using --libomptarget-nvptx-path=.
+// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda --libomptarget-nvptx-path=%S/Inputs/libomptarget \
 // RUN:   -Xopenmp-target -march=sm_20 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda \
 // RUN:   -fopenmp-relocatable-target -save-temps -no-canonical-prefixes %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-BCLIB %s
