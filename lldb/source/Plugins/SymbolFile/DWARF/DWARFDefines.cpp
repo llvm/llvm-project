@@ -504,9 +504,9 @@ const char *DW_MACINFO_value_to_name(uint32_t val) {
   return llvmstr.data();
 }
 
-const char *DW_CFA_value_to_name(uint32_t val) {
+const char *DW_CFA_value_to_name(uint32_t val, llvm::Triple::ArchType Arch) {
   static char invalid[100];
-  llvm::StringRef llvmstr = llvm::dwarf::CallFrameString(val);
+  llvm::StringRef llvmstr = llvm::dwarf::CallFrameString(val, Arch);
   if (llvmstr.empty()) {
     snprintf(invalid, sizeof(invalid), "Unknown DW_CFA constant: 0x%x", val);
     return invalid;
