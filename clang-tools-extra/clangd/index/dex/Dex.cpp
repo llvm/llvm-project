@@ -13,6 +13,8 @@
 #include "Logger.h"
 #include "Quality.h"
 #include "Trace.h"
+#include "index/Index.h"
+#include "index/dex/Iterator.h"
 #include "llvm/ADT/StringSet.h"
 #include <algorithm>
 #include <queue>
@@ -166,6 +168,10 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
     if (It != InvertedIndex.end())
       ScopeIterators.push_back(It->second.iterator());
   }
+  if (Req.AnyScope)
+    ScopeIterators.push_back(createBoost(createTrue(Symbols.size()),
+                                         ScopeIterators.empty() ? 1.0 : 0.2));
+
   // Add OR iterator for scopes if there are any Scope Iterators.
   if (!ScopeIterators.empty())
     TopLevelChildren.push_back(createOr(move(ScopeIterators)));

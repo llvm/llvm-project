@@ -101,6 +101,13 @@ struct CodeCompleteOptions {
   /// Whether to generate snippets for function arguments on code-completion.
   /// Needs snippets to be enabled as well.
   bool EnableFunctionArgSnippets = true;
+
+  /// Whether to include index symbols that are not defined in the scopes
+  /// visible from the code completion point. This applies in contexts without
+  /// explicit scope qualifiers.
+  ///
+  /// Such completions can insert scope qualifiers.
+  bool AllScopes = false;
 };
 
 // Semi-structured representation of a code-complete suggestion for our C++ API.

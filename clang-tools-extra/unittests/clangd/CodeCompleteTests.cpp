@@ -2093,6 +2093,57 @@ TEST(CompletionTest, IncludedCompletionKinds) {
                     Has("bar.h\"", CompletionItemKind::File)));
 }
 
+TEST(CompletionTest, NoAllScopesCompletionWhenQualified) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.AllScopes = true;
+
+  auto Results = completions(
+      R"cpp(
+    void f() { na::Clangd^ }
+  )cpp",
+      {cls("na::ClangdA"), cls("nx::ClangdX"), cls("Clangd3")}, Opts);
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(
+                  AllOf(Qualifier(""), Scope("na::"), Named("ClangdA"))));
+}
+
+TEST(CompletionTest, AllScopesCompletion) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.AllScopes = true;
+
+  auto Results = completions(
+      R"cpp(
+    namespace na {
+    void f() { Clangd^ }
+    }
+  )cpp",
+      {cls("nx::Clangd1"), cls("ny::Clangd2"), cls("Clangd3"),
+       cls("na::nb::Clangd4")},
+      Opts);
+  EXPECT_THAT(
+      Results.Completions,
+      UnorderedElementsAre(AllOf(Qualifier("nx::"), Named("Clangd1")),
+                           AllOf(Qualifier("ny::"), Named("Clangd2")),
+                           AllOf(Qualifier(""), Scope(""), Named("Clangd3")),
+                           AllOf(Qualifier("nb::"), Named("Clangd4"))));
+}
+
+TEST(CompletionTest, NoQualifierIfShadowed) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.AllScopes = true;
+
+  auto Results = completions(R"cpp(
+    namespace nx { class Clangd1 {}; }
+    using nx::Clangd1;
+    void f() { Clangd^ }
+  )cpp",
+                             {cls("nx::Clangd1"), cls("nx::Clangd2")}, Opts);
+  // Although Clangd1 is from another namespace, Sema tells us it's in-scope and
+  // needs no qualifier.
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(AllOf(Qualifier(""), Named("Clangd1")),
+                                   AllOf(Qualifier("nx::"), Named("Clangd2"))));
+}
 
 } // namespace
 } // namespace clangd

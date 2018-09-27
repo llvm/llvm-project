@@ -523,6 +523,17 @@ TEST(DexTest, NoMatchNestedScopes) {
   EXPECT_THAT(match(*I, Req), UnorderedElementsAre("a::y1"));
 }
 
+TEST(DexTest, WildcardScope) {
+  auto I =
+      Dex::build(generateSymbols({"a::y1", "a::b::y2", "c::y3"}), URISchemes);
+  FuzzyFindRequest Req;
+  Req.Query = "y";
+  Req.Scopes = {"a::"};
+  Req.AnyScope = true;
+  EXPECT_THAT(match(*I, Req),
+              UnorderedElementsAre("a::y1", "a::b::y2", "c::y3"));
+}
+
 TEST(DexTest, IgnoreCases) {
   auto I = Dex::build(generateSymbols({"ns::ABC", "ns::abc"}), URISchemes);
   FuzzyFindRequest Req;

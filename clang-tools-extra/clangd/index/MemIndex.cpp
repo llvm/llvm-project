@@ -39,7 +39,8 @@ bool MemIndex::fuzzyFind(
     const Symbol *Sym = Pair.second;
 
     // Exact match against all possible scopes.
-    if (!Req.Scopes.empty() && !llvm::is_contained(Req.Scopes, Sym->Scope))
+    if (!Req.AnyScope && !Req.Scopes.empty() &&
+        !llvm::is_contained(Req.Scopes, Sym->Scope))
       continue;
     if (Req.RestrictForCodeCompletion &&
         !(Sym->Flags & Symbol::IndexedForCodeCompletion))

@@ -44,6 +44,7 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
@@ -330,6 +331,7 @@ struct ScoredBundleGreater {
 struct CodeCompletionBuilder {
   CodeCompletionBuilder(ASTContext &ASTCtx, const CompletionCandidate &C,
                         CodeCompletionString *SemaCCS,
+                        llvm::ArrayRef<std::string> QueryScopes,
                         const IncludeInserter &Includes, StringRef FileName,
                         CodeCompletionContext::Kind ContextKind,
                         const CodeCompleteOptions &Opts)
@@ -374,6 +376,18 @@ struct CodeCompletionBuilder {
         Completion.Kind = toCompletionItemKind(C.IndexResult->SymInfo.Kind);
       if (Completion.Name.empty())
         Completion.Name = C.IndexResult->Name;
+      // If the completion was visible to Sema, no qualifier is needed. This
+      // avoids unneeded qualifiers in cases like with `using ns::X`.
+      if (Completion.RequiredQualifier.empty() && !C.SemaResult) {
+        StringRef ShortestQualifier = C.IndexResult->Scope;
+        for (StringRef Scope : QueryScopes) {
+          StringRef Qualifier = C.IndexResult->Scope;
+          if (Qualifier.consume_front(Scope) &&
+              Qualifier.size() < ShortestQualifier.size())
+            ShortestQualifier = Qualifier;
+        }
+        Completion.RequiredQualifier = ShortestQualifier;
+      }
       Completion.Deprecated |= (C.IndexResult->Flags & Symbol::Deprecated);
     }
 
@@ -604,9 +618,11 @@ struct SpecifiedScope {
   }
 };
 
-// Get all scopes that will be queried in indexes.
-std::vector<std::string> getQueryScopes(CodeCompletionContext &CCContext,
-                                        const SourceManager &SM) {
+// Get all scopes that will be queried in indexes and whether symbols from
+// any scope is allowed.
+std::pair<std::vector<std::string>, bool>
+getQueryScopes(CodeCompletionContext &CCContext, const SourceManager &SM,
+               const CodeCompleteOptions &Opts) {
   auto GetAllAccessibleScopes = [](CodeCompletionContext &CCContext) {
     SpecifiedScope Info;
     for (auto *Context : CCContext.getVisitedContexts()) {
@@ -627,13 +643,15 @@ std::vector<std::string> getQueryScopes(CodeCompletionContext &CCContext,
     // FIXME: Capture scopes and use for scoring, for example,
     //        "using namespace std; namespace foo {v^}" =>
     //        foo::value > std::vector > boost::variant
-    return GetAllAccessibleScopes(CCContext).scopesForIndexQuery();
+    auto Scopes = GetAllAccessibleScopes(CCContext).scopesForIndexQuery();
+    // Allow AllScopes completion only for there is no explicit scope qualifier.
+    return {Scopes, Opts.AllScopes};
   }
 
   // Qualified completion ("std::vec^"), we have two cases depending on whether
   // the qualifier can be resolved by Sema.
   if ((*SS)->isValid()) { // Resolved qualifier.
-    return GetAllAccessibleScopes(CCContext).scopesForIndexQuery();
+    return {GetAllAccessibleScopes(CCContext).scopesForIndexQuery(), false};
   }
 
   // Unresolved qualifier.
@@ -651,7 +669,7 @@ std::vector<std::string> getQueryScopes(CodeCompletionContext &CCContext,
   if (!Info.UnresolvedQualifier->empty())
     *Info.UnresolvedQualifier += "::";
 
-  return Info.scopesForIndexQuery();
+  return {Info.scopesForIndexQuery(), false};
 }
 
 // Should we perform index-based completion in a context of the specified kind?
@@ -1262,8 +1280,10 @@ class CodeCompleteFlow {
   CompletionRecorder *Recorder = nullptr;
   int NSema = 0, NIndex = 0, NBoth = 0; // Counters for logging.
   bool Incomplete = false; // Would more be available with a higher limit?
-  llvm::Optional<FuzzyMatcher> Filter;       // Initialized once Sema runs.
-  std::vector<std::string> QueryScopes;      // Initialized once Sema runs.
+  llvm::Optional<FuzzyMatcher> Filter;  // Initialized once Sema runs.
+  std::vector<std::string> QueryScopes; // Initialized once Sema runs.
+  // Whether to query symbols from any scope. Initialized once Sema runs.
+  bool AllScopes = false;
   // Include-insertion and proximity scoring rely on the include structure.
   // This is available after Sema has run.
   llvm::Optional<IncludeInserter> Inserter;  // Available during runWithSema.
@@ -1339,9 +1359,9 @@ public:
       Inserter.reset(); // Make sure this doesn't out-live Clang.
       SPAN_ATTACH(Tracer, "sema_completion_kind",
                   getCompletionKindString(Recorder->CCContext.getKind()));
-      log("Code complete: sema context {0}, query scopes [{1}]",
+      log("Code complete: sema context {0}, query scopes [{1}] (AnyScope={2})",
           getCompletionKindString(Recorder->CCContext.getKind()),
-          llvm::join(QueryScopes.begin(), QueryScopes.end(), ","));
+          llvm::join(QueryScopes.begin(), QueryScopes.end(), ","), AllScopes);
     });
 
     Recorder = RecorderOwner.get();
@@ -1387,8 +1407,8 @@ private:
     }
     Filter = FuzzyMatcher(
         Recorder->CCSema->getPreprocessor().getCodeCompletionFilter());
-    QueryScopes = getQueryScopes(Recorder->CCContext,
-                                 Recorder->CCSema->getSourceManager());
+    std::tie(QueryScopes, AllScopes) = getQueryScopes(
+        Recorder->CCContext, Recorder->CCSema->getSourceManager(), Opts);
     // Sema provides the needed context to query the index.
     // FIXME: in addition to querying for extra/overlapping symbols, we should
     //        explicitly request symbols corresponding to Sema results.
@@ -1428,6 +1448,7 @@ private:
     Req.Query = Filter->pattern();
     Req.RestrictForCodeCompletion = true;
     Req.Scopes = QueryScopes;
+    Req.AnyScope = AllScopes;
     // FIXME: we should send multiple weighted paths here.
     Req.ProximityPaths.push_back(FileName);
     vlog("Code complete: fuzzyFind({0:2})", toJSON(Req));
@@ -1538,6 +1559,8 @@ private:
     Relevance.Context = Recorder->CCContext.getKind();
     Relevance.Query = SymbolRelevanceSignals::CodeComplete;
     Relevance.FileProximityMatch = FileProximity.getPointer();
+    // FIXME: incorparate scope proximity into relevance score.
+
     auto &First = Bundle.front();
     if (auto FuzzyScore = fuzzyScore(First))
       Relevance.NameMatch = *FuzzyScore;
@@ -1587,8 +1610,8 @@ private:
                           : nullptr;
       if (!Builder)
         Builder.emplace(Recorder->CCSema->getASTContext(), Item, SemaCCS,
-                        *Inserter, FileName, Recorder->CCContext.getKind(),
-                        Opts);
+                        QueryScopes, *Inserter, FileName,
+                        Recorder->CCContext.getKind(), Opts);
       else
         Builder->add(Item, SemaCCS);
     }
