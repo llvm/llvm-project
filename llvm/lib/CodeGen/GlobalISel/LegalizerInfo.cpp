@@ -219,7 +219,7 @@ void LegalizerInfo::computeTables() {
             Opcode, TypeIdx, ElementSize,
             moreToWiderTypesAndLessToWidest(NumElementsActions));
       }
-      llvm::sort(ElementSizesSeen.begin(), ElementSizesSeen.end());
+      llvm::sort(ElementSizesSeen);
       SizeChangeStrategy VectorElementSizeChangeStrategy =
           &unsupportedForDifferentSizes;
       if (TypeIdx < VectorElementSizeChangeStrategies[OpcodeIdx].size() &&

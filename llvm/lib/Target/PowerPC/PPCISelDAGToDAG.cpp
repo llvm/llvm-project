@@ -1401,7 +1401,7 @@ class BitPermutationSelector {
     for (auto &I : ValueRots) {
       ValueRotsVec.push_back(I.second);
     }
-    llvm::sort(ValueRotsVec.begin(), ValueRotsVec.end());
+    llvm::sort(ValueRotsVec);
   }
 
   // In 64-bit mode, rlwinm and friends have a rotation operator that

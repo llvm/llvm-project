@@ -1118,7 +1118,7 @@ Error DumpOutputStyle::dumpStringTableFromPdb() {
 
       std::vector<uint32_t> SortedIDs(IS->name_ids().begin(),
                                       IS->name_ids().end());
-      llvm::sort(SortedIDs.begin(), SortedIDs.end());
+      llvm::sort(SortedIDs);
       for (uint32_t I : SortedIDs) {
         auto ES = IS->getStringForID(I);
         llvm::SmallString<32> Str;

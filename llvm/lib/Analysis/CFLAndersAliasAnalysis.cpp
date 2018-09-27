@@ -395,7 +395,7 @@ populateAliasMap(DenseMap<const Value *, std::vector<OffsetValue>> &AliasMap,
     }
 
     // Sort AliasList for faster lookup
-    llvm::sort(AliasList.begin(), AliasList.end());
+    llvm::sort(AliasList);
   }
 }
 
@@ -479,7 +479,7 @@ static void populateExternalRelations(
   }
 
   // Remove duplicates in ExtRelations
-  llvm::sort(ExtRelations.begin(), ExtRelations.end());
+  llvm::sort(ExtRelations);
   ExtRelations.erase(std::unique(ExtRelations.begin(), ExtRelations.end()),
                      ExtRelations.end());
 }

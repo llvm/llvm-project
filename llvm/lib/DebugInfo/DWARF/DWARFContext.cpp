@@ -106,10 +106,11 @@ collectContributionData(DWARFContext::unit_iterator_range Units) {
   // Sort the contributions so that any invalid ones are placed at
   // the start of the contributions vector. This way they are reported
   // first.
-  llvm::sort(Contributions.begin(), Contributions.end(),
+  llvm::sort(Contributions,
              [](const Optional<StrOffsetsContributionDescriptor> &L,
                 const Optional<StrOffsetsContributionDescriptor> &R) {
-               if (L && R) return L->Base < R->Base;
+               if (L && R)
+                 return L->Base < R->Base;
                return R.hasValue();
              });
 

@@ -828,7 +828,7 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughCFG(
            "split above!");
 
     // Sort and unique the codes to minimize them.
-    llvm::sort(UncondCodeSeq.begin(), UncondCodeSeq.end());
+    llvm::sort(UncondCodeSeq);
     UncondCodeSeq.erase(std::unique(UncondCodeSeq.begin(), UncondCodeSeq.end()),
                         UncondCodeSeq.end());
 

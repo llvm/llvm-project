@@ -144,11 +144,10 @@ void GSIHashStreamBuilder::finalizeBuckets(uint32_t RecordZeroOffset) {
     // can properly early-out when it detects the record won't be found.  The
     // algorithm used here corredsponds to the function
     // caseInsensitiveComparePchPchCchCch in the reference implementation.
-    llvm::sort(Bucket.begin(), Bucket.end(),
-              [](const std::pair<StringRef, PSHashRecord> &Left,
-                 const std::pair<StringRef, PSHashRecord> &Right) {
-                return gsiRecordLess(Left.first, Right.first);
-              });
+    llvm::sort(Bucket, [](const std::pair<StringRef, PSHashRecord> &Left,
+                          const std::pair<StringRef, PSHashRecord> &Right) {
+      return gsiRecordLess(Left.first, Right.first);
+    });
 
     for (const auto &Entry : Bucket)
       HashRecords.push_back(Entry.second);

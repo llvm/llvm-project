@@ -453,7 +453,7 @@ void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
     return;
 
   // Sort relocations by the address they are applied to.
-  llvm::sort(Relocs.begin(), Relocs.end(),
+  llvm::sort(Relocs,
              [](const ELFRelocationEntry &A, const ELFRelocationEntry &B) {
                return A.Offset < B.Offset;
              });

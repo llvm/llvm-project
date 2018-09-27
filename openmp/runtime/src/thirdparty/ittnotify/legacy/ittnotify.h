@@ -29,11 +29,17 @@
 #  define ITT_OS_MAC   3
 #endif /* ITT_OS_MAC */
 
+#ifndef ITT_OS_FREEBSD
+#  define ITT_OS_FREEBSD   4
+#endif /* ITT_OS_FREEBSD */
+
 #ifndef ITT_OS
 #  if defined WIN32 || defined _WIN32
 #    define ITT_OS ITT_OS_WIN
 #  elif defined( __APPLE__ ) && defined( __MACH__ )
 #    define ITT_OS ITT_OS_MAC
+#  elif defined( __FreeBSD__ )
+#    define ITT_OS ITT_OS_FREEBSD
 #  else
 #    define ITT_OS ITT_OS_LINUX
 #  endif
@@ -51,11 +57,17 @@
 #  define ITT_PLATFORM_MAC 3
 #endif /* ITT_PLATFORM_MAC */
 
+#ifndef ITT_PLATFORM_FREEBSD
+#  define ITT_PLATFORM_FREEBSD 4
+#endif /* ITT_PLATFORM_FREEBSD */
+
 #ifndef ITT_PLATFORM
 #  if ITT_OS==ITT_OS_WIN
 #    define ITT_PLATFORM ITT_PLATFORM_WIN
 #  elif ITT_OS==ITT_OS_MAC
 #    define ITT_PLATFORM ITT_PLATFORM_MAC
+#  elif ITT_OS==ITT_OS_FREEBSD
+#    define ITT_PLATFORM ITT_PLATFORM_FREEBSD
 #  else
 #    define ITT_PLATFORM ITT_PLATFORM_POSIX
 #  endif
@@ -75,17 +87,17 @@
 #endif /* UNICODE || _UNICODE */
 #endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 
-#ifndef CDECL
+#ifndef ITTAPI_CDECL
 #  if ITT_PLATFORM==ITT_PLATFORM_WIN
-#    define CDECL __cdecl
+#    define ITTAPI_CDECL __cdecl
 #  else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 #    if defined _M_IX86 || defined __i386__
-#      define CDECL __attribute__ ((cdecl))
+#      define ITTAPI_CDECL __attribute__ ((cdecl))
 #    else  /* _M_IX86 || __i386__ */
-#      define CDECL /* actual only on x86 platform */
+#      define ITTAPI_CDECL /* actual only on x86 platform */
 #    endif /* _M_IX86 || __i386__ */
 #  endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
-#endif /* CDECL */
+#endif /* ITTAPI_CDECL */
 
 #ifndef STDCALL
 #  if ITT_PLATFORM==ITT_PLATFORM_WIN
@@ -99,12 +111,12 @@
 #  endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 #endif /* STDCALL */
 
-#define ITTAPI    CDECL
-#define LIBITTAPI CDECL
+#define ITTAPI    ITTAPI_CDECL
+#define LIBITTAPI ITTAPI_CDECL
 
 /* TODO: Temporary for compatibility! */
-#define ITTAPI_CALL    CDECL
-#define LIBITTAPI_CALL CDECL
+#define ITTAPI_CALL    ITTAPI_CDECL
+#define LIBITTAPI_CALL ITTAPI_CDECL
 
 #if ITT_PLATFORM==ITT_PLATFORM_WIN
 /* use __forceinline (VC++ specific) */
@@ -223,25 +235,33 @@ extern "C" {
 void ITTAPI __itt_pause(void);
 /** @brief Resume collection */
 void ITTAPI __itt_resume(void);
+/** @brief Detach collection */
+void ITTAPI __itt_detach(void);
 
 /** @cond exclude_from_documentation */
 #ifndef INTEL_NO_MACRO_BODY
 #ifndef INTEL_NO_ITTNOTIFY_API
 ITT_STUBV(ITTAPI, void, pause,   (void))
 ITT_STUBV(ITTAPI, void, resume,  (void))
+ITT_STUBV(ITTAPI, void, detach,  (void))
 #define __itt_pause      ITTNOTIFY_VOID(pause)
 #define __itt_pause_ptr  ITTNOTIFY_NAME(pause)
 #define __itt_resume     ITTNOTIFY_VOID(resume)
 #define __itt_resume_ptr ITTNOTIFY_NAME(resume)
+#define __itt_detach     ITTNOTIFY_VOID(detach)
+#define __itt_detach_ptr ITTNOTIFY_NAME(detach)
 #else  /* INTEL_NO_ITTNOTIFY_API */
 #define __itt_pause()
 #define __itt_pause_ptr  0
 #define __itt_resume()
 #define __itt_resume_ptr 0
+#define __itt_detach()
+#define __itt_detach_ptr 0
 #endif /* INTEL_NO_ITTNOTIFY_API */
 #else  /* INTEL_NO_MACRO_BODY */
 #define __itt_pause_ptr  0
 #define __itt_resume_ptr 0
+#define __itt_detach_ptr 0
 #endif /* INTEL_NO_MACRO_BODY */
 /** @endcond */
 #endif /* _ITTNOTIFY_H_ */

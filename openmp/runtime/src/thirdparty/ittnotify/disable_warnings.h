@@ -8,6 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+
 #include "ittnotify_config.h"
 
 #if ITT_PLATFORM==ITT_PLATFORM_WIN

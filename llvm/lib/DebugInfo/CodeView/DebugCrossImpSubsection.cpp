@@ -79,7 +79,7 @@ Error DebugCrossModuleImportsSubsection::commit(
   for (const auto &M : Mappings)
     Ids.push_back(&M);
 
-  llvm::sort(Ids.begin(), Ids.end(), [this](const T &L1, const T &L2) {
+  llvm::sort(Ids, [this](const T &L1, const T &L2) {
     return Strings.getIdForString(L1->getKey()) <
            Strings.getIdForString(L2->getKey());
   });

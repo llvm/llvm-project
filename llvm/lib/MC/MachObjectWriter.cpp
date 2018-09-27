@@ -597,8 +597,8 @@ void MachObjectWriter::computeSymbolTable(
   }
 
   // External and undefined symbols are required to be in lexicographic order.
-  llvm::sort(ExternalSymbolData.begin(), ExternalSymbolData.end());
-  llvm::sort(UndefinedSymbolData.begin(), UndefinedSymbolData.end());
+  llvm::sort(ExternalSymbolData);
+  llvm::sort(UndefinedSymbolData);
 
   // Set the symbol indices.
   Index = 0;
