@@ -32,6 +32,8 @@ struct PropertyDefinition {
   const char *description;
 };
 
+using PropertyDefinitions = llvm::ArrayRef<PropertyDefinition>;
+
 class Property {
 public:
   Property(const PropertyDefinition &definition);

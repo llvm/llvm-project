@@ -76,8 +76,7 @@ static constexpr PropertyDefinition g_properties[] = {
     {"scan-type", OptionValue::eTypeEnum, true, eKASLRScanNearPC, NULL,
      OptionEnumValues(g_kaslr_kernel_scan_enum_values),
      "Control how many reads lldb will make while searching for a Darwin "
-     "kernel on attach."},
-    {NULL, OptionValue::eTypeInvalid, false, 0, NULL, {}, NULL} };
+     "kernel on attach."}};
 
 enum { ePropertyLoadKexts, ePropertyScanType };
 

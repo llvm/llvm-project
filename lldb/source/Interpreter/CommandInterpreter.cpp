@@ -89,8 +89,7 @@ static constexpr PropertyDefinition g_properties[] = {
      nullptr, {}, "If true, LLDB will stop running a 'command source' "
                   "script upon encountering an error."},
     {"space-repl-prompts", OptionValue::eTypeBoolean, true, false, nullptr, {},
-     "If true, blank lines will be printed between between REPL submissions."},
-    {nullptr, OptionValue::eTypeInvalid, true, 0, nullptr, {}, nullptr}};
+     "If true, blank lines will be printed between between REPL submissions."}};
 
 enum {
   ePropertyExpandRegexAliases = 0,

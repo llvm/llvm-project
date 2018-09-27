@@ -61,8 +61,7 @@ namespace {
 
 static constexpr PropertyDefinition g_properties[] = {
     {"enable-jit-breakpoint", OptionValue::eTypeBoolean, true, true, nullptr,
-     {}, "Enable breakpoint on __jit_debug_register_code."},
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, {}, nullptr}};
+     {}, "Enable breakpoint on __jit_debug_register_code."}};
 
 enum { ePropertyEnableJITBreakpoint };
 

@@ -118,9 +118,7 @@ static constexpr PropertyDefinition g_properties[] = {
      "links will be resolved at DWARF parse time."},
     {"ignore-file-indexes", OptionValue::eTypeBoolean, true, 0, nullptr, {},
      "Ignore indexes present in the object files and always index DWARF "
-     "manually."},
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, {}, nullptr},
-};
+     "manually."}};
 
 enum {
   ePropertySymLinkPaths,

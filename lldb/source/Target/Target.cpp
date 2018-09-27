@@ -3828,8 +3828,7 @@ static constexpr PropertyDefinition g_properties[] = {
      nullptr, {}, "If true, LLDB will show variables that are meant to "
                   "support the operation of a language's runtime support."},
     {"non-stop-mode", OptionValue::eTypeBoolean, false, 0, nullptr, {},
-     "Disable lock-step debugging, instead control threads independently."},
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, {}, nullptr}};
+     "Disable lock-step debugging, instead control threads independently."}};
 
 enum {
   ePropertyDefaultArch,

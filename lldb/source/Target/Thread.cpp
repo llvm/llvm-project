@@ -80,8 +80,7 @@ static constexpr PropertyDefinition g_properties[] = {
     {"trace-thread", OptionValue::eTypeBoolean, false, false, nullptr, {},
      "If true, this thread will single-step and log execution."},
     {"max-backtrace-depth", OptionValue::eTypeUInt64, false, 300000, nullptr,
-     {}, "Maximum number of frames to backtrace."},
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, {}, nullptr}};
+     {}, "Maximum number of frames to backtrace."}};
 
 enum {
   ePropertyStepInAvoidsNoDebug,
