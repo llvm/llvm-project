@@ -1671,6 +1671,16 @@ static int dl_iterate_phdr_test_cb(struct dl_phdr_info *info, size_t size,
 
 static atomic_uint32_t android_api_level;
 
+static AndroidApiLevel AndroidDetectApiLevelStatic() {
+#if __ANDROID_API__ <= 19
+  return ANDROID_KITKAT;
+#elif __ANDROID_API__ <= 22
+  return ANDROID_LOLLIPOP_MR1;
+#else
+  return ANDROID_POST_LOLLIPOP;
+#endif
+}
+
 static AndroidApiLevel AndroidDetectApiLevel() {
   if (!&dl_iterate_phdr)
     return ANDROID_KITKAT; // K or lower
@@ -1683,11 +1693,14 @@ static AndroidApiLevel AndroidDetectApiLevel() {
   // interesting to detect.
 }
 
+extern "C" __attribute__((weak)) void* _DYNAMIC;
+
 AndroidApiLevel AndroidGetApiLevel() {
   AndroidApiLevel level =
       (AndroidApiLevel)atomic_load(&android_api_level, memory_order_relaxed);
   if (level) return level;
-  level = AndroidDetectApiLevel();
+  level = &_DYNAMIC == nullptr ? AndroidDetectApiLevelStatic()
+                               : AndroidDetectApiLevel();
   atomic_store(&android_api_level, level, memory_order_relaxed);
   return level;
 }
