@@ -542,6 +542,25 @@
 // RUN: %clang -target aarch64 -march=armv8.4-a+nofp16+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV84A-NO-FP16-FP16FML %s
 // GENERICV84A-NO-FP16-FP16FML: "-target-feature" "+fp16fml" "-target-feature" "+fullfp16"
 
+// RUN: %clang -target aarch64 -march=armv8.5a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV85A %s
+// RUN: %clang -target aarch64 -march=armv8.5-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV85A %s
+// RUN: %clang -target aarch64 -mlittle-endian -march=armv8.5a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV85A %s
+// RUN: %clang -target aarch64 -mlittle-endian -march=armv8.5-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV85A %s
+// RUN: %clang -target aarch64_be -mlittle-endian -march=armv8.5a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV85A %s
+// RUN: %clang -target aarch64_be -mlittle-endian -march=armv8.5-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV85A %s
+// GENERICV85A: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8.5a"
+
+// RUN: %clang -target aarch64_be -march=armv8.5a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV85A-BE %s
+// RUN: %clang -target aarch64_be -march=armv8.5-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV85A-BE %s
+// RUN: %clang -target aarch64 -mbig-endian -march=armv8.5a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV85A-BE %s
+// RUN: %clang -target aarch64 -mbig-endian -march=armv8.5-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV85A-BE %s
+// RUN: %clang -target aarch64_be -mbig-endian -march=armv8.5a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV85A-BE %s
+// RUN: %clang -target aarch64_be -mbig-endian -march=armv8.5-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV85A-BE %s
+// GENERICV85A-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8.5a"
+
+// RUN: %clang -target aarch64 -march=armv8.5-a+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV85A-FP16 %s
+// GENERICV85A-FP16: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8.5a" "-target-feature" "+fullfp16"
+
 // fullfp16 is off by default for v8a, feature must not be mentioned
 // RUN: %clang -target aarch64 -march=armv8a  -### -c %s 2>&1 | FileCheck -check-prefix=V82ANOFP16 -check-prefix=GENERIC %s
 // RUN: %clang -target aarch64 -march=armv8-a -### -c %s 2>&1 | FileCheck -check-prefix=V82ANOFP16 -check-prefix=GENERIC %s

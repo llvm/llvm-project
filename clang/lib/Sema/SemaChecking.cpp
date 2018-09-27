@@ -929,6 +929,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   case Builtin::BI__va_start: {
     switch (Context.getTargetInfo().getTriple().getArch()) {
+    case llvm::Triple::aarch64:
     case llvm::Triple::arm:
     case llvm::Triple::thumb:
       if (SemaBuiltinVAStartARMMicrosoft(TheCall))

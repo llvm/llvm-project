@@ -2105,8 +2105,7 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
       const CXXMethodDecl *MD = I.second;
 
       ThunkInfoVectorTy ThunksVector = Thunks[MD];
-      llvm::sort(ThunksVector.begin(), ThunksVector.end(),
-                 [](const ThunkInfo &LHS, const ThunkInfo &RHS) {
+      llvm::sort(ThunksVector, [](const ThunkInfo &LHS, const ThunkInfo &RHS) {
         assert(LHS.Method == nullptr && RHS.Method == nullptr);
         return std::tie(LHS.This, LHS.Return) < std::tie(RHS.This, RHS.Return);
       });
@@ -3345,8 +3344,7 @@ static bool rebucketPaths(VPtrInfoVector &Paths) {
   PathsSorted.reserve(Paths.size());
   for (auto& P : Paths)
     PathsSorted.push_back(*P);
-  llvm::sort(PathsSorted.begin(), PathsSorted.end(),
-             [](const VPtrInfo &LHS, const VPtrInfo &RHS) {
+  llvm::sort(PathsSorted, [](const VPtrInfo &LHS, const VPtrInfo &RHS) {
     return LHS.MangledPath < RHS.MangledPath;
   });
   bool Changed = false;

@@ -3544,7 +3544,7 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
     std::vector<Selector> allSelectors;
     for (auto &entry : table)
       allSelectors.push_back(entry.first);
-    llvm::sort(allSelectors.begin(), allSelectors.end());
+    llvm::sort(allSelectors);
 
     for (auto &untypedSel : allSelectors) {
       std::string selNameStr = untypedSel.getAsString();

@@ -9164,6 +9164,18 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                                       Ops[0]);
     return Builder.CreateExtractValue(Call, 0);
   }
+  case X86::BI__builtin_ia32_lzcnt_u16:
+  case X86::BI__builtin_ia32_lzcnt_u32:
+  case X86::BI__builtin_ia32_lzcnt_u64: {
+    Value *F = CGM.getIntrinsic(Intrinsic::ctlz, Ops[0]->getType());
+    return Builder.CreateCall(F, {Ops[0], Builder.getInt1(false)});
+  }
+  case X86::BI__builtin_ia32_tzcnt_u16:
+  case X86::BI__builtin_ia32_tzcnt_u32:
+  case X86::BI__builtin_ia32_tzcnt_u64: {
+    Value *F = CGM.getIntrinsic(Intrinsic::cttz, Ops[0]->getType());
+    return Builder.CreateCall(F, {Ops[0], Builder.getInt1(false)});
+  }
   case X86::BI__builtin_ia32_undef128:
   case X86::BI__builtin_ia32_undef256:
   case X86::BI__builtin_ia32_undef512:

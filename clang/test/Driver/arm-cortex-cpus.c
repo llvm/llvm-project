@@ -318,6 +318,23 @@
 // RUN: %clang -target arm -march=armebv8.4-a -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V84A %s
 // CHECK-BE-V84A: "-cc1"{{.*}} "-triple" "armebv8.4{{.*}}" "-target-cpu" "generic"
 
+// RUN: %clang -target armv8.5a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V85A %s
+// RUN: %clang -target arm -march=armv8.5a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V85A %s
+// RUN: %clang -target arm -march=armv8.5-a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V85A %s
+// RUN: %clang -target arm -march=armv8.5a -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V85A %s
+// RUN: %clang -target armv8.5a -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V85A %s
+// RUN: %clang -target arm -march=armv8.5a -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V85A %s
+// RUN: %clang -target arm -mlittle-endian -march=armv8.5-a -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V85A %s
+// CHECK-V85A: "-cc1"{{.*}} "-triple" "armv8.5{{.*}}" "-target-cpu" "generic"
+
+// RUN: %clang -target armebv8.5a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V85A %s
+// RUN: %clang -target armv8.5a -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V85A %s
+// RUN: %clang -target armeb -march=armebv8.5a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V85A %s
+// RUN: %clang -target armeb -march=armebv8.5-a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V85A %s
+// RUN: %clang -target arm -march=armebv8.5a -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V85A %s
+// RUN: %clang -target arm -march=armebv8.5-a -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V85A %s
+// CHECK-BE-V85A: "-cc1"{{.*}} "-triple" "armebv8.5{{.*}}" "-target-cpu" "generic"
+
 // Once we have CPUs with optional v8.2-A FP16, we will need a way to turn it
 // on and off. Cortex-A53 is a placeholder for now.
 // RUN: %clang -target armv8a-linux-eabi -mcpu=cortex-a53+fp16 -### -c %s 2>&1 | FileCheck --check-prefix CHECK-CORTEX-A53-FP16 %s
@@ -410,6 +427,9 @@
 
 // RUN: %clang -target armv8a-linux-eabi -march=armv8.4-a+nofp16+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V84A-NOFP16-FP16FML %s
 // CHECK-V84A-NOFP16-FP16FML: "-target-feature" "+fp16fml" "-target-feature" "+fullfp16"
+
+// RUN: %clang -target armv8a-linux-eabi -march=armv8.5-a+fp16 -### -c %s 2>&1 | FileCheck --check-prefix CHECK-V85A-FP16 %s
+// CHECK-V85A-FP16: "-cc1"{{.*}} "-triple" "armv8.5{{.*}}" "-target-cpu" "generic" {{.*}}"-target-feature" "+fullfp16"
 
 // RUN: %clang -target arm -march=armv8.2-a+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-FULLFP16-SOFT %s
 // RUN: %clang -target arm -march=armv8.2-a+fp16fml -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-FULLFP16-SOFT %s

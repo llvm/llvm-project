@@ -680,6 +680,7 @@ struct AdditionalKeywords {
     kw_function = &IdentTable.get("function");
     kw_get = &IdentTable.get("get");
     kw_import = &IdentTable.get("import");
+    kw_infer = &IdentTable.get("infer");
     kw_is = &IdentTable.get("is");
     kw_let = &IdentTable.get("let");
     kw_module = &IdentTable.get("module");
@@ -751,6 +752,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_function;
   IdentifierInfo *kw_get;
   IdentifierInfo *kw_import;
+  IdentifierInfo *kw_infer;
   IdentifierInfo *kw_is;
   IdentifierInfo *kw_let;
   IdentifierInfo *kw_module;
