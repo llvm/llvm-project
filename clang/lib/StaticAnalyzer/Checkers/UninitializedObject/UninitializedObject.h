@@ -79,9 +79,9 @@ class FieldNode {
 protected:
   const FieldRegion *FR;
 
-  /// FieldNodes are never meant to be created on the heap, see
-  /// FindUninitializedFields::addFieldToUninits().
-  /* non-virtual */ ~FieldNode() = default;
+  // TODO: This destructor shouldn't be virtual, but breaks buildbots with
+  // -Werror -Wnon-virtual-dtor.
+  virtual ~FieldNode() = default;
 
 public:
   FieldNode(const FieldRegion *FR) : FR(FR) {}
