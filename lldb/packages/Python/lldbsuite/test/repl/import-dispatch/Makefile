@@ -9,7 +9,7 @@ first: a.out
 include $(LEVEL)/Makefile.rules
 
 a.out: input.swift
-	cat $< | $(LLDB) --repl "$(CFLAGS_EXTRAS)"
+	cat $< | $(LLDB) --repl="$(CFLAGS_EXTRAS)"
 	echo "libdispatch could be imported successfully!">$@
 
 input.swift:
