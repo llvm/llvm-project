@@ -411,8 +411,6 @@ private:
   bool adjustLoopLinks();
   void adjustLoopPreheaders();
   bool adjustLoopBranches();
-  void updateIncomingBlock(BasicBlock *CurrBlock, BasicBlock *OldPred,
-                           BasicBlock *NewPred);
 
   Loop *OuterLoop;
   Loop *InnerLoop;
@@ -455,6 +453,7 @@ struct LoopInterchange : public FunctionPass {
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addPreserved<ScalarEvolutionWrapperPass>();
+    AU.addPreservedID(LCSSAID);
   }
 
   bool runOnFunction(Function &F) override {
@@ -1297,9 +1296,8 @@ static void moveBBContents(BasicBlock *FromBB, Instruction *InsertBefore) {
                 FromBB->getTerminator()->getIterator());
 }
 
-void LoopInterchangeTransform::updateIncomingBlock(BasicBlock *CurrBlock,
-                                                   BasicBlock *OldPred,
-                                                   BasicBlock *NewPred) {
+static void updateIncomingBlock(BasicBlock *CurrBlock, BasicBlock *OldPred,
+                                BasicBlock *NewPred) {
   for (PHINode &PHI : CurrBlock->phis()) {
     unsigned Num = PHI.getNumIncomingValues();
     for (unsigned i = 0; i < Num; ++i) {
@@ -1328,6 +1326,52 @@ static void updateSuccessor(BranchInst *BI, BasicBlock *OldBB,
       break;
     }
   }
+}
+
+// Move Lcssa PHIs to the right place.
+static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerLatch,
+                          BasicBlock *OuterLatch) {
+  SmallVector<PHINode *, 8> LcssaInnerExit;
+  for (PHINode &P : InnerExit->phis())
+    LcssaInnerExit.push_back(&P);
+
+  SmallVector<PHINode *, 8> LcssaInnerLatch;
+  for (PHINode &P : InnerLatch->phis())
+    LcssaInnerLatch.push_back(&P);
+
+  // Lcssa PHIs for values used outside the inner loop are in InnerExit.
+  // If a PHI node has users outside of InnerExit, it has a use outside the
+  // interchanged loop and we have to preserve it. We move these to
+  // InnerLatch, which will become the new exit block for the innermost
+  // loop after interchanging. For PHIs only used in InnerExit, we can just
+  // replace them with the incoming value.
+  for (PHINode *P : LcssaInnerExit) {
+    bool hasUsersOutside = false;
+    for (auto UI = P->use_begin(), E = P->use_end(); UI != E;) {
+      Use &U = *UI;
+      ++UI;
+      auto *Usr = cast<Instruction>(U.getUser());
+      if (Usr->getParent() != InnerExit) {
+        hasUsersOutside = true;
+        continue;
+      }
+      U.set(P->getIncomingValueForBlock(InnerLatch));
+    }
+    if (hasUsersOutside)
+      P->moveBefore(InnerLatch->getFirstNonPHI());
+    else
+      P->eraseFromParent();
+  }
+
+  // If the inner loop latch contains LCSSA PHIs, those come from a child loop
+  // and we have to move them to the new inner latch.
+  for (PHINode *P : LcssaInnerLatch)
+    P->moveBefore(InnerExit->getFirstNonPHI());
+
+  // Now adjust the incoming blocks for the LCSSA PHIs.
+  // For PHIs moved from Inner's exit block, we need to replace Inner's latch
+  // with the new latch.
+  updateIncomingBlock(InnerLatch, InnerLatch, OuterLatch);
 }
 
 bool LoopInterchangeTransform::adjustLoopBranches() {
@@ -1409,17 +1453,6 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   updateSuccessor(InnerLoopLatchPredecessorBI, InnerLoopLatch,
                   InnerLoopLatchSuccessor, DTUpdates);
 
-  // Adjust PHI nodes in InnerLoopLatchSuccessor. Update all uses of PHI with
-  // the value and remove this PHI node from inner loop.
-  SmallVector<PHINode *, 8> LcssaVec;
-  for (PHINode &P : InnerLoopLatchSuccessor->phis())
-    LcssaVec.push_back(&P);
-
-  for (PHINode *P : LcssaVec) {
-    Value *Incoming = P->getIncomingValueForBlock(InnerLoopLatch);
-    P->replaceAllUsesWith(Incoming);
-    P->eraseFromParent();
-  }
 
   if (OuterLoopLatchBI->getSuccessor(0) == OuterLoopHeader)
     OuterLoopLatchSuccessor = OuterLoopLatchBI->getSuccessor(1);
@@ -1431,11 +1464,14 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   updateSuccessor(OuterLoopLatchBI, OuterLoopLatchSuccessor, InnerLoopLatch,
                   DTUpdates);
 
-  updateIncomingBlock(OuterLoopLatchSuccessor, OuterLoopLatch, InnerLoopLatch);
-
   DT->applyUpdates(DTUpdates);
   restructureLoops(OuterLoop, InnerLoop, InnerLoopPreHeader,
                    OuterLoopPreHeader);
+
+  moveLCSSAPhis(InnerLoopLatchSuccessor, InnerLoopLatch, OuterLoopLatch);
+  // For PHIs in the exit block of the outer loop, outer's latch has been
+  // replaced by Inners'.
+  updateIncomingBlock(OuterLoopLatchSuccessor, OuterLoopLatch, InnerLoopLatch);
 
   // Now update the reduction PHIs in the inner and outer loop headers.
   SmallVector<PHINode *, 4> InnerLoopPHIs, OuterLoopPHIs;

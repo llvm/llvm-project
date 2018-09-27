@@ -1487,7 +1487,7 @@ bool LSRUse::HasFormulaWithSameRegs(const Formula &F) const {
   SmallVector<const SCEV *, 4> Key = F.BaseRegs;
   if (F.ScaledReg) Key.push_back(F.ScaledReg);
   // Unstable sort by host order ok, because this is only used for uniquifying.
-  llvm::sort(Key.begin(), Key.end());
+  llvm::sort(Key);
   return Uniquifier.count(Key);
 }
 
@@ -1511,7 +1511,7 @@ bool LSRUse::InsertFormula(const Formula &F, const Loop &L) {
   SmallVector<const SCEV *, 4> Key = F.BaseRegs;
   if (F.ScaledReg) Key.push_back(F.ScaledReg);
   // Unstable sort by host order ok, because this is only used for uniquifying.
-  llvm::sort(Key.begin(), Key.end());
+  llvm::sort(Key);
 
   if (!Uniquifier.insert(Key).second)
     return false;
@@ -4238,7 +4238,7 @@ void LSRInstance::FilterOutUndesirableDedicatedRegisters() {
           Key.push_back(F.ScaledReg);
         // Unstable sort by host order ok, because this is only used for
         // uniquifying.
-        llvm::sort(Key.begin(), Key.end());
+        llvm::sort(Key);
 
         std::pair<BestFormulaeTy::const_iterator, bool> P =
           BestFormulae.insert(std::make_pair(Key, FIdx));

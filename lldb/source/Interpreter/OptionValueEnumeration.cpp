@@ -19,7 +19,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 OptionValueEnumeration::OptionValueEnumeration(
-    const OptionEnumValueElement *enumerators, enum_type value)
+    const OptionEnumValues &enumerators, enum_type value)
     : OptionValue(), m_current_value(value), m_default_value(value),
       m_enumerations() {
   SetEnumerations(enumerators);
@@ -91,18 +91,16 @@ Status OptionValueEnumeration::SetValueFromString(llvm::StringRef value,
 }
 
 void OptionValueEnumeration::SetEnumerations(
-    const OptionEnumValueElement *enumerators) {
+    const OptionEnumValues &enumerators) {
   m_enumerations.Clear();
-  if (enumerators) {
-    for (size_t i = 0; enumerators[i].string_value != nullptr; ++i) {
-      ConstString const_enumerator_name(enumerators[i].string_value);
-      EnumeratorInfo enumerator_info = {enumerators[i].value,
-                                        enumerators[i].usage};
-      m_enumerations.Append(const_enumerator_name,
-                            enumerator_info);
-    }
-    m_enumerations.Sort();
+
+  for (const auto &enumerator : enumerators) {
+    ConstString const_enumerator_name(enumerator.string_value);
+    EnumeratorInfo enumerator_info = {enumerator.value, enumerator.usage};
+    m_enumerations.Append(const_enumerator_name, enumerator_info);
   }
+
+  m_enumerations.Sort();
 }
 
 lldb::OptionValueSP OptionValueEnumeration::DeepCopy() const {

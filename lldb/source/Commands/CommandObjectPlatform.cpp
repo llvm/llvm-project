@@ -63,19 +63,19 @@ static mode_t ParsePermissionString(llvm::StringRef permissions) {
   return user | group | world;
 }
 
-static OptionDefinition g_permissions_options[] = {
+static constexpr OptionDefinition g_permissions_options[] = {
     // clang-format off
-  {LLDB_OPT_SET_ALL, false, "permissions-value",   'v', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypePermissionsNumber, "Give out the numeric value for permissions (e.g. 757)"},
-  {LLDB_OPT_SET_ALL, false, "permissions-string",  's', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypePermissionsString, "Give out the string value for permissions (e.g. rwxr-xr--)."},
-  {LLDB_OPT_SET_ALL, false, "user-read",           'r', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,              "Allow user to read."},
-  {LLDB_OPT_SET_ALL, false, "user-write",          'w', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,              "Allow user to write."},
-  {LLDB_OPT_SET_ALL, false, "user-exec",           'x', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,              "Allow user to execute."},
-  {LLDB_OPT_SET_ALL, false, "group-read",          'R', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,              "Allow group to read."},
-  {LLDB_OPT_SET_ALL, false, "group-write",         'W', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,              "Allow group to write."},
-  {LLDB_OPT_SET_ALL, false, "group-exec",          'X', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,              "Allow group to execute."},
-  {LLDB_OPT_SET_ALL, false, "world-read",          'd', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,              "Allow world to read."},
-  {LLDB_OPT_SET_ALL, false, "world-write",         't', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,              "Allow world to write."},
-  {LLDB_OPT_SET_ALL, false, "world-exec",          'e', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,              "Allow world to execute."},
+  {LLDB_OPT_SET_ALL, false, "permissions-value",   'v', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypePermissionsNumber, "Give out the numeric value for permissions (e.g. 757)"},
+  {LLDB_OPT_SET_ALL, false, "permissions-string",  's', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypePermissionsString, "Give out the string value for permissions (e.g. rwxr-xr--)."},
+  {LLDB_OPT_SET_ALL, false, "user-read",           'r', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow user to read."},
+  {LLDB_OPT_SET_ALL, false, "user-write",          'w', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow user to write."},
+  {LLDB_OPT_SET_ALL, false, "user-exec",           'x', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow user to execute."},
+  {LLDB_OPT_SET_ALL, false, "group-read",          'R', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow group to read."},
+  {LLDB_OPT_SET_ALL, false, "group-write",         'W', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow group to write."},
+  {LLDB_OPT_SET_ALL, false, "group-exec",          'X', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow group to execute."},
+  {LLDB_OPT_SET_ALL, false, "world-read",          'd', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow world to read."},
+  {LLDB_OPT_SET_ALL, false, "world-write",         't', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow world to write."},
+  {LLDB_OPT_SET_ALL, false, "world-exec",          'e', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Allow world to execute."},
     // clang-format on
 };
 
@@ -614,10 +614,10 @@ public:
 // "platform fread"
 //----------------------------------------------------------------------
 
-static OptionDefinition g_platform_fread_options[] = {
+static constexpr OptionDefinition g_platform_fread_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_1, false, "offset", 'o', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeIndex, "Offset into the file at which to start reading." },
-  { LLDB_OPT_SET_1, false, "count",  'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount, "Number of bytes to read from the file." },
+  { LLDB_OPT_SET_1, false, "offset", 'o', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeIndex, "Offset into the file at which to start reading." },
+  { LLDB_OPT_SET_1, false, "count",  'c', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeCount, "Number of bytes to read from the file." },
     // clang-format on
 };
 
@@ -709,10 +709,10 @@ protected:
 // "platform fwrite"
 //----------------------------------------------------------------------
 
-static OptionDefinition g_platform_fwrite_options[] = {
+static constexpr OptionDefinition g_platform_fwrite_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_1, false, "offset", 'o', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeIndex, "Offset into the file at which to start reading." },
-  { LLDB_OPT_SET_1, false, "data",   'd', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeValue, "Text to write to the file." },
+  { LLDB_OPT_SET_1, false, "offset", 'o', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeIndex, "Offset into the file at which to start reading." },
+  { LLDB_OPT_SET_1, false, "data",   'd', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeValue, "Text to write to the file." },
     // clang-format on
 };
 
@@ -1102,22 +1102,22 @@ protected:
 // "platform process list"
 //----------------------------------------------------------------------
 
-OptionDefinition g_platform_process_list_options[] = {
+static OptionDefinition g_platform_process_list_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_1,             false, "pid",         'p', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypePid,               "List the process info for a specific process ID." },
-  { LLDB_OPT_SET_2,             true,  "name",        'n', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeProcessName,       "Find processes with executable basenames that match a string." },
-  { LLDB_OPT_SET_3,             true,  "ends-with",   'e', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeProcessName,       "Find processes with executable basenames that end with a string." },
-  { LLDB_OPT_SET_4,             true,  "starts-with", 's', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeProcessName,       "Find processes with executable basenames that start with a string." },
-  { LLDB_OPT_SET_5,             true,  "contains",    'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeProcessName,       "Find processes with executable basenames that contain a string." },
-  { LLDB_OPT_SET_6,             true,  "regex",       'r', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeRegularExpression, "Find processes with executable basenames that match a regular expression." },
-  { LLDB_OPT_SET_FROM_TO(2, 6), false, "parent",      'P', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypePid,               "Find processes that have a matching parent process ID." },
-  { LLDB_OPT_SET_FROM_TO(2, 6), false, "uid",         'u', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeUnsignedInteger,   "Find processes that have a matching user ID." },
-  { LLDB_OPT_SET_FROM_TO(2, 6), false, "euid",        'U', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeUnsignedInteger,   "Find processes that have a matching effective user ID." },
-  { LLDB_OPT_SET_FROM_TO(2, 6), false, "gid",         'g', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeUnsignedInteger,   "Find processes that have a matching group ID." },
-  { LLDB_OPT_SET_FROM_TO(2, 6), false, "egid",        'G', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeUnsignedInteger,   "Find processes that have a matching effective group ID." },
-  { LLDB_OPT_SET_FROM_TO(2, 6), false, "arch",        'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeArchitecture,      "Find processes that have a matching architecture." },
-  { LLDB_OPT_SET_FROM_TO(1, 6), false, "show-args",   'A', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,              "Show process arguments instead of the process executable basename." },
-  { LLDB_OPT_SET_FROM_TO(1, 6), false, "verbose",     'v', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,              "Enable verbose output." },
+  { LLDB_OPT_SET_1,             false, "pid",         'p', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypePid,               "List the process info for a specific process ID." },
+  { LLDB_OPT_SET_2,             true,  "name",        'n', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeProcessName,       "Find processes with executable basenames that match a string." },
+  { LLDB_OPT_SET_3,             true,  "ends-with",   'e', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeProcessName,       "Find processes with executable basenames that end with a string." },
+  { LLDB_OPT_SET_4,             true,  "starts-with", 's', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeProcessName,       "Find processes with executable basenames that start with a string." },
+  { LLDB_OPT_SET_5,             true,  "contains",    'c', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeProcessName,       "Find processes with executable basenames that contain a string." },
+  { LLDB_OPT_SET_6,             true,  "regex",       'r', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeRegularExpression, "Find processes with executable basenames that match a regular expression." },
+  { LLDB_OPT_SET_FROM_TO(2, 6), false, "parent",      'P', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypePid,               "Find processes that have a matching parent process ID." },
+  { LLDB_OPT_SET_FROM_TO(2, 6), false, "uid",         'u', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeUnsignedInteger,   "Find processes that have a matching user ID." },
+  { LLDB_OPT_SET_FROM_TO(2, 6), false, "euid",        'U', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeUnsignedInteger,   "Find processes that have a matching effective user ID." },
+  { LLDB_OPT_SET_FROM_TO(2, 6), false, "gid",         'g', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeUnsignedInteger,   "Find processes that have a matching group ID." },
+  { LLDB_OPT_SET_FROM_TO(2, 6), false, "egid",        'G', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeUnsignedInteger,   "Find processes that have a matching effective group ID." },
+  { LLDB_OPT_SET_FROM_TO(2, 6), false, "arch",        'a', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeArchitecture,      "Find processes that have a matching architecture." },
+  { LLDB_OPT_SET_FROM_TO(1, 6), false, "show-args",   'A', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Show process arguments instead of the process executable basename." },
+  { LLDB_OPT_SET_FROM_TO(1, 6), false, "verbose",     'v', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,              "Enable verbose output." },
     // clang-format on
 };
 
@@ -1488,12 +1488,12 @@ protected:
   }
 };
 
-static OptionDefinition g_platform_process_attach_options[] = {
+static constexpr OptionDefinition g_platform_process_attach_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_ALL, false, "plugin",  'P', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypePlugin,      "Name of the process plugin you want to use." },
-  { LLDB_OPT_SET_1,   false, "pid",     'p', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypePid,         "The process ID of an existing process to attach to." },
-  { LLDB_OPT_SET_2,   false, "name",    'n', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeProcessName, "The name of the process to attach to." },
-  { LLDB_OPT_SET_2,   false, "waitfor", 'w', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeNone,        "Wait for the process with <process-name> to launch." },
+  { LLDB_OPT_SET_ALL, false, "plugin",  'P', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypePlugin,      "Name of the process plugin you want to use." },
+  { LLDB_OPT_SET_1,   false, "pid",     'p', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypePid,         "The process ID of an existing process to attach to." },
+  { LLDB_OPT_SET_2,   false, "name",    'n', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeProcessName, "The name of the process to attach to." },
+  { LLDB_OPT_SET_2,   false, "waitfor", 'w', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,        "Wait for the process with <process-name> to launch." },
     // clang-format on
 };
 
@@ -1673,9 +1673,9 @@ private:
 //----------------------------------------------------------------------
 // "platform shell"
 //----------------------------------------------------------------------
-static OptionDefinition g_platform_shell_options[] = {
+static constexpr OptionDefinition g_platform_shell_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_ALL, false, "timeout", 't', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeValue, "Seconds to wait for the remote host to finish running the command." },
+  { LLDB_OPT_SET_ALL, false, "timeout", 't', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeValue, "Seconds to wait for the remote host to finish running the command." },
     // clang-format on
 };
 

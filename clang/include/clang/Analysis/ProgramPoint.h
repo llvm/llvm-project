@@ -215,6 +215,12 @@ public:
     ID.AddPointer(getTag());
   }
 
+  void print(StringRef CR, llvm::raw_ostream &Out) const;
+
+  LLVM_DUMP_METHOD void dump() const {
+    return print(/*CR=*/"\n", llvm::errs());
+  }
+
   static ProgramPoint getProgramPoint(const Stmt *S, ProgramPoint::Kind K,
                                       const LocationContext *LC,
                                       const ProgramPointTag *tag);

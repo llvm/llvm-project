@@ -2495,8 +2495,7 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
       MacroIdentifiers.push_back(Id.second);
   // Sort the set of macro definitions that need to be serialized by the
   // name of the macro, to provide a stable ordering.
-  llvm::sort(MacroIdentifiers.begin(), MacroIdentifiers.end(),
-             llvm::less_ptr<IdentifierInfo>());
+  llvm::sort(MacroIdentifiers, llvm::less_ptr<IdentifierInfo>());
 
   // Emit the macro directives as a list and associate the offset with the
   // identifier they belong to.
@@ -3230,8 +3229,7 @@ void ASTWriter::WriteFileDeclIDsMap() {
 
   SmallVector<std::pair<FileID, DeclIDInFileInfo *>, 64> SortedFileDeclIDs(
       FileDeclIDs.begin(), FileDeclIDs.end());
-  llvm::sort(SortedFileDeclIDs.begin(), SortedFileDeclIDs.end(),
-             llvm::less_first());
+  llvm::sort(SortedFileDeclIDs, llvm::less_first());
 
   // Join the vectors of DeclIDs from all files.
   SmallVector<DeclID, 256> FileGroupedDeclIDs;
@@ -3737,7 +3735,7 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
       IIs.push_back(ID.second);
     // Sort the identifiers lexicographically before getting them references so
     // that their order is stable.
-    llvm::sort(IIs.begin(), IIs.end(), llvm::less_ptr<IdentifierInfo>());
+    llvm::sort(IIs, llvm::less_ptr<IdentifierInfo>());
     for (const IdentifierInfo *II : IIs)
       if (Trait.isInterestingNonMacroIdentifier(II))
         getIdentifierRef(II);
@@ -4035,7 +4033,7 @@ ASTWriter::GenerateNameLookupTable(const DeclContext *ConstDC,
   }
 
   // Sort the names into a stable order.
-  llvm::sort(Names.begin(), Names.end());
+  llvm::sort(Names);
 
   if (auto *D = dyn_cast<CXXRecordDecl>(DC)) {
     // We need to establish an ordering of constructor and conversion function
@@ -4172,7 +4170,7 @@ uint64_t ASTWriter::WriteDeclContextVisibleBlock(ASTContext &Context,
             std::make_pair(Entry.first, Entry.second.getLookupResult()));
     }
 
-    llvm::sort(LookupResults.begin(), LookupResults.end(), llvm::less_first());
+    llvm::sort(LookupResults, llvm::less_first());
     for (auto &NameAndResult : LookupResults) {
       DeclarationName Name = NameAndResult.first;
       DeclContext::lookup_result Result = NameAndResult.second;
@@ -4875,7 +4873,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
         IIs.push_back(II);
     }
     // Sort the identifiers to visit based on their name.
-    llvm::sort(IIs.begin(), IIs.end(), llvm::less_ptr<IdentifierInfo>());
+    llvm::sort(IIs, llvm::less_ptr<IdentifierInfo>());
     for (const IdentifierInfo *II : IIs) {
       for (IdentifierResolver::iterator D = SemaRef.IdResolver.begin(II),
                                      DEnd = SemaRef.IdResolver.end();
@@ -5112,7 +5110,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
       };
 
       // Sort and deduplicate module IDs.
-      llvm::sort(Imports.begin(), Imports.end(), Cmp);
+      llvm::sort(Imports, Cmp);
       Imports.erase(std::unique(Imports.begin(), Imports.end(), Eq),
                     Imports.end());
 

@@ -321,7 +321,7 @@ public:
   FileIndex(std::vector<std::string> Files)
       : OriginalPaths(std::move(Files)), Strings(Arena) {
     // Sort commands by filename for determinism (index is a tiebreaker later).
-    llvm::sort(OriginalPaths.begin(), OriginalPaths.end());
+    llvm::sort(OriginalPaths);
     Paths.reserve(OriginalPaths.size());
     Types.reserve(OriginalPaths.size());
     Stems.reserve(OriginalPaths.size());
@@ -336,9 +336,9 @@ public:
         if (Dir->size() > ShortDirectorySegment) // not trivial ones
           Components.emplace_back(*Dir, I);
     }
-    llvm::sort(Paths.begin(), Paths.end());
-    llvm::sort(Stems.begin(), Stems.end());
-    llvm::sort(Components.begin(), Components.end());
+    llvm::sort(Paths);
+    llvm::sort(Stems);
+    llvm::sort(Components);
   }
 
   bool empty() const { return Paths.empty(); }

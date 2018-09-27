@@ -1072,7 +1072,7 @@ void ARMTargetELFStreamer::finishAttributeSection() {
   if (Contents.empty())
     return;
 
-  llvm::sort(Contents.begin(), Contents.end(), AttributeItem::LessTag);
+  llvm::sort(Contents, AttributeItem::LessTag);
 
   ARMELFStreamer &Streamer = getStreamer();
 

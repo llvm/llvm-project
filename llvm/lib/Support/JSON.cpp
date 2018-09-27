@@ -517,7 +517,7 @@ static std::vector<const Object::value_type *> sortedElements(const Object &O) {
   std::vector<const Object::value_type *> Elements;
   for (const auto &E : O)
     Elements.push_back(&E);
-  llvm::sort(Elements.begin(), Elements.end(),
+  llvm::sort(Elements,
              [](const Object::value_type *L, const Object::value_type *R) {
                return L->first < R->first;
              });

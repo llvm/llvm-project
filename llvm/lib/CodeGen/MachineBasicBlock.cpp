@@ -461,7 +461,7 @@ bool MachineBasicBlock::isLiveIn(MCPhysReg Reg, LaneBitmask LaneMask) const {
 }
 
 void MachineBasicBlock::sortUniqueLiveIns() {
-  llvm::sort(LiveIns.begin(), LiveIns.end(),
+  llvm::sort(LiveIns,
              [](const RegisterMaskPair &LI0, const RegisterMaskPair &LI1) {
                return LI0.PhysReg < LI1.PhysReg;
              });

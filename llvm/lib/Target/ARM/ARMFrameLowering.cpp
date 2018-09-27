@@ -1008,8 +1008,7 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
     if (Regs.empty())
       continue;
 
-    llvm::sort(Regs.begin(), Regs.end(), [&](const RegAndKill &LHS,
-                                             const RegAndKill &RHS) {
+    llvm::sort(Regs, [&](const RegAndKill &LHS, const RegAndKill &RHS) {
       return TRI.getEncodingValue(LHS.first) < TRI.getEncodingValue(RHS.first);
     });
 
@@ -1105,7 +1104,7 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
     if (Regs.empty())
       continue;
 
-    llvm::sort(Regs.begin(), Regs.end(), [&](unsigned LHS, unsigned RHS) {
+    llvm::sort(Regs, [&](unsigned LHS, unsigned RHS) {
       return TRI.getEncodingValue(LHS) < TRI.getEncodingValue(RHS);
     });
 

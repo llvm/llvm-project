@@ -668,10 +668,9 @@ void distributePressure(float RemainingPressure,
                         llvm::SmallVector<float, 32> &DensePressure) {
   // Find the number of subunits with minimal pressure (they are at the
   // front).
-  llvm::sort(Subunits.begin(), Subunits.end(),
-             [&DensePressure](const uint16_t A, const uint16_t B) {
-               return DensePressure[A] < DensePressure[B];
-             });
+  llvm::sort(Subunits, [&DensePressure](const uint16_t A, const uint16_t B) {
+    return DensePressure[A] < DensePressure[B];
+  });
   const auto getPressureForSubunit = [&DensePressure,
                                       &Subunits](size_t I) -> float & {
     return DensePressure[Subunits[I]];
@@ -718,11 +717,10 @@ std::vector<std::pair<uint16_t, float>> computeIdealizedProcResPressure(
     llvm::SmallVector<llvm::MCWriteProcResEntry, 8> WPRS) {
   // DensePressure[I] is the port pressure for Proc Resource I.
   llvm::SmallVector<float, 32> DensePressure(SM.getNumProcResourceKinds());
-  llvm::sort(WPRS.begin(), WPRS.end(),
-             [](const llvm::MCWriteProcResEntry &A,
-                const llvm::MCWriteProcResEntry &B) {
-               return A.ProcResourceIdx < B.ProcResourceIdx;
-             });
+  llvm::sort(WPRS, [](const llvm::MCWriteProcResEntry &A,
+                      const llvm::MCWriteProcResEntry &B) {
+    return A.ProcResourceIdx < B.ProcResourceIdx;
+  });
   for (const llvm::MCWriteProcResEntry &WPR : WPRS) {
     // Get units for the entry.
     const llvm::MCProcResourceDesc *const ProcResDesc =

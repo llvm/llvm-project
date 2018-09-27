@@ -1947,10 +1947,9 @@ bool HCE::runOnMachineFunction(MachineFunction &MF) {
   AssignmentMap IMap;
 
   collect(MF);
-  llvm::sort(Extenders.begin(), Extenders.end(),
-    [](const ExtDesc &A, const ExtDesc &B) {
-      return ExtValue(A) < ExtValue(B);
-    });
+  llvm::sort(Extenders, [](const ExtDesc &A, const ExtDesc &B) {
+    return ExtValue(A) < ExtValue(B);
+  });
 
   bool Changed = false;
   LLVM_DEBUG(dbgs() << "Collected " << Extenders.size() << " extenders\n");

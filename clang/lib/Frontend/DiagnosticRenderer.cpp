@@ -337,8 +337,8 @@ static void computeCommonMacroArgExpansionFileIDs(
   SmallVector<FileID, 4> EndArgExpansions;
   getMacroArgExpansionFileIDs(Begin, BeginArgExpansions, /*IsBegin=*/true, SM);
   getMacroArgExpansionFileIDs(End, EndArgExpansions, /*IsBegin=*/false, SM);
-  llvm::sort(BeginArgExpansions.begin(), BeginArgExpansions.end());
-  llvm::sort(EndArgExpansions.begin(), EndArgExpansions.end());
+  llvm::sort(BeginArgExpansions);
+  llvm::sort(EndArgExpansions);
   std::set_intersection(BeginArgExpansions.begin(), BeginArgExpansions.end(),
                         EndArgExpansions.begin(), EndArgExpansions.end(),
                         std::back_inserter(CommonArgExpansions));

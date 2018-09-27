@@ -1423,7 +1423,7 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(const Decl *D,
     AddedAttr = true;
   }
   if (!Features.empty()) {
-    llvm::sort(Features.begin(), Features.end());
+    llvm::sort(Features);
     Attrs.addAttribute("target-features", llvm::join(Features, ","));
     AddedAttr = true;
   }

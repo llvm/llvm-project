@@ -452,7 +452,8 @@ int __kmp_str_match_false(char const *data) {
   int result =
       __kmp_str_match("false", 1, data) || __kmp_str_match("off", 2, data) ||
       __kmp_str_match("0", 1, data) || __kmp_str_match(".false.", 2, data) ||
-      __kmp_str_match(".f.", 2, data) || __kmp_str_match("no", 1, data);
+      __kmp_str_match(".f.", 2, data) || __kmp_str_match("no", 1, data) ||
+      __kmp_str_match("disabled", 0, data);
   return result;
 } // __kmp_str_match_false
 
@@ -460,7 +461,8 @@ int __kmp_str_match_true(char const *data) {
   int result =
       __kmp_str_match("true", 1, data) || __kmp_str_match("on", 2, data) ||
       __kmp_str_match("1", 1, data) || __kmp_str_match(".true.", 2, data) ||
-      __kmp_str_match(".t.", 2, data) || __kmp_str_match("yes", 1, data);
+      __kmp_str_match(".t.", 2, data) || __kmp_str_match("yes", 1, data) ||
+      __kmp_str_match("enabled", 0, data);
   return result;
 } // __kmp_str_match_true
 

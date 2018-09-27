@@ -83,7 +83,7 @@ Expected<JITEvaluatedSymbol> LLJIT::lookupLinkerMangled(JITDylib &JD,
 
 LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES,
              std::unique_ptr<TargetMachine> TM, DataLayout DL)
-    : ES(std::move(ES)), Main(this->ES->createJITDylib("main")),
+    : ES(std::move(ES)), Main(this->ES->getMainJITDylib()),
       DL(std::move(DL)),
       ObjLinkingLayer(*this->ES,
                       [this](VModuleKey K) { return getMemoryManager(K); }),
@@ -93,7 +93,7 @@ LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES,
 LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES,
              JITTargetMachineBuilder JTMB, DataLayout DL,
              unsigned NumCompileThreads)
-    : ES(std::move(ES)), Main(this->ES->createJITDylib("main")),
+    : ES(std::move(ES)), Main(this->ES->getMainJITDylib()),
       DL(std::move(DL)),
       ObjLinkingLayer(*this->ES,
                       [this](VModuleKey K) { return getMemoryManager(K); }),
