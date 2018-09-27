@@ -20,7 +20,7 @@ namespace wasm {
 
 struct Configuration {
   bool AllowUndefined;
-  bool CompressRelocTargets;
+  bool CompressRelocations;
   bool Demangle;
   bool DisableVerify;
   bool ExportAll;

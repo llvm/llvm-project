@@ -6,15 +6,15 @@ target triple = "x86_64-unknown-linux-gnu"
 %struct._IO_FILE = type { i32, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, %struct._IO_marker*, %struct._IO_FILE*, i32, i32, i64, i16, i8, [1 x i8], i8*, i64, i8*, i8*, i8*, i8*, i64, i32, [20 x i8] }
 %struct._IO_marker = type { %struct._IO_marker*, %struct._IO_FILE*, i32 }
 
-@A = common global [1536 x [1536 x float]] zeroinitializer, align 16
-@B = common global [1536 x [1536 x float]] zeroinitializer, align 16
-@stdout = external global %struct._IO_FILE*, align 8
+@A = common dso_local global [1536 x [1536 x float]] zeroinitializer, align 16
+@B = common dso_local global [1536 x [1536 x float]] zeroinitializer, align 16
+@stdout = external dso_local global %struct._IO_FILE*, align 8
 @.str = private unnamed_addr constant [5 x i8] c"%lf \00", align 1
-@C = common global [1536 x [1536 x float]] zeroinitializer, align 16
+@C = common dso_local global [1536 x [1536 x float]] zeroinitializer, align 16
 @.str.1 = private unnamed_addr constant [2 x i8] c"\0A\00", align 1
 
-; Function Attrs: nounwind uwtable
-define void @init_array() #0 {
+; Function Attrs: noinline nounwind uwtable
+define dso_local void @init_array() #0 {
 entry:
   %i = alloca i32, align 4
   %j = alloca i32, align 4
@@ -44,12 +44,12 @@ for.body3:                                        ; preds = %for.cond1
   %conv = sitofp i32 %add to double
   %div = fdiv double %conv, 2.000000e+00
   %conv4 = fptrunc double %div to float
-  %4 = load i32, i32* %j, align 4
+  %4 = load i32, i32* %i, align 4
   %idxprom = sext i32 %4 to i64
-  %5 = load i32, i32* %i, align 4
+  %arrayidx = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @A, i64 0, i64 %idxprom
+  %5 = load i32, i32* %j, align 4
   %idxprom5 = sext i32 %5 to i64
-  %arrayidx = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @A, i64 0, i64 %idxprom5
-  %arrayidx6 = getelementptr inbounds [1536 x float], [1536 x float]* %arrayidx, i64 0, i64 %idxprom
+  %arrayidx6 = getelementptr inbounds [1536 x float], [1536 x float]* %arrayidx, i64 0, i64 %idxprom5
   store float %conv4, float* %arrayidx6, align 4
   %6 = load i32, i32* %i, align 4
   %7 = load i32, i32* %j, align 4
@@ -59,12 +59,12 @@ for.body3:                                        ; preds = %for.cond1
   %conv10 = sitofp i32 %add9 to double
   %div11 = fdiv double %conv10, 2.000000e+00
   %conv12 = fptrunc double %div11 to float
-  %8 = load i32, i32* %j, align 4
+  %8 = load i32, i32* %i, align 4
   %idxprom13 = sext i32 %8 to i64
-  %9 = load i32, i32* %i, align 4
-  %idxprom14 = sext i32 %9 to i64
-  %arrayidx15 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @B, i64 0, i64 %idxprom14
-  %arrayidx16 = getelementptr inbounds [1536 x float], [1536 x float]* %arrayidx15, i64 0, i64 %idxprom13
+  %arrayidx14 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @B, i64 0, i64 %idxprom13
+  %9 = load i32, i32* %j, align 4
+  %idxprom15 = sext i32 %9 to i64
+  %arrayidx16 = getelementptr inbounds [1536 x float], [1536 x float]* %arrayidx14, i64 0, i64 %idxprom15
   store float %conv12, float* %arrayidx16, align 4
   br label %for.inc
 
@@ -87,8 +87,8 @@ for.end19:                                        ; preds = %for.cond
   ret void
 }
 
-; Function Attrs: nounwind uwtable
-define void @print_array() #0 {
+; Function Attrs: noinline nounwind uwtable
+define dso_local void @print_array() #0 {
 entry:
   %i = alloca i32, align 4
   %j = alloca i32, align 4
@@ -111,12 +111,12 @@ for.cond1:                                        ; preds = %for.inc, %for.body
 
 for.body3:                                        ; preds = %for.cond1
   %2 = load %struct._IO_FILE*, %struct._IO_FILE** @stdout, align 8
-  %3 = load i32, i32* %j, align 4
+  %3 = load i32, i32* %i, align 4
   %idxprom = sext i32 %3 to i64
-  %4 = load i32, i32* %i, align 4
+  %arrayidx = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @C, i64 0, i64 %idxprom
+  %4 = load i32, i32* %j, align 4
   %idxprom4 = sext i32 %4 to i64
-  %arrayidx = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @C, i64 0, i64 %idxprom4
-  %arrayidx5 = getelementptr inbounds [1536 x float], [1536 x float]* %arrayidx, i64 0, i64 %idxprom
+  %arrayidx5 = getelementptr inbounds [1536 x float], [1536 x float]* %arrayidx, i64 0, i64 %idxprom4
   %5 = load float, float* %arrayidx5, align 4
   %conv = fpext float %5 to double
   %call = call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %2, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i32 0, i32 0), double %conv)
@@ -154,10 +154,10 @@ for.end12:                                        ; preds = %for.cond
   ret void
 }
 
-declare i32 @fprintf(%struct._IO_FILE*, i8*, ...) #1
+declare dso_local i32 @fprintf(%struct._IO_FILE*, i8*, ...) #1
 
-; Function Attrs: nounwind uwtable
-define i32 @main() #0 {
+; Function Attrs: noinline nounwind uwtable
+define dso_local i32 @main() #0 {
 entry:
   %retval = alloca i32, align 4
   %i = alloca i32, align 4
@@ -185,12 +185,12 @@ for.cond1:                                        ; preds = %for.inc25, %for.bod
   br i1 %cmp2, label %for.body3, label %for.end27
 
 for.body3:                                        ; preds = %for.cond1
-  %2 = load i32, i32* %j, align 4
+  %2 = load i32, i32* %i, align 4
   %idxprom = sext i32 %2 to i64
-  %3 = load i32, i32* %i, align 4
+  %arrayidx = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @C, i64 0, i64 %idxprom
+  %3 = load i32, i32* %j, align 4
   %idxprom4 = sext i32 %3 to i64
-  %arrayidx = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @C, i64 0, i64 %idxprom4
-  %arrayidx5 = getelementptr inbounds [1536 x float], [1536 x float]* %arrayidx, i64 0, i64 %idxprom
+  %arrayidx5 = getelementptr inbounds [1536 x float], [1536 x float]* %arrayidx, i64 0, i64 %idxprom4
   store float 0.000000e+00, float* %arrayidx5, align 4
   store i32 0, i32* %k, align 4
   br label %for.cond6
@@ -201,35 +201,35 @@ for.cond6:                                        ; preds = %for.inc, %for.body3
   br i1 %cmp7, label %for.body8, label %for.end
 
 for.body8:                                        ; preds = %for.cond6
-  %5 = load i32, i32* %j, align 4
+  %5 = load i32, i32* %i, align 4
   %idxprom9 = sext i32 %5 to i64
-  %6 = load i32, i32* %i, align 4
-  %idxprom10 = sext i32 %6 to i64
-  %arrayidx11 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @C, i64 0, i64 %idxprom10
-  %arrayidx12 = getelementptr inbounds [1536 x float], [1536 x float]* %arrayidx11, i64 0, i64 %idxprom9
+  %arrayidx10 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @C, i64 0, i64 %idxprom9
+  %6 = load i32, i32* %j, align 4
+  %idxprom11 = sext i32 %6 to i64
+  %arrayidx12 = getelementptr inbounds [1536 x float], [1536 x float]* %arrayidx10, i64 0, i64 %idxprom11
   %7 = load float, float* %arrayidx12, align 4
-  %8 = load i32, i32* %k, align 4
+  %8 = load i32, i32* %i, align 4
   %idxprom13 = sext i32 %8 to i64
-  %9 = load i32, i32* %i, align 4
-  %idxprom14 = sext i32 %9 to i64
-  %arrayidx15 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @A, i64 0, i64 %idxprom14
-  %arrayidx16 = getelementptr inbounds [1536 x float], [1536 x float]* %arrayidx15, i64 0, i64 %idxprom13
+  %arrayidx14 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @A, i64 0, i64 %idxprom13
+  %9 = load i32, i32* %k, align 4
+  %idxprom15 = sext i32 %9 to i64
+  %arrayidx16 = getelementptr inbounds [1536 x float], [1536 x float]* %arrayidx14, i64 0, i64 %idxprom15
   %10 = load float, float* %arrayidx16, align 4
-  %11 = load i32, i32* %j, align 4
+  %11 = load i32, i32* %k, align 4
   %idxprom17 = sext i32 %11 to i64
-  %12 = load i32, i32* %k, align 4
-  %idxprom18 = sext i32 %12 to i64
-  %arrayidx19 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @B, i64 0, i64 %idxprom18
-  %arrayidx20 = getelementptr inbounds [1536 x float], [1536 x float]* %arrayidx19, i64 0, i64 %idxprom17
+  %arrayidx18 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @B, i64 0, i64 %idxprom17
+  %12 = load i32, i32* %j, align 4
+  %idxprom19 = sext i32 %12 to i64
+  %arrayidx20 = getelementptr inbounds [1536 x float], [1536 x float]* %arrayidx18, i64 0, i64 %idxprom19
   %13 = load float, float* %arrayidx20, align 4
   %mul = fmul float %10, %13
   %add = fadd float %7, %mul
-  %14 = load i32, i32* %j, align 4
+  %14 = load i32, i32* %i, align 4
   %idxprom21 = sext i32 %14 to i64
-  %15 = load i32, i32* %i, align 4
-  %idxprom22 = sext i32 %15 to i64
-  %arrayidx23 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @C, i64 0, i64 %idxprom22
-  %arrayidx24 = getelementptr inbounds [1536 x float], [1536 x float]* %arrayidx23, i64 0, i64 %idxprom21
+  %arrayidx22 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @C, i64 0, i64 %idxprom21
+  %15 = load i32, i32* %j, align 4
+  %idxprom23 = sext i32 %15 to i64
+  %arrayidx24 = getelementptr inbounds [1536 x float], [1536 x float]* %arrayidx22, i64 0, i64 %idxprom23
   store float %add, float* %arrayidx24, align 4
   br label %for.inc
 
@@ -261,9 +261,11 @@ for.end30:                                        ; preds = %for.cond
   ret i32 0
 }
 
-attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noinline nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
-!llvm.ident = !{!0}
+!llvm.module.flags = !{!0}
+!llvm.ident = !{!1}
 
-!0 = !{!"clang version 4.0.0 (http://llvm.org/git/clang.git 081569d9a29c7bc827b2d41f8e62891bbc895e2f) (http://llvm.org/git/llvm.git e117e506536626352e8e47f6c72cd6e2a276622c)"}
+!0 = !{i32 1, !"wchar_size", i32 4}
+!1 = !{!"clang version 8.0.0 (trunk 342834) (llvm/trunk 342856)"}

@@ -5012,8 +5012,10 @@ int __kmp_aux_get_affinity_mask_proc(int proc, void **mask) {
 }
 
 // Dynamic affinity settings - Affinity balanced
-void __kmp_balanced_affinity(int tid, int nthreads) {
+void __kmp_balanced_affinity(kmp_info_t *th, int nthreads) {
+  KMP_DEBUG_ASSERT(th);
   bool fine_gran = true;
+  int tid = th->th.th_info.ds.ds_tid;
 
   switch (__kmp_affinity_gran) {
   case affinity_gran_fine:
@@ -5061,8 +5063,7 @@ void __kmp_balanced_affinity(int tid, int nthreads) {
     KMP_DEBUG_ASSERT2(KMP_AFFINITY_CAPABLE(),
                       "Illegal set affinity operation when not capable");
 
-    kmp_affin_mask_t *mask;
-    KMP_CPU_ALLOC_ON_STACK(mask);
+    kmp_affin_mask_t *mask = th->th.th_affin_mask;
     KMP_CPU_ZERO(mask);
 
     if (fine_gran) {
@@ -5082,11 +5083,9 @@ void __kmp_balanced_affinity(int tid, int nthreads) {
                  __kmp_gettid(), tid, buf);
     }
     __kmp_set_system_affinity(mask, TRUE);
-    KMP_CPU_FREE_FROM_STACK(mask);
   } else { // Non-uniform topology
 
-    kmp_affin_mask_t *mask;
-    KMP_CPU_ALLOC_ON_STACK(mask);
+    kmp_affin_mask_t *mask = th->th.th_affin_mask;
     KMP_CPU_ZERO(mask);
 
     int core_level = __kmp_affinity_find_core_level(
@@ -5250,7 +5249,6 @@ void __kmp_balanced_affinity(int tid, int nthreads) {
                  __kmp_gettid(), tid, buf);
     }
     __kmp_set_system_affinity(mask, TRUE);
-    KMP_CPU_FREE_FROM_STACK(mask);
   }
 }
 

@@ -66,16 +66,16 @@ using namespace lldb_private;
 
 namespace {
 
-PropertyDefinition g_properties[] = {
+static constexpr PropertyDefinition g_properties[] = {
     {"enable-external-lookup", OptionValue::eTypeBoolean, true, true, nullptr,
-     nullptr,
+     {},
      "Control the use of external tools or libraries to locate symbol files. "
      "On macOS, Spotlight is used to locate a matching .dSYM bundle based on "
      "the UUID of the executable."},
     {"clang-modules-cache-path", OptionValue::eTypeFileSpec, true, 0, nullptr,
-     nullptr,
+     {},
      "The path to the clang modules cache directory (-fmodules-cache-path)."},
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, nullptr, nullptr}};
+    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, {}, nullptr}};
 
 enum { ePropertyEnableExternalLookup, ePropertyClangModulesCachePath };
 
