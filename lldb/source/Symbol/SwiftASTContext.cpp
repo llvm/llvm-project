@@ -3777,16 +3777,17 @@ bool SwiftASTContext::RegisterSectionModules(
             llvm::StringRef section_data_ref(
                 (const char *)ast_file_data_sp->GetBytes(),
                 ast_file_data_sp->GetByteSize());
-            llvm::SmallVector<std::string, 4> llvm_modules;
-            if (swift::parseASTSection(sml, section_data_ref, llvm_modules)) {
+            llvm::SmallVector<std::string, 4> swift_modules;
+            if (swift::parseASTSection(sml, section_data_ref, swift_modules)) {
               // Collect the LLVM module names referenced by the AST.
-              for (auto module_name : llvm_modules)
+              for (auto module_name : swift_modules) {
                 module_names.push_back(module_name);
-              if (log)
-                log->Printf("SwiftASTContext::%s() - parsed %zu llvm modules "
-                            "from Swift AST section %zu of %zu.",
-                            __FUNCTION__, llvm_modules.size(), ast_number,
-                            ast_file_datas.size());
+                if (log)
+                  log->Printf("SwiftASTContext::%s() - parsed module %s"
+                              "from Swift AST section %zu of %zu.",
+                              __FUNCTION__, module_name.c_str(), ast_number,
+                              ast_file_datas.size());
+              }
             } else {
               // Keep track of the fact that we failed to parse the AST
               // section info.
