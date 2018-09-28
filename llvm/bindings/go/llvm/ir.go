@@ -74,6 +74,7 @@ type (
 	IntPredicate        C.LLVMIntPredicate
 	FloatPredicate      C.LLVMRealPredicate
 	LandingPadClause    C.LLVMLandingPadClauseTy
+	InlineAsmDialect    C.LLVMInlineAsmDialect
 )
 
 func (c Context) IsNil() bool        { return c.C == nil }
@@ -312,6 +313,15 @@ const (
 const (
 	LandingPadCatch  LandingPadClause = C.LLVMLandingPadCatch
 	LandingPadFilter LandingPadClause = C.LLVMLandingPadFilter
+)
+
+//-------------------------------------------------------------------------
+// llvm.InlineAsmDialect
+//-------------------------------------------------------------------------
+
+const (
+	InlineAsmDialectATT   InlineAsmDialect = C.LLVMInlineAsmDialectATT
+	InlineAsmDialectIntel InlineAsmDialect = C.LLVMInlineAsmDialectIntel
 )
 
 //-------------------------------------------------------------------------
@@ -1234,6 +1244,16 @@ func (v Value) IncomingValue(i int) (rv Value) {
 }
 func (v Value) IncomingBlock(i int) (bb BasicBlock) {
 	bb.C = C.LLVMGetIncomingBlock(v.C, C.unsigned(i))
+	return
+}
+
+// Operations on inline assembly
+func InlineAsm(t Type, asmString, constraints string, hasSideEffects, isAlignStack bool, dialect InlineAsmDialect) (rv Value) {
+	casm := C.CString(asmString)
+	defer C.free(unsafe.Pointer(casm))
+	cconstraints := C.CString(constraints)
+	defer C.free(unsafe.Pointer(cconstraints))
+	rv.C = C.LLVMGetInlineAsm(t.C, casm, C.size_t(len(asmString)), cconstraints, C.size_t(len(constraints)), boolToLLVMBool(hasSideEffects), boolToLLVMBool(isAlignStack), C.LLVMInlineAsmDialect(dialect))
 	return
 }
 

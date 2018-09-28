@@ -1464,7 +1464,8 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     if (isRHSID) return replaceInstUsesWith(SVI, RHS);
   }
 
-  if (isa<UndefValue>(RHS) && CanEvaluateShuffled(LHS, Mask)) {
+  if (isa<UndefValue>(RHS) && !SVI.increasesLength() &&
+      CanEvaluateShuffled(LHS, Mask)) {
     Value *V = EvaluateInDifferentElementOrder(LHS, Mask);
     return replaceInstUsesWith(SVI, V);
   }

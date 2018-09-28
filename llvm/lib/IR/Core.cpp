@@ -872,6 +872,38 @@ void LLVMSetMetadata(LLVMValueRef Inst, unsigned KindID, LLVMValueRef Val) {
   unwrap<Instruction>(Inst)->setMetadata(KindID, N);
 }
 
+struct LLVMOpaqueValueMetadataEntry {
+  unsigned Kind;
+  LLVMMetadataRef Metadata;
+};
+
+using MetadataEntries = SmallVectorImpl<std::pair<unsigned, MDNode *>>;
+static LLVMValueMetadataEntry *
+llvm_getMetadata(size_t *NumEntries,
+                 llvm::function_ref<void(MetadataEntries &)> AccessMD) {
+  SmallVector<std::pair<unsigned, MDNode *>, 8> MVEs;
+  AccessMD(MVEs);
+
+  LLVMOpaqueValueMetadataEntry *Result =
+  static_cast<LLVMOpaqueValueMetadataEntry *>(
+                                              safe_malloc(MVEs.size() * sizeof(LLVMOpaqueValueMetadataEntry)));
+  for (unsigned i = 0; i < MVEs.size(); ++i) {
+    const auto &ModuleFlag = MVEs[i];
+    Result[i].Kind = ModuleFlag.first;
+    Result[i].Metadata = wrap(ModuleFlag.second);
+  }
+  *NumEntries = MVEs.size();
+  return Result;
+}
+
+LLVMValueMetadataEntry *
+LLVMInstructionGetAllMetadataOtherThanDebugLoc(LLVMValueRef Value,
+                                               size_t *NumEntries) {
+  return llvm_getMetadata(NumEntries, [&Value](MetadataEntries &Entries) {
+    unwrap<Instruction>(Value)->getAllMetadata(Entries);
+  });
+}
+
 /*--.. Conversion functions ................................................--*/
 
 #define LLVM_DEFINE_VALUE_CAST(name)                                       \
@@ -1874,6 +1906,49 @@ void LLVMSetAlignment(LLVMValueRef V, unsigned Bytes) {
   else
     llvm_unreachable(
         "only GlobalValue, AllocaInst, LoadInst and StoreInst have alignment");
+}
+
+LLVMValueMetadataEntry *LLVMGlobalCopyAllMetadata(LLVMValueRef Value,
+                                                  size_t *NumEntries) {
+  return llvm_getMetadata(NumEntries, [&Value](MetadataEntries &Entries) {
+    if (Instruction *Instr = dyn_cast<Instruction>(unwrap(Value))) {
+      Instr->getAllMetadata(Entries);
+    } else {
+      unwrap<GlobalObject>(Value)->getAllMetadata(Entries);
+    }
+  });
+}
+
+unsigned LLVMValueMetadataEntriesGetKind(LLVMValueMetadataEntry *Entries,
+                                         unsigned Index) {
+  LLVMOpaqueValueMetadataEntry MVE =
+      static_cast<LLVMOpaqueValueMetadataEntry>(Entries[Index]);
+  return MVE.Kind;
+}
+
+LLVMMetadataRef
+LLVMValueMetadataEntriesGetMetadata(LLVMValueMetadataEntry *Entries,
+                                    unsigned Index) {
+  LLVMOpaqueValueMetadataEntry MVE =
+      static_cast<LLVMOpaqueValueMetadataEntry>(Entries[Index]);
+  return MVE.Metadata;
+}
+
+void LLVMDisposeValueMetadataEntries(LLVMValueMetadataEntry *Entries) {
+  free(Entries);
+}
+
+void LLVMGlobalSetMetadata(LLVMValueRef Global, unsigned Kind,
+                           LLVMMetadataRef MD) {
+  unwrap<GlobalObject>(Global)->setMetadata(Kind, unwrap<MDNode>(MD));
+}
+
+void LLVMGlobalEraseMetadata(LLVMValueRef Global, unsigned Kind) {
+  unwrap<GlobalObject>(Global)->eraseMetadata(Kind);
+}
+
+void LLVMGlobalClearMetadata(LLVMValueRef Global) {
+  unwrap<GlobalObject>(Global)->clearMetadata();
 }
 
 /*--.. Operations on global variables ......................................--*/
