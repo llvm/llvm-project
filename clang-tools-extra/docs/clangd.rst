@@ -133,15 +133,15 @@ VSCode Integration
 ------------------
 
 :program:`VSCode` provides `vscode-clangd
-<https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd>`
+<https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd>`_
 which is published in Visual Studio Marketplace and can be installed direcetly
 from :program:`VSCode`.
 
 Emacs Integration
 -----------------
 
-:program:`Emacs` provides `lsp-mode <github.com/emacs-lsp/lsp-mode>` and
-`Eglot <https://github.com/joaotavora/eglot>` plugins for LSP integration.
+:program:`Emacs` provides `lsp-mode <github.com/emacs-lsp/lsp-mode>`_ and
+`Eglot <https://github.com/joaotavora/eglot>`_ plugins for LSP integration.
 
 Getting Involved
 ==================
