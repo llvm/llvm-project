@@ -38,8 +38,9 @@
 
 namespace __xray {
 
-SpinMutex LogMutex;
+static SpinMutex LogMutex;
 
+namespace {
 // We use elements of this type to record the entry TSC of every function ID we
 // see as we're tracing a particular thread's execution.
 struct alignas(16) StackEntry {
@@ -62,15 +63,16 @@ struct alignas(64) ThreadLocalData {
   int Fd = -1;
 };
 
-static pthread_key_t PThreadKey;
-
-static atomic_uint8_t BasicInitialized{0};
-
 struct BasicLoggingOptions {
   int DurationFilterMicros = 0;
   size_t MaxStackDepth = 0;
   size_t ThreadBufferSize = 0;
 };
+} // namespace
+
+static pthread_key_t PThreadKey;
+
+static atomic_uint8_t BasicInitialized{0};
 
 struct BasicLoggingOptions GlobalOptions;
 

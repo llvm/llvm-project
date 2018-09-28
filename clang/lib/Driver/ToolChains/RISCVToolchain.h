@@ -1,4 +1,4 @@
-//===--- RISCV.h - RISCV ToolChain Implementations --------------*- C++ -*-===//
+//===--- RISCVToolchain.h - RISCV ToolChain Implementations -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_RISCV_H
-#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_RISCV_H
+#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_RISCVTOOLCHAIN_H
+#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_RISCVTOOLCHAIN_H
 
 #include "Gnu.h"
 #include "clang/Driver/ToolChain.h"
@@ -60,4 +60,4 @@ public:
 } // end namespace driver
 } // end namespace clang
 
-#endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_RISCV_H
+#endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_RISCVTOOLCHAIN_H

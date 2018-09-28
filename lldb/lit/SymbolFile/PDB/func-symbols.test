@@ -14,7 +14,7 @@ CHECK-ONE-DAG: [[TY0:.*]]:   Type{[[UID0:.*]]} , name = "Func_arg_array", decl =
 CHECK-ONE-DAG: [[TY1:.*]]:   Type{[[UID1:.*]]} , name = "Func_arg_void", decl = FuncSymbolsTestMain.cpp:4, compiler_type = {{.*}} void (void)
 CHECK-ONE-DAG: [[TY2:.*]]:   Type{[[UID2:.*]]} , name = "Func_arg_none", decl = FuncSymbolsTestMain.cpp:5, compiler_type = {{.*}} void (void)
 CHECK-ONE-DAG: [[TY3:.*]]:   Type{[[UID3:.*]]} , name = "Func_varargs", decl = FuncSymbolsTestMain.cpp:6, compiler_type = {{.*}} void (...)
-CHECK-ONE-DAG: [[TY4:.*]]:   Type{[[UID4:.*]]} , name = "Func", decl = FuncSymbolsTestMain.cpp:28, compiler_type = {{.*}} void (signed char, int)
+CHECK-ONE-DAG: [[TY4:.*]]:   Type{[[UID4:.*]]} , name = "Func", decl = FuncSymbolsTestMain.cpp:28, compiler_type = {{.*}} void (char, int)
 CHECK-ONE-DAG: [[TY5:.*]]:   Type{[[UID5:.*]]} , name = "main", decl = FuncSymbolsTestMain.cpp:44, compiler_type = {{.*}} int (void)
 CHECK-ONE-DAG: [[TY6:.*]]:   Type{[[UID6:.*]]} , name = "Func", decl = FuncSymbolsTestMain.cpp:24, compiler_type = {{.*}} void (int, const long, volatile _Bool, ...)
 CHECK-ONE-DAG: [[TY7:.*]]:   Type{[[UID7:.*]]} , name = "StaticFunction", decl = FuncSymbolsTestMain.cpp:35, compiler_type = {{.*}} long (int)

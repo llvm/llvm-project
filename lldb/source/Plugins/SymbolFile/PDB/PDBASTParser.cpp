@@ -113,6 +113,8 @@ GetBuiltinTypeForPDBEncodingAndBitSize(ClangASTContext &clang_ast,
     return CompilerType();
   case PDB_BuiltinType::Void:
     return clang_ast.GetBasicType(eBasicTypeVoid);
+  case PDB_BuiltinType::Char:
+    return clang_ast.GetBasicType(eBasicTypeChar);
   case PDB_BuiltinType::Bool:
     return clang_ast.GetBasicType(eBasicTypeBool);
   case PDB_BuiltinType::Long:

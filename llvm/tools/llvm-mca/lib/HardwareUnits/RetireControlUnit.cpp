@@ -21,7 +21,7 @@ using namespace llvm;
 
 namespace mca {
 
-RetireControlUnit::RetireControlUnit(const llvm::MCSchedModel &SM)
+RetireControlUnit::RetireControlUnit(const MCSchedModel &SM)
     : NextAvailableSlotIdx(0), CurrentInstructionSlotIdx(0),
       AvailableSlots(SM.MicroOpBufferSize), MaxRetirePerCycle(0) {
   // Check if the scheduling model provides extra information about the machine

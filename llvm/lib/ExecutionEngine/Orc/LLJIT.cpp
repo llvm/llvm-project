@@ -83,34 +83,38 @@ Expected<JITEvaluatedSymbol> LLJIT::lookupLinkerMangled(JITDylib &JD,
 
 LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES,
              std::unique_ptr<TargetMachine> TM, DataLayout DL)
-    : ES(std::move(ES)), Main(this->ES->getMainJITDylib()),
-      DL(std::move(DL)),
+    : ES(std::move(ES)), Main(this->ES->getMainJITDylib()), DL(std::move(DL)),
       ObjLinkingLayer(*this->ES,
                       [this](VModuleKey K) { return getMemoryManager(K); }),
-      CompileLayer(*this->ES, ObjLinkingLayer, TMOwningSimpleCompiler(std::move(TM))),
+      CompileLayer(*this->ES, ObjLinkingLayer,
+                   TMOwningSimpleCompiler(std::move(TM))),
       CtorRunner(Main), DtorRunner(Main) {}
 
-LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES,
-             JITTargetMachineBuilder JTMB, DataLayout DL,
-             unsigned NumCompileThreads)
-    : ES(std::move(ES)), Main(this->ES->getMainJITDylib()),
-      DL(std::move(DL)),
+LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES, JITTargetMachineBuilder JTMB,
+             DataLayout DL, unsigned NumCompileThreads)
+    : ES(std::move(ES)), Main(this->ES->getMainJITDylib()), DL(std::move(DL)),
       ObjLinkingLayer(*this->ES,
                       [this](VModuleKey K) { return getMemoryManager(K); }),
-      CompileLayer(*this->ES, ObjLinkingLayer, MultiThreadedSimpleCompiler(std::move(JTMB))),
+      CompileLayer(*this->ES, ObjLinkingLayer,
+                   MultiThreadedSimpleCompiler(std::move(JTMB))),
       CtorRunner(Main), DtorRunner(Main) {
   assert(NumCompileThreads != 0 &&
          "Multithreaded LLJIT instance can not be created with 0 threads");
 
+  // Move modules to new contexts when they're emitted so that we can compile
+  // them in parallel.
+  CompileLayer.setCloneToNewContextOnEmit(true);
+
+  // Create a thread pool to compile on and set the execution session
+  // dispatcher to use the thread pool.
   CompileThreads = llvm::make_unique<ThreadPool>(NumCompileThreads);
-  this->ES->setDispatchMaterialization([this](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
-      // FIXME: Switch to move capture once we have c++14.
-      auto SharedMU = std::shared_ptr<MaterializationUnit>(std::move(MU));
-      auto Work = [SharedMU, &JD]() {
-        SharedMU->doMaterialize(JD);
-      };
-      CompileThreads->async(std::move(Work));
-    });
+  this->ES->setDispatchMaterialization(
+      [this](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
+        // FIXME: Switch to move capture once we have c++14.
+        auto SharedMU = std::shared_ptr<MaterializationUnit>(std::move(MU));
+        auto Work = [SharedMU, &JD]() { SharedMU->doMaterialize(JD); };
+        CompileThreads->async(std::move(Work));
+      });
 }
 
 std::unique_ptr<RuntimeDyld::MemoryManager>
@@ -181,7 +185,7 @@ Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
   if (auto Err = applyDataLayout(*TSM.getModule()))
     return Err;
 
-  makeAllSymbolsExternallyAccessible(*TSM.getModule());
+  PromoteSymbols(*TSM.getModule());
 
   recordCtorDtors(*TSM.getModule());
 
@@ -206,7 +210,9 @@ LLLazyJIT::LLLazyJIT(
     : LLJIT(std::move(ES), std::move(JTMB), std::move(DL), NumCompileThreads),
       LCTMgr(std::move(LCTMgr)), TransformLayer(*this->ES, CompileLayer),
       CODLayer(*this->ES, TransformLayer, *this->LCTMgr,
-               std::move(ISMBuilder)) {}
+               std::move(ISMBuilder)) {
+  CODLayer.setCloneToNewContextOnEmit(true);
+}
 
 } // End namespace orc.
 } // End namespace llvm.

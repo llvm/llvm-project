@@ -1,15 +1,12 @@
-// RUN: %clangxx_xray -g -std=c++11 %s -o %t
-// RUN: rm fdr-thread-order.* || true
-// RUN: XRAY_OPTIONS="patch_premain=false xray_naive_log=false \
-// RUN:    xray_logfile_base=fdr-thread-order. xray_fdr_log=true verbosity=1 \
-// RUN:    xray_fdr_log_func_duration_threshold_us=0" %run %t 2>&1 | \
+// RUN: rm -rf %t && mkdir %t
+// RUN: %clangxx_xray -g -std=c++11 %s -o %t.exe
+// RUN: XRAY_OPTIONS="patch_premain=false \
+// RUN:    xray_logfile_base=%t/ xray_mode=xray-fdr verbosity=1" \
+// RUN:    XRAY_FDR_OPTIONS=func_duration_threshold_us=0 %run %t.exe 2>&1 | \
 // RUN:    FileCheck %s
-// RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t \
-// RUN:    "`ls fdr-thread-order.* | head -1`"
-// RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t \
-// RUN:    "`ls fdr-thread-order.* | head -1`" | \
-// RUN:    FileCheck %s --check-prefix TRACE
-// RUN: rm fdr-thread-order.*
+// RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t.exe %t/*
+// RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t.exe %t/* | \
+// RUN:   FileCheck %s --check-prefix TRACE
 // FIXME: Make llvm-xray work on non-x86_64 as well.
 // REQUIRES: x86_64-target-arch
 // REQUIRES: built-in-llvm-tree

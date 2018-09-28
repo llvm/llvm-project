@@ -2985,11 +2985,13 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
     }
     const ExplodedNode *OtherNode = FirstHiddenNode;
     while (true) {
+      PreCallback(OtherNode);
       if (Stop(OtherNode))
         return true;
 
       if (OtherNode == N)
         break;
+      PostCallback(OtherNode);
 
       OtherNode = *OtherNode->succ_begin();
     }

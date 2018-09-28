@@ -989,8 +989,9 @@ static void setConfigs(opt::InputArgList &Args) {
   // You cannot choose which one, Rel or Rela, you want to use. Instead each
   // ABI defines which one you need to use. The following expression expresses
   // that.
-  Config->IsRela = M == EM_AARCH64 || M == EM_AMDGPU || M == EM_PPC ||
-                   M == EM_PPC64 || M == EM_RISCV || M == EM_X86_64;
+  Config->IsRela = M == EM_AARCH64 || M == EM_AMDGPU || M == EM_HEXAGON ||
+                   M == EM_PPC || M == EM_PPC64 || M == EM_RISCV ||
+                   M == EM_X86_64;
 
   // If the output uses REL relocations we must store the dynamic relocation
   // addends to the output sections. We also store addends for RELA relocations

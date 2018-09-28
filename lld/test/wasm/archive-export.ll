@@ -5,9 +5,9 @@ RUN: llc -filetype=obj %S/Inputs/archive1.ll -o %t.a1.o
 RUN: llc -filetype=obj %S/Inputs/archive2.ll -o %t.a2.o
 RUN: rm -f %t.a
 RUN: llvm-ar rcs %t.a %t.a1.o %t.a2.o
-RUN: wasm-ld --export=archive2_symbol -o %t.wasm %t.a %t.o
+RUN: wasm-ld --export-dynamic --export=archive2_symbol -o %t.wasm %t.a %t.o
 RUN: obj2yaml %t.wasm | FileCheck %s
-RUN: wasm-ld -o %t.wasm %t.a %t.o
+RUN: wasm-ld --export-dynamic -o %t.wasm %t.a %t.o
 RUN: obj2yaml %t.wasm | FileCheck %s -check-prefix=NOEXPORT
 
 CHECK:         Exports:

@@ -35,10 +35,10 @@ void DefaultResourceStrategy::skipMask(uint64_t Mask) {
 
 uint64_t DefaultResourceStrategy::select(uint64_t ReadyMask) {
   // This method assumes that ReadyMask cannot be zero.
-  uint64_t CandidateMask = llvm::PowerOf2Floor(NextInSequenceMask);
+  uint64_t CandidateMask = PowerOf2Floor(NextInSequenceMask);
   while (!(ReadyMask & CandidateMask)) {
     skipMask(CandidateMask);
-    CandidateMask = llvm::PowerOf2Floor(NextInSequenceMask);
+    CandidateMask = PowerOf2Floor(NextInSequenceMask);
   }
   return CandidateMask;
 }
@@ -55,8 +55,8 @@ ResourceState::ResourceState(const MCProcResourceDesc &Desc, unsigned Index,
                              uint64_t Mask)
     : ProcResourceDescIndex(Index), ResourceMask(Mask),
       BufferSize(Desc.BufferSize) {
-  if (llvm::countPopulation(ResourceMask) > 1)
-    ResourceSizeMask = ResourceMask ^ llvm::PowerOf2Floor(ResourceMask);
+  if (countPopulation(ResourceMask) > 1)
+    ResourceSizeMask = ResourceMask ^ PowerOf2Floor(ResourceMask);
   else
     ResourceSizeMask = (1ULL << Desc.NumUnits) - 1;
   ReadyMask = ResourceSizeMask;
@@ -66,7 +66,7 @@ ResourceState::ResourceState(const MCProcResourceDesc &Desc, unsigned Index,
 
 bool ResourceState::isReady(unsigned NumUnits) const {
   return (!isReserved() || isADispatchHazard()) &&
-         llvm::countPopulation(ReadyMask) >= NumUnits;
+         countPopulation(ReadyMask) >= NumUnits;
 }
 
 ResourceStateEvent ResourceState::isBufferAvailable() const {
@@ -87,7 +87,7 @@ void ResourceState::dump() const {
 #endif
 
 static unsigned getResourceStateIndex(uint64_t Mask) {
-  return std::numeric_limits<uint64_t>::digits - llvm::countLeadingZeros(Mask);
+  return std::numeric_limits<uint64_t>::digits - countLeadingZeros(Mask);
 }
 
 static std::unique_ptr<ResourceStrategy>

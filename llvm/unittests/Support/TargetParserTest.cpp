@@ -126,8 +126,6 @@ TEST(TargetParserTest, testARMCPU) {
                          ARM::AEK_DSP, "6"));
   EXPECT_TRUE(testARMCPU("arm1136jz-s", "armv6", "none",
                          ARM::AEK_DSP, "6"));
-  EXPECT_TRUE(testARMCPU("arm1176j-s", "armv6k", "none",
-                         ARM::AEK_DSP, "6K"));
   EXPECT_TRUE(testARMCPU("arm1176jz-s", "armv6kz", "none",
                          ARM::AEK_SEC | ARM::AEK_DSP, "6KZ"));
   EXPECT_TRUE(testARMCPU("mpcore", "armv6k", "vfpv2",
@@ -285,7 +283,7 @@ TEST(TargetParserTest, testARMCPU) {
                          "7-S"));
 }
 
-static constexpr unsigned NumARMCPUArchs = 83;
+static constexpr unsigned NumARMCPUArchs = 82;
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;
@@ -346,7 +344,7 @@ TEST(TargetParserTest, testARMArch) {
       testARMArch("armv6", "arm1136jf-s", "v6",
                           ARMBuildAttrs::CPUArch::v6));
   EXPECT_TRUE(
-      testARMArch("armv6k", "arm1176j-s", "v6k",
+      testARMArch("armv6k", "mpcore", "v6k",
                           ARMBuildAttrs::CPUArch::v6K));
   EXPECT_TRUE(
       testARMArch("armv6t2", "arm1156t2-s", "v6t2",

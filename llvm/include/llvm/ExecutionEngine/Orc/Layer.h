@@ -40,7 +40,9 @@ public:
   /// compiling them to enable concurrent compilation.
   /// Single threaded clients, or clients who load every module on a new
   /// context, need not set this.
-  void setCloneToNewContextOnEmit(bool CloneToNewContextOnEmit);
+  void setCloneToNewContextOnEmit(bool CloneToNewContextOnEmit) {
+    this->CloneToNewContextOnEmit = CloneToNewContextOnEmit;
+  }
 
   /// Returns the current value of the CloneToNewContextOnEmit flag.
   bool getCloneToNewContextOnEmit() const { return CloneToNewContextOnEmit; }
@@ -83,6 +85,9 @@ public:
   /// IRMaterializationUnit to another.
   IRMaterializationUnit(ThreadSafeModule TSM, SymbolFlagsMap SymbolFlags,
                         SymbolNameToDefinitionMap SymbolToDefinition);
+
+  /// Return the ModuleIdentifier as the name for this MaterializationUnit.
+  StringRef getName() const override;
 
 protected:
   ThreadSafeModule TSM;
@@ -144,6 +149,9 @@ public:
   BasicObjectLayerMaterializationUnit(ObjectLayer &L, VModuleKey K,
                                       std::unique_ptr<MemoryBuffer> O,
                                       SymbolFlagsMap SymbolFlags);
+
+  /// Return the buffer's identifier as the name for this MaterializationUnit.
+  StringRef getName() const override;
 
 private:
 

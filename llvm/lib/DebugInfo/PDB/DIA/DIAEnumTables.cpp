@@ -13,9 +13,8 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
-DIAEnumTables::DIAEnumTables(
-  CComPtr<IDiaEnumTables> DiaEnumerator)
-  : Enumerator(DiaEnumerator) {}
+DIAEnumTables::DIAEnumTables(CComPtr<IDiaEnumTables> DiaEnumerator)
+    : Enumerator(DiaEnumerator) {}
 
 uint32_t DIAEnumTables::getChildCount() const {
   LONG Count = 0;

@@ -59,7 +59,7 @@ struct good_const {
 good_const gc;
 
 struct no_default {
-  no_default() = delete; // expected-note 4{{deleted here}}
+  no_default() = delete; // expected-note 5{{deleted here}}
 };
 struct no_dtor {
   ~no_dtor() = delete; // expected-note 2{{deleted here}}
@@ -108,8 +108,8 @@ struct has_friend {
 has_friend hf;
 
 struct defaulted_delete {
-  no_default nd; // expected-note {{because field 'nd' has a deleted default constructor}}
-  defaulted_delete() = default; // expected-note{{implicitly deleted here}}
+  no_default nd; // expected-note 2{{because field 'nd' has a deleted default constructor}}
+  defaulted_delete() = default; // expected-note{{implicitly deleted here}} expected-warning {{implicitly deleted}}
 };
 defaulted_delete dd; // expected-error {{call to implicitly-deleted default constructor}}
 

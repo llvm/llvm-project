@@ -16,4 +16,4 @@ config.libomptarget_filecheck = "@OPENMP_FILECHECK_EXECUTABLE@"
 config.libomptarget_debug = @LIBOMPTARGET_DEBUG@
 
 # Let the main config do the real work.
-lit_config.load_config(config, "@LIBOMPTARGET_BASE_DIR@/test/lit.cfg")
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg")
