@@ -5721,7 +5721,8 @@ void ARMAsmParser::getMnemonicAcceptInfo(StringRef Mnemonic, StringRef FullInst,
       Mnemonic == "vudot" || Mnemonic == "vsdot" ||
       Mnemonic == "vcmla" || Mnemonic == "vcadd" ||
       Mnemonic == "vfmal" || Mnemonic == "vfmsl" ||
-      Mnemonic == "sb") {
+      Mnemonic == "sb"    || Mnemonic == "ssbb"  ||
+      Mnemonic == "pssbb") {
     // These mnemonics are never predicable
     CanAcceptPredicationCode = false;
   } else if (!isThumb()) {
@@ -6822,6 +6823,26 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
       return Error(Operands[1]->getStartLoc(), "instruction 'csdb' is not "
                                                "predicable, but condition "
                                                "code specified");
+    break;
+  }
+  case ARM::DSB:
+  case ARM::t2DSB: {
+
+    if (Inst.getNumOperands() < 2)
+      break;
+
+    unsigned Option = Inst.getOperand(0).getImm();
+    unsigned Pred = Inst.getOperand(1).getImm();
+
+    // SSBB and PSSBB (DSB #0|#4) are not predicable (pred must be AL).
+    if (Option == 0 && Pred != ARMCC::AL)
+      return Error(Operands[1]->getStartLoc(),
+                   "instruction 'ssbb' is not predicable, but condition code "
+                   "specified");
+    if (Option == 4 && Pred != ARMCC::AL)
+      return Error(Operands[1]->getStartLoc(),
+                   "instruction 'pssbb' is not predicable, but condition code "
+                   "specified");
     break;
   }
   case ARM::VMOVRRS: {

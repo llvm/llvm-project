@@ -1,4 +1,4 @@
-//===--- RISCV.cpp - RISCV ToolChain Implementations ------------*- C++ -*-===//
+//===--- RISCVToolchain.cpp - RISCV ToolChain Implementations ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RISCV.h"
+#include "RISCVToolchain.h"
 #include "CommonArgs.h"
 #include "InputInfo.h"
 #include "clang/Driver/Compilation.h"

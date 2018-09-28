@@ -1441,7 +1441,7 @@ vzeroupper
 # CHECK-NEXT:  1      6     1.00    *                   vphaddsw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.50                        vphaddw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      6     1.00    *                   vphaddw	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      2     1.00                        vphminposuw	%xmm0, %xmm2
+# CHECK-NEXT:  1      2     0.50                        vphminposuw	%xmm0, %xmm2
 # CHECK-NEXT:  1      7     1.00    *                   vphminposuw	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        vphsubd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      6     1.00    *                   vphsubd	(%rax), %xmm1, %xmm2
@@ -1720,7 +1720,7 @@ vzeroupper
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT: 48.00   -      -     357.00 915.00 404.50 424.50 382.00  -     43.00  132.00 119.50 119.50 38.00
+# CHECK-NEXT: 48.00   -      -     357.00 915.00 403.50 425.50 382.00  -     43.00  132.00 119.50 119.50 38.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
@@ -2147,8 +2147,8 @@ vzeroupper
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     vphaddsw	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     vphaddw	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     vphaddw	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -     0.50   0.50    -     vphminposuw	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -     0.50   0.50    -     vphminposuw	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     vphminposuw	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     vphminposuw	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     vphsubd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     vphsubd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     vphsubsw	%xmm0, %xmm1, %xmm2

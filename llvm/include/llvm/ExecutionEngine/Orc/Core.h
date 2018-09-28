@@ -655,7 +655,9 @@ public:
                            bool AddToMainDylibSearchOrder = true);
 
   /// Allocate a module key for a new module to add to the JIT.
-  VModuleKey allocateVModule() { return ++LastKey; }
+  VModuleKey allocateVModule() {
+    return runSessionLocked([this]() { return ++LastKey; });
+  }
 
   /// Return a module key to the ExecutionSession so that it can be
   ///        re-used. This should only be done once all resources associated

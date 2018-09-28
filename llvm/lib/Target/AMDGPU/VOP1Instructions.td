@@ -242,7 +242,9 @@ def VOP_I32_VI32_NO_EXT : VOPProfile<[i32, i32, untyped, untyped]> {
   let Src0RC64 = VRegSrc_32;
 
   let HasExt = 0;
-  let HasSDWA9 = 0;
+  let HasExtDPP = 0;
+  let HasExtSDWA = 0;
+  let HasExtSDWA9 = 0;
 }
 
 // Special case because there are no true output operands.  Hack vdst
@@ -271,7 +273,10 @@ def VOP_MOVRELD : VOPProfile<[untyped, i32, untyped, untyped]> {
   let AsmSDWA9 = getAsmSDWA9<1, 0, 1>.ret;
 
   let HasExt = 0;
-  let HasSDWA9 = 0;
+  let HasExtDPP = 0;
+  let HasExtSDWA = 0;
+  let HasExtSDWA9 = 0;
+
   let HasDst = 0;
   let EmitDst = 1; // force vdst emission
 }

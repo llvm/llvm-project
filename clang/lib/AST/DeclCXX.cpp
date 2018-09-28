@@ -628,6 +628,24 @@ bool CXXRecordDecl::hasSubobjectAtOffsetZeroOfEmptyBaseType(
   return false;
 }
 
+bool CXXRecordDecl::lambdaIsDefaultConstructibleAndAssignable() const {
+  assert(isLambda() && "not a lambda");
+
+  // C++2a [expr.prim.lambda.capture]p11:
+  //   The closure type associated with a lambda-expression has no default
+  //   constructor if the lambda-expression has a lambda-capture and a
+  //   defaulted default constructor otherwise. It has a deleted copy
+  //   assignment operator if the lambda-expression has a lambda-capture and
+  //   defaulted copy and move assignment operators otherwise.
+  //
+  // C++17 [expr.prim.lambda]p21:
+  //   The closure type associated with a lambda-expression has no default
+  //   constructor and a deleted copy assignment operator.
+  if (getLambdaCaptureDefault() != LCD_None)
+    return false;
+  return getASTContext().getLangOpts().CPlusPlus2a;
+}
+
 void CXXRecordDecl::addedMember(Decl *D) {
   if (!D->isImplicit() &&
       !isa<FieldDecl>(D) &&

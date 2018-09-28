@@ -5926,6 +5926,8 @@ include "ARMInstrNEON.td"
 // Memory barriers
 def : InstAlias<"dmb", (DMB 0xf), 0>, Requires<[IsARM, HasDB]>;
 def : InstAlias<"dsb", (DSB 0xf), 0>, Requires<[IsARM, HasDB]>;
+def : InstAlias<"ssbb", (DSB 0x0), 1>, Requires<[IsARM, HasDB]>;
+def : InstAlias<"pssbb", (DSB 0x4), 1>, Requires<[IsARM, HasDB]>;
 def : InstAlias<"isb", (ISB 0xf), 0>, Requires<[IsARM, HasDB]>;
 // Armv8-R 'Data Full Barrier'
 def : InstAlias<"dfb", (DSB 0xc), 1>, Requires<[IsARM, HasDFB]>;

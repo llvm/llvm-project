@@ -663,7 +663,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 
   // ACLE 6.4.9 32-bit SIMD instructions
-  if (ArchVersion >= 6 || (CPUProfile == "M" && DSP))
+  if ((CPUProfile != "M" && ArchVersion >= 6) || (CPUProfile == "M" && DSP))
     Builder.defineMacro("__ARM_FEATURE_SIMD32", "1");
 
   // ACLE 6.4.10 Hardware Integer Divide

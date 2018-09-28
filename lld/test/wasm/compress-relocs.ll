@@ -1,11 +1,11 @@
 ; RUN: llc -filetype=obj %p/Inputs/call-indirect.ll -o %t2.o
 ; RUN: llc -filetype=obj %s -o %t.o
-; RUN: wasm-ld -o %t.wasm %t2.o %t.o
+; RUN: wasm-ld --export-dynamic -o %t.wasm %t2.o %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
-; RUN: wasm-ld -O2 -o %t-opt.wasm %t2.o %t.o
+; RUN: wasm-ld --export-dynamic -O2 -o %t-opt.wasm %t2.o %t.o
 ; RUN: obj2yaml %t-opt.wasm | FileCheck %s
 ; RUN: not wasm-ld --compress-relocations -o %t-compressed.wasm %t2.o %t.o 2>&1 | FileCheck %s -check-prefix=ERROR
-; RUN: wasm-ld --strip-debug --compress-relocations -o %t-compressed.wasm %t2.o %t.o
+; RUN: wasm-ld --export-dynamic --strip-debug --compress-relocations -o %t-compressed.wasm %t2.o %t.o
 ; RUN: obj2yaml %t-compressed.wasm | FileCheck %s -check-prefix=COMPRESS
 
 target triple = "wasm32-unknown-unknown-wasm"

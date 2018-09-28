@@ -1,6 +1,4 @@
-// Linking with -lm won't work on Windows.
-// UNSUPPORTED: windows
-// RUN: %clang_builtins %s %librt -lm -o %t && %run %t
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 //===-- compiler_rt_logbl_test.c - Test __compiler_rt_logbl ---------------===//
 //
 //                     The LLVM Compiler Infrastructure

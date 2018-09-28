@@ -188,8 +188,10 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   assert(hasV6T2Ops() || !hasThumb2());
 
   // Execute only support requires movt support
-  if (genExecuteOnly())
-    assert(hasV8MBaselineOps() && !NoMovt && "Cannot generate execute-only code for this target");
+  if (genExecuteOnly()) {
+    NoMovt = false;
+    assert(hasV8MBaselineOps() && "Cannot generate execute-only code for this target");
+  }
 
   // Keep a pointer to static instruction cost data for the specified CPU.
   SchedModel = getSchedModelForCPU(CPUString);

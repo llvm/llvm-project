@@ -487,7 +487,7 @@ defm : JWriteResFpuPair<WritePSADBW,      [JFPU01, JVALU], 2>;
 defm : JWriteResFpuPair<WritePSADBWX,     [JFPU01, JVALU], 2>;
 defm : X86WriteResPairUnsupported<WritePSADBWY>;
 defm : X86WriteResPairUnsupported<WritePSADBWZ>;
-defm : JWriteResFpuPair<WritePHMINPOS,    [JFPU0,  JVALU], 2>;
+defm : JWriteResFpuPair<WritePHMINPOS,    [JFPU01, JVALU], 2>;
 defm : JWriteResFpuPair<WriteShuffle,     [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteShuffleX,    [JFPU01, JVALU], 1>;
 defm : X86WriteResPairUnsupported<WriteShuffleY>;
