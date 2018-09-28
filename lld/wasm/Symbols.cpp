@@ -105,10 +105,10 @@ bool Symbol::isExported() const {
   if (ForceExport || Config->ExportAll)
     return true;
 
-  if (!Config->ExportDefault)
-    return false;
+  if (Config->ExportDynamic && !isHidden())
+    return true;
 
-  return !isHidden();
+  return false;
 }
 
 uint32_t FunctionSymbol::getFunctionIndex() const {

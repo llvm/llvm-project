@@ -14,3 +14,11 @@ config.test_source_root = config.test_exec_root
 # Do not patch the XRay unit tests pre-main, and also make the error logging
 # verbose to get a more accurate error logging mechanism.
 config.environment['XRAY_OPTIONS'] = 'patch_premain=false'
+
+# Add the LLVM Library directory to the LD_LIBRARY_PATH to allow tests to look
+# up the shared libraries.
+if 'LD_LIBRARY_PATH' in os.environ:
+  libdirs = os.path.pathsep.join((config.llvm_lib_dir, os.environ['LD_LIBRARY_PATH']))
+  config.environment['LD_LIBRARY_PATH'] = libdirs
+else:
+  config.environment['LD_LIBRARY_PATH'] = config.llvm_lib_dir
