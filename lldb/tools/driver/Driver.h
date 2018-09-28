@@ -68,8 +68,6 @@ public:
     void AddInitialCommand(const char *command, CommandPlacement placement,
                            bool is_file, lldb::SBError &error);
 
-    // static OptionDefinition m_cmd_option_table[];
-
     struct InitialCmdEntry {
       InitialCmdEntry(const char *in_contents, bool in_is_file,
                       bool is_cwd_lldbinit_file_read, bool in_quiet = false)
