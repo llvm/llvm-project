@@ -11,6 +11,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUTARGETSTREAMER_H
 
 #include "AMDKernelCodeT.h"
+#include "llvm/BinaryFormat/MsgPackTypes.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/AMDGPUMetadata.h"
@@ -52,7 +53,20 @@ public:
   virtual bool EmitISAVersion(StringRef IsaVersionString) = 0;
 
   /// \returns True on success, false on failure.
-  virtual bool EmitHSAMetadata(StringRef HSAMetadataString);
+  virtual bool EmitHSAMetadataV2(StringRef HSAMetadataString);
+
+  /// \returns True on success, false on failure.
+  virtual bool EmitHSAMetadataV3(StringRef HSAMetadataString);
+
+  /// Emit HSA Metadata
+  ///
+  /// When \p Strict is true, known metadata elements must already be
+  /// well-typed. When \p Strict is false, known types are inferred and
+  /// the \p HSAMetadata structure is updated with the correct types.
+  ///
+  /// \returns True on success, false on failure.
+  virtual bool EmitHSAMetadata(std::shared_ptr<msgpack::Node> &HSAMetadata,
+                               bool Strict) = 0;
 
   /// \returns True on success, false on failure.
   virtual bool EmitHSAMetadata(const AMDGPU::HSAMD::Metadata &HSAMetadata) = 0;
@@ -92,6 +106,10 @@ public:
   bool EmitISAVersion(StringRef IsaVersionString) override;
 
   /// \returns True on success, false on failure.
+  bool EmitHSAMetadata(std::shared_ptr<msgpack::Node> &HSAMetadata,
+                       bool Strict) override;
+
+  /// \returns True on success, false on failure.
   bool EmitHSAMetadata(const AMDGPU::HSAMD::Metadata &HSAMetadata) override;
 
   /// \returns True on success, false on failure.
@@ -107,8 +125,8 @@ public:
 class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
   MCStreamer &Streamer;
 
-  void EmitAMDGPUNote(const MCExpr *DescSize, unsigned NoteType,
-                      function_ref<void(MCELFStreamer &)> EmitDesc);
+  void EmitNote(StringRef Name, const MCExpr *DescSize, unsigned NoteType,
+                function_ref<void(MCELFStreamer &)> EmitDesc);
 
 public:
   AMDGPUTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
@@ -130,6 +148,10 @@ public:
 
   /// \returns True on success, false on failure.
   bool EmitISAVersion(StringRef IsaVersionString) override;
+
+  /// \returns True on success, false on failure.
+  bool EmitHSAMetadata(std::shared_ptr<msgpack::Node> &HSAMetadata,
+                       bool Strict) override;
 
   /// \returns True on success, false on failure.
   bool EmitHSAMetadata(const AMDGPU::HSAMD::Metadata &HSAMetadata) override;
