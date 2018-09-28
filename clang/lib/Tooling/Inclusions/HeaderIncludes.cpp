@@ -10,6 +10,7 @@
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace clang {
 namespace tooling {
@@ -181,7 +182,7 @@ bool IncludeCategoryManager::isMainHeader(StringRef IncludeName) const {
       llvm::sys::path::stem(IncludeName.drop_front(1).drop_back(1));
   if (FileStem.startswith(HeaderStem) ||
       FileStem.startswith_lower(HeaderStem)) {
-    llvm::Regex MainIncludeRegex((HeaderStem + Style.IncludeIsMainRegex).str(),
+    llvm::Regex MainIncludeRegex(HeaderStem.str() + Style.IncludeIsMainRegex,
                                  llvm::Regex::IgnoreCase);
     if (MainIncludeRegex.match(FileStem))
       return true;
@@ -275,8 +276,8 @@ HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled) const {
       if ((IsAngled && StringRef(Inc.Name).startswith("<")) ||
           (!IsAngled && StringRef(Inc.Name).startswith("\"")))
         return llvm::None;
-  std::string Quoted = IsAngled ? ("<" + IncludeName + ">").str()
-                                : ("\"" + IncludeName + "\"").str();
+  std::string Quoted =
+      llvm::formatv(IsAngled ? "<{0}>" : "\"{0}\"", IncludeName);
   StringRef QuotedName = Quoted;
   int Priority = Categories.getIncludePriority(
       QuotedName, /*CheckMainHeader=*/FirstIncludeOffset < 0);
@@ -293,7 +294,7 @@ HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled) const {
     }
   }
   assert(InsertOffset <= Code.size());
-  std::string NewInclude = ("#include " + QuotedName + "\n").str();
+  std::string NewInclude = llvm::formatv("#include {0}\n", QuotedName);
   // When inserting headers at end of the code, also append '\n' to the code
   // if it does not end with '\n'.
   // FIXME: when inserting multiple #includes at the end of code, only one

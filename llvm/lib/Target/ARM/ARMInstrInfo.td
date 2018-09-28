@@ -391,6 +391,10 @@ let RecomputePerFunction = 1 in {
 
 def GenExecuteOnly : Predicate<"Subtarget->genExecuteOnly()">;
 
+// Armv8.5-A extensions
+def HasSpecCtrl      : Predicate<"Subtarget->hasSpecCtrl()">,
+                       AssemblerPredicate<"FeatureSpecCtrl", "specctrl">;
+
 //===----------------------------------------------------------------------===//
 // ARM Flag Definitions.
 
@@ -4873,6 +4877,14 @@ def TSB : AInoP<(outs), (ins tsb_opt:$opt), MiscFrm, NoItinerary,
   let Inst{31-0} = 0xe320f012;
 }
 
+}
+
+// Armv8.5-A speculation barrier
+def SB : AInoP<(outs), (ins), MiscFrm, NoItinerary, "sb", "", []>,
+         Requires<[IsARM, HasSpecCtrl]>, Sched<[]> {
+  let Inst{31-0} = 0xf57ff070;
+  let Unpredictable = 0x000fff0f;
+  let hasSideEffects = 1;
 }
 
 let usesCustomInserter = 1, Defs = [CPSR] in {

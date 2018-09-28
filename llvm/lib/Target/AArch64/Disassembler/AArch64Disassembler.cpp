@@ -1712,11 +1712,17 @@ static DecodeStatus DecodeSystemPStateInstruction(MCInst &Inst, uint32_t insn,
   uint64_t op1 = fieldFromInstruction(insn, 16, 3);
   uint64_t op2 = fieldFromInstruction(insn, 5, 3);
   uint64_t crm = fieldFromInstruction(insn, 8, 4);
-
   uint64_t pstate_field = (op1 << 3) | op2;
 
+  switch (pstate_field) {
+  case 0x01: // XAFlag
+  case 0x02: // AXFlag
+    return Fail;
+  }
+
   if ((pstate_field == AArch64PState::PAN  ||
-       pstate_field == AArch64PState::UAO) && crm > 1)
+       pstate_field == AArch64PState::UAO  ||
+       pstate_field == AArch64PState::SSBS) && crm > 1)
     return Fail;
 
   Inst.addOperand(MCOperand::createImm(pstate_field));

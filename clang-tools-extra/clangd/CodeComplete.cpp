@@ -349,6 +349,11 @@ struct CodeCompletionBuilder {
       }
       Completion.Kind = toCompletionItemKind(
           C.SemaResult->Kind, C.SemaResult->Declaration, ContextKind);
+      // Sema could provide more info on whether the completion was a file or
+      // folder.
+      if (Completion.Kind == CompletionItemKind::File &&
+          Completion.Name.back() == '/')
+        Completion.Kind = CompletionItemKind::Folder;
       for (const auto &FixIt : C.SemaResult->FixIts) {
         Completion.FixIts.push_back(
             toTextEdit(FixIt, ASTCtx.getSourceManager(), ASTCtx.getLangOpts()));

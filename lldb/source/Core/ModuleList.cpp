@@ -74,8 +74,7 @@ static constexpr PropertyDefinition g_properties[] = {
      "the UUID of the executable."},
     {"clang-modules-cache-path", OptionValue::eTypeFileSpec, true, 0, nullptr,
      {},
-     "The path to the clang modules cache directory (-fmodules-cache-path)."},
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, {}, nullptr}};
+     "The path to the clang modules cache directory (-fmodules-cache-path)."}};
 
 enum { ePropertyEnableExternalLookup, ePropertyClangModulesCachePath };
 

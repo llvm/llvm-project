@@ -376,9 +376,9 @@ static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target) {
   }
 }
 
-llvm::Optional<lldb::LanguageType> ClangUserExpression::GetLanguageForExpr(
+void ClangUserExpression::UpdateLanguageForExpr(
     DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx) {
-  lldb::LanguageType lang_type = lldb::LanguageType::eLanguageTypeUnknown;
+  m_expr_lang = lldb::LanguageType::eLanguageTypeUnknown;
 
   std::string prefix = m_expr_prefix;
 
@@ -390,17 +390,17 @@ llvm::Optional<lldb::LanguageType> ClangUserExpression::GetLanguageForExpr(
                                             m_expr_text.c_str()));
 
     if (m_in_cplusplus_method)
-      lang_type = lldb::eLanguageTypeC_plus_plus;
+      m_expr_lang = lldb::eLanguageTypeC_plus_plus;
     else if (m_in_objectivec_method)
-      lang_type = lldb::eLanguageTypeObjC;
+      m_expr_lang = lldb::eLanguageTypeObjC;
     else
-      lang_type = lldb::eLanguageTypeC;
+      m_expr_lang = lldb::eLanguageTypeC;
 
-    if (!source_code->GetText(m_transformed_text, lang_type, m_in_static_method,
-                              exe_ctx)) {
+    if (!source_code->GetText(m_transformed_text, m_expr_lang,
+                              m_in_static_method, exe_ctx)) {
       diagnostic_manager.PutString(eDiagnosticSeverityError,
                                    "couldn't construct expression body");
-      return llvm::Optional<lldb::LanguageType>();
+      return;
     }
 
     // Find and store the start position of the original code inside the
@@ -408,12 +408,11 @@ llvm::Optional<lldb::LanguageType> ClangUserExpression::GetLanguageForExpr(
     std::size_t original_start;
     std::size_t original_end;
     bool found_bounds = source_code->GetOriginalBodyBounds(
-        m_transformed_text, lang_type, original_start, original_end);
+        m_transformed_text, m_expr_lang, original_start, original_end);
     if (found_bounds) {
       m_user_expression_start_pos = original_start;
     }
   }
-  return lang_type;
 }
 
 bool ClangUserExpression::PrepareForParsing(
@@ -437,6 +436,8 @@ bool ClangUserExpression::PrepareForParsing(
   ApplyObjcCastHack(m_expr_text);
 
   SetupDeclVendor(exe_ctx, m_target);
+
+  UpdateLanguageForExpr(diagnostic_manager, exe_ctx);
   return true;
 }
 
@@ -449,11 +450,6 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   if (!PrepareForParsing(diagnostic_manager, exe_ctx))
     return false;
-
-  lldb::LanguageType lang_type = lldb::LanguageType::eLanguageTypeUnknown;
-  if (auto new_lang = GetLanguageForExpr(diagnostic_manager, exe_ctx)) {
-    lang_type = new_lang.getValue();
-  }
 
   if (log)
     log->Printf("Parsing the following code:\n%s", m_transformed_text.c_str());
@@ -514,7 +510,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
         const std::string &fixed_expression =
             diagnostic_manager.GetFixedExpression();
         if (ExpressionSourceCode::GetOriginalBodyBounds(
-                fixed_expression, lang_type, fixed_start, fixed_end))
+                fixed_expression, m_expr_lang, fixed_start, fixed_end))
           m_fixed_text =
               fixed_expression.substr(fixed_start, fixed_end - fixed_start);
       }
@@ -654,8 +650,6 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
 
   if (!PrepareForParsing(diagnostic_manager, exe_ctx))
     return false;
-
-  GetLanguageForExpr(diagnostic_manager, exe_ctx);
 
   if (log)
     log->Printf("Parsing the following code:\n%s", m_transformed_text.c_str());

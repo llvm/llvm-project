@@ -160,8 +160,9 @@ def  : WriteRes<WriteSETCCStore, [SBPort05,SBPort4,SBPort23]> {
   let Latency = 2;
   let NumMicroOps = 3;
 }
-def  : WriteRes<WriteLAHFSAHF, [SBPort05]>;
-def  : WriteRes<WriteBitTest,[SBPort05]>;
+def  : WriteRes<WriteLAHFSAHF,   [SBPort05]>;
+def  : WriteRes<WriteBitTest,    [SBPort05]>;
+def  : WriteRes<WriteBitTestSet, [SBPort05]>;
 
 // This is for simple LEAs with one or two input operands.
 // The complex ones can only execute on port 1, and they require two cycles on

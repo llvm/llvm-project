@@ -363,6 +363,11 @@ def FeatureNoPostRASched : SubtargetFeature<"disable-postra-scheduler",
 def FeatureUseAA : SubtargetFeature<"use-aa", "UseAA", "true",
                                     "Use alias analysis during codegen">;
 
+// Armv8.5-A extensions
+
+def FeatureSpecCtrl : SubtargetFeature<"specctrl", "HasSpecCtrl", "true",
+  "Enable speculation control barrier" >;
+
 //===----------------------------------------------------------------------===//
 // ARM architecture class
 //
@@ -454,7 +459,7 @@ def HasV8_4aOps   : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
 
 def HasV8_5aOps   : SubtargetFeature<"v8.5a", "HasV8_5aOps", "true",
                                    "Support ARM v8.5a instructions",
-                                   [HasV8_4aOps]>;
+                                   [HasV8_4aOps, FeatureSpecCtrl]>;
 
 //===----------------------------------------------------------------------===//
 // ARM Processor subtarget features.

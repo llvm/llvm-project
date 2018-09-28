@@ -1545,9 +1545,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT_CC, MVT::f64, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::f128, Custom);
 
-  setOperationAction(ISD::EH_SJLJ_SETJMP, MVT::i32, Custom);
-  setOperationAction(ISD::EH_SJLJ_LONGJMP, MVT::Other, Custom);
-
   setOperationAction(ISD::ADDC, MVT::i32, Custom);
   setOperationAction(ISD::ADDE, MVT::i32, Custom);
   setOperationAction(ISD::SUBC, MVT::i32, Custom);
@@ -1828,8 +1825,6 @@ const char *SparcTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case SPISD::SELECT_ICC:      return "SPISD::SELECT_ICC";
   case SPISD::SELECT_XCC:      return "SPISD::SELECT_XCC";
   case SPISD::SELECT_FCC:      return "SPISD::SELECT_FCC";
-  case SPISD::EH_SJLJ_SETJMP:  return "SPISD::EH_SJLJ_SETJMP";
-  case SPISD::EH_SJLJ_LONGJMP: return "SPISD::EH_SJLJ_LONGJMP";
   case SPISD::Hi:              return "SPISD::Hi";
   case SPISD::Lo:              return "SPISD::Lo";
   case SPISD::FTOI:            return "SPISD::FTOI";
@@ -2502,20 +2497,6 @@ static SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG,
                      DAG.getConstant(SPCC, dl, MVT::i32), CompareFlag);
 }
 
-SDValue SparcTargetLowering::LowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG,
-    const SparcTargetLowering &TLI) const {
-  SDLoc DL(Op);
-  return DAG.getNode(SPISD::EH_SJLJ_SETJMP, DL,
-      DAG.getVTList(MVT::i32, MVT::Other), Op.getOperand(0), Op.getOperand(1));
-
-}
-
-SDValue SparcTargetLowering::LowerEH_SJLJ_LONGJMP(SDValue Op, SelectionDAG &DAG,
-    const SparcTargetLowering &TLI) const {
-  SDLoc DL(Op);
-  return DAG.getNode(SPISD::EH_SJLJ_LONGJMP, DL, MVT::Other, Op.getOperand(0), Op.getOperand(1));
-}
-
 static SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG,
                             const SparcTargetLowering &TLI) {
   MachineFunction &MF = DAG.getMachineFunction();
@@ -3045,8 +3026,6 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
                                                   hasHardQuad);
   case ISD::SELECT_CC:          return LowerSELECT_CC(Op, DAG, *this,
                                                       hasHardQuad);
-  case ISD::EH_SJLJ_SETJMP:     return LowerEH_SJLJ_SETJMP(Op, DAG, *this);
-  case ISD::EH_SJLJ_LONGJMP:    return LowerEH_SJLJ_LONGJMP(Op, DAG, *this);
   case ISD::VASTART:            return LowerVASTART(Op, DAG, *this);
   case ISD::VAARG:              return LowerVAARG(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC: return LowerDYNAMIC_STACKALLOC(Op, DAG,
@@ -3129,13 +3108,6 @@ SparcTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case SP::SELECT_CC_DFP_FCC:
   case SP::SELECT_CC_QFP_FCC:
     return expandSelectCC(MI, BB, SP::FBCOND);
-  case SP::EH_SJLJ_SETJMP32ri:
-  case SP::EH_SJLJ_SETJMP32rr:
-    return emitEHSjLjSetJmp(MI, BB);
-  case SP::EH_SJLJ_LONGJMP32rr:
-  case SP::EH_SJLJ_LONGJMP32ri:
-    return emitEHSjLjLongJmp(MI, BB);
-
   }
 }
 
@@ -3193,205 +3165,6 @@ SparcTargetLowering::expandSelectCC(MachineInstr &MI, MachineBasicBlock *BB,
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return SinkMBB;
-}
-
-MachineBasicBlock *
-SparcTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
-                                       MachineBasicBlock *MBB) const {
-  DebugLoc DL = MI.getDebugLoc();
-  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-
-  MachineFunction *MF = MBB->getParent();
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  MachineInstrBuilder MIB;
-
-  MVT PVT = getPointerTy(MF->getDataLayout());
-  unsigned RegSize = PVT.getStoreSize();
-  assert(PVT == MVT::i32 && "Invalid Pointer Size!");
-
-  unsigned Buf = MI.getOperand(0).getReg();
-  unsigned JmpLoc = MRI.createVirtualRegister(&SP::IntRegsRegClass);
-
-  // TO DO: If we do 64-bit handling, this perhaps should be FLUSHW, not TA 3
-  MIB = BuildMI(*MBB, MI, DL, TII->get(SP::TRAPri), SP::G0).addImm(3).addImm(SPCC::ICC_A);
-
-  // Instruction to restore FP
-  const unsigned FP  = SP::I6;
-  MIB = BuildMI(*MBB, MI, DL, TII->get(SP::LDri))
-            .addReg(FP)
-            .addReg(Buf)
-            .addImm(0);
-
-  // Instruction to load jmp location
-  MIB = BuildMI(*MBB, MI, DL, TII->get(SP::LDri))
-            .addReg(JmpLoc, RegState::Define)
-            .addReg(Buf)
-            .addImm(RegSize);
-
-  // Instruction to restore SP
-  const unsigned SP  = SP::O6;
-  MIB = BuildMI(*MBB, MI, DL, TII->get(SP::LDri))
-            .addReg(SP)
-            .addReg(Buf)
-            .addImm(2 * RegSize);
-
-  // Instruction to restore I7
-  MIB = BuildMI(*MBB, MI, DL, TII->get(SP::LDri))
-            .addReg(SP::I7)
-            .addReg(Buf, RegState::Kill)
-            .addImm(3 * RegSize);
-
-  // Jump to JmpLoc
-  BuildMI(*MBB, MI, DL, TII->get(SP::JMPLrr)).addReg(SP::G0).addReg(JmpLoc, RegState::Kill).addReg(SP::G0);
-
-  MI.eraseFromParent();
-  return MBB;
-}
-
-MachineBasicBlock *
-SparcTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
-                                      MachineBasicBlock *MBB) const {
-  DebugLoc DL = MI.getDebugLoc();
-  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-  const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
-
-  MachineFunction *MF = MBB->getParent();
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  MachineInstrBuilder MIB;
-
-  MVT PVT = getPointerTy(MF->getDataLayout());
-  unsigned RegSize = PVT.getStoreSize();
-  assert(PVT == MVT::i32 && "Invalid Pointer Size!");
-
-  unsigned DstReg = MI.getOperand(0).getReg();
-  const TargetRegisterClass *RC = MRI.getRegClass(DstReg);
-  assert(TRI->isTypeLegalForClass(*RC, MVT::i32) && "Invalid destination!");
-  (void)TRI;
-  unsigned mainDstReg = MRI.createVirtualRegister(RC);
-  unsigned restoreDstReg = MRI.createVirtualRegister(RC);
-
-  // For v = setjmp(buf), we generate
-  //
-  // thisMBB:
-  //  buf[0] = FP
-  //  buf[RegSize] = restoreMBB <-- takes address of restoreMBB
-  //  buf[RegSize * 2] = O6
-  //  buf[RegSize * 3] = I7
-  //  Ensure restoreMBB remains in the relocations list (done using a bn instruction)
-  //  b mainMBB
-  //
-  // mainMBB:
-  //  v_main = 0
-  //  b sinkMBB
-  //
-  // restoreMBB:
-  //  v_restore = 1
-  //  --fall through--
-  //
-  // sinkMBB:
-  //  v = phi(main, restore)
-
-  const BasicBlock *BB = MBB->getBasicBlock();
-  MachineFunction::iterator It = ++MBB->getIterator();
-  MachineBasicBlock *thisMBB = MBB;
-  MachineBasicBlock *mainMBB = MF->CreateMachineBasicBlock(BB);
-  MachineBasicBlock *restoreMBB = MF->CreateMachineBasicBlock(BB);
-  MachineBasicBlock *sinkMBB = MF->CreateMachineBasicBlock(BB);
-
-  MF->insert(It, mainMBB);
-  MF->insert(It, restoreMBB);
-  MF->insert(It, sinkMBB);
-  restoreMBB->setHasAddressTaken();
-
-  // Transfer the remainder of BB and its successor edges to sinkMBB.
-  sinkMBB->splice(sinkMBB->begin(), MBB,
-                  std::next(MachineBasicBlock::iterator(MI)),
-                  MBB->end());
-  sinkMBB->transferSuccessorsAndUpdatePHIs(MBB);
-
-  unsigned LabelReg = MRI.createVirtualRegister(&SP::IntRegsRegClass);
-  unsigned LabelReg2 = MRI.createVirtualRegister(&SP::IntRegsRegClass);
-  unsigned BufReg = MI.getOperand(1).getReg();
-
-  // Instruction to store FP
-  const unsigned FP  = SP::I6;
-  MIB = BuildMI(thisMBB, DL, TII->get(SP::STri))
-            .addReg(BufReg)
-            .addImm(0)
-            .addReg(FP);
-
-  // Instructions to store jmp location
-  MIB = BuildMI(thisMBB, DL, TII->get(SP::SETHIi))
-            .addReg(LabelReg, RegState::Define)
-            .addMBB(restoreMBB, SparcMCExpr::VK_Sparc_HI);
-
-  MIB = BuildMI(thisMBB, DL, TII->get(SP::ORri))
-            .addReg(LabelReg2, RegState::Define)
-            .addReg(LabelReg, RegState::Kill)
-            .addMBB(restoreMBB, SparcMCExpr::VK_Sparc_LO);
-
-  MIB = BuildMI(thisMBB, DL, TII->get(SP::STri))
-            .addReg(BufReg)
-            .addImm(RegSize)
-            .addReg(LabelReg2, RegState::Kill);
-
-  // Instruction to store SP
-  const unsigned SP  = SP::O6;
-  MIB = BuildMI(thisMBB, DL, TII->get(SP::STri))
-            .addReg(BufReg)
-            .addImm(2 * RegSize)
-            .addReg(SP);
-
-  // Instruction to store I7
-  MIB = BuildMI(thisMBB, DL, TII->get(SP::STri))
-            .addReg(BufReg)
-            .addImm(3 * RegSize)
-            .addReg(SP::I7);
-
-
-  // FIX ME: This next instruction ensures that the restoreMBB block address remains
-  // valid through optimization passes and serves no other purpose. The ICC_N ensures
-  // that the branch is never taken. This commented-out code here was an alternative
-  // attempt to achieve this which brought myriad problems.
-  //MIB = BuildMI(thisMBB, DL, TII->get(SP::EH_SjLj_Setup)).addMBB(restoreMBB, SparcMCExpr::VK_Sparc_None);
-  MIB = BuildMI(thisMBB, DL, TII->get(SP::BCOND))
-              .addMBB(restoreMBB)
-              .addImm(SPCC::ICC_N);
-
-  MIB = BuildMI(thisMBB, DL, TII->get(SP::BCOND))
-              .addMBB(mainMBB)
-              .addImm(SPCC::ICC_A);
-
-  thisMBB->addSuccessor(mainMBB);
-  thisMBB->addSuccessor(restoreMBB);
-
-
-  // mainMBB:
-  MIB = BuildMI(mainMBB, DL, TII->get(SP::ORrr))
-             .addReg(mainDstReg, RegState::Define)
-             .addReg(SP::G0)
-             .addReg(SP::G0);
-  MIB = BuildMI(mainMBB, DL, TII->get(SP::BCOND)).addMBB(sinkMBB).addImm(SPCC::ICC_A);
-
-  mainMBB->addSuccessor(sinkMBB);
-
-
-  // restoreMBB:
-  MIB = BuildMI(restoreMBB, DL, TII->get(SP::ORri))
-              .addReg(restoreDstReg, RegState::Define)
-              .addReg(SP::G0)
-              .addImm(1);
-  //MIB = BuildMI(restoreMBB, DL, TII->get(SP::BCOND)).addMBB(sinkMBB).addImm(SPCC::ICC_A);
-  restoreMBB->addSuccessor(sinkMBB);
-
-  // sinkMBB:
-  MIB = BuildMI(*sinkMBB, sinkMBB->begin(), DL,
-                TII->get(SP::PHI), DstReg)
-             .addReg(mainDstReg).addMBB(mainMBB)
-             .addReg(restoreDstReg).addMBB(restoreMBB);
-
-  MI.eraseFromParent();
-  return sinkMBB;
 }
 
 //===----------------------------------------------------------------------===//

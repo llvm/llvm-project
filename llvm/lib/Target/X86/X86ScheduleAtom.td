@@ -121,7 +121,8 @@ def  : WriteRes<WriteLAHFSAHF, [AtomPort01]> {
   let Latency = 2;
   let ResourceCycles = [2];
 }
-def : WriteRes<WriteBitTest,[AtomPort01]>;
+defm : X86WriteRes<WriteBitTest,    [AtomPort01], 1, [1], 1>;
+defm : X86WriteRes<WriteBitTestSet, [AtomPort01], 1, [1], 1>;
 
 // This is for simple LEAs with one or two input operands.
 def : WriteRes<WriteLEA, [AtomPort1]>;

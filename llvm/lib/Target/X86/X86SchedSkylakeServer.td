@@ -159,8 +159,9 @@ def  : WriteRes<WriteSETCCStore, [SKXPort06,SKXPort4,SKXPort237]> {
   let Latency = 2;
   let NumMicroOps = 3;
 }
-def  : WriteRes<WriteLAHFSAHF, [SKXPort06]>;
-def  : WriteRes<WriteBitTest,  [SKXPort06]>; //
+def  : WriteRes<WriteLAHFSAHF,   [SKXPort06]>;
+def  : WriteRes<WriteBitTest,    [SKXPort06]>;
+def  : WriteRes<WriteBitTestSet, [SKXPort06]>;
 
 // Integer shifts and rotates.
 defm : SKXWriteResPair<WriteShift,    [SKXPort06],  1>;

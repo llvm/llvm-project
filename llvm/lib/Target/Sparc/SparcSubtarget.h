@@ -47,6 +47,7 @@ class SparcSubtarget : public SparcGenSubtargetInfo {
   // LEON features
   bool HasUmacSmac;
   bool HasLeonCasa;
+  bool HasPWRPSR;
   bool InsertNOPLoad;
   bool FixAllFDIVSQRT;
   bool DetectRoundChange;
@@ -93,6 +94,7 @@ public:
   // Leon options
   bool hasUmacSmac() const { return HasUmacSmac; }
   bool hasLeonCasa() const { return HasLeonCasa; }
+  bool hasPWRPSR() const { return HasPWRPSR; }
   bool insertNOPLoad() const { return InsertNOPLoad; }
   bool fixAllFDIVSQRT() const { return FixAllFDIVSQRT; }
   bool detectRoundChange() const { return DetectRoundChange; }

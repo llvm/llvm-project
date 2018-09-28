@@ -147,8 +147,7 @@ static constexpr PropertyDefinition g_properties[] = {
          "stepping and variable availability may not behave as expected."},
     {"stop-on-exec", OptionValue::eTypeBoolean, true, true,
      nullptr, {},
-     "If true, stop when a shared library is loaded or unloaded."},
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, {}, nullptr}};
+     "If true, stop when a shared library is loaded or unloaded."}};
 
 enum {
   ePropertyDisableMemCache,

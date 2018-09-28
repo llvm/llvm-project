@@ -55,10 +55,10 @@ public:
     bpfel,          // eBPF or extended BPF or 64-bit BPF (little endian)
     bpfeb,          // eBPF or extended BPF or 64-bit BPF (big endian)
     hexagon,        // Hexagon: hexagon
-    mips,           // MIPS: mips, mipsallegrex
-    mipsel,         // MIPSEL: mipsel, mipsallegrexe
-    mips64,         // MIPS64: mips64, mipsn32
-    mips64el,       // MIPS64EL: mips64el, mipsn32el
+    mips,           // MIPS: mips, mipsallegrex, mipsr6
+    mipsel,         // MIPSEL: mipsel, mipsallegrexe, mipsr6el
+    mips64,         // MIPS64: mips64, mips64r6, mipsn32, mipsn32r6
+    mips64el,       // MIPS64EL: mips64el, mips64r6el, mipsn32el, mipsn32r6el
     msp430,         // MSP430: msp430
     nios2,          // NIOSII: nios2
     ppc,            // PPC: powerpc
@@ -126,7 +126,9 @@ public:
 
     KalimbaSubArch_v3,
     KalimbaSubArch_v4,
-    KalimbaSubArch_v5
+    KalimbaSubArch_v5,
+
+    MipsSubArch_r6
   };
   enum VendorType {
     UnknownVendor,

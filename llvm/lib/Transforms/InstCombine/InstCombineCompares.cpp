@@ -5229,6 +5229,57 @@ Instruction *InstCombiner::foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
   return new ICmpInst(Pred, LHSI->getOperand(0), RHSInt);
 }
 
+/// Fold (C / X) < 0.0 --> X < 0.0 if possible. Swap predicate if necessary.
+static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
+                                              Constant *RHSC) {
+  // When C is not 0.0 and infinities are not allowed:
+  // (C / X) < 0.0 is a sign-bit test of X
+  // (C / X) < 0.0 --> X < 0.0 (if C is positive)
+  // (C / X) < 0.0 --> X > 0.0 (if C is negative, swap the predicate)
+  //
+  // Proof:
+  // Multiply (C / X) < 0.0 by X * X / C.
+  // - X is non zero, if it is the flag 'ninf' is violated.
+  // - C defines the sign of X * X * C. Thus it also defines whether to swap
+  //   the predicate. C is also non zero by definition.
+  //
+  // Thus X * X / C is non zero and the transformation is valid. [qed]
+
+  FCmpInst::Predicate Pred = I.getPredicate();
+
+  // Check that predicates are valid.
+  if ((Pred != FCmpInst::FCMP_OGT) && (Pred != FCmpInst::FCMP_OLT) &&
+      (Pred != FCmpInst::FCMP_OGE) && (Pred != FCmpInst::FCMP_OLE))
+    return nullptr;
+
+  // Check that RHS operand is zero.
+  if (!match(RHSC, m_AnyZeroFP()))
+    return nullptr;
+
+  // Check fastmath flags ('ninf').
+  if (!LHSI->hasNoInfs() || !I.hasNoInfs())
+    return nullptr;
+
+  // Check the properties of the dividend. It must not be zero to avoid a
+  // division by zero (see Proof).
+  const APFloat *C;
+  if (!match(LHSI->getOperand(0), m_APFloat(C)))
+    return nullptr;
+
+  if (C->isZero())
+    return nullptr;
+
+  // Get swapped predicate if necessary.
+  if (C->isNegative())
+    Pred = I.getSwappedPredicate();
+
+  // Finally emit the new fcmp.
+  Value *X = LHSI->getOperand(1);
+  FCmpInst *NewFCI = new FCmpInst(Pred, X, RHSC);
+  NewFCI->setFastMathFlags(I.getFastMathFlags());
+  return NewFCI;
+}
+
 Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
   bool Changed = false;
 
@@ -5363,6 +5414,10 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
                               ConstantExpr::getFNeg(RHSC));
         break;
       }
+      case Instruction::FDiv:
+        if (Instruction *NV = foldFCmpReciprocalAndZero(I, LHSI, RHSC))
+          return NV;
+        break;
       case Instruction::Load:
         if (GetElementPtrInst *GEP =
             dyn_cast<GetElementPtrInst>(LHSI->getOperand(0))) {
