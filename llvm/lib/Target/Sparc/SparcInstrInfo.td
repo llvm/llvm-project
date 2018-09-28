@@ -56,6 +56,11 @@ def HasHardQuad : Predicate<"Subtarget->hasHardQuad()">;
 // instruction
 def HasLeonCASA : Predicate<"Subtarget->hasLeonCasa()">;
 
+// HasPWRPSR - This is true when the target processor supports partial
+// writes to the PSR register that only affects the ET field.
+def HasPWRPSR : Predicate<"Subtarget->hasPWRPSR()">,
+                AssemblerPredicate<"FeaturePWRPSR">;
+
 // HasUMAC_SMAC - This is true when the target processor supports the
 // UMAC and SMAC instructions
 def HasUMAC_SMAC : Predicate<"Subtarget->hasUmacSmac()">;
@@ -181,9 +186,6 @@ SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDTSPtlsld :
 SDTypeProfile<1, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 
-def SDTSPeh_sjlj_setjmp : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisPtrTy<1>]>;
-def SDTSPeh_sjlj_longjmp: SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
-
 def SPcmpicc : SDNode<"SPISD::CMPICC", SDTSPcmpicc, [SDNPOutGlue]>;
 def SPcmpfcc : SDNode<"SPISD::CMPFCC", SDTSPcmpfcc, [SDNPOutGlue]>;
 def SPbricc : SDNode<"SPISD::BRICC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
@@ -201,13 +203,6 @@ def SPxtof  : SDNode<"SPISD::XTOF", SDTSPXTOF>;
 def SPselecticc : SDNode<"SPISD::SELECT_ICC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectxcc : SDNode<"SPISD::SELECT_XCC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectfcc : SDNode<"SPISD::SELECT_FCC", SDTSPselectcc, [SDNPInGlue]>;
-
-def SPsjlj_setjmp: SDNode<"SPISD::EH_SJLJ_SETJMP",
-                          SDTSPeh_sjlj_setjmp,
-                          [SDNPHasChain, SDNPSideEffect]>;
-def SPsjlj_longjmp: SDNode<"SPISD::EH_SJLJ_LONGJMP",
-                           SDTSPeh_sjlj_longjmp,
-                           [SDNPHasChain, SDNPSideEffect]>;
 
 //  These are target-independent nodes, but have target-specific formats.
 def SDT_SPCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32>,
@@ -483,27 +478,6 @@ let usesCustomInserter = 1, Uses = [FCC0] in {
    : Pseudo<(outs QFPRegs:$dst), (ins QFPRegs:$T, QFPRegs:$F, i32imm:$Cond),
             "; SELECT_CC_QFP_FCC PSEUDO!",
             [(set f128:$dst, (SPselectfcc f128:$T, f128:$F, imm:$Cond))]>;
-}
-
-let hasSideEffects = 1, isBarrier = 1, usesCustomInserter = 1 in {
-  let Defs = [WIM] in
-  def EH_SJLJ_SETJMP32ri  : Pseudo<(outs IntRegs:$dst), (ins MEMri:$buf),
-                            "#EH_SJLJ_SETJMP32",
-                            [(set i32:$dst, (SPsjlj_setjmp ADDRri:$buf))]>,
-                            Requires<[Is32Bit]>;
-  def EH_SJLJ_SETJMP32rr  : Pseudo<(outs IntRegs:$dst), (ins MEMrr:$buf),
-                            "#EH_SJLJ_SETJMP32",
-                            [(set i32:$dst, (SPsjlj_setjmp ADDRrr:$buf))]>,
-                            Requires<[Is32Bit]>;
-  let isTerminator = 1 in
-  def EH_SJLJ_LONGJMP32ri : Pseudo<(outs), (ins MEMri:$buf),
-                            "#EH_SJLJ_LONGJMP32",
-                            [(SPsjlj_longjmp ADDRri:$buf)]>,
-                            Requires<[Is32Bit]>;
-  def EH_SJLJ_LONGJMP32rr : Pseudo<(outs), (ins MEMrr:$buf),
-                            "#EH_SJLJ_LONGJMP32",
-                            [(SPsjlj_longjmp ADDRrr:$buf)]>,
-                            Requires<[Is32Bit]>;
 }
 
 // Section B.1 - Load Integer Instructions, p. 90
@@ -1585,6 +1559,17 @@ let Predicates = [HasUMAC_SMAC], Defs = [Y, ASR18], Uses = [Y, ASR18] in {
                   (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13, ASRRegs:$asr18),
                    "umac $rs1, $simm13, $rd",
                    [], IIC_smac_umac>;
+}
+
+// The partial write WRPSR instruction has a non-zero destination
+// register value to separate it from the standard instruction.
+let Predicates = [HasPWRPSR], Defs = [PSR], rd=1 in {
+  def PWRPSRrr : F3_1<2, 0b110001,
+     (outs), (ins IntRegs:$rs1, IntRegs:$rs2),
+     "pwr $rs1, $rs2, %psr", []>;
+  def PWRPSRri : F3_2<2, 0b110001,
+     (outs), (ins IntRegs:$rs1, simm13Op:$simm13),
+     "pwr $rs1, $simm13, %psr", []>;
 }
 
 let Defs = [ICC] in {

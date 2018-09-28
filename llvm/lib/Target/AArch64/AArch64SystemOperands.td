@@ -105,6 +105,9 @@ def : DC<"CISW",  0b000, 0b0111, 0b1110, 0b010>;
 let Requires = [{ {AArch64::HasV8_2aOps} }] in
 def : DC<"CVAP",  0b011, 0b0111, 0b1100, 0b001>;
 
+let Requires = [{ {AArch64::FeatureCacheDeepPersist} }] in
+def : DC<"CVADP",  0b011, 0b0111, 0b1101, 0b001>;
+
 //===----------------------------------------------------------------------===//
 // IC (instruction cache maintenance) instruction options.
 //===----------------------------------------------------------------------===//
@@ -298,6 +301,9 @@ def : PState<"UAO",     0b00011>;
 // v8.4a timining insensitivity of data processing instructions
 let Requires = [{ {AArch64::HasV8_4aOps} }] in
 def : PState<"DIT",     0b11010>;
+// v8.5a Spectre Mitigation
+let Requires = [{ {AArch64::FeatureSpecRestrict} }] in
+def : PState<"SSBS",    0b11001>;
 
 //===----------------------------------------------------------------------===//
 // PSB instruction options.
@@ -313,6 +319,23 @@ class PSB<string name, bits<5> encoding> : SearchableTable {
 }
 
 def : PSB<"csync", 0x11>;
+
+//===----------------------------------------------------------------------===//
+// BTI instruction options.
+//===----------------------------------------------------------------------===//
+
+class BTI<string name, bits<2> encoding> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<2> Encoding;
+  let Encoding = encoding;
+}
+
+def : BTI<"c",  0b01>;
+def : BTI<"j",  0b10>;
+def : BTI<"jc", 0b11>;
 
 //===----------------------------------------------------------------------===//
 // TLBI (translation lookaside buffer invalidate) instruction options.
@@ -420,6 +443,23 @@ def : TLBI<"RVAE3OS",      0b110, 0b1000, 0b0101, 0b001>;
 def : TLBI<"RVALE3OS",     0b110, 0b1000, 0b0101, 0b101>;
 }
 
+// Armv8.5-A Prediction Restriction by Context instruction options:
+class PRCTX<string name, bits<4> crm> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<11> Encoding;
+  let Encoding{10-4} = 0b0110111;
+  let Encoding{3-0} = crm;
+  bit NeedsReg = 1;
+  code Requires = [{ {} }];
+}
+
+let Requires = [{ {AArch64::FeaturePredCtrl} }] in {
+def : PRCTX<"RCTX", 0b0011>;
+}
+
 //===----------------------------------------------------------------------===//
 // MRS/MSR (system register read/write) instruction options.
 //===----------------------------------------------------------------------===//
@@ -487,6 +527,9 @@ def : ROSysReg<"AIDR_EL1",           0b11, 0b001, 0b0000, 0b0000, 0b111>;
 def : ROSysReg<"DCZID_EL0",          0b11, 0b011, 0b0000, 0b0000, 0b111>;
 def : ROSysReg<"ID_PFR0_EL1",        0b11, 0b000, 0b0000, 0b0001, 0b000>;
 def : ROSysReg<"ID_PFR1_EL1",        0b11, 0b000, 0b0000, 0b0001, 0b001>;
+def : ROSysReg<"ID_PFR2_EL1",        0b11, 0b000, 0b0000, 0b0011, 0b100> {
+    let Requires = [{ {AArch64::FeatureSpecRestrict} }];
+}
 def : ROSysReg<"ID_DFR0_EL1",        0b11, 0b000, 0b0000, 0b0001, 0b010>;
 def : ROSysReg<"ID_AFR0_EL1",        0b11, 0b000, 0b0000, 0b0001, 0b011>;
 def : ROSysReg<"ID_MMFR0_EL1",       0b11, 0b000, 0b0000, 0b0001, 0b100>;
@@ -592,6 +635,22 @@ def : ROSysReg<"LORID_EL1",  0b11, 0b000, 0b1010, 0b0100, 0b111>;
 let Requires = [{ {AArch64::FeatureRAS} }] in {
 def : ROSysReg<"ERRIDR_EL1", 0b11, 0b000, 0b0101, 0b0011, 0b000>;
 def : ROSysReg<"ERXFR_EL1",  0b11, 0b000, 0b0101, 0b0100, 0b000>;
+}
+
+// v8.5a "random number" registers
+//                       Op0   Op1    CRn     CRm     Op2
+let Requires = [{ {AArch64::FeatureRandGen} }] in {
+def : ROSysReg<"RNDR",   0b11, 0b011, 0b0010, 0b0100, 0b000>;
+def : ROSysReg<"RNDRRS", 0b11, 0b011, 0b0010, 0b0100, 0b001>;
+}
+
+// v8.5a Software Context Number registers
+let Requires = [{ {AArch64::FeatureSpecRestrict} }] in {
+def : RWSysReg<"SCXTNUM_EL0", 0b11, 0b011, 0b1101, 0b0000, 0b111>;
+def : RWSysReg<"SCXTNUM_EL1", 0b11, 0b000, 0b1101, 0b0000, 0b111>;
+def : RWSysReg<"SCXTNUM_EL2", 0b11, 0b100, 0b1101, 0b0000, 0b111>;
+def : RWSysReg<"SCXTNUM_EL3", 0b11, 0b110, 0b1101, 0b0000, 0b111>;
+def : RWSysReg<"SCXTNUM_EL12", 0b11, 0b101, 0b1101, 0b0000, 0b111>;
 }
 
 //===----------------------
@@ -1325,6 +1384,11 @@ def : RWSysReg<"ZCR_EL2",          0b11, 0b100, 0b0001, 0b0010, 0b000>;
 def : RWSysReg<"ZCR_EL3",          0b11, 0b110, 0b0001, 0b0010, 0b000>;
 def : RWSysReg<"ZCR_EL12",         0b11, 0b101, 0b0001, 0b0010, 0b000>;
 }
+
+// V8.5a Spectre mitigation SSBS register
+//                     Op0   Op1    CRn     CRm     Op2
+let Requires = [{ {AArch64::FeatureSpecRestrict} }] in
+def : RWSysReg<"SSBS", 0b11, 0b011, 0b0100, 0b0010, 0b110>;
 
 // Cyclone specific system registers
 //                                 Op0    Op1     CRn     CRm    Op2
