@@ -42,8 +42,10 @@
 
 namespace __xray {
 
-atomic_sint32_t LoggingStatus = {XRayLogInitStatus::XRAY_LOG_UNINITIALIZED};
+static atomic_sint32_t LoggingStatus = {
+    XRayLogInitStatus::XRAY_LOG_UNINITIALIZED};
 
+namespace {
 // Group together thread-local-data in a struct, then hide it behind a function
 // call so that it can be initialized on first use instead of as a global. We
 // force the alignment to 64-bytes for x86 cache line alignment, as this
@@ -72,6 +74,7 @@ struct alignas(64) ThreadLocalData {
   // FDRLogging, and that we're going to clean it up when the thread exits.
   BufferQueue *BQ = nullptr;
 };
+} // namespace
 
 static_assert(std::is_trivially_destructible<ThreadLocalData>::value,
               "ThreadLocalData must be trivially destructible");
