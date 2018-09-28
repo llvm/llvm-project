@@ -565,6 +565,15 @@ void MCStreamer::EmitCFIWindowSave() {
   CurFrame->Instructions.push_back(Instruction);
 }
 
+void MCStreamer::EmitCFINegateRAState() {
+  MCSymbol *Label = EmitCFILabel();
+  MCCFIInstruction Instruction = MCCFIInstruction::createNegateRAState(Label);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(Instruction);
+}
+
 void MCStreamer::EmitCFIReturnColumn(int64_t Register) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)

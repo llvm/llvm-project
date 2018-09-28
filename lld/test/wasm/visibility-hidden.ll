@@ -3,14 +3,14 @@
 ; RUN: rm -f %t2.a
 ; RUN: llvm-ar rcs %t2.a %t2.o
 
-; Test that hidden symbols are not exported, whether pulled in from an archive
-; or directly.
-; RUN: wasm-ld %t.o %t2.a -o %t.wasm
+; Test that symbols with hidden visitiblity are not export, even with
+; --export-dynamic
+; RUN: wasm-ld --export-dynamic %t.o %t2.a -o %t.wasm
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
-; Test that symbols with default visitiblity are not exported when
-; --no-export-default is passed.
-; RUN: wasm-ld --no-export-default %t.o %t2.a -o %t.nodef.wasm
+; Test that symbols with default visitiblity are not exported without
+; --export-dynamic
+; RUN: wasm-ld %t.o %t2.a -o %t.nodef.wasm
 ; RUN: obj2yaml %t.nodef.wasm | FileCheck %s -check-prefix=NO-DEFAULT
 
 
@@ -66,4 +66,13 @@ entry:
 ; NO-DEFAULT-NEXT:       - Name:            memory
 ; NO-DEFAULT-NEXT:         Kind:            MEMORY
 ; NO-DEFAULT-NEXT:         Index:           0
+; NO-DEFAULT-NEXT:       - Name:            __heap_base
+; NO-DEFAULT-NEXT:         Kind:            GLOBAL
+; NO-DEFAULT-NEXT:         Index:           1
+; NO-DEFAULT-NEXT:       - Name:            __data_end
+; NO-DEFAULT-NEXT:         Kind:            GLOBAL
+; NO-DEFAULT-NEXT:         Index:           2
+; NO-DEFAULT-NEXT:       - Name:            _start
+; NO-DEFAULT-NEXT:         Kind:            FUNCTION
+; NO-DEFAULT-NEXT:         Index:           3
 ; NO-DEFAULT-NEXT:   - Type:

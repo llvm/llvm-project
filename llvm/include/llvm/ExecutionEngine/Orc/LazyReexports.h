@@ -161,6 +161,8 @@ public:
                                    JITDylib &SourceJD,
                                    SymbolAliasMap CallableAliases);
 
+  StringRef getName() const override;
+
 private:
   void materialize(MaterializationResponsibility R) override;
   void discard(const JITDylib &JD, SymbolStringPtr Name) override;

@@ -147,7 +147,7 @@ function(add_openmp_testsuite target comment)
     return()
   endif()
 
-  cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
+  cmake_parse_arguments(ARG "" "" "DEPENDS;ARGS" ${ARGN})
   # EXCLUDE_FROM_ALL excludes the test ${target} out of check-openmp.
   if (NOT EXCLUDE_FROM_ALL)
     # Register the testsuites and depends for the check-openmp rule.
@@ -156,8 +156,9 @@ function(add_openmp_testsuite target comment)
   endif()
 
   if (${OPENMP_STANDALONE_BUILD})
+    set(LIT_ARGS ${OPENMP_LIT_ARGS} ${ARG_ARGS})
     add_custom_target(${target}
-      COMMAND ${PYTHON_EXECUTABLE} ${OPENMP_LLVM_LIT_EXECUTABLE} ${OPENMP_LIT_ARGS} ${ARG_UNPARSED_ARGUMENTS}
+      COMMAND ${PYTHON_EXECUTABLE} ${OPENMP_LLVM_LIT_EXECUTABLE} ${LIT_ARGS} ${ARG_UNPARSED_ARGUMENTS}
       COMMENT ${comment}
       DEPENDS ${ARG_DEPENDS}
       ${cmake_3_2_USES_TERMINAL}
@@ -167,6 +168,7 @@ function(add_openmp_testsuite target comment)
       ${comment}
       ${ARG_UNPARSED_ARGUMENTS}
       DEPENDS clang clang-headers FileCheck ${ARG_DEPENDS}
+      ARGS ${ARG_ARGS}
     )
   endif()
 endfunction()

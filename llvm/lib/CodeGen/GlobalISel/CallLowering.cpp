@@ -164,7 +164,6 @@ unsigned CallLowering::ValueHandler::extendRegister(unsigned ValReg,
     // nop in big-endian situations.
     return ValReg;
   case CCValAssign::AExt: {
-    assert(!VA.getLocVT().isVector() && "unexpected vector extend");
     auto MIB = MIRBuilder.buildAnyExt(LocTy, ValReg);
     return MIB->getOperand(0).getReg();
   }

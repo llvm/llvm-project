@@ -22,7 +22,8 @@ define i32* @get_address_of_global_var() #0 {
 
 define void @_start() #0 {
 entry:
-    %call = call i32* @get_address_of_global_var()
+    %call1 = call i32* @get_address_of_global_var()
+    %call2 = call i8* @get_address_of_foo()
     ret void
 }
 
@@ -81,12 +82,6 @@ entry:
 ; CHECK-NEXT:       - Name:            __data_end
 ; CHECK-NEXT:         Kind:            GLOBAL
 ; CHECK-NEXT:         Index:           2
-; CHECK-NEXT:       - Name:            get_address_of_foo
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           1
-; CHECK-NEXT:       - Name:            get_address_of_global_var
-; CHECK-NEXT:         Kind:            FUNCTION
-; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:       - Name:            _start
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           3
@@ -103,5 +98,5 @@ entry:
 ; CHECK-NEXT:         Body:            4180808080000B
 ; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            1082808080001A0B
+; CHECK-NEXT:         Body:            1082808080001A1081808080001A0B
 ; CHECK-NEXT: ...

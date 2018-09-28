@@ -239,17 +239,18 @@ TEST(SanitizerCommon, SizeClassAllocator64Dynamic) {
 }
 
 #if !SANITIZER_ANDROID
+//FIXME(kostyak): find values so that those work on Android as well.
 TEST(SanitizerCommon, SizeClassAllocator64Compact) {
   TestSizeClassAllocator<Allocator64Compact>();
+}
+
+TEST(SanitizerCommon, SizeClassAllocator64Dense) {
+  TestSizeClassAllocator<Allocator64Dense>();
 }
 #endif
 
 TEST(SanitizerCommon, SizeClassAllocator64VeryCompact) {
   TestSizeClassAllocator<Allocator64VeryCompact>();
-}
-
-TEST(SanitizerCommon, SizeClassAllocator64Dense) {
-  TestSizeClassAllocator<Allocator64Dense>();
 }
 #endif
 #endif

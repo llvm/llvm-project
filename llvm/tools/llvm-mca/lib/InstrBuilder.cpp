@@ -64,16 +64,15 @@ static void initializeUsedResources(InstrDesc &ID,
 
   // Sort elements by mask popcount, so that we prioritize resource units over
   // resource groups, and smaller groups over larger groups.
-  llvm::sort(Worklist,
-             [](const ResourcePlusCycles &A, const ResourcePlusCycles &B) {
-               unsigned popcntA = countPopulation(A.first);
-               unsigned popcntB = countPopulation(B.first);
-               if (popcntA < popcntB)
-                 return true;
-               if (popcntA > popcntB)
-                 return false;
-               return A.first < B.first;
-             });
+  sort(Worklist, [](const ResourcePlusCycles &A, const ResourcePlusCycles &B) {
+    unsigned popcntA = countPopulation(A.first);
+    unsigned popcntB = countPopulation(B.first);
+    if (popcntA < popcntB)
+      return true;
+    if (popcntA > popcntB)
+      return false;
+    return A.first < B.first;
+  });
 
   uint64_t UsedResourceUnits = 0;
 
@@ -351,7 +350,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   const MCSchedClassDesc &SCDesc = *SM.getSchedClassDesc(SchedClassID);
   if (SCDesc.NumMicroOps == MCSchedClassDesc::InvalidNumMicroOps) {
     std::string ToString;
-    llvm::raw_string_ostream OS(ToString);
+    raw_string_ostream OS(ToString);
     WithColor::error() << "found an unsupported instruction in the input"
                        << " assembly sequence.\n";
     MCIP.printInst(&MCI, OS, "", STI);

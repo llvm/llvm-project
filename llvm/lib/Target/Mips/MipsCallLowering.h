@@ -31,13 +31,21 @@ public:
 
     virtual ~MipsHandler() = default;
 
+    bool handle(ArrayRef<CCValAssign> ArgLocs,
+                ArrayRef<CallLowering::ArgInfo> Args);
+
   protected:
-    bool assign(unsigned VReg, const CCValAssign &VA);
+    bool assignVRegs(ArrayRef<unsigned> VRegs, ArrayRef<CCValAssign> ArgLocs,
+                     unsigned Index);
+
+    void setMostSignificantFirst(SmallVectorImpl<unsigned> &VRegs);
 
     MachineIRBuilder &MIRBuilder;
     MachineRegisterInfo &MRI;
 
   private:
+    bool assign(unsigned VReg, const CCValAssign &VA);
+
     virtual unsigned getStackAddress(const CCValAssign &VA,
                                      MachineMemOperand *&MMO) = 0;
 
@@ -45,6 +53,10 @@ public:
 
     virtual void assignValueToAddress(unsigned ValVReg,
                                       const CCValAssign &VA) = 0;
+
+    virtual bool handleSplit(SmallVectorImpl<unsigned> &VRegs,
+                             ArrayRef<CCValAssign> ArgLocs,
+                             unsigned ArgLocsStartIndex, unsigned ArgsReg) = 0;
   };
 
   MipsCallLowering(const MipsTargetLowering &TLI);
@@ -60,18 +72,13 @@ public:
                  ArrayRef<ArgInfo> OrigArgs) const override;
 
 private:
-  using FunTy =
-      std::function<void(ISD::ArgFlagsTy flags, EVT vt, EVT argvt, bool used,
-                         unsigned origIdx, unsigned partOffs)>;
-
   /// Based on registers available on target machine split or extend
   /// type if needed, also change pointer type to appropriate integer
-  /// type. Lambda will fill some info so we can tell MipsCCState to
-  /// assign physical registers.
-  void subTargetRegTypeForCallingConv(MachineIRBuilder &MIRBuilder,
-                                      ArrayRef<ArgInfo> Args,
+  /// type.
+  template <typename T>
+  void subTargetRegTypeForCallingConv(const Function &F, ArrayRef<ArgInfo> Args,
                                       ArrayRef<unsigned> OrigArgIndices,
-                                      const FunTy &PushBack) const;
+                                      SmallVectorImpl<T> &ISDArgs) const;
 
   /// Split structures and arrays, save original argument indices since
   /// Mips calling conv needs info about original argument type.

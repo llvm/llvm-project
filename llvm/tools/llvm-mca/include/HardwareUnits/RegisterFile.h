@@ -19,6 +19,7 @@
 
 #include "HardwareUnits/HardwareUnit.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/Error.h"
@@ -71,20 +72,31 @@ class RegisterFile : public HardwareUnit {
   // registers. So, the cost of allocating a YMM register in BtVer2 is 2.
   using IndexPlusCostPairTy = std::pair<unsigned, unsigned>;
 
-  // Struct RegisterRenamingInfo maps registers to register files.
-  // There is a RegisterRenamingInfo object for every register defined by
-  // the target. RegisteRenamingInfo objects are stored into vector
-  // RegisterMappings, and register IDs can be used to reference them.
+  // Struct RegisterRenamingInfo is used to map logical registers to register
+  // files.
+  //
+  // There is a RegisterRenamingInfo object for every logical register defined
+  // by the target. RegisteRenamingInfo objects are stored into vector
+  // `RegisterMappings`, and llvm::MCPhysReg IDs can be used to reference
+  // elements in that vector.
+  //
+  // Each RegisterRenamingInfo is owned by a PRF, and field `IndexPlusCost`
+  // specifies both the owning PRF, as well as the number of physical registers
+  // consumed at register renaming stage.
   struct RegisterRenamingInfo {
     IndexPlusCostPairTy IndexPlusCost;
     llvm::MCPhysReg RenameAs;
+    RegisterRenamingInfo()
+        : IndexPlusCost(std::make_pair(0U, 1U)), RenameAs(0U) {}
   };
 
   // RegisterMapping objects are mainly used to track physical register
-  // definitions. There is a RegisterMapping for every register defined by the
-  // Target. For each register, a RegisterMapping pair contains a descriptor of
-  // the last register write (in the form of a WriteRef object), as well as a
-  // RegisterRenamingInfo to quickly identify owning register files.
+  // definitions and resolve data dependencies.
+  //
+  // Every register declared by the Target is associated with an instance of
+  // RegisterMapping. RegisterMapping objects keep track of writes to a logical
+  // register.  That information is used by class RegisterFile to resolve data
+  // dependencies, and correctly set latencies for register uses.
   //
   // This implementation does not allow overlapping register files. The only
   // register file that is allowed to overlap with other register files is
@@ -92,8 +104,12 @@ class RegisterFile : public HardwareUnit {
   // at most one register file.
   using RegisterMapping = std::pair<WriteRef, RegisterRenamingInfo>;
 
-  // This map contains one entry for each register defined by the target.
+  // There is one entry per each register defined by the target.
   std::vector<RegisterMapping> RegisterMappings;
+
+  // Used to track zero registers. There is one bit for each register defined by
+  // the target. Bits are set for registers that are known to be zero.
+  llvm::APInt ZeroRegisters;
 
   // This method creates a new register file descriptor.
   // The new register file owns all of the registers declared by register

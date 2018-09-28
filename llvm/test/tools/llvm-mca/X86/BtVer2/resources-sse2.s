@@ -685,7 +685,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT: 17.00   -      -     49.00  204.00 119.50 140.50 117.00  -     15.00  54.00  66.50  66.50  12.00
+# CHECK-NEXT: 17.00   -      -     49.00  204.00 127.50 140.50 117.00  -     15.00  54.00  66.50  66.50  12.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
@@ -720,10 +720,10 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00    -      -     1.00    -      -      -     cvtps2dq	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     cvtps2pd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00    -      -     1.00    -      -      -     cvtps2pd	(%rax), %xmm2
-# CHECK-NEXT: 1.00    -      -     1.00    -      -     1.00    -      -      -     1.00    -      -      -     cvtsd2si	%xmm0, %ecx
-# CHECK-NEXT: 1.00    -      -     1.00    -      -     1.00    -      -      -     1.00    -      -      -     cvtsd2si	%xmm0, %rcx
-# CHECK-NEXT: 1.00    -      -     1.00    -      -     1.00   1.00    -      -     1.00    -      -      -     cvtsd2si	(%rax), %ecx
-# CHECK-NEXT: 1.00    -      -     1.00    -      -     1.00   1.00    -      -     1.00    -      -      -     cvtsd2si	(%rax), %rcx
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00   1.00    -      -      -     1.00    -      -      -     cvtsd2si	%xmm0, %ecx
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00   1.00    -      -      -     1.00    -      -      -     cvtsd2si	%xmm0, %rcx
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00   1.00   1.00    -      -     1.00    -      -      -     cvtsd2si	(%rax), %ecx
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00   1.00   1.00    -      -     1.00    -      -      -     cvtsd2si	(%rax), %rcx
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     2.00    -      -      -     cvtsd2ss	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00    -      -     2.00    -      -      -     cvtsd2ss	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     cvtsi2sdl	%ecx, %xmm2
@@ -738,10 +738,10 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00    -      -     1.00    -      -      -     cvttpd2pi	(%rax), %mm2
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     cvttps2dq	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00    -      -     1.00    -      -      -     cvttps2dq	(%rax), %xmm2
-# CHECK-NEXT: 1.00    -      -     1.00    -      -     1.00    -      -      -     1.00    -      -      -     cvttsd2si	%xmm0, %ecx
-# CHECK-NEXT: 1.00    -      -     1.00    -      -     1.00    -      -      -     1.00    -      -      -     cvttsd2si	%xmm0, %rcx
-# CHECK-NEXT: 1.00    -      -     1.00    -      -     1.00   1.00    -      -     1.00    -      -      -     cvttsd2si	(%rax), %ecx
-# CHECK-NEXT: 1.00    -      -     1.00    -      -     1.00   1.00    -      -     1.00    -      -      -     cvttsd2si	(%rax), %rcx
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00   1.00    -      -      -     1.00    -      -      -     cvttsd2si	%xmm0, %ecx
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00   1.00    -      -      -     1.00    -      -      -     cvttsd2si	%xmm0, %rcx
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00   1.00   1.00    -      -     1.00    -      -      -     cvttsd2si	(%rax), %ecx
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00   1.00   1.00    -      -     1.00    -      -      -     cvttsd2si	(%rax), %rcx
 # CHECK-NEXT:  -      -      -      -     19.00   -     1.00    -      -      -      -      -      -      -     divpd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -     19.00   -     1.00   1.00    -      -      -      -      -      -     divpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -     19.00   -     1.00    -      -      -      -      -      -      -     divsd	%xmm0, %xmm2

@@ -167,25 +167,6 @@ private:
     return llvm::make_unique<RO>(std::move(ResourcePtr));
   }
 
-  class StaticGlobalRenamer {
-  public:
-    StaticGlobalRenamer() = default;
-    StaticGlobalRenamer(StaticGlobalRenamer &&) = default;
-    StaticGlobalRenamer &operator=(StaticGlobalRenamer &&) = default;
-
-    void rename(Module &M) {
-      for (auto &F : M)
-        if (F.hasLocalLinkage())
-          F.setName("$static." + Twine(NextId++));
-      for (auto &G : M.globals())
-        if (G.hasLocalLinkage())
-          G.setName("$static." + Twine(NextId++));
-    }
-
-  private:
-    unsigned NextId = 0;
-  };
-
   struct LogicalDylib {
     struct SourceModuleEntry {
       std::unique_ptr<Module> SourceMod;
@@ -239,7 +220,7 @@ private:
     VModuleKey K;
     std::shared_ptr<SymbolResolver> BackingResolver;
     std::unique_ptr<IndirectStubsMgrT> StubsMgr;
-    StaticGlobalRenamer StaticRenamer;
+    SymbolLinkagePromoter PromoteSymbols;
     SourceModulesList SourceModules;
     std::vector<VModuleKey> BaseLayerVModuleKeys;
   };
@@ -361,14 +342,9 @@ public:
 private:
   Error addLogicalModule(LogicalDylib &LD, std::unique_ptr<Module> SrcMPtr) {
 
-    // Rename all static functions / globals to $static.X :
-    // This will unique the names across all modules in the logical dylib,
-    // simplifying symbol lookup.
-    LD.StaticRenamer.rename(*SrcMPtr);
-
-    // Bump the linkage and rename any anonymous/private members in SrcM to
-    // ensure that everything will resolve properly after we partition SrcM.
-    makeAllSymbolsExternallyAccessible(*SrcMPtr);
+    // Rename anonymous globals and promote linkage to ensure that everything
+    // will resolve properly after we partition SrcM.
+    LD.PromoteSymbols(*SrcMPtr);
 
     // Create a logical module handle for SrcM within the logical dylib.
     Module &SrcM = *SrcMPtr;
