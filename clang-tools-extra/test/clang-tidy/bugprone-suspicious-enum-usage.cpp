@@ -54,10 +54,10 @@ int trigger() {
   int emptytest = EmptyVal | B;
   if (bestDay() | A)
     return 1;
-  // CHECK-MESSAGES: :[[@LINE-2]]:17: warning: enum values are from different enum types
+  // CHECK-NOTES: :[[@LINE-2]]:17: warning: enum values are from different enum types
   if (I | Y)
     return 1;
-  // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: enum values are from different enum types
+  // CHECK-NOTES: :[[@LINE-2]]:9: warning: enum values are from different enum types
 }
 
 int dont_trigger() {

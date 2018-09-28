@@ -40,7 +40,9 @@ public:
   /// compiling them to enable concurrent compilation.
   /// Single threaded clients, or clients who load every module on a new
   /// context, need not set this.
-  void setCloneToNewContextOnEmit(bool CloneToNewContextOnEmit);
+  void setCloneToNewContextOnEmit(bool CloneToNewContextOnEmit) {
+    this->CloneToNewContextOnEmit = CloneToNewContextOnEmit;
+  }
 
   /// Returns the current value of the CloneToNewContextOnEmit flag.
   bool getCloneToNewContextOnEmit() const { return CloneToNewContextOnEmit; }

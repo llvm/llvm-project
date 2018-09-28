@@ -32,10 +32,10 @@ TEST(ThreadSafeModuleTest, ContextOwnershipSharedByTwoModules) {
   // ThreadSafeModule.
   ThreadSafeContext TSCtx(llvm::make_unique<LLVMContext>());
 
-  auto M1 =llvm::make_unique<Module>("M1", *TSCtx.getContext());
+  auto M1 = llvm::make_unique<Module>("M1", *TSCtx.getContext());
   ThreadSafeModule TSM1(std::move(M1), TSCtx);
 
-  auto M2 =llvm::make_unique<Module>("M2", *TSCtx.getContext());
+  auto M2 = llvm::make_unique<Module>("M2", *TSCtx.getContext());
   ThreadSafeModule TSM2(std::move(M2), std::move(TSCtx));
 }
 
@@ -68,7 +68,7 @@ TEST(ThreadSafeModuleTest, ThreadSafeModuleMoveAssignment) {
 TEST(ThreadSafeModuleTest, BasicContextLockAPI) {
   // Test that basic lock API calls work.
   ThreadSafeContext TSCtx(llvm::make_unique<LLVMContext>());
-  auto M =llvm::make_unique<Module>("M", *TSCtx.getContext());
+  auto M = llvm::make_unique<Module>("M", *TSCtx.getContext());
   ThreadSafeModule TSM(std::move(M), TSCtx);
 
   { auto L = TSCtx.getLock(); }

@@ -1571,7 +1571,11 @@ DWARFContext::create(const object::ObjectFile &Obj, const LoadedObjectInfo *L,
                      function_ref<ErrorPolicy(Error)> HandleError,
                      std::string DWPName) {
   auto DObj = llvm::make_unique<DWARFObjInMemory>(Obj, L, HandleError);
-  return llvm::make_unique<DWARFContext>(std::move(DObj), std::move(DWPName));
+  std::unique_ptr<DWARFContext> Ctx =
+      llvm::make_unique<DWARFContext>(std::move(DObj), std::move(DWPName));
+  logAllUnhandledErrors(Ctx->loadArchitectureInfo(Obj), errs(),
+                        Obj.getFileName() + ": ");
+  return Ctx;
 }
 
 std::unique_ptr<DWARFContext>

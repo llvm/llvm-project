@@ -458,6 +458,7 @@ StringRef llvm::dwarf::RangeListEncodingString(unsigned Encoding) {
 
 StringRef llvm::dwarf::CallFrameString(unsigned Encoding,
     Triple::ArchType Arch) {
+  assert(Arch != llvm::Triple::ArchType::UnknownArch);
 #define SELECT_AARCH64 (Arch == llvm::Triple::aarch64_be || Arch == llvm::Triple::aarch64)
 #define SELECT_MIPS64 Arch == llvm::Triple::mips64
 #define SELECT_SPARC (Arch == llvm::Triple::sparc || Arch == llvm::Triple::sparcv9)

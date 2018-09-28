@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -verify %s
+// RUN: %clang_cc1 -std=c++11 -verify %s -Wno-defaulted-function-deleted
 
 // expected-no-diagnostics
 

@@ -1721,7 +1721,8 @@ static DecodeStatus DecodeSystemPStateInstruction(MCInst &Inst, uint32_t insn,
   }
 
   if ((pstate_field == AArch64PState::PAN  ||
-       pstate_field == AArch64PState::UAO) && crm > 1)
+       pstate_field == AArch64PState::UAO  ||
+       pstate_field == AArch64PState::SSBS) && crm > 1)
     return Fail;
 
   Inst.addOperand(MCOperand::createImm(pstate_field));

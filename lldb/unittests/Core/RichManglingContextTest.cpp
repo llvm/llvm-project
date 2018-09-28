@@ -57,6 +57,29 @@ TEST(RichManglingContextTest, FromCxxMethodName) {
   ItaniumRMC.ParseFullName();
   CxxMethodRMC.ParseFullName();
   EXPECT_TRUE(ItaniumRMC.GetBufferRef() == CxxMethodRMC.GetBufferRef());
+
+  // Construct with a random name.
+  {
+    RichManglingContext CxxMethodRMC;
+    EXPECT_TRUE(CxxMethodRMC.FromCxxMethodName(ConstString("X")));
+
+    // We expect it is not a function.
+    EXPECT_FALSE(CxxMethodRMC.IsFunction());
+  }
+
+  // Construct with a function without a context.
+  {
+    RichManglingContext CxxMethodRMC;
+    EXPECT_TRUE(CxxMethodRMC.FromCxxMethodName(
+        ConstString("void * operator new(unsigned __int64)")));
+
+    // We expect it is a function.
+    EXPECT_TRUE(CxxMethodRMC.IsFunction());
+
+    // We expect its context is empty.
+    CxxMethodRMC.ParseFunctionDeclContextName();
+    EXPECT_TRUE(CxxMethodRMC.GetBufferRef().empty());
+  }
 }
 
 TEST(RichManglingContextTest, SwitchProvider) {

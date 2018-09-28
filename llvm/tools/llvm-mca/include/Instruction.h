@@ -141,6 +141,9 @@ public:
   unsigned getNumUsers() const { return Users.size() + NumWriteUsers; }
   bool clearsSuperRegisters() const { return ClearsSuperRegs; }
   bool isWriteZero() const { return WritesZero; }
+  bool isExecuted() const {
+    return CyclesLeft != UNKNOWN_CYCLES && CyclesLeft <= 0;
+  }
 
   const WriteState *getDependentWrite() const { return DependentWrite; }
   void setDependentWrite(WriteState *Other) {
@@ -351,9 +354,8 @@ public:
   int getCyclesLeft() const { return CyclesLeft; }
 
   bool hasDependentUsers() const {
-    return llvm::any_of(Defs, [](const UniqueDef &Def) {
-      return Def->getNumUsers() > 0;
-    });
+    return llvm::any_of(
+        Defs, [](const UniqueDef &Def) { return Def->getNumUsers() > 0; });
   }
 
   unsigned getNumUsers() const {
@@ -444,11 +446,22 @@ public:
   unsigned getSourceIndex() const { return Data.first; }
   const WriteState *getWriteState() const { return Data.second; }
   WriteState *getWriteState() { return Data.second; }
-  void invalidate() { Data = std::make_pair(INVALID_IID, nullptr); }
-
-  bool isValid() const {
-    return Data.first != INVALID_IID && Data.second != nullptr;
+  void invalidate() { Data.second = nullptr; }
+  bool isWriteZero() const {
+    assert(isValid() && "Invalid null WriteState found!");
+    return getWriteState()->isWriteZero();
   }
+
+  /// Returns true if this register write has been executed, and the new
+  /// register value is therefore available to users.
+  bool isAvailable() const {
+    if (getSourceIndex() == INVALID_IID)
+      return false;
+    const WriteState *WS = getWriteState();
+    return !WS || WS->isExecuted();
+  }
+
+  bool isValid() const { return Data.first != INVALID_IID && Data.second; }
   bool operator==(const WriteRef &Other) const { return Data == Other.Data; }
 
 #ifndef NDEBUG

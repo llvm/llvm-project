@@ -58,7 +58,7 @@ INNER: namespace N0 {
 INNER:     namespace N1 {
 INNER:         class Class : public N0::N1::Base {
 INNER:             struct Inner {
-INNER:                 signed char x;
+INNER:                 char x;
 INNER:                 short y;
 INNER:                 int z;
 INNER:             };

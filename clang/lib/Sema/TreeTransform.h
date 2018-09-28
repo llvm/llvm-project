@@ -8421,7 +8421,7 @@ TreeTransform<Derived>::TransformOMPNogroupClause(OMPNogroupClause *C) {
 template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPUnifiedAddressClause(
     OMPUnifiedAddressClause *C) {
-  llvm_unreachable("unified address clause cannot appear in dependent context");
+  llvm_unreachable("unified_address clause cannot appear in dependent context");
 }
 
 template <typename Derived>

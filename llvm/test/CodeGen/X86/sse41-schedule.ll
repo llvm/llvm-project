@@ -2078,13 +2078,13 @@ define <8 x i16> @test_phminposuw(<8 x i16> *%a0) {
 ; BTVER2-SSE-LABEL: test_phminposuw:
 ; BTVER2-SSE:       # %bb.0:
 ; BTVER2-SSE-NEXT:    phminposuw (%rdi), %xmm0 # sched: [7:1.00]
-; BTVER2-SSE-NEXT:    phminposuw %xmm0, %xmm0 # sched: [2:1.00]
+; BTVER2-SSE-NEXT:    phminposuw %xmm0, %xmm0 # sched: [2:0.50]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_phminposuw:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vphminposuw (%rdi), %xmm0 # sched: [7:1.00]
-; BTVER2-NEXT:    vphminposuw %xmm0, %xmm0 # sched: [2:1.00]
+; BTVER2-NEXT:    vphminposuw %xmm0, %xmm0 # sched: [2:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-SSE-LABEL: test_phminposuw:

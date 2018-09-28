@@ -246,57 +246,23 @@ void makeStub(Function &F, Value &ImplPointer) {
     Builder.CreateRet(Call);
 }
 
-// Utility class for renaming global values and functions during partitioning.
-class GlobalRenamer {
-public:
+void SymbolLinkagePromoter::operator()(Module &M) {
+  for (auto &GV : M.global_values()) {
 
-  static bool needsRenaming(const Value &New) {
-    return !New.hasName() || New.getName().startswith("\01L");
-  }
+    // Rename if necessary.
+    if (!GV.hasName())
+      GV.setName("__orc_anon." + Twine(NextId++));
+    else if (GV.getName().startswith("\01L"))
+      GV.setName("__" + GV.getName().substr(1) + "." + Twine(NextId++));
+    else if (GV.hasLocalLinkage())
+      GV.setName("__orc_lcl." + GV.getName() + "." + Twine(NextId++));
 
-  const std::string& getRename(const Value &Orig) {
-    // See if we have a name for this global.
-    {
-      auto I = Names.find(&Orig);
-      if (I != Names.end())
-        return I->second;
+    if (GV.hasLocalLinkage()) {
+      GV.setLinkage(GlobalValue::ExternalLinkage);
+      GV.setVisibility(GlobalValue::HiddenVisibility);
     }
-
-    // Nope. Create a new one.
-    // FIXME: Use a more robust uniquing scheme. (This may blow up if the user
-    //        writes a "__orc_anon[[:digit:]]* method).
-    unsigned ID = Names.size();
-    std::ostringstream NameStream;
-    NameStream << "__orc_anon" << ID++;
-    auto I = Names.insert(std::make_pair(&Orig, NameStream.str()));
-    return I.first->second;
+    GV.setUnnamedAddr(GlobalValue::UnnamedAddr::None);
   }
-private:
-  DenseMap<const Value*, std::string> Names;
-};
-
-static void raiseVisibilityOnValue(GlobalValue &V, GlobalRenamer &R) {
-  if (V.hasLocalLinkage()) {
-    if (R.needsRenaming(V))
-      V.setName(R.getRename(V));
-    V.setLinkage(GlobalValue::ExternalLinkage);
-    V.setVisibility(GlobalValue::HiddenVisibility);
-  }
-  V.setUnnamedAddr(GlobalValue::UnnamedAddr::None);
-  assert(!R.needsRenaming(V) && "Invalid global name.");
-}
-
-void makeAllSymbolsExternallyAccessible(Module &M) {
-  GlobalRenamer Renamer;
-
-  for (auto &F : M)
-    raiseVisibilityOnValue(F, Renamer);
-
-  for (auto &GV : M.globals())
-    raiseVisibilityOnValue(GV, Renamer);
-
-  for (auto &A : M.aliases())
-    raiseVisibilityOnValue(A, Renamer);
 }
 
 Function* cloneFunctionDecl(Module &Dst, const Function &F,
