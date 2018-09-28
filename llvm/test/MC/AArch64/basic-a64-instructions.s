@@ -3482,6 +3482,7 @@ _func:
 // CHECK: clrex                           // encoding: [0x5f,0x3f,0x03,0xd5]
 
         dsb #0
+        dsb #4
         dsb #12
         dsb #15
         dsb oshld
@@ -3496,7 +3497,8 @@ _func:
         dsb ld
         dsb st
         dsb sy
-// CHECK: dsb     #0                      // encoding: [0x9f,0x30,0x03,0xd5]
+// CHECK: ssbb                            // encoding: [0x9f,0x30,0x03,0xd5]
+// CHECK: pssbb                           // encoding: [0x9f,0x34,0x03,0xd5]
 // CHECK: dsb     #12                     // encoding: [0x9f,0x3c,0x03,0xd5]
 // CHECK: dsb     sy                      // encoding: [0x9f,0x3f,0x03,0xd5]
 // CHECK: dsb     oshld                   // encoding: [0x9f,0x31,0x03,0xd5]

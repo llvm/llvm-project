@@ -3231,6 +3231,14 @@ def t2TSB : T2I<(outs), (ins tsb_opt:$opt), NoItinerary,
 }
 }
 
+// Armv8.5-A speculation barrier
+def t2SB : Thumb2XI<(outs), (ins), AddrModeNone, 4, NoItinerary, "sb", "", []>,
+           Requires<[IsThumb2, HasSpecCtrl]>, Sched<[]> {
+  let Inst{31-0} = 0xf3bf8f70;
+  let Unpredictable = 0x000f2f0f;
+  let hasSideEffects = 1;
+}
+
 class T2I_ldrex<bits<4> opcod, dag oops, dag iops, AddrMode am, int sz,
                 InstrItinClass itin, string opc, string asm, string cstr,
                 list<dag> pattern, bits<4> rt2 = 0b1111>
@@ -4546,6 +4554,12 @@ def : t2InstAlias<"tst${p} $Rn, $Rm",
 def : InstAlias<"dmb${p}", (t2DMB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"dsb${p}", (t2DSB 0xf, pred:$p), 0>, Requires<[HasDB]>;
 def : InstAlias<"isb${p}", (t2ISB 0xf, pred:$p), 0>, Requires<[HasDB]>;
+
+// Non-predicable aliases of a predicable DSB: the predicate is (14, 0) where
+// 14 = AL (always execute) and 0 = "instruction doesn't read the CPSR".
+def : InstAlias<"ssbb", (t2DSB 0x0, 14, 0), 1>, Requires<[HasDB, IsThumb2]>;
+def : InstAlias<"pssbb", (t2DSB 0x4, 14, 0), 1>, Requires<[HasDB, IsThumb2]>;
+
 // Armv8-R 'Data Full Barrier'
 def : InstAlias<"dfb${p}", (t2DSB 0xc, pred:$p), 1>, Requires<[HasDFB]>;
 

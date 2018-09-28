@@ -207,6 +207,28 @@ def FeatureAggressiveFMA :
 def FeatureAltFPCmp : SubtargetFeature<"altnzcv", "HasAlternativeNZCV", "true",
   "Enable alternative NZCV format for floating point comparisons">;
 
+def FeatureFRInt3264 : SubtargetFeature<"fptoint", "HasFRInt3264", "true",
+  "Enable FRInt[32|64][Z|X] instructions that round a floating-point number to "
+  "an integer (in FP format) forcing it to fit into a 32- or 64-bit int" >;
+
+def FeatureSpecRestrict : SubtargetFeature<"specrestrict", "HasSpecRestrict",
+  "true", "Enable architectural speculation restriction" >;
+
+def FeatureSpecCtrl : SubtargetFeature<"specctrl", "HasSpecCtrl", "true",
+  "Enable speculation control barrier" >;
+
+def FeaturePredCtrl : SubtargetFeature<"predctrl", "HasPredCtrl", "true",
+  "Enable execution and data prediction invalidation instructions" >;
+
+def FeatureCacheDeepPersist : SubtargetFeature<"ccdp", "HasCCDP",
+    "true", "Enable Cache Clean to Point of Deep Persistence" >;
+
+def FeatureBranchTargetId : SubtargetFeature<"bti", "HasBTI",
+    "true", "Enable Branch Target Identification" >;
+
+def FeatureRandGen : SubtargetFeature<"rand", "HasRandGen",
+    "true", "Enable Random Number generation instructions" >;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -223,8 +245,12 @@ def HasV8_3aOps : SubtargetFeature<"v8.3a", "HasV8_3aOps", "true",
 def HasV8_4aOps : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
   "Support ARM v8.4a instructions", [HasV8_3aOps, FeatureDotProd]>;
 
-def HasV8_5aOps : SubtargetFeature<"v8.5a", "HasV8_5aOps", "true",
-  "Support ARM v8.5a instructions", [HasV8_4aOps, FeatureAltFPCmp]>;
+def HasV8_5aOps : SubtargetFeature<
+  "v8.5a", "HasV8_5aOps", "true", "Support ARM v8.5a instructions",
+  [HasV8_4aOps, FeatureAltFPCmp, FeatureFRInt3264, FeatureSpecRestrict,
+   FeatureSpecCtrl, FeaturePredCtrl, FeatureCacheDeepPersist,
+   FeatureBranchTargetId]
+>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description

@@ -26,8 +26,9 @@ namespace mca {
 
 RegisterFile::RegisterFile(const llvm::MCSchedModel &SM,
                            const llvm::MCRegisterInfo &mri, unsigned NumRegs)
-    : MRI(mri), RegisterMappings(mri.getNumRegs(),
-                                 {WriteRef(), {IndexPlusCostPairTy(0, 1), 0}}) {
+    : MRI(mri),
+      RegisterMappings(mri.getNumRegs(), {WriteRef(), RegisterRenamingInfo()}),
+      ZeroRegisters(mri.getNumRegs(), false) {
   initialize(SM, NumRegs);
 }
 
@@ -162,8 +163,10 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
   // a false dependency on RenameAs. The only exception is for when the write
   // implicitly clears the upper portion of the underlying register.
   // If a write clears its super-registers, then it is renamed as `RenameAs`.
-  bool ShouldAllocatePhysRegs = !WS.isWriteZero();
+  bool IsWriteZero = WS.isWriteZero();
+  bool ShouldAllocatePhysRegs = !IsWriteZero;
   const RegisterRenamingInfo &RRI = RegisterMappings[RegID].second;
+
   if (RRI.RenameAs && RRI.RenameAs != RegID) {
     RegID = RRI.RenameAs;
     WriteRef &OtherWrite = RegisterMappings[RegID].first;
@@ -182,6 +185,19 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
     }
   }
 
+  // Update zero registers.
+  unsigned ZeroRegisterID =
+      WS.clearsSuperRegisters() ? RegID : WS.getRegisterID();
+  if (IsWriteZero) {
+    ZeroRegisters.setBit(ZeroRegisterID);
+    for (MCSubRegIterator I(ZeroRegisterID, &MRI); I.isValid(); ++I)
+      ZeroRegisters.setBit(*I);
+  } else {
+    ZeroRegisters.clearBit(ZeroRegisterID);
+    for (MCSubRegIterator I(ZeroRegisterID, &MRI); I.isValid(); ++I)
+      ZeroRegisters.clearBit(*I);
+  }
+
   // Update the mapping for register RegID including its sub-registers.
   RegisterMappings[RegID].first = Write;
   for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I)
@@ -196,8 +212,13 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
   if (!WS.clearsSuperRegisters())
     return;
 
-  for (MCSuperRegIterator I(RegID, &MRI); I.isValid(); ++I)
+  for (MCSuperRegIterator I(RegID, &MRI); I.isValid(); ++I) {
     RegisterMappings[*I].first = Write;
+    if (IsWriteZero)
+      ZeroRegisters.setBit(*I);
+    else
+      ZeroRegisters.clearBit(*I);
+  }
 }
 
 void RegisterFile::removeRegisterWrite(
@@ -327,14 +348,16 @@ unsigned RegisterFile::isAvailable(ArrayRef<unsigned> Regs) const {
 void RegisterFile::dump() const {
   for (unsigned I = 0, E = MRI.getNumRegs(); I < E; ++I) {
     const RegisterMapping &RM = RegisterMappings[I];
-    if (!RM.first.getWriteState())
-      continue;
     const RegisterRenamingInfo &RRI = RM.second;
-    dbgs() << MRI.getName(I) << ", " << I << ", PRF=" << RRI.IndexPlusCost.first
-           << ", Cost=" << RRI.IndexPlusCost.second
-           << ", RenameAs=" << RRI.RenameAs << ", ";
-    RM.first.dump();
-    dbgs() << '\n';
+    if (ZeroRegisters[I]) {
+      dbgs() << MRI.getName(I) << ", " << I
+             << ", PRF=" << RRI.IndexPlusCost.first
+             << ", Cost=" << RRI.IndexPlusCost.second
+             << ", RenameAs=" << RRI.RenameAs << ", IsZero=" << ZeroRegisters[I]
+             << ",";
+      RM.first.dump();
+      dbgs() << '\n';
+    }
   }
 
   for (unsigned I = 0, E = getNumRegisterFiles(); I < E; ++I) {

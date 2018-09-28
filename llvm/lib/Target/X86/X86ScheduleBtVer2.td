@@ -200,7 +200,9 @@ defm : X86WriteRes<WriteFCMOV, [JFPU0, JFPA], 3, [1,1], 1>; // x87 conditional m
 def  : WriteRes<WriteSETCC, [JALU01]>; // Setcc.
 def  : WriteRes<WriteSETCCStore, [JALU01,JSAGU]>;
 def  : WriteRes<WriteLAHFSAHF, [JALU01]>;
-def  : WriteRes<WriteBitTest,[JALU01]>;
+
+defm : X86WriteRes<WriteBitTest,    [JALU01], 1, [1], 1>;
+defm : X86WriteRes<WriteBitTestSet, [JALU01], 1, [1], 2>;
 
 // This is for simple LEAs with one or two input operands.
 def : WriteRes<WriteLEA, [JALU01]>;
@@ -210,11 +212,11 @@ defm : JWriteResIntPair<WriteBSF, [JALU01], 5, [4], 8>;
 defm : JWriteResIntPair<WriteBSR, [JALU01], 5, [4], 8>;
 defm : JWriteResIntPair<WritePOPCNT,         [JALU01], 1>;
 defm : JWriteResIntPair<WriteLZCNT,          [JALU01], 1>;
-defm : JWriteResIntPair<WriteTZCNT,          [JALU01], 2, [2]>;
+defm : JWriteResIntPair<WriteTZCNT,          [JALU01], 2, [2], 2>;
 
 // BMI1 BEXTR/BLS, BMI2 BZHI
 defm : JWriteResIntPair<WriteBEXTR, [JALU01], 1>;
-defm : JWriteResIntPair<WriteBLS,   [JALU01], 2, [2]>;
+defm : JWriteResIntPair<WriteBLS,   [JALU01], 2, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteBZHI>;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -478,14 +480,14 @@ defm : X86WriteResPairUnsupported<WriteVecIMulZ>;
 defm : JWriteResFpuPair<WritePMULLD,      [JFPU0, JFPU01, JVIMUL, JVALU], 4, [2, 1, 2, 1], 3>;
 defm : X86WriteResPairUnsupported<WritePMULLDY>;
 defm : X86WriteResPairUnsupported<WritePMULLDZ>;
-defm : JWriteResFpuPair<WriteMPSAD,       [JFPU0, JVIMUL], 3, [1, 2]>;
+defm : JWriteResFpuPair<WriteMPSAD,       [JFPU0, JVIMUL], 3, [1, 2], 3>;
 defm : X86WriteResPairUnsupported<WriteMPSADY>;
 defm : X86WriteResPairUnsupported<WriteMPSADZ>;
 defm : JWriteResFpuPair<WritePSADBW,      [JFPU01, JVALU], 2>;
 defm : JWriteResFpuPair<WritePSADBWX,     [JFPU01, JVALU], 2>;
 defm : X86WriteResPairUnsupported<WritePSADBWY>;
 defm : X86WriteResPairUnsupported<WritePSADBWZ>;
-defm : JWriteResFpuPair<WritePHMINPOS,    [JFPU0,  JVALU], 2>;
+defm : JWriteResFpuPair<WritePHMINPOS,    [JFPU01, JVALU], 2>;
 defm : JWriteResFpuPair<WriteShuffle,     [JFPU01, JVALU], 1>;
 defm : JWriteResFpuPair<WriteShuffleX,    [JFPU01, JVALU], 1>;
 defm : X86WriteResPairUnsupported<WriteShuffleY>;

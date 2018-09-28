@@ -390,6 +390,22 @@ void Analysis::SchedClassCluster::addPoint(
   assert(ClusterId == Clustering.getClusterIdForPoint(PointId));
 }
 
+// Returns a ProxResIdx by id or name.
+static unsigned findProcResIdx(const llvm::MCSubtargetInfo &STI,
+                               const llvm::StringRef NameOrId) {
+  // Interpret the key as an ProcResIdx.
+  unsigned ProcResIdx = 0;
+  if (llvm::to_integer(NameOrId, ProcResIdx, 10))
+    return ProcResIdx;
+  // Interpret the key as a ProcRes name.
+  const auto &SchedModel = STI.getSchedModel();
+  for (int I = 0, E = SchedModel.getNumProcResourceKinds(); I < E; ++I) {
+    if (NameOrId == SchedModel.getProcResource(I)->Name)
+      return I;
+  }
+  return 0;
+}
+
 bool Analysis::SchedClassCluster::measurementsMatch(
     const llvm::MCSubtargetInfo &STI, const SchedClass &SC,
     const InstructionBenchmarkClustering &Clustering) const {
@@ -417,23 +433,28 @@ bool Analysis::SchedClassCluster::measurementsMatch(
     ClusterCenterPoint[0].PerInstructionValue = Representative[0].avg();
   } else if (Mode == InstructionBenchmark::Uops) {
     for (int I = 0, E = Representative.size(); I < E; ++I) {
-      // Find the pressure on ProcResIdx `Key`.
-      uint16_t ProcResIdx = 0;
-      if (!llvm::to_integer(Representative[I].key(), ProcResIdx, 10)) {
-        llvm::errs() << "expected ProcResIdx key, got "
-                     << Representative[I].key() << "\n";
+      const auto Key = Representative[I].key();
+      uint16_t ProcResIdx = findProcResIdx(STI, Key);
+      if (ProcResIdx > 0) {
+        // Find the pressure on ProcResIdx `Key`.
+        const auto ProcResPressureIt =
+            std::find_if(SC.IdealizedProcResPressure.begin(),
+                         SC.IdealizedProcResPressure.end(),
+                         [ProcResIdx](const std::pair<uint16_t, float> &WPR) {
+                           return WPR.first == ProcResIdx;
+                         });
+        SchedClassPoint[I].PerInstructionValue =
+            ProcResPressureIt == SC.IdealizedProcResPressure.end()
+                ? 0.0
+                : ProcResPressureIt->second;
+      } else if (Key == "NumMicroOps") {
+        SchedClassPoint[I].PerInstructionValue = SC.SCDesc->NumMicroOps;
+      } else {
+        llvm::errs() << "expected `key` to be either a ProcResIdx or a ProcRes "
+                        "name, got "
+                     << Key << "\n";
         return false;
       }
-      const auto ProcResPressureIt =
-          std::find_if(SC.IdealizedProcResPressure.begin(),
-                       SC.IdealizedProcResPressure.end(),
-                       [ProcResIdx](const std::pair<uint16_t, float> &WPR) {
-                         return WPR.first == ProcResIdx;
-                       });
-      SchedClassPoint[I].PerInstructionValue =
-          ProcResPressureIt == SC.IdealizedProcResPressure.end()
-              ? 0.0
-              : ProcResPressureIt->second;
       ClusterCenterPoint[I].PerInstructionValue = Representative[I].avg();
     }
   } else {
@@ -447,7 +468,7 @@ bool Analysis::SchedClassCluster::measurementsMatch(
 void Analysis::printSchedClassDescHtml(const SchedClass &SC,
                                        llvm::raw_ostream &OS) const {
   OS << "<table class=\"sched-class-desc\">";
-  OS << "<tr><th>Valid</th><th>Variant</th><th>uOps</th><th>Latency</"
+  OS << "<tr><th>Valid</th><th>Variant</th><th>NumMicroOps</th><th>Latency</"
         "th><th>WriteProcRes</th><th title=\"This is the idealized unit "
         "resource (port) pressure assuming ideal distribution\">Idealized "
         "Resource Pressure</th></tr>";

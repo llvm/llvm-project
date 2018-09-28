@@ -96,6 +96,13 @@ protected:
 
   // Armv8.5-A Extensions
   bool HasAlternativeNZCV = false;
+  bool HasFRInt3264 = false;
+  bool HasSpecRestrict = false;
+  bool HasSpecCtrl = false;
+  bool HasPredCtrl = false;
+  bool HasCCDP = false;
+  bool HasBTI = false;
+  bool HasRandGen = false;
 
   // HasZeroCycleRegMove - Has zero-cycle register mov instructions.
   bool HasZeroCycleRegMove = false;
@@ -310,6 +317,13 @@ public:
   bool hasRCPC() const { return HasRCPC; }
   bool hasAggressiveFMA() const { return HasAggressiveFMA; }
   bool hasAlternativeNZCV() const { return HasAlternativeNZCV; }
+  bool hasFRInt3264() const { return HasFRInt3264; }
+  bool hasSpecRestrict() { return HasSpecRestrict; }
+  bool hasSpecCtrl() { return HasSpecCtrl; }
+  bool hasPredCtrl() { return HasPredCtrl; }
+  bool hasCCDP() { return HasCCDP; }
+  bool hasBTI() { return HasBTI; }
+  bool hasRandGen() { return HasRandGen; }
 
   bool isLittleEndian() const { return IsLittle; }
 

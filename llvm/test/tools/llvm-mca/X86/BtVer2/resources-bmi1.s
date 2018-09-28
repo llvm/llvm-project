@@ -54,22 +54,22 @@ tzcnt       (%rax), %rcx
 # CHECK-NEXT:  1      4     1.00    *                   bextrl	%eax, (%rbx), %ecx
 # CHECK-NEXT:  1      1     0.50                        bextrq	%rax, %rbx, %rcx
 # CHECK-NEXT:  1      4     1.00    *                   bextrq	%rax, (%rbx), %rcx
-# CHECK-NEXT:  1      2     1.00                        blsil	%eax, %ecx
-# CHECK-NEXT:  1      5     1.00    *                   blsil	(%rax), %ecx
-# CHECK-NEXT:  1      2     1.00                        blsiq	%rax, %rcx
-# CHECK-NEXT:  1      5     1.00    *                   blsiq	(%rax), %rcx
-# CHECK-NEXT:  1      2     1.00                        blsmskl	%eax, %ecx
-# CHECK-NEXT:  1      5     1.00    *                   blsmskl	(%rax), %ecx
-# CHECK-NEXT:  1      2     1.00                        blsmskq	%rax, %rcx
-# CHECK-NEXT:  1      5     1.00    *                   blsmskq	(%rax), %rcx
-# CHECK-NEXT:  1      2     1.00                        blsrl	%eax, %ecx
-# CHECK-NEXT:  1      5     1.00    *                   blsrl	(%rax), %ecx
-# CHECK-NEXT:  1      2     1.00                        blsrq	%rax, %rcx
-# CHECK-NEXT:  1      5     1.00    *                   blsrq	(%rax), %rcx
-# CHECK-NEXT:  1      2     1.00                        tzcntl	%eax, %ecx
-# CHECK-NEXT:  1      5     1.00    *                   tzcntl	(%rax), %ecx
-# CHECK-NEXT:  1      2     1.00                        tzcntq	%rax, %rcx
-# CHECK-NEXT:  1      5     1.00    *                   tzcntq	(%rax), %rcx
+# CHECK-NEXT:  2      2     1.00                        blsil	%eax, %ecx
+# CHECK-NEXT:  2      5     1.00    *                   blsil	(%rax), %ecx
+# CHECK-NEXT:  2      2     1.00                        blsiq	%rax, %rcx
+# CHECK-NEXT:  2      5     1.00    *                   blsiq	(%rax), %rcx
+# CHECK-NEXT:  2      2     1.00                        blsmskl	%eax, %ecx
+# CHECK-NEXT:  2      5     1.00    *                   blsmskl	(%rax), %ecx
+# CHECK-NEXT:  2      2     1.00                        blsmskq	%rax, %rcx
+# CHECK-NEXT:  2      5     1.00    *                   blsmskq	(%rax), %rcx
+# CHECK-NEXT:  2      2     1.00                        blsrl	%eax, %ecx
+# CHECK-NEXT:  2      5     1.00    *                   blsrl	(%rax), %ecx
+# CHECK-NEXT:  2      2     1.00                        blsrq	%rax, %rcx
+# CHECK-NEXT:  2      5     1.00    *                   blsrq	(%rax), %rcx
+# CHECK-NEXT:  2      2     1.00                        tzcntl	%eax, %ecx
+# CHECK-NEXT:  2      5     1.00    *                   tzcntl	(%rax), %ecx
+# CHECK-NEXT:  2      2     1.00                        tzcntq	%rax, %rcx
+# CHECK-NEXT:  2      5     1.00    *                   tzcntq	(%rax), %rcx
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - JALU0

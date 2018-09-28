@@ -295,6 +295,7 @@ class LocalIndirectStubsManager : public IndirectStubsManager {
 public:
   Error createStub(StringRef StubName, JITTargetAddress StubAddr,
                    JITSymbolFlags StubFlags) override {
+    std::lock_guard<std::mutex> Lock(StubsMutex);
     if (auto Err = reserveStubs(1))
       return Err;
 
@@ -304,6 +305,7 @@ public:
   }
 
   Error createStubs(const StubInitsMap &StubInits) override {
+    std::lock_guard<std::mutex> Lock(StubsMutex);
     if (auto Err = reserveStubs(StubInits.size()))
       return Err;
 
@@ -315,6 +317,7 @@ public:
   }
 
   JITEvaluatedSymbol findStub(StringRef Name, bool ExportedStubsOnly) override {
+    std::lock_guard<std::mutex> Lock(StubsMutex);
     auto I = StubIndexes.find(Name);
     if (I == StubIndexes.end())
       return nullptr;
@@ -330,6 +333,7 @@ public:
   }
 
   JITEvaluatedSymbol findPointer(StringRef Name) override {
+    std::lock_guard<std::mutex> Lock(StubsMutex);
     auto I = StubIndexes.find(Name);
     if (I == StubIndexes.end())
       return nullptr;
@@ -342,11 +346,15 @@ public:
   }
 
   Error updatePointer(StringRef Name, JITTargetAddress NewAddr) override {
+    using AtomicIntPtr = std::atomic<uintptr_t>;
+
+    std::lock_guard<std::mutex> Lock(StubsMutex);
     auto I = StubIndexes.find(Name);
     assert(I != StubIndexes.end() && "No stub pointer for symbol");
     auto Key = I->second.first;
-    *IndirectStubsInfos[Key.first].getPtr(Key.second) =
-        reinterpret_cast<void *>(static_cast<uintptr_t>(NewAddr));
+    AtomicIntPtr *AtomicStubPtr = reinterpret_cast<AtomicIntPtr *>(
+        IndirectStubsInfos[Key.first].getPtr(Key.second));
+    *AtomicStubPtr = static_cast<uintptr_t>(NewAddr);
     return Error::success();
   }
 
@@ -376,6 +384,7 @@ private:
     StubIndexes[StubName] = std::make_pair(Key, StubFlags);
   }
 
+  std::mutex StubsMutex;
   std::vector<typename TargetT::IndirectStubsInfo> IndirectStubsInfos;
   using StubKey = std::pair<uint16_t, uint16_t>;
   std::vector<StubKey> FreeStubs;
@@ -413,12 +422,16 @@ GlobalVariable *createImplPointer(PointerType &PT, Module &M, const Twine &Name,
 ///        indirect call using the given function pointer.
 void makeStub(Function &F, Value &ImplPointer);
 
-/// Raise linkage types and rename as necessary to ensure that all
-///        symbols are accessible for other modules.
-///
-///   This should be called before partitioning a module to ensure that the
-/// partitions retain access to each other's symbols.
-void makeAllSymbolsExternallyAccessible(Module &M);
+/// Promotes private symbols to global hidden, and renames to prevent clashes
+/// with other promoted symbols. The same SymbolPromoter instance should be
+/// used for all symbols to be added to a single JITDylib.
+class SymbolLinkagePromoter {
+public:
+  void operator()(Module &M);
+
+private:
+  unsigned NextId = 0;
+};
 
 /// Clone a function declaration into a new module.
 ///
