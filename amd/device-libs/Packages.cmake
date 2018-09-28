@@ -5,14 +5,11 @@ set(PACKAGE_PREFIX lib/cmake/AMDDeviceLibs)
 # AMD_DEVICE_LIBS_PREFIX_CODE blank and include absolute paths in the target
 # imports in AMD_DEVICE_LIBS_TARGET_CODE.
 foreach(target ${AMDGCN_LIB_LIST})
-  get_target_property(target_name ${target} ARCHIVE_OUTPUT_NAME)
-  get_target_property(target_directory ${target} ARCHIVE_OUTPUT_DIRECTORY)
-  get_target_property(target_prefix ${target} PREFIX)
-  get_target_property(target_suffix ${target} SUFFIX)
+  get_target_property(target_path ${target} OUTPUT_NAME)
   set(AMD_DEVICE_LIBS_TARGET_CODE "${AMD_DEVICE_LIBS_TARGET_CODE}
 add_library(${target} STATIC IMPORTED)
 set_target_properties(${target} PROPERTIES
-  IMPORTED_LOCATION \"${target_directory}/${target_prefix}${target_name}${target_suffix}\")")
+  IMPORTED_LOCATION \"${target_path}\")")
 endforeach()
 configure_file(AMDDeviceLibsConfig.cmake.in
   ${PACKAGE_PREFIX}/AMDDeviceLibsConfig.cmake

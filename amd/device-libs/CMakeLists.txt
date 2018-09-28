@@ -7,6 +7,8 @@
 
 cmake_minimum_required(VERSION 2.6)
 
+cmake_policy(SET CMP0011 NEW)
+
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 project(ROCm-Device-Libs)
 
@@ -53,10 +55,6 @@ endif()
 include(Packages.cmake)
 
 if(ROCM_DEVICELIB_INCLUDE_TESTS)
-  if (NOT AMDHSACOD)
-    message(WARNING "amdhsacod is not found, testing disabled")
-    message(WARNING "Specify amdhsacod executable with -DAMDHSACOD=<...>")
-  endif()
   enable_testing()
   add_subdirectory(test/opencl)
   add_subdirectory(test/opencl_conformance)

@@ -5,130 +5,166 @@
 ## License. See LICENSE.TXT for details.
 ##===--------------------------------------------------------------------------
 
-# -Wno-error=atomic-alignment was added to workaround build problems due to potential mis-aligned atomic ops detected by clang
-set (CLANG_OCL_FLAGS "-Werror -Wno-error=atomic-alignment -x cl -Xclang -cl-std=CL2.0 -target ${AMDGPU_TARGET_TRIPLE} -fvisibility=protected -Xclang -finclude-default-header ${CLANG_OPTIONS_APPEND}")
-set (CLANG_OCL_LINK_FLAGS "-target ${AMDGPU_TARGET_TRIPLE} -mcpu=fiji")
+# Required because we need to generate response files on windows for long
+# command-lines, but the only way to do this as part of the dependency graph is
+# configure_file and we are included from multiple places. To get around this
+# we `file(WRITE)` a file with an @variable reference and `configure_file` it.
+cmake_policy(SET CMP0053 OLD)
 
-set (LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/llvm-link")
-set (LLVM_OBJDUMP "${LLVM_TOOLS_BINARY_DIR}/llvm-objdump")
-set (LLVM_OPT "${LLVM_TOOLS_BINARY_DIR}/opt")
+if (WIN32)
+  set(EXE_SUFFIX ".exe")
+else()
+  set(EXE_SUFFIX)
+endif()
+set(CLANG "${LLVM_TOOLS_BINARY_DIR}/clang${EXE_SUFFIX}")
+set(LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/llvm-link${EXE_SUFFIX}")
+set(LLVM_OBJDUMP "${LLVM_TOOLS_BINARY_DIR}/llvm-objdump${EXE_SUFFIX}")
+set(LLVM_OPT "${LLVM_TOOLS_BINARY_DIR}/opt${EXE_SUFFIX}")
+
+# -Wno-error=atomic-alignment was added to workaround build problems due to
+# potential mis-aligned atomic ops detected by clang
+set(CLANG_OCL_FLAGS -Werror -Wno-error=atomic-alignment -x cl -Xclang
+  -cl-std=CL2.0 -target "${AMDGPU_TARGET_TRIPLE}" -fvisibility=protected
+  -Xclang -finclude-default-header "${CLANG_OPTIONS_APPEND}")
 
 set (BC_EXT .bc)
 set (LIB_SUFFIX ".lib${BC_EXT}")
 set (STRIP_SUFFIX ".strip${BC_EXT}")
 set (FINAL_SUFFIX ".amdgcn${BC_EXT}")
-set (CMAKE_INCLUDE_FLAG_OCL "-I")
-set (CMAKE_OCL_COMPILER_ENV_VAR OCL)
-set (CMAKE_OCL_OUTPUT_EXTENTION ${BC_EXT})
-set (CMAKE_OCL_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang)
-set (CMAKE_OCL_COMPILE_OBJECT "${CMAKE_OCL_COMPILER} <INCLUDES> -o <OBJECT> <FLAGS> -c <SOURCE>")
-set (CMAKE_OCL_LINK_EXECUTABLE "${CMAKE_COMMAND} -E copy <OBJECTS> <TARGET>")
-set (CMAKE_OCL_CREATE_STATIC_LIBRARY "${LLVM_LINK} -o <TARGET> <OBJECTS>")
-set (CMAKE_OCL_SOURCE_FILE_EXTENSIONS "cl")
-set (CMAKE_EXECUTABLE_SUFFIX_OCL ".co")
+
+# Set `inc_options` to contain Clang command-line for include directories for
+# current source directory.
+macro(set_inc_options)
+  get_property(inc_dirs
+    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    PROPERTY INCLUDE_DIRECTORIES)
+  set(inc_options)
+  foreach(inc_dir ${inc_dirs})
+    list(APPEND inc_options "-I${inc_dir}")
+  endforeach()
+endmacro()
 
 macro(opencl_bc_lib name)
   get_target_property(irif_lib_output irif_lib OUTPUT_NAME)
 
-  set(impl_lib_tgt ${name}_lib_impl)
-  set(final_lib_tgt ${name}_lib)
+  set(OUT_NAME "${CMAKE_CURRENT_BINARY_DIR}/${name}")
+  set(DEPS_TGT ${name}_deps)
+  set(LIB_TGT ${name}_lib)
+  set(clean_files)
 
-  list(APPEND AMDGCN_LIB_LIST ${final_lib_tgt})
+  list(APPEND AMDGCN_LIB_LIST ${LIB_TGT})
   set(AMDGCN_LIB_LIST ${AMDGCN_LIB_LIST} PARENT_SCOPE)
+
+  set_inc_options()
+  set(deps)
   foreach(file ${ARGN})
-    get_filename_component(fext ${file} EXT)
-    #mark files as OCL source
+    get_filename_component(fname_we "${file}" NAME_WE)
+    get_filename_component(fext "${file}" EXT)
     if (fext STREQUAL ".cl")
-      set_source_files_properties(${file} PROPERTIES
-        OBJECT_DEPENDS "${CMAKE_OCL_COMPILER}"
-        LANGUAGE "OCL")
+      set(output "${CMAKE_CURRENT_BINARY_DIR}/${fname_we}${BC_EXT}")
+      add_custom_command(OUTPUT "${output}"
+        COMMAND "${CLANG}" ${inc_options} ${CLANG_OCL_FLAGS}
+          -emit-llvm -Xclang -mlink-builtin-bitcode -Xclang "${irif_lib_output}"
+          -c "${file}" -o "${output}"
+        DEPENDS "${file}" irif_lib)
+      list(APPEND deps "${output}")
+      list(APPEND clean_files "${output}")
     endif()
-    #mark files as OCL object to add them to link
     if (fext STREQUAL ".ll")
-      set_source_files_properties(${file} PROPERTIES EXTERNAL_OBJECT TRUE)
+      list(APPEND deps "${file}")
     endif()
   endforeach()
 
-  add_library(${impl_lib_tgt} STATIC ${ARGN})
-  add_dependencies(${impl_lib_tgt} irif_lib)
+  add_custom_target("${DEPS_TGT}" DEPENDS ${deps})
+  if(NOT ROCM_DEVICELIB_STANDALONE_BUILD)
+    add_dependencies("${DEPS_TGT}" clang)
+  endif()
+
+  # The llvm-link command-lines can get long enough to trigger strange behavior
+  # on Windows. LLVM tools support "response files" which can work around this:
+  # http://llvm.org/docs/CommandLine.html#response-files
+  set(RESPONSE_COMMAND_LINE)
+  foreach(dep ${deps})
+    set(RESPONSE_COMMAND_LINE "${RESPONSE_COMMAND_LINE} ${dep}")
+  endforeach()
+  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/response.in" "@RESPONSE_COMMAND_LINE@")
+  configure_file("${CMAKE_CURRENT_BINARY_DIR}/response.in"
+    "${OUT_NAME}_response" @ONLY)
+
+  add_custom_command(OUTPUT "${OUT_NAME}${FINAL_SUFFIX}"
+    COMMAND "${LLVM_LINK}"
+      -o "${OUT_NAME}${LIB_SUFFIX}" "@${OUT_NAME}_response"
+    COMMAND "${LLVM_OPT}" -strip
+      -o "${OUT_NAME}${STRIP_SUFFIX}" "${OUT_NAME}${LIB_SUFFIX}"
+    COMMAND "${PREPARE_BUILTINS}"
+      -o "${OUT_NAME}${FINAL_SUFFIX}" "${OUT_NAME}${STRIP_SUFFIX}"
+    DEPENDS "${DEPS_TGT}" "${OUT_NAME}_response")
+  add_custom_target("${LIB_TGT}" ALL
+    DEPENDS "${OUT_NAME}${FINAL_SUFFIX}"
+    SOURCES ${ARGN})
+  set_target_properties(${LIB_TGT} PROPERTIES
+    OUTPUT_NAME "${OUT_NAME}${FINAL_SUFFIX}"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    ARCHIVE_OUTPUT_NAME "${name}"
+    PREFIX "" SUFFIX ${FINAL_SUFFIX})
+
+  list(APPEND clean_files
+    "${OUT_NAME}${LIB_SUFFIX}" "${OUT_NAME}${STRIP_SUFFIX}")
 
   if(NOT ROCM_DEVICELIB_STANDALONE_BUILD)
-    add_dependencies(${impl_lib_tgt} llvm-link clang opt llvm-objdump)
+    add_dependencies("${LIB_TGT}" llvm-link clang opt llvm-objdump)
   endif()
-
-  set_target_properties(${impl_lib_tgt} PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-    ARCHIVE_OUTPUT_NAME "${name}"
-    PREFIX "" SUFFIX ${LIB_SUFFIX}
-    COMPILE_FLAGS "${CLANG_OCL_FLAGS} -emit-llvm -Xclang -mlink-builtin-bitcode -Xclang ${irif_lib_output}"
-    LINK_DEPENDS ${LLVM_LINK}
-    LANGUAGE "OCL" LINKER_LANGUAGE "OCL")
-  set(strip_name "${name}${STRIP_SUFFIX}")
-  set(final_name "${name}${FINAL_SUFFIX}")
 
   if (TARGET prepare-builtins)
-    add_dependencies(${impl_lib_tgt} prepare-builtins)
+    add_dependencies("${LIB_TGT}" prepare-builtins)
   endif()
 
-  add_custom_command(TARGET ${impl_lib_tgt}
-    POST_BUILD
-    COMMAND ${LLVM_OPT} -strip -o ${strip_name} $<TARGET_FILE:${impl_lib_tgt}>
-    COMMAND ${PREPARE_BUILTINS} ${strip_name} -o ${final_name}
-    DEPENDS ${lib_tgt}
-    COMMENT "Generating ${final_name}")
+  set_directory_properties(PROPERTIES
+    ADDITIONAL_MAKE_CLEAN_FILES "${clean_files}")
 
-  add_custom_target(${final_lib_tgt})
-  add_dependencies(${final_lib_tgt} ${impl_lib_tgt})
-
-  set_target_properties(${final_lib_tgt} PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-    ARCHIVE_OUTPUT_NAME "${name}"
-    PREFIX "" SUFFIX "${FINAL_SUFFIX}")
-
-  install (FILES "${CMAKE_CURRENT_BINARY_DIR}/${final_name}"
-    DESTINATION lib COMPONENT device-libs)
+  install(FILES "${OUT_NAME}${FINAL_SUFFIX}"
+    DESTINATION lib
+    COMPONENT device-libs)
 endmacro()
 
 function(clang_opencl_code name dir)
-  set(tgt_name ${name}_code)
-  set_source_files_properties(${dir}/${name}.cl PROPERTIES LANGUAGE "OCL")
-  add_executable(${tgt_name} ${dir}/${name}.cl)
+  set(TEST_TGT "${name}_code")
+  set(OUT_NAME "${CMAKE_CURRENT_BINARY_DIR}/${name}")
   set(mlink_flags)
   foreach (lib ${ARGN})
-    add_dependencies(${tgt_name} ${lib}_lib)
-    get_target_property(lib_file ${lib}_lib ARCHIVE_OUTPUT_NAME)
-    get_target_property(lib_path ${lib}_lib ARCHIVE_OUTPUT_DIRECTORY)
-    get_target_property(lib_prefix ${lib}_lib PREFIX)
-    get_target_property(lib_suffix ${lib}_lib SUFFIX)
-    set(mlink_flags "${mlink_flags} -Xclang -mlink-bitcode-file -Xclang ${lib_path}/${lib_prefix}${lib_file}${lib_suffix}")
+    get_target_property(lib_path "${lib}_lib" OUTPUT_NAME)
+    list(APPEND mlink_flags
+      -Xclang -mlink-bitcode-file
+      -Xclang "${lib_path}")
   endforeach()
-  set(test_build_flags "${CMAKE_OCL_FLAGS} -mcpu=fiji ${mlink_flags}")
-  #dummy link since clang already generated CodeObject file
-  set_target_properties(${tgt_name} PROPERTIES
-    COMPILE_FLAGS "${CLANG_OCL_FLAGS} ${test_build_flags}"
-    LANGUAGE "OCL" LINKER_LANGUAGE "OCL")
+  set_inc_options()
+  add_custom_command(OUTPUT "${OUT_NAME}.co"
+    COMMAND "${CLANG}" ${inc_options} ${CLANG_OCL_FLAGS}
+      -mcpu=fiji ${mlink_flags} -o "${OUT_NAME}.co" -c "${dir}/${name}.cl"
+    DEPENDS "${dir}/${name}.cl")
+  add_custom_target("${TEST_TGT}" ALL
+    DEPENDS "${OUT_NAME}.co"
+    SOURCES "${dir}/${name}.cl")
+  set_target_properties(${TEST_TGT} PROPERTIES
+    OUTPUT_NAME "${OUT_NAME}.co")
+  foreach (lib ${ARGN})
+    add_dependencies(${TEST_TGT} ${lib}_lib)
+  endforeach()
 endfunction()
 
-set (oclc_default_libs
+set(OCLC_DEFAULT_LIBS
   oclc_correctly_rounded_sqrt_off
   oclc_daz_opt_off
   oclc_finite_only_off
   oclc_isa_version_803
-  oclc_unsafe_math_off
-)
+  oclc_unsafe_math_off)
 
 macro(clang_opencl_test name dir)
-  clang_opencl_code(${name} ${dir} opencl ocml ockl ${oclc_default_libs})
+  clang_opencl_code(${name} ${dir} opencl ocml ockl ${OCLC_DEFAULT_LIBS})
   add_test(
     NAME ${name}:llvm-objdump
-    COMMAND ${LLVM_OBJDUMP} -disassemble -mcpu=fiji $<TARGET_FILE:${name}_code>
+    COMMAND ${LLVM_OBJDUMP} -disassemble -mcpu=fiji "${name}.co"
   )
-  if(AMDHSACOD)
-    add_test(
-      NAME ${name}:amdhsacod
-      COMMAND ${AMDHSACOD} -test -code $<TARGET_FILE:${name}_code>
-    )
-  endif()
 endmacro()
 
 macro(clang_opencl_test_file dir fname)
