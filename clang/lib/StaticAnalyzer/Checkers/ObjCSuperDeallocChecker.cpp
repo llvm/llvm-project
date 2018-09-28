@@ -72,7 +72,6 @@ public:
         Satisfied(false) {}
 
   std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *Succ,
-                                                 const ExplodedNode *Pred,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override;
 
@@ -247,8 +246,7 @@ ObjCSuperDeallocChecker::isSuperDeallocMessage(const ObjCMethodCall &M) const {
 
 std::shared_ptr<PathDiagnosticPiece>
 SuperDeallocBRVisitor::VisitNode(const ExplodedNode *Succ,
-                                 const ExplodedNode *Pred,
-                                 BugReporterContext &BRC, BugReport &BR) {
+                                 BugReporterContext &BRC, BugReport &) {
   if (Satisfied)
     return nullptr;
 
@@ -257,7 +255,8 @@ SuperDeallocBRVisitor::VisitNode(const ExplodedNode *Succ,
   bool CalledNow =
       Succ->getState()->contains<CalledSuperDealloc>(ReceiverSymbol);
   bool CalledBefore =
-      Pred->getState()->contains<CalledSuperDealloc>(ReceiverSymbol);
+      Succ->getFirstPred()->getState()->contains<CalledSuperDealloc>(
+          ReceiverSymbol);
 
   // Is Succ the node on which the analyzer noted that [super dealloc] was
   // called on ReceiverSymbol?

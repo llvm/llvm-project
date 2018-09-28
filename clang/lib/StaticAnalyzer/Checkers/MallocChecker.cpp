@@ -517,7 +517,6 @@ private:
     }
 
     std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                   const ExplodedNode *PrevN,
                                                    BugReporterContext &BRC,
                                                    BugReport &BR) override;
 
@@ -2889,11 +2888,10 @@ static bool isReferenceCountingPointerDestructor(const CXXDestructorDecl *DD) {
 }
 
 std::shared_ptr<PathDiagnosticPiece> MallocChecker::MallocBugVisitor::VisitNode(
-    const ExplodedNode *N, const ExplodedNode *PrevN, BugReporterContext &BRC,
-    BugReport &BR) {
+    const ExplodedNode *N, BugReporterContext &BRC, BugReport &BR) {
 
   ProgramStateRef state = N->getState();
-  ProgramStateRef statePrev = PrevN->getState();
+  ProgramStateRef statePrev = N->getFirstPred()->getState();
 
   const RefState *RS = state->get<RegionState>(Sym);
   const RefState *RSPrev = statePrev->get<RegionState>(Sym);

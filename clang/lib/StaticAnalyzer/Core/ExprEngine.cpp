@@ -177,7 +177,7 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(ObjectsUnderConstruction,
 static const char* TagProviderName = "ExprEngine";
 
 ExprEngine::ExprEngine(cross_tu::CrossTranslationUnitContext &CTU,
-                       AnalysisManager &mgr, bool gcEnabled,
+                       AnalysisManager &mgr,
                        SetOfConstDecls *VisitedCalleesIn,
                        FunctionSummariesTy *FS,
                        InliningModes HowToInlineIn)
@@ -531,7 +531,6 @@ ExprEngine::processRegionChanges(ProgramStateRef state,
 static void printObjectsUnderConstructionForContext(raw_ostream &Out,
                                                     ProgramStateRef State,
                                                     const char *NL,
-                                                    const char *Sep,
                                                     const LocationContext *LC) {
   PrintingPolicy PP =
       LC->getAnalysisDeclContext()->getASTContext().getPrintingPolicy();
@@ -553,7 +552,7 @@ void ExprEngine::printState(raw_ostream &Out, ProgramStateRef State,
       Out << Sep << "Objects under construction:" << NL;
 
       LCtx->dumpStack(Out, "", NL, Sep, [&](const LocationContext *LC) {
-        printObjectsUnderConstructionForContext(Out, State, NL, Sep, LC);
+        printObjectsUnderConstructionForContext(Out, State, NL, LC);
       });
     }
   }
@@ -561,7 +560,7 @@ void ExprEngine::printState(raw_ostream &Out, ProgramStateRef State,
   getCheckerManager().runCheckersForPrintState(Out, State, NL, Sep);
 }
 
-void ExprEngine::processEndWorklist(bool hasWorkRemaining) {
+void ExprEngine::processEndWorklist() {
   getCheckerManager().runCheckersForEndAnalysis(G, BR, *this);
 }
 
@@ -1128,7 +1127,7 @@ ProgramStateRef ExprEngine::escapeValue(ProgramStateRef State, SVal V,
     InvalidatedSymbols Symbols;
 
   public:
-    explicit CollectReachableSymbolsCallback(ProgramStateRef State) {}
+    explicit CollectReachableSymbolsCallback(ProgramStateRef) {}
 
     const InvalidatedSymbols &getSymbols() const { return Symbols; }
 
@@ -1931,8 +1930,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
 /// integers that promote their values (which are currently not tracked well).
 /// This function returns the SVal bound to Condition->IgnoreCasts if all the
 //  cast(s) did was sign-extend the original value.
-static SVal RecoverCastedSymbol(ProgramStateManager& StateMgr,
-                                ProgramStateRef state,
+static SVal RecoverCastedSymbol(ProgramStateRef state,
                                 const Stmt *Condition,
                                 const LocationContext *LCtx,
                                 ASTContext &Ctx) {
@@ -2029,7 +2027,7 @@ static const Stmt *ResolveCondition(const Stmt *Condition,
   llvm_unreachable("could not resolve condition");
 }
 
-void ExprEngine::processBranch(const Stmt *Condition, const Stmt *Term,
+void ExprEngine::processBranch(const Stmt *Condition,
                                NodeBuilderContext& BldCtx,
                                ExplodedNode *Pred,
                                ExplodedNodeSet &Dst,
@@ -2080,8 +2078,7 @@ void ExprEngine::processBranch(const Stmt *Condition, const Stmt *Term,
           // integers that promote their values are currently not tracked well.
           // If 'Condition' is such an expression, try and recover the
           // underlying value and use that instead.
-          SVal recovered = RecoverCastedSymbol(getStateManager(),
-                                               PrevState, Condition,
+          SVal recovered = RecoverCastedSymbol(PrevState, Condition,
                                                PredI->getLocationContext(),
                                                getContext());
 
@@ -2666,7 +2663,6 @@ ProgramStateRef
 ExprEngine::notifyCheckersOfPointerEscape(ProgramStateRef State,
     const InvalidatedSymbols *Invalidated,
     ArrayRef<const MemRegion *> ExplicitRegions,
-    ArrayRef<const MemRegion *> Regions,
     const CallEvent *Call,
     RegionAndSymbolInvalidationTraits &ITraits) {
   if (!Invalidated || Invalidated->empty())
@@ -2776,7 +2772,7 @@ void ExprEngine::evalStore(ExplodedNodeSet &Dst, const Expr *AssignE,
 
   // Evaluate the location (checks for bad dereferences).
   ExplodedNodeSet Tmp;
-  evalLocation(Tmp, AssignE, LocationE, Pred, state, location, tag, false);
+  evalLocation(Tmp, AssignE, LocationE, Pred, state, location, false);
 
   if (Tmp.empty())
     return;
@@ -2801,7 +2797,7 @@ void ExprEngine::evalLoad(ExplodedNodeSet &Dst,
   assert(BoundEx);
   // Evaluate the location (checks for bad dereferences).
   ExplodedNodeSet Tmp;
-  evalLocation(Tmp, NodeEx, BoundEx, Pred, state, location, tag, true);
+  evalLocation(Tmp, NodeEx, BoundEx, Pred, state, location, true);
   if (Tmp.empty())
     return;
 
@@ -2832,7 +2828,6 @@ void ExprEngine::evalLocation(ExplodedNodeSet &Dst,
                               ExplodedNode *Pred,
                               ProgramStateRef state,
                               SVal location,
-                              const ProgramPointTag *tag,
                               bool isLoad) {
   StmtNodeBuilder BldrTop(Pred, Dst, *currBldrCtx);
   // Early checks for performance reason.
@@ -3000,7 +2995,7 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
   }
 
   static std::string getNodeAttributes(const ExplodedNode *N,
-                                       ExplodedGraph *G) {
+                                       ExplodedGraph *) {
     SmallVector<StringRef, 10> Out;
     auto Noop = [](const ExplodedNode*){};
     if (traverseHiddenNodes(N, Noop, Noop, &nodeHasBugReport)) {
@@ -3036,8 +3031,8 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
           if (nodeHasBugReport(N))
             Out << "\\lBug report attached\\l";
         },
-        [&](const ExplodedNode *OtherNode) { Out << "\\l--------\\l"; },
-        [&](const ExplodedNode *N) { return false; });
+        [&](const ExplodedNode *) { Out << "\\l--------\\l"; },
+        [&](const ExplodedNode *) { return false; });
 
     Out << "\\l\\|";
 

@@ -49,7 +49,6 @@ class DynamicTypeChecker : public Checker<check::PostStmt<ImplicitCastExpr>> {
     }
 
     std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                   const ExplodedNode *PrevN,
                                                    BugReporterContext &BRC,
                                                    BugReport &BR) override;
 
@@ -92,11 +91,10 @@ void DynamicTypeChecker::reportTypeError(QualType DynamicType,
 
 std::shared_ptr<PathDiagnosticPiece>
 DynamicTypeChecker::DynamicTypeBugVisitor::VisitNode(const ExplodedNode *N,
-                                                     const ExplodedNode *PrevN,
                                                      BugReporterContext &BRC,
-                                                     BugReport &BR) {
+                                                     BugReport &) {
   ProgramStateRef State = N->getState();
-  ProgramStateRef StatePrev = PrevN->getState();
+  ProgramStateRef StatePrev = N->getFirstPred()->getState();
 
   DynamicTypeInfo TrackedType = getDynamicTypeInfo(State, Reg);
   DynamicTypeInfo TrackedTypePrev = getDynamicTypeInfo(StatePrev, Reg);
