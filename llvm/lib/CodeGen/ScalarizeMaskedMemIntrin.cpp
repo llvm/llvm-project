@@ -181,8 +181,7 @@ static void scalarizeMaskedLoad(CallInst *CI) {
     //
     //  %res.phi.else3 = phi <16 x i32> [ %11, %cond.load1 ], [ %res.phi.else, %else ]
     //  %mask_1 = extractelement <16 x i1> %mask, i32 Idx
-    //  %to_load = icmp eq i1 %mask_1, true
-    //  br i1 %to_load, label %cond.load, label %else
+    //  br i1 %mask_1, label %cond.load, label %else
     //
     if (Idx > 0) {
       Phi = Builder.CreatePHI(VecType, 2, "res.phi.else");
@@ -194,8 +193,6 @@ static void scalarizeMaskedLoad(CallInst *CI) {
 
     Value *Predicate =
         Builder.CreateExtractElement(Mask, Builder.getInt32(Idx));
-    Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, Predicate,
-                                    ConstantInt::get(Predicate->getType(), 1));
 
     // Create "cond" block
     //
@@ -216,7 +213,7 @@ static void scalarizeMaskedLoad(CallInst *CI) {
         CondBlock->splitBasicBlock(InsertPt->getIterator(), "else");
     Builder.SetInsertPoint(InsertPt);
     Instruction *OldBr = IfBlock->getTerminator();
-    BranchInst::Create(CondBlock, NewIfBlock, Cmp, OldBr);
+    BranchInst::Create(CondBlock, NewIfBlock, Predicate, OldBr);
     OldBr->eraseFromParent();
     PrevIfBlock = IfBlock;
     IfBlock = NewIfBlock;
@@ -311,13 +308,10 @@ static void scalarizeMaskedStore(CallInst *CI) {
     // Fill the "else" block, created in the previous iteration
     //
     //  %mask_1 = extractelement <16 x i1> %mask, i32 Idx
-    //  %to_store = icmp eq i1 %mask_1, true
-    //  br i1 %to_store, label %cond.store, label %else
+    //  br i1 %mask_1, label %cond.store, label %else
     //
     Value *Predicate =
         Builder.CreateExtractElement(Mask, Builder.getInt32(Idx));
-    Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, Predicate,
-                                    ConstantInt::get(Predicate->getType(), 1));
 
     // Create "cond" block
     //
@@ -339,7 +333,7 @@ static void scalarizeMaskedStore(CallInst *CI) {
         CondBlock->splitBasicBlock(InsertPt->getIterator(), "else");
     Builder.SetInsertPoint(InsertPt);
     Instruction *OldBr = IfBlock->getTerminator();
-    BranchInst::Create(CondBlock, NewIfBlock, Cmp, OldBr);
+    BranchInst::Create(CondBlock, NewIfBlock, Predicate, OldBr);
     OldBr->eraseFromParent();
     IfBlock = NewIfBlock;
   }
@@ -430,8 +424,7 @@ static void scalarizeMaskedGather(CallInst *CI) {
     // Fill the "else" block, created in the previous iteration
     //
     //  %Mask1 = extractelement <16 x i1> %Mask, i32 1
-    //  %ToLoad1 = icmp eq i1 %Mask1, true
-    //  br i1 %ToLoad1, label %cond.load, label %else
+    //  br i1 %Mask1, label %cond.load, label %else
     //
     if (Idx > 0) {
       Phi = Builder.CreatePHI(VecType, 2, "res.phi.else");
@@ -443,9 +436,6 @@ static void scalarizeMaskedGather(CallInst *CI) {
 
     Value *Predicate = Builder.CreateExtractElement(Mask, Builder.getInt32(Idx),
                                                     "Mask" + Twine(Idx));
-    Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, Predicate,
-                                    ConstantInt::get(Predicate->getType(), 1),
-                                    "ToLoad" + Twine(Idx));
 
     // Create "cond" block
     //
@@ -467,7 +457,7 @@ static void scalarizeMaskedGather(CallInst *CI) {
     BasicBlock *NewIfBlock = CondBlock->splitBasicBlock(InsertPt, "else");
     Builder.SetInsertPoint(InsertPt);
     Instruction *OldBr = IfBlock->getTerminator();
-    BranchInst::Create(CondBlock, NewIfBlock, Cmp, OldBr);
+    BranchInst::Create(CondBlock, NewIfBlock, Predicate, OldBr);
     OldBr->eraseFromParent();
     PrevIfBlock = IfBlock;
     IfBlock = NewIfBlock;
@@ -549,15 +539,11 @@ static void scalarizeMaskedScatter(CallInst *CI) {
   for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
     // Fill the "else" block, created in the previous iteration
     //
-    //  % Mask1 = extractelement <16 x i1> % Mask, i32 Idx
-    //  % ToStore = icmp eq i1 % Mask1, true
-    //  br i1 % ToStore, label %cond.store, label %else
+    //  %Mask1 = extractelement <16 x i1> %Mask, i32 Idx
+    //  br i1 %Mask1, label %cond.store, label %else
     //
     Value *Predicate = Builder.CreateExtractElement(Mask, Builder.getInt32(Idx),
                                                     "Mask" + Twine(Idx));
-    Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, Predicate,
-                                    ConstantInt::get(Predicate->getType(), 1),
-                                    "ToStore" + Twine(Idx));
 
     // Create "cond" block
     //
@@ -578,7 +564,7 @@ static void scalarizeMaskedScatter(CallInst *CI) {
     BasicBlock *NewIfBlock = CondBlock->splitBasicBlock(InsertPt, "else");
     Builder.SetInsertPoint(InsertPt);
     Instruction *OldBr = IfBlock->getTerminator();
-    BranchInst::Create(CondBlock, NewIfBlock, Cmp, OldBr);
+    BranchInst::Create(CondBlock, NewIfBlock, Predicate, OldBr);
     OldBr->eraseFromParent();
     IfBlock = NewIfBlock;
   }

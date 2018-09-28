@@ -70,6 +70,7 @@ AARCH64_ARCH_EXT_NAME("profile",  AArch64::AEK_PROFILE,  "+spe",  "-spe")
 AARCH64_ARCH_EXT_NAME("ras",      AArch64::AEK_RAS,      "+ras",  "-ras")
 AARCH64_ARCH_EXT_NAME("sve",      AArch64::AEK_SVE,      "+sve",  "-sve")
 AARCH64_ARCH_EXT_NAME("rcpc",     AArch64::AEK_RCPC,     "+rcpc", "-rcpc")
+AARCH64_ARCH_EXT_NAME("rng",      AArch64::AEK_RAND,     "+rand",  "-rand")
 #undef AARCH64_ARCH_EXT_NAME
 
 #ifndef AARCH64_CPU_NAME

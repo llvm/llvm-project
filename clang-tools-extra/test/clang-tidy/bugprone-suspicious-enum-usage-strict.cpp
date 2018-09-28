@@ -10,23 +10,23 @@ enum A {
   G = 63
 };
 
-// CHECK-MESSAGES: :[[@LINE+2]]:1: warning: enum type seems like a bitmask (contains mostly power-of-2 literals) but a literal is not power-of-2
-// CHECK-MESSAGES: :76:7: note: used here as a bitmask
+// CHECK-NOTES: :[[@LINE+2]]:1: warning: enum type seems like a bitmask (contains mostly power-of-2 literals) but a literal is not power-of-2
+// CHECK-NOTES: :76:7: note: used here as a bitmask
 enum X {
   X = 8,
   Y = 16,
   Z = 4,
   ZZ = 3
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: enum type seems like a bitmask (contains mostly power-of-2 literals), but this literal is not a power-of-2 [bugprone-suspicious-enum-usage]
-// CHECK-MESSAGES: :70:13: note: used here as a bitmask
+  // CHECK-NOTES: :[[@LINE-1]]:3: warning: enum type seems like a bitmask (contains mostly power-of-2 literals), but this literal is not a power-of-2 [bugprone-suspicious-enum-usage]
+// CHECK-NOTES: :70:13: note: used here as a bitmask
 };
-// CHECK-MESSAGES: :[[@LINE+2]]:1: warning: enum type seems like a bitmask (contains mostly power-of-2 literals) but some literals are not power-of-2
-// CHECK-MESSAGES: :73:8: note: used here as a bitmask
+// CHECK-NOTES: :[[@LINE+2]]:1: warning: enum type seems like a bitmask (contains mostly power-of-2 literals) but some literals are not power-of-2
+// CHECK-NOTES: :73:8: note: used here as a bitmask
 enum PP {
   P = 2,
   Q = 3,
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: enum type seems like a bitmask (contains mostly power-of-2 literals), but this literal is not a power-of-2
-  // CHECK-MESSAGES: :65:11: note: used here as a bitmask
+  // CHECK-NOTES: :[[@LINE-1]]:3: warning: enum type seems like a bitmask (contains mostly power-of-2 literals), but this literal is not a power-of-2
+  // CHECK-NOTES: :65:11: note: used here as a bitmask
   R = 4,
   S = 8,
   T = 16,
@@ -58,10 +58,10 @@ Days bestDay() {
 int trigger() {
   if (bestDay() | A)
     return 1;
-  // CHECK-MESSAGES: :[[@LINE-2]]:17: warning: enum values are from different enum types
+  // CHECK-NOTES: :[[@LINE-2]]:17: warning: enum values are from different enum types
   if (I | Y)
     return 1;
-  // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: enum values are from different enum types
+  // CHECK-NOTES: :[[@LINE-2]]:9: warning: enum values are from different enum types
   if (P + Q == R)
     return 1;
   else if ((S | R) == T)

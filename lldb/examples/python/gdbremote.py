@@ -685,32 +685,33 @@ def rsp_qXfer(options, cmd, cmd_args, rsp):
             if extension == '.xml':
                 response = Packet(rsp)
                 xml_string = response.get_hex_ascii_str()
-                ch = xml_string[0]
-                if ch == 'l':
-                    xml_string = xml_string[1:]
-                    xml_root = ET.fromstring(xml_string)
-                    for reg_element in xml_root.findall("./feature/reg"):
-                        if not 'value_regnums' in reg_element.attrib:
-                            reg_info = RegisterInfo([])
-                            if 'name' in reg_element.attrib:
-                                reg_info.info[
-                                    'name'] = reg_element.attrib['name']
-                            else:
-                                reg_info.info['name'] = 'unspecified'
-                            if 'encoding' in reg_element.attrib:
-                                reg_info.info['encoding'] = reg_element.attrib[
-                                    'encoding']
-                            else:
-                                reg_info.info['encoding'] = 'uint'
-                            if 'offset' in reg_element.attrib:
-                                reg_info.info[
-                                    'offset'] = reg_element.attrib['offset']
-                            if 'bitsize' in reg_element.attrib:
-                                reg_info.info[
-                                    'bitsize'] = reg_element.attrib['bitsize']
-                            g_register_infos.append(reg_info)
-                    print 'XML for "%s":' % (data[2])
-                    ET.dump(xml_root)
+                if xml_string:
+                    ch = xml_string[0]
+                    if ch == 'l':
+                        xml_string = xml_string[1:]
+                        xml_root = ET.fromstring(xml_string)
+                        for reg_element in xml_root.findall("./feature/reg"):
+                            if not 'value_regnums' in reg_element.attrib:
+                                reg_info = RegisterInfo([])
+                                if 'name' in reg_element.attrib:
+                                    reg_info.info[
+                                        'name'] = reg_element.attrib['name']
+                                else:
+                                    reg_info.info['name'] = 'unspecified'
+                                if 'encoding' in reg_element.attrib:
+                                    reg_info.info['encoding'] = reg_element.attrib[
+                                        'encoding']
+                                else:
+                                    reg_info.info['encoding'] = 'uint'
+                                if 'offset' in reg_element.attrib:
+                                    reg_info.info[
+                                        'offset'] = reg_element.attrib['offset']
+                                if 'bitsize' in reg_element.attrib:
+                                    reg_info.info[
+                                        'bitsize'] = reg_element.attrib['bitsize']
+                                g_register_infos.append(reg_info)
+                        print 'XML for "%s":' % (data[2])
+                        ET.dump(xml_root)
 
 
 def cmd_A(options, cmd, args):
@@ -810,6 +811,14 @@ def cmd_s(options, cmd, args):
     return False
 
 
+def cmd_qSpeedTest(options, cmd, args):
+    print("qSpeedTest: cmd='%s', args='%s'" % (cmd, args))
+
+
+def rsp_qSpeedTest(options, cmd, cmd_args, rsp):
+    print("qSpeedTest: rsp='%s' cmd='%s', args='%s'" % (rsp, cmd, args))
+
+
 def cmd_vCont(options, cmd, args):
     if args == '?':
         print "%s: get supported extended continue modes" % (cmd)
@@ -861,8 +870,10 @@ def rsp_vCont(options, cmd, cmd_args, rsp):
                 s += 'step'
             elif mode == 'S':
                 s += 'step with signal'
-            else:
-                s += 'unrecognized vCont mode: ', mode
+            elif mode == 't':
+                s += 'stop'
+            # else:
+            #     s += 'unrecognized vCont mode: ', str(mode)
         print s
     elif rsp:
         if rsp[0] == 'T' or rsp[0] == 'S' or rsp[0] == 'W' or rsp[0] == 'X':
@@ -933,7 +944,7 @@ def rsp_qThreadInfo(options, cmd, cmd_args, rsp):
 def rsp_hex_big_endian(options, cmd, cmd_args, rsp):
     if rsp == '':
         print "%s%s is not supported" % (cmd, cmd_args)
-    else:    
+    else:
         packet = Packet(rsp)
         uval = packet.get_hex_uint('big')
         print '%s: 0x%x' % (cmd, uval)
@@ -1225,6 +1236,7 @@ gdb_remote_commands = {
     'qHostInfo': {'cmd': cmd_query_packet, 'rsp': rsp_dump_key_value_pairs, 'name': "get host information"},
     'qC': {'cmd': cmd_qC, 'rsp': rsp_qC, 'name': "return the current thread ID"},
     'vCont': {'cmd': cmd_vCont, 'rsp': rsp_vCont, 'name': "extended continue command"},
+    'qSpeedTest': {'cmd':cmd_qSpeedTest, 'rsp': rsp_qSpeedTest, 'name': 'speed test packdet'},
     'vAttach': {'cmd': cmd_vAttach, 'rsp': rsp_stop_reply, 'name': "attach to process"},
     'c': {'cmd': cmd_c, 'rsp': rsp_stop_reply, 'name': "continue"},
     's': {'cmd': cmd_s, 'rsp': rsp_stop_reply, 'name': "step"},
@@ -1283,6 +1295,49 @@ def parse_gdb_log_file(path, options):
     f.close()
 
 
+def round_up(n, incr):
+    return float(((int(n) + incr) / incr) * incr)
+
+
+def plot_latencies(sec_times):
+    # import numpy as np
+    import matplotlib.pyplot as plt
+
+    for (i, name) in enumerate(sec_times.keys()):
+        times = sec_times[name]
+        if len(times) <= 1:
+            continue
+        plt.subplot(2, 1, 1)
+        plt.title('Packet "%s" Times' % (name))
+        plt.xlabel('Packet')
+        units = 'ms'
+        adj_times = []
+        max_time = 0.0
+        for time in times:
+            time = time * 1000.0
+            adj_times.append(time)
+            if time > max_time:
+                max_time = time
+        if max_time < 1.0:
+            units = 'us'
+            max_time = 0.0
+            for i in range(len(adj_times)):
+                adj_times[i] *= 1000.0
+                if adj_times[i] > max_time:
+                    max_time = adj_times[i]
+        plt.ylabel('Time (%s)' % (units))
+        max_y = None
+        for i in [5.0, 10.0, 25.0, 50.0]:
+            if max_time < i:
+                max_y = round_up(max_time, i)
+                break
+        if max_y is None:
+            max_y = round_up(max_time, 100.0)
+        plt.ylim(0.0, max_y)
+        plt.plot(adj_times, 'o-')
+        plt.show()
+
+
 def parse_gdb_log(file, options):
     '''Parse a GDB log file that was generated by enabling logging with:
     (lldb) log enable --threadsafe --timestamp --file <FILE> gdb-remote packets
@@ -1306,10 +1361,11 @@ def parse_gdb_log(file, options):
 
     base_time = 0.0
     last_time = 0.0
-    packet_send_time = 0.0
+    min_time = 100000000.0
     packet_total_times = {}
-    packet_times = []
-    packet_count = {}
+    all_packet_times = []
+    packet_times = {}
+    packet_counts = {}
     lines = file.read().splitlines()
     last_command = None
     last_command_args = None
@@ -1412,32 +1468,39 @@ def parse_gdb_log(file, options):
             curr_time = float(match.group(2))
             if last_time and not is_command:
                 delta = curr_time - last_time
-                packet_times.append(delta)
+                all_packet_times.append(delta)
             delta = 0.0
             if base_time:
                 delta = curr_time - last_time
             else:
                 base_time = curr_time
 
-            if is_command:
-                packet_send_time = curr_time
-            elif line.find('read packet: $') >= 0 and packet_name:
-                if packet_name in packet_total_times:
-                    packet_total_times[packet_name] += delta
-                    packet_count[packet_name] += 1
-                else:
-                    packet_total_times[packet_name] = delta
-                    packet_count[packet_name] = 1
-                packet_name = None
+            if not is_command:
+                if line.find('read packet: $') >= 0 and packet_name:
+                    if packet_name in packet_total_times:
+                        packet_total_times[packet_name] += delta
+                        packet_counts[packet_name] += 1
+                    else:
+                        packet_total_times[packet_name] = delta
+                        packet_counts[packet_name] = 1
+                    if packet_name not in packet_times:
+                        packet_times[packet_name] = []
+                    packet_times[packet_name].append(delta)
+                    packet_name = None
+                if min_time > delta:
+                    min_time = delta
 
             if not options or not options.quiet:
-                print '%s%.6f %+.6f%s' % (match.group(1), curr_time - base_time, delta, match.group(3))
+                print '%s%.6f %+.6f%s' % (match.group(1),
+                                          curr_time - base_time,
+                                          delta,
+                                          match.group(3))
             last_time = curr_time
         # else:
         #     print line
-    (average, std_dev) = calculate_mean_and_standard_deviation(packet_times)
+    (average, std_dev) = calculate_mean_and_standard_deviation(all_packet_times)
     if average and std_dev:
-        print '%u packets with average packet time of %f and standard deviation of %f' % (len(packet_times), average, std_dev)
+        print '%u packets with average packet time of %f and standard deviation of %f' % (len(all_packet_times), average, std_dev)
     if packet_total_times:
         total_packet_time = 0.0
         total_packet_count = 0
@@ -1446,19 +1509,21 @@ def parse_gdb_log(file, options):
             # print 'value = (%s) %s' % (type(vvv), vvv)
             # if type(vvv) == 'float':
             total_packet_time += vvv
-        for key, vvv in packet_count.items():
+        for key, vvv in packet_counts.items():
             total_packet_count += vvv
 
-        print '#---------------------------------------------------'
+        print '#------------------------------------------------------------'
         print '# Packet timing summary:'
-        print '# Totals: time = %6f, count = %6d' % (total_packet_time, total_packet_count)
-        print '#---------------------------------------------------'
-        print '# Packet                   Time (sec) Percent Count '
-        print '#------------------------- ---------- ------- ------'
+        print '# Totals: time = %6f, count = %6d' % (total_packet_time,
+                                                     total_packet_count)
+        print '# Min packet time: time = %6f' % (min_time)
+        print '#------------------------------------------------------------'
+        print '# Packet                   Time (sec)  Percent Count  Latency'
+        print '#------------------------- ----------- ------- ------ -------'
         if options and options.sort_count:
             res = sorted(
-                packet_count,
-                key=packet_count.__getitem__,
+                packet_counts,
+                key=packet_counts.__getitem__,
                 reverse=True)
         else:
             res = sorted(
@@ -1471,11 +1536,12 @@ def parse_gdb_log(file, options):
                 packet_total_time = packet_total_times[item]
                 packet_percent = (
                     packet_total_time / total_packet_time) * 100.0
-                if packet_percent >= 10.0:
-                    print "  %24s %.6f   %.2f%% %6d" % (item, packet_total_time, packet_percent, packet_count[item])
-                else:
-                    print "  %24s %.6f   %.2f%%  %6d" % (item, packet_total_time, packet_percent, packet_count[item])
-
+                packet_count = packet_counts[item]
+                print "  %24s %11.6f  %5.2f%% %6d %9.6f" % (
+                        item, packet_total_time, packet_percent, packet_count,
+                        float(packet_total_time) / float(packet_count))
+        if options.plot:
+            plot_latencies(packet_times)
 
 if __name__ == '__main__':
     usage = "usage: gdbremote [options]"
@@ -1490,6 +1556,12 @@ if __name__ == '__main__':
         action='store_true',
         dest='verbose',
         help='display verbose debug info',
+        default=False)
+    parser.add_option(
+        '--plot',
+        action='store_true',
+        dest='plot',
+        help='plot packet latencies by packet type',
         default=False)
     parser.add_option(
         '-q',

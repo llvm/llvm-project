@@ -141,6 +141,23 @@ public:
   // Base pointer (stack realignment) support.
   unsigned getBaseRegister(const MachineFunction &MF) const;
   bool hasBasePointer(const MachineFunction &MF) const;
+
+  /// stripRegisterPrefix - This method strips the character prefix from a
+  /// register name so that only the number is left.  Used by for linux asm.
+  static const char *stripRegisterPrefix(const char *RegName) {
+    switch (RegName[0]) {
+      case 'r':
+      case 'f':
+      case 'q': // for QPX
+      case 'v':
+        if (RegName[1] == 's')
+          return RegName + 2;
+        return RegName + 1;
+      case 'c': if (RegName[1] == 'r') return RegName + 2;
+    }
+
+    return RegName;
+  }
 };
 
 } // end namespace llvm

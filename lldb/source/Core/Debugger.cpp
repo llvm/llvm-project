@@ -278,8 +278,7 @@ static constexpr PropertyDefinition g_properties[] = {
     {"frame-format-unique", OptionValue::eTypeFormatEntity, true, 0,
      DEFAULT_FRAME_FORMAT_NO_ARGS, {},
      "The default frame format string to use when displaying stack frame"
-     "information for threads from thread backtrace unique."},
-    {nullptr, OptionValue::eTypeInvalid, true, 0, nullptr, {}, nullptr}};
+     "information for threads from thread backtrace unique."}};
 
 enum {
   ePropertyAutoConfirm = 0,

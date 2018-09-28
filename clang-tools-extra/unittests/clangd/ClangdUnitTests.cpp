@@ -79,8 +79,9 @@ TEST(DiagnosticsTest, DiagnosticRanges) {
     int main() {
       $typo[[go\
 o]]();
-      foo()$semicolon[[]]
+      foo()$semicolon[[]]//with comments
       $unk[[unknown]]();
+      double bar = $type[["foo"]];
     }
   )cpp");
   EXPECT_THAT(
@@ -93,11 +94,16 @@ o]]();
                     Fix(Test.range("typo"), "foo", "change 'go\\ o' to 'foo'")),
                 // This is a pretty normal range.
                 WithNote(Diag(Test.range("decl"), "'foo' declared here"))),
-          // This range is zero-width, and at the end of a line.
+          // This range is zero-width and insertion. Therefore make sure we are
+          // not expanding it into other tokens. Since we are not going to
+          // replace those.
           AllOf(Diag(Test.range("semicolon"), "expected ';' after expression"),
                 WithFix(Fix(Test.range("semicolon"), ";", "insert ';'"))),
           // This range isn't provided by clang, we expand to the token.
-          Diag(Test.range("unk"), "use of undeclared identifier 'unknown'")));
+          Diag(Test.range("unk"), "use of undeclared identifier 'unknown'"),
+          Diag(Test.range("type"),
+               "cannot initialize a variable of type 'double' with an lvalue "
+               "of type 'const char [4]'")));
 }
 
 TEST(DiagnosticsTest, FlagsMatter) {

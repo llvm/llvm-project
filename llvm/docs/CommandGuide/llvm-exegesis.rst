@@ -127,7 +127,7 @@ following command:
     $ llvm-exegesis -mode=analysis \
   -benchmarks-file=/tmp/benchmarks.yaml \
   -analysis-clusters-output-file=/tmp/clusters.csv \
-  -analysis-inconsistencies-output-file=/tmp/inconsistencies.txt
+  -analysis-inconsistencies-output-file=/tmp/inconsistencies.html
 
 This will group the instructions into clusters with the same performance
 characteristics. The clusters will be written out to `/tmp/clusters.csv` in the

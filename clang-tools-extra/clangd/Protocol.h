@@ -233,13 +233,65 @@ struct CompletionItemClientCapabilities {
 };
 bool fromJSON(const llvm::json::Value &, CompletionItemClientCapabilities &);
 
+/// The kind of a completion entry.
+enum class CompletionItemKind {
+  Missing = 0,
+  Text = 1,
+  Method = 2,
+  Function = 3,
+  Constructor = 4,
+  Field = 5,
+  Variable = 6,
+  Class = 7,
+  Interface = 8,
+  Module = 9,
+  Property = 10,
+  Unit = 11,
+  Value = 12,
+  Enum = 13,
+  Keyword = 14,
+  Snippet = 15,
+  Color = 16,
+  File = 17,
+  Reference = 18,
+  Folder = 19,
+  EnumMember = 20,
+  Constant = 21,
+  Struct = 22,
+  Event = 23,
+  Operator = 24,
+  TypeParameter = 25,
+};
+bool fromJSON(const llvm::json::Value &, CompletionItemKind &);
+
+struct CompletionItemKindCapabilities {
+  /// The CompletionItemKinds that the client supports. If not set, the client
+  /// only supports <= CompletionItemKind::Reference and will not fall back to a
+  /// valid default value.
+  llvm::Optional<std::vector<CompletionItemKind>> valueSet;
+};
+// Discards unknown CompletionItemKinds.
+bool fromJSON(const llvm::json::Value &, std::vector<CompletionItemKind> &);
+bool fromJSON(const llvm::json::Value &, CompletionItemKindCapabilities &);
+
+constexpr auto CompletionItemKindMin =
+    static_cast<size_t>(CompletionItemKind::Text);
+constexpr auto CompletionItemKindMax =
+    static_cast<size_t>(CompletionItemKind::TypeParameter);
+using CompletionItemKindBitset = std::bitset<CompletionItemKindMax + 1>;
+CompletionItemKind
+adjustKindToCapability(CompletionItemKind Kind,
+                       CompletionItemKindBitset &supportedCompletionItemKinds);
+
 struct CompletionClientCapabilities {
   /// Whether completion supports dynamic registration.
   bool dynamicRegistration = false;
   /// The client supports the following `CompletionItem` specific capabilities.
   CompletionItemClientCapabilities completionItem;
-  // NOTE: not used by clangd at the moment.
-  // llvm::Optional<CompletionItemKindCapabilities> completionItemKind;
+  /// The CompletionItemKinds that the client supports. If not set, the client
+  /// only supports <= CompletionItemKind::Reference and will not fall back to a
+  /// valid default value.
+  llvm::Optional<CompletionItemKindCapabilities> completionItemKind;
 
   /// The client supports to send additional context information for a
   /// `textDocument/completion` request.
@@ -305,6 +357,7 @@ struct SymbolKindCapabilities {
   /// value.
   llvm::Optional<std::vector<SymbolKind>> valueSet;
 };
+// Discards unknown SymbolKinds.
 bool fromJSON(const llvm::json::Value &, std::vector<SymbolKind> &);
 bool fromJSON(const llvm::json::Value &, SymbolKindCapabilities &);
 SymbolKind adjustKindToCapability(SymbolKind Kind,
@@ -682,29 +735,6 @@ struct Hover {
   llvm::Optional<Range> range;
 };
 llvm::json::Value toJSON(const Hover &H);
-
-/// The kind of a completion entry.
-enum class CompletionItemKind {
-  Missing = 0,
-  Text = 1,
-  Method = 2,
-  Function = 3,
-  Constructor = 4,
-  Field = 5,
-  Variable = 6,
-  Class = 7,
-  Interface = 8,
-  Module = 9,
-  Property = 10,
-  Unit = 11,
-  Value = 12,
-  Enum = 13,
-  Keyword = 14,
-  Snippet = 15,
-  Color = 16,
-  File = 17,
-  Reference = 18,
-};
 
 /// Defines whether the insert text in a completion item should be interpreted
 /// as plain text or a snippet.

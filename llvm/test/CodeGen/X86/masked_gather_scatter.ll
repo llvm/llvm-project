@@ -70,8 +70,7 @@ declare <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> , i32, <8 x i1> ,
 ; SCALAR: else:
 ; SCALAR-NEXT:  %res.phi.else = phi
 ; SCALAR-NEXT:  %Mask1 = extractelement <16 x i1> %imask, i32 1
-; SCALAR-NEXT:  %ToLoad1 = icmp eq i1 %Mask1, true
-; SCALAR-NEXT:  br i1 %ToLoad1, label %cond.load1, label %else2
+; SCALAR-NEXT:  br i1 %Mask1, label %cond.load1, label %else2
 
 define <16 x float> @test2(float* %base, <16 x i32> %ind, i16 %mask) {
 ; KNL_64-LABEL: test2:
@@ -213,8 +212,7 @@ define <16 x i32> @test4(i32* %base, <16 x i32> %ind, i16 %mask) {
 
 ; SCALAR-LABEL: test5
 ; SCALAR:        %Mask0 = extractelement <16 x i1> %imask, i32 0
-; SCALAR-NEXT:   %ToStore0 = icmp eq i1 %Mask0, true
-; SCALAR-NEXT:   br i1 %ToStore0, label %cond.store, label %else
+; SCALAR-NEXT:   br i1 %Mask0, label %cond.store, label %else
 ; SCALAR: cond.store:
 ; SCALAR-NEXT:  %Elt0 = extractelement <16 x i32> %val, i32 0
 ; SCALAR-NEXT:  %Ptr0 = extractelement <16 x i32*> %gep.random, i32 0
@@ -222,8 +220,7 @@ define <16 x i32> @test4(i32* %base, <16 x i32> %ind, i16 %mask) {
 ; SCALAR-NEXT:  br label %else
 ; SCALAR: else:
 ; SCALAR-NEXT: %Mask1 = extractelement <16 x i1> %imask, i32 1
-; SCALAR-NEXT:  %ToStore1 = icmp eq i1 %Mask1, true
-; SCALAR-NEXT:  br i1 %ToStore1, label %cond.store1, label %else2
+; SCALAR-NEXT:  br i1 %Mask1, label %cond.store1, label %else2
 
 define void @test5(i32* %base, <16 x i32> %ind, i16 %mask, <16 x i32>%val) {
 ; KNL_64-LABEL: test5:
@@ -2448,45 +2445,41 @@ define void @v1_scatter(<1 x i32>%a1, <1 x i32*> %ptr, <1 x i1> %mask) {
 ; KNL_64-LABEL: v1_scatter:
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    testb $1, %dl
-; KNL_64-NEXT:    jne .LBB43_1
-; KNL_64-NEXT:  # %bb.2: # %else
-; KNL_64-NEXT:    retq
-; KNL_64-NEXT:  .LBB43_1: # %cond.store
+; KNL_64-NEXT:    je .LBB43_2
+; KNL_64-NEXT:  # %bb.1: # %cond.store
 ; KNL_64-NEXT:    movl %edi, (%rsi)
+; KNL_64-NEXT:  .LBB43_2: # %else
 ; KNL_64-NEXT:    retq
 ;
 ; KNL_32-LABEL: v1_scatter:
 ; KNL_32:       # %bb.0:
 ; KNL_32-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; KNL_32-NEXT:    jne .LBB43_1
-; KNL_32-NEXT:  # %bb.2: # %else
-; KNL_32-NEXT:    retl
-; KNL_32-NEXT:  .LBB43_1: # %cond.store
+; KNL_32-NEXT:    je .LBB43_2
+; KNL_32-NEXT:  # %bb.1: # %cond.store
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; KNL_32-NEXT:    movl %ecx, (%eax)
+; KNL_32-NEXT:  .LBB43_2: # %else
 ; KNL_32-NEXT:    retl
 ;
 ; SKX-LABEL: v1_scatter:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    testb $1, %dl
-; SKX-NEXT:    jne .LBB43_1
-; SKX-NEXT:  # %bb.2: # %else
-; SKX-NEXT:    retq
-; SKX-NEXT:  .LBB43_1: # %cond.store
+; SKX-NEXT:    je .LBB43_2
+; SKX-NEXT:  # %bb.1: # %cond.store
 ; SKX-NEXT:    movl %edi, (%rsi)
+; SKX-NEXT:  .LBB43_2: # %else
 ; SKX-NEXT:    retq
 ;
 ; SKX_32-LABEL: v1_scatter:
 ; SKX_32:       # %bb.0:
 ; SKX_32-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; SKX_32-NEXT:    jne .LBB43_1
-; SKX_32-NEXT:  # %bb.2: # %else
-; SKX_32-NEXT:    retl
-; SKX_32-NEXT:  .LBB43_1: # %cond.store
+; SKX_32-NEXT:    je .LBB43_2
+; SKX_32-NEXT:  # %bb.1: # %cond.store
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SKX_32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SKX_32-NEXT:    movl %ecx, (%eax)
+; SKX_32-NEXT:  .LBB43_2: # %else
 ; SKX_32-NEXT:    retl
   call void @llvm.masked.scatter.v1i32.v1p0i32(<1 x i32> %a1, <1 x i32*> %ptr, i32 4, <1 x i1> %mask)
   ret void

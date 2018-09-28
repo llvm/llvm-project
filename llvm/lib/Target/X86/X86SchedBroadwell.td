@@ -161,8 +161,9 @@ def  : WriteRes<WriteSETCCStore, [BWPort06,BWPort4,BWPort237]> {
   let Latency = 2;
   let NumMicroOps = 3;
 }
-def  : WriteRes<WriteLAHFSAHF, [BWPort06]>;
-def  : WriteRes<WriteBitTest,[BWPort06]>; // Bit Test instrs
+def  : WriteRes<WriteLAHFSAHF,   [BWPort06]>;
+def  : WriteRes<WriteBitTest,    [BWPort06]>; // Bit Test instrs
+def  : WriteRes<WriteBitTestSet, [BWPort06]>; // Bit Test + Set instrs
 
 // Bit counts.
 defm : BWWriteResPair<WriteBSF, [BWPort1], 3>;

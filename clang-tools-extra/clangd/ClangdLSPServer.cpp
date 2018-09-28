@@ -70,6 +70,14 @@ SymbolKindBitset defaultSymbolKinds() {
   return Defaults;
 }
 
+CompletionItemKindBitset defaultCompletionItemKinds() {
+  CompletionItemKindBitset Defaults;
+  for (size_t I = CompletionItemKindMin;
+       I <= static_cast<size_t>(CompletionItemKind::Reference); ++I)
+    Defaults.set(I);
+  return Defaults;
+}
+
 } // namespace
 
 void ClangdLSPServer::onInitialize(InitializeParams &Params) {
@@ -89,12 +97,19 @@ void ClangdLSPServer::onInitialize(InitializeParams &Params) {
       Params.capabilities.textDocument.publishDiagnostics.categorySupport;
 
   if (Params.capabilities.workspace && Params.capabilities.workspace->symbol &&
-      Params.capabilities.workspace->symbol->symbolKind) {
+      Params.capabilities.workspace->symbol->symbolKind &&
+      Params.capabilities.workspace->symbol->symbolKind->valueSet) {
     for (SymbolKind Kind :
          *Params.capabilities.workspace->symbol->symbolKind->valueSet) {
       SupportedSymbolKinds.set(static_cast<size_t>(Kind));
     }
   }
+
+  if (Params.capabilities.textDocument.completion.completionItemKind &&
+      Params.capabilities.textDocument.completion.completionItemKind->valueSet)
+    for (CompletionItemKind Kind : *Params.capabilities.textDocument.completion
+                                        .completionItemKind->valueSet)
+      SupportedCompletionItemKinds.set(static_cast<size_t>(Kind));
 
   reply(json::Object{
       {{"capabilities",
@@ -347,8 +362,12 @@ void ClangdLSPServer::onCompletion(TextDocumentPositionParams &Params) {
                            return replyError(List.takeError());
                          CompletionList LSPList;
                          LSPList.isIncomplete = List->HasMore;
-                         for (const auto &R : List->Completions)
-                           LSPList.items.push_back(R.render(CCOpts));
+                         for (const auto &R : List->Completions) {
+                           CompletionItem C = R.render(CCOpts);
+                           C.kind = adjustKindToCapability(
+                               C.kind, SupportedCompletionItemKinds);
+                           LSPList.items.push_back(std::move(C));
+                         }
                          return reply(std::move(LSPList));
                        });
 }
@@ -459,6 +478,7 @@ ClangdLSPServer::ClangdLSPServer(JSONOutput &Out,
                                          : CompilationDB::makeDirectoryBased(
                                                std::move(CompileCommandsDir))),
       CCOpts(CCOpts), SupportedSymbolKinds(defaultSymbolKinds()),
+      SupportedCompletionItemKinds(defaultCompletionItemKinds()),
       Server(new ClangdServer(CDB.getCDB(), FSProvider, /*DiagConsumer=*/*this,
                               Opts)) {}
 
