@@ -1318,7 +1318,7 @@ std::string PatternToMatch::getPredicateCheck() const {
   SmallVector<const Predicate*,4> PredList;
   for (const Predicate &P : Predicates)
     PredList.push_back(&P);
-  llvm::sort(PredList.begin(), PredList.end(), deref<llvm::less>());
+  llvm::sort(PredList, deref<llvm::less>());
 
   std::string Check;
   for (unsigned i = 0, e = PredList.size(); i != e; ++i) {
@@ -3742,7 +3742,7 @@ std::vector<Predicate> CodeGenDAGPatterns::makePredList(ListInit *L) {
   }
 
   // Sort so that different orders get canonicalized to the same string.
-  llvm::sort(Preds.begin(), Preds.end());
+  llvm::sort(Preds);
   return Preds;
 }
 

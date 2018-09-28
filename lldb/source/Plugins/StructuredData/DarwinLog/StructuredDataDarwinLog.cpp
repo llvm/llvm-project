@@ -133,9 +133,7 @@ static constexpr PropertyDefinition g_properties[] = {
         "Specify the options to 'plugin structured-data darwin-log enable' "
         "that should be applied when automatically enabling logging on "
         "startup/attach." // description
-    },
-    // Last entry sentinel.
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, {}, nullptr}};
+    }};
 
 enum { ePropertyEnableOnStartup = 0, ePropertyAutoEnableOptions = 1 };
 

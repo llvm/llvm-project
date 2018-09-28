@@ -204,6 +204,9 @@ def FeatureAggressiveFMA :
                    "true",
                    "Enable Aggressive FMA for floating-point.">;
 
+def FeatureAltFPCmp : SubtargetFeature<"altnzcv", "HasAlternativeNZCV", "true",
+  "Enable alternative NZCV format for floating point comparisons">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -221,7 +224,7 @@ def HasV8_4aOps : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
   "Support ARM v8.4a instructions", [HasV8_3aOps, FeatureDotProd]>;
 
 def HasV8_5aOps : SubtargetFeature<"v8.5a", "HasV8_5aOps", "true",
-  "Support ARM v8.5a instructions", [HasV8_4aOps]>;
+  "Support ARM v8.5a instructions", [HasV8_4aOps, FeatureAltFPCmp]>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description

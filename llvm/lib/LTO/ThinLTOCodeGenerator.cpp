@@ -968,12 +968,11 @@ void ThinLTOCodeGenerator::run() {
   std::vector<int> ModulesOrdering;
   ModulesOrdering.resize(Modules.size());
   std::iota(ModulesOrdering.begin(), ModulesOrdering.end(), 0);
-  llvm::sort(ModulesOrdering.begin(), ModulesOrdering.end(),
-             [&](int LeftIndex, int RightIndex) {
-               auto LSize = Modules[LeftIndex].getBuffer().size();
-               auto RSize = Modules[RightIndex].getBuffer().size();
-               return LSize > RSize;
-             });
+  llvm::sort(ModulesOrdering, [&](int LeftIndex, int RightIndex) {
+    auto LSize = Modules[LeftIndex].getBuffer().size();
+    auto RSize = Modules[RightIndex].getBuffer().size();
+    return LSize > RSize;
+  });
 
   // Parallel optimizer + codegen
   {

@@ -3088,6 +3088,12 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return Style.BreakBeforeBinaryOperators != FormatStyle::BOS_None;
     if (Right.is(Keywords.kw_as))
       return false; // must not break before as in 'x as type' casts
+    if (Right.isOneOf(Keywords.kw_extends, Keywords.kw_infer)) {
+      // extends and infer can appear as keywords in conditional types:
+      //   https://www.typescriptlang.org/docs/handbook/release-notes/typescript-2-8.html#conditional-types
+      // do not break before them, as the expressions are subject to ASI.
+      return false;
+    }
     if (Left.is(Keywords.kw_as))
       return true;
     if (Left.is(TT_JsNonNullAssertion))

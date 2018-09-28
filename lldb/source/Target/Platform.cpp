@@ -71,8 +71,7 @@ static constexpr PropertyDefinition g_properties[] = {
     {"use-module-cache", OptionValue::eTypeBoolean, true, true, nullptr,
      {}, "Use module cache."},
     {"module-cache-directory", OptionValue::eTypeFileSpec, true, 0, nullptr,
-     {}, "Root directory for cached modules."},
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, {}, nullptr}};
+     {}, "Root directory for cached modules."}};
 
 enum { ePropertyUseModuleCache, ePropertyModuleCacheDirectory };
 

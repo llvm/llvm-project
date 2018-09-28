@@ -1444,9 +1444,8 @@ void ARMBaseInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
   SmallVector<unsigned, 6> ScratchRegs;
   for(unsigned I = 5; I < MI->getNumOperands(); ++I)
     ScratchRegs.push_back(MI->getOperand(I).getReg());
-  llvm::sort(ScratchRegs.begin(), ScratchRegs.end(),
-             [&TRI](const unsigned &Reg1,
-                    const unsigned &Reg2) -> bool {
+  llvm::sort(ScratchRegs,
+             [&TRI](const unsigned &Reg1, const unsigned &Reg2) -> bool {
                return TRI.getEncodingValue(Reg1) <
                       TRI.getEncodingValue(Reg2);
              });

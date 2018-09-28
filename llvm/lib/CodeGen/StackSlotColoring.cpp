@@ -214,7 +214,7 @@ void StackSlotColoring::InitializeSlots() {
   Intervals.reserve(LS->getNumIntervals());
   for (auto &I : *LS)
     Intervals.push_back(&I);
-  llvm::sort(Intervals.begin(), Intervals.end(),
+  llvm::sort(Intervals,
              [](Pair *LHS, Pair *RHS) { return LHS->first < RHS->first; });
 
   // Gather all spill slots into a list.

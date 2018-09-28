@@ -130,7 +130,7 @@ filterAndSortClassDefs(LinePrinter &Printer, Enumerator &E,
   }
 
   if (Comp)
-    llvm::sort(Filtered.begin(), Filtered.end(), Comp);
+    llvm::sort(Filtered, Comp);
   return Filtered;
 }
 

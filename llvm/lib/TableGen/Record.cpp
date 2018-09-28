@@ -158,10 +158,9 @@ RecordRecTy *RecordRecTy::get(ArrayRef<Record *> UnsortedClasses) {
 
   SmallVector<Record *, 4> Classes(UnsortedClasses.begin(),
                                    UnsortedClasses.end());
-  llvm::sort(Classes.begin(), Classes.end(),
-             [](Record *LHS, Record *RHS) {
-               return LHS->getNameInitAsString() < RHS->getNameInitAsString();
-             });
+  llvm::sort(Classes, [](Record *LHS, Record *RHS) {
+    return LHS->getNameInitAsString() < RHS->getNameInitAsString();
+  });
 
   FoldingSetNodeID ID;
   ProfileRecordRecTy(ID, Classes);

@@ -82,35 +82,6 @@ struct Instruction {
   llvm::BitVector UseRegisters; // The union of the aliased use registers.
 };
 
-// A builder for an Instruction holding values for each of its Variables.
-struct InstructionBuilder {
-  InstructionBuilder(const Instruction &Instr);
-
-  InstructionBuilder(const InstructionBuilder &);            // default
-  InstructionBuilder &operator=(const InstructionBuilder &); // default
-  InstructionBuilder(InstructionBuilder &&);                 // default
-  InstructionBuilder &operator=(InstructionBuilder &&);      // default
-
-  unsigned getOpcode() const;
-  llvm::MCOperand &getValueFor(const Variable &Var);
-  const llvm::MCOperand &getValueFor(const Variable &Var) const;
-  llvm::MCOperand &getValueFor(const Operand &Op);
-  const llvm::MCOperand &getValueFor(const Operand &Op) const;
-  bool hasImmediateVariables() const;
-
-  // Assigns a Random Value to all Variables that are still Invalid.
-  // Do not use any of the registers in `ForbiddenRegs`.
-  void randomizeUnsetVariables(const llvm::BitVector &ForbiddenRegs);
-
-  // Builds an llvm::MCInst from this InstructionBuilder setting its operands to
-  // the corresponding variable values.
-  // Precondition: All VariableValues must be set.
-  llvm::MCInst build() const;
-
-  Instruction Instr;
-  llvm::SmallVector<llvm::MCOperand, 4> VariableValues;
-};
-
 // Represents the assignment of a Register to an Operand.
 struct RegisterOperandAssignment {
   RegisterOperandAssignment(const Operand *Operand, llvm::MCPhysReg Reg)
@@ -152,20 +123,6 @@ struct AliasingConfigurations {
   const Instruction &UseInstruction;
   llvm::SmallVector<AliasingRegisterOperands, 32> Configurations;
 };
-
-// A global Random Number Generator to randomize configurations.
-// FIXME: Move random number generation into an object and make it seedable for
-// unit tests.
-std::mt19937 &randomGenerator();
-
-// Picks a random bit among the bits set in Vector and returns its index.
-// Precondition: Vector must have at least one bit set.
-size_t randomBit(const llvm::BitVector &Vector);
-
-// Picks a random configuration, then selects a random def and a random use from
-// it and finally set the selected values in the provided InstructionInstances.
-void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations,
-                       InstructionBuilder &DefIB, InstructionBuilder &UseIB);
 
 // Writes MCInst to OS.
 // This is not assembly but the internal LLVM's name for instructions and

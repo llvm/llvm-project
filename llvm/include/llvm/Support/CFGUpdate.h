@@ -105,7 +105,7 @@ void LegalizeUpdates(ArrayRef<Update<NodePtr>> AllUpdates,
       Operations[{U.getTo(), U.getFrom()}] = int(i);
   }
 
-  llvm::sort(Result.begin(), Result.end(),
+  llvm::sort(Result,
              [&Operations](const Update<NodePtr> &A, const Update<NodePtr> &B) {
                return Operations[{A.getFrom(), A.getTo()}] >
                       Operations[{B.getFrom(), B.getTo()}];

@@ -1997,7 +1997,7 @@ bool LowerTypeTestsModule::lower() {
     }
     Sets.emplace_back(I, MaxUniqueId);
   }
-  llvm::sort(Sets.begin(), Sets.end(),
+  llvm::sort(Sets,
              [](const std::pair<GlobalClassesTy::iterator, unsigned> &S1,
                 const std::pair<GlobalClassesTy::iterator, unsigned> &S2) {
                return S1.second < S2.second;
@@ -2022,12 +2022,12 @@ bool LowerTypeTestsModule::lower() {
 
     // Order type identifiers by unique ID for determinism. This ordering is
     // stable as there is a one-to-one mapping between metadata and unique IDs.
-    llvm::sort(TypeIds.begin(), TypeIds.end(), [&](Metadata *M1, Metadata *M2) {
+    llvm::sort(TypeIds, [&](Metadata *M1, Metadata *M2) {
       return TypeIdInfo[M1].UniqueId < TypeIdInfo[M2].UniqueId;
     });
 
     // Same for the branch funnels.
-    llvm::sort(ICallBranchFunnels.begin(), ICallBranchFunnels.end(),
+    llvm::sort(ICallBranchFunnels,
                [&](ICallBranchFunnel *F1, ICallBranchFunnel *F2) {
                  return F1->UniqueId < F2->UniqueId;
                });

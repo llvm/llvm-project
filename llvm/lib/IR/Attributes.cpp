@@ -658,7 +658,7 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C,
   FoldingSetNodeID ID;
 
   SmallVector<Attribute, 8> SortedAttrs(Attrs.begin(), Attrs.end());
-  llvm::sort(SortedAttrs.begin(), SortedAttrs.end());
+  llvm::sort(SortedAttrs);
 
   for (const auto Attr : SortedAttrs)
     Attr.Profile(ID);

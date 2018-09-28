@@ -175,6 +175,7 @@ private:
 
   bool parseDirectiveReq(StringRef Name, SMLoc L);
   bool parseDirectiveUnreq(SMLoc L);
+  bool parseDirectiveCFINegateRAState();
 
   bool validateInstruction(MCInst &Inst, SMLoc &IDLoc,
                            SmallVectorImpl<SMLoc> &Loc);
@@ -4925,6 +4926,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
     parseDirectiveUnreq(Loc);
   else if (IDVal == ".inst")
     parseDirectiveInst(Loc);
+  else if (IDVal == ".cfi_negate_ra_state")
+    parseDirectiveCFINegateRAState();
   else if (IsMachO) {
     if (IDVal == MCLOHDirectiveName())
       parseDirectiveLOH(IDVal, Loc);
@@ -5295,6 +5298,13 @@ bool AArch64AsmParser::parseDirectiveUnreq(SMLoc L) {
   Parser.Lex(); // Eat the identifier.
   if (parseToken(AsmToken::EndOfStatement))
     return addErrorSuffix("in '.unreq' directive");
+  return false;
+}
+
+bool AArch64AsmParser::parseDirectiveCFINegateRAState() {
+  if (parseToken(AsmToken::EndOfStatement, "unexpected token in directive"))
+    return true;
+  getStreamer().EmitCFINegateRAState();
   return false;
 }
 

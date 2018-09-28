@@ -1446,20 +1446,20 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
 
     FileSpecList dependent_files;
     ObjectFile *executable_objfile = executable_sp->GetObjectFile();
-    bool load_dependens;
+    bool load_dependents = true;
     switch (load_dependent_files) {
     case eLoadDependentsDefault:
-      load_dependens = executable_sp->IsExecutable();
+      load_dependents = executable_sp->IsExecutable();
       break;
     case eLoadDependentsYes:
-      load_dependens = true;
+      load_dependents = true;
       break;
     case eLoadDependentsNo:
-      load_dependens = false;
+      load_dependents = false;
       break;
     }
 
-    if (executable_objfile && load_dependens) {
+    if (executable_objfile && load_dependents) {
       executable_objfile->GetDependentModules(dependent_files);
       for (uint32_t i = 0; i < dependent_files.GetSize(); i++) {
         FileSpec dependent_file_spec(
@@ -3352,8 +3352,7 @@ static constexpr PropertyDefinition g_properties[] = {
      nullptr, {}, "If true, LLDB will show variables that are meant to "
                   "support the operation of a language's runtime support."},
     {"non-stop-mode", OptionValue::eTypeBoolean, false, 0, nullptr, {},
-     "Disable lock-step debugging, instead control threads independently."},
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, {}, nullptr}};
+     "Disable lock-step debugging, instead control threads independently."}};
 
 enum {
   ePropertyDefaultArch,
@@ -3483,8 +3482,7 @@ static constexpr PropertyDefinition g_experimental_properties[]{
      "ivars and local variables.  "
      "But it can make expressions run much more slowly."},
     {"use-modern-type-lookup", OptionValue::eTypeBoolean, true, false, nullptr,
-     {}, "If true, use Clang's modern type lookup infrastructure."},
-    {nullptr, OptionValue::eTypeInvalid, true, 0, nullptr, {}, nullptr}};
+     {}, "If true, use Clang's modern type lookup infrastructure."}};
 
 enum { ePropertyInjectLocalVars = 0, ePropertyUseModernTypeLookup };
 

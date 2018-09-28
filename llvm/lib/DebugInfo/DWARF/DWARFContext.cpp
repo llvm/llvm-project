@@ -106,10 +106,11 @@ collectContributionData(DWARFContext::unit_iterator_range Units) {
   // Sort the contributions so that any invalid ones are placed at
   // the start of the contributions vector. This way they are reported
   // first.
-  llvm::sort(Contributions.begin(), Contributions.end(),
+  llvm::sort(Contributions,
              [](const Optional<StrOffsetsContributionDescriptor> &L,
                 const Optional<StrOffsetsContributionDescriptor> &R) {
-               if (L && R) return L->Base < R->Base;
+               if (L && R)
+                 return L->Base < R->Base;
                return R.hasValue();
              });
 
@@ -724,7 +725,7 @@ const DWARFDebugFrame *DWARFContext::getDebugFrame() {
   // http://lists.dwarfstd.org/htdig.cgi/dwarf-discuss-dwarfstd.org/2011-December/001173.html
   DWARFDataExtractor debugFrameData(DObj->getDebugFrameSection(),
                                     isLittleEndian(), DObj->getAddressSize());
-  DebugFrame.reset(new DWARFDebugFrame(false /* IsEH */));
+  DebugFrame.reset(new DWARFDebugFrame(Arch, false /* IsEH */));
   DebugFrame->parse(debugFrameData);
   return DebugFrame.get();
 }
@@ -735,7 +736,7 @@ const DWARFDebugFrame *DWARFContext::getEHFrame() {
 
   DWARFDataExtractor debugFrameData(DObj->getEHFrameSection(), isLittleEndian(),
                                     DObj->getAddressSize());
-  DebugFrame.reset(new DWARFDebugFrame(true /* IsEH */));
+  DebugFrame.reset(new DWARFDebugFrame(Arch, true /* IsEH */));
   DebugFrame->parse(debugFrameData);
   return DebugFrame.get();
 }
@@ -1581,9 +1582,11 @@ DWARFContext::create(const StringMap<std::unique_ptr<MemoryBuffer>> &Sections,
   return llvm::make_unique<DWARFContext>(std::move(DObj), "");
 }
 
-Error DWARFContext::loadRegisterInfo(const object::ObjectFile &Obj) {
+Error DWARFContext::loadArchitectureInfo(const object::ObjectFile &Obj) {
   // Detect the architecture from the object file. We usually don't need OS
   // info to lookup a target and create register info.
+  Arch = Triple::ArchType(Obj.getArch());
+
   Triple TT;
   TT.setArch(Triple::ArchType(Obj.getArch()));
   TT.setVendor(Triple::UnknownVendor);

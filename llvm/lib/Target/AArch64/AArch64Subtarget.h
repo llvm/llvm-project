@@ -94,6 +94,9 @@ protected:
   bool HasRCPC = false;
   bool HasAggressiveFMA = false;
 
+  // Armv8.5-A Extensions
+  bool HasAlternativeNZCV = false;
+
   // HasZeroCycleRegMove - Has zero-cycle register mov instructions.
   bool HasZeroCycleRegMove = false;
 
@@ -306,6 +309,7 @@ public:
   bool hasSVE() const { return HasSVE; }
   bool hasRCPC() const { return HasRCPC; }
   bool hasAggressiveFMA() const { return HasAggressiveFMA; }
+  bool hasAlternativeNZCV() const { return HasAlternativeNZCV; }
 
   bool isLittleEndian() const { return IsLittle; }
 

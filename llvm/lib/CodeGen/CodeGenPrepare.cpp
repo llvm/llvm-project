@@ -4989,8 +4989,7 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
           return LargeOffsetGEPID[LHS.first] < LargeOffsetGEPID[RHS.first];
         };
     // Sorting all the GEPs of the same data structures based on the offsets.
-    llvm::sort(LargeOffsetGEPs.begin(), LargeOffsetGEPs.end(),
-               compareGEPOffset);
+    llvm::sort(LargeOffsetGEPs, compareGEPOffset);
     LargeOffsetGEPs.erase(
         std::unique(LargeOffsetGEPs.begin(), LargeOffsetGEPs.end()),
         LargeOffsetGEPs.end());

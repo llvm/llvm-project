@@ -36,9 +36,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include <algorithm>
-#include <random>
 #include <string>
-#include <unordered_map>
 
 static llvm::cl::opt<unsigned>
     OpcodeIndex("opcode-index", llvm::cl::desc("opcode to measure, by index"),
@@ -160,10 +158,10 @@ public:
 
   // Implementation of the llvm::MCStreamer interface. We only care about
   // instructions.
-  void EmitInstruction(const llvm::MCInst &instruction,
-                       const llvm::MCSubtargetInfo &mc_subtarget_info,
+  void EmitInstruction(const llvm::MCInst &Instruction,
+                       const llvm::MCSubtargetInfo &STI,
                        bool PrintSchedInfo) override {
-    Result->Instructions.push_back(instruction);
+    Result->Instructions.push_back(Instruction);
   }
 
   // Implementation of the llvm::AsmCommentConsumer.
@@ -211,17 +209,17 @@ public:
 
 private:
   // We only care about instructions, we don't implement this part of the API.
-  void EmitCommonSymbol(llvm::MCSymbol *symbol, uint64_t size,
-                        unsigned byte_alignment) override {}
-  bool EmitSymbolAttribute(llvm::MCSymbol *symbol,
-                           llvm::MCSymbolAttr attribute) override {
+  void EmitCommonSymbol(llvm::MCSymbol *Symbol, uint64_t Size,
+                        unsigned ByteAlignment) override {}
+  bool EmitSymbolAttribute(llvm::MCSymbol *Symbol,
+                           llvm::MCSymbolAttr Attribute) override {
     return false;
   }
-  void EmitValueToAlignment(unsigned byte_alignment, int64_t value,
-                            unsigned value_size,
-                            unsigned max_bytes_to_emit) override {}
-  void EmitZerofill(llvm::MCSection *section, llvm::MCSymbol *symbol,
-                    uint64_t size, unsigned byte_alignment,
+  void EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
+                            unsigned ValueSize,
+                            unsigned MaxBytesToEmit) override {}
+  void EmitZerofill(llvm::MCSection *Section, llvm::MCSymbol *Symbol,
+                    uint64_t Size, unsigned ByteAlignment,
                     llvm::SMLoc Loc) override {}
 
   unsigned findRegisterByName(const llvm::StringRef RegName) const {

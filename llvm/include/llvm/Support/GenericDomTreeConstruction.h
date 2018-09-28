@@ -1386,10 +1386,9 @@ struct SemiNCAInfo {
       // Make a copy and sort it such that it is possible to check if there are
       // no gaps between DFS numbers of adjacent children.
       SmallVector<TreeNodePtr, 8> Children(Node->begin(), Node->end());
-      llvm::sort(Children.begin(), Children.end(),
-                 [](const TreeNodePtr Ch1, const TreeNodePtr Ch2) {
-                   return Ch1->getDFSNumIn() < Ch2->getDFSNumIn();
-                 });
+      llvm::sort(Children, [](const TreeNodePtr Ch1, const TreeNodePtr Ch2) {
+        return Ch1->getDFSNumIn() < Ch2->getDFSNumIn();
+      });
 
       auto PrintChildrenError = [Node, &Children, PrintNodeAndDFSNums](
           const TreeNodePtr FirstCh, const TreeNodePtr SecondCh) {

@@ -26,6 +26,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadicDetails.h"
+#include "llvm/ADT/Triple.h"
 
 namespace llvm {
 class StringRef;
@@ -272,6 +273,7 @@ enum RangeListEntries {
 /// Call frame instruction encodings.
 enum CallFrameInfo {
 #define HANDLE_DW_CFA(ID, NAME) DW_CFA_##NAME = ID,
+#define HANDLE_DW_CFA_PRED(ID, NAME, ARCH) DW_CFA_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
   DW_CFA_extended = 0x00,
 
@@ -430,7 +432,7 @@ StringRef LNStandardString(unsigned Standard);
 StringRef LNExtendedString(unsigned Encoding);
 StringRef MacinfoString(unsigned Encoding);
 StringRef RangeListEncodingString(unsigned Encoding);
-StringRef CallFrameString(unsigned Encoding);
+StringRef CallFrameString(unsigned Encoding, Triple::ArchType Arch);
 StringRef ApplePropertyString(unsigned);
 StringRef UnitTypeString(unsigned);
 StringRef AtomTypeString(unsigned Atom);

@@ -698,9 +698,8 @@ bool GuardWideningImpl::combineRangeChecks(
     // CurrentChecks.size() will typically be 3 here, but so far there has been
     // no need to hard-code that fact.
 
-    llvm::sort(CurrentChecks.begin(), CurrentChecks.end(),
-               [&](const GuardWideningImpl::RangeCheck &LHS,
-                   const GuardWideningImpl::RangeCheck &RHS) {
+    llvm::sort(CurrentChecks, [&](const GuardWideningImpl::RangeCheck &LHS,
+                                  const GuardWideningImpl::RangeCheck &RHS) {
       return LHS.getOffsetValue().slt(RHS.getOffsetValue());
     });
 

@@ -45,4 +45,6 @@ body: |
     ; CHECK: CFI_INSTRUCTION escape 0x61, 0x62, 0x63
     CFI_INSTRUCTION window_save
     ; CHECK: CFI_INSTRUCTION window_save
+    CFI_INSTRUCTION negate_ra_sign_state
+    ; CHECK: CFI_INSTRUCTION negate_ra_sign_state
     RET_ReallyLR

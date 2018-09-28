@@ -578,7 +578,7 @@ bool HexagonStoreWidening::processBasicBlock(MachineBasicBlock &MBB) {
   };
   for (auto &G : SGs) {
     assert(G.size() > 1 && "Store group with fewer than 2 elements");
-    llvm::sort(G.begin(), G.end(), Less);
+    llvm::sort(G, Less);
 
     Changed |= processStoreGroup(G);
   }
