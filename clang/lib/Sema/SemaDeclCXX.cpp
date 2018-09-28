@@ -6451,20 +6451,29 @@ void Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD) {
   //        copy operation can take a non-const reference) as an implicit
   //        declaration, and
   //     -- not have default arguments.
+  // C++2a changes the second bullet to instead delete the function if it's
+  // defaulted on its first declaration, unless it's "an assignment operator,
+  // and its return type differs or its parameter type is not a reference".
+  bool DeleteOnTypeMismatch = getLangOpts().CPlusPlus2a && First;
+  bool ShouldDeleteForTypeMismatch = false;
   unsigned ExpectedParams = 1;
   if (CSM == CXXDefaultConstructor || CSM == CXXDestructor)
     ExpectedParams = 0;
   if (MD->getNumParams() != ExpectedParams) {
-    // This also checks for default arguments: a copy or move constructor with a
+    // This checks for default arguments: a copy or move constructor with a
     // default argument is classified as a default constructor, and assignment
     // operations and destructors can't have default arguments.
     Diag(MD->getLocation(), diag::err_defaulted_special_member_params)
       << CSM << MD->getSourceRange();
     HadError = true;
   } else if (MD->isVariadic()) {
-    Diag(MD->getLocation(), diag::err_defaulted_special_member_variadic)
-      << CSM << MD->getSourceRange();
-    HadError = true;
+    if (DeleteOnTypeMismatch)
+      ShouldDeleteForTypeMismatch = true;
+    else {
+      Diag(MD->getLocation(), diag::err_defaulted_special_member_variadic)
+        << CSM << MD->getSourceRange();
+      HadError = true;
+    }
   }
 
   const FunctionProtoType *Type = MD->getType()->getAs<FunctionProtoType>();
@@ -6489,9 +6498,13 @@ void Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD) {
 
     // A defaulted special member cannot have cv-qualifiers.
     if (Type->getTypeQuals()) {
-      Diag(MD->getLocation(), diag::err_defaulted_special_member_quals)
-        << (CSM == CXXMoveAssignment) << getLangOpts().CPlusPlus14;
-      HadError = true;
+      if (DeleteOnTypeMismatch)
+        ShouldDeleteForTypeMismatch = true;
+      else {
+        Diag(MD->getLocation(), diag::err_defaulted_special_member_quals)
+          << (CSM == CXXMoveAssignment) << getLangOpts().CPlusPlus14;
+        HadError = true;
+      }
     }
   }
 
@@ -6504,23 +6517,30 @@ void Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD) {
     HasConstParam = ReferentType.isConstQualified();
 
     if (ReferentType.isVolatileQualified()) {
-      Diag(MD->getLocation(),
-           diag::err_defaulted_special_member_volatile_param) << CSM;
-      HadError = true;
+      if (DeleteOnTypeMismatch)
+        ShouldDeleteForTypeMismatch = true;
+      else {
+        Diag(MD->getLocation(),
+             diag::err_defaulted_special_member_volatile_param) << CSM;
+        HadError = true;
+      }
     }
 
     if (HasConstParam && !CanHaveConstParam) {
-      if (CSM == CXXCopyConstructor || CSM == CXXCopyAssignment) {
+      if (DeleteOnTypeMismatch)
+        ShouldDeleteForTypeMismatch = true;
+      else if (CSM == CXXCopyConstructor || CSM == CXXCopyAssignment) {
         Diag(MD->getLocation(),
              diag::err_defaulted_special_member_copy_const_param)
           << (CSM == CXXCopyAssignment);
         // FIXME: Explain why this special member can't be const.
+        HadError = true;
       } else {
         Diag(MD->getLocation(),
              diag::err_defaulted_special_member_move_const_param)
           << (CSM == CXXMoveAssignment);
+        HadError = true;
       }
-      HadError = true;
     }
   } else if (ExpectedParams) {
     // A copy assignment operator can take its argument by value, but a
@@ -6582,14 +6602,27 @@ void Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD) {
                                         EPI));
   }
 
-  if (ShouldDeleteSpecialMember(MD, CSM)) {
+  if (ShouldDeleteForTypeMismatch || ShouldDeleteSpecialMember(MD, CSM)) {
     if (First) {
       SetDeclDeleted(MD, MD->getLocation());
+      if (!inTemplateInstantiation() && !HadError) {
+        Diag(MD->getLocation(), diag::warn_defaulted_method_deleted) << CSM;
+        if (ShouldDeleteForTypeMismatch) {
+          Diag(MD->getLocation(), diag::note_deleted_type_mismatch) << CSM;
+        } else {
+          ShouldDeleteSpecialMember(MD, CSM, nullptr, /*Diagnose*/true);
+        }
+      }
+      if (ShouldDeleteForTypeMismatch && !HadError) {
+        Diag(MD->getLocation(),
+             diag::warn_cxx17_compat_defaulted_method_type_mismatch) << CSM;
+      }
     } else {
       // C++11 [dcl.fct.def.default]p4:
       //   [For a] user-provided explicitly-defaulted function [...] if such a
       //   function is implicitly defined as deleted, the program is ill-formed.
       Diag(MD->getLocation(), diag::err_out_of_line_default_deletes) << CSM;
+      assert(!ShouldDeleteForTypeMismatch && "deleted non-first decl");
       ShouldDeleteSpecialMember(MD, CSM, nullptr, /*Diagnose*/true);
       HadError = true;
     }
@@ -7088,7 +7121,8 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD, CXXSpecialMember CSM,
   //   The closure type associated with a lambda-expression has a
   //   deleted (8.4.3) default constructor and a deleted copy
   //   assignment operator.
-  if (RD->isLambda() &&
+  // C++2a adds back these operators if the lambda has no capture-default.
+  if (RD->isLambda() && !RD->lambdaIsDefaultConstructibleAndAssignable() &&
       (CSM == CXXDefaultConstructor || CSM == CXXCopyAssignment)) {
     if (Diagnose)
       Diag(RD->getLocation(), diag::note_lambda_decl);

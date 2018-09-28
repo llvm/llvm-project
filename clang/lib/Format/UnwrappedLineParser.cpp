@@ -1266,6 +1266,8 @@ void UnwrappedLineParser::parseStructuralElement() {
       break;
     case tok::kw_try:
       // We arrive here when parsing function-try blocks.
+      if (Style.BraceWrapping.AfterFunction)
+        addUnwrappedLine();
       parseTryCatch();
       return;
     case tok::identifier: {

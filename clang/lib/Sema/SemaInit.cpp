@@ -9155,8 +9155,11 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
       TSInfo->getType()->getContainedDeducedType());
   assert(DeducedTST && "not a deduced template specialization type");
 
-  // We can only perform deduction for class templates.
   auto TemplateName = DeducedTST->getTemplateName();
+  if (TemplateName.isDependent())
+    return Context.DependentTy;
+
+  // We can only perform deduction for class templates.
   auto *Template =
       dyn_cast_or_null<ClassTemplateDecl>(TemplateName.getAsTemplateDecl());
   if (!Template) {

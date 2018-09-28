@@ -169,7 +169,7 @@
 // TARGET-O32: "-triple" "mips-unknown-linux-gnu"
 // TARGET-O32: "-target-cpu" "mips32r2"
 // TARGET-O32: "-target-abi" "o32"
-// TARGET-O32: ld{{.*}}"
+// TARGET-O32: ld{{(.exe)?}}"
 // TARGET-O32: "-m" "elf32btsmip"
 
 // RUN: %clang -target mips-linux-gnu -mabi=n32 -### %s 2>&1 \
@@ -177,7 +177,7 @@
 // TARGET-N32: "-triple" "mips64-unknown-linux-gnu"
 // TARGET-N32: "-target-cpu" "mips64r2"
 // TARGET-N32: "-target-abi" "n32"
-// TARGET-N32: ld{{.*}}"
+// TARGET-N32: ld{{(.exe)?}}"
 // TARGET-N32: "-m" "elf32btsmipn32"
 
 // RUN: %clang -target mips-linux-gnu -mabi=64 -### %s 2>&1 \
@@ -185,5 +185,5 @@
 // TARGET-N64: "-triple" "mips64-unknown-linux-gnu"
 // TARGET-N64: "-target-cpu" "mips64r2"
 // TARGET-N64: "-target-abi" "n64"
-// TARGET-N64: ld{{.*}}"
+// TARGET-N64: ld{{(.exe)?}}"
 // TARGET-N64: "-m" "elf64btsmip"

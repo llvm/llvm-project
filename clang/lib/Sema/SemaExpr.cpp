@@ -266,6 +266,17 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
       return true;
   }
 
+  if (auto *MD = dyn_cast<CXXMethodDecl>(D)) {
+    // Lambdas are only default-constructible or assignable in C++2a onwards.
+    if (MD->getParent()->isLambda() &&
+        ((isa<CXXConstructorDecl>(MD) &&
+          cast<CXXConstructorDecl>(MD)->isDefaultConstructor()) ||
+         MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator())) {
+      Diag(Loc, diag::warn_cxx17_compat_lambda_def_ctor_assign)
+        << !isa<CXXConstructorDecl>(MD);
+    }
+  }
+
   auto getReferencedObjCProp = [](const NamedDecl *D) ->
                                       const ObjCPropertyDecl * {
     if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
