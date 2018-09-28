@@ -1,6 +1,6 @@
 include_directories(../Plugins/Process/Utility)
 
-set(REFLECTION_LIB "")
+set(REFLECTION_LIB "swiftReflection")
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     set(REFLECTION_LIB "swiftReflection-linux-x86_64")
