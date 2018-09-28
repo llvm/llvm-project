@@ -307,6 +307,13 @@ namespace dependent {
   template int Var(int);
   template int Cast(int);
   template int New(int);
+
+  template<template<typename> typename Y> void test() {
+    Y(0);
+    new Y(0);
+    Y y(0);
+  }
+  template void test<X>();
 }
 
 namespace injected_class_name {

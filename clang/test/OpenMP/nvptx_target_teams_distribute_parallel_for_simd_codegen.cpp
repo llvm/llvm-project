@@ -33,7 +33,7 @@ tx ftemplate(int n) {
     l = i;
   }
 
-  #pragma omp target teams distribute parallel for simd map(tofrom: aa) num_teams(M) thread_limit(64)
+ #pragma omp target teams distribute parallel for simd map(tofrom: aa) num_teams(M) thread_limit(64)
   for(int i = 0; i < n; i++) {
     aa[i] += 1;
   }
@@ -82,28 +82,28 @@ int bar(int n){
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}(
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 0)
-// CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 92,
+// CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 91,
 // CHECK: {{call|invoke}} void [[OUTL2:@.+]](
 // CHECK: call void @__kmpc_for_static_fini(
 // CHECK: call void @__kmpc_spmd_kernel_deinit()
 // CHECK: ret void
 
 // CHECK: define internal void [[OUTL2]](
-// CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 34,
+// CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 33,
 // CHECK: call void @__kmpc_for_static_fini(
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}(
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 0)
-// CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 92,
+// CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 91,
 // CHECK: {{call|invoke}} void [[OUTL3:@.+]](
 // CHECK: call void @__kmpc_for_static_fini(
 // CHECK: call void @__kmpc_spmd_kernel_deinit()
 // CHECK: ret void
 
 // CHECK: define internal void [[OUTL3]](
-// CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 34,
+// CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 33,
 // CHECK: call void @__kmpc_for_static_fini(
 // CHECK: ret void
 
@@ -112,14 +112,14 @@ int bar(int n){
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 0)
 // CHECK: store {{.+}} 99, {{.+}}* [[COMB_UB:%.+]], align
-// CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 92, {{.+}}, {{.+}}, {{.+}}* [[COMB_UB]],
+// CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 91, {{.+}}, {{.+}}, {{.+}}* [[COMB_UB]],
 // CHECK: {{call|invoke}} void [[OUTL4:@.+]](
 // CHECK: call void @__kmpc_for_static_fini(
 // CHECK: call void @__kmpc_spmd_kernel_deinit()
 // CHECK: ret void
 
 // CHECK: define internal void [[OUTL4]](
-// CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 34,
+// CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 33,
 // CHECK: call void @__kmpc_for_static_fini(
 // CHECK: ret void
 
