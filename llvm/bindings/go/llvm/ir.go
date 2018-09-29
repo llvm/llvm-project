@@ -74,6 +74,7 @@ type (
 	IntPredicate        C.LLVMIntPredicate
 	FloatPredicate      C.LLVMRealPredicate
 	LandingPadClause    C.LLVMLandingPadClauseTy
+	InlineAsmDialect    C.LLVMInlineAsmDialect
 )
 
 func (c Context) IsNil() bool        { return c.C == nil }
@@ -211,6 +212,7 @@ const (
 	PointerTypeKind   TypeKind = C.LLVMPointerTypeKind
 	VectorTypeKind    TypeKind = C.LLVMVectorTypeKind
 	MetadataTypeKind  TypeKind = C.LLVMMetadataTypeKind
+	TokenTypeKind     TypeKind = C.LLVMTokenTypeKind
 )
 
 //-------------------------------------------------------------------------
@@ -312,6 +314,15 @@ const (
 const (
 	LandingPadCatch  LandingPadClause = C.LLVMLandingPadCatch
 	LandingPadFilter LandingPadClause = C.LLVMLandingPadFilter
+)
+
+//-------------------------------------------------------------------------
+// llvm.InlineAsmDialect
+//-------------------------------------------------------------------------
+
+const (
+	InlineAsmDialectATT   InlineAsmDialect = C.LLVMInlineAsmDialectATT
+	InlineAsmDialectIntel InlineAsmDialect = C.LLVMInlineAsmDialectIntel
 )
 
 //-------------------------------------------------------------------------
@@ -655,6 +666,7 @@ func (t Type) VectorSize() int          { return int(C.LLVMGetVectorSize(t.C)) }
 // Operations on other types
 func (c Context) VoidType() (t Type)  { t.C = C.LLVMVoidTypeInContext(c.C); return }
 func (c Context) LabelType() (t Type) { t.C = C.LLVMLabelTypeInContext(c.C); return }
+func (c Context) TokenType() (t Type) { t.C = C.LLVMTokenTypeInContext(c.C); return }
 
 func VoidType() (t Type)  { t.C = C.LLVMVoidType(); return }
 func LabelType() (t Type) { t.C = C.LLVMLabelType(); return }
@@ -1234,6 +1246,16 @@ func (v Value) IncomingValue(i int) (rv Value) {
 }
 func (v Value) IncomingBlock(i int) (bb BasicBlock) {
 	bb.C = C.LLVMGetIncomingBlock(v.C, C.unsigned(i))
+	return
+}
+
+// Operations on inline assembly
+func InlineAsm(t Type, asmString, constraints string, hasSideEffects, isAlignStack bool, dialect InlineAsmDialect) (rv Value) {
+	casm := C.CString(asmString)
+	defer C.free(unsafe.Pointer(casm))
+	cconstraints := C.CString(constraints)
+	defer C.free(unsafe.Pointer(cconstraints))
+	rv.C = C.LLVMGetInlineAsm(t.C, casm, C.size_t(len(asmString)), cconstraints, C.size_t(len(constraints)), boolToLLVMBool(hasSideEffects), boolToLLVMBool(isAlignStack), C.LLVMInlineAsmDialect(dialect))
 	return
 }
 

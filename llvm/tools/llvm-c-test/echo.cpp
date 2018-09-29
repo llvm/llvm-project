@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c-test.h"
+#include "llvm-c/DebugInfo.h"
 #include "llvm-c/Target.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -728,6 +729,19 @@ struct FunCloner {
       exit(-1);
     }
 
+    auto Ctx = LLVMGetModuleContext(M);
+    size_t NumMetadataEntries;
+    auto *AllMetadata =
+        LLVMInstructionGetAllMetadataOtherThanDebugLoc(Src,
+                                                       &NumMetadataEntries);
+    for (unsigned i = 0; i < NumMetadataEntries; ++i) {
+      unsigned Kind = LLVMValueMetadataEntriesGetKind(AllMetadata, i);
+      LLVMMetadataRef MD = LLVMValueMetadataEntriesGetMetadata(AllMetadata, i);
+      LLVMSetMetadata(Dst, Kind, LLVMMetadataAsValue(Ctx, MD));
+    }
+    LLVMDisposeValueMetadataEntries(AllMetadata);
+    LLVMSetInstDebugLocation(Builder, Dst);
+
     check_value_kind(Dst, LLVMInstructionValueKind);
     return VMap[Src] = Dst;
   }
@@ -999,6 +1013,15 @@ static void clone_symbols(LLVMModuleRef Src, LLVMModuleRef M) {
     if (auto I = LLVMGetInitializer(Cur))
       LLVMSetInitializer(G, clone_constant(I, M));
 
+    size_t NumMetadataEntries;
+    auto *AllMetadata = LLVMGlobalCopyAllMetadata(Cur, &NumMetadataEntries);
+    for (unsigned i = 0; i < NumMetadataEntries; ++i) {
+      unsigned Kind = LLVMValueMetadataEntriesGetKind(AllMetadata, i);
+      LLVMMetadataRef MD = LLVMValueMetadataEntriesGetMetadata(AllMetadata, i);
+      LLVMGlobalSetMetadata(G, Kind, MD);
+    }
+    LLVMDisposeValueMetadataEntries(AllMetadata);
+    
     LLVMSetGlobalConstant(G, LLVMIsGlobalConstant(Cur));
     LLVMSetThreadLocal(G, LLVMIsThreadLocal(Cur));
     LLVMSetExternallyInitialized(G, LLVMIsExternallyInitialized(Cur));
@@ -1049,6 +1072,15 @@ FunClone:
         report_fatal_error("Could not find personality function");
       LLVMSetPersonalityFn(Fun, P);
     }
+
+    size_t NumMetadataEntries;
+    auto *AllMetadata = LLVMGlobalCopyAllMetadata(Cur, &NumMetadataEntries);
+    for (unsigned i = 0; i < NumMetadataEntries; ++i) {
+      unsigned Kind = LLVMValueMetadataEntriesGetKind(AllMetadata, i);
+      LLVMMetadataRef MD = LLVMValueMetadataEntriesGetMetadata(AllMetadata, i);
+      LLVMGlobalSetMetadata(Fun, Kind, MD);
+    }
+    LLVMDisposeValueMetadataEntries(AllMetadata);
 
     FunCloner FC(Cur, Fun);
     FC.CloneBBs(Cur);

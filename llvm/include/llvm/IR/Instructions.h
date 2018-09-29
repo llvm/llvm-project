@@ -2457,11 +2457,21 @@ public:
 
   /// Return true if this shuffle returns a vector with a different number of
   /// elements than its source vectors.
-  /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2>
+  /// Examples: shufflevector <4 x n> A, <4 x n> B, <1,2,3>
+  ///           shufflevector <4 x n> A, <4 x n> B, <1,2,3,4,5>
   bool changesLength() const {
     unsigned NumSourceElts = Op<0>()->getType()->getVectorNumElements();
     unsigned NumMaskElts = getMask()->getType()->getVectorNumElements();
     return NumSourceElts != NumMaskElts;
+  }
+
+  /// Return true if this shuffle returns a vector with a greater number of
+  /// elements than its source vectors.
+  /// Example: shufflevector <2 x n> A, <2 x n> B, <1,2,3>
+  bool increasesLength() const {
+    unsigned NumSourceElts = Op<0>()->getType()->getVectorNumElements();
+    unsigned NumMaskElts = getMask()->getType()->getVectorNumElements();
+    return NumSourceElts < NumMaskElts;
   }
 
   /// Return true if this shuffle mask chooses elements from exactly one source

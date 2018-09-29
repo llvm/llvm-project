@@ -80,13 +80,17 @@ def FeatureSPE : SubtargetFeature<"spe", "HasSPE", "true",
 def FeatureSVE : SubtargetFeature<"sve", "HasSVE", "true",
   "Enable Scalable Vector Extension (SVE) instructions">;
 
-/// Cyclone has register move instructions which are "free".
 def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
                                         "Has zero-cycle register moves">;
+def FeatureZCZeroingGP : SubtargetFeature<"zcz-gp", "HasZeroCycleZeroingGP", "true",
+                                        "Has zero-cycle zeroing instructions for generic registers">;
 
-/// Cyclone has instructions which zero registers for "free".
+def FeatureZCZeroingFP : SubtargetFeature<"zcz-fp", "HasZeroCycleZeroingFP", "true",
+                                        "Has zero-cycle zeroing instructions for FP registers">;
+
 def FeatureZCZeroing : SubtargetFeature<"zcz", "HasZeroCycleZeroing", "true",
-                                        "Has zero-cycle zeroing instructions">;
+                                        "Has zero-cycle zeroing instructions",
+                                        [FeatureZCZeroingGP, FeatureZCZeroingFP]>;
 
 /// ... but the floating-point version doesn't quite work in rare cases on older
 /// CPUs.
@@ -404,7 +408,7 @@ def ProcExynosM1 : SubtargetFeature<"exynosm1", "ARMProcFamily", "ExynosM1",
                                      FeaturePostRAScheduler,
                                      FeatureSlowMisaligned128Store,
                                      FeatureUseRSqrt,
-                                     FeatureZCZeroing]>;
+                                     FeatureZCZeroingFP]>;
 
 def ProcExynosM2 : SubtargetFeature<"exynosm2", "ARMProcFamily", "ExynosM1",
                                     "Samsung Exynos-M2 processors",
@@ -418,7 +422,7 @@ def ProcExynosM2 : SubtargetFeature<"exynosm2", "ARMProcFamily", "ExynosM1",
                                      FeaturePerfMon,
                                      FeaturePostRAScheduler,
                                      FeatureSlowMisaligned128Store,
-                                     FeatureZCZeroing]>;
+                                     FeatureZCZeroingFP]>;
 
 def ProcExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
@@ -435,7 +439,7 @@ def ProcExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                      FeaturePerfMon,
                                      FeaturePostRAScheduler,
                                      FeaturePredictableSelectIsExpensive,
-                                     FeatureZCZeroing]>;
+                                     FeatureZCZeroingFP]>;
 
 def ProcKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",
                                    "Qualcomm Kryo processors", [

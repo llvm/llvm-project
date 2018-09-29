@@ -3103,6 +3103,7 @@ static SDValue simplifyDivRem(SDNode *N, SelectionDAG &DAG) {
 
   unsigned Opc = N->getOpcode();
   bool IsDiv = (ISD::SDIV == Opc) || (ISD::UDIV == Opc);
+  ConstantSDNode *N1C = isConstOrConstSplat(N1);
 
   // X / undef -> undef
   // X % undef -> undef
@@ -3125,8 +3126,10 @@ static SDValue simplifyDivRem(SDNode *N, SelectionDAG &DAG) {
   if (N0 == N1)
     return DAG.getConstant(IsDiv ? 1 : 0, DL, VT);
 
-  // TODO: X / 1 -> X
-  // TODO: X % 1 -> 0
+  // X / 1 -> X
+  // X % 1 -> 0
+  if (N1C && N1C->isOne())
+    return IsDiv ? N0 : DAG.getConstant(0, DL, VT);
   // If this is a boolean op (single-bit element type), we can't have
   // division-by-zero or remainder-by-zero, so assume the divisor is 1.
   // Similarly, if we're zero-extending a boolean divisor, then assume it's a 1.
@@ -3152,9 +3155,6 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
   ConstantSDNode *N1C = isConstOrConstSplat(N1);
   if (N0C && N1C && !N0C->isOpaque() && !N1C->isOpaque())
     return DAG.FoldConstantArithmetic(ISD::SDIV, DL, VT, N0C, N1C);
-  // fold (sdiv X, 1) -> X
-  if (N1C && N1C->isOne())
-    return N0;
   // fold (sdiv X, -1) -> 0-X
   if (N1C && N1C->isAllOnesValue())
     return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), N0);
@@ -3290,9 +3290,6 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
     if (SDValue Folded = DAG.FoldConstantArithmetic(ISD::UDIV, DL, VT,
                                                     N0C, N1C))
       return Folded;
-  // fold (udiv X, 1) -> X
-  if (N1C && N1C->isOne())
-    return N0;
   // fold (udiv X, -1) -> select(X == -1, 1, 0)
   if (N1C && N1C->getAPIntValue().isAllOnesValue())
     return DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, N0, N1, ISD::SETEQ),

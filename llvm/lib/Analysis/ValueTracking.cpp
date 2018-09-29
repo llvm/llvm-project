@@ -4397,12 +4397,34 @@ static bool isKnownNonNaN(const Value *V, FastMathFlags FMF) {
 
   if (auto *C = dyn_cast<ConstantFP>(V))
     return !C->isNaN();
+
+  if (auto *C = dyn_cast<ConstantDataVector>(V)) {
+    if (!C->getElementType()->isFloatingPointTy())
+      return false;
+    for (unsigned I = 0, E = C->getNumElements(); I < E; ++I) {
+      if (C->getElementAsAPFloat(I).isNaN())
+        return false;
+    }
+    return true;
+  }
+
   return false;
 }
 
 static bool isKnownNonZero(const Value *V) {
   if (auto *C = dyn_cast<ConstantFP>(V))
     return !C->isZero();
+
+  if (auto *C = dyn_cast<ConstantDataVector>(V)) {
+    if (!C->getElementType()->isFloatingPointTy())
+      return false;
+    for (unsigned I = 0, E = C->getNumElements(); I < E; ++I) {
+      if (C->getElementAsAPFloat(I).isZero())
+        return false;
+    }
+    return true;
+  }
+
   return false;
 }
 
