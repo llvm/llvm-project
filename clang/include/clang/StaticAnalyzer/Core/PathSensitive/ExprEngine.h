@@ -155,7 +155,7 @@ private:
 
 public:
   ExprEngine(cross_tu::CrossTranslationUnitContext &CTU, AnalysisManager &mgr,
-             bool gcEnabled, SetOfConstDecls *VisitedCalleesIn,
+             SetOfConstDecls *VisitedCalleesIn,
              FunctionSummariesTy *FS, InliningModes HowToInlineIn);
 
   ~ExprEngine() override;
@@ -203,6 +203,18 @@ public:
   void GenerateAutoTransition(ExplodedNode *N);
   void enqueueEndOfPath(ExplodedNodeSet &S);
   void GenerateCallExitNode(ExplodedNode *N);
+
+
+  /// Dump graph to the specified filename.
+  /// If filename is empty, generate a temporary one.
+  /// \return The filename the graph is written into.
+  std::string DumpGraph(bool trim = false, StringRef Filename="");
+
+  /// Dump the graph consisting of the given nodes to a specified filename.
+  /// Generate a temporary filename if it's not provided.
+  /// \return The filename the graph is written into.
+  std::string DumpGraph(ArrayRef<const ExplodedNode *> Nodes,
+                        StringRef Filename = "");
 
   /// Visualize the ExplodedGraph created by executing the simulation.
   void ViewGraph(bool trim = false);
@@ -281,7 +293,7 @@ public:
 
   /// ProcessBranch - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a branch condition.
-  void processBranch(const Stmt *Condition, const Stmt *Term,
+  void processBranch(const Stmt *Condition,
                      NodeBuilderContext& BuilderCtx,
                      ExplodedNode *Pred,
                      ExplodedNodeSet &Dst,
@@ -340,7 +352,7 @@ public:
   void processCallExit(ExplodedNode *Pred) override;
 
   /// Called by CoreEngine when the analysis worklist has terminated.
-  void processEndWorklist(bool hasWorkRemaining) override;
+  void processEndWorklist() override;
 
   /// evalAssume - Callback function invoked by the ConstraintManager when
   ///  making assumptions about state values.
@@ -603,7 +615,6 @@ protected:
                            ProgramStateRef State,
                            const InvalidatedSymbols *Invalidated,
                            ArrayRef<const MemRegion *> ExplicitRegions,
-                           ArrayRef<const MemRegion *> Regions,
                            const CallEvent *Call,
                            RegionAndSymbolInvalidationTraits &ITraits) override;
 
@@ -671,14 +682,13 @@ private:
                       const ProgramPointTag *tag,
                       QualType LoadTy);
 
-  // FIXME: 'tag' should be removed, and a LocationContext should be used
-  // instead.
   void evalLocation(ExplodedNodeSet &Dst,
                     const Stmt *NodeEx, /* This will eventually be a CFGStmt */
                     const Stmt *BoundEx,
                     ExplodedNode *Pred,
-                    ProgramStateRef St, SVal location,
-                    const ProgramPointTag *tag, bool isLoad);
+                    ProgramStateRef St,
+                    SVal location,
+                    bool isLoad);
 
   /// Count the stack depth and determine if the call is recursive.
   void examineStackFrames(const Decl *D, const LocationContext *LCtx,

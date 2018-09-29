@@ -222,7 +222,7 @@ ProgramState::invalidateRegionsImpl(ValueList Values,
     if (CausedByPointerEscape) {
       newState = Eng->notifyCheckersOfPointerEscape(newState, IS,
                                                     TopLevelInvalidated,
-                                                    Invalidated, Call,
+                                                    Call,
                                                     *ITraits);
     }
 
@@ -462,7 +462,7 @@ void ProgramState::print(raw_ostream &Out,
   // Print the store.
   ProgramStateManager &Mgr = getStateManager();
   const ASTContext &Context = getStateManager().getContext();
-  Mgr.getStoreManager().print(getStore(), Out, NL, Sep);
+  Mgr.getStoreManager().print(getStore(), Out, NL);
 
   // Print out the environment.
   Env.print(Out, NL, Sep, Context, LC);
@@ -474,7 +474,7 @@ void ProgramState::print(raw_ostream &Out,
   printDynamicTypeInfo(this, Out, NL, Sep);
 
   // Print out tainted symbols.
-  printTaint(Out, NL, Sep);
+  printTaint(Out, NL);
 
   // Print checker-specific data.
   Mgr.getOwningEngine()->printState(Out, this, NL, Sep, LC);
@@ -490,7 +490,7 @@ LLVM_DUMP_METHOD void ProgramState::dump() const {
 }
 
 void ProgramState::printTaint(raw_ostream &Out,
-                              const char *NL, const char *Sep) const {
+                              const char *NL) const {
   TaintMapImpl TM = get<TaintMap>();
 
   if (!TM.isEmpty())

@@ -5394,6 +5394,9 @@ Stmt *ASTNodeImporter::VisitCXXTryStmt(CXXTryStmt *S) {
 }
 
 Stmt *ASTNodeImporter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
+  auto *ToInit = dyn_cast_or_null<Stmt>(Importer.Import(S->getInit()));
+  if (!ToInit && S->getInit())
+    return nullptr;
   auto *ToRange =
     dyn_cast_or_null<DeclStmt>(Importer.Import(S->getRangeStmt()));
   if (!ToRange && S->getRangeStmt())
@@ -5423,11 +5426,9 @@ Stmt *ASTNodeImporter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   SourceLocation ToCoawaitLoc = Importer.Import(S->getCoawaitLoc());
   SourceLocation ToColonLoc = Importer.Import(S->getColonLoc());
   SourceLocation ToRParenLoc = Importer.Import(S->getRParenLoc());
-  return new (Importer.getToContext()) CXXForRangeStmt(ToRange, ToBegin, ToEnd,
-                                                       ToCond, ToInc,
-                                                       ToLoopVar, ToBody,
-                                                       ToForLoc, ToCoawaitLoc,
-                                                       ToColonLoc, ToRParenLoc);
+  return new (Importer.getToContext())
+      CXXForRangeStmt(ToInit, ToRange, ToBegin, ToEnd, ToCond, ToInc, ToLoopVar,
+                      ToBody, ToForLoc, ToCoawaitLoc, ToColonLoc, ToRParenLoc);
 }
 
 Stmt *ASTNodeImporter::VisitObjCForCollectionStmt(ObjCForCollectionStmt *S) {

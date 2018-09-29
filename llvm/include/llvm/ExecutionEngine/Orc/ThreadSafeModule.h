@@ -66,6 +66,10 @@ public:
   /// instance, or null if the instance was default constructed.
   LLVMContext *getContext() { return S ? S->Ctx.get() : nullptr; }
 
+  /// Returns a pointer to the LLVMContext that was used to construct this
+  /// instance, or null if the instance was default constructed.
+  const LLVMContext *getContext() const { return S ? S->Ctx.get() : nullptr; }
+
   Lock getLock() {
     assert(S && "Can not lock an empty ThreadSafeContext");
     return Lock(S);

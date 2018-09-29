@@ -1131,10 +1131,6 @@ public:
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
-  // Options table: Required for subclasses of Options.
-
-  static lldb_private::OptionDefinition g_option_table[];
-
   // Instance variables to hold the values for command options.
 
   bool m_rsync;
@@ -1160,10 +1156,6 @@ public:
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
-  // Options table: Required for subclasses of Options.
-
-  static lldb_private::OptionDefinition g_option_table[];
-
   // Instance variables to hold the values for command options.
 
   bool m_ssh;
@@ -1186,10 +1178,6 @@ public:
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
-
-  // Options table: Required for subclasses of Options.
-
-  static lldb_private::OptionDefinition g_option_table[];
 
   // Instance variables to hold the values for command options.
 

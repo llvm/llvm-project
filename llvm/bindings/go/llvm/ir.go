@@ -212,6 +212,7 @@ const (
 	PointerTypeKind   TypeKind = C.LLVMPointerTypeKind
 	VectorTypeKind    TypeKind = C.LLVMVectorTypeKind
 	MetadataTypeKind  TypeKind = C.LLVMMetadataTypeKind
+	TokenTypeKind     TypeKind = C.LLVMTokenTypeKind
 )
 
 //-------------------------------------------------------------------------
@@ -665,6 +666,7 @@ func (t Type) VectorSize() int          { return int(C.LLVMGetVectorSize(t.C)) }
 // Operations on other types
 func (c Context) VoidType() (t Type)  { t.C = C.LLVMVoidTypeInContext(c.C); return }
 func (c Context) LabelType() (t Type) { t.C = C.LLVMLabelTypeInContext(c.C); return }
+func (c Context) TokenType() (t Type) { t.C = C.LLVMTokenTypeInContext(c.C); return }
 
 func VoidType() (t Type)  { t.C = C.LLVMVoidType(); return }
 func LabelType() (t Type) { t.C = C.LLVMLabelType(); return }

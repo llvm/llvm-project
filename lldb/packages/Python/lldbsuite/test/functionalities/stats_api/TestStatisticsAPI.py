@@ -17,6 +17,15 @@ class TestStatsAPI(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
+
+        # Test enabling/disabling stats
+        self.assertFalse(target.GetCollectingStats())
+        target.SetCollectingStats(True)
+        self.assertTrue(target.GetCollectingStats())
+        target.SetCollectingStats(False)
+        self.assertFalse(target.GetCollectingStats())
+
+        # Test the function to get the statistics in JSON'ish.
         stats = target.GetStatistics()
         stream = lldb.SBStream()
         res = stats.GetAsJSON(stream)

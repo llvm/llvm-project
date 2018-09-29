@@ -89,6 +89,8 @@ public:
   /// Return the ModuleIdentifier as the name for this MaterializationUnit.
   StringRef getName() const override;
 
+  const ThreadSafeModule &getModule() const { return TSM; }
+
 protected:
   ThreadSafeModule TSM;
   SymbolNameToDefinitionMap SymbolToDefinition;

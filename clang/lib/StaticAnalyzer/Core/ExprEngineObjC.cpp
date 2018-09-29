@@ -129,7 +129,7 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
   bool isContainerNull = state->isNull(collectionV).isConstrainedTrue();
 
   ExplodedNodeSet dstLocation;
-  evalLocation(dstLocation, S, elem, Pred, state, elementV, nullptr, false);
+  evalLocation(dstLocation, S, elem, Pred, state, elementV, false);
 
   ExplodedNodeSet Tmp;
   StmtNodeBuilder Bldr(Pred, Tmp, *currBldrCtx);

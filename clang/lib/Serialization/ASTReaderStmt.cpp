@@ -1270,6 +1270,7 @@ void ASTStmtReader::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   S->CoawaitLoc = ReadSourceLocation();
   S->ColonLoc = ReadSourceLocation();
   S->RParenLoc = ReadSourceLocation();
+  S->setInit(Record.readSubStmt());
   S->setRangeStmt(Record.readSubStmt());
   S->setBeginStmt(Record.readSubStmt());
   S->setEndStmt(Record.readSubStmt());

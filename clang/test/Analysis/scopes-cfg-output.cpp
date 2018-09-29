@@ -820,10 +820,9 @@ void test_for_compound_and_break() {
 // CHECK-NEXT:   3: __end1
 // CHECK-NEXT:   4: [B2.3] (ImplicitCastExpr, LValueToRValue, class A *)
 // CHECK-NEXT:   5: [B2.2] != [B2.4]
-// CHECK-NEXT:   T: for (auto &i : [B5.4]) {
+// CHECK-NEXT:   T: for (auto &i : [B5.4])
 // CHECK:         [B4.11];
-// CHECK-NEXT:}
-// CHECK-NEXT:   Preds (2): B3 B5
+// CHECK:        Preds (2): B3 B5
 // CHECK-NEXT:   Succs (2): B4 B1
 // CHECK:      [B3]
 // CHECK-NEXT:   1: __begin1

@@ -1876,6 +1876,10 @@ void LLVMSetUnnamedAddr(LLVMValueRef Global, LLVMBool HasUnnamedAddr) {
                      : GlobalValue::UnnamedAddr::None);
 }
 
+LLVMTypeRef LLVMGlobalGetValueType(LLVMValueRef Global) {
+  return wrap(unwrap<GlobalValue>(Global)->getValueType());
+}
+
 /*--.. Operations on global variables, load and store instructions .........--*/
 
 unsigned LLVMGetAlignment(LLVMValueRef V) {

@@ -970,7 +970,7 @@ void PathDiagnosticLocation::flatten() {
 //===----------------------------------------------------------------------===//
 
 std::shared_ptr<PathDiagnosticCallPiece>
-PathDiagnosticCallPiece::construct(const ExplodedNode *N, const CallExitEnd &CE,
+PathDiagnosticCallPiece::construct(const CallExitEnd &CE,
                                    const SourceManager &SM) {
   const Decl *caller = CE.getLocationContext()->getDecl();
   PathDiagnosticLocation pos = getLocationForCaller(CE.getCalleeContext(),

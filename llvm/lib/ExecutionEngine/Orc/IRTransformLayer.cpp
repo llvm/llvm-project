@@ -22,7 +22,7 @@ void IRTransformLayer2::emit(MaterializationResponsibility R, VModuleKey K,
                              ThreadSafeModule TSM) {
   assert(TSM.getModule() && "Module must not be null");
 
-  if (auto TransformedTSM = Transform(std::move(TSM)))
+  if (auto TransformedTSM = Transform(std::move(TSM), R))
     BaseLayer.emit(std::move(R), std::move(K), std::move(*TransformedTSM));
   else {
     R.failMaterialization();

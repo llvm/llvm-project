@@ -72,7 +72,6 @@ private:
     }
 
     std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                   const ExplodedNode *PrevN,
                                                    BugReporterContext &BRC,
                                                    BugReport &BR) override;
 
@@ -119,15 +118,14 @@ static bool isAnyBaseRegionReported(ProgramStateRef State,
 
 std::shared_ptr<PathDiagnosticPiece>
 MisusedMovedObjectChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
-                                                      const ExplodedNode *PrevN,
                                                       BugReporterContext &BRC,
-                                                      BugReport &BR) {
+                                                      BugReport &) {
   // We need only the last move of the reported object's region.
   // The visitor walks the ExplodedGraph backwards.
   if (Found)
     return nullptr;
   ProgramStateRef State = N->getState();
-  ProgramStateRef StatePrev = PrevN->getState();
+  ProgramStateRef StatePrev = N->getFirstPred()->getState();
   const RegionState *TrackedObject = State->get<TrackedRegionMap>(Region);
   const RegionState *TrackedObjectPrev =
       StatePrev->get<TrackedRegionMap>(Region);
