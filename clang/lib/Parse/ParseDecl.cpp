@@ -4153,15 +4153,11 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   // Enum definitions should not be parsed in a trailing-return-type.
   bool AllowDeclaration = DSC != DeclSpecContext::DSC_trailing;
 
-  bool AllowFixedUnderlyingType = AllowDeclaration &&
-    (getLangOpts().CPlusPlus11 || getLangOpts().MicrosoftExt ||
-     getLangOpts().ObjC2);
-
   CXXScopeSpec &SS = DS.getTypeSpecScope();
   if (getLangOpts().CPlusPlus) {
     // "enum foo : bar;" is not a potential typo for "enum foo::bar;"
     // if a fixed underlying type is allowed.
-    ColonProtectionRAIIObject X(*this, AllowFixedUnderlyingType);
+    ColonProtectionRAIIObject X(*this, AllowDeclaration);
 
     CXXScopeSpec Spec;
     if (ParseOptionalCXXScopeSpecifier(Spec, nullptr,
@@ -4183,7 +4179,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 
   // Must have either 'enum name' or 'enum {...}'.
   if (Tok.isNot(tok::identifier) && Tok.isNot(tok::l_brace) &&
-      !(AllowFixedUnderlyingType && Tok.is(tok::colon))) {
+      !(AllowDeclaration && Tok.is(tok::colon))) {
     Diag(Tok, diag::err_expected_either) << tok::identifier << tok::l_brace;
 
     // Skip the rest of this declarator, up until the comma or semicolon.
@@ -4216,7 +4212,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 
   // Parse the fixed underlying type.
   bool CanBeBitfield = getCurScope()->getFlags() & Scope::ClassScope;
-  if (AllowFixedUnderlyingType && Tok.is(tok::colon)) {
+  if (AllowDeclaration && Tok.is(tok::colon)) {
     bool PossibleBitfield = false;
     if (CanBeBitfield) {
       // If we're in class scope, this can either be an enum declaration with
@@ -4276,13 +4272,15 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
       SourceRange Range;
       BaseType = ParseTypeName(&Range);
 
-      if (getLangOpts().CPlusPlus11) {
-        Diag(StartLoc, diag::warn_cxx98_compat_enum_fixed_underlying_type);
-      } else if (!getLangOpts().ObjC2) {
-        if (getLangOpts().CPlusPlus)
-          Diag(StartLoc, diag::ext_cxx11_enum_fixed_underlying_type) << Range;
+      if (!getLangOpts().ObjC2) {
+        if (getLangOpts().CPlusPlus11)
+          Diag(StartLoc, diag::warn_cxx98_compat_enum_fixed_underlying_type);
+        else if (getLangOpts().CPlusPlus)
+          Diag(StartLoc, diag::ext_cxx11_enum_fixed_underlying_type);
+        else if (getLangOpts().MicrosoftExt)
+          Diag(StartLoc, diag::ext_ms_c_enum_fixed_underlying_type);
         else
-          Diag(StartLoc, diag::ext_c_enum_fixed_underlying_type) << Range;
+          Diag(StartLoc, diag::ext_clang_c_enum_fixed_underlying_type);
       }
     }
   }

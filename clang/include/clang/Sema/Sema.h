@@ -3777,12 +3777,14 @@ public:
 
   StmtResult ActOnCXXForRangeStmt(Scope *S, SourceLocation ForLoc,
                                   SourceLocation CoawaitLoc,
+                                  Stmt *InitStmt,
                                   Stmt *LoopVar,
                                   SourceLocation ColonLoc, Expr *Collection,
                                   SourceLocation RParenLoc,
                                   BuildForRangeKind Kind);
   StmtResult BuildCXXForRangeStmt(SourceLocation ForLoc,
                                   SourceLocation CoawaitLoc,
+                                  Stmt *InitStmt,
                                   SourceLocation ColonLoc,
                                   Stmt *RangeDecl, Stmt *Begin, Stmt *End,
                                   Expr *Cond, Expr *Inc,

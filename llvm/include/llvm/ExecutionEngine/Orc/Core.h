@@ -146,7 +146,7 @@ class MaterializationResponsibility {
 public:
   MaterializationResponsibility(MaterializationResponsibility &&) = default;
   MaterializationResponsibility &
-  operator=(MaterializationResponsibility &&) = default;
+  operator=(MaterializationResponsibility &&) = delete;
 
   /// Destruct a MaterializationResponsibility instance. In debug mode
   ///        this asserts that all symbols being tracked have been either
@@ -167,7 +167,7 @@ public:
   /// MaterializationResponsibility object that have queries pending. This
   /// information can be used to return responsibility for unrequested symbols
   /// back to the JITDylib via the delegate method.
-  SymbolNameSet getRequestedSymbols();
+  SymbolNameSet getRequestedSymbols() const;
 
   /// Notifies the target JITDylib that the given symbols have been resolved.
   /// This will update the given symbols' addresses in the JITDylib, and notify
@@ -623,7 +623,7 @@ private:
 
   void replace(std::unique_ptr<MaterializationUnit> MU);
 
-  SymbolNameSet getRequestedSymbols(const SymbolFlagsMap &SymbolFlags);
+  SymbolNameSet getRequestedSymbols(const SymbolFlagsMap &SymbolFlags) const;
 
   void addDependencies(const SymbolStringPtr &Name,
                        const SymbolDependenceMap &Dependants);

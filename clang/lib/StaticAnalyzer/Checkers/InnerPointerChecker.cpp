@@ -55,8 +55,7 @@ public:
       ID.AddPointer(getTag());
     }
 
-    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                   const ExplodedNode *PrevN,
+    virtual std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
                                                    BugReporterContext &BRC,
                                                    BugReport &BR) override;
 
@@ -282,11 +281,10 @@ const MemRegion *getContainerObjRegion(ProgramStateRef State, SymbolRef Sym) {
 
 std::shared_ptr<PathDiagnosticPiece>
 InnerPointerChecker::InnerPointerBRVisitor::VisitNode(const ExplodedNode *N,
-                                                      const ExplodedNode *PrevN,
                                                       BugReporterContext &BRC,
-                                                      BugReport &BR) {
+                                                      BugReport &) {
   if (!isSymbolTracked(N->getState(), PtrToBuf) ||
-      isSymbolTracked(PrevN->getState(), PtrToBuf))
+      isSymbolTracked(N->getFirstPred()->getState(), PtrToBuf))
     return nullptr;
 
   const Stmt *S = PathDiagnosticLocation::getStmt(N);

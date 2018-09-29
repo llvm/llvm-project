@@ -597,7 +597,7 @@ void MemRegion::printPretty(raw_ostream &os) const {
   os << "'";
 }
 
-void MemRegion::printPrettyAsExpr(raw_ostream &os) const {
+void MemRegion::printPrettyAsExpr(raw_ostream &) const {
   llvm_unreachable("This region cannot be printed pretty.");
 }
 
@@ -1175,7 +1175,7 @@ const MemRegion *MemRegion::getBaseRegion() const {
   return R;
 }
 
-bool MemRegion::isSubRegionOf(const MemRegion *R) const {
+bool MemRegion::isSubRegionOf(const MemRegion *) const {
   return false;
 }
 

@@ -632,7 +632,7 @@ public:
   }
 
   static std::shared_ptr<PathDiagnosticCallPiece>
-  construct(const ExplodedNode *N, const CallExitEnd &CE,
+  construct(const CallExitEnd &CE,
             const SourceManager &SM);
 
   static PathDiagnosticCallPiece *construct(PathPieces &pieces,

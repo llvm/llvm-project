@@ -1004,6 +1004,8 @@ struct CounterCoverageMappingBuilder
 
   void VisitCXXForRangeStmt(const CXXForRangeStmt *S) {
     extendRegion(S);
+    if (S->getInit())
+      Visit(S->getInit());
     Visit(S->getLoopVarStmt());
     Visit(S->getRangeStmt());
 

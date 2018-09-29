@@ -90,7 +90,6 @@ class UnmangledFuncInfo {
 
 public:
   using ID = AMDGPULibFunc::EFuncId;
-  UnmangledFuncInfo() = default;
   UnmangledFuncInfo(StringRef _Name, unsigned _NumArgs)
       : Name(_Name), NumArgs(_NumArgs) {}
   // Get index to Table by function name.

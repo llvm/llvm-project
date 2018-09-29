@@ -225,7 +225,7 @@ void CFIProgram::printOperand(raw_ostream &OS, const MCRegisterInfo *MRI,
   switch (Type) {
   case OT_Unset: {
     OS << " Unsupported " << (OperandIdx ? "second" : "first") << " operand to";
-    auto OpcodeName = CallFrameString(Opcode, Arch);
+    auto OpcodeName = CallFrameString(Opcode);
     if (!OpcodeName.empty())
       OS << " " << OpcodeName;
     else
@@ -279,7 +279,7 @@ void CFIProgram::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
     if (Opcode & DWARF_CFI_PRIMARY_OPCODE_MASK)
       Opcode &= DWARF_CFI_PRIMARY_OPCODE_MASK;
     OS.indent(2 * IndentLevel);
-    OS << CallFrameString(Opcode, Arch) << ":";
+    OS << CallFrameString(Opcode) << ":";
     for (unsigned i = 0; i < Instr.Ops.size(); ++i)
       printOperand(OS, MRI, IsEH, Instr, i, Instr.Ops[i]);
     OS << '\n';
@@ -325,9 +325,8 @@ void FDE::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const {
   OS << "\n";
 }
 
-DWARFDebugFrame::DWARFDebugFrame(Triple::ArchType Arch,
-    bool IsEH, uint64_t EHFrameAddress)
-    : Arch(Arch), IsEH(IsEH), EHFrameAddress(EHFrameAddress) {}
+DWARFDebugFrame::DWARFDebugFrame(bool IsEH, uint64_t EHFrameAddress)
+    : IsEH(IsEH), EHFrameAddress(EHFrameAddress) {}
 
 DWARFDebugFrame::~DWARFDebugFrame() = default;
 
@@ -461,7 +460,7 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
           StartOffset, Length, Version, AugmentationString, AddressSize,
           SegmentDescriptorSize, CodeAlignmentFactor, DataAlignmentFactor,
           ReturnAddressRegister, AugmentationData, FDEPointerEncoding,
-          LSDAPointerEncoding, Personality, PersonalityEncoding, Arch);
+          LSDAPointerEncoding, Personality, PersonalityEncoding);
       CIEs[StartOffset] = Cie.get();
       Entries.emplace_back(std::move(Cie));
     } else {
@@ -513,7 +512,7 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
 
       Entries.emplace_back(new FDE(StartOffset, Length, CIEPointer,
                                    InitialLocation, AddressRange,
-                                   Cie, LSDAAddress, Arch));
+                                   Cie, LSDAAddress));
     }
 
     if (Error E =

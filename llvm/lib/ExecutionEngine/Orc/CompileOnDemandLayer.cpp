@@ -36,7 +36,7 @@ static void extractAliases(MaterializationResponsibility &R, Module &M,
       A->replaceAllUsesWith(F);
       A->eraseFromParent();
       F->setName(AliasName);
-    } else if (isa<GlobalValue>(Aliasee)) {
+    } else if (isa<GlobalVariable>(Aliasee)) {
       auto *G = cloneGlobalVariableDecl(M, *cast<GlobalVariable>(Aliasee));
       A->replaceAllUsesWith(G);
       A->eraseFromParent();

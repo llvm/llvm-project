@@ -2180,6 +2180,8 @@ DEF_TRAVERSE_STMT(ObjCAutoreleasePoolStmt, {})
 
 DEF_TRAVERSE_STMT(CXXForRangeStmt, {
   if (!getDerived().shouldVisitImplicitCode()) {
+    if (S->getInit())
+      TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getInit());
     TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getLoopVarStmt());
     TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getRangeInit());
     TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getBody());

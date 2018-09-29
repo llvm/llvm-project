@@ -544,6 +544,8 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
 
   void VisitCXXForRangeStmt(const CXXForRangeStmt *S) {
     RecordStmtCount(S);
+    if (S->getInit())
+      Visit(S->getInit());
     Visit(S->getLoopVarStmt());
     Visit(S->getRangeStmt());
     Visit(S->getBeginStmt());

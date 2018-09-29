@@ -932,6 +932,8 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   LexicalScope ForScope(*this, S.getSourceRange());
 
   // Evaluate the first pieces before the loop.
+  if (S.getInit())
+    EmitStmt(S.getInit());
   EmitStmt(S.getRangeStmt());
   EmitStmt(S.getBeginStmt());
   EmitStmt(S.getEndStmt());

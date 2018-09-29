@@ -1647,6 +1647,8 @@ namespace {
     void VisitCXXForRangeStmt(const CXXForRangeStmt *S) {
       // Only visit the initialization of a for loop; the body
       // has a different break/continue scope.
+      if (const Stmt *Init = S->getInit())
+        Visit(Init);
       if (const Stmt *Range = S->getRangeStmt())
         Visit(Range);
       if (const Stmt *Begin = S->getBeginStmt())
@@ -2065,15 +2067,20 @@ static bool ObjCEnumerationCollection(Expr *Collection) {
 /// The body of the loop is not available yet, since it cannot be analysed until
 /// we have determined the type of the for-range-declaration.
 StmtResult Sema::ActOnCXXForRangeStmt(Scope *S, SourceLocation ForLoc,
-                                      SourceLocation CoawaitLoc, Stmt *First,
-                                      SourceLocation ColonLoc, Expr *Range,
-                                      SourceLocation RParenLoc,
+                                      SourceLocation CoawaitLoc, Stmt *InitStmt,
+                                      Stmt *First, SourceLocation ColonLoc,
+                                      Expr *Range, SourceLocation RParenLoc,
                                       BuildForRangeKind Kind) {
   if (!First)
     return StmtError();
 
-  if (Range && ObjCEnumerationCollection(Range))
+  if (Range && ObjCEnumerationCollection(Range)) {
+    // FIXME: Support init-statements in Objective-C++20 ranged for statement.
+    if (InitStmt)
+      return Diag(InitStmt->getBeginLoc(), diag::err_objc_for_range_init_stmt)
+                 << InitStmt->getSourceRange();
     return ActOnObjCForCollectionStmt(ForLoc, First, Range, RParenLoc);
+  }
 
   DeclStmt *DS = dyn_cast<DeclStmt>(First);
   assert(DS && "first part of for range not a decl stmt");
@@ -2119,10 +2126,10 @@ StmtResult Sema::ActOnCXXForRangeStmt(Scope *S, SourceLocation ForLoc,
     return StmtError();
   }
 
-  return BuildCXXForRangeStmt(ForLoc, CoawaitLoc, ColonLoc, RangeDecl.get(),
-                              /*BeginStmt=*/nullptr, /*EndStmt=*/nullptr,
-                              /*Cond=*/nullptr, /*Inc=*/nullptr,
-                              DS, RParenLoc, Kind);
+  return BuildCXXForRangeStmt(
+      ForLoc, CoawaitLoc, InitStmt, ColonLoc, RangeDecl.get(),
+      /*BeginStmt=*/nullptr, /*EndStmt=*/nullptr,
+      /*Cond=*/nullptr, /*Inc=*/nullptr, DS, RParenLoc, Kind);
 }
 
 /// Create the initialization, compare, and increment steps for
@@ -2270,6 +2277,7 @@ BuildNonArrayForRange(Sema &SemaRef, Expr *BeginRange, Expr *EndRange,
 static StmtResult RebuildForRangeWithDereference(Sema &SemaRef, Scope *S,
                                                  SourceLocation ForLoc,
                                                  SourceLocation CoawaitLoc,
+                                                 Stmt *InitStmt,
                                                  Stmt *LoopVarDecl,
                                                  SourceLocation ColonLoc,
                                                  Expr *Range,
@@ -2286,8 +2294,8 @@ static StmtResult RebuildForRangeWithDereference(Sema &SemaRef, Scope *S,
       return StmtResult();
 
     StmtResult SR = SemaRef.ActOnCXXForRangeStmt(
-        S, ForLoc, CoawaitLoc, LoopVarDecl, ColonLoc, AdjustedRange.get(),
-        RParenLoc, Sema::BFRK_Check);
+        S, ForLoc, CoawaitLoc, InitStmt, LoopVarDecl, ColonLoc,
+        AdjustedRange.get(), RParenLoc, Sema::BFRK_Check);
     if (SR.isInvalid())
       return StmtResult();
   }
@@ -2297,9 +2305,9 @@ static StmtResult RebuildForRangeWithDereference(Sema &SemaRef, Scope *S,
   // case there are any other (non-fatal) problems with it.
   SemaRef.Diag(RangeLoc, diag::err_for_range_dereference)
     << Range->getType() << FixItHint::CreateInsertion(RangeLoc, "*");
-  return SemaRef.ActOnCXXForRangeStmt(S, ForLoc, CoawaitLoc, LoopVarDecl,
-                                      ColonLoc, AdjustedRange.get(), RParenLoc,
-                                      Sema::BFRK_Rebuild);
+  return SemaRef.ActOnCXXForRangeStmt(
+      S, ForLoc, CoawaitLoc, InitStmt, LoopVarDecl, ColonLoc,
+      AdjustedRange.get(), RParenLoc, Sema::BFRK_Rebuild);
 }
 
 namespace {
@@ -2319,12 +2327,13 @@ struct InvalidateOnErrorScope {
 }
 
 /// BuildCXXForRangeStmt - Build or instantiate a C++11 for-range statement.
-StmtResult
-Sema::BuildCXXForRangeStmt(SourceLocation ForLoc, SourceLocation CoawaitLoc,
-                           SourceLocation ColonLoc, Stmt *RangeDecl,
-                           Stmt *Begin, Stmt *End, Expr *Cond,
-                           Expr *Inc, Stmt *LoopVarDecl,
-                           SourceLocation RParenLoc, BuildForRangeKind Kind) {
+StmtResult Sema::BuildCXXForRangeStmt(SourceLocation ForLoc,
+                                      SourceLocation CoawaitLoc, Stmt *InitStmt,
+                                      SourceLocation ColonLoc, Stmt *RangeDecl,
+                                      Stmt *Begin, Stmt *End, Expr *Cond,
+                                      Expr *Inc, Stmt *LoopVarDecl,
+                                      SourceLocation RParenLoc,
+                                      BuildForRangeKind Kind) {
   // FIXME: This should not be used during template instantiation. We should
   // pick up the set of unqualified lookup results for the != and + operators
   // in the initial parse.
@@ -2519,7 +2528,7 @@ Sema::BuildCXXForRangeStmt(SourceLocation ForLoc, SourceLocation CoawaitLoc,
         // If building the range failed, try dereferencing the range expression
         // unless a diagnostic was issued or the end function is problematic.
         StmtResult SR = RebuildForRangeWithDereference(*this, S, ForLoc,
-                                                       CoawaitLoc,
+                                                       CoawaitLoc, InitStmt,
                                                        LoopVarDecl, ColonLoc,
                                                        Range, RangeLoc,
                                                        RParenLoc);
@@ -2636,7 +2645,7 @@ Sema::BuildCXXForRangeStmt(SourceLocation ForLoc, SourceLocation CoawaitLoc,
     return StmtResult();
 
   return new (Context) CXXForRangeStmt(
-      RangeDS, cast_or_null<DeclStmt>(BeginDeclStmt.get()),
+      InitStmt, RangeDS, cast_or_null<DeclStmt>(BeginDeclStmt.get()),
       cast_or_null<DeclStmt>(EndDeclStmt.get()), NotEqExpr.get(),
       IncrExpr.get(), LoopVarDS, /*Body=*/nullptr, ForLoc, CoawaitLoc,
       ColonLoc, RParenLoc);

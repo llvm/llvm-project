@@ -601,8 +601,7 @@ public: // Part of public interface to class.
                              RBFactory.getTreeFactory());
   }
 
-  void print(Store store, raw_ostream &Out, const char* nl,
-             const char *sep) override;
+  void print(Store store, raw_ostream &Out, const char* nl) override;
 
   void iterBindings(Store store, BindingsHandler& f) override {
     RegionBindingsRef B = getRegionBindings(store);
@@ -2600,7 +2599,7 @@ StoreRef RegionStoreManager::removeDeadBindings(Store store,
 //===----------------------------------------------------------------------===//
 
 void RegionStoreManager::print(Store store, raw_ostream &OS,
-                               const char* nl, const char *sep) {
+                               const char* nl) {
   RegionBindingsRef B = getRegionBindings(store);
   OS << "Store (direct and default bindings), "
      << B.asStore()

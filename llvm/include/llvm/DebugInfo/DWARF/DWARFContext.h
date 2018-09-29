@@ -90,7 +90,6 @@ class DWARFContext : public DIContext {
   bool CheckedForDWP = false;
   std::string DWPName;
 
-  Triple::ArchType Arch;
   std::unique_ptr<MCRegisterInfo> RegInfo;
 
   /// Read compile units from the debug_info section (if necessary)
@@ -342,7 +341,7 @@ public:
   /// Loads register info for the architecture of the provided object file.
   /// Improves readability of dumped DWARF expressions. Requires the caller to
   /// have initialized the relevant target descriptions.
-  Error loadArchitectureInfo(const object::ObjectFile &Obj);
+  Error loadRegisterInfo(const object::ObjectFile &Obj);
 
   /// Get address size from CUs.
   /// TODO: refactor compile_units() to make this const.
