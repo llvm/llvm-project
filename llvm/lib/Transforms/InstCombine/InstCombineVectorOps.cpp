@@ -871,7 +871,7 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
 
 /// Return true if we can evaluate the specified expression tree if the vector
 /// elements were shuffled in a different order.
-static bool CanEvaluateShuffled(Value *V, ArrayRef<int> Mask,
+static bool canEvaluateShuffled(Value *V, ArrayRef<int> Mask,
                                 unsigned Depth = 5) {
   // We can always reorder the elements of a constant.
   if (isa<Constant>(V))
@@ -919,7 +919,7 @@ static bool CanEvaluateShuffled(Value *V, ArrayRef<int> Mask,
     case Instruction::FPExt:
     case Instruction::GetElementPtr: {
       for (Value *Operand : I->operands()) {
-        if (!CanEvaluateShuffled(Operand, Mask, Depth-1))
+        if (!canEvaluateShuffled(Operand, Mask, Depth - 1))
           return false;
       }
       return true;
@@ -939,7 +939,7 @@ static bool CanEvaluateShuffled(Value *V, ArrayRef<int> Mask,
           SeenOnce = true;
         }
       }
-      return CanEvaluateShuffled(I->getOperand(0), Mask, Depth-1);
+      return canEvaluateShuffled(I->getOperand(0), Mask, Depth - 1);
     }
   }
   return false;
@@ -1023,12 +1023,12 @@ static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps) {
   llvm_unreachable("failed to rebuild vector instructions");
 }
 
-Value *
-InstCombiner::EvaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
+static Value *evaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
   // Mask.size() does not need to be equal to the number of vector elements.
 
   assert(V->getType()->isVectorTy() && "can't reorder non-vector elements");
   Type *EltTy = V->getType()->getScalarType();
+  Type *I32Ty = IntegerType::getInt32Ty(V->getContext());
   if (isa<UndefValue>(V))
     return UndefValue::get(VectorType::get(EltTy, Mask.size()));
 
@@ -1039,9 +1039,9 @@ InstCombiner::EvaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
     SmallVector<Constant *, 16> MaskValues;
     for (int i = 0, e = Mask.size(); i != e; ++i) {
       if (Mask[i] == -1)
-        MaskValues.push_back(UndefValue::get(Builder.getInt32Ty()));
+        MaskValues.push_back(UndefValue::get(I32Ty));
       else
-        MaskValues.push_back(Builder.getInt32(Mask[i]));
+        MaskValues.push_back(ConstantInt::get(I32Ty, Mask[i]));
     }
     return ConstantExpr::getShuffleVector(C, UndefValue::get(C->getType()),
                                           ConstantVector::get(MaskValues));
@@ -1083,7 +1083,7 @@ InstCombiner::EvaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
       SmallVector<Value*, 8> NewOps;
       bool NeedsRebuild = (Mask.size() != I->getType()->getVectorNumElements());
       for (int i = 0, e = I->getNumOperands(); i != e; ++i) {
-        Value *V = EvaluateInDifferentElementOrder(I->getOperand(i), Mask);
+        Value *V = evaluateInDifferentElementOrder(I->getOperand(i), Mask);
         NewOps.push_back(V);
         NeedsRebuild |= (V != I->getOperand(i));
       }
@@ -1110,11 +1110,11 @@ InstCombiner::EvaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
       // If element is not in Mask, no need to handle the operand 1 (element to
       // be inserted). Just evaluate values in operand 0 according to Mask.
       if (!Found)
-        return EvaluateInDifferentElementOrder(I->getOperand(0), Mask);
+        return evaluateInDifferentElementOrder(I->getOperand(0), Mask);
 
-      Value *V = EvaluateInDifferentElementOrder(I->getOperand(0), Mask);
+      Value *V = evaluateInDifferentElementOrder(I->getOperand(0), Mask);
       return InsertElementInst::Create(V, I->getOperand(1),
-                                       Builder.getInt32(Index), "", I);
+                                       ConstantInt::get(I32Ty, Index), "", I);
     }
   }
   llvm_unreachable("failed to reorder elements of vector instruction!");
@@ -1465,8 +1465,8 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   }
 
   if (isa<UndefValue>(RHS) && !SVI.increasesLength() &&
-      CanEvaluateShuffled(LHS, Mask)) {
-    Value *V = EvaluateInDifferentElementOrder(LHS, Mask);
+      canEvaluateShuffled(LHS, Mask)) {
+    Value *V = evaluateInDifferentElementOrder(LHS, Mask);
     return replaceInstUsesWith(SVI, V);
   }
 
