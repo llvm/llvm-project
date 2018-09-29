@@ -140,6 +140,9 @@ public:
 
   std::string AnalyzeSpecificFunction;
 
+  /// File path to which the exploded graph should be dumped.
+  std::string DumpExplodedGraphTo;
+
   /// Store full compiler invocation for reproducible instructions in the
   /// generated report.
   std::string FullCompilerInvocation;

@@ -139,7 +139,6 @@ private:
     }
 
     std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                   const ExplodedNode *PrevN,
                                                    BugReporterContext &BRC,
                                                    BugReport &BR) override;
 
@@ -293,11 +292,10 @@ NullabilityChecker::getTrackRegion(SVal Val, bool CheckSuperRegion) const {
 
 std::shared_ptr<PathDiagnosticPiece>
 NullabilityChecker::NullabilityBugVisitor::VisitNode(const ExplodedNode *N,
-                                                     const ExplodedNode *PrevN,
                                                      BugReporterContext &BRC,
                                                      BugReport &BR) {
   ProgramStateRef State = N->getState();
-  ProgramStateRef StatePrev = PrevN->getState();
+  ProgramStateRef StatePrev = N->getFirstPred()->getState();
 
   const NullabilityState *TrackedNullab = State->get<NullabilityMap>(Region);
   const NullabilityState *TrackedNullabPrev =

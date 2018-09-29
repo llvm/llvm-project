@@ -99,6 +99,28 @@ namespace {
       IndentLevel -= SubIndent;
     }
 
+    void PrintInitStmt(Stmt *S, unsigned PrefixWidth) {
+      // FIXME: Cope better with odd prefix widths.
+      IndentLevel += (PrefixWidth + 1) / 2;
+      if (auto *DS = dyn_cast<DeclStmt>(S))
+        PrintRawDeclStmt(DS);
+      else
+        PrintExpr(cast<Expr>(S));
+      OS << "; ";
+      IndentLevel -= (PrefixWidth + 1) / 2;
+    }
+
+    void PrintControlledStmt(Stmt *S) {
+      if (auto *CS = dyn_cast<CompoundStmt>(S)) {
+        OS << " ";
+        PrintRawCompoundStmt(CS);
+        OS << NL;
+      } else {
+        OS << NL;
+        PrintStmt(S);
+      }
+    }
+
     void PrintRawCompoundStmt(CompoundStmt *S);
     void PrintRawDecl(Decl *D);
     void PrintRawDeclStmt(const DeclStmt *S);
@@ -218,6 +240,8 @@ void StmtPrinter::VisitAttributedStmt(AttributedStmt *Node) {
 
 void StmtPrinter::PrintRawIfStmt(IfStmt *If) {
   OS << "if (";
+  if (If->getInit())
+    PrintInitStmt(If->getInit(), 4);
   if (const DeclStmt *DS = If->getConditionVariableDeclStmt())
     PrintRawDeclStmt(DS);
   else
@@ -258,21 +282,14 @@ void StmtPrinter::VisitIfStmt(IfStmt *If) {
 
 void StmtPrinter::VisitSwitchStmt(SwitchStmt *Node) {
   Indent() << "switch (";
+  if (Node->getInit())
+    PrintInitStmt(Node->getInit(), 8);
   if (const DeclStmt *DS = Node->getConditionVariableDeclStmt())
     PrintRawDeclStmt(DS);
   else
     PrintExpr(Node->getCond());
   OS << ")";
-
-  // Pretty print compoundstmt bodies (very common).
-  if (auto *CS = dyn_cast<CompoundStmt>(Node->getBody())) {
-    OS << " ";
-    PrintRawCompoundStmt(CS);
-    OS << NL;
-  } else {
-    OS << NL;
-    PrintStmt(Node->getBody());
-  }
+  PrintControlledStmt(Node->getBody());
 }
 
 void StmtPrinter::VisitWhileStmt(WhileStmt *Node) {
@@ -303,31 +320,19 @@ void StmtPrinter::VisitDoStmt(DoStmt *Node) {
 
 void StmtPrinter::VisitForStmt(ForStmt *Node) {
   Indent() << "for (";
-  if (Node->getInit()) {
-    if (auto *DS = dyn_cast<DeclStmt>(Node->getInit()))
-      PrintRawDeclStmt(DS);
-    else
-      PrintExpr(cast<Expr>(Node->getInit()));
-  }
-  OS << ";";
-  if (Node->getCond()) {
-    OS << " ";
+  if (Node->getInit())
+    PrintInitStmt(Node->getInit(), 5);
+  else
+    OS << (Node->getCond() ? "; " : ";");
+  if (Node->getCond())
     PrintExpr(Node->getCond());
-  }
   OS << ";";
   if (Node->getInc()) {
     OS << " ";
     PrintExpr(Node->getInc());
   }
-  OS << ") ";
-
-  if (auto *CS = dyn_cast<CompoundStmt>(Node->getBody())) {
-    PrintRawCompoundStmt(CS);
-    OS << NL;
-  } else {
-    OS << NL;
-    PrintStmt(Node->getBody());
-  }
+  OS << ")";
+  PrintControlledStmt(Node->getBody());
 }
 
 void StmtPrinter::VisitObjCForCollectionStmt(ObjCForCollectionStmt *Node) {
@@ -338,28 +343,21 @@ void StmtPrinter::VisitObjCForCollectionStmt(ObjCForCollectionStmt *Node) {
     PrintExpr(cast<Expr>(Node->getElement()));
   OS << " in ";
   PrintExpr(Node->getCollection());
-  OS << ") ";
-
-  if (auto *CS = dyn_cast<CompoundStmt>(Node->getBody())) {
-    PrintRawCompoundStmt(CS);
-    OS << NL;
-  } else {
-    OS << NL;
-    PrintStmt(Node->getBody());
-  }
+  OS << ")";
+  PrintControlledStmt(Node->getBody());
 }
 
 void StmtPrinter::VisitCXXForRangeStmt(CXXForRangeStmt *Node) {
   Indent() << "for (";
+  if (Node->getInit())
+    PrintInitStmt(Node->getInit(), 5);
   PrintingPolicy SubPolicy(Policy);
   SubPolicy.SuppressInitializers = true;
   Node->getLoopVariable()->print(OS, SubPolicy, IndentLevel);
   OS << " : ";
   PrintExpr(Node->getRangeInit());
-  OS << ") {" << NL;
-  PrintStmt(Node->getBody());
-  Indent() << "}";
-  if (Policy.IncludeNewlines) OS << NL;
+  OS << ")";
+  PrintControlledStmt(Node->getBody());
 }
 
 void StmtPrinter::VisitMSDependentExistsStmt(MSDependentExistsStmt *Node) {

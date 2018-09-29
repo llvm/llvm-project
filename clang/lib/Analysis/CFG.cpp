@@ -4255,7 +4255,10 @@ CFGBlock *CFGBuilder::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   Block = createBlock();
   addStmt(S->getBeginStmt());
   addStmt(S->getEndStmt());
-  return addStmt(S->getRangeStmt());
+  CFGBlock *Head = addStmt(S->getRangeStmt());
+  if (S->getInit())
+    Head = addStmt(S->getInit());
+  return Head;
 }
 
 CFGBlock *CFGBuilder::VisitExprWithCleanups(ExprWithCleanups *E,
