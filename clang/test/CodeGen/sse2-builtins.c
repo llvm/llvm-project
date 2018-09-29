@@ -721,6 +721,30 @@ __m128i test_mm_loadu_si64(void const* A) {
   return _mm_loadu_si64(A);
 }
 
+__m128i test_mm_loadu_si32(void const* A) {
+  // CHECK-LABEL: test_mm_loadu_si32
+  // CHECK: load i32, i32* %{{.*}}, align 1{{$}}
+  // CHECK: insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
+  // CHECK: insertelement <4 x i32> %{{.*}}, i32 0, i32 1
+  // CHECK: insertelement <4 x i32> %{{.*}}, i32 0, i32 2
+  // CHECK: insertelement <4 x i32> %{{.*}}, i32 0, i32 3
+  return _mm_loadu_si32(A);
+}
+
+__m128i test_mm_loadu_si16(void const* A) {
+  // CHECK-LABEL: test_mm_loadu_si16
+  // CHECK: load i16, i16* %{{.*}}, align 1{{$}}
+  // CHECK: insertelement <8 x i16> undef, i16 %{{.*}}, i32 0
+  // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 1
+  // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 2
+  // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 3
+  // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 4
+  // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 5
+  // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 6
+  // CHECK: insertelement <8 x i16> %{{.*}}, i16 0, i32 7
+  return _mm_loadu_si16(A);
+}
+
 __m128i test_mm_madd_epi16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_madd_epi16
   // CHECK: call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
@@ -1349,6 +1373,30 @@ void test_mm_storeu_si128(__m128i* A, __m128i B) {
   // CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
   // CHECK-NEXT: ret void
   _mm_storeu_si128(A, B);
+}
+
+void test_mm_storeu_si64(void* A, __m128i B) {
+  // CHECK-LABEL: test_mm_storeu_si64
+  // CHECK: [[EXT:%.*]] = extractelement <2 x i64> %{{.*}}, i32 0
+  // CHECK: store i64 [[EXT]], i64* %{{.*}}, align 1{{$}}
+  // CHECK-NEXT: ret void
+  _mm_storeu_si64(A, B);
+}
+
+void test_mm_storeu_si32(void* A, __m128i B) {
+  // CHECK-LABEL: test_mm_storeu_si32
+  // CHECK: [[EXT:%.*]] = extractelement <4 x i32> %{{.*}}, i32 0
+  // CHECK: store i32 [[EXT]], i32* %{{.*}}, align 1{{$}}
+  // CHECK-NEXT: ret void
+  _mm_storeu_si32(A, B);
+}
+
+void test_mm_storeu_si16(void* A, __m128i B) {
+  // CHECK-LABEL: test_mm_storeu_si16
+  // CHECK: [[EXT:%.*]] = extractelement <8 x i16> %{{.*}}, i32 0
+  // CHECK: store i16 [[EXT]], i16* %{{.*}}, align 1{{$}}
+  // CHECK-NEXT: ret void
+  _mm_storeu_si16(A, B);
 }
 
 void test_mm_stream_pd(double *A, __m128d B) {
