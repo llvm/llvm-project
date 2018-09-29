@@ -88,9 +88,12 @@ def err_enumerator_unnamed_no_def : Error<
 def ext_cxx11_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a C++11 extension">,
   InGroup<CXX11>;
-def ext_c_enum_fixed_underlying_type : Extension<
+def ext_ms_c_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a Microsoft extension">,
   InGroup<MicrosoftFixedEnum>;
+def ext_clang_c_enum_fixed_underlying_type : Extension<
+  "enumeration types with a fixed underlying type are a Clang extension">,
+  InGroup<DiagGroup<"fixed-enum-extension">>;
 def warn_cxx98_compat_enum_fixed_underlying_type : Warning<
   "enumeration types with a fixed underlying type are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
@@ -540,6 +543,12 @@ def ext_init_statement : ExtWarn<
 def warn_cxx14_compat_init_statement : Warning<
   "%select{if|switch}0 initialization statements are incompatible with "
   "C++ standards before C++17">, DefaultIgnore, InGroup<CXXPre17Compat>;
+def ext_for_range_init_stmt : ExtWarn<
+  "range-based for loop initialization statements are a C++2a extension">,
+  InGroup<CXX2a>;
+def warn_cxx17_compat_for_range_init_stmt : Warning<
+  "range-based for loop initialization statements are incompatible with "
+  "C++ standards before C++2a">, DefaultIgnore, InGroup<CXXPre2aCompat>;
 
 // C++ derived classes
 def err_dup_virtual : Error<"duplicate 'virtual' in base specifier">;

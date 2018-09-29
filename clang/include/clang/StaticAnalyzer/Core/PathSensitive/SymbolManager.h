@@ -657,7 +657,7 @@ public:
   /// The method returns \c true if symbols should continue be scanned and \c
   /// false otherwise.
   virtual bool VisitSymbol(SymbolRef sym) = 0;
-  virtual bool VisitMemRegion(const MemRegion *region) { return true; }
+  virtual bool VisitMemRegion(const MemRegion *) { return true; }
 };
 
 } // namespace ento

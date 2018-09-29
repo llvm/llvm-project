@@ -1793,10 +1793,12 @@ private:
                                             SourceLocation Start);
 
   //===--------------------------------------------------------------------===//
-  // C++ if/switch/while condition expression.
+  // C++ if/switch/while/for condition expression.
+  struct ForRangeInfo;
   Sema::ConditionResult ParseCXXCondition(StmtResult *InitStmt,
                                           SourceLocation Loc,
-                                          Sema::ConditionKind CK);
+                                          Sema::ConditionKind CK,
+                                          ForRangeInfo *FRI = nullptr);
 
   //===--------------------------------------------------------------------===//
   // C++ Coroutines
@@ -2045,6 +2047,9 @@ private:
 
     bool ParsedForRangeDecl() { return !ColonLoc.isInvalid(); }
   };
+  struct ForRangeInfo : ForRangeInit {
+    StmtResult LoopVar;
+  };
 
   DeclGroupPtrTy ParseDeclaration(DeclaratorContext Context,
                                   SourceLocation &DeclEnd,
@@ -2215,13 +2220,15 @@ private:
     Expression,    ///< Disambiguated as an expression (either kind).
     ConditionDecl, ///< Disambiguated as the declaration form of condition.
     InitStmtDecl,  ///< Disambiguated as a simple-declaration init-statement.
+    ForRangeDecl,  ///< Disambiguated as a for-range declaration.
     Error          ///< Can't be any of the above!
   };
   /// Disambiguates between the different kinds of things that can happen
   /// after 'if (' or 'switch ('. This could be one of two different kinds of
   /// declaration (depending on whether there is a ';' later) or an expression.
   ConditionOrInitStatement
-  isCXXConditionDeclarationOrInitStatement(bool CanBeInitStmt);
+  isCXXConditionDeclarationOrInitStatement(bool CanBeInitStmt,
+                                           bool CanBeForRangeDecl);
 
   bool isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous);
   bool isCXXTypeId(TentativeCXXTypeIdContext Context) {

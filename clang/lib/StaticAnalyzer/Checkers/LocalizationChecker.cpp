@@ -125,7 +125,6 @@ public:
   }
 
   std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *Succ,
-                                                 const ExplodedNode *Pred,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override;
 
@@ -1003,7 +1002,6 @@ void NonLocalizedStringChecker::checkPostStmt(const ObjCStringLiteral *SL,
 
 std::shared_ptr<PathDiagnosticPiece>
 NonLocalizedStringBRVisitor::VisitNode(const ExplodedNode *Succ,
-                                       const ExplodedNode *Pred,
                                        BugReporterContext &BRC, BugReport &BR) {
   if (Satisfied)
     return nullptr;
