@@ -1,5 +1,5 @@
-; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=static -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM
-; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=pic -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM
+; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=static -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM,CHECK-STATIC
+; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=pic -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM,CHECK-PIC
 ; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=ropi -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM
 ; RUN: llc -mtriple armv7--linux-gnueabihf -relocation-model=rwpi -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7ARM
 ; RUN: llc -mtriple thumbv7--linux-gnueabihf -relocation-model=static -arm-promote-constant < %s | FileCheck %s --check-prefixes=CHECK,CHECK-V7,CHECK-V7THUMB
@@ -16,12 +16,15 @@
 @.str2 = private unnamed_addr constant [27 x i8] c"this string is just right!\00", align 1
 @.str3 = private unnamed_addr constant [26 x i8] c"this string is used twice\00", align 1
 @.str4 = private unnamed_addr constant [29 x i8] c"same string in two functions\00", align 1
+@.str5 = private unnamed_addr constant [2 x i8] c"s\00", align 1
 @.arr1 = private unnamed_addr constant [2 x i16] [i16 3, i16 4], align 2
 @.arr2 = private unnamed_addr constant [2 x i16] [i16 7, i16 8], align 2
 @.arr3 = private unnamed_addr constant [2 x i16*] [i16* null, i16* null], align 4
 @.ptr = private unnamed_addr constant [2 x i16*] [i16* getelementptr inbounds ([2 x i16], [2 x i16]* @.arr2, i32 0, i32 0), i16* null], align 2
 @.arr4 = private unnamed_addr constant [2 x i16] [i16 3, i16 4], align 16
+@.arr5 = private unnamed_addr constant [2 x i16] [i16 3, i16 4], align 2
 @.zerosize = private unnamed_addr constant [0 x i16] zeroinitializer, align 4
+@implicit_alignment_vector = private unnamed_addr constant <4 x i32> <i32 1, i32 2, i32 3, i32 4>
 
 ; CHECK-LABEL: @test1
 ; CHECK: adr r0, [[x:.*]]
@@ -75,20 +78,14 @@ define void @test5b() #0 {
 }
 
 ; CHECK-LABEL: @test6a
-; CHECK: adr r0, [[x:.*]]
-; CHECK: [[x]]:
-; CHECK: .short 3
-; CHECK: .short 4
+; CHECK: L.arr1
 define void @test6a() #0 {
   tail call void @c(i16* getelementptr inbounds ([2 x i16], [2 x i16]* @.arr1, i32 0, i32 0)) #2
   ret void
 }
 
 ; CHECK-LABEL: @test6b
-; CHECK: adr r0, [[x:.*]]
-; CHECK: [[x]]:
-; CHECK: .short 3
-; CHECK: .short 4
+; CHECK: L.arr1
 define void @test6b() #0 {
   tail call void @c(i16* getelementptr inbounds ([2 x i16], [2 x i16]* @.arr1, i32 0, i32 0)) #2
   ret void
@@ -102,12 +99,23 @@ define void @test7() #0 {
   ret void  
 }
 
-; This shouldn't be promoted, because the array contains pointers.
+; This can be promoted; it contains pointers, but they don't need relocations.
 ; CHECK-LABEL: @test8
-; CHECK-NOT: .zero
+; CHECK: .zero
 ; CHECK: .fnend
 define void @test8() #0 {
   %a = load i16*, i16** getelementptr inbounds ([2 x i16*], [2 x i16*]* @.arr3, i32 0, i32 0)
+  tail call void @c(i16* %a) #2
+  ret void
+}
+
+; This can't be promoted in PIC mode because it contains pointers to other globals.
+; CHECK-LABEL: @test8a
+; CHECK-STATIC: .long .L.arr2
+; CHECK-PIC: .long .L.ptr
+; CHECK: .fnend
+define void @test8a() #0 {
+  %a = load i16*, i16** getelementptr inbounds ([2 x i16*], [2 x i16*]* @.ptr, i32 0, i32 0)
   tail call void @c(i16* %a) #2
   ret void
 }
@@ -156,7 +164,7 @@ define void @pr32130() #0 {
 ; CHECK-V7: [[x]]:
 ; CHECK-V7: .asciz "s\000\000"
 define void @test10(i8* %a) local_unnamed_addr #0 {
-  call void @llvm.memmove.p0i8.p0i8.i32(i8* align 1 %a, i8* align 1 getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i32 0, i32 0), i32 1, i1 false)
+  call void @llvm.memmove.p0i8.p0i8.i32(i8* align 1 %a, i8* align 1 getelementptr inbounds ([2 x i8], [2 x i8]* @.str5, i32 0, i32 0), i32 1, i1 false)
   ret void
 }
 
@@ -174,13 +182,23 @@ define void @test10(i8* %a) local_unnamed_addr #0 {
 ; CHECK-V7ARM: .short 3
 ; CHECK-V7ARM: .short 4
 define void @test11(i16* %a) local_unnamed_addr #0 {
-  call void @llvm.memmove.p0i16.p0i16.i32(i16* align 2 %a, i16* align 2 getelementptr inbounds ([2 x i16], [2 x i16]* @.arr1, i32 0, i32 0), i32 2, i1 false)
+  call void @llvm.memmove.p0i16.p0i16.i32(i16* align 2 %a, i16* align 2 getelementptr inbounds ([2 x i16], [2 x i16]* @.arr5, i32 0, i32 0), i32 2, i1 false)
+  ret void
+}
+
+; Promotion only works with globals with alignment 4 or less; a vector has
+; implicit alignment 16.
+; CHECK-LABEL: @test12
+; CHECK-NOT: adr
+define void @test12() local_unnamed_addr #0 {
+  call void @d(<4 x i32>* @implicit_alignment_vector)
   ret void
 }
 
 
 declare void @b(i8*) #1
 declare void @c(i16*) #1
+declare void @d(<4 x i32>*) #1
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1)
 declare void @llvm.memmove.p0i8.p0i8.i32(i8*, i8*, i32, i1) local_unnamed_addr
 declare void @llvm.memmove.p0i16.p0i16.i32(i16*, i16*, i32, i1) local_unnamed_addr

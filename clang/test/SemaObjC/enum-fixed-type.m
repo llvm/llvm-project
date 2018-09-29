@@ -1,6 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -pedantic -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -xc %s
 
 #if !__has_feature(objc_fixed_enum)
+#  error Enumerations with a fixed underlying type are not supported
+#endif
+
+#if !__has_extension(cxx_fixed_enum)
 #  error Enumerations with a fixed underlying type are not supported
 #endif
 

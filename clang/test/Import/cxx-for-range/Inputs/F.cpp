@@ -4,8 +4,7 @@ struct Container {
 };
 
 void f() {
-  Container c;
-  for (int varname : c) {
+  for (Container c; int varname : c) {
     return;
   }
 }

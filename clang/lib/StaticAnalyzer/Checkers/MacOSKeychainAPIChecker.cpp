@@ -135,7 +135,6 @@ private:
     }
 
     std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                   const ExplodedNode *PrevN,
                                                    BugReporterContext &BRC,
                                                    BugReport &BR) override;
   };
@@ -573,12 +572,12 @@ void MacOSKeychainAPIChecker::checkDeadSymbols(SymbolReaper &SR,
 
 std::shared_ptr<PathDiagnosticPiece>
 MacOSKeychainAPIChecker::SecKeychainBugVisitor::VisitNode(
-    const ExplodedNode *N, const ExplodedNode *PrevN, BugReporterContext &BRC,
-    BugReport &BR) {
+    const ExplodedNode *N, BugReporterContext &BRC, BugReport &BR) {
   const AllocationState *AS = N->getState()->get<AllocatedData>(Sym);
   if (!AS)
     return nullptr;
-  const AllocationState *ASPrev = PrevN->getState()->get<AllocatedData>(Sym);
+  const AllocationState *ASPrev =
+      N->getFirstPred()->getState()->get<AllocatedData>(Sym);
   if (ASPrev)
     return nullptr;
 

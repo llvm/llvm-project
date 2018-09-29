@@ -90,7 +90,6 @@ private:
       return std::make_shared<PathDiagnosticEventPiece>(L, BR.getDescription(), false);
     }
     std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                   const ExplodedNode *PrevN,
                                                    BugReporterContext &BRC,
                                                    BugReport &BR) override;
 
@@ -376,10 +375,10 @@ void ValistChecker::checkVAListEndCall(const CallEvent &Call,
 }
 
 std::shared_ptr<PathDiagnosticPiece> ValistChecker::ValistBugVisitor::VisitNode(
-    const ExplodedNode *N, const ExplodedNode *PrevN, BugReporterContext &BRC,
+    const ExplodedNode *N, BugReporterContext &BRC,
     BugReport &) {
   ProgramStateRef State = N->getState();
-  ProgramStateRef StatePrev = PrevN->getState();
+  ProgramStateRef StatePrev = N->getFirstPred()->getState();
 
   const Stmt *S = PathDiagnosticLocation::getStmt(N);
   if (!S)

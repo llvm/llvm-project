@@ -30,8 +30,6 @@ class GSIHashIterator
           GSIHashIterator, FixedStreamArrayIterator<PSHashRecord>,
           std::random_access_iterator_tag, const uint32_t> {
 public:
-  GSIHashIterator() = default;
-
   template <typename T>
   GSIHashIterator(T &&v)
       : GSIHashIterator::iterator_adaptor_base(std::forward<T &&>(v)) {}

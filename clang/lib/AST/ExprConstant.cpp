@@ -4217,6 +4217,13 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
     const CXXForRangeStmt *FS = cast<CXXForRangeStmt>(S);
     BlockScopeRAII Scope(Info);
 
+    // Evaluate the init-statement if present.
+    if (FS->getInit()) {
+      EvalStmtResult ESR = EvaluateStmt(Result, Info, FS->getInit());
+      if (ESR != ESR_Succeeded)
+        return ESR;
+    }
+
     // Initialize the __range variable.
     EvalStmtResult ESR = EvaluateStmt(Result, Info, FS->getRangeStmt());
     if (ESR != ESR_Succeeded)

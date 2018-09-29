@@ -702,10 +702,12 @@ int main(int argc, char **argv, char * const *envp) {
 static orc::IRTransformLayer2::TransformFunction createDebugDumper() {
   switch (OrcDumpKind) {
   case DumpKind::NoDump:
-    return [](orc::ThreadSafeModule TSM) { return TSM; };
+    return [](orc::ThreadSafeModule TSM,
+              const orc::MaterializationResponsibility &R) { return TSM; };
 
   case DumpKind::DumpFuncsToStdOut:
-    return [](orc::ThreadSafeModule TSM) {
+    return [](orc::ThreadSafeModule TSM,
+              const orc::MaterializationResponsibility &R) {
       printf("[ ");
 
       for (const auto &F : *TSM.getModule()) {
@@ -724,7 +726,8 @@ static orc::IRTransformLayer2::TransformFunction createDebugDumper() {
     };
 
   case DumpKind::DumpModsToStdOut:
-    return [](orc::ThreadSafeModule TSM) {
+    return [](orc::ThreadSafeModule TSM,
+              const orc::MaterializationResponsibility &R) {
       outs() << "----- Module Start -----\n"
              << *TSM.getModule() << "----- Module End -----\n";
 
@@ -732,7 +735,8 @@ static orc::IRTransformLayer2::TransformFunction createDebugDumper() {
     };
 
   case DumpKind::DumpModsToDisk:
-    return [](orc::ThreadSafeModule TSM) {
+    return [](orc::ThreadSafeModule TSM,
+              const orc::MaterializationResponsibility &R) {
       std::error_code EC;
       raw_fd_ostream Out(TSM.getModule()->getModuleIdentifier() + ".ll", EC,
                          sys::fs::F_Text);
@@ -792,12 +796,13 @@ int runOrcLazyJIT(const char *ProgName) {
 
   auto Dump = createDebugDumper();
 
-  J->setLazyCompileTransform([&](orc::ThreadSafeModule TSM) {
+  J->setLazyCompileTransform([&](orc::ThreadSafeModule TSM,
+                                 const orc::MaterializationResponsibility &R) {
     if (verifyModule(*TSM.getModule(), &dbgs())) {
       dbgs() << "Bad module: " << *TSM.getModule() << "\n";
       exit(1);
     }
-    return Dump(std::move(TSM));
+    return Dump(std::move(TSM), R);
   });
   J->getMainJITDylib().setFallbackDefinitionGenerator(
       orc::DynamicLibraryFallbackGenerator(

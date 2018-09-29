@@ -630,8 +630,6 @@ public:
     this->operator++();
   }
 
-  LineCoverageIterator &operator=(const LineCoverageIterator &R) = default;
-
   bool operator==(const LineCoverageIterator &R) const {
     return &CD == &R.CD && Next == R.Next && Ended == R.Ended;
   }

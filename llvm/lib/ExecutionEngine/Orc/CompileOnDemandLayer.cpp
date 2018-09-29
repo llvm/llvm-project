@@ -14,26 +14,6 @@
 using namespace llvm;
 using namespace llvm::orc;
 
-namespace {
-
-template <typename MaterializerFtor>
-class LambdaValueMaterializer final : public ValueMaterializer {
-public:
-  LambdaValueMaterializer(MaterializerFtor M) : M(std::move(M)) {}
-
-  Value *materialize(Value *V) final { return M(V); }
-
-private:
-  MaterializerFtor M;
-};
-
-template <typename MaterializerFtor>
-LambdaValueMaterializer<MaterializerFtor>
-createLambdaValueMaterializer(MaterializerFtor M) {
-  return LambdaValueMaterializer<MaterializerFtor>(std::move(M));
-}
-} // namespace
-
 static void extractAliases(MaterializationResponsibility &R, Module &M,
                            MangleAndInterner &Mangle) {
   SymbolAliasMap Aliases;
@@ -56,7 +36,7 @@ static void extractAliases(MaterializationResponsibility &R, Module &M,
       A->replaceAllUsesWith(F);
       A->eraseFromParent();
       F->setName(AliasName);
-    } else if (isa<GlobalValue>(Aliasee)) {
+    } else if (isa<GlobalVariable>(Aliasee)) {
       auto *G = cloneGlobalVariableDecl(M, *cast<GlobalVariable>(Aliasee));
       A->replaceAllUsesWith(G);
       A->eraseFromParent();

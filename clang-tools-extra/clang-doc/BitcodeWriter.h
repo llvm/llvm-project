@@ -169,7 +169,6 @@ private:
       Stream.EnterSubblock(ID, BitCodeConstants::SubblockIDSize);
     }
 
-    StreamSubBlockGuard() = default;
     StreamSubBlockGuard(const StreamSubBlockGuard &) = delete;
     StreamSubBlockGuard &operator=(const StreamSubBlockGuard &) = delete;
 

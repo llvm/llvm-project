@@ -31,15 +31,17 @@ public:
       : MaterializationUnit(SymbolFlagsMap({{Name, JITSymbolFlags::Exported}})),
         Name(std::move(Name)), Compile(std::move(Compile)) {}
 
+  StringRef getName() const override { return "<Compile Callbacks>"; }
+
 private:
-  void materialize(MaterializationResponsibility R) {
+  void materialize(MaterializationResponsibility R) override {
     SymbolMap Result;
     Result[Name] = JITEvaluatedSymbol(Compile(), JITSymbolFlags::Exported);
     R.resolve(Result);
     R.emit();
   }
 
-  void discard(const JITDylib &JD, SymbolStringPtr Name) {
+  void discard(const JITDylib &JD, SymbolStringPtr Name) override {
     llvm_unreachable("Discard should never occur on a LMU?");
   }
 

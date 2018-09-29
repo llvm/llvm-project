@@ -109,6 +109,8 @@ protected:
 
   // HasZeroCycleZeroing - Has zero-cycle zeroing instructions.
   bool HasZeroCycleZeroing = false;
+  bool HasZeroCycleZeroingGP = false;
+  bool HasZeroCycleZeroingFP = false;
   bool HasZeroCycleZeroingFPWorkaround = false;
 
   // StrictAlign - Disallow unaligned memory accesses.
@@ -228,7 +230,9 @@ public:
 
   bool hasZeroCycleRegMove() const { return HasZeroCycleRegMove; }
 
-  bool hasZeroCycleZeroing() const { return HasZeroCycleZeroing; }
+  bool hasZeroCycleZeroingGP() const { return HasZeroCycleZeroingGP; }
+
+  bool hasZeroCycleZeroingFP() const { return HasZeroCycleZeroingFP; }
 
   bool hasZeroCycleZeroingFPWorkaround() const {
     return HasZeroCycleZeroingFPWorkaround;

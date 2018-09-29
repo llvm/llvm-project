@@ -246,6 +246,11 @@ void MachineFunction::clear() {
     WinEHInfo->~WinEHFuncInfo();
     Allocator.Deallocate(WinEHInfo);
   }
+
+  if (WasmEHInfo) {
+    WasmEHInfo->~WasmEHFuncInfo();
+    Allocator.Deallocate(WasmEHInfo);
+  }
 }
 
 const DataLayout &MachineFunction::getDataLayout() const {

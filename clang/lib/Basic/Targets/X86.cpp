@@ -1081,6 +1081,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasMWAITX)
     Builder.defineMacro("__MWAITX__");
 
+  if (HasMOVBE)
+    Builder.defineMacro("__MOVBE__");
+
   switch (XOPLevel) {
   case XOP:
     Builder.defineMacro("__XOP__");

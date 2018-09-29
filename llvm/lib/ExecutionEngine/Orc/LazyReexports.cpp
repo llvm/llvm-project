@@ -135,6 +135,10 @@ LazyReexportsMaterializationUnit::LazyReexportsMaterializationUnit(
             return ISManager.updatePointer(*SymbolName, ResolvedAddr);
           })) {}
 
+StringRef LazyReexportsMaterializationUnit::getName() const {
+  return "<Lazy Reexports>";
+}
+
 void LazyReexportsMaterializationUnit::materialize(
     MaterializationResponsibility R) {
   auto RequestedSymbols = R.getRequestedSymbols();

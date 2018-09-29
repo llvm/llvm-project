@@ -231,17 +231,17 @@ struct TransformedFunction {
   TransformedFunction& operator=(TransformedFunction&&) = default;
 
   /// Type of the function before the transformation.
-  FunctionType* const OriginalType;
+  FunctionType *OriginalType;
 
   /// Type of the function after the transformation.
-  FunctionType* const TransformedType;
+  FunctionType *TransformedType;
 
   /// Transforming a function may change the position of arguments.  This
   /// member records the mapping from each argument's old position to its new
   /// position.  Argument positions are zero-indexed.  If the transformation
   /// from F to F' made the first argument of F into the third argument of F',
   /// then ArgumentIndexMapping[0] will equal 2.
-  const std::vector<unsigned> ArgumentIndexMapping;
+  std::vector<unsigned> ArgumentIndexMapping;
 };
 
 /// Given function attributes from a call site for the original function,
