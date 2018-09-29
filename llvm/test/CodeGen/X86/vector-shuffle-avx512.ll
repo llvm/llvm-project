@@ -541,7 +541,7 @@ define <8 x float> @expand14(<4 x float> %a) {
 define <8 x float> @expand15(<4 x float> %a) {
 ; SKX64-LABEL: expand15:
 ; SKX64:       # %bb.0:
-; SKX64-NEXT:    vpermilps {{.*#+}} xmm1 = mem[0,1,0,0]
+; SKX64-NEXT:    vmovaps {{.*#+}} xmm1 = [0.000000e+00,2.000000e+00,0.000000e+00,0.000000e+00]
 ; SKX64-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[0,1,1,3]
 ; SKX64-NEXT:    vmovaps {{.*#+}} ymm0 = [0,1,8,3,10,3,2,3]
 ; SKX64-NEXT:    vpermi2ps %ymm2, %ymm1, %ymm0
@@ -549,7 +549,7 @@ define <8 x float> @expand15(<4 x float> %a) {
 ;
 ; KNL64-LABEL: expand15:
 ; KNL64:       # %bb.0:
-; KNL64-NEXT:    vpermilps {{.*#+}} xmm1 = mem[0,1,0,0]
+; KNL64-NEXT:    vmovaps {{.*#+}} xmm1 = [0.000000e+00,2.000000e+00,0.000000e+00,0.000000e+00]
 ; KNL64-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,1,1,1]
 ; KNL64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; KNL64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
@@ -558,7 +558,7 @@ define <8 x float> @expand15(<4 x float> %a) {
 ;
 ; SKX32-LABEL: expand15:
 ; SKX32:       # %bb.0:
-; SKX32-NEXT:    vpermilps {{.*#+}} xmm1 = mem[0,1,0,0]
+; SKX32-NEXT:    vmovaps {{.*#+}} xmm1 = [0.000000e+00,2.000000e+00,0.000000e+00,0.000000e+00]
 ; SKX32-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[0,1,1,3]
 ; SKX32-NEXT:    vmovaps {{.*#+}} ymm0 = [0,1,8,3,10,3,2,3]
 ; SKX32-NEXT:    vpermi2ps %ymm2, %ymm1, %ymm0
@@ -566,7 +566,7 @@ define <8 x float> @expand15(<4 x float> %a) {
 ;
 ; KNL32-LABEL: expand15:
 ; KNL32:       # %bb.0:
-; KNL32-NEXT:    vpermilps {{.*#+}} xmm1 = mem[0,1,0,0]
+; KNL32-NEXT:    vmovaps {{.*#+}} xmm1 = [0.000000e+00,2.000000e+00,0.000000e+00,0.000000e+00]
 ; KNL32-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,1,1,1]
 ; KNL32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; KNL32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
