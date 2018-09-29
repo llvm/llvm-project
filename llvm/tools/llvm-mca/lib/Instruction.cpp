@@ -133,7 +133,7 @@ void Instruction::execute() {
 void Instruction::update() {
   assert(isDispatched() && "Unexpected instruction stage found!");
 
-  if (!llvm::all_of(Uses, [](const UniqueUse &Use) { return Use->isReady(); }))
+  if (!all_of(Uses, [](const UniqueUse &Use) { return Use->isReady(); }))
     return;
 
   // A partial register write cannot complete before a dependent write.
@@ -147,7 +147,7 @@ void Instruction::update() {
     return true;
   };
 
-  if (llvm::all_of(Defs, IsDefReady))
+  if (all_of(Defs, IsDefReady))
     Stage = IS_READY;
 }
 

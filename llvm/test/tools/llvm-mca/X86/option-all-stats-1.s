@@ -76,26 +76,26 @@ add %eax, %eax
 # FULLREPORT-NEXT:    Total number of mappings created: 200
 # FULLREPORT-NEXT:    Max number of mappings used:      44
 
-# FULLREPORT:      Resources:
-# FULLREPORT-NEXT: [0]   - JALU0
-# FULLREPORT-NEXT: [1]   - JALU1
-# FULLREPORT-NEXT: [2]   - JDiv
-# FULLREPORT-NEXT: [3]   - JFPA
-# FULLREPORT-NEXT: [4]   - JFPM
-# FULLREPORT-NEXT: [5]   - JFPU0
-# FULLREPORT-NEXT: [6]   - JFPU1
-# FULLREPORT-NEXT: [7]   - JLAGU
-# FULLREPORT-NEXT: [8]   - JMul
-# FULLREPORT-NEXT: [9]   - JSAGU
-# FULLREPORT-NEXT: [10]  - JSTC
-# FULLREPORT-NEXT: [11]  - JVALU0
-# FULLREPORT-NEXT: [12]  - JVALU1
-# FULLREPORT-NEXT: [13]  - JVIMUL
+# ALL:             Resources:
+# ALL-NEXT:        [0]   - JALU0
+# ALL-NEXT:        [1]   - JALU1
+# ALL-NEXT:        [2]   - JDiv
+# ALL-NEXT:        [3]   - JFPA
+# ALL-NEXT:        [4]   - JFPM
+# ALL-NEXT:        [5]   - JFPU0
+# ALL-NEXT:        [6]   - JFPU1
+# ALL-NEXT:        [7]   - JLAGU
+# ALL-NEXT:        [8]   - JMul
+# ALL-NEXT:        [9]   - JSAGU
+# ALL-NEXT:        [10]  - JSTC
+# ALL-NEXT:        [11]  - JVALU0
+# ALL-NEXT:        [12]  - JVALU1
+# ALL-NEXT:        [13]  - JVIMUL
 
-# FULLREPORT:      Resource pressure per iteration:
-# FULLREPORT-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# FULLREPORT-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -
+# ALL:             Resource pressure per iteration:
+# ALL-NEXT:        [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
+# ALL-NEXT:        0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -
 
-# FULLREPORT:      Resource pressure by instruction:
-# FULLREPORT-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# FULLREPORT-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     addl	%eax, %eax
+# ALL:             Resource pressure by instruction:
+# ALL-NEXT:        [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
+# ALL-NEXT:        0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     addl	%eax, %eax

@@ -3072,41 +3072,8 @@ static bool allUsersAreInFunction(const Value *V, const Function *F) {
   return true;
 }
 
-/// Return true if all users of V are within some (any) function, looking through
-/// ConstantExprs. In other words, are there any global constant users?
-static bool allUsersAreInFunctions(const Value *V) {
-  SmallVector<const User*,4> Worklist;
-  for (auto *U : V->users())
-    Worklist.push_back(U);
-  while (!Worklist.empty()) {
-    auto *U = Worklist.pop_back_val();
-    if (isa<ConstantExpr>(U)) {
-      for (auto *UU : U->users())
-        Worklist.push_back(UU);
-      continue;
-    }
-
-    if (!isa<Instruction>(U))
-      return false;
-  }
-  return true;
-}
-
-// Return true if T is an integer, float or an array/vector of either.
-static bool isSimpleType(Type *T) {
-  if (T->isIntegerTy() || T->isFloatingPointTy())
-    return true;
-  Type *SubT = nullptr;
-  if (T->isArrayTy())
-    SubT = T->getArrayElementType();
-  else if (T->isVectorTy())
-    SubT = T->getVectorElementType();
-  else
-    return false;
-  return SubT->isIntegerTy() || SubT->isFloatingPointTy();
-}
-
-static SDValue promoteToConstantPool(const GlobalValue *GV, SelectionDAG &DAG,
+static SDValue promoteToConstantPool(const ARMTargetLowering *TLI,
+                                     const GlobalValue *GV, SelectionDAG &DAG,
                                      EVT PtrVT, const SDLoc &dl) {
   // If we're creating a pool entry for a constant global with unnamed address,
   // and the global is small enough, we can emit it inline into the constant pool
@@ -3133,11 +3100,11 @@ static SDValue promoteToConstantPool(const GlobalValue *GV, SelectionDAG &DAG,
       !GVar->hasLocalLinkage())
     return SDValue();
 
-  // Ensure that we don't try and inline any type that contains pointers. If
-  // we inline a value that contains relocations, we move the relocations from
-  // .data to .text which is not ideal.
+  // If we inline a value that contains relocations, we move the relocations
+  // from .data to .text. This is not allowed in position-independent code.
   auto *Init = GVar->getInitializer();
-  if (!isSimpleType(Init->getType()))
+  if ((TLI->isPositionIndependent() || TLI->getSubtarget()->isROPI()) &&
+      Init->needsRelocation())
     return SDValue();
 
   // The constant islands pass can only really deal with alignment requests
@@ -3148,7 +3115,7 @@ static SDValue promoteToConstantPool(const GlobalValue *GV, SelectionDAG &DAG,
   // that are strings for simplicity.
   auto *CDAInit = dyn_cast<ConstantDataArray>(Init);
   unsigned Size = DAG.getDataLayout().getTypeAllocSize(Init->getType());
-  unsigned Align = GVar->getAlignment();
+  unsigned Align = DAG.getDataLayout().getPreferredAlignment(GVar);
   unsigned RequiredPadding = 4 - (Size % 4);
   bool PaddingPossible =
     RequiredPadding == 4 || (CDAInit && CDAInit->isString());
@@ -3169,12 +3136,14 @@ static SDValue promoteToConstantPool(const GlobalValue *GV, SelectionDAG &DAG,
         ConstpoolPromotionMaxTotal)
       return SDValue();
 
-  // This is only valid if all users are in a single function OR it has users
-  // in multiple functions but it no larger than a pointer. We also check if
-  // GVar has constant (non-ConstantExpr) users. If so, it essentially has its
-  // address taken.
-  if (!allUsersAreInFunction(GVar, &F) &&
-      !(Size <= 4 && allUsersAreInFunctions(GVar)))
+  // This is only valid if all users are in a single function; we can't clone
+  // the constant in general. The LLVM IR unnamed_addr allows merging
+  // constants, but not cloning them.
+  //
+  // We could potentially allow cloning if we could prove all uses of the
+  // constant in the current function don't care about the address, like
+  // printf format strings. But that isn't implemented for now.
+  if (!allUsersAreInFunction(GVar, &F))
     return SDValue();
 
   // We're going to inline this global. Pad it out if needed.
@@ -3230,7 +3199,7 @@ SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
 
   // promoteToConstantPool only if not generating XO text section
   if (TM.shouldAssumeDSOLocal(*GV->getParent(), GV) && !Subtarget->genExecuteOnly())
-    if (SDValue V = promoteToConstantPool(GV, DAG, PtrVT, dl))
+    if (SDValue V = promoteToConstantPool(this, GV, DAG, PtrVT, dl))
       return V;
 
   if (isPositionIndependent()) {

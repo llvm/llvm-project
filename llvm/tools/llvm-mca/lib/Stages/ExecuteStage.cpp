@@ -85,9 +85,9 @@ Error ExecuteStage::issueReadyInstructions() {
 }
 
 Error ExecuteStage::cycleStart() {
-  llvm::SmallVector<ResourceRef, 8> Freed;
-  llvm::SmallVector<InstRef, 4> Executed;
-  llvm::SmallVector<InstRef, 4> Ready;
+  SmallVector<ResourceRef, 8> Freed;
+  SmallVector<InstRef, 4> Executed;
+  SmallVector<InstRef, 4> Ready;
 
   HWS.cycleEvent(Freed, Executed, Ready);
 

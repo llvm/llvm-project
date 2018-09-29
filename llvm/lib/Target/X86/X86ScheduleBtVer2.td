@@ -208,8 +208,8 @@ defm : X86WriteRes<WriteBitTestSet, [JALU01], 1, [1], 2>;
 def : WriteRes<WriteLEA, [JALU01]>;
 
 // Bit counts.
-defm : JWriteResIntPair<WriteBSF, [JALU01], 5, [4], 8>;
-defm : JWriteResIntPair<WriteBSR, [JALU01], 5, [4], 8>;
+defm : JWriteResIntPair<WriteBSF, [JALU01], 4, [8], 7>;
+defm : JWriteResIntPair<WriteBSR, [JALU01], 5, [8], 8>;
 defm : JWriteResIntPair<WritePOPCNT,         [JALU01], 1>;
 defm : JWriteResIntPair<WriteLZCNT,          [JALU01], 1>;
 defm : JWriteResIntPair<WriteTZCNT,          [JALU01], 2, [2], 2>;
@@ -392,11 +392,11 @@ defm : X86WriteResPairUnsupported<WriteFVarShuffle256>;
 // Conversions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResFpuPair<WriteCvtSS2I,      [JFPU1, JSTC, JFPA, JALU0], 7, [1,1,1,1], 2>;
+defm : JWriteResFpuPair<WriteCvtSS2I,      [JFPU1, JSTC, JFPU0, JFPA, JALU0], 7, [1,1,1,1,1], 2>;
 defm : JWriteResFpuPair<WriteCvtPS2I,      [JFPU1, JSTC], 3, [1,1], 1>;
 defm : JWriteResYMMPair<WriteCvtPS2IY,     [JFPU1, JSTC], 3, [2,2], 2>;
 defm : X86WriteResPairUnsupported<WriteCvtPS2IZ>;
-defm : JWriteResFpuPair<WriteCvtSD2I,      [JFPU1, JSTC, JFPA, JALU0], 7, [1,1,1,1], 2>;
+defm : JWriteResFpuPair<WriteCvtSD2I,      [JFPU1, JSTC, JFPU0, JFPA, JALU0], 7, [1,1,1,1,1], 2>;
 defm : JWriteResFpuPair<WriteCvtPD2I,      [JFPU1, JSTC], 3, [1,1], 1>;
 defm : JWriteResYMMPair<WriteCvtPD2IY,     [JFPU1, JSTC, JFPX], 6, [2,2,4], 3>;
 defm : X86WriteResPairUnsupported<WriteCvtPD2IZ>;
@@ -663,6 +663,8 @@ def JWriteVZeroIdiomALU : SchedWriteVariant<[
 ]>;
 def : InstRW<[JWriteVZeroIdiomALU], (instrs MMX_PSUBBirr, MMX_PSUBDirr,
                                             MMX_PSUBQirr, MMX_PSUBWirr,
+                                            MMX_PSUBSBirr, MMX_PSUBSWirr,
+                                            MMX_PSUBUSBirr, MMX_PSUBUSWirr,
                                             MMX_PCMPGTBirr, MMX_PCMPGTDirr,
                                             MMX_PCMPGTWirr)>;
 
@@ -674,6 +676,10 @@ def : InstRW<[JWriteVZeroIdiomALUX], (instrs PSUBBrr, VPSUBBrr,
                                              PSUBDrr, VPSUBDrr,
                                              PSUBQrr, VPSUBQrr,
                                              PSUBWrr, VPSUBWrr,
+                                             PSUBSBrr, VPSUBSBrr,
+                                             PSUBSWrr, VPSUBSWrr,
+                                             PSUBUSBrr, VPSUBUSBrr,
+                                             PSUBUSWrr, VPSUBUSWrr,
                                              PCMPGTBrr, VPCMPGTBrr,
                                              PCMPGTDrr, VPCMPGTDrr,
                                              PCMPGTQrr, VPCMPGTQrr,
@@ -724,6 +730,7 @@ def : IsZeroIdiomFunction<[
   DepBreakingClass<[
     MMX_PXORirr, MMX_PANDNirr, MMX_PSUBBirr,
     MMX_PSUBDirr, MMX_PSUBQirr, MMX_PSUBWirr,
+    MMX_PSUBSBirr, MMX_PSUBSWirr, MMX_PSUBUSBirr, MMX_PSUBUSWirr,
     MMX_PCMPGTBirr, MMX_PCMPGTDirr, MMX_PCMPGTWirr
   ], ZeroIdiomPredicate>,
 
@@ -735,6 +742,7 @@ def : IsZeroIdiomFunction<[
     // int variants.
     PXORrr, PANDNrr,
     PSUBBrr, PSUBWrr, PSUBDrr, PSUBQrr,
+    PSUBSBrr, PSUBSWrr, PSUBUSBrr, PSUBUSWrr,
     PCMPGTBrr, PCMPGTDrr, PCMPGTQrr, PCMPGTWrr
   ], ZeroIdiomPredicate>,
 
@@ -746,6 +754,7 @@ def : IsZeroIdiomFunction<[
     // xmm int variants.
     VPXORrr, VPANDNrr,
     VPSUBBrr, VPSUBWrr, VPSUBDrr, VPSUBQrr,
+    VPSUBSBrr, VPSUBSWrr, VPSUBUSBrr, VPSUBUSWrr,
     VPCMPGTBrr, VPCMPGTWrr, VPCMPGTDrr, VPCMPGTQrr,
 
     // ymm variants.
