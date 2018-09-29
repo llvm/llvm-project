@@ -9,6 +9,7 @@
 
 #include "InputFiles.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -30,10 +31,18 @@ public:
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
   void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  void writePltHeader(uint8_t *Buf) const override;
+  void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
+                int32_t Index, unsigned RelOff) const override;
 };
 } // namespace
 
 Hexagon::Hexagon() {
+  PltRel = R_HEX_JMP_SLOT;
+  RelativeRel = R_HEX_RELATIVE;
+  PltEntrySize = 16;
+  PltHeaderSize = 32;
+
   // Hexagon Linux uses 64K pages by default.
   DefaultMaxPageSize = 0x10000;
   NoneRel = R_HEX_NONE;
@@ -65,11 +74,12 @@ RelExpr Hexagon::getRelExpr(RelType Type, const Symbol &S,
   case R_HEX_B13_PCREL:
   case R_HEX_B15_PCREL:
   case R_HEX_B15_PCREL_X:
+  case R_HEX_6_PCREL_X:
+    return R_PC;
   case R_HEX_B22_PCREL:
   case R_HEX_B22_PCREL_X:
   case R_HEX_B32_PCREL_X:
-  case R_HEX_6_PCREL_X:
-    return R_PC;
+    return R_PLT_PC;
   default:
     return R_ABS;
   }
@@ -168,7 +178,7 @@ void Hexagon::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_HEX_12_X:
     or32le(Loc, applyMask(0x000007e0, Val));
     break;
-  case R_HEX_16_X:  // This reloc only has 6 effective bits.
+  case R_HEX_16_X: // This reloc only has 6 effective bits.
     or32le(Loc, applyMask(findMaskR16(read32le(Loc)), Val & 0x3f));
     break;
   case R_HEX_32:
@@ -211,6 +221,39 @@ void Hexagon::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     error(getErrorLocation(Loc) + "unrecognized reloc " + toString(Type));
     break;
   }
+}
+
+void Hexagon::writePltHeader(uint8_t *Buf) const {
+  const uint8_t PltData[] = {
+      0x00, 0x40, 0x00, 0x00, // { immext (#0)
+      0x1c, 0xc0, 0x49, 0x6a, //   r28 = add (pc, ##GOT0@PCREL) } # @GOT0
+      0x0e, 0x42, 0x9c, 0xe2, // { r14 -= add (r28, #16)  # offset of GOTn
+      0x4f, 0x40, 0x9c, 0x91, //   r15 = memw (r28 + #8)  # object ID at GOT2
+      0x3c, 0xc0, 0x9c, 0x91, //   r28 = memw (r28 + #4) }# dynamic link at GOT1
+      0x0e, 0x42, 0x0e, 0x8c, // { r14 = asr (r14, #2)    # index of PLTn
+      0x00, 0xc0, 0x9c, 0x52, //   jumpr r28 }            # call dynamic linker
+      0x0c, 0xdb, 0x00, 0x54, // trap0(#0xdb) # bring plt0 into 16byte alignment
+  };
+  memcpy(Buf, PltData, sizeof(PltData));
+
+  // offset from PLT0 to the GOT.
+  relocateOne(Buf, R_HEX_B32_PCREL_X, In.GotPlt->getVA() - In.Plt->getVA());
+  relocateOne(Buf + 4, R_HEX_6_PCREL_X,
+              In.GotPlt->getVA() - In.Plt->getVA());
+}
+void Hexagon::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
+                       uint64_t PltEntryAddr, int32_t Index,
+                       unsigned RelOff) const {
+  const uint8_t Inst[] = {
+      0x00, 0x40, 0x00, 0x00, // { immext (#0)
+      0x0e, 0xc0, 0x49, 0x6a, //   r14 = add (pc, ##GOTn@PCREL) }
+      0x1c, 0xc0, 0x8e, 0x91, // r28 = memw (r14)
+      0x00, 0xc0, 0x9c, 0x52, // jumpr r28
+  };
+  memcpy(Buf, Inst, sizeof(Inst));
+
+  relocateOne(Buf, R_HEX_B32_PCREL_X, GotPltEntryAddr - PltEntryAddr);
+  relocateOne(Buf + 4, R_HEX_6_PCREL_X, GotPltEntryAddr - PltEntryAddr);
 }
 
 TargetInfo *elf::getHexagonTargetInfo() {
