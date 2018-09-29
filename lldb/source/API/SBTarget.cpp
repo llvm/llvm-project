@@ -202,6 +202,21 @@ SBStructuredData SBTarget::GetStatistics() {
   return data;
 }
 
+void SBTarget::SetCollectingStats(bool v) {
+  TargetSP target_sp(GetSP());
+  if (!target_sp)
+    return;
+  return target_sp->SetCollectingStats(v);
+}
+
+bool SBTarget::GetCollectingStats() {
+  TargetSP target_sp(GetSP());
+  if (!target_sp)
+    return false;
+  return target_sp->GetCollectingStats();
+}
+
+
 SBProcess SBTarget::LoadCore(const char *core_file) {
   lldb::SBError error; // Ignored
   return LoadCore(core_file, error);

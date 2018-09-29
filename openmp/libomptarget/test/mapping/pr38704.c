@@ -16,16 +16,20 @@ typedef struct {
 } StructWithPtrs;
 
 int main(int argc, char *argv[]) {
-  StructWithPtrs s;
+  StructWithPtrs s, s2;
   s.ptr1 = malloc(sizeof(int));
   s.ptr2 = malloc(2 * sizeof(int));
+  s2.ptr1 = malloc(sizeof(int));
+  s2.ptr2 = malloc(2 * sizeof(int));
 
+#pragma omp target enter data map(to: s2.ptr2[0:1])
 #pragma omp target map(s.ptr1[0:1], s.ptr2[0:2])
   {
     s.ptr1[0] = 1;
     s.ptr2[0] = 2;
     s.ptr2[1] = 3;
   }
+#pragma omp target exit data map(from: s2.ptr1[0:1], s2.ptr2[0:1])
 
   // CHECK: s.ptr1[0] = 1
   // CHECK: s.ptr2[0] = 2
@@ -36,6 +40,8 @@ int main(int argc, char *argv[]) {
 
   free(s.ptr1);
   free(s.ptr2);
+  free(s2.ptr1);
+  free(s2.ptr2);
 
   return 0;
 }
