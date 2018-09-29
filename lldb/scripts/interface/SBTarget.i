@@ -949,6 +949,10 @@ public:
     void
     SetLaunchInfo (const lldb::SBLaunchInfo &launch_info);
 
+    void SetCollectingStats(bool v);
+
+    bool GetCollectingStats();
+
     lldb::SBStructuredData GetStatistics();
 
     bool
