@@ -524,6 +524,7 @@
 // CHECK_CORE_AVX2_M32: #define __INVPCID__ 1
 // CHECK_CORE_AVX2_M32: #define __LZCNT__ 1
 // CHECK_CORE_AVX2_M32: #define __MMX__ 1
+// CHECK_CORE_AVX2_M32: #define __MOVBE__ 1
 // CHECK_CORE_AVX2_M32: #define __PCLMUL__ 1
 // CHECK_CORE_AVX2_M32: #define __POPCNT__ 1
 // CHECK_CORE_AVX2_M32: #define __RDRND__ 1
@@ -554,6 +555,7 @@
 // CHECK_CORE_AVX2_M64: #define __INVPCID__ 1
 // CHECK_CORE_AVX2_M64: #define __LZCNT__ 1
 // CHECK_CORE_AVX2_M64: #define __MMX__ 1
+// CHECK_CORE_AVX2_M64: #define __MOVBE__ 1
 // CHECK_CORE_AVX2_M64: #define __PCLMUL__ 1
 // CHECK_CORE_AVX2_M64: #define __POPCNT__ 1
 // CHECK_CORE_AVX2_M64: #define __RDRND__ 1
@@ -588,6 +590,7 @@
 // CHECK_BROADWELL_M32: #define __INVPCID__ 1
 // CHECK_BROADWELL_M32: #define __LZCNT__ 1
 // CHECK_BROADWELL_M32: #define __MMX__ 1
+// CHECK_BROADWELL_M32: #define __MOVBE__ 1
 // CHECK_BROADWELL_M32: #define __PCLMUL__ 1
 // CHECK_BROADWELL_M32: #define __POPCNT__ 1
 // CHECK_BROADWELL_M32: #define __PRFCHW__ 1
@@ -621,6 +624,7 @@
 // CHECK_BROADWELL_M64: #define __INVPCID__ 1
 // CHECK_BROADWELL_M64: #define __LZCNT__ 1
 // CHECK_BROADWELL_M64: #define __MMX__ 1
+// CHECK_BROADWELL_M64: #define __MOVBE__ 1
 // CHECK_BROADWELL_M64: #define __PCLMUL__ 1
 // CHECK_BROADWELL_M64: #define __POPCNT__ 1
 // CHECK_BROADWELL_M64: #define __PRFCHW__ 1
@@ -659,6 +663,7 @@
 // CHECK_SKL_M32: #define __INVPCID__ 1
 // CHECK_SKL_M32: #define __LZCNT__ 1
 // CHECK_SKL_M32: #define __MMX__ 1
+// CHECK_SKL_M32: #define __MOVBE__ 1
 // CHECK_SKL_M32: #define __MPX__ 1
 // CHECK_SKL_M32: #define __PCLMUL__ 1
 // CHECK_SKL_M32: #define __POPCNT__ 1
@@ -694,6 +699,7 @@
 // CHECK_SKL_M64: #define __INVPCID__ 1
 // CHECK_SKL_M64: #define __LZCNT__ 1
 // CHECK_SKL_M64: #define __MMX__ 1
+// CHECK_SKL_M64: #define __MOVBE__ 1
 // CHECK_SKL_M64: #define __MPX__ 1
 // CHECK_SKL_M64: #define __PCLMUL__ 1
 // CHECK_SKL_M64: #define __POPCNT__ 1
@@ -735,6 +741,7 @@
 // CHECK_KNL_M32: #define __FMA__ 1
 // CHECK_KNL_M32: #define __LZCNT__ 1
 // CHECK_KNL_M32: #define __MMX__ 1
+// CHECK_KNL_M32: #define __MOVBE__ 1
 // CHECK_KNL_M32: #define __PCLMUL__ 1
 // CHECK_KNL_M32: #define __POPCNT__ 1
 // CHECK_KNL_M32: #define __PREFETCHWT1__ 1
@@ -772,6 +779,7 @@
 // CHECK_KNL_M64: #define __FMA__ 1
 // CHECK_KNL_M64: #define __LZCNT__ 1
 // CHECK_KNL_M64: #define __MMX__ 1
+// CHECK_KNL_M64: #define __MOVBE__ 1
 // CHECK_KNL_M64: #define __PCLMUL__ 1
 // CHECK_KNL_M64: #define __POPCNT__ 1
 // CHECK_KNL_M64: #define __PREFETCHWT1__ 1
@@ -813,6 +821,7 @@
 // CHECK_KNM_M32: #define __FMA__ 1
 // CHECK_KNM_M32: #define __LZCNT__ 1
 // CHECK_KNM_M32: #define __MMX__ 1
+// CHECK_KNM_M32: #define __MOVBE__ 1
 // CHECK_KNM_M32: #define __PCLMUL__ 1
 // CHECK_KNM_M32: #define __POPCNT__ 1
 // CHECK_KNM_M32: #define __PREFETCHWT1__ 1
@@ -848,6 +857,7 @@
 // CHECK_KNM_M64: #define __FMA__ 1
 // CHECK_KNM_M64: #define __LZCNT__ 1
 // CHECK_KNM_M64: #define __MMX__ 1
+// CHECK_KNM_M64: #define __MOVBE__ 1
 // CHECK_KNM_M64: #define __PCLMUL__ 1
 // CHECK_KNM_M64: #define __POPCNT__ 1
 // CHECK_KNM_M64: #define __PREFETCHWT1__ 1
@@ -889,6 +899,7 @@
 // CHECK_SKX_M32: #define __INVPCID__ 1
 // CHECK_SKX_M32: #define __LZCNT__ 1
 // CHECK_SKX_M32: #define __MMX__ 1
+// CHECK_SKX_M32: #define __MOVBE__ 1
 // CHECK_SKX_M32: #define __MPX__ 1
 // CHECK_SKX_M32: #define __PCLMUL__ 1
 // CHECK_SKX_M32: #define __PKU__ 1
@@ -935,6 +946,7 @@
 // CHECK_SKX_M64: #define __INVPCID__ 1
 // CHECK_SKX_M64: #define __LZCNT__ 1
 // CHECK_SKX_M64: #define __MMX__ 1
+// CHECK_SKX_M64: #define __MOVBE__ 1
 // CHECK_SKX_M64: #define __MPX__ 1
 // CHECK_SKX_M64: #define __PCLMUL__ 1
 // CHECK_SKX_M64: #define __PKU__ 1
@@ -986,6 +998,7 @@
 // CHECK_CNL_M32: #define __INVPCID__ 1
 // CHECK_CNL_M32: #define __LZCNT__ 1
 // CHECK_CNL_M32: #define __MMX__ 1
+// CHECK_CNL_M32: #define __MOVBE__ 1
 // CHECK_CNL_M32: #define __MPX__ 1
 // CHECK_CNL_M32: #define __PCLMUL__ 1
 // CHECK_CNL_M32: #define __PKU__ 1
@@ -1035,6 +1048,7 @@
 // CHECK_CNL_M64: #define __INVPCID__ 1
 // CHECK_CNL_M64: #define __LZCNT__ 1
 // CHECK_CNL_M64: #define __MMX__ 1
+// CHECK_CNL_M64: #define __MOVBE__ 1
 // CHECK_CNL_M64: #define __MPX__ 1
 // CHECK_CNL_M64: #define __PCLMUL__ 1
 // CHECK_CNL_M64: #define __PKU__ 1
@@ -1090,6 +1104,7 @@
 // CHECK_ICL_M32: #define __INVPCID__ 1
 // CHECK_ICL_M32: #define __LZCNT__ 1
 // CHECK_ICL_M32: #define __MMX__ 1
+// CHECK_ICL_M32: #define __MOVBE__ 1
 // CHECK_ICL_M32: #define __MPX__ 1
 // CHECK_ICL_M32: #define __PCLMUL__ 1
 // CHECK_ICL_M32: #define __PKU__ 1
@@ -1148,6 +1163,7 @@
 // CHECK_ICL_M64: #define __INVPCID__ 1
 // CHECK_ICL_M64: #define __LZCNT__ 1
 // CHECK_ICL_M64: #define __MMX__ 1
+// CHECK_ICL_M64: #define __MOVBE__ 1
 // CHECK_ICL_M64: #define __MPX__ 1
 // CHECK_ICL_M64: #define __PCLMUL__ 1
 // CHECK_ICL_M64: #define __PKU__ 1
@@ -1207,6 +1223,7 @@
 // CHECK_ICX_M32: #define __INVPCID__ 1
 // CHECK_ICX_M32: #define __LZCNT__ 1
 // CHECK_ICX_M32: #define __MMX__ 1
+// CHECK_ICX_M32: #define __MOVBE__ 1
 // CHECK_ICX_M32: #define __MPX__ 1
 // CHECK_ICX_M32: #define __PCLMUL__ 1
 // CHECK_ICX_M32: #define __PCONFIG__ 1
@@ -1266,6 +1283,7 @@
 // CHECK_ICX_M64: #define __INVPCID__ 1
 // CHECK_ICX_M64: #define __LZCNT__ 1
 // CHECK_ICX_M64: #define __MMX__ 1
+// CHECK_ICX_M64: #define __MOVBE__ 1
 // CHECK_ICX_M64: #define __MPX__ 1
 // CHECK_ICX_M64: #define __PCLMUL__ 1
 // CHECK_ICX_M64: #define __PCONFIG__ 1
@@ -1303,6 +1321,7 @@
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_ATOM_M32
 // CHECK_ATOM_M32: #define __MMX__ 1
+// CHECK_ATOM_M32: #define __MOVBE__ 1
 // CHECK_ATOM_M32: #define __SSE2__ 1
 // CHECK_ATOM_M32: #define __SSE3__ 1
 // CHECK_ATOM_M32: #define __SSE__ 1
@@ -1318,6 +1337,7 @@
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_ATOM_M64
 // CHECK_ATOM_M64: #define __MMX__ 1
+// CHECK_ATOM_M64: #define __MOVBE__ 1
 // CHECK_ATOM_M64: #define __SSE2_MATH__ 1
 // CHECK_ATOM_M64: #define __SSE2__ 1
 // CHECK_ATOM_M64: #define __SSE3__ 1
@@ -1340,6 +1360,7 @@
 // CHECK_GLM_M32: #define __FSGSBASE__ 1
 // CHECK_GLM_M32: #define __FXSR__ 1
 // CHECK_GLM_M32: #define __MMX__ 1
+// CHECK_GLM_M32: #define __MOVBE__ 1
 // CHECK_GLM_M32: #define __MPX__ 1
 // CHECK_GLM_M32: #define __PCLMUL__ 1
 // CHECK_GLM_M32: #define __POPCNT__ 1
@@ -1373,6 +1394,7 @@
 // CHECK_GLM_M64: #define __FSGSBASE__ 1
 // CHECK_GLM_M64: #define __FXSR__ 1
 // CHECK_GLM_M64: #define __MMX__ 1
+// CHECK_GLM_M64: #define __MOVBE__ 1
 // CHECK_GLM_M64: #define __MPX__ 1
 // CHECK_GLM_M64: #define __PCLMUL__ 1
 // CHECK_GLM_M64: #define __POPCNT__ 1
@@ -1404,6 +1426,7 @@
 // CHECK_GLMP_M32: #define __FSGSBASE__ 1
 // CHECK_GLMP_M32: #define __FXSR__ 1
 // CHECK_GLMP_M32: #define __MMX__ 1
+// CHECK_GLMP_M32: #define __MOVBE__ 1
 // CHECK_GLMP_M32: #define __MPX__ 1
 // CHECK_GLMP_M32: #define __PCLMUL__ 1
 // CHECK_GLMP_M32: #define __POPCNT__ 1
@@ -1440,6 +1463,7 @@
 // CHECK_GLMP_M64: #define __FSGSBASE__ 1
 // CHECK_GLMP_M64: #define __FXSR__ 1
 // CHECK_GLMP_M64: #define __MMX__ 1
+// CHECK_GLMP_M64: #define __MOVBE__ 1
 // CHECK_GLMP_M64: #define __MPX__ 1
 // CHECK_GLMP_M64: #define __PCLMUL__ 1
 // CHECK_GLMP_M64: #define __POPCNT__ 1
@@ -1476,6 +1500,7 @@
 // CHECK_TRM_M32: #define __FXSR__ 1
 // CHECK_TRM_M32: #define __GFNI__ 1
 // CHECK_TRM_M32: #define __MMX__ 1
+// CHECK_TRM_M32: #define __MOVBE__ 1
 // CHECK_TRM_M32: #define __MOVDIR64B__ 1
 // CHECK_TRM_M32: #define __MOVDIRI__ 1
 // CHECK_TRM_M32: #define __MPX__ 1
@@ -1517,6 +1542,7 @@
 // CHECK_TRM_M64: #define __FXSR__ 1
 // CHECK_TRM_M64: #define __GFNI__ 1
 // CHECK_TRM_M64: #define __MMX__ 1
+// CHECK_TRM_M64: #define __MOVBE__ 1
 // CHECK_TRM_M64: #define __MOVDIR64B__ 1
 // CHECK_TRM_M64: #define __MOVDIRI__ 1
 // CHECK_TRM_M64: #define __MPX__ 1
@@ -1551,6 +1577,7 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SLM_M32
 // CHECK_SLM_M32: #define __FXSR__ 1
 // CHECK_SLM_M32: #define __MMX__ 1
+// CHECK_SLM_M32: #define __MOVBE__ 1
 // CHECK_SLM_M32: #define __PCLMUL__ 1
 // CHECK_SLM_M32: #define __POPCNT__ 1
 // CHECK_SLM_M32: #define __PRFCHW__ 1
@@ -1573,6 +1600,7 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SLM_M64
 // CHECK_SLM_M64: #define __FXSR__ 1
 // CHECK_SLM_M64: #define __MMX__ 1
+// CHECK_SLM_M64: #define __MOVBE__ 1
 // CHECK_SLM_M64: #define __PCLMUL__ 1
 // CHECK_SLM_M64: #define __POPCNT__ 1
 // CHECK_SLM_M64: #define __PRFCHW__ 1
@@ -2134,6 +2162,7 @@
 // CHECK_BTVER2_M32: #define __F16C__ 1
 // CHECK_BTVER2_M32: #define __LZCNT__ 1
 // CHECK_BTVER2_M32: #define __MMX__ 1
+// CHECK_BTVER2_M32: #define __MOVBE__ 1
 // CHECK_BTVER2_M32: #define __PCLMUL__ 1
 // CHECK_BTVER2_M32: #define __POPCNT__ 1
 // CHECK_BTVER2_M32: #define __PRFCHW__ 1
@@ -2163,6 +2192,7 @@
 // CHECK_BTVER2_M64: #define __F16C__ 1
 // CHECK_BTVER2_M64: #define __LZCNT__ 1
 // CHECK_BTVER2_M64: #define __MMX__ 1
+// CHECK_BTVER2_M64: #define __MOVBE__ 1
 // CHECK_BTVER2_M64: #define __PCLMUL__ 1
 // CHECK_BTVER2_M64: #define __POPCNT__ 1
 // CHECK_BTVER2_M64: #define __PRFCHW__ 1
@@ -2491,6 +2521,7 @@
 // CHECK_ZNVER1_M32: #define __FSGSBASE__ 1
 // CHECK_ZNVER1_M32: #define __LZCNT__ 1
 // CHECK_ZNVER1_M32: #define __MMX__ 1
+// CHECK_ZNVER1_M32: #define __MOVBE__ 1
 // CHECK_ZNVER1_M32: #define __PCLMUL__ 1
 // CHECK_ZNVER1_M32: #define __POPCNT__ 1
 // CHECK_ZNVER1_M32: #define __PRFCHW__ 1
@@ -2534,6 +2565,7 @@
 // CHECK_ZNVER1_M64: #define __FSGSBASE__ 1
 // CHECK_ZNVER1_M64: #define __LZCNT__ 1
 // CHECK_ZNVER1_M64: #define __MMX__ 1
+// CHECK_ZNVER1_M64: #define __MOVBE__ 1
 // CHECK_ZNVER1_M64: #define __PCLMUL__ 1
 // CHECK_ZNVER1_M64: #define __POPCNT__ 1
 // CHECK_ZNVER1_M64: #define __PRFCHW__ 1

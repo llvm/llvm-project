@@ -106,6 +106,8 @@ public:
       Destructor();
   }
 
+  StringRef getName() const override { return "<Simple>"; }
+
   void materialize(orc::MaterializationResponsibility R) override {
     Materialize(std::move(R));
   }

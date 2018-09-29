@@ -204,3 +204,10 @@ static_assert(complex_test(makeComplex<_Complex int>(0, 0),
                            std::strong_equality::nonequal));
 // TODO: defaulted operator <=>
 } // namespace ThreeWayComparison
+
+constexpr bool for_range_init() {
+  int k = 0;
+  for (int arr[3] = {1, 2, 3}; int n : arr) k += n;
+  return k == 6;
+}
+static_assert(for_range_init());

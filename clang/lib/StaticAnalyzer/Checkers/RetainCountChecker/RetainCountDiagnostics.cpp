@@ -29,7 +29,7 @@ static bool isNumericLiteralExpression(const Expr *E) {
 }
 
 std::shared_ptr<PathDiagnosticPiece>
-CFRefReportVisitor::VisitNode(const ExplodedNode *N, const ExplodedNode *PrevN,
+CFRefReportVisitor::VisitNode(const ExplodedNode *N,
                               BugReporterContext &BRC, BugReport &BR) {
   // FIXME: We will eventually need to handle non-statement-based events
   // (__attribute__((cleanup))).
@@ -37,7 +37,7 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N, const ExplodedNode *PrevN,
     return nullptr;
 
   // Check if the type state has changed.
-  ProgramStateRef PrevSt = PrevN->getState();
+  ProgramStateRef PrevSt = N->getFirstPred()->getState();
   ProgramStateRef CurrSt = N->getState();
   const LocationContext *LCtx = N->getLocationContext();
 

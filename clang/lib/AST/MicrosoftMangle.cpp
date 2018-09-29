@@ -375,6 +375,8 @@ private:
   void mangleObjCProtocol(const ObjCProtocolDecl *PD);
   void mangleObjCLifetime(const QualType T, Qualifiers Quals,
                           SourceRange Range);
+  void mangleObjCKindOfType(const ObjCObjectType *T, Qualifiers Quals,
+                            SourceRange Range);
 };
 }
 
@@ -1553,6 +1555,23 @@ void MicrosoftCXXNameMangler::mangleObjCLifetime(const QualType Type,
   mangleArtificalTagType(TTK_Struct, TemplateMangling, {"__ObjC"});
 }
 
+void MicrosoftCXXNameMangler::mangleObjCKindOfType(const ObjCObjectType *T,
+                                                   Qualifiers Quals,
+                                                   SourceRange Range) {
+  llvm::SmallString<64> TemplateMangling;
+  llvm::raw_svector_ostream Stream(TemplateMangling);
+  MicrosoftCXXNameMangler Extra(Context, Stream);
+
+  Stream << "?$";
+  Extra.mangleSourceName("KindOf");
+  Extra.mangleType(QualType(T, 0)
+                       .stripObjCKindOfType(getASTContext())
+                       ->getAs<ObjCObjectType>(),
+                   Quals, Range);
+
+  mangleArtificalTagType(TTK_Struct, TemplateMangling, {"__ObjC"});
+}
+
 void MicrosoftCXXNameMangler::mangleQualifiers(Qualifiers Quals,
                                                bool IsMember) {
   // <cvr-qualifiers> ::= [E] [F] [I] <base-cvr-qualifiers>
@@ -2624,9 +2643,12 @@ void MicrosoftCXXNameMangler::mangleType(const ObjCInterfaceType *T, Qualifiers,
   mangle(T->getDecl(), ".objc_cls_");
 }
 
-void MicrosoftCXXNameMangler::mangleType(const ObjCObjectType *T, Qualifiers,
-                                         SourceRange Range) {
-  if (T->qual_empty())
+void MicrosoftCXXNameMangler::mangleType(const ObjCObjectType *T,
+                                         Qualifiers Quals, SourceRange Range) {
+  if (T->isKindOfType())
+    return mangleObjCKindOfType(T, Quals, Range);
+
+  if (T->qual_empty() && !T->isSpecialized())
     return mangleType(T->getBaseType(), Range, QMM_Drop);
 
   ArgBackRefMap OuterArgsContext;
@@ -2647,6 +2669,11 @@ void MicrosoftCXXNameMangler::mangleType(const ObjCObjectType *T, Qualifiers,
 
   for (const auto &Q : T->quals())
     mangleObjCProtocol(Q);
+
+  if (T->isSpecialized())
+    for (const auto &TA : T->getTypeArgs())
+      mangleType(TA, Range, QMM_Drop);
+
   Out << '@';
 
   Out << '@';

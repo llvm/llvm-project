@@ -15,7 +15,7 @@
 # CHECK-NEXT: 0x0000002b: DW_TAG_subprogram [2] *
 # CHECK-NEXT: DW_AT_low_pc [DW_FORM_addr]       (0x0000000000000000)
 # CHECK-NEXT: DW_AT_high_pc [DW_FORM_data4]     (0x00000016)
-# CHECK-NEXT: DW_AT_frame_base [DW_FORM_exprloc]        (DW_OP_reg6 RBP)
+# CHECK-NEXT: DW_AT_frame_base [DW_FORM_exprloc]        (DW_OP_reg6)
 # CHECK-NEXT: DW_AT_name [DW_FORM_strp] ( .debug_str[0x00000061] = "main")
 # CHECK-NEXT: DW_AT_decl_file [DW_FORM_data1]   (0x01)
 # CHECK-NEXT: DW_AT_decl_line [DW_FORM_data1]   (1)

@@ -13,7 +13,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/Support/Error.h"
@@ -60,11 +59,9 @@ public:
   unsigned size() const { return (unsigned)Instructions.size(); }
   bool empty() const { return Instructions.empty(); }
 
-  CFIProgram(uint64_t CodeAlignmentFactor, int64_t DataAlignmentFactor,
-             Triple::ArchType Arch)
+  CFIProgram(uint64_t CodeAlignmentFactor, int64_t DataAlignmentFactor)
       : CodeAlignmentFactor(CodeAlignmentFactor),
-        DataAlignmentFactor(DataAlignmentFactor),
-        Arch(Arch) {}
+        DataAlignmentFactor(DataAlignmentFactor) {}
 
   /// Parse and store a sequence of CFI instructions from Data,
   /// starting at *Offset and ending at EndOffset. *Offset is updated
@@ -79,7 +76,6 @@ private:
   std::vector<Instruction> Instructions;
   const uint64_t CodeAlignmentFactor;
   const int64_t DataAlignmentFactor;
-  Triple::ArchType Arch;
 
   /// Convenience method to add a new instruction with the given opcode.
   void addInstruction(uint8_t Opcode) {
@@ -134,9 +130,8 @@ public:
   enum FrameKind { FK_CIE, FK_FDE };
 
   FrameEntry(FrameKind K, uint64_t Offset, uint64_t Length, uint64_t CodeAlign,
-             int64_t DataAlign, Triple::ArchType Arch)
-      : Kind(K), Offset(Offset), Length(Length),
-        CFIs(CodeAlign, DataAlign, Arch) {}
+             int64_t DataAlign)
+      : Kind(K), Offset(Offset), Length(Length), CFIs(CodeAlign, DataAlign) {}
 
   virtual ~FrameEntry() {}
 
@@ -173,9 +168,9 @@ public:
       int64_t DataAlignmentFactor, uint64_t ReturnAddressRegister,
       SmallString<8> AugmentationData, uint32_t FDEPointerEncoding,
       uint32_t LSDAPointerEncoding, Optional<uint64_t> Personality,
-      Optional<uint32_t> PersonalityEnc, Triple::ArchType Arch)
+      Optional<uint32_t> PersonalityEnc)
       : FrameEntry(FK_CIE, Offset, Length, CodeAlignmentFactor,
-                   DataAlignmentFactor, Arch),
+                   DataAlignmentFactor),
         Version(Version), Augmentation(std::move(Augmentation)),
         AddressSize(AddressSize), SegmentDescriptorSize(SegmentDescriptorSize),
         CodeAlignmentFactor(CodeAlignmentFactor),
@@ -229,11 +224,10 @@ public:
   // is obtained lazily once it's actually required.
   FDE(uint64_t Offset, uint64_t Length, int64_t LinkedCIEOffset,
       uint64_t InitialLocation, uint64_t AddressRange, CIE *Cie,
-      Optional<uint64_t> LSDAAddress, Triple::ArchType Arch)
+      Optional<uint64_t> LSDAAddress)
       : FrameEntry(FK_FDE, Offset, Length,
                    Cie ? Cie->getCodeAlignmentFactor() : 0,
-                   Cie ? Cie->getDataAlignmentFactor() : 0,
-                   Arch),
+                   Cie ? Cie->getDataAlignmentFactor() : 0),
         LinkedCIEOffset(LinkedCIEOffset), InitialLocation(InitialLocation),
         AddressRange(AddressRange), LinkedCIE(Cie), LSDAAddress(LSDAAddress) {}
 
@@ -262,7 +256,6 @@ private:
 
 /// A parsed .debug_frame or .eh_frame section
 class DWARFDebugFrame {
-  const Triple::ArchType Arch;
   // True if this is parsing an eh_frame section.
   const bool IsEH;
   // Not zero for sane pointer values coming out of eh_frame
@@ -279,8 +272,7 @@ public:
   // it is a .debug_frame section. EHFrameAddress should be different
   // than zero for correct parsing of .eh_frame addresses when they
   // use a PC-relative encoding.
-  DWARFDebugFrame(Triple::ArchType Arch,
-                  bool IsEH = false, uint64_t EHFrameAddress = 0);
+  DWARFDebugFrame(bool IsEH = false, uint64_t EHFrameAddress = 0);
   ~DWARFDebugFrame();
 
   /// Dump the section data into the given stream.

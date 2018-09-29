@@ -54,3 +54,12 @@ struct DefaultDeleteWrongType : DefaultDeleteWrongTypeBase {
     // expected-warning@-4 {{explicitly defaulting this copy constructor with a type different from the implicit type is incompatible with C++ standards before C++2a}}
 #endif
 };
+
+void ForRangeInit() {
+  for (int arr[3] = {1, 2, 3}; int n : arr) {}
+#if __cplusplus <= 201703L
+    // expected-warning@-2 {{range-based for loop initialization statements are a C++2a extension}}
+#else
+    // expected-warning@-4 {{range-based for loop initialization statements are incompatible with C++ standards before C++2a}}
+#endif
+}

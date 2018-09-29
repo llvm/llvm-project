@@ -118,14 +118,15 @@ public:
 };
 
 /// CXXForRangeStmt - This represents C++0x [stmt.ranged]'s ranged for
-/// statement, represented as 'for (range-declarator : range-expression)'.
+/// statement, represented as 'for (range-declarator : range-expression)'
+/// or 'for (init-statement range-declarator : range-expression)'.
 ///
 /// This is stored in a partially-desugared form to allow full semantic
 /// analysis of the constituent components. The original syntactic components
 /// can be extracted using getLoopVariable and getRangeInit.
 class CXXForRangeStmt : public Stmt {
   SourceLocation ForLoc;
-  enum { RANGE, BEGINSTMT, ENDSTMT, COND, INC, LOOPVAR, BODY, END };
+  enum { INIT, RANGE, BEGINSTMT, ENDSTMT, COND, INC, LOOPVAR, BODY, END };
   // SubExprs[RANGE] is an expression or declstmt.
   // SubExprs[COND] and SubExprs[INC] are expressions.
   Stmt *SubExprs[END];
@@ -135,16 +136,17 @@ class CXXForRangeStmt : public Stmt {
 
   friend class ASTStmtReader;
 public:
-  CXXForRangeStmt(DeclStmt *Range, DeclStmt *Begin, DeclStmt *End,
-                  Expr *Cond, Expr *Inc, DeclStmt *LoopVar, Stmt *Body,
-                  SourceLocation FL, SourceLocation CAL, SourceLocation CL,
-                  SourceLocation RPL);
+  CXXForRangeStmt(Stmt *InitStmt, DeclStmt *Range, DeclStmt *Begin,
+                  DeclStmt *End, Expr *Cond, Expr *Inc, DeclStmt *LoopVar,
+                  Stmt *Body, SourceLocation FL, SourceLocation CAL,
+                  SourceLocation CL, SourceLocation RPL);
   CXXForRangeStmt(EmptyShell Empty) : Stmt(CXXForRangeStmtClass, Empty) { }
 
-
+  Stmt *getInit() { return SubExprs[INIT]; }
   VarDecl *getLoopVariable();
   Expr *getRangeInit();
 
+  const Stmt *getInit() const { return SubExprs[INIT]; }
   const VarDecl *getLoopVariable() const;
   const Expr *getRangeInit() const;
 
@@ -179,6 +181,7 @@ public:
   }
   const Stmt *getBody() const { return SubExprs[BODY]; }
 
+  void setInit(Stmt *S) { SubExprs[INIT] = S; }
   void setRangeInit(Expr *E) { SubExprs[RANGE] = reinterpret_cast<Stmt*>(E); }
   void setRangeStmt(Stmt *S) { SubExprs[RANGE] = S; }
   void setBeginStmt(Stmt *S) { SubExprs[BEGINSTMT] = S; }

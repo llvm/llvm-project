@@ -331,9 +331,6 @@ public:
   void RunPathSensitiveChecks(Decl *D,
                               ExprEngine::InliningModes IMode,
                               SetOfConstDecls *VisitedCallees);
-  void ActionExprEngine(Decl *D, bool ObjCGCEnabled,
-                        ExprEngine::InliningModes IMode,
-                        SetOfConstDecls *VisitedCallees);
 
   /// Visitors for the RecursiveASTVisitor.
   bool shouldWalkTypesOfTypeLocs() const { return false; }
@@ -726,9 +723,9 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
 // Path-sensitive checking.
 //===----------------------------------------------------------------------===//
 
-void AnalysisConsumer::ActionExprEngine(Decl *D, bool ObjCGCEnabled,
-                                        ExprEngine::InliningModes IMode,
-                                        SetOfConstDecls *VisitedCallees) {
+void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
+                                              ExprEngine::InliningModes IMode,
+                                              SetOfConstDecls *VisitedCallees) {
   // Construct the analysis engine.  First check if the CFG is valid.
   // FIXME: Inter-procedural analysis will need to handle invalid CFGs.
   if (!Mgr->getCFG(D))
@@ -738,12 +735,14 @@ void AnalysisConsumer::ActionExprEngine(Decl *D, bool ObjCGCEnabled,
   if (!Mgr->getAnalysisDeclContext(D)->getAnalysis<RelaxedLiveVariables>())
     return;
 
-  ExprEngine Eng(CTU, *Mgr, ObjCGCEnabled, VisitedCallees, &FunctionSummaries,
-                 IMode);
+  ExprEngine Eng(CTU, *Mgr, VisitedCallees, &FunctionSummaries, IMode);
 
   // Execute the worklist algorithm.
   Eng.ExecuteWorkList(Mgr->getAnalysisDeclContextManager().getStackFrame(D),
                       Mgr->options.getMaxNodesPerTopLevelFunction());
+
+  if (!Mgr->options.DumpExplodedGraphTo.empty())
+    Eng.DumpGraph(Mgr->options.TrimGraph, Mgr->options.DumpExplodedGraphTo);
 
   // Visualize the exploded graph.
   if (Mgr->options.visualizeExplodedGraphWithGraphViz)
@@ -751,26 +750,6 @@ void AnalysisConsumer::ActionExprEngine(Decl *D, bool ObjCGCEnabled,
 
   // Display warnings.
   Eng.getBugReporter().FlushReports();
-}
-
-void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
-                                              ExprEngine::InliningModes IMode,
-                                              SetOfConstDecls *Visited) {
-
-  switch (Mgr->getLangOpts().getGC()) {
-  case LangOptions::NonGC:
-    ActionExprEngine(D, false, IMode, Visited);
-    break;
-
-  case LangOptions::GCOnly:
-    ActionExprEngine(D, true, IMode, Visited);
-    break;
-
-  case LangOptions::HybridGC:
-    ActionExprEngine(D, false, IMode, Visited);
-    ActionExprEngine(D, true, IMode, Visited);
-    break;
-  }
 }
 
 //===----------------------------------------------------------------------===//

@@ -729,9 +729,9 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   case AArch64::FMOVH0:
   case AArch64::FMOVS0:
   case AArch64::FMOVD0:
-    return Subtarget.hasZeroCycleZeroing();
+    return Subtarget.hasZeroCycleZeroingFP();
   case TargetOpcode::COPY:
-    return (Subtarget.hasZeroCycleZeroing() &&
+    return (Subtarget.hasZeroCycleZeroingGP() &&
             (MI.getOperand(1).getReg() == AArch64::WZR ||
              MI.getOperand(1).getReg() == AArch64::XZR));
   }
@@ -2481,7 +2481,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
             .addImm(0)
             .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
       }
-    } else if (SrcReg == AArch64::WZR && Subtarget.hasZeroCycleZeroing()) {
+    } else if (SrcReg == AArch64::WZR && Subtarget.hasZeroCycleZeroingGP()) {
       BuildMI(MBB, I, DL, get(AArch64::MOVZWi), DestReg)
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
@@ -2518,7 +2518,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addReg(SrcReg, getKillRegState(KillSrc))
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
-    } else if (SrcReg == AArch64::XZR && Subtarget.hasZeroCycleZeroing()) {
+    } else if (SrcReg == AArch64::XZR && Subtarget.hasZeroCycleZeroingGP()) {
       BuildMI(MBB, I, DL, get(AArch64::MOVZXi), DestReg)
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));

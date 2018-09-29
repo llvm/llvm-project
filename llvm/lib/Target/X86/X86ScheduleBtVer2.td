@@ -663,6 +663,8 @@ def JWriteVZeroIdiomALU : SchedWriteVariant<[
 ]>;
 def : InstRW<[JWriteVZeroIdiomALU], (instrs MMX_PSUBBirr, MMX_PSUBDirr,
                                             MMX_PSUBQirr, MMX_PSUBWirr,
+                                            MMX_PSUBSBirr, MMX_PSUBSWirr,
+                                            MMX_PSUBUSBirr, MMX_PSUBUSWirr,
                                             MMX_PCMPGTBirr, MMX_PCMPGTDirr,
                                             MMX_PCMPGTWirr)>;
 
@@ -674,6 +676,10 @@ def : InstRW<[JWriteVZeroIdiomALUX], (instrs PSUBBrr, VPSUBBrr,
                                              PSUBDrr, VPSUBDrr,
                                              PSUBQrr, VPSUBQrr,
                                              PSUBWrr, VPSUBWrr,
+                                             PSUBSBrr, VPSUBSBrr,
+                                             PSUBSWrr, VPSUBSWrr,
+                                             PSUBUSBrr, VPSUBUSBrr,
+                                             PSUBUSWrr, VPSUBUSWrr,
                                              PCMPGTBrr, VPCMPGTBrr,
                                              PCMPGTDrr, VPCMPGTDrr,
                                              PCMPGTQrr, VPCMPGTQrr,
@@ -724,6 +730,7 @@ def : IsZeroIdiomFunction<[
   DepBreakingClass<[
     MMX_PXORirr, MMX_PANDNirr, MMX_PSUBBirr,
     MMX_PSUBDirr, MMX_PSUBQirr, MMX_PSUBWirr,
+    MMX_PSUBSBirr, MMX_PSUBSWirr, MMX_PSUBUSBirr, MMX_PSUBUSWirr,
     MMX_PCMPGTBirr, MMX_PCMPGTDirr, MMX_PCMPGTWirr
   ], ZeroIdiomPredicate>,
 
@@ -735,6 +742,7 @@ def : IsZeroIdiomFunction<[
     // int variants.
     PXORrr, PANDNrr,
     PSUBBrr, PSUBWrr, PSUBDrr, PSUBQrr,
+    PSUBSBrr, PSUBSWrr, PSUBUSBrr, PSUBUSWrr,
     PCMPGTBrr, PCMPGTDrr, PCMPGTQrr, PCMPGTWrr
   ], ZeroIdiomPredicate>,
 
@@ -746,6 +754,7 @@ def : IsZeroIdiomFunction<[
     // xmm int variants.
     VPXORrr, VPANDNrr,
     VPSUBBrr, VPSUBWrr, VPSUBDrr, VPSUBQrr,
+    VPSUBSBrr, VPSUBSWrr, VPSUBUSBrr, VPSUBUSWrr,
     VPCMPGTBrr, VPCMPGTWrr, VPCMPGTDrr, VPCMPGTQrr,
 
     // ymm variants.

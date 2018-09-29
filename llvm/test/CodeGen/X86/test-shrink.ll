@@ -575,4 +575,240 @@ no:
   ret void
 }
 
+define void @and16_trunc_8_sign(i16 %x) nounwind {
+; CHECK-LINUX64-LABEL: and16_trunc_8_sign:
+; CHECK-LINUX64:       # %bb.0:
+; CHECK-LINUX64-NEXT:    andl $128, %edi
+; CHECK-LINUX64-NEXT:    testb %dil, %dil
+; CHECK-LINUX64-NEXT:    jg .LBB13_2
+; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
+; CHECK-LINUX64-NEXT:    pushq %rax
+; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    popq %rax
+; CHECK-LINUX64-NEXT:  .LBB13_2: # %no
+; CHECK-LINUX64-NEXT:    retq
+;
+; CHECK-WIN32-64-LABEL: and16_trunc_8_sign:
+; CHECK-WIN32-64:       # %bb.0:
+; CHECK-WIN32-64-NEXT:    subq $40, %rsp
+; CHECK-WIN32-64-NEXT:    # kill: def $cx killed $cx def $ecx
+; CHECK-WIN32-64-NEXT:    andl $128, %ecx
+; CHECK-WIN32-64-NEXT:    testb %cl, %cl
+; CHECK-WIN32-64-NEXT:    jg .LBB13_2
+; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
+; CHECK-WIN32-64-NEXT:    callq bar
+; CHECK-WIN32-64-NEXT:  .LBB13_2: # %no
+; CHECK-WIN32-64-NEXT:    addq $40, %rsp
+; CHECK-WIN32-64-NEXT:    retq
+;
+; CHECK-X86-LABEL: and16_trunc_8_sign:
+; CHECK-X86:       # %bb.0:
+; CHECK-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-X86-NEXT:    andl $128, %eax
+; CHECK-X86-NEXT:    testb %al, %al
+; CHECK-X86-NEXT:    jg .LBB13_2
+; CHECK-X86-NEXT:  # %bb.1: # %yes
+; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:  .LBB13_2: # %no
+; CHECK-X86-NEXT:    retl
+  %t = and i16 %x, 128
+  %r = trunc i16 %t to i8
+  %s = icmp sle i8 %r, 0
+  br i1 %s, label %yes, label %no
+
+yes:
+  call void @bar()
+  ret void
+no:
+  ret void
+}
+
+define void @and32_trunc_8_sign(i32 %x) nounwind {
+; CHECK-LINUX64-LABEL: and32_trunc_8_sign:
+; CHECK-LINUX64:       # %bb.0:
+; CHECK-LINUX64-NEXT:    andl $128, %edi
+; CHECK-LINUX64-NEXT:    testb %dil, %dil
+; CHECK-LINUX64-NEXT:    jg .LBB14_2
+; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
+; CHECK-LINUX64-NEXT:    pushq %rax
+; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    popq %rax
+; CHECK-LINUX64-NEXT:  .LBB14_2: # %no
+; CHECK-LINUX64-NEXT:    retq
+;
+; CHECK-WIN32-64-LABEL: and32_trunc_8_sign:
+; CHECK-WIN32-64:       # %bb.0:
+; CHECK-WIN32-64-NEXT:    subq $40, %rsp
+; CHECK-WIN32-64-NEXT:    andl $128, %ecx
+; CHECK-WIN32-64-NEXT:    testb %cl, %cl
+; CHECK-WIN32-64-NEXT:    jg .LBB14_2
+; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
+; CHECK-WIN32-64-NEXT:    callq bar
+; CHECK-WIN32-64-NEXT:  .LBB14_2: # %no
+; CHECK-WIN32-64-NEXT:    addq $40, %rsp
+; CHECK-WIN32-64-NEXT:    retq
+;
+; CHECK-X86-LABEL: and32_trunc_8_sign:
+; CHECK-X86:       # %bb.0:
+; CHECK-X86-NEXT:    movl $128, %eax
+; CHECK-X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-X86-NEXT:    testb %al, %al
+; CHECK-X86-NEXT:    jg .LBB14_2
+; CHECK-X86-NEXT:  # %bb.1: # %yes
+; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:  .LBB14_2: # %no
+; CHECK-X86-NEXT:    retl
+  %t = and i32 %x, 128
+  %r = trunc i32 %t to i8
+  %s = icmp sle i8 %r, 0
+  br i1 %s, label %yes, label %no
+
+yes:
+  call void @bar()
+  ret void
+no:
+  ret void
+}
+
+define void @and64_trunc_8_sign(i64 %x) nounwind {
+; CHECK-LINUX64-LABEL: and64_trunc_8_sign:
+; CHECK-LINUX64:       # %bb.0:
+; CHECK-LINUX64-NEXT:    andl $128, %edi
+; CHECK-LINUX64-NEXT:    testb %dil, %dil
+; CHECK-LINUX64-NEXT:    jg .LBB15_2
+; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
+; CHECK-LINUX64-NEXT:    pushq %rax
+; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    popq %rax
+; CHECK-LINUX64-NEXT:  .LBB15_2: # %no
+; CHECK-LINUX64-NEXT:    retq
+;
+; CHECK-WIN32-64-LABEL: and64_trunc_8_sign:
+; CHECK-WIN32-64:       # %bb.0:
+; CHECK-WIN32-64-NEXT:    subq $40, %rsp
+; CHECK-WIN32-64-NEXT:    andl $128, %ecx
+; CHECK-WIN32-64-NEXT:    testb %cl, %cl
+; CHECK-WIN32-64-NEXT:    jg .LBB15_2
+; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
+; CHECK-WIN32-64-NEXT:    callq bar
+; CHECK-WIN32-64-NEXT:  .LBB15_2: # %no
+; CHECK-WIN32-64-NEXT:    addq $40, %rsp
+; CHECK-WIN32-64-NEXT:    retq
+;
+; CHECK-X86-LABEL: and64_trunc_8_sign:
+; CHECK-X86:       # %bb.0:
+; CHECK-X86-NEXT:    movl $128, %eax
+; CHECK-X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-X86-NEXT:    testb %al, %al
+; CHECK-X86-NEXT:    jg .LBB15_2
+; CHECK-X86-NEXT:  # %bb.1: # %yes
+; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:  .LBB15_2: # %no
+; CHECK-X86-NEXT:    retl
+  %t = and i64 %x, 128
+  %r = trunc i64 %t to i8
+  %s = icmp sle i8 %r, 0
+  br i1 %s, label %yes, label %no
+
+yes:
+  call void @bar()
+  ret void
+no:
+  ret void
+}
+
+define void @and32_trunc_16_sign(i32 %x) minsize nounwind {
+; CHECK-LINUX64-LABEL: and32_trunc_16_sign:
+; CHECK-LINUX64:       # %bb.0:
+; CHECK-LINUX64-NEXT:    andl $32768, %edi # imm = 0x8000
+; CHECK-LINUX64-NEXT:    testw %di, %di
+; CHECK-LINUX64-NEXT:    jg .LBB16_2
+; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
+; CHECK-LINUX64-NEXT:    pushq %rax
+; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    popq %rax
+; CHECK-LINUX64-NEXT:  .LBB16_2: # %no
+; CHECK-LINUX64-NEXT:    retq
+;
+; CHECK-WIN32-64-LABEL: and32_trunc_16_sign:
+; CHECK-WIN32-64:       # %bb.0:
+; CHECK-WIN32-64-NEXT:    subq $40, %rsp
+; CHECK-WIN32-64-NEXT:    andl $32768, %ecx # imm = 0x8000
+; CHECK-WIN32-64-NEXT:    testw %cx, %cx
+; CHECK-WIN32-64-NEXT:    jg .LBB16_2
+; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
+; CHECK-WIN32-64-NEXT:    callq bar
+; CHECK-WIN32-64-NEXT:  .LBB16_2: # %no
+; CHECK-WIN32-64-NEXT:    addq $40, %rsp
+; CHECK-WIN32-64-NEXT:    retq
+;
+; CHECK-X86-LABEL: and32_trunc_16_sign:
+; CHECK-X86:       # %bb.0:
+; CHECK-X86-NEXT:    movl $32768, %eax # imm = 0x8000
+; CHECK-X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-X86-NEXT:    testw %ax, %ax
+; CHECK-X86-NEXT:    jg .LBB16_2
+; CHECK-X86-NEXT:  # %bb.1: # %yes
+; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:  .LBB16_2: # %no
+; CHECK-X86-NEXT:    retl
+  %t = and i32 %x, 32768
+  %r = trunc i32 %t to i16
+  %s = icmp sle i16 %r, 0
+  br i1 %s, label %yes, label %no
+
+yes:
+  call void @bar()
+  ret void
+no:
+  ret void
+}
+
+define void @and64_trunc_32_sign(i64 %x) minsize nounwind {
+; CHECK-LINUX64-LABEL: and64_trunc_32_sign:
+; CHECK-LINUX64:       # %bb.0:
+; CHECK-LINUX64-NEXT:    andl $32768, %edi # imm = 0x8000
+; CHECK-LINUX64-NEXT:    testw %di, %di
+; CHECK-LINUX64-NEXT:    jg .LBB17_2
+; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
+; CHECK-LINUX64-NEXT:    pushq %rax
+; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    popq %rax
+; CHECK-LINUX64-NEXT:  .LBB17_2: # %no
+; CHECK-LINUX64-NEXT:    retq
+;
+; CHECK-WIN32-64-LABEL: and64_trunc_32_sign:
+; CHECK-WIN32-64:       # %bb.0:
+; CHECK-WIN32-64-NEXT:    subq $40, %rsp
+; CHECK-WIN32-64-NEXT:    andl $32768, %ecx # imm = 0x8000
+; CHECK-WIN32-64-NEXT:    testw %cx, %cx
+; CHECK-WIN32-64-NEXT:    jg .LBB17_2
+; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
+; CHECK-WIN32-64-NEXT:    callq bar
+; CHECK-WIN32-64-NEXT:  .LBB17_2: # %no
+; CHECK-WIN32-64-NEXT:    addq $40, %rsp
+; CHECK-WIN32-64-NEXT:    retq
+;
+; CHECK-X86-LABEL: and64_trunc_32_sign:
+; CHECK-X86:       # %bb.0:
+; CHECK-X86-NEXT:    movl $32768, %eax # imm = 0x8000
+; CHECK-X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-X86-NEXT:    testw %ax, %ax
+; CHECK-X86-NEXT:    jg .LBB17_2
+; CHECK-X86-NEXT:  # %bb.1: # %yes
+; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:  .LBB17_2: # %no
+; CHECK-X86-NEXT:    retl
+  %t = and i64 %x, 32768
+  %r = trunc i64 %t to i16
+  %s = icmp sle i16 %r, 0
+  br i1 %s, label %yes, label %no
+
+yes:
+  call void @bar()
+  ret void
+no:
+  ret void
+}
+
 declare void @bar()

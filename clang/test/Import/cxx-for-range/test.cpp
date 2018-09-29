@@ -4,6 +4,11 @@
 
 // CHECK-NEXT: DeclStmt
 // CHECK-NEXT: VarDecl
+// CHECK-SAME: c 'Container'
+// CHECK-NEXT: CXXConstructExpr
+
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT: VarDecl
 // CHECK-NEXT: DeclRefExpr
 // CHECK-SAME: 'c'
 // CHECK-SAME: Container

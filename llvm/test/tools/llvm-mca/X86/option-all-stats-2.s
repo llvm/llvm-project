@@ -42,61 +42,61 @@ add %eax, %eax
 # FULL-NEXT:  1,              62  (60.2%)
 # FULL-NEXT:  2,              19  (18.4%)
 
-# FULL:      Schedulers - number of cycles where we saw N instructions issued:
-# FULL-NEXT: [# issued], [# cycles]
-# FULL-NEXT:  0,          3  (2.9%)
-# FULL-NEXT:  1,          100  (97.1%)
+# ALL:       Schedulers - number of cycles where we saw N instructions issued:
+# ALL-NEXT:  [# issued], [# cycles]
+# ALL-NEXT:   0,          3  (2.9%)
+# ALL-NEXT:   1,          100  (97.1%)
 
-# FULL:      Scheduler's queue usage:
-# FULL-NEXT: [1] Resource name.
-# FULL-NEXT: [2] Average number of used buffer entries.
-# FULL-NEXT: [3] Maximum number of used buffer entries.
-# FULL-NEXT: [4] Total number of buffer entries.
+# ALL:       Scheduler's queue usage:
+# ALL-NEXT:  [1] Resource name.
+# ALL-NEXT:  [2] Average number of used buffer entries.
+# ALL-NEXT:  [3] Maximum number of used buffer entries.
+# ALL-NEXT:  [4] Total number of buffer entries.
 
-# FULL:       [1]            [2]        [3]        [4]
-# FULL-NEXT: JALU01           15         20         20
-# FULL-NEXT: JFPU01           0          0          18
-# FULL-NEXT: JLSAGU           0          0          12
+# ALL:        [1]            [2]        [3]        [4]
+# ALL-NEXT:  JALU01           15         20         20
+# ALL-NEXT:  JFPU01           0          0          18
+# ALL-NEXT:  JLSAGU           0          0          12
 
-# FULL:      Retire Control Unit - number of cycles where we saw N instructions retired:
-# FULL-NEXT: [# retired], [# cycles]
-# FULL-NEXT:  0,           3  (2.9%)
-# FULL-NEXT:  1,           100  (97.1%)
+# ALL:       Retire Control Unit - number of cycles where we saw N instructions retired:
+# ALL-NEXT:  [# retired], [# cycles]
+# ALL-NEXT:   0,           3  (2.9%)
+# ALL-NEXT:   1,           100  (97.1%)
 
-# FULL:      Register File statistics:
-# FULL-NEXT: Total number of mappings created:    200
-# FULL-NEXT: Max number of mappings used:         44
+# ALL:       Register File statistics:
+# ALL-NEXT:  Total number of mappings created:    200
+# ALL-NEXT:  Max number of mappings used:         44
 
-# FULL:      *  Register File #1 -- JFpuPRF:
-# FULL-NEXT:    Number of physical registers:     72
-# FULL-NEXT:    Total number of mappings created: 0
-# FULL-NEXT:    Max number of mappings used:      0
+# ALL:       *  Register File #1 -- JFpuPRF:
+# ALL-NEXT:     Number of physical registers:     72
+# ALL-NEXT:     Total number of mappings created: 0
+# ALL-NEXT:     Max number of mappings used:      0
 
-# FULL:      *  Register File #2 -- JIntegerPRF:
-# FULL-NEXT:    Number of physical registers:     64
-# FULL-NEXT:    Total number of mappings created: 200
-# FULL-NEXT:    Max number of mappings used:      44
+# ALL:       *  Register File #2 -- JIntegerPRF:
+# ALL-NEXT:     Number of physical registers:     64
+# ALL-NEXT:     Total number of mappings created: 200
+# ALL-NEXT:     Max number of mappings used:      44
 
-# FULL:      Resources:
-# FULL-NEXT: [0]   - JALU0
-# FULL-NEXT: [1]   - JALU1
-# FULL-NEXT: [2]   - JDiv
-# FULL-NEXT: [3]   - JFPA
-# FULL-NEXT: [4]   - JFPM
-# FULL-NEXT: [5]   - JFPU0
-# FULL-NEXT: [6]   - JFPU1
-# FULL-NEXT: [7]   - JLAGU
-# FULL-NEXT: [8]   - JMul
-# FULL-NEXT: [9]   - JSAGU
-# FULL-NEXT: [10]  - JSTC
-# FULL-NEXT: [11]  - JVALU0
-# FULL-NEXT: [12]  - JVALU1
-# FULL-NEXT: [13]  - JVIMUL
+# ALL:       Resources:
+# ALL-NEXT:  [0]   - JALU0
+# ALL-NEXT:  [1]   - JALU1
+# ALL-NEXT:  [2]   - JDiv
+# ALL-NEXT:  [3]   - JFPA
+# ALL-NEXT:  [4]   - JFPM
+# ALL-NEXT:  [5]   - JFPU0
+# ALL-NEXT:  [6]   - JFPU1
+# ALL-NEXT:  [7]   - JLAGU
+# ALL-NEXT:  [8]   - JMul
+# ALL-NEXT:  [9]   - JSAGU
+# ALL-NEXT:  [10]  - JSTC
+# ALL-NEXT:  [11]  - JVALU0
+# ALL-NEXT:  [12]  - JVALU1
+# ALL-NEXT:  [13]  - JVIMUL
 
-# FULL:      Resource pressure per iteration:
-# FULL-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# FULL-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -
+# ALL:       Resource pressure per iteration:
+# ALL-NEXT:  [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
+# ALL-NEXT:  0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -
 
-# FULL:      Resource pressure by instruction:
-# FULL-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# FULL-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     addl	%eax, %eax
+# ALL:       Resource pressure by instruction:
+# ALL-NEXT:  [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
+# ALL-NEXT:  0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     addl	%eax, %eax

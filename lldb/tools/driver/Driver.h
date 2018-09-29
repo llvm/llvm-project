@@ -11,9 +11,7 @@
 #define lldb_Driver_h_
 
 #include "Platform.h"
-#include "lldb/Host/PseudoTerminal.h"
 
-#include <bitset>
 #include <set>
 #include <string>
 #include <vector>
@@ -22,8 +20,6 @@
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBError.h"
-
-class IOChannel;
 
 class Driver : public lldb::SBBroadcaster {
 public:
@@ -68,8 +64,6 @@ public:
     void AddInitialCommand(const char *command, CommandPlacement placement,
                            bool is_file, lldb::SBError &error);
 
-    // static OptionDefinition m_cmd_option_table[];
-
     struct InitialCmdEntry {
       InitialCmdEntry(const char *in_contents, bool in_is_file,
                       bool is_cwd_lldbinit_file_read, bool in_quiet = false)
@@ -109,9 +103,6 @@ public:
     OptionSet m_seen_options;
   };
 
-  static lldb::SBError SetOptionValue(int option_idx, const char *option_arg,
-                                      Driver::OptionData &data);
-
   lldb::SBDebugger &GetDebugger() { return m_debugger; }
 
   void ResizeWindow(unsigned short col);
@@ -121,8 +112,6 @@ private:
   OptionData m_option_data;
 
   void ResetOptionValues();
-
-  void ReadyForCommand();
 };
 
 #endif // lldb_Driver_h_
