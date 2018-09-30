@@ -37,6 +37,11 @@ void NativeTypePointer::dump(raw_ostream &OS, int Indent,
                              PdbSymbolIdField RecurseIdFields) const {
   NativeRawSymbol::dump(OS, Indent, ShowIdFields, RecurseIdFields);
 
+  if (isMemberPointer()) {
+    dumpSymbolIdField(OS, "classParentId", getClassParentId(), Indent, Session,
+                      PdbSymbolIdField::ClassParent, ShowIdFields,
+                      RecurseIdFields);
+  }
   dumpSymbolIdField(OS, "lexicalParentId", 0, Indent, Session,
                     PdbSymbolIdField::LexicalParent, ShowIdFields,
                     RecurseIdFields);
@@ -50,8 +55,25 @@ void NativeTypePointer::dump(raw_ostream &OS, int Indent,
   dumpSymbolField(OS, "RValueReference", isRValueReference(), Indent);
   dumpSymbolField(OS, "reference", isReference(), Indent);
   dumpSymbolField(OS, "restrictedType", isRestrictedType(), Indent);
+  if (isMemberPointer()) {
+    if (isSingleInheritance())
+      dumpSymbolField(OS, "isSingleInheritance", 1, Indent);
+    else if (isMultipleInheritance())
+      dumpSymbolField(OS, "isMultipleInheritance", 1, Indent);
+    else if (isVirtualInheritance())
+      dumpSymbolField(OS, "isVirtualInheritance", 1, Indent);
+  }
   dumpSymbolField(OS, "unalignedType", isUnalignedType(), Indent);
   dumpSymbolField(OS, "volatileType", isVolatileType(), Indent);
+}
+
+SymIndexId NativeTypePointer::getClassParentId() const {
+  if (!isMemberPointer())
+    return 0;
+
+  assert(Record);
+  const MemberPointerInfo &MPI = Record->getMemberInfo();
+  return Session.getSymbolCache().findSymbolByTypeIndex(MPI.ContainingType);
 }
 
 uint64_t NativeTypePointer::getLength() const {
@@ -132,4 +154,41 @@ bool NativeTypePointer::isUnalignedType() const {
     return false;
   return (Record->getOptions() & PointerOptions::Unaligned) !=
          PointerOptions::None;
+}
+
+static inline bool isInheritanceKind(const MemberPointerInfo &MPI,
+                                     PointerToMemberRepresentation P1,
+                                     PointerToMemberRepresentation P2) {
+  return (MPI.getRepresentation() == P1 || MPI.getRepresentation() == P2);
+}
+
+bool NativeTypePointer::isSingleInheritance() const {
+  if (!isMemberPointer())
+    return false;
+  return isInheritanceKind(
+      Record->getMemberInfo(),
+      PointerToMemberRepresentation::SingleInheritanceData,
+      PointerToMemberRepresentation::SingleInheritanceFunction);
+}
+
+bool NativeTypePointer::isMultipleInheritance() const {
+  if (!isMemberPointer())
+    return false;
+  return isInheritanceKind(
+      Record->getMemberInfo(),
+      PointerToMemberRepresentation::MultipleInheritanceData,
+      PointerToMemberRepresentation::MultipleInheritanceFunction);
+}
+
+bool NativeTypePointer::isVirtualInheritance() const {
+  if (!isMemberPointer())
+    return false;
+  return isInheritanceKind(
+      Record->getMemberInfo(),
+      PointerToMemberRepresentation::VirtualInheritanceData,
+      PointerToMemberRepresentation::VirtualInheritanceFunction);
+}
+
+bool NativeTypePointer::isMemberPointer() const {
+  return isPointerToDataMember() || isPointerToMemberFunction();
 }

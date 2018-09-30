@@ -13,6 +13,7 @@
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Object/ObjectFile.h"
 
@@ -26,8 +27,13 @@ JITSymbolFlags llvm::JITSymbolFlags::fromGlobalValue(const GlobalValue &GV) {
     Flags |= JITSymbolFlags::Common;
   if (!GV.hasLocalLinkage() && !GV.hasHiddenVisibility())
     Flags |= JITSymbolFlags::Exported;
+
   if (isa<Function>(GV))
     Flags |= JITSymbolFlags::Callable;
+  else if (isa<GlobalAlias>(GV) &&
+           isa<Function>(cast<GlobalAlias>(GV).getAliasee()))
+    Flags |= JITSymbolFlags::Callable;
+
   return Flags;
 }
 
