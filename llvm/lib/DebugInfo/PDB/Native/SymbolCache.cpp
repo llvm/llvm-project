@@ -7,6 +7,7 @@
 #include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
+#include "llvm/DebugInfo/PDB/Native/NativeTypeArray.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypeBuiltin.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypeEnum.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypeFunctionSig.h"
@@ -167,6 +168,10 @@ SymIndexId SymbolCache::findSymbolByTypeIndex(codeview::TypeIndex Index) {
   switch (CVT.kind()) {
   case codeview::LF_ENUM:
     Id = createSymbolForType<NativeTypeEnum, EnumRecord>(Index, std::move(CVT));
+    break;
+  case codeview::LF_ARRAY:
+    Id = createSymbolForType<NativeTypeArray, ArrayRecord>(Index,
+                                                           std::move(CVT));
     break;
   case codeview::LF_CLASS:
   case codeview::LF_STRUCTURE:
