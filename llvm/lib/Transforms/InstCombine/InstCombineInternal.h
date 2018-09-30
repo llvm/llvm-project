@@ -551,7 +551,6 @@ private:
 
   Value *EmitGEPOffset(User *GEP);
   Instruction *scalarizePHI(ExtractElementInst &EI, PHINode *PN);
-  Value *EvaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask);
   Instruction *foldCastedBitwiseLogic(BinaryOperator &I);
   Instruction *narrowBinOp(TruncInst &Trunc);
   Instruction *narrowMaskedBinOp(BinaryOperator &And);

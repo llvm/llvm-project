@@ -193,25 +193,38 @@ EXTERN void __kmpc_kernel_end_convergent_parallel(void *buffer) {
 // support for parallel that goes parallel (1 static level only)
 ////////////////////////////////////////////////////////////////////////////////
 
-// return number of cuda threads that participate to parallel
-// calculation has to consider simd implementation in nvptx
-// i.e. (num omp threads * num lanes)
-//
-// cudathreads =
-//    if(num_threads != 0) {
-//      if(thread_limit > 0) {
-//        min (num_threads*numLanes ; thread_limit*numLanes);
-//      } else {
-//        min (num_threads*numLanes; blockDim.x)
-//      }
-//    } else {
-//      if (thread_limit != 0) {
-//        min (thread_limit*numLanes; blockDim.x)
-//      } else { // no thread_limit, no num_threads, use all cuda threads
-//        blockDim.x;
-//      }
-//    }
-//
+static INLINE uint16_t determineNumberOfThreads(uint16_t NumThreadsClause,
+                                                uint16_t NThreadsICV,
+                                                uint16_t ThreadLimit) {
+  uint16_t ThreadsRequested = NThreadsICV;
+  if (NumThreadsClause != 0) {
+    ThreadsRequested = NumThreadsClause;
+  }
+
+  uint16_t ThreadsAvailable = GetNumberOfWorkersInTeam();
+  if (ThreadLimit != 0 && ThreadLimit < ThreadsAvailable) {
+    ThreadsAvailable = ThreadLimit;
+  }
+
+  uint16_t NumThreads = ThreadsAvailable;
+  if (ThreadsRequested != 0 && ThreadsRequested < NumThreads) {
+    NumThreads = ThreadsRequested;
+  }
+
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+  // On Volta and newer architectures we require that all lanes in
+  // a warp participate in the parallel region.  Round down to a
+  // multiple of WARPSIZE since it is legal to do so in OpenMP.
+  if (NumThreads < WARPSIZE) {
+    NumThreads = 1;
+  } else {
+    NumThreads = (NumThreads & ~((uint16_t)WARPSIZE - 1));
+  }
+#endif
+
+  return NumThreads;
+}
+
 // This routine is always called by the team master..
 EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
                                            int16_t IsOMPRuntimeInitialized) {
@@ -234,78 +247,26 @@ EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
     return;
   }
 
-  uint16_t CudaThreadsForParallel = 0;
-  uint16_t NumThreadsClause =
+  uint16_t &NumThreadsClause =
       omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(threadId);
 
-  // we cannot have more than block size
-  uint16_t CudaThreadsAvail = GetNumberOfWorkersInTeam();
+  uint16_t NumThreads =
+      determineNumberOfThreads(NumThreadsClause, currTaskDescr->NThreads(),
+                               currTaskDescr->ThreadLimit());
 
-  // currTaskDescr->ThreadLimit(): If non-zero, this is the limit as
-  // specified by the thread_limit clause on the target directive.
-  // GetNumberOfWorkersInTeam(): This is the number of workers available
-  // in this kernel instance.
-  //
-  // E.g: If thread_limit is 33, the kernel is launched with 33+32=65
-  // threads.  The last warp is the master warp so in this case
-  // GetNumberOfWorkersInTeam() returns 64.
-
-  // this is different from ThreadAvail of OpenMP because we may be
-  // using some of the CUDA threads as SIMD lanes
-  int NumLanes = 1;
   if (NumThreadsClause != 0) {
-    // reset request to avoid propagating to successive #parallel
-    omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(threadId) =
-        0;
-
-    // assume that thread_limit*numlanes is already <= CudaThreadsAvail
-    // because that is already checked on the host side (CUDA offloading rtl)
-    if (currTaskDescr->ThreadLimit() != 0)
-      CudaThreadsForParallel =
-          NumThreadsClause * NumLanes < currTaskDescr->ThreadLimit() * NumLanes
-              ? NumThreadsClause * NumLanes
-              : currTaskDescr->ThreadLimit() * NumLanes;
-    else {
-      CudaThreadsForParallel = (NumThreadsClause * NumLanes > CudaThreadsAvail)
-                                   ? CudaThreadsAvail
-                                   : NumThreadsClause * NumLanes;
-    }
-  } else {
-    if (currTaskDescr->ThreadLimit() != 0) {
-      CudaThreadsForParallel =
-          (currTaskDescr->ThreadLimit() * NumLanes > CudaThreadsAvail)
-              ? CudaThreadsAvail
-              : currTaskDescr->ThreadLimit() * NumLanes;
-    } else
-      CudaThreadsForParallel = CudaThreadsAvail;
+    // Reset request to avoid propagating to successive #parallel
+    NumThreadsClause = 0;
   }
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-  // On Volta and newer architectures we require that all lanes in
-  // a warp participate in the parallel region.  Round down to a
-  // multiple of WARPSIZE since it is legal to do so in OpenMP.
-  // CudaThreadsAvail is the number of workers available in this
-  // kernel instance and is greater than or equal to
-  // currTaskDescr->ThreadLimit().
-  if (CudaThreadsForParallel < CudaThreadsAvail) {
-    CudaThreadsForParallel =
-        (CudaThreadsForParallel < WARPSIZE)
-            ? 1
-            : CudaThreadsForParallel & ~((uint16_t)WARPSIZE - 1);
-  }
-#endif
-
-  ASSERT(LT_FUSSY, CudaThreadsForParallel > 0,
-         "bad thread request of %d threads", CudaThreadsForParallel);
+  ASSERT(LT_FUSSY, NumThreads > 0, "bad thread request of %d threads",
+         NumThreads);
   ASSERT0(LT_FUSSY, GetThreadIdInBlock() == GetMasterThreadID(),
           "only team master can create parallel");
 
-  // set number of threads on work descriptor
-  // this is different from the number of cuda threads required for the parallel
-  // region
+  // Set number of threads on work descriptor.
   omptarget_nvptx_WorkDescr &workDescr = getMyWorkDescriptor();
-  workDescr.WorkTaskDescr()->CopyToWorkDescr(currTaskDescr,
-                                             CudaThreadsForParallel / NumLanes);
+  workDescr.WorkTaskDescr()->CopyToWorkDescr(currTaskDescr, NumThreads);
 }
 
 // All workers call this function.  Deactivate those not needed.

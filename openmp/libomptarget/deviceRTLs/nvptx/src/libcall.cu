@@ -61,8 +61,8 @@ EXTERN int omp_get_max_threads(void) {
   omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor();
   int rc = 1; // default is 1 thread avail
   if (!currTaskDescr->InParallelRegion()) {
-    // not currently in a parallel region... all are available
-    rc = GetNumberOfProcsInTeam();
+    // Not currently in a parallel region, return what was set.
+    rc = currTaskDescr->NThreads();
     ASSERT0(LT_FUSSY, rc >= 0, "bad number of threads");
   }
   PRINT(LD_IO, "call omp_get_max_threads() return %d\n", rc);
@@ -122,32 +122,11 @@ EXTERN int omp_in_final(void) {
 }
 
 EXTERN void omp_set_dynamic(int flag) {
-  PRINT(LD_IO, "call omp_set_dynamic(%d)\n", flag);
-  if (isRuntimeUninitialized()) {
-    ASSERT0(LT_FUSSY, isSPMDMode(),
-            "Expected SPMD mode only with uninitialized runtime.");
-    return;
-  }
-
-  omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor();
-  if (flag) {
-    currTaskDescr->SetDynamic();
-  } else {
-    currTaskDescr->ClearDynamic();
-  }
+  PRINT(LD_IO, "call omp_set_dynamic(%d) is ignored (no support)\n", flag);
 }
 
 EXTERN int omp_get_dynamic(void) {
   int rc = 0;
-  if (isRuntimeUninitialized()) {
-    ASSERT0(LT_FUSSY, isSPMDMode(),
-            "Expected SPMD mode only with uninitialized runtime.");
-    return rc;
-  }
-  omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor();
-  if (currTaskDescr->IsDynamic()) {
-    rc = 1;
-  }
   PRINT(LD_IO, "call omp_get_dynamic() returns %d\n", rc);
   return rc;
 }
@@ -237,14 +216,13 @@ EXTERN int omp_get_ancestor_thread_num(int level) {
           // print current state
           omp_sched_t sched = currTaskDescr->GetRuntimeSched();
           PRINT(LD_ALL,
-                "task descr %s %d: %s, in par %d, dyn %d, rt sched %d,"
+                "task descr %s %d: %s, in par %d, rt sched %d,"
                 " chunk %" PRIu64 "; tid %d, tnum %d, nthreads %d\n",
                 "ancestor", steps,
                 (currTaskDescr->IsParallelConstruct() ? "par" : "task"),
-                currTaskDescr->InParallelRegion(), currTaskDescr->IsDynamic(),
-                sched, currTaskDescr->RuntimeChunkSize(),
-                currTaskDescr->ThreadId(), currTaskDescr->ThreadsInTeam(),
-                currTaskDescr->NThreads());
+                currTaskDescr->InParallelRegion(), sched,
+                currTaskDescr->RuntimeChunkSize(), currTaskDescr->ThreadId(),
+                currTaskDescr->ThreadsInTeam(), currTaskDescr->NThreads());
         }
 
         if (currTaskDescr->IsParallelConstruct()) {
