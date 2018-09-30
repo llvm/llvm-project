@@ -76,6 +76,11 @@ BasicIRLayerMaterializationUnit::BasicIRLayerMaterializationUnit(
 void BasicIRLayerMaterializationUnit::materialize(
     MaterializationResponsibility R) {
 
+  // Throw away the SymbolToDefinition map: it's not usable after we hand
+  // off the module.
+  SymbolToDefinition.clear();
+
+  // If cloneToNewContextOnEmit is set, clone the module now.
   if (L.getCloneToNewContextOnEmit())
     TSM = cloneToNewContext(TSM);
 
