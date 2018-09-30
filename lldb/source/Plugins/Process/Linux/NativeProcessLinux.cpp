@@ -1502,40 +1502,6 @@ size_t NativeProcessLinux::UpdateThreads() {
   return m_threads.size();
 }
 
-Status NativeProcessLinux::GetSoftwareBreakpointPCOffset(
-    uint32_t &actual_opcode_size) {
-  // FIXME put this behind a breakpoint protocol class that can be
-  // set per architecture.  Need ARM, MIPS support here.
-  static const uint8_t g_i386_opcode[] = {0xCC};
-  static const uint8_t g_s390x_opcode[] = {0x00, 0x01};
-
-  switch (m_arch.GetMachine()) {
-  case llvm::Triple::x86:
-  case llvm::Triple::x86_64:
-    actual_opcode_size = static_cast<uint32_t>(sizeof(g_i386_opcode));
-    return Status();
-
-  case llvm::Triple::systemz:
-    actual_opcode_size = static_cast<uint32_t>(sizeof(g_s390x_opcode));
-    return Status();
-
-  case llvm::Triple::arm:
-  case llvm::Triple::aarch64:
-  case llvm::Triple::mips64:
-  case llvm::Triple::mips64el:
-  case llvm::Triple::mips:
-  case llvm::Triple::mipsel:
-  case llvm::Triple::ppc64le:
-    // On these architectures the PC don't get updated for breakpoint hits
-    actual_opcode_size = 0;
-    return Status();
-
-  default:
-    assert(false && "CPU type not supported!");
-    return Status("CPU type not supported");
-  }
-}
-
 Status NativeProcessLinux::SetBreakpoint(lldb::addr_t addr, uint32_t size,
                                          bool hardware) {
   if (hardware)
@@ -1763,13 +1729,8 @@ NativeProcessLinux::FixupBreakpointPCAsNeeded(NativeThreadLinux &thread) {
   // code).
   NativeRegisterContext &context = thread.GetRegisterContext();
 
-  uint32_t breakpoint_size = 0;
-  error = GetSoftwareBreakpointPCOffset(breakpoint_size);
-  if (error.Fail()) {
-    LLDB_LOG(log, "GetBreakpointSize() failed: {0}", error);
-    return error;
-  } else
-    LLDB_LOG(log, "breakpoint size: {0}", breakpoint_size);
+  uint32_t breakpoint_size = GetSoftwareBreakpointPCOffset();
+  LLDB_LOG(log, "breakpoint size: {0}", breakpoint_size);
 
   // First try probing for a breakpoint at a software breakpoint location: PC -
   // breakpoint size.

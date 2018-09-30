@@ -182,8 +182,6 @@ private:
 
   NativeThreadLinux &AddThread(lldb::tid_t thread_id);
 
-  Status GetSoftwareBreakpointPCOffset(uint32_t &actual_opcode_size);
-
   Status FixupBreakpointPCAsNeeded(NativeThreadLinux &thread);
 
   /// Writes a siginfo_t structure corresponding to the given thread ID to the
