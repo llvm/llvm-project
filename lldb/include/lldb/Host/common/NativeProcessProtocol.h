@@ -451,6 +451,12 @@ protected:
   virtual llvm::Expected<llvm::ArrayRef<uint8_t>>
   GetSoftwareBreakpointTrapOpcode(size_t size_hint);
 
+  /// Return the offset of the PC relative to the software breakpoint that was hit. If an
+  /// architecture (e.g. arm) reports breakpoint hits before incrementing the PC, this offset
+  /// will be 0. If an architecture (e.g. intel) reports breakpoints hits after incrementing the
+  /// PC, this offset will be the size of the breakpoint opcode.
+  virtual size_t GetSoftwareBreakpointPCOffset();
+
   // -----------------------------------------------------------
   /// Notify the delegate that an exec occurred.
   ///

@@ -167,7 +167,8 @@ Instruction *InstCombiner::scalarizePHI(ExtractElementInst &EI, PHINode *PN) {
 }
 
 static Instruction *foldBitcastExtElt(ExtractElementInst &Ext,
-                                      InstCombiner::BuilderTy &Builder) {
+                                      InstCombiner::BuilderTy &Builder,
+                                      bool IsBigEndian) {
   Value *X;
   uint64_t ExtIndexC;
   if (!match(Ext.getVectorOperand(), m_BitCast(m_Value(X))) ||
@@ -185,6 +186,47 @@ static Instruction *foldBitcastExtElt(ExtractElementInst &Ext,
   if (NumSrcElts == NumElts)
     if (Value *Elt = findScalarElement(X, ExtIndexC))
       return new BitCastInst(Elt, DestTy);
+
+  // If the source elements are wider than the destination, try to shift and
+  // truncate a subset of scalar bits of an insert op.
+  if (NumSrcElts < NumElts && SrcTy->getScalarType()->isIntegerTy()) {
+    Value *Scalar;
+    uint64_t InsIndexC;
+    if (!match(X, m_InsertElement(m_Value(), m_Value(Scalar),
+                                  m_ConstantInt(InsIndexC))))
+      return nullptr;
+
+    // The extract must be from the subset of vector elements that we inserted
+    // into. Example: if we inserted element 1 of a <2 x i64> and we are
+    // extracting an i16 (narrowing ratio = 4), then this extract must be from 1
+    // of elements 4-7 of the bitcasted vector.
+    unsigned NarrowingRatio = NumElts / NumSrcElts;
+    if (ExtIndexC / NarrowingRatio != InsIndexC)
+      return nullptr;
+
+    // We are extracting part of the original scalar. How that scalar is
+    // inserted into the vector depends on the endian-ness. Example:
+    //              Vector Byte Elt Index:    0  1  2  3  4  5  6  7
+    //                                       +--+--+--+--+--+--+--+--+
+    // inselt <2 x i32> V, <i32> S, 1:       |V0|V1|V2|V3|S0|S1|S2|S3|
+    // extelt <4 x i16> V', 3:               |                 |S2|S3|
+    //                                       +--+--+--+--+--+--+--+--+
+    // If this is little-endian, S2|S3 are the MSB of the 32-bit 'S' value.
+    // If this is big-endian, S2|S3 are the LSB of the 32-bit 'S' value.
+    // In this example, we must right-shift little-endian. Big-endian is just a
+    // truncate.
+    unsigned Chunk = ExtIndexC % NarrowingRatio;
+    if (IsBigEndian)
+      Chunk = NarrowingRatio - 1 - Chunk;
+    unsigned ShAmt = Chunk * DestTy->getPrimitiveSizeInBits();
+    if (ShAmt) {
+      // Bail out if we could end with more instructions than we started with.
+      if (!Ext.getVectorOperand()->hasOneUse())
+        return nullptr;
+      Scalar = Builder.CreateLShr(Scalar, ShAmt);
+    }
+    return new TruncInst(Scalar, DestTy);
+  }
 
   return nullptr;
 }
@@ -224,7 +266,7 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
       }
     }
 
-    if (Instruction *I = foldBitcastExtElt(EI, Builder))
+    if (Instruction *I = foldBitcastExtElt(EI, Builder, DL.isBigEndian()))
       return I;
 
     // If there's a vector PHI feeding a scalar use through this extractelement
@@ -918,6 +960,13 @@ static bool canEvaluateShuffled(Value *V, ArrayRef<int> Mask,
     case Instruction::FPTrunc:
     case Instruction::FPExt:
     case Instruction::GetElementPtr: {
+      // Bail out if we would create longer vector ops. We could allow creating
+      // longer vector ops, but that may result in more expensive codegen. We
+      // would also need to limit the transform to avoid undefined behavior for
+      // integer div/rem.
+      Type *ITy = I->getType();
+      if (ITy->isVectorTy() && Mask.size() > ITy->getVectorNumElements())
+        return false;
       for (Value *Operand : I->operands()) {
         if (!canEvaluateShuffled(Operand, Mask, Depth - 1))
           return false;
@@ -1464,8 +1513,7 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     if (isRHSID) return replaceInstUsesWith(SVI, RHS);
   }
 
-  if (isa<UndefValue>(RHS) && !SVI.increasesLength() &&
-      canEvaluateShuffled(LHS, Mask)) {
+  if (isa<UndefValue>(RHS) && canEvaluateShuffled(LHS, Mask)) {
     Value *V = evaluateInDifferentElementOrder(LHS, Mask);
     return replaceInstUsesWith(SVI, V);
   }

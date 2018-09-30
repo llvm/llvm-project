@@ -202,8 +202,10 @@ EXTERN int omp_get_ancestor_thread_num(int level) {
             "Expected SPMD mode only with uninitialized runtime.");
     return level == 1 ? GetThreadIdInBlock() : 0;
   }
-  int rc = 0; // default at level 0
-  if (level >= 0) {
+  int rc = -1;
+  if (level == 0) {
+    rc = 0;
+  } else if (level > 0) {
     int totLevel = omp_get_level();
     if (level <= totLevel) {
       omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor();
@@ -249,8 +251,10 @@ EXTERN int omp_get_team_size(int level) {
             "Expected SPMD mode only with uninitialized runtime.");
     return level == 1 ? GetNumberOfThreadsInBlock() : 1;
   }
-  int rc = 1; // default at level 0
-  if (level >= 0) {
+  int rc = -1;
+  if (level == 0) {
+    rc = 1;
+  } else if (level > 0) {
     int totLevel = omp_get_level();
     if (level <= totLevel) {
       omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor();
