@@ -29,11 +29,11 @@ ThreadSafeModule cloneToNewContext(ThreadSafeModule &TSM,
   SmallVector<char, 1> ClonedModuleBuffer;
 
   {
-    std::vector<GlobalValue *> ClonedDefsInSrc;
+    std::set<GlobalValue *> ClonedDefsInSrc;
     ValueToValueMapTy VMap;
     auto Tmp = CloneModule(*TSM.getModule(), VMap, [&](const GlobalValue *GV) {
       if (ShouldCloneDef(*GV)) {
-        ClonedDefsInSrc.push_back(const_cast<GlobalValue *>(GV));
+        ClonedDefsInSrc.insert(const_cast<GlobalValue *>(GV));
         return true;
       }
       return false;

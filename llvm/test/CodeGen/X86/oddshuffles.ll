@@ -1280,7 +1280,7 @@ define void @interleave_24i32_out(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm11[1,1,2,3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm6 = xmm6[0],xmm3[0],xmm6[1],xmm3[1]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,1],xmm5[0,3]
-; SSE2-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,0],xmm11[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,0],xmm11[2,0]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,3],xmm5[2,0]
 ; SSE2-NEXT:    movaps %xmm8, %xmm5
@@ -1288,7 +1288,7 @@ define void @interleave_24i32_out(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm9[2,3,0,1]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm8[0,3]
-; SSE2-NEXT:    shufps {{.*#+}} xmm8 = xmm8[1,0],xmm10[2,3]
+; SSE2-NEXT:    shufps {{.*#+}} xmm8 = xmm8[1,0],xmm10[2,0]
 ; SSE2-NEXT:    movdqa %xmm9, %xmm2
 ; SSE2-NEXT:    shufps {{.*#+}} xmm9 = xmm9[0,3],xmm8[2,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,0],xmm10[0,0]

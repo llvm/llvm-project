@@ -108,6 +108,12 @@ namespace {
                     cl::desc("calls the given entry-point on a new thread "
                              "(jit-kind=orc-lazy only)"));
 
+  cl::opt<bool> PerModuleLazy(
+      "per-module-lazy",
+      cl::desc("Performs lazy compilation on whole module boundaries "
+               "rather than individual functions"),
+      cl::init(false));
+
   // The MCJIT supports building for a target address space separate from
   // the JIT compilation process. Use a forked process and a copying
   // memory manager with IPC to execute using this functionality.
@@ -349,6 +355,7 @@ static void reportError(SMDiagnostic Err, const char *ProgName) {
 }
 
 int runOrcLazyJIT(const char *ProgName);
+void disallowOrcOptions();
 
 //===----------------------------------------------------------------------===//
 // main Driver function
@@ -374,19 +381,8 @@ int main(int argc, char **argv, char * const *envp) {
 
   if (UseJITKind == JITKind::OrcLazy)
     return runOrcLazyJIT(argv[0]);
-  else {
-    // Make sure nobody used an orc-lazy specific option accidentally.
-
-    if (LazyJITCompileThreads != 0) {
-      errs() << "-compile-threads requires -jit-kind=orc-lazy\n";
-      exit(1);
-    }
-
-    if (!ThreadEntryPoints.empty()) {
-      errs() << "-thread-entry requires -jit-kind=orc-lazy\n";
-      exit(1);
-    }
-  }
+  else
+    disallowOrcOptions();
 
   LLVMContext Context;
 
@@ -794,6 +790,9 @@ int runOrcLazyJIT(const char *ProgName) {
   }
   auto J = ExitOnErr(orc::LLLazyJIT::Create(std::move(JTMB), DL, LazyJITCompileThreads));
 
+  if (PerModuleLazy)
+    J->setPartitionFunction(orc::CompileOnDemandLayer2::compileWholeModule);
+
   auto Dump = createDebugDumper();
 
   J->setLazyCompileTransform([&](orc::ThreadSafeModule TSM,
@@ -871,6 +870,25 @@ int runOrcLazyJIT(const char *ProgName) {
   CXXRuntimeOverrides.runDestructors();
 
   return Result;
+}
+
+void disallowOrcOptions() {
+  // Make sure nobody used an orc-lazy specific option accidentally.
+
+  if (LazyJITCompileThreads != 0) {
+    errs() << "-compile-threads requires -jit-kind=orc-lazy\n";
+    exit(1);
+  }
+
+  if (!ThreadEntryPoints.empty()) {
+    errs() << "-thread-entry requires -jit-kind=orc-lazy\n";
+    exit(1);
+  }
+
+  if (PerModuleLazy) {
+    errs() << "-per-module-lazy requires -jit-kind=orc-lazy\n";
+    exit(1);
+  }
 }
 
 std::unique_ptr<FDRawChannel> launchRemote() {

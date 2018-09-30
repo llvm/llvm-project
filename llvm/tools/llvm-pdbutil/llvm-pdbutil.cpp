@@ -243,6 +243,9 @@ cl::opt<bool> Typedefs("typedefs", cl::desc("Display typedef types"),
                        cl::cat(TypeCategory), cl::sub(PrettySubcommand));
 cl::opt<bool> Funcsigs("funcsigs", cl::desc("Display function signatures"),
                        cl::cat(TypeCategory), cl::sub(PrettySubcommand));
+cl::opt<bool> Pointers("pointers", cl::desc("Display pointer types"),
+                       cl::cat(TypeCategory), cl::sub(PrettySubcommand));
+
 cl::opt<SymbolSortMode> SymbolOrder(
     "symbol-order", cl::desc("symbol sort order"),
     cl::init(SymbolSortMode::None),
@@ -1179,7 +1182,7 @@ static void dumpPretty(StringRef Path) {
   }
 
   if (opts::pretty::Classes || opts::pretty::Enums || opts::pretty::Typedefs ||
-      opts::pretty::Funcsigs) {
+      opts::pretty::Funcsigs || opts::pretty::Pointers) {
     Printer.NewLine();
     WithColor(Printer, PDB_ColorItem::SectionHeader).get() << "---TYPES---";
     Printer.Indent();
@@ -1516,6 +1519,8 @@ int main(int Argc, const char **Argv) {
       opts::pretty::Classes = true;
       opts::pretty::Typedefs = true;
       opts::pretty::Enums = true;
+      opts::pretty::Pointers = true;
+      opts::pretty::Funcsigs = true;
     }
 
     // When adding filters for excluded compilands and types, we need to

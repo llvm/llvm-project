@@ -9,9 +9,7 @@ define i32 @t(i8* %ref_frame_ptr, i32 %ref_frame_stride, i32 %idxX, i32 %idxY) n
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    imull {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    addl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,1,2,4,5,6,7]
-; X32-NEXT:    movd %xmm0, %eax
+; X32-NEXT:    movl (%eax,%ecx), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t:

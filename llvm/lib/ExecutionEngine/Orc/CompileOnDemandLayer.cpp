@@ -14,144 +14,75 @@
 using namespace llvm;
 using namespace llvm::orc;
 
-static void extractAliases(MaterializationResponsibility &R, Module &M,
-                           MangleAndInterner &Mangle) {
-  SymbolAliasMap Aliases;
+static ThreadSafeModule extractSubModule(ThreadSafeModule &TSM,
+                                         StringRef Suffix,
+                                         GVPredicate ShouldExtract) {
 
-  std::vector<GlobalAlias *> ModAliases;
-  for (auto &A : M.aliases())
-    ModAliases.push_back(&A);
+  auto DeleteExtractedDefs = [](GlobalValue &GV) {
+    // Bump the linkage: this global will be provided by the external module.
+    GV.setLinkage(GlobalValue::ExternalLinkage);
 
-  for (auto *A : ModAliases) {
-    Constant *Aliasee = A->getAliasee();
-    assert(A->hasName() && "Anonymous alias?");
-    assert(Aliasee->hasName() && "Anonymous aliasee");
-    std::string AliasName = A->getName();
-
-    Aliases[Mangle(AliasName)] = SymbolAliasMapEntry(
-        {Mangle(Aliasee->getName()), JITSymbolFlags::fromGlobalValue(*A)});
-
-    if (isa<Function>(Aliasee)) {
-      auto *F = cloneFunctionDecl(M, *cast<Function>(Aliasee));
-      A->replaceAllUsesWith(F);
-      A->eraseFromParent();
-      F->setName(AliasName);
-    } else if (isa<GlobalVariable>(Aliasee)) {
-      auto *G = cloneGlobalVariableDecl(M, *cast<GlobalVariable>(Aliasee));
-      A->replaceAllUsesWith(G);
-      A->eraseFromParent();
-      G->setName(AliasName);
-    }
-  }
-
-  R.replace(symbolAliases(std::move(Aliases)));
-}
-
-static ThreadSafeModule extractAndClone(ThreadSafeModule &TSM, StringRef Suffix,
-                                        GVPredicate ShouldCloneDefinition) {
-
-  auto DeleteClonedDefsAndPromoteDeclLinkages = [](GlobalValue &GV) {
-    // Delete the definition and bump the linkage in the source module.
+    // Delete the definition in the source module.
     if (isa<Function>(GV)) {
       auto &F = cast<Function>(GV);
       F.deleteBody();
       F.setPersonalityFn(nullptr);
     } else if (isa<GlobalVariable>(GV)) {
       cast<GlobalVariable>(GV).setInitializer(nullptr);
+    } else if (isa<GlobalAlias>(GV)) {
+      // We need to turn deleted aliases into function or variable decls based
+      // on the type of their aliasee.
+      auto &A = cast<GlobalAlias>(GV);
+      Constant *Aliasee = A.getAliasee();
+      assert(A.hasName() && "Anonymous alias?");
+      assert(Aliasee->hasName() && "Anonymous aliasee");
+      std::string AliasName = A.getName();
+
+      if (isa<Function>(Aliasee)) {
+        auto *F = cloneFunctionDecl(*A.getParent(), *cast<Function>(Aliasee));
+        A.replaceAllUsesWith(F);
+        A.eraseFromParent();
+        F->setName(AliasName);
+      } else if (isa<GlobalVariable>(Aliasee)) {
+        auto *G = cloneGlobalVariableDecl(*A.getParent(),
+                                          *cast<GlobalVariable>(Aliasee));
+        A.replaceAllUsesWith(G);
+        A.eraseFromParent();
+        G->setName(AliasName);
+      } else
+        llvm_unreachable("Alias to unsupported type");
     } else
       llvm_unreachable("Unsupported global type");
-
-    GV.setLinkage(GlobalValue::ExternalLinkage);
   };
 
-  auto NewTSMod = cloneToNewContext(TSM, ShouldCloneDefinition,
-                                    DeleteClonedDefsAndPromoteDeclLinkages);
+  auto NewTSMod = cloneToNewContext(TSM, ShouldExtract, DeleteExtractedDefs);
   auto &M = *NewTSMod.getModule();
   M.setModuleIdentifier((M.getModuleIdentifier() + Suffix).str());
 
   return NewTSMod;
 }
 
-static ThreadSafeModule extractGlobals(ThreadSafeModule &TSM) {
-  return extractAndClone(TSM, ".globals", [](const GlobalValue &GV) {
-    return isa<GlobalVariable>(GV);
-  });
-}
-
 namespace llvm {
 namespace orc {
 
-class ExtractingIRMaterializationUnit : public IRMaterializationUnit {
+class PartitioningIRMaterializationUnit : public IRMaterializationUnit {
 public:
-  ExtractingIRMaterializationUnit(ExecutionSession &ES,
-                                  CompileOnDemandLayer2 &Parent,
-                                  ThreadSafeModule TSM)
+  PartitioningIRMaterializationUnit(ExecutionSession &ES, ThreadSafeModule TSM,
+                                    CompileOnDemandLayer2 &Parent)
       : IRMaterializationUnit(ES, std::move(TSM)), Parent(Parent) {}
 
-  ExtractingIRMaterializationUnit(ThreadSafeModule TSM,
-                                  SymbolFlagsMap SymbolFlags,
-                                  SymbolNameToDefinitionMap SymbolToDefinition,
-                                  CompileOnDemandLayer2 &Parent)
+  PartitioningIRMaterializationUnit(
+      ThreadSafeModule TSM, SymbolFlagsMap SymbolFlags,
+      SymbolNameToDefinitionMap SymbolToDefinition,
+      CompileOnDemandLayer2 &Parent)
       : IRMaterializationUnit(std::move(TSM), std::move(SymbolFlags),
                               std::move(SymbolToDefinition)),
         Parent(Parent) {}
 
 private:
   void materialize(MaterializationResponsibility R) override {
-    // FIXME: Need a 'notify lazy-extracting/emitting' callback to tie the
-    //        extracted module key, extracted module, and source module key
-    //        together. This could be used, for example, to provide a specific
-    //        memory manager instance to the linking layer.
-
-    auto RequestedSymbols = R.getRequestedSymbols();
-
-    // Extract the requested functions into a new module.
-    ThreadSafeModule ExtractedFunctionsModule;
-    if (!RequestedSymbols.empty()) {
-      std::string Suffix;
-      std::set<const GlobalValue *> FunctionsToClone;
-      for (auto &Name : RequestedSymbols) {
-        auto I = SymbolToDefinition.find(Name);
-        assert(I != SymbolToDefinition.end() && I->second != nullptr &&
-               "Should have a non-null definition");
-        FunctionsToClone.insert(I->second);
-        Suffix += ".";
-        Suffix += *Name;
-      }
-
-      std::lock_guard<std::mutex> Lock(SourceModuleMutex);
-      ExtractedFunctionsModule =
-          extractAndClone(TSM, Suffix, [&](const GlobalValue &GV) -> bool {
-            return FunctionsToClone.count(&GV);
-          });
-    }
-
-    // Build a new ExtractingIRMaterializationUnit to delegate the unrequested
-    // symbols to.
-    SymbolFlagsMap DelegatedSymbolFlags;
-    IRMaterializationUnit::SymbolNameToDefinitionMap
-        DelegatedSymbolToDefinition;
-    for (auto &KV : SymbolToDefinition) {
-      if (RequestedSymbols.count(KV.first))
-        continue;
-      DelegatedSymbolFlags[KV.first] =
-          JITSymbolFlags::fromGlobalValue(*KV.second);
-      DelegatedSymbolToDefinition[KV.first] = KV.second;
-    }
-
-    if (!DelegatedSymbolFlags.empty()) {
-      assert(DelegatedSymbolFlags.size() ==
-                 DelegatedSymbolToDefinition.size() &&
-             "SymbolFlags and SymbolToDefinition should have the same number "
-             "of entries");
-      R.replace(llvm::make_unique<ExtractingIRMaterializationUnit>(
-          std::move(TSM), std::move(DelegatedSymbolFlags),
-          std::move(DelegatedSymbolToDefinition), Parent));
-    }
-
-    if (ExtractedFunctionsModule)
-      Parent.emitExtractedFunctionsModule(std::move(R),
-                                          std::move(ExtractedFunctionsModule));
+    Parent.emitPartition(std::move(R), std::move(TSM),
+                         std::move(SymbolToDefinition));
   }
 
   void discard(const JITDylib &V, SymbolStringPtr Name) override {
@@ -165,74 +96,71 @@ private:
   CompileOnDemandLayer2 &Parent;
 };
 
+Optional<CompileOnDemandLayer2::GlobalValueSet>
+CompileOnDemandLayer2::compileRequested(GlobalValueSet Requested) {
+  return std::move(Requested);
+}
+
+Optional<CompileOnDemandLayer2::GlobalValueSet>
+CompileOnDemandLayer2::compileWholeModule(GlobalValueSet Requested) {
+  return None;
+}
+
 CompileOnDemandLayer2::CompileOnDemandLayer2(
     ExecutionSession &ES, IRLayer &BaseLayer, LazyCallThroughManager &LCTMgr,
     IndirectStubsManagerBuilder BuildIndirectStubsManager)
     : IRLayer(ES), BaseLayer(BaseLayer), LCTMgr(LCTMgr),
       BuildIndirectStubsManager(std::move(BuildIndirectStubsManager)) {}
 
-Error CompileOnDemandLayer2::add(JITDylib &V, VModuleKey K,
-                                 ThreadSafeModule TSM) {
-  return IRLayer::add(V, K, std::move(TSM));
+void CompileOnDemandLayer2::setPartitionFunction(PartitionFunction Partition) {
+  this->Partition = std::move(Partition);
 }
 
 void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
                                  ThreadSafeModule TSM) {
+  assert(TSM.getModule() && "Null module");
+
   auto &ES = getExecutionSession();
-  assert(TSM && "M should not be null");
   auto &M = *TSM.getModule();
 
-  for (auto &GV : M.global_values())
-    if (GV.hasWeakLinkage())
-      GV.setLinkage(GlobalValue::ExternalLinkage);
+  // First, do some cleanup on the module:
+  cleanUpModule(M);
+
+  // Now sort the callables and non-callables, build re-exports and lodge the
+  // actual module with the implementation dylib.
+  auto &PDR = getPerDylibResources(R.getTargetJITDylib());
 
   MangleAndInterner Mangle(ES, M.getDataLayout());
-
-  extractAliases(R, *TSM.getModule(), Mangle);
-
-  auto GlobalsModule = extractGlobals(TSM);
-
-  // Delete the bodies of any available externally functions and build the
-  // lazy reexports alias map.
-  std::map<SymbolStringPtr, std::pair<JITTargetAddress, JITSymbolFlags>>
-      StubCallbacksAndLinkages;
-  auto &TargetJD = R.getTargetJITDylib();
-  auto &Resources = getPerDylibResources(TargetJD);
-  auto &ImplD = Resources.getImplDylib();
-
-  SymbolAliasMap LazyReexports;
-  for (auto &F : M.functions()) {
-    if (F.isDeclaration())
+  SymbolAliasMap NonCallables;
+  SymbolAliasMap Callables;
+  for (auto &GV : M.global_values()) {
+    assert(GV.hasName() && !GV.hasLocalLinkage() &&
+           "GlobalValues must have been promoted before adding to "
+           "CompileOnDemandLayer");
+    if (GV.isDeclaration() || GV.hasAppendingLinkage())
       continue;
 
-    if (F.hasAvailableExternallyLinkage()) {
-      F.deleteBody();
-      F.setPersonalityFn(nullptr);
-      continue;
-    }
-
-    auto Flags = JITSymbolFlags::fromGlobalValue(F);
-    assert(Flags.isCallable() && "Non-callable definition in functions module");
-
-    auto MangledName = Mangle(F.getName());
-    LazyReexports[MangledName] = SymbolAliasMapEntry(MangledName, Flags);
+    auto Name = Mangle(GV.getName());
+    auto Flags = JITSymbolFlags::fromGlobalValue(GV);
+    if (Flags.isCallable())
+      Callables[Name] = SymbolAliasMapEntry(Name, Flags);
+    else
+      NonCallables[Name] = SymbolAliasMapEntry(Name, Flags);
   }
 
-  // Add the functions module to the implementation dylib using an extracting
-  // materialization unit.
-  if (auto Err =
-          ImplD.define(llvm::make_unique<ExtractingIRMaterializationUnit>(
-              ES, *this, std::move(TSM)))) {
+  // Create a partitioning materialization unit and lodge it with the
+  // implementation dylib.
+  if (auto Err = PDR.getImplDylib().define(
+          llvm::make_unique<PartitioningIRMaterializationUnit>(
+              ES, std::move(TSM), *this))) {
     ES.reportError(std::move(Err));
     R.failMaterialization();
     return;
   }
 
-  // Handle responsibility for function symbols by returning lazy reexports.
-  auto &ISMgr = Resources.getISManager();
-  R.replace(lazyReexports(LCTMgr, ISMgr, ImplD, LazyReexports));
-
-  BaseLayer.emit(std::move(R), std::move(K), std::move(GlobalsModule));
+  R.replace(reexports(PDR.getImplDylib(), std::move(NonCallables)));
+  R.replace(lazyReexports(LCTMgr, PDR.getISManager(), PDR.getImplDylib(),
+                          std::move(Callables)));
 }
 
 CompileOnDemandLayer2::PerDylibResources &
@@ -251,10 +179,100 @@ CompileOnDemandLayer2::getPerDylibResources(JITDylib &TargetD) {
   return I->second;
 }
 
-void CompileOnDemandLayer2::emitExtractedFunctionsModule(
-    MaterializationResponsibility R, ThreadSafeModule TSM) {
-  auto K = getExecutionSession().allocateVModule();
-  BaseLayer.emit(std::move(R), std::move(K), std::move(TSM));
+void CompileOnDemandLayer2::cleanUpModule(Module &M) {
+  for (auto &F : M.functions()) {
+    if (F.isDeclaration())
+      continue;
+
+    if (F.hasAvailableExternallyLinkage()) {
+      F.deleteBody();
+      F.setPersonalityFn(nullptr);
+      continue;
+    }
+  }
+}
+
+void CompileOnDemandLayer2::expandPartition(GlobalValueSet &Partition) {
+  // Expands the partition to ensure the following rules hold:
+  // (1) If any alias is in the partition, its aliasee is also in the partition.
+  // (2) If any aliasee is in the partition, its aliases are also in the
+  //     partiton.
+  // (3) If any global variable is in the partition then all global variables
+  //     are in the partition.
+  assert(!Partition.empty() && "Unexpected empty partition");
+
+  const Module &M = *(*Partition.begin())->getParent();
+  bool ContainsGlobalVariables = false;
+  std::vector<const GlobalValue *> GVsToAdd;
+
+  for (auto *GV : Partition)
+    if (isa<GlobalAlias>(GV))
+      GVsToAdd.push_back(
+          cast<GlobalValue>(cast<GlobalAlias>(GV)->getAliasee()));
+    else if (isa<GlobalVariable>(GV))
+      ContainsGlobalVariables = true;
+
+  for (auto &A : M.aliases())
+    if (Partition.count(cast<GlobalValue>(A.getAliasee())))
+      GVsToAdd.push_back(&A);
+
+  if (ContainsGlobalVariables)
+    for (auto &G : M.globals())
+      GVsToAdd.push_back(&G);
+
+  for (auto *GV : GVsToAdd)
+    Partition.insert(GV);
+}
+
+void CompileOnDemandLayer2::emitPartition(
+    MaterializationResponsibility R, ThreadSafeModule TSM,
+    IRMaterializationUnit::SymbolNameToDefinitionMap Defs) {
+
+  // FIXME: Need a 'notify lazy-extracting/emitting' callback to tie the
+  //        extracted module key, extracted module, and source module key
+  //        together. This could be used, for example, to provide a specific
+  //        memory manager instance to the linking layer.
+
+  auto &ES = getExecutionSession();
+
+  GlobalValueSet RequestedGVs;
+  for (auto &Name : R.getRequestedSymbols()) {
+    assert(Defs.count(Name) && "No definition for symbol");
+    RequestedGVs.insert(Defs[Name]);
+  }
+
+  auto GVsToExtract = Partition(RequestedGVs);
+
+  // Take a 'None' partition to mean the whole module (as opposed to an empty
+  // partition, which means "materialize nothing"). Emit the whole module
+  // unmodified to the base layer.
+  if (GVsToExtract == None) {
+    Defs.clear();
+    BaseLayer.emit(std::move(R), ES.allocateVModule(), std::move(TSM));
+    return;
+  }
+
+  // If the partition is empty, return the whole module to the symbol table.
+  if (GVsToExtract->empty()) {
+    R.replace(llvm::make_unique<PartitioningIRMaterializationUnit>(
+        std::move(TSM), R.getSymbols(), std::move(Defs), *this));
+    return;
+  }
+
+  expandPartition(*GVsToExtract);
+
+  // Extract the requested partiton (plus any necessary aliases) and
+  // put the rest back into the impl dylib.
+  auto ShouldExtract = [&](const GlobalValue &GV) -> bool {
+    return GVsToExtract->count(&GV);
+  };
+
+  auto ExtractedTSM = extractSubModule(TSM, ".submodule", ShouldExtract);
+
+  R.replace(llvm::make_unique<PartitioningIRMaterializationUnit>(
+      ES, std::move(TSM), *this));
+
+  BaseLayer.emit(std::move(R), ES.allocateVModule(), std::move(ExtractedTSM));
 }
 
 } // end namespace orc
