@@ -20,6 +20,7 @@ add_clang_library(clangTidyPlugin
   clangTidyLLVMModule
   clangTidyMiscModule
   clangTidyModernizeModule
+  clangTidyMPIModule
   clangTidyObjCModule
   clangTidyPerformanceModule
   clangTidyPortabilityModule
@@ -27,9 +28,3 @@ add_clang_library(clangTidyPlugin
   clangTidyZirconModule
   clangTooling
   )
-
-if(CLANG_ENABLE_STATIC_ANALYZER)
-  target_link_libraries(clangTidyPlugin PRIVATE
-    clangTidyMPIModule
-  )
-endif()

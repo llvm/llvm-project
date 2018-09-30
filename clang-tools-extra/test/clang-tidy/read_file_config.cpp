@@ -1,4 +1,3 @@
-// REQUIRES: static-analyzer
 // RUN: mkdir -p %T/read-file-config/
 // RUN: cp %s %T/read-file-config/test.cpp
 // RUN: echo 'Checks: "-*,modernize-use-nullptr"' > %T/read-file-config/.clang-tidy

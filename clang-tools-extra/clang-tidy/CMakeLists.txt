@@ -21,16 +21,11 @@ add_clang_library(clangTidy
   clangLex
   clangRewrite
   clangSema
+  clangStaticAnalyzerCore
+  clangStaticAnalyzerFrontend
   clangTooling
   clangToolingCore
   )
-
-if(CLANG_ENABLE_STATIC_ANALYZER)
-  target_link_libraries(clangTidy PRIVATE
-    clangStaticAnalyzerCore
-    clangStaticAnalyzerFrontend
-  )
-endif()
 
 add_subdirectory(android)
 add_subdirectory(abseil)
@@ -44,9 +39,7 @@ add_subdirectory(hicpp)
 add_subdirectory(llvm)
 add_subdirectory(misc)
 add_subdirectory(modernize)
-if(CLANG_ENABLE_STATIC_ANALYZER)
-  add_subdirectory(mpi)
-endif()
+add_subdirectory(mpi)
 add_subdirectory(objc)
 add_subdirectory(performance)
 add_subdirectory(plugin)

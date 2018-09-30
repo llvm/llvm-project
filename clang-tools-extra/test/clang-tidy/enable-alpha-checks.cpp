@@ -1,5 +1,3 @@
-// REQUIRES: static-analyzer
-
 // Check if '-allow-enabling-analyzer-alpha-checkers' is visible for users.
 // RUN: clang-tidy -help | not grep 'allow-enabling-analyzer-alpha-checkers'
 

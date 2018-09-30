@@ -60,14 +60,18 @@ set(CLANG_TOOLS_TEST_DEPS
 
   # Unit tests
   ExtraToolsUnitTests
-
-  # For the clang-tidy libclang integration test.
-  c-index-test
-  # clang-tidy tests require it.
-  clang-headers
-
-  clang-tidy
   )
+
+if(CLANG_ENABLE_STATIC_ANALYZER)
+  list(APPEND CLANG_TOOLS_TEST_DEPS
+    # For the clang-tidy libclang integration test.
+    c-index-test
+    # clang-tidy tests require it.
+    clang-headers
+
+    clang-tidy
+    )
+endif()
 
 set(llvm_utils
   FileCheck count not
