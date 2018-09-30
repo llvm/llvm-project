@@ -217,9 +217,7 @@ public:
 
   void print(StringRef CR, llvm::raw_ostream &Out) const;
 
-  LLVM_DUMP_METHOD void dump() const {
-    return print(/*CR=*/"\n", llvm::errs());
-  }
+  LLVM_DUMP_METHOD void dump() const;
 
   static ProgramPoint getProgramPoint(const Stmt *S, ProgramPoint::Kind K,
                                       const LocationContext *LC,

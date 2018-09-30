@@ -2295,12 +2295,11 @@ structHasUniqueObjectRepresentations(const ASTContext &Context,
       }
     }
 
-    llvm::sort(
-        Bases.begin(), Bases.end(), [&](const std::pair<QualType, int64_t> &L,
-                                        const std::pair<QualType, int64_t> &R) {
-          return Layout.getBaseClassOffset(L.first->getAsCXXRecordDecl()) <
-                 Layout.getBaseClassOffset(R.first->getAsCXXRecordDecl());
-        });
+    llvm::sort(Bases, [&](const std::pair<QualType, int64_t> &L,
+                          const std::pair<QualType, int64_t> &R) {
+      return Layout.getBaseClassOffset(L.first->getAsCXXRecordDecl()) <
+             Layout.getBaseClassOffset(R.first->getAsCXXRecordDecl());
+    });
 
     for (const auto Base : Bases) {
       int64_t BaseOffset = Context.toBits(

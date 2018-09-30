@@ -118,7 +118,7 @@ public:
     Builder &operator=(const Builder&) = delete;
 
     ~Builder() {
-      llvm::sort(Self.Rep.begin(), Self.Rep.end(), Compare());
+      llvm::sort(Self.Rep, Compare());
       std::unique(Self.Rep.begin(), Self.Rep.end(),
                   [](const_reference A, const_reference B) {
         // FIXME: we should not allow any duplicate keys, but there are a lot of
