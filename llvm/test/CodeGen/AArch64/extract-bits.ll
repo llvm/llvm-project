@@ -788,3 +788,53 @@ define i32 @c4_i32_bad(i32 %arg) {
   %tmp1 = and i32 %tmp0, 16382
   ret i32 %tmp1
 }
+
+; i64
+
+; The most canonical variant
+define i64 @c0_i64(i64 %arg) {
+; CHECK-LABEL: c0_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ubfx x0, x0, #51, #10
+; CHECK-NEXT:    ret
+  %tmp0 = lshr i64 %arg, 51
+  %tmp1 = and i64 %tmp0, 1023
+  ret i64 %tmp1
+}
+
+; Should be still fine, but the mask is shifted
+define i64 @c1_i64(i64 %arg) {
+; CHECK-LABEL: c1_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr x8, x0, #51
+; CHECK-NEXT:    and x0, x8, #0xffc
+; CHECK-NEXT:    ret
+  %tmp0 = lshr i64 %arg, 51
+  %tmp1 = and i64 %tmp0, 4092
+  ret i64 %tmp1
+}
+
+; Should be still fine, but the result is shifted left afterwards
+define i64 @c2_i64(i64 %arg) {
+; CHECK-LABEL: c2_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ubfx x8, x0, #51, #10
+; CHECK-NEXT:    lsl x0, x8, #2
+; CHECK-NEXT:    ret
+  %tmp0 = lshr i64 %arg, 51
+  %tmp1 = and i64 %tmp0, 1023
+  %tmp2 = shl i64 %tmp1, 2
+  ret i64 %tmp2
+}
+
+; The mask covers newly shifted-in bit
+define i64 @c4_i64_bad(i64 %arg) {
+; CHECK-LABEL: c4_i64_bad:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr x8, x0, #51
+; CHECK-NEXT:    and x0, x8, #0x1ffe
+; CHECK-NEXT:    ret
+  %tmp0 = lshr i64 %arg, 51
+  %tmp1 = and i64 %tmp0, 16382
+  ret i64 %tmp1
+}

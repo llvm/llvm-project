@@ -372,6 +372,8 @@ SymbolNameSet MaterializationResponsibility::getRequestedSymbols() const {
 }
 
 void MaterializationResponsibility::resolve(const SymbolMap &Symbols) {
+  LLVM_DEBUG(dbgs() << "In " << JD.getName() << " resolving " << Symbols
+                    << "\n");
 #ifndef NDEBUG
   for (auto &KV : Symbols) {
     auto I = SymbolFlags.find(KV.first);
@@ -435,8 +437,8 @@ void MaterializationResponsibility::replace(
     SymbolFlags.erase(KV.first);
 
   LLVM_DEBUG(JD.getExecutionSession().runSessionLocked([&]() {
-    dbgs() << "In " << JD.getName() << " replacing symbols with MU@" << MU.get()
-           << " (" << MU->getName() << ")\n";
+    dbgs() << "In " << JD.getName() << " replacing symbols with " << *MU
+           << "\n";
   }););
 
   JD.replace(std::move(MU));

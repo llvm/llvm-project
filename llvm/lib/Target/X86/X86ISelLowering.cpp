@@ -31732,25 +31732,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
                    [VT](SDValue V) { return VT != V.getValueType(); }))
     return false;
 
-  // Attempt to simplify inputs.
-  int NumSrcs = OpInputs.size();
-  for (int Src = 0; Src != NumSrcs; ++Src) {
-    int Lo = Src * NumElts;
-    APInt SrcElts = APInt::getNullValue(NumElts);
-    for (int i = 0; i != NumElts; ++i)
-      if (DemandedElts[i]) {
-        int M = OpMask[i] - Lo;
-        if (0 <= M && M < NumElts)
-          SrcElts.setBit(M);
-      }
-
-    APInt SrcUndef, SrcZero;
-    if (SimplifyDemandedVectorElts(OpInputs[Src], SrcElts, SrcUndef, SrcZero,
-                                   TLO, Depth + 1))
-      return true;
-  }
-
   // Check if shuffle mask can be simplified to undef/zero/identity.
+  int NumSrcs = OpInputs.size();
   for (int i = 0; i != NumElts; ++i)
     if (!DemandedElts[i])
       OpMask[i] = SM_SentinelUndef;
@@ -31767,6 +31750,23 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   for (int Src = 0; Src != NumSrcs; ++Src)
     if (isSequentialOrUndefInRange(OpMask, 0, NumElts, Src * NumElts))
       return TLO.CombineTo(Op, OpInputs[Src]);
+
+  // Attempt to simplify inputs.
+  for (int Src = 0; Src != NumSrcs; ++Src) {
+    int Lo = Src * NumElts;
+    APInt SrcElts = APInt::getNullValue(NumElts);
+    for (int i = 0; i != NumElts; ++i)
+      if (DemandedElts[i]) {
+        int M = OpMask[i] - Lo;
+        if (0 <= M && M < NumElts)
+          SrcElts.setBit(M);
+      }
+
+    APInt SrcUndef, SrcZero;
+    if (SimplifyDemandedVectorElts(OpInputs[Src], SrcElts, SrcUndef, SrcZero,
+                                   TLO, Depth + 1))
+      return true;
+  }
 
   // Extract known zero/undef elements.
   // TODO - Propagate input undef/zero elts.

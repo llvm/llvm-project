@@ -384,6 +384,13 @@ EXTERN void* __kmpc_data_sharing_push_stack(size_t DataSize,
     return omptarget_nvptx_SimpleThreadPrivateContext::Allocate(DataSize);
   }
 
+  // Add worst-case padding to DataSize so that future stack allocations are
+  // correctly aligned.
+  const size_t Alignment = 8;
+  if (DataSize % Alignment != 0) {
+    DataSize += (Alignment - DataSize % Alignment);
+  }
+
   // Frame pointer must be visible to all workers in the same warp.
   unsigned WID = getWarpId();
   void *&FrameP = DataSharingState.FramePtr[WID];
