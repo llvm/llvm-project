@@ -16,6 +16,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_COMPILEONDEMANDLAYER_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -62,19 +63,37 @@ namespace orc {
 class ExtractingIRMaterializationUnit;
 
 class CompileOnDemandLayer2 : public IRLayer {
-  friend class ExtractingIRMaterializationUnit;
+  friend class PartitioningIRMaterializationUnit;
 
 public:
   /// Builder for IndirectStubsManagers.
   using IndirectStubsManagerBuilder =
       std::function<std::unique_ptr<IndirectStubsManager>()>;
 
+  using GlobalValueSet = std::set<const GlobalValue *>;
+
+  /// Partitioning function.
+  using PartitionFunction =
+      std::function<Optional<GlobalValueSet>(GlobalValueSet Requested)>;
+
+  /// Off-the-shelf partitioning which compiles all requested symbols (usually
+  /// a single function at a time).
+  static Optional<GlobalValueSet> compileRequested(GlobalValueSet Requested);
+
+  /// Off-the-shelf partitioning which compiles whole modules whenever any
+  /// symbol in them is requested.
+  static Optional<GlobalValueSet> compileWholeModule(GlobalValueSet Requested);
+
+  /// Construct a CompileOnDemandLayer2.
   CompileOnDemandLayer2(ExecutionSession &ES, IRLayer &BaseLayer,
                         LazyCallThroughManager &LCTMgr,
                         IndirectStubsManagerBuilder BuildIndirectStubsManager);
 
-  Error add(JITDylib &V, VModuleKey K, ThreadSafeModule TSM) override;
+  /// Sets the partition function.
+  void setPartitionFunction(PartitionFunction Partition);
 
+  /// Emits the given module. This should not be called by clients: it will be
+  /// called by the JIT when a definition added via the add method is requested.
   void emit(MaterializationResponsibility R, VModuleKey K,
             ThreadSafeModule TSM) override;
 
@@ -96,8 +115,12 @@ private:
 
   PerDylibResources &getPerDylibResources(JITDylib &TargetD);
 
-  void emitExtractedFunctionsModule(MaterializationResponsibility R,
-                                    ThreadSafeModule TSM);
+  void cleanUpModule(Module &M);
+
+  void expandPartition(GlobalValueSet &Partition);
+
+  void emitPartition(MaterializationResponsibility R, ThreadSafeModule TSM,
+                     IRMaterializationUnit::SymbolNameToDefinitionMap Defs);
 
   mutable std::mutex CODLayerMutex;
 
@@ -105,6 +128,7 @@ private:
   LazyCallThroughManager &LCTMgr;
   IndirectStubsManagerBuilder BuildIndirectStubsManager;
   PerDylibResourcesMap DylibResources;
+  PartitionFunction Partition = compileRequested;
 };
 
 /// Compile-on-demand layer.
