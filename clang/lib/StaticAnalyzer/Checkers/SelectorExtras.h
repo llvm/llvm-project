@@ -33,6 +33,13 @@ static inline void lazyInitKeywordSelector(Selector &Sel, ASTContext &Ctx,
   Sel = getKeywordSelector(Ctx, IIs...);
 }
 
+static inline void lazyInitNullarySelector(Selector &Sel, ASTContext &Ctx,
+                                           const char *Name) {
+  if (!Sel.isNull())
+    return;
+  Sel = GetNullarySelector(Name, Ctx);
+}
+
 } // end namespace ento
 } // end namespace clang
 
