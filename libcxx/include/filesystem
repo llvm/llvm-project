@@ -587,7 +587,7 @@ template <class _ECharT>
 typename enable_if<__can_convert_char<_ECharT>::value, bool>::type
 __is_separator(_ECharT __e) {
   return __e == _ECharT('/');
-};
+}
 
 struct _NullSentinal {};
 

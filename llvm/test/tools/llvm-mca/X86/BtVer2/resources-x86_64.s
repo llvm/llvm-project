@@ -969,7 +969,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      1     0.50                        btcw	%si, %di
 # CHECK-NEXT:  2      1     0.50                        btrw	%si, %di
 # CHECK-NEXT:  2      1     0.50                        btsw	%si, %di
-# CHECK-NEXT:  1      4     1.00    *                   btw	%si, (%rax)
+# CHECK-NEXT:  5      4     1.00    *                   btw	%si, (%rax)
 # CHECK-NEXT:  2      4     1.00    *      *            btcw	%si, (%rax)
 # CHECK-NEXT:  2      4     1.00    *      *            btrw	%si, (%rax)
 # CHECK-NEXT:  2      4     1.00    *      *            btsw	%si, (%rax)
@@ -985,7 +985,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      1     0.50                        btcl	%esi, %edi
 # CHECK-NEXT:  2      1     0.50                        btrl	%esi, %edi
 # CHECK-NEXT:  2      1     0.50                        btsl	%esi, %edi
-# CHECK-NEXT:  1      4     1.00    *                   btl	%esi, (%rax)
+# CHECK-NEXT:  5      4     1.00    *                   btl	%esi, (%rax)
 # CHECK-NEXT:  2      4     1.00    *      *            btcl	%esi, (%rax)
 # CHECK-NEXT:  2      4     1.00    *      *            btrl	%esi, (%rax)
 # CHECK-NEXT:  2      4     1.00    *      *            btsl	%esi, (%rax)
@@ -1001,7 +1001,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      1     0.50                        btcq	%rsi, %rdi
 # CHECK-NEXT:  2      1     0.50                        btrq	%rsi, %rdi
 # CHECK-NEXT:  2      1     0.50                        btsq	%rsi, %rdi
-# CHECK-NEXT:  1      4     1.00    *                   btq	%rsi, (%rax)
+# CHECK-NEXT:  5      4     1.00    *                   btq	%rsi, (%rax)
 # CHECK-NEXT:  2      4     1.00    *      *            btcq	%rsi, (%rax)
 # CHECK-NEXT:  2      4     1.00    *      *            btrq	%rsi, (%rax)
 # CHECK-NEXT:  2      4     1.00    *      *            btsq	%rsi, (%rax)

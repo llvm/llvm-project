@@ -215,8 +215,32 @@ public:
 class DynamicLibraryFallbackGenerator {
 public:
   using SymbolPredicate = std::function<bool(SymbolStringPtr)>;
+
+  static bool AllowAll(SymbolStringPtr Name) { return true; }
+
+  /// Create a DynamicLibraryFallbackGenerator that searches for symbols in the
+  /// given sys::DynamicLibrary.
+  /// Only symbols that match the 'Allow' predicate will be searched for.
   DynamicLibraryFallbackGenerator(sys::DynamicLibrary Dylib,
-                                  const DataLayout &DL, SymbolPredicate Allow);
+                                  const DataLayout &DL,
+                                  SymbolPredicate Allow = AllowAll);
+
+  /// Permanently loads the library at the given path and, on success, returns
+  /// a DynamicLibraryFallbackGenerator that will search it for symbol
+  /// definitions matching the Allow predicate.
+  /// On failure returns the reason the library failed to load.
+  static Expected<DynamicLibraryFallbackGenerator>
+  Load(const char *FileName, const DataLayout &DL,
+       SymbolPredicate Allow = AllowAll);
+
+  /// Creates a DynamicLibraryFallbackGenerator that searches for symbols in
+  /// the current process.
+  static Expected<DynamicLibraryFallbackGenerator>
+  CreateForCurrentProcess(const DataLayout &DL,
+                          SymbolPredicate Allow = AllowAll) {
+    return Load(nullptr, DL, std::move(Allow));
+  }
+
   SymbolNameSet operator()(JITDylib &JD, const SymbolNameSet &Names);
 
 private:

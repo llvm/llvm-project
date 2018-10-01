@@ -36,10 +36,6 @@ struct InstructionTemplate {
   const llvm::MCOperand &getValueFor(const Operand &Op) const;
   bool hasImmediateVariables() const;
 
-  // Assigns a Random Value to all Variables that are still Invalid.
-  // Do not use any of the registers in `ForbiddenRegs`.
-  void randomizeUnsetVariables(const llvm::BitVector &ForbiddenRegs);
-
   // Builds an llvm::MCInst from this InstructionTemplate setting its operands
   // to the corresponding variable values. Precondition: All VariableValues must
   // be set.
@@ -69,20 +65,6 @@ struct CodeTemplate {
   // the pointer to this memory is passed in to the function.
   unsigned ScratchSpacePointerInReg = 0;
 };
-
-// A global Random Number Generator to randomize configurations.
-// FIXME: Move random number generation into an object and make it seedable for
-// unit tests.
-std::mt19937 &randomGenerator();
-
-// Picks a random bit among the bits set in Vector and returns its index.
-// Precondition: Vector must have at least one bit set.
-size_t randomBit(const llvm::BitVector &Vector);
-
-// Picks a random configuration, then selects a random def and a random use from
-// it and finally set the selected values in the provided InstructionInstances.
-void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations,
-                       InstructionTemplate &DefIB, InstructionTemplate &UseIB);
 
 } // namespace exegesis
 

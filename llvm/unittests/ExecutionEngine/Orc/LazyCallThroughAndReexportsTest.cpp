@@ -33,7 +33,7 @@ TEST_F(LazyReexportsTest, BasicLocalCallThroughManagerOperation) {
     return;
   }
 
-  auto DummyTarget = ES.getSymbolStringPool().intern("DummyTarget");
+  auto DummyTarget = ES.intern("DummyTarget");
 
   bool DummyTargetMaterialized = false;
 

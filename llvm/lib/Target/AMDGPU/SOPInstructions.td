@@ -442,19 +442,19 @@ def S_LSHL_B32 : SOP2_32 <"s_lshl_b32",
   [(set i32:$sdst, (UniformBinFrag<shl> i32:$src0, i32:$src1))]
 >;
 def S_LSHL_B64 : SOP2_64_32 <"s_lshl_b64",
-  [(set i64:$sdst, (shl i64:$src0, i32:$src1))]
+  [(set i64:$sdst, (UniformBinFrag<shl> i64:$src0, i32:$src1))]
 >;
 def S_LSHR_B32 : SOP2_32 <"s_lshr_b32",
   [(set i32:$sdst, (UniformBinFrag<srl> i32:$src0, i32:$src1))]
 >;
 def S_LSHR_B64 : SOP2_64_32 <"s_lshr_b64",
-  [(set i64:$sdst, (srl i64:$src0, i32:$src1))]
+  [(set i64:$sdst, (UniformBinFrag<srl> i64:$src0, i32:$src1))]
 >;
 def S_ASHR_I32 : SOP2_32 <"s_ashr_i32",
   [(set i32:$sdst, (UniformBinFrag<sra> i32:$src0, i32:$src1))]
 >;
 def S_ASHR_I64 : SOP2_64_32 <"s_ashr_i64",
-  [(set i64:$sdst, (sra i64:$src0, i32:$src1))]
+  [(set i64:$sdst, (UniformBinFrag<sra> i64:$src0, i32:$src1))]
 >;
 } // End Defs = [SCC]
 

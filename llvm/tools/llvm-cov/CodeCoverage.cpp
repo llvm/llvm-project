@@ -215,12 +215,13 @@ void CodeCoverageTool::collectPaths(const std::string &Path) {
     for (llvm::sys::fs::recursive_directory_iterator F(Path, EC), E;
          F != E; F.increment(EC)) {
 
-      if (EC) {
-        warning(EC.message(), F->path());
+      auto Status = F->status();
+      if (!Status) {
+        warning(Status.getError().message(), F->path());
         continue;
       }
 
-      if (llvm::sys::fs::is_regular_file(F->path()))
+      if (Status->type() == llvm::sys::fs::file_type::regular_file)
         addCollectedPath(F->path());
     }
   }

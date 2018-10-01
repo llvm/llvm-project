@@ -174,6 +174,15 @@ DynamicLibraryFallbackGenerator::DynamicLibraryFallbackGenerator(
     : Dylib(std::move(Dylib)), Allow(std::move(Allow)),
       GlobalPrefix(DL.getGlobalPrefix()) {}
 
+Expected<DynamicLibraryFallbackGenerator> DynamicLibraryFallbackGenerator::Load(
+    const char *FileName, const DataLayout &DL, SymbolPredicate Allow) {
+  std::string ErrMsg;
+  auto Lib = sys::DynamicLibrary::getPermanentLibrary(FileName, &ErrMsg);
+  if (!Lib.isValid())
+    return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
+  return DynamicLibraryFallbackGenerator(std::move(Lib), DL, std::move(Allow));
+}
+
 SymbolNameSet DynamicLibraryFallbackGenerator::
 operator()(JITDylib &JD, const SymbolNameSet &Names) {
   orc::SymbolNameSet Added;

@@ -22,7 +22,7 @@ void JITSymbolResolverAdapter::lookup(const LookupSet &Symbols,
                                       OnResolvedFunction OnResolved) {
   SymbolNameSet InternedSymbols;
   for (auto &S : Symbols)
-    InternedSymbols.insert(ES.getSymbolStringPool().intern(S));
+    InternedSymbols.insert(ES.intern(S));
 
   auto OnResolvedWithUnwrap = [OnResolved](Expected<SymbolMap> InternedResult) {
     if (!InternedResult) {
@@ -52,7 +52,7 @@ Expected<JITSymbolResolverAdapter::LookupSet>
 JITSymbolResolverAdapter::getResponsibilitySet(const LookupSet &Symbols) {
   SymbolNameSet InternedSymbols;
   for (auto &S : Symbols)
-    InternedSymbols.insert(ES.getSymbolStringPool().intern(S));
+    InternedSymbols.insert(ES.intern(S));
 
   auto InternedResult = R.getResponsibilitySet(InternedSymbols);
   LookupSet Result;

@@ -143,6 +143,7 @@ void addSystemHeadersMapping(CanonicalIncludes *Includes) {
       {"std::basic_stringstream", "<sstream>"},
       {"std::istringstream", "<sstream>"},
       {"std::ostringstream", "<sstream>"},
+      {"std::string", "<string>"},
       {"std::stringbuf", "<sstream>"},
       {"std::stringstream", "<sstream>"},
       {"std::wistringstream", "<sstream>"},

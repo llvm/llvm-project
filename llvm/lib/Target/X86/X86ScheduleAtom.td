@@ -121,8 +121,12 @@ def  : WriteRes<WriteLAHFSAHF, [AtomPort01]> {
   let Latency = 2;
   let ResourceCycles = [2];
 }
-defm : X86WriteRes<WriteBitTest,    [AtomPort1], 1, [1], 1>;
-defm : X86WriteRes<WriteBitTestSet, [AtomPort1], 1, [1], 1>;
+defm : X86WriteRes<WriteBitTest,         [AtomPort1],  1, [1], 1>;
+defm : X86WriteRes<WriteBitTestImmLd,    [AtomPort0],  1, [1], 1>;
+defm : X86WriteRes<WriteBitTestRegLd,    [AtomPort01], 9, [9], 1>;
+defm : X86WriteRes<WriteBitTestSet,      [AtomPort1],  1, [1], 1>;
+defm : X86WriteRes<WriteBitTestSetImmLd, [AtomPort1],  1, [1], 1>;
+defm : X86WriteRes<WriteBitTestSetRegLd, [AtomPort1],  1, [1], 1>;
 
 // This is for simple LEAs with one or two input operands.
 def : WriteRes<WriteLEA, [AtomPort1]>;
@@ -626,8 +630,7 @@ def AtomWrite01_9 : SchedWriteRes<[AtomPort01]> {
   let Latency = 9;
   let ResourceCycles = [9];
 }
-def : InstRW<[AtomWrite01_9], (instrs BT16mr, BT32mr, BT64mr,
-                                      POPA16, POPA32,
+def : InstRW<[AtomWrite01_9], (instrs POPA16, POPA32,
                                       PUSHF16, PUSHF32, PUSHF64,
                                       SHLD64mrCL, SHRD64mrCL,
                                       SHLD64mri8, SHRD64mri8,

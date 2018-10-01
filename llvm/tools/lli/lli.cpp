@@ -752,15 +752,6 @@ static orc::IRTransformLayer2::TransformFunction createDebugDumper() {
 int runOrcLazyJIT(const char *ProgName) {
   // Start setting up the JIT environment.
 
-  // First add lli's symbols into the JIT's search space.
-  std::string ErrMsg;
-  sys::DynamicLibrary LibLLI =
-      sys::DynamicLibrary::getPermanentLibrary(nullptr, &ErrMsg);
-  if (!LibLLI.isValid()) {
-    errs() << "Error loading lli symbols: " << ErrMsg << ".\n";
-    return 1;
-  }
-
   // Parse the main module.
   orc::ThreadSafeContext TSCtx(llvm::make_unique<LLVMContext>());
   SMDiagnostic Err;
@@ -786,12 +777,7 @@ int runOrcLazyJIT(const char *ProgName) {
                         ? Optional<CodeModel::Model>(CMModel)
                         : None);
 
-  DataLayout DL("");
-  {
-    // Create a throwaway TargetMachine to get the data layout.
-    auto TM = ExitOnErr(JTMB.createTargetMachine());
-    DL = TM->createDataLayout();
-  }
+  DataLayout DL = ExitOnErr(JTMB.getDefaultDataLayoutForTarget());
   auto J = ExitOnErr(orc::LLLazyJIT::Create(std::move(JTMB), DL, LazyJITCompileThreads));
 
   if (PerModuleLazy)
@@ -807,9 +793,8 @@ int runOrcLazyJIT(const char *ProgName) {
     }
     return Dump(std::move(TSM), R);
   });
-  J->getMainJITDylib().setFallbackDefinitionGenerator(
-      orc::DynamicLibraryFallbackGenerator(
-          std::move(LibLLI), DL, [](orc::SymbolStringPtr) { return true; }));
+  J->getMainJITDylib().setFallbackDefinitionGenerator(ExitOnErr(
+      orc::DynamicLibraryFallbackGenerator::CreateForCurrentProcess(DL)));
 
   orc::MangleAndInterner Mangle(J->getExecutionSession(), DL);
   orc::LocalCXXRuntimeOverrides2 CXXRuntimeOverrides;

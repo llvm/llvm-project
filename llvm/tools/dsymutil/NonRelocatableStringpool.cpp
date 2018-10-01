@@ -40,11 +40,10 @@ NonRelocatableStringpool::getEntriesForEmission() const {
   for (const auto &E : Strings)
     if (E.getValue().isIndexed())
       Result.emplace_back(E, true);
-  llvm::sort(
-      Result.begin(), Result.end(),
-      [](const DwarfStringPoolEntryRef A, const DwarfStringPoolEntryRef B) {
-        return A.getIndex() < B.getIndex();
-      });
+  llvm::sort(Result, [](const DwarfStringPoolEntryRef A,
+                        const DwarfStringPoolEntryRef B) {
+    return A.getIndex() < B.getIndex();
+  });
   return Result;
 }
 
