@@ -233,7 +233,7 @@ private:
 /// value is undefined or not, such as ints and doubles, can be analyzed with
 /// ease. This also helps ensuring that every special field type is handled
 /// correctly.
-static bool isPrimitiveType(const QualType &T) {
+inline bool isPrimitiveType(const QualType &T) {
   return T->isBuiltinType() || T->isEnumeralType() || T->isMemberPointerType();
 }
 

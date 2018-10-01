@@ -215,12 +215,10 @@ bool FindUninitializedFields::isPointerOrReferenceUninit(
     llvm_unreachable("All cases are handled!");
   }
 
-  // Temporary variable to avoid warning from -Wunused-function.
-  bool IsPrimitive = isPrimitiveType(DynT->getPointeeType());
-  assert((IsPrimitive || DynT->isAnyPointerType() || DynT->isReferenceType()) &&
+  assert((isPrimitiveType(DynT->getPointeeType()) || DynT->isAnyPointerType() ||
+          DynT->isReferenceType()) &&
          "At this point FR must either have a primitive dynamic type, or it "
          "must be a null, undefined, unknown or concrete pointer!");
-  (void)IsPrimitive;
 
   if (isPrimitiveUninit(DerefdV)) {
     if (NeedsCastBack)
