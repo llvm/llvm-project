@@ -26,6 +26,11 @@ ProgramStateRef markReleased(ProgramStateRef State, SymbolRef Sym,
 /// AF_InnerBuffer symbols.
 std::unique_ptr<BugReporterVisitor> getInnerPointerBRVisitor(SymbolRef Sym);
 
+/// 'Sym' represents a pointer to the inner buffer of a container object.
+/// This function looks up the memory region of that object in
+/// DanglingInternalBufferChecker's program state map.
+const MemRegion *getContainerObjRegion(ProgramStateRef State, SymbolRef Sym);
+
 } // end namespace allocation_state
 
 } // end namespace ento
