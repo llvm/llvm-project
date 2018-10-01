@@ -152,7 +152,6 @@ std::string getVariableName(const FieldDecl *Field);
 /// functions such as add() and replaceHead().
 class FieldChainInfo {
 public:
-  using FieldChainImpl = llvm::ImmutableListImpl<const FieldNode &>;
   using FieldChain = llvm::ImmutableList<const FieldNode &>;
 
 private:
@@ -179,8 +178,8 @@ public:
   bool contains(const FieldRegion *FR) const;
   bool isEmpty() const { return Chain.isEmpty(); }
 
-  const FieldRegion *getUninitRegion() const;
-  const FieldNode &getHead() { return Chain.getHead(); }
+  const FieldNode &getHead() const { return Chain.getHead(); }
+  const FieldRegion *getUninitRegion() const { return getHead().getRegion(); }
 
   void printNoteMsg(llvm::raw_ostream &Out) const;
 };
