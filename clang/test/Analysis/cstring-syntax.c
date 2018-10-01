@@ -7,7 +7,6 @@ typedef __SIZE_TYPE__ size_t;
 char  *strncat(char *, const char *, size_t);
 size_t strlen (const char *s);
 size_t strlcpy(char *, const char *, size_t);
-size_t strlcat(char *, const char *, size_t);
 
 void testStrncat(const char *src) {
   char dest[10];
@@ -33,20 +32,4 @@ void testStrlcpy(const char *src) {
   strlcpy(dest, src, ulen);
   strlcpy(dest + 5, src, 5);
   strlcpy(dest + 5, src, 10); // expected-warning {{The third argument is larger than the size of the input buffer.}}
-}
-
-void testStrlcat(const char *src) {
-  char dest[10];
-  size_t badlen = 10;
-  size_t ulen;
-  strlcpy(dest, "aaaaa", sizeof("aaaaa") - 1);
-  strlcat(dest, "bbbb", (sizeof("bbbb") - 1) - sizeof(dest) - 1);
-  strlcpy(dest, "012345678", sizeof(dest));
-  strlcat(dest, "910", sizeof(dest)); // expected-warning {{The third argument allows to potentially copy more bytes than it should. Replace with the value  <size>  - strlen(dest) - 1 or lower}}
-  strlcpy(dest, "0123456789", sizeof(dest));
-  strlcat(dest, "0123456789", badlen); // expected-warning {{The third argument allows to potentially copy more bytes than it should. Replace with the value 'badlen' - strlen(dest) - 1 or lower}}
-  strlcat(dest, "0123456789", badlen - strlen(dest) - 1);
-  strlcat(dest, src, ulen);
-  strlcpy(dest, src, 5);
-  strlcat(dest + 5, src, badlen); // expected-warning {{The third argument allows to potentially copy more bytes than it should. Replace with the value 'badlen' - strlen(<destination buffer>) - 1 or lower}}
 }
