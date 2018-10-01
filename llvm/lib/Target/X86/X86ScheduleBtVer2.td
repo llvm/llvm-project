@@ -100,7 +100,8 @@ def : ReadAdvance<ReadAfterLd, 3>;
 // folded loads.
 multiclass JWriteResIntPair<X86FoldableSchedWrite SchedRW,
                             list<ProcResourceKind> ExePorts,
-                            int Lat, list<int> Res = [], int UOps = 1> {
+                            int Lat, list<int> Res = [], int UOps = 1,
+                            int LoadUOps = 0> {
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -113,13 +114,14 @@ multiclass JWriteResIntPair<X86FoldableSchedWrite SchedRW,
   def : WriteRes<SchedRW.Folded, !listconcat([JLAGU], ExePorts)> {
     let Latency = !add(Lat, 3);
     let ResourceCycles = !if(!empty(Res), [], !listconcat([1], Res));
-    let NumMicroOps = UOps;
+    let NumMicroOps = !add(UOps, LoadUOps);
   }
 }
 
 multiclass JWriteResFpuPair<X86FoldableSchedWrite SchedRW,
                             list<ProcResourceKind> ExePorts,
-                            int Lat, list<int> Res = [], int UOps = 1> {
+                            int Lat, list<int> Res = [], int UOps = 1,
+                            int LoadUOps = 0> {
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -132,13 +134,14 @@ multiclass JWriteResFpuPair<X86FoldableSchedWrite SchedRW,
   def : WriteRes<SchedRW.Folded, !listconcat([JLAGU], ExePorts)> {
     let Latency = !add(Lat, 5);
     let ResourceCycles = !if(!empty(Res), [], !listconcat([1], Res));
-    let NumMicroOps = UOps;
+    let NumMicroOps = !add(UOps, LoadUOps);
   }
 }
 
 multiclass JWriteResYMMPair<X86FoldableSchedWrite SchedRW,
                             list<ProcResourceKind> ExePorts,
-                            int Lat, list<int> Res = [2], int UOps = 2> {
+                            int Lat, list<int> Res = [2], int UOps = 2,
+                            int LoadUOps = 0> {
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
@@ -151,7 +154,7 @@ multiclass JWriteResYMMPair<X86FoldableSchedWrite SchedRW,
   def : WriteRes<SchedRW.Folded, !listconcat([JLAGU], ExePorts)> {
     let Latency = !add(Lat, 5);
     let ResourceCycles = !listconcat([2], Res);
-    let NumMicroOps = UOps;
+    let NumMicroOps = !add(UOps, LoadUOps);
   }
 }
 
@@ -525,8 +528,8 @@ defm : X86WriteRes<WriteVecExtractSt,   [JFPU1, JSTC, JSAGU], 3, [1,1,1], 1>;
 // SSE42 String instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : JWriteResFpuPair<WritePCmpIStrI, [JFPU1, JVALU1, JFPA, JALU0], 7, [1, 2, 1, 1], 3>;
-defm : JWriteResFpuPair<WritePCmpIStrM, [JFPU1, JVALU1, JFPA, JALU0], 8, [1, 2, 1, 1], 3>;
+defm : JWriteResFpuPair<WritePCmpIStrI, [JFPU1, JVALU1, JFPU0, JFPA, JALU0], 7, [2, 2, 1, 1, 1], 3>;
+defm : JWriteResFpuPair<WritePCmpIStrM, [JFPU1, JVALU1, JFPU0, JFPA, JALU0], 8, [2, 2, 1, 1, 1], 3>;
 defm : JWriteResFpuPair<WritePCmpEStrI, [JFPU1, JSAGU, JLAGU, JVALU, JVALU1, JFPA, JALU0], 14, [1, 2, 2, 6, 4, 1, 1], 9>;
 defm : JWriteResFpuPair<WritePCmpEStrM, [JFPU1, JSAGU, JLAGU, JVALU, JVALU1, JFPA, JALU0], 14, [1, 2, 2, 6, 4, 1, 1], 9>;
 

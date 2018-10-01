@@ -83,6 +83,7 @@ extern llvm::cl::opt<bool> Globals;
 extern llvm::cl::opt<bool> Classes;
 extern llvm::cl::opt<bool> Enums;
 extern llvm::cl::opt<bool> Funcsigs;
+extern llvm::cl::opt<bool> Arrays;
 extern llvm::cl::opt<bool> Typedefs;
 extern llvm::cl::opt<bool> Pointers;
 extern llvm::cl::opt<bool> All;

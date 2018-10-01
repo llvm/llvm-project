@@ -19,6 +19,7 @@
 
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeArray.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
@@ -201,6 +202,9 @@ void TypeDumper::start(const PDBSymbolExe &Exe) {
   if (opts::pretty::Typedefs)
     dumpSymbolCategory<PDBSymbolTypeTypedef>(Printer, Exe, *this, "Typedefs");
 
+  if (opts::pretty::Arrays)
+    dumpSymbolCategory<PDBSymbolTypeArray>(Printer, Exe, *this, "Arrays");
+
   if (opts::pretty::Pointers)
     dumpSymbolCategory<PDBSymbolTypePointer>(Printer, Exe, *this, "Pointers");
 
@@ -282,6 +286,15 @@ void TypeDumper::dump(const PDBSymbolTypeTypedef &Symbol) {
 
   TypedefDumper Dumper(Printer);
   Dumper.start(Symbol);
+}
+
+void TypeDumper::dump(const PDBSymbolTypeArray &Symbol) {
+  auto ElementType = Symbol.getElementType();
+
+  ElementType->dump(*this);
+  Printer << "[";
+  WithColor(Printer, PDB_ColorItem::LiteralValue).get() << Symbol.getCount();
+  Printer << "]";
 }
 
 void TypeDumper::dump(const PDBSymbolTypeFunctionSig &Symbol) {

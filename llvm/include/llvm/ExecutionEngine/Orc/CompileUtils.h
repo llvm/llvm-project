@@ -16,7 +16,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
-#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"

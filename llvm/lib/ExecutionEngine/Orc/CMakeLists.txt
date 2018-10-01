@@ -5,6 +5,7 @@ add_llvm_library(LLVMOrcJIT
   IndirectionUtils.cpp
   IRCompileLayer.cpp
   IRTransformLayer.cpp
+  JITTargetMachineBuilder.cpp
   LazyReexports.cpp
   Legacy.cpp
   Layer.cpp

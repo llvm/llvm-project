@@ -26,6 +26,7 @@
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/OrcRemoteTargetClient.h"
 #include "llvm/ExecutionEngine/OrcMCJITReplacement.h"
@@ -773,8 +774,10 @@ int runOrcLazyJIT(const char *ProgName) {
       TT.empty() ? ExitOnErr(orc::JITTargetMachineBuilder::detectHost())
                  : orc::JITTargetMachineBuilder(Triple(TT));
 
-  JTMB.setArch(MArch)
-      .setCPU(getCPUStr())
+  if (!MArch.empty())
+    JTMB.getTargetTriple().setArchName(MArch);
+
+  JTMB.setCPU(getCPUStr())
       .addFeatures(getFeatureList())
       .setRelocationModel(RelocModel.getNumOccurrences()
                               ? Optional<Reloc::Model>(RelocModel)
@@ -782,6 +785,7 @@ int runOrcLazyJIT(const char *ProgName) {
       .setCodeModel(CMModel.getNumOccurrences()
                         ? Optional<CodeModel::Model>(CMModel)
                         : None);
+
   DataLayout DL("");
   {
     // Create a throwaway TargetMachine to get the data layout.

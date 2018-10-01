@@ -19,45 +19,6 @@
 namespace llvm {
 namespace orc {
 
-JITTargetMachineBuilder::JITTargetMachineBuilder(Triple TT)
-    : TT(std::move(TT)) {}
-
-Expected<JITTargetMachineBuilder> JITTargetMachineBuilder::detectHost() {
-  return JITTargetMachineBuilder(Triple(sys::getProcessTriple()));
-}
-
-Expected<std::unique_ptr<TargetMachine>>
-JITTargetMachineBuilder::createTargetMachine() {
-  if (!Arch.empty()) {
-    Triple::ArchType Type = Triple::getArchTypeForLLVMName(Arch);
-
-    if (Type == Triple::UnknownArch)
-      return make_error<StringError>(std::string("Unknown arch: ") + Arch,
-                                     inconvertibleErrorCode());
-  }
-
-  std::string ErrMsg;
-  auto *TheTarget = TargetRegistry::lookupTarget(TT.getTriple(), ErrMsg);
-  if (!TheTarget)
-    return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
-
-  auto *TM =
-      TheTarget->createTargetMachine(TT.getTriple(), CPU, Features.getString(),
-                                     Options, RM, CM, OptLevel, /*JIT*/ true);
-  if (!TM)
-    return make_error<StringError>("Could not allocate target machine",
-                                   inconvertibleErrorCode());
-
-  return std::unique_ptr<TargetMachine>(TM);
-}
-
-JITTargetMachineBuilder &JITTargetMachineBuilder::addFeatures(
-    const std::vector<std::string> &FeatureVec) {
-  for (const auto &F : FeatureVec)
-    Features.AddFeature(F);
-  return *this;
-}
-
 CtorDtorIterator::CtorDtorIterator(const GlobalVariable *GV, bool End)
   : InitList(
       GV ? dyn_cast_or_null<ConstantArray>(GV->getInitializer()) : nullptr),

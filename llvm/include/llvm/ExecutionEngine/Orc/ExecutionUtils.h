@@ -21,7 +21,6 @@
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Target/TargetOptions.h"
 #include <algorithm>
 #include <cstdint>
 #include <string>
@@ -38,48 +37,6 @@ class TargetMachine;
 class Value;
 
 namespace orc {
-
-/// A utility class for building TargetMachines for JITs.
-class JITTargetMachineBuilder {
-public:
-  JITTargetMachineBuilder(Triple TT);
-  static Expected<JITTargetMachineBuilder> detectHost();
-  Expected<std::unique_ptr<TargetMachine>> createTargetMachine();
-
-  JITTargetMachineBuilder &setArch(std::string Arch) {
-    this->Arch = std::move(Arch);
-    return *this;
-  }
-  JITTargetMachineBuilder &setCPU(std::string CPU) {
-    this->CPU = std::move(CPU);
-    return *this;
-  }
-  JITTargetMachineBuilder &setRelocationModel(Optional<Reloc::Model> RM) {
-    this->RM = std::move(RM);
-    return *this;
-  }
-  JITTargetMachineBuilder &setCodeModel(Optional<CodeModel::Model> CM) {
-    this->CM = std::move(CM);
-    return *this;
-  }
-  JITTargetMachineBuilder &
-  addFeatures(const std::vector<std::string> &FeatureVec);
-  SubtargetFeatures &getFeatures() { return Features; }
-  TargetOptions &getOptions() { return Options; }
-
-  Triple& getTargetTriple() { return TT; }
-  const Triple& getTargetTriple() const { return TT; }
-
-private:
-  Triple TT;
-  std::string Arch;
-  std::string CPU;
-  SubtargetFeatures Features;
-  TargetOptions Options;
-  Optional<Reloc::Model> RM;
-  Optional<CodeModel::Model> CM;
-  CodeGenOpt::Level OptLevel = CodeGenOpt::Default;
-};
 
 /// This iterator provides a convenient way to iterate over the elements
 ///        of an llvm.global_ctors/llvm.global_dtors instance.

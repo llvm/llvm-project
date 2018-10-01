@@ -1339,7 +1339,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
     Success = false;
   }
   else
-    llvm::sort(Opts.VerifyPrefixes.begin(), Opts.VerifyPrefixes.end());
+    llvm::sort(Opts.VerifyPrefixes);
   DiagnosticLevelMask DiagMask = DiagnosticLevelMask::None;
   Success &= parseDiagnosticLevelMask("-verify-ignore-unexpected=",
     Args.getAllArgValues(OPT_verify_ignore_unexpected_EQ),
@@ -2502,7 +2502,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.CurrentModule = Opts.ModuleName;
   Opts.AppExt = Args.hasArg(OPT_fapplication_extension);
   Opts.ModuleFeatures = Args.getAllArgValues(OPT_fmodule_feature);
-  llvm::sort(Opts.ModuleFeatures.begin(), Opts.ModuleFeatures.end());
+  llvm::sort(Opts.ModuleFeatures);
   Opts.NativeHalfType |= Args.hasArg(OPT_fnative_half_type);
   Opts.NativeHalfArgsAndReturns |= Args.hasArg(OPT_fnative_half_arguments_and_returns);
   // Enable HalfArgsAndReturns if present in Args or if NativeHalfArgsAndReturns
