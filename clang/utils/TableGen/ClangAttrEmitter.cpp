@@ -3961,10 +3961,10 @@ void EmitClangAttrDocs(RecordKeeper &Records, raw_ostream &OS) {
   for (auto &I : SplitDocs) {
     WriteCategoryHeader(I.first, OS);
 
-    llvm::sort(I.second.begin(), I.second.end(),
+    llvm::sort(I.second,
                [](const DocumentationData &D1, const DocumentationData &D2) {
                  return D1.Heading < D2.Heading;
-              });
+               });
 
     // Walk over each of the attributes in the category and write out their
     // documentation.

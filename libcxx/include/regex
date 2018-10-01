@@ -1352,9 +1352,9 @@ public:
     virtual ~__node() {}
 
     _LIBCPP_INLINE_VISIBILITY
-    virtual void __exec(__state&) const {};
+    virtual void __exec(__state&) const {}
     _LIBCPP_INLINE_VISIBILITY
-    virtual void __exec_split(bool, __state&) const {};
+    virtual void __exec_split(bool, __state&) const {}
 };
 
 // __end_state

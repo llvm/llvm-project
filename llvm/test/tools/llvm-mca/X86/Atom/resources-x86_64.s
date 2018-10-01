@@ -977,7 +977,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     1.00                        btcw	$7, %di
 # CHECK-NEXT:  1      1     1.00                        btrw	$7, %di
 # CHECK-NEXT:  1      1     1.00                        btsw	$7, %di
-# CHECK-NEXT:  1      1     0.50    *                   btw	$7, (%rax)
+# CHECK-NEXT:  1      1     1.00    *                   btw	$7, (%rax)
 # CHECK-NEXT:  1      2     1.00    *      *            btcw	$7, (%rax)
 # CHECK-NEXT:  1      2     1.00    *      *            btrw	$7, (%rax)
 # CHECK-NEXT:  1      2     1.00    *      *            btsw	$7, (%rax)
@@ -993,7 +993,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     1.00                        btcl	$7, %edi
 # CHECK-NEXT:  1      1     1.00                        btrl	$7, %edi
 # CHECK-NEXT:  1      1     1.00                        btsl	$7, %edi
-# CHECK-NEXT:  1      1     0.50    *                   btl	$7, (%rax)
+# CHECK-NEXT:  1      1     1.00    *                   btl	$7, (%rax)
 # CHECK-NEXT:  1      2     1.00    *      *            btcl	$7, (%rax)
 # CHECK-NEXT:  1      2     1.00    *      *            btrl	$7, (%rax)
 # CHECK-NEXT:  1      2     1.00    *      *            btsl	$7, (%rax)
@@ -1009,7 +1009,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     1.00                        btcq	$7, %rdi
 # CHECK-NEXT:  1      1     1.00                        btrq	$7, %rdi
 # CHECK-NEXT:  1      1     1.00                        btsq	$7, %rdi
-# CHECK-NEXT:  1      1     0.50    *                   btq	$7, (%rax)
+# CHECK-NEXT:  1      1     1.00    *                   btq	$7, (%rax)
 # CHECK-NEXT:  1      2     1.00    *      *            btcq	$7, (%rax)
 # CHECK-NEXT:  1      2     1.00    *      *            btrq	$7, (%rax)
 # CHECK-NEXT:  1      2     1.00    *      *            btsq	$7, (%rax)
@@ -1614,7 +1614,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 2392.00 2051.00
+# CHECK-NEXT: 2393.50 2049.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
@@ -1734,7 +1734,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -     1.00   btcw	$7, %di
 # CHECK-NEXT:  -     1.00   btrw	$7, %di
 # CHECK-NEXT:  -     1.00   btsw	$7, %di
-# CHECK-NEXT: 0.50   0.50   btw	$7, (%rax)
+# CHECK-NEXT: 1.00    -     btw	$7, (%rax)
 # CHECK-NEXT: 1.00   1.00   btcw	$7, (%rax)
 # CHECK-NEXT: 1.00   1.00   btrw	$7, (%rax)
 # CHECK-NEXT: 1.00   1.00   btsw	$7, (%rax)
@@ -1750,7 +1750,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -     1.00   btcl	$7, %edi
 # CHECK-NEXT:  -     1.00   btrl	$7, %edi
 # CHECK-NEXT:  -     1.00   btsl	$7, %edi
-# CHECK-NEXT: 0.50   0.50   btl	$7, (%rax)
+# CHECK-NEXT: 1.00    -     btl	$7, (%rax)
 # CHECK-NEXT: 1.00   1.00   btcl	$7, (%rax)
 # CHECK-NEXT: 1.00   1.00   btrl	$7, (%rax)
 # CHECK-NEXT: 1.00   1.00   btsl	$7, (%rax)
@@ -1766,7 +1766,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -     1.00   btcq	$7, %rdi
 # CHECK-NEXT:  -     1.00   btrq	$7, %rdi
 # CHECK-NEXT:  -     1.00   btsq	$7, %rdi
-# CHECK-NEXT: 0.50   0.50   btq	$7, (%rax)
+# CHECK-NEXT: 1.00    -     btq	$7, (%rax)
 # CHECK-NEXT: 1.00   1.00   btcq	$7, (%rax)
 # CHECK-NEXT: 1.00   1.00   btrq	$7, (%rax)
 # CHECK-NEXT: 1.00   1.00   btsq	$7, (%rax)

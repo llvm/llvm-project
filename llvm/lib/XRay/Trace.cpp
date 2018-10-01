@@ -311,7 +311,7 @@ Error loadFDRLog(StringRef Data, bool IsLittleEndian,
     for (auto &PTB : Index) {
       auto &Blocks = PTB.second;
       llvm::sort(
-          Blocks.begin(), Blocks.end(),
+          Blocks,
           [](const BlockIndexer::Block &L, const BlockIndexer::Block &R) {
             return (L.WallclockTime->seconds() < R.WallclockTime->seconds() &&
                     L.WallclockTime->nanos() < R.WallclockTime->nanos());

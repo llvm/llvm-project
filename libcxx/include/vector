@@ -2455,7 +2455,7 @@ private:
     void __vdeallocate() _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY
     static size_type __align_it(size_type __new_size) _NOEXCEPT
-        {return __new_size + (__bits_per_word-1) & ~((size_type)__bits_per_word-1);};
+        {return __new_size + (__bits_per_word-1) & ~((size_type)__bits_per_word-1);}
     _LIBCPP_INLINE_VISIBILITY  size_type __recommend(size_type __new_size) const;
     _LIBCPP_INLINE_VISIBILITY void __construct_at_end(size_type __n, bool __x);
     template <class _ForwardIterator>
