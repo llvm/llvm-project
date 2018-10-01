@@ -424,3 +424,7 @@ void no_CXXRecordDecl() {
   *(void **)&b = c() + 1;
   *b = a; // no-crash
 }
+
+void checkReference(std::string &s) {
+  const char *c = s.c_str();
+}
