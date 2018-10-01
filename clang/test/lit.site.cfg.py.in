@@ -26,6 +26,7 @@ config.enable_shared = @ENABLE_SHARED@
 config.enable_backtrace = @ENABLE_BACKTRACES@
 config.host_arch = "@HOST_ARCH@"
 config.python_executable = "@PYTHON_EXECUTABLE@"
+config.use_z3_solver = "@USE_Z3_SOLVER@"
 
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.
@@ -34,6 +35,7 @@ try:
     config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
     config.llvm_shlib_dir = config.llvm_shlib_dir % lit_config.params
     config.llvm_libs_dir = config.llvm_libs_dir % lit_config.params
+    config.use_z3_solver = lit_config.params['USE_Z3_SOLVER']
 except KeyError:
     e = sys.exc_info()[1]
     key, = e.args

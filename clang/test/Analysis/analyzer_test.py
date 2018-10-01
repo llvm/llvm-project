@@ -4,6 +4,10 @@ import lit.TestRunner
 # Custom format class for static analyzer tests
 class AnalyzerTest(lit.formats.ShTest):
 
+    def __init__(self, execute_external, use_z3_solver=False):
+        super(AnalyzerTest, self).__init__(execute_external)
+        self.use_z3_solver = use_z3_solver
+
     def execute(self, test, litConfig):
         results = []
 
@@ -19,7 +23,8 @@ class AnalyzerTest(lit.formats.ShTest):
                 return results[-1]
 
         # If z3 backend available, add an additional run line for it
-        if test.config.clang_staticanalyzer_z3 == '1':
+        if self.use_z3_solver == '1':
+            assert(test.config.clang_staticanalyzer_z3 == '1')
             results.append(self.executeWithAnalyzeSubstitution(
                 saved_test, litConfig, '-analyzer-constraints=z3 -DANALYZER_CM_Z3'))
 
