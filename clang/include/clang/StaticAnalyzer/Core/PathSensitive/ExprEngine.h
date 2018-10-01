@@ -141,9 +141,6 @@ private:
   /// implicitly never returns.
   ObjCNoReturn ObjCNoRet;
 
-  /// Whether or not GC is enabled in this analysis.
-  bool ObjCGCEnabled;
-
   /// The BugReporter associated with this engine.  It is important that
   ///  this object be placed at the very end of member variables so that its
   ///  destructor is called before the rest of the ExprEngine is destroyed.
@@ -200,8 +197,6 @@ public:
     assert(currBldrCtx);
     return *currBldrCtx;
   }
-
-  bool isObjCGCEnabled() { return ObjCGCEnabled; }
 
   const Stmt *getStmt() const;
 

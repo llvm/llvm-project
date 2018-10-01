@@ -2023,8 +2023,6 @@ static std::unique_ptr<PathDiagnostic> generatePathDiagnosticForConsumer(
 
 void BugType::anchor() {}
 
-void BugType::FlushReports(BugReporter &BR) {}
-
 void BuiltinBug::anchor() {}
 
 //===----------------------------------------------------------------------===//
@@ -2252,14 +2250,6 @@ BugReporter::~BugReporter() {
 void BugReporter::FlushReports() {
   if (BugTypes.isEmpty())
     return;
-
-  // First flush the warnings for each BugType.  This may end up creating new
-  // warnings and new BugTypes.
-  // FIXME: Only NSErrorChecker needs BugType's FlushReports.
-  // Turn NSErrorChecker into a proper checker and remove this.
-  SmallVector<const BugType *, 16> bugTypes(BugTypes.begin(), BugTypes.end());
-  for (const auto I : bugTypes)
-    const_cast<BugType*>(I)->FlushReports(*this);
 
   // We need to flush reports in deterministic order to ensure the order
   // of the reports is consistent between runs.
