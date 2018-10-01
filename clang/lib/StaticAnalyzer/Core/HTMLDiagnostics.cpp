@@ -122,6 +122,15 @@ private:
 
   /// \return Javascript for navigating the HTML report using j/k keys.
   StringRef generateKeyboardNavigationJavascript();
+
+  /// \return JavaScript for an option to only show relevant lines.
+  std::string showRelevantLinesJavascript(
+    const PathDiagnostic &D, const PathPieces &path);
+
+  /// Write executed lines from \p D in JSON format into \p os.
+  void dumpCoverageData(const PathDiagnostic &D,
+                        const PathPieces &path,
+                        llvm::raw_string_ostream &os);
 };
 
 } // namespace
@@ -333,8 +342,7 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
   return os.str();
 }
 
-/// Write executed lines from \p D in JSON format into \p os.
-static void serializeExecutedLines(
+void HTMLDiagnostics::dumpCoverageData(
     const PathDiagnostic &D,
     const PathPieces &path,
     llvm::raw_string_ostream &os) {
@@ -360,13 +368,12 @@ static void serializeExecutedLines(
   os << "};";
 }
 
-/// \return JavaScript for an option to only show relevant lines.
-static std::string showRelevantLinesJavascript(
+std::string HTMLDiagnostics::showRelevantLinesJavascript(
       const PathDiagnostic &D, const PathPieces &path) {
   std::string s;
   llvm::raw_string_ostream os(s);
   os << "<script type='text/javascript'>\n";
-  serializeExecutedLines(D, path, os);
+  dumpCoverageData(D, path, os);
   os << R"<<<(
 
 var filterCounterexample = function (hide) {
