@@ -2812,16 +2812,15 @@ static bool isInevitablySinking(const ExplodedNode *N) {
     DFSWorkList.pop_back();
     Visited.insert(Blk);
 
+    // If at least one path reaches the CFG exit, it means that control is
+    // returned to the caller. For now, say that we are not sure what
+    // happens next. If necessary, this can be improved to analyze
+    // the parent StackFrameContext's call site in a similar manner.
+    if (Blk == &Cfg.getExit())
+      return false;
+
     for (const auto &Succ : Blk->succs()) {
       if (const CFGBlock *SuccBlk = Succ.getReachableBlock()) {
-        if (SuccBlk == &Cfg.getExit()) {
-          // If at least one path reaches the CFG exit, it means that control is
-          // returned to the caller. For now, say that we are not sure what
-          // happens next. If necessary, this can be improved to analyze
-          // the parent StackFrameContext's call site in a similar manner.
-          return false;
-        }
-
         if (!isImmediateSinkBlock(SuccBlk) && !Visited.count(SuccBlk)) {
           // If the block has reachable child blocks that aren't no-return,
           // add them to the worklist.
