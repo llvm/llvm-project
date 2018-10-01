@@ -43,6 +43,10 @@ ProgramPoint ProgramPoint::getProgramPoint(const Stmt *S, ProgramPoint::Kind K,
   }
 }
 
+LLVM_DUMP_METHOD void ProgramPoint::dump() const {
+  return print(/*CR=*/"\n", llvm::errs());
+}
+
 static void printLocation(raw_ostream &Out, SourceLocation SLoc,
                           const SourceManager &SM,
                           StringRef CR,
