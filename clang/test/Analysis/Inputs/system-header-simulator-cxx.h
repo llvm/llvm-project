@@ -642,6 +642,12 @@ namespace std {
   template <class InputIterator, class T>
   InputIterator find(InputIterator first, InputIterator last, const T &val);
 
+  template <class ForwardIterator1, class ForwardIterator2>
+  ForwardIterator1 find_first_of(ForwardIterator1 first1,
+                                 ForwardIterator1 last1,
+                                 ForwardIterator2 first2,
+                                 ForwardIterator2 last2);
+
   template <class InputIterator, class OutputIterator>
   OutputIterator copy(InputIterator first, InputIterator last,
                       OutputIterator result);
