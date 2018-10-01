@@ -117,7 +117,7 @@ public:
 
   virtual void printSeparator(llvm::raw_ostream &Out) const override {}
 
-  virtual bool isBase() const { return true; }
+  virtual bool isBase() const override { return true; }
 };
 
 } // end of anonymous namespace
