@@ -50,6 +50,10 @@ MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
  "${PROJECT_NAME} requires an out of source build. Please create a separate
  build directory and run 'cmake /path/to/${PROJECT_NAME} [options]' there."
  )
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+  message(STATUS "Configuring for clang-cl")
+  set(LIBCXX_TARGETING_CLANG_CL ON)
+endif()
 
 if (MSVC)
   set(LIBCXX_TARGETING_MSVC ON)
@@ -122,11 +126,6 @@ option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 
 if (NOT LIBCXX_ENABLE_SHARED AND NOT LIBCXX_ENABLE_STATIC)
   message(FATAL_ERROR "libc++ must be built as either a shared or static library.")
-endif()
-
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-  message(STATUS "Configuring for clang-cl")
-  set(LIBCXX_TARGETING_CLANG_CL ON)
 endif()
 
 # ABI Library options ---------------------------------------------------------
@@ -556,8 +555,13 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     if (LIBCXX_TARGETING_CLANG_CL)
       add_compile_flags_if_supported(
         -Wno-c++98-compat
+        -Wno-c++98-compat-pedantic
         -Wno-c++11-compat
         -Wno-undef
+        -Wno-reserved-id-macro
+        -Wno-gnu-include-next
+        -Wno-gcc-compat # For ignoring "'diagnose_if' is a clang extension" warnings
+        -Wno-zero-as-null-pointer-constant # FIXME: Remove this and fix all occurances.
       )
     endif()
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
