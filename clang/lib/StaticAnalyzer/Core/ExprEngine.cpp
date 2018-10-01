@@ -3142,9 +3142,13 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
     }
 
     ProgramStateRef state = N->getState();
-    Out << "\\|StateID: " << state->getID() << " ("
-        << (const void*) state.get() << ")"
-        << " NodeID: " << (const void*) N << "\\|";
+    ExplodedGraph &Graph =
+        static_cast<ExprEngine *>(state->getStateManager().getOwningEngine())
+            ->getGraph();
+
+    Out << "\\|StateID: " << state->getID() << " (" << (const void *)state.get()
+        << ")"
+        << " NodeID: " << N->getID(&Graph) << " (" << (const void *)N << ")\\|";
 
     state->printDOT(Out, N->getLocationContext());
 
