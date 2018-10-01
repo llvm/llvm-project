@@ -3109,16 +3109,16 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
       const Stmt *S = Loc.castAs<StmtPoint>().getStmt();
       assert(S != nullptr && "Expecting non-null Stmt");
 
-      Out << S->getStmtClassName() << ' '
+      Out << S->getStmtClassName() << " S"
           << S->getID(Context) << " <" << (const void *)S << "> ";
       S->printPretty(Out, /*helper=*/nullptr, Context.getPrintingPolicy(),
                      /*Indentation=*/2, /*NewlineSymbol=*/"\\l");
       printLocation(Out, S->getBeginLoc());
 
       if (Loc.getAs<PreStmt>())
-        Out << "\\lPreStmt\\l;";
+        Out << "\\lPreStmt\\l";
       else if (Loc.getAs<PostLoad>())
-        Out << "\\lPostLoad\\l;";
+        Out << "\\lPostLoad\\l";
       else if (Loc.getAs<PostStore>())
         Out << "\\lPostStore\\l";
       else if (Loc.getAs<PostLValue>())
@@ -3172,9 +3172,8 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
         static_cast<ExprEngine *>(State->getStateManager().getOwningEngine())
             ->getGraph();
 
-    Out << "StateID: " << State->getID() << " <" << (const void *)State.get()
-        << ">"
-        << " NodeID: " << N->getID(&Graph) << " <" << (const void *)N << ">\\|";
+    Out << "StateID: ST" << State->getID() << ", NodeID: N" << N->getID(&Graph)
+        << " <" << (const void *)N << ">\\|";
 
     bool SameAsAllPredecessors =
         std::all_of(N->pred_begin(), N->pred_end(), [&](const ExplodedNode *P) {

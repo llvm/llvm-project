@@ -235,8 +235,7 @@ void Environment::print(raw_ostream &Out, const char *NL,
       const Stmt *S = I.first.getStmt();
       assert(S != nullptr && "Expected non-null Stmt");
 
-      Out << "(LC " << LC->getID() << " <" << (const void *)LC << ">, S "
-          << S->getID(Context) << " <" << (const void *)S << ">) ";
+      Out << "(LC" << LC->getID() << ", S" << S->getID(Context) << ") ";
       S->printPretty(Out, /*Helper=*/nullptr, PP);
       Out << " : " << I.second << NL;
     }
