@@ -58,6 +58,202 @@ RetainSummaryManager::getPersistentSummary(const RetainSummary &OldSumm) {
 }
 
 const RetainSummary *
+RetainSummaryManager::generateSummary(const FunctionDecl *FD,
+                                      bool &AllowAnnotations) {
+  // We generate "stop" summaries for implicitly defined functions.
+  if (FD->isImplicit()) {
+    return getPersistentStopSummary();
+  }
+
+  // [PR 3337] Use 'getAs<FunctionType>' to strip away any typedefs on the
+  // function's type.
+  const FunctionType *FT = FD->getType()->getAs<FunctionType>();
+  const IdentifierInfo *II = FD->getIdentifier();
+  if (!II)
+    return getDefaultSummary();
+
+  StringRef FName = II->getName();
+
+  // Strip away preceding '_'.  Doing this here will effect all the checks
+  // down below.
+  FName = FName.substr(FName.find_first_not_of('_'));
+
+  // Inspect the result type.
+  QualType RetTy = FT->getReturnType();
+  std::string RetTyName = RetTy.getAsString();
+
+  // FIXME: This should all be refactored into a chain of "summary lookup"
+  //  filters.
+  assert(ScratchArgs.isEmpty());
+
+  if (FName == "pthread_create" || FName == "pthread_setspecific") {
+    // Part of: <rdar://problem/7299394> and <rdar://problem/11282706>.
+    // This will be addressed better with IPA.
+    return getPersistentStopSummary();
+  } else if (FName == "CFPlugInInstanceCreate") {
+    return getPersistentSummary(RetEffect::MakeNoRet());
+  } else if (FName == "IORegistryEntrySearchCFProperty" ||
+             (RetTyName == "CFMutableDictionaryRef" &&
+              (FName == "IOBSDNameMatching" || FName == "IOServiceMatching" ||
+               FName == "IOServiceNameMatching" ||
+               FName == "IORegistryEntryIDMatching" ||
+               FName == "IOOpenFirmwarePathMatching"))) {
+    // Part of <rdar://problem/6961230>. (IOKit)
+    // This should be addressed using a API table.
+    return getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF), DoNothing,
+                             DoNothing);
+  } else if (FName == "IOServiceGetMatchingService" ||
+             FName == "IOServiceGetMatchingServices") {
+    // FIXES: <rdar://problem/6326900>
+    // This should be addressed using a API table.  This strcmp is also
+    // a little gross, but there is no need to super optimize here.
+    ScratchArgs = AF.add(ScratchArgs, 1, DecRef);
+    return getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+  } else if (FName == "IOServiceAddNotification" ||
+             FName == "IOServiceAddMatchingNotification") {
+    // Part of <rdar://problem/6961230>. (IOKit)
+    // This should be addressed using a API table.
+    ScratchArgs = AF.add(ScratchArgs, 2, DecRef);
+    return getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+  } else if (FName == "CVPixelBufferCreateWithBytes") {
+    // FIXES: <rdar://problem/7283567>
+    // Eventually this can be improved by recognizing that the pixel
+    // buffer passed to CVPixelBufferCreateWithBytes is released via
+    // a callback and doing full IPA to make sure this is done correctly.
+    // FIXME: This function has an out parameter that returns an
+    // allocated object.
+    ScratchArgs = AF.add(ScratchArgs, 7, StopTracking);
+    return getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+  } else if (FName == "CGBitmapContextCreateWithData") {
+    // FIXES: <rdar://problem/7358899>
+    // Eventually this can be improved by recognizing that 'releaseInfo'
+    // passed to CGBitmapContextCreateWithData is released via
+    // a callback and doing full IPA to make sure this is done correctly.
+    ScratchArgs = AF.add(ScratchArgs, 8, StopTracking);
+    return getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF), DoNothing,
+                             DoNothing);
+  } else if (FName == "CVPixelBufferCreateWithPlanarBytes") {
+    // FIXES: <rdar://problem/7283567>
+    // Eventually this can be improved by recognizing that the pixel
+    // buffer passed to CVPixelBufferCreateWithPlanarBytes is released
+    // via a callback and doing full IPA to make sure this is done
+    // correctly.
+    ScratchArgs = AF.add(ScratchArgs, 12, StopTracking);
+    return getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+  } else if (FName == "VTCompressionSessionEncodeFrame") {
+    // The context argument passed to VTCompressionSessionEncodeFrame()
+    // is passed to the callback specified when creating the session
+    // (e.g. with VTCompressionSessionCreate()) which can release it.
+    // To account for this possibility, conservatively stop tracking
+    // the context.
+    ScratchArgs = AF.add(ScratchArgs, 5, StopTracking);
+    return getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+  } else if (FName == "dispatch_set_context" ||
+             FName == "xpc_connection_set_context") {
+    // <rdar://problem/11059275> - The analyzer currently doesn't have
+    // a good way to reason about the finalizer function for libdispatch.
+    // If we pass a context object that is memory managed, stop tracking it.
+    // <rdar://problem/13783514> - Same problem, but for XPC.
+    // FIXME: this hack should possibly go away once we can handle
+    // libdispatch and XPC finalizers.
+    ScratchArgs = AF.add(ScratchArgs, 1, StopTracking);
+    return getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+  } else if (FName.startswith("NSLog")) {
+    return getDoNothingSummary();
+  } else if (FName.startswith("NS") &&
+             (FName.find("Insert") != StringRef::npos)) {
+    // Whitelist NSXXInsertXX, for example NSMapInsertIfAbsent, since they can
+    // be deallocated by NSMapRemove. (radar://11152419)
+    ScratchArgs = AF.add(ScratchArgs, 1, StopTracking);
+    ScratchArgs = AF.add(ScratchArgs, 2, StopTracking);
+    return getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
+  }
+
+  if (RetTy->isPointerType()) {
+    // For CoreFoundation ('CF') types.
+    if (cocoa::isRefType(RetTy, "CF", FName)) {
+      if (RetainSummary::isRetain(FD, FName)) {
+        // CFRetain isn't supposed to be annotated. However, this may as well
+        // be a user-made "safe" CFRetain function that is incorrectly
+        // annotated as cf_returns_retained due to lack of better options.
+        // We want to ignore such annotation.
+        AllowAnnotations = false;
+
+        return getUnarySummary(FT, cfretain);
+      } else if (RetainSummary::isAutorelease(FD, FName)) {
+        // The headers use cf_consumed, but we can fully model CFAutorelease
+        // ourselves.
+        AllowAnnotations = false;
+
+        return getUnarySummary(FT, cfautorelease);
+      } else {
+        return getCFCreateGetRuleSummary(FD);
+      }
+    }
+
+    // For CoreGraphics ('CG') and CoreVideo ('CV') types.
+    if (cocoa::isRefType(RetTy, "CG", FName) ||
+        cocoa::isRefType(RetTy, "CV", FName)) {
+      if (RetainSummary::isRetain(FD, FName))
+        return getUnarySummary(FT, cfretain);
+      else
+        return getCFCreateGetRuleSummary(FD);
+    }
+
+    // For all other CF-style types, use the Create/Get
+    // rule for summaries but don't support Retain functions
+    // with framework-specific prefixes.
+    if (coreFoundation::isCFObjectRef(RetTy)) {
+      return getCFCreateGetRuleSummary(FD);
+    }
+
+    if (FD->hasAttr<CFAuditedTransferAttr>()) {
+      return getCFCreateGetRuleSummary(FD);
+    }
+  }
+
+  // Check for release functions, the only kind of functions that we care
+  // about that don't return a pointer type.
+  if (FName.size() >= 2 && FName[0] == 'C' &&
+      (FName[1] == 'F' || FName[1] == 'G')) {
+    // Test for 'CGCF'.
+    FName = FName.substr(FName.startswith("CGCF") ? 4 : 2);
+
+    if (RetainSummary::isRelease(FD, FName))
+      return getUnarySummary(FT, cfrelease);
+    else {
+      assert(ScratchArgs.isEmpty());
+      // Remaining CoreFoundation and CoreGraphics functions.
+      // We use to assume that they all strictly followed the ownership idiom
+      // and that ownership cannot be transferred.  While this is technically
+      // correct, many methods allow a tracked object to escape.  For example:
+      //
+      //   CFMutableDictionaryRef x = CFDictionaryCreateMutable(...);
+      //   CFDictionaryAddValue(y, key, x);
+      //   CFRelease(x);
+      //   ... it is okay to use 'x' since 'y' has a reference to it
+      //
+      // We handle this and similar cases with the follow heuristic.  If the
+      // function name contains "InsertValue", "SetValue", "AddValue",
+      // "AppendValue", or "SetAttribute", then we assume that arguments may
+      // "escape."  This means that something else holds on to the object,
+      // allowing it be used even after its local retain count drops to 0.
+      ArgEffect E = (StrInStrNoCase(FName, "InsertValue") != StringRef::npos ||
+                     StrInStrNoCase(FName, "AddValue") != StringRef::npos ||
+                     StrInStrNoCase(FName, "SetValue") != StringRef::npos ||
+                     StrInStrNoCase(FName, "AppendValue") != StringRef::npos ||
+                     StrInStrNoCase(FName, "SetAttribute") != StringRef::npos)
+                        ? MayEscape
+                        : DoNothing;
+
+      return getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, E);
+    }
+  }
+
+  return getDefaultSummary();
+}
+
+const RetainSummary *
 RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
   // If we don't know what function we're calling, use our default summary.
   if (!FD)
@@ -69,217 +265,8 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
     return I->second;
 
   // No summary?  Generate one.
-  const RetainSummary *S = nullptr;
   bool AllowAnnotations = true;
-
-  do {
-    // We generate "stop" summaries for implicitly defined functions.
-    if (FD->isImplicit()) {
-      S = getPersistentStopSummary();
-      break;
-    }
-
-    // [PR 3337] Use 'getAs<FunctionType>' to strip away any typedefs on the
-    // function's type.
-    const FunctionType* FT = FD->getType()->getAs<FunctionType>();
-    const IdentifierInfo *II = FD->getIdentifier();
-    if (!II)
-      break;
-
-    StringRef FName = II->getName();
-
-    // Strip away preceding '_'.  Doing this here will effect all the checks
-    // down below.
-    FName = FName.substr(FName.find_first_not_of('_'));
-
-    // Inspect the result type.
-    QualType RetTy = FT->getReturnType();
-    std::string RetTyName = RetTy.getAsString();
-
-    // FIXME: This should all be refactored into a chain of "summary lookup"
-    //  filters.
-    assert(ScratchArgs.isEmpty());
-
-    if (FName == "pthread_create" || FName == "pthread_setspecific") {
-      // Part of: <rdar://problem/7299394> and <rdar://problem/11282706>.
-      // This will be addressed better with IPA.
-      S = getPersistentStopSummary();
-    } else if (FName == "CFPlugInInstanceCreate") {
-      S = getPersistentSummary(RetEffect::MakeNoRet());
-    } else if (FName == "IORegistryEntrySearchCFProperty"
-        || (RetTyName == "CFMutableDictionaryRef" && (
-               FName == "IOBSDNameMatching" ||
-               FName == "IOServiceMatching" ||
-               FName == "IOServiceNameMatching" ||
-               FName == "IORegistryEntryIDMatching" ||
-               FName == "IOOpenFirmwarePathMatching"
-            ))) {
-      // Part of <rdar://problem/6961230>. (IOKit)
-      // This should be addressed using a API table.
-      S = getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF),
-                               DoNothing, DoNothing);
-    } else if (FName == "IOServiceGetMatchingService" ||
-               FName == "IOServiceGetMatchingServices") {
-      // FIXES: <rdar://problem/6326900>
-      // This should be addressed using a API table.  This strcmp is also
-      // a little gross, but there is no need to super optimize here.
-      ScratchArgs = AF.add(ScratchArgs, 1, DecRef);
-      S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
-    } else if (FName == "IOServiceAddNotification" ||
-               FName == "IOServiceAddMatchingNotification") {
-      // Part of <rdar://problem/6961230>. (IOKit)
-      // This should be addressed using a API table.
-      ScratchArgs = AF.add(ScratchArgs, 2, DecRef);
-      S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
-    } else if (FName == "CVPixelBufferCreateWithBytes") {
-      // FIXES: <rdar://problem/7283567>
-      // Eventually this can be improved by recognizing that the pixel
-      // buffer passed to CVPixelBufferCreateWithBytes is released via
-      // a callback and doing full IPA to make sure this is done correctly.
-      // FIXME: This function has an out parameter that returns an
-      // allocated object.
-      ScratchArgs = AF.add(ScratchArgs, 7, StopTracking);
-      S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
-    } else if (FName == "CGBitmapContextCreateWithData") {
-      // FIXES: <rdar://problem/7358899>
-      // Eventually this can be improved by recognizing that 'releaseInfo'
-      // passed to CGBitmapContextCreateWithData is released via
-      // a callback and doing full IPA to make sure this is done correctly.
-      ScratchArgs = AF.add(ScratchArgs, 8, StopTracking);
-      S = getPersistentSummary(RetEffect::MakeOwned(RetEffect::CF),
-                               DoNothing, DoNothing);
-    } else if (FName == "CVPixelBufferCreateWithPlanarBytes") {
-      // FIXES: <rdar://problem/7283567>
-      // Eventually this can be improved by recognizing that the pixel
-      // buffer passed to CVPixelBufferCreateWithPlanarBytes is released
-      // via a callback and doing full IPA to make sure this is done
-      // correctly.
-      ScratchArgs = AF.add(ScratchArgs, 12, StopTracking);
-      S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
-    } else if (FName == "VTCompressionSessionEncodeFrame") {
-      // The context argument passed to VTCompressionSessionEncodeFrame()
-      // is passed to the callback specified when creating the session
-      // (e.g. with VTCompressionSessionCreate()) which can release it.
-      // To account for this possibility, conservatively stop tracking
-      // the context.
-      ScratchArgs = AF.add(ScratchArgs, 5, StopTracking);
-      S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
-    } else if (FName == "dispatch_set_context" ||
-               FName == "xpc_connection_set_context") {
-      // <rdar://problem/11059275> - The analyzer currently doesn't have
-      // a good way to reason about the finalizer function for libdispatch.
-      // If we pass a context object that is memory managed, stop tracking it.
-      // <rdar://problem/13783514> - Same problem, but for XPC.
-      // FIXME: this hack should possibly go away once we can handle
-      // libdispatch and XPC finalizers.
-      ScratchArgs = AF.add(ScratchArgs, 1, StopTracking);
-      S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
-    } else if (FName.startswith("NSLog")) {
-      S = getDoNothingSummary();
-    } else if (FName.startswith("NS") &&
-                (FName.find("Insert") != StringRef::npos)) {
-      // Whitelist NSXXInsertXX, for example NSMapInsertIfAbsent, since they can
-      // be deallocated by NSMapRemove. (radar://11152419)
-      ScratchArgs = AF.add(ScratchArgs, 1, StopTracking);
-      ScratchArgs = AF.add(ScratchArgs, 2, StopTracking);
-      S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, DoNothing);
-    }
-
-    // Did we get a summary?
-    if (S)
-      break;
-
-    if (RetTy->isPointerType()) {
-      // For CoreFoundation ('CF') types.
-      if (cocoa::isRefType(RetTy, "CF", FName)) {
-        if (RetainSummary::isRetain(FD, FName)) {
-          S = getUnarySummary(FT, cfretain);
-          // CFRetain isn't supposed to be annotated. However, this may as well
-          // be a user-made "safe" CFRetain function that is incorrectly
-          // annotated as cf_returns_retained due to lack of better options.
-          // We want to ignore such annotation.
-          AllowAnnotations = false;
-        } else if (RetainSummary::isAutorelease(FD, FName)) {
-          S = getUnarySummary(FT, cfautorelease);
-          // The headers use cf_consumed, but we can fully model CFAutorelease
-          // ourselves.
-          AllowAnnotations = false;
-        } else {
-          S = getCFCreateGetRuleSummary(FD);
-        }
-
-        break;
-      }
-
-      // For CoreGraphics ('CG') and CoreVideo ('CV') types.
-      if (cocoa::isRefType(RetTy, "CG", FName) ||
-          cocoa::isRefType(RetTy, "CV", FName)) {
-        if (RetainSummary::isRetain(FD, FName))
-          S = getUnarySummary(FT, cfretain);
-        else
-          S = getCFCreateGetRuleSummary(FD);
-
-        break;
-      }
-
-      // For all other CF-style types, use the Create/Get
-      // rule for summaries but don't support Retain functions
-      // with framework-specific prefixes.
-      if (coreFoundation::isCFObjectRef(RetTy)) {
-        S = getCFCreateGetRuleSummary(FD);
-        break;
-      }
-
-      if (FD->hasAttr<CFAuditedTransferAttr>()) {
-        S = getCFCreateGetRuleSummary(FD);
-        break;
-      }
-
-      break;
-    }
-
-    // Check for release functions, the only kind of functions that we care
-    // about that don't return a pointer type.
-    if (FName.size() >= 2 &&
-        FName[0] == 'C' && (FName[1] == 'F' || FName[1] == 'G')) {
-      // Test for 'CGCF'.
-      FName = FName.substr(FName.startswith("CGCF") ? 4 : 2);
-
-      if (RetainSummary::isRelease(FD, FName))
-        S = getUnarySummary(FT, cfrelease);
-      else {
-        assert (ScratchArgs.isEmpty());
-        // Remaining CoreFoundation and CoreGraphics functions.
-        // We use to assume that they all strictly followed the ownership idiom
-        // and that ownership cannot be transferred.  While this is technically
-        // correct, many methods allow a tracked object to escape.  For example:
-        //
-        //   CFMutableDictionaryRef x = CFDictionaryCreateMutable(...);
-        //   CFDictionaryAddValue(y, key, x);
-        //   CFRelease(x);
-        //   ... it is okay to use 'x' since 'y' has a reference to it
-        //
-        // We handle this and similar cases with the follow heuristic.  If the
-        // function name contains "InsertValue", "SetValue", "AddValue",
-        // "AppendValue", or "SetAttribute", then we assume that arguments may
-        // "escape."  This means that something else holds on to the object,
-        // allowing it be used even after its local retain count drops to 0.
-        ArgEffect E = (StrInStrNoCase(FName, "InsertValue") != StringRef::npos||
-                       StrInStrNoCase(FName, "AddValue") != StringRef::npos ||
-                       StrInStrNoCase(FName, "SetValue") != StringRef::npos ||
-                       StrInStrNoCase(FName, "AppendValue") != StringRef::npos||
-                       StrInStrNoCase(FName, "SetAttribute") != StringRef::npos)
-                      ? MayEscape : DoNothing;
-
-        S = getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, E);
-      }
-    }
-  }
-  while (0);
-
-  // If we got all the way here without any luck, use a default summary.
-  if (!S)
-    S = getDefaultSummary();
+  const RetainSummary *S = generateSummary(FD, AllowAnnotations);
 
   // Annotations override defaults.
   if (AllowAnnotations)

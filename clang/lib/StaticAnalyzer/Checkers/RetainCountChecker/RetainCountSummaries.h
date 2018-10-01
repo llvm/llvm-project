@@ -495,6 +495,10 @@ public:
 
   RetEffect getObjAllocRetEffect() const { return ObjCAllocRetE; }
 
+private:
+  const RetainSummary * generateSummary(const FunctionDecl *FD,
+                                        bool &AllowAnnotations);
+
   friend class RetainSummaryTemplate;
 };
 
