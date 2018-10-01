@@ -561,7 +561,11 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
         -Wno-reserved-id-macro
         -Wno-gnu-include-next
         -Wno-gcc-compat # For ignoring "'diagnose_if' is a clang extension" warnings
-        -Wno-zero-as-null-pointer-constant # FIXME: Remove this and fix all occurances.
+        -Wno-zero-as-null-pointer-constant # FIXME: Remove this and fix all occurrences.
+        -Wno-deprecated-dynamic-exception-spec # For auto_ptr
+        -Wno-sign-conversion
+        -Wno-old-style-cast
+        -Wno-deprecated # FIXME: Remove this and fix all occurrences.
       )
     endif()
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
