@@ -122,7 +122,7 @@ public:
   /// Each region is a subregion of itself.
   virtual bool isSubRegionOf(const MemRegion *R) const;
 
-  const MemRegion *StripCasts(bool StripBaseCasts = true) const;
+  const MemRegion *StripCasts(bool StripBaseAndDerivedCasts = true) const;
 
   /// If this is a symbolic region, returns the region. Otherwise,
   /// goes up the base chain looking for the first symbolic base region.
@@ -1176,6 +1176,47 @@ public:
   }
 };
 
+// CXXDerivedObjectRegion represents a derived-class object that surrounds
+// a C++ object. It is identified by the derived class declaration and the
+// region of its parent object. It is a bit counter-intuitive (but not otherwise
+// unseen) that this region represents a larger segment of memory that its
+// super-region.
+class CXXDerivedObjectRegion : public TypedValueRegion {
+  friend class MemRegionManager;
+
+  const CXXRecordDecl *DerivedD;
+
+  CXXDerivedObjectRegion(const CXXRecordDecl *DerivedD, const SubRegion *SReg)
+      : TypedValueRegion(SReg, CXXDerivedObjectRegionKind), DerivedD(DerivedD) {
+    assert(DerivedD);
+    // In case of a concrete region, it should always be possible to model
+    // the base-to-derived cast by undoing a previous derived-to-base cast,
+    // otherwise the cast is most likely ill-formed.
+    assert(SReg->getSymbolicBase() &&
+           "Should have unwrapped a base region instead!");
+  }
+
+  static void ProfileRegion(llvm::FoldingSetNodeID &ID, const CXXRecordDecl *RD,
+                            const MemRegion *SReg);
+
+public:
+  const CXXRecordDecl *getDecl() const { return DerivedD; }
+
+  QualType getValueType() const override;
+
+  void dumpToStream(raw_ostream &os) const override;
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override;
+
+  bool canPrintPrettyAsExpr() const override;
+
+  void printPrettyAsExpr(raw_ostream &os) const override;
+
+  static bool classof(const MemRegion *region) {
+    return region->getKind() == CXXDerivedObjectRegionKind;
+  }
+};
+
 template<typename RegionTy>
 const RegionTy* MemRegion::getAs() const {
   if (const auto *RT = dyn_cast<RegionTy>(this))
@@ -1325,6 +1366,14 @@ public:
     return getCXXBaseObjectRegion(baseReg->getDecl(), superRegion,
                                   baseReg->isVirtual());
   }
+
+  /// Create a CXXDerivedObjectRegion with the given derived class for region
+  /// \p Super. This should not be used for casting an existing
+  /// CXXBaseObjectRegion back to the derived type; instead, CXXBaseObjectRegion
+  /// should be removed.
+  const CXXDerivedObjectRegion *
+  getCXXDerivedObjectRegion(const CXXRecordDecl *BaseClass,
+                            const SubRegion *Super);
 
   const FunctionCodeRegion *getFunctionCodeRegion(const NamedDecl *FD);
   const BlockCodeRegion *getBlockCodeRegion(const BlockDecl *BD,
