@@ -318,6 +318,9 @@ extern CGColorSpaceRef CGColorSpaceCreateDeviceRGB(void);
 + (id)array;
 @end
 
+// This is how NSMakeCollectable is declared in the OS X 10.8 headers.
+id NSMakeCollectable(CFTypeRef __attribute__((cf_consumed))) __attribute__((ns_returns_retained));
+
 typedef const struct __CFUUID * CFUUIDRef;
 
 extern
@@ -2071,6 +2074,16 @@ void rdar11400885(int y)
     [printString release];
     NSLog(@"Again: %@", printString); // expected-warning {{Reference-counted object is used after it is released}}
   }
+}
+
+id makeCollectableNonLeak() {
+  extern CFTypeRef CFCreateSomething();
+
+  CFTypeRef object = CFCreateSomething(); // +1
+  CFRetain(object); // +2
+  id objCObject = NSMakeCollectable(object); // +2
+  [objCObject release]; // +1
+  return [objCObject autorelease]; // +0
 }
 
 void consumeAndStopTracking(id NS_CONSUMED obj, void (^callback)(void));

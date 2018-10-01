@@ -78,6 +78,10 @@ static bool isAutorelease(const FunctionDecl *FD, StringRef FName) {
          FName.endswith_lower("autorelease");
 }
 
+static bool isMakeCollectable(StringRef FName) {
+  return FName.contains_lower("MakeCollectable");
+}
+
 const RetainSummary *
 RetainSummaryManager::generateSummary(const FunctionDecl *FD,
                                       bool &AllowAnnotations) {
@@ -111,6 +115,11 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
     // Part of: <rdar://problem/7299394> and <rdar://problem/11282706>.
     // This will be addressed better with IPA.
     return getPersistentStopSummary();
+  } else if(FName == "NSMakeCollectable") {
+    // Handle: id NSMakeCollectable(CFTypeRef)
+    AllowAnnotations = false;
+    return RetTy->isObjCIdType() ? getUnarySummary(FT, cfmakecollectable)
+                                 : getPersistentStopSummary();
   } else if (FName == "CFPlugInInstanceCreate") {
     return getPersistentSummary(RetEffect::MakeNoRet());
   } else if (FName == "IORegistryEntrySearchCFProperty" ||
@@ -207,6 +216,9 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
         AllowAnnotations = false;
 
         return getUnarySummary(FT, cfautorelease);
+      } else if (isMakeCollectable(FName)) {
+        AllowAnnotations = false;
+        return getUnarySummary(FT, cfmakecollectable);
       } else {
         return getCFCreateGetRuleSummary(FD);
       }
@@ -301,7 +313,6 @@ RetainSummaryManager::getFunctionSummary(const FunctionDecl *FD) {
 // Summary creation for functions (largely uses of Core Foundation).
 //===----------------------------------------------------------------------===//
 
-
 static ArgEffect getStopTrackingHardEquivalent(ArgEffect E) {
   switch (E) {
   case DoNothing:
@@ -309,6 +320,7 @@ static ArgEffect getStopTrackingHardEquivalent(ArgEffect E) {
   case DecRefBridgedTransferred:
   case IncRef:
   case IncRefMsg:
+  case MakeCollectable:
   case UnretainedOutParameter:
   case RetainedOutParameter:
   case MayEscape:
@@ -458,14 +470,17 @@ bool RetainSummaryManager::canEval(const CallExpr *CE,
   FName = FName.substr(FName.find_first_not_of('_'));
 
   QualType ResultTy = CE->getCallReturnType(Ctx);
-  if (ResultTy->isPointerType()) {
+  if (ResultTy->isObjCIdType()) {
+    return II->isStr("NSMakeCollectable");
+  } else if (ResultTy->isPointerType()) {
     // Handle: (CF|CG|CV)Retain
     //         CFAutorelease
     // It's okay to be a little sloppy here.
     if (cocoa::isRefType(ResultTy, "CF", FName) ||
         cocoa::isRefType(ResultTy, "CG", FName) ||
         cocoa::isRefType(ResultTy, "CV", FName))
-      return isRetain(FD, FName) || isAutorelease(FD, FName);
+      return isRetain(FD, FName) || isAutorelease(FD, FName) ||
+             isMakeCollectable(FName);
 
     if (FD->getDefinition()) {
       bool out = isTrustedReferenceCountImplementation(FD->getDefinition());
@@ -495,6 +510,7 @@ RetainSummaryManager::getUnarySummary(const FunctionType* FT,
   case cfretain: Effect = IncRef; break;
   case cfrelease: Effect = DecRef; break;
   case cfautorelease: Effect = Autorelease; break;
+  case cfmakecollectable: Effect = MakeCollectable; break;
   }
 
   ScratchArgs = AF.add(ScratchArgs, 0, Effect);

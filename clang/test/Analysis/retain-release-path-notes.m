@@ -36,6 +36,9 @@ CFTypeRef CFRetain(CFTypeRef);
 void CFRelease(CFTypeRef);
 CFTypeRef CFAutorelease(CFTypeRef __attribute__((cf_consumed)));
 
+id NSMakeCollectable(CFTypeRef);
+CFTypeRef CFMakeCollectable(CFTypeRef);
+
 CFTypeRef CFCreateSomething();
 CFTypeRef CFGetSomething();
 
@@ -93,6 +96,13 @@ void autoreleaseUnowned (Foo *foo) {
   id object = foo.propertyValue; // expected-note{{Property returns an Objective-C object with a +0 retain count}}
   [object autorelease]; // expected-note{{Object autoreleased}} 
   return; // expected-warning{{Object autoreleased too many times}} expected-note{{Object was autoreleased but has a +0 retain count}}
+}
+
+void makeCollectableIgnored() {
+  CFTypeRef leaked = CFCreateSomething(); // expected-note{{Call to function 'CFCreateSomething' returns a Core Foundation object of type CFTypeRef with a +1 retain count}}
+  CFMakeCollectable(leaked);
+  NSMakeCollectable(leaked);
+  return; // expected-warning{{leak}} expected-note{{Object leaked: object allocated and stored into 'leaked' is not referenced later in this execution path and has a retain count of +1}}
 }
 
 CFTypeRef CFCopyRuleViolation () {
