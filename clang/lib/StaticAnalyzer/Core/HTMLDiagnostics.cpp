@@ -115,12 +115,13 @@ public:
   void RewriteFile(Rewriter &R, const SourceManager& SMgr,
                    const PathPieces& path, FileID FID);
 
-  /// \return Javascript for navigating the HTML report using j/k keys.
-  std::string generateKeyboardNavigationJavascript();
 
 private:
   /// \return Javascript for displaying shortcuts help;
-  std::string showHelpJavascript();
+  StringRef showHelpJavascript();
+
+  /// \return Javascript for navigating the HTML report using j/k keys.
+  StringRef generateKeyboardNavigationJavascript();
 };
 
 } // namespace
@@ -571,7 +572,7 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
   html::AddHeaderFooterInternalBuiltinCSS(R, FID, Entry->getName());
 }
 
-std::string HTMLDiagnostics::showHelpJavascript() {
+StringRef HTMLDiagnostics::showHelpJavascript() {
   return R"<<<(
 <script type='text/javascript'>
 
@@ -929,7 +930,7 @@ void HTMLDiagnostics::HighlightRange(Rewriter& R, FileID BugFileID,
   html::HighlightRange(R, InstantiationStart, E, HighlightStart, HighlightEnd);
 }
 
-std::string HTMLDiagnostics::generateKeyboardNavigationJavascript() {
+StringRef HTMLDiagnostics::generateKeyboardNavigationJavascript() {
   return R"<<<(
 <script type='text/javascript'>
 var digitMatcher = new RegExp("[0-9]+");
