@@ -86,8 +86,11 @@ set(CLANGD_TEST_DEPS
   clangd-indexer
   dexp
 )
+# Exclude check-clangd from check-all, as check-clangd will launch via check-clang-tools.
+set(EXCLUDE_FROM_ALL ON)
 add_lit_testsuite(check-clangd "Running the Clangd regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}/Unit/clangd;${CMAKE_CURRENT_BINARY_DIR}/clangd
   DEPENDS ${CLANGD_TEST_DEPS}
 )
 set_target_properties(check-clangd PROPERTIES FOLDER "Clangd tests")
+set(EXCLUDE_FROM_ALL OFF)
