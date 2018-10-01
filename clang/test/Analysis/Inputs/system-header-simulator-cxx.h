@@ -269,6 +269,21 @@ namespace std {
     void emplace_back(Args&&... args);
     void pop_back();
 
+    iterator insert(const_iterator position, const value_type &val);
+    iterator insert(const_iterator position, size_type n,
+                    const value_type &val);
+    template <typename InputIterator>
+    iterator insert(const_iterator position, InputIterator first,
+                    InputIterator last);
+    iterator insert(const_iterator position, value_type &&val);
+    iterator insert(const_iterator position, initializer_list<value_type> il);
+
+    template <class... Args>
+    iterator emplace(const_iterator position, Args&&... args);
+
+    iterator erase(const_iterator position);
+    iterator erase(const_iterator first, const_iterator last);
+
     T &operator[](size_t n) {
       return _start[n];
     }
@@ -331,6 +346,21 @@ namespace std {
     void emplace_front(Args&&... args);
     void pop_front();
 
+    iterator insert(const_iterator position, const value_type &val);
+    iterator insert(const_iterator position, size_type n,
+                    const value_type &val);
+    template <typename InputIterator>
+    iterator insert(const_iterator position, InputIterator first,
+                    InputIterator last);
+    iterator insert(const_iterator position, value_type &&val);
+    iterator insert(const_iterator position, initializer_list<value_type> il);
+
+    template <class... Args>
+    iterator emplace(const_iterator position, Args&&... args);
+
+    iterator erase(const_iterator position);
+    iterator erase(const_iterator first, const_iterator last);
+
     iterator begin() { return iterator(_start); }
     const_iterator begin() const { return const_iterator(_start); }
     const_iterator cbegin() const { return const_iterator(_start); }
@@ -389,6 +419,21 @@ namespace std {
     void emplace_front(Args&&... args);
     void pop_front();
 
+    iterator insert(const_iterator position, const value_type &val);
+    iterator insert(const_iterator position, size_type n,
+                    const value_type &val);
+    template <typename InputIterator>
+    iterator insert(const_iterator position, InputIterator first,
+                    InputIterator last);
+    iterator insert(const_iterator position, value_type &&val);
+    iterator insert(const_iterator position, initializer_list<value_type> il);
+
+    template <class... Args>
+    iterator emplace(const_iterator position, Args&&... args);
+
+    iterator erase(const_iterator position);
+    iterator erase(const_iterator first, const_iterator last);
+
     T &operator[](size_t n) {
       return _start[n];
     }
@@ -444,6 +489,22 @@ namespace std {
     template<class... Args>
     void emplace_front(Args&&... args);
     void pop_front();
+
+    iterator insert_after(const_iterator position, const value_type &val);
+    iterator insert_after(const_iterator position, value_type &&val);
+    iterator insert_after(const_iterator position, size_type n,
+                          const value_type &val);
+    template <typename InputIterator>
+    iterator insert_after(const_iterator position, InputIterator first,
+                          InputIterator last);
+    iterator insert_after(const_iterator position,
+                          initializer_list<value_type> il);
+
+    template <class... Args>
+    iterator emplace_after(const_iterator position, Args&&... args);
+
+    iterator erase_after(const_iterator position);
+    iterator erase_after(const_iterator first, const_iterator last);
 
     iterator begin() { return iterator(_start); }
     const_iterator begin() const { return const_iterator(_start); }
