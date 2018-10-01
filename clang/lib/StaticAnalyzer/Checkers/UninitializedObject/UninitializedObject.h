@@ -35,6 +35,13 @@
 //     `-analyzer-config \
 //         alpha.cplusplus.UninitializedObject:CheckPointeeInitialization=true`.
 //
+//   - "IgnoreRecordsWithField" (string). If supplied, the checker will not
+//     analyze structures that have a field with a name or type name that
+//     matches the given pattern. Defaults to "".
+//
+//     `-analyzer-config \
+// alpha.cplusplus.UninitializedObject:IgnoreRecordsWithField="[Tt]ag|[Kk]ind"`.
+//
 //     TODO: With some clever heuristics, some pointers should be dereferenced
 //     by default. For example, if the pointee is constructed within the
 //     constructor call, it's reasonable to say that no external object
@@ -60,7 +67,8 @@ namespace ento {
 struct UninitObjCheckerOptions {
   bool IsPedantic = false;
   bool ShouldConvertNotesToWarnings = false;
-  bool CheckPointeeInitialization =  false;
+  bool CheckPointeeInitialization = false;
+  std::string IgnoredRecordsWithFieldPattern;
 };
 
 /// A lightweight polymorphic wrapper around FieldRegion *. We'll use this
