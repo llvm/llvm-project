@@ -36,23 +36,6 @@ using namespace clang;
 using namespace ento;
 
 //===----------------------------------------------------------------------===//
-// Node auditing.
-//===----------------------------------------------------------------------===//
-
-// An out of line virtual method to provide a home for the class vtable.
-ExplodedNode::Auditor::~Auditor() = default;
-
-#ifndef NDEBUG
-static ExplodedNode::Auditor* NodeAuditor = nullptr;
-#endif
-
-void ExplodedNode::SetAuditor(ExplodedNode::Auditor* A) {
-#ifndef NDEBUG
-  NodeAuditor = A;
-#endif
-}
-
-//===----------------------------------------------------------------------===//
 // Cleanup.
 //===----------------------------------------------------------------------===//
 
@@ -224,9 +207,6 @@ void ExplodedNode::addPredecessor(ExplodedNode *V, ExplodedGraph &G) {
   assert(!V->isSink());
   Preds.addNode(V, G);
   V->Succs.addNode(this, G);
-#ifndef NDEBUG
-  if (NodeAuditor) NodeAuditor->AddEdge(V, this);
-#endif
 }
 
 void ExplodedNode::NodeGroup::replaceNode(ExplodedNode *node) {

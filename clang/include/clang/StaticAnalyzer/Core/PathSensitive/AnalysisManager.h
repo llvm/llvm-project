@@ -100,8 +100,7 @@ public:
   void FlushDiagnostics();
 
   bool shouldVisualize() const {
-    return options.visualizeExplodedGraphWithGraphViz ||
-           options.visualizeExplodedGraphWithUbiGraph;
+    return options.visualizeExplodedGraphWithGraphViz;
   }
 
   bool shouldInlineCall() const {
