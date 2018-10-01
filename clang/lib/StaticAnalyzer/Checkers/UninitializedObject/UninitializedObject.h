@@ -32,6 +32,8 @@ class FieldNode {
 protected:
   const FieldRegion *FR;
 
+  ~FieldNode() = default;
+
 public:
   FieldNode(const FieldRegion *FR) : FR(FR) { assert(FR); }
 
