@@ -413,6 +413,9 @@ public:
   void dump(raw_ostream &OS, SourceManager &SM) const;
   void dump(raw_ostream &OS) const;
 
+  /// \return Unique reproducible object identifier
+  int64_t getID(const ASTContext &Context) const;
+
   /// dumpColor - same as dump(), but forces color highlighting.
   void dumpColor() const;
 
