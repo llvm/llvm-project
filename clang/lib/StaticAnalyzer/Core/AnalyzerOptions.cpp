@@ -471,6 +471,13 @@ bool AnalyzerOptions::shouldAggressivelySimplifyBinaryOperation() {
   return AggressiveBinaryOperationSimplification.getValue();
 }
 
+bool AnalyzerOptions::shouldEagerlyAssume() {
+  if (!EagerlyAssumeBinOpBifurcation.hasValue())
+    EagerlyAssumeBinOpBifurcation =
+        getBooleanOption("eagerly-assume", true);
+  return EagerlyAssumeBinOpBifurcation.getValue();
+}
+
 StringRef AnalyzerOptions::getCTUDir() {
   if (!CTUDir.hasValue()) {
     CTUDir = getOptionAsString("ctu-dir", "");

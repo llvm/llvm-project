@@ -1,7 +1,7 @@
-// RUN: %clang_analyze_cc1 -Wno-non-pod-varargs -analyzer-checker=core,cplusplus,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++03 %s
-// RUN: %clang_analyze_cc1 -Wno-non-pod-varargs -analyzer-checker=core,cplusplus,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++11 %s
-// RUN: %clang_analyze_cc1 -Wno-non-pod-varargs -analyzer-checker=core,cplusplus,debug.ExprInspection -DTEMPORARY_DTORS -verify -w -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true %s -std=c++11
-// RUN: %clang_analyze_cc1 -Wno-non-pod-varargs -analyzer-checker=core,cplusplus,debug.ExprInspection -DTEMPORARY_DTORS -w -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true %s -std=c++17
+// RUN: %clang_analyze_cc1 -Wno-non-pod-varargs -analyzer-checker=core,cplusplus,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++03 -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -Wno-non-pod-varargs -analyzer-checker=core,cplusplus,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++11 -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -Wno-non-pod-varargs -analyzer-checker=core,cplusplus,debug.ExprInspection -DTEMPORARY_DTORS -verify -w -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true -analyzer-config eagerly-assume=false %s -std=c++11
+// RUN: %clang_analyze_cc1 -Wno-non-pod-varargs -analyzer-checker=core,cplusplus,debug.ExprInspection -DTEMPORARY_DTORS -w -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true -analyzer-config eagerly-assume=false %s -std=c++17
 
 // Note: The C++17 run-line doesn't -verify yet - it is a no-crash test.
 

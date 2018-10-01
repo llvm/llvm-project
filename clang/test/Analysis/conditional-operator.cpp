@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection %s -analyzer-output=text -verify
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config eagerly-assume=false %s -analyzer-output=text -verify
 
 void clang_analyzer_eval(bool);
 
