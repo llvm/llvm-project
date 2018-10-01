@@ -3178,7 +3178,12 @@ struct DOTGraphTraits<ExplodedNode*> : public DefaultDOTGraphTraits {
         << ")"
         << " NodeID: " << N->getID(&Graph) << " (" << (const void *)N << ")\\|";
 
-    State->printDOT(Out, N->getLocationContext());
+    bool SameAsAllPredecessors =
+        std::all_of(N->pred_begin(), N->pred_end(), [&](const ExplodedNode *P) {
+          return P->getState() == State;
+        });
+    if (!SameAsAllPredecessors)
+      State->printDOT(Out, N->getLocationContext());
     return Out.str();
   }
 };
