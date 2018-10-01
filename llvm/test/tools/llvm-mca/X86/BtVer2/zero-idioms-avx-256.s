@@ -330,12 +330,12 @@ vaddps  %ymm1, %ymm1, %ymm0
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      403
+# CHECK-NEXT: Total Cycles:      205
 # CHECK-NEXT: Total uOps:        400
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.99
-# CHECK-NEXT: IPC:               0.50
+# CHECK-NEXT: uOps Per Cycle:    1.95
+# CHECK-NEXT: IPC:               0.98
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:
@@ -347,7 +347,7 @@ vaddps  %ymm1, %ymm1, %ymm0
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  2      1     1.00                        vperm2f128	$136, %ymm0, %ymm0, %ymm1
+# CHECK-NEXT:  2      1     0.50                        vperm2f128	$136, %ymm0, %ymm0, %ymm1
 # CHECK-NEXT:  2      3     2.00                        vaddps	%ymm1, %ymm1, %ymm0
 
 # CHECK:      Resources:
@@ -368,23 +368,23 @@ vaddps  %ymm1, %ymm1, %ymm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT:  -      -      -     2.00   2.00   2.00   2.00    -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -     2.00   1.00   2.00   1.00    -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -      -     2.00    -     2.00    -      -      -      -      -      -      -     vperm2f128	$136, %ymm0, %ymm0, %ymm1
+# CHECK-NEXT:  -      -      -      -     1.00    -     1.00    -      -      -      -      -      -      -     vperm2f128	$136, %ymm0, %ymm0, %ymm1
 # CHECK-NEXT:  -      -      -     2.00    -     2.00    -      -      -      -      -      -      -      -     vaddps	%ymm1, %ymm1, %ymm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
+# CHECK-NEXT:                     0
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeER .    .   .   vperm2f128	$136, %ymm0, %ymm0, %ymm1
-# CHECK-NEXT: [0,1]     .DeeeER   .   .   vaddps	%ymm1, %ymm1, %ymm0
-# CHECK-NEXT: [1,0]     . D==eER  .   .   vperm2f128	$136, %ymm0, %ymm0, %ymm1
-# CHECK-NEXT: [1,1]     .  D==eeeER   .   vaddps	%ymm1, %ymm1, %ymm0
-# CHECK-NEXT: [2,0]     .   D====eER  .   vperm2f128	$136, %ymm0, %ymm0, %ymm1
-# CHECK-NEXT: [2,1]     .    D====eeeER   vaddps	%ymm1, %ymm1, %ymm0
+# CHECK:      [0,0]     DeER .    .   vperm2f128	$136, %ymm0, %ymm0, %ymm1
+# CHECK-NEXT: [0,1]     .DeeeER   .   vaddps	%ymm1, %ymm1, %ymm0
+# CHECK-NEXT: [1,0]     . DeE-R   .   vperm2f128	$136, %ymm0, %ymm0, %ymm1
+# CHECK-NEXT: [1,1]     .  DeeeER .   vaddps	%ymm1, %ymm1, %ymm0
+# CHECK-NEXT: [2,0]     .   DeE-R .   vperm2f128	$136, %ymm0, %ymm0, %ymm1
+# CHECK-NEXT: [2,1]     .    DeeeER   vaddps	%ymm1, %ymm1, %ymm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -393,5 +393,5 @@ vaddps  %ymm1, %ymm1, %ymm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     3     3.0    0.3    0.0       vperm2f128	$136, %ymm0, %ymm0, %ymm1
-# CHECK-NEXT: 1.     3     3.0    0.0    0.0       vaddps	%ymm1, %ymm1, %ymm0
+# CHECK-NEXT: 0.     3     1.0    1.0    0.7       vperm2f128	$136, %ymm0, %ymm0, %ymm1
+# CHECK-NEXT: 1.     3     1.0    0.0    0.0       vaddps	%ymm1, %ymm1, %ymm0

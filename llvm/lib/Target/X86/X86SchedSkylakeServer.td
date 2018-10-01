@@ -159,9 +159,13 @@ def  : WriteRes<WriteSETCCStore, [SKXPort06,SKXPort4,SKXPort237]> {
   let Latency = 2;
   let NumMicroOps = 3;
 }
-def  : WriteRes<WriteLAHFSAHF,   [SKXPort06]>;
-def  : WriteRes<WriteBitTest,    [SKXPort06]>;
-def  : WriteRes<WriteBitTestSet, [SKXPort06]>;
+defm : X86WriteRes<WriteLAHFSAHF,        [SKXPort06], 1, [1], 1>;
+defm : X86WriteRes<WriteBitTest,         [SKXPort06], 1, [1], 1>;
+defm : X86WriteRes<WriteBitTestImmLd,    [SKXPort06,SKXPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteBitTestRegLd,    [SKXPort0156,SKXPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteBitTestSet,      [SKXPort06], 1, [1], 1>;
+defm : X86WriteRes<WriteBitTestSetImmLd, [SKXPort06,SKXPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteBitTestSetRegLd, [SKXPort0156,SKXPort23], 5, [1,1], 2>;
 
 // Integer shifts and rotates.
 defm : SKXWriteResPair<WriteShift,    [SKXPort06],  1>;
@@ -1175,13 +1179,6 @@ def SKXWriteResGroup76 : SchedWriteRes<[SKXPort6,SKXPort23]> {
 def: InstRW<[SKXWriteResGroup76], (instrs FARJMP64)>;
 def: InstRW<[SKXWriteResGroup76], (instregex "JMP(16|32|64)m")>;
 
-def SKXWriteResGroup78 : SchedWriteRes<[SKXPort23,SKXPort06]> {
-  let Latency = 6;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1];
-}
-def: InstRW<[SKXWriteResGroup78], (instregex "BT(16|32|64)mi8")>;
-
 def SKXWriteResGroup79 : SchedWriteRes<[SKXPort23,SKXPort15]> {
   let Latency = 6;
   let NumMicroOps = 2;
@@ -2086,10 +2083,10 @@ def SKXWriteResGroup199 : SchedWriteRes<[SKXPort4,SKXPort23,SKXPort237,SKXPort06
 }
 def: InstRW<[SKXWriteResGroup199], (instrs CMPXCHG8B)>;
 
-def SKXWriteResGroup200 : SchedWriteRes<[SKXPort0156]> {
-  let Latency = 16;
-  let NumMicroOps = 16;
-  let ResourceCycles = [16];
+def SKXWriteResGroup200 : SchedWriteRes<[SKXPort1, SKXPort05, SKXPort6]> {
+  let Latency = 12;
+  let NumMicroOps = 34;
+  let ResourceCycles = [1, 4, 5];
 }
 def: InstRW<[SKXWriteResGroup200], (instrs VZEROALL)>;
 

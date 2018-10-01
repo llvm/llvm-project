@@ -215,8 +215,8 @@ int internal_fork() {
 
 int internal_sysctl(const int *name, unsigned int namelen, void *oldp,
                     uptr *oldlenp, const void *newp, uptr newlen) {
-  return sysctl((int *)name, namelen, oldp, (size_t *)oldlenp, (void *)newp,
-                (size_t)newlen);
+  return sysctl(const_cast<int *>(name), namelen, oldp, (size_t *)oldlenp,
+                const_cast<void *>(newp), (size_t)newlen);
 }
 
 int internal_forkpty(int *amaster) {

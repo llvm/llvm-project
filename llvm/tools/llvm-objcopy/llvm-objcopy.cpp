@@ -178,6 +178,7 @@ struct CopyConfig {
   bool StripSections = false;
   bool StripUnneeded = false;
   bool Weaken = false;
+  bool DecompressDebugSections = false;
   DebugCompressionType CompressionType = DebugCompressionType::None;
 };
 
@@ -430,33 +431,34 @@ static bool isCompressable(const SectionBase &Section) {
          Section.Name != ".gdb_index";
 }
 
-static void compressSections(const CopyConfig &Config, Object &Obj,
-                             SectionPred &RemovePred) {
-  SmallVector<SectionBase *, 13> ToCompress;
+static void replaceDebugSections(
+    const CopyConfig &Config, Object &Obj, SectionPred &RemovePred,
+    function_ref<bool(const SectionBase &)> shouldReplace,
+    function_ref<SectionBase *(const SectionBase *)> addSection) {
+  SmallVector<SectionBase *, 13> ToReplace;
   SmallVector<RelocationSection *, 13> RelocationSections;
   for (auto &Sec : Obj.sections()) {
     if (RelocationSection *R = dyn_cast<RelocationSection>(&Sec)) {
-      if (isCompressable(*R->getSection()))
+      if (shouldReplace(*R->getSection()))
         RelocationSections.push_back(R);
       continue;
     }
 
-    if (isCompressable(Sec))
-      ToCompress.push_back(&Sec);
+    if (shouldReplace(Sec))
+      ToReplace.push_back(&Sec);
   }
 
-  for (SectionBase *S : ToCompress) {
-    CompressedSection &CS =
-        Obj.addSection<CompressedSection>(*S, Config.CompressionType);
+  for (SectionBase *S : ToReplace) {
+    SectionBase *NewSection = addSection(S);
 
     for (RelocationSection *RS : RelocationSections) {
       if (RS->getSection() == S)
-        RS->setSection(&CS);
+        RS->setSection(NewSection);
     }
   }
 
-  RemovePred = [RemovePred](const SectionBase &Sec) {
-    return isCompressable(Sec) || RemovePred(Sec);
+  RemovePred = [shouldReplace, RemovePred](const SectionBase &Sec) {
+    return shouldReplace(Sec) || RemovePred(Sec);
   };
 }
 
@@ -672,7 +674,19 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
   }
 
   if (Config.CompressionType != DebugCompressionType::None)
-    compressSections(Config, Obj, RemovePred);
+    replaceDebugSections(Config, Obj, RemovePred, isCompressable,
+                         [&Config, &Obj](const SectionBase *S) {
+                           return &Obj.addSection<CompressedSection>(
+                               *S, Config.CompressionType);
+                         });
+  else if (Config.DecompressDebugSections)
+    replaceDebugSections(
+        Config, Obj, RemovePred,
+        [](const SectionBase &S) { return isa<CompressedSection>(&S); },
+        [&Obj](const SectionBase *S) {
+          auto CS = cast<CompressedSection>(S);
+          return &Obj.addSection<DecompressedSection>(*CS);
+        });
 
   Obj.removeSections(RemovePred);
 
@@ -983,6 +997,8 @@ static DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   Config.DiscardAll = InputArgs.hasArg(OBJCOPY_discard_all);
   Config.OnlyKeepDebug = InputArgs.hasArg(OBJCOPY_only_keep_debug);
   Config.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
+  Config.DecompressDebugSections =
+      InputArgs.hasArg(OBJCOPY_decompress_debug_sections);
   for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbol))
     Config.SymbolsToLocalize.push_back(Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_global_symbol))
@@ -1002,6 +1018,15 @@ static DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
 
   DriverConfig DC;
   DC.CopyConfigs.push_back(std::move(Config));
+  if (Config.DecompressDebugSections &&
+      Config.CompressionType != DebugCompressionType::None) {
+    error("Cannot specify --compress-debug-sections at the same time as "
+          "--decompress-debug-sections at the same time");
+  }
+
+  if (Config.DecompressDebugSections && !zlib::isAvailable())
+    error("LLVM was not compiled with LLVM_ENABLE_ZLIB: cannot decompress.");
+
   return DC;
 }
 

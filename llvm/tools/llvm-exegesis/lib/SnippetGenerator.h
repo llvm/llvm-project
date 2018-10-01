@@ -70,6 +70,25 @@ private:
   generateCodeTemplate(unsigned Opcode) const = 0;
 };
 
+// A global Random Number Generator to randomize configurations.
+// FIXME: Move random number generation into an object and make it seedable for
+// unit tests.
+std::mt19937 &randomGenerator();
+
+// Picks a random bit among the bits set in Vector and returns its index.
+// Precondition: Vector must have at least one bit set.
+size_t randomBit(const llvm::BitVector &Vector);
+
+// Picks a random configuration, then selects a random def and a random use from
+// it and finally set the selected values in the provided InstructionInstances.
+void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations,
+                       InstructionTemplate &DefIB, InstructionTemplate &UseIB);
+
+// Assigns a Random Value to all Variables in IT that are still Invalid.
+// Do not use any of the registers in `ForbiddenRegs`.
+void randomizeUnsetVariables(const llvm::BitVector &ForbiddenRegs,
+                             InstructionTemplate &IT);
+
 } // namespace exegesis
 
 #endif // LLVM_TOOLS_LLVM_EXEGESIS_SNIPPETGENERATOR_H

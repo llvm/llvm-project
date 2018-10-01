@@ -909,7 +909,8 @@ Instruction *InstCombiner::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
           }
 
       // If all indices are the same, just compare the base pointers.
-      if (IndicesTheSame)
+      Type *BaseType = GEPLHS->getOperand(0)->getType();
+      if (IndicesTheSame && CmpInst::makeCmpResultType(BaseType) == I.getType())
         return new ICmpInst(Cond, GEPLHS->getOperand(0), GEPRHS->getOperand(0));
 
       // If we're comparing GEPs with two base pointers that only differ in type

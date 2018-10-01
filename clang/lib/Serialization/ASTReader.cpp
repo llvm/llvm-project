@@ -11723,6 +11723,9 @@ OMPClause *OMPClauseReader::readClause() {
   case OMPC_unified_address:
     C = new (Context) OMPUnifiedAddressClause();
     break;
+  case OMPC_unified_shared_memory:
+    C = new (Context) OMPUnifiedSharedMemoryClause();
+    break;
   case OMPC_private:
     C = OMPPrivateClause::CreateEmpty(Context, Record.readInt());
     break;
@@ -11952,6 +11955,9 @@ void OMPClauseReader::VisitOMPSIMDClause(OMPSIMDClause *) {}
 void OMPClauseReader::VisitOMPNogroupClause(OMPNogroupClause *) {}
 
 void OMPClauseReader::VisitOMPUnifiedAddressClause(OMPUnifiedAddressClause *) {}
+
+void OMPClauseReader::VisitOMPUnifiedSharedMemoryClause(
+    OMPUnifiedSharedMemoryClause *) {}
 
 void OMPClauseReader::VisitOMPPrivateClause(OMPPrivateClause *C) {
   C->setLParenLoc(Record.readSourceLocation());

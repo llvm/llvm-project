@@ -1719,7 +1719,7 @@ vzeroupper
 # CHECK-NEXT:  2      7     1.00    *                   vxorps	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     1.00                        vxorps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  2      8     1.00    *                   vxorps	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  16     16    16.00   *      *      U     vzeroall
+# CHECK-NEXT:  20     8     1.00    *      *      U     vzeroall
 # CHECK-NEXT:  4      4     1.00    *      *      U     vzeroupper
 
 # CHECK:      Resources:
@@ -1736,7 +1736,7 @@ vzeroupper
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -     336.00 215.67 237.67 176.17 176.17 38.00  445.67 2.00   12.67
+# CHECK-NEXT:  -     336.00 215.67 237.67 176.17 176.17 38.00  430.67 3.00   12.67
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -2429,5 +2429,5 @@ vzeroupper
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vxorps	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vxorps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vxorps	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     16.00   -      -     vzeroall
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00    -     vzeroall
 # CHECK-NEXT:  -      -     1.08   1.08    -      -      -     1.08   0.75    -     vzeroupper

@@ -109,13 +109,13 @@
       integer(kind=omp_control_tool_kind)omp_control_tool_end
       parameter(omp_control_tool_end=4)
 
-      integer(kind=omp_control_tool_result_kind)omp_control_tool_notool
+      integer(omp_control_tool_result_kind)omp_control_tool_notool
       parameter(omp_control_tool_notool=-2)
-      integer(kind=omp_integer_kind)omp_control_tool_nocallback
+      integer(omp_control_tool_result_kind)omp_control_tool_nocallback
       parameter(omp_control_tool_nocallback=-1)
-      integer(kind=omp_control_tool_result_kind)omp_control_tool_success
+      integer(omp_control_tool_result_kind)omp_control_tool_success
       parameter(omp_control_tool_success=0)
-      integer(kind=omp_control_tool_result_kind)omp_control_tool_ignored
+      integer(omp_control_tool_result_kind)omp_control_tool_ignored
       parameter(omp_control_tool_ignored=1)
 
       integer(kind=omp_allocator_kind)omp_null_allocator
