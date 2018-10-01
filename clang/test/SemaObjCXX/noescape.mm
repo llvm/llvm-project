@@ -8,6 +8,7 @@ struct S {
   void m();
 };
 
+void escapingFunc0(BlockTy);
 void noescapeFunc0(id, __attribute__((noescape)) BlockTy);
 void noescapeFunc1(id, [[clang::noescape]] BlockTy);
 void noescapeFunc2(__attribute__((noescape)) int *); // expected-note {{previous declaration is here}}
@@ -127,3 +128,27 @@ __attribute__((objc_root_class))
 -(void) m1:(int*) p {
 }
 @end
+
+struct S6 {
+  S6();
+  S6(const S6 &) = delete; // expected-note 3 {{'S6' has been explicitly marked deleted here}}
+  int f;
+};
+
+void test1() {
+  id a;
+  // __block variables that are not captured by escaping blocks don't
+  // necessitate having accessible copy constructors.
+  __block S6 b0;
+  __block S6 b1; // expected-error {{call to deleted constructor of 'S6'}}
+  __block S6 b2; // expected-error {{call to deleted constructor of 'S6'}}
+  __block S6 b3; // expected-error {{call to deleted constructor of 'S6'}}
+
+  noescapeFunc0(a, ^{ (void)b0; });
+  escapingFunc0(^{ (void)b1; });
+  {
+    noescapeFunc0(a, ^{ (void)b0; (void)b1; });
+  }
+  noescapeFunc0(a, ^{ escapingFunc0(^{ (void)b2; }); });
+  escapingFunc0(^{ noescapeFunc0(a, ^{ (void)b3; }); });
+}
