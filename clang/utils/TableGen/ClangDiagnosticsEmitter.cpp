@@ -1763,7 +1763,7 @@ void EmitClangDiagDocs(RecordKeeper &Records, raw_ostream &OS) {
         OS << "Also controls ";
 
       bool First = true;
-      llvm::sort(GroupInfo.SubGroups.begin(), GroupInfo.SubGroups.end());
+      llvm::sort(GroupInfo.SubGroups);
       for (const auto &Name : GroupInfo.SubGroups) {
         if (!First) OS << ", ";
         OS << "`" << (IsRemarkGroup ? "-R" : "-W") << Name << "`_";

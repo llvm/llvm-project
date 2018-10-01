@@ -1868,12 +1868,9 @@ void CodeGenSchedModels::collectProcResources() {
   }
   // Finalize each ProcModel by sorting the record arrays.
   for (CodeGenProcModel &PM : ProcModels) {
-    llvm::sort(PM.WriteResDefs.begin(), PM.WriteResDefs.end(),
-               LessRecord());
-    llvm::sort(PM.ReadAdvanceDefs.begin(), PM.ReadAdvanceDefs.end(),
-               LessRecord());
-    llvm::sort(PM.ProcResourceDefs.begin(), PM.ProcResourceDefs.end(),
-               LessRecord());
+    llvm::sort(PM.WriteResDefs, LessRecord());
+    llvm::sort(PM.ReadAdvanceDefs, LessRecord());
+    llvm::sort(PM.ProcResourceDefs, LessRecord());
     LLVM_DEBUG(
         PM.dump();
         dbgs() << "WriteResDefs: "; for (RecIter RI = PM.WriteResDefs.begin(),

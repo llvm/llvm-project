@@ -60,8 +60,8 @@ void TrampolinePool::anchor() {}
 Expected<JITTargetAddress>
 JITCompileCallbackManager::getCompileCallback(CompileFunction Compile) {
   if (auto TrampolineAddr = TP->getTrampoline()) {
-    auto CallbackName = ES.getSymbolStringPool().intern(
-        std::string("cc") + std::to_string(++NextCallbackId));
+    auto CallbackName =
+        ES.intern(std::string("cc") + std::to_string(++NextCallbackId));
 
     std::lock_guard<std::mutex> Lock(CCMgrMutex);
     AddrToSymbol[*TrampolineAddr] = CallbackName;

@@ -170,7 +170,7 @@ Expected<SymbolFlagsMap> getObjectSymbolFlags(ExecutionSession &ES,
     auto Name = Sym.getName();
     if (!Name)
       return Name.takeError();
-    auto InternedName = ES.getSymbolStringPool().intern(*Name);
+    auto InternedName = ES.intern(*Name);
     auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
     if (!SymFlags)
       return SymFlags.takeError();

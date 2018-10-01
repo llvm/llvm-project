@@ -4394,21 +4394,20 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   std::vector<std::vector<Record *>> FeatureBitsets;
   for (auto &Rule : Rules)
     FeatureBitsets.push_back(Rule.getRequiredFeatures());
-  llvm::sort(
-      FeatureBitsets.begin(), FeatureBitsets.end(),
-      [&](const std::vector<Record *> &A, const std::vector<Record *> &B) {
-        if (A.size() < B.size())
-          return true;
-        if (A.size() > B.size())
-          return false;
-        for (const auto &Pair : zip(A, B)) {
-          if (std::get<0>(Pair)->getName() < std::get<1>(Pair)->getName())
-            return true;
-          if (std::get<0>(Pair)->getName() > std::get<1>(Pair)->getName())
-            return false;
-        }
+  llvm::sort(FeatureBitsets, [&](const std::vector<Record *> &A,
+                                 const std::vector<Record *> &B) {
+    if (A.size() < B.size())
+      return true;
+    if (A.size() > B.size())
+      return false;
+    for (const auto &Pair : zip(A, B)) {
+      if (std::get<0>(Pair)->getName() < std::get<1>(Pair)->getName())
+        return true;
+      if (std::get<0>(Pair)->getName() > std::get<1>(Pair)->getName())
         return false;
-      });
+    }
+    return false;
+  });
   FeatureBitsets.erase(
       std::unique(FeatureBitsets.begin(), FeatureBitsets.end()),
       FeatureBitsets.end());
@@ -4577,13 +4576,11 @@ void RuleMatcher::optimize() {
     }
     InsnMatcher.optimize();
   }
-  llvm::sort(
-      EpilogueMatchers.begin(), EpilogueMatchers.end(),
-      [](const std::unique_ptr<PredicateMatcher> &L,
-         const std::unique_ptr<PredicateMatcher> &R) {
-        return std::make_tuple(L->getKind(), L->getInsnVarID(), L->getOpIdx()) <
-               std::make_tuple(R->getKind(), R->getInsnVarID(), R->getOpIdx());
-      });
+  llvm::sort(EpilogueMatchers, [](const std::unique_ptr<PredicateMatcher> &L,
+                                  const std::unique_ptr<PredicateMatcher> &R) {
+    return std::make_tuple(L->getKind(), L->getInsnVarID(), L->getOpIdx()) <
+           std::make_tuple(R->getKind(), R->getInsnVarID(), R->getOpIdx());
+  });
 }
 
 bool RuleMatcher::hasFirstCondition() const {

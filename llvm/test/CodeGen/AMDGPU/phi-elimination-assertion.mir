@@ -1,0 +1,69 @@
+# RUN: llc -mtriple amdgcn -run-pass livevars -run-pass phi-node-elimination -o - %s | FileCheck %s
+
+################################################################################
+# This test used to hit an assert in PHIElimination:
+#  PHIElimination::LowerPHINode(llvm::MachineBasicBlock&, llvm::MachineBasicBlock::iterator): Assertion `KillInst->readsRegister(SrcReg) && "Cannot find kill instruction"'
+
+---
+name:            foo
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    S_CBRANCH_SCC0 %bb.2, implicit undef $scc
+
+  bb.1:
+    %1:sreg_32_xm0 = S_MOV_B32 255
+    S_BRANCH %bb.3
+
+  bb.2:
+    %2:sreg_32_xm0 = S_MOV_B32 254
+
+  bb.3:
+    dead %3:sreg_32_xm0 = PHI undef %2, %bb.2, undef %1, %bb.1
+    %4:sreg_32_xm0 = PHI %2, %bb.2, %1, %bb.1
+    S_NOP 0, implicit %4
+...
+
+# CHECK-LABEL: name:            foo
+# CHECK:   bb.3:
+# CHECK-NEXT:     %3:sreg_32_xm0 = COPY killed %4
+# CHECK-NEXT:     dead %2:sreg_32_xm0 = IMPLICIT_DEF
+# CHECK-NEXT:     S_NOP 0, implicit killed %3
+
+
+################################################################################
+# Similar test as above, but with swapped order for the PHI nodes.
+# With this PHI node order we did not hit the assert, but we used to get
+#
+#  bb.3:
+#    dead %3:sreg_32_xm0 = COPY killed %4
+#    %2:sreg_32_xm0 = COPY %4
+#    S_NOP 0, implicit killed %2
+#
+# which looks weird regarding killed flags for %4.
+
+---
+name:            bar
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    S_CBRANCH_SCC0 %bb.2, implicit undef $scc
+
+  bb.1:
+    %1:sreg_32_xm0 = S_MOV_B32 255
+    S_BRANCH %bb.3
+
+  bb.2:
+    %2:sreg_32_xm0 = S_MOV_B32 254
+
+  bb.3:
+    %4:sreg_32_xm0 = PHI %2, %bb.2, %1, %bb.1
+    dead %3:sreg_32_xm0 = PHI undef %2, %bb.2, undef %1, %bb.1
+    S_NOP 0, implicit %4
+...
+
+# CHECK-LABEL: name:            bar
+# CHECK:   bb.3:
+# CHECK-NEXT:     dead %3:sreg_32_xm0 = IMPLICIT_DEF
+# CHECK-NEXT:     %2:sreg_32_xm0 = COPY killed %4
+# CHECK-NEXT:     S_NOP 0, implicit killed %2

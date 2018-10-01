@@ -1628,7 +1628,7 @@ Expected<SymbolMap> ExecutionSession::legacyLookup(
 }
 
 void ExecutionSession::lookup(
-    const JITDylibList &JDs, const SymbolNameSet &Symbols,
+    const JITDylibList &JDs, SymbolNameSet Symbols,
     SymbolsResolvedCallback OnResolve, SymbolsReadyCallback OnReady,
     RegisterDependenciesFunction RegisterDependencies) {
 
@@ -1640,7 +1640,7 @@ void ExecutionSession::lookup(
   auto Unresolved = std::move(Symbols);
   std::map<JITDylib *, MaterializationUnitList> MUsMap;
   auto Q = std::make_shared<AsynchronousSymbolQuery>(
-      Symbols, std::move(OnResolve), std::move(OnReady));
+      Unresolved, std::move(OnResolve), std::move(OnReady));
   bool QueryIsFullyResolved = false;
   bool QueryIsFullyReady = false;
   bool QueryFailed = false;
@@ -1873,7 +1873,7 @@ SymbolStringPtr MangleAndInterner::operator()(StringRef Name) {
     raw_string_ostream MangledNameStream(MangledName);
     Mangler::getNameWithPrefix(MangledNameStream, Name, DL);
   }
-  return ES.getSymbolStringPool().intern(MangledName);
+  return ES.intern(MangledName);
 }
 
 } // End namespace orc.

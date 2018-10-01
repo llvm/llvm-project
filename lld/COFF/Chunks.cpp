@@ -351,7 +351,12 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
           check(File->getCOFFObj()->getSymbol(Rel.SymbolTableIndex));
       StringRef Name;
       File->getCOFFObj()->getSymbolName(Sym, Name);
-      error("relocation against symbol in discarded section: " + Name);
+
+      // MinGW mode object files (built by GCC) can have leftover sections
+      // with relocations against discarded comdat sections. Such sections
+      // are left as is, with relocations untouched.
+      if (!Config->MinGW)
+        error("relocation against symbol in discarded section: " + Name);
       continue;
     }
     // Get the output section of the symbol for this relocation.  The output
