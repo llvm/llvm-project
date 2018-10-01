@@ -781,7 +781,7 @@ struct LambdaTest2 {
 
 void fLambdaTest2() {
   int b;
-  auto equals = [&b](int a) { return a == b; }; // expected-note{{uninitialized field 'this->functor.b'}}
+  auto equals = [&b](int a) { return a == b; }; // expected-note{{uninitialized pointee 'this->functor.b'}}
   LambdaTest2<decltype(equals)>(equals, int());
 }
 #else
@@ -857,8 +857,8 @@ struct MultipleLambdaCapturesTest1 {
 
 void fMultipleLambdaCapturesTest1() {
   int b1, b2 = 3, b3;
-  auto equals = [&b1, &b2, &b3](int a) { return a == b1 == b2 == b3; }; // expected-note{{uninitialized field 'this->functor.b1'}}
-  // expected-note@-1{{uninitialized field 'this->functor.b3'}}
+  auto equals = [&b1, &b2, &b3](int a) { return a == b1 == b2 == b3; }; // expected-note{{uninitialized pointee 'this->functor.b1'}}
+  // expected-note@-1{{uninitialized pointee 'this->functor.b3'}}
   MultipleLambdaCapturesTest1<decltype(equals)>(equals, int());
 }
 
@@ -872,7 +872,7 @@ struct MultipleLambdaCapturesTest2 {
 
 void fMultipleLambdaCapturesTest2() {
   int b1, b2 = 3, b3;
-  auto equals = [b1, &b2, &b3](int a) { return a == b1 == b2 == b3; }; // expected-note{{uninitialized field 'this->functor.b3'}}
+  auto equals = [b1, &b2, &b3](int a) { return a == b1 == b2 == b3; }; // expected-note{{uninitialized pointee 'this->functor.b3'}}
   MultipleLambdaCapturesTest2<decltype(equals)>(equals, int());
 }
 

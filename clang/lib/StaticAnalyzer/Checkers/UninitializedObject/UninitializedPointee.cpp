@@ -28,6 +28,40 @@
 using namespace clang;
 using namespace clang::ento;
 
+namespace {
+
+/// Represents a pointer or a reference field.
+class LocField : public FieldNode {
+  /// We'll store whether the pointee or the pointer itself is uninitialited.
+  const bool IsDereferenced;
+
+public:
+  LocField(const FieldRegion *FR, const bool IsDereferenced = true)
+      : FieldNode(FR), IsDereferenced(IsDereferenced) {}
+
+  virtual void printNoteMsg(llvm::raw_ostream &Out) const override {
+    if (IsDereferenced)
+      Out << "uninitialized pointee ";
+    else
+      Out << "uninitialized pointer ";
+  }
+
+  virtual void printPrefix(llvm::raw_ostream &Out) const override {}
+
+  virtual void printNode(llvm::raw_ostream &Out) const override {
+    Out << getVariableName(getDecl());
+  }
+
+  virtual void printSeparator(llvm::raw_ostream &Out) const override {
+    if (getDecl()->getType()->isPointerType())
+      Out << "->";
+    else
+      Out << '.';
+  }
+};
+
+} // end of anonymous namespace
+
 // Utility function declarations.
 
 /// Returns whether T can be (transitively) dereferenced to a void pointer type
@@ -57,7 +91,8 @@ bool FindUninitializedFields::isPointerOrReferenceUninit(
   }
 
   if (V.isUndef()) {
-    return addFieldToUninits({LocalChain, FR});
+    return addFieldToUninits(
+        LocalChain.add(LocField(FR, /*IsDereferenced*/ false)));
   }
 
   if (!CheckPointeeInitialization) {
@@ -126,11 +161,11 @@ bool FindUninitializedFields::isPointerOrReferenceUninit(
     const TypedValueRegion *R = RecordV->getRegion();
 
     if (DynT->getPointeeType()->isStructureOrClassType())
-      return isNonUnionUninit(R, {LocalChain, FR});
+      return isNonUnionUninit(R, LocalChain.add(LocField(FR)));
 
     if (DynT->getPointeeType()->isUnionType()) {
       if (isUnionUninit(R)) {
-        return addFieldToUninits({LocalChain, FR, /*IsDereferenced*/ true});
+        return addFieldToUninits(LocalChain.add(LocField(FR)));
       } else {
         IsAnyFieldInitialized = true;
         return false;
@@ -151,7 +186,7 @@ bool FindUninitializedFields::isPointerOrReferenceUninit(
          "must be a null, undefined, unknown or concrete pointer!");
 
   if (isPrimitiveUninit(DerefdV))
-    return addFieldToUninits({LocalChain, FR, /*IsDereferenced*/ true});
+    return addFieldToUninits(LocalChain.add(LocField(FR)));
 
   IsAnyFieldInitialized = true;
   return false;

@@ -26,58 +26,85 @@
 namespace clang {
 namespace ento {
 
+/// Represent a single field. This is only an interface to abstract away special
+/// cases like pointers/references.
+class FieldNode {
+protected:
+  const FieldRegion *FR;
+
+public:
+  FieldNode(const FieldRegion *FR) : FR(FR) { assert(FR); }
+
+  FieldNode() = delete;
+  FieldNode(const FieldNode &) = delete;
+  FieldNode(FieldNode &&) = delete;
+  FieldNode &operator=(const FieldNode &) = delete;
+  FieldNode &operator=(const FieldNode &&) = delete;
+
+  /// Profile - Used to profile the contents of this object for inclusion in a
+  /// FoldingSet.
+  void Profile(llvm::FoldingSetNodeID &ID) const { ID.AddPointer(this); }
+
+  bool operator<(const FieldNode &Other) const { return FR < Other.FR; }
+  bool isSameRegion(const FieldRegion *OtherFR) const { return FR == OtherFR; }
+
+  const FieldRegion *getRegion() const { return FR; }
+  const FieldDecl *getDecl() const { return FR->getDecl(); }
+
+  // When a fieldchain is printed (a list of FieldNode objects), it will have
+  // the following format:
+  // <note message>'<prefix>this-><node><separator><node><separator>...<node>'
+
+  /// If this is the last element of the fieldchain, this method will be called.
+  /// The note message should state something like "uninitialized field" or
+  /// "uninitialized pointee" etc.
+  virtual void printNoteMsg(llvm::raw_ostream &Out) const = 0;
+
+  /// Print any prefixes before the fieldchain.
+  virtual void printPrefix(llvm::raw_ostream &Out) const = 0;
+
+  /// Print the node. Should contain the name of the field stored in getRegion.
+  virtual void printNode(llvm::raw_ostream &Out) const = 0;
+
+  /// Print the separator. For example, fields may be separated with '.' or
+  /// "->".
+  virtual void printSeparator(llvm::raw_ostream &Out) const = 0;
+};
+
+/// Returns with Field's name. This is a helper function to get the correct name
+/// even if Field is a captured lambda variable.
+StringRef getVariableName(const FieldDecl *Field);
+
 /// Represents a field chain. A field chain is a vector of fields where the
 /// first element of the chain is the object under checking (not stored), and
 /// every other element is a field, and the element that precedes it is the
 /// object that contains it.
 ///
-/// Note that this class is immutable, and new fields may only be added through
-/// constructor calls.
+/// Note that this class is immutable (essentially a wrapper around an
+/// ImmutableList), and new elements can only be added by creating new
+/// FieldChainInfo objects through add().
 class FieldChainInfo {
 public:
-  using FieldChainImpl = llvm::ImmutableListImpl<const FieldRegion *>;
-  using FieldChain = llvm::ImmutableList<const FieldRegion *>;
+  using FieldChainImpl = llvm::ImmutableListImpl<const FieldNode &>;
+  using FieldChain = llvm::ImmutableList<const FieldNode &>;
 
 private:
-  FieldChain::Factory &Factory;
+  FieldChain::Factory &ChainFactory;
   FieldChain Chain;
-
-  const bool IsDereferenced = false;
 
 public:
   FieldChainInfo() = delete;
-  FieldChainInfo(FieldChain::Factory &F) : Factory(F) {}
+  FieldChainInfo(FieldChain::Factory &F) : ChainFactory(F) {}
+  FieldChainInfo(const FieldChainInfo &Other) = default;
 
-  FieldChainInfo(const FieldChainInfo &Other, const bool IsDereferenced)
-      : Factory(Other.Factory), Chain(Other.Chain),
-        IsDereferenced(IsDereferenced) {}
+  template <class FieldNodeT> FieldChainInfo add(const FieldNodeT &FN);
 
-  FieldChainInfo(const FieldChainInfo &Other, const FieldRegion *FR,
-                 const bool IsDereferenced = false);
-
-  bool contains(const FieldRegion *FR) const { return Chain.contains(FR); }
-  bool isPointer() const;
-
-  /// If this is a fieldchain whose last element is an uninitialized region of a
-  /// pointer type, `IsDereferenced` will store whether the pointer itself or
-  /// the pointee is uninitialized.
-  bool isDereferenced() const;
-  const FieldDecl *getEndOfChain() const;
-  void print(llvm::raw_ostream &Out) const;
-
-private:
-  friend struct FieldChainInfoComparator;
+  bool contains(const FieldRegion *FR) const;
+  const FieldRegion *getUninitRegion() const;
+  void printNoteMsg(llvm::raw_ostream &Out) const;
 };
 
-struct FieldChainInfoComparator {
-  bool operator()(const FieldChainInfo &lhs, const FieldChainInfo &rhs) const {
-    assert(!lhs.Chain.isEmpty() && !rhs.Chain.isEmpty() &&
-           "Attempted to store an empty fieldchain!");
-    return *lhs.Chain.begin() < *rhs.Chain.begin();
-  }
-};
-
-using UninitFieldSet = std::set<FieldChainInfo, FieldChainInfoComparator>;
+using UninitFieldMap = std::map<const FieldRegion *, llvm::SmallString<50>>;
 
 /// Searches for and stores uninitialized fields in a non-union object.
 class FindUninitializedFields {
@@ -89,20 +116,27 @@ class FindUninitializedFields {
 
   bool IsAnyFieldInitialized = false;
 
-  FieldChainInfo::FieldChain::Factory Factory;
-  UninitFieldSet UninitFields;
+  FieldChainInfo::FieldChain::Factory ChainFactory;
+
+  /// A map for assigning uninitialized regions to note messages. For example,
+  ///
+  ///   struct A {
+  ///     int x;
+  ///   };
+  ///
+  ///   A a;
+  ///
+  /// After analyzing `a`, the map will contain a pair for `a.x`'s region and
+  /// the note message "uninitialized field 'this->x'.
+  UninitFieldMap UninitFields;
 
 public:
   FindUninitializedFields(ProgramStateRef State,
                           const TypedValueRegion *const R, bool IsPedantic,
                           bool CheckPointeeInitialization);
-  const UninitFieldSet &getUninitFields();
+  const UninitFieldMap &getUninitFields();
 
 private:
-  /// Adds a FieldChainInfo object to UninitFields. Return true if an insertion
-  /// took place.
-  bool addFieldToUninits(FieldChainInfo LocalChain);
-
   // For the purposes of this checker, we'll regard the object under checking as
   // a directed tree, where
   //   * the root is the object under checking
@@ -175,6 +209,16 @@ private:
   // often left uninitialized intentionally even when it is of a C++ record
   // type, so we'll assume that an array is always initialized.
   // TODO: Add a support for nonloc::LocAsInteger.
+
+  /// Processes LocalChain and attempts to insert it into UninitFields. Returns
+  /// true on success.
+  ///
+  /// Since this class analyzes regions with recursion, we'll only store
+  /// references to temporary FieldNode objects created on the stack. This means
+  /// that after analyzing a leaf of the directed tree described above, the
+  /// elements LocalChain references will be destructed, so we can't store it
+  /// directly.
+  bool addFieldToUninits(FieldChainInfo LocalChain);
 };
 
 /// Returns true if T is a primitive type. We defined this type so that for
@@ -184,6 +228,19 @@ private:
 /// correctly.
 static bool isPrimitiveType(const QualType &T) {
   return T->isBuiltinType() || T->isEnumeralType() || T->isMemberPointerType();
+}
+
+// Template method definitions.
+
+template <class FieldNodeT>
+inline FieldChainInfo FieldChainInfo::add(const FieldNodeT &FN) {
+  assert(!contains(FN.getRegion()) &&
+         "Can't add a field that is already a part of the "
+         "fieldchain! Is this a cyclic reference?");
+
+  FieldChainInfo NewChain = *this;
+  NewChain.Chain = ChainFactory.add(FN, Chain);
+  return NewChain;
 }
 
 } // end of namespace ento

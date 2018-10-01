@@ -72,6 +72,27 @@ public:
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
 };
 
+/// A basic field type, that is not a pointer or a reference, it's dynamic and
+/// static type is the same.
+class RegularField : public FieldNode {
+public:
+  RegularField(const FieldRegion *FR) : FieldNode(FR) {}
+
+  virtual void printNoteMsg(llvm::raw_ostream &Out) const override {
+    Out << "uninitialized field ";
+  }
+
+  virtual void printPrefix(llvm::raw_ostream &Out) const override {}
+
+  virtual void printNode(llvm::raw_ostream &Out) const {
+    Out << getVariableName(getDecl());
+  }
+
+  virtual void printSeparator(llvm::raw_ostream &Out) const override {
+    Out << '.';
+  }
+};
+
 } // end of anonymous namespace
 
 // Utility function declarations.
@@ -88,14 +109,6 @@ getObjectVal(const CXXConstructorDecl *CtorDecl, CheckerContext &Context);
 /// it multiple times).
 static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
                                       CheckerContext &Context);
-
-/// Constructs a note message for a given FieldChainInfo object.
-static void printNoteMessage(llvm::raw_ostream &Out,
-                             const FieldChainInfo &Chain);
-
-/// Returns with Field's name. This is a helper function to get the correct name
-/// even if Field is a captured lambda variable.
-static StringRef getVariableName(const FieldDecl *Field);
 
 //===----------------------------------------------------------------------===//
 //                  Methods for UninitializedObjectChecker.
@@ -126,7 +139,7 @@ void UninitializedObjectChecker::checkEndFunction(
   FindUninitializedFields F(Context.getState(), Object->getRegion(), IsPedantic,
                             CheckPointeeInitialization);
 
-  const UninitFieldSet &UninitFields = F.getUninitFields();
+  const UninitFieldMap &UninitFields = F.getUninitFields();
 
   if (UninitFields.empty())
     return;
@@ -146,14 +159,10 @@ void UninitializedObjectChecker::checkEndFunction(
   // For Plist consumers that don't support notes just yet, we'll convert notes
   // to warnings.
   if (ShouldConvertNotesToWarnings) {
-    for (const auto &Chain : UninitFields) {
-      SmallString<100> WarningBuf;
-      llvm::raw_svector_ostream WarningOS(WarningBuf);
-
-      printNoteMessage(WarningOS, Chain);
+    for (const auto &Pair : UninitFields) {
 
       auto Report = llvm::make_unique<BugReport>(
-          *BT_uninitField, WarningOS.str(), Node, LocUsedForUniqueing,
+          *BT_uninitField, Pair.second, Node, LocUsedForUniqueing,
           Node->getLocationContext()->getDecl());
       Context.emitReport(std::move(Report));
     }
@@ -170,14 +179,9 @@ void UninitializedObjectChecker::checkEndFunction(
       *BT_uninitField, WarningOS.str(), Node, LocUsedForUniqueing,
       Node->getLocationContext()->getDecl());
 
-  for (const auto &Chain : UninitFields) {
-    SmallString<200> NoteBuf;
-    llvm::raw_svector_ostream NoteOS(NoteBuf);
-
-    printNoteMessage(NoteOS, Chain);
-
-    Report->addNote(NoteOS.str(),
-                    PathDiagnosticLocation::create(Chain.getEndOfChain(),
+  for (const auto &Pair : UninitFields) {
+    Report->addNote(Pair.second,
+                    PathDiagnosticLocation::create(Pair.first->getDecl(),
                                                    Context.getSourceManager()));
   }
   Context.emitReport(std::move(Report));
@@ -193,8 +197,8 @@ FindUninitializedFields::FindUninitializedFields(
     : State(State), ObjectR(R), IsPedantic(IsPedantic),
       CheckPointeeInitialization(CheckPointeeInitialization) {}
 
-const UninitFieldSet &FindUninitializedFields::getUninitFields() {
-  isNonUnionUninit(ObjectR, FieldChainInfo(Factory));
+const UninitFieldMap &FindUninitializedFields::getUninitFields() {
+  isNonUnionUninit(ObjectR, FieldChainInfo(ChainFactory));
 
   if (!IsPedantic && !IsAnyFieldInitialized)
     UninitFields.clear();
@@ -204,10 +208,15 @@ const UninitFieldSet &FindUninitializedFields::getUninitFields() {
 
 bool FindUninitializedFields::addFieldToUninits(FieldChainInfo Chain) {
   if (State->getStateManager().getContext().getSourceManager().isInSystemHeader(
-          Chain.getEndOfChain()->getLocation()))
+          Chain.getUninitRegion()->getDecl()->getLocation()))
     return false;
 
-  return UninitFields.insert(Chain).second;
+  UninitFieldMap::mapped_type NoteMsgBuf;
+  llvm::raw_svector_ostream OS(NoteMsgBuf);
+  Chain.printNoteMsg(OS);
+  return UninitFields
+      .insert(std::make_pair(Chain.getUninitRegion(), std::move(NoteMsgBuf)))
+      .second;
 }
 
 bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
@@ -237,14 +246,14 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
       return false;
 
     if (T->isStructureOrClassType()) {
-      if (isNonUnionUninit(FR, {LocalChain, FR}))
+      if (isNonUnionUninit(FR, LocalChain.add(RegularField(FR))))
         ContainsUninitField = true;
       continue;
     }
 
     if (T->isUnionType()) {
       if (isUnionUninit(FR)) {
-        if (addFieldToUninits({LocalChain, FR}))
+        if (addFieldToUninits(LocalChain.add(RegularField(FR))))
           ContainsUninitField = true;
       } else
         IsAnyFieldInitialized = true;
@@ -266,7 +275,7 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
       SVal V = State->getSVal(FieldVal);
 
       if (isPrimitiveUninit(V)) {
-        if (addFieldToUninits({LocalChain, FR}))
+        if (addFieldToUninits(LocalChain.add(RegularField(FR))))
           ContainsUninitField = true;
       }
       continue;
@@ -323,27 +332,17 @@ bool FindUninitializedFields::isPrimitiveUninit(const SVal &V) {
 //                       Methods for FieldChainInfo.
 //===----------------------------------------------------------------------===//
 
-FieldChainInfo::FieldChainInfo(const FieldChainInfo &Other,
-                               const FieldRegion *FR, const bool IsDereferenced)
-    : FieldChainInfo(Other, IsDereferenced) {
-  assert(!contains(FR) && "Can't add a field that is already a part of the "
-                          "fieldchain! Is this a cyclic reference?");
-  Chain = Factory.add(FR, Other.Chain);
-}
-
-bool FieldChainInfo::isPointer() const {
+const FieldRegion *FieldChainInfo::getUninitRegion() const {
   assert(!Chain.isEmpty() && "Empty fieldchain!");
-  return (*Chain.begin())->getDecl()->getType()->isPointerType();
+  return (*Chain.begin()).getRegion();
 }
 
-bool FieldChainInfo::isDereferenced() const {
-  assert(isPointer() && "Only pointers may or may not be dereferenced!");
-  return IsDereferenced;
-}
-
-const FieldDecl *FieldChainInfo::getEndOfChain() const {
-  assert(!Chain.isEmpty() && "Empty fieldchain!");
-  return (*Chain.begin())->getDecl();
+bool FieldChainInfo::contains(const FieldRegion *FR) const {
+  for (const FieldNode &Node : Chain) {
+    if (Node.isSameRegion(FR))
+      return true;
+  }
+  return false;
 }
 
 /// Prints every element except the last to `Out`. Since ImmutableLists store
@@ -386,13 +385,23 @@ static void printTail(llvm::raw_ostream &Out,
 // "uninitialized field 'this->x'", but we can't refer to 'x' directly,
 // we need an explicit namespace resolution whether the uninit field was
 // 'D1::x' or 'D2::x'.
-void FieldChainInfo::print(llvm::raw_ostream &Out) const {
+void FieldChainInfo::printNoteMsg(llvm::raw_ostream &Out) const {
   if (Chain.isEmpty())
     return;
 
   const FieldChainImpl *L = Chain.getInternalPointer();
+  const FieldNode &LastField = L->getHead();
+
+  LastField.printNoteMsg(Out);
+  Out << '\'';
+
+  for (const FieldNode &Node : Chain)
+    Node.printPrefix(Out);
+
+  Out << "this->";
   printTail(Out, L->getTail());
-  Out << getVariableName(L->getHead()->getDecl());
+  LastField.printNode(Out);
+  Out << '\'';
 }
 
 static void printTail(llvm::raw_ostream &Out,
@@ -401,9 +410,9 @@ static void printTail(llvm::raw_ostream &Out,
     return;
 
   printTail(Out, L->getTail());
-  const FieldDecl *Field = L->getHead()->getDecl();
-  Out << getVariableName(Field);
-  Out << (Field->getType()->isPointerType() ? "->" : ".");
+
+  L->getHead().printNode(Out);
+  L->getHead().printSeparator(Out);
 }
 
 //===----------------------------------------------------------------------===//
@@ -453,20 +462,7 @@ static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
   return false;
 }
 
-static void printNoteMessage(llvm::raw_ostream &Out,
-                             const FieldChainInfo &Chain) {
-  if (Chain.isPointer()) {
-    if (Chain.isDereferenced())
-      Out << "uninitialized pointee 'this->";
-    else
-      Out << "uninitialized pointer 'this->";
-  } else
-    Out << "uninitialized field 'this->";
-  Chain.print(Out);
-  Out << "'";
-}
-
-static StringRef getVariableName(const FieldDecl *Field) {
+StringRef clang::ento::getVariableName(const FieldDecl *Field) {
   // If Field is a captured lambda variable, Field->getName() will return with
   // an empty string. We can however acquire it's name from the lambda's
   // captures.
