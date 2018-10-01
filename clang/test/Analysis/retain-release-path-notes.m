@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,osx.coreFoundation.CFRetainRelease,osx.cocoa.ClassRelease,osx.cocoa.RetainCount -analyzer-store=region -analyzer-output=text -verify %s
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,osx.coreFoundation.CFRetainRelease,osx.cocoa.ClassRelease,osx.cocoa.RetainCount -analyzer-store=region -analyzer-output=plist-multi-file %s -o %t
-// RUN: tail -n +11 %t | diff -u -w - %S/Inputs/expected-plists/retain-release-path-notes.m.plist
+// RUN: cat %t | diff -u -w -I "<string>/" -I "clang version" - %S/Inputs/expected-plists/retain-release-path-notes.m.plist
 
 /***
 This file is for testing the path-sensitive notes for retain/release errors.

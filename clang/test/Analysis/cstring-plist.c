@@ -18,5 +18,8 @@ void cstringchecker_bounds_nocrash() {
 // CHECK: <key>diagnostics</key>
 // CHECK-NEXT: <array>
 // CHECK-NEXT: </array>
+// CHECK-NEXT: <key>files</key>
+// CHECK-NEXT: <array>
+// CHECK-NEXT: </array>
 // CHECK-NEXT: </dict>
 // CHECK-NEXT: </plist>

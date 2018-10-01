@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,osx.cocoa.RetainCount,deadcode -verify -fblocks -analyzer-opt-analyze-nested-blocks -fobjc-arc -analyzer-output=plist-multi-file -o %t.plist %s
-// RUN: tail -n +11 %t.plist | diff -u -w - %S/Inputs/expected-plists/objc-arc.m.plist
+// RUN: cat %t.plist | diff -u -w -I "<string>/" -I "clang version" - %S/Inputs/expected-plists/objc-arc.m.plist
 
 typedef signed char BOOL;
 typedef struct _NSZone NSZone;
