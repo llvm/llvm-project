@@ -78,7 +78,7 @@ static bool isVoidPointer(QualType T);
 bool FindUninitializedFields::isPointerOrReferenceUninit(
     const FieldRegion *FR, FieldChainInfo LocalChain) {
 
-  assert((FR->getDecl()->getType()->isPointerType() ||
+  assert((FR->getDecl()->getType()->isAnyPointerType() ||
           FR->getDecl()->getType()->isReferenceType() ||
           FR->getDecl()->getType()->isBlockPointerType()) &&
          "This method only checks pointer/reference objects!");
