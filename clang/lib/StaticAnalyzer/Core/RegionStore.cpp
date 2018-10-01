@@ -17,6 +17,7 @@
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/TargetInfo.h"
@@ -1031,6 +1032,32 @@ void invalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
     // Invalidate regions contents.
     if (!PreserveRegionsContents)
       B = B.remove(baseR);
+  }
+
+  if (const auto *TO = dyn_cast<TypedValueRegion>(baseR)) {
+    if (const auto *RD = TO->getValueType()->getAsCXXRecordDecl()) {
+
+      // Lambdas can affect all static local variables without explicitly
+      // capturing those.
+      // We invalidate all static locals referenced inside the lambda body.
+      if (RD->isLambda() && RD->getLambdaCallOperator()->getBody()) {
+        using namespace ast_matchers;
+
+        const char *DeclBind = "DeclBind";
+        StatementMatcher RefToStatic = stmt(hasDescendant(declRefExpr(
+              to(varDecl(hasStaticStorageDuration()).bind(DeclBind)))));
+        auto Matches =
+            match(RefToStatic, *RD->getLambdaCallOperator()->getBody(),
+                  RD->getASTContext());
+
+        for (BoundNodes &Match : Matches) {
+          auto *VD = Match.getNodeAs<VarDecl>(DeclBind);
+          const VarRegion *ToInvalidate =
+              RM.getRegionManager().getVarRegion(VD, LCtx);
+          AddToWorkList(ToInvalidate);
+        }
+      }
+    }
   }
 
   // BlockDataRegion?  If so, invalidate captured variables that are passed
