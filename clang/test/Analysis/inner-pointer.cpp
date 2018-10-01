@@ -361,3 +361,24 @@ void func_default_arg() {
   consume(c);        // expected-warning {{Use of memory after it is freed}}
   // expected-note@-1 {{Use of memory after it is freed}}
 }
+
+struct S {
+  std::string to_string() { return s; }
+private:
+  std::string s;
+};
+
+const char *escape_via_return_temp() {
+  S x;
+  return x.to_string().c_str(); // expected-note {{Dangling inner pointer obtained here}}
+  // expected-note@-1 {{Inner pointer invalidated by call to destructor}}
+  // expected-warning@-2 {{Use of memory after it is freed}}
+  // expected-note@-3 {{Use of memory after it is freed}}
+}
+
+const char *escape_via_return_local() {
+  std::string s;
+  return s.c_str(); // expected-note {{Dangling inner pointer obtained here}}
+                    // expected-note@-1 {{Inner pointer invalidated by call to destructor}}
+} // expected-warning {{Use of memory after it is freed}}
+// expected-note@-1 {{Use of memory after it is freed}}
