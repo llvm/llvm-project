@@ -326,7 +326,7 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
     }
   }
 
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+  if (dyn_cast<CXXMethodDecl>(FD)) {
 
     // Stop tracking arguments passed to C++ methods, as those might be
     // wrapping smart pointers.
