@@ -146,6 +146,12 @@ public:
     TransformLayer.setTransform(std::move(Transform));
   }
 
+  /// Sets the partition function.
+  void
+  setPartitionFunction(CompileOnDemandLayer2::PartitionFunction Partition) {
+    CODLayer.setPartitionFunction(std::move(Partition));
+  }
+
   /// Add a module to be lazily compiled to JITDylib JD.
   Error addLazyIRModule(JITDylib &JD, ThreadSafeModule M);
 

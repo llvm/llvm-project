@@ -218,6 +218,20 @@ define <3 x i32> @div_wider(i32 %y, i32 %z) {
   ret <3 x i32> %ext
 }
 
+; Increasing length of insertelements (no math ops) is a good canonicalization.
+
+define <3 x i8> @fold_inselts_with_widening_shuffle(i8 %x, i8 %y) {
+; CHECK-LABEL: @fold_inselts_with_widening_shuffle(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i8> undef, i8 [[X:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x i8> [[TMP1]], i8 [[Y:%.*]], i32 1
+; CHECK-NEXT:    ret <3 x i8> [[TMP2]]
+;
+  %ins0 = insertelement <2 x i8> undef, i8 %x, i32 0
+  %ins1 = insertelement <2 x i8> %ins0, i8 %y, i32 1
+  %widen = shufflevector <2 x i8> %ins1, <2 x i8> undef, <3 x i32> <i32 0, i32 1, i32 undef>
+  ret <3 x i8> %widen
+}
+
 define <2 x i8> @test13b(i8 %x) {
 ; CHECK-LABEL: @test13b(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> undef, i8 [[X:%.*]], i32 1

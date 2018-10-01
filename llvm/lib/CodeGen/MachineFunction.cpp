@@ -642,9 +642,8 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
       addCleanup(LandingPad);
 
     // FIXME: New EH - Add the clauses in reverse order. This isn't 100%
-    // correct,
-    //        but we need to do it this way because of how the DWARF EH emitter
-    //        processes the clauses.
+    //        correct, but we need to do it this way because of how the DWARF EH
+    //        emitter processes the clauses.
     for (unsigned I = LPI->getNumClauses(); I != 0; --I) {
       Value *Val = LPI->getClause(I - 1);
       if (LPI->isCatch(I - 1)) {

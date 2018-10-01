@@ -1212,7 +1212,6 @@ public:
     value_type SingleElement;
 
   public:
-    iterator() = default;
     explicit iterator(pointer Pos, value_type Single = nullptr)
         : IteratorBase(Pos), SingleElement(Single) {}
 

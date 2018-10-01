@@ -3370,7 +3370,7 @@ The symbol name of the resolver function is given in quotes.  A function with th
 
 The ``ifunc`` attribute may only be used on a function declaration.  A function declaration with an ``ifunc`` attribute is considered to be a definition of the declared entity.  The entity must not have weak linkage; for example, in C++, it cannot be applied to a declaration if a definition at that location would be considered inline.
 
-Not all targets support this attribute.  ELF targets support this attribute when using binutils v2.20.1 or higher and glibc v2.11.1 or higher.  Non-ELF targets currently do not support this attribute.
+Not all targets support this attribute. ELF target support depends on both the linker and runtime linker, and is available in at least lld 4.0 and later, binutils 2.20.1 and later, glibc v2.11.1 and later, and FreeBSD 9.1 and later. Non-ELF targets currently do not support this attribute.
   }];
 }
 

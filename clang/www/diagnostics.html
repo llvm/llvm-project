@@ -244,7 +244,7 @@ Default: template diff with type elision
 <span class="loc">t.cc:4:5:</span> <span class="note">note:</span> candidate function not viable: no known conversion for 1st argument;
   vector&lt;
     map&lt;
-      [...], 
+      [...],
       [<span class="template-highlight">float</span> != <span class="template-highlight">double</span>]&gt;&gt;
 </pre>
 -fdiagnostics-show-template-tree -fno-elide-type: template tree printing with no elision
@@ -252,7 +252,7 @@ Default: template diff with type elision
 <span class="loc">t.cc:4:5:</span> <span class="note">note:</span> candidate function not viable: no known conversion for 1st argument;
   vector&lt;
     map&lt;
-      int, 
+      int,
       [<span class="template-highlight">float</span> != <span class="template-highlight">double</span>]&gt;&gt;
 </pre>
 
@@ -292,7 +292,7 @@ implements the "wwopen" class of APIs):</p>
 </pre>
 
 <p>In practice, we've found that Clang's treatment of macros is actually more useful in multiply nested
-macros that in simple ones.</p>
+macros than in simple ones.</p>
 
 <h2>Quality of Implementation and Attention to Detail</h2>
 

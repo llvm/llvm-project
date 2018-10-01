@@ -2590,7 +2590,14 @@ bool X86DAGToDAGISel::matchBEXTRFromAnd(SDNode *Node) {
   SDValue N0 = Node->getOperand(0);
   SDValue N1 = Node->getOperand(1);
 
-  if (!Subtarget->hasBMI() && !Subtarget->hasTBM())
+  // If we have TBM we can use an immediate for the control. If we have BMI
+  // we should only do this if the BEXTR instruction is implemented well.
+  // Otherwise moving the control into a register makes this more costly.
+  // TODO: Maybe load folding, greater than 32-bit masks, or a guarantee of LICM
+  // hoisting the move immediate would make it worthwhile with a less optimal
+  // BEXTR?
+  if (!Subtarget->hasTBM() &&
+      !(Subtarget->hasBMI() && Subtarget->hasFastBEXTR()))
     return false;
 
   // Must have a shift right.
@@ -3259,20 +3266,22 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     if (NVT == MVT::i8 && (!isSigned || signBitIsZero)) {
       // Special case for div8, just use a move with zero extension to AX to
       // clear the upper 8 bits (AH).
-      SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, Move, Chain;
+      SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, Chain;
+      MachineSDNode *Move;
       if (tryFoldLoad(Node, N0, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4)) {
         SDValue Ops[] = { Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, N0.getOperand(0) };
-        Move =
-          SDValue(CurDAG->getMachineNode(X86::MOVZX32rm8, dl, MVT::i32,
-                                         MVT::Other, Ops), 0);
-        Chain = Move.getValue(1);
+        Move = CurDAG->getMachineNode(X86::MOVZX32rm8, dl, MVT::i32,
+                                      MVT::Other, Ops);
+        Chain = SDValue(Move, 1);
         ReplaceUses(N0.getValue(1), Chain);
+        // Record the mem-refs
+        CurDAG->setNodeMemRefs(Move, {cast<LoadSDNode>(N0)->getMemOperand()});
       } else {
-        Move =
-          SDValue(CurDAG->getMachineNode(X86::MOVZX32rr8, dl, MVT::i32, N0),0);
+        Move = CurDAG->getMachineNode(X86::MOVZX32rr8, dl, MVT::i32, N0);
         Chain = CurDAG->getEntryNode();
       }
-      Chain  = CurDAG->getCopyToReg(Chain, dl, X86::EAX, Move, SDValue());
+      Chain  = CurDAG->getCopyToReg(Chain, dl, X86::EAX, SDValue(Move, 0),
+                                    SDValue());
       InFlag = Chain.getValue(1);
     } else {
       InFlag =

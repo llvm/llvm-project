@@ -26,6 +26,9 @@ public:
   void dump(const PDBSymbolTypeEnum &Symbol) override;
   void dump(const PDBSymbolTypeTypedef &Symbol) override;
   void dump(const PDBSymbolTypeFunctionSig &Symbol) override;
+  void dump(const PDBSymbolTypeArray &Symbol) override;
+  void dump(const PDBSymbolTypeBuiltin &Symbol) override;
+  void dump(const PDBSymbolTypePointer &Symbol) override;
 
   void dumpClassLayout(const ClassLayout &Class);
 

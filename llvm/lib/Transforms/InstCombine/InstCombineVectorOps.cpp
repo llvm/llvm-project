@@ -167,7 +167,8 @@ Instruction *InstCombiner::scalarizePHI(ExtractElementInst &EI, PHINode *PN) {
 }
 
 static Instruction *foldBitcastExtElt(ExtractElementInst &Ext,
-                                      InstCombiner::BuilderTy &Builder) {
+                                      InstCombiner::BuilderTy &Builder,
+                                      bool IsBigEndian) {
   Value *X;
   uint64_t ExtIndexC;
   if (!match(Ext.getVectorOperand(), m_BitCast(m_Value(X))) ||
@@ -185,6 +186,47 @@ static Instruction *foldBitcastExtElt(ExtractElementInst &Ext,
   if (NumSrcElts == NumElts)
     if (Value *Elt = findScalarElement(X, ExtIndexC))
       return new BitCastInst(Elt, DestTy);
+
+  // If the source elements are wider than the destination, try to shift and
+  // truncate a subset of scalar bits of an insert op.
+  if (NumSrcElts < NumElts && SrcTy->getScalarType()->isIntegerTy()) {
+    Value *Scalar;
+    uint64_t InsIndexC;
+    if (!match(X, m_InsertElement(m_Value(), m_Value(Scalar),
+                                  m_ConstantInt(InsIndexC))))
+      return nullptr;
+
+    // The extract must be from the subset of vector elements that we inserted
+    // into. Example: if we inserted element 1 of a <2 x i64> and we are
+    // extracting an i16 (narrowing ratio = 4), then this extract must be from 1
+    // of elements 4-7 of the bitcasted vector.
+    unsigned NarrowingRatio = NumElts / NumSrcElts;
+    if (ExtIndexC / NarrowingRatio != InsIndexC)
+      return nullptr;
+
+    // We are extracting part of the original scalar. How that scalar is
+    // inserted into the vector depends on the endian-ness. Example:
+    //              Vector Byte Elt Index:    0  1  2  3  4  5  6  7
+    //                                       +--+--+--+--+--+--+--+--+
+    // inselt <2 x i32> V, <i32> S, 1:       |V0|V1|V2|V3|S0|S1|S2|S3|
+    // extelt <4 x i16> V', 3:               |                 |S2|S3|
+    //                                       +--+--+--+--+--+--+--+--+
+    // If this is little-endian, S2|S3 are the MSB of the 32-bit 'S' value.
+    // If this is big-endian, S2|S3 are the LSB of the 32-bit 'S' value.
+    // In this example, we must right-shift little-endian. Big-endian is just a
+    // truncate.
+    unsigned Chunk = ExtIndexC % NarrowingRatio;
+    if (IsBigEndian)
+      Chunk = NarrowingRatio - 1 - Chunk;
+    unsigned ShAmt = Chunk * DestTy->getPrimitiveSizeInBits();
+    if (ShAmt) {
+      // Bail out if we could end with more instructions than we started with.
+      if (!Ext.getVectorOperand()->hasOneUse())
+        return nullptr;
+      Scalar = Builder.CreateLShr(Scalar, ShAmt);
+    }
+    return new TruncInst(Scalar, DestTy);
+  }
 
   return nullptr;
 }
@@ -224,7 +266,7 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
       }
     }
 
-    if (Instruction *I = foldBitcastExtElt(EI, Builder))
+    if (Instruction *I = foldBitcastExtElt(EI, Builder, DL.isBigEndian()))
       return I;
 
     // If there's a vector PHI feeding a scalar use through this extractelement
@@ -871,7 +913,7 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
 
 /// Return true if we can evaluate the specified expression tree if the vector
 /// elements were shuffled in a different order.
-static bool CanEvaluateShuffled(Value *V, ArrayRef<int> Mask,
+static bool canEvaluateShuffled(Value *V, ArrayRef<int> Mask,
                                 unsigned Depth = 5) {
   // We can always reorder the elements of a constant.
   if (isa<Constant>(V))
@@ -918,8 +960,15 @@ static bool CanEvaluateShuffled(Value *V, ArrayRef<int> Mask,
     case Instruction::FPTrunc:
     case Instruction::FPExt:
     case Instruction::GetElementPtr: {
+      // Bail out if we would create longer vector ops. We could allow creating
+      // longer vector ops, but that may result in more expensive codegen. We
+      // would also need to limit the transform to avoid undefined behavior for
+      // integer div/rem.
+      Type *ITy = I->getType();
+      if (ITy->isVectorTy() && Mask.size() > ITy->getVectorNumElements())
+        return false;
       for (Value *Operand : I->operands()) {
-        if (!CanEvaluateShuffled(Operand, Mask, Depth-1))
+        if (!canEvaluateShuffled(Operand, Mask, Depth - 1))
           return false;
       }
       return true;
@@ -939,7 +988,7 @@ static bool CanEvaluateShuffled(Value *V, ArrayRef<int> Mask,
           SeenOnce = true;
         }
       }
-      return CanEvaluateShuffled(I->getOperand(0), Mask, Depth-1);
+      return canEvaluateShuffled(I->getOperand(0), Mask, Depth - 1);
     }
   }
   return false;
@@ -1023,12 +1072,12 @@ static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps) {
   llvm_unreachable("failed to rebuild vector instructions");
 }
 
-Value *
-InstCombiner::EvaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
+static Value *evaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
   // Mask.size() does not need to be equal to the number of vector elements.
 
   assert(V->getType()->isVectorTy() && "can't reorder non-vector elements");
   Type *EltTy = V->getType()->getScalarType();
+  Type *I32Ty = IntegerType::getInt32Ty(V->getContext());
   if (isa<UndefValue>(V))
     return UndefValue::get(VectorType::get(EltTy, Mask.size()));
 
@@ -1039,9 +1088,9 @@ InstCombiner::EvaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
     SmallVector<Constant *, 16> MaskValues;
     for (int i = 0, e = Mask.size(); i != e; ++i) {
       if (Mask[i] == -1)
-        MaskValues.push_back(UndefValue::get(Builder.getInt32Ty()));
+        MaskValues.push_back(UndefValue::get(I32Ty));
       else
-        MaskValues.push_back(Builder.getInt32(Mask[i]));
+        MaskValues.push_back(ConstantInt::get(I32Ty, Mask[i]));
     }
     return ConstantExpr::getShuffleVector(C, UndefValue::get(C->getType()),
                                           ConstantVector::get(MaskValues));
@@ -1083,7 +1132,7 @@ InstCombiner::EvaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
       SmallVector<Value*, 8> NewOps;
       bool NeedsRebuild = (Mask.size() != I->getType()->getVectorNumElements());
       for (int i = 0, e = I->getNumOperands(); i != e; ++i) {
-        Value *V = EvaluateInDifferentElementOrder(I->getOperand(i), Mask);
+        Value *V = evaluateInDifferentElementOrder(I->getOperand(i), Mask);
         NewOps.push_back(V);
         NeedsRebuild |= (V != I->getOperand(i));
       }
@@ -1110,11 +1159,11 @@ InstCombiner::EvaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
       // If element is not in Mask, no need to handle the operand 1 (element to
       // be inserted). Just evaluate values in operand 0 according to Mask.
       if (!Found)
-        return EvaluateInDifferentElementOrder(I->getOperand(0), Mask);
+        return evaluateInDifferentElementOrder(I->getOperand(0), Mask);
 
-      Value *V = EvaluateInDifferentElementOrder(I->getOperand(0), Mask);
+      Value *V = evaluateInDifferentElementOrder(I->getOperand(0), Mask);
       return InsertElementInst::Create(V, I->getOperand(1),
-                                       Builder.getInt32(Index), "", I);
+                                       ConstantInt::get(I32Ty, Index), "", I);
     }
   }
   llvm_unreachable("failed to reorder elements of vector instruction!");
@@ -1464,9 +1513,8 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     if (isRHSID) return replaceInstUsesWith(SVI, RHS);
   }
 
-  if (isa<UndefValue>(RHS) && !SVI.increasesLength() &&
-      CanEvaluateShuffled(LHS, Mask)) {
-    Value *V = EvaluateInDifferentElementOrder(LHS, Mask);
+  if (isa<UndefValue>(RHS) && canEvaluateShuffled(LHS, Mask)) {
+    Value *V = evaluateInDifferentElementOrder(LHS, Mask);
     return replaceInstUsesWith(SVI, V);
   }
 

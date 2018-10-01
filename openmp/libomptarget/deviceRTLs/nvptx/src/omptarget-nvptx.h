@@ -154,13 +154,6 @@ public:
   // methods for flags
   INLINE omp_sched_t GetRuntimeSched();
   INLINE void SetRuntimeSched(omp_sched_t sched);
-  INLINE int IsDynamic() { return items.flags & TaskDescr_IsDynamic; }
-  INLINE void SetDynamic() {
-    items.flags = items.flags | TaskDescr_IsDynamic;
-  }
-  INLINE void ClearDynamic() {
-    items.flags = items.flags & (~TaskDescr_IsDynamic);
-  }
   INLINE int InParallelRegion() { return items.flags & TaskDescr_InPar; }
   INLINE int InL2OrHigherParallelRegion() {
     return items.flags & TaskDescr_InParL2P;
@@ -196,15 +189,13 @@ public:
   INLINE void RestoreLoopData() const;
 
 private:
-  // bits for flags: (7 used, 1 free)
+  // bits for flags: (6 used, 2 free)
   //   3 bits (SchedMask) for runtime schedule
-  //   1 bit (IsDynamic) for dynamic schedule (false = static)
   //   1 bit (InPar) if this thread has encountered one or more parallel region
   //   1 bit (IsParConstr) if ICV for a parallel region (false = explicit task)
   //   1 bit (InParL2+) if this thread has encountered L2 or higher parallel
   //   region
   static const uint8_t TaskDescr_SchedMask = (0x1 | 0x2 | 0x4);
-  static const uint8_t TaskDescr_IsDynamic = 0x8;
   static const uint8_t TaskDescr_InPar = 0x10;
   static const uint8_t TaskDescr_IsParConstr = 0x20;
   static const uint8_t TaskDescr_InParL2P = 0x40;
