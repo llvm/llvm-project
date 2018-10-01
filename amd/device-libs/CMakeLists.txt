@@ -43,6 +43,7 @@ add_subdirectory(oclc)
 add_subdirectory(ocml)
 add_subdirectory(ockl)
 add_subdirectory(opencl)
+add_subdirectory(hip)
 
 if(BUILD_HC_LIB)
   add_subdirectory(hc)

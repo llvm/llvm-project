@@ -160,7 +160,7 @@ set(OCLC_DEFAULT_LIBS
   oclc_unsafe_math_off)
 
 macro(clang_opencl_test name dir)
-  clang_opencl_code(${name} ${dir} opencl ocml ockl ${OCLC_DEFAULT_LIBS})
+  clang_opencl_code(${name} ${dir} hip opencl ocml ockl ${OCLC_DEFAULT_LIBS})
   add_test(
     NAME ${name}:llvm-objdump
     COMMAND ${LLVM_OBJDUMP} -disassemble -mcpu=fiji "${name}.co"
