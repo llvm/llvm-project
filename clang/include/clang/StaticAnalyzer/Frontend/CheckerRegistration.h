@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_STATICANALYZER_FRONTEND_CHECKERREGISTRATION_H
 #define LLVM_CLANG_STATICANALYZER_FRONTEND_CHECKERREGISTRATION_H
 
+#include "clang/AST/ASTContext.h"
 #include "clang/Basic/LLVM.h"
 #include <functional>
 #include <memory>
@@ -25,7 +26,8 @@ namespace ento {
   class CheckerRegistry;
 
   std::unique_ptr<CheckerManager> createCheckerManager(
-      AnalyzerOptions &opts, const LangOptions &langOpts,
+      ASTContext &context,
+      AnalyzerOptions &opts,
       ArrayRef<std::string> plugins,
       ArrayRef<std::function<void(CheckerRegistry &)>> checkerRegistrationFns,
       DiagnosticsEngine &diags);
