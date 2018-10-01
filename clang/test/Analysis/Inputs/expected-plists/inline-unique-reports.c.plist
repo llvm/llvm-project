@@ -1,7 +1,3 @@
- <key>diagnostics</key>
- <array>
-  <dict>
-   <key>path</key>
    <array>
     <dict>
      <key>kind</key><string>event</string>
@@ -251,7 +247,22 @@
    <key>col</key><integer>6</integer>
    <key>file</key><integer>0</integer>
   </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>4</integer>
+    <integer>5</integer>
+    <integer>13</integer>
+    <integer>14</integer>
+    <integer>15</integer>
+   </array>
   </dict>
+  </dict>
+ </array>
+ <key>files</key>
+ <array>
+  <string>/Volumes/Transcend/code/monorepo/llvm-project/clang/test/Analysis/inline-unique-reports.c</string>
  </array>
 </dict>
 </plist>

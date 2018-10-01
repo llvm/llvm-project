@@ -1,7 +1,3 @@
- <key>diagnostics</key>
- <array>
-  <dict>
-   <key>path</key>
    <array>
     <dict>
      <key>kind</key><string>control</string>
@@ -509,6 +505,23 @@
    <key>col</key><integer>26</integer>
    <key>file</key><integer>0</integer>
   </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>6</integer>
+    <integer>7</integer>
+    <integer>8</integer>
+    <integer>9</integer>
+    <integer>10</integer>
+    <integer>11</integer>
+    <integer>12</integer>
+    <integer>13</integer>
+    <integer>14</integer>
+    <integer>15</integer>
+    <integer>16</integer>
+   </array>
+  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -736,6 +749,17 @@
    <key>line</key><integer>33</integer>
    <key>col</key><integer>24</integer>
    <key>file</key><integer>0</integer>
+  </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>31</integer>
+    <integer>32</integer>
+    <integer>33</integer>
+    <integer>87</integer>
+    <integer>88</integer>
+   </array>
   </dict>
   </dict>
   <dict>
@@ -1014,6 +1038,21 @@
    <key>col</key><integer>26</integer>
    <key>file</key><integer>0</integer>
   </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>31</integer>
+    <integer>32</integer>
+    <integer>34</integer>
+    <integer>37</integer>
+    <integer>38</integer>
+    <integer>39</integer>
+    <integer>40</integer>
+    <integer>41</integer>
+    <integer>42</integer>
+   </array>
+  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -1159,6 +1198,18 @@
    <key>line</key><integer>48</integer>
    <key>col</key><integer>22</integer>
    <key>file</key><integer>0</integer>
+  </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>31</integer>
+    <integer>32</integer>
+    <integer>34</integer>
+    <integer>37</integer>
+    <integer>38</integer>
+    <integer>48</integer>
+   </array>
   </dict>
   </dict>
   <dict>
@@ -1437,6 +1488,20 @@
    <key>col</key><integer>26</integer>
    <key>file</key><integer>0</integer>
   </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>68</integer>
+    <integer>69</integer>
+    <integer>72</integer>
+    <integer>73</integer>
+    <integer>74</integer>
+    <integer>75</integer>
+    <integer>76</integer>
+    <integer>77</integer>
+   </array>
+  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -1583,7 +1648,22 @@
    <key>col</key><integer>22</integer>
    <key>file</key><integer>0</integer>
   </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>68</integer>
+    <integer>69</integer>
+    <integer>72</integer>
+    <integer>73</integer>
+    <integer>83</integer>
+   </array>
   </dict>
+  </dict>
+ </array>
+ <key>files</key>
+ <array>
+  <string>/Volumes/Transcend/code/monorepo/llvm-project/clang/test/Analysis/cxx-for-range.cpp</string>
  </array>
 </dict>
 </plist>

@@ -1,7 +1,3 @@
- <key>diagnostics</key>
- <array>
-  <dict>
-   <key>path</key>
    <array>
     <dict>
      <key>kind</key><string>event</string>
@@ -464,6 +460,24 @@
    <key>col</key><integer>14</integer>
    <key>file</key><integer>0</integer>
   </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>5</integer>
+    <integer>6</integer>
+    <integer>7</integer>
+    <integer>11</integer>
+    <integer>12</integer>
+    <integer>15</integer>
+    <integer>19</integer>
+    <integer>20</integer>
+    <integer>21</integer>
+    <integer>22</integer>
+    <integer>25</integer>
+    <integer>26</integer>
+   </array>
+  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -783,6 +797,19 @@
    <key>line</key><integer>42</integer>
    <key>col</key><integer>14</integer>
    <key>file</key><integer>0</integer>
+  </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>30</integer>
+    <integer>31</integer>
+    <integer>33</integer>
+    <integer>38</integer>
+    <integer>39</integer>
+    <integer>40</integer>
+    <integer>42</integer>
+   </array>
   </dict>
   </dict>
   <dict>
@@ -1283,7 +1310,25 @@
    <key>col</key><integer>10</integer>
    <key>file</key><integer>0</integer>
   </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>50</integer>
+    <integer>51</integer>
+    <integer>54</integer>
+    <integer>57</integer>
+    <integer>58</integer>
+    <integer>59</integer>
+    <integer>60</integer>
+    <integer>62</integer>
+   </array>
   </dict>
+  </dict>
+ </array>
+ <key>files</key>
+ <array>
+  <string>/Volumes/Transcend/code/monorepo/llvm-project/clang/test/Analysis/diagnostics/undef-value-param.c</string>
  </array>
 </dict>
 </plist>
