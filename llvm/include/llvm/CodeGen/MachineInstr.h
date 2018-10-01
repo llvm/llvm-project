@@ -1544,6 +1544,10 @@ public:
   /// Scan instructions following MI and collect any matching DBG_VALUEs.
   void collectDebugValues(SmallVectorImpl<MachineInstr *> &DbgValues);
 
+  /// Find all DBG_VALUEs immediately following this instruction that point
+  /// to a register def in this instruction and point them to \p Reg instead.
+  void changeDebugValuesDefReg(unsigned Reg);
+
 private:
   /// If this instruction is embedded into a MachineFunction, return the
   /// MachineRegisterInfo object for the current function, otherwise

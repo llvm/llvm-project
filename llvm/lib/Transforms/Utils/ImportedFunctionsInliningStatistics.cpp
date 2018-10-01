@@ -190,17 +190,14 @@ ImportedFunctionsInliningStatistics::getSortedNodes() {
   for (const NodesMapTy::value_type& Node : NodesMap)
     SortedNodes.push_back(&Node);
 
-  llvm::sort(
-      SortedNodes.begin(), SortedNodes.end(),
-      [&](const SortedNodesTy::value_type &Lhs,
-          const SortedNodesTy::value_type &Rhs) {
-        if (Lhs->second->NumberOfInlines != Rhs->second->NumberOfInlines)
-          return Lhs->second->NumberOfInlines > Rhs->second->NumberOfInlines;
-        if (Lhs->second->NumberOfRealInlines !=
-            Rhs->second->NumberOfRealInlines)
-          return Lhs->second->NumberOfRealInlines >
-                 Rhs->second->NumberOfRealInlines;
-        return Lhs->first() < Rhs->first();
-      });
+  llvm::sort(SortedNodes, [&](const SortedNodesTy::value_type &Lhs,
+                              const SortedNodesTy::value_type &Rhs) {
+    if (Lhs->second->NumberOfInlines != Rhs->second->NumberOfInlines)
+      return Lhs->second->NumberOfInlines > Rhs->second->NumberOfInlines;
+    if (Lhs->second->NumberOfRealInlines != Rhs->second->NumberOfRealInlines)
+      return Lhs->second->NumberOfRealInlines >
+             Rhs->second->NumberOfRealInlines;
+    return Lhs->first() < Rhs->first();
+  });
   return SortedNodes;
 }

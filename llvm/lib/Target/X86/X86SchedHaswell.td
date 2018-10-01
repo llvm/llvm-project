@@ -1617,10 +1617,10 @@ def HWWriteResGroup144 : SchedWriteRes<[HWPort4,HWPort5,HWPort6,HWPort23,HWPort2
 }
 def: InstRW<[HWWriteResGroup144], (instrs INSB, INSL, INSW)>;
 
-def HWWriteResGroup145 : SchedWriteRes<[HWPort5]> {
-  let Latency = 16;
-  let NumMicroOps = 16;
-  let ResourceCycles = [16];
+def HWWriteResGroup145 : SchedWriteRes<[HWPort5, HWPort6]> {
+  let Latency = 8;
+  let NumMicroOps = 20;
+  let ResourceCycles = [1,1];
 }
 def: InstRW<[HWWriteResGroup145], (instrs VZEROALL)>;
 

@@ -41,6 +41,8 @@ NativeExeSymbol::findChildren(PDB_SymType Type) const {
     return std::unique_ptr<IPDBEnumSymbols>(new NativeEnumModules(Session));
     break;
   }
+  case PDB_SymType::ArrayType:
+    return Session.getSymbolCache().createTypeEnumerator(codeview::LF_ARRAY);
   case PDB_SymType::Enum:
     return Session.getSymbolCache().createTypeEnumerator(codeview::LF_ENUM);
   case PDB_SymType::PointerType:

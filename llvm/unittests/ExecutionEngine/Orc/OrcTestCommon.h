@@ -50,10 +50,10 @@ protected:
   std::shared_ptr<SymbolStringPool> SSP = std::make_shared<SymbolStringPool>();
   ExecutionSession ES{SSP};
   JITDylib &JD = ES.createJITDylib("JD");
-  SymbolStringPtr Foo = ES.getSymbolStringPool().intern("foo");
-  SymbolStringPtr Bar = ES.getSymbolStringPool().intern("bar");
-  SymbolStringPtr Baz = ES.getSymbolStringPool().intern("baz");
-  SymbolStringPtr Qux = ES.getSymbolStringPool().intern("qux");
+  SymbolStringPtr Foo = ES.intern("foo");
+  SymbolStringPtr Bar = ES.intern("bar");
+  SymbolStringPtr Baz = ES.intern("baz");
+  SymbolStringPtr Qux = ES.intern("qux");
   static const JITTargetAddress FooAddr = 1U;
   static const JITTargetAddress BarAddr = 2U;
   static const JITTargetAddress BazAddr = 3U;

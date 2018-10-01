@@ -52,6 +52,7 @@ add_pdb_impl_folder(Native
   Native/NativeExeSymbol.cpp
   Native/NativeRawSymbol.cpp
   Native/NativeSymbolEnumerator.cpp
+  Native/NativeTypeArray.cpp
   Native/NativeTypeBuiltin.cpp
   Native/NativeTypeEnum.cpp
   Native/NativeTypeFunctionSig.cpp

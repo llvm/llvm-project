@@ -1374,10 +1374,10 @@ def BWWriteResGroup153 : SchedWriteRes<[BWPort4,BWPort23,BWPort237,BWPort06,BWPo
 }
 def: InstRW<[BWWriteResGroup153], (instrs CMPXCHG8B)>;
 
-def BWWriteResGroup154 : SchedWriteRes<[BWPort5]> {
-  let Latency = 16;
-  let NumMicroOps = 16;
-  let ResourceCycles = [16];
+def BWWriteResGroup154 : SchedWriteRes<[BWPort5,BWPort6]> {
+  let Latency = 8;
+  let NumMicroOps = 20;
+  let ResourceCycles = [1,1];
 }
 def: InstRW<[BWWriteResGroup154], (instrs VZEROALL)>;
 

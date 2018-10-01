@@ -42,11 +42,14 @@ define i64 @test2(i64 %in) {
 }
 
 define i32 @bitcasted_inselt_wide_source_zero_elt(i64 %x) {
-; ANY-LABEL: @bitcasted_inselt_wide_source_zero_elt(
-; ANY-NEXT:    [[I:%.*]] = insertelement <2 x i64> undef, i64 [[X:%.*]], i32 0
-; ANY-NEXT:    [[B:%.*]] = bitcast <2 x i64> [[I]] to <4 x i32>
-; ANY-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[B]], i32 0
-; ANY-NEXT:    ret i32 [[R]]
+; LE-LABEL: @bitcasted_inselt_wide_source_zero_elt(
+; LE-NEXT:    [[R:%.*]] = trunc i64 [[X:%.*]] to i32
+; LE-NEXT:    ret i32 [[R]]
+;
+; BE-LABEL: @bitcasted_inselt_wide_source_zero_elt(
+; BE-NEXT:    [[TMP1:%.*]] = lshr i64 [[X:%.*]], 32
+; BE-NEXT:    [[R:%.*]] = trunc i64 [[TMP1]] to i32
+; BE-NEXT:    ret i32 [[R]]
 ;
   %i = insertelement <2 x i64> zeroinitializer, i64 %x, i32 0
   %b = bitcast <2 x i64> %i to <4 x i32>
@@ -55,11 +58,14 @@ define i32 @bitcasted_inselt_wide_source_zero_elt(i64 %x) {
 }
 
 define i16 @bitcasted_inselt_wide_source_modulo_elt(i64 %x) {
-; ANY-LABEL: @bitcasted_inselt_wide_source_modulo_elt(
-; ANY-NEXT:    [[I:%.*]] = insertelement <2 x i64> undef, i64 [[X:%.*]], i32 1
-; ANY-NEXT:    [[B:%.*]] = bitcast <2 x i64> [[I]] to <8 x i16>
-; ANY-NEXT:    [[R:%.*]] = extractelement <8 x i16> [[B]], i32 4
-; ANY-NEXT:    ret i16 [[R]]
+; LE-LABEL: @bitcasted_inselt_wide_source_modulo_elt(
+; LE-NEXT:    [[R:%.*]] = trunc i64 [[X:%.*]] to i16
+; LE-NEXT:    ret i16 [[R]]
+;
+; BE-LABEL: @bitcasted_inselt_wide_source_modulo_elt(
+; BE-NEXT:    [[TMP1:%.*]] = lshr i64 [[X:%.*]], 48
+; BE-NEXT:    [[R:%.*]] = trunc i64 [[TMP1]] to i16
+; BE-NEXT:    ret i16 [[R]]
 ;
   %i = insertelement <2 x i64> undef, i64 %x, i32 1
   %b = bitcast <2 x i64> %i to <8 x i16>
@@ -68,11 +74,14 @@ define i16 @bitcasted_inselt_wide_source_modulo_elt(i64 %x) {
 }
 
 define i32 @bitcasted_inselt_wide_source_not_modulo_elt(i64 %x) {
-; ANY-LABEL: @bitcasted_inselt_wide_source_not_modulo_elt(
-; ANY-NEXT:    [[I:%.*]] = insertelement <2 x i64> undef, i64 [[X:%.*]], i32 0
-; ANY-NEXT:    [[B:%.*]] = bitcast <2 x i64> [[I]] to <4 x i32>
-; ANY-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[B]], i32 1
-; ANY-NEXT:    ret i32 [[R]]
+; LE-LABEL: @bitcasted_inselt_wide_source_not_modulo_elt(
+; LE-NEXT:    [[TMP1:%.*]] = lshr i64 [[X:%.*]], 32
+; LE-NEXT:    [[R:%.*]] = trunc i64 [[TMP1]] to i32
+; LE-NEXT:    ret i32 [[R]]
+;
+; BE-LABEL: @bitcasted_inselt_wide_source_not_modulo_elt(
+; BE-NEXT:    [[R:%.*]] = trunc i64 [[X:%.*]] to i32
+; BE-NEXT:    ret i32 [[R]]
 ;
   %i = insertelement <2 x i64> undef, i64 %x, i32 0
   %b = bitcast <2 x i64> %i to <4 x i32>
@@ -81,11 +90,15 @@ define i32 @bitcasted_inselt_wide_source_not_modulo_elt(i64 %x) {
 }
 
 define i8 @bitcasted_inselt_wide_source_not_modulo_elt_not_half(i32 %x) {
-; ANY-LABEL: @bitcasted_inselt_wide_source_not_modulo_elt_not_half(
-; ANY-NEXT:    [[I:%.*]] = insertelement <2 x i32> undef, i32 [[X:%.*]], i32 0
-; ANY-NEXT:    [[B:%.*]] = bitcast <2 x i32> [[I]] to <8 x i8>
-; ANY-NEXT:    [[R:%.*]] = extractelement <8 x i8> [[B]], i32 2
-; ANY-NEXT:    ret i8 [[R]]
+; LE-LABEL: @bitcasted_inselt_wide_source_not_modulo_elt_not_half(
+; LE-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 16
+; LE-NEXT:    [[R:%.*]] = trunc i32 [[TMP1]] to i8
+; LE-NEXT:    ret i8 [[R]]
+;
+; BE-LABEL: @bitcasted_inselt_wide_source_not_modulo_elt_not_half(
+; BE-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 8
+; BE-NEXT:    [[R:%.*]] = trunc i32 [[TMP1]] to i8
+; BE-NEXT:    ret i8 [[R]]
 ;
   %i = insertelement <2 x i32> undef, i32 %x, i32 0
   %b = bitcast <2 x i32> %i to <8 x i8>
@@ -94,11 +107,15 @@ define i8 @bitcasted_inselt_wide_source_not_modulo_elt_not_half(i32 %x) {
 }
 
 define i3 @bitcasted_inselt_wide_source_not_modulo_elt_not_half_weird_types(i15 %x) {
-; ANY-LABEL: @bitcasted_inselt_wide_source_not_modulo_elt_not_half_weird_types(
-; ANY-NEXT:    [[I:%.*]] = insertelement <3 x i15> undef, i15 [[X:%.*]], i32 0
-; ANY-NEXT:    [[B:%.*]] = bitcast <3 x i15> [[I]] to <15 x i3>
-; ANY-NEXT:    [[R:%.*]] = extractelement <15 x i3> [[B]], i32 1
-; ANY-NEXT:    ret i3 [[R]]
+; LE-LABEL: @bitcasted_inselt_wide_source_not_modulo_elt_not_half_weird_types(
+; LE-NEXT:    [[TMP1:%.*]] = lshr i15 [[X:%.*]], 3
+; LE-NEXT:    [[R:%.*]] = trunc i15 [[TMP1]] to i3
+; LE-NEXT:    ret i3 [[R]]
+;
+; BE-LABEL: @bitcasted_inselt_wide_source_not_modulo_elt_not_half_weird_types(
+; BE-NEXT:    [[TMP1:%.*]] = lshr i15 [[X:%.*]], 9
+; BE-NEXT:    [[R:%.*]] = trunc i15 [[TMP1]] to i3
+; BE-NEXT:    ret i3 [[R]]
 ;
   %i = insertelement <3 x i15> undef, i15 %x, i32 0
   %b = bitcast <3 x i15> %i to <15 x i3>
@@ -125,12 +142,19 @@ define i8 @bitcasted_inselt_wide_source_wrong_insert(<2 x i32> %v, i32 %x) {
 declare void @use(<8 x i8>)
 
 define i8 @bitcasted_inselt_wide_source_uses(i32 %x) {
-; ANY-LABEL: @bitcasted_inselt_wide_source_uses(
-; ANY-NEXT:    [[I:%.*]] = insertelement <2 x i32> undef, i32 [[X:%.*]], i32 0
-; ANY-NEXT:    [[B:%.*]] = bitcast <2 x i32> [[I]] to <8 x i8>
-; ANY-NEXT:    call void @use(<8 x i8> [[B]])
-; ANY-NEXT:    [[R:%.*]] = extractelement <8 x i8> [[B]], i32 3
-; ANY-NEXT:    ret i8 [[R]]
+; LE-LABEL: @bitcasted_inselt_wide_source_uses(
+; LE-NEXT:    [[I:%.*]] = insertelement <2 x i32> undef, i32 [[X:%.*]], i32 0
+; LE-NEXT:    [[B:%.*]] = bitcast <2 x i32> [[I]] to <8 x i8>
+; LE-NEXT:    call void @use(<8 x i8> [[B]])
+; LE-NEXT:    [[R:%.*]] = extractelement <8 x i8> [[B]], i32 3
+; LE-NEXT:    ret i8 [[R]]
+;
+; BE-LABEL: @bitcasted_inselt_wide_source_uses(
+; BE-NEXT:    [[I:%.*]] = insertelement <2 x i32> undef, i32 [[X:%.*]], i32 0
+; BE-NEXT:    [[B:%.*]] = bitcast <2 x i32> [[I]] to <8 x i8>
+; BE-NEXT:    call void @use(<8 x i8> [[B]])
+; BE-NEXT:    [[R:%.*]] = trunc i32 [[X]] to i8
+; BE-NEXT:    ret i8 [[R]]
 ;
   %i = insertelement <2 x i32> undef, i32 %x, i32 0
   %b = bitcast <2 x i32> %i to <8 x i8>

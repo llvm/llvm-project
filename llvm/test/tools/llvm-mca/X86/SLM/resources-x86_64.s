@@ -977,7 +977,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     0.50                        btcw	$7, %di
 # CHECK-NEXT:  1      1     0.50                        btrw	$7, %di
 # CHECK-NEXT:  1      1     0.50                        btsw	$7, %di
-# CHECK-NEXT:  1      1     0.50    *                   btw	$7, (%rax)
+# CHECK-NEXT:  1      4     1.00    *                   btw	$7, (%rax)
 # CHECK-NEXT:  2      4     2.00    *      *            btcw	$7, (%rax)
 # CHECK-NEXT:  2      4     2.00    *      *            btrw	$7, (%rax)
 # CHECK-NEXT:  2      4     2.00    *      *            btsw	$7, (%rax)
@@ -993,7 +993,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     0.50                        btcl	$7, %edi
 # CHECK-NEXT:  1      1     0.50                        btrl	$7, %edi
 # CHECK-NEXT:  1      1     0.50                        btsl	$7, %edi
-# CHECK-NEXT:  1      1     0.50    *                   btl	$7, (%rax)
+# CHECK-NEXT:  1      4     1.00    *                   btl	$7, (%rax)
 # CHECK-NEXT:  2      4     2.00    *      *            btcl	$7, (%rax)
 # CHECK-NEXT:  2      4     2.00    *      *            btrl	$7, (%rax)
 # CHECK-NEXT:  2      4     2.00    *      *            btsl	$7, (%rax)
@@ -1009,7 +1009,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     0.50                        btcq	$7, %rdi
 # CHECK-NEXT:  1      1     0.50                        btrq	$7, %rdi
 # CHECK-NEXT:  1      1     0.50                        btsq	$7, %rdi
-# CHECK-NEXT:  1      1     0.50    *                   btq	$7, (%rax)
+# CHECK-NEXT:  1      4     1.00    *                   btq	$7, (%rax)
 # CHECK-NEXT:  2      4     2.00    *      *            btcq	$7, (%rax)
 # CHECK-NEXT:  2      4     2.00    *      *            btrq	$7, (%rax)
 # CHECK-NEXT:  2      4     2.00    *      *            btsq	$7, (%rax)
@@ -1620,7 +1620,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT: 400.00  -      -     41.00   -     595.50 437.50 554.00
+# CHECK-NEXT: 400.00  -      -     41.00   -     595.50 437.50 557.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -1740,7 +1740,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btcw	$7, %di
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btrw	$7, %di
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btsw	$7, %di
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btw	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00   btw	$7, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btcw	$7, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btrw	$7, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btsw	$7, (%rax)
@@ -1756,7 +1756,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btcl	$7, %edi
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btrl	$7, %edi
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btsl	$7, %edi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btl	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00   btl	$7, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btcl	$7, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btrl	$7, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btsl	$7, (%rax)
@@ -1772,7 +1772,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btcq	$7, %rdi
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btrq	$7, %rdi
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btsq	$7, %rdi
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     btq	$7, (%rax)
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00   btq	$7, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btcq	$7, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btrq	$7, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   2.00   btsq	$7, (%rax)

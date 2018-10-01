@@ -5339,22 +5339,22 @@ define <8 x float> @test_xorps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%a
 define void @test_zeroall() {
 ; GENERIC-LABEL: test_zeroall:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vzeroall # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroall # sched: [9:2.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_zeroall:
 ; SANDY:       # %bb.0:
-; SANDY-NEXT:    vzeroall # sched: [100:0.33]
+; SANDY-NEXT:    vzeroall # sched: [9:2.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_zeroall:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vzeroall # sched: [16:16.00]
+; HASWELL-NEXT:    vzeroall # sched: [8:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_zeroall:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vzeroall # sched: [16:16.00]
+; BROADWELL-NEXT:    vzeroall # sched: [8:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_zeroall:
@@ -5364,7 +5364,7 @@ define void @test_zeroall() {
 ;
 ; SKX-LABEL: test_zeroall:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vzeroall # sched: [16:4.00]
+; SKX-NEXT:    vzeroall # sched: [12:5.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_zeroall:
