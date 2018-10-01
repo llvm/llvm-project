@@ -1,5 +1,6 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -analyzer-checker=core,alpha.core,debug.ExprInspection -analyzer-store=region -analyzer-config eagerly-assume=false -verify %s
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -analyzer-checker=core,alpha.core,debug.ExprInspection -analyzer-store=region -analyzer-config eagerly-assume=false -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -analyzer-checker=core,alpha.core,debug.ExprInspection -analyzer-store=region -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -analyzer-checker=core,alpha.core,debug.ExprInspection -analyzer-store=region -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core,debug.ExprInspection -verify -DEAGERLY_ASSUME=1 -w %s
 
 extern void clang_analyzer_eval(_Bool);
 
@@ -15,6 +16,8 @@ struct sockaddr { sa_family_t sa_family; };
 struct sockaddr_storage {};
 
 void getsockname();
+
+#ifndef EAGERLY_ASSUME
 
 void f(int sock) {
   struct sockaddr_storage storage;
@@ -188,3 +191,21 @@ void testSwitchWithSizeofs() {
   case sizeof(char):; // no-crash
   }
 }
+
+#endif
+
+#ifdef EAGERLY_ASSUME
+
+// expected-no-diagnostics
+
+int globalA; // TODO: the example is not representative.
+extern int globalFunc();
+void no_crash_on_symsym_cast_to_long() {
+  char c = globalFunc() - 5;
+  c == 0;
+  globalA -= c;
+  globalA == 3;
+  (long)globalA << 48; // no-crash
+}
+
+#endif
