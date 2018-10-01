@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 %s -analyzer-checker=core.NullDereference,core.DivideZero -fblocks -analyzer-output=text -analyzer-config suppress-null-return-paths=false -verify %s
 // RUN: %clang_analyze_cc1 %s -analyzer-checker=core.NullDereference,core.DivideZero -fblocks -analyzer-output=plist -analyzer-config suppress-null-return-paths=false -o %t
-// RUN: tail -n +11 %t | diff -u -w - %S/ExpectedOutputs/plists/inline-plist.c.plist
+// RUN: tail -n +11 %t | diff -u -w - %S/Inputs/expected-plists/inline-plist.c.plist
 
 // <rdar://problem/10967815>
 void mmm(int y) {
