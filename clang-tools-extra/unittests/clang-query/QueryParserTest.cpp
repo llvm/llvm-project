@@ -103,6 +103,12 @@ TEST_F(QueryParserTest, LetUnlet) {
   EXPECT_TRUE(cast<LetQuery>(Q)->Value.isMatcher());
   EXPECT_TRUE(cast<LetQuery>(Q)->Value.getMatcher().hasTypedMatcher<Decl>());
 
+  Q = parse("l foo decl()");
+  ASSERT_TRUE(isa<LetQuery>(Q));
+  EXPECT_EQ("foo", cast<LetQuery>(Q)->Name);
+  EXPECT_TRUE(cast<LetQuery>(Q)->Value.isMatcher());
+  EXPECT_TRUE(cast<LetQuery>(Q)->Value.getMatcher().hasTypedMatcher<Decl>());
+
   Q = parse("let bar \"str\"");
   ASSERT_TRUE(isa<LetQuery>(Q));
   EXPECT_EQ("bar", cast<LetQuery>(Q)->Name);

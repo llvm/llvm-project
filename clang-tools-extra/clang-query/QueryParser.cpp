@@ -162,6 +162,7 @@ QueryRef QueryParser::doParse() {
   ParsedQueryKind QKind = LexOrCompleteWord<ParsedQueryKind>(this, CommandStr)
                               .Case("", PQK_NoOp)
                               .Case("help", PQK_Help)
+                              .Case("l", PQK_Let, /*IsCompletion=*/false)
                               .Case("let", PQK_Let)
                               .Case("m", PQK_Match, /*IsCompletion=*/false)
                               .Case("match", PQK_Match)
