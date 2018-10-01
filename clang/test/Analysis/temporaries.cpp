@@ -1152,3 +1152,23 @@ void run() {
 // and the non-definition decl should be found by direct lookup.
 void T::foo(C) {}
 } // namespace argument_virtual_decl_lookup
+
+namespace union_indirect_field_crash {
+union U {
+  struct {
+    int x;
+  };
+};
+
+template <typename T> class C {
+public:
+  void foo() const {
+    (void)(true ? U().x : 0);
+  }
+};
+
+void test() {
+  C<int> c;
+  c.foo();
+}
+} // namespace union_indirect_field_crash
