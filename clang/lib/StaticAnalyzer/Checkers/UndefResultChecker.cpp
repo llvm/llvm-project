@@ -122,6 +122,7 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
            << ((B->getOpcode() == BinaryOperatorKind::BO_Shl) ? "left"
                                                               : "right")
            << " shift is undefined because the right operand is negative";
+        Ex = B->getRHS();
       } else if ((B->getOpcode() == BinaryOperatorKind::BO_Shl ||
                   B->getOpcode() == BinaryOperatorKind::BO_Shr) &&
                  isShiftOverflow(B, C)) {
@@ -130,6 +131,7 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
            << ((B->getOpcode() == BinaryOperatorKind::BO_Shl) ? "left"
                                                               : "right")
            << " shift is undefined due to shifting by ";
+        Ex = B->getRHS();
 
         SValBuilder &SB = C.getSValBuilder();
         const llvm::APSInt *I =
@@ -147,6 +149,7 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
                  C.isNegative(B->getLHS())) {
         OS << "The result of the left shift is undefined because the left "
               "operand is negative";
+        Ex = B->getLHS();
       } else if (B->getOpcode() == BinaryOperatorKind::BO_Shl &&
                  isLeftShiftResultUnrepresentable(B, C)) {
         ProgramStateRef State = C.getState();
@@ -160,6 +163,7 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
            << "\', which is unrepresentable in the unsigned version of "
            << "the return type \'" << B->getLHS()->getType().getAsString()
            << "\'";
+        Ex = B->getLHS();
       } else {
         OS << "The result of the '"
            << BinaryOperator::getOpcodeStr(B->getOpcode())
