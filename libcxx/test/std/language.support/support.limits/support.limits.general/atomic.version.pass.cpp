@@ -16,6 +16,8 @@
 
 */
 
+// UNSUPPORTED: libcpp-has-no-threads
+
 #include <atomic>
 #include "test_macros.h"
 
