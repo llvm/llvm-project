@@ -359,11 +359,38 @@ bool CallEvent::isCalled(const CallDescription &CD) const {
     return false;
   if (!CD.IsLookupDone) {
     CD.IsLookupDone = true;
-    CD.II = &getState()->getStateManager().getContext().Idents.get(CD.FuncName);
+    CD.II = &getState()->getStateManager().getContext().Idents.get(
+        CD.getFunctionName());
   }
   const IdentifierInfo *II = getCalleeIdentifier();
   if (!II || II != CD.II)
     return false;
+
+  const Decl *D = getDecl();
+  // If CallDescription provides prefix names, use them to improve matching
+  // accuracy.
+  if (CD.QualifiedName.size() > 1 && D) {
+    const DeclContext *Ctx = D->getDeclContext();
+    std::vector<StringRef> QualifiedName = CD.QualifiedName;
+    QualifiedName.pop_back();
+    for (; Ctx && isa<NamedDecl>(Ctx); Ctx = Ctx->getParent()) {
+      if (const auto *ND = dyn_cast<NamespaceDecl>(Ctx)) {
+        if (!QualifiedName.empty() && ND->getName() == QualifiedName.back())
+          QualifiedName.pop_back();
+        continue;
+      }
+
+      if (const auto *RD = dyn_cast<RecordDecl>(Ctx)) {
+        if (!QualifiedName.empty() && RD->getName() == QualifiedName.back())
+          QualifiedName.pop_back();
+        continue;
+      }
+    }
+
+    if (!QualifiedName.empty())
+      return false;
+  }
+
   return (CD.RequiredArgs == CallDescription::NoArgRequirement ||
           CD.RequiredArgs == getNumArgs());
 }
