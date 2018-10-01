@@ -11,7 +11,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTConstraintManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SMTContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTExpr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTSolver.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTSort.h"
@@ -53,11 +52,11 @@ void Z3ErrorHandler(Z3_context Context, Z3_error_code Error) {
 }
 
 /// Wrapper for Z3 context
-class Z3Context : public SMTContext {
+class Z3Context {
 public:
   Z3_context Context;
 
-  Z3Context() : SMTContext() {
+  Z3Context() {
     Context = Z3_mk_context_rc(Z3Config().Config);
     // The error function is set here because the context is the first object
     // created by the backend
