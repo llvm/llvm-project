@@ -2131,7 +2131,9 @@ struct __compressed_pair_elem {
   _LIBCPP_INLINE_VISIBILITY
   constexpr explicit
   __compressed_pair_elem(_Up&& __u)
-      : __value_(_VSTD::forward<_Up>(__u)){};
+      : __value_(_VSTD::forward<_Up>(__u))
+    {
+    }
 
   template <class... _Args, size_t... _Indexes>
   _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
@@ -2168,7 +2170,8 @@ struct __compressed_pair_elem<_Tp, _Idx, true> : private _Tp {
   _LIBCPP_INLINE_VISIBILITY
   constexpr explicit
   __compressed_pair_elem(_Up&& __u)
-      : __value_type(_VSTD::forward<_Up>(__u)){};
+      : __value_type(_VSTD::forward<_Up>(__u))
+  {}
 
   template <class... _Args, size_t... _Indexes>
   _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14

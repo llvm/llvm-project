@@ -17,9 +17,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -271,7 +271,7 @@ static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
   return true;
 }
 
-static void populateWorklist(Loop &L, SmallVector<LoopVector, 8> &V) {
+static LoopVector populateWorklist(Loop &L) {
   LLVM_DEBUG(dbgs() << "Calling populateWorklist on Func: "
                     << L.getHeader()->getParent()->getName() << " Loop: %"
                     << L.getHeader()->getName() << '\n');
@@ -282,16 +282,15 @@ static void populateWorklist(Loop &L, SmallVector<LoopVector, 8> &V) {
     // The current loop has multiple subloops in it hence it is not tightly
     // nested.
     // Discard all loops above it added into Worklist.
-    if (Vec->size() != 1) {
-      LoopList.clear();
-      return;
-    }
+    if (Vec->size() != 1)
+      return {};
+
     LoopList.push_back(CurrentLoop);
     CurrentLoop = Vec->front();
     Vec = &CurrentLoop->getSubLoops();
   }
   LoopList.push_back(CurrentLoop);
-  V.push_back(std::move(LoopList));
+  return LoopList;
 }
 
 static PHINode *getInductionVariable(Loop *L, ScalarEvolution *SE) {
@@ -425,7 +424,7 @@ private:
 };
 
 // Main LoopInterchange Pass.
-struct LoopInterchange : public FunctionPass {
+struct LoopInterchange : public LoopPass {
   static char ID;
   ScalarEvolution *SE = nullptr;
   LoopInfo *LI = nullptr;
@@ -436,28 +435,19 @@ struct LoopInterchange : public FunctionPass {
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter *ORE;
 
-  LoopInterchange() : FunctionPass(ID) {
+  LoopInterchange() : LoopPass(ID) {
     initializeLoopInterchangePass(*PassRegistry::getPassRegistry());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<DependenceAnalysisWrapperPass>();
-    AU.addRequiredID(LoopSimplifyID);
-    AU.addRequiredID(LCSSAID);
     AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
 
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
-    AU.addPreserved<ScalarEvolutionWrapperPass>();
-    AU.addPreservedID(LCSSAID);
+    getLoopAnalysisUsage(AU);
   }
 
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
+  bool runOnLoop(Loop *L, LPPassManager &LPM) override {
+    if (skipLoop(L) || L->getParentLoop())
       return false;
 
     SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
@@ -465,21 +455,8 @@ struct LoopInterchange : public FunctionPass {
     DI = &getAnalysis<DependenceAnalysisWrapperPass>().getDI();
     DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-    PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
-    // Build up a worklist of loop pairs to analyze.
-    SmallVector<LoopVector, 8> Worklist;
-
-    for (Loop *L : *LI)
-      populateWorklist(*L, Worklist);
-
-    LLVM_DEBUG(dbgs() << "Worklist size = " << Worklist.size() << "\n");
-    bool Changed = true;
-    while (!Worklist.empty()) {
-      LoopVector LoopList = Worklist.pop_back_val();
-      Changed = processLoopList(LoopList, F);
-    }
-    return Changed;
+    return processLoopList(populateWorklist(*L));
   }
 
   bool isComputableLoopNest(LoopVector LoopList) {
@@ -507,7 +484,7 @@ struct LoopInterchange : public FunctionPass {
     return LoopList.size() - 1;
   }
 
-  bool processLoopList(LoopVector LoopList, Function &F) {
+  bool processLoopList(LoopVector LoopList) {
     bool Changed = false;
     unsigned LoopNestDepth = LoopList.size();
     if (LoopNestDepth < 2) {
@@ -1542,13 +1519,8 @@ char LoopInterchange::ID = 0;
 
 INITIALIZE_PASS_BEGIN(LoopInterchange, "loop-interchange",
                       "Interchanges loops for cache reuse", false, false)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(DependenceAnalysisWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
-INITIALIZE_PASS_DEPENDENCY(LCSSAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 
 INITIALIZE_PASS_END(LoopInterchange, "loop-interchange",

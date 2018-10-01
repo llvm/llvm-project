@@ -127,6 +127,44 @@ typedef enum {
 } LLVMDWARFEmissionKind;
 
 /**
+ * The kind of metadata nodes.
+ */
+enum {
+  LLVMMDStringMetadataKind,
+  LLVMConstantAsMetadataMetadataKind,
+  LLVMLocalAsMetadataMetadataKind,
+  LLVMDistinctMDOperandPlaceholderMetadataKind,
+  LLVMMDTupleMetadataKind,
+  LLVMDILocationMetadataKind,
+  LLVMDIExpressionMetadataKind,
+  LLVMDIGlobalVariableExpressionMetadataKind,
+  LLVMGenericDINodeMetadataKind,
+  LLVMDISubrangeMetadataKind,
+  LLVMDIEnumeratorMetadataKind,
+  LLVMDIBasicTypeMetadataKind,
+  LLVMDIDerivedTypeMetadataKind,
+  LLVMDICompositeTypeMetadataKind,
+  LLVMDISubroutineTypeMetadataKind,
+  LLVMDIFileMetadataKind,
+  LLVMDICompileUnitMetadataKind,
+  LLVMDISubprogramMetadataKind,
+  LLVMDILexicalBlockMetadataKind,
+  LLVMDILexicalBlockFileMetadataKind,
+  LLVMDINamespaceMetadataKind,
+  LLVMDIModuleMetadataKind,
+  LLVMDITemplateTypeParameterMetadataKind,
+  LLVMDITemplateValueParameterMetadataKind,
+  LLVMDIGlobalVariableMetadataKind,
+  LLVMDILocalVariableMetadataKind,
+  LLVMDILabelMetadataKind,
+  LLVMDIObjCPropertyMetadataKind,
+  LLVMDIImportedEntityMetadataKind,
+  LLVMDIMacroMetadataKind,
+  LLVMDIMacroFileMetadataKind
+};
+typedef unsigned LLVMMetadataKind;
+
+/**
  * An LLVM DWARF type encoding.
  */
 typedef unsigned LLVMDWARFTypeEncoding;
@@ -1152,6 +1190,13 @@ LLVMMetadataRef LLVMGetSubprogram(LLVMValueRef Func);
  * @see llvm::Function::setSubprogram()
  */
 void LLVMSetSubprogram(LLVMValueRef Func, LLVMMetadataRef SP);
+
+/**
+ * Obtain the enumerated type of a Metadata instance.
+ *
+ * @see llvm::Metadata::getMetadataID()
+ */
+LLVMMetadataKind LLVMGetMetadataKind(LLVMMetadataRef Metadata);
 
 #ifdef __cplusplus
 } /* end extern "C" */

@@ -118,7 +118,7 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
     libomptarget_say("Building CUDA LLVM bitcode offloading device RTL.")
 
     # Set flags for LLVM Bitcode compilation.
-    set(bc_flags ${LIBOMPTARGET_NVPTX_SELECTED_CUDA_COMPILER_FLAGS} -DOMPTARGET_NVPTX_TEST=0)
+    set(bc_flags ${LIBOMPTARGET_NVPTX_SELECTED_CUDA_COMPILER_FLAGS})
     if(${LIBOMPTARGET_NVPTX_DEBUG})
       set(bc_flags ${bc_flags} -DOMPTARGET_NVPTX_DEBUG=-1)
     else()

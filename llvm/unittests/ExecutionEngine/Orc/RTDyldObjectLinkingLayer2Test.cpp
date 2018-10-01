@@ -52,7 +52,7 @@ static bool testSetProcessAllSections(std::unique_ptr<MemoryBuffer> Obj,
 
   ExecutionSession ES;
   auto &JD = ES.createJITDylib("main");
-  auto Foo = ES.getSymbolStringPool().intern("foo");
+  auto Foo = ES.intern("foo");
 
   RTDyldObjectLinkingLayer2 ObjLayer(ES, [&DebugSectionSeen](VModuleKey) {
     return llvm::make_unique<MemoryManagerWrapper>(DebugSectionSeen);
@@ -150,7 +150,7 @@ TEST(RTDyldObjectLinkingLayer2Test, TestOverrideObjectFlags) {
   // Create a simple stack and set the override flags option.
   ExecutionSession ES;
   auto &JD = ES.createJITDylib("main");
-  auto Foo = ES.getSymbolStringPool().intern("foo");
+  auto Foo = ES.intern("foo");
   RTDyldObjectLinkingLayer2 ObjLayer(
       ES, [](VModuleKey) { return llvm::make_unique<SectionMemoryManager>(); });
   IRCompileLayer2 CompileLayer(ES, ObjLayer, FunkySimpleCompiler(*TM));
@@ -212,7 +212,7 @@ TEST(RTDyldObjectLinkingLayer2Test, TestAutoClaimResponsibilityForSymbols) {
   // Create a simple stack and set the override flags option.
   ExecutionSession ES;
   auto &JD = ES.createJITDylib("main");
-  auto Foo = ES.getSymbolStringPool().intern("foo");
+  auto Foo = ES.intern("foo");
   RTDyldObjectLinkingLayer2 ObjLayer(
       ES, [](VModuleKey) { return llvm::make_unique<SectionMemoryManager>(); });
   IRCompileLayer2 CompileLayer(ES, ObjLayer, FunkySimpleCompiler(*TM));

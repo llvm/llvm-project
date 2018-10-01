@@ -1354,3 +1354,14 @@ LLVMMetadataRef LLVMGetSubprogram(LLVMValueRef Func) {
 void LLVMSetSubprogram(LLVMValueRef Func, LLVMMetadataRef SP) {
   unwrap<Function>(Func)->setSubprogram(unwrap<DISubprogram>(SP));
 }
+
+LLVMMetadataKind LLVMGetMetadataKind(LLVMMetadataRef Metadata) {
+  switch(unwrap(Metadata)->getMetadataID()) {
+#define HANDLE_METADATA_LEAF(CLASS) \
+  case Metadata::CLASS##Kind: \
+    return (LLVMMetadataKind)LLVM##CLASS##MetadataKind;
+#include "llvm/IR/Metadata.def"
+  default:
+    return (LLVMMetadataKind)LLVMGenericDINodeMetadataKind;
+  }
+}

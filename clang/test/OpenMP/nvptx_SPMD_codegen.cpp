@@ -40,7 +40,7 @@ void foo() {
   for (int i = 0; i < 10; ++i)
     ;
 int a;
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 1)
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})

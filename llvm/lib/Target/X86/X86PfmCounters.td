@@ -20,6 +20,7 @@ def SBPort23Counter : PfmIssueCounter<SBPort23,
                                        "uops_dispatched_port:port_3"]>;
 def SBPort4Counter : PfmIssueCounter<SBPort4, ["uops_dispatched_port:port_4"]>;
 def SBPort5Counter : PfmIssueCounter<SBPort5, ["uops_dispatched_port:port_5"]>;
+def SBUopsCounter  : PfmUopsCounter<"uops_issued:any">;
 }
 
 let SchedModel = HaswellModel in {
@@ -45,6 +46,7 @@ def BWPort4Counter : PfmIssueCounter<BWPort4, ["uops_executed_port:port_4"]>;
 def BWPort5Counter : PfmIssueCounter<BWPort5, ["uops_executed_port:port_5"]>;
 def BWPort6Counter : PfmIssueCounter<BWPort6, ["uops_executed_port:port_6"]>;
 def BWPort7Counter : PfmIssueCounter<BWPort7, ["uops_executed_port:port_7"]>;
+def BWUopsCounter  : PfmUopsCounter<"uops_issued:any">;
 }
 
 let SchedModel = SkylakeClientModel in {
@@ -69,6 +71,7 @@ def SKXPort4Counter : PfmIssueCounter<SKXPort4, ["uops_dispatched_port:port_4"]>
 def SKXPort5Counter : PfmIssueCounter<SKXPort5, ["uops_dispatched_port:port_5"]>;
 def SKXPort6Counter : PfmIssueCounter<SKXPort6, ["uops_dispatched_port:port_6"]>;
 def SKXPort7Counter : PfmIssueCounter<SKXPort7, ["uops_dispatched_port:port_7"]>;
+def SKXUopsCounter  : PfmUopsCounter<"uops_issued:any">;
 }
 
 let SchedModel = BtVer2Model in {

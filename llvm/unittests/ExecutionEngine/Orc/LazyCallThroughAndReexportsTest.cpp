@@ -1,5 +1,5 @@
 #include "OrcTestCommon.h"
-#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
 #include "gtest/gtest.h"
 
@@ -33,7 +33,7 @@ TEST_F(LazyReexportsTest, BasicLocalCallThroughManagerOperation) {
     return;
   }
 
-  auto DummyTarget = ES.getSymbolStringPool().intern("DummyTarget");
+  auto DummyTarget = ES.intern("DummyTarget");
 
   bool DummyTargetMaterialized = false;
 

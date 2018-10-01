@@ -158,9 +158,14 @@ def  : WriteRes<WriteSETCCStore, [SKLPort06,SKLPort4,SKLPort237]> {
   let Latency = 2;
   let NumMicroOps = 3;
 }
-def  : WriteRes<WriteLAHFSAHF,   [SKLPort06]>;
-def  : WriteRes<WriteBitTest,    [SKLPort06]>;
-def  : WriteRes<WriteBitTestSet, [SKLPort06]>;
+
+defm : X86WriteRes<WriteLAHFSAHF,        [SKLPort06], 1, [1], 1>;
+defm : X86WriteRes<WriteBitTest,         [SKLPort06], 1, [1], 1>;
+defm : X86WriteRes<WriteBitTestImmLd,    [SKLPort06,SKLPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteBitTestRegLd,    [SKLPort0156,SKLPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteBitTestSet,      [SKLPort06], 1, [1], 1>;
+defm : X86WriteRes<WriteBitTestSetImmLd, [SKLPort06,SKLPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteBitTestSetRegLd, [SKLPort0156,SKLPort23], 5, [1,1], 2>;
 
 // Bit counts.
 defm : SKLWriteResPair<WriteBSF, [SKLPort1], 3>;
@@ -1014,13 +1019,6 @@ def SKLWriteResGroup72 : SchedWriteRes<[SKLPort6,SKLPort23]> {
 }
 def: InstRW<[SKLWriteResGroup72], (instrs FARJMP64)>;
 def: InstRW<[SKLWriteResGroup72], (instregex "JMP(16|32|64)m")>;
-
-def SKLWriteResGroup74 : SchedWriteRes<[SKLPort23,SKLPort06]> {
-  let Latency = 6;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1];
-}
-def: InstRW<[SKLWriteResGroup74], (instregex "BT(16|32|64)mi8")>;
 
 def SKLWriteResGroup75 : SchedWriteRes<[SKLPort23,SKLPort15]> {
   let Latency = 6;

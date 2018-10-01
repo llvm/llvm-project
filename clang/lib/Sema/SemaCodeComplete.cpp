@@ -8098,7 +8098,7 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
       AddFilesFromDirLookup(D, false);
   }
   for (const auto &D : make_range(S.angled_dir_begin(), S.angled_dir_end()))
-    AddFilesFromDirLookup(D, true);
+    AddFilesFromDirLookup(D, false);
   for (const auto &D : make_range(S.system_dir_begin(), S.system_dir_end()))
     AddFilesFromDirLookup(D, true);
 

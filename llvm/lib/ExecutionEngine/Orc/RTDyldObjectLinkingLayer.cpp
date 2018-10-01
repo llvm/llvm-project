@@ -24,7 +24,7 @@ public:
 
     // Intern the requested symbols: lookup takes interned strings.
     for (auto &S : Symbols)
-      InternedSymbols.insert(ES.getSymbolStringPool().intern(S));
+      InternedSymbols.insert(ES.intern(S));
 
     // Build an OnResolve callback to unwrap the interned strings and pass them
     // to the OnResolved callback.
@@ -167,8 +167,7 @@ Error RTDyldObjectLinkingLayer2::onObjLoad(
     if (InternalSymbols.count(KV.first))
       continue;
 
-    auto InternedName =
-        getExecutionSession().getSymbolStringPool().intern(KV.first);
+    auto InternedName = getExecutionSession().intern(KV.first);
     auto Flags = KV.second.getFlags();
 
     // Override object flags and claim responsibility for symbols if

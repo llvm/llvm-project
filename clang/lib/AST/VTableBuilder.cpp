@@ -2205,13 +2205,12 @@ VTableLayout::VTableLayout(ArrayRef<size_t> VTableIndices,
   else
     this->VTableIndices = OwningArrayRef<size_t>(VTableIndices);
 
-  llvm::sort(this->VTableThunks.begin(), this->VTableThunks.end(),
-             [](const VTableLayout::VTableThunkTy &LHS,
-                const VTableLayout::VTableThunkTy &RHS) {
-              assert((LHS.first != RHS.first || LHS.second == RHS.second) &&
-                     "Different thunks should have unique indices!");
-              return LHS.first < RHS.first;
-            });
+  llvm::sort(this->VTableThunks, [](const VTableLayout::VTableThunkTy &LHS,
+                                    const VTableLayout::VTableThunkTy &RHS) {
+    assert((LHS.first != RHS.first || LHS.second == RHS.second) &&
+           "Different thunks should have unique indices!");
+    return LHS.first < RHS.first;
+  });
 }
 
 VTableLayout::~VTableLayout() { }

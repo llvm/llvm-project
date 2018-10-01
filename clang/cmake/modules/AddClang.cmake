@@ -131,6 +131,7 @@ macro(add_clang_tool name)
   endif()
 
   add_clang_executable(${name} ${ARGN})
+  add_dependencies(${name} clang-headers)
 
   if (CLANG_BUILD_TOOLS)
     if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR

@@ -375,11 +375,9 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   addExtensionsToPM(EP_LateLoopOptimizations, MPM);
   MPM.add(createLoopDeletionPass());          // Delete dead loops
 
-  if (EnableLoopInterchange) {
-    // FIXME: These are function passes and break the loop pass pipeline.
+  if (EnableLoopInterchange)
     MPM.add(createLoopInterchangePass()); // Interchange loops
-    MPM.add(createCFGSimplificationPass());
-  }
+
   if (!DisableUnrollLoops)
     MPM.add(createSimpleLoopUnrollPass(OptLevel));    // Unroll small loops
   addExtensionsToPM(EP_LoopOptimizerEnd, MPM);

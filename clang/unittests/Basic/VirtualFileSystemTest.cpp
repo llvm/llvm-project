@@ -23,6 +23,9 @@
 using namespace clang;
 using namespace llvm;
 using llvm::sys::fs::UniqueID;
+using testing::ElementsAre;
+using testing::Pair;
+using testing::UnorderedElementsAre;
 
 namespace {
 struct DummyFile : public vfs::File {
@@ -418,30 +421,22 @@ TEST(VirtualFileSystemTest, BrokenSymlinkRealFSIteration) {
   ScopedDir _b(TestDirectory + "/b");
   ScopedLink _c("no_such_file", TestDirectory + "/c");
 
+  // Should get no iteration error, but a stat error for the broken symlinks.
+  std::map<std::string, std::error_code> StatResults;
   std::error_code EC;
   for (vfs::directory_iterator I = FS->dir_begin(Twine(TestDirectory), EC), E;
        I != E; I.increment(EC)) {
-    // Skip broken symlinks.
-    auto EC2 = std::make_error_code(std::errc::no_such_file_or_directory);
-    if (EC == EC2) {
-      EC.clear();
-      continue;
-    }
-    // For bot debugging.
-    if (EC) {
-      outs() << "Error code found:\n"
-             << "EC value: " << EC.value() << "\n"
-             << "EC category: " << EC.category().name()
-             << "EC message: " << EC.message() << "\n";
-
-      outs() << "Error code tested for:\n"
-             << "EC value: " << EC2.value() << "\n"
-             << "EC category: " << EC2.category().name()
-             << "EC message: " << EC2.message() << "\n";
-    }
-    ASSERT_FALSE(EC);
-    EXPECT_TRUE(I->path() == _b);
+    EXPECT_FALSE(EC);
+    StatResults[sys::path::filename(I->path())] =
+        FS->status(I->path()).getError();
   }
+  EXPECT_THAT(
+      StatResults,
+      ElementsAre(
+          Pair("a", std::make_error_code(std::errc::no_such_file_or_directory)),
+          Pair("b", std::error_code()),
+          Pair("c",
+               std::make_error_code(std::errc::no_such_file_or_directory))));
 }
 #endif
 
@@ -500,45 +495,24 @@ TEST(VirtualFileSystemTest, BrokenSymlinkRealFSRecursiveIteration) {
   ScopedDir _ddd(TestDirectory + "/d/d/d");
   ScopedLink _e("no_such_file", TestDirectory + "/e");
 
-  std::vector<StringRef> ExpectedBrokenSymlinks = {_a, _ba, _bc, _c, _e};
-  std::vector<StringRef> ExpectedNonBrokenSymlinks = {_b, _bb, _d, _dd, _ddd};
   std::vector<std::string> VisitedBrokenSymlinks;
   std::vector<std::string> VisitedNonBrokenSymlinks;
   std::error_code EC;
   for (vfs::recursive_directory_iterator I(*FS, Twine(TestDirectory), EC), E;
        I != E; I.increment(EC)) {
-    auto EC2 = std::make_error_code(std::errc::no_such_file_or_directory);
-    if (EC == EC2) {
-      VisitedBrokenSymlinks.push_back(I->path());
-      continue;
-    }
-    // For bot debugging.
-    if (EC) {
-      outs() << "Error code found:\n"
-             << "EC value: " << EC.value() << "\n"
-             << "EC category: " << EC.category().name()
-             << "EC message: " << EC.message() << "\n";
-
-      outs() << "Error code tested for:\n"
-             << "EC value: " << EC2.value() << "\n"
-             << "EC category: " << EC2.category().name()
-             << "EC message: " << EC2.message() << "\n";
-    }
-    ASSERT_FALSE(EC);
-    VisitedNonBrokenSymlinks.push_back(I->path());
+    EXPECT_FALSE(EC);
+    (FS->status(I->path()) ? VisitedNonBrokenSymlinks : VisitedBrokenSymlinks)
+        .push_back(I->path());
   }
 
   // Check visited file names.
-  std::sort(VisitedBrokenSymlinks.begin(), VisitedBrokenSymlinks.end());
-  std::sort(VisitedNonBrokenSymlinks.begin(), VisitedNonBrokenSymlinks.end());
-  EXPECT_EQ(ExpectedBrokenSymlinks.size(), VisitedBrokenSymlinks.size());
-  EXPECT_TRUE(std::equal(VisitedBrokenSymlinks.begin(),
-                         VisitedBrokenSymlinks.end(),
-                         ExpectedBrokenSymlinks.begin()));
-  EXPECT_EQ(ExpectedNonBrokenSymlinks.size(), VisitedNonBrokenSymlinks.size());
-  EXPECT_TRUE(std::equal(VisitedNonBrokenSymlinks.begin(),
-                         VisitedNonBrokenSymlinks.end(),
-                         ExpectedNonBrokenSymlinks.begin()));
+  EXPECT_THAT(VisitedBrokenSymlinks,
+              UnorderedElementsAre(StringRef(_a), StringRef(_ba),
+                                   StringRef(_bc), StringRef(_c),
+                                   StringRef(_e)));
+  EXPECT_THAT(VisitedNonBrokenSymlinks,
+              UnorderedElementsAre(StringRef(_b), StringRef(_bb), StringRef(_d),
+                                   StringRef(_dd), StringRef(_ddd)));
 }
 #endif
 
