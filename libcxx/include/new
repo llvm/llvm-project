@@ -171,6 +171,10 @@ enum class _LIBCPP_ENUM_VIS align_val_t : size_t { };
 enum align_val_t { __zero = 0, __max = (size_t)-1 };
 #endif
 #endif
+#elif !defined(__cpp_aligned_new)
+// We're defering to Microsoft's STL to provide aligned new et al. We don't
+// have it unless the language feature test macro is defined.
+#define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
 #endif
 
 }  // std
