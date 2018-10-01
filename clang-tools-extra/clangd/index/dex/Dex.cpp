@@ -148,7 +148,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   bool More = false;
 
   std::vector<std::unique_ptr<Iterator>> TopLevelChildren;
-  const auto TrigramTokens = generateIdentifierTrigrams(Req.Query);
+  const auto TrigramTokens = generateQueryTrigrams(Req.Query);
 
   // Generate query trigrams and construct AND iterator over all query
   // trigrams.
