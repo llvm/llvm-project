@@ -58,7 +58,7 @@ public:
   /// The last parameter can be used to register a new visitor with the given
   /// BugReport while processing a node.
   virtual std::shared_ptr<PathDiagnosticPiece>
-  VisitNode(const ExplodedNode *Succ, const ExplodedNode *Pred,
+  VisitNode(const ExplodedNode *Succ, 
             BugReporterContext &BRC, BugReport &BR) = 0;
 
   /// Last function called on the visitor, no further calls to VisitNode
@@ -107,7 +107,6 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 
   std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 const ExplodedNode *PrevN,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override;
 };
@@ -134,7 +133,6 @@ public:
   static const char *getTag();
 
   std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 const ExplodedNode *PrevN,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override;
 
@@ -153,7 +151,6 @@ public:
   }
 
   std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 const ExplodedNode *PrevN,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override;
 
@@ -179,12 +176,10 @@ public:
   static const char *getTag();
 
   std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 const ExplodedNode *Prev,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override;
 
   std::shared_ptr<PathDiagnosticPiece> VisitNodeImpl(const ExplodedNode *N,
-                                                     const ExplodedNode *Prev,
                                                      BugReporterContext &BRC,
                                                      BugReport &BR);
 
@@ -237,10 +232,9 @@ public:
     ID.AddPointer(getTag());
   }
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 const ExplodedNode *Prev,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override {
+  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *,
+                                                 BugReporterContext &,
+                                                 BugReport &) override {
     return nullptr;
   }
 
@@ -267,7 +261,6 @@ public:
   }
 
   std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 const ExplodedNode *PrevN,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override;
 };
@@ -297,7 +290,6 @@ public:
   static const char *getTag();
 
   std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *Succ,
-                                                 const ExplodedNode *Pred,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override;
 };
@@ -311,7 +303,6 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const override {}
 
   std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *Succ,
-                                                 const ExplodedNode *Pred,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override;
 };
@@ -327,7 +318,6 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const override { ID.Add(V); }
 
   std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 const ExplodedNode *PrevN,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override;
 };
@@ -346,7 +336,6 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 
   std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 const ExplodedNode *PrevN,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override;
 

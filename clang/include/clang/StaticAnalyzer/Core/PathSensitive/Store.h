@@ -254,8 +254,7 @@ public:
   virtual bool scanReachableSymbols(Store S, const MemRegion *R,
                                     ScanReachableSymbols &Visitor) = 0;
 
-  virtual void print(Store store, raw_ostream &Out,
-                     const char* nl, const char *sep) = 0;
+  virtual void print(Store store, raw_ostream &Out, const char* nl) = 0;
 
   class BindingsHandler {
   public:
