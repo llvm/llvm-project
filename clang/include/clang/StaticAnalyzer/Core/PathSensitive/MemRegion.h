@@ -763,7 +763,9 @@ class SymbolicRegion : public SubRegion {
 
   SymbolicRegion(const SymbolRef s, const MemSpaceRegion *sreg)
       : SubRegion(sreg, SymbolicRegionKind), sym(s) {
-    assert(s);
+    // Because pointer arithmetic is represented by ElementRegion layers,
+    // the base symbol here should not contain any arithmetic.
+    assert(s && isa<SymbolData>(s));
     assert(s->getType()->isAnyPointerType() ||
            s->getType()->isReferenceType() ||
            s->getType()->isBlockPointerType());
