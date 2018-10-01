@@ -77,6 +77,7 @@ SourceLocation::printToString(const SourceManager &SM) const {
 
 LLVM_DUMP_METHOD void SourceLocation::dump(const SourceManager &SM) const {
   print(llvm::errs(), SM);
+  llvm::errs() << '\n';
 }
 
 //===----------------------------------------------------------------------===//

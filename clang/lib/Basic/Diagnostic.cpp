@@ -239,7 +239,7 @@ DiagnosticsEngine::DiagStateMap::getFile(SourceManager &SrcMgr,
 void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
                                            StringRef DiagName) const {
   llvm::errs() << "diagnostic state at ";
-  CurDiagStateLoc.dump(SrcMgr);
+  CurDiagStateLoc.print(llvm::errs(), SrcMgr);
   llvm::errs() << ": " << CurDiagState << "\n";
 
   for (auto &F : Files) {
@@ -261,7 +261,7 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
                      << Decomp.first.getHashValue() << "> ";
         SrcMgr.getLocForStartOfFile(Decomp.first)
               .getLocWithOffset(Decomp.second)
-              .dump(SrcMgr);
+              .print(llvm::errs(), SrcMgr);
       }
       if (File.HasLocalTransitions)
         llvm::errs() << " has_local_transitions";
@@ -281,7 +281,7 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
         llvm::errs() << "  ";
         SrcMgr.getLocForStartOfFile(ID)
               .getLocWithOffset(Transition.Offset)
-              .dump(SrcMgr);
+              .print(llvm::errs(), SrcMgr);
         llvm::errs() << ": state " << Transition.State << ":\n";
       };
 
