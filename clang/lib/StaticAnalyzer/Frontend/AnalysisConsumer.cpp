@@ -745,6 +745,9 @@ void AnalysisConsumer::ActionExprEngine(Decl *D, bool ObjCGCEnabled,
   Eng.ExecuteWorkList(Mgr->getAnalysisDeclContextManager().getStackFrame(D),
                       Mgr->options.getMaxNodesPerTopLevelFunction());
 
+  if (!Mgr->options.DumpExplodedGraphTo.empty())
+    Eng.DumpGraph(Mgr->options.TrimGraph, Mgr->options.DumpExplodedGraphTo);
+
   // Visualize the exploded graph.
   if (Mgr->options.visualizeExplodedGraphWithGraphViz)
     Eng.ViewGraph(Mgr->options.TrimGraph);
