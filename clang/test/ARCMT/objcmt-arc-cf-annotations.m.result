@@ -299,11 +299,11 @@ extern DADissenterRef DADissenterCreate( CFAllocatorRef allocator, DAReturn stat
 @protocol QCCompositionRenderer - (NSDictionary*) attributes;
 @end   @interface QCRenderer : NSObject <QCCompositionRenderer> {
 }
-- (id) createSnapshotImageOfType:(NSString*)type;
+- (id) createSnapshotImageOfType:(NSString*)type NS_RETURNS_RETAINED;
 @end  extern NSString* const QCViewDidStartRenderingNotification;
 @interface QCView : NSView <QCCompositionRenderer> {
 }
-- (id) createSnapshotImageOfType:(NSString*)type;
+- (id) createSnapshotImageOfType:(NSString*)type NS_RETURNS_RETAINED;
 @end    enum {
 ICEXIFOrientation1 = 1,     ICEXIFOrientation2 = 2,     ICEXIFOrientation3 = 3,     ICEXIFOrientation4 = 4,     ICEXIFOrientation5 = 5,     ICEXIFOrientation6 = 6,     ICEXIFOrientation7 = 7,     ICEXIFOrientation8 = 8, };
 @class ICDevice;
