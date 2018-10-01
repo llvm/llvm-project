@@ -93,6 +93,33 @@ public:
   }
 };
 
+/// Represents that the FieldNode that comes after this is declared in a base
+/// of the previous FieldNode.
+class BaseClass final : public FieldNode {
+  const QualType BaseClassT;
+
+public:
+  BaseClass(const QualType &T) : FieldNode(nullptr), BaseClassT(T) {
+    assert(!T.isNull());
+    assert(T->getAsCXXRecordDecl());
+  }
+
+  virtual void printNoteMsg(llvm::raw_ostream &Out) const override {
+    llvm_unreachable("This node can never be the final node in the "
+                     "fieldchain!");
+  }
+
+  virtual void printPrefix(llvm::raw_ostream &Out) const override {}
+
+  virtual void printNode(llvm::raw_ostream &Out) const override {
+    Out << BaseClassT->getAsCXXRecordDecl()->getName() << "::";
+  }
+
+  virtual void printSeparator(llvm::raw_ostream &Out) const override {}
+
+  virtual bool isBase() const { return true; }
+};
+
 } // end of anonymous namespace
 
 // Utility function declarations.
@@ -295,8 +322,17 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
                                  .castAs<loc::MemRegionVal>()
                                  .getRegionAs<TypedValueRegion>();
 
-    if (isNonUnionUninit(BaseRegion, LocalChain))
-      ContainsUninitField = true;
+    // If the head of the list is also a BaseClass, we'll overwrite it to avoid
+    // note messages like 'this->A::B::x'.
+    if (!LocalChain.isEmpty() && LocalChain.getHead().isBase()) {
+      if (isNonUnionUninit(BaseRegion, LocalChain.replaceHead(
+                                           BaseClass(BaseSpec.getType()))))
+        ContainsUninitField = true;
+    } else {
+      if (isNonUnionUninit(BaseRegion,
+                           LocalChain.add(BaseClass(BaseSpec.getType()))))
+        ContainsUninitField = true;
+    }
   }
 
   return ContainsUninitField;

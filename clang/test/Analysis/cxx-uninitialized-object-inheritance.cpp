@@ -35,7 +35,7 @@ void fNonPolymorphicInheritanceTest1() {
 }
 
 class NonPolymorphicBaseClass2 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->NonPolymorphicBaseClass2::x'}}
 protected:
   int y;
 
@@ -62,7 +62,7 @@ class NonPolymorphicBaseClass3 {
   int x;
 
 protected:
-  int y; // expected-note{{uninitialized field 'this->y'}}
+  int y; // expected-note{{uninitialized field 'this->NonPolymorphicBaseClass3::y'}}
 public:
   NonPolymorphicBaseClass3() = default;
   NonPolymorphicBaseClass3(int) : x(7) {}
@@ -140,7 +140,7 @@ void fPolymorphicInheritanceTest1() {
 }
 
 class PolymorphicRight1 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->PolymorphicRight1::x'}}
 protected:
   int y;
 
@@ -168,7 +168,7 @@ class PolymorphicBaseClass3 {
   int x;
 
 protected:
-  int y; // expected-note{{uninitialized field 'this->y'}}
+  int y; // expected-note{{uninitialized field 'this->PolymorphicBaseClass3::y'}}
 public:
   virtual ~PolymorphicBaseClass3() = default;
   PolymorphicBaseClass3() = default;
@@ -248,7 +248,7 @@ void fVirtualInheritanceTest1() {
 }
 
 class VirtualPolymorphicRight1 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->VirtualPolymorphicRight1::x'}}
 protected:
   int y;
 
@@ -276,7 +276,7 @@ class VirtualPolymorphicBaseClass3 {
   int x;
 
 protected:
-  int y; // expected-note{{uninitialized field 'this->y'}}
+  int y; // expected-note{{uninitialized field 'this->VirtualPolymorphicBaseClass3::y'}}
 public:
   virtual ~VirtualPolymorphicBaseClass3() = default;
   VirtualPolymorphicBaseClass3() = default;
@@ -358,7 +358,7 @@ struct Left2 {
   Left2(int) : x(36) {}
 };
 struct Right2 {
-  int y; // expected-note{{uninitialized field 'this->y'}}
+  int y; // expected-note{{uninitialized field 'this->Right2::y'}}
   Right2() = default;
   Right2(int) : y(37) {}
 };
@@ -378,7 +378,7 @@ void fMultipleInheritanceTest2() {
 }
 
 struct Left3 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->Left3::x'}}
   Left3() = default;
   Left3(int) : x(39) {}
 };
@@ -433,7 +433,7 @@ struct Left5 {
   Left5(int) : x(44) {}
 };
 struct Right5 {
-  int y; // expected-note{{uninitialized field 'this->y'}}
+  int y; // expected-note{{uninitialized field 'this->Right5::y'}}
   Right5() = default;
   Right5(int) : y(45) {}
 };
@@ -514,7 +514,7 @@ void fNonVirtualDiamondInheritanceTest1() {
 }
 
 struct NonVirtualBase2 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->NonVirtualBase2::x'}}
   NonVirtualBase2() = default;
   NonVirtualBase2(int) : x(52) {}
 };
@@ -542,7 +542,7 @@ void fNonVirtualDiamondInheritanceTest2() {
 }
 
 struct NonVirtualBase3 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->NonVirtualBase3::x'}}
   NonVirtualBase3() = default;
   NonVirtualBase3(int) : x(54) {}
 };
@@ -570,8 +570,8 @@ void fNonVirtualDiamondInheritanceTest3() {
 }
 
 struct NonVirtualBase4 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
-  // expected-note@-1{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->NonVirtualBase4::x'}}
+  // expected-note@-1{{uninitialized field 'this->NonVirtualBase4::x'}}
   NonVirtualBase4() = default;
   NonVirtualBase4(int) : x(56) {}
 };
@@ -626,7 +626,7 @@ void fNonVirtualDiamondInheritanceTest5() {
 }
 
 struct NonVirtualBase6 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->NonVirtualBase6::x'}}
   NonVirtualBase6() = default;
   NonVirtualBase6(int) : x(59) {}
 };
@@ -712,7 +712,7 @@ void fVirtualDiamondInheritanceTest1() {
 }
 
 struct VirtualBase2 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->VirtualBase2::x'}}
   VirtualBase2() = default;
   VirtualBase2(int) : x(63) {}
 };
@@ -751,7 +751,7 @@ void fVirtualDiamondInheritanceTest2() {
 }
 
 struct VirtualBase3 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->VirtualBase3::x'}}
   VirtualBase3() = default;
   VirtualBase3(int) : x(66) {}
 };
