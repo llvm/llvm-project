@@ -199,32 +199,6 @@ public:
     return Args.isEmpty();
   }
 
-
-  static bool isRetain(const FunctionDecl *FD, StringRef FName) {
-    return FName.startswith_lower("retain") || FName.endswith_lower("retain");
-  }
-
-  static bool isRelease(const FunctionDecl *FD, StringRef FName) {
-    return FName.startswith_lower("release") || FName.endswith_lower("release");
-  }
-
-  static bool isAutorelease(const FunctionDecl *FD, StringRef FName) {
-    return FName.startswith_lower("autorelease") ||
-           FName.endswith_lower("autorelease");
-  }
-
-  static bool hasRCAnnotation(const Decl *D, StringRef rcAnnotation) {
-    for (const auto *Ann : D->specific_attrs<AnnotateAttr>()) {
-      if (Ann->getAnnotation() == rcAnnotation)
-        return true;
-    }
-    return false;
-  }
-
-  static bool isTrustedReferenceCountImplementation(const FunctionDecl *FD) {
-    return hasRCAnnotation(FD, "rc_ownership_trusted_implementation");
-  }
-
 private:
   ArgEffects getArgEffects() const { return Args; }
   ArgEffect getDefaultArgEffect() const { return DefaultArgEffect; }
@@ -375,7 +349,7 @@ class RetainSummaryManager {
 
   void InitializeClassMethodSummaries();
   void InitializeMethodSummaries();
-private:
+
   void addNSObjectClsMethSummary(Selector S, const RetainSummary *Summ) {
     ObjCClassMethodSummaries[S] = Summ;
   }
@@ -437,6 +411,12 @@ public:
     InitializeClassMethodSummaries();
     InitializeMethodSummaries();
   }
+
+  bool canEval(const CallExpr *CE,
+               const FunctionDecl *FD,
+               bool &hasTrustedImplementationAnnotation);
+
+  bool isTrustedReferenceCountImplementation(const FunctionDecl *FD);
 
   const RetainSummary *getSummary(const CallEvent &Call,
                                   ProgramStateRef State = nullptr);

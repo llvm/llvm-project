@@ -754,45 +754,15 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
   if (!FD)
     return false;
 
-  IdentifierInfo *II = FD->getIdentifier();
-  if (!II)
-    return false;
+  RetainSummaryManager &SmrMgr = getSummaryManager(C);
+  QualType ResultTy = CE->getCallReturnType(C.getASTContext());
 
-  // For now, we're only handling the functions that return aliases of their
-  // arguments: CFRetain (and its families).
-  // Eventually we should add other functions we can model entirely,
-  // such as CFRelease, which don't invalidate their arguments or globals.
-  if (CE->getNumArgs() != 1)
-    return false;
-
-  // Get the name of the function.
-  StringRef FName = II->getName();
-  FName = FName.substr(FName.find_first_not_of('_'));
-
-  // See if it's one of the specific functions we know how to eval.
-  bool canEval = false;
   // See if the function has 'rc_ownership_trusted_implementation'
   // annotate attribute. If it does, we will not inline it.
   bool hasTrustedImplementationAnnotation = false;
 
-  QualType ResultTy = CE->getCallReturnType(C.getASTContext());
-  if (ResultTy->isPointerType()) {
-    // Handle: (CF|CG|CV)Retain
-    //         CFAutorelease
-    // It's okay to be a little sloppy here.
-    if (cocoa::isRefType(ResultTy, "CF", FName) ||
-        cocoa::isRefType(ResultTy, "CG", FName) ||
-        cocoa::isRefType(ResultTy, "CV", FName)) {
-      canEval = RetainSummary::isRetain(FD, FName) ||
-                RetainSummary::isAutorelease(FD, FName);
-    } else {
-      if (FD->getDefinition()) {
-        canEval = RetainSummary::isTrustedReferenceCountImplementation(
-            FD->getDefinition());
-        hasTrustedImplementationAnnotation = canEval;
-      }
-    }
-  }
+  // See if it's one of the specific functions we know how to eval.
+  bool canEval = SmrMgr.canEval(CE, FD, hasTrustedImplementationAnnotation);
 
   if (!canEval)
     return false;
@@ -1273,16 +1243,15 @@ void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
   if (!Ctx.inTopFrame())
     return;
 
+  RetainSummaryManager &SmrMgr = getSummaryManager(Ctx);
   const LocationContext *LCtx = Ctx.getLocationContext();
   const FunctionDecl *FD = dyn_cast<FunctionDecl>(LCtx->getDecl());
 
-  if (!FD || RetainSummary::isTrustedReferenceCountImplementation(FD))
+  if (!FD || SmrMgr.isTrustedReferenceCountImplementation(FD))
     return;
 
   ProgramStateRef state = Ctx.getState();
-
-  const RetainSummary *FunctionSummary =
-      getSummaryManager(Ctx).getFunctionSummary(FD);
+  const RetainSummary *FunctionSummary = SmrMgr.getFunctionSummary(FD);
   ArgEffects CalleeSideArgEffects = FunctionSummary->getArgEffects();
 
   for (unsigned idx = 0, e = FD->getNumParams(); idx != e; ++idx) {

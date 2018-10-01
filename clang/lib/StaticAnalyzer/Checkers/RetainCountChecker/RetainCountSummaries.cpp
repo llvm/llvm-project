@@ -57,6 +57,27 @@ RetainSummaryManager::getPersistentSummary(const RetainSummary &OldSumm) {
   return Summ;
 }
 
+static bool hasRCAnnotation(const Decl *D, StringRef rcAnnotation) {
+  for (const auto *Ann : D->specific_attrs<AnnotateAttr>()) {
+    if (Ann->getAnnotation() == rcAnnotation)
+      return true;
+  }
+  return false;
+}
+
+static bool isRetain(const FunctionDecl *FD, StringRef FName) {
+  return FName.startswith_lower("retain") || FName.endswith_lower("retain");
+}
+
+static bool isRelease(const FunctionDecl *FD, StringRef FName) {
+  return FName.startswith_lower("release") || FName.endswith_lower("release");
+}
+
+static bool isAutorelease(const FunctionDecl *FD, StringRef FName) {
+  return FName.startswith_lower("autorelease") ||
+         FName.endswith_lower("autorelease");
+}
+
 const RetainSummary *
 RetainSummaryManager::generateSummary(const FunctionDecl *FD,
                                       bool &AllowAnnotations) {
@@ -172,7 +193,7 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
   if (RetTy->isPointerType()) {
     // For CoreFoundation ('CF') types.
     if (cocoa::isRefType(RetTy, "CF", FName)) {
-      if (RetainSummary::isRetain(FD, FName)) {
+      if (isRetain(FD, FName)) {
         // CFRetain isn't supposed to be annotated. However, this may as well
         // be a user-made "safe" CFRetain function that is incorrectly
         // annotated as cf_returns_retained due to lack of better options.
@@ -180,7 +201,7 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
         AllowAnnotations = false;
 
         return getUnarySummary(FT, cfretain);
-      } else if (RetainSummary::isAutorelease(FD, FName)) {
+      } else if (isAutorelease(FD, FName)) {
         // The headers use cf_consumed, but we can fully model CFAutorelease
         // ourselves.
         AllowAnnotations = false;
@@ -194,7 +215,7 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
     // For CoreGraphics ('CG') and CoreVideo ('CV') types.
     if (cocoa::isRefType(RetTy, "CG", FName) ||
         cocoa::isRefType(RetTy, "CV", FName)) {
-      if (RetainSummary::isRetain(FD, FName))
+      if (isRetain(FD, FName))
         return getUnarySummary(FT, cfretain);
       else
         return getCFCreateGetRuleSummary(FD);
@@ -219,7 +240,7 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
     // Test for 'CGCF'.
     FName = FName.substr(FName.startswith("CGCF") ? 4 : 2);
 
-    if (RetainSummary::isRelease(FD, FName))
+    if (isRelease(FD, FName))
       return getUnarySummary(FT, cfrelease);
     else {
       assert(ScratchArgs.isEmpty());
@@ -414,6 +435,49 @@ RetainSummaryManager::getCFCreateGetRuleSummary(const FunctionDecl *FD) {
   return getCFSummaryGetRule(FD);
 }
 
+bool RetainSummaryManager::isTrustedReferenceCountImplementation(
+    const FunctionDecl *FD) {
+  return hasRCAnnotation(FD, "rc_ownership_trusted_implementation");
+}
+
+bool RetainSummaryManager::canEval(const CallExpr *CE,
+                                   const FunctionDecl *FD,
+                                   bool &hasTrustedImplementationAnnotation) {
+  // For now, we're only handling the functions that return aliases of their
+  // arguments: CFRetain (and its families).
+  // Eventually we should add other functions we can model entirely,
+  // such as CFRelease, which don't invalidate their arguments or globals.
+  if (CE->getNumArgs() != 1)
+    return false;
+
+  IdentifierInfo *II = FD->getIdentifier();
+  if (!II)
+    return false;
+
+  StringRef FName = II->getName();
+  FName = FName.substr(FName.find_first_not_of('_'));
+
+  QualType ResultTy = CE->getCallReturnType(Ctx);
+  if (ResultTy->isPointerType()) {
+    // Handle: (CF|CG|CV)Retain
+    //         CFAutorelease
+    // It's okay to be a little sloppy here.
+    if (cocoa::isRefType(ResultTy, "CF", FName) ||
+        cocoa::isRefType(ResultTy, "CG", FName) ||
+        cocoa::isRefType(ResultTy, "CV", FName))
+      return isRetain(FD, FName) || isAutorelease(FD, FName);
+
+    if (FD->getDefinition()) {
+      bool out = isTrustedReferenceCountImplementation(FD->getDefinition());
+      hasTrustedImplementationAnnotation = out;
+      return out;
+    }
+  }
+
+  return false;
+
+}
+
 const RetainSummary *
 RetainSummaryManager::getUnarySummary(const FunctionType* FT,
                                       UnaryFuncKind func) {
@@ -475,7 +539,7 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
 
   if (D->hasAttr<CFReturnsRetainedAttr>())
     return RetEffect::MakeOwned(RetEffect::CF);
-  else if (RetainSummary::hasRCAnnotation(D, "rc_ownership_returns_retained"))
+  else if (hasRCAnnotation(D, "rc_ownership_returns_retained"))
     return RetEffect::MakeOwned(RetEffect::Generalized);
 
   if (D->hasAttr<CFReturnsNotRetainedAttr>())
@@ -501,10 +565,10 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
     if (pd->hasAttr<NSConsumedAttr>())
       Template->addArg(AF, parm_idx, DecRefMsg);
     else if (pd->hasAttr<CFConsumedAttr>() ||
-             RetainSummary::hasRCAnnotation(pd, "rc_ownership_consumed"))
+             hasRCAnnotation(pd, "rc_ownership_consumed"))
       Template->addArg(AF, parm_idx, DecRef);
     else if (pd->hasAttr<CFReturnsRetainedAttr>() ||
-             RetainSummary::hasRCAnnotation(pd, "rc_ownership_returns_retained")) {
+             hasRCAnnotation(pd, "rc_ownership_returns_retained")) {
       QualType PointeeTy = pd->getType()->getPointeeType();
       if (!PointeeTy.isNull())
         if (coreFoundation::isCFObjectRef(PointeeTy))
