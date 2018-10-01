@@ -28,12 +28,15 @@
 #include "swift/AST/Types.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/Demangler.h"
+#include "swift/Reflection/ReflectionContext.h"
+#include "swift/Reflection/TypeRefBuilder.h"
 #include "swift/Remote/MemoryReader.h"
+#include "swift/Remote/RemoteAddress.h"
 #include "swift/RemoteAST/RemoteAST.h"
+#include "swift/Runtime/Metadata.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -52,6 +55,7 @@
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/TypeList.h"
@@ -64,6 +68,7 @@
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
 #include "lldb/Target/ThreadPlanStepOverRange.h"
+#include "lldb/Utility/Status.h"
 
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataBuffer.h"
@@ -82,12 +87,35 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 SwiftLanguageRuntime::~SwiftLanguageRuntime() {}
 
+void SwiftLanguageRuntime::SetupReflection() {
+  auto &target = m_process->GetTarget();
+  auto M = target.GetExecutableModule();
+  auto *ObjFile = M->GetObjectFile();
+  Address startAddress = ObjFile->GetHeaderAddress();
+  auto loadPtr = static_cast<uintptr_t>(startAddress.GetLoadAddress(&target));
+
+  reflection_ctx = new NativeReflectionContext(this->GetMemoryReader());
+  reflection_ctx->addImage(swift::remote::RemoteAddress(loadPtr));
+
+  auto module_list = GetTargetRef().GetImages();
+  module_list.ForEach([&](const ModuleSP &module_sp) -> bool {
+    std::string module_path = module_sp->GetFileSpec().GetPath();
+    auto *ObjFile = module_sp->GetObjectFile();
+    Address startAddress = ObjFile->GetHeaderAddress();
+    auto loadPtr = static_cast<uintptr_t>(
+        startAddress.GetLoadAddress(&(m_process->GetTarget())));
+    reflection_ctx->addImage(swift::remote::RemoteAddress(loadPtr));
+    return true;
+  });
+}
+
 SwiftLanguageRuntime::SwiftLanguageRuntime(Process *process)
     : LanguageRuntime(process), m_negative_cache_mutex(),
       m_SwiftNativeNSErrorISA(), m_memory_reader_sp(), m_promises_map(),
       m_bridged_synthetics_map(), m_box_metadata_type() {
   SetupSwiftError();
   SetupExclusivity();
+  SetupReflection();
 }
 
 static llvm::Optional<lldb::addr_t>
@@ -1037,7 +1065,7 @@ std::shared_ptr<swift::remote::MemoryReader>
 SwiftLanguageRuntime::GetMemoryReader() {
   class MemoryReader : public swift::remote::MemoryReader {
   public:
-    MemoryReader(Process *p, size_t max_read_amount = 50 * 1024)
+    MemoryReader(Process *p, size_t max_read_amount = INT32_MAX)
         : m_process(p) {
       lldbassert(m_process && "MemoryReader requires a valid Process");
       m_max_read_amount = max_read_amount;
@@ -1163,7 +1191,8 @@ SwiftLanguageRuntime::GetMemoryReader() {
             "[MemoryReader] asked to read string data at address 0x%" PRIx64,
             address.getAddressData());
 
-      std::vector<char> storage(m_max_read_amount, 0);
+      uint32_t read_size = 50 * 1024;
+      std::vector<char> storage(read_size, 0);
       Target &target(m_process->GetTarget());
       Address addr(address.getAddressData());
       Status error;

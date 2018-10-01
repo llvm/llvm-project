@@ -33,6 +33,14 @@ namespace remote {
 class MemoryReader;
 class RemoteAddress;
 }
+
+template <typename T> class External;
+template <unsigned PointerSize> class RuntimeTarget;
+
+namespace reflection {
+template <typename T> class ReflectionContext;
+}
+
 namespace remoteAST {
 class RemoteASTContext;
 }
@@ -425,6 +433,7 @@ protected:
 
   void SetupSwiftError();
   void SetupExclusivity();
+  void SetupReflection();
 
   const CompilerType &GetBoxMetadataType();
 
@@ -483,6 +492,10 @@ protected:
   bool m_original_dynamic_exclusivity_flag_state = false;
 
 private:
+  using NativeReflectionContext = swift::reflection::ReflectionContext<
+      swift::External<swift::RuntimeTarget<sizeof(uintptr_t)>>>;
+  NativeReflectionContext *reflection_ctx;
+
   DISALLOW_COPY_AND_ASSIGN(SwiftLanguageRuntime);
 };
 
