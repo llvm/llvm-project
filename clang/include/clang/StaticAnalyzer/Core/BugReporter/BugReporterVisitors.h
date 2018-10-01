@@ -83,6 +83,8 @@ public:
                     BugReport &BR);
 };
 
+/// Finds last store into the given region,
+/// which is different from a given symbolic value.
 class FindLastStoreBRVisitor final : public BugReporterVisitor {
   const MemRegion *R;
   SVal V;
