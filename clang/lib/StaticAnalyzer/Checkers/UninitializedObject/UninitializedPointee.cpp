@@ -234,5 +234,13 @@ static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
       break;
   }
 
+  while (R->getAs<CXXBaseObjectRegion>()) {
+    NeedsCastBack = true;
+
+    if (!isa<TypedValueRegion>(R->getSuperRegion()))
+      break;
+    R = R->getSuperRegion()->getAs<TypedValueRegion>();
+  }
+
   return std::make_pair(R, NeedsCastBack);
 }
