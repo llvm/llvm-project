@@ -18,8 +18,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "UninitializedObject.h"
 #include "ClangSACheckers.h"
+#include "UninitializedObject.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
