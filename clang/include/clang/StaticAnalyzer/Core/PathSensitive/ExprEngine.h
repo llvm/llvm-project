@@ -662,6 +662,11 @@ public:
                        const EvalCallOptions &CallOpts = {});
 
 private:
+  ProgramStateRef finishArgumentConstruction(ProgramStateRef State,
+                                             const CallEvent &Call);
+  void finishArgumentConstruction(ExplodedNodeSet &Dst, ExplodedNode *Pred,
+                                  const CallEvent &Call);
+
   void evalLoadCommon(ExplodedNodeSet &Dst,
                       const Expr *NodeEx,  /* Eventually will be a CFGStmt */
                       const Expr *BoundEx,

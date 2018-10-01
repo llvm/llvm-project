@@ -1,7 +1,7 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++03 %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++11 %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus,debug.ExprInspection -DTEMPORARY_DTORS -verify -w -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true %s -std=c++11
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus,debug.ExprInspection -DTEMPORARY_DTORS -w -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true %s -std=c++17
+// RUN: %clang_analyze_cc1 -Wno-non-pod-varargs -analyzer-checker=core,cplusplus,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++03 %s
+// RUN: %clang_analyze_cc1 -Wno-non-pod-varargs -analyzer-checker=core,cplusplus,debug.ExprInspection -analyzer-config cfg-temporary-dtors=false -verify -w -std=c++11 %s
+// RUN: %clang_analyze_cc1 -Wno-non-pod-varargs -analyzer-checker=core,cplusplus,debug.ExprInspection -DTEMPORARY_DTORS -verify -w -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true %s -std=c++11
+// RUN: %clang_analyze_cc1 -Wno-non-pod-varargs -analyzer-checker=core,cplusplus,debug.ExprInspection -DTEMPORARY_DTORS -w -analyzer-config cfg-temporary-dtors=true,c++-temp-dtor-inlining=true %s -std=c++17
 
 // Note: The C++17 run-line doesn't -verify yet - it is a no-crash test.
 
@@ -962,6 +962,87 @@ C &&bar2() { return foo2(); } // no-crash
 } // end namespace pass_references_through
 
 
+namespace arguments {
+int glob;
+
+struct S {
+  int x;
+  S(int x): x(x) {}
+  S(const S &s) : x(s.x) {}
+  ~S() {}
+
+  S &operator+(S s) {
+    glob = s.x;
+    x += s.x;
+    return *this;
+  }
+};
+
+class C {
+public:
+  virtual void bar3(S s) {}
+};
+
+class D: public C {
+public:
+  D() {}
+  virtual void bar3(S s) override { glob = s.x; }
+};
+
+void bar1(S s) {
+  glob = s.x;
+}
+
+// Record-typed calls are a different CFGStmt, let's see if we handle that
+// as well.
+S bar2(S s) {
+  glob = s.x;
+  return S(3);
+}
+
+void bar5(int, ...);
+
+void foo(void (*bar4)(S)) {
+  bar1(S(1));
+  clang_analyzer_eval(glob == 1);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-2{{TRUE}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
+
+  bar2(S(2));
+  clang_analyzer_eval(glob == 2);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-2{{TRUE}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
+
+  C *c = new D();
+  c->bar3(S(3));
+  // FIXME: Should be TRUE.
+  clang_analyzer_eval(glob == 3); // expected-warning{{UNKNOWN}}
+  delete c;
+
+  // What if we've no idea what we're calling?
+  bar4(S(4)); // no-crash
+
+  S(5) + S(6);
+  clang_analyzer_eval(glob == 6);
+#ifdef TEMPORARY_DTORS
+  // expected-warning@-2{{TRUE}}
+#else
+  // expected-warning@-4{{UNKNOWN}}
+#endif
+
+  // Variadic functions. This will __builtin_trap() because you cannot pass
+  // an object as a variadic argument.
+  bar5(7, S(7)); // no-crash
+  clang_analyzer_warnIfReached(); // no-warning
+}
+} // namespace arguments
+
 namespace ctor_argument {
 // Stripped down unique_ptr<int>
 struct IntPtr {
@@ -1004,3 +1085,70 @@ void foo() {
 }
 } // namespace operator_implicit_argument
 
+
+#if __cplusplus >= 201103L
+namespace argument_lazy_bindings {
+int glob;
+
+struct S {
+  int x, y, z;
+};
+
+struct T {
+  S s;
+  int w;
+  T(int w): s{5, 6, 7}, w(w) {}
+};
+
+void foo(T t) {
+  t.s = {1, 2, 3};
+  glob = t.w;
+}
+
+void bar() {
+  foo(T(4));
+  clang_analyzer_eval(glob == 4); // expected-warning{{TRUE}}
+}
+} // namespace argument_lazy_bindings
+#endif
+
+namespace operator_argument_cleanup {
+struct S {
+  S();
+};
+
+class C {
+public:
+  void operator=(S);
+};
+
+void foo() {
+  C c;
+  c = S(); // no-crash
+}
+} // namespace operator_argument_cleanup
+
+namespace argument_decl_lookup {
+class C {};
+int foo(C);
+int bar(C c) { foo(c); }
+int foo(C c) {}
+} // namespace argument_decl_lookup
+
+namespace argument_virtual_decl_lookup {
+class C {};
+
+struct T  {
+  virtual void foo(C);
+};
+
+void run() {
+  T *t;
+  t->foo(C()); // no-crash // expected-warning{{Called C++ object pointer is uninitialized}}
+}
+
+// This is after run() because the test is about picking the correct decl
+// for the parameter region, which should belong to the correct function decl,
+// and the non-definition decl should be found by direct lookup.
+void T::foo(C) {}
+} // namespace argument_virtual_decl_lookup

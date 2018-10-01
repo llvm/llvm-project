@@ -169,18 +169,27 @@ bool CallEvent::isGlobalCFunction(StringRef FunctionName) const {
 
 AnalysisDeclContext *CallEvent::getCalleeAnalysisDeclContext() const {
   const Decl *D = getDecl();
-
-  // If the callee is completely unknown, we cannot construct the stack frame.
   if (!D)
     return nullptr;
 
-  // FIXME: Skip virtual functions for now. There's no easy procedure to foresee
-  // the exact decl that should be used, especially when it's not a definition.
-  if (const Decl *RD = getRuntimeDefinition().getDecl())
-    if (RD != D)
-      return nullptr;
+  // TODO: For now we skip functions without definitions, even if we have
+  // our own getDecl(), because it's hard to find out which re-declaration
+  // is going to be used, and usually clients don't really care about this
+  // situation because there's a loss of precision anyway because we cannot
+  // inline the call.
+  RuntimeDefinition RD = getRuntimeDefinition();
+  if (!RD.getDecl())
+    return nullptr;
 
-  return LCtx->getAnalysisDeclContext()->getManager()->getContext(D);
+  AnalysisDeclContext *ADC =
+      LCtx->getAnalysisDeclContext()->getManager()->getContext(D);
+
+  // TODO: For now we skip virtual functions, because this also rises
+  // the problem of which decl to use, but now it's across different classes.
+  if (RD.mayHaveOtherDefinitions() || RD.getDecl() != ADC->getDecl())
+    return nullptr;
+
+  return ADC;
 }
 
 const StackFrameContext *CallEvent::getCalleeStackFrame() const {
@@ -218,7 +227,24 @@ const VarRegion *CallEvent::getParameterLocation(unsigned Index) const {
   if (!SFC)
     return nullptr;
 
-  const ParmVarDecl *PVD = parameters()[Index];
+  // Retrieve parameters of the definition, which are different from
+  // CallEvent's parameters() because getDecl() isn't necessarily
+  // the definition. SFC contains the definition that would be used
+  // during analysis.
+  const Decl *D = SFC->getDecl();
+
+  // TODO: Refactor into a virtual method of CallEvent, like parameters().
+  const ParmVarDecl *PVD = nullptr;
+  if (const auto *FD = dyn_cast<FunctionDecl>(D))
+    PVD = FD->parameters()[Index];
+  else if (const auto *BD = dyn_cast<BlockDecl>(D))
+    PVD = BD->parameters()[Index];
+  else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
+    PVD = MD->parameters()[Index];
+  else if (const auto *CD = dyn_cast<CXXConstructorDecl>(D))
+    PVD = CD->parameters()[Index];
+  assert(PVD && "Unexpected Decl kind!");
+
   const VarRegion *VR =
       State->getStateManager().getRegionManager().getVarRegion(PVD, SFC);
 
@@ -285,6 +311,20 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
         // TODO: Factor this out + handle the lower level const pointers.
 
     ValuesToInvalidate.push_back(getArgSVal(Idx));
+
+    // If a function accepts an object by argument (which would of course be a
+    // temporary that isn't lifetime-extended), invalidate the object itself,
+    // not only other objects reachable from it. This is necessary because the
+    // destructor has access to the temporary object after the call.
+    // TODO: Support placement arguments once we start
+    // constructing them directly.
+    // TODO: This is unnecessary when there's no destructor, but that's
+    // currently hard to figure out.
+    if (getKind() != CE_CXXAllocator)
+      if (isArgumentConstructedDirectly(Idx))
+        if (auto AdjIdx = getAdjustedParameterIndex(Idx))
+          if (const VarRegion *VR = getParameterLocation(*AdjIdx))
+            ValuesToInvalidate.push_back(loc::MemRegionVal(VR));
   }
 
   // Invalidate designated regions using the batch invalidation API.
@@ -432,6 +472,10 @@ static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
   for (; I != E && Idx < NumArgs; ++I, ++Idx) {
     const ParmVarDecl *ParamDecl = *I;
     assert(ParamDecl && "Formal parameter has no decl?");
+
+    if (Call.getKind() != CE_CXXAllocator)
+      if (Call.isArgumentConstructedDirectly(Idx))
+        continue;
 
     SVal ArgVal = Call.getArgSVal(Idx);
     if (!ArgVal.isUnknown()) {
