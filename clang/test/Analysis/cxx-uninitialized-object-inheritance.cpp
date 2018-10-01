@@ -776,3 +776,26 @@ public:
 void fVirtualDiamondInheritanceTest3() {
   VirtualDiamondInheritanceTest3();
 }
+
+//===----------------------------------------------------------------------===//
+// Dynamic type test.
+//===----------------------------------------------------------------------===//
+
+struct DynTBase {};
+struct DynTDerived : DynTBase {
+  // TODO: we'd expect the note: {{uninitialized field 'this->x'}}
+  int x; // no-note
+};
+
+struct DynamicTypeTest {
+  DynTBase *bptr;
+  int i = 0;
+
+  // TODO: we'd expect the warning: {{1 uninitialized field}}
+  DynamicTypeTest(DynTBase *bptr) : bptr(bptr) {} // no-warning
+};
+
+void f() {
+  DynTDerived d;
+  DynamicTypeTest t(&d);
+};

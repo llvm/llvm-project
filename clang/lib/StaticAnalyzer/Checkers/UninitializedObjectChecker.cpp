@@ -44,7 +44,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include <algorithm>
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeMap.h"
 
 using namespace clang;
 using namespace clang::ento;
@@ -236,10 +236,10 @@ getObjectVal(const CXXConstructorDecl *CtorDecl, CheckerContext &Context);
 static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
                                CheckerContext &Context);
 
-/// Returns whether FD can be (transitively) dereferenced to a void pointer type
+/// Returns whether T can be (transitively) dereferenced to a void pointer type
 /// (void*, void**, ...). The type of the region behind a void pointer isn't
 /// known, and thus FD can not be analyzed.
-static bool isVoidPointer(const FieldDecl *FD);
+static bool isVoidPointer(QualType T);
 
 /// Returns true if T is a primitive type. We defined this type so that for
 /// objects that we'd only like analyze as much as checking whether their
@@ -483,7 +483,7 @@ bool FindUninitializedFields::isPointerOrReferenceUninit(
 
   SVal V = State->getSVal(FR);
 
-  if (V.isUnknown() || V.isZeroConstant()) {
+  if (V.isUnknown() || V.getAs<loc::ConcreteInt>()) {
     IsAnyFieldInitialized = true;
     return false;
   }
@@ -497,48 +497,70 @@ bool FindUninitializedFields::isPointerOrReferenceUninit(
     return false;
   }
 
-  const FieldDecl *FD = FR->getDecl();
+  assert(V.getAs<loc::MemRegionVal>() &&
+         "At this point V must be loc::MemRegionVal!");
+  auto L = V.castAs<loc::MemRegionVal>();
 
-  // TODO: The dynamic type of a void pointer may be retrieved with
-  // `getDynamicTypeInfo`.
-  if (isVoidPointer(FD)) {
+  // We can't reason about symbolic regions, assume its initialized.
+  // Note that this also avoids a potential infinite recursion, because
+  // constructors for list-like classes are checked without being called, and
+  // the Static Analyzer will construct a symbolic region for Node *next; or
+  // similar code snippets.
+  if (L.getRegion()->getSymbolicBase()) {
     IsAnyFieldInitialized = true;
     return false;
   }
 
-  assert(V.getAs<Loc>() && "V should be Loc at this point!");
+  DynamicTypeInfo DynTInfo = getDynamicTypeInfo(State, L.getRegion());
+  if (!DynTInfo.isValid()) {
+    IsAnyFieldInitialized = true;
+    return false;
+  }
+
+  QualType DynT = DynTInfo.getType();
+
+  if (isVoidPointer(DynT)) {
+    IsAnyFieldInitialized = true;
+    return false;
+  }
 
   // At this point the pointer itself is initialized and points to a valid
   // location, we'll now check the pointee.
-  SVal DerefdV = State->getSVal(V.castAs<Loc>());
+  SVal DerefdV = State->getSVal(V.castAs<Loc>(), DynT);
 
-  // TODO: Dereferencing should be done according to the dynamic type.
-  while (Optional<Loc> L = DerefdV.getAs<Loc>()) {
-    DerefdV = State->getSVal(*L);
+  // If DerefdV is still a pointer value, we'll dereference it again (e.g.:
+  // int** -> int*).
+  while (auto Tmp = DerefdV.getAs<loc::MemRegionVal>()) {
+    if (Tmp->getRegion()->getSymbolicBase()) {
+      IsAnyFieldInitialized = true;
+      return false;
+    }
+
+    DynTInfo = getDynamicTypeInfo(State, Tmp->getRegion());
+    if (!DynTInfo.isValid()) {
+      IsAnyFieldInitialized = true;
+      return false;
+    }
+
+    DynT = DynTInfo.getType();
+    if (isVoidPointer(DynT)) {
+      IsAnyFieldInitialized = true;
+      return false;
+    }
+
+    DerefdV = State->getSVal(*Tmp, DynT);
   }
 
-  // If V is a pointer pointing to a record type.
+  // If FR is a pointer pointing to a non-primitive type.
   if (Optional<nonloc::LazyCompoundVal> RecordV =
           DerefdV.getAs<nonloc::LazyCompoundVal>()) {
 
     const TypedValueRegion *R = RecordV->getRegion();
 
-    // We can't reason about symbolic regions, assume its initialized.
-    // Note that this also avoids a potential infinite recursion, because
-    // constructors for list-like classes are checked without being called, and
-    // the Static Analyzer will construct a symbolic region for Node *next; or
-    // similar code snippets.
-    if (R->getSymbolicBase()) {
-      IsAnyFieldInitialized = true;
-      return false;
-    }
-
-    const QualType T = R->getValueType();
-
-    if (T->isStructureOrClassType())
+    if (DynT->getPointeeType()->isStructureOrClassType())
       return isNonUnionUninit(R, {LocalChain, FR});
 
-    if (T->isUnionType()) {
+    if (DynT->getPointeeType()->isUnionType()) {
       if (isUnionUninit(R)) {
         return addFieldToUninits({LocalChain, FR, /*IsDereferenced*/ true});
       } else {
@@ -547,7 +569,7 @@ bool FindUninitializedFields::isPointerOrReferenceUninit(
       }
     }
 
-    if (T->isArrayType()) {
+    if (DynT->getPointeeType()->isArrayType()) {
       IsAnyFieldInitialized = true;
       return false;
     }
@@ -555,8 +577,10 @@ bool FindUninitializedFields::isPointerOrReferenceUninit(
     llvm_unreachable("All cases are handled!");
   }
 
-  // TODO: If possible, it should be asserted that the DerefdV at this point is
-  // primitive.
+  assert((isPrimitiveType(DynT->getPointeeType()) || DynT->isPointerType() ||
+          DynT->isReferenceType()) &&
+         "At this point FR must either have a primitive dynamic type, or it "
+         "must be a null, undefined, unknown or concrete pointer!");
 
   if (isPrimitiveUninit(DerefdV))
     return addFieldToUninits({LocalChain, FR, /*IsDereferenced*/ true});
@@ -600,6 +624,25 @@ const FieldDecl *FieldChainInfo::getEndOfChain() const {
   return (*Chain.begin())->getDecl();
 }
 
+// TODO: This function constructs an incorrect string if a void pointer is a
+// part of the chain:
+//
+//   struct B { int x; }
+//
+//   struct A {
+//     void *vptr;
+//     A(void* vptr) : vptr(vptr) {}
+//   };
+//
+//   void f() {
+//     B b;
+//     A a(&b);
+//   }
+//
+// The note message will be "uninitialized field 'this->vptr->x'", even though
+// void pointers can't be dereferenced. This should be changed to "uninitialized
+// field 'static_cast<B*>(this->vptr)->x'".
+//
 // TODO: This function constructs an incorrect fieldchain string in the
 // following case:
 //
@@ -640,9 +683,7 @@ void FieldChainInfo::printTail(
 //                           Utility functions.
 //===----------------------------------------------------------------------===//
 
-static bool isVoidPointer(const FieldDecl *FD) {
-  QualType T = FD->getType();
-
+static bool isVoidPointer(QualType T) {
   while (!T.isNull()) {
     if (T->isVoidPointerType())
       return true;
