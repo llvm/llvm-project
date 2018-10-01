@@ -90,11 +90,10 @@ void DwarfStringPool::emit(AsmPrinter &Asm, MCSection *StrSection,
   for (const auto &E : Pool)
     Entries.push_back(&E);
 
-  llvm::sort(
-      Entries.begin(), Entries.end(),
-      [](const StringMapEntry<EntryTy> *A, const StringMapEntry<EntryTy> *B) {
-        return A->getValue().Offset < B->getValue().Offset;
-      });
+  llvm::sort(Entries, [](const StringMapEntry<EntryTy> *A,
+                         const StringMapEntry<EntryTy> *B) {
+    return A->getValue().Offset < B->getValue().Offset;
+  });
 
   for (const auto &Entry : Entries) {
     assert(ShouldCreateSymbols == static_cast<bool>(Entry->getValue().Symbol) &&

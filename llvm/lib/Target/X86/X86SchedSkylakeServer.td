@@ -2086,10 +2086,10 @@ def SKXWriteResGroup199 : SchedWriteRes<[SKXPort4,SKXPort23,SKXPort237,SKXPort06
 }
 def: InstRW<[SKXWriteResGroup199], (instrs CMPXCHG8B)>;
 
-def SKXWriteResGroup200 : SchedWriteRes<[SKXPort0156]> {
-  let Latency = 16;
-  let NumMicroOps = 16;
-  let ResourceCycles = [16];
+def SKXWriteResGroup200 : SchedWriteRes<[SKXPort1, SKXPort05, SKXPort6]> {
+  let Latency = 12;
+  let NumMicroOps = 34;
+  let ResourceCycles = [1, 4, 5];
 }
 def: InstRW<[SKXWriteResGroup200], (instrs VZEROALL)>;
 
