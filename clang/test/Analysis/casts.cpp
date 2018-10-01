@@ -70,5 +70,35 @@ void foo(B *b) {
   clang_analyzer_eval(c->x); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(c->y); // expected-warning{{TRUE}}
 }
+} // namespace base_to_derived_double_inheritance
+
+namespace base_to_derived_opaque_class {
+class NotInt {
+public:
+  operator int() { return !x; } // no-crash
+  int x;
+};
+
+typedef struct Opaque *OpaqueRef;
+typedef void *VeryOpaqueRef;
+
+class Transparent {
+public:
+  int getNotInt() { return NI; }
+  NotInt NI;
+};
+
+class SubTransparent : public Transparent {};
+
+SubTransparent *castToDerived(Transparent *TRef) {
+  return (SubTransparent *)TRef;
 }
 
+void foo(OpaqueRef ORef) {
+  castToDerived(reinterpret_cast<Transparent *>(ORef))->getNotInt();
+}
+
+void foo(VeryOpaqueRef ORef) {
+  castToDerived(reinterpret_cast<Transparent *>(ORef))->getNotInt();
+}
+} // namespace base_to_derived_opaque_class
