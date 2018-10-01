@@ -1,3 +1,7 @@
+ <key>diagnostics</key>
+ <array>
+  <dict>
+   <key>notes</key>
    <array>
     <dict>
      <key>location</key>
@@ -71,19 +75,7 @@
    <key>col</key><integer>23</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>6</integer>
-    <integer>13</integer>
-   </array>
   </dict>
-  </dict>
- </array>
- <key>files</key>
- <array>
-  <string>/Volumes/Transcend/code/monorepo/llvm-project/clang/test/Analysis/copypaste/plist-diagnostics.cpp</string>
  </array>
 </dict>
 </plist>

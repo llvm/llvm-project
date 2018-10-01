@@ -8,9 +8,6 @@ int foo() {}
 // CHECK:  <key>diagnostics</key>
 // CHECK-NEXT:  <array>
 // CHECK-NEXT:  </array>
-// CHECK-NEXT: <key>files</key>
-// CHECK-NEXT: <array>
-// CHECK-NEXT: </array>
 // CHECK-NEXT: <key>statistics</key>
 // CHECK-NEXT: <string>{
 // CHECK: }

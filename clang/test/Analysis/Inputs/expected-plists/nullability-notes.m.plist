@@ -1,3 +1,7 @@
+ <key>diagnostics</key>
+ <array>
+  <dict>
+   <key>path</key>
    <array>
     <dict>
      <key>kind</key><string>control</string>
@@ -175,21 +179,7 @@
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>10</integer>
-    <integer>14</integer>
-    <integer>16</integer>
-    <integer>17</integer>
-   </array>
   </dict>
-  </dict>
- </array>
- <key>files</key>
- <array>
-  <string>/Volumes/Transcend/code/monorepo/llvm-project/clang/test/Analysis/nullability-notes.m</string>
  </array>
 </dict>
 </plist>

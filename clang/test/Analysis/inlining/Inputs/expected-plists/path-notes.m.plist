@@ -1,3 +1,7 @@
+ <key>diagnostics</key>
+ <array>
+  <dict>
+   <key>path</key>
    <array>
     <dict>
      <key>kind</key><string>control</string>
@@ -339,16 +343,6 @@
    <key>col</key><integer>20</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>72</integer>
-    <integer>73</integer>
-    <integer>78</integer>
-    <integer>79</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -659,19 +653,6 @@
    <key>col</key><integer>12</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>7</integer>
-    <integer>87</integer>
-    <integer>88</integer>
-    <integer>90</integer>
-    <integer>94</integer>
-    <integer>97</integer>
-    <integer>101</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -920,19 +901,6 @@
    <key>line</key><integer>118</integer>
    <key>col</key><integer>5</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>7</integer>
-    <integer>105</integer>
-    <integer>109</integer>
-    <integer>111</integer>
-    <integer>114</integer>
-    <integer>116</integer>
-    <integer>118</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -1511,19 +1479,6 @@
    <key>col</key><integer>6</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>134</integer>
-    <integer>135</integer>
-    <integer>139</integer>
-    <integer>143</integer>
-    <integer>145</integer>
-    <integer>150</integer>
-    <integer>152</integer>
-   </array>
-  </dict>
   </dict>
   <dict>
    <key>path</key>
@@ -1703,15 +1658,6 @@
    <key>line</key><integer>161</integer>
    <key>col</key><integer>10</integer>
    <key>file</key><integer>0</integer>
-  </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>158</integer>
-    <integer>159</integer>
-    <integer>161</integer>
-   </array>
   </dict>
   </dict>
   <dict>
@@ -1968,24 +1914,7 @@
    <key>col</key><integer>3</integer>
    <key>file</key><integer>0</integer>
   </dict>
-  <key>ExecutedLines</key>
-  <dict>
-   <key>0</key>
-   <array>
-    <integer>13</integer>
-    <integer>166</integer>
-    <integer>167</integer>
-    <integer>168</integer>
-    <integer>170</integer>
-    <integer>175</integer>
-    <integer>177</integer>
-   </array>
   </dict>
-  </dict>
- </array>
- <key>files</key>
- <array>
-  <string>/Volumes/Transcend/code/monorepo/llvm-project/clang/test/Analysis/inlining/path-notes.m</string>
  </array>
 </dict>
 </plist>
