@@ -10,8 +10,39 @@
 // This file defines helper classes for UninitializedObjectChecker and
 // documentation about the logic of it.
 //
-// To read about command line options and a description what this checker does,
-// refer to UninitializedObjectChecker.cpp.
+// The checker reports uninitialized fields in objects created after a
+// constructor call.
+//
+// This checker has several options:
+//   - "Pedantic" (boolean). If its not set or is set to false, the checker
+//     won't emit warnings for objects that don't have at least one initialized
+//     field. This may be set with
+//
+//     `-analyzer-config alpha.cplusplus.UninitializedObject:Pedantic=true`.
+//
+//   - "NotesAsWarnings" (boolean). If set to true, the checker will emit a
+//     warning for each uninitalized field, as opposed to emitting one warning
+//     per constructor call, and listing the uninitialized fields that belongs
+//     to it in notes. Defaults to false.
+//
+//     `-analyzer-config \
+//         alpha.cplusplus.UninitializedObject:NotesAsWarnings=true`.
+//
+//   - "CheckPointeeInitialization" (boolean). If set to false, the checker will
+//     not analyze the pointee of pointer/reference fields, and will only check
+//     whether the object itself is initialized. Defaults to false.
+//
+//     `-analyzer-config \
+//         alpha.cplusplus.UninitializedObject:CheckPointeeInitialization=true`.
+//
+//     TODO: With some clever heuristics, some pointers should be dereferenced
+//     by default. For example, if the pointee is constructed within the
+//     constructor call, it's reasonable to say that no external object
+//     references it, and we wouldn't generate multiple report on the same
+//     pointee.
+//
+// Most of the following methods as well as the checker itself is defined in
+// UninitializedObjectChecker.cpp.
 //
 // Some methods are implemented in UninitializedPointee.cpp, to reduce the
 // complexity of the main checker file.
@@ -25,6 +56,12 @@
 
 namespace clang {
 namespace ento {
+
+struct UninitObjCheckerOptions {
+  bool IsPedantic = false;
+  bool ShouldConvertNotesToWarnings = false;
+  bool CheckPointeeInitialization =  false;
+};
 
 /// A lightweight polymorphic wrapper around FieldRegion *. We'll use this
 /// interface to store addinitional information about fields. As described
@@ -147,7 +184,7 @@ class FindUninitializedFields {
   ProgramStateRef State;
   const TypedValueRegion *const ObjectR;
 
-  const bool CheckPointeeInitialization;
+  const UninitObjCheckerOptions Opts;
   bool IsAnyFieldInitialized = false;
 
   FieldChainInfo::FieldChain::Factory ChainFactory;
@@ -169,7 +206,7 @@ public:
   /// uninitialized fields in R.
   FindUninitializedFields(ProgramStateRef State,
                           const TypedValueRegion *const R,
-                          bool CheckPointeeInitialization);
+                          const UninitObjCheckerOptions &Opts);
 
   const UninitFieldMap &getUninitFields() { return UninitFields; }
 

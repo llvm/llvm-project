@@ -10,11 +10,8 @@
 // This file defines functions and methods for handling pointers and references
 // to reduce the size and complexity of UninitializedObjectChecker.cpp.
 //
-// To read about command line options and a description what this checker does,
-// refer to UninitializedObjectChecker.cpp.
-//
-// To read about how the checker works, refer to the comments in
-// UninitializedObject.h.
+// To read about command line options and documentation about how the checker
+// works, refer to UninitializedObjectChecker.h.
 //
 //===----------------------------------------------------------------------===//
 
@@ -124,7 +121,7 @@ bool FindUninitializedFields::isDereferencableUninit(
         LocalChain.add(LocField(FR, /*IsDereferenced*/ false)));
   }
 
-  if (!CheckPointeeInitialization) {
+  if (!Opts.CheckPointeeInitialization) {
     IsAnyFieldInitialized = true;
     return false;
   }
