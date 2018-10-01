@@ -148,7 +148,7 @@ int32_t nvptx_parallel_reduce_nowait(int32_t global_tid, int32_t num_vars,
                                      kmp_ShuffleReductFctPtr shflFct,
                                      kmp_InterWarpCopyFctPtr cpyFct,
                                      bool isSPMDExecutionMode,
-                                     bool isRuntimeUninitialized = false) {
+                                     bool isRuntimeUninitialized) {
   uint32_t BlockThreadId = GetLogicalThreadIdInBlock();
   uint32_t NumThreads = GetNumberOfOmpThreads(
       BlockThreadId, isSPMDExecutionMode, isRuntimeUninitialized);
@@ -240,9 +240,10 @@ EXTERN
 int32_t __kmpc_nvptx_parallel_reduce_nowait(
     int32_t global_tid, int32_t num_vars, size_t reduce_size, void *reduce_data,
     kmp_ShuffleReductFctPtr shflFct, kmp_InterWarpCopyFctPtr cpyFct) {
-  return nvptx_parallel_reduce_nowait(global_tid, num_vars, reduce_size,
-                                      reduce_data, shflFct, cpyFct,
-                                      /*isSPMDExecutionMode=*/isSPMDMode());
+  return nvptx_parallel_reduce_nowait(
+      global_tid, num_vars, reduce_size, reduce_data, shflFct, cpyFct,
+      /*isSPMDExecutionMode=*/isSPMDMode(),
+      /*isRuntimeUninitialized=*/isRuntimeUninitialized());
 }
 
 EXTERN
@@ -270,7 +271,7 @@ int32_t nvptx_teams_reduce_nowait(
     int32_t global_tid, int32_t num_vars, size_t reduce_size, void *reduce_data,
     kmp_ShuffleReductFctPtr shflFct, kmp_InterWarpCopyFctPtr cpyFct,
     kmp_CopyToScratchpadFctPtr scratchFct, kmp_LoadReduceFctPtr ldFct,
-    bool isSPMDExecutionMode, bool isRuntimeUninitialized = false) {
+    bool isSPMDExecutionMode, bool isRuntimeUninitialized) {
   uint32_t ThreadId = GetLogicalThreadIdInBlock();
   // In non-generic mode all workers participate in the teams reduction.
   // In generic mode only the team master participates in the teams
@@ -399,9 +400,10 @@ int32_t __kmpc_nvptx_teams_reduce_nowait(int32_t global_tid, int32_t num_vars,
                                          kmp_InterWarpCopyFctPtr cpyFct,
                                          kmp_CopyToScratchpadFctPtr scratchFct,
                                          kmp_LoadReduceFctPtr ldFct) {
-  return nvptx_teams_reduce_nowait(global_tid, num_vars, reduce_size,
-                                   reduce_data, shflFct, cpyFct, scratchFct,
-                                   ldFct, /*isSPMDExecutionMode=*/isSPMDMode());
+  return nvptx_teams_reduce_nowait(
+      global_tid, num_vars, reduce_size, reduce_data, shflFct, cpyFct,
+      scratchFct, ldFct, /*isSPMDExecutionMode=*/isSPMDMode(),
+      /*isRuntimeUninitialized=*/isRuntimeUninitialized());
 }
 
 EXTERN

@@ -3,7 +3,7 @@
 .\"
 .\" This man page documents only lld's ELF linking support, obtained originally
 .\" from FreeBSD.
-.Dd September 14, 2018
+.Dd September 26, 2018
 .Dt LD.LLD 1
 .Os
 .Sh NAME
@@ -13,6 +13,7 @@
 .Nm ld.lld
 .Op Ar options
 .Ar objfile ...
+
 .Sh DESCRIPTION
 A linker takes one or more object, archive, and library files, and combines
 them into an output file (an executable, a shared library, or another object
@@ -25,7 +26,21 @@ is a drop-in replacement for the GNU BFD and gold linkers.
 It accepts most of the same command line arguments and linker scripts
 as GNU linkers.
 .Pp
-These options are available:
+.Nm
+currently supports i386, x86-64, ARM, AArch64, PowerPC32, PowerPC64,
+MIPS32, MIPS64, RISC-V, AMDGPU, Hexagon and SPARC V9 targets.
+.Nm
+acts as a Microsoft link.exe-compatible linker if invoked as
+.Nm lld-link
+and as macOS's ld if invoked as
+.Nm ld.ld64.
+All these targets are always supported however
+.Nm
+was built, so you can always use
+.Nm
+as a native linker as well as a cross linker.
+
+.Sh OPTIONS
 .Bl -tag -width indent
 .It Fl -allow-multiple-definition
 Do not error if a symbol is defined multiple times.
