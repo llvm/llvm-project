@@ -82,7 +82,7 @@ class CallDescription {
   mutable bool IsLookupDone = false;
   // The list of the qualified names used to identify the specified CallEvent,
   // e.g. "{a, b}" represent the qualified names, like "a::b".
-  std::vector<StringRef> QualifiedName;
+  std::vector<const char *> QualifiedName;
   unsigned RequiredArgs;
 
 public:
@@ -90,28 +90,17 @@ public:
 
   /// Constructs a CallDescription object.
   ///
-  /// @param QualifiedName The list of the qualified names of the function that
-  /// will be matched. It does not require the user to provide the full list of
-  /// the qualified name. The more details provided, the more accurate the
-  /// matching.
+  /// @param QualifiedName The list of the name qualifiers of the function that
+  /// will be matched. The user is allowed to skip any of the qualifiers.
+  /// For example, {"std", "basic_string", "c_str"} would match both
+  /// std::basic_string<...>::c_str() and std::__1::basic_string<...>::c_str().
   ///
   /// @param RequiredArgs The number of arguments that is expected to match a
   /// call. Omit this parameter to match every occurrence of call with a given
   /// name regardless the number of arguments.
-  CallDescription(std::vector<StringRef> QualifiedName,
+  CallDescription(ArrayRef<const char *> QualifiedName,
                   unsigned RequiredArgs = NoArgRequirement)
       : QualifiedName(QualifiedName), RequiredArgs(RequiredArgs) {}
-
-  /// Constructs a CallDescription object.
-  ///
-  /// @param FuncName The name of the function that will be matched.
-  ///
-  /// @param RequiredArgs The number of arguments that is expected to match a
-  /// call. Omit this parameter to match every occurrence of call with a given
-  /// name regardless the number of arguments.
-  CallDescription(StringRef FuncName, unsigned RequiredArgs = NoArgRequirement)
-      : CallDescription(std::vector<StringRef>({FuncName}), NoArgRequirement) {
-  }
 
   /// Get the name of the function that this object matches.
   StringRef getFunctionName() const { return QualifiedName.back(); }
