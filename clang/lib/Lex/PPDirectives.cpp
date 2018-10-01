@@ -1889,13 +1889,16 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
       // characters
       StringRef OriginalFilename = Filename;
       if (!File) {
-        while (!isAlphanumeric(Filename.front())) {
-          Filename = Filename.drop_front();
-        }
-        while (!isAlphanumeric(Filename.back())) {
-          Filename = Filename.drop_back();
-        }
-
+        // A heuristic to correct a typo file name by removing leading and
+        // trailing non-isAlphanumeric characters.
+        auto CorrectTypoFilename = [](llvm::StringRef Filename) {
+          Filename = Filename.drop_until(isAlphanumeric);
+          while (!Filename.empty() && !isAlphanumeric(Filename.back())) {
+            Filename = Filename.drop_back();
+          }
+          return Filename;
+        };
+        Filename = CorrectTypoFilename(Filename);
         File = LookupFile(
             FilenameLoc,
             LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename, isAngled,

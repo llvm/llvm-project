@@ -598,6 +598,11 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       LLVM_DEBUG(dbgs() << "MCP: Removing copy due to no live-out succ: ";
                  MaybeDead->dump());
       assert(!MRI->isReserved(MaybeDead->getOperand(0).getReg()));
+
+      // Update matching debug values.
+      assert(MaybeDead->isCopy());
+      MaybeDead->changeDebugValuesDefReg(MaybeDead->getOperand(1).getReg());
+
       MaybeDead->eraseFromParent();
       Changed = true;
       ++NumDeletes;

@@ -189,7 +189,9 @@ static Instruction *foldBitcastExtElt(ExtractElementInst &Ext,
 
   // If the source elements are wider than the destination, try to shift and
   // truncate a subset of scalar bits of an insert op.
-  if (NumSrcElts < NumElts && SrcTy->getScalarType()->isIntegerTy()) {
+  // TODO: This is limited to integer types, but we could bitcast to/from FP.
+  if (NumSrcElts < NumElts && SrcTy->getScalarType()->isIntegerTy() &&
+      DestTy->getScalarType()->isIntegerTy()) {
     Value *Scalar;
     uint64_t InsIndexC;
     if (!match(X, m_InsertElement(m_Value(), m_Value(Scalar),

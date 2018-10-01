@@ -43,7 +43,6 @@ set(CLANG_TOOLS_TEST_DEPS
   # Individual tools we test.
   clang-apply-replacements
   clang-change-namespace
-  clangd
   clang-doc
   clang-include-fixer
   clang-move
@@ -53,10 +52,7 @@ set(CLANG_TOOLS_TEST_DEPS
   modularize
   pp-trace
 
-  # These individual tools have no tests, add them here to make them compile
-  # together with check-clang-tools, so that we won't break them in the future.
-  clangd-indexer
-  dexp
+  check-clangd
 
   # Unit tests
   ExtraToolsUnitTests
@@ -73,16 +69,6 @@ if(CLANG_ENABLE_STATIC_ANALYZER)
     )
 endif()
 
-set(llvm_utils
-  FileCheck count not
-  )
-
-foreach(t ${llvm_utils})
-  if(TARGET ${t})
-    list(APPEND CLANG_TOOLS_TEST_DEPS ${t})
-  endif()
-endforeach()
-
 add_lit_testsuite(check-clang-tools "Running the Clang extra tools' regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${CLANG_TOOLS_TEST_DEPS}
@@ -90,3 +76,18 @@ add_lit_testsuite(check-clang-tools "Running the Clang extra tools' regression t
   )
 
 set_target_properties(check-clang-tools PROPERTIES FOLDER "Clang extra tools' tests")
+
+# Setup an individual test for building and testing clangd-only stuff.
+set(CLANGD_TEST_DEPS
+  clangd
+  ClangdTests
+  # clangd-related tools which don't have tests, add them to the test to make
+  # sure we don't introduce new changes that break their compilations.
+  clangd-indexer
+  dexp
+)
+add_lit_testsuite(check-clangd "Running the Clangd regression tests"
+  ${CMAKE_CURRENT_BINARY_DIR}/Unit/clangd;${CMAKE_CURRENT_BINARY_DIR}/clangd
+  DEPENDS ${CLANGD_TEST_DEPS}
+)
+set_target_properties(check-clangd PROPERTIES FOLDER "Clangd tests")

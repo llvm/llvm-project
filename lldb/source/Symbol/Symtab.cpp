@@ -139,6 +139,8 @@ void Symtab::Dump(Stream *s, Target *target, SortOrder sort_order) {
       }
       break;
     }
+  } else {
+    s->PutCString("\n");
   }
 }
 

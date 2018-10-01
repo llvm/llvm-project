@@ -19,6 +19,13 @@
 // different zero-idioms.
 def ZeroIdiomPredicate : CheckSameRegOperand<1, 2>;
 
+// A predicate used to identify VPERM that have bits 3 and 7 of their mask set.
+// On some processors, these VPERM instructions are zero-idioms.
+def ZeroIdiomVPERMPredicate : CheckAll<[
+  ZeroIdiomPredicate,
+  CheckImmOperand<3, 0x88>
+]>;
+
 // A predicate used to check if a LEA instruction uses all three source
 // operands: base, index, and offset.
 def IsThreeOperandsLEAPredicate: CheckAll<[
