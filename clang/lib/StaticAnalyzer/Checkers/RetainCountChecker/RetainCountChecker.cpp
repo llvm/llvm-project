@@ -16,7 +16,6 @@
 
 using namespace clang;
 using namespace ento;
-using namespace objc_retain;
 using namespace retaincountchecker;
 using llvm::StrInStrNoCase;
 
@@ -331,7 +330,19 @@ void RetainCountChecker::checkPostStmt(const ObjCIvarRefExpr *IRE,
 void RetainCountChecker::checkPostCall(const CallEvent &Call,
                                        CheckerContext &C) const {
   RetainSummaryManager &Summaries = getSummaryManager(C);
-  const RetainSummary *Summ = Summaries.getSummary(Call, C.getState());
+
+  // Leave null if no receiver.
+  QualType ReceiverType;
+  if (const auto *MC = dyn_cast<ObjCMethodCall>(&Call)) {
+    if (MC->isInstanceMessage()) {
+      SVal ReceiverV = MC->getReceiverSVal();
+      if (SymbolRef Sym = ReceiverV.getAsLocSymbol())
+        if (const RefVal *T = getRefBinding(C.getState(), Sym))
+          ReceiverType = T->getType();
+    }
+  }
+
+  const RetainSummary *Summ = Summaries.getSummary(Call, ReceiverType);
 
   if (C.wasInlined) {
     processSummaryOfInlined(*Summ, Call, C);
@@ -1386,45 +1397,6 @@ void RetainCountChecker::printState(raw_ostream &Out, ProgramStateRef State,
     Out << NL;
   }
 }
-
-//===----------------------------------------------------------------------===//
-// Implementation of the CallEffects API.
-//===----------------------------------------------------------------------===//
-
-namespace clang {
-namespace ento {
-namespace objc_retain {
-
-// This is a bit gross, but it allows us to populate CallEffects without
-// creating a bunch of accessors.  This kind is very localized, so the
-// damage of this macro is limited.
-#define createCallEffect(D, KIND)\
-  ASTContext &Ctx = D->getASTContext();\
-  LangOptions L = Ctx.getLangOpts();\
-  RetainSummaryManager M(Ctx, L.ObjCAutoRefCount);\
-  const RetainSummary *S = M.get ## KIND ## Summary(D);\
-  CallEffects CE(S->getRetEffect());\
-  CE.Receiver = S->getReceiverEffect();\
-  unsigned N = D->param_size();\
-  for (unsigned i = 0; i < N; ++i) {\
-    CE.Args.push_back(S->getArg(i));\
-  }
-
-CallEffects CallEffects::getEffect(const ObjCMethodDecl *MD) {
-  createCallEffect(MD, Method);
-  return CE;
-}
-
-CallEffects CallEffects::getEffect(const FunctionDecl *FD) {
-  createCallEffect(FD, Function);
-  return CE;
-}
-
-#undef createCallEffect
-
-} // end namespace objc_retain
-} // end namespace ento
-} // end namespace clang
 
 //===----------------------------------------------------------------------===//
 // Checker registration.
