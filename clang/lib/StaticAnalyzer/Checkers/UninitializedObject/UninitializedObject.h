@@ -111,9 +111,7 @@ class FindUninitializedFields {
   ProgramStateRef State;
   const TypedValueRegion *const ObjectR;
 
-  const bool IsPedantic;
   const bool CheckPointeeInitialization;
-
   bool IsAnyFieldInitialized = false;
 
   FieldChainInfo::FieldChain::Factory ChainFactory;
@@ -131,10 +129,17 @@ class FindUninitializedFields {
   UninitFieldMap UninitFields;
 
 public:
+  /// Constructs the FindUninitializedField object, searches for and stores
+  /// uninitialized fields in R.
   FindUninitializedFields(ProgramStateRef State,
-                          const TypedValueRegion *const R, bool IsPedantic,
+                          const TypedValueRegion *const R,
                           bool CheckPointeeInitialization);
-  const UninitFieldMap &getUninitFields();
+
+  const UninitFieldMap &getUninitFields() { return UninitFields; }
+
+  /// Returns whether the analyzed region contains at least one initialized
+  /// field.
+  bool isAnyFieldInitialized() { return IsAnyFieldInitialized; }
 
 private:
   // For the purposes of this checker, we'll regard the object under checking as
