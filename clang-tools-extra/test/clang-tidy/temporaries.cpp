@@ -1,3 +1,4 @@
+// REQUIRES: static-analyzer
 // RUN: clang-tidy -checks='-*,clang-analyzer-core.NullDereference' %s -- | FileCheck %s
 
 struct NoReturnDtor {

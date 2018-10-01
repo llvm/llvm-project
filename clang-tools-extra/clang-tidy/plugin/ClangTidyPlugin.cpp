@@ -9,6 +9,7 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
+#include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/MultiplexConsumer.h"
@@ -133,10 +134,12 @@ extern volatile int ModernizeModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED ModernizeModuleAnchorDestination =
     ModernizeModuleAnchorSource;
 
+#if CLANG_ENABLE_STATIC_ANALYZER
 // This anchor is used to force the linker to link the MPIModule.
 extern volatile int MPIModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED MPIModuleAnchorDestination =
     MPIModuleAnchorSource;
+#endif
 
 // This anchor is used to force the linker to link the ObjCModule.
 extern volatile int ObjCModuleAnchorSource;
