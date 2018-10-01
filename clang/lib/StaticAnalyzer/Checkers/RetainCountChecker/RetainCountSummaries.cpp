@@ -482,10 +482,10 @@ bool RetainSummaryManager::canEval(const CallExpr *CE,
       return isRetain(FD, FName) || isAutorelease(FD, FName) ||
              isMakeCollectable(FName);
 
-    if (FD->getDefinition()) {
-      bool out = isTrustedReferenceCountImplementation(FD->getDefinition());
-      hasTrustedImplementationAnnotation = out;
-      return out;
+    const FunctionDecl* FDD = FD->getDefinition();
+    if (FDD && isTrustedReferenceCountImplementation(FDD)) {
+      hasTrustedImplementationAnnotation = true;
+      return true;
     }
   }
 

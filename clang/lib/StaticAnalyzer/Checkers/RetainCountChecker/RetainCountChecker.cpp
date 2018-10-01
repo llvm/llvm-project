@@ -765,9 +765,7 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
   bool hasTrustedImplementationAnnotation = false;
 
   // See if it's one of the specific functions we know how to eval.
-  bool canEval = SmrMgr.canEval(CE, FD, hasTrustedImplementationAnnotation);
-
-  if (!canEval)
+  if (!SmrMgr.canEval(CE, FD, hasTrustedImplementationAnnotation))
     return false;
 
   // Bind the return value.
@@ -1235,11 +1233,8 @@ RetainCountChecker::processLeaks(ProgramStateRef state,
   return N;
 }
 
-static bool isGeneralizedObjectRef(QualType Ty) {
-  if (Ty.getAsString().substr(0, 4) == "isl_")
-    return true;
-  else
-    return false;
+static bool isISLObjectRef(QualType Ty) {
+  return StringRef(Ty.getAsString()).startswith("isl_");
 }
 
 void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
@@ -1263,9 +1258,9 @@ void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
 
     QualType Ty = Param->getType();
     const ArgEffect *AE = CalleeSideArgEffects.lookup(idx);
-    if (AE && *AE == DecRef && isGeneralizedObjectRef(Ty)) {
+    if (AE && *AE == DecRef && isISLObjectRef(Ty)) {
       state = setRefBinding(state, Sym, RefVal::makeOwned(RetEffect::ObjKind::Generalized, Ty));
-    } else if (isGeneralizedObjectRef(Ty)) {
+    } else if (isISLObjectRef(Ty)) {
       state = setRefBinding(
           state, Sym,
           RefVal::makeNotOwned(RetEffect::ObjKind::Generalized, Ty));
