@@ -1881,6 +1881,21 @@ static void dropFunctionEntryEdge(PathPieces &Path, LocationContextMap &LCM,
 using VisitorsDiagnosticsTy = llvm::DenseMap<const ExplodedNode *,
                    std::vector<std::shared_ptr<PathDiagnosticPiece>>>;
 
+/// Populate executes lines with lines containing at least one diagnostics.
+static void updateExecutedLinesWithDiagnosticPieces(
+  PathDiagnostic &PD) {
+
+  PathPieces path = PD.path.flatten(/*ShouldFlattenMacros=*/true);
+  FilesToLineNumsMap &ExecutedLines = PD.getExecutedLines();
+
+  for (const auto &P : path) {
+    FullSourceLoc Loc = P->getLocation().asLocation().getExpansionLoc();
+    FileID FID = Loc.getFileID();
+    unsigned LineNo = Loc.getLineNumber();
+    ExecutedLines[FID.getHashValue()].insert(LineNo);
+  }
+}
+
 /// This function is responsible for generating diagnostic pieces that are
 /// *not* provided by bug report visitors.
 /// These diagnostics may differ depending on the consumer's settings,
@@ -2985,6 +3000,7 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
     for (const auto &i : Meta)
       PD->addMeta(i);
 
+    updateExecutedLinesWithDiagnosticPieces(*PD);
     Consumer->HandlePathDiagnostic(std::move(PD));
   }
 }

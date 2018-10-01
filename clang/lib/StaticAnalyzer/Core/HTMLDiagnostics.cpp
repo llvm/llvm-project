@@ -337,23 +337,8 @@ static void serializeExecutedLines(
     const PathDiagnostic &D,
     const PathPieces &path,
     llvm::raw_string_ostream &os) {
-  // Copy executed lines from path diagnostics.
-  std::map<unsigned, std::set<unsigned>> ExecutedLines;
-  for (auto I = D.executedLines_begin(),
-            E = D.executedLines_end(); I != E; ++I) {
-    std::set<unsigned> &LinesInFile = ExecutedLines[I->first];
-    for (unsigned LineNo : I->second) {
-      LinesInFile.insert(LineNo);
-    }
-  }
 
-  // We need to include all lines for which any kind of diagnostics appears.
-  for (const auto &P : path) {
-    FullSourceLoc Loc = P->getLocation().asLocation().getExpansionLoc();
-    FileID FID = Loc.getFileID();
-    unsigned LineNo = Loc.getLineNumber();
-    ExecutedLines[FID.getHashValue()].insert(LineNo);
-  }
+  const FilesToLineNumsMap &ExecutedLines = D.getExecutedLines();
 
   os << "var relevant_lines = {";
   for (auto I = ExecutedLines.begin(),

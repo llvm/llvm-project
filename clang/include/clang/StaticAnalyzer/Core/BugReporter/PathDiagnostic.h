@@ -859,13 +859,13 @@ public:
   meta_iterator meta_end() const { return OtherDesc.end(); }
   void addMeta(StringRef s) { OtherDesc.push_back(s); }
 
-  using filesmap_iterator = FilesToLineNumsMap::const_iterator;
-
-  filesmap_iterator executedLines_begin() const {
-    return ExecutedLines->begin();
+  const FilesToLineNumsMap &getExecutedLines() const {
+    return *ExecutedLines;
   }
 
-  filesmap_iterator executedLines_end() const { return ExecutedLines->end(); }
+  FilesToLineNumsMap &getExecutedLines() {
+    return *ExecutedLines;
+  }
 
   PathDiagnosticLocation getLocation() const {
     return Loc;
