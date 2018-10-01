@@ -1893,7 +1893,7 @@ static void updateExecutedLinesWithDiagnosticPieces(
     FileID FID = Loc.getFileID();
     unsigned LineNo = Loc.getLineNumber();
     assert(FID.isValid());
-    ExecutedLines[FID.getHashValue()].insert(LineNo);
+    ExecutedLines[FID].insert(LineNo);
   }
 }
 
@@ -3030,7 +3030,7 @@ static void populateExecutedLinesWithFunctionSignature(
 
   FileID FID = SM.getFileID(SM.getExpansionLoc(Start));
   for (unsigned Line = StartLine; Line <= EndLine; Line++)
-    ExecutedLines->operator[](FID.getHashValue()).insert(Line);
+    ExecutedLines->operator[](FID).insert(Line);
 }
 
 static void populateExecutedLinesWithStmt(
@@ -3042,7 +3042,7 @@ static void populateExecutedLinesWithStmt(
   SourceLocation ExpansionLoc = SM.getExpansionLoc(Loc);
   FileID FID = SM.getFileID(ExpansionLoc);
   unsigned LineNo = SM.getExpansionLineNumber(ExpansionLoc);
-  ExecutedLines->operator[](FID.getHashValue()).insert(LineNo);
+  ExecutedLines->operator[](FID).insert(LineNo);
 }
 
 /// \return all executed lines including function signatures on the path
