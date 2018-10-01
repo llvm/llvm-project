@@ -1028,3 +1028,18 @@ void testOperators() {
   C(1) + C(2);
 }
 } // namespace operators
+
+namespace variadic_function_arguments {
+class C {
+ public:
+  C(int);
+};
+
+int variadic(...);
+
+// This code is quite exotic, so let's not test the CFG for it,
+// but only make sure we don't crash.
+void testCrashOnVariadicArgument() {
+  C c(variadic(0 ? c : 0)); // no-crash
+}
+} // namespace variadic_function_arguments
