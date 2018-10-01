@@ -3565,9 +3565,9 @@ AST_MATCHER(CXXCtorInitializer, isMemberInitializer) {
 /// objcMessageExpr(hasAnyArgument(integerLiteral(equals(12))))
 ///   matches [i f:12]
 AST_POLYMORPHIC_MATCHER_P(hasAnyArgument,
-                          AST_POLYMORPHIC_SUPPORTED_TYPES(CallExpr,
-                                                          CXXConstructExpr,
-                                                          ObjCMessageExpr),
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(
+                              CallExpr, CXXConstructExpr,
+                              CXXUnresolvedConstructExpr, ObjCMessageExpr),
                           internal::Matcher<Expr>, InnerMatcher) {
   for (const Expr *Arg : Node.arguments()) {
     BoundNodesTreeBuilder Result(*Builder);
