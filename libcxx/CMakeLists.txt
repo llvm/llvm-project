@@ -124,6 +124,11 @@ if (NOT LIBCXX_ENABLE_SHARED AND NOT LIBCXX_ENABLE_STATIC)
   message(FATAL_ERROR "libc++ must be built as either a shared or static library.")
 endif()
 
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+  message(STATUS "Configuring for clang-cl")
+  set(LIBCXX_TARGETING_CLANG_CL ON)
+endif()
+
 # ABI Library options ---------------------------------------------------------
 set(LIBCXX_CXX_ABI "default" CACHE STRING
     "Specify C++ ABI library to use.")
@@ -548,6 +553,13 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     add_compile_flags_if_supported(
         -Wno-user-defined-literals
         -Wno-covered-switch-default)
+    if (LIBCXX_TARGETING_CLANG_CL)
+      add_compile_flags_if_supported(
+        -Wno-c++98-compat
+        -Wno-c++11-compat
+        -Wno-undef
+      )
+    endif()
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
     add_compile_flags_if_supported(
         -Wno-literal-suffix
