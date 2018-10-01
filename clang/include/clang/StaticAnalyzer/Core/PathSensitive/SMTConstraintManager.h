@@ -16,7 +16,7 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SMTCONSTRAINTMANAGER_H
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SMTSolver.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
 
 namespace clang {
 namespace ento {
@@ -42,13 +42,14 @@ public:
     QualType RetTy;
     bool hasComparison;
 
-    SMTExprRef Exp = Solver->getExpr(Ctx, Sym, &RetTy, &hasComparison);
+    SMTExprRef Exp = SMTConv::getExpr(Solver, Ctx, Sym, &RetTy, &hasComparison);
 
     // Create zero comparison for implicit boolean cast, with reversed
     // assumption
     if (!hasComparison && !RetTy->isBooleanType())
-      return assumeExpr(State, Sym,
-                        Solver->getZeroExpr(Ctx, Exp, RetTy, !Assumption));
+      return assumeExpr(
+          State, Sym,
+          SMTConv::getZeroExpr(Solver, Ctx, Exp, RetTy, !Assumption));
 
     return assumeExpr(State, Sym, Assumption ? Exp : Solver->mkNot(Exp));
   }
@@ -58,8 +59,8 @@ public:
                                           const llvm::APSInt &To,
                                           bool InRange) override {
     ASTContext &Ctx = getBasicVals().getContext();
-    return assumeExpr(State, Sym,
-                      Solver->getRangeExpr(Ctx, Sym, From, To, InRange));
+    return assumeExpr(
+        State, Sym, SMTConv::getRangeExpr(Solver, Ctx, Sym, From, To, InRange));
   }
 
   ProgramStateRef assumeSymUnsupported(ProgramStateRef State, SymbolRef Sym,
@@ -77,31 +78,37 @@ public:
 
     QualType RetTy;
     // The expression may be casted, so we cannot call getZ3DataExpr() directly
-    SMTExprRef VarExp = Solver->getExpr(Ctx, Sym, &RetTy);
+    SMTExprRef VarExp = SMTConv::getExpr(Solver, Ctx, Sym, &RetTy);
     SMTExprRef Exp =
-        Solver->getZeroExpr(Ctx, VarExp, RetTy, /*Assumption=*/true);
+        SMTConv::getZeroExpr(Solver, Ctx, VarExp, RetTy, /*Assumption=*/true);
 
     // Negate the constraint
     SMTExprRef NotExp =
-        Solver->getZeroExpr(Ctx, VarExp, RetTy, /*Assumption=*/false);
+        SMTConv::getZeroExpr(Solver, Ctx, VarExp, RetTy, /*Assumption=*/false);
 
     Solver->reset();
     addStateConstraints(State);
 
     Solver->push();
     Solver->addConstraint(Exp);
-    ConditionTruthVal isSat = Solver->check();
+
+    Optional<bool> isSat = Solver->check();
+    if (!isSat.hasValue())
+      return ConditionTruthVal();
 
     Solver->pop();
     Solver->addConstraint(NotExp);
-    ConditionTruthVal isNotSat = Solver->check();
+
+    Optional<bool> isNotSat = Solver->check();
+    if (!isNotSat.hasValue())
+      return ConditionTruthVal();
 
     // Zero is the only possible solution
-    if (isSat.isConstrainedTrue() && isNotSat.isConstrainedFalse())
+    if (isSat.getValue() && !isNotSat.getValue())
       return true;
 
     // Zero is not a solution
-    if (isSat.isConstrainedFalse() && isNotSat.isConstrainedTrue())
+    if (!isSat.getValue() && isNotSat.getValue())
       return false;
 
     // Zero may be a solution
@@ -120,14 +127,14 @@ public:
                          !Ty->isSignedIntegerOrEnumerationType());
 
       SMTExprRef Exp =
-          Solver->fromData(SD->getSymbolID(), Ty, Ctx.getTypeSize(Ty));
+          SMTConv::fromData(Solver, SD->getSymbolID(), Ty, Ctx.getTypeSize(Ty));
 
       Solver->reset();
       addStateConstraints(State);
 
       // Constraints are unsatisfiable
-      ConditionTruthVal isSat = Solver->check();
-      if (!isSat.isConstrainedTrue())
+      Optional<bool> isSat = Solver->check();
+      if (!isSat.hasValue() || !isSat.getValue())
         return nullptr;
 
       // Model does not assign interpretation
@@ -135,16 +142,16 @@ public:
         return nullptr;
 
       // A value has been obtained, check if it is the only value
-      SMTExprRef NotExp = Solver->fromBinOp(
-          Exp, BO_NE,
+      SMTExprRef NotExp = SMTConv::fromBinOp(
+          Solver, Exp, BO_NE,
           Ty->isBooleanType() ? Solver->fromBoolean(Value.getBoolValue())
                               : Solver->fromAPSInt(Value),
           false);
 
       Solver->addConstraint(NotExp);
 
-      ConditionTruthVal isNotSat = Solver->check();
-      if (isNotSat.isConstrainedTrue())
+      Optional<bool> isNotSat = Solver->check();
+      if (!isSat.hasValue() || isNotSat.getValue())
         return nullptr;
 
       // This is the only solution, store it
@@ -185,10 +192,10 @@ public:
 
       llvm::APSInt ConvertedLHS, ConvertedRHS;
       QualType LTy, RTy;
-      std::tie(ConvertedLHS, LTy) = Solver->fixAPSInt(Ctx, *LHS);
-      std::tie(ConvertedRHS, RTy) = Solver->fixAPSInt(Ctx, *RHS);
-      Solver->doIntTypeConversion<llvm::APSInt, &SMTSolver::castAPSInt>(
-          Ctx, ConvertedLHS, LTy, ConvertedRHS, RTy);
+      std::tie(ConvertedLHS, LTy) = SMTConv::fixAPSInt(Ctx, *LHS);
+      std::tie(ConvertedRHS, RTy) = SMTConv::fixAPSInt(Ctx, *RHS);
+      SMTConv::doIntTypeConversion<llvm::APSInt, &SMTConv::castAPSInt>(
+          Solver, Ctx, ConvertedLHS, LTy, ConvertedRHS, RTy);
       return BVF.evalAPSInt(BSE->getOpcode(), ConvertedLHS, ConvertedRHS);
     }
 
@@ -262,9 +269,13 @@ protected:
     Solver->reset();
     Solver->addConstraint(Exp);
     addStateConstraints(State);
-    return Solver->check();
-  }
 
+    Optional<bool> res = Solver->check();
+    if (!res.hasValue())
+      return ConditionTruthVal();
+
+    return ConditionTruthVal(res.getValue());
+  }
 }; // end class SMTConstraintManager
 
 } // namespace ento
