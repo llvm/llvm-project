@@ -774,18 +774,20 @@ const Stmt *PathDiagnosticLocation::getStmt(const ExplodedNode *N) {
   }
   // Otherwise, see if the node's program point directly points to a statement.
   ProgramPoint P = N->getLocation();
-  if (Optional<StmtPoint> SP = P.getAs<StmtPoint>())
+  if (auto SP = P.getAs<StmtPoint>())
     return SP->getStmt();
-  if (Optional<BlockEdge> BE = P.getAs<BlockEdge>())
+  if (auto BE = P.getAs<BlockEdge>())
     return BE->getSrc()->getTerminator();
-  if (Optional<CallEnter> CE = P.getAs<CallEnter>())
+  if (auto CE = P.getAs<CallEnter>())
     return CE->getCallExpr();
-  if (Optional<CallExitEnd> CEE = P.getAs<CallExitEnd>())
+  if (auto CEE = P.getAs<CallExitEnd>())
     return CEE->getCalleeContext()->getCallSite();
-  if (Optional<PostInitializer> PIPP = P.getAs<PostInitializer>())
+  if (auto PIPP = P.getAs<PostInitializer>())
     return PIPP->getInitializer()->getInit();
-  if (Optional<CallExitBegin> CEB = P.getAs<CallExitBegin>())
+  if (auto CEB = P.getAs<CallExitBegin>())
     return CEB->getReturnStmt();
+  if (auto FEP = P.getAs<FunctionExitPoint>())
+    return FEP->getStmt();
 
   return nullptr;
 }
@@ -822,17 +824,21 @@ PathDiagnosticLocation
                                           const SourceManager &SM) {
   assert(N && "Cannot create a location with a null node.");
   const Stmt *S = getStmt(N);
+  const LocationContext *LC = N->getLocationContext();
 
   if (!S) {
     // If this is an implicit call, return the implicit call point location.
     if (Optional<PreImplicitCall> PIE = N->getLocationAs<PreImplicitCall>())
       return PathDiagnosticLocation(PIE->getLocation(), SM);
+    if (auto FE = N->getLocationAs<FunctionExitPoint>()) {
+      if (const ReturnStmt *RS = FE->getStmt())
+        return PathDiagnosticLocation::createBegin(RS, SM, LC);
+    }
     S = getNextStmt(N);
   }
 
   if (S) {
     ProgramPoint P = N->getLocation();
-    const LocationContext *LC = N->getLocationContext();
 
     // For member expressions, return the location of the '.' or '->'.
     if (const auto *ME = dyn_cast<MemberExpr>(S))
