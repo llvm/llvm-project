@@ -1560,6 +1560,10 @@ static const Expr *peelOffOuterExpr(const Expr *Ex,
     if (const Expr *SubEx = peelOffPointerArithmetic(BO))
       return peelOffOuterExpr(SubEx, N);
 
+  if (auto *UO = dyn_cast<UnaryOperator>(Ex))
+    if (UO->getOpcode() == UO_LNot)
+      return peelOffOuterExpr(UO->getSubExpr(), N);
+
   return Ex;
 }
 
