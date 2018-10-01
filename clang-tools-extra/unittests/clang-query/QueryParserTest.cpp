@@ -153,12 +153,12 @@ TEST_F(QueryParserTest, Complete) {
   EXPECT_EQ("let", Comps[1].DisplayText);
   EXPECT_EQ("match ", Comps[2].TypedText);
   EXPECT_EQ("match", Comps[2].DisplayText);
-  EXPECT_EQ("set ", Comps[3].TypedText);
-  EXPECT_EQ("set", Comps[3].DisplayText);
-  EXPECT_EQ("unlet ", Comps[4].TypedText);
-  EXPECT_EQ("unlet", Comps[4].DisplayText);
-  EXPECT_EQ("quit", Comps[5].DisplayText);
-  EXPECT_EQ("quit ", Comps[5].TypedText);
+  EXPECT_EQ("quit ", Comps[3].TypedText);
+  EXPECT_EQ("quit", Comps[3].DisplayText);
+  EXPECT_EQ("set ", Comps[4].TypedText);
+  EXPECT_EQ("set", Comps[4].DisplayText);
+  EXPECT_EQ("unlet ", Comps[5].TypedText);
+  EXPECT_EQ("unlet", Comps[5].DisplayText);
 
   Comps = QueryParser::complete("set o", 5, QS);
   ASSERT_EQ(1u, Comps.size());
