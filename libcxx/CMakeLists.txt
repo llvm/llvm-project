@@ -547,7 +547,7 @@ add_definitions(-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 add_compile_flags_if_supported(
     -Wall -Wextra -W -Wwrite-strings
     -Wno-unused-parameter -Wno-long-long
-    -Werror=return-type)
+    -Werror=return-type -Wextra-semi)
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     add_compile_flags_if_supported(
         -Wno-user-defined-literals
@@ -566,6 +566,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
         -Wno-sign-conversion
         -Wno-old-style-cast
         -Wno-deprecated # FIXME: Remove this and fix all occurrences.
+        -Wno-shift-sign-overflow # FIXME: Why do we need this with clang-cl but not clang?
       )
     endif()
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
