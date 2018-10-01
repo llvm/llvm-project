@@ -759,10 +759,14 @@ class ReturnVisitor : public BugReporterVisitor {
 
   bool EnableNullFPSuppression;
   bool ShouldInvalidate = true;
+  AnalyzerOptions& Options;
 
 public:
-  ReturnVisitor(const StackFrameContext *Frame, bool Suppressed)
-      : StackFrame(Frame), EnableNullFPSuppression(Suppressed) {}
+  ReturnVisitor(const StackFrameContext *Frame,
+                bool Suppressed,
+                AnalyzerOptions &Options)
+      : StackFrame(Frame), EnableNullFPSuppression(Suppressed),
+        Options(Options) {}
 
   static void *getTag() {
     static int Tag = 0;
@@ -790,10 +794,10 @@ public:
 
     // First, find when we processed the statement.
     do {
-      if (Optional<CallExitEnd> CEE = Node->getLocationAs<CallExitEnd>())
+      if (auto CEE = Node->getLocationAs<CallExitEnd>())
         if (CEE->getCalleeContext()->getCallSite() == S)
           break;
-      if (Optional<StmtPoint> SP = Node->getLocationAs<StmtPoint>())
+      if (auto SP = Node->getLocationAs<StmtPoint>())
         if (SP->getStmt() == S)
           break;
 
@@ -834,13 +838,8 @@ public:
 
     BR.markInteresting(CalleeContext);
     BR.addVisitor(llvm::make_unique<ReturnVisitor>(CalleeContext,
-                                                   EnableNullFPSuppression));
-  }
-
-  /// Returns true if any counter-suppression heuristics are enabled for
-  /// ReturnVisitor.
-  static bool hasCounterSuppression(AnalyzerOptions &Options) {
-    return Options.shouldAvoidSuppressingNullArgumentPaths();
+                                                   EnableNullFPSuppression,
+                                                   Options));
   }
 
   std::shared_ptr<PathDiagnosticPiece>
@@ -909,8 +908,8 @@ public:
       // If we have counter-suppression enabled, make sure we keep visiting
       // future nodes. We want to emit a path note as well, in case
       // the report is resurrected as valid later on.
-      AnalyzerOptions &Options = BRC.getAnalyzerOptions();
-      if (EnableNullFPSuppression && hasCounterSuppression(Options))
+      if (EnableNullFPSuppression &&
+          Options.shouldAvoidSuppressingNullArgumentPaths())
         Mode = MaybeUnsuppress;
 
       if (RetE->getType()->isObjCObjectPointerType())
@@ -947,8 +946,7 @@ public:
   visitNodeMaybeUnsuppress(const ExplodedNode *N, const ExplodedNode *PrevN,
                            BugReporterContext &BRC, BugReport &BR) {
 #ifndef NDEBUG
-    AnalyzerOptions &Options = BRC.getAnalyzerOptions();
-    assert(hasCounterSuppression(Options));
+    assert(Options.shouldAvoidSuppressingNullArgumentPaths());
 #endif
 
     // Are we at the entry node for this call?
