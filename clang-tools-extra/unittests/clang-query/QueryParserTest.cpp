@@ -47,6 +47,15 @@ TEST_F(QueryParserTest, Help) {
   EXPECT_EQ("unexpected extra input: ' me'", cast<InvalidQuery>(Q)->ErrStr);
 }
 
+TEST_F(QueryParserTest, Quit) {
+  QueryRef Q = parse("quit");
+  ASSERT_TRUE(isa<QuitQuery>(Q));
+
+  Q = parse("quit me");
+  ASSERT_TRUE(isa<InvalidQuery>(Q));
+  EXPECT_EQ("unexpected extra input: ' me'", cast<InvalidQuery>(Q)->ErrStr);
+}
+
 TEST_F(QueryParserTest, Set) {
   QueryRef Q = parse("set");
   ASSERT_TRUE(isa<InvalidQuery>(Q));
