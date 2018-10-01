@@ -170,4 +170,14 @@ TEST_F(QueryParserTest, Complete) {
   EXPECT_EQ("Stmt(", Comps[0].TypedText);
   EXPECT_EQ("Matcher<Stmt> whileStmt(Matcher<WhileStmt>...)",
             Comps[0].DisplayText);
+
+  Comps = QueryParser::complete("m", 1, QS);
+  ASSERT_EQ(1u, Comps.size());
+  EXPECT_EQ("atch ", Comps[0].TypedText);
+  EXPECT_EQ("match", Comps[0].DisplayText);
+
+  Comps = QueryParser::complete("l", 1, QS);
+  ASSERT_EQ(1u, Comps.size());
+  EXPECT_EQ("et ", Comps[0].TypedText);
+  EXPECT_EQ("let", Comps[0].DisplayText);
 }
