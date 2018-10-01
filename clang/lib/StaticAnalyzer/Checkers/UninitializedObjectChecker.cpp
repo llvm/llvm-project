@@ -225,12 +225,16 @@ static llvm::ImmutableListFactory<const FieldRegion *> Factory;
 
 /// Returns the object that was constructed by CtorDecl, or None if that isn't
 /// possible.
+// TODO: Refactor this function so that it returns the constructed object's
+// region.
 static Optional<nonloc::LazyCompoundVal>
 getObjectVal(const CXXConstructorDecl *CtorDecl, CheckerContext &Context);
 
-/// Checks whether the constructor under checking is called by another
-/// constructor.
-static bool isCalledByConstructor(const CheckerContext &Context);
+/// Checks whether the object constructed by \p Ctor will be analyzed later
+/// (e.g. if the object is a field of another object, in which case we'd check
+/// it multiple times).
+static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
+                               CheckerContext &Context);
 
 /// Returns whether FD can be (transitively) dereferenced to a void pointer type
 /// (void*, void**, ...). The type of the region behind a void pointer isn't
@@ -273,7 +277,7 @@ void UninitializedObjectChecker::checkEndFunction(
     return;
 
   // This avoids essentially the same error being reported multiple times.
-  if (isCalledByConstructor(Context))
+  if (willObjectBeAnalyzedLater(CtorDecl, Context))
     return;
 
   Optional<nonloc::LazyCompoundVal> Object = getObjectVal(CtorDecl, Context);
@@ -433,8 +437,8 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
   }
 
   // Checking bases.
-  // FIXME: As of now, because of `isCalledByConstructor`, objects whose type
-  // is a descendant of another type will emit warnings for uninitalized
+  // FIXME: As of now, because of `willObjectBeAnalyzedLater`, objects whose
+  // type is a descendant of another type will emit warnings for uninitalized
   // inherited members.
   // This is not the only way to analyze bases of an object -- if we didn't
   // filter them out, and didn't analyze the bases, this checker would run for
@@ -661,18 +665,32 @@ getObjectVal(const CXXConstructorDecl *CtorDecl, CheckerContext &Context) {
   return Object.getAs<nonloc::LazyCompoundVal>();
 }
 
-// TODO: We should also check that if the constructor was called by another
-// constructor, whether those two are in any relation to one another. In it's
-// current state, this introduces some false negatives.
-static bool isCalledByConstructor(const CheckerContext &Context) {
-  const LocationContext *LC = Context.getLocationContext()->getParent();
+static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
+                               CheckerContext &Context) {
 
-  while (LC) {
-    if (isa<CXXConstructorDecl>(LC->getDecl()))
+  Optional<nonloc::LazyCompoundVal> CurrentObject = getObjectVal(Ctor, Context);
+  if (!CurrentObject)
+    return false;
+
+  const LocationContext *LC = Context.getLocationContext();
+  while ((LC = LC->getParent())) {
+
+    // If \p Ctor was called by another constructor.
+    const auto *OtherCtor = dyn_cast<CXXConstructorDecl>(LC->getDecl());
+    if (!OtherCtor)
+      continue;
+
+    Optional<nonloc::LazyCompoundVal> OtherObject =
+        getObjectVal(OtherCtor, Context);
+    if (!OtherObject)
+      continue;
+
+    // If the CurrentObject is a subregion of OtherObject, it will be analyzed
+    // during the analysis of OtherObject.
+    if (CurrentObject->getRegion()->isSubRegionOf(OtherObject->getRegion()))
       return true;
-
-    LC = LC->getParent();
   }
+
   return false;
 }
 
