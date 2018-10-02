@@ -355,8 +355,8 @@ static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
   BufferedStackTrace *stack = stack_buffer.data();
   stack->Reset();
   SignalContext sig{info, uc};
-  GetStackTrace(stack, kStackTraceMax, sig.pc, sig.bp, uc,
-                common_flags()->fast_unwind_on_fatal);
+  GetStackTrace(stack, kStackTraceMax, StackTrace::GetNextInstructionPc(sig.pc),
+                sig.bp, uc, common_flags()->fast_unwind_on_fatal);
 
   ReportTagMismatch(stack, ai.addr, ai.size, ai.is_store);
 
@@ -375,8 +375,8 @@ static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
 
 static void OnStackUnwind(const SignalContext &sig, const void *,
                           BufferedStackTrace *stack) {
-  GetStackTrace(stack, kStackTraceMax, sig.pc, sig.bp, sig.context,
-                common_flags()->fast_unwind_on_fatal);
+  GetStackTrace(stack, kStackTraceMax, StackTrace::GetNextInstructionPc(sig.pc),
+                sig.bp, sig.context, common_flags()->fast_unwind_on_fatal);
 }
 
 void HwasanOnDeadlySignal(int signo, void *info, void *context) {
