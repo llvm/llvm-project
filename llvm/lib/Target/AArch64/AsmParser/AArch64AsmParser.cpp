@@ -2825,6 +2825,7 @@ static const struct Extension {
   { "lse", {AArch64::FeatureLSE} },
   { "predctrl", {AArch64::FeaturePredCtrl} },
   { "ccdp", {AArch64::FeatureCacheDeepPersist} },
+  { "mte", {AArch64::FeatureMTE} },
 
   // FIXME: Unsupported extensions
   { "pan", {} },
@@ -3825,13 +3826,9 @@ bool AArch64AsmParser::ParseInstruction(ParseInstructionInfo &Info,
 
   // Read the remaining operands.
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    // Read the first operand.
-    if (parseOperand(Operands, false, false)) {
-      return true;
-    }
 
-    unsigned N = 2;
-    while (parseOptionalToken(AsmToken::Comma)) {
+    unsigned N = 1;
+    do {
       // Parse and remember the operand.
       if (parseOperand(Operands, (N == 4 && condCodeFourthOperand) ||
                                      (N == 3 && condCodeThirdOperand) ||
@@ -3859,7 +3856,7 @@ bool AArch64AsmParser::ParseInstruction(ParseInstructionInfo &Info,
             AArch64Operand::CreateToken("!", false, ELoc, getContext()));
 
       ++N;
-    }
+    } while (parseOptionalToken(AsmToken::Comma));
   }
 
   if (parseToken(AsmToken::EndOfStatement, "unexpected token in argument list"))
@@ -4096,6 +4093,15 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
                    "unpredictable STXP instruction, status is also a source");
     break;
   }
+  case AArch64::LDGV: {
+    unsigned Rt = Inst.getOperand(0).getReg();
+    unsigned Rn = Inst.getOperand(1).getReg();
+    if (RI->isSubRegisterEq(Rt, Rn)) {
+      return Error(Loc[0],
+                  "unpredictable LDGV instruction, writeback register is also "
+                  "the target register");
+    }
+  }
   }
 
 
@@ -4230,6 +4236,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "index must be an integer in range [-128, 127].");
   case Match_InvalidMemoryIndexedSImm9:
     return Error(Loc, "index must be an integer in range [-256, 255].");
+  case Match_InvalidMemoryIndexed16SImm9:
+    return Error(Loc, "index must be a multiple of 16 in range [-4096, 4080].");
   case Match_InvalidMemoryIndexed8SImm10:
     return Error(Loc, "index must be a multiple of 8 in range [-4096, 4088].");
   case Match_InvalidMemoryIndexed4SImm7:
@@ -4246,6 +4254,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "index must be a multiple of 2 in range [0, 62].");
   case Match_InvalidMemoryIndexed8UImm6:
     return Error(Loc, "index must be a multiple of 8 in range [0, 504].");
+  case Match_InvalidMemoryIndexed16UImm6:
+    return Error(Loc, "index must be a multiple of 16 in range [0, 1008].");
   case Match_InvalidMemoryIndexed4UImm6:
     return Error(Loc, "index must be a multiple of 4 in range [0, 252].");
   case Match_InvalidMemoryIndexed2UImm6:
@@ -4882,10 +4892,12 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidMemoryIndexed2UImm6:
   case Match_InvalidMemoryIndexed4UImm6:
   case Match_InvalidMemoryIndexed8UImm6:
+  case Match_InvalidMemoryIndexed16UImm6:
   case Match_InvalidMemoryIndexedSImm6:
   case Match_InvalidMemoryIndexedSImm5:
   case Match_InvalidMemoryIndexedSImm8:
   case Match_InvalidMemoryIndexedSImm9:
+  case Match_InvalidMemoryIndexed16SImm9:
   case Match_InvalidMemoryIndexed8SImm10:
   case Match_InvalidImm0_1:
   case Match_InvalidImm0_7:

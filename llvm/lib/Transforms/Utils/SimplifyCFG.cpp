@@ -1940,11 +1940,11 @@ static bool SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   }
   assert(EndBB == BI->getSuccessor(!Invert) && "No edge from to end block");
 
-  // Keep a count of how many times instructions are used within CondBB when
-  // they are candidates for sinking into CondBB. Specifically:
+  // Keep a count of how many times instructions are used within ThenBB when
+  // they are candidates for sinking into ThenBB. Specifically:
   // - They are defined in BB, and
   // - They have no side effects, and
-  // - All of their uses are in CondBB.
+  // - All of their uses are in ThenBB.
   SmallDenseMap<Instruction *, unsigned, 4> SinkCandidateUseCounts;
 
   SmallVector<Instruction *, 4> SpeculatedDbgIntrinsics;
@@ -1994,14 +1994,14 @@ static bool SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
     }
   }
 
-  // Consider any sink candidates which are only used in CondBB as costs for
+  // Consider any sink candidates which are only used in ThenBB as costs for
   // speculation. Note, while we iterate over a DenseMap here, we are summing
   // and so iteration order isn't significant.
   for (SmallDenseMap<Instruction *, unsigned, 4>::iterator
            I = SinkCandidateUseCounts.begin(),
            E = SinkCandidateUseCounts.end();
        I != E; ++I)
-    if (I->first->getNumUses() == I->second) {
+    if (I->first->hasNUses(I->second)) {
       ++SpeculationCost;
       if (SpeculationCost > 1)
         return false;

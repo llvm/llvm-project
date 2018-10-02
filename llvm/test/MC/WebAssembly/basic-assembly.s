@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+sign_ext,+simd128 < %s | FileCheck %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+simd128,+nontrapping-fptoint < %s | FileCheck %s
 
     .text
     .type    test0,@function
@@ -42,6 +42,11 @@ test0:
     get_local   4
     get_local   5
     f32x4.add
+    # Test correct parsing of instructions with / and : in them:
+    # TODO: enable once instruction has been added.
+    #i32x4.trunc_s/f32x4:sat
+    i32.trunc_s/f32
+    #i32.trunc_s:sat/f32
     end_function
 
 
@@ -81,4 +86,5 @@ test0:
 # CHECK-NEXT:      get_local   4
 # CHECK-NEXT:      get_local   5
 # CHECK-NEXT:      f32x4.add
+# CHECK-NEXT:      i32.trunc_s/f32
 # CHECK-NEXT:      end_function

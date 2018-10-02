@@ -86,6 +86,7 @@ namespace format {
   TYPE(RegexLiteral)                                                           \
   TYPE(SelectorName)                                                           \
   TYPE(StartOfName)                                                            \
+  TYPE(StatementMacro)                                                         \
   TYPE(StructuredBindingLSquare)                                               \
   TYPE(TemplateCloser)                                                         \
   TYPE(TemplateOpener)                                                         \
@@ -188,10 +189,6 @@ struct FormatToken {
   bool ClosesTemplateDeclaration = false;
 
   /// Number of parameters, if this is "(", "[" or "<".
-  ///
-  /// This is initialized to 1 as we don't need to distinguish functions with
-  /// 0 parameters from functions with 1 parameter. Thus, we can simply count
-  /// the number of commas.
   unsigned ParameterCount = 0;
 
   /// Number of parameters that are nested blocks,
@@ -268,7 +265,7 @@ struct FormatToken {
   /// \c true if this token ends a binary expression.
   bool EndsBinaryExpression = false;
 
-  /// Is this is an operator (or "."/"->") in a sequence of operators
+  /// If this is an operator (or "."/"->") in a sequence of operators
   /// with the same precedence, contains the 0-based operator index.
   unsigned OperatorIndex = 0;
 

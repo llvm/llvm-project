@@ -1502,6 +1502,9 @@ protected:
     unsigned Kind : 8;
   };
 
+  /// FunctionTypeBitfields store various bits belonging to FunctionProtoType.
+  /// Only common bits are stored here. Additional uncommon bits are stored
+  /// in a trailing object after FunctionProtoType.
   class FunctionTypeBitfields {
     friend class FunctionProtoType;
     friend class FunctionType;
@@ -1512,6 +1515,11 @@ protected:
     /// regparm and the calling convention.
     unsigned ExtInfo : 12;
 
+    /// The ref-qualifier associated with a \c FunctionProtoType.
+    ///
+    /// This is a value of type \c RefQualifierKind.
+    unsigned RefQualifier : 2;
+
     /// Used only by FunctionProtoType, put here to pack with the
     /// other bitfields.
     /// The qualifiers are part of FunctionProtoType because...
@@ -1520,10 +1528,23 @@ protected:
     /// cv-qualifier-seq, [...], are part of the function type.
     unsigned TypeQuals : 4;
 
-    /// The ref-qualifier associated with a \c FunctionProtoType.
-    ///
-    /// This is a value of type \c RefQualifierKind.
-    unsigned RefQualifier : 2;
+    /// The number of parameters this function has, not counting '...'.
+    /// According to [implimits] 8 bits should be enough here but this is
+    /// somewhat easy to exceed with metaprogramming and so we would like to
+    /// keep NumParams as wide as reasonably possible.
+    unsigned NumParams : 16;
+
+    /// The type of exception specification this function has.
+    unsigned ExceptionSpecType : 4;
+
+    /// Whether this function has extended parameter information.
+    unsigned HasExtParameterInfos : 1;
+
+    /// Whether the function is variadic.
+    unsigned Variadic : 1;
+
+    /// Whether this function has a trailing return type.
+    unsigned HasTrailingReturn : 1;
   };
 
   class ObjCObjectTypeBitfields {
@@ -3331,6 +3352,92 @@ class FunctionType : public Type {
   QualType ResultType;
 
 public:
+  /// Interesting information about a specific parameter that can't simply
+  /// be reflected in parameter's type. This is only used by FunctionProtoType
+  /// but is in FunctionType to make this class available during the
+  /// specification of the bases of FunctionProtoType.
+  ///
+  /// It makes sense to model language features this way when there's some
+  /// sort of parameter-specific override (such as an attribute) that
+  /// affects how the function is called.  For example, the ARC ns_consumed
+  /// attribute changes whether a parameter is passed at +0 (the default)
+  /// or +1 (ns_consumed).  This must be reflected in the function type,
+  /// but isn't really a change to the parameter type.
+  ///
+  /// One serious disadvantage of modelling language features this way is
+  /// that they generally do not work with language features that attempt
+  /// to destructure types.  For example, template argument deduction will
+  /// not be able to match a parameter declared as
+  ///   T (*)(U)
+  /// against an argument of type
+  ///   void (*)(__attribute__((ns_consumed)) id)
+  /// because the substitution of T=void, U=id into the former will
+  /// not produce the latter.
+  class ExtParameterInfo {
+    enum {
+      ABIMask = 0x0F,
+      IsConsumed = 0x10,
+      HasPassObjSize = 0x20,
+      IsNoEscape = 0x40,
+    };
+    unsigned char Data = 0;
+
+  public:
+    ExtParameterInfo() = default;
+
+    /// Return the ABI treatment of this parameter.
+    ParameterABI getABI() const { return ParameterABI(Data & ABIMask); }
+    ExtParameterInfo withABI(ParameterABI kind) const {
+      ExtParameterInfo copy = *this;
+      copy.Data = (copy.Data & ~ABIMask) | unsigned(kind);
+      return copy;
+    }
+
+    /// Is this parameter considered "consumed" by Objective-C ARC?
+    /// Consumed parameters must have retainable object type.
+    bool isConsumed() const { return (Data & IsConsumed); }
+    ExtParameterInfo withIsConsumed(bool consumed) const {
+      ExtParameterInfo copy = *this;
+      if (consumed)
+        copy.Data |= IsConsumed;
+      else
+        copy.Data &= ~IsConsumed;
+      return copy;
+    }
+
+    bool hasPassObjectSize() const { return Data & HasPassObjSize; }
+    ExtParameterInfo withHasPassObjectSize() const {
+      ExtParameterInfo Copy = *this;
+      Copy.Data |= HasPassObjSize;
+      return Copy;
+    }
+
+    bool isNoEscape() const { return Data & IsNoEscape; }
+    ExtParameterInfo withIsNoEscape(bool NoEscape) const {
+      ExtParameterInfo Copy = *this;
+      if (NoEscape)
+        Copy.Data |= IsNoEscape;
+      else
+        Copy.Data &= ~IsNoEscape;
+      return Copy;
+    }
+
+    unsigned char getOpaqueValue() const { return Data; }
+    static ExtParameterInfo getFromOpaqueValue(unsigned char data) {
+      ExtParameterInfo result;
+      result.Data = data;
+      return result;
+    }
+
+    friend bool operator==(ExtParameterInfo lhs, ExtParameterInfo rhs) {
+      return lhs.Data == rhs.Data;
+    }
+
+    friend bool operator!=(ExtParameterInfo lhs, ExtParameterInfo rhs) {
+      return lhs.Data != rhs.Data;
+    }
+  };
+
   /// A class which abstracts out some details necessary for
   /// making a call.
   ///
@@ -3465,6 +3572,22 @@ public:
     }
   };
 
+  /// A simple holder for a QualType representing a type in an
+  /// exception specification. Unfortunately needed by FunctionProtoType
+  /// because TrailingObjects cannot handle repeated types.
+  struct ExceptionType { QualType Type; };
+
+  /// A simple holder for various uncommon bits which do not fit in
+  /// FunctionTypeBitfields. Aligned to alignof(void *) to maintain the
+  /// alignment of subsequent objects in TrailingObjects. You must update
+  /// hasExtraBitfields in FunctionProtoType after adding extra data here.
+  struct alignas(void *) FunctionTypeExtraBitfields {
+    /// The number of types in the exception specification.
+    /// A whole unsigned is not needed here and according to
+    /// [implimits] 8 bits would be enough here.
+    unsigned NumExceptionType;
+  };
+
 protected:
   FunctionType(TypeClass tc, QualType res,
                QualType Canonical, bool Dependent,
@@ -3544,104 +3667,61 @@ public:
 
 /// Represents a prototype with parameter type info, e.g.
 /// 'int foo(int)' or 'int foo(void)'.  'void' is represented as having no
-/// parameters, not as having a single void parameter. Such a type can have an
-/// exception specification, but this specification is not part of the canonical
-/// type.
-class FunctionProtoType : public FunctionType, public llvm::FoldingSetNode {
+/// parameters, not as having a single void parameter. Such a type can have
+/// an exception specification, but this specification is not part of the
+/// canonical type. FunctionProtoType has several trailing objects, some of
+/// which optional. For more information about the trailing objects see
+/// the first comment inside FunctionProtoType.
+class FunctionProtoType final
+    : public FunctionType,
+      public llvm::FoldingSetNode,
+      private llvm::TrailingObjects<
+          FunctionProtoType, QualType, FunctionType::FunctionTypeExtraBitfields,
+          FunctionType::ExceptionType, Expr *, FunctionDecl *,
+          FunctionType::ExtParameterInfo> {
+  friend class ASTContext; // ASTContext creates these.
+  friend TrailingObjects;
+
+  // FunctionProtoType is followed by several trailing objects, some of
+  // which optional. They are in order:
+  //
+  // * An array of getNumParams() QualType holding the parameter types.
+  //   Always present. Note that for the vast majority of FunctionProtoType,
+  //   these will be the only trailing objects.
+  //
+  // * Optionally if some extra data is stored in FunctionTypeExtraBitfields
+  //   (see FunctionTypeExtraBitfields and FunctionTypeBitfields):
+  //   a single FunctionTypeExtraBitfields. Present if and only if
+  //   hasExtraBitfields() is true.
+  //
+  // * Optionally exactly one of:
+  //   * an array of getNumExceptions() ExceptionType,
+  //   * a single Expr *,
+  //   * a pair of FunctionDecl *,
+  //   * a single FunctionDecl *
+  //   used to store information about the various types of exception
+  //   specification. See getExceptionSpecSize for the details.
+  //
+  // * Optionally an array of getNumParams() ExtParameterInfo holding
+  //   an ExtParameterInfo for each of the parameters. Present if and
+  //   only if hasExtParameterInfos() is true.
+  //
+  // The optional FunctionTypeExtraBitfields has to be before the data
+  // related to the exception specification since it contains the number
+  // of exception types.
+  //
+  // We put the ExtParameterInfos last.  If all were equal, it would make
+  // more sense to put these before the exception specification, because
+  // it's much easier to skip past them compared to the elaborate switch
+  // required to skip the exception specification.  However, all is not
+  // equal; ExtParameterInfos are used to model very uncommon features,
+  // and it's better not to burden the more common paths.
+
 public:
-  /// Interesting information about a specific parameter that can't simply
-  /// be reflected in parameter's type.
-  ///
-  /// It makes sense to model language features this way when there's some
-  /// sort of parameter-specific override (such as an attribute) that
-  /// affects how the function is called.  For example, the ARC ns_consumed
-  /// attribute changes whether a parameter is passed at +0 (the default)
-  /// or +1 (ns_consumed).  This must be reflected in the function type,
-  /// but isn't really a change to the parameter type.
-  ///
-  /// One serious disadvantage of modelling language features this way is
-  /// that they generally do not work with language features that attempt
-  /// to destructure types.  For example, template argument deduction will
-  /// not be able to match a parameter declared as
-  ///   T (*)(U)
-  /// against an argument of type
-  ///   void (*)(__attribute__((ns_consumed)) id)
-  /// because the substitution of T=void, U=id into the former will
-  /// not produce the latter.
-  class ExtParameterInfo {
-    enum {
-      ABIMask         = 0x0F,
-      IsConsumed      = 0x10,
-      HasPassObjSize  = 0x20,
-      IsNoEscape      = 0x40,
-    };
-    unsigned char Data = 0;
-
-  public:
-    ExtParameterInfo() = default;
-
-    /// Return the ABI treatment of this parameter.
-    ParameterABI getABI() const {
-      return ParameterABI(Data & ABIMask);
-    }
-    ExtParameterInfo withABI(ParameterABI kind) const {
-      ExtParameterInfo copy = *this;
-      copy.Data = (copy.Data & ~ABIMask) | unsigned(kind);
-      return copy;
-    }
-
-    /// Is this parameter considered "consumed" by Objective-C ARC?
-    /// Consumed parameters must have retainable object type.
-    bool isConsumed() const {
-      return (Data & IsConsumed);
-    }
-    ExtParameterInfo withIsConsumed(bool consumed) const {
-      ExtParameterInfo copy = *this;
-      if (consumed) {
-        copy.Data |= IsConsumed;
-      } else {
-        copy.Data &= ~IsConsumed;
-      }
-      return copy;
-    }
-
-    bool hasPassObjectSize() const {
-      return Data & HasPassObjSize;
-    }
-    ExtParameterInfo withHasPassObjectSize() const {
-      ExtParameterInfo Copy = *this;
-      Copy.Data |= HasPassObjSize;
-      return Copy;
-    }
-
-    bool isNoEscape() const {
-      return Data & IsNoEscape;
-    }
-
-    ExtParameterInfo withIsNoEscape(bool NoEscape) const {
-      ExtParameterInfo Copy = *this;
-      if (NoEscape)
-        Copy.Data |= IsNoEscape;
-      else
-        Copy.Data &= ~IsNoEscape;
-      return Copy;
-    }
-
-    unsigned char getOpaqueValue() const { return Data; }
-    static ExtParameterInfo getFromOpaqueValue(unsigned char data) {
-      ExtParameterInfo result;
-      result.Data = data;
-      return result;
-    }
-
-    friend bool operator==(ExtParameterInfo lhs, ExtParameterInfo rhs) {
-      return lhs.Data == rhs.Data;
-    }
-    friend bool operator!=(ExtParameterInfo lhs, ExtParameterInfo rhs) {
-      return lhs.Data != rhs.Data;
-    }
-  };
-
+  /// Holds information about the various types of exception specification.
+  /// ExceptionSpecInfo is not stored as such in FunctionProtoType but is
+  /// used to group together the various bits of information about the
+  /// exception specification.
   struct ExceptionSpecInfo {
     /// The kind of exception specification this is.
     ExceptionSpecificationType Type = EST_None;
@@ -3665,7 +3745,9 @@ public:
     ExceptionSpecInfo(ExceptionSpecificationType EST) : Type(EST) {}
   };
 
-  /// Extra information about a function prototype.
+  /// Extra information about a function prototype. ExtProtoInfo is not
+  /// stored as such in FunctionProtoType but is used to group together
+  /// the various bits of extra information about a function prototype.
   struct ExtProtoInfo {
     FunctionType::ExtInfo ExtInfo;
     bool Variadic : 1;
@@ -3675,21 +3757,42 @@ public:
     ExceptionSpecInfo ExceptionSpec;
     const ExtParameterInfo *ExtParameterInfos = nullptr;
 
-    ExtProtoInfo()
-        : Variadic(false), HasTrailingReturn(false) {}
+    ExtProtoInfo() : Variadic(false), HasTrailingReturn(false) {}
 
     ExtProtoInfo(CallingConv CC)
         : ExtInfo(CC), Variadic(false), HasTrailingReturn(false) {}
 
-    ExtProtoInfo withExceptionSpec(const ExceptionSpecInfo &O) {
+    ExtProtoInfo withExceptionSpec(const ExceptionSpecInfo &ESI) {
       ExtProtoInfo Result(*this);
-      Result.ExceptionSpec = O;
+      Result.ExceptionSpec = ESI;
       return Result;
     }
   };
 
 private:
-  friend class ASTContext; // ASTContext creates these.
+  unsigned numTrailingObjects(OverloadToken<QualType>) const {
+    return getNumParams();
+  }
+
+  unsigned numTrailingObjects(OverloadToken<FunctionTypeExtraBitfields>) const {
+    return hasExtraBitfields();
+  }
+
+  unsigned numTrailingObjects(OverloadToken<ExceptionType>) const {
+    return getExceptionSpecSize().NumExceptionType;
+  }
+
+  unsigned numTrailingObjects(OverloadToken<Expr *>) const {
+    return getExceptionSpecSize().NumExprPtr;
+  }
+
+  unsigned numTrailingObjects(OverloadToken<FunctionDecl *>) const {
+    return getExceptionSpecSize().NumFunctionDeclPtr;
+  }
+
+  unsigned numTrailingObjects(OverloadToken<ExtParameterInfo>) const {
+    return hasExtParameterInfos() ? getNumParams() : 0;
+  }
 
   /// Determine whether there are any argument types that
   /// contain an unexpanded parameter pack.
@@ -3705,88 +3808,67 @@ private:
   FunctionProtoType(QualType result, ArrayRef<QualType> params,
                     QualType canonical, const ExtProtoInfo &epi);
 
-  /// The number of parameters this function has, not counting '...'.
-  unsigned NumParams : 15;
+  /// This struct is returned by getExceptionSpecSize and is used to
+  /// translate an ExceptionSpecificationType to the number and kind
+  /// of trailing objects related to the exception specification.
+  struct ExceptionSpecSizeHolder {
+    unsigned NumExceptionType;
+    unsigned NumExprPtr;
+    unsigned NumFunctionDeclPtr;
+  };
 
-  /// The number of types in the exception spec, if any.
-  unsigned NumExceptions : 9;
-
-  /// The type of exception specification this function has.
-  unsigned ExceptionSpecType : 4;
-
-  /// Whether this function has extended parameter information.
-  unsigned HasExtParameterInfos : 1;
-
-  /// Whether the function is variadic.
-  unsigned Variadic : 1;
-
-  /// Whether this function has a trailing return type.
-  unsigned HasTrailingReturn : 1;
-
-  // ParamInfo - There is an variable size array after the class in memory that
-  // holds the parameter types.
-
-  // Exceptions - There is another variable size array after ArgInfo that
-  // holds the exception types.
-
-  // NoexceptExpr - Instead of Exceptions, there may be a single Expr* pointing
-  // to the expression in the noexcept() specifier.
-
-  // ExceptionSpecDecl, ExceptionSpecTemplate - Instead of Exceptions, there may
-  // be a pair of FunctionDecl* pointing to the function which should be used to
-  // instantiate this function type's exception specification, and the function
-  // from which it should be instantiated.
-
-  // ExtParameterInfos - A variable size array, following the exception
-  // specification and of length NumParams, holding an ExtParameterInfo
-  // for each of the parameters.  This only appears if HasExtParameterInfos
-  // is true.
-
-  const ExtParameterInfo *getExtParameterInfosBuffer() const {
-    assert(hasExtParameterInfos());
-
-    // Find the end of the exception specification.
-    const auto *ptr = reinterpret_cast<const char *>(exception_begin());
-    ptr += getExceptionSpecSize();
-
-    return reinterpret_cast<const ExtParameterInfo *>(ptr);
-  }
-
-  static size_t getExceptionSpecSize(ExceptionSpecificationType EST,
-                                     unsigned NumExceptions) {
+  /// Return the number and kind of trailing objects
+  /// related to the exception specification.
+  static ExceptionSpecSizeHolder
+  getExceptionSpecSize(ExceptionSpecificationType EST, unsigned NumExceptions) {
     switch (EST) {
     case EST_None:
     case EST_DynamicNone:
     case EST_MSAny:
     case EST_BasicNoexcept:
     case EST_Unparsed:
-      return 0;
+      return {0, 0, 0};
 
     case EST_Dynamic:
-      return NumExceptions * sizeof(QualType);
+      return {NumExceptions, 0, 0};
 
     case EST_DependentNoexcept:
     case EST_NoexceptFalse:
     case EST_NoexceptTrue:
-      return sizeof(Expr *);
+      return {0, 1, 0};
 
     case EST_Uninstantiated:
-      return 2 * sizeof(FunctionDecl *);
+      return {0, 0, 2};
 
     case EST_Unevaluated:
-      return sizeof(FunctionDecl *);
+      return {0, 0, 1};
     }
     llvm_unreachable("bad exception specification kind");
   }
-  size_t getExceptionSpecSize() const {
+
+  /// Return the number and kind of trailing objects
+  /// related to the exception specification.
+  ExceptionSpecSizeHolder getExceptionSpecSize() const {
     return getExceptionSpecSize(getExceptionSpecType(), getNumExceptions());
   }
 
+  /// Whether the trailing FunctionTypeExtraBitfields is present.
+  static bool hasExtraBitfields(ExceptionSpecificationType EST) {
+    // If the exception spec type is EST_Dynamic then we have > 0 exception
+    // types and the exact number is stored in FunctionTypeExtraBitfields.
+    return EST == EST_Dynamic;
+  }
+
+  /// Whether the trailing FunctionTypeExtraBitfields is present.
+  bool hasExtraBitfields() const {
+    return hasExtraBitfields(getExceptionSpecType());
+  }
+
 public:
-  unsigned getNumParams() const { return NumParams; }
+  unsigned getNumParams() const { return FunctionTypeBits.NumParams; }
 
   QualType getParamType(unsigned i) const {
-    assert(i < NumParams && "invalid parameter index");
+    assert(i < getNumParams() && "invalid parameter index");
     return param_type_begin()[i];
   }
 
@@ -3812,20 +3894,18 @@ public:
     } else if (EPI.ExceptionSpec.Type == EST_Unevaluated) {
       EPI.ExceptionSpec.SourceDecl = getExceptionSpecDecl();
     }
-    if (hasExtParameterInfos())
-      EPI.ExtParameterInfos = getExtParameterInfosBuffer();
+    EPI.ExtParameterInfos = getExtParameterInfosOrNull();
     return EPI;
   }
 
   /// Get the kind of exception specification on this function.
   ExceptionSpecificationType getExceptionSpecType() const {
-    return static_cast<ExceptionSpecificationType>(ExceptionSpecType);
+    return static_cast<ExceptionSpecificationType>(
+        FunctionTypeBits.ExceptionSpecType);
   }
 
   /// Return whether this function has any kind of exception spec.
-  bool hasExceptionSpec() const {
-    return getExceptionSpecType() != EST_None;
-  }
+  bool hasExceptionSpec() const { return getExceptionSpecType() != EST_None; }
 
   /// Return whether this function has a dynamic (throw) exception spec.
   bool hasDynamicExceptionSpec() const {
@@ -3844,16 +3924,26 @@ public:
   /// spec.
   bool hasInstantiationDependentExceptionSpec() const;
 
-  unsigned getNumExceptions() const { return NumExceptions; }
+  /// Return the number of types in the exception specification.
+  unsigned getNumExceptions() const {
+    return getExceptionSpecType() == EST_Dynamic
+               ? getTrailingObjects<FunctionTypeExtraBitfields>()
+                     ->NumExceptionType
+               : 0;
+  }
+
+  /// Return the ith exception type, where 0 <= i < getNumExceptions().
   QualType getExceptionType(unsigned i) const {
-    assert(i < NumExceptions && "Invalid exception number!");
+    assert(i < getNumExceptions() && "Invalid exception number!");
     return exception_begin()[i];
   }
+
+  /// Return the expression inside noexcept(expression), or a null pointer
+  /// if there is none (because the exception spec is not of this form).
   Expr *getNoexceptExpr() const {
     if (!isComputedNoexcept(getExceptionSpecType()))
       return nullptr;
-    // NoexceptExpr sits where the arguments end.
-    return *reinterpret_cast<Expr *const *>(param_type_end());
+    return *getTrailingObjects<Expr *>();
   }
 
   /// If this function type has an exception specification which hasn't
@@ -3864,7 +3954,7 @@ public:
     if (getExceptionSpecType() != EST_Uninstantiated &&
         getExceptionSpecType() != EST_Unevaluated)
       return nullptr;
-    return reinterpret_cast<FunctionDecl *const *>(param_type_end())[0];
+    return getTrailingObjects<FunctionDecl *>()[0];
   }
 
   /// If this function type has an uninstantiated exception
@@ -3874,7 +3964,7 @@ public:
   FunctionDecl *getExceptionSpecTemplate() const {
     if (getExceptionSpecType() != EST_Uninstantiated)
       return nullptr;
-    return reinterpret_cast<FunctionDecl *const *>(param_type_end())[1];
+    return getTrailingObjects<FunctionDecl *>()[1];
   }
 
   /// Determine whether this function type has a non-throwing exception
@@ -3885,11 +3975,11 @@ public:
   /// specification. If this depends on template arguments, returns
   /// \c ResultIfDependent.
   bool isNothrow(bool ResultIfDependent = false) const {
-    return ResultIfDependent ? canThrow() != CT_Can
-                             : canThrow() == CT_Cannot;
+    return ResultIfDependent ? canThrow() != CT_Can : canThrow() == CT_Cannot;
   }
 
-  bool isVariadic() const { return Variadic; }
+  /// Whether this function prototype is variadic.
+  bool isVariadic() const { return FunctionTypeBits.Variadic; }
 
   /// Determines whether this function prototype contains a
   /// parameter pack at the end.
@@ -3899,7 +3989,8 @@ public:
   /// function.
   bool isTemplateVariadic() const;
 
-  bool hasTrailingReturn() const { return HasTrailingReturn; }
+  /// Whether this function prototype has a trailing return type.
+  bool hasTrailingReturn() const { return FunctionTypeBits.HasTrailingReturn; }
 
   unsigned getTypeQuals() const { return FunctionType::getTypeQuals(); }
 
@@ -3916,11 +4007,11 @@ public:
   }
 
   param_type_iterator param_type_begin() const {
-    return reinterpret_cast<const QualType *>(this+1);
+    return getTrailingObjects<QualType>();
   }
 
   param_type_iterator param_type_end() const {
-    return param_type_begin() + NumParams;
+    return param_type_begin() + getNumParams();
   }
 
   using exception_iterator = const QualType *;
@@ -3930,22 +4021,23 @@ public:
   }
 
   exception_iterator exception_begin() const {
-    // exceptions begin where arguments end
-    return param_type_end();
+    return reinterpret_cast<exception_iterator>(
+        getTrailingObjects<ExceptionType>());
   }
 
   exception_iterator exception_end() const {
-    if (getExceptionSpecType() != EST_Dynamic)
-      return exception_begin();
-    return exception_begin() + NumExceptions;
+    return exception_begin() + getNumExceptions();
   }
 
   /// Is there any interesting extra information for any of the parameters
   /// of this function type?
-  bool hasExtParameterInfos() const { return HasExtParameterInfos; }
+  bool hasExtParameterInfos() const {
+    return FunctionTypeBits.HasExtParameterInfos;
+  }
+
   ArrayRef<ExtParameterInfo> getExtParameterInfos() const {
     assert(hasExtParameterInfos());
-    return ArrayRef<ExtParameterInfo>(getExtParameterInfosBuffer(),
+    return ArrayRef<ExtParameterInfo>(getTrailingObjects<ExtParameterInfo>(),
                                       getNumParams());
   }
 
@@ -3955,27 +4047,27 @@ public:
   const ExtParameterInfo *getExtParameterInfosOrNull() const {
     if (!hasExtParameterInfos())
       return nullptr;
-    return getExtParameterInfosBuffer();
+    return getTrailingObjects<ExtParameterInfo>();
   }
 
   ExtParameterInfo getExtParameterInfo(unsigned I) const {
     assert(I < getNumParams() && "parameter index out of range");
     if (hasExtParameterInfos())
-      return getExtParameterInfosBuffer()[I];
+      return getTrailingObjects<ExtParameterInfo>()[I];
     return ExtParameterInfo();
   }
 
   ParameterABI getParameterABI(unsigned I) const {
     assert(I < getNumParams() && "parameter index out of range");
     if (hasExtParameterInfos())
-      return getExtParameterInfosBuffer()[I].getABI();
+      return getTrailingObjects<ExtParameterInfo>()[I].getABI();
     return ParameterABI::Ordinary;
   }
 
   bool isParamConsumed(unsigned I) const {
     assert(I < getNumParams() && "parameter index out of range");
     if (hasExtParameterInfos())
-      return getExtParameterInfosBuffer()[I].isConsumed();
+      return getTrailingObjects<ExtParameterInfo>()[I].isConsumed();
     return false;
   }
 

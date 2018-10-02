@@ -86,6 +86,7 @@ extern llvm::cl::opt<bool> Funcsigs;
 extern llvm::cl::opt<bool> Arrays;
 extern llvm::cl::opt<bool> Typedefs;
 extern llvm::cl::opt<bool> Pointers;
+extern llvm::cl::opt<bool> VTShapes;
 extern llvm::cl::opt<bool> All;
 extern llvm::cl::opt<bool> ExcludeCompilerGenerated;
 

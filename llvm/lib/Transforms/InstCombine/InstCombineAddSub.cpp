@@ -1662,6 +1662,39 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     }
   }
 
+  {
+    // ~A - Min/Max(~A, O) -> Max/Min(A, ~O) - A
+    // ~A - Min/Max(O, ~A) -> Max/Min(A, ~O) - A
+    // Min/Max(~A, O) - ~A -> A - Max/Min(A, ~O)
+    // Min/Max(O, ~A) - ~A -> A - Max/Min(A, ~O)
+    // So long as O here is freely invertible, this will be neutral or a win.
+    Value *LHS, *RHS, *A;
+    Value *NotA = Op0, *MinMax = Op1;
+    SelectPatternFlavor SPF = matchSelectPattern(MinMax, LHS, RHS).Flavor;
+    if (!SelectPatternResult::isMinOrMax(SPF)) {
+      NotA = Op1;
+      MinMax = Op0;
+      SPF = matchSelectPattern(MinMax, LHS, RHS).Flavor;
+    }
+    if (SelectPatternResult::isMinOrMax(SPF) &&
+        match(NotA, m_Not(m_Value(A))) && (NotA == LHS || NotA == RHS)) {
+      if (NotA == LHS)
+        std::swap(LHS, RHS);
+      // LHS is now O above and expected to have at least 2 uses (the min/max)
+      // NotA is epected to have 2 uses from the min/max and 1 from the sub.
+      if (IsFreeToInvert(LHS, !LHS->hasNUsesOrMore(3)) &&
+          !NotA->hasNUsesOrMore(4)) {
+        // Note: We don't generate the inverse max/min, just create the not of
+        // it and let other folds do the rest.
+        Value *Not = Builder.CreateNot(MinMax);
+        if (NotA == Op0)
+          return BinaryOperator::CreateSub(Not, A);
+        else
+          return BinaryOperator::CreateSub(A, Not);
+      }
+    }
+  }
+
   // Optimize pointer differences into the same array into a size.  Consider:
   //  &A[10] - &A[0]: we should compile this to "10".
   Value *LHSOp, *RHSOp;

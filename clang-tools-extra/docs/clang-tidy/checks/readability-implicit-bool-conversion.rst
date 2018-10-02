@@ -66,7 +66,9 @@ example:
 
 In general, the following conversion types are checked:
 
-- integer expression/literal to boolean,
+- integer expression/literal to boolean (conversion from a single bit bitfield
+  to boolean is explicitly allowed, since there's no ambiguity / information
+  loss in this case),
 
 - floating expression/literal to boolean,
 

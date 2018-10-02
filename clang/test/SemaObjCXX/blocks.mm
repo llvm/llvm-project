@@ -76,21 +76,27 @@ namespace N1 {
 }
 
 // Make sure we successfully instantiate the copy constructor of a
-// __block variable's type.
+// __block variable's type when the variable is captured by an escaping block.
 namespace N2 {
   template <int n> struct A {
     A() {}
     A(const A &other) {
       int invalid[-n]; // expected-error 2 {{array with a negative size}}
     }
+    void m() {}
   };
+
+  typedef void (^BlockFnTy)();
+  void func(BlockFnTy);
 
   void test1() {
     __block A<1> x; // expected-note {{requested here}}
+    func(^{ x.m(); });
   }
 
   template <int n> void test2() {
     __block A<n> x; // expected-note {{requested here}}
+    func(^{ x.m(); });
   }
   template void test2<2>();
 }

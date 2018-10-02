@@ -70,15 +70,16 @@ TEST(DexIterators, DocumentIterator) {
 }
 
 TEST(DexIterators, AndTwoLists) {
+  Corpus C{10000};
   const PostingList L0({0, 5, 7, 10, 42, 320, 9000});
   const PostingList L1({0, 4, 7, 10, 30, 60, 320, 9000});
 
-  auto And = createAnd(L1.iterator(), L0.iterator());
+  auto And = C.intersect(L1.iterator(), L0.iterator());
 
   EXPECT_FALSE(And->reachedEnd());
   EXPECT_THAT(consumeIDs(*And), ElementsAre(0U, 7U, 10U, 320U, 9000U));
 
-  And = createAnd(L0.iterator(), L1.iterator());
+  And = C.intersect(L0.iterator(), L1.iterator());
 
   And->advanceTo(0);
   EXPECT_EQ(And->peek(), 0U);
@@ -94,11 +95,12 @@ TEST(DexIterators, AndTwoLists) {
 }
 
 TEST(DexIterators, AndThreeLists) {
+  Corpus C{10000};
   const PostingList L0({0, 5, 7, 10, 42, 320, 9000});
   const PostingList L1({0, 4, 7, 10, 30, 60, 320, 9000});
   const PostingList L2({1, 4, 7, 11, 30, 60, 320, 9000});
 
-  auto And = createAnd(L0.iterator(), L1.iterator(), L2.iterator());
+  auto And = C.intersect(L0.iterator(), L1.iterator(), L2.iterator());
   EXPECT_EQ(And->peek(), 7U);
   And->advanceTo(300);
   EXPECT_EQ(And->peek(), 320U);
@@ -108,10 +110,11 @@ TEST(DexIterators, AndThreeLists) {
 }
 
 TEST(DexIterators, OrTwoLists) {
+  Corpus C{10000};
   const PostingList L0({0, 5, 7, 10, 42, 320, 9000});
   const PostingList L1({0, 4, 7, 10, 30, 60, 320, 9000});
 
-  auto Or = createOr(L0.iterator(), L1.iterator());
+  auto Or = C.unionOf(L0.iterator(), L1.iterator());
 
   EXPECT_FALSE(Or->reachedEnd());
   EXPECT_EQ(Or->peek(), 0U);
@@ -134,18 +137,19 @@ TEST(DexIterators, OrTwoLists) {
   Or->advanceTo(9001);
   EXPECT_TRUE(Or->reachedEnd());
 
-  Or = createOr(L0.iterator(), L1.iterator());
+  Or = C.unionOf(L0.iterator(), L1.iterator());
 
   EXPECT_THAT(consumeIDs(*Or),
               ElementsAre(0U, 4U, 5U, 7U, 10U, 30U, 42U, 60U, 320U, 9000U));
 }
 
 TEST(DexIterators, OrThreeLists) {
+  Corpus C{10000};
   const PostingList L0({0, 5, 7, 10, 42, 320, 9000});
   const PostingList L1({0, 4, 7, 10, 30, 60, 320, 9000});
   const PostingList L2({1, 4, 7, 11, 30, 60, 320, 9000});
 
-  auto Or = createOr(L0.iterator(), L1.iterator(), L2.iterator());
+  auto Or = C.unionOf(L0.iterator(), L1.iterator(), L2.iterator());
 
   EXPECT_FALSE(Or->reachedEnd());
   EXPECT_EQ(Or->peek(), 0U);
@@ -194,17 +198,18 @@ TEST(DexIterators, QueryTree) {
   //                  |1, 5, 7, 9|                |1, 5|    |0, 3, 5|
   //                  +----------+                +----+    +-------+
   //
+  Corpus C{10};
   const PostingList L0({1, 3, 5, 8, 9});
   const PostingList L1({1, 5, 7, 9});
   const PostingList L2({1, 5});
   const PostingList L3({0, 3, 5});
 
   // Root of the query tree: [1, 5]
-  auto Root = createAnd(
+  auto Root = C.intersect(
       // Lower And Iterator: [1, 5, 9]
-      createAnd(L0.iterator(), createBoost(L1.iterator(), 2U)),
+      C.intersect(L0.iterator(), C.boost(L1.iterator(), 2U)),
       // Lower Or Iterator: [0, 1, 5]
-      createOr(createBoost(L2.iterator(), 3U), createBoost(L3.iterator(), 4U)));
+      C.unionOf(C.boost(L2.iterator(), 3U), C.boost(L3.iterator(), 4U)));
 
   EXPECT_FALSE(Root->reachedEnd());
   EXPECT_EQ(Root->peek(), 1U);
@@ -226,66 +231,73 @@ TEST(DexIterators, QueryTree) {
 }
 
 TEST(DexIterators, StringRepresentation) {
-  const PostingList L0({4, 7, 8, 20, 42, 100});
-  const PostingList L1({1, 3, 5, 8, 9});
-  const PostingList L2({1, 5, 7, 9});
-  const PostingList L3({0, 5});
-  const PostingList L4({0, 1, 5});
+  Corpus C{10};
+  const PostingList L1({1, 3, 5});
+  const PostingList L2({1, 7, 9});
 
-  EXPECT_EQ(llvm::to_string(*(L0.iterator())), "[4 ...]");
-  auto It = L0.iterator();
-  It->advanceTo(19);
-  EXPECT_EQ(llvm::to_string(*It), "[... 20 ...]");
-  It->advanceTo(9000);
-  EXPECT_EQ(llvm::to_string(*It), "[... END]");
+  // No token given, prints full posting list.
+  auto I1 = L1.iterator();
+  EXPECT_EQ(llvm::to_string(*I1), "[1 3 5]");
+
+  // Token given, uses token's string representation.
+  Token Tok(Token::Kind::Trigram, "L2");
+  auto I2 = L1.iterator(&Tok);
+  EXPECT_EQ(llvm::to_string(*I2), "T=L2");
+
+  auto Tree = C.limit(C.intersect(move(I1), move(I2)), 10);
+  EXPECT_EQ(llvm::to_string(*Tree), "(LIMIT 10 (& [1 3 5] T=L2))");
 }
 
 TEST(DexIterators, Limit) {
+  Corpus C{10000};
   const PostingList L0({3, 6, 7, 20, 42, 100});
   const PostingList L1({1, 3, 5, 6, 7, 30, 100});
   const PostingList L2({0, 3, 5, 7, 8, 100});
 
-  auto DocIterator = createLimit(L0.iterator(), 42);
+  auto DocIterator = C.limit(L0.iterator(), 42);
   EXPECT_THAT(consumeIDs(*DocIterator), ElementsAre(3, 6, 7, 20, 42, 100));
 
-  DocIterator = createLimit(L0.iterator(), 3);
+  DocIterator = C.limit(L0.iterator(), 3);
   EXPECT_THAT(consumeIDs(*DocIterator), ElementsAre(3, 6, 7));
 
-  DocIterator = createLimit(L0.iterator(), 0);
+  DocIterator = C.limit(L0.iterator(), 0);
   EXPECT_THAT(consumeIDs(*DocIterator), ElementsAre());
 
-  auto AndIterator = createAnd(
-      createLimit(createTrue(9000), 343), createLimit(L0.iterator(), 2),
-      createLimit(L1.iterator(), 3), createLimit(L2.iterator(), 42));
+  auto AndIterator =
+      C.intersect(C.limit(C.all(), 343), C.limit(L0.iterator(), 2),
+                  C.limit(L1.iterator(), 3), C.limit(L2.iterator(), 42));
   EXPECT_THAT(consumeIDs(*AndIterator), ElementsAre(3, 7));
 }
 
 TEST(DexIterators, True) {
-  auto TrueIterator = createTrue(0U);
+  Corpus C{0};
+  auto TrueIterator = C.all();
   EXPECT_TRUE(TrueIterator->reachedEnd());
   EXPECT_THAT(consumeIDs(*TrueIterator), ElementsAre());
 
+  C = Corpus{7};
   const PostingList L0({1, 2, 5, 7});
-  TrueIterator = createTrue(7U);
+  TrueIterator = C.all();
   EXPECT_THAT(TrueIterator->peek(), 0);
-  auto AndIterator = createAnd(L0.iterator(), move(TrueIterator));
+  auto AndIterator = C.intersect(L0.iterator(), move(TrueIterator));
   EXPECT_FALSE(AndIterator->reachedEnd());
   EXPECT_THAT(consumeIDs(*AndIterator), ElementsAre(1, 2, 5));
 }
 
 TEST(DexIterators, Boost) {
-  auto BoostIterator = createBoost(createTrue(5U), 42U);
+  Corpus C{5};
+  auto BoostIterator = C.boost(C.all(), 42U);
   EXPECT_FALSE(BoostIterator->reachedEnd());
   auto ElementBoost = BoostIterator->consume();
   EXPECT_THAT(ElementBoost, 42U);
 
   const PostingList L0({2, 4});
   const PostingList L1({1, 4});
-  auto Root = createOr(createTrue(5U), createBoost(L0.iterator(), 2U),
-                       createBoost(L1.iterator(), 3U));
+  auto Root = C.unionOf(C.all(), C.boost(L0.iterator(), 2U),
+                        C.boost(L1.iterator(), 3U));
 
   ElementBoost = Root->consume();
-  EXPECT_THAT(ElementBoost, Iterator::DEFAULT_BOOST_SCORE);
+  EXPECT_THAT(ElementBoost, 1);
   Root->advance();
   EXPECT_THAT(Root->peek(), 1U);
   ElementBoost = Root->consume();

@@ -1055,7 +1055,7 @@ class CommandObjectTypeFormatterList : public CommandObjectParsed {
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      static constexpr OptionDefinition g_option_table[] = {
+      static constexpr OptionDefinition g_option_table[] {
           // clang-format off
             {LLDB_OPT_SET_1, false, "category-regex", 'w', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeName,     "Only show categories matching this filter."},
             {LLDB_OPT_SET_2, false, "language",       'l', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeLanguage, "Only show the category for a specific language."}

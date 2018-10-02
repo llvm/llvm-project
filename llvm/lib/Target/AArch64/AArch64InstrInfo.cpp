@@ -2748,9 +2748,6 @@ void AArch64InstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, unsigned SrcReg,
     bool isKill, int FI, const TargetRegisterClass *RC,
     const TargetRegisterInfo *TRI) const {
-  DebugLoc DL;
-  if (MBBI != MBB.end())
-    DL = MBBI->getDebugLoc();
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned Align = MFI.getObjectAlignment(FI);
@@ -2797,7 +2794,7 @@ void AArch64InstrInfo::storeRegToStackSlot(
       Opc = AArch64::ST1Twov1d;
       Offset = false;
     } else if (AArch64::XSeqPairsClassRegClass.hasSubClassEq(RC)) {
-      BuildMI(MBB, MBBI, DL, get(AArch64::STPXi))
+      BuildMI(MBB, MBBI, DebugLoc(), get(AArch64::STPXi))
           .addReg(TRI->getSubReg(SrcReg, AArch64::sube64),
                   getKillRegState(isKill))
           .addReg(TRI->getSubReg(SrcReg, AArch64::subo64),
@@ -2843,7 +2840,7 @@ void AArch64InstrInfo::storeRegToStackSlot(
   }
   assert(Opc && "Unknown register class");
 
-  const MachineInstrBuilder MI = BuildMI(MBB, MBBI, DL, get(Opc))
+  const MachineInstrBuilder MI = BuildMI(MBB, MBBI, DebugLoc(), get(Opc))
                                      .addReg(SrcReg, getKillRegState(isKill))
                                      .addFrameIndex(FI);
 
@@ -2856,9 +2853,6 @@ void AArch64InstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, unsigned DestReg,
     int FI, const TargetRegisterClass *RC,
     const TargetRegisterInfo *TRI) const {
-  DebugLoc DL;
-  if (MBBI != MBB.end())
-    DL = MBBI->getDebugLoc();
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned Align = MFI.getObjectAlignment(FI);
@@ -2905,7 +2899,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(
       Opc = AArch64::LD1Twov1d;
       Offset = false;
     } else if (AArch64::XSeqPairsClassRegClass.hasSubClassEq(RC)) {
-      BuildMI(MBB, MBBI, DL, get(AArch64::LDPXi))
+      BuildMI(MBB, MBBI, DebugLoc(), get(AArch64::LDPXi))
           .addReg(TRI->getSubReg(DestReg, AArch64::sube64),
                   getDefRegState(true))
           .addReg(TRI->getSubReg(DestReg, AArch64::subo64),
@@ -2951,7 +2945,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(
   }
   assert(Opc && "Unknown register class");
 
-  const MachineInstrBuilder MI = BuildMI(MBB, MBBI, DL, get(Opc))
+  const MachineInstrBuilder MI = BuildMI(MBB, MBBI, DebugLoc(), get(Opc))
                                      .addReg(DestReg, getDefRegState(true))
                                      .addFrameIndex(FI);
   if (Offset)

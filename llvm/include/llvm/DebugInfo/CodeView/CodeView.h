@@ -512,6 +512,19 @@ enum class RegisterId : uint16_t {
 #undef CV_REGISTER
 };
 
+/// Two-bit value indicating which register is the designated frame pointer
+/// register. Appears in the S_FRAMEPROC record flags.
+enum class EncodedFramePtrReg : uint8_t {
+  None = 0,
+  StackPtr = 1,
+  FramePtr = 2,
+  BasePtr = 3,
+};
+
+RegisterId decodeFramePtrReg(EncodedFramePtrReg EncodedReg, CPUType CPU);
+
+EncodedFramePtrReg encodeFramePtrReg(RegisterId Reg, CPUType CPU);
+
 /// These values correspond to the THUNK_ORDINAL enumeration.
 enum class ThunkOrdinal : uint8_t {
   Standard,

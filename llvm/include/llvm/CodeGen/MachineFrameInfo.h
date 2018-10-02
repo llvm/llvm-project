@@ -266,6 +266,10 @@ private:
   /// It is only valid during and after prolog/epilog code insertion.
   unsigned MaxCallFrameSize = ~0u;
 
+  /// The number of bytes of callee saved registers that the target wants to
+  /// report for the current function in the CodeView S_FRAMEPROC record.
+  unsigned CVBytesOfCalleeSavedRegisters = 0;
+
   /// The prolog/epilog code inserter fills in this vector with each
   /// callee saved register saved in the frame.  Beyond its use by the prolog/
   /// epilog code inserter, this data used for debug info and exception
@@ -602,6 +606,15 @@ public:
     return MaxCallFrameSize != ~0u;
   }
   void setMaxCallFrameSize(unsigned S) { MaxCallFrameSize = S; }
+
+  /// Returns how many bytes of callee-saved registers the target pushed in the
+  /// prologue. Only used for debug info.
+  unsigned getCVBytesOfCalleeSavedRegisters() const {
+    return CVBytesOfCalleeSavedRegisters;
+  }
+  void setCVBytesOfCalleeSavedRegisters(unsigned S) {
+    CVBytesOfCalleeSavedRegisters = S;
+  }
 
   /// Create a new object at a fixed location on the stack.
   /// All fixed objects should be created before other objects are created for

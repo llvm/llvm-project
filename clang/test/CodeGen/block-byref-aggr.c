@@ -9,11 +9,13 @@ Agg makeAgg(void);
 // cause a block copy.  rdar://9309454
 void test0() {
   __block Agg a = {100};
+  ^{ (void)a; };
 
  a = makeAgg();
 }
 // CHECK-LABEL:    define void @test0()
 // CHECK:      [[A:%.*]] = alloca [[BYREF:%.*]], align 8
+// CHECK-NEXT: alloca <{ i8*, i32, i32, i8*, %{{.*}}*, i8* }>, align 8
 // CHECK-NEXT: [[TEMP:%.*]] = alloca [[AGG]], align 4
 // CHECK:      [[RESULT:%.*]] = call i32 @makeAgg()
 // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[TEMP]], i32 0, i32 0
@@ -35,11 +37,13 @@ void test0() {
 // rdar://11757470
 void test1() {
   __block Agg a, b;
+  ^{ (void)a; (void)b; };
   a = b = makeAgg();
 }
 // CHECK-LABEL:    define void @test1()
 // CHECK:      [[A:%.*]] = alloca [[A_BYREF:%.*]], align 8
 // CHECK-NEXT: [[B:%.*]] = alloca [[B_BYREF:%.*]], align 8
+// CHECK-NEXT: alloca <{ i8*, i32, i32, i8*, %{{.*}}*, i8*, i8* }>, align 8
 // CHECK-NEXT: [[TEMP:%.*]] = alloca [[AGG]], align 4
 // CHECK:      [[RESULT:%.*]] = call i32 @makeAgg()
 // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[AGG]], [[AGG]]* [[TEMP]], i32 0, i32 0

@@ -208,8 +208,8 @@ defm : X86WriteRes<WriteBitTest,         [JALU01], 1, [1], 1>;
 defm : X86WriteRes<WriteBitTestImmLd,    [JALU01,JLAGU], 4, [1,1], 1>;
 defm : X86WriteRes<WriteBitTestRegLd,    [JALU01,JLAGU], 4, [1,1], 5>;
 defm : X86WriteRes<WriteBitTestSet,      [JALU01], 1, [1], 2>;
-defm : X86WriteRes<WriteBitTestSetImmLd, [JALU01,JLAGU], 3, [1,1], 1>;
-defm : X86WriteRes<WriteBitTestSetRegLd, [JALU01,JLAGU], 3, [1,1], 1>;
+defm : X86WriteRes<WriteBitTestSetImmLd, [JALU01,JLAGU], 4, [1,1], 3>;
+defm : X86WriteRes<WriteBitTestSetRegLd, [JALU01,JLAGU], 4, [1,1], 7>;
 
 // This is for simple LEAs with one or two input operands.
 def : WriteRes<WriteLEA, [JALU01]>;
@@ -389,8 +389,8 @@ defm : X86WriteResPairUnsupported<WriteFVarShuffleZ>;
 defm : JWriteResFpuPair<WriteFBlend,      [JFPU01, JFPX],  1>;
 defm : JWriteResYMMPair<WriteFBlendY,     [JFPU01, JFPX],  1, [2, 2], 2>;
 defm : X86WriteResPairUnsupported<WriteFBlendZ>;
-defm : JWriteResFpuPair<WriteFVarBlend,   [JFPU01, JFPX],  2, [1, 4], 3>;
-defm : JWriteResYMMPair<WriteFVarBlendY,  [JFPU01, JFPX],  3, [2, 6], 6>;
+defm : JWriteResFpuPair<WriteFVarBlend,   [JFPU01, JFPX],  2, [4, 4], 3>;
+defm : JWriteResYMMPair<WriteFVarBlendY,  [JFPU01, JFPX],  3, [6, 6], 6>;
 defm : X86WriteResPairUnsupported<WriteFVarBlendZ>;
 defm : JWriteResFpuPair<WriteFShuffle256, [JFPU01, JFPX],  1, [2, 2], 2>;
 defm : X86WriteResPairUnsupported<WriteFVarShuffle256>;
@@ -506,7 +506,7 @@ defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;
 defm : JWriteResFpuPair<WriteBlend,       [JFPU01, JVALU], 1>;
 defm : X86WriteResPairUnsupported<WriteBlendY>;
 defm : X86WriteResPairUnsupported<WriteBlendZ>;
-defm : JWriteResFpuPair<WriteVarBlend,    [JFPU01, JVALU], 2, [1, 4], 3>;
+defm : JWriteResFpuPair<WriteVarBlend,    [JFPU01, JVALU], 2, [4, 4], 3>;
 defm : X86WriteResPairUnsupported<WriteVarBlendY>;
 defm : X86WriteResPairUnsupported<WriteVarBlendZ>;
 defm : JWriteResFpuPair<WriteVecLogic,    [JFPU01, JVALU], 1>;
@@ -552,7 +552,7 @@ def  : WriteRes<WriteMMXMOVMSK,  [JFPU0, JFPA, JALU0]> { let Latency = 3; }
 
 defm : JWriteResFpuPair<WriteAESIMC,      [JFPU0, JVIMUL], 2>;
 defm : JWriteResFpuPair<WriteAESKeyGen,   [JFPU0, JVIMUL], 2>;
-defm : JWriteResFpuPair<WriteAESDecEnc,   [JFPU0, JVIMUL], 3, [1, 1], 2>;
+defm : JWriteResFpuPair<WriteAESDecEnc,   [JFPU01, JVALU, JFPU0, JVIMUL], 3, [1,1,1,1], 2>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Horizontal add/sub  instructions.

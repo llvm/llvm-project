@@ -5,8 +5,8 @@ void noop() {}
 int main() {
   noop();
   goto jump_to_me;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: avoid using 'goto' for flow control
-  // CHECK-MESSAGES: [[@LINE+3]]:1: note: label defined here
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: avoid using 'goto' for flow control
+  // CHECK-NOTES: [[@LINE+3]]:1: note: label defined here
   noop();
 
 jump_to_me:;
@@ -14,14 +14,14 @@ jump_to_me:;
 jump_backwards:;
   noop();
   goto jump_backwards;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: avoid using 'goto' for flow control
-  // CHECK-MESSAGES: [[@LINE-4]]:1: note: label defined here
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: avoid using 'goto' for flow control
+  // CHECK-NOTES: [[@LINE-4]]:1: note: label defined here
 
   goto jump_in_line;
   ;
 jump_in_line:;
-  // CHECK-MESSAGES: [[@LINE-3]]:3: warning: avoid using 'goto' for flow control
-  // CHECK-MESSAGES: [[@LINE-2]]:1: note: label defined here
+  // CHECK-NOTES: [[@LINE-3]]:3: warning: avoid using 'goto' for flow control
+  // CHECK-NOTES: [[@LINE-2]]:1: note: label defined here
 
   // Test the GNU extension https://gcc.gnu.org/onlinedocs/gcc/Labels-as-Values.html
 some_label:;
@@ -132,8 +132,8 @@ before_the_loop:
     for (int j = 0; j < 10; ++j) {
       if (i * j > 80)
         goto before_the_loop;
-      // CHECK-MESSAGES: [[@LINE-1]]:9: warning: avoid using 'goto' for flow control
-      // CHECK-MESSAGES: [[@LINE-8]]:1: note: label defined here
+      // CHECK-NOTES: [[@LINE-1]]:9: warning: avoid using 'goto' for flow control
+      // CHECK-NOTES: [[@LINE-8]]:1: note: label defined here
     }
   }
 }

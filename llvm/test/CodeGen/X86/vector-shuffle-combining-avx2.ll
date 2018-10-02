@@ -691,7 +691,7 @@ define <8 x i32> @constant_fold_permd() {
 define <8 x float> @constant_fold_permps() {
 ; CHECK-LABEL: constant_fold_permps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm0 = [5.000000e+00,7.000000e+00,3.000000e+00,2.000000e+00,8.000000e+00,2.000000e+00,6.000000e+00,1.000000e+00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm0 = [5,7,3,2,8,2,6,1]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <8 x float> @llvm.x86.avx2.permps(<8 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0>, <8 x i32> <i32 4, i32 6, i32 2, i32 1, i32 7, i32 1, i32 5, i32 0>)
   ret <8 x float> %1

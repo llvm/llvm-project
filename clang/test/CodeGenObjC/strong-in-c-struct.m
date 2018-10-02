@@ -485,7 +485,38 @@ void test_constructor_destructor_StructArray(void) {
   StructArray t;
 }
 
+// Test that StructArray's field 'd' is copied before entering the loop.
+
+// CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_t0w8_AB8s24n4_t8w16_s24_AE(i8** %[[DST:.*]], i8** %[[SRC:.*]])
+// CHECK: entry:
+// CHECK: %[[DST_ADDR:.*]] = alloca i8**, align 8
+// CHECK: %[[SRC_ADDR:.*]] = alloca i8**, align 8
+// CHECK: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
+// CHECK: store i8** %[[SRC]], i8*** %[[SRC_ADDR]], align 8
+// CHECK: %[[V0:.*]] = load i8**, i8*** %[[DST_ADDR]], align 8
+// CHECK: %[[V1:.*]] = load i8**, i8*** %[[SRC_ADDR]], align 8
+// CHECK: %[[V2:.*]] = bitcast i8** %[[V0]] to i64*
+// CHECK: %[[V3:.*]] = bitcast i8** %[[V1]] to i64*
+// CHECK: %[[V4:.*]] = load i64, i64* %[[V3]], align 8
+// CHECK: store i64 %[[V4]], i64* %[[V2]], align 8
+
+// CHECK: phi i8**
+// CHECK: phi i8**
+
+// CHECK: phi i8**
+// CHECK: phi i8**
+
+// CHECK-NOT: load i64, i64* %
+// CHECK-NOT: store i64 %
+// CHECK: call void @__copy_constructor_8_8_t0w16_s16(
+
+void test_copy_constructor_StructArray(StructArray a) {
+  StructArray t = a;
+}
+
 // Check that IRGen copies the 9-bit bitfield emitting i16 load and store.
+
+// CHECK: define void @test_copy_constructor_Bitfield0(
 
 // CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_s0_t8w2(
 // CHECK: %[[V4:.*]] = bitcast i8** %{{.*}} to i8*
