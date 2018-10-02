@@ -9,6 +9,7 @@
 
 #include "PostingList.h"
 #include "Iterator.h"
+#include "Token.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -23,8 +24,8 @@ namespace {
 /// them on-the-fly when the contents of chunk are to be seen.
 class ChunkIterator : public Iterator {
 public:
-  explicit ChunkIterator(llvm::ArrayRef<Chunk> Chunks)
-      : Chunks(Chunks), CurrentChunk(Chunks.begin()) {
+  explicit ChunkIterator(const Token *Tok, llvm::ArrayRef<Chunk> Chunks)
+      : Tok(Tok), Chunks(Chunks), CurrentChunk(Chunks.begin()) {
     if (!Chunks.empty()) {
       DecompressedChunk = CurrentChunk->decompress();
       CurrentID = DecompressedChunk.begin();
@@ -71,15 +72,16 @@ public:
 
 private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
+    if (Tok != nullptr)
+      return OS << *Tok;
     OS << '[';
-    if (CurrentChunk != Chunks.begin() ||
-        (CurrentID != DecompressedChunk.begin() && !DecompressedChunk.empty()))
-      OS << "... ";
-    OS << (reachedEnd() ? "END" : std::to_string(*CurrentID));
-    if (!reachedEnd() && CurrentID < DecompressedChunk.end() - 1)
-      OS << " ...";
-    OS << ']';
-    return OS;
+    const char *Sep = "";
+    for (const Chunk &C : Chunks)
+      for (const DocID Doc : C.decompress()) {
+        OS << Sep << Doc;
+        Sep = " ";
+      }
+    return OS << ']';
   }
 
   /// If the cursor is at the end of a chunk, place it at the start of the next
@@ -110,6 +112,7 @@ private:
     }
   }
 
+  const Token *Tok;
   llvm::ArrayRef<Chunk> Chunks;
   /// Iterator over chunks.
   /// If CurrentChunk is valid, then DecompressedChunk is
@@ -217,8 +220,8 @@ llvm::SmallVector<DocID, Chunk::PayloadSize + 1> Chunk::decompress() const {
 PostingList::PostingList(llvm::ArrayRef<DocID> Documents)
     : Chunks(encodeStream(Documents)) {}
 
-std::unique_ptr<Iterator> PostingList::iterator() const {
-  return llvm::make_unique<ChunkIterator>(Chunks);
+std::unique_ptr<Iterator> PostingList::iterator(const Token *Tok) const {
+  return llvm::make_unique<ChunkIterator>(Tok, Chunks);
 }
 
 } // namespace dex

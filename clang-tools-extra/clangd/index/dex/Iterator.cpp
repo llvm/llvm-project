@@ -243,8 +243,7 @@ public:
 
 private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
-    OS << "(TRUE {" << Index << "} out of " << Size << ")";
-    return OS;
+    return OS << "true";
   }
 
   DocID Index = 0;
@@ -273,8 +272,7 @@ public:
 
 private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
-    OS << "(BOOST " << Factor << ' ' << *Child << ')';
-    return OS;
+    return OS << "(* " << Factor << ' ' << *Child << ')';
   }
 
   std::unique_ptr<Iterator> Child;
@@ -314,8 +312,7 @@ public:
 
 private:
   llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
-    OS << "(LIMIT " << Limit << '(' << ItemsLeft << ") " << *Child << ')';
-    return OS;
+    return OS << "(LIMIT " << Limit << " " << *Child << ')';
   }
 
   std::unique_ptr<Iterator> Child;

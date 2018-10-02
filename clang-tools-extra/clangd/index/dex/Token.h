@@ -82,6 +82,20 @@ struct Token {
   Kind TokenKind;
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Token &T) {
+    switch (T.TokenKind) {
+    case Kind::Trigram:
+      OS << "T=";
+      break;
+    case Kind::Scope:
+      OS << "S=";
+      break;
+    case Kind::ProximityURI:
+      OS << "U=";
+      break;
+    case Kind::Sentinel:
+      OS << "?=";
+      break;
+    }
     return OS << T.Data;
   }
 

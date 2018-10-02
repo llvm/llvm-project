@@ -226,18 +226,20 @@ TEST(DexIterators, QueryTree) {
 }
 
 TEST(DexIterators, StringRepresentation) {
-  const PostingList L0({4, 7, 8, 20, 42, 100});
-  const PostingList L1({1, 3, 5, 8, 9});
-  const PostingList L2({1, 5, 7, 9});
-  const PostingList L3({0, 5});
-  const PostingList L4({0, 1, 5});
+  const PostingList L1({1, 3, 5});
+  const PostingList L2({1, 7, 9});
 
-  EXPECT_EQ(llvm::to_string(*(L0.iterator())), "[4 ...]");
-  auto It = L0.iterator();
-  It->advanceTo(19);
-  EXPECT_EQ(llvm::to_string(*It), "[... 20 ...]");
-  It->advanceTo(9000);
-  EXPECT_EQ(llvm::to_string(*It), "[... END]");
+  // No token given, prints full posting list.
+  auto I1 = L1.iterator();
+  EXPECT_EQ(llvm::to_string(*I1), "[1 3 5]");
+
+  // Token given, uses token's string representation.
+  Token Tok(Token::Kind::Trigram, "L2");
+  auto I2 = L1.iterator(&Tok);
+  EXPECT_EQ(llvm::to_string(*I2), "T=L2");
+
+  auto Tree = createLimit(createAnd(move(I1), move(I2)), 10);
+  EXPECT_EQ(llvm::to_string(*Tree), "(LIMIT 10 (& [1 3 5] T=L2))");
 }
 
 TEST(DexIterators, Limit) {
