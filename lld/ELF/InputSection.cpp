@@ -873,14 +873,13 @@ static void switchMorestackCallsToMorestackNonSplit(
   }
 
   // Sort both collections to compare addresses efficiently.
-  llvm::sort(MorestackCalls.begin(), MorestackCalls.end(),
-             [](const Relocation *L, const Relocation *R) {
-               return L->Offset < R->Offset;
-             });
+  llvm::sort(MorestackCalls, [](const Relocation *L, const Relocation *R) {
+    return L->Offset < R->Offset;
+  });
   std::vector<Defined *> Functions(Prologues.begin(), Prologues.end());
-  llvm::sort(
-      Functions.begin(), Functions.end(),
-      [](const Defined *L, const Defined *R) { return L->Value < R->Value; });
+  llvm::sort(Functions, [](const Defined *L, const Defined *R) {
+    return L->Value < R->Value;
+  });
 
   auto It = MorestackCalls.begin();
   for (Defined *F : Functions) {

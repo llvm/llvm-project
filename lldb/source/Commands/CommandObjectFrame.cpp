@@ -61,11 +61,11 @@ using namespace lldb_private;
 // CommandObjectFrameDiagnose
 //-------------------------------------------------------------------------
 
-static OptionDefinition g_frame_diag_options[] = {
+static constexpr OptionDefinition g_frame_diag_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_1, false, "register", 'r', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeRegisterName,    "A register to diagnose." },
-  { LLDB_OPT_SET_1, false, "address",  'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeAddress,         "An address to diagnose." },
-  { LLDB_OPT_SET_1, false, "offset",   'o', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset,          "An optional offset.  Requires --register." }
+  { LLDB_OPT_SET_1, false, "register", 'r', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeRegisterName,    "A register to diagnose." },
+  { LLDB_OPT_SET_1, false, "address",  'a', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeAddress,         "An address to diagnose." },
+  { LLDB_OPT_SET_1, false, "offset",   'o', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeOffset,          "An optional offset.  Requires --register." }
     // clang-format on
 };
 
@@ -251,7 +251,7 @@ protected:
 
 static OptionDefinition g_frame_select_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_1, false, "relative", 'r', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset, "A relative frame index offset from the current frame index." },
+  { LLDB_OPT_SET_1, false, "relative", 'r', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeOffset, "A relative frame index offset from the current frame index." },
     // clang-format on
 };
 

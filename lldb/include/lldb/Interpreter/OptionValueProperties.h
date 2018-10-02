@@ -62,7 +62,7 @@ public:
   void Apropos(llvm::StringRef keyword,
                std::vector<const Property *> &matching_properties) const;
 
-  void Initialize(const PropertyDefinition *setting_definitions);
+  void Initialize(const PropertyDefinitions &setting_definitions);
 
   //    bool
   //    GetQualifiedName (Stream &strm);

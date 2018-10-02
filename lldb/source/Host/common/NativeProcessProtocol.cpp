@@ -409,6 +409,29 @@ NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   }
 }
 
+size_t NativeProcessProtocol::GetSoftwareBreakpointPCOffset() {
+  switch (GetArchitecture().GetMachine()) {
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+  case llvm::Triple::systemz:
+    // These architectures report increment the PC after breakpoint is hit.
+    return cantFail(GetSoftwareBreakpointTrapOpcode(0)).size();
+
+  case llvm::Triple::arm:
+  case llvm::Triple::aarch64:
+  case llvm::Triple::mips64:
+  case llvm::Triple::mips64el:
+  case llvm::Triple::mips:
+  case llvm::Triple::mipsel:
+  case llvm::Triple::ppc64le:
+    // On these architectures the PC doesn't get updated for breakpoint hits.
+    return 0;
+
+  default:
+    llvm_unreachable("CPU type not supported!");
+  }
+}
+
 Status NativeProcessProtocol::RemoveBreakpoint(lldb::addr_t addr,
                                                bool hardware) {
   if (hardware)

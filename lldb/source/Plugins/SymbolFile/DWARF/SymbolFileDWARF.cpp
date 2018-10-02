@@ -111,17 +111,14 @@ using namespace lldb_private;
 
 namespace {
 
-PropertyDefinition g_properties[] = {
+static constexpr PropertyDefinition g_properties[] = {
     {"comp-dir-symlink-paths", OptionValue::eTypeFileSpecList, true, 0, nullptr,
-     nullptr,
+     {},
      "If the DW_AT_comp_dir matches any of these paths the symbolic "
      "links will be resolved at DWARF parse time."},
-    {"ignore-file-indexes", OptionValue::eTypeBoolean, true, 0, nullptr,
-     nullptr,
+    {"ignore-file-indexes", OptionValue::eTypeBoolean, true, 0, nullptr, {},
      "Ignore indexes present in the object files and always index DWARF "
-     "manually."},
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, nullptr, nullptr},
-};
+     "manually."}};
 
 enum {
   ePropertySymLinkPaths,
@@ -3625,6 +3622,11 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             is_static_lifetime = true;
         }
         SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
+        if (debug_map_symfile)
+          // Set the module of the expression to the linked module
+          // instead of the oject file so the relocated address can be
+          // found there.
+          location.SetModule(debug_map_symfile->GetObjectFile()->GetModule());
 
         if (is_static_lifetime) {
           if (is_external)

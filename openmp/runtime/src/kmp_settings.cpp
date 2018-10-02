@@ -4658,6 +4658,22 @@ static void __kmp_stg_print_omp_cancellation(kmp_str_buf_t *buffer,
 #endif
 
 #if OMP_50_ENABLED && OMPT_SUPPORT
+static int __kmp_tool = 1;
+
+static void __kmp_stg_parse_omp_tool(char const *name, char const *value,
+                                     void *data) {
+  __kmp_stg_parse_bool(name, value, &__kmp_tool);
+} // __kmp_stg_parse_omp_tool
+
+static void __kmp_stg_print_omp_tool(kmp_str_buf_t *buffer, char const *name,
+                                     void *data) {
+  if (__kmp_env_format) {
+    KMP_STR_BUF_PRINT_BOOL_EX(name, __kmp_tool, "enabled", "disabled");
+  } else {
+    __kmp_str_buf_print(buffer, "   %s=%s\n", name,
+                        __kmp_tool ? "enabled" : "disabled");
+  }
+} // __kmp_stg_print_omp_tool
 
 static char *__kmp_tool_libraries = NULL;
 
@@ -4939,6 +4955,8 @@ static kmp_setting_t __kmp_stg_table[] = {
 #endif
 
 #if OMP_50_ENABLED && OMPT_SUPPORT
+    {"OMP_TOOL", __kmp_stg_parse_omp_tool, __kmp_stg_print_omp_tool, NULL, 0,
+     0},
     {"OMP_TOOL_LIBRARIES", __kmp_stg_parse_omp_tool_libraries,
      __kmp_stg_print_omp_tool_libraries, NULL, 0, 0},
 #endif

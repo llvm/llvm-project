@@ -373,8 +373,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->Entry = getEntry(Args, Args.hasArg(OPT_relocatable) ? "" : "_start");
   Config->ExportAll = Args.hasArg(OPT_export_all);
-  Config->ExportDefault = Args.hasFlag(OPT_export_default,
-      OPT_no_export_default, true);
+  Config->ExportDynamic = Args.hasFlag(OPT_export_dynamic,
+      OPT_no_export_dynamic, false);
   Config->ExportTable = Args.hasArg(OPT_export_table);
   errorHandler().FatalWarnings =
       Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
@@ -396,7 +396,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->SearchPaths = args::getStrings(Args, OPT_L);
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->StripDebug = Args.hasArg(OPT_strip_debug);
-  Config->CompressRelocTargets = Args.hasArg(OPT_compress_relocations);
+  Config->CompressRelocations = Args.hasArg(OPT_compress_relocations);
   Config->StackFirst = Args.hasArg(OPT_stack_first);
   Config->ThinLTOCacheDir = Args.getLastArgValue(OPT_thinlto_cache_dir);
   Config->ThinLTOCachePolicy = CHECK(
@@ -412,7 +412,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->ZStackSize =
       args::getZOptionValue(Args, OPT_z, "stack-size", WasmPageSize);
 
-  if (!Config->StripDebug && !Config->StripAll && Config->CompressRelocTargets)
+  if (!Config->StripDebug && !Config->StripAll && Config->CompressRelocations)
     error("--compress-relocations is incompatible with output debug"
           " information. Please pass --strip-debug or --strip-all");
 
@@ -442,7 +442,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       error("entry point specified for relocatable output file");
     if (Config->GcSections)
       error("-r and --gc-sections may not be used together");
-    if (Config->CompressRelocTargets)
+    if (Config->CompressRelocations)
       error("-r -and --compress-relocations may not be used together");
     if (Args.hasArg(OPT_undefined))
       error("-r -and --undefined may not be used together");
@@ -473,6 +473,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     WasmSym::DsoHandle = Symtab->addSyntheticDataSymbol(
         "__dso_handle", WASM_SYMBOL_VISIBILITY_HIDDEN);
     WasmSym::DataEnd = Symtab->addSyntheticDataSymbol("__data_end", 0);
+
+    // These two synthetic symbols exist purely for the embedder so we always
+    // want to export them.
+    WasmSym::HeapBase->ForceExport = true;
+    WasmSym::DataEnd->ForceExport = true;
   }
 
   createFiles(Args);
@@ -507,7 +512,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
     if (!Config->Entry.empty()) {
       EntrySym = handleUndefined(Config->Entry);
-      if (!EntrySym)
+      if (EntrySym && EntrySym->isDefined())
+        EntrySym->ForceExport = true;
+      else
         error("entry symbol not defined (pass --no-entry to supress): " +
               Config->Entry);
     }
