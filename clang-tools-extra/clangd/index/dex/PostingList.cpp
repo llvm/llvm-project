@@ -63,7 +63,7 @@ public:
   float consume() override {
     assert(!reachedEnd() &&
            "Posting List iterator can't consume() at the end.");
-    return DEFAULT_BOOST_SCORE;
+    return 1;
   }
 
   size_t estimateSize() const override {
