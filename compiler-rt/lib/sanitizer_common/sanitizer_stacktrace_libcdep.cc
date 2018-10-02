@@ -114,11 +114,25 @@ void __sanitizer_symbolize_pc(uptr pc, const char *fmt, char *out_buf,
     return;
   }
   InternalScopedString frame_desc(GetPageSizeCached());
-  RenderFrame(&frame_desc, fmt, 0, frame->info,
-              common_flags()->symbolize_vs_style,
-              common_flags()->strip_path_prefix);
-  internal_strncpy(out_buf, frame_desc.data(), out_buf_size);
-  out_buf[out_buf_size - 1] = 0;
+  uptr frame_num = 0;
+  // Reserve one byte for the final 0.
+  char *out_end = out_buf + out_buf_size - 1;
+  for (SymbolizedStack *cur = frame; cur && out_buf < out_end;
+       cur = cur->next) {
+    frame_desc.clear();
+    RenderFrame(&frame_desc, fmt, frame_num++, cur->info,
+                common_flags()->symbolize_vs_style,
+                common_flags()->strip_path_prefix);
+    if (!frame_desc.length())
+      continue;
+    // Reserve one byte for the terminating 0.
+    uptr n = out_end - out_buf - 1;
+    internal_strncpy(out_buf, frame_desc.data(), n);
+    out_buf += __sanitizer::Min<uptr>(n, frame_desc.length());
+    *out_buf++ = 0;
+  }
+  CHECK(out_buf <= out_end);
+  *out_buf = 0;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
