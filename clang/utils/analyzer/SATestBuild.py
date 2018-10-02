@@ -351,7 +351,7 @@ def runAnalyzePreprocessed(Args, Dir, SBOutputDir, Mode):
     CmdPrefix += "-analyze -analyzer-output=plist -w "
     CmdPrefix += "-analyzer-checker=" + Checkers
     CmdPrefix += " -fcxx-exceptions -fblocks "
-    CmdPrefix += " -analyzer-config " + generateAnalyzerConfig(Args)
+    CmdPrefix += " -analyzer-config %s " % generateAnalyzerConfig(Args)
 
     if (Mode == 2):
         CmdPrefix += "-std=c++11 "
