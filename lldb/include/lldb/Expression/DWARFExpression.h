@@ -152,6 +152,8 @@ public:
   lldb::addr_t GetLocation_DW_OP_addr(uint32_t op_addr_idx, bool &error) const;
 
   bool Update_DW_OP_addr(lldb::addr_t file_addr);
+  
+  void SetModule(const lldb::ModuleSP &module) { m_module_wp = module; }
 
   bool ContainsThreadLocalStorage() const;
 
