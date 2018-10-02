@@ -9579,6 +9579,8 @@ class SBTarget(_object):
         BreakpointCreateByLocation(self, SBFileSpec file_spec, uint32_t line, addr_t offset) -> SBBreakpoint
         BreakpointCreateByLocation(self, SBFileSpec file_spec, uint32_t line, addr_t offset, 
             SBFileSpecList module_list) -> SBBreakpoint
+        BreakpointCreateByLocation(self, SBFileSpec file_spec, uint32_t line, uint32_t column, 
+            addr_t offset, SBFileSpecList module_list) -> SBBreakpoint
         """
         return _lldb.SBTarget_BreakpointCreateByLocation(self, *args)
 
@@ -9842,6 +9844,14 @@ class SBTarget(_object):
     def SetLaunchInfo(self, *args):
         """SetLaunchInfo(self, SBLaunchInfo launch_info)"""
         return _lldb.SBTarget_SetLaunchInfo(self, *args)
+
+    def SetCollectingStats(self, *args):
+        """SetCollectingStats(self, bool v)"""
+        return _lldb.SBTarget_SetCollectingStats(self, *args)
+
+    def GetCollectingStats(self):
+        """GetCollectingStats(self) -> bool"""
+        return _lldb.SBTarget_GetCollectingStats(self)
 
     def GetStatistics(self):
         """GetStatistics(self) -> SBStructuredData"""
