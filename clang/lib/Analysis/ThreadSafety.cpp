@@ -86,8 +86,8 @@ static void warnInvalidLock(ThreadSafetyHandler &Handler,
 
 namespace {
 
-/// A set of CapabilityInfo objects, which are compiled from the
-/// requires attributes on a function.
+/// A set of CapabilityExpr objects, which are compiled from thread safety
+/// attributes on a function.
 class CapExprSet : public SmallVector<CapabilityExpr, 4> {
 public:
   /// Push M onto list, but discard duplicates.

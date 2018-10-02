@@ -413,6 +413,9 @@ public:
   void dump(raw_ostream &OS, SourceManager &SM) const;
   void dump(raw_ostream &OS) const;
 
+  /// \return Unique reproducible object identifier
+  int64_t getID(const ASTContext &Context) const;
+
   /// dumpColor - same as dump(), but forces color highlighting.
   void dumpColor() const;
 
@@ -421,6 +424,7 @@ public:
   void dumpPretty(const ASTContext &Context) const;
   void printPretty(raw_ostream &OS, PrinterHelper *Helper,
                    const PrintingPolicy &Policy, unsigned Indentation = 0,
+                   StringRef NewlineSymbol = "\n",
                    const ASTContext *Context = nullptr) const;
 
   /// viewAST - Visualize an AST rooted at this Stmt* using GraphViz.  Only

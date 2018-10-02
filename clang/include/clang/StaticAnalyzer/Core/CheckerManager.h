@@ -115,13 +115,14 @@ enum class ObjCMessageVisitKind {
 };
 
 class CheckerManager {
+  ASTContext &Context;
   const LangOptions LangOpts;
   AnalyzerOptions &AOptions;
   CheckName CurrentCheckName;
 
 public:
-  CheckerManager(const LangOptions &langOpts, AnalyzerOptions &AOptions)
-      : LangOpts(langOpts), AOptions(AOptions) {}
+  CheckerManager(ASTContext &Context, AnalyzerOptions &AOptions)
+      : Context(Context), LangOpts(Context.getLangOpts()), AOptions(AOptions) {}
 
   ~CheckerManager();
 
@@ -134,6 +135,7 @@ public:
 
   const LangOptions &getLangOpts() const { return LangOpts; }
   AnalyzerOptions &getAnalyzerOptions() { return AOptions; }
+  ASTContext &getASTContext() { return Context; }
 
   using CheckerRef = CheckerBase *;
   using CheckerTag = const void *;
@@ -149,13 +151,13 @@ public:
   ///
   /// \returns a pointer to the checker object.
   template <typename CHECKER, typename... AT>
-  CHECKER *registerChecker(AT... Args) {
+  CHECKER *registerChecker(AT &&... Args) {
     CheckerTag tag = getTag<CHECKER>();
     CheckerRef &ref = CheckerTags[tag];
     if (ref)
       return static_cast<CHECKER *>(ref); // already registered.
 
-    CHECKER *checker = new CHECKER(Args...);
+    CHECKER *checker = new CHECKER(std::forward<AT>(Args)...);
     checker->Name = CurrentCheckName;
     CheckerDtors.push_back(CheckerDtor(checker, destruct<CHECKER>));
     CHECKER::_register(checker, *this);

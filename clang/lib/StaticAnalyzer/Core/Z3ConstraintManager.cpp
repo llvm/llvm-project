@@ -11,10 +11,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTConstraintManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SMTContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SMTExpr.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SMTSolver.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SMTSort.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
 
 #include "clang/Config/config.h"
 
@@ -53,11 +50,11 @@ void Z3ErrorHandler(Z3_context Context, Z3_error_code Error) {
 }
 
 /// Wrapper for Z3 context
-class Z3Context : public SMTContext {
+class Z3Context {
 public:
   Z3_context Context;
 
-  Z3Context() : SMTContext() {
+  Z3Context() {
     Context = Z3_mk_context_rc(Z3Config().Config);
     // The error function is set here because the context is the first object
     // created by the backend
@@ -750,12 +747,6 @@ public:
     return newExprRef(Z3Expr(Context, Z3_mk_fpa_rne(Context.Context)));
   }
 
-  SMTExprRef fromData(const SymbolID ID, const QualType &Ty,
-                      uint64_t BitWidth) override {
-    llvm::Twine Name = "$" + llvm::Twine(ID);
-    return mkSymbol(Name.str().c_str(), mkSort(Ty, BitWidth));
-  }
-
   SMTExprRef fromBoolean(const bool Bool) override {
     Z3_ast AST =
         Bool ? Z3_mk_true(Context.Context) : Z3_mk_false(Context.Context);
@@ -873,7 +864,7 @@ public:
     return toAPFloat(Sort, Assign, Float, true);
   }
 
-  ConditionTruthVal check() const override {
+  Optional<bool> check() const override {
     Z3_lbool res = Z3_solver_check(Context.Context, Solver);
     if (res == Z3_L_TRUE)
       return true;
@@ -881,7 +872,7 @@ public:
     if (res == Z3_L_FALSE)
       return false;
 
-    return ConditionTruthVal();
+    return Optional<bool>();
   }
 
   void push() override { return Z3_solver_push(Context.Context, Solver); }
@@ -905,30 +896,12 @@ public:
   }
 }; // end class Z3Solver
 
-class Z3ConstraintManager : public SMTConstraintManager {
+class Z3ConstraintManager : public SMTConstraintManager<ConstraintZ3, Z3Expr> {
   SMTSolverRef Solver = CreateZ3Solver();
 
 public:
   Z3ConstraintManager(SubEngine *SE, SValBuilder &SB)
       : SMTConstraintManager(SE, SB, Solver) {}
-
-  void addStateConstraints(ProgramStateRef State) const override {
-    // TODO: Don't add all the constraints, only the relevant ones
-    ConstraintZ3Ty CZ = State->get<ConstraintZ3>();
-    ConstraintZ3Ty::iterator I = CZ.begin(), IE = CZ.end();
-
-    // Construct the logical AND of all the constraints
-    if (I != IE) {
-      std::vector<SMTExprRef> ASTs;
-
-      SMTExprRef Constraint = Solver->newExprRef(I++->second);
-      while (I != IE) {
-        Constraint = Solver->mkAnd(Constraint, Solver->newExprRef(I++->second));
-      }
-
-      Solver->addConstraint(Constraint);
-    }
-  }
 
   bool canReasonAbout(SVal X) const override {
     const TargetInfo &TI = getBasicVals().getContext().getTargetInfo();
@@ -972,52 +945,13 @@ public:
 
     llvm_unreachable("Unsupported expression to reason about!");
   }
-
-  ProgramStateRef removeDeadBindings(ProgramStateRef State,
-                                     SymbolReaper &SymReaper) override {
-    ConstraintZ3Ty CZ = State->get<ConstraintZ3>();
-    ConstraintZ3Ty::Factory &CZFactory = State->get_context<ConstraintZ3>();
-
-    for (ConstraintZ3Ty::iterator I = CZ.begin(), E = CZ.end(); I != E; ++I) {
-      if (SymReaper.maybeDead(I->first))
-        CZ = CZFactory.remove(CZ, *I);
-    }
-
-    return State->set<ConstraintZ3>(CZ);
-  }
-
-  ProgramStateRef assumeExpr(ProgramStateRef State, SymbolRef Sym,
-                             const SMTExprRef &Exp) override {
-    // Check the model, avoid simplifying AST to save time
-    if (checkModel(State, Exp).isConstrainedTrue())
-      return State->add<ConstraintZ3>(std::make_pair(Sym, toZ3Expr(*Exp)));
-
-    return nullptr;
-  }
-
-  //==------------------------------------------------------------------------==/
-  // Pretty-printing.
-  //==------------------------------------------------------------------------==/
-
-  void print(ProgramStateRef St, raw_ostream &OS, const char *nl,
-             const char *sep) override {
-
-    ConstraintZ3Ty CZ = St->get<ConstraintZ3>();
-
-    OS << nl << sep << "Constraints:";
-    for (ConstraintZ3Ty::iterator I = CZ.begin(), E = CZ.end(); I != E; ++I) {
-      OS << nl << ' ' << I->first << " : ";
-      I->second.print(OS);
-    }
-    OS << nl;
-  }
 }; // end class Z3ConstraintManager
 
 } // end anonymous namespace
 
 #endif
 
-std::unique_ptr<SMTSolver> clang::ento::CreateZ3Solver() {
+SMTSolverRef clang::ento::CreateZ3Solver() {
 #if CLANG_ANALYZER_WITH_Z3
   return llvm::make_unique<Z3Solver>();
 #else

@@ -422,10 +422,17 @@ TEST(UnaryExprOrTypeTraitExpr, MatchesSizeOfAndAlignOf) {
 
 TEST(MemberExpression, DoesNotMatchClasses) {
   EXPECT_TRUE(notMatches("class Y { void x() {} };", memberExpr()));
+  EXPECT_TRUE(notMatches("class Y { void x() {} };", unresolvedMemberExpr()));
+  EXPECT_TRUE(
+      notMatches("class Y { void x() {} };", cxxDependentScopeMemberExpr()));
 }
 
 TEST(MemberExpression, MatchesMemberFunctionCall) {
   EXPECT_TRUE(matches("class Y { void x() { x(); } };", memberExpr()));
+  EXPECT_TRUE(matches("class Y { template <class T> void x() { x<T>(); } };",
+                      unresolvedMemberExpr()));
+  EXPECT_TRUE(matches("template <class T> void x() { T t; t.f(); }",
+                      cxxDependentScopeMemberExpr()));
 }
 
 TEST(MemberExpression, MatchesVariable) {
@@ -435,6 +442,13 @@ TEST(MemberExpression, MatchesVariable) {
     matches("class Y { void x() { y; } int y; };", memberExpr()));
   EXPECT_TRUE(
     matches("class Y { void x() { Y y; y.y; } int y; };", memberExpr()));
+  EXPECT_TRUE(matches("template <class T>"
+                      "class X : T { void f() { this->T::v; } };",
+                      cxxDependentScopeMemberExpr()));
+  EXPECT_TRUE(matches("template <class T> class X : T { void f() { T::v; } };",
+                      cxxDependentScopeMemberExpr()));
+  EXPECT_TRUE(matches("template <class T> void x() { T t; t.v; }",
+                      cxxDependentScopeMemberExpr()));
 }
 
 TEST(MemberExpression, MatchesStaticVariable) {

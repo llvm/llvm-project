@@ -146,7 +146,7 @@ bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned Steps,
 
     dispatchWorkItem(Node, Node->getLocation(), WU);
   }
-  SubEng.processEndWorklist(hasWorkRemaining());
+  SubEng.processEndWorklist();
   return WList->hasWork();
 }
 
@@ -223,8 +223,12 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
     // Get return statement..
     const ReturnStmt *RS = nullptr;
     if (!L.getSrc()->empty()) {
-      if (Optional<CFGStmt> LastStmt = L.getSrc()->back().getAs<CFGStmt>()) {
+      CFGElement LastElement = L.getSrc()->back();
+      if (Optional<CFGStmt> LastStmt = LastElement.getAs<CFGStmt>()) {
         RS = dyn_cast<ReturnStmt>(LastStmt->getStmt());
+      } else if (Optional<CFGAutomaticObjDtor> AutoDtor =
+                 LastElement.getAs<CFGAutomaticObjDtor>()) {
+        RS = dyn_cast<ReturnStmt>(AutoDtor->getTriggerStmt());
       }
     }
 
@@ -392,8 +396,8 @@ void CoreEngine::HandleBranch(const Stmt *Cond, const Stmt *Term,
   assert(B->succ_size() == 2);
   NodeBuilderContext Ctx(*this, B, Pred);
   ExplodedNodeSet Dst;
-  SubEng.processBranch(Cond, Term, Ctx, Pred, Dst,
-                       *(B->succ_begin()), *(B->succ_begin()+1));
+  SubEng.processBranch(Cond, Ctx, Pred, Dst, *(B->succ_begin()),
+                       *(B->succ_begin() + 1));
   // Enqueue the new frontier onto the worklist.
   enqueue(Dst);
 }

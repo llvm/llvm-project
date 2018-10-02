@@ -141,9 +141,6 @@ private:
   /// implicitly never returns.
   ObjCNoReturn ObjCNoRet;
 
-  /// Whether or not GC is enabled in this analysis.
-  bool ObjCGCEnabled;
-
   /// The BugReporter associated with this engine.  It is important that
   ///  this object be placed at the very end of member variables so that its
   ///  destructor is called before the rest of the ExprEngine is destroyed.
@@ -158,7 +155,7 @@ private:
 
 public:
   ExprEngine(cross_tu::CrossTranslationUnitContext &CTU, AnalysisManager &mgr,
-             bool gcEnabled, SetOfConstDecls *VisitedCalleesIn,
+             SetOfConstDecls *VisitedCalleesIn,
              FunctionSummariesTy *FS, InliningModes HowToInlineIn);
 
   ~ExprEngine() override;
@@ -201,13 +198,23 @@ public:
     return *currBldrCtx;
   }
 
-  bool isObjCGCEnabled() { return ObjCGCEnabled; }
-
   const Stmt *getStmt() const;
 
   void GenerateAutoTransition(ExplodedNode *N);
   void enqueueEndOfPath(ExplodedNodeSet &S);
   void GenerateCallExitNode(ExplodedNode *N);
+
+
+  /// Dump graph to the specified filename.
+  /// If filename is empty, generate a temporary one.
+  /// \return The filename the graph is written into.
+  std::string DumpGraph(bool trim = false, StringRef Filename="");
+
+  /// Dump the graph consisting of the given nodes to a specified filename.
+  /// Generate a temporary filename if it's not provided.
+  /// \return The filename the graph is written into.
+  std::string DumpGraph(ArrayRef<const ExplodedNode *> Nodes,
+                        StringRef Filename = "");
 
   /// Visualize the ExplodedGraph created by executing the simulation.
   void ViewGraph(bool trim = false);
@@ -286,7 +293,7 @@ public:
 
   /// ProcessBranch - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a branch condition.
-  void processBranch(const Stmt *Condition, const Stmt *Term,
+  void processBranch(const Stmt *Condition,
                      NodeBuilderContext& BuilderCtx,
                      ExplodedNode *Pred,
                      ExplodedNodeSet &Dst,
@@ -345,7 +352,7 @@ public:
   void processCallExit(ExplodedNode *Pred) override;
 
   /// Called by CoreEngine when the analysis worklist has terminated.
-  void processEndWorklist(bool hasWorkRemaining) override;
+  void processEndWorklist() override;
 
   /// evalAssume - Callback function invoked by the ConstraintManager when
   ///  making assumptions about state values.
@@ -608,7 +615,6 @@ protected:
                            ProgramStateRef State,
                            const InvalidatedSymbols *Invalidated,
                            ArrayRef<const MemRegion *> ExplicitRegions,
-                           ArrayRef<const MemRegion *> Regions,
                            const CallEvent *Call,
                            RegionAndSymbolInvalidationTraits &ITraits) override;
 
@@ -662,6 +668,11 @@ public:
                        const EvalCallOptions &CallOpts = {});
 
 private:
+  ProgramStateRef finishArgumentConstruction(ProgramStateRef State,
+                                             const CallEvent &Call);
+  void finishArgumentConstruction(ExplodedNodeSet &Dst, ExplodedNode *Pred,
+                                  const CallEvent &Call);
+
   void evalLoadCommon(ExplodedNodeSet &Dst,
                       const Expr *NodeEx,  /* Eventually will be a CFGStmt */
                       const Expr *BoundEx,
@@ -671,14 +682,13 @@ private:
                       const ProgramPointTag *tag,
                       QualType LoadTy);
 
-  // FIXME: 'tag' should be removed, and a LocationContext should be used
-  // instead.
   void evalLocation(ExplodedNodeSet &Dst,
                     const Stmt *NodeEx, /* This will eventually be a CFGStmt */
                     const Stmt *BoundEx,
                     ExplodedNode *Pred,
-                    ProgramStateRef St, SVal location,
-                    const ProgramPointTag *tag, bool isLoad);
+                    ProgramStateRef St,
+                    SVal location,
+                    bool isLoad);
 
   /// Count the stack depth and determine if the call is recursive.
   void examineStackFrames(const Decl *D, const LocationContext *LCtx,
@@ -729,10 +739,14 @@ private:
   ///
   /// If \p Result is provided, the new region will be bound to this expression
   /// instead of \p InitWithAdjustments.
-  ProgramStateRef createTemporaryRegionIfNeeded(ProgramStateRef State,
-                                                const LocationContext *LC,
-                                                const Expr *InitWithAdjustments,
-                                                const Expr *Result = nullptr);
+  ///
+  /// Returns the temporary region with adjustments into the optional
+  /// OutRegionWithAdjustments out-parameter if a new region was indeed needed,
+  /// otherwise sets it to nullptr.
+  ProgramStateRef createTemporaryRegionIfNeeded(
+      ProgramStateRef State, const LocationContext *LC,
+      const Expr *InitWithAdjustments, const Expr *Result = nullptr,
+      const SubRegion **OutRegionWithAdjustments = nullptr);
 
   /// Returns a region representing the first element of a (possibly
   /// multi-dimensional) array, for the purposes of element construction or

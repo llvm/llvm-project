@@ -211,7 +211,8 @@ public:
   }
 
   const llvm::APSInt &getTruthValue(bool b, QualType T) {
-    return getValue(b ? 1 : 0, Ctx.getIntWidth(T), true);
+    return getValue(b ? 1 : 0, Ctx.getIntWidth(T),
+                    T->isUnsignedIntegerOrEnumerationType());
   }
 
   const llvm::APSInt &getTruthValue(bool b) {

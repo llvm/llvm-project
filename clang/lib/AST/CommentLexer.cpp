@@ -21,7 +21,7 @@ namespace comments {
 
 void Token::dump(const Lexer &L, const SourceManager &SM) const {
   llvm::errs() << "comments::Token Kind=" << Kind << " ";
-  Loc.dump(SM);
+  Loc.print(llvm::errs(), SM);
   llvm::errs() << " " << Length << " \"" << L.getSpelling(*this, SM) << "\"\n";
 }
 

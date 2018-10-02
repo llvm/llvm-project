@@ -107,6 +107,8 @@ public:
 
   ~ProgramState();
 
+  int64_t getID() const;
+
   /// Return the ProgramStateManager associated with this state.
   ProgramStateManager &getStateManager() const {
     return *stateMgr;
@@ -469,8 +471,7 @@ public:
              const LocationContext *CurrentLC = nullptr) const;
   void printDOT(raw_ostream &Out,
                 const LocationContext *CurrentLC = nullptr) const;
-  void printTaint(raw_ostream &Out, const char *nl = "\n",
-                  const char *sep = "") const;
+  void printTaint(raw_ostream &Out, const char *nl = "\n") const;
 
   void dump() const;
   void dumpTaint() const;

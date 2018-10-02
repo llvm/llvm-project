@@ -112,12 +112,12 @@ getCheckerOptList(const AnalyzerOptions &opts) {
 }
 
 std::unique_ptr<CheckerManager> ento::createCheckerManager(
-    AnalyzerOptions &opts, const LangOptions &langOpts,
+    ASTContext &context,
+    AnalyzerOptions &opts,
     ArrayRef<std::string> plugins,
     ArrayRef<std::function<void(CheckerRegistry &)>> checkerRegistrationFns,
     DiagnosticsEngine &diags) {
-  std::unique_ptr<CheckerManager> checkerMgr(
-      new CheckerManager(langOpts, opts));
+  auto checkerMgr = llvm::make_unique<CheckerManager>(context, opts);
 
   SmallVector<CheckerOptInfo, 8> checkerOpts = getCheckerOptList(opts);
 

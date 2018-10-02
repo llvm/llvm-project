@@ -1,6 +1,11 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UninitializedObject -analyzer-config alpha.cplusplus.UninitializedObject:Pedantic=true -std=c++11 -DPEDANTIC -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config alpha.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
+// RUN:   -analyzer-config alpha.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
+// RUN:   -std=c++11 -verify  %s
 
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UninitializedObject -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config alpha.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
+// RUN:   -std=c++11 -verify  %s
 
 //===----------------------------------------------------------------------===//
 // Concrete location tests.
@@ -14,6 +19,24 @@ struct ConcreteIntLocTest {
 
 void fConcreteIntLocTest() {
   ConcreteIntLocTest();
+}
+
+//===----------------------------------------------------------------------===//
+// nonloc::LocAsInteger tests.
+//===----------------------------------------------------------------------===//
+
+using intptr_t = unsigned long long;
+
+struct LocAsIntegerTest {
+  intptr_t ptr; // expected-note{{uninitialized pointee 'reinterpret_cast<char *>(this->ptr)'}}
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  LocAsIntegerTest(void *ptr) : ptr(reinterpret_cast<intptr_t>(ptr)) {} // expected-warning{{1 uninitialized field}}
+};
+
+void fLocAsIntegerTest() {
+  char c;
+  LocAsIntegerTest t(&c);
 }
 
 //===----------------------------------------------------------------------===//
@@ -38,6 +61,50 @@ public:
 
 void fNullPtrTest() {
   NullPtrTest();
+}
+
+//===----------------------------------------------------------------------===//
+// Alloca tests.
+//===----------------------------------------------------------------------===//
+
+struct UntypedAllocaTest {
+  void *allocaPtr;
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  UntypedAllocaTest() : allocaPtr(__builtin_alloca(sizeof(int))) {
+    // All good!
+  }
+};
+
+void fUntypedAllocaTest() {
+  UntypedAllocaTest();
+}
+
+struct TypedAllocaTest1 {
+  int *allocaPtr; // expected-note{{uninitialized pointee 'this->allocaPtr'}}
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  TypedAllocaTest1() // expected-warning{{1 uninitialized field}}
+      : allocaPtr(static_cast<int *>(__builtin_alloca(sizeof(int)))) {}
+};
+
+void fTypedAllocaTest1() {
+  TypedAllocaTest1();
+}
+
+struct TypedAllocaTest2 {
+  int *allocaPtr;
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  TypedAllocaTest2()
+      : allocaPtr(static_cast<int *>(__builtin_alloca(sizeof(int)))) {
+    *allocaPtr = 55555;
+    // All good!
+  }
+};
+
+void fTypedAllocaTest2() {
+  TypedAllocaTest2();
 }
 
 //===----------------------------------------------------------------------===//
@@ -189,13 +256,22 @@ void fCharPointerTest() {
   CharPointerTest();
 }
 
-struct CyclicPointerTest {
+struct CyclicPointerTest1 {
   int *ptr;
-  CyclicPointerTest() : ptr(reinterpret_cast<int*>(&ptr)) {}
+  CyclicPointerTest1() : ptr(reinterpret_cast<int *>(&ptr)) {}
 };
 
-void fCyclicPointerTest() {
-  CyclicPointerTest();
+void fCyclicPointerTest1() {
+  CyclicPointerTest1();
+}
+
+struct CyclicPointerTest2 {
+  int **pptr; // no-crash
+  CyclicPointerTest2() : pptr(reinterpret_cast<int **>(&pptr)) {}
+};
+
+void fCyclicPointerTest2() {
+  CyclicPointerTest2();
 }
 
 //===----------------------------------------------------------------------===//
@@ -280,11 +356,60 @@ struct CyclicVoidPointerTest {
   void *vptr; // no-crash
 
   CyclicVoidPointerTest() : vptr(&vptr) {}
-
 };
 
 void fCyclicVoidPointerTest() {
   CyclicVoidPointerTest();
+}
+
+struct IntDynTypedVoidPointerTest1 {
+  void *vptr; // expected-note{{uninitialized pointee 'static_cast<int *>(this->vptr)'}}
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  IntDynTypedVoidPointerTest1(void *vptr) : vptr(vptr) {} // expected-warning{{1 uninitialized field}}
+};
+
+void fIntDynTypedVoidPointerTest1() {
+  int a;
+  IntDynTypedVoidPointerTest1 tmp(&a);
+}
+
+struct RecordDynTypedVoidPointerTest {
+  struct RecordType {
+    int x; // expected-note{{uninitialized field 'static_cast<struct RecordDynTypedVoidPointerTest::RecordType *>(this->vptr)->x'}}
+    int y; // expected-note{{uninitialized field 'static_cast<struct RecordDynTypedVoidPointerTest::RecordType *>(this->vptr)->y'}}
+  };
+
+  void *vptr;
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  RecordDynTypedVoidPointerTest(void *vptr) : vptr(vptr) {} // expected-warning{{2 uninitialized fields}}
+};
+
+void fRecordDynTypedVoidPointerTest() {
+  RecordDynTypedVoidPointerTest::RecordType a;
+  RecordDynTypedVoidPointerTest tmp(&a);
+}
+
+struct NestedNonVoidDynTypedVoidPointerTest {
+  struct RecordType {
+    int x;      // expected-note{{uninitialized field 'static_cast<struct NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->x'}}
+    int y;      // expected-note{{uninitialized field 'static_cast<struct NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->y'}}
+    void *vptr; // expected-note{{uninitialized pointee 'static_cast<char *>(static_cast<struct NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->vptr)'}}
+  };
+
+  void *vptr;
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  NestedNonVoidDynTypedVoidPointerTest(void *vptr, void *c) : vptr(vptr) {
+    static_cast<RecordType *>(vptr)->vptr = c; // expected-warning{{3 uninitialized fields}}
+  }
+};
+
+void fNestedNonVoidDynTypedVoidPointerTest() {
+  NestedNonVoidDynTypedVoidPointerTest::RecordType a;
+  char c;
+  NestedNonVoidDynTypedVoidPointerTest tmp(&a, &c);
 }
 
 //===----------------------------------------------------------------------===//
@@ -402,6 +527,39 @@ void fMultiPointerTest3() {
   MultiPointerTest3::RecordType **mptr = &p1;
   MultiPointerTest3(mptr, int()); // '**mptr' uninitialized
 }
+
+//===----------------------------------------------------------------------===//
+// Incomplete pointee tests.
+//===----------------------------------------------------------------------===//
+
+class IncompleteType;
+
+struct IncompletePointeeTypeTest {
+  IncompleteType *pImpl; //no-crash
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  IncompletePointeeTypeTest(IncompleteType *A) : pImpl(A) {}
+};
+
+void fIncompletePointeeTypeTest(void *ptr) {
+  IncompletePointeeTypeTest(reinterpret_cast<IncompleteType *>(ptr));
+}
+
+//===----------------------------------------------------------------------===//
+// Function pointer tests.
+//===----------------------------------------------------------------------===//
+
+struct FunctionPointerWithDifferentDynTypeTest {
+  using Func1 = void *(*)();
+  using Func2 = int *(*)();
+
+  Func1 f; // no-crash
+  FunctionPointerWithDifferentDynTypeTest(Func2 f) : f((Func1)f) {}
+};
+
+// Note that there isn't a function calling the constructor of
+// FunctionPointerWithDifferentDynTypeTest, because a crash could only be
+// reproduced without it.
 
 //===----------------------------------------------------------------------===//
 // Member pointer tests.
@@ -576,6 +734,15 @@ void fCyclicList() {
   n1.next = &n3;
   // note that n1.i is uninitialized
   CyclicList(&n1, int());
+}
+
+struct RingListTest {
+  RingListTest *next; // no-crash
+  RingListTest() : next(this) {}
+};
+
+void fRingListTest() {
+  RingListTest();
 }
 
 //===----------------------------------------------------------------------===//

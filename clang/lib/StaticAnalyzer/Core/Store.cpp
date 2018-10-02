@@ -138,6 +138,7 @@ const MemRegion *StoreManager::castRegion(const MemRegion *R, QualType CastToTy)
     case MemRegion::VarRegionKind:
     case MemRegion::CXXTempObjectRegionKind:
     case MemRegion::CXXBaseObjectRegionKind:
+    case MemRegion::CXXDerivedObjectRegionKind:
       return MakeElementRegion(cast<SubRegion>(R), PointeeTy);
 
     case MemRegion::ElementRegionKind: {
@@ -272,9 +273,8 @@ SVal StoreManager::evalDerivedToBase(SVal Derived, const CXXBasePath &Path) {
 
 SVal StoreManager::evalDerivedToBase(SVal Derived, QualType BaseType,
                                      bool IsVirtual) {
-  Optional<loc::MemRegionVal> DerivedRegVal =
-      Derived.getAs<loc::MemRegionVal>();
-  if (!DerivedRegVal)
+  const MemRegion *DerivedReg = Derived.getAsRegion();
+  if (!DerivedReg)
     return Derived;
 
   const CXXRecordDecl *BaseDecl = BaseType->getPointeeCXXRecordDecl();
@@ -282,8 +282,18 @@ SVal StoreManager::evalDerivedToBase(SVal Derived, QualType BaseType,
     BaseDecl = BaseType->getAsCXXRecordDecl();
   assert(BaseDecl && "not a C++ object?");
 
+  if (const auto *AlreadyDerivedReg =
+          dyn_cast<CXXDerivedObjectRegion>(DerivedReg)) {
+    if (const auto *SR =
+            dyn_cast<SymbolicRegion>(AlreadyDerivedReg->getSuperRegion()))
+      if (SR->getSymbol()->getType()->getPointeeCXXRecordDecl() == BaseDecl)
+        return loc::MemRegionVal(SR);
+
+    DerivedReg = AlreadyDerivedReg->getSuperRegion();
+  }
+
   const MemRegion *BaseReg = MRMgr.getCXXBaseObjectRegion(
-      BaseDecl, cast<SubRegion>(DerivedRegVal->getRegion()), IsVirtual);
+      BaseDecl, cast<SubRegion>(DerivedReg), IsVirtual);
 
   return loc::MemRegionVal(BaseReg);
 }
@@ -363,6 +373,20 @@ SVal StoreManager::attemptDownCast(SVal Base, QualType TargetType,
     }
 
     MR = Uncasted;
+  }
+
+  // If we're casting a symbolic base pointer to a derived class, use
+  // CXXDerivedObjectRegion to represent the cast. If it's a pointer to an
+  // unrelated type, it must be a weird reinterpret_cast and we have to
+  // be fine with ElementRegion. TODO: Should we instead make
+  // Derived{TargetClass, Element{SourceClass, SR}}?
+  if (const auto *SR = dyn_cast<SymbolicRegion>(MR)) {
+    QualType T = SR->getSymbol()->getType();
+    const CXXRecordDecl *SourceClass = T->getPointeeCXXRecordDecl();
+    if (TargetClass && SourceClass && TargetClass->isDerivedFrom(SourceClass))
+      return loc::MemRegionVal(
+          MRMgr.getCXXDerivedObjectRegion(TargetClass, SR));
+    return loc::MemRegionVal(GetElementZeroRegion(SR, TargetType));
   }
 
   // We failed if the region we ended up with has perfect type info.

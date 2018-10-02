@@ -820,6 +820,7 @@ public:
 class E {
 public:
   E(D d);
+  E(D d1, D d2);
 };
 
 void useC(C c);
@@ -939,6 +940,38 @@ void passArgumentWithDestructorByReference() {
 void passArgumentIntoAnotherConstructor() {
   E e = E(D());
 }
+
+
+// CHECK: void passTwoArgumentsIntoAnotherConstructor()
+// CXX11-ELIDE:          1: argument_constructors::D() (CXXConstructExpr, [B1.2], [B1.4], [B1.5], class argument_constructors::D)
+// CXX11-NOELIDE:          1: argument_constructors::D() (CXXConstructExpr, [B1.2], [B1.4], class argument_constructors::D)
+// CXX11-NEXT:     2: [B1.1] (BindTemporary)
+// CXX11-NEXT:     3: [B1.2] (ImplicitCastExpr, NoOp, const class argument_constructors::D)
+// CXX11-NEXT:     4: [B1.3]
+// CXX11-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.6], [B1.13]+0, class argument_constructors::D)
+// CXX11-NEXT:     6: [B1.5] (BindTemporary)
+// CXX11-ELIDE-NEXT:     7: argument_constructors::D() (CXXConstructExpr, [B1.8], [B1.10], [B1.11], class argument_constructors::D)
+// CXX11-NOELIDE-NEXT:     7: argument_constructors::D() (CXXConstructExpr, [B1.8], [B1.10], class argument_constructors::D)
+// CXX11-NEXT:     8: [B1.7] (BindTemporary)
+// CXX11-NEXT:     9: [B1.8] (ImplicitCastExpr, NoOp, const class argument_constructors::D)
+// CXX11-NEXT:    10: [B1.9]
+// CXX11-NEXT:    11: [B1.10] (CXXConstructExpr, [B1.12], [B1.13]+1, class argument_constructors::D)
+// CXX11-NEXT:    12: [B1.11] (BindTemporary)
+// CXX11-NEXT:    13: argument_constructors::E([B1.6], [B1.12]) (CXXConstructExpr, class argument_constructors::E)
+// CXX11-NEXT:    14: ~argument_constructors::D() (Temporary object destructor)
+// CXX11-NEXT:    15: ~argument_constructors::D() (Temporary object destructor)
+// CXX11-NEXT:    16: ~argument_constructors::D() (Temporary object destructor)
+// CXX11-NEXT:    17: ~argument_constructors::D() (Temporary object destructor)
+// CXX17:          1: argument_constructors::D() (CXXConstructExpr, [B1.2], [B1.5]+0, class argument_constructors::D)
+// CXX17-NEXT:     2: [B1.1] (BindTemporary)
+// CXX17-NEXT:     3: argument_constructors::D() (CXXConstructExpr, [B1.4], [B1.5]+1, class argument_constructors::D)
+// CXX17-NEXT:     4: [B1.3] (BindTemporary)
+// CXX17-NEXT:     5: argument_constructors::E([B1.2], [B1.4]) (CXXConstructExpr, class argument_constructors::E)
+// CXX17-NEXT:     6: ~argument_constructors::D() (Temporary object destructor)
+// CXX17-NEXT:     7: ~argument_constructors::D() (Temporary object destructor)
+void passTwoArgumentsIntoAnotherConstructor() {
+  E(D(), D());
+}
 } // end namespace argument_constructors
 
 namespace copy_elision_with_extra_arguments {
@@ -963,3 +996,50 @@ void testCopyElisionWhenCopyConstructorHasExtraArguments() {
   C c = C();
 }
 } // namespace copy_elision_with_extra_arguments
+
+
+namespace operators {
+class C {
+public:
+  C(int);
+  C &operator+(C Other);
+};
+
+// FIXME: Find construction context for the this-argument of the operator.
+// CHECK: void testOperators()
+// CHECK:        [B1]
+// CHECK-NEXT:     1: operator+
+// CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class operators::C &(*)(class o
+// CHECK-NEXT:     3: 1
+// CHECK-NEXT:     4: [B1.3] (CXXConstructExpr, [B1.6], class operators::C)
+// CHECK-NEXT:     5: operators::C([B1.4]) (CXXFunctionalCastExpr, ConstructorConversion, class operato
+// CHECK-NEXT:     6: [B1.5]
+// CHECK-NEXT:     7: 2
+// CXX11-ELIDE-NEXT:     8: [B1.7] (CXXConstructExpr, [B1.10], [B1.11], class operators::C)
+// CXX11-NOELIDE-NEXT:     8: [B1.7] (CXXConstructExpr, [B1.10], class operators::C)
+// CXX11-NEXT:     9: operators::C([B1.8]) (CXXFunctionalCastExpr, ConstructorConversion, class operato
+// CXX11-NEXT:    10: [B1.9]
+// CXX11-NEXT:    11: [B1.10] (CXXConstructExpr, [B1.12]+1, class operators::C)
+// CXX11-NEXT:    12: [B1.6] + [B1.11] (OperatorCall)
+// CXX17-NEXT:     8: [B1.7] (CXXConstructExpr, [B1.10]+1, class operators::C)
+// CXX17-NEXT:     9: operators::C([B1.8]) (CXXFunctionalCastExpr, ConstructorConversion, class operato
+// CXX17-NEXT:    10: [B1.6] + [B1.9] (OperatorCall)
+void testOperators() {
+  C(1) + C(2);
+}
+} // namespace operators
+
+namespace variadic_function_arguments {
+class C {
+ public:
+  C(int);
+};
+
+int variadic(...);
+
+// This code is quite exotic, so let's not test the CFG for it,
+// but only make sure we don't crash.
+void testCrashOnVariadicArgument() {
+  C c(variadic(0 ? c : 0)); // no-crash
+}
+} // namespace variadic_function_arguments

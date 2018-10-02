@@ -140,6 +140,9 @@ public:
 
   std::string AnalyzeSpecificFunction;
 
+  /// File path to which the exploded graph should be dumped.
+  std::string DumpExplodedGraphTo;
+
   /// Store full compiler invocation for reproducible instructions in the
   /// generated report.
   std::string FullCompilerInvocation;
@@ -160,20 +163,10 @@ public:
   unsigned AnalyzerDisplayProgress : 1;
   unsigned AnalyzeNestedBlocks : 1;
 
-  /// The flag regulates if we should eagerly assume evaluations of
-  /// conditionals, thus, bifurcating the path.
-  ///
-  /// This flag indicates how the engine should handle expressions such as: 'x =
-  /// (y != 0)'.  When this flag is true then the subexpression 'y != 0' will be
-  /// eagerly assumed to be true or false, thus evaluating it to the integers 0
-  /// or 1 respectively.  The upside is that this can increase analysis
-  /// precision until we have a better way to lazily evaluate such logic.  The
-  /// downside is that it eagerly bifurcates paths.
   unsigned eagerlyAssumeBinOpBifurcation : 1;
 
   unsigned TrimGraph : 1;
   unsigned visualizeExplodedGraphWithGraphViz : 1;
-  unsigned visualizeExplodedGraphWithUbiGraph : 1;
   unsigned UnoptimizedCFG : 1;
   unsigned PrintStats : 1;
 
@@ -321,6 +314,9 @@ private:
   /// \sa shouldAggressivelySimplifyBinaryOperation
   Optional<bool> AggressiveBinaryOperationSimplification;
 
+  /// \sa shouldEagerlyAssume
+  Optional<bool> EagerlyAssumeBinOpBifurcation;
+
   /// \sa getCTUDir
   Optional<StringRef> CTUDir;
 
@@ -367,7 +363,7 @@ public:
         AnalyzerDisplayProgress(false), AnalyzeNestedBlocks(false),
         eagerlyAssumeBinOpBifurcation(false), TrimGraph(false),
         visualizeExplodedGraphWithGraphViz(false),
-        visualizeExplodedGraphWithUbiGraph(false), UnoptimizedCFG(false),
+        UnoptimizedCFG(false),
         PrintStats(false), NoRetryExhausted(false), CXXMemberInliningMode() {}
 
   /// Interprets an option's string value as a boolean. The "true" string is
@@ -703,6 +699,17 @@ public:
   /// '+' or '-'. The rearrangement also happens with '-' instead of '+' on
   // either or both side and also if any or both integers are missing.
   bool shouldAggressivelySimplifyBinaryOperation();
+
+  /// Returns true if we should eagerly assume evaluations of
+  /// conditionals, thus, bifurcating the path.
+  ///
+  /// This indicates how the engine should handle expressions such as: 'x =
+  /// (y != 0)'.  When this is true then the subexpression 'y != 0' will be
+  /// eagerly assumed to be true or false, thus evaluating it to the integers 0
+  /// or 1 respectively.  The upside is that this can increase analysis
+  /// precision until we have a better way to lazily evaluate such logic.  The
+  /// downside is that it eagerly bifurcates paths.
+  bool shouldEagerlyAssume();
 
   /// Returns the directory containing the CTU related files.
   StringRef getCTUDir();

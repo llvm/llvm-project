@@ -139,8 +139,8 @@ public:
   virtual SVal simplifySVal(ProgramStateRef State, SVal Val) = 0;
 
   /// Constructs a symbolic expression for two non-location values.
-  SVal makeSymExprValNN(ProgramStateRef state, BinaryOperator::Opcode op,
-                      NonLoc lhs, NonLoc rhs, QualType resultTy);
+  SVal makeSymExprValNN(BinaryOperator::Opcode op,
+                        NonLoc lhs, NonLoc rhs, QualType resultTy);
 
   SVal evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
                  SVal lhs, SVal rhs, QualType type);
