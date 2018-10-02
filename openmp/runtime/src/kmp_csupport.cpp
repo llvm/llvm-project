@@ -71,6 +71,14 @@ void __kmpc_end(ident_t *loc) {
 
     __kmp_internal_end_thread(-1);
   }
+#if KMP_OS_WINDOWS && OMPT_SUPPORT
+  // Normal exit process on Windows does not allow worker threads of the final
+  // parallel region to finish reporting their events, so shutting down the
+  // library here fixes the issue at least for the cases where __kmpc_end() is
+  // placed properly.
+  if (ompt_enabled.enabled)
+    __kmp_internal_end_library(__kmp_gtid_get_specific());
+#endif
 }
 
 /*!
