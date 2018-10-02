@@ -69,7 +69,7 @@ int bar(int n){
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}_l32(
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 0)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 1)
 // CHECK: [[TEAM_ALLOC:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{[0-9]+}} 4, i16 0)
 // CHECK: [[BC:%.+]] = bitcast i8* [[TEAM_ALLOC]] to [[REC:%.+]]*
 // CHECK: getelementptr inbounds [[REC]], [[REC]]* [[BC]], i{{[0-9]+}} 0, i{{[0-9]+}} 0

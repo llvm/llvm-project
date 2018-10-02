@@ -1379,6 +1379,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_simd:
   case OMPC_nogroup:
   case OMPC_unified_address:
+  case OMPC_unified_shared_memory:
     // OpenMP [2.7.1, Restrictions, p. 9]
     //  Only one ordered clause can appear on a loop directive.
     // OpenMP [2.7.1, Restrictions, C/C++, p. 4]
