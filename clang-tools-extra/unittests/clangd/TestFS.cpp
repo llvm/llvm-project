@@ -23,6 +23,7 @@ buildTestFS(llvm::StringMap<std::string> const &Files,
             llvm::StringMap<time_t> const &Timestamps) {
   IntrusiveRefCntPtr<vfs::InMemoryFileSystem> MemFS(
       new vfs::InMemoryFileSystem);
+  MemFS->setCurrentWorkingDirectory(testRoot());
   for (auto &FileAndContents : Files) {
     StringRef File = FileAndContents.first();
     MemFS->addFile(

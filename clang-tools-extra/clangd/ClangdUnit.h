@@ -11,6 +11,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDUNIT_H
 
 #include "Diagnostics.h"
+#include "FS.h"
 #include "Function.h"
 #include "Headers.h"
 #include "Path.h"
@@ -45,7 +46,8 @@ namespace clangd {
 // Stores Preamble and associated data.
 struct PreambleData {
   PreambleData(PrecompiledPreamble Preamble, std::vector<Diag> Diags,
-               IncludeStructure Includes);
+               IncludeStructure Includes,
+               std::unique_ptr<PreambleFileStatusCache> StatCache);
 
   tooling::CompileCommand CompileCommand;
   PrecompiledPreamble Preamble;
@@ -53,6 +55,9 @@ struct PreambleData {
   // Processes like code completions and go-to-definitions will need #include
   // information, and their compile action skips preamble range.
   IncludeStructure Includes;
+  // Cache of FS operations performed when building the preamble.
+  // When reusing a preamble, this cache can be consumed to save IO.
+  std::unique_ptr<PreambleFileStatusCache> StatCache;
 };
 
 /// Information required to run clang, e.g. to parse AST or do code completion.
