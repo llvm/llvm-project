@@ -26,6 +26,7 @@ public:
   virtual bool emitFPOData(const MCSymbol *ProcSym, SMLoc L = {}) = 0;
   virtual bool emitFPOPushReg(unsigned Reg, SMLoc L = {}) = 0;
   virtual bool emitFPOStackAlloc(unsigned StackAlloc, SMLoc L = {}) = 0;
+  virtual bool emitFPOStackAlign(unsigned Align, SMLoc L = {}) = 0;
   virtual bool emitFPOSetFrame(unsigned Reg, SMLoc L = {}) = 0;
 };
 

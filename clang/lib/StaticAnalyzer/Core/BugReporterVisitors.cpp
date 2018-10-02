@@ -2448,15 +2448,19 @@ void FalsePositiveRefutationBRVisitor::finalizeVisitor(
 
   // Add constraints to the solver
   for (const auto &I : Constraints) {
-    SymbolRef Sym = I.first;
+    const SymbolRef Sym = I.first;
+    auto RangeIt = I.second.begin();
 
-    SMTExprRef Constraints = RefutationSolver->fromBoolean(false);
-    for (const auto &Range : I.second) {
+    SMTExprRef Constraints = SMTConv::getRangeExpr(
+        RefutationSolver, Ctx, Sym, RangeIt->From(), RangeIt->To(),
+        /*InRange=*/true);
+    while ((++RangeIt) != I.second.end()) {
       Constraints = RefutationSolver->mkOr(
           Constraints, SMTConv::getRangeExpr(RefutationSolver, Ctx, Sym,
-                                             Range.From(), Range.To(),
+                                             RangeIt->From(), RangeIt->To(),
                                              /*InRange=*/true));
     }
+
     RefutationSolver->addConstraint(Constraints);
   }
 

@@ -17,9 +17,8 @@
 ; CHECK:         .cv_fpo_setframe        %ebp
 ; CHECK:         pushl   %esi
 ; CHECK:         .cv_fpo_pushreg %esi
-;       We don't seem to need to describe this AND because at this point CSRs
-;       are stored relative to EBP, but it's suspicious.
 ; CHECK:         andl    $-16, %esp
+; CHECK:         .cv_fpo_stackalign      16
 ; CHECK:         subl    $32, %esp
 ; CHECK:         .cv_fpo_stackalloc      32
 ; CHECK:         .cv_fpo_endprologue

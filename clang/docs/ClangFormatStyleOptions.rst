@@ -1979,6 +1979,15 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+**StatementMacros** (``std::vector<std::string>``)
+  A vector of macros that should be interpreted as complete statements.
+
+  Typical macros are expressions, and require a semi-colon to be
+  added; sometimes this is not the case, and this allows to make
+  clang-format aware of such cases.
+
+  For example: Q_UNUSED
+
 **TabWidth** (``unsigned``)
   The number of columns used for tab stops.
 

@@ -1051,6 +1051,16 @@ struct FormatStyle {
   /// For example: BOOST_FOREACH.
   std::vector<std::string> ForEachMacros;
 
+  /// A vector of macros that should be interpreted as complete
+  /// statements.
+  ///
+  /// Typical macros are expressions, and require a semi-colon to be
+  /// added; sometimes this is not the case, and this allows to make
+  /// clang-format aware of such cases.
+  ///
+  /// For example: Q_UNUSED
+  std::vector<std::string> StatementMacros;
+
   tooling::IncludeStyle IncludeStyle;
 
   /// Indent case labels one level from the switch statement.
@@ -1766,7 +1776,7 @@ struct FormatStyle {
            SpacesInParentheses == R.SpacesInParentheses &&
            SpacesInSquareBrackets == R.SpacesInSquareBrackets &&
            Standard == R.Standard && TabWidth == R.TabWidth &&
-           UseTab == R.UseTab;
+           StatementMacros == R.StatementMacros && UseTab == R.UseTab;
   }
 
   llvm::Optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;

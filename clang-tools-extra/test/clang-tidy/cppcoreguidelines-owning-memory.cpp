@@ -36,17 +36,17 @@ gsl::owner<int *> returns_owner2() { return new int(42); }                    //
 int *returns_no_owner1() { return nullptr; }
 int *returns_no_owner2() {
   return new int(42);
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: returning a newly created resource of type 'int *' or 'gsl::owner<>' from a function whose return type is not 'gsl::owner<>'
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: returning a newly created resource of type 'int *' or 'gsl::owner<>' from a function whose return type is not 'gsl::owner<>'
 }
 int *returns_no_owner3() {
   int *should_be_owner = new int(42);
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: initializing non-owner 'int *' with a newly created 'gsl::owner<>'
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: initializing non-owner 'int *' with a newly created 'gsl::owner<>'
   return should_be_owner;
 }
 int *returns_no_owner4() {
   gsl::owner<int *> owner = new int(42);
   return owner;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: returning a newly created resource of type 'int *' or 'gsl::owner<>' from a function whose return type is not 'gsl::owner<>'
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: returning a newly created resource of type 'int *' or 'gsl::owner<>' from a function whose return type is not 'gsl::owner<>'
 }
 
 unique_ptr<int *> returns_no_owner5() {
@@ -71,11 +71,11 @@ void test_assignment_and_initialization() {
   int stack_int2;
 
   gsl::owner<int *> owned_int1 = &stack_int1; // BAD
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: expected initialization with value of type 'gsl::owner<>'; got 'int *'
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: expected initialization with value of type 'gsl::owner<>'; got 'int *'
 
   gsl::owner<int *> owned_int2;
   owned_int2 = &stack_int2; // BAD since no owner, bad since uninitialized
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: expected assignment source to be of type 'gsl::owner<>'; got 'int *'
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: expected assignment source to be of type 'gsl::owner<>'; got 'int *'
 
   gsl::owner<int *> owned_int3 = new int(42); // Good
   owned_int3 = nullptr;                       // Good
@@ -92,41 +92,41 @@ void test_assignment_and_initialization() {
   owned_int6 = owned_int3; // BAD, because reassignment without resource release
 
   auto owned_int7 = returns_owner1(); // Bad, since type deduction eliminates the owner wrapper
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: initializing non-owner 'int *' with a newly created 'gsl::owner<>'
-  // CHECK-MESSAGES: [[@LINE-2]]:3: note: type deduction did not result in an owner
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: initializing non-owner 'int *' with a newly created 'gsl::owner<>'
+  // CHECK-NOTES: [[@LINE-2]]:3: note: type deduction did not result in an owner
 
   const auto owned_int8 = returns_owner2(); // Bad, since type deduction eliminates the owner wrapper
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: initializing non-owner 'int *const' with a newly created 'gsl::owner<>'
-  // CHECK-MESSAGES: [[@LINE-2]]:3: note: type deduction did not result in an owner
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: initializing non-owner 'int *const' with a newly created 'gsl::owner<>'
+  // CHECK-NOTES: [[@LINE-2]]:3: note: type deduction did not result in an owner
 
   gsl::owner<int *> owned_int9 = returns_owner1(); // Ok
   int *unowned_int3 = returns_owner1();            // Bad
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: initializing non-owner 'int *' with a newly created 'gsl::owner<>'
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: initializing non-owner 'int *' with a newly created 'gsl::owner<>'
 
   gsl::owner<int *> owned_int10;
   owned_int10 = returns_owner1(); // Ok
 
   int *unowned_int4;
   unowned_int4 = returns_owner1(); // Bad
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: assigning newly created 'gsl::owner<>' to non-owner 'int *'
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: assigning newly created 'gsl::owner<>' to non-owner 'int *'
 
   gsl::owner<int *> owned_int11 = returns_no_owner1(); // Bad since no owner
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: expected initialization with value of type 'gsl::owner<>'; got 'int *'
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: expected initialization with value of type 'gsl::owner<>'; got 'int *'
 
   gsl::owner<int *> owned_int12;
   owned_int12 = returns_no_owner1(); // Bad since no owner
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: expected assignment source to be of type 'gsl::owner<>'; got 'int *'
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: expected assignment source to be of type 'gsl::owner<>'; got 'int *'
 
   int *unowned_int5 = returns_no_owner1(); // Ok
   int *unowned_int6;
   unowned_int6 = returns_no_owner1(); // Ok
 
   int *unowned_int7 = new int(42); // Bad, since resource not assigned to an owner
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: initializing non-owner 'int *' with a newly created 'gsl::owner<>'
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: initializing non-owner 'int *' with a newly created 'gsl::owner<>'
 
   int *unowned_int8;
   unowned_int8 = new int(42);
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: assigning newly created 'gsl::owner<>' to non-owner 'int *'
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: assigning newly created 'gsl::owner<>' to non-owner 'int *'
 
   gsl::owner<int *> owned_int13 = nullptr; // Ok
 }
@@ -139,16 +139,16 @@ void test_deletion() {
   delete[] owned_int2; // Good
 
   int *unowned_int1 = new int(42); // BAD, since new creates and owner
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: initializing non-owner 'int *' with a newly created 'gsl::owner<>'
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: initializing non-owner 'int *' with a newly created 'gsl::owner<>'
   delete unowned_int1; // BAD, since no owner
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: deleting a pointer through a type that is not marked 'gsl::owner<>'; consider using a smart pointer instead
-  // CHECK-MESSAGES: [[@LINE-4]]:3: note: variable declared here
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: deleting a pointer through a type that is not marked 'gsl::owner<>'; consider using a smart pointer instead
+  // CHECK-NOTES: [[@LINE-4]]:3: note: variable declared here
 
   int *unowned_int2 = new int[42]; // BAD, since new creates and owner
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: initializing non-owner 'int *' with a newly created 'gsl::owner<>'
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: initializing non-owner 'int *' with a newly created 'gsl::owner<>'
   delete[] unowned_int2; // BAD since no owner
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: deleting a pointer through a type that is not marked 'gsl::owner<>'; consider using a smart pointer instead
-  // CHECK-MESSAGES: [[@LINE-4]]:3: note: variable declared here
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: deleting a pointer through a type that is not marked 'gsl::owner<>'; consider using a smart pointer instead
+  // CHECK-NOTES: [[@LINE-4]]:3: note: variable declared here
 
   delete new int(42);   // Technically ok, but stupid
   delete[] new int[42]; // Technically ok, but stupid
@@ -158,17 +158,17 @@ void test_owner_function_calls() {
   int stack_int = 42;
   int *unowned_int1 = &stack_int;
   takes_owner(&stack_int); // BAD
-  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: expected argument of type 'gsl::owner<>'; got 'int *'
+  // CHECK-NOTES: [[@LINE-1]]:15: warning: expected argument of type 'gsl::owner<>'; got 'int *'
   takes_owner(unowned_int1); // BAD
-  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: expected argument of type 'gsl::owner<>'; got 'int *'
+  // CHECK-NOTES: [[@LINE-1]]:15: warning: expected argument of type 'gsl::owner<>'; got 'int *'
 
   gsl::owner<int *> owned_int1 = new int(42);
   takes_owner(owned_int1); // Ok
 
   takes_owner_and_more(42, &stack_int, 42.0f); // BAD
-  // CHECK-MESSAGES: [[@LINE-1]]:28: warning: expected argument of type 'gsl::owner<>'; got 'int *'
+  // CHECK-NOTES: [[@LINE-1]]:28: warning: expected argument of type 'gsl::owner<>'; got 'int *'
   takes_owner_and_more(42, unowned_int1, 42.0f); // BAD
-  // CHECK-MESSAGES: [[@LINE-1]]:28: warning: expected argument of type 'gsl::owner<>'; got 'int *'
+  // CHECK-NOTES: [[@LINE-1]]:28: warning: expected argument of type 'gsl::owner<>'; got 'int *'
 
   takes_owner_and_more(42, new int(42), 42.0f); // Ok, since new is consumed by owner
   takes_owner_and_more(42, owned_int1, 42.0f);  // Ok, since owner as argument
@@ -176,11 +176,11 @@ void test_owner_function_calls() {
   takes_templated_owner(owned_int1);   // Ok
   takes_templated_owner(new int(42));  // Ok
   takes_templated_owner(unowned_int1); // Bad
-  // CHECK-MESSAGES: [[@LINE-1]]:25: warning: expected argument of type 'gsl::owner<>'; got 'int *'
+  // CHECK-NOTES: [[@LINE-1]]:25: warning: expected argument of type 'gsl::owner<>'; got 'int *'
 
   takes_owner(returns_owner1());    // Ok
   takes_owner(returns_no_owner1()); // BAD
-  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: expected argument of type 'gsl::owner<>'; got 'int *'
+  // CHECK-NOTES: [[@LINE-1]]:15: warning: expected argument of type 'gsl::owner<>'; got 'int *'
 }
 
 void test_unowned_function_calls() {
@@ -192,10 +192,10 @@ void test_unowned_function_calls() {
   takes_pointer(unowned_int1); // Ok
   takes_pointer(owned_int1);   // Ok
   takes_pointer(new int(42));  // Bad, since new creates and owner
-  // CHECK-MESSAGES: [[@LINE-1]]:17: warning: initializing non-owner argument of type 'int *' with a newly created 'gsl::owner<>'
+  // CHECK-NOTES: [[@LINE-1]]:17: warning: initializing non-owner argument of type 'int *' with a newly created 'gsl::owner<>'
 
   takes_pointer(returns_owner1()); // Bad
-  // CHECK-MESSAGES: [[@LINE-1]]:17: warning: initializing non-owner argument of type 'int *' with a newly created 'gsl::owner<>'
+  // CHECK-NOTES: [[@LINE-1]]:17: warning: initializing non-owner argument of type 'int *' with a newly created 'gsl::owner<>'
 
   takes_pointer(returns_no_owner1()); // Ok
 }
@@ -239,7 +239,7 @@ struct ClassWithOwner {                    // Does not define destructor, necess
   ClassWithOwner() : owner_var(nullptr) {} // Ok
 
   ClassWithOwner(ArbitraryClass &other) : owner_var(&other) {}
-  // CHECK-MESSAGES: [[@LINE-1]]:43: warning: expected initialization of owner member variable with value of type 'gsl::owner<>'; got 'ArbitraryClass *'
+  // CHECK-NOTES: [[@LINE-1]]:43: warning: expected initialization of owner member variable with value of type 'gsl::owner<>'; got 'ArbitraryClass *'
 
   ClassWithOwner(gsl::owner<ArbitraryClass *> other) : owner_var(other) {} // Ok
 
@@ -249,7 +249,7 @@ struct ClassWithOwner {                    // Does not define destructor, necess
 
   ClassWithOwner(ArbitraryClass *bad_data, int /* unused */, int /* unused */) {
     owner_var = bad_data;
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: expected assignment source to be of type 'gsl::owner<>'; got 'ArbitraryClass *'
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: expected assignment source to be of type 'gsl::owner<>'; got 'ArbitraryClass *'
   }
 
   ClassWithOwner(ClassWithOwner &&other) : owner_var{other.owner_var} {} // Ok
@@ -264,19 +264,19 @@ struct ClassWithOwner {                    // Does not define destructor, necess
   gsl::owner<ArbitraryClass *> buggy_but_returns_owner() { return owner_var; }
 
   gsl::owner<ArbitraryClass *> owner_var;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: member variable of type 'gsl::owner<>' requires the class 'ClassWithOwner' to implement a destructor to release the owned resource
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: member variable of type 'gsl::owner<>' requires the class 'ClassWithOwner' to implement a destructor to release the owned resource
 };
 
 class DefaultedDestructor {         // Bad since default constructor with owner
   ~DefaultedDestructor() = default; // Bad, since will not destroy the owner
   gsl::owner<int *> Owner;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: member variable of type 'gsl::owner<>' requires the class 'DefaultedDestructor' to implement a destructor to release the owned resource
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: member variable of type 'gsl::owner<>' requires the class 'DefaultedDestructor' to implement a destructor to release the owned resource
 };
 
 struct DeletedDestructor {
   ~DeletedDestructor() = delete;
   gsl::owner<int *> Owner;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: member variable of type 'gsl::owner<>' requires the class 'DeletedDestructor' to implement a destructor to release the owned resource
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: member variable of type 'gsl::owner<>' requires the class 'DeletedDestructor' to implement a destructor to release the owned resource
 };
 
 void test_class_with_owner() {
@@ -286,18 +286,18 @@ void test_class_with_owner() {
   ClassWithOwner C3{gsl::owner<ArbitraryClass *>(new ArbitraryClass)}; // Ok
 
   const auto Owner1 = C3.buggy_but_returns_owner(); // BAD, deduces Owner1 to ArbitraryClass *const
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: initializing non-owner 'ArbitraryClass *const' with a newly created 'gsl::owner<>'
-  // CHECK-MESSAGES: [[@LINE-2]]:3: note: type deduction did not result in an owner
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: initializing non-owner 'ArbitraryClass *const' with a newly created 'gsl::owner<>'
+  // CHECK-NOTES: [[@LINE-2]]:3: note: type deduction did not result in an owner
 
   auto Owner2 = C2.buggy_but_returns_owner(); // BAD, deduces Owner2 to ArbitraryClass *
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: initializing non-owner 'ArbitraryClass *' with a newly created 'gsl::owner<>'
-  // CHECK-MESSAGES: [[@LINE-2]]:3: note: type deduction did not result in an owner
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: initializing non-owner 'ArbitraryClass *' with a newly created 'gsl::owner<>'
+  // CHECK-NOTES: [[@LINE-2]]:3: note: type deduction did not result in an owner
 
   Owner2 = &A; // Ok, since type deduction did NOT result in owner<int*>
 
   gsl::owner<ArbitraryClass *> Owner3 = C1.buggy_but_returns_owner(); // Ok, still an owner
   Owner3 = &A;                                                        // Bad, since assignment of non-owner to owner
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: expected assignment source to be of type 'gsl::owner<>'; got 'ArbitraryClass *'
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: expected assignment source to be of type 'gsl::owner<>'; got 'ArbitraryClass *'
 }
 
 template <typename T>
@@ -311,7 +311,7 @@ struct HeapArray {                                          // Ok, since destruc
       _data[i] = val; // Ok
   }
   HeapArray(int size, T val, int *problematic) : _data{problematic}, size(size) {} // Bad
-  // CHECK-MESSAGES: [[@LINE-1]]:50: warning: expected initialization of owner member variable with value of type 'gsl::owner<>'; got 'void'
+  // CHECK-NOTES: [[@LINE-1]]:50: warning: expected initialization of owner member variable with value of type 'gsl::owner<>'; got 'void'
   // FIXME: void is incorrect type, probably wrong thing matched
 
   HeapArray(HeapArray &&other) : _data(other._data), size(other.size) { // Ok
@@ -344,7 +344,7 @@ void test_inner_template() {
 
   int *NonOwningPtr = Array1.data();           // Ok
   gsl::owner<int *> OwningPtr = Array1.data(); // Bad, since it does not return the owner
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: expected initialization with value of type 'gsl::owner<>'; got 'int *'
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: expected initialization with value of type 'gsl::owner<>'; got 'int *'
 }
 
 // FIXME: Typededuction removes the owner - wrapper, therefore gsl::owner can not be used
@@ -364,8 +364,8 @@ struct TemplateValue {
 template <typename T>
 void template_function(T t) {
   gsl::owner<int *> owner_t = t; // Probably bad, since type deduction still wrong
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: expected initialization with value of type 'gsl::owner<>'; got 'T'
-  // CHECK-MESSAGES: [[@LINE-2]]:3: warning: expected initialization with value of type 'gsl::owner<>'; got 'int *'
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: expected initialization with value of type 'gsl::owner<>'; got 'T'
+  // CHECK-NOTES: [[@LINE-2]]:3: warning: expected initialization with value of type 'gsl::owner<>'; got 'int *'
 }
 
 // FIXME: Same typededcution problems
@@ -384,7 +384,7 @@ void test_templates() {
 
   TemplateValue<int *> NonOwner1(new int(42));      // Bad, T is int *, hence dynamic memory to non-owner
   gsl::owner<int *> IntOwner1 = NonOwner1.getVal(); // Bad, since owner initialized with non-owner
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: expected initialization with value of type 'gsl::owner<>'; got 'int *'
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: expected initialization with value of type 'gsl::owner<>'; got 'int *'
 
   template_function(IntOwner1);  // Ok, but not actually ok, since type deduction removes owner
   template_function(stack_ptr1); // Bad, but type deduction gets it wrong

@@ -134,9 +134,9 @@ public:
       // A value has been obtained, check if it is the only value
       SMTExprRef NotExp = SMTConv::fromBinOp(
           Solver, Exp, BO_NE,
-          Ty->isBooleanType() ? Solver->fromBoolean(Value.getBoolValue())
-                              : Solver->fromAPSInt(Value),
-          false);
+          Ty->isBooleanType() ? Solver->mkBoolean(Value.getBoolValue())
+                              : Solver->mkBitvector(Value, Value.getBitWidth()),
+          /*isSigned=*/false);
 
       Solver->addConstraint(NotExp);
 

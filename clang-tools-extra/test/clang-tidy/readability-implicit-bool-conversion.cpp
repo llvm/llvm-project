@@ -437,3 +437,24 @@ void useOfUserConversion() {
 }
 
 } // namespace ignoreUserDefinedConversionOperator
+
+namespace ignore_1bit_bitfields {
+
+struct S {
+  int a;
+  int b : 1;
+  int c : 2;
+};
+
+bool f(const S& s) {
+  functionTaking<bool>(s.a);
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'int' -> bool
+  // CHECK-FIXES: functionTaking<bool>(s.a != 0);
+  functionTaking<bool>(s.b);
+  // CHECK-FIXES: functionTaking<bool>(s.b);
+  functionTaking<bool>(s.c);
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'int' -> bool
+  // CHECK-FIXES: functionTaking<bool>(s.c != 0);
+}
+
+} // namespace ignore_1bit_bitfields

@@ -22,6 +22,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/ADT/MapVector.h"
 
 #include <stack>
 
@@ -99,7 +100,8 @@ private:
   // Index (in 'Tokens') of the last token that starts a new line.
   unsigned FirstInLineIndex;
   SmallVector<FormatToken *, 16> Tokens;
-  SmallVector<IdentifierInfo *, 8> ForEachMacros;
+
+  llvm::SmallMapVector<IdentifierInfo *, TokenType, 8> Macros;
 
   bool FormattingDisabled;
 

@@ -165,6 +165,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
     codeview::FrameProcedureOptions FrameProcOpts;
 
+    bool HasStackRealignment = false;
+
     bool HaveLineInfo = false;
   };
   FunctionInfo *CurFn = nullptr;

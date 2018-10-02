@@ -10,6 +10,7 @@
 //  This file defines the code-completion semantic actions.
 //
 //===----------------------------------------------------------------------===//
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
@@ -1295,18 +1296,29 @@ namespace {
     ResultBuilder &Results;
     DeclContext *CurContext;
     std::vector<FixItHint> FixIts;
+    // This is set to the record where the search starts, if this is a record
+    // member completion.
+    RecordDecl *MemberCompletionRecord = nullptr;
 
   public:
     CodeCompletionDeclConsumer(
         ResultBuilder &Results, DeclContext *CurContext,
-        std::vector<FixItHint> FixIts = std::vector<FixItHint>())
-        : Results(Results), CurContext(CurContext), FixIts(std::move(FixIts)) {}
+        std::vector<FixItHint> FixIts = std::vector<FixItHint>(),
+        RecordDecl *MemberCompletionRecord = nullptr)
+        : Results(Results), CurContext(CurContext), FixIts(std::move(FixIts)),
+          MemberCompletionRecord(MemberCompletionRecord) {}
 
     void FoundDecl(NamedDecl *ND, NamedDecl *Hiding, DeclContext *Ctx,
                    bool InBaseClass) override {
       bool Accessible = true;
-      if (Ctx)
-        Accessible = Results.getSema().IsSimplyAccessible(ND, Ctx);
+      if (Ctx) {
+        // Set the actual accessing context (i.e. naming class) to the record
+        // context where the search starts. When `InBaseClass` is true, `Ctx`
+        // will be the base class, which is not the actual naming class.
+        DeclContext *AccessingCtx =
+            MemberCompletionRecord ? MemberCompletionRecord : Ctx;
+        Accessible = Results.getSema().IsSimplyAccessible(ND, AccessingCtx);
+      }
       ResultBuilder::Result Result(ND, Results.getBasePriority(ND), nullptr,
                                    false, Accessible, FixIts);
       Results.AddResult(Result, CurContext, Hiding, InBaseClass);
@@ -1598,6 +1610,74 @@ static void AddStaticAssertResult(CodeCompletionBuilder &Builder,
   Results.AddResult(CodeCompletionResult(Builder.TakeString()));
 }
 
+namespace {
+void printOverrideString(llvm::raw_ostream &OS, CodeCompletionString *CCS) {
+  for (const auto &C : *CCS) {
+    if (C.Kind == CodeCompletionString::CK_Optional)
+      printOverrideString(OS, C.Optional);
+    else
+      OS << C.Text;
+    // Add a space after return type.
+    if (C.Kind == CodeCompletionString::CK_ResultType)
+      OS << ' ';
+  }
+}
+} // namespace
+
+static void AddOverrideResults(ResultBuilder &Results,
+                               const CodeCompletionContext &CCContext,
+                               CodeCompletionBuilder &Builder) {
+  Sema &S = Results.getSema();
+  const auto *CR = llvm::dyn_cast<CXXRecordDecl>(S.CurContext);
+  // If not inside a class/struct/union return empty.
+  if (!CR)
+    return;
+  // First store overrides within current class.
+  // These are stored by name to make querying fast in the later step.
+  llvm::StringMap<std::vector<FunctionDecl *>> Overrides;
+  for (auto *Method : CR->methods()) {
+    if (!Method->isVirtual() || !Method->getIdentifier())
+      continue;
+    Overrides[Method->getName()].push_back(Method);
+  }
+
+  for (const auto &Base : CR->bases()) {
+    const auto *BR = Base.getType().getTypePtr()->getAsCXXRecordDecl();
+    if (!BR)
+      continue;
+    for (auto *Method : BR->methods()) {
+      if (!Method->isVirtual() || !Method->getIdentifier())
+        continue;
+      const auto it = Overrides.find(Method->getName());
+      bool IsOverriden = false;
+      if (it != Overrides.end()) {
+        for (auto *MD : it->second) {
+          // If the method in current body is not an overload of this virtual
+          // function, then it overrides this one.
+          if (!S.IsOverload(MD, Method, false)) {
+            IsOverriden = true;
+            break;
+          }
+        }
+      }
+      if (!IsOverriden) {
+        // Generates a new CodeCompletionResult by taking this function and
+        // converting it into an override declaration with only one chunk in the
+        // final CodeCompletionString as a TypedTextChunk.
+        std::string OverrideSignature;
+        llvm::raw_string_ostream OS(OverrideSignature);
+        CodeCompletionResult CCR(Method, 0);
+        PrintingPolicy Policy =
+            getCompletionPrintingPolicy(S.getASTContext(), S.getPreprocessor());
+        auto *CCS = CCR.createCodeCompletionStringForOverride(
+            S.getPreprocessor(), S.getASTContext(), Builder,
+            /*IncludeBriefComments=*/false, CCContext, Policy);
+        Results.AddResult(CodeCompletionResult(CCS, Method, CCP_CodePattern));
+      }
+    }
+  }
+}
+
 /// Add language constructs that show up for "ordinary" names.
 static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC,
                                    Scope *S,
@@ -1706,6 +1786,12 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC,
         if (IsNotInheritanceScope && Results.includeCodePatterns())
           Builder.AddChunk(CodeCompletionString::CK_Colon);
         Results.AddResult(Result(Builder.TakeString()));
+
+        // FIXME: This adds override results only if we are at the first word of
+        // the declaration/definition. Also call this from other sides to have
+        // more use-cases.
+        AddOverrideResults(Results, CodeCompletionContext::CCC_ClassStructUnion,
+                           Builder);
       }
     }
     LLVM_FALLTHROUGH;
@@ -2834,6 +2920,30 @@ CodeCompletionResult::CreateCodeCompletionString(ASTContext &Ctx,
     return Result.TakeString();
   }
   assert(Kind == RK_Declaration && "Missed a result kind?");
+  return createCodeCompletionStringForDecl(PP, Ctx, Result, IncludeBriefComments,
+                                    CCContext, Policy);
+}
+
+CodeCompletionString *
+CodeCompletionResult::createCodeCompletionStringForOverride(
+    Preprocessor &PP, ASTContext &Ctx, CodeCompletionBuilder &Result,
+    bool IncludeBriefComments, const CodeCompletionContext &CCContext,
+    PrintingPolicy &Policy) {
+  std::string OverrideSignature;
+  llvm::raw_string_ostream OS(OverrideSignature);
+  auto *CCS = createCodeCompletionStringForDecl(PP, Ctx, Result,
+                                                /*IncludeBriefComments=*/false,
+                                                CCContext, Policy);
+  printOverrideString(OS, CCS);
+  OS << " override";
+  Result.AddTypedTextChunk(Result.getAllocator().CopyString(OS.str()));
+  return Result.TakeString();
+}
+
+CodeCompletionString *CodeCompletionResult::createCodeCompletionStringForDecl(
+    Preprocessor &PP, ASTContext &Ctx, CodeCompletionBuilder &Result,
+    bool IncludeBriefComments, const CodeCompletionContext &CCContext,
+    PrintingPolicy &Policy) {
   const NamedDecl *ND = Declaration;
   Result.addParentContext(ND->getDeclContext());
 
@@ -2931,7 +3041,6 @@ CodeCompletionResult::CreateCodeCompletionString(ASTContext &Ctx,
     Result.AddChunk(CodeCompletionString::CK_RightAngle);
     return Result.TakeString();
   }
-
   if (const ObjCMethodDecl *Method = dyn_cast<ObjCMethodDecl>(ND)) {
     Selector Sel = Method->getSelector();
     if (Sel.isUnarySelector()) {
@@ -3027,7 +3136,7 @@ CodeCompletionResult::CreateCodeCompletionString(ASTContext &Ctx,
                                    Ctx, Policy);
 
   Result.AddTypedTextChunk(
-                       Result.getAllocator().CopyString(ND->getNameAsString()));
+      Result.getAllocator().CopyString(ND->getNameAsString()));
   return Result.TakeString();
 }
 
@@ -4004,7 +4113,8 @@ static void AddRecordMembersCompletionResults(Sema &SemaRef,
   std::vector<FixItHint> FixIts;
   if (AccessOpFixIt)
       FixIts.emplace_back(AccessOpFixIt.getValue());
-  CodeCompletionDeclConsumer Consumer(Results, SemaRef.CurContext, std::move(FixIts));
+  CodeCompletionDeclConsumer Consumer(Results, SemaRef.CurContext,
+                                      std::move(FixIts), RD);
   SemaRef.LookupVisibleDecls(RD, Sema::LookupMemberName, Consumer,
                              SemaRef.CodeCompleter->includeGlobals(),
                              /*IncludeDependentBases=*/true,

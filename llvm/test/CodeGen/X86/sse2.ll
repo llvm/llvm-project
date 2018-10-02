@@ -395,7 +395,7 @@ define void @test12() nounwind {
 ; SSE-LABEL: test12:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movapd 0, %xmm0
-; SSE-NEXT:    movapd {{.*#+}} xmm1 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
+; SSE-NEXT:    movapd {{.*#+}} xmm1 = [1,1,1,1]
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; SSE-NEXT:    xorps %xmm2, %xmm2
 ; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm0[1],xmm2[1]
