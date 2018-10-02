@@ -367,8 +367,10 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
       TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment();
 
   const char *Prefix = IsITANMSVCWindows ? "" : "lib";
-  const char *Suffix = Shared ? (Triple.isOSWindows() ? ".dll" : ".so")
+  const char *Suffix = Shared ? (Triple.isOSWindows() ? ".lib" : ".so")
                               : (IsITANMSVCWindows ? ".lib" : ".a");
+  if (Shared && Triple.isWindowsGNUEnvironment())
+    Suffix = ".dll.a";
 
   for (const auto &LibPath : getLibraryPaths()) {
     SmallString<128> P(LibPath);

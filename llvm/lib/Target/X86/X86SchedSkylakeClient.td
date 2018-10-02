@@ -164,7 +164,7 @@ defm : X86WriteRes<WriteBitTest,         [SKLPort06], 1, [1], 1>;
 defm : X86WriteRes<WriteBitTestImmLd,    [SKLPort06,SKLPort23], 6, [1,1], 2>;
 defm : X86WriteRes<WriteBitTestRegLd,    [SKLPort0156,SKLPort23], 6, [1,1], 2>;
 defm : X86WriteRes<WriteBitTestSet,      [SKLPort06], 1, [1], 1>;
-defm : X86WriteRes<WriteBitTestSetImmLd, [SKLPort06,SKLPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteBitTestSetImmLd, [SKLPort06,SKLPort23], 5, [1,1], 3>;
 defm : X86WriteRes<WriteBitTestSetRegLd, [SKLPort0156,SKLPort23], 5, [1,1], 2>;
 
 // Bit counts.
@@ -1055,10 +1055,7 @@ def SKLWriteResGroup82 : SchedWriteRes<[SKLPort4,SKLPort23,SKLPort237,SKLPort06]
   let NumMicroOps = 4;
   let ResourceCycles = [1,1,1,1];
 }
-def: InstRW<[SKLWriteResGroup82], (instregex "BTC(16|32|64)mi8",
-                                             "BTR(16|32|64)mi8",
-                                             "BTS(16|32|64)mi8",
-                                             "SAR(8|16|32|64)m(1|i)",
+def: InstRW<[SKLWriteResGroup82], (instregex "SAR(8|16|32|64)m(1|i)",
                                              "SHL(8|16|32|64)m(1|i)",
                                              "SHR(8|16|32|64)m(1|i)")>;
 

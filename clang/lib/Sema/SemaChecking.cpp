@@ -10896,6 +10896,19 @@ CheckImplicitConversion(Sema &S, Expr *E, QualType T, SourceLocation CC,
     return DiagnoseImpCast(S, E, T, CC, diag::warn_impcast_integer_precision);
   }
 
+  if (TargetRange.Width > SourceRange.Width) {
+    if (auto *UO = dyn_cast<UnaryOperator>(E))
+      if (UO->getOpcode() == UO_Minus)
+        if (Source->isUnsignedIntegerType()) {
+          if (Target->isUnsignedIntegerType())
+            return DiagnoseImpCast(S, E, T, CC,
+                                   diag::warn_impcast_high_order_zero_bits);
+          if (Target->isSignedIntegerType())
+            return DiagnoseImpCast(S, E, T, CC,
+                                   diag::warn_impcast_nonnegative_result);
+        }
+  }
+
   if (TargetRange.Width == SourceRange.Width && !TargetRange.NonNegative &&
       SourceRange.NonNegative && Source->isSignedIntegerType()) {
     // Warn when doing a signed to signed conversion, warn if the positive

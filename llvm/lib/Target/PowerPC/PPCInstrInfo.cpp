@@ -3150,6 +3150,14 @@ bool PPCInstrInfo::isImmElgibleForForwarding(const MachineOperand &ImmMO,
        III.TruncateImmTo || III.ImmWidth != 16)
       return false;
 
+    // Going from XForm to DForm loads means that the displacement needs to be
+    // not just an immediate but also a multiple of 4, or 16 depending on the
+    // load. A DForm load cannot be represented if it is a multiple of say 2.
+    // XForm loads do not have this restriction.
+    if (ImmMO.isGlobal() &&
+        ImmMO.getGlobal()->getAlignment() < III.ImmMustBeMultipleOf)
+      return false;
+
     return true;
   }
 

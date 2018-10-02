@@ -3,6 +3,7 @@
 
 void test19() {
    __block id x;
+   ^{ (void)x; };
 // CHECK-UNOPT-LABEL: define internal void @__Block_byref_object_copy
 // CHECK-UNOPT: [[X:%.*]] = getelementptr inbounds [[BYREF_T:%.*]], [[BYREF_T:%.*]]* [[VAR:%.*]], i32 0, i32 6
 // CHECK-UNOPT: [[X2:%.*]] = getelementptr inbounds [[BYREF_T:%.*]], [[BYREF_T:%.*]]* [[VAR1:%.*]], i32 0, i32 6

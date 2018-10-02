@@ -1,9 +1,12 @@
 #include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
 
+#include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordHelpers.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "llvm/DebugInfo/PDB/Native/NativeCompilandSymbol.h"
+#include "llvm/DebugInfo/PDB/Native/NativeEnumGlobals.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
@@ -12,8 +15,11 @@
 #include "llvm/DebugInfo/PDB/Native/NativeTypeEnum.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypeFunctionSig.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypePointer.h"
+#include "llvm/DebugInfo/PDB/Native/NativeTypeTypedef.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypeUDT.h"
+#include "llvm/DebugInfo/PDB/Native/NativeTypeVTShape.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
@@ -32,6 +38,7 @@ static const struct BuiltinTypeEntry {
 } BuiltinTypes[] = {
     {codeview::SimpleTypeKind::None, PDB_BuiltinType::None, 0},
     {codeview::SimpleTypeKind::Void, PDB_BuiltinType::Void, 0},
+    {codeview::SimpleTypeKind::HResult, PDB_BuiltinType::HResult, 4},
     {codeview::SimpleTypeKind::Int16Short, PDB_BuiltinType::Int, 2},
     {codeview::SimpleTypeKind::UInt16Short, PDB_BuiltinType::UInt, 2},
     {codeview::SimpleTypeKind::Int32, PDB_BuiltinType::Int, 4},
@@ -41,9 +48,15 @@ static const struct BuiltinTypeEntry {
     {codeview::SimpleTypeKind::Int64Quad, PDB_BuiltinType::Int, 8},
     {codeview::SimpleTypeKind::UInt64Quad, PDB_BuiltinType::UInt, 8},
     {codeview::SimpleTypeKind::NarrowCharacter, PDB_BuiltinType::Char, 1},
+    {codeview::SimpleTypeKind::WideCharacter, PDB_BuiltinType::WCharT, 2},
+    {codeview::SimpleTypeKind::Character16, PDB_BuiltinType::Char16, 2},
+    {codeview::SimpleTypeKind::Character32, PDB_BuiltinType::Char32, 4},
     {codeview::SimpleTypeKind::SignedCharacter, PDB_BuiltinType::Char, 1},
     {codeview::SimpleTypeKind::UnsignedCharacter, PDB_BuiltinType::UInt, 1},
-    {codeview::SimpleTypeKind::Boolean8, PDB_BuiltinType::Bool, 1}
+    {codeview::SimpleTypeKind::Float32, PDB_BuiltinType::Float, 4},
+    {codeview::SimpleTypeKind::Float64, PDB_BuiltinType::Float, 8},
+    {codeview::SimpleTypeKind::Float80, PDB_BuiltinType::Float, 10},
+    {codeview::SimpleTypeKind::Boolean8, PDB_BuiltinType::Bool, 1},
     // This table can be grown as necessary, but these are the only types we've
     // needed so far.
 };
@@ -75,6 +88,12 @@ SymbolCache::createTypeEnumerator(std::vector<TypeLeafKind> Kinds) {
   auto &Types = Tpi->typeCollection();
   return std::unique_ptr<IPDBEnumSymbols>(
       new NativeEnumTypes(Session, Types, std::move(Kinds)));
+}
+
+std::unique_ptr<IPDBEnumSymbols>
+SymbolCache::createGlobalsEnumerator(codeview::SymbolKind Kind) {
+  return std::unique_ptr<IPDBEnumSymbols>(
+      new NativeEnumGlobals(Session, {Kind}));
 }
 
 SymIndexId SymbolCache::createSimpleType(TypeIndex Index,
@@ -196,6 +215,10 @@ SymIndexId SymbolCache::findSymbolByTypeIndex(codeview::TypeIndex Index) {
     Id = createSymbolForType<NativeTypeFunctionSig, MemberFunctionRecord>(
         Index, std::move(CVT));
     break;
+  case codeview::LF_VTSHAPE:
+    Id = createSymbolForType<NativeTypeVTShape, VFTableShapeRecord>(
+        Index, std::move(CVT));
+    break;
   default:
     Id = createSymbolPlaceholder();
     break;
@@ -233,6 +256,32 @@ uint32_t SymbolCache::getNumCompilands() const {
     return 0;
 
   return Dbi->modules().getModuleCount();
+}
+
+SymIndexId SymbolCache::getOrCreateGlobalSymbolByOffset(uint32_t Offset) {
+  auto Iter = GlobalOffsetToSymbolId.find(Offset);
+  if (Iter != GlobalOffsetToSymbolId.end())
+    return Iter->second;
+
+  SymbolStream &SS = cantFail(Session.getPDBFile().getPDBSymbolStream());
+  CVSymbol CVS = SS.readRecord(Offset);
+  SymIndexId Id = 0;
+  switch (CVS.kind()) {
+  case SymbolKind::S_UDT: {
+    UDTSym US = cantFail(SymbolDeserializer::deserializeAs<UDTSym>(CVS));
+    Id = createSymbol<NativeTypeTypedef>(std::move(US));
+    break;
+  }
+  default:
+    Id = createSymbolPlaceholder();
+    break;
+  }
+  if (Id != 0) {
+    assert(GlobalOffsetToSymbolId.count(Offset) == 0);
+    GlobalOffsetToSymbolId[Offset] = Id;
+  }
+
+  return Id;
 }
 
 std::unique_ptr<PDBSymbolCompiland>

@@ -208,6 +208,10 @@ void TypeDumper::start(const PDBSymbolExe &Exe) {
   if (opts::pretty::Pointers)
     dumpSymbolCategory<PDBSymbolTypePointer>(Printer, Exe, *this, "Pointers");
 
+  if (opts::pretty::VTShapes)
+    dumpSymbolCategory<PDBSymbolTypeVTableShape>(Printer, Exe, *this,
+                                                 "VFTable Shapes");
+
   if (opts::pretty::Classes) {
     if (auto Classes = Exe.findAllChildren<PDBSymbolTypeUDT>()) {
       uint32_t All = Classes->getChildCount();
@@ -281,6 +285,10 @@ void TypeDumper::dump(const PDBSymbolTypeBuiltin &Symbol) {
   BD.start(Symbol);
 }
 
+void TypeDumper::dump(const PDBSymbolTypeUDT &Symbol) {
+  printClassDecl(Printer, Symbol);
+}
+
 void TypeDumper::dump(const PDBSymbolTypeTypedef &Symbol) {
   assert(opts::pretty::Typedefs);
 
@@ -305,7 +313,7 @@ void TypeDumper::dump(const PDBSymbolTypeFunctionSig &Symbol) {
 void TypeDumper::dump(const PDBSymbolTypePointer &Symbol) {
   std::unique_ptr<PDBSymbol> P = Symbol.getPointeeType();
 
-  if (auto *FS = dyn_cast_or_null<PDBSymbolTypeFunctionSig>(P.get())) {
+  if (auto *FS = dyn_cast<PDBSymbolTypeFunctionSig>(P.get())) {
     FunctionDumper Dumper(Printer);
     FunctionDumper::PointerType PT =
         Symbol.isReference() ? FunctionDumper::PointerType::Reference
@@ -314,7 +322,7 @@ void TypeDumper::dump(const PDBSymbolTypePointer &Symbol) {
     return;
   }
 
-  if (auto *UDT = dyn_cast_or_null<PDBSymbolTypeUDT>(P.get())) {
+  if (auto *UDT = dyn_cast<PDBSymbolTypeUDT>(P.get())) {
     printClassDecl(Printer, *UDT);
   } else if (P) {
     P->dump(*this);
@@ -332,6 +340,10 @@ void TypeDumper::dump(const PDBSymbolTypePointer &Symbol) {
     Printer << "&&";
   else
     Printer << "*";
+}
+
+void TypeDumper::dump(const PDBSymbolTypeVTableShape &Symbol) {
+  Printer.format("<vtshape ({0} methods)>", Symbol.getCount());
 }
 
 void TypeDumper::dumpClassLayout(const ClassLayout &Class) {

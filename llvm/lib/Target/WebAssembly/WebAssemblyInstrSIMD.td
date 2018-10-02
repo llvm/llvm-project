@@ -387,14 +387,14 @@ defm "" : SIMDAbs<v2f64, "f64x2", 128>;
 defm "" : SIMDSqrt<v4f32, "f32x4", 141>;
 defm "" : SIMDSqrt<v2f64, "f64x2", 142>;
 
-defm "" : SIMDConvert<v4f32, v4i32, sint_to_fp, "f32x4.convert_s?i32x4", 143>;
-defm "" : SIMDConvert<v4f32, v4i32, uint_to_fp, "f32x4.convert_u?i32x4", 144>;
-defm "" : SIMDConvert<v2f64, v2i64, sint_to_fp, "f64x2.convert_s?i64x2", 145>;
-defm "" : SIMDConvert<v2f64, v2i64, uint_to_fp, "f64x2.convert_u?i64x2", 146>;
-defm "" : SIMDConvert<v4i32, v4f32, fp_to_sint, "i32x4.trunc_saturating_s?f32x4", 143>;
-defm "" : SIMDConvert<v4i32, v4f32, fp_to_uint, "i32x4.trunc_saturating_u?f32x4", 144>;
-defm "" : SIMDConvert<v2i64, v2f64, fp_to_sint, "i64x2.trunc_saturating_s?f64x2", 145>;
-defm "" : SIMDConvert<v2i64, v2f64, fp_to_uint, "i64x2.trunc_saturating_u?f64x2", 146>;
+defm "" : SIMDConvert<v4f32, v4i32, sint_to_fp, "f32x4.convert_s/i32x4", 143>;
+defm "" : SIMDConvert<v4f32, v4i32, uint_to_fp, "f32x4.convert_u/i32x4", 144>;
+defm "" : SIMDConvert<v2f64, v2i64, sint_to_fp, "f64x2.convert_s/i64x2", 145>;
+defm "" : SIMDConvert<v2f64, v2i64, uint_to_fp, "f64x2.convert_u/i64x2", 146>;
+defm "" : SIMDConvert<v4i32, v4f32, fp_to_sint, "i32x4.trunc_sat_s/f32x4", 147>;
+defm "" : SIMDConvert<v4i32, v4f32, fp_to_uint, "i32x4.trunc_sat_u/f32x4", 148>;
+defm "" : SIMDConvert<v2i64, v2f64, fp_to_sint, "i64x2.trunc_sat_s/f64x2", 149>;
+defm "" : SIMDConvert<v2i64, v2f64, fp_to_uint, "i64x2.trunc_sat_u/f64x2", 150>;
 
 } // Defs = [ARGUMENTS]
 

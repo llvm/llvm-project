@@ -90,7 +90,7 @@ define <2 x float> @cvt_v2u32_v2f32(<2 x i32> %src) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm1 = [4.503600e+15,4.503600e+15]
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm1 = [4503599627370496,4503599627370496]
 ; CHECK-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vcvtpd2ps %xmm0, %xmm0
@@ -99,7 +99,7 @@ define <2 x float> @cvt_v2u32_v2f32(<2 x i32> %src) {
 ; CHECK-WIDE-LABEL: cvt_v2u32_v2f32:
 ; CHECK-WIDE:       ## %bb.0:
 ; CHECK-WIDE-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; CHECK-WIDE-NEXT:    vmovdqa {{.*#+}} xmm1 = [4.503600e+15,4.503600e+15]
+; CHECK-WIDE-NEXT:    vmovdqa {{.*#+}} xmm1 = [4503599627370496,4503599627370496]
 ; CHECK-WIDE-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; CHECK-WIDE-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
 ; CHECK-WIDE-NEXT:    vcvtpd2ps %xmm0, %xmm0

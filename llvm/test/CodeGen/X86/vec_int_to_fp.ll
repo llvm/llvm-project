@@ -415,7 +415,7 @@ define <2 x double> @uitofp_2i64_to_2f64(<2 x i64> %a) {
 ; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1127219200,1160773632,0,0]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; SSE-NEXT:    movapd {{.*#+}} xmm4 = [4.503600e+15,1.934281e+25]
+; SSE-NEXT:    movapd {{.*#+}} xmm4 = [4503599627370496,1.9342813113834067E+25]
 ; SSE-NEXT:    subpd %xmm4, %xmm0
 ; SSE-NEXT:    movapd %xmm0, %xmm1
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
@@ -433,7 +433,7 @@ define <2 x double> @uitofp_2i64_to_2f64(<2 x i64> %a) {
 ; VEX:       # %bb.0:
 ; VEX-NEXT:    vmovapd {{.*#+}} xmm1 = [1127219200,1160773632,0,0]
 ; VEX-NEXT:    vunpcklps {{.*#+}} xmm2 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; VEX-NEXT:    vmovapd {{.*#+}} xmm3 = [4.503600e+15,1.934281e+25]
+; VEX-NEXT:    vmovapd {{.*#+}} xmm3 = [4503599627370496,1.9342813113834067E+25]
 ; VEX-NEXT:    vsubpd %xmm3, %xmm2, %xmm2
 ; VEX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; VEX-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
@@ -698,7 +698,7 @@ define <4 x double> @uitofp_4i64_to_4f64(<4 x i64> %a) {
 ; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [1127219200,1160773632,0,0]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; SSE-NEXT:    movapd {{.*#+}} xmm5 = [4.503600e+15,1.934281e+25]
+; SSE-NEXT:    movapd {{.*#+}} xmm5 = [4503599627370496,1.9342813113834067E+25]
 ; SSE-NEXT:    subpd %xmm5, %xmm2
 ; SSE-NEXT:    movapd %xmm2, %xmm0
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm2[1]
@@ -729,7 +729,7 @@ define <4 x double> @uitofp_4i64_to_4f64(<4 x i64> %a) {
 ; VEX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; VEX-NEXT:    vmovapd {{.*#+}} xmm2 = [1127219200,1160773632,0,0]
 ; VEX-NEXT:    vunpcklps {{.*#+}} xmm3 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; VEX-NEXT:    vmovapd {{.*#+}} xmm4 = [4.503600e+15,1.934281e+25]
+; VEX-NEXT:    vmovapd {{.*#+}} xmm4 = [4503599627370496,1.9342813113834067E+25]
 ; VEX-NEXT:    vsubpd %xmm4, %xmm3, %xmm3
 ; VEX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[2,3,0,1]
 ; VEX-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
@@ -797,7 +797,7 @@ define <4 x double> @uitofp_4i32_to_4f64(<4 x i32> %a) {
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrld $16, %xmm1
 ; SSE-NEXT:    cvtdq2pd %xmm1, %xmm1
-; SSE-NEXT:    movapd {{.*#+}} xmm2 = [6.553600e+04,6.553600e+04]
+; SSE-NEXT:    movapd {{.*#+}} xmm2 = [65536,65536]
 ; SSE-NEXT:    mulpd %xmm2, %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
 ; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
@@ -2329,7 +2329,7 @@ define <8 x float> @uitofp_8i32_to_8f32(<8 x i32> %a) {
 ; SSE-NEXT:    psrld $16, %xmm0
 ; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [1392508928,1392508928,1392508928,1392508928]
 ; SSE-NEXT:    por %xmm5, %xmm0
-; SSE-NEXT:    movaps {{.*#+}} xmm6 = [-5.497642e+11,-5.497642e+11,-5.497642e+11,-5.497642e+11]
+; SSE-NEXT:    movaps {{.*#+}} xmm6 = [-5.49764202E+11,-5.49764202E+11,-5.49764202E+11,-5.49764202E+11]
 ; SSE-NEXT:    addps %xmm6, %xmm0
 ; SSE-NEXT:    addps %xmm3, %xmm0
 ; SSE-NEXT:    pand %xmm1, %xmm2
@@ -2804,7 +2804,7 @@ define <2 x double> @uitofp_load_2i64_to_2f64(<2 x i64> *%a) {
 ; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1127219200,1160773632,0,0]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,0,1]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; SSE-NEXT:    movapd {{.*#+}} xmm4 = [4.503600e+15,1.934281e+25]
+; SSE-NEXT:    movapd {{.*#+}} xmm4 = [4503599627370496,1.9342813113834067E+25]
 ; SSE-NEXT:    subpd %xmm4, %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
@@ -2822,7 +2822,7 @@ define <2 x double> @uitofp_load_2i64_to_2f64(<2 x i64> *%a) {
 ; VEX-NEXT:    vmovapd (%rdi), %xmm0
 ; VEX-NEXT:    vmovapd {{.*#+}} xmm1 = [1127219200,1160773632,0,0]
 ; VEX-NEXT:    vunpcklps {{.*#+}} xmm2 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; VEX-NEXT:    vmovapd {{.*#+}} xmm3 = [4.503600e+15,1.934281e+25]
+; VEX-NEXT:    vmovapd {{.*#+}} xmm3 = [4503599627370496,1.9342813113834067E+25]
 ; VEX-NEXT:    vsubpd %xmm3, %xmm2, %xmm2
 ; VEX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; VEX-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
@@ -2972,7 +2972,7 @@ define <4 x double> @uitofp_load_4i64_to_4f64(<4 x i64> *%a) {
 ; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [1127219200,1160773632,0,0]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,0,1]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
-; SSE-NEXT:    movapd {{.*#+}} xmm5 = [4.503600e+15,1.934281e+25]
+; SSE-NEXT:    movapd {{.*#+}} xmm5 = [4503599627370496,1.9342813113834067E+25]
 ; SSE-NEXT:    subpd %xmm5, %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
@@ -3003,7 +3003,7 @@ define <4 x double> @uitofp_load_4i64_to_4f64(<4 x i64> *%a) {
 ; VEX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; VEX-NEXT:    vmovapd {{.*#+}} xmm2 = [1127219200,1160773632,0,0]
 ; VEX-NEXT:    vunpcklps {{.*#+}} xmm3 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; VEX-NEXT:    vmovapd {{.*#+}} xmm4 = [4.503600e+15,1.934281e+25]
+; VEX-NEXT:    vmovapd {{.*#+}} xmm4 = [4503599627370496,1.9342813113834067E+25]
 ; VEX-NEXT:    vsubpd %xmm4, %xmm3, %xmm3
 ; VEX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[2,3,0,1]
 ; VEX-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
@@ -3075,7 +3075,7 @@ define <4 x double> @uitofp_load_4i32_to_4f64(<4 x i32> *%a) {
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrld $16, %xmm1
 ; SSE-NEXT:    cvtdq2pd %xmm1, %xmm1
-; SSE-NEXT:    movapd {{.*#+}} xmm2 = [6.553600e+04,6.553600e+04]
+; SSE-NEXT:    movapd {{.*#+}} xmm2 = [65536,65536]
 ; SSE-NEXT:    mulpd %xmm2, %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
 ; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
@@ -4480,7 +4480,7 @@ define <8 x float> @uitofp_load_8i32_to_8f32(<8 x i32> *%a) {
 ; SSE-NEXT:    psrld $16, %xmm0
 ; SSE-NEXT:    movdqa {{.*#+}} xmm5 = [1392508928,1392508928,1392508928,1392508928]
 ; SSE-NEXT:    por %xmm5, %xmm0
-; SSE-NEXT:    movaps {{.*#+}} xmm6 = [-5.497642e+11,-5.497642e+11,-5.497642e+11,-5.497642e+11]
+; SSE-NEXT:    movaps {{.*#+}} xmm6 = [-5.49764202E+11,-5.49764202E+11,-5.49764202E+11,-5.49764202E+11]
 ; SSE-NEXT:    addps %xmm6, %xmm0
 ; SSE-NEXT:    addps %xmm3, %xmm0
 ; SSE-NEXT:    pand %xmm1, %xmm2

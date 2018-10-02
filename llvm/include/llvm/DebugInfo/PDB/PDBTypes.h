@@ -210,6 +210,18 @@ enum class PDB_SymType {
   CustomType,
   ManagedType,
   Dimension,
+  CallSite,
+  InlineSite,
+  BaseInterface,
+  VectorType,
+  MatrixType,
+  HLSLType,
+  Caller,
+  Callee,
+  Export,
+  HeapAllocationSite,
+  CoffGroup,
+  Inlinee,
   Max
 };
 

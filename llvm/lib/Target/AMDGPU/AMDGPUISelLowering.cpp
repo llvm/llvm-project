@@ -4477,3 +4477,10 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
     return false;
   }
 }
+
+TargetLowering::AtomicExpansionKind
+AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+  if (RMW->getOperation() == AtomicRMWInst::Nand)
+    return AtomicExpansionKind::CmpXChg;
+  return AtomicExpansionKind::None;
+}

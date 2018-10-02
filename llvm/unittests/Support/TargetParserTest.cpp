@@ -966,7 +966,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
                               {"sve", "nosve", "+sve", "-sve"},
                               {"dotprod", "nodotprod", "+dotprod", "-dotprod"},
                               {"rcpc", "norcpc", "+rcpc", "-rcpc" },
-                              {"rng", "norng", "+rand", "-rand"}};
+                              {"rng", "norng", "+rand", "-rand"},
+                              {"memtag", "nomemtag", "+mte", "-mte"}};
 
   for (unsigned i = 0; i < array_lengthof(ArchExt); i++) {
     EXPECT_EQ(StringRef(ArchExt[i][2]),

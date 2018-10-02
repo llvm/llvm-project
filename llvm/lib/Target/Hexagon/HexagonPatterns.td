@@ -1119,14 +1119,6 @@ def: Pat<(or (or (or (shl (Zext64 (and I32:$b, (i32 65535))), (i32 16)),
          (Combinew (A2_combine_ll I32:$d, I32:$c),
                    (A2_combine_ll I32:$b, I32:$a))>;
 
-def: Pat<(or (or (shl (or (shl (i32 (extloadi8 (add I32:$b, 3))),
-                               (i32 8)),
-                          (i32 (zextloadi8 (add I32:$b, 2)))),
-                      (i32 16)),
-                 (shl (i32 (zextloadi8 (add I32:$b, 1))), (i32 8))),
-             (zextloadi8 I32:$b)),
-         (A2_swiz (L2_loadri_io IntRegs:$b, 0))>;
-
 let AddedComplexity = 200 in {
   def: Pat<(or (shl I32:$Rt, (i32 16)), (and I32:$Rs, (i32 65535))),
            (A2_combine_ll I32:$Rt, I32:$Rs)>;

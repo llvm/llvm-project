@@ -36,10 +36,10 @@ void Y::doSomething() {
 
 // CHECK-SUPER-ACCESS: CXXMethod:{ResultType void}{TypedText doSomething}{LeftParen (}{RightParen )} (34)
 // CHECK-SUPER-ACCESS: CXXMethod:{ResultType void}{Informative X::}{TypedText func1}{LeftParen (}{RightParen )} (36)
-// CHECK-SUPER-ACCESS: CXXMethod:{ResultType void}{Informative X::}{TypedText func2}{LeftParen (}{RightParen )} (36)
+// CHECK-SUPER-ACCESS: CXXMethod:{ResultType void}{Informative X::}{TypedText func2}{LeftParen (}{RightParen )} (36){{$}}
 // CHECK-SUPER-ACCESS: CXXMethod:{ResultType void}{Informative X::}{TypedText func3}{LeftParen (}{RightParen )} (36) (inaccessible)
 // CHECK-SUPER-ACCESS: FieldDecl:{ResultType int}{Informative X::}{TypedText member1} (37)
-// CHECK-SUPER-ACCESS: FieldDecl:{ResultType int}{Informative X::}{TypedText member2} (37)
+// CHECK-SUPER-ACCESS: FieldDecl:{ResultType int}{Informative X::}{TypedText member2} (37){{$}}
 // CHECK-SUPER-ACCESS: FieldDecl:{ResultType int}{Informative X::}{TypedText member3} (37) (inaccessible)
 // CHECK-SUPER-ACCESS: CXXMethod:{ResultType Y &}{TypedText operator=}{LeftParen (}{Placeholder const Y &}{RightParen )} (79)
 // CHECK-SUPER-ACCESS: CXXMethod:{ResultType X &}{Text X::}{TypedText operator=}{LeftParen (}{Placeholder const X &}{RightParen )} (81)

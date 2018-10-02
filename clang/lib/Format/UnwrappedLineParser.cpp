@@ -480,6 +480,10 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
       }
       LBraceStack.pop_back();
       break;
+    case tok::identifier:
+      if (!Tok->is(TT_StatementMacro))
+          break;
+      LLVM_FALLTHROUGH;
     case tok::at:
     case tok::semi:
     case tok::kw_if:
@@ -1108,6 +1112,10 @@ void UnwrappedLineParser::parseStructuralElement() {
         return;
       }
     }
+    if (Style.isCpp() && FormatTok->is(TT_StatementMacro)) {
+      parseStatementMacro();
+      return;
+    }
     // In all other cases, parse the declaration.
     break;
   default:
@@ -1306,6 +1314,11 @@ void UnwrappedLineParser::parseStructuralElement() {
         }
         parseRecord();
         addUnwrappedLine();
+        return;
+      }
+
+      if (Style.isCpp() && FormatTok->is(TT_StatementMacro)) {
+        parseStatementMacro();
         return;
       }
 
@@ -2326,6 +2339,16 @@ void UnwrappedLineParser::parseJavaScriptEs6ImportExport() {
       nextToken();
     }
   }
+}
+
+void UnwrappedLineParser::parseStatementMacro()
+{
+  nextToken();
+  if (FormatTok->is(tok::l_paren))
+    parseParens();
+  if (FormatTok->is(tok::semi))
+    nextToken();
+  addUnwrappedLine();
 }
 
 LLVM_ATTRIBUTE_UNUSED static void printDebugInfo(const UnwrappedLine &Line,

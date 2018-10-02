@@ -270,7 +270,7 @@ roundss     $1, (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT: 6.00    -      -     29.00  23.00  48.50  51.50  44.00   -     5.00   13.00  32.50  32.50  10.00
+# CHECK-NEXT: 6.00    -      -     29.00  23.00  57.50  60.50  44.00   -     5.00   13.00  32.50  32.50  10.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
@@ -278,10 +278,10 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50   1.00    -      -      -      -      -      -     blendpd	$11, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -     blendps	$11, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50   1.00    -      -      -      -      -      -     blendps	$11, (%rax), %xmm2
-# CHECK-NEXT:  -      -      -     2.00   2.00   0.50   0.50    -      -      -      -      -      -      -     blendvpd	%xmm0, %xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     2.00   2.00   0.50   0.50   1.00    -      -      -      -      -      -     blendvpd	%xmm0, (%rax), %xmm2
-# CHECK-NEXT:  -      -      -     2.00   2.00   0.50   0.50    -      -      -      -      -      -      -     blendvps	%xmm0, %xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     2.00   2.00   0.50   0.50   1.00    -      -      -      -      -      -     blendvps	%xmm0, (%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00   2.00   2.00   2.00    -      -      -      -      -      -      -     blendvpd	%xmm0, %xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00   2.00   2.00   2.00   1.00    -      -      -      -      -      -     blendvpd	%xmm0, (%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00   2.00   2.00   2.00    -      -      -      -      -      -      -     blendvps	%xmm0, %xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00   2.00   2.00   2.00   1.00    -      -      -      -      -      -     blendvps	%xmm0, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     3.00   3.00    -     1.00    -      -      -      -      -      -      -     dppd	$22, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     3.00   3.00    -     1.00   1.00    -      -      -      -      -      -     dppd	$22, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     3.00   3.00    -     1.00    -      -      -      -      -      -      -     dpps	$22, %xmm0, %xmm2
@@ -295,8 +295,8 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -      -      -     2.00   mpsadbw	$1, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     packusdw	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     packusdw	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     2.00   2.00    -     pblendvb	%xmm0, %xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     2.00   2.00    -     pblendvb	%xmm0, (%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -     2.00   2.00    -     pblendvb	%xmm0, %xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00   1.00    -      -      -     2.00   2.00    -     pblendvb	%xmm0, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     pblendw	$11, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     pblendw	$11, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     pcmpeqq	%xmm0, %xmm2
