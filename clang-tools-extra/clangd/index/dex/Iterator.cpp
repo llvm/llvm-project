@@ -64,7 +64,7 @@ public:
 
   float consume() override {
     assert(!reachedEnd() && "AND iterator can't consume() at the end.");
-    float Boost = 1;
+    float Boost = DEFAULT_BOOST_SCORE;
     for (const auto &Child : Children)
       Boost *= Child->consume();
     return Boost;
@@ -175,12 +175,12 @@ public:
     return Result;
   }
 
-  // Returns the maximum boosting score among all Children when iterator
-  // points to the current ID.
+  // Returns the maximum boosting score among all Children when iterator is not
+  // exhausted and points to the given ID, DEFAULT_BOOST_SCORE otherwise.
   float consume() override {
     assert(!reachedEnd() && "OR iterator can't consume() at the end.");
     const DocID ID = peek();
-    float Boost = 1;
+    float Boost = DEFAULT_BOOST_SCORE;
     for (const auto &Child : Children)
       if (!Child->reachedEnd() && Child->peek() == ID)
         Boost = std::max(Boost, Child->consume());
@@ -236,7 +236,7 @@ public:
 
   float consume() override {
     assert(!reachedEnd() && "TRUE iterator can't consume() at the end.");
-    return 1;
+    return DEFAULT_BOOST_SCORE;
   }
 
   size_t estimateSize() const override { return Size; }
@@ -330,30 +330,30 @@ std::vector<std::pair<DocID, float>> consume(Iterator &It) {
 }
 
 std::unique_ptr<Iterator>
-Corpus::intersect(std::vector<std::unique_ptr<Iterator>> Children) const {
+createAnd(std::vector<std::unique_ptr<Iterator>> Children) {
   // If there is exactly one child, pull it one level up: AND(Child) -> Child.
   return Children.size() == 1 ? std::move(Children.front())
                               : llvm::make_unique<AndIterator>(move(Children));
 }
 
 std::unique_ptr<Iterator>
-Corpus::unionOf(std::vector<std::unique_ptr<Iterator>> Children) const {
+createOr(std::vector<std::unique_ptr<Iterator>> Children) {
   // If there is exactly one child, pull it one level up: OR(Child) -> Child.
   return Children.size() == 1 ? std::move(Children.front())
                               : llvm::make_unique<OrIterator>(move(Children));
 }
 
-std::unique_ptr<Iterator> Corpus::all() const {
+std::unique_ptr<Iterator> createTrue(DocID Size) {
   return llvm::make_unique<TrueIterator>(Size);
 }
 
-std::unique_ptr<Iterator> Corpus::boost(std::unique_ptr<Iterator> Child,
-                                        float Factor) const {
+std::unique_ptr<Iterator> createBoost(std::unique_ptr<Iterator> Child,
+                                      float Factor) {
   return llvm::make_unique<BoostIterator>(move(Child), Factor);
 }
 
-std::unique_ptr<Iterator> Corpus::limit(std::unique_ptr<Iterator> Child,
-                                        size_t Limit) const {
+std::unique_ptr<Iterator> createLimit(std::unique_ptr<Iterator> Child,
+                                      size_t Limit) {
   return llvm::make_unique<LimitIterator>(move(Child), Limit);
 }
 
