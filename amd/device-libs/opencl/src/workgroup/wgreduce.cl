@@ -7,6 +7,10 @@
 
 #include "wg.h"
 
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+#pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
+
 #define reduce_add atomic_fetch_add_explicit
 #define reduce_min atomic_fetch_min_explicit
 #define reduce_max atomic_fetch_max_explicit
