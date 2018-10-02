@@ -31,6 +31,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/LexicalScopes.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -93,6 +94,21 @@ using namespace llvm::codeview;
 static cl::opt<bool> EmitDebugGlobalHashes("emit-codeview-ghash-section",
                                            cl::ReallyHidden, cl::init(false));
 
+static CPUType mapArchToCVCPUType(Triple::ArchType Type) {
+  switch (Type) {
+  case Triple::ArchType::x86:
+    return CPUType::Pentium3;
+  case Triple::ArchType::x86_64:
+    return CPUType::X64;
+  case Triple::ArchType::thumb:
+    return CPUType::Thumb;
+  case Triple::ArchType::aarch64:
+    return CPUType::ARM64;
+  default:
+    report_fatal_error("target architecture doesn't map to a CodeView CPUType");
+  }
+}
+
 CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
     : DebugHandlerBase(AP), OS(*Asm->OutStreamer), TypeTable(Allocator) {
   // If module doesn't have named metadata anchors or COFF debug section
@@ -102,9 +118,11 @@ CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
     Asm = nullptr;
     return;
   }
-
   // Tell MMI that we have debug info.
   MMI->setDebugInfoAvailability(true);
+
+  TheCPU =
+      mapArchToCVCPUType(Triple(MMI->getModule()->getTargetTriple()).getArch());
 }
 
 StringRef CodeViewDebug::getFullFilepath(const DIFile *File) {
@@ -669,21 +687,6 @@ static Version parseVersion(StringRef Name) {
   return V;
 }
 
-static CPUType mapArchToCVCPUType(Triple::ArchType Type) {
-  switch (Type) {
-  case Triple::ArchType::x86:
-    return CPUType::Pentium3;
-  case Triple::ArchType::x86_64:
-    return CPUType::X64;
-  case Triple::ArchType::thumb:
-    return CPUType::Thumb;
-  case Triple::ArchType::aarch64:
-    return CPUType::ARM64;
-  default:
-    report_fatal_error("target architecture doesn't map to a CodeView CPUType");
-  }
-}
-
 void CodeViewDebug::emitCompilerInformation() {
   MCContext &Context = MMI->getContext();
   MCSymbol *CompilerBegin = Context.createTempSymbol(),
@@ -707,9 +710,7 @@ void CodeViewDebug::emitCompilerInformation() {
   OS.EmitIntValue(Flags, 4);
 
   OS.AddComment("CPUType");
-  CPUType CPU =
-      mapArchToCVCPUType(Triple(MMI->getModule()->getTargetTriple()).getArch());
-  OS.EmitIntValue(static_cast<uint64_t>(CPU), 2);
+  OS.EmitIntValue(static_cast<uint64_t>(TheCPU), 2);
 
   StringRef CompilerVersion = CU->getProducer();
   Version FrontVer = parseVersion(CompilerVersion);
@@ -801,7 +802,7 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
 
   OS.EmitLabel(InlineEnd);
 
-  emitLocalVariableList(Site.InlinedLocals);
+  emitLocalVariableList(FI, Site.InlinedLocals);
 
   // Recurse on child inlined call sites before closing the scope.
   for (const DILocation *ChildSite : Site.ChildSites) {
@@ -970,7 +971,31 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     emitNullTerminatedSymbolName(OS, FuncName);
     OS.EmitLabel(ProcRecordEnd);
 
-    emitLocalVariableList(FI.Locals);
+    MCSymbol *FrameProcBegin = MMI->getContext().createTempSymbol(),
+             *FrameProcEnd = MMI->getContext().createTempSymbol();
+    OS.AddComment("Record length");
+    OS.emitAbsoluteSymbolDiff(FrameProcEnd, FrameProcBegin, 2);
+    OS.EmitLabel(FrameProcBegin);
+    OS.AddComment("Record kind: S_FRAMEPROC");
+    OS.EmitIntValue(unsigned(SymbolKind::S_FRAMEPROC), 2);
+    // Subtract out the CSR size since MSVC excludes that and we include it.
+    OS.AddComment("FrameSize");
+    OS.EmitIntValue(FI.FrameSize - FI.CSRSize, 4);
+    OS.AddComment("Padding");
+    OS.EmitIntValue(0, 4);
+    OS.AddComment("Offset of padding");
+    OS.EmitIntValue(0, 4);
+    OS.AddComment("Bytes of callee saved registers");
+    OS.EmitIntValue(FI.CSRSize, 4);
+    OS.AddComment("Exception handler offset");
+    OS.EmitIntValue(0, 4);
+    OS.AddComment("Exception handler section");
+    OS.EmitIntValue(0, 2);
+    OS.AddComment("Flags (defines frame register)");
+    OS.EmitIntValue(uint32_t(FI.FrameProcOpts), 4);
+    OS.EmitLabel(FrameProcEnd);
+
+    emitLocalVariableList(FI, FI.Locals);
     emitLexicalBlockList(FI.ChildBlocks, FI);
 
     // Emit inlined call site information. Only emit functions inlined directly
@@ -1215,12 +1240,73 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
 }
 
 void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
+  const TargetSubtargetInfo &TSI = MF->getSubtarget();
+  const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
   const Function &GV = MF->getFunction();
   auto Insertion = FnDebugInfo.insert({&GV, llvm::make_unique<FunctionInfo>()});
   assert(Insertion.second && "function already has info");
   CurFn = Insertion.first->second.get();
   CurFn->FuncId = NextFuncId++;
   CurFn->Begin = Asm->getFunctionBegin();
+
+  // The S_FRAMEPROC record reports the stack size, and how many bytes of
+  // callee-saved registers were used. For targets that don't use a PUSH
+  // instruction (AArch64), this will be zero.
+  CurFn->CSRSize = MFI.getCVBytesOfCalleeSavedRegisters();
+  CurFn->FrameSize = MFI.getStackSize();
+
+  // For this function S_FRAMEPROC record, figure out which codeview register
+  // will be the frame pointer.
+  CurFn->EncodedParamFramePtrReg = EncodedFramePtrReg::None; // None.
+  CurFn->EncodedLocalFramePtrReg = EncodedFramePtrReg::None; // None.
+  if (CurFn->FrameSize > 0) {
+    if (!TSI.getFrameLowering()->hasFP(*MF)) {
+      CurFn->EncodedLocalFramePtrReg = EncodedFramePtrReg::StackPtr;
+      CurFn->EncodedParamFramePtrReg = EncodedFramePtrReg::StackPtr;
+    } else {
+      // If there is an FP, parameters are always relative to it.
+      CurFn->EncodedParamFramePtrReg = EncodedFramePtrReg::FramePtr;
+      if (TRI->needsStackRealignment(*MF)) {
+        // If the stack needs realignment, locals are relative to SP or VFRAME.
+        CurFn->EncodedLocalFramePtrReg = EncodedFramePtrReg::StackPtr;
+      } else {
+        // Otherwise, locals are relative to EBP, and we probably have VLAs or
+        // other stack adjustments.
+        CurFn->EncodedLocalFramePtrReg = EncodedFramePtrReg::FramePtr;
+      }
+    }
+  }
+
+  // Compute other frame procedure options.
+  FrameProcedureOptions FPO = FrameProcedureOptions::None;
+  if (MFI.hasVarSizedObjects())
+    FPO |= FrameProcedureOptions::HasAlloca;
+  if (MF->exposesReturnsTwice())
+    FPO |= FrameProcedureOptions::HasSetJmp;
+  // FIXME: Set HasLongJmp if we ever track that info.
+  if (MF->hasInlineAsm())
+    FPO |= FrameProcedureOptions::HasInlineAssembly;
+  if (GV.hasPersonalityFn()) {
+    if (isAsynchronousEHPersonality(
+            classifyEHPersonality(GV.getPersonalityFn())))
+      FPO |= FrameProcedureOptions::HasStructuredExceptionHandling;
+    else
+      FPO |= FrameProcedureOptions::HasExceptionHandling;
+  }
+  if (GV.hasFnAttribute(Attribute::InlineHint))
+    FPO |= FrameProcedureOptions::MarkedInline;
+  if (GV.hasFnAttribute(Attribute::Naked))
+    FPO |= FrameProcedureOptions::Naked;
+  if (MFI.hasStackProtectorIndex())
+    FPO |= FrameProcedureOptions::SecurityChecks;
+  FPO |= FrameProcedureOptions(uint32_t(CurFn->EncodedLocalFramePtrReg) << 14U);
+  FPO |= FrameProcedureOptions(uint32_t(CurFn->EncodedParamFramePtrReg) << 16U);
+  if (Asm->TM.getOptLevel() != CodeGenOpt::None && !GV.optForSize() &&
+      !GV.hasFnAttribute(Attribute::OptimizeNone))
+    FPO |= FrameProcedureOptions::OptimizedForSpeed;
+  // FIXME: Set GuardCfg when it is implemented.
+  CurFn->FrameProcOpts = FPO;
 
   OS.EmitCVFuncIdDirective(CurFn->FuncId);
 
@@ -2347,7 +2433,8 @@ void CodeViewDebug::emitDeferredCompleteTypes() {
   }
 }
 
-void CodeViewDebug::emitLocalVariableList(ArrayRef<LocalVariable> Locals) {
+void CodeViewDebug::emitLocalVariableList(const FunctionInfo &FI,
+                                          ArrayRef<LocalVariable> Locals) {
   // Get the sorted list of parameters and emit them first.
   SmallVector<const LocalVariable *, 6> Params;
   for (const LocalVariable &L : Locals)
@@ -2357,15 +2444,27 @@ void CodeViewDebug::emitLocalVariableList(ArrayRef<LocalVariable> Locals) {
     return L->DIVar->getArg() < R->DIVar->getArg();
   });
   for (const LocalVariable *L : Params)
-    emitLocalVariable(*L);
+    emitLocalVariable(FI, *L);
 
   // Next emit all non-parameters in the order that we found them.
   for (const LocalVariable &L : Locals)
     if (!L.DIVar->isParameter())
-      emitLocalVariable(L);
+      emitLocalVariable(FI, L);
 }
 
-void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {
+/// Only call this on endian-specific types like ulittle16_t and little32_t, or
+/// structs composed of them.
+template <typename T>
+static void copyBytesForDefRange(SmallString<20> &BytePrefix,
+                                 SymbolKind SymKind, const T &DefRangeHeader) {
+  BytePrefix.resize(2 + sizeof(T));
+  ulittle16_t SymKindLE = ulittle16_t(SymKind);
+  memcpy(&BytePrefix[0], &SymKindLE, 2);
+  memcpy(&BytePrefix[2], &DefRangeHeader, sizeof(T));
+}
+
+void CodeViewDebug::emitLocalVariable(const FunctionInfo &FI,
+                                      const LocalVariable &Var) {
   // LocalSym record, see SymbolRecord.h for more info.
   MCSymbol *LocalBegin = MMI->getContext().createTempSymbol(),
            *LocalEnd = MMI->getContext().createTempSymbol();
@@ -2400,45 +2499,54 @@ void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {
   for (const LocalVarDefRange &DefRange : Var.DefRanges) {
     BytePrefix.clear();
     if (DefRange.InMemory) {
-      uint16_t RegRelFlags = 0;
-      if (DefRange.IsSubfield) {
-        RegRelFlags = DefRangeRegisterRelSym::IsSubfieldFlag |
-                      (DefRange.StructOffset
-                       << DefRangeRegisterRelSym::OffsetInParentShift);
+      int Offset = DefRange.DataOffset;
+      unsigned Reg = DefRange.CVRegister;
+
+      // x86 call sequences often use PUSH instructions, which disrupt
+      // ESP-relative offsets. Use the virtual frame pointer, VFRAME or $T0,
+      // instead. In simple cases, $T0 will be the CFA. If the frame required
+      // re-alignment, it will be the CFA aligned downwards.
+      if (RegisterId(Reg) == RegisterId::ESP) {
+        Reg = unsigned(RegisterId::VFRAME);
+        Offset -= FI.FrameSize;
       }
-      DefRangeRegisterRelSym Sym(S_DEFRANGE_REGISTER_REL);
-      Sym.Hdr.Register = DefRange.CVRegister;
-      Sym.Hdr.Flags = RegRelFlags;
-      Sym.Hdr.BasePointerOffset = DefRange.DataOffset;
-      ulittle16_t SymKind = ulittle16_t(S_DEFRANGE_REGISTER_REL);
-      BytePrefix +=
-          StringRef(reinterpret_cast<const char *>(&SymKind), sizeof(SymKind));
-      BytePrefix +=
-          StringRef(reinterpret_cast<const char *>(&Sym.Hdr), sizeof(Sym.Hdr));
+
+      // If we can use the chosen frame pointer for the frame and this isn't a
+      // sliced aggregate, use the smaller S_DEFRANGE_FRAMEPOINTER_REL record.
+      // Otherwise, use S_DEFRANGE_REGISTER_REL.
+      EncodedFramePtrReg EncFP = encodeFramePtrReg(RegisterId(Reg), TheCPU);
+      if (!DefRange.IsSubfield && EncFP != EncodedFramePtrReg::None &&
+          (bool(Flags & LocalSymFlags::IsParameter)
+               ? (EncFP == FI.EncodedParamFramePtrReg)
+               : (EncFP == FI.EncodedLocalFramePtrReg))) {
+        little32_t FPOffset = little32_t(Offset);
+        copyBytesForDefRange(BytePrefix, S_DEFRANGE_FRAMEPOINTER_REL, FPOffset);
+      } else {
+        uint16_t RegRelFlags = 0;
+        if (DefRange.IsSubfield) {
+          RegRelFlags = DefRangeRegisterRelSym::IsSubfieldFlag |
+                        (DefRange.StructOffset
+                         << DefRangeRegisterRelSym::OffsetInParentShift);
+        }
+        DefRangeRegisterRelSym::Header DRHdr;
+        DRHdr.Register = Reg;
+        DRHdr.Flags = RegRelFlags;
+        DRHdr.BasePointerOffset = Offset;
+        copyBytesForDefRange(BytePrefix, S_DEFRANGE_REGISTER_REL, DRHdr);
+      }
     } else {
       assert(DefRange.DataOffset == 0 && "unexpected offset into register");
       if (DefRange.IsSubfield) {
-        // Unclear what matters here.
-        DefRangeSubfieldRegisterSym Sym(S_DEFRANGE_SUBFIELD_REGISTER);
-        Sym.Hdr.Register = DefRange.CVRegister;
-        Sym.Hdr.MayHaveNoName = 0;
-        Sym.Hdr.OffsetInParent = DefRange.StructOffset;
-
-        ulittle16_t SymKind = ulittle16_t(S_DEFRANGE_SUBFIELD_REGISTER);
-        BytePrefix += StringRef(reinterpret_cast<const char *>(&SymKind),
-                                sizeof(SymKind));
-        BytePrefix += StringRef(reinterpret_cast<const char *>(&Sym.Hdr),
-                                sizeof(Sym.Hdr));
+        DefRangeSubfieldRegisterSym::Header DRHdr;
+        DRHdr.Register = DefRange.CVRegister;
+        DRHdr.MayHaveNoName = 0;
+        DRHdr.OffsetInParent = DefRange.StructOffset;
+        copyBytesForDefRange(BytePrefix, S_DEFRANGE_SUBFIELD_REGISTER, DRHdr);
       } else {
-        // Unclear what matters here.
-        DefRangeRegisterSym Sym(S_DEFRANGE_REGISTER);
-        Sym.Hdr.Register = DefRange.CVRegister;
-        Sym.Hdr.MayHaveNoName = 0;
-        ulittle16_t SymKind = ulittle16_t(S_DEFRANGE_REGISTER);
-        BytePrefix += StringRef(reinterpret_cast<const char *>(&SymKind),
-                                sizeof(SymKind));
-        BytePrefix += StringRef(reinterpret_cast<const char *>(&Sym.Hdr),
-                                sizeof(Sym.Hdr));
+        DefRangeRegisterSym::Header DRHdr;
+        DRHdr.Register = DefRange.CVRegister;
+        DRHdr.MayHaveNoName = 0;
+        copyBytesForDefRange(BytePrefix, S_DEFRANGE_REGISTER, DRHdr);
       }
     }
     OS.EmitCVDefRangeDirective(DefRange.Ranges, BytePrefix);
@@ -2479,7 +2587,7 @@ void CodeViewDebug::emitLexicalBlock(const LexicalBlock &Block,
   OS.EmitLabel(RecordEnd);
 
   // Emit variables local to this lexical block.
-  emitLocalVariableList(Block.Locals);
+  emitLocalVariableList(FI, Block.Locals);
 
   // Emit lexical blocks contained within this block.
   emitLexicalBlockList(Block.Children, FI);

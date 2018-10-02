@@ -162,7 +162,8 @@ SymIndexId NativeTypeFunctionSig::getTypeId() const {
   TypeIndex ReturnTI =
       IsMemberFunction ? MemberFunc.getReturnType() : Proc.getReturnType();
 
-  return Session.getSymbolCache().findSymbolByTypeIndex(ReturnTI);
+  SymIndexId Result = Session.getSymbolCache().findSymbolByTypeIndex(ReturnTI);
+  return Result;
 }
 
 int32_t NativeTypeFunctionSig::getThisAdjust() const {

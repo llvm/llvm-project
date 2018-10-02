@@ -610,6 +610,7 @@ void AMDGPUPassConfig::addIRPasses() {
   disablePass(&FuncletLayoutID);
   disablePass(&PatchableFunctionID);
 
+  addPass(createAtomicExpandPass());
   // this pass should be performed on linked module
   addPass(createAMDGPULowerKernelCallsPass());
   addPass(createAMDGPULowerIntrinsicsPass());

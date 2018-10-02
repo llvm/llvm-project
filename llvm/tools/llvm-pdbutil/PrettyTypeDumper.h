@@ -29,6 +29,8 @@ public:
   void dump(const PDBSymbolTypeArray &Symbol) override;
   void dump(const PDBSymbolTypeBuiltin &Symbol) override;
   void dump(const PDBSymbolTypePointer &Symbol) override;
+  void dump(const PDBSymbolTypeVTableShape &Symbol) override;
+  void dump(const PDBSymbolTypeUDT &Symbol) override;
 
   void dumpClassLayout(const ClassLayout &Class);
 

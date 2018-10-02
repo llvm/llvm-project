@@ -54,6 +54,9 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   BumpPtrAllocator Allocator;
   codeview::GlobalTypeTableBuilder TypeTable;
 
+  /// The codeview CPU type used by the translation unit.
+  codeview::CPUType TheCPU;
+
   /// Represents the most general definition range.
   struct LocalVarDefRange {
     /// Indicates that variable data is stored in memory relative to the
@@ -140,6 +143,28 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
     const MCSymbol *End = nullptr;
     unsigned FuncId = 0;
     unsigned LastFileId = 0;
+
+    /// Number of bytes allocated in the prologue for all local stack objects.
+    unsigned FrameSize = 0;
+
+    /// Number of bytes of parameters on the stack.
+    unsigned ParamSize = 0;
+
+    /// Number of bytes pushed to save CSRs.
+    unsigned CSRSize = 0;
+
+    /// Two-bit value indicating which register is the designated frame pointer
+    /// register for local variables. Included in S_FRAMEPROC.
+    codeview::EncodedFramePtrReg EncodedLocalFramePtrReg =
+        codeview::EncodedFramePtrReg::None;
+
+    /// Two-bit value indicating which register is the designated frame pointer
+    /// register for stack parameters. Included in S_FRAMEPROC.
+    codeview::EncodedFramePtrReg EncodedParamFramePtrReg =
+        codeview::EncodedFramePtrReg::None;
+
+    codeview::FrameProcedureOptions FrameProcOpts;
+
     bool HaveLineInfo = false;
   };
   FunctionInfo *CurFn = nullptr;
@@ -293,10 +318,11 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   void recordLocalVariable(LocalVariable &&Var, const LexicalScope *LS);
 
   /// Emits local variables in the appropriate order.
-  void emitLocalVariableList(ArrayRef<LocalVariable> Locals);
+  void emitLocalVariableList(const FunctionInfo &FI,
+                             ArrayRef<LocalVariable> Locals);
 
   /// Emits an S_LOCAL record and its associated defined ranges.
-  void emitLocalVariable(const LocalVariable &Var);
+  void emitLocalVariable(const FunctionInfo &FI, const LocalVariable &Var);
 
   /// Emits a sequence of lexical block scopes and their children.
   void emitLexicalBlockList(ArrayRef<LexicalBlock *> Blocks,

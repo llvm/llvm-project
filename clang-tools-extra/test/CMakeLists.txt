@@ -56,18 +56,14 @@ set(CLANG_TOOLS_TEST_DEPS
 
   # Unit tests
   ExtraToolsUnitTests
+
+  # For the clang-tidy libclang integration test.
+  c-index-test
+  # clang-tidy tests require it.
+  clang-headers
+
+  clang-tidy
   )
-
-if(CLANG_ENABLE_STATIC_ANALYZER)
-  list(APPEND CLANG_TOOLS_TEST_DEPS
-    # For the clang-tidy libclang integration test.
-    c-index-test
-    # clang-tidy tests require it.
-    clang-headers
-
-    clang-tidy
-    )
-endif()
 
 add_lit_testsuite(check-clang-tools "Running the Clang extra tools' regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
@@ -86,8 +82,11 @@ set(CLANGD_TEST_DEPS
   clangd-indexer
   dexp
 )
+# Exclude check-clangd from check-all, as check-clangd will launch via check-clang-tools.
+set(EXCLUDE_FROM_ALL ON)
 add_lit_testsuite(check-clangd "Running the Clangd regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}/Unit/clangd;${CMAKE_CURRENT_BINARY_DIR}/clangd
   DEPENDS ${CLANGD_TEST_DEPS}
 )
 set_target_properties(check-clangd PROPERTIES FOLDER "Clangd tests")
+set(EXCLUDE_FROM_ALL OFF)

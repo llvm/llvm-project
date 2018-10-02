@@ -1,0 +1,32 @@
+# RUN: llc -o - %s -run-pass=regallocfast | FileCheck %s
+--- |
+  target triple = "aarch64--"
+
+  !0 = !DIFile(filename: "test.ll", directory: "/")
+  !1 = distinct !DICompileUnit(file: !0, language: DW_LANG_C)
+  !2 = distinct !DISubprogram(name: "test")
+  !3 = !DILocation(line: 17, scope: !2)
+  !4 = !DILocation(line: 42, scope: !2)
+
+  define void @func() {
+    unreachable
+  }
+...
+---
+# CHECK-LABEL: name: func
+name: func
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK: LDRXui killed $x0
+    ; Should find a spill here, but it should not have a debug-location.
+    ; CHECK-NOT: STRXui {{.*}}debug-location
+    ; CHECK: BLR
+    ; Should find a reload here, but it should not have a debug-location.
+    ; CHECK-NOT: LDRXui {{.*}}debug-location
+    ; CHECK: STRXui {{.*}}, killed $x0
+    %0 : gpr64 = LDRXui $x0, 0, debug-location !3
+    ; an instruction with regmask should force us to spill %0
+    BLR undef $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $x0, debug-location !3
+    STRXui %0, $x0, 0, debug-location !4

@@ -76,6 +76,7 @@ namespace test2 {
   void test() {
     __block A a;
     __block B b;
+    ^{ (void)a; (void)b; };
   }
 
   // CHECK-LABEL: define internal void @__Block_byref_object_copy

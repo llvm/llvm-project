@@ -229,8 +229,20 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS, const PDB_SymType &Tag) {
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SymType, CustomType, OS)
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SymType, ManagedType, OS)
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SymType, Dimension, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SymType, CallSite, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SymType, InlineSite, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SymType, BaseInterface, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SymType, VectorType, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SymType, MatrixType, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SymType, HLSLType, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SymType, Caller, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SymType, Callee, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SymType, Export, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SymType, HeapAllocationSite, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SymType, CoffGroup, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SymType, Inlinee, OS)
   default:
-    OS << "Unknown";
+    OS << "Unknown SymTag " << uint32_t(Tag);
   }
   return OS;
 }

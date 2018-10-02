@@ -99,7 +99,7 @@
 ; OBJ64:          DisplayName: f
 ; OBJ64:          LinkageName: f
 ; OBJ64:        }
-; OBJ64-NEXT:   ProcEnd {
+; OBJ64:        ProcEnd {
 ; OBJ64:        }
 ; OBJ64-NEXT: ]
 ; OBJ64:      FunctionLineTable [

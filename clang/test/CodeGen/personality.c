@@ -26,6 +26,7 @@ extern void i(void);
 
 void f(void) {
   __block int i;
+  ^{ (void)i; };
   g(^ { });
 }
 
