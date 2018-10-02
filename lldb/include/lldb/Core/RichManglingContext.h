@@ -64,7 +64,6 @@ public:
   /// most recent ParseXy() operation. The next ParseXy() call invalidates it.
   llvm::StringRef GetBufferRef() const {
     assert(m_provider != None && "Initialize a provider first");
-    assert(m_buffer.data() != nullptr && "Parse first");
     return m_buffer;
   }
 

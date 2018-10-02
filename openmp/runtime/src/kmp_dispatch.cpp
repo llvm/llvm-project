@@ -18,13 +18,6 @@
  *       is the largest value __kmp_nth may take, 1 is the smallest.
  */
 
-// Need to raise Win version from XP to Vista here for support of
-// InterlockedExchange64
-#if defined(_WIN32_WINNT) && defined(_M_IX86)
-#undef _WIN32_WINNT
-#define _WIN32_WINNT 0x0502
-#endif
-
 #include "kmp.h"
 #include "kmp_error.h"
 #include "kmp_i18n.h"

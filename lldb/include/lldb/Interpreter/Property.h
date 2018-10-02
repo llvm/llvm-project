@@ -28,9 +28,11 @@ struct PropertyDefinition {
   bool global; // false == this setting is a global setting by default
   uintptr_t default_uint_value;
   const char *default_cstr_value;
-  OptionEnumValueElement *enum_values;
+  OptionEnumValues enum_values;
   const char *description;
 };
+
+using PropertyDefinitions = llvm::ArrayRef<PropertyDefinition>;
 
 class Property {
 public:

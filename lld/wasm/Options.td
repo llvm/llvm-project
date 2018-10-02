@@ -30,9 +30,9 @@ defm demangle: B<"demangle",
     "Demangle symbol names",
     "Do not demangle symbol names">;
 
-defm export_default: B<"export-default",
-    "Export symbols marked as 'default' visibility (default)",
-    "Do not export symbols marked as 'default' visibility">;
+defm export_dynamic: B<"export-dynamic",
+    "Put symbols in the dynamic symbol table",
+    "Do not put symbols in the dynamic symbol table (default)">;
 
 def entry: S<"entry">, MetaVarName<"<entry>">,
   HelpText<"Name of entry point symbol">;
@@ -144,12 +144,13 @@ defm whole_archive: B<"whole-archive",
     "Do not force load of all members in a static library (default)">;
 
 // Aliases
-def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
-def alias_entry_entry: J<"entry=">, Alias<entry>;
-def alias_initial_memory_i: Flag<["-"], "i">, Alias<initial_memory>;
-def alias_max_memory_m: Flag<["-"], "m">, Alias<max_memory>;
-def alias_relocatable_r: Flag<["-"], "r">, Alias<relocatable>;
-def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
+def: JoinedOrSeparate<["-"], "e">, Alias<entry>;
+def: J<"entry=">, Alias<entry>;
+def: Flag<["-"], "E">, Alias<export_dynamic>, HelpText<"Alias for --export-dynamic">;
+def: Flag<["-"], "i">, Alias<initial_memory>;
+def: Flag<["-"], "m">, Alias<max_memory>;
+def: Flag<["-"], "r">, Alias<relocatable>;
+def: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 
 // LTO-related options.
 def lto_O: J<"lto-O">, MetaVarName<"<opt-level>">,

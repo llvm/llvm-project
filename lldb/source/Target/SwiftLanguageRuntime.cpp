@@ -4014,7 +4014,7 @@ SwiftDemangleNodeKindToCString(const swift::Demangle::Node::Kind node_kind) {
 
 static OptionDefinition g_swift_demangle_options[] = {
   // clang-format off
-  {LLDB_OPT_SET_1, false, "expand", 'e', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Whether LLDB should print the demangled tree"},
+  {LLDB_OPT_SET_1, false, "expand", 'e', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Whether LLDB should print the demangled tree"},
   // clang-format on
 };
 

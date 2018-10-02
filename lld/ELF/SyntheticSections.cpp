@@ -1626,10 +1626,9 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
       NonRelatives.push_back(R);
   }
 
-  llvm::sort(Relatives.begin(), Relatives.end(),
-             [](const Elf_Rel &A, const Elf_Rel &B) {
-               return A.r_offset < B.r_offset;
-             });
+  llvm::sort(Relatives, [](const Elf_Rel &A, const Elf_Rel &B) {
+    return A.r_offset < B.r_offset;
+  });
 
   // Try to find groups of relative relocations which are spaced one word
   // apart from one another. These generally correspond to vtable entries. The
@@ -1707,10 +1706,9 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
   }
 
   // Finally the non-relative relocations.
-  llvm::sort(NonRelatives.begin(), NonRelatives.end(),
-             [](const Elf_Rela &A, const Elf_Rela &B) {
-               return A.r_offset < B.r_offset;
-             });
+  llvm::sort(NonRelatives, [](const Elf_Rela &A, const Elf_Rela &B) {
+    return A.r_offset < B.r_offset;
+  });
   if (!NonRelatives.empty()) {
     Add(NonRelatives.size());
     Add(HasAddendIfRela);

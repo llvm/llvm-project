@@ -412,6 +412,11 @@ void ObjFile<ELFT>::initializeSections(
       continue;
     const Elf_Shdr &Sec = ObjSections[I];
 
+    if (Sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH_PROFILE)
+      CGProfile = check(
+          this->getObj().template getSectionContentsAsArray<Elf_CGProfile>(
+              &Sec));
+
     // SHF_EXCLUDE'ed sections are discarded by the linker. However,
     // if -r is given, we'll let the final link discard such sections.
     // This is compatible with GNU.

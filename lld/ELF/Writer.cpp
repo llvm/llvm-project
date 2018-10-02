@@ -1135,11 +1135,10 @@ sortISDBySectionOrder(InputSectionDescription *ISD,
     }
     OrderedSections.push_back({IS, I->second});
   }
-  llvm::sort(
-      OrderedSections.begin(), OrderedSections.end(),
-      [&](std::pair<InputSection *, int> A, std::pair<InputSection *, int> B) {
-        return A.second < B.second;
-      });
+  llvm::sort(OrderedSections, [&](std::pair<InputSection *, int> A,
+                                  std::pair<InputSection *, int> B) {
+    return A.second < B.second;
+  });
 
   // Find an insertion point for the ordered section list in the unordered
   // section list. On targets with limited-range branches, this is the mid-point
@@ -2133,10 +2132,9 @@ struct SectionOffset {
 // load and virtual adresses).
 static void checkOverlap(StringRef Name, std::vector<SectionOffset> &Sections,
                          bool IsVirtualAddr) {
-  llvm::sort(Sections.begin(), Sections.end(),
-             [=](const SectionOffset &A, const SectionOffset &B) {
-               return A.Offset < B.Offset;
-             });
+  llvm::sort(Sections, [=](const SectionOffset &A, const SectionOffset &B) {
+    return A.Offset < B.Offset;
+  });
 
   // Finding overlap is easy given a vector is sorted by start position.
   // If an element starts before the end of the previous element, they overlap.
