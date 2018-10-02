@@ -98,6 +98,8 @@ public:
     return Iterator.dump(OS);
   }
 
+  constexpr static float DEFAULT_BOOST_SCORE = 1;
+
 private:
   virtual llvm::raw_ostream &dump(llvm::raw_ostream &OS) const = 0;
 };
@@ -112,74 +114,69 @@ private:
 /// to acquire preliminary scores of requested items.
 std::vector<std::pair<DocID, float>> consume(Iterator &It);
 
-namespace detail {
-// Variadic template machinery.
-inline void populateChildren(std::vector<std::unique_ptr<Iterator>> &) {}
-template <typename... TailT>
-void populateChildren(std::vector<std::unique_ptr<Iterator>> &Children,
-                      std::unique_ptr<Iterator> Head, TailT... Tail) {
-  Children.push_back(move(Head));
-  populateChildren(Children, move(Tail)...);
+/// Returns AND Iterator which performs the intersection of the PostingLists of
+/// its children.
+///
+/// consume(): AND Iterator returns the product of Childrens' boosting scores
+/// when not exhausted and DEFAULT_BOOST_SCORE otherwise.
+std::unique_ptr<Iterator>
+createAnd(std::vector<std::unique_ptr<Iterator>> Children);
+
+/// Returns OR Iterator which performs the union of the PostingLists of its
+/// children.
+///
+/// consume(): OR Iterator returns the highest boost value among children
+/// pointing to requested item when not exhausted and DEFAULT_BOOST_SCORE
+/// otherwise.
+std::unique_ptr<Iterator>
+createOr(std::vector<std::unique_ptr<Iterator>> Children);
+
+/// Returns TRUE Iterator which iterates over "virtual" PostingList containing
+/// all items in range [0, Size) in an efficient manner.
+///
+/// TRUE returns DEFAULT_BOOST_SCORE for each processed item.
+std::unique_ptr<Iterator> createTrue(DocID Size);
+
+/// Returns BOOST iterator which multiplies the score of each item by given
+/// factor. Boosting can be used as a computationally inexpensive filtering.
+/// Users can return significantly more items using consumeAndBoost() and then
+/// trim Top K using retrieval score.
+std::unique_ptr<Iterator> createBoost(std::unique_ptr<Iterator> Child,
+                                      float Factor);
+
+/// Returns LIMIT iterator, which yields up to N elements of its child iterator.
+/// Elements only count towards the limit if they are part of the final result
+/// set. Therefore the following iterator (AND (2) (LIMIT (1 2) 1)) yields (2),
+/// not ().
+std::unique_ptr<Iterator> createLimit(std::unique_ptr<Iterator> Child,
+                                      size_t Limit);
+
+/// This allows createAnd(create(...), create(...)) syntax.
+template <typename... Args> std::unique_ptr<Iterator> createAnd(Args... args) {
+  std::vector<std::unique_ptr<Iterator>> Children;
+  populateChildren(Children, args...);
+  return createAnd(move(Children));
 }
-} // namespace detail
 
-// A corpus is a set of documents, and a factory for iterators over them.
-class Corpus {
-  DocID Size;
+/// This allows createOr(create(...), create(...)) syntax.
+template <typename... Args> std::unique_ptr<Iterator> createOr(Args... args) {
+  std::vector<std::unique_ptr<Iterator>> Children;
+  populateChildren(Children, args...);
+  return createOr(move(Children));
+}
 
-public:
-  explicit Corpus(DocID Size) : Size(Size) {}
+template <typename HeadT, typename... TailT>
+void populateChildren(std::vector<std::unique_ptr<Iterator>> &Children,
+                      HeadT &Head, TailT &... Tail) {
+  Children.push_back(move(Head));
+  populateChildren(Children, Tail...);
+}
 
-  /// Returns AND Iterator which performs the intersection of the PostingLists
-  /// of its children.
-  ///
-  /// consume(): AND Iterator returns the product of Childrens' boosting
-  /// scores.
-  std::unique_ptr<Iterator>
-  intersect(std::vector<std::unique_ptr<Iterator>> Children) const;
-
-  /// Returns OR Iterator which performs the union of the PostingLists of its
-  /// children.
-  ///
-  /// consume(): OR Iterator returns the highest boost value among children
-  /// containing the requested item.
-  std::unique_ptr<Iterator>
-  unionOf(std::vector<std::unique_ptr<Iterator>> Children) const;
-
-  /// Returns TRUE Iterator which iterates over "virtual" PostingList
-  /// containing all items in range [0, Size) in an efficient manner.
-  std::unique_ptr<Iterator> all() const;
-
-  /// Returns BOOST iterator which multiplies the score of each item by given
-  /// factor. Boosting can be used as a computationally inexpensive filtering.
-  /// Users can return significantly more items using consumeAndBoost() and
-  /// then trim Top K using retrieval score.
-  std::unique_ptr<Iterator> boost(std::unique_ptr<Iterator> Child,
-                                  float Factor) const;
-
-  /// Returns LIMIT iterator, which yields up to N elements of its child
-  /// iterator. Elements only count towards the limit if they are part of the
-  /// final result set. Therefore the following iterator (AND (2) (LIMIT (1 2)
-  /// 1)) yields (2), not ().
-  std::unique_ptr<Iterator> limit(std::unique_ptr<Iterator> Child,
-                                  size_t Limit) const;
-
-  /// This allows intersect(create(...), create(...)) syntax.
-  template <typename... Args>
-  std::unique_ptr<Iterator> intersect(Args... args) const {
-    std::vector<std::unique_ptr<Iterator>> Children;
-    detail::populateChildren(Children, std::forward<Args>(args)...);
-    return intersect(move(Children));
-  }
-
-  /// This allows unionOf(create(...), create(...)) syntax.
-  template <typename... Args>
-  std::unique_ptr<Iterator> unionOf(Args... args) const {
-    std::vector<std::unique_ptr<Iterator>> Children;
-    detail::populateChildren(Children, std::forward<Args>(args)...);
-    return unionOf(move(Children));
-  }
-};
+template <typename HeadT>
+void populateChildren(std::vector<std::unique_ptr<Iterator>> &Children,
+                      HeadT &Head) {
+  Children.push_back(move(Head));
+}
 
 } // namespace dex
 } // namespace clangd
