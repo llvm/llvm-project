@@ -124,6 +124,12 @@ extern "C" {
 
   // Symbolizes the supplied 'pc' using the format string 'fmt'.
   // Outputs at most 'out_buf_size' bytes into 'out_buf'.
+  // If 'out_buf' is not empty then output is zero or more non empty C strings
+  // followed by single empty C string. Multiple strings can be returned if PC
+  // corresponds to inlined function. Inlined frames are printed in the order
+  // from "most-inlined" to the "least-inlined", so the last frame should be the
+  // not inlined function.
+  // Inlined frames can be removed with 'symbolize_inline_frames=0'.
   // The format syntax is described in
   // lib/sanitizer_common/sanitizer_stacktrace_printer.h.
   void __sanitizer_symbolize_pc(void *pc, const char *fmt, char *out_buf,
