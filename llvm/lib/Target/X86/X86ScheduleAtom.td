@@ -125,8 +125,8 @@ defm : X86WriteRes<WriteBitTest,         [AtomPort1],  1, [1], 1>;
 defm : X86WriteRes<WriteBitTestImmLd,    [AtomPort0],  1, [1], 1>;
 defm : X86WriteRes<WriteBitTestRegLd,    [AtomPort01], 9, [9], 1>;
 defm : X86WriteRes<WriteBitTestSet,      [AtomPort1],  1, [1], 1>;
-defm : X86WriteRes<WriteBitTestSetImmLd, [AtomPort1],  1, [1], 1>;
-defm : X86WriteRes<WriteBitTestSetRegLd, [AtomPort1],  1, [1], 1>;
+//defm : X86WriteRes<WriteBitTestSetImmLd, [AtomPort1],  1, [1], 1>;
+//defm : X86WriteRes<WriteBitTestSetRegLd, [AtomPort1],  1, [1], 1>;
 
 // This is for simple LEAs with one or two input operands.
 def : WriteRes<WriteLEA, [AtomPort1]>;
@@ -557,14 +557,14 @@ def : InstRW<[AtomWrite01_2], (instrs LEAVE, LEAVE64, POP16r,
                                       PUSH16rmm, PUSH32rmm, PUSH64rmm,
                                       LODSB, LODSL, LODSQ, LODSW,
                                       SCASB, SCASL, SCASQ, SCASW)>;
-def : InstRW<[AtomWrite01_2], (instregex "BT(C|R|S)(16|32|64)mi8",
-                                         "PUSH(CS|DS|ES|FS|GS|SS)(16|32|64)",
+def : InstRW<[AtomWrite01_2], (instregex "PUSH(CS|DS|ES|FS|GS|SS)(16|32|64)",
                                          "(ST|ISTT)_F(P)?(16|32|64)?(m|rr)",
                                          "MMX_P(ADD|SUB)Qirr",
                                          "MOV(S|Z)X16rr8",
                                          "MOV(UPS|UPD|DQU)mr",
                                          "MASKMOVDQU(64)?",
                                          "P(ADD|SUB)Qrr")>;
+def : SchedAlias<WriteBitTestSetImmRMW, AtomWrite01_2>;
 
 def AtomWrite01_3 : SchedWriteRes<[AtomPort01]> {
   let Latency = 3;
@@ -653,7 +653,7 @@ def AtomWrite01_11 : SchedWriteRes<[AtomPort01]> {
   let ResourceCycles = [11];
 }
 def : InstRW<[AtomWrite01_11], (instrs BOUNDS16rm, BOUNDS32rm)>;
-def : InstRW<[AtomWrite01_11], (instregex "BT(C|R|S)(16|32|64)mr")>;
+def : SchedAlias<WriteBitTestSetRegRMW, AtomWrite01_11>;
 
 def AtomWrite01_13 : SchedWriteRes<[AtomPort01]> {
   let Latency = 13;

@@ -1482,7 +1482,22 @@ static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
   return Comment;
 }
 
-static void printConstant(const APFloat& Flt, raw_ostream &CS) {
+static void printConstant(const APInt &Val, raw_ostream &CS) {
+  if (Val.getBitWidth() <= 64) {
+    CS << Val.getZExtValue();
+  } else {
+    // print multi-word constant as (w0,w1)
+    CS << "(";
+    for (int i = 0, N = Val.getNumWords(); i < N; ++i) {
+      if (i > 0)
+        CS << ",";
+      CS << Val.getRawData()[i];
+    }
+    CS << ")";
+  }
+}
+
+static void printConstant(const APFloat &Flt, raw_ostream &CS) {
   SmallString<32> Str;
   Flt.toString(Str);
   CS << Str;
@@ -1492,19 +1507,7 @@ static void printConstant(const Constant *COp, raw_ostream &CS) {
   if (isa<UndefValue>(COp)) {
     CS << "u";
   } else if (auto *CI = dyn_cast<ConstantInt>(COp)) {
-    if (CI->getBitWidth() <= 64) {
-      CS << CI->getZExtValue();
-    } else {
-      // print multi-word constant as (w0,w1)
-      const auto &Val = CI->getValue();
-      CS << "(";
-      for (int i = 0, N = Val.getNumWords(); i < N; ++i) {
-        if (i > 0)
-          CS << ",";
-        CS << Val.getRawData()[i];
-      }
-      CS << ")";
-    }
+    printConstant(CI->getValue(), CS);
   } else if (auto *CF = dyn_cast<ConstantFP>(COp)) {
     printConstant(CF->getValueAPF(), CS);
   } else {
@@ -1528,6 +1531,9 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
       break;
     case X86::SEH_StackAlloc:
       XTS->emitFPOStackAlloc(MI->getOperand(0).getImm());
+      break;
+    case X86::SEH_StackAlign:
+      XTS->emitFPOStackAlign(MI->getOperand(0).getImm());
       break;
     case X86::SEH_SetFrame:
       assert(MI->getOperand(1).getImm() == 0 &&
@@ -1806,6 +1812,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::SEH_SaveReg:
   case X86::SEH_SaveXMM:
   case X86::SEH_StackAlloc:
+  case X86::SEH_StackAlign:
   case X86::SEH_SetFrame:
   case X86::SEH_PushFrame:
   case X86::SEH_EndPrologue:
@@ -2100,7 +2107,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
             if (i != 0 || l != 0)
               CS << ",";
             if (CDS->getElementType()->isIntegerTy())
-              CS << CDS->getElementAsInteger(i);
+              printConstant(CDS->getElementAsAPInt(i), CS);
             else if (CDS->getElementType()->isHalfTy() ||
                      CDS->getElementType()->isFloatTy() ||
                      CDS->getElementType()->isDoubleTy())

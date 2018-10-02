@@ -271,6 +271,12 @@ def simm10Scaled : Operand<i64> {
   let PrintMethod = "printImmScale<8>";
 }
 
+def simm9s16 : Operand<i64> {
+  let ParserMatchClass = SImmScaledMemoryIndexed<9, 16>;
+  let DecoderMethod = "DecodeSImm<9>";
+  let PrintMethod = "printImmScale<16>";
+}
+
 // uimm6 predicate - True if the immediate is in the range [0, 63].
 def UImm6Operand : AsmOperandClass {
   let Name = "UImm6";
@@ -366,6 +372,7 @@ def UImm6s1Operand : UImmScaledMemoryIndexed<6, 1>;
 def UImm6s2Operand : UImmScaledMemoryIndexed<6, 2>;
 def UImm6s4Operand : UImmScaledMemoryIndexed<6, 4>;
 def UImm6s8Operand : UImmScaledMemoryIndexed<6, 8>;
+def UImm6s16Operand : UImmScaledMemoryIndexed<6, 16>;
 
 def uimm6s1 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= 0 && Imm < 64; }]> {
   let ParserMatchClass = UImm6s1Operand;
@@ -384,6 +391,11 @@ def uimm6s8 : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >= 0 && Imm < (64*8) && ((Imm % 8) == 0); }]> {
   let PrintMethod = "printImmScale<8>";
   let ParserMatchClass = UImm6s8Operand;
+}
+def uimm6s16 : Operand<i64>, ImmLeaf<i64,
+[{ return Imm >= 0 && Imm < (64*16) && ((Imm % 16) == 0); }]> {
+  let PrintMethod = "printImmScale<16>";
+  let ParserMatchClass = UImm6s16Operand;
 }
 
 // simm6sN predicate - True if the immediate is a multiple of N in the range
@@ -1740,10 +1752,12 @@ multiclass AddSubCarry<bit isSub, string asm, string asm_setflags,
 }
 
 class BaseTwoOperand<bits<4> opc, RegisterClass regtype, string asm,
-                     SDPatternOperator OpNode>
-  : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm),
+                     SDPatternOperator OpNode,
+                     RegisterClass in1regtype = regtype,
+                     RegisterClass in2regtype = regtype>
+  : I<(outs regtype:$Rd), (ins in1regtype:$Rn, in2regtype:$Rm),
       asm, "\t$Rd, $Rn, $Rm", "",
-      [(set regtype:$Rd, (OpNode regtype:$Rn, regtype:$Rm))]> {
+      [(set regtype:$Rd, (OpNode in1regtype:$Rn, in2regtype:$Rm))]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
@@ -2009,7 +2023,6 @@ class BaseAddSubImm<bit isSub, bit setFlags, RegisterClass dstRegtype,
   let Inst{28-24} = 0b10001;
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Rd;
-  let DecoderMethod = "DecodeBaseAddSubImm";
 }
 
 class AddSubImmShift<bit isSub, bit setFlags, RegisterClass dstRegtype,
@@ -2021,6 +2034,7 @@ class AddSubImmShift<bit isSub, bit setFlags, RegisterClass dstRegtype,
   bits<14> imm;
   let Inst{23-22} = imm{13-12}; // '00' => lsl #0, '01' => lsl #12
   let Inst{21-10} = imm{11-0};
+  let DecoderMethod = "DecodeAddSubImmShift";
 }
 
 class BaseAddSubRegPseudo<RegisterClass regtype,
@@ -2296,6 +2310,27 @@ multiclass AddSubS<bit isSub, string mnemonic, SDNode OpNode, string cmp,
   def : AddSubRegAlias<mnemonic,
                        !cast<Instruction>(NAME#"Xrx64"),
                        GPR64, GPR64sponly, GPR64, 24>; // UXTX #0
+}
+
+class AddSubG<bit isSub, string asm_inst, SDPatternOperator OpNode>
+      : BaseAddSubImm<
+          isSub, 0, GPR64sp, asm_inst, "\t$Rd, $Rn, $imm6, $imm4",
+          (ins GPR64sp:$Rn, uimm6s16:$imm6, imm0_15:$imm4),
+          (set GPR64sp:$Rd, (OpNode GPR64sp:$Rn, imm0_63:$imm6, imm0_15:$imm4))> {
+  bits<6> imm6;
+  bits<4> imm4;
+  let Inst{31} = 1;
+  let Inst{23-22} = 0b10;
+  let Inst{21-16} = imm6;
+  let Inst{15-14} = 0b00;
+  let Inst{13-10} = imm4;
+  let Unpredictable{15-14} = 0b11;
+}
+
+class SUBP<bit setsFlags, string asm_instr, SDPatternOperator OpNode>
+      : BaseTwoOperand<0b0000, GPR64, asm_instr, null_frag, GPR64sp, GPR64sp> {
+  let Inst{31} = 1;
+  let Inst{29} = setsFlags;
 }
 
 //---
@@ -3957,6 +3992,78 @@ class StoreExclusivePair<bits<2> sz, bit o2, bit L, bit o1, bit o0,
   let Inst{4-0} = Rt;
 
   let Constraints = "@earlyclobber $Ws";
+}
+
+// Armv8.5-A Memory Tagging Extension
+class BaseMemTag<bits<2> opc1, bits<2> opc2, string asm_insn,
+                 string asm_opnds, string cstr, dag oops, dag iops>
+    : I<oops, iops, asm_insn, asm_opnds, cstr, []>,
+      Sched<[]> {
+  bits<5> Rn;
+
+  let Inst{31-24} = 0b11011001;
+  let Inst{23-22} = opc1;
+  let Inst{21}    = 1;
+  // Inst{20-12} defined by subclass
+  let Inst{11-10} = opc2;
+  let Inst{9-5}   = Rn;
+  // Inst{4-0} defined by subclass
+}
+
+class MemTagVector<bit Load, string asm_insn, string asm_opnds,
+                   dag oops, dag iops>
+    : BaseMemTag<{0b1, Load}, 0b00, asm_insn, asm_opnds,
+                 "$Rn = $wback,@earlyclobber $wback", oops, iops> {
+  bits<5> Rt;
+
+  let Inst{20-12} = 0b000000000;
+  let Inst{4-0}   = Rt;
+
+  let mayLoad = Load;
+}
+
+class MemTagLoad<string asm_insn, string asm_opnds>
+    : BaseMemTag<0b01, 0b00, asm_insn, asm_opnds, "", (outs GPR64:$Rt),
+                 (ins GPR64sp:$Rn, simm9s16:$offset)> {
+  bits<5> Rt;
+  bits<9> offset;
+
+  let Inst{20-12} = offset;
+  let Inst{4-0}   = Rt;
+
+  let mayLoad = 1;
+}
+
+class BaseMemTagStore<bits<2> opc1, bits<2> opc2, string asm_insn,
+                     string asm_opnds, string cstr, dag oops, dag iops>
+    : BaseMemTag<opc1, opc2, asm_insn, asm_opnds, cstr, oops, iops> {
+  bits<5> Rt;
+  bits<9> offset;
+
+  let Inst{20-12} = offset;
+  let Inst{4-0}   = 0b11111;
+  let Unpredictable{4-0} = 0b11111;
+
+  let mayStore = 1;
+}
+
+multiclass MemTagStore<bits<2> opc1, string insn> {
+  def Offset :
+    BaseMemTagStore<opc1, 0b10, insn, "\t[$Rn, $offset]", "",
+                    (outs), (ins GPR64sp:$Rn, simm9s16:$offset)>;
+  def PreIndex :
+    BaseMemTagStore<opc1, 0b11, insn, "\t[$Rn, $offset]!",
+                    "$Rn = $wback,@earlyclobber $wback",
+                    (outs GPR64sp:$wback),
+                    (ins GPR64sp:$Rn, simm9s16:$offset)>;
+  def PostIndex :
+    BaseMemTagStore<opc1, 0b01, insn, "\t[$Rn], $offset",
+                    "$Rn = $wback,@earlyclobber $wback",
+                    (outs GPR64sp:$wback),
+                    (ins GPR64sp:$Rn, simm9s16:$offset)>;
+
+  def : InstAlias<insn # "\t[$Rn]",
+                  (!cast<Instruction>(NAME # "Offset") GPR64sp:$Rn, 0)>;
 }
 
 //---

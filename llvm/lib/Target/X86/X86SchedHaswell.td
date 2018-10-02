@@ -171,8 +171,8 @@ defm : X86WriteRes<WriteBitTest,         [HWPort06], 1, [1], 1>;
 defm : X86WriteRes<WriteBitTestImmLd,    [HWPort06,HWPort23], 6, [1,1], 2>;
 defm : X86WriteRes<WriteBitTestRegLd,    [], 1, [], 10>;
 defm : X86WriteRes<WriteBitTestSet,      [HWPort06], 1, [1], 1>;
-defm : X86WriteRes<WriteBitTestSetImmLd, [HWPort06,HWPort23], 6, [1,1], 2>;
-defm : X86WriteRes<WriteBitTestSetRegLd, [], 1, [], 11>;
+defm : X86WriteRes<WriteBitTestSetImmLd, [HWPort06,HWPort23], 6, [1,1], 3>;
+//defm : X86WriteRes<WriteBitTestSetRegLd, [], 1, [], 11>;
 
 // This is for simple LEAs with one or two input operands.
 // The complex ones can only execute on port 1, and they require two cycles on
@@ -652,7 +652,7 @@ def : InstRW<[HWWritePopA], (instregex "POPA(16|32)")>;
 def HWWriteBTRSCmr : SchedWriteRes<[]> {
   let NumMicroOps = 11;
 }
-def : InstRW<[HWWriteBTRSCmr], (instregex "BT(R|S|C)(16|32|64)mr")>;
+def : SchedAlias<WriteBitTestSetRegRMW, HWWriteBTRSCmr>;
 
 //-- Control transfer instructions --//
 
@@ -1063,10 +1063,7 @@ def HWWriteResGroup25 : SchedWriteRes<[HWPort4,HWPort23,HWPort237,HWPort06]> {
   let NumMicroOps = 4;
   let ResourceCycles = [1,1,1,1];
 }
-def: InstRW<[HWWriteResGroup25], (instregex "BTC(16|32|64)mi8",
-                                            "BTR(16|32|64)mi8",
-                                            "BTS(16|32|64)mi8",
-                                            "SAR(8|16|32|64)m(1|i)",
+def: InstRW<[HWWriteResGroup25], (instregex "SAR(8|16|32|64)m(1|i)",
                                             "SHL(8|16|32|64)m(1|i)",
                                             "SHR(8|16|32|64)m(1|i)")>;
 
