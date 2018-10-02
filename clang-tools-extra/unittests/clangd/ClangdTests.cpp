@@ -963,6 +963,8 @@ TEST_F(ClangdVFSTest, ChangedHeaderFromISystem) {
                                        Field(&CodeCompletion::Name, "baz")));
 }
 
+// FIXME(ioeric): make this work for windows again.
+#ifndef _WIN32
 // Check that running code completion doesn't stat() a bunch of files from the
 // preamble again. (They should be using the preamble's stat-cache)
 TEST(ClangdTests, PreambleVFSStatCache) {
@@ -1028,6 +1030,7 @@ TEST(ClangdTests, PreambleVFSStatCache) {
   EXPECT_THAT(Completions,
               ElementsAre(Field(&CodeCompletion::Name, "TestSym")));
 }
+#endif
 
 } // namespace
 } // namespace clangd
