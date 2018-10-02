@@ -9948,6 +9948,14 @@ class SBTarget(_object):
         """SetLaunchInfo(self, SBLaunchInfo launch_info)"""
         return _lldb.SBTarget_SetLaunchInfo(self, *args)
 
+    def SetCollectingStats(self, *args):
+        """SetCollectingStats(self, bool v)"""
+        return _lldb.SBTarget_SetCollectingStats(self, *args)
+
+    def GetCollectingStats(self):
+        """GetCollectingStats(self) -> bool"""
+        return _lldb.SBTarget_GetCollectingStats(self)
+
     def GetStatistics(self):
         """GetStatistics(self) -> SBStructuredData"""
         return _lldb.SBTarget_GetStatistics(self)
