@@ -10,6 +10,7 @@
 //  This file defines the code-completion semantic actions.
 //
 //===----------------------------------------------------------------------===//
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
@@ -1247,18 +1248,29 @@ namespace {
     ResultBuilder &Results;
     DeclContext *CurContext;
     std::vector<FixItHint> FixIts;
+    // This is set to the record where the search starts, if this is a record
+    // member completion.
+    RecordDecl *MemberCompletionRecord = nullptr;
 
   public:
     CodeCompletionDeclConsumer(
         ResultBuilder &Results, DeclContext *CurContext,
-        std::vector<FixItHint> FixIts = std::vector<FixItHint>())
-        : Results(Results), CurContext(CurContext), FixIts(std::move(FixIts)) {}
+        std::vector<FixItHint> FixIts = std::vector<FixItHint>(),
+        RecordDecl *MemberCompletionRecord = nullptr)
+        : Results(Results), CurContext(CurContext), FixIts(std::move(FixIts)),
+          MemberCompletionRecord(MemberCompletionRecord) {}
 
     void FoundDecl(NamedDecl *ND, NamedDecl *Hiding, DeclContext *Ctx,
                    bool InBaseClass) override {
       bool Accessible = true;
-      if (Ctx)
-        Accessible = Results.getSema().IsSimplyAccessible(ND, Ctx);
+      if (Ctx) {
+        // Set the actual accessing context (i.e. naming class) to the record
+        // context where the search starts. When `InBaseClass` is true, `Ctx`
+        // will be the base class, which is not the actual naming class.
+        DeclContext *AccessingCtx =
+            MemberCompletionRecord ? MemberCompletionRecord : Ctx;
+        Accessible = Results.getSema().IsSimplyAccessible(ND, AccessingCtx);
+      }
       ResultBuilder::Result Result(ND, Results.getBasePriority(ND), nullptr,
                                    false, Accessible, FixIts);
       Results.AddResult(Result, CurContext, Hiding, InBaseClass);
@@ -4052,7 +4064,8 @@ static void AddRecordMembersCompletionResults(Sema &SemaRef,
   std::vector<FixItHint> FixIts;
   if (AccessOpFixIt)
       FixIts.emplace_back(AccessOpFixIt.getValue());
-  CodeCompletionDeclConsumer Consumer(Results, SemaRef.CurContext, std::move(FixIts));
+  CodeCompletionDeclConsumer Consumer(Results, SemaRef.CurContext,
+                                      std::move(FixIts), RD);
   SemaRef.LookupVisibleDecls(RD, Sema::LookupMemberName, Consumer,
                              SemaRef.CodeCompleter->includeGlobals(),
                              /*IncludeDependentBases=*/true,

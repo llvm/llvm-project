@@ -3697,30 +3697,19 @@ QualType ASTContext::getFunctionTypeInternal(
     assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
   }
 
-  // FunctionProtoType objects are allocated with extra bytes after
-  // them for three variable size arrays at the end:
-  //  - parameter types
-  //  - exception types
-  //  - extended parameter information
-  // Instead of the exception types, there could be a noexcept
-  // expression, or information used to resolve the exception
-  // specification.
-  size_t Size =
-      sizeof(FunctionProtoType) + NumArgs * sizeof(QualType) +
-      FunctionProtoType::getExceptionSpecSize(
-          EPI.ExceptionSpec.Type, EPI.ExceptionSpec.Exceptions.size());
+  // Compute the needed size to hold this FunctionProtoType and the
+  // various trailing objects.
+  auto ESH = FunctionProtoType::getExceptionSpecSize(
+      EPI.ExceptionSpec.Type, EPI.ExceptionSpec.Exceptions.size());
+  size_t Size = FunctionProtoType::totalSizeToAlloc<
+      QualType, FunctionType::FunctionTypeExtraBitfields,
+      FunctionType::ExceptionType, Expr *, FunctionDecl *,
+      FunctionProtoType::ExtParameterInfo>(
+      NumArgs, FunctionProtoType::hasExtraBitfields(EPI.ExceptionSpec.Type),
+      ESH.NumExceptionType, ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
+      EPI.ExtParameterInfos ? NumArgs : 0);
 
-  // Put the ExtParameterInfos last.  If all were equal, it would make
-  // more sense to put these before the exception specification, because
-  // it's much easier to skip past them compared to the elaborate switch
-  // required to skip the exception specification.  However, all is not
-  // equal; ExtParameterInfos are used to model very uncommon features,
-  // and it's better not to burden the more common paths.
-  if (EPI.ExtParameterInfos) {
-    Size += NumArgs * sizeof(FunctionProtoType::ExtParameterInfo);
-  }
-
-  auto *FTP = (FunctionProtoType *) Allocate(Size, TypeAlignment);
+  auto *FTP = (FunctionProtoType *)Allocate(Size, TypeAlignment);
   FunctionProtoType::ExtProtoInfo newEPI = EPI;
   new (FTP) FunctionProtoType(ResultTy, ArgArray, Canonical, newEPI);
   Types.push_back(FTP);
