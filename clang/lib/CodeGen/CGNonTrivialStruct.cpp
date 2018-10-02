@@ -187,6 +187,7 @@ template <class Derived> struct GenFuncNameBase {
     if (!FK)
       return asDerived().visitTrivial(QualType(AT, 0), FD, CurStructOffset);
 
+    asDerived().flushTrivialFields();
     CharUnits FieldOffset = CurStructOffset + asDerived().getFieldOffset(FD);
     ASTContext &Ctx = asDerived().getContext();
     const ConstantArrayType *CAT = cast<ConstantArrayType>(AT);
@@ -336,6 +337,7 @@ template <class Derived> struct GenFuncBase {
       return asDerived().visitTrivial(QualType(AT, 0), FD, CurStackOffset,
                                       Addrs);
 
+    asDerived().flushTrivialFields(Addrs);
     CodeGenFunction &CGF = *this->CGF;
     ASTContext &Ctx = CGF.getContext();
 

@@ -2839,7 +2839,7 @@ void CodeGenFunction::EmitLambdaBlockInvokeBody() {
   CallArgList CallArgs;
 
   QualType ThisType = getContext().getPointerType(getContext().getRecordType(Lambda));
-  Address ThisPtr = GetAddrOfBlockDecl(variable, false);
+  Address ThisPtr = GetAddrOfBlockDecl(variable);
   CallArgs.add(RValue::get(ThisPtr.getPointer()), ThisType);
 
   // Add the rest of the parameters.

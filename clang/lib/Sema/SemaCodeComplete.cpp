@@ -1550,6 +1550,74 @@ static void AddStaticAssertResult(CodeCompletionBuilder &Builder,
   Results.AddResult(CodeCompletionResult(Builder.TakeString()));
 }
 
+namespace {
+void printOverrideString(llvm::raw_ostream &OS, CodeCompletionString *CCS) {
+  for (const auto &C : *CCS) {
+    if (C.Kind == CodeCompletionString::CK_Optional)
+      printOverrideString(OS, C.Optional);
+    else
+      OS << C.Text;
+    // Add a space after return type.
+    if (C.Kind == CodeCompletionString::CK_ResultType)
+      OS << ' ';
+  }
+}
+} // namespace
+
+static void AddOverrideResults(ResultBuilder &Results,
+                               const CodeCompletionContext &CCContext,
+                               CodeCompletionBuilder &Builder) {
+  Sema &S = Results.getSema();
+  const auto *CR = llvm::dyn_cast<CXXRecordDecl>(S.CurContext);
+  // If not inside a class/struct/union return empty.
+  if (!CR)
+    return;
+  // First store overrides within current class.
+  // These are stored by name to make querying fast in the later step.
+  llvm::StringMap<std::vector<FunctionDecl *>> Overrides;
+  for (auto *Method : CR->methods()) {
+    if (!Method->isVirtual() || !Method->getIdentifier())
+      continue;
+    Overrides[Method->getName()].push_back(Method);
+  }
+
+  for (const auto &Base : CR->bases()) {
+    const auto *BR = Base.getType().getTypePtr()->getAsCXXRecordDecl();
+    if (!BR)
+      continue;
+    for (auto *Method : BR->methods()) {
+      if (!Method->isVirtual() || !Method->getIdentifier())
+        continue;
+      const auto it = Overrides.find(Method->getName());
+      bool IsOverriden = false;
+      if (it != Overrides.end()) {
+        for (auto *MD : it->second) {
+          // If the method in current body is not an overload of this virtual
+          // function, then it overrides this one.
+          if (!S.IsOverload(MD, Method, false)) {
+            IsOverriden = true;
+            break;
+          }
+        }
+      }
+      if (!IsOverriden) {
+        // Generates a new CodeCompletionResult by taking this function and
+        // converting it into an override declaration with only one chunk in the
+        // final CodeCompletionString as a TypedTextChunk.
+        std::string OverrideSignature;
+        llvm::raw_string_ostream OS(OverrideSignature);
+        CodeCompletionResult CCR(Method, 0);
+        PrintingPolicy Policy =
+            getCompletionPrintingPolicy(S.getASTContext(), S.getPreprocessor());
+        auto *CCS = CCR.createCodeCompletionStringForOverride(
+            S.getPreprocessor(), S.getASTContext(), Builder,
+            /*IncludeBriefComments=*/false, CCContext, Policy);
+        Results.AddResult(CodeCompletionResult(CCS, Method, CCP_CodePattern));
+      }
+    }
+  }
+}
+
 /// Add language constructs that show up for "ordinary" names.
 static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC,
                                    Scope *S,
@@ -1658,6 +1726,12 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC,
         if (IsNotInheritanceScope && Results.includeCodePatterns())
           Builder.AddChunk(CodeCompletionString::CK_Colon);
         Results.AddResult(Result(Builder.TakeString()));
+
+        // FIXME: This adds override results only if we are at the first word of
+        // the declaration/definition. Also call this from other sides to have
+        // more use-cases.
+        AddOverrideResults(Results, CodeCompletionContext::CCC_ClassStructUnion,
+                           Builder);
       }
     }
     LLVM_FALLTHROUGH;
@@ -2786,6 +2860,30 @@ CodeCompletionResult::CreateCodeCompletionString(ASTContext &Ctx,
     return Result.TakeString();
   }
   assert(Kind == RK_Declaration && "Missed a result kind?");
+  return createCodeCompletionStringForDecl(PP, Ctx, Result, IncludeBriefComments,
+                                    CCContext, Policy);
+}
+
+CodeCompletionString *
+CodeCompletionResult::createCodeCompletionStringForOverride(
+    Preprocessor &PP, ASTContext &Ctx, CodeCompletionBuilder &Result,
+    bool IncludeBriefComments, const CodeCompletionContext &CCContext,
+    PrintingPolicy &Policy) {
+  std::string OverrideSignature;
+  llvm::raw_string_ostream OS(OverrideSignature);
+  auto *CCS = createCodeCompletionStringForDecl(PP, Ctx, Result,
+                                                /*IncludeBriefComments=*/false,
+                                                CCContext, Policy);
+  printOverrideString(OS, CCS);
+  OS << " override";
+  Result.AddTypedTextChunk(Result.getAllocator().CopyString(OS.str()));
+  return Result.TakeString();
+}
+
+CodeCompletionString *CodeCompletionResult::createCodeCompletionStringForDecl(
+    Preprocessor &PP, ASTContext &Ctx, CodeCompletionBuilder &Result,
+    bool IncludeBriefComments, const CodeCompletionContext &CCContext,
+    PrintingPolicy &Policy) {
   const NamedDecl *ND = Declaration;
   Result.addParentContext(ND->getDeclContext());
 
@@ -2883,7 +2981,6 @@ CodeCompletionResult::CreateCodeCompletionString(ASTContext &Ctx,
     Result.AddChunk(CodeCompletionString::CK_RightAngle);
     return Result.TakeString();
   }
-
   if (const ObjCMethodDecl *Method = dyn_cast<ObjCMethodDecl>(ND)) {
     Selector Sel = Method->getSelector();
     if (Sel.isUnarySelector()) {
@@ -2979,7 +3076,7 @@ CodeCompletionResult::CreateCodeCompletionString(ASTContext &Ctx,
                                    Ctx, Policy);
 
   Result.AddTypedTextChunk(
-                       Result.getAllocator().CopyString(ND->getNameAsString()));
+      Result.getAllocator().CopyString(ND->getNameAsString()));
   return Result.TakeString();
 }
 
@@ -8050,7 +8147,7 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
       AddFilesFromDirLookup(D, false);
   }
   for (const auto &D : make_range(S.angled_dir_begin(), S.angled_dir_end()))
-    AddFilesFromDirLookup(D, true);
+    AddFilesFromDirLookup(D, false);
   for (const auto &D : make_range(S.system_dir_begin(), S.system_dir_end()))
     AddFilesFromDirLookup(D, true);
 
