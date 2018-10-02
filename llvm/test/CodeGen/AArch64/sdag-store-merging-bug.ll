@@ -1,4 +1,4 @@
-; RUN: llc -o - %s -mtriple aarch64-- -mattr +slow-misaligned-128store -stop-after=isel | FileCheck %s
+; RUN: llc -o - %s -mtriple aarch64-- -mattr +slow-misaligned-128store -stop-after=instruction-select | FileCheck %s
 ; Checks for a bug where selection dag store merging would construct wrong
 ; indices when extracting values from vectors, resulting in an invalid
 ; lane duplication in this case.
