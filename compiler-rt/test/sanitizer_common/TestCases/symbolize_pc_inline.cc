@@ -3,6 +3,8 @@
 // RUN: %env_tool_opts=strip_path_prefix=/TestCases/:symbolize_inline_frames=0 \
 // RUN:   %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-NOINLINE
 
+// XFAIL: darwin
+
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>
 #include <string.h>

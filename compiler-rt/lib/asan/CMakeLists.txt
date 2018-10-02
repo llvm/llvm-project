@@ -75,6 +75,14 @@ append_rtti_flag(OFF ASAN_CFLAGS)
 
 set(ASAN_DYNAMIC_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 
+if(ANDROID)
+# Put most Sanitizer shared libraries in the global group. For more details, see
+# android-changes-for-ndk-developers.md#changes-to-library-search-order
+  if (COMPILER_RT_HAS_Z_GLOBAL)
+    list(APPEND ASAN_DYNAMIC_LINK_FLAGS -Wl,-z,global)
+  endif()
+endif()
+
 set(ASAN_DYNAMIC_DEFINITIONS
   ${ASAN_COMMON_DEFINITIONS} ASAN_DYNAMIC=1)
 append_list_if(WIN32 INTERCEPTION_DYNAMIC_CRT ASAN_DYNAMIC_DEFINITIONS)
