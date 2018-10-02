@@ -30,6 +30,11 @@
 #define DECL_PURE_OCKL_NULLARY_U32(N) _DECL_X_OCKL_NULLARY_U32(pure, N)
 #define DECL_CONST_OCKL_NULLARY_U32(N) _DECL_X_OCKL_NULLARY_U32(const, N)
 
+#define DECL_OCKL_NULLARY_U64(N) extern ulong OCKL_MANGLE_U64(N)(void);
+#define _DECL_X_OCKL_NULLARY_U64(A,N) extern __attribute__((A)) ulong OCKL_MANGLE_U64(N)(void);
+#define DECL_PURE_OCKL_NULLARY_U64(N) _DECL_X_OCKL_NULLARY_U64(pure, N)
+#define DECL_CONST_OCKL_NULLARY_U64(N) _DECL_X_OCKL_NULLARY_U64(const, N)
+
 #define DECL_OCKL_UNARY_I32(N) extern int OCKL_MANGLE_I32(N)(int);
 #define _DECL_X_OCKL_UNARY_I32(A,N) extern __attribute__((A)) int OCKL_MANGLE_I32(N)(int);
 #define DECL_PURE_OCKL_UNARY_I32(N) _DECL_X_OCKL_UNARY_I32(pure, N)
@@ -136,6 +141,8 @@ DECL_CONST_OCKL_BINARY_U32(mul24)
 DECL_OCKL_NULLARY_U32(lane)
 DECL_OCKL_NULLARY_U32(activelane)
 
+DECL_PURE_OCKL_NULLARY_U64(memtime)
+DECL_PURE_OCKL_NULLARY_U64(memrealtime)
 
 extern half OCKL_MANGLE_T(wfred_add,f16)(half x);
 extern float OCKL_MANGLE_T(wfred_add,f32)(float x);
