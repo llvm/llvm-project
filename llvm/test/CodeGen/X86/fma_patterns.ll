@@ -715,14 +715,14 @@ define <4 x float> @test_v4f32_mul_y_add_x_negone(<4 x float> %x, <4 x float> %y
 define <4 x float> @test_v4f32_mul_sub_one_x_y(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_sub_one_x_y:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vmovaps {{.*#+}} xmm2 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
+; FMA-INFS-NEXT:    vmovaps {{.*#+}} xmm2 = [1,1,1,1]
 ; FMA-INFS-NEXT:    vsubps %xmm0, %xmm2, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_sub_one_x_y:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vmovaps {{.*#+}} xmm2 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
+; FMA4-INFS-NEXT:    vmovaps {{.*#+}} xmm2 = [1,1,1,1]
 ; FMA4-INFS-NEXT:    vsubps %xmm0, %xmm2, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    retq
@@ -756,14 +756,14 @@ define <4 x float> @test_v4f32_mul_sub_one_x_y(<4 x float> %x, <4 x float> %y) {
 define <4 x float> @test_v4f32_mul_y_sub_one_x(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_y_sub_one_x:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vmovaps {{.*#+}} xmm2 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
+; FMA-INFS-NEXT:    vmovaps {{.*#+}} xmm2 = [1,1,1,1]
 ; FMA-INFS-NEXT:    vsubps %xmm0, %xmm2, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_y_sub_one_x:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vmovaps {{.*#+}} xmm2 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
+; FMA4-INFS-NEXT:    vmovaps {{.*#+}} xmm2 = [1,1,1,1]
 ; FMA4-INFS-NEXT:    vsubps %xmm0, %xmm2, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA4-INFS-NEXT:    retq
@@ -797,14 +797,14 @@ define <4 x float> @test_v4f32_mul_y_sub_one_x(<4 x float> %x, <4 x float> %y) {
 define <4 x float> @test_v4f32_mul_sub_negone_x_y(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_sub_negone_x_y:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vmovaps {{.*#+}} xmm2 = [-1.000000e+00,-1.000000e+00,-1.000000e+00,-1.000000e+00]
+; FMA-INFS-NEXT:    vmovaps {{.*#+}} xmm2 = [-1,-1,-1,-1]
 ; FMA-INFS-NEXT:    vsubps %xmm0, %xmm2, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_sub_negone_x_y:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vmovaps {{.*#+}} xmm2 = [-1.000000e+00,-1.000000e+00,-1.000000e+00,-1.000000e+00]
+; FMA4-INFS-NEXT:    vmovaps {{.*#+}} xmm2 = [-1,-1,-1,-1]
 ; FMA4-INFS-NEXT:    vsubps %xmm0, %xmm2, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    retq
@@ -838,14 +838,14 @@ define <4 x float> @test_v4f32_mul_sub_negone_x_y(<4 x float> %x, <4 x float> %y
 define <4 x float> @test_v4f32_mul_y_sub_negone_x(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_y_sub_negone_x:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vmovaps {{.*#+}} xmm2 = [-1.000000e+00,-1.000000e+00,-1.000000e+00,-1.000000e+00]
+; FMA-INFS-NEXT:    vmovaps {{.*#+}} xmm2 = [-1,-1,-1,-1]
 ; FMA-INFS-NEXT:    vsubps %xmm0, %xmm2, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_y_sub_negone_x:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vmovaps {{.*#+}} xmm2 = [-1.000000e+00,-1.000000e+00,-1.000000e+00,-1.000000e+00]
+; FMA4-INFS-NEXT:    vmovaps {{.*#+}} xmm2 = [-1,-1,-1,-1]
 ; FMA4-INFS-NEXT:    vsubps %xmm0, %xmm2, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA4-INFS-NEXT:    retq
@@ -1084,7 +1084,7 @@ define float @test_f32_interp(float %x, float %y, float %t) {
 define <4 x float> @test_v4f32_interp(<4 x float> %x, <4 x float> %y, <4 x float> %t) {
 ; FMA-INFS-LABEL: test_v4f32_interp:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vmovaps {{.*#+}} xmm3 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
+; FMA-INFS-NEXT:    vmovaps {{.*#+}} xmm3 = [1,1,1,1]
 ; FMA-INFS-NEXT:    vsubps %xmm2, %xmm3, %xmm3
 ; FMA-INFS-NEXT:    vmulps %xmm3, %xmm1, %xmm1
 ; FMA-INFS-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm2 * xmm0) + xmm1
@@ -1092,7 +1092,7 @@ define <4 x float> @test_v4f32_interp(<4 x float> %x, <4 x float> %y, <4 x float
 ;
 ; FMA4-INFS-LABEL: test_v4f32_interp:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vmovaps {{.*#+}} xmm3 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
+; FMA4-INFS-NEXT:    vmovaps {{.*#+}} xmm3 = [1,1,1,1]
 ; FMA4-INFS-NEXT:    vsubps %xmm2, %xmm3, %xmm3
 ; FMA4-INFS-NEXT:    vmulps %xmm3, %xmm1, %xmm1
 ; FMA4-INFS-NEXT:    vfmaddps %xmm1, %xmm2, %xmm0, %xmm0
@@ -1133,7 +1133,7 @@ define <4 x float> @test_v4f32_interp(<4 x float> %x, <4 x float> %y, <4 x float
 define <8 x float> @test_v8f32_interp(<8 x float> %x, <8 x float> %y, <8 x float> %t) {
 ; FMA-INFS-LABEL: test_v8f32_interp:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vmovaps {{.*#+}} ymm3 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
+; FMA-INFS-NEXT:    vmovaps {{.*#+}} ymm3 = [1,1,1,1,1,1,1,1]
 ; FMA-INFS-NEXT:    vsubps %ymm2, %ymm3, %ymm3
 ; FMA-INFS-NEXT:    vmulps %ymm3, %ymm1, %ymm1
 ; FMA-INFS-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm2 * ymm0) + ymm1
@@ -1141,7 +1141,7 @@ define <8 x float> @test_v8f32_interp(<8 x float> %x, <8 x float> %y, <8 x float
 ;
 ; FMA4-INFS-LABEL: test_v8f32_interp:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vmovaps {{.*#+}} ymm3 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
+; FMA4-INFS-NEXT:    vmovaps {{.*#+}} ymm3 = [1,1,1,1,1,1,1,1]
 ; FMA4-INFS-NEXT:    vsubps %ymm2, %ymm3, %ymm3
 ; FMA4-INFS-NEXT:    vmulps %ymm3, %ymm1, %ymm1
 ; FMA4-INFS-NEXT:    vfmaddps %ymm1, %ymm2, %ymm0, %ymm0
@@ -1231,7 +1231,7 @@ define double @test_f64_interp(double %x, double %y, double %t) {
 define <2 x double> @test_v2f64_interp(<2 x double> %x, <2 x double> %y, <2 x double> %t) {
 ; FMA-INFS-LABEL: test_v2f64_interp:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vmovapd {{.*#+}} xmm3 = [1.000000e+00,1.000000e+00]
+; FMA-INFS-NEXT:    vmovapd {{.*#+}} xmm3 = [1,1]
 ; FMA-INFS-NEXT:    vsubpd %xmm2, %xmm3, %xmm3
 ; FMA-INFS-NEXT:    vmulpd %xmm3, %xmm1, %xmm1
 ; FMA-INFS-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm2 * xmm0) + xmm1
@@ -1239,7 +1239,7 @@ define <2 x double> @test_v2f64_interp(<2 x double> %x, <2 x double> %y, <2 x do
 ;
 ; FMA4-INFS-LABEL: test_v2f64_interp:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vmovapd {{.*#+}} xmm3 = [1.000000e+00,1.000000e+00]
+; FMA4-INFS-NEXT:    vmovapd {{.*#+}} xmm3 = [1,1]
 ; FMA4-INFS-NEXT:    vsubpd %xmm2, %xmm3, %xmm3
 ; FMA4-INFS-NEXT:    vmulpd %xmm3, %xmm1, %xmm1
 ; FMA4-INFS-NEXT:    vfmaddpd %xmm1, %xmm2, %xmm0, %xmm0
@@ -1247,7 +1247,7 @@ define <2 x double> @test_v2f64_interp(<2 x double> %x, <2 x double> %y, <2 x do
 ;
 ; AVX512-INFS-LABEL: test_v2f64_interp:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vmovapd {{.*#+}} xmm3 = [1.000000e+00,1.000000e+00]
+; AVX512-INFS-NEXT:    vmovapd {{.*#+}} xmm3 = [1,1]
 ; AVX512-INFS-NEXT:    vsubpd %xmm2, %xmm3, %xmm3
 ; AVX512-INFS-NEXT:    vmulpd %xmm3, %xmm1, %xmm1
 ; AVX512-INFS-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm2 * xmm0) + xmm1
@@ -1280,7 +1280,7 @@ define <2 x double> @test_v2f64_interp(<2 x double> %x, <2 x double> %y, <2 x do
 define <4 x double> @test_v4f64_interp(<4 x double> %x, <4 x double> %y, <4 x double> %t) {
 ; FMA-INFS-LABEL: test_v4f64_interp:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vmovapd {{.*#+}} ymm3 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
+; FMA-INFS-NEXT:    vmovapd {{.*#+}} ymm3 = [1,1,1,1]
 ; FMA-INFS-NEXT:    vsubpd %ymm2, %ymm3, %ymm3
 ; FMA-INFS-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
 ; FMA-INFS-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm2 * ymm0) + ymm1
@@ -1288,7 +1288,7 @@ define <4 x double> @test_v4f64_interp(<4 x double> %x, <4 x double> %y, <4 x do
 ;
 ; FMA4-INFS-LABEL: test_v4f64_interp:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vmovapd {{.*#+}} ymm3 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
+; FMA4-INFS-NEXT:    vmovapd {{.*#+}} ymm3 = [1,1,1,1]
 ; FMA4-INFS-NEXT:    vsubpd %ymm2, %ymm3, %ymm3
 ; FMA4-INFS-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
 ; FMA4-INFS-NEXT:    vfmaddpd %ymm1, %ymm2, %ymm0, %ymm0

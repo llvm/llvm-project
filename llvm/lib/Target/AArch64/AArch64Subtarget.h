@@ -103,6 +103,7 @@ protected:
   bool HasCCDP = false;
   bool HasBTI = false;
   bool HasRandGen = false;
+  bool HasMTE = false;
 
   // HasZeroCycleRegMove - Has zero-cycle register mov instructions.
   bool HasZeroCycleRegMove = false;
@@ -328,6 +329,7 @@ public:
   bool hasCCDP() { return HasCCDP; }
   bool hasBTI() { return HasBTI; }
   bool hasRandGen() { return HasRandGen; }
+  bool hasMTE() { return HasMTE; }
 
   bool isLittleEndian() const { return IsLittle; }
 

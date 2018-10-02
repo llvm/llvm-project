@@ -1482,6 +1482,12 @@ static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
   return Comment;
 }
 
+static void printConstant(const APFloat& Flt, raw_ostream &CS) {
+  SmallString<32> Str;
+  Flt.toString(Str);
+  CS << Str;
+}
+
 static void printConstant(const Constant *COp, raw_ostream &CS) {
   if (isa<UndefValue>(COp)) {
     CS << "u";
@@ -1500,9 +1506,7 @@ static void printConstant(const Constant *COp, raw_ostream &CS) {
       CS << ")";
     }
   } else if (auto *CF = dyn_cast<ConstantFP>(COp)) {
-    SmallString<32> Str;
-    CF->getValueAPF().toString(Str);
-    CS << Str;
+    printConstant(CF->getValueAPF(), CS);
   } else {
     CS << "?";
   }
@@ -2097,10 +2101,10 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
               CS << ",";
             if (CDS->getElementType()->isIntegerTy())
               CS << CDS->getElementAsInteger(i);
-            else if (CDS->getElementType()->isFloatTy())
-              CS << CDS->getElementAsFloat(i);
-            else if (CDS->getElementType()->isDoubleTy())
-              CS << CDS->getElementAsDouble(i);
+            else if (CDS->getElementType()->isHalfTy() ||
+                     CDS->getElementType()->isFloatTy() ||
+                     CDS->getElementType()->isDoubleTy())
+              printConstant(CDS->getElementAsAPFloat(i), CS);
             else
               CS << "?";
           }

@@ -227,15 +227,34 @@ public:
 
   bool ParseInstruction(ParseInstructionInfo & /*Info*/, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override {
+    // Note: Name does NOT point into the sourcecode, but to a local, so
+    // use NameLoc instead.
+    Name = StringRef(NameLoc.getPointer(), Name.size());
+    // WebAssembly has instructions with / in them, which AsmLexer parses
+    // as seperate tokens, so if we find such tokens immediately adjacent (no
+    // whitespace), expand the name to include them:
+    for (;;) {
+      auto &Sep = Lexer.getTok();
+      if (Sep.getLoc().getPointer() != Name.end() ||
+          Sep.getKind() != AsmToken::Slash) break;
+      // Extend name with /
+      Name = StringRef(Name.begin(), Name.size() + Sep.getString().size());
+      Parser.Lex();
+      // We must now find another identifier, or error.
+      auto &Id = Lexer.getTok();
+      if (Id.getKind() != AsmToken::Identifier ||
+          Id.getLoc().getPointer() != Name.end())
+        return Error("Incomplete instruction name: ", Id);
+      Name = StringRef(Name.begin(), Name.size() + Id.getString().size());
+      Parser.Lex();
+    }
+    // Now construct the name as first operand.
     Operands.push_back(make_unique<WebAssemblyOperand>(
-        WebAssemblyOperand::Token, NameLoc,
-        SMLoc::getFromPointer(NameLoc.getPointer() + Name.size()),
-        WebAssemblyOperand::TokOp{
-            StringRef(NameLoc.getPointer(), Name.size())}));
+        WebAssemblyOperand::Token, NameLoc, SMLoc::getFromPointer(Name.end()),
+        WebAssemblyOperand::TokOp{Name}));
     auto NamePair = Name.split('.');
     // If no '.', there is no type prefix.
-    if (NamePair.second.empty())
-      std::swap(NamePair.first, NamePair.second);
+    auto BaseName = NamePair.second.empty() ? NamePair.first : NamePair.second;
     while (Lexer.isNot(AsmToken::EndOfStatement)) {
       auto &Tok = Lexer.getTok();
       switch (Tok.getKind()) {
@@ -254,11 +273,11 @@ public:
         Parser.Lex();
         if (Lexer.isNot(AsmToken::Integer))
           return Error("Expected integer instead got: ", Lexer.getTok());
-        if (ParseOperandStartingWithInteger(true, Operands, NamePair.second))
+        if (ParseOperandStartingWithInteger(true, Operands, BaseName))
           return true;
         break;
       case AsmToken::Integer:
-        if (ParseOperandStartingWithInteger(false, Operands, NamePair.second))
+        if (ParseOperandStartingWithInteger(false, Operands, BaseName))
           return true;
         break;
       case AsmToken::Real: {
@@ -284,7 +303,7 @@ public:
     // assembly, so we add a dummy one explicitly (since we have no control
     // over signature tables here, we assume these will be regenerated when
     // the wasm module is generated).
-    if (NamePair.second == "block" || NamePair.second == "loop") {
+    if (BaseName == "block" || BaseName == "loop") {
       Operands.push_back(make_unique<WebAssemblyOperand>(
           WebAssemblyOperand::Integer, NameLoc, NameLoc,
           WebAssemblyOperand::IntOp{-1}));

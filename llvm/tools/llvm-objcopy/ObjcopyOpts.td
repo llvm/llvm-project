@@ -23,6 +23,8 @@ def compress_debug_sections_eq : Joined<["--", "-"], "compress-debug-sections=">
                                  HelpText<"Compress DWARF debug sections using "
                                           "specified style. Supported styles: "
                                           "'zlib-gnu' and 'zlib'">;
+def decompress_debug_sections : Flag<["-", "--"], "decompress-debug-sections">,
+                                HelpText<"Decompress DWARF debug sections.">;
 def O : JoinedOrSeparate<["-"], "O">,
         Alias<output_target>;
 defm split_dwo : Eq<"split-dwo">,

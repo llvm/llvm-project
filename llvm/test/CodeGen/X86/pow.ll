@@ -56,11 +56,11 @@ define <4 x float> @pow_v4f32_one_fourth_fmf(<4 x float> %x) nounwind {
 ; CHECK-NEXT:    rsqrtps %xmm0, %xmm1
 ; CHECK-NEXT:    movaps %xmm0, %xmm2
 ; CHECK-NEXT:    mulps %xmm1, %xmm2
-; CHECK-NEXT:    movaps {{.*#+}} xmm3 = [-5.000000e-01,-5.000000e-01,-5.000000e-01,-5.000000e-01]
+; CHECK-NEXT:    movaps {{.*#+}} xmm3 = [-0.5,-0.5,-0.5,-0.5]
 ; CHECK-NEXT:    movaps %xmm2, %xmm4
 ; CHECK-NEXT:    mulps %xmm3, %xmm4
 ; CHECK-NEXT:    mulps %xmm1, %xmm2
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [-3.000000e+00,-3.000000e+00,-3.000000e+00,-3.000000e+00]
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [-3,-3,-3,-3]
 ; CHECK-NEXT:    addps %xmm1, %xmm2
 ; CHECK-NEXT:    mulps %xmm4, %xmm2
 ; CHECK-NEXT:    xorps %xmm4, %xmm4

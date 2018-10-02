@@ -136,6 +136,63 @@ void SectionWriter::visit(const OwnedDataSection &Sec) {
   std::copy(std::begin(Sec.Data), std::end(Sec.Data), Buf);
 }
 
+static const std::vector<uint8_t> ZlibGnuMagic = {'Z', 'L', 'I', 'B'};
+
+static bool isDataGnuCompressed(ArrayRef<uint8_t> Data) {
+  return Data.size() > ZlibGnuMagic.size() &&
+         std::equal(ZlibGnuMagic.begin(), ZlibGnuMagic.end(), Data.data());
+}
+
+template <class ELFT>
+static std::tuple<uint64_t, uint64_t>
+getDecompressedSizeAndAlignment(ArrayRef<uint8_t> Data) {
+  const bool IsGnuDebug = isDataGnuCompressed(Data);
+  const uint64_t DecompressedSize =
+      IsGnuDebug
+          ? support::endian::read64be(reinterpret_cast<const uint64_t *>(
+                Data.data() + ZlibGnuMagic.size()))
+          : reinterpret_cast<const Elf_Chdr_Impl<ELFT> *>(Data.data())->ch_size;
+  const uint64_t DecompressedAlign =
+      IsGnuDebug ? 1
+                 : reinterpret_cast<const Elf_Chdr_Impl<ELFT> *>(Data.data())
+                       ->ch_addralign;
+
+  return std::make_tuple(DecompressedSize, DecompressedAlign);
+}
+
+template <class ELFT>
+void ELFSectionWriter<ELFT>::visit(const DecompressedSection &Sec) {
+  uint8_t *Buf = Out.getBufferStart() + Sec.Offset;
+
+  if (!zlib::isAvailable()) {
+    std::copy(Sec.OriginalData.begin(), Sec.OriginalData.end(), Buf);
+    return;
+  }
+
+  const size_t DataOffset = isDataGnuCompressed(Sec.OriginalData)
+                                ? (ZlibGnuMagic.size() + sizeof(Sec.Size))
+                                : sizeof(Elf_Chdr_Impl<ELFT>);
+
+  StringRef CompressedContent(
+      reinterpret_cast<const char *>(Sec.OriginalData.data()) + DataOffset,
+      Sec.OriginalData.size() - DataOffset);
+
+  SmallVector<char, 128> DecompressedContent;
+  if (Error E = zlib::uncompress(CompressedContent, DecompressedContent,
+                                 static_cast<size_t>(Sec.Size)))
+    reportError(Sec.Name, std::move(E));
+
+  std::copy(DecompressedContent.begin(), DecompressedContent.end(), Buf);
+}
+
+void BinarySectionWriter::visit(const DecompressedSection &Sec) {
+  error("Cannot write compressed section '" + Sec.Name + "' ");
+}
+
+void DecompressedSection::accept(SectionVisitor &Visitor) const {
+  Visitor.visit(*this);
+}
+
 void OwnedDataSection::accept(SectionVisitor &Visitor) const {
   Visitor.visit(*this);
 }
@@ -204,6 +261,14 @@ CompressedSection::CompressedSection(const SectionBase &Sec,
   }
   Size = ChdrSize + CompressedData.size();
   Align = 8;
+}
+
+CompressedSection::CompressedSection(ArrayRef<uint8_t> CompressedData,
+                                     uint64_t DecompressedSize,
+                                     uint64_t DecompressedAlign)
+    : CompressionType(DebugCompressionType::None),
+      DecompressedSize(DecompressedSize), DecompressedAlign(DecompressedAlign) {
+  OriginalData = CompressedData;
 }
 
 void CompressedSection::accept(SectionVisitor &Visitor) const {
@@ -969,9 +1034,19 @@ SectionBase &ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
   }
   case SHT_NOBITS:
     return Obj.addSection<Section>(Data);
-  default:
+  default: {
     Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
+
+    if (isDataGnuCompressed(Data) || (Shdr.sh_flags & ELF::SHF_COMPRESSED)) {
+      uint64_t DecompressedSize, DecompressedAlign;
+      std::tie(DecompressedSize, DecompressedAlign) =
+          getDecompressedSizeAndAlignment<ELFT>(Data);
+      return Obj.addSection<CompressedSection>(Data, DecompressedSize,
+                                               DecompressedAlign);
+    }
+
     return Obj.addSection<Section>(Data);
+  }
   }
 }
 

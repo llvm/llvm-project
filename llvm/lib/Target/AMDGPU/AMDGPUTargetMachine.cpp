@@ -602,6 +602,7 @@ void AMDGPUPassConfig::addIRPasses() {
   disablePass(&FuncletLayoutID);
   disablePass(&PatchableFunctionID);
 
+  addPass(createAtomicExpandPass());
   addPass(createAMDGPULowerIntrinsicsPass());
 
   if (TM.getTargetTriple().getArch() == Triple::r600 ||

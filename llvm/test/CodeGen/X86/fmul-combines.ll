@@ -24,7 +24,7 @@ define <4 x float> @fmul2_v4f32(<4 x float> %x) {
 define <4 x float> @constant_fold_fmul_v4f32(<4 x float> %x) {
 ; CHECK-LABEL: constant_fold_fmul_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [8.000000e+00,8.000000e+00,8.000000e+00,8.000000e+00]
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [8,8,8,8]
 ; CHECK-NEXT:    retq
   %y = fmul <4 x float> <float 4.0, float 4.0, float 4.0, float 4.0>, <float 2.0, float 2.0, float 2.0, float 2.0>
   ret <4 x float> %y

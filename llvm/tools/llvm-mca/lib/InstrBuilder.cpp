@@ -98,7 +98,7 @@ static void initializeUsedResources(InstrDesc &ID,
     for (unsigned J = I + 1; J < E; ++J) {
       ResourcePlusCycles &B = Worklist[J];
       if ((NormalizedMask & B.first) == NormalizedMask) {
-        B.second.CS.Subtract(A.second.size() - SuperResources[A.first]);
+        B.second.CS.subtract(A.second.size() - SuperResources[A.first]);
         if (countPopulation(B.first) > 1)
           B.second.NumUnits++;
       }

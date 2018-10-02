@@ -779,6 +779,8 @@ bool MIParser::parse(MachineInstr *&MI) {
     MDNode *Node = nullptr;
     if (parseMDNode(Node))
       return true;
+    if (!isa<DILocation>(Node))
+      return error("referenced metadata is not a DILocation");
     DebugLocation = DebugLoc(Node);
   }
 

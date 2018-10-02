@@ -246,7 +246,7 @@ public:
 
   bool isValid() const { return Begin <= End; }
   unsigned size() const { return End - Begin; };
-  void Subtract(unsigned Cycles) {
+  void subtract(unsigned Cycles) {
     assert(End >= Cycles);
     End -= Cycles;
   }
