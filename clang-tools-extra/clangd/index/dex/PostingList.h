@@ -33,8 +33,7 @@
 namespace clang {
 namespace clangd {
 namespace dex {
-
-class Iterator;
+struct Token;
 
 /// NOTE: This is an implementation detail.
 ///
@@ -64,7 +63,8 @@ public:
 
   /// Constructs DocumentIterator over given posting list. DocumentIterator will
   /// go through the chunks and decompress them on-the-fly when necessary.
-  std::unique_ptr<Iterator> iterator() const;
+  /// If given, Tok is only used for the string representation.
+  std::unique_ptr<Iterator> iterator(const Token *Tok = nullptr) const;
 
   /// Returns in-memory size of external storage.
   size_t bytes() const { return Chunks.capacity() * sizeof(Chunk); }

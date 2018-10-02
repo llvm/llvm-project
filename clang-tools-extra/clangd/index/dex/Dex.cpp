@@ -16,6 +16,7 @@
 #include "index/Index.h"
 #include "index/dex/Iterator.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <queue>
 
@@ -85,13 +86,13 @@ std::vector<std::unique_ptr<Iterator>> createFileProximityIterators(
   // ProximityPaths. Boosting factor should depend on the distance to the
   // Proximity Path: the closer processed path is, the higher boosting factor.
   for (const auto &ParentURI : ParentURIs.keys()) {
-    const auto It =
-        InvertedIndex.find(Token(Token::Kind::ProximityURI, ParentURI));
+    Token Tok(Token::Kind::ProximityURI, ParentURI);
+    const auto It = InvertedIndex.find(Tok);
     if (It != InvertedIndex.end()) {
       // FIXME(kbobyrev): Append LIMIT on top of every BOOST iterator.
       PathProximitySignals.SymbolURI = ParentURI;
-      BoostingIterators.push_back(
-          createBoost(It->second.iterator(), PathProximitySignals.evaluate()));
+      BoostingIterators.push_back(createBoost(It->second.iterator(&It->first),
+                                              PathProximitySignals.evaluate()));
     }
   }
   return BoostingIterators;
@@ -142,7 +143,6 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
                     llvm::function_ref<void(const Symbol &)> Callback) const {
   assert(!StringRef(Req.Query).contains("::") &&
          "There must be no :: in query.");
-  // FIXME: attach the query tree to the trace span.
   trace::Span Tracer("Dex fuzzyFind");
   FuzzyMatcher Filter(Req.Query);
   bool More = false;
@@ -156,7 +156,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   for (const auto &Trigram : TrigramTokens) {
     const auto It = InvertedIndex.find(Trigram);
     if (It != InvertedIndex.end())
-      TrigramIterators.push_back(It->second.iterator());
+      TrigramIterators.push_back(It->second.iterator(&It->first));
   }
   if (!TrigramIterators.empty())
     TopLevelChildren.push_back(createAnd(move(TrigramIterators)));
@@ -164,9 +164,10 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   // Generate scope tokens for search query.
   std::vector<std::unique_ptr<Iterator>> ScopeIterators;
   for (const auto &Scope : Req.Scopes) {
-    const auto It = InvertedIndex.find(Token(Token::Kind::Scope, Scope));
+    Token Tok(Token::Kind::Scope, Scope);
+    const auto It = InvertedIndex.find(Tok);
     if (It != InvertedIndex.end())
-      ScopeIterators.push_back(It->second.iterator());
+      ScopeIterators.push_back(It->second.iterator(&It->first));
   }
   if (Req.AnyScope)
     ScopeIterators.push_back(createBoost(createTrue(Symbols.size()),
@@ -189,7 +190,8 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
 
   if (Req.RestrictForCodeCompletion)
     TopLevelChildren.push_back(
-        InvertedIndex.find(RestrictedForCodeCompletion)->second.iterator());
+        InvertedIndex.find(RestrictedForCodeCompletion)
+            ->second.iterator(&RestrictedForCodeCompletion));
 
   // Use TRUE iterator if both trigrams and scopes from the query are not
   // present in the symbol index.
@@ -203,6 +205,8 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   // when the requested number of items is small.
   auto Root = Req.Limit ? createLimit(move(QueryIterator), *Req.Limit * 100)
                         : move(QueryIterator);
+  SPAN_ATTACH(Tracer, "query", llvm::to_string(*Root));
+  vlog("Dex query tree: {0}", *Root);
 
   using IDAndScore = std::pair<DocID, float>;
   std::vector<IDAndScore> IDAndScores = consume(*Root);
