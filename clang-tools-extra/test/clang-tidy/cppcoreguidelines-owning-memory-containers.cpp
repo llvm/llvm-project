@@ -37,22 +37,23 @@ int main() {
   // Rangebased looping in resource vector.
   for (auto *Element : OwnerStdVector) {
     Element = new int(42);
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: assigning newly created 'gsl::owner<>' to non-owner 'int *'
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: assigning newly created 'gsl::owner<>' to non-owner 'int *'
   }
   for (auto *Element : OwnerStdVector) {
     delete Element;
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: deleting a pointer through a type that is not marked 'gsl::owner<>'; consider using a smart pointer instead
-    // CHECK-MESSAGES: [[@LINE-3]]:8: note: variable declared here
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: deleting a pointer through a type that is not marked 'gsl::owner<>'; consider using a smart pointer instead
+    // CHECK-NOTES: [[@LINE-3]]:8: note: variable declared here
   }
 
   // Indexbased looping in resource vector.
   for (int i = 0; i < 100; ++i) {
     OwnerStdVector[i] = new int(42);
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: assigning newly created 'gsl::owner<>' to non-owner 'int *'
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: assigning newly created 'gsl::owner<>' to non-owner 'int *'
   }
   for (int i = 0; i < 100; ++i) {
     delete OwnerStdVector[i];
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: deleting a pointer through a type that is not marked 'gsl::owner<>'; consider using a smart pointer instead
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: deleting a pointer through a type that is not marked 'gsl::owner<>'; consider using a smart pointer instead
+    // CHECK-NOTES: [[@LINE-21]]:3: note: variable declared here
     // A note gets emitted here pointing to the return value of the operator[] from the
     // vector implementation. Maybe this is considered misleading.
   }
