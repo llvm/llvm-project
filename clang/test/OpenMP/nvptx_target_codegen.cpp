@@ -557,7 +557,6 @@ int baz(int f, double &a) {
   // CHECK: [[STACK:%.+]] = alloca [[GLOBAL_ST:%.+]],
   // CHECK: [[ZERO_ADDR:%.+]] = alloca i32,
   // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t*
-  // CHECK: [[GTID_ADDR:%.+]] = alloca i32,
   // CHECK: store i32 0, i32* [[ZERO_ADDR]]
   // CHECK: [[RES:%.+]] = call i8 @__kmpc_is_spmd_exec_mode()
   // CHECK: [[IS_SPMD:%.+]] = icmp ne i8 [[RES]], 0
@@ -583,9 +582,6 @@ int baz(int f, double &a) {
   // CHECK: call void @__kmpc_end_serialized_parallel(%struct.ident_t* @{{.+}}, i32 [[GTID]])
   // CHECK: br label
 
-  // CHECK: icmp eq i32
-  // CHECK: br i1
-
   // CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* @{{.+}} to i8*), i16 1)
   // CHECK: call void @__kmpc_begin_sharing_variables(i8*** [[SHARED_PTR:%.+]], i{{64|32}} 2)
   // CHECK: [[SHARED:%.+]] = load i8**, i8*** [[SHARED_PTR]],
@@ -595,10 +591,6 @@ int baz(int f, double &a) {
   // CHECK: call void @llvm.nvvm.barrier0()
   // CHECK: call void @llvm.nvvm.barrier0()
   // CHECK: call void @__kmpc_end_sharing_variables()
-  // CHECK: br label
-
-  // CHECK: store i32 [[GTID]], i32* [[GTID_ADDR]],
-  // CHECK: call void [[OUTLINED]](i32* [[GTID_ADDR]], i32* [[ZERO_ADDR]], i32* [[F_PTR]], double* %{{.+}})
   // CHECK: br label
 
   // CHECK: [[RES:%.+]] = load i32, i32* [[F_PTR]],

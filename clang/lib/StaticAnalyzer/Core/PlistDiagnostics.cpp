@@ -32,8 +32,8 @@ namespace {
   class PlistDiagnostics : public PathDiagnosticConsumer {
     const std::string OutputFile;
     const Preprocessor &PP;
+    AnalyzerOptions &AnOpts;
     const bool SupportsCrossFileDiagnostics;
-    const bool SerializeStatistics;
   public:
     PlistDiagnostics(AnalyzerOptions &AnalyzerOpts,
                      const std::string& prefix,
@@ -63,22 +63,23 @@ PlistDiagnostics::PlistDiagnostics(AnalyzerOptions &AnalyzerOpts,
                                    const std::string& output,
                                    const Preprocessor &PP,
                                    bool supportsMultipleFiles)
-  : OutputFile(output), PP(PP),
-    SupportsCrossFileDiagnostics(supportsMultipleFiles),
-    SerializeStatistics(AnalyzerOpts.shouldSerializeStats()) {}
+  : OutputFile(output), PP(PP), AnOpts(AnalyzerOpts),
+    SupportsCrossFileDiagnostics(supportsMultipleFiles) {}
 
 void ento::createPlistDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
                                          PathDiagnosticConsumers &C,
                                          const std::string& s,
                                          const Preprocessor &PP) {
-  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP, false));
+  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP,
+                                   /*supportsMultipleFiles*/ false));
 }
 
 void ento::createPlistMultiFileDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
                                                   PathDiagnosticConsumers &C,
                                                   const std::string &s,
                                                   const Preprocessor &PP) {
-  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP, true));
+  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP,
+                                   /*supportsMultipleFiles*/ true));
 }
 
 static void EmitRanges(raw_ostream &o,
@@ -175,7 +176,8 @@ static void ReportControlFlow(raw_ostream &o,
   Indent(o, indent) << "</dict>\n";
 }
 
-static void ReportEvent(raw_ostream &o, const PathDiagnosticEventPiece& P,
+static void ReportEvent(raw_ostream &o,
+                        const PathDiagnosticEventPiece& P,
                         const FIDMap& FM,
                         const Preprocessor &PP,
                         unsigned indent,
@@ -219,6 +221,7 @@ static void ReportPiece(raw_ostream &o,
                         const PathDiagnosticPiece &P,
                         const FIDMap& FM, 
                         const Preprocessor &PP,
+                        AnalyzerOptions &AnOpts,
                         unsigned indent,
                         unsigned depth,
                         bool includeControlFlow,
@@ -228,28 +231,29 @@ static void ReportCall(raw_ostream &o,
                        const PathDiagnosticCallPiece &P,
                        const FIDMap& FM,
                        const Preprocessor &PP,
+                       AnalyzerOptions &AnOpts,
                        unsigned indent,
                        unsigned depth) {
 
   if (auto callEnter = P.getCallEnterEvent())
-    ReportPiece(o, *callEnter, FM, PP, indent, depth,
+    ReportPiece(o, *callEnter, FM, PP, AnOpts, indent, depth,
                 /*includeControlFlow*/ true, P.isLastInMainSourceFile());
 
 
   ++depth;
 
   if (auto callEnterWithinCaller = P.getCallEnterWithinCallerEvent())
-    ReportPiece(o, *callEnterWithinCaller, FM, PP, indent, depth,
+    ReportPiece(o, *callEnterWithinCaller, FM, PP, AnOpts, indent, depth,
                 /*includeControlFlow*/ true);
 
   for (PathPieces::const_iterator I = P.path.begin(), E = P.path.end();I!=E;++I)
-    ReportPiece(o, **I, FM, PP, indent, depth,
+    ReportPiece(o, **I, FM, PP, AnOpts, indent, depth,
                 /*includeControlFlow*/ true);
 
   --depth;
 
   if (auto callExit = P.getCallExitEvent())
-    ReportPiece(o, *callExit, FM, PP, indent, depth,
+    ReportPiece(o, *callExit, FM, PP, AnOpts, indent, depth,
                 /*includeControlFlow*/ true);
 }
 
@@ -257,20 +261,21 @@ static void ReportMacro(raw_ostream &o,
                         const PathDiagnosticMacroPiece& P,
                         const FIDMap& FM,
                         const Preprocessor &PP,
+                        AnalyzerOptions &AnOpts,
                         unsigned indent,
                         unsigned depth) {
 
   for (PathPieces::const_iterator I = P.subPieces.begin(), E=P.subPieces.end();
        I!=E; ++I) {
-    ReportPiece(o, **I, FM, PP, indent, depth, /*includeControlFlow*/ false);
+    ReportPiece(o, **I, FM, PP, AnOpts, indent, depth,
+                /*includeControlFlow*/ false);
   }
 }
 
 static void ReportNote(raw_ostream &o, const PathDiagnosticNotePiece& P,
                         const FIDMap& FM,
                         const Preprocessor &PP,
-                        unsigned indent,
-                        unsigned depth) {
+                        unsigned indent) {
 
   const SourceManager &SM = PP.getSourceManager();
 
@@ -295,9 +300,12 @@ static void ReportNote(raw_ostream &o, const PathDiagnosticNotePiece& P,
   Indent(o, indent); o << "</dict>\n";
 }
 
-static void ReportDiag(raw_ostream &o, const PathDiagnosticPiece& P,
-                       const FIDMap& FM, const Preprocessor &PP) {
-  ReportPiece(o, P, FM, PP, /*indent*/ 4, /*depth*/ 0,
+static void ReportDiag(raw_ostream &o,
+                       const PathDiagnosticPiece& P,
+                       const FIDMap& FM,
+                       const Preprocessor &PP,
+                       AnalyzerOptions &AnOpts) {
+  ReportPiece(o, P, FM, PP, AnOpts, /*indent*/ 4, /*depth*/ 0,
               /*includeControlFlow*/ true);
 }
 
@@ -305,6 +313,7 @@ static void ReportPiece(raw_ostream &o,
                         const PathDiagnosticPiece &P,
                         const FIDMap& FM,
                         const Preprocessor &PP,
+                        AnalyzerOptions &AnOpts,
                         unsigned indent,
                         unsigned depth,
                         bool includeControlFlow,
@@ -316,17 +325,19 @@ static void ReportPiece(raw_ostream &o,
                           indent);
       break;
     case PathDiagnosticPiece::Call:
-      ReportCall(o, cast<PathDiagnosticCallPiece>(P), FM, PP, indent, depth);
+      ReportCall(o, cast<PathDiagnosticCallPiece>(P), FM, PP, AnOpts, indent,
+                 depth);
       break;
     case PathDiagnosticPiece::Event:
       ReportEvent(o, cast<PathDiagnosticEventPiece>(P), FM, PP, indent, depth,
                   isKeyEvent);
       break;
     case PathDiagnosticPiece::Macro:
-      ReportMacro(o, cast<PathDiagnosticMacroPiece>(P), FM, PP, indent, depth);
+      ReportMacro(o, cast<PathDiagnosticMacroPiece>(P), FM, PP, AnOpts, indent,
+                  depth);
       break;
     case PathDiagnosticPiece::Note:
-      ReportNote(o, cast<PathDiagnosticNotePiece>(P), FM, PP, indent, depth);
+      ReportNote(o, cast<PathDiagnosticNotePiece>(P), FM, PP, indent);
       break;
   }
 }
@@ -458,7 +469,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
            "   <array>\n";
 
       for (; I != FirstNonNote; ++I)
-        ReportDiag(o, **I, FM, PP);
+        ReportDiag(o, **I, FM, PP, AnOpts);
 
       o << "   </array>\n";
     }
@@ -468,7 +479,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
     o << "   <array>\n";
 
     for (PathPieces::const_iterator E = Path.end(); I != E; ++I)
-      ReportDiag(o, **I, FM, PP);
+      ReportDiag(o, **I, FM, PP, AnOpts);
 
     o << "   </array>\n";
 
@@ -594,7 +605,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
     EmitString(o << "  ", SM.getFileEntryForID(FID)->getName()) << '\n';
   o << " </array>\n";
 
-  if (llvm::AreStatisticsEnabled() && SerializeStatistics) {
+  if (llvm::AreStatisticsEnabled() && AnOpts.shouldSerializeStats()) {
     o << " <key>statistics</key>\n";
     std::string stats;
     llvm::raw_string_ostream os(stats);

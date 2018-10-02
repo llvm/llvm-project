@@ -3400,20 +3400,7 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
       if (isOpenMPSimdDirective(S.getDirectiveKind()) &&
           !isOpenMPParallelDirective(S.getDirectiveKind()) &&
           !isOpenMPTeamsDirective(S.getDirectiveKind())) {
-        OpenMPDirectiveKind ReductionKind = OMPD_unknown;
-        if (isOpenMPParallelDirective(S.getDirectiveKind()) &&
-            isOpenMPSimdDirective(S.getDirectiveKind())) {
-          ReductionKind = OMPD_parallel_for_simd;
-        } else if (isOpenMPParallelDirective(S.getDirectiveKind())) {
-          ReductionKind = OMPD_parallel_for;
-        } else if (isOpenMPSimdDirective(S.getDirectiveKind())) {
-          ReductionKind = OMPD_simd;
-        } else if (!isOpenMPTeamsDirective(S.getDirectiveKind()) &&
-                   S.hasClausesOfKind<OMPReductionClause>()) {
-          llvm_unreachable(
-              "No reduction clauses is allowed in distribute directive.");
-        }
-        EmitOMPReductionClauseFinal(S, ReductionKind);
+        EmitOMPReductionClauseFinal(S, OMPD_simd);
         // Emit post-update of the reduction variables if IsLastIter != 0.
         emitPostUpdateForReductionClause(
             *this, S, [IL, &S](CodeGenFunction &CGF) {
