@@ -446,6 +446,17 @@ This can be used to ensure linker invocation remains compatible with
 traditional Unix-like linkers.
 .It Fl -warn-common
 Warn about duplicate common symbols.
+.It Fl -warn-ifunc-textrel
+Warn about using ifunc symbols in conjunction with text relocations.
+Older versions of glibc library (2.28 and earlier) has a bug that causes
+the segment that includes ifunc symbols to be marked as not executable when
+they are relocated. As a result, although the program compiles and links
+successfully, it gives segmentation fault when the instruction pointer reaches
+an ifunc symbol. Use -warn-ifunc-textrel to let lld give a warning, if the
+code may include ifunc symbols, may do text relocations and be linked with
+an older glibc version. Otherwise, there is no need to use it, as the default
+value does not give a warning. This flag has been introduced in late 2018,
+has no counter part in ld and gold linkers, and may be removed in the future.
 .It Fl -warn-unresolved-symbols
 Report unresolved symbols as warnings.
 .It Fl -whole-archive

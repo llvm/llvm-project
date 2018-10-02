@@ -852,6 +852,7 @@ private:
   bool parseDirectiveFPOSetFrame(SMLoc L);
   bool parseDirectiveFPOPushReg(SMLoc L);
   bool parseDirectiveFPOStackAlloc(SMLoc L);
+  bool parseDirectiveFPOStackAlign(SMLoc L);
   bool parseDirectiveFPOEndPrologue(SMLoc L);
   bool parseDirectiveFPOEndProc(SMLoc L);
   bool parseDirectiveFPOData(SMLoc L);
@@ -3315,6 +3316,8 @@ bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
     return parseDirectiveFPOPushReg(DirectiveID.getLoc());
   else if (IDVal == ".cv_fpo_stackalloc")
     return parseDirectiveFPOStackAlloc(DirectiveID.getLoc());
+  else if (IDVal == ".cv_fpo_stackalign")
+    return parseDirectiveFPOStackAlign(DirectiveID.getLoc());
   else if (IDVal == ".cv_fpo_endprologue")
     return parseDirectiveFPOEndPrologue(DirectiveID.getLoc());
   else if (IDVal == ".cv_fpo_endproc")
@@ -3427,6 +3430,16 @@ bool X86AsmParser::parseDirectiveFPOStackAlloc(SMLoc L) {
       Parser.parseEOL("unexpected tokens"))
     return addErrorSuffix(" in '.cv_fpo_stackalloc' directive");
   return getTargetStreamer().emitFPOStackAlloc(Offset, L);
+}
+
+// .cv_fpo_stackalign 8
+bool X86AsmParser::parseDirectiveFPOStackAlign(SMLoc L) {
+  MCAsmParser &Parser = getParser();
+  int64_t Offset;
+  if (Parser.parseIntToken(Offset, "expected offset") ||
+      Parser.parseEOL("unexpected tokens"))
+    return addErrorSuffix(" in '.cv_fpo_stackalign' directive");
+  return getTargetStreamer().emitFPOStackAlign(Offset, L);
 }
 
 // .cv_fpo_endprologue

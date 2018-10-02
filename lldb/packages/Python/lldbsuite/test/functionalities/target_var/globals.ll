@@ -23,7 +23,7 @@ attributes #0 = { noinline nounwind optnone ssp uwtable }
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression(DW_OP_deref))
 !1 = distinct !DIGlobalVariable(name: "i", scope: !2, file: !3, line: 1, type: !9, isLocal: false, isDefinition: true)
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, emissionKind: FullDebug, globals: !5, nameTableKind: None)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, emissionKind: FullDebug, globals: !5)
 !3 = !DIFile(filename: "globals.c", directory: "/")
 !4 = !{}
 !5 = !{!0, !6}

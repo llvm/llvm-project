@@ -22,7 +22,6 @@
 #include "Pipeline.h"
 #include "SourceMgr.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include <memory>
 

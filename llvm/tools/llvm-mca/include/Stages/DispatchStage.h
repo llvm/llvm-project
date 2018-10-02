@@ -65,7 +65,7 @@ class DispatchStage final : public Stage {
 
   void notifyInstructionDispatched(const InstRef &IR,
                                    llvm::ArrayRef<unsigned> UsedPhysRegs,
-                                   unsigned uOps);
+                                   unsigned uOps) const;
 
   void collectWrites(llvm::SmallVectorImpl<WriteRef> &Vec,
                      unsigned RegID) const {

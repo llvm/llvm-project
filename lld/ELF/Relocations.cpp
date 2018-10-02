@@ -50,6 +50,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Thunks.h"
+#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/SmallSet.h"
@@ -979,12 +980,22 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
   // all dynamic symbols that can be resolved within the executable will
   // actually be resolved that way at runtime, because the main exectuable
   // is always at the beginning of a search list. We can leverage that fact.
-  if (Sym.isGnuIFunc())
+  if (Sym.isGnuIFunc()) {
+    if (!Config->ZText && Config->WarnIfuncTextrel) {
+      warn("using ifunc symbols when text relocations are allowed may produce "
+           "a binary that will segfault, if the object file is linked with "
+           "old version of glibc (glibc 2.28 and earlier). If this applies to "
+           "you, consider recompiling the object files without -fPIC and "
+           "without -Wl,-z,notext option. Use -no-warn-ifunc-textrel to "
+           "turn off this warning." +
+           getLocation(Sec, Sym, Offset));
+    }
     Expr = toPlt(Expr);
-  else if (!Sym.IsPreemptible && Expr == R_GOT_PC && !isAbsoluteValue(Sym))
+  } else if (!Sym.IsPreemptible && Expr == R_GOT_PC && !isAbsoluteValue(Sym)) {
     Expr = Target->adjustRelaxExpr(Type, RelocatedAddr, Expr);
-  else if (!Sym.IsPreemptible)
+  } else if (!Sym.IsPreemptible) {
     Expr = fromPlt(Expr);
+  }
 
   // This relocation does not require got entry, but it is relative to got and
   // needs it to be created. Here we request for that.
