@@ -66,7 +66,8 @@
 ; OBJ:   ParamFramePtrReg: VFRAME (0x7536)
 ; OBJ: }
 ; OBJ: LocalSym {
-; OBJ:   Type: NonTrivial (0x1007)
+; OBJ:   Kind: S_LOCAL (0x113E)
+; OBJ:   Type: NonTrivial (0x{{.*}})
 ; OBJ:   Flags [ (0x1)
 ; OBJ:     IsParameter (0x1)
 ; OBJ:   ]
