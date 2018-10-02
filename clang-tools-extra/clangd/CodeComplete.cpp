@@ -20,6 +20,7 @@
 
 #include "CodeComplete.h"
 #include "AST.h"
+#include "ClangdUnit.h"
 #include "CodeCompletionStrings.h"
 #include "Compiler.h"
 #include "Diagnostics.h"
@@ -986,7 +987,7 @@ private:
 struct SemaCompleteInput {
   PathRef FileName;
   const tooling::CompileCommand &Command;
-  PrecompiledPreamble const *Preamble;
+  const PreambleData *Preamble;
   StringRef Contents;
   Position Pos;
   IntrusiveRefCntPtr<vfs::FileSystem> VFS;
@@ -1010,12 +1011,15 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
     // working dirs.
   }
 
+  IntrusiveRefCntPtr<vfs::FileSystem> VFS = Input.VFS;
+  if (Input.Preamble && Input.Preamble->StatCache)
+    VFS = Input.Preamble->StatCache->getConsumingFS(std::move(VFS));
   IgnoreDiagnostics DummyDiagsConsumer;
   auto CI = createInvocationFromCommandLine(
       ArgStrs,
       CompilerInstance::createDiagnostics(new DiagnosticOptions,
                                           &DummyDiagsConsumer, false),
-      Input.VFS);
+      VFS);
   if (!CI) {
     elog("Couldn't create CompilerInvocation");
     return false;
@@ -1054,8 +1058,10 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   // NOTE: we must call BeginSourceFile after prepareCompilerInstance. Otherwise
   // the remapped buffers do not get freed.
   auto Clang = prepareCompilerInstance(
-      std::move(CI), CompletingInPreamble ? nullptr : Input.Preamble,
-      std::move(ContentsBuffer), std::move(Input.PCHs), std::move(Input.VFS),
+      std::move(CI),
+      (Input.Preamble && !CompletingInPreamble) ? &Input.Preamble->Preamble
+                                                : nullptr,
+      std::move(ContentsBuffer), std::move(Input.PCHs), std::move(VFS),
       DummyDiagsConsumer);
   Clang->getPreprocessorOpts().SingleFileParseMode = CompletingInPreamble;
   Clang->setCodeCompletionConsumer(Consumer.release());
@@ -1565,19 +1571,20 @@ speculateCompletionFilter(llvm::StringRef Content, Position Pos) {
 
 CodeCompleteResult
 codeComplete(PathRef FileName, const tooling::CompileCommand &Command,
-             PrecompiledPreamble const *Preamble,
-             const IncludeStructure &PreambleInclusions, StringRef Contents,
-             Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+             const PreambleData *Preamble, StringRef Contents, Position Pos,
+             IntrusiveRefCntPtr<vfs::FileSystem> VFS,
              std::shared_ptr<PCHContainerOperations> PCHs,
              CodeCompleteOptions Opts, SpeculativeFuzzyFind *SpecFuzzyFind) {
-  return CodeCompleteFlow(FileName, PreambleInclusions, SpecFuzzyFind, Opts)
+  return CodeCompleteFlow(FileName,
+                          Preamble ? Preamble->Includes : IncludeStructure(),
+                          SpecFuzzyFind, Opts)
       .run({FileName, Command, Preamble, Contents, Pos, VFS, PCHs});
 }
 
 SignatureHelp signatureHelp(PathRef FileName,
                             const tooling::CompileCommand &Command,
-                            PrecompiledPreamble const *Preamble,
-                            StringRef Contents, Position Pos,
+                            const PreambleData *Preamble, StringRef Contents,
+                            Position Pos,
                             IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                             std::shared_ptr<PCHContainerOperations> PCHs,
                             const SymbolIndex *Index) {
