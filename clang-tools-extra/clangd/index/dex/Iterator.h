@@ -53,9 +53,6 @@ using DocID = uint32_t;
 /// (their children) to form a multi-level Query Tree. The interface is designed
 /// to be extensible in order to support multiple types of iterators.
 class Iterator {
-  // FIXME(kbobyrev): Implement iterator cost, an estimate of advance() calls
-  // before iterator exhaustion.
-  // FIXME(kbobyrev): Implement Limit iterator.
 public:
   /// Returns true if all valid DocIDs were processed and hence the iterator is
   /// exhausted.
