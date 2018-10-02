@@ -60,7 +60,7 @@ llvm::Error FetchStage::execute(InstRef & /*unused */) {
 }
 
 llvm::Error FetchStage::cycleStart() {
-  if (!CurrentInstruction && SM.hasNext())
+  if (!CurrentInstruction)
     return getNextInstruction();
   return llvm::ErrorSuccess();
 }

@@ -81,6 +81,17 @@
 ; X86-NEXT: .byte   0
 ; X86-NEXT: .asciz "x"
 ; X86-NEXT: [[PROC_SEGMENT_END]]:
+; X86-NEXT: .short  [[FPROC_END:[^ ]*]]-[[FPROC_BEG:[^ ]*]]           # Record length
+; X86-NEXT: [[FPROC_BEG]]:
+; X86-NEXT: .short  4114                    # Record kind: S_FRAMEPROC
+; X86-NEXT: .long   0                       # FrameSize
+; X86-NEXT: .long   0                       # Padding
+; X86-NEXT: .long   0                       # Offset of padding
+; X86-NEXT: .long   0                       # Bytes of callee saved registers
+; X86-NEXT: .long   0                       # Exception handler offset
+; X86-NEXT: .short  0                       # Exception handler section
+; X86-NEXT: .long   0                       # Flags (defines frame register)
+; X86-NEXT: [[FPROC_END]]:
 ; X86-NEXT: .short  2
 ; X86-NEXT: .short  4431
 ; X86-NEXT: [[F1_END]]:
@@ -107,6 +118,17 @@
 ; X86-NEXT: .byte   0
 ; X86-NEXT: .asciz "y"
 ; X86-NEXT: [[PROC_SEGMENT_END]]:
+; X86-NEXT: .short  [[FPROC_END:[^ ]*]]-[[FPROC_BEG:[^ ]*]]           # Record length
+; X86-NEXT: [[FPROC_BEG]]:
+; X86-NEXT: .short  4114                    # Record kind: S_FRAMEPROC
+; X86-NEXT: .long   0                       # FrameSize
+; X86-NEXT: .long   0                       # Padding
+; X86-NEXT: .long   0                       # Offset of padding
+; X86-NEXT: .long   0                       # Bytes of callee saved registers
+; X86-NEXT: .long   0                       # Exception handler offset
+; X86-NEXT: .short  0                       # Exception handler section
+; X86-NEXT: .long   0                       # Flags (defines frame register)
+; X86-NEXT: [[FPROC_END]]:
 ; X86-NEXT: .short  2
 ; X86-NEXT: .short  4431
 ; X86-NEXT: [[COMPILE_END]]:
@@ -133,6 +155,17 @@
 ; X86-NEXT: .byte   0
 ; X86-NEXT: .asciz "f"
 ; X86-NEXT: [[PROC_SEGMENT_END]]:
+; X86-NEXT: .short  [[FPROC_END:[^ ]*]]-[[FPROC_BEG:[^ ]*]]           # Record length
+; X86-NEXT: [[FPROC_BEG]]:
+; X86-NEXT: .short  4114                    # Record kind: S_FRAMEPROC
+; X86-NEXT: .long   0                       # FrameSize
+; X86-NEXT: .long   0                       # Padding
+; X86-NEXT: .long   0                       # Offset of padding
+; X86-NEXT: .long   0                       # Bytes of callee saved registers
+; X86-NEXT: .long   0                       # Exception handler offset
+; X86-NEXT: .short  0                       # Exception handler section
+; X86-NEXT: .long   0                       # Flags (defines frame register)
+; X86-NEXT: [[FPROC_END]]:
 ; X86-NEXT: .short  2
 ; X86-NEXT: .short  4431
 ; X86-NEXT: [[COMPILE_END]]:
@@ -354,6 +387,17 @@
 ; X64-NEXT: .byte   0
 ; X64-NEXT: .asciz "x"
 ; X64-NEXT: [[PROC_SEGMENT_END]]:
+; X64-NEXT: .short  [[FPROC_END:[^ ]*]]-[[FPROC_BEG:[^ ]*]]           # Record length
+; X64-NEXT: [[FPROC_BEG]]:
+; X64-NEXT: .short  4114                    # Record kind: S_FRAMEPROC
+; X64-NEXT: .long   40                       # FrameSize
+; X64-NEXT: .long   0                       # Padding
+; X64-NEXT: .long   0                       # Offset of padding
+; X64-NEXT: .long   0                       # Bytes of callee saved registers
+; X64-NEXT: .long   0                       # Exception handler offset
+; X64-NEXT: .short  0                       # Exception handler section
+; X64-NEXT: .long   81920                       # Flags (defines frame register)
+; X64-NEXT: [[FPROC_END]]:
 ; X64-NEXT: .short  2
 ; X64-NEXT: .short  4431
 ; X64-NEXT: [[F1_END]]:
@@ -379,6 +423,17 @@
 ; X64-NEXT: .byte   0
 ; X64-NEXT: .asciz "y"
 ; X64-NEXT: [[PROC_SEGMENT_END]]:
+; X64-NEXT: .short  [[FPROC_END:[^ ]*]]-[[FPROC_BEG:[^ ]*]]           # Record length
+; X64-NEXT: [[FPROC_BEG]]:
+; X64-NEXT: .short  4114                    # Record kind: S_FRAMEPROC
+; X64-NEXT: .long   40                       # FrameSize
+; X64-NEXT: .long   0                       # Padding
+; X64-NEXT: .long   0                       # Offset of padding
+; X64-NEXT: .long   0                       # Bytes of callee saved registers
+; X64-NEXT: .long   0                       # Exception handler offset
+; X64-NEXT: .short  0                       # Exception handler section
+; X64-NEXT: .long   81920                       # Flags (defines frame register)
+; X64-NEXT: [[FPROC_END]]:
 ; X64-NEXT: .short  2
 ; X64-NEXT: .short  4431
 ; X64-NEXT: [[COMPILE_END]]:
@@ -404,6 +459,17 @@
 ; X64-NEXT: .byte   0
 ; X64-NEXT: .asciz "f"
 ; X64-NEXT: [[PROC_SEGMENT_END]]:
+; X64-NEXT: .short  [[FPROC_END:[^ ]*]]-[[FPROC_BEG:[^ ]*]]           # Record length
+; X64-NEXT: [[FPROC_BEG]]:
+; X64-NEXT: .short  4114                    # Record kind: S_FRAMEPROC
+; X64-NEXT: .long   40                       # FrameSize
+; X64-NEXT: .long   0                       # Padding
+; X64-NEXT: .long   0                       # Offset of padding
+; X64-NEXT: .long   0                       # Bytes of callee saved registers
+; X64-NEXT: .long   0                       # Exception handler offset
+; X64-NEXT: .short  0                       # Exception handler section
+; X64-NEXT: .long   81920                       # Flags (defines frame register)
+; X64-NEXT: [[FPROC_END]]:
 ; X64-NEXT: .short  2
 ; X64-NEXT: .short  4431
 ; X64-NEXT: [[COMPILE_END]]:
@@ -422,16 +488,16 @@
 ; OBJ64:      Relocations [
 ; OBJ64-NEXT:   0x64 IMAGE_REL_AMD64_SECREL x
 ; OBJ64-NEXT:   0x68 IMAGE_REL_AMD64_SECTION x
-; OBJ64-NEXT:   0x7C IMAGE_REL_AMD64_SECREL x
-; OBJ64-NEXT:   0x80 IMAGE_REL_AMD64_SECTION x
-; OBJ64-NEXT:   0xE0 IMAGE_REL_AMD64_SECREL y
-; OBJ64-NEXT:   0xE4 IMAGE_REL_AMD64_SECTION y
-; OBJ64-NEXT:   0xF8 IMAGE_REL_AMD64_SECREL y
-; OBJ64-NEXT:   0xFC IMAGE_REL_AMD64_SECTION y
-; OBJ64-NEXT:   0x15C IMAGE_REL_AMD64_SECREL f
-; OBJ64-NEXT:   0x160 IMAGE_REL_AMD64_SECTION f
-; OBJ64-NEXT:   0x174 IMAGE_REL_AMD64_SECREL f
-; OBJ64-NEXT:   0x178 IMAGE_REL_AMD64_SECTION f
+; OBJ64-NEXT:   0x98 IMAGE_REL_AMD64_SECREL x
+; OBJ64-NEXT:   0x9C IMAGE_REL_AMD64_SECTION x
+; OBJ64-NEXT:   0xFC IMAGE_REL_AMD64_SECREL y
+; OBJ64-NEXT:   0x100 IMAGE_REL_AMD64_SECTION y
+; OBJ64-NEXT:   0x130 IMAGE_REL_AMD64_SECREL y
+; OBJ64-NEXT:   0x134 IMAGE_REL_AMD64_SECTION y
+; OBJ64-NEXT:   0x194 IMAGE_REL_AMD64_SECREL f
+; OBJ64-NEXT:   0x198 IMAGE_REL_AMD64_SECTION f
+; OBJ64-NEXT:   0x1C8 IMAGE_REL_AMD64_SECREL f
+; OBJ64-NEXT:   0x1CC IMAGE_REL_AMD64_SECTION f
 ; OBJ64-NEXT: ]
 ; OBJ64:      Subsection [
 ; OBJ64-NEXT:   SubSectionType: Symbols (0xF1)

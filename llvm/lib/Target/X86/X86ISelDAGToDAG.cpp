@@ -3439,8 +3439,11 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         ROpc = X86::TEST16ri;
         MOpc = X86::TEST16mi;
       } else if (isUInt<32>(Mask) && N0.getValueType() != MVT::i16 &&
-                 (!(Mask & 0x80000000) || CmpVT == MVT::i32 ||
-                  hasNoSignedComparisonUses(Node))) {
+                 ((!(Mask & 0x80000000) &&
+                   // Without minsize 16-bit Cmps can get here so we need to
+                   // be sure we calculate the correct sign flag if needed.
+                   (CmpVT != MVT::i16 || !(Mask & 0x8000))) ||
+                  CmpVT == MVT::i32 || hasNoSignedComparisonUses(Node))) {
         // For example, "testq %rax, $268468232" to "testl %eax, $268468232".
         // NOTE: We only want to run that transform if N0 is 32 or 64 bits.
         // Otherwize, we find ourselves in a position where we have to do

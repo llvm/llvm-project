@@ -132,7 +132,7 @@ class SettingsCommandTestCase(TestBase):
 
         # Change the default format to print function.name rather than
         # function.name-with-args
-        format_string = "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}`${function.name}{${function.pc-offset}}}{ at ${line.file.fullpath}:${line.number}}{, lang=${language}}\n"
+        format_string = "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}\`${function.name}{${function.pc-offset}}}{ at ${line.file.fullpath}:${line.number}}{, lang=${language}}\n"
         self.runCmd("settings set frame-format %s" % format_string)
 
         # Immediately test the setting.

@@ -965,6 +965,8 @@ protected:
     /// Defines kind of the ImplicitParamDecl: 'this', 'self', 'vtt', '_cmd' or
     /// something else.
     unsigned ImplicitParamKind : 3;
+
+    unsigned EscapingByref : 1;
   };
 
   union {
@@ -1405,6 +1407,19 @@ public:
   void setPreviousDeclInSameBlockScope(bool Same) {
     assert(!isa<ParmVarDecl>(this));
     NonParmVarDeclBits.PreviousDeclInSameBlockScope = Same;
+  }
+
+  /// Indicates the capture is a __block variable that is captured by a block
+  /// that can potentially escape (a block for which BlockDecl::doesNotEscape
+  /// returns false).
+  bool isEscapingByref() const;
+
+  /// Indicates the capture is a __block variable that is never captured by an
+  /// escaping block.
+  bool isNonEscapingByref() const;
+
+  void setEscapingByref() {
+    NonParmVarDeclBits.EscapingByref = true;
   }
 
   /// Retrieve the variable declaration from which this variable could
@@ -3864,6 +3879,14 @@ public:
     /// Whether this is a "by ref" capture, i.e. a capture of a __block
     /// variable.
     bool isByRef() const { return VariableAndFlags.getInt() & flag_isByRef; }
+
+    bool isEscapingByref() const {
+      return getVariable()->isEscapingByref();
+    }
+
+    bool isNonEscapingByref() const {
+      return getVariable()->isNonEscapingByref();
+    }
 
     /// Whether this is a nested capture, i.e. the variable captured
     /// is not from outside the immediately enclosing function/block.

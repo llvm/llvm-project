@@ -493,7 +493,11 @@ static QualType getCaptureFieldType(const CodeGenFunction &CGF,
     return CGF.BlockInfo->getCapture(VD).fieldType();
   if (auto *FD = CGF.LambdaCaptureFields.lookup(VD))
     return FD->getType();
-  return VD->getType();
+  // If the captured variable is a non-escaping __block variable, the field
+  // type is the reference type. If the variable is a __block variable that
+  // already has a reference type, the field type is the variable's type.
+  return VD->isNonEscapingByref() ?
+         CGF.getContext().getLValueReferenceType(VD->getType()) : VD->getType();
 }
 
 /// Compute the layout of the given block.  Attempts to lay the block
@@ -549,7 +553,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
   for (const auto &CI : block->captures()) {
     const VarDecl *variable = CI.getVariable();
 
-    if (CI.isByRef()) {
+    if (CI.isEscapingByref()) {
       // We have to copy/dispose of the __block reference.
       info.NeedsCopyDispose = true;
 
@@ -1032,7 +1036,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
       // The lambda capture in a lambda's conversion-to-block-pointer is
       // special; we'll simply emit it directly.
       src = Address::invalid();
-    } else if (CI.isByRef()) {
+    } else if (CI.isEscapingByref()) {
       if (BlockInfo && CI.isNested()) {
         // We need to use the capture from the enclosing block.
         const CGBlockInfo::Capture &enclosingCapture =
@@ -1060,7 +1064,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
     // the block field.  There's no need to chase the forwarding
     // pointer at this point, since we're building something that will
     // live a shorter life than the stack byref anyway.
-    if (CI.isByRef()) {
+    if (CI.isEscapingByref()) {
       // Get a void* that points to the byref struct.
       llvm::Value *byrefPointer;
       if (CI.isNested())
@@ -1279,8 +1283,7 @@ RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
   return EmitCall(FnInfo, Callee, ReturnValue, Args);
 }
 
-Address CodeGenFunction::GetAddrOfBlockDecl(const VarDecl *variable,
-                                            bool isByRef) {
+Address CodeGenFunction::GetAddrOfBlockDecl(const VarDecl *variable) {
   assert(BlockInfo && "evaluating block ref without block information?");
   const CGBlockInfo::Capture &capture = BlockInfo->getCapture(variable);
 
@@ -1291,7 +1294,7 @@ Address CodeGenFunction::GetAddrOfBlockDecl(const VarDecl *variable,
     Builder.CreateStructGEP(LoadBlockStruct(), capture.getIndex(),
                             capture.getOffset(), "block.capture.addr");
 
-  if (isByRef) {
+  if (variable->isEscapingByref()) {
     // addr should be a void** right now.  Load, then cast the result
     // to byref*.
 
@@ -1305,6 +1308,10 @@ Address CodeGenFunction::GetAddrOfBlockDecl(const VarDecl *variable,
                                  variable->getName());
   }
 
+  assert((!variable->isNonEscapingByref() ||
+          capture.fieldType()->isReferenceType()) &&
+         "the capture field of a non-escaping variable should have a "
+         "reference type");
   if (capture.fieldType()->isReferenceType())
     addr = EmitLoadOfReference(MakeAddrLValue(addr, capture.fieldType()));
 
@@ -1656,7 +1663,7 @@ computeCopyInfoForBlockCapture(const BlockDecl::Capture &CI, QualType T,
     return std::make_pair(BlockCaptureEntityKind::CXXRecord, BlockFieldFlags());
   }
   BlockFieldFlags Flags;
-  if (CI.isByRef()) {
+  if (CI.isEscapingByref()) {
     Flags = BLOCK_FIELD_IS_BYREF;
     if (T.isObjCGCWeak())
       Flags |= BLOCK_FIELD_IS_WEAK;
@@ -2102,7 +2109,7 @@ getBlockFieldFlagsForObjCObjectPointer(const BlockDecl::Capture &CI,
 static std::pair<BlockCaptureEntityKind, BlockFieldFlags>
 computeDestroyInfoForBlockCapture(const BlockDecl::Capture &CI, QualType T,
                                   const LangOptions &LangOpts) {
-  if (CI.isByRef()) {
+  if (CI.isEscapingByref()) {
     BlockFieldFlags Flags = BLOCK_FIELD_IS_BYREF;
     if (T.isObjCGCWeak())
       Flags |= BLOCK_FIELD_IS_WEAK;
@@ -2564,6 +2571,9 @@ BlockByrefHelpers *
 CodeGenFunction::buildByrefHelpers(llvm::StructType &byrefType,
                                    const AutoVarEmission &emission) {
   const VarDecl &var = *emission.Variable;
+  assert(var.isEscapingByref() &&
+         "only escaping __block variables need byref helpers");
+
   QualType type = var.getType();
 
   auto &byrefInfo = getBlockByrefInfo(&var);

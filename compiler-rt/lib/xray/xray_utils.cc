@@ -103,10 +103,9 @@ int getLogFD() XRAY_NEVER_INSTRUMENT {
   if (LastSlash != nullptr)
     Progname = LastSlash + 1;
 
-  const int HalfLength = sizeof(TmpFilename) / 2 - sizeof(TmpWildcardPattern);
   int NeededLength = internal_snprintf(
-      TmpFilename, sizeof(TmpFilename), "%.*s%.*s.%s", HalfLength,
-      flags()->xray_logfile_base, HalfLength, Progname, TmpWildcardPattern);
+      TmpFilename, sizeof(TmpFilename), "%s%s.%s",
+      flags()->xray_logfile_base, Progname, TmpWildcardPattern);
   if (NeededLength > int(sizeof(TmpFilename))) {
     Report("XRay log file name too long (%d): %s\n", NeededLength, TmpFilename);
     return -1;
