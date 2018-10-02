@@ -165,9 +165,14 @@ def  : WriteRes<WriteSETCCStore, [HWPort06,HWPort4,HWPort237]> {
   let Latency = 2;
   let NumMicroOps = 3;
 }
-def  : WriteRes<WriteLAHFSAHF,   [HWPort06]>;
-def  : WriteRes<WriteBitTest,    [HWPort06]>;
-def  : WriteRes<WriteBitTestSet, [HWPort06]>;
+
+defm : X86WriteRes<WriteLAHFSAHF,        [HWPort06], 1, [1], 1>;
+defm : X86WriteRes<WriteBitTest,         [HWPort06], 1, [1], 1>;
+defm : X86WriteRes<WriteBitTestImmLd,    [HWPort06,HWPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteBitTestRegLd,    [], 1, [], 10>;
+defm : X86WriteRes<WriteBitTestSet,      [HWPort06], 1, [1], 1>;
+defm : X86WriteRes<WriteBitTestSetImmLd, [HWPort06,HWPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteBitTestSetRegLd, [], 1, [], 11>;
 
 // This is for simple LEAs with one or two input operands.
 // The complex ones can only execute on port 1, and they require two cycles on
@@ -642,13 +647,6 @@ def : InstRW<[HWWritePopA], (instregex "POPA(16|32)")>;
 
 //-- Arithmetic instructions --//
 
-// BT.
-// m,r.
-def HWWriteBTmr : SchedWriteRes<[]> {
-  let NumMicroOps = 10;
-}
-def : InstRW<[HWWriteBTmr], (instregex "BT(16|32|64)mr")>;
-
 // BTR BTS BTC.
 // m,r.
 def HWWriteBTRSCmr : SchedWriteRes<[]> {
@@ -990,13 +988,6 @@ def HWWriteResGroup14 : SchedWriteRes<[HWPort6,HWPort23]> {
 }
 def: InstRW<[HWWriteResGroup14], (instrs FARJMP64)>;
 def: InstRW<[HWWriteResGroup14], (instregex "JMP(16|32|64)m")>;
-
-def HWWriteResGroup15 : SchedWriteRes<[HWPort23,HWPort06]> {
-  let Latency = 6;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1];
-}
-def: InstRW<[HWWriteResGroup15], (instregex "BT(16|32|64)mi8")>;
 
 def HWWriteResGroup16 : SchedWriteRes<[HWPort23,HWPort15]> {
   let Latency = 6;

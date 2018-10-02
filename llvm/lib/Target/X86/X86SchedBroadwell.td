@@ -161,9 +161,14 @@ def  : WriteRes<WriteSETCCStore, [BWPort06,BWPort4,BWPort237]> {
   let Latency = 2;
   let NumMicroOps = 3;
 }
-def  : WriteRes<WriteLAHFSAHF,   [BWPort06]>;
-def  : WriteRes<WriteBitTest,    [BWPort06]>; // Bit Test instrs
-def  : WriteRes<WriteBitTestSet, [BWPort06]>; // Bit Test + Set instrs
+
+defm : X86WriteRes<WriteLAHFSAHF,        [BWPort06], 1, [1], 1>;
+defm : X86WriteRes<WriteBitTest,         [BWPort06], 1, [1], 1>; // Bit Test instrs
+defm : X86WriteRes<WriteBitTestImmLd,    [BWPort06,BWPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteBitTestRegLd,    [BWPort0156,BWPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteBitTestSet,      [BWPort06], 1, [1], 1>; // Bit Test + Set instrs
+defm : X86WriteRes<WriteBitTestSetImmLd, [BWPort06,BWPort23], 6, [1,1], 2>;
+defm : X86WriteRes<WriteBitTestSetRegLd, [BWPort0156,BWPort23], 5, [1,1], 2>;
 
 // Bit counts.
 defm : BWWriteResPair<WriteBSF, [BWPort1], 3>;
@@ -974,13 +979,6 @@ def BWWriteResGroup62 : SchedWriteRes<[BWPort6,BWPort23]> {
 }
 def: InstRW<[BWWriteResGroup62], (instrs FARJMP64)>;
 def: InstRW<[BWWriteResGroup62], (instregex "JMP(16|32|64)m")>;
-
-def BWWriteResGroup63 : SchedWriteRes<[BWPort23,BWPort06]> {
-  let Latency = 6;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1];
-}
-def: InstRW<[BWWriteResGroup63], (instregex "BT(16|32|64)mi8")>;
 
 def BWWriteResGroup64 : SchedWriteRes<[BWPort23,BWPort15]> {
   let Latency = 6;

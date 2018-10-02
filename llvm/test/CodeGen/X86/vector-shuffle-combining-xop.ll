@@ -384,12 +384,12 @@ define void @buildvector_v4f32_07z6(float %a, <4 x float> %b, <4 x float>* %ptr)
 define <2 x double> @constant_fold_vpermil2pd() {
 ; X32-LABEL: constant_fold_vpermil2pd:
 ; X32:       # %bb.0:
-; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [-2.000000e+00,2.000000e+00]
+; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [-2,2]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: constant_fold_vpermil2pd:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [-2.000000e+00,2.000000e+00]
+; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [-2,2]
 ; X64-NEXT:    retq
   %1 = call <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double> <double 1.0, double 2.0>, <2 x double> <double -2.0, double -1.0>, <2 x i64> <i64 4, i64 2>, i8 2)
   ret <2 x double> %1
@@ -398,12 +398,12 @@ define <2 x double> @constant_fold_vpermil2pd() {
 define <4 x double> @constant_fold_vpermil2pd_256() {
 ; X32-LABEL: constant_fold_vpermil2pd_256:
 ; X32:       # %bb.0:
-; X32-NEXT:    vmovaps {{.*#+}} ymm0 = [-4.000000e+00,0.000000e+00,4.000000e+00,3.000000e+00]
+; X32-NEXT:    vmovaps {{.*#+}} ymm0 = [-4,0,4,3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: constant_fold_vpermil2pd_256:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [-4.000000e+00,0.000000e+00,4.000000e+00,3.000000e+00]
+; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [-4,0,4,3]
 ; X64-NEXT:    retq
   %1 = call <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double> <double 1.0, double 2.0, double 3.0, double 4.0>, <4 x double> <double -4.0, double -3.0, double -2.0, double -1.0>, <4 x i64> <i64 4, i64 8, i64 2, i64 0>, i8 2)
   ret <4 x double> %1
@@ -412,12 +412,12 @@ define <4 x double> @constant_fold_vpermil2pd_256() {
 define <4 x float> @constant_fold_vpermil2ps() {
 ; X32-LABEL: constant_fold_vpermil2ps:
 ; X32:       # %bb.0:
-; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [-4.000000e+00,1.000000e+00,3.000000e+00,0.000000e+00]
+; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [-4,1,3,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: constant_fold_vpermil2ps:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [-4.000000e+00,1.000000e+00,3.000000e+00,0.000000e+00]
+; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [-4,1,3,0]
 ; X64-NEXT:    retq
   %1 = call <4 x float> @llvm.x86.xop.vpermil2ps(<4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, <4 x float> <float -4.0, float -3.0, float -2.0, float -1.0>, <4 x i32> <i32 4, i32 0, i32 2, i32 8>, i8 2)
   ret <4 x float> %1
@@ -426,12 +426,12 @@ define <4 x float> @constant_fold_vpermil2ps() {
 define <8 x float> @constant_fold_vpermil2ps_256() {
 ; X32-LABEL: constant_fold_vpermil2ps_256:
 ; X32:       # %bb.0:
-; X32-NEXT:    vmovaps {{.*#+}} ymm0 = [-8.000000e+00,1.000000e+00,3.000000e+00,0.000000e+00,5.000000e+00,0.000000e+00,5.000000e+00,7.000000e+00]
+; X32-NEXT:    vmovaps {{.*#+}} ymm0 = [-8,1,3,0,5,0,5,7]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: constant_fold_vpermil2ps_256:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [-8.000000e+00,1.000000e+00,3.000000e+00,0.000000e+00,5.000000e+00,0.000000e+00,5.000000e+00,7.000000e+00]
+; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [-8,1,3,0,5,0,5,7]
 ; X64-NEXT:    retq
   %1 = call <8 x float> @llvm.x86.xop.vpermil2ps.256(<8 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0>, <8 x float> <float -8.0, float -7.0, float -6.0, float -5.0, float -4.0, float -3.0, float -2.0, float -1.0>, <8 x i32> <i32 4, i32 0, i32 2, i32 8, i32 0, i32 8, i32 0, i32 2>, i8 2)
   ret <8 x float> %1

@@ -47,6 +47,7 @@ add_pdb_impl_folder(Native
   Native/InfoStreamBuilder.cpp
   Native/ModuleDebugStream.cpp
   Native/NativeCompilandSymbol.cpp
+  Native/NativeEnumGlobals.cpp
   Native/NativeEnumModules.cpp
   Native/NativeEnumTypes.cpp
   Native/NativeExeSymbol.cpp
@@ -57,7 +58,9 @@ add_pdb_impl_folder(Native
   Native/NativeTypeEnum.cpp
   Native/NativeTypeFunctionSig.cpp
   Native/NativeTypePointer.cpp
+  Native/NativeTypeTypedef.cpp
   Native/NativeTypeUDT.cpp
+  Native/NativeTypeVTShape.cpp
   Native/NamedStreamMap.cpp
   Native/NativeSession.cpp
   Native/PDBFile.cpp

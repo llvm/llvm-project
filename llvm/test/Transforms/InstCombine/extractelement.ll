@@ -163,3 +163,29 @@ define i8 @bitcasted_inselt_wide_source_uses(i32 %x) {
   ret i8 %r
 }
 
+define float @bitcasted_inselt_to_FP(i64 %x) {
+; ANY-LABEL: @bitcasted_inselt_to_FP(
+; ANY-NEXT:    [[I:%.*]] = insertelement <2 x i64> undef, i64 [[X:%.*]], i32 0
+; ANY-NEXT:    [[B:%.*]] = bitcast <2 x i64> [[I]] to <4 x float>
+; ANY-NEXT:    [[R:%.*]] = extractelement <4 x float> [[B]], i32 1
+; ANY-NEXT:    ret float [[R]]
+;
+  %i = insertelement <2 x i64> undef, i64 %x, i32 0
+  %b = bitcast <2 x i64> %i to <4 x float>
+  %r = extractelement <4 x float> %b, i32 1
+  ret float %r
+}
+
+define i32 @bitcasted_inselt_from_FP(double %x) {
+; ANY-LABEL: @bitcasted_inselt_from_FP(
+; ANY-NEXT:    [[I:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i32 0
+; ANY-NEXT:    [[B:%.*]] = bitcast <2 x double> [[I]] to <4 x i32>
+; ANY-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[B]], i32 1
+; ANY-NEXT:    ret i32 [[R]]
+;
+  %i = insertelement <2 x double> undef, double %x, i32 0
+  %b = bitcast <2 x double> %i to <4 x i32>
+  %r = extractelement <4 x i32> %b, i32 1
+  ret i32 %r
+}
+

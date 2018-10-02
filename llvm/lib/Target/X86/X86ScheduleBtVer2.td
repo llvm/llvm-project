@@ -204,8 +204,12 @@ def  : WriteRes<WriteSETCC, [JALU01]>; // Setcc.
 def  : WriteRes<WriteSETCCStore, [JALU01,JSAGU]>;
 def  : WriteRes<WriteLAHFSAHF, [JALU01]>;
 
-defm : X86WriteRes<WriteBitTest,    [JALU01], 1, [1], 1>;
-defm : X86WriteRes<WriteBitTestSet, [JALU01], 1, [1], 2>;
+defm : X86WriteRes<WriteBitTest,         [JALU01], 1, [1], 1>;
+defm : X86WriteRes<WriteBitTestImmLd,    [JALU01,JLAGU], 4, [1,1], 1>;
+defm : X86WriteRes<WriteBitTestRegLd,    [JALU01,JLAGU], 4, [1,1], 5>;
+defm : X86WriteRes<WriteBitTestSet,      [JALU01], 1, [1], 2>;
+defm : X86WriteRes<WriteBitTestSetImmLd, [JALU01,JLAGU], 4, [1,1], 3>;
+defm : X86WriteRes<WriteBitTestSetRegLd, [JALU01,JLAGU], 4, [1,1], 7>;
 
 // This is for simple LEAs with one or two input operands.
 def : WriteRes<WriteLEA, [JALU01]>;
@@ -290,8 +294,8 @@ defm : X86WriteRes<WriteFLDC,          [JFPU1, JSTC], 3, [1,1], 1>;
 defm : X86WriteRes<WriteFLoad,         [JLAGU, JFPU01, JFPX], 5, [1, 1, 1], 1>;
 defm : X86WriteRes<WriteFLoadX,        [JLAGU, JFPU01, JFPX], 5, [1, 1, 1], 1>;
 defm : X86WriteRes<WriteFLoadY,        [JLAGU, JFPU01, JFPX], 5, [1, 1, 1], 1>;
-defm : X86WriteRes<WriteFMaskedLoad,   [JLAGU, JFPU01, JFPX], 6, [1, 1, 2], 1>;
-defm : X86WriteRes<WriteFMaskedLoadY,  [JLAGU, JFPU01, JFPX], 6, [2, 2, 4], 2>;
+defm : X86WriteRes<WriteFMaskedLoad,   [JLAGU, JFPU01, JFPX], 6, [1, 2, 2], 1>;
+defm : X86WriteRes<WriteFMaskedLoadY,  [JLAGU, JFPU01, JFPX], 6, [2, 4, 4], 2>;
 
 defm : X86WriteRes<WriteFStore,        [JSAGU, JFPU1,  JSTC], 2, [1, 1, 1], 1>;
 defm : X86WriteRes<WriteFStoreX,       [JSAGU, JFPU1,  JSTC], 1, [1, 1, 1], 1>;
@@ -444,8 +448,8 @@ defm : X86WriteRes<WriteVecLoadX,         [JLAGU, JFPU01, JVALU], 5, [1, 1, 1], 
 defm : X86WriteRes<WriteVecLoadY,         [JLAGU, JFPU01, JVALU], 5, [1, 1, 1], 1>;
 defm : X86WriteRes<WriteVecLoadNT,        [JLAGU, JFPU01, JVALU], 5, [1, 1, 1], 1>;
 defm : X86WriteRes<WriteVecLoadNTY,       [JLAGU, JFPU01, JVALU], 5, [1, 1, 1], 1>;
-defm : X86WriteRes<WriteVecMaskedLoad,    [JLAGU, JFPU01, JVALU], 6, [1, 1, 2], 1>;
-defm : X86WriteRes<WriteVecMaskedLoadY,   [JLAGU, JFPU01, JVALU], 6, [2, 2, 4], 2>;
+defm : X86WriteRes<WriteVecMaskedLoad,    [JLAGU, JFPU01, JVALU], 6, [1, 2, 2], 1>;
+defm : X86WriteRes<WriteVecMaskedLoadY,   [JLAGU, JFPU01, JVALU], 6, [2, 4, 4], 2>;
 
 defm : X86WriteRes<WriteVecStore,         [JSAGU, JFPU1,   JSTC], 2, [1, 1, 1], 1>;
 defm : X86WriteRes<WriteVecStoreX,        [JSAGU, JFPU1,   JSTC], 1, [1, 1, 1], 1>;
@@ -688,6 +692,12 @@ def : InstRW<[JWriteVZeroIdiomALUX], (instrs PSUBBrr, VPSUBBrr,
                                              PCMPGTQrr, VPCMPGTQrr,
                                              PCMPGTWrr, VPCMPGTWrr)>;
 
+def JWriteVPERM2F128 : SchedWriteVariant<[
+  SchedVar<MCSchedPredicate<ZeroIdiomVPERMPredicate>, [JWriteZeroIdiomYmm]>,
+  SchedVar<NoSchedPred,                               [WriteFShuffle256]>
+]>;
+def : InstRW<[JWriteVPERM2F128], (instrs VPERM2F128rr)>;
+
 // This write is used for slow LEA instructions.
 def JWrite3OpsLEA : SchedWriteRes<[JALU1, JSAGU]> {
   let Latency = 2;
@@ -762,7 +772,9 @@ def : IsZeroIdiomFunction<[
 
     // ymm variants.
     VXORPSYrr, VXORPDYrr, VANDNPSYrr, VANDNPDYrr
-  ], ZeroIdiomPredicate>
+  ], ZeroIdiomPredicate>,
+
+  DepBreakingClass<[ VPERM2F128rr ], ZeroIdiomVPERMPredicate>
 ]>;
 
 def : IsDepBreakingFunction<[

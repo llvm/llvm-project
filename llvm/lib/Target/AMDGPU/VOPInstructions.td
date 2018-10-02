@@ -572,6 +572,11 @@ class VOPPatOrNull<SDPatternOperator Op, VOPProfile P> {
   list<dag> ret = !if(!ne(P.NeedPatGen,PatGenMode.NoPattern), VOPPatGen<Op, P>.ret, []);
 }
 
+class DivergentFragOrOp<SDPatternOperator Op, VOPProfile P> {
+  SDPatternOperator ret = !if(!eq(P.NeedPatGen,PatGenMode.Pattern),
+   !if(!isa<SDNode>(Op), getDivergentFrag<Op>.ret, Op), Op);
+}
+
 include "VOPCInstructions.td"
 include "VOP1Instructions.td"
 include "VOP2Instructions.td"

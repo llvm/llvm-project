@@ -2,12 +2,26 @@
 
 # RUN: yaml2obj %p/Inputs/compress-debug-sections.yaml -o %t.o
 # RUN: llvm-objcopy --compress-debug-sections=zlib %t.o %t-compressed.o
+# RUN: llvm-objcopy --decompress-debug-sections %t-compressed.o %t-decompressed.o
 
 # RUN: llvm-objdump -s %t.o -section=.debug_foo | FileCheck %s
 # RUN: llvm-objdump -s %t-compressed.o | FileCheck %s --check-prefix=CHECK-COMPRESSED
 # RUN: llvm-readobj -relocations -s %t-compressed.o | FileCheck %s --check-prefix=CHECK-FLAGS
+# RUN: llvm-readobj -relocations -s %t-decompressed.o | FileCheck %s --check-prefix=CHECK-HEADER
+# RUN: llvm-readobj -relocations -s %t.o | FileCheck %s --check-prefix=CHECK-HEADER
+# RUN: llvm-objdump -s %t-decompressed.o -section=.debug_foo | FileCheck %s
 
 # CHECK: .debug_foo:
+# CHECK-NEXT: 0000 00000000 00000000
+
+# CHECK-HEADER: Index: 1
+# CHECK-HEADER-NEXT: Name: .debug_foo
+# CHECK-HEADER-NEXT: Type: SHT_PROGBITS
+# CHECK-HEADER-NEXT: Flags [
+# CHECK-HEADER-NEXT: ]
+# CHECK-HEADER-NEXT: Address:
+# CHECK-HEADER-NEXT: Offset:
+# CHECK-HEADER-NEXT: Size: 8
 
 # CHECK-COMPRESSED: .debug_foo:
 # CHECK-COMPRESSED: .notdebug_foo:

@@ -2825,6 +2825,7 @@ static const struct Extension {
   { "lse", {AArch64::FeatureLSE} },
   { "predctrl", {AArch64::FeaturePredCtrl} },
   { "ccdp", {AArch64::FeatureCacheDeepPersist} },
+  { "mte", {AArch64::FeatureMTE} },
 
   // FIXME: Unsupported extensions
   { "pan", {} },

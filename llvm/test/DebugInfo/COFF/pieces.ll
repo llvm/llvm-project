@@ -108,7 +108,7 @@
 ; ASM:        .cv_def_range    [[oy_start]] [[oy_end]], "C\021\027\000\000\000\004\000\000\000"
 
 
-; OBJ-LABEL: {{.*}}Proc{{.*}}Sym {
+; OBJ-LABEL: GlobalProcIdSym {
 ; OBJ:         Kind: S_GPROC32_ID (0x1147)
 ; OBJ:         DisplayName: loop_csr
 ; OBJ:       }
@@ -138,7 +138,7 @@
 ; ASM:        .asciz  "o"
 ; ASM:        .cv_def_range    .Lfunc_begin1 .Ltmp8, "C\021\021\000\000\000\004\000\000\000"
 
-; OBJ-LABEL: {{.*}}Proc{{.*}}Sym {
+; OBJ-LABEL: GlobalProcIdSym {
 ; OBJ:         Kind: S_GPROC32_ID (0x1147)
 ; OBJ:         DisplayName: pad_right
 ; OBJ:       }
@@ -161,7 +161,7 @@
 ; ASM:        .asciz  "o"
 ; ASM:        .cv_def_range    .Lfunc_begin2 .Ltmp10, "C\021\021\000\000\000\000\000\000\000"
 
-; OBJ-LABEL: {{.*}}Proc{{.*}}Sym {
+; OBJ-LABEL: GlobalProcIdSym {
 ; OBJ:         Kind: S_GPROC32_ID (0x1147)
 ; OBJ:         DisplayName: pad_left
 ; OBJ:       }
@@ -187,7 +187,7 @@
 ; ASM:        .asciz  "p"
 ; ASM:        .cv_def_range    [[p_start]] .Lfunc_end3, "C\021\021\000\000\000\004\000\000\000"
 
-; OBJ-LABEL: {{.*}}Proc{{.*}}Sym {
+; OBJ-LABEL: GlobalProcIdSym {
 ; OBJ:         Kind: S_GPROC32_ID (0x1147)
 ; OBJ:         DisplayName: nested
 ; OBJ:       }
@@ -223,7 +223,7 @@
 ; ASM:        .asciz  "o"
 ; ASM:        .cv_def_range    [[spill_o_x_start]] [[spill_o_x_end]], "E\021O\001A\000$\000\000\000"
 
-; OBJ-LABEL: {{.*}}Proc{{.*}}Sym {
+; OBJ-LABEL: GlobalProcIdSym {
 ; OBJ:         Kind: S_GPROC32_ID (0x1147)
 ; OBJ:         DisplayName: bitpiece_spill
 ; OBJ:       }

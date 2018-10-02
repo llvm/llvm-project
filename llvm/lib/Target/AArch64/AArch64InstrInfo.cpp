@@ -675,6 +675,26 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   if (!Subtarget.hasCustomCheapAsMoveHandling())
     return MI.isAsCheapAsAMove();
 
+  const unsigned Opcode = MI.getOpcode();
+
+  // Firstly, check cases gated by features.
+
+  if (Subtarget.hasZeroCycleZeroingFP()) {
+    if (Opcode == AArch64::FMOVH0 ||
+        Opcode == AArch64::FMOVS0 ||
+        Opcode == AArch64::FMOVD0)
+      return true;
+  }
+
+  if (Subtarget.hasZeroCycleZeroingGP()) {
+    if (Opcode == TargetOpcode::COPY &&
+        (MI.getOperand(1).getReg() == AArch64::WZR ||
+         MI.getOperand(1).getReg() == AArch64::XZR))
+      return true;
+  }
+
+  // Secondly, check cases specific to sub-targets.
+
   if (Subtarget.hasExynosCheapAsMoveHandling()) {
     if (isExynosResetFast(MI) || isExynosShiftLeftFast(MI))
       return true;
@@ -682,7 +702,9 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
       return MI.isAsCheapAsAMove();
   }
 
-  switch (MI.getOpcode()) {
+  // Finally, check generic cases.
+
+  switch (Opcode) {
   default:
     return false;
 
@@ -723,17 +745,6 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
     return canBeExpandedToORR(MI, 32);
   case AArch64::MOVi64imm:
     return canBeExpandedToORR(MI, 64);
-
-  // It is cheap to zero out registers if the subtarget has ZeroCycleZeroing
-  // feature.
-  case AArch64::FMOVH0:
-  case AArch64::FMOVS0:
-  case AArch64::FMOVD0:
-    return Subtarget.hasZeroCycleZeroingFP();
-  case TargetOpcode::COPY:
-    return (Subtarget.hasZeroCycleZeroingGP() &&
-            (MI.getOperand(1).getReg() == AArch64::WZR ||
-             MI.getOperand(1).getReg() == AArch64::XZR));
   }
 
   llvm_unreachable("Unknown opcode to check as cheap as a move!");
@@ -2737,9 +2748,6 @@ void AArch64InstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, unsigned SrcReg,
     bool isKill, int FI, const TargetRegisterClass *RC,
     const TargetRegisterInfo *TRI) const {
-  DebugLoc DL;
-  if (MBBI != MBB.end())
-    DL = MBBI->getDebugLoc();
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned Align = MFI.getObjectAlignment(FI);
@@ -2786,7 +2794,7 @@ void AArch64InstrInfo::storeRegToStackSlot(
       Opc = AArch64::ST1Twov1d;
       Offset = false;
     } else if (AArch64::XSeqPairsClassRegClass.hasSubClassEq(RC)) {
-      BuildMI(MBB, MBBI, DL, get(AArch64::STPXi))
+      BuildMI(MBB, MBBI, DebugLoc(), get(AArch64::STPXi))
           .addReg(TRI->getSubReg(SrcReg, AArch64::sube64),
                   getKillRegState(isKill))
           .addReg(TRI->getSubReg(SrcReg, AArch64::subo64),
@@ -2832,7 +2840,7 @@ void AArch64InstrInfo::storeRegToStackSlot(
   }
   assert(Opc && "Unknown register class");
 
-  const MachineInstrBuilder MI = BuildMI(MBB, MBBI, DL, get(Opc))
+  const MachineInstrBuilder MI = BuildMI(MBB, MBBI, DebugLoc(), get(Opc))
                                      .addReg(SrcReg, getKillRegState(isKill))
                                      .addFrameIndex(FI);
 
@@ -2845,9 +2853,6 @@ void AArch64InstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, unsigned DestReg,
     int FI, const TargetRegisterClass *RC,
     const TargetRegisterInfo *TRI) const {
-  DebugLoc DL;
-  if (MBBI != MBB.end())
-    DL = MBBI->getDebugLoc();
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned Align = MFI.getObjectAlignment(FI);
@@ -2894,7 +2899,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(
       Opc = AArch64::LD1Twov1d;
       Offset = false;
     } else if (AArch64::XSeqPairsClassRegClass.hasSubClassEq(RC)) {
-      BuildMI(MBB, MBBI, DL, get(AArch64::LDPXi))
+      BuildMI(MBB, MBBI, DebugLoc(), get(AArch64::LDPXi))
           .addReg(TRI->getSubReg(DestReg, AArch64::sube64),
                   getDefRegState(true))
           .addReg(TRI->getSubReg(DestReg, AArch64::subo64),
@@ -2940,7 +2945,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(
   }
   assert(Opc && "Unknown register class");
 
-  const MachineInstrBuilder MI = BuildMI(MBB, MBBI, DL, get(Opc))
+  const MachineInstrBuilder MI = BuildMI(MBB, MBBI, DebugLoc(), get(Opc))
                                      .addReg(DestReg, getDefRegState(true))
                                      .addFrameIndex(FI);
   if (Offset)

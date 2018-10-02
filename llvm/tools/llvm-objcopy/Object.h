@@ -41,6 +41,7 @@ class GnuDebugLinkSection;
 class GroupSection;
 class SectionIndexSection;
 class CompressedSection;
+class DecompressedSection;
 class Segment;
 class Object;
 struct Symbol;
@@ -89,6 +90,7 @@ public:
   virtual void visit(const GroupSection &Sec) = 0;
   virtual void visit(const SectionIndexSection &Sec) = 0;
   virtual void visit(const CompressedSection &Sec) = 0;
+  virtual void visit(const DecompressedSection &Sec) = 0;
 };
 
 class SectionWriter : public SectionVisitor {
@@ -108,6 +110,7 @@ public:
   virtual void visit(const GroupSection &Sec) override = 0;
   virtual void visit(const SectionIndexSection &Sec) override = 0;
   virtual void visit(const CompressedSection &Sec) override = 0;
+  virtual void visit(const DecompressedSection &Sec) override = 0;
 
   explicit SectionWriter(Buffer &Buf) : Out(Buf) {}
 };
@@ -127,6 +130,7 @@ public:
   void visit(const GroupSection &Sec) override;
   void visit(const SectionIndexSection &Sec) override;
   void visit(const CompressedSection &Sec) override;
+  void visit(const DecompressedSection &Sec) override;
 
   explicit ELFSectionWriter(Buffer &Buf) : SectionWriter(Buf) {}
 };
@@ -145,6 +149,7 @@ public:
   void visit(const GroupSection &Sec) override;
   void visit(const SectionIndexSection &Sec) override;
   void visit(const CompressedSection &Sec) override;
+  void visit(const DecompressedSection &Sec) override;
 
   explicit BinarySectionWriter(Buffer &Buf) : SectionWriter(Buf) {}
 };
@@ -370,6 +375,33 @@ class CompressedSection : public SectionBase {
 public:
   CompressedSection(const SectionBase &Sec,
                     DebugCompressionType CompressionType);
+  CompressedSection(ArrayRef<uint8_t> CompressedData, uint64_t DecompressedSize,
+                    uint64_t DecompressedAlign);
+
+  uint64_t getDecompressedSize() const { return DecompressedSize; }
+  uint64_t getDecompressedAlign() const { return DecompressedAlign; }
+
+  void accept(SectionVisitor &Visitor) const override;
+
+  static bool classof(const SectionBase *S) {
+    return (S->Flags & ELF::SHF_COMPRESSED) ||
+           (StringRef(S->Name).startswith(".zdebug"));
+  }
+};
+
+class DecompressedSection : public SectionBase {
+  MAKE_SEC_WRITER_FRIEND
+
+public:
+  explicit DecompressedSection(const CompressedSection &Sec)
+      : SectionBase(Sec) {
+    Size = Sec.getDecompressedSize();
+    Align = Sec.getDecompressedAlign();
+    Flags = (Flags & ~ELF::SHF_COMPRESSED);
+    if (StringRef(Name).startswith(".zdebug"))
+      Name = "." + Name.substr(2);
+  }
+
   void accept(SectionVisitor &Visitor) const override;
 };
 
