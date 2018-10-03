@@ -242,7 +242,7 @@ public:
         constexpr span(      _Container& __c,
             enable_if_t<__is_span_compatible_container<_Container, _Tp>::value, nullptr_t> = nullptr)
         : __data{_VSTD::data(__c)}
-        { _LIBCPP_ASSERT(_Extent == _VSTD::size(__c), "size mismatch in span's constructor (container))"); }
+        { _LIBCPP_ASSERT(_Extent == _VSTD::size(__c), "size mismatch in span's constructor (container)"); }
 
     template <class _Container>
     inline _LIBCPP_INLINE_VISIBILITY
@@ -440,7 +440,7 @@ public:
     inline _LIBCPP_INLINE_VISIBILITY
         constexpr span<element_type, _Count> first() const noexcept
     {
-        static_assert(_Count >= 0);
+        static_assert(_Count >= 0, "Count must be >= 0 in span::first()");
         _LIBCPP_ASSERT(_Count <= size(), "Count out of range in span::first()");
         return {data(), _Count};
     }
@@ -449,7 +449,7 @@ public:
     inline _LIBCPP_INLINE_VISIBILITY
         constexpr span<element_type, _Count> last() const noexcept
     {
-        static_assert(_Count >= 0);
+        static_assert(_Count >= 0, "Count must be >= 0 in span::last()");
         _LIBCPP_ASSERT(_Count <= size(), "Count out of range in span::last()");
         return {data() + size() - _Count, _Count};
     }
