@@ -107,6 +107,32 @@ Error ExecuteStage::cycleStart() {
   return issueReadyInstructions();
 }
 
+
+#ifndef NDEBUG
+static void verifyInstructionEliminated(const InstRef &IR) {
+  const Instruction &Inst = *IR.getInstruction();
+  assert(Inst.isEliminated() && "Instruction was not eliminated!");
+  assert(Inst.isReady() && "Instruction in an inconsistent state!");
+
+  // Ensure that instructions eliminated at register renaming stage are in a
+  // consistent state.
+  const InstrDesc &Desc = Inst.getDesc();
+  assert(!Desc.MayLoad && !Desc.MayStore && "Cannot eliminate a memory op!");
+}
+#endif
+
+
+Error ExecuteStage::handleInstructionEliminated(InstRef &IR) {
+#ifndef NDEBUG
+  verifyInstructionEliminated(IR);
+#endif
+  notifyInstructionReady(IR);
+  notifyInstructionIssued(IR, {});
+  IR.getInstruction()->forceExecuted();
+  notifyInstructionExecuted(IR);
+  return moveToTheNextStage(IR);
+}
+
 // Schedule the instruction for execution on the hardware.
 Error ExecuteStage::execute(InstRef &IR) {
   assert(isAvailable(IR) && "Scheduler is not available!");
@@ -115,6 +141,10 @@ Error ExecuteStage::execute(InstRef &IR) {
   // Ensure that the HWS has not stored this instruction in its queues.
   HWS.sanityCheck(IR);
 #endif
+
+  if (IR.getInstruction()->isEliminated())
+    return handleInstructionEliminated(IR);
+
   // Reserve a slot in each buffered resource. Also, mark units with
   // BufferSize=0 as reserved. Resources with a buffer size of zero will only
   // be released after MCIS is issued, and all the ResourceCycles for those

@@ -717,6 +717,10 @@ public:
   unsigned createVirtualRegister(const TargetRegisterClass *RegClass,
                                  StringRef Name = "");
 
+  /// Create and return a new virtual register in the function with the same
+  /// attributes as the given register.
+  unsigned cloneVirtualRegister(unsigned VReg, StringRef Name = "");
+
   /// Get the low-level type of \p Reg or LLT{} if Reg is not a generic
   /// (target independent) virtual register.
   LLT getType(unsigned Reg) const {

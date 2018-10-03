@@ -37,6 +37,11 @@ StringRef QueryParser::lexWord() {
     ++Begin;
   }
 
+  if (*Begin == '#') {
+    End = Begin;
+    return StringRef();
+  }
+
   const char *WordBegin = Begin;
 
   while (true) {
@@ -127,6 +132,7 @@ namespace {
 
 enum ParsedQueryKind {
   PQK_Invalid,
+  PQK_Comment,
   PQK_NoOp,
   PQK_Help,
   PQK_Let,
@@ -161,17 +167,20 @@ QueryRef QueryParser::doParse() {
   StringRef CommandStr;
   ParsedQueryKind QKind = LexOrCompleteWord<ParsedQueryKind>(this, CommandStr)
                               .Case("", PQK_NoOp)
+                              .Case("#", PQK_Comment, /*IsCompletion=*/false)
                               .Case("help", PQK_Help)
                               .Case("l", PQK_Let, /*IsCompletion=*/false)
                               .Case("let", PQK_Let)
                               .Case("m", PQK_Match, /*IsCompletion=*/false)
                               .Case("match", PQK_Match)
+                              .Case("q", PQK_Quit,  /*IsCompletion=*/false)
                               .Case("quit", PQK_Quit)
                               .Case("set", PQK_Set)
                               .Case("unlet", PQK_Unlet)
                               .Default(PQK_Invalid);
 
   switch (QKind) {
+  case PQK_Comment:
   case PQK_NoOp:
     return new NoOpQuery;
 

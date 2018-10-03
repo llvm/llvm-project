@@ -50,7 +50,8 @@
 ///
 /// In detail, this pass does following things:
 ///
-/// 1) Create three global variables: __THREW__, __threwValue, and __tempRet0.
+/// 1) Assumes the existence of global variables: __THREW__, __threwValue, and
+///    __tempRet0.
 ///    __tempRet0 will be set within __cxa_find_matching_catch() function in
 ///    JS library, and __THREW__ and __threwValue will be set in invoke wrappers
 ///    in JS glue code. For what invoke wrappers are, refer to 3). These
@@ -65,9 +66,10 @@
 ///
 /// * Exception handling
 ///
-/// 2) Create setThrew and setTempRet0 functions.
-///    The global variables created in 1) will exist in wasm address space,
-///    but their values should be set in JS code, so we provide these functions
+/// 2) We assume the existence of setThrew and setTempRet0 functions at link
+///    time.
+///    The global variables in 1) will exist in wasm address space,
+///    but their values should be set in JS code, so these functions
 ///    as interfaces to JS glue code. These functions are equivalent to the
 ///    following JS functions, which actually exist in asm.js version of JS
 ///    library.
@@ -272,9 +274,6 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   bool areAllExceptionsAllowed() const { return EHWhitelistSet.empty(); }
   bool canLongjmp(Module &M, const Value *Callee) const;
 
-  void createSetThrewFunction(Module &M);
-  void createSetTempRet0Function(Module &M);
-
   void rebuildSSA(Function &F);
 
 public:
@@ -333,13 +332,15 @@ static bool canThrow(const Value *V) {
   return true;
 }
 
-static GlobalVariable *createGlobalVariableI32(Module &M, IRBuilder<> &IRB,
-                                               const char *Name) {
+// Get a global variable with the given name.  If it doesn't exist declare it,
+// which will generate an import and asssumes that it will exist at link time.
+static GlobalVariable *getGlobalVariableI32(Module &M, IRBuilder<> &IRB,
+                                            const char *Name) {
   if (M.getNamedGlobal(Name))
     report_fatal_error(Twine("variable name is reserved: ") + Name);
 
   return new GlobalVariable(M, IRB.getInt32Ty(), false,
-                            GlobalValue::WeakODRLinkage, IRB.getInt32(0), Name);
+                            GlobalValue::ExternalLinkage, nullptr, Name);
 }
 
 // Simple function name mangler.
@@ -590,67 +591,6 @@ void WebAssemblyLowerEmscriptenEHSjLj::wrapTestSetjmp(
   LongjmpResult = IRB.CreateLoad(TempRet0GV, "longjmp_result");
 }
 
-// Create setThrew function
-// function setThrew(threw, value) {
-//   if (__THREW__ == 0) {
-//     __THREW__ = threw;
-//     __threwValue = value;
-//   }
-// }
-void WebAssemblyLowerEmscriptenEHSjLj::createSetThrewFunction(Module &M) {
-  LLVMContext &C = M.getContext();
-  IRBuilder<> IRB(C);
-
-  if (M.getNamedGlobal("setThrew"))
-    report_fatal_error("setThrew already exists");
-
-  Type *Params[] = {IRB.getInt32Ty(), IRB.getInt32Ty()};
-  FunctionType *FTy = FunctionType::get(IRB.getVoidTy(), Params, false);
-  Function *F =
-      Function::Create(FTy, GlobalValue::WeakODRLinkage, "setThrew", &M);
-  Argument *Arg1 = &*(F->arg_begin());
-  Argument *Arg2 = &*std::next(F->arg_begin());
-  Arg1->setName("threw");
-  Arg2->setName("value");
-  BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);
-  BasicBlock *ThenBB = BasicBlock::Create(C, "if.then", F);
-  BasicBlock *EndBB = BasicBlock::Create(C, "if.end", F);
-
-  IRB.SetInsertPoint(EntryBB);
-  Value *Threw = IRB.CreateLoad(ThrewGV, ThrewGV->getName() + ".val");
-  Value *Cmp = IRB.CreateICmpEQ(Threw, IRB.getInt32(0), "cmp");
-  IRB.CreateCondBr(Cmp, ThenBB, EndBB);
-
-  IRB.SetInsertPoint(ThenBB);
-  IRB.CreateStore(Arg1, ThrewGV);
-  IRB.CreateStore(Arg2, ThrewValueGV);
-  IRB.CreateBr(EndBB);
-
-  IRB.SetInsertPoint(EndBB);
-  IRB.CreateRetVoid();
-}
-
-// Create setTempRet0 function
-// function setTempRet0(value) {
-//   __tempRet0 = value;
-// }
-void WebAssemblyLowerEmscriptenEHSjLj::createSetTempRet0Function(Module &M) {
-  LLVMContext &C = M.getContext();
-  IRBuilder<> IRB(C);
-
-  if (M.getNamedGlobal("setTempRet0"))
-    report_fatal_error("setTempRet0 already exists");
-  Type *Params[] = {IRB.getInt32Ty()};
-  FunctionType *FTy = FunctionType::get(IRB.getVoidTy(), Params, false);
-  Function *F =
-      Function::Create(FTy, GlobalValue::WeakODRLinkage, "setTempRet0", &M);
-  F->arg_begin()->setName("value");
-  BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);
-  IRB.SetInsertPoint(EntryBB);
-  IRB.CreateStore(&*F->arg_begin(), TempRet0GV);
-  IRB.CreateRetVoid();
-}
-
 void WebAssemblyLowerEmscriptenEHSjLj::rebuildSSA(Function &F) {
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
   DT.recalculate(F); // CFG has been changed
@@ -688,11 +628,12 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   bool LongjmpUsed = LongjmpF && !LongjmpF->use_empty();
   bool DoSjLj = EnableSjLj && (SetjmpUsed || LongjmpUsed);
 
-  // Create global variables __THREW__, threwValue, and __tempRet0, which are
-  // used in common for both exception handling and setjmp/longjmp handling
-  ThrewGV = createGlobalVariableI32(M, IRB, "__THREW__");
-  ThrewValueGV = createGlobalVariableI32(M, IRB, "__threwValue");
-  TempRet0GV = createGlobalVariableI32(M, IRB, "__tempRet0");
+  // Declare (or get) global variables __THREW__, __threwValue, and __tempRet0,
+  // which are used in common for both exception handling and setjmp/longjmp
+  // handling
+  ThrewGV = getGlobalVariableI32(M, IRB, "__THREW__");
+  ThrewValueGV = getGlobalVariableI32(M, IRB, "__threwValue");
+  TempRet0GV = getGlobalVariableI32(M, IRB, "__tempRet0");
 
   bool Changed = false;
 
@@ -764,9 +705,6 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
 
   if (!Changed) {
     // Delete unused global variables and functions
-    ThrewGV->eraseFromParent();
-    ThrewValueGV->eraseFromParent();
-    TempRet0GV->eraseFromParent();
     if (ResumeF)
       ResumeF->eraseFromParent();
     if (EHTypeIDF)
@@ -779,12 +717,6 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
       TestSetjmpF->eraseFromParent();
     return false;
   }
-
-  // If we have made any changes while doing exception handling or
-  // setjmp/longjmp handling, we have to create these functions for JavaScript
-  // to call.
-  createSetThrewFunction(M);
-  createSetTempRet0Function(M);
 
   return true;
 }

@@ -540,8 +540,6 @@ def ast_dump_lookups : Flag<["-"], "ast-dump-lookups">,
   HelpText<"Build ASTs and then debug dump their name lookup tables">;
 def ast_view : Flag<["-"], "ast-view">,
   HelpText<"Build ASTs and view them with GraphViz">;
-def print_decl_contexts : Flag<["-"], "print-decl-contexts">,
-  HelpText<"Print DeclContexts and their Decls">;
 def emit_module : Flag<["-"], "emit-module">,
   HelpText<"Generate pre-compiled module file from a module map">;
 def emit_module_interface : Flag<["-"], "emit-module-interface">,

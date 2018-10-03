@@ -220,11 +220,15 @@ def NullableReturnedFromNonnullChecker : Checker<"NullableReturnedFromNonnull">,
 
 let ParentPackage = APIModeling in {
 
+def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
+  HelpText<"Improve modeling of the C standard library functions">,
+  DescFile<"StdLibraryFunctionsChecker.cpp">;
+
 def TrustNonnullChecker : Checker<"TrustNonnull">,
   HelpText<"Trust that returns from framework methods annotated with _Nonnull are not null">,
   DescFile<"TrustNonnullChecker.cpp">;
 
-}
+} // end "apiModeling"
 
 //===----------------------------------------------------------------------===//
 // Evaluate "builtin" functions.
@@ -493,10 +497,6 @@ def MismatchedDeallocatorChecker : Checker<"MismatchedDeallocator">,
 def VforkChecker : Checker<"Vfork">,
   HelpText<"Check for proper usage of vfork">,
   DescFile<"VforkChecker.cpp">;
-
-def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
-  HelpText<"Improve modeling of the C standard library functions">,
-  DescFile<"StdLibraryFunctionsChecker.cpp">;
 
 } // end "unix"
 

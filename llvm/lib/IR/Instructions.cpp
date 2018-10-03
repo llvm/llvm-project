@@ -1336,6 +1336,37 @@ AtomicRMWInst::AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
   Init(Operation, Ptr, Val, Ordering, SSID);
 }
 
+StringRef AtomicRMWInst::getOperationName(BinOp Op) {
+  switch (Op) {
+  case AtomicRMWInst::Xchg:
+    return "xchg";
+  case AtomicRMWInst::Add:
+    return "add";
+  case AtomicRMWInst::Sub:
+    return "sub";
+  case AtomicRMWInst::And:
+    return "and";
+  case AtomicRMWInst::Nand:
+    return "nand";
+  case AtomicRMWInst::Or:
+    return "or";
+  case AtomicRMWInst::Xor:
+    return "xor";
+  case AtomicRMWInst::Max:
+    return "max";
+  case AtomicRMWInst::Min:
+    return "min";
+  case AtomicRMWInst::UMax:
+    return "umax";
+  case AtomicRMWInst::UMin:
+    return "umin";
+  case AtomicRMWInst::BAD_BINOP:
+    return "<invalid operation>";
+  }
+
+  llvm_unreachable("invalid atomicrmw operation");
+}
+
 //===----------------------------------------------------------------------===//
 //                       FenceInst Implementation
 //===----------------------------------------------------------------------===//

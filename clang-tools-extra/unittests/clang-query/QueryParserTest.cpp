@@ -51,6 +51,9 @@ TEST_F(QueryParserTest, Quit) {
   QueryRef Q = parse("quit");
   ASSERT_TRUE(isa<QuitQuery>(Q));
 
+  Q = parse("q");
+  ASSERT_TRUE(isa<QuitQuery>(Q));
+
   Q = parse("quit me");
   ASSERT_TRUE(isa<InvalidQuery>(Q));
   EXPECT_EQ("unexpected extra input: ' me'", cast<InvalidQuery>(Q)->ErrStr);
@@ -141,6 +144,17 @@ TEST_F(QueryParserTest, LetUnlet) {
   ASSERT_TRUE(isa<InvalidQuery>(Q));
   EXPECT_EQ("unexpected extra input: ' bad_data'",
             cast<InvalidQuery>(Q)->ErrStr);
+}
+
+TEST_F(QueryParserTest, Comment) {
+  QueryRef Q = parse("# let foo decl()");
+  ASSERT_TRUE(isa<NoOpQuery>(Q));
+
+  Q = parse("let foo decl() # creates a decl() matcher called foo");
+  ASSERT_TRUE(isa<LetQuery>(Q));
+
+  Q = parse("set bind-root false # reduce noise");
+  ASSERT_TRUE(isa<SetQuery<bool>>(Q));
 }
 
 TEST_F(QueryParserTest, Complete) {
