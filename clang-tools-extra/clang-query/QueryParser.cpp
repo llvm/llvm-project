@@ -166,6 +166,7 @@ QueryRef QueryParser::doParse() {
                               .Case("let", PQK_Let)
                               .Case("m", PQK_Match, /*IsCompletion=*/false)
                               .Case("match", PQK_Match)
+                              .Case("q", PQK_Quit,  /*IsCompletion=*/false)
                               .Case("quit", PQK_Quit)
                               .Case("set", PQK_Set)
                               .Case("unlet", PQK_Unlet)
