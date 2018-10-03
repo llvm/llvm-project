@@ -106,9 +106,6 @@ enum ActionKind {
   /// Run a plugin action, \see ActionName.
   PluginAction,
 
-  /// Print DeclContext and their Decls.
-  PrintDeclContext,
-
   /// Print the "preamble" of the input file
   PrintPreamble,
 

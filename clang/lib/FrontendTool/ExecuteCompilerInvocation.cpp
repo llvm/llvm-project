@@ -91,7 +91,6 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     return nullptr;
   }
 
-  case PrintDeclContext:       return llvm::make_unique<DeclContextPrintAction>();
   case PrintPreamble:          return llvm::make_unique<PrintPreambleAction>();
   case PrintPreprocessedInput: {
     if (CI.getPreprocessorOutputOpts().RewriteIncludes ||
