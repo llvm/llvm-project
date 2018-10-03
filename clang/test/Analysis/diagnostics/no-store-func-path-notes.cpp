@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -x c++ -analyzer-checker=core -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -x c++ -std=c++14 -analyzer-checker=core -analyzer-output=text -verify %s
 
 int initializer1(int &p, int x) {
   if (x) { // expected-note{{Taking false branch}}
