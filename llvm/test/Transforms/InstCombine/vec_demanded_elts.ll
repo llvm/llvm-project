@@ -421,7 +421,7 @@ define <3 x i8> @shuf_urem_const_op1(<3 x i8> %x) {
 
 define <3 x float> @shuf_fadd(<3 x float> %x) {
 ; CHECK-LABEL: @shuf_fadd(
-; CHECK-NEXT:    [[BO:%.*]] = fadd <3 x float> [[X:%.*]], <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    [[BO:%.*]] = fadd <3 x float> [[X:%.*]], <float 1.000000e+00, float 2.000000e+00, float undef>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x float> [[BO]], <3 x float> undef, <3 x i32> <i32 undef, i32 1, i32 0>
 ; CHECK-NEXT:    ret <3 x float> [[R]]
 ;
@@ -432,7 +432,7 @@ define <3 x float> @shuf_fadd(<3 x float> %x) {
 
 define <3 x float> @shuf_fsub(<3 x float> %x) {
 ; CHECK-LABEL: @shuf_fsub(
-; CHECK-NEXT:    [[BO:%.*]] = fsub fast <3 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[BO:%.*]] = fsub fast <3 x float> <float 1.000000e+00, float undef, float 3.000000e+00>, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x float> [[BO]], <3 x float> undef, <3 x i32> <i32 undef, i32 0, i32 2>
 ; CHECK-NEXT:    ret <3 x float> [[R]]
 ;
@@ -443,7 +443,7 @@ define <3 x float> @shuf_fsub(<3 x float> %x) {
 
 define <3 x float> @shuf_fmul(<3 x float> %x) {
 ; CHECK-LABEL: @shuf_fmul(
-; CHECK-NEXT:    [[BO:%.*]] = fmul reassoc <3 x float> [[X:%.*]], <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    [[BO:%.*]] = fmul reassoc <3 x float> [[X:%.*]], <float 1.000000e+00, float 2.000000e+00, float undef>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x float> [[BO]], <3 x float> undef, <3 x i32> <i32 undef, i32 1, i32 0>
 ; CHECK-NEXT:    ret <3 x float> [[R]]
 ;
@@ -454,7 +454,7 @@ define <3 x float> @shuf_fmul(<3 x float> %x) {
 
 define <3 x float> @shuf_fdiv_const_op0(<3 x float> %x) {
 ; CHECK-LABEL: @shuf_fdiv_const_op0(
-; CHECK-NEXT:    [[BO:%.*]] = fdiv reassoc ninf <3 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[BO:%.*]] = fdiv reassoc ninf <3 x float> <float 1.000000e+00, float undef, float 3.000000e+00>, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x float> [[BO]], <3 x float> undef, <3 x i32> <i32 undef, i32 0, i32 2>
 ; CHECK-NEXT:    ret <3 x float> [[R]]
 ;
@@ -465,7 +465,7 @@ define <3 x float> @shuf_fdiv_const_op0(<3 x float> %x) {
 
 define <3 x float> @shuf_fdiv_const_op1(<3 x float> %x) {
 ; CHECK-LABEL: @shuf_fdiv_const_op1(
-; CHECK-NEXT:    [[BO:%.*]] = fdiv nnan ninf <3 x float> [[X:%.*]], <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    [[BO:%.*]] = fdiv nnan ninf <3 x float> [[X:%.*]], <float 1.000000e+00, float 2.000000e+00, float undef>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x float> [[BO]], <3 x float> undef, <3 x i32> <i32 undef, i32 1, i32 0>
 ; CHECK-NEXT:    ret <3 x float> [[R]]
 ;
@@ -476,7 +476,7 @@ define <3 x float> @shuf_fdiv_const_op1(<3 x float> %x) {
 
 define <3 x float> @shuf_frem_const_op0(<3 x float> %x) {
 ; CHECK-LABEL: @shuf_frem_const_op0(
-; CHECK-NEXT:    [[BO:%.*]] = frem nnan <3 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[BO:%.*]] = frem nnan <3 x float> <float 1.000000e+00, float undef, float 3.000000e+00>, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x float> [[BO]], <3 x float> undef, <3 x i32> <i32 undef, i32 2, i32 0>
 ; CHECK-NEXT:    ret <3 x float> [[R]]
 ;
@@ -487,7 +487,7 @@ define <3 x float> @shuf_frem_const_op0(<3 x float> %x) {
 
 define <3 x float> @shuf_frem_const_op1(<3 x float> %x) {
 ; CHECK-LABEL: @shuf_frem_const_op1(
-; CHECK-NEXT:    [[BO:%.*]] = frem reassoc ninf <3 x float> [[X:%.*]], <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    [[BO:%.*]] = frem reassoc ninf <3 x float> [[X:%.*]], <float undef, float 2.000000e+00, float 3.000000e+00>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x float> [[BO]], <3 x float> undef, <3 x i32> <i32 1, i32 undef, i32 2>
 ; CHECK-NEXT:    ret <3 x float> [[R]]
 ;

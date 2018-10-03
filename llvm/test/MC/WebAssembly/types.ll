@@ -12,6 +12,7 @@ declare <4 x i32> @v4i32()
 declare <2 x i64> @v2i64()
 declare <4 x float> @v4f32()
 declare <2 x double> @v2f64()
+declare { i32, i32, i32 } @structret()
 
 define void @f1() {
 entry:
@@ -25,6 +26,11 @@ entry:
   %tmp8 = call <2 x i64> @v2i64()
   %tmp9 = call <4 x float> @v4f32()
   %tmp10 = call <2 x double> @v2f64()
+  %tmp11 = call {i32, i32, i32} @structret()
+  ret void
+}
+
+define void @vararg(i32, i32, ...) {
   ret void
 }
 
@@ -48,5 +54,15 @@ entry:
 ; CHECK-NEXT:       - Index: 5
 ; CHECK-NEXT:         ReturnType: V128
 ; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:       - Index: 6
+; CHECK-NEXT:         ReturnType: NORESULT
+; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:           - I32
+; CHECK-NEXT:       - Index: 7
+; CHECK-NEXT:         ReturnType: NORESULT
+; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:           - I32
+; CHECK-NEXT:           - I32
+; CHECK-NEXT:           - I32
 ; should be no additional types
 ; CHECK-NOT: ReturnType

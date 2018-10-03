@@ -83,16 +83,25 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
     if (F.isDeclarationForLinker() && !F.isIntrinsic()) {
       SmallVector<MVT, 4> Results;
       SmallVector<MVT, 4> Params;
-      ComputeSignatureVTs(F, TM, Params, Results);
-      MCSymbol *Sym = getSymbol(&F);
-      getTargetStreamer()->emitIndirectFunctionType(Sym, Params, Results);
+      ComputeSignatureVTs(F.getFunctionType(), F, TM, Params, Results);
+      auto *Sym = cast<MCSymbolWasm>(getSymbol(&F));
+      if (!Sym->getSignature()) {
+        auto Signature = SignatureFromMVTs(Results, Params);
+        Sym->setSignature(Signature.get());
+        addSignature(std::move(Signature));
+      }
+      // FIXME: this was originally intended for post-linking and was only used
+      // for imports that were only called indirectly (i.e. s2wasm could not
+      // infer the type from a call). With object files it applies to all
+      // imports. so fix the names and the tests, or rethink how import
+      // delcarations work in asm files.
+      getTargetStreamer()->emitIndirectFunctionType(Sym);
 
       if (TM.getTargetTriple().isOSBinFormatWasm() &&
           F.hasFnAttribute("wasm-import-module")) {
-        MCSymbolWasm *WasmSym = cast<MCSymbolWasm>(Sym);
         StringRef Name =
             F.getFnAttribute("wasm-import-module").getValueAsString();
-        getTargetStreamer()->emitImportModule(WasmSym, Name);
+        getTargetStreamer()->emitImportModule(Sym, Name);
       }
     }
   }
@@ -137,10 +146,17 @@ void WebAssemblyAsmPrinter::EmitJumpTableInfo() {
 }
 
 void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
-  getTargetStreamer()->emitParam(CurrentFnSym, MFI->getParams());
-
-  SmallVector<MVT, 4> ResultVTs;
   const Function &F = MF->getFunction();
+  SmallVector<MVT, 1> ResultVTs;
+  SmallVector<MVT, 4> ParamVTs;
+  ComputeSignatureVTs(F.getFunctionType(), F, TM, ParamVTs, ResultVTs);
+  auto Signature = SignatureFromMVTs(ResultVTs, ParamVTs);
+  auto *WasmSym = cast<MCSymbolWasm>(CurrentFnSym);
+  WasmSym->setSignature(Signature.get());
+  addSignature(std::move(Signature));
+
+  // FIXME: clean up how params and results are emitted (use signatures)
+  getTargetStreamer()->emitParam(CurrentFnSym, ParamVTs);
 
   // Emit the function index.
   if (MDNode *Idx = F.getMetadata("wasm.index")) {
@@ -150,15 +166,7 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
         cast<ConstantAsMetadata>(Idx->getOperand(0))->getValue()));
   }
 
-  ComputeLegalValueVTs(F, TM, F.getReturnType(), ResultVTs);
-
-  // If the return type needs to be legalized it will get converted into
-  // passing a pointer.
-  if (ResultVTs.size() == 1)
-    getTargetStreamer()->emitResult(CurrentFnSym, ResultVTs);
-  else
-    getTargetStreamer()->emitResult(CurrentFnSym, ArrayRef<MVT>());
-
+  getTargetStreamer()->emitResult(CurrentFnSym, ResultVTs);
   getTargetStreamer()->emitLocal(MFI->getLocals());
 
   AsmPrinter::EmitFunctionBodyStart();
