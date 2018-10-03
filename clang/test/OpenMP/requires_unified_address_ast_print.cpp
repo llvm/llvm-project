@@ -16,4 +16,7 @@
 #pragma omp requires unified_shared_memory
 // CHECK:#pragma omp requires unified_shared_memory
 
+#pragma omp requires reverse_offload
+// CHECK:#pragma omp requires reverse_offload
+
 #endif

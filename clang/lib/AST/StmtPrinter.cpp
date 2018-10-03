@@ -705,6 +705,10 @@ void OMPClausePrinter::VisitOMPUnifiedSharedMemoryClause(
   OS << "unified_shared_memory";
 }
 
+void OMPClausePrinter::VisitOMPReverseOffloadClause(OMPReverseOffloadClause *) {
+  OS << "reverse_offload";
+}
+
 void OMPClausePrinter::VisitOMPScheduleClause(OMPScheduleClause *Node) {
   OS << "schedule(";
   if (Node->getFirstScheduleModifier() != OMPC_SCHEDULE_MODIFIER_unknown) {

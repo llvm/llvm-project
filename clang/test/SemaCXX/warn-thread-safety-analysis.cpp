@@ -1754,9 +1754,24 @@ struct TestTryLock {
     mu.Unlock();
   }
 
+  void foo2_builtin_expect() {
+    if (__builtin_expect(!mu.TryLock(), false))
+      return;
+    a = 2;
+    mu.Unlock();
+  }
+
   void foo3() {
     bool b = mu.TryLock();
     if (b) {
+      a = 3;
+      mu.Unlock();
+    }
+  }
+
+  void foo3_builtin_expect() {
+    bool b = mu.TryLock();
+    if (__builtin_expect(b, true)) {
       a = 3;
       mu.Unlock();
     }

@@ -2874,6 +2874,12 @@ bool RecursiveASTVisitor<Derived>::VisitOMPUnifiedSharedMemoryClause(
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPReverseOffloadClause(
+    OMPReverseOffloadClause *) {
+  return true;
+}
+
+template <typename Derived>
 bool
 RecursiveASTVisitor<Derived>::VisitOMPScheduleClause(OMPScheduleClause *C) {
   TRY_TO(VisitOMPClauseWithPreInit(C));
