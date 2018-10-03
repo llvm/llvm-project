@@ -946,6 +946,16 @@ public:
                                      CodeCompletionAllocator &Allocator,
                                      CodeCompletionTUInfo &CCTUInfo);
 
+  CodeCompletionString *createCodeCompletionStringForDecl(
+      Preprocessor &PP, ASTContext &Ctx, CodeCompletionBuilder &Result,
+      bool IncludeBriefComments, const CodeCompletionContext &CCContext,
+      PrintingPolicy &Policy);
+
+  CodeCompletionString *createCodeCompletionStringForOverride(
+      Preprocessor &PP, ASTContext &Ctx, CodeCompletionBuilder &Result,
+      bool IncludeBriefComments, const CodeCompletionContext &CCContext,
+      PrintingPolicy &Policy);
+
   /// Retrieve the name that should be used to order a result.
   ///
   /// If the name needs to be constructed as a string, that string will be

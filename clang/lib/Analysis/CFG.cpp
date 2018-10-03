@@ -2632,15 +2632,12 @@ CFGBlock *CFGBuilder::VisitDeclStmt(DeclStmt *DS) {
   for (DeclStmt::reverse_decl_iterator I = DS->decl_rbegin(),
                                        E = DS->decl_rend();
        I != E; ++I) {
-    // Get the alignment of the new DeclStmt, padding out to >=8 bytes.
-    unsigned A = alignof(DeclStmt) < 8 ? 8 : alignof(DeclStmt);
 
     // Allocate the DeclStmt using the BumpPtrAllocator.  It will get
     // automatically freed with the CFG.
     DeclGroupRef DG(*I);
     Decl *D = *I;
-    void *Mem = cfg->getAllocator().Allocate(sizeof(DeclStmt), A);
-    DeclStmt *DSNew = new (Mem) DeclStmt(DG, D->getLocation(), GetEndLoc(D));
+    DeclStmt *DSNew = new (Context) DeclStmt(DG, D->getLocation(), GetEndLoc(D));
     cfg->addSyntheticDeclStmt(DSNew, DS);
 
     // Append the fake DeclStmt to block.

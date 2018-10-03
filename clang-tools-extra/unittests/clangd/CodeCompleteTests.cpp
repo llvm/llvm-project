@@ -2093,6 +2093,15 @@ TEST(CompletionTest, IncludedCompletionKinds) {
                     Has("bar.h\"", CompletionItemKind::File)));
 }
 
+TEST(CompletionTest, NoCrashAtNonAlphaIncludeHeader) {
+  auto Results = completions(
+      R"cpp(
+        #include "./^"
+      )cpp"
+      );
+  EXPECT_TRUE(Results.Completions.empty());
+}
+
 TEST(CompletionTest, NoAllScopesCompletionWhenQualified) {
   clangd::CodeCompleteOptions Opts = {};
   Opts.AllScopes = true;

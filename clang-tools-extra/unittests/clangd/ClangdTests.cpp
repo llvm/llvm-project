@@ -963,6 +963,75 @@ TEST_F(ClangdVFSTest, ChangedHeaderFromISystem) {
                                        Field(&CodeCompletion::Name, "baz")));
 }
 
+// FIXME(ioeric): make this work for windows again.
+#ifndef _WIN32
+// Check that running code completion doesn't stat() a bunch of files from the
+// preamble again. (They should be using the preamble's stat-cache)
+TEST(ClangdTests, PreambleVFSStatCache) {
+  class ListenStatsFSProvider : public FileSystemProvider {
+  public:
+    ListenStatsFSProvider(llvm::StringMap<unsigned> &CountStats)
+        : CountStats(CountStats) {}
+
+    IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() override {
+      class ListenStatVFS : public vfs::ProxyFileSystem {
+      public:
+        ListenStatVFS(IntrusiveRefCntPtr<vfs::FileSystem> FS,
+                      llvm::StringMap<unsigned> &CountStats)
+            : ProxyFileSystem(std::move(FS)), CountStats(CountStats) {}
+
+        llvm::ErrorOr<std::unique_ptr<vfs::File>>
+        openFileForRead(const Twine &Path) override {
+          ++CountStats[llvm::sys::path::filename(Path.str())];
+          return ProxyFileSystem::openFileForRead(Path);
+        }
+        llvm::ErrorOr<vfs::Status> status(const Twine &Path) override {
+          ++CountStats[llvm::sys::path::filename(Path.str())];
+          return ProxyFileSystem::status(Path);
+        }
+
+      private:
+        llvm::StringMap<unsigned> &CountStats;
+      };
+
+      return IntrusiveRefCntPtr<ListenStatVFS>(
+          new ListenStatVFS(buildTestFS(Files), CountStats));
+    }
+
+    // If relative paths are used, they are resolved with testPath().
+    llvm::StringMap<std::string> Files;
+    llvm::StringMap<unsigned> &CountStats;
+  };
+
+  llvm::StringMap<unsigned> CountStats;
+  ListenStatsFSProvider FS(CountStats);
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  auto SourcePath = testPath("foo.cpp");
+  auto HeaderPath = testPath("foo.h");
+  FS.Files[HeaderPath] = "struct TestSym {};";
+  Annotations Code(R"cpp(
+    #include "foo.h"
+
+    int main() {
+      TestSy^
+    })cpp");
+
+  runAddDocument(Server, SourcePath, Code.code());
+
+  unsigned Before = CountStats["foo.h"];
+  EXPECT_GT(Before, 0u);
+  auto Completions = cantFail(runCodeComplete(Server, SourcePath, Code.point(),
+                                              clangd::CodeCompleteOptions()))
+                         .Completions;
+  EXPECT_EQ(CountStats["foo.h"], Before);
+  EXPECT_THAT(Completions,
+              ElementsAre(Field(&CodeCompletion::Name, "TestSym")));
+}
+#endif
+
 } // namespace
 } // namespace clangd
 } // namespace clang

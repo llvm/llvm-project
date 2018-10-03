@@ -266,6 +266,7 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
 
   auto exceptionCases =
       expr(anyOf(allOf(isMacroExpansion(), unless(isNULLMacroExpansion())),
+                 has(ignoringImplicit(memberExpr(hasDeclaration(fieldDecl(hasBitWidth(1)))))),
                  hasParent(explicitCastExpr())));
   auto implicitCastFromBool = implicitCastExpr(
       anyOf(hasCastKind(CK_IntegralCast), hasCastKind(CK_IntegralToFloating),

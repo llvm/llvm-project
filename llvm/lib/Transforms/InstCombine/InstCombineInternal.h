@@ -20,7 +20,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetFolder.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
@@ -33,6 +32,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -41,10 +41,13 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
 
 #define DEBUG_TYPE "instcombine"
+
+using namespace llvm::PatternMatch;
 
 namespace llvm {
 
@@ -174,6 +177,10 @@ static inline bool IsFreeToInvert(Value *V, bool WillInvertAllUses) {
         BO->getOpcode() == Instruction::Sub)
       if (isa<Constant>(BO->getOperand(0)) || isa<Constant>(BO->getOperand(1)))
         return WillInvertAllUses;
+
+  // Selects with invertible operands are freely invertible
+  if (match(V, m_Select(m_Value(), m_Not(m_Value()), m_Not(m_Value()))))
+    return WillInvertAllUses;
 
   return false;
 }

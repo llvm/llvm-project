@@ -39,6 +39,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
@@ -726,6 +727,7 @@ bool TargetPassConfig::addCoreISelPasses() {
        TM->Options.EnableGlobalISel && EnableFastISelOption != cl::BOU_TRUE)) {
     TM->setFastISel(false);
 
+    SaveAndRestore<bool> SavedAddingMachinePasses(AddingMachinePasses, true);
     if (addIRTranslator())
       return true;
 

@@ -15,6 +15,7 @@
 #include "Arch/SystemZ.h"
 #include "Arch/X86.h"
 #include "Hexagon.h"
+#include "HIP.h"
 #include "InputInfo.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
@@ -1337,6 +1338,18 @@ void tools::AddHIPLinkerScript(const ToolChain &TC, Compilation &C,
   if (!JA.isHostOffloading(Action::OFK_HIP))
     return;
 
+  InputInfoList DeviceInputs;
+  for (const auto &II : Inputs) {
+    const Action *A = II.getAction();
+    // Is this a device linking action?
+    if (A && isa<LinkJobAction>(A) && A->isDeviceOffloading(Action::OFK_HIP)) {
+      DeviceInputs.push_back(II);
+    }
+  }
+
+  if (DeviceInputs.empty())
+    return;
+
   // Create temporary linker script. Keep it if save-temps is enabled.
   const char *LKS;
   SmallString<256> Name = llvm::sys::path::filename(Output.getFilename());
@@ -1364,39 +1377,12 @@ void tools::AddHIPLinkerScript(const ToolChain &TC, Compilation &C,
          "Wrong platform");
   (void)HIPTC;
 
-  // Construct clang-offload-bundler command to bundle object files for
-  // for different GPU archs.
-  ArgStringList BundlerArgs;
-  BundlerArgs.push_back(Args.MakeArgString("-type=o"));
-
-  // ToDo: Remove the dummy host binary entry which is required by
-  // clang-offload-bundler.
-  std::string BundlerTargetArg = "-targets=host-x86_64-unknown-linux";
-  std::string BundlerInputArg = "-inputs=/dev/null";
-
-  for (const auto &II : Inputs) {
-    const Action *A = II.getAction();
-    // Is this a device linking action?
-    if (A && isa<LinkJobAction>(A) && A->isDeviceOffloading(Action::OFK_HIP)) {
-      BundlerTargetArg = BundlerTargetArg + ",hip-amdgcn-amd-amdhsa-" +
-                         StringRef(A->getOffloadingArch()).str();
-      BundlerInputArg = BundlerInputArg + "," + II.getFilename();
-    }
-  }
-  BundlerArgs.push_back(Args.MakeArgString(BundlerTargetArg));
-  BundlerArgs.push_back(Args.MakeArgString(BundlerInputArg));
-
-  std::string BundleFileName = C.getDriver().GetTemporaryPath("BUNDLE", "o");
+  // The output file name needs to persist through the compilation, therefore
+  // it needs to be created through MakeArgString.
+  std::string BundleFileName = C.getDriver().GetTemporaryPath("BUNDLE", "hipfb");
   const char *BundleFile =
       C.addTempFile(C.getArgs().MakeArgString(BundleFileName.c_str()));
-  auto BundlerOutputArg =
-      Args.MakeArgString(std::string("-outputs=").append(BundleFile));
-  BundlerArgs.push_back(BundlerOutputArg);
-
-  SmallString<128> BundlerPath(C.getDriver().Dir);
-  llvm::sys::path::append(BundlerPath, "clang-offload-bundler");
-  const char *Bundler = Args.MakeArgString(BundlerPath);
-  C.addCommand(llvm::make_unique<Command>(JA, T, Bundler, BundlerArgs, Inputs));
+  AMDGCN::constructHIPFatbinCommand(C, JA, BundleFile, DeviceInputs, Args, T);
 
   // Add commands to embed target binaries. We ensure that each section and
   // image is 16-byte aligned. This is not mandatory, but increases the

@@ -218,8 +218,8 @@ defm : X86WriteRes<WriteBitTest,         [ZnALU], 1, [1], 1>;
 defm : X86WriteRes<WriteBitTestImmLd,    [ZnALU,ZnAGU], 5, [1,1], 2>;
 defm : X86WriteRes<WriteBitTestRegLd,    [ZnALU,ZnAGU], 5, [1,1], 2>;
 defm : X86WriteRes<WriteBitTestSet,      [ZnALU], 2, [1], 2>;
-defm : X86WriteRes<WriteBitTestSetImmLd, [ZnALU,ZnAGU], 5, [1,1], 2>;
-defm : X86WriteRes<WriteBitTestSetRegLd, [ZnALU,ZnAGU], 5, [1,1], 2>;
+//defm : X86WriteRes<WriteBitTestSetImmLd, [ZnALU,ZnAGU], 5, [1,1], 2>;
+//defm : X86WriteRes<WriteBitTestSetRegLd, [ZnALU,ZnAGU], 5, [1,1], 2>;
 
 // Bit counts.
 defm : ZnWriteResPair<WriteBSF, [ZnALU], 3>;
@@ -723,7 +723,8 @@ def ZnWriteBTRSCm : SchedWriteRes<[ZnAGU, ZnALU]> {
   let NumMicroOps = 2;
 }
 // m,r,i.
-def : InstRW<[ZnWriteBTRSCm], (instregex "BT(R|S|C)(16|32|64)m(r|i8)")>;
+def : SchedAlias<WriteBitTestSetImmRMW, ZnWriteBTRSCm>;
+def : SchedAlias<WriteBitTestSetRegRMW, ZnWriteBTRSCm>;
 
 // BLSI BLSMSK BLSR.
 // r,r.

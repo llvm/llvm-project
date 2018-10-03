@@ -193,6 +193,30 @@
     # CHECK: v128.not # encoding: [0xfd,0x3f]
     v128.not
 
+    # CHECK: i8x16.any_true # encoding: [0xfd,0x41]
+    i8x16.any_true
+
+    # CHECK: i16x8.any_true # encoding: [0xfd,0x42]
+    i16x8.any_true
+
+    # CHECK: i32x4.any_true # encoding: [0xfd,0x43]
+    i32x4.any_true
+
+    # CHECK: i64x2.any_true # encoding: [0xfd,0x44]
+    i64x2.any_true
+
+    # CHECK: i8x16.all_true # encoding: [0xfd,0x45]
+    i8x16.all_true
+
+    # CHECK: i16x8.all_true # encoding: [0xfd,0x46]
+    i16x8.all_true
+
+    # CHECK: i32x4.all_true # encoding: [0xfd,0x47]
+    i32x4.all_true
+
+    # CHECK: i64x2.all_true # encoding: [0xfd,0x48]
+    i64x2.all_true
+
     # CHECK: i8x16.eq # encoding: [0xfd,0x49]
     i8x16.eq
 

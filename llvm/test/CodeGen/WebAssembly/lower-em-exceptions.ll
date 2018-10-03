@@ -5,9 +5,9 @@ target triple = "wasm32-unknown-unknown"
 
 @_ZTIi = external constant i8*
 @_ZTIc = external constant i8*
-; CHECK-DAG: __THREW__ = weak_odr global i32 0
-; CHECK-DAG: __threwValue = weak_odr global i32 0
-; CHECK-DAG: __tempRet0 = weak_odr global i32 0
+; CHECK-DAG: __THREW__ = external global i32
+; CHECK-DAG: __threwValue = external global i32
+; CHECK-DAG: __tempRet0 = external global i32
 
 ; Test invoke instruction with clauses (try-catch block)
 define void @clause() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
@@ -171,24 +171,3 @@ declare void @__cxa_call_unexpected(i8*)
 ; CHECK-DAG: declare void @__resumeException(i8*)
 ; CHECK-DAG: declare void @__invoke_void_i32(void (i32)*, i32)
 ; CHECK-DAG: declare i8* @__cxa_find_matching_catch_4(i8*, i8*)
-
-; setThrew function creation
-; CHECK-LABEL: define weak_odr void @setThrew(i32 %threw, i32 %value) {
-; CHECK: entry:
-; CHECK-NEXT: %__THREW__.val = load i32, i32* @__THREW__
-; CHECK-NEXT: %cmp = icmp eq i32 %__THREW__.val, 0
-; CHECK-NEXT: br i1 %cmp, label %if.then, label %if.end
-; CHECK: if.then:
-; CHECK-NEXT: store i32 %threw, i32* @__THREW__
-; CHECK-NEXT: store i32 %value, i32* @__threwValue
-; CHECK-NEXT: br label %if.end
-; CHECK: if.end:
-; CHECK-NEXT: ret void
-; CHECK: }
-
-; setTempRet0 function creation
-; CHECK-LABEL: define weak_odr void @setTempRet0(i32 %value) {
-; CHECK: entry:
-; CHECK-NEXT: store i32 %value, i32* @__tempRet0
-; CHECK-NEXT: ret void
-; CHECK: }

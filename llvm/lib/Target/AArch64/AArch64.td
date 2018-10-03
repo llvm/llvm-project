@@ -233,6 +233,9 @@ def FeatureBranchTargetId : SubtargetFeature<"bti", "HasBTI",
 def FeatureRandGen : SubtargetFeature<"rand", "HasRandGen",
     "true", "Enable Random Number generation instructions" >;
 
+def FeatureMTE : SubtargetFeature<"mte", "HasMTE",
+    "true", "Enable Memory Tagging Extension" >;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //

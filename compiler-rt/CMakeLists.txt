@@ -385,14 +385,6 @@ endif()
 
 append_list_if(COMPILER_RT_HAS_LIBC c SANITIZER_COMMON_LINK_LIBS)
 
-if(ANDROID)
-# Put the Sanitizer shared libraries in the global group. For more details, see
-# android-changes-for-ndk-developers.md#changes-to-library-search-order
-  if (COMPILER_RT_HAS_Z_GLOBAL)
-    list(APPEND SANITIZER_COMMON_LINK_FLAGS -Wl,-z,global)
-  endif()
-endif()
-
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "Fuchsia")
   list(APPEND SANITIZER_COMMON_LINK_FLAGS -Wl,-z,defs,-z,now,-z,relro)
   list(APPEND SANITIZER_COMMON_LINK_LIBS zircon)

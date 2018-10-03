@@ -127,7 +127,7 @@ define <2 x double> @trunc_unsigned_v2f64(<2 x double> %x) #0 {
 ; SSE2-NEXT:    movq %rcx, %xmm1
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1127219200,1160773632,0,0]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; SSE2-NEXT:    movapd {{.*#+}} xmm3 = [4.503600e+15,1.934281e+25]
+; SSE2-NEXT:    movapd {{.*#+}} xmm3 = [4503599627370496,1.9342813113834067E+25]
 ; SSE2-NEXT:    subpd %xmm3, %xmm1
 ; SSE2-NEXT:    movapd %xmm1, %xmm0
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
@@ -195,7 +195,7 @@ define <4 x double> @trunc_unsigned_v4f64(<4 x double> %x) #0 {
 ; SSE2-NEXT:    movq %rdx, %xmm1
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1127219200,1160773632,0,0]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; SSE2-NEXT:    movapd {{.*#+}} xmm3 = [4.503600e+15,1.934281e+25]
+; SSE2-NEXT:    movapd {{.*#+}} xmm3 = [4503599627370496,1.9342813113834067E+25]
 ; SSE2-NEXT:    subpd %xmm3, %xmm1
 ; SSE2-NEXT:    movapd %xmm1, %xmm0
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]

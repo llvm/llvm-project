@@ -24,8 +24,6 @@
 namespace mca {
 
 class HWEventListener;
-class HWInstructionEvent;
-class HWStallEvent;
 
 /// A pipeline for a specific subtarget.
 ///

@@ -181,6 +181,7 @@ enum ArchExtKind : unsigned {
   AEK_AES =         1 << 16,
   AEK_FP16FML =     1 << 17,
   AEK_RAND =        1 << 18,
+  AEK_MTE =         1 << 19,
 };
 
 StringRef getCanonicalArchName(StringRef Arch);

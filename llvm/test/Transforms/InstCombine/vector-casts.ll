@@ -2,6 +2,8 @@
 ; RUN: opt < %s -instcombine -S | FileCheck %s
 
 ; This turns into a&1 != 0
+; TODO: The bar for canonicalizing to something bigger than the minimal length IR is very high. 
+; This pattern does not appear to meet that standard.
 
 define <2 x i1> @trunc(<2 x i64> %a) {
 ; CHECK-LABEL: @trunc(
@@ -13,6 +15,8 @@ define <2 x i1> @trunc(<2 x i64> %a) {
   ret <2 x i1> %t
 }
 
+; TODO: This could be just 1 instruction (trunc). 
+
 define <2 x i1> @and_cmp_is_trunc(<2 x i64> %a) {
 ; CHECK-LABEL: @and_cmp_is_trunc(
 ; CHECK-NEXT:    [[T:%.*]] = and <2 x i64> [[A:%.*]], <i64 1, i64 1>
@@ -21,6 +25,32 @@ define <2 x i1> @and_cmp_is_trunc(<2 x i64> %a) {
 ;
   %t = and <2 x i64> %a, <i64 1, i64 1>
   %r = icmp ne <2 x i64> %t, zeroinitializer
+  ret <2 x i1> %r
+}
+
+; TODO: This could be just 1 instruction (trunc). 
+
+define <2 x i1> @and_cmp_is_trunc_even_with_undef_elt(<2 x i64> %a) {
+; CHECK-LABEL: @and_cmp_is_trunc_even_with_undef_elt(
+; CHECK-NEXT:    [[T:%.*]] = and <2 x i64> [[A:%.*]], <i64 undef, i64 1>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i64> [[T]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %t = and <2 x i64> %a, <i64 undef, i64 1>
+  %r = icmp ne <2 x i64> %t, zeroinitializer
+  ret <2 x i1> %r
+}
+
+; TODO: This could be just 1 instruction (trunc). 
+
+define <2 x i1> @and_cmp_is_trunc_even_with_undef_elts(<2 x i64> %a) {
+; CHECK-LABEL: @and_cmp_is_trunc_even_with_undef_elts(
+; CHECK-NEXT:    [[T:%.*]] = and <2 x i64> [[A:%.*]], <i64 undef, i64 1>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i64> [[T]], <i64 undef, i64 0>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %t = and <2 x i64> %a, <i64 undef, i64 1>
+  %r = icmp ne <2 x i64> %t, <i64 undef, i64 0>
   ret <2 x i1> %r
 }
 

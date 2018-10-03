@@ -181,8 +181,6 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
     if (isCancelled())
       return CB(llvm::make_error<CancelledError>());
 
-    auto PreambleData = IP->Preamble;
-
     llvm::Optional<SpeculativeFuzzyFind> SpecFuzzyFind;
     if (CodeCompleteOpts.Index && CodeCompleteOpts.SpeculativeIndexRequest) {
       SpecFuzzyFind.emplace();
@@ -195,10 +193,8 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
     // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
     // both the old and the new version in case only one of them matches.
     CodeCompleteResult Result = clangd::codeComplete(
-        File, IP->Command, PreambleData ? &PreambleData->Preamble : nullptr,
-        PreambleData ? PreambleData->Includes : IncludeStructure(),
-        IP->Contents, Pos, FS, PCHs, CodeCompleteOpts,
-        SpecFuzzyFind ? SpecFuzzyFind.getPointer() : nullptr);
+        File, IP->Command, IP->Preamble, IP->Contents, Pos, FS, PCHs,
+        CodeCompleteOpts, SpecFuzzyFind ? SpecFuzzyFind.getPointer() : nullptr);
     {
       clang::clangd::trace::Span Tracer("Completion results callback");
       CB(std::move(Result));
@@ -231,9 +227,8 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
       return CB(IP.takeError());
 
     auto PreambleData = IP->Preamble;
-    CB(clangd::signatureHelp(File, IP->Command,
-                             PreambleData ? &PreambleData->Preamble : nullptr,
-                             IP->Contents, Pos, FS, PCHs, Index));
+    CB(clangd::signatureHelp(File, IP->Command, PreambleData, IP->Contents, Pos,
+                             FS, PCHs, Index));
   };
 
   // Unlike code completion, we wait for an up-to-date preamble here.

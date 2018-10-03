@@ -240,6 +240,8 @@ let isPseudo = 1, SchedRW = [WriteSystem] in {
                             "#SEH_SaveXMM $reg, $dst", []>;
   def SEH_StackAlloc : I<0, Pseudo, (outs), (ins i32imm:$size),
                             "#SEH_StackAlloc $size", []>;
+  def SEH_StackAlign : I<0, Pseudo, (outs), (ins i32imm:$align),
+                            "#SEH_StackAlign $align", []>;
   def SEH_SetFrame : I<0, Pseudo, (outs), (ins i32imm:$reg, i32imm:$offset),
                             "#SEH_SetFrame $reg, $offset", []>;
   def SEH_PushFrame : I<0, Pseudo, (outs), (ins i1imm:$mode),
