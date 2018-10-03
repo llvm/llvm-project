@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=fiji -print-after=isel -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=fiji -print-after=amdgpu-isel -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=SI %s
 
 ; This checks that the -print-after of MIR containing a target custom pseudo
 ; value works correctly.

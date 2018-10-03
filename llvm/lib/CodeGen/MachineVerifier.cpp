@@ -364,6 +364,13 @@ unsigned MachineVerifier::verify(MachineFunction &MF) {
 
   const bool isFunctionFailedISel = MF.getProperties().hasProperty(
       MachineFunctionProperties::Property::FailedISel);
+
+  // If we're mid-GlobalISel and we already triggered the fallback path then
+  // it's expected that the MIR is somewhat broken but that's ok since we'll
+  // reset it and clear the FailedISel attribute in ResetMachineFunctions.
+  if (isFunctionFailedISel)
+    return foundErrors;
+
   isFunctionRegBankSelected =
       !isFunctionFailedISel &&
       MF.getProperties().hasProperty(

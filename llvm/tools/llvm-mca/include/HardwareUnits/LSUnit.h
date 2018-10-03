@@ -22,7 +22,6 @@
 namespace mca {
 
 class InstRef;
-struct InstrDesc;
 
 /// A Load/Store Unit implementing a load and store queues.
 ///

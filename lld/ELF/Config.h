@@ -176,6 +176,7 @@ struct Configuration {
   bool UseAndroidRelrTags = false;
   bool WarnBackrefs;
   bool WarnCommon;
+  bool WarnIfuncTextrel;
   bool WarnMissingEntry;
   bool WarnSymbolOrdering;
   bool WriteAddends;

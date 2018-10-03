@@ -971,6 +971,8 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                     unsigned SrcReg, bool isKill, int FI,
                     const TargetRegisterClass *RC,
                     const TargetRegisterInfo *TRI) const {
+  DebugLoc DL;
+  if (I != MBB.end()) DL = I->getDebugLoc();
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned Align = MFI.getObjectAlignment(FI);
@@ -982,7 +984,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   switch (TRI->getSpillSize(*RC)) {
     case 2:
       if (ARM::HPRRegClass.hasSubClassEq(RC)) {
-        BuildMI(MBB, I, DebugLoc(), get(ARM::VSTRH))
+        BuildMI(MBB, I, DL, get(ARM::VSTRH))
             .addReg(SrcReg, getKillRegState(isKill))
             .addFrameIndex(FI)
             .addImm(0)
@@ -993,14 +995,14 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
       break;
     case 4:
       if (ARM::GPRRegClass.hasSubClassEq(RC)) {
-        BuildMI(MBB, I, DebugLoc(), get(ARM::STRi12))
+        BuildMI(MBB, I, DL, get(ARM::STRi12))
             .addReg(SrcReg, getKillRegState(isKill))
             .addFrameIndex(FI)
             .addImm(0)
             .addMemOperand(MMO)
             .add(predOps(ARMCC::AL));
       } else if (ARM::SPRRegClass.hasSubClassEq(RC)) {
-        BuildMI(MBB, I, DebugLoc(), get(ARM::VSTRS))
+        BuildMI(MBB, I, DL, get(ARM::VSTRS))
             .addReg(SrcReg, getKillRegState(isKill))
             .addFrameIndex(FI)
             .addImm(0)
@@ -1011,7 +1013,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
       break;
     case 8:
       if (ARM::DPRRegClass.hasSubClassEq(RC)) {
-        BuildMI(MBB, I, DebugLoc(), get(ARM::VSTRD))
+        BuildMI(MBB, I, DL, get(ARM::VSTRD))
             .addReg(SrcReg, getKillRegState(isKill))
             .addFrameIndex(FI)
             .addImm(0)
@@ -1019,7 +1021,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
             .add(predOps(ARMCC::AL));
       } else if (ARM::GPRPairRegClass.hasSubClassEq(RC)) {
         if (Subtarget.hasV5TEOps()) {
-          MachineInstrBuilder MIB = BuildMI(MBB, I, DebugLoc(), get(ARM::STRD));
+          MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::STRD));
           AddDReg(MIB, SrcReg, ARM::gsub_0, getKillRegState(isKill), TRI);
           AddDReg(MIB, SrcReg, ARM::gsub_1, 0, TRI);
           MIB.addFrameIndex(FI).addReg(0).addImm(0).addMemOperand(MMO)
@@ -1027,7 +1029,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
         } else {
           // Fallback to STM instruction, which has existed since the dawn of
           // time.
-          MachineInstrBuilder MIB = BuildMI(MBB, I, DebugLoc(), get(ARM::STMIA))
+          MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::STMIA))
                                         .addFrameIndex(FI)
                                         .addMemOperand(MMO)
                                         .add(predOps(ARMCC::AL));
@@ -1041,14 +1043,14 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
       if (ARM::DPairRegClass.hasSubClassEq(RC)) {
         // Use aligned spills if the stack can be realigned.
         if (Align >= 16 && getRegisterInfo().canRealignStack(MF)) {
-          BuildMI(MBB, I, DebugLoc(), get(ARM::VST1q64))
+          BuildMI(MBB, I, DL, get(ARM::VST1q64))
               .addFrameIndex(FI)
               .addImm(16)
               .addReg(SrcReg, getKillRegState(isKill))
               .addMemOperand(MMO)
               .add(predOps(ARMCC::AL));
         } else {
-          BuildMI(MBB, I, DebugLoc(), get(ARM::VSTMQIA))
+          BuildMI(MBB, I, DL, get(ARM::VSTMQIA))
               .addReg(SrcReg, getKillRegState(isKill))
               .addFrameIndex(FI)
               .addMemOperand(MMO)
@@ -1061,15 +1063,14 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
       if (ARM::DTripleRegClass.hasSubClassEq(RC)) {
         // Use aligned spills if the stack can be realigned.
         if (Align >= 16 && getRegisterInfo().canRealignStack(MF)) {
-          BuildMI(MBB, I, DebugLoc(), get(ARM::VST1d64TPseudo))
+          BuildMI(MBB, I, DL, get(ARM::VST1d64TPseudo))
               .addFrameIndex(FI)
               .addImm(16)
               .addReg(SrcReg, getKillRegState(isKill))
               .addMemOperand(MMO)
               .add(predOps(ARMCC::AL));
         } else {
-          MachineInstrBuilder MIB = BuildMI(MBB, I, DebugLoc(),
-                                            get(ARM::VSTMDIA))
+          MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::VSTMDIA))
                                         .addFrameIndex(FI)
                                         .add(predOps(ARMCC::AL))
                                         .addMemOperand(MMO);
@@ -1085,15 +1086,14 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
         if (Align >= 16 && getRegisterInfo().canRealignStack(MF)) {
           // FIXME: It's possible to only store part of the QQ register if the
           // spilled def has a sub-register index.
-          BuildMI(MBB, I, DebugLoc(), get(ARM::VST1d64QPseudo))
+          BuildMI(MBB, I, DL, get(ARM::VST1d64QPseudo))
               .addFrameIndex(FI)
               .addImm(16)
               .addReg(SrcReg, getKillRegState(isKill))
               .addMemOperand(MMO)
               .add(predOps(ARMCC::AL));
         } else {
-          MachineInstrBuilder MIB = BuildMI(MBB, I, DebugLoc(),
-                                            get(ARM::VSTMDIA))
+          MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::VSTMDIA))
                                         .addFrameIndex(FI)
                                         .add(predOps(ARMCC::AL))
                                         .addMemOperand(MMO);
@@ -1107,7 +1107,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
       break;
     case 64:
       if (ARM::QQQQPRRegClass.hasSubClassEq(RC)) {
-        MachineInstrBuilder MIB = BuildMI(MBB, I, DebugLoc(), get(ARM::VSTMDIA))
+        MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::VSTMDIA))
                                       .addFrameIndex(FI)
                                       .add(predOps(ARMCC::AL))
                                       .addMemOperand(MMO);

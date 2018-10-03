@@ -61,13 +61,13 @@ public:
 
   void notifyInstructionIssued(
       const InstRef &IR,
-      llvm::ArrayRef<std::pair<ResourceRef, ResourceCycles>> Used);
-  void notifyInstructionExecuted(const InstRef &IR);
-  void notifyInstructionReady(const InstRef &IR);
-  void notifyResourceAvailable(const ResourceRef &RR);
+      llvm::ArrayRef<std::pair<ResourceRef, ResourceCycles>> Used) const;
+  void notifyInstructionExecuted(const InstRef &IR) const;
+  void notifyInstructionReady(const InstRef &IR) const;
+  void notifyResourceAvailable(const ResourceRef &RR) const;
 
   // Notify listeners that buffered resources have been consumed or freed.
-  void notifyReservedOrReleasedBuffers(const InstRef &IR, bool Reserved);
+  void notifyReservedOrReleasedBuffers(const InstRef &IR, bool Reserved) const;
 };
 
 } // namespace mca

@@ -16,9 +16,12 @@ _start:
  bx lr
  .space 0x1000
 // CHECK1: Disassembly of section .text:
-// CHECK1-NEXT: _start:
-// CHECK1-NEXT:    11000:       70 47   bx      lr
-// CHECK1-NEXT:    11002:       00 00   movs    r0, r0
+// CHECK1-NEXT:_start:
+// CHECK1-NEXT:   11000:       70 47   bx      lr
+// CHECK1-EMPTY:
+// CHECK-NEXT:$d.1:
+// CHECK-NEXT:  11002:       00 00           .short  0x0000
+
 
 // CHECK2: __Thumbv7ABSLongThunk__start:
 // CHECK2-NEXT:    12004:       fe f7 fc bf     b.w     #-4104 <_start>

@@ -85,7 +85,7 @@ const FunctionDecl *SVal::getAsFunctionDecl() const {
 SymbolRef SVal::getAsLocSymbol(bool IncludeBaseRegions) const {
   // FIXME: should we consider SymbolRef wrapped in CodeTextRegion?
   if (Optional<nonloc::LocAsInteger> X = getAs<nonloc::LocAsInteger>())
-    return X->getLoc().getAsLocSymbol();
+    return X->getLoc().getAsLocSymbol(IncludeBaseRegions);
 
   if (Optional<loc::MemRegionVal> X = getAs<loc::MemRegionVal>()) {
     const MemRegion *R = X->getRegion();

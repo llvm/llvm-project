@@ -19,6 +19,11 @@ namespace driver {
 namespace tools {
 
 namespace AMDGCN {
+  // Construct command for creating HIP fatbin.
+  void constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
+                  StringRef OutputFileName, const InputInfoList &Inputs,
+                  const llvm::opt::ArgList &TCArgs, const Tool& T);
+
 // Runs llvm-link/opt/llc/lld, which links multiple LLVM bitcode, together with
 // device library, then compiles it to ISA in a shared object.
 class LLVM_LIBRARY_VISIBILITY Linker : public Tool {

@@ -177,6 +177,16 @@ MachineRegisterInfo::createVirtualRegister(const TargetRegisterClass *RegClass,
   return Reg;
 }
 
+unsigned MachineRegisterInfo::cloneVirtualRegister(unsigned VReg,
+                                                   StringRef Name) {
+  unsigned Reg = createIncompleteVirtualRegister(Name);
+  VRegInfo[Reg].first = VRegInfo[VReg].first;
+  setType(Reg, getType(VReg));
+  if (TheDelegate)
+    TheDelegate->MRI_NoteNewVirtualRegister(Reg);
+  return Reg;
+}
+
 void MachineRegisterInfo::setType(unsigned VReg, LLT Ty) {
   // Check that VReg doesn't have a class.
   assert((getRegClassOrRegBank(VReg).isNull() ||
