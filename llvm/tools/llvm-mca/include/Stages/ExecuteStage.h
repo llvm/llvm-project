@@ -34,6 +34,9 @@ class ExecuteStage final : public Stage {
   // instructions to the underlying pipelines.
   llvm::Error issueReadyInstructions();
 
+  // Used to notify instructions eliminated at register renaming stage.
+  llvm::Error handleInstructionEliminated(InstRef &IR);
+
   ExecuteStage(const ExecuteStage &Other) = delete;
   ExecuteStage &operator=(const ExecuteStage &Other) = delete;
 

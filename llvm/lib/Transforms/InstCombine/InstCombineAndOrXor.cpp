@@ -1535,7 +1535,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
   if (SimplifyAssociativeOrCommutative(I))
     return &I;
 
-  if (Instruction *X = foldShuffledBinop(I))
+  if (Instruction *X = foldVectorBinop(I))
     return X;
 
   // See if we can simplify any instructions used by the instruction whose sole
@@ -2134,7 +2134,7 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   if (SimplifyAssociativeOrCommutative(I))
     return &I;
 
-  if (Instruction *X = foldShuffledBinop(I))
+  if (Instruction *X = foldVectorBinop(I))
     return X;
 
   // See if we can simplify any instructions used by the instruction whose sole
@@ -2602,7 +2602,7 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   if (SimplifyAssociativeOrCommutative(I))
     return &I;
 
-  if (Instruction *X = foldShuffledBinop(I))
+  if (Instruction *X = foldVectorBinop(I))
     return X;
 
   if (Instruction *NewXor = foldXorToXor(I, Builder))

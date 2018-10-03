@@ -2534,30 +2534,30 @@ class DIGlobalVariable : public DIVariable {
         IsLocalToUnit(IsLocalToUnit), IsDefinition(IsDefinition) {}
   ~DIGlobalVariable() = default;
 
-  static DIGlobalVariable *getImpl(LLVMContext &Context, DIScope *Scope,
-                                   StringRef Name, StringRef LinkageName,
-                                   DIFile *File, unsigned Line, DITypeRef Type,
-                                   bool IsLocalToUnit, bool IsDefinition,
-                                   DIDerivedType *StaticDataMemberDeclaration,
-                                   uint32_t AlignInBits, StorageType Storage,
-                                   bool ShouldCreate = true) {
+  static DIGlobalVariable *
+  getImpl(LLVMContext &Context, DIScope *Scope, StringRef Name,
+          StringRef LinkageName, DIFile *File, unsigned Line, DITypeRef Type,
+          bool IsLocalToUnit, bool IsDefinition,
+          DIDerivedType *StaticDataMemberDeclaration, MDTuple *TemplateParams,
+          uint32_t AlignInBits, StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
                    getCanonicalMDString(Context, LinkageName), File, Line, Type,
                    IsLocalToUnit, IsDefinition, StaticDataMemberDeclaration,
-                   AlignInBits, Storage, ShouldCreate);
+                   cast_or_null<Metadata>(TemplateParams), AlignInBits, Storage,
+                   ShouldCreate);
   }
   static DIGlobalVariable *
   getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
           MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,
           bool IsLocalToUnit, bool IsDefinition,
-          Metadata *StaticDataMemberDeclaration, uint32_t AlignInBits,
-          StorageType Storage, bool ShouldCreate = true);
+          Metadata *StaticDataMemberDeclaration, Metadata *TemplateParams,
+          uint32_t AlignInBits, StorageType Storage, bool ShouldCreate = true);
 
   TempDIGlobalVariable cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getLinkageName(),
                         getFile(), getLine(), getType(), isLocalToUnit(),
                         isDefinition(), getStaticDataMemberDeclaration(),
-                        getAlignInBits());
+                        getTemplateParams(), getAlignInBits());
   }
 
 public:
@@ -2566,17 +2566,19 @@ public:
                      DIFile *File, unsigned Line, DITypeRef Type,
                      bool IsLocalToUnit, bool IsDefinition,
                      DIDerivedType *StaticDataMemberDeclaration,
-                     uint32_t AlignInBits),
+                     MDTuple *TemplateParams, uint32_t AlignInBits),
                     (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
-                     IsDefinition, StaticDataMemberDeclaration, AlignInBits))
+                     IsDefinition, StaticDataMemberDeclaration, TemplateParams,
+                     AlignInBits))
   DEFINE_MDNODE_GET(DIGlobalVariable,
                     (Metadata * Scope, MDString *Name, MDString *LinkageName,
                      Metadata *File, unsigned Line, Metadata *Type,
                      bool IsLocalToUnit, bool IsDefinition,
                      Metadata *StaticDataMemberDeclaration,
-                     uint32_t AlignInBits),
+                     Metadata *TemplateParams, uint32_t AlignInBits),
                     (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
-                     IsDefinition, StaticDataMemberDeclaration, AlignInBits))
+                     IsDefinition, StaticDataMemberDeclaration, TemplateParams,
+                     AlignInBits))
 
   TempDIGlobalVariable clone() const { return cloneImpl(); }
 
@@ -2590,6 +2592,8 @@ public:
 
   MDString *getRawLinkageName() const { return getOperandAs<MDString>(5); }
   Metadata *getRawStaticDataMemberDeclaration() const { return getOperand(6); }
+  Metadata *getRawTemplateParams() const { return getOperand(7); }
+  MDTuple *getTemplateParams() const { return getOperandAs<MDTuple>(7); }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIGlobalVariableKind;

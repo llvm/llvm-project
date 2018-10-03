@@ -543,15 +543,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FGETSIGN, MVT::i64, Custom);
     setOperationAction(ISD::FGETSIGN, MVT::i32, Custom);
 
-    // Expand FP immediates into loads from the stack, except for the special
-    // cases we handle.
-    addLegalFPImmediate(APFloat(+0.0)); // xorpd
-    addLegalFPImmediate(APFloat(+0.0f)); // xorps
-  } else if (UseX87 && X86ScalarSSEf32) {
+  } else if (!useSoftFloat() && X86ScalarSSEf32 && (UseX87 || Is64Bit)) {
     // Use SSE for f32, x87 for f64.
     // Set up the FP register classes.
     addRegisterClass(MVT::f32, &X86::FR32RegClass);
-    addRegisterClass(MVT::f64, &X86::RFP64RegClass);
+    if (UseX87)
+      addRegisterClass(MVT::f64, &X86::RFP64RegClass);
 
     // Use ANDPS to simulate FABS.
     setOperationAction(ISD::FABS , MVT::f32, Custom);
@@ -559,10 +556,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // Use XORP to simulate FNEG.
     setOperationAction(ISD::FNEG , MVT::f32, Custom);
 
-    setOperationAction(ISD::UNDEF,     MVT::f64, Expand);
+    if (UseX87)
+      setOperationAction(ISD::UNDEF, MVT::f64, Expand);
 
     // Use ANDPS and ORPS to simulate FCOPYSIGN.
-    setOperationAction(ISD::FCOPYSIGN, MVT::f64, Expand);
+    if (UseX87)
+      setOperationAction(ISD::FCOPYSIGN, MVT::f64, Expand);
     setOperationAction(ISD::FCOPYSIGN, MVT::f32, Custom);
 
     // We don't support sin/cos/fmod
@@ -570,17 +569,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FCOS   , MVT::f32, Expand);
     setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
 
-    // Special cases we handle for FP constants.
-    addLegalFPImmediate(APFloat(+0.0f)); // xorps
-    addLegalFPImmediate(APFloat(+0.0)); // FLD0
-    addLegalFPImmediate(APFloat(+1.0)); // FLD1
-    addLegalFPImmediate(APFloat(-0.0)); // FLD0/FCHS
-    addLegalFPImmediate(APFloat(-1.0)); // FLD1/FCHS
-
-    // Always expand sin/cos functions even though x87 has an instruction.
-    setOperationAction(ISD::FSIN   , MVT::f64, Expand);
-    setOperationAction(ISD::FCOS   , MVT::f64, Expand);
-    setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
+    if (UseX87) {
+      // Always expand sin/cos functions even though x87 has an instruction.
+      setOperationAction(ISD::FSIN, MVT::f64, Expand);
+      setOperationAction(ISD::FCOS, MVT::f64, Expand);
+      setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
+    }
   } else if (UseX87) {
     // f32 and f64 in x87.
     // Set up the FP register classes.
@@ -596,14 +590,27 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FCOS   , VT, Expand);
       setOperationAction(ISD::FSINCOS, VT, Expand);
     }
-    addLegalFPImmediate(APFloat(+0.0)); // FLD0
-    addLegalFPImmediate(APFloat(+1.0)); // FLD1
-    addLegalFPImmediate(APFloat(-0.0)); // FLD0/FCHS
-    addLegalFPImmediate(APFloat(-1.0)); // FLD1/FCHS
-    addLegalFPImmediate(APFloat(+0.0f)); // FLD0
-    addLegalFPImmediate(APFloat(+1.0f)); // FLD1
-    addLegalFPImmediate(APFloat(-0.0f)); // FLD0/FCHS
-    addLegalFPImmediate(APFloat(-1.0f)); // FLD1/FCHS
+  }
+
+  // Expand FP32 immediates into loads from the stack, save special cases.
+  if (isTypeLegal(MVT::f32)) {
+    if (UseX87 && (getRegClassFor(MVT::f32) == &X86::RFP32RegClass)) {
+      addLegalFPImmediate(APFloat(+0.0f)); // FLD0
+      addLegalFPImmediate(APFloat(+1.0f)); // FLD1
+      addLegalFPImmediate(APFloat(-0.0f)); // FLD0/FCHS
+      addLegalFPImmediate(APFloat(-1.0f)); // FLD1/FCHS
+    } else // SSE immediates.
+      addLegalFPImmediate(APFloat(+0.0f)); // xorps
+  }
+  // Expand FP64 immediates into loads from the stack, save special cases.
+  if (isTypeLegal(MVT::f64)) {
+    if (UseX87 && getRegClassFor(MVT::f64) == &X86::RFP64RegClass) {
+      addLegalFPImmediate(APFloat(+0.0)); // FLD0
+      addLegalFPImmediate(APFloat(+1.0)); // FLD1
+      addLegalFPImmediate(APFloat(-0.0)); // FLD0/FCHS
+      addLegalFPImmediate(APFloat(-1.0)); // FLD1/FCHS
+    } else // SSE immediates.
+      addLegalFPImmediate(APFloat(+0.0)); // xorpd
   }
 
   // We don't support FMA.
@@ -1936,7 +1943,8 @@ X86TargetLowering::getOptimalMemOpType(uint64_t Size,
       if (Subtarget.hasSSE2())
         return MVT::v16i8;
       // TODO: Can SSE1 handle a byte vector?
-      if (Subtarget.hasSSE1())
+      // If we have SSE1 registers we should be able to use them.
+      if (Subtarget.hasSSE1() && (Subtarget.is64Bit() || Subtarget.hasX87()))
         return MVT::v4f32;
     } else if ((!IsMemset || ZeroMemset) && !MemcpyStrSrc && Size >= 8 &&
                !Subtarget.is64Bit() && Subtarget.hasSSE2()) {
@@ -19335,16 +19343,6 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  if (VT == MVT::v4i1 || VT == MVT::v2i1) {
-    SDValue zeroConst = DAG.getIntPtrConstant(0, DL);
-    Op1 = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, MVT::v8i1,
-                      DAG.getUNDEF(MVT::v8i1), Op1, zeroConst);
-    Op2 = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, MVT::v8i1,
-                      DAG.getUNDEF(MVT::v8i1), Op2, zeroConst);
-    SDValue newSelect = DAG.getSelect(DL, MVT::v8i1, Cond, Op1, Op2);
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, newSelect, zeroConst);
-  }
-
   if (Cond.getOpcode() == ISD::SETCC) {
     if (SDValue NewCond = LowerSETCC(Cond, DAG)) {
       Cond = NewCond;
@@ -27455,19 +27453,17 @@ static bool isCMOVPseudo(MachineInstr &MI) {
   case X86::CMOV_RFP32:
   case X86::CMOV_RFP64:
   case X86::CMOV_RFP80:
-  case X86::CMOV_V2F64:
-  case X86::CMOV_V2I64:
-  case X86::CMOV_V4F32:
-  case X86::CMOV_V4F64:
-  case X86::CMOV_V4I64:
-  case X86::CMOV_V16F32:
-  case X86::CMOV_V8F32:
-  case X86::CMOV_V8F64:
-  case X86::CMOV_V8I64:
-  case X86::CMOV_V8I1:
-  case X86::CMOV_V16I1:
-  case X86::CMOV_V32I1:
-  case X86::CMOV_V64I1:
+  case X86::CMOV_VR128:
+  case X86::CMOV_VR128X:
+  case X86::CMOV_VR256:
+  case X86::CMOV_VR256X:
+  case X86::CMOV_VR512:
+  case X86::CMOV_VK2:
+  case X86::CMOV_VK4:
+  case X86::CMOV_VK8:
+  case X86::CMOV_VK16:
+  case X86::CMOV_VK32:
+  case X86::CMOV_VK64:
     return true;
 
   default:
@@ -29051,26 +29047,23 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return EmitLoweredTLSCall(MI, BB);
   case X86::CMOV_FR32:
   case X86::CMOV_FR64:
-  case X86::CMOV_F128:
   case X86::CMOV_GR8:
   case X86::CMOV_GR16:
   case X86::CMOV_GR32:
   case X86::CMOV_RFP32:
   case X86::CMOV_RFP64:
   case X86::CMOV_RFP80:
-  case X86::CMOV_V2F64:
-  case X86::CMOV_V2I64:
-  case X86::CMOV_V4F32:
-  case X86::CMOV_V4F64:
-  case X86::CMOV_V4I64:
-  case X86::CMOV_V16F32:
-  case X86::CMOV_V8F32:
-  case X86::CMOV_V8F64:
-  case X86::CMOV_V8I64:
-  case X86::CMOV_V8I1:
-  case X86::CMOV_V16I1:
-  case X86::CMOV_V32I1:
-  case X86::CMOV_V64I1:
+  case X86::CMOV_VR128:
+  case X86::CMOV_VR128X:
+  case X86::CMOV_VR256:
+  case X86::CMOV_VR256X:
+  case X86::CMOV_VR512:
+  case X86::CMOV_VK2:
+  case X86::CMOV_VK4:
+  case X86::CMOV_VK8:
+  case X86::CMOV_VK16:
+  case X86::CMOV_VK32:
+  case X86::CMOV_VK64:
     return EmitLoweredSelect(MI, BB);
 
   case X86::RDFLAGS32:

@@ -430,7 +430,6 @@ struct LoopInterchange : public LoopPass {
   LoopInfo *LI = nullptr;
   DependenceInfo *DI = nullptr;
   DominatorTree *DT = nullptr;
-  bool PreserveLCSSA;
 
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter *ORE;

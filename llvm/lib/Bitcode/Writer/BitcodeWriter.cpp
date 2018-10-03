@@ -1745,7 +1745,7 @@ void ModuleBitcodeWriter::writeDITemplateValueParameter(
 void ModuleBitcodeWriter::writeDIGlobalVariable(
     const DIGlobalVariable *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
-  const uint64_t Version = 1 << 1;
+  const uint64_t Version = 2 << 1;
   Record.push_back((uint64_t)N->isDistinct() | Version);
   Record.push_back(VE.getMetadataOrNullID(N->getScope()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
@@ -1755,8 +1755,8 @@ void ModuleBitcodeWriter::writeDIGlobalVariable(
   Record.push_back(VE.getMetadataOrNullID(N->getType()));
   Record.push_back(N->isLocalToUnit());
   Record.push_back(N->isDefinition());
-  Record.push_back(/* expr */ 0);
   Record.push_back(VE.getMetadataOrNullID(N->getStaticDataMemberDeclaration()));
+  Record.push_back(VE.getMetadataOrNullID(N->getTemplateParams()));
   Record.push_back(N->getAlignInBits());
 
   Stream.EmitRecord(bitc::METADATA_GLOBAL_VAR, Record, Abbrev);
