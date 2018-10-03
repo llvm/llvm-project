@@ -5983,11 +5983,18 @@ std::pair<SDValue, SDValue> SITargetLowering::splitBufferOffsets(
   if (C1) {
     unsigned ImmOffset = C1->getZExtValue();
     // If the immediate value is too big for the immoffset field, put the value
-    // mod 4096 into the immoffset field so that the value that is copied/added
+    // and -4096 into the immoffset field so that the value that is copied/added
     // for the voffset field is a multiple of 4096, and it stands more chance
     // of being CSEd with the copy/add for another similar load/store.
+    // However, do not do that rounding down to a multiple of 4096 if that is a
+    // negative number, as it appears to be illegal to have a negative offset
+    // in the vgpr, even if adding the immediate offset makes it positive.
     unsigned Overflow = ImmOffset & ~MaxImm;
     ImmOffset -= Overflow;
+    if ((int32_t)Overflow < 0) {
+      Overflow += ImmOffset;
+      ImmOffset = 0;
+    }
     C1 = cast<ConstantSDNode>(DAG.getConstant(ImmOffset, DL, MVT::i32));
     if (Overflow) {
       auto OverflowVal = DAG.getConstant(Overflow, DL, MVT::i32);

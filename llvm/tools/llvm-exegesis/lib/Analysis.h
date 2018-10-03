@@ -49,11 +49,12 @@ private:
   using ClusterId = InstructionBenchmarkClustering::ClusterId;
 
   // An llvm::MCSchedClassDesc augmented with some additional data.
-  struct SchedClass {
-    SchedClass(const llvm::MCSchedClassDesc &SD,
-               const llvm::MCSubtargetInfo &STI);
+  struct ResolvedSchedClass {
+    ResolvedSchedClass(const llvm::MCSubtargetInfo &STI,
+                       unsigned ResolvedSchedClassId, bool WasVariant);
 
     const llvm::MCSchedClassDesc *const SCDesc;
+    const bool WasVariant; // Whether the original class was variant.
     const llvm::SmallVector<llvm::MCWriteProcResEntry, 8>
         NonRedundantWriteProcRes;
     const std::vector<std::pair<uint16_t, float>> IdealizedProcResPressure;
@@ -75,7 +76,8 @@ private:
 
     // Returns true if the cluster representative measurements match that of SC.
     bool
-    measurementsMatch(const llvm::MCSubtargetInfo &STI, const SchedClass &SC,
+    measurementsMatch(const llvm::MCSubtargetInfo &STI,
+                      const ResolvedSchedClass &SC,
                       const InstructionBenchmarkClustering &Clustering) const;
 
     void addPoint(size_t PointId,
@@ -92,15 +94,22 @@ private:
 
   void
   printSchedClassClustersHtml(const std::vector<SchedClassCluster> &Clusters,
-                              const SchedClass &SC,
+                              const ResolvedSchedClass &SC,
                               llvm::raw_ostream &OS) const;
-  void printSchedClassDescHtml(const SchedClass &SC,
+  void printSchedClassDescHtml(const ResolvedSchedClass &SC,
                                llvm::raw_ostream &OS) const;
 
-  // Builds a map of Sched Class -> indices of points that belong to the sched
-  // class.
-  std::unordered_map<unsigned, std::vector<size_t>>
-  makePointsPerSchedClass() const;
+  // A pair of (Sched Class, indices of points that belong to the sched
+  // class).
+  struct ResolvedSchedClassAndPoints {
+    explicit ResolvedSchedClassAndPoints(ResolvedSchedClass &&RSC);
+
+    ResolvedSchedClass RSC;
+    std::vector<size_t> PointIds;
+  };
+
+  // Builds a list of ResolvedSchedClassAndPoints.
+  std::vector<ResolvedSchedClassAndPoints> makePointsPerSchedClass() const;
 
   template <typename EscapeTag, EscapeTag Tag>
   void writeSnippet(llvm::raw_ostream &OS, llvm::ArrayRef<uint8_t> Bytes,

@@ -104,7 +104,7 @@ PreferredTuple ChoosePreferredUse(PreferredTuple &CurrentUse,
     return {TyForCandidate, OpcodeForCandidate, MIForCandidate};
   }
   return CurrentUse;
-};
+}
 } // end anonymous namespace
 
 bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
