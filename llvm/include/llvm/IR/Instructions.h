@@ -735,6 +735,8 @@ public:
     return static_cast<BinOp>(getSubclassDataFromInstruction() >> 5);
   }
 
+  static StringRef getOperationName(BinOp Op);
+
   void setOperation(BinOp Operation) {
     unsigned short SubclassData = getSubclassDataFromInstruction();
     setInstructionSubclassData((SubclassData & 31) |

@@ -1,4 +1,5 @@
 ; RUN: opt -hotcoldsplit -S < %s
+; RUN: opt -passes=hotcoldsplit -S < %s
 
 ; Make sure this compiles. This test used to fail with an invalid phi node: the
 ; two predecessors were outlined and the SSA representation was invalid.

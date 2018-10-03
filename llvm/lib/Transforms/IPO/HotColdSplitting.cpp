@@ -44,6 +44,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/HotColdSplitting.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -110,6 +111,18 @@ bool blockEndsInUnreachable(const BasicBlock &BB) {
   return succ_empty(&BB);
 }
 
+static bool exceptionHandlingFunctions(const CallInst *CI) {
+  auto F = CI->getCalledFunction();
+  if (!F)
+    return false;
+  auto FName = F->getName();
+  return FName == "__cxa_begin_catch" ||
+         FName == "__cxa_free_exception" ||
+         FName == "__cxa_allocate_exception" ||
+         FName == "__cxa_begin_catch" ||
+         FName == "__cxa_end_catch";
+}
+
 static
 bool unlikelyExecuted(const BasicBlock &BB) {
   if (blockEndsInUnreachable(BB))
@@ -121,7 +134,8 @@ bool unlikelyExecuted(const BasicBlock &BB) {
     if (const CallInst *CI = dyn_cast<CallInst>(&I)) {
       // The block is cold if it calls functions tagged as cold or noreturn.
       if (CI->hasFnAttr(Attribute::Cold) ||
-          CI->hasFnAttr(Attribute::NoReturn))
+          CI->hasFnAttr(Attribute::NoReturn) ||
+          exceptionHandlingFunctions(CI))
         return true;
 
       // Assume that inline assembly is hot code.
@@ -407,6 +421,38 @@ bool HotColdSplittingLegacyPass::runOnModule(Module &M) {
   };
 
   return HotColdSplitting(PSI, GBFI, GTTI, &GetORE).run(M);
+}
+
+PreservedAnalyses
+HotColdSplittingPass::run(Module &M, ModuleAnalysisManager &AM) {
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  std::function<AssumptionCache &(Function &)> GetAssumptionCache =
+      [&FAM](Function &F) -> AssumptionCache & {
+    return FAM.getResult<AssumptionAnalysis>(F);
+  };
+
+  auto GBFI = [&FAM](Function &F) {
+    return &FAM.getResult<BlockFrequencyAnalysis>(F);
+  };
+
+  std::function<TargetTransformInfo &(Function &)> GTTI =
+      [&FAM](Function &F) -> TargetTransformInfo & {
+    return FAM.getResult<TargetIRAnalysis>(F);
+  };
+
+  std::unique_ptr<OptimizationRemarkEmitter> ORE;
+  std::function<OptimizationRemarkEmitter &(Function &)> GetORE =
+      [&ORE](Function &F) -> OptimizationRemarkEmitter & {
+    ORE.reset(new OptimizationRemarkEmitter(&F));
+    return *ORE.get();
+  };
+
+  ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
+
+  if (HotColdSplitting(PSI, GBFI, GTTI, &GetORE).run(M))
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
 }
 
 char HotColdSplittingLegacyPass::ID = 0;
