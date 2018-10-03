@@ -14,9 +14,10 @@
 #ifndef LLVM_CLANG_C_INDEXSTORE_INDEXSTORE_H
 #define LLVM_CLANG_C_INDEXSTORE_INDEXSTORE_H
 
-#include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
-#include <ctime>
+#include <stdint.h>
+#include <time.h>
 
 /**
  * \brief The version constants for the Index Store C API.
@@ -131,7 +132,7 @@ indexstore_unit_event_get_kind(indexstore_unit_event_t);
 INDEXSTORE_PUBLIC indexstore_string_ref_t
 indexstore_unit_event_get_unit_name(indexstore_unit_event_t);
 
-INDEXSTORE_PUBLIC timespec
+INDEXSTORE_PUBLIC struct timespec
 indexstore_unit_event_get_modification_time(indexstore_unit_event_t);
 
 #if INDEXSTORE_HAS_BLOCKS
