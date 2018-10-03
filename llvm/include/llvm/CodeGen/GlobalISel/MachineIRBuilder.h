@@ -60,11 +60,6 @@ struct MachineIRBuilderState {
 class MachineIRBuilderBase {
 
   MachineIRBuilderState State;
-  const TargetInstrInfo &getTII() {
-    assert(State.TII && "TargetInstrInfo is not set");
-    return *State.TII;
-  }
-
   void validateTruncExt(unsigned Dst, unsigned Src, bool IsExtend);
 
 protected:
@@ -106,6 +101,11 @@ public:
   }
 
   MachineIRBuilderBase(const MachineIRBuilderState &BState) : State(BState) {}
+
+  const TargetInstrInfo &getTII() {
+    assert(State.TII && "TargetInstrInfo is not set");
+    return *State.TII;
+  }
 
   /// Getter for the function we currently build.
   MachineFunction &getMF() {

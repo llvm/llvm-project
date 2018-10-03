@@ -25,6 +25,34 @@
 
 using namespace llvm;
 
+namespace {
+/// This class acts as the glue the joins the CombinerHelper to the overall
+/// Combine algorithm. The CombinerHelper is intended to report the
+/// modifications it makes to the MIR to the CombinerChangeObserver and the
+/// observer subclass will act on these events. In this case, instruction
+/// erasure will cancel any future visits to the erased instruction and
+/// instruction creation will schedule that instruction for a future visit.
+/// Other Combiner implementations may require more complex behaviour from
+/// their CombinerChangeObserver subclass.
+class WorkListMaintainer : public CombinerChangeObserver {
+  using WorkListTy = GISelWorkList<512>;
+  WorkListTy &WorkList;
+
+public:
+  WorkListMaintainer(WorkListTy &WorkList) : WorkList(WorkList) {}
+  virtual ~WorkListMaintainer() {}
+
+  void erasedInstr(MachineInstr &MI) override {
+    LLVM_DEBUG(dbgs() << "Erased: "; MI.print(dbgs()); dbgs() << "\n");
+    WorkList.remove(&MI);
+  }
+  void createdInstr(MachineInstr &MI) override {
+    LLVM_DEBUG(dbgs() << "Created: "; MI.print(dbgs()); dbgs() << "\n");
+    WorkList.insert(&MI);
+  }
+};
+}
+
 Combiner::Combiner(CombinerInfo &Info, const TargetPassConfig *TPC)
     : CInfo(Info), TPC(TPC) {
   (void)this->TPC; // FIXME: Remove when used.
@@ -53,6 +81,7 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF) {
     // down RPOT.
     Changed = false;
     GISelWorkList<512> WorkList;
+    WorkListMaintainer Observer(WorkList);
     for (MachineBasicBlock *MBB : post_order(&MF)) {
       if (MBB->empty())
         continue;
@@ -72,7 +101,7 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF) {
     while (!WorkList.empty()) {
       MachineInstr *CurrInst = WorkList.pop_back_val();
       LLVM_DEBUG(dbgs() << "Try combining " << *CurrInst << "\n";);
-      Changed |= CInfo.combine(*CurrInst, Builder);
+      Changed |= CInfo.combine(Observer, *CurrInst, Builder);
     }
     MFChanged |= Changed;
   } while (Changed);
