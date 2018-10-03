@@ -1,4 +1,5 @@
 ; RUN: opt -hotcoldsplit -S < %s | FileCheck %s
+; RUN: opt -passes=hotcoldsplit -S < %s | FileCheck %s
 
 ; Outlined function is called from a basic block named codeRepl
 ; CHECK: codeRepl:
