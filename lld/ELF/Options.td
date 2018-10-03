@@ -352,6 +352,10 @@ defm warn_common: B<"warn-common",
     "Warn about duplicate common symbols",
     "Do not warn about duplicate common symbols (default)">;
 
+defm warn_ifunc_textrel: B<"warn-ifunc-textrel",
+    "Warn about using ifunc symbols with text relocations",
+    "Do not warn about using ifunc symbols with text relocations (default)">;
+
 defm warn_symbol_ordering: B<"warn-symbol-ordering",
     "Warn about problems with the symbol ordering file (default)",
     "Do not warn about problems with the symbol ordering file">;

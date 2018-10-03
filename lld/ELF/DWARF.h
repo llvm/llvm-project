@@ -42,6 +42,7 @@ public:
   StringRef getFileName() const override { return ""; }
   StringRef getAbbrevSection() const override { return AbbrevSection; }
   StringRef getStringSection() const override { return StrSection; }
+  StringRef getLineStringSection() const override { return LineStringSection; }
 
   StringRef getGnuPubNamesSection() const override {
     return GnuPubNamesSection;
@@ -72,6 +73,7 @@ private:
   StringRef GnuPubNamesSection;
   StringRef GnuPubTypesSection;
   StringRef StrSection;
+  StringRef LineStringSection;
 };
 
 } // namespace elf
