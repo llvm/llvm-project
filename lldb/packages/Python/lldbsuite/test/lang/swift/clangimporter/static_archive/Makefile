@@ -1,15 +1,14 @@
 LEVEL = ../../../../make
 SRCDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 SWIFT_OBJC_INTEROP := 1
-SWIFT_SOURCES = Foo.swift Bar.swift
 # This Makefile overwrites the default rules.
-EXE=None
+USESWIFTDRIVER := 0
+EXE := a.out
+
+all: a.out
 
 # This test builds an Objective-C main program that imports two Swift
 # .dylibs with conflicting ClangImporter search paths.
-
-first: a.out.dSYM
-a.out.dSYM: a.out
 
 include $(LEVEL)/Makefile.rules
 

@@ -20,7 +20,6 @@ import unittest2
 class TestSwiftRemoteASTImport(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-    NO_DEBUG_INFO_TESTCASE = True
     
     def setUp(self):
         TestBase.setUp(self)
@@ -44,7 +43,7 @@ class TestSwiftRemoteASTImport(TestBase):
         self.expect("expr -d no-dynamic-values -- input",
                     substrs=['(LibraryProtocol) $R0'])
         self.expect("expr -d run-target -- input",
-                    substrs=['(main.FromMainModule) $R2'])
+                    substrs=['(a.FromMainModule) $R2'])
         
 if __name__ == '__main__':
     import atexit

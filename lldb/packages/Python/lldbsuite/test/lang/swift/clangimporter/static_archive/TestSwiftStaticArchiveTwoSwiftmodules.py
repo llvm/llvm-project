@@ -27,7 +27,6 @@ class TestSwiftStaticArchiveTwoSwiftmodules(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
-    @skipIf(debug_info=no_match(["dwarf"]))
     @add_test_categories(["swiftpr"])
     def test(self):
         self.build()

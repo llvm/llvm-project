@@ -479,12 +479,20 @@ endif
 #----------------------------------------------------------------------
 ifneq "$(strip $(SWIFT_SOURCES))" ""
 	OBJECTS +=$(strip $(SWIFT_SOURCES:.swift=.o))
+	USESWIFTDRIVER = 1
+endif
+
+ifneq "$(strip $(DYLIB_SWIFT_SOURCES))" ""
+	DYLIB_OBJECTS +=$(strip $(DYLIB_OBJC_SOURCES:.swift=.o))
+	USESWIFTDRIVER = 1
+endif
+
+ifeq "$(USESWIFTDRIVER)" "1"
 	LDFLAGS +=-L"$(SWIFTLIBS)"
 	ifneq "$(TRIPLE)" ""
 		SWIFTFLAGS += -target $(TRIPLE)
 	endif
 	SWIFTFLAGS += -sdk "$(SWIFTSDKROOT)"
-	USESWIFTDRIVER = 1
 endif
 
 #----------------------------------------------------------------------
@@ -594,7 +602,16 @@ endif
 #----------------------------------------------------------------------
 ifeq "$(USESWIFTDRIVER)" "1"
 #----------------------------------------------------------------------
+ifeq "$(DYLIB_NAME)" ""
 MODULENAME=$(shell basename $(EXE) .out)
+SWIFT_OBJECTS=$(patsubst %.swift,%.o,$(SWIFT_SOURCES))
+else
+EXE = $(DYLIB_FILENAME)
+MODULENAME=$(DYLIB_NAME)
+SWIFT_OBJECTS=$(patsubst %.swift,%.o,$(DYLIB_SWIFT_SOURCES))
+DYLIB_OBJECTS=$(SWIFT_OBJECTS)
+endif
+
 VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES))
 %.o: %.swift
 	@echo "### Compiling" $<
@@ -605,28 +622,29 @@ VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES))
 	  -o $(BUILDDIR)/$@
 
 ifeq "$(OS)" "Darwin"
-$(EXE): $(EXE).swiftmodule $(patsubst %.swift,%.o,$(SWIFT_SOURCES))
+$(EXE): $(MODULENAME).swiftmodule $(SWIFT_OBJECTS)
 	@echo "### Linking" $(EXE)
-	$(SWIFTC) \
+	$(SWIFTC) $(LD_EXTRAS) \
 	  $(patsubst $<,-Xlinker -add_ast_path -Xlinker $(BUILDDIR)/$<,$^) \
 	  $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
 else # OS = Linux
-$(EXE): $(EXE).swiftmodule.o $(patsubst %.swift,%.o,$(SWIFT_SOURCES))
+$(EXE): $(MODULENAME).swiftmodule.o $(SWIFT_OBJECTS)
 	@echo "### Linking" $(EXE)
-	$(SWIFTC) $^ $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+	$(SWIFTC) $(LD_EXTRAS) $^ $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
 
-$(EXE).swiftmodule.o: $(EXE).swiftmodule
+$(MODULENAME).swiftmodule.o: $(MODULENAME).swiftmodule
 	@echo "### Wrapping swift module"
 	$(SWIFT) -modulewrap $^ -o $(BUILDDIR)/$@
 endif
-$(EXE).swiftmodule: $(patsubst %.swift,%.o,$(SWIFT_SOURCES))
-	@echo "### Merging swift modules"
+$(MODULENAME).swiftmodule: $(SWIFT_OBJECTS)
+	@echo "### Merging swift modules for $(MODULENAME)"
 	$(SWIFT_FE) $(SWIFT_FEFLAGS) -merge-modules \
 	  -emit-module $(patsubst %.o,%.partial.swiftmodule,$^) \
 	  -parse-as-library -sil-merge-partial-modules \
 	  -disable-diagnostic-passes -disable-sil-perf-optzns \
 	  -module-name $(MODULENAME) \
 	  -o $(BUILDDIR)/$@
+
 else # USESWIFTDRIVER = 0
 #----------------------------------------------------------------------
 
@@ -674,6 +692,13 @@ endif
 #----------------------------------------------------------------------
 # Make the dylib
 #----------------------------------------------------------------------
+ifeq "$(USESWIFTDRIVER)" "1"
+$(DYLIB_FILENAME) : $(DYLIB_OBJECTS)
+	@echo "### Linking dynamic library $(DYLIB_NAME)"
+	$(SWIFTC) $(LD_EXTRAS) -o $@ $^ -Xlinker -dylib \
+	  -Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule \
+	  -Xlinker -install_name -Xlinker @executable_path/$(shell basename $@)
+else
 $(DYLIB_OBJECTS) : CFLAGS += -DCOMPILING_LLDB_TEST_DLL
 
 ifneq "$(OS)" "Windows_NT"
@@ -696,7 +721,7 @@ ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
 	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DYLIB_FILENAME).debug" "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME)"
 endif
 endif
-
+endif
 #----------------------------------------------------------------------
 # Make the precompiled header and compile C++ sources against it
 #----------------------------------------------------------------------
