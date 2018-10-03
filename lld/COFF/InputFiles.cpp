@@ -54,8 +54,16 @@ std::vector<BitcodeFile *> BitcodeFile::Instances;
 static void checkAndSetWeakAlias(SymbolTable *Symtab, InputFile *F,
                                  Symbol *Source, Symbol *Target) {
   if (auto *U = dyn_cast<Undefined>(Source)) {
-    if (U->WeakAlias && U->WeakAlias != Target)
+    if (U->WeakAlias && U->WeakAlias != Target) {
+      // Weak aliases as produced by GCC are named in the form
+      // .weak.<weaksymbol>.<othersymbol>, where <othersymbol> is the name
+      // of another symbol emitted near the weak symbol.
+      // Just use the definition from the first object file that defined
+      // this weak symbol.
+      if (Config->MinGW)
+        return;
       Symtab->reportDuplicate(Source, F);
+    }
     U->WeakAlias = Target;
   }
 }
