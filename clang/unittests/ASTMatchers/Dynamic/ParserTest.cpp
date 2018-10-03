@@ -183,7 +183,6 @@ TEST(ParserTest, ParseMatcher) {
 
 TEST(ParserTest, ParseComment) {
   MockSema Sema;
-  const uint64_t ExpectedFoo = Sema.expectMatcher("Foo");
   Sema.parse(" Foo() # Bar() ");
   for (const auto &E : Sema.Errors) {
     EXPECT_EQ("", E);
