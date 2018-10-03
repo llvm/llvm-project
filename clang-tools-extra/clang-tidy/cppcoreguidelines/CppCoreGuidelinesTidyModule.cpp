@@ -40,10 +40,10 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidGotoCheck>(
         "cppcoreguidelines-avoid-goto");
-    CheckFactories.registerCheck<InterfacesGlobalInitCheck>(
-        "cppcoreguidelines-interfaces-global-init");
     CheckFactories.registerCheck<readability::MagicNumbersCheck>(
         "cppcoreguidelines-avoid-magic-numbers");
+    CheckFactories.registerCheck<InterfacesGlobalInitCheck>(
+        "cppcoreguidelines-interfaces-global-init");
     CheckFactories.registerCheck<NarrowingConversionsCheck>(
         "cppcoreguidelines-narrowing-conversions");
     CheckFactories.registerCheck<NoMallocCheck>("cppcoreguidelines-no-malloc");
