@@ -48,6 +48,8 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *Obj) {
       GnuPubTypesSection = toStringRef(Sec->Data);
     else if (Sec->Name == ".debug_str")
       StrSection = toStringRef(Sec->Data);
+    if (Sec->Name == ".debug_line_str")
+      LineStringSection = toStringRef(Sec->Data);
   }
 }
 
