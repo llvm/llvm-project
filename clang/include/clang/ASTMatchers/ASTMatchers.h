@@ -645,12 +645,12 @@ AST_MATCHER(FunctionDecl, isMain) {
 ///
 /// Given
 /// \code
-///   tempalate<typename T> class A {};
-///   typedef A<int> B;
+/// template<typename T> class A {}; #1
+/// template<> class A<int> {}; #2
 /// \endcode
 /// classTemplateSpecializationDecl(hasSpecializedTemplate(classTemplateDecl()))
-///   matches 'B' with classTemplateDecl() matching the class template
-///   declaration of 'A'.
+///   matches '#2' with classTemplateDecl() matching the class template
+///   declaration of 'A' at #1.
 AST_MATCHER_P(ClassTemplateSpecializationDecl, hasSpecializedTemplate,
               internal::Matcher<ClassTemplateDecl>, InnerMatcher) {
   const ClassTemplateDecl* Decl = Node.getSpecializedTemplate();
@@ -929,7 +929,7 @@ AST_MATCHER_P(TemplateArgument, refersToType,
 /// Given
 /// \code
 ///   template<template <typename> class S> class X {};
-///   template<typename T> class Y {};"
+///   template<typename T> class Y {};
 ///   X<Y> xi;
 /// \endcode
 /// classTemplateSpecializationDecl(hasAnyTemplateArgument(
@@ -5283,7 +5283,7 @@ AST_TYPE_TRAVERSE_MATCHER(hasDeducedType, getDeducedType,
 ///   decltype(2.0) b = 2.0;
 /// \endcode
 /// decltypeType(hasUnderlyingType(isInteger()))
-///   matches "auto a"
+///   matches the type of "a"
 ///
 /// Usable as: Matcher<DecltypeType>
 AST_TYPE_TRAVERSE_MATCHER(hasUnderlyingType, getUnderlyingType,

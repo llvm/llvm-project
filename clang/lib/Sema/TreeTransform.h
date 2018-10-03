@@ -8444,6 +8444,12 @@ OMPClause *TreeTransform<Derived>::TransformOMPUnifiedSharedMemoryClause(
 }
 
 template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPReverseOffloadClause(
+    OMPReverseOffloadClause *C) {
+  llvm_unreachable("reverse_offload clause cannot appear in dependent context");
+}
+
+template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPPrivateClause(OMPPrivateClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;

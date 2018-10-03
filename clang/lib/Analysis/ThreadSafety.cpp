@@ -33,6 +33,7 @@
 #include "clang/Analysis/Analyses/ThreadSafetyUtil.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
@@ -1388,8 +1389,11 @@ const CallExpr* ThreadSafetyAnalyzer::getTrylockCallExpr(const Stmt *Cond,
   if (!Cond)
     return nullptr;
 
-  if (const auto *CallExp = dyn_cast<CallExpr>(Cond))
+  if (const auto *CallExp = dyn_cast<CallExpr>(Cond)) {
+    if (CallExp->getBuiltinCallee() == Builtin::BI__builtin_expect)
+      return getTrylockCallExpr(CallExp->getArg(0), C, Negate);
     return CallExp;
+  }
   else if (const auto *PE = dyn_cast<ParenExpr>(Cond))
     return getTrylockCallExpr(PE->getSubExpr(), C, Negate);
   else if (const auto *CE = dyn_cast<ImplicitCastExpr>(Cond))

@@ -41,6 +41,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MD5.h"
@@ -1776,6 +1777,29 @@ CGDebugInfo::CollectFunctionTemplateParams(const FunctionDecl *FD,
   return llvm::DINodeArray();
 }
 
+llvm::DINodeArray CGDebugInfo::CollectVarTemplateParams(const VarDecl *VL,
+    llvm::DIFile *Unit) {
+  if (auto *TS = dyn_cast<VarTemplateSpecializationDecl>(VL)) {
+    auto T = TS->getSpecializedTemplateOrPartial();
+    auto TA = TS->getTemplateArgs().asArray();
+    // Collect parameters for a partial specialization
+    if (T.is<VarTemplatePartialSpecializationDecl *>()) {
+      const TemplateParameterList *TList =
+        T.get<VarTemplatePartialSpecializationDecl *>()
+        ->getTemplateParameters();
+      return CollectTemplateParams(TList, TA, Unit);
+    }
+
+    // Collect parameters for an explicit specialization
+    if (T.is<VarTemplateDecl *>()) {
+      const TemplateParameterList *TList = T.get<VarTemplateDecl *>()
+        ->getTemplateParameters();
+      return CollectTemplateParams(TList, TA, Unit);
+    }
+  }
+  return llvm::DINodeArray();
+}
+
 llvm::DINodeArray CGDebugInfo::CollectCXXTemplateParams(
     const ClassTemplateSpecializationDecl *TSpecial, llvm::DIFile *Unit) {
   // Always get the full list of parameters, not just the ones from
@@ -3070,6 +3094,7 @@ void CGDebugInfo::collectFunctionDeclProps(GlobalDecl GD, llvm::DIFile *Unit,
 void CGDebugInfo::collectVarDeclProps(const VarDecl *VD, llvm::DIFile *&Unit,
                                       unsigned &LineNo, QualType &T,
                                       StringRef &Name, StringRef &LinkageName,
+                                      llvm::MDTuple *&TemplateParameters,
                                       llvm::DIScope *&VDContext) {
   Unit = getOrCreateFile(VD->getLocation());
   LineNo = getLineNumber(VD->getLocation());
@@ -3092,6 +3117,13 @@ void CGDebugInfo::collectVarDeclProps(const VarDecl *VD, llvm::DIFile *&Unit,
     LinkageName = CGM.getMangledName(VD);
   if (LinkageName == Name)
     LinkageName = StringRef();
+
+  if (isa<VarTemplateSpecializationDecl>(VD)) {
+    llvm::DINodeArray parameterNodes = CollectVarTemplateParams(VD, &*Unit);
+    TemplateParameters = parameterNodes.get();
+  } else {
+    TemplateParameters = nullptr;
+  }
 
   // Since we emit declarations (DW_AT_members) for static members, place the
   // definition of those static members in the namespace they were declared in
@@ -3173,12 +3205,14 @@ CGDebugInfo::getGlobalVariableForwardDeclaration(const VarDecl *VD) {
   llvm::DIFile *Unit = getOrCreateFile(Loc);
   llvm::DIScope *DContext = Unit;
   unsigned Line = getLineNumber(Loc);
+  llvm::MDTuple *TemplateParameters = nullptr;
 
-  collectVarDeclProps(VD, Unit, Line, T, Name, LinkageName, DContext);
+  collectVarDeclProps(VD, Unit, Line, T, Name, LinkageName, TemplateParameters,
+                      DContext);
   auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
   auto *GV = DBuilder.createTempGlobalVariableFwdDecl(
       DContext, Name, LinkageName, Unit, Line, getOrCreateType(T, Unit),
-      !VD->isExternallyVisible(), nullptr, Align);
+      !VD->isExternallyVisible(), nullptr, TemplateParameters, Align);
   FwdDeclReplaceMap.emplace_back(
       std::piecewise_construct,
       std::make_tuple(cast<VarDecl>(VD->getCanonicalDecl())),
@@ -4089,7 +4123,9 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
   unsigned LineNo;
   StringRef DeclName, LinkageName;
   QualType T;
-  collectVarDeclProps(D, Unit, LineNo, T, DeclName, LinkageName, DContext);
+  llvm::MDTuple *TemplateParameters = nullptr;
+  collectVarDeclProps(D, Unit, LineNo, T, DeclName, LinkageName,
+                      TemplateParameters, DContext);
 
   // Attempt to store one global variable for the declaration - even if we
   // emit a lot of fields.
@@ -4115,7 +4151,8 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
         DContext, DeclName, LinkageName, Unit, LineNo, getOrCreateType(T, Unit),
         Var->hasLocalLinkage(),
         Expr.empty() ? nullptr : DBuilder.createExpression(Expr),
-        getOrCreateStaticDataMemberDeclarationOrNull(D), Align);
+        getOrCreateStaticDataMemberDeclarationOrNull(D), TemplateParameters,
+        Align);
     Var->addDebugInfo(GVE);
   }
   DeclCache[D->getCanonicalDecl()].reset(GVE);
@@ -4172,10 +4209,19 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
       InitExpr = DBuilder.createConstantValueExpression(
           Init.getFloat().bitcastToAPInt().getZExtValue());
   }
+
+  llvm::MDTuple *TemplateParameters = nullptr;
+
+  if (isa<VarTemplateSpecializationDecl>(VD))
+    if (VarD) {
+      llvm::DINodeArray parameterNodes = CollectVarTemplateParams(VarD, &*Unit);
+      TemplateParameters = parameterNodes.get();
+    }
+
   GV.reset(DBuilder.createGlobalVariableExpression(
       DContext, Name, StringRef(), Unit, getLineNumber(VD->getLocation()), Ty,
       true, InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VarD),
-      Align));
+      TemplateParameters, Align));
 }
 
 llvm::DIScope *CGDebugInfo::getCurrentContextDescriptor(const Decl *D) {
