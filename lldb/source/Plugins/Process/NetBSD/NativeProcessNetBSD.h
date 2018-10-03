@@ -112,7 +112,6 @@ private:
   void MonitorSIGTRAP(lldb::pid_t pid);
   void MonitorSignal(lldb::pid_t pid, int signal);
 
-  Status FixupBreakpointPCAsNeeded(NativeThreadNetBSD &thread);
   Status PopulateMemoryRegionCache();
   void SigchldHandler();
 

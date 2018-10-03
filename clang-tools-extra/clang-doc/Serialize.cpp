@@ -244,6 +244,9 @@ static void parseParameters(FunctionInfo &I, const FunctionDecl *D) {
 }
 
 static void parseBases(RecordInfo &I, const CXXRecordDecl *D) {
+  // Don't parse bases if this isn't a definition.
+  if (!D->isThisDeclarationADefinition())
+    return;
   for (const CXXBaseSpecifier &B : D->bases()) {
     if (B.isVirtual())
       continue;
