@@ -111,8 +111,8 @@ def WriteMove    : SchedWrite;
 // Arithmetic.
 defm WriteALU    : X86SchedWritePair; // Simple integer ALU op.
 defm WriteADC    : X86SchedWritePair; // Integer ALU + flags op.
-def  WriteALURMW : WriteSequence<[WriteALULd, WriteStore]>;
-def  WriteADCRMW : WriteSequence<[WriteADCLd, WriteStore]>;
+def  WriteALURMW : WriteSequence<[WriteALULd, WriteRMW]>;
+def  WriteADCRMW : WriteSequence<[WriteADCLd, WriteRMW]>;
 def  WriteLEA    : SchedWrite;        // LEA instructions can't fold loads.
 
 // Integer multiplication

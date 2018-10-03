@@ -66,10 +66,7 @@ void RISCVDAGToDAGISel::PostprocessISelDAG() {
 }
 
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
-  unsigned Opcode = Node->getOpcode();
-  MVT XLenVT = Subtarget->getXLenVT();
-
-  // If we have a custom node, we have already selected
+  // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
     LLVM_DEBUG(dbgs() << "== "; Node->dump(CurDAG); dbgs() << "\n");
     Node->setNodeId(-1);
@@ -78,26 +75,29 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
   // Instruction Selection not handled by the auto-generated tablegen selection
   // should be handled here.
+  unsigned Opcode = Node->getOpcode();
+  MVT XLenVT = Subtarget->getXLenVT();
+  SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
-  if (Opcode == ISD::Constant && VT == XLenVT) {
-    auto *ConstNode = cast<ConstantSDNode>(Node);
-    // Materialize zero constants as copies from X0. This allows the coalescer
-    // to propagate these into other instructions.
-    if (ConstNode->isNullValue()) {
+
+  switch (Opcode) {
+  case ISD::Constant: {
+    auto ConstNode = cast<ConstantSDNode>(Node);
+    if (VT == XLenVT && ConstNode->isNullValue()) {
       SDValue New = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), SDLoc(Node),
                                            RISCV::X0, XLenVT);
       ReplaceNode(Node, New.getNode());
       return;
     }
+    break;
   }
-  if (Opcode == ISD::FrameIndex) {
-    SDLoc DL(Node);
+  case ISD::FrameIndex: {
     SDValue Imm = CurDAG->getTargetConstant(0, DL, XLenVT);
     int FI = cast<FrameIndexSDNode>(Node)->getIndex();
-    EVT VT = Node->getValueType(0);
     SDValue TFI = CurDAG->getTargetFrameIndex(FI, VT);
     ReplaceNode(Node, CurDAG->getMachineNode(RISCV::ADDI, DL, VT, TFI, Imm));
     return;
+  }
   }
 
   // Select the default instruction.

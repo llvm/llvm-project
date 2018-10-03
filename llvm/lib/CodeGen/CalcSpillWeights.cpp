@@ -287,9 +287,11 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &li, SlotIndex *start,
     if (TargetHint.first == 0 && TargetHint.second)
       mri.clearSimpleHint(li.reg);
 
+    std::set<unsigned> HintedRegs;
     for (auto &Hint : CopyHints) {
-      if (TargetHint.first != 0 && Hint.Reg == TargetHint.second)
-        // Don't add again the target-type hint.
+      if (!HintedRegs.insert(Hint.Reg).second ||
+          (TargetHint.first != 0 && Hint.Reg == TargetHint.second))
+        // Don't add the same reg twice or the target-type hint again.
         continue;
       mri.addRegAllocationHint(li.reg, Hint.Reg);
       if (!tri.enableMultipleCopyHints())

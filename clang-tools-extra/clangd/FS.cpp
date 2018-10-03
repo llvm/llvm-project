@@ -16,7 +16,7 @@ namespace clangd {
 
 void PreambleFileStatusCache::update(const vfs::FileSystem &FS, vfs::Status S) {
   SmallString<32> PathStore(S.getName());
-  if (auto Err = FS.makeAbsolute(PathStore))
+  if (FS.makeAbsolute(PathStore))
     return;
   // Stores the latest status in cache as it can change in a preamble build.
   StatCache.insert({PathStore, std::move(S)});

@@ -92,12 +92,6 @@ ASTViewAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 }
 
 std::unique_ptr<ASTConsumer>
-DeclContextPrintAction::CreateASTConsumer(CompilerInstance &CI,
-                                          StringRef InFile) {
-  return CreateDeclContextPrinter();
-}
-
-std::unique_ptr<ASTConsumer>
 GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   std::string Sysroot;
   if (!ComputeASTConsumerArguments(CI, /*ref*/ Sysroot))
