@@ -1701,7 +1701,7 @@ def main(num_threads, test_runner_name, results_formatter):
     # move core files into session dir
     cores = find('core.*', test_subdir)
     for core in cores:
-        dst = core.replace(test_directory, "")[1:]
+        dst = core.replace(test_subdir, "")[1:]
         dst = dst.replace(os.path.sep, "-")
         os.rename(core, os.path.join(session_dir, dst))
 
