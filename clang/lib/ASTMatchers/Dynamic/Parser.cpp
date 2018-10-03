@@ -110,6 +110,10 @@ private:
     }
 
     switch (Code[0]) {
+    case '#':
+      Result.Kind = TokenInfo::TK_Eof;
+      Result.Text = "";
+      return Result;
     case ',':
       Result.Kind = TokenInfo::TK_Comma;
       Result.Text = Code.substr(0, 1);

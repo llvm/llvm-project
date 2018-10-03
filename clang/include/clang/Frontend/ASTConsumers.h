@@ -50,10 +50,6 @@ std::unique_ptr<ASTConsumer> CreateASTDeclNodeLister();
 // function declarations to stderr.
 std::unique_ptr<ASTConsumer> CreateASTViewer();
 
-// DeclContext printer: prints out the DeclContext tree in human-readable form
-// to stderr; this is intended for debugging.
-std::unique_ptr<ASTConsumer> CreateDeclContextPrinter();
-
 } // end clang namespace
 
 #endif
