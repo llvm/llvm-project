@@ -1041,7 +1041,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   if (SimplifyAssociativeOrCommutative(I))
     return &I;
 
-  if (Instruction *X = foldShuffledBinop(I))
+  if (Instruction *X = foldVectorBinop(I))
     return X;
 
   // (A*B)+(A*C) -> A*(B+C) etc
@@ -1276,7 +1276,7 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
   if (SimplifyAssociativeOrCommutative(I))
     return &I;
 
-  if (Instruction *X = foldShuffledBinop(I))
+  if (Instruction *X = foldVectorBinop(I))
     return X;
 
   if (Instruction *FoldedFAdd = foldBinOpIntoSelectOrPhi(I))
@@ -1455,7 +1455,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
                                  SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  if (Instruction *X = foldShuffledBinop(I))
+  if (Instruction *X = foldVectorBinop(I))
     return X;
 
   // (A*B)-(A*C) -> A*(B-C) etc
@@ -1752,7 +1752,7 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  if (Instruction *X = foldShuffledBinop(I))
+  if (Instruction *X = foldVectorBinop(I))
     return X;
 
   // Subtraction from -0.0 is the canonical form of fneg.

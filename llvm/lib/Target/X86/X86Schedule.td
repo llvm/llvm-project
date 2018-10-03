@@ -107,12 +107,13 @@ def WriteLoad    : SchedWrite;
 def WriteStore   : SchedWrite;
 def WriteStoreNT : SchedWrite;
 def WriteMove    : SchedWrite;
+def WriteCopy    : WriteSequence<[WriteLoad, WriteStore]>; // mem->mem copy
 
 // Arithmetic.
 defm WriteALU    : X86SchedWritePair; // Simple integer ALU op.
 defm WriteADC    : X86SchedWritePair; // Integer ALU + flags op.
-def  WriteALURMW : WriteSequence<[WriteALULd, WriteStore]>;
-def  WriteADCRMW : WriteSequence<[WriteADCLd, WriteStore]>;
+def  WriteALURMW : WriteSequence<[WriteALULd, WriteRMW]>;
+def  WriteADCRMW : WriteSequence<[WriteADCLd, WriteRMW]>;
 def  WriteLEA    : SchedWrite;        // LEA instructions can't fold loads.
 
 // Integer multiplication

@@ -60,6 +60,11 @@ void RegisterFile::initialize(const MCSchedModel &SM, unsigned NumRegs) {
   }
 }
 
+void RegisterFile::cycleStart() {
+  for (RegisterMappingTracker &RMT : RegisterFiles)
+    RMT.NumMoveEliminated = 0;
+}
+
 void RegisterFile::addRegisterFile(ArrayRef<MCRegisterCostEntry> Entries,
                                    unsigned NumPhysRegs) {
   // A default register file is always allocated at index #0. That register file
@@ -262,6 +267,37 @@ void RegisterFile::removeRegisterWrite(
     if (OtherWR.getWriteState() == &WS)
       OtherWR.invalidate();
   }
+}
+
+bool RegisterFile::tryEliminateMove(WriteState &WS, const ReadState &RS) {
+  const RegisterMapping &RMFrom = RegisterMappings[RS.getRegisterID()];
+  const RegisterMapping &RMTo = RegisterMappings[WS.getRegisterID()];
+
+  // Early exit if the PRF doesn't support move elimination for this register.
+  if (!RMTo.second.AllowMoveElimination)
+    return false;
+
+  // From and To must be owned by the same PRF.
+  const RegisterRenamingInfo &RRIFrom = RMFrom.second;
+  const RegisterRenamingInfo &RRITo = RMTo.second;
+  unsigned RegisterFileIndex = RRIFrom.IndexPlusCost.first;
+  if (RegisterFileIndex != RRITo.IndexPlusCost.first)
+    return false;
+
+  RegisterMappingTracker &RMT = RegisterFiles[RegisterFileIndex];
+  if (RMT.MaxMoveEliminatedPerCycle &&
+      RMT.NumMoveEliminated == RMT.MaxMoveEliminatedPerCycle)
+    return false;
+
+  bool IsZeroMove = ZeroRegisters[RS.getRegisterID()];
+  if (RRITo.AllowZeroMoveEliminationOnly && !IsZeroMove)
+    return false;
+
+  RMT.NumMoveEliminated++;
+  if (IsZeroMove)
+    WS.setWriteZero();
+  WS.setEliminated();
+  return true;
 }
 
 void RegisterFile::collectWrites(SmallVectorImpl<WriteRef> &Writes,

@@ -102,8 +102,8 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}buffer_load_negative_offset:
-;CHECK: v_add_{{[iu]}}32_e32 {{v[0-9]+}}, vcc, 0xfffff000, v0
-;CHECK: buffer_load_dwordx4 v[0:3], {{v\[[0-9]+:[0-9]+\]}}, s[0:3], 0 idxen offen offset:4080
+;CHECK: v_add_{{[iu]}}32_e32 {{v[0-9]+}}, vcc, -16, v0
+;CHECK: buffer_load_dwordx4 v[0:3], {{v\[[0-9]+:[0-9]+\]}}, s[0:3], 0 idxen offen
 define amdgpu_ps <4 x float> @buffer_load_negative_offset(<4 x i32> inreg, i32 %ofs) {
 main_body:
   %ofs.1 = add i32 %ofs, -16

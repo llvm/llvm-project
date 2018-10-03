@@ -100,6 +100,13 @@ Error DispatchStage::dispatch(InstRef IR) {
     AvailableEntries -= NumMicroOps;
   }
 
+  // Check if this is an optimizable reg-reg move.
+  if (IS.isOptimizableMove()) {
+    assert(IS.getDefs().size() == 1 && "Expected a single input!");
+    assert(IS.getUses().size() == 1 && "Expected a single output!");
+    PRF.tryEliminateMove(*IS.getDefs()[0], *IS.getUses()[0]);
+  }
+
   // A dependency-breaking instruction doesn't have to wait on the register
   // input operands, and it is often optimized at register renaming stage.
   // Update RAW dependencies if this instruction is not a dependency-breaking
@@ -130,6 +137,8 @@ Error DispatchStage::dispatch(InstRef IR) {
 }
 
 Error DispatchStage::cycleStart() {
+  PRF.cycleStart();
+
   if (!CarryOver) {
     AvailableEntries = DispatchWidth;
     return ErrorSuccess();
