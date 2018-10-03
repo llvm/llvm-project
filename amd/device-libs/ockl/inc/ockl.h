@@ -141,8 +141,8 @@ DECL_CONST_OCKL_BINARY_U32(mul24)
 DECL_OCKL_NULLARY_U32(lane)
 DECL_OCKL_NULLARY_U32(activelane)
 
-DECL_PURE_OCKL_NULLARY_U64(memtime)
-DECL_PURE_OCKL_NULLARY_U64(memrealtime)
+DECL_OCKL_NULLARY_U64(memtime)
+DECL_OCKL_NULLARY_U64(memrealtime)
 
 extern half OCKL_MANGLE_T(wfred_add,f16)(half x);
 extern float OCKL_MANGLE_T(wfred_add,f32)(float x);
