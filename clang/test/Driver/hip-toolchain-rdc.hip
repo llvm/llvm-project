@@ -7,7 +7,7 @@
 // RUN:   --hip-device-lib=lib1.bc --hip-device-lib=lib2.bc \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib1 \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib2 \
-// RUN:   -fuse-ld=lld \
+// RUN:   -fuse-ld=lld -fgpu-rdc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s
@@ -15,14 +15,14 @@
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa" 
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu" {{.*}} "-target-cpu" "gfx803"
-// CHECK-SAME: "-fcuda-is-device" "-fvisibility" "hidden"
+// CHECK-SAME: "-fcuda-is-device" "-fgpu-rdc" "-fvisibility" "hidden"
 // CHECK-SAME: {{.*}} "-o" [[A_BC:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC:".*a.cu"]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu" "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip" {{.*}} "-target-cpu" "gfx803"
-// CHECK-SAME: "-fcuda-is-device" "-fvisibility" "hidden"
+// CHECK-SAME: "-fcuda-is-device" "-fgpu-rdc" "-fvisibility" "hidden"
 // CHECK-SAME: {{.*}} "-o" [[B_BC:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC:".*b.hip"]]
 
@@ -80,7 +80,7 @@
 
 // CHECK: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"
 // CHECK-SAME: "-targets={{.*}},hip-amdgcn-amd-amdhsa-gfx803,hip-amdgcn-amd-amdhsa-gfx900"
-// CHECK-SAME: "-inputs={{.*}},[[IMG_DEV1]],[[IMG_DEV2]]" "-outputs=[[BUNDLE:.*o]]"
+// CHECK-SAME: "-inputs={{.*}},[[IMG_DEV1]],[[IMG_DEV2]]" "-outputs=[[BUNDLE:.*hipfb]]"
 
 // CHECK: [[LD:".*ld.*"]] {{.*}} [[A_OBJ_HOST]] [[B_OBJ_HOST]]
 // CHECK-SAME: {{.*}} "-T" "{{.*}}.lk"

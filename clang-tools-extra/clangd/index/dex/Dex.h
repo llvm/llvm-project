@@ -101,7 +101,7 @@ private:
   /// std. Inverted index is used to retrieve posting lists which are processed
   /// during the fuzzyFind process.
   llvm::DenseMap<Token, PostingList> InvertedIndex;
-  Corpus Corpus;
+  dex::Corpus Corpus;
   std::shared_ptr<void> KeepAlive; // poor man's move-only std::any
   // Size of memory retained by KeepAlive.
   size_t BackingDataSize = 0;

@@ -584,9 +584,11 @@ def fno_cuda_flush_denormals_to_zero : Flag<["-"], "fno-cuda-flush-denormals-to-
 def fcuda_approx_transcendentals : Flag<["-"], "fcuda-approx-transcendentals">,
   Flags<[CC1Option]>, HelpText<"Use approximate transcendental functions">;
 def fno_cuda_approx_transcendentals : Flag<["-"], "fno-cuda-approx-transcendentals">;
-def fcuda_rdc : Flag<["-"], "fcuda-rdc">, Flags<[CC1Option]>,
+def fgpu_rdc : Flag<["-"], "fgpu-rdc">, Flags<[CC1Option]>,
   HelpText<"Generate relocatable device code, also known as separate compilation mode.">;
-def fno_cuda_rdc : Flag<["-"], "fno-cuda-rdc">;
+def fno_gpu_rdc : Flag<["-"], "fno-gpu-rdc">;
+def : Flag<["-"], "fcuda-rdc">, Alias<fgpu_rdc>;
+def : Flag<["-"], "fno-cuda-rdc">, Alias<fno_gpu_rdc>;
 def fcuda_short_ptr : Flag<["-"], "fcuda-short-ptr">, Flags<[CC1Option]>,
   HelpText<"Use 32-bit pointers for accessing const/local/shared address spaces.">;
 def fno_cuda_short_ptr : Flag<["-"], "fno-cuda-short-ptr">;

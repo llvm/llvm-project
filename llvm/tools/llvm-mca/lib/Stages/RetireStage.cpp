@@ -47,7 +47,7 @@ llvm::Error RetireStage::execute(InstRef &IR) {
   return llvm::ErrorSuccess();
 }
 
-void RetireStage::notifyInstructionRetired(const InstRef &IR) {
+void RetireStage::notifyInstructionRetired(const InstRef &IR) const {
   LLVM_DEBUG(llvm::dbgs() << "[E] Instruction Retired: #" << IR << '\n');
   llvm::SmallVector<unsigned, 4> FreedRegs(PRF.getNumRegisterFiles());
   const Instruction &Inst = *IR.getInstruction();

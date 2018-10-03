@@ -196,7 +196,7 @@ attributes #2 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 ; YAML:           ClassType:       4100
 ; YAML:           ThisType:        4101
 ; YAML:           CallConv:        ThisCall
-; YAML:           Options:         [ None ]
+; YAML:           Options:         [ None, Constructor ]
 ; YAML:           ParameterCount:  2
 ; YAML:           ArgumentList:    4102
 ; YAML:           ThisPointerAdjustment: 0
@@ -282,14 +282,14 @@ attributes #2 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 ; YAML:         - C324F82D24D22283
 ; YAML:         - 74698BE366891D3D
 ; YAML:         - DDE23757322DB7C3
-; YAML:         - 3C458A5105FEA7C1
+; YAML:         - 1692305447C3D360
 ; YAML:         - D341E2F9BE57A1C7
 ; YAML:         - 243F76AED6D8FB79
-; YAML:         - B038D36C0C67EEEA
-; YAML:         - C0A51CE268B50087
+; YAML:         - C75E2FD5D79D363D
+; YAML:         - 30FB9353B361B4B8
 ; YAML:         - 0634944401BCC520
-; YAML:         - 8CFC595FACFE1AB2
-; YAML:         - F1795EA10053AC52
+; YAML:         - DF0B7BE0B5AD5B4F
+; YAML:         - 0916E74F3860DA92
 ; YAML:         - 17D3CDC3384402DD
 ; ...
 

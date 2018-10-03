@@ -26,7 +26,6 @@
 
 namespace mca {
 
-class ReadState;
 class WriteState;
 class WriteRef;
 

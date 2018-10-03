@@ -1019,11 +1019,12 @@ TEST(ClangdTests, PreambleVFSStatCache) {
 
   runAddDocument(Server, SourcePath, Code.code());
 
-  EXPECT_EQ(CountStats["foo.h"], 1u);
+  unsigned Before = CountStats["foo.h"];
+  EXPECT_GT(Before, 0u);
   auto Completions = cantFail(runCodeComplete(Server, SourcePath, Code.point(),
                                               clangd::CodeCompleteOptions()))
                          .Completions;
-  EXPECT_EQ(CountStats["foo.h"], 1u);
+  EXPECT_EQ(CountStats["foo.h"], Before);
   EXPECT_THAT(Completions,
               ElementsAre(Field(&CodeCompletion::Name, "TestSym")));
 }

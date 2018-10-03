@@ -375,19 +375,28 @@ int ExecuteCommand(const Command &Cmd) {
     Argv[i] = Args[i].c_str();
   Argv[Argc] = nullptr;
 
-  // Determine stdout
+  // Determine output.  On Fuchsia, the fuzzer is typically run as a component
+  // that lacks a mutable working directory. Fortunately, when this is the case
+  // a mutable output directory must be specified using "-artifact_prefix=...",
+  // so write the log file(s) there.
   int FdOut = STDOUT_FILENO;
-
   if (Cmd.hasOutputFile()) {
-    auto Filename = Cmd.getOutputFile();
-    FdOut = open(Filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0);
+    std::string Path;
+    if (Cmd.hasFlag("artifact_prefix"))
+      Path = Cmd.getFlagValue("artifact_prefix") + "/" + Cmd.getOutputFile();
+    else
+      Path = Cmd.getOutputFile();
+    FdOut = open(Path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0);
     if (FdOut == -1) {
-      Printf("libFuzzer: failed to open %s: %s\n", Filename.c_str(),
+      Printf("libFuzzer: failed to open %s: %s\n", Path.c_str(),
              strerror(errno));
       return ZX_ERR_IO;
     }
   }
-  auto CloseFdOut = at_scope_exit([&]() { close(FdOut); } );
+  auto CloseFdOut = at_scope_exit([FdOut]() {
+    if (FdOut != STDOUT_FILENO)
+      close(FdOut);
+  });
 
   // Determine stderr
   int FdErr = STDERR_FILENO;
