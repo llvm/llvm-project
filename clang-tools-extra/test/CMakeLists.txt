@@ -52,8 +52,6 @@ set(CLANG_TOOLS_TEST_DEPS
   modularize
   pp-trace
 
-  check-clangd
-
   # Unit tests
   ExtraToolsUnitTests
 
@@ -65,6 +63,19 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-tidy
   )
 
+set(CLANGD_TEST_DEPS
+  clangd
+  ClangdTests
+  # clangd-related tools which don't have tests, add them to the test to make
+  # sure we don't introduce new changes that break their compilations.
+  clangd-indexer
+  dexp
+  )
+foreach(clangd_dep ${CLANGD_TEST_DEPS})
+  list(APPEND CLANG_TOOLS_TEST_DEPS
+       ${clangd_dep})
+endforeach()
+
 add_lit_testsuite(check-clang-tools "Running the Clang extra tools' regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${CLANG_TOOLS_TEST_DEPS}
@@ -74,15 +85,9 @@ add_lit_testsuite(check-clang-tools "Running the Clang extra tools' regression t
 set_target_properties(check-clang-tools PROPERTIES FOLDER "Clang extra tools' tests")
 
 # Setup an individual test for building and testing clangd-only stuff.
-set(CLANGD_TEST_DEPS
-  clangd
-  ClangdTests
-  # clangd-related tools which don't have tests, add them to the test to make
-  # sure we don't introduce new changes that break their compilations.
-  clangd-indexer
-  dexp
-)
-# Exclude check-clangd from check-all, as check-clangd will launch via check-clang-tools.
+# Note: all clangd tests have been covered in check-clang-tools, this is a
+# convenient target for clangd developers.
+# Exclude check-clangd from check-all.
 set(EXCLUDE_FROM_ALL ON)
 add_lit_testsuite(check-clangd "Running the Clangd regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}/Unit/clangd;${CMAKE_CURRENT_BINARY_DIR}/clangd

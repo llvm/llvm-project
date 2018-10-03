@@ -18,6 +18,13 @@ def ImmI#SIZE : ImmLeaf<i32, "return (Imm & ((1UL << "#SIZE#") - 1)) == Imm;">;
 foreach SIZE = [2, 4, 8, 16, 32] in
 def LaneIdx#SIZE : ImmLeaf<i32, "return 0 <= Imm && Imm < "#SIZE#";">;
 
+// Custom nodes for custom operations
+def wasm_shuffle_t : SDTypeProfile<1, 18, []>;
+def wasm_reduce_t : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVec<1>]>;
+def wasm_shuffle : SDNode<"WebAssemblyISD::SHUFFLE", wasm_shuffle_t>;
+def wasm_anytrue : SDNode<"WebAssemblyISD::ANYTRUE", wasm_reduce_t>;
+def wasm_alltrue : SDNode<"WebAssemblyISD::ALLTRUE", wasm_reduce_t>;
+
 multiclass ConstVec<ValueType vec_t, dag ops, dag pat, string args> {
   let isMoveImm = 1, isReMaterializable = 1 in
   defm CONST_V128_#vec_t : SIMD_I<(outs V128:$dst), ops, (outs), ops,
@@ -185,6 +192,18 @@ multiclass SIMDNot<ValueType vec_t, PatFrag splat_pat, ValueType lane_t> {
                              ))
                            )],
                            "v128.not\t$dst, $vec", "v128.not", 63>;
+}
+multiclass SIMDReduceVec<ValueType vec_t, string vec, string name, SDNode op,
+                      bits<32> simdop> {
+  defm _#vec_t : SIMD_I<(outs I32:$dst), (ins V128:$vec), (outs), (ins),
+                       [(set I32:$dst, (i32 (op (vec_t V128:$vec))))],
+                       vec#"."#name#"\t$dst, $vec", vec#"."#name, simdop>;
+}
+multiclass SIMDReduce<string name, SDNode op, bits<32> baseInst> {
+  defm "" : SIMDReduceVec<v16i8, "i8x16", name, op, baseInst>;
+  defm "" : SIMDReduceVec<v8i16, "i16x8", name, op, !add(baseInst, 1)>;
+  defm "" : SIMDReduceVec<v4i32, "i32x4", name, op, !add(baseInst, 2)>;
+  defm "" : SIMDReduceVec<v2i64, "i64x2", name, op, !add(baseInst, 3)>;
 }
 multiclass SIMDCondition<ValueType vec_t, ValueType out_t, string vec,
                              string name, CondCode cond, bits<32> simdop> {
@@ -361,6 +380,9 @@ defm "" : SIMDNot<v8i16, splat8, i32>;
 defm "" : SIMDNot<v4i32, splat4, i32>;
 defm "" : SIMDNot<v2i64, splat2, i64>;
 
+defm ANYTRUE : SIMDReduce<"any_true", wasm_anytrue, 65>;
+defm ALLTRUE : SIMDReduce<"all_true", wasm_alltrue, 69>;
+
 let isCommutable = 1 in {
 defm EQ : SIMDConditionInt<"eq", SETEQ, 73>;
 defm EQ : SIMDConditionFP<"eq", SETOEQ, 77>;
@@ -457,8 +479,6 @@ def : Pat<(v2i64 (shifts[0] (v2i64 V128:$vec), (v2i64 (splat2 I64:$x)))),
           (v2i64 (shifts[1] (v2i64 V128:$vec), (I32_WRAP_I64 I64:$x)))>;
 
 // Shuffles after custom lowering
-def wasm_shuffle_t : SDTypeProfile<1, 18, []>;
-def wasm_shuffle : SDNode<"WebAssemblyISD::SHUFFLE", wasm_shuffle_t>;
 foreach vec_t = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
 def : Pat<(v16i8 (wasm_shuffle (vec_t V128:$x), (vec_t V128:$y),
             (i32 LaneIdx32:$m0), (i32 LaneIdx32:$m1),

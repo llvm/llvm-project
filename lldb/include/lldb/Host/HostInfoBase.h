@@ -75,10 +75,6 @@ public:
   /// member of the FileSpec is filled in.
   static FileSpec GetHeaderDir();
 
-  /// Returns the directory containing the python modules. Only the directory
-  /// member of the FileSpec is filled in.
-  static FileSpec GetPythonDir();
-
   /// Returns the directory containing the system plugins. Only the directory
   /// member of the FileSpec is filled in.
   static FileSpec GetSystemPluginDir();

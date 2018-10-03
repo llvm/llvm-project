@@ -3437,6 +3437,11 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             is_static_lifetime = true;
         }
         SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
+        if (debug_map_symfile)
+          // Set the module of the expression to the linked module
+          // instead of the oject file so the relocated address can be
+          // found there.
+          location.SetModule(debug_map_symfile->GetObjectFile()->GetModule());
 
         if (is_static_lifetime) {
           if (is_external)

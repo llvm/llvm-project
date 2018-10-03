@@ -87,4 +87,17 @@ def int_wasm_atomic_notify:
             [IntrInaccessibleMemOnly, NoCapture<0>, IntrHasSideEffects], "",
             [SDNPMemOperand]>;
 
-}
+//===----------------------------------------------------------------------===//
+// SIMD intrinsics
+//===----------------------------------------------------------------------===//
+
+def int_wasm_anytrue :
+  Intrinsic<[llvm_i32_ty],
+            [llvm_anyvector_ty],
+            [IntrNoMem, IntrSpeculatable]>;
+def int_wasm_alltrue :
+  Intrinsic<[llvm_i32_ty],
+            [llvm_anyvector_ty],
+            [IntrNoMem, IntrSpeculatable]>;
+
+} // TargetPrefix = "wasm"

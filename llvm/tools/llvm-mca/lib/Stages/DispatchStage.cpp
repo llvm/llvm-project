@@ -29,7 +29,7 @@ namespace mca {
 
 void DispatchStage::notifyInstructionDispatched(const InstRef &IR,
                                                 ArrayRef<unsigned> UsedRegs,
-                                                unsigned UOps) {
+                                                unsigned UOps) const {
   LLVM_DEBUG(dbgs() << "[E] Instruction Dispatched: #" << IR << '\n');
   notifyEvent<HWInstructionEvent>(
       HWInstructionDispatchedEvent(IR, UsedRegs, UOps));
@@ -115,7 +115,8 @@ Error DispatchStage::dispatch(InstRef IR) {
   // to the instruction.
   SmallVector<unsigned, 4> RegisterFiles(PRF.getNumRegisterFiles());
   for (std::unique_ptr<WriteState> &WS : IS.getDefs())
-    PRF.addRegisterWrite(WriteRef(IR.getSourceIndex(), WS.get()), RegisterFiles);
+    PRF.addRegisterWrite(WriteRef(IR.getSourceIndex(), WS.get()),
+                         RegisterFiles);
 
   // Reserve slots in the RCU, and notify the instruction that it has been
   // dispatched to the schedulers for execution.
@@ -138,7 +139,7 @@ Error DispatchStage::cycleStart() {
   unsigned DispatchedOpcodes = DispatchWidth - AvailableEntries;
   CarryOver -= DispatchedOpcodes;
   assert(CarriedOver.isValid() && "Invalid dispatched instruction");
-  
+
   SmallVector<unsigned, 8> RegisterFiles(PRF.getNumRegisterFiles(), 0U);
   notifyInstructionDispatched(CarriedOver, RegisterFiles, DispatchedOpcodes);
   if (!CarryOver)

@@ -1532,6 +1532,9 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
     case X86::SEH_StackAlloc:
       XTS->emitFPOStackAlloc(MI->getOperand(0).getImm());
       break;
+    case X86::SEH_StackAlign:
+      XTS->emitFPOStackAlign(MI->getOperand(0).getImm());
+      break;
     case X86::SEH_SetFrame:
       assert(MI->getOperand(1).getImm() == 0 &&
              ".cv_fpo_setframe takes no offset");
@@ -1809,6 +1812,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::SEH_SaveReg:
   case X86::SEH_SaveXMM:
   case X86::SEH_StackAlloc:
+  case X86::SEH_StackAlign:
   case X86::SEH_SetFrame:
   case X86::SEH_PushFrame:
   case X86::SEH_EndPrologue:
