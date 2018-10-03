@@ -1,9 +1,9 @@
-; RUN: llc < %s -mtriple=i686-- | FileCheck %s -check-prefix=X87
-; RUN: llc < %s -mtriple=x86_64-- -mattr=-sse | FileCheck %s -check-prefix=X87
-; RUN: llc < %s -mtriple=i686-- -mattr=-x87 | FileCheck %s -check-prefix=NOX87
-; RUN: llc < %s -mtriple=x86_64-- -mattr=-x87,-sse | FileCheck %s -check-prefix=NOX87
-; RUN: llc < %s -mtriple=i686-- -mattr=-x87,+sse | FileCheck %s -check-prefix=NOX87
-; RUN: llc < %s -mtriple=x86_64-- -mattr=-x87,-sse2 | FileCheck %s -check-prefix=NOX87
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s -check-prefixes=X8732,X87
+; RUN: llc < %s -mtriple=x86_64-- -mattr=-sse | FileCheck %s -check-prefixes=X8732,X87
+; RUN: llc < %s -mtriple=i686-- -mattr=-x87 | FileCheck %s -check-prefixes=NOX8732,NOX87
+; RUN: llc < %s -mtriple=x86_64-- -mattr=-x87,-sse | FileCheck %s -check-prefixes=NOX8732,NOX87
+; RUN: llc < %s -mtriple=i686-- -mattr=-x87,+sse | FileCheck %s -check-prefixes=NOX8732,NOX87
+; RUN: llc < %s -mtriple=x86_64-- -mattr=-x87,-sse2 | FileCheck %s -check-prefixes=X8732_SSE,NOX87
 
 define void @test(i32 %i, i64 %l, float* %pf, double* %pd, fp128* %pld) nounwind readnone {
 ; X87-LABEL: test:
@@ -12,18 +12,18 @@ define void @test(i32 %i, i64 %l, float* %pf, double* %pd, fp128* %pld) nounwind
 ; NOX87-NOT: {{ }}f{{.*}}
 
 ; X87: fild
-; NOX87: __floatunsisf
+; NOX8732: __floatunsisf
   %tmp = uitofp i32 %i to float
 
-; X87: fild
-; NOX87: __floatdisf
+; X8732: fild
+; NOX8732: __floatdisf
   %tmp1 = sitofp i64 %l to float
 
-; X87: fadd
-; NOX87: __addsf3
+; X8732: fadd
+; NOX8732: __addsf3
   %tmp2 = fadd float %tmp, %tmp1
 
-; X87: fstp
+; X8732: fstp
   store float %tmp2, float* %pf
 
 ; X87: fild

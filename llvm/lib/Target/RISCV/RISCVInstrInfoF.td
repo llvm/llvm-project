@@ -252,13 +252,8 @@ let Predicates = [HasStdExtF] in {
 def : Pat<(bitconvert GPR:$rs1), (FMV_W_X GPR:$rs1)>;
 def : Pat<(bitconvert FPR32:$rs1), (FMV_X_W FPR32:$rs1)>;
 
-// FP->[u]int. Round-to-zero must be used
-def : Pat<(fp_to_sint FPR32:$rs1), (FCVT_W_S $rs1, 0b001)>;
-def : Pat<(fp_to_uint FPR32:$rs1), (FCVT_WU_S $rs1, 0b001)>;
-
-// [u]int->fp. Match GCC and default to using dynamic rounding mode.
-def : Pat<(sint_to_fp GPR:$rs1), (FCVT_S_W $rs1, 0b111)>;
-def : Pat<(uint_to_fp GPR:$rs1), (FCVT_S_WU $rs1, 0b111)>;
+// [u]int32<->float conversion patterns must be gated on IsRV32 or IsRV64, so
+// are defined later.
 
 /// Float arithmetic operations
 
@@ -313,3 +308,13 @@ defm : LdPat<load, FLW>;
 defm : StPat<store, FSW, FPR32>;
 
 } // Predicates = [HasStdExtF]
+
+let Predicates = [HasStdExtF, IsRV32] in {
+// float->[u]int. Round-to-zero must be used.
+def : Pat<(fp_to_sint FPR32:$rs1), (FCVT_W_S $rs1, 0b001)>;
+def : Pat<(fp_to_uint FPR32:$rs1), (FCVT_WU_S $rs1, 0b001)>;
+
+// [u]int->float. Match GCC and default to using dynamic rounding mode.
+def : Pat<(sint_to_fp GPR:$rs1), (FCVT_S_W $rs1, 0b111)>;
+def : Pat<(uint_to_fp GPR:$rs1), (FCVT_S_WU $rs1, 0b111)>;
+} // Predicates = [HasStdExtF, IsRV32]

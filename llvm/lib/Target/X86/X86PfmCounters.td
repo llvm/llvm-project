@@ -59,6 +59,7 @@ def SKLPort4Counter : PfmIssueCounter<SKLPort4, ["uops_dispatched_port:port_4"]>
 def SKLPort5Counter : PfmIssueCounter<SKLPort5, ["uops_dispatched_port:port_5"]>;
 def SKLPort6Counter : PfmIssueCounter<SKLPort6, ["uops_dispatched_port:port_6"]>;
 def SKLPort7Counter : PfmIssueCounter<SKLPort7, ["uops_dispatched_port:port_7"]>;
+def SKLUopsCounter  : PfmUopsCounter<"uops_issued:any">;
 }
 
 let SchedModel = SkylakeServerModel in {

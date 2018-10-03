@@ -57,7 +57,6 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -97,6 +96,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/InstCombine/InstCombineWorklist.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -1351,13 +1351,14 @@ Value *InstCombiner::Descale(Value *Val, APInt Scale, bool &NoSignedWrap) {
   } while (true);
 }
 
-Instruction *InstCombiner::foldShuffledBinop(BinaryOperator &Inst) {
+Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   if (!Inst.getType()->isVectorTy()) return nullptr;
 
-  unsigned VWidth = cast<VectorType>(Inst.getType())->getNumElements();
+  BinaryOperator::BinaryOps Opcode = Inst.getOpcode();
+  unsigned NumElts = cast<VectorType>(Inst.getType())->getNumElements();
   Value *LHS = Inst.getOperand(0), *RHS = Inst.getOperand(1);
-  assert(cast<VectorType>(LHS->getType())->getNumElements() == VWidth);
-  assert(cast<VectorType>(RHS->getType())->getNumElements() == VWidth);
+  assert(cast<VectorType>(LHS->getType())->getNumElements() == NumElts);
+  assert(cast<VectorType>(RHS->getType())->getNumElements() == NumElts);
 
   // If both operands of the binop are vector concatenations, then perform the
   // narrow binop on each pair of the source operands followed by concatenation
@@ -1373,10 +1374,10 @@ Instruction *InstCombiner::foldShuffledBinop(BinaryOperator &Inst) {
     // operating on exactly the same elements as the existing binop.
     // TODO: We could ease the mask requirement to allow different undef lanes,
     //       but that requires an analysis of the binop-with-undef output value.
-    Value *NewBO0 = Builder.CreateBinOp(Inst.getOpcode(), L0, R0);
+    Value *NewBO0 = Builder.CreateBinOp(Opcode, L0, R0);
     if (auto *BO = dyn_cast<BinaryOperator>(NewBO0))
       BO->copyIRFlags(&Inst);
-    Value *NewBO1 = Builder.CreateBinOp(Inst.getOpcode(), L1, R1);
+    Value *NewBO1 = Builder.CreateBinOp(Opcode, L1, R1);
     if (auto *BO = dyn_cast<BinaryOperator>(NewBO1))
       BO->copyIRFlags(&Inst);
     return new ShuffleVectorInst(NewBO0, NewBO1, Mask);
@@ -1389,7 +1390,7 @@ Instruction *InstCombiner::foldShuffledBinop(BinaryOperator &Inst) {
     return nullptr;
 
   auto createBinOpShuffle = [&](Value *X, Value *Y, Constant *M) {
-    Value *XY = Builder.CreateBinOp(Inst.getOpcode(), X, Y);
+    Value *XY = Builder.CreateBinOp(Opcode, X, Y);
     if (auto *BO = dyn_cast<BinaryOperator>(XY))
       BO->copyIRFlags(&Inst);
     return new ShuffleVectorInst(XY, UndefValue::get(XY->getType()), M);
@@ -1415,7 +1416,7 @@ Instruction *InstCombiner::foldShuffledBinop(BinaryOperator &Inst) {
   if (match(&Inst, m_c_BinOp(
           m_OneUse(m_ShuffleVector(m_Value(V1), m_Undef(), m_Constant(Mask))),
           m_Constant(C))) &&
-      V1->getType()->getVectorNumElements() <= VWidth) {
+      V1->getType()->getVectorNumElements() <= NumElts) {
     assert(Inst.getType()->getScalarType() == V1->getType()->getScalarType() &&
            "Shuffle should not change scalar type");
     unsigned V1Width = V1->getType()->getVectorNumElements();
@@ -1429,9 +1430,9 @@ Instruction *InstCombiner::foldShuffledBinop(BinaryOperator &Inst) {
     SmallVector<Constant *, 16>
         NewVecC(V1Width, UndefValue::get(C->getType()->getScalarType()));
     bool MayChange = true;
-    for (unsigned I = 0; I < VWidth; ++I) {
+    for (unsigned I = 0; I < NumElts; ++I) {
       if (ShMask[I] >= 0) {
-        assert(ShMask[I] < (int)VWidth && "Not expecting narrowing shuffle");
+        assert(ShMask[I] < (int)NumElts && "Not expecting narrowing shuffle");
         Constant *CElt = C->getAggregateElement(I);
         Constant *NewCElt = NewVecC[ShMask[I]];
         // Bail out if:
@@ -1455,7 +1456,7 @@ Instruction *InstCombiner::foldShuffledBinop(BinaryOperator &Inst) {
       // that did not exist in the original code.
       bool ConstOp1 = isa<Constant>(Inst.getOperand(1));
       if (Inst.isIntDivRem() || (Inst.isShift() && ConstOp1))
-        NewC = getSafeVectorConstantForBinop(Inst.getOpcode(), NewC, ConstOp1);
+        NewC = getSafeVectorConstantForBinop(Opcode, NewC, ConstOp1);
 
       // Op(shuffle(V1, Mask), C) -> shuffle(Op(V1, NewC), Mask)
       // Op(C, shuffle(V1, Mask)) -> shuffle(Op(NewC, V1), Mask)

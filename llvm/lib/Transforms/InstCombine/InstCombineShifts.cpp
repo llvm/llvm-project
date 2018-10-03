@@ -593,7 +593,7 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
                                  SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  if (Instruction *X = foldShuffledBinop(I))
+  if (Instruction *X = foldVectorBinop(I))
     return X;
 
   if (Instruction *V = commonShiftTransforms(I))
@@ -697,7 +697,7 @@ Instruction *InstCombiner::visitLShr(BinaryOperator &I) {
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  if (Instruction *X = foldShuffledBinop(I))
+  if (Instruction *X = foldVectorBinop(I))
     return X;
 
   if (Instruction *R = commonShiftTransforms(I))
@@ -825,7 +825,7 @@ Instruction *InstCombiner::visitAShr(BinaryOperator &I) {
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  if (Instruction *X = foldShuffledBinop(I))
+  if (Instruction *X = foldVectorBinop(I))
     return X;
 
   if (Instruction *R = commonShiftTransforms(I))

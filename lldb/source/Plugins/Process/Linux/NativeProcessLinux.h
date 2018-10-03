@@ -182,8 +182,6 @@ private:
 
   NativeThreadLinux &AddThread(lldb::tid_t thread_id);
 
-  Status FixupBreakpointPCAsNeeded(NativeThreadLinux &thread);
-
   /// Writes a siginfo_t structure corresponding to the given thread ID to the
   /// memory region pointed to by @p siginfo.
   Status GetSignalInfo(lldb::tid_t tid, void *siginfo);

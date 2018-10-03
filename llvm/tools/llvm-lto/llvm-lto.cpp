@@ -166,6 +166,10 @@ static cl::opt<int>
     ThinLTOCacheMaxSizeFiles("thinlto-cache-max-size-files", cl::init(1000000),
     cl::desc("Set ThinLTO cache pruning directory maximum number of files."));
 
+static cl::opt<unsigned>
+    ThinLTOCacheEntryExpiration("thinlto-cache-entry-expiration", cl::init(604800) /* 1w */,
+    cl::desc("Set ThinLTO cache entry expiration time."));
+
 static cl::opt<std::string> ThinLTOSaveTempsPrefix(
     "thinlto-save-temps",
     cl::desc("Save ThinLTO temp files using filenames created by adding "
@@ -481,6 +485,7 @@ public:
     ThinGenerator.setTargetOptions(Options);
     ThinGenerator.setCacheDir(ThinLTOCacheDir);
     ThinGenerator.setCachePruningInterval(ThinLTOCachePruningInterval);
+    ThinGenerator.setCacheEntryExpiration(ThinLTOCacheEntryExpiration);
     ThinGenerator.setCacheMaxSizeFiles(ThinLTOCacheMaxSizeFiles);
     ThinGenerator.setCacheMaxSizeBytes(ThinLTOCacheMaxSizeBytes);
     ThinGenerator.setFreestanding(EnableFreestanding);
