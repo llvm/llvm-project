@@ -170,3 +170,25 @@ NSString *_Nonnull checkAssumeOnMutableDictionaryOtherMethod(NSMutableDictionary
   if (k) {}
   return k; // no-warning
 }
+
+// Check that we don't crash when the added assumption is enough
+// to make the state unfeasible.
+@class DummyClass;
+@interface DictionarySubclass : NSDictionary {
+  DummyClass *g;
+  DictionarySubclass *d;
+}
+@end
+@implementation DictionarySubclass
+- (id) objectForKey:(id)e {
+  if (e) {}
+  return d;
+}
+- (void) coder {
+  for (id e in g) {
+    id f = [self objectForKey:e];
+    if (f)
+      (void)e;
+  }
+}
+@end
