@@ -876,12 +876,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationPromotedToType(ISD::OR,     VT, MVT::v2i64);
       setOperationPromotedToType(ISD::XOR,    VT, MVT::v2i64);
       setOperationPromotedToType(ISD::LOAD,   VT, MVT::v2i64);
-      setOperationPromotedToType(ISD::SELECT, VT, MVT::v2i64);
     }
 
     // Custom lower v2i64 and v2f64 selects.
     setOperationAction(ISD::SELECT,             MVT::v2f64, Custom);
     setOperationAction(ISD::SELECT,             MVT::v2i64, Custom);
+    setOperationAction(ISD::SELECT,             MVT::v4i32, Custom);
+    setOperationAction(ISD::SELECT,             MVT::v8i16, Custom);
+    setOperationAction(ISD::SELECT,             MVT::v16i8, Custom);
 
     setOperationAction(ISD::FP_TO_SINT,         MVT::v4i32, Legal);
     setOperationAction(ISD::FP_TO_SINT,         MVT::v2i32, Custom);
@@ -1058,6 +1060,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setOperationAction(ISD::SELECT,            MVT::v4f64, Custom);
     setOperationAction(ISD::SELECT,            MVT::v4i64, Custom);
+    setOperationAction(ISD::SELECT,            MVT::v8i32, Custom);
+    setOperationAction(ISD::SELECT,            MVT::v16i16, Custom);
+    setOperationAction(ISD::SELECT,            MVT::v32i8, Custom);
     setOperationAction(ISD::SELECT,            MVT::v8f32, Custom);
 
     for (auto VT : { MVT::v16i16, MVT::v8i32, MVT::v4i64 }) {
@@ -1174,7 +1179,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationPromotedToType(ISD::OR,     VT, MVT::v4i64);
       setOperationPromotedToType(ISD::XOR,    VT, MVT::v4i64);
       setOperationPromotedToType(ISD::LOAD,   VT, MVT::v4i64);
-      setOperationPromotedToType(ISD::SELECT, VT, MVT::v4i64);
     }
 
     if (HasInt256) {
@@ -1347,6 +1351,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setOperationAction(ISD::SELECT,             MVT::v8f64, Custom);
     setOperationAction(ISD::SELECT,             MVT::v8i64, Custom);
+    setOperationAction(ISD::SELECT,             MVT::v16i32, Custom);
+    setOperationAction(ISD::SELECT,             MVT::v32i16, Custom);
+    setOperationAction(ISD::SELECT,             MVT::v64i8, Custom);
     setOperationAction(ISD::SELECT,             MVT::v16f32, Custom);
 
     for (auto VT : { MVT::v16i32, MVT::v8i64 }) {
@@ -1421,7 +1428,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
     for (auto VT : { MVT::v64i8, MVT::v32i16, MVT::v16i32 }) {
       setOperationPromotedToType(ISD::LOAD,   VT, MVT::v8i64);
-      setOperationPromotedToType(ISD::SELECT, VT, MVT::v8i64);
     }
 
     // Need to custom split v32i16/v64i8 bitcasts.

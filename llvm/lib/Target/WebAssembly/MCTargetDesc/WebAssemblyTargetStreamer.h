@@ -40,9 +40,7 @@ public:
   /// .endfunc
   virtual void emitEndFunc() = 0;
   /// .functype
-  virtual void emitIndirectFunctionType(MCSymbol *Symbol,
-                                        SmallVectorImpl<MVT> &Params,
-                                        SmallVectorImpl<MVT> &Results) = 0;
+  virtual void emitIndirectFunctionType(MCSymbolWasm *Symbol) = 0;
   /// .indidx
   virtual void emitIndIdx(const MCExpr *Value) = 0;
   /// .import_global
@@ -65,8 +63,7 @@ public:
   void emitResult(MCSymbol *Symbol, ArrayRef<MVT> Types) override;
   void emitLocal(ArrayRef<MVT> Types) override;
   void emitEndFunc() override;
-  void emitIndirectFunctionType(MCSymbol *Symbol, SmallVectorImpl<MVT> &Params,
-                                SmallVectorImpl<MVT> &Results) override;
+  void emitIndirectFunctionType(MCSymbolWasm *Symbol) override;
   void emitIndIdx(const MCExpr *Value) override;
   void emitGlobalImport(StringRef name) override;
   void emitImportModule(MCSymbolWasm *Sym, StringRef ModuleName) override;
@@ -81,8 +78,7 @@ public:
   void emitResult(MCSymbol *Symbol, ArrayRef<MVT> Types) override;
   void emitLocal(ArrayRef<MVT> Types) override;
   void emitEndFunc() override;
-  void emitIndirectFunctionType(MCSymbol *Symbol, SmallVectorImpl<MVT> &Params,
-                                SmallVectorImpl<MVT> &Results) override;
+  void emitIndirectFunctionType(MCSymbolWasm *Symbol) override;
   void emitIndIdx(const MCExpr *Value) override;
   void emitGlobalImport(StringRef name) override;
   void emitImportModule(MCSymbolWasm *Sym, StringRef ModuleName) override;

@@ -20,11 +20,8 @@ class MCSymbolWasm : public MCSymbol {
   bool IsHidden = false;
   bool IsComdat = false;
   std::string ModuleName;
-  SmallVector<wasm::ValType, 1> Returns;
-  SmallVector<wasm::ValType, 4> Params;
+  wasm::WasmSignature *Signature = nullptr;
   wasm::WasmGlobalType GlobalType;
-  bool ParamsSet = false;
-  bool ReturnsSet = false;
   bool GlobalTypeSet = false;
 
   /// An expression describing how to calculate the size of a symbol. If a
@@ -60,25 +57,8 @@ public:
   const StringRef getModuleName() const { return ModuleName; }
   void setModuleName(StringRef Name) { ModuleName = Name; }
 
-  const SmallVector<wasm::ValType, 1> &getReturns() const {
-    assert(ReturnsSet);
-    return Returns;
-  }
-
-  void setReturns(SmallVectorImpl<wasm::ValType> &&Rets) {
-    ReturnsSet = true;
-    Returns = std::move(Rets);
-  }
-
-  const SmallVector<wasm::ValType, 4> &getParams() const {
-    assert(ParamsSet);
-    return Params;
-  }
-
-  void setParams(SmallVectorImpl<wasm::ValType> &&Pars) {
-    ParamsSet = true;
-    Params = std::move(Pars);
-  }
+  const wasm::WasmSignature *getSignature() const { return Signature; }
+  void setSignature(wasm::WasmSignature *Sig) { Signature = Sig; }
 
   const wasm::WasmGlobalType &getGlobalType() const {
     assert(GlobalTypeSet);

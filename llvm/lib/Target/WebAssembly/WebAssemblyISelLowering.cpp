@@ -769,12 +769,18 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
     MFI->addParam(PtrVT);
   }
 
-  // Record the number and types of results.
+  // Record the number and types of arguments and results.
   SmallVector<MVT, 4> Params;
   SmallVector<MVT, 4> Results;
-  ComputeSignatureVTs(MF.getFunction(), DAG.getTarget(), Params, Results);
+  ComputeSignatureVTs(MF.getFunction().getFunctionType(), MF.getFunction(),
+                      DAG.getTarget(), Params, Results);
   for (MVT VT : Results)
     MFI->addResult(VT);
+  // TODO: Use signatures in WebAssemblyMachineFunctionInfo too and unify
+  // the param logic here with ComputeSignatureVTs
+  assert(MFI->getParams().size() == Params.size() &&
+         std::equal(MFI->getParams().begin(), MFI->getParams().end(),
+                    Params.begin()));
 
   return Chain;
 }
