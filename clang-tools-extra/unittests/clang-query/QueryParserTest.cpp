@@ -146,6 +146,17 @@ TEST_F(QueryParserTest, LetUnlet) {
             cast<InvalidQuery>(Q)->ErrStr);
 }
 
+TEST_F(QueryParserTest, Comment) {
+  QueryRef Q = parse("# let foo decl()");
+  ASSERT_TRUE(isa<NoOpQuery>(Q));
+
+  Q = parse("let foo decl() # creates a decl() matcher called foo");
+  ASSERT_TRUE(isa<LetQuery>(Q));
+
+  Q = parse("set bind-root false # reduce noise");
+  ASSERT_TRUE(isa<SetQuery<bool>>(Q));
+}
+
 TEST_F(QueryParserTest, Complete) {
   std::vector<llvm::LineEditor::Completion> Comps =
       QueryParser::complete("", 0, QS);
