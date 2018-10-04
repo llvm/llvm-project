@@ -87,6 +87,7 @@ public:
 
 private:
   void buildIndex();
+  std::unique_ptr<Iterator> iterator(const Token &Tok) const;
 
   /// Stores symbols sorted in the descending order of symbol quality..
   std::vector<const Symbol *> Symbols;
