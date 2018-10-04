@@ -317,9 +317,9 @@ TEST(DexIterators, Boost) {
 
 TEST(DexIterators, Optimizations) {
   Corpus C{5};
-  const PostingList L1({1});
-  const PostingList L2({2});
-  const PostingList L3({3});
+  const PostingList L1{1};
+  const PostingList L2{2};
+  const PostingList L3{3};
 
   // empty and/or yield true/false
   EXPECT_EQ(llvm::to_string(*C.intersect()), "true");
