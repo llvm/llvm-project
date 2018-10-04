@@ -47,7 +47,7 @@ static llvm::cl::opt<IndexFileFormat>
                                        "human-readable YAML format"),
                             clEnumValN(IndexFileFormat::RIFF, "binary",
                                        "binary RIFF format")),
-           llvm::cl::init(IndexFileFormat::YAML));
+           llvm::cl::init(IndexFileFormat::RIFF));
 
 class IndexActionFactory : public tooling::FrontendActionFactory {
 public:

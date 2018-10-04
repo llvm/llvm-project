@@ -24,6 +24,15 @@ namespace clang {
 namespace clangd {
 namespace dex {
 
+std::unique_ptr<SymbolIndex>
+Dex::build(SymbolSlab Symbols, RefSlab Refs,
+           llvm::ArrayRef<std::string> URISchemes) {
+  auto Size = Symbols.bytes() + Refs.bytes();
+  auto Data = std::make_pair(std::move(Symbols), std::move(Refs));
+  return llvm::make_unique<Dex>(Data.first, Data.second, std::move(Data), Size,
+                                std::move(URISchemes));
+}
+
 namespace {
 
 // Mark symbols which are can be used for code completion.
@@ -254,7 +263,10 @@ void Dex::lookup(const LookupRequest &Req,
 void Dex::refs(const RefsRequest &Req,
                llvm::function_ref<void(const Ref &)> Callback) const {
   trace::Span Tracer("Dex refs");
-  log("refs is not implemented.");
+  for (const auto &ID : Req.IDs)
+    for (const auto &Ref : Refs.lookup(ID))
+      if (static_cast<int>(Req.Filter & Ref.Kind))
+        Callback(Ref);
 }
 
 size_t Dex::estimateMemoryUsage() const {
@@ -264,6 +276,7 @@ size_t Dex::estimateMemoryUsage() const {
   Bytes += InvertedIndex.getMemorySize();
   for (const auto &TokenToPostingList : InvertedIndex)
     Bytes += TokenToPostingList.second.bytes();
+  Bytes += Refs.getMemorySize();
   return Bytes + BackingDataSize;
 }
 
