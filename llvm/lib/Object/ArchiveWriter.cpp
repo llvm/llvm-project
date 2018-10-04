@@ -27,6 +27,8 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <map>
+
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>
 #else
@@ -245,18 +247,20 @@ static void printMemberHeader(raw_ostream &Out, uint64_t Pos,
                               raw_ostream &StringTable,
                               object::Archive::Kind Kind, bool Thin,
                               StringRef ArcName, const NewArchiveMember &M,
+                              sys::TimePoint<std::chrono::seconds> ModTime,
                               unsigned Size) {
+
   if (isBSDLike(Kind))
-    return printBSDMemberHeader(Out, Pos, M.MemberName, M.ModTime, M.UID, M.GID,
+    return printBSDMemberHeader(Out, Pos, M.MemberName, ModTime, M.UID, M.GID,
                                 M.Perms, Size);
   if (!useStringTable(Thin, M.MemberName))
-    return printGNUSmallMemberHeader(Out, M.MemberName, M.ModTime, M.UID, M.GID,
+    return printGNUSmallMemberHeader(Out, M.MemberName, ModTime, M.UID, M.GID,
                                      M.Perms, Size);
   Out << '/';
   uint64_t NamePos = StringTable.tell();
   addToStringTable(StringTable, ArcName, M, Thin);
   printWithSpacePadding(Out, NamePos, 15);
-  printRestOfMemberHeader(Out, M.ModTime, M.UID, M.GID, M.Perms, Size);
+  printRestOfMemberHeader(Out, ModTime, M.UID, M.GID, M.Perms, Size);
 }
 
 namespace {
@@ -411,7 +415,7 @@ getSymbols(MemoryBufferRef Buf, raw_ostream &SymNames, bool &HasObject) {
 static Expected<std::vector<MemberData>>
 computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
                   object::Archive::Kind Kind, bool Thin, StringRef ArcName,
-                  ArrayRef<NewArchiveMember> NewMembers) {
+                  bool Deterministic, ArrayRef<NewArchiveMember> NewMembers) {
   static char PaddingData[8] = {'\n', '\n', '\n', '\n', '\n', '\n', '\n', '\n'};
 
   // This ignores the symbol table, but we only need the value mod 8 and the
@@ -420,6 +424,59 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
 
   std::vector<MemberData> Ret;
   bool HasObject = false;
+
+  // UniqueTimestamps is a special case to improve debugging on Darwin:
+  //
+  // The Darwin linker does not link debug info into the final
+  // binary. Instead, it emits entries of type N_OSO in in the output
+  // binary's symbol table, containing references to the linked-in
+  // object files. Using that reference, the debugger can read the
+  // debug data directly from the object files. Alternatively, an
+  // invocation of 'dsymutil' will link the debug data from the object
+  // files into a dSYM bundle, which can be loaded by the debugger,
+  // instead of the object files.
+  //
+  // For an object file, the N_OSO entries contain the absolute path
+  // path to the file, and the file's timestamp. For an object
+  // included in an archive, the path is formatted like
+  // "/absolute/path/to/archive.a(member.o)", and the timestamp is the
+  // archive member's timestamp, rather than the archive's timestamp.
+  //
+  // However, this doesn't always uniquely identify an object within
+  // an archive -- an archive file can have multiple entries with the
+  // same filename. (This will happen commonly if the original object
+  // files started in different directories.) The only way they get
+  // distinguished, then, is via the timestamp. But this process is
+  // unable to find the correct object file in the archive when there
+  // are two files of the same name and timestamp.
+  //
+  // Additionally, timestamp==0 is treated specially, and causes the
+  // timestamp to be ignored as a match criteria.
+  //
+  // That will "usually" work out okay when creating an archive not in
+  // deterministic timestamp mode, because the objects will probably
+  // have been created at different timestamps.
+  //
+  // To ameliorate this problem, in deterministic archive mode (which
+  // is the default), on Darwin we will emit a unique non-zero
+  // timestamp for each entry with a duplicated name. This is still
+  // deterministic: the only thing affecting that timestamp is the
+  // order of the files in the resultant archive.
+  //
+  // See also the functions that handle the lookup:
+  // in lldb: ObjectContainerBSDArchive::Archive::FindObject()
+  // in llvm/tools/dsymutil: BinaryHolder::GetArchiveMemberBuffers().
+  bool UniqueTimestamps =
+      Deterministic && (Kind == object::Archive::K_DARWIN ||
+                        Kind == object::Archive::K_DARWIN64);
+  std::map<StringRef, unsigned> FilenameCount;
+  if (UniqueTimestamps) {
+    for (const NewArchiveMember &M : NewMembers)
+      FilenameCount[M.MemberName]++;
+    for (auto &Entry : FilenameCount)
+      Entry.second = Entry.second > 1 ? 1 : 0;
+  }
+
   for (const NewArchiveMember &M : NewMembers) {
     std::string Header;
     raw_string_ostream Out(Header);
@@ -437,7 +494,13 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
     unsigned TailPadding = OffsetToAlignment(Data.size() + MemberPadding, 2);
     StringRef Padding = StringRef(PaddingData, MemberPadding + TailPadding);
 
-    printMemberHeader(Out, Pos, StringTable, Kind, Thin, ArcName, M,
+    sys::TimePoint<std::chrono::seconds> ModTime;
+    if (UniqueTimestamps)
+      // Increment timestamp for each file of a given name.
+      ModTime = sys::toTimePoint(FilenameCount[M.MemberName]++);
+    else
+      ModTime = M.ModTime;
+    printMemberHeader(Out, Pos, StringTable, Kind, Thin, ArcName, M, ModTime,
                       Buf.getBufferSize() + MemberPadding);
     Out.flush();
 
@@ -469,8 +532,8 @@ Error llvm::writeArchive(StringRef ArcName,
   SmallString<0> StringTableBuf;
   raw_svector_ostream StringTable(StringTableBuf);
 
-  Expected<std::vector<MemberData>> DataOrErr =
-      computeMemberData(StringTable, SymNames, Kind, Thin, ArcName, NewMembers);
+  Expected<std::vector<MemberData>> DataOrErr = computeMemberData(
+      StringTable, SymNames, Kind, Thin, ArcName, Deterministic, NewMembers);
   if (Error E = DataOrErr.takeError())
     return E;
   std::vector<MemberData> &Data = *DataOrErr;
