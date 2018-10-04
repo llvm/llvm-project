@@ -111,8 +111,8 @@ TEST(DexIterators, AndThreeLists) {
 
 TEST(DexIterators, AndEmpty) {
   Corpus C{10000};
-  const PostingList L1({1});
-  const PostingList L2({2});
+  const PostingList L1{1};
+  const PostingList L2{2};
   // These iterators are empty, but the optimizer can't tell.
   auto Empty1 = C.intersect(L1.iterator(), L2.iterator());
   auto Empty2 = C.intersect(L1.iterator(), L2.iterator());
