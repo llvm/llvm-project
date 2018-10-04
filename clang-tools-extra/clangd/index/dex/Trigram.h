@@ -37,7 +37,7 @@ namespace dex {
 ///
 /// The symbol's name is broken into segments, e.g. "FooBar" has two segments.
 /// Trigrams can start at any character in the input. Then we can choose to move
-/// to the next character, move to the start of the next segment, or stop.
+/// to the next character or to the start of the next segment.
 ///
 /// Short trigrams (length 1-2) are used for short queries. These are:
 ///  - prefixes of the identifier, of length 1 and 2

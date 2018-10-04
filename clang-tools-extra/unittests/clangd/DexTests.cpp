@@ -381,8 +381,7 @@ TEST(DexTrigrams, IdentifierTrigrams) {
                            "cde", "def"}));
 
   EXPECT_THAT(generateIdentifierTrigrams("a_b_c_d_e_"),
-              trigramsAre({"a", "a_", "ab", "abc", "abd", "acd", "ace", "bcd",
-                           "bce", "bde", "cde"}));
+              trigramsAre({"a", "a_", "ab", "abc", "bcd", "cde"}));
 
   EXPECT_THAT(generateIdentifierTrigrams("unique_ptr"),
               trigramsAre({"u", "un", "up", "uni", "unp", "upt", "niq", "nip",
@@ -396,14 +395,11 @@ TEST(DexTrigrams, IdentifierTrigrams) {
   EXPECT_THAT(generateIdentifierTrigrams("IsOK"),
               trigramsAre({"i", "is", "io", "iso", "iok", "sok"}));
 
-  auto X = generateIdentifierTrigrams("abc_defGhij__klm");
   EXPECT_THAT(
       generateIdentifierTrigrams("abc_defGhij__klm"),
-      trigramsAre({"a",   "ab",  "ad",  "abc", "abd", "abg", "ade", "adg",
-                   "adk", "agh", "agk", "bcd", "bcg", "bde", "bdg", "bdk",
-                   "bgh", "bgk", "cde", "cdg", "cdk", "cgh", "cgk", "def",
-                   "deg", "dek", "dgh", "dgk", "dkl", "efg", "efk", "egh",
-                   "egk", "ekl", "fgh", "fgk", "fkl", "ghi", "ghk", "gkl",
+      trigramsAre({"a",   "ab",  "ad",  "abc", "abd", "ade", "adg", "bcd",
+                   "bde", "bdg", "cde", "cdg", "def", "deg", "dgh", "dgk",
+                   "efg", "egh", "egk", "fgh", "fgk", "ghi", "ghk", "gkl",
                    "hij", "hik", "hkl", "ijk", "ikl", "jkl", "klm"}));
 }
 
