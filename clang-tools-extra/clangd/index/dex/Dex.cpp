@@ -156,7 +156,9 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
          "There must be no :: in query.");
   trace::Span Tracer("Dex fuzzyFind");
   FuzzyMatcher Filter(Req.Query);
-  bool More = false;
+  // For short queries we use specialized trigrams that don't yield all results.
+  // Prevent clients from postfiltering them for longer queries.
+  bool More = !Req.Query.empty() && Req.Query.size() < 3;
 
   std::vector<std::unique_ptr<Iterator>> TopLevelChildren;
   const auto TrigramTokens = generateQueryTrigrams(Req.Query);

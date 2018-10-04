@@ -367,53 +367,54 @@ trigramsAre(std::initializer_list<std::string> Trigrams) {
 
 TEST(DexTrigrams, IdentifierTrigrams) {
   EXPECT_THAT(generateIdentifierTrigrams("X86"),
-              trigramsAre({"x86", "x$$", "x8$"}));
+              trigramsAre({"x86", "x", "x8"}));
 
-  EXPECT_THAT(generateIdentifierTrigrams("nl"), trigramsAre({"nl$", "n$$"}));
+  EXPECT_THAT(generateIdentifierTrigrams("nl"), trigramsAre({"nl", "n"}));
 
-  EXPECT_THAT(generateIdentifierTrigrams("n"), trigramsAre({"n$$"}));
+  EXPECT_THAT(generateIdentifierTrigrams("n"), trigramsAre({"n"}));
 
   EXPECT_THAT(generateIdentifierTrigrams("clangd"),
-              trigramsAre({"c$$", "cl$", "cla", "lan", "ang", "ngd"}));
+              trigramsAre({"c", "cl", "cla", "lan", "ang", "ngd"}));
 
   EXPECT_THAT(generateIdentifierTrigrams("abc_def"),
-              trigramsAre({"a$$", "abc", "abd", "ade", "bcd", "bde", "cde",
-                           "def", "ab$", "ad$"}));
+              trigramsAre({"a", "ab", "ad", "abc", "abd", "ade", "bcd", "bde",
+                           "cde", "def"}));
 
   EXPECT_THAT(generateIdentifierTrigrams("a_b_c_d_e_"),
-              trigramsAre({"a$$", "a_$", "a_b", "abc", "abd", "acd", "ace",
-                           "bcd", "bce", "bde", "cde", "ab$"}));
+              trigramsAre({"a", "a_", "ab", "abc", "abd", "acd", "ace", "bcd",
+                           "bce", "bde", "cde"}));
 
   EXPECT_THAT(generateIdentifierTrigrams("unique_ptr"),
-              trigramsAre({"u$$", "uni", "unp", "upt", "niq", "nip", "npt",
-                           "iqu", "iqp", "ipt", "que", "qup", "qpt", "uep",
-                           "ept", "ptr", "un$", "up$"}));
+              trigramsAre({"u", "un", "up", "uni", "unp", "upt", "niq", "nip",
+                           "npt", "iqu", "iqp", "ipt", "que", "qup", "qpt",
+                           "uep", "ept", "ptr"}));
 
   EXPECT_THAT(
       generateIdentifierTrigrams("TUDecl"),
-      trigramsAre({"t$$", "tud", "tde", "ude", "dec", "ecl", "tu$", "td$"}));
+      trigramsAre({"t", "tu", "td", "tud", "tde", "ude", "dec", "ecl"}));
 
   EXPECT_THAT(generateIdentifierTrigrams("IsOK"),
-              trigramsAre({"i$$", "iso", "iok", "sok", "is$", "io$"}));
+              trigramsAre({"i", "is", "io", "iso", "iok", "sok"}));
 
+  auto X = generateIdentifierTrigrams("abc_defGhij__klm");
   EXPECT_THAT(
       generateIdentifierTrigrams("abc_defGhij__klm"),
-      trigramsAre({"a$$", "abc", "abd", "abg", "ade", "adg", "adk", "agh",
-                   "agk", "bcd", "bcg", "bde", "bdg", "bdk", "bgh", "bgk",
-                   "cde", "cdg", "cdk", "cgh", "cgk", "def", "deg", "dek",
-                   "dgh", "dgk", "dkl", "efg", "efk", "egh", "egk", "ekl",
-                   "fgh", "fgk", "fkl", "ghi", "ghk", "gkl", "hij", "hik",
-                   "hkl", "ijk", "ikl", "jkl", "klm", "ab$", "ad$"}));
+      trigramsAre({"a",   "ab",  "ad",  "abc", "abd", "abg", "ade", "adg",
+                   "adk", "agh", "agk", "bcd", "bcg", "bde", "bdg", "bdk",
+                   "bgh", "bgk", "cde", "cdg", "cdk", "cgh", "cgk", "def",
+                   "deg", "dek", "dgh", "dgk", "dkl", "efg", "efk", "egh",
+                   "egk", "ekl", "fgh", "fgk", "fkl", "ghi", "ghk", "gkl",
+                   "hij", "hik", "hkl", "ijk", "ikl", "jkl", "klm"}));
 }
 
 TEST(DexTrigrams, QueryTrigrams) {
-  EXPECT_THAT(generateQueryTrigrams("c"), trigramsAre({"c$$"}));
-  EXPECT_THAT(generateQueryTrigrams("cl"), trigramsAre({"cl$"}));
+  EXPECT_THAT(generateQueryTrigrams("c"), trigramsAre({"c"}));
+  EXPECT_THAT(generateQueryTrigrams("cl"), trigramsAre({"cl"}));
   EXPECT_THAT(generateQueryTrigrams("cla"), trigramsAre({"cla"}));
 
-  EXPECT_THAT(generateQueryTrigrams("_"), trigramsAre({"_$$"}));
-  EXPECT_THAT(generateQueryTrigrams("__"), trigramsAre({"__$"}));
-  EXPECT_THAT(generateQueryTrigrams("___"), trigramsAre({"___"}));
+  EXPECT_THAT(generateQueryTrigrams("_"), trigramsAre({"_"}));
+  EXPECT_THAT(generateQueryTrigrams("__"), trigramsAre({"__"}));
+  EXPECT_THAT(generateQueryTrigrams("___"), trigramsAre({}));
 
   EXPECT_THAT(generateQueryTrigrams("X86"), trigramsAre({"x86"}));
 
@@ -528,6 +529,31 @@ TEST(DexTest, FuzzyMatch) {
   EXPECT_THAT(match(*I, Req),
               UnorderedElementsAre("LaughingOutLoud", "LittleOldLady"));
 }
+
+// TODO(sammccall): enable after D52796 bugfix.
+#if 0
+TEST(DexTest, ShortQuery) {
+  auto I =
+      Dex::build(generateSymbols({"OneTwoThreeFour"}), RefSlab(), URISchemes);
+  FuzzyFindRequest Req;
+  bool Incomplete;
+
+  EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre("OneTwoThreeFour"));
+  EXPECT_FALSE(Incomplete) << "Empty string is not a short query";
+
+  Req.Query = "t";
+  EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre());
+  EXPECT_TRUE(Incomplete) << "Short queries have different semantics";
+
+  Req.Query = "tt";
+  EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre());
+  EXPECT_TRUE(Incomplete) << "Short queries have different semantics";
+
+  Req.Query = "ttf";
+  EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre("OneTwoThreeFour"));
+  EXPECT_FALSE(Incomplete) << "3-char string is not a short query";
+}
+#endif
 
 TEST(DexTest, MatchQualifiedNamesWithoutSpecificScope) {
   auto I = Dex::build(generateSymbols({"a::y1", "b::y2", "y3"}), RefSlab(),
