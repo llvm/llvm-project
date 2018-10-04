@@ -192,7 +192,9 @@ def ext_flexible_array_init : Extension<
   "flexible array initialization is a GNU extension">, InGroup<GNUFlexibleArrayInitializer>;
 
 // Declarations.
-def ext_duplicate_declspec : ExtWarn<"duplicate '%0' declaration specifier">,
+def ext_duplicate_declspec : Extension<"duplicate '%0' declaration specifier">,
+  InGroup<DuplicateDeclSpecifier>;
+def ext_warn_duplicate_declspec : ExtWarn<"duplicate '%0' declaration specifier">,
   InGroup<DuplicateDeclSpecifier>;
 def warn_duplicate_declspec : Warning<"duplicate '%0' declaration specifier">,
   InGroup<DuplicateDeclSpecifier>;

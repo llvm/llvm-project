@@ -219,6 +219,87 @@ fp16_fml_fallthrough:
       Features.push_back("+fullfp16");
   }
 
+  // FIXME: this needs reimplementation too after the TargetParser rewrite
+  //
+  // Context sensitive meaning of Crypto:
+  // 1) For Arch >= ARMv8.4a:  crypto = sm4 + sha3 + sha2 + aes
+  // 2) For Arch <= ARMv8.3a:  crypto = sha2 + aes
+  const auto ItBegin = Features.begin();
+  const auto ItEnd = Features.end();
+  const auto ItRBegin = Features.rbegin();
+  const auto ItREnd = Features.rend();
+  const auto ItRCrypto = std::find(ItRBegin, ItREnd, "+crypto");
+  const auto ItRNoCrypto = std::find(ItRBegin, ItREnd, "-crypto");
+  const auto HasCrypto  = ItRCrypto != ItREnd;
+  const auto HasNoCrypto = ItRNoCrypto != ItREnd;
+  const ptrdiff_t PosCrypto = ItRCrypto - ItRBegin;
+  const ptrdiff_t PosNoCrypto = ItRNoCrypto - ItRBegin;
+
+  bool NoCrypto = false;
+  if (HasCrypto && HasNoCrypto) {
+    if (PosNoCrypto < PosCrypto)
+      NoCrypto = true;
+  }
+
+  if (std::find(ItBegin, ItEnd, "+v8.4a") != ItEnd) {
+    if (HasCrypto && !NoCrypto) {
+      // Check if we have NOT disabled an algorithm with something like:
+      //   +crypto, -algorithm
+      // And if "-algorithm" does not occur, we enable that crypto algorithm.
+      const bool HasSM4  = (std::find(ItBegin, ItEnd, "-sm4") == ItEnd);
+      const bool HasSHA3 = (std::find(ItBegin, ItEnd, "-sha3") == ItEnd);
+      const bool HasSHA2 = (std::find(ItBegin, ItEnd, "-sha2") == ItEnd);
+      const bool HasAES  = (std::find(ItBegin, ItEnd, "-aes") == ItEnd);
+      if (HasSM4)
+        Features.push_back("+sm4");
+      if (HasSHA3)
+        Features.push_back("+sha3");
+      if (HasSHA2)
+        Features.push_back("+sha2");
+      if (HasAES)
+        Features.push_back("+aes");
+    } else if (HasNoCrypto) {
+      // Check if we have NOT enabled a crypto algorithm with something like:
+      //   -crypto, +algorithm
+      // And if "+algorithm" does not occur, we disable that crypto algorithm.
+      const bool HasSM4  = (std::find(ItBegin, ItEnd, "+sm4") != ItEnd);
+      const bool HasSHA3 = (std::find(ItBegin, ItEnd, "+sha3") != ItEnd);
+      const bool HasSHA2 = (std::find(ItBegin, ItEnd, "+sha2") != ItEnd);
+      const bool HasAES  = (std::find(ItBegin, ItEnd, "+aes") != ItEnd);
+      if (!HasSM4)
+        Features.push_back("-sm4");
+      if (!HasSHA3)
+        Features.push_back("-sha3");
+      if (!HasSHA2)
+        Features.push_back("-sha2");
+      if (!HasAES)
+        Features.push_back("-aes");
+    }
+  } else {
+    if (HasCrypto && !NoCrypto) {
+      const bool HasSHA2 = (std::find(ItBegin, ItEnd, "-sha2") == ItEnd);
+      const bool HasAES = (std::find(ItBegin, ItEnd, "-aes") == ItEnd);
+      if (HasSHA2)
+        Features.push_back("+sha2");
+      if (HasAES)
+        Features.push_back("+aes");
+    } else if (HasNoCrypto) {
+      const bool HasSHA2 = (std::find(ItBegin, ItEnd, "+sha2") != ItEnd);
+      const bool HasAES  = (std::find(ItBegin, ItEnd, "+aes") != ItEnd);
+      const bool HasV82a = (std::find(ItBegin, ItEnd, "+v8.2a") != ItEnd);
+      const bool HasV83a = (std::find(ItBegin, ItEnd, "+v8.3a") != ItEnd);
+      const bool HasV84a = (std::find(ItBegin, ItEnd, "+v8.4a") != ItEnd);
+      if (!HasSHA2)
+        Features.push_back("-sha2");
+      if (!HasAES)
+        Features.push_back("-aes");
+      if (HasV82a || HasV83a || HasV84a) {
+        Features.push_back("-sm4");
+        Features.push_back("-sha3");
+      }
+    }
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
                                options::OPT_munaligned_access))
     if (A->getOption().matches(options::OPT_mno_unaligned_access))
