@@ -435,8 +435,9 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
   }
 
   trace::Span Tracer("BuildIndex");
-  auto Index = UseDex ? dex::Dex::build(std::move(Symbols), URISchemes)
-                      : MemIndex::build(std::move(Symbols), std::move(Refs));
+  auto Index =
+      UseDex ? dex::Dex::build(std::move(Symbols), std::move(Refs), URISchemes)
+             : MemIndex::build(std::move(Symbols), std::move(Refs));
   vlog("Loaded {0} from {1} with estimated memory usage {2}",
        UseDex ? "Dex" : "MemIndex", SymbolFilename,
        Index->estimateMemoryUsage());

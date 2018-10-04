@@ -423,7 +423,8 @@ TEST(DexSearchTokens, SymbolPath) {
 //===----------------------------------------------------------------------===//
 
 TEST(Dex, Lookup) {
-  auto I = Dex::build(generateSymbols({"ns::abc", "ns::xyz"}), URISchemes);
+  auto I = Dex::build(generateSymbols({"ns::abc", "ns::xyz"}), RefSlab(),
+                      URISchemes);
   EXPECT_THAT(lookup(*I, SymbolID("ns::abc")), UnorderedElementsAre("ns::abc"));
   EXPECT_THAT(lookup(*I, {SymbolID("ns::abc"), SymbolID("ns::xyz")}),
               UnorderedElementsAre("ns::abc", "ns::xyz"));
@@ -436,7 +437,7 @@ TEST(Dex, FuzzyFind) {
   auto Index =
       Dex::build(generateSymbols({"ns::ABC", "ns::BCD", "::ABC",
                                   "ns::nested::ABC", "other::ABC", "other::A"}),
-                 URISchemes);
+                 RefSlab(), URISchemes);
   FuzzyFindRequest Req;
   Req.Query = "ABC";
   Req.Scopes = {"ns::"};
@@ -466,13 +467,13 @@ TEST(DexTest, DexDeduplicate) {
                                  symbol("2") /* duplicate */};
   FuzzyFindRequest Req;
   Req.Query = "2";
-  Dex I(Symbols, URISchemes);
+  Dex I(Symbols, RefSlab(), URISchemes);
   EXPECT_FALSE(Req.Limit);
   EXPECT_THAT(match(I, Req), ElementsAre("2", "2"));
 }
 
 TEST(DexTest, DexLimitedNumMatches) {
-  auto I = Dex::build(generateNumSymbols(0, 100), URISchemes);
+  auto I = Dex::build(generateNumSymbols(0, 100), RefSlab(), URISchemes);
   FuzzyFindRequest Req;
   Req.Query = "5";
   Req.Limit = 3;
@@ -486,7 +487,7 @@ TEST(DexTest, DexLimitedNumMatches) {
 TEST(DexTest, FuzzyMatch) {
   auto I = Dex::build(
       generateSymbols({"LaughingOutLoud", "LionPopulation", "LittleOldLady"}),
-      URISchemes);
+      RefSlab(), URISchemes);
   FuzzyFindRequest Req;
   Req.Query = "lol";
   Req.Limit = 2;
@@ -495,14 +496,16 @@ TEST(DexTest, FuzzyMatch) {
 }
 
 TEST(DexTest, MatchQualifiedNamesWithoutSpecificScope) {
-  auto I = Dex::build(generateSymbols({"a::y1", "b::y2", "y3"}), URISchemes);
+  auto I = Dex::build(generateSymbols({"a::y1", "b::y2", "y3"}), RefSlab(),
+                      URISchemes);
   FuzzyFindRequest Req;
   Req.Query = "y";
   EXPECT_THAT(match(*I, Req), UnorderedElementsAre("a::y1", "b::y2", "y3"));
 }
 
 TEST(DexTest, MatchQualifiedNamesWithGlobalScope) {
-  auto I = Dex::build(generateSymbols({"a::y1", "b::y2", "y3"}), URISchemes);
+  auto I = Dex::build(generateSymbols({"a::y1", "b::y2", "y3"}), RefSlab(),
+                      URISchemes);
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {""};
@@ -510,8 +513,9 @@ TEST(DexTest, MatchQualifiedNamesWithGlobalScope) {
 }
 
 TEST(DexTest, MatchQualifiedNamesWithOneScope) {
-  auto I = Dex::build(
-      generateSymbols({"a::y1", "a::y2", "a::x", "b::y2", "y3"}), URISchemes);
+  auto I =
+      Dex::build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y2", "y3"}),
+                 RefSlab(), URISchemes);
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::"};
@@ -520,7 +524,7 @@ TEST(DexTest, MatchQualifiedNamesWithOneScope) {
 
 TEST(DexTest, MatchQualifiedNamesWithMultipleScopes) {
   auto I = Dex::build(
-      generateSymbols({"a::y1", "a::y2", "a::x", "b::y3", "y3"}), URISchemes);
+      generateSymbols({"a::y1", "a::y2", "a::x", "b::y3", "y3"}), RefSlab(), URISchemes);
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::", "b::"};
@@ -528,7 +532,7 @@ TEST(DexTest, MatchQualifiedNamesWithMultipleScopes) {
 }
 
 TEST(DexTest, NoMatchNestedScopes) {
-  auto I = Dex::build(generateSymbols({"a::y1", "a::b::y2"}), URISchemes);
+  auto I = Dex::build(generateSymbols({"a::y1", "a::b::y2"}), RefSlab(), URISchemes);
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::"};
@@ -537,7 +541,7 @@ TEST(DexTest, NoMatchNestedScopes) {
 
 TEST(DexTest, WildcardScope) {
   auto I =
-      Dex::build(generateSymbols({"a::y1", "a::b::y2", "c::y3"}), URISchemes);
+      Dex::build(generateSymbols({"a::y1", "a::b::y2", "c::y3"}), RefSlab(), URISchemes);
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::"};
@@ -547,7 +551,7 @@ TEST(DexTest, WildcardScope) {
 }
 
 TEST(DexTest, IgnoreCases) {
-  auto I = Dex::build(generateSymbols({"ns::ABC", "ns::abc"}), URISchemes);
+  auto I = Dex::build(generateSymbols({"ns::ABC", "ns::abc"}), RefSlab(), URISchemes);
   FuzzyFindRequest Req;
   Req.Query = "AB";
   Req.Scopes = {"ns::"};
@@ -555,7 +559,7 @@ TEST(DexTest, IgnoreCases) {
 }
 
 TEST(DexTest, Lookup) {
-  auto I = Dex::build(generateSymbols({"ns::abc", "ns::xyz"}), URISchemes);
+  auto I = Dex::build(generateSymbols({"ns::abc", "ns::xyz"}), RefSlab(), URISchemes);
   EXPECT_THAT(lookup(*I, SymbolID("ns::abc")), UnorderedElementsAre("ns::abc"));
   EXPECT_THAT(lookup(*I, {SymbolID("ns::abc"), SymbolID("ns::xyz")}),
               UnorderedElementsAre("ns::abc", "ns::xyz"));
@@ -570,7 +574,7 @@ TEST(DexTest, SymbolIndexOptionsFilter) {
   CodeCompletionSymbol.Flags = Symbol::SymbolFlag::IndexedForCodeCompletion;
   NonCodeCompletionSymbol.Flags = Symbol::SymbolFlag::None;
   std::vector<Symbol> Symbols{CodeCompletionSymbol, NonCodeCompletionSymbol};
-  Dex I(Symbols, URISchemes);
+  Dex I(Symbols, RefSlab(), URISchemes);
   FuzzyFindRequest Req;
   Req.RestrictForCodeCompletion = false;
   EXPECT_THAT(match(I, Req), ElementsAre("Completion", "NoCompletion"));
@@ -585,7 +589,7 @@ TEST(DexTest, ProximityPathsBoosting) {
   CloseSymbol.CanonicalDeclaration.FileURI = "unittest:///a/b/c/d/e/f/file.h";
 
   std::vector<Symbol> Symbols{CloseSymbol, RootSymbol};
-  Dex I(Symbols, URISchemes);
+  Dex I(Symbols, RefSlab(), URISchemes);
 
   FuzzyFindRequest Req;
   Req.Query = "abc";
@@ -601,6 +605,31 @@ TEST(DexTest, ProximityPathsBoosting) {
   // RootSymbol to come out.
   Req.ProximityPaths = {testPath("file.h")};
   EXPECT_THAT(match(I, Req), ElementsAre("root::abc"));
+}
+
+TEST(DexTests, Refs) {
+  DenseMap<SymbolID, std::vector<Ref>> Refs;
+  auto AddRef = [&](const Symbol& Sym, StringRef Filename, RefKind Kind) {
+    auto& SymbolRefs = Refs[Sym.ID];
+    SymbolRefs.emplace_back();
+    SymbolRefs.back().Kind = Kind;
+    SymbolRefs.back().Location.FileURI = Filename;
+  };
+  auto Foo = symbol("foo");
+  auto Bar = symbol("bar");
+  AddRef(Foo, "foo.h", RefKind::Declaration);
+  AddRef(Foo, "reffoo.h", RefKind::Reference);
+  AddRef(Bar, "bar.h", RefKind::Declaration);
+
+  std::vector<std::string> Files;
+  RefsRequest Req;
+  Req.IDs.insert(Foo.ID);
+  Req.Filter = RefKind::Declaration | RefKind::Definition;
+  Dex(std::vector<Symbol>{Foo, Bar}, Refs, {}).refs(Req, [&](const Ref &R) {
+    Files.push_back(R.Location.FileURI);
+  });
+
+  EXPECT_THAT(Files, ElementsAre("foo.h"));
 }
 
 } // namespace
