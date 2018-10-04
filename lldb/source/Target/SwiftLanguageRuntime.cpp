@@ -90,21 +90,27 @@ SwiftLanguageRuntime::~SwiftLanguageRuntime() {}
 void SwiftLanguageRuntime::SetupReflection() {
   auto &target = m_process->GetTarget();
   auto M = target.GetExecutableModule();
-  auto *ObjFile = M->GetObjectFile();
-  Address startAddress = ObjFile->GetHeaderAddress();
-  auto loadPtr = static_cast<uintptr_t>(startAddress.GetLoadAddress(&target));
+  auto *obj_file = M->GetObjectFile();
+  Address start_address = obj_file->GetHeaderAddress();
+  auto load_ptr = static_cast<uintptr_t>(start_address.GetLoadAddress(&target));
+
+  // Bail out if we can't read the executable instead of crashing.
+  if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS)
+    return;
 
   reflection_ctx = new NativeReflectionContext(this->GetMemoryReader());
-  reflection_ctx->addImage(swift::remote::RemoteAddress(loadPtr));
+  reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
 
   auto module_list = GetTargetRef().GetImages();
   module_list.ForEach([&](const ModuleSP &module_sp) -> bool {
     std::string module_path = module_sp->GetFileSpec().GetPath();
-    auto *ObjFile = module_sp->GetObjectFile();
-    Address startAddress = ObjFile->GetHeaderAddress();
-    auto loadPtr = static_cast<uintptr_t>(
-        startAddress.GetLoadAddress(&(m_process->GetTarget())));
-    reflection_ctx->addImage(swift::remote::RemoteAddress(loadPtr));
+    auto *obj_file = module_sp->GetObjectFile();
+    Address start_address = obj_file->GetHeaderAddress();
+    auto load_ptr = static_cast<uintptr_t>(
+        start_address.GetLoadAddress(&(m_process->GetTarget())));
+    if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS)
+      return false;
+    reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
     return true;
   });
 }
