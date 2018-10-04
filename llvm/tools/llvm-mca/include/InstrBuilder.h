@@ -62,6 +62,8 @@ class InstrBuilder {
                              unsigned SchedClassID);
   llvm::Error populateReads(InstrDesc &ID, const llvm::MCInst &MCI,
                             unsigned SchedClassID);
+  llvm::Error verifyInstrDesc(const InstrDesc &ID,
+                              const llvm::MCInst &MCI) const;
 
 public:
   InstrBuilder(const llvm::MCSubtargetInfo &sti, const llvm::MCInstrInfo &mcii,

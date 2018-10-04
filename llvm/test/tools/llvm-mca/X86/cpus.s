@@ -17,20 +17,15 @@ add %edi, %eax
 # ALL-NEXT:         Total Cycles:      103
 # ALL-NEXT:         Total uOps:        100
 
-# BTVER2:           Dispatch Width:    2
-# BTVER2-NEXT:      uOps Per Cycle:    0.97
-# BTVER2-NEXT:      IPC:               0.97
-# BTVER2-NEXT:      Block RThroughput: 0.5
-
-# SLM:              Dispatch Width:    2
-# SLM-NEXT:         uOps Per Cycle:    0.97
-# SLM-NEXT:         IPC:               0.97
-# SLM-NEXT:         Block RThroughput: 0.5
-
 # BROADWELL:        Dispatch Width:    4
 # BROADWELL-NEXT:   uOps Per Cycle:    0.97
 # BROADWELL-NEXT:   IPC:               0.97
 # BROADWELL-NEXT:   Block RThroughput: 0.3
+
+# BTVER2:           Dispatch Width:    2
+# BTVER2-NEXT:      uOps Per Cycle:    0.97
+# BTVER2-NEXT:      IPC:               0.97
+# BTVER2-NEXT:      Block RThroughput: 0.5
 
 # HASWELL:          Dispatch Width:    4
 # HASWELL-NEXT:     uOps Per Cycle:    0.97
@@ -52,11 +47,6 @@ add %edi, %eax
 # SANDYBRIDGE-NEXT: IPC:               0.97
 # SANDYBRIDGE-NEXT: Block RThroughput: 0.3
 
-# ZNVER1:           Dispatch Width:    4
-# ZNVER1-NEXT:      uOps Per Cycle:    0.97
-# ZNVER1-NEXT:      IPC:               0.97
-# ZNVER1-NEXT:      Block RThroughput: 0.3
-
 # SKX:              Dispatch Width:    6
 # SKX-NEXT:         uOps Per Cycle:    0.97
 # SKX-NEXT:         IPC:               0.97
@@ -66,3 +56,13 @@ add %edi, %eax
 # SKX-AVX512-NEXT:  uOps Per Cycle:    0.97
 # SKX-AVX512-NEXT:  IPC:               0.97
 # SKX-AVX512-NEXT:  Block RThroughput: 0.3
+
+# SLM:              Dispatch Width:    2
+# SLM-NEXT:         uOps Per Cycle:    0.97
+# SLM-NEXT:         IPC:               0.97
+# SLM-NEXT:         Block RThroughput: 0.5
+
+# ZNVER1:           Dispatch Width:    4
+# ZNVER1-NEXT:      uOps Per Cycle:    0.97
+# ZNVER1-NEXT:      IPC:               0.97
+# ZNVER1-NEXT:      Block RThroughput: 0.3

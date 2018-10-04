@@ -64,6 +64,9 @@ class RegisterFile : public HardwareUnit {
     // NumMoveEliminated is less than MaxMoveEliminatedPerCycle.
     unsigned NumMoveEliminated;
 
+    // If set, move elimination is restricted to zero-register moves only.
+    bool AllowZeroMoveEliminationOnly;
+
     RegisterMappingTracker(unsigned NumPhysRegisters,
                            unsigned MaxMoveEliminated = 0U)
         : NumPhysRegs(NumPhysRegisters), NumUsedPhysRegs(0),
@@ -104,16 +107,13 @@ class RegisterFile : public HardwareUnit {
   //
   // Field `AllowMoveElimination` is set for registers that are used as
   // destination by optimizable register moves.
-  // Field `AllowZeroMoveEliminationOnly` further restricts move elimination
-  // only to zero-register moves.
   struct RegisterRenamingInfo {
     IndexPlusCostPairTy IndexPlusCost;
     llvm::MCPhysReg RenameAs;
     bool AllowMoveElimination;
-    bool AllowZeroMoveEliminationOnly;
     RegisterRenamingInfo()
         : IndexPlusCost(std::make_pair(0U, 1U)), RenameAs(0U),
-          AllowMoveElimination(false), AllowZeroMoveEliminationOnly(false) {}
+          AllowMoveElimination(false) {}
   };
 
   // RegisterMapping objects are mainly used to track physical register
