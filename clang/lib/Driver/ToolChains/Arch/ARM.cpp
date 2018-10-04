@@ -444,6 +444,26 @@ fp16_fml_fallthrough:
       Features.push_back("-crc");
   }
 
+  // For Arch >= ARMv8.0:  crypto = sha2 + aes
+  // FIXME: this needs reimplementation after the TargetParser rewrite
+  if (ArchName.find_lower("armv8a") != StringRef::npos ||
+      ArchName.find_lower("armv8.1a") != StringRef::npos ||
+      ArchName.find_lower("armv8.2a") != StringRef::npos ||
+      ArchName.find_lower("armv8.3a") != StringRef::npos ||
+      ArchName.find_lower("armv8.4a") != StringRef::npos) {
+    if (ArchName.find_lower("+crypto") != StringRef::npos) {
+      if (ArchName.find_lower("+nosha2") == StringRef::npos)
+        Features.push_back("+sha2");
+      if (ArchName.find_lower("+noaes") == StringRef::npos)
+        Features.push_back("+aes");
+    } else if (ArchName.find_lower("-crypto") != StringRef::npos) {
+      if (ArchName.find_lower("+sha2") == StringRef::npos)
+        Features.push_back("-sha2");
+      if (ArchName.find_lower("+aes") == StringRef::npos)
+        Features.push_back("-aes");
+    }
+  }
+
   // Look for the last occurrence of -mlong-calls or -mno-long-calls. If
   // neither options are specified, see if we are compiling for kernel/kext and
   // decide whether to pass "+long-calls" based on the OS and its version.

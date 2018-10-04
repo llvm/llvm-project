@@ -387,4 +387,41 @@ namespace MemcpyEtc {
   // designators until we have a long enough matching size, if both designators
   // point to the start of their respective final elements.
   static_assert(test_derived_to_base(2) == 3434); // expected-error {{constant}} expected-note {{in call}}
+
+  // Check that when address-of an array is passed to a tested function the
+  // array can be fully copied.
+  constexpr int test_address_of_const_array_type() {
+    int arr[4] = {1, 2, 3, 4};
+    __builtin_memmove(&arr, &arr, sizeof(arr));
+    return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
+  }
+  static_assert(test_address_of_const_array_type() == 1234);
+
+  // Check that an incomplete array is rejected.
+  constexpr int test_incomplete_array_type() { // expected-error {{never produces a constant}}
+    extern int arr[];
+    __builtin_memmove(arr, arr, 4 * sizeof(arr[0]));
+    // expected-note@-1 2{{'memmove' not supported: source is not a contiguous array of at least 4 elements of type 'int'}}
+    return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
+  }
+  static_assert(test_incomplete_array_type() == 1234); // expected-error {{constant}} expected-note {{in call}}
+
+  // Check that a pointer to an incomplete array is rejected.
+  constexpr int test_address_of_incomplete_array_type() { // expected-error {{never produces a constant}}
+    extern int arr[];
+    __builtin_memmove(&arr, &arr, 4 * sizeof(arr[0]));
+    // expected-note@-1 2{{cannot constant evaluate 'memmove' between objects of incomplete type 'int []'}}
+    return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
+  }
+  static_assert(test_address_of_incomplete_array_type() == 1234); // expected-error {{constant}} expected-note {{in call}}
+
+  // Check that a pointer to an incomplete struct is rejected.
+  constexpr bool test_address_of_incomplete_struct_type() { // expected-error {{never produces a constant}}
+    struct Incomplete;
+    extern Incomplete x, y;
+    __builtin_memcpy(&x, &x, 4);
+    // expected-note@-1 2{{cannot constant evaluate 'memcpy' between objects of incomplete type 'Incomplete'}}
+    return true;
+  }
+  static_assert(test_address_of_incomplete_struct_type()); // expected-error {{constant}} expected-note {{in call}}
 }

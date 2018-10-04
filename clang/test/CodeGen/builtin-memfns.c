@@ -111,3 +111,10 @@ void test11() {
   memcpy(&d, (char *)&e.a, sizeof(e));
 }
 
+// CHECK-LABEL: @test12
+extern char dest_array[];
+extern char src_array[];
+void test12() {
+  // CHECK: call void @llvm.memcpy{{.*}}(
+  memcpy(&dest_array, &dest_array, 2);
+}

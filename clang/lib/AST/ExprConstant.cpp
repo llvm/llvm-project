@@ -6239,6 +6239,10 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       Info.FFDiag(E, diag::note_constexpr_memcpy_type_pun) << Move << SrcT << T;
       return false;
     }
+    if (T->isIncompleteType()) {
+      Info.FFDiag(E, diag::note_constexpr_memcpy_incomplete_type) << Move << T;
+      return false;
+    }
     if (!T.isTriviallyCopyableType(Info.Ctx)) {
       Info.FFDiag(E, diag::note_constexpr_memcpy_nontrivial) << Move << T;
       return false;
