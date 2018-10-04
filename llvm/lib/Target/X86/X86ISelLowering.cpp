@@ -19971,15 +19971,20 @@ static SDValue LowerLoad(SDValue Op, const X86Subtarget &Subtarget,
 
   SmallVector<SDValue, 8> Chains;
   SDValue Ptr = Ld->getBasePtr();
-  SDValue Increment = DAG.getConstant(SclrLoadTy.getSizeInBits() / 8, dl,
+  unsigned OffsetInc = SclrLoadTy.getSizeInBits() / 8;
+  SDValue Increment = DAG.getConstant(OffsetInc, dl,
                                       TLI.getPointerTy(DAG.getDataLayout()));
   SDValue Res = DAG.getUNDEF(LoadUnitVecVT);
 
+  unsigned Offset = 0;
   for (unsigned i = 0; i < NumLoads; ++i) {
+    unsigned NewAlign = MinAlign(Ld->getAlignment(), Offset);
+
     // Perform a single load.
     SDValue ScalarLoad =
-        DAG.getLoad(SclrLoadTy, dl, Ld->getChain(), Ptr, Ld->getPointerInfo(),
-                    Ld->getAlignment(), Ld->getMemOperand()->getFlags());
+      DAG.getLoad(SclrLoadTy, dl, Ld->getChain(), Ptr,
+                  Ld->getPointerInfo().getWithOffset(Offset),
+                  NewAlign, Ld->getMemOperand()->getFlags());
     Chains.push_back(ScalarLoad.getValue(1));
     // Create the first element type using SCALAR_TO_VECTOR in order to avoid
     // another round of DAGCombining.
@@ -19990,6 +19995,7 @@ static SDValue LowerLoad(SDValue Op, const X86Subtarget &Subtarget,
                         ScalarLoad, DAG.getIntPtrConstant(i, dl));
 
     Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr, Increment);
+    Offset += OffsetInc;
   }
 
   SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);

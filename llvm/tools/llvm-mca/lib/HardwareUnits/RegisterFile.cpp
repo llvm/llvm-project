@@ -284,13 +284,31 @@ bool RegisterFile::tryEliminateMove(WriteState &WS, const ReadState &RS) {
   if (RegisterFileIndex != RRITo.IndexPlusCost.first)
     return false;
 
+  // We only allow move elimination for writes that update a full physical
+  // register. On X86, move elimination is possible with 32-bit general purpose
+  // registers because writes to those registers are not partial writes.  If a
+  // register move is a partial write, then we conservatively assume that move
+  // elimination fails, since it would either trigger a partial update, or the
+  // issue of a merge opcode.
+  //
+  // Note that this constraint may be lifted in future.  For example, we could
+  // make this model more flexible, and let users customize the set of registers
+  // (i.e. register classes) that allow move elimination.
+  //
+  // For now, we assume that there is a strong correlation between registers
+  // that allow move elimination, and how those same registers are renamed in
+  // hardware.
+  if (RRITo.RenameAs && RRITo.RenameAs != WS.getRegisterID())
+    if (!WS.clearsSuperRegisters())
+      return false;
+
   RegisterMappingTracker &RMT = RegisterFiles[RegisterFileIndex];
   if (RMT.MaxMoveEliminatedPerCycle &&
       RMT.NumMoveEliminated == RMT.MaxMoveEliminatedPerCycle)
     return false;
 
   bool IsZeroMove = ZeroRegisters[RS.getRegisterID()];
-  if (RRITo.AllowZeroMoveEliminationOnly && !IsZeroMove)
+  if (RMT.AllowZeroMoveEliminationOnly && !IsZeroMove)
     return false;
 
   RMT.NumMoveEliminated++;

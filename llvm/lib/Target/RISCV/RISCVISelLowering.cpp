@@ -327,7 +327,7 @@ SDValue RISCVTargetLowering::lowerGlobalAddress(SDValue Op,
   int64_t Offset = N->getOffset();
   MVT XLenVT = Subtarget.getXLenVT();
 
-  if (isPositionIndependent() || Subtarget.is64Bit())
+  if (isPositionIndependent())
     report_fatal_error("Unable to lowerGlobalAddress");
   // In order to maximise the opportunity for common subexpression elimination,
   // emit a separate ADD node for the global address offset instead of folding
@@ -352,7 +352,7 @@ SDValue RISCVTargetLowering::lowerBlockAddress(SDValue Op,
   const BlockAddress *BA = N->getBlockAddress();
   int64_t Offset = N->getOffset();
 
-  if (isPositionIndependent() || Subtarget.is64Bit())
+  if (isPositionIndependent())
     report_fatal_error("Unable to lowerBlockAddress");
 
   SDValue BAHi = DAG.getTargetBlockAddress(BA, Ty, Offset, RISCVII::MO_HI);
