@@ -1195,6 +1195,18 @@ void ifWhileAndSwitchSequenceInitDeclAndCondition() {
   }
 }
 
+// Some statements in templates (e.g. null, break and continue statements) may
+// be shared between the uninstantiated and instantiated versions of the
+// template and therefore have multiple parents. Make sure the sequencing code
+// handles this correctly.
+template <class> void nullStatementSequencesInTemplate() {
+  int c = 0;
+  (void)c;
+  ;
+  std::move(c);
+}
+template void nullStatementSequencesInTemplate<int>();
+
 namespace PR33020 {
 class D {
   ~D();
