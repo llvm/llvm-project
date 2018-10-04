@@ -13,10 +13,11 @@ public:
   IndexAction(std::shared_ptr<SymbolCollector> C,
               std::unique_ptr<CanonicalIncludes> Includes,
               const index::IndexingOptions &Opts,
-              std::function<void(SymbolSlab)> &SymbolsCallback)
+              std::function<void(SymbolSlab)> SymbolsCallback,
+              std::function<void(RefSlab)> RefsCallback)
       : WrapperFrontendAction(index::createIndexingAction(C, Opts, nullptr)),
-        SymbolsCallback(SymbolsCallback), Collector(C),
-        Includes(std::move(Includes)),
+        SymbolsCallback(SymbolsCallback), RefsCallback(RefsCallback),
+        Collector(C), Includes(std::move(Includes)),
         PragmaHandler(collectIWYUHeaderMaps(this->Includes.get())) {}
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -41,10 +42,13 @@ public:
       return;
     }
     SymbolsCallback(Collector->takeSymbols());
+    if (RefsCallback != nullptr)
+      RefsCallback(Collector->takeRefs());
   }
 
 private:
   std::function<void(SymbolSlab)> SymbolsCallback;
+  std::function<void(RefSlab)> RefsCallback;
   std::shared_ptr<SymbolCollector> Collector;
   std::unique_ptr<CanonicalIncludes> Includes;
   std::unique_ptr<CommentHandler> PragmaHandler;
@@ -54,20 +58,23 @@ private:
 
 std::unique_ptr<FrontendAction>
 createStaticIndexingAction(SymbolCollector::Options Opts,
-                           std::function<void(SymbolSlab)> SymbolsCallback) {
+                           std::function<void(SymbolSlab)> SymbolsCallback,
+                           std::function<void(RefSlab)> RefsCallback) {
   index::IndexingOptions IndexOpts;
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
   Opts.CollectIncludePath = true;
   Opts.CountReferences = true;
   Opts.Origin = SymbolOrigin::Static;
+  if (RefsCallback != nullptr)
+    Opts.RefFilter = RefKind::All;
   auto Includes = llvm::make_unique<CanonicalIncludes>();
   addSystemHeadersMapping(Includes.get());
   Opts.Includes = Includes.get();
   return llvm::make_unique<IndexAction>(
       std::make_shared<SymbolCollector>(std::move(Opts)), std::move(Includes),
-      IndexOpts, SymbolsCallback);
-}
+      IndexOpts, SymbolsCallback, RefsCallback);
+};
 
 } // namespace clangd
 } // namespace clang

@@ -120,10 +120,10 @@ TEST(FileSymbolsTest, SnapshotAliveAfterRemove) {
   EXPECT_THAT(getRefs(*Symbols, ID), RefsAre({FileURI("f1.cc")}));
 }
 
-std::vector<std::string> match(const FileIndex &I,
+std::vector<std::string> match(const SymbolIndex &I,
                                const FuzzyFindRequest &Req) {
   std::vector<std::string> Matches;
-  I.index().fuzzyFind(Req, [&](const Symbol &Sym) {
+  I.fuzzyFind(Req, [&](const Symbol &Sym) {
     Matches.push_back((Sym.Scope + Sym.Name).str());
   });
   return Matches;
@@ -147,7 +147,7 @@ TEST(FileIndexTest, CustomizedURIScheme) {
   FuzzyFindRequest Req;
   Req.Query = "";
   bool SeenSymbol = false;
-  M.index().fuzzyFind(Req, [&](const Symbol &Sym) {
+  M.fuzzyFind(Req, [&](const Symbol &Sym) {
     EXPECT_EQ(Sym.CanonicalDeclaration.FileURI, "unittest:///f.h");
     SeenSymbol = true;
   });
@@ -201,7 +201,7 @@ TEST(FileIndexTest, NoIncludeCollected) {
   FuzzyFindRequest Req;
   Req.Query = "";
   bool SeenSymbol = false;
-  M.index().fuzzyFind(Req, [&](const Symbol &Sym) {
+  M.fuzzyFind(Req, [&](const Symbol &Sym) {
     EXPECT_TRUE(Sym.IncludeHeaders.empty());
     SeenSymbol = true;
   });
@@ -225,7 +225,7 @@ vector<Ty> make_vector(Arg A) {}
   Req.Query = "";
   bool SeenVector = false;
   bool SeenMakeVector = false;
-  M.index().fuzzyFind(Req, [&](const Symbol &Sym) {
+  M.fuzzyFind(Req, [&](const Symbol &Sym) {
     if (Sym.Name == "vector") {
       EXPECT_EQ(Sym.Signature, "<class Ty>");
       EXPECT_EQ(Sym.CompletionSnippetSuffix, "<${1:class Ty}>");
@@ -324,7 +324,7 @@ TEST(FileIndexTest, Refs) {
   AST = Test2.build();
   Index.updateMain(Test2.Filename, AST);
 
-  EXPECT_THAT(getRefs(Index.index(), Foo.ID),
+  EXPECT_THAT(getRefs(Index, Foo.ID),
               RefsAre({AllOf(RefRange(MainCode.range("foo")),
                              FileURI("unittest:///test.cc")),
                        AllOf(RefRange(MainCode.range("foo")),
@@ -338,7 +338,7 @@ TEST(FileIndexTest, CollectMacros) {
   FuzzyFindRequest Req;
   Req.Query = "";
   bool SeenSymbol = false;
-  M.index().fuzzyFind(Req, [&](const Symbol &Sym) {
+  M.fuzzyFind(Req, [&](const Symbol &Sym) {
     EXPECT_EQ(Sym.Name, "CLANGD");
     EXPECT_EQ(Sym.SymInfo.Kind, index::SymbolKind::Macro);
     SeenSymbol = true;

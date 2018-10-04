@@ -33,26 +33,21 @@ namespace clangd {
 namespace dex {
 
 /// Returns list of unique fuzzy-search trigrams from unqualified symbol.
+/// The trigrams give the 3-character query substrings this symbol can match.
 ///
-/// First, given Identifier (unqualified symbol name) is segmented using
-/// FuzzyMatch API and lowercased. After segmentation, the following technique
-/// is applied for generating trigrams: for each letter or digit in the input
-/// string the algorithms looks for the possible next and skip-1-next characters
-/// which can be jumped to during fuzzy matching. Each combination of such three
-/// characters is inserted into the result.
-///
+/// The symbol's name is broken into segments, e.g. "FooBar" has two segments.
 /// Trigrams can start at any character in the input. Then we can choose to move
-/// to the next character, move to the start of the next segment, or skip over a
-/// segment.
+/// to the next character or to the start of the next segment.
 ///
-/// This also generates incomplete trigrams for short query scenarios:
-///  * Empty trigram: "$$$".
-///  * Unigram: the first character of the identifier.
-///  * Bigrams: a 2-char prefix of the identifier and a bigram of the first two
-///    HEAD characters (if they exist).
-//
-/// Note: the returned list of trigrams does not have duplicates, if any trigram
-/// belongs to more than one class it is only inserted once.
+/// Short trigrams (length 1-2) are used for short queries. These are:
+///  - prefixes of the identifier, of length 1 and 2
+///  - the first character + next head character
+///
+/// For "FooBar" we get the following trigrams:
+///  {f, fo, fb, foo, fob, fba, oob, oba, bar}.
+///
+/// Trigrams are lowercase, as trigram matching is case-insensitive.
+/// Trigrams in the returned list are deduplicated.
 std::vector<Token> generateIdentifierTrigrams(llvm::StringRef Identifier);
 
 /// Returns list of unique fuzzy-search trigrams given a query.

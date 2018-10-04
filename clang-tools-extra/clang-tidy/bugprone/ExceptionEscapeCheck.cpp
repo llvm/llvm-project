@@ -186,6 +186,9 @@ void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void ExceptionEscapeCheck::registerMatchers(MatchFinder *Finder) {
+  if (!getLangOpts().CPlusPlus || !getLangOpts().CXXExceptions)
+    return;
+
   Finder->addMatcher(
       functionDecl(allOf(throws(unless(isIgnored(IgnoredExceptions))),
                          anyOf(isNoThrow(), cxxDestructorDecl(),

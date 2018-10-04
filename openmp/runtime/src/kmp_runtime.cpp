@@ -1209,8 +1209,7 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
 #endif /* OMP_40_ENABLED */
 
 #if OMPT_SUPPORT
-  ompt_data_t ompt_parallel_data;
-  ompt_parallel_data.ptr = NULL;
+  ompt_data_t ompt_parallel_data = ompt_data_none;
   ompt_data_t *implicit_task_data;
   void *codeptr = OMPT_LOAD_RETURN_ADDRESS(global_tid);
   if (ompt_enabled.enabled &&
@@ -1477,8 +1476,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
     master_set_numthreads = master_th->th.th_set_nproc;
 
 #if OMPT_SUPPORT
-    ompt_data_t ompt_parallel_data;
-    ompt_parallel_data.ptr = NULL;
+    ompt_data_t ompt_parallel_data = ompt_data_none;
     ompt_data_t *parent_task_data;
     omp_frame_t *ompt_frame;
     ompt_data_t *implicit_task_data;
@@ -3726,7 +3724,7 @@ int __kmp_register_root(int initial_thread) {
     }
     root_thread->th.th_info.ds.ds_gtid = gtid;
 #if OMPT_SUPPORT
-    root_thread->th.ompt_thread_info.thread_data.ptr = NULL;
+    root_thread->th.ompt_thread_info.thread_data = ompt_data_none;
 #endif
     root_thread->th.th_root = root;
     if (__kmp_env_consistency_check) {
@@ -5601,7 +5599,7 @@ void *__kmp_launch_thread(kmp_info_t *this_thr) {
   ompt_data_t *thread_data;
   if (ompt_enabled.enabled) {
     thread_data = &(this_thr->th.ompt_thread_info.thread_data);
-    thread_data->ptr = NULL;
+    *thread_data = ompt_data_none;
 
     this_thr->th.ompt_thread_info.state = omp_state_overhead;
     this_thr->th.ompt_thread_info.wait_id = 0;

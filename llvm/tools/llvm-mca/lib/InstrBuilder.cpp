@@ -321,6 +321,36 @@ Error InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
   return ErrorSuccess();
 }
 
+Error InstrBuilder::verifyInstrDesc(const InstrDesc &ID,
+                                    const MCInst &MCI) const {
+  if (ID.NumMicroOps != 0)
+    return ErrorSuccess();
+
+  bool UsesMemory = ID.MayLoad || ID.MayStore;
+  bool UsesBuffers = !ID.Buffers.empty();
+  bool UsesResources = !ID.Resources.empty();
+  if (!UsesMemory && !UsesBuffers && !UsesResources)
+    return ErrorSuccess();
+
+  std::string ToString;
+  raw_string_ostream OS(ToString);
+  if (UsesMemory) {
+    WithColor::error() << "found an inconsistent instruction that decodes "
+                       << "into zero opcodes and that consumes load/store "
+                       << "unit resources.\n";
+  } else {
+    WithColor::error() << "found an inconsistent instruction that decodes"
+                       << " to zero opcodes and that consumes scheduler "
+                       << "resources.\n";
+  }
+
+  MCIP.printInst(&MCI, OS, "", STI);
+  OS.flush();
+  WithColor::note() << "instruction: " << ToString << '\n';
+  return make_error<StringError>("Invalid instruction definition found",
+                                 inconvertibleErrorCode());
+}
+
 Expected<const InstrDesc &>
 InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   assert(STI.getSchedModel().hasInstrSchedModel() &&
@@ -391,6 +421,10 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
 
   LLVM_DEBUG(dbgs() << "\t\tMaxLatency=" << ID->MaxLatency << '\n');
   LLVM_DEBUG(dbgs() << "\t\tNumMicroOps=" << ID->NumMicroOps << '\n');
+
+  // Sanity check on the instruction descriptor.
+  if (Error Err = verifyInstrDesc(*ID, MCI))
+    return std::move(Err);
 
   // Now add the new descriptor.
   SchedClassID = MCDesc.getSchedClass();

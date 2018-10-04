@@ -164,11 +164,16 @@ define i8 @bitcasted_inselt_wide_source_uses(i32 %x) {
 }
 
 define float @bitcasted_inselt_to_FP(i64 %x) {
-; ANY-LABEL: @bitcasted_inselt_to_FP(
-; ANY-NEXT:    [[I:%.*]] = insertelement <2 x i64> undef, i64 [[X:%.*]], i32 0
-; ANY-NEXT:    [[B:%.*]] = bitcast <2 x i64> [[I]] to <4 x float>
-; ANY-NEXT:    [[R:%.*]] = extractelement <4 x float> [[B]], i32 1
-; ANY-NEXT:    ret float [[R]]
+; LE-LABEL: @bitcasted_inselt_to_FP(
+; LE-NEXT:    [[TMP1:%.*]] = lshr i64 [[X:%.*]], 32
+; LE-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+; LE-NEXT:    [[R:%.*]] = bitcast i32 [[TMP2]] to float
+; LE-NEXT:    ret float [[R]]
+;
+; BE-LABEL: @bitcasted_inselt_to_FP(
+; BE-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i32
+; BE-NEXT:    [[R:%.*]] = bitcast i32 [[TMP1]] to float
+; BE-NEXT:    ret float [[R]]
 ;
   %i = insertelement <2 x i64> undef, i64 %x, i32 0
   %b = bitcast <2 x i64> %i to <4 x float>
@@ -210,11 +215,16 @@ define float @bitcasted_inselt_to_FP_uses2(i128 %x) {
 }
 
 define i32 @bitcasted_inselt_from_FP(double %x) {
-; ANY-LABEL: @bitcasted_inselt_from_FP(
-; ANY-NEXT:    [[I:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i32 0
-; ANY-NEXT:    [[B:%.*]] = bitcast <2 x double> [[I]] to <4 x i32>
-; ANY-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[B]], i32 1
-; ANY-NEXT:    ret i32 [[R]]
+; LE-LABEL: @bitcasted_inselt_from_FP(
+; LE-NEXT:    [[TMP1:%.*]] = bitcast double [[X:%.*]] to i64
+; LE-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 32
+; LE-NEXT:    [[R:%.*]] = trunc i64 [[TMP2]] to i32
+; LE-NEXT:    ret i32 [[R]]
+;
+; BE-LABEL: @bitcasted_inselt_from_FP(
+; BE-NEXT:    [[TMP1:%.*]] = bitcast double [[X:%.*]] to i64
+; BE-NEXT:    [[R:%.*]] = trunc i64 [[TMP1]] to i32
+; BE-NEXT:    ret i32 [[R]]
 ;
   %i = insertelement <2 x double> undef, double %x, i32 0
   %b = bitcast <2 x double> %i to <4 x i32>

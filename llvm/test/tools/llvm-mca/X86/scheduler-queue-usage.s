@@ -17,9 +17,6 @@ xor %eax, %ebx
 # ALL-NEXT:         0,          3  (75.0%)
 # ALL-NEXT:         1,          1  (25.0%)
 
-# SLM:             Scheduler's queue usage:
-# SLM-NEXT:        No scheduler resources used.
-
 # BDW:             Scheduler's queue usage:
 # BDW-NEXT:        [1] Resource name.
 # BDW-NEXT:        [2] Average number of used buffer entries.
@@ -62,6 +59,9 @@ xor %eax, %ebx
 # SKX-AVX512-NEXT: [3] Maximum number of used buffer entries.
 # SKX-AVX512-NEXT: [4] Total number of buffer entries.
 
+# SLM:             Scheduler's queue usage:
+# SLM-NEXT:        No scheduler resources used.
+
 # SNB:             Scheduler's queue usage:
 # SNB-NEXT:        [1] Resource name.
 # SNB-NEXT:        [2] Average number of used buffer entries.
@@ -77,28 +77,28 @@ xor %eax, %ebx
 # BDW:              [1]            [2]        [3]        [4]
 # BDW-NEXT:        BWPortAny        0          1          60
 
-# HSW:              [1]            [2]        [3]        [4]
-# HSW-NEXT:        HWPortAny        0          1          60
-
-# KNL:              [1]            [2]        [3]        [4]
-# KNL-NEXT:        HWPortAny        0          1          60
-
 # BTVER2:           [1]            [2]        [3]        [4]
 # BTVER2-NEXT:     JALU01           0          1          20
 # BTVER2-NEXT:     JFPU01           0          0          18
 # BTVER2-NEXT:     JLSAGU           0          0          12
 
+# HSW:              [1]            [2]        [3]        [4]
+# HSW-NEXT:        HWPortAny        0          1          60
+
 # IVB:              [1]            [2]        [3]        [4]
 # IVB-NEXT:        SBPortAny        0          1          54
 
-# SNB:              [1]            [2]        [3]        [4]
-# SNB-NEXT:        SBPortAny        0          1          54
+# KNL:              [1]            [2]        [3]        [4]
+# KNL-NEXT:        HWPortAny        0          1          60
 
 # SKX:              [1]            [2]        [3]        [4]
 # SKX-NEXT:        SKLPortAny       0          1          60
 
 # SKX-AVX512:       [1]            [2]        [3]        [4]
 # SKX-AVX512-NEXT: SKXPortAny       0          1          60
+
+# SNB:              [1]            [2]        [3]        [4]
+# SNB-NEXT:        SBPortAny        0          1          54
 
 # ZNVER1:           [1]            [2]        [3]        [4]
 # ZNVER1-NEXT:     ZnAGU            0          0          28

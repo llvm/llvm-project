@@ -250,4 +250,5 @@ const char *llvm::WebAssembly::TypeToString(wasm::ValType Ty) {
   case wasm::ValType::EXCEPT_REF:
     return "except_ref";
   }
+  llvm_unreachable("Unknown wasm::ValType");
 }

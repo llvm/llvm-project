@@ -2975,6 +2975,68 @@ This can be used to contain the ABI of a C++ library by excluding unwanted class
   }];
 }
 
+def ExcludeFromExplicitInstantiationDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``exclude_from_explicit_instantiation`` attribute opts-out a member of a
+class template from being part of explicit template instantiations of that
+class template. This means that an explicit instantiation will not instantiate
+members of the class template marked with the attribute, but also that code
+where an extern template declaration of the enclosing class template is visible
+will not take for granted that an external instantiation of the class template
+would provide those members (which would otherwise be a link error, since the
+explicit instantiation won't provide those members). For example, let's say we
+don't want the ``data()`` method to be part of libc++'s ABI. To make sure it
+is not exported from the dylib, we give it hidden visibility:
+
+  .. code-block:: c++
+
+    // in <string>
+    template <class CharT>
+    class basic_string {
+    public:
+      __attribute__((__visibility__("hidden")))
+      const value_type* data() const noexcept { ... }
+    };
+
+    template class basic_string<char>;
+
+Since an explicit template instantiation declaration for ``basic_string<char>``
+is provided, the compiler is free to assume that ``basic_string<char>::data()``
+will be provided by another translation unit, and it is free to produce an
+external call to this function. However, since ``data()`` has hidden visibility
+and the explicit template instantiation is provided in a shared library (as
+opposed to simply another translation unit), ``basic_string<char>::data()``
+won't be found and a link error will ensue. This happens because the compiler
+assumes that ``basic_string<char>::data()`` is part of the explicit template
+instantiation declaration, when it really isn't. To tell the compiler that
+``data()`` is not part of the explicit template instantiation declaration, the
+``exclude_from_explicit_instantiation`` attribute can be used:
+
+  .. code-block:: c++
+
+    // in <string>
+    template <class CharT>
+    class basic_string {
+    public:
+      __attribute__((__visibility__("hidden")))
+      __attribute__((exclude_from_explicit_instantiation))
+      const value_type* data() const noexcept { ... }
+    };
+
+    template class basic_string<char>;
+
+Now, the compiler won't assume that ``basic_string<char>::data()`` is provided
+externally despite there being an explicit template instantiation declaration:
+the compiler will implicitly instantiate ``basic_string<char>::data()`` in the
+TUs where it is used.
+
+This attribute can be used on static and non-static member functions of class
+templates, static data members of class templates and member classes of class
+templates.
+  }];
+}
+
 def DisableTailCallsDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
