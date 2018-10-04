@@ -165,7 +165,7 @@ def main():
   if has_check_notes:
     notes_file = temp_file_name + '.notes'
     filtered_output = [line for line in clang_tidy_output.splitlines()
-                       if not "note: FIX-IT applied suggested changes" in line]
+                       if not "note: FIX-IT applied" in line]
     write_file(notes_file, '\n'.join(filtered_output))
     try:
       subprocess.check_output(

@@ -7,7 +7,7 @@ int foo(int value = 5) { return value; }
 int f() {
   foo();
   // CHECK-NOTES: [[@LINE-1]]:3: warning: calling a function that uses a default argument is disallowed [fuchsia-default-arguments]
-  // CHECK-NOTES: [[@LINE-8]]:9: note: default parameter was declared here
+  // CHECK-NOTES: [[@LINE-7]]:9: note: default parameter was declared here
 }
 
 int bar(int value) { return value; }
@@ -71,10 +71,10 @@ int main() {
   S s;
   s.x();
   // CHECK-NOTES: [[@LINE-1]]:3: warning: calling a function that uses a default argument is disallowed [fuchsia-default-arguments]
-  // CHECK-NOTES: [[@LINE-9]]:11: note: default parameter was declared here
+  // CHECK-NOTES: [[@LINE-8]]:11: note: default parameter was declared here
   // CHECK-NEXT: void S::x(int i = 12) {}
   x();
   // CHECK-NOTES: [[@LINE-1]]:3: warning: calling a function that uses a default argument is disallowed [fuchsia-default-arguments]
-  // CHECK-NOTES: [[@LINE-19]]:8: note: default parameter was declared here
+  // CHECK-NOTES: [[@LINE-18]]:8: note: default parameter was declared here
   // CHECK-NEXT: void x(int i = 12);
 }
