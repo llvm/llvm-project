@@ -2,7 +2,6 @@ LEVEL = ../../../../make
 SRCDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 SWIFT_SOURCES := main.swift
 # This Makefile overwrites the default rules.
-#USESWIFTDRIVER := 0
 EXE := a.out
 
 all: libLibrary a.out
