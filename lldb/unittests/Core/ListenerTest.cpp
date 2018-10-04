@@ -21,7 +21,7 @@ TEST(ListenerTest, GetEventImmediate) {
   EventSP event_sp;
   Broadcaster broadcaster(nullptr, "test-broadcaster");
 
-  // Create a listener, sign it up, make sure it recieves an event.
+  // Create a listener, sign it up, make sure it receives an event.
   ListenerSP listener_sp = Listener::MakeListener("test-listener");
   const uint32_t event_mask = 1;
   ASSERT_EQ(event_mask,
@@ -58,7 +58,7 @@ TEST(ListenerTest, GetEventWait) {
   EventSP event_sp;
   Broadcaster broadcaster(nullptr, "test-broadcaster");
 
-  // Create a listener, sign it up, make sure it recieves an event.
+  // Create a listener, sign it up, make sure it receives an event.
   ListenerSP listener_sp = Listener::MakeListener("test-listener");
   const uint32_t event_mask = 1;
   ASSERT_EQ(event_mask,
