@@ -91,6 +91,10 @@ def int_wasm_atomic_notify:
 // SIMD intrinsics
 //===----------------------------------------------------------------------===//
 
+def int_wasm_bitselect :
+  Intrinsic<[llvm_anyvector_ty],
+            [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+            [IntrNoMem, IntrSpeculatable]>;
 def int_wasm_anytrue :
   Intrinsic<[llvm_i32_ty],
             [llvm_anyvector_ty],
