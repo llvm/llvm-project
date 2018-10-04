@@ -1113,37 +1113,45 @@ TEST(FindReferences, WithinAST) {
   const char *Tests[] = {
       R"cpp(// Local variable
         int main() {
-          int $foo[[foo]];
-          $foo[[^foo]] = 2;
-          int test1 = $foo[[foo]];
+          int [[foo]];
+          [[^foo]] = 2;
+          int test1 = [[foo]];
         }
       )cpp",
 
       R"cpp(// Struct
         namespace ns1 {
-        struct $foo[[Foo]] {};
+        struct [[Foo]] {};
         } // namespace ns1
         int main() {
-          ns1::$foo[[Fo^o]]* Params;
+          ns1::[[Fo^o]]* Params;
+        }
+      )cpp",
+
+      R"cpp(// Forward declaration
+        class [[Foo]];
+        class [[Foo]] {}
+        int main() {
+          [[Fo^o]] foo;
         }
       )cpp",
 
       R"cpp(// Function
-        int $foo[[foo]](int) {}
+        int [[foo]](int) {}
         int main() {
-          auto *X = &$foo[[^foo]];
-          $foo[[foo]](42)
+          auto *X = &[[^foo]];
+          [[foo]](42)
         }
       )cpp",
 
       R"cpp(// Field
         struct Foo {
-          int $foo[[foo]];
-          Foo() : $foo[[foo]](0) {}
+          int [[foo]];
+          Foo() : [[foo]](0) {}
         };
         int main() {
           Foo f;
-          f.$foo[[f^oo]] = 1;
+          f.[[f^oo]] = 1;
         }
       )cpp",
 
@@ -1152,29 +1160,29 @@ TEST(FindReferences, WithinAST) {
         int Foo::[[foo]]() {}
         int main() {
           Foo f;
-          f.^foo();
+          f.[[^foo]]();
         }
       )cpp",
 
       R"cpp(// Typedef
-        typedef int $foo[[Foo]];
+        typedef int [[Foo]];
         int main() {
-          $foo[[^Foo]] bar;
+          [[^Foo]] bar;
         }
       )cpp",
 
       R"cpp(// Namespace
-        namespace $foo[[ns]] {
+        namespace [[ns]] {
         struct Foo {};
         } // namespace ns
-        int main() { $foo[[^ns]]::Foo foo; }
+        int main() { [[^ns]]::Foo foo; }
       )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
     auto AST = TestTU::withCode(T.code()).build();
     std::vector<Matcher<Location>> ExpectedLocations;
-    for (const auto &R : T.ranges("foo"))
+    for (const auto &R : T.ranges())
       ExpectedLocations.push_back(RangeIs(R));
     EXPECT_THAT(findReferences(AST, T.point()),
                 ElementsAreArray(ExpectedLocations))

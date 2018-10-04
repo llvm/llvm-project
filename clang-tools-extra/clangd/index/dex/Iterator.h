@@ -98,8 +98,16 @@ public:
     return Iterator.dump(OS);
   }
 
+  /// Inspect iterator type, used internally for optimizing query trees.
+  enum class Kind { And, Or, True, False, Other };
+  Kind kind() const { return MyKind; }
+
+protected:
+  Iterator(Kind MyKind = Kind::Other) : MyKind(MyKind) {}
+
 private:
   virtual llvm::raw_ostream &dump(llvm::raw_ostream &OS) const = 0;
+  Kind MyKind;
 };
 
 /// Advances the iterator until it is exhausted. Returns pairs of document IDs
@@ -149,6 +157,9 @@ public:
   /// Returns TRUE Iterator which iterates over "virtual" PostingList
   /// containing all items in range [0, Size) in an efficient manner.
   std::unique_ptr<Iterator> all() const;
+
+  /// Returns FALSE Iterator which iterates over no documents.
+  std::unique_ptr<Iterator> none() const;
 
   /// Returns BOOST iterator which multiplies the score of each item by given
   /// factor. Boosting can be used as a computationally inexpensive filtering.

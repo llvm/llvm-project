@@ -70,6 +70,11 @@ public:
     // of the reorder buffer. To avoid problems, cap the amount of slots to
     // the size of the reorder buffer.
     Quantity = std::min(Quantity, static_cast<unsigned>(Queue.size()));
+
+    // Further normalize the number of micro opcodes for instructions that
+    // declare zero opcodes. This should match the behavior of method
+    // reserveSlot().
+    Quantity = std::max(Quantity, 1U);
     return AvailableSlots >= Quantity;
   }
 

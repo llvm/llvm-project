@@ -28,6 +28,7 @@
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <memory>
 #include <string>
 
 using namespace llvm;
@@ -56,7 +57,7 @@ public:
 
 private:
   StringMap<unsigned> PassIDCountMap; ///< Map that counts instances of passes
-  DenseMap<PassInstanceID, Timer *> TimingData; ///< timers for pass instances
+  DenseMap<PassInstanceID, std::unique_ptr<Timer>> TimingData; ///< timers for pass instances
   TimerGroup TG;
 
 public:
@@ -93,8 +94,7 @@ PassTimingInfo::PassTimingInfo()
 PassTimingInfo::~PassTimingInfo() {
   // Deleting the timers accumulates their info into the TG member.
   // Then TG member is (implicitly) deleted, actually printing the report.
-  for (auto &I : TimingData)
-    delete I.getSecond();
+  TimingData.clear();
 }
 
 void PassTimingInfo::init() {
@@ -126,16 +126,16 @@ Timer *PassTimingInfo::getPassTimer(Pass *P, PassInstanceID Pass) {
 
   init();
   sys::SmartScopedLock<true> Lock(*TimingInfoMutex);
-  Timer *&T = TimingData[Pass];
+  std::unique_ptr<Timer> &T = TimingData[Pass];
 
   if (!T) {
     StringRef PassName = P->getPassName();
     StringRef PassArgument;
     if (const PassInfo *PI = Pass::lookupPassInfo(P->getPassID()))
       PassArgument = PI->getPassArgument();
-    T = newPassTimer(PassArgument.empty() ? PassName : PassArgument, PassName);
+    T.reset(newPassTimer(PassArgument.empty() ? PassName : PassArgument, PassName));
   }
-  return T;
+  return T.get();
 }
 
 PassTimingInfo *PassTimingInfo::TheTimeInfo;

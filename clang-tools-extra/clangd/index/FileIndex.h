@@ -19,6 +19,7 @@
 #include "ClangdUnit.h"
 #include "Index.h"
 #include "MemIndex.h"
+#include "Merge.h"
 #include "clang/Lex/Preprocessor.h"
 #include <memory>
 
@@ -59,14 +60,11 @@ private:
 
 /// This manages symbols from files and an in-memory index on all symbols.
 /// FIXME: Expose an interface to remove files that are closed.
-class FileIndex {
+class FileIndex : public MergedIndex {
 public:
   /// If URISchemes is empty, the default schemes in SymbolCollector will be
   /// used.
   FileIndex(std::vector<std::string> URISchemes = {});
-
-  // Presents a merged view of the supplied main-file and preamble ASTs.
-  const SymbolIndex &index() const { return *MergedIndex; }
 
   /// Update preamble symbols of file \p Path with all declarations in \p AST
   /// and macros in \p PP.
@@ -102,8 +100,6 @@ private:
   // (Note that symbols *only* in the main file are not indexed).
   FileSymbols MainFileSymbols;
   SwapIndex MainFileIndex;
-
-  std::unique_ptr<SymbolIndex> MergedIndex;  // Merge preamble and main index.
 };
 
 /// Retrieves symbols and refs of local top level decls in \p AST (i.e.

@@ -26,20 +26,15 @@ bextrl	%esi, (%rdi), %eax
 # ZNVER1-NEXT:  Total Cycles:      8
 # ZNVER1-NEXT:  Total uOps:        3
 
-# BTVER2:       Dispatch Width:    2
-# BTVER2-NEXT:  uOps Per Cycle:    0.29
-# BTVER2-NEXT:  IPC:               0.29
-# BTVER2-NEXT:  Block RThroughput: 1.0
-
-# ZNVER1:       Dispatch Width:    4
-# ZNVER1-NEXT:  uOps Per Cycle:    0.38
-# ZNVER1-NEXT:  IPC:               0.25
-# ZNVER1-NEXT:  Block RThroughput: 0.8
-
 # BDWELL:       Dispatch Width:    4
 # BDWELL-NEXT:  uOps Per Cycle:    0.40
 # BDWELL-NEXT:  IPC:               0.20
 # BDWELL-NEXT:  Block RThroughput: 1.0
+
+# BTVER2:       Dispatch Width:    2
+# BTVER2-NEXT:  uOps Per Cycle:    0.29
+# BTVER2-NEXT:  IPC:               0.29
+# BTVER2-NEXT:  Block RThroughput: 1.0
 
 # HASWELL:      Dispatch Width:    4
 # HASWELL-NEXT: uOps Per Cycle:    0.40
@@ -50,6 +45,11 @@ bextrl	%esi, (%rdi), %eax
 # SKYLAKE-NEXT: uOps Per Cycle:    0.40
 # SKYLAKE-NEXT: IPC:               0.20
 # SKYLAKE-NEXT: Block RThroughput: 0.7
+
+# ZNVER1:       Dispatch Width:    4
+# ZNVER1-NEXT:  uOps Per Cycle:    0.38
+# ZNVER1-NEXT:  IPC:               0.25
+# ZNVER1-NEXT:  Block RThroughput: 0.8
 
 # ALL:          Instruction Info:
 # ALL-NEXT:     [1]: #uOps
@@ -87,6 +87,9 @@ bextrl	%esi, (%rdi), %eax
 # BDWELL:       [0,0]     DeER .   .   addl	%edi, %esi
 # BDWELL-NEXT:  [0,1]     DeeeeeeeER   bextrl	%esi, (%rdi), %eax
 
+# BTVER2:       [0,0]     DeER ..   addl	%edi, %esi
+# BTVER2-NEXT:  [0,1]     DeeeeER   bextrl	%esi, (%rdi), %eax
+
 # HASWELL:      [0,0]     DeER .   .   addl	%edi, %esi
 # HASWELL-NEXT: [0,1]     DeeeeeeeER   bextrl	%esi, (%rdi), %eax
 
@@ -95,9 +98,6 @@ bextrl	%esi, (%rdi), %eax
 
 # ZNVER1:       [0,0]     DeER . .   addl	%edi, %esi
 # ZNVER1-NEXT:  [0,1]     DeeeeeER   bextrl	%esi, (%rdi), %eax
-
-# BTVER2:       [0,0]     DeER ..   addl	%edi, %esi
-# BTVER2-NEXT:  [0,1]     DeeeeER   bextrl	%esi, (%rdi), %eax
 
 # ALL:          Average Wait times (based on the timeline view):
 # ALL-NEXT:     [0]: Executions

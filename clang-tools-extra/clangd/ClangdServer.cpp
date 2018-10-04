@@ -117,18 +117,15 @@ ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                                : nullptr,
                     Opts.UpdateDebounce, Opts.RetentionPolicy) {
   if (DynamicIdx && Opts.StaticIndex) {
-    MergedIndex = mergeIndex(&DynamicIdx->index(), Opts.StaticIndex);
-    Index = MergedIndex.get();
+    MergedIdx =
+        llvm::make_unique<MergedIndex>(DynamicIdx.get(), Opts.StaticIndex);
+    Index = MergedIdx.get();
   } else if (DynamicIdx)
-    Index = &DynamicIdx->index();
+    Index = DynamicIdx.get();
   else if (Opts.StaticIndex)
     Index = Opts.StaticIndex;
   else
     Index = nullptr;
-}
-
-const SymbolIndex *ClangdServer::dynamicIndex() const {
-  return DynamicIdx ? &DynamicIdx->index() : nullptr;
 }
 
 void ClangdServer::setRootPath(PathRef RootPath) {
