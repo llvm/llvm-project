@@ -42,7 +42,8 @@
 
 using namespace llvm;
 using namespace llvm::support;
-using namespace msgpack;
+using namespace COMGR;
+using namespace COMGR::msgpack;
 
 Reader::Reader(MemoryBufferRef InputBuffer)
     : InputBuffer(InputBuffer), Current(InputBuffer.getBufferStart()),

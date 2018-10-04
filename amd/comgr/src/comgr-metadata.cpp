@@ -71,7 +71,7 @@ getElfMetadataRoot(const std::unique_ptr<ELFObjectFile<ELFT>> Obj,
         return AMD_COMGR_STATUS_SUCCESS;
       } else if (Note.getType() == 13) {
         Found = true;
-        llvm::msgpack::Reader MPReader(DescString);
+        msgpack::Reader MPReader(DescString);
         return COMGR::msgpack::parse(MPReader, metap->msgpack_node);
       }
     }

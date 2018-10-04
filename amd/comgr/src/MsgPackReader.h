@@ -43,7 +43,9 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 
-namespace llvm {
+using namespace llvm;
+
+namespace COMGR {
 namespace msgpack {
 
 /// MessagePack types as defined in the standard, with the exception of Integer
@@ -154,6 +156,6 @@ private:
 };
 
 } // end namespace msgpack
-} // end namespace llvm
+} // end namespace COMGR
 
 #endif // LLVM_SUPPORT_MSGPACKREADER_H

@@ -42,7 +42,7 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Endian.h"
 
-namespace llvm {
+namespace COMGR {
 namespace msgpack {
 
 /// The endianness of all multi-byte encoded values in MessagePack.
@@ -112,6 +112,6 @@ namespace FixMin {
 }
 
 } // end namespace msgpack
-} // end namespace llvm
+} // end namespace COMGR
 
 #endif // LLVM_BINARYFORMAT_MSGPACK_H

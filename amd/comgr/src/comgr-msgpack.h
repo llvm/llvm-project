@@ -109,7 +109,7 @@ public:
   }
 };
 
-amd_comgr_status_t parse(llvm::msgpack::Reader &MPReader,
+amd_comgr_status_t parse(msgpack::Reader &MPReader,
                          std::shared_ptr<Node> &Out);
 
 } // namespace msgpack
