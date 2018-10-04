@@ -152,7 +152,7 @@ void SendTerminatedEvent() {
 }
 
 //----------------------------------------------------------------------
-// Send a thread stopped event for all threads as lons as the process
+// Send a thread stopped event for all threads as long as the process
 // is stopped.
 //----------------------------------------------------------------------
 void SendThreadStoppedEvent() {
@@ -191,7 +191,7 @@ void SendThreadStoppedEvent() {
       if (g_vsc.focus_tid == LLDB_INVALID_THREAD_ID)
         g_vsc.focus_tid = first_tid_with_reason;
 
-      // If no threads stopped with a reaspon, then report the first one so
+      // If no threads stopped with a reason, then report the first one so
       // we at least let the UI know we stopped.
       if (num_threads_with_reason == 0) {
         lldb::SBThread thread = process.GetThreadAtIndex(0);
@@ -324,7 +324,7 @@ void SendStdOutStdErr(lldb::SBProcess &process) {
 }
 
 //----------------------------------------------------------------------
-// All events from a the debugger, target, process, thread and frames are
+// All events from the debugger, target, process, thread and frames are
 // received in this function that runs in its own thread. We are using a
 // "FILE *" to output packets back to VS Code and they have mutexes in them
 // them prevent multiple threads from writing simultaneously so no locking
@@ -1623,7 +1623,7 @@ void request_setBreakpoints(const llvm::json::Object &request) {
         remove_lines.push_back(pair.first);
       } else {
         pair.second.UpdateBreakpoint(request_pos->second);
-        // Remove this breakpopint from the request breakpoints since we have
+        // Remove this breakpoint from the request breakpoints since we have
         // handled it here and we don't need to set a new breakpoint below.
         request_bps.erase(request_pos);
         // Add this breakpoint info to the response
@@ -1849,7 +1849,7 @@ void request_setFunctionBreakpoints(const llvm::json::Object &request) {
       // Update the existing breakpoint as any setting withing the function
       // breakpoint might have changed.
       pair.second.UpdateBreakpoint(request_pos->second);
-      // Remove this breakpopint from the request breakpoints since we have
+      // Remove this breakpoint from the request breakpoints since we have
       // handled it here and we don't need to set a new breakpoint below.
       request_bps.erase(request_pos);
       // Add this breakpoint info to the response
@@ -2334,13 +2334,13 @@ void request_setVariable(const llvm::json::Object &request) {
   // only specifies the variable reference of the enclosing scope/variable, and
   // the name of the variable. We could have two shadowed variables with the
   // same name in "Locals" or "Globals". In our case the "id" absolute index
-  // of the variable within the the g_vsc.variables list.
+  // of the variable within the g_vsc.variables list.
   const auto id_value = GetUnsigned(arguments, "id", UINT64_MAX);
   if (id_value != UINT64_MAX) {
     variable = g_vsc.variables.GetValueAtIndex(id_value);
   } else if (VARREF_IS_SCOPE(variablesReference)) {
     // variablesReference is one of our scopes, not an actual variable it is
-    // asking for a variable inlocals or globals or registers
+    // asking for a variable in locals or globals or registers
     int64_t start_idx = 0;
     int64_t end_idx = 0;
     switch (variablesReference) {

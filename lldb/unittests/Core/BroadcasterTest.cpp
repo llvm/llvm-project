@@ -24,7 +24,7 @@ TEST(BroadcasterTest, BroadcastEvent) {
   Broadcaster broadcaster(nullptr, "test-broadcaster");
   std::chrono::seconds timeout(0);
 
-  // Create a listener, sign it up, make sure it recieves an event.
+  // Create a listener, sign it up, make sure it receives an event.
   ListenerSP listener1_sp = Listener::MakeListener("test-listener1");
   const uint32_t event_mask1 = 1;
   EXPECT_EQ(event_mask1,

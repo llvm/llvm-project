@@ -379,7 +379,7 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread, uint32_t stop_id);
 /// object:
 ///   "name" - the name of the variable
 ///   "value" - the value of the variable as a string
-///   "type" - the typename of the varaible as a string
+///   "type" - the typename of the variable as a string
 ///   "id" - a unique identifier for a value in case there are multiple
 ///          variables with the same name. Other parts of the VSCode
 ///          protocol refer to values by name so this can help
@@ -401,7 +401,7 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread, uint32_t stop_id);
 ///     might be asked to expand itself.
 ///
 /// @param[in] varID
-///     A unique variable indentifier to help in properly identifying
+///     A unique variable identifier to help in properly identifying
 ///     variables with the same name. This is an extension to the
 ///     VS protocol.
 ///
