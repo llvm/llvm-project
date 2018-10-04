@@ -6,6 +6,12 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
+// A YAML index file is a sequence of tagged entries.
+// Each entry either encodes a Symbol or the list of references to a symbol
+// (a "ref bundle").
+//
+//===----------------------------------------------------------------------===//
 
 #include "Index.h"
 #include "Serialization.h"
@@ -20,10 +26,22 @@
 #include <cstdint>
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::clangd::Symbol::IncludeHeaderWithReferences)
+LLVM_YAML_IS_SEQUENCE_VECTOR(clang::clangd::Ref)
 
+namespace {
+using RefBundle =
+    std::pair<clang::clangd::SymbolID, std::vector<clang::clangd::Ref>>;
+// This is a pale imitation of std::variant<Symbol, RefBundle>
+struct VariantEntry {
+  llvm::Optional<clang::clangd::Symbol> Symbol;
+  llvm::Optional<RefBundle> Refs;
+};
+} // namespace
 namespace llvm {
 namespace yaml {
 
+using clang::clangd::Ref;
+using clang::clangd::RefKind;
 using clang::clangd::Symbol;
 using clang::clangd::SymbolID;
 using clang::clangd::SymbolLocation;
@@ -179,6 +197,46 @@ template <> struct ScalarEnumerationTraits<SymbolKind> {
   }
 };
 
+template <> struct MappingTraits<RefBundle> {
+  static void mapping(IO &IO, RefBundle &Refs) {
+    MappingNormalization<NormalizedSymbolID, SymbolID> NSymbolID(IO,
+                                                                 Refs.first);
+    IO.mapRequired("ID", NSymbolID->HexString);
+    IO.mapRequired("References", Refs.second);
+  }
+};
+
+struct NormalizedRefKind {
+  NormalizedRefKind(IO &) {}
+  NormalizedRefKind(IO &, RefKind O) { Kind = static_cast<uint8_t>(O); }
+
+  RefKind denormalize(IO &) { return static_cast<RefKind>(Kind); }
+
+  uint8_t Kind = 0;
+};
+
+template <> struct MappingTraits<Ref> {
+  static void mapping(IO &IO, Ref &R) {
+    MappingNormalization<NormalizedRefKind, RefKind> NKind(IO, R.Kind);
+    IO.mapRequired("Kind", NKind->Kind);
+    IO.mapRequired("Location", R.Location);
+  }
+};
+
+template <> struct MappingTraits<VariantEntry> {
+  static void mapping(IO &IO, VariantEntry &Variant) {
+    if (IO.mapTag("!Symbol", Variant.Symbol.hasValue())) {
+      if (!IO.outputting())
+        Variant.Symbol.emplace();
+      MappingTraits<Symbol>::mapping(IO, *Variant.Symbol);
+    } else if (IO.mapTag("!Refs", Variant.Refs.hasValue())) {
+      if (!IO.outputting())
+        Variant.Refs.emplace();
+      MappingTraits<RefBundle>::mapping(IO, *Variant.Refs);
+    }
+  }
+};
+
 } // namespace yaml
 } // namespace llvm
 
@@ -187,23 +245,38 @@ namespace clangd {
 
 void writeYAML(const IndexFileOut &O, raw_ostream &OS) {
   llvm::yaml::Output Yout(OS);
-  for (Symbol Sym : *O.Symbols) // copy: Yout<< requires mutability.
-    Yout << Sym;
+  for (const auto &Sym : *O.Symbols) {
+    VariantEntry Entry;
+    Entry.Symbol = Sym;
+    Yout << Entry;
+  }
+  if (O.Refs)
+    for (auto &Sym : *O.Refs) {
+      VariantEntry Entry;
+      Entry.Refs = Sym;
+      Yout << Entry;
+    }
 }
 
 Expected<IndexFileIn> readYAML(StringRef Data) {
   SymbolSlab::Builder Symbols;
+  RefSlab::Builder Refs;
   llvm::yaml::Input Yin(Data);
   do {
-    Symbol S;
-    Yin >> S;
+    VariantEntry Variant;
+    Yin >> Variant;
     if (Yin.error())
       return llvm::errorCodeToError(Yin.error());
-    Symbols.insert(S);
+    if (Variant.Symbol)
+      Symbols.insert(*Variant.Symbol);
+    if (Variant.Refs)
+      for (const auto &Ref : Variant.Refs->second)
+        Refs.insert(Variant.Refs->first, Ref);
   } while (Yin.nextDocument());
 
   IndexFileIn Result;
   Result.Symbols.emplace(std::move(Symbols).build());
+  Result.Refs.emplace(std::move(Refs).build());
   return std::move(Result);
 }
 
@@ -214,6 +287,17 @@ std::string toYAML(const Symbol &S) {
     llvm::yaml::Output Yout(OS);
     Symbol Sym = S; // copy: Yout<< requires mutability.
     OS << Sym;
+  }
+  return Buf;
+}
+
+std::string toYAML(const std::pair<SymbolID, ArrayRef<Ref>> &Data) {
+  RefBundle Refs = {Data.first, Data.second};
+  std::string Buf;
+  {
+    llvm::raw_string_ostream OS(Buf);
+    llvm::yaml::Output Yout(OS);
+    Yout << Refs;
   }
   return Buf;
 }
