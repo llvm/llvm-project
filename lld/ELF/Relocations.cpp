@@ -331,9 +331,9 @@ static bool needsPlt(RelExpr Expr) {
 // returns false for TLS variables even though they need GOT, because
 // TLS variables uses GOT differently than the regular variables.
 static bool needsGot(RelExpr Expr) {
-  return isRelExprOneOf<R_GOT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOT_OFF,
-                        R_MIPS_GOT_OFF32, R_GOT_PAGE_PC, R_GOT_PC,
-                        R_GOT_FROM_END>(Expr);
+  return isRelExprOneOf<R_GOT, R_GOT_OFF, R_HEXAGON_GOT, R_MIPS_GOT_LOCAL_PAGE,
+                        R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_GOT_PAGE_PC,
+                        R_GOT_PC, R_GOT_FROM_END>(Expr);
 }
 
 // True if this expression is of the form Sym - X, where X is a position in the
@@ -357,12 +357,12 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
                                      InputSectionBase &S, uint64_t RelOff) {
   // These expressions always compute a constant
   if (isRelExprOneOf<
-          R_GOT_FROM_END, R_GOT_OFF, R_TLSLD_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE,
-          R_MIPS_GOTREL, R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
-          R_MIPS_TLSGD, R_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
-          R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_GOT, R_TLSGD_GOT_FROM_END,
-          R_TLSGD_PC, R_PPC_CALL_PLT, R_TLSDESC_CALL, R_TLSDESC_PAGE, R_HINT,
-          R_TLSLD_HINT, R_TLSIE_HINT>(E))
+          R_GOT_FROM_END, R_GOT_OFF, R_HEXAGON_GOT, R_TLSLD_GOT_OFF,
+          R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL, R_MIPS_GOT_OFF,
+          R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC, R_MIPS_TLSGD, R_GOT_PAGE_PC,
+          R_GOT_PC, R_GOTONLY_PC, R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_GOT,
+          R_TLSGD_GOT_FROM_END, R_TLSGD_PC, R_PPC_CALL_PLT, R_TLSDESC_CALL,
+          R_TLSDESC_PAGE, R_HINT, R_TLSLD_HINT, R_TLSIE_HINT>(E))
     return true;
 
   // These never do, except if the entire file is position dependent or if
