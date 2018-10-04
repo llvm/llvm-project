@@ -1494,10 +1494,8 @@ void RelocationBaseSection::finalizeContents() {
   // If all relocations are R_*_RELATIVE they don't refer to any
   // dynamic symbol and we don't need a dynamic symbol table. If that
   // is the case, just use 0 as the link.
-  Link = In.DynSymTab ? In.DynSymTab->getParent()->SectionIndex : 0;
-
-  // Set required output section properties.
-  getParent()->Link = Link;
+  getParent()->Link =
+      In.DynSymTab ? In.DynSymTab->getParent()->SectionIndex : 0;
 }
 
 RelrBaseSection::RelrBaseSection()
