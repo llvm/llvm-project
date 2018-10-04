@@ -2159,19 +2159,21 @@ TypeSystem *Target::GetScratchTypeSystemForLanguage(
           if (m_use_scratch_typesystem_per_module)
             DisplayFallbackSwiftContextErrors(swift_ast_ctx);
           else if (StreamSP errs = GetDebugger().GetAsyncErrorStream()) {
-            errs->Printf(
-                "warning: Swift error in scratch context: %s.\n",
-                swift_ast_ctx->GetFatalErrors().AsCString("unknown error"));
-            auto *module_name = GetExecutableModule()
-                                    ->GetPlatformFileSpec()
-                                    .GetFilename()
-                                    .AsCString();
-            errs->Printf("Shared Swift state for %s has developed fatal "
-                         "errors and is being discarded.\n",
-                         module_name);
-            errs->PutCString("REPL definitions and persistent names/types "
-                             "will be lost.\n\n");
-            errs->Flush();
+            if (swift_ast_ctx->HasFatalErrors()) {
+              errs->Printf(
+                  "warning: Swift error in scratch context: %s.\n",
+                  swift_ast_ctx->GetFatalErrors().AsCString("unknown error"));
+              auto *module_name = GetExecutableModule()
+                                      ->GetPlatformFileSpec()
+                                      .GetFilename()
+                                      .AsCString();
+              errs->Printf("Shared Swift state for %s has developed fatal "
+                           "errors and is being discarded.\n",
+                           module_name);
+              errs->PutCString("REPL definitions and persistent names/types "
+                               "will be lost.\n\n");
+              errs->Flush();
+            }
           }
 
           m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
