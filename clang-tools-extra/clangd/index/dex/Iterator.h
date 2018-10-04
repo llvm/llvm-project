@@ -106,6 +106,7 @@ protected:
   Iterator(Kind MyKind = Kind::Other) : MyKind(MyKind) {}
 
 private:
+  Kind MyKind;
   virtual llvm::raw_ostream &dump(llvm::raw_ostream &OS) const = 0;
   Kind MyKind;
 };
