@@ -1378,24 +1378,6 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     }
     break;
   }
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::Xor:
-  case Instruction::Add:
-  case Instruction::Sub:
-  case Instruction::Mul:
-    // div/rem demand all inputs, because they don't want divide by zero.
-    TmpV = SimplifyDemandedVectorElts(I->getOperand(0), DemandedElts, UndefElts,
-                                      Depth + 1);
-    if (TmpV) { I->setOperand(0, TmpV); MadeChange = true; }
-    TmpV = SimplifyDemandedVectorElts(I->getOperand(1), DemandedElts,
-                                      UndefElts2, Depth + 1);
-    if (TmpV) { I->setOperand(1, TmpV); MadeChange = true; }
-
-    // Output elements are undefined if both are undefined.  Consider things
-    // like undef&0.  The result is known zero, not undef.
-    UndefElts &= UndefElts2;
-    break;
   case Instruction::FPTrunc:
   case Instruction::FPExt:
     TmpV = SimplifyDemandedVectorElts(I->getOperand(0), DemandedElts, UndefElts,
@@ -1647,5 +1629,25 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     break;
   }
   }
+
+  // TODO: We bail completely on integer div/rem and shifts because they have
+  // UB/poison potential, but that should be refined.
+  BinaryOperator *BO;
+  if (match(I, m_BinOp(BO)) && !BO->isIntDivRem() && !BO->isShift()) {
+    TmpV = SimplifyDemandedVectorElts(I->getOperand(0), DemandedElts, UndefElts,
+                                      Depth + 1);
+    if (TmpV) { I->setOperand(0, TmpV); MadeChange = true; }
+    TmpV = SimplifyDemandedVectorElts(I->getOperand(1), DemandedElts,
+                                      UndefElts2, Depth + 1);
+    if (TmpV) { I->setOperand(1, TmpV); MadeChange = true; }
+
+    // TODO: If this is a potentially poison-producing instruction, we need
+    // to drop the wrapping/exact flags?
+
+    // Output elements are undefined if both are undefined.  Consider things
+    // like undef&0.  The result is known zero, not undef.
+    UndefElts &= UndefElts2;
+  }
+
   return MadeChange ? I : nullptr;
 }

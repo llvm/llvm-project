@@ -235,26 +235,19 @@ void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
   }
 }
 
-const char *llvm::WebAssembly::TypeToString(MVT Ty) {
-  switch (Ty.SimpleTy) {
-  case MVT::i32:
+const char *llvm::WebAssembly::TypeToString(wasm::ValType Ty) {
+  switch (Ty) {
+  case wasm::ValType::I32:
     return "i32";
-  case MVT::i64:
+  case wasm::ValType::I64:
     return "i64";
-  case MVT::f32:
+  case wasm::ValType::F32:
     return "f32";
-  case MVT::f64:
+  case wasm::ValType::F64:
     return "f64";
-  case MVT::v16i8:
-  case MVT::v8i16:
-  case MVT::v4i32:
-  case MVT::v2i64:
-  case MVT::v4f32:
-  case MVT::v2f64:
+  case wasm::ValType::V128:
     return "v128";
-  case MVT::ExceptRef:
+  case wasm::ValType::EXCEPT_REF:
     return "except_ref";
-  default:
-    llvm_unreachable("unsupported type");
   }
 }

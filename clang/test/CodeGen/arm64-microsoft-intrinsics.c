@@ -59,3 +59,10 @@ void check__sevl(void) {
 
 // CHECK-MSVC: @llvm.aarch64.hint(i32 5)
 // CHECK-LINUX: error: implicit declaration of function '__sevl'
+
+void check_ReadWriteBarrier() {
+  _ReadWriteBarrier();
+}
+
+// CHECK-MSVC: fence syncscope("singlethread")
+// CHECK-LINUX: error: implicit declaration of function '_ReadWriteBarrier'

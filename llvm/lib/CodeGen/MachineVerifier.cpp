@@ -109,6 +109,7 @@ namespace {
     using RegMap = DenseMap<unsigned, const MachineInstr *>;
     using BlockSet = SmallPtrSet<const MachineBasicBlock *, 8>;
 
+    const MachineInstr *FirstNonPHI;
     const MachineInstr *FirstTerminator;
     BlockSet FunctionBlocks;
 
@@ -608,6 +609,7 @@ static bool matchPair(MachineBasicBlock::const_succ_iterator i,
 void
 MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   FirstTerminator = nullptr;
+  FirstNonPHI = nullptr;
 
   if (!MF->getProperties().hasProperty(
       MachineFunctionProperties::Property::NoPHIs) && MRI->tracksLiveness()) {
@@ -889,9 +891,15 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
            << MI->getNumOperands() << " given.\n";
   }
 
-  if (MI->isPHI() && MF->getProperties().hasProperty(
-                         MachineFunctionProperties::Property::NoPHIs))
-    report("Found PHI instruction with NoPHIs property set", MI);
+  if (MI->isPHI()) {
+    if (MF->getProperties().hasProperty(
+            MachineFunctionProperties::Property::NoPHIs))
+      report("Found PHI instruction with NoPHIs property set", MI);
+
+    if (FirstNonPHI)
+      report("Found PHI instruction after non-PHI", MI);
+  } else if (FirstNonPHI == nullptr)
+    FirstNonPHI = MI;
 
   // Check the tied operands.
   if (MI->isInlineAsm())

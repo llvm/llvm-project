@@ -160,6 +160,9 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
     addUInt(*VariableDIE, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
             AlignInBytes);
 
+  if (MDTuple *TP = GV->getTemplateParams())
+    addTemplateParams(*VariableDIE, DINodeArray(TP));
+
   // Add location.
   bool addToAccelTable = false;
   DIELoc *Loc = nullptr;

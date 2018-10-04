@@ -38,3 +38,5 @@ class F : virtual private D, public E {};
 class X {
   class Y {};
 };
+
+class G;
