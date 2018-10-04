@@ -206,7 +206,7 @@ public:
 
   /// Returns the active dynamic index if one was built.
   /// This can be useful for testing, debugging, or observing memory usage.
-  const SymbolIndex *dynamicIndex() const;
+  const SymbolIndex *dynamicIndex() const { return DynamicIdx.get(); }
 
   // Blocks the main thread until the server is idle. Only for use in tests.
   // Returns false if the timeout expires.
@@ -244,7 +244,7 @@ private:
   // If present, an index of symbols in open files. Read via *Index.
   std::unique_ptr<FileIndex> DynamicIdx;
   // If present, storage for the merged static/dynamic index. Read via *Index.
-  std::unique_ptr<SymbolIndex> MergedIndex;
+  std::unique_ptr<SymbolIndex> MergedIdx;
 
   // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)
   llvm::StringMap<llvm::Optional<FuzzyFindRequest>>

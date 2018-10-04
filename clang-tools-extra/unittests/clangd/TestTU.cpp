@@ -48,11 +48,12 @@ SymbolSlab TestTU::headerSymbols() const {
   return indexHeaderSymbols(AST.getASTContext(), AST.getPreprocessorPtr());
 }
 
-// FIXME: This should return a FileIndex with both preamble and main index.
 std::unique_ptr<SymbolIndex> TestTU::index() const {
   auto AST = build();
-  auto Content = indexMainDecls(AST);
-  return MemIndex::build(std::move(Content.first), std::move(Content.second));
+  auto Idx = llvm::make_unique<FileIndex>();
+  Idx->updatePreamble(Filename, AST.getASTContext(), AST.getPreprocessorPtr());
+  Idx->updateMain(Filename, AST);
+  return Idx;
 }
 
 const Symbol &findSymbol(const SymbolSlab &Slab, llvm::StringRef QName) {
