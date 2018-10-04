@@ -19971,15 +19971,20 @@ static SDValue LowerLoad(SDValue Op, const X86Subtarget &Subtarget,
 
   SmallVector<SDValue, 8> Chains;
   SDValue Ptr = Ld->getBasePtr();
-  SDValue Increment = DAG.getConstant(SclrLoadTy.getSizeInBits() / 8, dl,
+  unsigned OffsetInc = SclrLoadTy.getSizeInBits() / 8;
+  SDValue Increment = DAG.getConstant(OffsetInc, dl,
                                       TLI.getPointerTy(DAG.getDataLayout()));
   SDValue Res = DAG.getUNDEF(LoadUnitVecVT);
 
+  unsigned Offset = 0;
   for (unsigned i = 0; i < NumLoads; ++i) {
+    unsigned NewAlign = MinAlign(Ld->getAlignment(), Offset);
+
     // Perform a single load.
     SDValue ScalarLoad =
-        DAG.getLoad(SclrLoadTy, dl, Ld->getChain(), Ptr, Ld->getPointerInfo(),
-                    Ld->getAlignment(), Ld->getMemOperand()->getFlags());
+      DAG.getLoad(SclrLoadTy, dl, Ld->getChain(), Ptr,
+                  Ld->getPointerInfo().getWithOffset(Offset),
+                  NewAlign, Ld->getMemOperand()->getFlags());
     Chains.push_back(ScalarLoad.getValue(1));
     // Create the first element type using SCALAR_TO_VECTOR in order to avoid
     // another round of DAGCombining.
@@ -19990,6 +19995,7 @@ static SDValue LowerLoad(SDValue Op, const X86Subtarget &Subtarget,
                         ScalarLoad, DAG.getIntPtrConstant(i, dl));
 
     Ptr = DAG.getNode(ISD::ADD, dl, Ptr.getValueType(), Ptr, Increment);
+    Offset += OffsetInc;
   }
 
   SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
@@ -34930,29 +34936,6 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-// Try to match (and (xor X, -1), Y) logic pattern for (andnp X, Y) combines.
-static bool matchANDXORWithAllOnesAsANDNP(SDNode *N, SDValue &X, SDValue &Y) {
-  if (N->getOpcode() != ISD::AND)
-    return false;
-
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-  if (N0.getOpcode() == ISD::XOR &&
-      ISD::isBuildVectorAllOnes(N0.getOperand(1).getNode())) {
-    X = N0.getOperand(0);
-    Y = N1;
-    return true;
-  }
-  if (N1.getOpcode() == ISD::XOR &&
-      ISD::isBuildVectorAllOnes(N1.getOperand(1).getNode())) {
-    X = N1.getOperand(0);
-    Y = N0;
-    return true;
-  }
-
-  return false;
-}
-
 /// Try to fold: (and (xor X, -1), Y) -> (andnp X, Y).
 static SDValue combineANDXORWithAllOnesIntoANDNP(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::AND);
@@ -34962,10 +34945,20 @@ static SDValue combineANDXORWithAllOnesIntoANDNP(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   SDValue X, Y;
-  if (matchANDXORWithAllOnesAsANDNP(N, X, Y))
-    return DAG.getNode(X86ISD::ANDNP, SDLoc(N), VT, X, Y);
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  if (N0.getOpcode() == ISD::XOR &&
+      ISD::isBuildVectorAllOnes(N0.getOperand(1).getNode())) {
+    X = N0.getOperand(0);
+    Y = N1;
+  } else if (N1.getOpcode() == ISD::XOR &&
+             ISD::isBuildVectorAllOnes(N1.getOperand(1).getNode())) {
+    X = N1.getOperand(0);
+    Y = N0;
+  } else
+    return SDValue();
 
-  return SDValue();
+  return DAG.getNode(X86ISD::ANDNP, SDLoc(N), VT, X, Y);
 }
 
 // On AVX/AVX2 the type v8i1 is legalized to v8i16, which is an XMM sized

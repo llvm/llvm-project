@@ -41,9 +41,10 @@ namespace dex {
 // index on disk and then load it if available.
 class Dex : public SymbolIndex {
 public:
-  // All symbols must outlive this index.
-  template <typename Range>
-  Dex(Range &&Symbols, llvm::ArrayRef<std::string> Schemes)
+  // All data must outlive this index.
+  template <typename SymbolRange, typename RefsRange>
+  Dex(SymbolRange &&Symbols, RefsRange &&Refs,
+      llvm::ArrayRef<std::string> Schemes)
       : Corpus(0), URISchemes(Schemes) {
     // If Schemes don't contain any items, fall back to SymbolCollector's
     // default URI schemes.
@@ -53,26 +54,24 @@ public:
     }
     for (auto &&Sym : Symbols)
       this->Symbols.push_back(&Sym);
+    for (auto &&Ref : Refs)
+      this->Refs.try_emplace(Ref.first, Ref.second);
     buildIndex();
   }
-  // Symbols are owned by BackingData, Index takes ownership.
-  template <typename Range, typename Payload>
-  Dex(Range &&Symbols, Payload &&BackingData, size_t BackingDataSize,
-      llvm::ArrayRef<std::string> URISchemes)
-      : Dex(std::forward<Range>(Symbols), URISchemes) {
+  // Symbols and Refs are owned by BackingData, Index takes ownership.
+  template <typename SymbolRange, typename RefsRange, typename Payload>
+  Dex(SymbolRange &&Symbols, RefsRange &&Refs, Payload &&BackingData,
+      size_t BackingDataSize, llvm::ArrayRef<std::string> URISchemes)
+      : Dex(std::forward<SymbolRange>(Symbols), std::forward<RefsRange>(Refs),
+            URISchemes) {
     KeepAlive = std::shared_ptr<void>(
         std::make_shared<Payload>(std::move(BackingData)), nullptr);
     this->BackingDataSize = BackingDataSize;
   }
 
-  /// Builds an index from a slab. The index takes ownership of the slab.
+  /// Builds an index from slabs. The index takes ownership of the slab.
   static std::unique_ptr<SymbolIndex>
-  build(SymbolSlab Slab, llvm::ArrayRef<std::string> URISchemes) {
-    // Store Slab size before it is moved.
-    const auto BackingDataSize = Slab.bytes();
-    return llvm::make_unique<Dex>(Slab, std::move(Slab), BackingDataSize,
-                                  URISchemes);
-  }
+  build(SymbolSlab, RefSlab, llvm::ArrayRef<std::string> URISchemes);
 
   bool
   fuzzyFind(const FuzzyFindRequest &Req,
@@ -102,6 +101,7 @@ private:
   /// during the fuzzyFind process.
   llvm::DenseMap<Token, PostingList> InvertedIndex;
   dex::Corpus Corpus;
+  llvm::DenseMap<SymbolID, llvm::ArrayRef<Ref>> Refs;
   std::shared_ptr<void> KeepAlive; // poor man's move-only std::any
   // Size of memory retained by KeepAlive.
   size_t BackingDataSize = 0;

@@ -152,10 +152,10 @@ std::unique_ptr<SymbolIndex> FileSymbols::buildMemIndex() {
 }
 
 FileIndex::FileIndex(std::vector<std::string> URISchemes)
-    : URISchemes(std::move(URISchemes)),
+    : MergedIndex(&MainFileIndex, &PreambleIndex),
+      URISchemes(std::move(URISchemes)),
       PreambleIndex(PreambleSymbols.buildMemIndex()),
-      MainFileIndex(MainFileSymbols.buildMemIndex()),
-      MergedIndex(mergeIndex(&MainFileIndex, &PreambleIndex)) {}
+      MainFileIndex(MainFileSymbols.buildMemIndex()) {}
 
 void FileIndex::updatePreamble(PathRef Path, ASTContext &AST,
                                std::shared_ptr<Preprocessor> PP) {

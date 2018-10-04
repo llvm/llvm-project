@@ -189,9 +189,7 @@ static Instruction *foldBitcastExtElt(ExtractElementInst &Ext,
 
   // If the source elements are wider than the destination, try to shift and
   // truncate a subset of scalar bits of an insert op.
-  // TODO: This is limited to integer types, but we could bitcast to/from FP.
-  if (NumSrcElts < NumElts && SrcTy->getScalarType()->isIntegerTy() &&
-      DestTy->getScalarType()->isIntegerTy()) {
+  if (NumSrcElts < NumElts) {
     Value *Scalar;
     uint64_t InsIndexC;
     if (!match(X, m_InsertElement(m_Value(), m_Value(Scalar),
@@ -220,12 +218,41 @@ static Instruction *foldBitcastExtElt(ExtractElementInst &Ext,
     unsigned Chunk = ExtIndexC % NarrowingRatio;
     if (IsBigEndian)
       Chunk = NarrowingRatio - 1 - Chunk;
-    unsigned ShAmt = Chunk * DestTy->getPrimitiveSizeInBits();
+
+    // Bail out if this is an FP vector to FP vector sequence. That would take
+    // more instructions than we started with unless there is no shift, and it
+    // may not be handled as well in the backend.
+    bool NeedSrcBitcast = SrcTy->getScalarType()->isFloatingPointTy();
+    bool NeedDestBitcast = DestTy->isFloatingPointTy();
+    if (NeedSrcBitcast && NeedDestBitcast)
+      return nullptr;
+
+    unsigned SrcWidth = SrcTy->getScalarSizeInBits();
+    unsigned DestWidth = DestTy->getPrimitiveSizeInBits();
+    unsigned ShAmt = Chunk * DestWidth;
+
+    // TODO: This limitation is more strict than necessary. We could sum the
+    // number of new instructions and subtract the number eliminated to know if
+    // we can proceed.
+    if (!X->hasOneUse() || !Ext.getVectorOperand()->hasOneUse())
+      if (NeedSrcBitcast || NeedDestBitcast)
+        return nullptr;
+
+    if (NeedSrcBitcast) {
+      Type *SrcIntTy = IntegerType::getIntNTy(Scalar->getContext(), SrcWidth);
+      Scalar = Builder.CreateBitCast(Scalar, SrcIntTy);
+    }
+
     if (ShAmt) {
       // Bail out if we could end with more instructions than we started with.
       if (!Ext.getVectorOperand()->hasOneUse())
         return nullptr;
       Scalar = Builder.CreateLShr(Scalar, ShAmt);
+    }
+
+    if (NeedDestBitcast) {
+      Type *DestIntTy = IntegerType::getIntNTy(Scalar->getContext(), DestWidth);
+      return new BitCastInst(Builder.CreateTrunc(Scalar, DestIntTy), DestTy);
     }
     return new TruncInst(Scalar, DestTy);
   }

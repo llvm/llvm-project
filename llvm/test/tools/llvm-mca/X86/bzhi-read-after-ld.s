@@ -27,15 +27,15 @@ bzhil	%esi, (%rdi), %eax
 # HASWELL-NEXT: IPC:               0.22
 # HASWELL-NEXT: Block RThroughput: 0.8
 
-# ZNVER1:       Dispatch Width:    4
-# ZNVER1-NEXT:  uOps Per Cycle:    0.38
-# ZNVER1-NEXT:  IPC:               0.25
-# ZNVER1-NEXT:  Block RThroughput: 0.8
-
 # SKYLAKE:      Dispatch Width:    6
 # SKYLAKE-NEXT: uOps Per Cycle:    0.33
 # SKYLAKE-NEXT: IPC:               0.22
 # SKYLAKE-NEXT: Block RThroughput: 0.5
+
+# ZNVER1:       Dispatch Width:    4
+# ZNVER1-NEXT:  uOps Per Cycle:    0.38
+# ZNVER1-NEXT:  IPC:               0.25
+# ZNVER1-NEXT:  Block RThroughput: 0.8
 
 # ALL:          Instruction Info:
 # ALL-NEXT:     [1]: #uOps

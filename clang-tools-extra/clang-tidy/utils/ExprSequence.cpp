@@ -63,8 +63,9 @@ bool isDescendantOrEqual(const Stmt *Descendant, const Stmt *Ancestor,
 }
 }
 
-ExprSequence::ExprSequence(const CFG *TheCFG, ASTContext *TheContext)
-    : Context(TheContext) {
+ExprSequence::ExprSequence(const CFG *TheCFG, const Stmt *Root,
+                           ASTContext *TheContext)
+    : Context(TheContext), Root(Root) {
   for (const auto &SyntheticStmt : TheCFG->synthetic_stmts()) {
     SyntheticStmtSourceMap[SyntheticStmt.first] = SyntheticStmt.second;
   }
@@ -99,6 +100,11 @@ bool ExprSequence::potentiallyAfter(const Stmt *After,
 
 const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
   for (const Stmt *Parent : getParentStmts(S, Context)) {
+    // If a statement has multiple parents, make sure we're using the parent
+    // that lies within the sub-tree under Root.
+    if (!isDescendantOrEqual(Parent, Root, Context))
+      continue;
+
     if (const auto *BO = dyn_cast<BinaryOperator>(Parent)) {
       // Comma operator: Right-hand side is sequenced after the left-hand side.
       if (BO->getLHS() == S && BO->getOpcode() == BO_Comma)

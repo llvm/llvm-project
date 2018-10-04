@@ -361,7 +361,7 @@ namespace {
 class ReferenceFinder : public index::IndexDataConsumer {
 public:
   struct Reference {
-    const Decl *Target;
+    const Decl *CanonicalTarget;
     SourceLocation Loc;
     index::SymbolRoleSet Role;
   };
@@ -370,22 +370,23 @@ public:
                   const std::vector<const Decl *> &TargetDecls)
       : AST(AST) {
     for (const Decl *D : TargetDecls)
-      Targets.insert(D);
+      CanonicalTargets.insert(D->getCanonicalDecl());
   }
 
   std::vector<Reference> take() && {
     std::sort(References.begin(), References.end(),
               [](const Reference &L, const Reference &R) {
-                return std::tie(L.Loc, L.Target, L.Role) <
-                       std::tie(R.Loc, R.Target, R.Role);
+                return std::tie(L.Loc, L.CanonicalTarget, L.Role) <
+                       std::tie(R.Loc, R.CanonicalTarget, R.Role);
               });
     // We sometimes see duplicates when parts of the AST get traversed twice.
-    References.erase(std::unique(References.begin(), References.end(),
-                                 [](const Reference &L, const Reference &R) {
-                                   return std::tie(L.Target, L.Loc, L.Role) ==
-                                          std::tie(R.Target, R.Loc, R.Role);
-                                 }),
-                     References.end());
+    References.erase(
+        std::unique(References.begin(), References.end(),
+                    [](const Reference &L, const Reference &R) {
+                      return std::tie(L.CanonicalTarget, L.Loc, L.Role) ==
+                             std::tie(R.CanonicalTarget, R.Loc, R.Role);
+                    }),
+        References.end());
     return std::move(References);
   }
 
@@ -394,15 +395,16 @@ public:
                       ArrayRef<index::SymbolRelation> Relations,
                       SourceLocation Loc,
                       index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
+    assert(D->isCanonicalDecl() && "expect D to be a canonical declaration");
     const SourceManager &SM = AST.getSourceManager();
     Loc = SM.getFileLoc(Loc);
-    if (SM.isWrittenInMainFile(Loc) && Targets.count(D))
+    if (SM.isWrittenInMainFile(Loc) && CanonicalTargets.count(D))
       References.push_back({D, Loc, Roles});
     return true;
   }
 
 private:
-  llvm::SmallSet<const Decl *, 4> Targets;
+  llvm::SmallSet<const Decl *, 4> CanonicalTargets;
   std::vector<Reference> References;
   const ASTContext &AST;
 };

@@ -492,28 +492,38 @@ def _write_output(test_path, input_lines, prefix_list, block_infos,  # noqa
   output_check_lines = []
   used_prefixes = set()
   for block_num in range(len(block_infos)):
-    for block_text in sorted(block_infos[block_num]):
-      if not block_text:
-        continue
+    if type(block_infos[block_num]) is list:
+      # The block is of the type output from _break_down_block().
+      used_prefixes |= _write_block(output_check_lines,
+                                    block_infos[block_num],
+                                    not_prefix_set,
+                                    common_prefix,
+                                    prefix_pad)
+    else:
+      # _break_down_block() was unable to do do anything so output the block
+      # as-is.
 
-      if type(block_infos[block_num]) is list:
-        # The block is of the type output from _break_down_block().
-        used_prefixes |= _write_block(output_check_lines,
-                                      block_infos[block_num],
-                                      not_prefix_set,
-                                      common_prefix,
-                                      prefix_pad)
-        break
-      elif block_infos[block_num][block_text]:
-        # _break_down_block() was unable to do do anything so output the block
-        # as-is.
+      # Rather than writing out each block as soon we encounter it, save it
+      # indexed by prefix so that we can write all of the blocks out sorted by
+      # prefix at the end.
+      output_blocks = defaultdict(list)
+
+      for block_text in sorted(block_infos[block_num]):
+
+        if not block_text:
+          continue
+
         lines = block_text.split('\n')
         for prefix in block_infos[block_num][block_text]:
-          used_prefixes |= _write_block(output_check_lines,
+          assert prefix not in output_blocks
+          used_prefixes |= _write_block(output_blocks[prefix],
                                         [(prefix, line) for line in lines],
                                         not_prefix_set,
                                         common_prefix,
                                         prefix_pad)
+
+      for prefix in sorted(output_blocks):
+        output_check_lines.extend(output_blocks[prefix])
 
   unused_prefixes = (prefix_set - not_prefix_set) - used_prefixes
   if unused_prefixes:

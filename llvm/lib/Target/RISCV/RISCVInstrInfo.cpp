@@ -362,9 +362,8 @@ unsigned RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   MachineFunction *MF = MBB.getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const auto &TM = static_cast<const RISCVTargetMachine &>(MF->getTarget());
-  const auto &STI = MF->getSubtarget<RISCVSubtarget>();
 
-  if (TM.isPositionIndependent() || STI.is64Bit())
+  if (TM.isPositionIndependent())
     report_fatal_error("Unable to insert indirect branch");
 
   if (!isInt<32>(BrOffset))
