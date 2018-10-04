@@ -1347,12 +1347,12 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(Symbol &Sym, RelType Type,
   for (Thunk *T : *ThunkVec)
     if (T->isCompatibleWith(Type) &&
         Target->inBranchRange(Type, Src, T->getThunkTargetSym()->getVA()))
-      return {T, false};
+      return std::make_pair(T, false);
 
   // No existing compatible Thunk in range, create a new one
   Thunk *T = addThunk(Type, Sym);
   ThunkVec->push_back(T);
-  return {T, true};
+  return std::make_pair(T, true);
 }
 
 // Call Fn on every executable InputSection accessed via the linker script
