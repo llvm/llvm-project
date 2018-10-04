@@ -87,6 +87,8 @@ std::vector<Token> generateIdentifierTrigrams(llvm::StringRef Identifier) {
 }
 
 std::vector<Token> generateQueryTrigrams(llvm::StringRef Query) {
+  if (Query.empty())
+    return {};
   std::string LowercaseQuery = Query.lower();
   if (Query.size() < 3) // short-query trigrams only
     return {Token(Token::Kind::Trigram, LowercaseQuery)};
