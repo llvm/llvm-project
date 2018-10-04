@@ -225,6 +225,8 @@ public:
   /// in debugging.
   void dump(const LangOptions &LO) const;
   void dump() const;
+  void dump(llvm::raw_ostream &OS) const;
+  void dump(llvm::raw_ostream &OS, const LangOptions &LO) const;
 
   /// \brief Compute the qualification required to get from the current context
   /// (\p CurContext) to the target context (\p TargetContext).
