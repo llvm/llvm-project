@@ -796,6 +796,37 @@ public:
   }
 };
 
+/// This represents 'reverse_offload' clause in the '#pragma omp requires'
+/// directive.
+///
+/// \code
+/// #pragma omp requires reverse_offload
+/// \endcode
+/// In this example directive '#pragma omp requires' has 'reverse_offload'
+/// clause.
+class OMPReverseOffloadClause final : public OMPClause {
+public:
+  friend class OMPClauseReader;
+  /// Build 'reverse_offload' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPReverseOffloadClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_reverse_offload, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPReverseOffloadClause()
+      : OMPClause(OMPC_reverse_offload, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_reverse_offload;
+  }
+};
+
 /// This represents 'schedule' clause in the '#pragma omp ...' directive.
 ///
 /// \code

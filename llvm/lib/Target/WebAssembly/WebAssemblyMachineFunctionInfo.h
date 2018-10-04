@@ -17,7 +17,9 @@
 #define LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYMACHINEFUNCTIONINFO_H
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/MC/MCSymbolWasm.h"
 
 namespace llvm {
 
@@ -121,9 +123,15 @@ public:
 void ComputeLegalValueVTs(const Function &F, const TargetMachine &TM, Type *Ty,
                           SmallVectorImpl<MVT> &ValueVTs);
 
-void ComputeSignatureVTs(const Function &F, const TargetMachine &TM,
-                         SmallVectorImpl<MVT> &Params,
+// Compute the signature for a given FunctionType (Ty). Note that it's not the
+// signature for F (F is just used to get varous context)
+void ComputeSignatureVTs(const FunctionType *Ty, const Function &F,
+                         const TargetMachine &TM, SmallVectorImpl<MVT> &Params,
                          SmallVectorImpl<MVT> &Results);
+
+std::unique_ptr<wasm::WasmSignature>
+SignatureFromMVTs(const SmallVectorImpl<MVT> &Results,
+                  const SmallVectorImpl<MVT> &Params);
 
 } // end namespace llvm
 

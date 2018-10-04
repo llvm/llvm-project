@@ -58,6 +58,7 @@ struct SectionBookkeeping {
 
 // The signature of a wasm function, in a struct capable of being used as a
 // DenseMap key.
+// TODO: Consider using WasmSignature directly instead.
 struct WasmFunctionType {
   // Support empty and tombstone instances, needed by DenseMap.
   enum { Plain, Empty, Tombstone } State;
@@ -1049,8 +1050,10 @@ uint32_t WasmObjectWriter::registerFunctionType(const MCSymbolWasm &Symbol) {
 
   WasmFunctionType F;
   const MCSymbolWasm *ResolvedSym = ResolveSymbol(Symbol);
-  F.Returns = ResolvedSym->getReturns();
-  F.Params = ResolvedSym->getParams();
+  if (auto *Sig = ResolvedSym->getSignature()) {
+    F.Returns = Sig->Returns;
+    F.Params = Sig->Params;
+  }
 
   auto Pair =
       FunctionTypeIndices.insert(std::make_pair(F, FunctionTypes.size()));

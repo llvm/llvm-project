@@ -281,6 +281,7 @@ OPENMP_CLAUSE(task_reduction,  OMPTaskReductionClause)
 OPENMP_CLAUSE(in_reduction,  OMPInReductionClause)
 OPENMP_CLAUSE(unified_address, OMPUnifiedAddressClause)
 OPENMP_CLAUSE(unified_shared_memory, OMPUnifiedSharedMemoryClause)
+OPENMP_CLAUSE(reverse_offload, OMPReverseOffloadClause)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)
@@ -465,6 +466,7 @@ OPENMP_TARGET_CLAUSE(reduction)
 // Clauses allowed for OpenMP directive 'requires'.
 OPENMP_REQUIRES_CLAUSE(unified_address)
 OPENMP_REQUIRES_CLAUSE(unified_shared_memory)
+OPENMP_REQUIRES_CLAUSE(reverse_offload)
 
 // Clauses allowed for OpenMP directive 'target data'.
 OPENMP_TARGET_DATA_CLAUSE(if)

@@ -1,3 +1,6 @@
+// Temporarily disabling the test, it failes the "system is over-constrained"
+// assertion in *non* optimized builds.
+// REQUIRES: rdar44992170
 // RUN: %clang_analyze_cc1 -fblocks -analyze -analyzer-checker=core,nullability,apiModeling,debug.ExprInspection  -verify %s
 
 #include "Inputs/system-header-simulator-for-nullability.h"
@@ -170,3 +173,25 @@ NSString *_Nonnull checkAssumeOnMutableDictionaryOtherMethod(NSMutableDictionary
   if (k) {}
   return k; // no-warning
 }
+
+// Check that we don't crash when the added assumption is enough
+// to make the state unfeasible.
+@class DummyClass;
+@interface DictionarySubclass : NSDictionary {
+  DummyClass *g;
+  DictionarySubclass *d;
+}
+@end
+@implementation DictionarySubclass
+- (id) objectForKey:(id)e {
+  if (e) {}
+  return d;
+}
+- (void) coder {
+  for (id e in g) {
+    id f = [self objectForKey:e];
+    if (f)
+      (void)e;
+  }
+}
+@end

@@ -994,7 +994,7 @@ void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &NewLHS,SDValue &NewRHS,
     // We would prefer to promote the comparison operand with sign extension.
     // If the width of OpL/OpR excluding the duplicated sign bits is no greater
     // than the width of NewLHS/NewRH, we can avoid inserting real truncate
-    // instruction, which is redudant eventually.
+    // instruction, which is redundant eventually.
     unsigned OpLEffectiveBits =
         OpL.getScalarValueSizeInBits() - DAG.ComputeNumSignBits(OpL) + 1;
     unsigned OpREffectiveBits =

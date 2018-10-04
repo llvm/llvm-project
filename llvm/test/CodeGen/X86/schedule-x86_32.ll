@@ -1676,9 +1676,9 @@ define i16 @test_pop_push_16(i16 %a0, i16 *%a1) optsize {
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; SLM-NEXT:    #APP
 ; SLM-NEXT:    popw %ax # sched: [3:1.00]
-; SLM-NEXT:    popw (%ecx) # sched: [1:1.00]
+; SLM-NEXT:    popw (%ecx) # sched: [4:2.00]
 ; SLM-NEXT:    pushw %ax # sched: [1:1.00]
-; SLM-NEXT:    pushw (%ecx) # sched: [1:1.00]
+; SLM-NEXT:    pushw (%ecx) # sched: [4:2.00]
 ; SLM-NEXT:    pushw $4095 # imm = 0xFFF
 ; SLM-NEXT:    # sched: [1:1.00]
 ; SLM-NEXT:    pushw $7 # sched: [1:1.00]
@@ -1766,9 +1766,9 @@ define i16 @test_pop_push_16(i16 %a0, i16 *%a1) optsize {
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    popw %ax # sched: [5:1.00]
-; BTVER2-NEXT:    popw (%ecx) # sched: [1:1.00]
+; BTVER2-NEXT:    popw (%ecx) # sched: [6:1.00]
 ; BTVER2-NEXT:    pushw %ax # sched: [1:1.00]
-; BTVER2-NEXT:    pushw (%ecx) # sched: [1:1.00]
+; BTVER2-NEXT:    pushw (%ecx) # sched: [6:1.00]
 ; BTVER2-NEXT:    pushw $4095 # imm = 0xFFF
 ; BTVER2-NEXT:    # sched: [1:1.00]
 ; BTVER2-NEXT:    pushw $7 # sched: [1:1.00]
@@ -1828,9 +1828,9 @@ define i32 @test_pop_push_32(i32 %a0, i32 *%a1) optsize {
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; SLM-NEXT:    #APP
 ; SLM-NEXT:    popl %eax # sched: [3:1.00]
-; SLM-NEXT:    popl (%ecx) # sched: [1:1.00]
+; SLM-NEXT:    popl (%ecx) # sched: [4:2.00]
 ; SLM-NEXT:    pushl %eax # sched: [1:1.00]
-; SLM-NEXT:    pushl (%ecx) # sched: [1:1.00]
+; SLM-NEXT:    pushl (%ecx) # sched: [4:2.00]
 ; SLM-NEXT:    pushl $4095 # imm = 0xFFF
 ; SLM-NEXT:    # sched: [1:1.00]
 ; SLM-NEXT:    pushl $7 # sched: [1:1.00]
@@ -1918,9 +1918,9 @@ define i32 @test_pop_push_32(i32 %a0, i32 *%a1) optsize {
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    popl %eax # sched: [5:1.00]
-; BTVER2-NEXT:    popl (%ecx) # sched: [1:1.00]
+; BTVER2-NEXT:    popl (%ecx) # sched: [6:1.00]
 ; BTVER2-NEXT:    pushl %eax # sched: [1:1.00]
-; BTVER2-NEXT:    pushl (%ecx) # sched: [1:1.00]
+; BTVER2-NEXT:    pushl (%ecx) # sched: [6:1.00]
 ; BTVER2-NEXT:    pushl $4095 # imm = 0xFFF
 ; BTVER2-NEXT:    # sched: [1:1.00]
 ; BTVER2-NEXT:    pushl $7 # sched: [1:1.00]
@@ -1933,7 +1933,7 @@ define i32 @test_pop_push_32(i32 %a0, i32 *%a1) optsize {
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    popl %eax # sched: [8:0.50]
-; ZNVER1-NEXT:    popl (%ecx) # sched: [1:0.50]
+; ZNVER1-NEXT:    popl (%ecx) # sched: [9:1.00]
 ; ZNVER1-NEXT:    pushl %eax # sched: [1:0.50]
 ; ZNVER1-NEXT:    pushl (%ecx) # sched: [4:0.50]
 ; ZNVER1-NEXT:    pushl $4095 # imm = 0xFFF
