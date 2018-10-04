@@ -47,8 +47,7 @@ void templates() {
   variadic(/*xxx=*/0, /*yyy=*/1);
   variadic2(/*zzU=*/0, /*xxx=*/1, /*yyy=*/2);
   // CHECK-NOTES: [[@LINE-1]]:13: warning: argument name 'zzU' in comment does not match parameter name 'zzz'
-  // CHECK-NOTES: [[@LINE-2]]:13: note: FIX-IT applied suggested code changes
-  // CHECK-NOTES: :[[@LINE-7]]:20: note: 'zzz' declared here
+  // CHECK-NOTES: :[[@LINE-6]]:20: note: 'zzz' declared here
   // CHECK-FIXES: variadic2(/*zzz=*/0, /*xxx=*/1, /*yyy=*/2);
 }
 
@@ -76,16 +75,14 @@ namespace OtherEditDistanceAboveThreshold {
 void f5(int xxx, int yyy);
 void g() { f5(/*Zxx=*/0, 0); }
 // CHECK-NOTES: [[@LINE-1]]:15: warning: argument name 'Zxx' in comment does not match parameter name 'xxx'
-// CHECK-NOTES: [[@LINE-2]]:15: note: FIX-IT applied suggested code changes
-// CHECK-NOTES: [[@LINE-4]]:13: note: 'xxx' declared here
+// CHECK-NOTES: [[@LINE-3]]:13: note: 'xxx' declared here
 // CHECK-FIXES: void g() { f5(/*xxx=*/0, 0); }
 struct C2 {
   C2(int xxx, int yyy);
 };
 C2 c2(/*Zxx=*/0, 0);
 // CHECK-NOTES: [[@LINE-1]]:7: warning: argument name 'Zxx' in comment does not match parameter name 'xxx'
-// CHECK-NOTES: [[@LINE-2]]:7: note: FIX-IT applied suggested code changes
-// CHECK-NOTES: [[@LINE-5]]:10: note: 'xxx' declared here
+// CHECK-NOTES: [[@LINE-4]]:10: note: 'xxx' declared here
 // CHECK-FIXES: C2 c2(/*xxx=*/0, 0);
 }
 
