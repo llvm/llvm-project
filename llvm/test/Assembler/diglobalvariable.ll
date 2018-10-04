@@ -3,8 +3,8 @@
 
 @foo = global i32 0
 
-; CHECK: !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8}
-!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8}
+; CHECK: !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12}
+!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12}
 
 !0 = !DIFile(filename: "scope.h", directory: "/path/to/dir")
 !1 = distinct !{}
@@ -23,3 +23,8 @@
 ; CHECK: !8 = !DIGlobalVariable(name: "mem", scope: !0, type: !9, isLocal: false, isDefinition: true, declaration: !7)
 !8 = !DIGlobalVariable(name: "mem", scope: !0, declaration: !7, type: !9)
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+
+; CHECK: !12 = !DIGlobalVariable(name: "bar", linkageName: "bar", scope: !0, file: !2, line: 8, type: !3, isLocal: true, isDefinition: false, templateParams: !11, align: 32)
+!10 = !DITemplateTypeParameter(name: "Ty", type: !3)
+!11 = distinct !{!10}
+!12 = !DIGlobalVariable(name: "bar", linkageName: "bar", scope: !0, file: !2, line: 8, type: !3, isLocal: true, isDefinition: false, templateParams: !11, align: 32)

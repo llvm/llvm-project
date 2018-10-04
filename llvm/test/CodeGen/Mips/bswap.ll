@@ -1,7 +1,11 @@
-; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=MIPS32
-; RUN: llc  < %s -mtriple=mipsel-mti-linux-gnu -mcpu=mips32r2 -mattr=+micromips | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=MM
-; RUN: llc  < %s -march=mips64el -mcpu=mips64r2 | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=MIPS64
-; RUN: llc  < %s -mtriple=mipsel-linux-gnu -march=mipsel -mcpu=mips32r2 -mattr=+mips16 | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=MIPS16
+; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 \
+; RUN:   | FileCheck %s -check-prefix=MIPS32
+; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 -mattr=+micromips \
+; RUN:   | FileCheck %s -check-prefix=MM
+; RUN: llc  < %s -march=mips64el -mcpu=mips64r2 \
+; RUN:   | FileCheck %s -check-prefix=MIPS64
+; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 -mattr=+mips16 \
+; RUN:   | FileCheck %s -check-prefix=MIPS16
 
 define i32 @bswap32(i32 signext %x) nounwind readnone {
 entry:
@@ -68,10 +72,8 @@ entry:
 ; MIPS16-DAG: srl $[[R1:[0-9]+]], $4, 24
 ; MIPS16-DAG: sll $[[R2:[0-9]+]], $4, 8
 ; MIPS16-DAG: sll $[[R3:[0-9]+]], $4, 24
-; MIPS16-DAG: li  $[[R4:[0-9]+]], 65280
 ; MIPS16-DAG: and $[[R0]], $[[R4]]
 ; MIPS16-DAG: or  $[[R1]], $[[R0]]
-; MIPS16-DAG: lw  $[[R7:[0-9]+]], 1f
 ; MIPS16-DAG: and $[[R2]], $[[R7]]
 ; MIPS16-DAG: or  $[[R3]], $[[R2]]
 ; MIPS16-DAG: or  $[[R3]], $[[R1]]

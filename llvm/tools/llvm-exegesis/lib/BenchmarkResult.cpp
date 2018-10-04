@@ -90,9 +90,11 @@ private:
     assert(!String.empty());
     int64_t IntValue = 0;
     double DoubleValue = 0;
-    if (sscanf(String.data(), kIntegerFormat, &IntValue) == 1)
+    if (String[0] == kIntegerFormat[0] &&
+        sscanf(String.data(), kIntegerFormat, &IntValue) == 1)
       return llvm::MCOperand::createImm(IntValue);
-    if (sscanf(String.data(), kDoubleFormat, &DoubleValue) == 1)
+    if (String[0] == kDoubleFormat[0] &&
+        sscanf(String.data(), kDoubleFormat, &DoubleValue) == 1)
       return llvm::MCOperand::createFPImm(DoubleValue);
     if (unsigned RegNo = getRegNo(String))
       return llvm::MCOperand::createReg(RegNo);

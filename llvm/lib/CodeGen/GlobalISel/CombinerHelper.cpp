@@ -154,12 +154,18 @@ bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
   assert(Preferred.Ty != LoadValueTy && "Extending to same type?");
 
   // Rewrite the load and schedule the canonical use for erasure.
-  const auto TruncateUse = [](MachineIRBuilder &Builder, MachineOperand &UseMO,
-                              unsigned DstReg, unsigned SrcReg) {
+  const auto TruncateUse = [&MI](MachineIRBuilder &Builder,
+                                 MachineOperand &UseMO, unsigned DstReg,
+                                 unsigned SrcReg) {
     MachineInstr &UseMI = *UseMO.getParent();
     MachineBasicBlock &UseMBB = *UseMI.getParent();
 
     Builder.setInsertPt(UseMBB, MachineBasicBlock::iterator(UseMI));
+
+    if (UseMI.isPHI())
+      Builder.setInsertPt(*MI.getParent(),
+                          std::next(MachineBasicBlock::iterator(MI)));
+
     Builder.buildTrunc(DstReg, SrcReg);
   };
 

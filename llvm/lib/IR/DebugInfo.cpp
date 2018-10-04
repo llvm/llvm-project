@@ -1220,23 +1220,16 @@ LLVMDIBuilderCreateConstantValueExpression(LLVMDIBuilderRef Builder,
   return wrap(unwrap(Builder)->createConstantValueExpression(Value));
 }
 
-LLVMMetadataRef
-LLVMDIBuilderCreateGlobalVariableExpression(LLVMDIBuilderRef Builder,
-                                            LLVMMetadataRef Scope,
-                                            const char *Name, size_t NameLen,
-                                            const char *Linkage, size_t LinkLen,
-                                            LLVMMetadataRef File,
-                                            unsigned LineNo,
-                                            LLVMMetadataRef Ty,
-                                            LLVMBool LocalToUnit,
-                                            LLVMMetadataRef Expr,
-                                            LLVMMetadataRef Decl,
-                                            uint32_t AlignInBits) {
+LLVMMetadataRef LLVMDIBuilderCreateGlobalVariableExpression(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, const char *Linkage, size_t LinkLen, LLVMMetadataRef File,
+    unsigned LineNo, LLVMMetadataRef Ty, LLVMBool LocalToUnit,
+    LLVMMetadataRef Expr, LLVMMetadataRef Decl, uint32_t AlignInBits) {
   return wrap(unwrap(Builder)->createGlobalVariableExpression(
-                  unwrapDI<DIScope>(Scope), {Name, NameLen}, {Linkage, LinkLen},
-                  unwrapDI<DIFile>(File), LineNo, unwrapDI<DIType>(Ty),
-                  LocalToUnit, unwrap<DIExpression>(Expr),
-                  unwrapDI<MDNode>(Decl), AlignInBits));
+      unwrapDI<DIScope>(Scope), {Name, NameLen}, {Linkage, LinkLen},
+      unwrapDI<DIFile>(File), LineNo, unwrapDI<DIType>(Ty), LocalToUnit,
+      unwrap<DIExpression>(Expr), unwrapDI<MDNode>(Decl),
+      nullptr, AlignInBits));
 }
 
 LLVMMetadataRef LLVMTemporaryMDNode(LLVMContextRef Ctx, LLVMMetadataRef *Data,
@@ -1256,26 +1249,21 @@ void LLVMMetadataReplaceAllUsesWith(LLVMMetadataRef TargetMetadata,
   MDNode::deleteTemporary(Node);
 }
 
-LLVMMetadataRef
-LLVMDIBuilderCreateTempGlobalVariableFwdDecl(LLVMDIBuilderRef Builder,
-                                             LLVMMetadataRef Scope,
-                                             const char *Name, size_t NameLen,
-                                             const char *Linkage, size_t LnkLen,
-                                             LLVMMetadataRef File,
-                                             unsigned LineNo,
-                                             LLVMMetadataRef Ty,
-                                             LLVMBool LocalToUnit,
-                                             LLVMMetadataRef Decl,
-                                             uint32_t AlignInBits) {
+LLVMMetadataRef LLVMDIBuilderCreateTempGlobalVariableFwdDecl(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, const char *Linkage, size_t LnkLen, LLVMMetadataRef File,
+    unsigned LineNo, LLVMMetadataRef Ty, LLVMBool LocalToUnit,
+    LLVMMetadataRef Decl, uint32_t AlignInBits) {
   return wrap(unwrap(Builder)->createTempGlobalVariableFwdDecl(
-                  unwrapDI<DIScope>(Scope), {Name, NameLen}, {Linkage, LnkLen},
-                  unwrapDI<DIFile>(File), LineNo, unwrapDI<DIType>(Ty),
-                  LocalToUnit, unwrapDI<MDNode>(Decl), AlignInBits));
+      unwrapDI<DIScope>(Scope), {Name, NameLen}, {Linkage, LnkLen},
+      unwrapDI<DIFile>(File), LineNo, unwrapDI<DIType>(Ty), LocalToUnit,
+      unwrapDI<MDNode>(Decl), nullptr, AlignInBits));
 }
 
-LLVMValueRef LLVMDIBuilderInsertDeclareBefore(
-  LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
-  LLVMMetadataRef Expr, LLVMMetadataRef DL, LLVMValueRef Instr) {
+LLVMValueRef
+LLVMDIBuilderInsertDeclareBefore(LLVMDIBuilderRef Builder, LLVMValueRef Storage,
+                                 LLVMMetadataRef VarInfo, LLVMMetadataRef Expr,
+                                 LLVMMetadataRef DL, LLVMValueRef Instr) {
   return wrap(unwrap(Builder)->insertDeclare(
                   unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
                   unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),

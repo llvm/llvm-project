@@ -53,6 +53,7 @@ private:
     ResolvedSchedClass(const llvm::MCSubtargetInfo &STI,
                        unsigned ResolvedSchedClassId, bool WasVariant);
 
+    const unsigned SchedClassId;
     const llvm::MCSchedClassDesc *const SCDesc;
     const bool WasVariant; // Whether the original class was variant.
     const llvm::SmallVector<llvm::MCWriteProcResEntry, 8>

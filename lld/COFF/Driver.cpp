@@ -430,26 +430,28 @@ StringRef LinkerDriver::findDefaultEntry() {
   assert(Config->Subsystem != IMAGE_SUBSYSTEM_UNKNOWN &&
          "must handle /subsystem before calling this");
 
-  // As a special case, if /nodefaultlib is given, we directly look for an
-  // entry point. This is because, if no default library is linked, users
-  // need to define an entry point instead of a "main".
-  bool FindMain = !Config->NoDefaultLibAll;
   if (Config->Subsystem == IMAGE_SUBSYSTEM_WINDOWS_GUI) {
-    if (findUnderscoreMangle(FindMain ? "WinMain" : "WinMainCRTStartup"))
-      return mangle("WinMainCRTStartup");
-    if (findUnderscoreMangle(FindMain ? "wWinMain" : "wWinMainCRTStartup"))
-      return mangle("wWinMainCRTStartup");
+    if (findUnderscoreMangle("wWinMain")) {
+      if (!findUnderscoreMangle("WinMain"))
+        return mangle("wWinMainCRTStartup");
+      warn("found both wWinMain and WinMain; using latter");
+    }
+    return mangle("WinMainCRTStartup");
   }
-  if (findUnderscoreMangle(FindMain ? "main" : "mainCRTStartup"))
-    return mangle("mainCRTStartup");
-  if (findUnderscoreMangle(FindMain ? "wmain" : "wmainCRTStartup"))
-    return mangle("wmainCRTStartup");
-  return "";
+  if (findUnderscoreMangle("wmain")) {
+    if (!findUnderscoreMangle("main"))
+      return mangle("wmainCRTStartup");
+    warn("found both wmain and main; using latter");
+  }
+  return mangle("mainCRTStartup");
 }
 
 WindowsSubsystem LinkerDriver::inferSubsystem() {
   if (Config->DLL)
     return IMAGE_SUBSYSTEM_WINDOWS_GUI;
+  // Note that link.exe infers the subsystem from the presence of these
+  // functions even if /entry: or /nodefaultlib are passed which causes them
+  // to not be called.
   bool HaveMain = findUnderscoreMangle("main");
   bool HaveWMain = findUnderscoreMangle("wmain");
   bool HaveWinMain = findUnderscoreMangle("WinMain");

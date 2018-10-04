@@ -130,6 +130,12 @@ void Instruction::execute() {
     Stage = IS_EXECUTED;
 }
 
+void Instruction::forceExecuted() {
+  assert(Stage == IS_READY && "Invalid internal state!");
+  CyclesLeft = 0;
+  Stage = IS_EXECUTED;
+}
+
 void Instruction::update() {
   assert(isDispatched() && "Unexpected instruction stage found!");
 

@@ -473,6 +473,9 @@ void OMPClauseProfiler::VisitOMPUnifiedAddressClause(
 void OMPClauseProfiler::VisitOMPUnifiedSharedMemoryClause(
     const OMPUnifiedSharedMemoryClause *C) {}
 
+void OMPClauseProfiler::VisitOMPReverseOffloadClause(
+    const OMPReverseOffloadClause *C) {}
+
 void OMPClauseProfiler::VisitOMPScheduleClause(const OMPScheduleClause *C) {
   VistOMPClauseWithPreInit(C);
   if (auto *S = C->getChunkSize())

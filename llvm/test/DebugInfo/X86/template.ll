@@ -3,7 +3,10 @@
 ; RUN: llc -mtriple=x86_64-linux -O0 -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 ; IR generated with `clang++ -g -emit-llvm -S` from the following code:
-; template<int x, int*, template<typename> class y, decltype(nullptr) n, int ...z>  int func() { return 3; }
+; template<int x, int*, template<typename> class y, decltype(nullptr) n, int ...z>  int func() {
+;  var<int> = 5;
+;  return var<int>;
+; }
 ; template<typename> struct y_impl { struct nested { }; };
 ; int glbl = func<3, &glbl, y_impl, nullptr, 1, 2>();
 ; y_impl<int>::nested n;
@@ -12,9 +15,17 @@
 ; CHECK-NEXT: DW_AT_name{{.*}} = "int"
 
 ; CHECK: DW_TAG_structure_type
-; CHECK-NEXT: DW_AT_name{{.*}}"y_impl<int>"
+; CHECK: DW_AT_name{{.*}}"y_impl<int>"
+; CHECK-NOT: {{TAG|NULL}}
+; CHECK: DW_TAG_template_type_parameter
+
+; CHECK: DW_TAG_variable
+; CHECK-NEXT: DW_AT_name{{.*}}"var"
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_template_type_parameter
+; CHECK-NEXT: DW_AT_type{{.*}}=> {[[INT]]}
+; CHECK-NEXT: DW_AT_name{{.*}}= "T"
+
 
 ; CHECK: DW_AT_name{{.*}}"func<3, &glbl, y_impl, nullptr, 1, 2>"
 ; CHECK-NOT: NULL
@@ -59,75 +70,84 @@
 ; CHECK-NEXT: DW_AT_name{{.*}}= "decltype(nullptr)"
 
 source_filename = "test/DebugInfo/X86/template.ll"
-
 %"struct.y_impl<int>::nested" = type { i8 }
 
-@glbl = global i32 0, align 4, !dbg !0
-@n = global %"struct.y_impl<int>::nested" zeroinitializer, align 1, !dbg !4
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_template.cpp, i8* null }]
+@glbl = dso_local global i32 0, align 4, !dbg !0
+@_Z3varIiE = linkonce_odr dso_local global i32 0, align 4, !dbg !13
+@n = dso_local global %"struct.y_impl<int>::nested" zeroinitializer, align 1, !dbg !6
+@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_upstream_test.cpp, i8* null }]
 
-define internal void @__cxx_global_var_init() section ".text.startup" !dbg !17 {
+; Function Attrs: noinline uwtable
+define internal void @__cxx_global_var_init() #0 section ".text.startup" !dbg !21 {
 entry:
-  %call = call i32 @_Z4funcILi3EXadL_Z4glblEE6y_implLDn0EJLi1ELi2EEEiv(), !dbg !20
-  store i32 %call, i32* @glbl, align 4, !dbg !20
-  ret void, !dbg !20
+  %call = call i32 @_Z4funcILi3EXadL_Z4glblEE6y_implLDn0EJLi1ELi2EEEiv(), !dbg !24
+  store i32 %call, i32* @glbl, align 4, !dbg !24
+  ret void, !dbg !24
 }
 
-; Function Attrs: nounwind uwtable
-define linkonce_odr i32 @_Z4funcILi3EXadL_Z4glblEE6y_implLDn0EJLi1ELi2EEEiv() #0 !dbg !21 {
+; Function Attrs: noinline nounwind optnone uwtable
+define linkonce_odr dso_local i32 @_Z4funcILi3EXadL_Z4glblEE6y_implLDn0EJLi1ELi2EEEiv() #1 !dbg !25 {
 entry:
-  ret i32 3, !dbg !35
+  store i32 5, i32* @_Z3varIiE, align 4, !dbg !39
+  %0 = load i32, i32* @_Z3varIiE, align 4, !dbg !40
+  ret i32 %0, !dbg !41
 }
 
-define internal void @_GLOBAL__sub_I_template.cpp() section ".text.startup" {
+; Function Attrs: noinline uwtable
+define internal void @_GLOBAL__sub_I_upstream_test.cpp() #0 section ".text.startup" !dbg !42 {
 entry:
-  call void @__cxx_global_var_init(), !dbg !36
+  call void @__cxx_global_var_init(), !dbg !44
   ret void
 }
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable }
+attributes #1 = { nounwind uwtable noinline optnone }
 
-!llvm.dbg.cu = !{!11}
-!llvm.module.flags = !{!14, !15}
-!llvm.ident = !{!16}
+!llvm.dbg.cu = !{!2}
+!llvm.module.flags = !{!17, !18, !19}
+!llvm.ident = !{!20}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
-!1 = !DIGlobalVariable(name: "glbl", scope: null, file: !2, line: 3, type: !3, isLocal: false, isDefinition: true)
-!2 = !DIFile(filename: "template.cpp", directory: "/tmp/dbginfo")
-!3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
-!5 = !DIGlobalVariable(name: "n", scope: null, file: !2, line: 4, type: !6, isLocal: false, isDefinition: true)
-!6 = !DICompositeType(tag: DW_TAG_structure_type, name: "nested", scope: !7, file: !2, line: 2, size: 8, align: 8, elements: !8, identifier: "_ZTSN6y_implIiE6nestedE")
-!7 = !DICompositeType(tag: DW_TAG_structure_type, name: "y_impl<int>", file: !2, line: 2, size: 8, align: 8, elements: !8, templateParams: !9, identifier: "_ZTS6y_implIiE")
-!8 = !{}
-!9 = !{!10}
-!10 = !DITemplateTypeParameter(type: !3)
-!11 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang version 3.6.0 (trunk 224394) (llvm/trunk 224384)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !8, retainedTypes: !12, globals: !13, imports: !8)
-!12 = !{!7, !6}
-!13 = !{!0, !4}
-!14 = !{i32 2, !"Dwarf Version", i32 4}
-!15 = !{i32 2, !"Debug Info Version", i32 3}
-!16 = !{!"clang version 3.6.0 (trunk 224394) (llvm/trunk 224384)"}
-!17 = distinct !DISubprogram(name: "__cxx_global_var_init", scope: !2, file: !2, line: 3, type: !18, isLocal: true, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !11, retainedNodes: !8)
-!18 = !DISubroutineType(types: !19)
-!19 = !{null}
-!20 = !DILocation(line: 3, column: 12, scope: !17)
-!21 = distinct !DISubprogram(name: "func<3, &glbl, y_impl, nullptr, 1, 2>", linkageName: "_Z4funcILi3EXadL_Z4glblEE6y_implLDn0EJLi1ELi2EEEiv", scope: !2, file: !2, line: 1, type: !22, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !11, templateParams: !24, retainedNodes: !8)
+!1 = distinct !DIGlobalVariable(name: "glbl", scope: !2, file: !3, line: 7, type: !12, isLocal: false, isDefinition: true)
+!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 7.0.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
+!3 = !DIFile(filename: "upstream_test.cpp", directory: "/home/mvoss/src/92562")
+!4 = !{}
+!5 = !{!0, !6, !13}
+!6 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
+!7 = distinct !DIGlobalVariable(name: "n", scope: !2, file: !3, line: 8, type: !8, isLocal: false, isDefinition: true)!8 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "nested", scope: !9, file: !3, line: 6, size: 8, flags: DIFlagTypePassByValue, elements: !4, identifier: "_ZTSN6y_implIiE6nestedE")
+!9 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "y_impl<int>", file: !3, line: 6, size: 8, flags: DIFlagTypePassByValue, elements: !4, templateParams: !10, identifier: "_ZTS6y_implIiE")
+!10 = !{!11}
+!11 = !DITemplateTypeParameter(type: !12)
+!12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!13 = !DIGlobalVariableExpression(var: !14, expr: !DIExpression())
+!14 = distinct !DIGlobalVariable(name: "var", linkageName: "_Z3varIiE", scope: !2, file: !3, line: 1, type: !12, isLocal: false, isDefinition: true, templateParams: !15)
+!15 = !{!16}
+!16 = !DITemplateTypeParameter(name: "T", type: !12)
+!17 = !{i32 2, !"Dwarf Version", i32 4}
+!18 = !{i32 2, !"Debug Info Version", i32 3}
+!19 = !{i32 1, !"wchar_size", i32 4}
+!20 = !{!"clang version 7.0.0 "}
+!21 = distinct !DISubprogram(name: "__cxx_global_var_init", scope: !3, file: !3, line: 7, type: !22, isLocal: true, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: false, unit: !2, retainedNodes: !4)
 !22 = !DISubroutineType(types: !23)
-!23 = !{!3}
-!24 = !{!25, !26, !28, !29, !31}
-!25 = !DITemplateValueParameter(name: "x", type: !3, value: i32 3)
-!26 = !DITemplateValueParameter(type: !27, value: i32* @glbl)
-!27 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !3, size: 64, align: 64)
-!28 = !DITemplateValueParameter(tag: DW_TAG_GNU_template_template_param, name: "y", value: !"y_impl")
-!29 = !DITemplateValueParameter(name: "n", type: !30, value: i8 0)
-!30 = !DIBasicType(tag: DW_TAG_unspecified_type, name: "decltype(nullptr)")
-!31 = !DITemplateValueParameter(tag: DW_TAG_GNU_template_parameter_pack, name: "z", value: !32)
-!32 = !{!33, !34}
-!33 = !DITemplateValueParameter(type: !3, value: i32 1)
-!34 = !DITemplateValueParameter(type: !3, value: i32 2)
-!35 = !DILocation(line: 1, column: 96, scope: !21)
-!36 = !DILocation(line: 0, scope: !37)
-!37 = distinct !DISubprogram(linkageName: "_GLOBAL__sub_I_template.cpp", scope: !2, file: !2, type: !38, isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, unit: !11, retainedNodes: !8)
-!38 = !DISubroutineType(types: !8)
-
+!23 = !{null}
+!24 = !DILocation(line: 7, column: 12, scope: !21)
+!25 = distinct !DISubprogram(name: "func<3, &glbl, y_impl, nullptr, 1, 2>", linkageName: "_Z4funcILi3EXadL_Z4glblEE6y_implLDn0EJLi1ELi2EEEiv", scope: !3, file: !3, line: 2, type: !26, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !2, templateParams: !28, retainedNodes: !4)
+!26 = !DISubroutineType(types: !27)
+!27 = !{!12}
+!28 = !{!29, !30, !32, !33, !35}
+!29 = !DITemplateValueParameter(name: "x", type: !12, value: i32 3)
+!30 = !DITemplateValueParameter(type: !31, value: i32* @glbl)
+!31 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !12, size: 64)
+!32 = !DITemplateValueParameter(tag: DW_TAG_GNU_template_template_param, name: "y", value: !"y_impl")
+!33 = !DITemplateValueParameter(name: "n", type: !34, value: i8 0)
+!34 = !DIBasicType(tag: DW_TAG_unspecified_type, name: "decltype(nullptr)")
+!35 = !DITemplateValueParameter(tag: DW_TAG_GNU_template_parameter_pack, name: "z", value: !36)
+!36 = !{!37, !38}
+!37 = !DITemplateValueParameter(type: !12, value: i32 1)
+!38 = !DITemplateValueParameter(type: !12, value: i32 2)
+!39 = !DILocation(line: 3, column: 12, scope: !25)
+!40 = !DILocation(line: 4, column: 10, scope: !25)
+!41 = !DILocation(line: 4, column: 3, scope: !25)
+!42 = distinct !DISubprogram(linkageName: "_GLOBAL__sub_I_upstream_test.cpp", scope: !3, file: !3, type: !43, isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, unit: !2, retainedNodes: !4)
+!43 = !DISubroutineType(types: !4)
+!44 = !DILocation(line: 0, scope: !42)

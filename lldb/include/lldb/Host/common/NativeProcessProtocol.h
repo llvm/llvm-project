@@ -457,6 +457,11 @@ protected:
   /// PC, this offset will be the size of the breakpoint opcode.
   virtual size_t GetSoftwareBreakpointPCOffset();
 
+  // Adjust the thread's PC after hitting a software breakpoint. On
+  // architectures where the PC points after the breakpoint instruction, this
+  // resets it to point to the breakpoint itself.
+  void FixupBreakpointPCAsNeeded(NativeThreadProtocol &thread);
+
   // -----------------------------------------------------------
   /// Notify the delegate that an exec occurred.
   ///

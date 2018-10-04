@@ -16,6 +16,7 @@
 #define LLVM_BINARYFORMAT_WASM_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 namespace wasm {
@@ -32,11 +33,6 @@ const uint32_t WasmPageSize = 65536;
 struct WasmObjectHeader {
   StringRef Magic;
   uint32_t Version;
-};
-
-struct WasmSignature {
-  std::vector<uint8_t> ParamTypes;
-  uint8_t ReturnType;
 };
 
 struct WasmExport {
@@ -220,16 +216,6 @@ enum : unsigned {
   WASM_LIMITS_FLAG_HAS_MAX = 0x1,
 };
 
-// Subset of types that a value can have
-enum class ValType {
-  I32 = WASM_TYPE_I32,
-  I64 = WASM_TYPE_I64,
-  F32 = WASM_TYPE_F32,
-  F64 = WASM_TYPE_F64,
-  V128 = WASM_TYPE_V128,
-  EXCEPT_REF = WASM_TYPE_EXCEPT_REF,
-};
-
 // Kind codes used in the custom "name" section
 enum : unsigned {
   WASM_NAMES_FUNCTION = 0x1,
@@ -276,9 +262,32 @@ enum : unsigned {
 
 #undef WASM_RELOC
 
+// Subset of types that a value can have
+enum class ValType {
+  I32 = WASM_TYPE_I32,
+  I64 = WASM_TYPE_I64,
+  F32 = WASM_TYPE_F32,
+  F64 = WASM_TYPE_F64,
+  V128 = WASM_TYPE_V128,
+  EXCEPT_REF = WASM_TYPE_EXCEPT_REF,
+};
+
+struct WasmSignature {
+  SmallVector<wasm::ValType, 1> Returns;
+  SmallVector<wasm::ValType, 4> Params;
+  // Support empty and tombstone instances, needed by DenseMap.
+  enum { Plain, Empty, Tombstone } State = Plain;
+
+  WasmSignature(SmallVector<wasm::ValType, 1> &&InReturns,
+                SmallVector<wasm::ValType, 4> &&InParams)
+      : Returns(InReturns), Params(InParams) {}
+  WasmSignature() = default;
+};
+
 // Useful comparison operators
 inline bool operator==(const WasmSignature &LHS, const WasmSignature &RHS) {
-  return LHS.ReturnType == RHS.ReturnType && LHS.ParamTypes == RHS.ParamTypes;
+  return LHS.State == RHS.State && LHS.Returns == RHS.Returns &&
+         LHS.Params == RHS.Params;
 }
 
 inline bool operator!=(const WasmSignature &LHS, const WasmSignature &RHS) {

@@ -458,7 +458,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     InputGlobal *StackPointer = make<InputGlobal>(Global, nullptr);
     StackPointer->Live = true;
 
-    static WasmSignature NullSignature = {{}, WASM_TYPE_NORESULT};
+    static WasmSignature NullSignature = {{}, {}};
 
     // Add synthetic symbols before any others
     WasmSym::CallCtors = Symtab->addSyntheticFunction(

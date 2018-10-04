@@ -494,6 +494,24 @@ SDValue RISCVTargetLowering::LowerRETURNADDR(SDValue Op,
   return DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, XLenVT);
 }
 
+SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
+                                               DAGCombinerInfo &DCI) const {
+  switch (N->getOpcode()) {
+  default:
+    break;
+  case RISCVISD::SplitF64: {
+    // If the input to SplitF64 is just BuildPairF64 then the operation is
+    // redundant. Instead, use BuildPairF64's operands directly.
+    SDValue Op0 = N->getOperand(0);
+    if (Op0->getOpcode() != RISCVISD::BuildPairF64)
+      break;
+    return DCI.CombineTo(N, Op0.getOperand(0), Op0.getOperand(1));
+  }
+  }
+
+  return SDValue();
+}
+
 static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
                                              MachineBasicBlock *BB) {
   assert(MI.getOpcode() == RISCV::SplitF64Pseudo && "Unexpected instruction");
@@ -868,6 +886,22 @@ void RISCVTargetLowering::analyzeOutputArgs(
   }
 }
 
+// Convert Val to a ValVT. Should not be called for CCValAssign::Indirect
+// values.
+static SDValue convertLocVTToValVT(SelectionDAG &DAG, SDValue Val,
+                                   const CCValAssign &VA, const SDLoc &DL) {
+  switch (VA.getLocInfo()) {
+  default:
+    llvm_unreachable("Unexpected CCValAssign::LocInfo");
+  case CCValAssign::Full:
+    break;
+  case CCValAssign::BCvt:
+    Val = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), Val);
+    break;
+  }
+  return Val;
+}
+
 // The caller is responsible for loading the full value if the argument is
 // passed with CCValAssign::Indirect.
 static SDValue unpackFromRegLoc(SelectionDAG &DAG, SDValue Chain,
@@ -875,21 +909,29 @@ static SDValue unpackFromRegLoc(SelectionDAG &DAG, SDValue Chain,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
   EVT LocVT = VA.getLocVT();
-  EVT ValVT = VA.getValVT();
   SDValue Val;
 
   unsigned VReg = RegInfo.createVirtualRegister(&RISCV::GPRRegClass);
   RegInfo.addLiveIn(VA.getLocReg(), VReg);
   Val = DAG.getCopyFromReg(Chain, DL, VReg, LocVT);
 
+  if (VA.getLocInfo() == CCValAssign::Indirect)
+    return Val;
+
+  return convertLocVTToValVT(DAG, Val, VA, DL);
+}
+
+static SDValue convertValVTToLocVT(SelectionDAG &DAG, SDValue Val,
+                                   const CCValAssign &VA, const SDLoc &DL) {
+  EVT LocVT = VA.getLocVT();
+
   switch (VA.getLocInfo()) {
   default:
     llvm_unreachable("Unexpected CCValAssign::LocInfo");
   case CCValAssign::Full:
-  case CCValAssign::Indirect:
     break;
   case CCValAssign::BCvt:
-    Val = DAG.getNode(ISD::BITCAST, DL, ValVT, Val);
+    Val = DAG.getNode(ISD::BITCAST, DL, LocVT, Val);
     break;
   }
   return Val;
@@ -1291,13 +1333,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     // Promote the value if needed.
     // For now, only handle fully promoted and indirect arguments.
-    switch (VA.getLocInfo()) {
-    case CCValAssign::Full:
-      break;
-    case CCValAssign::BCvt:
-      ArgValue = DAG.getNode(ISD::BITCAST, DL, VA.getLocVT(), ArgValue);
-      break;
-    case CCValAssign::Indirect: {
+    if (VA.getLocInfo() == CCValAssign::Indirect) {
       // Store the argument in a stack slot and pass its address.
       SDValue SpillSlot = DAG.CreateStackTemporary(Outs[i].ArgVT);
       int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
@@ -1319,10 +1355,8 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
         ++i;
       }
       ArgValue = SpillSlot;
-      break;
-    }
-    default:
-      llvm_unreachable("Unknown loc info!");
+    } else {
+      ArgValue = convertValVTToLocVT(DAG, ArgValue, VA, DL);
     }
 
     // Use local copy if it is a byval arg.
@@ -1424,6 +1458,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     // Glue the RetValue to the end of the call sequence
     Chain = RetValue.getValue(1);
     Glue = RetValue.getValue(2);
+
     if (VA.getLocVT() == MVT::i32 && VA.getValVT() == MVT::f64) {
       assert(VA.getLocReg() == ArgGPRs[0] && "Unexpected reg assignment");
       SDValue RetValue2 =
@@ -1434,15 +1469,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
                              RetValue2);
     }
 
-    switch (VA.getLocInfo()) {
-    default:
-      llvm_unreachable("Unknown loc info!");
-    case CCValAssign::Full:
-      break;
-    case CCValAssign::BCvt:
-      RetValue = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), RetValue);
-      break;
-    }
+    RetValue = convertLocVTToValVT(DAG, RetValue, VA, DL);
 
     InVals.push_back(RetValue);
   }
@@ -1463,22 +1490,6 @@ bool RISCVTargetLowering::CanLowerReturn(
       return false;
   }
   return true;
-}
-
-static SDValue packIntoRegLoc(SelectionDAG &DAG, SDValue Val,
-                              const CCValAssign &VA, const SDLoc &DL) {
-  EVT LocVT = VA.getLocVT();
-
-  switch (VA.getLocInfo()) {
-  default:
-    llvm_unreachable("Unexpected CCValAssign::LocInfo");
-  case CCValAssign::Full:
-    break;
-  case CCValAssign::BCvt:
-    Val = DAG.getNode(ISD::BITCAST, DL, LocVT, Val);
-    break;
-  }
-  return Val;
 }
 
 SDValue
@@ -1523,7 +1534,7 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       RetOps.push_back(DAG.getRegister(RegHi, MVT::i32));
     } else {
       // Handle a 'normal' return.
-      Val = packIntoRegLoc(DAG, Val, VA, DL);
+      Val = convertValVTToLocVT(DAG, Val, VA, DL);
       Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), Val, Glue);
 
       // Guarantee that all emitted copies are stuck together.
