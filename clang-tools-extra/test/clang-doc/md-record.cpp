@@ -56,7 +56,8 @@ class G;
 // RUN: cat %t/docs/./GlobalNamespace.md | FileCheck %s --check-prefix CHECK-2
 // CHECK-2: # Global Namespace
 // CHECK-2: ## Functions
-// CHECK-2: ### void H()
+// CHECK-2: ### H
+// CHECK-2: *void H()*
 // CHECK-2: *Defined at line 11 of test*
 // CHECK-2: ## Enums
 // CHECK-2: | enum B |
@@ -74,11 +75,14 @@ class G;
 // CHECK-3: # class E
 // CHECK-3: *Defined at line 25 of test*
 // CHECK-3: ## Functions
-// CHECK-3: ### void E()
+// CHECK-3: ### E
+// CHECK-3: *void E()*
 // CHECK-3: *Defined at line 27 of test*
-// CHECK-3: ### void ~E()
+// CHECK-3: ### ~E
+// CHECK-3: *void ~E()*
 // CHECK-3: *Defined at line 28 of test*
-// CHECK-3: ### void ProtectedMethod()
+// CHECK-3: ### ProtectedMethod
+// CHECK-3: *void ProtectedMethod()*
 // CHECK-3: *Defined at line 34 of test*
 
 // RUN: cat %t/docs/./C.md | FileCheck %s --check-prefix CHECK-4

@@ -33,7 +33,8 @@ void F(int I, int J) {}
 // RUN: cat %t/docs/./GlobalNamespace.md | FileCheck %s --check-prefix CHECK-0
 // CHECK-0: # Global Namespace
 // CHECK-0: ## Functions
-// CHECK-0: ### void F(int I, int J)
+// CHECK-0: ### F
+// CHECK-0: *void F(int I, int J)*
 // CHECK-0: *Defined at line 28 of test*
 // CHECK-0: **brief** Brief description.
 // CHECK-0:  Extended description that continues onto the next line.
