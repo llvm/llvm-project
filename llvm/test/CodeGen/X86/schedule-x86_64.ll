@@ -9648,9 +9648,9 @@ define i16 @test_pop_push_16(i16 %a0, i16 *%a1) optsize {
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
 ; SLM-NEXT:    popw %ax # sched: [3:1.00]
-; SLM-NEXT:    popw (%rsi) # sched: [1:1.00]
+; SLM-NEXT:    popw (%rsi) # sched: [4:2.00]
 ; SLM-NEXT:    pushw %di # sched: [1:1.00]
-; SLM-NEXT:    pushw (%rsi) # sched: [1:1.00]
+; SLM-NEXT:    pushw (%rsi) # sched: [4:2.00]
 ; SLM-NEXT:    pushw $4095 # imm = 0xFFF
 ; SLM-NEXT:    # sched: [1:1.00]
 ; SLM-NEXT:    pushw $7 # sched: [1:1.00]
@@ -9726,9 +9726,9 @@ define i16 @test_pop_push_16(i16 %a0, i16 *%a1) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    popw %ax # sched: [5:1.00]
-; BTVER2-NEXT:    popw (%rsi) # sched: [1:1.00]
+; BTVER2-NEXT:    popw (%rsi) # sched: [6:1.00]
 ; BTVER2-NEXT:    pushw %di # sched: [1:1.00]
-; BTVER2-NEXT:    pushw (%rsi) # sched: [1:1.00]
+; BTVER2-NEXT:    pushw (%rsi) # sched: [6:1.00]
 ; BTVER2-NEXT:    pushw $4095 # imm = 0xFFF
 ; BTVER2-NEXT:    # sched: [1:1.00]
 ; BTVER2-NEXT:    pushw $7 # sched: [1:1.00]
@@ -9781,9 +9781,9 @@ define i64 @test_pop_push_64(i64 %a0, i64 *%a1) optsize {
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
 ; SLM-NEXT:    popq %rax # sched: [3:1.00]
-; SLM-NEXT:    popq (%rsi) # sched: [1:1.00]
+; SLM-NEXT:    popq (%rsi) # sched: [4:2.00]
 ; SLM-NEXT:    pushq %rdi # sched: [1:1.00]
-; SLM-NEXT:    pushq (%rsi) # sched: [1:1.00]
+; SLM-NEXT:    pushq (%rsi) # sched: [4:2.00]
 ; SLM-NEXT:    pushq $4095 # imm = 0xFFF
 ; SLM-NEXT:    # sched: [1:1.00]
 ; SLM-NEXT:    pushq $7 # sched: [1:1.00]
@@ -9859,9 +9859,9 @@ define i64 @test_pop_push_64(i64 %a0, i64 *%a1) optsize {
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    popq %rax # sched: [5:1.00]
-; BTVER2-NEXT:    popq (%rsi) # sched: [1:1.00]
+; BTVER2-NEXT:    popq (%rsi) # sched: [6:1.00]
 ; BTVER2-NEXT:    pushq %rdi # sched: [1:1.00]
-; BTVER2-NEXT:    pushq (%rsi) # sched: [1:1.00]
+; BTVER2-NEXT:    pushq (%rsi) # sched: [6:1.00]
 ; BTVER2-NEXT:    pushq $4095 # imm = 0xFFF
 ; BTVER2-NEXT:    # sched: [1:1.00]
 ; BTVER2-NEXT:    pushq $7 # sched: [1:1.00]
@@ -9872,9 +9872,9 @@ define i64 @test_pop_push_64(i64 %a0, i64 *%a1) optsize {
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    popq %rax # sched: [8:0.50]
-; ZNVER1-NEXT:    popq (%rsi) # sched: [1:0.50]
+; ZNVER1-NEXT:    popq (%rsi) # sched: [9:1.00]
 ; ZNVER1-NEXT:    pushq %rdi # sched: [1:0.50]
-; ZNVER1-NEXT:    pushq (%rsi) # sched: [1:0.50]
+; ZNVER1-NEXT:    pushq (%rsi) # sched: [9:1.00]
 ; ZNVER1-NEXT:    pushq $4095 # imm = 0xFFF
 ; ZNVER1-NEXT:    # sched: [1:0.50]
 ; ZNVER1-NEXT:    pushq $7 # sched: [1:0.50]

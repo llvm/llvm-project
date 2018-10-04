@@ -701,17 +701,16 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
   Signatures.reserve(Count);
   while (Count--) {
     wasm::WasmSignature Sig;
-    Sig.ReturnType = wasm::WASM_TYPE_NORESULT;
     uint8_t Form = readUint8(Ctx);
     if (Form != wasm::WASM_TYPE_FUNC) {
       return make_error<GenericBinaryError>("Invalid signature type",
                                             object_error::parse_failed);
     }
     uint32_t ParamCount = readVaruint32(Ctx);
-    Sig.ParamTypes.reserve(ParamCount);
+    Sig.Params.reserve(ParamCount);
     while (ParamCount--) {
       uint32_t ParamType = readUint8(Ctx);
-      Sig.ParamTypes.push_back(ParamType);
+      Sig.Params.push_back(wasm::ValType(ParamType));
     }
     uint32_t ReturnCount = readVaruint32(Ctx);
     if (ReturnCount) {
@@ -719,9 +718,9 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
         return make_error<GenericBinaryError>(
             "Multiple return types not supported", object_error::parse_failed);
       }
-      Sig.ReturnType = readUint8(Ctx);
+      Sig.Returns.push_back(wasm::ValType(readUint8(Ctx)));
     }
-    Signatures.push_back(Sig);
+    Signatures.push_back(std::move(Sig));
   }
   if (Ctx.Ptr != Ctx.End)
     return make_error<GenericBinaryError>("Type section ended prematurely",

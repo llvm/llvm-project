@@ -1,22 +1,34 @@
-; RUN: llc -march=mips < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,O32 %s
-; RUN: llc -march=mipsel < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,O32 %s
-; RUN: llc -march=mips < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,O32-INV %s
-; RUN: llc -march=mipsel < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,O32-INV %s
+; RUN: llc -march=mips   < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN: llc -march=mipsel < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN: llc -march=mips   < %s | FileCheck --check-prefixes=ALL,O32-INV %s
+; RUN: llc -march=mipsel < %s | FileCheck --check-prefixes=ALL,O32-INV %s
 
-; RUN-TODO: llc -march=mips64 -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
-; RUN-TODO: llc -march=mips64el -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
-; RUN-TODO: llc -march=mips64 -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32-INV %s
-; RUN-TODO: llc -march=mips64el -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32-INV %s
+; RUN-TODO: llc -march=mips64 -target-abi o32 < %s \
+; RUN-TODO:   | FileCheck --check-prefixes=ALL,O32 %s
+; RUN-TODO: llc -march=mips64el -target-abi o32 < %s \
+; RUN-TODO:   | FileCheck --check-prefixes=ALL,O32 %s
+; RUN-TODO: llc -march=mips64 -target-abi o32 < %s \
+; RUN-TODO:   | FileCheck --check-prefixes=ALL,O32-INV %s
+; RUN-TODO: llc -march=mips64el -target-abi o32 < %s \
+; RUN-TODO:   | FileCheck --check-prefixes=ALL,O32-INV %s
 
-; RUN: llc -march=mips64 -target-abi n32 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,N32 %s
-; RUN: llc -march=mips64el -target-abi n32 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,N32 %s
-; RUN: llc -march=mips64 -target-abi n32 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,N32-INV %s
-; RUN: llc -march=mips64el -target-abi n32 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,N32-INV %s
+; RUN: llc -march=mips64 -target-abi n32 < %s \
+; RUN:   | FileCheck --check-prefixes=ALL,N32 %s
+; RUN: llc -march=mips64el -target-abi n32 < %s \
+; RUN:   | FileCheck --check-prefixes=ALL,N32 %s
+; RUN: llc -march=mips64 -target-abi n32 < %s \
+; RUN:   | FileCheck --check-prefixes=ALL,N32-INV %s
+; RUN: llc -march=mips64el -target-abi n32 < %s \
+; RUN:   | FileCheck --check-prefixes=ALL,N32-INV %s
 
-; RUN: llc -march=mips64 -target-abi n64 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,N64 %s
-; RUN: llc -march=mips64el -target-abi n64 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,N64 %s
-; RUN: llc -march=mips64 -target-abi n64 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,N64-INV %s
-; RUN: llc -march=mips64el -target-abi n64 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,N64-INV %s
+; RUN: llc -march=mips64 -target-abi n64 < %s \
+; RUN:   | FileCheck --check-prefixes=ALL,N64 %s
+; RUN: llc -march=mips64el -target-abi n64 < %s \
+; RUN:   | FileCheck --check-prefixes=ALL,N64 %s
+; RUN: llc -march=mips64 -target-abi n64 < %s \
+; RUN:   | FileCheck --check-prefixes=ALL,N64-INV %s
+; RUN: llc -march=mips64el -target-abi n64 < %s \
+; RUN:   | FileCheck --check-prefixes=ALL,N64-INV %s
 
 ; Test the callee-saved registers are callee-saved as specified by section
 ; 2 of the MIPSpro N32 Handbook and section 3 of the SYSV ABI spec.
@@ -61,7 +73,7 @@ entry:
 ; O32-INV-NOT:   sw $28,
 ; O32-INV-NOT:   sw $29,
 ; O32-DAG:       sw [[G30:\$fp]], [[OFF30:[0-9]+]]($sp)
-; O32-DAG:       sw [[G31:\$fp]], [[OFF31:[0-9]+]]($sp)
+; O32-DAG:       sw [[G31:\$ra]], [[OFF31:[0-9]+]]($sp)
 ; O32-DAG:       lw [[G16]], [[OFF16]]($sp)
 ; O32-DAG:       lw [[G17]], [[OFF17]]($sp)
 ; O32-DAG:       lw [[G18]], [[OFF18]]($sp)
@@ -106,7 +118,7 @@ entry:
 ; N32-DAG:       sd [[G28:\$gp]], [[OFF28:[0-9]+]]($sp)
 ; N32-INV-NOT:   sd $29,
 ; N32-DAG:       sd [[G30:\$fp]], [[OFF30:[0-9]+]]($sp)
-; N32-DAG:       sd [[G31:\$fp]], [[OFF31:[0-9]+]]($sp)
+; N32-DAG:       sd [[G31:\$ra]], [[OFF31:[0-9]+]]($sp)
 ; N32-DAG:       ld [[G16]], [[OFF16]]($sp)
 ; N32-DAG:       ld [[G17]], [[OFF17]]($sp)
 ; N32-DAG:       ld [[G18]], [[OFF18]]($sp)
@@ -146,7 +158,7 @@ entry:
 ; N64-DAG:       sd [[G22:\$22]], [[OFF22:[0-9]+]]($sp)
 ; N64-DAG:       sd [[G23:\$23]], [[OFF23:[0-9]+]]($sp)
 ; N64-DAG:       sd [[G30:\$fp]], [[OFF30:[0-9]+]]($sp)
-; N64-DAG:       sd [[G31:\$fp]], [[OFF31:[0-9]+]]($sp)
+; N64-DAG:       sd [[G31:\$ra]], [[OFF31:[0-9]+]]($sp)
 ; N64-INV-NOT:   sd $24,
 ; N64-INV-NOT:   sd $25,
 ; N64-INV-NOT:   sd $26,

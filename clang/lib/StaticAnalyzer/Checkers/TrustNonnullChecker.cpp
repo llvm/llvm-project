@@ -212,20 +212,26 @@ private:
   /// the negation of \p Antecedent.
   /// Checks NonNullImplicationMap and assumes \p Antecedent otherwise.
   ProgramStateRef addImplication(SymbolRef Antecedent,
-                                 ProgramStateRef State,
+                                 ProgramStateRef InputState,
                                  bool Negated) const {
-    SValBuilder &SVB = State->getStateManager().getSValBuilder();
+    if (!InputState)
+      return nullptr;
+    SValBuilder &SVB = InputState->getStateManager().getSValBuilder();
     const SymbolRef *Consequent =
-        Negated ? State->get<NonNullImplicationMap>(Antecedent)
-                : State->get<NullImplicationMap>(Antecedent);
+        Negated ? InputState->get<NonNullImplicationMap>(Antecedent)
+                : InputState->get<NullImplicationMap>(Antecedent);
     if (!Consequent)
-      return State;
+      return InputState;
 
     SVal AntecedentV = SVB.makeSymbolVal(Antecedent);
-    if ((Negated && State->isNonNull(AntecedentV).isConstrainedTrue())
-        || (!Negated && State->isNull(AntecedentV).isConstrainedTrue())) {
+    ProgramStateRef State = InputState;
+
+    if ((Negated && InputState->isNonNull(AntecedentV).isConstrainedTrue())
+        || (!Negated && InputState->isNull(AntecedentV).isConstrainedTrue())) {
       SVal ConsequentS = SVB.makeSymbolVal(*Consequent);
-      State = State->assume(ConsequentS.castAs<DefinedSVal>(), Negated);
+      State = InputState->assume(ConsequentS.castAs<DefinedSVal>(), Negated);
+      if (!State)
+        return nullptr;
 
       // Drop implications from the map.
       if (Negated) {

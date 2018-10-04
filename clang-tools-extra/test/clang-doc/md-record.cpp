@@ -39,6 +39,8 @@ class X {
   class Y {};
 };
 
+class G;
+
 // RUN: clang-doc --format=md --doxygen --public --extra-arg=-fmodules-ts -p %t %t/test.cpp -output=%t/docs
 
 
@@ -95,3 +97,6 @@ class X {
 // CHECK-6: ## Members
 // CHECK-6: int X
 // CHECK-6: int Y
+
+// RUN: cat %t/docs/./G.md | FileCheck %s --check-prefix CHECK-7
+// CHECK-7: # class G
