@@ -161,16 +161,16 @@ TEST(MemIndexTest, Lookup) {
 TEST(MergeIndexTest, Lookup) {
   auto I = MemIndex::build(generateSymbols({"ns::A", "ns::B"}), RefSlab()),
        J = MemIndex::build(generateSymbols({"ns::B", "ns::C"}), RefSlab());
-  auto M = mergeIndex(I.get(), J.get());
-  EXPECT_THAT(lookup(*M, SymbolID("ns::A")), UnorderedElementsAre("ns::A"));
-  EXPECT_THAT(lookup(*M, SymbolID("ns::B")), UnorderedElementsAre("ns::B"));
-  EXPECT_THAT(lookup(*M, SymbolID("ns::C")), UnorderedElementsAre("ns::C"));
-  EXPECT_THAT(lookup(*M, {SymbolID("ns::A"), SymbolID("ns::B")}),
+  MergedIndex M(I.get(), J.get());
+  EXPECT_THAT(lookup(M, SymbolID("ns::A")), UnorderedElementsAre("ns::A"));
+  EXPECT_THAT(lookup(M, SymbolID("ns::B")), UnorderedElementsAre("ns::B"));
+  EXPECT_THAT(lookup(M, SymbolID("ns::C")), UnorderedElementsAre("ns::C"));
+  EXPECT_THAT(lookup(M, {SymbolID("ns::A"), SymbolID("ns::B")}),
               UnorderedElementsAre("ns::A", "ns::B"));
-  EXPECT_THAT(lookup(*M, {SymbolID("ns::A"), SymbolID("ns::C")}),
+  EXPECT_THAT(lookup(M, {SymbolID("ns::A"), SymbolID("ns::C")}),
               UnorderedElementsAre("ns::A", "ns::C"));
-  EXPECT_THAT(lookup(*M, SymbolID("ns::D")), UnorderedElementsAre());
-  EXPECT_THAT(lookup(*M, {}), UnorderedElementsAre());
+  EXPECT_THAT(lookup(M, SymbolID("ns::D")), UnorderedElementsAre());
+  EXPECT_THAT(lookup(M, {}), UnorderedElementsAre());
 }
 
 TEST(MergeIndexTest, FuzzyFind) {
@@ -178,7 +178,7 @@ TEST(MergeIndexTest, FuzzyFind) {
        J = MemIndex::build(generateSymbols({"ns::B", "ns::C"}), RefSlab());
   FuzzyFindRequest Req;
   Req.Scopes = {"ns::"};
-  EXPECT_THAT(match(*mergeIndex(I.get(), J.get()), Req),
+  EXPECT_THAT(match(MergedIndex(I.get(), J.get()), Req),
               UnorderedElementsAre("ns::A", "ns::B", "ns::C"));
 }
 
@@ -231,7 +231,7 @@ TEST(MergeTest, PreferSymbolWithDefn) {
 TEST(MergeIndexTest, Refs) {
   FileIndex Dyn({"unittest"});
   FileIndex StaticIndex({"unittest"});
-  auto MergedIndex = mergeIndex(&Dyn.index(), &StaticIndex.index());
+  MergedIndex Merge(&Dyn, &StaticIndex);
 
   const char *HeaderCode = "class Foo;";
   auto HeaderSymbols = TestTU::withHeaderCode("class Foo;").headerSymbols();
@@ -266,7 +266,7 @@ TEST(MergeIndexTest, Refs) {
   RefsRequest Request;
   Request.IDs = {Foo.ID};
   RefSlab::Builder Results;
-  MergedIndex->refs(Request, [&](const Ref &O) { Results.insert(Foo.ID, O); });
+  Merge.refs(Request, [&](const Ref &O) { Results.insert(Foo.ID, O); });
 
   EXPECT_THAT(
       std::move(Results).build(),
