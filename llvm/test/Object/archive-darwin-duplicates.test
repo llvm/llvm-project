@@ -1,0 +1,21 @@
+Test that darwin archives are created with distinct (name,timestamp) pairs.
+
+The two members with the duplicated name "test.o" must have unique
+non-zero timestamps, while baz.o, being unique, remains a zero
+timestamp.
+
+RUN: mkdir -p %T/sub1
+RUN: printf test > %T/test.o
+RUN: printf sub1/test > %T/sub1/test.o
+RUN: printf baz > %T/baz.o
+
+RUN: rm -f %t.a
+RUN: llvm-ar -format=darwin rcs %t.a %T/sub1/test.o %T/test.o %T/baz.o
+RUN: FileCheck -strict-whitespace %s < %t.a
+
+CHECK:#1/12           1           0     0     644     28        `
+CHECK-NEXT:test.o
+CHECK:#1/12           2           0     0     644     20        `
+CHECK-NEXT:test.o
+CHECK:#1/12           0           0     0     644     20        `
+CHECK-NEXT:baz.o

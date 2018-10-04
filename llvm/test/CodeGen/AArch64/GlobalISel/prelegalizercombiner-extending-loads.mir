@@ -288,8 +288,7 @@ body: |
     ; CHECK: [[T1:%[0-9]+]]:_(s64) = G_SEXTLOAD [[T0]](p0) :: (load 1 from %ir.addr)
     ; CHECK: [[T2:%[0-9]+]]:_(s8) = G_TRUNC [[T1]]
     ; CHECK: [[T3:%[0-9]+]]:_(s32) = G_ANYEXT [[T2]]
-    ; CHECK: [[T4:%[0-9]+]]:_(s8) = G_TRUNC [[T1]]
-    ; CHECK: [[T5:%[0-9]+]]:_(s32) = G_ANYEXT [[T4]]
+    ; CHECK: [[T5:%[0-9]+]]:_(s32) = G_ANYEXT [[T2]]
     ; CHECK: $w0 = COPY [[T3]](s32)
     ; CHECK: $x1 = COPY [[T1]](s64)
     ; CHECK: $w2 = COPY [[T5]](s32)
