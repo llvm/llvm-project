@@ -43,6 +43,7 @@ enum RelExpr {
   R_GOT_OFF,
   R_GOT_PAGE_PC,
   R_GOT_PC,
+  R_HEXAGON_GOT,
   R_HINT,
   R_MIPS_GOTREL,
   R_MIPS_GOT_GP,

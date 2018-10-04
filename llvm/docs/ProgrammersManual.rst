@@ -1872,9 +1872,7 @@ to :ref:`std::set <dss_set>`, but for pointers it uses something far better,
 :ref:`SmallPtrSet <dss_smallptrset>`.
 
 The magic of this class is that it handles small sets extremely efficiently, but
-gracefully handles extremely large sets without loss of efficiency.  The
-drawback is that the interface is quite small: it supports insertion, queries
-and erasing, but does not support iteration.
+gracefully handles extremely large sets without loss of efficiency.
 
 .. _dss_smallptrset:
 
@@ -1882,11 +1880,11 @@ llvm/ADT/SmallPtrSet.h
 ^^^^^^^^^^^^^^^^^^^^^^
 
 ``SmallPtrSet`` has all the advantages of ``SmallSet`` (and a ``SmallSet`` of
-pointers is transparently implemented with a ``SmallPtrSet``), but also supports
-iterators.  If more than N insertions are performed, a single quadratically
-probed hash table is allocated and grows as needed, providing extremely
-efficient access (constant time insertion/deleting/queries with low constant
-factors) and is very stingy with malloc traffic.
+pointers is transparently implemented with a ``SmallPtrSet``). If more than N
+insertions are performed, a single quadratically probed hash table is allocated
+and grows as needed, providing extremely efficient access (constant time
+insertion/deleting/queries with low constant factors) and is very stingy with
+malloc traffic.
 
 Note that, unlike :ref:`std::set <dss_set>`, the iterators of ``SmallPtrSet``
 are invalidated whenever an insertion occurs.  Also, the values visited by the

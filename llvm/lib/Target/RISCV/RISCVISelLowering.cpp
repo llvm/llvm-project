@@ -312,9 +312,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VASTART:
     return lowerVASTART(Op, DAG);
   case ISD::FRAMEADDR:
-    return LowerFRAMEADDR(Op, DAG);
+    return lowerFRAMEADDR(Op, DAG);
   case ISD::RETURNADDR:
-    return LowerRETURNADDR(Op, DAG);
+    return lowerRETURNADDR(Op, DAG);
   }
 }
 
@@ -327,7 +327,7 @@ SDValue RISCVTargetLowering::lowerGlobalAddress(SDValue Op,
   int64_t Offset = N->getOffset();
   MVT XLenVT = Subtarget.getXLenVT();
 
-  if (isPositionIndependent() || Subtarget.is64Bit())
+  if (isPositionIndependent())
     report_fatal_error("Unable to lowerGlobalAddress");
   // In order to maximise the opportunity for common subexpression elimination,
   // emit a separate ADD node for the global address offset instead of folding
@@ -352,7 +352,7 @@ SDValue RISCVTargetLowering::lowerBlockAddress(SDValue Op,
   const BlockAddress *BA = N->getBlockAddress();
   int64_t Offset = N->getOffset();
 
-  if (isPositionIndependent() || Subtarget.is64Bit())
+  if (isPositionIndependent())
     report_fatal_error("Unable to lowerBlockAddress");
 
   SDValue BAHi = DAG.getTargetBlockAddress(BA, Ty, Offset, RISCVII::MO_HI);
@@ -441,7 +441,7 @@ SDValue RISCVTargetLowering::lowerVASTART(SDValue Op, SelectionDAG &DAG) const {
                       MachinePointerInfo(SV));
 }
 
-SDValue RISCVTargetLowering::LowerFRAMEADDR(SDValue Op,
+SDValue RISCVTargetLowering::lowerFRAMEADDR(SDValue Op,
                                             SelectionDAG &DAG) const {
   const RISCVRegisterInfo &RI = *Subtarget.getRegisterInfo();
   MachineFunction &MF = DAG.getMachineFunction();
@@ -464,7 +464,7 @@ SDValue RISCVTargetLowering::LowerFRAMEADDR(SDValue Op,
   return FrameAddr;
 }
 
-SDValue RISCVTargetLowering::LowerRETURNADDR(SDValue Op,
+SDValue RISCVTargetLowering::lowerRETURNADDR(SDValue Op,
                                              SelectionDAG &DAG) const {
   const RISCVRegisterInfo &RI = *Subtarget.getRegisterInfo();
   MachineFunction &MF = DAG.getMachineFunction();
@@ -481,7 +481,7 @@ SDValue RISCVTargetLowering::LowerRETURNADDR(SDValue Op,
   unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
   if (Depth) {
     int Off = -XLenInBytes;
-    SDValue FrameAddr = LowerFRAMEADDR(Op, DAG);
+    SDValue FrameAddr = lowerFRAMEADDR(Op, DAG);
     SDValue Offset = DAG.getConstant(Off, DL, VT);
     return DAG.getLoad(VT, DL, DAG.getEntryNode(),
                        DAG.getNode(ISD::ADD, DL, VT, FrameAddr, Offset),
@@ -834,10 +834,14 @@ static bool CC_RISCV(const DataLayout &DL, unsigned ValNo, MVT ValVT, MVT LocVT,
 
   if (Reg) {
     State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
-  } else {
-    State.addLoc(
-        CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
+    return false;
   }
+
+  if (ValVT == MVT::f32) {
+    LocVT = MVT::f32;
+    LocInfo = CCValAssign::Full;
+  }
+  State.addLoc(CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
   return false;
 }
 
@@ -1046,7 +1050,6 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
 
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
-    assert(VA.getLocVT() == XLenVT && "Unhandled argument type");
     SDValue ArgValue;
     // Passing f64 on RV32D with a soft float ABI must be handled as a special
     // case.

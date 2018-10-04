@@ -10,7 +10,7 @@
 
 # We've found actual broken DSOs of this sort in the wild, but for this test, we
 # created a reduced broken input file. There are no tools capable of producing a
-# broken DSO of this nature, so instead we created a valid DSO with an undefiend
+# broken DSO of this nature, so instead we created a valid DSO with an undefined
 # global symbol in the dynamic symbol table and then manually edited the binary
 # to make that symbol local. The valid DSO was created as follows:
 

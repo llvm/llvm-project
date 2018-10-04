@@ -173,6 +173,9 @@ def note_constexpr_memcpy_type_pun : Note<
 def note_constexpr_memcpy_nontrivial : Note<
   "cannot constant evaluate '%select{memcpy|memmove}0' between objects of "
   "non-trivially-copyable type %1">;
+def note_constexpr_memcpy_incomplete_type : Note<
+  "cannot constant evaluate '%select{memcpy|memmove}0' between objects of "
+  "incomplete type %1">;
 def note_constexpr_memcpy_overlap : Note<
   "'%select{memcpy|wmemcpy}0' between overlapping memory regions">;
 def note_constexpr_memcpy_unsupported : Note<
