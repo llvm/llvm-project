@@ -53,7 +53,7 @@ std::unique_ptr<SymbolIndex> TestTU::index() const {
   auto Idx = llvm::make_unique<FileIndex>();
   Idx->updatePreamble(Filename, AST.getASTContext(), AST.getPreprocessorPtr());
   Idx->updateMain(Filename, AST);
-  return Idx;
+  return std::move(Idx);
 }
 
 const Symbol &findSymbol(const SymbolSlab &Slab, llvm::StringRef QName) {
