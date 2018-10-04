@@ -27,11 +27,6 @@
 #include "Index.h"
 #include "llvm/Support/Error.h"
 
-namespace llvm {
-namespace yaml {
-class Input;
-}
-} // namespace llvm
 namespace clang {
 namespace clangd {
 
@@ -61,10 +56,8 @@ struct IndexFileOut {
 // Serializes an index file.
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O);
 
+// Convert a single symbol to YAML, a nice debug representation.
 std::string toYAML(const Symbol &);
-// Returned symbol is backed by the YAML input.
-// FIXME: this is only needed for IndexerMain, find a better solution.
-llvm::Expected<Symbol> symbolFromYAML(llvm::yaml::Input &);
 
 // Build an in-memory static index from an index file.
 // The size should be relatively small, so data can be managed in memory.

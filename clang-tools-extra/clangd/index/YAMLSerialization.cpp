@@ -218,13 +218,5 @@ std::string toYAML(const Symbol &S) {
   return Buf;
 }
 
-Expected<Symbol> symbolFromYAML(llvm::yaml::Input &Yin) {
-  Symbol S;
-  Yin >> S;
-  if (Yin.error())
-    return llvm::errorCodeToError(Yin.error());
-  return S;
-}
-
 } // namespace clangd
 } // namespace clang
