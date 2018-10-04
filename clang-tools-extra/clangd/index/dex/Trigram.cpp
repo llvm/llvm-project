@@ -36,17 +36,15 @@ std::vector<Token> generateIdentifierTrigrams(llvm::StringRef Identifier) {
   //
   // * Next Tail - next character from the same segment
   // * Next Head - front character of the next segment
-  // * Skip-1-Next Head - front character of the skip-1-next segment
   //
   // Next stores tuples of three indices in the presented order, if a variant is
   // not available then 0 is stored.
   std::vector<std::array<unsigned, 3>> Next(LowercaseIdentifier.size());
-  unsigned NextTail = 0, NextHead = 0, NextNextHead = 0;
+  unsigned NextTail = 0, NextHead = 0;
   for (int I = LowercaseIdentifier.size() - 1; I >= 0; --I) {
-    Next[I] = {{NextTail, NextHead, NextNextHead}};
+    Next[I] = {{NextTail, NextHead}};
     NextTail = Roles[I] == Tail ? I : 0;
     if (Roles[I] == Head) {
-      NextNextHead = NextHead;
       NextHead = I;
     }
   }
