@@ -154,19 +154,19 @@ typedef enum amd_comgr_language_s {
   /**
    * No high level language.
    */
-  AMD_COMGR_LANGUAGE_NONE,
+  AMD_COMGR_LANGUAGE_NONE = 0x0,
   /**
    * OpenCL 1.2.
    */
-  AMD_COMGR_LANGUAGE_OPENCL_1_2,
+  AMD_COMGR_LANGUAGE_OPENCL_1_2 = 0x1,
   /**
    * OpenCL 2.0.
    */
-  AMD_COMGR_LANGUAGE_OPENCL_2_0,
+  AMD_COMGR_LANGUAGE_OPENCL_2_0 = 0x2,
   /**
    * AMD Hetrogeneous C++ (HC).
    */
-  AMD_COMGR_LANGUAGE_HC,
+  AMD_COMGR_LANGUAGE_HC = 0x3,
   /**
    * Marker for last valid language.
    */
@@ -213,47 +213,47 @@ typedef enum amd_comgr_data_kind_s {
   /**
    * No data is available.
    */
-  AMD_COMGR_DATA_KIND_UNDEF,
+  AMD_COMGR_DATA_KIND_UNDEF = 0x0,
   /**
    * The data is a textual main source.
    */
-  AMD_COMGR_DATA_KIND_SOURCE,
+  AMD_COMGR_DATA_KIND_SOURCE = 0x1,
   /**
    * The data is a textual source that is included in the main source
    * or other include source.
    */
-  AMD_COMGR_DATA_KIND_INCLUDE,
+  AMD_COMGR_DATA_KIND_INCLUDE = 0x2,
   /**
    * The data is a precompiled-header source that is included in the main
    * source or other include source.
    */
-  AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER,
+  AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER = 0x3,
   /**
    * The data is a diagnostic output.
    */
-  AMD_COMGR_DATA_KIND_DIAGNOSTIC,
+  AMD_COMGR_DATA_KIND_DIAGNOSTIC = 0x4,
   /**
    * The data is a textual log output.
    */
-  AMD_COMGR_DATA_KIND_LOG,
+  AMD_COMGR_DATA_KIND_LOG = 0x5,
   /**
    * The data is compiler LLVM IR bit code for a specific isa.
    */
-  AMD_COMGR_DATA_KIND_BC,
+  AMD_COMGR_DATA_KIND_BC = 0x6,
   /**
    * The data is a relocatable machine code object for a specific isa.
    */
-  AMD_COMGR_DATA_KIND_RELOCATABLE,
+  AMD_COMGR_DATA_KIND_RELOCATABLE = 0x7,
   /**
    * The data is an executable machine code object for a specific
    * isa. An executable is the kind of code object that can be loaded
    * and executed.
    */
-  AMD_COMGR_DATA_KIND_EXECUTABLE,
+  AMD_COMGR_DATA_KIND_EXECUTABLE = 0x8,
   /**
    * The data is a block of bytes.
    */
-  AMD_COMGR_DATA_KIND_BYTES,
+  AMD_COMGR_DATA_KIND_BYTES = 0x9,
   /**
    * Marker for last valid data kind.
    */
@@ -1126,7 +1126,7 @@ typedef enum amd_comgr_action_kind_s {
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
    * if isa name or language is not set in @p info.
    */
-  AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR,
+  AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR = 0x0,
   /**
    * Copy all existing data objects in @p input to @p output, then add the
    * device-specific and language-specific precompiled headers required for
@@ -1138,7 +1138,7 @@ typedef enum amd_comgr_action_kind_s {
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT if isa name or language
    * is not set in @p info, or the language is not supported.
    */
-  AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS,
+  AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS = 0x1,
   /**
    * Compile each source data object in @p input in order. For each
    * successful compilation add a bc data object to @p result. Resolve
@@ -1153,7 +1153,7 @@ typedef enum amd_comgr_action_kind_s {
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
    * if isa name or language is not set in @p info.
    */
-  AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC,
+  AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC = 0x2,
   /**
    * Copy all existing data objects in @p input to @p output, then add the
    * device-specific and language-specific bitcode libraries required for
@@ -1180,7 +1180,7 @@ typedef enum amd_comgr_action_kind_s {
    * language-specific flag is supplied, or a language-specific flag is
    * repeated.
    */
-  AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES,
+  AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES = 0x3,
   /**
    * Link each bc data object in @p input together and add the linked
    * bc data object to @p result. Any device library bc data object
@@ -1192,7 +1192,7 @@ typedef enum amd_comgr_action_kind_s {
    * if isa name is not set in @p info and does not match the isa name
    * of all bc data objects in @p input.
    */
-  AMD_COMGR_ACTION_LINK_BC_TO_BC,
+  AMD_COMGR_ACTION_LINK_BC_TO_BC = 0x4,
   /**
    * Optimize each bc data object in @p input and create an optimized bc data
    * object to @p result.
@@ -1203,7 +1203,7 @@ typedef enum amd_comgr_action_kind_s {
    * if isa name is not set in @p info and does not match the isa name
    * of all bc data objects in @p input.
    */
-  AMD_COMGR_ACTION_OPTIMIZE_BC_TO_BC,
+  AMD_COMGR_ACTION_OPTIMIZE_BC_TO_BC = 0x5,
   /**
    * Perform code generation for each bc data object in @p input in
    * order. For each successful code generation add a relocatable data
@@ -1216,7 +1216,7 @@ typedef enum amd_comgr_action_kind_s {
    * if isa name is not set in @p info and does not match the isa name
    * of all bc data objects in @p input.
    */
-  AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE,
+  AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE = 0x6,
   /**
    * Perform code generation for each bc data object in @p input in
    * order. For each successful code generation add an assembly source data
@@ -1229,7 +1229,7 @@ typedef enum amd_comgr_action_kind_s {
    * if isa name is not set in @p info and does not match the isa name
    * of all bc data objects in @p input.
    */
-  AMD_COMGR_ACTION_CODEGEN_BC_TO_ASSEMBLY,
+  AMD_COMGR_ACTION_CODEGEN_BC_TO_ASSEMBLY = 0x7,
   /**
    * Link each relocatable data object in @p input together and add
    * the linked relocatable data object to @p result. Any device
@@ -1242,7 +1242,7 @@ typedef enum amd_comgr_action_kind_s {
    * if isa name is not set in @p info and does not match the isa name
    * of all relocatable data objects in @p input.
    */
-  AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_RELOCATABLE,
+  AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_RELOCATABLE = 0x8,
   /**
    * Link each relocatable data object in @p input together and add
    * the linked executable data object to @p result. Any device
@@ -1255,7 +1255,7 @@ typedef enum amd_comgr_action_kind_s {
    * if isa name is not set in @p info and does not match the isa name
    * of all relocatable data objects in @p input.
    */
-  AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE,
+  AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE = 0x9,
   /**
    * Assemble each source data object in @p input in order into machine code.
    * For each successful assembly add a relocatable data object to @p result.
@@ -1268,7 +1268,7 @@ typedef enum amd_comgr_action_kind_s {
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT if isa name is not set in
    * @p info.
    */
-  AMD_COMGR_ACTION_ASSEMBLE_SOURCE_TO_RELOCATABLE,
+  AMD_COMGR_ACTION_ASSEMBLE_SOURCE_TO_RELOCATABLE = 0xA,
   /**
    * Disassemble each relocatable data object in @p input in
    * order. For each successful disassembly add a source data object to
@@ -1281,7 +1281,7 @@ typedef enum amd_comgr_action_kind_s {
    * if isa name is not set in @p info and does not match the isa name
    * of all relocatable data objects in @p input.
    */
-  AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE,
+  AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE = 0xB,
   /**
    * Disassemble each executable data object in @p input in order. For
    * each successful disassembly add a source data object to @p result.
@@ -1293,7 +1293,7 @@ typedef enum amd_comgr_action_kind_s {
    * if isa name is not set in @p info and does not match the isa name
    * of all relocatable data objects in @p input.
    */
-  AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE,
+  AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE = 0xC,
   /**
    * Disassemble each bytes data object in @p input in order. For each
    * successful disassembly add a source data object to @p
@@ -1308,7 +1308,7 @@ typedef enum amd_comgr_action_kind_s {
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
    * if isa name is not set in @p info
    */
-  AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE,
+  AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE = 0xD,
   /**
    * Marker for last valid action kind.
    */
@@ -1362,19 +1362,19 @@ typedef enum amd_comgr_metadata_kind_s {
   /**
    * The NULL metadata handle.
    */
-  AMD_COMGR_METADATA_KIND_NULL = 0,
+  AMD_COMGR_METADATA_KIND_NULL = 0x0,
   /**
    * A sting value.
    */
-  AMD_COMGR_METADATA_KIND_STRING = 1,
+  AMD_COMGR_METADATA_KIND_STRING = 0x1,
   /**
    * A map that consists of a set of key and value pairs.
    */
-  AMD_COMGR_METADATA_KIND_MAP = 2,
+  AMD_COMGR_METADATA_KIND_MAP = 0x2,
   /**
    * A list that consists of a sequence of values.
    */
-  AMD_COMGR_METADATA_KIND_LIST = 3,
+  AMD_COMGR_METADATA_KIND_LIST = 0x3,
   /**
    * Marker for last valid metadata kind.
    */
@@ -1654,30 +1654,30 @@ typedef enum amd_comgr_symbol_type_s {
   /**
    * The symbol's type is not specified.
   */
-  AMD_COMGR_SYMBOL_TYPE_NOTYPE,
+  AMD_COMGR_SYMBOL_TYPE_NOTYPE = 0x0,
 
   /**
    * The symbol is associated with a data object, such as a variable, an array,
    * and so on.
   */
-  AMD_COMGR_SYMBOL_TYPE_OBJECT,
+  AMD_COMGR_SYMBOL_TYPE_OBJECT = 0x1,
 
   /**
    * The symbol is associated with a function or other executable code.
   */
-  AMD_COMGR_SYMBOL_TYPE_FUNC,
+  AMD_COMGR_SYMBOL_TYPE_FUNC = 0x2,
 
   /**
    * The symbol is associated with a section. Symbol table entries of this type
    * exist primarily for relocation.
   */
-  AMD_COMGR_SYMBOL_TYPE_SECTION,
+  AMD_COMGR_SYMBOL_TYPE_SECTION = 0x3,
 
   /**
    * Conventionally, the symbol's name gives the name of the source file
    * associated with the object file.
   */
-  AMD_COMGR_SYMBOL_TYPE_FILE,
+  AMD_COMGR_SYMBOL_TYPE_FILE = 0x4,
 
   /**
    * The symbol labels an uninitialized common block.
@@ -1693,37 +1693,37 @@ typedef enum amd_comgr_symbol_info_s {
    * The length of the symbol name in bytes. Does not include the NUL
    * terminator. The type of this attribute is uint64_t.
   */
-  AMD_COMGR_SYMBOL_INFO_NAME_LENGTH,
+  AMD_COMGR_SYMBOL_INFO_NAME_LENGTH = 0x0,
 
   /**
    * The name of the symbol. The type of this attribute is character array with
    * the length equal to the value of the @p AMD_COMGR_SYMBOL_INFO_NAME_LENGTH
    * attribute plus 1 for a NUL terminator.
   */
-  AMD_COMGR_SYMBOL_INFO_NAME,
+  AMD_COMGR_SYMBOL_INFO_NAME = 0x1,
 
   /**
    * The kind of the symbol. The type of this attribute is @p
    * amd_comgr_symbol_type_t.
    */
-  AMD_COMGR_SYMBOL_INFO_TYPE,
+  AMD_COMGR_SYMBOL_INFO_TYPE = 0x2,
 
   /**
    * Size of the variable. The value of this attribute is undefined if the
    * symbol is not a variable. The type of this attribute is uint64_t.
    */
-  AMD_COMGR_SYMBOL_INFO_SIZE,
+  AMD_COMGR_SYMBOL_INFO_SIZE = 0x3,
 
   /**
    * Indicates whether the symbol is undefined. The type of this attribute is
    * bool.
    */
-  AMD_COMGR_SYMBOL_INFO_IS_UNDEFINED,
+  AMD_COMGR_SYMBOL_INFO_IS_UNDEFINED = 0x4,
 
   /**
    * The value of the symbol. The type of this attribute is uint64_t.
    */
-  AMD_COMGR_SYMBOL_INFO_VALUE,
+  AMD_COMGR_SYMBOL_INFO_VALUE = 0x5,
 
   /**
    * Marker for last valid symbol info.
