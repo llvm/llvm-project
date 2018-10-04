@@ -67,18 +67,30 @@ public:
                    else
                      Symbols.insert(Sym);
                  }
+               },
+               [&](RefSlab S) {
+                 std::lock_guard<std::mutex> Lock(SymbolsMu);
+                 for (const auto &Sym : S) {
+                   // No need to merge as currently all Refs are from main file.
+                   for (const auto &Ref : Sym.second)
+                     Refs.insert(Sym.first, Ref);
+                 }
                })
         .release();
   }
 
   // Awkward: we write the result in the destructor, because the executor
   // takes ownership so it's the easiest way to get our data back out.
-  ~IndexActionFactory() { Result.Symbols = std::move(Symbols).build(); }
+  ~IndexActionFactory() {
+    Result.Symbols = std::move(Symbols).build();
+    Result.Refs = std::move(Refs).build();
+  }
 
 private:
   IndexFileIn &Result;
   std::mutex SymbolsMu;
   SymbolSlab::Builder Symbols;
+  RefSlab::Builder Refs;
 };
 
 } // namespace

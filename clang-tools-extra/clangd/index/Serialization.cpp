@@ -298,17 +298,47 @@ Symbol readSymbol(Reader &Data, ArrayRef<StringRef> Strings) {
   return Sym;
 }
 
+// REFS ENCODING
+// A refs section has data grouped by Symbol. Each symbol has:
+//  - SymbolID: 20 bytes
+//  - NumRefs: varint
+//  - Ref[NumRefs]
+// Fields of Ref are encoded in turn, see implementation.
+
+void writeRefs(const SymbolID &ID, ArrayRef<Ref> Refs,
+               const StringTableOut &Strings, raw_ostream &OS) {
+  OS << ID.raw();
+  writeVar(Refs.size(), OS);
+  for (const auto &Ref : Refs) {
+    OS.write(static_cast<unsigned char>(Ref.Kind));
+    writeLocation(Ref.Location, Strings, OS);
+  }
+}
+
+std::pair<SymbolID, std::vector<Ref>> readRefs(Reader &Data,
+                                               ArrayRef<StringRef> Strings) {
+  std::pair<SymbolID, std::vector<Ref>> Result;
+  Result.first = Data.consumeID();
+  Result.second.resize(Data.consumeVar());
+  for (auto &Ref : Result.second) {
+    Ref.Kind = static_cast<RefKind>(Data.consume8());
+    Ref.Location = readLocation(Data, Strings);
+  }
+  return Result;
+}
+
 // FILE ENCODING
 // A file is a RIFF chunk with type 'CdIx'.
 // It contains the sections:
 //   - meta: version number
 //   - stri: string table
 //   - symb: symbols
+//   - refs: references to symbols
 
 // The current versioning scheme is simple - non-current versions are rejected.
 // If you make a breaking change, bump this version number to invalidate stored
 // data. Later we may want to support some backward compatibility.
-constexpr static uint32_t Version = 4;
+constexpr static uint32_t Version = 5;
 
 Expected<IndexFileIn> readRIFF(StringRef Data) {
   auto RIFF = riff::readFile(Data);
@@ -342,6 +372,18 @@ Expected<IndexFileIn> readRIFF(StringRef Data) {
       return makeError("malformed or truncated symbol");
     Result.Symbols = std::move(Symbols).build();
   }
+  if (Chunks.count("refs")) {
+    Reader RefsReader(Chunks.lookup("refs"));
+    RefSlab::Builder Refs;
+    while (!RefsReader.eof()) {
+      auto RefsBundle = readRefs(RefsReader, Strings->Strings);
+      for (const auto &Ref : RefsBundle.second) // FIXME: bulk insert?
+        Refs.insert(RefsBundle.first, Ref);
+    }
+    if (RefsReader.err())
+      return makeError("malformed or truncated refs");
+    Result.Refs = std::move(Refs).build();
+  }
   return std::move(Result);
 }
 
@@ -363,6 +405,14 @@ void writeRIFF(const IndexFileOut &Data, raw_ostream &OS) {
     Symbols.emplace_back(Sym);
     visitStrings(Symbols.back(), [&](StringRef &S) { Strings.intern(S); });
   }
+  std::vector<std::pair<SymbolID, std::vector<Ref>>> Refs;
+  if (Data.Refs) {
+    for (const auto &Sym : *Data.Refs) {
+      Refs.emplace_back(Sym);
+      for (auto &Ref : Refs.back().second)
+        Strings.intern(Ref.Location.FileURI);
+    }
+  }
 
   std::string StringSection;
   {
@@ -378,6 +428,16 @@ void writeRIFF(const IndexFileOut &Data, raw_ostream &OS) {
       writeSymbol(Sym, Strings, SymbolOS);
   }
   RIFF.Chunks.push_back({riff::fourCC("symb"), SymbolSection});
+
+  std::string RefsSection;
+  if (Data.Refs) {
+    {
+      raw_string_ostream RefsOS(RefsSection);
+      for (const auto &Sym : Refs)
+        writeRefs(Sym.first, Sym.second, Strings, RefsOS);
+    }
+    RIFF.Chunks.push_back({riff::fourCC("refs"), RefsSection});
+  }
 
   OS << RIFF;
 }
@@ -428,6 +488,8 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
     if (auto I = readIndexFile(Buffer->get()->getBuffer())) {
       if (I->Symbols)
         Symbols = std::move(*I->Symbols);
+      if (I->Refs)
+        Refs = std::move(*I->Refs);
     } else {
       llvm::errs() << "Bad Index: " << llvm::toString(I.takeError()) << "\n";
       return nullptr;
