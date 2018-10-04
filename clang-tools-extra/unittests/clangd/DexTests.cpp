@@ -109,6 +109,18 @@ TEST(DexIterators, AndThreeLists) {
   EXPECT_TRUE(And->reachedEnd());
 }
 
+TEST(DexIterators, AndEmpty) {
+  Corpus C{10000};
+  const PostingList L1({1});
+  const PostingList L2({2});
+  // These iterators are empty, but the optimizer can't tell.
+  auto Empty1 = C.intersect(L1.iterator(), L2.iterator());
+  auto Empty2 = C.intersect(L1.iterator(), L2.iterator());
+  // And syncs iterators on construction, and used to fail on empty children.
+  auto And = C.intersect(std::move(Empty1), std::move(Empty2));
+  EXPECT_TRUE(And->reachedEnd());
+}
+
 TEST(DexIterators, OrTwoLists) {
   Corpus C{10000};
   const PostingList L0({0, 5, 7, 10, 42, 320, 9000});
@@ -270,18 +282,8 @@ TEST(DexIterators, Limit) {
 }
 
 TEST(DexIterators, True) {
-  Corpus C{0};
-  auto TrueIterator = C.all();
-  EXPECT_TRUE(TrueIterator->reachedEnd());
-  EXPECT_THAT(consumeIDs(*TrueIterator), ElementsAre());
-
-  C = Corpus{7};
-  const PostingList L0({1, 2, 5, 7});
-  TrueIterator = C.all();
-  EXPECT_THAT(TrueIterator->peek(), 0);
-  auto AndIterator = C.intersect(L0.iterator(), move(TrueIterator));
-  EXPECT_FALSE(AndIterator->reachedEnd());
-  EXPECT_THAT(consumeIDs(*AndIterator), ElementsAre(1, 2, 5));
+  EXPECT_TRUE(Corpus{0}.all()->reachedEnd());
+  EXPECT_THAT(consumeIDs(*Corpus{4}.all()), ElementsAre(0, 1, 2, 3));
 }
 
 TEST(DexIterators, Boost) {
@@ -311,6 +313,38 @@ TEST(DexIterators, Boost) {
   Root->advanceTo(4);
   ElementBoost = Root->consume();
   EXPECT_THAT(ElementBoost, 3);
+}
+
+TEST(DexIterators, Optimizations) {
+  Corpus C{5};
+  const PostingList L1({1});
+  const PostingList L2({2});
+  const PostingList L3({3});
+
+  // empty and/or yield true/false
+  EXPECT_EQ(llvm::to_string(*C.intersect()), "true");
+  EXPECT_EQ(llvm::to_string(*C.unionOf()), "false");
+
+  // true/false inside and/or short-circuit
+  EXPECT_EQ(llvm::to_string(*C.intersect(L1.iterator(), C.all())), "[1]");
+  EXPECT_EQ(llvm::to_string(*C.intersect(L1.iterator(), C.none())), "false");
+  // Not optimized to avoid breaking boosts.
+  EXPECT_EQ(llvm::to_string(*C.unionOf(L1.iterator(), C.all())),
+            "(| [1] true)");
+  EXPECT_EQ(llvm::to_string(*C.unionOf(L1.iterator(), C.none())), "[1]");
+
+  // and/or nested inside and/or are flattened
+  EXPECT_EQ(llvm::to_string(*C.intersect(
+                L1.iterator(), C.intersect(L1.iterator(), L1.iterator()))),
+            "(& [1] [1] [1])");
+  EXPECT_EQ(llvm::to_string(*C.unionOf(
+                L1.iterator(), C.unionOf(L2.iterator(), L3.iterator()))),
+            "(| [1] [2] [3])");
+
+  // optimizations combine over multiple levels
+  EXPECT_EQ(llvm::to_string(*C.intersect(
+                C.intersect(L1.iterator(), C.intersect()), C.unionOf(C.all()))),
+            "[1]");
 }
 
 //===----------------------------------------------------------------------===//
