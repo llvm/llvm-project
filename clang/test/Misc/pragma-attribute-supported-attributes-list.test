@@ -2,8 +2,8 @@
 
 // The number of supported attributes should never go down!
 
-// Swift has 4 additional attributes that are not present in upstream LLVM.
-// CHECK: #pragma clang attribute supports 132 attributes:
+// Swift has 5 additional attributes that are not present in upstream LLVM.
+// CHECK: #pragma clang attribute supports 134 attributes:
 // CHECK-NEXT: AMDGPUFlatWorkGroupSize (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumSGPR (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumVGPR (SubjectMatchRule_function)
@@ -48,6 +48,7 @@
 // CHECK-NEXT: DisableTailCalls (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: EnableIf (SubjectMatchRule_function)
 // CHECK-NEXT: EnumExtensibility (SubjectMatchRule_enum)
+// CHECK-NEXT: ExcludeFromExplicitInstantiation (SubjectMatchRule_variable, SubjectMatchRule_function, SubjectMatchRule_record)
 // CHECK-NEXT: ExternalSourceSymbol ((SubjectMatchRule_record, SubjectMatchRule_enum, SubjectMatchRule_enum_constant, SubjectMatchRule_field, SubjectMatchRule_function, SubjectMatchRule_namespace, SubjectMatchRule_objc_category, SubjectMatchRule_objc_interface, SubjectMatchRule_objc_method, SubjectMatchRule_objc_property, SubjectMatchRule_objc_protocol, SubjectMatchRule_record, SubjectMatchRule_type_alias, SubjectMatchRule_variable))
 // CHECK-NEXT: FlagEnum (SubjectMatchRule_enum)
 // CHECK-NEXT: Flatten (SubjectMatchRule_function)
@@ -89,6 +90,7 @@
 // CHECK-NEXT: ObjCBridge (SubjectMatchRule_record, SubjectMatchRule_type_alias)
 // CHECK-NEXT: ObjCBridgeMutable (SubjectMatchRule_record)
 // CHECK-NEXT: ObjCBridgeRelated (SubjectMatchRule_record)
+// CHECK-NEXT: ObjCCompleteDefinition (SubjectMatchRule_objc_interface)
 // CHECK-NEXT: ObjCException (SubjectMatchRule_objc_interface)
 // CHECK-NEXT: ObjCExplicitProtocolImpl (SubjectMatchRule_objc_protocol)
 // CHECK-NEXT: ObjCMethodFamily (SubjectMatchRule_objc_method)
