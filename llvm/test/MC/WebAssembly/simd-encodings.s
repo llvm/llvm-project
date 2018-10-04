@@ -193,6 +193,9 @@
     # CHECK: v128.not # encoding: [0xfd,0x3f]
     v128.not
 
+    # CHECK: v128.bitselect # encoding: [0xfd,0x40]
+    v128.bitselect
+
     # CHECK: i8x16.any_true # encoding: [0xfd,0x41]
     i8x16.any_true
 

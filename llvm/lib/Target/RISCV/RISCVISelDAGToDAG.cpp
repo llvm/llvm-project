@@ -96,18 +96,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, CurDAG->getMachineNode(RISCV::ADDI, DL, VT, TFI, Imm));
     return;
   }
-  case RISCVISD::SplitF64: {
-    // If the input to SplitF64 is just BuildPairF64 then the operation is
-    // redundant. Instead, use BuildPairF64's operands directly. This pattern
-    // can't be written in tablegen due to the multiple outputs.
-    SDValue Op0 = Node->getOperand(0);
-    if (Op0->getOpcode() != RISCVISD::BuildPairF64)
-      break;
-    ReplaceUses(SDValue(Node, 0), Op0.getOperand(0));
-    ReplaceUses(SDValue(Node, 1), Op0.getOperand(1));
-    CurDAG->RemoveDeadNode(Node);
-    return;
-  }
   }
 
   // Select the default instruction.

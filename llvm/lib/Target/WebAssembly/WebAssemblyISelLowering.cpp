@@ -965,6 +965,11 @@ WebAssemblyTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   switch (IntNo) {
   default:
     return {}; // Don't custom lower most intrinsics.
+
+  case Intrinsic::wasm_bitselect:
+    return DAG.getNode(WebAssemblyISD::BITSELECT, DL, Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+
   case Intrinsic::wasm_anytrue:
   case Intrinsic::wasm_alltrue: {
     unsigned OpCode = IntNo == Intrinsic::wasm_anytrue
@@ -972,6 +977,7 @@ WebAssemblyTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                           : WebAssemblyISD::ALLTRUE;
     return DAG.getNode(OpCode, DL, Op.getValueType(), Op.getOperand(1));
   }
+
   case Intrinsic::wasm_lsda:
     // TODO For now, just return 0 not to crash
     return DAG.getConstant(0, DL, Op.getValueType());
