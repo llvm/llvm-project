@@ -157,11 +157,6 @@ TEST(SerializationTest, BinaryConversions) {
   IndexFileOut Out(*In);
   Out.Format = IndexFileFormat::RIFF;
   std::string Serialized = llvm::to_string(Out);
-  {
-    std::error_code EC;
-    llvm::raw_fd_ostream F("/tmp/foo", EC);
-    F << Serialized;
-  }
 
   auto In2 = readIndexFile(Serialized);
   ASSERT_TRUE(bool(In2)) << In.takeError();

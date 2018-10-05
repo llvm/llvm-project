@@ -14,19 +14,15 @@ namespace tidy {
 namespace utils {
 namespace lexer {
 
-Token getPreviousToken(const ASTContext &Context, SourceLocation Location,
-                       bool SkipComments) {
-  const auto &SourceManager = Context.getSourceManager();
+Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
+                       const LangOptions &LangOpts, bool SkipComments) {
   Token Token;
   Token.setKind(tok::unknown);
   Location = Location.getLocWithOffset(-1);
-  auto StartOfFile =
-      SourceManager.getLocForStartOfFile(SourceManager.getFileID(Location));
+  auto StartOfFile = SM.getLocForStartOfFile(SM.getFileID(Location));
   while (Location != StartOfFile) {
-    Location = Lexer::GetBeginningOfToken(Location, SourceManager,
-                                          Context.getLangOpts());
-    if (!Lexer::getRawToken(Location, Token, SourceManager,
-                            Context.getLangOpts()) &&
+    Location = Lexer::GetBeginningOfToken(Location, SM, LangOpts);
+    if (!Lexer::getRawToken(Location, Token, SM, LangOpts) &&
         (!SkipComments || !Token.is(tok::comment))) {
       break;
     }

@@ -278,6 +278,10 @@ protected:
   /// stored.
   virtual Address emitThreadIDAddress(CodeGenFunction &CGF, SourceLocation Loc);
 
+  void setLocThreadIdInsertPt(CodeGenFunction &CGF,
+                              bool AtCurrentPoint = false);
+  void clearLocThreadIdInsertPt(CodeGenFunction &CGF);
+
 private:
   /// Default const ident_t object used for initialization of all other
   /// ident_t objects.
@@ -300,6 +304,8 @@ private:
   struct DebugLocThreadIdTy {
     llvm::Value *DebugLoc;
     llvm::Value *ThreadID;
+    /// Insert point for the service instructions.
+    llvm::AssertingVH<llvm::Instruction> ServiceInsertPt = nullptr;
   };
   /// Map of local debug location, ThreadId and functions.
   typedef llvm::DenseMap<llvm::Function *, DebugLocThreadIdTy>

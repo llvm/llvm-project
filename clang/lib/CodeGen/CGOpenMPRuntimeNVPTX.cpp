@@ -1083,12 +1083,15 @@ void CGOpenMPRuntimeNVPTX::emitNonSPMDKernel(const OMPExecutableDirective &D,
                          CGOpenMPRuntimeNVPTX::WorkerFunctionState &WST)
         : EST(EST), WST(WST) {}
     void Enter(CodeGenFunction &CGF) override {
-      static_cast<CGOpenMPRuntimeNVPTX &>(CGF.CGM.getOpenMPRuntime())
-          .emitNonSPMDEntryHeader(CGF, EST, WST);
+      auto &RT = static_cast<CGOpenMPRuntimeNVPTX &>(CGF.CGM.getOpenMPRuntime());
+      RT.emitNonSPMDEntryHeader(CGF, EST, WST);
+      // Skip target region initialization.
+      RT.setLocThreadIdInsertPt(CGF, /*AtCurrentPoint=*/true);
     }
     void Exit(CodeGenFunction &CGF) override {
-      static_cast<CGOpenMPRuntimeNVPTX &>(CGF.CGM.getOpenMPRuntime())
-          .emitNonSPMDEntryFooter(CGF, EST);
+      auto &RT = static_cast<CGOpenMPRuntimeNVPTX &>(CGF.CGM.getOpenMPRuntime());
+      RT.clearLocThreadIdInsertPt(CGF);
+      RT.emitNonSPMDEntryFooter(CGF, EST);
     }
   } Action(EST, WST);
   CodeGen.setAction(Action);
@@ -1197,8 +1200,11 @@ void CGOpenMPRuntimeNVPTX::emitSPMDKernel(const OMPExecutableDirective &D,
         : RT(RT), EST(EST), D(D) {}
     void Enter(CodeGenFunction &CGF) override {
       RT.emitSPMDEntryHeader(CGF, EST, D);
+      // Skip target region initialization.
+      RT.setLocThreadIdInsertPt(CGF, /*AtCurrentPoint=*/true);
     }
     void Exit(CodeGenFunction &CGF) override {
+      RT.clearLocThreadIdInsertPt(CGF);
       RT.emitSPMDEntryFooter(CGF, EST);
     }
   } Action(*this, EST, D);

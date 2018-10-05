@@ -390,7 +390,6 @@ SourceLocation clangd::getBeginningOfIdentifier(ParsedAST &Unit,
     log("getBeginningOfIdentifier: {0}", Offset.takeError());
     return SourceLocation();
   }
-  SourceLocation InputLoc = SourceMgr.getComposedLoc(FID, *Offset);
 
   // GetBeginningOfToken(pos) is almost what we want, but does the wrong thing
   // if the cursor is at the end of the identifier.
@@ -401,15 +400,16 @@ SourceLocation clangd::getBeginningOfIdentifier(ParsedAST &Unit,
   //  3) anywhere outside an identifier, we'll get some non-identifier thing.
   // We can't actually distinguish cases 1 and 3, but returning the original
   // location is correct for both!
+  SourceLocation InputLoc = SourceMgr.getComposedLoc(FID, *Offset);
   if (*Offset == 0) // Case 1 or 3.
     return SourceMgr.getMacroArgExpandedLocation(InputLoc);
-  SourceLocation Before =
-      SourceMgr.getMacroArgExpandedLocation(InputLoc.getLocWithOffset(-1));
+  SourceLocation Before = SourceMgr.getComposedLoc(FID, *Offset - 1);
+
   Before = Lexer::GetBeginningOfToken(Before, SourceMgr, AST.getLangOpts());
   Token Tok;
   if (Before.isValid() &&
       !Lexer::getRawToken(Before, Tok, SourceMgr, AST.getLangOpts(), false) &&
       Tok.is(tok::raw_identifier))
-    return Before;                                        // Case 2.
+    return SourceMgr.getMacroArgExpandedLocation(Before); // Case 2.
   return SourceMgr.getMacroArgExpandedLocation(InputLoc); // Case 1 or 3.
 }

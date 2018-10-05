@@ -590,6 +590,13 @@ void SectionChunk::replace(SectionChunk *Other) {
   Other->Live = false;
 }
 
+uint32_t SectionChunk::getSectionNumber() const {
+  DataRefImpl R;
+  R.p = reinterpret_cast<uintptr_t>(Header);
+  SectionRef S(R, File->getCOFFObj());
+  return S.getIndex() + 1;
+}
+
 CommonChunk::CommonChunk(const COFFSymbolRef S) : Sym(S) {
   // Common symbols are aligned on natural boundaries up to 32 bytes.
   // This is what MSVC link.exe does.

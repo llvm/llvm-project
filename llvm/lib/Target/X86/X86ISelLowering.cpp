@@ -6380,6 +6380,42 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
       Ops.push_back(Op);
     return true;
   }
+  case ISD::INSERT_SUBVECTOR: {
+    // Handle INSERT_SUBVECTOR(SRC0, SHUFFLE(EXTRACT_SUBVECTOR(SRC1)) where
+    // SRC0/SRC1 are both of the same valuetype VT.
+    // TODO - add peekThroughOneUseBitcasts support.
+    SDValue Src = N.getOperand(0);
+    SDValue Sub = N.getOperand(1);
+    EVT SubVT = Sub.getValueType();
+    unsigned NumSubElts = SubVT.getVectorNumElements();
+    if (!isa<ConstantSDNode>(N.getOperand(2)) ||
+        !N->isOnlyUserOf(Sub.getNode()))
+      return false;
+    SmallVector<int, 64> SubMask;
+    SmallVector<SDValue, 2> SubInputs;
+    if (!resolveTargetShuffleInputs(Sub, SubInputs, SubMask, DAG))
+      return false;
+    Ops.push_back(Src);
+    for (SDValue &SubInput : SubInputs) {
+      if (SubInput.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+          SubInput.getOperand(0).getValueType() != VT ||
+          !isa<ConstantSDNode>(SubInput.getOperand(1)))
+        return false;
+      Ops.push_back(SubInput.getOperand(0));
+    }
+    int InsertIdx = N.getConstantOperandVal(2);
+    for (int i = 0; i != (int)NumElts; ++i)
+      Mask.push_back(i);
+    for (int i = 0; i != (int)NumSubElts; ++i) {
+      int M = SubMask[i];
+      if (0 <= M) {
+        int InputIdx = M / NumSubElts;
+        int ExtractIdx = SubInputs[InputIdx].getConstantOperandVal(1);
+        Mask[i + InsertIdx] = (NumElts * (1 + InputIdx)) + ExtractIdx + M;
+      }
+    }
+    return true;
+  }
   case ISD::SCALAR_TO_VECTOR: {
     // Match against a scalar_to_vector of an extract from a vector,
     // for PEXTRW/PEXTRB we must handle the implicit zext of the scalar.

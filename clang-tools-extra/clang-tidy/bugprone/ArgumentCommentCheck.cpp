@@ -91,8 +91,9 @@ static std::vector<std::pair<SourceLocation, StringRef>>
 getCommentsBeforeLoc(ASTContext *Ctx, SourceLocation Loc) {
   std::vector<std::pair<SourceLocation, StringRef>> Comments;
   while (Loc.isValid()) {
-    clang::Token Tok =
-        utils::lexer::getPreviousToken(*Ctx, Loc, /*SkipComments=*/false);
+    clang::Token Tok = utils::lexer::getPreviousToken(
+        Loc, Ctx->getSourceManager(), Ctx->getLangOpts(),
+        /*SkipComments=*/false);
     if (Tok.isNot(tok::comment))
       break;
     Loc = Tok.getLocation();

@@ -5669,38 +5669,18 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       return 0;
     // Certain instructions can be cheaper to vectorize if they have a constant
     // second vector operand. One example of this are shifts on x86.
-    TargetTransformInfo::OperandValueKind Op1VK =
-        TargetTransformInfo::OK_AnyValue;
-    TargetTransformInfo::OperandValueKind Op2VK =
-        TargetTransformInfo::OK_AnyValue;
-    TargetTransformInfo::OperandValueProperties Op1VP =
-        TargetTransformInfo::OP_None;
-    TargetTransformInfo::OperandValueProperties Op2VP =
-        TargetTransformInfo::OP_None;
     Value *Op2 = I->getOperand(1);
-
-    // Check for a splat or for a non uniform vector of constants.
-    if (isa<ConstantInt>(Op2)) {
-      ConstantInt *CInt = cast<ConstantInt>(Op2);
-      if (CInt && CInt->getValue().isPowerOf2())
-        Op2VP = TargetTransformInfo::OP_PowerOf2;
-      Op2VK = TargetTransformInfo::OK_UniformConstantValue;
-    } else if (isa<ConstantVector>(Op2) || isa<ConstantDataVector>(Op2)) {
-      Op2VK = TargetTransformInfo::OK_NonUniformConstantValue;
-      Constant *SplatValue = cast<Constant>(Op2)->getSplatValue();
-      if (SplatValue) {
-        ConstantInt *CInt = dyn_cast<ConstantInt>(SplatValue);
-        if (CInt && CInt->getValue().isPowerOf2())
-          Op2VP = TargetTransformInfo::OP_PowerOf2;
-        Op2VK = TargetTransformInfo::OK_UniformConstantValue;
-      }
-    } else if (Legal->isUniform(Op2)) {
+    TargetTransformInfo::OperandValueProperties Op2VP;
+    TargetTransformInfo::OperandValueKind Op2VK =
+        TTI.getOperandInfo(Op2, Op2VP);
+    if (Op2VK == TargetTransformInfo::OK_AnyValue && Legal->isUniform(Op2))
       Op2VK = TargetTransformInfo::OK_UniformValue;
-    }
+
     SmallVector<const Value *, 4> Operands(I->operand_values());
     unsigned N = isScalarAfterVectorization(I, VF) ? VF : 1;
-    return N * TTI.getArithmeticInstrCost(I->getOpcode(), VectorTy, Op1VK,
-                                          Op2VK, Op1VP, Op2VP, Operands);
+    return N * TTI.getArithmeticInstrCost(
+                   I->getOpcode(), VectorTy, TargetTransformInfo::OK_AnyValue,
+                   Op2VK, TargetTransformInfo::OP_None, Op2VP, Operands);
   }
   case Instruction::Select: {
     SelectInst *SI = cast<SelectInst>(I);

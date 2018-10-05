@@ -384,6 +384,49 @@ unsigned TargetTransformInfo::getMaxInterleaveFactor(unsigned VF) const {
   return TTIImpl->getMaxInterleaveFactor(VF);
 }
 
+TargetTransformInfo::OperandValueKind
+TargetTransformInfo::getOperandInfo(Value *V,
+                                    OperandValueProperties &OpProps) const {
+  OperandValueKind OpInfo = OK_AnyValue;
+  OpProps = OP_None;
+
+  if (auto *CI = dyn_cast<ConstantInt>(V)) {
+    if (CI->getValue().isPowerOf2())
+      OpProps = OP_PowerOf2;
+    return OK_UniformConstantValue;
+  }
+
+  const Value *Splat = getSplatValue(V);
+
+  // Check for a splat of a constant or for a non uniform vector of constants
+  // and check if the constant(s) are all powers of two.
+  if (isa<ConstantVector>(V) || isa<ConstantDataVector>(V)) {
+    OpInfo = OK_NonUniformConstantValue;
+    if (Splat) {
+      OpInfo = OK_UniformConstantValue;
+      if (auto *CI = dyn_cast<ConstantInt>(Splat))
+        if (CI->getValue().isPowerOf2())
+          OpProps = OP_PowerOf2;
+    } else if (auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
+      OpProps = OP_PowerOf2;
+      for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
+        if (auto *CI = dyn_cast<ConstantInt>(CDS->getElementAsConstant(I)))
+          if (CI->getValue().isPowerOf2())
+            continue;
+        OpProps = OP_None;
+        break;
+      }
+    }
+  }
+
+  // Check for a splat of a uniform value. This is not loop aware, so return
+  // true only for the obviously uniform cases (argument, globalvalue)
+  if (Splat && (isa<Argument>(Splat) || isa<GlobalValue>(Splat)))
+    OpInfo = OK_UniformValue;
+
+  return OpInfo;
+}
+
 int TargetTransformInfo::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, OperandValueKind Opd1Info,
     OperandValueKind Opd2Info, OperandValueProperties Opd1PropInfo,
@@ -628,49 +671,6 @@ bool TargetTransformInfo::shouldExpandReduction(const IntrinsicInst *II) const {
 
 int TargetTransformInfo::getInstructionLatency(const Instruction *I) const {
   return TTIImpl->getInstructionLatency(I);
-}
-
-static TargetTransformInfo::OperandValueKind
-getOperandInfo(Value *V, TargetTransformInfo::OperandValueProperties &OpProps) {
-  TargetTransformInfo::OperandValueKind OpInfo =
-      TargetTransformInfo::OK_AnyValue;
-  OpProps = TargetTransformInfo::OP_None;
-
-  if (auto *CI = dyn_cast<ConstantInt>(V)) {
-    if (CI->getValue().isPowerOf2())
-      OpProps = TargetTransformInfo::OP_PowerOf2;
-    return TargetTransformInfo::OK_UniformConstantValue;
-  }
-
-  const Value *Splat = getSplatValue(V);
-
-  // Check for a splat of a constant or for a non uniform vector of constants
-  // and check if the constant(s) are all powers of two.
-  if (isa<ConstantVector>(V) || isa<ConstantDataVector>(V)) {
-    OpInfo = TargetTransformInfo::OK_NonUniformConstantValue;
-    if (Splat) {
-      OpInfo = TargetTransformInfo::OK_UniformConstantValue;
-      if (auto *CI = dyn_cast<ConstantInt>(Splat))
-        if (CI->getValue().isPowerOf2())
-          OpProps = TargetTransformInfo::OP_PowerOf2;
-    } else if (auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
-      OpProps = TargetTransformInfo::OP_PowerOf2;
-      for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
-        if (auto *CI = dyn_cast<ConstantInt>(CDS->getElementAsConstant(I)))
-          if (CI->getValue().isPowerOf2())
-            continue;
-        OpProps = TargetTransformInfo::OP_None;
-        break;
-      }
-    }
-  }
-
-  // Check for a splat of a uniform value. This is not loop aware, so return
-  // true only for the obviously uniform cases (argument, globalvalue)
-  if (Splat && (isa<Argument>(Splat) || isa<GlobalValue>(Splat)))
-    OpInfo = TargetTransformInfo::OK_UniformValue;
-
-  return OpInfo;
 }
 
 static bool matchPairwiseShuffleMask(ShuffleVectorInst *SI, bool IsLeft,
