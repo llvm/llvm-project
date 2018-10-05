@@ -323,8 +323,10 @@ void LiveDebugValues::printVarLocInMBB(const MachineFunction &MF,
                                        raw_ostream &Out) const {
   Out << '\n' << msg << '\n';
   for (const MachineBasicBlock &BB : MF) {
-    const auto &L = V.lookup(&BB);
-    Out << "MBB: " << BB.getName() << ":\n";
+    const VarLocSet &L = V.lookup(&BB);
+    if (L.empty())
+      continue;
+    Out << "MBB: " << BB.getNumber() << ":\n";
     for (unsigned VLL : L) {
       const VarLoc &VL = VarLocIDs[VLL];
       Out << " Var: " << VL.Var.getVar()->getName();
@@ -599,7 +601,7 @@ bool LiveDebugValues::transferTerminatorInst(MachineInstr &MI,
   LLVM_DEBUG(for (unsigned ID
                   : OpenRanges.getVarLocs()) {
     // Copy OpenRanges to OutLocs, if not already present.
-    dbgs() << "Add to OutLocs: ";
+    dbgs() << "Add to OutLocs in MBB #" << CurMBB->getNumber() << ":  ";
     VarLocIDs[ID].dump();
   });
   VarLocSet &VLS = OutLocs[CurMBB];
@@ -629,7 +631,7 @@ bool LiveDebugValues::process(MachineInstr &MI, OpenRangesSet &OpenRanges,
 bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
                            VarLocInMBB &InLocs, const VarLocMap &VarLocIDs,
                            SmallPtrSet<const MachineBasicBlock *, 16> &Visited) {
-  LLVM_DEBUG(dbgs() << "join MBB: " << MBB.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "join MBB: " << MBB.getNumber() << "\n");
   bool Changed = false;
 
   VarLocSet InLocsT; // Temporary incoming locations.
@@ -641,8 +643,11 @@ bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
     // Ignore unvisited predecessor blocks.  As we are processing
     // the blocks in reverse post-order any unvisited block can
     // be considered to not remove any incoming values.
-    if (!Visited.count(p))
+    if (!Visited.count(p)) {
+      LLVM_DEBUG(dbgs() << "  ignoring unvisited pred MBB: " << p->getNumber()
+                        << "\n");
       continue;
+    }
     auto OL = OutLocs.find(p);
     // Join is null in case of empty OutLocs from any of the pred.
     if (OL == OutLocs.end())
@@ -654,14 +659,29 @@ bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
       InLocsT = OL->second;
     else
       InLocsT &= OL->second;
+
+    LLVM_DEBUG({
+      if (!InLocsT.empty()) {
+        for (auto ID : InLocsT)
+          dbgs() << "  gathered candidate incoming var: "
+                 << VarLocIDs[ID].Var.getVar()->getName() << "\n";
+      }
+    });
+
     NumVisited++;
   }
 
   // Filter out DBG_VALUES that are out of scope.
   VarLocSet KillSet;
-  for (auto ID : InLocsT)
-    if (!VarLocIDs[ID].dominates(MBB))
+  for (auto ID : InLocsT) {
+    if (!VarLocIDs[ID].dominates(MBB)) {
       KillSet.set(ID);
+      LLVM_DEBUG({
+        auto Name = VarLocIDs[ID].Var.getVar()->getName();
+        dbgs() << "  killing " << Name << ", it doesn't dominate MBB\n";
+      });
+    }
+  }
   InLocsT.intersectWithComplement(KillSet);
 
   // As we are processing blocks in reverse post-order we
