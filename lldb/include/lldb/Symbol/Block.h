@@ -327,6 +327,14 @@ public:
     return m_inlineInfoSP.get();
   }
 
+  //------------------------------------------------------------------
+  /// Get the symbol file which contains debug info for this block's
+  /// symbol context module.
+  ///
+  /// @return A pointer to the symbol file or nullptr.
+  //------------------------------------------------------------------
+  SymbolFile *GetSymbolFile();
+
   CompilerDeclContext GetDeclContext();
 
   //------------------------------------------------------------------
