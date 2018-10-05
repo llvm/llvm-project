@@ -7,8 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// GlobalSymbolBuilder is a tool to extract symbols from a whole project.
-// This tool is **experimental** only. Don't use it in production code.
+// clangd-indexer is a tool to gather index data (symbols, xrefs) from source.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,7 +20,6 @@
 #include "clang/Tooling/Execution.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 
 using namespace llvm;
@@ -32,22 +30,13 @@ namespace clang {
 namespace clangd {
 namespace {
 
-static llvm::cl::opt<std::string> AssumedHeaderDir(
-    "assume-header-dir",
-    llvm::cl::desc("The index includes header that a symbol is defined in. "
-                   "If the absolute path cannot be determined (e.g. an "
-                   "in-memory VFS) then the relative path is resolved against "
-                   "this directory, which must be absolute. If this flag is "
-                   "not given, such headers will have relative paths."),
-    llvm::cl::init(""));
-
 static llvm::cl::opt<IndexFileFormat>
     Format("format", llvm::cl::desc("Format of the index to be written"),
            llvm::cl::values(clEnumValN(IndexFileFormat::YAML, "yaml",
                                        "human-readable YAML format"),
                             clEnumValN(IndexFileFormat::RIFF, "binary",
                                        "binary RIFF format")),
-           llvm::cl::init(IndexFileFormat::YAML));
+           llvm::cl::init(IndexFileFormat::RIFF));
 
 class IndexActionFactory : public tooling::FrontendActionFactory {
 public:
@@ -55,7 +44,6 @@ public:
 
   clang::FrontendAction *create() override {
     SymbolCollector::Options Opts;
-    Opts.FallbackDir = AssumedHeaderDir;
     return createStaticIndexingAction(
                Opts,
                [&](SymbolSlab S) {
@@ -102,15 +90,14 @@ int main(int argc, const char **argv) {
 
   const char *Overview = R"(
   Creates an index of symbol information etc in a whole project.
-  This is **experimental** and not production-ready!
 
   Example usage for a project using CMake compile commands:
 
-  $ clangd-indexer --executor=all-TUs compile_commands.json > index.yaml
+  $ clangd-indexer --executor=all-TUs compile_commands.json > clangd.dex
 
   Example usage for file sequence index without flags:
 
-  $ clangd-indexer File1.cpp File2.cpp ... FileN.cpp > index.yaml
+  $ clangd-indexer File1.cpp File2.cpp ... FileN.cpp > clangd.dex
 
   Note: only symbols from header files will be indexed.
   )";
@@ -120,12 +107,6 @@ int main(int argc, const char **argv) {
 
   if (!Executor) {
     llvm::errs() << llvm::toString(Executor.takeError()) << "\n";
-    return 1;
-  }
-
-  if (!clang::clangd::AssumedHeaderDir.empty() &&
-      !llvm::sys::path::is_absolute(clang::clangd::AssumedHeaderDir)) {
-    llvm::errs() << "--assume-header-dir must be an absolute path.\n";
     return 1;
   }
 

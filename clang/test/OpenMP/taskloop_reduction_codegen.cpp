@@ -52,11 +52,11 @@ sum = 0.0;
 // CHECK:    [[C:%.*]] = alloca [100 x %struct.S],
 // CHECK:    [[D:%.*]] = alloca float*,
 // CHECK:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON:%.*]],
-// CHECK:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t*
 // CHECK:    [[DOTRD_INPUT_:%.*]] = alloca [4 x %struct.kmp_task_red_input_t],
 // CHECK:    alloca i32,
 // CHECK:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32,
 // CHECK:    [[DOTCAPTURE_EXPR_9:%.*]] = alloca i32,
+// CHECK:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t*
 // CHECK:    store i32 0, i32* [[RETVAL]],
 // CHECK:    store i32 [[ARGC:%.*]], i32* [[ARGC_ADDR]],
 // CHECK:    store i8** [[ARGV:%.*]], i8*** [[ARGV_ADDR]],

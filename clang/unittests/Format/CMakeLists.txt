@@ -15,6 +15,7 @@ add_clang_unittest(FormatTests
   FormatTestTextProto.cpp
   NamespaceEndCommentsFixerTest.cpp
   SortImportsTestJS.cpp
+  SortImportsTestJava.cpp
   SortIncludesTest.cpp
   UsingDeclarationsSorterTest.cpp
   )
