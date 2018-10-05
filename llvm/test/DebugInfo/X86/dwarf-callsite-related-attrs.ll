@@ -13,8 +13,8 @@
 ; UNSUPPORTED: cygwin,windows-gnu,windows-msvc
 
 ; REQUIRES: object-emission
-; RUN: %llc_dwarf < %s -o - | FileCheck %s -check-prefix=ASM
-; RUN: %llc_dwarf < %s -filetype=obj -o %t.o
+; RUN: %llc_dwarf -mtriple=x86_64-- < %s -o - | FileCheck %s -check-prefix=ASM
+; RUN: %llc_dwarf -mtriple=x86_64-- < %s -filetype=obj -o %t.o
 ; RUN: llvm-dwarfdump %t.o -o - | FileCheck %s -check-prefix=OBJ -implicit-check-not=DW_TAG_call_site
 ; RUN: llvm-dwarfdump -verify %t.o 2>&1 | FileCheck %s -check-prefix=VERIFY
 ; RUN: llvm-dwarfdump -statistics %t.o | FileCheck %s -check-prefix=STATS
