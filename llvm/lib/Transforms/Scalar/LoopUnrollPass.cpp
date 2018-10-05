@@ -801,7 +801,7 @@ bool llvm::computeUnrollCount(
     }
   }
 
-  // 4th priority is loop peeling
+  // 4th priority is loop peeling.
   computePeelCount(L, LoopSize, UP, TripCount, SE);
   if (UP.PeelCount) {
     UP.Runtime = false;

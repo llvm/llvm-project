@@ -309,6 +309,8 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
   // Local expression tree should go after the BLOCK.
   for (auto I = Header->getFirstTerminator(), E = Header->begin(); I != E;
        --I) {
+    if (std::prev(I)->isDebugInstr() || std::prev(I)->isPosition())
+      continue;
     if (WebAssembly::isChild(*std::prev(I), MFI))
       AfterSet.insert(&*std::prev(I));
     else
@@ -531,6 +533,8 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   // Local expression tree should go after the TRY.
   for (auto I = Header->getFirstTerminator(), E = Header->begin(); I != E;
        --I) {
+    if (std::prev(I)->isDebugInstr() || std::prev(I)->isPosition())
+      continue;
     if (WebAssembly::isChild(*std::prev(I), MFI))
       AfterSet.insert(&*std::prev(I));
     else

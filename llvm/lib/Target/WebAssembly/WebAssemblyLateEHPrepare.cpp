@@ -91,12 +91,15 @@ static void EraseBBsAndChildren(const Container &MBBs) {
   SmallVector<MachineBasicBlock *, 8> WL(MBBs.begin(), MBBs.end());
   while (!WL.empty()) {
     MachineBasicBlock *MBB = WL.pop_back_val();
-    for (auto *Pred : MBB->predecessors())
+    SmallVector<MachineBasicBlock *, 4> Preds(MBB->pred_begin(),
+                                              MBB->pred_end());
+    for (auto *Pred : Preds)
       Pred->removeSuccessor(MBB);
-    for (auto *Succ : MBB->successors()) {
-      WL.push_back(Succ);
+    SmallVector<MachineBasicBlock *, 4> Succs(MBB->succ_begin(),
+                                              MBB->succ_end());
+    WL.append(MBB->succ_begin(), MBB->succ_end());
+    for (auto *Succ : Succs)
       MBB->removeSuccessor(Succ);
-    }
     MBB->eraseFromParent();
   }
 }

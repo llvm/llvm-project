@@ -26,8 +26,6 @@
 
 namespace mca {
 
-class DispatchUnit;
-
 /// A builder class that knows how to construct Instruction objects.
 ///
 /// Every llvm-mca Instruction is described by an object of class InstrDesc.

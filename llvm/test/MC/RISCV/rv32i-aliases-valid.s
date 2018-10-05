@@ -69,12 +69,12 @@ li x12, 0x80000000
 # CHECK-EXPAND: addi a2, zero, -1
 li x12, 0xFFFFFFFF
 
-# CHECK-INST: csrrs t4, 3202, zero
+# CHECK-INST: csrrs t4, instreth, zero
 # CHECK-ALIAS: rdinstreth t4
 rdinstreth x29
-# CHECK-INST: csrrs s11, 3200, zero
+# CHECK-INST: csrrs s11, cycleh, zero
 # CHECK-ALIAS: rdcycleh s11
 rdcycleh x27
-# CHECK-INST: csrrs t3, 3201, zero
+# CHECK-INST: csrrs t3, timeh, zero
 # CHECK-ALIAS: rdtimeh t3
 rdtimeh x28
