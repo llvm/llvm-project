@@ -1648,8 +1648,8 @@ define void @interleave_24i32_in(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2,
 ; AVX2-FAST-NEXT:    vmovups (%rsi), %ymm0
 ; AVX2-FAST-NEXT:    vmovups (%rdx), %ymm1
 ; AVX2-FAST-NEXT:    vmovups (%rcx), %ymm2
-; AVX2-FAST-NEXT:    vpermilps {{.*#+}} xmm3 = xmm1[1,0,2,2]
-; AVX2-FAST-NEXT:    vpermpd {{.*#+}} ymm3 = ymm3[0,1,0,1]
+; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm3 = [1,0,2,2,1,0,2,2]
+; AVX2-FAST-NEXT:    vpermps %ymm1, %ymm3, %ymm3
 ; AVX2-FAST-NEXT:    vpermpd {{.*#+}} ymm4 = ymm0[0,0,2,1]
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm3 = ymm4[0],ymm3[1],ymm4[2,3],ymm3[4],ymm4[5,6],ymm3[7]
 ; AVX2-FAST-NEXT:    vbroadcastsd %xmm2, %ymm4

@@ -74,7 +74,7 @@ unsigned __int64 check__getReg() {
   return reg;
 }
 
-// CHECK-MSVC: call i64 @llvm.read_register.i64(metadata !2)
-// CHECK-MSVC: call i64 @llvm.read_register.i64(metadata !3)
-// CHECK-MSVC: !2 = !{!"x18"}
-// CHECK-MSVC: !3 = !{!"sp"}
+// CHECK-MSVC: call i64 @llvm.read_register.i64(metadata ![[MD2:.*]])
+// CHECK-MSVC: call i64 @llvm.read_register.i64(metadata ![[MD3:.*]])
+// CHECK-MSVC: ![[MD2]] = !{!"x18"}
+// CHECK-MSVC: ![[MD3]] = !{!"sp"}

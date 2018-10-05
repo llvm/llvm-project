@@ -824,13 +824,6 @@ public:
     // Do nothing.
   }
 
-  /// The creation of multiple copy hints have been implemented in
-  /// weightCalcHelper(), but since this affects so many tests for many
-  /// targets, this is temporarily disabled per default. THIS SHOULD BE
-  /// "GENERAL GOODNESS" and hopefully all targets will update their tests
-  /// and enable this soon. This hook should then be removed.
-  virtual bool enableMultipleCopyHints() const { return false; }
-
   /// Allow the target to reverse allocation order of local live ranges. This
   /// will generally allocate shorter local live ranges first. For targets with
   /// many registers, this could reduce regalloc compile time by a large

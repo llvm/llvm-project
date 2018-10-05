@@ -156,7 +156,6 @@ public:
 
   void updateRegAllocHint(unsigned Reg, unsigned NewReg,
                           MachineFunction &MF) const override;
-  bool enableMultipleCopyHints() const override { return true; }
 
   bool hasBasePointer(const MachineFunction &MF) const;
 
