@@ -45,6 +45,10 @@ public:
 
   void SetEchoCommands(bool);
 
+  bool GetEchoCommentCommands() const;
+
+  void SetEchoCommentCommands(bool echo);
+
   bool GetPrintResults() const;
 
   void SetPrintResults(bool);
