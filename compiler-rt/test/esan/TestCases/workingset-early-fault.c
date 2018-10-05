@@ -3,6 +3,8 @@
 //
 // RUN: %clang_esan_wset %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
+// Stucks at init and no clone feature equivalent.
+// UNSUPPORTED: freebsd
 
 #include <stdio.h>
 #include <stdlib.h>

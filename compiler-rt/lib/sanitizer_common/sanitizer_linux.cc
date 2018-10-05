@@ -591,7 +591,7 @@ static void GetArgsAndEnv(char ***argv, char ***envp) {
   // this information. See also <sys/exec.h>.
   ps_strings *pss;
   size_t sz = sizeof(pss);
-  if (sysctlbyname("kern.ps_strings", &pss, &sz, NULL, 0) == -1) {
+  if (internal_sysctlbyname("kern.ps_strings", &pss, &sz, NULL, 0) == -1) {
     Printf("sysctl kern.ps_strings failed\n");
     Die();
   }
@@ -796,6 +796,16 @@ int internal_sysctl(const int *name, unsigned int namelen, void *oldp,
   return sysctl(name, namelen, oldp, (size_t *)oldlenp, newp, (size_t)newlen);
 #endif
 }
+
+int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
+                          const void *newp, uptr newlen) {
+#if SANITIZER_OPENBSD
+  return sysctlbyname(sname, oldp, (size_t *)oldlenp, (void *)newp,
+                      (size_t)newlen);
+#else
+  return sysctlbyname(sname, oldp, (size_t *)oldlenp, newp, (size_t)newlen);
+#endif
+}
 #endif
 
 #if SANITIZER_LINUX
@@ -906,8 +916,18 @@ bool internal_sigismember(__sanitizer_sigset_t *set, int signum) {
   const uptr bit = signum % (sizeof(k_set->sig[0]) * 8);
   return k_set->sig[idx] & (1 << bit);
 }
-#endif  // SANITIZER_LINUX
-#endif  // !SANITIZER_SOLARIS && !SANITIZER_NETBSD
+#elif SANITIZER_FREEBSD
+void internal_sigdelset(__sanitizer_sigset_t *set, int signum) {
+  sigset_t *rset = reinterpret_cast<sigset_t *>(set);
+  sigdelset(rset, signum);
+}
+
+bool internal_sigismember(__sanitizer_sigset_t *set, int signum) {
+  sigset_t *rset = reinterpret_cast<sigset_t *>(set);
+  return sigismember(rset, signum);
+}
+#endif
+#endif // !SANITIZER_SOLARIS
 
 #if !SANITIZER_NETBSD
 // ThreadLister implementation.
