@@ -54,13 +54,13 @@ entry:
 ; OBJ:   DW_AT_name ("foo")
 ; OBJ:   DW_TAG_call_site
 ; OBJ:     DW_AT_call_origin ([[bar_sp]])
-; OBJ:     DW_AT_call_return_pc ({{[0x]+}}26)
+; OBJ:     DW_AT_call_return_pc
 ; OBJ:   DW_TAG_call_site
 ; OBJ:     DW_AT_call_origin ([[bat_sp]])
-; OBJ:     DW_AT_call_return_pc ({{[0x]+}}2b)
+; OBJ:     DW_AT_call_return_pc
 ; OBJ:   DW_TAG_call_site
 ; OBJ:     DW_AT_call_origin ([[bar_sp]])
-; OBJ:     DW_AT_call_return_pc ({{[0x]+}}30)
+; OBJ:     DW_AT_call_return_pc
 ; OBJ:   DW_TAG_call_site
 ; OBJ:     DW_AT_call_origin ([[bat_sp]])
 ; OBJ:     DW_AT_call_tail_call
@@ -80,7 +80,7 @@ entry:
 ; OBJ: DW_AT_name ("main")
 ; OBJ:   DW_TAG_call_site
 ; OBJ:     DW_AT_call_origin ([[foo_sp]])
-; OBJ:     DW_AT_call_return_pc ({{[0x]+}}46)
+; OBJ:     DW_AT_call_return_pc
 define i32 @main() !dbg !29 {
 entry:
   call void @_Z3foov(), !dbg !32
