@@ -203,10 +203,13 @@ public:
   // Allow iteration over the associated child chunks for this section.
   ArrayRef<SectionChunk *> children() const { return AssocChildren; }
 
+  // The section ID this chunk belongs to in its Obj.
+  uint32_t getSectionNumber() const;
+
   // A pointer pointing to a replacement for this chunk.
   // Initially it points to "this" object. If this chunk is merged
   // with other chunk by ICF, it points to another chunk,
-  // and this chunk is considrered as dead.
+  // and this chunk is considered as dead.
   SectionChunk *Repl;
 
   // The CRC of the contents as described in the COFF spec 4.5.5.
