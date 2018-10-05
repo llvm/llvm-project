@@ -752,7 +752,15 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
       }
       SmallVector<SlotIndex, 16> Kills;
       extendDef(Idx, Loc, LI, VNI, &Kills, LIS);
-      if (LI)
+      // FIXME: Handle sub-registers in addDefsFromCopies. The problem is that
+      // if the original location for example is %vreg0:sub_hi, and we find a
+      // full register copy in addDefsFromCopies (at the moment it only handles
+      // full register copies), then we must add the sub1 sub-register index to
+      // the new location. However, that is only possible if the new virtual
+      // register is of the same regclass (or if there is an equivalent
+      // sub-register in that regclass). For now, simply skip handling copies if
+      // a sub-register is involved.
+      if (LI && !LocMO.getSubReg())
         addDefsFromCopies(LI, Loc.locNo(), Loc.wasIndirect(), Kills, Defs, MRI,
                           LIS);
       continue;
