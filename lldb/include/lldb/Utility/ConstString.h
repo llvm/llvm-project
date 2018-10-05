@@ -253,7 +253,7 @@ public:
   //------------------------------------------------------------------
   /// Clear this object's state.
   ///
-  /// Clear any contained string and reset the value to the an empty string
+  /// Clear any contained string and reset the value to the empty string
   /// value.
   //------------------------------------------------------------------
   void Clear() { m_string = nullptr; }

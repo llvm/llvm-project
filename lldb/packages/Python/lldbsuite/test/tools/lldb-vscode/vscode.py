@@ -907,7 +907,7 @@ def main():
         '--vscode',
         type='string',
         dest='vscode_path',
-        help=('The path to the a command line program that implements the '
+        help=('The path to the command line program that implements the '
               'Visual Studio Code Debug Adaptor protocol.'),
         default=None)
 

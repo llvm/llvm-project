@@ -66,3 +66,15 @@ void check_ReadWriteBarrier() {
 
 // CHECK-MSVC: fence syncscope("singlethread")
 // CHECK-LINUX: error: implicit declaration of function '_ReadWriteBarrier'
+
+unsigned __int64 check__getReg() {
+  unsigned volatile __int64 reg;
+  reg = __getReg(18);
+  reg = __getReg(31);
+  return reg;
+}
+
+// CHECK-MSVC: call i64 @llvm.read_register.i64(metadata !2)
+// CHECK-MSVC: call i64 @llvm.read_register.i64(metadata !3)
+// CHECK-MSVC: !2 = !{!"x18"}
+// CHECK-MSVC: !3 = !{!"sp"}

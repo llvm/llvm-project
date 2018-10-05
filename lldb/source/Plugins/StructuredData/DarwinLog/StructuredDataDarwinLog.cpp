@@ -482,11 +482,11 @@ static constexpr OptionDefinition g_enable_option_table[] = {
      "message."},
     {LLDB_OPT_SET_ALL, false, "subsystem", 's', OptionParser::eNoArgument,
      nullptr, {}, 0, eArgTypeNone,
-     "Include the subsystem in the the message header when displaying "
+     "Include the subsystem in the message header when displaying "
      "a log message."},
     {LLDB_OPT_SET_ALL, false, "category", 'c', OptionParser::eNoArgument,
      nullptr, {}, 0, eArgTypeNone,
-     "Include the category in the the message header when displaying "
+     "Include the category in the message header when displaying "
      "a log message."},
     {LLDB_OPT_SET_ALL, false, "activity-chain", 'C', OptionParser::eNoArgument,
      nullptr, {}, 0, eArgTypeNone,
