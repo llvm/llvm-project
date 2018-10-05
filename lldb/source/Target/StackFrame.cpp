@@ -49,20 +49,18 @@ using namespace lldb_private;
 
 StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        user_id_t unwind_frame_index, addr_t cfa,
-                       bool cfa_is_valid, addr_t pc, uint32_t stop_id,
-                       bool stop_id_is_valid, bool is_history_frame,
+                       bool cfa_is_valid, addr_t pc, StackFrame::Kind kind,
                        const SymbolContext *sc_ptr)
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index), m_reg_context_sp(),
       m_id(pc, cfa, nullptr), m_frame_code_addr(pc), m_sc(), m_flags(),
       m_frame_base(), m_frame_base_error(), m_cfa_is_valid(cfa_is_valid),
-      m_stop_id(stop_id), m_stop_id_is_valid(stop_id_is_valid),
-      m_is_history_frame(is_history_frame), m_variable_list_sp(),
+      m_stack_frame_kind(kind), m_variable_list_sp(),
       m_variable_list_value_objects(), m_disassembly(), m_mutex() {
   // If we don't have a CFA value, use the frame index for our StackID so that
   // recursive functions properly aren't confused with one another on a history
   // stack.
-  if (m_is_history_frame && !m_cfa_is_valid) {
+  if (IsHistorical() && !m_cfa_is_valid) {
     m_id.SetCFA(m_frame_index);
   }
 
@@ -80,10 +78,9 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_concrete_frame_index(unwind_frame_index),
       m_reg_context_sp(reg_context_sp), m_id(pc, cfa, nullptr),
       m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
-      m_frame_base_error(), m_cfa_is_valid(true), m_stop_id(0),
-      m_stop_id_is_valid(false), m_is_history_frame(false),
-      m_variable_list_sp(), m_variable_list_value_objects(), m_disassembly(),
-      m_mutex() {
+      m_frame_base_error(), m_cfa_is_valid(true),
+      m_stack_frame_kind(StackFrame::Kind::Regular), m_variable_list_sp(),
+      m_variable_list_value_objects(), m_disassembly(), m_mutex() {
   if (sc_ptr != nullptr) {
     m_sc = *sc_ptr;
     m_flags.Set(m_sc.GetResolvedMask());
@@ -106,10 +103,9 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_id(pc_addr.GetLoadAddress(thread_sp->CalculateTarget().get()), cfa,
            nullptr),
       m_frame_code_addr(pc_addr), m_sc(), m_flags(), m_frame_base(),
-      m_frame_base_error(), m_cfa_is_valid(true), m_stop_id(0),
-      m_stop_id_is_valid(false), m_is_history_frame(false),
-      m_variable_list_sp(), m_variable_list_value_objects(), m_disassembly(),
-      m_mutex() {
+      m_frame_base_error(), m_cfa_is_valid(true),
+      m_stack_frame_kind(StackFrame::Kind::Regular), m_variable_list_sp(),
+      m_variable_list_value_objects(), m_disassembly(), m_mutex() {
   if (sc_ptr != nullptr) {
     m_sc = *sc_ptr;
     m_flags.Set(m_sc.GetResolvedMask());
@@ -210,7 +206,7 @@ const Address &StackFrame::GetFrameCodeAddress() {
 bool StackFrame::ChangePC(addr_t pc) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   // We can't change the pc value of a history stack frame - it is immutable.
-  if (m_is_history_frame)
+  if (IsHistorical())
     return false;
   m_frame_code_addr.SetRawAddress(pc);
   m_sc.Clear(false);
@@ -456,7 +452,7 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
                                    bool must_have_valid_location) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   // We can't fetch variable information for a history stack frame.
-  if (m_is_history_frame)
+  if (IsHistorical())
     return VariableListSP();
 
   VariableListSP var_list_sp(new VariableList);
@@ -490,7 +486,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     VariableSP &var_sp, Status &error) {
   llvm::StringRef original_var_expr = var_expr;
   // We can't fetch variable information for a history stack frame.
-  if (m_is_history_frame)
+  if (IsHistorical())
     return ValueObjectSP();
 
   if (var_expr.empty()) {
@@ -1135,7 +1131,7 @@ StackFrame::GetValueObjectForFrameVariable(const VariableSP &variable_sp,
                                            DynamicValueType use_dynamic) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   ValueObjectSP valobj_sp;
-  if (m_is_history_frame) {
+  if (IsHistorical()) {
     return valobj_sp;
   }
   VariableList *var_list = GetVariableList(true);
@@ -1164,7 +1160,7 @@ StackFrame::GetValueObjectForFrameVariable(const VariableSP &variable_sp,
 ValueObjectSP StackFrame::TrackGlobalVariable(const VariableSP &variable_sp,
                                               DynamicValueType use_dynamic) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  if (m_is_history_frame)
+  if (IsHistorical())
     return ValueObjectSP();
 
   // Check to make sure we aren't already tracking this variable?
@@ -1192,6 +1188,14 @@ bool StackFrame::IsInlined() {
   if (m_sc.block)
     return m_sc.block->GetContainingInlinedBlock() != nullptr;
   return false;
+}
+
+bool StackFrame::IsHistorical() const {
+  return m_stack_frame_kind == StackFrame::Kind::History;
+}
+
+bool StackFrame::IsArtificial() const {
+  return m_stack_frame_kind == StackFrame::Kind::Artificial;
 }
 
 lldb::LanguageType StackFrame::GetLanguage() {
