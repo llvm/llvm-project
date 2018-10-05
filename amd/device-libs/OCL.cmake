@@ -48,7 +48,6 @@ macro(opencl_bc_lib name)
   get_target_property(irif_lib_output irif_lib OUTPUT_NAME)
 
   set(OUT_NAME "${CMAKE_CURRENT_BINARY_DIR}/${name}")
-  set(DEPS_TGT ${name}_deps)
   set(LIB_TGT ${name}_lib)
   set(clean_files)
 
@@ -66,7 +65,7 @@ macro(opencl_bc_lib name)
         COMMAND "${CLANG}" ${inc_options} ${CLANG_OCL_FLAGS}
           -emit-llvm -Xclang -mlink-builtin-bitcode -Xclang "${irif_lib_output}"
           -c "${file}" -o "${output}"
-        DEPENDS "${file}" irif_lib)
+        DEPENDS "${file}" "${irif_lib_output}" "${CLANG}")
       list(APPEND deps "${output}")
       list(APPEND clean_files "${output}")
     endif()
@@ -74,11 +73,6 @@ macro(opencl_bc_lib name)
       list(APPEND deps "${file}")
     endif()
   endforeach()
-
-  add_custom_target("${DEPS_TGT}" DEPENDS ${deps})
-  if(NOT ROCM_DEVICELIB_STANDALONE_BUILD)
-    add_dependencies("${DEPS_TGT}" clang)
-  endif()
 
   # The llvm-link command-lines can get long enough to trigger strange behavior
   # on Windows. LLVM tools support "response files" which can work around this:
@@ -98,7 +92,7 @@ macro(opencl_bc_lib name)
       -o "${OUT_NAME}${STRIP_SUFFIX}" "${OUT_NAME}${LIB_SUFFIX}"
     COMMAND "${PREPARE_BUILTINS}"
       -o "${OUT_NAME}${FINAL_SUFFIX}" "${OUT_NAME}${STRIP_SUFFIX}"
-    DEPENDS "${DEPS_TGT}" "${OUT_NAME}_response")
+    DEPENDS "${deps}" "${OUT_NAME}_response" "${PREPARE_BUILTINS}")
   add_custom_target("${LIB_TGT}" ALL
     DEPENDS "${OUT_NAME}${FINAL_SUFFIX}"
     SOURCES ${ARGN})
@@ -118,6 +112,7 @@ macro(opencl_bc_lib name)
   if (TARGET prepare-builtins)
     add_dependencies("${LIB_TGT}" prepare-builtins)
   endif()
+  add_dependencies("${LIB_TGT}" irif_lib)
 
   set_directory_properties(PROPERTIES
     ADDITIONAL_MAKE_CLEAN_FILES "${clean_files}")
