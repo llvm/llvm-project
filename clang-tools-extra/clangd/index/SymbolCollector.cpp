@@ -19,7 +19,6 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Index/IndexSymbol.h"
@@ -229,10 +228,10 @@ getTokenLocation(SourceLocation TokLoc, const SourceManager &SM,
 // the first seen declaration as canonical declaration is not a good enough
 // heuristic.
 bool isPreferredDeclaration(const NamedDecl &ND, index::SymbolRoleSet Roles) {
-  using namespace clang::ast_matchers;
+  const auto& SM = ND.getASTContext().getSourceManager();
   return (Roles & static_cast<unsigned>(index::SymbolRole::Definition)) &&
          llvm::isa<TagDecl>(&ND) &&
-         match(decl(isExpansionInMainFile()), ND, ND.getASTContext()).empty();
+         !SM.isWrittenInMainFile(SM.getExpansionLoc(ND.getLocation()));
 }
 
 RefKind toRefKind(index::SymbolRoleSet Roles) {
@@ -260,7 +259,6 @@ void SymbolCollector::initialize(ASTContext &Ctx) {
 bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
                                           ASTContext &ASTCtx,
                                           const Options &Opts) {
-  using namespace clang::ast_matchers;
   if (ND.isImplicit())
     return false;
   // Skip anonymous declarations, e.g (anonymous enum/class/struct).
