@@ -606,7 +606,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
         assert(
             (generic_regnum == LLDB_REGNUM_GENERIC_PC ||
              generic_regnum == LLDB_REGNUM_GENERIC_FLAGS) &&
-            "eInfoTypeISA used for poping a register other the the PC/FLAGS");
+            "eInfoTypeISA used for popping a register other the PC/FLAGS");
         if (generic_regnum != LLDB_REGNUM_GENERIC_FLAGS) {
           m_curr_row->SetRegisterLocationToSame(reg_num,
                                                 false /*must_replace*/);

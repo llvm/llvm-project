@@ -60,12 +60,8 @@ PreferredTuple ChoosePreferredUse(PreferredTuple &CurrentUse,
                                   unsigned OpcodeForCandidate,
                                   MachineInstr *MIForCandidate) {
   if (!CurrentUse.Ty.isValid()) {
-    if (CurrentUse.ExtendOpcode == OpcodeForCandidate)
-      return {TyForCandidate, OpcodeForCandidate, MIForCandidate};
-    if (CurrentUse.ExtendOpcode == TargetOpcode::G_ANYEXT &&
-        (OpcodeForCandidate == TargetOpcode::G_SEXT ||
-         OpcodeForCandidate == TargetOpcode::G_ZEXT ||
-         OpcodeForCandidate == TargetOpcode::G_ANYEXT))
+    if (CurrentUse.ExtendOpcode == OpcodeForCandidate ||
+        CurrentUse.ExtendOpcode == TargetOpcode::G_ANYEXT)
       return {TyForCandidate, OpcodeForCandidate, MIForCandidate};
     return CurrentUse;
   }
@@ -114,7 +110,8 @@ PreferredTuple ChoosePreferredUse(PreferredTuple &CurrentUse,
 /// want to try harder to find a dominating block.
 static void InsertInsnsWithoutSideEffectsBeforeUse(
     MachineIRBuilder &Builder, MachineInstr &DefMI, MachineOperand &UseMO,
-    std::function<void(MachineBasicBlock::iterator)> Inserter) {
+    std::function<void(MachineBasicBlock *, MachineBasicBlock::iterator)>
+        Inserter) {
   MachineInstr &UseMI = *UseMO.getParent();
 
   MachineBasicBlock *InsertBB = UseMI.getParent();
@@ -129,16 +126,26 @@ static void InsertInsnsWithoutSideEffectsBeforeUse(
   // the def instead of at the start of the block.
   if (InsertBB == DefMI.getParent()) {
     MachineBasicBlock::iterator InsertPt = &DefMI;
-    Inserter(std::next(InsertPt));
+    Inserter(InsertBB, std::next(InsertPt));
     return;
   }
 
   // Otherwise we want the start of the BB
-  Inserter(InsertBB->getFirstNonPHI());
+  Inserter(InsertBB, InsertBB->getFirstNonPHI());
 }
 } // end anonymous namespace
 
 bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
+  struct InsertionPoint {
+    MachineOperand *UseMO;
+    MachineBasicBlock *InsertIntoBB;
+    MachineBasicBlock::iterator InsertBefore;
+    InsertionPoint(MachineOperand *UseMO, MachineBasicBlock *InsertIntoBB,
+                   MachineBasicBlock::iterator InsertBefore)
+        : UseMO(UseMO), InsertIntoBB(InsertIntoBB), InsertBefore(InsertBefore) {
+    }
+  };
+
   // We match the loads and follow the uses to the extend instead of matching
   // the extends and following the def to the load. This is because the load
   // must remain in the same position for correctness (unless we also add code
@@ -171,10 +178,12 @@ bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
   PreferredTuple Preferred = {LLT(), PreferredOpcode, nullptr};
   for (auto &UseMI : MRI.use_instructions(LoadValue.getReg())) {
     if (UseMI.getOpcode() == TargetOpcode::G_SEXT ||
-        UseMI.getOpcode() == TargetOpcode::G_ZEXT || !Preferred.Ty.isValid())
+        UseMI.getOpcode() == TargetOpcode::G_ZEXT ||
+        UseMI.getOpcode() == TargetOpcode::G_ANYEXT) {
       Preferred = ChoosePreferredUse(Preferred,
                                      MRI.getType(UseMI.getOperand(0).getReg()),
                                      UseMI.getOpcode(), &UseMI);
+    }
   }
 
   // There were no extends
@@ -195,7 +204,7 @@ bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
 
   // Rewrite all the uses to fix up the types.
   SmallVector<MachineInstr *, 1> ScheduleForErase;
-  SmallVector<std::pair<MachineOperand *, MachineInstr *>, 4> ScheduleForInsert;
+  SmallVector<InsertionPoint, 4> ScheduleForInsert;
   for (auto &UseMO : MRI.use_operands(LoadValue.getReg())) {
     MachineInstr *UseMI = UseMO.getParent();
 
@@ -245,8 +254,9 @@ bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
           //    ... = ... %3(s64)
           InsertInsnsWithoutSideEffectsBeforeUse(
               Builder, MI, UseMO,
-              [&](MachineBasicBlock::iterator InsertBefore) {
-                ScheduleForInsert.emplace_back(&UseMO, &*InsertBefore);
+              [&](MachineBasicBlock *InsertIntoBB,
+                  MachineBasicBlock::iterator InsertBefore) {
+                ScheduleForInsert.emplace_back(&UseMO, InsertIntoBB, InsertBefore);
               });
         }
         continue;
@@ -261,27 +271,29 @@ bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
     // The use isn't an extend. Truncate back to the type we originally loaded.
     // This is free on many targets.
     InsertInsnsWithoutSideEffectsBeforeUse(
-        Builder, MI, UseMO, [&](MachineBasicBlock::iterator InsertBefore) {
-          ScheduleForInsert.emplace_back(&UseMO, &*InsertBefore);
+        Builder, MI, UseMO,
+        [&](MachineBasicBlock *InsertIntoBB,
+            MachineBasicBlock::iterator InsertBefore) {
+          ScheduleForInsert.emplace_back(&UseMO, InsertIntoBB, InsertBefore);
         });
   }
 
   DenseMap<MachineBasicBlock *, MachineInstr *> EmittedInsns;
   for (auto &InsertionInfo : ScheduleForInsert) {
-    MachineOperand *UseMO = InsertionInfo.first;
-    MachineInstr *InsertBefore = InsertionInfo.second;
+    MachineOperand *UseMO = InsertionInfo.UseMO;
+    MachineBasicBlock *InsertIntoBB = InsertionInfo.InsertIntoBB;
+    MachineBasicBlock::iterator InsertBefore = InsertionInfo.InsertBefore;
 
-    MachineInstr *PreviouslyEmitted =
-        EmittedInsns.lookup(InsertBefore->getParent());
+    MachineInstr *PreviouslyEmitted = EmittedInsns.lookup(InsertIntoBB);
     if (PreviouslyEmitted) {
       UseMO->setReg(PreviouslyEmitted->getOperand(0).getReg());
       continue;
     }
 
-    Builder.setInsertPt(*InsertBefore->getParent(), InsertBefore);
+    Builder.setInsertPt(*InsertIntoBB, InsertBefore);
     unsigned NewDstReg = MRI.cloneVirtualRegister(MI.getOperand(0).getReg());
     MachineInstr *NewMI = Builder.buildTrunc(NewDstReg, ChosenDstReg);
-    EmittedInsns[InsertBefore->getParent()] = NewMI;
+    EmittedInsns[InsertIntoBB] = NewMI;
     UseMO->setReg(NewDstReg);
     Observer.createdInstr(*NewMI);
   }

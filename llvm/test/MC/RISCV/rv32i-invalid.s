@@ -82,6 +82,16 @@ csrrsi a0, %pcrel_hi(c), a0 # CHECK: :[[@LINE]]:12: error: immediate must be an 
 csrrwi a0, %pcrel_lo(4), 0 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [0, 4095]
 csrrsi a0, %pcrel_lo(d), a0 # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the range [0, 4095]
 
+## named csr in place of uimm12
+csrrw a0, foos, a0 # CHECK: :[[@LINE]]:11: error: operand must be a valid system register name or an integer in the range [0, 4095]
+csrrs a0, mstatusx, a0 # CHECK: :[[@LINE]]:11: error: operand must be a valid system register name or an integer in the range [0, 4095]
+csrrs a0, xmstatus, a0 # CHECK: :[[@LINE]]:11: error: operand must be a valid system register name or an integer in the range [0, 4095]
+csrrc a0, m12status, a0 # CHECK: :[[@LINE]]:11: error: operand must be a valid system register name or an integer in the range [0, 4095]
+csrrwi a0, mstatus12, 0 # CHECK: :[[@LINE]]:12: error: operand must be a valid system register name or an integer in the range [0, 4095]
+csrrsi a0, mhpm12counter, a0 # CHECK: :[[@LINE]]:12: error: operand must be a valid system register name or an integer in the range [0, 4095]
+csrrwi a0, mhpmcounter32, 0 # CHECK: :[[@LINE]]:12: error: operand must be a valid system register name or an integer in the range [0, 4095]
+csrrsi a0, A, a0 # CHECK: :[[@LINE]]:12: error: operand must be a valid system register name or an integer in the range [0, 4095]
+
 ## simm13_lsb0
 beq t0, t1, %lo(1) # CHECK: :[[@LINE]]:13: error: immediate must be a multiple of 2 bytes in the range [-4096, 4094]
 bne t0, t1, %lo(a) # CHECK: :[[@LINE]]:13: error: immediate must be a multiple of 2 bytes in the range [-4096, 4094]

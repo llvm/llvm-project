@@ -27,7 +27,7 @@ namespace lldb_vscode {
 ///
 /// @param[in] prefix
 ///     A string that will be printed into \a strm prior to emitting
-///     the prmopt + command and command output. Can be NULL.
+///     the prompt + command and command output. Can be NULL.
 ///
 /// @param[in] commands
 ///     An array of LLDB commands to execute.
@@ -48,7 +48,7 @@ void RunLLDBCommands(llvm::StringRef prefix,
 ///
 /// @param[in] prefix
 ///     A string that will be printed into \a strm prior to emitting
-///     the prmopt + command and command output. Can be NULL.
+///     the prompt + command and command output. Can be NULL.
 ///
 /// @param[in] commands
 ///     An array of LLDB commands to execute.
