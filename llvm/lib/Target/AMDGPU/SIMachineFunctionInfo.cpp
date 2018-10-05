@@ -137,8 +137,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     }
   }
 
-  bool IsCOV2 = ST.isAmdCodeObjectV2(F);
-  if (IsCOV2) {
+  bool isAmdHsaOrMesa = ST.isAmdHsaOrMesa(F);
+  if (isAmdHsaOrMesa) {
     if (HasStackObjects || MaySpill)
       PrivateSegmentBuffer = true;
 
@@ -158,7 +158,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   if (F.hasFnAttribute("amdgpu-kernarg-segment-ptr"))
     KernargSegmentPtr = true;
 
-  if (ST.hasFlatAddressSpace() && isEntryFunction() && IsCOV2) {
+  if (ST.hasFlatAddressSpace() && isEntryFunction() && isAmdHsaOrMesa) {
     // TODO: This could be refined a lot. The attribute is a poor way of
     // detecting calls that may require it before argument lowering.
     if (HasStackObjects || F.hasFnAttribute("amdgpu-flat-scratch"))

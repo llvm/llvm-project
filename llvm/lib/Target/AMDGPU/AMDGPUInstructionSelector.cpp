@@ -630,6 +630,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
     return selectImpl(I, CoverageInfo);
   case TargetOpcode::G_ADD:
     return selectG_ADD(I);
+  case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_BITCAST:
     return selectCOPY(I);
   case TargetOpcode::G_CONSTANT:
