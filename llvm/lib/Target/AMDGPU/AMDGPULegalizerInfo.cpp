@@ -117,6 +117,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   setAction({G_ICMP, S1}, Legal);
   setAction({G_ICMP, 1, S32}, Legal);
 
+  getActionDefinitionsBuilder(G_INTTOPTR)
+    .legalIf([](const LegalityQuery &Query) {
+      return true;
+    });
 
   getActionDefinitionsBuilder({G_LOAD, G_STORE})
     .legalIf([=, &ST](const LegalityQuery &Query) {

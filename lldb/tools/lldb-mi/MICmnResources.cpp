@@ -78,7 +78,7 @@ const CMICmnResources::SRsrcTextData
          "and a custom plugin.\nThe custom plugin is not necessary to operate "
          "the MI Driver."},
         {IDE_MI_APP_ARG_USAGE, "\nMI driver usage:\n\n\tlldb-mi [--longOption] "
-                               "[-s hortOption] [executeable]\n\n[] = optional "
+                               "[-s hortOption] [executable]\n\n[] = optional "
                                "argument."},
         {IDE_MI_APP_ARG_HELP, "-h\n--help\n\tPrints out usage information for "
                               "the MI debugger. Exit the MI\n\tDriver "

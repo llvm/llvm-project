@@ -80,7 +80,7 @@ extern \"C\" void * __lldb_objc_find_implementation_for_selector (           \n\
         void *super_ptr;                                                     \n\
     };                                                                       \n\
     struct __lldb_objc_super {                                               \n\
-        void *reciever;                                                      \n\
+        void *receiver;                                                      \n\
         struct __lldb_objc_class *class_ptr;                                 \n\
     };                                                                       \n\
     struct __lldb_msg_ref {                                                  \n\
@@ -202,7 +202,7 @@ extern \"C\" void * __lldb_objc_find_implementation_for_selector (void *object, 
         void *super_ptr;                                                     \n\
     };                                                                       \n\
     struct __lldb_objc_super {                                               \n\
-        void *reciever;                                                      \n\
+        void *receiver;                                                      \n\
         struct __lldb_objc_class *class_ptr;                                 \n\
     };                                                                       \n\
     struct __lldb_msg_ref {                                                  \n\

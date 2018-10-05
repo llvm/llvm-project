@@ -3,166 +3,166 @@
 @class I;
 
 id kid;
-// CHECK: @"?kid@@3PAU.objc_object@@A" =  dso_local global
+// CHECK: @"?kid@@3PAUobjc_object@@A" =  dso_local global
 
 Class klass;
-// CHECK: @"?klass@@3PAU.objc_class@@A" = dso_local global
+// CHECK: @"?klass@@3PAUobjc_class@@A" = dso_local global
 
 I *kI;
-// CHECK: @"?kI@@3PAU.objc_cls_I@@A" = dso_local global
+// CHECK: @"?kI@@3PAUI@@A" = dso_local global
 
 void f(I *) {}
-// CHECK-LABEL: "?f@@YAXPAU.objc_cls_I@@@Z"
+// CHECK-LABEL: "?f@@YAXPAUI@@@Z"
 
 void f(const I *) {}
-// CHECK-LABEL: "?f@@YAXPBU.objc_cls_I@@@Z"
+// CHECK-LABEL: "?f@@YAXPBUI@@@Z"
 
 void f(I &) {}
-// CHECK-LABEL: "?f@@YAXAAU.objc_cls_I@@@Z"
+// CHECK-LABEL: "?f@@YAXAAUI@@@Z"
 
 void f(const I &) {}
-// CHECK-LABEL: "?f@@YAXABU.objc_cls_I@@@Z"
+// CHECK-LABEL: "?f@@YAXABUI@@@Z"
 
 void f(const I &&) {}
-// CHECK-LABEL: "?f@@YAX$$QBU.objc_cls_I@@@Z"
+// CHECK-LABEL: "?f@@YAX$$QBUI@@@Z"
 
 void g(id) {}
-// CHECK-LABEL: "?g@@YAXPAU.objc_object@@@Z"
+// CHECK-LABEL: "?g@@YAXPAUobjc_object@@@Z"
 
 void g(id &) {}
-// CHECK-LABEL: "?g@@YAXAAPAU.objc_object@@@Z"
+// CHECK-LABEL: "?g@@YAXAAPAUobjc_object@@@Z"
 
 void g(const id &) {}
-// CHECK-LABEL: "?g@@YAXABQAU.objc_object@@@Z"
+// CHECK-LABEL: "?g@@YAXABQAUobjc_object@@@Z"
 
 void g(id &&) {}
-// CHECK-LABEL: "?g@@YAX$$QAPAU.objc_object@@@Z"
+// CHECK-LABEL: "?g@@YAX$$QAPAUobjc_object@@@Z"
 
 void h(Class) {}
-// CHECK-LABEL: "?h@@YAXPAU.objc_class@@@Z"
+// CHECK-LABEL: "?h@@YAXPAUobjc_class@@@Z"
 
 void h(Class &) {}
-// CHECK-LABEL: "?h@@YAXAAPAU.objc_class@@@Z"
+// CHECK-LABEL: "?h@@YAXAAPAUobjc_class@@@Z"
 
 void h(const Class &) {}
-// CHECK-LABEL: "?h@@YAXABQAU.objc_class@@@Z"
+// CHECK-LABEL: "?h@@YAXABQAUobjc_class@@@Z"
 
 void h(Class &&) {}
-// CHECK-LABEL: "?h@@YAX$$QAPAU.objc_class@@@Z"
+// CHECK-LABEL: "?h@@YAX$$QAPAUobjc_class@@@Z"
 
 I *i() { return nullptr; }
-// CHECK-LABEL: "?i@@YAPAU.objc_cls_I@@XZ"
+// CHECK-LABEL: "?i@@YAPAUI@@XZ"
 
 const I *j() { return nullptr; }
-// CHECK-LABEL: "?j@@YAPBU.objc_cls_I@@XZ"
+// CHECK-LABEL: "?j@@YAPBUI@@XZ"
 
 I &k() { return *kI; }
-// CHECK-LABEL: "?k@@YAAAU.objc_cls_I@@XZ"
+// CHECK-LABEL: "?k@@YAAAUI@@XZ"
 
 const I &l() { return *kI; }
-// CHECK-LABEL: "?l@@YAABU.objc_cls_I@@XZ"
+// CHECK-LABEL: "?l@@YAABUI@@XZ"
 
 void m(const id) {}
-// CHECK-LABEL: "?m@@YAXQAU.objc_object@@@Z"
+// CHECK-LABEL: "?m@@YAXQAUobjc_object@@@Z"
 
 void m(const I *) {}
-// CHECK-LABEL: "?m@@YAXPBU.objc_cls_I@@@Z"
+// CHECK-LABEL: "?m@@YAXPBUI@@@Z"
 
 void n(SEL) {}
-// CHECK-LABEL: "?n@@YAXPAU.objc_selector@@@Z"
+// CHECK-LABEL: "?n@@YAXPAUobjc_selector@@@Z"
 
 void n(SEL *) {}
-// CHECK-LABEL: "?n@@YAXPAPAU.objc_selector@@@Z"
+// CHECK-LABEL: "?n@@YAXPAPAUobjc_selector@@@Z"
 
 void n(const SEL *) {}
-// CHECK-LABEL: "?n@@YAXPBQAU.objc_selector@@@Z"
+// CHECK-LABEL: "?n@@YAXPBQAUobjc_selector@@@Z"
 
 void n(SEL &) {}
-// CHECK-LABEL: "?n@@YAXAAPAU.objc_selector@@@Z"
+// CHECK-LABEL: "?n@@YAXAAPAUobjc_selector@@@Z"
 
 void n(const SEL &) {}
-// CHECK-LABEL: "?n@@YAXABQAU.objc_selector@@@Z"
+// CHECK-LABEL: "?n@@YAXABQAUobjc_selector@@@Z"
 
 void n(SEL &&) {}
-// CHECK-LABEL: "?n@@YAX$$QAPAU.objc_selector@@@Z"
+// CHECK-LABEL: "?n@@YAX$$QAPAUobjc_selector@@@Z"
 
 struct __declspec(dllexport) s {
   struct s &operator=(const struct s &) = delete;
 
   void m(I *) {}
-  // CHECK-LABEL: "?m@s@@QAAXPAU.objc_cls_I@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAXPAUI@@@Z"
 
   void m(const I *) {}
-  // CHECK-LABEL: "?m@s@@QAAXPBU.objc_cls_I@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAXPBUI@@@Z"
 
   void m(I &) {}
-  // CHECK-LABEL: "?m@s@@QAAXAAU.objc_cls_I@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAXAAUI@@@Z"
 
   void m(const I &) {}
-  // CHECK-LABEL: "?m@s@@QAAXABU.objc_cls_I@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAXABUI@@@Z"
 
   void m(I &&) {}
-  // CHECK-LABEL: "?m@s@@QAAX$$QAU.objc_cls_I@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAX$$QAUI@@@Z"
 
   void m(const I &&) {}
-  // CHECK-LABEL: "?m@s@@QAAX$$QBU.objc_cls_I@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAX$$QBUI@@@Z"
 
   void m(id) {}
-  // CHECK-LABEL: "?m@s@@QAAXPAU.objc_object@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAXPAUobjc_object@@@Z"
 
   void m(id &) {}
-  // CHECK-LABEL: "?m@s@@QAAXAAPAU.objc_object@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAXAAPAUobjc_object@@@Z"
 
   void m(id &&) {}
-  // CHECK-LABEL: "?m@s@@QAAX$$QAPAU.objc_object@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAX$$QAPAUobjc_object@@@Z"
 
   void m(const id &) {}
-  // CHECK-LABEL: "?m@s@@QAAXABQAU.objc_object@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAXABQAUobjc_object@@@Z"
 
   void m(const id &&) {}
-  // CHECK-LABEL: "?m@s@@QAAX$$QBQAU.objc_object@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAX$$QBQAUobjc_object@@@Z"
 
   void m(Class *) {}
-  // CHECK-LABEL: "?m@s@@QAAXPAPAU.objc_class@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAXPAPAUobjc_class@@@Z"
 
   void m(const Class *) {}
-  // CHECK-LABEL: "?m@s@@QAAXPBQAU.objc_class@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAXPBQAUobjc_class@@@Z"
 
   void m(Class) {}
-  // CHECK-LABEL: "?m@s@@QAAXPAU.objc_class@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAXPAUobjc_class@@@Z"
 
   void m(Class &) {}
-  // CHECK-LABEL: "?m@s@@QAAXAAPAU.objc_class@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAXAAPAUobjc_class@@@Z"
 
   void m(const Class &) {}
-  // CHECK-LABEL: "?m@s@@QAAXABQAU.objc_class@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAXABQAUobjc_class@@@Z"
 
   void m(Class &&) {}
-  // CHECK-LABEL: "?m@s@@QAAX$$QAPAU.objc_class@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAX$$QAPAUobjc_class@@@Z"
 
   void m(const Class &&) {}
-  // CHECK-LABEL: "?m@s@@QAAX$$QBQAU.objc_class@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAX$$QBQAUobjc_class@@@Z"
 
   void m(SEL) {}
-  // CHECK-LABEL: "?m@s@@QAAXPAU.objc_selector@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAXPAUobjc_selector@@@Z"
 
   void m(SEL *) {}
-  // CHECK-LABEL: "?m@s@@QAAXPAPAU.objc_selector@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAXPAPAUobjc_selector@@@Z"
 
   void m(const SEL *) {}
-  // CHECK-LABEL: "?m@s@@QAAXPBQAU.objc_selector@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAXPBQAUobjc_selector@@@Z"
 
   void m(SEL &) {}
-  // CHECK-LABEL: "?m@s@@QAAXAAPAU.objc_selector@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAXAAPAUobjc_selector@@@Z"
 
   void m(const SEL &) {}
-  // CHECK-LABEL: "?m@s@@QAAXABQAU.objc_selector@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAXABQAUobjc_selector@@@Z"
 
   void m(SEL &&) {}
-  // CHECK-LABEL: "?m@s@@QAAX$$QAPAU.objc_selector@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAX$$QAPAUobjc_selector@@@Z"
 
   void m(const SEL &&) {}
-  // CHECK-LABEL: "?m@s@@QAAX$$QBQAU.objc_selector@@@Z"
+  // CHECK-LABEL: "?m@s@@QAAX$$QBQAUobjc_selector@@@Z"
 };
 
 template <typename T>
@@ -179,14 +179,14 @@ struct t {
 };
 
 template struct t<id>;
-// CHECK-LABEL: "??0?$t@PAU.objc_object@@@@QAA@XZ"
+// CHECK-LABEL: "??0?$t@PAUobjc_object@@@@QAA@XZ"
 
 template struct t<remove_pointer<id>::type>;
-// CHECK-LABEL: "??0?$t@U.objc_object@@@@QAA@XZ"
+// CHECK-LABEL: "??0?$t@Uobjc_object@@@@QAA@XZ"
 
 template struct t<SEL>;
-// CHECK-LABEL: "??0?$t@PAU.objc_selector@@@@QAA@XZ"
+// CHECK-LABEL: "??0?$t@PAUobjc_selector@@@@QAA@XZ"
 
 template struct t<remove_pointer<SEL>::type>;
-// CHECK-LABEL: "??0?$t@U.objc_selector@@@@QAA@XZ"
+// CHECK-LABEL: "??0?$t@Uobjc_selector@@@@QAA@XZ"
 

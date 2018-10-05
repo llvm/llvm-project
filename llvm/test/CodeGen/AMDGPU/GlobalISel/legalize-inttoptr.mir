@@ -1,0 +1,29 @@
+# RUN: llc -march=amdgcn -run-pass=legalizer %s -o - | FileCheck %s
+
+---
+name: test_inttoptr
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr2, $vgpr0_vgpr1, $vgpr2
+
+    ; CHECK-LABEL: name: test_inttoptr
+    ; CHECK: [[S64:%[0-9]+]]:_(s64) = COPY $sgpr0_sgpr1
+    ; CHECK: [[S32:%[0-9]+]]:_(s32) = COPY $sgpr2
+    ; CHECK: [[V64:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[V32:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK: (p0) = G_INTTOPTR [[V64]]
+    ; CHECK: (p1) = G_INTTOPTR [[V64]]
+    ; CHECK: (p3) = G_INTTOPTR [[V32]]
+    ; CHECK: (p4) = G_INTTOPTR [[S64]]
+    ; CHECK: (p5) = G_INTTOPTR [[S32]]
+    %0:_(s64) = COPY $sgpr0_sgpr1
+    %1:_(s32) = COPY $sgpr2
+    %2:_(s64) = COPY $vgpr0_vgpr1
+    %3:_(s32) = COPY $vgpr2
+    %4:_(p0) = G_INTTOPTR %2
+    %5:_(p1) = G_INTTOPTR %2
+    %6:_(p3) = G_INTTOPTR %3
+    %7:_(p4) = G_INTTOPTR %0
+    %8:_(p5) = G_INTTOPTR %1
+    S_ENDPGM implicit %4, implicit %5, implicit %6, implicit %7, implicit %8
+...

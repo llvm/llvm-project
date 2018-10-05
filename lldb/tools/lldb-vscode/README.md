@@ -82,7 +82,7 @@ file that defines how your program will be run. The JSON configuration file can 
 |**cwd**            |string| | The program working directory.
 |**env**            |dictionary| | Environment variables to set when launching the program. The format of each environment variable string is "VAR=VALUE" for environment variables with values or just "VAR" for environment variables with no values.
 |**stopOnEntry**    |boolean| | Whether to stop program immediately after launching.
-|**initCommands**   |[string]| | LLDB commands executed upon debugger startup prior to creating a the LLDB target. Commands and command output will be sent to the debugger console when they are executed.
+|**initCommands**   |[string]| | LLDB commands executed upon debugger startup prior to creating the LLDB target. Commands and command output will be sent to the debugger console when they are executed.
 |**preRunCommands** |[string]| | LLDB commands executed just before launching after the LLDB target has been created. Commands and command output will be sent to the debugger console when they are executed.
 |**stopCommands**   |[string]| | LLDB commands executed just after each stop. Commands and command output will be sent to the debugger console when they are executed.
 |**exitCommands**   |[string]| | LLDB commands executed when the program exits. Commands and command output will be sent to the debugger console when they are executed.
@@ -108,7 +108,7 @@ The JSON configuration file can contain the following `lldb-vscode` specific lau
 |**pid**            |number  | | The process id of the process you wish to attach to. If **pid** is omitted, the debugger will attempt to attach to the program by finding a process whose file name matches the file name from **porgram**. Setting this value to `${command:pickMyProcess}` will allow interactive process selection in the IDE.
 |**stopOnEntry**    |boolean| | Whether to stop program immediately after launching.
 |**waitFor**        |boolean | | Wait for the process to launch.
-|**initCommands**   |[string]| | LLDB commands executed upon debugger startup prior to creating a the LLDB target. Commands and command output will be sent to the debugger console when they are executed.
+|**initCommands**   |[string]| | LLDB commands executed upon debugger startup prior to creating the LLDB target. Commands and command output will be sent to the debugger console when they are executed.
 |**preRunCommands** |[string]| | LLDB commands executed just before launching after the LLDB target has been created. Commands and command output will be sent to the debugger console when they are executed.
 |**stopCommands**   |[string]| | LLDB commands executed just after each stop. Commands and command output will be sent to the debugger console when they are executed.
 |**exitCommands**   |[string]| | LLDB commands executed when the program exits. Commands and command output will be sent to the debugger console when they are executed.

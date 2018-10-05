@@ -408,6 +408,7 @@ TEST(DexTrigrams, QueryTrigrams) {
   EXPECT_THAT(generateQueryTrigrams("cl"), trigramsAre({"cl"}));
   EXPECT_THAT(generateQueryTrigrams("cla"), trigramsAre({"cla"}));
 
+  EXPECT_THAT(generateQueryTrigrams(""), trigramsAre({}));
   EXPECT_THAT(generateQueryTrigrams("_"), trigramsAre({"_"}));
   EXPECT_THAT(generateQueryTrigrams("__"), trigramsAre({"__"}));
   EXPECT_THAT(generateQueryTrigrams("___"), trigramsAre({}));
@@ -526,8 +527,6 @@ TEST(DexTest, FuzzyMatch) {
               UnorderedElementsAre("LaughingOutLoud", "LittleOldLady"));
 }
 
-// TODO(sammccall): enable after D52796 bugfix.
-#if 0
 TEST(DexTest, ShortQuery) {
   auto I =
       Dex::build(generateSymbols({"OneTwoThreeFour"}), RefSlab(), URISchemes);
@@ -549,7 +548,6 @@ TEST(DexTest, ShortQuery) {
   EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre("OneTwoThreeFour"));
   EXPECT_FALSE(Incomplete) << "3-char string is not a short query";
 }
-#endif
 
 TEST(DexTest, MatchQualifiedNamesWithoutSpecificScope) {
   auto I = Dex::build(generateSymbols({"a::y1", "b::y2", "y3"}), RefSlab(),
@@ -612,6 +610,15 @@ TEST(DexTest, IgnoreCases) {
   Req.Query = "AB";
   Req.Scopes = {"ns::"};
   EXPECT_THAT(match(*I, Req), UnorderedElementsAre("ns::ABC", "ns::abc"));
+}
+
+TEST(DexTest, UnknownPostingList) {
+  // Regression test: we used to ignore unknown scopes and accept any symbol.
+  auto I = Dex::build(generateSymbols({"ns::ABC", "ns::abc"}), RefSlab(),
+                      URISchemes);
+  FuzzyFindRequest Req;
+  Req.Scopes = {"ns2::"};
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre());
 }
 
 TEST(DexTest, Lookup) {

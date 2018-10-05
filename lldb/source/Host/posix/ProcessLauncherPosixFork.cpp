@@ -157,7 +157,7 @@ static void LLVM_ATTRIBUTE_NORETURN ChildFunc(int error_fd,
 
 #if defined(__linux__)
   if (errno == ETXTBSY) {
-    // On android M and earlier we can get this error because the adb deamon
+    // On android M and earlier we can get this error because the adb daemon
     // can hold a write handle on the executable even after it has finished
     // uploading it. This state lasts only a short time and happens only when
     // there are many concurrent adb commands being issued, such as when

@@ -225,6 +225,8 @@ public:
   /// in debugging.
   void dump(const LangOptions &LO) const;
   void dump() const;
+  void dump(llvm::raw_ostream &OS) const;
+  void dump(llvm::raw_ostream &OS, const LangOptions &LO) const;
 };
 
 /// A C++ nested-name-specifier augmented with source location
