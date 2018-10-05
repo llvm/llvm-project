@@ -309,7 +309,7 @@ MainLoop::RegisterSignal(int signo, const Callback &callback, Status &error) {
   g_signal_flags[signo] = 0;
 
   // Even if using kqueue, the signal handler will still be invoked, so it's
-  // important to replace it with our "bening" handler.
+  // important to replace it with our "benign" handler.
   int ret = sigaction(signo, &new_action, &info.old_action);
   assert(ret == 0 && "sigaction failed");
 
@@ -321,7 +321,7 @@ MainLoop::RegisterSignal(int signo, const Callback &callback, Status &error) {
 #endif
 
   // If we're using kqueue, the signal needs to be unblocked in order to
-  // recieve it. If using pselect/ppoll, we need to block it, and later unblock
+  // receive it. If using pselect/ppoll, we need to block it, and later unblock
   // it as a part of the system call.
   ret = pthread_sigmask(HAVE_SYS_EVENT_H ? SIG_UNBLOCK : SIG_BLOCK,
                         &new_action.sa_mask, &old_set);

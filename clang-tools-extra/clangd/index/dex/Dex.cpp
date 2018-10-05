@@ -62,7 +62,7 @@ std::vector<Token> generateSearchTokens(const Symbol &Sym) {
 }
 
 // Constructs BOOST iterators for Path Proximities.
-std::vector<std::unique_ptr<Iterator>> createFileProximityIterators(
+std::unique_ptr<Iterator> createFileProximityIterator(
     llvm::ArrayRef<std::string> ProximityPaths,
     llvm::ArrayRef<std::string> URISchemes,
     const llvm::DenseMap<Token, PostingList> &InvertedIndex,
@@ -105,7 +105,8 @@ std::vector<std::unique_ptr<Iterator>> createFileProximityIterators(
           It->second.iterator(&It->first), PathProximitySignals.evaluate()));
     }
   }
-  return BoostingIterators;
+  BoostingIterators.push_back(Corpus.all());
+  return Corpus.unionOf(std::move(BoostingIterators));
 }
 
 } // namespace
@@ -147,6 +148,12 @@ void Dex::buildIndex() {
         {TokenToPostingList.first, PostingList(TokenToPostingList.second)});
 }
 
+std::unique_ptr<Iterator> Dex::iterator(const Token &Tok) const {
+  auto It = InvertedIndex.find(Tok);
+  return It == InvertedIndex.end() ? Corpus.none()
+                                   : It->second.iterator(&It->first);
+}
+
 /// Constructs iterators over tokens extracted from the query and exhausts it
 /// while applying Callback to each symbol in the order of decreasing quality
 /// of the matched symbols.
@@ -160,64 +167,40 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   // Prevent clients from postfiltering them for longer queries.
   bool More = !Req.Query.empty() && Req.Query.size() < 3;
 
-  std::vector<std::unique_ptr<Iterator>> TopLevelChildren;
+  std::vector<std::unique_ptr<Iterator>> Criteria;
   const auto TrigramTokens = generateQueryTrigrams(Req.Query);
 
   // Generate query trigrams and construct AND iterator over all query
   // trigrams.
   std::vector<std::unique_ptr<Iterator>> TrigramIterators;
-  for (const auto &Trigram : TrigramTokens) {
-    const auto It = InvertedIndex.find(Trigram);
-    if (It != InvertedIndex.end())
-      TrigramIterators.push_back(It->second.iterator(&It->first));
-  }
-  if (!TrigramIterators.empty())
-    TopLevelChildren.push_back(Corpus.intersect(move(TrigramIterators)));
+  for (const auto &Trigram : TrigramTokens)
+    TrigramIterators.push_back(iterator(Trigram));
+  Criteria.push_back(Corpus.intersect(move(TrigramIterators)));
 
   // Generate scope tokens for search query.
   std::vector<std::unique_ptr<Iterator>> ScopeIterators;
-  for (const auto &Scope : Req.Scopes) {
-    Token Tok(Token::Kind::Scope, Scope);
-    const auto It = InvertedIndex.find(Tok);
-    if (It != InvertedIndex.end())
-      ScopeIterators.push_back(It->second.iterator(&It->first));
-  }
-  if (Req.AnyScope)
+  for (const auto &Scope : Req.Scopes)
+    ScopeIterators.push_back(iterator(Token(Token::Kind::Scope, Scope)));
+  if (Req.AnyScope || /*legacy*/ Req.Scopes.empty())
     ScopeIterators.push_back(
         Corpus.boost(Corpus.all(), ScopeIterators.empty() ? 1.0 : 0.2));
+  Criteria.push_back(Corpus.unionOf(move(ScopeIterators)));
 
-  // Add OR iterator for scopes if there are any Scope Iterators.
-  if (!ScopeIterators.empty())
-    TopLevelChildren.push_back(Corpus.unionOf(move(ScopeIterators)));
-
-  // Add proximity paths boosting.
-  auto BoostingIterators = createFileProximityIterators(
-      Req.ProximityPaths, URISchemes, InvertedIndex, Corpus);
-  // Boosting iterators do not actually filter symbols. In order to preserve
-  // the validity of resulting query, TRUE iterator should be added along
-  // BOOSTs.
-  if (!BoostingIterators.empty()) {
-    BoostingIterators.push_back(Corpus.all());
-    TopLevelChildren.push_back(Corpus.unionOf(move(BoostingIterators)));
-  }
+  // Add proximity paths boosting (all symbols, some boosted).
+  Criteria.push_back(createFileProximityIterator(Req.ProximityPaths, URISchemes,
+                                                 InvertedIndex, Corpus));
 
   if (Req.RestrictForCodeCompletion)
-    TopLevelChildren.push_back(
-        InvertedIndex.find(RestrictedForCodeCompletion)
-            ->second.iterator(&RestrictedForCodeCompletion));
+    Criteria.push_back(iterator(RestrictedForCodeCompletion));
 
   // Use TRUE iterator if both trigrams and scopes from the query are not
   // present in the symbol index.
-  auto QueryIterator = TopLevelChildren.empty()
-                           ? Corpus.all()
-                           : Corpus.intersect(move(TopLevelChildren));
+  auto Root = Corpus.intersect(move(Criteria));
   // Retrieve more items than it was requested: some of  the items with high
   // final score might not be retrieved otherwise.
-  // FIXME(kbobyrev): Pre-scoring retrieval threshold should be adjusted as
-  // using 100x of the requested number might not be good in practice, e.g.
-  // when the requested number of items is small.
-  auto Root = Req.Limit ? Corpus.limit(move(QueryIterator), *Req.Limit * 100)
-                        : move(QueryIterator);
+  // FIXME(kbobyrev): Tune this ratio.
+  if (Req.Limit)
+    Root = Corpus.limit(move(Root), *Req.Limit * 100);
   SPAN_ATTACH(Tracer, "query", llvm::to_string(*Root));
   vlog("Dex query tree: {0}", *Root);
 

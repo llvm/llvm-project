@@ -30,9 +30,9 @@ struct B {
 struct D : B {
   D() : B() {}
   D(const D &RHS) : B(RHS) {}
-  // CHECK-MESSAGES: :[[@LINE+3]]:16: warning: move constructor initializes base class by calling a copy constructor [performance-move-constructor-init]
-  // CHECK-MESSAGES: 26:3: note: copy constructor being called
-  // CHECK-MESSAGES: 27:3: note: candidate move constructor here
+  // CHECK-NOTES: :[[@LINE+3]]:16: warning: move constructor initializes base class by calling a copy constructor [performance-move-constructor-init]
+  // CHECK-NOTES: 26:3: note: copy constructor being called
+  // CHECK-NOTES: 27:3: note: candidate move constructor here
   D(D &&RHS) : B(RHS) {}
 };
 
@@ -75,8 +75,10 @@ struct L : K {
 
 struct M {
   B Mem;
-  // CHECK-MESSAGES: :[[@LINE+1]]:16: warning: move constructor initializes class member by calling a copy constructor [performance-move-constructor-init]
+  // CHECK-NOTES: :[[@LINE+1]]:16: warning: move constructor initializes class member by calling a copy constructor [performance-move-constructor-init]
   M(M &&RHS) : Mem(RHS.Mem) {}
+  // CHECK-NOTES: 26:3: note: copy constructor being called
+  // CHECK-NOTES: 27:3: note: candidate move constructor here
 };
 
 struct N {
@@ -109,7 +111,7 @@ struct TriviallyCopyable {
 
 struct Positive {
   Positive(Movable M) : M_(M) {}
-  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: pass by value and use std::move [modernize-pass-by-value]
+  // CHECK-NOTES: [[@LINE-1]]:12: warning: pass by value and use std::move [modernize-pass-by-value]
   // CHECK-FIXES: Positive(Movable M) : M_(std::move(M)) {}
   Movable M_;
 };

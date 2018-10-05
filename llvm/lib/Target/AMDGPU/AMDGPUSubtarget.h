@@ -135,7 +135,7 @@ public:
     return isMesa3DOS() && !AMDGPU::isShader(F.getCallingConv());
   }
 
-  bool isAmdCodeObjectV2(const Function &F) const {
+  bool isAmdHsaOrMesa(const Function &F) const {
     return isAmdHsaOS() || isMesaKernel(F);
   }
 
@@ -202,7 +202,7 @@ public:
   /// Returns the offset in bytes from the start of the input buffer
   ///        of the first explicit kernel argument.
   unsigned getExplicitKernelArgOffset(const Function &F) const {
-    return isAmdCodeObjectV2(F) ? 0 : 36;
+    return isAmdHsaOrMesa(F) ? 0 : 36;
   }
 
   /// \returns Maximum number of work groups per compute unit supported by the

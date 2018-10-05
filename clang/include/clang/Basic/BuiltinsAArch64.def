@@ -104,6 +104,7 @@ TARGET_HEADER_BUILTIN(_InterlockedOr64,          "LLiLLiD*LLi", "nh", "intrin.h"
 TARGET_HEADER_BUILTIN(_InterlockedXor64,         "LLiLLiD*LLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 
 TARGET_HEADER_BUILTIN(_ReadWriteBarrier, "v", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__getReg, "ULLii", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 
 #undef BUILTIN
 #undef LANGBUILTIN

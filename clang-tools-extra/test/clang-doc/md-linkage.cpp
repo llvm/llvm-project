@@ -104,23 +104,31 @@ inline void anonInlineFunction();
 // CHECK-0: int publicField
 // CHECK-0: protected int protectedField
 // CHECK-0: ## Functions
-// CHECK-0: ### void publicMethod()
-// CHECK-0: ### void protectedMethod()
+// CHECK-0: ### publicMethod
+// CHECK-0: *void publicMethod()*
+// CHECK-0: ### protectedMethod
+// CHECK-0: *void protectedMethod()*
 
 // RUN: cat %t/docs/./named.md | FileCheck %s --check-prefix CHECK-1
 // CHECK-1: # namespace named
 // CHECK-1: ## Functions
-// CHECK-1: ### void namedFunction()
-// CHECK-1: ### void namedInlineFunction()
+// CHECK-1: ### namedFunction
+// CHECK-1: *void namedFunction()*
+// CHECK-1: ### namedInlineFunction
+// CHECK-1: *void namedInlineFunction()*
 
 // RUN: cat %t/docs/./GlobalNamespace.md | FileCheck %s --check-prefix CHECK-2
 // CHECK-2: # Global Namespace
 // CHECK-2: ## Functions
-// CHECK-2: ### void function(int x)
-// CHECK-2: ### int inlinedFunction(int x)
-// CHECK-2: ### int functionWithInnerClass(int x)
+// CHECK-2: ### function
+// CHECK-2: *void function(int x)*
+// CHECK-2: ### inlinedFunction
+// CHECK-2: *int inlinedFunction(int x)*
+// CHECK-2: ### functionWithInnerClass
+// CHECK-2: *int functionWithInnerClass(int x)*
 // CHECK-2: *Defined at line 14 of test*
-// CHECK-2: ### int inlinedFunctionWithInnerClass(int x)
+// CHECK-2: ### inlinedFunctionWithInnerClass
+// CHECK-2: *int inlinedFunctionWithInnerClass(int x)*
 // CHECK-2: *Defined at line 23 of test*
 
 // RUN: cat %t/docs/named/NamedClass.md | FileCheck %s --check-prefix CHECK-3
@@ -130,5 +138,7 @@ inline void anonInlineFunction();
 // CHECK-3: int namedPublicField
 // CHECK-3: protected int namedProtectedField
 // CHECK-3: ## Functions
-// CHECK-3: ### void namedPublicMethod()
-// CHECK-3: ### void namedProtectedMethod()
+// CHECK-3: ### namedPublicMethod
+// CHECK-3: *void namedPublicMethod()*
+// CHECK-3: ### namedProtectedMethod
+// CHECK-3: *void namedProtectedMethod()*

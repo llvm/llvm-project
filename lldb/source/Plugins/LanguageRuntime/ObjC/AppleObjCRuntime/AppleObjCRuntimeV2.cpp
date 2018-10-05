@@ -2449,7 +2449,7 @@ bool AppleObjCRuntimeV2::NonPointerISACache::EvaluateNonPointerISA(
 
   // If all of the indexed ISA variables are set, then its possible that this
   // ISA is indexed, and we should first try to get its value using the index.
-  // Note, we check these varaibles first as the ObjC runtime will set at least
+  // Note, we check these variables first as the ObjC runtime will set at least
   // one of their values to 0 if they aren't needed.
   if (m_objc_debug_indexed_isa_magic_mask &&
       m_objc_debug_indexed_isa_magic_value &&
@@ -2536,7 +2536,7 @@ bool AppleObjCRuntimeV2::NonPointerISACache::EvaluateNonPointerISA(
     return false;
   }
 
-  // Definately not an indexed ISA, so try to use a mask to extract the pointer
+  // Definitely not an indexed ISA, so try to use a mask to extract the pointer
   // from the ISA.
   if ((isa & m_objc_debug_isa_magic_mask) == m_objc_debug_isa_magic_value) {
     ret_isa = isa & m_objc_debug_isa_class_mask;

@@ -14,9 +14,10 @@
 #ifndef LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVBASEINFO_H
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVBASEINFO_H
 
-#include "RISCVMCTargetDesc.h"
+#include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/MC/SubtargetFeature.h"
 
 namespace llvm {
 
@@ -118,8 +119,39 @@ inline static bool isValidRoundingMode(unsigned Mode) {
     return true;
   }
 }
-
 } // namespace RISCVFPRndMode
+
+namespace RISCVSysReg {
+struct SysReg {
+  const char *Name;
+  unsigned Encoding;
+  // FIXME: add these additional fields when needed.
+  // Privilege Access: Read, Write, Read-Only.
+  // unsigned ReadWrite;
+  // Privilege Mode: User, System or Machine.
+  // unsigned Mode;
+  // Check field name.
+  // unsigned Extra;
+  // Register number without the privilege bits.
+  // unsigned Number;
+  FeatureBitset FeaturesRequired;
+  bool isRV32Only;
+
+  bool haveRequiredFeatures(FeatureBitset ActiveFeatures) const {
+    // Not in 32-bit mode.
+    if (isRV32Only && ActiveFeatures[RISCV::Feature64Bit])
+      return false;
+    // No required feature associated with the system register.
+    if (FeaturesRequired.none())
+      return true;
+    return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
+  }
+};
+
+#define GET_SysRegsList_DECL
+#include "RISCVGenSystemOperands.inc"
+} // end namespace RISCVSysReg
+
 } // namespace llvm
 
 #endif

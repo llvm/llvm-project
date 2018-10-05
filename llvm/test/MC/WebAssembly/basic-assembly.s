@@ -47,6 +47,7 @@ test0:
     #i32x4.trunc_s/f32x4:sat
     i32.trunc_s/f32
     #i32.trunc_s:sat/f32
+    get_global	__stack_pointer@GLOBAL
     end_function
 
 
@@ -87,4 +88,5 @@ test0:
 # CHECK-NEXT:      get_local   5
 # CHECK-NEXT:      f32x4.add
 # CHECK-NEXT:      i32.trunc_s/f32
+# CHECK-NEXT:      get_global	__stack_pointer@GLOBAL
 # CHECK-NEXT:      end_function

@@ -74,18 +74,18 @@ std::string genReferenceList(const llvm::SmallVectorImpl<Reference> &Refs) {
   return Stream.str();
 }
 
-void writeLine(const Twine &Text, raw_ostream &OS) { OS << Text << "\n"; }
+void writeLine(const Twine &Text, raw_ostream &OS) { OS << Text << "\n\n"; }
 
-void writeNewLine(raw_ostream &OS) { OS << "\n"; }
+void writeNewLine(raw_ostream &OS) { OS << "\n\n"; }
 
 void writeHeader(const Twine &Text, unsigned int Num, raw_ostream &OS) {
-  OS << std::string(Num, '#') + " " + Text << "\n";
+  OS << std::string(Num, '#') + " " + Text << "\n\n";
 }
 
 void writeFileDefinition(const Location &L, raw_ostream &OS) {
   OS << genItalic("Defined at line " + std::to_string(L.LineNumber) + " of " +
                   L.Filename)
-     << "\n";
+     << "\n\n";
 }
 
 void writeDescription(const CommentInfo &I, raw_ostream &OS) {
@@ -104,10 +104,10 @@ void writeDescription(const CommentInfo &I, raw_ostream &OS) {
     OS << genEmphasis(I.Name) << " " << I.Text;
   } else if (I.Kind == "ParamCommandComment") {
     std::string Direction = I.Explicit ? (" " + I.Direction).str() : "";
-    OS << genEmphasis(I.ParamName) << I.Text << Direction << "\n";
+    OS << genEmphasis(I.ParamName) << I.Text << Direction << "\n\n";
   } else if (I.Kind == "TParamCommandComment") {
     std::string Direction = I.Explicit ? (" " + I.Direction).str() : "";
-    OS << genEmphasis(I.ParamName) << I.Text << Direction << "\n";
+    OS << genEmphasis(I.ParamName) << I.Text << Direction << "\n\n";
   } else if (I.Kind == "VerbatimBlockComment") {
     for (const auto &Child : I.Children)
       writeDescription(*Child, OS);
@@ -132,7 +132,7 @@ void writeDescription(const CommentInfo &I, raw_ostream &OS) {
   } else if (I.Kind == "TextComment") {
     OS << I.Text;
   } else {
-    OS << "Unknown comment kind: " << I.Kind << ".\n";
+    OS << "Unknown comment kind: " << I.Kind << ".\n\n";
   }
 }
 
@@ -166,11 +166,16 @@ void genMarkdown(const FunctionInfo &I, llvm::raw_ostream &OS) {
     Stream << N.Type.Name + " " + N.Name;
     First = false;
   }
+  writeHeader(I.Name, 3, OS);
   std::string Access = getAccess(I.Access);
   if (Access != "")
-    writeHeader(genItalic(Access) + " " + I.ReturnType.Type.Name + " " + I.Name + "(" + Stream.str() + ")", 3, OS);
-  else 
-    writeHeader(I.ReturnType.Type.Name + " " + I.Name + "(" + Stream.str() + ")", 3, OS);
+    writeLine(genItalic(Access + " " + I.ReturnType.Type.Name + " " + I.Name +
+                        "(" + Stream.str() + ")"),
+              OS);
+  else
+    writeLine(genItalic(I.ReturnType.Type.Name + " " + I.Name + "(" +
+                        Stream.str() + ")"),
+              OS);
   if (I.DefLoc)
     writeFileDefinition(I.DefLoc.getValue(), OS);
 

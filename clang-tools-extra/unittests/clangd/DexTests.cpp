@@ -111,8 +111,8 @@ TEST(DexIterators, AndThreeLists) {
 
 TEST(DexIterators, AndEmpty) {
   Corpus C{10000};
-  const PostingList L1({1});
-  const PostingList L2({2});
+  const PostingList L1{1};
+  const PostingList L2{2};
   // These iterators are empty, but the optimizer can't tell.
   auto Empty1 = C.intersect(L1.iterator(), L2.iterator());
   auto Empty2 = C.intersect(L1.iterator(), L2.iterator());
@@ -317,9 +317,9 @@ TEST(DexIterators, Boost) {
 
 TEST(DexIterators, Optimizations) {
   Corpus C{5};
-  const PostingList L1({1});
-  const PostingList L2({2});
-  const PostingList L3({3});
+  const PostingList L1{1};
+  const PostingList L2{2};
+  const PostingList L3{3};
 
   // empty and/or yield true/false
   EXPECT_EQ(llvm::to_string(*C.intersect()), "true");
@@ -408,6 +408,7 @@ TEST(DexTrigrams, QueryTrigrams) {
   EXPECT_THAT(generateQueryTrigrams("cl"), trigramsAre({"cl"}));
   EXPECT_THAT(generateQueryTrigrams("cla"), trigramsAre({"cla"}));
 
+  EXPECT_THAT(generateQueryTrigrams(""), trigramsAre({}));
   EXPECT_THAT(generateQueryTrigrams("_"), trigramsAre({"_"}));
   EXPECT_THAT(generateQueryTrigrams("__"), trigramsAre({"__"}));
   EXPECT_THAT(generateQueryTrigrams("___"), trigramsAre({}));
@@ -526,8 +527,6 @@ TEST(DexTest, FuzzyMatch) {
               UnorderedElementsAre("LaughingOutLoud", "LittleOldLady"));
 }
 
-// TODO(sammccall): enable after D52796 bugfix.
-#if 0
 TEST(DexTest, ShortQuery) {
   auto I =
       Dex::build(generateSymbols({"OneTwoThreeFour"}), RefSlab(), URISchemes);
@@ -549,7 +548,6 @@ TEST(DexTest, ShortQuery) {
   EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre("OneTwoThreeFour"));
   EXPECT_FALSE(Incomplete) << "3-char string is not a short query";
 }
-#endif
 
 TEST(DexTest, MatchQualifiedNamesWithoutSpecificScope) {
   auto I = Dex::build(generateSymbols({"a::y1", "b::y2", "y3"}), RefSlab(),
@@ -612,6 +610,15 @@ TEST(DexTest, IgnoreCases) {
   Req.Query = "AB";
   Req.Scopes = {"ns::"};
   EXPECT_THAT(match(*I, Req), UnorderedElementsAre("ns::ABC", "ns::abc"));
+}
+
+TEST(DexTest, UnknownPostingList) {
+  // Regression test: we used to ignore unknown scopes and accept any symbol.
+  auto I = Dex::build(generateSymbols({"ns::ABC", "ns::abc"}), RefSlab(),
+                      URISchemes);
+  FuzzyFindRequest Req;
+  Req.Scopes = {"ns2::"};
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre());
 }
 
 TEST(DexTest, Lookup) {

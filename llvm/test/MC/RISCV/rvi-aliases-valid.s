@@ -148,21 +148,21 @@ ret
 # CHECK-S-OBJ: fence
 fence
 
-# CHECK-S-OBJ-NOALIAS: csrrs s10, 3074, zero
+# CHECK-S-OBJ-NOALIAS: csrrs s10, instret, zero
 # CHECK-S-OBJ: rdinstret s10
 rdinstret x26
-# CHECK-S-OBJ-NOALIAS: csrrs s8, 3072, zero
+# CHECK-S-OBJ-NOALIAS: csrrs s8, cycle, zero
 # CHECK-S-OBJ: rdcycle s8
 rdcycle x24
-# CHECK-S-OBJ-NOALIAS: csrrs s9, 3073, zero
+# CHECK-S-OBJ-NOALIAS: csrrs s9, time, zero
 # CHECK-S-OBJ: rdtime s9
 rdtime x25
 
 # CHECK-S-OBJ-NOALIAS: csrrs  s0, 336, zero
 # CHECK-S-OBJ: csrr s0, 336
 csrr x8, 0x150
-# CHECK-S-OBJ-NOALIAS: csrrw zero, 320, s1
-# CHECK-S-OBJ: csrw 320, s1
+# CHECK-S-OBJ-NOALIAS: csrrw zero, sscratch, s1
+# CHECK-S-OBJ: csrw sscratch, s1
 csrw 0x140, x9
 # CHECK-S-OBJ-NOALIAS: csrrs zero, 4095, s6
 # CHECK-S-OBJ: csrs 4095, s6
@@ -177,8 +177,8 @@ csrwi 0x150, 0xf
 # CHECK-S-OBJ-NOALIAS: csrrsi zero, 4095, 16
 # CHECK-S-OBJ: csrsi 4095, 16
 csrsi 0xfff, 0x10
-# CHECK-S-OBJ-NOALIAS: csrrci zero, 320, 17
-# CHECK-S-OBJ: csrci 320, 17
+# CHECK-S-OBJ-NOALIAS: csrrci zero, sscratch, 17
+# CHECK-S-OBJ: csrci sscratch, 17
 csrci 0x140, 0x11
 
 # CHECK-S-OBJ-NOALIAS: sfence.vma zero, zero

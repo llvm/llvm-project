@@ -20,5 +20,7 @@ export double exportedModuleFunction(double y, int z); // ExternalLinkage
 // RUN: cat %t/docs/./GlobalNamespace.md | FileCheck %s --check-prefix CHECK-0
 // CHECK-0: # Global Namespace
 // CHECK-0: ## Functions
-// CHECK-0: ### int moduleFunction(int x)
-// CHECK-0: ### double exportedModuleFunction(double y, int z)
+// CHECK-0: ### moduleFunction
+// CHECK-0: *int moduleFunction(int x)*
+// CHECK-0: ### exportedModuleFunction
+// CHECK-0: *double exportedModuleFunction(double y, int z)*
