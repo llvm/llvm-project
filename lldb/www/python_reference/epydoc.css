@@ -176,7 +176,7 @@ table.summary
                               font-family: monospace; }
 
 /* Variable values
- *   - In the 'variable details' sections, each varaible's value is
+ *   - In the 'variable details' sections, each variable's value is
  *     listed in a 'pre.variable' box.  The width of this box is
  *     restricted to 80 chars; if the value's repr is longer than
  *     this it will be wrapped, using a backslash marked with

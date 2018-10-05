@@ -200,7 +200,7 @@ void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
 
   const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
   const Function &F = MF->getFunction();
-  if (STM.isAmdCodeObjectV2(F) &&
+  if (!STM.hasCodeObjectV3() && STM.isAmdHsaOrMesa(F) &&
       (F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
        F.getCallingConv() == CallingConv::SPIR_KERNEL)) {
     amd_kernel_code_t KernelCode;
@@ -208,10 +208,8 @@ void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
     getTargetStreamer()->EmitAMDKernelCodeT(KernelCode);
   }
 
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
-    return;
-
-  HSAMetadataStream->emitKernel(*MF, CurrentProgramInfo);
+  if (STM.isAmdHsaOS())
+    HSAMetadataStream->emitKernel(*MF, CurrentProgramInfo);
 }
 
 void AMDGPUAsmPrinter::EmitFunctionBodyEnd() {
@@ -260,7 +258,7 @@ void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
 
   const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
-  if (MFI->isEntryFunction() && STM.isAmdCodeObjectV2(MF->getFunction())) {
+  if (MFI->isEntryFunction() && STM.isAmdHsaOrMesa(MF->getFunction())) {
     SmallString<128> SymbolName;
     getNameWithPrefix(SymbolName, &MF->getFunction()),
     getTargetStreamer()->EmitAMDGPUSymbolType(

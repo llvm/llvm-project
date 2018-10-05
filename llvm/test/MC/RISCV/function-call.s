@@ -37,3 +37,9 @@ call ra
 # INSTR: auipc ra, 0
 # INSTR: jalr  ra
 # FIXUP: fixup A - offset: 0, value: ra, kind: fixup_riscv_call
+
+call mstatus
+# RELOC: R_RISCV_CALL mstatus 0x0
+# INSTR: auipc ra, 0
+# INSTR: jalr  ra
+# FIXUP: fixup A - offset: 0, value: mstatus, kind: fixup_riscv_call

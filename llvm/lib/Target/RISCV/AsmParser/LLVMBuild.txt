@@ -19,5 +19,5 @@
 type = Library
 name = RISCVAsmParser
 parent = RISCV
-required_libraries = MC MCParser RISCVDesc RISCVInfo Support
+required_libraries = MC MCParser RISCVDesc RISCVInfo RISCVUtils Support
 add_to_library_groups = RISCV

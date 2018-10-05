@@ -35,8 +35,9 @@ if sys.version_info.major >= 3:
         FreeBSD = 2
         Linux = 3
         NetBSD = 4
-        Windows = 5
-        kFreeBSD = 6
+        OpenBSD = 5
+        Windows = 6
+        kFreeBSD = 7
 else:
     class EnumOsType(object):
         values = ["Unknown",

@@ -20,11 +20,18 @@ def LaneIdx#SIZE : ImmLeaf<i32, "return 0 <= Imm && Imm < "#SIZE#";">;
 
 // Custom nodes for custom operations
 def wasm_shuffle_t : SDTypeProfile<1, 18, []>;
+def wasm_saturate_t : SDTypeProfile<1, 2,
+  [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>]
+>;
 def wasm_bitselect_t : SDTypeProfile<1, 3,
   [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>]
 >;
 def wasm_reduce_t : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVec<1>]>;
 def wasm_shuffle : SDNode<"WebAssemblyISD::SHUFFLE", wasm_shuffle_t>;
+def wasm_add_sat_s : SDNode<"WebAssemblyISD::ADD_SAT_S", wasm_saturate_t>;
+def wasm_add_sat_u : SDNode<"WebAssemblyISD::ADD_SAT_U", wasm_saturate_t>;
+def wasm_sub_sat_s : SDNode<"WebAssemblyISD::SUB_SAT_S", wasm_saturate_t>;
+def wasm_sub_sat_u : SDNode<"WebAssemblyISD::SUB_SAT_U", wasm_saturate_t>;
 def wasm_bitselect : SDNode<"WebAssemblyISD::BITSELECT", wasm_bitselect_t>;
 def wasm_anytrue : SDNode<"WebAssemblyISD::ANYTRUE", wasm_reduce_t>;
 def wasm_alltrue : SDNode<"WebAssemblyISD::ALLTRUE", wasm_reduce_t>;
@@ -138,6 +145,10 @@ multiclass SIMDBinaryInt<SDNode node, string name, bits<32> baseInst> {
 multiclass SIMDBinaryFP<SDNode node, string name, bits<32> baseInst> {
   defm "" : SIMDBinary<v4f32, "f32x4", node, name, baseInst>;
   defm "" : SIMDBinary<v2f64, "f64x2", node, name, !add(baseInst, 1)>;
+}
+multiclass SIMDBinarySat<SDNode node, string name, bits<32> baseInst> {
+  defm "" : SIMDBinary<v16i8, "i8x16", node, name, baseInst>;
+  defm "" : SIMDBinary<v8i16, "i16x8", node, name, !add(baseInst, 2)>;
 }
 multiclass SIMDShift<ValueType vec_t, string vec, SDNode node, dag shift_vec,
                      string name, bits<32> simdop> {
@@ -366,10 +377,14 @@ defm ADD : SIMDBinaryInt<add, "add", 24>;
 defm ADD : SIMDBinaryFP<fadd, "add", 133>;
 defm MUL : SIMDBinaryIntNoI64x2<mul, "mul", 32>;
 defm MUL : SIMDBinaryFP<fmul, "mul", 139>;
+defm ADD_SAT_S : SIMDBinarySat<wasm_add_sat_s, "add_saturate_s", 40>;
+defm ADD_SAT_U : SIMDBinarySat<wasm_add_sat_u, "add_saturate_u", 41>;
 } // isCommutable = 1
 
 defm SUB : SIMDBinaryInt<sub, "sub", 28>;
 defm SUB : SIMDBinaryFP<fsub, "sub", 135>;
+defm SUB_SAT_S : SIMDBinarySat<wasm_sub_sat_s, "sub_saturate_s", 44>;
+defm SUB_SAT_U : SIMDBinarySat<wasm_sub_sat_u, "sub_saturate_u", 45>;
 defm DIV : SIMDBinaryFP<fdiv, "div", 137>;
 
 defm "" : SIMDNegInt<v16i8, "i8x16", splat16, i32, 36>;

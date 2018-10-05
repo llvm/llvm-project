@@ -1413,7 +1413,7 @@ define <4 x i8> @or_add_not_enough_masking(<4 x i8> %v) {
 ; CHECK-LABEL: @or_add_not_enough_masking(
 ; CHECK-NEXT:    [[V0:%.*]] = lshr <4 x i8> [[V:%.*]], <i8 1, i8 1, i8 1, i8 1>
 ; CHECK-NEXT:    [[T1:%.*]] = or <4 x i8> [[V0]], <i8 undef, i8 undef, i8 -64, i8 -64>
-; CHECK-NEXT:    [[T2:%.*]] = add nuw nsw <4 x i8> [[V0]], <i8 1, i8 2, i8 undef, i8 undef>
+; CHECK-NEXT:    [[T2:%.*]] = add <4 x i8> [[V0]], <i8 1, i8 2, i8 undef, i8 undef>
 ; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i8> [[T1]], <4 x i8> [[T2]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i8> [[T3]]
 ;

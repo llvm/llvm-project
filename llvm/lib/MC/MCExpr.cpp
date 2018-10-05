@@ -419,6 +419,7 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("hi8", VK_AVR_HI8)
     .Case("hlo8", VK_AVR_HLO8)
     .Case("function", VK_WebAssembly_FUNCTION)
+    .Case("global", VK_WebAssembly_GLOBAL)
     .Case("typeindex", VK_WebAssembly_TYPEINDEX)
     .Case("gotpcrel32@lo", VK_AMDGPU_GOTPCREL32_LO)
     .Case("gotpcrel32@hi", VK_AMDGPU_GOTPCREL32_HI)

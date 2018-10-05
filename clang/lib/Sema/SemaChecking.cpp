@@ -1749,6 +1749,9 @@ bool Sema::CheckAArch64BuiltinFunctionCall(unsigned BuiltinID,
       BuiltinID == AArch64::BI__builtin_arm_wsrp)
     return SemaBuiltinARMSpecialReg(BuiltinID, TheCall, 0, 5, true);
 
+  if (BuiltinID == AArch64::BI__getReg)
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 31);
+
   if (CheckNeonBuiltinFunctionCall(BuiltinID, TheCall))
     return true;
 

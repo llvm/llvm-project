@@ -1653,7 +1653,7 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
   bool RequiresStackAccess = HasStackObjects || MFI.hasCalls();
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  if (ST.isAmdCodeObjectV2(MF.getFunction())) {
+  if (ST.isAmdHsaOrMesa(MF.getFunction())) {
     if (RequiresStackAccess) {
       // If we have stack objects, we unquestionably need the private buffer
       // resource. For the Code Object V2 ABI, this will be the first 4 user
@@ -4809,14 +4809,14 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_implicit_buffer_ptr: {
-    if (getSubtarget()->isAmdCodeObjectV2(MF.getFunction()))
+    if (getSubtarget()->isAmdHsaOrMesa(MF.getFunction()))
       return emitNonHSAIntrinsicError(DAG, DL, VT);
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::IMPLICIT_BUFFER_PTR);
   }
   case Intrinsic::amdgcn_dispatch_ptr:
   case Intrinsic::amdgcn_queue_ptr: {
-    if (!Subtarget->isAmdCodeObjectV2(MF.getFunction())) {
+    if (!Subtarget->isAmdHsaOrMesa(MF.getFunction())) {
       DiagnosticInfoUnsupported BadIntrin(
           MF.getFunction(), "unsupported hsa intrinsic without hsa target",
           DL.getDebugLoc());
