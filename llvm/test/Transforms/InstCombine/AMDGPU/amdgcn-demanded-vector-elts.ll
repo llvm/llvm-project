@@ -299,9 +299,8 @@ define i32 @extract0_bitcast_buffer_load_format_v4f32(i32 %arg) #0 {
 
 ; CHECK-LABEL: @extract_lo16_0_bitcast_buffer_load_format_v4f32(
 ; CHECK-NEXT: %tmp = call float @llvm.amdgcn.buffer.load.format.f32(<4 x i32> undef, i32 %arg, i32 16, i1 false, i1 false)
-; CHECK-NEXT: %1 = insertelement <4 x float> undef, float %tmp, i64 0
-; CHECK-NEXT: %tmp1 = bitcast <4 x float> %1 to <8 x i16>
-; CHECK-NEXT: %tmp2 = extractelement <8 x i16> %tmp1, i32 0
+; CHECK-NEXT: %1 = bitcast float %tmp to i32
+; CHECK-NEXT: %tmp2 = trunc i32 %1 to i16
 ; CHECK-NEXT: ret i16 %tmp2
 define i16 @extract_lo16_0_bitcast_buffer_load_format_v4f32(i32 %arg) #0 {
   %tmp = call <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> undef, i32 %arg, i32 16, i1 false, i1 false) #3
