@@ -93,116 +93,114 @@ static void *GetRealLibcAddress(const char *symbol) {
     real_##func = (ret_type(*)(__VA_ARGS__))GetRealLibcAddress(#func); \
   }                                                                    \
   CHECK(real_##func);
-#define DEFINE_INTERNAL(ret_type, func, ...) \
-  ret_type internal_##func(__VA_ARGS__)
 
 // --------------- sanitizer_libc.h
-DEFINE_INTERNAL(uptr, mmap, void *addr, uptr length, int prot, int flags,
-                int fd, OFF_T offset) {
+uptr internal_mmap(void *addr, uptr length, int prot, int flags, int fd,
+                   OFF_T offset) {
   CHECK(&__mmap);
   return (uptr)__mmap(addr, length, prot, flags, fd, 0, offset);
 }
 
-DEFINE_INTERNAL(uptr, munmap, void *addr, uptr length) {
+uptr internal_munmap(void *addr, uptr length) {
   DEFINE__REAL(int, munmap, void *a, uptr b);
   return _REAL(munmap, addr, length);
 }
 
-DEFINE_INTERNAL(int, mprotect, void *addr, uptr length, int prot) {
+int internal_mprotect(void *addr, uptr length, int prot) {
   DEFINE__REAL(int, mprotect, void *a, uptr b, int c);
   return _REAL(mprotect, addr, length, prot);
 }
 
-DEFINE_INTERNAL(uptr, close, fd_t fd) {
+uptr internal_close(fd_t fd) {
   CHECK(&_sys_close);
   return _sys_close(fd);
 }
 
-DEFINE_INTERNAL(uptr, open, const char *filename, int flags) {
+uptr internal_open(const char *filename, int flags) {
   CHECK(&_sys_open);
   return _sys_open(filename, flags);
 }
 
-DEFINE_INTERNAL(uptr, open, const char *filename, int flags, u32 mode) {
+uptr internal_open(const char *filename, int flags, u32 mode) {
   CHECK(&_sys_open);
   return _sys_open(filename, flags, mode);
 }
 
-DEFINE_INTERNAL(uptr, read, fd_t fd, void *buf, uptr count) {
+uptr internal_read(fd_t fd, void *buf, uptr count) {
   sptr res;
   CHECK(&_sys_read);
   HANDLE_EINTR(res, (sptr)_sys_read(fd, buf, (size_t)count));
   return res;
 }
 
-DEFINE_INTERNAL(uptr, write, fd_t fd, const void *buf, uptr count) {
+uptr internal_write(fd_t fd, const void *buf, uptr count) {
   sptr res;
   CHECK(&_sys_write);
   HANDLE_EINTR(res, (sptr)_sys_write(fd, buf, count));
   return res;
 }
 
-DEFINE_INTERNAL(uptr, ftruncate, fd_t fd, uptr size) {
+uptr internal_ftruncate(fd_t fd, uptr size) {
   sptr res;
   CHECK(&__ftruncate);
   HANDLE_EINTR(res, __ftruncate(fd, 0, (s64)size));
   return res;
 }
 
-DEFINE_INTERNAL(uptr, stat, const char *path, void *buf) {
+uptr internal_stat(const char *path, void *buf) {
   DEFINE__REAL(int, __stat50, const char *a, void *b);
   return _REAL(__stat50, path, buf);
 }
 
-DEFINE_INTERNAL(uptr, lstat, const char *path, void *buf) {
+uptr internal_lstat(const char *path, void *buf) {
   DEFINE__REAL(int, __lstat50, const char *a, void *b);
   return _REAL(__lstat50, path, buf);
 }
 
-DEFINE_INTERNAL(uptr, fstat, fd_t fd, void *buf) {
+uptr internal_fstat(fd_t fd, void *buf) {
   DEFINE__REAL(int, __fstat50, int a, void *b);
   return _REAL(__fstat50, fd, buf);
 }
 
-DEFINE_INTERNAL(uptr, filesize, fd_t fd) {
+uptr internal_filesize(fd_t fd) {
   struct stat st;
   if (internal_fstat(fd, &st))
     return -1;
   return (uptr)st.st_size;
 }
 
-DEFINE_INTERNAL(uptr, dup2, int oldfd, int newfd) {
+uptr internal_dup2(int oldfd, int newfd) {
   DEFINE__REAL(int, dup2, int a, int b);
   return _REAL(dup2, oldfd, newfd);
 }
 
-DEFINE_INTERNAL(uptr, readlink, const char *path, char *buf, uptr bufsize) {
+uptr internal_readlink(const char *path, char *buf, uptr bufsize) {
   CHECK(&_sys_readlink);
   return (uptr)_sys_readlink(path, buf, bufsize);
 }
 
-DEFINE_INTERNAL(uptr, unlink, const char *path) {
+uptr internal_unlink(const char *path) {
   DEFINE__REAL(int, unlink, const char *a);
   return _REAL(unlink, path);
 }
 
-DEFINE_INTERNAL(uptr, rename, const char *oldpath, const char *newpath) {
+uptr internal_rename(const char *oldpath, const char *newpath) {
   DEFINE__REAL(int, rename, const char *a, const char *b);
   return _REAL(rename, oldpath, newpath);
 }
 
-DEFINE_INTERNAL(uptr, sched_yield) {
+uptr internal_sched_yield() {
   CHECK(&_sys_sched_yield);
   return _sys_sched_yield();
 }
 
-DEFINE_INTERNAL(void, _exit, int exitcode) {
+void internal__exit(int exitcode) {
   DEFINE__REAL(void, _exit, int a);
   _REAL(_exit, exitcode);
   Die();  // Unreachable.
 }
 
-DEFINE_INTERNAL(unsigned int, sleep, unsigned int seconds) {
+unsigned int internal_sleep(unsigned int seconds) {
   struct timespec ts;
   ts.tv_sec = 1;
   ts.tv_nsec = 0;
@@ -213,8 +211,8 @@ DEFINE_INTERNAL(unsigned int, sleep, unsigned int seconds) {
   return 0;
 }
 
-DEFINE_INTERNAL(uptr, execve, const char *filename, char *const argv[],
-                char *const envp[]) {
+uptr internal_execve(const char *filename, char *const argv[],
+                     char *const envp[]) {
   CHECK(&_sys_execve);
   return _sys_execve(filename, argv, envp);
 }
@@ -238,92 +236,90 @@ u64 NanoTime() {
   return (u64)tv.tv_sec * 1000 * 1000 * 1000 + tv.tv_usec * 1000;
 }
 
-DEFINE_INTERNAL(uptr, clock_gettime, __sanitizer_clockid_t clk_id, void *tp) {
+uptr internal_clock_gettime(__sanitizer_clockid_t clk_id, void *tp) {
   DEFINE__REAL(int, __clock_gettime50, __sanitizer_clockid_t a, void *b);
   return _REAL(__clock_gettime50, clk_id, tp);
 }
 
-DEFINE_INTERNAL(uptr, ptrace, int request, int pid, void *addr, void *data) {
+uptr internal_ptrace(int request, int pid, void *addr, void *data) {
   Printf("internal_ptrace not implemented for NetBSD");
   Die();
   return 0;
 }
 
-DEFINE_INTERNAL(uptr, waitpid, int pid, int *status, int options) {
+uptr internal_waitpid(int pid, int *status, int options) {
   CHECK(&_sys___wait450);
   return _sys___wait450(pid, status, options, 0 /* rusage */);
 }
 
-DEFINE_INTERNAL(uptr, getpid) {
+uptr internal_getpid() {
   DEFINE__REAL(int, getpid);
   return _REAL(getpid);
 }
 
-DEFINE_INTERNAL(uptr, getppid) {
+uptr internal_getppid() {
   DEFINE__REAL(int, getppid);
   return _REAL(getppid);
 }
 
-DEFINE_INTERNAL(uptr, getdents, fd_t fd, void *dirp, unsigned int count) {
+uptr internal_getdents(fd_t fd, void *dirp, unsigned int count) {
   DEFINE__REAL(int, __getdents30, int a, void *b, size_t c);
   return _REAL(__getdents30, fd, dirp, count);
 }
 
-DEFINE_INTERNAL(uptr, lseek, fd_t fd, OFF_T offset, int whence) {
+uptr internal_lseek(fd_t fd, OFF_T offset, int whence) {
   CHECK(&__lseek);
   return __lseek(fd, 0, offset, whence);
 }
 
-DEFINE_INTERNAL(uptr, prctl, int option, uptr arg2, uptr arg3, uptr arg4,
-                uptr arg5) {
+uptr internal_prctl(int option, uptr arg2, uptr arg3, uptr arg4, uptr arg5) {
   Printf("internal_prctl not implemented for NetBSD");
   Die();
   return 0;
 }
 
-DEFINE_INTERNAL(uptr, sigaltstack, const void *ss, void *oss) {
+uptr internal_sigaltstack(const void *ss, void *oss) {
   DEFINE__REAL(int, __sigaltstack14, const void *a, void *b);
   return _REAL(__sigaltstack14, ss, oss);
 }
 
-DEFINE_INTERNAL(int, fork) {
+int internal_fork() {
   CHECK(&__fork);
   return __fork();
 }
 
-DEFINE_INTERNAL(int, sysctl, const int *name, unsigned int namelen, void *oldp,
-                uptr *oldlenp, const void *newp, uptr newlen) {
+int internal_sysctl(const int *name, unsigned int namelen, void *oldp,
+                    uptr *oldlenp, const void *newp, uptr newlen) {
   CHECK(&__sysctl);
   return __sysctl(name, namelen, oldp, (size_t *)oldlenp, newp, (size_t)newlen);
 }
 
-DEFINE_INTERNAL(int, sysctlbyname, const char *sname, void *oldp, uptr *oldlenp,
-                const void *newp, uptr newlen) {
+int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
+                          const void *newp, uptr newlen) {
   DEFINE__REAL(int, sysctlbyname, const char *a, void *b, size_t *c,
                const void *d, size_t e);
   return _REAL(sysctlbyname, sname, oldp, (size_t *)oldlenp, newp,
                (size_t)newlen);
 }
 
-DEFINE_INTERNAL(uptr, sigprocmask, int how, __sanitizer_sigset_t *set,
-                __sanitizer_sigset_t *oldset) {
+uptr internal_sigprocmask(int how, __sanitizer_sigset_t *set,
+                          __sanitizer_sigset_t *oldset) {
   CHECK(&_sys___sigprocmask14);
   return _sys___sigprocmask14(how, set, oldset);
 }
 
-DEFINE_INTERNAL(void, sigfillset, __sanitizer_sigset_t *set) {
+void internal_sigfillset(__sanitizer_sigset_t *set) {
   DEFINE__REAL(int, __sigfillset14, const void *a);
   (void)_REAL(__sigfillset14, set);
 }
 
-DEFINE_INTERNAL(void, sigemptyset, __sanitizer_sigset_t *set) {
+void internal_sigemptyset(__sanitizer_sigset_t *set) {
   DEFINE__REAL(int, __sigemptyset14, const void *a);
   (void)_REAL(__sigemptyset14, set);
 }
 
-DEFINE_INTERNAL(uptr, clone, int (*fn)(void *), void *child_stack, int flags,
-                void *arg, int *parent_tidptr, void *newtls,
-                int *child_tidptr) {
+uptr intrnal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
+                   int *parent_tidptr, void *newtls, int *child_tidptr) {
   Printf("internal_clone not implemented for NetBSD");
   Die();
   return 0;
