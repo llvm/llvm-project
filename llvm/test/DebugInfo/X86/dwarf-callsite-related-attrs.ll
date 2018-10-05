@@ -8,6 +8,10 @@
 ; }
 ; int __attribute__((disable_tail_calls)) main() { foo(); }
 
+; On Windows, we don't handle the relocations needed for AT_return_pc properly
+; and fail with "failed to compute relocation: IMAGE_REL_AMD64_ADDR32".
+; UNSUPPORTED: cygwin,windows-gnu,windows-msvc
+
 ; REQUIRES: object-emission
 ; RUN: %llc_dwarf < %s -o - | FileCheck %s -check-prefix=ASM
 ; RUN: %llc_dwarf < %s -filetype=obj -o %t.o
