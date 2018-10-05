@@ -1,23 +1,31 @@
-// RUN: %clang_cc1 %s -emit-llvm -o %t -fobjc-gc -fblocks -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5
-// RUN: grep "_Block_object_dispose" %t | count 6
-// RUN: grep "__copy_helper_block_" %t | count 4
-// RUN: grep "__destroy_helper_block_" %t | count 4
-// RUN: grep "__Block_byref_object_copy_" %t | count 2
-// RUN: grep "__Block_byref_object_dispose_" %t | count 2
-// RUN: not grep "i32 135)" %t
-// RUN: grep "_Block_object_assign" %t | count 4
-// RUN: grep "objc_read_weak" %t | count 2
-// RUN: grep "objc_assign_weak" %t | count 3
-// RUN: %clang_cc1 -x objective-c++ %s -emit-llvm -o %t -fobjc-gc -fblocks -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5
-// RUN: grep "_Block_object_dispose" %t | count 6
-// RUN: grep "__copy_helper_block_" %t | count 4
-// RUN: grep "__destroy_helper_block_" %t | count 4
-// RUN: grep "__Block_byref_object_copy_" %t | count 2
-// RUN: grep "__Block_byref_object_dispose_" %t | count 2
-// RUN: not grep "i32 135)" %t
-// RUN: grep "_Block_object_assign" %t | count 4
-// RUN: grep "objc_read_weak" %t | count 2
-// RUN: grep "objc_assign_weak" %t | count 3
+// RUN: %clang_cc1 %s -emit-llvm -o - -fobjc-gc -fblocks -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 | FileCheck %s --check-prefix=CHECK --check-prefix=OBJC
+// RUN: %clang_cc1 -x objective-c++ %s -emit-llvm -o - -fobjc-gc -fblocks -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 | FileCheck %s --check-prefix=CHECK --check-prefix=OBJCXX
+
+// OBJC-LABEL: define void @test1(
+// OBJCXX-LABEL: define void @_Z5test1P12NSDictionary(
+
+// CHECK-LABEL: define linkonce_odr hidden void @__copy_helper_block_
+// CHECK: call void @_Block_object_assign(
+
+// CHECK-LABEL: define linkonce_odr hidden void @__destroy_helper_block_
+// CHECK: call void @_Block_object_dispose(
+
+// OBJC-LABEL: define void @foo(
+// OBJCXX-LABEL: define void @_Z3foov(
+// CHECK: call i8* @objc_read_weak(
+// CHECK: call i8* @objc_assign_weak(
+// CHECK: call void @_Block_object_dispose(
+
+// OBJC-LABEL: define void @test2(
+// OBJCXX-LABEL: define void @_Z5test2v(
+// CHECK: call i8* @objc_assign_weak(
+// CHECK: call void @_Block_object_dispose(
+
+// CHECK-LABEL: define linkonce_odr hidden void @__copy_helper_block_
+// CHECK: call void @_Block_object_assign(
+
+// CHECK-LABEL: define linkonce_odr hidden void @__destroy_helper_block_
+// CHECK: call void @_Block_object_dispose(
 
 @interface NSDictionary @end
 
@@ -30,6 +38,7 @@ void test1(NSDictionary * dict) {
 
 void foo() {
   __block __weak D *weakSelf;
+  ^{ (void)weakSelf; };
   D *l;
   l = weakSelf;
   weakSelf = l;

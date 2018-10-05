@@ -1366,6 +1366,7 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
     VD->NonParmVarDeclBits.IsInitCapture = Record.readInt();
     VD->NonParmVarDeclBits.PreviousDeclInSameBlockScope = Record.readInt();
     VD->NonParmVarDeclBits.ImplicitParamKind = Record.readInt();
+    VD->NonParmVarDeclBits.EscapingByref = Record.readInt();
   }
   auto VarLinkage = Linkage(Record.readInt());
   VD->setCachedLinkage(VarLinkage);
