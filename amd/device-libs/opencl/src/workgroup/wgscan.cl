@@ -15,7 +15,7 @@
 #define add(X,Y) (X + Y)
 
 #define GENI(TYPE,OP,ID) \
-__attribute__((overloadable, always_inline)) TYPE \
+__attribute__((overloadable)) TYPE \
 work_group_scan_inclusive_##OP(TYPE a) \
 { \
     uint n = get_num_sub_groups(); \
@@ -72,7 +72,7 @@ GENI(half,max,-(half)INFINITY)
 GENI(half,min,(half)INFINITY)
 
 #define GENE(TYPE,OP,ID) \
-__attribute__((overloadable, always_inline)) TYPE \
+__attribute__((overloadable)) TYPE \
 work_group_scan_exclusive_##OP(TYPE a) \
 { \
     uint n = get_num_sub_groups(); \

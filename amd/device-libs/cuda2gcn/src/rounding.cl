@@ -7,7 +7,7 @@
 
 #include "ocml.h"
 
-#define ATTR __attribute__((always_inline, const))
+#define ATTR __attribute__((const))
 
 //-------- T __nv_llrint
 ATTR long __nv_llrint(double x) { return (long)__ocml_rint_f64(x); }

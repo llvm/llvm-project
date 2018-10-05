@@ -15,8 +15,8 @@ extern struct redret __half_red(float);
 extern float2 __half_scr(float);
 extern float __half_tr(float, int);
 
-#define IATTR __attribute__((always_inline, overloadable))
-#define CATTR __attribute__((always_inline, overloadable, const))
+#define IATTR __attribute__((overloadable))
+#define CATTR __attribute__((overloadable, const))
 
 #if !defined USE_CLP
 #define LISTU2(F) F(x.s0), F(x.s1)

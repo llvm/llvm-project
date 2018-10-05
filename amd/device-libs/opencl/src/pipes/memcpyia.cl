@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-__attribute__((always_inline)) void 
+void
 __memcpy_internal_aligned(void *d, const void *s, size_t size, size_t align)
 {
     if (align == 2) {

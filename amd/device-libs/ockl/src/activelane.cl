@@ -8,7 +8,7 @@
 #include "irif.h"
 #include "ockl.h"
 
-__attribute__((always_inline)) uint
+uint
 OCKL_MANGLE_U32(activelane)(void)
 {
     // TODO - check that this compiles to the desired 2 ISA instructions

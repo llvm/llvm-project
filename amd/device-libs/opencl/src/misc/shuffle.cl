@@ -21,9 +21,9 @@
 #define double_utype ulong
 #define half_utype ushort
 
-#define ATTR __attribute__((always_inline, overloadable, const))
-#define IATTR __attribute__((always_inline, const))
-#define AATTR(A) __attribute__((always_inline, overloadable, const, alias(A)))
+#define ATTR __attribute__((overloadable, const))
+#define IATTR __attribute__((const))
+#define AATTR(A) __attribute__((overloadable, const, alias(A)))
 
 #define LIST2 t[m.s0], t[m.s1]
 #define LIST4 LIST2, t[m.s2], t[m.s3]

@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#define ATTR __attribute__((always_inline, overloadable, const))
+#define ATTR __attribute__((overloadable, const))
 
 #define char_mask ((char)1 << 7)
 #define short_mask ((short)1 << 15)

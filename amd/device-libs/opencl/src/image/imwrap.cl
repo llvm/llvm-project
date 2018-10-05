@@ -235,10 +235,10 @@ static __constant int channel_data_type_map[32] = {
 #define _2Dad_gpars float2 dx, float2 dy
 #define _3D_gpars float4 dx, float4 dy
 
-#define RATTR __attribute__((overloadable, always_inline, pure))
-#define WATTR __attribute__((overloadable, always_inline))
-#define GATTR __attribute__((overloadable, always_inline, const))
-#define FATTR __attribute__((always_inline, pure))
+#define RATTR __attribute__((overloadable, pure))
+#define WATTR __attribute__((overloadable))
+#define GATTR __attribute__((overloadable, const))
+#define FATTR __attribute__((pure))
 
 #define SGEN(IT,PT,CT) \
 RATTR IT##_##PT##_pty \

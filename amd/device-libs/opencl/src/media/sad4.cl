@@ -8,7 +8,7 @@
 
 #include "ockl.h"
 
-__attribute__((overloadable, always_inline, const)) uint
+__attribute__((overloadable, const)) uint
 amd_sad4(uint4 x, uint4 y, uint z)
 {
     uint a = OCKL_MANGLE_U32(sad)(x.s0,y.s0,z);

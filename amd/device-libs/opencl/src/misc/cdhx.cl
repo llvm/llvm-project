@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#define ATTR __attribute__((always_inline, const))
+#define ATTR __attribute__((const))
 
 
 // TODO - remove these when these conversions are ordinary LLVM conversions

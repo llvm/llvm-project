@@ -7,7 +7,7 @@
 
 #include "ockl.h"
 
-#define ATTR __attribute__((overloadable, always_inline, const))
+#define ATTR __attribute__((overloadable, const))
 
 #define _F(N) __ockl_unpack##N##_f32
 #define F(N) _F(N)
@@ -31,7 +31,7 @@ amd_unpack##B(uint##N a) \
     GENN(4,B) \
     GENN(3,B) \
     GENN(2,B)
-           
+
 GEN(0)
 GEN(1)
 GEN(2)

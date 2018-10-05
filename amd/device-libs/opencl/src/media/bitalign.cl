@@ -7,7 +7,7 @@
 
 #include "ockl.h"
 
-#define ATTR __attribute__((overloadable, always_inline, const))
+#define ATTR __attribute__((overloadable, const))
 
 #define F OCKL_MANGLE_U32(bitalign)
 
@@ -31,6 +31,6 @@ GEN(8)
 GEN(4)
 GEN(3)
 GEN(2)
-           
+
 ATTR uint amd_bitalign(uint a, uint b, uint c) { return F(a, b, c); }
 

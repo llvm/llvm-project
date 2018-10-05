@@ -1,5 +1,5 @@
 
-#define ATTR __attribute__((always_inline, const, overloadable))
+#define ATTR __attribute__((const, overloadable))
 
 #if defined FLOAT_SPECIALIZATION
 #define T float

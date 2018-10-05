@@ -8,7 +8,7 @@
 #include "mathD.h"
 
 #define GEN(LN,UN) \
-CONSTATTR INLINEATTR double \
+CONSTATTR double \
 MATH_MANGLE(LN)(double x, double y) \
 { \
     return BUILTIN_##UN##_F64(x, y); \

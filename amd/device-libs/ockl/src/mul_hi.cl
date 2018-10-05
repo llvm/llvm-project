@@ -7,19 +7,19 @@
 
 #include "ockl.h"
 
-__attribute__((always_inline, const)) int
+__attribute__((const)) int
 OCKL_MANGLE_I32(mul_hi)(int x, int y)
 {
     return (int)(((long)x * (long)y) >> 32);
 }
 
-__attribute__((always_inline, const)) uint
+__attribute__((const)) uint
 OCKL_MANGLE_U32(mul_hi)(uint x, uint y)
 {
     return (uint)(((ulong)x * (ulong)y) >> 32);
 }
 
-__attribute__((always_inline, const)) long
+__attribute__((const)) long
 OCKL_MANGLE_I64(mul_hi)(long x, long y)
 {
     ulong x0 = (ulong)x & 0xffffffffUL;
@@ -34,7 +34,7 @@ OCKL_MANGLE_I64(mul_hi)(long x, long y)
     return x1*y1 + z2 + (z1 >> 32);
 }
 
-__attribute__((always_inline, const)) ulong
+__attribute__((const)) ulong
 OCKL_MANGLE_U64(mul_hi)(ulong x, ulong y)
 {
     ulong x0 = x & 0xffffffffUL;

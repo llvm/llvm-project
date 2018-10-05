@@ -73,7 +73,7 @@ extern void RunCmdTemplateDispatch(
             uint    numMaxWaves,
             uint    useATC);
 
-__attribute__((always_inline)) void
+void
 __amd_scheduler_pal(
     __global AmdVQueueHeader* queue,
     __global SchedulerParam* params,

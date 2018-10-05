@@ -13,7 +13,7 @@
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
 
-#define ATTR __attribute__((always_inline))
+#define ATTR
 
 #define AL(T,P,O,S) __opencl_atomic_load(P,O,S)
 #define AS(P,V,O,S) __opencl_atomic_store(P,V,O,S)

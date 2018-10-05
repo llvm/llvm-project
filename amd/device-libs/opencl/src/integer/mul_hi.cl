@@ -7,7 +7,7 @@
 
 #include "int.h"
 
-#define ATTR __attribute__((always_inline, overloadable, const))
+#define ATTR __attribute__((overloadable, const))
 
 #define char_shift 8
 #define short_shift 16

@@ -15,7 +15,7 @@ MATH_MANGLE(fma)(float a, float b, float c)
 }
 
 #define GEN(LN,UN) \
-CONSTATTR INLINEATTR float \
+CONSTATTR float \
 MATH_MANGLE(LN)(float a, float b, float c) \
 { \
     return BUILTIN_##UN##_F32(a, b, c); \

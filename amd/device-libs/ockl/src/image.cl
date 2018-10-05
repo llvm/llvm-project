@@ -11,9 +11,9 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-#define RATTR __attribute__((always_inline, pure))
-#define WATTR __attribute__((always_inline))
-#define GATTR __attribute__((always_inline, const))
+#define RATTR __attribute__((pure))
+#define WATTR
+#define GATTR __attribute__((const))
 
 // TSHARP/SSHARP access
 #define FIELD(P,B,W) ((P[B >> 5] >> (B & 0x1f)) & ((1 << W) - 1))

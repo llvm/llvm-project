@@ -7,7 +7,7 @@
 
 #include "int.h"
 
-#define UEXPATTR __attribute__((always_inline, overloadable, const))
+#define UEXPATTR __attribute__((overloadable, const))
 UEXP(char,clz)
 UEXP(uchar,clz)
 UEXP(short,clz)

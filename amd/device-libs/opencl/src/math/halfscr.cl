@@ -7,7 +7,7 @@
 
 #include "irif.h"
 
-__attribute__((always_inline)) float2
+float2
 __half_scr(float x)
 {
     float y = x * 0x1.45f306p-3f;

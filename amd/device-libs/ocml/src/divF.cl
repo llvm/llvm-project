@@ -8,7 +8,7 @@
 #include "mathF.h"
 
 #define GEN(LN,UN) \
-CONSTATTR INLINEATTR float \
+CONSTATTR float \
 MATH_MANGLE(LN)(float x, float y) \
 { \
     return BUILTIN_##UN##_F32(x, y); \

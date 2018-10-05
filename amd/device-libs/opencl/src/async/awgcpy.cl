@@ -10,9 +10,9 @@
 #define _S(X) #X
 #define S(X) _S(X)
 
-#define ATTR __attribute__((always_inline, overloadable))
-#define IATTR __attribute__((always_inline))
-#define AATTR(A) __attribute__((always_inline, overloadable, alias(A)))
+#define ATTR __attribute__((overloadable))
+#define IATTR
+#define AATTR(A) __attribute__((overloadable, alias(A)))
 
 #define BODY(D,S) \
     size_t i; \

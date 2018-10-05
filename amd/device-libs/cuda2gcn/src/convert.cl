@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#define ATTR __attribute__((always_inline, const))
+#define ATTR __attribute__((const))
 
 #define CONVERTM(A,B,m,n) ATTR B __nv_##A##2##B##_##m(A x) \
     { return convert_##B##_##n(x); }

@@ -115,8 +115,8 @@
 #define double_suf _f64
 #define half_suf _f16
 
-#define CATTR __attribute__((always_inline, const))
-#define IATTR __attribute__((always_inline))
+#define CATTR __attribute__((const))
+#define IATTR
 
 #define GENMIN(T) CATTR static T T##_min(T a, T b) { return a < b ? a : b; }
 GENMIN(int)

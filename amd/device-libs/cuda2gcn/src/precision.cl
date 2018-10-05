@@ -7,7 +7,7 @@
 
 #include "ocml.h"
 
-#define ATTR __attribute__((always_inline))
+#define ATTR
 
 #define FUNC1F(root) \
   ATTR float __nv_fast_##root##f(float x) { return __ocml_##root##_f32(x); }

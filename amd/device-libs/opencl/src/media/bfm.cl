@@ -7,7 +7,7 @@
 
 #include "ockl.h"
 
-#define ATTR __attribute__((overloadable, always_inline, const))
+#define ATTR __attribute__((overloadable, const))
 
 #define F OCKL_MANGLE_U32(bfm)
 
@@ -31,6 +31,6 @@ GEN(8)
 GEN(4)
 GEN(3)
 GEN(2)
-           
+
 ATTR uint amd_bfm(uint a, uint b) { return F(a, b); }
 

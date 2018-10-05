@@ -9,7 +9,7 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-#define ATTR __attribute__((always_inline, overloadable, const))
+#define ATTR __attribute__((overloadable, const))
 
 #define VLIST2 clamp(x.s0, lo.s0, hi.s0), clamp(x.s1, lo.s1, hi.s1)
 #define VLIST3 VLIST2, clamp(x.s2, lo.s2, hi.s2)

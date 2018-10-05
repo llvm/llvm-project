@@ -15,9 +15,9 @@ extern __attribute__((const)) uint __cvt_f16_rtn_f64(double);
 extern __attribute__((const)) uint __cvt_f16_rtp_f64(double);
 extern __attribute__((const)) uint __cvt_f16_rtz_f64(double);
 
-#define ATTR __attribute__((always_inline, overloadable, const))
-#define IATTR __attribute__((always_inline, const))
-#define AATTR(S) __attribute__((always_inline, overloadable, const, alias(S)))
+#define ATTR __attribute__((overloadable, const))
+#define IATTR __attribute__((const))
+#define AATTR(S) __attribute__((overloadable, const, alias(S)))
 
 #define _C(A,B) A##B
 #define C(A,B) _C(A,B)

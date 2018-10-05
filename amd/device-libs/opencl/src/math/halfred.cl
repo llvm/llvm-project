@@ -12,7 +12,7 @@ struct redret {
     float r;
 };
 
-__attribute__((always_inline)) struct redret
+struct redret
 __half_red(float x)
 {
     const float twobypi = 0x1.45f306p-1f;

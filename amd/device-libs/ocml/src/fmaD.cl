@@ -14,7 +14,7 @@ MATH_MANGLE(fma)(double a, double b, double c)
 }
 
 #define GEN(LN,UN) \
-CONSTATTR INLINEATTR double \
+CONSTATTR double \
 MATH_MANGLE(LN)(double a, double b, double c) \
 { \
     return BUILTIN_##UN##_F64(a, b, c); \

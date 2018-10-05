@@ -11,9 +11,9 @@
 #define _C(A,B) A##B
 #define C(A,B) _C(A,B)
 
-#define ATTR __attribute__((always_inline, overloadable, const))
-#define IATTR __attribute__((always_inline, const))
-#define AATTR(S) __attribute__((always_inline, overloadable, const, alias(S)))
+#define ATTR __attribute__((overloadable, const))
+#define IATTR __attribute__((const))
+#define AATTR(S) __attribute__((overloadable, const, alias(S)))
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 

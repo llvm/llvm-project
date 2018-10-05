@@ -5,19 +5,19 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-__attribute__((overloadable, always_inline)) void
+__attribute__((overloadable)) void
 barrier(cl_mem_fence_flags flags)
 {
     work_group_barrier(flags);
 }
 
-__attribute__((overloadable, always_inline)) void
+__attribute__((overloadable)) void
 work_group_barrier(cl_mem_fence_flags flags)
 {
     work_group_barrier(flags, memory_scope_work_group);
 }
 
-__attribute__((overloadable, always_inline)) void
+__attribute__((overloadable)) void
 work_group_barrier(cl_mem_fence_flags flags, memory_scope scope)
 {
     if (flags) {
