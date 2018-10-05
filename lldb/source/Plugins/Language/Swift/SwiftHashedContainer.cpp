@@ -910,19 +910,22 @@ HashedStorageHandlerUP
 HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
   static ConstString g__variant("_variant"); // Swift 5
   static ConstString g__variantBuffer("_variantBuffer"); // Swift 4
-  static ConstString g_native("native");
-  static ConstString g_cocoa("cocoa");
+  static ConstString g_native("native"); // Swift 4.2
+  static ConstString g_cocoa("cocoa"); // Swift 4.2
+  static ConstString g_object("object"); // Swift 5
+  static ConstString g_rawValue("rawValue"); // Swift 5
   static ConstString g_nativeBuffer("nativeBuffer"); // Swift 4
   static ConstString g__storage("_storage");
 
   Status error;
 
+  auto exe_ctx = valobj.GetExecutionContextRef();
+
   ValueObjectSP valobj_sp = valobj.GetSP();
   if (valobj_sp->GetObjectRuntimeLanguage() != eLanguageTypeSwift &&
       valobj_sp->IsPointerType()) {
-    if (auto swiftval_sp = SwiftObjectAtAddress(
-          valobj_sp->GetExecutionContextRef(),
-          valobj_sp->GetPointerValue()))
+    lldb::addr_t address = valobj_sp->GetPointerValue();
+    if (auto swiftval_sp = SwiftObjectAtAddress(exe_ctx, address))
       valobj_sp = swiftval_sp;
   }
   valobj_sp = valobj_sp->GetQualifiedRepresentationIfAvailable(
@@ -949,44 +952,76 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
   if (!variant_sp)
     return nullptr;
 
-  ConstString variant_cs(variant_sp->GetValueAsCString());
-  if (!variant_cs)
+  ValueObjectSP bobject_sp =
+    variant_sp->GetChildAtNamePath({g_object, g_rawValue});
+
+  if (!bobject_sp) { // FIXME: Remove (Legacy Swift 4.2 path)
+    ConstString variant_cs(variant_sp->GetValueAsCString());
+    if (!variant_cs)
+      return nullptr;
+
+    if (g_cocoa == variant_cs) {
+      // it's an NSDictionary/NSSet in disguise
+      static ConstString g_object("object"); // Swift 5
+      static ConstString g_cocoaDictionary("cocoaDictionary"); // Swift 4
+      static ConstString g_cocoaSet("cocoaSet"); // Swift 4
+    
+      ValueObjectSP child_sp =
+        variant_sp->GetChildAtNamePath({g_cocoa, g_object});
+      if (!child_sp) // try Swift 4 name for dictionaries
+        child_sp = variant_sp->GetChildAtNamePath({g_cocoa, g_cocoaDictionary});
+      if (!child_sp) // try Swift 4 name for sets
+        child_sp = variant_sp->GetChildAtNamePath({g_cocoa, g_cocoaSet});
+      if (!child_sp)
+        return nullptr;
+      // child_sp is the _NSDictionary/_NSSet reference.
+      ValueObjectSP ref_sp = child_sp->GetChildAtIndex(0, true); // instance
+      if (!ref_sp)
+        return nullptr;
+
+      uint64_t cocoa_ptr = ref_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+      if (cocoa_ptr == LLDB_INVALID_ADDRESS)
+        return nullptr;
+      // FIXME: for some reason I need to zero out the MSB; figure out why
+      cocoa_ptr &= 0x00FFFFFFFFFFFFFF;
+
+      auto cocoa_sp = CocoaObjectAtAddress(exe_ctx, cocoa_ptr);
+      if (!cocoa_sp)
+        return nullptr;
+      return CreateCocoaHandler(cocoa_sp);
+    }
+    if (g_native == variant_cs) {
+      auto storage_sp = variant_sp->GetChildAtNamePath({g_native, g__storage});
+      return CreateNativeHandler(valobj_sp, storage_sp);
+    }
+    return nullptr;
+  }
+
+  lldb::addr_t storage_location =
+    bobject_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+  if (storage_location == LLDB_INVALID_ADDRESS) {
+    return nullptr;
+  }
+
+  ProcessSP process_sp = exe_ctx.GetProcessSP();
+  if (!process_sp)
     return nullptr;
 
-  if (g_cocoa == variant_cs) {
-    // it's an NSDictionary/NSSet in disguise
-    static ConstString g_object("object"); // Swift 5
-    static ConstString g_cocoaDictionary("cocoaDictionary"); // Swift 4
-    static ConstString g_cocoaSet("cocoaSet"); // Swift 4
-    
-    ValueObjectSP child_sp =
-      variant_sp->GetChildAtNamePath({g_cocoa, g_object});
-    if (!child_sp) // try Swift 4 name for dictionaries
-      child_sp = variant_sp->GetChildAtNamePath({g_cocoa, g_cocoaDictionary});
-    if (!child_sp) // try Swift 4 name for sets
-      child_sp = variant_sp->GetChildAtNamePath({g_cocoa, g_cocoaSet});
-    if (!child_sp)
-      return nullptr;
-    // child_sp is the _NSDictionary/_NSSet reference.
-    ValueObjectSP ref_sp = child_sp->GetChildAtIndex(0, true); // instance
-    if (!ref_sp)
-      return nullptr;
+  SwiftLanguageRuntime *swift_runtime = process_sp->GetSwiftLanguageRuntime();
+  if (!swift_runtime)
+    return nullptr;
 
-    uint64_t cocoa_ptr = ref_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-    if (cocoa_ptr == LLDB_INVALID_ADDRESS)
-      return nullptr;
-    // FIXME: for some reason I need to zero out the MSB; figure out why
-    cocoa_ptr &= 0x00FFFFFFFFFFFFFF;
+  lldb::addr_t masked_storage_location =
+    swift_runtime->MaskMaybeBridgedPointer(storage_location);
 
-    auto cocoa_sp = CocoaObjectAtAddress(valobj_sp->GetExecutionContextRef(),
-                                         cocoa_ptr);
+  if (masked_storage_location == storage_location) {
+    // Native storage
+    return CreateNativeHandler(valobj_sp, bobject_sp);
+  } else {
+    auto cocoa_sp = CocoaObjectAtAddress(exe_ctx, masked_storage_location);
     if (!cocoa_sp)
       return nullptr;
     return CreateCocoaHandler(cocoa_sp);
-  }
-  if (g_native == variant_cs) {
-    auto storage_sp = variant_sp->GetChildAtNamePath({g_native, g__storage});
-    return CreateNativeHandler(valobj_sp, storage_sp);
   }
 
   return nullptr;
