@@ -16,6 +16,7 @@
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/CompilerType.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/lldb-private.h"
 
@@ -195,6 +196,10 @@ public:
 
   ObjectFile *GetObjectFile() { return m_obj_file; }
   const ObjectFile *GetObjectFile() const { return m_obj_file; }
+
+  virtual std::vector<CallEdge> ParseCallEdgesInFunction(UserID func_id) {
+    return {};
+  }
 
   //------------------------------------------------------------------
   /// Notify the SymbolFile that the file addresses in the Sections

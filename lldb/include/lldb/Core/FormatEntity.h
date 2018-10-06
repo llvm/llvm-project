@@ -88,6 +88,7 @@ public:
       FrameRegisterFP,
       FrameRegisterFlags,
       FrameRegisterByName,
+      FrameIsArtificial,
       ScriptFrame,
       FunctionID,
       FunctionDidChange,
