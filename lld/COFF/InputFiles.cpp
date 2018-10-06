@@ -280,6 +280,13 @@ Symbol *ObjFile::createRegular(COFFSymbolRef Sym) {
     COFFObj->getSymbolName(Sym, Name);
     if (SC)
       return Symtab->addRegular(this, Name, Sym.getGeneric(), SC);
+    // For MinGW symbols named .weak.* that point to a discarded section,
+    // don't create an Undefined symbol. If nothing ever refers to the symbol,
+    // everything should be fine. If something actually refers to the symbol
+    // (e.g. the undefined weak alias), linking will fail due to undefined
+    // references at the end.
+    if (Config->MinGW && Name.startswith(".weak."))
+      return nullptr;
     return Symtab->addUndefined(Name, this, false);
   }
   if (SC)

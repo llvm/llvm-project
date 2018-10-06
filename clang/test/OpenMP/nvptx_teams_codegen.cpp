@@ -105,7 +105,6 @@ int main (int argc, char **argv) {
 // CK2: [[AADDR:%.+]] = alloca i{{[0-9]+}},
 // CK2: [[BADDR:%.+]] = alloca i{{[0-9]+}},
 // CK2: [[ARGCADDR:%.+]] = alloca i{{[0-9]+}},
-// CK2:  {{%.+}} = call i32 @__kmpc_global_thread_num(
 // CK2: store i{{[0-9]+}} [[A_IN]], i{{[0-9]+}}* [[AADDR]],
 // CK2: store i{{[0-9]+}} [[B_IN]], i{{[0-9]+}}* [[BADDR]],
 // CK2: store i{{[0-9]+}} [[ARGC_IN]], i{{[0-9]+}}* [[ARGCADDR]],
@@ -117,6 +116,7 @@ int main (int argc, char **argv) {
 // CK2-32:  [[ARG:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[ARGCADDR]]
 // CK2:  [[ARGCADDR:%.+]] = getelementptr inbounds %struct.{{.*}}, %struct.{{.*}}* %{{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CK2:  store i{{[0-9]+}} [[ARG]], i{{[0-9]+}}* [[ARGCADDR]],
+// CK2:  {{%.+}} = call i32 @__kmpc_global_thread_num(
 // CK2:  store i{{[0-9]+}}* [[ARGCADDR]], i{{[0-9]+}}** [[ARGCADDR_PTR]],
 // CK2:  [[ARGCADDR_PTR_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[ARGCADDR_PTR]],
 // CK2: store i{{[0-9]+}} 0, i{{[0-9]+}}* [[ARGCADDR_PTR_REF]],
@@ -129,7 +129,6 @@ int main (int argc, char **argv) {
 // CK2: [[AADDR:%.+]] = alloca i{{[0-9]+}},
 // CK2: [[BADDR:%.+]] = alloca i{{[0-9]+}},
 // CK2: [[ARGCADDR:%.+]] = alloca i{{[0-9]+}}**,
-// CK2: {{%.+}} = call i32 @__kmpc_global_thread_num(
 // CK2: store i{{[0-9]+}} [[A_IN]], i{{[0-9]+}}* [[AADDR]],
 // CK2: store i{{[0-9]+}} [[B_IN]], i{{[0-9]+}}* [[BADDR]],
 // CK2: store i{{[0-9]+}}** [[ARGC]], i{{[0-9]+}}*** [[ARGCADDR]],
@@ -137,6 +136,7 @@ int main (int argc, char **argv) {
 // CK2: [[ARG:%.+]] = load i{{[0-9]+}}**, i{{[0-9]+}}*** [[ARGCADDR]]
 // CK2: [[ARGCADDR:%.+]] = getelementptr inbounds %struct.{{.*}}, %struct.{{.*}}* %{{.*}}, i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CK2: store i{{[0-9]+}}** [[ARG]], i{{[0-9]+}}*** [[ARGCADDR]],
+// CK2: {{%.+}} = call i32 @__kmpc_global_thread_num(
 // CK2: store i{{[0-9]+}}*** [[ARGCADDR]], i{{[0-9]+}}**** [[ARGCADDR_PTR]],
 // CK2: [[ARGCADDR_PTR_REF:%.+]] = load i{{[0-9]+}}***, i{{[0-9]+}}**** [[ARGCADDR_PTR]],
 // CK2: store i{{[0-9]+}}** null, i{{[0-9]+}}*** [[ARGCADDR_PTR_REF]],
