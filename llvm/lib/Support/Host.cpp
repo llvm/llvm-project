@@ -196,6 +196,21 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
             .Default("generic");
   }
 
+  if (Implementer == "0x42" || Implementer == "0x43") { // Broadcom | Cavium.
+    for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
+      if (Lines[I].startswith("CPU part")) {
+        return StringSwitch<const char *>(Lines[I].substr(8).ltrim("\t :"))
+          .Case("0x516", "thunderx2t99")
+          .Case("0x0516", "thunderx2t99")
+          .Case("0xaf", "thunderx2t99")
+          .Case("0x0af", "thunderx2t99")
+          .Case("0xa1", "thunderxt88")
+          .Case("0x0a1", "thunderxt88")
+          .Default("generic");
+      }
+    }
+  }
+
   if (Implementer == "0x51") // Qualcomm Technologies, Inc.
     // Look for the CPU part line.
     for (unsigned I = 0, E = Lines.size(); I != E; ++I)

@@ -596,16 +596,14 @@ define i1 @add_ultcmp_bad_i16_i4(i16 %x) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addl $8, %eax
-; X86-NEXT:    movzwl %ax, %eax
-; X86-NEXT:    cmpl $16, %eax
+; X86-NEXT:    cmpw $16, %ax
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: add_ultcmp_bad_i16_i4:
 ; X64:       # %bb.0:
 ; X64-NEXT:    addl $8, %edi
-; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    cmpl $16, %eax
+; X64-NEXT:    cmpw $16, %di
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
   %tmp0 = add i16 %x, 8 ; 1U << (4-1)

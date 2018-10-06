@@ -87,8 +87,13 @@ def ZnMultiplier : ProcResource<1>;
 // Integer division issued on ALU2.
 def ZnDivider : ProcResource<1>;
 
-// 4 Cycles load-to use Latency is captured
+// 4 Cycles integer load-to use Latency is captured
 def : ReadAdvance<ReadAfterLd, 4>;
+
+// 8 Cycles vector load-to use Latency is captured
+def : ReadAdvance<ReadAfterVecLd, 8>;
+def : ReadAdvance<ReadAfterVecXLd, 8>;
+def : ReadAdvance<ReadAfterVecYLd, 8>;
 
 // The Integer PRF for Zen is 168 entries, and it holds the architectural and
 // speculative version of the 64-bit integer registers.

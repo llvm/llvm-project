@@ -9,7 +9,7 @@ define zeroext i16 @t1(i16 zeroext %x) nounwind readnone ssp {
 ; CHECK-LABEL: t1:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpl $26, %edi
+; CHECK-NEXT:    cmpw $26, %di
 ; CHECK-NEXT:    seta %al
 ; CHECK-NEXT:    shll $5, %eax
 ; CHECK-NEXT:    retq
@@ -22,7 +22,7 @@ define zeroext i16 @t2(i16 zeroext %x) nounwind readnone ssp {
 ; CHECK-LABEL: t2:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpl $26, %edi
+; CHECK-NEXT:    cmpw $26, %di
 ; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    shll $5, %eax
 ; CHECK-NEXT:    retq

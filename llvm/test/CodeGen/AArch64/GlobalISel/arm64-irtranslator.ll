@@ -2207,3 +2207,17 @@ define void @test_blockaddress() {
 block:
   ret void
 }
+
+%t = type { i32 }
+declare {}* @llvm.invariant.start.p0i8(i64, i8* nocapture) readonly nounwind
+declare void @llvm.invariant.end.p0i8({}*, i64, i8* nocapture) nounwind
+define void @test_invariant_intrin() {
+; CHECK-LABEL: name: test_invariant_intrin
+; CHECK: %{{[0-9]+}}:_(s64) = G_IMPLICIT_DEF
+; CHECK-NEXT: RET_ReallyLR
+  %x = alloca %t
+  %y = bitcast %t* %x to i8*
+  %inv = call {}* @llvm.invariant.start.p0i8(i64 8, i8* %y)
+  call void @llvm.invariant.end.p0i8({}* %inv, i64 8, i8* %y)
+  ret void
+}

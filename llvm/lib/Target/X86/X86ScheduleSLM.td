@@ -49,6 +49,9 @@ def SLMFPDivider    : ProcResource<1>;
 // Loads are 3 cycles, so ReadAfterLd registers needn't be available until 3
 // cycles after the memory operand.
 def : ReadAdvance<ReadAfterLd, 3>;
+def : ReadAdvance<ReadAfterVecLd, 3>;
+def : ReadAdvance<ReadAfterVecXLd, 3>;
+def : ReadAdvance<ReadAfterVecYLd, 3>;
 
 // Many SchedWrites are defined in pairs with and without a folded load.
 // Instructions with folded loads are usually micro-fused, so they only appear

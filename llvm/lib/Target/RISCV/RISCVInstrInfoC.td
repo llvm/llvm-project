@@ -625,6 +625,8 @@ def : CompressPat<(AND GPRC:$rs1, GPRC:$rs2, GPRC:$rs1),
 } //  Predicates = [HasStdExtC]
 
 let Predicates = [HasStdExtC, IsRV64] in {
+def : CompressPat<(ADDIW GPRNoX0:$rd, X0, simm6:$imm),
+                  (C_LI GPRNoX0:$rd, simm6:$imm)>;
 def : CompressPat<(SUBW GPRC:$rs1, GPRC:$rs1, GPRC:$rs2),
                   (C_SUBW GPRC:$rs1, GPRC:$rs2)>;
 def : CompressPat<(ADDW GPRC:$rs1, GPRC:$rs1, GPRC:$rs2),

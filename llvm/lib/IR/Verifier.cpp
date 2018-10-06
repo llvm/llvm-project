@@ -1119,6 +1119,10 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
       AssertDI(Op && isa<DIType>(Op), "invalid thrown type", &N, ThrownTypes,
                Op);
   }
+
+  if (N.areAllCallsDescribed())
+    AssertDI(N.isDefinition(),
+             "DIFlagAllCallsDescribed must be attached to a definition");
 }
 
 void Verifier::visitDILexicalBlockBase(const DILexicalBlockBase &N) {

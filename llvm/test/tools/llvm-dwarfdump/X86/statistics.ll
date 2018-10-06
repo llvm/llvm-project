@@ -1,5 +1,6 @@
 ; RUN: llc -O0 %s -o - -filetype=obj \
 ; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
+; CHECK: "version":1
 
 ; int GlobalConst = 42;
 ; int Global;

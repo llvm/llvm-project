@@ -39,6 +39,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Constants.h"
@@ -499,6 +500,63 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
         SkelCU->constructAbstractSubprogramScopeDIE(Scope);
     } else
       CU.constructAbstractSubprogramScopeDIE(Scope);
+  }
+}
+
+void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
+                                            DwarfCompileUnit &CU, DIE &ScopeDIE,
+                                            const MachineFunction &MF) {
+  // Add a call site-related attribute (DWARF5, Sec. 3.3.1.3). Do this only if
+  // the subprogram is required to have one.
+  if (!SP.areAllCallsDescribed() || !SP.isDefinition())
+    return;
+
+  // Use DW_AT_call_all_calls to express that call site entries are present
+  // for both tail and non-tail calls. Don't use DW_AT_call_all_source_calls
+  // because one of its requirements is not met: call site entries for
+  // optimized-out calls are elided.
+  CU.addFlag(ScopeDIE, dwarf::DW_AT_call_all_calls);
+
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  assert(TII && "TargetInstrInfo not found: cannot label tail calls");
+
+  // Emit call site entries for each call or tail call in the function.
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB.instrs()) {
+      // Skip instructions which aren't calls. Both calls and tail-calling jump
+      // instructions (e.g TAILJMPd64) are classified correctly here.
+      if (!MI.isCall())
+        continue;
+
+      // TODO: Add support for targets with delay slots (see: beginInstruction).
+      if (MI.hasDelaySlot())
+        return;
+
+      // If this is a direct call, find the callee's subprogram.
+      const MachineOperand &CalleeOp = MI.getOperand(0);
+      if (!CalleeOp.isGlobal())
+        continue;
+      const Function *CalleeDecl = dyn_cast<Function>(CalleeOp.getGlobal());
+      if (!CalleeDecl || !CalleeDecl->getSubprogram())
+        continue;
+
+      // TODO: Omit call site entries for runtime calls (objc_msgSend, etc).
+      // TODO: Add support for indirect calls.
+
+      bool IsTail = TII->isTailCall(MI);
+
+      // For tail calls, no return PC information is needed. For regular calls,
+      // the return PC is needed to disambiguate paths in the call graph which
+      // could lead to some target function.
+      const MCSymbol *ReturnPC = IsTail ? nullptr : getLabelAfterInsn(&MI);
+
+      assert((IsTail || ReturnPC) && "Call without return PC information");
+      LLVM_DEBUG(dbgs() << "CallSiteEntry: " << MF.getName() << " -> "
+                        << CalleeDecl->getName() << (IsTail ? " [tail]" : "")
+                        << "\n");
+      CU.constructCallSiteEntryDIE(ScopeDIE, *CalleeDecl->getSubprogram(),
+                                   IsTail, ReturnPC);
+    }
   }
 }
 
@@ -1313,6 +1371,49 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
   }
 }
 
+static const DebugLoc &
+findNextDebugLoc(MachineBasicBlock::const_iterator MBBI,
+                 MachineBasicBlock::const_iterator MBBE) {
+  static DebugLoc NoLocation;
+  for ( ; MBBI != MBBE; ++MBBI) {
+    if (MBBI->isDebugInstr())
+      continue;
+    const DebugLoc &DL = MBBI->getDebugLoc();
+    if (DL)
+      return DL;
+  }
+  return NoLocation;
+}
+
+void DwarfDebug::emitDebugLoc(const DebugLoc &DL) {
+  unsigned LastAsmLine =
+      Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
+
+  // We have an explicit location, different from the previous location.
+  // Don't repeat a line-0 record, but otherwise emit the new location.
+  // (The new location might be an explicit line 0, which we do emit.)
+  unsigned Line = DL.getLine();
+  if (PrevInstLoc && Line == 0 && LastAsmLine == 0)
+    return;
+  unsigned Flags = 0;
+  if (DL == PrologEndLoc) {
+    Flags |= DWARF2_FLAG_PROLOGUE_END | DWARF2_FLAG_IS_STMT;
+    PrologEndLoc = DebugLoc();
+  }
+  // If the line changed, we call that a new statement; unless we went to
+  // line 0 and came back, in which case it is not a new statement.
+  unsigned OldLine = PrevInstLoc ? PrevInstLoc.getLine() : LastAsmLine;
+  if (Line && Line != OldLine)
+    Flags |= DWARF2_FLAG_IS_STMT;
+
+  const MDNode *Scope = DL.getScope();
+  recordSourceLine(Line, DL.getCol(), Scope, Flags);
+
+  // If we're not at line 0, remember this location.
+  if (Line)
+    PrevInstLoc = DL;
+}
+
 // Process beginning of an instruction.
 void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   DebugHandlerBase::beginInstruction(MI);
@@ -1333,6 +1434,11 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   unsigned LastAsmLine =
       Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
 
+  // Request a label after the call in order to emit AT_return_pc information
+  // in call site entries. TODO: Add support for targets with delay slots.
+  if (SP->areAllCallsDescribed() && MI->isCall() && !MI->hasDelaySlot())
+    requestLabelAfterInsn(MI);
+
   if (DL == PrevInstLoc) {
     // If we have an ongoing unspecified location, nothing to do here.
     if (!DL)
@@ -1352,54 +1458,41 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     // If we have already emitted a line-0 record, don't repeat it.
     if (LastAsmLine == 0)
       return;
+    // By default we emit nothing to avoid line table bloat. However at the
+    // beginning of a basic block or after a label it is undesirable to let
+    // the previous location unchanged. In these cases do a forward search for
+    // the next valid debug location.
+    if (UnknownLocations == Default) {
+      const MachineBasicBlock &MBB = *MI->getParent();
+      if (!PrevLabel && PrevInstBB == &MBB)
+        return;
+
+      const DebugLoc &NextDL = findNextDebugLoc(MI->getIterator(), MBB.end());
+      if (NextDL) {
+        emitDebugLoc(NextDL);
+        return;
+      }
+    }
+
+    // We should emit a line-0 record.
     // If user said Don't Do That, don't do that.
     if (UnknownLocations == Disable)
       return;
-    // See if we have a reason to emit a line-0 record now.
-    // Reasons to emit a line-0 record include:
-    // - User asked for it (UnknownLocations).
-    // - Instruction has a label, so it's referenced from somewhere else,
-    //   possibly debug information; we want it to have a source location.
-    // - Instruction is at the top of a block; we don't want to inherit the
-    //   location from the physically previous (maybe unrelated) block.
-    if (UnknownLocations == Enable || PrevLabel ||
-        (PrevInstBB && PrevInstBB != MI->getParent())) {
-      // Preserve the file and column numbers, if we can, to save space in
-      // the encoded line table.
-      // Do not update PrevInstLoc, it remembers the last non-0 line.
-      const MDNode *Scope = nullptr;
-      unsigned Column = 0;
-      if (PrevInstLoc) {
-        Scope = PrevInstLoc.getScope();
-        Column = PrevInstLoc.getCol();
-      }
-      recordSourceLine(/*Line=*/0, Column, Scope, /*Flags=*/0);
+    // Emit a line-0 record now.
+    // Preserve the file and column numbers, if we can, to save space in
+    // the encoded line table.
+    // Do not update PrevInstLoc, it remembers the last non-0 line.
+    const MDNode *Scope = nullptr;
+    unsigned Column = 0;
+    if (PrevInstLoc) {
+      Scope = PrevInstLoc.getScope();
+      Column = PrevInstLoc.getCol();
     }
+    recordSourceLine(/*Line=*/0, Column, Scope, /*Flags=*/0);
     return;
   }
 
-  // We have an explicit location, different from the previous location.
-  // Don't repeat a line-0 record, but otherwise emit the new location.
-  // (The new location might be an explicit line 0, which we do emit.)
-  if (PrevInstLoc && DL.getLine() == 0 && LastAsmLine == 0)
-    return;
-  unsigned Flags = 0;
-  if (DL == PrologEndLoc) {
-    Flags |= DWARF2_FLAG_PROLOGUE_END | DWARF2_FLAG_IS_STMT;
-    PrologEndLoc = DebugLoc();
-  }
-  // If the line changed, we call that a new statement; unless we went to
-  // line 0 and came back, in which case it is not a new statement.
-  unsigned OldLine = PrevInstLoc ? PrevInstLoc.getLine() : LastAsmLine;
-  if (DL.getLine() && DL.getLine() != OldLine)
-    Flags |= DWARF2_FLAG_IS_STMT;
-
-  const MDNode *Scope = DL.getScope();
-  recordSourceLine(DL.getLine(), DL.getCol(), Scope, Flags);
-
-  // If we're not at line 0, remember this location.
-  if (DL.getLine())
-    PrevInstLoc = DL;
+  emitDebugLoc(DL);
 }
 
 static DebugLoc findPrologueEndLoc(const MachineFunction *MF) {
@@ -1516,11 +1609,14 @@ void DwarfDebug::endFunctionImpl(const MachineFunction *MF) {
   }
 
   ProcessedSPNodes.insert(SP);
-  TheCU.constructSubprogramScopeDIE(SP, FnScope);
+  DIE &ScopeDIE = TheCU.constructSubprogramScopeDIE(SP, FnScope);
   if (auto *SkelCU = TheCU.getSkeleton())
     if (!LScopes.getAbstractScopesList().empty() &&
         TheCU.getCUNode()->getSplitDebugInlining())
       SkelCU->constructSubprogramScopeDIE(SP, FnScope);
+
+  // Construct call site entries.
+  constructCallSiteEntryDIEs(*SP, TheCU, ScopeDIE, *MF);
 
   // Clear debug info
   // Ownership of DbgVariables is a bit subtle - ScopeVariables owns all the
