@@ -93,6 +93,12 @@ def JVALU : ProcResGroup<[JVALU0, JVALU1]>;
 // cycles after the memory operand.
 def : ReadAdvance<ReadAfterLd, 3>;
 
+// Vector loads are 5 cycles, so ReadAfterVec*Ld registers needn't be available until 5
+// cycles after the memory operand.
+def : ReadAdvance<ReadAfterVecLd, 5>;
+def : ReadAdvance<ReadAfterVecXLd, 5>;
+def : ReadAdvance<ReadAfterVecYLd, 5>;
+
 // Many SchedWrites are defined in pairs with and without a folded load.
 // Instructions with folded loads are usually micro-fused, so they only appear
 // as two micro-ops when dispatched by the schedulers.

@@ -51,7 +51,7 @@ multiclass fma3p_rm_213<bits<8> opc, string OpcodeStr, RegisterClass RC,
                               "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
                    [(set RC:$dst, (VT (Op RC:$src2, RC:$src1,
                                           (MemFrag addr:$src3))))]>,
-                   Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
+                   Sched<[sched.Folded, sched.ReadAfterFold, sched.ReadAfterFold]>;
 }
 
 multiclass fma3p_rm_231<bits<8> opc, string OpcodeStr, RegisterClass RC,
@@ -71,7 +71,7 @@ multiclass fma3p_rm_231<bits<8> opc, string OpcodeStr, RegisterClass RC,
                               "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
                    [(set RC:$dst, (VT (Op RC:$src2, (MemFrag addr:$src3),
                                           RC:$src1)))]>,
-                   Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
+                   Sched<[sched.Folded, sched.ReadAfterFold, sched.ReadAfterFold]>;
 }
 
 multiclass fma3p_rm_132<bits<8> opc, string OpcodeStr, RegisterClass RC,
@@ -93,7 +93,7 @@ multiclass fma3p_rm_132<bits<8> opc, string OpcodeStr, RegisterClass RC,
                               "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
                    [(set RC:$dst, (VT (Op (MemFrag addr:$src3), RC:$src1,
                                           RC:$src2)))]>,
-                   Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
+                   Sched<[sched.Folded, sched.ReadAfterFold, sched.ReadAfterFold]>;
 }
 
 let Constraints = "$src1 = $dst", hasSideEffects = 0, isCommutable = 1 in
@@ -192,7 +192,7 @@ multiclass fma3s_rm_213<bits<8> opc, string OpcodeStr,
                            "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
                 [(set RC:$dst,
                   (OpNode RC:$src2, RC:$src1, (load addr:$src3)))]>,
-                Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
+                Sched<[sched.Folded, sched.ReadAfterFold, sched.ReadAfterFold]>;
 }
 
 multiclass fma3s_rm_231<bits<8> opc, string OpcodeStr,
@@ -212,7 +212,7 @@ multiclass fma3s_rm_231<bits<8> opc, string OpcodeStr,
                            "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
                 [(set RC:$dst,
                   (OpNode RC:$src2, (load addr:$src3), RC:$src1))]>,
-                Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
+                Sched<[sched.Folded, sched.ReadAfterFold, sched.ReadAfterFold]>;
 }
 
 multiclass fma3s_rm_132<bits<8> opc, string OpcodeStr,
@@ -234,7 +234,7 @@ multiclass fma3s_rm_132<bits<8> opc, string OpcodeStr,
                            "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
                 [(set RC:$dst,
                   (OpNode (load addr:$src3), RC:$src1, RC:$src2))]>,
-                Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
+                Sched<[sched.Folded, sched.ReadAfterFold, sched.ReadAfterFold]>;
 }
 
 let Constraints = "$src1 = $dst", isCommutable = 1, hasSideEffects = 0 in
@@ -279,7 +279,7 @@ multiclass fma3s_rm_int<bits<8> opc, string OpcodeStr,
                         (ins RC:$src1, RC:$src2, memopr:$src3),
                         !strconcat(OpcodeStr,
                                    "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
-                        []>, Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
+                        []>, Sched<[sched.Folded, sched.ReadAfterFold, sched.ReadAfterFold]>;
 }
 
 // The FMA 213 form is created for lowering of scalar FMA intrinscis
@@ -402,19 +402,19 @@ multiclass fma4s<bits<8> opc, string OpcodeStr, RegisterClass RC,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set RC:$dst, (OpNode RC:$src1, RC:$src2,
                            (mem_frag addr:$src3)))]>, VEX_W, VEX_LIG,
-           Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
+           Sched<[sched.Folded, sched.ReadAfterFold, sched.ReadAfterFold]>;
   def mr : FMA4S<opc, MRMSrcMem, (outs RC:$dst),
            (ins RC:$src1, x86memop:$src2, RC:$src3),
            !strconcat(OpcodeStr,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set RC:$dst,
              (OpNode RC:$src1, (mem_frag addr:$src2), RC:$src3))]>, VEX_LIG,
-           Sched<[sched.Folded, ReadAfterLd,
+           Sched<[sched.Folded, sched.ReadAfterFold,
                   // x86memop:$src2
                   ReadDefault, ReadDefault, ReadDefault, ReadDefault,
                   ReadDefault,
                   // RC:$src3
-                  ReadAfterLd]>;
+                  sched.ReadAfterFold]>;
 // For disassembler
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
   def rr_REV : FMA4S<opc, MRMSrcReg, (outs RC:$dst),
@@ -438,19 +438,19 @@ let isCodeGenOnly = 1, hasSideEffects = 0 in {
                !strconcat(OpcodeStr,
                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
                []>, VEX_W, VEX_LIG,
-               Sched<[sched.Folded, ReadAfterLd, ReadAfterLd]>;
+               Sched<[sched.Folded, sched.ReadAfterFold, sched.ReadAfterFold]>;
   let mayLoad = 1 in
   def mr_Int : FMA4S_Int<opc, MRMSrcMem, (outs VR128:$dst),
                (ins VR128:$src1, memop:$src2, VR128:$src3),
                !strconcat(OpcodeStr,
                "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
                []>,
-               VEX_LIG, Sched<[sched.Folded, ReadAfterLd,
+               VEX_LIG, Sched<[sched.Folded, sched.ReadAfterFold,
                                // memop:$src2
                                ReadDefault, ReadDefault, ReadDefault,
                                ReadDefault, ReadDefault,
                                // VR128::$src3
-                               ReadAfterLd]>;
+                               sched.ReadAfterFold]>;
   def rr_Int_REV : FMA4S_Int<opc, MRMSrcReg, (outs VR128:$dst),
                (ins VR128:$src1, VR128:$src2, VR128:$src3),
                !strconcat(OpcodeStr,
@@ -477,19 +477,19 @@ multiclass fma4p<bits<8> opc, string OpcodeStr, SDNode OpNode,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR128:$dst, (OpNode VR128:$src1, VR128:$src2,
                               (ld_frag128 addr:$src3)))]>, VEX_W,
-           Sched<[sched.XMM.Folded, ReadAfterLd, ReadAfterLd]>;
+           Sched<[sched.XMM.Folded, sched.XMM.ReadAfterFold, sched.XMM.ReadAfterFold]>;
   def mr : FMA4<opc, MRMSrcMem, (outs VR128:$dst),
            (ins VR128:$src1, f128mem:$src2, VR128:$src3),
            !strconcat(OpcodeStr,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR128:$dst,
              (OpNode VR128:$src1, (ld_frag128 addr:$src2), VR128:$src3))]>,
-           Sched<[sched.XMM.Folded, ReadAfterLd,
+           Sched<[sched.XMM.Folded, sched.XMM.ReadAfterFold,
                   // f128mem:$src2
                   ReadDefault, ReadDefault, ReadDefault, ReadDefault,
                   ReadDefault,
                   // VR128::$src3
-                  ReadAfterLd]>;
+                  sched.XMM.ReadAfterFold]>;
   let isCommutable = 1 in
   def Yrr : FMA4<opc, MRMSrcRegOp4, (outs VR256:$dst),
            (ins VR256:$src1, VR256:$src2, VR256:$src3),
@@ -504,19 +504,19 @@ multiclass fma4p<bits<8> opc, string OpcodeStr, SDNode OpNode,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR256:$dst, (OpNode VR256:$src1, VR256:$src2,
                               (ld_frag256 addr:$src3)))]>, VEX_W, VEX_L,
-           Sched<[sched.YMM.Folded, ReadAfterLd, ReadAfterLd]>;
+           Sched<[sched.YMM.Folded, sched.YMM.ReadAfterFold, sched.YMM.ReadAfterFold]>;
   def Ymr : FMA4<opc, MRMSrcMem, (outs VR256:$dst),
            (ins VR256:$src1, f256mem:$src2, VR256:$src3),
            !strconcat(OpcodeStr,
            "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
            [(set VR256:$dst, (OpNode VR256:$src1,
                               (ld_frag256 addr:$src2), VR256:$src3))]>, VEX_L,
-           Sched<[sched.YMM.Folded, ReadAfterLd,
+           Sched<[sched.YMM.Folded, sched.YMM.ReadAfterFold,
                   // f256mem:$src2
                   ReadDefault, ReadDefault, ReadDefault, ReadDefault,
                   ReadDefault,
                   // VR256::$src3
-                  ReadAfterLd]>;
+                  sched.YMM.ReadAfterFold]>;
 // For disassembler
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in {
   def rr_REV : FMA4<opc, MRMSrcReg, (outs VR128:$dst),

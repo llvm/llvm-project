@@ -203,11 +203,19 @@ public:
                               bool *HasNonScopeChildren = nullptr);
 
   /// Construct a DIE for this subprogram scope.
-  void constructSubprogramScopeDIE(const DISubprogram *Sub, LexicalScope *Scope);
+  DIE &constructSubprogramScopeDIE(const DISubprogram *Sub,
+                                   LexicalScope *Scope);
 
   DIE *createAndAddScopeChildren(LexicalScope *Scope, DIE &ScopeDIE);
 
   void constructAbstractSubprogramScopeDIE(LexicalScope *Scope);
+
+  /// Construct a call site entry DIE describing a call within \p Scope to a
+  /// callee described by \p CalleeSP. \p IsTail specifies whether the call is
+  /// a tail call. \p ReturnPC must be non-null for non-tail calls and point
+  /// to the PC value after the call returns.
+  DIE &constructCallSiteEntryDIE(DIE &ScopeDIE, const DISubprogram &CalleeSP,
+                                 bool IsTail, const MCSymbol *ReturnPC);
 
   /// Construct import_module DIE.
   DIE *constructImportedEntityDIE(const DIImportedEntity *Module);

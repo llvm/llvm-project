@@ -4836,33 +4836,38 @@ define i64 @test_movd_64(<2 x i64> %a0, i64 %a1, i64 *%a2) {
   ret i64 %7
 }
 
-define void @test_movhpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
+define <2 x double> @test_movhpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; GENERIC-LABEL: test_movhpd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [7:1.00]
-; GENERIC-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; GENERIC-NEXT:    movhpd %xmm1, (%rdi) # sched: [1:1.00]
+; GENERIC-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    movhpd %xmm0, (%rdi) # sched: [1:1.00]
+; GENERIC-NEXT:    movapd %xmm1, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movhpd:
 ; ATOM:       # %bb.0:
+; ATOM-NEXT:    movapd %xmm0, %xmm2 # sched: [1:0.50]
 ; ATOM-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [1:1.00]
-; ATOM-NEXT:    addpd %xmm0, %xmm1 # sched: [6:3.00]
-; ATOM-NEXT:    movhpd %xmm1, (%rdi) # sched: [1:1.00]
+; ATOM-NEXT:    addpd %xmm1, %xmm2 # sched: [6:3.00]
+; ATOM-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    movhpd %xmm2, (%rdi) # sched: [1:1.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movhpd:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [4:1.00]
-; SLM-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; SLM-NEXT:    movhpd %xmm1, (%rdi) # sched: [1:1.00]
+; SLM-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
+; SLM-NEXT:    movhpd %xmm0, (%rdi) # sched: [1:1.00]
+; SLM-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-SSE-LABEL: test_movhpd:
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [7:1.00]
-; SANDY-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; SANDY-SSE-NEXT:    movhpd %xmm1, (%rdi) # sched: [1:1.00]
+; SANDY-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
+; SANDY-SSE-NEXT:    movhpd %xmm0, (%rdi) # sched: [1:1.00]
+; SANDY-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movhpd:
@@ -4870,13 +4875,15 @@ define void @test_movhpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; SANDY-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [7:1.00]
 ; SANDY-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vmovhpd %xmm0, (%rdi) # sched: [1:1.00]
+; SANDY-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_movhpd:
 ; HASWELL-SSE:       # %bb.0:
 ; HASWELL-SSE-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
-; HASWELL-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; HASWELL-SSE-NEXT:    movhpd %xmm1, (%rdi) # sched: [1:1.00]
+; HASWELL-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
+; HASWELL-SSE-NEXT:    movhpd %xmm0, (%rdi) # sched: [1:1.00]
+; HASWELL-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:1.00]
 ; HASWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; HASWELL-LABEL: test_movhpd:
@@ -4884,13 +4891,15 @@ define void @test_movhpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; HASWELL-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
 ; HASWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vmovhpd %xmm0, (%rdi) # sched: [1:1.00]
+; HASWELL-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-SSE-LABEL: test_movhpd:
 ; BROADWELL-SSE:       # %bb.0:
 ; BROADWELL-SSE-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
-; BROADWELL-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; BROADWELL-SSE-NEXT:    movhpd %xmm1, (%rdi) # sched: [1:1.00]
+; BROADWELL-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
+; BROADWELL-SSE-NEXT:    movhpd %xmm0, (%rdi) # sched: [1:1.00]
+; BROADWELL-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:1.00]
 ; BROADWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_movhpd:
@@ -4898,13 +4907,15 @@ define void @test_movhpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; BROADWELL-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
 ; BROADWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vmovhpd %xmm0, (%rdi) # sched: [1:1.00]
+; BROADWELL-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-SSE-LABEL: test_movhpd:
 ; SKYLAKE-SSE:       # %bb.0:
 ; SKYLAKE-SSE-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
-; SKYLAKE-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [4:0.50]
-; SKYLAKE-SSE-NEXT:    movhpd %xmm1, (%rdi) # sched: [1:1.00]
+; SKYLAKE-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [4:0.50]
+; SKYLAKE-SSE-NEXT:    movhpd %xmm0, (%rdi) # sched: [1:1.00]
+; SKYLAKE-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movhpd:
@@ -4912,13 +4923,15 @@ define void @test_movhpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; SKYLAKE-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
 ; SKYLAKE-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vmovhpd %xmm0, (%rdi) # sched: [1:1.00]
+; SKYLAKE-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-SSE-LABEL: test_movhpd:
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
-; SKX-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [4:0.50]
-; SKX-SSE-NEXT:    movhpd %xmm1, (%rdi) # sched: [1:1.00]
+; SKX-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [4:0.50]
+; SKX-SSE-NEXT:    movhpd %xmm0, (%rdi) # sched: [1:1.00]
+; SKX-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.33]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movhpd:
@@ -4926,13 +4939,15 @@ define void @test_movhpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; SKX-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
 ; SKX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vmovhpd %xmm0, (%rdi) # sched: [1:1.00]
+; SKX-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_movhpd:
 ; BTVER2-SSE:       # %bb.0:
 ; BTVER2-SSE-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
-; BTVER2-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; BTVER2-SSE-NEXT:    movhpd %xmm1, (%rdi) # sched: [2:1.00]
+; BTVER2-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
+; BTVER2-SSE-NEXT:    movhpd %xmm0, (%rdi) # sched: [2:1.00]
+; BTVER2-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.50]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_movhpd:
@@ -4940,13 +4955,15 @@ define void @test_movhpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; BTVER2-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
 ; BTVER2-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    vmovhpd %xmm0, (%rdi) # sched: [2:1.00]
+; BTVER2-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-SSE-LABEL: test_movhpd:
 ; ZNVER1-SSE:       # %bb.0:
 ; ZNVER1-SSE-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [8:0.50]
-; ZNVER1-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; ZNVER1-SSE-NEXT:    movhpd %xmm1, (%rdi) # sched: [1:0.50]
+; ZNVER1-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
+; ZNVER1-SSE-NEXT:    movhpd %xmm0, (%rdi) # sched: [1:0.50]
+; ZNVER1-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_movhpd:
@@ -4954,6 +4971,7 @@ define void @test_movhpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; ZNVER1-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vmovhpd %xmm0, (%rdi) # sched: [1:0.50]
+; ZNVER1-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = bitcast x86_mmx* %a2 to double*
   %2 = load double, double *%1, align 8
@@ -4961,36 +4979,41 @@ define void @test_movhpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
   %4 = fadd <2 x double> %a0, %3
   %5 = extractelement <2 x double> %4, i32 1
   store double %5, double* %1
-  ret void
+  ret <2 x double> %3
 }
 
-define void @test_movlpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
+define <2 x double> @test_movlpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; GENERIC-LABEL: test_movlpd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [7:1.00]
-; GENERIC-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; GENERIC-NEXT:    movlpd %xmm1, (%rdi) # sched: [1:1.00]
+; GENERIC-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
+; GENERIC-NEXT:    movlpd %xmm0, (%rdi) # sched: [1:1.00]
+; GENERIC-NEXT:    movapd %xmm1, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; ATOM-LABEL: test_movlpd:
 ; ATOM:       # %bb.0:
+; ATOM-NEXT:    movapd %xmm0, %xmm2 # sched: [1:0.50]
 ; ATOM-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [1:1.00]
-; ATOM-NEXT:    addpd %xmm0, %xmm1 # sched: [6:3.00]
-; ATOM-NEXT:    movlpd %xmm1, (%rdi) # sched: [1:1.00]
+; ATOM-NEXT:    addpd %xmm1, %xmm2 # sched: [6:3.00]
+; ATOM-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.50]
+; ATOM-NEXT:    movlpd %xmm2, (%rdi) # sched: [1:1.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movlpd:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [4:1.00]
-; SLM-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; SLM-NEXT:    movlpd %xmm1, (%rdi) # sched: [1:1.00]
+; SLM-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
+; SLM-NEXT:    movlpd %xmm0, (%rdi) # sched: [1:1.00]
+; SLM-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-SSE-LABEL: test_movlpd:
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [7:1.00]
-; SANDY-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; SANDY-SSE-NEXT:    movlpd %xmm1, (%rdi) # sched: [1:1.00]
+; SANDY-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
+; SANDY-SSE-NEXT:    movlpd %xmm0, (%rdi) # sched: [1:1.00]
+; SANDY-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_movlpd:
@@ -4998,13 +5021,15 @@ define void @test_movlpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; SANDY-NEXT:    vmovlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [7:1.00]
 ; SANDY-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vmovlpd %xmm0, (%rdi) # sched: [1:1.00]
+; SANDY-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_movlpd:
 ; HASWELL-SSE:       # %bb.0:
 ; HASWELL-SSE-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [6:1.00]
-; HASWELL-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; HASWELL-SSE-NEXT:    movlpd %xmm1, (%rdi) # sched: [1:1.00]
+; HASWELL-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
+; HASWELL-SSE-NEXT:    movlpd %xmm0, (%rdi) # sched: [1:1.00]
+; HASWELL-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:1.00]
 ; HASWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; HASWELL-LABEL: test_movlpd:
@@ -5012,13 +5037,15 @@ define void @test_movlpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; HASWELL-NEXT:    vmovlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [6:1.00]
 ; HASWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    vmovlpd %xmm0, (%rdi) # sched: [1:1.00]
+; HASWELL-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-SSE-LABEL: test_movlpd:
 ; BROADWELL-SSE:       # %bb.0:
 ; BROADWELL-SSE-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [6:1.00]
-; BROADWELL-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; BROADWELL-SSE-NEXT:    movlpd %xmm1, (%rdi) # sched: [1:1.00]
+; BROADWELL-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
+; BROADWELL-SSE-NEXT:    movlpd %xmm0, (%rdi) # sched: [1:1.00]
+; BROADWELL-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:1.00]
 ; BROADWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_movlpd:
@@ -5026,13 +5053,15 @@ define void @test_movlpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; BROADWELL-NEXT:    vmovlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [6:1.00]
 ; BROADWELL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    vmovlpd %xmm0, (%rdi) # sched: [1:1.00]
+; BROADWELL-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-SSE-LABEL: test_movlpd:
 ; SKYLAKE-SSE:       # %bb.0:
 ; SKYLAKE-SSE-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [6:1.00]
-; SKYLAKE-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [4:0.50]
-; SKYLAKE-SSE-NEXT:    movlpd %xmm1, (%rdi) # sched: [1:1.00]
+; SKYLAKE-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [4:0.50]
+; SKYLAKE-SSE-NEXT:    movlpd %xmm0, (%rdi) # sched: [1:1.00]
+; SKYLAKE-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_movlpd:
@@ -5040,13 +5069,15 @@ define void @test_movlpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; SKYLAKE-NEXT:    vmovlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [6:1.00]
 ; SKYLAKE-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    vmovlpd %xmm0, (%rdi) # sched: [1:1.00]
+; SKYLAKE-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-SSE-LABEL: test_movlpd:
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [6:1.00]
-; SKX-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [4:0.50]
-; SKX-SSE-NEXT:    movlpd %xmm1, (%rdi) # sched: [1:1.00]
+; SKX-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [4:0.50]
+; SKX-SSE-NEXT:    movlpd %xmm0, (%rdi) # sched: [1:1.00]
+; SKX-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.33]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_movlpd:
@@ -5054,13 +5085,15 @@ define void @test_movlpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; SKX-NEXT:    vmovlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [6:1.00]
 ; SKX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vmovlpd %xmm0, (%rdi) # sched: [1:1.00]
+; SKX-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_movlpd:
 ; BTVER2-SSE:       # %bb.0:
 ; BTVER2-SSE-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [6:1.00]
-; BTVER2-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; BTVER2-SSE-NEXT:    movlpd %xmm1, (%rdi) # sched: [2:1.00]
+; BTVER2-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
+; BTVER2-SSE-NEXT:    movlpd %xmm0, (%rdi) # sched: [2:1.00]
+; BTVER2-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.50]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_movlpd:
@@ -5068,13 +5101,15 @@ define void @test_movlpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; BTVER2-NEXT:    vmovlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [6:1.00]
 ; BTVER2-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; BTVER2-NEXT:    vmovlpd %xmm0, (%rdi) # sched: [2:1.00]
+; BTVER2-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-SSE-LABEL: test_movlpd:
 ; ZNVER1-SSE:       # %bb.0:
 ; ZNVER1-SSE-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [8:0.50]
-; ZNVER1-SSE-NEXT:    addpd %xmm0, %xmm1 # sched: [3:1.00]
-; ZNVER1-SSE-NEXT:    movlpd %xmm1, (%rdi) # sched: [1:0.50]
+; ZNVER1-SSE-NEXT:    addpd %xmm1, %xmm0 # sched: [3:1.00]
+; ZNVER1-SSE-NEXT:    movlpd %xmm0, (%rdi) # sched: [1:0.50]
+; ZNVER1-SSE-NEXT:    movapd %xmm1, %xmm0 # sched: [1:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_movlpd:
@@ -5082,6 +5117,7 @@ define void @test_movlpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
 ; ZNVER1-NEXT:    vmovlpd {{.*#+}} xmm1 = mem[0],xmm1[1] sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    vmovlpd %xmm0, (%rdi) # sched: [1:0.50]
+; ZNVER1-NEXT:    vmovapd %xmm1, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = bitcast x86_mmx* %a2 to double*
   %2 = load double, double *%1, align 8
@@ -5089,7 +5125,7 @@ define void @test_movlpd(<2 x double> %a0, <2 x double> %a1, x86_mmx *%a2) {
   %4 = fadd <2 x double> %a0, %3
   %5 = extractelement <2 x double> %4, i32 0
   store double %5, double* %1
-  ret void
+  ret <2 x double> %3
 }
 
 define i32 @test_movmskpd(<2 x double> %a0) {

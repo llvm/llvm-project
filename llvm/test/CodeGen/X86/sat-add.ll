@@ -60,8 +60,7 @@ define i8 @unsigned_sat_constant_i8_using_cmp_notval(i8 %x) {
 define i16 @unsigned_sat_constant_i16_using_min(i16 %x) {
 ; ANY-LABEL: unsigned_sat_constant_i16_using_min:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movzwl %di, %eax
-; ANY-NEXT:    cmpl $65493, %eax # imm = 0xFFD5
+; ANY-NEXT:    cmpw $-43, %di
 ; ANY-NEXT:    movl $65493, %eax # imm = 0xFFD5
 ; ANY-NEXT:    cmovbl %edi, %eax
 ; ANY-NEXT:    addl $42, %eax
