@@ -4330,10 +4330,13 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
       Declaration->isConstexpr())
     return false;
 
-  // Bail out with no diagnostic if the function declaration itself is invalid.
-  // We will have produced a relevant diagnostic while parsing it.
-  if (Declaration->isInvalidDecl())
+  // Bail out if the function declaration itself is invalid.  We will
+  // have produced a relevant diagnostic while parsing it, so just
+  // note the problematic sub-expression.
+  if (Declaration->isInvalidDecl()) {
+    Info.FFDiag(CallLoc, diag::note_invalid_subexpr_in_const_expr);
     return false;
+  }
 
   // Can we evaluate this function call?
   if (Definition && Definition->isConstexpr() &&
@@ -5861,11 +5864,7 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
     // permitted in constant expressions in C++11. Bitcasts from cv void* are
     // also static_casts, but we disallow them as a resolution to DR1312.
     if (!E->getType()->isVoidPointerType()) {
-      // If we changed anything other than cvr-qualifiers, we can't use this
-      // value for constant folding. FIXME: Qualification conversions should
-      // always be CK_NoOp, but we get this wrong in C.
-      if (!Info.Ctx.hasCvrSimilarType(E->getType(), E->getSubExpr()->getType()))
-        Result.Designator.setInvalid();
+      Result.Designator.setInvalid();
       if (SubExpr->getType()->isVoidPointerType())
         CCEDiag(E, diag::note_constexpr_invalid_cast)
           << 3 << SubExpr->getType();

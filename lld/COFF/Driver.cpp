@@ -430,6 +430,11 @@ StringRef LinkerDriver::findDefaultEntry() {
   assert(Config->Subsystem != IMAGE_SUBSYSTEM_UNKNOWN &&
          "must handle /subsystem before calling this");
 
+  if (Config->MinGW)
+    return mangle(Config->Subsystem == IMAGE_SUBSYSTEM_WINDOWS_GUI
+                      ? "WinMainCRTStartup"
+                      : "mainCRTStartup");
+
   if (Config->Subsystem == IMAGE_SUBSYSTEM_WINDOWS_GUI) {
     if (findUnderscoreMangle("wWinMain")) {
       if (!findUnderscoreMangle("WinMain"))
@@ -449,6 +454,8 @@ StringRef LinkerDriver::findDefaultEntry() {
 WindowsSubsystem LinkerDriver::inferSubsystem() {
   if (Config->DLL)
     return IMAGE_SUBSYSTEM_WINDOWS_GUI;
+  if (Config->MinGW)
+    return IMAGE_SUBSYSTEM_WINDOWS_CUI;
   // Note that link.exe infers the subsystem from the presence of these
   // functions even if /entry: or /nodefaultlib are passed which causes them
   // to not be called.

@@ -258,7 +258,8 @@ private:
 
   bool join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs, VarLocInMBB &InLocs,
             const VarLocMap &VarLocIDs,
-            SmallPtrSet<const MachineBasicBlock *, 16> &Visited);
+            SmallPtrSet<const MachineBasicBlock *, 16> &Visited,
+            SmallPtrSetImpl<const MachineBasicBlock *> &ArtificialBlocks);
 
   bool ExtendRanges(MachineFunction &MF);
 
@@ -323,8 +324,10 @@ void LiveDebugValues::printVarLocInMBB(const MachineFunction &MF,
                                        raw_ostream &Out) const {
   Out << '\n' << msg << '\n';
   for (const MachineBasicBlock &BB : MF) {
-    const auto &L = V.lookup(&BB);
-    Out << "MBB: " << BB.getName() << ":\n";
+    const VarLocSet &L = V.lookup(&BB);
+    if (L.empty())
+      continue;
+    Out << "MBB: " << BB.getNumber() << ":\n";
     for (unsigned VLL : L) {
       const VarLoc &VL = VarLocIDs[VLL];
       Out << " Var: " << VL.Var.getVar()->getName();
@@ -604,7 +607,7 @@ bool LiveDebugValues::transferTerminatorInst(MachineInstr &MI,
   LLVM_DEBUG(for (unsigned ID
                   : OpenRanges.getVarLocs()) {
     // Copy OpenRanges to OutLocs, if not already present.
-    dbgs() << "Add to OutLocs: ";
+    dbgs() << "Add to OutLocs in MBB #" << CurMBB->getNumber() << ":  ";
     VarLocIDs[ID].dump();
   });
   VarLocSet &VLS = OutLocs[CurMBB];
@@ -631,10 +634,12 @@ bool LiveDebugValues::process(MachineInstr &MI, OpenRangesSet &OpenRanges,
 /// This routine joins the analysis results of all incoming edges in @MBB by
 /// inserting a new DBG_VALUE instruction at the start of the @MBB - if the same
 /// source variable in all the predecessors of @MBB reside in the same location.
-bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
-                           VarLocInMBB &InLocs, const VarLocMap &VarLocIDs,
-                           SmallPtrSet<const MachineBasicBlock *, 16> &Visited) {
-  LLVM_DEBUG(dbgs() << "join MBB: " << MBB.getName() << "\n");
+bool LiveDebugValues::join(
+    MachineBasicBlock &MBB, VarLocInMBB &OutLocs, VarLocInMBB &InLocs,
+    const VarLocMap &VarLocIDs,
+    SmallPtrSet<const MachineBasicBlock *, 16> &Visited,
+    SmallPtrSetImpl<const MachineBasicBlock *> &ArtificialBlocks) {
+  LLVM_DEBUG(dbgs() << "join MBB: " << MBB.getNumber() << "\n");
   bool Changed = false;
 
   VarLocSet InLocsT; // Temporary incoming locations.
@@ -646,8 +651,11 @@ bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
     // Ignore unvisited predecessor blocks.  As we are processing
     // the blocks in reverse post-order any unvisited block can
     // be considered to not remove any incoming values.
-    if (!Visited.count(p))
+    if (!Visited.count(p)) {
+      LLVM_DEBUG(dbgs() << "  ignoring unvisited pred MBB: " << p->getNumber()
+                        << "\n");
       continue;
+    }
     auto OL = OutLocs.find(p);
     // Join is null in case of empty OutLocs from any of the pred.
     if (OL == OutLocs.end())
@@ -659,14 +667,32 @@ bool LiveDebugValues::join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs,
       InLocsT = OL->second;
     else
       InLocsT &= OL->second;
+
+    LLVM_DEBUG({
+      if (!InLocsT.empty()) {
+        for (auto ID : InLocsT)
+          dbgs() << "  gathered candidate incoming var: "
+                 << VarLocIDs[ID].Var.getVar()->getName() << "\n";
+      }
+    });
+
     NumVisited++;
   }
 
   // Filter out DBG_VALUES that are out of scope.
   VarLocSet KillSet;
-  for (auto ID : InLocsT)
-    if (!VarLocIDs[ID].dominates(MBB))
-      KillSet.set(ID);
+  bool IsArtificial = ArtificialBlocks.count(&MBB);
+  if (!IsArtificial) {
+    for (auto ID : InLocsT) {
+      if (!VarLocIDs[ID].dominates(MBB)) {
+        KillSet.set(ID);
+        LLVM_DEBUG({
+          auto Name = VarLocIDs[ID].Var.getVar()->getName();
+          dbgs() << "  killing " << Name << ", it doesn't dominate MBB\n";
+        });
+      }
+    }
+  }
   InLocsT.intersectWithComplement(KillSet);
 
   // As we are processing blocks in reverse post-order we
@@ -717,6 +743,10 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
   VarLocInMBB InLocs;       // Ranges that are incoming after joining.
   TransferMap Transfers;    // DBG_VALUEs associated with spills.
 
+  // Blocks which are artificial, i.e. blocks which exclusively contain
+  // instructions without locations, or with line 0 locations.
+  SmallPtrSet<const MachineBasicBlock *, 16> ArtificialBlocks;
+
   DenseMap<unsigned int, MachineBasicBlock *> OrderToBB;
   DenseMap<MachineBasicBlock *, unsigned int> BBToOrder;
   std::priority_queue<unsigned int, std::vector<unsigned int>,
@@ -737,6 +767,15 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
     for (auto &MI : MBB)
       process(MI, OpenRanges, OutLocs, VarLocIDs, Transfers,
               dontTransferChanges);
+
+  auto hasNonArtificialLocation = [](const MachineInstr &MI) -> bool {
+    if (const DebugLoc &DL = MI.getDebugLoc())
+      return DL.getLine() != 0;
+    return false;
+  };
+  for (auto &MBB : MF)
+    if (none_of(MBB.instrs(), hasNonArtificialLocation))
+      ArtificialBlocks.insert(&MBB);
 
   LLVM_DEBUG(printVarLocInMBB(MF, OutLocs, VarLocIDs,
                               "OutLocs after initialization", dbgs()));
@@ -763,7 +802,8 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
     while (!Worklist.empty()) {
       MachineBasicBlock *MBB = OrderToBB[Worklist.top()];
       Worklist.pop();
-      MBBJoined = join(*MBB, OutLocs, InLocs, VarLocIDs, Visited);
+      MBBJoined =
+          join(*MBB, OutLocs, InLocs, VarLocIDs, Visited, ArtificialBlocks);
       Visited.insert(MBB);
       if (MBBJoined) {
         MBBJoined = false;

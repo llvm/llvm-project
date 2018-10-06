@@ -3742,6 +3742,60 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
   return vars_added;
 }
 
+/// Collect call graph edges present in a function DIE.
+static std::vector<lldb_private::CallEdge>
+CollectCallEdges(DWARFDIE function_die) {
+  // Check if the function has a supported call site-related attribute.
+  // TODO: In the future it may be worthwhile to support call_all_source_calls.
+  uint64_t has_call_edges =
+      function_die.GetAttributeValueAsUnsigned(DW_AT_call_all_calls, 0);
+  if (!has_call_edges)
+    return {};
+
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  LLDB_LOG(log, "CollectCallEdges: Found call site info in {0}",
+           function_die.GetPubname());
+
+  // Scan the DIE for TAG_call_site entries.
+  // TODO: A recursive scan of all blocks in the subprogram is needed in order
+  // to be DWARF5-compliant. This may need to be done lazily to be performant.
+  // For now, assume that all entries are nested directly under the subprogram
+  // (this is the kind of DWARF LLVM produces) and parse them eagerly.
+  std::vector<CallEdge> call_edges;
+  for (DWARFDIE child = function_die.GetFirstChild(); child.IsValid();
+       child = child.GetSibling()) {
+    if (child.Tag() != DW_TAG_call_site)
+      continue;
+
+    // Extract DW_AT_call_origin (the call target's DIE).
+    DWARFDIE call_origin = child.GetReferencedDIE(DW_AT_call_origin);
+    if (!call_origin.IsValid()) {
+      LLDB_LOG(log, "CollectCallEdges: Invalid call origin in {0}",
+               function_die.GetPubname());
+      continue;
+    }
+
+    // Extract DW_AT_call_return_pc (the PC the call returns to) if it's
+    // available. It should only ever be unavailable for tail call edges, in
+    // which case use LLDB_INVALID_ADDRESS.
+    addr_t return_pc = child.GetAttributeValueAsAddress(DW_AT_call_return_pc,
+                                                        LLDB_INVALID_ADDRESS);
+
+    LLDB_LOG(log, "CollectCallEdges: Found call origin: {0} (retn-PC: {1:x})",
+             call_origin.GetPubname(), return_pc);
+    call_edges.emplace_back(call_origin.GetMangledName(), return_pc);
+  }
+  return call_edges;
+}
+
+std::vector<lldb_private::CallEdge>
+SymbolFileDWARF::ParseCallEdgesInFunction(UserID func_id) {
+  DWARFDIE func_die = GetDIEFromUID(func_id.GetID());
+  if (func_die.IsValid())
+    return CollectCallEdges(func_die);
+  return {};
+}
+
 //------------------------------------------------------------------
 // PluginInterface protocol
 //------------------------------------------------------------------

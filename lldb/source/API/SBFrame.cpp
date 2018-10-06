@@ -1348,6 +1348,21 @@ bool SBFrame::IsInlined() const {
   return false;
 }
 
+bool SBFrame::IsArtificial() {
+  return static_cast<const SBFrame *>(this)->IsArtificial();
+}
+
+bool SBFrame::IsArtificial() const {
+  std::unique_lock<std::recursive_mutex> lock;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+
+  StackFrame *frame = exe_ctx.GetFramePtr();
+  if (frame)
+    return frame->IsArtificial();
+
+  return false;
+}
+
 const char *SBFrame::GetFunctionName() {
   return static_cast<const SBFrame *>(this)->GetFunctionName();
 }

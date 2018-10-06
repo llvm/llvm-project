@@ -39,24 +39,18 @@ define <2 x i32> @_mul2xi32a(<2 x i32>, <2 x i32>) {
 define <2 x i32> @_mul2xi32b(<2 x i32>, <2 x i32>) {
 ; SSE2-LABEL: _mul2xi32b:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE2-NEXT:    pmuludq %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,1,3]
+; SSE2-NEXT:    pmuludq %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: _mul2xi32b:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE42-NEXT:    pmuludq %xmm0, %xmm1
-; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero
+; SSE42-NEXT:    pmuludq %xmm1, %xmm0
+; SSE42-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: _mul2xi32b:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; AVX-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX-NEXT:    retq
@@ -349,27 +343,13 @@ define <2 x i64> @_mul2xi64toi64a(<2 x i64>, <2 x i64>) {
 ;
 ; SSE42-LABEL: _mul2xi64toi64a:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pxor %xmm2, %xmm2
-; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; SSE42-NEXT:    pmuludq %xmm1, %xmm0
 ; SSE42-NEXT:    retq
 ;
-; AVX1-LABEL: _mul2xi64toi64a:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; AVX1-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: _mul2xi64toi64a:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: _mul2xi64toi64a:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %f00 = extractelement <2 x i64> %0, i32 0
   %f01 = extractelement <2 x i64> %0, i32 1
   %f10 = extractelement <2 x i64> %1, i32 0

@@ -620,7 +620,7 @@ void __kmp_runtime_initialize(void) {
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
 
 /* Set up minimum number of threads to switch to TLS gtid */
-#if KMP_OS_WINDOWS && !defined KMP_DYNAMIC_LIB
+#if KMP_OS_WINDOWS && !KMP_DYNAMIC_LIB
   // Windows* OS, static library.
   /* New thread may use stack space previously used by another thread,
      currently terminated. On Windows* OS, in case of static linking, we do not

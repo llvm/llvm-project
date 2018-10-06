@@ -552,7 +552,7 @@ static void __kmp_fini_allocator() {
 
 /* ------------------------------------------------------------------------ */
 
-#ifdef KMP_DYNAMIC_LIB
+#if KMP_DYNAMIC_LIB
 #if KMP_OS_WINDOWS
 
 static void __kmp_reset_lock(kmp_bootstrap_lock_t *lck) {
@@ -3543,7 +3543,7 @@ static int __kmp_expand_threads(int nNeed) {
 // resizing __kmp_threads does not need additional protection if foreign
 // threads are present
 
-#if KMP_OS_WINDOWS && !defined KMP_DYNAMIC_LIB
+#if KMP_OS_WINDOWS && !KMP_DYNAMIC_LIB
   /* only for Windows static library */
   /* reclaim array entries for root threads that are already dead */
   added = __kmp_reclaim_dead_roots();
@@ -6194,7 +6194,7 @@ void __kmp_internal_end_thread(int gtid_req) {
       return;
     }
   }
-#if defined KMP_DYNAMIC_LIB
+#if KMP_DYNAMIC_LIB
   // AC: lets not shutdown the Linux* OS dynamic library at the exit of uber
   // thread, because we will better shutdown later in the library destructor.
   // The reason of this change is performance problem when non-openmp thread in
@@ -6644,7 +6644,7 @@ static void __kmp_do_serial_initialize(void) {
   __kmp_register_atfork();
 #endif
 
-#if !defined KMP_DYNAMIC_LIB
+#if !KMP_DYNAMIC_LIB
   {
     /* Invoke the exit handler when the program finishes, only for static
        library. For dynamic library, we already have _fini and DllMain. */

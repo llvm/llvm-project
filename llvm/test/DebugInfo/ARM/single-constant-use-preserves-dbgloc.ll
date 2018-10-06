@@ -31,11 +31,10 @@ if.then:                                          ; preds = %entry
 
 if.end:                                           ; preds = %entry
 ; Materialize the constant.
-; CHECK:      .loc    1 0
+; CHECK:      .loc    1 7 5
 ; CHECK-NEXT: mvn     r0, #0
 
 ; The backend performs the store to %retval first, for some reason.
-; CHECK-NEXT: .loc    1 7 5
 ; CHECK-NEXT: str     r0, [sp, #4]
   store i32 -1, i32* %x, align 4, !dbg !19
 
