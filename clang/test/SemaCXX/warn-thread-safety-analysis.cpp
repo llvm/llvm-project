@@ -1873,6 +1873,23 @@ struct TestTryLock {
    int i = a;
    mu.Unlock();
   }
+
+  // Test with conditional operator
+  void foo13() {
+    if (mu.TryLock() ? 1 : 0)
+      mu.Unlock();
+  }
+
+  void foo14() {
+    if (mu.TryLock() ? 0 : 1)
+      return;
+    mu.Unlock();
+  }
+
+  void foo15() {
+    if (mu.TryLock() ? 0 : 1) // expected-note{{mutex acquired here}}
+      mu.Unlock();            // expected-warning{{releasing mutex 'mu' that was not held}}
+  }                           // expected-warning{{mutex 'mu' is not held on every path through here}}
 };  // end TestTrylock
 
 } // end namespace TrylockTest

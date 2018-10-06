@@ -5862,6 +5862,8 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
       LangAS DestAS = DestTy->getPointeeType().getAddressSpace();
       if (SrcAS != DestAS)
         return CK_AddressSpaceConversion;
+      if (Context.hasCvrSimilarType(SrcTy, DestTy))
+        return CK_NoOp;
       return CK_BitCast;
     }
     case Type::STK_BlockPointer:
@@ -7762,7 +7764,12 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
     if (isa<PointerType>(RHSType)) {
       LangAS AddrSpaceL = LHSPointer->getPointeeType().getAddressSpace();
       LangAS AddrSpaceR = RHSType->getPointeeType().getAddressSpace();
-      Kind = AddrSpaceL != AddrSpaceR ? CK_AddressSpaceConversion : CK_BitCast;
+      if (AddrSpaceL != AddrSpaceR)
+        Kind = CK_AddressSpaceConversion;
+      else if (Context.hasCvrSimilarType(RHSType, LHSType))
+        Kind = CK_NoOp;
+      else
+        Kind = CK_BitCast;
       return checkPointerTypesForAssignment(*this, LHSType, RHSType);
     }
 
