@@ -62,12 +62,6 @@ private:
     CompilerType value_type) const;
 
   HashedStorageHandlerUP
-  _CreateLegacyNativeHandler(
-    lldb::ValueObjectSP storage_sp,
-    CompilerType key_type,
-    CompilerType value_type) const;
-  
-  HashedStorageHandlerUP
   CreateNativeHandler(
     lldb::ValueObjectSP value_sp,
     lldb::ValueObjectSP storage_sp) const;
@@ -114,14 +108,6 @@ protected:
   ConstString m_deferredBridgedStorage_mangledRegex_ObjC;
   ConstString m_deferredBridgedStorage_demangledPrefix;
   ConstString m_deferredBridgedStorage_demangledRegex;
-
-  // Legacy Swift 4.2 storage class names
-  ConstString m_legacy_nativeStorage_mangledRegex_ObjC;
-  ConstString m_legacy_nativeStorage_demangledPrefix;
-  ConstString m_legacy_nativeStorage_demangledRegex;
-
-  ConstString m_legacy_emptyStorage_mangled_ObjC;
-  ConstString m_legacy_emptyStorage_demangled;
 };
 
 // Some part of the buffer handling logic needs to be shared between summary and

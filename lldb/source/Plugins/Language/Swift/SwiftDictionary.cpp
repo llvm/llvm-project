@@ -68,18 +68,6 @@ DictionaryConfig::DictionaryConfig()
     = ConstString("Swift._SwiftDeferredNSDictionary<");
   m_deferredBridgedStorage_demangledRegex
     = ConstString("^Swift\\._SwiftDeferredNSDictionary<.+,.+>$");
-
-  // Legacy Swift 4.2 storage class names
-  m_legacy_nativeStorage_mangledRegex_ObjC =
-    ConstString("^_TtGCs37_HashableTypedNativeDictionaryStorage.*");
-  m_legacy_nativeStorage_demangledPrefix =
-    ConstString("Swift._HashableTypedNativeDictionaryStorage<");
-  m_legacy_nativeStorage_demangledRegex =
-    ConstString("^Swift\\._HashableTypedNativeDictionaryStorage<.+,.+>$");
-  m_legacy_emptyStorage_mangled_ObjC =
-    ConstString("_TtCs28__RawNativeDictionaryStorage");
-  m_legacy_emptyStorage_demangled
-    = ConstString("Swift.__RawNativeDictionaryStorage");
 }
 
 bool

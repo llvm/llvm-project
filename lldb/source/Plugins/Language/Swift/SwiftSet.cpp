@@ -67,16 +67,6 @@ SetConfig::SetConfig()
     = ConstString("Swift._SwiftDeferredNSSet<");
   m_deferredBridgedStorage_demangledRegex
     = ConstString("^Swift\\._SwiftDeferredNSSet<.+>$");
-
-  // Legacy Swift 4.2 storage class names
-  m_legacy_nativeStorage_mangledRegex_ObjC =
-    ConstString("^_TtGCs30_HashableTypedNativeSetStorage.*");
-  m_legacy_nativeStorage_demangledPrefix =
-    ConstString("Swift._HashableTypedNativeSetStorage<");
-  m_legacy_nativeStorage_demangledRegex =
-    ConstString("^Swift\\._HashableTypedNativeSetStorage<.+>$");
-  m_legacy_emptyStorage_mangled_ObjC = ConstString("_TtCs21__RawNativeSetStorage");
-  m_legacy_emptyStorage_demangled = ConstString("Swift.__RawNativeSetStorage");
 }
 
 bool
