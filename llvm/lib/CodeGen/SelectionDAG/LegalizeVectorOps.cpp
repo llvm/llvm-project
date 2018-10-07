@@ -1177,7 +1177,7 @@ SDValue VectorLegalizer::ExpandStrictFPOp(SDValue Op) {
   AddLegalizedOperand(Op.getValue(0), Result);
   AddLegalizedOperand(Op.getValue(1), NewChain);
 
-  return NewChain;
+  return Op.getResNo() ? NewChain : Result;
 }
 
 SDValue VectorLegalizer::UnrollVSETCC(SDValue Op) {

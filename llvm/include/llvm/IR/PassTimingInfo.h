@@ -60,7 +60,8 @@ class TimePassesHandler {
   /// Map that counts invocations of passes, for use in UniqPassID construction.
   StringMap<unsigned> PassIDCountMap;
 
-  SmallVector<Timer *, 8> TimerStack; //< Stack of currently active timers.
+  /// Stack of currently active timers.
+  SmallVector<Timer *, 8> TimerStack;
 
   bool Enabled;
 
