@@ -606,10 +606,9 @@ NativeHashedStorageHandler::GetElementAtIndex(size_t idx) {
 HashedStorageHandlerUP
 HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
   static ConstString g_native("native");
-  static ConstString g__variant("_variant"); // Swift 5
-  static ConstString g_cocoa("cocoa"); // Swift 4.2
-  static ConstString g_object("object"); // Swift 5
-  static ConstString g_rawValue("rawValue"); // Swift 5
+  static ConstString g__variant("_variant");
+  static ConstString g_object("object");
+  static ConstString g_rawValue("rawValue");
   static ConstString g__storage("_storage");
 
   Status error;
@@ -645,48 +644,6 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
 
   ValueObjectSP bobject_sp =
     variant_sp->GetChildAtNamePath({g_object, g_rawValue});
-
-  if (!bobject_sp) { // FIXME: Remove (Legacy Swift 4.2 path)
-    ConstString variant_cs(variant_sp->GetValueAsCString());
-    if (!variant_cs)
-      return nullptr;
-
-    if (g_cocoa == variant_cs) {
-      // it's an NSDictionary/NSSet in disguise
-      static ConstString g_object("object"); // Swift 5
-      static ConstString g_cocoaDictionary("cocoaDictionary"); // Swift 4
-      static ConstString g_cocoaSet("cocoaSet"); // Swift 4
-    
-      ValueObjectSP child_sp =
-        variant_sp->GetChildAtNamePath({g_cocoa, g_object});
-      if (!child_sp) // try Swift 4 name for dictionaries
-        child_sp = variant_sp->GetChildAtNamePath({g_cocoa, g_cocoaDictionary});
-      if (!child_sp) // try Swift 4 name for sets
-        child_sp = variant_sp->GetChildAtNamePath({g_cocoa, g_cocoaSet});
-      if (!child_sp)
-        return nullptr;
-      // child_sp is the _NSDictionary/_NSSet reference.
-      ValueObjectSP ref_sp = child_sp->GetChildAtIndex(0, true); // instance
-      if (!ref_sp)
-        return nullptr;
-
-      uint64_t cocoa_ptr = ref_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-      if (cocoa_ptr == LLDB_INVALID_ADDRESS)
-        return nullptr;
-      // FIXME: for some reason I need to zero out the MSB; figure out why
-      cocoa_ptr &= 0x00FFFFFFFFFFFFFF;
-
-      auto cocoa_sp = CocoaObjectAtAddress(exe_ctx, cocoa_ptr);
-      if (!cocoa_sp)
-        return nullptr;
-      return CreateCocoaHandler(cocoa_sp);
-    }
-    if (g_native == variant_cs) {
-      auto storage_sp = variant_sp->GetChildAtNamePath({g_native, g__storage});
-      return CreateNativeHandler(valobj_sp, storage_sp);
-    }
-    return nullptr;
-  }
 
   lldb::addr_t storage_location =
     bobject_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
