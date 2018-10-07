@@ -281,7 +281,7 @@ HashedCollectionConfig::CreateEmptyHandler(CompilerType elem_type) const {
 }
 
 ValueObjectSP
-HashedCollectionConfig::SwiftObjectAtAddress(
+HashedCollectionConfig::StorageObjectAtAddress(
     const ExecutionContext &exe_ctx,
     lldb::addr_t address) const {
 
@@ -304,14 +304,15 @@ HashedCollectionConfig::SwiftObjectAtAddress(
   if (error.Fail())
     return nullptr;
 
-  CompilerType anyObject_type = ast_ctx->GetAnyObjectType();
-  if (!anyObject_type)
+  CompilerType rawStorage_type = ast_ctx->GetTypeFromMangledTypename(
+    m_nativeStorageRoot_mangled.GetCString(), error);
+  if (!rawStorage_type.IsValid())
     return nullptr;
 
   lldb::DataBufferSP buffer(
     new lldb_private::DataBufferHeap(&address, sizeof(lldb::addr_t)));
   return ValueObjectConstResult::Create(
-    exe_scope, anyObject_type, ConstString("swift"),
+    exe_scope, rawStorage_type, ConstString("swift"),
     buffer, exe_ctx.GetByteOrder(), exe_ctx.GetAddressByteSize());
 }
 
@@ -356,10 +357,10 @@ HashedCollectionConfig::CreateNativeHandler(
   // runtime class of storage_sp and verify that it's of a known type.
   // If thissuccessful, get the correct key_type and value_type directly
   // from its generic arguments instead of using value_sp.
-  storage_sp = storage_sp->GetQualifiedRepresentationIfAvailable(
+  auto dynamic_storage_sp = storage_sp->GetQualifiedRepresentationIfAvailable(
     lldb::eDynamicCanRunTarget, false);
 
-  auto type = storage_sp->GetCompilerType();
+  auto type = dynamic_storage_sp->GetCompilerType();
 
   auto typeName = type.GetTypeName().GetStringRef();
   if (typeName == m_emptyStorage_demangled.GetStringRef()) {
@@ -370,7 +371,7 @@ HashedCollectionConfig::CreateNativeHandler(
     auto key_type = type.GetGenericArgumentType(0);
     auto value_type = type.GetGenericArgumentType(1);
     if (key_type.IsValid()) {
-      return _CreateNativeHandler(storage_sp, key_type, value_type);
+      return _CreateNativeHandler(dynamic_storage_sp, key_type, value_type);
     }
   }
 
@@ -380,7 +381,7 @@ HashedCollectionConfig::CreateNativeHandler(
   type = value_sp->GetCompilerType();
   CompilerType key_type = type.GetGenericArgumentType(0);
   CompilerType value_type = type.GetGenericArgumentType(1);
-  if (typeName == m_nativeStorageRoot_demangled.GetStringRef()) {
+  if (key_type.IsValid()) {
     return _CreateNativeHandler(storage_sp, key_type, value_type);
   }
   return nullptr;
@@ -619,7 +620,7 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
   if (valobj_sp->GetObjectRuntimeLanguage() != eLanguageTypeSwift &&
       valobj_sp->IsPointerType()) {
     lldb::addr_t address = valobj_sp->GetPointerValue();
-    if (auto swiftval_sp = SwiftObjectAtAddress(exe_ctx, address))
+    if (auto swiftval_sp = StorageObjectAtAddress(exe_ctx, address))
       valobj_sp = swiftval_sp;
   }
   valobj_sp = valobj_sp->GetQualifiedRepresentationIfAvailable(
@@ -664,7 +665,10 @@ HashedCollectionConfig::CreateHandler(ValueObject &valobj) const {
 
   if (masked_storage_location == storage_location) {
     // Native storage
-    return CreateNativeHandler(valobj_sp, bobject_sp);
+    auto storage_sp = StorageObjectAtAddress(exe_ctx, storage_location);
+    if (!storage_sp)
+      return nullptr;
+    return CreateNativeHandler(valobj_sp, storage_sp);
   } else {
     auto cocoa_sp = CocoaObjectAtAddress(exe_ctx, masked_storage_location);
     if (!cocoa_sp)

@@ -44,6 +44,8 @@ DictionaryConfig::DictionaryConfig()
   // Note: We need have use the old _Tt names here because those are
   // still used to name classes in the ObjC runtime.
 
+  m_nativeStorageRoot_mangled =
+    ConstString("_TtCs21_RawDictionaryStorage");
   m_nativeStorageRoot_demangled =
     ConstString("Swift._RawDictionaryStorage");
 

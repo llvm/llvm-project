@@ -70,7 +70,7 @@ private:
   CreateCocoaHandler(lldb::ValueObjectSP storage_sp) const;
 
   lldb::ValueObjectSP
-  SwiftObjectAtAddress(
+  StorageObjectAtAddress(
     const ExecutionContext &exe_ctx,
     lldb::addr_t address) const;
 
@@ -96,6 +96,7 @@ protected:
 
   ConstString m_collection_demangledRegex;
   
+  ConstString m_nativeStorageRoot_mangled;
   ConstString m_nativeStorageRoot_demangled;
 
   ConstString m_nativeStorage_mangledRegex_ObjC;
