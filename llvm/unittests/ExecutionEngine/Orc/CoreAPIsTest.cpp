@@ -107,6 +107,94 @@ TEST_F(CoreAPIsStandardTest, EmptyLookup) {
   EXPECT_TRUE(OnReadyRun) << "OnReady was not run for empty query";
 }
 
+TEST_F(CoreAPIsStandardTest, RemoveSymbolsTest) {
+  // Test that:
+  // (1) Missing symbols generate a SymbolsNotFound error.
+  // (2) Materializing symbols generate a SymbolCouldNotBeRemoved error.
+  // (3) Removal of unmaterialized symbols triggers discard on the
+  //     materialization unit.
+  // (4) Removal of symbols destroys empty materialization units.
+  // (5) Removal of materialized symbols works.
+
+  // Foo will be fully materialized.
+  cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
+
+  // Bar will be unmaterialized.
+  bool BarDiscarded = false;
+  bool BarMaterializerDestructed = false;
+  cantFail(JD.define(llvm::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Bar, BarSym.getFlags()}}),
+      [this](MaterializationResponsibility R) {
+        ADD_FAILURE() << "Unexpected materialization of \"Bar\"";
+        R.resolve({{Bar, BarSym}});
+        R.emit();
+      },
+      [&](const JITDylib &JD, const SymbolStringPtr &Name) {
+        EXPECT_EQ(Name, Bar) << "Expected \"Bar\" to be discarded";
+        if (Name == Bar)
+          BarDiscarded = true;
+      },
+      [&]() { BarMaterializerDestructed = true; })));
+
+  // Baz will be in the materializing state initially, then
+  // materialized for the final removal attempt.
+  Optional<MaterializationResponsibility> BazR;
+  cantFail(JD.define(llvm::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Baz, BazSym.getFlags()}}),
+      [&](MaterializationResponsibility R) { BazR.emplace(std::move(R)); },
+      [](const JITDylib &JD, const SymbolStringPtr &Name) {
+        ADD_FAILURE() << "\"Baz\" discarded unexpectedly";
+      })));
+
+  bool OnResolvedRun = false;
+  bool OnReadyRun = false;
+  ES.lookup({&JD}, {Foo, Baz},
+            [&](Expected<SymbolMap> Result) {
+              EXPECT_TRUE(!!Result) << "OnResolved failed unexpectedly";
+              consumeError(Result.takeError());
+              OnResolvedRun = true;
+            },
+            [&](Error Err) {
+              EXPECT_FALSE(!!Err) << "OnReady failed unexpectedly";
+              consumeError(std::move(Err));
+              OnReadyRun = true;
+            },
+            NoDependenciesToRegister);
+
+  {
+    // Attempt 1: Search for a missing symbol, Qux.
+    auto Err = JD.remove({Foo, Bar, Baz, Qux});
+    EXPECT_TRUE(!!Err) << "Expected failure";
+    EXPECT_TRUE(Err.isA<SymbolsNotFound>())
+        << "Expected a SymbolsNotFound error";
+    consumeError(std::move(Err));
+  }
+
+  {
+    // Attempt 2: Search for a symbol that is still materializing, Baz.
+    auto Err = JD.remove({Foo, Bar, Baz});
+    EXPECT_TRUE(!!Err) << "Expected failure";
+    EXPECT_TRUE(Err.isA<SymbolsCouldNotBeRemoved>())
+        << "Expected a SymbolsNotFound error";
+    consumeError(std::move(Err));
+  }
+
+  BazR->resolve({{Baz, BazSym}});
+  BazR->emit();
+  {
+    // Attempt 3: Search now that all symbols are fully materialized
+    // (Foo, Baz), or not yet materialized (Bar).
+    auto Err = JD.remove({Foo, Bar, Baz});
+    EXPECT_FALSE(!!Err) << "Expected failure";
+  }
+
+  EXPECT_TRUE(BarDiscarded) << "\"Bar\" should have been discarded";
+  EXPECT_TRUE(BarMaterializerDestructed)
+      << "\"Bar\"'s materializer should have been destructed";
+  EXPECT_TRUE(OnResolvedRun) << "OnResolved should have been run";
+  EXPECT_TRUE(OnReadyRun) << "OnReady should have been run";
+}
+
 TEST_F(CoreAPIsStandardTest, ChainedJITDylibLookup) {
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
 
