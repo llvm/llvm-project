@@ -372,11 +372,10 @@ public:
   }
 
   std::vector<Reference> take() && {
-    std::sort(References.begin(), References.end(),
-              [](const Reference &L, const Reference &R) {
-                return std::tie(L.Loc, L.CanonicalTarget, L.Role) <
-                       std::tie(R.Loc, R.CanonicalTarget, R.Role);
-              });
+    llvm::sort(References, [](const Reference &L, const Reference &R) {
+      return std::tie(L.Loc, L.CanonicalTarget, L.Role) <
+             std::tie(R.Loc, R.CanonicalTarget, R.Role);
+    });
     // We sometimes see duplicates when parts of the AST get traversed twice.
     References.erase(
         std::unique(References.begin(), References.end(),
