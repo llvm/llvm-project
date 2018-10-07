@@ -134,6 +134,20 @@ private:
   SymbolNameSet Symbols;
 };
 
+/// Used to notify clients that a set of symbols could not be removed.
+class SymbolsCouldNotBeRemoved : public ErrorInfo<SymbolsCouldNotBeRemoved> {
+public:
+  static char ID;
+
+  SymbolsCouldNotBeRemoved(SymbolNameSet Symbols);
+  std::error_code convertToErrorCode() const override;
+  void log(raw_ostream &OS) const override;
+  const SymbolNameSet &getSymbols() const { return Symbols; }
+
+private:
+  SymbolNameSet Symbols;
+};
+
 /// Tracks responsibility for materialization, and mediates interactions between
 /// MaterializationUnits and JDs.
 ///
@@ -255,7 +269,7 @@ public:
 
   /// Called by JITDylibs to notify MaterializationUnits that the given symbol
   /// has been overridden.
-  void doDiscard(const JITDylib &JD, SymbolStringPtr Name) {
+  void doDiscard(const JITDylib &JD, const SymbolStringPtr &Name) {
     SymbolFlags.erase(Name);
     discard(JD, std::move(Name));
   }
@@ -275,7 +289,7 @@ private:
   ///        from the source (e.g. if the source is an LLVM IR Module and the
   ///        symbol is a function, delete the function body or mark it available
   ///        externally).
-  virtual void discard(const JITDylib &JD, SymbolStringPtr Name) = 0;
+  virtual void discard(const JITDylib &JD, const SymbolStringPtr &Name) = 0;
 };
 
 using MaterializationUnitList =
@@ -293,7 +307,7 @@ public:
 
 private:
   void materialize(MaterializationResponsibility R) override;
-  void discard(const JITDylib &JD, SymbolStringPtr Name) override;
+  void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
   static SymbolFlagsMap extractFlags(const SymbolMap &Symbols);
 
   SymbolMap Symbols;
@@ -344,7 +358,7 @@ public:
 
 private:
   void materialize(MaterializationResponsibility R) override;
-  void discard(const JITDylib &JD, SymbolStringPtr Name) override;
+  void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
   static SymbolFlagsMap extractFlags(const SymbolAliasMap &Aliases);
 
   JITDylib *SourceJD = nullptr;
@@ -545,6 +559,18 @@ public:
   /// issue, then re-call define.
   template <typename MaterializationUnitType>
   Error define(std::unique_ptr<MaterializationUnitType> &MU);
+
+  /// Tries to remove the given symbols.
+  ///
+  /// If any symbols are not defined in this JITDylib this method will return
+  /// a SymbolsNotFound error covering the missing symbols.
+  ///
+  /// If all symbols are found but some symbols are in the process of being
+  /// materialized this method will return a SymbolsCouldNotBeRemoved error.
+  ///
+  /// On success, all symbols are removed. On failure, the JITDylib state is
+  /// left unmodified (no symbols are removed).
+  Error remove(const SymbolNameSet &Names);
 
   /// Search the given JITDylib for the symbols in Symbols. If found, store
   ///        the flags for each symbol in Flags. Returns any unresolved symbols.

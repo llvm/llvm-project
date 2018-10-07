@@ -96,7 +96,7 @@ protected:
   SymbolNameToDefinitionMap SymbolToDefinition;
 
 private:
-  void discard(const JITDylib &JD, SymbolStringPtr Name) override;
+  void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
 };
 
 /// MaterializationUnit that materializes modules by calling the 'emit' method
@@ -158,7 +158,7 @@ public:
 private:
 
   void materialize(MaterializationResponsibility R) override;
-  void discard(const JITDylib &JD, SymbolStringPtr Name) override;
+  void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
 
   ObjectLayer &L;
   VModuleKey K;

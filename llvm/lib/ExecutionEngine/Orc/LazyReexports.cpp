@@ -187,7 +187,7 @@ void LazyReexportsMaterializationUnit::materialize(
 }
 
 void LazyReexportsMaterializationUnit::discard(const JITDylib &JD,
-                                               SymbolStringPtr Name) {
+                                               const SymbolStringPtr &Name) {
   assert(CallableAliases.count(Name) &&
          "Symbol not covered by this MaterializationUnit");
   CallableAliases.erase(Name);

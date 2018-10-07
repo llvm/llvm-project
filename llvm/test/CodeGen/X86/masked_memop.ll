@@ -1278,6 +1278,54 @@ define void @trunc_mask(<4 x float> %x, <4 x float>* %ptr, <4 x float> %y, <4 x 
   ret void
 }
 
+; TODO: SimplifyDemandedBits should eliminate an ashr here.
+
+define void @masked_store_bool_mask_demand_trunc_sext(<4 x double> %x, <4 x double>* %p, <4 x i32> %masksrc) {
+; AVX1-LABEL: masked_store_bool_mask_demand_trunc_sext:
+; AVX1:       ## %bb.0:
+; AVX1-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrad $31, %xmm1, %xmm1
+; AVX1-NEXT:    vpmovsxdq %xmm1, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; AVX1-NEXT:    vpmovsxdq %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; AVX1-NEXT:    vmaskmovpd %ymm0, %ymm1, (%rdi)
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: masked_store_bool_mask_demand_trunc_sext:
+; AVX2:       ## %bb.0:
+; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm1
+; AVX2-NEXT:    vpmovsxdq %xmm1, %ymm1
+; AVX2-NEXT:    vmaskmovpd %ymm0, %ymm1, (%rdi)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: masked_store_bool_mask_demand_trunc_sext:
+; AVX512F:       ## %bb.0:
+; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
+; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512F-NEXT:    vmovupd %zmm0, (%rdi) {%k1}
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; SKX-LABEL: masked_store_bool_mask_demand_trunc_sext:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpslld $31, %xmm1, %xmm1
+; SKX-NEXT:    vptestmd %xmm1, %xmm1, %k1
+; SKX-NEXT:    vmovupd %ymm0, (%rdi) {%k1}
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+  %sext = sext <4 x i32> %masksrc to <4 x i64>
+  %boolmask = trunc <4 x i64> %sext to <4 x i1>
+  call void @llvm.masked.store.v4f64.p0v4f64(<4 x double> %x, <4 x double>* %p, i32 4, <4 x i1> %boolmask)
+  ret void
+}
+
 ; This needs to be widened to v4i32.
 ; This used to assert in type legalization. PR38436
 ; FIXME: The codegen for AVX512 should use KSHIFT to zero the upper bits of the mask.
@@ -1342,20 +1390,20 @@ define i32 @pr38986(i1 %c, i32* %p) {
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    testb $1, %dil
 ; AVX-NEXT:    ## implicit-def: $eax
-; AVX-NEXT:    je LBB43_2
+; AVX-NEXT:    je LBB44_2
 ; AVX-NEXT:  ## %bb.1: ## %cond.load
 ; AVX-NEXT:    movl (%rsi), %eax
-; AVX-NEXT:  LBB43_2: ## %else
+; AVX-NEXT:  LBB44_2: ## %else
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: pr38986:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    testb $1, %dil
 ; AVX512-NEXT:    ## implicit-def: $eax
-; AVX512-NEXT:    je LBB43_2
+; AVX512-NEXT:    je LBB44_2
 ; AVX512-NEXT:  ## %bb.1: ## %cond.load
 ; AVX512-NEXT:    movl (%rsi), %eax
-; AVX512-NEXT:  LBB43_2: ## %else
+; AVX512-NEXT:  LBB44_2: ## %else
 ; AVX512-NEXT:    retq
  %vc = insertelement <1 x i1> undef, i1 %c, i32 0
  %vp = bitcast i32* %p to <1 x i32>*

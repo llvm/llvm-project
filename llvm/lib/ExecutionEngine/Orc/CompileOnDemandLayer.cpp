@@ -85,7 +85,7 @@ private:
                          std::move(SymbolToDefinition));
   }
 
-  void discard(const JITDylib &V, SymbolStringPtr Name) override {
+  void discard(const JITDylib &V, const SymbolStringPtr &Name) override {
     // All original symbols were materialized by the CODLayer and should be
     // final. The function bodies provided by M should never be overridden.
     llvm_unreachable("Discard should never be called on an "
