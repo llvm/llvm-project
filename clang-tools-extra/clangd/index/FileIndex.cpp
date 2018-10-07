@@ -128,8 +128,8 @@ std::unique_ptr<SymbolIndex> FileSymbols::buildMemIndex() {
     for (auto &Sym : MergedRefs) {
       auto &SymRefs = Sym.second;
       // Sorting isn't required, but yields more stable results over rebuilds.
-      std::sort(SymRefs.begin(), SymRefs.end());
-      std::copy(SymRefs.begin(), SymRefs.end(), back_inserter(RefsStorage));
+      llvm::sort(SymRefs);
+      llvm::copy(SymRefs, back_inserter(RefsStorage));
       AllRefs.try_emplace(
           Sym.first,
           ArrayRef<Ref>(&RefsStorage[RefsStorage.size() - SymRefs.size()],

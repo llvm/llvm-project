@@ -84,10 +84,8 @@ float quality(const Symbol &S) {
 }
 
 SymbolSlab::const_iterator SymbolSlab::find(const SymbolID &ID) const {
-  auto It = std::lower_bound(Symbols.begin(), Symbols.end(), ID,
-                             [](const Symbol &S, const SymbolID &I) {
-                               return S.ID < I;
-                             });
+  auto It = llvm::lower_bound(
+      Symbols, ID, [](const Symbol &S, const SymbolID &I) { return S.ID < I; });
   if (It != Symbols.end() && It->ID == ID)
     return It;
   return Symbols.end();
@@ -112,8 +110,8 @@ void SymbolSlab::Builder::insert(const Symbol &S) {
 SymbolSlab SymbolSlab::Builder::build() && {
   Symbols = {Symbols.begin(), Symbols.end()}; // Force shrink-to-fit.
   // Sort symbols so the slab can binary search over them.
-  std::sort(Symbols.begin(), Symbols.end(),
-            [](const Symbol &L, const Symbol &R) { return L.ID < R.ID; });
+  llvm::sort(Symbols,
+             [](const Symbol &L, const Symbol &R) { return L.ID < R.ID; });
   // We may have unused strings from overwritten symbols. Build a new arena.
   BumpPtrAllocator NewArena;
   llvm::UniqueStringSaver Strings(NewArena);
@@ -155,8 +153,8 @@ RefSlab RefSlab::Builder::build() && {
   Result.reserve(Refs.size());
   for (auto &Sym : Refs) {
     auto &SymRefs = Sym.second;
-    std::sort(SymRefs.begin(), SymRefs.end());
-    // TODO: do we really need to dedup?
+    llvm::sort(SymRefs);
+    // FIXME: do we really need to dedup?
     SymRefs.erase(std::unique(SymRefs.begin(), SymRefs.end()), SymRefs.end());
 
     auto *Array = Arena.Allocate<Ref>(SymRefs.size());

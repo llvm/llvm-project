@@ -104,21 +104,19 @@ public:
     }
 
     // Sort results. Declarations being referenced explicitly come first.
-    std::sort(Result.begin(), Result.end(),
-              [](const DeclInfo &L, const DeclInfo &R) {
-                if (L.IsReferencedExplicitly != R.IsReferencedExplicitly)
-                  return L.IsReferencedExplicitly > R.IsReferencedExplicitly;
-                return L.D->getBeginLoc() < R.D->getBeginLoc();
-              });
+    llvm::sort(Result, [](const DeclInfo &L, const DeclInfo &R) {
+      if (L.IsReferencedExplicitly != R.IsReferencedExplicitly)
+        return L.IsReferencedExplicitly > R.IsReferencedExplicitly;
+      return L.D->getBeginLoc() < R.D->getBeginLoc();
+    });
     return Result;
   }
 
   std::vector<MacroDecl> takeMacroInfos() {
     // Don't keep the same Macro info multiple times.
-    std::sort(MacroInfos.begin(), MacroInfos.end(),
-              [](const MacroDecl &Left, const MacroDecl &Right) {
-                return Left.Info < Right.Info;
-              });
+    llvm::sort(MacroInfos, [](const MacroDecl &Left, const MacroDecl &Right) {
+      return Left.Info < Right.Info;
+    });
 
     auto Last = std::unique(MacroInfos.begin(), MacroInfos.end(),
                             [](const MacroDecl &Left, const MacroDecl &Right) {
