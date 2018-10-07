@@ -129,8 +129,7 @@ bool isPrivateProtoDecl(const NamedDecl &ND) {
   // will include OUTER_INNER and exclude some_enum_constant.
   // FIXME: the heuristic relies on naming style (i.e. no underscore in
   // user-defined names) and can be improved.
-  return (ND.getKind() != Decl::EnumConstant) ||
-         std::any_of(Name.begin(), Name.end(), islower);
+  return (ND.getKind() != Decl::EnumConstant) || llvm::any_of(Name, islower);
 }
 
 // We only collect #include paths for symbols that are suitable for global code

@@ -361,17 +361,15 @@ llvm::Optional<Path> ClangdServer::switchSourceHeader(PathRef Path) {
 
   // Lookup in a list of known extensions.
   auto SourceIter =
-      std::find_if(std::begin(SourceExtensions), std::end(SourceExtensions),
-                   [&PathExt](PathRef SourceExt) {
-                     return SourceExt.equals_lower(PathExt);
-                   });
+      llvm::find_if(SourceExtensions, [&PathExt](PathRef SourceExt) {
+        return SourceExt.equals_lower(PathExt);
+      });
   bool IsSource = SourceIter != std::end(SourceExtensions);
 
   auto HeaderIter =
-      std::find_if(std::begin(HeaderExtensions), std::end(HeaderExtensions),
-                   [&PathExt](PathRef HeaderExt) {
-                     return HeaderExt.equals_lower(PathExt);
-                   });
+      llvm::find_if(HeaderExtensions, [&PathExt](PathRef HeaderExt) {
+        return HeaderExt.equals_lower(PathExt);
+      });
 
   bool IsHeader = HeaderIter != std::end(HeaderExtensions);
 
