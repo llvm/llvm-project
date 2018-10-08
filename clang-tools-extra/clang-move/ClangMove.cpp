@@ -899,21 +899,21 @@ void ClangMoveTool::onEndOfTranslationUnit() {
     assert(Reporter);
     for (const auto *Decl : UnremovedDeclsInOldHeader) {
       auto Kind = Decl->getKind();
+      bool Templated = Decl->isTemplated();
       const std::string QualifiedName = Decl->getQualifiedNameAsString();
       if (Kind == Decl::Kind::Var)
-        Reporter->reportDeclaration(QualifiedName, "Variable");
+        Reporter->reportDeclaration(QualifiedName, "Variable", Templated);
       else if (Kind == Decl::Kind::Function ||
                Kind == Decl::Kind::FunctionTemplate)
-        Reporter->reportDeclaration(QualifiedName, "Function");
+        Reporter->reportDeclaration(QualifiedName, "Function", Templated);
       else if (Kind == Decl::Kind::ClassTemplate ||
                Kind == Decl::Kind::CXXRecord)
-        Reporter->reportDeclaration(QualifiedName, "Class");
+        Reporter->reportDeclaration(QualifiedName, "Class", Templated);
       else if (Kind == Decl::Kind::Enum)
-        Reporter->reportDeclaration(QualifiedName, "Enum");
-      else if (Kind == Decl::Kind::Typedef ||
-               Kind == Decl::Kind::TypeAlias ||
+        Reporter->reportDeclaration(QualifiedName, "Enum", Templated);
+      else if (Kind == Decl::Kind::Typedef || Kind == Decl::Kind::TypeAlias ||
                Kind == Decl::Kind::TypeAliasTemplate)
-        Reporter->reportDeclaration(QualifiedName, "TypeAlias");
+        Reporter->reportDeclaration(QualifiedName, "TypeAlias", Templated);
     }
     return;
   }
