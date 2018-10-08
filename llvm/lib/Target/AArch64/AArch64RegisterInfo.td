@@ -200,6 +200,12 @@ def tcGPR64 : RegisterClass<"AArch64", [i64], 64, (sub GPR64common, X19, X20, X2
                                                      X22, X23, X24, X25, X26,
                                                      X27, X28, FP, LR)>;
 
+// Restricted set of tail call registers, for use when branch target
+// enforcement is enabled. These are the only registers which can be used to
+// indirectly branch (not call) to the "BTI c" instruction at the start of a
+// BTI-protected function.
+def rtcGPR64 : RegisterClass<"AArch64", [i64], 64, (add X16, X17)>;
+
 // GPR register classes for post increment amount of vector load/store that
 // has alternate printing when Rm=31 and prints a constant immediate value
 // equal to the total number of bytes transferred.

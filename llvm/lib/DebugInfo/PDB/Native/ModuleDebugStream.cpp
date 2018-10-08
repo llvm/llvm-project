@@ -97,6 +97,14 @@ ModuleDebugStreamRef::symbols(bool *HadError) const {
   return make_range(SymbolArray.begin(HadError), SymbolArray.end());
 }
 
+CVSymbol ModuleDebugStreamRef::readSymbolAtOffset(uint32_t Offset) const {
+  // Offsets include the size of the 4-byte magic at the beginning, but lookup
+  // doesn't take that into account, so subtract it here.
+  auto Iter = SymbolArray.at(Offset - 4);
+  assert(Iter != SymbolArray.end());
+  return *Iter;
+}
+
 iterator_range<ModuleDebugStreamRef::DebugSubsectionIterator>
 ModuleDebugStreamRef::subsections() const {
   return make_range(Subsections.begin(), Subsections.end());

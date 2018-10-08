@@ -1103,7 +1103,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     // This is a symbol reference.
     StringRef SymbolName = Identifier;
     if (SymbolName.empty())
-      return true;
+      return Error(getLexer().getLoc(), "expected a symbol reference");
 
     MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
 

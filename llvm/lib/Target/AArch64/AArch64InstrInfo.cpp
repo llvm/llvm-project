@@ -5084,6 +5084,13 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   unsigned FrameID = MachineOutlinerDefault;
   unsigned NumBytesToCreateFrame = 4;
 
+  bool HasBTI =
+      std::any_of(RepeatedSequenceLocs.begin(), RepeatedSequenceLocs.end(),
+                  [](outliner::Candidate &C) {
+                    return C.getMF()->getFunction().hasFnAttribute(
+                        "branch-target-enforcement");
+                  });
+
   // If the last instruction in any candidate is a terminator, then we should
   // tail call all of the candidates.
   if (RepeatedSequenceLocs[0].back()->isTerminator()) {
@@ -5092,7 +5099,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     SetCandidateCallInfo(MachineOutlinerTailCall, 4);
   }
 
-  else if (LastInstrOpcode == AArch64::BL || LastInstrOpcode == AArch64::BLR) {
+  else if (LastInstrOpcode == AArch64::BL ||
+           (LastInstrOpcode == AArch64::BLR && !HasBTI)) {
     // FIXME: Do we need to check if the code after this uses the value of LR?
     FrameID = MachineOutlinerThunk;
     NumBytesToCreateFrame = 0;
@@ -5461,7 +5469,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
       TailOpcode = AArch64::TCRETURNdi;
     } else {
       assert(Call->getOpcode() == AArch64::BLR);
-      TailOpcode = AArch64::TCRETURNri;
+      TailOpcode = AArch64::TCRETURNriALL;
     }
     MachineInstr *TC = BuildMI(MF, DebugLoc(), get(TailOpcode))
                             .add(Call->getOperand(0))

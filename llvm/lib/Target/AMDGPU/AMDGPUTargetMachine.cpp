@@ -138,6 +138,13 @@ static cl::opt<bool> EnableLowerKernelArguments(
   cl::init(true),
   cl::Hidden);
 
+// Enable atomic optimization
+static cl::opt<bool> EnableAtomicOptimizations(
+  "amdgpu-atomic-optimizations",
+  cl::desc("Enable atomic optimizations"),
+  cl::init(false),
+  cl::Hidden);
+
 extern "C" void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -163,6 +170,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
   initializeAMDGPUAnnotateUniformValuesPass(*PR);
   initializeAMDGPUArgumentUsageInfoPass(*PR);
+  initializeAMDGPUAtomicOptimizerPass(*PR);
   initializeAMDGPULowerKernelArgumentsPass(*PR);
   initializeAMDGPULowerKernelAttributesPass(*PR);
   initializeAMDGPULowerIntrinsicsPass(*PR);
@@ -746,6 +754,10 @@ ScheduleDAGInstrs *GCNPassConfig::createMachineScheduler(
 
 bool GCNPassConfig::addPreISel() {
   AMDGPUPassConfig::addPreISel();
+
+  if (EnableAtomicOptimizations) {
+    addPass(createAMDGPUAtomicOptimizerPass());
+  }
 
   // FIXME: We need to run a pass to propagate the attributes when calls are
   // supported.

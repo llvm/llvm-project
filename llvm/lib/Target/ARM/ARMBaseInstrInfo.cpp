@@ -708,8 +708,12 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return MCID.getSize();
 
   // If this machine instr is an inline asm, measure it.
-  if (MI.getOpcode() == ARM::INLINEASM)
-    return getInlineAsmLength(MI.getOperand(0).getSymbolName(), *MAI);
+  if (MI.getOpcode() == ARM::INLINEASM) {
+    unsigned Size = getInlineAsmLength(MI.getOperand(0).getSymbolName(), *MAI);
+    if (!MF->getInfo<ARMFunctionInfo>()->isThumbFunction())
+      Size = alignTo(Size, 4);
+    return Size;
+  }
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
   default:

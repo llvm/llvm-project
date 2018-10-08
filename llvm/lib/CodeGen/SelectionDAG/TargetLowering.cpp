@@ -1219,7 +1219,7 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
         DemandedSubElts = APInt::getNullValue(Scale);
         for (unsigned i = 0; i != Scale; ++i) {
           unsigned Offset = i * NumSrcEltBits;
-          APInt Sub = DemandedMask.extractBits(NumSrcEltBits, Offset);
+          APInt Sub = NewMask.extractBits(NumSrcEltBits, Offset);
           if (Sub.isAllOnesValue())
             DemandedSubElts.setBit(i);
           else if (!Sub.isNullValue())

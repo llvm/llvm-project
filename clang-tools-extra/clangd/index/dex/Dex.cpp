@@ -123,8 +123,7 @@ void Dex::buildIndex() {
 
   // Symbols are sorted by symbol qualities so that items in the posting lists
   // are stored in the descending order of symbol quality.
-  std::sort(begin(ScoredSymbols), end(ScoredSymbols),
-            std::greater<std::pair<float, const Symbol *>>());
+  llvm::sort(ScoredSymbols, std::greater<std::pair<float, const Symbol *>>());
 
   // SymbolQuality was empty up until now.
   SymbolQuality.resize(Symbols.size());

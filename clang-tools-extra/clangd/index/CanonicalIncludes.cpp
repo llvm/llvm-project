@@ -46,12 +46,11 @@ CanonicalIncludes::mapHeader(llvm::ArrayRef<std::string> Headers,
     return SE->second;
   // Find the first header such that the extension is not '.inc', and isn't a
   // recognized non-header file
-  auto I =
-      std::find_if(Headers.begin(), Headers.end(), [](llvm::StringRef Include) {
-        // Skip .inc file whose including header file should
-        // be #included instead.
-        return !Include.endswith(".inc");
-      });
+  auto I = llvm::find_if(Headers, [](llvm::StringRef Include) {
+    // Skip .inc file whose including header file should
+    // be #included instead.
+    return !Include.endswith(".inc");
+  });
   if (I == Headers.end())
     return Headers[0]; // Fallback to the declaring header.
   StringRef Header = *I;

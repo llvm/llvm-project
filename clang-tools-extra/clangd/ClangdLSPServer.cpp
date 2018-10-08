@@ -549,8 +549,7 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File,
       DiagnosticsJSON.push_back(std::move(LSPDiag));
 
       auto &FixItsForDiagnostic = LocalFixIts[Diag];
-      std::copy(Fixes.begin(), Fixes.end(),
-                std::back_inserter(FixItsForDiagnostic));
+      llvm::copy(Fixes, std::back_inserter(FixItsForDiagnostic));
     });
   }
 

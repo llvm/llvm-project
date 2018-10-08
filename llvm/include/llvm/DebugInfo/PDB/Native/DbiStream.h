@@ -78,7 +78,7 @@ public:
 
   const DbiModuleList &modules() const;
 
-  FixedStreamArray<object::coff_section> getSectionHeaders();
+  FixedStreamArray<object::coff_section> getSectionHeaders() const;
 
   FixedStreamArray<object::FpoData> getFpoRecords();
 
