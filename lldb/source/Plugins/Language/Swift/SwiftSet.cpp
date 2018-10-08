@@ -45,6 +45,8 @@ SetConfig::SetConfig()
   // Note: We need to have the old _Tt names here because those are
   // still used to name classes in the ObjC runtime.
 
+  m_nativeStorageRoot_mangled =
+    ConstString("_TtCs14_RawSetStorage");
   m_nativeStorageRoot_demangled =
     ConstString("Swift._RawSetStorage");
 
@@ -67,16 +69,6 @@ SetConfig::SetConfig()
     = ConstString("Swift._SwiftDeferredNSSet<");
   m_deferredBridgedStorage_demangledRegex
     = ConstString("^Swift\\._SwiftDeferredNSSet<.+>$");
-
-  // Legacy Swift 4.2 storage class names
-  m_legacy_nativeStorage_mangledRegex_ObjC =
-    ConstString("^_TtGCs30_HashableTypedNativeSetStorage.*");
-  m_legacy_nativeStorage_demangledPrefix =
-    ConstString("Swift._HashableTypedNativeSetStorage<");
-  m_legacy_nativeStorage_demangledRegex =
-    ConstString("^Swift\\._HashableTypedNativeSetStorage<.+>$");
-  m_legacy_emptyStorage_mangled_ObjC = ConstString("_TtCs21__RawNativeSetStorage");
-  m_legacy_emptyStorage_demangled = ConstString("Swift.__RawNativeSetStorage");
 }
 
 bool
