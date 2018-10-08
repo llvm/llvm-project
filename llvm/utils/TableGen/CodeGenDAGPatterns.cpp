@@ -3037,13 +3037,6 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
       P->error("Operands list does not contain an entry for operand '" +
                *OperandsSet.begin() + "'!");
 
-    // If there is a code init for this fragment, keep track of the fact that
-    // this fragment uses it.
-    TreePredicateFn PredFn(P);
-    if (!PredFn.isAlwaysTrue())
-      for (auto T : P->getTrees())
-        T->addPredicateFn(PredFn);
-
     // If there is a node transformation corresponding to this, keep track of
     // it.
     Record *Transform = Frag->getValueAsDef("OperandTransform");

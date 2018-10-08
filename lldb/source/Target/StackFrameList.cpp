@@ -27,6 +27,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/Log.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 //#define DEBUG_STACK_FRAMES 1
 
@@ -240,6 +241,178 @@ void StackFrameList::GetOnlyConcreteFramesUpTo(uint32_t end_idx,
   m_frames.resize(num_frames);
 }
 
+/// Find the unique path through the call graph from \p begin (with return PC
+/// \p return_pc) to \p end. On success this path is stored into \p path, and 
+/// on failure \p path is unchanged.
+static void FindInterveningFrames(Function &begin, Function &end,
+                                  Target &target, addr_t return_pc,
+                                  std::vector<Function *> &path,
+                                  ModuleList &images, Log *log) {
+  LLDB_LOG(log, "Finding frames between {0} and {1}, retn-pc={2:x}",
+           begin.GetDisplayName(), end.GetDisplayName(), return_pc);
+
+  // Find a non-tail calling edge with the correct return PC.
+  auto first_level_edges = begin.GetCallEdges();
+  if (log)
+    for (const CallEdge &edge : first_level_edges)
+      LLDB_LOG(log, "FindInterveningFrames: found call with retn-PC = {0:x}",
+               edge.GetReturnPCAddress(begin, target));
+  auto first_edge_it = std::lower_bound(
+      first_level_edges.begin(), first_level_edges.end(), return_pc,
+      [&](const CallEdge &edge, addr_t target_pc) {
+        return edge.GetReturnPCAddress(begin, target) < target_pc;
+      });
+  if (first_edge_it == first_level_edges.end() ||
+      first_edge_it->GetReturnPCAddress(begin, target) != return_pc) {
+    LLDB_LOG(log, "No call edge outgoing from {0} with retn-PC == {1:x}",
+             begin.GetDisplayName(), return_pc);
+    return;
+  }
+  CallEdge &first_edge = const_cast<CallEdge &>(*first_edge_it);
+
+  // The first callee may not be resolved, or there may be nothing to fill in.
+  Function *first_callee = first_edge.GetCallee(images);
+  if (!first_callee) {
+    LLDB_LOG(log, "Could not resolve callee");
+    return;
+  }
+  if (first_callee == &end) {
+    LLDB_LOG(log, "Not searching further, first callee is {0} (retn-PC: {1:x})",
+             end.GetDisplayName(), return_pc);
+    return;
+  }
+
+  // Run DFS on the tail-calling edges out of the first callee to find \p end.
+  // Fully explore the set of functions reachable from the first edge via tail
+  // calls in order to detect ambiguous executions.
+  struct DFS {
+    std::vector<Function *> active_path = {};
+    std::vector<Function *> solution_path = {};
+    llvm::SmallPtrSet<Function *, 2> visited_nodes = {};
+    bool ambiguous = false;
+    Function *end;
+    ModuleList &images;
+
+    DFS(Function *end, ModuleList &images) : end(end), images(images) {}
+
+    void search(Function *first_callee, std::vector<Function *> &path) {
+      dfs(first_callee);
+      if (!ambiguous)
+        path = std::move(solution_path);
+    }
+
+    void dfs(Function *callee) {
+      // Found a path to the target function.
+      if (callee == end) {
+        if (solution_path.empty())
+          solution_path = active_path;
+        else
+          ambiguous = true;
+        return;
+      }
+
+      // Terminate the search if tail recursion is found, or more generally if
+      // there's more than one way to reach a target. This errs on the side of
+      // caution: it conservatively stops searching when some solutions are
+      // still possible to save time in the average case.
+      if (!visited_nodes.insert(callee).second) {
+        ambiguous = true;
+        return;
+      }
+
+      // Search the calls made from this callee.
+      active_path.push_back(callee);
+      for (CallEdge &edge : callee->GetTailCallingEdges()) {
+        Function *next_callee = edge.GetCallee(images);
+        if (!next_callee)
+          continue;
+
+        dfs(next_callee);
+        if (ambiguous)
+          return;
+      }
+      active_path.pop_back();
+    }
+  };
+
+  DFS(&end, images).search(first_callee, path);
+}
+
+/// Given that \p next_frame will be appended to the frame list, synthesize
+/// tail call frames between the current end of the list and \p next_frame.
+/// If any frames are added, adjust the frame index of \p next_frame.
+///
+///   --------------
+///   |    ...     | <- Completed frames.
+///   --------------
+///   | prev_frame |
+///   --------------
+///   |    ...     | <- Artificial frames inserted here.
+///   --------------
+///   | next_frame |
+///   --------------
+///   |    ...     | <- Not-yet-visited frames.
+///   --------------
+void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
+  TargetSP target_sp = next_frame.CalculateTarget();
+  if (!target_sp)
+    return;
+
+  lldb::RegisterContextSP next_reg_ctx_sp = next_frame.GetRegisterContext();
+  if (!next_reg_ctx_sp)
+    return;
+
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+
+  assert(!m_frames.empty() && "Cannot synthesize frames in an empty stack");
+  StackFrame &prev_frame = *m_frames.back().get();
+
+  // Find the functions prev_frame and next_frame are stopped in. The function
+  // objects are needed to search the lazy call graph for intervening frames.
+  Function *prev_func =
+      prev_frame.GetSymbolContext(eSymbolContextFunction).function;
+  if (!prev_func) {
+    LLDB_LOG(log, "SynthesizeTailCallFrames: can't find previous function");
+    return;
+  }
+  Function *next_func =
+      next_frame.GetSymbolContext(eSymbolContextFunction).function;
+  if (!next_func) {
+    LLDB_LOG(log, "SynthesizeTailCallFrames: can't find next function");
+    return;
+  }
+
+  // Try to find the unique sequence of (tail) calls which led from next_frame
+  // to prev_frame.
+  std::vector<Function *> path;
+  addr_t return_pc = next_reg_ctx_sp->GetPC();
+  Target &target = *target_sp.get();
+  ModuleList &images = next_frame.CalculateTarget()->GetImages();
+  FindInterveningFrames(*next_func, *prev_func, target, return_pc, path, images,
+                        log);
+
+  // Push synthetic tail call frames.
+  for (Function *callee : llvm::reverse(path)) {
+    uint32_t frame_idx = m_frames.size();
+    uint32_t concrete_frame_idx = next_frame.GetConcreteFrameIndex();
+    addr_t cfa = LLDB_INVALID_ADDRESS;
+    bool cfa_is_valid = false;
+    addr_t pc =
+        callee->GetAddressRange().GetBaseAddress().GetLoadAddress(&target);
+    SymbolContext sc;
+    callee->CalculateSymbolContext(&sc);
+    auto synth_frame = std::make_shared<StackFrame>(
+        m_thread.shared_from_this(), frame_idx, concrete_frame_idx, cfa,
+        cfa_is_valid, pc, StackFrame::Kind::Artificial, &sc);
+    m_frames.push_back(synth_frame);
+    LLDB_LOG(log, "Pushed frame {0}", callee->GetDisplayName());
+  }
+
+  // If any frames were created, adjust next_frame's index.
+  if (!path.empty())
+    next_frame.SetFrameIndex(m_frames.size());
+}
+
 void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
   // Do not fetch frames for an invalid thread.
   if (!m_thread.IsValid())
@@ -315,11 +488,15 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
         break;
       }
       const bool cfa_is_valid = true;
-      const bool stop_id_is_valid = false;
-      const bool is_history_frame = false;
-      unwind_frame_sp.reset(new StackFrame(
-          m_thread.shared_from_this(), m_frames.size(), idx, cfa, cfa_is_valid,
-          pc, 0, stop_id_is_valid, is_history_frame, nullptr));
+      unwind_frame_sp.reset(
+          new StackFrame(m_thread.shared_from_this(), m_frames.size(), idx, cfa,
+                         cfa_is_valid, pc, StackFrame::Kind::Regular, nullptr));
+
+      // Create synthetic tail call frames between the previous frame and the
+      // newly-found frame. The new frame's index may change after this call,
+      // although its concrete index will stay the same.
+      SynthesizeTailCallFrames(*unwind_frame_sp.get());
+
       m_frames.push_back(unwind_frame_sp);
     }
 
@@ -491,11 +668,9 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
         addr_t pc, cfa;
         if (unwinder->GetFrameInfoAtIndex(idx, cfa, pc)) {
           const bool cfa_is_valid = true;
-          const bool stop_id_is_valid = false;
-          const bool is_history_frame = false;
-          frame_sp.reset(new StackFrame(
-              m_thread.shared_from_this(), idx, idx, cfa, cfa_is_valid, pc, 0,
-              stop_id_is_valid, is_history_frame, nullptr));
+          frame_sp.reset(new StackFrame(m_thread.shared_from_this(), idx, idx,
+                                        cfa, cfa_is_valid, pc,
+                                        StackFrame::Kind::Regular, nullptr));
 
           Function *function =
               frame_sp->GetSymbolContext(eSymbolContextFunction).function;

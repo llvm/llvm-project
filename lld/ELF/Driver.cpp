@@ -1600,14 +1600,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   }
 
   // This adds a .comment section containing a version string. We have to add it
-  // before decompressAndMergeSections because the .comment section is a
-  // mergeable section.
+  // before mergeSections because the .comment section is a mergeable section.
   if (!Config->Relocatable)
     InputSections.push_back(createCommentSection());
 
   // Do size optimizations: garbage collection, merging of SHF_MERGE sections
   // and identical code folding.
-  decompressSections();
   splitSections<ELFT>();
   markLive<ELFT>();
   demoteSharedSymbols<ELFT>();

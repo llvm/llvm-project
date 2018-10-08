@@ -41,7 +41,7 @@ private:
     R.emit();
   }
 
-  void discard(const JITDylib &JD, SymbolStringPtr Name) override {
+  void discard(const JITDylib &JD, const SymbolStringPtr &Name) override {
     llvm_unreachable("Discard should never occur on a LMU?");
   }
 

@@ -16,6 +16,7 @@
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Declaration.h"
 #include "lldb/Utility/UserID.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace lldb_private {
 
@@ -290,6 +291,62 @@ private:
   Declaration m_call_decl;
 };
 
+class Function;
+
+//----------------------------------------------------------------------
+/// @class CallEdge Function.h "lldb/Symbol/Function.h"
+///
+/// Represent a call made within a Function. This can be used to find a path
+/// in the call graph between two functions.
+//----------------------------------------------------------------------
+class CallEdge {
+public:
+  /// Construct a call edge using a symbol name to identify the calling
+  /// function, and a return PC within the calling function to identify a
+  /// specific call site.
+  ///
+  /// TODO: A symbol name may not be globally unique. To disambiguate ODR
+  /// conflicts, it's necessary to determine the \c Target a call edge is
+  /// associated with before resolving it.
+  CallEdge(const char *symbol_name, lldb::addr_t return_pc);
+
+  CallEdge(CallEdge &&) = default;
+  CallEdge &operator=(CallEdge &&) = default;
+
+  /// Get the callee's definition.
+  ///
+  /// Note that this might lazily invoke the DWARF parser.
+  Function *GetCallee(ModuleList &images);
+
+  /// Get the load PC address of the instruction which executes after the call
+  /// returns. Returns LLDB_INVALID_ADDRESS iff this is a tail call. \p caller
+  /// is the Function containing this call, and \p target is the Target which
+  /// made the call.
+  lldb::addr_t GetReturnPCAddress(Function &caller, Target &target) const;
+
+  /// Like \ref GetReturnPCAddress, but returns an unresolved file address.
+  lldb::addr_t GetUnresolvedReturnPCAddress() const { return return_pc; }
+
+private:
+  void ParseSymbolFileAndResolve(ModuleList &images);
+
+  /// Either the callee's mangled name or its definition, discriminated by
+  /// \ref resolved.
+  union {
+    const char *symbol_name;
+    Function *def;
+  } lazy_callee;
+
+  /// An invalid address if this is a tail call. Otherwise, the return PC for
+  /// the call. Note that this is a file address which must be resolved.
+  lldb::addr_t return_pc;
+
+  /// Whether or not an attempt was made to find the callee's definition.
+  bool resolved;
+
+  DISALLOW_COPY_AND_ASSIGN(CallEdge);
+};
+
 //----------------------------------------------------------------------
 /// @class Function Function.h "lldb/Symbol/Function.h"
 /// A class that describes a function.
@@ -395,6 +452,18 @@ public:
   ///     The line number.
   //------------------------------------------------------------------
   void GetEndLineSourceInfo(FileSpec &source_file, uint32_t &line_no);
+
+  //------------------------------------------------------------------
+  /// Get the outgoing call edges from this function, sorted by their return
+  /// PC addresses (in increasing order).
+  //------------------------------------------------------------------
+  llvm::MutableArrayRef<CallEdge> GetCallEdges();
+
+  //------------------------------------------------------------------
+  /// Get the outgoing tail-calling edges from this function. If none exist,
+  /// return None.
+  //------------------------------------------------------------------
+  llvm::MutableArrayRef<CallEdge> GetTailCallingEdges();
 
   //------------------------------------------------------------------
   /// Get accessor for the block list.
@@ -587,6 +656,10 @@ protected:
   Flags m_flags;
   uint32_t
       m_prologue_byte_size; ///< Compute the prologue size once and cache it
+
+  bool m_call_edges_resolved = false; ///< Whether call site info has been
+                                      ///  parsed.
+  std::vector<CallEdge> m_call_edges; ///< Outgoing call edges.
 private:
   DISALLOW_COPY_AND_ASSIGN(Function);
 };

@@ -43,6 +43,21 @@ COFF Improvements
 
 * The following flags have been added: ``/force:multiple``
 
+* lld now can link against import libraries produced by GNU tools.
+
+* lld can create thunks for ARM, to allow linking images over 16 MB.
+
+MinGW Improvements
+------------------
+
+* lld can now automatically import data variables from DLLs without the
+  use of the dllimport attribute.
+
+* lld can now use existing normal MinGW sysroots with import libraries and
+  CRT startup object files for GNU binutils. lld can handle most object
+  files produced by GCC, and thus works as a drop-in replacement for
+  ld.bfd in such environments.
+
 MachO Improvements
 ------------------
 

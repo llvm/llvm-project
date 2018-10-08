@@ -443,6 +443,22 @@ TEST_F(FormatTestJava, MethodDeclarations) {
                getStyleWithColumns(40));
 }
 
+TEST_F(FormatTestJava, MethodReference) {
+  EXPECT_EQ(
+      "private void foo() {\n"
+      "  f(this::methodReference);\n"
+      "  f(C.super::methodReference);\n"
+      "  Consumer<String> c = System.out::println;\n"
+      "  Iface<Integer> mRef = Ty::<Integer>meth;\n"
+      "}",
+      format("private void foo() {\n"
+             "  f(this ::methodReference);\n"
+             "  f(C.super ::methodReference);\n"
+             "  Consumer<String> c = System.out ::println;\n"
+             "  Iface<Integer> mRef = Ty :: <Integer> meth;\n"
+             "}"));
+}
+
 TEST_F(FormatTestJava, CppKeywords) {
   verifyFormat("public void union(Type a, Type b);");
   verifyFormat("public void struct(Object o);");

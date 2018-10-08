@@ -541,36 +541,30 @@ define <8 x float> @expand14(<4 x float> %a) {
 define <8 x float> @expand15(<4 x float> %a) {
 ; SKX64-LABEL: expand15:
 ; SKX64:       # %bb.0:
-; SKX64-NEXT:    vmovaps {{.*#+}} xmm1 = [0,2,0,0]
-; SKX64-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[0,1,1,3]
-; SKX64-NEXT:    vmovaps {{.*#+}} ymm0 = [0,1,8,3,10,3,2,3]
-; SKX64-NEXT:    vpermi2ps %ymm2, %ymm1, %ymm0
+; SKX64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; SKX64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
+; SKX64-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
 ; SKX64-NEXT:    retq
 ;
 ; KNL64-LABEL: expand15:
 ; KNL64:       # %bb.0:
-; KNL64-NEXT:    vmovaps {{.*#+}} xmm1 = [0,2,0,0]
-; KNL64-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,1,1,1]
 ; KNL64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; KNL64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
-; KNL64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3],ymm0[4],ymm1[5,6,7]
+; KNL64-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
 ; KNL64-NEXT:    retq
 ;
 ; SKX32-LABEL: expand15:
 ; SKX32:       # %bb.0:
-; SKX32-NEXT:    vmovaps {{.*#+}} xmm1 = [0,2,0,0]
-; SKX32-NEXT:    vpermilps {{.*#+}} xmm2 = xmm0[0,1,1,3]
-; SKX32-NEXT:    vmovaps {{.*#+}} ymm0 = [0,1,8,3,10,3,2,3]
-; SKX32-NEXT:    vpermi2ps %ymm2, %ymm1, %ymm0
+; SKX32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; SKX32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
+; SKX32-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
 ; SKX32-NEXT:    retl
 ;
 ; KNL32-LABEL: expand15:
 ; KNL32:       # %bb.0:
-; KNL32-NEXT:    vmovaps {{.*#+}} xmm1 = [0,2,0,0]
-; KNL32-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,1,1,1]
 ; KNL32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; KNL32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
-; KNL32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3],ymm0[4],ymm1[5,6,7]
+; KNL32-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1],ymm0[2],mem[3],ymm0[4],mem[5,6,7]
 ; KNL32-NEXT:    retl
    %addV = fadd <4 x float> <float 0.0,float 1.0,float 2.0,float 0.0> , <float 0.0,float 1.0,float 2.0,float 0.0>
    %res = shufflevector <4 x float> %addV, <4 x float> %a, <8 x i32> <i32 0, i32 1, i32 4, i32 0, i32 5, i32 0, i32 0, i32 0>

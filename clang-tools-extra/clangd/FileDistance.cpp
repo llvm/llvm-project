@@ -72,8 +72,8 @@ FileDistance::FileDistance(StringMap<SourceParams> Sources,
       Rest = parent_path(Rest, sys::path::Style::posix);
       auto NextHash = hash_value(Rest);
       auto &Down = DownEdges[NextHash];
-      if (std::find(Down.begin(), Down.end(), Hash) == Down.end())
-        DownEdges[NextHash].push_back(Hash);
+      if (!llvm::is_contained(Down, Hash))
+        Down.push_back(Hash);
       // We can't just break after MaxUpTraversals, must still set DownEdges.
       if (I > S.getValue().MaxUpTraversals) {
         if (Cache.find(Hash) != Cache.end())

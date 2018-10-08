@@ -99,6 +99,8 @@ protected:
 
   void GetOnlyConcreteFramesUpTo(uint32_t end_idx, Unwind *unwinder);
 
+  void SynthesizeTailCallFrames(StackFrame &next_frame);
+
   bool GetAllFramesFetched() { return m_concrete_frames_fetched == UINT32_MAX; }
 
   void SetAllFramesFetched() { m_concrete_frames_fetched = UINT32_MAX; }

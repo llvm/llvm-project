@@ -112,4 +112,5 @@ void StandardInstrumentations::registerCallbacks(
     PIC.registerBeforePassCallback(PrintIR::printBeforePass);
   if (llvm::shouldPrintAfterPass())
     PIC.registerAfterPassCallback(PrintIR::printAfterPass);
+  TimePasses.registerCallbacks(PIC);
 }

@@ -590,7 +590,7 @@ static void GetArgsAndEnv(char ***argv, char ***envp) {
   // kern.ps_strings sysctl, which returns a pointer to a structure containing
   // this information. See also <sys/exec.h>.
   ps_strings *pss;
-  size_t sz = sizeof(pss);
+  uptr sz = sizeof(pss);
   if (internal_sysctlbyname("kern.ps_strings", &pss, &sz, NULL, 0) == -1) {
     Printf("sysctl kern.ps_strings failed\n");
     Die();

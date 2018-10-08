@@ -154,6 +154,17 @@ public:
     IsInlined() const;
 
     %feature("docstring", "
+    /// Return true if this frame is artificial (e.g a frame synthesized to
+    /// capture a tail call). Local variables may not be available in an artificial
+    /// frame.
+    ") IsArtificial;
+    bool
+    IsArtificial();
+
+    bool
+    IsArtificial() const;
+
+    %feature("docstring", "
     /// The version that doesn't supply a 'use_dynamic' value will use the
     /// target's default.
     ") EvaluateExpression;

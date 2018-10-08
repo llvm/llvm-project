@@ -5,8 +5,8 @@
 define double @select_fcmp_false(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: select_fcmp_false:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    mv a0, a2
 ; RV32IFD-NEXT:    mv a1, a3
+; RV32IFD-NEXT:    mv a0, a2
 ; RV32IFD-NEXT:    ret
   %1 = fcmp false double %a, %b
   %2 = select i1 %1, double %a, double %b

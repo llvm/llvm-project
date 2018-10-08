@@ -520,7 +520,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     // Generate a unique module ID.
     SmallString<64> ModuleID;
     llvm::raw_svector_ostream OS(ModuleID);
-    OS << ModuleIDPrefix << llvm::format("%x", FatbinWrapper->getGUID());
+    OS << ModuleIDPrefix << llvm::format("%" PRIx64, FatbinWrapper->getGUID());
     llvm::Constant *ModuleIDConstant =
         makeConstantString(ModuleID.str(), "", ModuleIDSectionName, 32);
 

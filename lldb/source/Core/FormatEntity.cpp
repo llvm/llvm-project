@@ -128,6 +128,7 @@ static FormatEntity::Entry::Definition g_frame_child_entries[] = {
     ENTRY("flags", FrameRegisterFlags, UInt64),
     ENTRY("no-debug", FrameNoDebug, None),
     ENTRY_CHILDREN("reg", FrameRegisterByName, UInt64, g_string_entry),
+    ENTRY("is-artificial", FrameIsArtificial, UInt32),
 };
 
 static FormatEntity::Entry::Definition g_function_child_entries[] = {
@@ -357,6 +358,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(FrameRegisterFP);
     ENUM_TO_CSTR(FrameRegisterFlags);
     ENUM_TO_CSTR(FrameRegisterByName);
+    ENUM_TO_CSTR(FrameIsArtificial);
     ENUM_TO_CSTR(ScriptFrame);
     ENUM_TO_CSTR(FunctionID);
     ENUM_TO_CSTR(FunctionDidChange);
@@ -1488,6 +1490,13 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       }
     }
     return false;
+
+  case Entry::Type::FrameIsArtificial: {
+    if (exe_ctx)
+      if (StackFrame *frame = exe_ctx->GetFramePtr())
+        return frame->IsArtificial();
+    return false;
+  }
 
   case Entry::Type::ScriptFrame:
     if (exe_ctx) {

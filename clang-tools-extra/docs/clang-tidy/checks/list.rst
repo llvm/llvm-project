@@ -174,6 +174,7 @@ Clang-Tidy Checks
    modernize-avoid-bind
    modernize-concat-nested-namespaces
    modernize-deprecated-headers
+   modernize-deprecated-ios-base-aliases
    modernize-loop-convert
    modernize-make-shared
    modernize-make-unique

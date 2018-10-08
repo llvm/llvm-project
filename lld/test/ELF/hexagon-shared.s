@@ -22,6 +22,9 @@ r2=add(pc,##_GLOBAL_OFFSET_TABLE_@PCREL)
 r0 = memw (r2+##bar@GOT)
 jumpr r0
 
+# R_HEX_GOT_16_X
+r0 = add(r1,##bar@GOT)
+
 # PLT: { immext(#65472
 # PLT: r28 = add(pc,##65488) }
 # PLT: { r14 -= add(r28,#16)
@@ -37,6 +40,7 @@ jumpr r0
 
 # TEXT:  10000: 00 00 02 00 00020000
 # TEXT: { 	call 0x10050 }
+# TEXT: r0 = add(r1,##65664) }
 
 # GOT: .got:
 # GOT: 30080:	00 00 00 00 00000000 <unknown>

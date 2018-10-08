@@ -122,6 +122,8 @@ public:
   size_t GetTypes(lldb_private::SymbolContextScope *sc_scope,
                   uint32_t type_mask,
                   lldb_private::TypeList &type_list) override;
+  std::vector<lldb_private::CallEdge>
+  ParseCallEdgesInFunction(lldb_private::UserID func_id) override;
 
   //------------------------------------------------------------------
   // PluginInterface protocol

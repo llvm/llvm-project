@@ -301,7 +301,7 @@ bool ICF<ELFT>::constantEq(const InputSection *SecA, ArrayRef<RelTy> RA,
 template <class ELFT>
 bool ICF<ELFT>::equalsConstant(const InputSection *A, const InputSection *B) {
   if (A->NumRelocations != B->NumRelocations || A->Flags != B->Flags ||
-      A->getSize() != B->getSize() || A->Data != B->Data)
+      A->getSize() != B->getSize() || A->data() != B->data())
     return false;
 
   // If two sections have different output sections, we cannot merge them.
@@ -439,7 +439,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   // Initially, we use hash values to partition sections.
   parallelForEach(Sections, [&](InputSection *S) {
     // Set MSB to 1 to avoid collisions with non-hash IDs.
-    S->Class[0] = xxHash64(S->Data) | (1U << 31);
+    S->Class[0] = xxHash64(S->data()) | (1U << 31);
   });
 
   // From now on, sections in Sections vector are ordered so that sections
