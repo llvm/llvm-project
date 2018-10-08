@@ -414,6 +414,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("IndentWidth", Style.IndentWidth);
     IO.mapOptional("IndentWrappedFunctionNames",
                    Style.IndentWrappedFunctionNames);
+    IO.mapOptional("JavaImportGroups", Style.JavaImportGroups);
     IO.mapOptional("JavaScriptQuotes", Style.JavaScriptQuotes);
     IO.mapOptional("JavaScriptWrapImports", Style.JavaScriptWrapImports);
     IO.mapOptional("KeepEmptyLinesAtTheStartOfBlocks",
@@ -847,6 +848,20 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
     ChromiumStyle.BreakAfterJavaFieldAnnotations = true;
     ChromiumStyle.ContinuationIndentWidth = 8;
     ChromiumStyle.IndentWidth = 4;
+    // See styleguide for import groups:
+    // https://chromium.googlesource.com/chromium/src/+/master/styleguide/java/java.md#Import-Order
+    ChromiumStyle.JavaImportGroups = {
+        "android",
+        "com",
+        "dalvik",
+        "junit",
+        "org",
+        "com.google.android.apps.chrome",
+        "org.chromium",
+        "java",
+        "javax",
+    };
+    ChromiumStyle.SortIncludes = true;
   } else if (Language == FormatStyle::LK_JavaScript) {
     ChromiumStyle.AllowShortIfStatementsOnASingleLine = false;
     ChromiumStyle.AllowShortLoopsOnASingleLine = false;
@@ -1608,6 +1623,14 @@ struct IncludeDirective {
   int Category;
 };
 
+struct JavaImportDirective {
+  StringRef Identifier;
+  StringRef Text;
+  unsigned Offset;
+  std::vector<StringRef> AssociatedCommentLines;
+  bool IsStatic;
+};
+
 } // end anonymous namespace
 
 // Determines whether 'Ranges' intersects with ('Start', 'End').
@@ -1726,7 +1749,7 @@ static void sortCppIncludes(const FormatStyle &Style,
 
 namespace {
 
-const char IncludeRegexPattern[] =
+const char CppIncludeRegexPattern[] =
     R"(^[\t\ ]*#[\t\ ]*(import|include)[^"<]*(["<][^">]*[">]))";
 
 } // anonymous namespace
@@ -1738,7 +1761,7 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
                                       unsigned *Cursor) {
   unsigned Prev = 0;
   unsigned SearchFrom = 0;
-  llvm::Regex IncludeRegex(IncludeRegexPattern);
+  llvm::Regex IncludeRegex(CppIncludeRegexPattern);
   SmallVector<StringRef, 4> Matches;
   SmallVector<IncludeDirective, 16> IncludesInBlock;
 
@@ -1797,6 +1820,149 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
   return Replaces;
 }
 
+// Returns group number to use as a first order sort on imports. Gives UINT_MAX
+// if the import does not match any given groups.
+static unsigned findJavaImportGroup(const FormatStyle &Style,
+                                    StringRef ImportIdentifier) {
+  unsigned LongestMatchIndex = UINT_MAX;
+  unsigned LongestMatchLength = 0;
+  for (unsigned I = 0; I < Style.JavaImportGroups.size(); I++) {
+    std::string GroupPrefix = Style.JavaImportGroups[I];
+    if (ImportIdentifier.startswith(GroupPrefix) &&
+        GroupPrefix.length() > LongestMatchLength) {
+      LongestMatchIndex = I;
+      LongestMatchLength = GroupPrefix.length();
+    }
+  }
+  return LongestMatchIndex;
+}
+
+// Sorts and deduplicates a block of includes given by 'Imports' based on
+// JavaImportGroups, then adding the necessary replacement to 'Replaces'.
+// Import declarations with the same text will be deduplicated. Between each
+// import group, a newline is inserted, and within each import group, a
+// lexicographic sort based on ASCII value is performed.
+static void sortJavaImports(const FormatStyle &Style,
+                            const SmallVectorImpl<JavaImportDirective> &Imports,
+                            ArrayRef<tooling::Range> Ranges, StringRef FileName,
+                            tooling::Replacements &Replaces) {
+  unsigned ImportsBeginOffset = Imports.front().Offset;
+  unsigned ImportsEndOffset =
+      Imports.back().Offset + Imports.back().Text.size();
+  unsigned ImportsBlockSize = ImportsEndOffset - ImportsBeginOffset;
+  if (!affectsRange(Ranges, ImportsBeginOffset, ImportsEndOffset))
+    return;
+  SmallVector<unsigned, 16> Indices;
+  SmallVector<unsigned, 16> JavaImportGroups;
+  for (unsigned i = 0, e = Imports.size(); i != e; ++i) {
+    Indices.push_back(i);
+    JavaImportGroups.push_back(
+        findJavaImportGroup(Style, Imports[i].Identifier));
+  }
+  llvm::sort(Indices.begin(), Indices.end(), [&](unsigned LHSI, unsigned RHSI) {
+        // Negating IsStatic to push static imports above non-static imports.
+        return std::make_tuple(!Imports[LHSI].IsStatic, JavaImportGroups[LHSI],
+                               Imports[LHSI].Identifier) <
+               std::make_tuple(!Imports[RHSI].IsStatic, JavaImportGroups[RHSI],
+                               Imports[RHSI].Identifier);
+      });
+
+  // Deduplicate imports.
+  Indices.erase(std::unique(Indices.begin(), Indices.end(),
+                            [&](unsigned LHSI, unsigned RHSI) {
+                              return Imports[LHSI].Text == Imports[RHSI].Text;
+                            }),
+                Indices.end());
+
+  bool CurrentIsStatic = Imports[Indices.front()].IsStatic;
+  unsigned CurrentImportGroup = JavaImportGroups[Indices.front()];
+
+  std::string result;
+  for (unsigned Index : Indices) {
+    if (!result.empty()) {
+      result += "\n";
+      if (CurrentIsStatic != Imports[Index].IsStatic ||
+          CurrentImportGroup != JavaImportGroups[Index])
+        result += "\n";
+    }
+    for (StringRef CommentLine : Imports[Index].AssociatedCommentLines) {
+      result += CommentLine;
+      result += "\n";
+    }
+    result += Imports[Index].Text;
+    CurrentIsStatic = Imports[Index].IsStatic;
+    CurrentImportGroup = JavaImportGroups[Index];
+  }
+
+  auto Err = Replaces.add(tooling::Replacement(FileName, Imports.front().Offset,
+                                               ImportsBlockSize, result));
+  // FIXME: better error handling. For now, just skip the replacement for the
+  // release version.
+  if (Err) {
+    llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+    assert(false);
+  }
+}
+
+namespace {
+
+const char JavaImportRegexPattern[] =
+    "^[\t ]*import[\t ]*(static[\t ]*)?([^\t ]*)[\t ]*;";
+
+} // anonymous namespace
+
+tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
+                                      ArrayRef<tooling::Range> Ranges,
+                                      StringRef FileName,
+                                      tooling::Replacements &Replaces) {
+  unsigned Prev = 0;
+  unsigned SearchFrom = 0;
+  llvm::Regex ImportRegex(JavaImportRegexPattern);
+  SmallVector<StringRef, 4> Matches;
+  SmallVector<JavaImportDirective, 16> ImportsInBlock;
+  std::vector<StringRef> AssociatedCommentLines;
+
+  bool FormattingOff = false;
+
+  for (;;) {
+    auto Pos = Code.find('\n', SearchFrom);
+    StringRef Line =
+        Code.substr(Prev, (Pos != StringRef::npos ? Pos : Code.size()) - Prev);
+
+    StringRef Trimmed = Line.trim();
+    if (Trimmed == "// clang-format off")
+      FormattingOff = true;
+    else if (Trimmed == "// clang-format on")
+      FormattingOff = false;
+
+    if (ImportRegex.match(Line, &Matches)) {
+      if (FormattingOff) {
+        // If at least one import line has formatting turned off, turn off
+        // formatting entirely.
+        return Replaces;
+      }
+      StringRef Static = Matches[1];
+      StringRef Identifier = Matches[2];
+      bool IsStatic = false;
+      if (Static.contains("static")) {
+        IsStatic = true;
+      }
+      ImportsInBlock.push_back({Identifier, Line, Prev, AssociatedCommentLines, IsStatic});
+      AssociatedCommentLines.clear();
+    } else if (Trimmed.size() > 0 && !ImportsInBlock.empty()) {
+      // Associating comments within the imports with the nearest import below
+      AssociatedCommentLines.push_back(Line);
+    }
+    Prev = Pos + 1;
+    if (Pos == StringRef::npos || Pos + 1 == Code.size())
+      break;
+    SearchFrom = Pos + 1;
+  }
+  if (!ImportsInBlock.empty())
+    sortJavaImports(Style, ImportsInBlock, Ranges, FileName, Replaces);
+  return Replaces;
+}
+
 bool isMpegTS(StringRef Code) {
   // MPEG transport streams use the ".ts" file extension. clang-format should
   // not attempt to format those. MPEG TS' frame format starts with 0x47 every
@@ -1819,6 +1985,8 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
     return Replaces;
   if (Style.Language == FormatStyle::LanguageKind::LK_JavaScript)
     return sortJavaScriptImports(Style, Code, Ranges, FileName);
+  if (Style.Language == FormatStyle::LanguageKind::LK_Java)
+    return sortJavaImports(Style, Code, Ranges, FileName, Replaces);
   sortCppIncludes(Style, Code, Ranges, FileName, Replaces, Cursor);
   return Replaces;
 }
@@ -1872,7 +2040,8 @@ namespace {
 
 inline bool isHeaderInsertion(const tooling::Replacement &Replace) {
   return Replace.getOffset() == UINT_MAX && Replace.getLength() == 0 &&
-         llvm::Regex(IncludeRegexPattern).match(Replace.getReplacementText());
+         llvm::Regex(CppIncludeRegexPattern)
+             .match(Replace.getReplacementText());
 }
 
 inline bool isHeaderDeletion(const tooling::Replacement &Replace) {
@@ -1925,7 +2094,7 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
     }
   }
 
-  llvm::Regex IncludeRegex = llvm::Regex(IncludeRegexPattern);
+  llvm::Regex IncludeRegex = llvm::Regex(CppIncludeRegexPattern);
   llvm::SmallVector<StringRef, 4> Matches;
   for (const auto &R : HeaderInsertions) {
     auto IncludeDirective = R.getReplacementText();

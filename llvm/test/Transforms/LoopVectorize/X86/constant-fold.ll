@@ -18,20 +18,19 @@ define void @f1() {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[INDEX]] to i16
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i16 0, [[TMP0]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[OFFSET_IDX]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i16> [[BROADCAST_SPLAT]], <i16 0, i16 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [2 x i16*], [2 x i16*]* @b, i16 0, i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i16*, i16** [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16** [[TMP4]] to <2 x i16*>*
-; CHECK-NEXT:    store <2 x i16*> <i16* getelementptr inbounds (%rec8, %rec8* extractelement (<2 x %rec8*> getelementptr ([1 x %rec8], [1 x %rec8]* @a, <2 x i16> zeroinitializer, <2 x i64> zeroinitializer), i32 0), i32 0, i32 0), i16* getelementptr inbounds (%rec8, %rec8* extractelement (<2 x %rec8*> getelementptr ([1 x %rec8], [1 x %rec8]* @a, <2 x i16> zeroinitializer, <2 x i64> zeroinitializer), i32 1), i32 0, i32 0)>, <2 x i16*>* [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[OFFSET_IDX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [2 x i16*], [2 x i16*]* @b, i16 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16*, i16** [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16** [[TMP3]] to <2 x i16*>*
+; CHECK-NEXT:    store <2 x i16*> <i16* getelementptr inbounds (%rec8, %rec8* extractelement (<2 x %rec8*> getelementptr ([1 x %rec8], [1 x %rec8]* @a, <2 x i16> zeroinitializer, <2 x i64> zeroinitializer), i32 0), i32 0, i32 0), i16* getelementptr inbounds (%rec8, %rec8* extractelement (<2 x %rec8*> getelementptr ([1 x %rec8], [1 x %rec8]* @a, <2 x i16> zeroinitializer, <2 x i64> zeroinitializer), i32 1), i32 0, i32 0)>, <2 x i16*>* [[TMP4]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 2
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 2
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
 ; CHECK:       middle.block:
 
 bb1:

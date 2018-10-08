@@ -40,15 +40,14 @@ if.end:                                           ; preds = %if.then, %entry
   ret void, !dbg !14
 }
 
-; CHECK:      .loc 1 7 7
+; CHECK:      .loc 1 7 7 prologue_end
 ; CHECK-NOT:  .loc
-; CHECK:      .loc 1 0 7 is_stmt 0
+; CHECK:      # %bb.1
+; CHECK-NEXT: .file 2 "/tests{{[/\]+}}include.h"
+; CHECK-NEXT: .loc 2 20 5
 ; CHECK-NOT:  .loc
-; CHECK:      .loc 2 20 5 is_stmt 1
 ; CHECK:      .LBB0_2:
-; CHECK-NEXT: .loc 2 0 5 is_stmt 0
-; CHECK-NOT:  .loc
-; CHECK:      .loc 1 10 3 is_stmt 1
+; CHECK:      .loc 1 10 3
 ;
 ; DISABLE-NOT: .loc 1 0
 

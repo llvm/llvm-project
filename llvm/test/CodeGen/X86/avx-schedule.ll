@@ -503,62 +503,62 @@ define <4 x double> @test_blendpd(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; GENERIC-LABEL: test_blendpd:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3] sched: [1:0.50]
-; GENERIC-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2],ymm0[3] sched: [8:0.50]
+; GENERIC-NEXT:    vblendpd {{.*#+}} ymm1 = ymm0[0,1],mem[2,3] sched: [8:0.50]
+; GENERIC-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_blendpd:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3] sched: [1:0.50]
-; SANDY-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
-; SANDY-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2],ymm0[3] sched: [8:0.50]
+; SANDY-NEXT:    vblendpd {{.*#+}} ymm1 = ymm0[0,1],mem[2,3] sched: [8:0.50]
+; SANDY-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_blendpd:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3] sched: [1:0.33]
-; HASWELL-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
-; HASWELL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2],ymm0[3] sched: [8:0.50]
+; HASWELL-NEXT:    vblendpd {{.*#+}} ymm1 = ymm0[0,1],mem[2,3] sched: [8:0.50]
+; HASWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_blendpd:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3] sched: [1:0.33]
-; BROADWELL-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
-; BROADWELL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2],ymm0[3] sched: [7:0.50]
+; BROADWELL-NEXT:    vblendpd {{.*#+}} ymm1 = ymm0[0,1],mem[2,3] sched: [7:0.50]
+; BROADWELL-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_blendpd:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3] sched: [1:0.33]
-; SKYLAKE-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2],ymm0[3] sched: [8:0.50]
+; SKYLAKE-NEXT:    vblendpd {{.*#+}} ymm1 = ymm0[0,1],mem[2,3] sched: [8:0.50]
+; SKYLAKE-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_blendpd:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3] sched: [1:0.33]
-; SKX-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [4:0.50]
-; SKX-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2],ymm0[3] sched: [8:0.50]
+; SKX-NEXT:    vblendpd {{.*#+}} ymm1 = ymm0[0,1],mem[2,3] sched: [8:0.50]
+; SKX-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_blendpd:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3] sched: [1:1.00]
-; BTVER2-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
-; BTVER2-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2],ymm0[3] sched: [6:2.00]
+; BTVER2-NEXT:    vblendpd {{.*#+}} ymm1 = ymm0[0,1],mem[2,3] sched: [6:2.00]
+; BTVER2-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_blendpd:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],ymm1[1,2],ymm0[3] sched: [1:0.50]
-; ZNVER1-NEXT:    vaddpd %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
-; ZNVER1-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0],mem[1,2],ymm0[3] sched: [8:0.50]
+; ZNVER1-NEXT:    vblendpd {{.*#+}} ymm1 = ymm0[0,1],mem[2,3] sched: [8:0.50]
+; ZNVER1-NEXT:    vaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = shufflevector <4 x double> %a0, <4 x double> %a1, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
   %2 = load <4 x double>, <4 x double> *%a2, align 32
-  %3 = fadd <4 x double> %a1, %1
-  %4 = shufflevector <4 x double> %3, <4 x double> %2, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+  %3 = shufflevector <4 x double> %1, <4 x double> %2, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  %4 = fadd <4 x double> %1, %3
   ret <4 x double> %4
 }
 

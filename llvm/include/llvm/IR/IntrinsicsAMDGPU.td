@@ -879,8 +879,8 @@ def int_amdgcn_struct_buffer_store_format : AMDGPUStructBufferStore;
 def int_amdgcn_struct_buffer_store : AMDGPUStructBufferStore;
 
 class AMDGPURawBufferAtomic : Intrinsic <
-  [llvm_i32_ty],
-  [llvm_i32_ty,       // vdata(VGPR)
+  [llvm_anyint_ty],
+  [LLVMMatchType<0>,  // vdata(VGPR)
    llvm_v4i32_ty,     // rsrc(SGPR)
    llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,       // soffset(SGPR/imm, excluded from bounds checking and swizzling)
@@ -898,9 +898,9 @@ def int_amdgcn_raw_buffer_atomic_and : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_or : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_xor : AMDGPURawBufferAtomic;
 def int_amdgcn_raw_buffer_atomic_cmpswap : Intrinsic<
-  [llvm_i32_ty],
-  [llvm_i32_ty,       // src(VGPR)
-   llvm_i32_ty,       // cmp(VGPR)
+  [llvm_anyint_ty],
+  [LLVMMatchType<0>,  // src(VGPR)
+   LLVMMatchType<0>,  // cmp(VGPR)
    llvm_v4i32_ty,     // rsrc(SGPR)
    llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,       // soffset(SGPR/imm, excluded from bounds checking and swizzling)
@@ -909,8 +909,8 @@ def int_amdgcn_raw_buffer_atomic_cmpswap : Intrinsic<
   AMDGPURsrcIntrinsic<2, 0>;
 
 class AMDGPUStructBufferAtomic : Intrinsic <
-  [llvm_i32_ty],
-  [llvm_i32_ty,       // vdata(VGPR)
+  [llvm_anyint_ty],
+  [LLVMMatchType<0>,  // vdata(VGPR)
    llvm_v4i32_ty,     // rsrc(SGPR)
    llvm_i32_ty,       // vindex(VGPR)
    llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
@@ -929,9 +929,9 @@ def int_amdgcn_struct_buffer_atomic_and : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_or : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_xor : AMDGPUStructBufferAtomic;
 def int_amdgcn_struct_buffer_atomic_cmpswap : Intrinsic<
-  [llvm_i32_ty],
-  [llvm_i32_ty,       // src(VGPR)
-   llvm_i32_ty,       // cmp(VGPR)
+  [llvm_anyint_ty],
+  [LLVMMatchType<0>,  // src(VGPR)
+   LLVMMatchType<0>,  // cmp(VGPR)
    llvm_v4i32_ty,     // rsrc(SGPR)
    llvm_i32_ty,       // vindex(VGPR)
    llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)

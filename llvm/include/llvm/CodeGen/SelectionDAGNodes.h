@@ -1602,10 +1602,10 @@ SDValue peekThroughOneUseBitcasts(SDValue V);
 bool isBitwiseNot(SDValue V);
 
 /// Returns the SDNode if it is a constant splat BuildVector or constant int.
-ConstantSDNode *isConstOrConstSplat(SDValue N);
+ConstantSDNode *isConstOrConstSplat(SDValue N, bool AllowUndefs = false);
 
 /// Returns the SDNode if it is a constant splat BuildVector or constant float.
-ConstantFPSDNode *isConstOrConstSplatFP(SDValue N);
+ConstantFPSDNode *isConstOrConstSplatFP(SDValue N, bool AllowUndefs = false);
 
 class GlobalAddressSDNode : public SDNode {
   friend class SelectionDAG;

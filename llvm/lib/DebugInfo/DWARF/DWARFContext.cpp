@@ -328,21 +328,20 @@ void DWARFContext::dump(
                  DObj->getAbbrevDWOSection()))
     getDebugAbbrevDWO()->dump(OS);
 
-  auto dumpDebugInfo = [&](bool IsExplicit, const char *Name,
-                           DWARFSection Section, unit_iterator_range Units) {
-    if (shouldDump(IsExplicit, Name, DIDT_ID_DebugInfo, Section.Data)) {
-      if (DumpOffset)
-        getDIEForOffset(DumpOffset.getValue())
-            .dump(OS, 0, DumpOpts.noImplicitRecursion());
-      else
-        for (const auto &U : Units)
-          U->dump(OS, DumpOpts);
-    }
+  auto dumpDebugInfo = [&](unit_iterator_range Units) {
+    if (DumpOffset)
+      getDIEForOffset(DumpOffset.getValue())
+          .dump(OS, 0, DumpOpts.noImplicitRecursion());
+    else
+      for (const auto &U : Units)
+        U->dump(OS, DumpOpts);
   };
-  dumpDebugInfo(Explicit, ".debug_info", DObj->getInfoSection(),
-                info_section_units());
-  dumpDebugInfo(ExplicitDWO, ".debug_info.dwo", DObj->getInfoDWOSection(),
-                dwo_info_section_units());
+  if (shouldDump(Explicit, ".debug_info", DIDT_ID_DebugInfo,
+                 DObj->getInfoSection().Data))
+    dumpDebugInfo(info_section_units());
+  if (shouldDump(ExplicitDWO, ".debug_info.dwo", DIDT_ID_DebugInfo,
+                 DObj->getInfoDWOSection().Data))
+    dumpDebugInfo(dwo_info_section_units());
 
   auto dumpDebugType = [&](const char *Name, unit_iterator_range Units) {
     OS << '\n' << Name << " contents:\n";
@@ -543,7 +542,7 @@ void DWARFContext::dump(
     dumpStringOffsetsSection(OS, "debug_str_offsets.dwo", *DObj,
                              DObj->getStringOffsetDWOSection(),
                              DObj->getStringDWOSection(), dwo_units(),
-                             isLittleEndian(), getMaxVersion());
+                             isLittleEndian(), getMaxDWOVersion());
 
   if (shouldDump(Explicit, ".gnu_index", DIDT_ID_GdbIndex,
                  DObj->getGdbIndexSection())) {

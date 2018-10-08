@@ -1130,6 +1130,35 @@ struct FormatStyle {
   /// \endcode
   bool IndentWrappedFunctionNames;
 
+  /// A vector of prefixes ordered by the desired groups for Java imports.
+  ///
+  /// Each group is seperated by a newline. Static imports will also follow the
+  /// same grouping convention above all non-static imports. One group's prefix
+  /// can be a subset of another - the longest prefix is always matched. Within
+  /// a group, the imports are ordered lexicographically.
+  ///
+  /// In the .clang-format configuration file, this can be configured like:
+  /// \code{.yaml}
+  ///   JavaImportGroups: ['com.example', 'com', 'org']
+  /// \endcode
+  /// Which will result in imports being formatted as so:
+  /// \code{.java}
+  ///    import static com.example.function1;
+  ///
+  ///    import static com.test.function2;
+  ///
+  ///    import static org.example.function3;
+  ///
+  ///    import com.example.ClassA;
+  ///    import com.example.Test;
+  ///    import com.example.a.ClassB;
+  ///
+  ///    import com.test.ClassC;
+  ///
+  ///    import org.example.ClassD;
+  /// \endcode
+  std::vector<std::string> JavaImportGroups;
+
   /// Quotation styles for JavaScript strings. Does not affect template
   /// strings.
   enum JavaScriptQuoteStyle {
@@ -1734,6 +1763,7 @@ struct FormatStyle {
            IndentPPDirectives == R.IndentPPDirectives &&
            IndentWidth == R.IndentWidth && Language == R.Language &&
            IndentWrappedFunctionNames == R.IndentWrappedFunctionNames &&
+           JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
            KeepEmptyLinesAtTheStartOfBlocks ==

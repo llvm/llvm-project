@@ -850,12 +850,12 @@ let hasSideEffects = 0 in {
   def rm : I<0xF7, MRMSrcMem4VOp3,
              (outs RC:$dst), (ins x86memop:$src1, RC:$src2),
              !strconcat(asm, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"), []>,
-             VEX, Sched<[WriteShiftLd,
+             VEX, Sched<[WriteShift.Folded,
                          // x86memop:$src1
                          ReadDefault, ReadDefault, ReadDefault, ReadDefault,
                          ReadDefault,
                          // RC:$src2
-                         ReadAfterLd]>;
+                         WriteShift.ReadAfterFold]>;
 }
 }
 

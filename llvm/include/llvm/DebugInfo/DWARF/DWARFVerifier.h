@@ -148,6 +148,8 @@ private:
   ///  - That the root DIE is a unit DIE.
   ///  - If a unit type is provided, that the unit DIE matches the unit type.
   ///  - The DIE ranges.
+  ///  - That call site entries are only nested within subprograms with a
+  ///    DW_AT_call attribute.
   ///
   /// \param Unit      The DWARF Unit to verify.
   ///
@@ -163,6 +165,12 @@ private:
   /// \returns The number of errors that occurred during verification.
   unsigned verifyUnitSection(const DWARFSection &S,
                              DWARFSectionKind SectionKind);
+
+  /// Verifies that a call site entry is nested within a subprogram with a
+  /// DW_AT_call attribute.
+  ///
+  /// \returns Number of errors that occurred during verification.
+  unsigned verifyDebugInfoCallSite(const DWARFDie &Die);
 
   /// Verify that all Die ranges are valid.
   ///

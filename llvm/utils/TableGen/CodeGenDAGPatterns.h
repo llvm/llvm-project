@@ -673,8 +673,8 @@ public:
   }
   void addPredicateFn(const TreePredicateFn &Fn) {
     assert(!Fn.isAlwaysTrue() && "Empty predicate string!");
-    if (!is_contained(PredicateFns, Fn))
-      PredicateFns.push_back(Fn);
+    assert(!is_contained(PredicateFns, Fn) && "predicate applied recursively");
+    PredicateFns.push_back(Fn);
   }
 
   Record *getTransformFn() const { return TransformFn; }

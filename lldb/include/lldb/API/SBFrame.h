@@ -90,6 +90,10 @@ public:
 
   bool IsInlined() const;
 
+  bool IsArtificial();
+
+  bool IsArtificial() const;
+
   /// The version that doesn't supply a 'use_dynamic' value will use the
   /// target's default.
   lldb::SBValue EvaluateExpression(const char *expr);

@@ -69,6 +69,10 @@ Pass *createAMDGPUAnnotateKernelFeaturesPass();
 void initializeAMDGPUAnnotateKernelFeaturesPass(PassRegistry &);
 extern char &AMDGPUAnnotateKernelFeaturesID;
 
+FunctionPass *createAMDGPUAtomicOptimizerPass();
+void initializeAMDGPUAtomicOptimizerPass(PassRegistry &);
+extern char &AMDGPUAtomicOptimizerID;
+
 ModulePass *createAMDGPULowerIntrinsicsPass();
 void initializeAMDGPULowerIntrinsicsPass(PassRegistry &);
 extern char &AMDGPULowerIntrinsicsID;

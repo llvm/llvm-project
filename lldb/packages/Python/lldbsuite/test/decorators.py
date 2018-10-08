@@ -687,6 +687,30 @@ def skipUnlessSupportedTypeAttribute(attr):
         return None
     return skipTestIfFn(compiler_doesnt_support_struct_attribute)
 
+def skipUnlessHasCallSiteInfo(func):
+    """Decorate the function to skip testing unless call site info from clang is available."""
+
+    def is_compiler_clang_with_call_site_info(self):
+        compiler_path = self.getCompiler()
+        compiler = os.path.basename(compiler_path)
+        if not compiler.startswith("clang"):
+            return "Test requires clang as compiler"
+
+        f = tempfile.NamedTemporaryFile()
+        cmd = "echo 'int main() {}' | " \
+              "%s -g -glldb -O1 -S -emit-llvm -x c -o %s -" % (compiler_path, f.name)
+        if os.popen(cmd).close() is not None:
+            return "Compiler can't compile with call site info enabled"
+
+        with open(f.name, 'r') as ir_output_file:
+            buf = ir_output_file.read()
+
+        if 'DIFlagAllCallsDescribed' not in buf:
+            return "Compiler did not introduce DIFlagAllCallsDescribed IR flag"
+
+        return None
+    return skipTestIfFn(is_compiler_clang_with_call_site_info)(func)
+
 def skipUnlessThreadSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
 

@@ -40,11 +40,10 @@ public:
     // highest element starting from the front. When child iterators in the
     // beginning have smaller estimated size, the sync() will have less restarts
     // and become more effective.
-    std::sort(begin(Children), end(Children),
-              [](const std::unique_ptr<Iterator> &LHS,
-                 const std::unique_ptr<Iterator> &RHS) {
-                return LHS->estimateSize() < RHS->estimateSize();
-              });
+    llvm::sort(Children, [](const std::unique_ptr<Iterator> &LHS,
+                            const std::unique_ptr<Iterator> &RHS) {
+      return LHS->estimateSize() < RHS->estimateSize();
+    });
   }
 
   bool reachedEnd() const override { return ReachedEnd; }

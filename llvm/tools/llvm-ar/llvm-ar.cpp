@@ -24,6 +24,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -367,7 +368,11 @@ static void doDisplayTable(StringRef Name, const object::Archive::Child &C) {
     outs() << ' ' << format("%6llu", Size.get());
     auto ModTimeOrErr = C.getLastModified();
     failIfError(ModTimeOrErr.takeError());
-    outs() << ' ' << ModTimeOrErr.get();
+    // Note: formatv() only handles the default TimePoint<>, which is in
+    // nanoseconds.
+    // TODO: fix format_provider<TimePoint<>> to allow other units.
+    sys::TimePoint<> ModTimeInNs = ModTimeOrErr.get();
+    outs() << ' ' << formatv("{0:%b %e %H:%M %Y}", ModTimeInNs);
     outs() << ' ';
   }
 

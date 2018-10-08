@@ -2555,8 +2555,11 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return false;
   if (Left.is(TT_TemplateCloser) && Left.MatchingParen &&
       Left.MatchingParen->Previous &&
-      Left.MatchingParen->Previous->is(tok::period))
+      (Left.MatchingParen->Previous->is(tok::period) ||
+       Left.MatchingParen->Previous->is(tok::coloncolon)))
+    // Java call to generic function with explicit type:
     // A.<B<C<...>>>DoSomething();
+    // A::<B<C<...>>>DoSomething();  // With a Java 8 method reference.
     return false;
   if (Left.is(TT_TemplateCloser) && Right.is(tok::l_square))
     return false;
@@ -2775,6 +2778,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return false;
   if (!Style.SpaceBeforeAssignmentOperators &&
       Right.getPrecedence() == prec::Assignment)
+    return false;
+  if (Style.Language == FormatStyle::LK_Java && Right.is(tok::coloncolon) &&
+      (Left.is(tok::identifier) || Left.is(tok::kw_this)))
     return false;
   if (Right.is(tok::coloncolon) && Left.is(tok::identifier))
     // Generally don't remove existing spaces between an identifier and "::".

@@ -169,6 +169,7 @@ extern llvm::cl::opt<bool> DumpSymbols;
 extern llvm::cl::opt<bool> DumpSymRecordBytes;
 extern llvm::cl::opt<bool> DumpGSIRecords;
 extern llvm::cl::opt<bool> DumpGlobals;
+extern llvm::cl::list<std::string> DumpGlobalNames;
 extern llvm::cl::opt<bool> DumpGlobalExtras;
 extern llvm::cl::opt<bool> DumpPublics;
 extern llvm::cl::opt<bool> DumpPublicExtras;

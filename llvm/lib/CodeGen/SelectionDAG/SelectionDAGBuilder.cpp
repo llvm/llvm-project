@@ -2827,7 +2827,7 @@ void SelectionDAGBuilder::visitShift(const User &I, unsigned Opcode) {
   SDValue Op2 = getValue(I.getOperand(1));
 
   EVT ShiftTy = DAG.getTargetLoweringInfo().getShiftAmountTy(
-      Op2.getValueType(), DAG.getDataLayout());
+      Op1.getValueType(), DAG.getDataLayout());
 
   // Coerce the shift amount to the right type if we can.
   if (!I.getType()->isVectorTy() && Op2.getValueType() != ShiftTy) {

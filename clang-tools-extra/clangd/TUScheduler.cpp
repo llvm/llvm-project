@@ -128,8 +128,7 @@ private:
   using KVPair = std::pair<Key, std::unique_ptr<ParsedAST>>;
 
   std::vector<KVPair>::iterator findByKey(Key K) {
-    return std::find_if(LRU.begin(), LRU.end(),
-                        [K](const KVPair &P) { return P.first == K; });
+    return llvm::find_if(LRU, [K](const KVPair &P) { return P.first == K; });
   }
 
   std::mutex Mut;

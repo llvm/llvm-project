@@ -1139,6 +1139,12 @@ auto lower_bound(R &&Range, ForwardIt I) -> decltype(adl_begin(Range)) {
   return std::lower_bound(adl_begin(Range), adl_end(Range), I);
 }
 
+template <typename R, typename ForwardIt, typename Compare>
+auto lower_bound(R &&Range, ForwardIt I, Compare C)
+    -> decltype(adl_begin(Range)) {
+  return std::lower_bound(adl_begin(Range), adl_end(Range), I, C);
+}
+
 /// Provide wrappers to std::upper_bound which take ranges instead of having to
 /// pass begin/end explicitly.
 template <typename R, typename ForwardIt>
