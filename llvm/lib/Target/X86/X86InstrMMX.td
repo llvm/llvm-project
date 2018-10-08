@@ -47,7 +47,7 @@ let Constraints = "$src1 = $dst" in {
                  !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
                  [(set VR64:$dst, (IntId VR64:$src1,
                                    (bitconvert (load_mmx addr:$src2))))]>,
-                 Sched<[sched.Folded, ReadAfterLd]>;
+                 Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 
   multiclass MMXI_binop_rmi_int<bits<8> opc, bits<8> opc2, Format ImmForm,
@@ -64,7 +64,7 @@ let Constraints = "$src1 = $dst" in {
                   !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
                   [(set VR64:$dst, (IntId VR64:$src1,
                                     (bitconvert (load_mmx addr:$src2))))]>,
-                  Sched<[sched.Folded, ReadAfterLd]>;
+                  Sched<[sched.Folded, sched.ReadAfterFold]>;
     def ri : MMXIi8<opc2, ImmForm, (outs VR64:$dst),
                                    (ins VR64:$src1, i32u8imm:$src2),
                     !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
@@ -105,7 +105,7 @@ multiclass SS3I_binop_rm_int_mm<bits<8> opc, string OpcodeStr,
        [(set VR64:$dst,
          (IntId64 VR64:$src1,
           (bitconvert (load_mmx addr:$src2))))]>,
-      Sched<[sched.Folded, ReadAfterLd]>;
+      Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 }
 
@@ -122,7 +122,7 @@ multiclass ssse3_palign_mm<string asm, Intrinsic IntId,
       !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
       [(set VR64:$dst, (IntId VR64:$src1,
                        (bitconvert (load_mmx addr:$src2)), (i8 imm:$src3)))]>,
-      Sched<[sched.Folded, ReadAfterLd]>;
+      Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass sse12_cvt_pint<bits<8> opc, RegisterClass SrcRC, RegisterClass DstRC,
@@ -553,7 +553,7 @@ let Predicates = [HasMMX, HasSSE1] in {
                    [(set VR64:$dst, (int_x86_mmx_pinsr_w VR64:$src1,
                                        (i32 (anyext (loadi16 addr:$src2))),
                                      imm:$src3))]>,
-                   Sched<[WriteVecInsertLd, ReadAfterLd]>;
+                   Sched<[WriteVecInsert.Folded, WriteVecInsert.ReadAfterFold]>;
 }
 }
 

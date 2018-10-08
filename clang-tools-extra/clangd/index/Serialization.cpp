@@ -158,7 +158,7 @@ public:
   // Finalize the table and write it to OS. No more strings may be added.
   void finalize(raw_ostream &OS) {
     Sorted = {Unique.begin(), Unique.end()};
-    std::sort(Sorted.begin(), Sorted.end());
+    llvm::sort(Sorted);
     for (unsigned I = 0; I < Sorted.size(); ++I)
       Index.try_emplace({Sorted[I].data(), Sorted[I].size()}, I);
 

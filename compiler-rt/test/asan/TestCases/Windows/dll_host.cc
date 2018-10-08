@@ -29,7 +29,6 @@
 // IMPORT: __asan_wrap_HeapReAlloc
 // IMPORT: __asan_wrap_HeapSize
 // IMPORT: __asan_wrap_CreateThread
-// IMPORT: __asan_wrap_NtTerminateThread
 // IMPORT: __asan_wrap_RaiseException
 // IMPORT: __asan_wrap_RtlRaiseException
 // IMPORT: __asan_wrap_SetUnhandledExceptionFilter

@@ -4,6 +4,16 @@
 // RUN: not %clang_cc1 -triple arm64-linux -Werror -S -o /dev/null %s 2>&1 \
 // RUN:    | FileCheck %s -check-prefix CHECK-LINUX
 
+long test_InterlockedAdd(long volatile *Addend, long Value) {
+  return _InterlockedAdd(Addend, Value);
+}
+
+// CHECK-LABEL: define {{.*}} i32 @test_InterlockedAdd(i32* %Addend, i32 %Value) {{.*}} {
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add i32* %1, i32 %2 seq_cst
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
+// CHECK-LINUX: error: implicit declaration of function '_InterlockedAdd'
+
 void check__dmb(void) {
   __dmb(0);
 }

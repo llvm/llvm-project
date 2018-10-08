@@ -17,13 +17,15 @@
 #define LLVM_PASSES_STANDARDINSTRUMENTATIONS_H
 
 #include "llvm/IR/PassInstrumentation.h"
+#include "llvm/IR/PassTimingInfo.h"
 
 namespace llvm {
 
 /// This class provides an interface to register all the standard pass
 /// instrumentations and manages their state (if any).
 class StandardInstrumentations {
-  // for now we do not have instrumentations with state
+  TimePassesHandler TimePasses;
+
 public:
   StandardInstrumentations() = default;
 

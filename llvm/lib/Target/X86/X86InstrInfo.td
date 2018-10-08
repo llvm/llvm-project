@@ -2423,7 +2423,7 @@ multiclass bmi_bextr<bits<8> opc, string mnemonic, RegisterClass RC,
                     ReadDefault, ReadDefault, ReadDefault, ReadDefault,
                     ReadDefault,
                     // RC:$src2
-                    ReadAfterLd]>;
+                    Sched.ReadAfterFold]>;
 }
 
 let Predicates = [HasBMI], Defs = [EFLAGS] in {
@@ -2449,7 +2449,7 @@ multiclass bmi_bzhi<bits<8> opc, string mnemonic, RegisterClass RC,
                     ReadDefault, ReadDefault, ReadDefault, ReadDefault,
                     ReadDefault,
                     // RC:$src2
-                    ReadAfterLd]>;
+                    Sched.ReadAfterFold]>;
 }
 
 let Predicates = [HasBMI2], Defs = [EFLAGS] in {
@@ -2585,7 +2585,7 @@ multiclass bmi_pdep_pext<string mnemonic, RegisterClass RC,
   def rm : I<0xF5, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, x86memop:$src2),
              !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set RC:$dst, (Int RC:$src1, (ld_frag addr:$src2)))]>,
-             VEX_4V, Sched<[WriteALULd, ReadAfterLd]>;
+             VEX_4V, Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>;
 }
 
 let Predicates = [HasBMI2] in {

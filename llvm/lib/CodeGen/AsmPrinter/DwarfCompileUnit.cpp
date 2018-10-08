@@ -730,7 +730,8 @@ DIE *DwarfCompileUnit::createScopeChildrenDIE(LexicalScope *Scope,
   return ObjectPointer;
 }
 
-void DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub, LexicalScope *Scope) {
+DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
+                                                   LexicalScope *Scope) {
   DIE &ScopeDIE = updateSubprogramScopeDIE(Sub);
 
   if (Scope) {
@@ -753,6 +754,8 @@ void DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub, Lexi
       !includeMinimalInlineScopes())
     ScopeDIE.addChild(
         DIE::get(DIEValueAllocator, dwarf::DW_TAG_unspecified_parameters));
+
+  return ScopeDIE;
 }
 
 DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
@@ -805,6 +808,32 @@ void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
     ContextCU->addUInt(*AbsDef, dwarf::DW_AT_inline, None, dwarf::DW_INL_inlined);
   if (DIE *ObjectPointer = ContextCU->createAndAddScopeChildren(Scope, *AbsDef))
     ContextCU->addDIEEntry(*AbsDef, dwarf::DW_AT_object_pointer, *ObjectPointer);
+}
+
+DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
+                                                 const DISubprogram &CalleeSP,
+                                                 bool IsTail,
+                                                 const MCSymbol *ReturnPC) {
+  // Insert a call site entry DIE within ScopeDIE.
+  DIE &CallSiteDIE =
+      createAndAddDIE(dwarf::DW_TAG_call_site, ScopeDIE, nullptr);
+
+  // For the purposes of showing tail call frames in backtraces, a key piece of
+  // information is DW_AT_call_origin, a pointer to the callee DIE.
+  DIE *CalleeDIE = getOrCreateSubprogramDIE(&CalleeSP);
+  assert(CalleeDIE && "Could not create DIE for call site entry origin");
+  addDIEEntry(CallSiteDIE, dwarf::DW_AT_call_origin, *CalleeDIE);
+
+  if (IsTail) {
+    // Attach DW_AT_call_tail_call to tail calls for standards compliance.
+    addFlag(CallSiteDIE, dwarf::DW_AT_call_tail_call);
+  } else {
+    // Attach the return PC to allow the debugger to disambiguate call paths
+    // from one function to another.
+    assert(ReturnPC && "Missing return PC information for a call");
+    addLabelAddress(CallSiteDIE, dwarf::DW_AT_call_return_pc, ReturnPC);
+  }
+  return CallSiteDIE;
 }
 
 DIE *DwarfCompileUnit::constructImportedEntityDIE(

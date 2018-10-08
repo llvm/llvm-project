@@ -25,7 +25,7 @@
 ; be empty file.
 ; RUN: opt -o %t5.o %s
 ; RUN: %clang -target x86_64-unknown-linux-gnu -O2 -o %t4.o -x ir %t5.o -c -fthinlto-index=%t.thinlto.bc
-; RUN: llvm-nm %t4.o | FileCheck %s -check-prefix=NO-SYMBOLS
+; RUN: llvm-nm %t4.o 2>&1 | FileCheck %s -check-prefix=NO-SYMBOLS
 ; NO-SYMBOLS: no symbols
 
 ; Ensure f2 was imported. Check for all 3 flavors of -save-temps[=cwd|obj].

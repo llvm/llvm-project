@@ -112,7 +112,8 @@ public:
     Materialize(std::move(R));
   }
 
-  void discard(const orc::JITDylib &JD, orc::SymbolStringPtr Name) override {
+  void discard(const orc::JITDylib &JD,
+               const orc::SymbolStringPtr &Name) override {
     if (Discard)
       Discard(JD, std::move(Name));
     else

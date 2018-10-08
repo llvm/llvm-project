@@ -8211,7 +8211,7 @@ bool llvm::isBitwiseNot(SDValue V) {
   return C && C->isAllOnesValue();
 }
 
-ConstantSDNode *llvm::isConstOrConstSplat(SDValue N) {
+ConstantSDNode *llvm::isConstOrConstSplat(SDValue N, bool AllowUndefs) {
   if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N))
     return CN;
 
@@ -8220,9 +8220,7 @@ ConstantSDNode *llvm::isConstOrConstSplat(SDValue N) {
     ConstantSDNode *CN = BV->getConstantSplatNode(&UndefElements);
 
     // BuildVectors can truncate their operands. Ignore that case here.
-    // FIXME: We blindly ignore splats which include undef which is overly
-    // pessimistic.
-    if (CN && UndefElements.none() &&
+    if (CN && (UndefElements.none() || AllowUndefs) &&
         CN->getValueType(0) == N.getValueType().getScalarType())
       return CN;
   }
@@ -8230,15 +8228,14 @@ ConstantSDNode *llvm::isConstOrConstSplat(SDValue N) {
   return nullptr;
 }
 
-ConstantFPSDNode *llvm::isConstOrConstSplatFP(SDValue N) {
+ConstantFPSDNode *llvm::isConstOrConstSplatFP(SDValue N, bool AllowUndefs) {
   if (ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(N))
     return CN;
 
   if (BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(N)) {
     BitVector UndefElements;
     ConstantFPSDNode *CN = BV->getConstantFPSplatNode(&UndefElements);
-
-    if (CN && UndefElements.none())
+    if (CN && (UndefElements.none() || AllowUndefs))
       return CN;
   }
 

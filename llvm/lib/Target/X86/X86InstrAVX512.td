@@ -524,7 +524,7 @@ multiclass vinsert_for_size_split<int Opcode, X86VectorVTInfo From,
                                (From.VT (bitconvert (From.LdFrag addr:$src2))),
                                (iPTR imm))>, AVX512AIi8Base, EVEX_4V,
                    EVEX_CD8<From.EltSize, From.CD8TupleForm>,
-                   Sched<[sched.Folded, ReadAfterLd]>;
+                   Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -783,7 +783,7 @@ def VINSERTPSZrm: AVX512AIi8<0x21, MRMSrcMem, (outs VR128X:$dst),
                           (v4f32 (scalar_to_vector (loadf32 addr:$src2))),
                           imm:$src3))]>,
       EVEX_4V, EVEX_CD8<32, CD8VT1>,
-      Sched<[SchedWriteFShuffle.XMM.Folded, ReadAfterLd]>;
+      Sched<[SchedWriteFShuffle.XMM.Folded, SchedWriteFShuffle.XMM.ReadAfterFold]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1742,7 +1742,7 @@ let Constraints = "$src1 = $dst", ExeDomain = _.ExeDomain,
             OpcodeStr, "$src3, $src2", "$src2, $src3",
             (_.VT (X86VPermt2 _.RC:$src2, IdxVT.RC:$src1,
                    (_.VT (bitconvert (_.LdFrag addr:$src3))))), 1>,
-            EVEX_4V, AVX5128IBase, Sched<[sched.Folded, ReadAfterLd]>;
+            EVEX_4V, AVX5128IBase, Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -1758,7 +1758,7 @@ multiclass avx512_perm_i_mb<bits<8> opc, string OpcodeStr,
               (_.VT (X86VPermt2 _.RC:$src2,
                IdxVT.RC:$src1,(_.VT (X86VBroadcast (_.ScalarLdFrag addr:$src3))))), 1>,
               AVX5128IBase, EVEX_4V, EVEX_B,
-              Sched<[sched.Folded, ReadAfterLd]>;
+              Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass avx512_perm_i_sizes<bits<8> opc, string OpcodeStr,
@@ -1860,7 +1860,7 @@ let Constraints = "$src1 = $dst", ExeDomain = _.ExeDomain in {
             OpcodeStr, "$src3, $src2", "$src2, $src3",
             (_.VT (X86VPermt2 _.RC:$src1, IdxVT.RC:$src2,
                    (bitconvert (_.LdFrag addr:$src3)))), 1>,
-            EVEX_4V, AVX5128IBase, Sched<[sched.Folded, ReadAfterLd]>;
+            EVEX_4V, AVX5128IBase, Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 multiclass avx512_perm_t_mb<bits<8> opc, string OpcodeStr,
@@ -1874,7 +1874,7 @@ multiclass avx512_perm_t_mb<bits<8> opc, string OpcodeStr,
               (_.VT (X86VPermt2 _.RC:$src1,
                IdxVT.RC:$src2,(_.VT (X86VBroadcast (_.ScalarLdFrag addr:$src3))))), 1>,
               AVX5128IBase, EVEX_4V, EVEX_B,
-              Sched<[sched.Folded, ReadAfterLd]>;
+              Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass avx512_perm_t_sizes<bits<8> opc, string OpcodeStr,
@@ -1955,19 +1955,19 @@ multiclass WriteFVarBlendask<bits<8> opc, string OpcodeStr,
              !strconcat(OpcodeStr,
              "\t{$src2, $src1, ${dst}|${dst}, $src1, $src2}"),
              []>, EVEX_4V, EVEX_CD8<_.EltSize, CD8VF>,
-             Sched<[sched.Folded, ReadAfterLd]>;
+             Sched<[sched.Folded, sched.ReadAfterFold]>;
   def rmk : AVX5128I<opc, MRMSrcMem, (outs _.RC:$dst),
              (ins _.KRCWM:$mask, _.RC:$src1, _.MemOp:$src2),
              !strconcat(OpcodeStr,
              "\t{$src2, $src1, ${dst} {${mask}}|${dst} {${mask}}, $src1, $src2}"),
              []>, EVEX_4V, EVEX_K, EVEX_CD8<_.EltSize, CD8VF>,
-             Sched<[sched.Folded, ReadAfterLd]>;
+             Sched<[sched.Folded, sched.ReadAfterFold]>;
   def rmkz : AVX5128I<opc, MRMSrcMem, (outs _.RC:$dst),
              (ins _.KRCWM:$mask, _.RC:$src1, _.MemOp:$src2),
              !strconcat(OpcodeStr,
              "\t{$src2, $src1, ${dst} {${mask}} {z}|${dst} {${mask}} {z}, $src1, $src2}"),
              []>, EVEX_4V, EVEX_KZ, EVEX_CD8<_.EltSize, CD8VF>,
-             Sched<[sched.Folded, ReadAfterLd]>, NotMemoryFoldable;
+             Sched<[sched.Folded, sched.ReadAfterFold]>, NotMemoryFoldable;
   }
   }
 }
@@ -1980,7 +1980,7 @@ multiclass WriteFVarBlendask_rmb<bits<8> opc, string OpcodeStr,
             "\t{${src2}", _.BroadcastStr, ", $src1, $dst {${mask}}|",
             "$dst {${mask}}, $src1, ${src2}", _.BroadcastStr, "}"), []>,
       EVEX_4V, EVEX_K, EVEX_B, EVEX_CD8<_.EltSize, CD8VF>,
-      Sched<[sched.Folded, ReadAfterLd]>;
+      Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   def rmbkz : AVX5128I<opc, MRMSrcMem, (outs _.RC:$dst),
       (ins _.KRCWM:$mask, _.RC:$src1, _.ScalarMemOp:$src2),
@@ -1988,7 +1988,7 @@ multiclass WriteFVarBlendask_rmb<bits<8> opc, string OpcodeStr,
             "\t{${src2}", _.BroadcastStr, ", $src1, $dst {${mask}} {z}|",
             "$dst {${mask}} {z}, $src1, ${src2}", _.BroadcastStr, "}"), []>,
       EVEX_4V, EVEX_KZ, EVEX_B, EVEX_CD8<_.EltSize, CD8VF>,
-      Sched<[sched.Folded, ReadAfterLd]>, NotMemoryFoldable;
+      Sched<[sched.Folded, sched.ReadAfterFold]>, NotMemoryFoldable;
 
   def rmb : AVX5128I<opc, MRMSrcMem, (outs _.RC:$dst),
       (ins _.RC:$src1, _.ScalarMemOp:$src2),
@@ -1996,7 +1996,7 @@ multiclass WriteFVarBlendask_rmb<bits<8> opc, string OpcodeStr,
             "\t{${src2}", _.BroadcastStr, ", $src1, $dst|",
             "$dst, $src1, ${src2}", _.BroadcastStr, "}"), []>,
       EVEX_4V, EVEX_B, EVEX_CD8<_.EltSize, CD8VF>,
-      Sched<[sched.Folded, ReadAfterLd]>;
+      Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -2067,7 +2067,7 @@ multiclass avx512_cmp_scalar<X86VectorVTInfo _, SDNode OpNode, SDNode OpNodeRnd,
                     "$src2, $src1", "$src1, $src2",
                     (OpNode (_.VT _.RC:$src1), _.ScalarIntMemCPat:$src2,
                         imm:$cc)>, EVEX_4V, EVEX_CD8<_.EltSize, CD8VT1>,
-                    Sched<[sched.Folded, ReadAfterLd]>;
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   defm  rrb_Int  : AVX512_maskable_cmp<0xC2, MRMSrcReg, _,
                      (outs _.KRC:$dst),
@@ -2094,7 +2094,7 @@ multiclass avx512_cmp_scalar<X86VectorVTInfo _, SDNode OpNode, SDNode OpNodeRnd,
                         "vcmp"#_.Suffix,
                         "$cc, $src2, $src1", "$src1, $src2, $cc">,
                         EVEX_4V, EVEX_CD8<_.EltSize, CD8VT1>,
-                        Sched<[sched.Folded, ReadAfterLd]>, NotMemoryFoldable;
+                        Sched<[sched.Folded, sched.ReadAfterFold]>, NotMemoryFoldable;
 
     defm  rrb_alt  : AVX512_maskable_cmp_alt<0xC2, MRMSrcReg, _,
                        (outs _.KRC:$dst),
@@ -2123,7 +2123,7 @@ multiclass avx512_cmp_scalar<X86VectorVTInfo _, SDNode OpNode, SDNode OpNodeRnd,
                                         (_.ScalarLdFrag addr:$src2),
                                         imm:$cc))]>,
               EVEX_4V, EVEX_CD8<_.EltSize, CD8VT1>,
-              Sched<[sched.Folded, ReadAfterLd]>;
+              Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -2150,7 +2150,7 @@ multiclass avx512_icmp_packed<bits<8> opc, string OpcodeStr, PatFrag OpNode,
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
              [(set _.KRC:$dst, (OpNode (_.VT _.RC:$src1),
                                        (_.VT (bitconvert (_.LdFrag addr:$src2)))))]>,
-             EVEX_4V, Sched<[sched.Folded, ReadAfterLd]>;
+             EVEX_4V, Sched<[sched.Folded, sched.ReadAfterFold]>;
   let isCommutable = IsCommutable in
   def rrk : AVX512BI<opc, MRMSrcReg,
               (outs _.KRC:$dst), (ins _.KRCWM:$mask, _.RC:$src1, _.RC:$src2),
@@ -2167,7 +2167,7 @@ multiclass avx512_icmp_packed<bits<8> opc, string OpcodeStr, PatFrag OpNode,
                                    (OpNode (_.VT _.RC:$src1),
                                        (_.VT (bitconvert
                                               (_.LdFrag addr:$src2))))))]>,
-              EVEX_4V, EVEX_K, Sched<[sched.Folded, ReadAfterLd]>;
+              EVEX_4V, EVEX_K, Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass avx512_icmp_packed_rmb<bits<8> opc, string OpcodeStr, PatFrag OpNode,
@@ -2180,7 +2180,7 @@ multiclass avx512_icmp_packed_rmb<bits<8> opc, string OpcodeStr, PatFrag OpNode,
                                     "|$dst, $src1, ${src2}", _.BroadcastStr, "}"),
               [(set _.KRC:$dst, (OpNode (_.VT _.RC:$src1),
                               (X86VBroadcast (_.ScalarLdFrag addr:$src2))))]>,
-              EVEX_4V, EVEX_B, Sched<[sched.Folded, ReadAfterLd]>;
+              EVEX_4V, EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
   def rmbk : AVX512BI<opc, MRMSrcMem,
                (outs _.KRC:$dst), (ins _.KRCWM:$mask, _.RC:$src1,
                                        _.ScalarMemOp:$src2),
@@ -2192,7 +2192,7 @@ multiclass avx512_icmp_packed_rmb<bits<8> opc, string OpcodeStr, PatFrag OpNode,
                                         (X86VBroadcast
                                           (_.ScalarLdFrag addr:$src2)))))]>,
                EVEX_4V, EVEX_K, EVEX_B,
-               Sched<[sched.Folded, ReadAfterLd]>;
+               Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass avx512_icmp_packed_vl<bits<8> opc, string OpcodeStr, PatFrag OpNode,
@@ -2293,7 +2293,7 @@ multiclass avx512_icmp_cc<bits<8> opc, string Suffix, PatFrag Frag,
                                  (_.VT _.RC:$src1),
                                  (_.VT (bitconvert (_.LdFrag addr:$src2))),
                                  cond)))]>,
-             EVEX_4V, Sched<[sched.Folded, ReadAfterLd]>;
+             EVEX_4V, Sched<[sched.Folded, sched.ReadAfterFold]>;
   let isCommutable = 1 in
   def rrik : AVX512AIi8<opc, MRMSrcReg,
               (outs _.KRC:$dst), (ins _.KRCWM:$mask, _.RC:$src1, _.RC:$src2,
@@ -2319,7 +2319,7 @@ multiclass avx512_icmp_cc<bits<8> opc, string Suffix, PatFrag Frag,
                                        (_.VT (bitconvert
                                               (_.LdFrag addr:$src2))),
                                        cond))))]>,
-              EVEX_4V, EVEX_K, Sched<[sched.Folded, ReadAfterLd]>;
+              EVEX_4V, EVEX_K, Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   // Accept explicit immediate argument form instead of comparison code.
   let isAsmParserOnly = 1, hasSideEffects = 0 in {
@@ -2333,7 +2333,7 @@ multiclass avx512_icmp_cc<bits<8> opc, string Suffix, PatFrag Frag,
                (outs _.KRC:$dst), (ins _.RC:$src1, _.MemOp:$src2, u8imm:$cc),
                !strconcat("vpcmp", Suffix, "\t{$cc, $src2, $src1, $dst|",
                           "$dst, $src1, $src2, $cc}"), []>,
-               EVEX_4V, Sched<[sched.Folded, ReadAfterLd]>, NotMemoryFoldable;
+               EVEX_4V, Sched<[sched.Folded, sched.ReadAfterFold]>, NotMemoryFoldable;
     def rrik_alt : AVX512AIi8<opc, MRMSrcReg,
                (outs _.KRC:$dst), (ins _.KRCWM:$mask, _.RC:$src1, _.RC:$src2,
                                        u8imm:$cc),
@@ -2348,7 +2348,7 @@ multiclass avx512_icmp_cc<bits<8> opc, string Suffix, PatFrag Frag,
                !strconcat("vpcmp", Suffix,
                           "\t{$cc, $src2, $src1, $dst {${mask}}|",
                           "$dst {${mask}}, $src1, $src2, $cc}"), []>,
-               EVEX_4V, EVEX_K, Sched<[sched.Folded, ReadAfterLd]>,
+               EVEX_4V, EVEX_K, Sched<[sched.Folded, sched.ReadAfterFold]>,
                NotMemoryFoldable;
   }
 
@@ -2380,7 +2380,7 @@ multiclass avx512_icmp_cc_rmb<bits<8> opc, string Suffix, PatFrag Frag,
                                        (X86VBroadcast
                                         (_.ScalarLdFrag addr:$src2)),
                                        cond)))]>,
-             EVEX_4V, EVEX_B, Sched<[sched.Folded, ReadAfterLd]>;
+             EVEX_4V, EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
   def rmibk : AVX512AIi8<opc, MRMSrcMem,
               (outs _.KRC:$dst), (ins _.KRCWM:$mask, _.RC:$src1,
                                        _.ScalarMemOp:$src2, AVX512ICC:$cc),
@@ -2393,7 +2393,7 @@ multiclass avx512_icmp_cc_rmb<bits<8> opc, string Suffix, PatFrag Frag,
                                              (X86VBroadcast
                                               (_.ScalarLdFrag addr:$src2)),
                                              cond))))]>,
-              EVEX_4V, EVEX_K, EVEX_B, Sched<[sched.Folded, ReadAfterLd]>;
+              EVEX_4V, EVEX_K, EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   // Accept explicit immediate argument form instead of comparison code.
   let isAsmParserOnly = 1, hasSideEffects = 0, mayLoad = 1 in {
@@ -2403,7 +2403,7 @@ multiclass avx512_icmp_cc_rmb<bits<8> opc, string Suffix, PatFrag Frag,
                !strconcat("vpcmp", Suffix,
                    "\t{$cc, ${src2}", _.BroadcastStr, ", $src1, $dst|",
                    "$dst, $src1, ${src2}", _.BroadcastStr, ", $cc}"), []>,
-               EVEX_4V, EVEX_B, Sched<[sched.Folded, ReadAfterLd]>,
+               EVEX_4V, EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>,
                NotMemoryFoldable;
     def rmibk_alt : AVX512AIi8<opc, MRMSrcMem,
                (outs _.KRC:$dst), (ins _.KRCWM:$mask, _.RC:$src1,
@@ -2411,7 +2411,7 @@ multiclass avx512_icmp_cc_rmb<bits<8> opc, string Suffix, PatFrag Frag,
                !strconcat("vpcmp", Suffix,
                   "\t{$cc, ${src2}", _.BroadcastStr, ", $src1, $dst {${mask}}|",
                   "$dst {${mask}}, $src1, ${src2}", _.BroadcastStr, ", $cc}"), []>,
-               EVEX_4V, EVEX_K, EVEX_B, Sched<[sched.Folded, ReadAfterLd]>,
+               EVEX_4V, EVEX_K, EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>,
                NotMemoryFoldable;
   }
 
@@ -2546,7 +2546,7 @@ multiclass avx512_vcmp_common<X86FoldableSchedWrite sched, X86VectorVTInfo _,
                 (X86cmpm (_.VT _.RC:$src1),
                         (_.VT (bitconvert (_.LdFrag addr:$src2))),
                         imm:$cc)>,
-                Sched<[sched.Folded, ReadAfterLd]>;
+                Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   defm  rmbi : AVX512_maskable_cmp<0xC2, MRMSrcMem, _,
                 (outs _.KRC:$dst),
@@ -2557,7 +2557,7 @@ multiclass avx512_vcmp_common<X86FoldableSchedWrite sched, X86VectorVTInfo _,
                 (X86cmpm (_.VT _.RC:$src1),
                         (_.VT (X86VBroadcast(_.ScalarLdFrag addr:$src2))),
                         imm:$cc)>,
-                EVEX_B, Sched<[sched.Folded, ReadAfterLd]>;
+                EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
   // Accept explicit immediate argument form instead of comparison code.
   let isAsmParserOnly = 1, hasSideEffects = 0 in {
     defm  rri_alt : AVX512_maskable_cmp_alt<0xC2, MRMSrcReg, _,
@@ -2573,7 +2573,7 @@ multiclass avx512_vcmp_common<X86FoldableSchedWrite sched, X86VectorVTInfo _,
                              (ins _.RC:$src1, _.MemOp:$src2, u8imm:$cc),
                              "vcmp"#_.Suffix,
                              "$cc, $src2, $src1", "$src1, $src2, $cc">,
-                             Sched<[sched.Folded, ReadAfterLd]>,
+                             Sched<[sched.Folded, sched.ReadAfterFold]>,
                              NotMemoryFoldable;
 
       defm  rmbi_alt : AVX512_maskable_cmp_alt<0xC2, MRMSrcMem, _,
@@ -2582,7 +2582,7 @@ multiclass avx512_vcmp_common<X86FoldableSchedWrite sched, X86VectorVTInfo _,
                          "vcmp"#_.Suffix,
                          "$cc, ${src2}"##_.BroadcastStr##", $src1",
                          "$src1, ${src2}"##_.BroadcastStr##", $cc">,
-                         EVEX_B, Sched<[sched.Folded, ReadAfterLd]>,
+                         EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>,
                          NotMemoryFoldable;
     }
   }
@@ -2694,7 +2694,7 @@ multiclass avx512_scalar_fpclass<bits<8> opc, string OpcodeStr, SDNode OpNode,
                     [(set _.KRC:$dst,
                           (OpNode _.ScalarIntMemCPat:$src1,
                                   (i32 imm:$src2)))]>,
-                    Sched<[sched.Folded, ReadAfterLd]>;
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
     def rmk : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
                     (ins _.KRCWM:$mask, _.IntScalarMemOp:$src1, i32u8imm:$src2),
                     OpcodeStr##_.Suffix##
@@ -2702,7 +2702,7 @@ multiclass avx512_scalar_fpclass<bits<8> opc, string OpcodeStr, SDNode OpNode,
                     [(set _.KRC:$dst,(and _.KRCWM:$mask,
                         (OpNode _.ScalarIntMemCPat:$src1,
                             (i32 imm:$src2))))]>,
-                    EVEX_K, Sched<[sched.Folded, ReadAfterLd]>;
+                    EVEX_K, Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -2734,7 +2734,7 @@ multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr, SDNode OpNode,
                     [(set _.KRC:$dst,(OpNode
                                      (_.VT (bitconvert (_.LdFrag addr:$src1))),
                                      (i32 imm:$src2)))]>,
-                    Sched<[sched.Folded, ReadAfterLd]>;
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
   def rmk : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
                     (ins _.KRCWM:$mask, _.MemOp:$src1, i32u8imm:$src2),
                     OpcodeStr##_.Suffix##mem#
@@ -2742,7 +2742,7 @@ multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr, SDNode OpNode,
                     [(set _.KRC:$dst, (and _.KRCWM:$mask, (OpNode
                                   (_.VT (bitconvert (_.LdFrag addr:$src1))),
                                   (i32 imm:$src2))))]>,
-                    EVEX_K, Sched<[sched.Folded, ReadAfterLd]>;
+                    EVEX_K, Sched<[sched.Folded, sched.ReadAfterFold]>;
   def rmb : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
                     (ins _.ScalarMemOp:$src1, i32u8imm:$src2),
                     OpcodeStr##_.Suffix##broadcast##"\t{$src2, ${src1}"##
@@ -2752,7 +2752,7 @@ multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                      (_.VT (X86VBroadcast
                                            (_.ScalarLdFrag addr:$src1))),
                                      (i32 imm:$src2)))]>,
-                    EVEX_B, Sched<[sched.Folded, ReadAfterLd]>;
+                    EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
   def rmbk : AVX512<opc, MRMSrcMem, (outs _.KRC:$dst),
                     (ins _.KRCWM:$mask, _.ScalarMemOp:$src1, i32u8imm:$src2),
                     OpcodeStr##_.Suffix##broadcast##"\t{$src2, ${src1}"##
@@ -2762,7 +2762,7 @@ multiclass avx512_vector_fpclass<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                      (_.VT (X86VBroadcast
                                            (_.ScalarLdFrag addr:$src1))),
                                      (i32 imm:$src2))))]>,
-                    EVEX_B, EVEX_K,  Sched<[sched.Folded, ReadAfterLd]>;
+                    EVEX_B, EVEX_K,  Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -4644,7 +4644,7 @@ multiclass avx512_binop_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                   (_.VT (OpNode _.RC:$src1,
                                 (bitconvert (_.LdFrag addr:$src2))))>,
                   AVX512BIBase, EVEX_4V,
-                  Sched<[sched.Folded, ReadAfterLd]>;
+                  Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass avx512_binop_rmb<bits<8> opc, string OpcodeStr, SDNode OpNode,
@@ -4659,7 +4659,7 @@ multiclass avx512_binop_rmb<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                 (X86VBroadcast
                                     (_.ScalarLdFrag addr:$src2))))>,
                   AVX512BIBase, EVEX_4V, EVEX_B,
-                  Sched<[sched.Folded, ReadAfterLd]>;
+                  Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass avx512_binop_rm_vl<bits<8> opc, string OpcodeStr, SDNode OpNode,
@@ -4775,7 +4775,7 @@ multiclass avx512_binop_rm2<bits<8> opc, string OpcodeStr,
                         (_Dst.VT (OpNode (_Src.VT _Src.RC:$src1),
                                       (bitconvert (_Src.LdFrag addr:$src2))))>,
                         AVX512BIBase, EVEX_4V,
-                        Sched<[sched.Folded, ReadAfterLd]>;
+                        Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   defm rmb : AVX512_maskable<opc, MRMSrcMem, _Dst, (outs _Dst.RC:$dst),
                     (ins _Src.RC:$src1, _Brdct.ScalarMemOp:$src2),
@@ -4786,7 +4786,7 @@ multiclass avx512_binop_rm2<bits<8> opc, string OpcodeStr,
                                  (_Brdct.VT (X86VBroadcast
                                           (_Brdct.ScalarLdFrag addr:$src2))))))>,
                     AVX512BIBase, EVEX_4V, EVEX_B,
-                    Sched<[sched.Folded, ReadAfterLd]>;
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 defm VPADD : avx512_binop_rm_vl_all<0xFC, 0xFD, 0xFE, 0xD4, "vpadd", add,
@@ -4859,7 +4859,7 @@ multiclass avx512_packs_rmb<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                  (_Src.VT (X86VBroadcast
                                           (_Src.ScalarLdFrag addr:$src2))))))>,
                     EVEX_4V, EVEX_B, EVEX_CD8<_Src.EltSize, CD8VF>,
-                    Sched<[sched.Folded, ReadAfterLd]>;
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass avx512_packs_rm<bits<8> opc, string OpcodeStr,
@@ -4880,7 +4880,7 @@ multiclass avx512_packs_rm<bits<8> opc, string OpcodeStr,
                         (_Dst.VT (OpNode (_Src.VT _Src.RC:$src1),
                                       (bitconvert (_Src.LdFrag addr:$src2))))>,
                          EVEX_4V, EVEX_CD8<_Src.EltSize, CD8VF>,
-                         Sched<[sched.Folded, ReadAfterLd]>;
+                         Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass avx512_packs_all_i32_i16<bits<8> opc, string OpcodeStr,
@@ -5072,7 +5072,7 @@ multiclass avx512_logic_rm<bits<8> opc, string OpcodeStr,
                   (_.VT (bitconvert (_.i64VT (OpNodeMsk _.RC:$src1,
                                      (bitconvert (_.LdFrag addr:$src2))))))>,
                   AVX512BIBase, EVEX_4V,
-                  Sched<[sched.Folded, ReadAfterLd]>;
+                  Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 // OpNodeMsk is the OpNode to use where element size is important. So use
@@ -5096,7 +5096,7 @@ multiclass avx512_logic_rmb<bits<8> opc, string OpcodeStr,
                                       (_.VT (X86VBroadcast
                                              (_.ScalarLdFrag addr:$src2))))))))>,
                   AVX512BIBase, EVEX_4V, EVEX_B,
-                  Sched<[sched.Folded, ReadAfterLd]>;
+                  Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass avx512_logic_rmb_vl<bits<8> opc, string OpcodeStr,
@@ -5157,7 +5157,7 @@ multiclass avx512_fp_scalar<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,
                          (_.VT (VecNode _.RC:$src1,
                                         _.ScalarIntMemCPat:$src2,
                                         (i32 FROUND_CURRENT)))>,
-                         Sched<[sched.Folded, ReadAfterLd]>;
+                         Sched<[sched.Folded, sched.ReadAfterFold]>;
   let isCodeGenOnly = 1, Predicates = [HasAVX512] in {
   def rr : I< opc, MRMSrcReg, (outs _.FRC:$dst),
                          (ins _.FRC:$src1, _.FRC:$src2),
@@ -5171,7 +5171,7 @@ multiclass avx512_fp_scalar<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,
                          OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                          [(set _.FRC:$dst, (OpNode _.FRC:$src1,
                          (_.ScalarLdFrag addr:$src2)))]>,
-                         Sched<[sched.Folded, ReadAfterLd]>;
+                         Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
   }
 }
@@ -5202,7 +5202,7 @@ multiclass avx512_fp_scalar_sae<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,
                          "$src2, $src1", "$src1, $src2",
                          (_.VT (VecNode _.RC:$src1,
                                         _.ScalarIntMemCPat:$src2))>,
-                         Sched<[sched.Folded, ReadAfterLd]>;
+                         Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   let isCodeGenOnly = 1, Predicates = [HasAVX512] in {
   def rr : I< opc, MRMSrcReg, (outs _.FRC:$dst),
@@ -5217,7 +5217,7 @@ multiclass avx512_fp_scalar_sae<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,
                          OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                          [(set _.FRC:$dst, (OpNode _.FRC:$src1,
                          (_.ScalarLdFrag addr:$src2)))]>,
-                         Sched<[sched.Folded, ReadAfterLd]>;
+                         Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 
   defm rrb_Int : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
@@ -5285,7 +5285,7 @@ multiclass avx512_comutable_binop_s<bits<8> opc, string OpcodeStr,
                          OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                          [(set _.FRC:$dst, (OpNode _.FRC:$src1,
                          (_.ScalarLdFrag addr:$src2)))]>,
-                         Sched<[sched.Folded, ReadAfterLd]>;
+                         Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 defm VMINCSSZ : avx512_comutable_binop_s<0x5D, "vminss", f32x_info, X86fminc,
@@ -5320,7 +5320,7 @@ multiclass avx512_fp_packed<bits<8> opc, string OpcodeStr, SDPatternOperator OpN
                     (ins _.RC:$src1, _.MemOp:$src2), OpcodeStr##_.Suffix,
                     "$src2, $src1", "$src1, $src2",
                     (OpNode _.RC:$src1, (_.LdFrag addr:$src2))>,
-                    EVEX_4V, Sched<[sched.Folded, ReadAfterLd]>;
+                    EVEX_4V, Sched<[sched.Folded, sched.ReadAfterFold]>;
     defm rmb: AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
                      (ins _.RC:$src1, _.ScalarMemOp:$src2), OpcodeStr##_.Suffix,
                      "${src2}"##_.BroadcastStr##", $src1",
@@ -5328,7 +5328,7 @@ multiclass avx512_fp_packed<bits<8> opc, string OpcodeStr, SDPatternOperator OpN
                      (OpNode  _.RC:$src1, (_.VT (X86VBroadcast
                                                 (_.ScalarLdFrag addr:$src2))))>,
                      EVEX_4V, EVEX_B,
-                     Sched<[sched.Folded, ReadAfterLd]>;
+                     Sched<[sched.Folded, sched.ReadAfterFold]>;
     }
   }
 }
@@ -5563,7 +5563,7 @@ multiclass avx512_fp_scalef_p<bits<8> opc, string OpcodeStr, SDNode OpNode,
                   (ins _.RC:$src1, _.MemOp:$src2), OpcodeStr##_.Suffix,
                   "$src2, $src1", "$src1, $src2",
                   (OpNode _.RC:$src1, (_.LdFrag addr:$src2), (i32 FROUND_CURRENT))>,
-                  EVEX_4V, Sched<[sched.Folded, ReadAfterLd]>;
+                  EVEX_4V, Sched<[sched.Folded, sched.ReadAfterFold]>;
   defm rmb: AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
                    (ins _.RC:$src1, _.ScalarMemOp:$src2), OpcodeStr##_.Suffix,
                    "${src2}"##_.BroadcastStr##", $src1",
@@ -5571,7 +5571,7 @@ multiclass avx512_fp_scalef_p<bits<8> opc, string OpcodeStr, SDNode OpNode,
                    (OpNode  _.RC:$src1, (_.VT (X86VBroadcast
                                               (_.ScalarLdFrag addr:$src2))),
                                               (i32 FROUND_CURRENT))>,
-                   EVEX_4V, EVEX_B, Sched<[sched.Folded, ReadAfterLd]>;
+                   EVEX_4V, EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -5588,7 +5588,7 @@ multiclass avx512_fp_scalef_scalar<bits<8> opc, string OpcodeStr, SDNode OpNode,
                   "$src2, $src1", "$src1, $src2",
                   (OpNode _.RC:$src1, _.ScalarIntMemCPat:$src2,
                           (i32 FROUND_CURRENT))>,
-                  Sched<[sched.Folded, ReadAfterLd]>;
+                  Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -5646,7 +5646,7 @@ multiclass avx512_vptest<bits<8> opc, string OpcodeStr, PatFrag OpNode,
                                           (bitconvert (_.LdFrag addr:$src2))))),
                            _.ImmAllZerosV)>,
                    EVEX_4V, EVEX_CD8<_.EltSize, CD8VF>,
-                   Sched<[sched.Folded, ReadAfterLd]>;
+                   Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 
   // Patterns for compare with 0 that just use the same source twice.
@@ -5671,7 +5671,7 @@ multiclass avx512_vptest_mb<bits<8> opc, string OpcodeStr, PatFrag OpNode,
                                         (_.ScalarLdFrag addr:$src2))),
                             _.ImmAllZerosV)>,
                     EVEX_B, EVEX_4V, EVEX_CD8<_.EltSize, CD8VF>,
-                    Sched<[sched.Folded, ReadAfterLd]>;
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 // Use 512bit version to implement 128/256 bit in case NoVLX.
@@ -5839,7 +5839,7 @@ multiclass avx512_shift_rrm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                        "$src2, $src1", "$src1, $src2",
                    (_.VT (OpNode _.RC:$src1, (bc_frag (loadv2i64 addr:$src2))))>,
                    AVX512BIBase,
-                   EVEX_4V, Sched<[sched.Folded, ReadAfterLd]>;
+                   EVEX_4V, Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -5993,7 +5993,7 @@ multiclass avx512_var_shift<bits<8> opc, string OpcodeStr, SDNode OpNode,
                    (_.VT (OpNode _.RC:$src1,
                    (_.VT (bitconvert (_.LdFrag addr:$src2)))))>,
                    AVX5128IBase, EVEX_4V, EVEX_CD8<_.EltSize, CD8VF>,
-                   Sched<[sched.Folded, ReadAfterLd]>;
+                   Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -6007,7 +6007,7 @@ multiclass avx512_var_shift_mb<bits<8> opc, string OpcodeStr, SDNode OpNode,
                     (_.VT (OpNode _.RC:$src1, (_.VT (X86VBroadcast
                                                 (_.ScalarLdFrag addr:$src2)))))>,
                     AVX5128IBase, EVEX_B, EVEX_4V, EVEX_CD8<_.EltSize, CD8VF>,
-                    Sched<[sched.Folded, ReadAfterLd]>;
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass avx512_var_shift_sizes<bits<8> opc, string OpcodeStr, SDNode OpNode,
@@ -6335,7 +6335,7 @@ multiclass avx512_permil_vec<bits<8> OpcVar, string OpcodeStr, SDNode OpNode,
                            _.RC:$src1,
                            (Ctrl.VT (bitconvert(Ctrl.LdFrag addr:$src2)))))>,
                   T8PD, EVEX_4V, EVEX_CD8<_.EltSize, CD8VF>,
-                  Sched<[sched.Folded, ReadAfterLd]>;
+                  Sched<[sched.Folded, sched.ReadAfterFold]>;
   defm rmb: AVX512_maskable<OpcVar, MRMSrcMem, _, (outs _.RC:$dst),
                    (ins _.RC:$src1, _.ScalarMemOp:$src2), OpcodeStr,
                    "${src2}"##_.BroadcastStr##", $src1",
@@ -6345,7 +6345,7 @@ multiclass avx512_permil_vec<bits<8> OpcVar, string OpcodeStr, SDNode OpNode,
                             (Ctrl.VT (X86VBroadcast
                                        (Ctrl.ScalarLdFrag addr:$src2)))))>,
                    T8PD, EVEX_4V, EVEX_B, EVEX_CD8<_.EltSize, CD8VF>,
-                   Sched<[sched.Folded, ReadAfterLd]>;
+                   Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass avx512_permil_vec_common<string OpcodeStr, bits<8> OpcVar,
@@ -6448,7 +6448,7 @@ multiclass avx512_mov_hilo_packed<bits<8> opc, string OpcodeStr,
                      (OpNode _.RC:$src1,
                        (_.VT (bitconvert
                          (v2f64 (scalar_to_vector (loadf64 addr:$src2)))))))]>,
-                  Sched<[SchedWriteFShuffle.XMM.Folded, ReadAfterLd]>, EVEX_4V;
+                  Sched<[SchedWriteFShuffle.XMM.Folded, SchedWriteFShuffle.XMM.ReadAfterFold]>, EVEX_4V;
 }
 
 // No patterns for MOVLPS/MOVHPS as the Movlhps node should only be created in
@@ -6524,7 +6524,7 @@ multiclass avx512_fma3p_213_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
           (ins _.RC:$src2, _.MemOp:$src3),
           OpcodeStr, "$src3, $src2", "$src2, $src3",
           (_.VT (OpNode _.RC:$src2, _.RC:$src1, (_.LdFrag addr:$src3))), 1, 0>,
-          AVX512FMA3Base, Sched<[sched.Folded, ReadAfterLd]>;
+          AVX512FMA3Base, Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   defm mb: AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
             (ins _.RC:$src2, _.ScalarMemOp:$src3),
@@ -6532,7 +6532,7 @@ multiclass avx512_fma3p_213_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
             !strconcat("$src2, ${src3}", _.BroadcastStr ),
             (OpNode _.RC:$src2,
              _.RC:$src1,(_.VT (X86VBroadcast (_.ScalarLdFrag addr:$src3)))), 1, 0>,
-             AVX512FMA3Base, EVEX_B, Sched<[sched.Folded, ReadAfterLd]>;
+             AVX512FMA3Base, EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -6598,7 +6598,7 @@ multiclass avx512_fma3p_231_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
           (ins _.RC:$src2, _.MemOp:$src3),
           OpcodeStr, "$src3, $src2", "$src2, $src3",
           (_.VT (OpNode _.RC:$src2, (_.LdFrag addr:$src3), _.RC:$src1)), 1, 0>,
-          AVX512FMA3Base, Sched<[sched.Folded, ReadAfterLd]>;
+          AVX512FMA3Base, Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   defm mb: AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
          (ins _.RC:$src2, _.ScalarMemOp:$src3),
@@ -6607,7 +6607,7 @@ multiclass avx512_fma3p_231_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
          (_.VT (OpNode _.RC:$src2,
                       (_.VT (X86VBroadcast(_.ScalarLdFrag addr:$src3))),
                       _.RC:$src1)), 1, 0>, AVX512FMA3Base, EVEX_B,
-         Sched<[sched.Folded, ReadAfterLd]>;
+         Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -6675,7 +6675,7 @@ multiclass avx512_fma3p_132_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
           (ins _.RC:$src2, _.MemOp:$src3),
           OpcodeStr, "$src3, $src2", "$src2, $src3",
           (_.VT (OpNode (_.LdFrag addr:$src3), _.RC:$src1, _.RC:$src2)), 1, 0>,
-          AVX512FMA3Base, Sched<[sched.Folded, ReadAfterLd]>;
+          AVX512FMA3Base, Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   // Pattern is 312 order so that the load is in a different place from the
   // 213 and 231 patterns this helps tablegen's duplicate pattern detection.
@@ -6685,7 +6685,7 @@ multiclass avx512_fma3p_132_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
          "$src2, ${src3}"##_.BroadcastStr,
          (_.VT (OpNode (_.VT (X86VBroadcast(_.ScalarLdFrag addr:$src3))),
                        _.RC:$src1, _.RC:$src2)), 1, 0>,
-         AVX512FMA3Base, EVEX_B, Sched<[sched.Folded, ReadAfterLd]>;
+         AVX512FMA3Base, EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -6750,7 +6750,7 @@ let Constraints = "$src1 = $dst", hasSideEffects = 0 in {
   defm m_Int: AVX512_maskable_3src_scalar<opc, MRMSrcMem, _, (outs _.RC:$dst),
           (ins _.RC:$src2, _.IntScalarMemOp:$src3), OpcodeStr,
           "$src3, $src2", "$src2, $src3", (null_frag), 1, 1>,
-          AVX512FMA3Base, Sched<[SchedWriteFMA.Scl.Folded, ReadAfterLd]>;
+          AVX512FMA3Base, Sched<[SchedWriteFMA.Scl.Folded, SchedWriteFMA.Scl.ReadAfterFold]>;
 
   defm rb_Int: AVX512_maskable_3src_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
          (ins _.RC:$src2, _.RC:$src3, AVX512RC:$rc),
@@ -6767,7 +6767,7 @@ let Constraints = "$src1 = $dst", hasSideEffects = 0 in {
                     (ins _.FRC:$src1, _.FRC:$src2, _.ScalarMemOp:$src3),
                     !strconcat(OpcodeStr,
                                "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
-                    [RHS_m]>, Sched<[SchedWriteFMA.Scl.Folded, ReadAfterLd]>;
+                    [RHS_m]>, Sched<[SchedWriteFMA.Scl.Folded, SchedWriteFMA.Scl.ReadAfterFold]>;
 
     def rb    : AVX512FMA3S<opc, MRMSrcReg, (outs _.FRC:$dst),
                      (ins _.FRC:$src1, _.FRC:$src2, _.FRC:$src3, AVX512RC:$rc),
@@ -7069,7 +7069,7 @@ multiclass avx512_pmadd52_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
           (ins _.RC:$src2, _.MemOp:$src3),
           OpcodeStr, "$src3, $src2", "$src2, $src3",
           (_.VT (OpNode _.RC:$src2, (_.LdFrag addr:$src3), _.RC:$src1))>,
-          AVX512FMA3Base, Sched<[sched.Folded, ReadAfterLd]>;
+          AVX512FMA3Base, Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   defm mb: AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
             (ins _.RC:$src2, _.ScalarMemOp:$src3),
@@ -7078,7 +7078,7 @@ multiclass avx512_pmadd52_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
             (OpNode _.RC:$src2,
                     (_.VT (X86VBroadcast (_.ScalarLdFrag addr:$src3))),
                     _.RC:$src1)>,
-            AVX512FMA3Base, EVEX_B, Sched<[sched.Folded, ReadAfterLd]>;
+            AVX512FMA3Base, EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 } // Constraints = "$src1 = $dst"
@@ -7120,7 +7120,7 @@ multiclass avx512_vcvtsi<bits<8> opc, SDNode OpNode, X86FoldableSchedWrite sched
       def rm : SI<opc, MRMSrcMem, (outs DstVT.FRC:$dst),
               (ins DstVT.FRC:$src1, x86memop:$src),
               !strconcat(asm,"\t{$src, $src1, $dst|$dst, $src1, $src}"), []>,
-              EVEX_4V, Sched<[sched.Folded, ReadAfterLd]>;
+              EVEX_4V, Sched<[sched.Folded, sched.ReadAfterFold]>;
   } // hasSideEffects = 0
   let isCodeGenOnly = 1 in {
     def rr_Int : SI<opc, MRMSrcReg, (outs DstVT.RC:$dst),
@@ -7139,7 +7139,7 @@ multiclass avx512_vcvtsi<bits<8> opc, SDNode OpNode, X86FoldableSchedWrite sched
                         (OpNode (DstVT.VT DstVT.RC:$src1),
                                  (ld_frag addr:$src2),
                                  (i32 FROUND_CURRENT)))]>,
-                  EVEX_4V, Sched<[sched.Folded, ReadAfterLd]>;
+                  EVEX_4V, Sched<[sched.Folded, sched.ReadAfterFold]>;
   }//isCodeGenOnly = 1
 }
 
@@ -7265,7 +7265,7 @@ multiclass avx512_cvt_s_int_round<bits<8> opc, X86VectorVTInfo SrcVT,
                 !strconcat(asm,"\t{$src, $dst|$dst, $src}"),
                 [(set DstVT.RC:$dst, (OpNode
                       (SrcVT.VT SrcVT.ScalarIntMemCPat:$src)))]>,
-                EVEX, VEX_LIG, Sched<[sched.Folded, ReadAfterLd]>;
+                EVEX, VEX_LIG, Sched<[sched.Folded, sched.ReadAfterFold]>;
 
     def : InstAlias<"v" # asm # aliasStr # "\t{$src, $dst|$dst, $src}",
             (!cast<Instruction>(NAME # "rr_Int") DstVT.RC:$dst, SrcVT.RC:$src), 0, "att">;
@@ -7412,7 +7412,7 @@ let Predicates = [HasAVX512] in {
   def rm : AVX512<opc, MRMSrcMem, (outs _DstRC.RC:$dst), (ins _SrcRC.ScalarMemOp:$src),
               !strconcat(asm,"\t{$src, $dst|$dst, $src}"),
               [(set _DstRC.RC:$dst, (OpNode (_SrcRC.ScalarLdFrag addr:$src)))]>,
-              EVEX, Sched<[sched.Folded, ReadAfterLd]>;
+              EVEX, Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 
   def rr_Int : AVX512<opc, MRMSrcReg, (outs _DstRC.RC:$dst), (ins _SrcRC.RC:$src),
@@ -7430,7 +7430,7 @@ let Predicates = [HasAVX512] in {
               !strconcat(asm,"\t{$src, $dst|$dst, $src}"),
               [(set _DstRC.RC:$dst,
                 (OpNodeInt (_SrcRC.VT _SrcRC.ScalarIntMemCPat:$src)))]>,
-              EVEX, VEX_LIG, Sched<[sched.Folded, ReadAfterLd]>;
+              EVEX, VEX_LIG, Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   def : InstAlias<asm # aliasStr # "\t{$src, $dst|$dst, $src}",
           (!cast<Instruction>(NAME # "rr_Int") _DstRC.RC:$dst, _SrcRC.RC:$src), 0, "att">;
@@ -7501,7 +7501,7 @@ multiclass avx512_cvt_fp_scalar<bits<8> opc, string OpcodeStr, X86VectorVTInfo _
                                   (_Src.VT _Src.ScalarIntMemCPat:$src2),
                                   (i32 FROUND_CURRENT)))>,
                          EVEX_4V, VEX_LIG,
-                         Sched<[sched.Folded, ReadAfterLd]>;
+                         Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   let isCodeGenOnly = 1, hasSideEffects = 0 in {
     def rr : I<opc, MRMSrcReg, (outs _.FRC:$dst),
@@ -7512,7 +7512,7 @@ multiclass avx512_cvt_fp_scalar<bits<8> opc, string OpcodeStr, X86VectorVTInfo _
     def rm : I<opc, MRMSrcMem, (outs _.FRC:$dst),
                (ins _.FRC:$src1, _Src.ScalarMemOp:$src2),
                OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>,
-               EVEX_4V, VEX_LIG, Sched<[sched.Folded, ReadAfterLd]>;
+               EVEX_4V, VEX_LIG, Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -8510,7 +8510,7 @@ multiclass avx512_fp14_s<bits<8> opc, string OpcodeStr, SDNode OpNode,
                          "$src2, $src1", "$src1, $src2",
                          (OpNode (_.VT _.RC:$src1),
                           _.ScalarIntMemCPat:$src2)>, EVEX_4V,
-                          Sched<[sched.Folded, ReadAfterLd]>;
+                          Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 }
 
@@ -8539,13 +8539,13 @@ multiclass avx512_fp14_p<bits<8> opc, string OpcodeStr, SDNode OpNode,
                          (ins _.MemOp:$src), OpcodeStr, "$src", "$src",
                          (OpNode (_.VT
                            (bitconvert (_.LdFrag addr:$src))))>, EVEX, T8PD,
-                         Sched<[sched.Folded, ReadAfterLd]>;
+                         Sched<[sched.Folded, sched.ReadAfterFold]>;
   defm mb: AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
                           (ins _.ScalarMemOp:$src), OpcodeStr,
                           "${src}"##_.BroadcastStr, "${src}"##_.BroadcastStr,
                           (OpNode (_.VT
                             (X86VBroadcast (_.ScalarLdFrag addr:$src))))>,
-                          EVEX, T8PD, EVEX_B, Sched<[sched.Folded, ReadAfterLd]>;
+                          EVEX, T8PD, EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -8599,7 +8599,7 @@ multiclass avx512_fp28_s<bits<8> opc, string OpcodeStr,X86VectorVTInfo _,
                          "$src2, $src1", "$src1, $src2",
                          (OpNode (_.VT _.RC:$src1), _.ScalarIntMemCPat:$src2,
                          (i32 FROUND_CURRENT))>,
-                         Sched<[sched.Folded, ReadAfterLd]>;
+                         Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -8635,7 +8635,7 @@ multiclass avx512_fp28_p<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
                          (OpNode (_.VT
                              (bitconvert (_.LdFrag addr:$src))),
                           (i32 FROUND_CURRENT))>,
-                          Sched<[sched.Folded, ReadAfterLd]>;
+                          Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   defm mb : AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
                          (ins _.ScalarMemOp:$src), OpcodeStr,
@@ -8643,7 +8643,7 @@ multiclass avx512_fp28_p<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
                          (OpNode (_.VT
                                   (X86VBroadcast (_.ScalarLdFrag addr:$src))),
                                  (i32 FROUND_CURRENT))>, EVEX_B,
-                         Sched<[sched.Folded, ReadAfterLd]>;
+                         Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 multiclass avx512_fp28_p_round<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
@@ -8710,13 +8710,13 @@ multiclass avx512_sqrt_packed<bits<8> opc, string OpcodeStr,
                          (ins _.MemOp:$src), OpcodeStr, "$src", "$src",
                          (fsqrt (_.VT
                            (bitconvert (_.LdFrag addr:$src))))>, EVEX,
-                           Sched<[sched.Folded, ReadAfterLd]>;
+                           Sched<[sched.Folded, sched.ReadAfterFold]>;
   defm mb: AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
                           (ins _.ScalarMemOp:$src), OpcodeStr,
                           "${src}"##_.BroadcastStr, "${src}"##_.BroadcastStr,
                           (fsqrt (_.VT
                             (X86VBroadcast (_.ScalarLdFrag addr:$src))))>,
-                          EVEX, EVEX_B, Sched<[sched.Folded, ReadAfterLd]>;
+                          EVEX, EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -8771,7 +8771,7 @@ multiclass avx512_sqrt_scalar<bits<8> opc, string OpcodeStr, X86FoldableSchedWri
                          (X86fsqrtRnds (_.VT _.RC:$src1),
                                     _.ScalarIntMemCPat:$src2,
                                     (i32 FROUND_CURRENT))>,
-                         Sched<[sched.Folded, ReadAfterLd]>;
+                         Sched<[sched.Folded, sched.ReadAfterFold]>;
     defm rb_Int : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
                          (ins _.RC:$src1, _.RC:$src2, AVX512RC:$rc), OpcodeStr,
                          "$rc, $src2, $src1", "$src1, $src2, $rc",
@@ -8789,7 +8789,7 @@ multiclass avx512_sqrt_scalar<bits<8> opc, string OpcodeStr, X86FoldableSchedWri
         def m : I<opc, MRMSrcMem, (outs _.FRC:$dst),
                   (ins _.FRC:$src1, _.ScalarMemOp:$src2),
                   OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}", []>,
-                  Sched<[sched.Folded, ReadAfterLd]>;
+                  Sched<[sched.Folded, sched.ReadAfterFold]>;
     }
   }
 
@@ -8842,7 +8842,7 @@ multiclass avx512_rndscale_scalar<bits<8> opc, string OpcodeStr,
                          "$src3, $src2, $src1", "$src1, $src2, $src3",
                          (_.VT (X86RndScales _.RC:$src1,
                                 _.ScalarIntMemCPat:$src2, (i32 imm:$src3)))>,
-                         Sched<[sched.Folded, ReadAfterLd]>;
+                         Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   let isCodeGenOnly = 1, hasSideEffects = 0, Predicates = [HasAVX512] in {
     def r : I<opc, MRMSrcReg, (outs _.FRC:$dst),
@@ -8854,7 +8854,7 @@ multiclass avx512_rndscale_scalar<bits<8> opc, string OpcodeStr,
       def m : I<opc, MRMSrcMem, (outs _.FRC:$dst),
                  (ins _.FRC:$src1, _.ScalarMemOp:$src2, i32u8imm:$src3),
                  OpcodeStr#"\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
-                 []>, Sched<[sched.Folded, ReadAfterLd]>;
+                 []>, Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
   }
 
@@ -9763,7 +9763,7 @@ multiclass expand_by_vec_width<bits<8> opc, X86VectorVTInfo _,
               (_.VT (X86expand (_.VT (bitconvert
                                       (_.LdFrag addr:$src1)))))>,
             AVX5128IBase, EVEX_CD8<_.EltSize, CD8VT1>,
-            Sched<[sched.Folded, ReadAfterLd]>;
+            Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass expand_by_vec_width_lowering<X86VectorVTInfo _, string Name> {
@@ -9825,14 +9825,14 @@ multiclass avx512_unary_fp_packed_imm<bits<8> opc, string OpcodeStr, SDNode OpNo
                     OpcodeStr##_.Suffix, "$src2, $src1", "$src1, $src2",
                     (OpNode (_.VT (bitconvert (_.LdFrag addr:$src1))),
                             (i32 imm:$src2))>,
-                    Sched<[sched.Folded, ReadAfterLd]>;
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
   defm rmbi : AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
                     (ins _.ScalarMemOp:$src1, i32u8imm:$src2),
                     OpcodeStr##_.Suffix, "$src2, ${src1}"##_.BroadcastStr,
                     "${src1}"##_.BroadcastStr##", $src2",
                     (OpNode (_.VT (X86VBroadcast(_.ScalarLdFrag addr:$src1))),
                             (i32 imm:$src2))>, EVEX_B,
-                    Sched<[sched.Folded, ReadAfterLd]>;
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -9888,7 +9888,7 @@ multiclass avx512_fp_packed_imm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                     (OpNode (_.VT _.RC:$src1),
                             (_.VT (bitconvert (_.LdFrag addr:$src2))),
                             (i32 imm:$src3))>,
-                    Sched<[sched.Folded, ReadAfterLd]>;
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
   defm rmbi : AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
                     (ins _.RC:$src1, _.ScalarMemOp:$src2, i32u8imm:$src3),
                     OpcodeStr, "$src3, ${src2}"##_.BroadcastStr##", $src1",
@@ -9896,7 +9896,7 @@ multiclass avx512_fp_packed_imm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                     (OpNode (_.VT _.RC:$src1),
                             (_.VT (X86VBroadcast(_.ScalarLdFrag addr:$src2))),
                             (i32 imm:$src3))>, EVEX_B,
-                    Sched<[sched.Folded, ReadAfterLd]>;
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -9920,7 +9920,7 @@ multiclass avx512_3Op_rm_imm8<bits<8> opc, string OpcodeStr, SDNode OpNode,
                              (SrcInfo.VT (bitconvert
                                                 (SrcInfo.LdFrag addr:$src2))),
                              (i8 imm:$src3)))>,
-                Sched<[sched.Folded, ReadAfterLd]>;
+                Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -9939,7 +9939,7 @@ multiclass avx512_3Op_imm8<bits<8> opc, string OpcodeStr, SDNode OpNode,
                     (OpNode (_.VT _.RC:$src1),
                             (_.VT (X86VBroadcast(_.ScalarLdFrag addr:$src2))),
                             (i8 imm:$src3))>, EVEX_B,
-                    Sched<[sched.Folded, ReadAfterLd]>;
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 //handle scalar instruction  reg_vec1 = op(reg_vec2,reg_vec3,imm)
@@ -9961,7 +9961,7 @@ multiclass avx512_fp_scalar_imm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                             (_.VT (scalar_to_vector
                                       (_.ScalarLdFrag addr:$src2))),
                             (i32 imm:$src3))>,
-                    Sched<[sched.Folded, ReadAfterLd]>;
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -10327,7 +10327,7 @@ multiclass avx512_shuff_packed_128_common<bits<8> opc, string OpcodeStr,
                   (CastInfo.VT (X86Shuf128 _.RC:$src1,
                                            (bitconvert (_.LdFrag addr:$src2)),
                                            (i8 imm:$src3)))))>,
-                Sched<[sched.Folded, ReadAfterLd]>,
+                Sched<[sched.Folded, sched.ReadAfterFold]>,
                 EVEX2VEXOverride<EVEX2VEXOvrd#"rm">;
   defm rmbi : AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
                     (ins _.RC:$src1, _.ScalarMemOp:$src2, u8imm:$src3),
@@ -10339,7 +10339,7 @@ multiclass avx512_shuff_packed_128_common<bits<8> opc, string OpcodeStr,
                        (X86Shuf128 _.RC:$src1,
                                    (X86VBroadcast (_.ScalarLdFrag addr:$src2)),
                                    (i8 imm:$src3)))))>, EVEX_B,
-                    Sched<[sched.Folded, ReadAfterLd]>;
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -10415,7 +10415,7 @@ multiclass avx512_valign<bits<8> opc, string OpcodeStr,
                 (_.VT (X86VAlign _.RC:$src1,
                                  (bitconvert (_.LdFrag addr:$src2)),
                                  (i8 imm:$src3)))>,
-                Sched<[sched.Folded, ReadAfterLd]>,
+                Sched<[sched.Folded, sched.ReadAfterFold]>,
                 EVEX2VEXOverride<"VPALIGNRrmi">;
 
   defm rmbi : AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
@@ -10425,7 +10425,7 @@ multiclass avx512_valign<bits<8> opc, string OpcodeStr,
                    (X86VAlign _.RC:$src1,
                               (_.VT (X86VBroadcast(_.ScalarLdFrag addr:$src2))),
                               (i8 imm:$src3))>, EVEX_B,
-                   Sched<[sched.Folded, ReadAfterLd]>;
+                   Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -10919,7 +10919,7 @@ multiclass avx512_insert_elt_m<bits<8> opc, string OpcodeStr, SDNode OpNode,
       OpcodeStr#"\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}",
       [(set _.RC:$dst,
           (_.VT (OpNode _.RC:$src1, (LdFrag addr:$src2), imm:$src3)))]>,
-      EVEX_4V, EVEX_CD8<_.EltSize, CD8VT1>, Sched<[WriteVecInsertLd, ReadAfterLd]>;
+      EVEX_4V, EVEX_CD8<_.EltSize, CD8VT1>, Sched<[WriteVecInsert.Folded, WriteVecInsert.ReadAfterFold]>;
 }
 
 multiclass avx512_insert_elt_bw<bits<8> opc, string OpcodeStr, SDNode OpNode,
@@ -10992,7 +10992,7 @@ multiclass avx512_shift_packed<bits<8> opc, SDNode OpNode, Format MRMr,
            [(set _.RC:$dst,(_.VT (OpNode
                                  (_.VT (bitconvert (_.LdFrag addr:$src1))),
                                  (i8 imm:$src2))))]>,
-           Sched<[sched.Folded, ReadAfterLd]>;
+           Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass avx512_shift_packed_all<bits<8> opc, SDNode OpNode, Format MRMr,
@@ -11032,7 +11032,7 @@ multiclass avx512_psadbw_packed<bits<8> opc, SDNode OpNode,
                               (OpNode (_src.VT _src.RC:$src1),
                               (_src.VT (bitconvert
                                         (_src.LdFrag addr:$src2))))))]>,
-           Sched<[sched.Folded, ReadAfterLd]>;
+           Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass avx512_psadbw_packed_all<bits<8> opc, SDNode OpNode,
@@ -11134,7 +11134,7 @@ multiclass avx512_ternlog<bits<8> opc, string OpcodeStr, SDNode OpNode,
                             (_.VT (bitconvert (_.LdFrag addr:$src3))),
                             (i8 imm:$src4)), 1, 0>,
                     AVX512AIi8Base, EVEX_4V, EVEX_CD8<_.EltSize, CD8VF>,
-                    Sched<[sched.Folded, ReadAfterLd]>;
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
   defm rmbi : AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
                     (ins _.RC:$src2, _.ScalarMemOp:$src3, u8imm:$src4),
                     OpcodeStr, "$src4, ${src3}"##_.BroadcastStr##", $src2",
@@ -11144,7 +11144,7 @@ multiclass avx512_ternlog<bits<8> opc, string OpcodeStr, SDNode OpNode,
                             (_.VT (X86VBroadcast(_.ScalarLdFrag addr:$src3))),
                             (i8 imm:$src4)), 1, 0>, EVEX_B,
                     AVX512AIi8Base, EVEX_4V, EVEX_CD8<_.EltSize, CD8VF>,
-                    Sched<[sched.Folded, ReadAfterLd]>;
+                    Sched<[sched.Folded, sched.ReadAfterFold]>;
   }// Constraints = "$src1 = $dst"
 
   // Additional patterns for matching passthru operand in other positions.
@@ -11360,7 +11360,7 @@ multiclass avx512_fixupimm_packed<bits<8> opc, string OpcodeStr, SDNode OpNode,
                               (TblVT.VT (bitconvert (TblVT.LdFrag addr:$src3))),
                               (i32 imm:$src4),
                               (i32 FROUND_CURRENT))>,
-                      Sched<[sched.Folded, ReadAfterLd]>;
+                      Sched<[sched.Folded, sched.ReadAfterFold]>;
     defm rmbi : AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
                       (ins _.RC:$src2, _.ScalarMemOp:$src3, i32u8imm:$src4),
                     OpcodeStr##_.Suffix, "$src4, ${src3}"##_.BroadcastStr##", $src2",
@@ -11370,7 +11370,7 @@ multiclass avx512_fixupimm_packed<bits<8> opc, string OpcodeStr, SDNode OpNode,
                               (TblVT.VT (X86VBroadcast(TblVT.ScalarLdFrag addr:$src3))),
                               (i32 imm:$src4),
                               (i32 FROUND_CURRENT))>,
-                    EVEX_B, Sched<[sched.Folded, ReadAfterLd]>;
+                    EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
   } // Constraints = "$src1 = $dst"
 }
 
@@ -11413,7 +11413,7 @@ multiclass avx512_fixupimm_scalar<bits<8> opc, string OpcodeStr, SDNode OpNode,
                               (_src3VT.VT _src3VT.RC:$src3),
                               (i32 imm:$src4),
                               (i32 FROUND_NO_EXC))>,
-                      EVEX_B, Sched<[sched.Folded, ReadAfterLd]>;
+                      EVEX_B, Sched<[sched.Folded, sched.ReadAfterFold]>;
     defm rmi : AVX512_maskable_3src_scalar<opc, MRMSrcMem, _, (outs _.RC:$dst),
                      (ins _.RC:$src2, _.ScalarMemOp:$src3, i32u8imm:$src4),
                      OpcodeStr##_.Suffix, "$src4, $src3, $src2", "$src2, $src3, $src4",
@@ -11423,7 +11423,7 @@ multiclass avx512_fixupimm_scalar<bits<8> opc, string OpcodeStr, SDNode OpNode,
                                        (_src3VT.ScalarLdFrag addr:$src3))),
                              (i32 imm:$src4),
                              (i32 FROUND_CURRENT))>,
-                     Sched<[sched.Folded, ReadAfterLd]>;
+                     Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -11647,7 +11647,7 @@ multiclass VBMI2_shift_var_rm<bits<8> Op, string OpStr, SDNode OpNode,
                 (VTI.VT (OpNode VTI.RC:$src1, VTI.RC:$src2,
                         (VTI.VT (bitconvert (VTI.LdFrag addr:$src3)))))>,
                 AVX512FMA3Base,
-                Sched<[sched.Folded, ReadAfterLd]>;
+                Sched<[sched.Folded, sched.ReadAfterFold]>;
   }
 }
 
@@ -11663,7 +11663,7 @@ multiclass VBMI2_shift_var_rmb<bits<8> Op, string OpStr, SDNode OpNode,
               (OpNode VTI.RC:$src1, VTI.RC:$src2,
                (VTI.VT (X86VBroadcast (VTI.ScalarLdFrag addr:$src3))))>,
               AVX512FMA3Base, EVEX_B,
-              Sched<[sched.Folded, ReadAfterLd]>;
+              Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass VBMI2_shift_var_rm_common<bits<8> Op, string OpStr, SDNode OpNode,
@@ -11751,7 +11751,7 @@ multiclass VNNI_rmb<bits<8> Op, string OpStr, SDNode OpNode,
                                             (VTI.VT (bitconvert
                                                      (VTI.LdFrag addr:$src3)))))>,
                                    EVEX_4V, EVEX_CD8<32, CD8VF>, T8PD,
-                                   Sched<[sched.Folded, ReadAfterLd]>;
+                                   Sched<[sched.Folded, sched.ReadAfterFold]>;
   defm mb :   AVX512_maskable_3src<Op, MRMSrcMem, VTI, (outs VTI.RC:$dst),
                                    (ins VTI.RC:$src2, VTI.ScalarMemOp:$src3),
                                    OpStr, "${src3}"##VTI.BroadcastStr##", $src2",
@@ -11760,7 +11760,7 @@ multiclass VNNI_rmb<bits<8> Op, string OpStr, SDNode OpNode,
                                     (VTI.VT (X86VBroadcast
                                              (VTI.ScalarLdFrag addr:$src3))))>,
                                    EVEX_4V, EVEX_CD8<32, CD8VF>, EVEX_B,
-                                   T8PD, Sched<[sched.Folded, ReadAfterLd]>;
+                                   T8PD, Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass VNNI_common<bits<8> Op, string OpStr, SDNode OpNode,
@@ -11807,7 +11807,7 @@ multiclass VPSHUFBITQMB_rm<X86FoldableSchedWrite sched, X86VectorVTInfo VTI> {
                                 (X86Vpshufbitqmb (VTI.VT VTI.RC:$src1),
                                 (VTI.VT (bitconvert (VTI.LdFrag addr:$src2))))>,
                                 EVEX_4V, EVEX_CD8<8, CD8VF>, T8PD,
-                                Sched<[sched.Folded, ReadAfterLd]>;
+                                Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass VPSHUFBITQMB_common<X86SchedWriteWidths sched, AVX512VLVectorVTInfo VTI> {
@@ -11855,7 +11855,7 @@ multiclass GF2P8AFFINE_avx512_rmb_imm<bits<8> Op, string OpStr, SDNode OpNode,
                 (OpNode (VTI.VT VTI.RC:$src1),
                  (bitconvert (BcstVTI.VT (X86VBroadcast (loadi64 addr:$src2)))),
                  (i8 imm:$src3))>, EVEX_B,
-                 Sched<[sched.Folded, ReadAfterLd]>;
+                 Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass GF2P8AFFINE_avx512_common<bits<8> Op, string OpStr, SDNode OpNode,

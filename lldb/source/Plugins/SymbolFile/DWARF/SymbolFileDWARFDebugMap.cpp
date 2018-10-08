@@ -1060,6 +1060,15 @@ size_t SymbolFileDWARFDebugMap::GetTypes(SymbolContextScope *sc_scope,
   return type_list.GetSize() - initial_size;
 }
 
+std::vector<lldb_private::CallEdge>
+SymbolFileDWARFDebugMap::ParseCallEdgesInFunction(UserID func_id) {
+  uint32_t oso_idx = GetOSOIndexFromUserID(func_id.GetID());
+  SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx);
+  if (oso_dwarf)
+    return oso_dwarf->ParseCallEdgesInFunction(func_id);
+  return {};
+}
+
 TypeSP SymbolFileDWARFDebugMap::FindDefinitionTypeForDWARFDeclContext(
     const DWARFDeclContext &die_decl_ctx) {
   TypeSP type_sp;

@@ -123,6 +123,8 @@ static constexpr OptionEnumValueElement g_language_enumerators[] = {
   "{ at ${line.file.basename}:${line.number}{:${line.column}}}"
 #define IS_OPTIMIZED "{${function.is-optimized} [opt]}"
 
+#define IS_ARTIFICIAL "{${frame.is-artificial} [artificial]}"
+
 #define DEFAULT_THREAD_FORMAT                                                  \
   "thread #${thread.index}: tid = ${thread.id%tid}"                            \
   "{, ${frame.pc}}" MODULE_WITH_FUNC FILE_AND_LINE                             \
@@ -147,11 +149,11 @@ static constexpr OptionEnumValueElement g_language_enumerators[] = {
 
 #define DEFAULT_FRAME_FORMAT                                                   \
   "frame #${frame.index}: ${frame.pc}" MODULE_WITH_FUNC FILE_AND_LINE          \
-      IS_OPTIMIZED "\\n"
+      IS_OPTIMIZED IS_ARTIFICIAL "\\n"
 
 #define DEFAULT_FRAME_FORMAT_NO_ARGS                                           \
   "frame #${frame.index}: ${frame.pc}" MODULE_WITH_FUNC_NO_ARGS FILE_AND_LINE  \
-      IS_OPTIMIZED "\\n"
+      IS_OPTIMIZED IS_ARTIFICIAL "\\n"
 
 // Three parts to this disassembly format specification:
 //   1. If this is a new function/symbol (no previous symbol/function), print

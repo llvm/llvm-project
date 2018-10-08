@@ -1036,7 +1036,7 @@ define void @interleave_24i16_out(<24 x i16>* %p, <8 x i16>* %q1, <8 x i16>* %q2
 ; SSE42-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,4,5,6,5]
 ; SSE42-NEXT:    movdqa %xmm0, %xmm4
 ; SSE42-NEXT:    pblendw {{.*#+}} xmm4 = xmm4[0],xmm1[1],xmm4[2,3],xmm1[4],xmm4[5,6],xmm1[7]
-; SSE42-NEXT:    pshufb {{.*#+}} xmm4 = xmm4[0,1,6,7,12,13,2,3,8,9,14,15,12,13,14,15]
+; SSE42-NEXT:    pshufb {{.*#+}} xmm4 = xmm4[0,1,6,7,12,13,2,3,8,9,14,15,u,u,u,u]
 ; SSE42-NEXT:    pblendw {{.*#+}} xmm4 = xmm4[0,1,2,3,4,5],xmm3[6,7]
 ; SSE42-NEXT:    movdqa %xmm2, %xmm3
 ; SSE42-NEXT:    pshufb {{.*#+}} xmm3 = xmm3[0,1,6,7,4,5,6,7,0,1,0,1,6,7,12,13]
@@ -1059,12 +1059,12 @@ define void @interleave_24i16_out(<24 x i16>* %p, <8 x i16>* %q1, <8 x i16>* %q2
 ; AVX1-NEXT:    vmovdqu (%rdi), %ymm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm1[0],xmm2[1],xmm1[2,3],xmm2[4],xmm1[5,6],xmm2[7]
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm3 = xmm3[0,1,6,7,12,13,2,3,8,9,14,15,12,13,14,15]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm3 = xmm3[0,1,6,7,12,13,2,3,8,9,14,15,u,u,u,u]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[0,1,2,1]
 ; AVX1-NEXT:    vpshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,4,5,6,5]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1,2,3,4,5],xmm4[6,7]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm1[0,1],xmm2[2],xmm1[3,4],xmm2[5],xmm1[6,7]
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm4 = xmm4[2,3,8,9,14,15,4,5,10,11,10,11,8,9,14,15]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm4 = xmm4[2,3,8,9,14,15,4,5,10,11,u,u,u,u,u,u]
 ; AVX1-NEXT:    vpshufb {{.*#+}} xmm5 = xmm0[0,1,6,7,4,5,6,7,0,1,0,1,6,7,12,13]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm4[0,1,2,3,4],xmm5[5,6,7]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2],xmm2[3,4],xmm1[5],xmm2[6,7]
@@ -1202,7 +1202,7 @@ define void @interleave_24i16_in(<24 x i16>* %p, <8 x i16>* %q1, <8 x i16>* %q2,
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm2[1,1,2,2]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm4[0],xmm3[1,2],xmm4[3],xmm3[4,5],xmm4[6],xmm3[7]
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm4 = xmm4[0,1,2,3,4,5,4,5,6,7,10,11,8,9,10,11]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm4 = xmm4[0,1,2,3,u,u,4,5,6,7,u,u,8,9,10,11]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[0,0,0,3]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm4[0,1],xmm5[2],xmm4[3,4],xmm5[5],xmm4[6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3

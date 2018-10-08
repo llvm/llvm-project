@@ -757,22 +757,22 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
     }
   }
 
-  auto writeFileName = [&]() {
+  auto writeFileName = [&](raw_ostream &S) {
     if (!ArchitectureName.empty())
-      outs() << "(for architecture " << ArchitectureName << "):";
+      S << "(for architecture " << ArchitectureName << "):";
     if (OutputFormat == posix && !ArchiveName.empty())
-      outs() << ArchiveName << "[" << CurrentFilename << "]: ";
+      S << ArchiveName << "[" << CurrentFilename << "]: ";
     else {
       if (!ArchiveName.empty())
-        outs() << ArchiveName << ":";
-      outs() << CurrentFilename << ": ";
+        S << ArchiveName << ":";
+      S << CurrentFilename << ": ";
     }
   };
 
   if (SymbolList.empty()) {
     if (PrintFileName)
-      writeFileName();
-    outs() << "no symbols\n";
+      writeFileName(errs());
+    errs() << "no symbols\n";
   }
 
   for (SymbolListT::iterator I = SymbolList.begin(), E = SymbolList.end();
@@ -797,7 +797,7 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
         (Weak && NoWeakSymbols))
       continue;
     if (PrintFileName)
-      writeFileName();
+      writeFileName(outs());
     if ((JustSymbolName ||
          (UndefinedOnly && MachO && OutputFormat != darwin)) &&
         OutputFormat != posix) {

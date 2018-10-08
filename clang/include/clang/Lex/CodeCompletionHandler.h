@@ -64,7 +64,7 @@ public:
 
   /// Callback invoked when performing code completion inside the filename
   /// part of an #include directive. (Also #import, #include_next, etc).
-  /// \p Dir is the directory relative to the include path, e.g. "a" for "<a/b".
+  /// \p Dir is the directory relative to the include path.
   virtual void CodeCompleteIncludedFile(llvm::StringRef Dir, bool IsAngled) {}
 
   /// Callback invoked when performing code completion in a part of the

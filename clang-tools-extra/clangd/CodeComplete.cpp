@@ -40,11 +40,9 @@
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/Sema.h"
-#include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
@@ -54,7 +52,6 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <iterator>
-#include <queue>
 
 // We log detailed candidate here if you run with -debug-only=codecomplete.
 #define DEBUG_TYPE "CodeComplete"
@@ -309,11 +306,10 @@ struct CodeCompletionBuilder {
         Completion.FixIts.push_back(
             toTextEdit(FixIt, ASTCtx.getSourceManager(), ASTCtx.getLangOpts()));
       }
-      std::sort(Completion.FixIts.begin(), Completion.FixIts.end(),
-                [](const TextEdit &X, const TextEdit &Y) {
-                  return std::tie(X.range.start.line, X.range.start.character) <
-                         std::tie(Y.range.start.line, Y.range.start.character);
-                });
+      llvm::sort(Completion.FixIts, [](const TextEdit &X, const TextEdit &Y) {
+        return std::tie(X.range.start.line, X.range.start.character) <
+               std::tie(Y.range.start.line, Y.range.start.character);
+      });
       Completion.Deprecated |=
           (C.SemaResult->Availability == CXAvailability_Deprecated);
     }
@@ -864,8 +860,8 @@ public:
           IndexRequest.IDs.size(), FetchedDocs.size());
     }
 
-    std::sort(
-        ScoredSignatures.begin(), ScoredSignatures.end(),
+    llvm::sort(
+        ScoredSignatures,
         [](const ScoredSignature &L, const ScoredSignature &R) {
           // Ordering follows:
           // - Less number of parameters is better.
@@ -1167,13 +1163,12 @@ llvm::SmallVector<StringRef, 1>
 getRankedIncludes(const Symbol &Sym) {
   auto Includes = Sym.IncludeHeaders;
   // Sort in descending order by reference count and header length.
-  std::sort(Includes.begin(), Includes.end(),
-            [](const Symbol::IncludeHeaderWithReferences &LHS,
-               const Symbol::IncludeHeaderWithReferences &RHS) {
-              if (LHS.References == RHS.References)
-                return LHS.IncludeHeader.size() < RHS.IncludeHeader.size();
-              return LHS.References > RHS.References;
-            });
+  llvm::sort(Includes, [](const Symbol::IncludeHeaderWithReferences &LHS,
+                          const Symbol::IncludeHeaderWithReferences &RHS) {
+    if (LHS.References == RHS.References)
+      return LHS.IncludeHeader.size() < RHS.IncludeHeader.size();
+    return LHS.References > RHS.References;
+  });
   llvm::SmallVector<StringRef, 1> Headers;
   for (const auto &Include : Includes)
     Headers.push_back(Include.IncludeHeader);
