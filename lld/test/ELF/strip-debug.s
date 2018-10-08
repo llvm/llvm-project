@@ -12,3 +12,5 @@
 
 .section .debug_Foo,"",@progbits
 .section .zdebug_Bar,"",@progbits
+.ascii "ZLIB"
+.quad 0
