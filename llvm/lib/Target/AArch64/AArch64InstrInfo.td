@@ -6635,6 +6635,12 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [SP] in {
                    Sched<[WriteBrReg]>;
   def TCRETURNri : Pseudo<(outs), (ins tcGPR64:$dst, i32imm:$FPDiff), []>,
                    Sched<[WriteBrReg]>;
+  // Indirect tail-call with any register allowed, used by MachineOutliner when
+  // this is proven safe.
+  // FIXME: If we have to add any more hacks like this, we should instead relax
+  // some verifier checks for outlined functions.
+  def TCRETURNriALL : Pseudo<(outs), (ins GPR64:$dst, i32imm:$FPDiff), []>,
+                      Sched<[WriteBrReg]>;
 }
 
 def : Pat<(AArch64tcret tcGPR64:$dst, (i32 timm:$FPDiff)),

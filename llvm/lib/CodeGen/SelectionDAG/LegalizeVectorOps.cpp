@@ -226,7 +226,6 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   SDValue Result = SDValue(DAG.UpdateNodeOperands(Op.getNode(), Ops),
                            Op.getResNo());
 
-  bool HasVectorValue = false;
   if (Op.getOpcode() == ISD::LOAD) {
     LoadSDNode *LD = cast<LoadSDNode>(Op.getNode());
     ISD::LoadExtType ExtType = LD->getExtensionType();
@@ -272,9 +271,9 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
         return LegalizeOp(ExpandStore(Op));
       }
     }
-  } else if (Op.getOpcode() == ISD::MSCATTER || Op.getOpcode() == ISD::MSTORE)
-    HasVectorValue = true;
+  }
 
+  bool HasVectorValue = false;
   for (SDNode::value_iterator J = Node->value_begin(), E = Node->value_end();
        J != E;
        ++J)
@@ -397,14 +396,6 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::UINT_TO_FP:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
-    break;
-  case ISD::MSCATTER:
-    Action = TLI.getOperationAction(Node->getOpcode(),
-               cast<MaskedScatterSDNode>(Node)->getValue().getValueType());
-    break;
-  case ISD::MSTORE:
-    Action = TLI.getOperationAction(Node->getOpcode(),
-               cast<MaskedStoreSDNode>(Node)->getValue().getValueType());
     break;
   }
 

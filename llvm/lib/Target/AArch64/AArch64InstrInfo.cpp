@@ -5461,7 +5461,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
       TailOpcode = AArch64::TCRETURNdi;
     } else {
       assert(Call->getOpcode() == AArch64::BLR);
-      TailOpcode = AArch64::TCRETURNri;
+      TailOpcode = AArch64::TCRETURNriALL;
     }
     MachineInstr *TC = BuildMI(MF, DebugLoc(), get(TailOpcode))
                             .add(Call->getOperand(0))

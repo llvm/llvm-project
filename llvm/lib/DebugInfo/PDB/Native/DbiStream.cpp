@@ -197,7 +197,7 @@ PDB_Machine DbiStream::getMachineType() const {
   return static_cast<PDB_Machine>(Machine);
 }
 
-FixedStreamArray<object::coff_section> DbiStream::getSectionHeaders() {
+FixedStreamArray<object::coff_section> DbiStream::getSectionHeaders() const {
   return SectionHeaders;
 }
 

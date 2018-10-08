@@ -1718,6 +1718,11 @@ entry:
 define <8 x i64> @test_mm512_mul_epu32(<8 x i64> %__A, <8 x i64> %__B) nounwind {
 ; CHECK-LABEL: test_mm512_mul_epu32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    movw $-21846, %ax # imm = 0xAAAA
+; CHECK-NEXT:    kmovw %eax, %k0
+; CHECK-NEXT:    knotw %k0, %k1
+; CHECK-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vmovdqa32 %zmm1, %zmm1 {%k1} {z}
 ; CHECK-NEXT:    vpmuludq %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %tmp = and <8 x i64> %__A, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>

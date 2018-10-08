@@ -3,8 +3,8 @@
 
 ; At the moment, BuildUREMEqFold does not handle nonsplat vectors.
 
-define <4 x i32> @test_urem_odd_div_nonsplat(<4 x i32> %X) nounwind readnone {
-; CHECK-LABEL: test_urem_odd_div_nonsplat:
+define <4 x i32> @test_urem_odd_div(<4 x i32> %X) nounwind readnone {
+; CHECK-LABEL: test_urem_odd_div:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
@@ -35,8 +35,8 @@ define <4 x i32> @test_urem_odd_div_nonsplat(<4 x i32> %X) nounwind readnone {
   ret <4 x i32> %ret
 }
 
-define <4 x i32> @test_urem_even_div_nonsplat(<4 x i32> %X) nounwind readnone {
-; CHECK-LABEL: test_urem_even_div_nonsplat:
+define <4 x i32> @test_urem_even_div(<4 x i32> %X) nounwind readnone {
+; CHECK-LABEL: test_urem_even_div:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI1_0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
@@ -64,8 +64,8 @@ define <4 x i32> @test_urem_even_div_nonsplat(<4 x i32> %X) nounwind readnone {
   ret <4 x i32> %ret
 }
 
-define <4 x i32> @test_urem_pow2_nonsplat(<4 x i32> %X) nounwind readnone {
-; CHECK-LABEL: test_urem_pow2_nonsplat:
+define <4 x i32> @test_urem_pow2(<4 x i32> %X) nounwind readnone {
+; CHECK-LABEL: test_urem_pow2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
@@ -89,8 +89,8 @@ define <4 x i32> @test_urem_pow2_nonsplat(<4 x i32> %X) nounwind readnone {
   ret <4 x i32> %ret
 }
 
-define <4 x i32> @test_urem_one_nonsplat(<4 x i32> %X) nounwind readnone {
-; CHECK-LABEL: test_urem_one_nonsplat:
+define <4 x i32> @test_urem_one(<4 x i32> %X) nounwind readnone {
+; CHECK-LABEL: test_urem_one:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI3_0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
@@ -121,8 +121,8 @@ define <4 x i32> @test_urem_one_nonsplat(<4 x i32> %X) nounwind readnone {
   ret <4 x i32> %ret
 }
 
-define <4 x i32> @test_urem_comp_nonsplat(<4 x i32> %X) nounwind readnone {
-; CHECK-LABEL: test_urem_comp_nonsplat:
+define <4 x i32> @test_urem_comp(<4 x i32> %X) nounwind readnone {
+; CHECK-LABEL: test_urem_comp:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #52429
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
@@ -145,8 +145,8 @@ define <4 x i32> @test_urem_comp_nonsplat(<4 x i32> %X) nounwind readnone {
   ret <4 x i32> %ret
 }
 
-define <4 x i32> @test_urem_both_nonsplat(<4 x i32> %X) nounwind readnone {
-; CHECK-LABEL: test_urem_both_nonsplat:
+define <4 x i32> @test_urem_both(<4 x i32> %X) nounwind readnone {
+; CHECK-LABEL: test_urem_both:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI5_0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI5_0]
