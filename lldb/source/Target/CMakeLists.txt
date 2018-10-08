@@ -3,7 +3,8 @@ include_directories(../Plugins/Process/Utility)
 set(REFLECTION_LIB "swiftReflection")
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
-    set(REFLECTION_LIB "swiftReflection-linux-x86_64")
+    # CMAKE_SYSTEM_PROCESSOR is equivalent to `uname -p` on Linux.
+    set(REFLECTION_LIB "swiftReflection-linux-${CMAKE_SYSTEM_PROCESSOR}")
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
