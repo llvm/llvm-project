@@ -17,6 +17,14 @@ define <4 x float> @fadd_zero_4f32(<4 x float> %x) #0 {
   ret <4 x float> %y
 }
 
+define <4 x float> @fadd_zero_4f32_undef(<4 x float> %x) {
+; CHECK-LABEL: fadd_zero_4f32_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retq
+  %y = fadd nsz <4 x float> %x, <float 0.0, float undef, float 0.0, float undef>
+  ret <4 x float> %y
+}
+
 ; CHECK: float 3
 define float @fadd_2const_f32(float %x) #0 {
 ; CHECK-LABEL: fadd_2const_f32:

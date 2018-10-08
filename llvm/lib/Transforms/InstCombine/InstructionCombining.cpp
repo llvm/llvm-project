@@ -2052,9 +2052,22 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           areMatchingArrayAndVecTypes(GEPEltType, SrcEltType)) ||
          (GEPEltType->isVectorTy() && SrcEltType->isArrayTy() &&
           areMatchingArrayAndVecTypes(SrcEltType, GEPEltType)))) {
-      GEP.setOperand(0, SrcOp);
-      GEP.setSourceElementType(SrcEltType);
-      return &GEP;
+
+      // Create a new GEP here, as using `setOperand()` followed by
+      // `setSourceElementType()` won't actually update the type of the
+      // existing GEP Value. Causing issues if this Value is accessed when
+      // constructing an AddrSpaceCastInst
+      Value *NGEP =
+          GEP.isInBounds()
+              ? Builder.CreateInBoundsGEP(nullptr, SrcOp, {Ops[1], Ops[2]})
+              : Builder.CreateGEP(nullptr, SrcOp, {Ops[1], Ops[2]});
+      NGEP->takeName(&GEP);
+
+      // Preserve GEP address space to satisfy users
+      if (NGEP->getType()->getPointerAddressSpace() != GEP.getAddressSpace())
+        return new AddrSpaceCastInst(NGEP, GEPType);
+
+      return replaceInstUsesWith(GEP, NGEP);
     }
 
     // See if we can simplify:

@@ -226,47 +226,52 @@ define float @nofold_fadd_x_0(float %a) {
   ret float %no_zero
 }
 
-; CHECK-LABEL: @fold_fadd_nsz_x_0(
-; CHECK-NEXT: ret float %a
 define float @fold_fadd_nsz_x_0(float %a) {
+; CHECK-LABEL: @fold_fadd_nsz_x_0(
+; CHECK-NEXT:    ret float [[A:%.*]]
+;
   %add = fadd nsz float %a, 0.0
   ret float %add
 }
 
-; CHECK-LABEL: @fold_fadd_cannot_be_neg0_nsz_src_x_0
-; CHECK-NEXT: %nsz = fmul nsz float %a, %b
-; CHECK-NEXT: ret float %nsz
 define float @fold_fadd_cannot_be_neg0_nsz_src_x_0(float %a, float %b) {
+; CHECK-LABEL: @fold_fadd_cannot_be_neg0_nsz_src_x_0(
+; CHECK-NEXT:    [[NSZ:%.*]] = fmul nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret float [[NSZ]]
+;
   %nsz = fmul nsz float %a, %b
   %add = fadd float %nsz, 0.0
   ret float %add
 }
 
-; CHECK-LABEL: @fold_fadd_cannot_be_neg0_fabs_src_x_0(
-; CHECK-NEXT: @llvm.fabs.f32
-; CHECK-NEXT: ret float %fabs
 define float @fold_fadd_cannot_be_neg0_fabs_src_x_0(float %a) {
+; CHECK-LABEL: @fold_fadd_cannot_be_neg0_fabs_src_x_0(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
   %fabs = call float @llvm.fabs.f32(float %a)
   %add = fadd float %fabs, 0.0
   ret float %add
 }
 
-; CHECK-LABEL: @fold_fadd_cannot_be_neg0_sqrt_nsz_src_x_0(
-; CHECK-NEXT: fmul
-; CHECK-NEXT: call float @llvm.sqrt.f32
-; CHECK-NEXT: ret float %sqrt
 define float @fold_fadd_cannot_be_neg0_sqrt_nsz_src_x_0(float %a, float %b) {
+; CHECK-LABEL: @fold_fadd_cannot_be_neg0_sqrt_nsz_src_x_0(
+; CHECK-NEXT:    [[NSZ:%.*]] = fmul nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SQRT:%.*]] = call float @llvm.sqrt.f32(float [[NSZ]])
+; CHECK-NEXT:    ret float [[SQRT]]
+;
   %nsz = fmul nsz float %a, %b
   %sqrt = call float @llvm.sqrt.f32(float %nsz)
   %add = fadd float %sqrt, 0.0
   ret float %add
 }
 
-; CHECK-LABEL: @fold_fadd_cannot_be_neg0_canonicalize_nsz_src_x_0(
-; CHECK-NEXT: fmul nsz
-; CHECK-NEXT: call float @llvm.canonicalize.f32(
-; CHECK-NEXT: ret float %canon
 define float @fold_fadd_cannot_be_neg0_canonicalize_nsz_src_x_0(float %a, float %b) {
+; CHECK-LABEL: @fold_fadd_cannot_be_neg0_canonicalize_nsz_src_x_0(
+; CHECK-NEXT:    [[NSZ:%.*]] = fmul nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[NSZ]])
+; CHECK-NEXT:    ret float [[CANON]]
+;
   %nsz = fmul nsz float %a, %b
   %canon = call float @llvm.canonicalize.f32(float %nsz)
   %add = fadd float %canon, 0.0
@@ -392,6 +397,17 @@ define float @fdiv_neg_swapped2(float %f) {
   %neg = fsub float 0.000000e+00, %f
   %div = fdiv nnan float %f, %neg
   ret float %div
+}
+
+define <2 x float> @fdiv_neg_vec_undef_elt(<2 x float> %f) {
+; CHECK-LABEL: @fdiv_neg_vec_undef_elt(
+; CHECK-NEXT:    [[NEG:%.*]] = fsub <2 x float> <float 0.000000e+00, float undef>, [[F:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan <2 x float> [[F]], [[NEG]]
+; CHECK-NEXT:    ret <2 x float> [[DIV]]
+;
+  %neg = fsub <2 x float> <float 0.0, float undef>, %f
+  %div = fdiv nnan <2 x float> %f, %neg
+  ret <2 x float> %div
 }
 
 ; PR21126: http://llvm.org/bugs/show_bug.cgi?id=21126

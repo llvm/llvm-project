@@ -1115,6 +1115,14 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getStrictFPOperationAction(Node->getOpcode(),
                                             Node->getValueType(0));
     break;
+  case ISD::MSCATTER:
+    Action = TLI.getOperationAction(Node->getOpcode(),
+                    cast<MaskedScatterSDNode>(Node)->getValue().getValueType());
+    break;
+  case ISD::MSTORE:
+    Action = TLI.getOperationAction(Node->getOpcode(),
+                    cast<MaskedStoreSDNode>(Node)->getValue().getValueType());
+    break;
   default:
     if (Node->getOpcode() >= ISD::BUILTIN_OP_END) {
       Action = TargetLowering::Legal;

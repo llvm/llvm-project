@@ -526,6 +526,11 @@ cl::opt<bool> DumpGlobals("globals", cl::desc("dump Globals symbol records"),
                           cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpGlobalExtras("global-extras", cl::desc("dump Globals hashes"),
                                cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
+cl::list<std::string> DumpGlobalNames(
+    "global-name",
+    cl::desc(
+        "With -globals, only dump globals whose name matches the given value"),
+    cl::cat(SymbolOptions), cl::sub(DumpSubcommand), cl::ZeroOrMore);
 cl::opt<bool> DumpPublics("publics", cl::desc("dump Publics stream data"),
                           cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpPublicExtras("public-extras",

@@ -320,6 +320,18 @@ define <4 x float> @fadd_bitcast_fneg_vec(<4 x float> %x, <4 x float> %y) {
   ret <4 x float> %fadd
 }
 
+define <4 x float> @fadd_bitcast_fneg_vec_undef_elts(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: fadd_bitcast_fneg_vec_undef_elts:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %bc1 = bitcast <4 x float> %y to <4 x i32>
+  %xor = xor <4 x i32> %bc1, <i32 2147483648, i32 2147483648, i32 undef, i32 2147483648>
+  %bc2 = bitcast <4 x i32> %xor to <4 x float>
+  %fadd = fadd <4 x float> %x, %bc2
+  ret <4 x float> %fadd
+}
+
 define <4 x float> @fsub_bitcast_fneg_vec(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: fsub_bitcast_fneg_vec:
 ; CHECK:       # %bb.0:
@@ -327,6 +339,18 @@ define <4 x float> @fsub_bitcast_fneg_vec(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:    retq
   %bc1 = bitcast <4 x float> %y to <4 x i32>
   %xor = xor <4 x i32> %bc1, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>
+  %bc2 = bitcast <4 x i32> %xor to <4 x float>
+  %fsub = fsub <4 x float> %x, %bc2
+  ret <4 x float> %fsub
+}
+
+define <4 x float> @fsub_bitcast_fneg_vec_undef_elts(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: fsub_bitcast_fneg_vec_undef_elts:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %bc1 = bitcast <4 x float> %y to <4 x i32>
+  %xor = xor <4 x i32> %bc1, <i32 undef, i32 2147483648, i32 undef, i32 2147483648>
   %bc2 = bitcast <4 x i32> %xor to <4 x float>
   %fsub = fsub <4 x float> %x, %bc2
   ret <4 x float> %fsub

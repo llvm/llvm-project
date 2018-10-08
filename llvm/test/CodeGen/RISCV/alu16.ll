@@ -82,11 +82,11 @@ define i16 @srli(i16 %a) nounwind {
 ; RV32I-LABEL: srli:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -256
+; RV32I-NEXT:    addi a1, a1, -64
 ; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    srli a0, a0, 8
+; RV32I-NEXT:    srli a0, a0, 6
 ; RV32I-NEXT:    ret
-  %1 = lshr i16 %a, 8
+  %1 = lshr i16 %a, 6
   ret i16 %1
 }
 

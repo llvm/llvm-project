@@ -7,8 +7,8 @@
 
 ; At the moment, BuildUREMEqFold does not handle nonsplat vectors.
 
-define <4 x i32> @test_urem_odd_div_nonsplat(<4 x i32> %X) nounwind readnone {
-; CHECK-SSE2-LABEL: test_urem_odd_div_nonsplat:
+define <4 x i32> @test_urem_odd_div(<4 x i32> %X) nounwind readnone {
+; CHECK-SSE2-LABEL: test_urem_odd_div:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2863311531,3435973837,613566757,954437177]
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
@@ -44,7 +44,7 @@ define <4 x i32> @test_urem_odd_div_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
-; CHECK-SSE41-LABEL: test_urem_odd_div_nonsplat:
+; CHECK-SSE41-LABEL: test_urem_odd_div:
 ; CHECK-SSE41:       # %bb.0:
 ; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [2863311531,3435973837,613566757,954437177]
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -69,7 +69,7 @@ define <4 x i32> @test_urem_odd_div_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm0
 ; CHECK-SSE41-NEXT:    retq
 ;
-; CHECK-AVX1-LABEL: test_urem_odd_div_nonsplat:
+; CHECK-AVX1-LABEL: test_urem_odd_div:
 ; CHECK-AVX1:       # %bb.0:
 ; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [2863311531,3435973837,613566757,954437177]
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -92,7 +92,7 @@ define <4 x i32> @test_urem_odd_div_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
 ;
-; CHECK-AVX2-LABEL: test_urem_odd_div_nonsplat:
+; CHECK-AVX2-LABEL: test_urem_odd_div:
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [2863311531,3435973837,613566757,954437177]
 ; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -113,7 +113,7 @@ define <4 x i32> @test_urem_odd_div_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    retq
 ;
-; CHECK-AVX512VL-LABEL: test_urem_odd_div_nonsplat:
+; CHECK-AVX512VL-LABEL: test_urem_odd_div:
 ; CHECK-AVX512VL:       # %bb.0:
 ; CHECK-AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm1 = [2863311531,3435973837,613566757,954437177]
 ; CHECK-AVX512VL-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -140,8 +140,8 @@ define <4 x i32> @test_urem_odd_div_nonsplat(<4 x i32> %X) nounwind readnone {
   ret <4 x i32> %ret
 }
 
-define <4 x i32> @test_urem_even_div_nonsplat(<4 x i32> %X) nounwind readnone {
-; CHECK-SSE2-LABEL: test_urem_even_div_nonsplat:
+define <4 x i32> @test_urem_even_div(<4 x i32> %X) nounwind readnone {
+; CHECK-SSE2-LABEL: test_urem_even_div:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2863311531,3435973837,2863311531,2454267027]
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
@@ -175,7 +175,7 @@ define <4 x i32> @test_urem_even_div_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
-; CHECK-SSE41-LABEL: test_urem_even_div_nonsplat:
+; CHECK-SSE41-LABEL: test_urem_even_div:
 ; CHECK-SSE41:       # %bb.0:
 ; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-SSE41-NEXT:    psrld $1, %xmm1
@@ -198,7 +198,7 @@ define <4 x i32> @test_urem_even_div_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm0
 ; CHECK-SSE41-NEXT:    retq
 ;
-; CHECK-AVX1-LABEL: test_urem_even_div_nonsplat:
+; CHECK-AVX1-LABEL: test_urem_even_div:
 ; CHECK-AVX1:       # %bb.0:
 ; CHECK-AVX1-NEXT:    vpsrld $1, %xmm0, %xmm1
 ; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,5],xmm1[6,7]
@@ -219,7 +219,7 @@ define <4 x i32> @test_urem_even_div_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
 ;
-; CHECK-AVX2-LABEL: test_urem_even_div_nonsplat:
+; CHECK-AVX2-LABEL: test_urem_even_div:
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [2863311531,3435973837,2863311531,2454267027]
 ; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -237,7 +237,7 @@ define <4 x i32> @test_urem_even_div_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    retq
 ;
-; CHECK-AVX512VL-LABEL: test_urem_even_div_nonsplat:
+; CHECK-AVX512VL-LABEL: test_urem_even_div:
 ; CHECK-AVX512VL:       # %bb.0:
 ; CHECK-AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm1 = [2863311531,3435973837,2863311531,2454267027]
 ; CHECK-AVX512VL-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -260,8 +260,8 @@ define <4 x i32> @test_urem_even_div_nonsplat(<4 x i32> %X) nounwind readnone {
   ret <4 x i32> %ret
 }
 
-define <4 x i32> @test_urem_pow2_nonsplat(<4 x i32> %X) nounwind readnone {
-; CHECK-SSE2-LABEL: test_urem_pow2_nonsplat:
+define <4 x i32> @test_urem_pow2(<4 x i32> %X) nounwind readnone {
+; CHECK-SSE2-LABEL: test_urem_pow2:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2863311531,3435973837,2863311531,268435456]
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
@@ -291,7 +291,7 @@ define <4 x i32> @test_urem_pow2_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
-; CHECK-SSE41-LABEL: test_urem_pow2_nonsplat:
+; CHECK-SSE41-LABEL: test_urem_pow2:
 ; CHECK-SSE41:       # %bb.0:
 ; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [2863311531,3435973837,2863311531,268435456]
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -314,7 +314,7 @@ define <4 x i32> @test_urem_pow2_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm0
 ; CHECK-SSE41-NEXT:    retq
 ;
-; CHECK-AVX1-LABEL: test_urem_pow2_nonsplat:
+; CHECK-AVX1-LABEL: test_urem_pow2:
 ; CHECK-AVX1:       # %bb.0:
 ; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [2863311531,3435973837,2863311531,268435456]
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -335,7 +335,7 @@ define <4 x i32> @test_urem_pow2_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
 ;
-; CHECK-AVX2-LABEL: test_urem_pow2_nonsplat:
+; CHECK-AVX2-LABEL: test_urem_pow2:
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [2863311531,3435973837,2863311531,268435456]
 ; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -352,7 +352,7 @@ define <4 x i32> @test_urem_pow2_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    retq
 ;
-; CHECK-AVX512VL-LABEL: test_urem_pow2_nonsplat:
+; CHECK-AVX512VL-LABEL: test_urem_pow2:
 ; CHECK-AVX512VL:       # %bb.0:
 ; CHECK-AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm1 = [2863311531,3435973837,2863311531,268435456]
 ; CHECK-AVX512VL-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -374,8 +374,8 @@ define <4 x i32> @test_urem_pow2_nonsplat(<4 x i32> %X) nounwind readnone {
   ret <4 x i32> %ret
 }
 
-define <4 x i32> @test_urem_one_nonsplat(<4 x i32> %X) nounwind readnone {
-; CHECK-SSE2-LABEL: test_urem_one_nonsplat:
+define <4 x i32> @test_urem_one(<4 x i32> %X) nounwind readnone {
+; CHECK-SSE2-LABEL: test_urem_one:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2863311531,0,2863311531,2454267027]
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
@@ -410,7 +410,7 @@ define <4 x i32> @test_urem_one_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
-; CHECK-SSE41-LABEL: test_urem_one_nonsplat:
+; CHECK-SSE41-LABEL: test_urem_one:
 ; CHECK-SSE41:       # %bb.0:
 ; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-SSE41-NEXT:    psrld $1, %xmm1
@@ -434,7 +434,7 @@ define <4 x i32> @test_urem_one_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm0
 ; CHECK-SSE41-NEXT:    retq
 ;
-; CHECK-AVX1-LABEL: test_urem_one_nonsplat:
+; CHECK-AVX1-LABEL: test_urem_one:
 ; CHECK-AVX1:       # %bb.0:
 ; CHECK-AVX1-NEXT:    vpsrld $1, %xmm0, %xmm1
 ; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,5],xmm1[6,7]
@@ -456,7 +456,7 @@ define <4 x i32> @test_urem_one_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
 ;
-; CHECK-AVX2-LABEL: test_urem_one_nonsplat:
+; CHECK-AVX2-LABEL: test_urem_one:
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [2863311531,0,2863311531,2454267027]
 ; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -475,7 +475,7 @@ define <4 x i32> @test_urem_one_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    retq
 ;
-; CHECK-AVX512VL-LABEL: test_urem_one_nonsplat:
+; CHECK-AVX512VL-LABEL: test_urem_one:
 ; CHECK-AVX512VL:       # %bb.0:
 ; CHECK-AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm1 = [2863311531,0,2863311531,2454267027]
 ; CHECK-AVX512VL-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -499,8 +499,8 @@ define <4 x i32> @test_urem_one_nonsplat(<4 x i32> %X) nounwind readnone {
   ret <4 x i32> %ret
 }
 
-define <4 x i32> @test_urem_comp_nonsplat(<4 x i32> %X) nounwind readnone {
-; CHECK-SSE2-LABEL: test_urem_comp_nonsplat:
+define <4 x i32> @test_urem_comp(<4 x i32> %X) nounwind readnone {
+; CHECK-SSE2-LABEL: test_urem_comp:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [3435973837,3435973837,3435973837,3435973837]
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
@@ -519,7 +519,7 @@ define <4 x i32> @test_urem_comp_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
-; CHECK-SSE41-LABEL: test_urem_comp_nonsplat:
+; CHECK-SSE41-LABEL: test_urem_comp:
 ; CHECK-SSE41:       # %bb.0:
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [3435973837,3435973837,3435973837,3435973837]
@@ -534,7 +534,7 @@ define <4 x i32> @test_urem_comp_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm0
 ; CHECK-SSE41-NEXT:    retq
 ;
-; CHECK-AVX1-LABEL: test_urem_comp_nonsplat:
+; CHECK-AVX1-LABEL: test_urem_comp:
 ; CHECK-AVX1:       # %bb.0:
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [3435973837,3435973837,3435973837,3435973837]
@@ -549,7 +549,7 @@ define <4 x i32> @test_urem_comp_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
 ;
-; CHECK-AVX2-LABEL: test_urem_comp_nonsplat:
+; CHECK-AVX2-LABEL: test_urem_comp:
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [3435973837,3435973837,3435973837,3435973837]
@@ -565,7 +565,7 @@ define <4 x i32> @test_urem_comp_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    retq
 ;
-; CHECK-AVX512VL-LABEL: test_urem_comp_nonsplat:
+; CHECK-AVX512VL-LABEL: test_urem_comp:
 ; CHECK-AVX512VL:       # %bb.0:
 ; CHECK-AVX512VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [3435973837,3435973837,3435973837,3435973837]
@@ -585,8 +585,8 @@ define <4 x i32> @test_urem_comp_nonsplat(<4 x i32> %X) nounwind readnone {
   ret <4 x i32> %ret
 }
 
-define <4 x i32> @test_urem_both_nonsplat(<4 x i32> %X) nounwind readnone {
-; CHECK-SSE2-LABEL: test_urem_both_nonsplat:
+define <4 x i32> @test_urem_both(<4 x i32> %X) nounwind readnone {
+; CHECK-SSE2-LABEL: test_urem_both:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2863311531,3435973837,2863311531,3435973837]
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
@@ -611,7 +611,7 @@ define <4 x i32> @test_urem_both_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
-; CHECK-SSE41-LABEL: test_urem_both_nonsplat:
+; CHECK-SSE41-LABEL: test_urem_both:
 ; CHECK-SSE41:       # %bb.0:
 ; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [2863311531,3435973837,2863311531,3435973837]
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -627,7 +627,7 @@ define <4 x i32> @test_urem_both_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm0
 ; CHECK-SSE41-NEXT:    retq
 ;
-; CHECK-AVX1-LABEL: test_urem_both_nonsplat:
+; CHECK-AVX1-LABEL: test_urem_both:
 ; CHECK-AVX1:       # %bb.0:
 ; CHECK-AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm1, %xmm0, %xmm1
@@ -642,7 +642,7 @@ define <4 x i32> @test_urem_both_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
 ;
-; CHECK-AVX2-LABEL: test_urem_both_nonsplat:
+; CHECK-AVX2-LABEL: test_urem_both:
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [14757395262689946283,14757395262689946283]
 ; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
@@ -658,7 +658,7 @@ define <4 x i32> @test_urem_both_nonsplat(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    retq
 ;
-; CHECK-AVX512VL-LABEL: test_urem_both_nonsplat:
+; CHECK-AVX512VL-LABEL: test_urem_both:
 ; CHECK-AVX512VL:       # %bb.0:
 ; CHECK-AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [14757395262689946283,14757395262689946283]
 ; CHECK-AVX512VL-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
