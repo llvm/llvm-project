@@ -414,6 +414,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(JumpThreadingPass());
   FPM.addPass(CorrelatedValuePropagationPass());
   FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(TaskSimplifyPass());
   if (Level == O3)
     FPM.addPass(AggressiveInstCombinePass());
   FPM.addPass(InstCombinePass());
@@ -431,6 +432,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   FPM.addPass(TailCallElimPass());
   FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(TaskSimplifyPass());
 
   // Form canonically associated expression trees, and simplify the trees using
   // basic mathematical properties. For example, this will form (nearly)
@@ -482,6 +484,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM1), DebugLogging));
   FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(TaskSimplifyPass());
   FPM.addPass(InstCombinePass());
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM2), DebugLogging));
 
@@ -529,6 +532,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // the simplifications and basic cleanup after all the simplifications.
   FPM.addPass(ADCEPass());
   FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(TaskSimplifyPass());
   FPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(FPM, Level);
 
@@ -720,6 +724,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   invokePeepholeEPCallbacks(GlobalCleanupPM, Level);
 
   GlobalCleanupPM.addPass(SimplifyCFGPass());
+  GlobalCleanupPM.addPass(TaskSimplifyPass());
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(GlobalCleanupPM)));
 
   // Add all the requested passes for instrumentation PGO, if requested.
@@ -888,6 +893,9 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   // Cleanup after the loop optimization passes.
   OptimizePM.addPass(InstCombinePass());
 
+  // Cleanup tasks after the loop optimization passes.
+  OptimizePM.addPass(TaskSimplifyPass());
+
   // Now that we've formed fast to execute loop structures, we do further
   // optimizations. These are run afterward as they might block doing complex
   // analyses and transforms such as what are needed for loop vectorization.
@@ -957,6 +965,9 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   // LoopSink (and other loop passes since the last simplifyCFG) might have
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
   OptimizePM.addPass(SimplifyCFGPass());
+
+  // Cleanup tasks as well.
+  OptimizePM.addPass(TaskSimplifyPass());
 
   // Optimize PHIs by speculating around them when profitable. Note that this
   // pass needs to be run after any PRE or similar pass as it is essentially
