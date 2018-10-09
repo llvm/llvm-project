@@ -10,6 +10,10 @@
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++98, c++03
 
+// There's currently no release of OS X whose dylib contains the patch for
+// PR38682. Since the fix for future<void> is in the dylib, this test may fail.
+// UNSUPPORTED: apple-darwin
+
 // This test is designed to cause and allow TSAN to detect a race condition
 // in std::async, as reported in https://bugs.llvm.org/show_bug.cgi?id=38682.
 

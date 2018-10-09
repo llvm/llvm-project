@@ -681,28 +681,37 @@ Here are some additional resources that are useful when working on the Clang
 Static Analyzer:
 
 <ul>
-<li> <a href="http://clang.llvm.org/doxygen">Clang doxygen</a>. Contains
-up-to-date documentation about the APIs available in Clang. Relevant entries
-have been linked throughout this page. Also of use is the
-<a href="http://llvm.org/doxygen">LLVM doxygen</a>, when dealing with classes
-from LLVM.
-<li> The <a href="http://lists.llvm.org/mailman/listinfo/cfe-dev">
-cfe-dev mailing list</a>. This is the primary mailing list used for
-discussion of Clang development (including static code analysis). The
-<a href="http://lists.llvm.org/pipermail/cfe-dev">archive</a> also contains
-a lot of information.
+<li><a href="http://lcs.ios.ac.cn/~xuzb/canalyze/memmodel.pdf">Xu, Zhongxing &
+Kremenek, Ted & Zhang, Jian. (2010). A Memory Model for Static Analysis of C
+Programs.</a></li>
+<li><a href="https://github.com/llvm-mirror/clang/blob/master/lib/StaticAnalyzer/README.txt">
+The Clang Static Analyzer README</a></li>
+<li><a href="https://github.com/llvm-mirror/clang/blob/master/docs/analyzer/RegionStore.txt">
+Documentation for how the Store works</a></li>
+<li><a href="https://github.com/llvm-mirror/clang/blob/master/docs/analyzer/IPA.txt">
+Documentation about inlining</a></li>
 <li> The "Building a Checker in 24 hours" presentation given at the <a
 href="http://llvm.org/devmtg/2012-11">November 2012 LLVM Developer's
 meeting</a>. Describes the construction of SimpleStreamChecker. <a
 href="http://llvm.org/devmtg/2012-11/Zaks-Rose-Checker24Hours.pdf">Slides</a>
 and <a
 href="https://youtu.be/kdxlsP5QVPw">video</a>
-are available.
-</ul>
-
-<h2 id=links>Useful Links</h2>
-<ul>
+are available.</li>
+<li>
+<a href="https://github.com/haoNoQ/clang-analyzer-guide/releases/download/v0.1/clang-analyzer-guide-v0.1.pdf">
+Artem Degrachev: Clang Static Analyzer: A Checker Developer's Guide
+</a> (reading the previous items first might be a good idea)</li>
 <li>The list of <a href="implicit_checks.html">Implicit Checkers</a></li>
+<li> <a href="http://clang.llvm.org/doxygen">Clang doxygen</a>. Contains
+up-to-date documentation about the APIs available in Clang. Relevant entries
+have been linked throughout this page. Also of use is the
+<a href="http://llvm.org/doxygen">LLVM doxygen</a>, when dealing with classes
+from LLVM.</li>
+<li> The <a href="http://lists.llvm.org/mailman/listinfo/cfe-dev">
+cfe-dev mailing list</a>. This is the primary mailing list used for
+discussion of Clang development (including static code analysis). The
+<a href="http://lists.llvm.org/pipermail/cfe-dev">archive</a> also contains
+a lot of information.</li>
 </ul>
 
 </div>

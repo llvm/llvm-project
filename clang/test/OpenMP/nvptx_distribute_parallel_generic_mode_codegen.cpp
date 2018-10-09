@@ -26,10 +26,13 @@ int main(int argc, char **argv) {
 // CHECK-LABEL: define internal void @__omp_offloading_{{.*}}_main_l17_worker(
 
 // CHECK: define weak void @__omp_offloading_{{.*}}_main_l17([10 x i32]* dereferenceable(40) %{{.+}}, [10 x i32]* dereferenceable(40) %{{.+}}, i32* dereferenceable(4) %{{.+}}, i{{64|32}} %{{.+}}, [10 x i32]* dereferenceable(40) %{{.+}})
-// CHECK: [[PTR:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{64|32}} 84, i16 0)
+// CHECK: [[PTR:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{64|32}} 2688, i16 0)
 // CHECK: [[STACK:%.+]] = bitcast i8* [[PTR]] to %struct._globalized_locals_ty*
 // CHECK: [[ARGC:%.+]] = load i32, i32* %{{.+}}, align
-// CHECK: [[ARGC_ADDR:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[STACK]], i{{32|64}} 0, i{{32|64}} 0
+// CHECK: [[ARGC_ARR_ADDR:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[STACK]], i{{32|64}} 0, i{{32|64}} 0
+// CHECK: [[TID:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK: [[LID:%.+]] = and i32 [[TID]], 31
+// CHECK: [[ARGC_ADDR:%.+]] = getelementptr inbounds [32 x i32], [32 x i32]* [[ARGC_ARR_ADDR]], i32 0, i32 [[LID]]
 // CHECK: store i32 [[ARGC]], i32* [[ARGC_ADDR]],
 // CHECK: getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[STACK]], i{{32|64}} 0, i{{32|64}} 1
 // CHECK: getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[STACK]], i{{32|64}} 0, i{{32|64}} 2

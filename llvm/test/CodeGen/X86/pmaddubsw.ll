@@ -332,33 +332,31 @@ define <8 x i16> @pmaddubsw_bad_extend(<16 x i8>* %Aptr, <16 x i8>* %Bptr) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa (%rsi), %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = <8,10,12,14,u,u,u,u,u,u,u,u,u,u,u,u>
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm3
+; AVX1-NEXT:    vpmovsxbd %xmm3, %xmm4
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,2,3]
 ; AVX1-NEXT:    vpmovsxbd %xmm3, %xmm3
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = <0,2,4,6,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-NEXT:    vpshufb %xmm4, %xmm0, %xmm5
-; AVX1-NEXT:    vpmovsxbd %xmm5, %xmm5
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm5 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero
+; AVX1-NEXT:    vpmulld %xmm5, %xmm4, %xmm4
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,2,3]
 ; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero
 ; AVX1-NEXT:    vpmulld %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpshufb %xmm4, %xmm1, %xmm3
-; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero
-; AVX1-NEXT:    vpmulld %xmm3, %xmm5, %xmm3
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = <9,11,13,15,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-NEXT:    vpshufb %xmm4, %xmm0, %xmm5
-; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm5 = xmm5[0],zero,zero,zero,xmm5[1],zero,zero,zero,xmm5[2],zero,zero,zero,xmm5[3],zero,zero,zero
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = <1,3,5,7,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX1-NEXT:    vpshufb %xmm6, %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = <1,3,5,7,9,11,13,15,u,u,u,u,u,u,u,u>
+; AVX1-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm5 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; AVX1-NEXT:    vpshufb %xmm4, %xmm1, %xmm4
-; AVX1-NEXT:    vpmovsxbd %xmm4, %xmm4
-; AVX1-NEXT:    vpmulld %xmm4, %xmm5, %xmm4
-; AVX1-NEXT:    vpaddd %xmm4, %xmm2, %xmm2
-; AVX1-NEXT:    vpshufb %xmm6, %xmm1, %xmm1
+; AVX1-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpmovsxbd %xmm1, %xmm3
+; AVX1-NEXT:    vpmulld %xmm3, %xmm5, %xmm3
+; AVX1-NEXT:    vpaddd %xmm3, %xmm4, %xmm3
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
 ; AVX1-NEXT:    vpmovsxbd %xmm1, %xmm1
 ; AVX1-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpaddd %xmm0, %xmm3, %xmm0
-; AVX1-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vpackssdw %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: pmaddubsw_bad_extend:
@@ -463,29 +461,29 @@ define <8 x i16> @pmaddubsw_bad_indices(<16 x i8>* %Aptr, <16 x i8>* %Bptr) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa (%rsi), %xmm1
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm2 = xmm0[9,10,13,14,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm2 = xmm0[1,2,5,6,9,10,13,14,u,u,u,u,u,u,u,u]
+; AVX1-NEXT:    vpmovsxbd %xmm2, %xmm3
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,2,3]
 ; AVX1-NEXT:    vpmovsxbd %xmm2, %xmm2
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm3 = xmm0[1,2,5,6,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-NEXT:    vpmovsxbd %xmm3, %xmm3
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm4 = xmm1[8,10,12,14,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm4 = xmm1[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm5 = xmm4[0],zero,zero,zero,xmm4[1],zero,zero,zero,xmm4[2],zero,zero,zero,xmm4[3],zero,zero,zero
+; AVX1-NEXT:    vpmulld %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[1,1,2,3]
 ; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm4 = xmm4[0],zero,zero,zero,xmm4[1],zero,zero,zero,xmm4[2],zero,zero,zero,xmm4[3],zero,zero,zero
 ; AVX1-NEXT:    vpmulld %xmm4, %xmm2, %xmm2
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm4 = xmm1[0,2,4,6,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm4 = xmm4[0],zero,zero,zero,xmm4[1],zero,zero,zero,xmm4[2],zero,zero,zero,xmm4[3],zero,zero,zero
-; AVX1-NEXT:    vpmulld %xmm4, %xmm3, %xmm3
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm4 = xmm0[8,11,12,15,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-NEXT:    vpmovsxbd %xmm4, %xmm4
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,3,4,7,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,3,4,7,8,11,12,15,u,u,u,u,u,u,u,u]
+; AVX1-NEXT:    vpmovsxbd %xmm0, %xmm4
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; AVX1-NEXT:    vpmovsxbd %xmm0, %xmm0
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm5 = xmm1[9,11,13,15,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm5 = xmm5[0],zero,zero,zero,xmm5[1],zero,zero,zero,xmm5[2],zero,zero,zero,xmm5[3],zero,zero,zero
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[1,3,5,7,9,11,13,15,u,u,u,u,u,u,u,u]
+; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm5 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; AVX1-NEXT:    vpmulld %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vpaddd %xmm4, %xmm2, %xmm2
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[1,3,5,7,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX1-NEXT:    vpaddd %xmm4, %xmm3, %xmm3
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
 ; AVX1-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; AVX1-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpaddd %xmm0, %xmm3, %xmm0
-; AVX1-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vpackssdw %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: pmaddubsw_bad_indices:

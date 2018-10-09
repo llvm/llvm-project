@@ -17,11 +17,12 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
-static const std::array<StringRef, 5> DeprecatedTypes = {
-    "::std::ios_base::io_state",  "::std::ios_base::open_mode",
-    "::std::ios_base::seek_dir",  "::std::ios_base::streamoff",
-    "::std::ios_base::streampos",
-};
+static const llvm::SmallVector<StringRef, 5> DeprecatedTypes = {
+    {"::std::ios_base::io_state"},
+    {"::std::ios_base::open_mode"},
+    {"::std::ios_base::seek_dir"},
+    {"::std::ios_base::streamoff"},
+    {"::std::ios_base::streampos"}};
 
 static const llvm::StringMap<StringRef> ReplacementTypes = {
     {"io_state", "iostate"},

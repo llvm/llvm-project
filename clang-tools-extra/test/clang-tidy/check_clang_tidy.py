@@ -18,7 +18,8 @@ This script runs clang-tidy in fix mode and verify fixes, messages or both.
 Usage:
   check_clang_tidy.py [-resource-dir=<resource-dir>] \
     [-assume-filename=<file-with-source-extension>] \
-    [-check-suffix=<file-check-suffix>] \
+    [-check-suffix=<comma-separated-file-check-suffixes>] \
+    [-check-suffixes=<comma-separated-file-check-suffixes>] \
     <source-file> <check-name> <temp-file> \
     -- [optional clang-tidy arguments]
 
@@ -38,15 +39,20 @@ def write_file(file_name, text):
     f.write(text)
     f.truncate()
 
+def csv(string):
+  return string.split(',')
+
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('-expect-clang-tidy-error', action='store_true')
   parser.add_argument('-resource-dir')
   parser.add_argument('-assume-filename')
-  parser.add_argument('-check-suffix', default='')
   parser.add_argument('input_file_name')
   parser.add_argument('check_name')
   parser.add_argument('temp_file_name')
+  parser.add_argument('-check-suffix', '-check-suffixes',
+                      default=[], type=csv,
+                      help="comma-separated list of FileCheck suffixes")
 
   args, extra_args = parser.parse_known_args()
 
@@ -72,14 +78,6 @@ def main():
       clang_tidy_extra_args.extend(
           ['-fobjc-abi-version=2', '-fobjc-arc'])
 
-  if args.check_suffix and not re.match('^[A-Z0-9\-]+$', args.check_suffix):
-    sys.exit('Only A..Z, 0..9 and "-" are allowed in check suffix, but "%s" was given' % (args.check_suffix))
-
-  file_check_suffix = ('-' + args.check_suffix) if args.check_suffix else ''
-  check_fixes_prefix = 'CHECK-FIXES' + file_check_suffix
-  check_messages_prefix = 'CHECK-MESSAGES' + file_check_suffix
-  check_notes_prefix = 'CHECK-NOTES' + file_check_suffix
-
   # Tests should not rely on STL being available, and instead provide mock
   # implementations of relevant APIs.
   clang_tidy_extra_args.append('-nostdinc++')
@@ -90,16 +88,48 @@ def main():
   with open(input_file_name, 'r') as input_file:
     input_text = input_file.read()
 
-  has_check_fixes = check_fixes_prefix in input_text
-  has_check_messages = check_messages_prefix in input_text
-  has_check_notes = check_notes_prefix in input_text
+  check_fixes_prefixes = []
+  check_messages_prefixes = []
+  check_notes_prefixes = []
 
-  if not has_check_fixes and not has_check_messages and not has_check_notes:
-    sys.exit('%s, %s or %s not found in the input' % (check_fixes_prefix,
-             check_messages_prefix, check_notes_prefix) )
+  has_check_fixes = False
+  has_check_messages = False
+  has_check_notes = False
 
-  if has_check_notes and has_check_messages:
-    sys.exit('Please use either CHECK-NOTES or CHECK-MESSAGES but not both')
+  if any(args.check_suffix):
+    for check in args.check_suffix:
+      if not re.match('^[A-Z0-9\-]+$', check):
+        sys.exit('Only A..Z, 0..9 and "-" are ' +
+          'allowed in check suffixes list, but "%s" was given' % (check))
+
+      file_check_suffix = '-' + check
+      check_fixes_prefix = 'CHECK-FIXES' + file_check_suffix
+      check_messages_prefix = 'CHECK-MESSAGES' + file_check_suffix
+      check_notes_prefix = 'CHECK-NOTES' + file_check_suffix
+
+      has_check_fix = check_fixes_prefix in input_text 
+      has_check_message = check_messages_prefix in input_text
+      has_check_note = check_notes_prefix in input_text 
+
+      if has_check_note and has_check_message:
+        sys.exit('Please use either %s or %s but not both' %
+          (check_notes_prefix, check_messages_prefix))
+
+      if not has_check_fix and not has_check_message and not has_check_note:
+        sys.exit('%s, %s or %s not found in the input' %
+          (check_fixes_prefix, check_messages_prefix, check_notes_prefix))
+
+      has_check_fixes = has_check_fixes or has_check_fix
+      has_check_messages = has_check_messages or has_check_message
+      has_check_notes = has_check_notes or has_check_note
+
+      check_fixes_prefixes.append(check_fixes_prefix)
+      check_messages_prefixes.append(check_messages_prefix)
+      check_notes_prefixes.append(check_notes_prefix)
+  else:
+    check_fixes_prefixes = ['CHECK-FIXES']
+    check_messages_prefixes = ['CHECK-MESSAGES']
+    check_notes_prefixes = ['CHECK-NOTES']
 
   # Remove the contents of the CHECK lines to avoid CHECKs matching on
   # themselves.  We need to keep the comments to preserve line numbers while
@@ -143,7 +173,8 @@ def main():
     try:
       subprocess.check_output(
           ['FileCheck', '-input-file=' + temp_file_name, input_file_name,
-           '-check-prefix=' + check_fixes_prefix, '-strict-whitespace'],
+           '-check-prefixes=' + ','.join(check_fixes_prefixes),
+           '-strict-whitespace'],
           stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
       print('FileCheck failed:\n' + e.output.decode())
@@ -155,7 +186,7 @@ def main():
     try:
       subprocess.check_output(
           ['FileCheck', '-input-file=' + messages_file, input_file_name,
-           '-check-prefix=' + check_messages_prefix,
+           '-check-prefixes=' + ','.join(check_messages_prefixes),
            '-implicit-check-not={{warning|error}}:'],
           stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
@@ -170,7 +201,7 @@ def main():
     try:
       subprocess.check_output(
           ['FileCheck', '-input-file=' + notes_file, input_file_name,
-           '-check-prefix=' + check_notes_prefix,
+           '-check-prefixes=' + ','.join(check_notes_prefixes),
            '-implicit-check-not={{note|warning|error}}:'],
           stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:

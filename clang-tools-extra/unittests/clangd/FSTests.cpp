@@ -20,16 +20,20 @@ TEST(FSTests, PreambleStatusCache) {
   llvm::StringMap<std::string> Files;
   Files["x"] = "";
   Files["y"] = "";
+  Files["main"] = "";
   auto FS = buildTestFS(Files);
   FS->setCurrentWorkingDirectory(testRoot());
 
-  PreambleFileStatusCache StatCache;
+  PreambleFileStatusCache StatCache(testPath("main"));
   auto ProduceFS = StatCache.getProducingFS(FS);
   EXPECT_TRUE(ProduceFS->openFileForRead("x"));
   EXPECT_TRUE(ProduceFS->status("y"));
+  EXPECT_TRUE(ProduceFS->status("main"));
 
   EXPECT_TRUE(StatCache.lookup(testPath("x")).hasValue());
   EXPECT_TRUE(StatCache.lookup(testPath("y")).hasValue());
+  // Main file is not cached.
+  EXPECT_FALSE(StatCache.lookup(testPath("main")).hasValue());
 
   vfs::Status S("fake", llvm::sys::fs::UniqueID(0, 0),
                 std::chrono::system_clock::now(), 0, 0, 1024,

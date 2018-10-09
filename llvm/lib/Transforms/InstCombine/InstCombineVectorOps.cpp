@@ -1445,8 +1445,8 @@ static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
 /// Match a shuffle-select-shuffle pattern where the shuffles are widening and
 /// narrowing (concatenating with undef and extracting back to the original
 /// length). This allows replacing the wide select with a narrow select.
-Instruction *narrowVectorSelect(ShuffleVectorInst &Shuf,
-                                InstCombiner::BuilderTy &Builder) {
+static Instruction *narrowVectorSelect(ShuffleVectorInst &Shuf,
+                                       InstCombiner::BuilderTy &Builder) {
   // This must be a narrowing identity shuffle. It extracts the 1st N elements
   // of the 1st vector operand of a shuffle.
   if (!match(Shuf.getOperand(1), m_Undef()) || !Shuf.isIdentityWithExtract())

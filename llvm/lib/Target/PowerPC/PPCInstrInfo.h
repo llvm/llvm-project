@@ -192,6 +192,16 @@ public:
   bool isXFormMemOp(unsigned Opcode) const {
     return get(Opcode).TSFlags & PPCII::XFormMemOp;
   }
+  static bool isSameClassPhysRegCopy(unsigned Opcode) {
+    unsigned CopyOpcodes[] =
+      { PPC::OR, PPC::OR8, PPC::FMR, PPC::VOR, PPC::XXLOR, PPC::XXLORf,
+        PPC::XSCPSGNDP, PPC::MCRF, PPC::QVFMR, PPC::QVFMRs, PPC::QVFMRb,
+        PPC::CROR, PPC::EVOR, -1U };
+    for (int i = 0; CopyOpcodes[i] != -1U; i++)
+      if (Opcode == CopyOpcodes[i])
+        return true;
+    return false;
+  }
 
   ScheduleHazardRecognizer *
   CreateTargetHazardRecognizer(const TargetSubtargetInfo *STI,
