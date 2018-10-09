@@ -54,6 +54,9 @@ macro(opencl_bc_lib name)
   list(APPEND AMDGCN_LIB_LIST ${LIB_TGT})
   set(AMDGCN_LIB_LIST ${AMDGCN_LIB_LIST} PARENT_SCOPE)
 
+  list(APPEND AMDGCN_DEP_LIST ${LIB_TGT})
+  set(AMDGCN_DEP_LIST ${AMDGCN_DEP_LIST} PARENT_SCOPE)
+
   set_inc_options()
   set(deps)
   foreach(file ${ARGN})

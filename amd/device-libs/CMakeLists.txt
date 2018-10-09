@@ -38,6 +38,7 @@ endif()
 include(OCL.cmake)
 
 set(AMDGCN_LIB_LIST)
+set(AMDGCN_DEP_LIST)
 add_subdirectory(irif)
 add_subdirectory(oclc)
 add_subdirectory(ocml)
@@ -51,6 +52,10 @@ endif()
 
 if(AMDGCN_TARGETS_LIB_LIST)
   set(${AMDGCN_TARGETS_LIB_LIST} ${AMDGCN_LIB_LIST} PARENT_SCOPE)
+endif()
+
+if(AMDGCN_TARGETS_LIB_DEPS)
+  set(${AMDGCN_TARGETS_LIB_DEPS} ${AMDGCN_DEP_LIST} PARENT_SCOPE)
 endif()
 
 include(Packages.cmake)
