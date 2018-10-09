@@ -1049,6 +1049,12 @@ public:
     TaskAllocator.Deallocate(T);
   }
 
+  // Manually recalculate TaskInfo from the given dominator tree.
+  void recalculate(Function &F, DominatorTree &DomTree) {
+    releaseMemory();
+    analyze(F, DomTree);
+  }
+
   // Create a spindle with entry block B and type Ty.
   Spindle *createSpindleWithEntry(BasicBlock *B, Spindle::SPType Ty) {
     Spindle *S = AllocateSpindle(B, Ty);
