@@ -91,6 +91,8 @@ bool shouldEscape(unsigned char C) {
   case '.':
   case '~':
   case '/': // '/' is only reserved when parsing.
+  // ':' is only reserved for relative URI paths, which clangd doesn't produce.
+  case ':':
     return false;
   }
   return true;
@@ -105,7 +107,7 @@ std::string percentEncode(llvm::StringRef Content) {
   llvm::raw_string_ostream OS(Result);
   for (unsigned char C : Content)
     if (shouldEscape(C))
-      OS << '%' << llvm::format_hex_no_prefix(C, 2);
+      OS << '%' << llvm::format_hex_no_prefix(C, 2, /*Upper = */true);
     else
       OS << C;
 
