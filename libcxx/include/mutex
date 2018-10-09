@@ -489,7 +489,7 @@ public:
 };
 
 template <class _Mutex>
-class _LIBCPP_TEMPLATE_VIS scoped_lock<_Mutex> {
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_THREAD_SAFETY_ANNOTATION(scoped_lockable) scoped_lock<_Mutex> {
 public:
     typedef _Mutex  mutex_type;
 private:

@@ -254,11 +254,12 @@ void Hexagon::writePltHeader(uint8_t *Buf) const {
   };
   memcpy(Buf, PltData, sizeof(PltData));
 
-  // offset from PLT0 to the GOT.
-  relocateOne(Buf, R_HEX_B32_PCREL_X, In.GotPlt->getVA() - In.Plt->getVA());
-  relocateOne(Buf + 4, R_HEX_6_PCREL_X,
-              In.GotPlt->getVA() - In.Plt->getVA());
+  // Offset from PLT0 to the GOT.
+  uint64_t Off = In.GotPlt->getVA() - In.Plt->getVA();
+  relocateOne(Buf, R_HEX_B32_PCREL_X, Off);
+  relocateOne(Buf + 4, R_HEX_6_PCREL_X, Off);
 }
+
 void Hexagon::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
                        uint64_t PltEntryAddr, int32_t Index,
                        unsigned RelOff) const {
