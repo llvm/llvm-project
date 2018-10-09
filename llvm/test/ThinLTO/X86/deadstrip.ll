@@ -18,6 +18,8 @@
 ; RUN:   -r %t1.bc,_baz,l \
 ; RUN:   -r %t1.bc,_boo,l \
 ; RUN:   -r %t1.bc,_live_available_externally_func,l \
+; RUN:   -r %t1.bc,_live_linkonce_odr_func,l \
+; RUN:   -r %t1.bc,_live_weak_odr_func,l \
 ; RUN:   -r %t2.bc,_baz,pl \
 ; RUN:   -r %t2.bc,_boo,pl \
 ; RUN:   -r %t2.bc,_dead_func,l \
@@ -33,6 +35,10 @@
 ; COMBINED-DAG: <COMBINED {{.*}} op2=119
 ; Live, dso_local, Internal
 ; COMBINED-DAG: <COMBINED {{.*}} op2=103
+; Live, Local, WeakODR
+; COMBINED-DAG: <COMBINED {{.*}} op2=101
+; Live, Local, LinkOnceODR
+; COMBINED-DAG: <COMBINED {{.*}} op2=99
 ; Live, Local, AvailableExternally
 ; COMBINED-DAG: <COMBINED {{.*}} op2=97
 ; Live, Local, External
@@ -95,6 +101,8 @@
 ; RUN:   -r %t1.bc,_baz,l \
 ; RUN:   -r %t1.bc,_boo,l \
 ; RUN:   -r %t1.bc,_live_available_externally_func,l \
+; RUN:   -r %t1.bc,_live_linkonce_odr_func,l \
+; RUN:   -r %t1.bc,_live_weak_odr_func,l \
 ; RUN:   -r %t3.bc,_baz,pl \
 ; RUN:   -r %t3.bc,_boo,pl \
 ; RUN:   -r %t3.bc,_dead_func,l \
@@ -140,6 +148,15 @@ define void @dead_func() {
     ret void
 }
 
+
+define linkonce_odr void @live_linkonce_odr_func() {
+    ret void
+}
+
+define weak_odr void @live_weak_odr_func() {
+    ret void
+}
+
 define available_externally void @live_available_externally_func() {
     ret void
 }
@@ -147,6 +164,8 @@ define available_externally void @live_available_externally_func() {
 define void @main() {
     call void @bar()
     call void @bar_internal()
+    call void @live_linkonce_odr_func()
+    call void @live_weak_odr_func()
     call void @live_available_externally_func()
     ret void
 }

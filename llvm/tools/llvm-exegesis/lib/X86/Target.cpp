@@ -262,25 +262,25 @@ class ExegesisX86Target : public ExegesisTarget {
     // value for input and output.
     for (size_t I = 0, E = IT.Instr.Operands.size(); I < E; ++I) {
       const Operand *Op = &IT.Instr.Operands[I];
-      if (Op->IsExplicit && Op->IsMem) {
+      if (Op->isExplicit() && Op->isMemory()) {
         // Case 1: 5-op memory.
         assert((I + 5 <= E) && "x86 memory references are always 5 ops");
         IT.getValueFor(*Op) = llvm::MCOperand::createReg(Reg); // BaseReg
         Op = &IT.Instr.Operands[++I];
-        assert(Op->IsMem);
-        assert(Op->IsExplicit);
+        assert(Op->isMemory());
+        assert(Op->isExplicit());
         IT.getValueFor(*Op) = llvm::MCOperand::createImm(1); // ScaleAmt
         Op = &IT.Instr.Operands[++I];
-        assert(Op->IsMem);
-        assert(Op->IsExplicit);
+        assert(Op->isMemory());
+        assert(Op->isExplicit());
         IT.getValueFor(*Op) = llvm::MCOperand::createReg(0); // IndexReg
         Op = &IT.Instr.Operands[++I];
-        assert(Op->IsMem);
-        assert(Op->IsExplicit);
+        assert(Op->isMemory());
+        assert(Op->isExplicit());
         IT.getValueFor(*Op) = llvm::MCOperand::createImm(Offset); // Disp
         Op = &IT.Instr.Operands[++I];
-        assert(Op->IsMem);
-        assert(Op->IsExplicit);
+        assert(Op->isMemory());
+        assert(Op->isExplicit());
         IT.getValueFor(*Op) = llvm::MCOperand::createReg(0); // Segment
         // Case2: segment:index addressing. We assume that ES is 0.
       }

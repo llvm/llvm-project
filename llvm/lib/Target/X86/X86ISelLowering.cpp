@@ -1124,11 +1124,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::UMIN, VT, HasInt256 ? Legal : Custom);
     }
 
-    if (HasInt256) {
-      setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, MVT::v4i64,  Custom);
-      setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, MVT::v8i32,  Custom);
-      setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, MVT::v16i16, Custom);
+    for (auto VT : {MVT::v16i16, MVT::v8i32, MVT::v4i64}) {
+      setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, VT, Custom);
+      setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Custom);
+    }
 
+    if (HasInt256) {
       // The custom lowering for UINT_TO_FP for v8i32 becomes interesting
       // when we have a 256bit-wide blend with immediate.
       setOperationAction(ISD::UINT_TO_FP, MVT::v8i32, Custom);
@@ -19712,37 +19713,53 @@ static SDValue LowerEXTEND_VECTOR_INREG(SDValue Op,
   if (InSVT != MVT::i32 && InSVT != MVT::i16 && InSVT != MVT::i8)
     return SDValue();
   if (!(VT.is128BitVector() && Subtarget.hasSSE2()) &&
-      !(VT.is256BitVector() && Subtarget.hasInt256()) &&
+      !(VT.is256BitVector() && Subtarget.hasAVX()) &&
       !(VT.is512BitVector() && Subtarget.hasAVX512()))
     return SDValue();
 
   SDLoc dl(Op);
+  unsigned Opc = Op.getOpcode();
+  unsigned NumElts = VT.getVectorNumElements();
 
   // For 256-bit vectors, we only need the lower (128-bit) half of the input.
   // For 512-bit vectors, we need 128-bits or 256-bits.
   if (VT.getSizeInBits() > 128) {
     // Input needs to be at least the same number of elements as output, and
     // at least 128-bits.
-    int InSize = InSVT.getSizeInBits() * VT.getVectorNumElements();
+    int InSize = InSVT.getSizeInBits() * NumElts;
     In = extractSubVector(In, 0, DAG, dl, std::max(InSize, 128));
   }
 
-  assert((Op.getOpcode() != ISD::ZERO_EXTEND_VECTOR_INREG ||
-          InVT == MVT::v64i8) && "Zero extend only for v64i8 input!");
-
-  // SSE41 targets can use the pmovsx* instructions directly for 128-bit results,
+  // SSE41 targets can use the pmov[sz]x* instructions directly for 128-bit results,
   // so are legal and shouldn't occur here. AVX2/AVX512 pmovsx* instructions still
   // need to be handled here for 256/512-bit results.
   if (Subtarget.hasInt256()) {
     assert(VT.getSizeInBits() > 128 && "Unexpected 128-bit vector extension");
-    unsigned ExtOpc = Op.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG ?
-                        X86ISD::VSEXT : X86ISD::VZEXT;
+    unsigned ExtOpc =
+        Opc == ISD::SIGN_EXTEND_VECTOR_INREG ? X86ISD::VSEXT : X86ISD::VZEXT;
     return DAG.getNode(ExtOpc, dl, VT, In);
   }
 
+  // pre-AVX2 256-bit extensions need to be split into 128-bit instructions.
+  if (Subtarget.hasAVX()) {
+    assert(VT.is256BitVector() && "256-bit vector expected");
+    int HalfNumElts = NumElts / 2;
+    MVT HalfVT = MVT::getVectorVT(SVT, HalfNumElts);
+
+    InVT = In.getSimpleValueType();
+    unsigned NumSrcElts = InVT.getVectorNumElements();
+    SmallVector<int, 16> HiMask(NumSrcElts, SM_SentinelUndef);
+    for (int i = 0; i != HalfNumElts; ++i)
+      HiMask[i] = HalfNumElts + i;
+
+    SDValue Lo = DAG.getNode(Opc, dl, HalfVT, In);
+    SDValue Hi = DAG.getVectorShuffle(InVT, dl, In, DAG.getUNDEF(InVT), HiMask);
+    Hi = DAG.getNode(Opc, dl, HalfVT, Hi);
+    return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, Lo, Hi);
+  }
+
   // We should only get here for sign extend.
-  assert(Op.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG &&
-         "Unexpected opcode!");
+  assert(Opc == ISD::SIGN_EXTEND_VECTOR_INREG && "Unexpected opcode!");
 
   // pre-SSE41 targets unpack lower lanes and then sign-extend using SRAI.
   SDValue Curr = In;
@@ -36927,10 +36944,12 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
 /// In short, LHS and RHS are inspected to see if LHS op RHS is of the form
 /// A horizontal-op B, for some already available A and B, and if so then LHS is
 /// set to A, RHS to B, and the routine returns 'true'.
-/// Note that the binary operation should have the property that if one of the
-/// operands is UNDEF then the result is UNDEF.
 static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, bool IsCommutative) {
-  // Look for the following pattern: if
+  // If either operand is undef, bail out. The binop should be simplified.
+  if (LHS.isUndef() || RHS.isUndef())
+    return false;
+
+  // Look for the following pattern:
   //   A = < float a0, float a1, float a2, float a3 >
   //   B = < float b0, float b1, float b2, float b3 >
   // and
@@ -36945,25 +36964,15 @@ static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, bool IsCommutative) {
     return false;
 
   MVT VT = LHS.getSimpleValueType();
-
   assert((VT.is128BitVector() || VT.is256BitVector()) &&
          "Unsupported vector type for horizontal add/sub");
 
-  // Handle 128 and 256-bit vector lengths. AVX defines horizontal add/sub to
-  // operate independently on 128-bit lanes.
-  unsigned NumElts = VT.getVectorNumElements();
-  unsigned NumLanes = VT.getSizeInBits()/128;
-  unsigned NumLaneElts = NumElts / NumLanes;
-  assert((NumLaneElts % 2 == 0) &&
-         "Vector type should have an even number of elements in each lane");
-  unsigned HalfLaneElts = NumLaneElts/2;
-
   // View LHS in the form
   //   LHS = VECTOR_SHUFFLE A, B, LMask
-  // If LHS is not a shuffle then pretend it is the shuffle
+  // If LHS is not a shuffle, then pretend it is the identity shuffle:
   //   LHS = VECTOR_SHUFFLE LHS, undef, <0, 1, ..., N-1>
-  // NOTE: in what follows a default initialized SDValue represents an UNDEF of
-  // type VT.
+  // NOTE: A default initialized SDValue represents an UNDEF of type VT.
+  unsigned NumElts = VT.getVectorNumElements();
   SDValue A, B;
   SmallVector<int, 16> LMask(NumElts);
   if (LHS.getOpcode() == ISD::VECTOR_SHUFFLE) {
@@ -36974,8 +36983,7 @@ static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, bool IsCommutative) {
     ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(LHS.getNode())->getMask();
     std::copy(Mask.begin(), Mask.end(), LMask.begin());
   } else {
-    if (!LHS.isUndef())
-      A = LHS;
+    A = LHS;
     for (unsigned i = 0; i != NumElts; ++i)
       LMask[i] = i;
   }
@@ -36992,43 +37000,48 @@ static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, bool IsCommutative) {
     ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(RHS.getNode())->getMask();
     std::copy(Mask.begin(), Mask.end(), RMask.begin());
   } else {
-    if (!RHS.isUndef())
-      C = RHS;
+    C = RHS;
     for (unsigned i = 0; i != NumElts; ++i)
       RMask[i] = i;
   }
 
-  // Check that the shuffles are both shuffling the same vectors.
-  if (!(A == C && B == D) && !(A == D && B == C))
-    return false;
-
-  // If everything is UNDEF then bail out: it would be better to fold to UNDEF.
-  if (!A.getNode() && !B.getNode())
-    return false;
-
-  // If A and B occur in reverse order in RHS, then "swap" them (which means
-  // rewriting the mask).
-  if (A != C)
+  // If A and B occur in reverse order in RHS, then canonicalize by commuting
+  // RHS operands and shuffle mask.
+  if (A != C) {
+    std::swap(C, D);
     ShuffleVectorSDNode::commuteMask(RMask);
+  }
+  // Check that the shuffles are both shuffling the same vectors.
+  if (!(A == C && B == D))
+    return false;
 
-  // At this point LHS and RHS are equivalent to
-  //   LHS = VECTOR_SHUFFLE A, B, LMask
-  //   RHS = VECTOR_SHUFFLE A, B, RMask
+  // LHS and RHS are now:
+  //   LHS = shuffle A, B, LMask
+  //   RHS = shuffle A, B, RMask
   // Check that the masks correspond to performing a horizontal operation.
-  for (unsigned l = 0; l != NumElts; l += NumLaneElts) {
-    for (unsigned i = 0; i != NumLaneElts; ++i) {
-      int LIdx = LMask[i+l], RIdx = RMask[i+l];
-
-      // Ignore any UNDEF components.
+  // AVX defines horizontal add/sub to operate independently on 128-bit lanes,
+  // so we just repeat the inner loop if this is a 256-bit op.
+  unsigned Num128BitChunks = VT.getSizeInBits() / 128;
+  unsigned NumEltsPer128BitChunk = NumElts / Num128BitChunks;
+  assert((NumEltsPer128BitChunk % 2 == 0) &&
+         "Vector type should have an even number of elements in each lane");
+  for (unsigned j = 0; j != NumElts; j += NumEltsPer128BitChunk) {
+    for (unsigned i = 0; i != NumEltsPer128BitChunk; ++i) {
+      // Ignore undefined components.
+      int LIdx = LMask[i + j], RIdx = RMask[i + j];
       if (LIdx < 0 || RIdx < 0 ||
           (!A.getNode() && (LIdx < (int)NumElts || RIdx < (int)NumElts)) ||
           (!B.getNode() && (LIdx >= (int)NumElts || RIdx >= (int)NumElts)))
         continue;
 
-      // Check that successive elements are being operated on.  If not, this is
+      // The  low half of the 128-bit result must choose from A.
+      // The high half of the 128-bit result must choose from B.
+      unsigned NumEltsPer64BitChunk = NumEltsPer128BitChunk / 2;
+      unsigned Src = i >= NumEltsPer64BitChunk;
+
+      // Check that successive elements are being operated on. If not, this is
       // not a horizontal operation.
-      unsigned Src = (i/HalfLaneElts); // each lane is split between srcs
-      int Index = 2*(i%HalfLaneElts) + NumElts*Src + l;
+      int Index = 2 * (i % NumEltsPer64BitChunk) + NumElts * Src + j;
       if (!(LIdx == Index && RIdx == Index + 1) &&
           !(IsCommutative && LIdx == Index + 1 && RIdx == Index))
         return false;
@@ -38352,11 +38365,11 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
                        DAG.getIntPtrConstant(0, DL));
   }
 
-  // If target-size is 128-bits (or 256-bits on AVX2 target), then convert to
+  // If target-size is 128-bits (or 256-bits on AVX target), then convert to
   // ISD::*_EXTEND_VECTOR_INREG which ensures lowering to X86ISD::V*EXT.
   // Also use this if we don't have SSE41 to allow the legalizer do its job.
   if (!Subtarget.hasSSE41() || VT.is128BitVector() ||
-      (VT.is256BitVector() && Subtarget.hasInt256()) ||
+      (VT.is256BitVector() && Subtarget.hasAVX()) ||
       (VT.is512BitVector() && Subtarget.useAVX512Regs())) {
     SDValue ExOp = ExtendVecSize(DL, N0, VT.getSizeInBits());
     return Opcode == ISD::SIGN_EXTEND
@@ -38383,9 +38396,9 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Opnds);
   };
 
-  // On pre-AVX2 targets, split into 128-bit nodes of
+  // On pre-AVX targets, split into 128-bit nodes of
   // ISD::*_EXTEND_VECTOR_INREG.
-  if (!Subtarget.hasInt256() && !(VT.getSizeInBits() % 128))
+  if (!Subtarget.hasAVX() && !(VT.getSizeInBits() % 128))
     return SplitAndExtendInReg(128);
 
   // On pre-AVX512 targets, split into 256-bit nodes of
@@ -40217,7 +40230,9 @@ static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   EVT WideVecVT = N->getOperand(0).getValueType();
   SDValue WideVec = peekThroughBitcasts(N->getOperand(0));
-  if (Subtarget.hasAVX() && !Subtarget.hasAVX2() && WideVecVT.isSimple() &&
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (Subtarget.hasAVX() && !Subtarget.hasAVX2() &&
+      TLI.isTypeLegal(WideVecVT) &&
       WideVecVT.getSizeInBits() == 256 && WideVec.getOpcode() == ISD::AND) {
     auto isConcatenatedNot = [] (SDValue V) {
       V = peekThroughBitcasts(V);

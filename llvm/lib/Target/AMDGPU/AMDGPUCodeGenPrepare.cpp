@@ -558,7 +558,7 @@ Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
   Value *FQM = Builder.CreateFMul(FA, RCP);
 
   // fq = trunc(fqm);
-  CallInst* FQ = Builder.CreateIntrinsic(Intrinsic::trunc, { FQM });
+  CallInst *FQ = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, FQM);
   FQ->copyFastMathFlags(Builder.getFastMathFlags());
 
   // float fqneg = -fq;
@@ -566,17 +566,17 @@ Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
 
   // float fr = mad(fqneg, fb, fa);
   Value *FR = Builder.CreateIntrinsic(Intrinsic::amdgcn_fmad_ftz,
-                                      { FQNeg, FB, FA }, FQ);
+                                      {FQNeg->getType()}, {FQNeg, FB, FA}, FQ);
 
   // int iq = (int)fq;
   Value *IQ = IsSigned ? Builder.CreateFPToSI(FQ, I32Ty)
                        : Builder.CreateFPToUI(FQ, I32Ty);
 
   // fr = fabs(fr);
-  FR = Builder.CreateIntrinsic(Intrinsic::fabs, { FR }, FQ);
+  FR = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FR, FQ);
 
   // fb = fabs(fb);
-  FB = Builder.CreateIntrinsic(Intrinsic::fabs, { FB }, FQ);
+  FB = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FB, FQ);
 
   // int cv = fr >= fb;
   Value *CV = Builder.CreateFCmpOGE(FR, FB);

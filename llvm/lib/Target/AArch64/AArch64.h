@@ -46,6 +46,7 @@ FunctionPass *createAArch64A57FPLoadBalancing();
 FunctionPass *createAArch64A53Fix835769();
 FunctionPass *createFalkorHWPFFixPass();
 FunctionPass *createFalkorMarkStridedAccessesPass();
+FunctionPass *createAArch64BranchTargetsPass();
 
 FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 
@@ -58,6 +59,7 @@ FunctionPass *createAArch64PreLegalizeCombiner();
 void initializeAArch64A53Fix835769Pass(PassRegistry&);
 void initializeAArch64A57FPLoadBalancingPass(PassRegistry&);
 void initializeAArch64AdvSIMDScalarPass(PassRegistry&);
+void initializeAArch64BranchTargetsPass(PassRegistry&);
 void initializeAArch64CollectLOHPass(PassRegistry&);
 void initializeAArch64CondBrTuningPass(PassRegistry &);
 void initializeAArch64ConditionalComparesPass(PassRegistry&);

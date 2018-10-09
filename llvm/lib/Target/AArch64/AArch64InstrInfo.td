@@ -360,6 +360,9 @@ let RecomputePerFunction = 1 in {
   def NotForCodeSize   : Predicate<"!MF->getFunction().optForSize()">;
   // Avoid generating STRQro if it is slow, unless we're optimizing for code size.
   def UseSTRQro : Predicate<"!Subtarget->isSTRQroSlow() || MF->getFunction().optForSize()">;
+
+  def UseBTI : Predicate<[{ MF->getFunction().hasFnAttribute("branch-target-enforcement") }]>;
+  def NotUseBTI : Predicate<[{ !MF->getFunction().hasFnAttribute("branch-target-enforcement") }]>;
 }
 
 include "AArch64InstrFormats.td"
@@ -6641,10 +6644,18 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [SP] in {
   // some verifier checks for outlined functions.
   def TCRETURNriALL : Pseudo<(outs), (ins GPR64:$dst, i32imm:$FPDiff), []>,
                       Sched<[WriteBrReg]>;
+  // Indirect tail-call limited to only use registers (x16 and x17) which are
+  // allowed to tail-call a "BTI c" instruction.
+  def TCRETURNriBTI : Pseudo<(outs), (ins rtcGPR64:$dst, i32imm:$FPDiff), []>,
+                      Sched<[WriteBrReg]>;
 }
 
 def : Pat<(AArch64tcret tcGPR64:$dst, (i32 timm:$FPDiff)),
-          (TCRETURNri tcGPR64:$dst, imm:$FPDiff)>;
+          (TCRETURNri tcGPR64:$dst, imm:$FPDiff)>,
+      Requires<[NotUseBTI]>;
+def : Pat<(AArch64tcret rtcGPR64:$dst, (i32 timm:$FPDiff)),
+          (TCRETURNriBTI rtcGPR64:$dst, imm:$FPDiff)>,
+      Requires<[UseBTI]>;
 def : Pat<(AArch64tcret tglobaladdr:$dst, (i32 timm:$FPDiff)),
           (TCRETURNdi texternalsym:$dst, imm:$FPDiff)>;
 def : Pat<(AArch64tcret texternalsym:$dst, (i32 timm:$FPDiff)),

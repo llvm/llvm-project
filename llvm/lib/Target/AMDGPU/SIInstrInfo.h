@@ -37,6 +37,7 @@
 namespace llvm {
 
 class APInt;
+class MachineDominatorTree;
 class MachineRegisterInfo;
 class RegScavenger;
 class GCNSubtarget;
@@ -79,8 +80,8 @@ public:
 private:
   void swapOperands(MachineInstr &Inst) const;
 
-  bool moveScalarAddSub(SetVectorType &Worklist,
-                        MachineInstr &Inst) const;
+  bool moveScalarAddSub(SetVectorType &Worklist, MachineInstr &Inst,
+                        MachineDominatorTree *MDT = nullptr) const;
 
   void lowerScalarAbs(SetVectorType &Worklist,
                       MachineInstr &Inst) const;
@@ -91,11 +92,12 @@ private:
   void splitScalar64BitUnaryOp(SetVectorType &Worklist,
                                MachineInstr &Inst, unsigned Opcode) const;
 
-  void splitScalar64BitAddSub(SetVectorType &Worklist,
-                              MachineInstr &Inst) const;
+  void splitScalar64BitAddSub(SetVectorType &Worklist, MachineInstr &Inst,
+                              MachineDominatorTree *MDT = nullptr) const;
 
-  void splitScalar64BitBinaryOp(SetVectorType &Worklist,
-                                MachineInstr &Inst, unsigned Opcode) const;
+  void splitScalar64BitBinaryOp(SetVectorType &Worklist, MachineInstr &Inst,
+                                unsigned Opcode,
+                                MachineDominatorTree *MDT = nullptr) const;
 
   void splitScalar64BitBCNT(SetVectorType &Worklist,
                             MachineInstr &Inst) const;
@@ -798,14 +800,16 @@ public:
                               MachineOperand &Op, MachineRegisterInfo &MRI,
                               const DebugLoc &DL) const;
 
-  /// Legalize all operands in this instruction.  This function may
-  /// create new instruction and insert them before \p MI.
-  void legalizeOperands(MachineInstr &MI) const;
+  /// Legalize all operands in this instruction.  This function may create new
+  /// instructions and control-flow around \p MI.  If present, \p MDT is
+  /// updated.
+  void legalizeOperands(MachineInstr &MI,
+                        MachineDominatorTree *MDT = nullptr) const;
 
   /// Replace this instruction's opcode with the equivalent VALU
   /// opcode.  This function will also move the users of \p MI to the
-  /// VALU if necessary.
-  void moveToVALU(MachineInstr &MI) const;
+  /// VALU if necessary. If present, \p MDT is updated.
+  void moveToVALU(MachineInstr &MI, MachineDominatorTree *MDT = nullptr) const;
 
   void insertWaitStates(MachineBasicBlock &MBB,MachineBasicBlock::iterator MI,
                         int Count) const;
@@ -931,6 +935,12 @@ namespace AMDGPU {
 
   LLVM_READONLY
   int getAddr64Inst(uint16_t Opcode);
+
+  /// Check if \p Opcode is an Addr64 opcode.
+  ///
+  /// \returns \p Opcode if it is an Addr64 opcode, otherwise -1.
+  LLVM_READONLY
+  int getIfAddr64Inst(uint16_t Opcode);
 
   LLVM_READONLY
   int getMUBUFNoLdsInst(uint16_t Opcode);

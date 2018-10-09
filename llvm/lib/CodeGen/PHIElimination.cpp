@@ -153,8 +153,7 @@ bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
   // This pass takes the function out of SSA form.
   MRI->leaveSSA();
 
-  // Split critical edges to help the coalescer. This does not yet support
-  // updating LiveIntervals, so we disable it.
+  // Split critical edges to help the coalescer.
   if (!DisableEdgeSplitting && (LV || LIS)) {
     MachineLoopInfo *MLI = getAnalysisIfAvailable<MachineLoopInfo>();
     for (auto &MBB : MF)

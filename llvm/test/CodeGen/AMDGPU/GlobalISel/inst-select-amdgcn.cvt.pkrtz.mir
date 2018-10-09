@@ -1,4 +1,5 @@
 # RUN: llc -march=amdgcn -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefixes=GCN
+# RUN: llc -march=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefixes=GCN
 
 --- |
   define void @cvt_pkrtz(i32 addrspace(1)* %global0) { ret void }
@@ -23,15 +24,15 @@ body: |
     %3:vgpr(s64) = COPY $vgpr3_vgpr4
 
     ; cvt_pkrtz vs
-    ; GCN: V_CVT_PKRTZ_F16_F32_e32 [[SGPR0]], [[VGPR0]]
+    ; GCN: V_CVT_PKRTZ_F16_F32_e64 0, [[VGPR0]], 0, [[SGPR0]]
     %4:vgpr(<2 x s16>) = G_INTRINSIC intrinsic(@llvm.amdgcn.cvt.pkrtz), %1, %0
 
     ; cvt_pkrtz sv
-    ; GCN: V_CVT_PKRTZ_F16_F32_e32 [[SGPR0]], [[VGPR0]]
+    ; GCN: V_CVT_PKRTZ_F16_F32_e64 0, [[SGPR0]], 0, [[VGPR0]]
     %5:vgpr(<2 x s16>) = G_INTRINSIC intrinsic(@llvm.amdgcn.cvt.pkrtz), %0, %1
 
     ; cvt_pkrtz vv
-    ; GCN: V_CVT_PKRTZ_F16_F32_e32 [[VGPR0]], [[VGPR1]]
+    ; GCN: V_CVT_PKRTZ_F16_F32_e64 0, [[VGPR0]], 0, [[VGPR1]]
     %6:vgpr(<2 x s16>) = G_INTRINSIC intrinsic(@llvm.amdgcn.cvt.pkrtz), %1, %2
 
     %7:vgpr(s32) = G_BITCAST %4
