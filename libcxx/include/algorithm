@@ -2899,10 +2899,11 @@ template<class _IntType>
 template<class _URNG>
 typename uniform_int_distribution<_IntType>::result_type
 uniform_int_distribution<_IntType>::operator()(_URNG& __g, const param_type& __p)
+_LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 {
     typedef typename conditional<sizeof(result_type) <= sizeof(uint32_t),
                                             uint32_t, uint64_t>::type _UIntType;
-    const _UIntType _Rp = __p.b() - __p.a() + _UIntType(1);
+    const _UIntType _Rp = _UIntType(__p.b()) - _UIntType(__p.a()) + _UIntType(1);
     if (_Rp == 1)
         return __p.a();
     const size_t _Dt = numeric_limits<_UIntType>::digits;
@@ -2989,7 +2990,7 @@ random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last,
         {
             difference_type __i = __rand(__d);
             if (__i != difference_type(0))
-	            swap(*__first, *(__first + __i));
+              swap(*__first, *(__first + __i));
         }
     }
 }

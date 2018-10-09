@@ -11122,26 +11122,16 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
 
   if (Options.UnsafeFPMath || Flags.hasAllowReassociation()) {
     // fmul (fmul X, C1), C2 -> fmul X, C1 * C2
-    if (N0.getOpcode() == ISD::FMUL) {
-      // Fold scalars or any vector constants (not just splats).
-      // This fold is done in general by InstCombine, but extra fmul insts
-      // may have been generated during lowering.
+    if (isConstantFPBuildVectorOrConstantFP(N1) &&
+        N0.getOpcode() == ISD::FMUL) {
       SDValue N00 = N0.getOperand(0);
       SDValue N01 = N0.getOperand(1);
-      auto *BV1 = dyn_cast<BuildVectorSDNode>(N1);
-      auto *BV00 = dyn_cast<BuildVectorSDNode>(N00);
-      auto *BV01 = dyn_cast<BuildVectorSDNode>(N01);
-
-      // Check 1: Make sure that the first operand of the inner multiply is NOT
-      // a constant. Otherwise, we may induce infinite looping.
-      if (!(isConstOrConstSplatFP(N00) || (BV00 && BV00->isConstant()))) {
-        // Check 2: Make sure that the second operand of the inner multiply and
-        // the second operand of the outer multiply are constants.
-        if ((N1CFP && isConstOrConstSplatFP(N01)) ||
-            (BV1 && BV01 && BV1->isConstant() && BV01->isConstant())) {
-          SDValue MulConsts = DAG.getNode(ISD::FMUL, DL, VT, N01, N1, Flags);
-          return DAG.getNode(ISD::FMUL, DL, VT, N00, MulConsts, Flags);
-        }
+      // Avoid an infinite loop by making sure that N00 is not a constant
+      // (the inner multiply has not been constant folded yet).
+      if (isConstantFPBuildVectorOrConstantFP(N01) &&
+          !isConstantFPBuildVectorOrConstantFP(N00)) {
+        SDValue MulConsts = DAG.getNode(ISD::FMUL, DL, VT, N01, N1, Flags);
+        return DAG.getNode(ISD::FMUL, DL, VT, N00, MulConsts, Flags);
       }
     }
 

@@ -599,7 +599,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         if (isVGPRToSGPRCopy(SrcRC, DstRC, *TRI)) {
           unsigned SrcReg = MI.getOperand(1).getReg();
           if (!TargetRegisterInfo::isVirtualRegister(SrcReg)) {
-            TII->moveToVALU(MI);
+            TII->moveToVALU(MI, MDT);
             break;
           }
 
@@ -614,7 +614,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
             MI.setDesc(TII->get(SMovOp));
             break;
           }
-          TII->moveToVALU(MI);
+          TII->moveToVALU(MI, MDT);
         } else if (isSGPRToVGPRCopy(SrcRC, DstRC, *TRI)) {
           tryChangeVGPRtoSGPRinCopy(MI, TRI, TII);
         }
@@ -677,7 +677,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         SmallSet<unsigned, 8> Visited;
         if (HasVGPROperand || !phiHasBreakDef(MI, MRI, Visited)) {
           LLVM_DEBUG(dbgs() << "Fixing PHI: " << MI);
-          TII->moveToVALU(MI);
+          TII->moveToVALU(MI, MDT);
         }
         break;
       }
@@ -690,7 +690,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
 
         LLVM_DEBUG(dbgs() << "Fixing REG_SEQUENCE: " << MI);
 
-        TII->moveToVALU(MI);
+        TII->moveToVALU(MI, MDT);
         break;
       case AMDGPU::INSERT_SUBREG: {
         const TargetRegisterClass *DstRC, *Src0RC, *Src1RC;
@@ -700,7 +700,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         if (TRI->isSGPRClass(DstRC) &&
             (TRI->hasVGPRs(Src0RC) || TRI->hasVGPRs(Src1RC))) {
           LLVM_DEBUG(dbgs() << " Fixing INSERT_SUBREG: " << MI);
-          TII->moveToVALU(MI);
+          TII->moveToVALU(MI, MDT);
         }
         break;
       }

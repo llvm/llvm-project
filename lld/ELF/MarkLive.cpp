@@ -45,7 +45,7 @@ using namespace lld::elf;
 template <class ELFT>
 static typename ELFT::uint getAddend(InputSectionBase &Sec,
                                      const typename ELFT::Rel &Rel) {
-  return Target->getImplicitAddend(Sec.Data.begin() + Rel.r_offset,
+  return Target->getImplicitAddend(Sec.data().begin() + Rel.r_offset,
                                    Rel.getType(Config->IsMips64EL));
 }
 
