@@ -116,8 +116,8 @@ private:
   bool selectImplicitDefOrPHI(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectShift(MachineInstr &I, MachineRegisterInfo &MRI,
                    MachineFunction &MF) const;
-  bool selectSDiv(MachineInstr &I, MachineRegisterInfo &MRI,
-                   MachineFunction &MF) const;
+  bool selectDivRem(MachineInstr &I, MachineRegisterInfo &MRI,
+                    MachineFunction &MF) const;
   bool selectIntrinsicWSideEffects(MachineInstr &I, MachineRegisterInfo &MRI,
                                    MachineFunction &MF) const;
 
@@ -388,7 +388,10 @@ bool X86InstructionSelector::select(MachineInstr &I,
   case TargetOpcode::G_LSHR:
     return selectShift(I, MRI, MF);
   case TargetOpcode::G_SDIV:
-    return selectSDiv(I, MRI, MF);
+  case TargetOpcode::G_UDIV:
+  case TargetOpcode::G_SREM:
+  case TargetOpcode::G_UREM:
+    return selectDivRem(I, MRI, MF);
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     return selectIntrinsicWSideEffects(I, MRI, MF);
   }
@@ -1585,23 +1588,33 @@ bool X86InstructionSelector::selectShift(MachineInstr &I,
   return true;
 }
 
-bool X86InstructionSelector::selectSDiv(MachineInstr &I,
-                                        MachineRegisterInfo &MRI,
-                                        MachineFunction &MF) const {
-
-  assert(I.getOpcode() == TargetOpcode::G_SDIV && "unexpected instruction");
+bool X86InstructionSelector::selectDivRem(MachineInstr &I,
+                                          MachineRegisterInfo &MRI,
+                                          MachineFunction &MF) const {
+  // The implementation of this function is taken from X86FastISel.
+  assert((I.getOpcode() == TargetOpcode::G_SDIV ||
+          I.getOpcode() == TargetOpcode::G_SREM ||
+          I.getOpcode() == TargetOpcode::G_UDIV ||
+          I.getOpcode() == TargetOpcode::G_UREM) &&
+         "unexpected instruction");
 
   const unsigned DstReg = I.getOperand(0).getReg();
-  const unsigned DividentReg = I.getOperand(1).getReg();
-  const unsigned DiviserReg = I.getOperand(2).getReg();
+  const unsigned Op1Reg = I.getOperand(1).getReg();
+  const unsigned Op2Reg = I.getOperand(2).getReg();
 
   const LLT RegTy = MRI.getType(DstReg);
-  assert(RegTy == MRI.getType(DividentReg) &&
-         RegTy == MRI.getType(DiviserReg) &&
+  assert(RegTy == MRI.getType(Op1Reg) && RegTy == MRI.getType(Op2Reg) &&
          "Arguments and return value types must match");
 
   const RegisterBank &RegRB = *RBI.getRegBank(DstReg, MRI, TRI);
+  if (RegRB.getID() != X86::GPRRegBankID)
+    return false;
 
+  const static unsigned NumTypes = 4; // i8, i16, i32, i64
+  const static unsigned NumOps = 4;   // SDiv, SRem, UDiv, URem
+  const static bool S = true;         // IsSigned
+  const static bool U = false;        // !IsSigned
+  const static unsigned Copy = TargetOpcode::COPY;
   // For the X86 IDIV instruction, in most cases the dividend
   // (numerator) must be in a specific register pair highreg:lowreg,
   // producing the quotient in lowreg and the remainder in highreg.
@@ -1610,57 +1623,168 @@ bool X86InstructionSelector::selectSDiv(MachineInstr &I,
   // exception is i8, where the dividend is defined as a single register rather
   // than a register pair, and we therefore directly sign-extend the dividend
   // into lowreg, instead of copying, and ignore the highreg.
-  const static struct SDivEntry {
+  const static struct DivRemEntry {
+    // The following portion depends only on the data type.
     unsigned SizeInBits;
-    unsigned QuotientReg;
-    unsigned DividentRegUpper;
-    unsigned DividentRegLower;
-    unsigned OpSignExtend;
-    unsigned OpCopy;
-    unsigned OpDiv;
-  } OpTable[] = {
-      {8, X86::AL, X86::NoRegister, X86::AX, 0, X86::MOVSX16rr8,
-       X86::IDIV8r}, // i8
-      {16, X86::AX, X86::DX, X86::AX, X86::CWD, TargetOpcode::COPY,
-       X86::IDIV16r}, // i16
-      {32, X86::EAX, X86::EDX, X86::EAX, X86::CDQ, TargetOpcode::COPY,
-       X86::IDIV32r}, // i32
-      {64, X86::RAX, X86::RDX, X86::RAX, X86::CQO, TargetOpcode::COPY,
-       X86::IDIV64r} // i64
+    unsigned LowInReg;  // low part of the register pair
+    unsigned HighInReg; // high part of the register pair
+    // The following portion depends on both the data type and the operation.
+    struct DivRemResult {
+      unsigned OpDivRem;        // The specific DIV/IDIV opcode to use.
+      unsigned OpSignExtend;    // Opcode for sign-extending lowreg into
+                                // highreg, or copying a zero into highreg.
+      unsigned OpCopy;          // Opcode for copying dividend into lowreg, or
+                                // zero/sign-extending into lowreg for i8.
+      unsigned DivRemResultReg; // Register containing the desired result.
+      bool IsOpSigned;          // Whether to use signed or unsigned form.
+    } ResultTable[NumOps];
+  } OpTable[NumTypes] = {
+      {8,
+       X86::AX,
+       0,
+       {
+           {X86::IDIV8r, 0, X86::MOVSX16rr8, X86::AL, S}, // SDiv
+           {X86::IDIV8r, 0, X86::MOVSX16rr8, X86::AH, S}, // SRem
+           {X86::DIV8r, 0, X86::MOVZX16rr8, X86::AL, U},  // UDiv
+           {X86::DIV8r, 0, X86::MOVZX16rr8, X86::AH, U},  // URem
+       }},                                                // i8
+      {16,
+       X86::AX,
+       X86::DX,
+       {
+           {X86::IDIV16r, X86::CWD, Copy, X86::AX, S},    // SDiv
+           {X86::IDIV16r, X86::CWD, Copy, X86::DX, S},    // SRem
+           {X86::DIV16r, X86::MOV32r0, Copy, X86::AX, U}, // UDiv
+           {X86::DIV16r, X86::MOV32r0, Copy, X86::DX, U}, // URem
+       }},                                                // i16
+      {32,
+       X86::EAX,
+       X86::EDX,
+       {
+           {X86::IDIV32r, X86::CDQ, Copy, X86::EAX, S},    // SDiv
+           {X86::IDIV32r, X86::CDQ, Copy, X86::EDX, S},    // SRem
+           {X86::DIV32r, X86::MOV32r0, Copy, X86::EAX, U}, // UDiv
+           {X86::DIV32r, X86::MOV32r0, Copy, X86::EDX, U}, // URem
+       }},                                                 // i32
+      {64,
+       X86::RAX,
+       X86::RDX,
+       {
+           {X86::IDIV64r, X86::CQO, Copy, X86::RAX, S},    // SDiv
+           {X86::IDIV64r, X86::CQO, Copy, X86::RDX, S},    // SRem
+           {X86::DIV64r, X86::MOV32r0, Copy, X86::RAX, U}, // UDiv
+           {X86::DIV64r, X86::MOV32r0, Copy, X86::RDX, U}, // URem
+       }},                                                 // i64
   };
 
-  if (RegRB.getID() != X86::GPRRegBankID)
+  auto OpEntryIt = std::find_if(std::begin(OpTable), std::end(OpTable),
+                                [RegTy](const DivRemEntry &El) {
+                                  return El.SizeInBits == RegTy.getSizeInBits();
+                                });
+  if (OpEntryIt == std::end(OpTable))
     return false;
 
-  auto SDivEntryIt = std::find_if(
-      std::begin(OpTable), std::end(OpTable), [RegTy](const SDivEntry &El) {
-    return El.SizeInBits == RegTy.getSizeInBits();
-      });
+  unsigned OpIndex;
+  switch (I.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected div/rem opcode");
+  case TargetOpcode::G_SDIV:
+    OpIndex = 0;
+    break;
+  case TargetOpcode::G_SREM:
+    OpIndex = 1;
+    break;
+  case TargetOpcode::G_UDIV:
+    OpIndex = 2;
+    break;
+  case TargetOpcode::G_UREM:
+    OpIndex = 3;
+    break;
+  }
 
-  if (SDivEntryIt == std::end(OpTable))
-    return false;
+  const DivRemEntry &TypeEntry = *OpEntryIt;
+  const DivRemEntry::DivRemResult &OpEntry = TypeEntry.ResultTable[OpIndex];
 
   const TargetRegisterClass *RegRC = getRegClass(RegTy, RegRB);
-  if (!RBI.constrainGenericRegister(DividentReg, *RegRC, MRI) ||
-      !RBI.constrainGenericRegister(DiviserReg, *RegRC, MRI) ||
+  if (!RBI.constrainGenericRegister(Op1Reg, *RegRC, MRI) ||
+      !RBI.constrainGenericRegister(Op2Reg, *RegRC, MRI) ||
       !RBI.constrainGenericRegister(DstReg, *RegRC, MRI)) {
     LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
                       << " operand\n");
     return false;
   }
 
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SDivEntryIt->OpCopy),
-          SDivEntryIt->DividentRegLower)
-      .addReg(DividentReg);
-  if (SDivEntryIt->DividentRegUpper != X86::NoRegister)
-    BuildMI(*I.getParent(), I, I.getDebugLoc(),
-            TII.get(SDivEntryIt->OpSignExtend));
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SDivEntryIt->OpDiv))
-      .addReg(DiviserReg);
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
-          DstReg)
-      .addReg(SDivEntryIt->QuotientReg);
+  // Move op1 into low-order input register.
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(OpEntry.OpCopy),
+          TypeEntry.LowInReg)
+      .addReg(Op1Reg);
+  // Zero-extend or sign-extend into high-order input register.
+  if (OpEntry.OpSignExtend) {
+    if (OpEntry.IsOpSigned)
+      BuildMI(*I.getParent(), I, I.getDebugLoc(),
+              TII.get(OpEntry.OpSignExtend));
+    else {
+      unsigned Zero32 = MRI.createVirtualRegister(&X86::GR32RegClass);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::MOV32r0),
+              Zero32);
 
+      // Copy the zero into the appropriate sub/super/identical physical
+      // register. Unfortunately the operations needed are not uniform enough
+      // to fit neatly into the table above.
+      if (RegTy.getSizeInBits() == 16) {
+        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Copy),
+                TypeEntry.HighInReg)
+            .addReg(Zero32, 0, X86::sub_16bit);
+      } else if (RegTy.getSizeInBits() == 32) {
+        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Copy),
+                TypeEntry.HighInReg)
+            .addReg(Zero32);
+      } else if (RegTy.getSizeInBits() == 64) {
+        BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                TII.get(TargetOpcode::SUBREG_TO_REG), TypeEntry.HighInReg)
+            .addImm(0)
+            .addReg(Zero32)
+            .addImm(X86::sub_32bit);
+      }
+    }
+  }
+  // Generate the DIV/IDIV instruction.
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(OpEntry.OpDivRem))
+      .addReg(Op2Reg);
+  // For i8 remainder, we can't reference ah directly, as we'll end
+  // up with bogus copies like %r9b = COPY %ah. Reference ax
+  // instead to prevent ah references in a rex instruction.
+  //
+  // The current assumption of the fast register allocator is that isel
+  // won't generate explicit references to the GR8_NOREX registers. If
+  // the allocator and/or the backend get enhanced to be more robust in
+  // that regard, this can be, and should be, removed.
+  if ((I.getOpcode() == Instruction::SRem ||
+       I.getOpcode() == Instruction::URem) &&
+      OpEntry.DivRemResultReg == X86::AH && STI.is64Bit()) {
+    unsigned SourceSuperReg = MRI.createVirtualRegister(&X86::GR16RegClass);
+    unsigned ResultSuperReg = MRI.createVirtualRegister(&X86::GR16RegClass);
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Copy), SourceSuperReg)
+        .addReg(X86::AX);
+
+    // Shift AX right by 8 bits instead of using AH.
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::SHR16ri),
+            ResultSuperReg)
+        .addReg(SourceSuperReg)
+        .addImm(8);
+
+    // Now reference the 8-bit subreg of the result.
+    BuildMI(*I.getParent(), I, I.getDebugLoc(),
+            TII.get(TargetOpcode::SUBREG_TO_REG))
+        .addDef(DstReg)
+        .addImm(0)
+        .addReg(ResultSuperReg)
+        .addImm(X86::sub_8bit);
+  } else {
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
+            DstReg)
+        .addReg(OpEntry.DivRemResultReg);
+  }
   I.eraseFromParent();
   return true;
 }

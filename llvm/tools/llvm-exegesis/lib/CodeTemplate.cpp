@@ -33,32 +33,26 @@ unsigned InstructionTemplate::getOpcode() const {
 }
 
 llvm::MCOperand &InstructionTemplate::getValueFor(const Variable &Var) {
-  return VariableValues[Var.Index];
+  return VariableValues[Var.getIndex()];
 }
 
 const llvm::MCOperand &
 InstructionTemplate::getValueFor(const Variable &Var) const {
-  return VariableValues[Var.Index];
+  return VariableValues[Var.getIndex()];
 }
 
 llvm::MCOperand &InstructionTemplate::getValueFor(const Operand &Op) {
-  assert(Op.VariableIndex >= 0);
-  return getValueFor(Instr.Variables[Op.VariableIndex]);
+  return getValueFor(Instr.Variables[Op.getVariableIndex()]);
 }
 
 const llvm::MCOperand &
 InstructionTemplate::getValueFor(const Operand &Op) const {
-  assert(Op.VariableIndex >= 0);
-  return getValueFor(Instr.Variables[Op.VariableIndex]);
+  return getValueFor(Instr.Variables[Op.getVariableIndex()]);
 }
 
 bool InstructionTemplate::hasImmediateVariables() const {
   return llvm::any_of(Instr.Variables, [this](const Variable &Var) {
-    assert(!Var.TiedOperands.empty());
-    const unsigned OpIndex = Var.TiedOperands[0];
-    const Operand &Op = Instr.Operands[OpIndex];
-    assert(Op.Info);
-    return Op.Info->OperandType == llvm::MCOI::OPERAND_IMMEDIATE;
+    return Instr.getPrimaryOperand(Var).isImmediate();
   });
 }
 
@@ -66,7 +60,7 @@ llvm::MCInst InstructionTemplate::build() const {
   llvm::MCInst Result;
   Result.setOpcode(Instr.Description->Opcode);
   for (const auto &Op : Instr.Operands)
-    if (Op.IsExplicit)
+    if (Op.isExplicit())
       Result.addOperand(getValueFor(Op));
   return Result;
 }

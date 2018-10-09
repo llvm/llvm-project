@@ -93,25 +93,11 @@ UopsSnippetGenerator::isInfeasible(const llvm::MCInstrDesc &MCInstrDesc) const {
   return llvm::Error::success();
 }
 
-// Returns whether this Variable ties Use and Def operands together.
-static bool hasTiedOperands(const Instruction &Instr, const Variable &Var) {
-  bool HasUse = false;
-  bool HasDef = false;
-  for (const unsigned OpIndex : Var.TiedOperands) {
-    const Operand &Op = Instr.Operands[OpIndex];
-    if (Op.IsDef)
-      HasDef = true;
-    else
-      HasUse = true;
-  }
-  return HasUse && HasDef;
-}
-
 static llvm::SmallVector<const Variable *, 8>
-getTiedVariables(const Instruction &Instr) {
+getVariablesWithTiedOperands(const Instruction &Instr) {
   llvm::SmallVector<const Variable *, 8> Result;
   for (const auto &Var : Instr.Variables)
-    if (hasTiedOperands(Instr, Var))
+    if (Var.hasTiedOperands())
       Result.push_back(&Var);
   return Result;
 }
@@ -170,8 +156,8 @@ UopsSnippetGenerator::generateCodeTemplate(unsigned Opcode) const {
     // If the instruction implicitly writes to ScratchSpacePointerInReg , abort.
     // FIXME: We could make a copy of the scratch register.
     for (const auto &Op : Instr.Operands) {
-      if (Op.IsDef && Op.ImplicitReg &&
-          ScratchSpaceAliasedRegs->test(*Op.ImplicitReg))
+      if (Op.isDef() && Op.isImplicitReg() &&
+          ScratchSpaceAliasedRegs->test(Op.getImplicitReg()))
         return llvm::make_error<BenchmarkFailure>(
             "Infeasible : memory instruction uses scratch memory register");
     }
@@ -191,7 +177,7 @@ UopsSnippetGenerator::generateCodeTemplate(unsigned Opcode) const {
     instantiateMemoryOperands(CT.ScratchSpacePointerInReg, CT.Instructions);
     return std::move(CT);
   }
-  const auto TiedVariables = getTiedVariables(Instr);
+  const auto TiedVariables = getVariablesWithTiedOperands(Instr);
   if (!TiedVariables.empty()) {
     if (TiedVariables.size() > 1)
       return llvm::make_error<llvm::StringError>(
@@ -199,11 +185,11 @@ UopsSnippetGenerator::generateCodeTemplate(unsigned Opcode) const {
           llvm::inconvertibleErrorCode());
     const Variable *Var = TiedVariables.front();
     assert(Var);
-    assert(!Var->TiedOperands.empty());
-    const Operand &Op = Instr.Operands[Var->TiedOperands.front()];
-    assert(Op.Tracker);
+    const Operand &Op = Instr.getPrimaryOperand(*Var);
+    assert(Op.isReg());
     CT.Info = "instruction has tied variables using static renaming.";
-    for (const llvm::MCPhysReg Reg : Op.Tracker->sourceBits().set_bits()) {
+    for (const llvm::MCPhysReg Reg :
+         Op.getRegisterAliasing().sourceBits().set_bits()) {
       if (ScratchSpaceAliasedRegs && ScratchSpaceAliasedRegs->test(Reg))
         continue; // Do not use the scratch memory address register.
       InstructionTemplate TmpIT = IT;
@@ -216,8 +202,8 @@ UopsSnippetGenerator::generateCodeTemplate(unsigned Opcode) const {
   // No tied variables, we pick random values for defs.
   llvm::BitVector Defs(State.getRegInfo().getNumRegs());
   for (const auto &Op : Instr.Operands) {
-    if (Op.Tracker && Op.IsExplicit && Op.IsDef && !Op.IsMem) {
-      auto PossibleRegisters = Op.Tracker->sourceBits();
+    if (Op.isReg() && Op.isExplicit() && Op.isDef() && !Op.isMemory()) {
+      auto PossibleRegisters = Op.getRegisterAliasing().sourceBits();
       remove(PossibleRegisters, RATC.reservedRegisters());
       // Do not use the scratch memory address register.
       if (ScratchSpaceAliasedRegs)
@@ -231,8 +217,8 @@ UopsSnippetGenerator::generateCodeTemplate(unsigned Opcode) const {
   // And pick random use values that are not reserved and don't alias with defs.
   const auto DefAliases = getAliasedBits(State.getRegInfo(), Defs);
   for (const auto &Op : Instr.Operands) {
-    if (Op.Tracker && Op.IsExplicit && !Op.IsDef && !Op.IsMem) {
-      auto PossibleRegisters = Op.Tracker->sourceBits();
+    if (Op.isReg() && Op.isExplicit() && Op.isUse() && !Op.isMemory()) {
+      auto PossibleRegisters = Op.getRegisterAliasing().sourceBits();
       remove(PossibleRegisters, RATC.reservedRegisters());
       // Do not use the scratch memory address register.
       if (ScratchSpaceAliasedRegs)

@@ -141,6 +141,11 @@ static cl::opt<int> EnableGlobalISelAtO(
 static cl::opt<bool> EnableFalkorHWPFFix("aarch64-enable-falkor-hwpf-fix",
                                          cl::init(true), cl::Hidden);
 
+static cl::opt<bool>
+    EnableBranchTargets("aarch64-enable-branch-targets", cl::Hidden,
+                        cl::desc("Enable the AAcrh64 branch target pass"),
+                        cl::init(true));
+
 extern "C" void LLVMInitializeAArch64Target() {
   // Register the target.
   RegisterTargetMachine<AArch64leTargetMachine> X(getTheAArch64leTarget());
@@ -151,6 +156,7 @@ extern "C" void LLVMInitializeAArch64Target() {
   initializeAArch64A53Fix835769Pass(*PR);
   initializeAArch64A57FPLoadBalancingPass(*PR);
   initializeAArch64AdvSIMDScalarPass(*PR);
+  initializeAArch64BranchTargetsPass(*PR);
   initializeAArch64CollectLOHPass(*PR);
   initializeAArch64ConditionalComparesPass(*PR);
   initializeAArch64ConditionOptimizerPass(*PR);
@@ -536,6 +542,9 @@ void AArch64PassConfig::addPreEmitPass() {
   // range of their destination.
   if (BranchRelaxation)
     addPass(&BranchRelaxationPassID);
+
+  if (EnableBranchTargets)
+    addPass(createAArch64BranchTargetsPass());
 
   if (TM->getOptLevel() != CodeGenOpt::None && EnableCollectLOH &&
       TM->getTargetTriple().isOSBinFormatMachO())
