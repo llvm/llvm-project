@@ -158,11 +158,11 @@ static llvm::cl::opt<bool> HeaderInsertionDecorators(
                    "an include line will be inserted or not."),
     llvm::cl::init(true));
 
-static llvm::cl::opt<Path> YamlSymbolFile(
-    "yaml-symbol-file",
+static llvm::cl::opt<Path> IndexFile(
+    "index-file",
     llvm::cl::desc(
-        "YAML-format global symbol file to build the static index. Clangd will "
-        "use the static index for global code completion.\n"
+        "Index file to build the static index. The file must have been created "
+        "by a compatible clangd-index.\n"
         "WARNING: This option is experimental only, and will be removed "
         "eventually. Don't rely on it."),
     llvm::cl::init(""), llvm::cl::Hidden);
@@ -288,12 +288,12 @@ int main(int argc, char *argv[]) {
   Opts.BuildDynamicSymbolIndex = EnableIndex;
   std::unique_ptr<SymbolIndex> StaticIdx;
   std::future<void> AsyncIndexLoad; // Block exit while loading the index.
-  if (EnableIndex && !YamlSymbolFile.empty()) {
+  if (EnableIndex && !IndexFile.empty()) {
     // Load the index asynchronously. Meanwhile SwapIndex returns no results.
     SwapIndex *Placeholder;
     StaticIdx.reset(Placeholder = new SwapIndex(llvm::make_unique<MemIndex>()));
     AsyncIndexLoad = runAsync<void>([Placeholder, &Opts] {
-      if (auto Idx = loadIndex(YamlSymbolFile, Opts.URISchemes, UseDex))
+      if (auto Idx = loadIndex(IndexFile, Opts.URISchemes, UseDex))
         Placeholder->reset(std::move(Idx));
     });
     if (RunSynchronously)

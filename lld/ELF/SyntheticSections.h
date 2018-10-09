@@ -970,7 +970,6 @@ private:
 
 InputSection *createInterpSection();
 MergeInputSection *createCommentSection();
-void decompressSections();
 template <class ELFT> void splitSections();
 void mergeSections();
 

@@ -741,24 +741,28 @@ void llvm::computeDeadSymbols(
         return;
 
     // We only keep live symbols that are known to be non-prevailing if any are
-    // available_externally. Those symbols are discarded later in the
-    // EliminateAvailableExternally pass and setting them to not-live breaks
-    // downstreams users of liveness information (PR36483).
+    // available_externally, linkonceodr, weakodr. Those symbols are discarded
+    // later in the EliminateAvailableExternally pass and setting them to
+    // not-live could break downstreams users of liveness information (PR36483)
+    // or limit optimization opportunities.
     if (isPrevailing(VI.getGUID()) == PrevailingType::No) {
-      bool AvailableExternally = false;
+      bool KeepAliveLinkage = false;
       bool Interposable = false;
       for (auto &S : VI.getSummaryList()) {
-        if (S->linkage() == GlobalValue::AvailableExternallyLinkage)
-          AvailableExternally = true;
+        if (S->linkage() == GlobalValue::AvailableExternallyLinkage ||
+            S->linkage() == GlobalValue::WeakODRLinkage ||
+            S->linkage() == GlobalValue::LinkOnceODRLinkage)
+          KeepAliveLinkage = true;
         else if (GlobalValue::isInterposableLinkage(S->linkage()))
           Interposable = true;
       }
 
-      if (!AvailableExternally)
+      if (!KeepAliveLinkage)
         return;
 
       if (Interposable)
-        report_fatal_error("Interposable and available_externally symbol");
+        report_fatal_error(
+          "Interposable and available_externally/linkonce_odr/weak_odr symbol");
     }
 
     for (auto &S : VI.getSummaryList())

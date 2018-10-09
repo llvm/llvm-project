@@ -1,0 +1,30 @@
+; RUN: llvm-pdbutil dump -globals \
+; RUN:    -global-name="operator delete" \
+; RUN:    -global-name=main \
+; RUN:    -global-name=abcdefg \
+; RUN:    %p/Inputs/every-function.pdb | FileCheck %s
+
+; This is a separate command line invocation because B::PureFunc
+; is special.  It's in the last hash bucket, so it exercises a special
+; calculation path.
+; RUN: llvm-pdbutil dump -globals -global-name=B::PureFunc \
+; RUN:    %p/Inputs/symbolformat.pdb | FileCheck --check-prefix=PURE %s
+
+CHECK:                        Global Symbols
+CHECK-NEXT: ============================================================
+CHECK-NEXT:     Global Name `operator delete`
+CHECK-NEXT:       1516 | S_PROCREF [size = 32] `operator delete`
+CHECK-NEXT:              module = 1, sum name = 0, offset = 324
+CHECK-NEXT:       1484 | S_PROCREF [size = 32] `operator delete`
+CHECK-NEXT:              module = 1, sum name = 0, offset = 184
+CHECK-NEXT:     Global Name `main`
+CHECK-NEXT:       2016 | S_PROCREF [size = 20] `main`
+CHECK-NEXT:              module = 1, sum name = 0, offset = 1952
+CHECK-NEXT:     Global Name `abcdefg`
+CHECK-NEXT:       (no matching records found)
+
+PURE:                        Global Symbols
+PURE-NEXT: ============================================================
+PURE-NEXT:     Global Name `B::PureFunc`
+PURE-NEXT:        980 | S_PROCREF [size = 28] `B::PureFunc`
+PURE-NEXT:              module = 1, sum name = 0, offset = 800

@@ -356,7 +356,7 @@ static uint64_t scanCortexA53Errata843419(InputSection *IS, uint64_t &Off,
   }
 
   uint64_t PatchOff = 0;
-  const uint8_t *Buf = IS->Data.begin();
+  const uint8_t *Buf = IS->data().begin();
   const ulittle32_t *InstBuf = reinterpret_cast<const ulittle32_t *>(Buf + Off);
   uint32_t Instr1 = *InstBuf++;
   uint32_t Instr2 = *InstBuf++;
@@ -411,7 +411,7 @@ uint64_t lld::elf::Patch843419Section::getLDSTAddr() const {
 void lld::elf::Patch843419Section::writeTo(uint8_t *Buf) {
   // Copy the instruction that we will be replacing with a branch in the
   // Patchee Section.
-  write32le(Buf, read32le(Patchee->Data.begin() + PatcheeOffset));
+  write32le(Buf, read32le(Patchee->data().begin() + PatcheeOffset));
 
   // Apply any relocation transferred from the original PatcheeSection.
   // For a SyntheticSection Buf already has OutSecOff added, but relocateAlloc
@@ -598,7 +598,7 @@ AArch64Err843419Patcher::patchInputSectionDescription(
       auto DataSym = std::next(CodeSym);
       uint64_t Off = (*CodeSym)->Value;
       uint64_t Limit =
-          (DataSym == MapSyms.end()) ? IS->Data.size() : (*DataSym)->Value;
+          (DataSym == MapSyms.end()) ? IS->data().size() : (*DataSym)->Value;
 
       while (Off < Limit) {
         uint64_t StartAddr = IS->getVA(Off);

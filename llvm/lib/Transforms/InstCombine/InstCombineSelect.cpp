@@ -1751,7 +1751,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
            match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(X)))) ||
           (X == TrueVal && Pred == FCmpInst::FCMP_OGT &&
            match(FalseVal, m_FSub(m_PosZeroFP(), m_Specific(X))))) {
-        Value *Fabs = Builder.CreateIntrinsic(Intrinsic::fabs, { X }, FCI);
+        Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, FCI);
         return replaceInstUsesWith(SI, Fabs);
       }
       // With nsz:
@@ -1764,7 +1764,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
             (Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_OLE)) ||
            (X == TrueVal && match(FalseVal, m_FNeg(m_Specific(X))) &&
             (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_OGE)))) {
-        Value *Fabs = Builder.CreateIntrinsic(Intrinsic::fabs, { X }, FCI);
+        Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, FCI);
         return replaceInstUsesWith(SI, Fabs);
       }
     }

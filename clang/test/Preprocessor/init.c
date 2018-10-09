@@ -47,21 +47,21 @@
 // CXX11:#define __cplusplus 201103L
 // CXX11:#define __private_extern__ extern
 //
-// 
+//
 // RUN: %clang_cc1 -x c++ -std=c++98 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX98 %s
-// 
+//
 // CXX98:#define __GNUG__ {{.*}}
 // CXX98:#define __GXX_RTTI 1
 // CXX98:#define __GXX_WEAK__ 1
 // CXX98:#define __cplusplus 199711L
 // CXX98:#define __private_extern__ extern
 //
-// 
+//
 // RUN: %clang_cc1 -fdeprecated-macro -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix DEPRECATED %s
 //
 // DEPRECATED:#define __DEPRECATED 1
 //
-// 
+//
 // RUN: %clang_cc1 -std=c99 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C99 %s
 //
 // C99:#define __STDC_VERSION__ 199901L
@@ -71,7 +71,7 @@
 // C99-NOT: __GXX_WEAK__
 // C99-NOT: __cplusplus
 //
-// 
+//
 // RUN: %clang_cc1 -std=c11 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C11 %s
 // RUN: %clang_cc1 -std=c1x -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C11 %s
 // RUN: %clang_cc1 -std=iso9899:2011 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C11 %s
@@ -86,7 +86,7 @@
 // C11-NOT: __GXX_WEAK__
 // C11-NOT: __cplusplus
 //
-// 
+//
 // RUN: %clang_cc1 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix COMMON %s
 //
 // COMMON:#define __CONSTANT_CFSTRINGS__ 1
@@ -113,7 +113,7 @@
 // RUN: %clang_cc1 -E -dM -triple=x86_64-pc-linux-gnu < /dev/null | FileCheck -match-full-lines -check-prefix C-DEFAULT %s
 // RUN: %clang_cc1 -E -dM -triple=x86_64-apple-darwin < /dev/null | FileCheck -match-full-lines -check-prefix C-DEFAULT %s
 // RUN: %clang_cc1 -E -dM -triple=armv7a-apple-darwin < /dev/null | FileCheck -match-full-lines -check-prefix C-DEFAULT %s
-// 
+//
 // C-DEFAULT:#define __STDC_VERSION__ 201112L
 //
 // RUN: %clang_cc1 -ffreestanding -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix FREESTANDING %s
@@ -158,12 +158,12 @@
 // GXX98:#define __cplusplus 199711L
 // GXX98:#define __private_extern__ extern
 //
-// 
+//
 // RUN: %clang_cc1 -std=iso9899:199409 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C94 %s
 //
 // C94:#define __STDC_VERSION__ 199409L
 //
-// 
+//
 // RUN: %clang_cc1 -fms-extensions -triple i686-pc-win32 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix MSEXT %s
 //
 // MSEXT-NOT:#define __STDC__
@@ -185,7 +185,7 @@
 // MSEXT-CXX-NOWCHAR-NOT:#define _WCHAR_T_DEFINED 1
 // MSEXT-CXX-NOWCHAR:#define __BOOL_DEFINED 1
 //
-// 
+//
 // RUN: %clang_cc1 -x objective-c -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix OBJC %s
 //
 // OBJC:#define OBJC_NEW_PROPERTIES 1
@@ -197,7 +197,7 @@
 //
 // OBJCGC:#define __OBJC_GC__ 1
 //
-// 
+//
 // RUN: %clang_cc1 -x objective-c -fobjc-exceptions -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix NONFRAGILE %s
 //
 // NONFRAGILE:#define OBJC_ZEROCOST_EXCEPTIONS 1
@@ -246,9 +246,9 @@
 //
 // PASCAL:#define __PASCAL_STRINGS__ 1
 //
-// 
+//
 // RUN: %clang_cc1 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix SCHAR %s
-// 
+//
 // SCHAR:#define __STDC__ 1
 // SCHAR-NOT:#define __UNSIGNED_CHAR__
 // SCHAR:#define __clang__ 1
@@ -7978,6 +7978,7 @@
 // X86_64:#define __WINT_WIDTH__ 32
 // X86_64:#define __amd64 1
 // X86_64:#define __amd64__ 1
+// X86_64:#define __code_model_small_ 1
 // X86_64:#define __x86_64 1
 // X86_64:#define __x86_64__ 1
 //
@@ -7987,7 +7988,10 @@
 // X86_64H:#define __x86_64__ 1
 // X86_64H:#define __x86_64h 1
 // X86_64H:#define __x86_64h__ 1
-
+//
+// RUN: %clang -xc - -E -dM -mcmodel=medium --target=i386-unknown-linux < /dev/null | FileCheck -match-full-lines -check-prefix X86_MEDIUM %s
+// X86_MEDIUM:#define __code_model_medium_ 1
+//
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=x86_64-none-none-gnux32 < /dev/null | FileCheck -match-full-lines -check-prefix X32 %s
 // RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=x86_64-none-none-gnux32 < /dev/null | FileCheck -match-full-lines -check-prefix X32 -check-prefix X32-CXX %s
 //
@@ -9830,7 +9834,7 @@
 // AVR:#define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
 // AVR:#define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 1
 // AVR:#define __GXX_ABI_VERSION 1002
-// AVR:#define __INT16_C_SUFFIX__ 
+// AVR:#define __INT16_C_SUFFIX__
 // AVR:#define __INT16_MAX__ 32767
 // AVR:#define __INT16_TYPE__ short
 // AVR:#define __INT32_C_SUFFIX__ L
@@ -9839,7 +9843,7 @@
 // AVR:#define __INT64_C_SUFFIX__ LL
 // AVR:#define __INT64_MAX__ 9223372036854775807LL
 // AVR:#define __INT64_TYPE__ long long int
-// AVR:#define __INT8_C_SUFFIX__ 
+// AVR:#define __INT8_C_SUFFIX__
 // AVR:#define __INT8_MAX__ 127
 // AVR:#define __INT8_TYPE__ signed char
 // AVR:#define __INTMAX_C_SUFFIX__ LL
@@ -9914,7 +9918,7 @@
 // AVR:#define __UINT64_C_SUFFIX__ ULL
 // AVR:#define __UINT64_MAX__ 18446744073709551615ULL
 // AVR:#define __UINT64_TYPE__ long long unsigned int
-// AVR:#define __UINT8_C_SUFFIX__ 
+// AVR:#define __UINT8_C_SUFFIX__
 // AVR:#define __UINT8_MAX__ 255
 // AVR:#define __UINT8_TYPE__ unsigned char
 // AVR:#define __UINTMAX_C_SUFFIX__ ULL
@@ -9938,7 +9942,7 @@
 // AVR:#define __UINT_LEAST64_TYPE__ long long unsigned int
 // AVR:#define __UINT_LEAST8_MAX__ 255
 // AVR:#define __UINT_LEAST8_TYPE__ unsigned char
-// AVR:#define __USER_LABEL_PREFIX__ 
+// AVR:#define __USER_LABEL_PREFIX__
 // AVR:#define __WCHAR_MAX__ 32767
 // AVR:#define __WCHAR_TYPE__ int
 // AVR:#define __WINT_TYPE__ int

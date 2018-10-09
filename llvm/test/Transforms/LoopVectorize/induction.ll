@@ -138,7 +138,7 @@ for.end:
 ; CHECK-LABEL: @scalarize_induction_variable_02(
 ; CHECK: vector.body:
 ; CHECK:   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK:   %offset.idx = shl i64 %index, 3
+; CHECK:   %offset.idx = mul i64 %index, 8
 ; CHECK:   %[[i0:.+]] = add i64 %offset.idx, 0
 ; CHECK:   %[[i1:.+]] = add i64 %offset.idx, 8
 ; CHECK:   getelementptr inbounds float, float* %a, i64 %[[i0]]
@@ -149,7 +149,7 @@ for.end:
 ; UNROLL-NO-IC-LABEL: @scalarize_induction_variable_02(
 ; UNROLL-NO-IC: vector.body:
 ; UNROLL-NO-IC:   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; UNROLL-NO-IC:   %offset.idx = shl i64 %index, 3
+; UNROLL-NO-IC:   %offset.idx = mul i64 %index, 8
 ; UNROLL-NO-IC:   %[[i0:.+]] = add i64 %offset.idx, 0
 ; UNROLL-NO-IC:   %[[i1:.+]] = add i64 %offset.idx, 8
 ; UNROLL-NO-IC:   %[[i2:.+]] = add i64 %offset.idx, 16

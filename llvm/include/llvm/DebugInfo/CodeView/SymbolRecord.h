@@ -358,6 +358,7 @@ public:
 // S_PUB32
 class PublicSym32 : public SymbolRecord {
 public:
+  PublicSym32() : SymbolRecord(SymbolRecordKind::PublicSym32) {}
   explicit PublicSym32(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit PublicSym32(uint32_t RecordOffset)
       : SymbolRecord(SymbolRecordKind::PublicSym32),
@@ -636,6 +637,7 @@ public:
 // S_OBJNAME
 class ObjNameSym : public SymbolRecord {
 public:
+  explicit ObjNameSym() : SymbolRecord(SymbolRecordKind::ObjNameSym) {}
   explicit ObjNameSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   ObjNameSym(uint32_t RecordOffset)
       : SymbolRecord(SymbolRecordKind::ObjNameSym), RecordOffset(RecordOffset) {
@@ -718,6 +720,7 @@ public:
 // S_COMPILE3
 class Compile3Sym : public SymbolRecord {
 public:
+  Compile3Sym() : SymbolRecord(SymbolRecordKind::Compile3Sym) {}
   explicit Compile3Sym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   Compile3Sym(uint32_t RecordOffset)
       : SymbolRecord(SymbolRecordKind::Compile3Sym),
@@ -739,8 +742,17 @@ public:
     Flags = CompileSym3Flags((uint32_t(Flags) & 0xFFFFFF00) | uint32_t(Lang));
   }
 
-  uint8_t getLanguage() const { return static_cast<uint32_t>(Flags) & 0xFF; }
-  uint32_t getFlags() const { return static_cast<uint32_t>(Flags) & ~0xFF; }
+  SourceLanguage getLanguage() const {
+    return static_cast<SourceLanguage>(static_cast<uint32_t>(Flags) & 0xFF);
+  }
+  CompileSym3Flags getFlags() const {
+    return static_cast<CompileSym3Flags>(static_cast<uint32_t>(Flags) & ~0xFF);
+  }
+
+  bool hasOptimizations() const {
+    return CompileSym3Flags::None !=
+           (getFlags() & (CompileSym3Flags::PGO | CompileSym3Flags::LTCG));
+  }
 
   uint32_t RecordOffset;
 };

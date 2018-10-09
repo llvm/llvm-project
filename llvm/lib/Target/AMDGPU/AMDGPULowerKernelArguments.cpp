@@ -83,8 +83,8 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
     return false;
 
   CallInst *KernArgSegment =
-    Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, nullptr,
-                            F.getName() + ".kernarg.segment");
+      Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, {}, {},
+                              nullptr, F.getName() + ".kernarg.segment");
 
   KernArgSegment->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
   KernArgSegment->addAttribute(AttributeList::ReturnIndex,

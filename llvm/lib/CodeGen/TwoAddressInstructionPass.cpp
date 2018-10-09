@@ -592,17 +592,17 @@ isProfitableToCommute(unsigned regA, unsigned regB, unsigned regC,
   // the two-address register.
   // e.g.
   // %reg1028 = EXTRACT_SUBREG killed %reg1027, 1
-  // %reg1029 = MOV8rr %reg1028
+  // %reg1029 = COPY %reg1028
   // %reg1029 = SHR8ri %reg1029, 7, implicit dead %eflags
-  // insert => %reg1030 = MOV8rr %reg1028
+  // insert => %reg1030 = COPY %reg1028
   // %reg1030 = ADD8rr killed %reg1028, killed %reg1029, implicit dead %eflags
-  // In this case, it might not be possible to coalesce the second MOV8rr
+  // In this case, it might not be possible to coalesce the second COPY
   // instruction if the first one is coalesced. So it would be profitable to
   // commute it:
   // %reg1028 = EXTRACT_SUBREG killed %reg1027, 1
-  // %reg1029 = MOV8rr %reg1028
+  // %reg1029 = COPY %reg1028
   // %reg1029 = SHR8ri %reg1029, 7, implicit dead %eflags
-  // insert => %reg1030 = MOV8rr %reg1029
+  // insert => %reg1030 = COPY %reg1029
   // %reg1030 = ADD8rr killed %reg1029, killed %reg1028, implicit dead %eflags
 
   if (!isPlainlyKilled(MI, regC, LIS))

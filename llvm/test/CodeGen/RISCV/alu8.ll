@@ -79,16 +79,20 @@ define i8 @slli(i8 %a) nounwind {
 define i8 @srli(i8 %a) nounwind {
 ; RV32I-LABEL: srli:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 192
+; RV32I-NEXT:    srli a0, a0, 6
 ; RV32I-NEXT:    ret
-  %1 = lshr i8 %a, 8
+  %1 = lshr i8 %a, 6
   ret i8 %1
 }
 
 define i8 @srai(i8 %a) nounwind {
 ; RV32I-LABEL: srai:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    srai a0, a0, 29
 ; RV32I-NEXT:    ret
-  %1 = ashr i8 %a, 9
+  %1 = ashr i8 %a, 5
   ret i8 %1
 }
 

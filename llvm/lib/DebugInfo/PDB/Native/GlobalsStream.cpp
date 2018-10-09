@@ -20,7 +20,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
+
+#include "llvm/DebugInfo/CodeView/RecordName.h"
+#include "llvm/DebugInfo/PDB/Native/Hash.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
+#include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
@@ -39,6 +43,37 @@ Error GlobalsStream::reload() {
   if (auto E = GlobalsTable.read(Reader))
     return E;
   return Error::success();
+}
+
+std::vector<std::pair<uint32_t, codeview::CVSymbol>>
+GlobalsStream::findRecordsByName(StringRef Name,
+                                 const SymbolStream &Symbols) const {
+  std::vector<std::pair<uint32_t, codeview::CVSymbol>> Result;
+
+  // Hash the name to figure out which bucket this goes into.
+  size_t ExpandedBucketIndex = hashStringV1(Name) % IPHR_HASH;
+  int32_t CompressedBucketIndex = GlobalsTable.BucketMap[ExpandedBucketIndex];
+  if (CompressedBucketIndex == -1)
+    return Result;
+
+  uint32_t ChainStartOffset = GlobalsTable.HashBuckets[CompressedBucketIndex];
+  uint32_t NextChainOffset = GlobalsTable.HashBuckets.size() * 12;
+  uint32_t LastBucketIndex = GlobalsTable.HashBuckets.size() - 1;
+  if (static_cast<uint32_t>(CompressedBucketIndex) < LastBucketIndex) {
+    NextChainOffset = GlobalsTable.HashBuckets[CompressedBucketIndex + 1];
+  }
+  ChainStartOffset /= 12;
+  NextChainOffset /= 12;
+
+  while (ChainStartOffset < NextChainOffset) {
+    PSHashRecord PSH = GlobalsTable.HashRecords[ChainStartOffset];
+    uint32_t Off = PSH.Off - 1;
+    codeview::CVSymbol Record = Symbols.readRecord(Off);
+    if (codeview::getSymbolName(Record) == Name)
+      Result.push_back(std::make_pair(Off, std::move(Record)));
+    ++ChainStartOffset;
+  }
+  return Result;
 }
 
 static Error checkHashHdrVersion(const GSIHashHeader *HashHdr) {
@@ -86,7 +121,8 @@ static Error readGSIHashRecords(FixedStreamArray<PSHashRecord> &HashRecords,
 
 static Error
 readGSIHashBuckets(FixedStreamArray<support::ulittle32_t> &HashBuckets,
-                   ArrayRef<uint8_t> &HashBitmap, const GSIHashHeader *HashHdr,
+                   ArrayRef<uint32_t> &HashBitmap, const GSIHashHeader *HashHdr,
+                   MutableArrayRef<int32_t> BucketMap,
                    BinaryStreamReader &Reader) {
   if (auto EC = checkHashHdrVersion(HashHdr))
     return EC;
@@ -94,13 +130,27 @@ readGSIHashBuckets(FixedStreamArray<support::ulittle32_t> &HashBuckets,
   // Before the actual hash buckets, there is a bitmap of length determined by
   // IPHR_HASH.
   size_t BitmapSizeInBits = alignTo(IPHR_HASH + 1, 32);
-  uint32_t NumBitmapEntries = BitmapSizeInBits / 8;
-  if (auto EC = Reader.readBytes(HashBitmap, NumBitmapEntries))
+  uint32_t NumBitmapEntries = BitmapSizeInBits / 32;
+  if (auto EC = Reader.readArray(HashBitmap, NumBitmapEntries))
     return joinErrors(std::move(EC),
                       make_error<RawError>(raw_error_code::corrupt_file,
                                            "Could not read a bitmap."));
+  uint32_t NumBuckets1 = 0;
+  uint32_t CompressedBucketIdx = 0;
+  for (uint32_t I = 0; I <= IPHR_HASH; ++I) {
+    uint8_t WordIdx = I / 32;
+    uint8_t BitIdx = I % 32;
+    bool IsSet = HashBitmap[WordIdx] & (1U << BitIdx);
+    if (IsSet) {
+      ++NumBuckets1;
+      BucketMap[I] = CompressedBucketIdx++;
+    } else {
+      BucketMap[I] = -1;
+    }
+  }
+
   uint32_t NumBuckets = 0;
-  for (uint8_t B : HashBitmap)
+  for (uint32_t B : HashBitmap)
     NumBuckets += countPopulation(B);
 
   // Hash buckets follow.
@@ -118,7 +168,8 @@ Error GSIHashTable::read(BinaryStreamReader &Reader) {
   if (auto EC = readGSIHashRecords(HashRecords, HashHdr, Reader))
     return EC;
   if (HashHdr->HrSize > 0)
-    if (auto EC = readGSIHashBuckets(HashBuckets, HashBitmap, HashHdr, Reader))
+    if (auto EC = readGSIHashBuckets(HashBuckets, HashBitmap, HashHdr,
+                                     BucketMap, Reader))
       return EC;
   return Error::success();
 }

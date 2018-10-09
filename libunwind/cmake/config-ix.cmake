@@ -7,6 +7,7 @@ check_library_exists(c fopen "" LIBUNWIND_HAS_C_LIB)
 
 if (NOT LIBUNWIND_USE_COMPILER_RT)
   check_library_exists(gcc_s __gcc_personality_v0 "" LIBUNWIND_HAS_GCC_S_LIB)
+  check_library_exists(gcc __absvdi2 "" LIBUNWIND_HAS_GCC_LIB)
 endif()
 
 # libunwind is built with -nodefaultlibs, so we want all our checks to also
@@ -25,8 +26,13 @@ if (LIBUNWIND_HAS_NODEFAULTLIBS_FLAG)
   if (LIBUNWIND_USE_COMPILER_RT)
     find_compiler_rt_library(builtins LIBUNWIND_BUILTINS_LIBRARY)
     list(APPEND CMAKE_REQUIRED_LIBRARIES "${LIBUNWIND_BUILTINS_LIBRARY}")
-  elseif (LIBUNWIND_HAS_GCC_S_LIB)
-    list(APPEND CMAKE_REQUIRED_LIBRARIES gcc_s)
+  else ()
+    if (LIBUNWIND_HAS_GCC_S_LIB)
+      list(APPEND CMAKE_REQUIRED_LIBRARIES gcc_s)
+    endif ()
+    if (LIBUNWIND_HAS_GCC_LIB)
+      list(APPEND CMAKE_REQUIRED_LIBRARIES gcc)
+    endif ()
   endif ()
   if (MINGW)
     # Mingw64 requires quite a few "C" runtime libraries in order for basic
