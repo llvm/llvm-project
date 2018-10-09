@@ -154,9 +154,9 @@ void SymbolTable::trace(StringRef Name) {
 
 void SymbolTable::wrap(Symbol *Sym, Symbol *Real, Symbol *Wrap) {
   // Swap symbols as instructed by -wrap.
-  int &Idx1 = Symtab->SymMap[CachedHashStringRef(Sym->getName())];
-  int &Idx2 = Symtab->SymMap[CachedHashStringRef(Real->getName())];
-  int &Idx3 = Symtab->SymMap[CachedHashStringRef(Wrap->getName())];
+  int &Idx1 = SymMap[CachedHashStringRef(Sym->getName())];
+  int &Idx2 = SymMap[CachedHashStringRef(Real->getName())];
+  int &Idx3 = SymMap[CachedHashStringRef(Wrap->getName())];
 
   Idx2 = Idx1;
   Idx1 = Idx3;
@@ -196,23 +196,22 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
 
   if (SymIndex == -1) {
     SymIndex = SymVector.size();
-    IsNew = Traced = true;
+    IsNew = true;
+    Traced = true;
   }
 
-  Symbol *Sym;
-  if (IsNew) {
-    Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
-    Sym->Visibility = STV_DEFAULT;
-    Sym->IsUsedInRegularObj = false;
-    Sym->ExportDynamic = false;
-    Sym->CanInline = true;
-    Sym->Traced = Traced;
-    Sym->VersionId = Config->DefaultSymbolVersion;
-    SymVector.push_back(Sym);
-  } else {
-    Sym = SymVector[SymIndex];
-  }
-  return {Sym, IsNew};
+  if (!IsNew)
+    return {SymVector[SymIndex], false};
+
+  auto *Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
+  Sym->Visibility = STV_DEFAULT;
+  Sym->IsUsedInRegularObj = false;
+  Sym->ExportDynamic = false;
+  Sym->CanInline = true;
+  Sym->Traced = Traced;
+  Sym->VersionId = Config->DefaultSymbolVersion;
+  SymVector.push_back(Sym);
+  return {Sym, true};
 }
 
 // Find an existing symbol or create and insert a new one, then apply the given
@@ -234,11 +233,10 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name, uint8_t Type,
   if (!File || File->kind() == InputFile::ObjKind)
     S->IsUsedInRegularObj = true;
 
-  if (!WasInserted && S->Type != Symbol::UnknownType &&
-      ((Type == STT_TLS) != S->isTls())) {
+  bool HasTlsAttr = !WasInserted && (!S->isLazy() || S->isTls());
+  if (HasTlsAttr && (Type == STT_TLS) != S->isTls())
     error("TLS attribute mismatch: " + toString(*S) + "\n>>> defined in " +
           toString(S->File) + "\n>>> defined in " + toString(File));
-  }
 
   return {S, WasInserted};
 }
@@ -444,12 +442,6 @@ Symbol *SymbolTable::addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
   return S;
 }
 
-static void reportDuplicate(Symbol *Sym, InputFile *NewFile) {
-  if (!Config->AllowMultipleDefinition)
-    error("duplicate symbol: " + toString(*Sym) + "\n>>> defined in " +
-          toString(Sym->File) + "\n>>> defined in " + toString(NewFile));
-}
-
 static void reportDuplicate(Symbol *Sym, InputFile *NewFile,
                             InputSectionBase *ErrSec, uint64_t ErrOffset) {
   if (Config->AllowMultipleDefinition)
@@ -457,7 +449,8 @@ static void reportDuplicate(Symbol *Sym, InputFile *NewFile,
 
   Defined *D = cast<Defined>(Sym);
   if (!D->Section || !ErrSec) {
-    reportDuplicate(Sym, NewFile);
+    error("duplicate symbol: " + toString(*Sym) + "\n>>> defined in " +
+          toString(Sym->File) + "\n>>> defined in " + toString(NewFile));
     return;
   }
 
@@ -546,7 +539,7 @@ Symbol *SymbolTable::addBitcode(StringRef Name, uint8_t Binding,
   if (Cmp > 0)
     replaceSymbol<Defined>(S, &F, Name, Binding, StOther, Type, 0, 0, nullptr);
   else if (Cmp == 0)
-    reportDuplicate(S, &F);
+    reportDuplicate(S, &F, nullptr, 0);
   return S;
 }
 
@@ -559,18 +552,14 @@ Symbol *SymbolTable::find(StringRef Name) {
   return SymVector[It->second];
 }
 
-// This is used to handle lazy symbols. May replace existent
-// symbol with lazy version or request to Fetch it.
-template <class ELFT, typename LazyT, typename... ArgT>
-static void replaceOrFetchLazy(StringRef Name, InputFile &File,
-                               llvm::function_ref<InputFile *()> Fetch,
-                               ArgT &&... Arg) {
+template <class ELFT>
+void SymbolTable::addLazyArchive(StringRef Name, ArchiveFile &File,
+                                 const object::Archive::Symbol Sym) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = Symtab->insert(Name);
+  std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
-    replaceSymbol<LazyT>(S, File, Symbol::UnknownType,
-                         std::forward<ArgT>(Arg)...);
+    replaceSymbol<LazyArchive>(S, File, STT_NOTYPE, Sym);
     return;
   }
   if (!S->isUndefined())
@@ -579,26 +568,37 @@ static void replaceOrFetchLazy(StringRef Name, InputFile &File,
   // An undefined weak will not fetch archive members. See comment on Lazy in
   // Symbols.h for the details.
   if (S->isWeak()) {
-    replaceSymbol<LazyT>(S, File, S->Type, std::forward<ArgT>(Arg)...);
+    replaceSymbol<LazyArchive>(S, File, S->Type, Sym);
     S->Binding = STB_WEAK;
     return;
   }
 
-  if (InputFile *F = Fetch())
-    Symtab->addFile<ELFT>(F);
+  if (InputFile *F = File.fetch(Sym))
+    addFile<ELFT>(F);
 }
 
 template <class ELFT>
-void SymbolTable::addLazyArchive(StringRef Name, ArchiveFile &F,
-                                 const object::Archive::Symbol Sym) {
-  replaceOrFetchLazy<ELFT, LazyArchive>(Name, F, [&]() { return F.fetch(Sym); },
-                                        Sym);
-}
+void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &File) {
+  Symbol *S;
+  bool WasInserted;
+  std::tie(S, WasInserted) = insert(Name);
+  if (WasInserted) {
+    replaceSymbol<LazyObject>(S, File, STT_NOTYPE, Name);
+    return;
+  }
+  if (!S->isUndefined())
+    return;
 
-template <class ELFT>
-void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &Obj) {
-  replaceOrFetchLazy<ELFT, LazyObject>(Name, Obj, [&]() { return Obj.fetch(); },
-                                       Name);
+  // An undefined weak will not fetch archive members. See comment on Lazy in
+  // Symbols.h for the details.
+  if (S->isWeak()) {
+    replaceSymbol<LazyObject>(S, File, S->Type, Name);
+    S->Binding = STB_WEAK;
+    return;
+  }
+
+  if (InputFile *F = File.fetch())
+    addFile<ELFT>(F);
 }
 
 template <class ELFT> void SymbolTable::fetchLazy(Symbol *Sym) {

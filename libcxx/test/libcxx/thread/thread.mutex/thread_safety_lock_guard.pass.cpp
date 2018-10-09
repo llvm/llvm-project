@@ -24,7 +24,13 @@
 std::mutex m;
 int foo __attribute__((guarded_by(m)));
 
+static void scoped() {
+  std::scoped_lock<std::mutex> lock(m);
+  foo++;
+}
+
 int main() {
+  scoped();
   std::lock_guard<std::mutex> lock(m);
   foo++;
 }
