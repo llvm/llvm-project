@@ -680,9 +680,10 @@ source code is at `test/clang-tidy/google-readability-casting.cpp`_):
     // CHECK-FIXES: int b = a;
   }
 
-To check more than one scenario in the same test file use 
-``-check-suffix=SUFFIX-NAME`` on ``check_clang_tidy.py`` command line.
-With ``-check-suffix=SUFFIX-NAME`` you need to replace your ``CHECK-*`` 
+To check more than one scenario in the same test file use
+``-check-suffix=SUFFIX-NAME`` on ``check_clang_tidy.py`` command line or
+``-check-suffixes=SUFFIX-NAME-1,SUFFIX-NAME-2,...``.
+With ``-check-suffix[es]=SUFFIX-NAME`` you need to replace your ``CHECK-*``
 directives with ``CHECK-MESSAGES-SUFFIX-NAME`` and ``CHECK-FIXES-SUFFIX-NAME``.
 
 Here's an example:
