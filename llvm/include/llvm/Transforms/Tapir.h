@@ -67,7 +67,7 @@ FunctionPass *createSpawnUnswitchPass();
 //
 // LowerTapirToTarget - Lower Tapir constructs to a specified parallel runtime.
 //
-ModulePass *createLowerTapirToTargetPass(TapirTargetID);
+ModulePass *createLowerTapirToTargetPass();
 
 //===----------------------------------------------------------------------===//
 //

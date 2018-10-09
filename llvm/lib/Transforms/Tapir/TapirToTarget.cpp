@@ -15,6 +15,7 @@
 #include "llvm/Transforms/Tapir/TapirToTarget.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/TapirTaskInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
@@ -28,29 +29,13 @@
 
 using namespace llvm;
 
-static cl::opt<TapirTargetID> ClTapirTarget(
-    "tapir-target", cl::desc("Target runtime for Tapir"),
-    cl::init(TapirTargetID::Cilk),
-    cl::values(clEnumValN(TapirTargetID::None,
-                          "none", "None"),
-               clEnumValN(TapirTargetID::Serial,
-                          "serial", "Serial code"),
-               clEnumValN(TapirTargetID::Cilk,
-                          "cilk", "Cilk Plus"),
-               clEnumValN(TapirTargetID::OpenMP,
-                          "openmp", "OpenMP"),
-               clEnumValN(TapirTargetID::CilkR,
-                          "cilkr", "CilkR"),
-	       clEnumValN(TapirTargetID::Cheetah,
-                          "cheetah", "Cheetah")));
-
 class TapirToTargetImpl {
 public:
   TapirToTargetImpl(Module &M,
                     function_ref<DominatorTree &(Function &)> GetDT,
                     function_ref<TaskInfo &(Function &)> GetTI,
                     function_ref<AssumptionCache &(Function &)> GetAC,
-                    TapirTarget *Target = getTapirTargetFromID(ClTapirTarget))
+                    TapirTarget *Target)
       : Target(Target), M(M), GetDT(GetDT), GetTI(GetTI), GetAC(GetAC) {
     assert(this->Target);
   }
@@ -302,6 +287,7 @@ bool TapirToTargetImpl::run() {
 }
 
 PreservedAnalyses TapirToTargetPass::run(Module &M, ModuleAnalysisManager &AM) {
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(M);
   auto &FAM =
     AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto GetDT =
@@ -318,11 +304,9 @@ PreservedAnalyses TapirToTargetPass::run(Module &M, ModuleAnalysisManager &AM) {
     };
 
   bool Changed = false;
-  if (TapirTargetID::Last_TapirTargetID == TargetID)
-    Changed |= TapirToTargetImpl(M, GetDT, GetTI, GetAC).run();
-  else
-    Changed |= TapirToTargetImpl(M, GetDT, GetTI, GetAC,
-                                 getTapirTargetFromID(TargetID)).run();
+  TapirTargetID TargetID = TLI.getTapirTarget();
+  Changed |= TapirToTargetImpl(M, GetDT, GetTI, GetAC,
+                               getTapirTargetFromID(TargetID)).run();
 
   if (Changed)
     return PreservedAnalyses::none();
@@ -332,9 +316,8 @@ PreservedAnalyses TapirToTargetPass::run(Module &M, ModuleAnalysisManager &AM) {
 namespace {
 struct LowerTapirToTarget : public ModulePass {
   static char ID; // Pass identification, replacement for typeid
-  explicit LowerTapirToTarget(TapirTargetID TargetID =
-                              TapirTargetID::Last_TapirTargetID)
-      : ModulePass(ID), TargetID(TargetID) {
+  explicit LowerTapirToTarget()
+      : ModulePass(ID) {
     initializeLowerTapirToTargetPass(*PassRegistry::getPassRegistry());
   }
 
@@ -347,10 +330,9 @@ struct LowerTapirToTarget : public ModulePass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<TaskInfoWrapperPass>();
   }
-private:
-  TapirTargetID TargetID = TapirTargetID::Last_TapirTargetID;
 };
 }  // End of anonymous namespace
 
@@ -359,6 +341,7 @@ INITIALIZE_PASS_BEGIN(LowerTapirToTarget, "tapir2target",
                       "Lower Tapir to Target ABI", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TaskInfoWrapperPass)
 INITIALIZE_PASS_END(LowerTapirToTarget, "tapir2target",
                     "Lower Tapir to Target ABI", false, false)
@@ -366,6 +349,8 @@ INITIALIZE_PASS_END(LowerTapirToTarget, "tapir2target",
 bool LowerTapirToTarget::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
+  auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  TapirTargetID TargetID = TLI.getTapirTarget();
 
   auto GetDT =
     [this](Function &F) -> DominatorTree & {
@@ -382,19 +367,15 @@ bool LowerTapirToTarget::runOnModule(Module &M) {
     };
 
   bool Changed = false;
-  if (TapirTargetID::Last_TapirTargetID == TargetID)
-    Changed |= TapirToTargetImpl(M, GetDT, GetTI, GetAC).run();
-  else
-    Changed |= TapirToTargetImpl(M, GetDT, GetTI, GetAC,
-                                 getTapirTargetFromID(TargetID)).run();
+  Changed |= TapirToTargetImpl(M, GetDT, GetTI, GetAC,
+                               getTapirTargetFromID(TargetID)).run();
   return Changed;
 }
 
 // createLowerTapirToTargetPass - Provide an entry point to create this pass.
 //
 namespace llvm {
-ModulePass *createLowerTapirToTargetPass(TapirTargetID TargetID =
-                                         TapirTargetID::Last_TapirTargetID) {
-  return new LowerTapirToTarget(TargetID);
+ModulePass *createLowerTapirToTargetPass() {
+  return new LowerTapirToTarget();
 }
 }
