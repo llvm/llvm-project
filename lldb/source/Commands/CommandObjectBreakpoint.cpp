@@ -301,9 +301,6 @@ static constexpr OptionDefinition g_breakpoint_set_options[] = {
   "are specified, uses the current \"default source file\".  If you want to "
   "match against all source files, pass the \"--all-files\" option." },
   { LLDB_OPT_SET_9,                false, "all-files",              'A', OptionParser::eNoArgument,       nullptr, {}, 0,                                         eArgTypeNone,                "All files are searched for source pattern matches." },
-  { LLDB_OPT_SET_11,               true, "python-class",            'P', OptionParser::eRequiredArgument, nullptr, {}, 0,                                         eArgTypePythonClass,       "The name of the class that implement a scripted breakpoint." },
-  { LLDB_OPT_SET_11,               false, "python-class-key",       'k', OptionParser::eRequiredArgument, nullptr, {}, 0,                                         eArgTypeNone,                "The key for a key/value pair passed to the class that implements a scripted breakpoint.  Can be specified more    305  than once." },
-  { LLDB_OPT_SET_11,               false, "python-class-value",     'v', OptionParser::eRequiredArgument, nullptr, {}, 0,                                         eArgTypeNone,                "The value for the previous key in the pair passed to the class that implements a scripted breakpoint.    Can b    306 e specified more than once." },
   { LLDB_OPT_SET_10,               true,  "language-exception",     'E', OptionParser::eRequiredArgument, nullptr, {}, 0,                                         eArgTypeLanguage,            "Set the breakpoint on exceptions thrown by the specified language (without "
   "options, on throw but not catch.)" },
   { LLDB_OPT_SET_10,               false, "on-throw",               'w', OptionParser::eRequiredArgument, nullptr, {}, 0,                                         eArgTypeBoolean,             "Set the breakpoint on exception throW." },

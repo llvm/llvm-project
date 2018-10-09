@@ -3697,17 +3697,17 @@ static constexpr PropertyDefinition g_properties[] = {
      nullptr, {},
      "List of directories to be searched when locating modules for Clang."},
     {"swift-framework-search-paths", OptionValue::eTypeFileSpecList, false, 0,
-     nullptr, nullptr,
+     nullptr, {},
      "List of directories to be searched when locating frameworks for Swift."},
     {"swift-module-search-paths", OptionValue::eTypeFileSpecList, false, 0,
-     nullptr, nullptr,
+     nullptr, {},
      "List of directories to be searched when locating modules for Swift."},
     {"auto-import-clang-modules", OptionValue::eTypeBoolean, false, true,
      nullptr, {},
      "Automatically load Clang modules referred to by the program."},
     {"use-all-compiler-flags", OptionValue::eTypeBoolean, false, true, nullptr,
-     nullptr, "Try to use compiler flags for all modules when setting up the "
-              "Swift expression parser, not just the main executable."},
+     {}, "Try to use compiler flags for all modules when setting up the "
+         "Swift expression parser, not just the main executable."},
     {"auto-apply-fixits", OptionValue::eTypeBoolean, false, true, nullptr,
      {}, "Automatically apply fix-it hints to expressions."},
     {"notify-about-fixits", OptionValue::eTypeBoolean, false, true, nullptr,
@@ -3822,7 +3822,7 @@ static constexpr PropertyDefinition g_properties[] = {
      OptionValue::eTypeString, nullptr, {},
      "A list of trap handler function names, e.g. a common Unix user process "
      "one is _sigtramp."},
-    {"sdk-path", OptionValue::eTypeFileSpec, false, 0, nullptr, nullptr,
+    {"sdk-path", OptionValue::eTypeFileSpec, false, 0, nullptr, {},
      "The path to the SDK used to build the current target."},
     {"display-runtime-support-values", OptionValue::eTypeBoolean, false, false,
      nullptr, {}, "If true, LLDB will show variables that are meant to "
