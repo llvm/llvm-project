@@ -75,13 +75,17 @@ Position pos(int line, int character) {
 TEST(DiagnosticsTest, DiagnosticRanges) {
   // Check we report correct ranges, including various edge-cases.
   Annotations Test(R"cpp(
+    namespace test{};
     void $decl[[foo]]();
     int main() {
       $typo[[go\
 o]]();
       foo()$semicolon[[]]//with comments
       $unk[[unknown]]();
-      double bar = $type[["foo"]];
+      double $type[[bar]] = "foo";
+      struct Foo { int x; }; Foo a;
+      a.$nomember[[y]];
+      test::$nomembernamespace[[test]];
     }
   )cpp");
   EXPECT_THAT(
@@ -103,7 +107,10 @@ o]]();
           Diag(Test.range("unk"), "use of undeclared identifier 'unknown'"),
           Diag(Test.range("type"),
                "cannot initialize a variable of type 'double' with an lvalue "
-               "of type 'const char [4]'")));
+               "of type 'const char [4]'"),
+          Diag(Test.range("nomember"), "no member named 'y' in 'Foo'"),
+          Diag(Test.range("nomembernamespace"),
+               "no member named 'test' in namespace 'test'")));
 }
 
 TEST(DiagnosticsTest, FlagsMatter) {
