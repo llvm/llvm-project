@@ -10,13 +10,22 @@
 #include "FS.h"
 #include "clang/Basic/VirtualFileSystem.h"
 #include "llvm/ADT/None.h"
+#include "llvm/Support/Path.h"
 
 namespace clang {
 namespace clangd {
 
+PreambleFileStatusCache::PreambleFileStatusCache(llvm::StringRef MainFilePath)
+    : MainFilePath(MainFilePath) {
+  assert(llvm::sys::path::is_absolute(MainFilePath));
+}
+
 void PreambleFileStatusCache::update(const vfs::FileSystem &FS, vfs::Status S) {
   SmallString<32> PathStore(S.getName());
   if (FS.makeAbsolute(PathStore))
+    return;
+  // Do not cache status for the main file.
+  if (PathStore == MainFilePath)
     return;
   // Stores the latest status in cache as it can change in a preamble build.
   StatCache.insert({PathStore, std::move(S)});
