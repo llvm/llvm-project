@@ -181,9 +181,9 @@ def act_on_decl(declaration, comment, allowed_types):
         raise Exception('Inconsistent documentation for: %s' % name)
       for result_type in result_types:
         add_matcher(result_type, name, 'Matcher<Type>', comment)
-        if loc:
-          add_matcher('%sLoc' % result_type, '%sLoc' % name, 'Matcher<TypeLoc>',
-                      comment)
+        # if loc:
+        #   add_matcher('%sLoc' % result_type, '%sLoc' % name, 'Matcher<TypeLoc>',
+        #               comment)
       return
 
     m = re.match(r"""^\s*AST_POLYMORPHIC_MATCHER(_P)?(.?)(?:_OVERLOAD)?\(
