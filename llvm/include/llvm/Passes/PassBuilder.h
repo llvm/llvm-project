@@ -327,6 +327,16 @@ public:
                                                     bool DebugLogging = false,
                                                     bool LTOPreLink = false);
 
+  /// Construct the pipeline for lowering Tapir constructions to a target
+  /// parallel runtime.
+  ///
+  /// This pipeline is intended to be used with the PerModuleDefault pipeline
+  /// and various LTO pipelines to lower Tapir constructs.  This pipeline is
+  /// expected to run late in the parent pipelines.
+  ModulePassManager buildTapirLoweringPipeline(OptimizationLevel Level,
+                                               ThinLTOPhase Phase,
+                                               bool DebugLogging = false);
+
   /// Build a per-module default optimization pipeline.
   ///
   /// This provides a good default optimization pipeline for per-module
@@ -340,7 +350,8 @@ public:
   /// build them.
   ModulePassManager buildPerModuleDefaultPipeline(OptimizationLevel Level,
                                                   bool DebugLogging = false,
-                                                  bool LTOPreLink = false);
+                                                  bool LTOPreLink = false,
+                                                  bool LowerTapir = false);
 
   /// Build a pre-link, ThinLTO-targeting default optimization pipeline to
   /// a pass manager.
@@ -564,6 +575,16 @@ public:
     OptimizerLastEPCallbacks.push_back(C);
   }
 
+  /// Register a callback for a default optimizer pipeline extension point.
+  ///
+  /// This extension point allows adding passes after optimizations have been
+  /// performed on the Tapir IR, but before Tapir constructs are lowered to a
+  /// target runtime.
+  void registerTapirLateEPCallback(
+      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+    TapirLateEPCallbacks.push_back(C);
+  }
+
   /// Register a callback for parsing an AliasAnalysis Name to populate
   /// the given AAManager \p AA
   void registerParseAACallback(
@@ -678,6 +699,8 @@ private:
       VectorizerStartEPCallbacks;
   SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
       OptimizerLastEPCallbacks;
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+      TapirLateEPCallbacks;
   // Module callbacks
   SmallVector<std::function<void(ModulePassManager &)>, 2>
       PipelineStartEPCallbacks;

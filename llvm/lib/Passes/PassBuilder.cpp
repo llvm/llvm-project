@@ -982,11 +982,58 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
 }
 
 ModulePassManager
+PassBuilder::buildTapirLoweringPipeline(OptimizationLevel Level,
+                                        ThinLTOPhase Phase,
+                                        bool DebugLogging) {
+  ModulePassManager MPM(DebugLogging);
+
+  // Add passes to run just before Tapir lowering.
+  for (auto &C : TapirLateEPCallbacks)
+    C(MPM, Level);
+
+  LoopPassManager LPM1(DebugLogging), LPM2(DebugLogging);
+
+  // Rotate Loop - disable header duplication at -Oz
+  LPM1.addPass(LoopRotatePass(Level != Oz));
+  LPM2.addPass(IndVarSimplifyPass());
+
+  FunctionPassManager FPM(DebugLogging);
+  FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM1), DebugLogging));
+  FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(InstCombinePass());
+  FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM2), DebugLogging));
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+
+  // Outline Tapir loops as needed.
+  MPM.addPass(LoopSpawningPass());
+
+  // The LoopSpawning pass may leave cruft around.  Clean it up using the
+  // function simplification pipeline.
+  MPM.addPass(
+      createModuleToFunctionPassAdaptor(
+          buildFunctionSimplificationPipeline(Level, Phase, DebugLogging)));
+
+  // Lower Tapir to target runtime calls.
+  MPM.addPass(TapirToTargetPass());
+
+  // The TapirToTarget pass may leave cruft around.  Clean it up using the
+  // function simplification pipeline.
+  MPM.addPass(
+      createModuleToFunctionPassAdaptor(
+          buildFunctionSimplificationPipeline(Level, Phase, DebugLogging)));
+
+  return MPM;
+}
+
+ModulePassManager
 PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
-                                           bool DebugLogging, bool LTOPreLink) {
+                                           bool DebugLogging, bool LTOPreLink,
+                                           bool LowerTapir) {
   assert(Level != O0 && "Must request optimizations for the default pipeline!");
 
   ModulePassManager MPM(DebugLogging);
+  bool RerunAfterTapirLowering = false;
+  bool TapirHasBeenLowered = !LowerTapir;
 
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
@@ -998,12 +1045,19 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   if (PGOOpt && PGOOpt->SamplePGOSupport)
     MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
 
-  // Add the core simplification pipeline.
-  MPM.addPass(buildModuleSimplificationPipeline(Level, ThinLTOPhase::None,
-                                                DebugLogging));
+  do {
+    RerunAfterTapirLowering = !TapirHasBeenLowered && LowerTapir;
 
   // Now add the optimization pipeline.
   MPM.addPass(buildModuleOptimizationPipeline(Level, DebugLogging, LTOPreLink));
+
+    if (!TapirHasBeenLowered) {
+      MPM.addPass(buildTapirLoweringPipeline(Level, ThinLTOPhase::None,
+                                             DebugLogging));
+
+      TapirHasBeenLowered = true;
+    }
+  } while (RerunAfterTapirLowering);
 
   return MPM;
 }
