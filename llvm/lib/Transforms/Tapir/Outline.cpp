@@ -262,7 +262,7 @@ Function *llvm::CreateHelper(
   // Create the new function
   Function *NewFunc = Function::Create(
       FTy, GlobalValue::InternalLinkage,
-      OldFunc->getName() + "_" + Header->getName() + NameSuffix, DestM);
+      OldFunc->getName() + ".outline_" + Header->getName() + NameSuffix, DestM);
 
   // Set names for input and output arguments.
   Function::arg_iterator DestI = NewFunc->arg_begin();
