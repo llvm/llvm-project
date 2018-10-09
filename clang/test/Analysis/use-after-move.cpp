@@ -695,7 +695,10 @@ void ifStmtSequencesDeclAndConditionTest() {
   }
 }
 
-class C : public A {};
+struct C : public A {
+  [[clang::reinitializes]] void reinit();
+};
+
 void subRegionMoveTest() {
   {
     A a;
@@ -737,6 +740,13 @@ void resetSuperClass() {
   C c;
   C c1 = std::move(c);
   c.clear();
+  C c2 = c; // no-warning
+}
+
+void resetSuperClass2() {
+  C c;
+  C c1 = std::move(c);
+  c.reinit();
   C c2 = c; // no-warning
 }
 
