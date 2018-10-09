@@ -40,6 +40,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -698,6 +699,7 @@ PreservedAnalyses LoopLoadEliminationPass::run(Function &F,
   auto *PSI = MAM.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   auto *BFI = (PSI && PSI->hasProfileSummary()) ?
       &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
+  auto &TI = AM.getResult<TaskAnalysis>(F);
   MemorySSA *MSSA = EnableMSSALoopDependency
                         ? &AM.getResult<MemorySSAAnalysis>(F).getMSSA()
                         : nullptr;
@@ -705,7 +707,8 @@ PreservedAnalyses LoopLoadEliminationPass::run(Function &F,
   auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
   bool Changed = eliminateLoadsAcrossLoops(
       F, LI, DT, BFI, PSI, [&](Loop &L) -> const LoopAccessInfo & {
-        LoopStandardAnalysisResults AR = {AA, AC, DT, LI, SE, TLI, TTI, MSSA};
+        LoopStandardAnalysisResults AR = {AA, AC, DT, LI, SE, TLI, TTI, TI,
+                                          MSSA};
         return LAM.getResult<LoopAccessAnalysis>(L, AR);
       });
 

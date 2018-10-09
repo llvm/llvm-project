@@ -54,6 +54,7 @@ bool LoopAnalysisManagerFunctionProxy::Result::invalidate(
       Inv.invalidate<DominatorTreeAnalysis>(F, PA) ||
       Inv.invalidate<LoopAnalysis>(F, PA) ||
       Inv.invalidate<ScalarEvolutionAnalysis>(F, PA) ||
+      Inv.invalidate<TaskAnalysis>(F, PA) ||
       invalidateMemorySSAAnalysis) {
     // Note that the LoopInfo may be stale at this point, however the loop
     // objects themselves remain the only viable keys that could be in the
