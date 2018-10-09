@@ -40,3 +40,36 @@ define void @frob(i32* %x) {
   tail call void @qux(i32* byval %x)
   ret void
 }
+
+; A byval parameter passed into a function which is passed out as byval does
+; not block the call from being marked as tail.
+
+declare void @ext2(i32* byval)
+
+define void @bar2(i32* byval %x) {
+  call void @ext2(i32* byval %x)
+  ret void
+}
+
+define void @foobar(i32* %x) {
+; CHECK-LABEL: define void @foobar(
+; CHECK: %[[POS:.*]] = alloca i32
+; CHECK: %[[VAL:.*]] = load i32, i32* %x
+; CHECK: store i32 %[[VAL]], i32* %[[POS]]
+; CHECK: tail call void @ext2(i32* byval nonnull %[[POS]]
+; CHECK: ret void
+  tail call void @bar2(i32* byval %x)
+  ret void
+}
+
+define void @barfoo() {
+; CHECK-LABEL: define void @barfoo(
+; CHECK: %[[POS:.*]] = alloca i32
+; CHECK: %[[VAL:.*]] = load i32, i32* %x
+; CHECK: store i32 %[[VAL]], i32* %[[POS]]
+; CHECK: tail call void @ext2(i32* byval nonnull %[[POS]]
+; CHECK: ret void
+  %x = alloca i32
+  tail call void @bar2(i32* byval %x)
+  ret void
+}

@@ -17,8 +17,13 @@ int main(void) {
 
   type = S_ISCHR(st.st_mode) ? S_IFCHR : S_IFBLK;
 
+#if defined(__NetBSD__)
+  if (devname_r(st.st_rdev, type, name, sizeof(name)))
+    exit(1);
+#else
   if (!devname_r(st.st_rdev, type, name, sizeof(name)))
     exit(1);
+#endif
 
   printf("%s\n", name);
 
