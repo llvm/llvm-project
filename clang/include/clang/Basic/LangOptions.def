@@ -298,8 +298,6 @@ VALUE_LANGOPT(VtorDispMode, 2, 1, "How many vtordisps to insert")
 LANGOPT(ApplePragmaPack, 1, 0, "Apple gcc-compatible #pragma pack handling")
 
 LANGOPT(Cilk, 1, 0, "Enable Cilk language extensions")
-LANGOPT(Rhino, 1, 0, "Rhino parallel extensions")
-LANGOPT(Detach, 1, 0, "Disable Parallel Memory Opts")
 
 LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, "retain documentation comments from system headers in the AST")
 

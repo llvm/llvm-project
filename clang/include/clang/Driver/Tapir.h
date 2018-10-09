@@ -12,14 +12,20 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_TAPIR_H
-#define LLVM_CLANG_BASIC_TAPIR_H
+#ifndef LLVM_CLANG_DRIVER_TAPIR_H
+#define LLVM_CLANG_DRIVER_TAPIR_H
 
-#include "llvm/Transforms/Tapir/TapirTargetIDs.h"
+#include "clang/Basic/Tapir.h"
+
+namespace llvm {
+namespace opt {
+  class ArgList;
+}
+}
 
 namespace clang {
 
-using TapirTargetID = llvm::TapirTargetID;
+TapirTargetID parseTapirTarget(const llvm::opt::ArgList &Args);
 
 } // end namespace clang
 

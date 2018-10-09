@@ -388,6 +388,9 @@ static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
   default:
     break;
   }
+
+  TLII->setTapirTarget(CodeGenOpts.getTapirTarget());
+
   return TLII;
 }
 
@@ -600,9 +603,9 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
 
   PMBuilder.OptLevel = CodeGenOpts.OptimizationLevel;
 
-  if (LangOpts.Detach) PMBuilder.DisableTapirOpts = true;
-  if (LangOpts.Rhino) PMBuilder.Rhino = true;
-  PMBuilder.TapirTarget = LangOpts.TapirTarget;
+  if (CodeGenOpts.TapirEarlyOutline) PMBuilder.DisableTapirOpts = true;
+  if (CodeGenOpts.TapirRhino) PMBuilder.Rhino = true;
+  PMBuilder.TapirTarget = CodeGenOpts.getTapirTarget();
 
   PMBuilder.SizeLevel = CodeGenOpts.OptimizeSize;
   PMBuilder.SLPVectorize = CodeGenOpts.VectorizeSLP;
