@@ -605,7 +605,7 @@ InputSectionBase *ObjFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
 // as a given section.
 static InputSection *toRegularSection(MergeInputSection *Sec) {
   return make<InputSection>(Sec->File, Sec->Flags, Sec->Type, Sec->Alignment,
-                            Sec->Data, Sec->Name);
+                            Sec->data(), Sec->Name);
 }
 
 template <class ELFT>
