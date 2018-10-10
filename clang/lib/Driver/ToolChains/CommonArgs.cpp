@@ -20,7 +20,6 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Version.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
@@ -51,6 +50,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetParser.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLParser.h"
 
 using namespace clang::driver;

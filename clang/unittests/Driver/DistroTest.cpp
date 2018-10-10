@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Distro.h"
-#include "clang/Basic/VirtualFileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 using namespace clang;
@@ -25,7 +25,7 @@ namespace {
 // accidentally result in incorrect distribution guess.
 
 TEST(DistroTest, DetectUbuntu) {
-  vfs::InMemoryFileSystem UbuntuTrustyFileSystem;
+  llvm::vfs::InMemoryFileSystem UbuntuTrustyFileSystem;
   // Ubuntu uses Debian Sid version.
   UbuntuTrustyFileSystem.addFile("/etc/debian_version", 0,
       llvm::MemoryBuffer::getMemBuffer("jessie/sid\n"));
@@ -52,7 +52,7 @@ TEST(DistroTest, DetectUbuntu) {
   ASSERT_FALSE(UbuntuTrusty.IsOpenSUSE());
   ASSERT_FALSE(UbuntuTrusty.IsDebian());
 
-  vfs::InMemoryFileSystem UbuntuYakketyFileSystem;
+  llvm::vfs::InMemoryFileSystem UbuntuYakketyFileSystem;
   UbuntuYakketyFileSystem.addFile("/etc/debian_version", 0,
       llvm::MemoryBuffer::getMemBuffer("stretch/sid\n"));
   UbuntuYakketyFileSystem.addFile("/etc/lsb-release", 0,
@@ -83,7 +83,7 @@ TEST(DistroTest, DetectUbuntu) {
 }
 
 TEST(DistroTest, DetectRedhat) {
-  vfs::InMemoryFileSystem Fedora25FileSystem;
+  llvm::vfs::InMemoryFileSystem Fedora25FileSystem;
   Fedora25FileSystem.addFile("/etc/system-release-cpe", 0,
       llvm::MemoryBuffer::getMemBuffer("cpe:/o:fedoraproject:fedora:25\n"));
   // Both files are symlinks to fedora-release.
@@ -115,7 +115,7 @@ TEST(DistroTest, DetectRedhat) {
   ASSERT_FALSE(Fedora25.IsOpenSUSE());
   ASSERT_FALSE(Fedora25.IsDebian());
 
-  vfs::InMemoryFileSystem CentOS7FileSystem;
+  llvm::vfs::InMemoryFileSystem CentOS7FileSystem;
   CentOS7FileSystem.addFile("/etc/system-release-cpe", 0,
       llvm::MemoryBuffer::getMemBuffer("cpe:/o:centos:centos:7\n"));
   // Both files are symlinks to centos-release.
@@ -153,7 +153,7 @@ TEST(DistroTest, DetectRedhat) {
 }
 
 TEST(DistroTest, DetectOpenSUSE) {
-  vfs::InMemoryFileSystem OpenSUSELeap421FileSystem;
+  llvm::vfs::InMemoryFileSystem OpenSUSELeap421FileSystem;
   OpenSUSELeap421FileSystem.addFile("/etc/SuSE-release", 0,
       llvm::MemoryBuffer::getMemBuffer("openSUSE 42.1 (x86_64)\n"
                                        "VERSION = 42.1\n"
@@ -178,7 +178,7 @@ TEST(DistroTest, DetectOpenSUSE) {
   ASSERT_TRUE(OpenSUSELeap421.IsOpenSUSE());
   ASSERT_FALSE(OpenSUSELeap421.IsDebian());
 
-  vfs::InMemoryFileSystem OpenSUSE132FileSystem;
+  llvm::vfs::InMemoryFileSystem OpenSUSE132FileSystem;
   OpenSUSE132FileSystem.addFile("/etc/SuSE-release", 0,
       llvm::MemoryBuffer::getMemBuffer("openSUSE 13.2 (x86_64)\n"
                                        "VERSION = 13.2\n"
@@ -203,7 +203,7 @@ TEST(DistroTest, DetectOpenSUSE) {
   ASSERT_TRUE(OpenSUSE132.IsOpenSUSE());
   ASSERT_FALSE(OpenSUSE132.IsDebian());
 
-  vfs::InMemoryFileSystem SLES10FileSystem;
+  llvm::vfs::InMemoryFileSystem SLES10FileSystem;
   SLES10FileSystem.addFile("/etc/SuSE-release", 0,
       llvm::MemoryBuffer::getMemBuffer("SUSE Linux Enterprise Server 10 (x86_64)\n"
                                        "VERSION = 10\n"
@@ -221,7 +221,7 @@ TEST(DistroTest, DetectOpenSUSE) {
 }
 
 TEST(DistroTest, DetectDebian) {
-  vfs::InMemoryFileSystem DebianJessieFileSystem;
+  llvm::vfs::InMemoryFileSystem DebianJessieFileSystem;
   DebianJessieFileSystem.addFile("/etc/debian_version", 0,
                                  llvm::MemoryBuffer::getMemBuffer("8.6\n"));
   DebianJessieFileSystem.addFile("/etc/os-release", 0,
@@ -241,7 +241,7 @@ TEST(DistroTest, DetectDebian) {
   ASSERT_FALSE(DebianJessie.IsOpenSUSE());
   ASSERT_TRUE(DebianJessie.IsDebian());
 
-  vfs::InMemoryFileSystem DebianStretchSidFileSystem;
+  llvm::vfs::InMemoryFileSystem DebianStretchSidFileSystem;
   DebianStretchSidFileSystem.addFile("/etc/debian_version", 0,
                                  llvm::MemoryBuffer::getMemBuffer("stretch/sid\n"));
   DebianStretchSidFileSystem.addFile("/etc/os-release", 0,
@@ -261,7 +261,7 @@ TEST(DistroTest, DetectDebian) {
 }
 
 TEST(DistroTest, DetectExherbo) {
-  vfs::InMemoryFileSystem ExherboFileSystem;
+  llvm::vfs::InMemoryFileSystem ExherboFileSystem;
   ExherboFileSystem.addFile("/etc/exherbo-release", 0, // (ASCII art)
                                  llvm::MemoryBuffer::getMemBuffer(""));
   ExherboFileSystem.addFile("/etc/os-release", 0,
@@ -282,7 +282,7 @@ TEST(DistroTest, DetectExherbo) {
 }
 
 TEST(DistroTest, DetectArchLinux) {
-  vfs::InMemoryFileSystem ArchLinuxFileSystem;
+  llvm::vfs::InMemoryFileSystem ArchLinuxFileSystem;
   ArchLinuxFileSystem.addFile("/etc/arch-release", 0, // (empty)
                                  llvm::MemoryBuffer::getMemBuffer(""));
   ArchLinuxFileSystem.addFile("/etc/os-release", 0,
