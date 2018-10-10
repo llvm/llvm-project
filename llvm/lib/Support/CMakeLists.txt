@@ -127,6 +127,7 @@ add_llvm_library(LLVMSupport
   Unicode.cpp
   UnicodeCaseFold.cpp
   VersionTuple.cpp
+  VirtualFileSystem.cpp
   WithColor.cpp
   YAMLParser.cpp
   YAMLTraits.cpp
