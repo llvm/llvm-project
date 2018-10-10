@@ -87,6 +87,8 @@ const char *Section::GetTypeAsCString() const {
     return "dwarf-pubtypes";
   case eSectionTypeDWARFDebugRanges:
     return "dwarf-ranges";
+  case eSectionTypeDWARFDebugRngLists:
+    return "dwarf-rnglists";
   case eSectionTypeDWARFDebugStr:
     return "dwarf-str";
   case eSectionTypeDWARFDebugStrOffsets:
