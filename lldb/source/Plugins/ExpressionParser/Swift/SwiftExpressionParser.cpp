@@ -1184,13 +1184,8 @@ static swift::ASTContext *SetupASTContext(
   if (disable_objc_runtime())
     swift_ast_context->GetLanguageOptions().EnableObjCInterop = false;
 
-  if (repl || playground) {
-    swift_ast_context->GetLanguageOptions().Playground = true;
-    swift_ast_context->GetIRGenOptions().Playground = true;
-  } else {
-    swift_ast_context->GetLanguageOptions().Playground = true;
-    swift_ast_context->GetIRGenOptions().Playground = false;
-  }
+  swift_ast_context->GetLanguageOptions().Playground = repl || playground;
+  swift_ast_context->GetIRGenOptions().Playground = repl || playground;
 
   // For the expression parser and REPL we want to relax the
   // requirement that you put "try" in front of every expression that
