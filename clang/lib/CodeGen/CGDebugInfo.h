@@ -570,6 +570,11 @@ private:
                          unsigned LineNo, StringRef LinkageName,
                          llvm::GlobalVariable *Var, llvm::DIScope *DContext);
 
+
+  /// Return flags which enable debug info emission for call sites, provided
+  /// that it is supported and enabled.
+  llvm::DINode::DIFlags getCallSiteRelatedAttrs() const;
+
   /// Get the printing policy for producing names for debug info.
   PrintingPolicy getPrintingPolicy() const;
 
