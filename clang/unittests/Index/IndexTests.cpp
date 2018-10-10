@@ -9,7 +9,6 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Decl.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Index/IndexDataConsumer.h"
@@ -18,6 +17,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
