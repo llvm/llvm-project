@@ -14,7 +14,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Tooling/Tooling.h"
@@ -22,6 +21,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 #include <memory>
 #include <string>
@@ -63,8 +63,8 @@ public:
   int used(const SymbolInfo &Symbol) { return Reporter.used(Symbol); }
 
   bool runFindAllSymbols(StringRef HeaderCode, StringRef MainCode) {
-    llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
-        new vfs::InMemoryFileSystem);
+    llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+        new llvm::vfs::InMemoryFileSystem);
     llvm::IntrusiveRefCntPtr<FileManager> Files(
         new FileManager(FileSystemOptions(), InMemoryFileSystem));
 
