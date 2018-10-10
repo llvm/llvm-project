@@ -30,26 +30,27 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *Obj) {
   for (InputSectionBase *Sec : Obj->getSections()) {
     if (!Sec)
       continue;
+
     if (LLDDWARFSection *M = StringSwitch<LLDDWARFSection *>(Sec->Name)
                                  .Case(".debug_info", &InfoSection)
                                  .Case(".debug_ranges", &RangeSection)
                                  .Case(".debug_line", &LineSection)
                                  .Default(nullptr)) {
-      Sec->maybeDecompress();
-      M->Data = toStringRef(Sec->Data);
+      M->Data = toStringRef(Sec->data());
       M->Sec = Sec;
       continue;
     }
+
     if (Sec->Name == ".debug_abbrev")
-      AbbrevSection = toStringRef(Sec->Data);
+      AbbrevSection = toStringRef(Sec->data());
     else if (Sec->Name == ".debug_gnu_pubnames")
-      GnuPubNamesSection = toStringRef(Sec->Data);
+      GnuPubNamesSection = toStringRef(Sec->data());
     else if (Sec->Name == ".debug_gnu_pubtypes")
-      GnuPubTypesSection = toStringRef(Sec->Data);
+      GnuPubTypesSection = toStringRef(Sec->data());
     else if (Sec->Name == ".debug_str")
-      StrSection = toStringRef(Sec->Data);
-    if (Sec->Name == ".debug_line_str")
-      LineStringSection = toStringRef(Sec->Data);
+      StrSection = toStringRef(Sec->data());
+    else if (Sec->Name == ".debug_line_str")
+      LineStringSection = toStringRef(Sec->data());
   }
 }
 

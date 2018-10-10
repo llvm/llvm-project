@@ -582,7 +582,7 @@ static int64_t computeMipsAddend(const RelTy &Rel, const RelTy *End,
   if (PairTy == R_MIPS_NONE)
     return 0;
 
-  const uint8_t *Buf = Sec.Data.data();
+  const uint8_t *Buf = Sec.data().data();
   uint32_t SymIndex = Rel.getSymbol(Config->IsMips64EL);
 
   // To make things worse, paired relocations might not be contiguous in
@@ -610,7 +610,7 @@ static int64_t computeAddend(const RelTy &Rel, const RelTy *End,
   if (RelTy::IsRela) {
     Addend = getAddend<ELFT>(Rel);
   } else {
-    const uint8_t *Buf = Sec.Data.data();
+    const uint8_t *Buf = Sec.data().data();
     Addend = Target->getImplicitAddend(Buf + Rel.r_offset, Type);
   }
 
@@ -962,7 +962,7 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
   if (maybeReportUndefined(Sym, Sec, Rel.r_offset))
     return;
 
-  const uint8_t *RelocatedAddr = Sec.Data.begin() + Rel.r_offset;
+  const uint8_t *RelocatedAddr = Sec.data().begin() + Rel.r_offset;
   RelExpr Expr = Target->getRelExpr(Type, Sym, RelocatedAddr);
 
   // Ignore "hint" relocations because they are only markers for relaxation.
