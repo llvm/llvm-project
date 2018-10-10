@@ -169,24 +169,11 @@ multiclass ARGUMENT<WebAssemblyRegClass vt> {
                         (outs), (ins i32imm:$argno),
                         [(set vt:$res, (WebAssemblyargument timm:$argno))]>;
 }
-multiclass SIMD_ARGUMENT<ValueType vt> {
-  let hasSideEffects = 1, Uses = [ARGUMENTS], isCodeGenOnly = 1 in
-  defm ARGUMENT_#vt : SIMD_I<(outs V128:$res), (ins i32imm:$argno),
-                             (outs), (ins i32imm:$argno),
-                             [(set (vt V128:$res),
-                                  (WebAssemblyargument timm:$argno))]>;
-}
 defm "": ARGUMENT<I32>;
 defm "": ARGUMENT<I64>;
 defm "": ARGUMENT<F32>;
 defm "": ARGUMENT<F64>;
 defm "": ARGUMENT<EXCEPT_REF>;
-defm "": SIMD_ARGUMENT<v16i8>;
-defm "": SIMD_ARGUMENT<v8i16>;
-defm "": SIMD_ARGUMENT<v4i32>;
-defm "": SIMD_ARGUMENT<v2i64>;
-defm "": SIMD_ARGUMENT<v4f32>;
-defm "": SIMD_ARGUMENT<v2f64>;
 
 let Defs = [ARGUMENTS] in {
 

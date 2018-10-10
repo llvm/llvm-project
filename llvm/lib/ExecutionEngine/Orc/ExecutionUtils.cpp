@@ -99,6 +99,12 @@ void CtorDtorRunner2::add(iterator_range<CtorDtorIterator> CtorDtors) {
     assert(CtorDtor.Func && CtorDtor.Func->hasName() &&
            "Ctor/Dtor function must be named to be runnable under the JIT");
 
+    // FIXME: Maybe use a symbol promoter here instead.
+    if (CtorDtor.Func->hasLocalLinkage()) {
+      CtorDtor.Func->setLinkage(GlobalValue::ExternalLinkage);
+      CtorDtor.Func->setVisibility(GlobalValue::HiddenVisibility);
+    }
+
     if (CtorDtor.Data && cast<GlobalValue>(CtorDtor.Data)->isDeclaration()) {
       dbgs() << "  Skipping because why now?\n";
       continue;

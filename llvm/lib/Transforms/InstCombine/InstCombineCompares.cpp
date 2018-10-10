@@ -1609,6 +1609,13 @@ Instruction *InstCombiner::foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
 Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
                                                  BinaryOperator *And,
                                                  const APInt &C1) {
+  // For vectors: icmp ne (and X, 1), 0 --> trunc X to N x i1
+  // TODO: We canonicalize to the longer form for scalars because we have
+  // better analysis/folds for icmp, and codegen may be better with icmp.
+  if (Cmp.getPredicate() == CmpInst::ICMP_NE && Cmp.getType()->isVectorTy() &&
+      C1.isNullValue() && match(And->getOperand(1), m_One()))
+    return new TruncInst(And->getOperand(0), Cmp.getType());
+
   const APInt *C2;
   if (!match(And->getOperand(1), m_APInt(C2)))
     return nullptr;

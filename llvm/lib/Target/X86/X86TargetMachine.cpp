@@ -54,6 +54,11 @@ static cl::opt<bool> EnableMachineCombinerPass("x86-machine-combiner",
                                cl::desc("Enable the machine combiner pass"),
                                cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnableCondBrFoldingPass("x86-condbr-folding",
+                               cl::desc("Enable the conditional branch "
+                                        "folding pass"),
+                               cl::init(true), cl::Hidden);
+
 namespace llvm {
 
 void initializeWinEHStatePassPass(PassRegistry &);
@@ -447,6 +452,8 @@ bool X86PassConfig::addGlobalInstructionSelect() {
 }
 
 bool X86PassConfig::addILPOpts() {
+  if (EnableCondBrFoldingPass)
+    addPass(createX86CondBrFolding());
   addPass(&EarlyIfConverterID);
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);

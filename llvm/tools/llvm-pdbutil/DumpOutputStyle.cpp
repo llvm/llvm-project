@@ -1708,11 +1708,6 @@ Error DumpOutputStyle::dumpSymbolsFromGSI(const GSIHashTable &Table,
 
   // Return early if we aren't dumping public hash table and address map info.
   if (HashExtras) {
-    ArrayRef<uint8_t> BitmapBytes(
-        reinterpret_cast<const uint8_t *>(Table.HashBitmap.data()),
-        Table.HashBitmap.size() * sizeof(uint32_t));
-    P.formatBinary("Hash Bitmap", BitmapBytes, 0);
-
     P.formatLine("Hash Entries");
     {
       AutoIndent Indent2(P);

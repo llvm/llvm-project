@@ -44,7 +44,7 @@ define <4 x i1> @test_cmp_v4f32(<4 x float> %a0, <4 x float> %a1) nounwind {
 define <2 x i1> @test_cmp_v2i64(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; SSE2-LABEL: test_cmp_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,0,2147483648,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
@@ -191,7 +191,7 @@ define <8 x i1> @test_cmp_v8f32(<8 x float> %a0, <8 x float> %a1) nounwind {
 define <4 x i1> @test_cmp_v4i64(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; SSE2-LABEL: test_cmp_v4i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,0,2147483648,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,2147483648]
 ; SSE2-NEXT:    pxor %xmm4, %xmm3
 ; SSE2-NEXT:    pxor %xmm4, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm5
@@ -751,7 +751,7 @@ define <16 x i1> @test_cmp_v16f32(<16 x float> %a0, <16 x float> %a1) nounwind {
 define <8 x i1> @test_cmp_v8i64(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; SSE2-LABEL: test_cmp_v8i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [2147483648,0,2147483648,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [2147483648,2147483648]
 ; SSE2-NEXT:    pxor %xmm8, %xmm7
 ; SSE2-NEXT:    pxor %xmm8, %xmm3
 ; SSE2-NEXT:    movdqa %xmm3, %xmm9
@@ -2757,7 +2757,7 @@ define <32 x i1> @test_cmp_v32f32(<32 x float> %a0, <32 x float> %a1) nounwind {
 define <16 x i1> @test_cmp_v16i64(<16 x i64> %a0, <16 x i64> %a1) nounwind {
 ; SSE2-LABEL: test_cmp_v16i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [2147483648,0,2147483648,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [2147483648,2147483648]
 ; SSE2-NEXT:    pxor %xmm8, %xmm7
 ; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm9
 ; SSE2-NEXT:    pxor %xmm8, %xmm9
@@ -6999,7 +6999,7 @@ define <32 x i1> @test_cmp_v32i64(<32 x i64> %a0, <32 x i64> %a1) nounwind {
 ; SSE2-LABEL: test_cmp_v32i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq %rdi, %rax
-; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [2147483648,0,2147483648,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [2147483648,2147483648]
 ; SSE2-NEXT:    pxor %xmm8, %xmm1
 ; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm9
 ; SSE2-NEXT:    pxor %xmm8, %xmm9

@@ -14,7 +14,7 @@ define i64 @test_v2i64(<2 x i64> %a0) {
 ; SSE2-LABEL: test_v2i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,0,2147483648,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-NEXT:    pxor %xmm2, %xmm3
 ; SSE2-NEXT:    pxor %xmm1, %xmm2
@@ -36,7 +36,7 @@ define i64 @test_v2i64(<2 x i64> %a0) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,0,2147483648,0]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,2147483648]
 ; SSE41-NEXT:    movdqa %xmm1, %xmm3
 ; SSE41-NEXT:    pxor %xmm0, %xmm3
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
@@ -82,7 +82,7 @@ define i64 @test_v2i64(<2 x i64> %a0) {
 define i64 @test_v4i64(<4 x i64> %a0) {
 ; SSE2-LABEL: test_v4i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,0,2147483648,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-NEXT:    pxor %xmm2, %xmm3
 ; SSE2-NEXT:    movdqa %xmm1, %xmm4
@@ -119,7 +119,7 @@ define i64 @test_v4i64(<4 x i64> %a0) {
 ; SSE41-LABEL: test_v4i64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
-; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [2147483648,0,2147483648,0]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [2147483648,2147483648]
 ; SSE41-NEXT:    pxor %xmm3, %xmm0
 ; SSE41-NEXT:    movdqa %xmm1, %xmm4
 ; SSE41-NEXT:    pxor %xmm3, %xmm4
@@ -201,7 +201,7 @@ define i64 @test_v4i64(<4 x i64> %a0) {
 define i64 @test_v8i64(<8 x i64> %a0) {
 ; SSE2-LABEL: test_v8i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,0,2147483648,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,2147483648]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm5
 ; SSE2-NEXT:    pxor %xmm4, %xmm5
 ; SSE2-NEXT:    movdqa %xmm3, %xmm6
@@ -268,7 +268,7 @@ define i64 @test_v8i64(<8 x i64> %a0) {
 ; SSE41-LABEL: test_v8i64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm8
-; SSE41-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,0,2147483648,0]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,2147483648]
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pxor %xmm5, %xmm0
 ; SSE41-NEXT:    movdqa %xmm3, %xmm6
@@ -376,7 +376,7 @@ define i64 @test_v8i64(<8 x i64> %a0) {
 define i64 @test_v16i64(<16 x i64> %a0) {
 ; SSE2-LABEL: test_v16i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [2147483648,0,2147483648,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [2147483648,2147483648]
 ; SSE2-NEXT:    movdqa %xmm2, %xmm9
 ; SSE2-NEXT:    pxor %xmm8, %xmm9
 ; SSE2-NEXT:    movdqa %xmm6, %xmm10
@@ -503,7 +503,7 @@ define i64 @test_v16i64(<16 x i64> %a0) {
 ; SSE41-LABEL: test_v16i64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm8
-; SSE41-NEXT:    movdqa {{.*#+}} xmm9 = [2147483648,0,2147483648,0]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm9 = [2147483648,2147483648]
 ; SSE41-NEXT:    movdqa %xmm2, %xmm10
 ; SSE41-NEXT:    pxor %xmm9, %xmm10
 ; SSE41-NEXT:    movdqa %xmm6, %xmm0

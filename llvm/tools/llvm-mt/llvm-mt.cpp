@@ -115,7 +115,7 @@ int main(int Argc, const char **Argv) {
   }
 
   if (InputArgs.hasArg(OPT_help)) {
-    T.PrintHelp(outs(), "mt", "Manifest Tool", false);
+    T.PrintHelp(outs(), "llvm-mt [options] file...", "Manifest Tool", false);
     return 0;
   }
 

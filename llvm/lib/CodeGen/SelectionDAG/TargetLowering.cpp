@@ -573,6 +573,17 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
       Known.Zero &= Known2.Zero;
     }
     return false;   // Don't fall through, will infinitely loop.
+  case ISD::CONCAT_VECTORS:
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
+    for (SDValue SrcOp : Op->ops()) {
+      if (SimplifyDemandedBits(SrcOp, NewMask, Known2, TLO, Depth + 1))
+        return true;
+      // Known bits are the values that are shared by every subvector.
+      Known.One &= Known2.One;
+      Known.Zero &= Known2.Zero;
+    }
+    break;
   case ISD::AND:
     // If the RHS is a constant, check to see if the LHS would be zero without
     // using the bits from the RHS.  Below, we use knowledge about the RHS to
@@ -1102,6 +1113,25 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     if (Known.isNonNegative())
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ZERO_EXTEND, dl, VT,
                                                Op.getOperand(0)));
+    break;
+  }
+  case ISD::SIGN_EXTEND_VECTOR_INREG: {
+    // TODO - merge this with SIGN_EXTEND above?
+    SDValue Src = Op.getOperand(0);
+    unsigned InBits = Src.getValueType().getScalarSizeInBits();
+
+    APInt InDemandedBits = NewMask.trunc(InBits);
+
+    // If some of the sign extended bits are demanded, we know that the sign
+    // bit is demanded.
+    if (InBits < NewMask.getActiveBits())
+      InDemandedBits.setBit(InBits - 1);
+
+    if (SimplifyDemandedBits(Src, InDemandedBits, Known, TLO, Depth + 1))
+      return true;
+    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
+    // If the sign bit is known one, the top bits match.
+    Known = Known.sext(BitWidth);
     break;
   }
   case ISD::ANY_EXTEND: {
