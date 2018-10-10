@@ -2,6 +2,9 @@
 ;
 ; Note: The scalarized vector instructions costs are not including any
 ; extracts, due to the undef operands.
+;
+; Note: Vectorization of division/remainder is temporarily disabled for high
+; vectorization factors by returning 1000.
 
 define void @add() {
   %res0 = add i8 undef, undef
@@ -175,14 +178,14 @@ define void @sdiv() {
 ; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %res9 = sdiv <4 x i16> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 12 for instruction:   %res10 = sdiv <4 x i32> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 6 for instruction:   %res11 = sdiv <4 x i64> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 40 for instruction:   %res12 = sdiv <8 x i8> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 40 for instruction:   %res13 = sdiv <8 x i16> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 24 for instruction:   %res14 = sdiv <8 x i32> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 12 for instruction:   %res15 = sdiv <8 x i64> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 80 for instruction:   %res16 = sdiv <16 x i8> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 80 for instruction:   %res17 = sdiv <16 x i16> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 48 for instruction:   %res18 = sdiv <16 x i32> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 24 for instruction:   %res19 = sdiv <16 x i64> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res12 = sdiv <8 x i8> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res13 = sdiv <8 x i16> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res14 = sdiv <8 x i32> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res15 = sdiv <8 x i64> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res16 = sdiv <16 x i8> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res17 = sdiv <16 x i16> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res18 = sdiv <16 x i32> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res19 = sdiv <16 x i64> undef, undef
 
   ret void;
 }
@@ -221,14 +224,14 @@ define void @srem() {
 ; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %res9 = srem <4 x i16> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 12 for instruction:   %res10 = srem <4 x i32> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 6 for instruction:   %res11 = srem <4 x i64> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 40 for instruction:   %res12 = srem <8 x i8> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 40 for instruction:   %res13 = srem <8 x i16> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 24 for instruction:   %res14 = srem <8 x i32> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 12 for instruction:   %res15 = srem <8 x i64> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 80 for instruction:   %res16 = srem <16 x i8> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 80 for instruction:   %res17 = srem <16 x i16> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 48 for instruction:   %res18 = srem <16 x i32> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 24 for instruction:   %res19 = srem <16 x i64> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res12 = srem <8 x i8> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res13 = srem <8 x i16> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res14 = srem <8 x i32> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res15 = srem <8 x i64> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res16 = srem <16 x i8> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res17 = srem <16 x i16> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res18 = srem <16 x i32> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res19 = srem <16 x i64> undef, undef
 
   ret void;
 }
@@ -267,14 +270,14 @@ define void @udiv() {
 ; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %res9 = udiv <4 x i16> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 12 for instruction:   %res10 = udiv <4 x i32> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 10 for instruction:   %res11 = udiv <4 x i64> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 40 for instruction:   %res12 = udiv <8 x i8> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 40 for instruction:   %res13 = udiv <8 x i16> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 24 for instruction:   %res14 = udiv <8 x i32> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %res15 = udiv <8 x i64> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 80 for instruction:   %res16 = udiv <16 x i8> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 80 for instruction:   %res17 = udiv <16 x i16> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 48 for instruction:   %res18 = udiv <16 x i32> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 40 for instruction:   %res19 = udiv <16 x i64> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res12 = udiv <8 x i8> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res13 = udiv <8 x i16> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res14 = udiv <8 x i32> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res15 = udiv <8 x i64> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res16 = udiv <16 x i8> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res17 = udiv <16 x i16> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res18 = udiv <16 x i32> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res19 = udiv <16 x i64> undef, undef
 
   ret void;
 }
@@ -313,14 +316,14 @@ define void @urem() {
 ; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %res9 = urem <4 x i16> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 12 for instruction:   %res10 = urem <4 x i32> undef, undef
 ; CHECK: Cost Model: Found an estimated cost of 10 for instruction:   %res11 = urem <4 x i64> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 40 for instruction:   %res12 = urem <8 x i8> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 40 for instruction:   %res13 = urem <8 x i16> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 24 for instruction:   %res14 = urem <8 x i32> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %res15 = urem <8 x i64> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 80 for instruction:   %res16 = urem <16 x i8> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 80 for instruction:   %res17 = urem <16 x i16> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 48 for instruction:   %res18 = urem <16 x i32> undef, undef
-; CHECK: Cost Model: Found an estimated cost of 40 for instruction:   %res19 = urem <16 x i64> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res12 = urem <8 x i8> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res13 = urem <8 x i16> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res14 = urem <8 x i32> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res15 = urem <8 x i64> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res16 = urem <16 x i8> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res17 = urem <16 x i16> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res18 = urem <16 x i32> undef, undef
+; CHECK: Cost Model: Found an estimated cost of 1000 for instruction:   %res19 = urem <16 x i64> undef, undef
 
   ret void;
 }

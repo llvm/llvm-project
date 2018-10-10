@@ -81,18 +81,6 @@
 
 namespace exegesis {
 
-static bool hasUnknownOperand(const llvm::MCOperandInfo &OpInfo) {
-  return OpInfo.OperandType == llvm::MCOI::OPERAND_UNKNOWN;
-}
-
-llvm::Error
-UopsSnippetGenerator::isInfeasible(const llvm::MCInstrDesc &MCInstrDesc) const {
-  if (llvm::any_of(MCInstrDesc.operands(), hasUnknownOperand))
-    return llvm::make_error<BenchmarkFailure>(
-        "Infeasible : has unknown operands");
-  return llvm::Error::success();
-}
-
 static llvm::SmallVector<const Variable *, 8>
 getVariablesWithTiedOperands(const Instruction &Instr) {
   llvm::SmallVector<const Variable *, 8> Result;
@@ -109,6 +97,7 @@ static void remove(llvm::BitVector &a, const llvm::BitVector &b) {
 }
 
 UopsBenchmarkRunner::~UopsBenchmarkRunner() = default;
+
 UopsSnippetGenerator::~UopsSnippetGenerator() = default;
 
 void UopsSnippetGenerator::instantiateMemoryOperands(
@@ -137,10 +126,10 @@ void UopsSnippetGenerator::instantiateMemoryOperands(
 
 llvm::Expected<CodeTemplate>
 UopsSnippetGenerator::generateCodeTemplate(unsigned Opcode) const {
-  const auto &InstrDesc = State.getInstrInfo().get(Opcode);
-  if (auto E = isInfeasible(InstrDesc))
-    return std::move(E);
-  const Instruction Instr(InstrDesc, RATC);
+  const Instruction Instr(State.getInstrInfo().get(Opcode), RATC);
+  if (Instr.hasMemoryOperands())
+    return llvm::make_error<BenchmarkFailure>(
+        "Infeasible : has unknown operands");
   const auto &ET = State.getExegesisTarget();
   CodeTemplate CT;
 

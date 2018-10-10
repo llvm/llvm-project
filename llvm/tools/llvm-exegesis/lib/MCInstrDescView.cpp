@@ -175,6 +175,18 @@ bool Instruction::hasAliasingImplicitRegisters() const {
   return ImplDefRegs.anyCommon(ImplUseRegs);
 }
 
+bool Instruction::hasAliasingImplicitRegistersThrough(
+    const Instruction &OtherInstr) const {
+  return ImplDefRegs.anyCommon(OtherInstr.ImplUseRegs) &&
+         OtherInstr.ImplDefRegs.anyCommon(ImplUseRegs);
+}
+
+bool Instruction::hasAliasingRegistersThrough(
+    const Instruction &OtherInstr) const {
+  return AllDefRegs.anyCommon(OtherInstr.AllUseRegs) &&
+         OtherInstr.AllDefRegs.anyCommon(AllUseRegs);
+}
+
 bool Instruction::hasTiedRegisters() const {
   return llvm::any_of(
       Variables, [](const Variable &Var) { return Var.hasTiedOperands(); });
@@ -215,8 +227,10 @@ void Instruction::dump(const llvm::MCRegisterInfo &RegInfo,
   }
   for (const auto &Var : Variables) {
     Stream << "- Var" << Var.getIndex();
+    Stream << " (";
     for (auto OperandIndex : Var.TiedOperands)
-      Stream << " Op" << OperandIndex;
+      Stream << "Op" << OperandIndex;
+    Stream << ")";
     Stream << "\n";
   }
   if (hasMemoryOperands())

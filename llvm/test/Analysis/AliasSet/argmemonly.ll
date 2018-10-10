@@ -5,7 +5,7 @@
 
 ; CHECK: Alias sets for function 'test_alloca_argmemonly':
 ; CHECK-NEXT: Alias Set Tracker: 2 alias sets for 3 pointer values.
-; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, 1)
+; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, LocationSize::precise(1))
 ; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref    Pointers: (i8* %d, unknown), (i8* %s, unknown)   
 define void @test_alloca_argmemonly(i8* %s, i8* %d) {
 entry:
@@ -28,7 +28,7 @@ entry:
 
 ; CHECK: Alias sets for function 'test_noalias_argmemonly':
 ; CHECK-NEXT: Alias Set Tracker: 2 alias sets for 3 pointer values.
-; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, 1)
+; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Pointers: (i8* %a, LocationSize::precise(1))
 ; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 2] may alias, Mod/Ref    Pointers: (i8* %d, unknown), (i8* %s, unknown)   
 define void @test_noalias_argmemonly(i8* noalias %a, i8* %s, i8* %d) {
 entry:
@@ -121,7 +121,7 @@ declare void @my_memmove(i8* nocapture, i8* nocapture readonly, i64) argmemonly
 
 ; CHECK: Alias sets for function 'test_attribute_intersect':
 ; CHECK-NEXT: Alias Set Tracker: 1 alias sets for 1 pointer values.
-; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %a, 1)
+; CHECK-NEXT: AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Ref       Pointers: (i8* %a, LocationSize::precise(1))
 define i8 @test_attribute_intersect(i8* noalias %a) {
 entry:
   ;; This call is effectively readnone since the argument is readonly

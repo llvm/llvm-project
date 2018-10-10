@@ -349,9 +349,9 @@ static OverwriteResult isOverwrite(const MemoryLocation &Later,
                                    InstOverlapIntervalsTy &IOL,
                                    AliasAnalysis &AA,
                                    const Function *F) {
-  // If we don't know the sizes of either access, then we can't do a comparison.
-  if (Later.Size == MemoryLocation::UnknownSize ||
-      Earlier.Size == MemoryLocation::UnknownSize)
+  // FIXME: Vet that this works for size upper-bounds. Seems unlikely that we'll
+  // get imprecise values here, though (except for unknown sizes).
+  if (!Later.Size.isPrecise() || !Earlier.Size.isPrecise())
     return OW_Unknown;
 
   const uint64_t LaterSize = Later.Size.getValue();

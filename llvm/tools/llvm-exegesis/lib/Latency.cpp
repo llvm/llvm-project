@@ -20,27 +20,7 @@
 
 namespace exegesis {
 
-static bool hasUnknownOperand(const llvm::MCOperandInfo &OpInfo) {
-  return OpInfo.OperandType == llvm::MCOI::OPERAND_UNKNOWN;
-}
-
-// FIXME: Handle memory, see PR36905.
-static bool hasMemoryOperand(const llvm::MCOperandInfo &OpInfo) {
-  return OpInfo.OperandType == llvm::MCOI::OPERAND_MEMORY;
-}
-
 LatencySnippetGenerator::~LatencySnippetGenerator() = default;
-
-llvm::Error LatencySnippetGenerator::isInfeasible(
-    const llvm::MCInstrDesc &MCInstrDesc) const {
-  if (llvm::any_of(MCInstrDesc.operands(), hasUnknownOperand))
-    return llvm::make_error<BenchmarkFailure>(
-        "Infeasible : has unknown operands");
-  if (llvm::any_of(MCInstrDesc.operands(), hasMemoryOperand))
-    return llvm::make_error<BenchmarkFailure>(
-        "Infeasible : has memory operands");
-  return llvm::Error::success();
-}
 
 llvm::Expected<CodeTemplate>
 LatencySnippetGenerator::generateTwoInstructionPrototype(
@@ -53,11 +33,9 @@ LatencySnippetGenerator::generateTwoInstructionPrototype(
     if (OtherOpcode == Instr.Description->Opcode)
       continue;
     const auto &OtherInstrDesc = State.getInstrInfo().get(OtherOpcode);
-    if (auto E = isInfeasible(OtherInstrDesc)) {
-      llvm::consumeError(std::move(E));
-      continue;
-    }
     const Instruction OtherInstr(OtherInstrDesc, RATC);
+    if (OtherInstr.hasMemoryOperands())
+      continue;
     const AliasingConfigurations Forward(Instr, OtherInstr);
     const AliasingConfigurations Back(OtherInstr, Instr);
     if (Forward.empty() || Back.empty())
@@ -81,10 +59,10 @@ LatencySnippetGenerator::generateTwoInstructionPrototype(
 
 llvm::Expected<CodeTemplate>
 LatencySnippetGenerator::generateCodeTemplate(unsigned Opcode) const {
-  const auto &InstrDesc = State.getInstrInfo().get(Opcode);
-  if (auto E = isInfeasible(InstrDesc))
-    return std::move(E);
-  const Instruction Instr(InstrDesc, RATC);
+  const Instruction Instr(State.getInstrInfo().get(Opcode), RATC);
+  if (Instr.hasMemoryOperands())
+    return llvm::make_error<BenchmarkFailure>(
+        "Infeasible : has memory operands");
   if (auto CT = generateSelfAliasingCodeTemplate(Instr))
     return CT;
   else
