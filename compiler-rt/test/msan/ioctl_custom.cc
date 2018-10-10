@@ -4,6 +4,9 @@
 // RUN: %clangxx_msan -DPOSITIVE -O0 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_msan -DPOSITIVE -O3 -g %s -o %t && not %run %t 2>&1 | FileCheck %s
 
+// Reports different report (not analyzed)
+// XFAIL: netbsd
+
 #include <assert.h>
 #include <stdlib.h>
 #include <net/if.h>
