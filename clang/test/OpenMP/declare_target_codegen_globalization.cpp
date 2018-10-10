@@ -35,16 +35,21 @@ int maini1() {
 // CHECK-NOT: @__kmpc_data_sharing_push_stack
 
 // CHECK: define {{.*}}[[BAR]]()
-// CHECK: [[STACK:%.+]] = alloca [[GLOBAL_ST:%.+]],
+// CHECK: alloca i32,
+// CHECK: [[A_LOCAL_ADDR:%.+]] = alloca i32,
 // CHECK: [[RES:%.+]] = call i8 @__kmpc_is_spmd_exec_mode()
 // CHECK: [[IS_SPMD:%.+]] = icmp ne i8 [[RES]], 0
 // CHECK: br i1 [[IS_SPMD]], label
 // CHECK: br label
-// CHECK: [[RES:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i64 4, i16 0)
-// CHECK: [[GLOBALS:%.+]] = bitcast i8* [[RES]] to [[GLOBAL_ST]]*
+// CHECK: [[RES:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i64 128, i16 0)
+// CHECK: [[GLOBALS:%.+]] = bitcast i8* [[RES]] to [[GLOBAL_ST:%.+]]*
 // CHECK: br label
-// CHECK: [[ITEMS:%.+]] = phi [[GLOBAL_ST]]* [ [[STACK]], {{.+}} ], [ [[GLOBALS]], {{.+}} ]
+// CHECK: [[ITEMS:%.+]] = phi [[GLOBAL_ST]]* [ null, {{.+}} ], [ [[GLOBALS]], {{.+}} ]
 // CHECK: [[A_ADDR:%.+]] = getelementptr inbounds [[GLOBAL_ST]], [[GLOBAL_ST]]* [[ITEMS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+// CHECK: [[TID:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK: [[LID:%.+]] = and i32 [[TID]], 31
+// CHECK: [[A_GLOBAL_ADDR:%.+]] = getelementptr inbounds [32 x i32], [32 x i32]* [[A_ADDR]], i32 0, i32 [[LID]]
+// CHECK: [[A_ADDR:%.+]] = select i1 [[IS_SPMD]], i32* [[A_LOCAL_ADDR]], i32* [[A_GLOBAL_ADDR]]
 // CHECK: call {{.*}}[[FOO]](i32* dereferenceable{{.*}} [[A_ADDR]])
 // CHECK: br i1 [[IS_SPMD]], label
 // CHECK: [[BC:%.+]] = bitcast [[GLOBAL_ST]]* [[ITEMS]] to i8*

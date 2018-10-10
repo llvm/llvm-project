@@ -182,7 +182,6 @@ private:
 
   IRTransformLayer2 TransformLayer;
   CompileOnDemandLayer2 CODLayer;
-  SymbolLinkagePromoter PromoteSymbols;
 };
 
 } // End namespace orc

@@ -96,7 +96,8 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
   // Handle when no input or output is specified
   if (Args.hasArgNoClaim(OPT_INPUT) ||
       (!Args.hasArgNoClaim(OPT_d) && !Args.hasArgNoClaim(OPT_l))) {
-    Table.PrintHelp(outs(), ArgsArr[0], "dlltool", false);
+    Table.PrintHelp(outs(), "llvm-dlltool [options] file...", "llvm-dlltool",
+                    false);
     llvm::outs() << "\nTARGETS: i386, i386:x86-64, arm, arm64\n";
     return 1;
   }

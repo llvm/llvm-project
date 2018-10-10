@@ -1001,9 +1001,9 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS1,
 /// Provide ad-hoc rules to disambiguate accesses through two GEP operators,
 /// both having the exact same pointer operand.
 static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
-                                            LocationSize V1Size,
+                                            LocationSize MaybeV1Size,
                                             const GEPOperator *GEP2,
-                                            LocationSize V2Size,
+                                            LocationSize MaybeV2Size,
                                             const DataLayout &DL) {
   assert(GEP1->getPointerOperand()->stripPointerCastsAndInvariantGroups() ==
              GEP2->getPointerOperand()->stripPointerCastsAndInvariantGroups() &&
@@ -1019,9 +1019,12 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
 
   // If we don't know the size of the accesses through both GEPs, we can't
   // determine whether the struct fields accessed can't alias.
-  if (V1Size == MemoryLocation::UnknownSize ||
-      V2Size == MemoryLocation::UnknownSize)
+  if (MaybeV1Size == MemoryLocation::UnknownSize ||
+      MaybeV2Size == MemoryLocation::UnknownSize)
     return MayAlias;
+
+  const uint64_t V1Size = MaybeV1Size.getValue();
+  const uint64_t V2Size = MaybeV2Size.getValue();
 
   ConstantInt *C1 =
       dyn_cast<ConstantInt>(GEP1->getOperand(GEP1->getNumOperands() - 1));
@@ -1179,10 +1182,13 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
 // than (%alloca - 1), and so is not inbounds, a contradiction.
 bool BasicAAResult::isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
       const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompObject,
-      LocationSize ObjectAccessSize) {
+      LocationSize MaybeObjectAccessSize) {
   // If the object access size is unknown, or the GEP isn't inbounds, bail.
-  if (ObjectAccessSize == MemoryLocation::UnknownSize || !GEPOp->isInBounds())
+  if (MaybeObjectAccessSize == MemoryLocation::UnknownSize ||
+      !GEPOp->isInBounds())
     return false;
+
+  const uint64_t ObjectAccessSize = MaybeObjectAccessSize.getValue();
 
   // We need the object to be an alloca or a globalvariable, and want to know
   // the offset of the pointer from the object precisely, so no variable
@@ -1346,7 +1352,7 @@ BasicAAResult::aliasGEP(const GEPOperator *GEP1, LocationSize V1Size,
   if (GEP1BaseOffset != 0 && DecompGEP1.VarIndices.empty()) {
     if (GEP1BaseOffset >= 0) {
       if (V2Size != MemoryLocation::UnknownSize) {
-        if ((uint64_t)GEP1BaseOffset < V2Size)
+        if ((uint64_t)GEP1BaseOffset < V2Size.getValue())
           return PartialAlias;
         return NoAlias;
       }
@@ -1361,7 +1367,7 @@ BasicAAResult::aliasGEP(const GEPOperator *GEP1, LocationSize V1Size,
       // stripped a gep with negative index ('gep <ptr>, -1, ...).
       if (V1Size != MemoryLocation::UnknownSize &&
           V2Size != MemoryLocation::UnknownSize) {
-        if (-(uint64_t)GEP1BaseOffset < V1Size)
+        if (-(uint64_t)GEP1BaseOffset < V1Size.getValue())
           return PartialAlias;
         return NoAlias;
       }
@@ -1411,14 +1417,17 @@ BasicAAResult::aliasGEP(const GEPOperator *GEP1, LocationSize V1Size,
     // two locations do not alias.
     uint64_t ModOffset = (uint64_t)GEP1BaseOffset & (Modulo - 1);
     if (V1Size != MemoryLocation::UnknownSize &&
-        V2Size != MemoryLocation::UnknownSize && ModOffset >= V2Size &&
-        V1Size <= Modulo - ModOffset)
+        V2Size != MemoryLocation::UnknownSize &&
+        ModOffset >= V2Size.getValue() &&
+        V1Size.getValue() <= Modulo - ModOffset)
       return NoAlias;
 
     // If we know all the variables are positive, then GEP1 >= GEP1BasePtr.
     // If GEP1BasePtr > V2 (GEP1BaseOffset > 0) then we know the pointers
     // don't alias if V2Size can fit in the gap between V2 and GEP1BasePtr.
-    if (AllPositive && GEP1BaseOffset > 0 && V2Size <= (uint64_t)GEP1BaseOffset)
+    if (AllPositive && GEP1BaseOffset > 0 &&
+        V2Size != MemoryLocation::UnknownSize &&
+        V2Size.getValue() <= (uint64_t)GEP1BaseOffset)
       return NoAlias;
 
     if (constantOffsetHeuristic(DecompGEP1.VarIndices, V1Size, V2Size,
@@ -1707,9 +1716,11 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // side, then we know such behavior is undefined and can assume no alias.
   bool NullIsValidLocation = NullPointerIsDefined(&F);
   if ((V1Size != MemoryLocation::UnknownSize &&
-       isObjectSmallerThan(O2, V1Size, DL, TLI, NullIsValidLocation)) ||
+       isObjectSmallerThan(O2, V1Size.getValue(), DL, TLI,
+                           NullIsValidLocation)) ||
       (V2Size != MemoryLocation::UnknownSize &&
-       isObjectSmallerThan(O1, V2Size, DL, TLI, NullIsValidLocation)))
+       isObjectSmallerThan(O1, V2Size.getValue(), DL, TLI,
+                           NullIsValidLocation)))
     return NoAlias;
 
   // Check the cache before climbing up use-def chains. This also terminates
@@ -1769,8 +1780,8 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   if (O1 == O2)
     if (V1Size != MemoryLocation::UnknownSize &&
         V2Size != MemoryLocation::UnknownSize &&
-        (isObjectSize(O1, V1Size, DL, TLI, NullIsValidLocation) ||
-         isObjectSize(O2, V2Size, DL, TLI, NullIsValidLocation)))
+        (isObjectSize(O1, V1Size.getValue(), DL, TLI, NullIsValidLocation) ||
+         isObjectSize(O2, V2Size.getValue(), DL, TLI, NullIsValidLocation)))
       return AliasCache[Locs] = PartialAlias;
 
   // Recurse back into the best AA results we have, potentially with refined
@@ -1853,12 +1864,15 @@ void BasicAAResult::GetIndexDifference(
 }
 
 bool BasicAAResult::constantOffsetHeuristic(
-    const SmallVectorImpl<VariableGEPIndex> &VarIndices, LocationSize V1Size,
-    LocationSize V2Size, int64_t BaseOffset, AssumptionCache *AC,
-    DominatorTree *DT) {
-  if (VarIndices.size() != 2 || V1Size == MemoryLocation::UnknownSize ||
-      V2Size == MemoryLocation::UnknownSize)
+    const SmallVectorImpl<VariableGEPIndex> &VarIndices,
+    LocationSize MaybeV1Size, LocationSize MaybeV2Size, int64_t BaseOffset,
+    AssumptionCache *AC, DominatorTree *DT) {
+  if (VarIndices.size() != 2 || MaybeV1Size == MemoryLocation::UnknownSize ||
+      MaybeV2Size == MemoryLocation::UnknownSize)
     return false;
+
+  const uint64_t V1Size = MaybeV1Size.getValue();
+  const uint64_t V2Size = MaybeV2Size.getValue();
 
   const VariableGEPIndex &Var0 = VarIndices[0], &Var1 = VarIndices[1];
 

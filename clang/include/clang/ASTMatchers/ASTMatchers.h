@@ -645,8 +645,8 @@ AST_MATCHER(FunctionDecl, isMain) {
 ///
 /// Given
 /// \code
-/// template<typename T> class A {}; #1
-/// template<> class A<int> {}; #2
+///   template<typename T> class A {}; #1
+///   template<> class A<int> {}; #2
 /// \endcode
 /// classTemplateSpecializationDecl(hasSpecializedTemplate(classTemplateDecl()))
 ///   matches '#2' with classTemplateDecl() matching the class template

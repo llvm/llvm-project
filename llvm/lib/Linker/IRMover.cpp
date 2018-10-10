@@ -1230,8 +1230,14 @@ Error IRLinker::linkModuleFlagsMetadata() {
     case Module::Warning: {
       // Emit a warning if the values differ.
       if (SrcOp->getOperand(2) != DstOp->getOperand(2)) {
-        emitWarning("linking module flags '" + ID->getString() +
-                    "': IDs have conflicting values");
+        std::string str;
+        raw_string_ostream(str)
+            << "linking module flags '" << ID->getString()
+            << "': IDs have conflicting values ('" << *SrcOp->getOperand(2)
+            << "' from " << SrcM->getModuleIdentifier() << " with '"
+            << *DstOp->getOperand(2) << "' from " << DstM.getModuleIdentifier()
+            << ')';
+        emitWarning(str);
       }
       continue;
     }

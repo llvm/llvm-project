@@ -1,30 +1,32 @@
 ; RUN: llvm-pdbutil dump -globals \
-; RUN:    -global-name="operator delete" \
 ; RUN:    -global-name=main \
+; RUN:    -global-name="operator delete" \
 ; RUN:    -global-name=abcdefg \
-; RUN:    %p/Inputs/every-function.pdb | FileCheck %s
+; RUN:    %p/Inputs/global-name-lookup.pdb | FileCheck %s
 
-; This is a separate command line invocation because B::PureFunc
-; is special.  It's in the last hash bucket, so it exercises a special
-; calculation path.
-; RUN: llvm-pdbutil dump -globals -global-name=B::PureFunc \
-; RUN:    %p/Inputs/symbolformat.pdb | FileCheck --check-prefix=PURE %s
+; RUN: llvm-pdbutil dump -globals \
+; RUN:    -global-name=OvlGlobalFn \
+; RUN:    %p/Inputs/global-name-lookup.pdb | FileCheck --check-prefix=LASTBUCKET %s
 
 CHECK:                        Global Symbols
 CHECK-NEXT: ============================================================
-CHECK-NEXT:     Global Name `operator delete`
-CHECK-NEXT:       1516 | S_PROCREF [size = 32] `operator delete`
-CHECK-NEXT:              module = 1, sum name = 0, offset = 324
-CHECK-NEXT:       1484 | S_PROCREF [size = 32] `operator delete`
-CHECK-NEXT:              module = 1, sum name = 0, offset = 184
 CHECK-NEXT:     Global Name `main`
-CHECK-NEXT:       2016 | S_PROCREF [size = 20] `main`
-CHECK-NEXT:              module = 1, sum name = 0, offset = 1952
+CHECK-NEXT:        344 | S_PROCREF [size = 20] `main`
+CHECK-NEXT:              module = 1, sum name = 0, offset = 780
+CHECK-NEXT:     Global Name `operator delete`
+CHECK-NEXT:        228 | S_PROCREF [size = 32] `operator delete`
+CHECK-NEXT:              module = 1, sum name = 0, offset = 200
+CHECK-NEXT:        196 | S_PROCREF [size = 32] `operator delete`
+CHECK-NEXT:              module = 1, sum name = 0, offset = 52
 CHECK-NEXT:     Global Name `abcdefg`
-CHECK-NEXT:       (no matching records found)
+CHECK-NEXT:        (no matching records found)
 
-PURE:                        Global Symbols
-PURE-NEXT: ============================================================
-PURE-NEXT:     Global Name `B::PureFunc`
-PURE-NEXT:        980 | S_PROCREF [size = 28] `B::PureFunc`
-PURE-NEXT:              module = 1, sum name = 0, offset = 800
+LASTBUCKET:                        Global Symbols
+LASTBUCKET-NEXT: ============================================================
+LASTBUCKET-NEXT:     Global Name `OvlGlobalFn`
+LASTBUCKET-NEXT:        316 | S_PROCREF [size = 28] `OvlGlobalFn`
+LASTBUCKET-NEXT:              module = 1, sum name = 0, offset = 608
+LASTBUCKET-NEXT:        288 | S_PROCREF [size = 28] `OvlGlobalFn`
+LASTBUCKET-NEXT:              module = 1, sum name = 0, offset = 464
+LASTBUCKET-NEXT:        260 | S_PROCREF [size = 28] `OvlGlobalFn`
+LASTBUCKET-NEXT:              module = 1, sum name = 0, offset = 348

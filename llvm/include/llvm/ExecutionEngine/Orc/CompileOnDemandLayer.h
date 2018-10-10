@@ -129,6 +129,7 @@ private:
   IndirectStubsManagerBuilder BuildIndirectStubsManager;
   PerDylibResourcesMap DylibResources;
   PartitionFunction Partition = compileRequested;
+  SymbolLinkagePromoter PromoteSymbols;
 };
 
 /// Compile-on-demand layer.

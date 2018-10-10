@@ -39,6 +39,7 @@ struct MachineFunctionPrinterPass : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
+    AU.addUsedIfAvailable<SlotIndexes>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 

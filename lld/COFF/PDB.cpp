@@ -218,6 +218,33 @@ public:
 };
 }
 
+// Visual Studio's debugger requires absolute paths in various places in the
+// PDB to work without additional configuration:
+// https://docs.microsoft.com/en-us/visualstudio/debugger/debug-source-files-common-properties-solution-property-pages-dialog-box
+static void pdbMakeAbsolute(SmallVectorImpl<char> &FileName) {
+  if (sys::path::is_absolute(FileName, sys::path::Style::windows))
+    return;
+  if (Config->PDBSourcePath.empty()) {
+    // Debuggers generally want that PDB files contain absolute, Windows-style
+    // paths. On POSIX hosts, this here will produce an absolute POSIX-style
+    // path, which is weird -- but it's not clear what else to do.
+    // People doing cross builds should probably just always pass
+    // /pbdsourcepath: and make sure paths to input obj files and to lld-link
+    // itself are relative.
+    sys::fs::make_absolute(FileName);
+    return;
+  }
+  // Using /pdbsourcepath: with absolute POSIX paths will prepend
+  // PDBSourcePath to the absolute POSIX path. Since absolute POSIX paths
+  // don't make sense in PDB files anyways, this is gargabe-in-garbage-out.
+  SmallString<128> AbsoluteFileName = Config->PDBSourcePath;
+  sys::path::append(AbsoluteFileName, sys::path::Style::windows, FileName);
+  sys::path::native(AbsoluteFileName, sys::path::Style::windows);
+  sys::path::remove_dots(AbsoluteFileName, /*remove_dot_dots=*/true,
+                         sys::path::Style::windows);
+  FileName = std::move(AbsoluteFileName);
+}
+
 static SectionChunk *findByName(ArrayRef<SectionChunk *> Sections,
                                 StringRef Name) {
   for (SectionChunk *C : Sections)
@@ -984,13 +1011,7 @@ void DebugSHandler::finish() {
   for (FileChecksumEntry &FC : Checksums) {
     SmallString<128> FileName =
         ExitOnErr(CVStrTab.getString(FC.FileNameOffset));
-    if (!sys::path::is_absolute(FileName) && !Config->PDBSourcePath.empty()) {
-      SmallString<128> AbsoluteFileName = Config->PDBSourcePath;
-      sys::path::append(AbsoluteFileName, FileName);
-      sys::path::native(AbsoluteFileName);
-      sys::path::remove_dots(AbsoluteFileName, /*remove_dot_dots=*/true);
-      FileName = std::move(AbsoluteFileName);
-    }
+    pdbMakeAbsolute(FileName);
     ExitOnErr(Linker.Builder.getDbiBuilder().addModuleSourceFile(
         *File.ModuleDBI, FileName));
     NewChecksums->addChecksum(FileName, FC.Kind, FC.Checksum);
@@ -1005,7 +1026,7 @@ void PDBLinker::addObjFile(ObjFile *File) {
   // absolute.
   bool InArchive = !File->ParentName.empty();
   SmallString<128> Path = InArchive ? File->ParentName : File->getName();
-  sys::fs::make_absolute(Path);
+  pdbMakeAbsolute(Path);
   sys::path::native(Path, sys::path::Style::windows);
   StringRef Name = InArchive ? File->getName() : StringRef(Path);
 
@@ -1201,11 +1222,14 @@ static void addCommonLinkerModuleSymbols(StringRef Path,
   std::string ArgStr = llvm::join(Args, " ");
   EBS.Fields.push_back("cwd");
   SmallString<64> cwd;
-  sys::fs::current_path(cwd);
+  if (Config->PDBSourcePath.empty()) 
+    sys::fs::current_path(cwd);
+  else
+    cwd = Config->PDBSourcePath;
   EBS.Fields.push_back(cwd);
   EBS.Fields.push_back("exe");
   SmallString<64> exe = Config->Argv[0];
-  llvm::sys::fs::make_absolute(exe);
+  pdbMakeAbsolute(exe);
   EBS.Fields.push_back(exe);
   EBS.Fields.push_back("pdb");
   EBS.Fields.push_back(Path);
@@ -1287,7 +1311,7 @@ void PDBLinker::addSections(ArrayRef<OutputSection *> OutputSections,
   // It's not entirely clear what this is, but the * Linker * module uses it.
   pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
   NativePath = Config->PDBPath;
-  sys::fs::make_absolute(NativePath);
+  pdbMakeAbsolute(NativePath);
   sys::path::native(NativePath, sys::path::Style::windows);
   uint32_t PdbFilePathNI = DbiBuilder.addECName(NativePath);
   auto &LinkerModule = ExitOnErr(DbiBuilder.addModuleInfo("* Linker *"));

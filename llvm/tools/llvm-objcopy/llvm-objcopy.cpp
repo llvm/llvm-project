@@ -897,12 +897,12 @@ static DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
 
   if (InputArgs.size() == 0) {
-    T.PrintHelp(errs(), "llvm-objcopy <input> [ <output> ]", "objcopy tool");
+    T.PrintHelp(errs(), "llvm-objcopy input [output]", "objcopy tool");
     exit(1);
   }
 
   if (InputArgs.hasArg(OBJCOPY_help)) {
-    T.PrintHelp(outs(), "llvm-objcopy <input> [ <output> ]", "objcopy tool");
+    T.PrintHelp(outs(), "llvm-objcopy input [output]", "objcopy tool");
     exit(0);
   }
 
@@ -1039,13 +1039,14 @@ static DriverConfig parseStripOptions(ArrayRef<const char *> ArgsArr) {
   llvm::opt::InputArgList InputArgs =
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
 
+  static const char Usage[] = "llvm-strip [options] file...";
   if (InputArgs.size() == 0) {
-    T.PrintHelp(errs(), "llvm-strip", "strip tool");
+    T.PrintHelp(errs(), Usage, "strip tool");
     exit(1);
   }
 
   if (InputArgs.hasArg(STRIP_help)) {
-    T.PrintHelp(outs(), "llvm-strip", "strip tool");
+    T.PrintHelp(outs(), Usage, "strip tool");
     exit(0);
   }
 

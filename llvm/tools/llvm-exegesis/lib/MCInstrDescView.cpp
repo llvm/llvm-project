@@ -17,6 +17,76 @@
 
 namespace exegesis {
 
+unsigned Variable::getIndex() const {
+  assert(Index >= 0 && "Index must be set");
+  return Index;
+}
+
+unsigned Variable::getPrimaryOperandIndex() const {
+  assert(!TiedOperands.empty());
+  return TiedOperands[0];
+}
+
+bool Variable::hasTiedOperands() const { return TiedOperands.size() > 1; }
+
+unsigned Operand::getIndex() const {
+  assert(Index >= 0 && "Index must be set");
+  return Index;
+}
+
+bool Operand::isExplicit() const { return Info; }
+
+bool Operand::isImplicit() const { return !Info; }
+
+bool Operand::isImplicitReg() const { return ImplicitReg; }
+
+bool Operand::isDef() const { return IsDef; }
+
+bool Operand::isUse() const { return !IsDef; }
+
+bool Operand::isReg() const { return Tracker; }
+
+bool Operand::isTied() const { return TiedToIndex >= 0; }
+
+bool Operand::isVariable() const { return VariableIndex >= 0; }
+
+bool Operand::isMemory() const {
+  return isExplicit() &&
+         getExplicitOperandInfo().OperandType == llvm::MCOI::OPERAND_MEMORY;
+}
+
+bool Operand::isImmediate() const {
+  return isExplicit() &&
+         getExplicitOperandInfo().OperandType == llvm::MCOI::OPERAND_IMMEDIATE;
+}
+
+unsigned Operand::getTiedToIndex() const {
+  assert(isTied() && "Operand must be tied to get the tied index");
+  assert(TiedToIndex >= 0 && "TiedToIndex must be set");
+  return TiedToIndex;
+}
+
+unsigned Operand::getVariableIndex() const {
+  assert(isVariable() && "Operand must be variable to get the Variable index");
+  assert(VariableIndex >= 0 && "VariableIndex must be set");
+  return VariableIndex;
+}
+
+unsigned Operand::getImplicitReg() const {
+  assert(ImplicitReg);
+  return *ImplicitReg;
+}
+
+const RegisterAliasingTracker &Operand::getRegisterAliasing() const {
+  assert(Tracker);
+  return *Tracker;
+}
+
+const llvm::MCOperandInfo &Operand::getExplicitOperandInfo() const {
+  assert(Info);
+  return *Info;
+}
+
 Instruction::Instruction(const llvm::MCInstrDesc &MCInstrDesc,
                          const RegisterAliasingTrackerCache &RATC)
     : Description(&MCInstrDesc) {
@@ -26,8 +96,6 @@ Instruction::Instruction(const llvm::MCInstrDesc &MCInstrDesc,
     Operand Operand;
     Operand.Index = OpIndex;
     Operand.IsDef = (OpIndex < MCInstrDesc.getNumDefs());
-    Operand.IsMem = OpInfo.OperandType == llvm::MCOI::OPERAND_MEMORY;
-    Operand.IsExplicit = true;
     // TODO(gchatelet): Handle isLookupPtrRegClass.
     if (OpInfo.RegClass >= 0)
       Operand.Tracker = &RATC.getRegisterClass(OpInfo.RegClass);
@@ -41,7 +109,6 @@ Instruction::Instruction(const llvm::MCInstrDesc &MCInstrDesc,
     Operand Operand;
     Operand.Index = OpIndex;
     Operand.IsDef = true;
-    Operand.IsExplicit = false;
     Operand.Tracker = &RATC.getRegister(*MCPhysReg);
     Operand.ImplicitReg = MCPhysReg;
     Operands.push_back(Operand);
@@ -51,7 +118,6 @@ Instruction::Instruction(const llvm::MCInstrDesc &MCInstrDesc,
     Operand Operand;
     Operand.Index = OpIndex;
     Operand.IsDef = false;
-    Operand.IsExplicit = false;
     Operand.Tracker = &RATC.getRegister(*MCPhysReg);
     Operand.ImplicitReg = MCPhysReg;
     Operands.push_back(Operand);
@@ -59,7 +125,7 @@ Instruction::Instruction(const llvm::MCInstrDesc &MCInstrDesc,
   // Assigning Variables to non tied explicit operands.
   Variables.reserve(Operands.size()); // Variables.size() <= Operands.size()
   for (auto &Op : Operands)
-    if (Op.IsExplicit && Op.TiedToIndex < 0) {
+    if (Op.isExplicit() && !Op.isTied()) {
       const size_t VariableIndex = Variables.size();
       Op.VariableIndex = VariableIndex;
       Variables.emplace_back();
@@ -67,26 +133,100 @@ Instruction::Instruction(const llvm::MCInstrDesc &MCInstrDesc,
     }
   // Assigning Variables to tied operands.
   for (auto &Op : Operands)
-    if (Op.TiedToIndex >= 0)
-      Op.VariableIndex = Operands[Op.TiedToIndex].VariableIndex;
+    if (Op.isTied())
+      Op.VariableIndex = Operands[Op.getTiedToIndex()].getVariableIndex();
   // Assigning Operands to Variables.
   for (auto &Op : Operands)
-    if (Op.VariableIndex >= 0)
-      Variables[Op.VariableIndex].TiedOperands.push_back(Op.Index);
+    if (Op.isVariable())
+      Variables[Op.getVariableIndex()].TiedOperands.push_back(Op.getIndex());
   // Processing Aliasing.
-  DefRegisters = RATC.emptyRegisters();
-  UseRegisters = RATC.emptyRegisters();
+  ImplDefRegs = RATC.emptyRegisters();
+  ImplUseRegs = RATC.emptyRegisters();
+  AllDefRegs = RATC.emptyRegisters();
+  AllUseRegs = RATC.emptyRegisters();
   for (const auto &Op : Operands) {
-    if (Op.Tracker) {
-      auto &Registers = Op.IsDef ? DefRegisters : UseRegisters;
-      Registers |= Op.Tracker->aliasedBits();
+    if (Op.isReg()) {
+      const auto &AliasingBits = Op.getRegisterAliasing().aliasedBits();
+      if (Op.isDef())
+        AllDefRegs |= AliasingBits;
+      if (Op.isUse())
+        AllUseRegs |= AliasingBits;
+      if (Op.isDef() && Op.isImplicit())
+        ImplDefRegs |= AliasingBits;
+      if (Op.isUse() && Op.isImplicit())
+        ImplUseRegs |= AliasingBits;
     }
   }
 }
 
+const Operand &Instruction::getPrimaryOperand(const Variable &Var) const {
+  const auto PrimaryOperandIndex = Var.getPrimaryOperandIndex();
+  assert(PrimaryOperandIndex < Operands.size());
+  return Operands[PrimaryOperandIndex];
+}
+
 bool Instruction::hasMemoryOperands() const {
-  return std::any_of(Operands.begin(), Operands.end(),
-                     [](const Operand &Op) { return Op.IsMem; });
+  return std::any_of(Operands.begin(), Operands.end(), [](const Operand &Op) {
+    return Op.isReg() && Op.isExplicit() && Op.isMemory();
+  });
+}
+
+bool Instruction::hasAliasingImplicitRegisters() const {
+  return ImplDefRegs.anyCommon(ImplUseRegs);
+}
+
+bool Instruction::hasTiedRegisters() const {
+  return llvm::any_of(
+      Variables, [](const Variable &Var) { return Var.hasTiedOperands(); });
+}
+
+bool Instruction::hasAliasingRegisters() const {
+  return AllDefRegs.anyCommon(AllUseRegs);
+}
+
+void Instruction::dump(const llvm::MCRegisterInfo &RegInfo,
+                       llvm::raw_ostream &Stream) const {
+  for (const auto &Op : Operands) {
+    Stream << "- Op" << Op.getIndex();
+    if (Op.isExplicit())
+      Stream << " Explicit";
+    if (Op.isImplicit())
+      Stream << " Implicit";
+    if (Op.isUse())
+      Stream << " Use";
+    if (Op.isDef())
+      Stream << " Def";
+    if (Op.isImmediate())
+      Stream << " Immediate";
+    if (Op.isMemory())
+      Stream << " Memory";
+    if (Op.isReg()) {
+      if (Op.isImplicitReg())
+        Stream << " Reg(" << RegInfo.getName(Op.getImplicitReg()) << ")";
+      else
+        Stream << " RegClass("
+               << RegInfo.getRegClassName(
+                      &RegInfo.getRegClass(Op.Info->RegClass))
+               << ")";
+    }
+    if (Op.isTied())
+      Stream << " TiedToOp" << Op.getTiedToIndex();
+    Stream << "\n";
+  }
+  for (const auto &Var : Variables) {
+    Stream << "- Var" << Var.getIndex();
+    for (auto OperandIndex : Var.TiedOperands)
+      Stream << " Op" << OperandIndex;
+    Stream << "\n";
+  }
+  if (hasMemoryOperands())
+    Stream << "- hasMemoryOperands\n";
+  if (hasAliasingImplicitRegisters())
+    Stream << "- hasAliasingImplicitRegisters (execution is always serial)\n";
+  if (hasTiedRegisters())
+    Stream << "- hasTiedRegisters (execution is always serial)\n";
+  if (hasAliasingRegisters())
+    Stream << "- hasAliasingRegisters\n";
 }
 
 bool RegisterOperandAssignment::
@@ -103,8 +243,8 @@ static void addOperandIfAlias(
     const llvm::MCPhysReg Reg, bool SelectDef, llvm::ArrayRef<Operand> Operands,
     llvm::SmallVectorImpl<RegisterOperandAssignment> &OperandValues) {
   for (const auto &Op : Operands) {
-    if (Op.Tracker && Op.IsDef == SelectDef) {
-      const int SourceReg = Op.Tracker->getOrigin(Reg);
+    if (Op.isReg() && Op.isDef() == SelectDef) {
+      const int SourceReg = Op.getRegisterAliasing().getOrigin(Reg);
       if (SourceReg >= 0)
         OperandValues.emplace_back(&Op, SourceReg);
     }
@@ -113,7 +253,7 @@ static void addOperandIfAlias(
 
 bool AliasingRegisterOperands::hasImplicitAliasing() const {
   const auto HasImplicit = [](const RegisterOperandAssignment &ROV) {
-    return !ROV.Op->IsExplicit;
+    return ROV.Op->isImplicit();
   };
   return llvm::any_of(Defs, HasImplicit) && llvm::any_of(Uses, HasImplicit);
 }
@@ -129,9 +269,9 @@ bool AliasingConfigurations::hasImplicitAliasing() const {
 AliasingConfigurations::AliasingConfigurations(
     const Instruction &DefInstruction, const Instruction &UseInstruction)
     : DefInstruction(DefInstruction), UseInstruction(UseInstruction) {
-  if (UseInstruction.UseRegisters.anyCommon(DefInstruction.DefRegisters)) {
-    auto CommonRegisters = UseInstruction.UseRegisters;
-    CommonRegisters &= DefInstruction.DefRegisters;
+  if (UseInstruction.AllUseRegs.anyCommon(DefInstruction.AllDefRegs)) {
+    auto CommonRegisters = UseInstruction.AllUseRegs;
+    CommonRegisters &= DefInstruction.AllDefRegs;
     for (const llvm::MCPhysReg Reg : CommonRegisters.set_bits()) {
       AliasingRegisterOperands ARO;
       addOperandIfAlias(Reg, true, DefInstruction.Operands, ARO.Defs);

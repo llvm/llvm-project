@@ -86,3 +86,18 @@ entry:
   %add = add i16 %b, %a
   ret i16 %add
 }
+
+define i64 @add_i64(i64 %a, i64 %b) {
+; MIPS32-LABEL: add_i64:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    addu $5, $7, $5
+; MIPS32-NEXT:    addu $4, $6, $4
+; MIPS32-NEXT:    sltu $6, $4, $6
+; MIPS32-NEXT:    addu $3, $5, $6
+; MIPS32-NEXT:    move $2, $4
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %add = add i64 %b, %a
+  ret i64 %add
+}

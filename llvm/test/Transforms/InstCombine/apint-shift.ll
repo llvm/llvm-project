@@ -319,8 +319,8 @@ define i1 @test16(i84 %X) {
 
 define <2 x i1> @test16vec(<2 x i84> %X) {
 ; CHECK-LABEL: @test16vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i84> %X, <i84 16, i84 16>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i84> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i84> [[X:%.*]], <i84 16, i84 16>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i84> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shr = ashr <2 x i84> %X, <i84 4, i84 4>

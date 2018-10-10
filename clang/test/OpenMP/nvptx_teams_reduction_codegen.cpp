@@ -597,9 +597,9 @@ int bar(int n){
   // CHECK: [[OF:%.+]] = mul nuw i[[SZ]] [[NUM_TEAMS]], 1
   // CHECK: [[POS1:%.+]] = add nuw i[[SZ]] [[SCRATCHPAD]], [[OF]]
   // CHECK: [[POS2:%.+]] = sub nuw i[[SZ]] [[POS1]], 1
-  // CHECK: [[POS3:%.+]] = udiv i[[SZ]] [[POS2]], 256
+  // CHECK: [[POS3:%.+]] = udiv i[[SZ]] [[POS2]], 128
   // CHECK: [[POS4:%.+]] = add nuw i[[SZ]] [[POS3]], 1
-  // CHECK: [[SCRATCHPAD_NEXT:%.+]] = mul nuw i[[SZ]] [[POS4]], 256
+  // CHECK: [[SCRATCHPAD_NEXT:%.+]] = mul nuw i[[SZ]] [[POS4]], 128
   //
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i[[SZ]] 0, i[[SZ]] 1
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
@@ -643,9 +643,9 @@ int bar(int n){
   // CHECK: [[OF:%.+]] = mul nuw i[[SZ]] [[NUM_TEAMS]], 1
   // CHECK: [[POS1:%.+]] = add nuw i[[SZ]] [[SCRATCHPAD]], [[OF]]
   // CHECK: [[POS2:%.+]] = sub nuw i[[SZ]] [[POS1]], 1
-  // CHECK: [[POS3:%.+]] = udiv i[[SZ]] [[POS2]], 256
+  // CHECK: [[POS3:%.+]] = udiv i[[SZ]] [[POS2]], 128
   // CHECK: [[POS4:%.+]] = add nuw i[[SZ]] [[POS3]], 1
-  // CHECK: [[SCRATCHPAD_NEXT:%.+]] = mul nuw i[[SZ]] [[POS4]], 256
+  // CHECK: [[SCRATCHPAD_NEXT:%.+]] = mul nuw i[[SZ]] [[POS4]], 128
   //
   // CHECK: [[P:%.+]] = mul nuw i[[SZ]] 4, [[TEAM]]
   // CHECK: [[SCRATCHPAD_ELT_PTR64:%.+]] = add nuw i[[SZ]] [[SCRATCHPAD_NEXT]], [[P]]
@@ -1024,9 +1024,9 @@ int bar(int n){
   // CHECK: [[OF:%.+]] = mul nuw i[[SZ]] [[NUM_TEAMS]], 4
   // CHECK: [[POS1:%.+]] = add nuw i[[SZ]] [[SCRATCHPAD]], [[OF]]
   // CHECK: [[POS2:%.+]] = sub nuw i[[SZ]] [[POS1]], 1
-  // CHECK: [[POS3:%.+]] = udiv i[[SZ]] [[POS2]], 256
+  // CHECK: [[POS3:%.+]] = udiv i[[SZ]] [[POS2]], 128
   // CHECK: [[POS4:%.+]] = add nuw i[[SZ]] [[POS3]], 1
-  // CHECK: [[SCRATCHPAD_NEXT:%.+]] = mul nuw i[[SZ]] [[POS4]], 256
+  // CHECK: [[SCRATCHPAD_NEXT:%.+]] = mul nuw i[[SZ]] [[POS4]], 128
   //
   // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i[[SZ]] 0, i[[SZ]] 1
   // CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
@@ -1072,9 +1072,9 @@ int bar(int n){
   // CHECK: [[OF:%.+]] = mul nuw i[[SZ]] [[NUM_TEAMS]], 4
   // CHECK: [[POS1:%.+]] = add nuw i[[SZ]] [[SCRATCHPAD]], [[OF]]
   // CHECK: [[POS2:%.+]] = sub nuw i[[SZ]] [[POS1]], 1
-  // CHECK: [[POS3:%.+]] = udiv i[[SZ]] [[POS2]], 256
+  // CHECK: [[POS3:%.+]] = udiv i[[SZ]] [[POS2]], 128
   // CHECK: [[POS4:%.+]] = add nuw i[[SZ]] [[POS3]], 1
-  // CHECK: [[SCRATCHPAD_NEXT:%.+]] = mul nuw i[[SZ]] [[POS4]], 256
+  // CHECK: [[SCRATCHPAD_NEXT:%.+]] = mul nuw i[[SZ]] [[POS4]], 128
   //
   // CHECK: [[P:%.+]] = mul nuw i[[SZ]] 2, [[TEAM]]
   // CHECK: [[SCRATCHPAD_ELT_PTR64:%.+]] = add nuw i[[SZ]] [[SCRATCHPAD_NEXT]], [[P]]

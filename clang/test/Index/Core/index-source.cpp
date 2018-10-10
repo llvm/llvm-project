@@ -1,4 +1,5 @@
 // RUN: c-index-test core -print-source-symbols -- %s -std=c++1z -target x86_64-apple-macosx10.7 | FileCheck %s
+// RUN: c-index-test core -print-source-symbols -include-locals -- %s -std=c++1z -target x86_64-apple-macosx10.7 | FileCheck -check-prefix=LOCAL %s
 
 // CHECK: [[@LINE+1]]:7 | class/C++ | Cls | [[Cls_USR:.*]] | <no-cgname> | Def | rel: 0
 class Cls { public:
@@ -493,6 +494,7 @@ void localStructuredBindingAndRef() {
 // CHECK: [[@LINE-1]]:69 | variable/C++ | structuredBinding2 | c:@N@cpp17structuredBinding@structuredBinding2 | <no-cgname> | Ref,Read,RelCont | rel: 1
 // CHECK-NEXT: RelCont | localStructuredBindingAndRef | c:@N@cpp17structuredBinding@F@localStructuredBindingAndRef#
 // CHECK-NOT: localBinding
+// LOCAL: [[@LINE-4]]:9 | variable(local)/C++ | localBinding1 | c:index-source.cpp@25382@N@cpp17structuredBinding@F@localStructuredBindingAndRef#@localBinding1
 }
 
 }
