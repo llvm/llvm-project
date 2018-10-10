@@ -8,7 +8,7 @@ A f() { return A(0); }
 
 // Verify that we do not elide copies when constructing a base class.
 namespace no_elide_base {
-  struct Base { 
+  struct Base {
     Base(const Base&);
     ~Base();
   };
@@ -17,12 +17,12 @@ namespace no_elide_base {
     operator Base() const;
   };
 
-  struct Derived : public virtual Base { 
+  struct Derived : public virtual Base {
     Derived(const Other &O);
   };
 
-  // CHECK: define {{.*}} @_ZN13no_elide_base7DerivedC1ERKNS_5OtherE(%"struct.no_elide_base::Derived"* returned %this, %"struct.no_elide_base::Other"* dereferenceable({{[0-9]+}}) %O) unnamed_addr
-  Derived::Derived(const Other &O) 
+  // CHECK: define {{.*}} @_ZN13no_elide_base7DerivedC1ERKNS_5OtherE(%"struct.no_elide_base::Derived"* noalias returned %this, %"struct.no_elide_base::Other"* dereferenceable({{[0-9]+}}) %O) unnamed_addr
+  Derived::Derived(const Other &O)
     // CHECK: call {{.*}} @_ZNK13no_elide_base5OthercvNS_4BaseEEv
     // CHECK: call {{.*}} @_ZN13no_elide_base4BaseC2ERKS0_
     // CHECK: call {{.*}} @_ZN13no_elide_base4BaseD1Ev

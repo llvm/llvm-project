@@ -131,6 +131,9 @@ namespace {
       return PlaceholderKind == K;
     }
 
+    // Language specific cast restrictions for address spaces.
+    void checkAddressSpaceCast(QualType SrcType, QualType DestType);
+
     void checkCastAlign() {
       Self.CheckCastAlign(SrcExpr.get(), DestType, OpRange);
     }
@@ -2276,6 +2279,27 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
   return SuccessResult;
 }
 
+void CastOperation::checkAddressSpaceCast(QualType SrcType, QualType DestType) {
+  // In OpenCL only conversions between pointers to objects in overlapping
+  // addr spaces are allowed. v2.0 s6.5.5 - Generic addr space overlaps
+  // with any named one, except for constant.
+  if (Self.getLangOpts().OpenCL) {
+    auto SrcPtrType = SrcType->getAs<PointerType>();
+    if (!SrcPtrType)
+      return;
+    auto DestPtrType = DestType->getAs<PointerType>();
+    if (!DestPtrType)
+      return;
+    if (!DestPtrType->isAddressSpaceOverlapping(*SrcPtrType)) {
+      Self.Diag(OpRange.getBegin(),
+                diag::err_typecheck_incompatible_address_space)
+          << SrcType << DestType << Sema::AA_Casting
+          << SrcExpr.get()->getSourceRange();
+      SrcExpr = ExprError();
+    }
+  }
+}
+
 void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
                                        bool ListInitialization) {
   assert(Self.getLangOpts().CPlusPlus);
@@ -2403,6 +2427,8 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
     }
   }
 
+  checkAddressSpaceCast(SrcExpr.get()->getType(), DestType);
+
   if (isValidCast(tcr)) {
     if (Kind == CK_BitCast)
       checkCastAlign();
@@ -2489,20 +2515,9 @@ void CastOperation::CheckCStyleCast() {
 
   assert(!SrcType->isPlaceholderType());
 
-  // OpenCL v1 s6.5: Casting a pointer to address space A to a pointer to
-  // address space B is illegal.
-  if (Self.getLangOpts().OpenCL && DestType->isPointerType() &&
-      SrcType->isPointerType()) {
-    const PointerType *DestPtr = DestType->getAs<PointerType>();
-    if (!DestPtr->isAddressSpaceOverlapping(*SrcType->getAs<PointerType>())) {
-      Self.Diag(OpRange.getBegin(),
-                diag::err_typecheck_incompatible_address_space)
-          << SrcType << DestType << Sema::AA_Casting
-          << SrcExpr.get()->getSourceRange();
-      SrcExpr = ExprError();
-      return;
-    }
-  }
+  checkAddressSpaceCast(SrcType, DestType);
+  if (SrcExpr.isInvalid())
+    return;
 
   if (Self.RequireCompleteType(OpRange.getBegin(), DestType,
                                diag::err_typecheck_cast_to_incomplete)) {
