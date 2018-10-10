@@ -24,8 +24,8 @@ using find_all_symbols::SymbolAndSignals;
 static bool runOnCode(tooling::ToolAction *ToolAction, StringRef Code,
                       StringRef FileName,
                       const std::vector<std::string> &ExtraArgs) {
-  llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new vfs::InMemoryFileSystem);
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
   llvm::IntrusiveRefCntPtr<FileManager> Files(
       new FileManager(FileSystemOptions(), InMemoryFileSystem));
   // FIXME: Investigate why -fms-compatibility breaks tests.

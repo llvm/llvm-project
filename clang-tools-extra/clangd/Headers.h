@@ -13,7 +13,6 @@
 #include "Path.h"
 #include "Protocol.h"
 #include "SourceCode.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -21,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {
 namespace clangd {
