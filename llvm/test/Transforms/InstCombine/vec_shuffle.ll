@@ -133,8 +133,8 @@ define <4 x i32> @test10(<4 x i32> %t5) {
   ret <4 x i32> %t7
 }
 
-; Test fold of two shuffles where the two shufflevector inputs's op1 are
-; the same
+; Test fold of two shuffles where the two shufflevector inputs's op1 are the same.
+
 define <8 x i8> @test11(<16 x i8> %t6) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[T3:%.*]] = shufflevector <16 x i8> [[T6:%.*]], <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -146,8 +146,8 @@ define <8 x i8> @test11(<16 x i8> %t6) {
   ret <8 x i8> %t3
 }
 
-; Test fold of two shuffles where the first shufflevector's inputs are
-; the same as the second
+; Test fold of two shuffles where the first shufflevector's inputs are the same as the second.
+
 define <8 x i8> @test12(<8 x i8> %t6, <8 x i8> %t2) {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:    [[T3:%.*]] = shufflevector <8 x i8> [[T6:%.*]], <8 x i8> [[T2:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 9, i32 8, i32 11, i32 12>
@@ -158,8 +158,8 @@ define <8 x i8> @test12(<8 x i8> %t6, <8 x i8> %t2) {
   ret <8 x i8> %t3
 }
 
-; Test fold of two shuffles where the first shufflevector's inputs are
-; the same as the second
+; Test fold of two shuffles where the first shufflevector's inputs are the same as the second.
+
 define <8 x i8> @test12a(<8 x i8> %t6, <8 x i8> %t2) {
 ; CHECK-LABEL: @test12a(
 ; CHECK-NEXT:    [[T3:%.*]] = shufflevector <8 x i8> [[T2:%.*]], <8 x i8> [[T6:%.*]], <8 x i32> <i32 0, i32 3, i32 1, i32 4, i32 8, i32 9, i32 10, i32 11>
@@ -168,6 +168,38 @@ define <8 x i8> @test12a(<8 x i8> %t6, <8 x i8> %t2) {
   %t1 = shufflevector <8 x i8> %t6, <8 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 4, i32 undef, i32 7>
   %t3 = shufflevector <8 x i8> %t2, <8 x i8> %t1, <8 x i32> <i32 0, i32 3, i32 1, i32 4, i32 8, i32 9, i32 10, i32 11>
   ret <8 x i8> %t3
+}
+
+; TODO: The mask length of the 1st shuffle can be reduced to eliminate the 2nd shuffle.
+
+define <2 x i8> @extract_subvector_of_shuffle(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @extract_subvector_of_shuffle(
+; CHECK-NEXT:    [[EXTRACT_SUBV:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    ret <2 x i8> [[EXTRACT_SUBV]]
+;
+  %shuf = shufflevector <2 x i8> %x, <2 x i8> %y, <3 x i32> <i32 0, i32 2, i32 0>
+  %extract_subv = shufflevector <3 x i8> %shuf, <3 x i8> undef, <2 x i32> <i32 0, i32 1>
+  ret <2 x i8> %extract_subv
+}
+
+; TODO:
+; Extra uses are ok.
+; Undef elements in either mask are ok. Undefs from the 2nd shuffle mask should propagate to the new shuffle.
+; The type of the inputs does not have to match the output type.
+
+declare void @use_v5i8(<5 x i8>)
+
+define <4 x i8> @extract_subvector_of_shuffle_extra_use(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @extract_subvector_of_shuffle_extra_use(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]], <5 x i32> <i32 undef, i32 2, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    call void @use_v5i8(<5 x i8> [[SHUF]])
+; CHECK-NEXT:    [[EXTRACT_SUBV:%.*]] = shufflevector <2 x i8> [[X]], <2 x i8> [[Y]], <4 x i32> <i32 undef, i32 2, i32 0, i32 undef>
+; CHECK-NEXT:    ret <4 x i8> [[EXTRACT_SUBV]]
+;
+  %shuf = shufflevector <2 x i8> %x, <2 x i8> %y, <5 x i32> <i32 undef, i32 2, i32 0, i32 1, i32 0>
+  call void @use_v5i8(<5 x i8> %shuf)
+  %extract_subv = shufflevector <5 x i8> %shuf, <5 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+  ret <4 x i8> %extract_subv
 }
 
 define <2 x i8> @test13a(i8 %x1, i8 %x2) {

@@ -21,9 +21,8 @@ void MipsMCAsmInfo::anchor() { }
 MipsMCAsmInfo::MipsMCAsmInfo(const Triple &TheTriple) {
   IsLittleEndian = TheTriple.isLittleEndian();
 
-  if (TheTriple.isMIPS64()) {
+  if (TheTriple.isMIPS64() && TheTriple.getEnvironment() != Triple::GNUABIN32)
     CodePointerSize = CalleeSaveStackSlotSize = 8;
-  }
 
   // FIXME: This condition isn't quite right but it's the best we can do until
   //        this object can identify the ABI. It will misbehave when using O32

@@ -87,7 +87,7 @@ public:
     return !(*this == Other);
   }
 
-  void print(raw_ostream &OS) const { OS << Value; }
+  void print(raw_ostream &OS) const;
 
   // Returns an opaque value that represents this LocationSize. Cannot be
   // reliably converted back into a LocationSize.

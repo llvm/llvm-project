@@ -2,8 +2,6 @@
 # RUN: cp %t %t1
 # RUN: llvm-objcopy --strip-all-gnu %t %t2
 # RUN: llvm-readobj -file-headers -sections %t2 | FileCheck %s
-# RUN: llvm-objcopy -S %t1 %t3
-# RUN: cmp %t2 %t3
 
 !ELF
 FileHeader:

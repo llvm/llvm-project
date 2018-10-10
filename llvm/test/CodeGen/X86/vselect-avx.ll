@@ -41,7 +41,6 @@ define void @test2(double** %call1559, i64 %indvars.iv4198, <4 x i1> %tmp1895) {
 ; AVX1-LABEL: test2:
 ; AVX1:       ## %bb.0: ## %bb
 ; AVX1-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm1
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0

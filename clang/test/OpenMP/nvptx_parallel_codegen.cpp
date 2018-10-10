@@ -318,11 +318,14 @@ int bar(int n){
 // CHECK-32: [[A_ADDR:%.+]] = alloca i32,
 // CHECK-64: [[A_ADDR:%.+]] = alloca i64,
 // CHECK-64: [[CONV:%.+]] = bitcast i64* [[A_ADDR]] to i32*
-// CHECK: [[STACK:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{64|32}} 4, i16 0)
+// CHECK: [[STACK:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{64|32}} 128, i16 0)
 // CHECK: [[BC:%.+]] = bitcast i8* [[STACK]] to %struct._globalized_locals_ty*
 // CHECK-32: [[A:%.+]] = load i32, i32* [[A_ADDR]],
 // CHECK-64: [[A:%.+]] = load i32, i32* [[CONV]],
-// CHECK: [[GLOBAL_A_ADDR:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[BC]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+// CHECK: [[GLOBAL_A_ADDR_ARR:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[BC]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+// CHECK: [[TID:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK: [[LID:%.+]] = and i32 [[TID]], 31
+// CHECK: [[GLOBAL_A_ADDR:%.+]] = getelementptr inbounds [32 x i32], [32 x i32]* [[GLOBAL_A_ADDR_ARR]], i32 0, i32 [[LID]]
 // CHECK: store i32 [[A]], i32* [[GLOBAL_A_ADDR]],
 
 // CHECK-LABEL: define internal void @{{.+}}(i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable{{.*}})

@@ -17,10 +17,10 @@ namespace clang {
 namespace clangd {
 
 /// Records status information for files open()ed or stat()ed during preamble
-/// build, so we can avoid stat()s on the underlying FS when reusing the
-/// preamble. For example, code completion can re-stat files when getting FileID
-/// for source locations stored in preamble (e.g. checking whether a location is
-/// in the main file).
+/// build (except for the main file), so we can avoid stat()s on the underlying
+/// FS when reusing the preamble. For example, code completion can re-stat files
+/// when getting FileID for source locations stored in preamble (e.g. checking
+/// whether a location is in the main file).
 ///
 /// The cache is keyed by absolute path of file name in cached status, as this
 /// is what preamble stores.
@@ -35,7 +35,12 @@ namespace clangd {
 /// Note that the cache is only valid when reusing preamble.
 class PreambleFileStatusCache {
 public:
+  /// \p MainFilePath is the absolute path of the main source file this preamble
+  /// corresponds to. The stat for the main file will not be cached.
+  PreambleFileStatusCache(llvm::StringRef MainFilePath);
+
   void update(const vfs::FileSystem &FS, vfs::Status S);
+
   /// \p Path is a path stored in preamble.
   llvm::Optional<vfs::Status> lookup(llvm::StringRef Path) const;
 
@@ -56,6 +61,7 @@ public:
   getConsumingFS(IntrusiveRefCntPtr<vfs::FileSystem> FS) const;
 
 private:
+  std::string MainFilePath;
   llvm::StringMap<vfs::Status> StatCache;
 };
 

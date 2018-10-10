@@ -4,6 +4,10 @@
 // RUN: %clangxx_asan -fexceptions -O0 %s -o %t
 // RUN: %run %t
 
+// The current implementation of this functionality requires special
+// combination of libraries that are not used by default on NetBSD
+// XFAIL: netbsd
+
 #include <assert.h>
 #include <exception>
 #include <sanitizer/asan_interface.h>

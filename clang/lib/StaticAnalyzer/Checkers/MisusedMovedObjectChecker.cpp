@@ -314,17 +314,18 @@ bool MisusedMovedObjectChecker::isMoveSafeMethod(
       return true;
   }
   // Function call `empty` can be skipped.
-  if (MethodDec && MethodDec->getDeclName().isIdentifier() &&
+  return (MethodDec && MethodDec->getDeclName().isIdentifier() &&
       (MethodDec->getName().lower() == "empty" ||
-       MethodDec->getName().lower() == "isempty"))
-    return true;
-
-  return false;
+       MethodDec->getName().lower() == "isempty"));
 }
 
 bool MisusedMovedObjectChecker::isStateResetMethod(
     const CXXMethodDecl *MethodDec) const {
-  if (MethodDec && MethodDec->getDeclName().isIdentifier()) {
+  if (!MethodDec)
+      return false;
+  if (MethodDec->hasAttr<ReinitializesAttr>())
+      return true;
+  if (MethodDec->getDeclName().isIdentifier()) {
     std::string MethodName = MethodDec->getName().lower();
     if (MethodName == "reset" || MethodName == "clear" ||
         MethodName == "destroy")
@@ -429,8 +430,7 @@ void MisusedMovedObjectChecker::checkPreCall(const CallEvent &Call,
 
   // We want to investigate the whole object, not only sub-object of a parent
   // class in which the encountered method defined.
-  while (const CXXBaseObjectRegion *BR =
-             dyn_cast<CXXBaseObjectRegion>(ThisRegion))
+  while (const auto *BR = dyn_cast<CXXBaseObjectRegion>(ThisRegion))
     ThisRegion = BR->getSuperRegion();
 
   if (isMoveSafeMethod(MethodDecl))
@@ -487,13 +487,9 @@ ProgramStateRef MisusedMovedObjectChecker::checkRegionChanges(
     ThisRegion = IC->getCXXThisVal().getAsRegion();
   }
 
-  for (ArrayRef<const MemRegion *>::iterator I = ExplicitRegions.begin(),
-                                             E = ExplicitRegions.end();
-       I != E; ++I) {
-    const auto *Region = *I;
-    if (ThisRegion != Region) {
+  for (const auto *Region : ExplicitRegions) {
+    if (ThisRegion != Region)
       State = removeFromState(State, Region);
-    }
   }
 
   return State;

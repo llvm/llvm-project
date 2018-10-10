@@ -156,7 +156,7 @@ static list<std::string> Name(
     value_desc("pattern"), cat(DwarfDumpCategory));
 static alias NameAlias("n", desc("Alias for -name"), aliasopt(Name));
 static opt<unsigned long long> Lookup("lookup",
-           desc("Lookup <address> in the debug information and print out any"
+           desc("Lookup <address> in the debug information and print out any "
                 "available file, function, block and line table details."),
            value_desc("address"), cat(DwarfDumpCategory));
 static opt<std::string>
@@ -281,31 +281,44 @@ using HandlerFn = std::function<bool(ObjectFile &, DWARFContext &DICtx, Twine,
                                      raw_ostream &)>;
 
 /// Print only DIEs that have a certain name.
+static bool filterByName(const StringSet<> &Names, DWARFDie Die,
+                         StringRef NameRef, raw_ostream &OS) {
+  std::string Name =
+      (IgnoreCase && !UseRegex) ? NameRef.lower() : NameRef.str();
+  if (UseRegex) {
+    // Match regular expression.
+    for (auto Pattern : Names.keys()) {
+      Regex RE(Pattern, IgnoreCase ? Regex::IgnoreCase : Regex::NoFlags);
+      std::string Error;
+      if (!RE.isValid(Error)) {
+        errs() << "error in regular expression: " << Error << "\n";
+        exit(1);
+      }
+      if (RE.match(Name)) {
+        Die.dump(OS, 0, getDumpOpts());
+        return true;
+      }
+    }
+  } else if (Names.count(Name)) {
+    // Match full text.
+    Die.dump(OS, 0, getDumpOpts());
+    return true;
+  }
+  return false;
+}
+
+/// Print only DIEs that have a certain name.
 static void filterByName(const StringSet<> &Names,
                          DWARFContext::unit_iterator_range CUs,
                          raw_ostream &OS) {
   for (const auto &CU : CUs)
     for (const auto &Entry : CU->dies()) {
       DWARFDie Die = {CU.get(), &Entry};
-      if (const char *NamePtr = Die.getName(DINameKind::ShortName)) {
-        std::string Name =
-            (IgnoreCase && !UseRegex) ? StringRef(NamePtr).lower() : NamePtr;
-        // Match regular expression.
-        if (UseRegex)
-          for (auto Pattern : Names.keys()) {
-            Regex RE(Pattern, IgnoreCase ? Regex::IgnoreCase : Regex::NoFlags);
-            std::string Error;
-            if (!RE.isValid(Error)) {
-              errs() << "error in regular expression: " << Error << "\n";
-              exit(1);
-            }
-            if (RE.match(Name))
-              Die.dump(OS, 0, getDumpOpts());
-          }
-        // Match full text.
-        else if (Names.count(Name))
-          Die.dump(OS, 0, getDumpOpts());
-      }
+      if (const char *Name = Die.getName(DINameKind::ShortName))
+        if (filterByName(Names, Die, Name, OS))
+          continue;
+      if (const char *Name = Die.getName(DINameKind::LinkageName))
+        filterByName(Names, Die, Name, OS);
     }
 }
 

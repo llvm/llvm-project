@@ -401,9 +401,7 @@ define float @fdiv_neg_swapped2(float %f) {
 
 define <2 x float> @fdiv_neg_vec_undef_elt(<2 x float> %f) {
 ; CHECK-LABEL: @fdiv_neg_vec_undef_elt(
-; CHECK-NEXT:    [[NEG:%.*]] = fsub <2 x float> <float 0.000000e+00, float undef>, [[F:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan <2 x float> [[F]], [[NEG]]
-; CHECK-NEXT:    ret <2 x float> [[DIV]]
+; CHECK-NEXT:    ret <2 x float> <float -1.000000e+00, float -1.000000e+00>
 ;
   %neg = fsub <2 x float> <float 0.0, float undef>, %f
   %div = fdiv nnan <2 x float> %f, %neg

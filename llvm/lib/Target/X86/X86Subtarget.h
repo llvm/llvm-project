@@ -419,6 +419,9 @@ protected:
   /// Indicates target prefers 256 bit instructions.
   bool Prefer256Bit = false;
 
+  /// Threeway branch is profitable in this subtarget.
+  bool ThreewayBranchProfitable = false;
+
   /// What processor and OS we're targeting.
   Triple TargetTriple;
 
@@ -662,6 +665,7 @@ public:
   bool hasWAITPKG() const { return HasWAITPKG; }
   bool hasPCONFIG() const { return HasPCONFIG; }
   bool hasSGX() const { return HasSGX; }
+  bool threewayBranchProfitable() const { return ThreewayBranchProfitable; }
   bool hasINVPCID() const { return HasINVPCID; }
   bool useRetpolineIndirectCalls() const { return UseRetpolineIndirectCalls; }
   bool useRetpolineIndirectBranches() const {

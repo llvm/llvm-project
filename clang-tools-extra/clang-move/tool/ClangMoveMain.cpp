@@ -128,7 +128,7 @@ int main(int argc, const char **argv) {
                                  InitialDirectory.str(), Style, DumpDecls};
   move::DeclarationReporter Reporter;
   move::ClangMoveActionFactory Factory(&Context, &Reporter);
-  
+
   int CodeStatus = Tool.run(&Factory);
   if (CodeStatus)
     return CodeStatus;
@@ -138,8 +138,9 @@ int main(int argc, const char **argv) {
     const auto &Declarations = Reporter.getDeclarationList();
     for (auto I = Declarations.begin(), E = Declarations.end(); I != E; ++I) {
       llvm::outs() << "  {\n";
-      llvm::outs() << "    \"DeclarationName\": \"" << I->QualifiedName << "\",\n";
-      llvm::outs() << "    \"DeclarationType\": \"" << I->Kind << "\"\n";
+      llvm::outs() << "    \"DeclarationName\": \"" << I->QualifiedName
+                   << "\",\n";
+      llvm::outs() << "    \"DeclarationType\": \"" << I->Kind << "\",\n";
       llvm::outs() << "    \"Templated\": " << (I->Templated ? "true" : "false")
                    << "\n";
       llvm::outs() << "  }";

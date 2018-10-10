@@ -9984,7 +9984,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
           DeductionFailure.getFirstArg()->getNonTypeTemplateArgumentType();
       QualType T2 =
           DeductionFailure.getSecondArg()->getNonTypeTemplateArgumentType();
-      if (!S.Context.hasSameType(T1, T2)) {
+      if (!T1.isNull() && !T2.isNull() && !S.Context.hasSameType(T1, T2)) {
         S.Diag(Templated->getLocation(),
                diag::note_ovl_candidate_inconsistent_deduction_types)
           << ParamD->getDeclName() << *DeductionFailure.getFirstArg() << T1
