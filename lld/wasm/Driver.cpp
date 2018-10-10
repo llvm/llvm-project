@@ -24,7 +24,6 @@
 #include "llvm/Object/Wasm.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TargetSelect.h"
@@ -350,8 +349,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Handle --help
   if (Args.hasArg(OPT_help)) {
-    std::string Usage = formatv("{0} [options] file...", ArgsArr[0]).str();
-    Parser.PrintHelp(outs(), Usage.c_str(), "LLVM Linker", false);
+    Parser.PrintHelp(outs(),
+                     (std::string(ArgsArr[0]) + " [options] file...").c_str(),
+                     "LLVM Linker", false);
     return;
   }
 
