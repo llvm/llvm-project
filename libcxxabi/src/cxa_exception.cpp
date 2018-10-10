@@ -79,22 +79,37 @@ size_t cxa_exception_size_from_exception_thrown_size(size_t size) {
                                    alignof(__cxa_exception));
 }
 
-static void setExceptionClass(_Unwind_Exception* unwind_exception) {
-    unwind_exception->exception_class = kOurExceptionClass;
+void __setExceptionClass(_Unwind_Exception* unwind_exception, uint64_t newValue) {
+	::memcpy(&unwind_exception->exception_class, &newValue, sizeof(newValue));
+	}
+	
+
+static void setOurExceptionClass(_Unwind_Exception* unwind_exception) {
+    __setExceptionClass(unwind_exception, kOurExceptionClass);
 }
 
 static void setDependentExceptionClass(_Unwind_Exception* unwind_exception) {
-    unwind_exception->exception_class = kOurDependentExceptionClass;
+    __setExceptionClass(unwind_exception, kOurDependentExceptionClass);
 }
 
 //  Is it one of ours?
-static bool isOurExceptionClass(const _Unwind_Exception* unwind_exception) {
-    return (unwind_exception->exception_class & get_vendor_and_language) == 
-           (kOurExceptionClass                & get_vendor_and_language);
+uint64_t __getExceptionClass(const _Unwind_Exception* unwind_exception) {
+//	On x86 and some ARM unwinders, unwind_exception->exception_class is
+//		a uint64_t. On other ARM unwinders, it is a char[8]
+//	See: http://infocenter.arm.com/help/topic/com.arm.doc.ihi0038b/IHI0038B_ehabi.pdf
+//	So we just copy it into a uint64_t to be sure.
+	uint64_t exClass;
+	::memcpy(&exClass, &unwind_exception->exception_class, sizeof(exClass));
+	return exClass;
+}
+
+bool __isOurExceptionClass(const _Unwind_Exception* unwind_exception) {
+    return (__getExceptionClass(unwind_exception) & get_vendor_and_language) == 
+           (kOurExceptionClass                    & get_vendor_and_language);
 }
 
 static bool isDependentException(_Unwind_Exception* unwind_exception) {
-    return (unwind_exception->exception_class & 0xFF) == 0x01;
+    return (__getExceptionClass(unwind_exception) & 0xFF) == 0x01;
 }
 
 //  This does not need to be atomic
@@ -249,7 +264,7 @@ __cxa_throw(void *thrown_object, std::type_info *tinfo, void (*dest)(void *)) {
     exception_header->terminateHandler  = std::get_terminate();
     exception_header->exceptionType = tinfo;
     exception_header->exceptionDestructor = dest;
-    setExceptionClass(&exception_header->unwindHeader);
+    setOurExceptionClass(&exception_header->unwindHeader);
     exception_header->referenceCount = 1;  // This is a newly allocated exception, no need for thread safety.
     globals->uncaughtExceptions += 1;   // Not atomically, since globals are thread-local
 
@@ -300,7 +315,7 @@ bool __cxa_begin_cleanup(void *unwind_arg) throw() {
     __cxa_exception* exception_header =
         cxa_exception_from_exception_unwind_exception(unwind_exception);
 
-    if (isOurExceptionClass(unwind_exception))
+    if (__isOurExceptionClass(unwind_exception))
     {
         if (0 == exception_header->propagationCount)
         {
@@ -343,7 +358,7 @@ __cxa_end_cleanup_impl()
         std::terminate();
     }
 
-    if (isOurExceptionClass(&exception_header->unwindHeader))
+    if (__isOurExceptionClass(&exception_header->unwindHeader))
     {
         --exception_header->propagationCount;
         if (0 == exception_header->propagationCount)
@@ -408,7 +423,7 @@ void*
 __cxa_begin_catch(void* unwind_arg) throw()
 {
     _Unwind_Exception* unwind_exception = static_cast<_Unwind_Exception*>(unwind_arg);
-    bool native_exception = isOurExceptionClass(unwind_exception);
+    bool native_exception = __isOurExceptionClass(unwind_exception);
     __cxa_eh_globals* globals = __cxa_get_globals();
     // exception_header is a hackish offset from a foreign exception, but it
     //   works as long as we're careful not to try to access any __cxa_exception
@@ -485,7 +500,7 @@ void __cxa_end_catch() {
     //    nothing more to be done.  Do nothing!
     if (NULL != exception_header)
     {
-        bool native_exception = isOurExceptionClass(&exception_header->unwindHeader);
+        bool native_exception = __isOurExceptionClass(&exception_header->unwindHeader);
         if (native_exception)
         {
             // This is a native exception
@@ -550,7 +565,7 @@ std::type_info *__cxa_current_exception_type() {
     __cxa_exception *exception_header = globals->caughtExceptions;
     if (NULL == exception_header)
         return NULL;        //  No current exception
-    if (!isOurExceptionClass(&exception_header->unwindHeader))
+    if (!__isOurExceptionClass(&exception_header->unwindHeader))
         return NULL;
     return exception_header->exceptionType;
 }
@@ -572,7 +587,7 @@ void __cxa_rethrow() {
     __cxa_exception* exception_header = globals->caughtExceptions;
     if (NULL == exception_header)
         std::terminate();      // throw; called outside of a exception handler
-    bool native_exception = isOurExceptionClass(&exception_header->unwindHeader);
+    bool native_exception = __isOurExceptionClass(&exception_header->unwindHeader);
     if (native_exception)
     {
         //  Mark the exception as being rethrown (reverse the effects of __cxa_begin_catch)
@@ -661,7 +676,7 @@ void *__cxa_current_primary_exception() throw() {
     __cxa_exception* exception_header = globals->caughtExceptions;
     if (NULL == exception_header)
         return NULL;        //  No current exception
-    if (!isOurExceptionClass(&exception_header->unwindHeader))
+    if (!__isOurExceptionClass(&exception_header->unwindHeader))
         return NULL;        // Can't capture a foreign exception (no way to refcount it)
     if (isDependentException(&exception_header->unwindHeader)) {
         __cxa_dependent_exception* dep_exception_header =
