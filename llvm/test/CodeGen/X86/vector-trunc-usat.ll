@@ -17,7 +17,7 @@
 define <4 x i32> @trunc_usat_v4i64_v4i32(<4 x i64> %a0) {
 ; SSE2-LABEL: trunc_usat_v4i64_v4i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-NEXT:    pxor %xmm2, %xmm3
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [9223372039002259455,9223372039002259455]
@@ -49,7 +49,7 @@ define <4 x i32> @trunc_usat_v4i64_v4i32(<4 x i64> %a0) {
 ;
 ; SSSE3-LABEL: trunc_usat_v4i64_v4i32:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; SSSE3-NEXT:    movdqa %xmm0, %xmm3
 ; SSSE3-NEXT:    pxor %xmm2, %xmm3
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [9223372039002259455,9223372039002259455]
@@ -82,7 +82,7 @@ define <4 x i32> @trunc_usat_v4i64_v4i32(<4 x i64> %a0) {
 ; SSE41-LABEL: trunc_usat_v4i64_v4i32:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [9223372039002259456,9223372039002259456]
 ; SSE41-NEXT:    movdqa %xmm2, %xmm3
 ; SSE41-NEXT:    pxor %xmm0, %xmm3
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [9223372039002259455,9223372039002259455]
@@ -208,7 +208,7 @@ define <8 x i32> @trunc_usat_v8i64_v8i32(<8 x i64> %a0) {
 ; SSE2-LABEL: trunc_usat_v8i64_v8i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [4294967295,4294967295]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [9223372039002259456,9223372039002259456]
 ; SSE2-NEXT:    movdqa %xmm3, %xmm7
 ; SSE2-NEXT:    pxor %xmm5, %xmm7
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [9223372039002259455,9223372039002259455]
@@ -269,7 +269,7 @@ define <8 x i32> @trunc_usat_v8i64_v8i32(<8 x i64> %a0) {
 ; SSSE3-LABEL: trunc_usat_v8i64_v8i32:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm8 = [4294967295,4294967295]
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm5 = [9223372039002259456,9223372039002259456]
 ; SSSE3-NEXT:    movdqa %xmm3, %xmm7
 ; SSSE3-NEXT:    pxor %xmm5, %xmm7
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm9 = [9223372039002259455,9223372039002259455]
@@ -331,7 +331,7 @@ define <8 x i32> @trunc_usat_v8i64_v8i32(<8 x i64> %a0) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm8
 ; SSE41-NEXT:    movapd {{.*#+}} xmm6 = [4294967295,4294967295]
-; SSE41-NEXT:    movdqa {{.*#+}} xmm7 = [2147483648,2147483648,2147483648,2147483648]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm7 = [9223372039002259456,9223372039002259456]
 ; SSE41-NEXT:    movdqa %xmm3, %xmm0
 ; SSE41-NEXT:    pxor %xmm7, %xmm0
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm9 = [9223372039002259455,9223372039002259455]
@@ -464,7 +464,7 @@ define <8 x i16> @trunc_usat_v8i64_v8i16(<8 x i64> %a0) {
 ; SSE2-LABEL: trunc_usat_v8i64_v8i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [65535,65535]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [9223372039002259456,9223372039002259456]
 ; SSE2-NEXT:    movdqa %xmm2, %xmm5
 ; SSE2-NEXT:    pxor %xmm6, %xmm5
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [9223372039002324991,9223372039002324991]
@@ -533,7 +533,7 @@ define <8 x i16> @trunc_usat_v8i64_v8i16(<8 x i64> %a0) {
 ; SSSE3-LABEL: trunc_usat_v8i64_v8i16:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm8 = [65535,65535]
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm6 = [2147483648,2147483648,2147483648,2147483648]
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm6 = [9223372039002259456,9223372039002259456]
 ; SSSE3-NEXT:    movdqa %xmm2, %xmm5
 ; SSSE3-NEXT:    pxor %xmm6, %xmm5
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm9 = [9223372039002324991,9223372039002324991]
@@ -603,7 +603,7 @@ define <8 x i16> @trunc_usat_v8i64_v8i16(<8 x i64> %a0) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm8
 ; SSE41-NEXT:    movapd {{.*#+}} xmm5 = [65535,65535]
-; SSE41-NEXT:    movdqa {{.*#+}} xmm6 = [2147483648,2147483648,2147483648,2147483648]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm6 = [9223372039002259456,9223372039002259456]
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pxor %xmm6, %xmm0
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm9 = [9223372039002324991,9223372039002324991]
@@ -965,7 +965,7 @@ define <8 x i8> @trunc_usat_v8i64_v8i8(<8 x i64> %a0) {
 ; SSE2-LABEL: trunc_usat_v8i64_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [255,255]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [9223372039002259456,9223372039002259456]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm7
 ; SSE2-NEXT:    pxor %xmm5, %xmm7
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [9223372039002259711,9223372039002259711]
@@ -1026,7 +1026,7 @@ define <8 x i8> @trunc_usat_v8i64_v8i8(<8 x i64> %a0) {
 ; SSSE3-LABEL: trunc_usat_v8i64_v8i8:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm8 = [255,255]
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm5 = [9223372039002259456,9223372039002259456]
 ; SSSE3-NEXT:    movdqa %xmm1, %xmm7
 ; SSSE3-NEXT:    pxor %xmm5, %xmm7
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm9 = [9223372039002259711,9223372039002259711]
@@ -1088,7 +1088,7 @@ define <8 x i8> @trunc_usat_v8i64_v8i8(<8 x i64> %a0) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm8
 ; SSE41-NEXT:    movapd {{.*#+}} xmm5 = [255,255]
-; SSE41-NEXT:    movdqa {{.*#+}} xmm6 = [2147483648,2147483648,2147483648,2147483648]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm6 = [9223372039002259456,9223372039002259456]
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pxor %xmm6, %xmm0
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm9 = [9223372039002259711,9223372039002259711]
@@ -1203,7 +1203,7 @@ define void @trunc_usat_v8i64_v8i8_store(<8 x i64> %a0, <8 x i8> *%p1) {
 ; SSE2-LABEL: trunc_usat_v8i64_v8i8_store:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [255,255]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [9223372039002259456,9223372039002259456]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm5
 ; SSE2-NEXT:    pxor %xmm6, %xmm5
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [9223372039002259711,9223372039002259711]
@@ -1270,7 +1270,7 @@ define void @trunc_usat_v8i64_v8i8_store(<8 x i64> %a0, <8 x i8> *%p1) {
 ; SSSE3-LABEL: trunc_usat_v8i64_v8i8_store:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm8 = [255,255]
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm6 = [2147483648,2147483648,2147483648,2147483648]
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm6 = [9223372039002259456,9223372039002259456]
 ; SSSE3-NEXT:    movdqa %xmm0, %xmm5
 ; SSSE3-NEXT:    pxor %xmm6, %xmm5
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm9 = [9223372039002259711,9223372039002259711]
@@ -1338,7 +1338,7 @@ define void @trunc_usat_v8i64_v8i8_store(<8 x i64> %a0, <8 x i8> *%p1) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm4
 ; SSE41-NEXT:    movapd {{.*#+}} xmm8 = [255,255]
-; SSE41-NEXT:    movdqa {{.*#+}} xmm7 = [2147483648,2147483648,2147483648,2147483648]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm7 = [9223372039002259456,9223372039002259456]
 ; SSE41-NEXT:    pxor %xmm7, %xmm0
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm9 = [9223372039002259711,9223372039002259711]
 ; SSE41-NEXT:    movdqa %xmm9, %xmm6
@@ -1471,7 +1471,7 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64> %a0) {
 ; SSE2-LABEL: trunc_usat_v16i64_v16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [255,255]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [9223372039002259456,9223372039002259456]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm11
 ; SSE2-NEXT:    pxor %xmm9, %xmm11
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm10 = [9223372039002259711,9223372039002259711]
@@ -1588,7 +1588,7 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64> %a0) {
 ; SSSE3-LABEL: trunc_usat_v16i64_v16i8:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm8 = [255,255]
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm9 = [2147483648,2147483648,2147483648,2147483648]
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm9 = [9223372039002259456,9223372039002259456]
 ; SSSE3-NEXT:    movdqa %xmm1, %xmm11
 ; SSSE3-NEXT:    pxor %xmm9, %xmm11
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm10 = [9223372039002259711,9223372039002259711]
@@ -1706,7 +1706,7 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(<16 x i64> %a0) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm8
 ; SSE41-NEXT:    movapd {{.*#+}} xmm9 = [255,255]
-; SSE41-NEXT:    movdqa {{.*#+}} xmm10 = [2147483648,2147483648,2147483648,2147483648]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm10 = [9223372039002259456,9223372039002259456]
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pxor %xmm10, %xmm0
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm11 = [9223372039002259711,9223372039002259711]

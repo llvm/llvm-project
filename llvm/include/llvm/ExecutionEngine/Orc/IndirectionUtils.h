@@ -427,7 +427,9 @@ void makeStub(Function &F, Value &ImplPointer);
 /// used for all symbols to be added to a single JITDylib.
 class SymbolLinkagePromoter {
 public:
-  void operator()(Module &M);
+  /// Promote symbols in the given module. Returns the set of global values
+  /// that have been renamed/promoted.
+  std::vector<GlobalValue *> operator()(Module &M);
 
 private:
   unsigned NextId = 0;

@@ -34,6 +34,8 @@ STATISTIC(NumRRConvertedInPreEmit,
           "Number of r+r instructions converted to r+i in pre-emit peephole");
 STATISTIC(NumRemovedInPreEmit,
           "Number of instructions deleted in pre-emit peephole");
+STATISTIC(NumberOfSelfCopies,
+          "Number of self copy instructions eliminated");
 
 static cl::opt<bool>
 RunPreEmitPeephole("ppc-late-peephole", cl::Hidden, cl::init(true),
@@ -65,6 +67,28 @@ namespace {
       SmallVector<MachineInstr *, 4> InstrsToErase;
       for (MachineBasicBlock &MBB : MF) {
         for (MachineInstr &MI : MBB) {
+          unsigned Opc = MI.getOpcode();
+          // Detect self copies - these can result from running AADB.
+          if (PPCInstrInfo::isSameClassPhysRegCopy(Opc)) {
+            const MCInstrDesc &MCID = TII->get(Opc);
+            if (MCID.getNumOperands() == 3 &&
+                MI.getOperand(0).getReg() == MI.getOperand(1).getReg() &&
+                MI.getOperand(0).getReg() == MI.getOperand(2).getReg()) {
+              NumberOfSelfCopies++;
+              LLVM_DEBUG(dbgs() << "Deleting self-copy instruction: ");
+              LLVM_DEBUG(MI.dump());
+              InstrsToErase.push_back(&MI);
+              continue;
+            }
+            else if (MCID.getNumOperands() == 2 &&
+                     MI.getOperand(0).getReg() == MI.getOperand(1).getReg()) {
+              NumberOfSelfCopies++;
+              LLVM_DEBUG(dbgs() << "Deleting self-copy instruction: ");
+              LLVM_DEBUG(MI.dump());
+              InstrsToErase.push_back(&MI);
+              continue;
+            }
+          }
           MachineInstr *DefMIToErase = nullptr;
           if (TII->convertToImmediateForm(MI, &DefMIToErase)) {
             Changed = true;

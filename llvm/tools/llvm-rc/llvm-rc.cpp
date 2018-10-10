@@ -90,7 +90,7 @@ int main(int Argc, const char **Argv) {
 
   // The tool prints nothing when invoked with no command-line arguments.
   if (InputArgs.hasArg(OPT_HELP)) {
-    T.PrintHelp(outs(), "rc", "Resource Converter", false);
+    T.PrintHelp(outs(), "rc [options] file...", "Resource Converter", false);
     return 0;
   }
 

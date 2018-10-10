@@ -1139,7 +1139,8 @@ public:
     SmallVector<unsigned, 2> CustomCost;
     for (unsigned ISD : ISDs) {
       if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
-        if (IID == Intrinsic::fabs && TLI->isFAbsFree(LT.second)) {
+        if (IID == Intrinsic::fabs && LT.second.isFloatingPoint() &&
+            TLI->isFAbsFree(LT.second)) {
           return 0;
         }
 

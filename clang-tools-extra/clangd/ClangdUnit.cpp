@@ -29,6 +29,7 @@
 #include "clang/Serialization/ASTWriter.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/raw_ostream.h"
@@ -336,7 +337,9 @@ std::shared_ptr<const PreambleData> clangd::buildPreamble(
     // dirs.
   }
 
-  auto StatCache = llvm::make_unique<PreambleFileStatusCache>();
+  llvm::SmallString<32> AbsFileName(FileName);
+  Inputs.FS->makeAbsolute(AbsFileName);
+  auto StatCache = llvm::make_unique<PreambleFileStatusCache>(AbsFileName);
   auto BuiltPreamble = PrecompiledPreamble::Build(
       CI, ContentsBuffer.get(), Bounds, *PreambleDiagsEngine,
       StatCache->getProducingFS(Inputs.FS), PCHs, StoreInMemory,

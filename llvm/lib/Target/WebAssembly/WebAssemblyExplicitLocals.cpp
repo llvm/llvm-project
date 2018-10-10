@@ -157,6 +157,8 @@ static MVT typeForRegClass(const TargetRegisterClass *RC) {
     return MVT::f32;
   if (RC == &WebAssembly::F64RegClass)
     return MVT::f64;
+  if (RC == &WebAssembly::V128RegClass)
+    return MVT::v16i8;
   if (RC == &WebAssembly::EXCEPT_REFRegClass)
     return MVT::ExceptRef;
   llvm_unreachable("unrecognized register class");

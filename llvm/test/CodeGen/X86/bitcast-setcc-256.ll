@@ -210,7 +210,7 @@ define i32 @v32i8(<32 x i8> %a, <32 x i8> %b) {
 define i4 @v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE2-SSSE3-LABEL: v4i64:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,0,2147483648,0]
+; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,2147483648]
 ; SSE2-SSSE3-NEXT:    pxor %xmm4, %xmm3
 ; SSE2-SSSE3-NEXT:    pxor %xmm4, %xmm1
 ; SSE2-SSSE3-NEXT:    movdqa %xmm1, %xmm5

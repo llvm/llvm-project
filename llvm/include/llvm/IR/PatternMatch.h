@@ -666,6 +666,13 @@ m_FNeg(const RHS &X) {
   return m_FSub(m_NegZeroFP(), X);
 }
 
+/// Match 'fneg X' as 'fsub +-0.0, X'.
+template <typename RHS>
+inline BinaryOp_match<cstfp_pred_ty<is_any_zero_fp>, RHS, Instruction::FSub>
+m_FNegNSZ(const RHS &X) {
+  return m_FSub(m_AnyZeroFP(), X);
+}
+
 template <typename LHS, typename RHS>
 inline BinaryOp_match<LHS, RHS, Instruction::Mul> m_Mul(const LHS &L,
                                                         const RHS &R) {

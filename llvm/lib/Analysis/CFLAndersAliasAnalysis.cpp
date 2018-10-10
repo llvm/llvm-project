@@ -515,10 +515,9 @@ CFLAndersAAResult::FunctionInfo::getAttrs(const Value *V) const {
   return None;
 }
 
-bool CFLAndersAAResult::FunctionInfo::mayAlias(const Value *LHS,
-                                               LocationSize LHSSize,
-                                               const Value *RHS,
-                                               LocationSize RHSSize) const {
+bool CFLAndersAAResult::FunctionInfo::mayAlias(
+    const Value *LHS, LocationSize MaybeLHSSize, const Value *RHS,
+    LocationSize MaybeRHSSize) const {
   assert(LHS && RHS);
 
   // Check if we've seen LHS and RHS before. Sometimes LHS or RHS can be created
@@ -558,9 +557,12 @@ bool CFLAndersAAResult::FunctionInfo::mayAlias(const Value *LHS,
 
     if (RangePair.first != RangePair.second) {
       // Be conservative about UnknownSize
-      if (LHSSize == MemoryLocation::UnknownSize ||
-          RHSSize == MemoryLocation::UnknownSize)
+      if (MaybeLHSSize == MemoryLocation::UnknownSize ||
+          MaybeRHSSize == MemoryLocation::UnknownSize)
         return true;
+
+      const uint64_t LHSSize = MaybeLHSSize.getValue();
+      const uint64_t RHSSize = MaybeRHSSize.getValue();
 
       for (const auto &OVal : make_range(RangePair)) {
         // Be conservative about UnknownOffset

@@ -56,22 +56,28 @@ GlobalsStream::findRecordsByName(StringRef Name,
   if (CompressedBucketIndex == -1)
     return Result;
 
-  uint32_t ChainStartOffset = GlobalsTable.HashBuckets[CompressedBucketIndex];
-  uint32_t NextChainOffset = GlobalsTable.HashBuckets.size() * 12;
   uint32_t LastBucketIndex = GlobalsTable.HashBuckets.size() - 1;
-  if (static_cast<uint32_t>(CompressedBucketIndex) < LastBucketIndex) {
-    NextChainOffset = GlobalsTable.HashBuckets[CompressedBucketIndex + 1];
+  uint32_t StartRecordIndex =
+      GlobalsTable.HashBuckets[CompressedBucketIndex] / 12;
+  uint32_t EndRecordIndex = 0;
+  if (LLVM_LIKELY(uint32_t(CompressedBucketIndex) < LastBucketIndex)) {
+    EndRecordIndex = GlobalsTable.HashBuckets[CompressedBucketIndex + 1];
+  } else {
+    // If this is the last bucket, it consists of all hash records until the end
+    // of the HashRecords array.
+    EndRecordIndex = GlobalsTable.HashRecords.size() * 12;
   }
-  ChainStartOffset /= 12;
-  NextChainOffset /= 12;
 
-  while (ChainStartOffset < NextChainOffset) {
-    PSHashRecord PSH = GlobalsTable.HashRecords[ChainStartOffset];
+  EndRecordIndex /= 12;
+
+  assert(EndRecordIndex <= GlobalsTable.HashRecords.size());
+  while (StartRecordIndex < EndRecordIndex) {
+    PSHashRecord PSH = GlobalsTable.HashRecords[StartRecordIndex];
     uint32_t Off = PSH.Off - 1;
     codeview::CVSymbol Record = Symbols.readRecord(Off);
     if (codeview::getSymbolName(Record) == Name)
       Result.push_back(std::make_pair(Off, std::move(Record)));
-    ++ChainStartOffset;
+    ++StartRecordIndex;
   }
   return Result;
 }
@@ -121,7 +127,8 @@ static Error readGSIHashRecords(FixedStreamArray<PSHashRecord> &HashRecords,
 
 static Error
 readGSIHashBuckets(FixedStreamArray<support::ulittle32_t> &HashBuckets,
-                   ArrayRef<uint32_t> &HashBitmap, const GSIHashHeader *HashHdr,
+                   FixedStreamArray<support::ulittle32_t> &HashBitmap,
+                   const GSIHashHeader *HashHdr,
                    MutableArrayRef<int32_t> BucketMap,
                    BinaryStreamReader &Reader) {
   if (auto EC = checkHashHdrVersion(HashHdr))

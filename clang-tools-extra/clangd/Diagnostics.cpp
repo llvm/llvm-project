@@ -51,16 +51,12 @@ bool locationInRange(SourceLocation L, CharSourceRange R,
 Range diagnosticRange(const clang::Diagnostic &D, const LangOptions &L) {
   auto &M = D.getSourceManager();
   auto Loc = M.getFileLoc(D.getLocation());
-  // Accept the first range that contains the location.
-  llvm::Optional<Range> FallbackRange;
   for (const auto &CR : D.getRanges()) {
     auto R = Lexer::makeFileCharRange(CR, M, L);
     if (locationInRange(Loc, R, M))
       return halfOpenToRange(M, R);
-    // If there are no ranges that contain the location report the first range.
-    if (!FallbackRange)
-      FallbackRange = halfOpenToRange(M, R);
   }
+  llvm::Optional<Range> FallbackRange;
   // The range may be given as a fixit hint instead.
   for (const auto &F : D.getFixItHints()) {
     auto R = Lexer::makeFileCharRange(F.RemoveRange, M, L);
@@ -69,7 +65,7 @@ Range diagnosticRange(const clang::Diagnostic &D, const LangOptions &L) {
     // If there's a fixit that performs insertion, it has zero-width. Therefore
     // it can't contain the location of the diag, but it might be possible that
     // this should be reported as range. For example missing semicolon.
-    if (!FallbackRange && R.getBegin() == R.getEnd())
+    if (R.getBegin() == R.getEnd() && Loc == R.getBegin())
       FallbackRange = halfOpenToRange(M, R);
   }
   if (FallbackRange)

@@ -70,6 +70,18 @@ void basic() {
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use std::make_shared instead
   // CHECK-FIXES: auto P3 = std::make_shared<int>();
 
+  std::shared_ptr<int> P4 = std::shared_ptr<int>((new int));
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use std::make_shared instead [modernize-make-shared]
+  // CHECK-FIXES: std::shared_ptr<int> P4 = std::make_shared<int>();
+
+  P4.reset((((new int()))));
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use std::make_shared instead [modernize-make-shared]
+  // CHECK-FIXES: P4 = std::make_shared<int>();
+
+  P4 = std::shared_ptr<int>(((new int)));
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use std::make_shared instead [modernize-make-shared]
+  // CHECK-FIXES: P4 = std::make_shared<int>();
+
   {
     // No std.
     using namespace std;

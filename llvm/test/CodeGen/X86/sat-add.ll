@@ -542,7 +542,7 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_cmp_notval(<4 x i32> %x) {
 define <2 x i64> @unsigned_sat_constant_v2i64_using_min(<2 x i64> %x) {
 ; SSE2-LABEL: unsigned_sat_constant_v2i64_using_min:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [9223372039002259456,9223372039002259456]
 ; SSE2-NEXT:    pxor %xmm0, %xmm1
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [9223372034707292117,9223372034707292117]
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
@@ -563,7 +563,7 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_min(<2 x i64> %x) {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; SSE41-NEXT:    movapd {{.*#+}} xmm2 = [18446744073709551573,18446744073709551573]
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [9223372039002259456,9223372039002259456]
 ; SSE41-NEXT:    pxor %xmm1, %xmm0
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [9223372034707292117,9223372034707292117]
 ; SSE41-NEXT:    movdqa %xmm3, %xmm4
@@ -589,7 +589,7 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_cmp_sum(<2 x i64> %x) {
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    movdqa {{.*#+}} xmm1 = [42,42]
 ; ANY-NEXT:    paddq %xmm0, %xmm1
-; ANY-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; ANY-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; ANY-NEXT:    pxor %xmm2, %xmm0
 ; ANY-NEXT:    pxor %xmm1, %xmm2
 ; ANY-NEXT:    movdqa %xmm0, %xmm3
@@ -841,22 +841,21 @@ define <4 x i32> @unsigned_sat_variable_v4i32_using_cmp_notval(<4 x i32> %x, <4 
 define <2 x i64> @unsigned_sat_variable_v2i64_using_min(<2 x i64> %x, <2 x i64> %y) {
 ; SSE2-LABEL: unsigned_sat_variable_v2i64_using_min:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
-; SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
-; SSE2-NEXT:    movdqa %xmm0, %xmm4
-; SSE2-NEXT:    pxor %xmm2, %xmm4
-; SSE2-NEXT:    pxor %xmm3, %xmm2
-; SSE2-NEXT:    pxor %xmm1, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm5
-; SSE2-NEXT:    pcmpgtd %xmm4, %xmm5
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [9223372039002259456,9223372039002259456]
+; SSE2-NEXT:    pxor %xmm0, %xmm3
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [9223372034707292159,9223372034707292159]
+; SSE2-NEXT:    pxor %xmm1, %xmm4
+; SSE2-NEXT:    movdqa %xmm4, %xmm5
+; SSE2-NEXT:    pcmpgtd %xmm3, %xmm5
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm4, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; SSE2-NEXT:    pand %xmm6, %xmm2
+; SSE2-NEXT:    pcmpeqd %xmm3, %xmm4
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
+; SSE2-NEXT:    pand %xmm6, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[1,1,3,3]
-; SSE2-NEXT:    por %xmm2, %xmm4
+; SSE2-NEXT:    por %xmm3, %xmm4
 ; SSE2-NEXT:    pand %xmm4, %xmm0
-; SSE2-NEXT:    pxor %xmm3, %xmm4
+; SSE2-NEXT:    pxor %xmm2, %xmm4
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
 ; SSE2-NEXT:    pandn %xmm4, %xmm2
 ; SSE2-NEXT:    por %xmm2, %xmm0
@@ -868,15 +867,15 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_min(<2 x i64> %x, <2 x i64> 
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    pcmpeqd %xmm3, %xmm3
 ; SSE41-NEXT:    pxor %xmm1, %xmm3
-; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
-; SSE41-NEXT:    movdqa %xmm2, %xmm4
-; SSE41-NEXT:    pxor %xmm0, %xmm4
-; SSE41-NEXT:    pxor %xmm3, %xmm0
-; SSE41-NEXT:    movdqa %xmm0, %xmm5
-; SSE41-NEXT:    pcmpgtd %xmm4, %xmm5
+; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [9223372039002259456,9223372039002259456]
+; SSE41-NEXT:    pxor %xmm2, %xmm0
+; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [9223372034707292159,9223372034707292159]
+; SSE41-NEXT:    pxor %xmm1, %xmm4
+; SSE41-NEXT:    movdqa %xmm4, %xmm5
+; SSE41-NEXT:    pcmpgtd %xmm0, %xmm5
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,2,2]
-; SSE41-NEXT:    pcmpeqd %xmm4, %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm4
+; SSE41-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
 ; SSE41-NEXT:    pand %xmm6, %xmm4
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[1,1,3,3]
 ; SSE41-NEXT:    por %xmm4, %xmm0
@@ -895,7 +894,7 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_cmp_sum(<2 x i64> %x, <2 x i
 ; ANY-LABEL: unsigned_sat_variable_v2i64_using_cmp_sum:
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    paddq %xmm0, %xmm1
-; ANY-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; ANY-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; ANY-NEXT:    pxor %xmm2, %xmm0
 ; ANY-NEXT:    pxor %xmm1, %xmm2
 ; ANY-NEXT:    movdqa %xmm0, %xmm3
@@ -917,22 +916,19 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_cmp_sum(<2 x i64> %x, <2 x i
 define <2 x i64> @unsigned_sat_variable_v2i64_using_cmp_notval(<2 x i64> %x, <2 x i64> %y) {
 ; ANY-LABEL: unsigned_sat_variable_v2i64_using_cmp_notval:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
-; ANY-NEXT:    pcmpeqd %xmm3, %xmm3
-; ANY-NEXT:    movdqa %xmm0, %xmm4
-; ANY-NEXT:    paddq %xmm1, %xmm4
-; ANY-NEXT:    pxor %xmm2, %xmm0
-; ANY-NEXT:    pxor %xmm2, %xmm3
-; ANY-NEXT:    pxor %xmm1, %xmm3
-; ANY-NEXT:    movdqa %xmm0, %xmm1
-; ANY-NEXT:    pcmpgtd %xmm3, %xmm1
-; ANY-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[0,0,2,2]
-; ANY-NEXT:    pcmpeqd %xmm0, %xmm3
-; ANY-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; ANY-NEXT:    pand %xmm2, %xmm3
-; ANY-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,3,3]
-; ANY-NEXT:    por %xmm4, %xmm0
-; ANY-NEXT:    por %xmm3, %xmm0
+; ANY-NEXT:    movdqa %xmm0, %xmm2
+; ANY-NEXT:    paddq %xmm1, %xmm2
+; ANY-NEXT:    pxor {{.*}}(%rip), %xmm1
+; ANY-NEXT:    pxor {{.*}}(%rip), %xmm0
+; ANY-NEXT:    movdqa %xmm0, %xmm3
+; ANY-NEXT:    pcmpgtd %xmm1, %xmm3
+; ANY-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[0,0,2,2]
+; ANY-NEXT:    pcmpeqd %xmm1, %xmm0
+; ANY-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; ANY-NEXT:    pand %xmm4, %xmm1
+; ANY-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[1,1,3,3]
+; ANY-NEXT:    por %xmm2, %xmm0
+; ANY-NEXT:    por %xmm1, %xmm0
 ; ANY-NEXT:    retq
   %noty = xor <2 x i64> %y, <i64 -1, i64 -1>
   %a = add <2 x i64> %x, %y

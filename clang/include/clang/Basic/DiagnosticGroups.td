@@ -59,6 +59,8 @@ def BoolConversion : DiagGroup<"bool-conversion", [PointerBoolConversion,
                                                    UndefinedBoolConversion]>;
 def IntConversion : DiagGroup<"int-conversion">;
 def EnumConversion : DiagGroup<"enum-conversion">;
+def ImplicitIntConversion : DiagGroup<"implicit-int-conversion">;
+def ImplicitFloatConversion : DiagGroup<"implicit-float-conversion">;
 
 def FloatOverflowConversion : DiagGroup<"float-overflow-conversion">;
 def FloatZeroConversion : DiagGroup<"float-zero-conversion">;
@@ -709,6 +711,8 @@ def Conversion : DiagGroup<"conversion",
                             FloatConversion,
                             Shorten64To32,
                             IntConversion,
+                            ImplicitIntConversion,
+                            ImplicitFloatConversion,
                             LiteralConversion,
                             NonLiteralNullConversion, // (1-1)->pointer (etc)
                             NullConversion, // NULL->non-pointer

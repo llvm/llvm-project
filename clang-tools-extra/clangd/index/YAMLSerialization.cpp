@@ -286,7 +286,7 @@ std::string toYAML(const Symbol &S) {
     llvm::raw_string_ostream OS(Buf);
     llvm::yaml::Output Yout(OS);
     Symbol Sym = S; // copy: Yout<< requires mutability.
-    OS << Sym;
+    Yout << Sym;
   }
   return Buf;
 }

@@ -692,11 +692,10 @@ const DWARFDebugLocDWO *DWARFContext::getDebugLocDWO() {
 
   LocDWO.reset(new DWARFDebugLocDWO());
   // Assume all compile units have the same address byte size.
-  if (getNumCompileUnits()) {
-    DataExtractor LocData(DObj->getLocDWOSection().Data, isLittleEndian(),
-                          getUnitAtIndex(0)->getAddressByteSize());
-    LocDWO->parse(LocData);
-  }
+  // FIXME: We don't need AddressSize for split DWARF since relocatable
+  // addresses cannot appear there. At the moment DWARFExpression requires it.
+  DataExtractor LocData(DObj->getLocDWOSection().Data, isLittleEndian(), 4);
+  LocDWO->parse(LocData);
   return LocDWO.get();
 }
 

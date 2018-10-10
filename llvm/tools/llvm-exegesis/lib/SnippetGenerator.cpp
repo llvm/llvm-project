@@ -70,17 +70,17 @@ std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
     // Returns the register that this Operand sets or uses, or 0 if this is not
     // a register.
     const auto GetOpReg = [&IT](const Operand &Op) -> unsigned {
-      if (Op.IsMem)
+      if (Op.isMemory())
         return 0;
-      if (Op.ImplicitReg)
-        return *Op.ImplicitReg;
-      if (Op.IsExplicit && IT.getValueFor(Op).isReg())
+      if (Op.isImplicitReg())
+        return Op.getImplicitReg();
+      if (Op.isExplicit() && IT.getValueFor(Op).isReg())
         return IT.getValueFor(Op).getReg();
       return 0;
     };
     // Collect used registers that have never been def'ed.
     for (const Operand &Op : IT.Instr.Operands) {
-      if (!Op.IsDef) {
+      if (Op.isUse()) {
         const unsigned Reg = GetOpReg(Op);
         if (Reg > 0 && !DefinedRegs.test(Reg)) {
           RIV.push_back(RegisterValue{Reg, llvm::APInt()});
@@ -90,7 +90,7 @@ std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
     }
     // Mark defs as having been def'ed.
     for (const Operand &Op : IT.Instr.Operands) {
-      if (Op.IsDef) {
+      if (Op.isDef()) {
         const unsigned Reg = GetOpReg(Op);
         if (Reg > 0)
           DefinedRegs.set(Reg);
@@ -149,18 +149,15 @@ static auto randomElement(const C &Container) -> decltype(Container[0]) {
 static void randomize(const Instruction &Instr, const Variable &Var,
                       llvm::MCOperand &AssignedValue,
                       const llvm::BitVector &ForbiddenRegs) {
-  assert(!Var.TiedOperands.empty());
-  const Operand &Op = Instr.Operands[Var.TiedOperands.front()];
-  assert(Op.Info != nullptr);
-  const auto &OpInfo = *Op.Info;
-  switch (OpInfo.OperandType) {
+  const Operand &Op = Instr.getPrimaryOperand(Var);
+  switch (Op.getExplicitOperandInfo().OperandType) {
   case llvm::MCOI::OperandType::OPERAND_IMMEDIATE:
     // FIXME: explore immediate values too.
     AssignedValue = llvm::MCOperand::createImm(1);
     break;
   case llvm::MCOI::OperandType::OPERAND_REGISTER: {
-    assert(Op.Tracker);
-    auto AllowedRegs = Op.Tracker->sourceBits();
+    assert(Op.isReg());
+    auto AllowedRegs = Op.getRegisterAliasing().sourceBits();
     assert(AllowedRegs.size() == ForbiddenRegs.size());
     for (auto I : ForbiddenRegs.set_bits())
       AllowedRegs.reset(I);
@@ -175,7 +172,7 @@ static void randomize(const Instruction &Instr, const Variable &Var,
 static void setRegisterOperandValue(const RegisterOperandAssignment &ROV,
                                     InstructionTemplate &IB) {
   assert(ROV.Op);
-  if (ROV.Op->IsExplicit) {
+  if (ROV.Op->isExplicit()) {
     auto &AssignedValue = IB.getValueFor(*ROV.Op);
     if (AssignedValue.isValid()) {
       assert(AssignedValue.isReg() && AssignedValue.getReg() == ROV.Reg);
@@ -183,8 +180,8 @@ static void setRegisterOperandValue(const RegisterOperandAssignment &ROV,
     }
     AssignedValue = llvm::MCOperand::createReg(ROV.Reg);
   } else {
-    assert(ROV.Op->ImplicitReg != nullptr);
-    assert(ROV.Reg == *ROV.Op->ImplicitReg);
+    assert(ROV.Op->isImplicitReg());
+    assert(ROV.Reg == ROV.Op->getImplicitReg());
   }
 }
 

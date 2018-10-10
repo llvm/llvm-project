@@ -1,5 +1,5 @@
-;RUN: opt < %s -analyze -dot-cfg 2>/dev/null
-;RUN: FileCheck %s -input-file=cfg.f.dot
+;RUN: opt < %s -analyze -dot-cfg -cfg-dot-filename-prefix=%t 2>/dev/null
+;RUN: FileCheck %s -input-file=%t.f.dot
 
 define void @f(i32) {
 entry:

@@ -2889,8 +2889,6 @@ def err_cyclic_alias : Error<
   "%select{alias|ifunc}0 definition is part of a cycle">;
 def err_ifunc_resolver_return : Error<
   "ifunc resolver function must return a pointer">;
-def err_ifunc_resolver_params : Error<
-  "ifunc resolver function must have no parameters">;
 def warn_attribute_wrong_decl_type_str : Warning<
   "%0 attribute only applies to %1">, InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type_str : Error<
@@ -3183,10 +3181,10 @@ def err_impcast_complex_scalar : Error<
   "implicit conversion from %0 to %1 is not permitted in C++">;
 def warn_impcast_float_precision : Warning<
   "implicit conversion loses floating-point precision: %0 to %1">,
-  InGroup<Conversion>, DefaultIgnore;
+  InGroup<ImplicitFloatConversion>, DefaultIgnore;
 def warn_impcast_float_result_precision : Warning<
   "implicit conversion when assigning computation result loses floating-point precision: %0 to %1">,
-  InGroup<Conversion>, DefaultIgnore;
+  InGroup<ImplicitFloatConversion>, DefaultIgnore;
 def warn_impcast_double_promotion : Warning<
   "implicit conversion increases floating-point precision: %0 to %1">,
   InGroup<DoublePromotion>, DefaultIgnore;
@@ -3198,10 +3196,10 @@ def warn_impcast_integer_sign_conditional : Warning<
   InGroup<SignConversion>, DefaultIgnore;
 def warn_impcast_integer_precision : Warning<
   "implicit conversion loses integer precision: %0 to %1">,
-  InGroup<Conversion>, DefaultIgnore;
+  InGroup<ImplicitIntConversion>, DefaultIgnore;
 def warn_impcast_high_order_zero_bits : Warning<
   "higher order bits are zeroes after implicit conversion">,
-  InGroup<Conversion>, DefaultIgnore;
+  InGroup<ImplicitIntConversion>, DefaultIgnore;
 def warn_impcast_nonnegative_result : Warning<
   "the resulting value is always non-negative after implicit conversion">,
   InGroup<SignConversion>, DefaultIgnore;
