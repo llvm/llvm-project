@@ -71,6 +71,14 @@ void SBCommandInterpreterRunOptions::SetEchoCommands(bool echo_commands) {
   m_opaque_up->SetEchoCommands(echo_commands);
 }
 
+bool SBCommandInterpreterRunOptions::GetEchoCommentCommands() const {
+  return m_opaque_up->GetEchoCommentCommands();
+}
+
+void SBCommandInterpreterRunOptions::SetEchoCommentCommands(bool echo) {
+  m_opaque_up->SetEchoCommentCommands(echo);
+}
+
 bool SBCommandInterpreterRunOptions::GetPrintResults() const {
   return m_opaque_up->GetPrintResults();
 }
