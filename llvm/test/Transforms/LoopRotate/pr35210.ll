@@ -20,6 +20,7 @@
 ; CHECK-NEXT: Running analysis: TargetLibraryAnalysis on f
 ; CHECK-NEXT: Running analysis: ScalarEvolutionAnalysis on f
 ; CHECK-NEXT: Running analysis: TargetIRAnalysis on f
+; CHECK-NEXT: Running analysis: TaskAnalysis on f
 ; CHECK-NEXT: Running analysis: InnerAnalysisManagerProxy{{.*}} on f
 ; CHECK-NEXT: Starting Loop pass manager run.
 ; CHECK-NEXT: Running analysis: PassInstrumentationAnalysis on bb
