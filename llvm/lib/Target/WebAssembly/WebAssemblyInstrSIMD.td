@@ -400,6 +400,9 @@ multiclass SIMDBinaryInt<SDNode node, string name, bits<32> baseInst> {
   defm "" : SIMDBinary<v2i64, "i64x2", node, name, !add(baseInst, 3)>;
 }
 
+// Integer vector negation
+def ivneg : PatFrag<(ops node:$in), (sub immAllZerosV, node:$in)>;
+
 // Integer addition: add
 let isCommutable = 1 in
 defm ADD : SIMDBinaryInt<add, "add", 24>;
@@ -411,29 +414,18 @@ defm SUB : SIMDBinaryInt<sub, "sub", 28>;
 defm MUL : SIMDBinaryIntNoI64x2<mul, "mul", 32>;
 
 // Integer negation: neg
-multiclass SIMDNeg<ValueType vec_t, string vec, PatFrag splat_pat,
-                   ValueType lane_t, SDNode node, dag lane, bits<32> simdop> {
-  defm NEG_#vec_t : SIMD_I<(outs V128:$dst), (ins V128:$vec),
-                           (outs), (ins),
-                           [(set
-                             (vec_t V128:$dst),
-                             (vec_t (node
-                               (vec_t (splat_pat lane)),
-                               (vec_t V128:$vec)
-                             ))
+multiclass SIMDNeg<ValueType vec_t, string vec, SDNode neg, bits<32> simdop> {
+  defm NEG_#vec_t : SIMD_I<(outs V128:$dst), (ins V128:$vec), (outs), (ins),
+                           [(set (vec_t V128:$dst),
+                             (vec_t (neg (vec_t V128:$vec)))
                            )],
                            vec#".neg\t$dst, $vec", vec#".neg", simdop>;
 }
 
-multiclass SIMDNegInt<ValueType vec_t, string vec, PatFrag splat_pat,
-                      ValueType lane_t, bits<32> simdop> {
-  defm "" : SIMDNeg<vec_t, vec, splat_pat, lane_t, sub, (lane_t 0), simdop>;
-}
-
-defm "" : SIMDNegInt<v16i8, "i8x16", splat16, i32, 36>;
-defm "" : SIMDNegInt<v8i16, "i16x8", splat8, i32, 37>;
-defm "" : SIMDNegInt<v4i32, "i32x4", splat4, i32, 38>;
-defm "" : SIMDNegInt<v2i64, "i64x2", splat2, i64, 39>;
+defm "" : SIMDNeg<v16i8, "i8x16", ivneg, 36>;
+defm "" : SIMDNeg<v8i16, "i16x8", ivneg, 37>;
+defm "" : SIMDNeg<v4i32, "i32x4", ivneg, 38>;
+defm "" : SIMDNeg<v2i64, "i64x2", ivneg, 39>;
 
 //===----------------------------------------------------------------------===//
 // Saturating integer arithmetic
@@ -718,15 +710,8 @@ def : StorePatExternSymOffOnly<vec_t, store, !cast<NI>("STORE_"#vec_t)>;
 //===----------------------------------------------------------------------===//
 
 // Negation: neg
-def fpimm0 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(+0.0); }]>;
-multiclass SIMDNegFP<ValueType vec_t, string vec, PatFrag splat_pat,
-                     ValueType lane_t, bits<32> simdop> {
-  defm "" : SIMDNeg<vec_t, vec, splat_pat, lane_t, fsub, (lane_t fpimm0),
-                    simdop>;
-}
-
-defm "" : SIMDNegFP<v4f32, "f32x4", splat4, f32, 125>;
-defm "" : SIMDNegFP<v2f64, "f64x2", splat2, f64, 126>;
+defm "" : SIMDNeg<v4f32, "f32x4", fneg, 125>;
+defm "" : SIMDNeg<v2f64, "f64x2", fneg, 126>;
 
 // Absolute value: abs
 multiclass SIMDAbs<ValueType vec_t, string vec, bits<32> simdop> {
@@ -794,13 +779,13 @@ multiclass SIMDConvert<ValueType vec_t, ValueType arg_t, SDNode op,
            name#"\t$dst, $vec", name, simdop>;
 }
 
-// Integer to floating point
+// Integer to floating point: convert_s / convert_u
 defm "" : SIMDConvert<v4f32, v4i32, sint_to_fp, "f32x4.convert_s/i32x4", 143>;
 defm "" : SIMDConvert<v4f32, v4i32, uint_to_fp, "f32x4.convert_u/i32x4", 144>;
 defm "" : SIMDConvert<v2f64, v2i64, sint_to_fp, "f64x2.convert_s/i64x2", 145>;
 defm "" : SIMDConvert<v2f64, v2i64, uint_to_fp, "f64x2.convert_u/i64x2", 146>;
 
-// Floating point to integer with saturation
+// Floating point to integer with saturation: trunc_sat_s / trunc_sat_u
 defm "" : SIMDConvert<v4i32, v4f32, fp_to_sint, "i32x4.trunc_sat_s/f32x4", 147>;
 defm "" : SIMDConvert<v4i32, v4f32, fp_to_uint, "i32x4.trunc_sat_u/f32x4", 148>;
 defm "" : SIMDConvert<v2i64, v2f64, fp_to_sint, "i64x2.trunc_sat_s/f64x2", 149>;

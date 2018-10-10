@@ -31,8 +31,6 @@ public:
   static constexpr const size_t kMinNumDifferentAddresses = 6;
 
 private:
-  llvm::Error isInfeasible(const llvm::MCInstrDesc &MCInstrDesc) const;
-
   // Instantiates memory operands within a snippet.
   // To make computations as parallel as possible, we generate independant
   // memory locations for instructions that load and store. If there are less

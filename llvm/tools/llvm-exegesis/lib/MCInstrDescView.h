@@ -44,7 +44,7 @@ struct Variable {
 
   // The indices of the operands tied to this Variable.
   llvm::SmallVector<unsigned, 2> TiedOperands;
-  llvm::MCOperand AssignedValue;
+
   // The index of this Variable in Instruction.Variables and its associated
   // Value in InstructionBuilder.VariableValues.
   int Index = -1;
@@ -99,24 +99,31 @@ struct Instruction {
   // In case the Variable is tied, the primary (i.e. Def) Operand is returned.
   const Operand &getPrimaryOperand(const Variable &Var) const;
 
-  // Returns whether this instruction has Memory Operands.
-  // Repeating this instruction executes sequentially with an instruction that
-  // reads or write the same memory region.
-  bool hasMemoryOperands() const;
+  // Whether this instruction is self aliasing through its tied registers.
+  // Repeating this instruction is guaranteed to executes sequentially.
+  bool hasTiedRegisters() const;
 
   // Whether this instruction is self aliasing through its implicit registers.
   // Repeating this instruction is guaranteed to executes sequentially.
   bool hasAliasingImplicitRegisters() const;
-
-  // Whether this instruction is self aliasing through its tied registers.
-  // Repeating this instruction is guaranteed to executes sequentially.
-  bool hasTiedRegisters() const;
 
   // Whether this instruction is self aliasing through some registers.
   // Repeating this instruction may execute sequentially by picking aliasing
   // Use and Def registers. It may also execute in parallel by picking non
   // aliasing Use and Def registers.
   bool hasAliasingRegisters() const;
+
+  // Whether this instruction's implicit registers alias with OtherInstr's
+  // implicit registers.
+  bool hasAliasingImplicitRegistersThrough(const Instruction &OtherInstr) const;
+
+  // Whether this instruction's registers alias with OtherInstr's registers.
+  bool hasAliasingRegistersThrough(const Instruction &OtherInstr) const;
+
+  // Returns whether this instruction has Memory Operands.
+  // Repeating this instruction executes sequentially with an instruction that
+  // reads or write the same memory region.
+  bool hasMemoryOperands() const;
 
   // Convenient function to help with debugging.
   void dump(const llvm::MCRegisterInfo &RegInfo,

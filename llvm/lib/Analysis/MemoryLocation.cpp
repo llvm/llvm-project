@@ -18,6 +18,20 @@
 #include "llvm/IR/Type.h"
 using namespace llvm;
 
+void LocationSize::print(raw_ostream &OS) const {
+  OS << "LocationSize::";
+  if (*this == unknown())
+    OS << "unknown";
+  else if (*this == mapEmpty())
+    OS << "mapEmpty";
+  else if (*this == mapTombstone())
+    OS << "mapTombstone";
+  else if (isPrecise())
+    OS << "precise(" << getValue() << ')';
+  else
+    OS << "upperBound(" << getValue() << ')';
+}
+
 MemoryLocation MemoryLocation::get(const LoadInst *LI) {
   AAMDNodes AATags;
   LI->getAAMetadata(AATags);
