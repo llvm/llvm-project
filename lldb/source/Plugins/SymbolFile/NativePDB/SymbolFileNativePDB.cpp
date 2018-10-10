@@ -487,7 +487,6 @@ bool SymbolFileNativePDB::ParseCompileUnitLineTable(
       }
 
       // LLDB wants the index of the file in the list of support files.
-      llvm::StringRef file_name = *efn;
       auto fn_iter = llvm::find(cci->m_file_list, *efn);
       lldbassert(fn_iter != cci->m_file_list.end());
       uint32_t file_index = std::distance(cci->m_file_list.begin(), fn_iter);

@@ -219,14 +219,14 @@ GetSegmentOffsetAndLength<TrampolineSym>(const CVSymbol &sym) {
 template <>
 SegmentOffsetLength GetSegmentOffsetAndLength<Thunk32Sym>(const CVSymbol &sym) {
   Thunk32Sym record = createRecord<Thunk32Sym>(sym);
-  return {record.Segment, record.Offset, record.Length};
+  return SegmentOffsetLength{record.Segment, record.Offset, record.Length};
 }
 
 template <>
 SegmentOffsetLength
 GetSegmentOffsetAndLength<CoffGroupSym>(const CVSymbol &sym) {
   CoffGroupSym record = createRecord<CoffGroupSym>(sym);
-  return {record.Segment, record.Offset, record.Size};
+  return SegmentOffsetLength{record.Segment, record.Offset, record.Size};
 }
 
 SegmentOffsetLength lldb_private::npdb::GetSegmentOffsetAndLength(

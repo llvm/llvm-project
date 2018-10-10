@@ -134,14 +134,15 @@ void PdbIndex::BuildAddrToSymbolMap(CompilandIndexItem &cci) {
     // If the debug info is incorrect, we could have multiple symbols with the
     // same address.  So use try_emplace instead of insert, and the first one
     // will win.
-    auto emplace_result = cci.m_symbols_by_va.try_emplace(va, cu_sym_uid);
-    (void)emplace_result;
+    auto insert_result =
+        cci.m_symbols_by_va.insert(std::make_pair(va, cu_sym_uid));
+    (void)insert_result;
 
     // The odds of an error in some function such as GetSegmentAndOffset or
     // MakeVirtualAddress are much higher than the odds of encountering bad
     // debug info, so assert that this item was inserted in the map as opposed
     // to having already been there.
-    lldbassert(emplace_result.second);
+    lldbassert(insert_result.second);
   }
 }
 
