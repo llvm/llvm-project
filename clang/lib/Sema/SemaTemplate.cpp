@@ -9176,9 +9176,9 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     if (!HasNoEffect) {
       // Instantiate static data member or variable template.
       Prev->setTemplateSpecializationKind(TSK, D.getIdentifierLoc());
+      // Merge attributes.
+      ProcessDeclAttributeList(S, Prev, D.getDeclSpec().getAttributes());
       if (PrevTemplate) {
-        // Merge attributes.
-        ProcessDeclAttributeList(S, Prev, D.getDeclSpec().getAttributes());
         ProcessAPINotes(Prev);
       }
       if (TSK == TSK_ExplicitInstantiationDefinition)

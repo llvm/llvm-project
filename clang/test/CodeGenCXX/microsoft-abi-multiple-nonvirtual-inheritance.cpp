@@ -204,7 +204,7 @@ struct AsymmetricChild : LeftWithNonVirtualDtor, Right {
 void call_asymmetric_child_complete_dtor() {
   // CHECK-LABEL: define dso_local void @"?call_asymmetric_child_complete_dtor@@YAXXZ"
   AsymmetricChild obj;
-  // CHECK: call x86_thiscallcc %struct.AsymmetricChild* @"??0AsymmetricChild@@QAE@XZ"(%struct.AsymmetricChild* %[[OBJ:.*]])
+  // CHECK: call x86_thiscallcc %struct.AsymmetricChild* @"??0AsymmetricChild@@QAE@XZ"(%struct.AsymmetricChild* noalias %[[OBJ:.*]])
   // CHECK-NOT: getelementptr
   // CHECK: call x86_thiscallcc void @"??1AsymmetricChild@@UAE@XZ"(%struct.AsymmetricChild* %[[OBJ]])
   // CHECK: ret

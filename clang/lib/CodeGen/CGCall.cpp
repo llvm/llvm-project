@@ -2041,6 +2041,22 @@ void CodeGenModule::ConstructAttributeList(
         Attrs.addAttribute(llvm::Attribute::Nest);
       else if (AI.getInReg())
         Attrs.addAttribute(llvm::Attribute::InReg);
+      if (ArgNo == 0 && TargetDecl && isa<CXXConstructorDecl>(TargetDecl)) {
+        // C++ [class.ctor]p14:
+        //   During the construction of an object, if the value of the object
+        //   or any of its subobjects is accessed through a glvalue that is not
+        //   obtained, directly or indirectly, from the constructor’s this
+        //   pointer, the value of the object or subobject thus obtained is
+        //   unspecified.
+        //
+        // We intentionally treat this behaviour as undefined by marking 'this'
+        // with noalias attribute and have recommended the Standard to be
+        // changed accordingly.
+        unsigned ThisIRArg, NumIRArgs;
+        std::tie(ThisIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
+        assert((NumIRArgs == 1) && "unexpected IR mapping for 'this' argument");
+        Attrs.addAttribute(llvm::Attribute::NoAlias);
+      }
       break;
 
     case ABIArgInfo::Indirect: {
