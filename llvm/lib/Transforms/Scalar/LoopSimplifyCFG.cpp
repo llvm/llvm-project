@@ -701,6 +701,11 @@ PreservedAnalyses LoopSimplifyCFGPass::run(Loop &L, LoopAnalysisManager &AM,
   if (DeleteCurrentLoop)
     LPMU.markLoopAsDeleted(L, "loop-simplifycfg");
 
+  // Recompute task info.
+  // FIXME: Figure out a way to update task info that is less computationally
+  // wasteful.
+  AR.TI.recalculate(*L.getHeader()->getParent(), AR.DT);
+
   auto PA = getLoopPassPreservedAnalyses();
   if (EnableMSSALoopDependency)
     PA.preserve<MemorySSAAnalysis>();

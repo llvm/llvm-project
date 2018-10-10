@@ -2879,6 +2879,11 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
   // in asserts builds.
   assert(AR.DT.verify(DominatorTree::VerificationLevel::Fast));
 
+  // Recompute task info.
+  // FIXME: Figure out a way to update task info that is less computationally
+  // wasteful.
+  AR.TI.recalculate(F, AR.DT);
+
   auto PA = getLoopPassPreservedAnalyses();
   if (EnableMSSALoopDependency)
     PA.preserve<MemorySSAAnalysis>();

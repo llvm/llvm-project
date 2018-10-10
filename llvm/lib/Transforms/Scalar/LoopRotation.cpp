@@ -46,7 +46,7 @@ PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
     MSSAU = MemorySSAUpdater(AR.MSSA);
   bool Changed = LoopRotation(&L, &AR.LI, &AR.TTI, &AR.AC, &AR.DT, &AR.SE,
                               MSSAU.hasValue() ? MSSAU.getPointer() : nullptr,
-                              SQ, false, Threshold, false);
+                              &AR.TI, SQ, false, Threshold, false);
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -98,6 +98,8 @@ public:
     auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
     auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
     auto *SE = SEWP ? &SEWP->getSE() : nullptr;
+    auto *TIWP = getAnalysisIfAvailable<TaskInfoWrapperPass>();
+    auto *TI = TIWP ? &TIWP->getTaskInfo() : nullptr;
     const SimplifyQuery SQ = getBestSimplifyQuery(*this, F);
     Optional<MemorySSAUpdater> MSSAU;
     if (EnableMSSALoopDependency) {
@@ -105,7 +107,7 @@ public:
       MSSAU = MemorySSAUpdater(MSSA);
     }
     return LoopRotation(L, LI, TTI, AC, DT, SE,
-                        MSSAU.hasValue() ? MSSAU.getPointer() : nullptr, SQ,
+                        MSSAU.hasValue() ? MSSAU.getPointer() : nullptr, TI, SQ,
                         false, MaxHeaderSize, false);
   }
 };

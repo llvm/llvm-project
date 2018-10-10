@@ -49,6 +49,7 @@ class ScalarEvolution;
 class SCEV;
 class TargetLibraryInfo;
 class TargetTransformInfo;
+class TaskInfo;
 
 BasicBlock *InsertPreheaderForLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU, bool PreserveLCSSA);
@@ -142,12 +143,12 @@ bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 ///   - The loop needs to have a Preheader
 ///   - A unique dedicated exit block must exist
 ///
-/// This also updates the relevant analysis information in \p DT, \p SE, and \p
-/// LI if pointers to those are provided.
+/// This also updates the relevant analysis information in \p DT, \p SE, \p
+/// LI, and \p TI if pointers to those are provided.
 /// It also updates the loop PM if an updater struct is provided.
 
 void deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
-                    LoopInfo *LI);
+                    LoopInfo *LI, TaskInfo *TI);
 
 /// Try to promote memory values to scalars by sinking stores out of
 /// the loop and moving loads to before the loop.  We do this by looping over
