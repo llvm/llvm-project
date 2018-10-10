@@ -3517,14 +3517,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
               // All DW_AT_start_scope are relative to the base address of the
               // compile unit. We add the compile unit base address to make
               // sure all the addresses are properly fixed up.
-              for (size_t i = 0, count = dwarf_scope_ranges.GetSize();
-                   i < count; ++i) {
-                const DWARFRangeList::Entry &range =
-                    dwarf_scope_ranges.GetEntryRef(i);
-                scope_ranges.Append(range.GetRangeBase() +
-                                        die.GetCU()->GetBaseAddress(),
-                                    range.GetByteSize());
-              }
+              dwarf_scope_ranges.Slide(die.GetCU()->GetBaseAddress());
             } else {
               // TODO: Handle the case when DW_AT_start_scope have form
               // constant. The
