@@ -20,11 +20,16 @@ namespace lldb_private {
 namespace npdb {
 
 struct SegmentOffset {
+  SegmentOffset() = default;
+  SegmentOffset(uint16_t s, uint32_t o) : segment(s), offset(o) {}
   uint16_t segment = 0;
   uint32_t offset = 0;
 };
 
 struct SegmentOffsetLength {
+  SegmentOffsetLength() = default;
+  SegmentOffsetLength(uint16_t s, uint32_t o, uint32_t l)
+      : so(s, o), length(l) {}
   SegmentOffset so;
   uint32_t length = 0;
 };
