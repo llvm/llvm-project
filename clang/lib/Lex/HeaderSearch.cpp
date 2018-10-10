@@ -17,7 +17,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Lex/DirectoryLookup.h"
 #include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/HeaderMap.h"
@@ -35,6 +34,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -1571,8 +1571,9 @@ void HeaderSearch::collectAllModules(SmallVectorImpl<Module *> &Modules) {
                                 DirNative);
 
         // Search each of the ".framework" directories to load them as modules.
-        vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
-        for (vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC), DirEnd;
+        llvm::vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+        for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
+                                           DirEnd;
              Dir != DirEnd && !EC; Dir.increment(EC)) {
           if (llvm::sys::path::extension(Dir->path()) != ".framework")
             continue;
@@ -1639,8 +1640,8 @@ void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
   std::error_code EC;
   SmallString<128> DirNative;
   llvm::sys::path::native(SearchDir.getDir()->getName(), DirNative);
-  vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
-  for (vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC), DirEnd;
+  llvm::vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+  for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC), DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
     bool IsFramework = llvm::sys::path::extension(Dir->path()) == ".framework";
     if (IsFramework == SearchDir.isFramework())

@@ -1715,12 +1715,10 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // If the size of one access is larger than the entire object on the other
   // side, then we know such behavior is undefined and can assume no alias.
   bool NullIsValidLocation = NullPointerIsDefined(&F);
-  if ((V1Size != MemoryLocation::UnknownSize &&
-       isObjectSmallerThan(O2, V1Size.getValue(), DL, TLI,
-                           NullIsValidLocation)) ||
-      (V2Size != MemoryLocation::UnknownSize &&
-       isObjectSmallerThan(O1, V2Size.getValue(), DL, TLI,
-                           NullIsValidLocation)))
+  if ((V1Size.isPrecise() && isObjectSmallerThan(O2, V1Size.getValue(), DL, TLI,
+                                                 NullIsValidLocation)) ||
+      (V2Size.isPrecise() && isObjectSmallerThan(O1, V2Size.getValue(), DL, TLI,
+                                                 NullIsValidLocation)))
     return NoAlias;
 
   // Check the cache before climbing up use-def chains. This also terminates
@@ -1778,8 +1776,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // If both pointers are pointing into the same object and one of them
   // accesses the entire object, then the accesses must overlap in some way.
   if (O1 == O2)
-    if (V1Size != MemoryLocation::UnknownSize &&
-        V2Size != MemoryLocation::UnknownSize &&
+    if (V1Size.isPrecise() && V2Size.isPrecise() &&
         (isObjectSize(O1, V1Size.getValue(), DL, TLI, NullIsValidLocation) ||
          isObjectSize(O2, V2Size.getValue(), DL, TLI, NullIsValidLocation)))
       return AliasCache[Locs] = PartialAlias;

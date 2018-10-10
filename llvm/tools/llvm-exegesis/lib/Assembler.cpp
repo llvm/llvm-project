@@ -121,7 +121,7 @@ static void fillMachineFunction(llvm::MachineFunction &MF,
   } else {
     llvm::MachineIRBuilder MIB(MF);
     MIB.setMBB(*MBB);
-    MF.getSubtarget().getCallLowering()->lowerReturn(MIB, nullptr, 0);
+    MF.getSubtarget().getCallLowering()->lowerReturn(MIB, nullptr, {});
   }
 }
 

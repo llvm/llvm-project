@@ -34,18 +34,39 @@ class AnyMemIntrinsic;
 class TargetLibraryInfo;
 
 // Represents the size of a MemoryLocation. Logically, it's an
-// Optional<uint64_t>.
+// Optional<uint63_t> that also carries a bit to represent whether the integer
+// it contains, N, is 'precise'. Precise, in this context, means that we know
+// that the area of storage referenced by the given MemoryLocation must be
+// precisely N bytes. An imprecise value is formed as the union of two or more
+// precise values, and can conservatively represent all of the values unioned
+// into it. Importantly, imprecise values are an *upper-bound* on the size of a
+// MemoryLocation.
 //
-// We plan to use it for more soon, but we're trying to transition to this brave
-// new world in small, easily-reviewable pieces; please see D44748.
+// Concretely, a precise MemoryLocation is (%p, 4) in
+// store i32 0, i32* %p
+//
+// Since we know that %p must be at least 4 bytes large at this point.
+// Otherwise, we have UB. An example of an imprecise MemoryLocation is (%p, 4)
+// at the memcpy in
+//
+//   %n = select i1 %foo, i64 1, i64 4
+//   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %p, i8* %baz, i64 %n, i32 1,
+//                                        i1 false)
+//
+// ...Since we'll copy *up to* 4 bytes into %p, but we can't guarantee that
+// we'll ever actually do so.
+//
+// If asked to represent a pathologically large value, this will degrade to
+// None.
 class LocationSize {
   enum : uint64_t {
     Unknown = ~uint64_t(0),
+    ImpreciseBit = uint64_t(1) << 63,
     MapEmpty = Unknown - 1,
     MapTombstone = Unknown - 2,
 
     // The maximum value we can represent without falling back to 'unknown'.
-    MaxValue = MapTombstone - 1,
+    MaxValue = (MapTombstone - 1) & ~ImpreciseBit,
   };
 
   uint64_t Value;
@@ -56,11 +77,28 @@ class LocationSize {
 
   constexpr LocationSize(uint64_t Raw, DirectConstruction): Value(Raw) {}
 
+  static_assert(Unknown & ImpreciseBit, "Unknown is imprecise by definition.");
 public:
+  // FIXME: Migrate all users to construct via either `precise` or `upperBound`,
+  // to make it more obvious at the callsite the kind of size that they're
+  // providing.
+  //
+  // Since the overwhelming majority of users of this provide precise values,
+  // this assumes the provided value is precise.
   constexpr LocationSize(uint64_t Raw)
       : Value(Raw > MaxValue ? Unknown : Raw) {}
 
   static LocationSize precise(uint64_t Value) { return LocationSize(Value); }
+
+  static LocationSize upperBound(uint64_t Value) {
+    // You can't go lower than 0, so give a precise result.
+    if (LLVM_UNLIKELY(Value == 0))
+      return precise(0);
+    if (LLVM_UNLIKELY(Value > MaxValue))
+      return unknown();
+    return LocationSize(Value | ImpreciseBit, Direct);
+  }
+
   constexpr static LocationSize unknown() {
     return LocationSize(Unknown, Direct);
   }
@@ -73,10 +111,28 @@ public:
     return LocationSize(MapEmpty, Direct);
   }
 
+  // Returns a LocationSize that can correctly represent either `*this` or
+  // `Other`.
+  LocationSize unionWith(LocationSize Other) const {
+    if (Other == *this)
+      return *this;
+
+    if (!hasValue() || !Other.hasValue())
+      return unknown();
+
+    return upperBound(std::max(getValue(), Other.getValue()));
+  }
+
   bool hasValue() const { return Value != Unknown; }
   uint64_t getValue() const {
     assert(hasValue() && "Getting value from an unknown LocationSize!");
-    return Value;
+    return Value & ~ImpreciseBit;
+  }
+
+  // Returns whether or not this value is precise. Note that if a value is
+  // precise, it's guaranteed to not be `unknown()`.
+  bool isPrecise() const {
+    return (Value & ImpreciseBit) == 0;
   }
 
   bool operator==(const LocationSize &Other) const {
@@ -87,21 +143,16 @@ public:
     return !(*this == Other);
   }
 
+  // Ordering operators are not provided, since it's unclear if there's only one
+  // reasonable way to compare:
+  // - values that don't exist against values that do, and
+  // - precise values to imprecise values
+
   void print(raw_ostream &OS) const;
 
   // Returns an opaque value that represents this LocationSize. Cannot be
   // reliably converted back into a LocationSize.
   uint64_t toRaw() const { return Value; }
-
-  // NOTE: These comparison operators will go away with D44748. Please don't
-  // rely on them.
-  bool operator<(const LocationSize &Other) const {
-    return Value < Other.Value;
-  }
-
-  bool operator>(const LocationSize &Other) const {
-    return Other < *this;
-  }
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, LocationSize Size) {

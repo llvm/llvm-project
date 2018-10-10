@@ -19,8 +19,6 @@ define void @pr38533_2(half %x) {
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    callq __gnu_f2h_ieee
-; SSE-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; SSE-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
 ; SSE-NEXT:    movw %ax, (%rax)
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
@@ -30,8 +28,6 @@ define void @pr38533_2(half %x) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
 ; AVX512-NEXT:    movw %ax, (%rax)
 ; AVX512-NEXT:    retq
   %a = bitcast half %x to <4 x i4>
@@ -46,8 +42,6 @@ define void @pr38533_3(half %x) {
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    callq __gnu_f2h_ieee
-; SSE-NEXT:    movw %ax, (%rsp)
-; SSE-NEXT:    movzwl (%rsp), %eax
 ; SSE-NEXT:    movw %ax, (%rax)
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 8

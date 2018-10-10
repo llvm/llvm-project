@@ -53,7 +53,7 @@ void test(int n) {
 
   // CHECK: [[arrayctor_loop]]
   // CHECK-NEXT: [[arrayctor_cur:%.+]] = phi [[struct_S]]* [ [[vla]], %[[new_ctorloop]] ], [ [[arrayctor_next:%.+]], %[[arrayctor_loop]] ]
-  // CHECK-NEXT: call void [[ctor:@.+]]([[struct_S]]* [[arrayctor_cur]])
+  // CHECK-NEXT: call void [[ctor:@.+]]([[struct_S]]* noalias [[arrayctor_cur]])
   // CHECK-NEXT: [[arrayctor_next]] = getelementptr inbounds [[struct_S]], [[struct_S]]* [[arrayctor_cur]], i64 1
   // CHECK-NEXT: [[arrayctor_done:%.+]] = icmp eq [[struct_S]]* [[arrayctor_next]], [[arrayctor_end]]
   // CHECK-NEXT: br i1 [[arrayctor_done]], label %[[arrayctor_cont]], label %[[arrayctor_loop]]

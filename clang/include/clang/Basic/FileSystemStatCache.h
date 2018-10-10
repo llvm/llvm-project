@@ -26,7 +26,7 @@
 #include <string>
 #include <utility>
 
-namespace clang {
+namespace llvm {
 
 namespace vfs {
 
@@ -34,6 +34,9 @@ class File;
 class FileSystem;
 
 } // namespace vfs
+} // namespace llvm
+
+namespace clang {
 
 // FIXME: should probably replace this with vfs::Status
 struct FileData {
@@ -82,8 +85,8 @@ public:
   /// implementation can optionally fill in \p F with a valid \p File object and
   /// the client guarantees that it will close it.
   static bool get(StringRef Path, FileData &Data, bool isFile,
-                  std::unique_ptr<vfs::File> *F, FileSystemStatCache *Cache,
-                  vfs::FileSystem &FS);
+                  std::unique_ptr<llvm::vfs::File> *F,
+                  FileSystemStatCache *Cache, llvm::vfs::FileSystem &FS);
 
   /// Sets the next stat call cache in the chain of stat caches.
   /// Takes ownership of the given stat cache.
@@ -106,11 +109,12 @@ protected:
   // unique_ptr. Optional<unique_ptr<vfs::File>&> might be nicer, but
   // Optional needs some work to support references so this isn't possible yet.
   virtual LookupResult getStat(StringRef Path, FileData &Data, bool isFile,
-                               std::unique_ptr<vfs::File> *F,
-                               vfs::FileSystem &FS) = 0;
+                               std::unique_ptr<llvm::vfs::File> *F,
+                               llvm::vfs::FileSystem &FS) = 0;
 
   LookupResult statChained(StringRef Path, FileData &Data, bool isFile,
-                           std::unique_ptr<vfs::File> *F, vfs::FileSystem &FS) {
+                           std::unique_ptr<llvm::vfs::File> *F,
+                           llvm::vfs::FileSystem &FS) {
     if (FileSystemStatCache *Next = getNextStatCache())
       return Next->getStat(Path, Data, isFile, F, FS);
 
@@ -135,8 +139,8 @@ public:
   iterator end() const { return StatCalls.end(); }
 
   LookupResult getStat(StringRef Path, FileData &Data, bool isFile,
-                       std::unique_ptr<vfs::File> *F,
-                       vfs::FileSystem &FS) override;
+                       std::unique_ptr<llvm::vfs::File> *F,
+                       llvm::vfs::FileSystem &FS) override;
 };
 
 } // namespace clang

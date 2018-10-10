@@ -54,6 +54,7 @@ class DWARFDebugInfo;
 class DWARFDebugInfoEntry;
 class DWARFDebugLine;
 class DWARFDebugRanges;
+class DWARFDebugRngLists;
 class DWARFDeclContext;
 class DWARFDIECollection;
 class DWARFFormValue;
@@ -244,6 +245,7 @@ public:
   const lldb_private::DWARFDataExtractor &get_debug_macro_data();
   const lldb_private::DWARFDataExtractor &get_debug_loc_data();
   const lldb_private::DWARFDataExtractor &get_debug_ranges_data();
+  const lldb_private::DWARFDataExtractor &get_debug_rnglists_data();
   const lldb_private::DWARFDataExtractor &get_debug_str_data();
   const lldb_private::DWARFDataExtractor &get_debug_str_offsets_data();
   const lldb_private::DWARFDataExtractor &get_debug_types_data();
@@ -474,6 +476,7 @@ protected:
   DWARFDataSegment m_data_debug_macro;
   DWARFDataSegment m_data_debug_loc;
   DWARFDataSegment m_data_debug_ranges;
+  DWARFDataSegment m_data_debug_rnglists;
   DWARFDataSegment m_data_debug_str;
   DWARFDataSegment m_data_debug_str_offsets;
   DWARFDataSegment m_data_debug_types;

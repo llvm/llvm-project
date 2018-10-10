@@ -46,7 +46,7 @@ public:
 
   // Calls generateCodeTemplate and expands it into one or more BenchmarkCode.
   llvm::Expected<std::vector<BenchmarkCode>>
-  generateConfigurations(unsigned Opcode) const;
+  generateConfigurations(const Instruction &Instr) const;
 
   // Given a snippet, computes which registers the setup code needs to define.
   std::vector<RegisterValue> computeRegisterInitialValues(
@@ -54,7 +54,6 @@ public:
 
 protected:
   const LLVMState &State;
-  const RegisterAliasingTrackerCache RATC;
 
   // Generates a single code template that has a self-dependency.
   llvm::Expected<CodeTemplate>
@@ -67,7 +66,7 @@ protected:
 private:
   // API to be implemented by subclasses.
   virtual llvm::Expected<CodeTemplate>
-  generateCodeTemplate(unsigned Opcode) const = 0;
+  generateCodeTemplate(const Instruction &Instr) const = 0;
 };
 
 // A global Random Number Generator to randomize configurations.

@@ -264,11 +264,11 @@ int b = a;
 TEST_F(ClangdVFSTest, PropagatesContexts) {
   static Key<int> Secret;
   struct FSProvider : public FileSystemProvider {
-    IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() override {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> getFileSystem() const override {
       Got = Context::current().getExisting(Secret);
       return buildTestFS({});
     }
-    int Got;
+    mutable int Got;
   } FS;
   struct DiagConsumer : public DiagnosticsConsumer {
     void onDiagnosticsReady(PathRef File,
@@ -973,19 +973,19 @@ TEST(ClangdTests, PreambleVFSStatCache) {
     ListenStatsFSProvider(llvm::StringMap<unsigned> &CountStats)
         : CountStats(CountStats) {}
 
-    IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() override {
-      class ListenStatVFS : public vfs::ProxyFileSystem {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> getFileSystem() const override {
+      class ListenStatVFS : public llvm::vfs::ProxyFileSystem {
       public:
-        ListenStatVFS(IntrusiveRefCntPtr<vfs::FileSystem> FS,
+        ListenStatVFS(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                       llvm::StringMap<unsigned> &CountStats)
             : ProxyFileSystem(std::move(FS)), CountStats(CountStats) {}
 
-        llvm::ErrorOr<std::unique_ptr<vfs::File>>
+        llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
         openFileForRead(const Twine &Path) override {
           ++CountStats[llvm::sys::path::filename(Path.str())];
           return ProxyFileSystem::openFileForRead(Path);
         }
-        llvm::ErrorOr<vfs::Status> status(const Twine &Path) override {
+        llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override {
           ++CountStats[llvm::sys::path::filename(Path.str())];
           return ProxyFileSystem::status(Path);
         }
