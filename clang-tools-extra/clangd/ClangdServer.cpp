@@ -97,8 +97,8 @@ ClangdServer::Options ClangdServer::optsForTest() {
   return Opts;
 }
 
-ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
-                           FileSystemProvider &FSProvider,
+ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
+                           const FileSystemProvider &FSProvider,
                            DiagnosticsConsumer &DiagConsumer,
                            const Options &Opts)
     : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),

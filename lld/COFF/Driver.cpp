@@ -371,13 +371,30 @@ Optional<StringRef> LinkerDriver::findFile(StringRef Filename) {
   return Path;
 }
 
+// MinGW specific. If an embedded directive specified to link to
+// foo.lib, but it isn't found, try libfoo.a instead.
+StringRef LinkerDriver::doFindLibMinGW(StringRef Filename) {
+  if (Filename.contains('/') || Filename.contains('\\'))
+    return Filename;
+
+  SmallString<128> S = Filename;
+  sys::path::replace_extension(S, ".a");
+  StringRef LibName = Saver.save("lib" + S.str());
+  return doFindFile(LibName);
+}
+
 // Find library file from search path.
 StringRef LinkerDriver::doFindLib(StringRef Filename) {
   // Add ".lib" to Filename if that has no file extension.
   bool HasExt = Filename.contains('.');
   if (!HasExt)
     Filename = Saver.save(Filename + ".lib");
-  return doFindFile(Filename);
+  StringRef Ret = doFindFile(Filename);
+  // For MinGW, if the find above didn't turn up anything, try
+  // looking for a MinGW formatted library name.
+  if (Config->MinGW && Ret == Filename)
+    return doFindLibMinGW(Filename);
+  return Ret;
 }
 
 // Resolves a library path. /nodefaultlib options are taken into

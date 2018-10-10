@@ -264,11 +264,11 @@ int b = a;
 TEST_F(ClangdVFSTest, PropagatesContexts) {
   static Key<int> Secret;
   struct FSProvider : public FileSystemProvider {
-    IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() override {
+    IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() const override {
       Got = Context::current().getExisting(Secret);
       return buildTestFS({});
     }
-    int Got;
+    mutable int Got;
   } FS;
   struct DiagConsumer : public DiagnosticsConsumer {
     void onDiagnosticsReady(PathRef File,
@@ -973,7 +973,7 @@ TEST(ClangdTests, PreambleVFSStatCache) {
     ListenStatsFSProvider(llvm::StringMap<unsigned> &CountStats)
         : CountStats(CountStats) {}
 
-    IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() override {
+    IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() const override {
       class ListenStatVFS : public vfs::ProxyFileSystem {
       public:
         ListenStatVFS(IntrusiveRefCntPtr<vfs::FileSystem> FS,

@@ -106,7 +106,7 @@ namespace {
 /// Otherwise return null.
 Value *SimplifyIndvar::foldIVUser(Instruction *UseInst, Instruction *IVOperand) {
   Value *IVSrc = nullptr;
-  unsigned OperIdx = 0;
+  const unsigned OperIdx = 0;
   const SCEV *FoldedExpr = nullptr;
   switch (UseInst->getOpcode()) {
   default:

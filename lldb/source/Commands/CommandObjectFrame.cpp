@@ -427,7 +427,17 @@ public:
             "arguments and local variables in scope. Names of argument, "
             "local, file static and file global variables can be specified. "
             "Children of aggregate variables can be specified such as "
-            "'var->child.x'.",
+            "'var->child.x'.  The -> and [] operators in 'frame variable' do "
+            "not invoke operator overloads if they exist, but directly access "
+            "the specified element.  If you want to trigger operator overloads "
+            "use the expression command to print the variable instead."
+            "\nIt is worth noting that except for overloaded "
+            "operators, when printing local variables 'expr local_var' and "
+            "'frame var local_var' produce the same "
+            "results.  However, 'frame variable' is more efficient, since it "
+            "uses debug information and memory reads directly, rather than "
+            "parsing and evaluating an expression, which may even involve "
+            "JITing and running code in the target program.",
             nullptr, eCommandRequiresFrame | eCommandTryTargetAPILock |
                          eCommandProcessMustBeLaunched |
                          eCommandProcessMustBePaused | eCommandRequiresProcess),

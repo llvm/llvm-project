@@ -328,6 +328,25 @@ bool SystemZTTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) {
   return (VT.isScalarInteger() && TLI->isTypeLegal(VT));
 }
 
+// Return the bit size for the scalar type or vector element
+// type. getScalarSizeInBits() returns 0 for a pointer type.
+static unsigned getScalarSizeInBits(Type *Ty) {
+  unsigned Size =
+    (Ty->isPtrOrPtrVectorTy() ? 64U : Ty->getScalarSizeInBits());
+  assert(Size > 0 && "Element must have non-zero size.");
+  return Size;
+}
+
+// getNumberOfParts() calls getTypeLegalizationCost() which splits the vector
+// type until it is legal. This would e.g. return 4 for <6 x i64>, instead of
+// 3.
+static unsigned getNumVectorRegs(Type *Ty) {
+  assert(Ty->isVectorTy() && "Expected vector type");
+  unsigned WideBits = getScalarSizeInBits(Ty) * Ty->getVectorNumElements();
+  assert(WideBits > 0 && "Could not compute size of vector");
+  return ((WideBits % 128U) ? ((WideBits / 128U) + 1) : (WideBits / 128U));
+}
+
 int SystemZTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty,
     TTI::OperandValueKind Op1Info, TTI::OperandValueKind Op2Info,
@@ -370,7 +389,7 @@ int SystemZTTIImpl::getArithmeticInstrCost(
   if (Ty->isVectorTy()) {
     assert (ST->hasVector() && "getArithmeticInstrCost() called with vector type.");
     unsigned VF = Ty->getVectorNumElements();
-    unsigned NumVectors = getNumberOfParts(Ty);
+    unsigned NumVectors = getNumVectorRegs(Ty);
 
     // These vector operations are custom handled, but are still supported
     // with one instruction per vector, regardless of element size.
@@ -465,12 +484,11 @@ int SystemZTTIImpl::getArithmeticInstrCost(
                                        Opd1PropInfo, Opd2PropInfo, Args);
 }
 
-
 int SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
                                    Type *SubTp) {
   assert (Tp->isVectorTy());
   assert (ST->hasVector() && "getShuffleCost() called.");
-  unsigned NumVectors = getNumberOfParts(Tp);
+  unsigned NumVectors = getNumVectorRegs(Tp);
 
   // TODO: Since fp32 is expanded, the shuffle cost should always be 0.
 
@@ -525,7 +543,7 @@ getVectorTruncCost(Type *SrcTy, Type *DstTy) {
 
   // TODO: Since fp32 is expanded, the extract cost should always be 0.
 
-  unsigned NumParts = getNumberOfParts(SrcTy);
+  unsigned NumParts = getNumVectorRegs(SrcTy);
   if (NumParts <= 2)
     // Up to 2 vector registers can be truncated efficiently with pack or
     // permute. The latter requires an immediate mask to be loaded, which
@@ -568,7 +586,7 @@ getVectorBitmaskConversionCost(Type *SrcTy, Type *DstTy) {
     // The bitmask will be truncated.
     PackCost = getVectorTruncCost(SrcTy, DstTy);
   else if (SrcScalarBits < DstScalarBits) {
-    unsigned DstNumParts = getNumberOfParts(DstTy);
+    unsigned DstNumParts = getNumVectorRegs(DstTy);
     // Each vector select needs its part of the bitmask unpacked.
     PackCost = Log2Diff * DstNumParts;
     // Extra cost for moving part of mask before unpacking.
@@ -613,8 +631,8 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     assert (ST->hasVector() && "getCastInstrCost() called with vector type.");
     assert (Dst->isVectorTy());
     unsigned VF = Src->getVectorNumElements();
-    unsigned NumDstVectors = getNumberOfParts(Dst);
-    unsigned NumSrcVectors = getNumberOfParts(Src);
+    unsigned NumDstVectors = getNumVectorRegs(Dst);
+    unsigned NumSrcVectors = getNumVectorRegs(Src);
 
     if (Opcode == Instruction::Trunc) {
       if (Src->getScalarSizeInBits() == Dst->getScalarSizeInBits())
@@ -763,7 +781,7 @@ int SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondT
       // Float is handled with 2*vmr[lh]f + 2*vldeb + vfchdb for each pair of
       // floats.  FIXME: <2 x float> generates same code as <4 x float>.
       unsigned CmpCostPerVector = (ValTy->getScalarType()->isFloatTy() ? 10 : 1);
-      unsigned NumVecs_cmp = getNumberOfParts(ValTy);
+      unsigned NumVecs_cmp = getNumVectorRegs(ValTy);
 
       unsigned Cost = (NumVecs_cmp * (CmpCostPerVector + PredicateExtraCost));
       return Cost;
@@ -779,7 +797,7 @@ int SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondT
         PackCost =
           getVectorBitmaskConversionCost(CmpOpTy, ValTy);
 
-      return getNumberOfParts(ValTy) /*vsel*/ + PackCost;
+      return getNumVectorRegs(ValTy) /*vsel*/ + PackCost;
     }
   }
   else { // Scalar
@@ -808,7 +826,7 @@ getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
     return ((Index % 2 == 0) ? 1 : 0);
 
   if (Opcode == Instruction::ExtractElement) {
-    int Cost = ((Val->getScalarSizeInBits() == 1) ? 2 /*+test-under-mask*/ : 1);
+    int Cost = ((getScalarSizeInBits(Val) == 1) ? 2 /*+test-under-mask*/ : 1);
 
     // Give a slight penalty for moving out of vector pipeline to FXU unit.
     if (Index == 0 && Val->isIntOrIntVectorTy())
@@ -828,7 +846,7 @@ int SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   if (!Src->isVectorTy() && Opcode == Instruction::Load &&
       I != nullptr && I->hasOneUse()) {
       const Instruction *UserI = cast<Instruction>(*I->user_begin());
-      unsigned Bits = Src->getScalarSizeInBits();
+      unsigned Bits = getScalarSizeInBits(Src);
       bool FoldsLoad = false;
       switch (UserI->getOpcode()) {
       case Instruction::ICmp:
@@ -870,7 +888,8 @@ int SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       }
   }
 
-  unsigned NumOps = getNumberOfParts(Src);
+  unsigned NumOps =
+    (Src->isVectorTy() ? getNumVectorRegs(Src) : getNumberOfParts(Src));
 
   if (Src->getScalarSizeInBits() == 128)
     // 128 bit scalars are held in a pair of two 64 bit registers.
@@ -887,11 +906,7 @@ int SystemZTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
   assert(isa<VectorType>(VecTy) &&
          "Expect a vector type for interleaved memory op");
 
-  unsigned WideBits = (VecTy->isPtrOrPtrVectorTy() ?
-     (64U * VecTy->getVectorNumElements()) : VecTy->getPrimitiveSizeInBits());
-  assert (WideBits > 0 && "Could not compute size of vector");
-  int NumWideParts =
-    ((WideBits % 128U) ? ((WideBits / 128U) + 1) : (WideBits / 128U));
+  int NumWideParts = getNumVectorRegs(VecTy);
 
   // How many source vectors are handled to produce a vectorized operand?
   int NumElsPerVector = (VecTy->getVectorNumElements() / NumWideParts);

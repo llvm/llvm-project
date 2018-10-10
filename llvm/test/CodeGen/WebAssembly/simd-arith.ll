@@ -748,7 +748,8 @@ define <2 x i64> @bitselect_v2i64(<2 x i64> %c, <2 x i64> %v1, <2 x i64> %v2) {
 ; SIMD128-NEXT: f32x4.neg $push[[R:[0-9]+]]=, $0{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x float> @neg_v4f32(<4 x float> %x) {
-  %a = fsub <4 x float> <float 0., float 0., float 0., float 0.>, %x
+  ; nsz makes this semantically equivalent to flipping sign bit
+  %a = fsub nsz <4 x float> <float 0.0, float 0.0, float 0.0, float 0.0>, %x
   ret <4 x float> %a
 }
 
@@ -830,7 +831,8 @@ define <4 x float> @sqrt_v4f32(<4 x float> %x) {
 ; SIMD128-NEXT: f64x2.neg $push[[R:[0-9]+]]=, $0{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x double> @neg_v2f64(<2 x double> %x) {
-  %a = fsub <2 x double> <double 0., double 0.>, %x
+  ; nsz makes this semantically equivalent to flipping sign bit
+  %a = fsub nsz <2 x double> <double 0., double 0.>, %x
   ret <2 x double> %a
 }
 

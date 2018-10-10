@@ -123,3 +123,71 @@ bool DWARFDebugRanges::FindRanges(dw_addr_t debug_ranges_base,
   }
   return false;
 }
+
+bool DWARFDebugRngLists::ExtractRangeList(const DWARFDataExtractor &data,
+                                          uint8_t addrSize,
+                                          lldb::offset_t *offset_ptr,
+                                          DWARFRangeList &rangeList) {
+  rangeList.Clear();
+
+  bool error = false;
+  while (!error) {
+    switch (data.GetU8(offset_ptr)) {
+    case DW_RLE_end_of_list:
+      return true;
+
+    case DW_RLE_start_length: {
+      dw_addr_t begin = data.GetMaxU64(offset_ptr, addrSize);
+      dw_addr_t len = data.GetULEB128(offset_ptr);
+      rangeList.Append(DWARFRangeList::Entry(begin, len));
+      break;
+    }
+
+    default:
+      // Next encodings are not yet supported:
+      // DW_RLE_base_addressx, DW_RLE_startx_endx, DW_RLE_startx_length,
+      // DW_RLE_offset_pair, DW_RLE_base_address, DW_RLE_start_end
+      lldbassert(0 && "unknown range list entry encoding");
+      error = true;
+    }
+  }
+
+  return false;
+}
+
+void DWARFDebugRngLists::Extract(SymbolFileDWARF *dwarf2Data) {
+  const DWARFDataExtractor &data = dwarf2Data->get_debug_rnglists_data();
+  lldb::offset_t offset = 0;
+
+  uint64_t length = data.GetU32(&offset);
+  bool isDwarf64 = false;
+  if (length == 0xffffffff) {
+    length = data.GetU64(&offset);
+    isDwarf64 = true;
+  }
+  lldb::offset_t end = offset + length;
+
+  // Check version.
+  if (data.GetU16(&offset) < 5)
+    return;
+
+  uint8_t addrSize = data.GetU8(&offset);
+
+  // We do not support non-zero segment selector size.
+  if (data.GetU8(&offset) != 0) {
+    lldbassert(0 && "not implemented");
+    return;
+  }
+
+  uint32_t offsetsAmount = data.GetU32(&offset);
+  for (uint32_t i = 0; i < offsetsAmount; ++i)
+    Offsets.push_back(data.GetPointer(&offset));
+
+  lldb::offset_t listOffset = offset;
+  DWARFRangeList rangeList;
+  while (offset < end && ExtractRangeList(data, addrSize, &offset, rangeList)) {
+    rangeList.Sort();
+    m_range_map[listOffset] = rangeList;
+    listOffset = offset;
+  }
+}
