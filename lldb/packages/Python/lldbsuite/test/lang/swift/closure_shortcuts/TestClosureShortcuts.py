@@ -1,4 +1,4 @@
-# TestAccelerateSIMD.py
+# TestClosureShortcuts.py
 #
 # This source file is part of the Swift.org open source project
 #
@@ -13,4 +13,4 @@ import lldbsuite.test.lldbinline as lldbinline
 from lldbsuite.test.decorators import *
 
 lldbinline.MakeInlineTest(__file__, globals(),
-                          decorators=[swiftTest,skipUnlessDarwin])
+                          decorators=[swiftTest])
