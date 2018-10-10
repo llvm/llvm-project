@@ -759,18 +759,6 @@ namespace {
       /// context we try to fold them immediately since the optimizer never
       /// gets a chance to look at it.
       EM_PotentialConstantExpressionUnevaluated,
-
-      /// Evaluate as a constant expression. In certain scenarios, if:
-      /// - we find a MemberExpr with a base that can't be evaluated, or
-      /// - we find a variable initialized with a call to a function that has
-      ///   the alloc_size attribute on it
-      /// then we may consider evaluation to have succeeded.
-      ///
-      /// In either case, the LValue returned shall have an invalid base; in the
-      /// former, the base will be the invalid MemberExpr, in the latter, the
-      /// base will be either the alloc_size CallExpr or a CastExpr wrapping
-      /// said CallExpr.
-      EM_OffsetFold,
     } EvalMode;
 
     /// Are we checking whether the expression is a potential constant
@@ -874,7 +862,6 @@ namespace {
           case EM_PotentialConstantExpression:
           case EM_ConstantExpressionUnevaluated:
           case EM_PotentialConstantExpressionUnevaluated:
-          case EM_OffsetFold:
             HasActiveDiagnostic = false;
             return OptionalDiagnostic();
           }
@@ -966,7 +953,6 @@ namespace {
       case EM_ConstantExpression:
       case EM_ConstantExpressionUnevaluated:
       case EM_ConstantFold:
-      case EM_OffsetFold:
         return false;
       }
       llvm_unreachable("Missed EvalMode case");
@@ -985,7 +971,6 @@ namespace {
       case EM_EvaluateForOverflow:
       case EM_IgnoreSideEffects:
       case EM_ConstantFold:
-      case EM_OffsetFold:
         return true;
 
       case EM_PotentialConstantExpression:
@@ -1021,7 +1006,6 @@ namespace {
       case EM_ConstantExpressionUnevaluated:
       case EM_ConstantFold:
       case EM_IgnoreSideEffects:
-      case EM_OffsetFold:
         return false;
       }
       llvm_unreachable("Missed EvalMode case");
@@ -1093,18 +1077,18 @@ namespace {
     }
   };
 
-  /// RAII object used to treat the current evaluation as the correct pointer
-  /// offset fold for the current EvalMode
-  struct FoldOffsetRAII {
+  /// RAII object used to set the current evaluation mode to ignore
+  /// side-effects.
+  struct IgnoreSideEffectsRAII {
     EvalInfo &Info;
     EvalInfo::EvaluationMode OldMode;
-    explicit FoldOffsetRAII(EvalInfo &Info)
+    explicit IgnoreSideEffectsRAII(EvalInfo &Info)
         : Info(Info), OldMode(Info.EvalMode) {
       if (!Info.checkingPotentialConstantExpression())
-        Info.EvalMode = EvalInfo::EM_OffsetFold;
+        Info.EvalMode = EvalInfo::EM_IgnoreSideEffects;
     }
 
-    ~FoldOffsetRAII() { Info.EvalMode = OldMode; }
+    ~IgnoreSideEffectsRAII() { Info.EvalMode = OldMode; }
   };
 
   /// RAII object used to optionally suppress diagnostics and side-effects from
@@ -8049,7 +8033,7 @@ static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
     // If there are any, but we can determine the pointed-to object anyway, then
     // ignore the side-effects.
     SpeculativeEvaluationRAII SpeculativeEval(Info);
-    FoldOffsetRAII Fold(Info);
+    IgnoreSideEffectsRAII Fold(Info);
 
     if (E->isGLValue()) {
       // It's possible for us to be given GLValues if we're called via
@@ -8117,7 +8101,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case EvalInfo::EM_ConstantFold:
     case EvalInfo::EM_EvaluateForOverflow:
     case EvalInfo::EM_IgnoreSideEffects:
-    case EvalInfo::EM_OffsetFold:
       // Leave it to IR generation.
       return Error(E);
     case EvalInfo::EM_ConstantExpressionUnevaluated:

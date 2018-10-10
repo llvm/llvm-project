@@ -18,8 +18,9 @@
 class DWARFDebugRanges {
 public:
   DWARFDebugRanges();
-  ~DWARFDebugRanges();
-  void Extract(SymbolFileDWARF *dwarf2Data);
+  virtual ~DWARFDebugRanges();
+  virtual void Extract(SymbolFileDWARF *dwarf2Data);
+
   static void Dump(lldb_private::Stream &s,
                    const lldb_private::DWARFDataExtractor &debug_ranges_data,
                    lldb::offset_t *offset_ptr, dw_addr_t cu_base_addr);
@@ -35,6 +36,19 @@ protected:
   typedef range_map::iterator range_map_iterator;
   typedef range_map::const_iterator range_map_const_iterator;
   range_map m_range_map;
+};
+
+// DWARF v5 .debug_rnglists section.
+class DWARFDebugRngLists : public DWARFDebugRanges {
+public:
+  void Extract(SymbolFileDWARF *dwarf2Data) override;
+
+protected:
+  bool ExtractRangeList(const lldb_private::DWARFDataExtractor &data,
+                        uint8_t addrSize, lldb::offset_t *offset_ptr,
+                        DWARFRangeList &list);
+
+  std::vector<uint64_t> Offsets;
 };
 
 #endif // SymbolFileDWARF_DWARFDebugRanges_h_
