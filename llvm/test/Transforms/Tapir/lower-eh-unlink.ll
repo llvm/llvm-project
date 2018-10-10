@@ -494,13 +494,13 @@ declare void @llvm.detached.rethrow.sl_p0i8i32s(token, { i8*, i32 }) #9
 ; Function Attrs: nounwind
 declare noalias i8* @malloc(i64) local_unnamed_addr #1
 
-; CHECK: define internal fastcc void @_ZN8sequence4packIP6vertexiNS_4getAIS2_iEEEE4_seqIT_EPS6_PbT0_SA_T1__pfor.body71.otd1(i64 %indvars.iv.otd1
+; CHECK: define internal fastcc void @_ZN8sequence4packIP6vertexiNS_4getAIS2_iEEEE4_seqIT_EPS6_PbT0_SA_T1_.outline_pfor.body71.otd1(i64 %indvars.iv.otd1
 ; CHECK: lpad90.otd1:
 ; CHECK: %[[LPAD:.+]] = landingpad
 ; CHECK: call void @__cilk_parent_epilogue(%struct.__cilkrts_stack_frame* %__cilkrts_sf)
 ; CHECK: resume {{.+}} %[[LPAD]]
 
-; CHECK: define internal fastcc void @_ZN8sequence4packIP6vertexiNS_4getAIS2_iEEEE4_seqIT_EPS6_PbT0_SA_T1__pfor.body.otd1(i64 %indvars.iv221.otd1
+; CHECK: define internal fastcc void @_ZN8sequence4packIP6vertexiNS_4getAIS2_iEEEE4_seqIT_EPS6_PbT0_SA_T1_.outline_pfor.body.otd1(i64 %indvars.iv221.otd1
 
 attributes #1 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="haswell" "target-features"="+aes,+avx,+avx2,+bmi,+bmi2,+cmov,+cx16,+f16c,+fma,+fsgsbase,+fxsr,+lzcnt,+mmx,+movbe,+pclmul,+popcnt,+rdrnd,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt,-adx,-avx512bitalg,-avx512bw,-avx512cd,-avx512dq,-avx512er,-avx512f,-avx512ifma,-avx512pf,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vpopcntdq,-clflushopt,-clwb,-clzero,-fma4,-gfni,-ibt,-lwp,-mwaitx,-pku,-prefetchwt1,-prfchw,-rdseed,-rtm,-sgx,-sha,-shstk,-sse4a,-tbm,-vaes,-vpclmulqdq,-xop,-xsavec,-xsaves" "unsafe-fp-math"="true" "use-soft-float"="false" }
 attributes #4 = { argmemonly nounwind }

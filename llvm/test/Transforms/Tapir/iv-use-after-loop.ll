@@ -151,7 +151,7 @@ pfor.cond.cleanup55.split:                        ; preds = %pfor.cond.cleanup55
   br label %pfor.detach98
 
 ; CHECK: pfor.cond.cleanup55.split:
-; CHECK: call fastcc void @_Z8randPermIiEvPT_i_pfor.detach98.ls2(i64 0, i64 %indvars.iv.next299.lcssa.escape
+; CHECK: call fastcc void @_Z8randPermIiEvPT_i.outline_pfor.detach98.ls2(i64 0, i64 %indvars.iv.next299.lcssa.escape
 
 pfor.detach56:                                    ; preds = %pfor.inc75, %while.body
   %indvars.iv298 = phi i64 [ %indvars.iv.next299, %pfor.inc75 ], [ 0, %while.body ]

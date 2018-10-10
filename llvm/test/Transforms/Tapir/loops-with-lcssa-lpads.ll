@@ -534,13 +534,13 @@ declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #5
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #5
 
-; CHECK-LABEL: define internal fastcc void @_Z10sampleSortIiSt4lessIiEiEvPT_T1_T0__pfor.detach73.ls1(i64 %__begin63.0382.start.ls1
+; CHECK-LABEL: define internal fastcc void @_Z10sampleSortIiSt4lessIiEiEvPT_T1_T0_.outline_pfor.detach73.ls1(i64 %__begin63.0382.start.ls1
 ; CHECK: lpad84.us-lcssa.ls1:
 ; CHECK: br label %lpad84.ls1
 ; CHECK: lpad84.ls1:
 ; CHECK-NOT: phi { i8*, i32 }{{.+}}[ {{%lpad.us-lcssa383.us|%lpad.us-lcssa383.us.ls1}}, {{%lpad84.us-lcssa.us|%lpad84.us-lcssa.us.ls1}} ]
 
-; CHECK-LABEL: define internal fastcc void @_Z10sampleSortIiSt4lessIiEiEvPT_T1_T0__pfor.detach73.us.ls1(i64 %__begin63.0382.us.start.ls1
+; CHECK-LABEL: define internal fastcc void @_Z10sampleSortIiSt4lessIiEiEvPT_T1_T0_.outline_pfor.detach73.us.ls1(i64 %__begin63.0382.us.start.ls1
 ; CHECK: lpad84.us-lcssa.us.ls1:
 ; CHECK: br label %lpad84.ls1
 ; CHECK: lpad84.ls1:

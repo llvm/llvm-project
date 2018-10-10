@@ -4,7 +4,11 @@
 ; Credit to Tim Kaler for producing the source code that inspired this test
 ; case.
 ;
-; RUN: opt < %s -loop-spawning -simplifycfg -instcombine -S | FileCheck %s
+; RUN: opt < %s -loop-spawning-ti -simplifycfg -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes='loop-spawning,function(simplify-cfg,instcombine)' -S | FileCheck %s
+
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
 
 %"class.std::vector.0" = type { %"struct.std::_Vector_base.1" }
 %"struct.std::_Vector_base.1" = type { %"struct.std::_Vector_base<std::tuple<int, double, int>, std::allocator<std::tuple<int, double, int> > >::_Vector_impl" }
@@ -72,7 +76,7 @@ if.then.i.i:                                      ; preds = %_ZNSt6vectorISt5tup
   tail call void @_ZdlPv(i8* %8) #8
   br label %invoke.cont
 
-invoke.cont:                                      ; preds = %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE20_M_allocate_and_copyISt13move_iteratorIPS1_EEES6_mT_S8_.exit.i, %if.then.i.i
+invoke.cont:                                      ; preds = %if.then.i.i, %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE20_M_allocate_and_copyISt13move_iteratorIPS1_EEES6_mT_S8_.exit.i
   %9 = bitcast %"class.std::vector.0"* %agg.result to i8**
   store i8* %call2.i.i.i.i.i179, i8** %9, align 8, !tbaa !9
   %10 = bitcast %"class.std::tuple"** %_M_finish.i.i to i8**
@@ -112,7 +116,7 @@ for.body.lr.ph.i.i.i.i.i184:                      ; preds = %_ZNSt16allocator_tr
   tail call void @llvm.memset.p0i8.i64(i8* nonnull %call2.i.i.i.i3.i.i187, i8 0, i64 %mul.i.i.i.i.i.i, i32 8, i1 false)
   br label %invoke.cont4
 
-invoke.cont4:                                     ; preds = %invoke.cont, %for.body.lr.ph.i.i.i.i.i184
+invoke.cont4:                                     ; preds = %for.body.lr.ph.i.i.i.i.i184, %invoke.cont
   %13 = phi i64 [ %12, %for.body.lr.ph.i.i.i.i.i184 ], [ 0, %invoke.cont ]
   %14 = phi i8* [ %call2.i.i.i.i3.i.i187, %for.body.lr.ph.i.i.i.i.i184 ], [ null, %invoke.cont ]
   %cond.i.i.i.i339 = phi %"class.std::vector.0"* [ %11, %for.body.lr.ph.i.i.i.i.i184 ], [ null, %invoke.cont ]
@@ -132,15 +136,18 @@ pfor.detach.lr.ph:                                ; preds = %invoke.cont4
   %16 = ashr exact i64 %sext445, 32
   br label %pfor.detach
 ; CHECK: {{^pfor.detach.lr.ph:}}
-; CHECK: invoke fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE_pfor.detach.ls(i64 0
+; CHECK: invoke fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach.ls1(i64 0
 ; CHECK-NEXT: to label %sync.continue87 unwind label %lpad80.loopexit
 
-pfor.cond.cleanup:                                ; preds = %pfor.inc78, %if.end.i, %invoke.cont4
-  %17 = phi i64 [ %15, %invoke.cont4 ], [ 0, %if.end.i ], [ %15, %pfor.inc78 ]
-  %__cur.0.lcssa.i.i.i.i.i461 = phi %"class.std::vector.0"* [ %__cur.0.lcssa.i.i.i.i.i, %invoke.cont4 ], [ null, %if.end.i ], [ %__cur.0.lcssa.i.i.i.i.i, %pfor.inc78 ]
-  %cond.i.i.i.i339453 = phi %"class.std::vector.0"* [ %cond.i.i.i.i339, %invoke.cont4 ], [ null, %if.end.i ], [ %cond.i.i.i.i339, %pfor.inc78 ]
-  %18 = phi i8* [ %14, %invoke.cont4 ], [ null, %if.end.i ], [ %14, %pfor.inc78 ]
-  %19 = phi i64 [ %13, %invoke.cont4 ], [ 0, %if.end.i ], [ %13, %pfor.inc78 ]
+pfor.cond.cleanup.loopexit:                       ; preds = %pfor.inc78
+  br label %pfor.cond.cleanup
+
+pfor.cond.cleanup:                                ; preds = %pfor.cond.cleanup.loopexit, %invoke.cont4, %if.end.i
+  %17 = phi i64 [ %15, %invoke.cont4 ], [ 0, %if.end.i ], [ %15, %pfor.cond.cleanup.loopexit ]
+  %__cur.0.lcssa.i.i.i.i.i461 = phi %"class.std::vector.0"* [ %__cur.0.lcssa.i.i.i.i.i, %invoke.cont4 ], [ null, %if.end.i ], [ %__cur.0.lcssa.i.i.i.i.i, %pfor.cond.cleanup.loopexit ]
+  %cond.i.i.i.i339453 = phi %"class.std::vector.0"* [ %cond.i.i.i.i339, %invoke.cont4 ], [ null, %if.end.i ], [ %cond.i.i.i.i339, %pfor.cond.cleanup.loopexit ]
+  %18 = phi i8* [ %14, %invoke.cont4 ], [ null, %if.end.i ], [ %14, %pfor.cond.cleanup.loopexit ]
+  %19 = phi i64 [ %13, %invoke.cont4 ], [ 0, %if.end.i ], [ %13, %pfor.cond.cleanup.loopexit ]
   sync within %syncreg, label %sync.continue87
 
 lpad:                                             ; preds = %_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE11_M_allocateEm.exit.i.i, %if.then.i
@@ -157,7 +164,7 @@ lpad3:                                            ; preds = %_ZNSt16allocator_tr
   %25 = extractvalue { i8*, i32 } %23, 1
   br label %ehcleanup126
 
-pfor.detach:                                      ; preds = %pfor.detach.lr.ph, %pfor.inc78
+pfor.detach:                                      ; preds = %pfor.inc78, %pfor.detach.lr.ph
   %indvars.iv440 = phi i64 [ 0, %pfor.detach.lr.ph ], [ %indvars.iv.next441, %pfor.inc78 ]
   detach within %syncreg, label %pfor.body, label %pfor.inc78 unwind label %lpad80.loopexit
 
@@ -219,7 +226,10 @@ invoke.cont17:                                    ; preds = %for.body.lr.ph.i.i.
 pfor.detach29.preheader:                          ; preds = %invoke.cont17
   br label %pfor.detach29
 
-pfor.cond.cleanup28:                              ; preds = %pfor.inc, %invoke.cont17
+pfor.cond.cleanup28.loopexit:                     ; preds = %pfor.inc
+  br label %pfor.cond.cleanup28
+
+pfor.cond.cleanup28:                              ; preds = %pfor.cond.cleanup28.loopexit, %invoke.cont17
   sync within %syncreg18, label %sync.continue
 
 lpad10.loopexit:                                  ; preds = %_ZNSt16allocator_traitsISaIiEE8allocateERS0_m.exit.i.i.i.i
@@ -239,15 +249,17 @@ lpad10:                                           ; preds = %lpad10.loopexit.spl
   br label %ehcleanup71
 
 ehcleanup69.thread:                               ; preds = %_ZNSt16allocator_traitsISaIiEE8allocateERS0_m.exit.i.i.i.i239
+  %worker_matches_count.sroa.13.lcssa11 = phi i32** [ %worker_matches_count.sroa.13, %_ZNSt16allocator_traitsISaIiEE8allocateERS0_m.exit.i.i.i.i239 ]
+  %call2.i.i.i.i3.i.i206.lcssa = phi i8* [ %call2.i.i.i.i3.i.i206, %_ZNSt16allocator_traitsISaIiEE8allocateERS0_m.exit.i.i.i.i239 ]
   %35 = landingpad { i8*, i32 }
           catch i8* null
-  %worker_matches_count.sroa.13.0..sroa_cast302.le = bitcast i32** %worker_matches_count.sroa.13 to i8*
+  %worker_matches_count.sroa.13.0..sroa_cast302.le = bitcast i32** %worker_matches_count.sroa.13.lcssa11 to i8*
   %36 = extractvalue { i8*, i32 } %35, 0
   %37 = extractvalue { i8*, i32 } %35, 1
   call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %worker_matches_count.sroa.13.0..sroa_cast302.le)
   br label %if.then.i.i.i259
 
-pfor.detach29:                                    ; preds = %pfor.detach29.preheader, %pfor.inc
+pfor.detach29:                                    ; preds = %pfor.inc, %pfor.detach29.preheader
   %indvars.iv436 = phi i64 [ %indvars.iv.next437, %pfor.inc ], [ 0, %pfor.detach29.preheader ]
   detach within %syncreg18, label %pfor.body33, label %pfor.inc unwind label %lpad45.loopexit
 
@@ -267,12 +279,17 @@ invoke.cont41:                                    ; preds = %invoke.cont37
   store i32 %call42, i32* %add.ptr.i268, align 4, !tbaa !14
   reattach within %syncreg18, label %pfor.inc
 
-pfor.inc:                                         ; preds = %pfor.detach29, %invoke.cont41
+pfor.inc:                                         ; preds = %invoke.cont41, %pfor.detach29
   %indvars.iv.next437 = add nuw nsw i64 %indvars.iv436, 1
-  %cmp27 = icmp slt i64 %indvars.iv.next437, %conv8
-  br i1 %cmp27, label %pfor.detach29, label %pfor.cond.cleanup28, !llvm.loop !16
+  %exitcond = icmp ne i64 %indvars.iv.next437, %conv8
+  br i1 %exitcond, label %pfor.detach29, label %pfor.cond.cleanup28.loopexit, !llvm.loop !16
 
 lpad34:                                           ; preds = %invoke.cont37, %pfor.body33
+  %.lcssa31 = phi i8* [ %30, %invoke.cont37 ], [ %30, %pfor.body33 ]
+  %cond.i.i.i.i240357.lcssa26 = phi i32* [ %cond.i.i.i.i240357, %invoke.cont37 ], [ %cond.i.i.i.i240357, %pfor.body33 ]
+  %.lcssa24 = phi i8* [ %31, %invoke.cont37 ], [ %31, %pfor.body33 ]
+  %cond.i.i.i.i198346350356.lcssa19 = phi i32* [ %cond.i.i.i.i198346350356, %invoke.cont37 ], [ %cond.i.i.i.i198346350356, %pfor.body33 ]
+  %worker_matches_count.sroa.13.0..sroa_cast302351355.lcssa15 = phi i8* [ %worker_matches_count.sroa.13.0..sroa_cast302351355, %invoke.cont37 ], [ %worker_matches_count.sroa.13.0..sroa_cast302351355, %pfor.body33 ]
   %39 = landingpad { i8*, i32 }
           catch i8* null
   invoke void @llvm.detached.rethrow.sl_p0i8i32s(token %syncreg18, { i8*, i32 } %39)
@@ -282,6 +299,11 @@ det.rethrow.unreachable:                          ; preds = %lpad34
   unreachable
 
 lpad45.loopexit:                                  ; preds = %pfor.detach29
+  %.lcssa30 = phi i8* [ %30, %pfor.detach29 ]
+  %cond.i.i.i.i240357.lcssa = phi i32* [ %cond.i.i.i.i240357, %pfor.detach29 ]
+  %.lcssa23 = phi i8* [ %31, %pfor.detach29 ]
+  %cond.i.i.i.i198346350356.lcssa = phi i32* [ %cond.i.i.i.i198346350356, %pfor.detach29 ]
+  %worker_matches_count.sroa.13.0..sroa_cast302351355.lcssa = phi i8* [ %worker_matches_count.sroa.13.0..sroa_cast302351355, %pfor.detach29 ]
   %lpad.loopexit = landingpad { i8*, i32 }
           catch i8* null
   br label %lpad45
@@ -292,9 +314,14 @@ lpad45.loopexit.split-lp:                         ; preds = %lpad34
   br label %lpad45
 
 lpad45:                                           ; preds = %lpad45.loopexit.split-lp, %lpad45.loopexit
+  %40 = phi i8* [ %.lcssa30, %lpad45.loopexit ], [ %.lcssa31, %lpad45.loopexit.split-lp ]
+  %cond.i.i.i.i24035729 = phi i32* [ %cond.i.i.i.i240357.lcssa, %lpad45.loopexit ], [ %cond.i.i.i.i240357.lcssa26, %lpad45.loopexit.split-lp ]
+  %41 = phi i8* [ %.lcssa23, %lpad45.loopexit ], [ %.lcssa24, %lpad45.loopexit.split-lp ]
+  %cond.i.i.i.i19834635035622 = phi i32* [ %cond.i.i.i.i198346350356.lcssa, %lpad45.loopexit ], [ %cond.i.i.i.i198346350356.lcssa19, %lpad45.loopexit.split-lp ]
+  %worker_matches_count.sroa.13.0..sroa_cast30235135518 = phi i8* [ %worker_matches_count.sroa.13.0..sroa_cast302351355.lcssa, %lpad45.loopexit ], [ %worker_matches_count.sroa.13.0..sroa_cast302351355.lcssa15, %lpad45.loopexit.split-lp ]
   %lpad.phi = phi { i8*, i32 } [ %lpad.loopexit, %lpad45.loopexit ], [ %lpad.loopexit.split-lp, %lpad45.loopexit.split-lp ]
-  %40 = extractvalue { i8*, i32 } %lpad.phi, 0
-  %41 = extractvalue { i8*, i32 } %lpad.phi, 1
+  %42 = extractvalue { i8*, i32 } %lpad.phi, 0
+  %43 = extractvalue { i8*, i32 } %lpad.phi, 1
   sync within %syncreg18, label %ehcleanup
 
 sync.continue:                                    ; preds = %pfor.cond.cleanup28
@@ -304,182 +331,195 @@ sync.continue:                                    ; preds = %pfor.cond.cleanup28
   br i1 %cmp51399, label %invoke.cont67, label %for.body.lr.ph
 
 for.body.lr.ph:                                   ; preds = %sync.continue
-  %42 = icmp ugt i64 %sub.ptr.div.i276, 1
-  %umax = select i1 %42, i64 %sub.ptr.div.i276, i64 1
+  %44 = icmp ugt i64 %sub.ptr.div.i276, 1
+  %umax = select i1 %44, i64 %sub.ptr.div.i276, i64 1
   %min.iters.check = icmp ult i64 %umax, 8
   br i1 %min.iters.check, label %for.body.preheader, label %vector.ph
 
 vector.ph:                                        ; preds = %for.body.lr.ph
   %n.vec = and i64 %umax, -8
-  %43 = add nsw i64 %n.vec, -8
-  %44 = lshr exact i64 %43, 3
-  %45 = add nuw nsw i64 %44, 1
-  %xtraiter = and i64 %45, 1
-  %46 = icmp eq i64 %43, 0
-  br i1 %46, label %middle.block.unr-lcssa, label %vector.ph.new
+  %45 = add nsw i64 %n.vec, -8
+  %46 = lshr exact i64 %45, 3
+  %47 = add nuw nsw i64 %46, 1
+  %xtraiter = and i64 %47, 1
+  %48 = icmp eq i64 %45, 0
+  br i1 %48, label %middle.block.unr-lcssa, label %vector.ph.new
 
 vector.ph.new:                                    ; preds = %vector.ph
-  %unroll_iter = sub nsw i64 %45, %xtraiter
+  %unroll_iter = sub nsw i64 %47, %xtraiter
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph.new
   %index = phi i64 [ 0, %vector.ph.new ], [ %index.next.1, %vector.body ]
-  %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph.new ], [ %63, %vector.body ]
-  %vec.phi509 = phi <4 x i32> [ zeroinitializer, %vector.ph.new ], [ %64, %vector.body ]
-  %vec.phi510 = phi <4 x i32> [ zeroinitializer, %vector.ph.new ], [ %69, %vector.body ]
-  %vec.phi511 = phi <4 x i32> [ zeroinitializer, %vector.ph.new ], [ %70, %vector.body ]
+  %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph.new ], [ %65, %vector.body ]
+  %vec.phi509 = phi <4 x i32> [ zeroinitializer, %vector.ph.new ], [ %66, %vector.body ]
+  %vec.phi510 = phi <4 x i32> [ zeroinitializer, %vector.ph.new ], [ %71, %vector.body ]
+  %vec.phi511 = phi <4 x i32> [ zeroinitializer, %vector.ph.new ], [ %72, %vector.body ]
   %niter = phi i64 [ %unroll_iter, %vector.ph.new ], [ %niter.nsub.1, %vector.body ]
-  %47 = getelementptr inbounds i32, i32* %cond.i.i.i.i240357, i64 %index
-  %48 = bitcast i32* %47 to <4 x i32>*
-  %wide.load = load <4 x i32>, <4 x i32>* %48, align 4, !tbaa !14
-  %49 = getelementptr i32, i32* %47, i64 4
+  %49 = getelementptr inbounds i32, i32* %cond.i.i.i.i240357, i64 %index
   %50 = bitcast i32* %49 to <4 x i32>*
-  %wide.load512 = load <4 x i32>, <4 x i32>* %50, align 4, !tbaa !14
-  %51 = add nsw <4 x i32> %wide.load, %vec.phi
-  %52 = add nsw <4 x i32> %wide.load512, %vec.phi509
-  %53 = getelementptr inbounds i32, i32* %cond.i.i.i.i198346350356, i64 %index
-  %54 = bitcast i32* %53 to <4 x i32>*
-  %wide.load513 = load <4 x i32>, <4 x i32>* %54, align 4, !tbaa !14
-  %55 = getelementptr i32, i32* %53, i64 4
+  %wide.load = load <4 x i32>, <4 x i32>* %50, align 4, !tbaa !14
+  %51 = getelementptr i32, i32* %49, i64 4
+  %52 = bitcast i32* %51 to <4 x i32>*
+  %wide.load512 = load <4 x i32>, <4 x i32>* %52, align 4, !tbaa !14
+  %53 = add nsw <4 x i32> %wide.load, %vec.phi
+  %54 = add nsw <4 x i32> %wide.load512, %vec.phi509
+  %55 = getelementptr inbounds i32, i32* %cond.i.i.i.i198346350356, i64 %index
   %56 = bitcast i32* %55 to <4 x i32>*
-  %wide.load514 = load <4 x i32>, <4 x i32>* %56, align 4, !tbaa !14
-  %57 = add nsw <4 x i32> %wide.load513, %vec.phi510
-  %58 = add nsw <4 x i32> %wide.load514, %vec.phi511
+  %wide.load513 = load <4 x i32>, <4 x i32>* %56, align 4, !tbaa !14
+  %57 = getelementptr i32, i32* %55, i64 4
+  %58 = bitcast i32* %57 to <4 x i32>*
+  %wide.load514 = load <4 x i32>, <4 x i32>* %58, align 4, !tbaa !14
+  %59 = add nsw <4 x i32> %wide.load513, %vec.phi510
+  %60 = add nsw <4 x i32> %wide.load514, %vec.phi511
   %index.next = or i64 %index, 8
-  %59 = getelementptr inbounds i32, i32* %cond.i.i.i.i240357, i64 %index.next
-  %60 = bitcast i32* %59 to <4 x i32>*
-  %wide.load.1 = load <4 x i32>, <4 x i32>* %60, align 4, !tbaa !14
-  %61 = getelementptr i32, i32* %59, i64 4
+  %61 = getelementptr inbounds i32, i32* %cond.i.i.i.i240357, i64 %index.next
   %62 = bitcast i32* %61 to <4 x i32>*
-  %wide.load512.1 = load <4 x i32>, <4 x i32>* %62, align 4, !tbaa !14
-  %63 = add nsw <4 x i32> %wide.load.1, %51
-  %64 = add nsw <4 x i32> %wide.load512.1, %52
-  %65 = getelementptr inbounds i32, i32* %cond.i.i.i.i198346350356, i64 %index.next
-  %66 = bitcast i32* %65 to <4 x i32>*
-  %wide.load513.1 = load <4 x i32>, <4 x i32>* %66, align 4, !tbaa !14
-  %67 = getelementptr i32, i32* %65, i64 4
+  %wide.load.1 = load <4 x i32>, <4 x i32>* %62, align 4, !tbaa !14
+  %63 = getelementptr i32, i32* %61, i64 4
+  %64 = bitcast i32* %63 to <4 x i32>*
+  %wide.load512.1 = load <4 x i32>, <4 x i32>* %64, align 4, !tbaa !14
+  %65 = add nsw <4 x i32> %wide.load.1, %53
+  %66 = add nsw <4 x i32> %wide.load512.1, %54
+  %67 = getelementptr inbounds i32, i32* %cond.i.i.i.i198346350356, i64 %index.next
   %68 = bitcast i32* %67 to <4 x i32>*
-  %wide.load514.1 = load <4 x i32>, <4 x i32>* %68, align 4, !tbaa !14
-  %69 = add nsw <4 x i32> %wide.load513.1, %57
-  %70 = add nsw <4 x i32> %wide.load514.1, %58
+  %wide.load513.1 = load <4 x i32>, <4 x i32>* %68, align 4, !tbaa !14
+  %69 = getelementptr i32, i32* %67, i64 4
+  %70 = bitcast i32* %69 to <4 x i32>*
+  %wide.load514.1 = load <4 x i32>, <4 x i32>* %70, align 4, !tbaa !14
+  %71 = add nsw <4 x i32> %wide.load513.1, %59
+  %72 = add nsw <4 x i32> %wide.load514.1, %60
   %index.next.1 = add i64 %index, 16
   %niter.nsub.1 = add i64 %niter, -2
   %niter.ncmp.1 = icmp eq i64 %niter.nsub.1, 0
-  br i1 %niter.ncmp.1, label %middle.block.unr-lcssa, label %vector.body, !llvm.loop !18
+  br i1 %niter.ncmp.1, label %middle.block.unr-lcssa.loopexit, label %vector.body, !llvm.loop !18
 
-middle.block.unr-lcssa:                           ; preds = %vector.body, %vector.ph
-  %.lcssa526.ph = phi <4 x i32> [ undef, %vector.ph ], [ %63, %vector.body ]
-  %.lcssa525.ph = phi <4 x i32> [ undef, %vector.ph ], [ %64, %vector.body ]
-  %.lcssa524.ph = phi <4 x i32> [ undef, %vector.ph ], [ %69, %vector.body ]
-  %.lcssa.ph = phi <4 x i32> [ undef, %vector.ph ], [ %70, %vector.body ]
-  %index.unr = phi i64 [ 0, %vector.ph ], [ %index.next.1, %vector.body ]
-  %vec.phi.unr = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %63, %vector.body ]
-  %vec.phi509.unr = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %64, %vector.body ]
-  %vec.phi510.unr = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %69, %vector.body ]
-  %vec.phi511.unr = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %70, %vector.body ]
+middle.block.unr-lcssa.loopexit:                  ; preds = %vector.body
+  %.lcssa4 = phi <4 x i32> [ %65, %vector.body ]
+  %.lcssa3 = phi <4 x i32> [ %66, %vector.body ]
+  %.lcssa2 = phi <4 x i32> [ %71, %vector.body ]
+  %.lcssa1 = phi <4 x i32> [ %72, %vector.body ]
+  %index.next.1.lcssa = phi i64 [ %index.next.1, %vector.body ]
+  br label %middle.block.unr-lcssa
+
+middle.block.unr-lcssa:                           ; preds = %middle.block.unr-lcssa.loopexit, %vector.ph
+  %.lcssa526.ph = phi <4 x i32> [ undef, %vector.ph ], [ %.lcssa4, %middle.block.unr-lcssa.loopexit ]
+  %.lcssa525.ph = phi <4 x i32> [ undef, %vector.ph ], [ %.lcssa3, %middle.block.unr-lcssa.loopexit ]
+  %.lcssa524.ph = phi <4 x i32> [ undef, %vector.ph ], [ %.lcssa2, %middle.block.unr-lcssa.loopexit ]
+  %.lcssa.ph = phi <4 x i32> [ undef, %vector.ph ], [ %.lcssa1, %middle.block.unr-lcssa.loopexit ]
+  %index.unr = phi i64 [ 0, %vector.ph ], [ %index.next.1.lcssa, %middle.block.unr-lcssa.loopexit ]
+  %vec.phi.unr = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %.lcssa4, %middle.block.unr-lcssa.loopexit ]
+  %vec.phi509.unr = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %.lcssa3, %middle.block.unr-lcssa.loopexit ]
+  %vec.phi510.unr = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %.lcssa2, %middle.block.unr-lcssa.loopexit ]
+  %vec.phi511.unr = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %.lcssa1, %middle.block.unr-lcssa.loopexit ]
   %lcmp.mod = icmp eq i64 %xtraiter, 0
   br i1 %lcmp.mod, label %middle.block, label %vector.body.epil
 
 vector.body.epil:                                 ; preds = %middle.block.unr-lcssa
-  %71 = getelementptr inbounds i32, i32* %cond.i.i.i.i240357, i64 %index.unr
-  %72 = getelementptr inbounds i32, i32* %cond.i.i.i.i198346350356, i64 %index.unr
-  %73 = getelementptr i32, i32* %72, i64 4
-  %74 = bitcast i32* %73 to <4 x i32>*
-  %wide.load514.epil = load <4 x i32>, <4 x i32>* %74, align 4, !tbaa !14
-  %75 = add nsw <4 x i32> %wide.load514.epil, %vec.phi511.unr
-  %76 = bitcast i32* %72 to <4 x i32>*
-  %wide.load513.epil = load <4 x i32>, <4 x i32>* %76, align 4, !tbaa !14
-  %77 = add nsw <4 x i32> %wide.load513.epil, %vec.phi510.unr
-  %78 = getelementptr i32, i32* %71, i64 4
-  %79 = bitcast i32* %78 to <4 x i32>*
-  %wide.load512.epil = load <4 x i32>, <4 x i32>* %79, align 4, !tbaa !14
-  %80 = add nsw <4 x i32> %wide.load512.epil, %vec.phi509.unr
-  %81 = bitcast i32* %71 to <4 x i32>*
-  %wide.load.epil = load <4 x i32>, <4 x i32>* %81, align 4, !tbaa !14
-  %82 = add nsw <4 x i32> %wide.load.epil, %vec.phi.unr
+  %73 = getelementptr inbounds i32, i32* %cond.i.i.i.i240357, i64 %index.unr
+  %74 = getelementptr inbounds i32, i32* %cond.i.i.i.i198346350356, i64 %index.unr
+  %75 = getelementptr i32, i32* %74, i64 4
+  %76 = bitcast i32* %75 to <4 x i32>*
+  %wide.load514.epil = load <4 x i32>, <4 x i32>* %76, align 4, !tbaa !14
+  %77 = add nsw <4 x i32> %wide.load514.epil, %vec.phi511.unr
+  %78 = bitcast i32* %74 to <4 x i32>*
+  %wide.load513.epil = load <4 x i32>, <4 x i32>* %78, align 4, !tbaa !14
+  %79 = add nsw <4 x i32> %wide.load513.epil, %vec.phi510.unr
+  %80 = getelementptr i32, i32* %73, i64 4
+  %81 = bitcast i32* %80 to <4 x i32>*
+  %wide.load512.epil = load <4 x i32>, <4 x i32>* %81, align 4, !tbaa !14
+  %82 = add nsw <4 x i32> %wide.load512.epil, %vec.phi509.unr
+  %83 = bitcast i32* %73 to <4 x i32>*
+  %wide.load.epil = load <4 x i32>, <4 x i32>* %83, align 4, !tbaa !14
+  %84 = add nsw <4 x i32> %wide.load.epil, %vec.phi.unr
   br label %middle.block
 
-middle.block:                                     ; preds = %middle.block.unr-lcssa, %vector.body.epil
-  %.lcssa526 = phi <4 x i32> [ %.lcssa526.ph, %middle.block.unr-lcssa ], [ %82, %vector.body.epil ]
-  %.lcssa525 = phi <4 x i32> [ %.lcssa525.ph, %middle.block.unr-lcssa ], [ %80, %vector.body.epil ]
-  %.lcssa524 = phi <4 x i32> [ %.lcssa524.ph, %middle.block.unr-lcssa ], [ %77, %vector.body.epil ]
-  %.lcssa = phi <4 x i32> [ %.lcssa.ph, %middle.block.unr-lcssa ], [ %75, %vector.body.epil ]
+middle.block:                                     ; preds = %vector.body.epil, %middle.block.unr-lcssa
+  %.lcssa526 = phi <4 x i32> [ %.lcssa526.ph, %middle.block.unr-lcssa ], [ %84, %vector.body.epil ]
+  %.lcssa525 = phi <4 x i32> [ %.lcssa525.ph, %middle.block.unr-lcssa ], [ %82, %vector.body.epil ]
+  %.lcssa524 = phi <4 x i32> [ %.lcssa524.ph, %middle.block.unr-lcssa ], [ %79, %vector.body.epil ]
+  %.lcssa = phi <4 x i32> [ %.lcssa.ph, %middle.block.unr-lcssa ], [ %77, %vector.body.epil ]
   %bin.rdx518 = add <4 x i32> %.lcssa, %.lcssa524
   %rdx.shuf519 = shufflevector <4 x i32> %bin.rdx518, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
   %bin.rdx520 = add <4 x i32> %bin.rdx518, %rdx.shuf519
   %rdx.shuf521 = shufflevector <4 x i32> %bin.rdx520, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
   %bin.rdx522 = add <4 x i32> %bin.rdx520, %rdx.shuf521
-  %83 = extractelement <4 x i32> %bin.rdx522, i32 0
+  %85 = extractelement <4 x i32> %bin.rdx522, i32 0
   %bin.rdx = add <4 x i32> %.lcssa525, %.lcssa526
   %rdx.shuf = shufflevector <4 x i32> %bin.rdx, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
   %bin.rdx515 = add <4 x i32> %bin.rdx, %rdx.shuf
   %rdx.shuf516 = shufflevector <4 x i32> %bin.rdx515, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
   %bin.rdx517 = add <4 x i32> %bin.rdx515, %rdx.shuf516
-  %84 = extractelement <4 x i32> %bin.rdx517, i32 0
+  %86 = extractelement <4 x i32> %bin.rdx517, i32 0
   %cmp.n = icmp eq i64 %umax, %n.vec
   br i1 %cmp.n, label %invoke.cont67, label %for.body.preheader
 
 for.body.preheader:                               ; preds = %middle.block, %for.body.lr.ph
   %indvars.iv438.ph = phi i64 [ 0, %for.body.lr.ph ], [ %n.vec, %middle.block ]
-  %matches_count.0401.ph = phi i32 [ 0, %for.body.lr.ph ], [ %84, %middle.block ]
-  %valid_moves.0400.ph = phi i32 [ 0, %for.body.lr.ph ], [ %83, %middle.block ]
+  %matches_count.0401.ph = phi i32 [ 0, %for.body.lr.ph ], [ %86, %middle.block ]
+  %valid_moves.0400.ph = phi i32 [ 0, %for.body.lr.ph ], [ %85, %middle.block ]
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:                                         ; preds = %for.body, %for.body.preheader
   %indvars.iv438 = phi i64 [ %indvars.iv.next439, %for.body ], [ %indvars.iv438.ph, %for.body.preheader ]
   %matches_count.0401 = phi i32 [ %add54, %for.body ], [ %matches_count.0401.ph, %for.body.preheader ]
   %valid_moves.0400 = phi i32 [ %add57, %for.body ], [ %valid_moves.0400.ph, %for.body.preheader ]
   %add.ptr.i291 = getelementptr inbounds i32, i32* %cond.i.i.i.i240357, i64 %indvars.iv438
-  %85 = load i32, i32* %add.ptr.i291, align 4, !tbaa !14
-  %add54 = add nsw i32 %85, %matches_count.0401
+  %87 = load i32, i32* %add.ptr.i291, align 4, !tbaa !14
+  %add54 = add nsw i32 %87, %matches_count.0401
   %add.ptr.i289 = getelementptr inbounds i32, i32* %cond.i.i.i.i198346350356, i64 %indvars.iv438
-  %86 = load i32, i32* %add.ptr.i289, align 4, !tbaa !14
-  %add57 = add nsw i32 %86, %valid_moves.0400
+  %88 = load i32, i32* %add.ptr.i289, align 4, !tbaa !14
+  %add57 = add nsw i32 %88, %valid_moves.0400
   %indvars.iv.next439 = add nuw i64 %indvars.iv438, 1
   %cmp51 = icmp ugt i64 %sub.ptr.div.i276, %indvars.iv.next439
-  br i1 %cmp51, label %for.body, label %invoke.cont67, !llvm.loop !20
+  br i1 %cmp51, label %for.body, label %invoke.cont67.loopexit, !llvm.loop !20
 
-invoke.cont67:                                    ; preds = %for.body, %middle.block, %sync.continue
-  %valid_moves.0.lcssa = phi i32 [ 0, %sync.continue ], [ %83, %middle.block ], [ %add57, %for.body ]
-  %matches_count.0.lcssa = phi i32 [ 0, %sync.continue ], [ %84, %middle.block ], [ %add54, %for.body ]
+invoke.cont67.loopexit:                           ; preds = %for.body
+  %add54.lcssa = phi i32 [ %add54, %for.body ]
+  %add57.lcssa = phi i32 [ %add57, %for.body ]
+  br label %invoke.cont67
+
+invoke.cont67:                                    ; preds = %invoke.cont67.loopexit, %middle.block, %sync.continue
+  %valid_moves.0.lcssa = phi i32 [ 0, %sync.continue ], [ %85, %middle.block ], [ %add57.lcssa, %invoke.cont67.loopexit ]
+  %matches_count.0.lcssa = phi i32 [ 0, %sync.continue ], [ %86, %middle.block ], [ %add54.lcssa, %invoke.cont67.loopexit ]
   %call59 = call i64 @clock() #8
   %sub60 = sub nsw i64 %call59, %call7
   %conv61 = sitofp i64 %sub60 to double
   %div62 = fdiv double %conv61, 1.000000e+06
-  %87 = bitcast %"class.std::tuple"* %ref.tmp65 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 24, i8* nonnull %87) #8
+  %89 = bitcast %"class.std::tuple"* %ref.tmp65 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 24, i8* nonnull %89) #8
   %_M_head_impl.i.i.i.i.i.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %ref.tmp65, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store i32 %matches_count.0.lcssa, i32* %_M_head_impl.i.i.i.i.i.i, align 8, !tbaa !22, !alias.scope !24
-  %88 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %ref.tmp65, i64 0, i32 0, i32 0, i32 1, i32 0
-  store double %div62, double* %88, align 8, !tbaa !27, !alias.scope !24
-  %89 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %ref.tmp65, i64 0, i32 0, i32 1, i32 0
-  store i32 %valid_moves.0.lcssa, i32* %89, align 8, !tbaa !30, !alias.scope !24
+  %90 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %ref.tmp65, i64 0, i32 0, i32 0, i32 1, i32 0
+  store double %div62, double* %90, align 8, !tbaa !27, !alias.scope !24
+  %91 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %ref.tmp65, i64 0, i32 0, i32 1, i32 0
+  store i32 %valid_moves.0.lcssa, i32* %91, align 8, !tbaa !30, !alias.scope !24
   %_M_finish.i.i284 = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %cond.i.i.i.i339, i64 %indvars.iv440, i32 0, i32 0, i32 1
-  %90 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_finish.i.i284, align 8, !tbaa !12
+  %92 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_finish.i.i284, align 8, !tbaa !12
   %_M_end_of_storage.i.i285 = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %cond.i.i.i.i339, i64 %indvars.iv440, i32 0, i32 0, i32 2
-  %91 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_end_of_storage.i.i285, align 8, !tbaa !13
-  %cmp.i.i = icmp eq %"class.std::tuple"* %90, %91
+  %93 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_end_of_storage.i.i285, align 8, !tbaa !13
+  %cmp.i.i = icmp eq %"class.std::tuple"* %92, %93
   br i1 %cmp.i.i, label %if.else.i.i, label %if.then.i.i286
 
 if.then.i.i286:                                   ; preds = %invoke.cont67
-  %_M_head_impl.i.i6.i.i.i.i.i.i.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %90, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
+  %_M_head_impl.i.i6.i.i.i.i.i.i.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %92, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
   store i32 %matches_count.0.lcssa, i32* %_M_head_impl.i.i6.i.i.i.i.i.i.i, align 4, !tbaa !22
-  %92 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %90, i64 0, i32 0, i32 0, i32 1, i32 0
-  store double %div62, double* %92, align 8, !tbaa !27
-  %93 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %90, i64 0, i32 0, i32 1, i32 0
-  %94 = load i32, i32* %89, align 8, !tbaa !14
-  store i32 %94, i32* %93, align 4, !tbaa !30
-  %incdec.ptr.i.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %90, i64 1
+  %94 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %92, i64 0, i32 0, i32 0, i32 1, i32 0
+  store double %div62, double* %94, align 8, !tbaa !27
+  %95 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %92, i64 0, i32 0, i32 1, i32 0
+  %96 = load i32, i32* %91, align 8, !tbaa !14
+  store i32 %96, i32* %95, align 4, !tbaa !30
+  %incdec.ptr.i.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %92, i64 1
   store %"class.std::tuple"* %incdec.ptr.i.i, %"class.std::tuple"** %_M_finish.i.i284, align 8, !tbaa !12
   br label %invoke.cont68
 
 if.else.i.i:                                      ; preds = %invoke.cont67
   %add.ptr.i283 = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %cond.i.i.i.i339, i64 %indvars.iv440
-  invoke void @_ZNSt6vectorISt5tupleIJidiEESaIS1_EE17_M_realloc_insertIJS1_EEEvN9__gnu_cxx17__normal_iteratorIPS1_S3_EEDpOT_(%"class.std::vector.0"* nonnull %add.ptr.i283, %"class.std::tuple"* %90, %"class.std::tuple"* nonnull dereferenceable(24) %ref.tmp65)
+  invoke void @_ZNSt6vectorISt5tupleIJidiEESaIS1_EE17_M_realloc_insertIJS1_EEEvN9__gnu_cxx17__normal_iteratorIPS1_S3_EEDpOT_(%"class.std::vector.0"* nonnull %add.ptr.i283, %"class.std::tuple"* %92, %"class.std::tuple"* nonnull dereferenceable(24) %ref.tmp65)
           to label %invoke.cont68 unwind label %lpad66
 
-invoke.cont68:                                    ; preds = %if.then.i.i286, %if.else.i.i
-  call void @llvm.lifetime.end.p0i8(i64 24, i8* nonnull %87) #8
+invoke.cont68:                                    ; preds = %if.else.i.i, %if.then.i.i286
+  call void @llvm.lifetime.end.p0i8(i64 24, i8* nonnull %89) #8
   %tobool.i.i.i278 = icmp eq i32* %cond.i.i.i.i240357, null
   br i1 %tobool.i.i.i278, label %_ZNSt6vectorIiSaIiEED2Ev.exit281, label %if.then.i.i.i280
 
@@ -487,7 +527,7 @@ if.then.i.i.i280:                                 ; preds = %invoke.cont68
   call void @_ZdlPv(i8* %30) #8
   br label %_ZNSt6vectorIiSaIiEED2Ev.exit281
 
-_ZNSt6vectorIiSaIiEED2Ev.exit281:                 ; preds = %invoke.cont68, %if.then.i.i.i280
+_ZNSt6vectorIiSaIiEED2Ev.exit281:                 ; preds = %if.then.i.i.i280, %invoke.cont68
   call void @llvm.lifetime.end.p0i8(i64 8, i8* %worker_matches_count.sroa.13.0..sroa_cast302351355)
   %tobool.i.i.i270 = icmp eq i32* %cond.i.i.i.i198346350356, null
   br i1 %tobool.i.i.i270, label %_ZNSt6vectorIiSaIiEED2Ev.exit273, label %if.then.i.i.i272
@@ -496,43 +536,54 @@ if.then.i.i.i272:                                 ; preds = %_ZNSt6vectorIiSaIiE
   call void @_ZdlPv(i8* %31) #8
   br label %_ZNSt6vectorIiSaIiEED2Ev.exit273
 
-_ZNSt6vectorIiSaIiEED2Ev.exit273:                 ; preds = %_ZNSt6vectorIiSaIiEED2Ev.exit281, %if.then.i.i.i272
+_ZNSt6vectorIiSaIiEED2Ev.exit273:                 ; preds = %if.then.i.i.i272, %_ZNSt6vectorIiSaIiEED2Ev.exit281
   reattach within %syncreg, label %pfor.inc78
 
-pfor.inc78:                                       ; preds = %pfor.detach, %_ZNSt6vectorIiSaIiEED2Ev.exit273
+pfor.inc78:                                       ; preds = %_ZNSt6vectorIiSaIiEED2Ev.exit273, %pfor.detach
   %indvars.iv.next441 = add nuw nsw i64 %indvars.iv440, 1
-  %cmp = icmp slt i64 %indvars.iv.next441, %16
-  br i1 %cmp, label %pfor.detach, label %pfor.cond.cleanup, !llvm.loop !32
+  %exitcond33 = icmp ne i64 %indvars.iv.next441, %16
+  br i1 %exitcond33, label %pfor.detach, label %pfor.cond.cleanup.loopexit, !llvm.loop !32
 
 lpad66:                                           ; preds = %if.else.i.i
-  %95 = landingpad { i8*, i32 }
+  %.lcssa32 = phi i8* [ %30, %if.else.i.i ]
+  %cond.i.i.i.i240357.lcssa27 = phi i32* [ %cond.i.i.i.i240357, %if.else.i.i ]
+  %.lcssa25 = phi i8* [ %31, %if.else.i.i ]
+  %cond.i.i.i.i198346350356.lcssa20 = phi i32* [ %cond.i.i.i.i198346350356, %if.else.i.i ]
+  %worker_matches_count.sroa.13.0..sroa_cast302351355.lcssa16 = phi i8* [ %worker_matches_count.sroa.13.0..sroa_cast302351355, %if.else.i.i ]
+  %ref.tmp65.lcssa9 = phi %"class.std::tuple"* [ %ref.tmp65, %if.else.i.i ]
+  %97 = landingpad { i8*, i32 }
           catch i8* null
-  %96 = bitcast %"class.std::tuple"* %ref.tmp65 to i8*
-  %97 = extractvalue { i8*, i32 } %95, 0
-  %98 = extractvalue { i8*, i32 } %95, 1
-  call void @llvm.lifetime.end.p0i8(i64 24, i8* nonnull %96) #8
+  %98 = bitcast %"class.std::tuple"* %ref.tmp65.lcssa9 to i8*
+  %99 = extractvalue { i8*, i32 } %97, 0
+  %100 = extractvalue { i8*, i32 } %97, 1
+  call void @llvm.lifetime.end.p0i8(i64 24, i8* nonnull %98) #8
   br label %ehcleanup
 
-ehcleanup:                                        ; preds = %lpad45, %lpad66
-  %exn.slot11.0 = phi i8* [ %97, %lpad66 ], [ %40, %lpad45 ]
-  %ehselector.slot12.0 = phi i32 [ %98, %lpad66 ], [ %41, %lpad45 ]
-  %tobool.i.i.i263 = icmp eq i32* %cond.i.i.i.i240357, null
+ehcleanup:                                        ; preds = %lpad66, %lpad45
+  %101 = phi i8* [ %.lcssa32, %lpad66 ], [ %40, %lpad45 ]
+  %cond.i.i.i.i24035728 = phi i32* [ %cond.i.i.i.i240357.lcssa27, %lpad66 ], [ %cond.i.i.i.i24035729, %lpad45 ]
+  %102 = phi i8* [ %.lcssa25, %lpad66 ], [ %41, %lpad45 ]
+  %cond.i.i.i.i19834635035621 = phi i32* [ %cond.i.i.i.i198346350356.lcssa20, %lpad66 ], [ %cond.i.i.i.i19834635035622, %lpad45 ]
+  %worker_matches_count.sroa.13.0..sroa_cast30235135517 = phi i8* [ %worker_matches_count.sroa.13.0..sroa_cast302351355.lcssa16, %lpad66 ], [ %worker_matches_count.sroa.13.0..sroa_cast30235135518, %lpad45 ]
+  %exn.slot11.0 = phi i8* [ %99, %lpad66 ], [ %42, %lpad45 ]
+  %ehselector.slot12.0 = phi i32 [ %100, %lpad66 ], [ %43, %lpad45 ]
+  %tobool.i.i.i263 = icmp eq i32* %cond.i.i.i.i24035728, null
   br i1 %tobool.i.i.i263, label %ehcleanup69, label %if.then.i.i.i265
 
 if.then.i.i.i265:                                 ; preds = %ehcleanup
-  call void @_ZdlPv(i8* %30) #8
+  call void @_ZdlPv(i8* %101) #8
   br label %ehcleanup69
 
 ehcleanup69:                                      ; preds = %if.then.i.i.i265, %ehcleanup
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %worker_matches_count.sroa.13.0..sroa_cast302351355)
-  %tobool.i.i.i257 = icmp eq i32* %cond.i.i.i.i198346350356, null
+  call void @llvm.lifetime.end.p0i8(i64 8, i8* %worker_matches_count.sroa.13.0..sroa_cast30235135517)
+  %tobool.i.i.i257 = icmp eq i32* %cond.i.i.i.i19834635035621, null
   br i1 %tobool.i.i.i257, label %ehcleanup71, label %if.then.i.i.i259
 
-if.then.i.i.i259:                                 ; preds = %ehcleanup69.thread, %ehcleanup69
+if.then.i.i.i259:                                 ; preds = %ehcleanup69, %ehcleanup69.thread
   %ehselector.slot12.1364 = phi i32 [ %37, %ehcleanup69.thread ], [ %ehselector.slot12.0, %ehcleanup69 ]
   %exn.slot11.1362 = phi i8* [ %36, %ehcleanup69.thread ], [ %exn.slot11.0, %ehcleanup69 ]
-  %99 = phi i8* [ %call2.i.i.i.i3.i.i206, %ehcleanup69.thread ], [ %31, %ehcleanup69 ]
-  call void @_ZdlPv(i8* %99) #8
+  %103 = phi i8* [ %call2.i.i.i.i3.i.i206.lcssa, %ehcleanup69.thread ], [ %102, %ehcleanup69 ]
+  call void @_ZdlPv(i8* %103) #8
   br label %ehcleanup71
 
 ehcleanup71:                                      ; preds = %if.then.i.i.i259, %ehcleanup69, %lpad10
@@ -558,45 +609,51 @@ lpad80.loopexit.split-lp:                         ; preds = %ehcleanup71
 
 lpad80:                                           ; preds = %lpad80.loopexit.split-lp, %lpad80.loopexit
   %lpad.phi369 = phi { i8*, i32 } [ %lpad.loopexit367, %lpad80.loopexit ], [ %lpad.loopexit.split-lp368, %lpad80.loopexit.split-lp ]
-  %100 = extractvalue { i8*, i32 } %lpad.phi369, 0
-  %101 = extractvalue { i8*, i32 } %lpad.phi369, 1
+  %104 = extractvalue { i8*, i32 } %lpad.phi369, 0
+  %105 = extractvalue { i8*, i32 } %lpad.phi369, 1
   sync within %syncreg, label %ehcleanup123
 
 sync.continue87:                                  ; preds = %pfor.cond.cleanup
   %sub.ptr.sub.i254 = sub i64 %17, %19
   %sub.ptr.div.i255 = sdiv exact i64 %sub.ptr.sub.i254, 24
-  %102 = icmp eq i64 %sub.ptr.sub.i254, 0
-  br i1 %102, label %for.cond.cleanup99, label %for.body100.lr.ph
+  %106 = icmp eq i64 %sub.ptr.sub.i254, 0
+  br i1 %106, label %for.cond.cleanup99, label %for.body100.lr.ph
 
 for.body100.lr.ph:                                ; preds = %sync.continue87
   %_M_finish.i188 = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %agg.result, i64 0, i32 0, i32 0, i32 1
   br label %for.body100
 
-for.cond.cleanup99:                               ; preds = %for.cond.cleanup107, %sync.continue87
+for.cond.cleanup99.loopexit:                      ; preds = %for.cond.cleanup107
+  br label %for.cond.cleanup99
+
+for.cond.cleanup99:                               ; preds = %for.cond.cleanup99.loopexit, %sync.continue87
   %cmp3.i.i.i.i218 = icmp eq %"class.std::vector.0"* %cond.i.i.i.i339453, %__cur.0.lcssa.i.i.i.i.i461
   br i1 %cmp3.i.i.i.i218, label %invoke.cont.i231, label %for.body.i.i.i.i223.preheader
 
 for.body.i.i.i.i223.preheader:                    ; preds = %for.cond.cleanup99
   br label %for.body.i.i.i.i223
 
-for.body.i.i.i.i223:                              ; preds = %for.body.i.i.i.i223.preheader, %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i227
+for.body.i.i.i.i223:                              ; preds = %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i227, %for.body.i.i.i.i223.preheader
   %__first.addr.04.i.i.i.i220 = phi %"class.std::vector.0"* [ %incdec.ptr.i.i.i.i225, %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i227 ], [ %cond.i.i.i.i339453, %for.body.i.i.i.i223.preheader ]
   %_M_start.i.i.i.i.i.i.i221 = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %__first.addr.04.i.i.i.i220, i64 0, i32 0, i32 0, i32 0
-  %103 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_start.i.i.i.i.i.i.i221, align 8, !tbaa !9
-  %tobool.i.i.i.i.i.i.i.i222 = icmp eq %"class.std::tuple"* %103, null
+  %107 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_start.i.i.i.i.i.i.i221, align 8, !tbaa !9
+  %tobool.i.i.i.i.i.i.i.i222 = icmp eq %"class.std::tuple"* %107, null
   br i1 %tobool.i.i.i.i.i.i.i.i222, label %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i227, label %if.then.i.i.i.i.i.i.i.i224
 
 if.then.i.i.i.i.i.i.i.i224:                       ; preds = %for.body.i.i.i.i223
-  %104 = bitcast %"class.std::tuple"* %103 to i8*
-  call void @_ZdlPv(i8* %104) #8
+  %108 = bitcast %"class.std::tuple"* %107 to i8*
+  call void @_ZdlPv(i8* %108) #8
   br label %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i227
 
 _ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i227: ; preds = %if.then.i.i.i.i.i.i.i.i224, %for.body.i.i.i.i223
   %incdec.ptr.i.i.i.i225 = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %__first.addr.04.i.i.i.i220, i64 1
   %cmp.i.i.i.i226 = icmp eq %"class.std::vector.0"* %incdec.ptr.i.i.i.i225, %__cur.0.lcssa.i.i.i.i.i461
-  br i1 %cmp.i.i.i.i226, label %invoke.cont.i231, label %for.body.i.i.i.i223
+  br i1 %cmp.i.i.i.i226, label %invoke.cont.i231.loopexit, label %for.body.i.i.i.i223
 
-invoke.cont.i231:                                 ; preds = %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i227, %for.cond.cleanup99
+invoke.cont.i231.loopexit:                        ; preds = %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i227
+  br label %invoke.cont.i231
+
+invoke.cont.i231:                                 ; preds = %invoke.cont.i231.loopexit, %for.cond.cleanup99
   %tobool.i.i.i230 = icmp eq %"class.std::vector.0"* %cond.i.i.i.i339453, null
   br i1 %tobool.i.i.i230, label %_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EED2Ev.exit233, label %if.then.i.i.i232
 
@@ -604,118 +661,124 @@ if.then.i.i.i232:                                 ; preds = %invoke.cont.i231
   call void @_ZdlPv(i8* %18) #8
   br label %_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EED2Ev.exit233
 
-_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EED2Ev.exit233: ; preds = %invoke.cont.i231, %if.then.i.i.i232
+_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EED2Ev.exit233: ; preds = %if.then.i.i.i232, %invoke.cont.i231
   ret void
 
-for.body100:                                      ; preds = %for.body100.lr.ph, %for.cond.cleanup107
+for.body100:                                      ; preds = %for.cond.cleanup107, %for.body100.lr.ph
   %indvars.iv434 = phi i64 [ 0, %for.body100.lr.ph ], [ %indvars.iv.next435, %for.cond.cleanup107 ]
   %add.ptr.i215 = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %cond.i.i.i.i339453, i64 %indvars.iv434
   %_M_finish.i211 = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %cond.i.i.i.i339453, i64 %indvars.iv434, i32 0, i32 0, i32 1
-  %105 = bitcast %"class.std::tuple"** %_M_finish.i211 to i64*
-  %106 = load i64, i64* %105, align 8, !tbaa !12
-  %107 = bitcast %"class.std::vector.0"* %add.ptr.i215 to i64*
-  %108 = load i64, i64* %107, align 8, !tbaa !9
-  %109 = icmp eq i64 %106, %108
-  br i1 %109, label %for.cond.cleanup107, label %for.body108.preheader
+  %109 = bitcast %"class.std::tuple"** %_M_finish.i211 to i64*
+  %110 = load i64, i64* %109, align 8, !tbaa !12
+  %111 = bitcast %"class.std::vector.0"* %add.ptr.i215 to i64*
+  %112 = load i64, i64* %111, align 8, !tbaa !9
+  %113 = icmp eq i64 %110, %112
+  br i1 %113, label %for.cond.cleanup107, label %for.body108.preheader
 
 for.body108.preheader:                            ; preds = %for.body100
   br label %for.body108
 
-for.cond.cleanup107:                              ; preds = %for.inc115, %for.body100
+for.cond.cleanup107.loopexit:                     ; preds = %for.inc115
+  br label %for.cond.cleanup107
+
+for.cond.cleanup107:                              ; preds = %for.cond.cleanup107.loopexit, %for.body100
   %indvars.iv.next435 = add nuw i64 %indvars.iv434, 1
   %cmp98 = icmp ugt i64 %sub.ptr.div.i255, %indvars.iv.next435
-  br i1 %cmp98, label %for.body100, label %for.cond.cleanup99
+  br i1 %cmp98, label %for.body100, label %for.cond.cleanup99.loopexit
 
-for.body108:                                      ; preds = %for.body108.preheader, %for.inc115
-  %.in = phi i64 [ %117, %for.inc115 ], [ %108, %for.body108.preheader ]
+for.body108:                                      ; preds = %for.inc115, %for.body108.preheader
+  %.in = phi i64 [ %121, %for.inc115 ], [ %112, %for.body108.preheader ]
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc115 ], [ 0, %for.body108.preheader ]
-  %110 = inttoptr i64 %.in to %"class.std::tuple"*
-  %add.ptr.i208 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %110, i64 %indvars.iv
-  %111 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_finish.i188, align 8, !tbaa !12
-  %112 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_end_of_storage.i.i, align 8, !tbaa !13
-  %cmp.i189 = icmp eq %"class.std::tuple"* %111, %112
+  %114 = inttoptr i64 %.in to %"class.std::tuple"*
+  %add.ptr.i208 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %114, i64 %indvars.iv
+  %115 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_finish.i188, align 8, !tbaa !12
+  %116 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_end_of_storage.i.i, align 8, !tbaa !13
+  %cmp.i189 = icmp eq %"class.std::tuple"* %115, %116
   br i1 %cmp.i189, label %if.else.i, label %if.then.i190
 
 if.then.i190:                                     ; preds = %for.body108
-  %113 = bitcast %"class.std::tuple"* %111 to i8*
-  %114 = bitcast %"class.std::tuple"* %add.ptr.i208 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %113, i8* nonnull %114, i64 24, i32 8, i1 false) #8
-  %115 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_finish.i188, align 8, !tbaa !12
-  %incdec.ptr.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %115, i64 1
+  %117 = bitcast %"class.std::tuple"* %115 to i8*
+  %118 = bitcast %"class.std::tuple"* %add.ptr.i208 to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %117, i8* nonnull %118, i64 24, i32 8, i1 false) #8
+  %119 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_finish.i188, align 8, !tbaa !12
+  %incdec.ptr.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %119, i64 1
   store %"class.std::tuple"* %incdec.ptr.i, %"class.std::tuple"** %_M_finish.i188, align 8, !tbaa !12
   br label %for.inc115
 
 if.else.i:                                        ; preds = %for.body108
-  invoke void @_ZNSt6vectorISt5tupleIJidiEESaIS1_EE17_M_realloc_insertIJRKS1_EEEvN9__gnu_cxx17__normal_iteratorIPS1_S3_EEDpOT_(%"class.std::vector.0"* nonnull %agg.result, %"class.std::tuple"* %111, %"class.std::tuple"* nonnull dereferenceable(24) %add.ptr.i208)
+  invoke void @_ZNSt6vectorISt5tupleIJidiEESaIS1_EE17_M_realloc_insertIJRKS1_EEEvN9__gnu_cxx17__normal_iteratorIPS1_S3_EEDpOT_(%"class.std::vector.0"* nonnull %agg.result, %"class.std::tuple"* %115, %"class.std::tuple"* nonnull dereferenceable(24) %add.ptr.i208)
           to label %for.inc115 unwind label %lpad113
 
-for.inc115:                                       ; preds = %if.then.i190, %if.else.i
+for.inc115:                                       ; preds = %if.else.i, %if.then.i190
   %indvars.iv.next = add nuw i64 %indvars.iv, 1
-  %116 = load i64, i64* %105, align 8, !tbaa !12
-  %117 = load i64, i64* %107, align 8, !tbaa !9
-  %sub.ptr.sub.i212 = sub i64 %116, %117
+  %120 = load i64, i64* %109, align 8, !tbaa !12
+  %121 = load i64, i64* %111, align 8, !tbaa !9
+  %sub.ptr.sub.i212 = sub i64 %120, %121
   %sub.ptr.div.i213 = sdiv exact i64 %sub.ptr.sub.i212, 24
   %cmp106 = icmp ugt i64 %sub.ptr.div.i213, %indvars.iv.next
-  br i1 %cmp106, label %for.body108, label %for.cond.cleanup107
+  br i1 %cmp106, label %for.body108, label %for.cond.cleanup107.loopexit
 
 lpad113:                                          ; preds = %if.else.i
-  %118 = landingpad { i8*, i32 }
+  %122 = landingpad { i8*, i32 }
           cleanup
-  %119 = extractvalue { i8*, i32 } %118, 0
-  %120 = extractvalue { i8*, i32 } %118, 1
+  %123 = extractvalue { i8*, i32 } %122, 0
+  %124 = extractvalue { i8*, i32 } %122, 1
   br label %ehcleanup123
 
-ehcleanup123:                                     ; preds = %lpad80, %lpad113
+ehcleanup123:                                     ; preds = %lpad113, %lpad80
   %__cur.0.lcssa.i.i.i.i.i460 = phi %"class.std::vector.0"* [ %__cur.0.lcssa.i.i.i.i.i461, %lpad113 ], [ %__cur.0.lcssa.i.i.i.i.i, %lpad80 ]
   %cond.i.i.i.i339455 = phi %"class.std::vector.0"* [ %cond.i.i.i.i339453, %lpad113 ], [ %cond.i.i.i.i339, %lpad80 ]
-  %121 = phi i8* [ %18, %lpad113 ], [ %14, %lpad80 ]
-  %ehselector.slot.0 = phi i32 [ %120, %lpad113 ], [ %101, %lpad80 ]
-  %exn.slot.0 = phi i8* [ %119, %lpad113 ], [ %100, %lpad80 ]
+  %125 = phi i8* [ %18, %lpad113 ], [ %14, %lpad80 ]
+  %ehselector.slot.0 = phi i32 [ %124, %lpad113 ], [ %105, %lpad80 ]
+  %exn.slot.0 = phi i8* [ %123, %lpad113 ], [ %104, %lpad80 ]
   %cmp3.i.i.i.i = icmp eq %"class.std::vector.0"* %cond.i.i.i.i339455, %__cur.0.lcssa.i.i.i.i.i460
   br i1 %cmp3.i.i.i.i, label %invoke.cont.i, label %for.body.i.i.i.i.preheader
 
 for.body.i.i.i.i.preheader:                       ; preds = %ehcleanup123
   br label %for.body.i.i.i.i
 
-for.body.i.i.i.i:                                 ; preds = %for.body.i.i.i.i.preheader, %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i
+for.body.i.i.i.i:                                 ; preds = %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i, %for.body.i.i.i.i.preheader
   %__first.addr.04.i.i.i.i = phi %"class.std::vector.0"* [ %incdec.ptr.i.i.i.i, %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i ], [ %cond.i.i.i.i339455, %for.body.i.i.i.i.preheader ]
   %_M_start.i.i.i.i.i.i.i = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %__first.addr.04.i.i.i.i, i64 0, i32 0, i32 0, i32 0
-  %122 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_start.i.i.i.i.i.i.i, align 8, !tbaa !9
-  %tobool.i.i.i.i.i.i.i.i = icmp eq %"class.std::tuple"* %122, null
+  %126 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_start.i.i.i.i.i.i.i, align 8, !tbaa !9
+  %tobool.i.i.i.i.i.i.i.i = icmp eq %"class.std::tuple"* %126, null
   br i1 %tobool.i.i.i.i.i.i.i.i, label %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i, label %if.then.i.i.i.i.i.i.i.i
 
 if.then.i.i.i.i.i.i.i.i:                          ; preds = %for.body.i.i.i.i
-  %123 = bitcast %"class.std::tuple"* %122 to i8*
-  call void @_ZdlPv(i8* %123) #8
+  %127 = bitcast %"class.std::tuple"* %126 to i8*
+  call void @_ZdlPv(i8* %127) #8
   br label %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i
 
 _ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i: ; preds = %if.then.i.i.i.i.i.i.i.i, %for.body.i.i.i.i
   %incdec.ptr.i.i.i.i = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %__first.addr.04.i.i.i.i, i64 1
   %cmp.i.i.i.i = icmp eq %"class.std::vector.0"* %incdec.ptr.i.i.i.i, %__cur.0.lcssa.i.i.i.i.i460
-  br i1 %cmp.i.i.i.i, label %invoke.cont.i, label %for.body.i.i.i.i
+  br i1 %cmp.i.i.i.i, label %invoke.cont.i.loopexit, label %for.body.i.i.i.i
 
-invoke.cont.i:                                    ; preds = %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i, %ehcleanup123
+invoke.cont.i.loopexit:                           ; preds = %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i
+  br label %invoke.cont.i
+
+invoke.cont.i:                                    ; preds = %invoke.cont.i.loopexit, %ehcleanup123
   %tobool.i.i.i176 = icmp eq %"class.std::vector.0"* %cond.i.i.i.i339455, null
   br i1 %tobool.i.i.i176, label %ehcleanup126, label %if.then.i.i.i177
 
 if.then.i.i.i177:                                 ; preds = %invoke.cont.i
-  call void @_ZdlPv(i8* %121) #8
+  call void @_ZdlPv(i8* %125) #8
   br label %ehcleanup126
 
-ehcleanup126:                                     ; preds = %lpad3, %invoke.cont.i, %if.then.i.i.i177, %lpad
+ehcleanup126:                                     ; preds = %if.then.i.i.i177, %invoke.cont.i, %lpad3, %lpad
   %ehselector.slot.2 = phi i32 [ %22, %lpad ], [ %25, %lpad3 ], [ %ehselector.slot.0, %invoke.cont.i ], [ %ehselector.slot.0, %if.then.i.i.i177 ]
   %exn.slot.2 = phi i8* [ %21, %lpad ], [ %24, %lpad3 ], [ %exn.slot.0, %invoke.cont.i ], [ %exn.slot.0, %if.then.i.i.i177 ]
   %_M_start.i.i = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %agg.result, i64 0, i32 0, i32 0, i32 0
-  %124 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_start.i.i, align 8, !tbaa !9
-  %tobool.i.i.i = icmp eq %"class.std::tuple"* %124, null
+  %128 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_start.i.i, align 8, !tbaa !9
+  %tobool.i.i.i = icmp eq %"class.std::tuple"* %128, null
   br i1 %tobool.i.i.i, label %_ZNSt6vectorISt5tupleIJidiEESaIS1_EED2Ev.exit, label %if.then.i.i.i
 
 if.then.i.i.i:                                    ; preds = %ehcleanup126
-  %125 = bitcast %"class.std::tuple"* %124 to i8*
-  call void @_ZdlPv(i8* %125) #8
+  %129 = bitcast %"class.std::tuple"* %128 to i8*
+  call void @_ZdlPv(i8* %129) #8
   br label %_ZNSt6vectorISt5tupleIJidiEESaIS1_EED2Ev.exit
 
-_ZNSt6vectorISt5tupleIJidiEESaIS1_EED2Ev.exit:    ; preds = %ehcleanup126, %if.then.i.i.i
+_ZNSt6vectorISt5tupleIJidiEESaIS1_EED2Ev.exit:    ; preds = %if.then.i.i.i, %ehcleanup126
   %lpad.val129 = insertvalue { i8*, i32 } undef, i8* %exn.slot.2, 0
   %lpad.val130 = insertvalue { i8*, i32 } %lpad.val129, i32 %ehselector.slot.2, 1
   resume { i8*, i32 } %lpad.val130
@@ -810,7 +873,7 @@ _ZNSt16allocator_traitsISaISt5tupleIJidiEEEE8allocateERS2_m.exit.i: ; preds = %e
 for.body.i.i.i.i82.preheader:                     ; preds = %_ZNSt16allocator_traitsISaISt5tupleIJidiEEEE8allocateERS2_m.exit.i
   br label %for.body.i.i.i.i82
 
-for.body.i.i.i.i82:                               ; preds = %for.body.i.i.i.i82.preheader, %for.body.i.i.i.i82
+for.body.i.i.i.i82:                               ; preds = %for.body.i.i.i.i82, %for.body.i.i.i.i82.preheader
   %__cur.023.i.i.i.i75 = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i80, %for.body.i.i.i.i82 ], [ %7, %for.body.i.i.i.i82.preheader ]
   %__first.sroa.0.022.i.i.i.i76 = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i.i79, %for.body.i.i.i.i82 ], [ %17, %for.body.i.i.i.i82.preheader ]
   %_M_head_impl.i.i.i.i.i.i.i.i.i.i.i77 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__first.sroa.0.022.i.i.i.i76, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
@@ -830,10 +893,14 @@ for.body.i.i.i.i82:                               ; preds = %for.body.i.i.i.i82.
   %incdec.ptr.i.i.i.i.i79 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__first.sroa.0.022.i.i.i.i76, i64 1
   %incdec.ptr.i.i.i.i80 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__cur.023.i.i.i.i75, i64 1
   %cmp.i.i.i.i.i.i81 = icmp eq %"class.std::tuple"* %incdec.ptr.i.i.i.i.i79, %__position.coerce
-  br i1 %cmp.i.i.i.i.i.i81, label %invoke.cont10, label %for.body.i.i.i.i82
+  br i1 %cmp.i.i.i.i.i.i81, label %invoke.cont10.loopexit, label %for.body.i.i.i.i82
 
-invoke.cont10:                                    ; preds = %for.body.i.i.i.i82, %_ZNSt16allocator_traitsISaISt5tupleIJidiEEEE8allocateERS2_m.exit.i
-  %__cur.0.lcssa.i.i.i.i83 = phi %"class.std::tuple"* [ %7, %_ZNSt16allocator_traitsISaISt5tupleIJidiEEEE8allocateERS2_m.exit.i ], [ %incdec.ptr.i.i.i.i80, %for.body.i.i.i.i82 ]
+invoke.cont10.loopexit:                           ; preds = %for.body.i.i.i.i82
+  %incdec.ptr.i.i.i.i80.lcssa = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i80, %for.body.i.i.i.i82 ]
+  br label %invoke.cont10
+
+invoke.cont10:                                    ; preds = %invoke.cont10.loopexit, %_ZNSt16allocator_traitsISaISt5tupleIJidiEEEE8allocateERS2_m.exit.i
+  %__cur.0.lcssa.i.i.i.i83 = phi %"class.std::tuple"* [ %7, %_ZNSt16allocator_traitsISaISt5tupleIJidiEEEE8allocateERS2_m.exit.i ], [ %incdec.ptr.i.i.i.i80.lcssa, %invoke.cont10.loopexit ]
   %incdec.ptr = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__cur.0.lcssa.i.i.i.i83, i64 1
   %27 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_finish.i20.i, align 8, !tbaa !12
   %cmp.i.i21.i.i.i.i = icmp eq %"class.std::tuple"* %27, %__position.coerce
@@ -842,7 +909,7 @@ invoke.cont10:                                    ; preds = %for.body.i.i.i.i82,
 for.body.i.i.i.i.preheader:                       ; preds = %invoke.cont10
   br label %for.body.i.i.i.i
 
-for.body.i.i.i.i:                                 ; preds = %for.body.i.i.i.i.preheader, %for.body.i.i.i.i
+for.body.i.i.i.i:                                 ; preds = %for.body.i.i.i.i, %for.body.i.i.i.i.preheader
   %__cur.023.i.i.i.i = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i, %for.body.i.i.i.i ], [ %incdec.ptr, %for.body.i.i.i.i.preheader ]
   %__first.sroa.0.022.i.i.i.i = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i.i, %for.body.i.i.i.i ], [ %__position.coerce, %for.body.i.i.i.i.preheader ]
   %_M_head_impl.i.i.i.i.i.i.i.i.i.i.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__first.sroa.0.022.i.i.i.i, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
@@ -862,10 +929,14 @@ for.body.i.i.i.i:                                 ; preds = %for.body.i.i.i.i.pr
   %incdec.ptr.i.i.i.i.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__first.sroa.0.022.i.i.i.i, i64 1
   %incdec.ptr.i.i.i.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__cur.023.i.i.i.i, i64 1
   %cmp.i.i.i.i.i.i = icmp eq %"class.std::tuple"* %incdec.ptr.i.i.i.i.i, %27
-  br i1 %cmp.i.i.i.i.i.i, label %invoke.cont15, label %for.body.i.i.i.i
+  br i1 %cmp.i.i.i.i.i.i, label %invoke.cont15.loopexit, label %for.body.i.i.i.i
 
-invoke.cont15:                                    ; preds = %for.body.i.i.i.i, %invoke.cont10
-  %__cur.0.lcssa.i.i.i.i = phi %"class.std::tuple"* [ %incdec.ptr, %invoke.cont10 ], [ %incdec.ptr.i.i.i.i, %for.body.i.i.i.i ]
+invoke.cont15.loopexit:                           ; preds = %for.body.i.i.i.i
+  %incdec.ptr.i.i.i.i.lcssa = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i, %for.body.i.i.i.i ]
+  br label %invoke.cont15
+
+invoke.cont15:                                    ; preds = %invoke.cont15.loopexit, %invoke.cont10
+  %__cur.0.lcssa.i.i.i.i = phi %"class.std::tuple"* [ %incdec.ptr, %invoke.cont10 ], [ %incdec.ptr.i.i.i.i.lcssa, %invoke.cont15.loopexit ]
   %_M_end_of_storage = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %this, i64 0, i32 0, i32 0, i32 2
   %tobool.i69 = icmp eq %"class.std::tuple"* %17, null
   br i1 %tobool.i69, label %_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit71, label %if.then.i70
@@ -875,7 +946,7 @@ if.then.i70:                                      ; preds = %invoke.cont15
   tail call void @_ZdlPv(i8* %37) #8
   br label %_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit71
 
-_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit71: ; preds = %invoke.cont15, %if.then.i70
+_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit71: ; preds = %if.then.i70, %invoke.cont15
   %38 = bitcast %"class.std::vector.0"* %this to i8**
   store i8* %call2.i.i.i, i8** %38, align 8, !tbaa !9
   store %"class.std::tuple"* %__cur.0.lcssa.i.i.i.i, %"class.std::tuple"** %_M_finish.i20.i, align 8, !tbaa !12
@@ -937,7 +1008,7 @@ invoke.cont:                                      ; preds = %_ZNSt16allocator_tr
 for.body.i.i.i.i82.preheader:                     ; preds = %invoke.cont
   br label %for.body.i.i.i.i82
 
-for.body.i.i.i.i82:                               ; preds = %for.body.i.i.i.i82.preheader, %for.body.i.i.i.i82
+for.body.i.i.i.i82:                               ; preds = %for.body.i.i.i.i82, %for.body.i.i.i.i82.preheader
   %__cur.023.i.i.i.i75 = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i80, %for.body.i.i.i.i82 ], [ %cond.i68, %for.body.i.i.i.i82.preheader ]
   %__first.sroa.0.022.i.i.i.i76 = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i.i79, %for.body.i.i.i.i82 ], [ %9, %for.body.i.i.i.i82.preheader ]
   %_M_head_impl.i.i.i.i.i.i.i.i.i.i.i77 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__first.sroa.0.022.i.i.i.i76, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
@@ -957,10 +1028,14 @@ for.body.i.i.i.i82:                               ; preds = %for.body.i.i.i.i82.
   %incdec.ptr.i.i.i.i.i79 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__first.sroa.0.022.i.i.i.i76, i64 1
   %incdec.ptr.i.i.i.i80 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__cur.023.i.i.i.i75, i64 1
   %cmp.i.i.i.i.i.i81 = icmp eq %"class.std::tuple"* %incdec.ptr.i.i.i.i.i79, %__position.coerce
-  br i1 %cmp.i.i.i.i.i.i81, label %invoke.cont10, label %for.body.i.i.i.i82
+  br i1 %cmp.i.i.i.i.i.i81, label %invoke.cont10.loopexit, label %for.body.i.i.i.i82
 
-invoke.cont10:                                    ; preds = %for.body.i.i.i.i82, %invoke.cont
-  %__cur.0.lcssa.i.i.i.i83 = phi %"class.std::tuple"* [ %cond.i68, %invoke.cont ], [ %incdec.ptr.i.i.i.i80, %for.body.i.i.i.i82 ]
+invoke.cont10.loopexit:                           ; preds = %for.body.i.i.i.i82
+  %incdec.ptr.i.i.i.i80.lcssa = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i80, %for.body.i.i.i.i82 ]
+  br label %invoke.cont10
+
+invoke.cont10:                                    ; preds = %invoke.cont10.loopexit, %invoke.cont
+  %__cur.0.lcssa.i.i.i.i83 = phi %"class.std::tuple"* [ %cond.i68, %invoke.cont ], [ %incdec.ptr.i.i.i.i80.lcssa, %invoke.cont10.loopexit ]
   %incdec.ptr = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__cur.0.lcssa.i.i.i.i83, i64 1
   %21 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_finish.i20.i, align 8, !tbaa !12
   %cmp.i.i21.i.i.i.i = icmp eq %"class.std::tuple"* %21, %__position.coerce
@@ -969,7 +1044,7 @@ invoke.cont10:                                    ; preds = %for.body.i.i.i.i82,
 for.body.i.i.i.i.preheader:                       ; preds = %invoke.cont10
   br label %for.body.i.i.i.i
 
-for.body.i.i.i.i:                                 ; preds = %for.body.i.i.i.i.preheader, %for.body.i.i.i.i
+for.body.i.i.i.i:                                 ; preds = %for.body.i.i.i.i, %for.body.i.i.i.i.preheader
   %__cur.023.i.i.i.i = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i, %for.body.i.i.i.i ], [ %incdec.ptr, %for.body.i.i.i.i.preheader ]
   %__first.sroa.0.022.i.i.i.i = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i.i, %for.body.i.i.i.i ], [ %__position.coerce, %for.body.i.i.i.i.preheader ]
   %_M_head_impl.i.i.i.i.i.i.i.i.i.i.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__first.sroa.0.022.i.i.i.i, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
@@ -989,10 +1064,14 @@ for.body.i.i.i.i:                                 ; preds = %for.body.i.i.i.i.pr
   %incdec.ptr.i.i.i.i.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__first.sroa.0.022.i.i.i.i, i64 1
   %incdec.ptr.i.i.i.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__cur.023.i.i.i.i, i64 1
   %cmp.i.i.i.i.i.i = icmp eq %"class.std::tuple"* %incdec.ptr.i.i.i.i.i, %21
-  br i1 %cmp.i.i.i.i.i.i, label %invoke.cont15, label %for.body.i.i.i.i
+  br i1 %cmp.i.i.i.i.i.i, label %invoke.cont15.loopexit, label %for.body.i.i.i.i
 
-invoke.cont15:                                    ; preds = %for.body.i.i.i.i, %invoke.cont10
-  %__cur.0.lcssa.i.i.i.i = phi %"class.std::tuple"* [ %incdec.ptr, %invoke.cont10 ], [ %incdec.ptr.i.i.i.i, %for.body.i.i.i.i ]
+invoke.cont15.loopexit:                           ; preds = %for.body.i.i.i.i
+  %incdec.ptr.i.i.i.i.lcssa = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i, %for.body.i.i.i.i ]
+  br label %invoke.cont15
+
+invoke.cont15:                                    ; preds = %invoke.cont15.loopexit, %invoke.cont10
+  %__cur.0.lcssa.i.i.i.i = phi %"class.std::tuple"* [ %incdec.ptr, %invoke.cont10 ], [ %incdec.ptr.i.i.i.i.lcssa, %invoke.cont15.loopexit ]
   %_M_end_of_storage = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %this, i64 0, i32 0, i32 0, i32 2
   %tobool.i69 = icmp eq %"class.std::tuple"* %9, null
   br i1 %tobool.i69, label %_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit71, label %if.then.i70
@@ -1002,7 +1081,7 @@ if.then.i70:                                      ; preds = %invoke.cont15
   tail call void @_ZdlPv(i8* %31) #8
   br label %_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit71
 
-_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit71: ; preds = %invoke.cont15, %if.then.i70
+_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit71: ; preds = %if.then.i70, %invoke.cont15
   store %"class.std::tuple"* %cond.i68, %"class.std::tuple"** %6, align 8, !tbaa !9
   store %"class.std::tuple"* %__cur.0.lcssa.i.i.i.i, %"class.std::tuple"** %_M_finish.i20.i, align 8, !tbaa !12
   %add.ptr39 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %cond.i68, i64 %cond.i
@@ -1013,30 +1092,30 @@ _ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit71: ; preds
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #1
 
-; CHECK-LABEL: define internal fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE_pfor.detach.ls(i64
-; CHECK: %[[SYNCREG:.+]] = tail call token @llvm.syncregion.start()
+; CHECK-LABEL: define internal fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach29.ls2(i64
+; CHECK: %[[SYNCREG:.+]] = call token @llvm.syncregion.start()
 ; CHECK: detach within %[[SYNCREG]], label %.split, label %{{.+}} unwind label %[[DUNWIND:.+]]
-; CHECK: {{^.split:}}
-; CHECK-NEXT: invoke fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE_pfor.detach.ls(i64
+; CHECK: {{^.split}}:
+; CHECK-NEXT: invoke fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach29.ls2(i64
 ; CHECK-NEXT: to label %[[INVOKECONT:.+]] unwind label %[[LSUNWIND:.+]]
 ; CHECK: [[DUNWIND]]:
 ; CHECK: sync within %[[SYNCREG]]
-; CHECK: {{^pfor.detach29.preheader.ls:}}
-; CHECK: invoke fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE_pfor.detach.ls_pfor.detach29.ls.ls(i64 0,
 ; CHECK: [[LSUNWIND]]:
 ; CHECK-NEXT: %[[LPADVAL:.+]] = landingpad [[LPADTYPE:.+]]
 ; CHECK-NEXT: catch {{.+}} null
 ; CHECK: invoke void @llvm.detached.rethrow
 ; CHECK: (token %[[SYNCREG]], [[LPADTYPE]] %[[LPADVAL]])
 
-; CHECK-LABEL: define internal fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE_pfor.detach.ls_pfor.detach29.ls.ls(i64
-; CHECK: %[[SYNCREG:.+]] = call token @llvm.syncregion.start()
+; CHECK-LABEL: define internal fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach.ls1(i64
+; CHECK: %[[SYNCREG:.+]] = tail call token @llvm.syncregion.start()
 ; CHECK: detach within %[[SYNCREG]], label %.split, label %{{.+}} unwind label %[[DUNWIND:.+]]
-; CHECK: {{^.split}}:
-; CHECK-NEXT: invoke fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE_pfor.detach.ls_pfor.detach29.ls.ls(i64
+; CHECK: {{^.split:}}
+; CHECK-NEXT: invoke fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach.ls1(i64
 ; CHECK-NEXT: to label %[[INVOKECONT:.+]] unwind label %[[LSUNWIND:.+]]
 ; CHECK: [[DUNWIND]]:
 ; CHECK: sync within %[[SYNCREG]]
+; CHECK: {{^pfor.detach29.preheader.ls1:}}
+; CHECK: invoke fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach29.ls2(i64 0,
 ; CHECK: [[LSUNWIND]]:
 ; CHECK-NEXT: %[[LPADVAL:.+]] = landingpad [[LPADTYPE:.+]]
 ; CHECK-NEXT: catch {{.+}} null

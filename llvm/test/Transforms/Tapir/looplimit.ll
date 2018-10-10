@@ -1,7 +1,8 @@
 ; Test that Tapir's loop spawning pass correctly transforms a loop
 ; that reads its original end iteration count.
 
-; RUN: opt < %s -loop-spawning -S | FileCheck %s
+; RUN: opt < %s -loop-spawning-ti -S | FileCheck %s
+; RUN: opt < %s -passes=loop-spawning -S | FileCheck %s
 
 source_filename = "looplimittest.c"
 
@@ -69,9 +70,9 @@ pfor.body:                                        ; preds = %pfor.detach
 
 pfor.inc:                                         ; preds = %pfor.body, %pfor.detach
 ; CHECK: {{^(; <label>:)?}}[[INC]]:
-; CHECK-NEXT: [[LOCALCMP:%[0-9]+]] = icmp ult {{.*}} [[LOCALITER:%[a-zA-Z0-9._]+]], [[END]]
+; CHECK-NEXT: add {{.*}} [[LOCALITER:%[a-zA-Z0-9._]+]], 1
+; CHECK-NEXT: [[LOCALCMP:%[a-zA-Z0-9._]+]] = icmp eq {{.*}} [[LOCALITER]], [[END]]
   %inc = add nuw nsw i32 %__begin.010, 1
-; CHECK-NEXT: add {{.*}} [[LOCALITER]], 1
   %exitcond = icmp eq i32 %__begin.010, %limit
 ; CHECK: br i1 [[LOCALCMP]]
   br i1 %exitcond, label %pfor.cond.cleanup, label %pfor.detach, !llvm.loop !2

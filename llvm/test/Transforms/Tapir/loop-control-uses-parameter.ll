@@ -50,7 +50,7 @@ pfor.detach.lr.ph:                                ; preds = %if.then
   br label %pfor.detach
 
 ; CHECK: pfor.detach.lr.ph:
-; CHECK: call fastcc void @_ZN4pbbs9transposeIjjE6transREmmmmmm_pfor.detach.ls1(
+; CHECK: call fastcc void @_ZN4pbbs9transposeIjjE6transREmmmmmm.outline_pfor.detach.ls1(
 ; CHECK: i64 %rStart
 ; CHECK: )
 
@@ -364,10 +364,10 @@ eh.resume:                                        ; preds = %lpad43, %lpad23
   resume { i8*, i32 } %lpad.val59
 }
 
-; CHECK: define internal fastcc void @_ZN4pbbs9transposeIjjE6transREmmmmmm_pfor.detach.ls1(
+; CHECK: define internal fastcc void @_ZN4pbbs9transposeIjjE6transREmmmmmm.outline_pfor.detach.ls1(
 ; CHECK: i64 %rStart.ls1
 ; CHECK: )
-; CHECK: call fastcc void @_ZN4pbbs9transposeIjjE6transREmmmmmm_pfor.detach.ls1(
+; CHECK: call fastcc void @_ZN4pbbs9transposeIjjE6transREmmmmmm.outline_pfor.detach.ls1(
 ; CHECK: i64 %rStart.ls1
 ; CHECK: )
 ; CHECK: pfor.inc.ls1:

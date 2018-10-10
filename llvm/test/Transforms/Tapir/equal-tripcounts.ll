@@ -1,4 +1,5 @@
 ; RUN: opt < %s -loop-spawning-ti -S | FileCheck %s
+; RUN: opt < %s -passes=loop-spawning -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -89,7 +90,7 @@ for.end:                                          ; preds = %for.end.unr-lcssa, 
   tail call void @cilk_fft(i32 %9, %struct.COMPLEX* nonnull %0, %struct.COMPLEX* %2)
   %conv4.i.i = sitofp i32 %9 to double
 ; CHECK: for.end:
-; CHECK: call fastcc void @test_correctness_pfor.detach.us.i.ls2(i64 0,
+; CHECK: call fastcc void @test_correctness.outline_pfor.detach.us.i.ls2(i64 0,
 ; CHECK: {{i64 %indvars.iv217|i64 %4}}
   br label %pfor.detach.us.i
 
@@ -241,7 +242,7 @@ for.end123:                                       ; preds = %for.inc121
   ret void
 }
 
-; CHECK: define internal fastcc void @test_correctness_pfor.detach.us.i.ls2(i64 %indvars.iv.i.start.ls2, i64 %end.ls2
+; CHECK: define internal fastcc void @test_correctness.outline_pfor.detach.us.i.ls2(i64 %indvars.iv.i.start.ls2, i64 %end.ls2
 ; CHECK: pfor.inc.us.i.ls2:
 ; CHECK: %exitcond.i.ls2 = icmp eq i64 %indvars.iv.next.i.ls2, %end.ls2
 

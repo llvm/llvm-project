@@ -4,7 +4,11 @@
 ; Credit to Tim Kaler for producing the source code that inspired this test
 ; case.
 ;
-; RUN: opt < %s -loop-spawning -simplifycfg -instcombine -S | FileCheck %s
+; RUN: opt < %s -loop-spawning-ti -simplifycfg -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes='loop-spawning,function(simplify-cfg,instcombine)' -S | FileCheck %s
+
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
 
 %"class.std::vector.0" = type { %"struct.std::_Vector_base.1" }
 %"struct.std::_Vector_base.1" = type { %"struct.std::_Vector_base<std::tuple<int, double, int>, std::allocator<std::tuple<int, double, int> > >::_Vector_impl" }
@@ -66,7 +70,7 @@ if.then.i.i:                                      ; preds = %_ZNSt6vectorISt5tup
   tail call void @_ZdlPv(i8* %8) #7
   br label %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE7reserveEm.exit
 
-_ZNSt6vectorISt5tupleIJidiEESaIS1_EE7reserveEm.exit: ; preds = %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE20_M_allocate_and_copyISt13move_iteratorIPS1_EEES6_mT_S8_.exit.i, %if.then.i.i
+_ZNSt6vectorISt5tupleIJidiEESaIS1_EE7reserveEm.exit: ; preds = %if.then.i.i, %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE20_M_allocate_and_copyISt13move_iteratorIPS1_EEES6_mT_S8_.exit.i
   %9 = bitcast %"class.std::vector.0"* %agg.result to i8**
   store i8* %call2.i.i.i.i.i, i8** %9, align 8, !tbaa !9
   %10 = bitcast %"class.std::tuple"** %_M_finish.i.i to i8**
@@ -100,7 +104,7 @@ for.body.lr.ph.i.i.i.i.i130:                      ; preds = %cond.true.i.i.i.i
   tail call void @llvm.memset.p0i8.i64(i8* nonnull %call2.i.i.i.i.i.i, i8 0, i64 %mul.i.i.i.i.i.i, i32 8, i1 false) #7
   br label %_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EEC2EmRKS4_.exit
 
-_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EEC2EmRKS4_.exit: ; preds = %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE7reserveEm.exit, %for.body.lr.ph.i.i.i.i.i130
+_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EEC2EmRKS4_.exit: ; preds = %for.body.lr.ph.i.i.i.i.i130, %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE7reserveEm.exit
   %13 = phi i64 [ %12, %for.body.lr.ph.i.i.i.i.i130 ], [ 0, %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE7reserveEm.exit ]
   %14 = phi i8* [ %call2.i.i.i.i.i.i, %for.body.lr.ph.i.i.i.i.i130 ], [ null, %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE7reserveEm.exit ]
   %cond.i.i.i.i212 = phi %"class.std::vector.0"* [ %11, %for.body.lr.ph.i.i.i.i.i130 ], [ null, %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE7reserveEm.exit ]
@@ -121,17 +125,20 @@ pfor.detach.lr.ph:                                ; preds = %_ZNSt6vectorIS_ISt5
   %wide.trip.count = zext i32 %trials to i64
   br label %pfor.detach
 ; CHECK: {{^pfor.detach.lr.ph:}}
-; CHECK: call fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE_pfor.detach.ls(i64 0,
+; CHECK: call fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach.ls1(i64 0,
 
-pfor.cond.cleanup:                                ; preds = %pfor.inc51, %if.end.i, %_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EEC2EmRKS4_.exit
-  %17 = phi i64 [ %15, %_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EEC2EmRKS4_.exit ], [ 0, %if.end.i ], [ %15, %pfor.inc51 ]
-  %__cur.0.lcssa.i.i.i.i.i261 = phi %"class.std::vector.0"* [ %__cur.0.lcssa.i.i.i.i.i, %_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EEC2EmRKS4_.exit ], [ null, %if.end.i ], [ %__cur.0.lcssa.i.i.i.i.i, %pfor.inc51 ]
-  %cond.i.i.i.i212259 = phi %"class.std::vector.0"* [ %cond.i.i.i.i212, %_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EEC2EmRKS4_.exit ], [ null, %if.end.i ], [ %cond.i.i.i.i212, %pfor.inc51 ]
-  %18 = phi i8* [ %14, %_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EEC2EmRKS4_.exit ], [ null, %if.end.i ], [ %14, %pfor.inc51 ]
-  %19 = phi i64 [ %13, %_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EEC2EmRKS4_.exit ], [ 0, %if.end.i ], [ %13, %pfor.inc51 ]
+pfor.cond.cleanup.loopexit:                       ; preds = %pfor.inc51
+  br label %pfor.cond.cleanup
+
+pfor.cond.cleanup:                                ; preds = %pfor.cond.cleanup.loopexit, %_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EEC2EmRKS4_.exit, %if.end.i
+  %17 = phi i64 [ %15, %_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EEC2EmRKS4_.exit ], [ 0, %if.end.i ], [ %15, %pfor.cond.cleanup.loopexit ]
+  %__cur.0.lcssa.i.i.i.i.i261 = phi %"class.std::vector.0"* [ %__cur.0.lcssa.i.i.i.i.i, %_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EEC2EmRKS4_.exit ], [ null, %if.end.i ], [ %__cur.0.lcssa.i.i.i.i.i, %pfor.cond.cleanup.loopexit ]
+  %cond.i.i.i.i212259 = phi %"class.std::vector.0"* [ %cond.i.i.i.i212, %_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EEC2EmRKS4_.exit ], [ null, %if.end.i ], [ %cond.i.i.i.i212, %pfor.cond.cleanup.loopexit ]
+  %18 = phi i8* [ %14, %_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EEC2EmRKS4_.exit ], [ null, %if.end.i ], [ %14, %pfor.cond.cleanup.loopexit ]
+  %19 = phi i64 [ %13, %_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EEC2EmRKS4_.exit ], [ 0, %if.end.i ], [ %13, %pfor.cond.cleanup.loopexit ]
   sync within %syncreg, label %sync.continue53
 
-pfor.detach:                                      ; preds = %pfor.detach.lr.ph, %pfor.inc51
+pfor.detach:                                      ; preds = %pfor.inc51, %pfor.detach.lr.ph
   %indvars.iv246 = phi i64 [ 0, %pfor.detach.lr.ph ], [ %indvars.iv.next247, %pfor.inc51 ]
   detach within %syncreg, label %pfor.body, label %pfor.inc51
 
@@ -169,7 +176,7 @@ for.body.lr.ph.i.i.i.i.i.i.i164:                  ; preds = %cond.true.i.i.i.i13
   call void @llvm.memset.p0i8.i64(i8* nonnull %call2.i.i.i.i.i.i156, i8 0, i64 %mul.i.i.i.i.i.i135, i32 4, i1 false) #7
   br label %_ZNSt6vectorIiSaIiEEC2EmRKS0_.exit166
 
-_ZNSt6vectorIiSaIiEEC2EmRKS0_.exit166:            ; preds = %_ZNSt12_Vector_baseIiSaIiEEC2EmRKS0_.exit.i163.thread, %for.body.lr.ph.i.i.i.i.i.i.i164
+_ZNSt6vectorIiSaIiEEC2EmRKS0_.exit166:            ; preds = %for.body.lr.ph.i.i.i.i.i.i.i164, %_ZNSt12_Vector_baseIiSaIiEEC2EmRKS0_.exit.i163.thread
   %23 = phi i64 [ %22, %for.body.lr.ph.i.i.i.i.i.i.i164 ], [ 0, %_ZNSt12_Vector_baseIiSaIiEEC2EmRKS0_.exit.i163.thread ]
   %24 = phi i8* [ %call2.i.i.i.i.i.i156, %for.body.lr.ph.i.i.i.i.i.i.i164 ], [ null, %_ZNSt12_Vector_baseIiSaIiEEC2EmRKS0_.exit.i163.thread ]
   %cond.i.i.i.i158222 = phi i32* [ %21, %for.body.lr.ph.i.i.i.i.i.i.i164 ], [ null, %_ZNSt12_Vector_baseIiSaIiEEC2EmRKS0_.exit.i163.thread ]
@@ -183,10 +190,13 @@ _ZNSt6vectorIiSaIiEEC2EmRKS0_.exit166:            ; preds = %_ZNSt12_Vector_base
 pfor.detach21.preheader:                          ; preds = %_ZNSt6vectorIiSaIiEEC2EmRKS0_.exit166
   br label %pfor.detach21
 
-pfor.cond.cleanup20:                              ; preds = %pfor.inc, %_ZNSt6vectorIiSaIiEEC2EmRKS0_.exit166
+pfor.cond.cleanup20.loopexit:                     ; preds = %pfor.inc
+  br label %pfor.cond.cleanup20
+
+pfor.cond.cleanup20:                              ; preds = %pfor.cond.cleanup20.loopexit, %_ZNSt6vectorIiSaIiEEC2EmRKS0_.exit166
   sync within %syncreg10, label %sync.continue
 
-pfor.detach21:                                    ; preds = %pfor.detach21.preheader, %pfor.inc
+pfor.detach21:                                    ; preds = %pfor.inc, %pfor.detach21.preheader
   %indvars.iv242 = phi i64 [ %indvars.iv.next243, %pfor.inc ], [ 0, %pfor.detach21.preheader ]
   detach within %syncreg10, label %pfor.body25, label %pfor.inc
 
@@ -203,7 +213,7 @@ pfor.body25:                                      ; preds = %pfor.detach21
 pfor.inc:                                         ; preds = %pfor.body25, %pfor.detach21
   %indvars.iv.next243 = add nuw nsw i64 %indvars.iv242, 1
   %exitcond = icmp eq i64 %indvars.iv.next243, %wide.trip.count
-  br i1 %exitcond, label %pfor.cond.cleanup20, label %pfor.detach21, !llvm.loop !16
+  br i1 %exitcond, label %pfor.cond.cleanup20.loopexit, label %pfor.detach21, !llvm.loop !16
 
 sync.continue:                                    ; preds = %pfor.cond.cleanup20
   %sub.ptr.sub.i179 = sub i64 %26, %23
@@ -279,18 +289,26 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index.next.1 = add i64 %index, 16
   %niter.nsub.1 = add i64 %niter, -2
   %niter.ncmp.1 = icmp eq i64 %niter.nsub.1, 0
-  br i1 %niter.ncmp.1, label %middle.block.unr-lcssa, label %vector.body, !llvm.loop !18
+  br i1 %niter.ncmp.1, label %middle.block.unr-lcssa.loopexit, label %vector.body, !llvm.loop !18
 
-middle.block.unr-lcssa:                           ; preds = %vector.body, %vector.ph
-  %.lcssa280.ph = phi <4 x i32> [ undef, %vector.ph ], [ %49, %vector.body ]
-  %.lcssa279.ph = phi <4 x i32> [ undef, %vector.ph ], [ %50, %vector.body ]
-  %.lcssa278.ph = phi <4 x i32> [ undef, %vector.ph ], [ %55, %vector.body ]
-  %.lcssa.ph = phi <4 x i32> [ undef, %vector.ph ], [ %56, %vector.body ]
-  %index.unr = phi i64 [ 0, %vector.ph ], [ %index.next.1, %vector.body ]
-  %vec.phi.unr = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %49, %vector.body ]
-  %vec.phi263.unr = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %50, %vector.body ]
-  %vec.phi264.unr = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %55, %vector.body ]
-  %vec.phi265.unr = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %56, %vector.body ]
+middle.block.unr-lcssa.loopexit:                  ; preds = %vector.body
+  %.lcssa4 = phi <4 x i32> [ %49, %vector.body ]
+  %.lcssa3 = phi <4 x i32> [ %50, %vector.body ]
+  %.lcssa2 = phi <4 x i32> [ %55, %vector.body ]
+  %.lcssa1 = phi <4 x i32> [ %56, %vector.body ]
+  %index.next.1.lcssa = phi i64 [ %index.next.1, %vector.body ]
+  br label %middle.block.unr-lcssa
+
+middle.block.unr-lcssa:                           ; preds = %middle.block.unr-lcssa.loopexit, %vector.ph
+  %.lcssa280.ph = phi <4 x i32> [ undef, %vector.ph ], [ %.lcssa4, %middle.block.unr-lcssa.loopexit ]
+  %.lcssa279.ph = phi <4 x i32> [ undef, %vector.ph ], [ %.lcssa3, %middle.block.unr-lcssa.loopexit ]
+  %.lcssa278.ph = phi <4 x i32> [ undef, %vector.ph ], [ %.lcssa2, %middle.block.unr-lcssa.loopexit ]
+  %.lcssa.ph = phi <4 x i32> [ undef, %vector.ph ], [ %.lcssa1, %middle.block.unr-lcssa.loopexit ]
+  %index.unr = phi i64 [ 0, %vector.ph ], [ %index.next.1.lcssa, %middle.block.unr-lcssa.loopexit ]
+  %vec.phi.unr = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %.lcssa4, %middle.block.unr-lcssa.loopexit ]
+  %vec.phi263.unr = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %.lcssa3, %middle.block.unr-lcssa.loopexit ]
+  %vec.phi264.unr = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %.lcssa2, %middle.block.unr-lcssa.loopexit ]
+  %vec.phi265.unr = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %.lcssa1, %middle.block.unr-lcssa.loopexit ]
   %lcmp.mod = icmp eq i64 %xtraiter, 0
   br i1 %lcmp.mod, label %middle.block, label %vector.body.epil
 
@@ -313,7 +331,7 @@ vector.body.epil:                                 ; preds = %middle.block.unr-lc
   %68 = add nsw <4 x i32> %wide.load.epil, %vec.phi.unr
   br label %middle.block
 
-middle.block:                                     ; preds = %middle.block.unr-lcssa, %vector.body.epil
+middle.block:                                     ; preds = %vector.body.epil, %middle.block.unr-lcssa
   %.lcssa280 = phi <4 x i32> [ %.lcssa280.ph, %middle.block.unr-lcssa ], [ %68, %vector.body.epil ]
   %.lcssa279 = phi <4 x i32> [ %.lcssa279.ph, %middle.block.unr-lcssa ], [ %66, %vector.body.epil ]
   %.lcssa278 = phi <4 x i32> [ %.lcssa278.ph, %middle.block.unr-lcssa ], [ %63, %vector.body.epil ]
@@ -333,9 +351,14 @@ middle.block:                                     ; preds = %middle.block.unr-lc
   %cmp.n = icmp eq i64 %umax, %n.vec
   br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader
 
-for.cond.cleanup:                                 ; preds = %for.body, %middle.block, %sync.continue
-  %valid_moves.0.lcssa = phi i32 [ 0, %sync.continue ], [ %69, %middle.block ], [ %add41, %for.body ]
-  %matches_count.0.lcssa = phi i32 [ 0, %sync.continue ], [ %70, %middle.block ], [ %add38, %for.body ]
+for.cond.cleanup.loopexit:                        ; preds = %for.body
+  %add38.lcssa = phi i32 [ %add38, %for.body ]
+  %add41.lcssa = phi i32 [ %add41, %for.body ]
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %middle.block, %sync.continue
+  %valid_moves.0.lcssa = phi i32 [ 0, %sync.continue ], [ %69, %middle.block ], [ %add41.lcssa, %for.cond.cleanup.loopexit ]
+  %matches_count.0.lcssa = phi i32 [ 0, %sync.continue ], [ %70, %middle.block ], [ %add38.lcssa, %for.cond.cleanup.loopexit ]
   %call43 = call i64 @clock() #7
   %sub44 = sub nsw i64 %call43, %call5
   %conv45 = sitofp i64 %sub44 to double
@@ -372,7 +395,7 @@ if.else.i.i:                                      ; preds = %for.cond.cleanup
   call void @_ZNSt6vectorISt5tupleIJidiEESaIS1_EE17_M_realloc_insertIJS1_EEEvN9__gnu_cxx17__normal_iteratorIPS1_S3_EEDpOT_(%"class.std::vector.0"* nonnull %add.ptr.i182, %"class.std::tuple"* %74, %"class.std::tuple"* nonnull dereferenceable(24) %ref.tmp49) #7
   br label %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE9push_backEOS1_.exit
 
-_ZNSt6vectorISt5tupleIJidiEESaIS1_EE9push_backEOS1_.exit: ; preds = %if.then.i.i177, %if.else.i.i
+_ZNSt6vectorISt5tupleIJidiEESaIS1_EE9push_backEOS1_.exit: ; preds = %if.else.i.i, %if.then.i.i177
   call void @llvm.lifetime.end.p0i8(i64 24, i8* nonnull %71) #7
   %tobool.i.i.i170 = icmp eq i32* %cond.i.i.i.i158222, null
   br i1 %tobool.i.i.i170, label %_ZNSt6vectorIiSaIiEED2Ev.exit172, label %if.then.i.i.i171
@@ -381,7 +404,7 @@ if.then.i.i.i171:                                 ; preds = %_ZNSt6vectorISt5tup
   call void @_ZdlPv(i8* %24) #7
   br label %_ZNSt6vectorIiSaIiEED2Ev.exit172
 
-_ZNSt6vectorIiSaIiEED2Ev.exit172:                 ; preds = %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE9push_backEOS1_.exit, %if.then.i.i.i171
+_ZNSt6vectorIiSaIiEED2Ev.exit172:                 ; preds = %if.then.i.i.i171, %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE9push_backEOS1_.exit
   call void @llvm.lifetime.end.p0i8(i64 8, i8* %worker_matches_count.sroa.11.0..sroa_cast189218220)
   %tobool.i.i.i149 = icmp eq i32* %cond.i.i.i.i137214217221, null
   br i1 %tobool.i.i.i149, label %_ZNSt6vectorIiSaIiEED2Ev.exit, label %if.then.i.i.i150
@@ -390,10 +413,10 @@ if.then.i.i.i150:                                 ; preds = %_ZNSt6vectorIiSaIiE
   call void @_ZdlPv(i8* %25) #7
   br label %_ZNSt6vectorIiSaIiEED2Ev.exit
 
-_ZNSt6vectorIiSaIiEED2Ev.exit:                    ; preds = %_ZNSt6vectorIiSaIiEED2Ev.exit172, %if.then.i.i.i150
+_ZNSt6vectorIiSaIiEED2Ev.exit:                    ; preds = %if.then.i.i.i150, %_ZNSt6vectorIiSaIiEED2Ev.exit172
   reattach within %syncreg, label %pfor.inc51
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:                                         ; preds = %for.body, %for.body.preheader
   %indvars.iv244 = phi i64 [ %indvars.iv.next245, %for.body ], [ %indvars.iv244.ph, %for.body.preheader ]
   %matches_count.0234 = phi i32 [ %add38, %for.body ], [ %matches_count.0234.ph, %for.body.preheader ]
   %valid_moves.0233 = phi i32 [ %add41, %for.body ], [ %valid_moves.0233.ph, %for.body.preheader ]
@@ -405,12 +428,12 @@ for.body:                                         ; preds = %for.body.preheader,
   %add41 = add nsw i32 %80, %valid_moves.0233
   %indvars.iv.next245 = add nuw i64 %indvars.iv244, 1
   %cmp35 = icmp ugt i64 %sub.ptr.div.i180, %indvars.iv.next245
-  br i1 %cmp35, label %for.body, label %for.cond.cleanup, !llvm.loop !30
+  br i1 %cmp35, label %for.body, label %for.cond.cleanup.loopexit, !llvm.loop !30
 
 pfor.inc51:                                       ; preds = %_ZNSt6vectorIiSaIiEED2Ev.exit, %pfor.detach
   %indvars.iv.next247 = add nuw nsw i64 %indvars.iv246, 1
-  %cmp = icmp slt i64 %indvars.iv.next247, %16
-  br i1 %cmp, label %pfor.detach, label %pfor.cond.cleanup, !llvm.loop !32
+  %exitcond5 = icmp ne i64 %indvars.iv.next247, %16
+  br i1 %exitcond5, label %pfor.detach, label %pfor.cond.cleanup.loopexit, !llvm.loop !32
 
 sync.continue53:                                  ; preds = %pfor.cond.cleanup
   %sub.ptr.sub.i143 = sub i64 %17, %19
@@ -422,14 +445,17 @@ for.body61.lr.ph:                                 ; preds = %sync.continue53
   %_M_finish.i = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %agg.result, i64 0, i32 0, i32 0, i32 1
   br label %for.body61
 
-for.cond.cleanup60:                               ; preds = %for.cond.cleanup68, %sync.continue53
+for.cond.cleanup60.loopexit:                      ; preds = %for.cond.cleanup68
+  br label %for.cond.cleanup60
+
+for.cond.cleanup60:                               ; preds = %for.cond.cleanup60.loopexit, %sync.continue53
   %cmp3.i.i.i.i = icmp eq %"class.std::vector.0"* %cond.i.i.i.i212259, %__cur.0.lcssa.i.i.i.i.i261
   br i1 %cmp3.i.i.i.i, label %_ZSt8_DestroyIPSt6vectorISt5tupleIJidiEESaIS2_EES4_EvT_S6_RSaIT0_E.exit.i, label %for.body.i.i.i.i.preheader
 
 for.body.i.i.i.i.preheader:                       ; preds = %for.cond.cleanup60
   br label %for.body.i.i.i.i
 
-for.body.i.i.i.i:                                 ; preds = %for.body.i.i.i.i.preheader, %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i
+for.body.i.i.i.i:                                 ; preds = %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i, %for.body.i.i.i.i.preheader
   %__first.addr.04.i.i.i.i = phi %"class.std::vector.0"* [ %incdec.ptr.i.i.i.i, %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i ], [ %cond.i.i.i.i212259, %for.body.i.i.i.i.preheader ]
   %_M_start.i.i.i.i.i.i.i = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %__first.addr.04.i.i.i.i, i64 0, i32 0, i32 0, i32 0
   %82 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_start.i.i.i.i.i.i.i, align 8, !tbaa !9
@@ -444,9 +470,12 @@ if.then.i.i.i.i.i.i.i.i:                          ; preds = %for.body.i.i.i.i
 _ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i: ; preds = %if.then.i.i.i.i.i.i.i.i, %for.body.i.i.i.i
   %incdec.ptr.i.i.i.i = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %__first.addr.04.i.i.i.i, i64 1
   %cmp.i.i.i.i = icmp eq %"class.std::vector.0"* %incdec.ptr.i.i.i.i, %__cur.0.lcssa.i.i.i.i.i261
-  br i1 %cmp.i.i.i.i, label %_ZSt8_DestroyIPSt6vectorISt5tupleIJidiEESaIS2_EES4_EvT_S6_RSaIT0_E.exit.i, label %for.body.i.i.i.i
+  br i1 %cmp.i.i.i.i, label %_ZSt8_DestroyIPSt6vectorISt5tupleIJidiEESaIS2_EES4_EvT_S6_RSaIT0_E.exit.i.loopexit, label %for.body.i.i.i.i
 
-_ZSt8_DestroyIPSt6vectorISt5tupleIJidiEESaIS2_EES4_EvT_S6_RSaIT0_E.exit.i: ; preds = %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i, %for.cond.cleanup60
+_ZSt8_DestroyIPSt6vectorISt5tupleIJidiEESaIS2_EES4_EvT_S6_RSaIT0_E.exit.i.loopexit: ; preds = %_ZSt8_DestroyISt6vectorISt5tupleIJidiEESaIS2_EEEvPT_.exit.i.i.i.i
+  br label %_ZSt8_DestroyIPSt6vectorISt5tupleIJidiEESaIS2_EES4_EvT_S6_RSaIT0_E.exit.i
+
+_ZSt8_DestroyIPSt6vectorISt5tupleIJidiEESaIS2_EES4_EvT_S6_RSaIT0_E.exit.i: ; preds = %_ZSt8_DestroyIPSt6vectorISt5tupleIJidiEESaIS2_EES4_EvT_S6_RSaIT0_E.exit.i.loopexit, %for.cond.cleanup60
   %tobool.i.i.i = icmp eq %"class.std::vector.0"* %cond.i.i.i.i212259, null
   br i1 %tobool.i.i.i, label %_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EED2Ev.exit, label %if.then.i.i.i
 
@@ -454,10 +483,10 @@ if.then.i.i.i:                                    ; preds = %_ZSt8_DestroyIPSt6v
   call void @_ZdlPv(i8* %18) #7
   br label %_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EED2Ev.exit
 
-_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EED2Ev.exit: ; preds = %_ZSt8_DestroyIPSt6vectorISt5tupleIJidiEESaIS2_EES4_EvT_S6_RSaIT0_E.exit.i, %if.then.i.i.i
+_ZNSt6vectorIS_ISt5tupleIJidiEESaIS1_EESaIS3_EED2Ev.exit: ; preds = %if.then.i.i.i, %_ZSt8_DestroyIPSt6vectorISt5tupleIJidiEESaIS2_EES4_EvT_S6_RSaIT0_E.exit.i
   ret void
 
-for.body61:                                       ; preds = %for.body61.lr.ph, %for.cond.cleanup68
+for.body61:                                       ; preds = %for.cond.cleanup68, %for.body61.lr.ph
   %indvars.iv240 = phi i64 [ 0, %for.body61.lr.ph ], [ %indvars.iv.next241, %for.cond.cleanup68 ]
   %add.ptr.i119 = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %cond.i.i.i.i212259, i64 %indvars.iv240
   %_M_finish.i115 = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %cond.i.i.i.i212259, i64 %indvars.iv240, i32 0, i32 0, i32 1
@@ -471,12 +500,15 @@ for.body61:                                       ; preds = %for.body61.lr.ph, %
 for.body69.preheader:                             ; preds = %for.body61
   br label %for.body69
 
-for.cond.cleanup68:                               ; preds = %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE9push_backERKS1_.exit, %for.body61
+for.cond.cleanup68.loopexit:                      ; preds = %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE9push_backERKS1_.exit
+  br label %for.cond.cleanup68
+
+for.cond.cleanup68:                               ; preds = %for.cond.cleanup68.loopexit, %for.body61
   %indvars.iv.next241 = add nuw i64 %indvars.iv240, 1
   %cmp59 = icmp ugt i64 %sub.ptr.div.i144, %indvars.iv.next241
-  br i1 %cmp59, label %for.body61, label %for.cond.cleanup60
+  br i1 %cmp59, label %for.body61, label %for.cond.cleanup60.loopexit
 
-for.body69:                                       ; preds = %for.body69.preheader, %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE9push_backERKS1_.exit
+for.body69:                                       ; preds = %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE9push_backERKS1_.exit, %for.body69.preheader
   %.in = phi i64 [ %96, %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE9push_backERKS1_.exit ], [ %87, %for.body69.preheader ]
   %indvars.iv = phi i64 [ %indvars.iv.next, %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE9push_backERKS1_.exit ], [ 0, %for.body69.preheader ]
   %89 = inttoptr i64 %.in to %"class.std::tuple"*
@@ -499,14 +531,14 @@ if.else.i:                                        ; preds = %for.body69
   call void @_ZNSt6vectorISt5tupleIJidiEESaIS1_EE17_M_realloc_insertIJRKS1_EEEvN9__gnu_cxx17__normal_iteratorIPS1_S3_EEDpOT_(%"class.std::vector.0"* nonnull %agg.result, %"class.std::tuple"* %90, %"class.std::tuple"* nonnull dereferenceable(24) %add.ptr.i) #7
   br label %_ZNSt6vectorISt5tupleIJidiEESaIS1_EE9push_backERKS1_.exit
 
-_ZNSt6vectorISt5tupleIJidiEESaIS1_EE9push_backERKS1_.exit: ; preds = %if.then.i, %if.else.i
+_ZNSt6vectorISt5tupleIJidiEESaIS1_EE9push_backERKS1_.exit: ; preds = %if.else.i, %if.then.i
   %indvars.iv.next = add nuw i64 %indvars.iv, 1
   %95 = load i64, i64* %84, align 8, !tbaa !12
   %96 = load i64, i64* %86, align 8, !tbaa !9
   %sub.ptr.sub.i116 = sub i64 %95, %96
   %sub.ptr.div.i117 = sdiv exact i64 %sub.ptr.sub.i116, 24
   %cmp67 = icmp ugt i64 %sub.ptr.div.i117, %indvars.iv.next
-  br i1 %cmp67, label %for.body69, label %for.cond.cleanup68
+  br i1 %cmp67, label %for.body69, label %for.cond.cleanup68.loopexit
 }
 
 ; Function Attrs: argmemonly nounwind
@@ -593,7 +625,7 @@ _ZNSt16allocator_traitsISaISt5tupleIJidiEEEE8allocateERS2_m.exit.i: ; preds = %e
 for.body.i.i.i.i53.preheader:                     ; preds = %_ZNSt16allocator_traitsISaISt5tupleIJidiEEEE8allocateERS2_m.exit.i
   br label %for.body.i.i.i.i53
 
-for.body.i.i.i.i53:                               ; preds = %for.body.i.i.i.i53.preheader, %for.body.i.i.i.i53
+for.body.i.i.i.i53:                               ; preds = %for.body.i.i.i.i53, %for.body.i.i.i.i53.preheader
   %__cur.012.i.i.i.i46 = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i51, %for.body.i.i.i.i53 ], [ %7, %for.body.i.i.i.i53.preheader ]
   %__first.sroa.0.011.i.i.i.i47 = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i.i50, %for.body.i.i.i.i53 ], [ %17, %for.body.i.i.i.i53.preheader ]
   %_M_head_impl.i.i.i.i.i.i.i.i.i.i.i48 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__first.sroa.0.011.i.i.i.i47, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
@@ -613,10 +645,14 @@ for.body.i.i.i.i53:                               ; preds = %for.body.i.i.i.i53.
   %incdec.ptr.i.i.i.i.i50 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__first.sroa.0.011.i.i.i.i47, i64 1
   %incdec.ptr.i.i.i.i51 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__cur.012.i.i.i.i46, i64 1
   %cmp.i.i.i.i.i.i52 = icmp eq %"class.std::tuple"* %incdec.ptr.i.i.i.i.i50, %__position.coerce
-  br i1 %cmp.i.i.i.i.i.i52, label %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55, label %for.body.i.i.i.i53
+  br i1 %cmp.i.i.i.i.i.i52, label %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55.loopexit, label %for.body.i.i.i.i53
 
-_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55: ; preds = %for.body.i.i.i.i53, %_ZNSt16allocator_traitsISaISt5tupleIJidiEEEE8allocateERS2_m.exit.i
-  %__cur.0.lcssa.i.i.i.i54 = phi %"class.std::tuple"* [ %7, %_ZNSt16allocator_traitsISaISt5tupleIJidiEEEE8allocateERS2_m.exit.i ], [ %incdec.ptr.i.i.i.i51, %for.body.i.i.i.i53 ]
+_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55.loopexit: ; preds = %for.body.i.i.i.i53
+  %incdec.ptr.i.i.i.i51.lcssa = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i51, %for.body.i.i.i.i53 ]
+  br label %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55
+
+_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55: ; preds = %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55.loopexit, %_ZNSt16allocator_traitsISaISt5tupleIJidiEEEE8allocateERS2_m.exit.i
+  %__cur.0.lcssa.i.i.i.i54 = phi %"class.std::tuple"* [ %7, %_ZNSt16allocator_traitsISaISt5tupleIJidiEEEE8allocateERS2_m.exit.i ], [ %incdec.ptr.i.i.i.i51.lcssa, %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55.loopexit ]
   %incdec.ptr = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__cur.0.lcssa.i.i.i.i54, i64 1
   %27 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_finish.i20.i, align 8, !tbaa !12
   %cmp.i.i10.i.i.i.i = icmp eq %"class.std::tuple"* %27, %__position.coerce
@@ -625,7 +661,7 @@ _ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_R
 for.body.i.i.i.i.preheader:                       ; preds = %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55
   br label %for.body.i.i.i.i
 
-for.body.i.i.i.i:                                 ; preds = %for.body.i.i.i.i.preheader, %for.body.i.i.i.i
+for.body.i.i.i.i:                                 ; preds = %for.body.i.i.i.i, %for.body.i.i.i.i.preheader
   %__cur.012.i.i.i.i = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i, %for.body.i.i.i.i ], [ %incdec.ptr, %for.body.i.i.i.i.preheader ]
   %__first.sroa.0.011.i.i.i.i = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i.i, %for.body.i.i.i.i ], [ %__position.coerce, %for.body.i.i.i.i.preheader ]
   %_M_head_impl.i.i.i.i.i.i.i.i.i.i.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__first.sroa.0.011.i.i.i.i, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
@@ -645,10 +681,14 @@ for.body.i.i.i.i:                                 ; preds = %for.body.i.i.i.i.pr
   %incdec.ptr.i.i.i.i.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__first.sroa.0.011.i.i.i.i, i64 1
   %incdec.ptr.i.i.i.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__cur.012.i.i.i.i, i64 1
   %cmp.i.i.i.i.i.i = icmp eq %"class.std::tuple"* %incdec.ptr.i.i.i.i.i, %27
-  br i1 %cmp.i.i.i.i.i.i, label %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit, label %for.body.i.i.i.i
+  br i1 %cmp.i.i.i.i.i.i, label %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit.loopexit, label %for.body.i.i.i.i
 
-_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit: ; preds = %for.body.i.i.i.i, %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55
-  %__cur.0.lcssa.i.i.i.i = phi %"class.std::tuple"* [ %incdec.ptr, %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55 ], [ %incdec.ptr.i.i.i.i, %for.body.i.i.i.i ]
+_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit.loopexit: ; preds = %for.body.i.i.i.i
+  %incdec.ptr.i.i.i.i.lcssa = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i, %for.body.i.i.i.i ]
+  br label %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit
+
+_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit: ; preds = %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit.loopexit, %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55
+  %__cur.0.lcssa.i.i.i.i = phi %"class.std::tuple"* [ %incdec.ptr, %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55 ], [ %incdec.ptr.i.i.i.i.lcssa, %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit.loopexit ]
   %_M_end_of_storage = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %this, i64 0, i32 0, i32 0, i32 2
   %tobool.i = icmp eq %"class.std::tuple"* %17, null
   br i1 %tobool.i, label %_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit, label %if.then.i43
@@ -658,7 +698,7 @@ if.then.i43:                                      ; preds = %_ZSt34__uninitializ
   tail call void @_ZdlPv(i8* %37) #7
   br label %_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit
 
-_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit: ; preds = %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit, %if.then.i43
+_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit: ; preds = %if.then.i43, %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit
   %38 = bitcast %"class.std::vector.0"* %this to i8**
   store i8* %call2.i.i.i, i8** %38, align 8, !tbaa !9
   store %"class.std::tuple"* %__cur.0.lcssa.i.i.i.i, %"class.std::tuple"** %_M_finish.i20.i, align 8, !tbaa !12
@@ -707,7 +747,7 @@ _ZNSt16allocator_traitsISaISt5tupleIJidiEEEE8allocateERS2_m.exit.i: ; preds = %c
   %.pre = load %"class.std::tuple"*, %"class.std::tuple"** %6, align 8, !tbaa !9
   br label %_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE11_M_allocateEm.exit
 
-_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE11_M_allocateEm.exit: ; preds = %entry, %_ZNSt16allocator_traitsISaISt5tupleIJidiEEEE8allocateERS2_m.exit.i
+_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE11_M_allocateEm.exit: ; preds = %_ZNSt16allocator_traitsISaISt5tupleIJidiEEEE8allocateERS2_m.exit.i, %entry
   %9 = phi %"class.std::tuple"* [ %.pre, %_ZNSt16allocator_traitsISaISt5tupleIJidiEEEE8allocateERS2_m.exit.i ], [ %7, %entry ]
   %cond.i58 = phi %"class.std::tuple"* [ %8, %_ZNSt16allocator_traitsISaISt5tupleIJidiEEEE8allocateERS2_m.exit.i ], [ null, %entry ]
   %add.ptr = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %cond.i58, i64 %sub.ptr.div.i
@@ -720,7 +760,7 @@ _ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE11_M_allocateEm.exit: ; preds = %entr
 for.body.i.i.i.i53.preheader:                     ; preds = %_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE11_M_allocateEm.exit
   br label %for.body.i.i.i.i53
 
-for.body.i.i.i.i53:                               ; preds = %for.body.i.i.i.i53.preheader, %for.body.i.i.i.i53
+for.body.i.i.i.i53:                               ; preds = %for.body.i.i.i.i53, %for.body.i.i.i.i53.preheader
   %__cur.012.i.i.i.i46 = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i51, %for.body.i.i.i.i53 ], [ %cond.i58, %for.body.i.i.i.i53.preheader ]
   %__first.sroa.0.011.i.i.i.i47 = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i.i50, %for.body.i.i.i.i53 ], [ %9, %for.body.i.i.i.i53.preheader ]
   %_M_head_impl.i.i.i.i.i.i.i.i.i.i.i48 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__first.sroa.0.011.i.i.i.i47, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
@@ -740,10 +780,14 @@ for.body.i.i.i.i53:                               ; preds = %for.body.i.i.i.i53.
   %incdec.ptr.i.i.i.i.i50 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__first.sroa.0.011.i.i.i.i47, i64 1
   %incdec.ptr.i.i.i.i51 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__cur.012.i.i.i.i46, i64 1
   %cmp.i.i.i.i.i.i52 = icmp eq %"class.std::tuple"* %incdec.ptr.i.i.i.i.i50, %__position.coerce
-  br i1 %cmp.i.i.i.i.i.i52, label %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55, label %for.body.i.i.i.i53
+  br i1 %cmp.i.i.i.i.i.i52, label %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55.loopexit, label %for.body.i.i.i.i53
 
-_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55: ; preds = %for.body.i.i.i.i53, %_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE11_M_allocateEm.exit
-  %__cur.0.lcssa.i.i.i.i54 = phi %"class.std::tuple"* [ %cond.i58, %_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE11_M_allocateEm.exit ], [ %incdec.ptr.i.i.i.i51, %for.body.i.i.i.i53 ]
+_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55.loopexit: ; preds = %for.body.i.i.i.i53
+  %incdec.ptr.i.i.i.i51.lcssa = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i51, %for.body.i.i.i.i53 ]
+  br label %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55
+
+_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55: ; preds = %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55.loopexit, %_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE11_M_allocateEm.exit
+  %__cur.0.lcssa.i.i.i.i54 = phi %"class.std::tuple"* [ %cond.i58, %_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE11_M_allocateEm.exit ], [ %incdec.ptr.i.i.i.i51.lcssa, %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55.loopexit ]
   %incdec.ptr = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__cur.0.lcssa.i.i.i.i54, i64 1
   %21 = load %"class.std::tuple"*, %"class.std::tuple"** %_M_finish.i20.i, align 8, !tbaa !12
   %cmp.i.i10.i.i.i.i = icmp eq %"class.std::tuple"* %21, %__position.coerce
@@ -752,7 +796,7 @@ _ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_R
 for.body.i.i.i.i.preheader:                       ; preds = %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55
   br label %for.body.i.i.i.i
 
-for.body.i.i.i.i:                                 ; preds = %for.body.i.i.i.i.preheader, %for.body.i.i.i.i
+for.body.i.i.i.i:                                 ; preds = %for.body.i.i.i.i, %for.body.i.i.i.i.preheader
   %__cur.012.i.i.i.i = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i, %for.body.i.i.i.i ], [ %incdec.ptr, %for.body.i.i.i.i.preheader ]
   %__first.sroa.0.011.i.i.i.i = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i.i, %for.body.i.i.i.i ], [ %__position.coerce, %for.body.i.i.i.i.preheader ]
   %_M_head_impl.i.i.i.i.i.i.i.i.i.i.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__first.sroa.0.011.i.i.i.i, i64 0, i32 0, i32 0, i32 0, i32 0, i32 0
@@ -772,10 +816,14 @@ for.body.i.i.i.i:                                 ; preds = %for.body.i.i.i.i.pr
   %incdec.ptr.i.i.i.i.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__first.sroa.0.011.i.i.i.i, i64 1
   %incdec.ptr.i.i.i.i = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %__cur.012.i.i.i.i, i64 1
   %cmp.i.i.i.i.i.i = icmp eq %"class.std::tuple"* %incdec.ptr.i.i.i.i.i, %21
-  br i1 %cmp.i.i.i.i.i.i, label %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit, label %for.body.i.i.i.i
+  br i1 %cmp.i.i.i.i.i.i, label %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit.loopexit, label %for.body.i.i.i.i
 
-_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit: ; preds = %for.body.i.i.i.i, %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55
-  %__cur.0.lcssa.i.i.i.i = phi %"class.std::tuple"* [ %incdec.ptr, %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55 ], [ %incdec.ptr.i.i.i.i, %for.body.i.i.i.i ]
+_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit.loopexit: ; preds = %for.body.i.i.i.i
+  %incdec.ptr.i.i.i.i.lcssa = phi %"class.std::tuple"* [ %incdec.ptr.i.i.i.i, %for.body.i.i.i.i ]
+  br label %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit
+
+_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit: ; preds = %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit.loopexit, %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55
+  %__cur.0.lcssa.i.i.i.i = phi %"class.std::tuple"* [ %incdec.ptr, %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit55 ], [ %incdec.ptr.i.i.i.i.lcssa, %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit.loopexit ]
   %_M_end_of_storage = getelementptr inbounds %"class.std::vector.0", %"class.std::vector.0"* %this, i64 0, i32 0, i32 0, i32 2
   %tobool.i = icmp eq %"class.std::tuple"* %9, null
   br i1 %tobool.i, label %_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit, label %if.then.i43
@@ -785,7 +833,7 @@ if.then.i43:                                      ; preds = %_ZSt34__uninitializ
   tail call void @_ZdlPv(i8* %31) #7
   br label %_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit
 
-_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit: ; preds = %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit, %if.then.i43
+_ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit: ; preds = %if.then.i43, %_ZSt34__uninitialized_move_if_noexcept_aIPSt5tupleIJidiEES2_SaIS1_EET0_T_S5_S4_RT1_.exit
   store %"class.std::tuple"* %cond.i58, %"class.std::tuple"** %6, align 8, !tbaa !9
   store %"class.std::tuple"* %__cur.0.lcssa.i.i.i.i, %"class.std::tuple"** %_M_finish.i20.i, align 8, !tbaa !12
   %add.ptr29 = getelementptr inbounds %"class.std::tuple", %"class.std::tuple"* %cond.i58, i64 %cond.i
@@ -796,19 +844,19 @@ _ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit: ; preds =
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #1
 
-; CHECK-LABEL: define internal fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE_pfor.detach.ls(i64
-; CHECK: %[[SYNCREG:.+]] = tail call token @llvm.syncregion.start()
-; CHECK: detach within %[[SYNCREG]], label %.split, label %{{.+}}
-; CHECK: {{^.split:}}
-; CHECK-NEXT: call fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE_pfor.detach.ls(i64
-; CHECK: {{^pfor.detach21.preheader.ls:}}
-; CHECK: call fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE_pfor.detach.ls_pfor.detach21.ls.ls(i64 0,
-
-; CHECK-LABEL: define internal fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE_pfor.detach.ls_pfor.detach21.ls.ls(i64
+; CHECK-LABEL: define internal fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach21.ls2(i64
 ; CHECK: %[[SYNCREG:.+]] = call token @llvm.syncregion.start()
 ; CHECK: detach within %[[SYNCREG]], label %.split, label %{{.+}}
 ; CHECK: {{^.split}}:
-; CHECK-NEXT: call fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE_pfor.detach.ls_pfor.detach21.ls.ls(i64
+; CHECK-NEXT: call fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach21.ls2(i64
+
+; CHECK-LABEL: define internal fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach.ls1(i64
+; CHECK: %[[SYNCREG:.+]] = tail call token @llvm.syncregion.start()
+; CHECK: detach within %[[SYNCREG]], label %.split, label %{{.+}}
+; CHECK: {{^.split:}}
+; CHECK-NEXT: call fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach.ls1(i64
+; CHECK: {{^pfor.detach21.preheader.ls1:}}
+; CHECK: call fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach21.ls2(i64 0,
 
 attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind }

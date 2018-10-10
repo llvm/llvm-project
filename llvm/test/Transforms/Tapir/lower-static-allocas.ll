@@ -30,7 +30,7 @@ sync.continue:                                    ; preds = %det.cont
   ret void
 }
 
-; TT-LABEL: define internal fastcc void @detach_test_det.achd.otd1(
+; TT-LABEL: define internal fastcc void @detach_test.outline_det.achd.otd1(
 ; TT: %y.otd1 = alloca
 ; TT-LABEL: det.achd.otd1:
 ; TT: %[[YCILKPTRSTART:.+]] = bitcast [16 x i32]* %y.otd1 to i8*
@@ -119,7 +119,7 @@ sync.continue28:                                  ; preds = %pfor.cond.cleanup16
   ret void
 }
 
-; LS-LABEL: define internal fastcc void @ploop_test_pfor.detach17.ls1(
+; LS-LABEL: define internal fastcc void @ploop_test.outline_pfor.detach17.ls1(
 ; LS: %[[ALLOCACALLPTR:.+]] = alloca
 ; LS: pfor.body22.ls1:
 ; LS: %[[ALLOCACALLPTRSTART:.+]] = bitcast [16 x i32]* %[[ALLOCACALLPTR]] to i8*
@@ -128,7 +128,7 @@ sync.continue28:                                  ; preds = %pfor.cond.cleanup16
 ; LS: %[[ALLOCACALLPTREND:.+]] = bitcast [16 x i32]* %[[ALLOCACALLPTR]] to i8*
 ; LS-NEXT: call void @llvm.lifetime.end.p0i8(i64 64, i8* %[[ALLOCACALLPTREND]])
 
-; LS-LABEL: define internal fastcc void @ploop_test_pfor.detach.ls1(
+; LS-LABEL: define internal fastcc void @ploop_test.outline_pfor.detach.ls1(
 ; LS: %y.ls1 = alloca
 ; LS: pfor.body.ls1:
 ; LS: %[[YLSPTRSTART:.+]] = bitcast [16 x i32]* %y.ls1 to i8*

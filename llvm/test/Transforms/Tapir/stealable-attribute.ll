@@ -1,14 +1,16 @@
 ; Check that Tapir lowering to the Cilk or CilkR targets will decorate
 ; functions that can be stolen with the "stealable" attribute.
 ;
-; RUN: opt < %s -loop-spawning -simplifycfg -instcombine -tapir2target -tapir-target=cilk -simplifycfg -instcombine -S | FileCheck %s --check-prefix=LOWERING
-; RUN: opt < %s -loop-spawning -simplifycfg -instcombine -tapir2target -tapir-target=cilkr -simplifycfg -instcombine -S | FileCheck %s --check-prefix=LOWERING
+; RUN: opt < %s -loop-spawning-ti -simplifycfg -instcombine -tapir2target -tapir-target=cilk -simplifycfg -instcombine -S | FileCheck %s --check-prefix=LOWERING
+; RUN: opt < %s -loop-spawning-ti -simplifycfg -instcombine -tapir2target -tapir-target=cilkr -simplifycfg -instcombine -S | FileCheck %s --check-prefix=LOWERING
+; RUN: opt < %s -passes='loop-spawning,function(simplify-cfg,instcombine),tapir2target,function(simplify-cfg,instcombine)' -tapir-target=cilkr -instcombine -S | FileCheck %s --check-prefix=LOWERING
 ;
 ; Check that the X86 assembly produced for stealable functions does
 ; not index stack variables using %rsp.
 ;
-; RUN: opt < %s -loop-spawning -simplifycfg -instcombine -tapir2target -tapir-target=cilk -simplifycfg -instcombine | llc -O3 -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefix=ASM
-; RUN: opt < %s -loop-spawning -simplifycfg -instcombine -tapir2target -tapir-target=cilkr -simplifycfg -instcombine | llc -O3 -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefix=ASM
+; RUN: opt < %s -loop-spawning-ti -simplifycfg -instcombine -tapir2target -tapir-target=cilk -simplifycfg -instcombine | llc -O3 -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefix=ASM
+; RUN: opt < %s -loop-spawning-ti -simplifycfg -instcombine -tapir2target -tapir-target=cilkr -simplifycfg -instcombine | llc -O3 -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefix=ASM
+; RUN: opt < %s -passes='loop-spawning,function(simplify-cfg,instcombine),tapir2target,function(simplify-cfg,instcombine)' -tapir-target=cilkr | llc -O3 -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefix=ASM
 
 %class._point3d = type { double, double, double }
 %struct.vertex.29 = type { i32, %class._point3d, [1 x %struct.vertex.29*] }
@@ -60,9 +62,9 @@ pfor.detach.us.preheader:                         ; preds = %pfor.detach.lr.ph
 pfor.detach.us:                                   ; preds = %pfor.detach.us.preheader, %pfor.inc.us
   %indvars.iv97 = phi i64 [ %indvars.iv.next98, %pfor.inc.us ], [ 0, %pfor.detach.us.preheader ]
   detach within %syncreg, label %for.body.lr.ph.i.us, label %pfor.inc.us
-; LOWERING: _ZN9gTreeNodeI8_point3dIdE7_vect3dIdE6vertexIS1_Li1EE5nDataIS5_EE13sortBlocksBigEPPS5_iiidS1_Pi_pfor.detach.us.ls({{[^)]*}}) local_unnamed_addr [[FUNCATTR:#[0-9]+]]
+; LOWERING: _ZN9gTreeNodeI8_point3dIdE7_vect3dIdE6vertexIS1_Li1EE5nDataIS5_EE13sortBlocksBigEPPS5_iiidS1_Pi.outline_pfor.detach.us.ls1({{[^)]*}}) local_unnamed_addr [[FUNCATTR:#[0-9]+]]
 ; LOWERING: attributes [[FUNCATTR]] = { {{[^}]*}}stealable
-; ASM: _ZN9gTreeNodeI8_point3dIdE7_vect3dIdE6vertexIS1_Li1EE5nDataIS5_EE13sortBlocksBigEPPS5_iiidS1_Pi_pfor.detach.us.ls:
+; ASM: _ZN9gTreeNodeI8_point3dIdE7_vect3dIdE6vertexIS1_Li1EE5nDataIS5_EE13sortBlocksBigEPPS5_iiidS1_Pi.outline_pfor.detach.us.ls1:
 ; ASM-NOT: (%rsp)
 ; ASM: @function
 

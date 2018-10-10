@@ -1,7 +1,8 @@
 ; Test that Tapir's loop spawning pass transforms this simple loop
 ; into recursive divide-and-conquer.
 
-; RUN: opt < %s -loop-spawning -S | FileCheck %s
+; RUN: opt < %s -loop-spawning-ti -S | FileCheck %s
+; RUN: opt < %s -passes=loop-spawning -S | FileCheck %s
 
 ; Function Attrs: nounwind uwtable
 define void @foo(i32 %n) local_unnamed_addr #0 {
@@ -13,10 +14,9 @@ entry:
 
 pfor.detach.preheader:                            ; preds = %entry
 ; CHECK: pfor.detach.preheader:
-; CHECK: [[LIMIT:%[0-9]+]] = add [[TYPE:i[0-9]+]] %n, -1
 ; CHECK: call fastcc void @[[OUTLINED:[a-zA-Z0-9._]+]](
-; CHECK: [[TYPE]] 0
-; CHECK: [[TYPE]] [[LIMIT]]
+; CHECK: [[TYPE:i32]] 0
+; CHECK: [[TYPE]] %n
 ; CHECK: [[TYPE]] {{[%]?[a-zA-Z0-9._]+}}
 ; CHECK-NEXT: br label %pfor.cond.cleanup.loopexit
   br label %pfor.detach
@@ -26,7 +26,7 @@ pfor.cond.cleanup.loopexit:                       ; preds = %pfor.inc
 
 pfor.cond.cleanup:                                ; preds = %pfor.cond.cleanup.loopexit, %entry
 ; CHECK: pfor.cond.cleanup
-; CHECK-NOT: sync within %syncreg, label %0
+; CHECK: sync within %syncreg
   sync within %syncreg, label %0
 
 ; <label>:0:                                      ; preds = %pfor.cond.cleanup
@@ -34,8 +34,7 @@ pfor.cond.cleanup:                                ; preds = %pfor.cond.cleanup.l
 
 pfor.detach:                                      ; preds = %pfor.detach.preheader, %pfor.inc
 ; CHECK: pfor.detach:
-; CHECK: phi i32
-; CHECK-NOT: %pfor.detach.preheader
+; CHECK-NOT: phi
 ; CHECK: detach
 
 ; CHECK: define internal fastcc void @[[OUTLINED]](
@@ -60,25 +59,25 @@ pfor.detach:                                      ; preds = %pfor.detach.prehead
 ; CHECK-NEXT: reattach within [[NEWSYNCREG]], label %[[CONTINUE]]
 
 ; CHECK: {{^(; <label>:)?}}[[CONTINUE]]:
-; CHECK-NEXT: [[MIDITERP1:%[a-zA-Z0-9._]+]] = add {{.*}} [[TYPE]] [[MIDITER]], 1
 ; CHECK-NEXT: br label %[[DACSTART]]
   %i.06 = phi i32 [ %inc, %pfor.inc ], [ 0, %pfor.detach.preheader ]
   detach within %syncreg, label %pfor.body, label %pfor.inc
 ; CHECK: sync within [[NEWSYNCREG]]
-; CHECK: br label %pfor.body.ls
+; CHECL: pfor.detach.ls1:
+; CHECK: br label %pfor.body.ls1
 
 pfor.body:                                        ; preds = %pfor.detach
-; CHECK: pfor.body.ls:
+; CHECK: pfor.body.ls1:
   tail call void @bar(i32 %i.06) #2
-; CHECK-NEXT: tail call void @bar(i32 %i.06.ls)
+; CHECK-NEXT: tail call void @bar(i32 %i.06.ls1)
   reattach within %syncreg, label %pfor.inc
 ; CHECK-NEXT: br label %[[INC:[a-zA-Z0-9._]+]]
 
 pfor.inc:                                         ; preds = %pfor.body, %pfor.detach
 ; CHECK: {{^(; <label>:)?}}[[INC]]:
-; CHECK-NEXT: [[LOCALCMP:%[0-9]+]] = icmp ult {{.*}} [[LOCALITER:%[a-zA-Z0-9._]+]], [[END]]
+; CHECK-NEXT: [[NEXTITER:%[a-zA-Z0-9._]+]] = add {{.*}} [[LOCALITER:%[a-zA-Z0-9._]+]], 1
+; CHECK-NEXT: [[LOCALCMP:%[a-zA-Z0-9._]+]] = icmp eq {{.*}} [[NEXTITER]], [[END]]
   %inc = add nuw nsw i32 %i.06, 1
-; CHECK-NEXT: add {{.*}} [[LOCALITER]], 1
   %exitcond = icmp eq i32 %inc, %n
 ; CHECK: br i1 [[LOCALCMP]]
   br i1 %exitcond, label %pfor.cond.cleanup.loopexit, label %pfor.detach, !llvm.loop !1
