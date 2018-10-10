@@ -123,7 +123,7 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
 
   // Handle /help
   if (Args.hasArg(OPT_help)) {
-    Table.PrintHelp(outs(), ArgsArr[0], "LLVM Lib");
+    Table.PrintHelp(outs(), "llvm-lib [options] file...", "LLVM Lib");
     return 0;
   }
 

@@ -1,5 +1,5 @@
 # FIXME: Disabled on Windows because -fPIC cannot be used to compile for Windows.
-UNSUPPORTED: aarch64, windows
+UNSUPPORTED: windows
 RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable  %S/NullDerefTest.cpp -o %t-NullDerefTest
 RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable %S/DSO1.cpp -fPIC %ld_flags_rpath_so1 -shared -o %dynamiclib1
 RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable %S/DSO2.cpp -fPIC %ld_flags_rpath_so2 -shared -o %dynamiclib2

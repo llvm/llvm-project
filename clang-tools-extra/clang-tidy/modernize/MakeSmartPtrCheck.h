@@ -44,9 +44,6 @@ protected:
   virtual bool isLanguageVersionSupported(const LangOptions &LangOpts) const;
 
   static const char PointerType[];
-  static const char ConstructorCall[];
-  static const char ResetCall[];
-  static const char NewExpression[];
 
 private:
   std::unique_ptr<utils::IncludeInserter> Inserter;
@@ -55,14 +52,15 @@ private:
   const std::string MakeSmartPtrFunctionName;
   const bool IgnoreMacros;
 
-  void checkConstruct(SourceManager &SM, const CXXConstructExpr *Construct,
-                      const QualType *Type, const CXXNewExpr *New);
-  void checkReset(SourceManager &SM, const CXXMemberCallExpr *Member,
-                  const CXXNewExpr *New);
+  void checkConstruct(SourceManager &SM, ASTContext *Ctx,
+                      const CXXConstructExpr *Construct, const QualType *Type,
+                      const CXXNewExpr *New);
+  void checkReset(SourceManager &SM, ASTContext *Ctx,
+                  const CXXMemberCallExpr *Member, const CXXNewExpr *New);
 
   /// Returns true when the fixes for replacing CXXNewExpr are generated.
   bool replaceNew(DiagnosticBuilder &Diag, const CXXNewExpr *New,
-                  SourceManager &SM);
+                  SourceManager &SM, ASTContext *Ctx);
   void insertHeader(DiagnosticBuilder &Diag, FileID FD);
 };
 

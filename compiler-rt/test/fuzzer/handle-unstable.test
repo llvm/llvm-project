@@ -1,6 +1,6 @@
 # Tests -handle_unstable
 # FIXME: Disabled on Windows until symbolization works properly.
-UNSUPPORTED: aarch64, windows
+UNSUPPORTED: windows
 
 RUN: %cpp_compiler %S/PrintUnstableStatsTest.cpp -o %t-HandleUnstableTest
 

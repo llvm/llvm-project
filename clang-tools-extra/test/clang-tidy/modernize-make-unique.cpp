@@ -110,6 +110,19 @@ void basic() {
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use std::make_unique instead
   // CHECK-FIXES: auto P3 = std::make_unique<int>();
 
+  std::unique_ptr<int> P4 = std::unique_ptr<int>((new int));
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use std::make_unique instead [modernize-make-unique]
+  // CHECK-FIXES: std::unique_ptr<int> P4 = std::make_unique<int>();
+  P4.reset((new int));
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use std::make_unique instead [modernize-make-unique]
+  // CHECK-FIXES: P4 = std::make_unique<int>();
+  std::unique_ptr<int> P5 = std::unique_ptr<int>((((new int))));
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use std::make_unique instead [modernize-make-unique]
+  // CHECK-FIXES: std::unique_ptr<int> P5 = std::make_unique<int>();
+  P5.reset(((((new int)))));
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use std::make_unique instead [modernize-make-unique]
+  // CHECK-FIXES: P5 = std::make_unique<int>();
+
   {
     // No std.
     using namespace std;

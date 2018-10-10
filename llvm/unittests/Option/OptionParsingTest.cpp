@@ -97,6 +97,10 @@ TEST(Option, OptionParsing) {
   T.PrintHelp(RSO, "test", "title!");
   EXPECT_NE(std::string::npos, Help.find("-A"));
 
+  // Check usage line.
+  T.PrintHelp(RSO, "name [options] file...", "title!");
+  EXPECT_NE(std::string::npos, Help.find("USAGE: name [options] file...\n"));
+
   // Test aliases.
   auto Cs = AL.filtered(OPT_C);
   ASSERT_NE(Cs.begin(), Cs.end());

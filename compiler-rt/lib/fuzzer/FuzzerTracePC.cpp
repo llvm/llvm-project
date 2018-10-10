@@ -194,11 +194,42 @@ void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
   ValueProfileMap.AddValueModPrime(Idx);
 }
 
+/// \return the address of the previous instruction.
+/// Note: the logic is copied from `sanitizer_common/sanitizer_stacktrace.h`
+inline ALWAYS_INLINE uintptr_t GetPreviousInstructionPc(uintptr_t PC) {
+#if defined(__arm__)
+  // T32 (Thumb) branch instructions might be 16 or 32 bit long,
+  // so we return (pc-2) in that case in order to be safe.
+  // For A32 mode we return (pc-4) because all instructions are 32 bit long.
+  return (PC - 3) & (~1);
+#elif defined(__powerpc__) || defined(__powerpc64__) || defined(__aarch64__)
+  // PCs are always 4 byte aligned.
+  return PC - 4;
+#elif defined(__sparc__) || defined(__mips__)
+  return PC - 8;
+#else
+  return PC - 1;
+#endif
+}
+
+/// \return the address of the next instruction.
+/// Note: the logic is copied from `sanitizer_common/sanitizer_stacktrace.cc`
+inline ALWAYS_INLINE uintptr_t GetNextInstructionPc(uintptr_t PC) {
+#if defined(__mips__)
+  return PC + 8;
+#elif defined(__powerpc__) || defined(__sparc__) || defined(__arm__) || \
+    defined(__aarch64__)
+  return PC + 4;
+#else
+  return PC + 1;
+#endif
+}
+
 void TracePC::UpdateObservedPCs() {
   Vector<uintptr_t> CoveredFuncs;
   auto ObservePC = [&](uintptr_t PC) {
     if (ObservedPCs.insert(PC).second && DoPrintNewPCs) {
-      PrintPC("\tNEW_PC: %p %F %L", "\tNEW_PC: %p", PC + 1);
+      PrintPC("\tNEW_PC: %p %F %L", "\tNEW_PC: %p", GetNextInstructionPc(PC));
       Printf("\n");
     }
   };
@@ -233,22 +264,11 @@ void TracePC::UpdateObservedPCs() {
   for (size_t i = 0, N = Min(CoveredFuncs.size(), NumPrintNewFuncs); i < N;
        i++) {
     Printf("\tNEW_FUNC[%zd/%zd]: ", i + 1, CoveredFuncs.size());
-    PrintPC("%p %F %L", "%p", CoveredFuncs[i] + 1);
+    PrintPC("%p %F %L", "%p", GetNextInstructionPc(CoveredFuncs[i]));
     Printf("\n");
   }
 }
 
-inline ALWAYS_INLINE uintptr_t GetPreviousInstructionPc(uintptr_t PC) {
-  // TODO: this implementation is x86 only.
-  // see sanitizer_common GetPreviousInstructionPc for full implementation.
-  return PC - 1;
-}
-
-inline ALWAYS_INLINE uintptr_t GetNextInstructionPc(uintptr_t PC) {
-  // TODO: this implementation is x86 only.
-  // see sanitizer_common GetPreviousInstructionPc for full implementation.
-  return PC + 1;
-}
 
 static std::string GetModuleName(uintptr_t PC) {
   char ModulePathRaw[4096] = "";  // What's PATH_MAX in portable C++?

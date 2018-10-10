@@ -33,6 +33,9 @@ ELF Improvements
   non-superpages to a superpage if they are aligned to the superpage
   size. (`r342746 <https://reviews.llvm.org/rL342746>`_)
 
+* lld/Hexagon can now link Linux kernel and musl libc for Qualcomm
+  Hexagon ISA.
+
 * The following flags have been added: ``-z interpose``, ``-z global``
 
 COFF Improvements

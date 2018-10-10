@@ -5,6 +5,10 @@
 ; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=-simd128 | FileCheck %s --check-prefixes CHECK,NO-SIMD128
 ; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=-simd128 -fast-isel | FileCheck %s --check-prefixes CHECK,NO-SIMD128
 
+; check that a non-test run (including explicit locals pass) at least finishes
+; RUN: llc < %s -O0 -wasm-enable-unimplemented-simd -mattr=+simd128,+sign-ext
+; RUN: llc < %s -O2 -wasm-enable-unimplemented-simd -mattr=+simd128,+sign-ext
+
 ; Test that basic SIMD128 arithmetic operations assemble as expected.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
@@ -744,7 +748,8 @@ define <2 x i64> @bitselect_v2i64(<2 x i64> %c, <2 x i64> %v1, <2 x i64> %v2) {
 ; SIMD128-NEXT: f32x4.neg $push[[R:[0-9]+]]=, $0{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x float> @neg_v4f32(<4 x float> %x) {
-  %a = fsub <4 x float> <float 0., float 0., float 0., float 0.>, %x
+  ; nsz makes this semantically equivalent to flipping sign bit
+  %a = fsub nsz <4 x float> <float 0.0, float 0.0, float 0.0, float 0.0>, %x
   ret <4 x float> %a
 }
 
@@ -826,7 +831,8 @@ define <4 x float> @sqrt_v4f32(<4 x float> %x) {
 ; SIMD128-NEXT: f64x2.neg $push[[R:[0-9]+]]=, $0{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x double> @neg_v2f64(<2 x double> %x) {
-  %a = fsub <2 x double> <double 0., double 0.>, %x
+  ; nsz makes this semantically equivalent to flipping sign bit
+  %a = fsub nsz <2 x double> <double 0., double 0.>, %x
   ret <2 x double> %a
 }
 
