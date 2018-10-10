@@ -29,6 +29,10 @@
 #include "sanitizer_placement_new.h"
 #include "sanitizer_win_defs.h"
 
+#if defined(PSAPI_VERSION) && PSAPI_VERSION == 1
+#pragma comment(lib, "psapi")
+#endif
+
 // A macro to tell the compiler that this part of the code cannot be reached,
 // if the compiler supports this feature. Since we're using this in
 // code that is called when terminating the process, the expansion of the
