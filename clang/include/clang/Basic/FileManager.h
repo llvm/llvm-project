@@ -16,7 +16,7 @@
 #define LLVM_CLANG_BASIC_FILEMANAGER_H
 
 #include "clang/Basic/FileSystemOptions.h"
-#include "clang/Basic/VirtualFileSystem.h"
+#include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallVector.h"
@@ -25,9 +25,10 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <ctime>
-#include <memory>
 #include <map>
+#include <memory>
 #include <string>
 
 namespace llvm {
@@ -71,7 +72,7 @@ class FileEntry {
   bool IsValid;               // Is this \c FileEntry initialized and valid?
 
   /// The open file, if it is owned by the \p FileEntry.
-  mutable std::unique_ptr<vfs::File> File;
+  mutable std::unique_ptr<llvm::vfs::File> File;
 
 public:
   FileEntry()
@@ -114,7 +115,7 @@ struct FileData;
 /// as a single file.
 ///
 class FileManager : public RefCountedBase<FileManager> {
-  IntrusiveRefCntPtr<vfs::FileSystem> FS;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   FileSystemOptions FileSystemOpts;
 
   /// Cache for existing real directories.
@@ -165,7 +166,7 @@ class FileManager : public RefCountedBase<FileManager> {
   std::unique_ptr<FileSystemStatCache> StatCache;
 
   bool getStatValue(StringRef Path, FileData &Data, bool isFile,
-                    std::unique_ptr<vfs::File> *F);
+                    std::unique_ptr<llvm::vfs::File> *F);
 
   /// Add all ancestors of the given path (pointing to either a file
   /// or a directory) as virtual directories.
@@ -173,7 +174,7 @@ class FileManager : public RefCountedBase<FileManager> {
 
 public:
   FileManager(const FileSystemOptions &FileSystemOpts,
-              IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
+              IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr);
   ~FileManager();
 
   /// Installs the provided FileSystemStatCache object within
@@ -222,7 +223,7 @@ public:
   FileSystemOptions &getFileSystemOpts() { return FileSystemOpts; }
   const FileSystemOptions &getFileSystemOpts() const { return FileSystemOpts; }
 
-  IntrusiveRefCntPtr<vfs::FileSystem> getVirtualFileSystem() const {
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> getVirtualFileSystem() const {
     return FS;
   }
 
@@ -247,8 +248,7 @@ public:
   /// FileManager's FileSystemOptions.
   ///
   /// \returns false on success, true on error.
-  bool getNoncachedStatValue(StringRef Path,
-                             vfs::Status &Result);
+  bool getNoncachedStatValue(StringRef Path, llvm::vfs::Status &Result);
 
   /// Remove the real file \p Entry from the cache.
   void invalidateCache(const FileEntry *Entry);

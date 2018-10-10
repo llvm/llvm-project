@@ -9,7 +9,6 @@ add_clang_unittest(BasicTests
   FixedPointTest.cpp
   MemoryBufferCacheTest.cpp
   SourceManagerTest.cpp
-  VirtualFileSystemTest.cpp
   )
 
 target_link_libraries(BasicTests

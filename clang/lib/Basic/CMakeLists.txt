@@ -95,7 +95,6 @@ add_clang_library(clangBasic
   Targets/XCore.cpp
   TokenKinds.cpp
   Version.cpp
-  VirtualFileSystem.cpp
   Warnings.cpp
   XRayInstr.cpp
   XRayLists.cpp
