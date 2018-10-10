@@ -8,9 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Hexagon.h"
-#include "InputInfo.h"
 #include "CommonArgs.h"
-#include "clang/Basic/VirtualFileSystem.h"
+#include "InputInfo.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -19,6 +18,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -369,9 +369,8 @@ void hexagon::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   constructHexagonLinkArgs(C, JA, HTC, Output, Inputs, Args, CmdArgs,
                            LinkingOutput);
 
-  std::string Linker = HTC.GetProgramPath("hexagon-link");
-  C.addCommand(llvm::make_unique<Command>(JA, *this, Args.MakeArgString(Linker),
-                                          CmdArgs, Inputs));
+  const char *Exec = Args.MakeArgString(HTC.GetLinkerPath());
+  C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
 }
 // Hexagon tools end.
 

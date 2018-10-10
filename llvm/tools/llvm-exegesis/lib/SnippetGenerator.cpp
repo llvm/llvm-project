@@ -25,16 +25,15 @@ namespace exegesis {
 SnippetGeneratorFailure::SnippetGeneratorFailure(const llvm::Twine &S)
     : llvm::StringError(S, llvm::inconvertibleErrorCode()) {}
 
-SnippetGenerator::SnippetGenerator(const LLVMState &State)
-    : State(State), RATC(State.getRegInfo(),
-                         getFunctionReservedRegs(State.getTargetMachine())) {}
+SnippetGenerator::SnippetGenerator(const LLVMState &State) : State(State) {}
 
 SnippetGenerator::~SnippetGenerator() = default;
 
 llvm::Expected<std::vector<BenchmarkCode>>
-SnippetGenerator::generateConfigurations(unsigned Opcode) const {
-  if (auto E = generateCodeTemplate(Opcode)) {
+SnippetGenerator::generateConfigurations(const Instruction &Instr) const {
+  if (auto E = generateCodeTemplate(Instr)) {
     CodeTemplate &CT = E.get();
+    const auto &RATC = State.getRATC();
     const llvm::BitVector &ForbiddenRegs =
         CT.ScratchSpacePointerInReg
             ? RATC.getRegister(CT.ScratchSpacePointerInReg).aliasedBits()
@@ -64,7 +63,7 @@ std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
   // Ignore memory operands which are handled separately.
   // Loop invariant: DefinedRegs[i] is true iif it has been set at least once
   // before the current instruction.
-  llvm::BitVector DefinedRegs = RATC.emptyRegisters();
+  llvm::BitVector DefinedRegs = State.getRATC().emptyRegisters();
   std::vector<RegisterValue> RIV;
   for (const InstructionTemplate &IT : Instructions) {
     // Returns the register that this Operand sets or uses, or 0 if this is not

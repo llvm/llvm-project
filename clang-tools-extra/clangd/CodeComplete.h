@@ -224,7 +224,7 @@ CodeCompleteResult codeComplete(PathRef FileName,
                                 const tooling::CompileCommand &Command,
                                 const PreambleData *Preamble,
                                 StringRef Contents, Position Pos,
-                                IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+                                IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                                 std::shared_ptr<PCHContainerOperations> PCHs,
                                 CodeCompleteOptions Opts,
                                 SpeculativeFuzzyFind *SpecFuzzyFind = nullptr);
@@ -234,7 +234,7 @@ SignatureHelp signatureHelp(PathRef FileName,
                             const tooling::CompileCommand &Command,
                             const PreambleData *Preamble, StringRef Contents,
                             Position Pos,
-                            IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+                            IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                             std::shared_ptr<PCHContainerOperations> PCHs,
                             const SymbolIndex *Index);
 

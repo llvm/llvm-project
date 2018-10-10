@@ -124,12 +124,8 @@ static unsigned getOpcodeOrDie(const llvm::MCInstrInfo &MCInstrInfo) {
 // Generates code snippets for opcode `Opcode`.
 static llvm::Expected<std::vector<BenchmarkCode>>
 generateSnippets(const LLVMState &State, unsigned Opcode) {
-  const std::unique_ptr<SnippetGenerator> Generator =
-      State.getExegesisTarget().createSnippetGenerator(BenchmarkMode, State);
-  if (!Generator)
-    llvm::report_fatal_error("cannot create snippet generator");
-
-  const llvm::MCInstrDesc &InstrDesc = State.getInstrInfo().get(Opcode);
+  const Instruction Instr(State, Opcode);
+  const llvm::MCInstrDesc &InstrDesc = *Instr.Description;
   // Ignore instructions that we cannot run.
   if (InstrDesc.isPseudo())
     return llvm::make_error<BenchmarkFailure>("Unsupported opcode: isPseudo");
@@ -140,7 +136,11 @@ generateSnippets(const LLVMState &State, unsigned Opcode) {
     return llvm::make_error<BenchmarkFailure>(
         "Unsupported opcode: isCall/isReturn");
 
-  return Generator->generateConfigurations(Opcode);
+  const std::unique_ptr<SnippetGenerator> Generator =
+      State.getExegesisTarget().createSnippetGenerator(BenchmarkMode, State);
+  if (!Generator)
+    llvm::report_fatal_error("cannot create snippet generator");
+  return Generator->generateConfigurations(Instr);
 }
 
 namespace {

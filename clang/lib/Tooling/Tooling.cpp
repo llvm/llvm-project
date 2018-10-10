@@ -19,7 +19,6 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
@@ -51,6 +50,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstring>
@@ -74,9 +74,9 @@ FrontendActionFactory::~FrontendActionFactory() = default;
 // it to be based on the same framework.
 
 /// Builds a clang driver initialized for running clang tools.
-static driver::Driver *newDriver(
-    DiagnosticsEngine *Diagnostics, const char *BinaryName,
-    IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+static driver::Driver *
+newDriver(DiagnosticsEngine *Diagnostics, const char *BinaryName,
+          IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   driver::Driver *CompilerDriver =
       new driver::Driver(BinaryName, llvm::sys::getDefaultTargetTriple(),
                          *Diagnostics, std::move(VFS));
@@ -155,7 +155,7 @@ namespace tooling {
 
 bool runToolOnCodeWithArgs(
     FrontendAction *ToolAction, const Twine &Code,
-    llvm::IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
     const std::vector<std::string> &Args, const Twine &FileName,
     const Twine &ToolName,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps) {
@@ -178,10 +178,10 @@ bool runToolOnCodeWithArgs(
     const Twine &ToolName,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     const FileContentMappings &VirtualMappedFiles) {
-  llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> OverlayFileSystem(
-      new vfs::OverlayFileSystem(vfs::getRealFileSystem()));
-  llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new vfs::InMemoryFileSystem);
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
+      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
 
   SmallString<1024> CodeStorage;
@@ -199,7 +199,7 @@ bool runToolOnCodeWithArgs(
                                FileName, ToolName);
 }
 
-llvm::Expected<std::string> getAbsolutePath(vfs::FileSystem &FS,
+llvm::Expected<std::string> getAbsolutePath(llvm::vfs::FileSystem &FS,
                                             StringRef File) {
   StringRef RelativePath(File);
   // FIXME: Should '.\\' be accepted on Win32?
@@ -215,7 +215,7 @@ llvm::Expected<std::string> getAbsolutePath(vfs::FileSystem &FS,
 }
 
 std::string getAbsolutePath(StringRef File) {
-  return llvm::cantFail(getAbsolutePath(*vfs::getRealFileSystem(), File));
+  return llvm::cantFail(getAbsolutePath(*llvm::vfs::getRealFileSystem(), File));
 }
 
 void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
@@ -372,11 +372,11 @@ bool FrontendActionFactory::runInvocation(
 ClangTool::ClangTool(const CompilationDatabase &Compilations,
                      ArrayRef<std::string> SourcePaths,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-                     IntrusiveRefCntPtr<vfs::FileSystem> BaseFS)
+                     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS)
     : Compilations(Compilations), SourcePaths(SourcePaths),
       PCHContainerOps(std::move(PCHContainerOps)),
-      OverlayFileSystem(new vfs::OverlayFileSystem(std::move(BaseFS))),
-      InMemoryFileSystem(new vfs::InMemoryFileSystem),
+      OverlayFileSystem(new llvm::vfs::OverlayFileSystem(std::move(BaseFS))),
+      InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
       Files(new FileManager(FileSystemOptions(), OverlayFileSystem)) {
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
   appendArgumentsAdjuster(getClangStripOutputAdjuster());
@@ -586,10 +586,10 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
 
   std::vector<std::unique_ptr<ASTUnit>> ASTs;
   ASTBuilderAction Action(ASTs);
-  llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> OverlayFileSystem(
-      new vfs::OverlayFileSystem(vfs::getRealFileSystem()));
-  llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new vfs::InMemoryFileSystem);
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
+      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
   llvm::IntrusiveRefCntPtr<FileManager> Files(
       new FileManager(FileSystemOptions(), OverlayFileSystem));

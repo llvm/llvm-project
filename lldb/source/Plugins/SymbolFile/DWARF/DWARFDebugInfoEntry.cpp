@@ -1067,9 +1067,9 @@ size_t DWARFDebugInfoEntry::GetAttributeAddressRanges(
       dwarf2Data, cu, DW_AT_ranges, DW_INVALID_OFFSET,
       check_specification_or_abstract_origin);
   if (debug_ranges_offset != DW_INVALID_OFFSET) {
-    DWARFDebugRanges *debug_ranges = dwarf2Data->DebugRanges();
-
-    debug_ranges->FindRanges(cu->GetRangesBase(), debug_ranges_offset, ranges);
+    if (DWARFDebugRanges *debug_ranges = dwarf2Data->DebugRanges())
+      debug_ranges->FindRanges(cu->GetRangesBase(), debug_ranges_offset,
+                               ranges);
     ranges.Slide(cu->GetBaseAddress());
   } else if (check_hi_lo_pc) {
     dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;

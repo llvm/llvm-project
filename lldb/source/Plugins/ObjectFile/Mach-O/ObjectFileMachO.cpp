@@ -1205,6 +1205,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
           case eSectionTypeDWARFDebugPubNames:
           case eSectionTypeDWARFDebugPubTypes:
           case eSectionTypeDWARFDebugRanges:
+          case eSectionTypeDWARFDebugRngLists:
           case eSectionTypeDWARFDebugStr:
           case eSectionTypeDWARFDebugStrOffsets:
           case eSectionTypeDWARFDebugTypes:
@@ -1494,7 +1495,7 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   if (section_name == g_sect_name_dwarf_debug_pubtypes)
     return eSectionTypeDWARFDebugPubTypes;
   if (section_name == g_sect_name_dwarf_debug_ranges)
-    return eSectionTypeDWARFDebugRanges;
+    return eSectionTypeDWARFDebugRanges; 
   if (section_name == g_sect_name_dwarf_debug_str)
     return eSectionTypeDWARFDebugStr;
   if (section_name == g_sect_name_dwarf_debug_types)

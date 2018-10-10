@@ -46,7 +46,7 @@ namespace test1 {
   // CHECK-LABEL: define void @_ZN5test14testEv()
   void test() {
     // CHECK: [[AV:%.*]] = alloca [[A:%.*]], align 1
-    // CHECK: call [[A]]* @_ZN5test11AC1Ei([[A]]* [[AV]], i32 10)
+    // CHECK: call [[A]]* @_ZN5test11AC1Ei([[A]]* noalias [[AV]], i32 10)
     // CHECK: invoke void @_ZN5test11A3barEv([[A]]* [[AV]])
     // CHECK: call [[A]]* @_ZN5test11AD1Ev([[A]]* [[AV]])
     // CHECK: ret void
@@ -54,7 +54,7 @@ namespace test1 {
     a.bar();
   }
 
-  // CHECK: define linkonce_odr [[A]]* @_ZN5test11AC1Ei([[A]]* returned %this, i32 %i) unnamed_addr
+  // CHECK: define linkonce_odr [[A]]* @_ZN5test11AC1Ei([[A]]* noalias returned %this, i32 %i) unnamed_addr
   // CHECK:   [[THIS:%.*]] = alloca [[A]]*, align 4
   // CHECK:   store [[A]]* {{.*}}, [[A]]** [[THIS]]
   // CHECK:   [[THIS1:%.*]] = load [[A]]*, [[A]]** [[THIS]]
@@ -340,7 +340,7 @@ namespace test8 {
     // CHECK-NEXT: [[T4:%.*]] = icmp ne i32 [[T3]], 0
     // CHECK-NEXT: br i1 [[T4]]
     //   -> fallthrough, end
-    // CHECK:      [[INIT:%.*]] = invoke [[TEST8A]]* @_ZN5test81AC1Ev([[TEST8A]]* @_ZZN5test84testEvE1x)
+    // CHECK:      [[INIT:%.*]] = invoke [[TEST8A]]* @_ZN5test81AC1Ev([[TEST8A]]* noalias @_ZZN5test84testEvE1x)
 
     // FIXME: Here we register a global destructor that
     // unconditionally calls the destructor.  That's what we've always

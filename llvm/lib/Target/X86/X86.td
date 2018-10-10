@@ -801,7 +801,6 @@ def : BroadwellProc<"broadwell">;
 def SKLFeatures : ProcessorFeatures<BDWFeatures.Value, [
   FeatureAES,
   FeatureMPX,
-  FeatureRTM,
   FeatureXSAVEC,
   FeatureXSAVES,
   FeatureCLFLUSHOPT,
