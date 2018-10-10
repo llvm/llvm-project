@@ -21,11 +21,13 @@
 
 #include <mutex>
 
+#include "test_macros.h"
+
 std::mutex m;
 int foo __attribute__((guarded_by(m)));
 
 static void scoped() {
-#if __cplusplus >= 201703L
+#if TEST_STD_VER >= 17
   std::scoped_lock<std::mutex> lock(m);
   foo++;
 #endif
