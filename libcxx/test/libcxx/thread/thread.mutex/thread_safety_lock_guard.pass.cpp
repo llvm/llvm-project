@@ -25,8 +25,10 @@ std::mutex m;
 int foo __attribute__((guarded_by(m)));
 
 static void scoped() {
+#if __cplusplus >= 201703L
   std::scoped_lock<std::mutex> lock(m);
   foo++;
+#endif
 }
 
 int main() {

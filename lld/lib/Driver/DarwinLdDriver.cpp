@@ -44,7 +44,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -384,9 +383,9 @@ bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx) {
         !parsedArgs.getLastArg(OPT_test_file_usage)) {
       // If no -arch and no options at all, print usage message.
       if (parsedArgs.size() == 0) {
-        std::string Usage =
-            llvm::formatv("{0} [options] file...", args[0]).str();
-        table.PrintHelp(llvm::outs(), Usage.c_str(), "LLVM Linker", false);
+        table.PrintHelp(llvm::outs(),
+                        (std::string(args[0]) + " [options] file...").c_str(),
+                        "LLVM Linker", false);
       } else {
         error("-arch not specified and could not be inferred");
       }
