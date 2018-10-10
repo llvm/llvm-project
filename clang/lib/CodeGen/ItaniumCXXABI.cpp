@@ -2342,6 +2342,9 @@ void ItaniumCXXABI::registerGlobalDtor(CodeGenFunction &CGF,
                                        const VarDecl &D,
                                        llvm::Constant *dtor,
                                        llvm::Constant *addr) {
+  if (D.isNoDestroy(CGM.getContext()))
+    return;
+
   // Use __cxa_atexit if available.
   if (CGM.getCodeGenOpts().CXAAtExit)
     return emitGlobalDtorWithCXAAtExit(CGF, dtor, addr, D.getTLSKind());
