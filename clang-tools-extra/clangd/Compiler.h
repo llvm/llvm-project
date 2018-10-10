@@ -37,8 +37,8 @@ public:
 ///   - Preamble is overriden to use PCH passed to this function. It means the
 ///     changes to the preamble headers or files included in the preamble are
 ///     not visible to this compiler instance.
-///   - vfs::FileSystem is used for all underlying file accesses. The actual
-///     vfs used by the compiler may be an overlay over the passed vfs.
+///   - llvm::vfs::FileSystem is used for all underlying file accesses. The
+///     actual vfs used by the compiler may be an overlay over the passed vfs.
 /// Returns null on errors. When non-null value is returned, it is expected to
 /// be consumed by FrontendAction::BeginSourceFile to properly destroy \p
 /// MainFile.
@@ -46,7 +46,7 @@ std::unique_ptr<CompilerInstance> prepareCompilerInstance(
     std::unique_ptr<clang::CompilerInvocation>, const PrecompiledPreamble *,
     std::unique_ptr<llvm::MemoryBuffer> MainFile,
     std::shared_ptr<PCHContainerOperations>,
-    IntrusiveRefCntPtr<vfs::FileSystem>, DiagnosticConsumer &);
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem>, DiagnosticConsumer &);
 
 } // namespace clangd
 } // namespace clang

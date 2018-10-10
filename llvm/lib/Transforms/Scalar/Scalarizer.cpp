@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -289,8 +290,12 @@ bool Scalarizer::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
   assert(Gathered.empty() && Scattered.empty());
-  for (BasicBlock &BB : F) {
-    for (BasicBlock::iterator II = BB.begin(), IE = BB.end(); II != IE;) {
+
+  // To ensure we replace gathered components correctly we need to do an ordered
+  // traversal of the basic blocks in the function.
+  ReversePostOrderTraversal<BasicBlock *> RPOT(&F.getEntryBlock());
+  for (BasicBlock *BB : RPOT) {
+    for (BasicBlock::iterator II = BB->begin(), IE = BB->end(); II != IE;) {
       Instruction *I = &*II;
       bool Done = visit(I);
       ++II;

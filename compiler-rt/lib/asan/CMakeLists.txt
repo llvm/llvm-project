@@ -100,7 +100,6 @@ append_list_if(COMPILER_RT_HAS_LIBM m ASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread ASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBLOG log ASAN_DYNAMIC_LIBS)
 append_list_if(MINGW "${MINGW_LIBRARIES}" ASAN_DYNAMIC_LIBS)
-append_list_if(MINGW psapi ASAN_DYNAMIC_LIBS)
 
 # Compile ASan sources into an object library.
 

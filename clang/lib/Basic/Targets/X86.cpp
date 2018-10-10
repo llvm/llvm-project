@@ -169,7 +169,6 @@ bool X86TargetInfo::initFeatureMap(
     if (Kind != CK_SkylakeServer) // SKX inherits all SKL features, except SGX
       setFeatureEnabledImpl(Features, "sgx", true);
     setFeatureEnabledImpl(Features, "clflushopt", true);
-    setFeatureEnabledImpl(Features, "rtm", true);
     setFeatureEnabledImpl(Features, "aes", true);
     LLVM_FALLTHROUGH;
   case CK_Broadwell:

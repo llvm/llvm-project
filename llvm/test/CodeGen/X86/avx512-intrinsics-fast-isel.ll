@@ -7210,8 +7210,7 @@ define double @test_mm512_reduce_add_pd(<8 x double> %__W) {
 ; X86-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; X86-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovlpd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -7226,8 +7225,7 @@ define double @test_mm512_reduce_add_pd(<8 x double> %__W) {
 ; X64-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; X64-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -7407,8 +7405,7 @@ define double @test_mm512_mask_reduce_add_pd(i8 zeroext %__M, <8 x double> %__W)
 ; X86-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; X86-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovlpd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -7425,8 +7422,7 @@ define double @test_mm512_mask_reduce_add_pd(i8 zeroext %__M, <8 x double> %__W)
 ; X64-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X64-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; X64-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:

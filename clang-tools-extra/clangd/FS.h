@@ -10,8 +10,9 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FS_H
 
-#include "clang/Basic/VirtualFileSystem.h"
+#include "clang/Basic/LLVM.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {
 namespace clangd {
@@ -39,10 +40,10 @@ public:
   /// corresponds to. The stat for the main file will not be cached.
   PreambleFileStatusCache(llvm::StringRef MainFilePath);
 
-  void update(const vfs::FileSystem &FS, vfs::Status S);
+  void update(const llvm::vfs::FileSystem &FS, llvm::vfs::Status S);
 
   /// \p Path is a path stored in preamble.
-  llvm::Optional<vfs::Status> lookup(llvm::StringRef Path) const;
+  llvm::Optional<llvm::vfs::Status> lookup(llvm::StringRef Path) const;
 
   /// Returns a VFS that collects file status.
   /// Only cache stats for files that exist because
@@ -51,18 +52,18 @@ public:
   ///   2) we use the file name in the Status as the cache key.
   ///
   /// Note that the returned VFS should not outlive the cache.
-  IntrusiveRefCntPtr<vfs::FileSystem>
-  getProducingFS(IntrusiveRefCntPtr<vfs::FileSystem> FS);
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+  getProducingFS(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
   /// Returns a VFS that uses the cache collected.
   ///
   /// Note that the returned VFS should not outlive the cache.
-  IntrusiveRefCntPtr<vfs::FileSystem>
-  getConsumingFS(IntrusiveRefCntPtr<vfs::FileSystem> FS) const;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+  getConsumingFS(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) const;
 
 private:
   std::string MainFilePath;
-  llvm::StringMap<vfs::Status> StatCache;
+  llvm::StringMap<llvm::vfs::Status> StatCache;
 };
 
 } // namespace clangd

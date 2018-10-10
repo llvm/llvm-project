@@ -21,6 +21,7 @@
 
 #include <random>
 
+#include "LlvmState.h"
 #include "RegisterAliasing.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -44,7 +45,7 @@ struct Variable {
 
   // The indices of the operands tied to this Variable.
   llvm::SmallVector<unsigned, 2> TiedOperands;
-  llvm::MCOperand AssignedValue;
+
   // The index of this Variable in Instruction.Variables and its associated
   // Value in InstructionBuilder.VariableValues.
   int Index = -1;
@@ -80,7 +81,7 @@ struct Operand {
   const llvm::MCOperandInfo &getExplicitOperandInfo() const;
 
   // Please use the accessors above and not the following fields.
-  unsigned Index = 0;
+  int Index = -1;
   bool IsDef = false;
   const RegisterAliasingTracker *Tracker = nullptr; // Set for Register Op.
   const llvm::MCOperandInfo *Info = nullptr;        // Set for Explicit Op.
@@ -92,25 +93,19 @@ struct Operand {
 // A view over an MCInstrDesc offering a convenient interface to compute
 // Register aliasing.
 struct Instruction {
-  Instruction(const llvm::MCInstrDesc &MCInstrDesc,
-              const RegisterAliasingTrackerCache &ATC);
+  Instruction(const LLVMState &State, unsigned Opcode);
 
   // Returns the Operand linked to this Variable.
   // In case the Variable is tied, the primary (i.e. Def) Operand is returned.
   const Operand &getPrimaryOperand(const Variable &Var) const;
 
-  // Returns whether this instruction has Memory Operands.
-  // Repeating this instruction executes sequentially with an instruction that
-  // reads or write the same memory region.
-  bool hasMemoryOperands() const;
+  // Whether this instruction is self aliasing through its tied registers.
+  // Repeating this instruction is guaranteed to executes sequentially.
+  bool hasTiedRegisters() const;
 
   // Whether this instruction is self aliasing through its implicit registers.
   // Repeating this instruction is guaranteed to executes sequentially.
   bool hasAliasingImplicitRegisters() const;
-
-  // Whether this instruction is self aliasing through its tied registers.
-  // Repeating this instruction is guaranteed to executes sequentially.
-  bool hasTiedRegisters() const;
 
   // Whether this instruction is self aliasing through some registers.
   // Repeating this instruction may execute sequentially by picking aliasing
@@ -118,11 +113,24 @@ struct Instruction {
   // aliasing Use and Def registers.
   bool hasAliasingRegisters() const;
 
+  // Whether this instruction's implicit registers alias with OtherInstr's
+  // implicit registers.
+  bool hasAliasingImplicitRegistersThrough(const Instruction &OtherInstr) const;
+
+  // Whether this instruction's registers alias with OtherInstr's registers.
+  bool hasAliasingRegistersThrough(const Instruction &OtherInstr) const;
+
+  // Returns whether this instruction has Memory Operands.
+  // Repeating this instruction executes sequentially with an instruction that
+  // reads or write the same memory region.
+  bool hasMemoryOperands() const;
+
   // Convenient function to help with debugging.
   void dump(const llvm::MCRegisterInfo &RegInfo,
             llvm::raw_ostream &Stream) const;
 
   const llvm::MCInstrDesc *Description; // Never nullptr.
+  llvm::StringRef Name;                 // The name of this instruction.
   llvm::SmallVector<Operand, 8> Operands;
   llvm::SmallVector<Variable, 4> Variables;
   llvm::BitVector ImplDefRegs; // The set of aliased implicit def registers.

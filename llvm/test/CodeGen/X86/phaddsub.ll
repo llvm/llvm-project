@@ -286,16 +286,12 @@ define <4 x i32> @phsubd1_reverse(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @phaddd_single_source1(<4 x i32> %x) {
 ; SSSE3-LABEL: phaddd_single_source1:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,0,2]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; SSSE3-NEXT:    paddd %xmm1, %xmm0
+; SSSE3-NEXT:    phaddd %xmm0, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: phaddd_single_source1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[0,1,0,2]
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %l = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> <i32 undef, i32 undef, i32 0, i32 2>
   %r = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> <i32 undef, i32 undef, i32 1, i32 3>
@@ -306,17 +302,13 @@ define <4 x i32> @phaddd_single_source1(<4 x i32> %x) {
 define <4 x i32> @phaddd_single_source2(<4 x i32> %x) {
 ; SSSE3-LABEL: phaddd_single_source2:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,0,2]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; SSSE3-NEXT:    paddd %xmm1, %xmm0
+; SSSE3-NEXT:    phaddd %xmm0, %xmm0
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,2,2,3]
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: phaddd_single_source2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[0,1,0,2]
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,2,2,3]
 ; AVX-NEXT:    retq
   %l = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> <i32 undef, i32 undef, i32 0, i32 2>
@@ -329,16 +321,12 @@ define <4 x i32> @phaddd_single_source2(<4 x i32> %x) {
 define <4 x i32> @phaddd_single_source3(<4 x i32> %x) {
 ; SSSE3-LABEL: phaddd_single_source3:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,0,1]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; SSSE3-NEXT:    paddd %xmm1, %xmm0
+; SSSE3-NEXT:    phaddd %xmm0, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: phaddd_single_source3:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[0,1,0,1]
-; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %l = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> <i32 undef, i32 undef, i32 0, i32 undef>
   %r = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> <i32 undef, i32 undef, i32 1, i32 undef>
@@ -349,14 +337,12 @@ define <4 x i32> @phaddd_single_source3(<4 x i32> %x) {
 define <4 x i32> @phaddd_single_source4(<4 x i32> %x) {
 ; SSSE3-LABEL: phaddd_single_source4:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,2,2]
-; SSSE3-NEXT:    paddd %xmm1, %xmm0
+; SSSE3-NEXT:    phaddd %xmm0, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: phaddd_single_source4:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[0,1,2,2]
-; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %l = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> <i32 undef, i32 undef, i32 undef, i32 2>
   %add = add <4 x i32> %l, %x
@@ -366,15 +352,13 @@ define <4 x i32> @phaddd_single_source4(<4 x i32> %x) {
 define <4 x i32> @phaddd_single_source5(<4 x i32> %x) {
 ; SSSE3-LABEL: phaddd_single_source5:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,2,2]
-; SSSE3-NEXT:    paddd %xmm0, %xmm1
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,1,2,3]
+; SSSE3-NEXT:    phaddd %xmm0, %xmm0
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: phaddd_single_source5:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[0,1,2,2]
-; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; AVX-NEXT:    retq
   %l = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> <i32 undef, i32 undef, i32 undef, i32 2>
@@ -386,17 +370,13 @@ define <4 x i32> @phaddd_single_source5(<4 x i32> %x) {
 define <4 x i32> @phaddd_single_source6(<4 x i32> %x) {
 ; SSSE3-LABEL: phaddd_single_source6:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,0,1]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; SSSE3-NEXT:    paddd %xmm1, %xmm0
+; SSSE3-NEXT:    phaddd %xmm0, %xmm0
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: phaddd_single_source6:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[0,1,0,1]
-; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; AVX-NEXT:    retq
   %l = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> <i32 undef, i32 undef, i32 0, i32 undef>
@@ -409,17 +389,12 @@ define <4 x i32> @phaddd_single_source6(<4 x i32> %x) {
 define <8 x i16> @phaddw_single_source1(<8 x i16> %x) {
 ; SSSE3-LABEL: phaddw_single_source1:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa %xmm0, %xmm1
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1,4,5,4,5,6,7,0,1,4,5,8,9,12,13]
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[6,7,2,3,4,5,6,7,2,3,6,7,10,11,14,15]
-; SSSE3-NEXT:    paddw %xmm1, %xmm0
+; SSSE3-NEXT:    phaddw %xmm0, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: phaddw_single_source1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[0,1,4,5,4,5,6,7,0,1,4,5,8,9,12,13]
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[6,7,2,3,4,5,6,7,2,3,6,7,10,11,14,15]
-; AVX-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %l = shufflevector <8 x i16> %x, <8 x i16> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 0, i32 2, i32 4, i32 6>
   %r = shufflevector <8 x i16> %x, <8 x i16> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 1, i32 3, i32 5, i32 7>
@@ -430,22 +405,14 @@ define <8 x i16> @phaddw_single_source1(<8 x i16> %x) {
 define <8 x i16> @phaddw_single_source2(<8 x i16> %x) {
 ; SSSE3-LABEL: phaddw_single_source2:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[0,2,2,3,4,5,6,7]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,3]
-; SSSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[1,3,2,3,4,5,6,7]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
-; SSSE3-NEXT:    paddw %xmm1, %xmm0
+; SSSE3-NEXT:    phaddw %xmm0, %xmm0
 ; SSSE3-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,4,6,7]
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,1,2,3]
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: phaddw_single_source2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[0,2,2,3,4,5,6,7]
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,3]
-; AVX-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,3,2,3,4,5,6,7]
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
-; AVX-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,4,6,7]
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,1,2,3]
 ; AVX-NEXT:    retq
@@ -459,20 +426,12 @@ define <8 x i16> @phaddw_single_source2(<8 x i16> %x) {
 define <8 x i16> @phaddw_single_source3(<8 x i16> %x) {
 ; SSSE3-LABEL: phaddw_single_source3:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[0,2,2,3,4,5,6,7]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,3]
-; SSSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[1,3,2,3,4,5,6,7]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
-; SSSE3-NEXT:    paddw %xmm1, %xmm0
+; SSSE3-NEXT:    phaddw %xmm0, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: phaddw_single_source3:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm0[0,2,2,3,4,5,6,7]
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,3]
-; AVX-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,3,2,3,4,5,6,7]
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
-; AVX-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %l = shufflevector <8 x i16> %x, <8 x i16> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 0, i32 2, i32 undef, i32 undef>
   %r = shufflevector <8 x i16> %x, <8 x i16> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 1, i32 3, i32 undef, i32 undef>
@@ -483,16 +442,12 @@ define <8 x i16> @phaddw_single_source3(<8 x i16> %x) {
 define <8 x i16> @phaddw_single_source4(<8 x i16> %x) {
 ; SSSE3-LABEL: phaddw_single_source4:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa %xmm0, %xmm1
-; SSSE3-NEXT:    pslld $16, %xmm1
-; SSSE3-NEXT:    paddw %xmm0, %xmm1
-; SSSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSSE3-NEXT:    phaddw %xmm0, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: phaddw_single_source4:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpslld $16, %xmm0, %xmm1
-; AVX-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %l = shufflevector <8 x i16> %x, <8 x i16> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 6>
   %add = add <8 x i16> %l, %x
@@ -502,18 +457,13 @@ define <8 x i16> @phaddw_single_source4(<8 x i16> %x) {
 define <8 x i16> @phaddw_single_source6(<8 x i16> %x) {
 ; SSSE3-LABEL: phaddw_single_source6:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,0,1]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
-; SSSE3-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,6,7]
-; SSSE3-NEXT:    paddw %xmm1, %xmm0
+; SSSE3-NEXT:    phaddw %xmm0, %xmm0
 ; SSSE3-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[6,7,8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: phaddw_single_source6:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[0,1,0,1]
-; AVX-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
-; AVX-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[6,7,8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero
 ; AVX-NEXT:    retq
   %l = shufflevector <8 x i16> %x, <8 x i16> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 0, i32 undef, i32 undef, i32 undef>

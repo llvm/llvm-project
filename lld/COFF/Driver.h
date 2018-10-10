@@ -89,6 +89,7 @@ private:
   Optional<StringRef> findLib(StringRef Filename);
   StringRef doFindFile(StringRef Filename);
   StringRef doFindLib(StringRef Filename);
+  StringRef doFindLibMinGW(StringRef Filename);
 
   // Parses LIB environment which contains a list of search paths.
   void addLibSearchPaths();

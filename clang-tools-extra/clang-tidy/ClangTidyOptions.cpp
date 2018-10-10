@@ -204,11 +204,11 @@ FileOptionsProvider::FileOptionsProvider(
     const ClangTidyGlobalOptions &GlobalOptions,
     const ClangTidyOptions &DefaultOptions,
     const ClangTidyOptions &OverrideOptions,
-    llvm::IntrusiveRefCntPtr<vfs::FileSystem> VFS)
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
     : DefaultOptionsProvider(GlobalOptions, DefaultOptions),
       OverrideOptions(OverrideOptions), FS(std::move(VFS)) {
   if (!FS)
-    FS = vfs::getRealFileSystem();
+    FS = llvm::vfs::getRealFileSystem();
   ConfigHandlers.emplace_back(".clang-tidy", parseConfiguration);
 }
 

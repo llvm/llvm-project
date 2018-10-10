@@ -10,9 +10,9 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/FileSystemStatCache.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -60,8 +60,8 @@ public:
 
   // Implement FileSystemStatCache::getStat().
   LookupResult getStat(StringRef Path, FileData &Data, bool isFile,
-                       std::unique_ptr<vfs::File> *F,
-                       vfs::FileSystem &FS) override {
+                       std::unique_ptr<llvm::vfs::File> *F,
+                       llvm::vfs::FileSystem &FS) override {
 #ifndef _WIN32
     SmallString<128> NormalizedPath(Path);
     llvm::sys::path::native(NormalizedPath);
@@ -305,8 +305,8 @@ TEST_F(FileManagerTest, makeAbsoluteUsesVFS) {
 #endif
   llvm::sys::path::append(CustomWorkingDir, "some", "weird", "path");
 
-  auto FS =
-      IntrusiveRefCntPtr<vfs::InMemoryFileSystem>(new vfs::InMemoryFileSystem);
+  auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
+      new llvm::vfs::InMemoryFileSystem);
   // setCurrentworkingdirectory must finish without error.
   ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
 

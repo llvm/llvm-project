@@ -37,7 +37,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -88,6 +87,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <atomic>
@@ -155,9 +155,8 @@ static bool moveOnNoError(llvm::ErrorOr<T> Val, T &Output) {
 /// and file-to-buffer remappings inside \p Invocation.
 static std::unique_ptr<llvm::MemoryBuffer>
 getBufferForFileHandlingRemapping(const CompilerInvocation &Invocation,
-                                  vfs::FileSystem *VFS,
-                                  StringRef FilePath,
-                                  bool isVolatile) {
+                                  llvm::vfs::FileSystem *VFS,
+                                  StringRef FilePath, bool isVolatile) {
   const auto &PreprocessorOpts = Invocation.getPreprocessorOpts();
 
   // Try to determine if the main file has been remapped, either from the
@@ -752,7 +751,8 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   AST->OnlyLocalDecls = OnlyLocalDecls;
   AST->CaptureDiagnostics = CaptureDiagnostics;
   AST->Diagnostics = Diags;
-  IntrusiveRefCntPtr<vfs::FileSystem> VFS = vfs::getRealFileSystem();
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
+      llvm::vfs::getRealFileSystem();
   AST->FileMgr = new FileManager(FileSystemOpts, VFS);
   AST->UserFilesAreVolatile = UserFilesAreVolatile;
   AST->SourceMgr = new SourceManager(AST->getDiagnostics(),
@@ -1074,7 +1074,7 @@ static void checkAndSanitizeDiags(SmallVectorImpl<StoredDiagnostic> &
 /// contain any translation-unit information, false otherwise.
 bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                     std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer,
-                    IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+                    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   if (!Invocation)
     return true;
 
@@ -1082,7 +1082,7 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   if (OverrideMainBuffer) {
     assert(Preamble &&
            "No preamble was built, but OverrideMainBuffer is not null");
-    IntrusiveRefCntPtr<vfs::FileSystem> OldVFS = VFS;
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OldVFS = VFS;
     Preamble->AddImplicitPreamble(*CCInvocation, VFS, OverrideMainBuffer.get());
     if (OldVFS != VFS && FileMgr) {
       assert(OldVFS == FileMgr->getVirtualFileSystem() &&
@@ -1279,7 +1279,7 @@ std::unique_ptr<llvm::MemoryBuffer>
 ASTUnit::getMainBufferWithPrecompiledPreamble(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     CompilerInvocation &PreambleInvocationIn,
-    IntrusiveRefCntPtr<vfs::FileSystem> VFS, bool AllowRebuild,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, bool AllowRebuild,
     unsigned MaxLines) {
   auto MainFilePath =
       PreambleInvocationIn.getFrontendOpts().Inputs[0].getFile();
@@ -1468,7 +1468,7 @@ ASTUnit::create(std::shared_ptr<CompilerInvocation> CI,
                 bool CaptureDiagnostics, bool UserFilesAreVolatile) {
   std::unique_ptr<ASTUnit> AST(new ASTUnit(false));
   ConfigureDiags(Diags, *AST, CaptureDiagnostics);
-  IntrusiveRefCntPtr<vfs::FileSystem> VFS =
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
       createVFSFromCompilerInvocation(*CI, *Diags);
   AST->Diagnostics = Diags;
   AST->FileSystemOpts = CI->getFileSystemOpts();
@@ -1630,7 +1630,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
 bool ASTUnit::LoadFromCompilerInvocation(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     unsigned PrecompilePreambleAfterNParses,
-    IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   if (!Invocation)
     return true;
 
@@ -1709,7 +1709,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
     bool AllowPCHWithCompilerErrors, SkipFunctionBodiesScope SkipFunctionBodies,
     bool SingleFileParse, bool UserFilesAreVolatile, bool ForSerialization,
     llvm::Optional<StringRef> ModuleFormat, std::unique_ptr<ASTUnit> *ErrAST,
-    IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   assert(Diags.get() && "no DiagnosticsEngine was provided");
 
   SmallVector<StoredDiagnostic, 4> StoredDiagnostics;
@@ -1754,7 +1754,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
   AST->Diagnostics = Diags;
   AST->FileSystemOpts = CI->getFileSystemOpts();
   if (!VFS)
-    VFS = vfs::getRealFileSystem();
+    VFS = llvm::vfs::getRealFileSystem();
   VFS = createVFSFromCompilerInvocation(*CI, *Diags, VFS);
   AST->FileMgr = new FileManager(AST->FileSystemOpts, VFS);
   AST->PCMCache = new MemoryBufferCache;
@@ -1794,7 +1794,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
 
 bool ASTUnit::Reparse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                       ArrayRef<RemappedFile> RemappedFiles,
-                      IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+                      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   if (!Invocation)
     return true;
 

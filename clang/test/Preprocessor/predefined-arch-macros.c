@@ -670,7 +670,6 @@
 // CHECK_SKL_M32: #define __PRFCHW__ 1
 // CHECK_SKL_M32: #define __RDRND__ 1
 // CHECK_SKL_M32: #define __RDSEED__ 1
-// CHECK_SKL_M32: #define __RTM__ 1
 // CHECK_SKL_M32: #define __SGX__ 1
 // CHECK_SKL_M32: #define __SSE2__ 1
 // CHECK_SKL_M32: #define __SSE3__ 1
@@ -706,7 +705,6 @@
 // CHECK_SKL_M64: #define __PRFCHW__ 1
 // CHECK_SKL_M64: #define __RDRND__ 1
 // CHECK_SKL_M64: #define __RDSEED__ 1
-// CHECK_SKL_M64: #define __RTM__ 1
 // CHECK_SKL_M64: #define __SGX__ 1
 // CHECK_SKL_M64: #define __SSE2_MATH__ 1
 // CHECK_SKL_M64: #define __SSE2__ 1
@@ -747,7 +745,6 @@
 // CHECK_KNL_M32: #define __PREFETCHWT1__ 1
 // CHECK_KNL_M32: #define __PRFCHW__ 1
 // CHECK_KNL_M32: #define __RDRND__ 1
-// CHECK_KNL_M32: #define __RTM__ 1
 // CHECK_KNL_M32: #define __SSE2__ 1
 // CHECK_KNL_M32: #define __SSE3__ 1
 // CHECK_KNL_M32: #define __SSE4_1__ 1
@@ -785,7 +782,6 @@
 // CHECK_KNL_M64: #define __PREFETCHWT1__ 1
 // CHECK_KNL_M64: #define __PRFCHW__ 1
 // CHECK_KNL_M64: #define __RDRND__ 1
-// CHECK_KNL_M64: #define __RTM__ 1
 // CHECK_KNL_M64: #define __SSE2_MATH__ 1
 // CHECK_KNL_M64: #define __SSE2__ 1
 // CHECK_KNL_M64: #define __SSE3__ 1
@@ -827,7 +823,6 @@
 // CHECK_KNM_M32: #define __PREFETCHWT1__ 1
 // CHECK_KNM_M32: #define __PRFCHW__ 1
 // CHECK_KNM_M32: #define __RDRND__ 1
-// CHECK_KNM_M32: #define __RTM__ 1
 // CHECK_KNM_M32: #define __SSE2__ 1
 // CHECK_KNM_M32: #define __SSE3__ 1
 // CHECK_KNM_M32: #define __SSE4_1__ 1
@@ -863,7 +858,6 @@
 // CHECK_KNM_M64: #define __PREFETCHWT1__ 1
 // CHECK_KNM_M64: #define __PRFCHW__ 1
 // CHECK_KNM_M64: #define __RDRND__ 1
-// CHECK_KNM_M64: #define __RTM__ 1
 // CHECK_KNM_M64: #define __SSE2_MATH__ 1
 // CHECK_KNM_M64: #define __SSE2__ 1
 // CHECK_KNM_M64: #define __SSE3__ 1
@@ -907,7 +901,6 @@
 // CHECK_SKX_M32: #define __PRFCHW__ 1
 // CHECK_SKX_M32: #define __RDRND__ 1
 // CHECK_SKX_M32: #define __RDSEED__ 1
-// CHECK_SKX_M32: #define __RTM__ 1
 // CHECK_SKX_M32-NOT: #define __SGX__ 1
 // CHECK_SKX_M32: #define __SSE2__ 1
 // CHECK_SKX_M32: #define __SSE3__ 1
@@ -954,7 +947,6 @@
 // CHECK_SKX_M64: #define __PRFCHW__ 1
 // CHECK_SKX_M64: #define __RDRND__ 1
 // CHECK_SKX_M64: #define __RDSEED__ 1
-// CHECK_SKX_M64: #define __RTM__ 1
 // CHECK_SKX_M64-NOT: #define __SGX__ 1
 // CHECK_SKX_M64: #define __SSE2_MATH__ 1
 // CHECK_SKX_M64: #define __SSE2__ 1
@@ -1006,7 +998,6 @@
 // CHECK_CNL_M32: #define __PRFCHW__ 1
 // CHECK_CNL_M32: #define __RDRND__ 1
 // CHECK_CNL_M32: #define __RDSEED__ 1
-// CHECK_CNL_M32: #define __RTM__ 1
 // CHECK_CNL_M32: #define __SGX__ 1
 // CHECK_CNL_M32: #define __SHA__ 1
 // CHECK_CNL_M32: #define __SSE2__ 1
@@ -1056,7 +1047,6 @@
 // CHECK_CNL_M64: #define __PRFCHW__ 1
 // CHECK_CNL_M64: #define __RDRND__ 1
 // CHECK_CNL_M64: #define __RDSEED__ 1
-// CHECK_CNL_M64: #define __RTM__ 1
 // CHECK_CNL_M64: #define __SGX__ 1
 // CHECK_CNL_M64: #define __SHA__ 1
 // CHECK_CNL_M64: #define __SSE2__ 1
@@ -1113,7 +1103,6 @@
 // CHECK_ICL_M32: #define __RDPID__ 1
 // CHECK_ICL_M32: #define __RDRND__ 1
 // CHECK_ICL_M32: #define __RDSEED__ 1
-// CHECK_ICL_M32: #define __RTM__ 1
 // CHECK_ICL_M32: #define __SGX__ 1
 // CHECK_ICL_M32: #define __SHA__ 1
 // CHECK_ICL_M32: #define __SSE2__ 1
@@ -1172,7 +1161,6 @@
 // CHECK_ICL_M64: #define __RDPID__ 1
 // CHECK_ICL_M64: #define __RDRND__ 1
 // CHECK_ICL_M64: #define __RDSEED__ 1
-// CHECK_ICL_M64: #define __RTM__ 1
 // CHECK_ICL_M64: #define __SGX__ 1
 // CHECK_ICL_M64: #define __SHA__ 1
 // CHECK_ICL_M64: #define __SSE2__ 1
@@ -1233,7 +1221,6 @@
 // CHECK_ICX_M32: #define __RDPID__ 1
 // CHECK_ICX_M32: #define __RDRND__ 1
 // CHECK_ICX_M32: #define __RDSEED__ 1
-// CHECK_ICX_M32: #define __RTM__ 1
 // CHECK_ICX_M32: #define __SGX__ 1
 // CHECK_ICX_M32: #define __SHA__ 1
 // CHECK_ICX_M32: #define __SSE2__ 1
@@ -1293,7 +1280,6 @@
 // CHECK_ICX_M64: #define __RDPID__ 1
 // CHECK_ICX_M64: #define __RDRND__ 1
 // CHECK_ICX_M64: #define __RDSEED__ 1
-// CHECK_ICX_M64: #define __RTM__ 1
 // CHECK_ICX_M64: #define __SGX__ 1
 // CHECK_ICX_M64: #define __SHA__ 1
 // CHECK_ICX_M64: #define __SSE2__ 1

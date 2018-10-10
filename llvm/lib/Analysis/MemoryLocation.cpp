@@ -26,8 +26,10 @@ void LocationSize::print(raw_ostream &OS) const {
     OS << "mapEmpty";
   else if (*this == mapTombstone())
     OS << "mapTombstone";
-  else
+  else if (isPrecise())
     OS << "precise(" << getValue() << ')';
+  else
+    OS << "upperBound(" << getValue() << ')';
 }
 
 MemoryLocation MemoryLocation::get(const LoadInst *LI) {

@@ -52,8 +52,12 @@ class AliasSet : public ilist_node<AliasSet> {
     PointerRec **PrevInList = nullptr;
     PointerRec *NextInList = nullptr;
     AliasSet *AS = nullptr;
-    LocationSize Size = 0;
+    LocationSize Size = LocationSize::mapEmpty();
     AAMDNodes AAInfo;
+
+    // Whether the size for this record has been set at all. This makes no
+    // guarantees about the size being known.
+    bool isSizeSet() const { return Size != LocationSize::mapEmpty(); }
 
   public:
     PointerRec(Value *V)
@@ -71,9 +75,10 @@ class AliasSet : public ilist_node<AliasSet> {
 
     bool updateSizeAndAAInfo(LocationSize NewSize, const AAMDNodes &NewAAInfo) {
       bool SizeChanged = false;
-      if (NewSize > Size) {
-        Size = NewSize;
-        SizeChanged = true;
+      if (NewSize != Size) {
+        LocationSize OldSize = Size;
+        Size = isSizeSet() ? Size.unionWith(NewSize) : NewSize;
+        SizeChanged = OldSize != Size;
       }
 
       if (AAInfo == DenseMapInfo<AAMDNodes>::getEmptyKey())
@@ -91,7 +96,10 @@ class AliasSet : public ilist_node<AliasSet> {
       return SizeChanged;
     }
 
-    LocationSize getSize() const { return Size; }
+    LocationSize getSize() const {
+      assert(isSizeSet() && "Getting an unset size!");
+      return Size;
+    }
 
     /// Return the AAInfo, or null if there is no information or conflicting
     /// information.

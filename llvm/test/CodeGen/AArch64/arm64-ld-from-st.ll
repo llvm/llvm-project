@@ -13,7 +13,7 @@ entry:
 }
 
 ; CHECK-LABEL: Str64Ldr32_0
-; CHECK: and x0, x1, #0xffffffff
+; CHECK: mov w0, w1
 define i32 @Str64Ldr32_0(i64* nocapture %P, i64 %v, i64 %n) {
 entry:
   %0 = bitcast i64* %P to i32*
@@ -37,7 +37,7 @@ entry:
 }
 
 ; CHECK-LABEL: Str64Ldr16_0
-; CHECK: and x0, x1, #0xffff
+; CHECK: mov w0, w1
 define i16 @Str64Ldr16_0(i64* nocapture %P, i64 %v, i64 %n) {
 entry:
   %0 = bitcast i64* %P to i16*
@@ -85,7 +85,7 @@ entry:
 }
 
 ; CHECK-LABEL: Str64Ldr8_0
-; CHECK: and x0, x1, #0xff
+; CHECK: mov w0, w1
 define i8 @Str64Ldr8_0(i64* nocapture %P, i64 %v, i64 %n) {
 entry:
   %0 = bitcast i64* %P to i8*
@@ -193,7 +193,7 @@ entry:
 }
 
 ; CHECK-LABEL: Str32Ldr16_0
-; CHECK: and w0, w1, #0xffff
+; CHECK: mov w0, w1
 define i16 @Str32Ldr16_0(i32* nocapture %P, i32 %v, i64 %n) {
 entry:
   %0 = bitcast i32* %P to i16*
@@ -217,7 +217,7 @@ entry:
 }
 
 ; CHECK-LABEL: Str32Ldr8_0
-; CHECK: and w0, w1, #0xff
+; CHECK: mov w0, w1
 define i8 @Str32Ldr8_0(i32* nocapture %P, i32 %v, i64 %n) {
 entry:
   %0 = bitcast i32* %P to i8*
@@ -265,7 +265,7 @@ entry:
 }
 
 ; CHECK-LABEL: Str16Ldr16
-; CHECK: and w0, w1, #0xffff
+; CHECK: mov w0, w1
 define i16 @Str16Ldr16(i16* nocapture %P, i16 %v, i64 %n) {
 entry:
   %0 = bitcast i16* %P to i16*
@@ -277,7 +277,7 @@ entry:
 }
 
 ; CHECK-LABEL: Str16Ldr8_0
-; CHECK: and w0, w1, #0xff
+; CHECK: mov w0, w1
 define i8 @Str16Ldr8_0(i16* nocapture %P, i16 %v, i64 %n) {
 entry:
   %0 = bitcast i16* %P to i8*
@@ -314,7 +314,7 @@ entry:
 }
 
 ; CHECK-LABEL: Unscaled_Str64Ldr32_0
-; CHECK: and x0, x1, #0xffffffff
+; CHECK: mov w0, w1
 define i32 @Unscaled_Str64Ldr32_0(i64* nocapture %P, i64 %v, i64 %n) {
 entry:
   %0 = bitcast i64* %P to i32*
@@ -338,7 +338,7 @@ entry:
 }
 
 ; CHECK-LABEL: Unscaled_Str64Ldr16_0
-; CHECK: and x0, x1, #0xffff
+; CHECK: mov w0, w1
 define i16 @Unscaled_Str64Ldr16_0(i64* nocapture %P, i64 %v, i64 %n) {
 entry:
   %0 = bitcast i64* %P to i16*
@@ -386,7 +386,7 @@ entry:
 }
 
 ; CHECK-LABEL: Unscaled_Str64Ldr8_0
-; CHECK: and x0, x1, #0xff
+; CHECK: mov w0, w1
 define i8 @Unscaled_Str64Ldr8_0(i64* nocapture %P, i64 %v, i64 %n) {
 entry:
   %0 = bitcast i64* %P to i8*
@@ -494,7 +494,7 @@ entry:
 }
 
 ; CHECK-LABEL: Unscaled_Str32Ldr16_0
-; CHECK: and w0, w1, #0xffff
+; CHECK: mov w0, w1
 define i16 @Unscaled_Str32Ldr16_0(i32* nocapture %P, i32 %v, i64 %n) {
 entry:
   %0 = bitcast i32* %P to i16*
@@ -518,7 +518,7 @@ entry:
 }
 
 ; CHECK-LABEL: Unscaled_Str32Ldr8_0
-; CHECK: and w0, w1, #0xff
+; CHECK: mov w0, w1
 define i8 @Unscaled_Str32Ldr8_0(i32* nocapture %P, i32 %v, i64 %n) {
 entry:
   %0 = bitcast i32* %P to i8*
@@ -566,7 +566,7 @@ entry:
 }
 
 ; CHECK-LABEL: Unscaled_Str16Ldr16
-; CHECK: and w0, w1, #0xffff
+; CHECK: mov w0, w1
 define i16 @Unscaled_Str16Ldr16(i16* nocapture %P, i16 %v, i64 %n) {
 entry:
   %0 = bitcast i16* %P to i16*
@@ -578,7 +578,7 @@ entry:
 }
 
 ; CHECK-LABEL: Unscaled_Str16Ldr8_0
-; CHECK: and w0, w1, #0xff
+; CHECK: mov w0, w1
 define i8 @Unscaled_Str16Ldr8_0(i16* nocapture %P, i16 %v, i64 %n) {
 entry:
   %0 = bitcast i16* %P to i8*

@@ -12375,14 +12375,14 @@ TEST_F(FormatTest, NoSpaceAfterSuper) {
 }
 
 TEST(FormatStyle, GetStyleWithEmptyFileName) {
-  vfs::InMemoryFileSystem FS;
+  llvm::vfs::InMemoryFileSystem FS;
   auto Style1 = getStyle("file", "", "Google", "", &FS);
   ASSERT_TRUE((bool)Style1);
   ASSERT_EQ(*Style1, getGoogleStyle());
 }
 
 TEST(FormatStyle, GetStyleOfFile) {
-  vfs::InMemoryFileSystem FS;
+  llvm::vfs::InMemoryFileSystem FS;
   // Test 1: format file in the same directory.
   ASSERT_TRUE(
       FS.addFile("/a/.clang-format", 0,

@@ -408,10 +408,10 @@ USEMV(ImportMembers::Nested, ConstexprField)
 
 // Import special member functions.
 struct ImportSpecials {
-  // M32-DAG: declare dllimport x86_thiscallcc %struct.ImportSpecials* @"??0ImportSpecials@@QAE@XZ"(%struct.ImportSpecials* returned)
-  // M64-DAG: declare dllimport                %struct.ImportSpecials* @"??0ImportSpecials@@QEAA@XZ"(%struct.ImportSpecials* returned)
-  // G32-DAG: declare dllimport x86_thiscallcc void                    @_ZN14ImportSpecialsC1Ev(%struct.ImportSpecials*)
-  // G64-DAG: declare dllimport                void                    @_ZN14ImportSpecialsC1Ev(%struct.ImportSpecials*)
+  // M32-DAG: declare dllimport x86_thiscallcc %struct.ImportSpecials* @"??0ImportSpecials@@QAE@XZ"(%struct.ImportSpecials* noalias returned)
+  // M64-DAG: declare dllimport                %struct.ImportSpecials* @"??0ImportSpecials@@QEAA@XZ"(%struct.ImportSpecials* noalias returned)
+  // G32-DAG: declare dllimport x86_thiscallcc void                    @_ZN14ImportSpecialsC1Ev(%struct.ImportSpecials* noalias)
+  // G64-DAG: declare dllimport                void                    @_ZN14ImportSpecialsC1Ev(%struct.ImportSpecials* noalias)
   __declspec(dllimport) ImportSpecials();
 
   // M32-DAG: declare dllimport x86_thiscallcc void @"??1ImportSpecials@@QAE@XZ"(%struct.ImportSpecials*)
@@ -420,10 +420,10 @@ struct ImportSpecials {
   // G64-DAG: declare dllimport                void                    @_ZN14ImportSpecialsD1Ev(%struct.ImportSpecials*)
   __declspec(dllimport) ~ImportSpecials();
 
-  // M32-DAG: declare dllimport x86_thiscallcc %struct.ImportSpecials* @"??0ImportSpecials@@QAE@ABU0@@Z"(%struct.ImportSpecials* returned, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
-  // M64-DAG: declare dllimport                %struct.ImportSpecials* @"??0ImportSpecials@@QEAA@AEBU0@@Z"(%struct.ImportSpecials* returned, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
-  // G32-DAG: declare dllimport x86_thiscallcc void                    @_ZN14ImportSpecialsC1ERKS_(%struct.ImportSpecials*, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
-  // G64-DAG: declare dllimport                void                    @_ZN14ImportSpecialsC1ERKS_(%struct.ImportSpecials*, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
+  // M32-DAG: declare dllimport x86_thiscallcc %struct.ImportSpecials* @"??0ImportSpecials@@QAE@ABU0@@Z"(%struct.ImportSpecials* noalias returned, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
+  // M64-DAG: declare dllimport                %struct.ImportSpecials* @"??0ImportSpecials@@QEAA@AEBU0@@Z"(%struct.ImportSpecials* noalias returned, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
+  // G32-DAG: declare dllimport x86_thiscallcc void                    @_ZN14ImportSpecialsC1ERKS_(%struct.ImportSpecials* noalias, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
+  // G64-DAG: declare dllimport                void                    @_ZN14ImportSpecialsC1ERKS_(%struct.ImportSpecials* noalias, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
   __declspec(dllimport) ImportSpecials(const ImportSpecials&);
 
   // M32-DAG: declare dllimport x86_thiscallcc dereferenceable({{[0-9]+}}) %struct.ImportSpecials* @"??4ImportSpecials@@QAEAAU0@ABU0@@Z"(%struct.ImportSpecials*, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
@@ -432,10 +432,10 @@ struct ImportSpecials {
   // G64-DAG: declare dllimport                dereferenceable({{[0-9]+}}) %struct.ImportSpecials* @_ZN14ImportSpecialsaSERKS_(%struct.ImportSpecials*, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
   __declspec(dllimport) ImportSpecials& operator=(const ImportSpecials&);
 
-  // M32-DAG: declare dllimport x86_thiscallcc %struct.ImportSpecials* @"??0ImportSpecials@@QAE@$$QAU0@@Z"(%struct.ImportSpecials* returned, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
-  // M64-DAG: declare dllimport                %struct.ImportSpecials* @"??0ImportSpecials@@QEAA@$$QEAU0@@Z"(%struct.ImportSpecials* returned, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
-  // G32-DAG: declare dllimport x86_thiscallcc void                    @_ZN14ImportSpecialsC1EOS_(%struct.ImportSpecials*, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
-  // G64-DAG: declare dllimport                void                    @_ZN14ImportSpecialsC1EOS_(%struct.ImportSpecials*, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
+  // M32-DAG: declare dllimport x86_thiscallcc %struct.ImportSpecials* @"??0ImportSpecials@@QAE@$$QAU0@@Z"(%struct.ImportSpecials* noalias returned, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
+  // M64-DAG: declare dllimport                %struct.ImportSpecials* @"??0ImportSpecials@@QEAA@$$QEAU0@@Z"(%struct.ImportSpecials* noalias returned, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
+  // G32-DAG: declare dllimport x86_thiscallcc void                    @_ZN14ImportSpecialsC1EOS_(%struct.ImportSpecials* noalias, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
+  // G64-DAG: declare dllimport                void                    @_ZN14ImportSpecialsC1EOS_(%struct.ImportSpecials* noalias, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
   __declspec(dllimport) ImportSpecials(ImportSpecials&&);
 
   // M32-DAG: declare dllimport x86_thiscallcc dereferenceable({{[0-9]+}}) %struct.ImportSpecials* @"??4ImportSpecials@@QAEAAU0@$$QAU0@@Z"(%struct.ImportSpecials*, %struct.ImportSpecials* dereferenceable({{[0-9]+}}))
@@ -449,10 +449,10 @@ USESPECIALS(ImportSpecials)
 
 // Export inline special member functions.
 struct ImportInlineSpecials {
-  // M32-DAG: declare dllimport   x86_thiscallcc %struct.ImportInlineSpecials* @"??0ImportInlineSpecials@@QAE@XZ"(%struct.ImportInlineSpecials* returned)
-  // M64-DAG: declare dllimport                  %struct.ImportInlineSpecials* @"??0ImportInlineSpecials@@QEAA@XZ"(%struct.ImportInlineSpecials* returned)
-  // G32-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN20ImportInlineSpecialsC1Ev(%struct.ImportInlineSpecials* %this)
-  // G64-DAG: define linkonce_odr dso_local                void @_ZN20ImportInlineSpecialsC1Ev(%struct.ImportInlineSpecials* %this)
+  // M32-DAG: declare dllimport   x86_thiscallcc %struct.ImportInlineSpecials* @"??0ImportInlineSpecials@@QAE@XZ"(%struct.ImportInlineSpecials* noalias returned)
+  // M64-DAG: declare dllimport                  %struct.ImportInlineSpecials* @"??0ImportInlineSpecials@@QEAA@XZ"(%struct.ImportInlineSpecials* noalias returned)
+  // G32-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN20ImportInlineSpecialsC1Ev(%struct.ImportInlineSpecials* noalias %this)
+  // G64-DAG: define linkonce_odr dso_local                void @_ZN20ImportInlineSpecialsC1Ev(%struct.ImportInlineSpecials* noalias %this)
   // MO1-DAG: define available_externally dllimport x86_thiscallcc %struct.ImportInlineSpecials* @"??0ImportInlineSpecials@@QAE@XZ"(
   // GO1-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN20ImportInlineSpecialsC1Ev(
   __declspec(dllimport) ImportInlineSpecials() {}
@@ -465,10 +465,10 @@ struct ImportInlineSpecials {
   // GO1-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN20ImportInlineSpecialsD1Ev(
   __declspec(dllimport) ~ImportInlineSpecials() {}
 
-  // M32-DAG: declare dllimport   x86_thiscallcc %struct.ImportInlineSpecials* @"??0ImportInlineSpecials@@QAE@ABU0@@Z"(%struct.ImportInlineSpecials* returned, %struct.ImportInlineSpecials* dereferenceable({{[0-9]+}}))
-  // M64-DAG: declare dllimport                  %struct.ImportInlineSpecials* @"??0ImportInlineSpecials@@QEAA@AEBU0@@Z"(%struct.ImportInlineSpecials* returned, %struct.ImportInlineSpecials* dereferenceable({{[0-9]+}}))
-  // G32-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN20ImportInlineSpecialsC1ERKS_(%struct.ImportInlineSpecials* %this, %struct.ImportInlineSpecials* dereferenceable({{[0-9]+}}))
-  // G64-DAG: define linkonce_odr dso_local                void @_ZN20ImportInlineSpecialsC1ERKS_(%struct.ImportInlineSpecials* %this, %struct.ImportInlineSpecials* dereferenceable({{[0-9]+}}))
+  // M32-DAG: declare dllimport   x86_thiscallcc %struct.ImportInlineSpecials* @"??0ImportInlineSpecials@@QAE@ABU0@@Z"(%struct.ImportInlineSpecials* noalias returned, %struct.ImportInlineSpecials* dereferenceable({{[0-9]+}}))
+  // M64-DAG: declare dllimport                  %struct.ImportInlineSpecials* @"??0ImportInlineSpecials@@QEAA@AEBU0@@Z"(%struct.ImportInlineSpecials* noalias returned, %struct.ImportInlineSpecials* dereferenceable({{[0-9]+}}))
+  // G32-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN20ImportInlineSpecialsC1ERKS_(%struct.ImportInlineSpecials* noalias %this, %struct.ImportInlineSpecials* dereferenceable({{[0-9]+}}))
+  // G64-DAG: define linkonce_odr dso_local                void @_ZN20ImportInlineSpecialsC1ERKS_(%struct.ImportInlineSpecials* noalias %this, %struct.ImportInlineSpecials* dereferenceable({{[0-9]+}}))
   // MO1-DAG: define available_externally dllimport x86_thiscallcc %struct.ImportInlineSpecials* @"??0ImportInlineSpecials@@QAE@ABU0@@Z"(
   // GO1-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN20ImportInlineSpecialsC1ERKS_(
   __declspec(dllimport) inline ImportInlineSpecials(const ImportInlineSpecials&);
@@ -481,10 +481,10 @@ struct ImportInlineSpecials {
   // GO1-DAG: define linkonce_odr dso_local x86_thiscallcc dereferenceable({{[0-9]+}}) %struct.ImportInlineSpecials* @_ZN20ImportInlineSpecialsaSERKS_(
   __declspec(dllimport) ImportInlineSpecials& operator=(const ImportInlineSpecials&);
 
-  // M32-DAG: declare dllimport   x86_thiscallcc %struct.ImportInlineSpecials* @"??0ImportInlineSpecials@@QAE@$$QAU0@@Z"(%struct.ImportInlineSpecials* returned, %struct.ImportInlineSpecials* dereferenceable({{[0-9]+}}))
-  // M64-DAG: declare dllimport                  %struct.ImportInlineSpecials* @"??0ImportInlineSpecials@@QEAA@$$QEAU0@@Z"(%struct.ImportInlineSpecials* returned, %struct.ImportInlineSpecials* dereferenceable({{[0-9]+}}))
-  // G32-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN20ImportInlineSpecialsC1EOS_(%struct.ImportInlineSpecials* %this, %struct.ImportInlineSpecials* dereferenceable({{[0-9]+}}))
-  // G64-DAG: define linkonce_odr dso_local                void @_ZN20ImportInlineSpecialsC1EOS_(%struct.ImportInlineSpecials* %this, %struct.ImportInlineSpecials* dereferenceable({{[0-9]+}}))
+  // M32-DAG: declare dllimport   x86_thiscallcc %struct.ImportInlineSpecials* @"??0ImportInlineSpecials@@QAE@$$QAU0@@Z"(%struct.ImportInlineSpecials* noalias returned, %struct.ImportInlineSpecials* dereferenceable({{[0-9]+}}))
+  // M64-DAG: declare dllimport                  %struct.ImportInlineSpecials* @"??0ImportInlineSpecials@@QEAA@$$QEAU0@@Z"(%struct.ImportInlineSpecials* noalias returned, %struct.ImportInlineSpecials* dereferenceable({{[0-9]+}}))
+  // G32-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN20ImportInlineSpecialsC1EOS_(%struct.ImportInlineSpecials* noalias %this, %struct.ImportInlineSpecials* dereferenceable({{[0-9]+}}))
+  // G64-DAG: define linkonce_odr dso_local                void @_ZN20ImportInlineSpecialsC1EOS_(%struct.ImportInlineSpecials* noalias %this, %struct.ImportInlineSpecials* dereferenceable({{[0-9]+}}))
   // MO1-DAG: define available_externally dllimport x86_thiscallcc %struct.ImportInlineSpecials* @"??0ImportInlineSpecials@@QAE@$$QAU0@@Z"(
   // GO1-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN20ImportInlineSpecialsC1EOS_(
   __declspec(dllimport) ImportInlineSpecials(ImportInlineSpecials&&) {}
@@ -504,12 +504,12 @@ USESPECIALS(ImportInlineSpecials)
 
 // Import defaulted member functions.
 struct ImportDefaulted {
-  // M32-DAG: declare dllimport   x86_thiscallcc %struct.ImportDefaulted* @"??0ImportDefaulted@@QAE@XZ"(%struct.ImportDefaulted* returned)
-  // M64-DAG: declare dllimport                  %struct.ImportDefaulted* @"??0ImportDefaulted@@QEAA@XZ"(%struct.ImportDefaulted* returned)
-  // G32-DAG: define linkonce_odr dso_local x86_thiscallcc void                     @_ZN15ImportDefaultedC1Ev(%struct.ImportDefaulted* %this)
-  // G64-DAG: define linkonce_odr dso_local                void                     @_ZN15ImportDefaultedC1Ev(%struct.ImportDefaulted* %this)
-  // MO1-DAG: define available_externally dllimport x86_thiscallcc %struct.ImportDefaulted* @"??0ImportDefaulted@@QAE@XZ"(%struct.ImportDefaulted* returned %this)
-  // GO1-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN15ImportDefaultedC1Ev(%struct.ImportDefaulted* %this)
+  // M32-DAG: declare dllimport   x86_thiscallcc %struct.ImportDefaulted* @"??0ImportDefaulted@@QAE@XZ"(%struct.ImportDefaulted* noalias returned)
+  // M64-DAG: declare dllimport                  %struct.ImportDefaulted* @"??0ImportDefaulted@@QEAA@XZ"(%struct.ImportDefaulted* noalias returned)
+  // G32-DAG: define linkonce_odr dso_local x86_thiscallcc void                     @_ZN15ImportDefaultedC1Ev(%struct.ImportDefaulted* noalias %this)
+  // G64-DAG: define linkonce_odr dso_local                void                     @_ZN15ImportDefaultedC1Ev(%struct.ImportDefaulted* noalias %this)
+  // MO1-DAG: define available_externally dllimport x86_thiscallcc %struct.ImportDefaulted* @"??0ImportDefaulted@@QAE@XZ"(%struct.ImportDefaulted* noalias returned %this)
+  // GO1-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN15ImportDefaultedC1Ev(%struct.ImportDefaulted* noalias %this)
   __declspec(dllimport) ImportDefaulted() = default;
 
   // M32-DAG: declare dllimport   x86_thiscallcc void @"??1ImportDefaulted@@QAE@XZ"(%struct.ImportDefaulted*)
@@ -520,12 +520,12 @@ struct ImportDefaulted {
   // GO1-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN15ImportDefaultedD1Ev(%struct.ImportDefaulted* %this)
   __declspec(dllimport) ~ImportDefaulted() = default;
 
-  // M32-DAG: declare dllimport   x86_thiscallcc %struct.ImportDefaulted* @"??0ImportDefaulted@@QAE@ABU0@@Z"(%struct.ImportDefaulted* returned, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
-  // M64-DAG: declare dllimport                  %struct.ImportDefaulted* @"??0ImportDefaulted@@QEAA@AEBU0@@Z"(%struct.ImportDefaulted* returned, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
-  // G32-DAG: define linkonce_odr dso_local x86_thiscallcc void                     @_ZN15ImportDefaultedC1ERKS_(%struct.ImportDefaulted* %this, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
-  // G64-DAG: define linkonce_odr dso_local                void                     @_ZN15ImportDefaultedC1ERKS_(%struct.ImportDefaulted* %this, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
-  // MO1-DAG: define available_externally dllimport x86_thiscallcc %struct.ImportDefaulted* @"??0ImportDefaulted@@QAE@ABU0@@Z"(%struct.ImportDefaulted* returned %this, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
-  // GO1-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN15ImportDefaultedC1ERKS_(%struct.ImportDefaulted* %this, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
+  // M32-DAG: declare dllimport   x86_thiscallcc %struct.ImportDefaulted* @"??0ImportDefaulted@@QAE@ABU0@@Z"(%struct.ImportDefaulted* noalias returned, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
+  // M64-DAG: declare dllimport                  %struct.ImportDefaulted* @"??0ImportDefaulted@@QEAA@AEBU0@@Z"(%struct.ImportDefaulted* noalias returned, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
+  // G32-DAG: define linkonce_odr dso_local x86_thiscallcc void                     @_ZN15ImportDefaultedC1ERKS_(%struct.ImportDefaulted* noalias %this, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
+  // G64-DAG: define linkonce_odr dso_local                void                     @_ZN15ImportDefaultedC1ERKS_(%struct.ImportDefaulted* noalias %this, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
+  // MO1-DAG: define available_externally dllimport x86_thiscallcc %struct.ImportDefaulted* @"??0ImportDefaulted@@QAE@ABU0@@Z"(%struct.ImportDefaulted* noalias returned %this, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
+  // GO1-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN15ImportDefaultedC1ERKS_(%struct.ImportDefaulted* noalias %this, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
   __declspec(dllimport) ImportDefaulted(const ImportDefaulted&) = default;
 
   // M32-DAG: declare dllimport   x86_thiscallcc dereferenceable({{[0-9]+}}) %struct.ImportDefaulted* @"??4ImportDefaulted@@QAEAAU0@ABU0@@Z"(%struct.ImportDefaulted*, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
@@ -536,12 +536,12 @@ struct ImportDefaulted {
   // GO1-DAG: define linkonce_odr dso_local x86_thiscallcc dereferenceable({{[0-9]+}}) %struct.ImportDefaulted* @_ZN15ImportDefaultedaSERKS_(%struct.ImportDefaulted* %this, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
   __declspec(dllimport) ImportDefaulted& operator=(const ImportDefaulted&) = default;
 
-  // M32-DAG: declare dllimport   x86_thiscallcc %struct.ImportDefaulted* @"??0ImportDefaulted@@QAE@$$QAU0@@Z"(%struct.ImportDefaulted* returned, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
-  // M64-DAG: declare dllimport                  %struct.ImportDefaulted* @"??0ImportDefaulted@@QEAA@$$QEAU0@@Z"(%struct.ImportDefaulted* returned, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
-  // G32-DAG: define linkonce_odr dso_local x86_thiscallcc void                     @_ZN15ImportDefaultedC1EOS_(%struct.ImportDefaulted* %this, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
-  // G64-DAG: define linkonce_odr dso_local                void                     @_ZN15ImportDefaultedC1EOS_(%struct.ImportDefaulted* %this, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
-  // MO1-DAG: define available_externally dllimport x86_thiscallcc %struct.ImportDefaulted* @"??0ImportDefaulted@@QAE@$$QAU0@@Z"(%struct.ImportDefaulted* returned %this, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
-  // GO1-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN15ImportDefaultedC1EOS_(%struct.ImportDefaulted* %this, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
+  // M32-DAG: declare dllimport   x86_thiscallcc %struct.ImportDefaulted* @"??0ImportDefaulted@@QAE@$$QAU0@@Z"(%struct.ImportDefaulted* noalias returned, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
+  // M64-DAG: declare dllimport                  %struct.ImportDefaulted* @"??0ImportDefaulted@@QEAA@$$QEAU0@@Z"(%struct.ImportDefaulted* noalias returned, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
+  // G32-DAG: define linkonce_odr dso_local x86_thiscallcc void                     @_ZN15ImportDefaultedC1EOS_(%struct.ImportDefaulted* noalias %this, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
+  // G64-DAG: define linkonce_odr dso_local                void                     @_ZN15ImportDefaultedC1EOS_(%struct.ImportDefaulted* noalias %this, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
+  // MO1-DAG: define available_externally dllimport x86_thiscallcc %struct.ImportDefaulted* @"??0ImportDefaulted@@QAE@$$QAU0@@Z"(%struct.ImportDefaulted* noalias returned %this, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
+  // GO1-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN15ImportDefaultedC1EOS_(%struct.ImportDefaulted* noalias %this, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
   __declspec(dllimport) ImportDefaulted(ImportDefaulted&&) = default;
 
   // M32-DAG: declare dllimport   x86_thiscallcc dereferenceable({{[0-9]+}}) %struct.ImportDefaulted* @"??4ImportDefaulted@@QAEAAU0@$$QAU0@@Z"(%struct.ImportDefaulted*, %struct.ImportDefaulted* dereferenceable({{[0-9]+}}))
@@ -571,8 +571,8 @@ struct ImportDefaultedDefs {
 
 #ifdef MSABI
 // For MinGW, the function will not be dllimport, and we cannot add the attribute now.
-// M32-DAG: declare dllimport x86_thiscallcc %struct.ImportDefaultedDefs* @"??0ImportDefaultedDefs@@QAE@XZ"(%struct.ImportDefaultedDefs* returned)
-// M64-DAG: declare dllimport                %struct.ImportDefaultedDefs* @"??0ImportDefaultedDefs@@QEAA@XZ"(%struct.ImportDefaultedDefs* returned)
+// M32-DAG: declare dllimport x86_thiscallcc %struct.ImportDefaultedDefs* @"??0ImportDefaultedDefs@@QAE@XZ"(%struct.ImportDefaultedDefs* noalias returned)
+// M64-DAG: declare dllimport                %struct.ImportDefaultedDefs* @"??0ImportDefaultedDefs@@QEAA@XZ"(%struct.ImportDefaultedDefs* noalias returned)
 __declspec(dllimport) ImportDefaultedDefs::ImportDefaultedDefs() = default;
 #endif
 
@@ -583,10 +583,10 @@ __declspec(dllimport) ImportDefaultedDefs::ImportDefaultedDefs() = default;
 __declspec(dllimport) ImportDefaultedDefs::~ImportDefaultedDefs() = default;
 #endif
 
-// M32-DAG: declare dllimport   x86_thiscallcc %struct.ImportDefaultedDefs* @"??0ImportDefaultedDefs@@QAE@ABU0@@Z"(%struct.ImportDefaultedDefs* returned, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
-// M64-DAG: declare dllimport                  %struct.ImportDefaultedDefs* @"??0ImportDefaultedDefs@@QEAA@AEBU0@@Z"(%struct.ImportDefaultedDefs* returned, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
-// G32-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN19ImportDefaultedDefsC1ERKS_(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
-// G64-DAG: define linkonce_odr dso_local                 void @_ZN19ImportDefaultedDefsC1ERKS_(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
+// M32-DAG: declare dllimport   x86_thiscallcc %struct.ImportDefaultedDefs* @"??0ImportDefaultedDefs@@QAE@ABU0@@Z"(%struct.ImportDefaultedDefs* noalias returned, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
+// M64-DAG: declare dllimport                  %struct.ImportDefaultedDefs* @"??0ImportDefaultedDefs@@QEAA@AEBU0@@Z"(%struct.ImportDefaultedDefs* noalias returned, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
+// G32-DAG: define linkonce_odr dso_local x86_thiscallcc void @_ZN19ImportDefaultedDefsC1ERKS_(%struct.ImportDefaultedDefs* noalias %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
+// G64-DAG: define linkonce_odr dso_local                 void @_ZN19ImportDefaultedDefsC1ERKS_(%struct.ImportDefaultedDefs* noalias %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
 inline ImportDefaultedDefs::ImportDefaultedDefs(const ImportDefaultedDefs&) = default;
 
 // M32-DAG: declare dllimport   x86_thiscallcc dereferenceable({{[0-9]+}}) %struct.ImportDefaultedDefs* @"??4ImportDefaultedDefs@@QAEAAU0@ABU0@@Z"(%struct.ImportDefaultedDefs*, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
@@ -595,12 +595,12 @@ inline ImportDefaultedDefs::ImportDefaultedDefs(const ImportDefaultedDefs&) = de
 // G64-DAG: define linkonce_odr dso_local                dereferenceable({{[0-9]+}}) %struct.ImportDefaultedDefs* @_ZN19ImportDefaultedDefsaSERKS_(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
 inline ImportDefaultedDefs& ImportDefaultedDefs::operator=(const ImportDefaultedDefs&) = default;
 
-// M32-DAG: define dso_local dllexport x86_thiscallcc %struct.ImportDefaultedDefs* @"??0ImportDefaultedDefs@@QAE@$$QAU0@@Z"(%struct.ImportDefaultedDefs* returned %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
-// M64-DAG: define dso_local dllexport                %struct.ImportDefaultedDefs* @"??0ImportDefaultedDefs@@QEAA@$$QEAU0@@Z"(%struct.ImportDefaultedDefs* returned %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
-// G32-DAG: define dso_local x86_thiscallcc void @_ZN19ImportDefaultedDefsC1EOS_(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
-// G64-DAG: define dso_local                void @_ZN19ImportDefaultedDefsC1EOS_(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
-// G32-DAG: define dso_local x86_thiscallcc void @_ZN19ImportDefaultedDefsC2EOS_(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
-// G64-DAG: define dso_local                void @_ZN19ImportDefaultedDefsC2EOS_(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
+// M32-DAG: define dso_local dllexport x86_thiscallcc %struct.ImportDefaultedDefs* @"??0ImportDefaultedDefs@@QAE@$$QAU0@@Z"(%struct.ImportDefaultedDefs* noalias returned %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
+// M64-DAG: define dso_local dllexport                %struct.ImportDefaultedDefs* @"??0ImportDefaultedDefs@@QEAA@$$QEAU0@@Z"(%struct.ImportDefaultedDefs* noalias returned %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
+// G32-DAG: define dso_local x86_thiscallcc void @_ZN19ImportDefaultedDefsC1EOS_(%struct.ImportDefaultedDefs* noalias %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
+// G64-DAG: define dso_local                void @_ZN19ImportDefaultedDefsC1EOS_(%struct.ImportDefaultedDefs* noalias %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
+// G32-DAG: define dso_local x86_thiscallcc void @_ZN19ImportDefaultedDefsC2EOS_(%struct.ImportDefaultedDefs* noalias %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
+// G64-DAG: define dso_local                void @_ZN19ImportDefaultedDefsC2EOS_(%struct.ImportDefaultedDefs* noalias %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
 ImportDefaultedDefs::ImportDefaultedDefs(ImportDefaultedDefs&&) = default; // dllimport ignored
 
 // M32-DAG: define dso_local dllexport x86_thiscallcc dereferenceable({{[0-9]+}}) %struct.ImportDefaultedDefs* @"??4ImportDefaultedDefs@@QAEAAU0@$$QAU0@@Z"(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))

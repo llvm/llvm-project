@@ -12,10 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_VIRTUALFILESYSTEM_H
-#define LLVM_CLANG_BASIC_VIRTUALFILESYSTEM_H
+#ifndef LLVM_SUPPORT_VIRTUALFILESYSTEM_H
+#define LLVM_SUPPORT_VIRTUALFILESYSTEM_H
 
-#include "clang/Basic/LLVM.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -40,9 +39,6 @@ namespace llvm {
 
 class MemoryBuffer;
 
-} // namespace llvm
-
-namespace clang {
 namespace vfs {
 
 /// The result of a \p status operation.
@@ -57,7 +53,7 @@ class Status {
   llvm::sys::fs::perms Perms;
 
 public:
-   // FIXME: remove when files support multiple names
+  // FIXME: remove when files support multiple names
   bool IsVFSMapped = false;
 
   Status() = default;
@@ -229,7 +225,7 @@ public:
   /// Gets the current level. Starting path is at level 0.
   int level() const {
     assert(!State->empty() && "Cannot get level without any iteration state");
-    return State->size()-1;
+    return State->size() - 1;
   }
 };
 
@@ -430,8 +426,7 @@ public:
   /// false if the file or directory already exists in the file system with
   /// different contents.
   bool addFileNoOwn(const Twine &Path, time_t ModificationTime,
-                    llvm::MemoryBuffer *Buffer,
-                    Optional<uint32_t> User = None,
+                    llvm::MemoryBuffer *Buffer, Optional<uint32_t> User = None,
                     Optional<uint32_t> Group = None,
                     Optional<llvm::sys::fs::file_type> Type = None,
                     Optional<llvm::sys::fs::perms> Perms = None);
@@ -469,12 +464,12 @@ llvm::sys::fs::UniqueID getNextVirtualUniqueID();
 IntrusiveRefCntPtr<FileSystem>
 getVFSFromYAML(std::unique_ptr<llvm::MemoryBuffer> Buffer,
                llvm::SourceMgr::DiagHandlerTy DiagHandler,
-               StringRef YAMLFilePath,
-               void *DiagContext = nullptr,
+               StringRef YAMLFilePath, void *DiagContext = nullptr,
                IntrusiveRefCntPtr<FileSystem> ExternalFS = getRealFileSystem());
 
 struct YAMLVFSEntry {
-  template <typename T1, typename T2> YAMLVFSEntry(T1 &&VPath, T2 &&RPath)
+  template <typename T1, typename T2>
+  YAMLVFSEntry(T1 &&VPath, T2 &&RPath)
       : VPath(std::forward<T1>(VPath)), RPath(std::forward<T2>(RPath)) {}
   std::string VPath;
   std::string RPath;
@@ -507,9 +502,7 @@ public:
     IsCaseSensitive = CaseSensitive;
   }
 
-  void setUseExternalNames(bool UseExtNames) {
-    UseExternalNames = UseExtNames;
-  }
+  void setUseExternalNames(bool UseExtNames) { UseExternalNames = UseExtNames; }
 
   void setIgnoreNonExistentContents(bool IgnoreContents) {
     IgnoreNonExistentContents = IgnoreContents;
@@ -524,6 +517,6 @@ public:
 };
 
 } // namespace vfs
-} // namespace clang
+} // namespace llvm
 
-#endif // LLVM_CLANG_BASIC_VIRTUALFILESYSTEM_H
+#endif // LLVM_SUPPORT_VIRTUALFILESYSTEM_H

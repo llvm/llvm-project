@@ -1093,6 +1093,9 @@ public:
   /// template.
   ArrayRef<TemplateArgument> getInjectedTemplateArgs();
 
+  /// Merge our RedeclarableTemplateDecl::Common with \param Prev.
+  void mergePrevDecl(FunctionTemplateDecl *Prev);
+
   /// Create a function template node.
   static FunctionTemplateDecl *Create(ASTContext &C, DeclContext *DC,
                                       SourceLocation L,

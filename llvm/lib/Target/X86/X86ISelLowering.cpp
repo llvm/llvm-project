@@ -36534,16 +36534,10 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
     // simplify ops leading up to it. We only demand the MSB of each lane.
     SDValue Mask = Mst->getMask();
     if (Mask.getScalarValueSizeInBits() != 1) {
-      TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
-                                            !DCI.isBeforeLegalizeOps());
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       APInt DemandedMask(APInt::getSignMask(VT.getScalarSizeInBits()));
-      KnownBits Known;
-      if (TLI.SimplifyDemandedBits(Mask, DemandedMask, Known, TLO)) {
-        DCI.AddToWorklist(Mask.getNode());
-        DCI.CommitTargetLoweringOpt(TLO);
+      if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI))
         return SDValue(N, 0);
-      }
     }
 
     // TODO: AVX512 targets should also be able to simplify something like the
@@ -37032,9 +37026,13 @@ static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, bool IsCommutative) {
         continue;
 
       // The  low half of the 128-bit result must choose from A.
-      // The high half of the 128-bit result must choose from B.
+      // The high half of the 128-bit result must choose from B,
+      // unless B is undef. In that case, we are always choosing from A.
+      // TODO: Using a horizontal op on a single input is likely worse for
+      // performance on many CPUs, so this should be limited here or reversed
+      // in a later pass.
       unsigned NumEltsPer64BitChunk = NumEltsPer128BitChunk / 2;
-      unsigned Src = i >= NumEltsPer64BitChunk;
+      unsigned Src = B.getNode() ? i >= NumEltsPer64BitChunk : 0;
 
       // Check that successive elements are being operated on. If not, this is
       // not a horizontal operation.
@@ -38962,16 +38960,10 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   // With AVX2 we only demand the upper bit of the mask.
   if (!Subtarget.hasAVX512()) {
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-    TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
-                                          !DCI.isBeforeLegalizeOps());
     SDValue Mask = N->getOperand(2);
-    KnownBits Known;
     APInt DemandedMask(APInt::getSignMask(Mask.getScalarValueSizeInBits()));
-    if (TLI.SimplifyDemandedBits(Mask, DemandedMask, Known, TLO)) {
-      DCI.AddToWorklist(Mask.getNode());
-      DCI.CommitTargetLoweringOpt(TLO);
+    if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI))
       return SDValue(N, 0);
-    }
   }
 
   return SDValue();

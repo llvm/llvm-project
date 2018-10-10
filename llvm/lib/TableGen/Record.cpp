@@ -709,6 +709,8 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
         return StringInit::get(LHSi->getAsString());
     } else if (isa<RecordRecTy>(getType())) {
       if (StringInit *Name = dyn_cast<StringInit>(LHS)) {
+        if (!CurRec && !IsFinal)
+          break;
         assert(CurRec && "NULL pointer");
         Record *D;
 

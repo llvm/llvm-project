@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(AnalysisTests
   AliasAnalysisTest.cpp
   AliasSetTrackerTest.cpp
+  BasicAliasAnalysisTest.cpp
   BlockFrequencyInfoTest.cpp
   BranchProbabilityInfoTest.cpp
   CallGraphTest.cpp

@@ -10022,11 +10022,17 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     if (FunctionTemplateDecl *OldTemplateDecl =
             dyn_cast<FunctionTemplateDecl>(OldDecl)) {
       auto *OldFD = OldTemplateDecl->getTemplatedDecl();
-      NewFD->setPreviousDeclaration(OldFD);
-      adjustDeclContextForDeclaratorDecl(NewFD, OldFD);
       FunctionTemplateDecl *NewTemplateDecl
         = NewFD->getDescribedFunctionTemplate();
       assert(NewTemplateDecl && "Template/non-template mismatch");
+
+      // The call to MergeFunctionDecl above may have created some state in
+      // NewTemplateDecl that needs to be merged with OldTemplateDecl before we
+      // can add it as a redeclaration.
+      NewTemplateDecl->mergePrevDecl(OldTemplateDecl);
+
+      NewFD->setPreviousDeclaration(OldFD);
+      adjustDeclContextForDeclaratorDecl(NewFD, OldFD);
       if (NewFD->isCXXClassMember()) {
         NewFD->setAccess(OldTemplateDecl->getAccess());
         NewTemplateDecl->setAccess(OldTemplateDecl->getAccess());

@@ -349,7 +349,7 @@ namespace test6 {
   };
 
   C::C() { opaque(); }
-  // CHECK5-LABEL: define void @_ZN5test61CC1Ev(%"struct.test6::C"* %this) unnamed_addr
+  // CHECK5-LABEL: define void @_ZN5test61CC1Ev(%"struct.test6::C"* noalias %this) unnamed_addr
   // CHECK5:   call void @_ZN5test61BILj2EEC2Ev
   // CHECK5:   invoke void @_ZN5test61BILj3EEC2Ev
   // CHECK5:   invoke void @_ZN5test61BILj0EEC2Ev
@@ -428,9 +428,9 @@ namespace test8 {
   // CHECK5-LABEL:    define void @_ZN5test84testEv()
   // CHECK5:      [[X:%.*]] = alloca [[A:%.*]], align 1
   // CHECK5-NEXT: [[Y:%.*]] = alloca [[A:%.*]], align 1
-  // CHECK5:      call void @_ZN5test81AC1Ev([[A]]* [[X]])
+  // CHECK5:      call void @_ZN5test81AC1Ev([[A]]* noalias [[X]])
   // CHECK5-NEXT: br label
-  // CHECK5:      invoke void @_ZN5test81AC1Ev([[A]]* [[Y]])
+  // CHECK5:      invoke void @_ZN5test81AC1Ev([[A]]* noalias [[Y]])
   // CHECK5v03:   invoke void @_ZN5test81AD1Ev([[A]]* [[Y]])
   // CHECK5v11:   call   void @_ZN5test81AD1Ev([[A]]* [[Y]])
   // CHECK5-NOT:  switch

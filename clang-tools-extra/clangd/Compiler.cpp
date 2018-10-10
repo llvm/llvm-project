@@ -44,7 +44,7 @@ prepareCompilerInstance(std::unique_ptr<clang::CompilerInvocation> CI,
                         const PrecompiledPreamble *Preamble,
                         std::unique_ptr<llvm::MemoryBuffer> Buffer,
                         std::shared_ptr<PCHContainerOperations> PCHs,
-                        IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+                        IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                         DiagnosticConsumer &DiagsClient) {
   assert(VFS && "VFS is null");
   assert(!CI->getPreprocessorOpts().RetainRemappedFileBuffers &&
