@@ -53,9 +53,9 @@ size_t OptionValueProperties::GetNumProperties() const {
   return m_properties.size();
 }
 
-void OptionValueProperties::Initialize(const PropertyDefinition *defs) {
-  for (size_t i = 0; defs[i].name; ++i) {
-    Property property(defs[i]);
+void OptionValueProperties::Initialize(const PropertyDefinitions &defs) {
+  for (const auto &definition : defs) {
+    Property property(definition);
     assert(property.IsValid());
     m_name_to_index.Append(ConstString(property.GetName()), m_properties.size());
     property.GetValue()->SetParent(shared_from_this());

@@ -110,12 +110,11 @@ void DumpProcessGDBRemotePacketHistory(void *p, const char *path) {
 
 namespace {
 
-static PropertyDefinition g_properties[] = {
-    {"packet-timeout", OptionValue::eTypeUInt64, true, 1, NULL, NULL,
+static constexpr PropertyDefinition g_properties[] = {
+    {"packet-timeout", OptionValue::eTypeUInt64, true, 1, NULL, {},
      "Specify the default packet timeout in seconds."},
-    {"target-definition-file", OptionValue::eTypeFileSpec, true, 0, NULL, NULL,
-     "The file that provides the description for remote target registers."},
-    {NULL, OptionValue::eTypeInvalid, false, 0, NULL, NULL, NULL}};
+    {"target-definition-file", OptionValue::eTypeFileSpec, true, 0, NULL, {},
+     "The file that provides the description for remote target registers."}};
 
 enum { ePropertyPacketTimeout, ePropertyTargetDefinitionFile };
 
