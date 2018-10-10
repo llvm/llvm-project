@@ -62,23 +62,21 @@ add_oclc_object(DataSet *data_set, std::tuple<const char*, const void*, size_t> 
 }
 
 amd_comgr_status_t
-add_precompiled_headers(DataAction *action_info, DataSet *input_set,
-                        DataSet *result_set) {
+add_precompiled_headers(DataAction *action_info, DataSet *result_set) {
   switch (action_info->language) {
   case AMD_COMGR_LANGUAGE_OPENCL_1_2:
     return add_object(result_set, AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER,
                    "opencl1.2-c.pch", opencl1_2_c, opencl1_2_c_size);
   case AMD_COMGR_LANGUAGE_OPENCL_2_0:
     return add_object(result_set, AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER,
-                   "opencl1.2-c.pch", opencl1_2_c, opencl1_2_c_size);
+                   "opencl2.0-c.pch", opencl2_0_c, opencl2_0_c_size);
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
 }
 
 amd_comgr_status_t
-add_device_libraries(DataAction *action_info, DataSet *input_set,
-                     DataSet *result_set) {
+add_device_libraries(DataAction *action_info, DataSet *result_set) {
   if (action_info->language != AMD_COMGR_LANGUAGE_OPENCL_1_2 &&
       action_info->language != AMD_COMGR_LANGUAGE_OPENCL_2_0)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;

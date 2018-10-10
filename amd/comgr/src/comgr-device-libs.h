@@ -42,12 +42,10 @@ struct DataAction;
 struct DataSet;
 
 amd_comgr_status_t
-add_precompiled_headers(DataAction *action_info, DataSet *input_set,
-                        DataSet *result_set);
+add_precompiled_headers(DataAction *action_info, DataSet *result_set);
 
 amd_comgr_status_t
-add_device_libraries(DataAction *action_info, DataSet *input_set,
-                     DataSet *result_set);
+add_device_libraries(DataAction *action_info, DataSet *result_set);
 
 }
 

@@ -257,9 +257,9 @@ dispatch_add_action(amd_comgr_action_kind_t action_kind,
   }
   switch (action_kind) {
   case AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS:
-    return add_precompiled_headers(action_info, input_set, result_set);
+    return add_precompiled_headers(action_info, result_set);
   case AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES:
-    return add_device_libraries(action_info, input_set, result_set);
+    return add_device_libraries(action_info, result_set);
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
