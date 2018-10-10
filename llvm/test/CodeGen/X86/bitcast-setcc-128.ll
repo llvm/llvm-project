@@ -163,7 +163,7 @@ define i2 @v2i8(<2 x i8> %a, <2 x i8> %b) {
 ; SSE2-SSSE3-NEXT:    psrad $24, %xmm1
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
 ; SSE2-SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,0,2147483648,0]
+; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE2-SSSE3-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-SSSE3-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-SSSE3-NEXT:    movdqa %xmm0, %xmm2
@@ -255,7 +255,7 @@ define i2 @v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; SSE2-SSSE3-NEXT:    psrad $16, %xmm1
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
 ; SSE2-SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,0,2147483648,0]
+; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE2-SSSE3-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-SSSE3-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-SSSE3-NEXT:    movdqa %xmm0, %xmm2
@@ -343,7 +343,7 @@ define i2 @v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; SSE2-SSSE3-NEXT:    psrad $31, %xmm1
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
 ; SSE2-SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,0,2147483648,0]
+; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648]
 ; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm2
 ; SSE2-SSSE3-NEXT:    movdqa %xmm2, %xmm1
@@ -413,7 +413,7 @@ define i2 @v2i32(<2 x i32> %a, <2 x i32> %b) {
 define i2 @v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE2-SSSE3-LABEL: v2i64:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,0,2147483648,0]
+; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE2-SSSE3-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-SSSE3-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-SSSE3-NEXT:    movdqa %xmm0, %xmm2

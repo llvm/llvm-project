@@ -706,12 +706,35 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
   if (SimplifyDemandedInstructionBits(CI))
     return &CI;
 
-  // Canonicalize trunc x to i1 -> (icmp ne (and x, 1), 0), likewise for vector.
   if (DestTy->getScalarSizeInBits() == 1) {
-    Constant *One = ConstantInt::get(SrcTy, 1);
-    Src = Builder.CreateAnd(Src, One);
     Value *Zero = Constant::getNullValue(Src->getType());
-    return new ICmpInst(ICmpInst::ICMP_NE, Src, Zero);
+    if (DestTy->isIntegerTy()) {
+      // Canonicalize trunc x to i1 -> icmp ne (and x, 1), 0 (scalar only).
+      // TODO: We canonicalize to more instructions here because we are probably
+      // lacking equivalent analysis for trunc relative to icmp. There may also
+      // be codegen concerns. If those trunc limitations were removed, we could
+      // remove this transform.
+      Value *And = Builder.CreateAnd(Src, ConstantInt::get(SrcTy, 1));
+      return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
+    }
+
+    // For vectors, we do not canonicalize all truncs to icmp, so optimize
+    // patterns that would be covered within visitICmpInst.
+    Value *X;
+    const APInt *C;
+    if (match(Src, m_OneUse(m_LShr(m_Value(X), m_APInt(C))))) {
+      // trunc (lshr X, C) to i1 --> icmp ne (and X, C'), 0
+      APInt MaskC = APInt(SrcTy->getScalarSizeInBits(), 1).shl(*C);
+      Value *And = Builder.CreateAnd(X, ConstantInt::get(SrcTy, MaskC));
+      return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
+    }
+    if (match(Src, m_OneUse(m_c_Or(m_LShr(m_Value(X), m_APInt(C)),
+                                   m_Deferred(X))))) {
+      // trunc (or (lshr X, C), X) to i1 --> icmp ne (and X, C'), 0
+      APInt MaskC = APInt(SrcTy->getScalarSizeInBits(), 1).shl(*C) | 1;
+      Value *And = Builder.CreateAnd(X, ConstantInt::get(SrcTy, MaskC));
+      return new ICmpInst(ICmpInst::ICMP_NE, And, Zero);
+    }
   }
 
   // FIXME: Maybe combine the next two transforms to handle the no cast case

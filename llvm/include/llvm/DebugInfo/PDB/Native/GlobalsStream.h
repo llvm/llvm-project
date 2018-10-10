@@ -52,7 +52,7 @@ class GSIHashTable {
 public:
   const GSIHashHeader *HashHdr;
   FixedStreamArray<PSHashRecord> HashRecords;
-  ArrayRef<uint32_t> HashBitmap;
+  FixedStreamArray<support::ulittle32_t> HashBitmap;
   FixedStreamArray<support::ulittle32_t> HashBuckets;
   std::array<int32_t, IPHR_HASH + 1> BucketMap;
 

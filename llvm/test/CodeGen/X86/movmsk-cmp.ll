@@ -837,7 +837,7 @@ define i1 @allzeros_v16i32_sign(<16 x i32> %arg) {
 define i1 @allones_v4i64_sign(<4 x i64> %arg) {
 ; SSE2-LABEL: allones_v4i64_sign:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,0,2147483648,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm3
@@ -888,7 +888,7 @@ define i1 @allones_v4i64_sign(<4 x i64> %arg) {
 define i1 @allzeros_v4i64_sign(<4 x i64> %arg) {
 ; SSE2-LABEL: allzeros_v4i64_sign:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,0,2147483648,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm3
@@ -938,7 +938,7 @@ define i1 @allzeros_v4i64_sign(<4 x i64> %arg) {
 define i1 @allones_v8i64_sign(<8 x i64> %arg) {
 ; SSE2-LABEL: allones_v8i64_sign:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,0,2147483648,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,2147483648]
 ; SSE2-NEXT:    pxor %xmm4, %xmm3
 ; SSE2-NEXT:    movdqa %xmm4, %xmm5
 ; SSE2-NEXT:    pcmpgtd %xmm3, %xmm5
@@ -1031,7 +1031,7 @@ define i1 @allones_v8i64_sign(<8 x i64> %arg) {
 define i1 @allzeros_v8i64_sign(<8 x i64> %arg) {
 ; SSE2-LABEL: allzeros_v8i64_sign:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,0,2147483648,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,2147483648]
 ; SSE2-NEXT:    pxor %xmm4, %xmm3
 ; SSE2-NEXT:    movdqa %xmm4, %xmm5
 ; SSE2-NEXT:    pcmpgtd %xmm3, %xmm5
@@ -3839,7 +3839,7 @@ define i32 @movmskps(<4 x float> %x) {
 define i32 @movmskpd256(<4 x double> %x) {
 ; SSE2-LABEL: movmskpd256:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,0,2147483648,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa %xmm2, %xmm3
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm3

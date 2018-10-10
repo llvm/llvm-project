@@ -191,7 +191,7 @@ define <2 x double> @clamp_sitofp_2i64_2f64(<2 x i64> %a) nounwind {
 ;
 ; X64-SSE-LABEL: clamp_sitofp_2i64_2f64:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,0,2147483648,0]
+; X64-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648]
 ; X64-SSE-NEXT:    movdqa %xmm0, %xmm2
 ; X64-SSE-NEXT:    pxor %xmm1, %xmm2
 ; X64-SSE-NEXT:    movdqa {{.*#+}} xmm3 = [18446744071562067713,18446744071562067713]

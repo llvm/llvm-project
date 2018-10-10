@@ -75,6 +75,9 @@ FunctionPass *createX86OptimizeLEAs();
 /// Return a pass that transforms setcc + movzx pairs into xor + setcc.
 FunctionPass *createX86FixupSetCC();
 
+/// Return a pass that folds conditional branch jumps.
+FunctionPass *createX86CondBrFolding();
+
 /// Return a pass that avoids creating store forward block issues in the hardware.
 FunctionPass *createX86AvoidStoreForwardingBlocks();
 

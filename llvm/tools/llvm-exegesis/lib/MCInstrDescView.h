@@ -47,7 +47,7 @@ struct Variable {
   llvm::MCOperand AssignedValue;
   // The index of this Variable in Instruction.Variables and its associated
   // Value in InstructionBuilder.VariableValues.
-  unsigned Index = -1;
+  int Index = -1;
 };
 
 // MCOperandInfo can only represents Explicit operands. This object gives a
@@ -62,7 +62,6 @@ struct Variable {
 // - VariableIndex: the index of the Variable holding the value for this Operand
 // or -1 if this operand is implicit.
 struct Operand {
-  bool getIndex() const;
   bool isExplicit() const;
   bool isImplicit() const;
   bool isImplicitReg() const;
@@ -73,8 +72,9 @@ struct Operand {
   bool isVariable() const;
   bool isMemory() const;
   bool isImmediate() const;
-  int getTiedToIndex() const;
-  int getVariableIndex() const;
+  unsigned getIndex() const;
+  unsigned getTiedToIndex() const;
+  unsigned getVariableIndex() const;
   unsigned getImplicitReg() const;
   const RegisterAliasingTracker &getRegisterAliasing() const;
   const llvm::MCOperandInfo &getExplicitOperandInfo() const;
@@ -117,6 +117,10 @@ struct Instruction {
   // Use and Def registers. It may also execute in parallel by picking non
   // aliasing Use and Def registers.
   bool hasAliasingRegisters() const;
+
+  // Convenient function to help with debugging.
+  void dump(const llvm::MCRegisterInfo &RegInfo,
+            llvm::raw_ostream &Stream) const;
 
   const llvm::MCInstrDesc *Description; // Never nullptr.
   llvm::SmallVector<Operand, 8> Operands;

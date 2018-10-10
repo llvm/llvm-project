@@ -18,9 +18,10 @@
 namespace exegesis {
 
 unsigned Variable::getIndex() const {
-  assert(Index >= 0);
+  assert(Index >= 0 && "Index must be set");
   return Index;
 }
+
 unsigned Variable::getPrimaryOperandIndex() const {
   assert(!TiedOperands.empty());
   return TiedOperands[0];
@@ -28,7 +29,10 @@ unsigned Variable::getPrimaryOperandIndex() const {
 
 bool Variable::hasTiedOperands() const { return TiedOperands.size() > 1; }
 
-bool Operand::getIndex() const { return Index; }
+unsigned Operand::getIndex() const {
+  assert(Index >= 0 && "Index must be set");
+  return Index;
+}
 
 bool Operand::isExplicit() const { return Info; }
 
@@ -56,13 +60,15 @@ bool Operand::isImmediate() const {
          getExplicitOperandInfo().OperandType == llvm::MCOI::OPERAND_IMMEDIATE;
 }
 
-int Operand::getTiedToIndex() const {
-  assert(isTied());
+unsigned Operand::getTiedToIndex() const {
+  assert(isTied() && "Operand must be tied to get the tied index");
+  assert(TiedToIndex >= 0 && "TiedToIndex must be set");
   return TiedToIndex;
 }
 
-int Operand::getVariableIndex() const {
-  assert(isVariable());
+unsigned Operand::getVariableIndex() const {
+  assert(isVariable() && "Operand must be variable to get the Variable index");
+  assert(VariableIndex >= 0 && "VariableIndex must be set");
   return VariableIndex;
 }
 
@@ -176,6 +182,51 @@ bool Instruction::hasTiedRegisters() const {
 
 bool Instruction::hasAliasingRegisters() const {
   return AllDefRegs.anyCommon(AllUseRegs);
+}
+
+void Instruction::dump(const llvm::MCRegisterInfo &RegInfo,
+                       llvm::raw_ostream &Stream) const {
+  for (const auto &Op : Operands) {
+    Stream << "- Op" << Op.getIndex();
+    if (Op.isExplicit())
+      Stream << " Explicit";
+    if (Op.isImplicit())
+      Stream << " Implicit";
+    if (Op.isUse())
+      Stream << " Use";
+    if (Op.isDef())
+      Stream << " Def";
+    if (Op.isImmediate())
+      Stream << " Immediate";
+    if (Op.isMemory())
+      Stream << " Memory";
+    if (Op.isReg()) {
+      if (Op.isImplicitReg())
+        Stream << " Reg(" << RegInfo.getName(Op.getImplicitReg()) << ")";
+      else
+        Stream << " RegClass("
+               << RegInfo.getRegClassName(
+                      &RegInfo.getRegClass(Op.Info->RegClass))
+               << ")";
+    }
+    if (Op.isTied())
+      Stream << " TiedToOp" << Op.getTiedToIndex();
+    Stream << "\n";
+  }
+  for (const auto &Var : Variables) {
+    Stream << "- Var" << Var.getIndex();
+    for (auto OperandIndex : Var.TiedOperands)
+      Stream << " Op" << OperandIndex;
+    Stream << "\n";
+  }
+  if (hasMemoryOperands())
+    Stream << "- hasMemoryOperands\n";
+  if (hasAliasingImplicitRegisters())
+    Stream << "- hasAliasingImplicitRegisters (execution is always serial)\n";
+  if (hasTiedRegisters())
+    Stream << "- hasTiedRegisters (execution is always serial)\n";
+  if (hasAliasingRegisters())
+    Stream << "- hasAliasingRegisters\n";
 }
 
 bool RegisterOperandAssignment::

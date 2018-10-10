@@ -19051,23 +19051,21 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     if (Opc == X86ISD::PCMPGT && !Subtarget.hasSSE42()) {
       assert(Subtarget.hasSSE2() && "Don't know how to lower!");
 
-      // First cast everything to the right type.
-      Op0 = DAG.getBitcast(MVT::v4i32, Op0);
-      Op1 = DAG.getBitcast(MVT::v4i32, Op1);
-
       // Since SSE has no unsigned integer comparisons, we need to flip the sign
       // bits of the inputs before performing those operations. The lower
       // compare is always unsigned.
       SDValue SB;
       if (FlipSigns) {
-        SB = DAG.getConstant(0x80000000U, dl, MVT::v4i32);
+        SB = DAG.getConstant(0x8000000080000000ULL, dl, MVT::v2i64);
       } else {
-        SDValue Sign = DAG.getConstant(0x80000000U, dl, MVT::i32);
-        SDValue Zero = DAG.getConstant(0x00000000U, dl, MVT::i32);
-        SB = DAG.getBuildVector(MVT::v4i32, dl, {Sign, Zero, Sign, Zero});
+        SB = DAG.getConstant(0x0000000080000000ULL, dl, MVT::v2i64);
       }
-      Op0 = DAG.getNode(ISD::XOR, dl, MVT::v4i32, Op0, SB);
-      Op1 = DAG.getNode(ISD::XOR, dl, MVT::v4i32, Op1, SB);
+      Op0 = DAG.getNode(ISD::XOR, dl, MVT::v2i64, Op0, SB);
+      Op1 = DAG.getNode(ISD::XOR, dl, MVT::v2i64, Op1, SB);
+
+      // Cast everything to the right type.
+      Op0 = DAG.getBitcast(MVT::v4i32, Op0);
+      Op1 = DAG.getBitcast(MVT::v4i32, Op1);
 
       // Emulate PCMPGTQ with (hi1 > hi2) | ((hi1 == hi2) & (lo1 > lo2))
       SDValue GT = DAG.getNode(X86ISD::PCMPGT, dl, MVT::v4i32, Op0, Op1);
@@ -36521,31 +36519,31 @@ static SDValue reduceMaskedStoreToScalarStore(MaskedStoreSDNode *MS,
 }
 
 static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
+                                  TargetLowering::DAGCombinerInfo &DCI,
                                   const X86Subtarget &Subtarget) {
   MaskedStoreSDNode *Mst = cast<MaskedStoreSDNode>(N);
-
   if (Mst->isCompressingStore())
     return SDValue();
 
+  EVT VT = Mst->getValue().getValueType();
   if (!Mst->isTruncatingStore()) {
     if (SDValue ScalarStore = reduceMaskedStoreToScalarStore(Mst, DAG))
       return ScalarStore;
 
-    // If the mask is checking (0 > X), we're creating a vector with all-zeros
-    // or all-ones elements based on the sign bits of X. AVX1 masked store only
-    // cares about the sign bit of each mask element, so eliminate the compare:
-    // mstore val, ptr, (pcmpgt 0, X) --> mstore val, ptr, X
-    // Note that by waiting to match an x86-specific PCMPGT node, we're
-    // eliminating potentially more complex matching of a setcc node which has
-    // a full range of predicates.
+    // If the mask value has been legalized to a non-boolean vector, try to
+    // simplify ops leading up to it. We only demand the MSB of each lane.
     SDValue Mask = Mst->getMask();
-    if (Mask.getOpcode() == X86ISD::PCMPGT &&
-        ISD::isBuildVectorAllZeros(Mask.getOperand(0).getNode())) {
-      assert(Mask.getValueType() == Mask.getOperand(1).getValueType() &&
-             "Unexpected type for PCMPGT");
-      return DAG.getMaskedStore(
-          Mst->getChain(), SDLoc(N), Mst->getValue(), Mst->getBasePtr(),
-          Mask.getOperand(1), Mst->getMemoryVT(), Mst->getMemOperand());
+    if (Mask.getScalarValueSizeInBits() != 1) {
+      TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
+                                            !DCI.isBeforeLegalizeOps());
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      APInt DemandedMask(APInt::getSignMask(VT.getScalarSizeInBits()));
+      KnownBits Known;
+      if (TLI.SimplifyDemandedBits(Mask, DemandedMask, Known, TLO)) {
+        DCI.AddToWorklist(Mask.getNode());
+        DCI.CommitTargetLoweringOpt(TLO);
+        return SDValue(N, 0);
+      }
     }
 
     // TODO: AVX512 targets should also be able to simplify something like the
@@ -36556,7 +36554,6 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
   }
 
   // Resolve truncating stores.
-  EVT VT = Mst->getValue().getValueType();
   unsigned NumElems = VT.getVectorNumElements();
   EVT StVT = Mst->getMemoryVT();
   SDLoc dl(Mst);
@@ -40382,7 +40379,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::LOAD:           return combineLoad(N, DAG, DCI, Subtarget);
   case ISD::MLOAD:          return combineMaskedLoad(N, DAG, DCI, Subtarget);
   case ISD::STORE:          return combineStore(N, DAG, Subtarget);
-  case ISD::MSTORE:         return combineMaskedStore(N, DAG, Subtarget);
+  case ISD::MSTORE:         return combineMaskedStore(N, DAG, DCI, Subtarget);
   case ISD::SINT_TO_FP:     return combineSIntToFP(N, DAG, Subtarget);
   case ISD::UINT_TO_FP:     return combineUIntToFP(N, DAG, Subtarget);
   case ISD::FADD:

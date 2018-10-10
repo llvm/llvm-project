@@ -134,10 +134,7 @@ void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
   SymbolAliasMap NonCallables;
   SymbolAliasMap Callables;
   for (auto &GV : M.global_values()) {
-    assert(GV.hasName() && !GV.hasLocalLinkage() &&
-           "GlobalValues must have been promoted before adding to "
-           "CompileOnDemandLayer");
-    if (GV.isDeclaration() || GV.hasAppendingLinkage())
+    if (GV.isDeclaration() || GV.hasLocalLinkage() || GV.hasAppendingLinkage())
       continue;
 
     auto Name = Mangle(GV.getName());
@@ -259,6 +256,25 @@ void CompileOnDemandLayer2::emitPartition(
     return;
   }
 
+  // Ok -- we actually need to partition the symbols. Promote the symbol
+  // linkages/names.
+  // FIXME: We apply this once per partitioning. It's safe, but overkill.
+  {
+    auto PromotedGlobals = PromoteSymbols(*TSM.getModule());
+    if (!PromotedGlobals.empty()) {
+      MangleAndInterner Mangle(ES, TSM.getModule()->getDataLayout());
+      SymbolFlagsMap SymbolFlags;
+      for (auto &GV : PromotedGlobals)
+        SymbolFlags[Mangle(GV->getName())] =
+            JITSymbolFlags::fromGlobalValue(*GV);
+      if (auto Err = R.defineMaterializing(SymbolFlags)) {
+        ES.reportError(std::move(Err));
+        R.failMaterialization();
+        return;
+      }
+    }
+  }
+
   expandPartition(*GVsToExtract);
 
   // Extract the requested partiton (plus any necessary aliases) and
@@ -268,7 +284,6 @@ void CompileOnDemandLayer2::emitPartition(
   };
 
   auto ExtractedTSM = extractSubModule(TSM, ".submodule", ShouldExtract);
-
   R.replace(llvm::make_unique<PartitioningIRMaterializationUnit>(
       ES, std::move(TSM), *this));
 

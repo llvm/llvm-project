@@ -248,8 +248,11 @@ void makeStub(Function &F, Value &ImplPointer) {
     Builder.CreateRet(Call);
 }
 
-void SymbolLinkagePromoter::operator()(Module &M) {
+std::vector<GlobalValue *> SymbolLinkagePromoter::operator()(Module &M) {
+  std::vector<GlobalValue *> PromotedGlobals;
+
   for (auto &GV : M.global_values()) {
+    bool Promoted = true;
 
     // Rename if necessary.
     if (!GV.hasName())
@@ -258,13 +261,21 @@ void SymbolLinkagePromoter::operator()(Module &M) {
       GV.setName("__" + GV.getName().substr(1) + "." + Twine(NextId++));
     else if (GV.hasLocalLinkage())
       GV.setName("__orc_lcl." + GV.getName() + "." + Twine(NextId++));
+    else
+      Promoted = false;
 
     if (GV.hasLocalLinkage()) {
       GV.setLinkage(GlobalValue::ExternalLinkage);
       GV.setVisibility(GlobalValue::HiddenVisibility);
+      Promoted = true;
     }
     GV.setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+
+    if (Promoted)
+      PromotedGlobals.push_back(&GV);
   }
+
+  return PromotedGlobals;
 }
 
 Function* cloneFunctionDecl(Module &Dst, const Function &F,

@@ -185,8 +185,6 @@ Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
   if (auto Err = applyDataLayout(*TSM.getModule()))
     return Err;
 
-  PromoteSymbols(*TSM.getModule());
-
   recordCtorDtors(*TSM.getModule());
 
   auto K = ES->allocateVModule();

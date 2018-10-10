@@ -9,7 +9,7 @@
 define i4 @v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i64> %d) {
 ; SSE2-SSSE3-LABEL: v4i64:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm8 = [2147483648,0,2147483648,0]
+; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm8 = [2147483648,2147483648]
 ; SSE2-SSSE3-NEXT:    pxor %xmm8, %xmm3
 ; SSE2-SSSE3-NEXT:    pxor %xmm8, %xmm1
 ; SSE2-SSSE3-NEXT:    movdqa %xmm1, %xmm9
