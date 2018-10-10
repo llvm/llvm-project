@@ -29,7 +29,7 @@ buildTestFS(llvm::StringMap<std::string> const &Files,
 // A VFS provider that returns TestFSes containing a provided set of files.
 class MockFSProvider : public FileSystemProvider {
 public:
-  IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() override {
+  IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() const override {
     return buildTestFS(Files);
   }
 

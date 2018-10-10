@@ -109,7 +109,8 @@ public:
   /// \p DiagConsumer. Note that a callback to \p DiagConsumer happens on a
   /// worker thread. Therefore, instances of \p DiagConsumer must properly
   /// synchronize access to shared state.
-  ClangdServer(GlobalCompilationDatabase &CDB, FileSystemProvider &FSProvider,
+  ClangdServer(const GlobalCompilationDatabase &CDB,
+               const FileSystemProvider &FSProvider,
                DiagnosticsConsumer &DiagConsumer, const Options &Opts);
 
   /// Set the root path of the workspace.
@@ -227,9 +228,9 @@ private:
 
   tooling::CompileCommand getCompileCommand(PathRef File);
 
-  GlobalCompilationDatabase &CDB;
+  const GlobalCompilationDatabase &CDB;
   DiagnosticsConsumer &DiagConsumer;
-  FileSystemProvider &FSProvider;
+  const FileSystemProvider &FSProvider;
 
   /// Used to synchronize diagnostic responses for added and removed files.
   llvm::StringMap<DocVersion> InternalVersion;

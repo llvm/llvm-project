@@ -25,13 +25,13 @@ public:
   /// Context::current() will be the context passed to the clang entrypoint,
   /// such as addDocument(), and will also be propagated to result callbacks.
   /// Embedders may use this to isolate filesystem accesses.
-  virtual IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() = 0;
+  virtual IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() const = 0;
 };
 
 class RealFileSystemProvider : public FileSystemProvider {
 public:
   // FIXME: returns the single real FS instance, which is not threadsafe.
-  IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() override {
+  IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() const override {
     return vfs::getRealFileSystem();
   }
 };
