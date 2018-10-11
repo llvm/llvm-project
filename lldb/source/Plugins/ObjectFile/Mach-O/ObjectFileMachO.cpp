@@ -5914,8 +5914,8 @@ uint32_t ObjectFileMachO::GetSDKVersion(uint32_t *versions,
                     m_sdk_versions.push_back (xxxx);
                     m_sdk_versions.push_back (yy);
                     m_sdk_versions.push_back (zz);
+                    success = true;
                 }
-                success = true;
             }
             offset = load_cmd_offset + lc.cmdsize;
         }
