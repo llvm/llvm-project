@@ -139,13 +139,6 @@ template <class ELFT> void SymbolTable::addCombinedLTOObject() {
   }
 }
 
-Defined *SymbolTable::addAbsolute(StringRef Name, uint8_t Visibility,
-                                  uint8_t Binding) {
-  Symbol *Sym =
-      addDefined(Name, Visibility, STT_NOTYPE, 0, 0, Binding, nullptr, nullptr);
-  return cast<Defined>(Sym);
-}
-
 // Set a flag for --trace-symbol so that we can print out a log message
 // if a new symbol with the same name is inserted into the symbol table.
 void SymbolTable::trace(StringRef Name) {

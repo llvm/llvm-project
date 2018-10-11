@@ -451,6 +451,7 @@ namespace {
     }
 
     bool foldLoadStoreIntoMemOperand(SDNode *Node);
+    bool matchBEXTRFromAndImm(SDNode *Node);
     bool matchBEXTR(SDNode *Node);
     bool shrinkAndImmediate(SDNode *N);
     bool isMaskZeroExtended(SDNode *N) const;
@@ -1340,6 +1341,64 @@ static bool foldMaskAndShiftToScale(SelectionDAG &DAG, SDValue N,
   return false;
 }
 
+// Transform "(X >> SHIFT) & (MASK << C1)" to
+// "((X >> (SHIFT + C1)) & (MASK)) << C1". Everything before the SHL will be
+// matched to a BEXTR later. Returns false if the simplification is performed.
+static bool foldMaskedShiftToBEXTR(SelectionDAG &DAG, SDValue N,
+                                   uint64_t Mask,
+                                   SDValue Shift, SDValue X,
+                                   X86ISelAddressMode &AM,
+                                   const X86Subtarget &Subtarget) {
+  if (Shift.getOpcode() != ISD::SRL ||
+      !isa<ConstantSDNode>(Shift.getOperand(1)) ||
+      !Shift.hasOneUse() || !N.hasOneUse())
+    return true;
+
+  // Only do this if BEXTR will be matched by matchBEXTRFromAndImm.
+  if (!Subtarget.hasTBM() &&
+      !(Subtarget.hasBMI() && Subtarget.hasFastBEXTR()))
+    return true;
+
+  // We need to ensure that mask is a continuous run of bits.
+  if (!isShiftedMask_64(Mask)) return true;
+
+  unsigned ShiftAmt = Shift.getConstantOperandVal(1);
+
+  // The amount of shift we're trying to fit into the addressing mode is taken
+  // from the trailing zeros of the mask.
+  unsigned AMShiftAmt = countTrailingZeros(Mask);
+
+  // There is nothing we can do here unless the mask is removing some bits.
+  // Also, the addressing mode can only represent shifts of 1, 2, or 3 bits.
+  if (AMShiftAmt <= 0 || AMShiftAmt > 3) return true;
+
+  MVT VT = N.getSimpleValueType();
+  SDLoc DL(N);
+  SDValue NewSRLAmt = DAG.getConstant(ShiftAmt + AMShiftAmt, DL, MVT::i8);
+  SDValue NewSRL = DAG.getNode(ISD::SRL, DL, VT, X, NewSRLAmt);
+  SDValue NewMask = DAG.getConstant(Mask >> AMShiftAmt, DL, VT);
+  SDValue NewAnd = DAG.getNode(ISD::AND, DL, VT, NewSRL, NewMask);
+  SDValue NewSHLAmt = DAG.getConstant(AMShiftAmt, DL, MVT::i8);
+  SDValue NewSHL = DAG.getNode(ISD::SHL, DL, VT, NewAnd, NewSHLAmt);
+
+  // Insert the new nodes into the topological ordering. We must do this in
+  // a valid topological ordering as nothing is going to go back and re-sort
+  // these nodes. We continually insert before 'N' in sequence as this is
+  // essentially a pre-flattened and pre-sorted sequence of nodes. There is no
+  // hierarchy left to express.
+  insertDAGNode(DAG, N, NewSRLAmt);
+  insertDAGNode(DAG, N, NewSRL);
+  insertDAGNode(DAG, N, NewMask);
+  insertDAGNode(DAG, N, NewAnd);
+  insertDAGNode(DAG, N, NewSHLAmt);
+  insertDAGNode(DAG, N, NewSHL);
+  DAG.ReplaceAllUsesWith(N, NewSHL);
+
+  AM.Scale = 1 << AMShiftAmt;
+  AM.IndexReg = NewAnd;
+  return false;
+}
+
 bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
                                               unsigned Depth) {
   SDLoc dl(N);
@@ -1620,6 +1679,11 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     // a scale on the outside of the mask.
     if (!foldMaskedShiftToScaledMask(*CurDAG, N, Mask, Shift, X, AM))
       return false;
+
+    // Try to fold the mask and shift into BEXTR and scale.
+    if (!foldMaskedShiftToBEXTR(*CurDAG, N, Mask, Shift, X, AM, *Subtarget))
+      return false;
+
     break;
   }
   }
@@ -2646,6 +2710,92 @@ bool X86DAGToDAGISel::matchBEXTR(SDNode *Node) {
   return true;
 }
 
+// See if this is an (X >> C1) & C2 that we can match to BEXTR/BEXTRI.
+bool X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
+  MVT NVT = Node->getSimpleValueType(0);
+  SDLoc dl(Node);
+
+  SDValue N0 = Node->getOperand(0);
+  SDValue N1 = Node->getOperand(1);
+
+  // If we have TBM we can use an immediate for the control. If we have BMI
+  // we should only do this if the BEXTR instruction is implemented well.
+  // Otherwise moving the control into a register makes this more costly.
+  // TODO: Maybe load folding, greater than 32-bit masks, or a guarantee of LICM
+  // hoisting the move immediate would make it worthwhile with a less optimal
+  // BEXTR?
+  if (!Subtarget->hasTBM() &&
+      !(Subtarget->hasBMI() && Subtarget->hasFastBEXTR()))
+    return false;
+
+  // Must have a shift right.
+  if (N0->getOpcode() != ISD::SRL && N0->getOpcode() != ISD::SRA)
+    return false;
+
+  // Shift can't have additional users.
+  if (!N0->hasOneUse())
+    return false;
+
+  // Only supported for 32 and 64 bits.
+  if (NVT != MVT::i32 && NVT != MVT::i64)
+    return false;
+
+  // Shift amount and RHS of and must be constant.
+  ConstantSDNode *MaskCst = dyn_cast<ConstantSDNode>(N1);
+  ConstantSDNode *ShiftCst = dyn_cast<ConstantSDNode>(N0->getOperand(1));
+  if (!MaskCst || !ShiftCst)
+    return false;
+
+  // And RHS must be a mask.
+  uint64_t Mask = MaskCst->getZExtValue();
+  if (!isMask_64(Mask))
+    return false;
+
+  uint64_t Shift = ShiftCst->getZExtValue();
+  uint64_t MaskSize = countPopulation(Mask);
+
+  // Don't interfere with something that can be handled by extracting AH.
+  // TODO: If we are able to fold a load, BEXTR might still be better than AH.
+  if (Shift == 8 && MaskSize == 8)
+    return false;
+
+  // Make sure we are only using bits that were in the original value, not
+  // shifted in.
+  if (Shift + MaskSize > NVT.getSizeInBits())
+    return false;
+
+  SDValue New = CurDAG->getTargetConstant(Shift | (MaskSize << 8), dl, NVT);
+  unsigned ROpc = NVT == MVT::i64 ? X86::BEXTRI64ri : X86::BEXTRI32ri;
+  unsigned MOpc = NVT == MVT::i64 ? X86::BEXTRI64mi : X86::BEXTRI32mi;
+
+  // BMI requires the immediate to placed in a register.
+  if (!Subtarget->hasTBM()) {
+    ROpc = NVT == MVT::i64 ? X86::BEXTR64rr : X86::BEXTR32rr;
+    MOpc = NVT == MVT::i64 ? X86::BEXTR64rm : X86::BEXTR32rm;
+    unsigned NewOpc = NVT == MVT::i64 ? X86::MOV32ri64 : X86::MOV32ri;
+    New = SDValue(CurDAG->getMachineNode(NewOpc, dl, NVT, New), 0);
+  }
+
+  MachineSDNode *NewNode;
+  SDValue Input = N0->getOperand(0);
+  SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
+  if (tryFoldLoad(Node, N0.getNode(), Input, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4)) {
+    SDValue Ops[] = { Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, New, Input.getOperand(0) };
+    SDVTList VTs = CurDAG->getVTList(NVT, MVT::Other);
+    NewNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
+    // Update the chain.
+    ReplaceUses(Input.getValue(1), SDValue(NewNode, 1));
+    // Record the mem-refs
+    CurDAG->setNodeMemRefs(NewNode, {cast<LoadSDNode>(Input)->getMemOperand()});
+  } else {
+    NewNode = CurDAG->getMachineNode(ROpc, dl, NVT, Input, New);
+  }
+
+  ReplaceUses(SDValue(Node, 0), SDValue(NewNode, 0));
+  CurDAG->RemoveDeadNode(Node);
+  return true;
+}
+
 // Emit a PCMISTR(I/M) instruction.
 MachineSDNode *X86DAGToDAGISel::emitPCMPISTR(unsigned ROpc, unsigned MOpc,
                                              bool MayFoldLoad, const SDLoc &dl,
@@ -2953,6 +3103,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     break;
 
   case ISD::AND:
+    if (matchBEXTRFromAndImm(Node))
+      return;
     if (matchBEXTR(Node))
       return;
     if (AndImmShrink && shrinkAndImmediate(Node))

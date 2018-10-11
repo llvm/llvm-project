@@ -5,11 +5,11 @@
 
 ; This load should be before the call, not after.
 
-; SSE: movaps    compl+128(%rip), %xmm0
+; SSE: movsd     compl+128(%rip), %xmm0
 ; SSE: movaps  %xmm0, (%rsp)
 ; SSE: callq   killcommon
 
-; AVX: vmovaps    compl+128(%rip), %xmm0
+; AVX: vmovsd     compl+128(%rip), %xmm0
 ; AVX: vmovaps  %xmm0, (%rsp)
 ; AVX: callq   killcommon
 

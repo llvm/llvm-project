@@ -41,8 +41,6 @@ public:
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
 
-  Defined *addAbsolute(StringRef Name, uint8_t Visibility, uint8_t Binding);
-
   template <class ELFT>
   Symbol *addUndefined(StringRef Name, uint8_t Binding, uint8_t StOther,
                        uint8_t Type, bool CanOmitFromDynSym, InputFile *File);

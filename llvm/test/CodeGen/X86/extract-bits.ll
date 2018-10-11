@@ -5568,23 +5568,69 @@ define i64 @bextr64_d5_skipextrauses(i64 %val, i64 %numskipbits, i64 %numlowbits
 
 ; https://bugs.llvm.org/show_bug.cgi?id=38938
 define void @pr38938(i32* %a0, i64* %a1) {
-; X86-LABEL: pr38938:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %ecx
-; X86-NEXT:    shrl $19, %ecx
-; X86-NEXT:    andl $4092, %ecx # imm = 0xFFC
-; X86-NEXT:    incl (%eax,%ecx)
-; X86-NEXT:    retl
+; X86-NOBMI-LABEL: pr38938:
+; X86-NOBMI:       # %bb.0:
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOBMI-NEXT:    movl (%ecx), %ecx
+; X86-NOBMI-NEXT:    shrl $19, %ecx
+; X86-NOBMI-NEXT:    andl $4092, %ecx # imm = 0xFFC
+; X86-NOBMI-NEXT:    incl (%eax,%ecx)
+; X86-NOBMI-NEXT:    retl
 ;
-; X64-LABEL: pr38938:
-; X64:       # %bb.0:
-; X64-NEXT:    movq (%rsi), %rax
-; X64-NEXT:    shrq $19, %rax
-; X64-NEXT:    andl $4092, %eax # imm = 0xFFC
-; X64-NEXT:    incl (%rdi,%rax)
-; X64-NEXT:    retq
+; X86-BMI1NOTBM-LABEL: pr38938:
+; X86-BMI1NOTBM:       # %bb.0:
+; X86-BMI1NOTBM-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMI1NOTBM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-BMI1NOTBM-NEXT:    movl $2581, %edx # imm = 0xA15
+; X86-BMI1NOTBM-NEXT:    bextrl %edx, (%ecx), %ecx
+; X86-BMI1NOTBM-NEXT:    incl (%eax,%ecx,4)
+; X86-BMI1NOTBM-NEXT:    retl
+;
+; X86-BMI1TBM-LABEL: pr38938:
+; X86-BMI1TBM:       # %bb.0:
+; X86-BMI1TBM-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMI1TBM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-BMI1TBM-NEXT:    bextrl $2581, (%ecx), %ecx # imm = 0xA15
+; X86-BMI1TBM-NEXT:    incl (%eax,%ecx,4)
+; X86-BMI1TBM-NEXT:    retl
+;
+; X86-BMI1NOTBMBMI2-LABEL: pr38938:
+; X86-BMI1NOTBMBMI2:       # %bb.0:
+; X86-BMI1NOTBMBMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMI1NOTBMBMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-BMI1NOTBMBMI2-NEXT:    movl $2581, %edx # imm = 0xA15
+; X86-BMI1NOTBMBMI2-NEXT:    bextrl %edx, (%ecx), %ecx
+; X86-BMI1NOTBMBMI2-NEXT:    incl (%eax,%ecx,4)
+; X86-BMI1NOTBMBMI2-NEXT:    retl
+;
+; X64-NOBMI-LABEL: pr38938:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    movq (%rsi), %rax
+; X64-NOBMI-NEXT:    shrq $19, %rax
+; X64-NOBMI-NEXT:    andl $4092, %eax # imm = 0xFFC
+; X64-NOBMI-NEXT:    incl (%rdi,%rax)
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMI1NOTBM-LABEL: pr38938:
+; X64-BMI1NOTBM:       # %bb.0:
+; X64-BMI1NOTBM-NEXT:    movl $2581, %eax # imm = 0xA15
+; X64-BMI1NOTBM-NEXT:    bextrq %rax, (%rsi), %rax
+; X64-BMI1NOTBM-NEXT:    incl (%rdi,%rax,4)
+; X64-BMI1NOTBM-NEXT:    retq
+;
+; X64-BMI1TBM-LABEL: pr38938:
+; X64-BMI1TBM:       # %bb.0:
+; X64-BMI1TBM-NEXT:    bextrq $2581, (%rsi), %rax # imm = 0xA15
+; X64-BMI1TBM-NEXT:    incl (%rdi,%rax,4)
+; X64-BMI1TBM-NEXT:    retq
+;
+; X64-BMI1NOTBMBMI2-LABEL: pr38938:
+; X64-BMI1NOTBMBMI2:       # %bb.0:
+; X64-BMI1NOTBMBMI2-NEXT:    movl $2581, %eax # imm = 0xA15
+; X64-BMI1NOTBMBMI2-NEXT:    bextrq %rax, (%rsi), %rax
+; X64-BMI1NOTBMBMI2-NEXT:    incl (%rdi,%rax,4)
+; X64-BMI1NOTBMBMI2-NEXT:    retq
   %tmp = load i64, i64* %a1, align 8
   %tmp1 = lshr i64 %tmp, 21
   %tmp2 = and i64 %tmp1, 1023
