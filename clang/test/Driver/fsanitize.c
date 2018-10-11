@@ -31,22 +31,37 @@
 // CHECK-COVERAGE-WIN64: "--dependent-lib={{[^"]*}}ubsan_standalone-x86_64.lib"
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=integer %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INTEGER -implicit-check-not="-fsanitize-address-use-after-scope"
-// CHECK-INTEGER: "-fsanitize={{((signed-integer-overflow|unsigned-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|implicit-integer-truncation),?){6}"}}
+// CHECK-INTEGER: "-fsanitize={{((signed-integer-overflow|unsigned-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){7}"}}
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=implicit-conversion %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-conversion,CHECK-implicit-conversion-RECOVER
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=implicit-conversion -fsanitize-recover=implicit-conversion %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-conversion,CHECK-implicit-conversion-RECOVER
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=implicit-conversion -fno-sanitize-recover=implicit-conversion %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-conversion,CHECK-implicit-conversion-NORECOVER
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=implicit-conversion -fsanitize-trap=implicit-conversion %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-conversion,CHECK-implicit-conversion-TRAP
-// CHECK-implicit-conversion: "-fsanitize={{((implicit-integer-truncation),?){1}"}}
-// CHECK-implicit-conversion-RECOVER: "-fsanitize-recover={{((implicit-integer-truncation),?){1}"}}
-// CHECK-implicit-conversion-RECOVER-NOT: "-fno-sanitize-recover={{((implicit-integer-truncation),?){1}"}}
-// CHECK-implicit-conversion-RECOVER-NOT: "-fsanitize-trap={{((implicit-integer-truncation),?){1}"}}
-// CHECK-implicit-conversion-NORECOVER-NOT: "-fno-sanitize-recover={{((implicit-integer-truncation),?){1}"}} // ???
-// CHECK-implicit-conversion-NORECOVER-NOT: "-fsanitize-recover={{((implicit-integer-truncation),?){1}"}}
-// CHECK-implicit-conversion-NORECOVER-NOT: "-fsanitize-trap={{((implicit-integer-truncation),?){1}"}}
-// CHECK-implicit-conversion-TRAP: "-fsanitize-trap={{((implicit-integer-truncation),?){1}"}}
-// CHECK-implicit-conversion-TRAP-NOT: "-fsanitize-recover={{((implicit-integer-truncation),?){1}"}}
-// CHECK-implicit-conversion-TRAP-NOT: "-fno-sanitize-recover={{((implicit-integer-truncation),?){1}"}}
+// CHECK-implicit-conversion: "-fsanitize={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
+// CHECK-implicit-conversion-RECOVER: "-fsanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
+// CHECK-implicit-conversion-RECOVER-NOT: "-fno-sanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
+// CHECK-implicit-conversion-RECOVER-NOT: "-fsanitize-trap={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
+// CHECK-implicit-conversion-NORECOVER-NOT: "-fno-sanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}} // ???
+// CHECK-implicit-conversion-NORECOVER-NOT: "-fsanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
+// CHECK-implicit-conversion-NORECOVER-NOT: "-fsanitize-trap={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
+// CHECK-implicit-conversion-TRAP: "-fsanitize-trap={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
+// CHECK-implicit-conversion-TRAP-NOT: "-fsanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
+// CHECK-implicit-conversion-TRAP-NOT: "-fno-sanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
+
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=implicit-integer-truncation %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-integer-truncation,CHECK-implicit-integer-truncation-RECOVER
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=implicit-integer-truncation -fsanitize-recover=implicit-integer-truncation %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-integer-truncation,CHECK-implicit-integer-truncation-RECOVER
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=implicit-integer-truncation -fno-sanitize-recover=implicit-integer-truncation %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-integer-truncation,CHECK-implicit-integer-truncation-NORECOVER
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=implicit-integer-truncation -fsanitize-trap=implicit-integer-truncation %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-integer-truncation,CHECK-implicit-integer-truncation-TRAP
+// CHECK-implicit-integer-truncation: "-fsanitize={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
+// CHECK-implicit-integer-truncation-RECOVER: "-fsanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
+// CHECK-implicit-integer-truncation-RECOVER-NOT: "-fno-sanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
+// CHECK-implicit-integer-truncation-RECOVER-NOT: "-fsanitize-trap={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
+// CHECK-implicit-integer-truncation-NORECOVER-NOT: "-fno-sanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}} // ???
+// CHECK-implicit-integer-truncation-NORECOVER-NOT: "-fsanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
+// CHECK-implicit-integer-truncation-NORECOVER-NOT: "-fsanitize-trap={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
+// CHECK-implicit-integer-truncation-TRAP: "-fsanitize-trap={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
+// CHECK-implicit-integer-truncation-TRAP-NOT: "-fsanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
+// CHECK-implicit-integer-truncation-TRAP-NOT: "-fno-sanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation),?){2}"}}
 
 // RUN: %clang -fsanitize=bounds -### -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix=CHECK-BOUNDS
 // CHECK-BOUNDS: "-fsanitize={{((array-bounds|local-bounds),?){2}"}}

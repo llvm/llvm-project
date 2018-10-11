@@ -89,11 +89,16 @@ Available checks are:
   -  ``-fsanitize=function``: Indirect call of a function through a
      function pointer of the wrong type (Darwin/Linux, C++ and x86/x86_64
      only).
-  -  ``-fsanitize=implicit-integer-truncation``: Implicit conversion from
+  -  ``-fsanitize=implicit-unsigned-integer-truncation``,
+     ``-fsanitize=implicit-signed-integer-truncation``: Implicit conversion from
      integer of larger bit width to smaller bit width, if that results in data
      loss. That is, if the demoted value, after casting back to the original
      width, is not equal to the original value before the downcast.
-     Issues caught by this sanitizer are not undefined behavior,
+     The ``-fsanitize=implicit-unsigned-integer-truncation`` handles conversions
+     between two ``unsigned`` types, while
+     ``-fsanitize=implicit-signed-integer-truncation`` handles the rest of the
+     conversions - when either one, or both of the types are signed.
+     Issues caught by these sanitizers are not undefined behavior,
      but are often unintentional.
   -  ``-fsanitize=integer-divide-by-zero``: Integer division by zero.
   -  ``-fsanitize=nonnull-attribute``: Passing null pointer as a function
@@ -160,6 +165,10 @@ You can also use the following check groups:
      behavior (e.g. unsigned integer overflow).
      Enables ``signed-integer-overflow``, ``unsigned-integer-overflow``,
      ``shift``, ``integer-divide-by-zero``, and ``implicit-integer-truncation``.
+  -  ``fsanitize=implicit-integer-truncation``: Checks for implicit integral
+     conversions that result in data loss.
+     Enables ``implicit-unsigned-integer-truncation`` and
+     ``implicit-signed-integer-truncation``.
   -  ``-fsanitize=implicit-conversion``: Checks for suspicious behaviours of
      implicit conversions.
      Currently, only ``-fsanitize=implicit-integer-truncation`` is implemented.
