@@ -4,7 +4,7 @@
 // CHECK-NEXT:        -:    0:Runs:1
 // CHECK-NEXT:        -:    0:Programs:1
 // CHECK-NEXT:function main called 1 returned 100% blocks executed 80%
-// CHECK-NEXT:        -:    1:int main(void)
+// CHECK-NEXT:        1:    1:int main(void)
 // CHECK-NEXT:        -:    2:{
 // CHECK-NEXT:        -:    3:  int var;
 // CHECK-NEXT:        -:    4:

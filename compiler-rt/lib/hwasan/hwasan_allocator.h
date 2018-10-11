@@ -76,7 +76,9 @@ class HwasanChunkView {
   uptr Beg() const;            // First byte of user memory
   uptr End() const;            // Last byte of user memory
   uptr UsedSize() const;       // Size requested by the user
+  uptr ActualSize() const;     // Size allocated by the allocator.
   u32 GetAllocStackId() const;
+  bool FromSmallHeap() const;
  private:
   uptr block_;
   Metadata *const metadata_;

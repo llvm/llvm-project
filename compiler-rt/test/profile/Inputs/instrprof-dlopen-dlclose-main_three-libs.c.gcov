@@ -7,7 +7,7 @@
 // CHECK-NEXT:        -:    2:#include <stdio.h>
 // CHECK-NEXT:        -:    3:#include <stdlib.h>
 // CHECK-NEXT:        -:    4:
-// CHECK-NEXT:        -:    5:int main(int argc, char *argv[]) {
+// CHECK-NEXT:        1:    5:int main(int argc, char *argv[]) {
 // CHECK-NEXT:        1:    6:  dlerror();
 // CHECK-NEXT:        1:    7:  void *f1_handle = dlopen("func.shared", RTLD_LAZY | RTLD_GLOBAL);
 // CHECK-NEXT:        1:    8:  if (f1_handle == NULL) {
