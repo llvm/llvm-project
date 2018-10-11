@@ -104,16 +104,18 @@ void  operator delete[](void* ptr, void*) noexcept;
 #pragma GCC system_header
 #endif
 
-#if !(defined(_LIBCPP_BUILDING_LIBRARY) || _LIBCPP_STD_VER >= 14 || \
-    (defined(__cpp_sized_deallocation) && __cpp_sized_deallocation >= 201309))
+#if !defined(_LIBCPP_BUILDING_LIBRARY) && _LIBCPP_STD_VER < 14
+# define _LIBCPP_HAS_NO_LIBRARY_SIZED_DEALLOCATION
+#endif
+
+#if defined(_LIBCPP_HAS_NO_LIBRARY_SIZED_DEALLOCATION) || \
+    !defined(__cpp_sized_deallocation) || __cpp_sized_deallocation < 201309
 # define _LIBCPP_HAS_NO_SIZED_DEALLOCATION
 #endif
 
 #if !__has_builtin(__builtin_operator_new) || \
-   __has_builtin(__builtin_operator_new) < 201802L || \
-   defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) || \
-   !defined(__cpp_aligned_new) || __cpp_aligned_new < 201606
-#define _LIBCPP_HAS_NO_BUILTIN_ALIGNED_OPERATOR_NEW_DELETE
+   __has_builtin(__builtin_operator_new) < 201802L
+#define _LIBCPP_HAS_NO_BUILTIN_OVERLOADED_OPERATOR_NEW_DELETE
 #endif
 
 namespace std  // purposefully not using versioning namespace
@@ -163,18 +165,13 @@ public:
 
 #endif  // defined(_LIBCPP_BUILDING_LIBRARY) || (_LIBCPP_STD_VER > 11)
 
-#if !defined(_LIBCPP_ABI_MICROSOFT) || defined(_LIBCPP_NO_VCRUNTIME)
-#if !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) || _LIBCPP_STD_VER > 14
+#if !defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION) && \
+    !defined(_LIBCPP_DEFER_NEW_TO_VCRUNTIME)
 #ifndef _LIBCPP_CXX03_LANG
 enum class _LIBCPP_ENUM_VIS align_val_t : size_t { };
 #else
 enum align_val_t { __zero = 0, __max = (size_t)-1 };
 #endif
-#endif
-#elif !defined(__cpp_aligned_new)
-// We're defering to Microsoft's STL to provide aligned new et al. We don't
-// have it unless the language feature test macro is defined.
-#define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
 #endif
 
 }  // std
@@ -185,13 +182,13 @@ enum align_val_t { __zero = 0, __max = (size_t)-1 };
 #define _THROW_BAD_ALLOC
 #endif
 
-#if !defined(_LIBCPP_ABI_MICROSOFT) || defined(_LIBCPP_NO_VCRUNTIME)
+#if !defined(_LIBCPP_DEFER_NEW_TO_VCRUNTIME)
 
 _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new(std::size_t __sz) _THROW_BAD_ALLOC;
 _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new(std::size_t __sz, const std::nothrow_t&) _NOEXCEPT _NOALIAS;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete(void* __p) _NOEXCEPT;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete(void* __p, const std::nothrow_t&) _NOEXCEPT;
-#ifndef _LIBCPP_HAS_NO_SIZED_DEALLOCATION
+#ifndef _LIBCPP_HAS_NO_LIBRARY_SIZED_DEALLOCATION
 _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE void  operator delete(void* __p, std::size_t __sz) _NOEXCEPT;
 #endif
 
@@ -199,16 +196,16 @@ _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new[](
 _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new[](std::size_t __sz, const std::nothrow_t&) _NOEXCEPT _NOALIAS;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete[](void* __p) _NOEXCEPT;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete[](void* __p, const std::nothrow_t&) _NOEXCEPT;
-#ifndef _LIBCPP_HAS_NO_SIZED_DEALLOCATION
+#ifndef _LIBCPP_HAS_NO_LIBRARY_SIZED_DEALLOCATION
 _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE void  operator delete[](void* __p, std::size_t __sz) _NOEXCEPT;
 #endif
 
-#ifndef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+#ifndef _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
 _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new(std::size_t __sz, std::align_val_t) _THROW_BAD_ALLOC;
 _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new(std::size_t __sz, std::align_val_t, const std::nothrow_t&) _NOEXCEPT _NOALIAS;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete(void* __p, std::align_val_t) _NOEXCEPT;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete(void* __p, std::align_val_t, const std::nothrow_t&) _NOEXCEPT;
-#ifndef _LIBCPP_HAS_NO_SIZED_DEALLOCATION
+#ifndef _LIBCPP_HAS_NO_LIBRARY_SIZED_DEALLOCATION
 _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE void  operator delete(void* __p, std::size_t __sz, std::align_val_t) _NOEXCEPT;
 #endif
 
@@ -216,7 +213,7 @@ _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new[](
 _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new[](std::size_t __sz, std::align_val_t, const std::nothrow_t&) _NOEXCEPT _NOALIAS;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete[](void* __p, std::align_val_t) _NOEXCEPT;
 _LIBCPP_OVERRIDABLE_FUNC_VIS void  operator delete[](void* __p, std::align_val_t, const std::nothrow_t&) _NOEXCEPT;
-#ifndef _LIBCPP_HAS_NO_SIZED_DEALLOCATION
+#ifndef _LIBCPP_HAS_NO_LIBRARY_SIZED_DEALLOCATION
 _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE void  operator delete[](void* __p, std::size_t __sz, std::align_val_t) _NOEXCEPT;
 #endif
 #endif
@@ -226,7 +223,7 @@ _LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_INLINE_VISIBILITY void* operator ne
 inline _LIBCPP_INLINE_VISIBILITY void  operator delete  (void*, void*) _NOEXCEPT {}
 inline _LIBCPP_INLINE_VISIBILITY void  operator delete[](void*, void*) _NOEXCEPT {}
 
-#endif // !_LIBCPP_ABI_MICROSOFT || _LIBCPP_NO_VCRUNTIME
+#endif // !_LIBCPP_DEFER_NEW_TO_VCRUNTIME
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -262,7 +259,7 @@ inline _LIBCPP_INLINE_VISIBILITY void __libcpp_deallocate(void* __ptr, size_t __
 #ifndef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
   if (__is_overaligned_for_new(__align)) {
     const align_val_t __align_val = static_cast<align_val_t>(__align);
-# ifdef _LIBCPP_HAS_NO_BUILTIN_ALIGNED_OPERATOR_NEW_DELETE
+# ifdef _LIBCPP_HAS_NO_BUILTIN_OVERLOADED_OPERATOR_NEW_DELETE
     return ::operator delete(__ptr, __align_val);
 # else
     return __builtin_operator_delete(__ptr, __align_val);

@@ -984,7 +984,14 @@ template <unsigned> struct __static_assert_check {};
 // If we are getting operator new from the MSVC CRT, then allocation overloads
 // for align_val_t were added in 19.12, aka VS 2017 version 15.3.
 #if defined(_LIBCPP_MSVCRT) && defined(_MSC_VER) && _MSC_VER < 1912
-#define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+#define _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
+#elif defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
+#define _LIBCPP_DEFER_NEW_TO_VCRUNTIME
+#if !defined(__cpp_aligned_new)
+// We're defering to Microsoft's STL to provide aligned new et al. We don't
+// have it unless the language feature test macro is defined.
+#define _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
+#endif
 #endif
 
 #if defined(__APPLE__)
@@ -994,14 +1001,14 @@ template <unsigned> struct __static_assert_check {};
 #  endif
 #  if defined(__MAC_OS_X_VERSION_MIN_REQUIRED)
 #    if __MAC_OS_X_VERSION_MIN_REQUIRED < 1060
-#      define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+#      define _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
 #    endif
 #  endif
 #endif // defined(__APPLE__)
 
 #if !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) && \
-    !defined(_LIBCPP_BUILDING_LIBRARY) && \
-    (!defined(__cpp_aligned_new) || __cpp_aligned_new < 201606)
+    (defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION) || \
+    (!defined(__cpp_aligned_new) || __cpp_aligned_new < 201606))
 #  define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
 #endif
 

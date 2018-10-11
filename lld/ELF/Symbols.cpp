@@ -263,6 +263,15 @@ void elf::warnUnorderableSymbol(const Symbol *Sym) {
   if (!Config->WarnSymbolOrdering)
     return;
 
+  // If UnresolvedPolicy::Ignore is used, no "undefined symbol" error/warning
+  // is emitted. It makes sense to not warn on undefined symbols.
+  //
+  // Note, ld.bfd --symbol-ordering-file= does not warn on undefined symbols,
+  // but we don't have to be compatible here.
+  if (Sym->isUndefined() &&
+      Config->UnresolvedSymbols == UnresolvedPolicy::Ignore)
+    return;
+
   const InputFile *File = Sym->File;
   auto *D = dyn_cast<Defined>(Sym);
 
