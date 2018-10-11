@@ -98,7 +98,7 @@ bool Input::setCurrentDocument() {
       ++DocIterator;
       return setCurrentDocument();
     }
-    TopNode = this->createHNodes(N);
+    TopNode = createHNodes(N);
     CurrentNode = TopNode.get();
     return true;
   }
@@ -343,7 +343,7 @@ void Input::blockScalarString(StringRef &S) { scalarString(S, QuotingType::None)
 
 void Input::setError(HNode *hnode, const Twine &message) {
   assert(hnode && "HNode must not be NULL");
-  this->setError(hnode->_node, message);
+  setError(hnode->_node, message);
 }
 
 void Input::setError(Node *node, const Twine &message) {
@@ -366,7 +366,7 @@ std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
   } else if (SequenceNode *SQ = dyn_cast<SequenceNode>(N)) {
     auto SQHNode = llvm::make_unique<SequenceHNode>(N);
     for (Node &SN : *SQ) {
-      auto Entry = this->createHNodes(&SN);
+      auto Entry = createHNodes(&SN);
       if (EC)
         break;
       SQHNode->Entries.push_back(std::move(Entry));
@@ -391,7 +391,7 @@ std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
         // Copy string to permanent storage
         KeyStr = StringStorage.str().copy(StringAllocator);
       }
-      auto ValueHNode = this->createHNodes(Value);
+      auto ValueHNode = createHNodes(Value);
       if (EC)
         break;
       mapHNode->Mapping[KeyStr] = std::move(ValueHNode);
@@ -406,7 +406,7 @@ std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
 }
 
 void Input::setError(const Twine &Message) {
-  this->setError(CurrentNode, Message);
+  setError(CurrentNode, Message);
 }
 
 bool Input::canElideEmptySequence() {
@@ -440,11 +440,11 @@ bool Output::mapTag(StringRef Tag, bool Use) {
         StateStack.size() > 1 && (StateStack[StateStack.size() - 2] == inSeq ||
           StateStack[StateStack.size() - 2] == inFlowSeq);
     if (SequenceElement && StateStack.back() == inMapFirstKey) {
-      this->newLineCheck();
+      newLineCheck();
     } else {
-      this->output(" ");
+      output(" ");
     }
-    this->output(Tag);
+    output(Tag);
     if (SequenceElement) {
       // If we're writing the tag during the first element of a map, the tag
       // takes the place of the first element in the sequence.
@@ -476,8 +476,8 @@ bool Output::preflightKey(const char *Key, bool Required, bool SameAsDefault,
     if (State == inFlowMapFirstKey || State == inFlowMapOtherKey) {
       flowKey(Key);
     } else {
-      this->newLineCheck();
-      this->paddedKey(Key);
+      newLineCheck();
+      paddedKey(Key);
     }
     return true;
   }
@@ -496,23 +496,23 @@ void Output::postflightKey(void *) {
 
 void Output::beginFlowMapping() {
   StateStack.push_back(inFlowMapFirstKey);
-  this->newLineCheck();
+  newLineCheck();
   ColumnAtMapFlowStart = Column;
   output("{ ");
 }
 
 void Output::endFlowMapping() {
   StateStack.pop_back();
-  this->outputUpToEndOfLine(" }");
+  outputUpToEndOfLine(" }");
 }
 
 void Output::beginDocuments() {
-  this->outputUpToEndOfLine("---");
+  outputUpToEndOfLine("---");
 }
 
 bool Output::preflightDocument(unsigned index) {
   if (index > 0)
-    this->outputUpToEndOfLine("\n---");
+    outputUpToEndOfLine("\n---");
   return true;
 }
 
@@ -542,7 +542,7 @@ void Output::postflightElement(void *) {
 
 unsigned Output::beginFlowSequence() {
   StateStack.push_back(inFlowSeq);
-  this->newLineCheck();
+  newLineCheck();
   ColumnAtFlowStart = Column;
   output("[ ");
   NeedFlowSequenceComma = false;
@@ -551,7 +551,7 @@ unsigned Output::beginFlowSequence() {
 
 void Output::endFlowSequence() {
   StateStack.pop_back();
-  this->outputUpToEndOfLine(" ]");
+  outputUpToEndOfLine(" ]");
 }
 
 bool Output::preflightFlowElement(unsigned, void *&) {
@@ -577,8 +577,8 @@ void Output::beginEnumScalar() {
 
 bool Output::matchEnumScalar(const char *Str, bool Match) {
   if (Match && !EnumerationMatchFound) {
-    this->newLineCheck();
-    this->outputUpToEndOfLine(Str);
+    newLineCheck();
+    outputUpToEndOfLine(Str);
     EnumerationMatchFound = true;
   }
   return false;
@@ -597,7 +597,7 @@ void Output::endEnumScalar() {
 }
 
 bool Output::beginBitSetScalar(bool &DoClear) {
-  this->newLineCheck();
+  newLineCheck();
   output("[ ");
   NeedBitValueComma = false;
   DoClear = false;
@@ -608,27 +608,27 @@ bool Output::bitSetMatch(const char *Str, bool Matches) {
   if (Matches) {
     if (NeedBitValueComma)
       output(", ");
-    this->output(Str);
+    output(Str);
     NeedBitValueComma = true;
   }
   return false;
 }
 
 void Output::endBitSetScalar() {
-  this->outputUpToEndOfLine(" ]");
+  outputUpToEndOfLine(" ]");
 }
 
 void Output::scalarString(StringRef &S, QuotingType MustQuote) {
-  this->newLineCheck();
+  newLineCheck();
   if (S.empty()) {
     // Print '' for the empty string because leaving the field empty is not
     // allowed.
-    this->outputUpToEndOfLine("''");
+    outputUpToEndOfLine("''");
     return;
   }
   if (MustQuote == QuotingType::None) {
     // Only quote if we must.
-    this->outputUpToEndOfLine(S);
+    outputUpToEndOfLine(S);
     return;
   }
 
@@ -645,7 +645,7 @@ void Output::scalarString(StringRef &S, QuotingType MustQuote) {
   // escapes. This is handled in yaml::escape.
   if (MustQuote == QuotingType::Double) {
     output(yaml::escape(Base, /* EscapePrintable= */ false));
-    this->outputUpToEndOfLine(Quote);
+    outputUpToEndOfLine(Quote);
     return;
   }
 
@@ -659,7 +659,7 @@ void Output::scalarString(StringRef &S, QuotingType MustQuote) {
     ++j;
   }
   output(StringRef(&Base[i], j - i));
-  this->outputUpToEndOfLine(Quote); // Ending quote.
+  outputUpToEndOfLine(Quote); // Ending quote.
 }
 
 void Output::blockScalarString(StringRef &S) {
@@ -702,7 +702,7 @@ void Output::output(StringRef s) {
 }
 
 void Output::outputUpToEndOfLine(StringRef s) {
-  this->output(s);
+  output(s);
   if (StateStack.empty() || (StateStack.back() != inFlowSeq &&
                              StateStack.back() != inFlowMapFirstKey &&
                              StateStack.back() != inFlowMapOtherKey))
@@ -723,7 +723,7 @@ void Output::newLineCheck() {
     return;
   NeedsNewLine = false;
 
-  this->outputNewLine();
+  outputNewLine();
 
   assert(StateStack.size() > 0);
   unsigned Indent = StateStack.size() - 1;

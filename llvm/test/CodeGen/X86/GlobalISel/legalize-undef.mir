@@ -11,32 +11,32 @@ body: |
     liveins:
     ; X64-LABEL: name: test_implicit_def
     ; X64: [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+    ; X64: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; X64: G_STORE [[C]](s8), [[DEF]](p0) :: (store 1)
     ; X64: [[DEF1:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
     ; X64: G_STORE [[DEF1]](s8), [[DEF]](p0) :: (store 1)
-    ; X64: [[DEF2:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
-    ; X64: G_STORE [[DEF2]](s8), [[DEF]](p0) :: (store 1)
-    ; X64: [[DEF3:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; X64: G_STORE [[DEF3]](s16), [[DEF]](p0) :: (store 2)
-    ; X64: [[DEF4:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; X64: G_STORE [[DEF4]](s32), [[DEF]](p0) :: (store 4)
-    ; X64: [[DEF5:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; X64: G_STORE [[DEF5]](s64), [[DEF]](p0) :: (store 8)
+    ; X64: [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; X64: G_STORE [[DEF2]](s16), [[DEF]](p0) :: (store 2)
+    ; X64: [[DEF3:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; X64: G_STORE [[DEF3]](s32), [[DEF]](p0) :: (store 4)
+    ; X64: [[DEF4:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; X64: G_STORE [[DEF4]](s64), [[DEF]](p0) :: (store 8)
     ; X32-LABEL: name: test_implicit_def
     ; X32: [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+    ; X32: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; X32: G_STORE [[C]](s8), [[DEF]](p0) :: (store 1)
     ; X32: [[DEF1:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
     ; X32: G_STORE [[DEF1]](s8), [[DEF]](p0) :: (store 1)
-    ; X32: [[DEF2:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
-    ; X32: G_STORE [[DEF2]](s8), [[DEF]](p0) :: (store 1)
-    ; X32: [[DEF3:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; X32: G_STORE [[DEF3]](s16), [[DEF]](p0) :: (store 2)
+    ; X32: [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; X32: G_STORE [[DEF2]](s16), [[DEF]](p0) :: (store 2)
+    ; X32: [[DEF3:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; X32: G_STORE [[DEF3]](s32), [[DEF]](p0) :: (store 4)
     ; X32: [[DEF4:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; X32: G_STORE [[DEF4]](s32), [[DEF]](p0) :: (store 4)
     ; X32: [[DEF5:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; X32: [[DEF6:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; X32: G_STORE [[DEF5]](s32), [[DEF]](p0) :: (store 4, align 8)
-    ; X32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; X32: [[GEP:%[0-9]+]]:_(p0) = G_GEP [[DEF]], [[C]](s32)
-    ; X32: G_STORE [[DEF6]](s32), [[GEP]](p0) :: (store 4)
+    ; X32: G_STORE [[DEF4]](s32), [[DEF]](p0) :: (store 4, align 8)
+    ; X32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; X32: [[GEP:%[0-9]+]]:_(p0) = G_GEP [[DEF]], [[C1]](s32)
+    ; X32: G_STORE [[DEF5]](s32), [[GEP]](p0) :: (store 4)
     %5:_(p0) = G_IMPLICIT_DEF
     %0:_(s1) = G_IMPLICIT_DEF
     G_STORE %0, %5 ::(store 1)

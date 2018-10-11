@@ -239,12 +239,6 @@ namespace {
       return tryFoldLoad(P, P, N, Base, Scale, Index, Disp, Segment);
     }
 
-    // Try to fold a vector load. This makes sure the load isn't non-temporal.
-    bool tryFoldVecLoad(SDNode *Root, SDNode *P, SDValue N,
-                        SDValue &Base, SDValue &Scale,
-                        SDValue &Index, SDValue &Disp,
-                        SDValue &Segment);
-
     /// Implement addressing mode selection for inline asm expressions.
     bool SelectInlineAsmMemoryOperand(const SDValue &Op,
                                       unsigned ConstraintID,
@@ -457,7 +451,7 @@ namespace {
     }
 
     bool foldLoadStoreIntoMemOperand(SDNode *Node);
-    bool matchBEXTRFromAnd(SDNode *Node);
+    bool matchBEXTR(SDNode *Node);
     bool shrinkAndImmediate(SDNode *N);
     bool isMaskZeroExtended(SDNode *N) const;
     bool tryShiftAmountMod(SDNode *N);
@@ -516,6 +510,10 @@ X86DAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const {
 
   if (N.getOpcode() != ISD::LOAD)
     return true;
+
+  // Don't fold non-temporal loads if we have an instruction for them.
+  if (useNonTemporalLoad(cast<LoadSDNode>(N)))
+    return false;
 
   // If N is a load, do additional profitability checks.
   if (U == Root) {
@@ -2054,20 +2052,6 @@ bool X86DAGToDAGISel::tryFoldLoad(SDNode *Root, SDNode *P, SDValue N,
                     N.getOperand(1), Base, Scale, Index, Disp, Segment);
 }
 
-bool X86DAGToDAGISel::tryFoldVecLoad(SDNode *Root, SDNode *P, SDValue N,
-                                     SDValue &Base, SDValue &Scale,
-                                     SDValue &Index, SDValue &Disp,
-                                     SDValue &Segment) {
-  if (!ISD::isNON_EXTLoad(N.getNode()) ||
-      useNonTemporalLoad(cast<LoadSDNode>(N)) ||
-      !IsProfitableToFold(N, P, Root) ||
-      !IsLegalToFold(N, P, Root, OptLevel))
-    return false;
-
-  return selectAddr(N.getNode(),
-                    N.getOperand(1), Base, Scale, Index, Disp, Segment);
-}
-
 /// Return an SDNode that returns the value of the global base register.
 /// Output instructions required to initialize the global base register,
 /// if necessary.
@@ -2582,66 +2566,83 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
   return true;
 }
 
-// See if this is an (X >> C1) & C2 that we can match to BEXTR/BEXTRI.
-bool X86DAGToDAGISel::matchBEXTRFromAnd(SDNode *Node) {
+// See if this is an  X & Mask  that we can match to BEXTR.
+// Where Mask is one of the following patterns:
+//   a) x &  (1 << nbits) - 1
+//   b) x & ~(-1 << nbits)
+//   c) x &  (-1 >> (32 - y))
+//   d) x << (32 - y) >> (32 - y)
+bool X86DAGToDAGISel::matchBEXTR(SDNode *Node) {
+  // BEXTR is BMI instruction. However, if we have BMI2, we prefer BZHI.
+  if (!Subtarget->hasBMI() || Subtarget->hasBMI2())
+    return false;
+
   MVT NVT = Node->getSimpleValueType(0);
-  SDLoc dl(Node);
-
-  SDValue N0 = Node->getOperand(0);
-  SDValue N1 = Node->getOperand(1);
-
-  // If we have TBM we can use an immediate for the control. If we have BMI
-  // we should only do this if the BEXTR instruction is implemented well.
-  // Otherwise moving the control into a register makes this more costly.
-  // TODO: Maybe load folding, greater than 32-bit masks, or a guarantee of LICM
-  // hoisting the move immediate would make it worthwhile with a less optimal
-  // BEXTR?
-  if (!Subtarget->hasTBM() &&
-      !(Subtarget->hasBMI() && Subtarget->hasFastBEXTR()))
-    return false;
-
-  // Must have a shift right.
-  if (N0->getOpcode() != ISD::SRL && N0->getOpcode() != ISD::SRA)
-    return false;
-
-  // Shift can't have additional users.
-  if (!N0->hasOneUse())
-    return false;
 
   // Only supported for 32 and 64 bits.
   if (NVT != MVT::i32 && NVT != MVT::i64)
     return false;
 
-  // Shift amount and RHS of and must be constant.
-  ConstantSDNode *MaskCst = dyn_cast<ConstantSDNode>(N1);
-  ConstantSDNode *ShiftCst = dyn_cast<ConstantSDNode>(N0->getOperand(1));
-  if (!MaskCst || !ShiftCst)
-    return false;
+  SDValue NBits;
 
-  // And RHS must be a mask.
-  uint64_t Mask = MaskCst->getZExtValue();
-  if (!isMask_64(Mask))
-    return false;
+  // b) x & ~(-1 << nbits)
+  auto matchPatternB = [&NBits](SDValue Mask) -> bool {
+    // Match `~()`. Must only have one use!
+    if (!isBitwiseNot(Mask) || !Mask->hasOneUse())
+      return false;
+    // Match `-1 << nbits`. Must only have one use!
+    SDValue M0 = Mask->getOperand(0);
+    if (M0->getOpcode() != ISD::SHL || !M0->hasOneUse())
+      return false;
+    if (!isAllOnesConstant(M0->getOperand(0)))
+      return false;
+    NBits = M0->getOperand(1);
+    return true;
+  };
 
-  uint64_t Shift = ShiftCst->getZExtValue();
-  uint64_t MaskSize = countPopulation(Mask);
+  auto matchLowBitMask = [&matchPatternB](SDValue Mask) -> bool {
+    // FIXME: patterns a, c, d.
+    return matchPatternB(Mask);
+  };
 
-  // Don't interfere with something that can be handled by extracting AH.
-  // TODO: If we are able to fold a load, BEXTR might still be better than AH.
-  if (Shift == 8 && MaskSize == 8)
-    return false;
+  SDValue X = Node->getOperand(0);
+  SDValue Mask = Node->getOperand(1);
 
-  // Make sure we are only using bits that were in the original value, not
-  // shifted in.
-  if (Shift + MaskSize > NVT.getSizeInBits())
-    return false;
+  if (matchLowBitMask(Mask)) {
+    // Great.
+  } else {
+    std::swap(X, Mask);
+    if (!matchLowBitMask(Mask))
+      return false;
+  }
 
-  // Create a BEXTR node and run it through selection.
-  SDValue C = CurDAG->getConstant(Shift | (MaskSize << 8), dl, NVT);
-  SDValue New = CurDAG->getNode(X86ISD::BEXTR, dl, NVT,
-                                N0->getOperand(0), C);
-  ReplaceNode(Node, New.getNode());
-  SelectCode(New.getNode());
+  SDLoc DL(Node);
+
+  // Insert 8-bit NBits into lowest 8 bits of NVT-sized (32 or 64-bit) register.
+  // All the other bits are undefined, we do not care about them.
+  SDValue ImplDef =
+      SDValue(CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, NVT), 0);
+  insertDAGNode(*CurDAG, NBits, ImplDef);
+  SDValue OrigNBits = NBits;
+  NBits = CurDAG->getTargetInsertSubreg(X86::sub_8bit, DL, NVT, ImplDef, NBits);
+  insertDAGNode(*CurDAG, OrigNBits, NBits);
+
+  // The 'control' of BEXTR has the pattern of:
+  // [15...8 bit][ 7...0 bit] location
+  // [ bit count][     shift] name
+  // I.e. 0b000000011'00000001 means  (x >> 0b1) & 0b11
+
+  // Shift NBits left by 8 bits, thus producing 'control'.
+  SDValue C8 = CurDAG->getConstant(8, DL, MVT::i8);
+  SDValue Control = CurDAG->getNode(ISD::SHL, DL, NVT, NBits, C8);
+  insertDAGNode(*CurDAG, OrigNBits, Control);
+  // NOTE: could also try to extract  start  from  (x >> start)
+
+  // And finally, form the BEXTR itself.
+  SDValue Extract = CurDAG->getNode(X86ISD::BEXTR, DL, NVT, X, Control);
+  ReplaceNode(Node, Extract.getNode());
+  SelectCode(Extract.getNode());
+
   return true;
 }
 
@@ -2659,8 +2660,8 @@ MachineSDNode *X86DAGToDAGISel::emitPCMPISTR(unsigned ROpc, unsigned MOpc,
   // alignment on this load.
   SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
   if (MayFoldLoad && N1->getOpcode() == ISD::BITCAST && N1->hasOneUse() &&
-      tryFoldVecLoad(Node, N1.getNode(), N1.getOperand(0), Tmp0, Tmp1, Tmp2,
-                     Tmp3, Tmp4)) {
+      tryFoldLoad(Node, N1.getNode(), N1.getOperand(0), Tmp0, Tmp1, Tmp2,
+                  Tmp3, Tmp4)) {
     SDValue Load = N1.getOperand(0);
     SDValue Ops[] = { N0, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, Imm,
                       Load.getOperand(0) };
@@ -2696,8 +2697,8 @@ MachineSDNode *X86DAGToDAGISel::emitPCMPESTR(unsigned ROpc, unsigned MOpc,
   // alignment on this load.
   SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
   if (MayFoldLoad && N2->getOpcode() == ISD::BITCAST && N2->hasOneUse() &&
-      tryFoldVecLoad(Node, N2.getNode(), N2.getOperand(0), Tmp0, Tmp1, Tmp2,
-                     Tmp3, Tmp4)) {
+      tryFoldLoad(Node, N2.getNode(), N2.getOperand(0), Tmp0, Tmp1, Tmp2,
+                  Tmp3, Tmp4)) {
     SDValue Load = N2.getOperand(0);
     SDValue Ops[] = { N0, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, Imm,
                       Load.getOperand(0), InFlag };
@@ -2952,7 +2953,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     break;
 
   case ISD::AND:
-    if (matchBEXTRFromAnd(Node))
+    if (matchBEXTR(Node))
       return;
     if (AndImmShrink && shrinkAndImmediate(Node))
       return;

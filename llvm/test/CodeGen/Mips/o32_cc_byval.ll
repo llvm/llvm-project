@@ -109,7 +109,8 @@ define void @f2(float %f, %struct.S1* nocapture byval %s1) nounwind {
 ; CHECK-NEXT:    lw $1, 64($sp)
 ; CHECK-NEXT:    lw $2, 68($sp)
 ; CHECK-NEXT:    lh $3, 58($sp)
-; CHECK-NEXT:    lb $5, 56($sp)
+; CHECK-NEXT:    sll $5, $6, 24
+; CHECK-NEXT:    sra $5, $5, 24
 ; CHECK-NEXT:    swc1 $f12, 36($sp)
 ; CHECK-NEXT:    sw $5, 32($sp)
 ; CHECK-NEXT:    sw $3, 28($sp)
@@ -191,11 +192,12 @@ define void @f4(float %f, %struct.S3* nocapture byval %s3, %struct.S1* nocapture
 ; CHECK-NEXT:    sw $ra, 44($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    addu $gp, $2, $25
 ; CHECK-NEXT:    move $4, $7
-; CHECK-NEXT:    sw $5, 52($sp)
 ; CHECK-NEXT:    sw $6, 56($sp)
+; CHECK-NEXT:    sw $5, 52($sp)
 ; CHECK-NEXT:    sw $7, 60($sp)
 ; CHECK-NEXT:    lw $1, 80($sp)
-; CHECK-NEXT:    lb $2, 52($sp)
+; CHECK-NEXT:    sll $2, $5, 24
+; CHECK-NEXT:    sra $2, $2, 24
 ; CHECK-NEXT:    addiu $3, $zero, 4
 ; CHECK-NEXT:    lui $5, 16576
 ; CHECK-NEXT:    sw $5, 36($sp)

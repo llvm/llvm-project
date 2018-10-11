@@ -109,7 +109,7 @@ public:
     return tryFoldImplicitDef(MI, DeadInsts);
   }
 
-  /// Try to fold sb = EXTEND (G_IMPLICIT_DEF sa) -> sb = G_IMPLICIT_DEF
+  /// Try to fold G_[ASZ]EXT (G_IMPLICIT_DEF).
   bool tryFoldImplicitDef(MachineInstr &MI,
                           SmallVectorImpl<MachineInstr *> &DeadInsts) {
     unsigned Opcode = MI.getOpcode();
@@ -119,13 +119,25 @@ public:
 
     if (MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF,
                                            MI.getOperand(1).getReg(), MRI)) {
+      Builder.setInstr(MI);
       unsigned DstReg = MI.getOperand(0).getReg();
       LLT DstTy = MRI.getType(DstReg);
-      if (isInstUnsupported({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}))
-        return false;
-      LLVM_DEBUG(dbgs() << ".. Combine EXT(IMPLICIT_DEF) " << MI;);
-      Builder.setInstr(MI);
-      Builder.buildInstr(TargetOpcode::G_IMPLICIT_DEF, DstReg);
+
+      if (Opcode == TargetOpcode::G_ANYEXT) {
+        // G_ANYEXT (G_IMPLICIT_DEF) -> G_IMPLICIT_DEF
+        if (isInstUnsupported({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}))
+          return false;
+        LLVM_DEBUG(dbgs() << ".. Combine G_ANYEXT(G_IMPLICIT_DEF): " << MI;);
+        Builder.buildInstr(TargetOpcode::G_IMPLICIT_DEF, DstReg);
+      } else {
+        // G_[SZ]EXT (G_IMPLICIT_DEF) -> G_CONSTANT 0 because the top
+        // bits will be 0 for G_ZEXT and 0/1 for the G_SEXT.
+        if (isInstUnsupported({TargetOpcode::G_CONSTANT, {DstTy}}))
+          return false;
+        LLVM_DEBUG(dbgs() << ".. Combine G_[SZ]EXT(G_IMPLICIT_DEF): " << MI;);
+        Builder.buildConstant(DstReg, 0);
+      }
+
       markInstAndDefDead(MI, *DefMI, DeadInsts);
       return true;
     }

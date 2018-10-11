@@ -222,6 +222,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SymbolRemappingReader.h"
 #include <algorithm>
 #include <cstdint>
 #include <memory>
@@ -289,11 +290,16 @@ public:
     // The function name may have been updated by adding suffix. In sample
     // profile, the function names are all stripped, so we need to strip
     // the function name suffix before matching with profile.
-    StringRef Fname = F.getName().split('.').first;
+    return getSamplesFor(F.getName().split('.').first);
+  }
+
+  /// Return the samples collected for function \p F.
+  virtual FunctionSamples *getSamplesFor(StringRef Fname) {
     std::string FGUID;
     Fname = getRepInFormat(Fname, getFormat(), FGUID);
-    if (Profiles.count(Fname))
-      return &Profiles[Fname];
+    auto It = Profiles.find(Fname);
+    if (It != Profiles.end())
+      return &It->second;
     return nullptr;
   }
 
@@ -336,6 +342,12 @@ protected:
 
   /// Profile summary information.
   std::unique_ptr<ProfileSummary> Summary;
+
+  /// Take ownership of the summary of this reader.
+  static std::unique_ptr<ProfileSummary>
+  takeSummary(SampleProfileReader &Reader) {
+    return std::move(Reader.Summary);
+  }
 
   /// Compute summary for this profile.
   void computeSummary();
@@ -523,6 +535,40 @@ protected:
   /// GCOV tags used to separate sections in the profile file.
   static const uint32_t GCOVTagAFDOFileNames = 0xaa000000;
   static const uint32_t GCOVTagAFDOFunction = 0xac000000;
+};
+
+/// A profile data reader proxy that remaps the profile data from another
+/// sample profile data reader, by applying a provided set of equivalences
+/// between components of the symbol names in the profile.
+class SampleProfileReaderItaniumRemapper : public SampleProfileReader {
+public:
+  SampleProfileReaderItaniumRemapper(
+      std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
+      std::unique_ptr<SampleProfileReader> Underlying)
+      : SampleProfileReader(std::move(B), C, Underlying->getFormat()) {
+    Profiles = std::move(Underlying->getProfiles());
+    Summary = takeSummary(*Underlying);
+  }
+
+  /// Create a remapped sample profile from the given remapping file and
+  /// underlying samples.
+  static ErrorOr<std::unique_ptr<SampleProfileReader>>
+  create(const Twine &Filename, LLVMContext &C,
+         std::unique_ptr<SampleProfileReader> Underlying);
+
+  /// Read and validate the file header.
+  std::error_code readHeader() override { return sampleprof_error::success; }
+
+  /// Read remapping file and apply it to the sample profile.
+  std::error_code read() override;
+
+  /// Return the samples collected for function \p F.
+  FunctionSamples *getSamplesFor(StringRef FunctionName) override;
+  using SampleProfileReader::getSamplesFor;
+
+private:
+  SymbolRemappingReader Remappings;
+  DenseMap<SymbolRemappingReader::Key, FunctionSamples*> SampleMap;
 };
 
 } // end namespace sampleprof

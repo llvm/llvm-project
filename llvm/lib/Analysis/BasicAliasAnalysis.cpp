@@ -1019,8 +1019,8 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
 
   // If we don't know the size of the accesses through both GEPs, we can't
   // determine whether the struct fields accessed can't alias.
-  if (MaybeV1Size == MemoryLocation::UnknownSize ||
-      MaybeV2Size == MemoryLocation::UnknownSize)
+  if (MaybeV1Size == LocationSize::unknown() ||
+      MaybeV2Size == LocationSize::unknown())
     return MayAlias;
 
   const uint64_t V1Size = MaybeV1Size.getValue();
@@ -1184,8 +1184,7 @@ bool BasicAAResult::isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
       const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompObject,
       LocationSize MaybeObjectAccessSize) {
   // If the object access size is unknown, or the GEP isn't inbounds, bail.
-  if (MaybeObjectAccessSize == MemoryLocation::UnknownSize ||
-      !GEPOp->isInBounds())
+  if (MaybeObjectAccessSize == LocationSize::unknown() || !GEPOp->isInBounds())
     return false;
 
   const uint64_t ObjectAccessSize = MaybeObjectAccessSize.getValue();
@@ -1254,8 +1253,8 @@ BasicAAResult::aliasGEP(const GEPOperator *GEP1, LocationSize V1Size,
       return NoAlias;
     // Do the base pointers alias?
     AliasResult BaseAlias =
-        aliasCheck(UnderlyingV1, MemoryLocation::UnknownSize, AAMDNodes(),
-                   UnderlyingV2, MemoryLocation::UnknownSize, AAMDNodes());
+        aliasCheck(UnderlyingV1, LocationSize::unknown(), AAMDNodes(),
+                   UnderlyingV2, LocationSize::unknown(), AAMDNodes());
 
     // Check for geps of non-aliasing underlying pointers where the offsets are
     // identical.
@@ -1314,13 +1313,12 @@ BasicAAResult::aliasGEP(const GEPOperator *GEP1, LocationSize V1Size,
     // pointer, we know they cannot alias.
 
     // If both accesses are unknown size, we can't do anything useful here.
-    if (V1Size == MemoryLocation::UnknownSize &&
-        V2Size == MemoryLocation::UnknownSize)
+    if (V1Size == LocationSize::unknown() && V2Size == LocationSize::unknown())
       return MayAlias;
 
-    AliasResult R = aliasCheck(UnderlyingV1, MemoryLocation::UnknownSize,
-                               AAMDNodes(), V2, MemoryLocation::UnknownSize,
-                               V2AAInfo, nullptr, UnderlyingV2);
+    AliasResult R =
+        aliasCheck(UnderlyingV1, LocationSize::unknown(), AAMDNodes(), V2,
+                   LocationSize::unknown(), V2AAInfo, nullptr, UnderlyingV2);
     if (R != MustAlias) {
       // If V2 may alias GEP base pointer, conservatively returns MayAlias.
       // If V2 is known not to alias GEP base pointer, then the two values
@@ -1351,7 +1349,7 @@ BasicAAResult::aliasGEP(const GEPOperator *GEP1, LocationSize V1Size,
   // greater, we know they do not overlap.
   if (GEP1BaseOffset != 0 && DecompGEP1.VarIndices.empty()) {
     if (GEP1BaseOffset >= 0) {
-      if (V2Size != MemoryLocation::UnknownSize) {
+      if (V2Size != LocationSize::unknown()) {
         if ((uint64_t)GEP1BaseOffset < V2Size.getValue())
           return PartialAlias;
         return NoAlias;
@@ -1365,8 +1363,8 @@ BasicAAResult::aliasGEP(const GEPOperator *GEP1, LocationSize V1Size,
       // GEP1             V2
       // We need to know that V2Size is not unknown, otherwise we might have
       // stripped a gep with negative index ('gep <ptr>, -1, ...).
-      if (V1Size != MemoryLocation::UnknownSize &&
-          V2Size != MemoryLocation::UnknownSize) {
+      if (V1Size != LocationSize::unknown() &&
+          V2Size != LocationSize::unknown()) {
         if (-(uint64_t)GEP1BaseOffset < V1Size.getValue())
           return PartialAlias;
         return NoAlias;
@@ -1416,9 +1414,8 @@ BasicAAResult::aliasGEP(const GEPOperator *GEP1, LocationSize V1Size,
     // mod Modulo. Check whether that difference guarantees that the
     // two locations do not alias.
     uint64_t ModOffset = (uint64_t)GEP1BaseOffset & (Modulo - 1);
-    if (V1Size != MemoryLocation::UnknownSize &&
-        V2Size != MemoryLocation::UnknownSize &&
-        ModOffset >= V2Size.getValue() &&
+    if (V1Size != LocationSize::unknown() &&
+        V2Size != LocationSize::unknown() && ModOffset >= V2Size.getValue() &&
         V1Size.getValue() <= Modulo - ModOffset)
       return NoAlias;
 
@@ -1426,7 +1423,7 @@ BasicAAResult::aliasGEP(const GEPOperator *GEP1, LocationSize V1Size,
     // If GEP1BasePtr > V2 (GEP1BaseOffset > 0) then we know the pointers
     // don't alias if V2Size can fit in the gap between V2 and GEP1BasePtr.
     if (AllPositive && GEP1BaseOffset > 0 &&
-        V2Size != MemoryLocation::UnknownSize &&
+        V2Size != LocationSize::unknown() &&
         V2Size.getValue() <= (uint64_t)GEP1BaseOffset)
       return NoAlias;
 
@@ -1607,7 +1604,7 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   // unknown to represent all the possible values the GEP could advance the
   // pointer to.
   if (isRecursive)
-    PNSize = MemoryLocation::UnknownSize;
+    PNSize = LocationSize::unknown();
 
   AliasResult Alias =
       aliasCheck(V2, V2Size, V2AAInfo, V1Srcs[0],
@@ -1864,8 +1861,8 @@ bool BasicAAResult::constantOffsetHeuristic(
     const SmallVectorImpl<VariableGEPIndex> &VarIndices,
     LocationSize MaybeV1Size, LocationSize MaybeV2Size, int64_t BaseOffset,
     AssumptionCache *AC, DominatorTree *DT) {
-  if (VarIndices.size() != 2 || MaybeV1Size == MemoryLocation::UnknownSize ||
-      MaybeV2Size == MemoryLocation::UnknownSize)
+  if (VarIndices.size() != 2 || MaybeV1Size == LocationSize::unknown() ||
+      MaybeV2Size == LocationSize::unknown())
     return false;
 
   const uint64_t V1Size = MaybeV1Size.getValue();

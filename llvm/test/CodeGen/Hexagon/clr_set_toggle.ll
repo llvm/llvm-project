@@ -70,7 +70,7 @@ entry:
 define zeroext i16 @my_setbit(i16 zeroext %crc) nounwind {
 entry:
 ; CHECK-LABEL: my_setbit
-; CHECK: memh(r{{[0-9]+}}+#{{[0-9]+}}) = setbit(#15)
+; CHECK: r{{[0-9]+}} = setbit(r{{[0-9]+}},#15)
   %crc.addr = alloca i16, align 2
   store i16 %crc, i16* %crc.addr, align 2
   %0 = load i16, i16* %crc.addr, align 2

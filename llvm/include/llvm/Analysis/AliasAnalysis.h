@@ -335,8 +335,7 @@ public:
 
   /// A convenience wrapper around the primary \c alias interface.
   AliasResult alias(const Value *V1, const Value *V2) {
-    return alias(V1, MemoryLocation::UnknownSize, V2,
-                 MemoryLocation::UnknownSize);
+    return alias(V1, LocationSize::unknown(), V2, LocationSize::unknown());
   }
 
   /// A trivial helper function to check to see if the specified pointers are

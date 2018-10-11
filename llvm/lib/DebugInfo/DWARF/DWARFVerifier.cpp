@@ -508,14 +508,15 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
                   "incompatible tag " +
                   TagString(RefTag));
     }
+    break;
   }
   case DW_AT_type: {
     DWARFDie TypeDie = Die.getAttributeValueAsReferencedDie(DW_AT_type);
     if (TypeDie && !isType(TypeDie.getTag())) {
       ReportError("DIE has " + AttributeString(Attr) +
                   " with incompatible tag " + TagString(TypeDie.getTag()));
-      break;
     }
+    break;
   }
   default:
     break;

@@ -263,8 +263,15 @@ static void computeCacheKey(
 
   if (!Conf.SampleProfile.empty()) {
     auto FileOrErr = MemoryBuffer::getFile(Conf.SampleProfile);
-    if (FileOrErr)
+    if (FileOrErr) {
       Hasher.update(FileOrErr.get()->getBuffer());
+
+      if (!Conf.ProfileRemapping.empty()) {
+        FileOrErr = MemoryBuffer::getFile(Conf.ProfileRemapping);
+        if (FileOrErr)
+          Hasher.update(FileOrErr.get()->getBuffer());
+      }
+    }
   }
 
   Key = toHex(Hasher.result());
