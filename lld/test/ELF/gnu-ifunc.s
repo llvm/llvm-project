@@ -15,11 +15,16 @@
 // CHECK-NEXT:  Address: [[RELA:.*]]
 // CHECK-NEXT:  Offset: 0x158
 // CHECK-NEXT:  Size: 48
-// CHECK-NEXT:  Link: 0
-// CHECK-NEXT:  Info: 0
+// CHECK-NEXT:  Link: [[SYMTAB:.*]]
+// CHECK-NEXT:  Info: [[GOTPLT:.*]]
 // CHECK-NEXT:  AddressAlignment: 8
 // CHECK-NEXT:  EntrySize: 24
 // CHECK-NEXT: }
+// CHECK:      Index: [[GOTPLT]]
+// CHECK-NEXT: Name: .got.plt
+// CHECK:      Index: [[SYMTAB]]
+// CHECK-NEXT: Name: .symtab
+// CHECK-NEXT: Type: SHT_SYMTAB
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.plt {
 // CHECK-NEXT:     0x202000 R_X86_64_IRELATIVE

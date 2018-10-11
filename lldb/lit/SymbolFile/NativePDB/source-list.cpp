@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
 // changing this file.
 
 // CHECK: (lldb) source list -n main
-// CHECK: File: D:\src\llvm-mono\lldb\lit\SymbolFile\NativePDB\source-list.cpp
+// CHECK: File: {{.*}}source-list.cpp
 // CHECK:    10
 // CHECK:    11    // Some context lines before
 // CHECK:    12   // the function.

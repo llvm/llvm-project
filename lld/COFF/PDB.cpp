@@ -222,26 +222,22 @@ public:
 // PDB to work without additional configuration:
 // https://docs.microsoft.com/en-us/visualstudio/debugger/debug-source-files-common-properties-solution-property-pages-dialog-box
 static void pdbMakeAbsolute(SmallVectorImpl<char> &FileName) {
-  if (sys::path::is_absolute(FileName, sys::path::Style::windows))
+  // The default behavior is to produce paths that are valid within the context
+  // of the machine that you perform the link on.  If the linker is running on
+  // a POSIX system, we will output absolute POSIX paths.  If the linker is
+  // running on a Windows system, we will output absolute Windows paths.  If the
+  // user desires any other kind of behavior, they should explicitly pass
+  // /pdbsourcepath and/or /pdbaltpath.
+  if (sys::path::is_absolute(FileName))
     return;
   if (Config->PDBSourcePath.empty()) {
-    // Debuggers generally want that PDB files contain absolute, Windows-style
-    // paths. On POSIX hosts, this here will produce an absolute POSIX-style
-    // path, which is weird -- but it's not clear what else to do.
-    // People doing cross builds should probably just always pass
-    // /pbdsourcepath: and make sure paths to input obj files and to lld-link
-    // itself are relative.
     sys::fs::make_absolute(FileName);
     return;
   }
-  // Using /pdbsourcepath: with absolute POSIX paths will prepend
-  // PDBSourcePath to the absolute POSIX path. Since absolute POSIX paths
-  // don't make sense in PDB files anyways, this is gargabe-in-garbage-out.
   SmallString<128> AbsoluteFileName = Config->PDBSourcePath;
-  sys::path::append(AbsoluteFileName, sys::path::Style::windows, FileName);
-  sys::path::native(AbsoluteFileName, sys::path::Style::windows);
-  sys::path::remove_dots(AbsoluteFileName, /*remove_dot_dots=*/true,
-                         sys::path::Style::windows);
+  sys::path::append(AbsoluteFileName, FileName);
+  sys::path::native(AbsoluteFileName);
+  sys::path::remove_dots(AbsoluteFileName, /*remove_dot_dots=*/true);
   FileName = std::move(AbsoluteFileName);
 }
 
@@ -444,8 +440,7 @@ PDBLinker::maybeMergeTypeServerPDB(ObjFile *File, TypeServer2Record &TS) {
         StringRef LocalPath =
             !File->ParentName.empty() ? File->ParentName : File->getName();
         SmallString<128> Path = sys::path::parent_path(LocalPath);
-        sys::path::append(
-            Path, sys::path::filename(TSPath, sys::path::Style::windows));
+        sys::path::append(Path, sys::path::filename(TSPath));
         return tryToLoadPDB(TSId, Path);
       },
       [&](std::unique_ptr<ECError> EC) -> Error {
@@ -1027,7 +1022,7 @@ void PDBLinker::addObjFile(ObjFile *File) {
   bool InArchive = !File->ParentName.empty();
   SmallString<128> Path = InArchive ? File->ParentName : File->getName();
   pdbMakeAbsolute(Path);
-  sys::path::native(Path, sys::path::Style::windows);
+  sys::path::native(Path);
   StringRef Name = InArchive ? File->getName() : StringRef(Path);
 
   pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
@@ -1312,7 +1307,7 @@ void PDBLinker::addSections(ArrayRef<OutputSection *> OutputSections,
   pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
   NativePath = Config->PDBPath;
   pdbMakeAbsolute(NativePath);
-  sys::path::native(NativePath, sys::path::Style::windows);
+  sys::path::native(NativePath);
   uint32_t PdbFilePathNI = DbiBuilder.addECName(NativePath);
   auto &LinkerModule = ExitOnErr(DbiBuilder.addModuleInfo("* Linker *"));
   LinkerModule.setPdbFilePathNI(PdbFilePathNI);
