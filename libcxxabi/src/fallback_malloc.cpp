@@ -216,7 +216,7 @@ void* __aligned_malloc_with_fallback(size_t size) {
   if (size == 0)
     size = 1;
   void* dest;
-  if (::posix_memalign(&dest, alignof(__aligned_type), size) == 0)
+  if (::posix_memalign(&dest, __alignof(__aligned_type), size) == 0)
     return dest;
 #endif
   return fallback_malloc(size);
