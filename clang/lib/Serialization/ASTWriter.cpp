@@ -6948,3 +6948,7 @@ void OMPClauseWriter::VisitOMPUnifiedSharedMemoryClause(
     OMPUnifiedSharedMemoryClause *) {}
 
 void OMPClauseWriter::VisitOMPReverseOffloadClause(OMPReverseOffloadClause *) {}
+
+void
+OMPClauseWriter::VisitOMPDynamicAllocatorsClause(OMPDynamicAllocatorsClause *) {
+}

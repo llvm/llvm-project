@@ -171,6 +171,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
   case OMPC_unified_address:
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
+  case OMPC_dynamic_allocators:
     break;
   }
   llvm_unreachable("Invalid OpenMP simple clause kind");
@@ -315,6 +316,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_unified_address:
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
+  case OMPC_dynamic_allocators:
     break;
   }
   llvm_unreachable("Invalid OpenMP simple clause kind");
