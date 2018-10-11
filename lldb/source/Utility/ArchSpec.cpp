@@ -947,13 +947,13 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
           m_triple.setVendor(llvm::Triple::Apple);
 
           // Don't set the OS.  It could be simulator, macosx, ios, watchos,
-          // tvos.  We could get close with the cpu type - but we can't get it
-          // right all of the time.  Better to leave this unset so other
-          // sections of code will set it when they have more information.
-          // NB: don't call m_triple.setOS (llvm::Triple::UnknownOS).  That sets
-          // the OSName to
-          // "unknown" and the ArchSpec::TripleVendorWasSpecified() method says
-          // that any OSName setting means it was specified.
+          // tvos, bridgeos.  We could get close with the cpu type - but we 
+          // can't get it right all of the time.  Better to leave this unset 
+          // so other sections of code will set it when they have more 
+          // information. NB: don't call m_triple.setOS (llvm::Triple::UnknownOS).  
+          // That sets the OSName to "unknown" and the 
+          // ArchSpec::TripleVendorWasSpecified() method says that any OSName 
+          // setting means it was specified.
         } else if (arch_type == eArchTypeELF) {
           switch (os) {
           case llvm::ELF::ELFOSABI_AIX:
