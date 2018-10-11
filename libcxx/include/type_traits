@@ -3686,12 +3686,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_trivially_move_assignable_v
 
 // is_trivially_destructible
 
-#if __has_keyword(__is_trivially_destructible)
-
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_trivially_destructible
-    : public integral_constant<bool, __is_trivially_destructible(_Tp)> {};
-
-#elif __has_feature(has_trivial_destructor) || (_GNUC_VER >= 403)
+#if __has_feature(has_trivial_destructor) || (_GNUC_VER >= 403)
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_trivially_destructible
     : public integral_constant<bool, is_destructible<_Tp>::value && __has_trivial_destructor(_Tp)> {};
@@ -3718,15 +3713,18 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_trivially_destructible_v
 
 // is_nothrow_constructible
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-
-#if __has_keyword(__is_nothrow_constructible)
-
+#if 0
 template <class _Tp, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible
-    : public integral_constant<bool, __is_nothrow_constructible(_Tp, _Args...)> {};
+    : public integral_constant<bool, __is_nothrow_constructible(_Tp(_Args...))>
+{
+};
 
-#elif __has_feature(cxx_noexcept) || (_GNUC_VER >= 407 && __cplusplus >= 201103L)
+#else
+
+#ifndef _LIBCPP_HAS_NO_VARIADICS
+
+#if __has_feature(cxx_noexcept) || (_GNUC_VER >= 407 && __cplusplus >= 201103L)
 
 template <bool, bool, class _Tp, class... _Args> struct __libcpp_is_nothrow_constructible;
 
@@ -3763,7 +3761,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp[_Ns]>
 {
 };
 
-#else  // __has_keyword(__is_nothrow_constructible) || __has_feature(cxx_noexcept)
+#else  // __has_feature(cxx_noexcept)
 
 template <class _Tp, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible
@@ -3819,23 +3817,6 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, _Tp&>
 
 #else  // _LIBCPP_HAS_NO_VARIADICS
 
-#if __has_keyword(__is_nothrow_constructible)
-
-template <class _Tp, class _A0 = __is_construct::__nat,
-                     class _A1 = __is_construct::__nat>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible
-    : public integral_constant<bool, __is_nothrow_constructible(_Tp, _A0, _A1)> {};
-
-template <class _Tp, class _A0>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, _A0>
-    : public integral_constant<bool, __is_nothrow_constructible(_Tp, _A0)> {};
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp>
-    : public integral_constant<bool, __is_nothrow_constructible(_Tp)> {};
-
-#else  // __has_keyword(__is_nothrow_constructible)
-
 template <class _Tp, class _A0 = __is_construct::__nat,
                      class _A1 = __is_construct::__nat>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible
@@ -3887,8 +3868,8 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, _Tp&,
 {
 };
 
-#endif  // __has_keyword(__is_nothrow_constructible)
 #endif  // _LIBCPP_HAS_NO_VARIADICS
+#endif  // __has_feature(is_nothrow_constructible)
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES) && !defined(_LIBCPP_HAS_NO_VARIADICS)
 template <class _Tp, class ..._Args>
@@ -3938,13 +3919,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_nothrow_move_constructible_v
 
 // is_nothrow_assignable
 
-#if __has_keyword(__is_nothrow_assignable)
-
-template <class _Tp, class _Arg>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable
-    : public integral_constant<bool, __is_nothrow_assignable(_Tp, _Arg)> {};
-
-#elif __has_feature(cxx_noexcept) || (_GNUC_VER >= 407 && __cplusplus >= 201103L)
+#if __has_feature(cxx_noexcept) || (_GNUC_VER >= 407 && __cplusplus >= 201103L)
 
 template <bool, class _Tp, class _Arg> struct __libcpp_is_nothrow_assignable;
 
@@ -3966,7 +3941,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable
 {
 };
 
-#else  // __has_keyword(__is_nothrow_assignable) || __has_feature(cxx_noexcept)
+#else  // __has_feature(cxx_noexcept)
 
 template <class _Tp, class _Arg>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable
