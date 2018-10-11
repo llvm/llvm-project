@@ -344,11 +344,11 @@ ImplicitNullChecks::areMemoryOpsAliased(MachineInstr &MI,
           return AR_MayAlias;
         continue;
       }
-      llvm::AliasResult AAResult = AA->alias(
-          MemoryLocation(MMO1->getValue(), MemoryLocation::UnknownSize,
-                         MMO1->getAAInfo()),
-          MemoryLocation(MMO2->getValue(), MemoryLocation::UnknownSize,
-                         MMO2->getAAInfo()));
+      llvm::AliasResult AAResult =
+          AA->alias(MemoryLocation(MMO1->getValue(), LocationSize::unknown(),
+                                   MMO1->getAAInfo()),
+                    MemoryLocation(MMO2->getValue(), LocationSize::unknown(),
+                                   MMO2->getAAInfo()));
       if (AAResult != NoAlias)
         return AR_MayAlias;
     }

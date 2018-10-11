@@ -32,8 +32,7 @@ LatencySnippetGenerator::generateTwoInstructionPrototype(
   for (const unsigned OtherOpcode : Opcodes) {
     if (OtherOpcode == Instr.Description->Opcode)
       continue;
-    const auto &OtherInstrDesc = State.getInstrInfo().get(OtherOpcode);
-    const Instruction OtherInstr(OtherInstrDesc, RATC);
+    const Instruction OtherInstr(State, OtherOpcode);
     if (OtherInstr.hasMemoryOperands())
       continue;
     const AliasingConfigurations Forward(Instr, OtherInstr);
@@ -58,8 +57,7 @@ LatencySnippetGenerator::generateTwoInstructionPrototype(
 }
 
 llvm::Expected<CodeTemplate>
-LatencySnippetGenerator::generateCodeTemplate(unsigned Opcode) const {
-  const Instruction Instr(State.getInstrInfo().get(Opcode), RATC);
+LatencySnippetGenerator::generateCodeTemplate(const Instruction &Instr) const {
   if (Instr.hasMemoryOperands())
     return llvm::make_error<BenchmarkFailure>(
         "Infeasible : has memory operands");

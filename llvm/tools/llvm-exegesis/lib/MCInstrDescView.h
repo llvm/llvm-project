@@ -21,6 +21,7 @@
 
 #include <random>
 
+#include "LlvmState.h"
 #include "RegisterAliasing.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -80,7 +81,7 @@ struct Operand {
   const llvm::MCOperandInfo &getExplicitOperandInfo() const;
 
   // Please use the accessors above and not the following fields.
-  unsigned Index = 0;
+  int Index = -1;
   bool IsDef = false;
   const RegisterAliasingTracker *Tracker = nullptr; // Set for Register Op.
   const llvm::MCOperandInfo *Info = nullptr;        // Set for Explicit Op.
@@ -92,8 +93,7 @@ struct Operand {
 // A view over an MCInstrDesc offering a convenient interface to compute
 // Register aliasing.
 struct Instruction {
-  Instruction(const llvm::MCInstrDesc &MCInstrDesc,
-              const RegisterAliasingTrackerCache &ATC);
+  Instruction(const LLVMState &State, unsigned Opcode);
 
   // Returns the Operand linked to this Variable.
   // In case the Variable is tied, the primary (i.e. Def) Operand is returned.
@@ -130,6 +130,7 @@ struct Instruction {
             llvm::raw_ostream &Stream) const;
 
   const llvm::MCInstrDesc *Description; // Never nullptr.
+  llvm::StringRef Name;                 // The name of this instruction.
   llvm::SmallVector<Operand, 8> Operands;
   llvm::SmallVector<Variable, 4> Variables;
   llvm::BitVector ImplDefRegs; // The set of aliased implicit def registers.

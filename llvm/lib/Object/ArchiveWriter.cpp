@@ -121,6 +121,11 @@ static void printWithSpacePadding(raw_ostream &OS, T Data, unsigned Size) {
   OS.indent(Size - SizeSoFar);
 }
 
+static bool isDarwin(object::Archive::Kind Kind) {
+  return Kind == object::Archive::K_DARWIN ||
+         Kind == object::Archive::K_DARWIN64;
+}
+
 static bool isBSDLike(object::Archive::Kind Kind) {
   switch (Kind) {
   case object::Archive::K_GNU:
@@ -128,8 +133,8 @@ static bool isBSDLike(object::Archive::Kind Kind) {
     return false;
   case object::Archive::K_BSD:
   case object::Archive::K_DARWIN:
-    return true;
   case object::Archive::K_DARWIN64:
+    return true;
   case object::Archive::K_COFF:
     break;
   }
@@ -314,7 +319,9 @@ static void printNBits(raw_ostream &Out, object::Archive::Kind Kind,
 static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
                              bool Deterministic, ArrayRef<MemberData> Members,
                              StringRef StringTable) {
-  if (StringTable.empty())
+  // We don't write a symbol table on an archive with no members -- except on
+  // Darwin, where the linker will abort unless the archive has a symbol table.
+  if (StringTable.empty() && !isDarwin(Kind))
     return;
 
   unsigned NumSyms = 0;
@@ -322,15 +329,15 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
     NumSyms += M.Symbols.size();
 
   unsigned Size = 0;
-  Size += is64BitKind(Kind) ? 8 : 4; // Number of entries
+  unsigned OffsetSize = is64BitKind(Kind) ? sizeof(uint64_t) : sizeof(uint32_t);
+
+  Size += OffsetSize; // Number of entries
   if (isBSDLike(Kind))
-    Size += NumSyms * 8; // Table
-  else if (is64BitKind(Kind))
-    Size += NumSyms * 8; // Table
+    Size += NumSyms * OffsetSize * 2; // Table
   else
-    Size += NumSyms * 4; // Table
+    Size += NumSyms * OffsetSize; // Table
   if (isBSDLike(Kind))
-    Size += 4; // byte count
+    Size += OffsetSize; // byte count
   Size += StringTable.size();
   // ld64 expects the members to be 8-byte aligned for 64-bit content and at
   // least 4-byte aligned for 32-bit content.  Opt for the larger encoding
@@ -340,25 +347,26 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
   unsigned Pad = OffsetToAlignment(Size, Alignment);
   Size += Pad;
 
-  if (isBSDLike(Kind))
-    printBSDMemberHeader(Out, Out.tell(), "__.SYMDEF", now(Deterministic), 0, 0,
-                         0, Size);
-  else if (is64BitKind(Kind))
-    printGNUSmallMemberHeader(Out, "/SYM64", now(Deterministic), 0, 0, 0, Size);
-  else
-    printGNUSmallMemberHeader(Out, "", now(Deterministic), 0, 0, 0, Size);
+  if (isBSDLike(Kind)) {
+    const char *Name = is64BitKind(Kind) ? "__.SYMDEF_64" : "__.SYMDEF";
+    printBSDMemberHeader(Out, Out.tell(), Name, now(Deterministic), 0, 0, 0,
+                         Size);
+  } else {
+    const char *Name = is64BitKind(Kind) ? "/SYM64" : "";
+    printGNUSmallMemberHeader(Out, Name, now(Deterministic), 0, 0, 0, Size);
+  }
 
   uint64_t Pos = Out.tell() + Size;
 
   if (isBSDLike(Kind))
-    print<uint32_t>(Out, Kind, NumSyms * 8);
+    printNBits(Out, Kind, NumSyms * 2 * OffsetSize);
   else
     printNBits(Out, Kind, NumSyms);
 
   for (const MemberData &M : Members) {
     for (unsigned StringOffset : M.Symbols) {
       if (isBSDLike(Kind))
-        print<uint32_t>(Out, Kind, StringOffset);
+        printNBits(Out, Kind, StringOffset);
       printNBits(Out, Kind, Pos); // member offset
     }
     Pos += M.Header.size() + M.Data.size() + M.Padding.size();
@@ -366,7 +374,7 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
 
   if (isBSDLike(Kind))
     // byte count of the string table
-    print<uint32_t>(Out, Kind, StringTable.size());
+    printNBits(Out, Kind, StringTable.size());
   Out << StringTable;
 
   while (Pad--)
@@ -466,9 +474,7 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
   // See also the functions that handle the lookup:
   // in lldb: ObjectContainerBSDArchive::Archive::FindObject()
   // in llvm/tools/dsymutil: BinaryHolder::GetArchiveMemberBuffers().
-  bool UniqueTimestamps =
-      Deterministic && (Kind == object::Archive::K_DARWIN ||
-                        Kind == object::Archive::K_DARWIN64);
+  bool UniqueTimestamps = Deterministic && isDarwin(Kind);
   std::map<StringRef, unsigned> FilenameCount;
   if (UniqueTimestamps) {
     for (const NewArchiveMember &M : NewMembers)
@@ -488,9 +494,8 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
     // least 4-byte aligned for 32-bit content.  Opt for the larger encoding
     // uniformly.  This matches the behaviour with cctools and ensures that ld64
     // is happy with archives that we generate.
-    unsigned MemberPadding = Kind == object::Archive::K_DARWIN
-                                 ? OffsetToAlignment(Data.size(), 8)
-                                 : 0;
+    unsigned MemberPadding =
+        isDarwin(Kind) ? OffsetToAlignment(Data.size(), 8) : 0;
     unsigned TailPadding = OffsetToAlignment(Data.size() + MemberPadding, 2);
     StringRef Padding = StringRef(PaddingData, MemberPadding + TailPadding);
 
@@ -569,8 +574,12 @@ Error llvm::writeArchive(StringRef ArcName,
     // If LastOffset isn't going to fit in a 32-bit varible we need to switch
     // to 64-bit. Note that the file can be larger than 4GB as long as the last
     // member starts before the 4GB offset.
-    if (LastOffset >= (1ULL << Sym64Threshold))
-      Kind = object::Archive::K_GNU64;
+    if (LastOffset >= (1ULL << Sym64Threshold)) {
+      if (Kind == object::Archive::K_DARWIN)
+        Kind = object::Archive::K_DARWIN64;
+      else
+        Kind = object::Archive::K_GNU64;
+    }
   }
 
   Expected<sys::fs::TempFile> Temp =

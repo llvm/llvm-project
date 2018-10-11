@@ -35,6 +35,8 @@ LLVMState::LLVMState(const std::string &Triple, const std::string &CpuName) {
     llvm::errs() << "no exegesis target for " << Triple << ", using default\n";
     TheExegesisTarget = &ExegesisTarget::getDefault();
   }
+  RATC.reset(new RegisterAliasingTrackerCache(
+      getRegInfo(), getFunctionReservedRegs(getTargetMachine())));
 }
 
 LLVMState::LLVMState()

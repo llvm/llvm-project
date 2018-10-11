@@ -35278,6 +35278,69 @@ static SDValue combineAndLoadToBZHI(SDNode *Node, SelectionDAG &DAG,
   return SDValue();
 }
 
+static bool hasBEXTR(const X86Subtarget &Subtarget, EVT VT) {
+  // If we have TBM we can use an immediate for the control. If we have BMI
+  // we should only do this if the BEXTR instruction is implemented well.
+  // Otherwise moving the control into a register makes this more costly.
+  // TODO: Maybe load folding, greater than 32-bit masks, or a guarantee of LICM
+  // hoisting the move immediate would make it worthwhile with a less optimal
+  // BEXTR?
+  if (!Subtarget.hasTBM() && !(Subtarget.hasBMI() && Subtarget.hasFastBEXTR()))
+    return false;
+  return (VT == MVT::i32 || (VT == MVT::i64 && Subtarget.is64Bit()));
+}
+
+// See if this is an (X >> C1) & C2 that we can match to BEXTR/BEXTRI.
+static SDValue combineAndIntoBEXTR(SDNode *Node, SelectionDAG &DAG,
+                                   const X86Subtarget &Subtarget) {
+  EVT NVT = Node->getValueType(0);
+  SDLoc dl(Node);
+
+  SDValue N0 = Node->getOperand(0);
+  SDValue N1 = Node->getOperand(1);
+
+  // Check if subtarget has BEXTR instruction for the node's type
+  if (!hasBEXTR(Subtarget, NVT))
+    return SDValue();
+
+  // Must have a shift right.
+  if (N0->getOpcode() != ISD::SRL && N0->getOpcode() != ISD::SRA)
+    return SDValue();
+
+  // Shift can't have additional users.
+  if (!N0->hasOneUse())
+    return SDValue();
+
+  // Shift amount and RHS of and must be constant.
+  ConstantSDNode *MaskCst = dyn_cast<ConstantSDNode>(N1);
+  ConstantSDNode *ShiftCst = dyn_cast<ConstantSDNode>(N0->getOperand(1));
+  if (!MaskCst || !ShiftCst)
+    return SDValue();
+
+  // And RHS must be a mask.
+  uint64_t Mask = MaskCst->getZExtValue();
+  if (!isMask_64(Mask))
+    return SDValue();
+
+  uint64_t Shift = ShiftCst->getZExtValue();
+  uint64_t MaskSize = countPopulation(Mask);
+
+  // Don't interfere with something that can be handled by extracting AH.
+  // TODO: If we are able to fold a load, BEXTR might still be better than AH.
+  if (Shift == 8 && MaskSize == 8)
+    return SDValue();
+
+  // Make sure we are only using bits that were in the original value, not
+  // shifted in.
+  if (Shift + MaskSize > NVT.getSizeInBits())
+    return SDValue();
+
+  // Create a BEXTR node.
+  SDValue C = DAG.getConstant(Shift | (MaskSize << 8), dl, NVT);
+  SDValue New = DAG.getNode(X86ISD::BEXTR, dl, NVT, N0->getOperand(0), C);
+  return New;
+}
+
 // Look for (and (ctpop X), 1) which is the IR form of __builtin_parity.
 // Turn it into series of XORs and a setnp.
 static SDValue combineParity(SDNode *N, SelectionDAG &DAG,
@@ -35378,6 +35441,9 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
+
+  if (SDValue R = combineAndIntoBEXTR(N, DAG, Subtarget))
+    return R;
 
   if (SDValue R = combineCompareEqual(N, DAG, DCI, Subtarget))
     return R;
@@ -36534,16 +36600,10 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
     // simplify ops leading up to it. We only demand the MSB of each lane.
     SDValue Mask = Mst->getMask();
     if (Mask.getScalarValueSizeInBits() != 1) {
-      TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
-                                            !DCI.isBeforeLegalizeOps());
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       APInt DemandedMask(APInt::getSignMask(VT.getScalarSizeInBits()));
-      KnownBits Known;
-      if (TLI.SimplifyDemandedBits(Mask, DemandedMask, Known, TLO)) {
-        DCI.AddToWorklist(Mask.getNode());
-        DCI.CommitTargetLoweringOpt(TLO);
+      if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI))
         return SDValue(N, 0);
-      }
     }
 
     // TODO: AVX512 targets should also be able to simplify something like the
@@ -37032,9 +37092,13 @@ static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, bool IsCommutative) {
         continue;
 
       // The  low half of the 128-bit result must choose from A.
-      // The high half of the 128-bit result must choose from B.
+      // The high half of the 128-bit result must choose from B,
+      // unless B is undef. In that case, we are always choosing from A.
+      // TODO: Using a horizontal op on a single input is likely worse for
+      // performance on many CPUs, so this should be limited here or reversed
+      // in a later pass.
       unsigned NumEltsPer64BitChunk = NumEltsPer128BitChunk / 2;
-      unsigned Src = i >= NumEltsPer64BitChunk;
+      unsigned Src = B.getNode() ? i >= NumEltsPer64BitChunk : 0;
 
       // Check that successive elements are being operated on. If not, this is
       // not a horizontal operation.
@@ -38962,16 +39026,10 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   // With AVX2 we only demand the upper bit of the mask.
   if (!Subtarget.hasAVX512()) {
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-    TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
-                                          !DCI.isBeforeLegalizeOps());
     SDValue Mask = N->getOperand(2);
-    KnownBits Known;
     APInt DemandedMask(APInt::getSignMask(Mask.getScalarValueSizeInBits()));
-    if (TLI.SimplifyDemandedBits(Mask, DemandedMask, Known, TLO)) {
-      DCI.AddToWorklist(Mask.getNode());
-      DCI.CommitTargetLoweringOpt(TLO);
+    if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI))
       return SDValue(N, 0);
-    }
   }
 
   return SDValue();

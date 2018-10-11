@@ -15,8 +15,6 @@
 // TODO: addr64: These currently assume the callee address is 32-bit.
 // FIXME: add $type to first call_indirect asmstr (and maybe $flags)
 
-let Defs = [ARGUMENTS] in {
-
 // Call sequence markers. These have an immediate which represents the amount of
 // stack space to allocate or free, which is used for varargs lowering.
 let Uses = [SP32, SP64], Defs = [SP32, SP64], isCodeGenOnly = 1 in {
@@ -117,8 +115,6 @@ let Uses = [SP32, SP64], isCall = 1 in {
                               "call_indirect\t", "call_indirect\t$type",
                               0x11>;
 } // Uses = [SP32,SP64], isCall = 1
-
-} // Defs = [ARGUMENTS]
 
 // Patterns for matching a direct call to a global address.
 def : Pat<(i32 (WebAssemblycall1 (WebAssemblywrapper tglobaladdr:$callee))),

@@ -37,6 +37,17 @@ def int_wasm_current_memory : Intrinsic<[llvm_anyint_ty], [], [IntrReadMem]>;
 def int_wasm_grow_memory : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], []>;
 
 //===----------------------------------------------------------------------===//
+// Saturating float-to-int conversions
+//===----------------------------------------------------------------------===//
+
+def int_wasm_trunc_saturate_signed : Intrinsic<[llvm_anyint_ty],
+                                               [llvm_anyfloat_ty],
+                                               [IntrNoMem, IntrSpeculatable]>;
+def int_wasm_trunc_saturate_unsigned : Intrinsic<[llvm_anyint_ty],
+                                                 [llvm_anyfloat_ty],
+                                                 [IntrNoMem, IntrSpeculatable]>;
+
+//===----------------------------------------------------------------------===//
 // Exception handling intrinsics
 //===----------------------------------------------------------------------===//
 

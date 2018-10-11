@@ -30,13 +30,13 @@
 ; branches, as they becomes ambiguous.
 
 ; CHECK-LABEL: entry
-; CHECK:  %cmp = icmp eq i32 %foo.0., 4, !dbg !14
-; CHECK:  %add = add nsw i32 %foo.0.4, 2, !dbg !16
+; CHECK:  %cmp = icmp eq i32 %foo.0., 4
+; CHECK:  %add = add nsw i32 %foo.0.4, 2, !dbg !18
 ; CHECK-NOT: @llvm.dbg.value(metadata i32 %add
-; CHECK:  %sub = add nsw i32 %foo.0.4, -2, !dbg !16
+; CHECK:  %sub = add nsw i32 %foo.0.4, -2, !dbg !21
 ; CHECK-NOT: @llvm.dbg.value(metadata i32 %sub
 ; CHECK:  %result.0 = select i1 %cmp, i32 %add, i32 %sub
-; CHECK:  call void @llvm.dbg.value(metadata i32 %result.0, metadata !12, metadata !DIExpression()), !dbg !13
+; CHECK:  call void @llvm.dbg.value(metadata i32 %result.0, metadata !12, metadata !DIExpression()), !dbg !17
 
 ; ModuleID = 'pr38763.cpp'
 source_filename = "pr38763.cpp"
@@ -48,12 +48,12 @@ define dso_local i32 @main() local_unnamed_addr #0 !dbg !7 {
 entry:
   %foo = alloca i32, align 4
   %foo.0..sroa_cast = bitcast i32* %foo to i8*
-  store volatile i32 4, i32* %foo, align 4
+  store volatile i32 4, i32* %foo, align 4, !tbaa !19
   %foo.0. = load volatile i32, i32* %foo, align 4
   %foo.0.4 = load volatile i32, i32* %foo, align 4
   call void @llvm.dbg.value(metadata i32 0, metadata !16, metadata !DIExpression()), !dbg !27
-  %cmp = icmp eq i32 %foo.0., 4, !dbg !28
-  br i1 %cmp, label %if.then, label %if.else, !dbg !30
+  %cmp = icmp eq i32 %foo.0., 4
+  br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
   %add = add nsw i32 %foo.0.4, 2, !dbg !31
@@ -91,10 +91,12 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !11 = !{!16}
 !16 = !DILocalVariable(name: "result", scope: !7, file: !1, line: 6, type: !10)
+!19 = !{!20, !20, i64 0}
+!20 = !{!"int", !21, i64 0}
+!21 = !{!"omnipotent char", !22, i64 0}
+!22 = !{!"Simple C++ TBAA"}
 !27 = !DILocation(line: 6, column: 7, scope: !7)
-!28 = !DILocation(line: 7, column: 12, scope: !29)
 !29 = distinct !DILexicalBlock(scope: !7, file: !1, line: 7, column: 7)
-!30 = !DILocation(line: 7, column: 7, scope: !7)
 !31 = !DILocation(line: 8, column: 20, scope: !32)
 !32 = distinct !DILexicalBlock(scope: !29, file: !1, line: 7, column: 18)
 !34 = !DILocation(line: 10, column: 20, scope: !35)

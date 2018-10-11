@@ -1136,9 +1136,9 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
             continue;
           }
           AliasResult AAResult = AA->alias(
-              MemoryLocation(MMO1->getValue(), MemoryLocation::UnknownSize,
+              MemoryLocation(MMO1->getValue(), LocationSize::unknown(),
                              MMO1->getAAInfo()),
-              MemoryLocation(MMO2->getValue(), MemoryLocation::UnknownSize,
+              MemoryLocation(MMO2->getValue(), LocationSize::unknown(),
                              MMO2->getAAInfo()));
 
           if (AAResult != NoAlias) {

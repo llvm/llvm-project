@@ -165,7 +165,7 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
 
         AAMDNodes AAInfo;
         I->getAAMetadata(AAInfo);
-        MemoryLocation Loc(Arg, MemoryLocation::UnknownSize, AAInfo);
+        MemoryLocation Loc(Arg, LocationSize::unknown(), AAInfo);
 
         // Skip accesses to local or constant memory as they don't impact the
         // externally visible mod/ref behavior.

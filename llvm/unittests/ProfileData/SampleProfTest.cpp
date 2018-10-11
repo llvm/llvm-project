@@ -58,7 +58,7 @@ struct SampleProfTest : ::testing::Test {
     Reader->collectFuncsToUse(M);
   }
 
-  void testRoundTrip(SampleProfileFormat Format) {
+  void testRoundTrip(SampleProfileFormat Format, bool Remap) {
     SmallVector<char, 128> ProfilePath;
     ASSERT_TRUE(NoError(llvm::sys::fs::createTemporaryFile("profile", "", ProfilePath)));
     StringRef Profile(ProfilePath.data(), ProfilePath.size());
@@ -108,22 +108,35 @@ struct SampleProfTest : ::testing::Test {
     EC = Reader->read();
     ASSERT_TRUE(NoError(EC));
 
-    StringMap<FunctionSamples> &ReadProfiles = Reader->getProfiles();
-    ASSERT_EQ(2u, ReadProfiles.size());
+    if (Remap) {
+      auto MemBuffer = llvm::MemoryBuffer::getMemBuffer(R"(
+        # Types 'int' and 'long' are equivalent
+        type i l
+        # Function names 'foo' and 'faux' are equivalent
+        name 3foo 4faux
+      )");
+      Reader.reset(new SampleProfileReaderItaniumRemapper(
+          std::move(MemBuffer), Context, std::move(Reader)));
+      FooName = "_Z4fauxi";
+      BarName = "_Z3barl";
 
-    std::string FooGUID;
-    StringRef FooRep = getRepInFormat(FooName, Format, FooGUID);
-    FunctionSamples &ReadFooSamples = ReadProfiles[FooRep];
-    ASSERT_EQ(7711u, ReadFooSamples.getTotalSamples());
-    ASSERT_EQ(610u, ReadFooSamples.getHeadSamples());
+      EC = Reader->read();
+      ASSERT_TRUE(NoError(EC));
+    }
 
-    std::string BarGUID;
-    StringRef BarRep = getRepInFormat(BarName, Format, BarGUID);
-    FunctionSamples &ReadBarSamples = ReadProfiles[BarRep];
-    ASSERT_EQ(20301u, ReadBarSamples.getTotalSamples());
-    ASSERT_EQ(1437u, ReadBarSamples.getHeadSamples());
+    ASSERT_EQ(2u, Reader->getProfiles().size());
+
+    FunctionSamples *ReadFooSamples = Reader->getSamplesFor(FooName);
+    ASSERT_TRUE(ReadFooSamples != nullptr);
+    ASSERT_EQ(7711u, ReadFooSamples->getTotalSamples());
+    ASSERT_EQ(610u, ReadFooSamples->getHeadSamples());
+
+    FunctionSamples *ReadBarSamples = Reader->getSamplesFor(BarName);
+    ASSERT_TRUE(ReadBarSamples != nullptr);
+    ASSERT_EQ(20301u, ReadBarSamples->getTotalSamples());
+    ASSERT_EQ(1437u, ReadBarSamples->getHeadSamples());
     ErrorOr<SampleRecord::CallTargetMap> CTMap =
-        ReadBarSamples.findCallTargetMapAt(1, 0);
+        ReadBarSamples->findCallTargetMapAt(1, 0);
     ASSERT_FALSE(CTMap.getError());
 
     std::string MconstructGUID;
@@ -184,15 +197,23 @@ struct SampleProfTest : ::testing::Test {
 };
 
 TEST_F(SampleProfTest, roundtrip_text_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Text);
+  testRoundTrip(SampleProfileFormat::SPF_Text, false);
 }
 
 TEST_F(SampleProfTest, roundtrip_raw_binary_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Binary);
+  testRoundTrip(SampleProfileFormat::SPF_Binary, false);
 }
 
 TEST_F(SampleProfTest, roundtrip_compact_binary_profile) {
-  testRoundTrip(SampleProfileFormat::SPF_Compact_Binary);
+  testRoundTrip(SampleProfileFormat::SPF_Compact_Binary, false);
+}
+
+TEST_F(SampleProfTest, remap_text_profile) {
+  testRoundTrip(SampleProfileFormat::SPF_Text, true);
+}
+
+TEST_F(SampleProfTest, remap_raw_binary_profile) {
+  testRoundTrip(SampleProfileFormat::SPF_Binary, true);
 }
 
 TEST_F(SampleProfTest, sample_overflow_saturation) {

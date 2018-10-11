@@ -45,9 +45,6 @@ multiclass ComparisonInt<CondCode cond, string name, bits<32> i32Inst, bits<32> 
                 !strconcat("i64.", name), i64Inst>;
 }
 
-
-let Defs = [ARGUMENTS] in {
-
 // The spaces after the names are for aesthetic purposes only, to make
 // operands line up vertically after tab expansion.
 let isCommutable = 1 in
@@ -97,15 +94,11 @@ defm EQZ_I64 : I<(outs I32:$dst), (ins I64:$src), (outs), (ins),
                  [(set I32:$dst, (setcc I64:$src, 0, SETEQ))],
                  "i64.eqz \t$dst, $src", "i64.eqz", 0x50>;
 
-} // Defs = [ARGUMENTS]
-
 // Optimize away an explicit mask on a rotate count.
 def : Pat<(rotl I32:$lhs, (and I32:$rhs, 31)), (ROTL_I32 I32:$lhs, I32:$rhs)>;
 def : Pat<(rotr I32:$lhs, (and I32:$rhs, 31)), (ROTR_I32 I32:$lhs, I32:$rhs)>;
 def : Pat<(rotl I64:$lhs, (and I64:$rhs, 63)), (ROTL_I64 I64:$lhs, I64:$rhs)>;
 def : Pat<(rotr I64:$lhs, (and I64:$rhs, 63)), (ROTR_I64 I64:$lhs, I64:$rhs)>;
-
-let Defs = [ARGUMENTS] in {
 
 defm SELECT_I32 : I<(outs I32:$dst), (ins I32:$lhs, I32:$rhs, I32:$cond),
                     (outs), (ins),
@@ -115,8 +108,6 @@ defm SELECT_I64 : I<(outs I64:$dst), (ins I64:$lhs, I64:$rhs, I32:$cond),
                     (outs), (ins),
                     [(set I64:$dst, (select I32:$cond, I64:$lhs, I64:$rhs))],
                     "i64.select\t$dst, $lhs, $rhs, $cond", "i64.select", 0x1b>;
-
-} // Defs = [ARGUMENTS]
 
 // ISD::SELECT requires its operand to conform to getBooleanContents, but
 // WebAssembly's select interprets any non-zero value as true, so we can fold

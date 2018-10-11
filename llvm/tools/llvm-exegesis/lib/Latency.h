@@ -27,7 +27,7 @@ public:
   ~LatencySnippetGenerator() override;
 
   llvm::Expected<CodeTemplate>
-  generateCodeTemplate(unsigned Opcode) const override;
+  generateCodeTemplate(const Instruction &Instr) const override;
 
 private:
   llvm::Expected<CodeTemplate>

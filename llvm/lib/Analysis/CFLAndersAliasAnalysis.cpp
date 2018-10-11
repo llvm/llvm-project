@@ -556,9 +556,9 @@ bool CFLAndersAAResult::FunctionInfo::mayAlias(
                                       OffsetValue{RHS, 0}, Comparator);
 
     if (RangePair.first != RangePair.second) {
-      // Be conservative about UnknownSize
-      if (MaybeLHSSize == MemoryLocation::UnknownSize ||
-          MaybeRHSSize == MemoryLocation::UnknownSize)
+      // Be conservative about unknown sizes
+      if (MaybeLHSSize == LocationSize::unknown() ||
+          MaybeRHSSize == LocationSize::unknown())
         return true;
 
       const uint64_t LHSSize = MaybeLHSSize.getValue();

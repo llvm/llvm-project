@@ -125,23 +125,18 @@ void UopsSnippetGenerator::instantiateMemoryOperands(
 }
 
 llvm::Expected<CodeTemplate>
-UopsSnippetGenerator::generateCodeTemplate(unsigned Opcode) const {
-  const Instruction Instr(State.getInstrInfo().get(Opcode), RATC);
-  if (Instr.hasMemoryOperands())
-    return llvm::make_error<BenchmarkFailure>(
-        "Infeasible : has unknown operands");
-  const auto &ET = State.getExegesisTarget();
+UopsSnippetGenerator::generateCodeTemplate(const Instruction &Instr) const {
   CodeTemplate CT;
-
   const llvm::BitVector *ScratchSpaceAliasedRegs = nullptr;
   if (Instr.hasMemoryOperands()) {
+    const auto &ET = State.getExegesisTarget();
     CT.ScratchSpacePointerInReg =
         ET.getScratchMemoryRegister(State.getTargetMachine().getTargetTriple());
     if (CT.ScratchSpacePointerInReg == 0)
       return llvm::make_error<BenchmarkFailure>(
           "Infeasible : target does not support memory instructions");
     ScratchSpaceAliasedRegs =
-        &RATC.getRegister(CT.ScratchSpacePointerInReg).aliasedBits();
+        &State.getRATC().getRegister(CT.ScratchSpacePointerInReg).aliasedBits();
     // If the instruction implicitly writes to ScratchSpacePointerInReg , abort.
     // FIXME: We could make a copy of the scratch register.
     for (const auto &Op : Instr.Operands) {
@@ -188,12 +183,13 @@ UopsSnippetGenerator::generateCodeTemplate(unsigned Opcode) const {
     instantiateMemoryOperands(CT.ScratchSpacePointerInReg, CT.Instructions);
     return std::move(CT);
   }
+  const auto &ReservedRegisters = State.getRATC().reservedRegisters();
   // No tied variables, we pick random values for defs.
   llvm::BitVector Defs(State.getRegInfo().getNumRegs());
   for (const auto &Op : Instr.Operands) {
     if (Op.isReg() && Op.isExplicit() && Op.isDef() && !Op.isMemory()) {
       auto PossibleRegisters = Op.getRegisterAliasing().sourceBits();
-      remove(PossibleRegisters, RATC.reservedRegisters());
+      remove(PossibleRegisters, ReservedRegisters);
       // Do not use the scratch memory address register.
       if (ScratchSpaceAliasedRegs)
         remove(PossibleRegisters, *ScratchSpaceAliasedRegs);
@@ -208,7 +204,7 @@ UopsSnippetGenerator::generateCodeTemplate(unsigned Opcode) const {
   for (const auto &Op : Instr.Operands) {
     if (Op.isReg() && Op.isExplicit() && Op.isUse() && !Op.isMemory()) {
       auto PossibleRegisters = Op.getRegisterAliasing().sourceBits();
-      remove(PossibleRegisters, RATC.reservedRegisters());
+      remove(PossibleRegisters, ReservedRegisters);
       // Do not use the scratch memory address register.
       if (ScratchSpaceAliasedRegs)
         remove(PossibleRegisters, *ScratchSpaceAliasedRegs);

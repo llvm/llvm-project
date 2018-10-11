@@ -509,7 +509,7 @@ public:
   /// Register a load  and whether it is only read from.
   void addLoad(MemoryLocation &Loc, bool IsReadOnly) {
     Value *Ptr = const_cast<Value*>(Loc.Ptr);
-    AST.add(Ptr, MemoryLocation::UnknownSize, Loc.AATags);
+    AST.add(Ptr, LocationSize::unknown(), Loc.AATags);
     Accesses.insert(MemAccessInfo(Ptr, false));
     if (IsReadOnly)
       ReadOnlyPtr.insert(Ptr);
@@ -518,7 +518,7 @@ public:
   /// Register a store.
   void addStore(MemoryLocation &Loc) {
     Value *Ptr = const_cast<Value*>(Loc.Ptr);
-    AST.add(Ptr, MemoryLocation::UnknownSize, Loc.AATags);
+    AST.add(Ptr, LocationSize::unknown(), Loc.AATags);
     Accesses.insert(MemAccessInfo(Ptr, true));
   }
 

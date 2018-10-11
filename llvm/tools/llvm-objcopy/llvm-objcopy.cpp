@@ -523,7 +523,7 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
 
     // The purpose of this loop is to mark symbols referenced by sections
     // (like GroupSection or RelocationSection). This way, we know which
-    // symbols are still 'needed' and wich are not.
+    // symbols are still 'needed' and which are not.
     if (Config.StripUnneeded) {
       for (auto &Section : Obj.sections())
         Section.markSymbols();

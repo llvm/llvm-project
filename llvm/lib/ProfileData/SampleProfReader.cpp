@@ -912,6 +912,40 @@ bool SampleProfileReaderGCC::hasFormat(const MemoryBuffer &Buffer) {
   return Magic == "adcg*704";
 }
 
+std::error_code SampleProfileReaderItaniumRemapper::read() {
+  // If the underlying data is in compact format, we can't remap it because
+  // we don't know what the original function names were.
+  if (getFormat() == SPF_Compact_Binary) {
+    Ctx.diagnose(DiagnosticInfoSampleProfile(
+        Buffer->getBufferIdentifier(),
+        "Profile data remapping cannot be applied to profile data "
+        "in compact format (original mangled names are not available).",
+        DS_Warning));
+    return sampleprof_error::success;
+  }
+
+  if (Error E = Remappings.read(*Buffer)) {
+    handleAllErrors(
+        std::move(E), [&](const SymbolRemappingParseError &ParseError) {
+          reportError(ParseError.getLineNum(), ParseError.getMessage());
+        });
+    return sampleprof_error::malformed;
+  }
+
+  for (auto &Sample : getProfiles())
+    if (auto Key = Remappings.insert(Sample.first()))
+      SampleMap.insert({Key, &Sample.second});
+
+  return sampleprof_error::success;
+}
+
+FunctionSamples *
+SampleProfileReaderItaniumRemapper::getSamplesFor(StringRef Fname) {
+  if (auto Key = Remappings.lookup(Fname))
+    return SampleMap.lookup(Key);
+  return SampleProfileReader::getSamplesFor(Fname);
+}
+
 /// Prepare a memory buffer for the contents of \p Filename.
 ///
 /// \returns an error code indicating the status of the buffer.
@@ -942,6 +976,27 @@ SampleProfileReader::create(const Twine &Filename, LLVMContext &C) {
   if (std::error_code EC = BufferOrError.getError())
     return EC;
   return create(BufferOrError.get(), C);
+}
+
+/// Create a sample profile remapper from the given input, to remap the
+/// function names in the given profile data.
+///
+/// \param Filename The file to open.
+///
+/// \param C The LLVM context to use to emit diagnostics.
+///
+/// \param Underlying The underlying profile data reader to remap.
+///
+/// \returns an error code indicating the status of the created reader.
+ErrorOr<std::unique_ptr<SampleProfileReader>>
+SampleProfileReaderItaniumRemapper::create(
+    const Twine &Filename, LLVMContext &C,
+    std::unique_ptr<SampleProfileReader> Underlying) {
+  auto BufferOrError = setupMemoryBuffer(Filename);
+  if (std::error_code EC = BufferOrError.getError())
+    return EC;
+  return llvm::make_unique<SampleProfileReaderItaniumRemapper>(
+      std::move(BufferOrError.get()), C, std::move(Underlying));
 }
 
 /// Create a sample profile reader based on the format of the input data.

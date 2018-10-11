@@ -36,12 +36,14 @@ public:
 /// The profile annotation (profile-instr-use) pass for IR based PGO.
 class PGOInstrumentationUse : public PassInfoMixin<PGOInstrumentationUse> {
 public:
-  PGOInstrumentationUse(std::string Filename = "");
+  PGOInstrumentationUse(std::string Filename = "",
+                        std::string RemappingFilename = "");
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
   std::string ProfileFileName;
+  std::string ProfileRemappingFileName;
 };
 
 /// The indirect function call promotion pass.
