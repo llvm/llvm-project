@@ -170,7 +170,7 @@ static Defined *addOptionalRegular(StringRef Name, SectionBase *Sec,
   Symbol *S = Symtab->find(Name);
   if (!S || S->isDefined())
     return nullptr;
-  Symbol *Sym = Symtab->addRegular(Name, StOther, STT_NOTYPE, Val,
+  Symbol *Sym = Symtab->addDefined(Name, StOther, STT_NOTYPE, Val,
                                    /*Size=*/0, Binding, Sec,
                                    /*File=*/nullptr);
   return cast<Defined>(Sym);
@@ -1550,7 +1550,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Even the author of gold doesn't remember why gold behaves that way.
   // https://sourceware.org/ml/binutils/2002-03/msg00360.html
   if (In.DynSymTab)
-    Symtab->addRegular("_DYNAMIC", STV_HIDDEN, STT_NOTYPE, 0 /*Value*/,
+    Symtab->addDefined("_DYNAMIC", STV_HIDDEN, STT_NOTYPE, 0 /*Value*/,
                        /*Size=*/0, STB_WEAK, In.Dynamic,
                        /*File=*/nullptr);
 
