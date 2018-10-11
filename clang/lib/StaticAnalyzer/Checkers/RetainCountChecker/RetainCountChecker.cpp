@@ -774,12 +774,23 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
   // annotate attribute. If it does, we will not inline it.
   bool hasTrustedImplementationAnnotation = false;
 
+  const LocationContext *LCtx = C.getLocationContext();
+
+  // Process OSDynamicCast: should just return the first argument.
+  // For now, tresting the cast as a no-op, and disregarding the case where
+  // the output becomes null due to the type mismatch.
+  if (FD->getNameAsString() == "safeMetaCast") {
+    state = state->BindExpr(CE, LCtx, 
+                            state->getSVal(CE->getArg(0), LCtx));
+    C.addTransition(state);
+    return true;
+  }
+
   // See if it's one of the specific functions we know how to eval.
   if (!SmrMgr.canEval(CE, FD, hasTrustedImplementationAnnotation))
     return false;
 
   // Bind the return value.
-  const LocationContext *LCtx = C.getLocationContext();
   SVal RetVal = state->getSVal(CE->getArg(0), LCtx);
   if (RetVal.isUnknown() ||
       (hasTrustedImplementationAnnotation && !ResultTy.isNull())) {
