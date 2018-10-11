@@ -17,13 +17,13 @@ int main(int argc, char **argv) {
   int size = argc < 3 ? 30 : atoi(argv[2]);
   char * volatile x = (char*)malloc(size);
   x[offset] = 42;
-// CHECK40: is a small unallocated heap chunk; size: 32 offset: 8
+// CHECK40: allocated heap chunk; size: 32 offset: 8
 // CHECK40: is located 10 bytes to the right of 30-byte region
 //
-// CHECK80: is a small unallocated heap chunk; size: 32 offset: 16
+// CHECK80: allocated heap chunk; size: 32 offset: 16
 // CHECK80: is located 50 bytes to the right of 30-byte region
 //
-// CHECKm30: is a small unallocated heap chunk; size: 32 offset: 2
+// CHECKm30: allocated heap chunk; size: 32 offset: 2
 // CHECKm30: is located 30 bytes to the left of 30-byte region
 //
 // CHECKMm30: is a large allocated heap chunk; size: 1003520 offset: -30

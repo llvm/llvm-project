@@ -35,8 +35,6 @@ namespace {
 
 // Import table
 
-static int ptrSize() { return Config->is64() ? 8 : 4; }
-
 // A chunk for the import descriptor table.
 class HintNameChunk : public Chunk {
 public:
@@ -61,8 +59,8 @@ private:
 // A chunk for the import descriptor table.
 class LookupChunk : public Chunk {
 public:
-  explicit LookupChunk(Chunk *C) : HintName(C) { Alignment = ptrSize(); }
-  size_t getSize() const override { return ptrSize(); }
+  explicit LookupChunk(Chunk *C) : HintName(C) { Alignment = Config->Wordsize; }
+  size_t getSize() const override { return Config->Wordsize; }
 
   void writeTo(uint8_t *Buf) const override {
     write32le(Buf + OutputSectionOff, HintName->getRVA());
@@ -76,8 +74,10 @@ public:
 // See Microsoft PE/COFF spec 7.1. Import Header for details.
 class OrdinalOnlyChunk : public Chunk {
 public:
-  explicit OrdinalOnlyChunk(uint16_t V) : Ordinal(V) { Alignment = ptrSize(); }
-  size_t getSize() const override { return ptrSize(); }
+  explicit OrdinalOnlyChunk(uint16_t V) : Ordinal(V) {
+    Alignment = Config->Wordsize;
+  }
+  size_t getSize() const override { return Config->Wordsize; }
 
   void writeTo(uint8_t *Buf) const override {
     // An import-by-ordinal slot has MSB 1 to indicate that
@@ -353,8 +353,10 @@ public:
 // A chunk for the import descriptor table.
 class DelayAddressChunk : public Chunk {
 public:
-  explicit DelayAddressChunk(Chunk *C) : Thunk(C) { Alignment = ptrSize(); }
-  size_t getSize() const override { return ptrSize(); }
+  explicit DelayAddressChunk(Chunk *C) : Thunk(C) {
+    Alignment = Config->Wordsize;
+  }
+  size_t getSize() const override { return Config->Wordsize; }
 
   void writeTo(uint8_t *Buf) const override {
     if (Config->is64()) {
@@ -493,8 +495,8 @@ void IdataContents::create() {
       Hints.push_back(C);
     }
     // Terminate with null values.
-    Lookups.push_back(make<NullChunk>(ptrSize()));
-    Addresses.push_back(make<NullChunk>(ptrSize()));
+    Lookups.push_back(make<NullChunk>(Config->Wordsize));
+    Addresses.push_back(make<NullChunk>(Config->Wordsize));
 
     for (int I = 0, E = Syms.size(); I < E; ++I)
       Syms[I]->setLocation(Addresses[Base + I]);
