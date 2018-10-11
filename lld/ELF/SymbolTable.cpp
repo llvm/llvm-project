@@ -178,7 +178,7 @@ static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
 }
 
 // Find an existing symbol or create and insert a new one.
-std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
+std::pair<Symbol *, bool> SymbolTable::insertName(StringRef Name) {
   // <name>@@<version> means the symbol is the default version. In that
   // case <name>@@<version> will be used to resolve references to <name>.
   //
@@ -222,7 +222,7 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name, uint8_t Type,
                                               InputFile *File) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
+  std::tie(S, WasInserted) = insertName(Name);
 
   // Merge in the new symbol's visibility.
   S->Visibility = getMinVisibility(S->Visibility, Visibility);
@@ -557,7 +557,7 @@ void SymbolTable::addLazyArchive(StringRef Name, ArchiveFile &File,
                                  const object::Archive::Symbol Sym) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
+  std::tie(S, WasInserted) = insertName(Name);
   if (WasInserted) {
     replaceSymbol<LazyArchive>(S, File, STT_NOTYPE, Sym);
     return;
@@ -581,7 +581,7 @@ template <class ELFT>
 void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &File) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
+  std::tie(S, WasInserted) = insertName(Name);
   if (WasInserted) {
     replaceSymbol<LazyObject>(S, File, STT_NOTYPE, Name);
     return;

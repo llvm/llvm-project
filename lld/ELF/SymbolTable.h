@@ -71,7 +71,6 @@ public:
                     uint8_t Binding, uint8_t StOther, uint8_t Type,
                     InputFile &File);
 
-  std::pair<Symbol *, bool> insert(StringRef Name);
   std::pair<Symbol *, bool> insert(StringRef Name, uint8_t Type,
                                    uint8_t Visibility, bool CanOmitFromDynSym,
                                    InputFile *File);
@@ -87,6 +86,8 @@ public:
   void handleDynamicList();
 
 private:
+  std::pair<Symbol *, bool> insertName(StringRef Name);
+
   std::vector<Symbol *> findByVersion(SymbolVersion Ver);
   std::vector<Symbol *> findAllByVersion(SymbolVersion Ver);
 
