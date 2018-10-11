@@ -4944,11 +4944,11 @@ namespace {
   };
 
   struct MinOS {
-    uint32_t major, minor, patch;
+    uint32_t major_version, minor_version, patch_version;
     MinOS(uint32_t version)
-        : major(version >> 16),
-          minor((version >> 8) & 0xffu),
-          patch(version & 0xffu) {}
+        : major_version(version >> 16),
+          minor_version((version >> 8) & 0xffu),
+          patch_version(version & 0xffu) {}
   };
 } // namespace
 
@@ -5006,8 +5006,8 @@ bool ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
                                 data.GetByteOrder(), &version_min) == 0)
             break;
           MinOS min_os(version_min.version);
-          os << GetOSName(load_cmd.cmd) << min_os.major << '.' << min_os.minor
-             << '.' << min_os.patch;
+          os << GetOSName(load_cmd.cmd) << min_os.major_version << '.'
+             << min_os.minor_version << '.' << min_os.patch_version;
           triple.setOSName(os.str());
           return true;
         }
@@ -5037,8 +5037,8 @@ bool ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
           OSEnv os_env(build_version.platform);
           if (os_env.os_type.empty())
             continue;
-          os << os_env.os_type << min_os.major << '.' << min_os.minor << '.'
-             << min_os.patch;
+          os << os_env.os_type << min_os.major_version << '.'
+             << min_os.minor_version << '.' << min_os.patch_version;
           triple.setOSName(os.str());
           if (!os_env.environment.empty())
             triple.setEnvironmentName(os_env.environment);

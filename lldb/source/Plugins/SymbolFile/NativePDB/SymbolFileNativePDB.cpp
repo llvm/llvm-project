@@ -75,7 +75,7 @@ static std::unique_ptr<PDBFile> loadPDBFile(std::string PdbPath,
   if (auto EC = File->parseStreamData())
     return nullptr;
 
-  return std::move(File);
+  return File;
 }
 
 static std::unique_ptr<PDBFile>
@@ -119,7 +119,7 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
 
   if (expected_info->getGuid() != guid)
     return nullptr;
-  return std::move(pdb);
+  return pdb;
 }
 
 static bool IsFunctionPrologue(const CompilandIndexItem &cci,
