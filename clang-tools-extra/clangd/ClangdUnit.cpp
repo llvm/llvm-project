@@ -31,7 +31,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
@@ -140,10 +139,6 @@ ParsedAST::build(std::unique_ptr<clang::CompilerInvocation> CI,
                               std::move(PCHs), std::move(VFS), ASTDiags);
   if (!Clang)
     return llvm::None;
-
-  // Recover resources if we crash before exiting this method.
-  llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance> CICleanup(
-      Clang.get());
 
   auto Action = llvm::make_unique<ClangdFrontendAction>();
   const FrontendInputFile &MainInput = Clang->getFrontendOpts().Inputs[0];
