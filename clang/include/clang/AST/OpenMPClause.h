@@ -827,6 +827,38 @@ public:
   }
 };
 
+/// This represents 'dynamic_allocators' clause in the '#pragma omp requires'
+/// directive.
+///
+/// \code
+/// #pragma omp requires dynamic_allocators
+/// \endcode
+/// In this example directive '#pragma omp requires' has 'dynamic_allocators'
+/// clause.
+class OMPDynamicAllocatorsClause final : public OMPClause {
+public:
+  friend class OMPClauseReader;
+  /// Build 'dynamic_allocators' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPDynamicAllocatorsClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_dynamic_allocators, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPDynamicAllocatorsClause()
+      : OMPClause(OMPC_dynamic_allocators, SourceLocation(), SourceLocation()) {
+  }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_dynamic_allocators;
+  }
+};
+
 /// This represents 'schedule' clause in the '#pragma omp ...' directive.
 ///
 /// \code

@@ -48,7 +48,7 @@ void test_f2(void) {
   PointerOfA test_A_pointer; // expected-error {{use of type 'PointerOfA' (aka 'const struct A *') requires my_ext extension to be enabled}}
   f(); // expected-error {{use of declaration 'f' requires my_ext extension to be enabled}}
   g(0); // expected-error {{no matching function for call to 'g'}}
-        // expected-note@-26 {{candidate disabled due to OpenCL extension}}
+        // expected-note@-26 {{candidate unavailable as it requires OpenCL extension 'my_ext' to be disabled}}
         // expected-note@-22 {{candidate function not viable: requires 0 arguments, but 1 was provided}}
 }
 

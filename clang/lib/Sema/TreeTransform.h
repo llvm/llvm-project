@@ -8450,6 +8450,13 @@ OMPClause *TreeTransform<Derived>::TransformOMPReverseOffloadClause(
 }
 
 template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPDynamicAllocatorsClause(
+    OMPDynamicAllocatorsClause *C) {
+  llvm_unreachable(
+      "dynamic_allocators clause cannot appear in dependent context");
+}
+
+template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPPrivateClause(OMPPrivateClause *C) {
   llvm::SmallVector<Expr *, 16> Vars;

@@ -203,7 +203,8 @@ static RecordDecl *buildRecordForGlobalizedVars(
   std::stable_sort(GlobalizedVars.begin(), GlobalizedVars.end(),
                    stable_sort_comparator);
   // Build struct _globalized_locals_ty {
-  //         /*  globalized vars  */[32] align (max(decl_align, 128))
+  //         /*  globalized vars  */[WarSize] align (max(decl_align,
+  //         GlobalMemoryAlignment))
   //         /*  globalized vars  */ for EscapedDeclsForTeams
   //       };
   RecordDecl *GlobalizedRD = C.buildImplicitRecord("_globalized_locals_ty");
@@ -370,11 +371,16 @@ class CheckVarsEscapingDeclContext final
     }
   }
 
-  void buildRecordForGlobalizedVars() {
+  void buildRecordForGlobalizedVars(bool IsInTargetMasterThreadRegion) {
     assert(!GlobalizedRD &&
            "Record for globalized variables is built already.");
+    ArrayRef<const ValueDecl *> EscapedDeclsForParallel, EscapedDeclsForTeams;
+    if (IsInTargetMasterThreadRegion)
+      EscapedDeclsForTeams = EscapedDecls.getArrayRef();
+    else
+      EscapedDeclsForParallel = EscapedDecls.getArrayRef();
     GlobalizedRD = ::buildRecordForGlobalizedVars(
-        CGF.getContext(), EscapedDecls.getArrayRef(), llvm::None,
+        CGF.getContext(), EscapedDeclsForParallel, EscapedDeclsForTeams,
         MappedDeclsFields);
   }
 
@@ -521,9 +527,9 @@ public:
 
   /// Returns the record that handles all the escaped local variables and used
   /// instead of their original storage.
-  const RecordDecl *getGlobalizedRecord() {
+  const RecordDecl *getGlobalizedRecord(bool IsInTargetMasterThreadRegion) {
     if (!GlobalizedRD)
-      buildRecordForGlobalizedVars();
+      buildRecordForGlobalizedVars(IsInTargetMasterThreadRegion);
     return GlobalizedRD;
   }
 
@@ -4087,7 +4093,8 @@ void CGOpenMPRuntimeNVPTX::emitFunctionProlog(CodeGenFunction &CGF,
     return;
   CheckVarsEscapingDeclContext VarChecker(CGF);
   VarChecker.Visit(Body);
-  const RecordDecl *GlobalizedVarsRecord = VarChecker.getGlobalizedRecord();
+  const RecordDecl *GlobalizedVarsRecord =
+      VarChecker.getGlobalizedRecord(IsInTargetMasterThreadRegion);
   ArrayRef<const ValueDecl *> EscapedVariableLengthDecls =
       VarChecker.getEscapedVariableLengthDecls();
   if (!GlobalizedVarsRecord && EscapedVariableLengthDecls.empty())
@@ -4105,7 +4112,8 @@ void CGOpenMPRuntimeNVPTX::emitFunctionProlog(CodeGenFunction &CGF,
   for (const ValueDecl *VD : VarChecker.getEscapedDecls()) {
     assert(VD->isCanonicalDecl() && "Expected canonical declaration");
     const FieldDecl *FD = VarChecker.getFieldForGlobalizedVar(VD);
-    Data.insert(std::make_pair(VD, MappedVarData(FD)));
+    Data.insert(
+        std::make_pair(VD, MappedVarData(FD, IsInTargetMasterThreadRegion)));
   }
   if (!NeedToDelayGlobalization) {
     emitGenericVarsProlog(CGF, D->getBeginLoc(), /*WithSPMDCheck=*/true);
