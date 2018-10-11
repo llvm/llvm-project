@@ -278,12 +278,21 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
     BitVector Blocked;
     SmallVector<SmallPtrSet<SUnit *, 4>, 10> B;
     SmallVector<SmallVector<int, 4>, 16> AdjK;
+    // Node to Index from ScheduleDAGTopologicalSort
+    std::vector<int> *Node2Idx;
     unsigned NumPaths;
     static unsigned MaxPaths;
 
   public:
-    Circuits(std::vector<SUnit> &SUs)
-        : SUnits(SUs), Blocked(SUs.size()), B(SUs.size()), AdjK(SUs.size()) {}
+    Circuits(std::vector<SUnit> &SUs, ScheduleDAGTopologicalSort &Topo)
+        : SUnits(SUs), Blocked(SUs.size()), B(SUs.size()), AdjK(SUs.size()) {
+      Node2Idx = new std::vector<int>(SUs.size());
+      unsigned Idx = 0;
+      for (const auto &NodeNum : Topo)
+        Node2Idx->at(NodeNum) = Idx++;
+    }
+
+    ~Circuits() { delete Node2Idx; }
 
     /// Reset the data structures used in the circuit algorithm.
     void reset() {
@@ -1295,6 +1304,7 @@ void SwingSchedulerDAG::changeDependences() {
     // Add a dependence between the new instruction and the instruction
     // that defines the new base.
     SDep Dep(&I, SDep::Anti, NewBase);
+    Topo.AddPred(LastSU, &I);
     LastSU->addPred(Dep);
 
     // Remember the base and offset information so that we can update the
@@ -1561,7 +1571,8 @@ bool SwingSchedulerDAG::Circuits::circuit(int V, int S, NodeSetType &NodeSets,
       ++NumPaths;
       break;
     } else if (!Blocked.test(W)) {
-      if (circuit(W, S, NodeSets, W < V ? true : HasBackedge))
+      if (circuit(W, S, NodeSets,
+                  Node2Idx->at(W) < Node2Idx->at(V) ? true : HasBackedge))
         F = true;
     }
   }
@@ -1601,7 +1612,7 @@ void SwingSchedulerDAG::findCircuits(NodeSetType &NodeSets) {
   // but we do this to find the circuits, and then change them back.
   swapAntiDependences(SUnits);
 
-  Circuits Cir(SUnits);
+  Circuits Cir(SUnits, Topo);
   // Create the adjacency structure.
   Cir.createAdjacencyStructure(this);
   for (int i = 0, e = SUnits.size(); i != e; ++i) {

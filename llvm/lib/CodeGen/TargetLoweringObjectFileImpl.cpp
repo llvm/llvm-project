@@ -506,30 +506,6 @@ static const MCSymbolELF *getAssociatedSymbol(const GlobalObject *GO,
   return OtherGO ? dyn_cast<MCSymbolELF>(TM.getSymbol(OtherGO)) : nullptr;
 }
 
-static unsigned getEntrySizeForKind(SectionKind Kind) {
-  if (Kind.isMergeable1ByteCString())
-    return 1;
-  else if (Kind.isMergeable2ByteCString())
-    return 2;
-  else if (Kind.isMergeable4ByteCString())
-    return 4;
-  else if (Kind.isMergeableConst4())
-    return 4;
-  else if (Kind.isMergeableConst8())
-    return 8;
-  else if (Kind.isMergeableConst16())
-    return 16;
-  else if (Kind.isMergeableConst32())
-    return 32;
-  else {
-    // We shouldn't have mergeable C strings or mergeable constants that we
-    // didn't handle above.
-    assert(!Kind.isMergeableCString() && "unknown string width");
-    assert(!Kind.isMergeableConst() && "unknown data width");
-    return 0;
-  }
-}
-
 MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   StringRef SectionName = GO->getSection();
@@ -574,7 +550,7 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
 
   MCSectionELF *Section = getContext().getELFSection(
       SectionName, getELFSectionType(SectionName, Kind), Flags,
-      getEntrySizeForKind(Kind), Group, UniqueID, AssociatedSymbol);
+      /*EntrySize=*/0, Group, UniqueID, AssociatedSymbol);
   // Make sure that we did not get some other section with incompatible sh_link.
   // This should not be possible due to UniqueID code above.
   assert(Section->getAssociatedSymbol() == AssociatedSymbol &&
@@ -599,6 +575,30 @@ static StringRef getSectionPrefixForGlobal(SectionKind Kind) {
     return ".data";
   assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
   return ".data.rel.ro";
+}
+
+static unsigned getEntrySizeForKind(SectionKind Kind) {
+  if (Kind.isMergeable1ByteCString())
+    return 1;
+  else if (Kind.isMergeable2ByteCString())
+    return 2;
+  else if (Kind.isMergeable4ByteCString())
+    return 4;
+  else if (Kind.isMergeableConst4())
+    return 4;
+  else if (Kind.isMergeableConst8())
+    return 8;
+  else if (Kind.isMergeableConst16())
+    return 16;
+  else if (Kind.isMergeableConst32())
+    return 32;
+  else {
+    // We shouldn't have mergeable C strings or mergeable constants that we
+    // didn't handle above.
+    assert(!Kind.isMergeableCString() && "unknown string width");
+    assert(!Kind.isMergeableConst() && "unknown data width");
+    return 0;
+  }
 }
 
 static MCSectionELF *selectELFSectionForGlobal(

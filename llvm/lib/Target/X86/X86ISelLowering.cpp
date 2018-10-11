@@ -902,6 +902,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     for (MVT VT : MVT::fp_vector_valuetypes())
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v2f32, Legal);
 
+    // We want to legalize this to an f64 load rather than an i64 load on
+    // 64-bit targets and two 32-bit loads on a 32-bit target.
+    setOperationAction(ISD::LOAD,               MVT::v2f32, Custom);
+
     setOperationAction(ISD::BITCAST,            MVT::v2i32, Custom);
     setOperationAction(ISD::BITCAST,            MVT::v4i16, Custom);
     setOperationAction(ISD::BITCAST,            MVT::v8i8,  Custom);
@@ -26420,6 +26424,25 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     }
     break;
   }
+  case ISD::LOAD: {
+    // Use an f64 load and a scalar_to_vector for v2f32 loads. This avoids
+    // scalarizing in 32-bit mode. In 64-bit mode this avoids a int->fp cast
+    // since type legalization will try to use an i64 load.
+    assert(N->getValueType(0) == MVT::v2f32 && "Unexpected VT");
+    if (!ISD::isNON_EXTLoad(N))
+      return;
+    auto *Ld = cast<LoadSDNode>(N);
+    SDValue Res = DAG.getLoad(MVT::f64, dl, Ld->getChain(), Ld->getBasePtr(),
+                              Ld->getPointerInfo(),
+                              Ld->getAlignment(),
+                              Ld->getMemOperand()->getFlags());
+    SDValue Chain = Res.getValue(1);
+    Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2f64, Res);
+    Res = DAG.getBitcast(MVT::v4f32, Res);
+    Results.push_back(Res);
+    Results.push_back(Chain);
+    return;
+  }
   }
 }
 
@@ -35278,69 +35301,6 @@ static SDValue combineAndLoadToBZHI(SDNode *Node, SelectionDAG &DAG,
   return SDValue();
 }
 
-static bool hasBEXTR(const X86Subtarget &Subtarget, EVT VT) {
-  // If we have TBM we can use an immediate for the control. If we have BMI
-  // we should only do this if the BEXTR instruction is implemented well.
-  // Otherwise moving the control into a register makes this more costly.
-  // TODO: Maybe load folding, greater than 32-bit masks, or a guarantee of LICM
-  // hoisting the move immediate would make it worthwhile with a less optimal
-  // BEXTR?
-  if (!Subtarget.hasTBM() && !(Subtarget.hasBMI() && Subtarget.hasFastBEXTR()))
-    return false;
-  return (VT == MVT::i32 || (VT == MVT::i64 && Subtarget.is64Bit()));
-}
-
-// See if this is an (X >> C1) & C2 that we can match to BEXTR/BEXTRI.
-static SDValue combineAndIntoBEXTR(SDNode *Node, SelectionDAG &DAG,
-                                   const X86Subtarget &Subtarget) {
-  EVT NVT = Node->getValueType(0);
-  SDLoc dl(Node);
-
-  SDValue N0 = Node->getOperand(0);
-  SDValue N1 = Node->getOperand(1);
-
-  // Check if subtarget has BEXTR instruction for the node's type
-  if (!hasBEXTR(Subtarget, NVT))
-    return SDValue();
-
-  // Must have a shift right.
-  if (N0->getOpcode() != ISD::SRL && N0->getOpcode() != ISD::SRA)
-    return SDValue();
-
-  // Shift can't have additional users.
-  if (!N0->hasOneUse())
-    return SDValue();
-
-  // Shift amount and RHS of and must be constant.
-  ConstantSDNode *MaskCst = dyn_cast<ConstantSDNode>(N1);
-  ConstantSDNode *ShiftCst = dyn_cast<ConstantSDNode>(N0->getOperand(1));
-  if (!MaskCst || !ShiftCst)
-    return SDValue();
-
-  // And RHS must be a mask.
-  uint64_t Mask = MaskCst->getZExtValue();
-  if (!isMask_64(Mask))
-    return SDValue();
-
-  uint64_t Shift = ShiftCst->getZExtValue();
-  uint64_t MaskSize = countPopulation(Mask);
-
-  // Don't interfere with something that can be handled by extracting AH.
-  // TODO: If we are able to fold a load, BEXTR might still be better than AH.
-  if (Shift == 8 && MaskSize == 8)
-    return SDValue();
-
-  // Make sure we are only using bits that were in the original value, not
-  // shifted in.
-  if (Shift + MaskSize > NVT.getSizeInBits())
-    return SDValue();
-
-  // Create a BEXTR node.
-  SDValue C = DAG.getConstant(Shift | (MaskSize << 8), dl, NVT);
-  SDValue New = DAG.getNode(X86ISD::BEXTR, dl, NVT, N0->getOperand(0), C);
-  return New;
-}
-
 // Look for (and (ctpop X), 1) which is the IR form of __builtin_parity.
 // Turn it into series of XORs and a setnp.
 static SDValue combineParity(SDNode *N, SelectionDAG &DAG,
@@ -35441,9 +35401,6 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
-
-  if (SDValue R = combineAndIntoBEXTR(N, DAG, Subtarget))
-    return R;
 
   if (SDValue R = combineCompareEqual(N, DAG, DCI, Subtarget))
     return R;

@@ -36,7 +36,6 @@
 ; CHECK: setp.ge.s32     %p{{.+}}, %r{{.+}}, %r{{.+}};
 ; CHECK: .loc [[DEBUG_INFO_CU]] 7 7
 ; CHECK: @%p{{.+}} bra   [[BB:.+]];
-; CHECK: .loc [[DEBUG_INFO_CU]] 8 13
 ; CHECK: ld.param.f32    %f{{.+}}, [{{.+}}];
 ; CHECK: ld.param.u64    %rd{{.+}}, [{{.+}}];
 ; CHECK: cvta.to.global.u64      %rd{{.+}}, %rd{{.+}};
@@ -44,6 +43,7 @@
 ; CHECK: cvta.to.global.u64      %rd{{.+}}, %rd{{.+}};
 ; CHECK: mul.wide.u32    %rd{{.+}}, %r{{.+}}, 4;
 ; CHECK: add.s64         %rd{{.+}}, %rd{{.+}}, %rd{{.+}};
+; CHECK: .loc [[DEBUG_INFO_CU]] 8 13
 ; CHECK: ld.global.f32   %f{{.+}}, [%rd{{.+}}];
 ; CHECK: add.s64         %rd{{.+}}, %rd{{.+}}, %rd{{.+}};
 ; CHECK: .loc [[DEBUG_INFO_CU]] 8 19

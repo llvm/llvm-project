@@ -13,8 +13,8 @@
 ;
 ; Check that the IR contains the overriding definition of the library routine
 ; in the IR after LTO:
-; CHECK_IR: define internal float @logf(float [[X:%.*]])
-; CHECK_IR-NEXT:   [[TMP:%.*]] = fadd float [[X]], [[X]]
+; CHECK_IR: define internal float @logf(float
+; CHECK_IR-NEXT:   [[TMP:%.*]] = fadd float
 ; CHECK_IR-NEXT:   ret float [[TMP]]
 ;
 ; Check that the assembly code from LTO contains the call to the expected

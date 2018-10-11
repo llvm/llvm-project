@@ -45,13 +45,11 @@ void RegisterFile::initialize(const MCSchedModel &SM, unsigned NumRegs) {
   // object. The size of every register file, as well as the mapping between
   // register files and register classes is specified via tablegen.
   const MCExtraProcessorInfo &Info = SM.getExtraProcessorInfo();
-  for (unsigned I = 0, E = Info.NumRegisterFiles; I < E; ++I) {
+
+  // Skip invalid register file at index 0.
+  for (unsigned I = 1, E = Info.NumRegisterFiles; I < E; ++I) {
     const MCRegisterFileDesc &RF = Info.RegisterFiles[I];
-    // Skip invalid register files with zero physical registers.
-    // TODO: verify this constraint in SubtargetEmitter, and convert this
-    // statement into an assert.
-    if (!RF.NumPhysRegs)
-      continue;
+    assert(RF.NumPhysRegs && "Invalid PRF with zero physical registers!");
 
     // The cost of a register definition is equivalent to the number of
     // physical registers that are allocated at register renaming stage.

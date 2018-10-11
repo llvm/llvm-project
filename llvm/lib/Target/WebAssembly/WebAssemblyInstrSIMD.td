@@ -22,7 +22,8 @@ multiclass SIMD_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
 }
 
 multiclass SIMD_ARGUMENT<ValueType vt> {
-  let hasSideEffects = 1, Uses = [ARGUMENTS], isCodeGenOnly = 1 in
+  let hasSideEffects = 1, isCodeGenOnly = 1,
+      Defs = []<Register>, Uses = [ARGUMENTS] in
   defm ARGUMENT_#vt : SIMD_I<(outs V128:$res), (ins i32imm:$argno),
                              (outs), (ins i32imm:$argno),
                              [(set (vt V128:$res),

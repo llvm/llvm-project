@@ -12847,6 +12847,11 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   if (!STCoversLD)
     return SDValue();
 
+  // Normalize for Endianness.
+  if (DAG.getDataLayout().isBigEndian())
+    Offset =
+        (STMemType.getSizeInBits() - LDMemType.getSizeInBits()) / 8 - Offset;
+
   // Memory as copy space (potentially masked).
   if (Offset == 0 && LDType == STType && STMemType == LDMemType) {
     // Simple case: Direct non-truncating forwarding
@@ -15451,14 +15456,13 @@ SDValue DAGCombiner::ReplaceExtractVectorEltOfLoadWithNarrowedLoad(
 }
 
 SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
-  // (vextract (scalar_to_vector val, 0) -> val
   SDValue InVec = N->getOperand(0);
   EVT VT = InVec.getValueType();
   EVT NVT = N->getValueType(0);
-
   if (InVec.isUndef())
     return DAG.getUNDEF(NVT);
 
+  // (vextract (scalar_to_vector val, 0) -> val
   if (InVec.getOpcode() == ISD::SCALAR_TO_VECTOR) {
     // Check if the result type doesn't match the inserted element type. A
     // SCALAR_TO_VECTOR may truncate the inserted element and the

@@ -257,6 +257,23 @@ class pf2<SDNode Op> : PatFrag<(ops node:$a, node:$b), (Op node:$a, node:$b)>;
 class Not2<PatFrag P>
   : PatFrag<(ops node:$A, node:$B), (P node:$A, (not node:$B))>;
 
+// If there is a constant operand that feeds the and/or instruction,
+// do not generate the compound instructions.
+// It is not always profitable, as some times we end up with a transfer.
+// Check the below example.
+// ra = #65820; rb = lsr(rb, #8); rc ^= and (rb, ra)
+// Instead this is preferable.
+// ra = and (#65820, lsr(ra, #8)); rb = xor(rb, ra)
+class Su_ni1<PatFrag Op>
+  : PatFrag<Op.Operands, !head(Op.Fragments), [{
+            if (hasOneUse(N)){
+              // Check if Op1 is an immediate operand.
+              SDValue Op1 = N->getOperand(1);
+              return !dyn_cast<ConstantSDNode>(Op1);
+            }
+            return false;}],
+            Op.OperandTransform>;
+
 class Su<PatFrag Op>
   : PatFrag<Op.Operands, !head(Op.Fragments), [{ return hasOneUse(N); }],
             Op.OperandTransform>;
@@ -1336,16 +1353,16 @@ def: Pat<(mul I32:$Rs, n8_0ImmPred:$n8),
 def: Pat<(add Sext64:$Rs, I64:$Rt),
          (A2_addsp (LoReg Sext64:$Rs), I64:$Rt)>;
 
-def: AccRRR_pat<M4_and_and,   And, Su<And>,       I32,  I32,  I32>;
-def: AccRRR_pat<M4_and_or,    And, Su<Or>,        I32,  I32,  I32>;
-def: AccRRR_pat<M4_and_xor,   And, Su<Xor>,       I32,  I32,  I32>;
-def: AccRRR_pat<M4_or_and,    Or,  Su<And>,       I32,  I32,  I32>;
-def: AccRRR_pat<M4_or_or,     Or,  Su<Or>,        I32,  I32,  I32>;
-def: AccRRR_pat<M4_or_xor,    Or,  Su<Xor>,       I32,  I32,  I32>;
-def: AccRRR_pat<M4_xor_and,   Xor, Su<And>,       I32,  I32,  I32>;
-def: AccRRR_pat<M4_xor_or,    Xor, Su<Or>,        I32,  I32,  I32>;
-def: AccRRR_pat<M2_xor_xacc,  Xor, Su<Xor>,       I32,  I32,  I32>;
-def: AccRRR_pat<M4_xor_xacc,  Xor, Su<Xor>,       I64,  I64,  I64>;
+def: AccRRR_pat<M4_and_and,   And, Su_ni1<And>,  I32,  I32,  I32>;
+def: AccRRR_pat<M4_and_or,    And, Su_ni1<Or>,   I32,  I32,  I32>;
+def: AccRRR_pat<M4_and_xor,   And, Su<Xor>,      I32,  I32,  I32>;
+def: AccRRR_pat<M4_or_and,    Or,  Su_ni1<And>,  I32,  I32,  I32>;
+def: AccRRR_pat<M4_or_or,     Or,  Su_ni1<Or>,   I32,  I32,  I32>;
+def: AccRRR_pat<M4_or_xor,    Or,  Su<Xor>,      I32,  I32,  I32>;
+def: AccRRR_pat<M4_xor_and,   Xor, Su_ni1<And>,  I32,  I32,  I32>;
+def: AccRRR_pat<M4_xor_or,    Xor, Su_ni1<Or>,   I32,  I32,  I32>;
+def: AccRRR_pat<M2_xor_xacc,  Xor, Su<Xor>,      I32,  I32,  I32>;
+def: AccRRR_pat<M4_xor_xacc,  Xor, Su<Xor>,      I64,  I64,  I64>;
 
 // For dags like (or (and (not _), _), (shl _, _)) where the "or" with
 // one argument matches the patterns below, and with the other argument
