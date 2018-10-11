@@ -300,6 +300,42 @@ ArrayRef<TemplateArgument> FunctionTemplateDecl::getInjectedTemplateArgs() {
   return llvm::makeArrayRef(CommonPtr->InjectedArgs, Params->size());
 }
 
+void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
+  using Base = RedeclarableTemplateDecl;
+
+  // If we haven't created a common pointer yet, then it can just be created
+  // with the usual method.
+  if (!Base::Common)
+    return;
+
+  Common *ThisCommon = static_cast<Common *>(Base::Common);
+  Common *PrevCommon = nullptr;
+  SmallVector<FunctionTemplateDecl *, 8> PreviousDecls;
+  for (; Prev; Prev = Prev->getPreviousDecl()) {
+    if (Prev->Base::Common) {
+      PrevCommon = static_cast<Common *>(Prev->Base::Common);
+      break;
+    }
+    PreviousDecls.push_back(Prev);
+  }
+
+  // If the previous redecl chain hasn't created a common pointer yet, then just
+  // use this common pointer.
+  if (!PrevCommon) {
+    for (auto *D : PreviousDecls)
+      D->Base::Common = ThisCommon;
+    return;
+  }
+
+  // Ensure we don't leak any important state.
+  assert(ThisCommon->Specializations.size() == 0 &&
+         !ThisCommon->InstantiatedFromMember.getPointer() &&
+         !ThisCommon->InstantiatedFromMember.getInt() &&
+         "Can't merge incompatible declarations!");
+
+  Base::Common = PrevCommon;
+}
+
 //===----------------------------------------------------------------------===//
 // ClassTemplateDecl Implementation
 //===----------------------------------------------------------------------===//
