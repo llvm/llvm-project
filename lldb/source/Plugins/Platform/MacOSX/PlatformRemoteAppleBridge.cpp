@@ -108,7 +108,7 @@ PlatformSP PlatformRemoteAppleBridge::CreateInstance(bool force,
       }
       if (create) {
         switch (triple.getOS()) {
-        // FIXMEJSM case llvm::Triple::BridgeOS: 
+        // NEED_BRIDGEOS_TRIPLE case llvm::Triple::BridgeOS: 
           break;
 
         default:
