@@ -44,6 +44,16 @@ Major New Features
 
 ...
 
+Improvements to clangd
+----------------------
+
+The improvements are...
+
+Improvements to clang-doc
+-------------------------
+
+The improvements are...
+
 Improvements to clang-query
 ---------------------------
 
@@ -99,12 +109,12 @@ Improvements to clang-tidy
   Checks for uses of nested namespaces in the form of
   ``namespace a { namespace b { ... }}`` and offers change to
   syntax introduced in C++17 standard: ``namespace a::b { ... }``.
-  
+
 - New :doc:`modernize-deprecated-ios-base-aliases
   <clang-tidy/checks/modernize-deprecated-ios-base-aliases>` check.
 
-  This check warns the uses of the deprecated member types of ``std::ios_base``
-  and replaces those that have a non-deprecated equivalent.
+  Detects usage of the deprecated member types of ``std::ios_base`` and replaces
+  those that have a non-deprecated equivalent.
 
 - New :doc:`readability-magic-numbers
   <clang-tidy/checks/readability-magic-numbers>` check.
