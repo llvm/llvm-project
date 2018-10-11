@@ -7130,11 +7130,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_NoDestroy:
     handleDestroyAttr(S, D, AL);
     break;
-
-  case ParsedAttr::AT_AlwaysDestroy:
-  case ParsedAttr::AT_NoDestroy:
-    handleDestroyAttr(S, D, AL);
-    break;
   }
 }
 
