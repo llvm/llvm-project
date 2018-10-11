@@ -42,11 +42,8 @@ static bool IsMainFile(llvm::StringRef main, llvm::StringRef other) {
   if (llvm::sys::fs::equivalent(main, other))
     return true;
 
-  // FIXME: If we ever want to support PDB debug info for non-Windows systems
-  // the following check will be wrong, but we need a way to store the host
-  // information in the PDB.
   llvm::SmallString<64> normalized(other);
-  llvm::sys::path::native(normalized, llvm::sys::path::Style::windows);
+  llvm::sys::path::native(normalized);
   return main.equals_lower(normalized);
 }
 
@@ -156,7 +153,8 @@ CompileUnitIndex::GetOrCreateCompiland(PdbSymUid compiland_uid) {
   // name until we find it, and we can cache that one since the memory is backed
   // by a contiguous chunk inside the mapped PDB.
   llvm::SmallString<64> main_file = GetMainSourceFile(*cci);
-  llvm::sys::path::native(main_file, llvm::sys::path::Style::windows);
+  std::string s = main_file.str();
+  llvm::sys::path::native(main_file);
 
   uint32_t file_count = modules.getSourceFileCount(modi);
   cci->m_file_list.reserve(file_count);
