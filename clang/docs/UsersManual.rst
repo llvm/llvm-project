@@ -1799,6 +1799,75 @@ In these cases, you can use the flag ``-fno-profile-instr-generate`` (or
 Note that these flags should appear after the corresponding profile
 flags to have an effect.
 
+Profile remapping
+^^^^^^^^^^^^^^^^^
+
+When the program is compiled after a change that affects many symbol names,
+pre-existing profile data may no longer match the program. For example:
+
+ * switching from libstdc++ to libc++ will result in the mangled names of all
+   functions taking standard library types to change
+ * renaming a widely-used type in C++ will result in the mangled names of all
+   functions that have parameters involving that type to change
+ * moving from a 32-bit compilation to a 64-bit compilation may change the
+   underlying type of ``size_t`` and similar types, resulting in changes to
+   manglings
+
+Clang allows use of a profile remapping file to specify that such differences
+in mangled names should be ignored when matching the profile data against the
+program.
+
+.. option:: -fprofile-remapping-file=<file>
+
+  Specifies a file containing profile remapping information, that will be
+  used to match mangled names in the profile data to mangled names in the
+  program.
+
+The profile remapping file is a text file containing lines of the form
+
+.. code-block::
+
+  fragmentkind fragment1 fragment2
+
+where ``fragmentkind`` is one of ``name``, ``type``, or ``encoding``,
+indicating whether the following mangled name fragments are
+<`name <http://itanium-cxx-abi.github.io/cxx-abi/abi.html#mangle.name>`>s,
+<`type <http://itanium-cxx-abi.github.io/cxx-abi/abi.html#mangle.type>`>s, or
+<`encoding <http://itanium-cxx-abi.github.io/cxx-abi/abi.html#mangle.encoding>`>s,
+respectively.
+
+Blank lines and lines starting with ``#`` are ignored.
+
+For example, to specify that ``absl::string_view`` and ``std::string_view``
+should be treated as equivalent when matching profile data, the following
+remapping file could be used:
+
+.. code-block::
+
+  # absl::string_view is considered equivalent to std::string_view
+  type N4absl11string_viewE St17basic_string_viewIcSt11char_traitsIcEE
+
+  # std:: might be std::__1:: in libc++ or std::__cxx11:: in libstdc++
+  name 3std St3__1
+  name 3std St7__cxx11
+
+Matching profile data using a profile remapping file is supported on a
+best-effort basis. For example, information regarding indirect call targets is
+currently not remapped. For best results, you are encouraged to generate new
+profile data matching the updated program.
+
+.. note::
+
+  Profile data remapping support is currently only implemented for LLVM's
+  new pass manager, which can be enabled with
+  ``-fexperimental-new-pass-manager``.
+
+.. note::
+
+  Profile data remapping is currently only supported for C++ mangled names
+  following the Itanium C++ ABI mangling scheme. This covers all C++ targets
+  supported by Clang other than Windows.
+
 Controlling Debug Information
 -----------------------------
 
