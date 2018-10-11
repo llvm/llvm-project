@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Define _LIBCPP_BUILDING_LIBRARY to ensure _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+// Define _LIBCPP_BUILDING_LIBRARY to ensure _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
 // is only defined when libc aligned allocation is not available.
 #define _LIBCPP_BUILDING_LIBRARY
 #include "fallback_malloc.h"
@@ -209,7 +209,7 @@ void* __aligned_malloc_with_fallback(size_t size) {
 #if defined(_WIN32)
   if (void* dest = _aligned_malloc(size, alignof(__aligned_type)))
     return dest;
-#elif defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION)
+#elif defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION)
   if (void* dest = std::malloc(size))
     return dest;
 #else

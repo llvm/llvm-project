@@ -239,7 +239,7 @@ inline _LIBCPP_INLINE_VISIBILITY void *__libcpp_allocate(size_t __size, size_t _
 #ifndef _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
   if (__is_overaligned_for_new(__align)) {
     const align_val_t __align_val = static_cast<align_val_t>(__align);
-# ifdef _LIBCPP_HAS_NO_BUILTIN_ALIGNED_OPERATOR_NEW_DELETE
+# ifdef _LIBCPP_HAS_NO_BUILTIN_OVERLOADED_OPERATOR_NEW_DELETE
     return ::operator new(__size, __align_val);
 # else
     return __builtin_operator_new(__size, __align_val);
