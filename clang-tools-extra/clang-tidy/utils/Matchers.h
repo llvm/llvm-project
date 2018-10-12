@@ -48,6 +48,13 @@ AST_MATCHER_FUNCTION(ast_matchers::TypeMatcher, isReferenceToConst) {
   return referenceType(pointee(qualType(isConstQualified())));
 }
 
+AST_MATCHER_P(NamedDecl, matchesAnyListedName, std::vector<std::string>,
+              NameList) {
+  return llvm::any_of(NameList, [&Node](const std::string &Name) {
+      return llvm::Regex(Name).match(Node.getName());
+    });
+}
+
 } // namespace matchers
 } // namespace tidy
 } // namespace clang
