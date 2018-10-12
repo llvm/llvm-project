@@ -255,7 +255,7 @@ std::unique_ptr<WorkList> WorkList::makeUnexploredFirstPriorityQueue() {
 
 namespace {
 class UnexploredFirstPriorityLocationQueue : public WorkList {
-  using LocIdentifier = int;
+  using LocIdentifier = const CFGBlock *;
 
   // How many times each location was visited.
   // Is signed because we negate it later in order to have a reversed
@@ -294,7 +294,7 @@ public:
     const ExplodedNode *N = U.getNode();
     unsigned NumVisited = 0;
     if (auto BE = N->getLocation().getAs<BlockEntrance>())
-      NumVisited = NumReached[BE->getBlock()->getBlockID()]++;
+      NumVisited = NumReached[BE->getBlock()]++;
 
     queue.push(std::make_pair(U, std::make_pair(-NumVisited, ++Counter)));
   }
