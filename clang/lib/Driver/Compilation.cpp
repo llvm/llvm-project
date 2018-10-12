@@ -127,7 +127,7 @@ bool Compilation::CleanupFile(const char *File, bool IssueErrors) const {
   return true;
 }
 
-bool Compilation::CleanupFileList(const ArgStringList &Files,
+bool Compilation::CleanupFileList(const llvm::opt::ArgStringList &Files,
                                   bool IssueErrors) const {
   bool Success = true;
   for (const auto &File: Files)

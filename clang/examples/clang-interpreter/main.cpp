@@ -164,7 +164,7 @@ int main(int argc, const char **argv) {
   }
 
   // Initialize a compiler invocation object from the clang (-cc1) arguments.
-  const driver::ArgStringList &CCArgs = Cmd.getArguments();
+  const llvm::opt::ArgStringList &CCArgs = Cmd.getArguments();
   std::unique_ptr<CompilerInvocation> CI(new CompilerInvocation);
   CompilerInvocation::CreateFromArgs(*CI,
                                      const_cast<const char **>(CCArgs.data()),

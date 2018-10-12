@@ -39,16 +39,10 @@ void test_ds(){
 // CK1: [[SHAREDARGS2:%.+]] = alloca i8**
 // CK1: call void @__kmpc_kernel_init
 // CK1: call void @__kmpc_data_sharing_init_stack
-// CK1: [[GLOBALSTACK:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i64 256, i16 0)
+// CK1: [[GLOBALSTACK:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i64 8, i16 0)
 // CK1: [[GLOBALSTACK2:%.+]] = bitcast i8* [[GLOBALSTACK]] to %struct._globalized_locals_ty*
-// CK1: [[A_ARR:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[GLOBALSTACK2]], i32 0, i32 0
-// CK1: [[TID:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-// CK1: [[LID:%.+]] = and i32 [[TID]], 31
-// CK1: [[A:%.+]] = getelementptr inbounds [32 x i32], [32 x i32]* [[A_ARR]], i32 0, i32 [[LID]]
-// CK1: [[B_ARR:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[GLOBALSTACK2]], i32 0, i32 1
-// CK1: [[TID:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-// CK1: [[LID:%.+]] = and i32 [[TID]], 31
-// CK1: [[B:%.+]] = getelementptr inbounds [32 x i32], [32 x i32]* [[B_ARR]], i32 0, i32 [[LID]]
+// CK1: [[A:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[GLOBALSTACK2]], i32 0, i32 0
+// CK1: [[B:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[GLOBALSTACK2]], i32 0, i32 1
 // CK1: store i32 10, i32* [[A]]
 // CK1: call void @__kmpc_kernel_prepare_parallel({{.*}}, i16 1)
 // CK1: call void @__kmpc_begin_sharing_variables(i8*** [[SHAREDARGS1]], i64 1)

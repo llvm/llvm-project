@@ -2164,6 +2164,8 @@ void UnwrappedLineParser::parseObjCMethod() {
       addUnwrappedLine();
       return;
     } else if (FormatTok->Tok.is(tok::l_brace)) {
+      if (Style.BraceWrapping.AfterFunction)
+        addUnwrappedLine();
       parseBlock(/*MustBeDeclaration=*/false);
       addUnwrappedLine();
       return;
