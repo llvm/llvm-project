@@ -1,8 +1,8 @@
 // clang-format off
 
 // Test that we can set display source of functions.
-// RUN: clang-cl /Z7 /GS- /GR- /c %s /Fo%t.obj
-// RUN: lld-link /DEBUG /nodefaultlib /entry:main /OUT:%t.exe /PDB:%t.pdb %t.obj
+// RUN: clang-cl /Z7 /GS- /GR- /c /Fo%t.obj -- %s 
+// RUN: lld-link /DEBUG /nodefaultlib /entry:main /OUT:%t.exe /PDB:%t.pdb -- %t.obj
 // RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb -f %t.exe -s \
 // RUN:     %p/Inputs/source-list.lldbinit | FileCheck %s
 
