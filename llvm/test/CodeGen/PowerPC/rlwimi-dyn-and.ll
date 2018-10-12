@@ -39,7 +39,7 @@ next:
   ret i32 %conv174
 
 ; CHECK-LABEL: @test2
-; CHECK: slwi 3, {{[0-9]+}}, 7
+; CHECK: rlwinm 3, {{[0-9]+}}, 7, 17, 24
 ; CHECK: rlwimi 3, {{[0-9]+}}, 15, 16, 16
 ; CHECK: blr
 }

@@ -441,6 +441,9 @@ namespace {
 
       switch (StoreSize) {
       default: llvm_unreachable("Unsupported store size");
+      case 4:
+      case 8:
+        return false;
       case 16:
         return Subtarget->hasSSE41();
       case 32:

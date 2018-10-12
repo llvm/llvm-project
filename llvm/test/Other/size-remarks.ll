@@ -32,7 +32,7 @@
 ; CGSCC-NEXT: Name:            IRSizeChange
 ; CGSCC-NEXT: Function:
 ; CGSCC-NEXT: Args:
-; CGSCC-NEXT:  - Pass:            Function Integration/Inlining
+; CGSCC-NEXT:  - Pass:            'Function Integration/Inlining'
 ; CGSCC-NEXT:  - String:          ': IR instruction count changed from '
 ; CGSCC-NEXT:  - IRInstrsBefore:  '[[ORIG]]'
 ; CGSCC-NEXT:  - String:          ' to '
@@ -44,7 +44,7 @@
 ; CGSCC-NEXT: Name:            FunctionIRSizeChange
 ; CGSCC-NEXT: Function:
 ; CGSCC-NEXT: Args:
-; CGSCC-NEXT:   - Pass:            Function Integration/Inlining
+; CGSCC-NEXT:   - Pass:            'Function Integration/Inlining'
 ; CGSCC-NEXT:   - String:          ': Function: '
 ; CGSCC-NEXT:   - Function:        bar
 ; CGSCC-NEXT:   - String:          ': IR instruction count changed from '

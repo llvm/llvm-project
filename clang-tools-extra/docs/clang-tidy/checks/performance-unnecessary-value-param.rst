@@ -61,3 +61,9 @@ Options
 
    A string specifying which include-style is used, `llvm` or `google`. Default
    is `llvm`.
+
+.. option:: AllowedTypes
+
+   A semicolon-separated list of names of types allowed to be passed by value.
+   Regular expressions are accepted, e.g. `[Rr]ef(erence)?$` matches every type
+   with suffix `Ref`, `ref`, `Reference` and `reference`. The default is empty.

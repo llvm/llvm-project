@@ -1017,8 +1017,9 @@ void SCCPSolver::visitBinaryOperator(Instruction &I) {
 
 // Handle ICmpInst instruction.
 void SCCPSolver::visitCmpInst(CmpInst &I) {
-  LatticeVal &IV = ValueState[&I];
-  if (IV.isOverdefined()) return;
+  // Do not cache this lookup, getValueState calls later in the function might
+  // invalidate the reference.
+  if (ValueState[&I].isOverdefined()) return;
 
   Value *Op1 = I.getOperand(0);
   Value *Op2 = I.getOperand(1);
@@ -1046,7 +1047,8 @@ void SCCPSolver::visitCmpInst(CmpInst &I) {
   }
 
   // If operands are still unknown, wait for it to resolve.
-  if (!V1State.isOverdefined() && !V2State.isOverdefined() && !IV.isConstant())
+  if (!V1State.isOverdefined() && !V2State.isOverdefined() &&
+      !ValueState[&I].isConstant())
     return;
 
   markOverdefined(&I);

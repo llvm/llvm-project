@@ -20,8 +20,6 @@ namespace llvm {
 class raw_pwrite_stream;
 }
 
-using llvm::StringRef;
-
 namespace clang {
 
 class ASTConsumer;
@@ -41,7 +39,7 @@ struct PCHBuffer {
 class PCHContainerWriter {
 public:
   virtual ~PCHContainerWriter() = 0;
-  virtual StringRef getFormat() const = 0;
+  virtual llvm::StringRef getFormat() const = 0;
 
   /// Return an ASTConsumer that can be chained with a
   /// PCHGenerator that produces a wrapper file format containing a
@@ -61,15 +59,15 @@ class PCHContainerReader {
 public:
   virtual ~PCHContainerReader() = 0;
   /// Equivalent to the format passed to -fmodule-format=
-  virtual StringRef getFormat() const = 0;
+  virtual llvm::StringRef getFormat() const = 0;
 
   /// Returns the serialized AST inside the PCH container Buffer.
-  virtual StringRef ExtractPCH(llvm::MemoryBufferRef Buffer) const = 0;
+  virtual llvm::StringRef ExtractPCH(llvm::MemoryBufferRef Buffer) const = 0;
 };
 
 /// Implements write operations for a raw pass-through PCH container.
 class RawPCHContainerWriter : public PCHContainerWriter {
-  StringRef getFormat() const override { return "raw"; }
+  llvm::StringRef getFormat() const override { return "raw"; }
 
   /// Return an ASTConsumer that can be chained with a
   /// PCHGenerator that writes the module to a flat file.
@@ -83,10 +81,10 @@ class RawPCHContainerWriter : public PCHContainerWriter {
 
 /// Implements read operations for a raw pass-through PCH container.
 class RawPCHContainerReader : public PCHContainerReader {
-  StringRef getFormat() const override { return "raw"; }
+  llvm::StringRef getFormat() const override { return "raw"; }
 
   /// Simply returns the buffer contained in Buffer.
-  StringRef ExtractPCH(llvm::MemoryBufferRef Buffer) const override;
+  llvm::StringRef ExtractPCH(llvm::MemoryBufferRef Buffer) const override;
 };
 
 /// A registry of PCHContainerWriter and -Reader objects for different formats.
@@ -103,10 +101,10 @@ public:
   void registerReader(std::unique_ptr<PCHContainerReader> Reader) {
     Readers[Reader->getFormat()] = std::move(Reader);
   }
-  const PCHContainerWriter *getWriterOrNull(StringRef Format) {
+  const PCHContainerWriter *getWriterOrNull(llvm::StringRef Format) {
     return Writers[Format].get();
   }
-  const PCHContainerReader *getReaderOrNull(StringRef Format) {
+  const PCHContainerReader *getReaderOrNull(llvm::StringRef Format) {
     return Readers[Format].get();
   }
   const PCHContainerReader &getRawReader() {

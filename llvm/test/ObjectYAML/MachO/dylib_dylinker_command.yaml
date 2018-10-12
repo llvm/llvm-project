@@ -40,7 +40,7 @@ LoadCommands:
 #CHECK:   - cmd:             LC_LOAD_DYLINKER
 #CHECK:     cmdsize:         32
 #CHECK:     name:            12
-#CHECK:     PayloadString:   /usr/lib/dyld
+#CHECK:     PayloadString:   '/usr/lib/dyld'
 #CHECK:     ZeroPadBytes:    7
 #CHECK:   - cmd:             LC_LOAD_DYLIB
 #CHECK:     cmdsize:         48
@@ -58,5 +58,5 @@ LoadCommands:
 #CHECK:       timestamp:       2
 #CHECK:       current_version: 80349697
 #CHECK:       compatibility_version: 65536
-#CHECK:     PayloadString:   /usr/lib/libSystem.B.dylib
+#CHECK:     PayloadString:   '/usr/lib/libSystem.B.dylib'
 #CHECK:     ZeroPadBytes:    6
