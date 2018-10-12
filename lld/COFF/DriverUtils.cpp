@@ -28,7 +28,6 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
@@ -864,8 +863,9 @@ std::vector<const char *> ArgParser::tokenize(StringRef S) {
 }
 
 void printHelp(const char *Argv0) {
-  std::string Usage = formatv("{0} [options] file...", Argv0).str();
-  COFFOptTable().PrintHelp(outs(), Usage.c_str(), "LLVM Linker", false);
+  COFFOptTable().PrintHelp(outs(),
+                           (std::string(Argv0) + " [options] file...").c_str(),
+                           "LLVM Linker", false);
 }
 
 } // namespace coff

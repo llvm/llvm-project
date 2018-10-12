@@ -73,6 +73,9 @@ struct Config {
   /// Sample PGO profile path.
   std::string SampleProfile;
 
+  /// Name remapping file for profile data.
+  std::string ProfileRemapping;
+
   /// The directory to store .dwo files.
   std::string DwoDir;
 

@@ -930,18 +930,21 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     PGOOpt = PGOOptions(CodeGenOpts.InstrProfileOutput.empty()
                             ? DefaultProfileGenName
                             : CodeGenOpts.InstrProfileOutput,
-                        "", "", true, CodeGenOpts.DebugInfoForProfiling);
+                        "", "", "", true,
+                        CodeGenOpts.DebugInfoForProfiling);
   else if (CodeGenOpts.hasProfileIRUse())
     // -fprofile-use.
-    PGOOpt = PGOOptions("", CodeGenOpts.ProfileInstrumentUsePath, "", false,
+    PGOOpt = PGOOptions("", CodeGenOpts.ProfileInstrumentUsePath, "",
+                        CodeGenOpts.ProfileRemappingFile, false,
                         CodeGenOpts.DebugInfoForProfiling);
   else if (!CodeGenOpts.SampleProfileFile.empty())
     // -fprofile-sample-use
-    PGOOpt = PGOOptions("", "", CodeGenOpts.SampleProfileFile, false,
+    PGOOpt = PGOOptions("", "", CodeGenOpts.SampleProfileFile,
+                        CodeGenOpts.ProfileRemappingFile, false,
                         CodeGenOpts.DebugInfoForProfiling);
   else if (CodeGenOpts.DebugInfoForProfiling)
     // -fdebug-info-for-profiling
-    PGOOpt = PGOOptions("", "", "", false, true);
+    PGOOpt = PGOOptions("", "", "", "", false, true);
 
   PassBuilder PB(TM.get(), PGOOpt);
 
@@ -1130,6 +1133,7 @@ static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
                               const LangOptions &LOpts,
                               std::unique_ptr<raw_pwrite_stream> OS,
                               std::string SampleProfile,
+                              std::string ProfileRemapping,
                               BackendAction Action) {
   StringMap<DenseMap<GlobalValue::GUID, GlobalValueSummary *>>
       ModuleToDefinedGVSummaries;
@@ -1202,6 +1206,7 @@ static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
   Conf.CGOptLevel = getCGOptLevel(CGOpts);
   initTargetOptions(Conf.Options, CGOpts, TOpts, LOpts, HeaderOpts);
   Conf.SampleProfile = std::move(SampleProfile);
+  Conf.ProfileRemapping = std::move(ProfileRemapping);
   Conf.UseNewPM = CGOpts.ExperimentalNewPassManager;
   Conf.DebugPassManager = CGOpts.DebugPassManager;
   Conf.RemarksWithHotness = CGOpts.DiagnosticsWithHotness;
@@ -1268,7 +1273,7 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
       if (!CombinedIndex->skipModuleByDistributedBackend()) {
         runThinLTOBackend(CombinedIndex.get(), M, HeaderOpts, CGOpts, TOpts,
                           LOpts, std::move(OS), CGOpts.SampleProfileFile,
-                          Action);
+                          CGOpts.ProfileRemappingFile, Action);
         return;
       }
       // Distributed indexing detected that nothing from the module is needed

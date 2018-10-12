@@ -89,21 +89,49 @@ public:
   }
 };
 
+/// Represents a Loc field that points to itself.
+class CyclicLocField final : public FieldNode {
+
+public:
+  CyclicLocField(const FieldRegion *FR) : FieldNode(FR) {}
+
+  virtual void printNoteMsg(llvm::raw_ostream &Out) const override {
+    Out << "object references itself ";
+  }
+
+  virtual void printPrefix(llvm::raw_ostream &Out) const override {}
+
+  virtual void printNode(llvm::raw_ostream &Out) const override {
+    Out << getVariableName(getDecl());
+  }
+
+  virtual void printSeparator(llvm::raw_ostream &Out) const override {
+    llvm_unreachable("CyclicLocField objects must be the last node of the "
+                     "fieldchain!");
+  }
+};
+
 } // end of anonymous namespace
 
 // Utility function declarations.
 
-/// Returns whether \p T can be (transitively) dereferenced to a void pointer
-/// type (void*, void**, ...).
-static bool isVoidPointer(QualType T);
-
-using DereferenceInfo = std::pair<const TypedValueRegion *, bool>;
+struct DereferenceInfo {
+  const TypedValueRegion *R;
+  const bool NeedsCastBack;
+  const bool IsCyclic;
+  DereferenceInfo(const TypedValueRegion *R, bool NCB, bool IC)
+      : R(R), NeedsCastBack(NCB), IsCyclic(IC) {}
+};
 
 /// Dereferences \p FR and returns with the pointee's region, and whether it
 /// needs to be casted back to it's location type. If for whatever reason
 /// dereferencing fails, returns with None.
 static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
                                                    const FieldRegion *FR);
+
+/// Returns whether \p T can be (transitively) dereferenced to a void pointer
+/// type (void*, void**, ...).
+static bool isVoidPointer(QualType T);
 
 //===----------------------------------------------------------------------===//
 //                   Methods for FindUninitializedFields.
@@ -141,8 +169,11 @@ bool FindUninitializedFields::isDereferencableUninit(
     return false;
   }
 
-  const TypedValueRegion *R = DerefInfo->first;
-  const bool NeedsCastBack = DerefInfo->second;
+  if (DerefInfo->IsCyclic)
+    return addFieldToUninits(LocalChain.add(CyclicLocField(FR)));
+
+  const TypedValueRegion *R = DerefInfo->R;
+  const bool NeedsCastBack = DerefInfo->NeedsCastBack;
 
   QualType DynT = R->getLocationType();
   QualType PointeeT = DynT->getPointeeType();
@@ -189,15 +220,6 @@ bool FindUninitializedFields::isDereferencableUninit(
 //                           Utility functions.
 //===----------------------------------------------------------------------===//
 
-static bool isVoidPointer(QualType T) {
-  while (!T.isNull()) {
-    if (T->isVoidPointerType())
-      return true;
-    T = T->getPointeeType();
-  }
-  return false;
-}
-
 static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
                                                    const FieldRegion *FR) {
 
@@ -229,9 +251,8 @@ static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
       return None;
 
     // We found a cyclic pointer, like int *ptr = (int *)&ptr.
-    // TODO: Should we report these fields too?
     if (!VisitedRegions.insert(R).second)
-      return None;
+      return DereferenceInfo{R, NeedsCastBack, /*IsCyclic*/ true};
 
     DynT = R->getLocationType();
     // In order to ensure that this loop terminates, we're also checking the
@@ -248,5 +269,14 @@ static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
     R = R->getSuperRegion()->getAs<TypedValueRegion>();
   }
 
-  return std::make_pair(R, NeedsCastBack);
+  return DereferenceInfo{R, NeedsCastBack, /*IsCyclic*/ false};
+}
+
+static bool isVoidPointer(QualType T) {
+  while (!T.isNull()) {
+    if (T->isVoidPointerType())
+      return true;
+    T = T->getPointeeType();
+  }
+  return false;
 }

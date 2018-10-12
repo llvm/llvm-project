@@ -735,6 +735,11 @@ def fprofile_instr_use : Flag<["-"], "fprofile-instr-use">, Group<f_Group>,
 def fprofile_instr_use_EQ : Joined<["-"], "fprofile-instr-use=">,
     Group<f_Group>, Flags<[CoreOption]>,
     HelpText<"Use instrumentation data for profile-guided optimization">;
+def fprofile_remapping_file_EQ : Joined<["-"], "fprofile-remapping-file=">,
+    Group<f_Group>, Flags<[CC1Option, CoreOption]>, MetaVarName<"<file>">,
+    HelpText<"Use the remappings described in <file> to match the profile data against names in the program">;
+def fprofile_remapping_file : Separate<["-"], "fprofile-remapping-file">,
+    Group<f_Group>, Flags<[CoreOption]>, Alias<fprofile_remapping_file_EQ>;
 def fcoverage_mapping : Flag<["-"], "fcoverage-mapping">,
     Group<f_Group>, Flags<[CC1Option, CoreOption]>,
     HelpText<"Generate coverage mapping to enable code coverage analysis">;

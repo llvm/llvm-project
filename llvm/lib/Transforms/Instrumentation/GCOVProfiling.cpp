@@ -570,6 +570,12 @@ void GCOVProfiler::emitProfileNotes() {
                                                 Options.ExitBlockBeforeBody));
       GCOVFunction &Func = *Funcs.back();
 
+      // Add the function line number to the lines of the entry block
+      // to have a counter for the function definition.
+      Func.getBlock(&EntryBlock)
+          .getFile(SP->getFilename())
+          .addLine(SP->getLine());
+
       for (auto &BB : F) {
         GCOVBlock &Block = Func.getBlock(&BB);
         TerminatorInst *TI = BB.getTerminator();

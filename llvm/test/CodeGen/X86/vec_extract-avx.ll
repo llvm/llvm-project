@@ -171,7 +171,9 @@ define void @legal_vzmovl_2f32_8f32(<2 x float>* %in, <8 x float>* %out) {
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X32-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X32-NEXT:    vmovaps %ymm0, (%eax)
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl

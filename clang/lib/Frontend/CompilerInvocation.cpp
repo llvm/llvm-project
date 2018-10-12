@@ -657,6 +657,13 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       Args.getLastArgValue(OPT_fprofile_instrument_use_path_EQ);
   if (!Opts.ProfileInstrumentUsePath.empty())
     setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath);
+  Opts.ProfileRemappingFile =
+      Args.getLastArgValue(OPT_fprofile_remapping_file_EQ);
+  if (!Opts.ProfileRemappingFile.empty() && !Opts.ExperimentalNewPassManager) {
+    Diags.Report(diag::err_drv_argument_only_allowed_with)
+      << Args.getLastArg(OPT_fprofile_remapping_file_EQ)->getAsString(Args)
+      << "-fexperimental-new-pass-manager";
+  }
 
   Opts.CoverageMapping =
       Args.hasFlag(OPT_fcoverage_mapping, OPT_fno_coverage_mapping, false);

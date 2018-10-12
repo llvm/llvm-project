@@ -96,6 +96,13 @@ static cl::opt<std::string> SampleProfileFile(
     "sample-profile-file", cl::init(""), cl::value_desc("filename"),
     cl::desc("Profile file loaded by -sample-profile"), cl::Hidden);
 
+// The named file contains a set of transformations that may have been applied
+// to the symbol names between the program from which the sample data was
+// collected and the current program's symbols.
+static cl::opt<std::string> SampleProfileRemappingFile(
+    "sample-profile-remapping-file", cl::init(""), cl::value_desc("filename"),
+    cl::desc("Profile remapping file loaded by -sample-profile"), cl::Hidden);
+
 static cl::opt<unsigned> SampleProfileMaxPropagateIterations(
     "sample-profile-max-propagate-iterations", cl::init(100),
     cl::desc("Maximum number of iterations to go through when propagating "
@@ -183,12 +190,12 @@ private:
 class SampleProfileLoader {
 public:
   SampleProfileLoader(
-      StringRef Name, bool IsThinLTOPreLink,
+      StringRef Name, StringRef RemapName, bool IsThinLTOPreLink,
       std::function<AssumptionCache &(Function &)> GetAssumptionCache,
       std::function<TargetTransformInfo &(Function &)> GetTargetTransformInfo)
       : GetAC(std::move(GetAssumptionCache)),
         GetTTI(std::move(GetTargetTransformInfo)), Filename(Name),
-        IsThinLTOPreLink(IsThinLTOPreLink) {}
+        RemappingFilename(RemapName), IsThinLTOPreLink(IsThinLTOPreLink) {}
 
   bool doInitialization(Module &M);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM,
@@ -282,6 +289,9 @@ protected:
   /// Name of the profile file to load.
   std::string Filename;
 
+  /// Name of the profile remapping file to load.
+  std::string RemappingFilename;
+
   /// Flag indicating whether the profile input loaded successfully.
   bool ProfileIsValid = false;
 
@@ -311,13 +321,14 @@ public:
 
   SampleProfileLoaderLegacyPass(StringRef Name = SampleProfileFile,
                                 bool IsThinLTOPreLink = false)
-      : ModulePass(ID), SampleLoader(Name, IsThinLTOPreLink,
-                                     [&](Function &F) -> AssumptionCache & {
-                                       return ACT->getAssumptionCache(F);
-                                     },
-                                     [&](Function &F) -> TargetTransformInfo & {
-                                       return TTIWP->getTTI(F);
-                                     }) {
+      : ModulePass(ID),
+        SampleLoader(Name, SampleProfileRemappingFile, IsThinLTOPreLink,
+                     [&](Function &F) -> AssumptionCache & {
+                       return ACT->getAssumptionCache(F);
+                     },
+                     [&](Function &F) -> TargetTransformInfo & {
+                       return TTIWP->getTTI(F);
+                     }) {
     initializeSampleProfileLoaderLegacyPassPass(
         *PassRegistry::getPassRegistry());
   }
@@ -1515,11 +1526,26 @@ bool SampleProfileLoader::doInitialization(Module &M) {
   Reader = std::move(ReaderOrErr.get());
   Reader->collectFuncsToUse(M);
   ProfileIsValid = (Reader->read() == sampleprof_error::success);
+
+  if (!RemappingFilename.empty()) {
+    // Apply profile remappings to the loaded profile data if requested.
+    // For now, we only support remapping symbols encoded using the Itanium
+    // C++ ABI's name mangling scheme.
+    ReaderOrErr = SampleProfileReaderItaniumRemapper::create(
+        RemappingFilename, Ctx, std::move(Reader));
+    if (std::error_code EC = ReaderOrErr.getError()) {
+      std::string Msg = "Could not open profile remapping file: " + EC.message();
+      Ctx.diagnose(DiagnosticInfoSampleProfile(Filename, Msg));
+      return false;
+    }
+    Reader = std::move(ReaderOrErr.get());
+    ProfileIsValid = (Reader->read() == sampleprof_error::success);
+  }
   return true;
 }
 
 ModulePass *llvm::createSampleProfileLoaderPass() {
-  return new SampleProfileLoaderLegacyPass(SampleProfileFile);
+  return new SampleProfileLoaderLegacyPass();
 }
 
 ModulePass *llvm::createSampleProfileLoaderPass(StringRef Name) {
@@ -1612,6 +1638,8 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
 
   SampleProfileLoader SampleLoader(
       ProfileFileName.empty() ? SampleProfileFile : ProfileFileName,
+      ProfileRemappingFileName.empty() ? SampleProfileRemappingFile
+                                       : ProfileRemappingFileName,
       IsThinLTOPreLink, GetAssumptionCache, GetTTI);
 
   SampleLoader.doInitialization(M);

@@ -50,7 +50,7 @@ struct DebugAttachContext {
   lldb::pid_t m_pid;
   ProcessAttachInfo m_attach_info;
 };
-}
+} // namespace
 
 DebuggerThread::DebuggerThread(DebugDelegateSP debug_delegate)
     : m_debug_delegate(debug_delegate), m_pid_to_detach(0),
@@ -191,7 +191,8 @@ Status DebuggerThread::StopDebugging(bool terminate) {
                handle, pid, terminate_suceeded);
     } else {
       LLDB_LOG(log,
-               "NOT calling TerminateProcess because the inferior is not valid ({0}, 0) (inferior={1})",
+               "NOT calling TerminateProcess because the inferior is not valid "
+               "({0}, 0) (inferior={1})",
                handle, pid);
     }
   }
@@ -267,6 +268,8 @@ void DebuggerThread::DebugLoop() {
     if (wait_result) {
       DWORD continue_status = DBG_CONTINUE;
       switch (dbe.dwDebugEventCode) {
+      default:
+        llvm_unreachable("Unhandle debug event code!");
       case EXCEPTION_DEBUG_EVENT: {
         ExceptionResult status =
             HandleExceptionEvent(dbe.u.Exception, dbe.dwThreadId);
@@ -330,7 +333,7 @@ void DebuggerThread::DebugLoop() {
   FreeProcessHandles();
 
   LLDB_LOG(log, "WaitForDebugEvent loop completed, exiting.");
-  SetEvent(m_debugging_ended_event);
+  ::SetEvent(m_debugging_ended_event);
 }
 
 ExceptionResult
@@ -381,7 +384,7 @@ DebuggerThread::HandleCreateThreadEvent(const CREATE_THREAD_DEBUG_INFO &info,
                                         DWORD thread_id) {
   Log *log =
       ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_EVENT | WINDOWS_LOG_THREAD);
-  LLDB_LOG(log, "Thread {0:x} spawned in process {1}", thread_id,
+  LLDB_LOG(log, "Thread {0} spawned in process {1}", thread_id,
            m_process.GetProcessId());
   HostThread thread(info.hThread);
   thread.GetNativeThread().SetOwnsHandle(false);
@@ -439,7 +442,6 @@ DebuggerThread::HandleExitProcessEvent(const EXIT_PROCESS_DEBUG_INFO &info,
 
   m_debug_delegate->OnExitProcess(info.dwExitCode);
 
-  FreeProcessHandles();
   return DBG_CONTINUE;
 }
 

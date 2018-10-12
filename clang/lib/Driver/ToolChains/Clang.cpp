@@ -4355,6 +4355,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     else
       A->render(Args, CmdArgs);
   }
+  Args.AddLastArg(CmdArgs, options::OPT_fprofile_remapping_file_EQ);
 
   RenderBuiltinOptions(TC, RawTriple, Args, CmdArgs);
 

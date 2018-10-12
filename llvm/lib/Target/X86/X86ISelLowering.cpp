@@ -902,6 +902,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     for (MVT VT : MVT::fp_vector_valuetypes())
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v2f32, Legal);
 
+    // We want to legalize this to an f64 load rather than an i64 load on
+    // 64-bit targets and two 32-bit loads on a 32-bit target.
+    setOperationAction(ISD::LOAD,               MVT::v2f32, Custom);
+
     setOperationAction(ISD::BITCAST,            MVT::v2i32, Custom);
     setOperationAction(ISD::BITCAST,            MVT::v4i16, Custom);
     setOperationAction(ISD::BITCAST,            MVT::v8i8,  Custom);
@@ -26419,6 +26423,25 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
     break;
+  }
+  case ISD::LOAD: {
+    // Use an f64 load and a scalar_to_vector for v2f32 loads. This avoids
+    // scalarizing in 32-bit mode. In 64-bit mode this avoids a int->fp cast
+    // since type legalization will try to use an i64 load.
+    assert(N->getValueType(0) == MVT::v2f32 && "Unexpected VT");
+    if (!ISD::isNON_EXTLoad(N))
+      return;
+    auto *Ld = cast<LoadSDNode>(N);
+    SDValue Res = DAG.getLoad(MVT::f64, dl, Ld->getChain(), Ld->getBasePtr(),
+                              Ld->getPointerInfo(),
+                              Ld->getAlignment(),
+                              Ld->getMemOperand()->getFlags());
+    SDValue Chain = Res.getValue(1);
+    Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2f64, Res);
+    Res = DAG.getBitcast(MVT::v4f32, Res);
+    Results.push_back(Res);
+    Results.push_back(Chain);
+    return;
   }
   }
 }

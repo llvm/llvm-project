@@ -1,4 +1,4 @@
-// RUN: %clang -fsanitize=implicit-integer-truncation %s -o %t && %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang -fsanitize=implicit-unsigned-integer-truncation %s -o %t && %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK
 
 #include <stdint.h>
 

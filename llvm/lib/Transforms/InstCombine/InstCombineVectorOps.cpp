@@ -1477,33 +1477,6 @@ static Instruction *narrowVectorSelect(ShuffleVectorInst &Shuf,
   return SelectInst::Create(NarrowCond, NarrowX, NarrowY);
 }
 
-/// Try to combine 2 shuffles into 1 shuffle by concatenating a shuffle mask.
-static Instruction *foldIdentityExtractShuffle(ShuffleVectorInst &Shuf) {
-  Value *Op0 = Shuf.getOperand(0), *Op1 = Shuf.getOperand(1);
-  if (!Shuf.isIdentityWithExtract() || !isa<UndefValue>(Op1))
-    return nullptr;
-
-  Value *X, *Y;
-  Constant *Mask;
-  if (!match(Op0, m_ShuffleVector(m_Value(X), m_Value(Y), m_Constant(Mask))))
-    return nullptr;
-
-  // We are extracting a subvector from a shuffle. Remove excess elements from
-  // the 1st shuffle mask to eliminate the extract.
-  //   shuf (shuf X, Y, <C0, C1, C2, C3>), undef, <0, undef, 2> -->
-  //   shuf X, Y, <C0, undef, C2>
-  unsigned NumElts = Shuf.getType()->getVectorNumElements();
-  SmallVector<Constant *, 16> NewMask(NumElts);
-  for (unsigned i = 0; i != NumElts; ++i) {
-    // If the extracting shuffle has an undef mask element, it transfers to the
-    // new shuffle mask. Otherwise, copy the original mask element.
-    Constant *ExtractMaskElt = Shuf.getMask()->getAggregateElement(i);
-    Constant *MaskElt = Mask->getAggregateElement(i);
-    NewMask[i] = isa<UndefValue>(ExtractMaskElt) ? ExtractMaskElt : MaskElt;
-  }
-  return new ShuffleVectorInst(X, Y, ConstantVector::get(NewMask));
-}
-
 Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   Value *LHS = SVI.getOperand(0);
   Value *RHS = SVI.getOperand(1);
@@ -1525,9 +1498,6 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
       return replaceInstUsesWith(SVI, V);
     return &SVI;
   }
-
-  if (Instruction *I = foldIdentityExtractShuffle(SVI))
-    return I;
 
   SmallVector<int, 16> Mask = SVI.getShuffleMask();
   Type *Int32Ty = Type::getInt32Ty(SVI.getContext());

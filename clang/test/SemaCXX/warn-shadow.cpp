@@ -222,3 +222,6 @@ void f(int a) {
   };
 }
 }
+
+int PR24718;
+enum class X { PR24718 }; // Ok, not shadowing
