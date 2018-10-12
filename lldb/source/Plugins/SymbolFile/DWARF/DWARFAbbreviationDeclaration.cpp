@@ -41,9 +41,13 @@ bool DWARFAbbreviationDeclaration::Extract(const DWARFDataExtractor &data,
     while (data.ValidOffset(*offset_ptr)) {
       dw_attr_t attr = data.GetULEB128(offset_ptr);
       dw_form_t form = data.GetULEB128(offset_ptr);
+      DWARFFormValue::ValueType val;
+
+      if (form == DW_FORM_implicit_const)
+        val.value.sval = data.GetULEB128(offset_ptr);
 
       if (attr && form)
-        m_attributes.push_back(DWARFAttribute(attr, form));
+        m_attributes.push_back(DWARFAttribute(attr, form, val));
       else
         break;
     }
