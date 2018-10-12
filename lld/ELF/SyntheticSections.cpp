@@ -1724,6 +1724,11 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
     }
   }
 
+  // Don't allow the section to shrink; otherwise the size of the section can
+  // oscillate infinitely.
+  if (RelocData.size() < OldSize)
+    RelocData.append(OldSize - RelocData.size(), 0);
+
   // Returns whether the section size changed. We need to keep recomputing both
   // section layout and the contents of this section until the size converges
   // because changing this section's size can affect section layout, which in
