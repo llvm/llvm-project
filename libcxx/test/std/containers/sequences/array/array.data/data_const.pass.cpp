@@ -20,6 +20,10 @@
 // Disable the missing braces warning for this reason.
 #include "disable_missing_braces_warning.h"
 
+struct NoDefault {
+  NoDefault(int) {}
+};
+
 int main()
 {
     {
@@ -39,9 +43,6 @@ int main()
         (void)p; // to placate scan-build
     }
     {
-      struct NoDefault {
-        NoDefault(int) {}
-      };
       typedef NoDefault T;
       typedef std::array<T, 0> C;
       const C c = {};
