@@ -488,8 +488,6 @@ public:
   // If the format is SPF_Compact_Binary, the name is already a GUID and we
   // don't want to return the GUID of GUID.
   static uint64_t getGUID(StringRef Name) {
-    if (Format == SPF_Compact_Binary)
-      errs() << Name << '\n';
     return (Format == SPF_Compact_Binary) ? std::stoull(Name.data())
                                           : Function::getGUID(Name);
   }

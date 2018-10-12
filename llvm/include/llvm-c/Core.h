@@ -930,6 +930,44 @@ void LLVMAddNamedMetadataOperand(LLVMModuleRef M, const char *Name,
                                  LLVMValueRef Val);
 
 /**
+ * Return the directory of the debug location for this value, which must be
+ * an llvm::Instruction, llvm::GlobalVariable, or llvm::Function.
+ *
+ * @see llvm::Instruction::getDebugLoc()
+ * @see llvm::GlobalVariable::getDebugInfo()
+ * @see llvm::Function::getSubprogram()
+ */
+const char *LLVMGetDebugLocDirectory(LLVMValueRef Val, unsigned *Length);
+
+/**
+ * Return the filename of the debug location for this value, which must be
+ * an llvm::Instruction, llvm::GlobalVariable, or llvm::Function.
+ *
+ * @see llvm::Instruction::getDebugLoc()
+ * @see llvm::GlobalVariable::getDebugInfo()
+ * @see llvm::Function::getSubprogram()
+ */
+const char *LLVMGetDebugLocFilename(LLVMValueRef Val, unsigned *Length);
+
+/**
+ * Return the line number of the debug location for this value, which must be
+ * an llvm::Instruction, llvm::GlobalVariable, or llvm::Function.
+ *
+ * @see llvm::Instruction::getDebugLoc()
+ * @see llvm::GlobalVariable::getDebugInfo()
+ * @see llvm::Function::getSubprogram()
+ */
+unsigned LLVMGetDebugLocLine(LLVMValueRef Val);
+
+/**
+ * Return the column number of the debug location for this value, which must be
+ * an llvm::Instruction.
+ *
+ * @see llvm::Instruction::getDebugLoc()
+ */
+unsigned LLVMGetDebugLocColumn(LLVMValueRef Val);
+
+/**
  * Add a function to a module under a specified name.
  *
  * @see llvm::Function::Create()

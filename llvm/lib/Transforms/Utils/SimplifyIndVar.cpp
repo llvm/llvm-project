@@ -108,6 +108,7 @@ Value *SimplifyIndvar::foldIVUser(Instruction *UseInst, Instruction *IVOperand) 
   Value *IVSrc = nullptr;
   const unsigned OperIdx = 0;
   const SCEV *FoldedExpr = nullptr;
+  bool MustDropExactFlag = false;
   switch (UseInst->getOpcode()) {
   default:
     return nullptr;
@@ -140,6 +141,11 @@ Value *SimplifyIndvar::foldIVUser(Instruction *UseInst, Instruction *IVOperand) 
                            APInt::getOneBitSet(BitWidth, D->getZExtValue()));
     }
     FoldedExpr = SE->getUDivExpr(SE->getSCEV(IVSrc), SE->getSCEV(D));
+    // We might have 'exact' flag set at this point which will no longer be
+    // correct after we make the replacement.
+    if (UseInst->isExact() &&
+        SE->getSCEV(IVSrc) != SE->getMulExpr(FoldedExpr, SE->getSCEV(D)))
+      MustDropExactFlag = true;
   }
   // We have something that might fold it's operand. Compare SCEVs.
   if (!SE->isSCEVable(UseInst->getType()))
@@ -154,6 +160,9 @@ Value *SimplifyIndvar::foldIVUser(Instruction *UseInst, Instruction *IVOperand) 
 
   UseInst->setOperand(OperIdx, IVSrc);
   assert(SE->getSCEV(UseInst) == FoldedExpr && "bad SCEV with folded oper");
+
+  if (MustDropExactFlag)
+    UseInst->dropPoisonGeneratingFlags();
 
   ++NumElimOperand;
   Changed = true;

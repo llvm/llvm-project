@@ -139,13 +139,6 @@ template <class ELFT> void SymbolTable::addCombinedLTOObject() {
   }
 }
 
-Defined *SymbolTable::addAbsolute(StringRef Name, uint8_t Visibility,
-                                  uint8_t Binding) {
-  Symbol *Sym =
-      addRegular(Name, Visibility, STT_NOTYPE, 0, 0, Binding, nullptr, nullptr);
-  return cast<Defined>(Sym);
-}
-
 // Set a flag for --trace-symbol so that we can print out a log message
 // if a new symbol with the same name is inserted into the symbol table.
 void SymbolTable::trace(StringRef Name) {
@@ -178,7 +171,7 @@ static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
 }
 
 // Find an existing symbol or create and insert a new one.
-std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
+std::pair<Symbol *, bool> SymbolTable::insertName(StringRef Name) {
   // <name>@@<version> means the symbol is the default version. In that
   // case <name>@@<version> will be used to resolve references to <name>.
   //
@@ -222,7 +215,7 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name, uint8_t Type,
                                               InputFile *File) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
+  std::tie(S, WasInserted) = insertName(Name);
 
   // Merge in the new symbol's visibility.
   S->Visibility = getMinVisibility(S->Visibility, Visibility);
@@ -239,12 +232,6 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name, uint8_t Type,
           toString(S->File) + "\n>>> defined in " + toString(File));
 
   return {S, WasInserted};
-}
-
-template <class ELFT> Symbol *SymbolTable::addUndefined(StringRef Name) {
-  return addUndefined<ELFT>(Name, STB_GLOBAL, STV_DEFAULT,
-                            /*Type*/ 0,
-                            /*CanOmitFromDynSym*/ false, /*File*/ nullptr);
 }
 
 static uint8_t getVisibility(uint8_t StOther) { return StOther & 3; }
@@ -477,7 +464,7 @@ static void reportDuplicate(Symbol *Sym, InputFile *NewFile,
   error(Msg);
 }
 
-Symbol *SymbolTable::addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
+Symbol *SymbolTable::addDefined(StringRef Name, uint8_t StOther, uint8_t Type,
                                 uint64_t Value, uint64_t Size, uint8_t Binding,
                                 SectionBase *Section, InputFile *File) {
   Symbol *S;
@@ -557,7 +544,7 @@ void SymbolTable::addLazyArchive(StringRef Name, ArchiveFile &File,
                                  const object::Archive::Symbol Sym) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
+  std::tie(S, WasInserted) = insertName(Name);
   if (WasInserted) {
     replaceSymbol<LazyArchive>(S, File, STT_NOTYPE, Sym);
     return;
@@ -581,7 +568,7 @@ template <class ELFT>
 void SymbolTable::addLazyObject(StringRef Name, LazyObjFile &File) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name);
+  std::tie(S, WasInserted) = insertName(Name);
   if (WasInserted) {
     replaceSymbol<LazyObject>(S, File, STT_NOTYPE, Name);
     return;
@@ -778,11 +765,6 @@ template void SymbolTable::addFile<ELF32LE>(InputFile *);
 template void SymbolTable::addFile<ELF32BE>(InputFile *);
 template void SymbolTable::addFile<ELF64LE>(InputFile *);
 template void SymbolTable::addFile<ELF64BE>(InputFile *);
-
-template Symbol *SymbolTable::addUndefined<ELF32LE>(StringRef);
-template Symbol *SymbolTable::addUndefined<ELF32BE>(StringRef);
-template Symbol *SymbolTable::addUndefined<ELF64LE>(StringRef);
-template Symbol *SymbolTable::addUndefined<ELF64BE>(StringRef);
 
 template Symbol *SymbolTable::addUndefined<ELF32LE>(StringRef, uint8_t, uint8_t,
                                                     uint8_t, bool, InputFile *);

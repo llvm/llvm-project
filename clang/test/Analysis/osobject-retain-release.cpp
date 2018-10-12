@@ -1,17 +1,45 @@
 // RUN: %clang_analyze_cc1 -analyze -analyzer-checker=core,osx.cocoa.RetainCount -analyzer-config osx.cocoa.RetainCount:CheckOSObject=true -analyzer-output=text -verify %s
 
+struct OSMetaClass;
+
+#define OSTypeID(type)   (type::metaClass)
+
+#define OSDynamicCast(type, inst)   \
+    ((type *) OSMetaClassBase::safeMetaCast((inst), OSTypeID(type)))
+
 struct OSObject {
   virtual void retain();
   virtual void release();
-
   virtual ~OSObject(){}
+
+  static OSObject *generateObject(int);
+
+  static const OSMetaClass * const metaClass;
 };
 
 struct OSArray : public OSObject {
   unsigned int getCount();
 
   static OSArray *withCapacity(unsigned int capacity);
+
+  static const OSMetaClass * const metaClass;
 };
+
+struct OSMetaClassBase {
+  static OSObject *safeMetaCast(const OSObject *inst, const OSMetaClass *meta);
+};
+
+void check_dynamic_cast() {
+  OSArray *arr = OSDynamicCast(OSArray, OSObject::generateObject(1));
+  arr->release();
+}
+
+void check_dynamic_cast_null_check() {
+  OSArray *arr = OSDynamicCast(OSArray, OSObject::generateObject(1));
+  if (!arr)
+    return;
+  arr->release();
+}
 
 void use_after_release() {
   OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to function 'withCapacity' returns an OSObject of type struct OSArray * with a +1 retain count}}

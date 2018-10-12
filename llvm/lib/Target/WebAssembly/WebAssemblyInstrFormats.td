@@ -30,6 +30,7 @@ class NI<dag oops, dag iops, list<dag> pattern, bit stack, string asmstr = "",
   dag OutOperandList = oops;
   dag InOperandList  = iops;
   let Pattern        = pattern;
+  let Defs           = [ARGUMENTS];
 }
 
 // Generates both register and stack based versions of one actual instruction.

@@ -4655,7 +4655,7 @@ LoopVectorizationCostModel::getSmallestAndWidestTypes() {
   // For each block.
   for (BasicBlock *BB : TheLoop->blocks()) {
     // For each instruction in the loop.
-    for (Instruction &I : *BB) {
+    for (Instruction &I : BB->instructionsWithoutDebug()) {
       Type *T = I.getType();
 
       // Skip ignored values.
@@ -4882,7 +4882,7 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<unsigned> VFs) {
   using IntervalMap = DenseMap<Instruction *, unsigned>;
 
   // Maps instruction to its index.
-  DenseMap<unsigned, Instruction *> IdxToInstr;
+  SmallVector<Instruction *, 64> IdxToInstr;
   // Marks the end of each interval.
   IntervalMap EndPoint;
   // Saves the list of instruction indices that are used in the loop.
@@ -4891,10 +4891,9 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<unsigned> VFs) {
   // defined outside the loop, such as arguments and constants.
   SmallPtrSet<Value *, 8> LoopInvariants;
 
-  unsigned Index = 0;
   for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO())) {
-    for (Instruction &I : *BB) {
-      IdxToInstr[Index++] = &I;
+    for (Instruction &I : BB->instructionsWithoutDebug()) {
+      IdxToInstr.push_back(&I);
 
       // Save the end location of each USE.
       for (Value *U : I.operands()) {
@@ -4911,7 +4910,7 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<unsigned> VFs) {
         }
 
         // Overwrite previous end points.
-        EndPoint[Instr] = Index;
+        EndPoint[Instr] = IdxToInstr.size();
         Ends.insert(Instr);
       }
     }
@@ -4948,7 +4947,7 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<unsigned> VFs) {
     return std::max<unsigned>(1, VF * TypeSize / WidestRegister);
   };
 
-  for (unsigned int i = 0; i < Index; ++i) {
+  for (unsigned int i = 0, s = IdxToInstr.size(); i < s; ++i) {
     Instruction *I = IdxToInstr[i];
 
     // Remove all of the instructions that end at this location.

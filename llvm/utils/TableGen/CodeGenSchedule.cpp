@@ -1763,6 +1763,11 @@ void CodeGenSchedModels::collectRegisterFiles() {
     // Now set the number of physical registers as well as the cost of registers
     // in each register class.
     CGRF.NumPhysRegs = RF->getValueAsInt("NumPhysRegs");
+    if (!CGRF.NumPhysRegs) {
+      PrintFatalError(RF->getLoc(),
+                      "Invalid RegisterFile with zero physical registers");
+    }
+
     RecVec RegisterClasses = RF->getValueAsListOfDefs("RegClasses");
     std::vector<int64_t> RegisterCosts = RF->getValueAsListOfInts("RegCosts");
     for (unsigned I = 0, E = RegisterClasses.size(); I < E; ++I) {

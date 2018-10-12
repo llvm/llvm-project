@@ -1,3 +1,8 @@
+import os
+from clang.cindex import Config
+if 'CLANG_LIBRARY_PATH' in os.environ:
+    Config.set_library_path(os.environ['CLANG_LIBRARY_PATH'])
+
 import clang.cindex
 from clang.cindex import ExceptionSpecificationKind
 from .util import get_tu

@@ -95,12 +95,18 @@ private:
     if (GV.hasPrivateLinkage())
       return;
 
-    // Conservatively append user-supplied runtime library functions to
-    // llvm.compiler.used.  These could be internalized and deleted by
-    // optimizations like -globalopt, causing problems when later optimizations
-    // add new library calls (e.g., llvm.memset => memset and printf => puts).
+    // Conservatively append user-supplied runtime library functions (supplied
+    // either directly, or via a function alias) to llvm.compiler.used.  These
+    // could be internalized and deleted by optimizations like -globalopt,
+    // causing problems when later optimizations add new library calls (e.g.,
+    // llvm.memset => memset and printf => puts).
     // Leave it to the linker to remove any dead code (e.g. with -dead_strip).
-    if (isa<Function>(GV) && Libcalls.count(GV.getName())) {
+    GlobalValue *FuncAliasee = nullptr;
+    if (isa<GlobalAlias>(GV)) {
+      auto *A = cast<GlobalAlias>(&GV);
+      FuncAliasee = dyn_cast<Function>(A->getAliasee());
+    }
+    if ((isa<Function>(GV) || FuncAliasee) && Libcalls.count(GV.getName())) {
       LLVMUsed.push_back(&GV);
       return;
     }

@@ -1493,9 +1493,12 @@ void RelocationBaseSection::addReloc(const DynamicReloc &Reloc) {
 void RelocationBaseSection::finalizeContents() {
   // If all relocations are R_*_RELATIVE they don't refer to any
   // dynamic symbol and we don't need a dynamic symbol table. If that
-  // is the case, just use 0 as the link.
-  getParent()->Link =
-      In.DynSymTab ? In.DynSymTab->getParent()->SectionIndex : 0;
+  // is the case, just use the index of the regular symbol table section.
+  getParent()->Link = In.DynSymTab ? In.DynSymTab->getParent()->SectionIndex
+                                   : In.SymTab->getParent()->SectionIndex;
+
+  if (In.RelaIplt == this || In.RelaPlt == this)
+    getParent()->Info = In.GotPlt->getParent()->SectionIndex;
 }
 
 RelrBaseSection::RelrBaseSection()
@@ -1720,6 +1723,11 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
       }
     }
   }
+
+  // Don't allow the section to shrink; otherwise the size of the section can
+  // oscillate infinitely.
+  if (RelocData.size() < OldSize)
+    RelocData.append(OldSize - RelocData.size(), 0);
 
   // Returns whether the section size changed. We need to keep recomputing both
   // section layout and the contents of this section until the size converges

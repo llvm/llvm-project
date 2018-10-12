@@ -81,8 +81,8 @@ const char *AMDGCN::Linker::constructLLVMLinkCommand(
     else
       FlushDenormalControlBC = "oclc_daz_opt_off.amdgcn.bc";
 
-    BCLibs.append({"opencl.amdgcn.bc",
-                   "ocml.amdgcn.bc", "ockl.amdgcn.bc", "irif.amdgcn.bc",
+    BCLibs.append({"hip.amdgcn.bc", "opencl.amdgcn.bc",
+                   "ocml.amdgcn.bc", "ockl.amdgcn.bc",
                    "oclc_finite_only_off.amdgcn.bc",
                    FlushDenormalControlBC,
                    "oclc_correctly_rounded_sqrt_on.amdgcn.bc",

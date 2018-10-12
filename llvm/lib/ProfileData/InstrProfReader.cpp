@@ -14,6 +14,7 @@
 
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
@@ -23,6 +24,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SymbolRemappingReader.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include <algorithm>
 #include <cctype>
@@ -88,16 +90,29 @@ InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
 }
 
 Expected<std::unique_ptr<IndexedInstrProfReader>>
-IndexedInstrProfReader::create(const Twine &Path) {
+IndexedInstrProfReader::create(const Twine &Path, const Twine &RemappingPath) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path);
   if (Error E = BufferOrError.takeError())
     return std::move(E);
-  return IndexedInstrProfReader::create(std::move(BufferOrError.get()));
+
+  // Set up the remapping buffer if requested.
+  std::unique_ptr<MemoryBuffer> RemappingBuffer;
+  std::string RemappingPathStr = RemappingPath.str();
+  if (!RemappingPathStr.empty()) {
+    auto RemappingBufferOrError = setupMemoryBuffer(RemappingPathStr);
+    if (Error E = RemappingBufferOrError.takeError())
+      return std::move(E);
+    RemappingBuffer = std::move(RemappingBufferOrError.get());
+  }
+
+  return IndexedInstrProfReader::create(std::move(BufferOrError.get()),
+                                        std::move(RemappingBuffer));
 }
 
 Expected<std::unique_ptr<IndexedInstrProfReader>>
-IndexedInstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
+IndexedInstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
+                               std::unique_ptr<MemoryBuffer> RemappingBuffer) {
   // Sanity check the buffer.
   if (uint64_t(Buffer->getBufferSize()) > std::numeric_limits<unsigned>::max())
     return make_error<InstrProfError>(instrprof_error::too_large);
@@ -105,7 +120,8 @@ IndexedInstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
   // Create the reader.
   if (!IndexedInstrProfReader::hasFormat(*Buffer))
     return make_error<InstrProfError>(instrprof_error::bad_magic);
-  auto Result = llvm::make_unique<IndexedInstrProfReader>(std::move(Buffer));
+  auto Result = llvm::make_unique<IndexedInstrProfReader>(
+      std::move(Buffer), std::move(RemappingBuffer));
 
   // Initialize the reader and return the result.
   if (Error E = initializeReader(*Result))
@@ -587,6 +603,124 @@ InstrProfReaderIndex<HashTableImpl>::InstrProfReaderIndex(
   RecordIterator = HashTable->data_begin();
 }
 
+namespace {
+/// A remapper that does not apply any remappings.
+class InstrProfReaderNullRemapper : public InstrProfReaderRemapper {
+  InstrProfReaderIndexBase &Underlying;
+
+public:
+  InstrProfReaderNullRemapper(InstrProfReaderIndexBase &Underlying)
+      : Underlying(Underlying) {}
+
+  Error getRecords(StringRef FuncName,
+                   ArrayRef<NamedInstrProfRecord> &Data) override {
+    return Underlying.getRecords(FuncName, Data);
+  }
+};
+}
+
+/// A remapper that applies remappings based on a symbol remapping file.
+template <typename HashTableImpl>
+class llvm::InstrProfReaderItaniumRemapper
+    : public InstrProfReaderRemapper {
+public:
+  InstrProfReaderItaniumRemapper(
+      std::unique_ptr<MemoryBuffer> RemapBuffer,
+      InstrProfReaderIndex<HashTableImpl> &Underlying)
+      : RemapBuffer(std::move(RemapBuffer)), Underlying(Underlying) {
+  }
+
+  /// Extract the original function name from a PGO function name.
+  static StringRef extractName(StringRef Name) {
+    // We can have multiple :-separated pieces; there can be pieces both
+    // before and after the mangled name. Find the first part that starts
+    // with '_Z'; we'll assume that's the mangled name we want.
+    std::pair<StringRef, StringRef> Parts = {StringRef(), Name};
+    while (true) {
+      Parts = Parts.second.split(':');
+      if (Parts.first.startswith("_Z"))
+        return Parts.first;
+      if (Parts.second.empty())
+        return Name;
+    }
+  }
+
+  /// Given a mangled name extracted from a PGO function name, and a new
+  /// form for that mangled name, reconstitute the name.
+  static void reconstituteName(StringRef OrigName, StringRef ExtractedName,
+                               StringRef Replacement,
+                               SmallVectorImpl<char> &Out) {
+    Out.reserve(OrigName.size() + Replacement.size() - ExtractedName.size());
+    Out.insert(Out.end(), OrigName.begin(), ExtractedName.begin());
+    Out.insert(Out.end(), Replacement.begin(), Replacement.end());
+    Out.insert(Out.end(), ExtractedName.end(), OrigName.end());
+  }
+
+  Error populateRemappings() override {
+    if (Error E = Remappings.read(*RemapBuffer))
+      return E;
+    for (StringRef Name : Underlying.HashTable->keys()) {
+      StringRef RealName = extractName(Name);
+      if (auto Key = Remappings.insert(RealName)) {
+        // FIXME: We could theoretically map the same equivalence class to
+        // multiple names in the profile data. If that happens, we should
+        // return NamedInstrProfRecords from all of them.
+        MappedNames.insert({Key, RealName});
+      }
+    }
+    return Error::success();
+  }
+
+  Error getRecords(StringRef FuncName,
+                   ArrayRef<NamedInstrProfRecord> &Data) override {
+    StringRef RealName = extractName(FuncName);
+    if (auto Key = Remappings.lookup(RealName)) {
+      StringRef Remapped = MappedNames.lookup(Key);
+      if (!Remapped.empty()) {
+        if (RealName.begin() == FuncName.begin() &&
+            RealName.end() == FuncName.end())
+          FuncName = Remapped;
+        else {
+          // Try rebuilding the name from the given remapping.
+          SmallString<256> Reconstituted;
+          reconstituteName(FuncName, RealName, Remapped, Reconstituted);
+          Error E = Underlying.getRecords(Reconstituted, Data);
+          if (!E)
+            return E;
+
+          // If we failed because the name doesn't exist, fall back to asking
+          // about the original name.
+          if (Error Unhandled = handleErrors(
+                  std::move(E), [](std::unique_ptr<InstrProfError> Err) {
+                    return Err->get() == instrprof_error::unknown_function
+                               ? Error::success()
+                               : Error(std::move(Err));
+                  }))
+            return Unhandled;
+        }
+      }
+    }
+    return Underlying.getRecords(FuncName, Data);
+  }
+
+private:
+  /// The memory buffer containing the remapping configuration. Remappings
+  /// holds pointers into this buffer.
+  std::unique_ptr<MemoryBuffer> RemapBuffer;
+
+  /// The mangling remapper.
+  SymbolRemappingReader Remappings;
+
+  /// Mapping from mangled name keys to the name used for the key in the
+  /// profile data.
+  /// FIXME: Can we store a location within the on-disk hash table instead of
+  /// redoing lookup?
+  DenseMap<SymbolRemappingReader::Key, StringRef> MappedNames;
+
+  /// The real profile data reader.
+  InstrProfReaderIndex<HashTableImpl> &Underlying;
+};
+
 bool IndexedInstrProfReader::hasFormat(const MemoryBuffer &DataBuffer) {
   using namespace support;
 
@@ -683,10 +817,22 @@ Error IndexedInstrProfReader::readHeader() {
   uint64_t HashOffset = endian::byte_swap<uint64_t, little>(Header->HashOffset);
 
   // The rest of the file is an on disk hash table.
-  InstrProfReaderIndexBase *IndexPtr = nullptr;
-  IndexPtr = new InstrProfReaderIndex<OnDiskHashTableImplV3>(
-      Start + HashOffset, Cur, Start, HashType, FormatVersion);
-  Index.reset(IndexPtr);
+  auto IndexPtr =
+      llvm::make_unique<InstrProfReaderIndex<OnDiskHashTableImplV3>>(
+          Start + HashOffset, Cur, Start, HashType, FormatVersion);
+
+  // Load the remapping table now if requested.
+  if (RemappingBuffer) {
+    Remapper = llvm::make_unique<
+        InstrProfReaderItaniumRemapper<OnDiskHashTableImplV3>>(
+        std::move(RemappingBuffer), *IndexPtr);
+    if (Error E = Remapper->populateRemappings())
+      return E;
+  } else {
+    Remapper = llvm::make_unique<InstrProfReaderNullRemapper>(*IndexPtr);
+  }
+  Index = std::move(IndexPtr);
+
   return success();
 }
 
@@ -707,7 +853,7 @@ Expected<InstrProfRecord>
 IndexedInstrProfReader::getInstrProfRecord(StringRef FuncName,
                                            uint64_t FuncHash) {
   ArrayRef<NamedInstrProfRecord> Data;
-  Error Err = Index->getRecords(FuncName, Data);
+  Error Err = Remapper->getRecords(FuncName, Data);
   if (Err)
     return std::move(Err);
   // Found it. Look for counters with the right hash.

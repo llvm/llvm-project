@@ -23,6 +23,7 @@
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
+#include "sanitizer_common/sanitizer_stacktrace_printer.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
 
 using namespace __sanitizer;
@@ -95,6 +96,21 @@ void PrintAddressDescription(
   Decorator d;
   int num_descriptions_printed = 0;
   uptr untagged_addr = UntagAddr(tagged_addr);
+
+  // Print some very basic information about the address, if it's a heap.
+  HwasanChunkView chunk = FindHeapChunkByAddress(untagged_addr);
+  if (uptr beg = chunk.Beg()) {
+    uptr size = chunk.ActualSize();
+    Printf("%s[%p,%p) is a %s %s heap chunk; "
+           "size: %zd offset: %zd\n%s",
+           d.Location(),
+           beg, beg + size,
+           chunk.FromSmallHeap() ? "small" : "large",
+           chunk.IsAllocated() ? "allocated" : "unallocated",
+           size, untagged_addr - beg,
+           d.Default());
+  }
+
   // Check if this looks like a heap buffer overflow by scanning
   // the shadow left and right and looking for the first adjacent
   // object with a different memory tag. If that tag matches addr_tag,
@@ -155,13 +171,13 @@ void PrintAddressDescription(
       Printf("previously allocated here:\n", t);
       Printf("%s", d.Default());
       GetStackTraceFromId(har.alloc_context_id).Print();
-      t->Announce();
 
       // Print a developer note: the index of this heap object
       // in the thread's deallocation ring buffer.
       Printf("hwasan_dev_note_heap_rb_distance: %zd %zd\n", D,
              flags()->heap_history_size);
 
+      t->Announce();
       num_descriptions_printed++;
     }
 
@@ -179,6 +195,7 @@ void PrintAddressDescription(
                      ? current_stack_allocations
                      : t->stack_allocations();
       uptr frames = Min((uptr)flags()->stack_history_size, sa->size());
+      InternalScopedString frame_desc(GetPageSizeCached() * 2);
       for (uptr i = 0; i < frames; i++) {
         uptr record = (*sa)[i];
         if (!record)
@@ -186,15 +203,23 @@ void PrintAddressDescription(
         uptr sp = (record >> 48) << 4;
         uptr pc_mask = (1ULL << 48) - 1;
         uptr pc = record & pc_mask;
-        uptr fixed_pc = StackTrace::GetNextInstructionPc(pc);
-        StackTrace stack(&fixed_pc, 1);
-        Printf("record: %p pc: %p sp: %p", record, pc, sp);
-        stack.Print();
+        if (SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc)) {
+          frame_desc.append("  sp: 0x%zx pc: %p ", sp, pc);
+          RenderFrame(&frame_desc, "in %f %s:%l\n", 0, frame->info,
+                      common_flags()->symbolize_vs_style,
+                      common_flags()->strip_path_prefix);
+          frame->ClearAll();
+        }
+        Printf("%s", frame_desc.data());
+        frame_desc.clear();
       }
 
       num_descriptions_printed++;
     }
   });
+
+  // Print the remaining threads, as an extra information, 1 line per thread.
+  hwasanThreadList().VisitAllLiveThreads([&](Thread *t) { t->Announce(); });
 
   if (!num_descriptions_printed)
     // We exhausted our possibilities. Bail out.
@@ -237,12 +262,12 @@ static void PrintTagsAroundAddr(tag_t *tag_ptr) {
       "bytes):\n", kShadowAlignment);
 
   const uptr row_len = 16;  // better be power of two.
-  const uptr num_rows = 11;
+  const uptr num_rows = 17;
   tag_t *center_row_beg = reinterpret_cast<tag_t *>(
       RoundDownTo(reinterpret_cast<uptr>(tag_ptr), row_len));
   tag_t *beg_row = center_row_beg - row_len * (num_rows / 2);
   tag_t *end_row = center_row_beg + row_len * (num_rows / 2);
-  InternalScopedString s(GetPageSizeCached());
+  InternalScopedString s(GetPageSizeCached() * 8);
   for (tag_t *row = beg_row; row < end_row; row += row_len) {
     s.append("%s", row == center_row_beg ? "=>" : "  ");
     for (uptr i = 0; i < row_len; i++) {
@@ -251,9 +276,8 @@ static void PrintTagsAroundAddr(tag_t *tag_ptr) {
       s.append("%s", row + i == tag_ptr ? "]" : " ");
     }
     s.append("%s\n", row == center_row_beg ? "<=" : "  ");
-    Printf("%s", s.data());
-    s.clear();
   }
+  Printf("%s", s.data());
 }
 
 void ReportInvalidFree(StackTrace *stack, uptr tagged_addr) {

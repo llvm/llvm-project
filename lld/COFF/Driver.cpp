@@ -1367,6 +1367,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     warn("/machine is not specified. x64 is assumed");
     Config->Machine = AMD64;
   }
+  Config->Wordsize = Config->is64() ? 8 : 4;
 
   // Input files can be Windows resource files (.res files). We use
   // WindowsResource to convert resource files to a regular COFF file,

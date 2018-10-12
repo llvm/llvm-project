@@ -174,7 +174,8 @@ define <8 x i8> @test12a(<8 x i8> %t6, <8 x i8> %t2) {
 
 define <2 x i8> @extract_subvector_of_shuffle(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @extract_subvector_of_shuffle(
-; CHECK-NEXT:    [[EXTRACT_SUBV:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]], <3 x i32> <i32 0, i32 2, i32 undef>
+; CHECK-NEXT:    [[EXTRACT_SUBV:%.*]] = shufflevector <3 x i8> [[SHUF]], <3 x i8> undef, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    ret <2 x i8> [[EXTRACT_SUBV]]
 ;
   %shuf = shufflevector <2 x i8> %x, <2 x i8> %y, <3 x i32> <i32 0, i32 2, i32 0>
@@ -193,7 +194,7 @@ define <4 x i8> @extract_subvector_of_shuffle_extra_use(<2 x i8> %x, <2 x i8> %y
 ; CHECK-LABEL: @extract_subvector_of_shuffle_extra_use(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]], <5 x i32> <i32 undef, i32 2, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    call void @use_v5i8(<5 x i8> [[SHUF]])
-; CHECK-NEXT:    [[EXTRACT_SUBV:%.*]] = shufflevector <2 x i8> [[X]], <2 x i8> [[Y]], <4 x i32> <i32 undef, i32 2, i32 0, i32 undef>
+; CHECK-NEXT:    [[EXTRACT_SUBV:%.*]] = shufflevector <5 x i8> [[SHUF]], <5 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
 ; CHECK-NEXT:    ret <4 x i8> [[EXTRACT_SUBV]]
 ;
   %shuf = shufflevector <2 x i8> %x, <2 x i8> %y, <5 x i32> <i32 undef, i32 2, i32 0, i32 1, i32 0>

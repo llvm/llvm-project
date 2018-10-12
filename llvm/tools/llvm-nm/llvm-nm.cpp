@@ -183,6 +183,8 @@ cl::opt<bool> DyldInfoOnly("dyldinfo-only",
 cl::opt<bool> NoLLVMBitcode("no-llvm-bc",
                             cl::desc("Disable LLVM bitcode reader"));
 
+cl::extrahelp HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
+
 bool PrintAddress = true;
 
 bool MultipleFiles = false;
@@ -1753,12 +1755,14 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
         outs() << "Archive map\n";
         for (; I != E; ++I) {
           Expected<Archive::Child> C = I->getMember();
-          if (!C)
+          if (!C) {
             error(C.takeError(), Filename);
+            break;
+          }
           Expected<StringRef> FileNameOrErr = C->getName();
           if (!FileNameOrErr) {
             error(FileNameOrErr.takeError(), Filename);
-            return;
+            break;
           }
           StringRef SymName = I->getName();
           outs() << SymName << " in " << FileNameOrErr.get() << "\n";

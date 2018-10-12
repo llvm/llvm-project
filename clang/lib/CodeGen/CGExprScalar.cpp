@@ -302,7 +302,9 @@ public:
   /// Known implicit conversion check kinds.
   /// Keep in sync with the enum of the same name in ubsan_handlers.h
   enum ImplicitConversionCheckKind : unsigned char {
-    ICCK_IntegerTruncation = 0,
+    ICCK_IntegerTruncation = 0, // Legacy, was only used by clang 7.
+    ICCK_UnsignedIntegerTruncation = 1,
+    ICCK_SignedIntegerTruncation = 2,
   };
 
   /// Emit a check that an [implicit] truncation of an integer  does not
@@ -944,7 +946,7 @@ void ScalarExprEmitter::EmitFloatConversionCheck(
 void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
                                                    Value *Dst, QualType DstType,
                                                    SourceLocation Loc) {
-  if (!CGF.SanOpts.has(SanitizerKind::ImplicitIntegerTruncation))
+  if (!CGF.SanOpts.hasOneOf(SanitizerKind::ImplicitIntegerTruncation))
     return;
 
   llvm::Type *SrcTy = Src->getType();
@@ -966,13 +968,31 @@ void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
 
   assert(!DstType->isBooleanType() && "we should not get here with booleans.");
 
+  bool SrcSigned = SrcType->isSignedIntegerOrEnumerationType();
+  bool DstSigned = DstType->isSignedIntegerOrEnumerationType();
+
+  // If both (src and dst) types are unsigned, then it's an unsigned truncation.
+  // Else, it is a signed truncation.
+  ImplicitConversionCheckKind Kind;
+  SanitizerMask Mask;
+  if (!SrcSigned && !DstSigned) {
+    Kind = ICCK_UnsignedIntegerTruncation;
+    Mask = SanitizerKind::ImplicitUnsignedIntegerTruncation;
+  } else {
+    Kind = ICCK_SignedIntegerTruncation;
+    Mask = SanitizerKind::ImplicitSignedIntegerTruncation;
+  }
+
+  // Do we care about this type of truncation?
+  if (!CGF.SanOpts.has(Mask))
+    return;
+
   CodeGenFunction::SanitizerScope SanScope(&CGF);
 
   llvm::Value *Check = nullptr;
 
   // 1. Extend the truncated value back to the same width as the Src.
-  bool InputSigned = DstType->isSignedIntegerOrEnumerationType();
-  Check = Builder.CreateIntCast(Dst, SrcTy, InputSigned, "anyext");
+  Check = Builder.CreateIntCast(Dst, SrcTy, DstSigned, "anyext");
   // 2. Equality-compare with the original source value
   Check = Builder.CreateICmpEQ(Check, Src, "truncheck");
   // If the comparison result is 'i1 false', then the truncation was lossy.
@@ -980,8 +1000,8 @@ void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
   llvm::Constant *StaticArgs[] = {
       CGF.EmitCheckSourceLocation(Loc), CGF.EmitCheckTypeDescriptor(SrcType),
       CGF.EmitCheckTypeDescriptor(DstType),
-      llvm::ConstantInt::get(Builder.getInt8Ty(), ICCK_IntegerTruncation)};
-  CGF.EmitCheck(std::make_pair(Check, SanitizerKind::ImplicitIntegerTruncation),
+      llvm::ConstantInt::get(Builder.getInt8Ty(), Kind)};
+  CGF.EmitCheck(std::make_pair(Check, Mask),
                 SanitizerHandler::ImplicitConversion, StaticArgs, {Src, Dst});
 }
 
@@ -1876,7 +1896,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
 
   case CK_IntegralCast: {
     ScalarConversionOpts Opts;
-    if (CGF.SanOpts.has(SanitizerKind::ImplicitIntegerTruncation)) {
+    if (CGF.SanOpts.hasOneOf(SanitizerKind::ImplicitIntegerTruncation)) {
       if (auto *ICE = dyn_cast<ImplicitCastExpr>(CE))
         Opts.EmitImplicitIntegerTruncationChecks = !ICE->isPartOfExplicitCast();
     }

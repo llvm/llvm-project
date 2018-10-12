@@ -154,6 +154,11 @@ public:
     MCELFStreamer::EmitValueImpl(Value, Size, Loc);
   }
 
+  void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
+                                  SMLoc Loc) override {
+    EmitDataMappingSymbol();
+    MCObjectStreamer::emitFill(NumBytes, FillValue, Loc);
+  }
 private:
   enum ElfMappingSymbol {
     EMS_None,
