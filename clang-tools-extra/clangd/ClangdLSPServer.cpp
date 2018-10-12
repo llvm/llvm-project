@@ -339,20 +339,21 @@ void ClangdLSPServer::onCodeAction(CodeActionParams &Params) {
     return replyError(ErrorCode::InvalidParams,
                       "onCodeAction called for non-added file");
 
-  json::Array Commands;
+  std::vector<Command> Commands;
   for (Diagnostic &D : Params.context.diagnostics) {
     for (auto &F : getFixes(Params.textDocument.uri.file(), D)) {
       WorkspaceEdit WE;
       std::vector<TextEdit> Edits(F.Edits.begin(), F.Edits.end());
-      WE.changes = {{Params.textDocument.uri.uri(), std::move(Edits)}};
-      Commands.push_back(json::Object{
-          {"title", llvm::formatv("Apply fix: {0}", F.Message)},
-          {"command", ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND},
-          {"arguments", {WE}},
-      });
+      Commands.emplace_back();
+      Commands.back().title = llvm::formatv("Apply fix: {0}", F.Message);
+      Commands.back().command = ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND;
+      Commands.back().workspaceEdit.emplace();
+      Commands.back().workspaceEdit->changes = {
+          {Params.textDocument.uri.uri(), std::move(Edits)},
+      };
     }
   }
-  reply(std::move(Commands));
+  reply(json::Array(Commands));
 }
 
 void ClangdLSPServer::onCompletion(TextDocumentPositionParams &Params) {
