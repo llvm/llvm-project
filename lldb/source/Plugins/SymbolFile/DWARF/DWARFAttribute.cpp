@@ -26,10 +26,10 @@ uint32_t DWARFAttributes::FindAttributeIndex(dw_attr_t attr) const {
   return UINT32_MAX;
 }
 
-void DWARFAttributes::Append(const DWARFUnit *cu,
-                             dw_offset_t attr_die_offset, dw_attr_t attr,
-                             dw_form_t form) {
-  AttributeValue attr_value = {cu, attr_die_offset, {attr, form}};
+void DWARFAttributes::Append(const DWARFUnit *cu, dw_offset_t attr_die_offset,
+                             dw_attr_t attr, dw_form_t form) {
+  AttributeValue attr_value = {
+      cu, attr_die_offset, {attr, form, DWARFFormValue::ValueType()}};
   m_infos.push_back(attr_value);
 }
 
