@@ -25,3 +25,10 @@ Options
 
    When non-zero, warns on any use of `auto` as the type of the range-based for
    loop variable. Default is `0`.
+
+.. option:: AllowedTypes
+
+   A semicolon-separated list of names of types allowed to be copied in each
+   iteration. Regular expressions are accepted, e.g. `[Rr]ef(erence)?$` matches
+   every type with suffix `Ref`, `ref`, `Reference` and `reference`. The default
+   is empty.

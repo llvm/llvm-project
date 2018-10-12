@@ -154,6 +154,9 @@ DWARFFormValue::GetFixedFormSizesForAddressSize(uint8_t addr_size,
 
 DWARFFormValue::DWARFFormValue() : m_cu(NULL), m_form(0), m_value() {}
 
+DWARFFormValue::DWARFFormValue(const DWARFUnit *cu)
+    : m_cu(cu), m_form(0), m_value() {}
+
 DWARFFormValue::DWARFFormValue(const DWARFUnit *cu, dw_form_t form)
     : m_cu(cu), m_form(form), m_value() {}
 
@@ -165,6 +168,9 @@ void DWARFFormValue::Clear() {
 
 bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
                                   lldb::offset_t *offset_ptr) {
+  if (m_form == DW_FORM_implicit_const)
+    return true;
+
   bool indirect = false;
   bool is_block = false;
   m_value.data = NULL;
@@ -366,6 +372,7 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
 
   // 0 bytes values (implied from DW_FORM)
   case DW_FORM_flag_present:
+  case DW_FORM_implicit_const:
     return true;
 
     // 1 byte values
@@ -822,6 +829,7 @@ bool DWARFFormValue::FormIsSupported(dw_form_t form) {
     case DW_FORM_ref_sig8:
     case DW_FORM_GNU_str_index:
     case DW_FORM_GNU_addr_index:
+    case DW_FORM_implicit_const:
       return true;
     default:
       break;

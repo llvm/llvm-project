@@ -10,11 +10,13 @@ add_llvm_library(LLVMMC
   MCAsmMacro.cpp
   MCAsmStreamer.cpp
   MCAssembler.cpp
+  MCBTFContext.cpp
   MCCodeEmitter.cpp
   MCCodePadder.cpp
   MCCodeView.cpp
   MCContext.cpp
   MCDwarf.cpp
+  MCDwarf2BTF.cpp
   MCELFObjectTargetWriter.cpp
   MCELFStreamer.cpp
   MCExpr.cpp

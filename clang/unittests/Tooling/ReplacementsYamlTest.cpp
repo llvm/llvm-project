@@ -33,13 +33,13 @@ TEST(ReplacementsYamlTest, serializesReplacements) {
 
   // NOTE: If this test starts to fail for no obvious reason, check whitespace.
   ASSERT_STREQ("---\n"
-               "MainSourceFile:  /path/to/source.cpp\n"
+               "MainSourceFile:  '/path/to/source.cpp'\n"
                "Replacements:    \n" // Extra whitespace here!
-               "  - FilePath:        /path/to/file1.h\n"
+               "  - FilePath:        '/path/to/file1.h'\n"
                "    Offset:          232\n"
                "    Length:          56\n"
                "    ReplacementText: 'replacement #1'\n"
-               "  - FilePath:        /path/to/file2.h\n"
+               "  - FilePath:        '/path/to/file2.h'\n"
                "    Offset:          301\n"
                "    Length:          2\n"
                "    ReplacementText: 'replacement #2'\n"

@@ -51,7 +51,7 @@ def main():
   parser.add_argument('check_name')
   parser.add_argument('temp_file_name')
   parser.add_argument('-check-suffix', '-check-suffixes',
-                      default=[], type=csv,
+                      default=[''], type=csv,
                       help="comma-separated list of FileCheck suffixes")
 
   args, extra_args = parser.parse_known_args()
@@ -96,41 +96,37 @@ def main():
   has_check_messages = False
   has_check_notes = False
 
-  if any(args.check_suffix):
-    for check in args.check_suffix:
-      if not re.match('^[A-Z0-9\-]+$', check):
-        sys.exit('Only A..Z, 0..9 and "-" are ' +
-          'allowed in check suffixes list, but "%s" was given' % (check))
+  for check in args.check_suffix:
+    if check and not re.match('^[A-Z0-9\-]+$', check):
+      sys.exit('Only A..Z, 0..9 and "-" are ' +
+        'allowed in check suffixes list, but "%s" was given' % (check))
 
-      file_check_suffix = '-' + check
-      check_fixes_prefix = 'CHECK-FIXES' + file_check_suffix
-      check_messages_prefix = 'CHECK-MESSAGES' + file_check_suffix
-      check_notes_prefix = 'CHECK-NOTES' + file_check_suffix
+    file_check_suffix = ('-' + check) if check else ''
+    check_fixes_prefix = 'CHECK-FIXES' + file_check_suffix
+    check_messages_prefix = 'CHECK-MESSAGES' + file_check_suffix
+    check_notes_prefix = 'CHECK-NOTES' + file_check_suffix
 
-      has_check_fix = check_fixes_prefix in input_text 
-      has_check_message = check_messages_prefix in input_text
-      has_check_note = check_notes_prefix in input_text 
+    has_check_fix = check_fixes_prefix in input_text
+    has_check_message = check_messages_prefix in input_text
+    has_check_note = check_notes_prefix in input_text
 
-      if has_check_note and has_check_message:
-        sys.exit('Please use either %s or %s but not both' %
-          (check_notes_prefix, check_messages_prefix))
+    if has_check_note and has_check_message:
+      sys.exit('Please use either %s or %s but not both' %
+        (check_notes_prefix, check_messages_prefix))
 
-      if not has_check_fix and not has_check_message and not has_check_note:
-        sys.exit('%s, %s or %s not found in the input' %
-          (check_fixes_prefix, check_messages_prefix, check_notes_prefix))
+    if not has_check_fix and not has_check_message and not has_check_note:
+      sys.exit('%s, %s or %s not found in the input' %
+        (check_fixes_prefix, check_messages_prefix, check_notes_prefix))
 
-      has_check_fixes = has_check_fixes or has_check_fix
-      has_check_messages = has_check_messages or has_check_message
-      has_check_notes = has_check_notes or has_check_note
+    has_check_fixes = has_check_fixes or has_check_fix
+    has_check_messages = has_check_messages or has_check_message
+    has_check_notes = has_check_notes or has_check_note
 
-      check_fixes_prefixes.append(check_fixes_prefix)
-      check_messages_prefixes.append(check_messages_prefix)
-      check_notes_prefixes.append(check_notes_prefix)
-  else:
-    check_fixes_prefixes = ['CHECK-FIXES']
-    check_messages_prefixes = ['CHECK-MESSAGES']
-    check_notes_prefixes = ['CHECK-NOTES']
+    check_fixes_prefixes.append(check_fixes_prefix)
+    check_messages_prefixes.append(check_messages_prefix)
+    check_notes_prefixes.append(check_notes_prefix)
 
+  assert has_check_fixes or has_check_messages or has_check_notes
   # Remove the contents of the CHECK lines to avoid CHECKs matching on
   # themselves.  We need to keep the comments to preserve line numbers while
   # avoiding empty lines which could potentially trigger formatting-related

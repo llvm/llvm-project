@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Dwarf2BTF.h"
 #include "DwarfFile.h"
 #include "DwarfCompileUnit.h"
 #include "DwarfDebug.h"
@@ -15,6 +16,8 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/MC/MCBTFContext.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include <algorithm>
 #include <cstdint>
@@ -86,6 +89,13 @@ void DwarfFile::emitAbbrevs(MCSection *Section) { Abbrevs.Emit(Asm, Section); }
 void DwarfFile::emitStrings(MCSection *StrSection, MCSection *OffsetSection,
                             bool UseRelativeOffsets) {
   StrPool.emit(*Asm, StrSection, OffsetSection, UseRelativeOffsets);
+}
+
+void DwarfFile::emitBTFSection(bool IsLittleEndian) {
+  Dwarf2BTF Dwarf2BTF(Asm->OutContext, IsLittleEndian);
+  for (auto &TheU : CUs)
+    Dwarf2BTF.addDwarfCU(TheU.get());
+  Dwarf2BTF.finish();
 }
 
 bool DwarfFile::addScopeVariable(LexicalScope *LS, DbgVariable *Var) {

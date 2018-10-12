@@ -756,6 +756,15 @@ TEST(Hover, All) {
           "int",
       },
       {
+          R"cpp(// Simple initialization with auto*
+            void foo() {
+              int a = 1;
+              ^auto* i = &a;
+            }
+          )cpp",
+          "int",
+      },
+      {
           R"cpp(// Auto with initializer list.
             namespace std
             {
@@ -858,6 +867,16 @@ TEST(Hover, All) {
             struct Bar {};
             ^auto& test() {
               return Bar();
+            }
+          )cpp",
+          "struct Bar",
+      },
+      {
+          R"cpp(// auto* in function return
+            struct Bar {};
+            ^auto* test() {
+              Bar* bar;
+              return bar;
             }
           )cpp",
           "struct Bar",

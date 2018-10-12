@@ -50,14 +50,7 @@ define <8 x i64> @testv8i64(<8 x i64> %in) nounwind {
 ;
 ; BITALG-LABEL: testv8i64:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; BITALG-NEXT:    vpandq %zmm1, %zmm0, %zmm2
-; BITALG-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; BITALG-NEXT:    vpshufb %zmm2, %zmm3, %zmm2
-; BITALG-NEXT:    vpsrlw $4, %zmm0, %zmm0
-; BITALG-NEXT:    vpandq %zmm1, %zmm0, %zmm0
-; BITALG-NEXT:    vpshufb %zmm0, %zmm3, %zmm0
-; BITALG-NEXT:    vpaddb %zmm2, %zmm0, %zmm0
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm0, %zmm0
 ; BITALG-NEXT:    retq
@@ -122,14 +115,7 @@ define <16 x i32> @testv16i32(<16 x i32> %in) nounwind {
 ;
 ; BITALG-LABEL: testv16i32:
 ; BITALG:       # %bb.0:
-; BITALG-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; BITALG-NEXT:    vpandq %zmm1, %zmm0, %zmm2
-; BITALG-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; BITALG-NEXT:    vpshufb %zmm2, %zmm3, %zmm2
-; BITALG-NEXT:    vpsrlw $4, %zmm0, %zmm0
-; BITALG-NEXT:    vpandq %zmm1, %zmm0, %zmm0
-; BITALG-NEXT:    vpshufb %zmm0, %zmm3, %zmm0
-; BITALG-NEXT:    vpaddb %zmm2, %zmm0, %zmm0
+; BITALG-NEXT:    vpopcntb %zmm0, %zmm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm0[2],zmm1[2],zmm0[3],zmm1[3],zmm0[6],zmm1[6],zmm0[7],zmm1[7],zmm0[10],zmm1[10],zmm0[11],zmm1[11],zmm0[14],zmm1[14],zmm0[15],zmm1[15]
 ; BITALG-NEXT:    vpsadbw %zmm1, %zmm2, %zmm2

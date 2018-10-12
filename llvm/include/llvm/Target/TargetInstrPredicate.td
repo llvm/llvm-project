@@ -313,7 +313,7 @@ class STIPredicate<STIPredicateDecl declaration,
 }
 
 // Convenience classes and definitions used by processor scheduling models to
-// describe dependency breaking instructions.
+// describe dependency breaking instructions and move elimination candidates.
 let UpdatesOpcodeMask = 1 in {
 
 def IsZeroIdiomDecl : STIPredicateDecl<"isZeroIdiom">;
@@ -323,8 +323,14 @@ def IsDepBreakingDecl : STIPredicateDecl<"isDependencyBreaking">;
 
 } // UpdatesOpcodeMask
 
+def IsOptimizableRegisterMoveDecl
+    : STIPredicateDecl<"isOptimizableRegisterMove">;
+
 class IsZeroIdiomFunction<list<DepBreakingClass> classes>
     : STIPredicate<IsZeroIdiomDecl, classes>;
 
 class IsDepBreakingFunction<list<DepBreakingClass> classes>
     : STIPredicate<IsDepBreakingDecl, classes>;
+
+class IsOptimizableRegisterMove<list<InstructionEquivalenceClass> classes>
+    : STIPredicate<IsOptimizableRegisterMoveDecl, classes>;

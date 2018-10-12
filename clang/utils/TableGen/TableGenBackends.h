@@ -23,63 +23,60 @@ namespace llvm {
   class RecordKeeper;
 }
 
-using llvm::raw_ostream;
-using llvm::RecordKeeper;
-
 namespace clang {
 
-void EmitClangDeclContext(RecordKeeper &RK, raw_ostream &OS);
-void EmitClangASTNodes(RecordKeeper &RK, raw_ostream &OS,
+void EmitClangDeclContext(llvm::RecordKeeper &RK, llvm::raw_ostream &OS);
+void EmitClangASTNodes(llvm::RecordKeeper &RK, llvm::raw_ostream &OS,
                        const std::string &N, const std::string &S);
 
-void EmitClangAttrParserStringSwitches(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangAttrSubjectMatchRulesParserStringSwitches(RecordKeeper &Records,
-                                                        raw_ostream &OS);
-void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangAttrImpl(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangAttrList(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangAttrSubjectMatchRuleList(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangAttrPCHRead(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangAttrPCHWrite(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangAttrSpellingListIndex(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangAttrASTVisitor(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangAttrTemplateInstantiate(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangAttrParsedAttrList(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangAttrDump(RecordKeeper &Records, raw_ostream &OS);
+void EmitClangAttrParserStringSwitches(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangAttrSubjectMatchRulesParserStringSwitches(llvm::RecordKeeper &Records,
+                                                        llvm::raw_ostream &OS);
+void EmitClangAttrClass(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangAttrImpl(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangAttrList(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangAttrSubjectMatchRuleList(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangAttrPCHRead(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangAttrPCHWrite(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangAttrHasAttrImpl(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangAttrSpellingListIndex(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangAttrASTVisitor(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangAttrTemplateInstantiate(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangAttrParsedAttrList(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangAttrParsedAttrImpl(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangAttrParsedAttrKinds(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangAttrDump(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitClangDiagsDefs(RecordKeeper &Records, raw_ostream &OS,
+void EmitClangDiagsDefs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS,
                         const std::string &Component);
-void EmitClangDiagGroups(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangDiagsIndexName(RecordKeeper &Records, raw_ostream &OS);
+void EmitClangDiagGroups(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangDiagsIndexName(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitClangSACheckers(RecordKeeper &Records, raw_ostream &OS);
+void EmitClangSACheckers(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitClangCommentHTMLTags(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangCommentHTMLTagsProperties(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangCommentHTMLNamedCharacterReferences(RecordKeeper &Records, raw_ostream &OS);
+void EmitClangCommentHTMLTags(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangCommentHTMLTagsProperties(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangCommentHTMLNamedCharacterReferences(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitClangCommentCommandInfo(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangCommentCommandList(RecordKeeper &Records, raw_ostream &OS);
+void EmitClangCommentCommandInfo(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangCommentCommandList(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitNeon(RecordKeeper &Records, raw_ostream &OS);
-void EmitFP16(RecordKeeper &Records, raw_ostream &OS);
-void EmitNeonSema(RecordKeeper &Records, raw_ostream &OS);
-void EmitNeonTest(RecordKeeper &Records, raw_ostream &OS);
-void EmitNeon2(RecordKeeper &Records, raw_ostream &OS);
-void EmitNeonSema2(RecordKeeper &Records, raw_ostream &OS);
-void EmitNeonTest2(RecordKeeper &Records, raw_ostream &OS);
+void EmitNeon(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitFP16(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitNeonSema(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitNeonTest(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitNeon2(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitNeonSema2(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitNeonTest2(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitClangAttrDocs(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangDiagDocs(RecordKeeper &Records, raw_ostream &OS);
-void EmitClangOptDocs(RecordKeeper &Records, raw_ostream &OS);
+void EmitClangAttrDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangDiagDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangOptDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitClangDataCollectors(RecordKeeper &Records, raw_ostream &OS);
+void EmitClangDataCollectors(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
-void EmitTestPragmaAttributeSupportedAttributes(RecordKeeper &Records,
-                                                raw_ostream &OS);
+void EmitTestPragmaAttributeSupportedAttributes(llvm::RecordKeeper &Records,
+                                                llvm::raw_ostream &OS);
 
 } // end namespace clang
 
