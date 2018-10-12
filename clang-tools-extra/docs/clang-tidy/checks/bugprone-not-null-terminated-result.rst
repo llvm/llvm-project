@@ -55,11 +55,11 @@ Rewrite to a string handler function is not possible:
 
 Rewrite based on the destination array:
 
-- If copy to the destination array cannot *overflow then the new function should
+- If copy to the destination array cannot overflow then the new function should
   be the older copy function (ending with ``cpy``), because it is more
   efficient than the safe version.
 
-- If copy to the destination array can *overflow and
+- If copy to the destination array can overflow and
   ``AreSafeFunctionsAvailable`` is set to ``Yes``, ``y`` or non-zero and it is
   possible to obtain the capacity of the destination array then the new function
   could be the safe version (ending with ``cpy_s``).
@@ -67,7 +67,7 @@ Rewrite based on the destination array:
 - If the new function is could be safe version and C++ files are analysed then
   the length of the destination array can be omitted.
 
-- *It is possible to overflow:
+- It is possible to overflow:
   - Unknown the capacity of the destination array.
   - If the given length is equal to the destination capacity.
 
@@ -95,17 +95,21 @@ Memory handler functions
     :ref:`Transformation rules of 'memcpy()'<MemcpyTransformation>` section.
 
 - ``memchr``:
+
   - Usually there is a C-style cast, and it is needed to be removed, because the
     new function ``strchr``'s return type is correct.
   - Also the given length is not needed in the new function.
 
 - ``memmove``:
+
   - If safe functions are available the new function is ``memmove_s``, it has
     four arguments:
+
     - destination array,
     - length of the destination array,
     - source string,
     - length of the source string which is incremented by one.
+
   - If safe functions are not available the given length is incremented by one.
 
 - ``memmove_s``: given length is incremented by one.
