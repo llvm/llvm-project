@@ -1141,8 +1141,8 @@
 		E769331E1A94D18100C73337 /* lldb-server.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E769331D1A94D18100C73337 /* lldb-server.cpp */; };
 		26680214115FD12C008E1FE4 /* lldb-types.h in Headers */ = {isa = PBXBuildFile; fileRef = 26BC7C2910F1B3BC00F91463 /* lldb-types.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		94145431175E63B500284436 /* lldb-versioning.h in Headers */ = {isa = PBXBuildFile; fileRef = 94145430175D7FDE00284436 /* lldb-versioning.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		AF4C10152065C7CB00698839 /* lldb.1 in Copy Files */ = {isa = PBXBuildFile; fileRef = AF90106315AB7C5700FF120D /* lldb.1 */; };
 		2679261E211CA3F200EE1D10 /* lldb-vscode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26792619211CA3E100EE1D10 /* lldb-vscode.cpp */; };
+		AF4C10152065C7CB00698839 /* lldb.1 in Copy Files */ = {isa = PBXBuildFile; fileRef = AF90106315AB7C5700FF120D /* lldb.1 */; };
 		AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = AF90106315AB7C5700FF120D /* lldb.1 */; };
 		2689FFDA13353D9D00698AC0 /* lldb.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E7410F1B85900F91463 /* lldb.cpp */; };
 		4947DE4A1E3C0B20008D6ED0 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 4947DE491E3C0B20008D6ED0 /* main.c */; };
