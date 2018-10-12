@@ -247,8 +247,18 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   CopyConfig Config;
   Config.InputFilename = Positional[0];
   Config.OutputFilename = Positional[Positional.size() == 1 ? 0 : 1];
-  Config.InputFormat = InputArgs.getLastArgValue(OBJCOPY_input_target);
-  Config.OutputFormat = InputArgs.getLastArgValue(OBJCOPY_output_target);
+  if (InputArgs.hasArg(OBJCOPY_target) &&
+      (InputArgs.hasArg(OBJCOPY_input_target) ||
+       InputArgs.hasArg(OBJCOPY_output_target)))
+    error("--target cannot be used with --input-target or --output-target");
+
+  if (InputArgs.hasArg(OBJCOPY_target)) {
+    Config.InputFormat = InputArgs.getLastArgValue(OBJCOPY_target);
+    Config.OutputFormat = InputArgs.getLastArgValue(OBJCOPY_target);
+  } else {
+    Config.InputFormat = InputArgs.getLastArgValue(OBJCOPY_input_target);
+    Config.OutputFormat = InputArgs.getLastArgValue(OBJCOPY_output_target);
+  }
   if (Config.InputFormat == "binary") {
     auto BinaryArch = InputArgs.getLastArgValue(OBJCOPY_binary_architecture);
     if (BinaryArch.empty())
