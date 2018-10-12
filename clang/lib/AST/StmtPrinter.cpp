@@ -709,6 +709,11 @@ void OMPClausePrinter::VisitOMPReverseOffloadClause(OMPReverseOffloadClause *) {
   OS << "reverse_offload";
 }
 
+void OMPClausePrinter::VisitOMPDynamicAllocatorsClause(
+    OMPDynamicAllocatorsClause *) {
+  OS << "dynamic_allocators";
+}
+
 void OMPClausePrinter::VisitOMPScheduleClause(OMPScheduleClause *Node) {
   OS << "schedule(";
   if (Node->getFirstScheduleModifier() != OMPC_SCHEDULE_MODIFIER_unknown) {

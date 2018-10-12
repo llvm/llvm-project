@@ -135,7 +135,13 @@ SANITIZER_GROUP("undefined", Undefined,
 SANITIZER_GROUP("undefined-trap", UndefinedTrap, Undefined)
 
 // ImplicitConversionSanitizer
-SANITIZER("implicit-integer-truncation", ImplicitIntegerTruncation)
+SANITIZER("implicit-unsigned-integer-truncation",
+          ImplicitUnsignedIntegerTruncation)
+SANITIZER("implicit-signed-integer-truncation", ImplicitSignedIntegerTruncation)
+SANITIZER_GROUP("implicit-integer-truncation", ImplicitIntegerTruncation,
+                ImplicitUnsignedIntegerTruncation |
+                    ImplicitSignedIntegerTruncation)
+
 SANITIZER_GROUP("implicit-conversion", ImplicitConversion,
                 ImplicitIntegerTruncation)
 

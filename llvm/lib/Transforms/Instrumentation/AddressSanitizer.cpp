@@ -25,7 +25,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/IR/Argument.h"
@@ -70,8 +69,10 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizerPass.h"
 #include "llvm/Transforms/Utils/ASanStackFrameLayout.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <algorithm>
@@ -597,26 +598,22 @@ static size_t RedzoneSizeForScale(int MappingScale) {
 namespace {
 
 /// AddressSanitizer: instrument the code in module to find memory bugs.
-struct AddressSanitizer : public FunctionPass {
-  // Pass identification, replacement for typeid
-  static char ID;
-
-  explicit AddressSanitizer(bool CompileKernel = false, bool Recover = false,
+struct AddressSanitizer {
+  explicit AddressSanitizer(Module &M, DominatorTree *DT,
+                            bool CompileKernel = false, bool Recover = false,
                             bool UseAfterScope = false)
-      : FunctionPass(ID), UseAfterScope(UseAfterScope || ClUseAfterScope) {
+      : UseAfterScope(UseAfterScope || ClUseAfterScope), DT(DT) {
     this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
     this->CompileKernel = ClEnableKasan.getNumOccurrences() > 0 ?
         ClEnableKasan : CompileKernel;
-    initializeAddressSanitizerPass(*PassRegistry::getPassRegistry());
-  }
 
-  StringRef getPassName() const override {
-    return "AddressSanitizerFunctionPass";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
+    // Initialize the private fields. No one has accessed them before.
+    GlobalsMD.init(M);
+    C = &(M.getContext());
+    LongSize = M.getDataLayout().getPointerSizeInBits();
+    IntptrTy = Type::getIntNTy(*C, LongSize);
+    TargetTriple = Triple(M.getTargetTriple());
+    Mapping = getShadowMapping(TargetTriple, LongSize, CompileKernel);
   }
 
   uint64_t getAllocaSizeInBytes(const AllocaInst &AI) const {
@@ -661,12 +658,12 @@ struct AddressSanitizer : public FunctionPass {
                                  Value *SizeArgument, uint32_t Exp);
   void instrumentMemIntrinsic(MemIntrinsic *MI);
   Value *memToShadow(Value *Shadow, IRBuilder<> &IRB);
-  bool runOnFunction(Function &F) override;
   bool maybeInsertAsanInitAtFunctionEntry(Function &F);
   void maybeInsertDynamicShadowAtFunctionEntry(Function &F);
   void markEscapedLocalAllocas(Function &F);
-  bool doInitialization(Module &M) override;
-  bool doFinalization(Module &M) override;
+
+  /// Return true if the function changed.
+  bool instrument(Function &F, const TargetLibraryInfo *TLI);
 
   DominatorTree &getDominatorTree() const { return *DT; }
 
@@ -724,16 +721,12 @@ private:
   DenseMap<const AllocaInst *, bool> ProcessedAllocas;
 };
 
-class AddressSanitizerModule : public ModulePass {
+class AddressSanitizerModule {
 public:
-  // Pass identification, replacement for typeid
-  static char ID;
-
   explicit AddressSanitizerModule(bool CompileKernel = false,
                                   bool Recover = false,
                                   bool UseGlobalsGC = true)
-      : ModulePass(ID),
-        UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC),
+      : UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC),
         // Not a typo: ClWithComdat is almost completely pointless without
         // ClUseGlobalsGC (because then it only works on modules without
         // globals, which are rare); it is a prerequisite for ClUseGlobalsGC;
@@ -742,14 +735,12 @@ public:
         // ClWithComdat and ClUseGlobalsGC unless the frontend says it's ok to
         // do globals-gc.
         UseCtorComdat(UseGlobalsGC && ClWithComdat) {
-          this->Recover = ClRecover.getNumOccurrences() > 0 ?
-              ClRecover : Recover;
-          this->CompileKernel = ClEnableKasan.getNumOccurrences() > 0 ?
-              ClEnableKasan : CompileKernel;
-	}
+    this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
+    this->CompileKernel =
+        ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan : CompileKernel;
+  }
 
-  bool runOnModule(Module &M) override;
-  StringRef getPassName() const override { return "AddressSanitizerModule"; }
+  bool instrument(Module &M);
 
 private:
   void initializeCallbacks(Module &M);
@@ -1057,18 +1048,100 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
                      Instruction *ThenTerm, Value *ValueIfFalse);
 };
 
+class AddressSanitizerLegacyPass : public FunctionPass {
+public:
+  static char ID;
+
+  explicit AddressSanitizerLegacyPass(bool CompileKernel = false,
+                                      bool Recover = false,
+                                      bool UseAfterScope = false)
+      : FunctionPass(ID), CompileKernel(CompileKernel), Recover(Recover),
+        UseAfterScope(UseAfterScope) {}
+
+  StringRef getPassName() const override {
+    return "AddressSanitizerFunctionPass";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
+  }
+
+  bool runOnFunction(Function &F) override {
+    DominatorTree *DTree =
+        &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    const TargetLibraryInfo *TLI =
+        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+    AddressSanitizer Sanitizer(*F.getParent(), DTree, CompileKernel, Recover,
+                               UseAfterScope);
+    return Sanitizer.instrument(F, TLI);
+  }
+
+private:
+  bool CompileKernel;
+  bool Recover;
+  bool UseAfterScope;
+};
+
+class AddressSanitizerModuleLegacyPass : public ModulePass {
+public:
+  static char ID;
+
+  explicit AddressSanitizerModuleLegacyPass(bool CompileKernel = false,
+                                            bool Recover = false,
+                                            bool UseAfterScope = true)
+      : ModulePass(ID), CompileKernel(CompileKernel), Recover(Recover),
+        UseAfterScope(UseAfterScope) {}
+
+  StringRef getPassName() const override { return "AddressSanitizerModule"; }
+
+  bool runOnModule(Module &M) override {
+    AddressSanitizerModule Sanitizer(CompileKernel, Recover, UseAfterScope);
+    return Sanitizer.instrument(M);
+  }
+
+private:
+  bool CompileKernel;
+  bool Recover;
+  bool UseAfterScope;
+};
+
 } // end anonymous namespace
 
-char AddressSanitizer::ID = 0;
+AddressSanitizerPass::AddressSanitizerPass(bool CompileKernel, bool Recover,
+                                           bool UseAfterScope)
+    : CompileKernel(CompileKernel), Recover(Recover),
+      UseAfterScope(UseAfterScope) {}
+
+PreservedAnalyses AddressSanitizerPass::run(Function &F,
+                                            AnalysisManager<Function> &AM) {
+  DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
+  const TargetLibraryInfo *TLI = &AM.getResult<TargetLibraryAnalysis>(F);
+  AddressSanitizer Sanitizer(*F.getParent(), DT, CompileKernel, Recover,
+                             UseAfterScope);
+  if (Sanitizer.instrument(F, TLI))
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses AddressSanitizerPass::run(Module &M,
+                                            AnalysisManager<Module> &AM) {
+  AddressSanitizerModule Sanitizer(CompileKernel, Recover, UseAfterScope);
+  if (Sanitizer.instrument(M))
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
+}
+
+char AddressSanitizerLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(
-    AddressSanitizer, "asan",
+    AddressSanitizerLegacyPass, "asan",
     "AddressSanitizer: detects use-after-free and out-of-bounds bugs.", false,
     false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(
-    AddressSanitizer, "asan",
+    AddressSanitizerLegacyPass, "asan",
     "AddressSanitizer: detects use-after-free and out-of-bounds bugs.", false,
     false)
 
@@ -1076,13 +1149,13 @@ FunctionPass *llvm::createAddressSanitizerFunctionPass(bool CompileKernel,
                                                        bool Recover,
                                                        bool UseAfterScope) {
   assert(!CompileKernel || Recover);
-  return new AddressSanitizer(CompileKernel, Recover, UseAfterScope);
+  return new AddressSanitizerLegacyPass(CompileKernel, Recover, UseAfterScope);
 }
 
-char AddressSanitizerModule::ID = 0;
+char AddressSanitizerModuleLegacyPass::ID = 0;
 
 INITIALIZE_PASS(
-    AddressSanitizerModule, "asan-module",
+    AddressSanitizerModuleLegacyPass, "asan-module",
     "AddressSanitizer: detects use-after-free and out-of-bounds bugs."
     "ModulePass",
     false, false)
@@ -1091,7 +1164,8 @@ ModulePass *llvm::createAddressSanitizerModulePass(bool CompileKernel,
                                                    bool Recover,
                                                    bool UseGlobalsGC) {
   assert(!CompileKernel || Recover);
-  return new AddressSanitizerModule(CompileKernel, Recover, UseGlobalsGC);
+  return new AddressSanitizerModuleLegacyPass(CompileKernel, Recover,
+                                              UseGlobalsGC);
 }
 
 static size_t TypeSizeToSizeIndex(uint32_t TypeSize) {
@@ -1100,25 +1174,11 @@ static size_t TypeSizeToSizeIndex(uint32_t TypeSize) {
   return Res;
 }
 
-// Create a constant for Str so that we can pass it to the run-time lib.
-static GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
-                                                    bool AllowMerging) {
-  Constant *StrConst = ConstantDataArray::getString(M.getContext(), Str);
-  // We use private linkage for module-local strings. If they can be merged
-  // with another one, we set the unnamed_addr attribute.
-  GlobalVariable *GV =
-      new GlobalVariable(M, StrConst->getType(), true,
-                         GlobalValue::PrivateLinkage, StrConst, kAsanGenPrefix);
-  if (AllowMerging) GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  GV->setAlignment(1);  // Strings may not be merged w/o setting align 1.
-  return GV;
-}
-
 /// Create a global describing a source location.
 static GlobalVariable *createPrivateGlobalForSourceLoc(Module &M,
                                                        LocationMetadata MD) {
   Constant *LocData[] = {
-      createPrivateGlobalForString(M, MD.Filename, true),
+      createPrivateGlobalForString(M, MD.Filename, true, kAsanGenPrefix),
       ConstantInt::get(Type::getInt32Ty(M.getContext()), MD.LineNo),
       ConstantInt::get(Type::getInt32Ty(M.getContext()), MD.ColumnNo),
   };
@@ -2105,7 +2165,7 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
   // We shouldn't merge same module names, as this string serves as unique
   // module ID in runtime.
   GlobalVariable *ModuleName = createPrivateGlobalForString(
-      M, M.getModuleIdentifier(), /*AllowMerging*/ false);
+      M, M.getModuleIdentifier(), /*AllowMerging*/ false, kAsanGenPrefix);
 
   for (size_t i = 0; i < n; i++) {
     static const uint64_t kMaxGlobalRedzone = 1 << 18;
@@ -2117,7 +2177,7 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
     // if it's available, otherwise just write the name of global variable).
     GlobalVariable *Name = createPrivateGlobalForString(
         M, MD.Name.empty() ? NameForGlobal : MD.Name,
-        /*AllowMerging*/ true);
+        /*AllowMerging*/ true, kAsanGenPrefix);
 
     Type *Ty = G->getValueType();
     uint64_t SizeInBytes = DL.getTypeAllocSize(Ty);
@@ -2268,7 +2328,7 @@ int AddressSanitizerModule::GetAsanVersion(const Module &M) const {
   return Version;
 }
 
-bool AddressSanitizerModule::runOnModule(Module &M) {
+bool AddressSanitizerModule::instrument(Module &M) {
   C = &(M.getContext());
   int LongSize = M.getDataLayout().getPointerSizeInBits();
   IntptrTy = Type::getIntNTy(*C, LongSize);
@@ -2387,25 +2447,6 @@ void AddressSanitizer::initializeCallbacks(Module &M) {
                                            ArrayType::get(IRB.getInt8Ty(), 0));
 }
 
-// virtual
-bool AddressSanitizer::doInitialization(Module &M) {
-  // Initialize the private fields. No one has accessed them before.
-  GlobalsMD.init(M);
-
-  C = &(M.getContext());
-  LongSize = M.getDataLayout().getPointerSizeInBits();
-  IntptrTy = Type::getIntNTy(*C, LongSize);
-  TargetTriple = Triple(M.getTargetTriple());
-
-  Mapping = getShadowMapping(TargetTriple, LongSize, CompileKernel);
-  return true;
-}
-
-bool AddressSanitizer::doFinalization(Module &M) {
-  GlobalsMD.reset();
-  return false;
-}
-
 bool AddressSanitizer::maybeInsertAsanInitAtFunctionEntry(Function &F) {
   // For each NSObject descendant having a +load method, this method is invoked
   // by the ObjC runtime before any of the static constructors is called.
@@ -2479,7 +2520,7 @@ void AddressSanitizer::markEscapedLocalAllocas(Function &F) {
   }
 }
 
-bool AddressSanitizer::runOnFunction(Function &F) {
+bool AddressSanitizer::instrument(Function &F, const TargetLibraryInfo *TLI) {
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage) return false;
   if (!ClDebugFunc.empty() && ClDebugFunc == F.getName()) return false;
   if (F.getName().startswith("__asan_")) return false;
@@ -2498,7 +2539,6 @@ bool AddressSanitizer::runOnFunction(Function &F) {
   LLVM_DEBUG(dbgs() << "ASAN instrumenting:\n" << F << "\n");
 
   initializeCallbacks(*F.getParent());
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
   FunctionStateRAII CleanupObj(this);
 
@@ -2519,8 +2559,6 @@ bool AddressSanitizer::runOnFunction(Function &F) {
   bool IsWrite;
   unsigned Alignment;
   uint64_t TypeSize;
-  const TargetLibraryInfo *TLI =
-      &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
 
   // Fill the set of memory operations to instrument.
   for (auto &BB : F) {
@@ -3020,7 +3058,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
       IntptrPtrTy);
   GlobalVariable *StackDescriptionGlobal =
       createPrivateGlobalForString(*F.getParent(), DescriptionString,
-                                   /*AllowMerging*/ true);
+                                   /*AllowMerging*/ true, kAsanGenPrefix);
   Value *Description = IRB.CreatePointerCast(StackDescriptionGlobal, IntptrTy);
   IRB.CreateStore(Description, BasePlus1);
   // Write the PC to redzone[2].

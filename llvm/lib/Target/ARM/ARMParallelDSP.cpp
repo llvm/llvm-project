@@ -71,7 +71,7 @@ namespace {
     virtual ~OpChain() = default;
 
     void SetMemoryLocations() {
-      const auto Size = MemoryLocation::UnknownSize;
+      const auto Size = LocationSize::unknown();
       for (auto *V : AllValues) {
         if (auto *I = dyn_cast<Instruction>(V)) {
           if (I->mayWriteToMemory())

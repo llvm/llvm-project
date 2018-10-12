@@ -23,6 +23,14 @@
 
 namespace __hwasan {
 
+static Allocator allocator;
+static AllocatorCache fallback_allocator_cache;
+static SpinMutex fallback_mutex;
+static atomic_uint8_t hwasan_allocator_tagging_enabled;
+
+static const tag_t kFallbackAllocTag = 0xBB;
+static const tag_t kFallbackFreeTag = 0xBC;
+
 bool HwasanChunkView::IsAllocated() const {
   return metadata_ && metadata_->alloc_context_id && metadata_->requested_size;
 }
@@ -40,13 +48,13 @@ u32 HwasanChunkView::GetAllocStackId() const {
   return metadata_->alloc_context_id;
 }
 
-static Allocator allocator;
-static AllocatorCache fallback_allocator_cache;
-static SpinMutex fallback_mutex;
-static atomic_uint8_t hwasan_allocator_tagging_enabled;
+uptr HwasanChunkView::ActualSize() const {
+  return allocator.GetActuallyAllocatedSize(reinterpret_cast<void *>(block_));
+}
 
-static const tag_t kFallbackAllocTag = 0xBB;
-static const tag_t kFallbackFreeTag = 0xBC;
+bool HwasanChunkView::FromSmallHeap() const {
+  return allocator.FromPrimary(reinterpret_cast<void *>(block_));
+}
 
 void GetAllocatorStats(AllocatorStatCounters s) {
   allocator.GetStats(s);

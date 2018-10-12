@@ -14,6 +14,11 @@
 
 #pragma omp requires reverse_offload, reverse_offload // expected-error {{Only one reverse_offload clause can appear on a requires directive in a single translation unit}} expected-error {{directive '#pragma omp requires' cannot contain more than one 'reverse_offload' clause}}
 
+#pragma omp requires dynamic_allocators // expected-note {{dynamic_allocators clause previously used here}} expected-note {{dynamic_allocators clause previously used here}}
+
+#pragma omp requires dynamic_allocators, dynamic_allocators // expected-error {{Only one dynamic_allocators clause can appear on a requires directive in a single translation unit}} expected-error {{directive '#pragma omp requires' cannot contain more than one 'dynamic_allocators' clause}}
+
+
 #pragma omp requires // expected-error {{expected at least one clause on '#pragma omp requires' directive}}
 
 #pragma omp requires invalid_clause // expected-warning {{extra tokens at the end of '#pragma omp requires' are ignored}} expected-error {{expected at least one clause on '#pragma omp requires' directive}}
@@ -24,7 +29,7 @@
 
 #pragma omp requires invalid_clause unified_address // expected-warning {{extra tokens at the end of '#pragma omp requires' are ignored}} expected-error {{expected at least one clause on '#pragma omp requires' directive}}
 
-#pragma omp requires unified_shared_memory, unified_address, reverse_offload // expected-error {{Only one unified_shared_memory clause can appear on a requires directive in a single translation unit}} expected-error{{Only one unified_address clause can appear on a requires directive in a single translation unit}} expected-error{{Only one reverse_offload clause can appear on a requires directive in a single translation unit}}
+#pragma omp requires unified_shared_memory, unified_address, reverse_offload, dynamic_allocators // expected-error {{Only one unified_shared_memory clause can appear on a requires directive in a single translation unit}} expected-error{{Only one unified_address clause can appear on a requires directive in a single translation unit}} expected-error{{Only one reverse_offload clause can appear on a requires directive in a single translation unit}} expected-error{{Only one dynamic_allocators clause can appear on a requires directive in a single translation unit}}
 
 namespace A {
   #pragma omp requires unified_address // expected-error {{Only one unified_address clause can appear on a requires directive in a single translation unit}}

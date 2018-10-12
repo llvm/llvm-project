@@ -17,8 +17,10 @@ define i1 @foo(i64 %a) {
 ;
 ; X86-SSE-LABEL: foo:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movaps %xmm0, %xmm1
+; X86-SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[2,3]
+; X86-SSE-NEXT:    ucomiss %xmm1, %xmm0
 ; X86-SSE-NEXT:    setp %al
 ; X86-SSE-NEXT:    retl
 ;

@@ -36,6 +36,11 @@ class OptimizationRemarkEmitter;
 BasicBlock::iterator PrepareToSplitEntryBlock(BasicBlock &BB,
                                               BasicBlock::iterator IP);
 
+// Create a constant for Str so that we can pass it to the run-time lib.
+GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
+                                             bool AllowMerging,
+                                             const char *NamePrefix = "");
+
 // Insert GCOV profiling instrumentation
 struct GCOVOptions {
   static GCOVOptions getDefault();

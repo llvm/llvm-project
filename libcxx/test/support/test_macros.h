@@ -281,6 +281,16 @@ inline void DoNotOptimize(Tp const& value) {
 }
 #endif
 
+#if defined(__GNUC__)
+#define TEST_ALWAYS_INLINE __attribute__((always_inline))
+#define TEST_NOINLINE __attribute__((noinline))
+#elif defined(_MSC_VER)
+#define TEST_ALWAYS_INLINE __forceinline
+#define TEST_NOINLINE __declspec(noinline)
+#else
+#define TEST_ALWAYS_INLINE
+#define TEST_NOINLINE
+#endif
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop

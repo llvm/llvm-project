@@ -140,7 +140,8 @@ public:
 
   /// Returns true if instruction I has multiple uses in Insts
   static bool hasMultipleUsesOf(Instruction *I,
-                                SmallPtrSetImpl<Instruction *> &Insts);
+                                SmallPtrSetImpl<Instruction *> &Insts,
+                                unsigned MaxNumUses);
 
   /// Returns true if all uses of the instruction I is within the Set.
   static bool areAllUsesIn(Instruction *I, SmallPtrSetImpl<Instruction *> &Set);
@@ -149,6 +150,10 @@ public:
   /// Select(ICmp(X, Y), X, Y) instruction pattern corresponding to a min(X, Y)
   /// or max(X, Y).
   static InstDesc isMinMaxSelectCmpPattern(Instruction *I, InstDesc &Prev);
+
+  /// Returns a struct describing if the instruction is a
+  /// Select(FCmp(X, Y), (Z = X op PHINode), PHINode) instruction pattern.
+  static InstDesc isConditionalRdxPattern(RecurrenceKind Kind, Instruction *I);
 
   /// Returns identity corresponding to the RecurrenceKind.
   static Constant *getRecurrenceIdentity(RecurrenceKind K, Type *Tp);

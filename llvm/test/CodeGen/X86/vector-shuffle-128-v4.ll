@@ -1998,8 +1998,8 @@ define <4 x i32> @mask_v4i32_0127(<4 x i32> %a, <4 x i32> %b) {
 define <4 x float> @broadcast_v4f32_0101_from_v2f32(<2 x float>* %x) {
 ; SSE2-LABEL: broadcast_v4f32_0101_from_v2f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: broadcast_v4f32_0101_from_v2f32:

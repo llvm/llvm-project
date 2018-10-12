@@ -35,6 +35,7 @@ subdirectories =
  BinaryFormat
  ObjectYAML
  Option
+ OptRemarks
  Passes
  ProfileData
  Support

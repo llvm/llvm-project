@@ -61,7 +61,6 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
-#include "llvm/Transforms/Instrumentation/CGProfile.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/ArgumentPromotion.h"
 #include "llvm/Transforms/IPO/CalledValuePropagation.h"
@@ -87,7 +86,9 @@
 #include "llvm/Transforms/IPO/SyntheticCountsPropagation.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizerPass.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
+#include "llvm/Transforms/Instrumentation/CGProfile.h"
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
@@ -505,7 +506,8 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
                                     PassBuilder::OptimizationLevel Level,
                                     bool RunProfileGen,
                                     std::string ProfileGenFile,
-                                    std::string ProfileUseFile) {
+                                    std::string ProfileUseFile,
+                                    std::string ProfileRemappingFile) {
   // Generally running simplification passes and the inliner with an high
   // threshold results in smaller executables, but there may be cases where
   // the size grows, so let's be conservative here and skip this simplification
@@ -559,7 +561,7 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
   }
 
   if (!ProfileUseFile.empty())
-    MPM.addPass(PGOInstrumentationUse(ProfileUseFile));
+    MPM.addPass(PGOInstrumentationUse(ProfileUseFile, ProfileRemappingFile));
 }
 
 static InlineParams
@@ -605,6 +607,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     // Annotate sample profile right after early FPM to ensure freshness of
     // the debug info.
     MPM.addPass(SampleProfileLoaderPass(PGOOpt->SampleProfileFile,
+                                        PGOOpt->ProfileRemappingFile,
                                         Phase == ThinLTOPhase::PreLink));
     // Do not invoke ICP in the ThinLTOPrelink phase as it makes it hard
     // for the profile annotation to be accurate in the ThinLTO backend.
@@ -657,7 +660,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (PGOOpt && Phase != ThinLTOPhase::PostLink &&
       (!PGOOpt->ProfileGenFile.empty() || !PGOOpt->ProfileUseFile.empty())) {
     addPGOInstrPasses(MPM, DebugLogging, Level, PGOOpt->RunProfileGen,
-                      PGOOpt->ProfileGenFile, PGOOpt->ProfileUseFile);
+                      PGOOpt->ProfileGenFile, PGOOpt->ProfileUseFile,
+                      PGOOpt->ProfileRemappingFile);
     MPM.addPass(PGOIndirectCallPromotion(false, false));
   }
 

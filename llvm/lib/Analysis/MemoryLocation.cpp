@@ -55,7 +55,8 @@ MemoryLocation MemoryLocation::get(const VAArgInst *VI) {
   AAMDNodes AATags;
   VI->getAAMetadata(AATags);
 
-  return MemoryLocation(VI->getPointerOperand(), UnknownSize, AATags);
+  return MemoryLocation(VI->getPointerOperand(), LocationSize::unknown(),
+                        AATags);
 }
 
 MemoryLocation MemoryLocation::get(const AtomicCmpXchgInst *CXI) {
@@ -87,7 +88,7 @@ MemoryLocation MemoryLocation::getForSource(const AtomicMemTransferInst *MTI) {
 }
 
 MemoryLocation MemoryLocation::getForSource(const AnyMemTransferInst *MTI) {
-  uint64_t Size = UnknownSize;
+  uint64_t Size = MemoryLocation::UnknownSize;
   if (ConstantInt *C = dyn_cast<ConstantInt>(MTI->getLength()))
     Size = C->getValue().getZExtValue();
 
@@ -108,7 +109,7 @@ MemoryLocation MemoryLocation::getForDest(const AtomicMemIntrinsic *MI) {
 }
 
 MemoryLocation MemoryLocation::getForDest(const AnyMemIntrinsic *MI) {
-  uint64_t Size = UnknownSize;
+  uint64_t Size = MemoryLocation::UnknownSize;
   if (ConstantInt *C = dyn_cast<ConstantInt>(MI->getLength()))
     Size = C->getValue().getZExtValue();
 
@@ -189,5 +190,6 @@ MemoryLocation MemoryLocation::getForArgument(ImmutableCallSite CS,
   }
   // FIXME: Handle memset_pattern4 and memset_pattern8 also.
 
-  return MemoryLocation(CS.getArgument(ArgIdx), UnknownSize, AATags);
+  return MemoryLocation(CS.getArgument(ArgIdx), LocationSize::unknown(),
+                        AATags);
 }

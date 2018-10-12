@@ -10,6 +10,10 @@ defm binary_architecture : Eq<"binary-architecture">,
                            HelpText<"Used when transforming an architecture-less format (such as binary) to another format">;
 def B : JoinedOrSeparate<["-"], "B">,
         Alias<binary_architecture>;
+defm target : Eq<"target">,
+              HelpText<"Format of the input and output file">,
+              Values<"binary">;
+def F : JoinedOrSeparate<[ "-" ], "F">, Alias<target>;
 defm input_target : Eq<"input-target">,
                     HelpText<"Format of the input file">,
                     Values<"binary">;

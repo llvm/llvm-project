@@ -41,15 +41,11 @@ public:
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
 
-  Defined *addAbsolute(StringRef Name,
-                       uint8_t Visibility = llvm::ELF::STV_HIDDEN,
-                       uint8_t Binding = llvm::ELF::STB_GLOBAL);
-
-  template <class ELFT> Symbol *addUndefined(StringRef Name);
   template <class ELFT>
   Symbol *addUndefined(StringRef Name, uint8_t Binding, uint8_t StOther,
                        uint8_t Type, bool CanOmitFromDynSym, InputFile *File);
-  Symbol *addRegular(StringRef Name, uint8_t StOther, uint8_t Type,
+
+  Symbol *addDefined(StringRef Name, uint8_t StOther, uint8_t Type,
                      uint64_t Value, uint64_t Size, uint8_t Binding,
                      SectionBase *Section, InputFile *File);
 
@@ -71,7 +67,6 @@ public:
                     uint8_t Binding, uint8_t StOther, uint8_t Type,
                     InputFile &File);
 
-  std::pair<Symbol *, bool> insert(StringRef Name);
   std::pair<Symbol *, bool> insert(StringRef Name, uint8_t Type,
                                    uint8_t Visibility, bool CanOmitFromDynSym,
                                    InputFile *File);
@@ -87,6 +82,8 @@ public:
   void handleDynamicList();
 
 private:
+  std::pair<Symbol *, bool> insertName(StringRef Name);
+
   std::vector<Symbol *> findByVersion(SymbolVersion Ver);
   std::vector<Symbol *> findAllByVersion(SymbolVersion Ver);
 

@@ -46,9 +46,10 @@ struct DenseMapPair : public std::pair<KeyT, ValueT> {
 
 } // end namespace detail
 
-template <
-    typename KeyT, typename ValueT, typename KeyInfoT = DenseMapInfo<KeyT>,
-    typename Bucket = detail::DenseMapPair<KeyT, ValueT>, bool IsConst = false>
+template <typename KeyT, typename ValueT,
+          typename KeyInfoT = DenseMapInfo<KeyT>,
+          typename Bucket = llvm::detail::DenseMapPair<KeyT, ValueT>,
+          bool IsConst = false>
 class DenseMapIterator;
 
 template <typename DerivedT, typename KeyT, typename ValueT, typename KeyInfoT,
@@ -641,7 +642,7 @@ public:
 
 template <typename KeyT, typename ValueT,
           typename KeyInfoT = DenseMapInfo<KeyT>,
-          typename BucketT = detail::DenseMapPair<KeyT, ValueT>>
+          typename BucketT = llvm::detail::DenseMapPair<KeyT, ValueT>>
 class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
                                      KeyT, ValueT, KeyInfoT, BucketT> {
   friend class DenseMapBase<DenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
@@ -798,7 +799,7 @@ private:
 
 template <typename KeyT, typename ValueT, unsigned InlineBuckets = 4,
           typename KeyInfoT = DenseMapInfo<KeyT>,
-          typename BucketT = detail::DenseMapPair<KeyT, ValueT>>
+          typename BucketT = llvm::detail::DenseMapPair<KeyT, ValueT>>
 class SmallDenseMap
     : public DenseMapBase<
           SmallDenseMap<KeyT, ValueT, InlineBuckets, KeyInfoT, BucketT>, KeyT,

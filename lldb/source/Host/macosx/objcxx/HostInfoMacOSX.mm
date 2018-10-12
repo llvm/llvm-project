@@ -253,6 +253,9 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
 #if defined(TARGET_OS_TV) && TARGET_OS_TV == 1
         arch_32.GetTriple().setOS(llvm::Triple::TvOS);
         arch_64.GetTriple().setOS(llvm::Triple::TvOS);
+#elif defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1
+        arch_32.GetTriple().setOS(llvm::Triple::BridgeOS);
+        arch_64.GetTriple().setOS(llvm::Triple::BridgeOS);
 #else
         arch_32.GetTriple().setOS(llvm::Triple::IOS);
         arch_64.GetTriple().setOS(llvm::Triple::IOS);

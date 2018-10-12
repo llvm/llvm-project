@@ -975,6 +975,20 @@
 // CHECK-MIPS64EL-REDHAT: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld.so.1"
 // CHECK-MIPS64EL-REDHAT-NOT: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld-musl-mipsel.so.1"
 // CHECK-MIPS64EL-REDHAT-NOT: "--hash-style={{gnu|both}}"
+
+// Check that we pass --hash-style=both for pre-M Android versions and
+// --hash-style=gnu for newer Android versions.
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android21 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-HASH-STYLE-L %s
+// CHECK-ANDROID-HASH-STYLE-L: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-HASH-STYLE-L: "--hash-style=both"
+//
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android23 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-HASH-STYLE-M %s
+// CHECK-ANDROID-HASH-STYLE-M: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-HASH-STYLE-M: "--hash-style=gnu"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=sparc-unknown-linux-gnu \
@@ -1241,6 +1255,8 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
 // CHECK-ANDROID: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-ANDROID: "-z" "now"
+// CHECK-ANDROID: "-z" "relro"
 // CHECK-ANDROID: "--enable-new-dtags"
 // CHECK-ANDROID: "{{.*}}{{/|\\\\}}crtbegin_dynamic.o"
 // CHECK-ANDROID: "-L[[SYSROOT]]/usr/lib"

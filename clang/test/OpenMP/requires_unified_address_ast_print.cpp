@@ -19,4 +19,7 @@
 #pragma omp requires reverse_offload
 // CHECK:#pragma omp requires reverse_offload
 
+#pragma omp requires dynamic_allocators
+// CHECK:#pragma omp requires dynamic_allocators
+
 #endif

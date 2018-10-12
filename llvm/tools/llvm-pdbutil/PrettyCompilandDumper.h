@@ -34,6 +34,7 @@ public:
   void dump(const PDBSymbolThunk &Symbol) override;
   void dump(const PDBSymbolTypeTypedef &Symbol) override;
   void dump(const PDBSymbolUnknown &Symbol) override;
+  void dump(const PDBSymbolUsingNamespace &Symbol) override;
 
 private:
   LinePrinter &Printer;

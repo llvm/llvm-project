@@ -141,6 +141,11 @@ static cl::opt<std::string>
                        cl::value_desc("filename"),
                        cl::desc("Specify the path of profile data file. This is"
                                 "mainly for test purpose."));
+static cl::opt<std::string> PGOTestProfileRemappingFile(
+    "pgo-test-profile-remapping-file", cl::init(""), cl::Hidden,
+    cl::value_desc("filename"),
+    cl::desc("Specify the path of profile remapping file. This is mainly for "
+             "test purpose."));
 
 // Command line option to disable value profiling. The default is false:
 // i.e. value profiling is enabled by default. This is for debug purpose.
@@ -1429,13 +1434,14 @@ PreservedAnalyses PGOInstrumentationGen::run(Module &M,
 }
 
 static bool annotateAllFunctions(
-    Module &M, StringRef ProfileFileName,
+    Module &M, StringRef ProfileFileName, StringRef ProfileRemappingFileName,
     function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
     function_ref<BlockFrequencyInfo *(Function &)> LookupBFI) {
   LLVM_DEBUG(dbgs() << "Read in profile counters: ");
   auto &Ctx = M.getContext();
   // Read the counter array from file.
-  auto ReaderOrErr = IndexedInstrProfReader::create(ProfileFileName);
+  auto ReaderOrErr =
+      IndexedInstrProfReader::create(ProfileFileName, ProfileRemappingFileName);
   if (Error E = ReaderOrErr.takeError()) {
     handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI) {
       Ctx.diagnose(
@@ -1529,10 +1535,14 @@ static bool annotateAllFunctions(
   return true;
 }
 
-PGOInstrumentationUse::PGOInstrumentationUse(std::string Filename)
-    : ProfileFileName(std::move(Filename)) {
+PGOInstrumentationUse::PGOInstrumentationUse(std::string Filename,
+                                             std::string RemappingFilename)
+    : ProfileFileName(std::move(Filename)),
+      ProfileRemappingFileName(std::move(RemappingFilename)) {
   if (!PGOTestProfileFile.empty())
     ProfileFileName = PGOTestProfileFile;
+  if (!PGOTestProfileRemappingFile.empty())
+    ProfileRemappingFileName = PGOTestProfileRemappingFile;
 }
 
 PreservedAnalyses PGOInstrumentationUse::run(Module &M,
@@ -1547,7 +1557,8 @@ PreservedAnalyses PGOInstrumentationUse::run(Module &M,
     return &FAM.getResult<BlockFrequencyAnalysis>(F);
   };
 
-  if (!annotateAllFunctions(M, ProfileFileName, LookupBPI, LookupBFI))
+  if (!annotateAllFunctions(M, ProfileFileName, ProfileRemappingFileName,
+                            LookupBPI, LookupBFI))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -1564,7 +1575,7 @@ bool PGOInstrumentationUseLegacyPass::runOnModule(Module &M) {
     return &this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
   };
 
-  return annotateAllFunctions(M, ProfileFileName, LookupBPI, LookupBFI);
+  return annotateAllFunctions(M, ProfileFileName, "", LookupBPI, LookupBFI);
 }
 
 static std::string getSimpleNodeName(const BasicBlock *Node) {

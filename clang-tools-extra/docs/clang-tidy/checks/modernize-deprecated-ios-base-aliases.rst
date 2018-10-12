@@ -3,8 +3,8 @@
 modernize-deprecated-ios-base-aliases
 =====================================
 
-This check warns the uses of the deprecated member types of ``std::ios_base``
-and replaces those that have a non-deprecated equivalent.
+Detects usage of the deprecated member types of ``std::ios_base`` and replaces
+those that have a non-deprecated equivalent.
 
 ===================================  ===========================
 Deprecated member type               Replacement

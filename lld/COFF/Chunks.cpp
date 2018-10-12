@@ -675,9 +675,7 @@ void LocalImportChunk::getBaserels(std::vector<Baserel> *Res) {
   Res->emplace_back(getRVA());
 }
 
-size_t LocalImportChunk::getSize() const {
-  return Config->is64() ? 8 : 4;
-}
+size_t LocalImportChunk::getSize() const { return Config->Wordsize; }
 
 void LocalImportChunk::writeTo(uint8_t *Buf) const {
   if (Config->is64()) {
@@ -841,9 +839,7 @@ void MergeChunk::writeTo(uint8_t *Buf) const {
 }
 
 // MinGW specific.
-size_t AbsolutePointerChunk::getSize() const {
-  return Config->is64() ? 8 : 4;
-}
+size_t AbsolutePointerChunk::getSize() const { return Config->Wordsize; }
 
 void AbsolutePointerChunk::writeTo(uint8_t *Buf) const {
   if (Config->is64()) {

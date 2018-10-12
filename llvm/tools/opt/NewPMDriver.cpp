@@ -108,6 +108,10 @@ static cl::opt<PGOKind> PGOKindFlag(
                           "Use sampled profile to guide PGO.")));
 static cl::opt<std::string> ProfileFile(
     "profile-file", cl::desc("Path to the profile."), cl::Hidden);
+static cl::opt<std::string>
+    ProfileRemappingFile("profile-remapping-file",
+                         cl::desc("Path to the profile remapping file."),
+                         cl::Hidden);
 static cl::opt<bool> DebugInfoForProfiling(
     "new-pm-debug-info-for-profiling", cl::init(false), cl::Hidden,
     cl::desc("Emit special debug info to enable PGO profile generation."));
@@ -200,17 +204,17 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   Optional<PGOOptions> P;
   switch (PGOKindFlag) {
     case InstrGen:
-      P = PGOOptions(ProfileFile, "", "", true);
+      P = PGOOptions(ProfileFile, "", "", "", true);
       break;
     case InstrUse:
-      P = PGOOptions("", ProfileFile, "", false);
+      P = PGOOptions("", ProfileFile, "", ProfileRemappingFile, false);
       break;
     case SampleUse:
-      P = PGOOptions("", "", ProfileFile, false);
+      P = PGOOptions("", "", ProfileFile, ProfileRemappingFile, false);
       break;
     case NoPGO:
       if (DebugInfoForProfiling)
-        P = PGOOptions("", "", "", false, true);
+        P = PGOOptions("", "", "", "", false, true);
       else
         P = None;
   }

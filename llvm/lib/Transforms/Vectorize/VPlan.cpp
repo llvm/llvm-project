@@ -543,8 +543,10 @@ void VPlanPrinter::dumpBasicBlock(const VPBasicBlock *BasicBlock) {
     if (const VPInstruction *CBI = dyn_cast<VPInstruction>(CBV)) {
       CBI->printAsOperand(OS);
       OS << " (" << DOT::EscapeString(CBI->getParent()->getName()) << ")\\l\"";
-    } else
+    } else {
       CBV->printAsOperand(OS);
+      OS << "\"";
+    }
   }
 
   bumpIndent(-2);

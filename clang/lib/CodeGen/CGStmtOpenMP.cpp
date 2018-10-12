@@ -3901,6 +3901,7 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_unified_address:
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
+  case OMPC_dynamic_allocators:
     llvm_unreachable("Clause is not allowed in 'omp atomic'.");
   }
 }

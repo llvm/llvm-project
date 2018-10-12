@@ -9,25 +9,26 @@
 
 #include "ContainerBenchmarks.hpp"
 #include "GenerateInput.hpp"
+#include "test_macros.h"
 
 using namespace ContainerBenchmarks;
 
 constexpr std::size_t TestNumInputs = 1024;
 
 template <class _Size>
-inline __attribute__((__always_inline__))
+inline TEST_ALWAYS_INLINE
 _Size loadword(const void* __p) {
     _Size __r;
     std::memcpy(&__r, __p, sizeof(__r));
     return __r;
 }
 
-inline __attribute__((__always_inline__))
+inline TEST_ALWAYS_INLINE
 std::size_t rotate_by_at_least_1(std::size_t __val, int __shift) {
     return (__val >> __shift) | (__val << (64 - __shift));
 }
 
-inline __attribute__((__always_inline__))
+inline TEST_ALWAYS_INLINE
 std::size_t hash_len_16(std::size_t __u, std::size_t __v) {
     const  std::size_t __mul = 0x9ddfea08eb382d69ULL;
     std::size_t __a = (__u ^ __v) * __mul;
@@ -40,7 +41,7 @@ std::size_t hash_len_16(std::size_t __u, std::size_t __v) {
 
 
 template <std::size_t _Len>
-inline __attribute__((__always_inline__))
+inline TEST_ALWAYS_INLINE
 std::size_t hash_len_0_to_8(const char* __s) {
     static_assert(_Len == 4 || _Len == 8, "");
     const uint64_t __a = loadword<uint32_t>(__s);
@@ -50,7 +51,7 @@ std::size_t hash_len_0_to_8(const char* __s) {
 
 struct UInt32Hash {
   UInt32Hash() = default;
-  inline __attribute__((__always_inline__))
+  inline TEST_ALWAYS_INLINE
   std::size_t operator()(uint32_t data) const {
       return hash_len_0_to_8<4>(reinterpret_cast<const char*>(&data));
   }
@@ -58,7 +59,7 @@ struct UInt32Hash {
 
 struct UInt64Hash {
   UInt64Hash() = default;
-  inline __attribute__((__always_inline__))
+  inline TEST_ALWAYS_INLINE
   std::size_t operator()(uint64_t data) const {
       return hash_len_0_to_8<8>(reinterpret_cast<const char*>(&data));
   }
@@ -66,7 +67,7 @@ struct UInt64Hash {
 
 struct UInt128Hash {
   UInt128Hash() = default;
-  inline __attribute__((__always_inline__))
+  inline TEST_ALWAYS_INLINE
   std::size_t operator()(__uint128_t data) const {
       const __uint128_t __mask = static_cast<std::size_t>(-1);
       const std::size_t __a = (std::size_t)(data & __mask);
@@ -77,7 +78,7 @@ struct UInt128Hash {
 
 struct UInt32Hash2 {
   UInt32Hash2() = default;
-  inline __attribute__((__always_inline__))
+  inline TEST_ALWAYS_INLINE
   std::size_t operator()(uint32_t data) const {
       const uint32_t __m = 0x5bd1e995;
       const uint32_t __r = 24;
@@ -97,7 +98,7 @@ struct UInt32Hash2 {
 
 struct UInt64Hash2 {
   UInt64Hash2() = default;
-  inline __attribute__((__always_inline__))
+  inline TEST_ALWAYS_INLINE
   std::size_t operator()(uint64_t data) const {
       return hash_len_0_to_8<8>(reinterpret_cast<const char*>(&data));
   }

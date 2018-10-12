@@ -45,6 +45,17 @@ define i32 @i32_trunc_s_f32(float %x) {
   ret i32 %a
 }
 
+; CHECK-LABEL: i32_trunc_sat_s_f32:
+; CHECK-NEXT: .param f32{{$}}
+; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: i32.trunc_s:sat/f32 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[NUM]]{{$}}
+declare i32 @llvm.wasm.trunc.saturate.signed.i32.f32(float)
+define i32 @i32_trunc_sat_s_f32(float %x) {
+  %a = call i32 @llvm.wasm.trunc.saturate.signed.i32.f32(float %x)
+  ret i32 %a
+}
+
 ; CHECK-LABEL: i32_trunc_u_f32:
 ; CHECK-NEXT: .param f32{{$}}
 ; CHECK-NEXT: .result i32{{$}}
@@ -52,6 +63,17 @@ define i32 @i32_trunc_s_f32(float %x) {
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @i32_trunc_u_f32(float %x) {
   %a = fptoui float %x to i32
+  ret i32 %a
+}
+
+; CHECK-LABEL: i32_trunc_sat_u_f32:
+; CHECK-NEXT: .param f32{{$}}
+; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: i32.trunc_u:sat/f32 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[NUM]]{{$}}
+declare i32 @llvm.wasm.trunc.saturate.unsigned.i32.f32(float)
+define i32 @i32_trunc_sat_u_f32(float %x) {
+  %a = call i32 @llvm.wasm.trunc.saturate.unsigned.i32.f32(float %x)
   ret i32 %a
 }
 
@@ -65,6 +87,17 @@ define i32 @i32_trunc_s_f64(double %x) {
   ret i32 %a
 }
 
+; CHECK-LABEL: i32_trunc_sat_s_f64:
+; CHECK-NEXT: .param f64{{$}}
+; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: i32.trunc_s:sat/f64 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[NUM]]{{$}}
+declare i32 @llvm.wasm.trunc.saturate.signed.i32.f64(double)
+define i32 @i32_trunc_sat_s_f64(double %x) {
+  %a = call i32 @llvm.wasm.trunc.saturate.signed.i32.f64(double %x)
+  ret i32 %a
+}
+
 ; CHECK-LABEL: i32_trunc_u_f64:
 ; CHECK-NEXT: .param f64{{$}}
 ; CHECK-NEXT: .result i32{{$}}
@@ -72,6 +105,17 @@ define i32 @i32_trunc_s_f64(double %x) {
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @i32_trunc_u_f64(double %x) {
   %a = fptoui double %x to i32
+  ret i32 %a
+}
+
+; CHECK-LABEL: i32_trunc_sat_u_f64:
+; CHECK-NEXT: .param f64{{$}}
+; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: i32.trunc_u:sat/f64 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[NUM]]{{$}}
+declare i32 @llvm.wasm.trunc.saturate.unsigned.i32.f64(double)
+define i32 @i32_trunc_sat_u_f64(double %x) {
+  %a = call i32 @llvm.wasm.trunc.saturate.unsigned.i32.f64(double %x)
   ret i32 %a
 }
 
@@ -85,6 +129,17 @@ define i64 @i64_trunc_s_f32(float %x) {
   ret i64 %a
 }
 
+; CHECK-LABEL: i64_trunc_sat_s_f32:
+; CHECK-NEXT: .param f32{{$}}
+; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: i64.trunc_s:sat/f32 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[NUM]]{{$}}
+declare i64 @llvm.wasm.trunc.saturate.signed.i64.f32(float)
+define i64 @i64_trunc_sat_s_f32(float %x) {
+  %a = call i64 @llvm.wasm.trunc.saturate.signed.i64.f32(float %x)
+  ret i64 %a
+}
+
 ; CHECK-LABEL: i64_trunc_u_f32:
 ; CHECK-NEXT: .param f32{{$}}
 ; CHECK-NEXT: .result i64{{$}}
@@ -92,6 +147,17 @@ define i64 @i64_trunc_s_f32(float %x) {
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @i64_trunc_u_f32(float %x) {
   %a = fptoui float %x to i64
+  ret i64 %a
+}
+
+; CHECK-LABEL: i64_trunc_sat_u_f32:
+; CHECK-NEXT: .param f32{{$}}
+; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: i64.trunc_u:sat/f32 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[NUM]]{{$}}
+declare i64 @llvm.wasm.trunc.saturate.unsigned.i64.f32(float)
+define i64 @i64_trunc_sat_u_f32(float %x) {
+  %a = call i64 @llvm.wasm.trunc.saturate.unsigned.i64.f32(float %x)
   ret i64 %a
 }
 
@@ -105,6 +171,17 @@ define i64 @i64_trunc_s_f64(double %x) {
   ret i64 %a
 }
 
+; CHECK-LABEL: i64_trunc_sat_s_f64:
+; CHECK-NEXT: .param f64{{$}}
+; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: i64.trunc_s:sat/f64 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[NUM]]{{$}}
+declare i64 @llvm.wasm.trunc.saturate.signed.i64.f64(double)
+define i64 @i64_trunc_sat_s_f64(double %x) {
+  %a = call i64 @llvm.wasm.trunc.saturate.signed.i64.f64(double %x)
+  ret i64 %a
+}
+
 ; CHECK-LABEL: i64_trunc_u_f64:
 ; CHECK-NEXT: .param f64{{$}}
 ; CHECK-NEXT: .result i64{{$}}
@@ -112,6 +189,17 @@ define i64 @i64_trunc_s_f64(double %x) {
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @i64_trunc_u_f64(double %x) {
   %a = fptoui double %x to i64
+  ret i64 %a
+}
+
+; CHECK-LABEL: i64_trunc_sat_u_f64:
+; CHECK-NEXT: .param f64{{$}}
+; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: i64.trunc_u:sat/f64 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[NUM]]{{$}}
+declare i64 @llvm.wasm.trunc.saturate.unsigned.i64.f64(double)
+define i64 @i64_trunc_sat_u_f64(double %x) {
+  %a = call i64 @llvm.wasm.trunc.saturate.unsigned.i64.f64(double %x)
   ret i64 %a
 }
 
