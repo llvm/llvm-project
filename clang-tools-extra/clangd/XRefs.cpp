@@ -579,20 +579,28 @@ public:
 
   llvm::Optional<QualType> getDeducedType() { return DeducedType; }
 
+  // Remove the surrounding Reference or Pointer type of the given type T.
+  QualType UnwrapReferenceOrPointer(QualType T) {
+    // "auto &" is represented as a ReferenceType containing an AutoType
+    if (const ReferenceType *RT = dyn_cast<ReferenceType>(T.getTypePtr()))
+      return RT->getPointeeType();
+    // "auto *" is represented as a PointerType containing an AutoType
+    if (const PointerType *PT = dyn_cast<PointerType>(T.getTypePtr()))
+      return PT->getPointeeType();
+    return T;
+  }
+
   // Handle auto initializers:
   //- auto i = 1;
   //- decltype(auto) i = 1;
   //- auto& i = 1;
+  //- auto* i = &a;
   bool VisitDeclaratorDecl(DeclaratorDecl *D) {
     if (!D->getTypeSourceInfo() ||
         D->getTypeSourceInfo()->getTypeLoc().getBeginLoc() != SearchedLocation)
       return true;
 
-    auto DeclT = D->getType();
-    // "auto &" is represented as a ReferenceType containing an AutoType
-    if (const ReferenceType *RT = dyn_cast<ReferenceType>(DeclT.getTypePtr()))
-      DeclT = RT->getPointeeType();
-
+    auto DeclT = UnwrapReferenceOrPointer(D->getType());
     const AutoType *AT = dyn_cast<AutoType>(DeclT.getTypePtr());
     if (AT && !AT->getDeducedType().isNull()) {
       // For auto, use the underlying type because the const& would be
@@ -626,11 +634,7 @@ public:
     if (CurLoc != SearchedLocation)
       return true;
 
-    auto T = D->getReturnType();
-    // "auto &" is represented as a ReferenceType containing an AutoType.
-    if (const ReferenceType *RT = dyn_cast<ReferenceType>(T.getTypePtr()))
-      T = RT->getPointeeType();
-
+    auto T = UnwrapReferenceOrPointer(D->getReturnType());
     const AutoType *AT = dyn_cast<AutoType>(T.getTypePtr());
     if (AT && !AT->getDeducedType().isNull()) {
       DeducedType = T.getUnqualifiedType();
