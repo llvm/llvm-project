@@ -426,6 +426,7 @@ void CommandInterpreter::Initialize() {
 
   cmd_obj_sp = GetCommandSPExact("frame variable", false);
   if (cmd_obj_sp) {
+    AddAlias("v", cmd_obj_sp);
     AddAlias("var", cmd_obj_sp);
     AddAlias("vo", cmd_obj_sp, "--object-description");
   }

@@ -584,6 +584,16 @@ TEST_F(FormatTestObjC, FormatObjCMethodDeclarations) {
                "             aaaaa:(a)yyy\n"
                "               bbb:(d)cccc;");
   verifyFormat("- (void)drawRectOn:(id)surface ofSize:(aaa)height:(bbb)width;");
+
+  // BraceWrapping AfterFunction is respected for ObjC methods 
+  Style = getGoogleStyle(FormatStyle::LK_ObjC);
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+  verifyFormat("@implementation Foo\n"
+               "- (void)foo:(id)bar\n"
+               "{\n"
+               "}\n"
+               "@end\n");
 }
 
 TEST_F(FormatTestObjC, FormatObjCMethodExpr) {

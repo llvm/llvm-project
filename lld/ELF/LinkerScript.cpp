@@ -169,7 +169,7 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
   // Define a symbol.
   Symbol *Sym;
   uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
-  std::tie(Sym, std::ignore) = Symtab->insert(Cmd->Name, /*Type*/ 0, Visibility,
+  std::tie(Sym, std::ignore) = Symtab->insert(Cmd->Name, Visibility,
                                               /*CanOmitFromDynSym*/ false,
                                               /*File*/ nullptr);
   ExprValue Value = Cmd->Expression();
@@ -202,7 +202,7 @@ static void declareSymbol(SymbolAssignment *Cmd) {
   // We can't calculate final value right now.
   Symbol *Sym;
   uint8_t Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
-  std::tie(Sym, std::ignore) = Symtab->insert(Cmd->Name, /*Type*/ 0, Visibility,
+  std::tie(Sym, std::ignore) = Symtab->insert(Cmd->Name, Visibility,
                                               /*CanOmitFromDynSym*/ false,
                                               /*File*/ nullptr);
   replaceSymbol<Defined>(Sym, nullptr, Cmd->Name, STB_GLOBAL, Visibility,

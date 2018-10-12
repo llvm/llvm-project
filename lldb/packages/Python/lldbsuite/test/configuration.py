@@ -188,5 +188,5 @@ def get_filecheck_path():
     """
     Get the path to the FileCheck testing tool.
     """
-    assert os.path.lexists(filecheck)
-    return filecheck
+    if filecheck and os.path.lexists(filecheck):
+        return filecheck

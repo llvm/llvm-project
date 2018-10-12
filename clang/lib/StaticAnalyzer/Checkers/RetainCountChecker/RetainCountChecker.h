@@ -45,8 +45,6 @@
 #include <cstdarg>
 #include <utility>
 
-using llvm::StrInStrNoCase;
-
 namespace clang {
 namespace ento {
 namespace retaincountchecker {

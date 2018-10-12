@@ -35,7 +35,8 @@ using namespace clang;
 using namespace driver;
 
 Command::Command(const Action &Source, const Tool &Creator,
-                 const char *Executable, const ArgStringList &Arguments,
+                 const char *Executable,
+                 const llvm::opt::ArgStringList &Arguments,
                  ArrayRef<InputInfo> Inputs)
     : Source(Source), Creator(Creator), Executable(Executable),
       Arguments(Arguments) {
@@ -389,7 +390,7 @@ int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
 
 FallbackCommand::FallbackCommand(const Action &Source_, const Tool &Creator_,
                                  const char *Executable_,
-                                 const ArgStringList &Arguments_,
+                                 const llvm::opt::ArgStringList &Arguments_,
                                  ArrayRef<InputInfo> Inputs,
                                  std::unique_ptr<Command> Fallback_)
     : Command(Source_, Creator_, Executable_, Arguments_, Inputs),
@@ -428,11 +429,9 @@ int FallbackCommand::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
   return SecondaryStatus;
 }
 
-ForceSuccessCommand::ForceSuccessCommand(const Action &Source_,
-                                         const Tool &Creator_,
-                                         const char *Executable_,
-                                         const ArgStringList &Arguments_,
-                                         ArrayRef<InputInfo> Inputs)
+ForceSuccessCommand::ForceSuccessCommand(
+    const Action &Source_, const Tool &Creator_, const char *Executable_,
+    const llvm::opt::ArgStringList &Arguments_, ArrayRef<InputInfo> Inputs)
     : Command(Source_, Creator_, Executable_, Arguments_, Inputs) {}
 
 void ForceSuccessCommand::Print(raw_ostream &OS, const char *Terminator,

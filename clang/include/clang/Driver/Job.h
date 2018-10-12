@@ -29,9 +29,6 @@ class Action;
 class InputInfo;
 class Tool;
 
-// Re-export this as clang::driver::ArgStringList.
-using llvm::opt::ArgStringList;
-
 struct CrashReportInfo {
   StringRef Filename;
   StringRef VFSPath;
@@ -137,7 +134,8 @@ public:
 class FallbackCommand : public Command {
 public:
   FallbackCommand(const Action &Source_, const Tool &Creator_,
-                  const char *Executable_, const ArgStringList &Arguments_,
+                  const char *Executable_,
+                  const llvm::opt::ArgStringList &Arguments_,
                   ArrayRef<InputInfo> Inputs,
                   std::unique_ptr<Command> Fallback_);
 
@@ -155,7 +153,8 @@ private:
 class ForceSuccessCommand : public Command {
 public:
   ForceSuccessCommand(const Action &Source_, const Tool &Creator_,
-                      const char *Executable_, const ArgStringList &Arguments_,
+                      const char *Executable_,
+                      const llvm::opt::ArgStringList &Arguments_,
                       ArrayRef<InputInfo> Inputs);
 
   void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,

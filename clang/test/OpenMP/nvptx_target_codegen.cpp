@@ -557,20 +557,26 @@ int baz(int f, double &a) {
   // CHECK: alloca i32,
   // CHECK: [[LOCAL_F_PTR:%.+]] = alloca i32,
   // CHECK: [[ZERO_ADDR:%.+]] = alloca i32,
-  // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t*
   // CHECK: store i32 0, i32* [[ZERO_ADDR]]
+  // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t*
+  // CHECK: [[PAR_LEVEL:%.+]] = call i16 @__kmpc_parallel_level(%struct.ident_t* @0, i32 [[GTID]])
+  // CHECK: [[IS_TTD:%.+]] = icmp eq i16 %1, 0
   // CHECK: [[RES:%.+]] = call i8 @__kmpc_is_spmd_exec_mode()
   // CHECK: [[IS_SPMD:%.+]] = icmp ne i8 [[RES]], 0
   // CHECK: br i1 [[IS_SPMD]], label
   // CHECK: br label
-  // CHECK: [[PTR:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{64|32}} 128, i16 0)
+  // CHECK: [[SIZE:%.+]] = select i1 [[IS_TTD]], i{{64|32}} 4, i{{64|32}} 128
+  // CHECK: [[PTR:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{64|32}} [[SIZE]], i16 0)
   // CHECK: [[REC_ADDR:%.+]] = bitcast i8* [[PTR]] to [[GLOBAL_ST:%.+]]*
   // CHECK: br label
   // CHECK: [[ITEMS:%.+]] = phi [[GLOBAL_ST]]* [ null, {{.+}} ], [ [[REC_ADDR]], {{.+}} ]
+  // CHECK: [[TTD_ITEMS:%.+]] = bitcast [[GLOBAL_ST]]* [[ITEMS]] to [[SEC_GLOBAL_ST:%.+]]*
   // CHECK: [[F_PTR_ARR:%.+]] = getelementptr inbounds [[GLOBAL_ST]], [[GLOBAL_ST]]* [[ITEMS]], i32 0, i32 0
   // CHECK: [[TID:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   // CHECK: [[LID:%.+]] = and i32 [[TID]], 31
-  // CHECK: [[GLOBAL_F_PTR:%.+]] = getelementptr inbounds [32 x i32], [32 x i32]* [[F_PTR_ARR]], i32 0, i32 [[LID]]
+  // CHECK: [[GLOBAL_F_PTR_PAR:%.+]] = getelementptr inbounds [32 x i32], [32 x i32]* [[F_PTR_ARR]], i32 0, i32 [[LID]]
+  // CHECK: [[GLOBAL_F_PTR_TTD:%.+]] = getelementptr inbounds [[SEC_GLOBAL_ST]], [[SEC_GLOBAL_ST]]* [[TTD_ITEMS]], i32 0, i32 0
+  // CHECK: [[GLOBAL_F_PTR:%.+]] = select i1 [[IS_TTD]], i32* [[GLOBAL_F_PTR_TTD]], i32* [[GLOBAL_F_PTR_PAR]]
   // CHECK: [[F_PTR:%.+]] = select i1 [[IS_SPMD]], i32* [[LOCAL_F_PTR]], i32* [[GLOBAL_F_PTR]]
   // CHECK: store i32 %{{.+}}, i32* [[F_PTR]],
 
