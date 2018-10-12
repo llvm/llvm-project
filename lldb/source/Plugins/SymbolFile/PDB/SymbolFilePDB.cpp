@@ -46,6 +46,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h" // For IsCPPMangledName
+#include "Plugins/SymbolFile/NativePDB/SymbolFileNativePDB.h"
 #include "Plugins/SymbolFile/PDB/PDBASTParser.h"
 #include "Plugins/SymbolFile/PDB/PDBLocationToDWARFExpression.h"
 
@@ -74,14 +75,31 @@ bool ShouldAddLine(uint32_t requested_line, uint32_t actual_line,
 }
 } // namespace
 
+static bool ShouldUseNativeReader() {
+#if !defined(_WIN32)
+  return true;
+#endif
+  llvm::StringRef use_native = ::getenv("LLDB_USE_NATIVE_PDB_READER");
+  return use_native.equals_lower("on") || use_native.equals_lower("yes") ||
+         use_native.equals_lower("1") || use_native.equals_lower("true");
+}
+
 void SymbolFilePDB::Initialize() {
-  PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                GetPluginDescriptionStatic(), CreateInstance,
-                                DebuggerInitialize);
+  if (ShouldUseNativeReader()) {
+    npdb::SymbolFileNativePDB::Initialize();
+  } else {
+    PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                  GetPluginDescriptionStatic(), CreateInstance,
+                                  DebuggerInitialize);
+  }
 }
 
 void SymbolFilePDB::Terminate() {
-  PluginManager::UnregisterPlugin(CreateInstance);
+  if (ShouldUseNativeReader()) {
+    npdb::SymbolFileNativePDB::Terminate();
+  } else {
+    PluginManager::UnregisterPlugin(CreateInstance);
+  }
 }
 
 void SymbolFilePDB::DebuggerInitialize(lldb_private::Debugger &debugger) {}
