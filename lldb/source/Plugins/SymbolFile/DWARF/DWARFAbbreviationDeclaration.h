@@ -35,20 +35,11 @@ public:
   dw_form_t GetFormByIndex(uint32_t idx) const {
     return m_attributes.size() > idx ? m_attributes[idx].get_form() : 0;
   }
-  bool GetAttrAndFormByIndex(uint32_t idx, dw_attr_t &attr,
-                             dw_form_t &form) const {
-    if (m_attributes.size() > idx) {
-      m_attributes[idx].get(attr, form);
-      return true;
-    }
-    attr = form = 0;
-    return false;
-  }
 
-  // idx is assumed to be valid when calling GetAttrAndFormByIndexUnchecked()
-  void GetAttrAndFormByIndexUnchecked(uint32_t idx, dw_attr_t &attr,
-                                      dw_form_t &form) const {
-    m_attributes[idx].get(attr, form);
+  // idx is assumed to be valid when calling GetAttrAndFormByIndex()
+  void GetAttrAndFormValueByIndex(uint32_t idx, dw_attr_t &attr,
+                                  DWARFFormValue &form_value) const {
+    m_attributes[idx].get(attr, form_value.FormRef(), form_value.ValueRef());
   }
   dw_form_t GetFormByIndexUnchecked(uint32_t idx) const {
     return m_attributes[idx].get_form();

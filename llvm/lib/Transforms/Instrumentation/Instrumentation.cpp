@@ -15,6 +15,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm-c/Initialization.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/PassRegistry.h"
 
@@ -51,6 +52,22 @@ BasicBlock::iterator llvm::PrepareToSplitEntryBlock(BasicBlock &BB,
       IP = moveBeforeInsertPoint(I, IP);
   }
   return IP;
+}
+
+// Create a constant for Str so that we can pass it to the run-time lib.
+GlobalVariable *llvm::createPrivateGlobalForString(Module &M, StringRef Str,
+                                                   bool AllowMerging,
+                                                   const char *NamePrefix) {
+  Constant *StrConst = ConstantDataArray::getString(M.getContext(), Str);
+  // We use private linkage for module-local strings. If they can be merged
+  // with another one, we set the unnamed_addr attribute.
+  GlobalVariable *GV =
+      new GlobalVariable(M, StrConst->getType(), true,
+                         GlobalValue::PrivateLinkage, StrConst, NamePrefix);
+  if (AllowMerging)
+    GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+  GV->setAlignment(1);  // Strings may not be merged w/o setting align 1.
+  return GV;
 }
 
 /// initializeInstrumentation - Initialize all passes in the TransformUtils

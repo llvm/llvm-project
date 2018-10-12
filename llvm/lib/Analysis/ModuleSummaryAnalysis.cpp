@@ -74,9 +74,17 @@ cl::opt<FunctionSummary::ForceSummaryHotnessType, true> FSEC(
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an
 // Instruction or a GlobalVariable (which walks its initializer).
-static void findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
+// Return true if any of the operands contains blockaddress. This is important
+// to know when computing summary for global var, because if global variable
+// references basic block address we can't import it separately from function
+// containing that basic block. For simplicity we currently don't import such
+// global vars at all. When importing function we aren't interested if any 
+// instruction in it takes an address of any basic block, because instruction
+// can only take an address of basic block located in the same function.
+static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
                          SetVector<ValueInfo> &RefEdges,
                          SmallPtrSet<const User *, 8> &Visited) {
+  bool HasBlockAddress = false;
   SmallVector<const User *, 32> Worklist;
   Worklist.push_back(CurUser);
 
@@ -92,8 +100,10 @@ static void findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
       const User *Operand = dyn_cast<User>(OI);
       if (!Operand)
         continue;
-      if (isa<BlockAddress>(Operand))
+      if (isa<BlockAddress>(Operand)) {
+        HasBlockAddress = true;
         continue;
+      }
       if (auto *GV = dyn_cast<GlobalValue>(Operand)) {
         // We have a reference to a global value. This should be added to
         // the reference set unless it is a callee. Callees are handled
@@ -105,6 +115,7 @@ static void findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
       Worklist.push_back(Operand);
     }
   }
+  return HasBlockAddress;
 }
 
 static CalleeInfo::HotnessType getHotness(uint64_t ProfileCount,
@@ -369,7 +380,7 @@ computeVariableSummary(ModuleSummaryIndex &Index, const GlobalVariable &V,
                        DenseSet<GlobalValue::GUID> &CantBePromoted) {
   SetVector<ValueInfo> RefEdges;
   SmallPtrSet<const User *, 8> Visited;
-  findRefEdges(Index, &V, RefEdges, Visited);
+  bool HasBlockAddress = findRefEdges(Index, &V, RefEdges, Visited);
   bool NonRenamableLocal = isNonRenamableLocal(V);
   GlobalValueSummary::GVFlags Flags(V.getLinkage(), NonRenamableLocal,
                                     /* Live = */ false, V.isDSOLocal());
@@ -377,6 +388,8 @@ computeVariableSummary(ModuleSummaryIndex &Index, const GlobalVariable &V,
       llvm::make_unique<GlobalVarSummary>(Flags, RefEdges.takeVector());
   if (NonRenamableLocal)
     CantBePromoted.insert(V.getGUID());
+  if (HasBlockAddress)
+    GVarSummary->setNotEligibleToImport();
   Index.addGlobalValueSummary(V, std::move(GVarSummary));
 }
 

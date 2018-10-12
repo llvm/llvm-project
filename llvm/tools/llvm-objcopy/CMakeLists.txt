@@ -14,6 +14,7 @@ tablegen(LLVM StripOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(StripOptsTableGen)
 
 add_llvm_tool(llvm-objcopy
+  CopyConfig.cpp
   llvm-objcopy.cpp
   Object.cpp
   DEPENDS

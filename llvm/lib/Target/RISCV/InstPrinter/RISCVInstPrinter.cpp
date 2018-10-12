@@ -93,6 +93,8 @@ void RISCVInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
   unsigned FenceArg = MI->getOperand(OpNo).getImm();
+  assert (((FenceArg >> 4) == 0) && "Invalid immediate in printFenceArg");
+
   if ((FenceArg & RISCVFenceField::I) != 0)
     O << 'i';
   if ((FenceArg & RISCVFenceField::O) != 0)
@@ -101,6 +103,8 @@ void RISCVInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
     O << 'r';
   if ((FenceArg & RISCVFenceField::W) != 0)
     O << 'w';
+  if (FenceArg == 0)
+    O << "unknown";
 }
 
 void RISCVInstPrinter::printFRMArg(const MCInst *MI, unsigned OpNo,

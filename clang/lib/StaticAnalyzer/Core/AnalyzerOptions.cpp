@@ -77,6 +77,8 @@ AnalyzerOptions::getExplorationStrategy() {
                   ExplorationStrategyKind::UnexploredFirst)
             .Case("unexplored_first_queue",
                   ExplorationStrategyKind::UnexploredFirstQueue)
+            .Case("unexplored_first_location_queue",
+                  ExplorationStrategyKind::UnexploredFirstLocationQueue)
             .Case("bfs_block_dfs_contents",
                   ExplorationStrategyKind::BFSBlockDFSContents)
             .Default(ExplorationStrategyKind::NotSet);

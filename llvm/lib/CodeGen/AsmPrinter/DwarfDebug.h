@@ -567,6 +567,9 @@ class DwarfDebug : public DebugHandlerBase {
   /// Emit the reference to the section.
   void emitSectionReference(const DwarfCompileUnit &CU);
 
+  // Emit the BTF sections
+  void emitBTFSection(bool IsLittleEndian);
+
 protected:
   /// Gather pre-function debug information.
   void beginFunctionImpl(const MachineFunction *MF) override;
@@ -723,9 +726,6 @@ public:
   bool tuneForLLDB() const { return DebuggerTuning == DebuggerKind::LLDB; }
   bool tuneForSCE() const { return DebuggerTuning == DebuggerKind::SCE; }
   /// @}
-
-private:
-  void emitDebugLoc(const DebugLoc &DL);
 };
 
 } // end namespace llvm

@@ -774,12 +774,23 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
   // annotate attribute. If it does, we will not inline it.
   bool hasTrustedImplementationAnnotation = false;
 
+  const LocationContext *LCtx = C.getLocationContext();
+
+  // Process OSDynamicCast: should just return the first argument.
+  // For now, tresting the cast as a no-op, and disregarding the case where
+  // the output becomes null due to the type mismatch.
+  if (FD->getNameAsString() == "safeMetaCast") {
+    state = state->BindExpr(CE, LCtx, 
+                            state->getSVal(CE->getArg(0), LCtx));
+    C.addTransition(state);
+    return true;
+  }
+
   // See if it's one of the specific functions we know how to eval.
   if (!SmrMgr.canEval(CE, FD, hasTrustedImplementationAnnotation))
     return false;
 
   // Bind the return value.
-  const LocationContext *LCtx = C.getLocationContext();
   SVal RetVal = state->getSVal(CE->getArg(0), LCtx);
   if (RetVal.isUnknown() ||
       (hasTrustedImplementationAnnotation && !ResultTy.isNull())) {
@@ -790,25 +801,6 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
     RetVal = SVB.conjureSymbolVal(nullptr, CE, LCtx, ResultTy, C.blockCount());
   }
   state = state->BindExpr(CE, LCtx, RetVal, false);
-
-  // FIXME: This should not be necessary, but otherwise the argument seems to be
-  // considered alive during the next statement.
-  if (const MemRegion *ArgRegion = RetVal.getAsRegion()) {
-    // Save the refcount status of the argument.
-    SymbolRef Sym = RetVal.getAsLocSymbol();
-    const RefVal *Binding = nullptr;
-    if (Sym)
-      Binding = getRefBinding(state, Sym);
-
-    // Invalidate the argument region.
-    state = state->invalidateRegions(
-        ArgRegion, CE, C.blockCount(), LCtx,
-        /*CausesPointerEscape*/ hasTrustedImplementationAnnotation);
-
-    // Restore the refcount status of the argument.
-    if (Binding)
-      state = setRefBinding(state, Sym, *Binding);
-  }
 
   C.addTransition(state);
   return true;

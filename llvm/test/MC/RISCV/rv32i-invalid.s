@@ -6,6 +6,7 @@ fence iorw, iore # CHECK: :[[@LINE]]:13: error: operand must be formed of letter
 fence wr, wr # CHECK: :[[@LINE]]:7: error: operand must be formed of letters selected in-order from 'iorw'
 fence rw, rr # CHECK: :[[@LINE]]:11: error: operand must be formed of letters selected in-order from 'iorw'
 fence 1, rw # CHECK: :[[@LINE]]:7: error: operand must be formed of letters selected in-order from 'iorw'
+fence unknown, unknown # CHECK: :[[@LINE]]:7: error: operand must be formed of letters selected in-order from 'iorw'
 
 ## uimm5
 slli a0, a0, 32 # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [0, 31]

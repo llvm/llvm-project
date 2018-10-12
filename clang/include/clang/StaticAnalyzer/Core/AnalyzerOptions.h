@@ -186,6 +186,7 @@ public:
     BFS,
     UnexploredFirst,
     UnexploredFirstQueue,
+    UnexploredFirstLocationQueue,
     BFSBlockDFSContents,
     NotSet
   };

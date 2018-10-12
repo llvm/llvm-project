@@ -568,7 +568,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       auto &MM = ASTReader->getModuleManager();
       auto &PrimaryModule = MM.getPrimaryModule();
 
-      for (ModuleFile &MF : MM)
+      for (serialization::ModuleFile &MF : MM)
         if (&MF != &PrimaryModule)
           CI.getFrontendOpts().ModuleFiles.push_back(MF.FileName);
 

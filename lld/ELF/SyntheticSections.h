@@ -307,8 +307,6 @@ private:
 
   uint64_t Size = 0;
 
-  size_t LocalEntriesNum = 0;
-
   // Symbol and addend.
   typedef std::pair<Symbol *, int64_t> GotEntry;
 
@@ -340,8 +338,6 @@ private:
     size_t getPageEntriesNum() const;
     // Number of entries require 16-bit index to access.
     size_t getIndexedEntriesNum() const;
-
-    bool isOverflow() const;
   };
 
   // Container of GOT created for each input file.

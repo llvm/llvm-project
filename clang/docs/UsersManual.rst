@@ -1831,12 +1831,14 @@ The profile remapping file is a text file containing lines of the form
 
 where ``fragmentkind`` is one of ``name``, ``type``, or ``encoding``,
 indicating whether the following mangled name fragments are
-<`name <http://itanium-cxx-abi.github.io/cxx-abi/abi.html#mangle.name>`>s,
-<`type <http://itanium-cxx-abi.github.io/cxx-abi/abi.html#mangle.type>`>s, or
-<`encoding <http://itanium-cxx-abi.github.io/cxx-abi/abi.html#mangle.encoding>`>s,
+<`name <http://itanium-cxx-abi.github.io/cxx-abi/abi.html#mangle.name>`_>s,
+<`type <http://itanium-cxx-abi.github.io/cxx-abi/abi.html#mangle.type>`_>s, or
+<`encoding <http://itanium-cxx-abi.github.io/cxx-abi/abi.html#mangle.encoding>`_>s,
 respectively.
-
 Blank lines and lines starting with ``#`` are ignored.
+
+For convenience, built-in <substitution>s such as ``St`` and ``Ss``
+are accepted as <name>s (even though they technically are not <name>s).
 
 For example, to specify that ``absl::string_view`` and ``std::string_view``
 should be treated as equivalent when matching profile data, the following
@@ -1854,7 +1856,8 @@ remapping file could be used:
 Matching profile data using a profile remapping file is supported on a
 best-effort basis. For example, information regarding indirect call targets is
 currently not remapped. For best results, you are encouraged to generate new
-profile data matching the updated program.
+profile data matching the updated program, or to remap the profile data
+using the ``llvm-cxxmap`` and ``llvm-profdata merge`` tools.
 
 .. note::
 

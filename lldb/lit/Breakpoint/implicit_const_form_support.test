@@ -1,0 +1,33 @@
+# RUN: yaml2obj %p/Inputs/implicit_const_form_support.yaml > %ttest
+# RUN: lldb-test breakpoints %ttest %s | FileCheck %s
+
+## The intention of the test is to check that DW_FORM_implicit_const
+## is supported and handled properly.
+
+## About implicit_const_form_support.yaml:
+## The following invocation and code were used to produce the binary
+## which was converted to yaml and reduced:
+## gcc version 8.0.1 20180319 (experimental) (GCC)
+##
+## g++ test.cpp -g -gdwarf-5 -o test
+##
+## // test.cpp
+## int foo1() {
+##  return 0;
+## }
+## 
+## int foo2() {
+##  return 0;
+## }
+## 
+## int main() {
+##  return foo1() + foo2();
+## }
+
+b foo1
+# CHECK-LABEL: b foo1
+# CHECK: Address: {{.*}}foo1() at test.cpp:2:9
+
+b foo2
+# CHECK-LABEL: b foo2
+# CHECK: Address: {{.*}}foo2() at test.cpp:6:9

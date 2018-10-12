@@ -10,6 +10,7 @@
 #ifndef LLVM_TOOLS_OBJCOPY_OBJECT_H
 #define LLVM_TOOLS_OBJCOPY_OBJECT_H
 
+#include "CopyConfig.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -66,15 +67,6 @@ public:
 };
 
 enum ElfType { ELFT_ELF32LE, ELFT_ELF64LE, ELFT_ELF32BE, ELFT_ELF64BE };
-
-// This type keeps track of the machine info for various architectures. This
-// lets us map architecture names to ELF types and the e_machine value of the
-// ELF file.
-struct MachineInfo {
-  uint16_t EMachine;
-  bool Is64Bit;
-  bool IsLittleEndian;
-};
 
 class SectionVisitor {
 public:

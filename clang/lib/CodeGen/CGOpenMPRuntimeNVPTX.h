@@ -376,7 +376,7 @@ private:
   /// The data for the single globalized variable.
   struct MappedVarData {
     /// Corresponding field in the global record.
-    const FieldDecl * FD = nullptr;
+    const FieldDecl *FD = nullptr;
     /// Corresponding address.
     Address PrivateAddr = Address::invalid();
     /// true, if only one element is required (for latprivates in SPMD mode),
@@ -392,10 +392,12 @@ private:
   using EscapedParamsTy = llvm::SmallPtrSet<const Decl *, 4>;
   struct FunctionData {
     DeclToAddrMapTy LocalVarData;
+    llvm::Optional<DeclToAddrMapTy> SecondaryLocalVarData = llvm::None;
     EscapedParamsTy EscapedParameters;
     llvm::SmallVector<const ValueDecl*, 4> EscapedVariableLengthDecls;
     llvm::SmallVector<llvm::Value *, 4> EscapedVariableLengthDeclsAddrs;
     const RecordDecl *GlobalRecord = nullptr;
+    llvm::Optional<const RecordDecl *> SecondaryGlobalRecord = llvm::None;
     llvm::Value *GlobalRecordAddr = nullptr;
     llvm::Value *IsInSPMDModeFlag = nullptr;
     std::unique_ptr<CodeGenFunction::OMPMapVars> MappedParams;

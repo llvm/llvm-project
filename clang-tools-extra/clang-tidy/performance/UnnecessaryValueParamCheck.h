@@ -40,6 +40,7 @@ private:
       MutationAnalyzers;
   std::unique_ptr<utils::IncludeInserter> Inserter;
   const utils::IncludeSorter::IncludeStyle IncludeStyle;
+  const std::vector<std::string> AllowedTypes;
 };
 
 } // namespace performance
