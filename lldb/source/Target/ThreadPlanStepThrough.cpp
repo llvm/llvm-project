@@ -13,6 +13,7 @@
 // Project includes
 #include "lldb/Target/ThreadPlanStepThrough.h"
 #include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Target/CPPLanguageRuntime.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
@@ -95,6 +96,15 @@ void ThreadPlanStepThrough::LookForPlanToStepThroughFromCurrentPC() {
     if (objc_runtime)
       m_sub_plan_sp =
           objc_runtime->GetStepThroughTrampolinePlan(m_thread, m_stop_others);
+
+    CPPLanguageRuntime *cpp_runtime =
+        m_thread.GetProcess()->GetCPPLanguageRuntime();
+
+    // If the ObjC runtime did not provide us with a step though plan then if we
+    // have it check the C++ runtime for a step though plan.
+    if (!m_sub_plan_sp.get() && cpp_runtime)
+      m_sub_plan_sp =
+          cpp_runtime->GetStepThroughTrampolinePlan(m_thread, m_stop_others);
   }
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
