@@ -340,8 +340,6 @@ private:
     size_t getPageEntriesNum() const;
     // Number of entries require 16-bit index to access.
     size_t getIndexedEntriesNum() const;
-
-    bool isOverflow() const;
   };
 
   // Container of GOT created for each input file.
