@@ -693,7 +693,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
         for (Value *Op : CI->arg_operands())
           if (Op->getType()->isPointerTy() &&
               pointerInvalidatedByLoop(
-                  MemoryLocation(Op, MemoryLocation::UnknownSize, AAMDNodes()),
+                  MemoryLocation(Op, LocationSize::unknown(), AAMDNodes()),
                   CurAST, CurLoop, AA))
             return false;
         return true;

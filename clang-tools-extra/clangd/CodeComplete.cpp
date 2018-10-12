@@ -986,7 +986,7 @@ struct SemaCompleteInput {
   const PreambleData *Preamble;
   StringRef Contents;
   Position Pos;
-  IntrusiveRefCntPtr<vfs::FileSystem> VFS;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
   std::shared_ptr<PCHContainerOperations> PCHs;
 };
 
@@ -1007,7 +1007,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
     // working dirs.
   }
 
-  IntrusiveRefCntPtr<vfs::FileSystem> VFS = Input.VFS;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = Input.VFS;
   if (Input.Preamble && Input.Preamble->StatCache)
     VFS = Input.Preamble->StatCache->getConsumingFS(std::move(VFS));
   IgnoreDiagnostics DummyDiagsConsumer;
@@ -1567,7 +1567,7 @@ speculateCompletionFilter(llvm::StringRef Content, Position Pos) {
 CodeCompleteResult
 codeComplete(PathRef FileName, const tooling::CompileCommand &Command,
              const PreambleData *Preamble, StringRef Contents, Position Pos,
-             IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+             IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
              std::shared_ptr<PCHContainerOperations> PCHs,
              CodeCompleteOptions Opts, SpeculativeFuzzyFind *SpecFuzzyFind) {
   return CodeCompleteFlow(FileName,
@@ -1580,7 +1580,7 @@ SignatureHelp signatureHelp(PathRef FileName,
                             const tooling::CompileCommand &Command,
                             const PreambleData *Preamble, StringRef Contents,
                             Position Pos,
-                            IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+                            IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                             std::shared_ptr<PCHContainerOperations> PCHs,
                             const SymbolIndex *Index) {
   SignatureHelp Result;

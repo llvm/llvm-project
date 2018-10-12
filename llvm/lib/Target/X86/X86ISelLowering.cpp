@@ -902,6 +902,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     for (MVT VT : MVT::fp_vector_valuetypes())
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v2f32, Legal);
 
+    // We want to legalize this to an f64 load rather than an i64 load on
+    // 64-bit targets and two 32-bit loads on a 32-bit target.
+    setOperationAction(ISD::LOAD,               MVT::v2f32, Custom);
+
     setOperationAction(ISD::BITCAST,            MVT::v2i32, Custom);
     setOperationAction(ISD::BITCAST,            MVT::v4i16, Custom);
     setOperationAction(ISD::BITCAST,            MVT::v8i8,  Custom);
@@ -26420,6 +26424,26 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     }
     break;
   }
+  case ISD::LOAD: {
+    // Use an f64 load and a scalar_to_vector for v2f32 loads. This avoids
+    // scalarizing in 32-bit mode. In 64-bit mode this avoids a int->fp cast
+    // since type legalization will try to use an i64 load.
+    EVT VT = N->getValueType(0);
+    assert(VT == MVT::v2f32 && "Unexpected VT");
+    if (!ISD::isNON_EXTLoad(N))
+      return;
+    auto *Ld = cast<LoadSDNode>(N);
+    SDValue Res = DAG.getLoad(MVT::f64, dl, Ld->getChain(), Ld->getBasePtr(),
+                              Ld->getPointerInfo(),
+                              Ld->getAlignment(),
+                              Ld->getMemOperand()->getFlags());
+    SDValue Chain = Res.getValue(1);
+    Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2f64, Res);
+    Res = DAG.getBitcast(MVT::v4f32, Res);
+    Results.push_back(Res);
+    Results.push_back(Chain);
+    return;
+  }
   }
 }
 
@@ -36534,16 +36558,10 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
     // simplify ops leading up to it. We only demand the MSB of each lane.
     SDValue Mask = Mst->getMask();
     if (Mask.getScalarValueSizeInBits() != 1) {
-      TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
-                                            !DCI.isBeforeLegalizeOps());
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       APInt DemandedMask(APInt::getSignMask(VT.getScalarSizeInBits()));
-      KnownBits Known;
-      if (TLI.SimplifyDemandedBits(Mask, DemandedMask, Known, TLO)) {
-        DCI.AddToWorklist(Mask.getNode());
-        DCI.CommitTargetLoweringOpt(TLO);
+      if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI))
         return SDValue(N, 0);
-      }
     }
 
     // TODO: AVX512 targets should also be able to simplify something like the
@@ -37032,9 +37050,13 @@ static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, bool IsCommutative) {
         continue;
 
       // The  low half of the 128-bit result must choose from A.
-      // The high half of the 128-bit result must choose from B.
+      // The high half of the 128-bit result must choose from B,
+      // unless B is undef. In that case, we are always choosing from A.
+      // TODO: Using a horizontal op on a single input is likely worse for
+      // performance on many CPUs, so this should be limited here or reversed
+      // in a later pass.
       unsigned NumEltsPer64BitChunk = NumEltsPer128BitChunk / 2;
-      unsigned Src = i >= NumEltsPer64BitChunk;
+      unsigned Src = B.getNode() ? i >= NumEltsPer64BitChunk : 0;
 
       // Check that successive elements are being operated on. If not, this is
       // not a horizontal operation.
@@ -38962,16 +38984,10 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   // With AVX2 we only demand the upper bit of the mask.
   if (!Subtarget.hasAVX512()) {
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-    TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
-                                          !DCI.isBeforeLegalizeOps());
     SDValue Mask = N->getOperand(2);
-    KnownBits Known;
     APInt DemandedMask(APInt::getSignMask(Mask.getScalarValueSizeInBits()));
-    if (TLI.SimplifyDemandedBits(Mask, DemandedMask, Known, TLO)) {
-      DCI.AddToWorklist(Mask.getNode());
-      DCI.CommitTargetLoweringOpt(TLO);
+    if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI))
       return SDValue(N, 0);
-    }
   }
 
   return SDValue();

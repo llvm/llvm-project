@@ -12,8 +12,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-let Defs = [ARGUMENTS] in {
-
 let isBranch = 1, isTerminator = 1, hasCtrlDep = 1 in {
 // The condition operand is a boolean value which WebAssembly represents as i32.
 defm BR_IF : I<(outs), (ins bb_op:$dst, I32:$cond),
@@ -30,14 +28,10 @@ defm BR   : NRI<(outs), (ins bb_op:$dst),
 } // isBarrier = 1
 } // isBranch = 1, isTerminator = 1, hasCtrlDep = 1
 
-} // Defs = [ARGUMENTS]
-
 def : Pat<(brcond (i32 (setne I32:$cond, 0)), bb:$dst),
           (BR_IF bb_op:$dst, I32:$cond)>;
 def : Pat<(brcond (i32 (seteq I32:$cond, 0)), bb:$dst),
           (BR_UNLESS bb_op:$dst, I32:$cond)>;
-
-let Defs = [ARGUMENTS] in {
 
 // TODO: SelectionDAG's lowering insists on using a pointer as the index for
 // jump tables, so in practice we don't ever use BR_TABLE_I64 in wasm32 mode
@@ -194,5 +188,3 @@ let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
                    [(catchret bb:$dst, bb:$from)], "", 0>;
 }
 }
-
-} // Defs = [ARGUMENTS]

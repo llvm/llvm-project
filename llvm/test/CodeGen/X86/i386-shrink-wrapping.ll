@@ -56,7 +56,7 @@ target triple = "i386-apple-macosx10.5"
 ;
 ; CHECK-NEXT: L_e$non_lazy_ptr, [[E:%[a-z]+]]
 ; CHECK-NEXT: movb %dl, ([[E]])
-; CHECK-NEXT: movsbl ([[E]]), [[CONV:%[a-z]+]]
+; CHECK-NEXT: movzbl %dl, [[CONV:%[a-z]+]]
 ; CHECK-NEXT: movl $6, [[CONV:%[a-z]+]]
 ; The eflags is used in the next instruction.
 ; If that instruction disappear, we are not exercising the bug

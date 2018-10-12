@@ -446,15 +446,6 @@ void copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI, MDNode *N,
 /// Remove the debug intrinsic instructions for the given instruction.
 void dropDebugUsers(Instruction &I);
 
-/// Hoist all of the instructions in the \p IfBlock to the dominant block
-/// \p DomBlock, by moving its instructions to the insertion point \p InsertPt.
-///
-/// The moved instructions receive the insertion point debug location values
-/// (DILocations) and their debug intrinsic instructions (dbg.values) are
-/// removed.
-void hoistAllInstructionsInto(BasicBlock *DomBlock,Instruction *InsertPt,
-                              BasicBlock *IfBlock);
-
 //===----------------------------------------------------------------------===//
 //  Intrinsic pattern matching
 //

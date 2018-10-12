@@ -376,7 +376,7 @@ namespace {
     using IndexList = SetVector<unsigned>;
     using ExtenderInit = std::pair<ExtValue, ExtExpr>;
     using AssignmentMap = std::map<ExtenderInit, IndexList>;
-    using LocDefMap = std::map<Loc, IndexList>;
+    using LocDefList = std::vector<std::pair<Loc, IndexList>>;
 
     const HexagonInstrInfo *HII = nullptr;
     const HexagonRegisterInfo *HRI = nullptr;
@@ -399,7 +399,7 @@ namespace {
     void assignInits(const ExtRoot &ER, unsigned Begin, unsigned End,
                      AssignmentMap &IMap);
     void calculatePlacement(const ExtenderInit &ExtI, const IndexList &Refs,
-                            LocDefMap &Defs);
+                            LocDefList &Defs);
     Register insertInitializer(Loc DefL, const ExtenderInit &ExtI);
     bool replaceInstrExact(const ExtDesc &ED, Register ExtR);
     bool replaceInstrExpr(const ExtDesc &ED, const ExtenderInit &ExtI,
@@ -731,7 +731,12 @@ bool HCE::ExtRoot::operator< (const HCE::ExtRoot &ER) const {
     case MachineOperand::MO_ExternalSymbol:
       return StringRef(V.SymbolName) < StringRef(ER.V.SymbolName);
     case MachineOperand::MO_GlobalAddress:
-      return V.GV->getGUID() < ER.V.GV->getGUID();
+      // Do not use GUIDs, since they depend on the source path. Moving the
+      // source file to a different directory could cause different GUID
+      // values for a pair of given symbols. These symbols could then compare
+      // "less" in one directory, but "greater" in another.
+      assert(!V.GV->getName().empty() && !ER.V.GV->getName().empty());
+      return V.GV->getName() < ER.V.GV->getName();
     case MachineOperand::MO_BlockAddress: {
       const BasicBlock *ThisB = V.BA->getBasicBlock();
       const BasicBlock *OtherB = ER.V.BA->getBasicBlock();
@@ -1236,9 +1241,13 @@ void HCE::collectInstr(MachineInstr &MI) {
 
 void HCE::collect(MachineFunction &MF) {
   Extenders.clear();
-  for (MachineBasicBlock &MBB : MF)
+  for (MachineBasicBlock &MBB : MF) {
+    // Skip unreachable blocks.
+    if (MBB.getNumber() == -1)
+      continue;
     for (MachineInstr &MI : MBB)
       collectInstr(MI);
+  }
 }
 
 void HCE::assignInits(const ExtRoot &ER, unsigned Begin, unsigned End,
@@ -1463,7 +1472,7 @@ void HCE::assignInits(const ExtRoot &ER, unsigned Begin, unsigned End,
 }
 
 void HCE::calculatePlacement(const ExtenderInit &ExtI, const IndexList &Refs,
-      LocDefMap &Defs) {
+      LocDefList &Defs) {
   if (Refs.empty())
     return;
 
@@ -1510,7 +1519,7 @@ void HCE::calculatePlacement(const ExtenderInit &ExtI, const IndexList &Refs,
     It = DomB->getFirstTerminator();
   }
   Loc DefLoc(DomB, It);
-  Defs.emplace(DefLoc, Refs);
+  Defs.emplace_back(DefLoc, Refs);
 }
 
 HCE::Register HCE::insertInitializer(Loc DefL, const ExtenderInit &ExtI) {
@@ -1880,7 +1889,7 @@ bool HCE::replaceInstr(unsigned Idx, Register ExtR, const ExtenderInit &ExtI) {
 }
 
 bool HCE::replaceExtenders(const AssignmentMap &IMap) {
-  LocDefMap Defs;
+  LocDefList Defs;
   bool Changed = false;
 
   for (const std::pair<ExtenderInit,IndexList> &P : IMap) {
@@ -1947,8 +1956,23 @@ bool HCE::runOnMachineFunction(MachineFunction &MF) {
   AssignmentMap IMap;
 
   collect(MF);
-  llvm::sort(Extenders, [](const ExtDesc &A, const ExtDesc &B) {
-    return ExtValue(A) < ExtValue(B);
+  llvm::sort(Extenders, [this](const ExtDesc &A, const ExtDesc &B) {
+    ExtValue VA(A), VB(B);
+    if (VA != VB)
+      return VA < VB;
+    const MachineInstr *MA = A.UseMI;
+    const MachineInstr *MB = B.UseMI;
+    if (MA == MB) {
+      // If it's the same instruction, compare operand numbers.
+      return A.OpNum < B.OpNum;
+    }
+
+    const MachineBasicBlock *BA = MA->getParent();
+    const MachineBasicBlock *BB = MB->getParent();
+    assert(BA->getNumber() != -1 && BB->getNumber() != -1);
+    if (BA != BB)
+      return BA->getNumber() < BB->getNumber();
+    return MDT->dominates(MA, MB);
   });
 
   bool Changed = false;

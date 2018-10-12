@@ -218,7 +218,7 @@ void delete_B(B *obj) {
 void call_complete_dtor() {
   // CHECK-LABEL: define dso_local void @"?call_complete_dtor@@YAXXZ"
   B b;
-  // CHECK: call x86_thiscallcc %struct.B* @"??0B@@QAE@XZ"(%struct.B* %[[B:.*]], i32 1)
+  // CHECK: call x86_thiscallcc %struct.B* @"??0B@@QAE@XZ"(%struct.B* noalias %[[B:.*]], i32 1)
   // CHECK-NOT: getelementptr
   // CHECK: call x86_thiscallcc void @"??_DB@@QAEXXZ"(%struct.B* %[[B]])
   // CHECK: ret
@@ -335,19 +335,19 @@ struct C : B, A { C() {} };
 void callC() { C x; }
 
 // CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc %"struct.test2::C"* @"??0C@test2@@QAE@XZ"
-// CHECK:           (%"struct.test2::C"* returned %this, i32 %is_most_derived)
+// CHECK:           (%"struct.test2::C"* noalias returned %this, i32 %is_most_derived)
 // CHECK: br i1
 //   Virtual bases
-// CHECK: call x86_thiscallcc %"struct.test2::A"* @"??0A@test2@@QAE@XZ"(%"struct.test2::A"* %{{.*}})
+// CHECK: call x86_thiscallcc %"struct.test2::A"* @"??0A@test2@@QAE@XZ"(%"struct.test2::A"* noalias %{{.*}})
 // CHECK: br label
 //   Non-virtual bases
-// CHECK: call x86_thiscallcc %"struct.test2::B"* @"??0B@test2@@QAE@XZ"(%"struct.test2::B"* %{{.*}}, i32 0)
-// CHECK: call x86_thiscallcc %"struct.test2::A"* @"??0A@test2@@QAE@XZ"(%"struct.test2::A"* %{{.*}})
+// CHECK: call x86_thiscallcc %"struct.test2::B"* @"??0B@test2@@QAE@XZ"(%"struct.test2::B"* noalias %{{.*}}, i32 0)
+// CHECK: call x86_thiscallcc %"struct.test2::A"* @"??0A@test2@@QAE@XZ"(%"struct.test2::A"* noalias %{{.*}})
 // CHECK: ret
 
 // CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc %"struct.test2::B"* @"??0B@test2@@QAE@XZ"
-// CHECK2:           (%"struct.test2::B"* returned %this, i32 %is_most_derived)
-// CHECK2: call x86_thiscallcc %"struct.test2::A"* @"??0A@test2@@QAE@XZ"(%"struct.test2::A"* %{{.*}})
+// CHECK2:           (%"struct.test2::B"* noalias returned %this, i32 %is_most_derived)
+// CHECK2: call x86_thiscallcc %"struct.test2::A"* @"??0A@test2@@QAE@XZ"(%"struct.test2::A"* noalias %{{.*}})
 // CHECK2: ret
 
 }

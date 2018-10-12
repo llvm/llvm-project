@@ -11,8 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/VirtualFileSystem.h"
-#include "clang/Basic/LLVM.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -55,9 +54,8 @@
 #include <utility>
 #include <vector>
 
-using namespace clang;
-using namespace vfs;
 using namespace llvm;
+using namespace llvm::vfs;
 
 using llvm::sys::fs::file_status;
 using llvm::sys::fs::file_type;
@@ -67,7 +65,7 @@ using llvm::sys::fs::UniqueID;
 Status::Status(const file_status &Status)
     : UID(Status.getUniqueID()), MTime(Status.getLastModificationTime()),
       User(Status.getUser()), Group(Status.getGroup()), Size(Status.getSize()),
-      Type(Status.type()), Perms(Status.permissions())  {}
+      Type(Status.type()), Perms(Status.permissions()) {}
 
 Status::Status(StringRef Name, UniqueID UID, sys::TimePoint<> MTime,
                uint32_t User, uint32_t Group, uint64_t Size, file_type Type,
@@ -92,25 +90,17 @@ bool Status::equivalent(const Status &Other) const {
   return getUniqueID() == Other.getUniqueID();
 }
 
-bool Status::isDirectory() const {
-  return Type == file_type::directory_file;
-}
+bool Status::isDirectory() const { return Type == file_type::directory_file; }
 
-bool Status::isRegularFile() const {
-  return Type == file_type::regular_file;
-}
+bool Status::isRegularFile() const { return Type == file_type::regular_file; }
 
 bool Status::isOther() const {
   return exists() && !isRegularFile() && !isDirectory() && !isSymlink();
 }
 
-bool Status::isSymlink() const {
-  return Type == file_type::symlink_file;
-}
+bool Status::isSymlink() const { return Type == file_type::symlink_file; }
 
-bool Status::isStatusKnown() const {
-  return Type != file_type::status_error;
-}
+bool Status::isStatusKnown() const { return Type != file_type::status_error; }
 
 bool Status::exists() const {
   return isStatusKnown() && Type != file_type::file_not_found;
@@ -245,6 +235,7 @@ public:
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) const override;
+
 private:
   mutable std::mutex CWDMutex;
   mutable std::string CWDCache;
@@ -310,7 +301,7 @@ IntrusiveRefCntPtr<FileSystem> vfs::getRealFileSystem() {
 
 namespace {
 
-class RealFSDirIter : public clang::vfs::detail::DirIterImpl {
+class RealFSDirIter : public llvm::vfs::detail::DirIterImpl {
   llvm::sys::fs::directory_iterator Iter;
 
 public:
@@ -395,11 +386,11 @@ OverlayFileSystem::getRealPath(const Twine &Path,
   return errc::no_such_file_or_directory;
 }
 
-clang::vfs::detail::DirIterImpl::~DirIterImpl() = default;
+llvm::vfs::detail::DirIterImpl::~DirIterImpl() = default;
 
 namespace {
 
-class OverlayFSDirIterImpl : public clang::vfs::detail::DirIterImpl {
+class OverlayFSDirIterImpl : public llvm::vfs::detail::DirIterImpl {
   OverlayFileSystem &Overlays;
   std::string Path;
   OverlayFileSystem::iterator CurrentFS;
@@ -465,7 +456,7 @@ directory_iterator OverlayFileSystem::dir_begin(const Twine &Dir,
       std::make_shared<OverlayFSDirIterImpl>(Dir, *this, EC));
 }
 
-namespace clang {
+namespace llvm {
 namespace vfs {
 
 namespace detail {
@@ -830,7 +821,7 @@ InMemoryFileSystem::openFileForRead(const Twine &Path) {
 namespace {
 
 /// Adaptor from InMemoryDir::iterator to directory_iterator.
-class InMemoryDirIterator : public clang::vfs::detail::DirIterImpl {
+class InMemoryDirIterator : public llvm::vfs::detail::DirIterImpl {
   detail::InMemoryDirectory::const_iterator I;
   detail::InMemoryDirectory::const_iterator E;
   std::string RequestedDirName;
@@ -841,13 +832,13 @@ class InMemoryDirIterator : public clang::vfs::detail::DirIterImpl {
       llvm::sys::path::append(Path, I->second->getFileName());
       sys::fs::file_type Type;
       switch (I->second->getKind()) {
-        case detail::IME_File:
-        case detail::IME_HardLink:
-          Type = sys::fs::file_type::regular_file;
-          break;
-        case detail::IME_Directory:
-          Type = sys::fs::file_type::directory_file;
-          break;
+      case detail::IME_File:
+      case detail::IME_HardLink:
+        Type = sys::fs::file_type::regular_file;
+        break;
+      case detail::IME_Directory:
+        Type = sys::fs::file_type::directory_file;
+        break;
       }
       CurrentEntry = directory_entry(Path.str(), Type);
     } else {
@@ -923,7 +914,7 @@ InMemoryFileSystem::getRealPath(const Twine &Path,
 }
 
 } // namespace vfs
-} // namespace clang
+} // namespace llvm
 
 //===-----------------------------------------------------------------------===/
 // RedirectingFileSystem implementation
@@ -931,10 +922,7 @@ InMemoryFileSystem::getRealPath(const Twine &Path,
 
 namespace {
 
-enum EntryKind {
-  EK_Directory,
-  EK_File
-};
+enum EntryKind { EK_Directory, EK_File };
 
 /// A single file or directory in the VFS.
 class Entry {
@@ -980,11 +968,7 @@ public:
 
 class RedirectingFileEntry : public Entry {
 public:
-  enum NameKind {
-    NK_NotSet,
-    NK_External,
-    NK_Virtual
-  };
+  enum NameKind { NK_NotSet, NK_External, NK_Virtual };
 
 private:
   std::string ExternalContentsPath;
@@ -1009,7 +993,7 @@ public:
   static bool classof(const Entry *E) { return E->getKind() == EK_File; }
 };
 
-class VFSFromYamlDirIterImpl : public clang::vfs::detail::DirIterImpl {
+class VFSFromYamlDirIterImpl : public llvm::vfs::detail::DirIterImpl {
   std::string Dir;
   RedirectingDirectoryEntry::iterator Current, End;
 
@@ -1162,7 +1146,7 @@ public:
     return ExternalFS->setCurrentWorkingDirectory(Path);
   }
 
-  directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override{
+  directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override {
     ErrorOr<Entry *> E = lookupPath(Dir);
     if (!E) {
       EC = E.getError();
@@ -1192,21 +1176,20 @@ public:
     return ExternalContentsPrefixDir;
   }
 
-  bool ignoreNonExistentContents() const {
-    return IgnoreNonExistentContents;
-  }
+  bool ignoreNonExistentContents() const { return IgnoreNonExistentContents; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void dump() const {
+  LLVM_DUMP_METHOD void dump() const {
     for (const auto &Root : Roots)
       dumpEntry(Root.get());
   }
 
-LLVM_DUMP_METHOD void dumpEntry(Entry *E, int NumSpaces = 0) const {
+  LLVM_DUMP_METHOD void dumpEntry(Entry *E, int NumSpaces = 0) const {
     StringRef Name = E->getName();
     for (int i = 0, e = NumSpaces; i < e; ++i)
       dbgs() << " ";
-    dbgs() << "'" << Name.str().c_str() << "'" << "\n";
+    dbgs() << "'" << Name.str().c_str() << "'"
+           << "\n";
 
     if (E->getKind() == EK_Directory) {
       auto *DE = dyn_cast<RedirectingDirectoryEntry>(E);
@@ -1214,7 +1197,7 @@ LLVM_DUMP_METHOD void dumpEntry(Entry *E, int NumSpaces = 0) const {
 
       for (std::unique_ptr<Entry> &SubEntry :
            llvm::make_range(DE->contents_begin(), DE->contents_end()))
-        dumpEntry(SubEntry.get(), NumSpaces+2);
+        dumpEntry(SubEntry.get(), NumSpaces + 2);
     }
   }
 #endif
@@ -1224,9 +1207,7 @@ LLVM_DUMP_METHOD void dumpEntry(Entry *E, int NumSpaces = 0) const {
 class RedirectingFileSystemParser {
   yaml::Stream &Stream;
 
-  void error(yaml::Node *N, const Twine &Msg) {
-    Stream.printError(N, Msg);
-  }
+  void error(yaml::Node *N, const Twine &Msg) { Stream.printError(N, Msg); }
 
   // false on error
   bool parseScalarString(yaml::Node *N, StringRef &Result,
@@ -1372,11 +1353,11 @@ class RedirectingFileSystemParser {
     }
 
     KeyStatusPair Fields[] = {
-      KeyStatusPair("name", true),
-      KeyStatusPair("type", true),
-      KeyStatusPair("contents", false),
-      KeyStatusPair("external-contents", false),
-      KeyStatusPair("use-external-name", false),
+        KeyStatusPair("name", true),
+        KeyStatusPair("type", true),
+        KeyStatusPair("contents", false),
+        KeyStatusPair("external-contents", false),
+        KeyStatusPair("use-external-name", false),
     };
 
     DenseMap<StringRef, KeyStatus> Keys(std::begin(Fields), std::end(Fields));
@@ -1516,7 +1497,7 @@ class RedirectingFileSystemParser {
     size_t RootPathLen = sys::path::root_path(Trimmed).size();
     while (Trimmed.size() > RootPathLen &&
            sys::path::is_separator(Trimmed.back()))
-      Trimmed = Trimmed.slice(0, Trimmed.size()-1);
+      Trimmed = Trimmed.slice(0, Trimmed.size() - 1);
     // Get the last component
     StringRef LastComponent = sys::path::filename(Trimmed);
 
@@ -1564,12 +1545,12 @@ public:
     }
 
     KeyStatusPair Fields[] = {
-      KeyStatusPair("version", true),
-      KeyStatusPair("case-sensitive", false),
-      KeyStatusPair("use-external-names", false),
-      KeyStatusPair("overlay-relative", false),
-      KeyStatusPair("ignore-non-existent-contents", false),
-      KeyStatusPair("roots", true),
+        KeyStatusPair("version", true),
+        KeyStatusPair("case-sensitive", false),
+        KeyStatusPair("use-external-names", false),
+        KeyStatusPair("overlay-relative", false),
+        KeyStatusPair("ignore-non-existent-contents", false),
+        KeyStatusPair("roots", true),
     };
 
     DenseMap<StringRef, KeyStatus> Keys(std::begin(Fields), std::end(Fields));
@@ -1852,8 +1833,7 @@ RedirectingFileSystem::openFileForRead(const Twine &Path) {
 IntrusiveRefCntPtr<FileSystem>
 vfs::getVFSFromYAML(std::unique_ptr<MemoryBuffer> Buffer,
                     SourceMgr::DiagHandlerTy DiagHandler,
-                    StringRef YAMLFilePath,
-                    void *DiagContext,
+                    StringRef YAMLFilePath, void *DiagContext,
                     IntrusiveRefCntPtr<FileSystem> ExternalFS) {
   return RedirectingFileSystem::create(std::move(Buffer), DiagHandler,
                                        YAMLFilePath, DiagContext,
@@ -2008,8 +1988,8 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
   bool UseOverlayRelative = false;
   if (IsOverlayRelative.hasValue()) {
     UseOverlayRelative = IsOverlayRelative.getValue();
-    OS << "  'overlay-relative': '"
-       << (UseOverlayRelative ? "true" : "false") << "',\n";
+    OS << "  'overlay-relative': '" << (UseOverlayRelative ? "true" : "false")
+       << "',\n";
   }
   if (IgnoreNonExistentContents.hasValue())
     OS << "  'ignore-non-existent-contents': '"
@@ -2092,12 +2072,12 @@ std::error_code VFSFromYamlDirIterImpl::incrementImpl() {
     llvm::sys::path::append(PathStr, (*Current)->getName());
     sys::fs::file_type Type;
     switch ((*Current)->getKind()) {
-      case EK_Directory:
-        Type = sys::fs::file_type::directory_file;
-        break;
-      case EK_File:
-        Type = sys::fs::file_type::regular_file;
-        break;
+    case EK_Directory:
+      Type = sys::fs::file_type::directory_file;
+      break;
+    case EK_File:
+      Type = sys::fs::file_type::regular_file;
+      break;
     }
     CurrentEntry = directory_entry(PathStr.str(), Type);
     break;
@@ -2108,9 +2088,8 @@ std::error_code VFSFromYamlDirIterImpl::incrementImpl() {
   return {};
 }
 
-vfs::recursive_directory_iterator::recursive_directory_iterator(FileSystem &FS_,
-                                                           const Twine &Path,
-                                                           std::error_code &EC)
+vfs::recursive_directory_iterator::recursive_directory_iterator(
+    FileSystem &FS_, const Twine &Path, std::error_code &EC)
     : FS(&FS_) {
   directory_iterator I = FS->dir_begin(Path, EC);
   if (I != directory_iterator()) {

@@ -250,7 +250,6 @@ struct has_ScalarEnumerationTraits
   template <typename U>
   static double test(...);
 
-public:
   static bool const value =
     (sizeof(test<ScalarEnumerationTraits<T>>(nullptr)) == 1);
 };
@@ -267,7 +266,6 @@ struct has_ScalarBitSetTraits
   template <typename U>
   static double test(...);
 
-public:
   static bool const value = (sizeof(test<ScalarBitSetTraits<T>>(nullptr)) == 1);
 };
 
@@ -287,7 +285,6 @@ struct has_ScalarTraits
   template <typename U>
   static double test(...);
 
-public:
   static bool const value =
       (sizeof(test<ScalarTraits<T>>(nullptr, nullptr, nullptr)) == 1);
 };
@@ -306,7 +303,6 @@ struct has_BlockScalarTraits
   template <typename U>
   static double test(...);
 
-public:
   static bool const value =
       (sizeof(test<BlockScalarTraits<T>>(nullptr, nullptr)) == 1);
 };
@@ -321,7 +317,6 @@ template <class T, class Context> struct has_MappingTraits {
   template <typename U>
   static double test(...);
 
-public:
   static bool const value =
       (sizeof(test<MappingContextTraits<T, Context>>(nullptr)) == 1);
 };
@@ -335,7 +330,6 @@ template <class T> struct has_MappingTraits<T, EmptyContext> {
 
   template <typename U> static double test(...);
 
-public:
   static bool const value = (sizeof(test<MappingTraits<T>>(nullptr)) == 1);
 };
 
@@ -349,7 +343,6 @@ template <class T, class Context> struct has_MappingValidateTraits {
   template <typename U>
   static double test(...);
 
-public:
   static bool const value =
       (sizeof(test<MappingContextTraits<T, Context>>(nullptr)) == 1);
 };
@@ -363,7 +356,6 @@ template <class T> struct has_MappingValidateTraits<T, EmptyContext> {
 
   template <typename U> static double test(...);
 
-public:
   static bool const value = (sizeof(test<MappingTraits<T>>(nullptr)) == 1);
 };
 
@@ -379,7 +371,6 @@ struct has_SequenceMethodTraits
   template <typename U>
   static double test(...);
 
-public:
   static bool const value =  (sizeof(test<SequenceTraits<T>>(nullptr)) == 1);
 };
 
@@ -395,7 +386,6 @@ struct has_CustomMappingTraits
   template <typename U>
   static double test(...);
 
-public:
   static bool const value =
       (sizeof(test<CustomMappingTraits<T>>(nullptr)) == 1);
 };
@@ -425,7 +415,6 @@ struct has_FlowTraits<T, true>
   template<typename C>
   static char (&f(...))[2];
 
-public:
   static bool const value = sizeof(f<Derived>(nullptr)) == 2;
 };
 
@@ -446,7 +435,6 @@ struct has_DocumentListTraits
   template <typename U>
   static double test(...);
 
-public:
   static bool const value = (sizeof(test<DocumentListTraits<T>>(nullptr))==1);
 };
 

@@ -28,14 +28,14 @@
 
 namespace llvm {
 class raw_ostream;
-}
-
-namespace clang {
-class PCHContainerOperations;
 
 namespace vfs {
 class FileSystem;
 }
+} // namespace llvm
+
+namespace clang {
+class PCHContainerOperations;
 
 namespace tooling {
 struct CompileCommand;
@@ -63,7 +63,7 @@ struct PreambleData {
 /// Information required to run clang, e.g. to parse AST or do code completion.
 struct ParseInputs {
   tooling::CompileCommand CompileCommand;
-  IntrusiveRefCntPtr<vfs::FileSystem> FS;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   std::string Contents;
 };
 
@@ -77,7 +77,7 @@ public:
         std::shared_ptr<const PreambleData> Preamble,
         std::unique_ptr<llvm::MemoryBuffer> Buffer,
         std::shared_ptr<PCHContainerOperations> PCHs,
-        IntrusiveRefCntPtr<vfs::FileSystem> VFS);
+        IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS);
 
   ParsedAST(ParsedAST &&Other);
   ParsedAST &operator=(ParsedAST &&Other);

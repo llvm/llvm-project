@@ -37,7 +37,7 @@ void RegisterFile::initialize(const MCSchedModel &SM, unsigned NumRegs) {
   // declared by the target. The number of physical registers in the default
   // register file is set equal to `NumRegs`. A value of zero for `NumRegs`
   // means: this register file has an unbounded number of physical registers.
-  addRegisterFile({} /* all registers */, NumRegs);
+  RegisterFiles.emplace_back(NumRegs);
   if (!SM.hasExtraProcessorInfo())
     return;
 
@@ -45,18 +45,18 @@ void RegisterFile::initialize(const MCSchedModel &SM, unsigned NumRegs) {
   // object. The size of every register file, as well as the mapping between
   // register files and register classes is specified via tablegen.
   const MCExtraProcessorInfo &Info = SM.getExtraProcessorInfo();
-  for (unsigned I = 0, E = Info.NumRegisterFiles; I < E; ++I) {
+
+  // Skip invalid register file at index 0.
+  for (unsigned I = 1, E = Info.NumRegisterFiles; I < E; ++I) {
     const MCRegisterFileDesc &RF = Info.RegisterFiles[I];
-    // Skip invalid register files with zero physical registers.
-    unsigned Length = RF.NumRegisterCostEntries;
-    if (!RF.NumPhysRegs)
-      continue;
+    assert(RF.NumPhysRegs && "Invalid PRF with zero physical registers!");
+
     // The cost of a register definition is equivalent to the number of
     // physical registers that are allocated at register renaming stage.
+    unsigned Length = RF.NumRegisterCostEntries;
     const MCRegisterCostEntry *FirstElt =
         &Info.RegisterCostTable[RF.RegisterCostEntryIdx];
-    addRegisterFile(ArrayRef<MCRegisterCostEntry>(FirstElt, Length),
-                    RF.NumPhysRegs);
+    addRegisterFile(RF, ArrayRef<MCRegisterCostEntry>(FirstElt, Length));
   }
 }
 
@@ -65,15 +65,15 @@ void RegisterFile::cycleStart() {
     RMT.NumMoveEliminated = 0;
 }
 
-void RegisterFile::addRegisterFile(ArrayRef<MCRegisterCostEntry> Entries,
-                                   unsigned NumPhysRegs) {
+void RegisterFile::addRegisterFile(const MCRegisterFileDesc &RF,
+                                   ArrayRef<MCRegisterCostEntry> Entries) {
   // A default register file is always allocated at index #0. That register file
   // is mainly used to count the total number of mappings created by all
   // register files at runtime. Users can limit the number of available physical
   // registers in register file #0 through the command line flag
   // `-register-file-size`.
   unsigned RegisterFileIndex = RegisterFiles.size();
-  RegisterFiles.emplace_back(NumPhysRegs);
+  RegisterFiles.emplace_back(RF.NumPhysRegs);
 
   // Special case where there is no register class identifier in the set.
   // An empty set of register classes means: this register file contains all

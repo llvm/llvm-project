@@ -813,7 +813,7 @@ template <class ELFT> Symbol *ObjFile<ELFT>::createSymbol(const Elf_Sym *Sym) {
     if (Sec == &InputSection::Discarded)
       return Symtab->addUndefined<ELFT>(Name, Binding, StOther, Type,
                                         /*CanOmitFromDynSym=*/false, this);
-    return Symtab->addRegular(Name, StOther, Type, Value, Size, Binding, Sec,
+    return Symtab->addDefined(Name, StOther, Type, Value, Size, Binding, Sec,
                               this);
   }
 }
@@ -1202,11 +1202,11 @@ void BinaryFile::parse() {
     if (!isAlnum(S[I]))
       S[I] = '_';
 
-  Symtab->addRegular(Saver.save(S + "_start"), STV_DEFAULT, STT_OBJECT, 0, 0,
+  Symtab->addDefined(Saver.save(S + "_start"), STV_DEFAULT, STT_OBJECT, 0, 0,
                      STB_GLOBAL, Section, nullptr);
-  Symtab->addRegular(Saver.save(S + "_end"), STV_DEFAULT, STT_OBJECT,
+  Symtab->addDefined(Saver.save(S + "_end"), STV_DEFAULT, STT_OBJECT,
                      Data.size(), 0, STB_GLOBAL, Section, nullptr);
-  Symtab->addRegular(Saver.save(S + "_size"), STV_DEFAULT, STT_OBJECT,
+  Symtab->addDefined(Saver.save(S + "_size"), STV_DEFAULT, STT_OBJECT,
                      Data.size(), 0, STB_GLOBAL, nullptr, nullptr);
 }
 

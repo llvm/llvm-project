@@ -34,7 +34,7 @@ extern B array[5];
 
 // CHECK-LABEL: define void @_Z9for_arrayv(
 void for_array() {
-  // CHECK: call void @_ZN1AC1Ev(%struct.A* [[A:.*]])
+  // CHECK: call void @_ZN1AC1Ev(%struct.A* noalias [[A:.*]])
   A a;
   for (B b : array) {
     // CHECK-NOT: 5begin
@@ -63,7 +63,7 @@ void for_array() {
 
 // CHECK-LABEL: define void @_Z9for_rangev(
 void for_range() {
-  // CHECK: call void @_ZN1AC1Ev(%struct.A* [[A:.*]])
+  // CHECK: call void @_ZN1AC1Ev(%struct.A* noalias [[A:.*]])
   A a;
   for (B b : C()) {
     // CHECK: call void @_ZN1CC1Ev(
@@ -95,7 +95,7 @@ void for_range() {
 
 // CHECK-LABEL: define void @_Z16for_member_rangev(
 void for_member_range() {
-  // CHECK: call void @_ZN1AC1Ev(%struct.A* [[A:.*]])
+  // CHECK: call void @_ZN1AC1Ev(%struct.A* noalias [[A:.*]])
   A a;
   for (B b : D()) {
     // CHECK: call void @_ZN1DC1Ev(

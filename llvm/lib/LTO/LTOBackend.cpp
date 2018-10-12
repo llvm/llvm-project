@@ -155,7 +155,8 @@ static void runNewPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
                            const ModuleSummaryIndex *ImportSummary) {
   Optional<PGOOptions> PGOOpt;
   if (!Conf.SampleProfile.empty())
-    PGOOpt = PGOOptions("", "", Conf.SampleProfile, false, true);
+    PGOOpt = PGOOptions("", "", Conf.SampleProfile, Conf.ProfileRemapping,
+                        false, true);
 
   PassBuilder PB(TM, PGOOpt);
   AAManager AA;

@@ -838,3 +838,93 @@ define i64 @c4_i64_bad(i64 %arg) {
   %tmp1 = and i64 %tmp0, 16382
   ret i64 %tmp1
 }
+
+; ---------------------------------------------------------------------------- ;
+; Constant, storing the result afterwards.
+; ---------------------------------------------------------------------------- ;
+
+; i32
+
+; The most canonical variant
+define void @c5_i32(i32 %arg, i32* %ptr) {
+; CHECK-LABEL: c5_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ubfx w8, w0, #19, #10
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %tmp0 = lshr i32 %arg, 19
+  %tmp1 = and i32 %tmp0, 1023
+  store i32 %tmp1, i32* %ptr
+  ret void
+}
+
+; Should be still fine, but the mask is shifted
+define void @c6_i32(i32 %arg, i32* %ptr) {
+; CHECK-LABEL: c6_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ubfx w8, w0, #19, #12
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %tmp0 = lshr i32 %arg, 19
+  %tmp1 = and i32 %tmp0, 4095
+  store i32 %tmp1, i32* %ptr
+  ret void
+}
+
+; Should be still fine, but the result is shifted left afterwards
+define void @c7_i32(i32 %arg, i32* %ptr) {
+; CHECK-LABEL: c7_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ubfx w8, w0, #19, #10
+; CHECK-NEXT:    lsl w8, w8, #2
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %tmp0 = lshr i32 %arg, 19
+  %tmp1 = and i32 %tmp0, 1023
+  %tmp2 = shl i32 %tmp1, 2
+  store i32 %tmp2, i32* %ptr
+  ret void
+}
+
+; i64
+
+; The most canonical variant
+define void @c5_i64(i64 %arg, i64* %ptr) {
+; CHECK-LABEL: c5_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ubfx x8, x0, #51, #10
+; CHECK-NEXT:    str x8, [x1]
+; CHECK-NEXT:    ret
+  %tmp0 = lshr i64 %arg, 51
+  %tmp1 = and i64 %tmp0, 1023
+  store i64 %tmp1, i64* %ptr
+  ret void
+}
+
+; Should be still fine, but the mask is shifted
+define void @c6_i64(i64 %arg, i64* %ptr) {
+; CHECK-LABEL: c6_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ubfx x8, x0, #51, #12
+; CHECK-NEXT:    str x8, [x1]
+; CHECK-NEXT:    ret
+  %tmp0 = lshr i64 %arg, 51
+  %tmp1 = and i64 %tmp0, 4095
+  store i64 %tmp1, i64* %ptr
+  ret void
+}
+
+; Should be still fine, but the result is shifted left afterwards
+define void @c7_i64(i64 %arg, i64* %ptr) {
+; CHECK-LABEL: c7_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ubfx x8, x0, #51, #10
+; CHECK-NEXT:    lsl x8, x8, #2
+; CHECK-NEXT:    str x8, [x1]
+; CHECK-NEXT:    ret
+  %tmp0 = lshr i64 %arg, 51
+  %tmp1 = and i64 %tmp0, 1023
+  %tmp2 = shl i64 %tmp1, 2
+  store i64 %tmp2, i64* %ptr
+  ret void
+}

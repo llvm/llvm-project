@@ -401,6 +401,13 @@ int SystemZTTIImpl::getArithmeticInstrCost(
     if (SDivPow2)
       return (NumVectors * SDivCostEstimate);
 
+    // Temporary hack: disable high vectorization factors with integer
+    // division/remainder, which will get scalarized and handled with GR128
+    // registers. The mischeduler is not clever enough to avoid spilling yet.
+    if ((Opcode == Instruction::UDiv || Opcode == Instruction::SDiv ||
+         Opcode == Instruction::URem || Opcode == Instruction::SRem) && VF > 4)
+      return 1000;
+
     // These FP operations are supported with a single vector instruction for
     // double (base implementation assumes float generally costs 2). For
     // FP128, the scalar cost is 1, and there is no overhead since the values

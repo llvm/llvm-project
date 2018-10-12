@@ -21,6 +21,7 @@
 #include <exception>
 #include <cstdlib>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 int main()
@@ -34,7 +35,7 @@ int main()
     assert(c.front() == 0);
     assert(false);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef int T;
     typedef std::vector<T, min_allocator<T>> C;

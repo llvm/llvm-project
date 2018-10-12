@@ -24,10 +24,8 @@ multiclass ATOMIC_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
             Requires<[HasAtomics]>;
 }
 
-let Defs = [ARGUMENTS] in {
 defm ATOMIC_LOAD_I32 : WebAssemblyLoad<I32, "i32.atomic.load", 0xfe10>;
 defm ATOMIC_LOAD_I64 : WebAssemblyLoad<I64, "i64.atomic.load", 0xfe11>;
-} // Defs = [ARGUMENTS]
 
 // Select loads with no constant offset.
 let Predicates = [HasAtomics] in {
@@ -62,13 +60,11 @@ def : LoadPatExternSymOffOnly<i64, atomic_load_64, ATOMIC_LOAD_I64>;
 
 // Extending loads. Note that there are only zero-extending atomic loads, no
 // sign-extending loads.
-let Defs = [ARGUMENTS] in {
 defm ATOMIC_LOAD8_U_I32 : WebAssemblyLoad<I32, "i32.atomic.load8_u", 0xfe12>;
 defm ATOMIC_LOAD16_U_I32 : WebAssemblyLoad<I32, "i32.atomic.load16_u", 0xfe13>;
 defm ATOMIC_LOAD8_U_I64 : WebAssemblyLoad<I64, "i64.atomic.load8_u", 0xfe14>;
 defm ATOMIC_LOAD16_U_I64 : WebAssemblyLoad<I64, "i64.atomic.load16_u", 0xfe15>;
 defm ATOMIC_LOAD32_U_I64 : WebAssemblyLoad<I64, "i64.atomic.load32_u", 0xfe16>;
-} // Defs = [ARGUMENTS]
 
 // Fragments for extending loads. These are different from regular loads because
 // the SDNodes are derived from AtomicSDNode rather than LoadSDNode and
@@ -200,10 +196,8 @@ def : LoadPatExternSymOffOnly<i64, sext_aload_16_64, ATOMIC_LOAD16_U_I64>;
 // Atomic stores
 //===----------------------------------------------------------------------===//
 
-let Defs = [ARGUMENTS] in {
 defm ATOMIC_STORE_I32 : WebAssemblyStore<I32, "i32.atomic.store", 0xfe17>;
 defm ATOMIC_STORE_I64 : WebAssemblyStore<I64, "i64.atomic.store", 0xfe18>;
-} // Defs = [ARGUMENTS]
 
 // We need an 'atomic' version of store patterns because store and atomic_store
 // nodes have different operand orders:
@@ -263,13 +257,11 @@ def : AStorePatExternSymOffOnly<i64, atomic_store_64, ATOMIC_STORE_I64>;
 } // Predicates = [HasAtomics]
 
 // Truncating stores.
-let Defs = [ARGUMENTS] in {
 defm ATOMIC_STORE8_I32 : WebAssemblyStore<I32, "i32.atomic.store8", 0xfe19>;
 defm ATOMIC_STORE16_I32 : WebAssemblyStore<I32, "i32.atomic.store16", 0xfe1a>;
 defm ATOMIC_STORE8_I64 : WebAssemblyStore<I64, "i64.atomic.store8", 0xfe1b>;
 defm ATOMIC_STORE16_I64 : WebAssemblyStore<I64, "i64.atomic.store16", 0xfe1c>;
 defm ATOMIC_STORE32_I64 : WebAssemblyStore<I64, "i64.atomic.store32", 0xfe1d>;
-} // Defs = [ARGUMENTS]
 
 // Fragments for truncating stores.
 
@@ -340,8 +332,6 @@ def : AStorePatExternSymOffOnly<i64, trunc_astore_32_64, ATOMIC_STORE32_I64>;
 //===----------------------------------------------------------------------===//
 // Atomic binary read-modify-writes
 //===----------------------------------------------------------------------===//
-
-let Defs = [ARGUMENTS] in {
 
 multiclass WebAssemblyBinRMW<WebAssemblyRegClass rc, string Name, int Opcode> {
   defm "" : I<(outs rc:$dst),
@@ -430,7 +420,6 @@ defm ATOMIC_RMW16_U_XCHG_I64 :
   WebAssemblyBinRMW<I64, "i64.atomic.rmw16_u.xchg", 0xfe46>;
 defm ATOMIC_RMW32_U_XCHG_I64 :
   WebAssemblyBinRMW<I64, "i64.atomic.rmw32_u.xchg", 0xfe47>;
-}
 
 // Select binary RMWs with no constant offset.
 class BinRMWPatNoOffset<ValueType ty, PatFrag kind, NI inst> :
@@ -674,8 +663,6 @@ defm : BinRMWTruncExtPattern<
 // Consider adding a pass after instruction selection that optimizes this case
 // if it is frequent.
 
-let Defs = [ARGUMENTS] in {
-
 multiclass WebAssemblyTerRMW<WebAssemblyRegClass rc, string Name, int Opcode> {
   defm "" : I<(outs rc:$dst),
               (ins P2Align:$p2align, offset32_op:$off, I32:$addr, rc:$exp,
@@ -699,7 +686,6 @@ defm ATOMIC_RMW16_U_CMPXCHG_I64 :
   WebAssemblyTerRMW<I64, "i64.atomic.rmw16_u.cmpxchg", 0xfe4d>;
 defm ATOMIC_RMW32_U_CMPXCHG_I64 :
   WebAssemblyTerRMW<I64, "i64.atomic.rmw32_u.cmpxchg", 0xfe4e>;
-}
 
 // Select ternary RMWs with no constant offset.
 class TerRMWPatNoOffset<ValueType ty, PatFrag kind, NI inst> :
@@ -912,7 +898,6 @@ defm : TerRMWTruncExtPattern<
 // Atomic wait / notify
 //===----------------------------------------------------------------------===//
 
-let Defs = [ARGUMENTS] in {
 let hasSideEffects = 1 in {
 defm ATOMIC_NOTIFY :
   I<(outs I32:$dst),
@@ -935,7 +920,6 @@ defm ATOMIC_WAIT_I64 :
     "i64.atomic.wait \t${off}, ${p2align}", 0xfe02>;
 } // mayLoad = 1
 } // hasSideEffects = 1
-} // Defs = [ARGUMENTS]
 
 let Predicates = [HasAtomics] in {
 // Select notifys with no constant offset.

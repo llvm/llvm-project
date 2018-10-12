@@ -233,7 +233,7 @@ getCheckOptions(const ClangTidyOptions &Options,
 void runClangTidy(clang::tidy::ClangTidyContext &Context,
                   const tooling::CompilationDatabase &Compilations,
                   ArrayRef<std::string> InputFiles,
-                  llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS,
+                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
                   bool EnableCheckProfile = false,
                   llvm::StringRef StoreCheckProfile = StringRef());
 
@@ -245,7 +245,7 @@ void runClangTidy(clang::tidy::ClangTidyContext &Context,
 /// clang-format configuration file is found, the given \P FormatStyle is used.
 void handleErrors(ClangTidyContext &Context, bool Fix,
                   unsigned &WarningsAsErrorsCount,
-                  llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS);
+                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS);
 
 /// \brief Serializes replacements into YAML and writes them to the specified
 /// output stream.

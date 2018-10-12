@@ -2846,7 +2846,8 @@ public:
                             unsigned Depth = 0,
                             bool AssumeSingleUse = false) const;
 
-  /// Helper wrapper around SimplifyDemandedBits
+  /// Helper wrapper around SimplifyDemandedBits.
+  /// Adds Op back to the worklist upon success.
   bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedMask,
                             DAGCombinerInfo &DCI) const;
 
@@ -2869,7 +2870,8 @@ public:
                                   TargetLoweringOpt &TLO, unsigned Depth = 0,
                                   bool AssumeSingleUse = false) const;
 
-  /// Helper wrapper around SimplifyDemandedVectorElts
+  /// Helper wrapper around SimplifyDemandedVectorElts.
+  /// Adds Op back to the worklist upon success.
   bool SimplifyDemandedVectorElts(SDValue Op, const APInt &DemandedElts,
                                   APInt &KnownUndef, APInt &KnownZero,
                                   DAGCombinerInfo &DCI) const;

@@ -2529,34 +2529,6 @@ void llvm::dropDebugUsers(Instruction &I) {
     DII->eraseFromParent();
 }
 
-void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock,Instruction *InsertPt,
-                                    BasicBlock *IfBlock) {
-  // Since we are moving the instructions out of its basic block, we do not
-  // retain their original debug locations (DILocations) and debug intrinsic
-  // instructions (dbg.values).
-  //
-  // Doing so would degrade the debugging experience and adversely affect the
-  // accuracy of profiling information.
-  //
-  // Currently, when hoisting the instructions, we take the following actions:
-  // - Remove their dbg.values.
-  // - Set their debug locations to the values from the insertion point.
-  //
-  // See PR38762 for more details.
-  //
-  // TODO: Extend llvm.dbg.value to take more than one SSA Value (PR39141) to
-  // encode predicated DIExpressions that yield different results on different
-  // code paths.
-  for (auto &I : *IfBlock) {
-    I.dropUnknownNonDebugMetadata();
-    dropDebugUsers(I);
-    I.setDebugLoc(InsertPt->getDebugLoc());
-  }
-  DomBlock->getInstList().splice(InsertPt->getIterator(),
-                                 IfBlock->getInstList(), IfBlock->begin(),
-                                 IfBlock->getTerminator()->getIterator());
-}
-
 namespace {
 
 /// A potential constituent of a bitreverse or bswap expression. See

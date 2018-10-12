@@ -17,6 +17,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -1187,6 +1188,78 @@ void LLVMAddNamedMetadataOperand(LLVMModuleRef M, const char *Name,
   if (!Val)
     return;
   N->addOperand(extractMDNode(unwrap<MetadataAsValue>(Val)));
+}
+
+const char *LLVMGetDebugLocDirectory(LLVMValueRef Val, unsigned *Length) {
+  if (!Length) return nullptr;
+  StringRef S;
+  if (const auto *I = unwrap<Instruction>(Val)) {
+    S = I->getDebugLoc()->getDirectory();
+  } else if (const auto *GV = unwrap<GlobalVariable>(Val)) {
+    SmallVector<DIGlobalVariableExpression *, 1> GVEs;
+    GV->getDebugInfo(GVEs);
+    if (GVEs.size())
+      if (const DIGlobalVariable *DGV = GVEs[0]->getVariable())
+        S = DGV->getDirectory();
+  } else if (const auto *F = unwrap<Function>(Val)) {
+    if (const DISubprogram *DSP = F->getSubprogram())
+      S = DSP->getDirectory();
+  } else {
+    assert(0 && "Expected Instruction, GlobalVariable or Function");
+    return nullptr;
+  }
+  *Length = S.size();
+  return S.data();
+}
+
+const char *LLVMGetDebugLocFilename(LLVMValueRef Val, unsigned *Length) {
+  if (!Length) return nullptr;
+  StringRef S;
+  if (const auto *I = unwrap<Instruction>(Val)) {
+    S = I->getDebugLoc()->getFilename();
+  } else if (const auto *GV = unwrap<GlobalVariable>(Val)) {
+    SmallVector<DIGlobalVariableExpression *, 1> GVEs;
+    GV->getDebugInfo(GVEs);
+    if (GVEs.size())
+      if (const DIGlobalVariable *DGV = GVEs[0]->getVariable())
+        S = DGV->getFilename();
+  } else if (const auto *F = unwrap<Function>(Val)) {
+    if (const DISubprogram *DSP = F->getSubprogram())
+      S = DSP->getFilename();
+  } else {
+    assert(0 && "Expected Instruction, GlobalVariable or Function");
+    return nullptr;
+  }
+  *Length = S.size();
+  return S.data();
+}
+
+unsigned LLVMGetDebugLocLine(LLVMValueRef Val) {
+  unsigned L = 0;
+  if (const auto *I = unwrap<Instruction>(Val)) {
+    L = I->getDebugLoc()->getLine();
+  } else if (const auto *GV = unwrap<GlobalVariable>(Val)) {
+    SmallVector<DIGlobalVariableExpression *, 1> GVEs;
+    GV->getDebugInfo(GVEs);
+    if (GVEs.size())
+      if (const DIGlobalVariable *DGV = GVEs[0]->getVariable())
+        L = DGV->getLine();
+  } else if (const auto *F = unwrap<Function>(Val)) {
+    if (const DISubprogram *DSP = F->getSubprogram())
+      L = DSP->getLine();
+  } else {
+    assert(0 && "Expected Instruction, GlobalVariable or Function");
+    return -1;
+  }
+  return L;
+}
+
+unsigned LLVMGetDebugLocColumn(LLVMValueRef Val) {
+  unsigned C = 0;
+  if (const auto *I = unwrap<Instruction>(Val))
+    if (const auto &L = I->getDebugLoc())
+      C = L->getColumn();
+  return C;
 }
 
 /*--.. Operations on scalar constants ......................................--*/

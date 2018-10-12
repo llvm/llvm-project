@@ -20,6 +20,7 @@
 #include <cstdlib>
 #include <exception>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 int main()
@@ -30,7 +31,7 @@ int main()
     l1.erase(i);
     assert(false);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     S l1("123");

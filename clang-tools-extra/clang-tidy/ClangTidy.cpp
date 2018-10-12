@@ -96,7 +96,7 @@ private:
 class ErrorReporter {
 public:
   ErrorReporter(ClangTidyContext &Context, bool ApplyFixes,
-                llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS)
+                llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS)
       : Files(FileSystemOptions(), BaseFS), DiagOpts(new DiagnosticOptions()),
         DiagPrinter(new TextDiagnosticPrinter(llvm::outs(), &*DiagOpts)),
         Diags(IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts,
@@ -503,7 +503,7 @@ getCheckOptions(const ClangTidyOptions &Options,
 void runClangTidy(clang::tidy::ClangTidyContext &Context,
                   const CompilationDatabase &Compilations,
                   ArrayRef<std::string> InputFiles,
-                  llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS,
+                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
                   bool EnableCheckProfile, llvm::StringRef StoreCheckProfile) {
   ClangTool Tool(Compilations, InputFiles,
                  std::make_shared<PCHContainerOperations>(), BaseFS);
@@ -590,9 +590,9 @@ void runClangTidy(clang::tidy::ClangTidyContext &Context,
 
 void handleErrors(ClangTidyContext &Context, bool Fix,
                   unsigned &WarningsAsErrorsCount,
-                  llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS) {
+                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
   ErrorReporter Reporter(Context, Fix, BaseFS);
-  vfs::FileSystem &FileSystem =
+  llvm::vfs::FileSystem &FileSystem =
       *Reporter.getSourceManager().getFileManager().getVirtualFileSystem();
   auto InitialWorkingDir = FileSystem.getCurrentWorkingDirectory();
   if (!InitialWorkingDir)

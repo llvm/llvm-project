@@ -13,8 +13,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-let Defs = [ARGUMENTS] in {
-
 defm I32_WRAP_I64 : I<(outs I32:$dst), (ins I64:$src), (outs), (ins),
                       [(set I32:$dst, (trunc I64:$src))],
                       "i32.wrap/i64\t$dst, $src", "i32.wrap/i64", 0xa7>;
@@ -51,14 +49,10 @@ defm I64_EXTEND32_S_I64 : I<(outs I64:$dst), (ins I64:$src), (outs), (ins),
                             0xc4>;
 } // Predicates = [HasSignExt]
 
-} // defs = [ARGUMENTS]
-
 // Expand a "don't care" extend into zero-extend (chosen over sign-extend
 // somewhat arbitrarily, although it favors popular hardware architectures
 // and is conceptually a simpler operation).
 def : Pat<(i64 (anyext I32:$src)), (I64_EXTEND_U_I32 I32:$src)>;
-
-let Defs = [ARGUMENTS] in {
 
 // Conversion from floating point to integer instructions which don't trap on
 // overflow or invalid.
@@ -102,6 +96,24 @@ defm I64_TRUNC_U_SAT_F64 : I<(outs I64:$dst), (ins F64:$src), (outs), (ins),
                              "i64.trunc_u:sat/f64\t$dst, $src",
                              "i64.trunc_u:sat/f64", 0xfc07>,
                              Requires<[HasNontrappingFPToInt]>;
+
+// Lower llvm.wasm.trunc.saturate.* to saturating instructions
+def : Pat<(int_wasm_trunc_saturate_signed F32:$src),
+          (I32_TRUNC_S_SAT_F32 F32:$src)>;
+def : Pat<(int_wasm_trunc_saturate_unsigned F32:$src),
+          (I32_TRUNC_U_SAT_F32 F32:$src)>;
+def : Pat<(int_wasm_trunc_saturate_signed F64:$src),
+          (I32_TRUNC_S_SAT_F64 F64:$src)>;
+def : Pat<(int_wasm_trunc_saturate_unsigned F64:$src),
+          (I32_TRUNC_U_SAT_F64 F64:$src)>;
+def : Pat<(int_wasm_trunc_saturate_signed F32:$src),
+          (I64_TRUNC_S_SAT_F32 F32:$src)>;
+def : Pat<(int_wasm_trunc_saturate_unsigned F32:$src),
+          (I64_TRUNC_U_SAT_F32 F32:$src)>;
+def : Pat<(int_wasm_trunc_saturate_signed F64:$src),
+          (I64_TRUNC_S_SAT_F64 F64:$src)>;
+def : Pat<(int_wasm_trunc_saturate_unsigned F64:$src),
+          (I64_TRUNC_U_SAT_F64 F64:$src)>;
 
 // Conversion from floating point to integer pseudo-instructions which don't
 // trap on overflow or invalid.
@@ -218,5 +230,3 @@ defm F64_REINTERPRET_I64 : I<(outs F64:$dst), (ins I64:$src), (outs), (ins),
                              [(set F64:$dst, (bitconvert I64:$src))],
                              "f64.reinterpret/i64\t$dst, $src",
                              "f64.reinterpret/i64", 0xbf>;
-
-} // Defs = [ARGUMENTS]

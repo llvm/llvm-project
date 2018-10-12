@@ -26,10 +26,9 @@ template <typename Impl> class X86SnippetGenerator : public Impl {
   using Impl::Impl;
 
   llvm::Expected<CodeTemplate>
-  generateCodeTemplate(unsigned Opcode) const override {
+  generateCodeTemplate(const Instruction &Instr) const override {
     // Test whether we can generate a snippet for this instruction.
-    const auto &InstrInfo = this->State.getInstrInfo();
-    const auto OpcodeName = InstrInfo.getName(Opcode);
+    const auto OpcodeName = Instr.Name;
     if (OpcodeName.startswith("POPF") || OpcodeName.startswith("PUSHF") ||
         OpcodeName.startswith("ADJCALLSTACK")) {
       return llvm::make_error<BenchmarkFailure>(
@@ -37,9 +36,8 @@ template <typename Impl> class X86SnippetGenerator : public Impl {
     }
 
     // Handle X87.
-    const auto &InstrDesc = InstrInfo.get(Opcode);
-    const unsigned FPInstClass = InstrDesc.TSFlags & llvm::X86II::FPTypeMask;
-    const Instruction Instr(InstrDesc, this->RATC);
+    const unsigned FPInstClass =
+        Instr.Description->TSFlags & llvm::X86II::FPTypeMask;
     switch (FPInstClass) {
     case llvm::X86II::NotFP:
       break;
@@ -67,7 +65,7 @@ template <typename Impl> class X86SnippetGenerator : public Impl {
     }
 
     // Fallback to generic implementation.
-    return Impl::Base::generateCodeTemplate(Opcode);
+    return Impl::Base::generateCodeTemplate(Instr);
   }
 };
 

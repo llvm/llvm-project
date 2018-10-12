@@ -10242,7 +10242,8 @@ static void DiagnoseOpenCLExtensionDisabled(Sema &S, OverloadCandidate *Cand) {
   FunctionDecl *Callee = Cand->Function;
 
   S.Diag(Callee->getLocation(),
-         diag::note_ovl_candidate_disabled_by_extension);
+         diag::note_ovl_candidate_disabled_by_extension)
+    << S.getOpenCLExtensionsFromDeclExtMap(Callee);
 }
 
 /// Generates a 'note' diagnostic for an overload candidate.  We've
