@@ -30,6 +30,7 @@
 #include "MisplacedWideningCastCheck.h"
 #include "MoveForwardingReferenceCheck.h"
 #include "MultipleStatementMacroCheck.h"
+#include "NotNullTerminatedResultCheck.h"
 #include "ParentVirtualCallCheck.h"
 #include "SizeofContainerCheck.h"
 #include "SizeofExpressionCheck.h"
@@ -98,6 +99,8 @@ public:
         "bugprone-multiple-statement-macro");
     CheckFactories.registerCheck<cppcoreguidelines::NarrowingConversionsCheck>(
         "bugprone-narrowing-conversions");
+    CheckFactories.registerCheck<NotNullTerminatedResultCheck>(
+        "bugprone-not-null-terminated-result");
     CheckFactories.registerCheck<ParentVirtualCallCheck>(
         "bugprone-parent-virtual-call");
     CheckFactories.registerCheck<SizeofContainerCheck>(
