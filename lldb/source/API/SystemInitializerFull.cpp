@@ -108,6 +108,7 @@
 #include "Plugins/Platform/MacOSX/PlatformDarwinKernel.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteAppleTV.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteAppleWatch.h"
+#include "Plugins/Platform/MacOSX/PlatformRemoteAppleBridge.h"
 #include "Plugins/Platform/MacOSX/PlatformiOSSimulator.h"
 #include "Plugins/Process/MacOSX-Kernel/ProcessKDP.h"
 #include "Plugins/SymbolVendor/MacOSX/SymbolVendorMacOSX.h"
@@ -390,6 +391,7 @@ void SystemInitializerFull::Initialize() {
   PlatformAppleWatchSimulator::Initialize();
   PlatformRemoteAppleTV::Initialize();
   PlatformRemoteAppleWatch::Initialize();
+  PlatformRemoteAppleBridge::Initialize();
   DynamicLoaderDarwinKernel::Initialize();
 #endif
 
@@ -514,6 +516,7 @@ void SystemInitializerFull::Terminate() {
   PlatformAppleWatchSimulator::Terminate();
   PlatformRemoteAppleTV::Terminate();
   PlatformRemoteAppleWatch::Terminate();
+  PlatformRemoteAppleBridge::Terminate();
 #endif
 
 #if defined(__FreeBSD__)
