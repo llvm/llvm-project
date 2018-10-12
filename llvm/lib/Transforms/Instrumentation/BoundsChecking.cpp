@@ -11,7 +11,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
-#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/BasicBlock.h"
@@ -60,8 +59,8 @@ template <typename GetTrapBBT>
 static bool instrumentMemAccess(Value *Ptr, Value *InstVal,
                                 const DataLayout &DL, TargetLibraryInfo &TLI,
                                 ObjectSizeOffsetEvaluator &ObjSizeEval,
-                                BuilderTy &IRB, GetTrapBBT GetTrapBB,
-                                ScalarEvolution &SE) {
+                                BuilderTy &IRB,
+                                GetTrapBBT GetTrapBB) {
   uint64_t NeededSize = DL.getTypeStoreSize(InstVal->getType());
   LLVM_DEBUG(dbgs() << "Instrument " << *Ptr << " for " << Twine(NeededSize)
                     << " bytes\n");
@@ -80,10 +79,6 @@ static bool instrumentMemAccess(Value *Ptr, Value *InstVal,
   Type *IntTy = DL.getIntPtrType(Ptr->getType());
   Value *NeededSizeVal = ConstantInt::get(IntTy, NeededSize);
 
-  auto SizeRange = SE.getUnsignedRange(SE.getSCEV(Size));
-  auto OffsetRange = SE.getUnsignedRange(SE.getSCEV(Offset));
-  auto NeededSizeRange = SE.getUnsignedRange(SE.getSCEV(NeededSizeVal));
-
   // three checks are required to ensure safety:
   // . Offset >= 0  (since the offset is given from the base ptr)
   // . Size >= Offset  (unsigned)
@@ -92,17 +87,10 @@ static bool instrumentMemAccess(Value *Ptr, Value *InstVal,
   // optimization: if Size >= 0 (signed), skip 1st check
   // FIXME: add NSW/NUW here?  -- we dont care if the subtraction overflows
   Value *ObjSize = IRB.CreateSub(Size, Offset);
-  Value *Cmp2 = SizeRange.getUnsignedMin().uge(OffsetRange.getUnsignedMax())
-                    ? ConstantInt::getFalse(Ptr->getContext())
-                    : IRB.CreateICmpULT(Size, Offset);
-  Value *Cmp3 = SizeRange.sub(OffsetRange)
-                        .getUnsignedMin()
-                        .uge(NeededSizeRange.getUnsignedMax())
-                    ? ConstantInt::getFalse(Ptr->getContext())
-                    : IRB.CreateICmpULT(ObjSize, NeededSizeVal);
+  Value *Cmp2 = IRB.CreateICmpULT(Size, Offset);
+  Value *Cmp3 = IRB.CreateICmpULT(ObjSize, NeededSizeVal);
   Value *Or = IRB.CreateOr(Cmp2, Cmp3);
-  if ((!SizeCI || SizeCI->getValue().slt(0)) &&
-      !SizeRange.getSignedMin().isNonNegative()) {
+  if (!SizeCI || SizeCI->getValue().slt(0)) {
     Value *Cmp1 = IRB.CreateICmpSLT(Offset, ConstantInt::get(IntTy, 0));
     Or = IRB.CreateOr(Cmp1, Or);
   }
@@ -135,8 +123,7 @@ static bool instrumentMemAccess(Value *Ptr, Value *InstVal,
   return true;
 }
 
-static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
-                              ScalarEvolution &SE) {
+static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI) {
   const DataLayout &DL = F.getParent()->getDataLayout();
   ObjectSizeOffsetEvaluator ObjSizeEval(DL, &TLI, F.getContext(),
                                            /*RoundToAlign=*/true);
@@ -181,19 +168,19 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     BuilderTy IRB(Inst->getParent(), BasicBlock::iterator(Inst), TargetFolder(DL));
     if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
       MadeChange |= instrumentMemAccess(LI->getPointerOperand(), LI, DL, TLI,
-                                        ObjSizeEval, IRB, GetTrapBB, SE);
+                                        ObjSizeEval, IRB, GetTrapBB);
     } else if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
       MadeChange |=
           instrumentMemAccess(SI->getPointerOperand(), SI->getValueOperand(),
-                              DL, TLI, ObjSizeEval, IRB, GetTrapBB, SE);
+                              DL, TLI, ObjSizeEval, IRB, GetTrapBB);
     } else if (AtomicCmpXchgInst *AI = dyn_cast<AtomicCmpXchgInst>(Inst)) {
       MadeChange |=
           instrumentMemAccess(AI->getPointerOperand(), AI->getCompareOperand(),
-                              DL, TLI, ObjSizeEval, IRB, GetTrapBB, SE);
+                              DL, TLI, ObjSizeEval, IRB, GetTrapBB);
     } else if (AtomicRMWInst *AI = dyn_cast<AtomicRMWInst>(Inst)) {
       MadeChange |=
           instrumentMemAccess(AI->getPointerOperand(), AI->getValOperand(), DL,
-                              TLI, ObjSizeEval, IRB, GetTrapBB, SE);
+                              TLI, ObjSizeEval, IRB, GetTrapBB);
     } else {
       llvm_unreachable("unknown Instruction type");
     }
@@ -203,9 +190,8 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
 
 PreservedAnalyses BoundsCheckingPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
-  auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
 
-  if (!addBoundsChecking(F, TLI, SE))
+  if (!addBoundsChecking(F, TLI))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -221,13 +207,11 @@ struct BoundsCheckingLegacyPass : public FunctionPass {
 
   bool runOnFunction(Function &F) override {
     auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
-    auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    return addBoundsChecking(F, TLI, SE);
+    return addBoundsChecking(F, TLI);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<ScalarEvolutionWrapperPass>();
   }
 };
 } // namespace
