@@ -28,6 +28,10 @@ define i8 @extractelt_bitcast(i32 %x) nounwind {
   ret i8 %ext
 }
 
+; TODO: This should have folded to avoid vector ops, but the transform
+; is guarded by 'hasOneUse'. That limitation apparently makes some AMDGPU 
+; codegen better.
+
 define i8 @extractelt_bitcast_extra_use(i32 %x, <4 x i8>* %p) nounwind {
 ; X86-LABEL: extractelt_bitcast_extra_use:
 ; X86:       # %bb.0:
