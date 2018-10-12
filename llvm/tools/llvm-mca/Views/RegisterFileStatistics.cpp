@@ -19,7 +19,8 @@ using namespace llvm;
 
 namespace mca {
 
-void RegisterFileStatistics::initializeRegisterFileInfo() {
+RegisterFileStatistics::RegisterFileStatistics(const llvm::MCSubtargetInfo &sti)
+    : STI(sti) {
   const MCSchedModel &SM = STI.getSchedModel();
   RegisterFileUsage Empty = {0, 0, 0};
   if (!SM.hasExtraProcessorInfo()) {

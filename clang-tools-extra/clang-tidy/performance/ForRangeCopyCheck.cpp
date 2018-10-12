@@ -10,6 +10,8 @@
 #include "ForRangeCopyCheck.h"
 #include "../utils/DeclRefExprUtils.h"
 #include "../utils/FixItHintUtils.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "../utils/TypeTraits.h"
 #include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
 
@@ -21,10 +23,14 @@ namespace performance {
 
 ForRangeCopyCheck::ForRangeCopyCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      WarnOnAllAutoCopies(Options.get("WarnOnAllAutoCopies", 0)) {}
+      WarnOnAllAutoCopies(Options.get("WarnOnAllAutoCopies", 0)),
+      AllowedTypes(
+          utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
 
 void ForRangeCopyCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnAllAutoCopies", WarnOnAllAutoCopies);
+  Options.store(Opts, "AllowedTypes",
+                utils::options::serializeStringList(AllowedTypes));
 }
 
 void ForRangeCopyCheck::registerMatchers(MatchFinder *Finder) {
@@ -32,7 +38,10 @@ void ForRangeCopyCheck::registerMatchers(MatchFinder *Finder) {
   // initialized through MaterializeTemporaryExpr which indicates a type
   // conversion.
   auto LoopVar = varDecl(
-      hasType(hasCanonicalType(unless(anyOf(referenceType(), pointerType())))),
+      hasType(qualType(
+          unless(anyOf(hasCanonicalType(anyOf(referenceType(), pointerType())),
+                       hasDeclaration(namedDecl(
+                           matchers::matchesAnyListedName(AllowedTypes))))))),
       unless(hasInitializer(expr(hasDescendant(materializeTemporaryExpr())))));
   Finder->addMatcher(cxxForRangeStmt(hasLoopVariable(LoopVar.bind("loopVar")))
                          .bind("forRange"),
@@ -41,6 +50,7 @@ void ForRangeCopyCheck::registerMatchers(MatchFinder *Finder) {
 
 void ForRangeCopyCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Var = Result.Nodes.getNodeAs<VarDecl>("loopVar");
+
   // Ignore code in macros since we can't place the fixes correctly.
   if (Var->getBeginLoc().isMacroID())
     return;

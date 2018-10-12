@@ -594,6 +594,7 @@ GlobalVariable *SanitizerCoverageModule::CreateFunctionLocalArrayInSection(
   Array->setSection(getSectionName(Section));
   Array->setAlignment(Ty->isPointerTy() ? DL->getPointerSize()
                                         : Ty->getPrimitiveSizeInBits() / 8);
+  GlobalsToAppendToUsed.push_back(Array);
   GlobalsToAppendToCompilerUsed.push_back(Array);
   MDNode *MD = MDNode::get(F.getContext(), ValueAsMetadata::get(&F));
   Array->addMetadata(LLVMContext::MD_associated, *MD);
@@ -631,14 +632,14 @@ SanitizerCoverageModule::CreatePCArray(Function &F,
 
 void SanitizerCoverageModule::CreateFunctionLocalArrays(
     Function &F, ArrayRef<BasicBlock *> AllBlocks) {
-  if (Options.TracePCGuard) {
+  if (Options.TracePCGuard)
     FunctionGuardArray = CreateFunctionLocalArrayInSection(
         AllBlocks.size(), F, Int32Ty, SanCovGuardsSectionName);
-    GlobalsToAppendToUsed.push_back(FunctionGuardArray);
-  }
+
   if (Options.Inline8bitCounters)
     Function8bitCounterArray = CreateFunctionLocalArrayInSection(
         AllBlocks.size(), F, Int8Ty, SanCovCountersSectionName);
+
   if (Options.PCTable)
     FunctionPCsArray = CreatePCArray(F, AllBlocks);
 }

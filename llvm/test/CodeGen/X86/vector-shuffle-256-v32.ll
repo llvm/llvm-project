@@ -2495,6 +2495,37 @@ define <32 x i8> @shuffle_v32i8_00_32_01_33_02_34_03_35_04_36_05_37_06_38_07_39_
   ret <32 x i8> %shuffle
 }
 
+define <32 x i8> @shuffle_v32i8_15_14_13_12_11_10_09_08_07_06_05_04_03_02_01_00_32_34_36_38_40_42_44_46_33_35_37_39_41_43_45_47(<32 x i8> %a, <32 x i8> %b) {
+; AVX1-LABEL: shuffle_v32i8_15_14_13_12_11_10_09_08_07_06_05_04_03_02_01_00_32_34_36_38_40_42_44_46_33_35_37_39_41_43_45_47:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[0,2,4,6,8,10,12,14,1,3,5,7,9,11,13,15]
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: shuffle_v32i8_15_14_13_12_11_10_09_08_07_06_05_04_03_02_01_00_32_34_36_38_40_42_44_46_33_35_37_39_41_43_45_47:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[0,2,4,6,8,10,12,14,1,3,5,7,9,11,13,15]
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VLBW-LABEL: shuffle_v32i8_15_14_13_12_11_10_09_08_07_06_05_04_03_02_01_00_32_34_36_38_40_42_44_46_33_35_37_39_41_43_45_47:
+; AVX512VLBW:       # %bb.0:
+; AVX512VLBW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
+; AVX512VLBW-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[0,2,4,6,8,10,12,14,1,3,5,7,9,11,13,15]
+; AVX512VLBW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VLBW-NEXT:    retq
+;
+; AVX512VLVBMI-LABEL: shuffle_v32i8_15_14_13_12_11_10_09_08_07_06_05_04_03_02_01_00_32_34_36_38_40_42_44_46_33_35_37_39_41_43_45_47:
+; AVX512VLVBMI:       # %bb.0:
+; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} ymm2 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,32,34,36,38,40,42,44,46,33,35,37,39,41,43,45,47]
+; AVX512VLVBMI-NEXT:    vpermt2b %ymm1, %ymm2, %ymm0
+; AVX512VLVBMI-NEXT:    retq
+  %shuffle = shufflevector <32 x i8> %a, <32 x i8> %b, <32 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 33, i32 35, i32 37, i32 39, i32 41, i32 43, i32 45, i32 47>
+  ret <32 x i8> %shuffle
+}
+
 define <32 x i8> @shuffle_v32i8_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_32_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_48(<32 x i8> %a) {
 ; AVX1-LABEL: shuffle_v32i8_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_32_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_zz_48:
 ; AVX1:       # %bb.0:

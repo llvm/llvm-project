@@ -37,6 +37,8 @@
 namespace clang {
 namespace tooling {
 
+extern llvm::cl::opt<std::string> ExecutorName;
+
 /// An abstraction for the result of a tool execution. For example, the
 /// underlying result can be in-memory or on-disk.
 ///

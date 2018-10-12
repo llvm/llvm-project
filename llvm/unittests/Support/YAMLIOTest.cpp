@@ -2543,7 +2543,9 @@ TEST(YAMLIO, TestEscaped) {
   // Single quote
   TestEscaped("@abc@", "'@abc@'");
   // No quote
-  TestEscaped("abc/", "abc/");
+  TestEscaped("abc", "abc");
+  // Forward slash quoted
+  TestEscaped("abc/", "'abc/'");
   // Double quote non-printable
   TestEscaped("\01@abc@", "\"\\x01@abc@\"");
   // Double quote inside single quote

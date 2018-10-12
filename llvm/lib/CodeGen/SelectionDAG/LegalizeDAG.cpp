@@ -2708,10 +2708,11 @@ SDValue SelectionDAGLegalize::ExpandBSWAP(SDValue Op, const SDLoc &dl) {
 /// Expand the specified bitcount instruction into operations.
 SDValue SelectionDAGLegalize::ExpandBitCount(unsigned Opc, SDValue Op,
                                              const SDLoc &dl) {
+  EVT VT = Op.getValueType();
+
   switch (Opc) {
   default: llvm_unreachable("Cannot expand this yet!");
   case ISD::CTPOP: {
-    EVT VT = Op.getValueType();
     EVT ShVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
     unsigned Len = VT.getSizeInBits();
 
@@ -2758,10 +2759,9 @@ SDValue SelectionDAGLegalize::ExpandBitCount(unsigned Opc, SDValue Op,
   }
   case ISD::CTLZ_ZERO_UNDEF:
     // This trivially expands to CTLZ.
-    return DAG.getNode(ISD::CTLZ, dl, Op.getValueType(), Op);
+    return DAG.getNode(ISD::CTLZ, dl, VT, Op);
   case ISD::CTLZ: {
-    EVT VT = Op.getValueType();
-    unsigned Len = VT.getSizeInBits();
+    unsigned Len = VT.getScalarSizeInBits();
 
     if (TLI.isOperationLegalOrCustom(ISD::CTLZ_ZERO_UNDEF, VT)) {
       EVT SetCCVT = getSetCCResultType(VT);
@@ -2792,9 +2792,8 @@ SDValue SelectionDAGLegalize::ExpandBitCount(unsigned Opc, SDValue Op,
   }
   case ISD::CTTZ_ZERO_UNDEF:
     // This trivially expands to CTTZ.
-    return DAG.getNode(ISD::CTTZ, dl, Op.getValueType(), Op);
+    return DAG.getNode(ISD::CTTZ, dl, VT, Op);
   case ISD::CTTZ: {
-    EVT VT = Op.getValueType();
     unsigned Len = VT.getSizeInBits();
 
     if (TLI.isOperationLegalOrCustom(ISD::CTTZ_ZERO_UNDEF, VT)) {
@@ -2818,7 +2817,7 @@ SDValue SelectionDAGLegalize::ExpandBitCount(unsigned Opc, SDValue Op,
     if (!TLI.isOperationLegalOrCustom(ISD::CTPOP, VT) &&
         TLI.isOperationLegalOrCustom(ISD::CTLZ, VT))
       return DAG.getNode(ISD::SUB, dl, VT,
-                         DAG.getConstant(VT.getSizeInBits(), dl, VT),
+                         DAG.getConstant(Len, dl, VT),
                          DAG.getNode(ISD::CTLZ, dl, VT, Tmp3));
     return DAG.getNode(ISD::CTPOP, dl, VT, Tmp3);
   }

@@ -169,6 +169,19 @@ public:
     return isZeroIdiom(MI, Mask);
   }
 
+  /// Returns true if MI is a candidate for move elimination.
+  ///
+  /// A candidate for move elimination may be optimized out at register renaming
+  /// stage. Subtargets can specify the set of optimizable moves by
+  /// instantiating tablegen class `IsOptimizableRegisterMove` (see
+  /// llvm/Target/TargetInstrPredicate.td).
+  ///
+  /// SubtargetEmitter is responsible for processing all the definitions of class
+  /// IsOptimizableRegisterMove, and auto-generate an override for this method.
+  virtual bool isOptimizableRegisterMove(const MachineInstr *MI) const {
+    return false;
+  }
+
   /// True if the subtarget should run MachineScheduler after aggressive
   /// coalescing.
   ///

@@ -1,0 +1,23 @@
+REQUIRES: darwin
+
+No dead_strip. Unused code is not removed.
+RUN: %cpp_compiler %S/GcSectionsTest.cpp -o %t
+RUN: nm %t | grep UnusedFunctionShouldBeRemovedByLinker | count 1
+RUN: %run %t -runs=0 2>&1 | FileCheck %s
+
+With dead_strip. Unused code is not removed.
+RUN: %cpp_compiler %S/GcSectionsTest.cpp -o %t -ffunction-sections -Wl,-dead_strip
+RUN: nm %t | grep UnusedFunctionShouldBeRemovedByLinker | count 1
+RUN: %run %t -runs=0 2>&1 | FileCheck %s
+
+With dead_strip, with trace-pc. Unused code is removed.
+RUN: %cpp_compiler %S/GcSectionsTest.cpp -o %t -ffunction-sections -fsanitize-coverage=0 -fsanitize-coverage=trace-pc -Wl,-dead_strip
+RUN: nm %t | not grep UnusedFunctionShouldBeRemovedByLinker
+RUN: %run %t -runs=0 2>&1 | FileCheck %s
+
+With dead_strip, with pc-table. Unused code is not removed.
+RUN: %cpp_compiler %S/GcSectionsTest.cpp -o %t -ffunction-sections -fsanitize-coverage=0 -fsanitize-coverage=trace-pc-guard,pc-table -Wl,-dead_strip
+RUN: nm %t | grep UnusedFunctionShouldBeRemovedByLinker | count 1
+RUN: %run %t -runs=0 2>&1 | FileCheck %s
+
+CHECK-NOT: ERROR: The size of coverage PC tables does not match

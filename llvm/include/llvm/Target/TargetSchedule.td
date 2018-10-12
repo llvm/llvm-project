@@ -460,6 +460,10 @@ class SchedAlias<SchedReadWrite match, SchedReadWrite alias> {
 //  - The number of physical registers which can be used for register renaming
 //    purpose.
 //  - The cost of a register rename.
+//  - The set of registers that allow move elimination.
+//  - The maximum number of moves that can be eliminated every cycle.
+//  - Whether move elimination is limited to register moves whose input
+//    is known to be zero.
 //
 // The cost of a rename is the number of physical registers allocated by the
 // register alias table to map the new definition. By default, register can be
@@ -506,11 +510,35 @@ class SchedAlias<SchedReadWrite match, SchedReadWrite alias> {
 // partial write is combined with the previous super-register definition.  We
 // should add support for these cases, and correctly model merge problems with
 // partial register accesses.
+//
+// Field MaxMovesEliminatedPerCycle specifies how many moves can be eliminated
+// every cycle. A default value of zero for that field means: there is no limit
+// to the number of moves that can be eliminated by this register file.
+//
+// An instruction MI is a candidate for move elimination if a call to
+// method TargetSubtargetInfo::isOptimizableRegisterMove(MI) returns true (see
+// llvm/CodeGen/TargetSubtargetInfo.h, and llvm/MC/MCInstrAnalysis.h).
+//
+// Subtargets can instantiate tablegen class IsOptimizableRegisterMove (see
+// llvm/Target/TargetInstrPredicate.td) to customize the set of move elimination
+// candidates. By default, no instruction is a valid move elimination candidate.
+//
+// A register move MI is eliminated only if:
+//  - MI is a move elimination candidate.
+//  - The destination register is from a register class that allows move
+//    elimination (see field `AllowMoveElimination` below).
+//  - Constraints on the move kind, and the maximum number of moves that can be
+//    eliminated per cycle are all met.
+
 class RegisterFile<int numPhysRegs, list<RegisterClass> Classes = [],
-                   list<int> Costs = []> {
+                   list<int> Costs = [], list<bit> AllowMoveElim = [],
+                   int MaxMoveElimPerCy = 0, bit AllowZeroMoveElimOnly = 0> {
   list<RegisterClass> RegClasses = Classes;
   list<int> RegCosts = Costs;
+  list<bit> AllowMoveElimination = AllowMoveElim;
   int NumPhysRegs = numPhysRegs;
+  int MaxMovesEliminatedPerCycle = MaxMoveElimPerCy;
+  bit AllowZeroMoveEliminationOnly = AllowZeroMoveElimOnly;
   SchedMachineModel SchedModel = ?;
 }
 

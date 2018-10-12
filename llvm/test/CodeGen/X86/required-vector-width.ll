@@ -190,7 +190,8 @@ define i32 @_Z9test_charPcS_i_256(i8* nocapture readonly, i8* nocapture readonly
 ; CHECK-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; CHECK-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; CHECK-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovd %xmm0, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -319,7 +320,8 @@ define i32 @sad_16i8_256() "required-vector-width"="256" {
 ; CHECK-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; CHECK-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; CHECK-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovd %xmm0, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

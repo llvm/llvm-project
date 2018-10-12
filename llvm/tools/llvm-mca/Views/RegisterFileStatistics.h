@@ -51,15 +51,10 @@ class RegisterFileStatistics : public View {
   // There is one entry for each register file implemented by the processor.
   llvm::SmallVector<RegisterFileUsage, 4> RegisterFiles;
 
-  void initializeRegisterFileInfo();
-
 public:
-  RegisterFileStatistics(const llvm::MCSubtargetInfo &sti) : STI(sti) {
-    initializeRegisterFileInfo();
-  }
+  RegisterFileStatistics(const llvm::MCSubtargetInfo &sti);
 
   void onEvent(const HWInstructionEvent &Event) override;
-
   void printView(llvm::raw_ostream &OS) const override;
 };
 } // namespace mca

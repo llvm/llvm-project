@@ -1911,4 +1911,36 @@ define <16 x i32> @test_masked_v16i32(i8 * %addr, <16 x i32> %old, <16 x i32> %m
   ret <16 x i32>%res
 }
 
+; Reduced from https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=10895
+define i32 @PR39256(float* %ptr) {
+; SSE-LABEL: PR39256:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    ucomiss {{.*}}(%rip), %xmm0
+; SSE-NEXT:    setb (%rax)
+; SSE-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR39256:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vucomiss {{.*}}(%rip), %xmm0
+; AVX-NEXT:    setb (%rax)
+; AVX-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: PR39256:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vucomiss {{.*}}(%rip), %xmm0
+; AVX512-NEXT:    setb (%rax)
+; AVX512-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; AVX512-NEXT:    retq
+entry:
+  %l = load float, float* %ptr, !nontemporal !1
+  %C = fcmp ult float %l, 0x36A0000000000000
+  store i1 %C, i1* undef
+  ret i32 -2147483648
+}
+
 !1 = !{i32 1}

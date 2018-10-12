@@ -21,81 +21,83 @@ namespace exegesis {
 
 namespace {
 
-// Common code for X86 Uops and Latency runners.
-template <typename Impl> class X86SnippetGenerator : public Impl {
-  using Impl::Impl;
+static llvm::Error IsInvalidOpcode(const Instruction &Instr) {
+  const auto OpcodeName = Instr.Name;
+  if (OpcodeName.startswith("POPF") || OpcodeName.startswith("PUSHF") ||
+      OpcodeName.startswith("ADJCALLSTACK"))
+    return llvm::make_error<BenchmarkFailure>(
+        "Unsupported opcode: Push/Pop/AdjCallStack");
+  return llvm::Error::success();
+}
+
+static unsigned GetX86FPFlags(const Instruction &Instr) {
+  return Instr.Description->TSFlags & llvm::X86II::FPTypeMask;
+}
+
+class X86LatencySnippetGenerator : public LatencySnippetGenerator {
+public:
+  using LatencySnippetGenerator::LatencySnippetGenerator;
 
   llvm::Expected<CodeTemplate>
   generateCodeTemplate(const Instruction &Instr) const override {
-    // Test whether we can generate a snippet for this instruction.
-    const auto OpcodeName = Instr.Name;
-    if (OpcodeName.startswith("POPF") || OpcodeName.startswith("PUSHF") ||
-        OpcodeName.startswith("ADJCALLSTACK")) {
-      return llvm::make_error<BenchmarkFailure>(
-          "Unsupported opcode: Push/Pop/AdjCallStack");
-    }
+    if (auto E = IsInvalidOpcode(Instr))
+      return std::move(E);
 
-    // Handle X87.
-    const unsigned FPInstClass =
-        Instr.Description->TSFlags & llvm::X86II::FPTypeMask;
-    switch (FPInstClass) {
+    switch (GetX86FPFlags(Instr)) {
     case llvm::X86II::NotFP:
-      break;
+      return LatencySnippetGenerator::generateCodeTemplate(Instr);
     case llvm::X86II::ZeroArgFP:
-      return llvm::make_error<BenchmarkFailure>("Unsupported x87 ZeroArgFP");
     case llvm::X86II::OneArgFP:
-      return llvm::make_error<BenchmarkFailure>("Unsupported x87 OneArgFP");
+    case llvm::X86II::SpecialFP:
+    case llvm::X86II::CompareFP:
+    case llvm::X86II::CondMovFP:
+      return llvm::make_error<BenchmarkFailure>("Unsupported x87 Instruction");
     case llvm::X86II::OneArgFPRW:
-    case llvm::X86II::TwoArgFP: {
+    case llvm::X86II::TwoArgFP:
+      // These are instructions like
+      //   - `ST(0) = fsqrt(ST(0))` (OneArgFPRW)
+      //   - `ST(0) = ST(0) + ST(i)` (TwoArgFP)
+      // They are intrinsically serial and do not modify the state of the stack.
+      return generateSelfAliasingCodeTemplate(Instr);
+    default:
+      llvm_unreachable("Unknown FP Type!");
+    }
+  }
+};
+
+class X86UopsSnippetGenerator : public UopsSnippetGenerator {
+public:
+  using UopsSnippetGenerator::UopsSnippetGenerator;
+
+  llvm::Expected<CodeTemplate>
+  generateCodeTemplate(const Instruction &Instr) const override {
+    if (auto E = IsInvalidOpcode(Instr))
+      return std::move(E);
+
+    switch (GetX86FPFlags(Instr)) {
+    case llvm::X86II::NotFP:
+      return UopsSnippetGenerator::generateCodeTemplate(Instr);
+    case llvm::X86II::ZeroArgFP:
+    case llvm::X86II::OneArgFP:
+    case llvm::X86II::SpecialFP:
+      return llvm::make_error<BenchmarkFailure>("Unsupported x87 Instruction");
+    case llvm::X86II::OneArgFPRW:
+    case llvm::X86II::TwoArgFP:
       // These are instructions like
       //   - `ST(0) = fsqrt(ST(0))` (OneArgFPRW)
       //   - `ST(0) = ST(0) + ST(i)` (TwoArgFP)
       // They are intrinsically serial and do not modify the state of the stack.
       // We generate the same code for latency and uops.
-      return this->generateSelfAliasingCodeTemplate(Instr);
-    }
+      return generateSelfAliasingCodeTemplate(Instr);
     case llvm::X86II::CompareFP:
-      return Impl::handleCompareFP(Instr);
     case llvm::X86II::CondMovFP:
-      return Impl::handleCondMovFP(Instr);
-    case llvm::X86II::SpecialFP:
-      return llvm::make_error<BenchmarkFailure>("Unsupported x87 SpecialFP");
+      // We can compute uops for any FP instruction that does not grow or shrink
+      // the stack (either do not touch the stack or push as much as they pop).
+      return generateUnconstrainedCodeTemplate(
+          Instr, "instruction does not grow/shrink the FP stack");
     default:
       llvm_unreachable("Unknown FP Type!");
     }
-
-    // Fallback to generic implementation.
-    return Impl::Base::generateCodeTemplate(Instr);
-  }
-};
-
-class X86LatencyImpl : public LatencySnippetGenerator {
-protected:
-  using Base = LatencySnippetGenerator;
-  using Base::Base;
-  llvm::Expected<CodeTemplate> handleCompareFP(const Instruction &Instr) const {
-    return llvm::make_error<SnippetGeneratorFailure>(
-        "Unsupported x87 CompareFP");
-  }
-  llvm::Expected<CodeTemplate> handleCondMovFP(const Instruction &Instr) const {
-    return llvm::make_error<SnippetGeneratorFailure>(
-        "Unsupported x87 CondMovFP");
-  }
-};
-
-class X86UopsImpl : public UopsSnippetGenerator {
-protected:
-  using Base = UopsSnippetGenerator;
-  using Base::Base;
-  // We can compute uops for any FP instruction that does not grow or shrink the
-  // stack (either do not touch the stack or push as much as they pop).
-  llvm::Expected<CodeTemplate> handleCompareFP(const Instruction &Instr) const {
-    return generateUnconstrainedCodeTemplate(
-        Instr, "instruction does not grow/shrink the FP stack");
-  }
-  llvm::Expected<CodeTemplate> handleCondMovFP(const Instruction &Instr) const {
-    return generateUnconstrainedCodeTemplate(
-        Instr, "instruction does not grow/shrink the FP stack");
   }
 };
 
@@ -330,12 +332,12 @@ class ExegesisX86Target : public ExegesisTarget {
 
   std::unique_ptr<SnippetGenerator>
   createLatencySnippetGenerator(const LLVMState &State) const override {
-    return llvm::make_unique<X86SnippetGenerator<X86LatencyImpl>>(State);
+    return llvm::make_unique<X86LatencySnippetGenerator>(State);
   }
 
   std::unique_ptr<SnippetGenerator>
   createUopsSnippetGenerator(const LLVMState &State) const override {
-    return llvm::make_unique<X86SnippetGenerator<X86UopsImpl>>(State);
+    return llvm::make_unique<X86UopsSnippetGenerator>(State);
   }
 
   bool matchesArch(llvm::Triple::ArchType Arch) const override {

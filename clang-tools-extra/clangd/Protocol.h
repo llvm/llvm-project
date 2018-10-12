@@ -673,7 +673,6 @@ bool fromJSON(const llvm::json::Value &, ExecuteCommandParams &);
 struct Command : public ExecuteCommandParams {
   std::string title;
 };
-
 llvm::json::Value toJSON(const Command &C);
 
 /// Represents information about programming constructs like variables, classes,

@@ -9,12 +9,12 @@ mov %edx, %eax
 
 # CHECK:      Iterations:        3
 # CHECK-NEXT: Instructions:      15
-# CHECK-NEXT: Total Cycles:      12
+# CHECK-NEXT: Total Cycles:      9
 # CHECK-NEXT: Total uOps:        15
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.25
-# CHECK-NEXT: IPC:               1.25
+# CHECK-NEXT: uOps Per Cycle:    1.67
+# CHECK-NEXT: IPC:               1.67
 # CHECK-NEXT: Block RThroughput: 2.5
 
 # CHECK:      Instruction Info:
@@ -33,8 +33,8 @@ mov %edx, %eax
 # CHECK-NEXT:  1      1     0.50                        movl	%edx, %eax
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    12
-# CHECK-NEXT: Max number of mappings used:         7
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- JFpuPRF:
 # CHECK-NEXT:    Number of physical registers:     72
@@ -43,8 +43,8 @@ mov %edx, %eax
 
 # CHECK:      *  Register File #2 -- JIntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     64
-# CHECK-NEXT:    Total number of mappings created: 12
-# CHECK-NEXT:    Max number of mappings used:      7
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - JALU0
@@ -64,35 +64,34 @@ mov %edx, %eax
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     xorl	%eax, %eax
-# CHECK-NEXT: 0.33   0.67    -      -      -      -      -      -      -      -      -      -      -      -     movl	%eax, %ebx
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%ebx, %ecx
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movl	%ecx, %edx
-# CHECK-NEXT: 0.67   0.33    -      -      -      -      -      -      -      -      -      -      -      -     movl	%edx, %eax
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%eax, %ebx
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%ebx, %ecx
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%ecx, %edx
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	%edx, %eax
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: Index     012345678
 
-# CHECK:      [0,0]     DR   .    ..   xorl	%eax, %eax
-# CHECK-NEXT: [0,1]     DeER .    ..   movl	%eax, %ebx
-# CHECK-NEXT: [0,2]     .DeER.    ..   movl	%ebx, %ecx
-# CHECK-NEXT: [0,3]     .D=eER    ..   movl	%ecx, %edx
-# CHECK-NEXT: [0,4]     . D=eER   ..   movl	%edx, %eax
-# CHECK-NEXT: [1,0]     . D---R   ..   xorl	%eax, %eax
-# CHECK-NEXT: [1,1]     .  DeE-R  ..   movl	%eax, %ebx
-# CHECK-NEXT: [1,2]     .  D=eER  ..   movl	%ebx, %ecx
-# CHECK-NEXT: [1,3]     .   D=eER ..   movl	%ecx, %edx
-# CHECK-NEXT: [1,4]     .   D==eER..   movl	%edx, %eax
-# CHECK-NEXT: [2,0]     .    D---R..   xorl	%eax, %eax
-# CHECK-NEXT: [2,1]     .    DeE--R.   movl	%eax, %ebx
-# CHECK-NEXT: [2,2]     .    .DeE-R.   movl	%ebx, %ecx
-# CHECK-NEXT: [2,3]     .    .D=eE-R   movl	%ecx, %edx
-# CHECK-NEXT: [2,4]     .    . D=eER   movl	%edx, %eax
+# CHECK:      [0,0]     DR   .  .   xorl	%eax, %eax
+# CHECK-NEXT: [0,1]     DR   .  .   movl	%eax, %ebx
+# CHECK-NEXT: [0,2]     .DR  .  .   movl	%ebx, %ecx
+# CHECK-NEXT: [0,3]     .DR  .  .   movl	%ecx, %edx
+# CHECK-NEXT: [0,4]     . DR .  .   movl	%edx, %eax
+# CHECK-NEXT: [1,0]     . DR .  .   xorl	%eax, %eax
+# CHECK-NEXT: [1,1]     .  DR.  .   movl	%eax, %ebx
+# CHECK-NEXT: [1,2]     .  DR.  .   movl	%ebx, %ecx
+# CHECK-NEXT: [1,3]     .   DR  .   movl	%ecx, %edx
+# CHECK-NEXT: [1,4]     .   DR  .   movl	%edx, %eax
+# CHECK-NEXT: [2,0]     .    DR .   xorl	%eax, %eax
+# CHECK-NEXT: [2,1]     .    DR .   movl	%eax, %ebx
+# CHECK-NEXT: [2,2]     .    .DR.   movl	%ebx, %ecx
+# CHECK-NEXT: [2,3]     .    .DR.   movl	%ecx, %edx
+# CHECK-NEXT: [2,4]     .    . DR   movl	%edx, %eax
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -101,8 +100,8 @@ mov %edx, %eax
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     3     0.0    0.0    2.0       xorl	%eax, %eax
-# CHECK-NEXT: 1.     3     1.0    1.0    1.0       movl	%eax, %ebx
-# CHECK-NEXT: 2.     3     1.3    0.0    0.3       movl	%ebx, %ecx
-# CHECK-NEXT: 3.     3     2.0    0.0    0.3       movl	%ecx, %edx
-# CHECK-NEXT: 4.     3     2.3    0.0    0.0       movl	%edx, %eax
+# CHECK-NEXT: 0.     3     0.0    0.0    0.0       xorl	%eax, %eax
+# CHECK-NEXT: 1.     3     0.0    0.0    0.0       movl	%eax, %ebx
+# CHECK-NEXT: 2.     3     0.0    0.0    0.0       movl	%ebx, %ecx
+# CHECK-NEXT: 3.     3     0.0    0.0    0.0       movl	%ecx, %edx
+# CHECK-NEXT: 4.     3     0.0    0.0    0.0       movl	%edx, %eax

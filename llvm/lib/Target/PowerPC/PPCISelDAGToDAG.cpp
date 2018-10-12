@@ -1083,9 +1083,14 @@ class BitPermutationSelector {
     // lowest-order bit.
     unsigned Idx;
 
+    // ConstZero means a bit we need to mask off.
+    // Variable is a bit comes from an input variable.
+    // VariableKnownToBeZero is also a bit comes from an input variable,
+    // but it is known to be already zero. So we do not need to mask them.
     enum Kind {
       ConstZero,
-      Variable
+      Variable,
+      VariableKnownToBeZero
     } K;
 
     ValueBit(SDValue V, unsigned I, Kind K = Variable)
@@ -1094,11 +1099,11 @@ class BitPermutationSelector {
       : V(SDValue(nullptr, 0)), Idx(UINT32_MAX), K(K) {}
 
     bool isZero() const {
-      return K == ConstZero;
+      return K == ConstZero || K == VariableKnownToBeZero;
     }
 
     bool hasValue() const {
-      return K == Variable;
+      return K == Variable || K == VariableKnownToBeZero;
     }
 
     SDValue getValue() const {
@@ -1248,8 +1253,14 @@ class BitPermutationSelector {
         for (unsigned i = 0; i < NumBits; ++i)
           if (((Mask >> i) & 1) == 1)
             Bits[i] = (*LHSBits)[i];
-          else
-            Bits[i] = ValueBit(ValueBit::ConstZero);
+          else {
+            // AND instruction masks this bit. If the input is already zero,
+            // we have nothing to do here. Otherwise, make the bit ConstZero.
+            if ((*LHSBits)[i].isZero())
+              Bits[i] = (*LHSBits)[i];
+            else
+              Bits[i] = ValueBit(ValueBit::ConstZero);
+          }
 
         return std::make_pair(Interesting, &Bits);
       }
@@ -1259,8 +1270,26 @@ class BitPermutationSelector {
       const auto &RHSBits = *getValueBits(V.getOperand(1), NumBits).second;
 
       bool AllDisjoint = true;
-      for (unsigned i = 0; i < NumBits; ++i)
-        if (LHSBits[i].isZero())
+      SDValue LastVal = SDValue();
+      unsigned LastIdx = 0;
+      for (unsigned i = 0; i < NumBits; ++i) {
+        if (LHSBits[i].isZero() && RHSBits[i].isZero()) {
+          // If both inputs are known to be zero and one is ConstZero and
+          // another is VariableKnownToBeZero, we can select whichever
+          // we like. To minimize the number of bit groups, we select
+          // VariableKnownToBeZero if this bit is the next bit of the same
+          // input variable from the previous bit. Otherwise, we select
+          // ConstZero.
+          if (LHSBits[i].hasValue() && LHSBits[i].getValue() == LastVal &&
+              LHSBits[i].getValueBitIndex() == LastIdx + 1)
+            Bits[i] = LHSBits[i];
+          else if (RHSBits[i].hasValue() && RHSBits[i].getValue() == LastVal &&
+                   RHSBits[i].getValueBitIndex() == LastIdx + 1)
+            Bits[i] = RHSBits[i];
+          else
+            Bits[i] = ValueBit(ValueBit::ConstZero);
+        }
+        else if (LHSBits[i].isZero())
           Bits[i] = RHSBits[i];
         else if (RHSBits[i].isZero())
           Bits[i] = LHSBits[i];
@@ -1268,6 +1297,16 @@ class BitPermutationSelector {
           AllDisjoint = false;
           break;
         }
+        // We remember the value and bit index of this bit.
+        if (Bits[i].hasValue()) {
+          LastVal = Bits[i].getValue();
+          LastIdx = Bits[i].getValueBitIndex();
+        }
+        else {
+          if (LastVal) LastVal = SDValue();
+          LastIdx = 0;
+        }
+      }
 
       if (!AllDisjoint)
         break;
@@ -1293,6 +1332,44 @@ class BitPermutationSelector {
 
       return std::make_pair(Interesting, &Bits);
     }
+    case ISD::AssertZext: {
+      // For AssertZext, we look through the operand and
+      // mark the bits known to be zero.
+      const SmallVector<ValueBit, 64> *LHSBits;
+      std::tie(Interesting, LHSBits) = getValueBits(V.getOperand(0),
+                                                    NumBits);
+
+      EVT FromType = cast<VTSDNode>(V.getOperand(1))->getVT();
+      const unsigned NumValidBits = FromType.getSizeInBits();
+      for (unsigned i = 0; i < NumValidBits; ++i)
+        Bits[i] = (*LHSBits)[i];
+
+      // These bits are known to be zero.
+      for (unsigned i = NumValidBits; i < NumBits; ++i)
+        Bits[i] = ValueBit((*LHSBits)[i].getValue(),
+                           (*LHSBits)[i].getValueBitIndex(),
+                           ValueBit::VariableKnownToBeZero);
+
+      return std::make_pair(Interesting, &Bits);
+    }
+    case ISD::LOAD:
+      LoadSDNode *LD = cast<LoadSDNode>(V);
+      if (ISD::isZEXTLoad(V.getNode()) && V.getResNo() == 0) {
+        EVT VT = LD->getMemoryVT();
+        const unsigned NumValidBits = VT.getSizeInBits();
+
+        for (unsigned i = 0; i < NumValidBits; ++i)
+          Bits[i] = ValueBit(V, i);
+
+        // These bits are known to be zero.
+        for (unsigned i = NumValidBits; i < NumBits; ++i)
+          Bits[i] = ValueBit(V, i, ValueBit::VariableKnownToBeZero);
+
+        // Zero-extending load itself cannot be optimized. So, it is not
+        // interesting by itself though it gives useful information.
+        return std::make_pair(Interesting = false, &Bits);
+      }
+      break;
     }
 
     for (unsigned i = 0; i < NumBits; ++i)
@@ -1304,7 +1381,7 @@ class BitPermutationSelector {
   // For each value (except the constant ones), compute the left-rotate amount
   // to get it from its original to final position.
   void computeRotationAmounts() {
-    HasZeros = false;
+    NeedMask = false;
     RLAmt.resize(Bits.size());
     for (unsigned i = 0; i < Bits.size(); ++i)
       if (Bits[i].hasValue()) {
@@ -1314,7 +1391,7 @@ class BitPermutationSelector {
         else
           RLAmt[i] = Bits.size() - (VBI - i);
       } else if (Bits[i].isZero()) {
-        HasZeros = true;
+        NeedMask = true;
         RLAmt[i] = UINT32_MAX;
       } else {
         llvm_unreachable("Unknown value bit type");
@@ -1330,6 +1407,7 @@ class BitPermutationSelector {
     unsigned LastRLAmt = RLAmt[0];
     SDValue LastValue = Bits[0].hasValue() ? Bits[0].getValue() : SDValue();
     unsigned LastGroupStartIdx = 0;
+    bool IsGroupOfZeros = !Bits[LastGroupStartIdx].hasValue();
     for (unsigned i = 1; i < Bits.size(); ++i) {
       unsigned ThisRLAmt = RLAmt[i];
       SDValue ThisValue = Bits[i].hasValue() ? Bits[i].getValue() : SDValue();
@@ -1342,10 +1420,20 @@ class BitPermutationSelector {
           LastGroupStartIdx = 0;
       }
 
+      // If this bit is known to be zero and the current group is a bit group
+      // of zeros, we do not need to terminate the current bit group even the
+      // Value or RLAmt does not match here. Instead, we terminate this group
+      // when the first non-zero bit appears later.
+      if (IsGroupOfZeros && Bits[i].isZero())
+        continue;
+
       // If this bit has the same underlying value and the same rotate factor as
       // the last one, then they're part of the same group.
       if (ThisRLAmt == LastRLAmt && ThisValue == LastValue)
-        continue;
+        // We cannot continue the current group if this bits is not known to
+        // be zero in a bit group of zeros.
+        if (!(IsGroupOfZeros && ThisValue && !Bits[i].isZero()))
+          continue;
 
       if (LastValue.getNode())
         BitGroups.push_back(BitGroup(LastValue, LastRLAmt, LastGroupStartIdx,
@@ -1353,6 +1441,7 @@ class BitPermutationSelector {
       LastRLAmt = ThisRLAmt;
       LastValue = ThisValue;
       LastGroupStartIdx = i;
+      IsGroupOfZeros = !Bits[LastGroupStartIdx].hasValue();
     }
     if (LastValue.getNode())
       BitGroups.push_back(BitGroup(LastValue, LastRLAmt, LastGroupStartIdx,
@@ -1698,7 +1787,7 @@ class BitPermutationSelector {
     // If we've not yet selected a 'starting' instruction, and we have no zeros
     // to fill in, select the (Value, RLAmt) with the highest priority (largest
     // number of groups), and start with this rotated value.
-    if ((!HasZeros || LateMask) && !Res) {
+    if ((!NeedMask || LateMask) && !Res) {
       ValueRotInfo &VRI = ValueRotsVec[0];
       if (VRI.RLAmt) {
         if (InstCnt) *InstCnt += 1;
@@ -2077,7 +2166,7 @@ class BitPermutationSelector {
     // If we've not yet selected a 'starting' instruction, and we have no zeros
     // to fill in, select the (Value, RLAmt) with the highest priority (largest
     // number of groups), and start with this rotated value.
-    if ((!HasZeros || LateMask) && !Res) {
+    if ((!NeedMask || LateMask) && !Res) {
       // If we have both Repl32 groups and non-Repl32 groups, the non-Repl32
       // groups will come first, and so the VRI representing the largest number
       // of groups might not be first (it might be the first Repl32 groups).
@@ -2230,7 +2319,7 @@ class BitPermutationSelector {
 
   SmallVector<ValueBit, 64> Bits;
 
-  bool HasZeros;
+  bool NeedMask;
   SmallVector<unsigned, 64> RLAmt;
 
   SmallVector<BitGroup, 16> BitGroups;
@@ -2259,10 +2348,10 @@ public:
                          " selection for:    ");
     LLVM_DEBUG(N->dump(CurDAG));
 
-    // Fill it RLAmt and set HasZeros.
+    // Fill it RLAmt and set NeedMask.
     computeRotationAmounts();
 
-    if (!HasZeros)
+    if (!NeedMask)
       return Select(N, false);
 
     // We currently have two techniques for handling results with zeros: early

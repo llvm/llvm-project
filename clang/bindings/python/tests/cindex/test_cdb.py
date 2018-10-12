@@ -31,11 +31,6 @@ class TestCDB(unittest.TestCase):
         """Check we can load a compilation database"""
         cdb = CompilationDatabase.fromDirectory(kInputsDir)
 
-    def test_lookup_fail(self):
-        """Check file lookup failure"""
-        cdb = CompilationDatabase.fromDirectory(kInputsDir)
-        self.assertIsNone(cdb.getCompileCommands('file_do_not_exist.cpp'))
-
     def test_lookup_succeed(self):
         """Check we get some results if the file exists in the db"""
         cdb = CompilationDatabase.fromDirectory(kInputsDir)

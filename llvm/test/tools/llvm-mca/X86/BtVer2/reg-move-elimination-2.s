@@ -14,12 +14,12 @@ movdqu %xmm5, %xmm0
 
 # CHECK:      Iterations:        3
 # CHECK-NEXT: Instructions:      27
-# CHECK-NEXT: Total Cycles:      19
+# CHECK-NEXT: Total Cycles:      15
 # CHECK-NEXT: Total uOps:        27
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.42
-# CHECK-NEXT: IPC:               1.42
+# CHECK-NEXT: uOps Per Cycle:    1.80
+# CHECK-NEXT: IPC:               1.80
 # CHECK-NEXT: Block RThroughput: 4.5
 
 # CHECK:      Instruction Info:
@@ -42,13 +42,13 @@ movdqu %xmm5, %xmm0
 # CHECK-NEXT:  1      1     0.50                        movdqu	%xmm5, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    21
-# CHECK-NEXT: Max number of mappings used:         8
+# CHECK-NEXT: Total number of mappings created:    0
+# CHECK-NEXT: Max number of mappings used:         0
 
 # CHECK:      *  Register File #1 -- JFpuPRF:
 # CHECK-NEXT:    Number of physical registers:     72
-# CHECK-NEXT:    Total number of mappings created: 21
-# CHECK-NEXT:    Max number of mappings used:      8
+# CHECK-NEXT:    Total number of mappings created: 0
+# CHECK-NEXT:    Max number of mappings used:      0
 
 # CHECK:      *  Register File #2 -- JIntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     64
@@ -73,51 +73,51 @@ movdqu %xmm5, %xmm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT:  -      -      -     2.00   2.00   3.33   3.67    -      -      -      -     1.33   1.67    -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     pxor	%mm0, %mm0
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -     movq	%mm0, %mm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	%mm0, %mm1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     xorps	%xmm0, %xmm0
-# CHECK-NEXT:  -      -      -      -     1.00   0.33   0.67    -      -      -      -      -      -      -     movaps	%xmm0, %xmm1
-# CHECK-NEXT:  -      -      -     1.00    -     0.33   0.67    -      -      -      -      -      -      -     movups	%xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -     1.00   0.67   0.33    -      -      -      -      -      -      -     movapd	%xmm2, %xmm3
-# CHECK-NEXT:  -      -      -     1.00    -     0.33   0.67    -      -      -      -      -      -      -     movupd	%xmm3, %xmm4
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -     movdqa	%xmm4, %xmm5
-# CHECK-NEXT:  -      -      -      -      -     0.67   0.33    -      -      -      -     0.33   0.67    -     movdqu	%xmm5, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     movaps	%xmm0, %xmm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     movups	%xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     movapd	%xmm2, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     movupd	%xmm3, %xmm4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqa	%xmm4, %xmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     movdqu	%xmm5, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     012345678
+# CHECK-NEXT:                     01234
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DR   .    .    .  .   pxor	%mm0, %mm0
-# CHECK-NEXT: [0,1]     DeER .    .    .  .   movq	%mm0, %mm1
-# CHECK-NEXT: [0,2]     .D-R .    .    .  .   xorps	%xmm0, %xmm0
-# CHECK-NEXT: [0,3]     .DeER.    .    .  .   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [0,4]     . DeER    .    .  .   movups	%xmm1, %xmm2
-# CHECK-NEXT: [0,5]     . D=eER   .    .  .   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [0,6]     .  D=eER  .    .  .   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [0,7]     .  D==eER .    .  .   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [0,8]     .   D==eER.    .  .   movdqu	%xmm5, %xmm0
-# CHECK-NEXT: [1,0]     .   D----R.    .  .   pxor	%mm0, %mm0
-# CHECK-NEXT: [1,1]     .    DeE--R    .  .   movq	%mm0, %mm1
-# CHECK-NEXT: [1,2]     .    D----R    .  .   xorps	%xmm0, %xmm0
-# CHECK-NEXT: [1,3]     .    .DeE--R   .  .   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [1,4]     .    .D=eE-R   .  .   movups	%xmm1, %xmm2
-# CHECK-NEXT: [1,5]     .    . D=eE-R  .  .   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [1,6]     .    . D==eER  .  .   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [1,7]     .    .  D==eER .  .   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [1,8]     .    .  D===eER.  .   movdqu	%xmm5, %xmm0
-# CHECK-NEXT: [2,0]     .    .   D----R.  .   pxor	%mm0, %mm0
-# CHECK-NEXT: [2,1]     .    .   DeE---R  .   movq	%mm0, %mm1
-# CHECK-NEXT: [2,2]     .    .    D----R  .   xorps	%xmm0, %xmm0
-# CHECK-NEXT: [2,3]     .    .    DeE---R .   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [2,4]     .    .    .DeE--R .   movups	%xmm1, %xmm2
-# CHECK-NEXT: [2,5]     .    .    .D=eE--R.   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [2,6]     .    .    . D=eE-R.   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [2,7]     .    .    . D==eE-R   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [2,8]     .    .    .  D==eER   movdqu	%xmm5, %xmm0
+# CHECK:      [0,0]     DR   .    .   .   pxor	%mm0, %mm0
+# CHECK-NEXT: [0,1]     DR   .    .   .   movq	%mm0, %mm1
+# CHECK-NEXT: [0,2]     .DR  .    .   .   xorps	%xmm0, %xmm0
+# CHECK-NEXT: [0,3]     .DR  .    .   .   movaps	%xmm0, %xmm1
+# CHECK-NEXT: [0,4]     . DR .    .   .   movups	%xmm1, %xmm2
+# CHECK-NEXT: [0,5]     . DR .    .   .   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [0,6]     .  DR.    .   .   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [0,7]     .  DR.    .   .   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [0,8]     .   DR    .   .   movdqu	%xmm5, %xmm0
+# CHECK-NEXT: [1,0]     .   DR    .   .   pxor	%mm0, %mm0
+# CHECK-NEXT: [1,1]     .    DR   .   .   movq	%mm0, %mm1
+# CHECK-NEXT: [1,2]     .    DR   .   .   xorps	%xmm0, %xmm0
+# CHECK-NEXT: [1,3]     .    .DR  .   .   movaps	%xmm0, %xmm1
+# CHECK-NEXT: [1,4]     .    .DR  .   .   movups	%xmm1, %xmm2
+# CHECK-NEXT: [1,5]     .    . DR .   .   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [1,6]     .    . DR .   .   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [1,7]     .    .  DR.   .   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [1,8]     .    .  DR.   .   movdqu	%xmm5, %xmm0
+# CHECK-NEXT: [2,0]     .    .   DR   .   pxor	%mm0, %mm0
+# CHECK-NEXT: [2,1]     .    .   DR   .   movq	%mm0, %mm1
+# CHECK-NEXT: [2,2]     .    .    DR  .   xorps	%xmm0, %xmm0
+# CHECK-NEXT: [2,3]     .    .    DR  .   movaps	%xmm0, %xmm1
+# CHECK-NEXT: [2,4]     .    .    .DR .   movups	%xmm1, %xmm2
+# CHECK-NEXT: [2,5]     .    .    .DR .   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [2,6]     .    .    . DR.   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [2,7]     .    .    . DR.   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [2,8]     .    .    .  DR   movdqu	%xmm5, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -126,12 +126,12 @@ movdqu %xmm5, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     3     0.0    0.0    2.7       pxor	%mm0, %mm0
-# CHECK-NEXT: 1.     3     1.0    1.0    1.7       movq	%mm0, %mm1
-# CHECK-NEXT: 2.     3     0.0    0.0    3.0       xorps	%xmm0, %xmm0
-# CHECK-NEXT: 3.     3     1.0    1.0    1.7       movaps	%xmm0, %xmm1
-# CHECK-NEXT: 4.     3     1.3    0.0    1.0       movups	%xmm1, %xmm2
-# CHECK-NEXT: 5.     3     2.0    0.0    1.0       movapd	%xmm2, %xmm3
-# CHECK-NEXT: 6.     3     2.3    0.0    0.3       movupd	%xmm3, %xmm4
-# CHECK-NEXT: 7.     3     3.0    0.0    0.3       movdqa	%xmm4, %xmm5
-# CHECK-NEXT: 8.     3     3.3    0.0    0.0       movdqu	%xmm5, %xmm0
+# CHECK-NEXT: 0.     3     0.0    0.0    0.0       pxor	%mm0, %mm0
+# CHECK-NEXT: 1.     3     0.0    0.0    0.0       movq	%mm0, %mm1
+# CHECK-NEXT: 2.     3     0.0    0.0    0.0       xorps	%xmm0, %xmm0
+# CHECK-NEXT: 3.     3     0.0    0.0    0.0       movaps	%xmm0, %xmm1
+# CHECK-NEXT: 4.     3     0.0    0.0    0.0       movups	%xmm1, %xmm2
+# CHECK-NEXT: 5.     3     0.0    0.0    0.0       movapd	%xmm2, %xmm3
+# CHECK-NEXT: 6.     3     0.0    0.0    0.0       movupd	%xmm3, %xmm4
+# CHECK-NEXT: 7.     3     0.0    0.0    0.0       movdqa	%xmm4, %xmm5
+# CHECK-NEXT: 8.     3     0.0    0.0    0.0       movdqu	%xmm5, %xmm0

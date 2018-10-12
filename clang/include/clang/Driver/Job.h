@@ -30,7 +30,7 @@ class InputInfo;
 class Tool;
 
 // Re-export this as clang::driver::ArgStringList.
-using llvm::opt::ArgStringList;
+using ArgStringList = llvm::opt::ArgStringList;
 
 struct CrashReportInfo {
   StringRef Filename;

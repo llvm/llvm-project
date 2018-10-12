@@ -17,6 +17,7 @@ add_llvm_library(LLVMAsmPrinter
   DwarfFile.cpp
   DwarfStringPool.cpp
   DwarfUnit.cpp
+  Dwarf2BTF.cpp
   EHStreamer.cpp
   ErlangGCPrinter.cpp
   OcamlGCPrinter.cpp

@@ -463,6 +463,8 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
   bool IsZeroIdiom = MCIA.isZeroIdiom(MCI, Mask, ProcID);
   bool IsDepBreaking =
       IsZeroIdiom || MCIA.isDependencyBreaking(MCI, Mask, ProcID);
+  if (MCIA.isOptimizableRegisterMove(MCI, ProcID))
+    NewIS->setOptimizableMove();
 
   // Initialize Reads first.
   for (const ReadDescriptor &RD : D.Reads) {

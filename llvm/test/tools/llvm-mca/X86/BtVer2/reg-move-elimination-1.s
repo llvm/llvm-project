@@ -32,13 +32,13 @@ vaddps %xmm1, %xmm1, %xmm2
 # CHECK-NEXT:  1      3     1.00                        vaddps	%xmm1, %xmm1, %xmm2
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    6
-# CHECK-NEXT: Max number of mappings used:         5
+# CHECK-NEXT: Total number of mappings created:    3
+# CHECK-NEXT: Max number of mappings used:         3
 
 # CHECK:      *  Register File #1 -- JFpuPRF:
 # CHECK-NEXT:    Number of physical registers:     72
-# CHECK-NEXT:    Total number of mappings created: 6
-# CHECK-NEXT:    Max number of mappings used:      5
+# CHECK-NEXT:    Total number of mappings created: 3
+# CHECK-NEXT:    Max number of mappings used:      3
 
 # CHECK:      *  Register File #2 -- JIntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     64
@@ -63,25 +63,25 @@ vaddps %xmm1, %xmm1, %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT:  -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     vxorps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT:  -      -      -      -     1.00    -     1.00    -      -      -      -      -      -      -     vmovaps	%xmm0, %xmm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     vmovaps	%xmm0, %xmm1
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     vaddps	%xmm1, %xmm1, %xmm2
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     0123456789
 
 # CHECK:      [0,0]     DR   .   .   vxorps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [0,1]     DeER .   .   vmovaps	%xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DR   .   .   vmovaps	%xmm0, %xmm1
 # CHECK-NEXT: [0,2]     .DeeeER  .   vaddps	%xmm1, %xmm1, %xmm2
 # CHECK-NEXT: [1,0]     .D----R  .   vxorps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [1,1]     . DeE--R .   vmovaps	%xmm0, %xmm1
-# CHECK-NEXT: [1,2]     . D=eeeER.   vaddps	%xmm1, %xmm1, %xmm2
+# CHECK-NEXT: [1,1]     . D----R .   vmovaps	%xmm0, %xmm1
+# CHECK-NEXT: [1,2]     . DeeeER .   vaddps	%xmm1, %xmm1, %xmm2
 # CHECK-NEXT: [2,0]     .  D----R.   vxorps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [2,1]     .  DeE---R   vmovaps	%xmm0, %xmm1
+# CHECK-NEXT: [2,1]     .  D----R.   vmovaps	%xmm0, %xmm1
 # CHECK-NEXT: [2,2]     .   DeeeER   vaddps	%xmm1, %xmm1, %xmm2
 
 # CHECK:      Average Wait times (based on the timeline view):
@@ -92,5 +92,5 @@ vaddps %xmm1, %xmm1, %xmm2
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     3     0.0    0.0    2.7       vxorps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: 1.     3     1.0    1.0    1.7       vmovaps	%xmm0, %xmm1
-# CHECK-NEXT: 2.     3     1.3    0.0    0.0       vaddps	%xmm1, %xmm1, %xmm2
+# CHECK-NEXT: 1.     3     0.0    0.0    2.7       vmovaps	%xmm0, %xmm1
+# CHECK-NEXT: 2.     3     1.0    1.0    0.0       vaddps	%xmm1, %xmm1, %xmm2

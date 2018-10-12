@@ -236,14 +236,12 @@ entry:
 ; CHECK-DAG: stfs 6, [[OFF1:[0-9]+]](1)
 ; CHECK-DAG: stfs 7, [[OFF2:[0-9]+]](1)
 ; CHECK-DAG: stfs 8, [[OFF3:[0-9]+]](1)
-; CHECK-DAG: lwz [[REG0:[0-9]+]], [[OFF0]](1)
+; CHECK-DAG: lwz 9, [[OFF0]](1)
 ; CHECK-DAG: lwz [[REG1:[0-9]+]], [[OFF1]](1)
-; CHECK-DAG: lwz [[REG2:[0-9]+]], [[OFF2]](1)
+; CHECK-DAG: lwz 10, [[OFF2]](1)
 ; CHECK-DAG: lwz [[REG3:[0-9]+]], [[OFF3]](1)
-; CHECK-DAG: sldi [[REG1]], [[REG1]], 32
-; CHECK-DAG: sldi [[REG3]], [[REG3]], 32
-; CHECK-DAG: or 9, [[REG0]], [[REG1]]
-; CHECK-DAG: or 10, [[REG2]], [[REG3]]
+; CHECK-DAG: rldimi 9, [[REG1]], 32, 0
+; CHECK-DAG: rldimi 10, [[REG3]], 32, 0
 ; CHECK: bl test1
 
 declare void @test1([8 x float], [8 x float])

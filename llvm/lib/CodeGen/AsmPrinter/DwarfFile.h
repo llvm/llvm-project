@@ -114,6 +114,9 @@ public:
   void emitStrings(MCSection *StrSection, MCSection *OffsetSection = nullptr,
                    bool UseRelativeOffsets = false);
 
+  // Emit all data for the BTF section
+  void emitBTFSection(bool IsLittleEndian);
+
   /// Returns the string pool.
   DwarfStringPool &getStringPool() { return StrPool; }
 
