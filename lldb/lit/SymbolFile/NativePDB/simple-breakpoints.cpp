@@ -1,8 +1,9 @@
 // clang-format off
+// REQUIRES: lld
 
 // Test that we can set simple breakpoints using PDB on any platform.
-// RUN: clang-cl /Z7 /GS- /GR- /c %s /Fo%t.obj
-// RUN: lld-link /DEBUG /nodefaultlib /entry:main /OUT:%t.exe /PDB:%t.pdb %t.obj
+// RUN: clang-cl /Z7 /GS- /GR- /c /Fo%t.obj -- %s 
+// RUN: lld-link /DEBUG /nodefaultlib /entry:main /OUT:%t.exe /PDB:%t.pdb -- %t.obj
 // RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb -f %t.exe -s \
 // RUN:     %p/Inputs/breakpoints.lldbinit | FileCheck %s
 
@@ -37,27 +38,27 @@ int main(int argc, char **argv) {
 // CHECK:      Current executable set to '{{.*}}simple-breakpoints.cpp.tmp.exe' (x86_64).
 // CHECK:      (lldb) break set -n main
 // CHECK:      Breakpoint 1: where = simple-breakpoints.cpp.tmp.exe`main + 21
-// CHECK-SAME:               at simple-breakpoints.cpp:30
+// CHECK-SAME:               at simple-breakpoints.cpp:31
 // CHECK:      (lldb) break set -n OvlGlobalFn
 // CHECK:      Breakpoint 2: 3 locations.
 // CHECK:      (lldb) break set -n StaticFn
 // CHECK:      Breakpoint 3: where = simple-breakpoints.cpp.tmp.exe`StaticFn + 5
-// CHECK-SAME:               at simple-breakpoints.cpp:23
+// CHECK-SAME:               at simple-breakpoints.cpp:24
 // CHECK:      (lldb) break set -n DoesntExist
 // CHECK:      Breakpoint 4: no locations (pending).
 // CHECK:      (lldb) break list
 // CHECK:      Current breakpoints:
 // CHECK:      1: name = 'main', locations = 1
 // CHECK:        1.1: where = simple-breakpoints.cpp.tmp.exe`main + 21
-// CHECK-SAME:                at simple-breakpoints.cpp:30
+// CHECK-SAME:                at simple-breakpoints.cpp:31
 // CHECK:      2: name = 'OvlGlobalFn', locations = 3
 // CHECK:        2.1: where = simple-breakpoints.cpp.tmp.exe`OvlGlobalFn + 5
-// CHECK-SAME:                at simple-breakpoints.cpp:12
+// CHECK-SAME:                at simple-breakpoints.cpp:13
 // CHECK:        2.2: where = simple-breakpoints.cpp.tmp.exe`OvlGlobalFn
-// CHECK-SAME:                at simple-breakpoints.cpp:15
+// CHECK-SAME:                at simple-breakpoints.cpp:16
 // CHECK:        2.3: where = simple-breakpoints.cpp.tmp.exe`OvlGlobalFn + 17
-// CHECK-SAME:                at simple-breakpoints.cpp:19
+// CHECK-SAME:                at simple-breakpoints.cpp:20
 // CHECK:      3: name = 'StaticFn', locations = 1
 // CHECK:        3.1: where = simple-breakpoints.cpp.tmp.exe`StaticFn + 5
-// CHECK-SAME:                at simple-breakpoints.cpp:23
+// CHECK-SAME:                at simple-breakpoints.cpp:24
 // CHECK:      4: name = 'DoesntExist', locations = 0 (pending)

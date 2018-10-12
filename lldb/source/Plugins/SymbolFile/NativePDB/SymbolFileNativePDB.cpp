@@ -70,10 +70,14 @@ static std::unique_ptr<PDBFile> loadPDBFile(std::string PdbPath,
       std::move(Buffer), llvm::support::little);
 
   auto File = llvm::make_unique<PDBFile>(Path, std::move(Stream), Allocator);
-  if (auto EC = File->parseFileHeaders())
+  if (auto EC = File->parseFileHeaders()) {
+    llvm::consumeError(std::move(EC));
     return nullptr;
-  if (auto EC = File->parseStreamData())
+  }
+  if (auto EC = File->parseStreamData()) {
+    llvm::consumeError(std::move(EC));
     return nullptr;
+  }
 
   return File;
 }
@@ -109,6 +113,9 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
   if (ec || magic != llvm::file_magic::pdb)
     return nullptr;
   std::unique_ptr<PDBFile> pdb = loadPDBFile(pdb_file, allocator);
+  if (!pdb)
+    return nullptr;
+
   auto expected_info = pdb->getPDBInfoStream();
   if (!expected_info) {
     llvm::consumeError(expected_info.takeError());

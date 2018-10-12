@@ -473,7 +473,7 @@ struct Mapping47 {
 6200 0000 0000 - 8000 0000 0000: -
 */
 
-struct Mapping48 {
+struct Mapping {
   static const uptr kMetaShadowBeg = 0x300000000000ull;
   static const uptr kMetaShadowEnd = 0x400000000000ull;
   static const uptr kTraceMemBeg   = 0x600000000000ull;
@@ -549,12 +549,10 @@ uptr MappingImpl(void) {
 
 template<int Type>
 uptr MappingArchImpl(void) {
-#if defined(__aarch64__) && !defined(__APPLE__)
+#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
   switch (vmaSize) {
-#if !SANITIZER_GO
     case 39: return MappingImpl<Mapping39, Type>();
     case 42: return MappingImpl<Mapping42, Type>();
-#endif
     case 48: return MappingImpl<Mapping48, Type>();
   }
   DCHECK(0);
@@ -708,12 +706,10 @@ bool IsAppMemImpl(uptr mem) {
 
 ALWAYS_INLINE
 bool IsAppMem(uptr mem) {
-#if defined(__aarch64__) && !defined(__APPLE__)
+#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
   switch (vmaSize) {
-#if !SANITIZER_GO
     case 39: return IsAppMemImpl<Mapping39>(mem);
     case 42: return IsAppMemImpl<Mapping42>(mem);
-#endif
     case 48: return IsAppMemImpl<Mapping48>(mem);
   }
   DCHECK(0);
@@ -741,12 +737,10 @@ bool IsShadowMemImpl(uptr mem) {
 
 ALWAYS_INLINE
 bool IsShadowMem(uptr mem) {
-#if defined(__aarch64__) && !defined(__APPLE__)
+#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
   switch (vmaSize) {
-#if !SANITIZER_GO
     case 39: return IsShadowMemImpl<Mapping39>(mem);
     case 42: return IsShadowMemImpl<Mapping42>(mem);
-#endif
     case 48: return IsShadowMemImpl<Mapping48>(mem);
   }
   DCHECK(0);
@@ -774,12 +768,10 @@ bool IsMetaMemImpl(uptr mem) {
 
 ALWAYS_INLINE
 bool IsMetaMem(uptr mem) {
-#if defined(__aarch64__) && !defined(__APPLE__)
+#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
   switch (vmaSize) {
-#if !SANITIZER_GO
     case 39: return IsMetaMemImpl<Mapping39>(mem);
     case 42: return IsMetaMemImpl<Mapping42>(mem);
-#endif
     case 48: return IsMetaMemImpl<Mapping48>(mem);
   }
   DCHECK(0);
@@ -817,12 +809,10 @@ uptr MemToShadowImpl(uptr x) {
 
 ALWAYS_INLINE
 uptr MemToShadow(uptr x) {
-#if defined(__aarch64__) && !defined(__APPLE__)
+#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
   switch (vmaSize) {
-#if !SANITIZER_GO
     case 39: return MemToShadowImpl<Mapping39>(x);
     case 42: return MemToShadowImpl<Mapping42>(x);
-#endif
     case 48: return MemToShadowImpl<Mapping48>(x);
   }
   DCHECK(0);
@@ -862,12 +852,10 @@ u32 *MemToMetaImpl(uptr x) {
 
 ALWAYS_INLINE
 u32 *MemToMeta(uptr x) {
-#if defined(__aarch64__) && !defined(__APPLE__)
+#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
   switch (vmaSize) {
-#if !SANITIZER_GO
     case 39: return MemToMetaImpl<Mapping39>(x);
     case 42: return MemToMetaImpl<Mapping42>(x);
-#endif
     case 48: return MemToMetaImpl<Mapping48>(x);
   }
   DCHECK(0);
@@ -920,12 +908,10 @@ uptr ShadowToMemImpl(uptr s) {
 
 ALWAYS_INLINE
 uptr ShadowToMem(uptr s) {
-#if defined(__aarch64__) && !defined(__APPLE__)
+#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
   switch (vmaSize) {
-#if !SANITIZER_GO
     case 39: return ShadowToMemImpl<Mapping39>(s);
     case 42: return ShadowToMemImpl<Mapping42>(s);
-#endif
     case 48: return ShadowToMemImpl<Mapping48>(s);
   }
   DCHECK(0);
@@ -961,12 +947,10 @@ uptr GetThreadTraceImpl(int tid) {
 
 ALWAYS_INLINE
 uptr GetThreadTrace(int tid) {
-#if defined(__aarch64__) && !defined(__APPLE__)
+#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
   switch (vmaSize) {
-#if !SANITIZER_GO
     case 39: return GetThreadTraceImpl<Mapping39>(tid);
     case 42: return GetThreadTraceImpl<Mapping42>(tid);
-#endif
     case 48: return GetThreadTraceImpl<Mapping48>(tid);
   }
   DCHECK(0);
@@ -997,12 +981,10 @@ uptr GetThreadTraceHeaderImpl(int tid) {
 
 ALWAYS_INLINE
 uptr GetThreadTraceHeader(int tid) {
-#if defined(__aarch64__) && !defined(__APPLE__)
+#if defined(__aarch64__) && !defined(__APPLE__) && !SANITIZER_GO
   switch (vmaSize) {
-#if !SANITIZER_GO
     case 39: return GetThreadTraceHeaderImpl<Mapping39>(tid);
     case 42: return GetThreadTraceHeaderImpl<Mapping42>(tid);
-#endif
     case 48: return GetThreadTraceHeaderImpl<Mapping48>(tid);
   }
   DCHECK(0);
