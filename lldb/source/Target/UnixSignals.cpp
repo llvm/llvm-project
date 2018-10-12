@@ -88,7 +88,7 @@ void UnixSignals::Reset() {
   AddSignal(10, "SIGBUS", false, true, true, "bus error");
   AddSignal(11, "SIGSEGV", false, true, true, "segmentation violation");
   AddSignal(12, "SIGSYS", false, true, true, "bad argument to system call");
-  AddSignal(13, "SIGPIPE", false, true, true,
+  AddSignal(13, "SIGPIPE", false, false, false,
             "write on a pipe with no one to read it");
   AddSignal(14, "SIGALRM", false, false, false, "alarm clock");
   AddSignal(15, "SIGTERM", false, true, true,
