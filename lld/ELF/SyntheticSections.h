@@ -307,8 +307,6 @@ private:
 
   uint64_t Size = 0;
 
-  size_t LocalEntriesNum = 0;
-
   // Symbol and addend.
   typedef std::pair<Symbol *, int64_t> GotEntry;
 
