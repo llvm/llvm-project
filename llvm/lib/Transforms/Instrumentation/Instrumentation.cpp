@@ -70,6 +70,21 @@ GlobalVariable *llvm::createPrivateGlobalForString(Module &M, StringRef Str,
   return GV;
 }
 
+Comdat *llvm::GetOrCreateFunctionComdat(Function &F,
+                                        const std::string &ModuleId) {
+  if (auto Comdat = F.getComdat()) return Comdat;
+  assert(F.hasName());
+  Module *M = F.getParent();
+  std::string Name = F.getName();
+  if (F.hasLocalLinkage()) {
+    if (ModuleId.empty())
+      return nullptr;
+    Name += ModuleId;
+  }
+  F.setComdat(M->getOrInsertComdat(Name));
+  return F.getComdat();
+}
+
 /// initializeInstrumentation - Initialize all passes in the TransformUtils
 /// library.
 void llvm::initializeInstrumentation(PassRegistry &Registry) {

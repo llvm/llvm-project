@@ -1423,7 +1423,7 @@ ELFDumper<ELFT>::ELFDumper(const ELFFile<ELFT> *Obj, ScopedPrinter &Writer)
       break;
     case ELF::SHT_LLVM_CALL_GRAPH_PROFILE:
       if (DotCGProfileSec != nullptr)
-        reportError("Multiple .note.llvm.cgprofile");
+        reportError("Multiple .llvm.call-graph-profile");
       DotCGProfileSec = &Sec;
       break;
     case ELF::SHT_LLVM_ADDRSIG:

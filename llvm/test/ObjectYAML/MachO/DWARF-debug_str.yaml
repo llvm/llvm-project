@@ -257,7 +257,7 @@ DWARF:
 #CHECK:     - ''
 #CHECK:     - 'clang version 4.0.0 (trunk 288677) (llvm/trunk 288676)'
 #CHECK:     - hello_world.c
-#CHECK:     - /Users/cbieneman/dev/open-source/llvm-build-rel
+#CHECK:     - '/Users/cbieneman/dev/open-source/llvm-build-rel'
 #CHECK:     - main
 #CHECK:     - argc
 #CHECK:     - argv

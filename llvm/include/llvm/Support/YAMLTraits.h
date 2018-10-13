@@ -578,7 +578,6 @@ inline QuotingType needsQuotes(StringRef S) {
     // Safe scalar characters.
     case '_':
     case '-':
-    case '/':
     case '^':
     case '.':
     case ',':
@@ -595,6 +594,12 @@ inline QuotingType needsQuotes(StringRef S) {
     // DEL (0x7F) are excluded from the allowed character range.
     case 0x7F:
       return QuotingType::Double;
+    // Forward slash is allowed to be unquoted, but we quote it anyway.  We have
+    // many tests that use FileCheck against YAML output, and this output often
+    // contains paths.  If we quote backslashes but not forward slashes then
+    // paths will come out either quoted or unquoted depending on which platform
+    // the test is run on, making FileCheck comparisons difficult.
+    case '/':
     default: {
       // C0 control block (0x0 - 0x1F) is excluded from the allowed character
       // range.

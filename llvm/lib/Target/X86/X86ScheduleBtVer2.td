@@ -48,12 +48,22 @@ def JFPU1 : ProcResource<1>; // Vector/FPU Pipe1: VALU1/STC/FPM
 // part of it.
 // Reference: Section 21.10 "AMD Bobcat and Jaguar pipeline: Partial register
 // access" - Agner Fog's "microarchitecture.pdf".
-def JIntegerPRF : RegisterFile<64, [GR64, CCR]>;
+def JIntegerPRF : RegisterFile<64, [GR64, CCR], [1, 1], [1, 0],
+                               0,  // Max moves that can be eliminated per cycle.
+                               1>; // Restrict move elimination to zero regs.
 
 // The Jaguar FP Retire Queue renames SIMD and FP uOps onto a pool of 72 SSE
 // registers. Operations on 256-bit data types are cracked into two COPs.
 // Reference: www.realworldtech.com/jaguar/4/
-def JFpuPRF: RegisterFile<72, [VR64, VR128, VR256], [1, 1, 2]>;
+
+// The PRF in the floating point unit can eliminate a move from a MMX or SSE
+// register that is know to be zero (i.e. it has been zeroed using a zero-idiom
+// dependency breaking instruction, or via VZEROALL).
+// Reference: Section 21.8 "AMD Bobcat and Jaguar pipeline: Dependency-breaking
+// instructions" - Agner Fog's "microarchitecture.pdf"
+def JFpuPRF: RegisterFile<72, [VR64, VR128, VR256], [1, 1, 2], [1, 1, 0],
+                          0,  // Max moves that can be eliminated per cycle.
+                          1>; // Restrict move elimination to zero regs.
 
 // The retire control unit (RCU) can track up to 64 macro-ops in-flight. It can
 // retire up to two macro-ops per cycle.
@@ -803,6 +813,26 @@ def : IsDepBreakingFunction<[
   DepBreakingClass<[
     VPCMPEQBrr, VPCMPEQWrr, VPCMPEQDrr, VPCMPEQQrr
   ], ZeroIdiomPredicate>
+]>;
+
+def : IsOptimizableRegisterMove<[
+  InstructionEquivalenceClass<[
+    // GPR variants.
+    MOV32rr, MOV64rr,
+
+    // MMX variants.
+    MMX_MOVQ64rr,
+
+    // SSE variants.
+    MOVAPSrr, MOVUPSrr,
+    MOVAPDrr, MOVUPDrr,
+    MOVDQArr, MOVDQUrr,
+
+    // AVX variants.
+    VMOVAPSrr, VMOVUPSrr,
+    VMOVAPDrr, VMOVUPDrr,
+    VMOVDQArr, VMOVDQUrr
+  ], TruePred >
 ]>;
 
 } // SchedModel
