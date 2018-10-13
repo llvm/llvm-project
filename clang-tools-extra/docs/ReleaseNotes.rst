@@ -116,15 +116,6 @@ Improvements to clang-tidy
   Detects usage of the deprecated member types of ``std::ios_base`` and replaces
   those that have a non-deprecated equivalent.
 
-- New :doc:`bugprone-not-null-terminated-result
-  <clang-tidy/checks/bugprone-not-null-terminated-result>` check
-
-  Finds function calls where it is possible to cause a not null-terminated
-  result. Usually the proper length of a string is ``strlen(src) + 1`` or equal
-  length of this expression, because the null terminator needs an extra space.
-  Without the null terminator it can result in undefined behaviour when the
-  string is read.
-
 - New :doc:`readability-magic-numbers
   <clang-tidy/checks/readability-magic-numbers>` check.
 
