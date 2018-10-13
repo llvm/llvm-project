@@ -339,6 +339,12 @@ void Command::setEnvironment(llvm::ArrayRef<const char *> NewEnvironment) {
 
 int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
                      std::string *ErrMsg, bool *ExecutionFailed) const {
+  if (PrintInputFilenames) {
+    for (const char *Arg : InputFilenames)
+      llvm::outs() << llvm::sys::path::filename(Arg) << "\n";
+    llvm::outs().flush();
+  }
+
   SmallVector<const char*, 128> Argv;
 
   Optional<ArrayRef<StringRef>> Env;

@@ -337,6 +337,7 @@ void ExprInspectionChecker::analyzerDenote(const CallExpr *CE,
   C.addTransition(C.getState()->set<DenotedSymbols>(Sym, E));
 }
 
+namespace {
 class SymbolExpressor
     : public SymExprVisitor<SymbolExpressor, Optional<std::string>> {
   ProgramStateRef State;
@@ -369,6 +370,7 @@ public:
     return None;
   }
 };
+} // namespace
 
 void ExprInspectionChecker::analyzerExpress(const CallExpr *CE,
                                             CheckerContext &C) const {

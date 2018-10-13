@@ -394,22 +394,35 @@ option(CLANG_BUILD_TOOLS
 option(CLANG_ENABLE_ARCMT "Build ARCMT." ON)
 option(CLANG_ENABLE_STATIC_ANALYZER "Build static analyzer." ON)
 
-option(CLANG_ANALYZER_BUILD_Z3
-  "Build the static analyzer with the Z3 constraint manager." OFF)
+set(CLANG_ANALYZER_Z3_INSTALL_DIR "" CACHE STRING "Install directory of the Z3 solver.")
+
+find_package(Z3 4.7.1 EXACT)
+
+if (CLANG_ANALYZER_Z3_INSTALL_DIR)
+  if (NOT Z3_FOUND)
+    message(FATAL_ERROR "Z3 4.7.1 has not been found in CLANG_ANALYZER_Z3_INSTALL_DIR: ${CLANG_ANALYZER_Z3_INSTALL_DIR}.")
+  endif()
+endif()
+
+set(CLANG_ANALYZER_ENABLE_Z3_SOLVER_DEFAULT "${Z3_FOUND}")
+
+option(CLANG_ANALYZER_ENABLE_Z3_SOLVER
+  "Enable Support for the Z3 constraint solver in the Clang Static Analyzer."
+  ${CLANG_ANALYZER_ENABLE_Z3_SOLVER_DEFAULT}
+)
+
+if (CLANG_ANALYZER_ENABLE_Z3_SOLVER)
+  if (NOT Z3_FOUND)
+    message(FATAL_ERROR "CLANG_ANALYZER_ENABLE_Z3_SOLVER cannot be enabled when Z3 is not available.")
+  endif()
+
+  set(CLANG_ANALYZER_WITH_Z3 1)
+endif()
 
 option(CLANG_ENABLE_PROTO_FUZZER "Build Clang protobuf fuzzer." OFF)
 
-if(NOT CLANG_ENABLE_STATIC_ANALYZER AND (CLANG_ENABLE_ARCMT OR CLANG_ANALYZER_BUILD_Z3))
+if(NOT CLANG_ENABLE_STATIC_ANALYZER AND (CLANG_ENABLE_ARCMT OR CLANG_ANALYZER_ENABLE_Z3_SOLVER))
   message(FATAL_ERROR "Cannot disable static analyzer while enabling ARCMT or Z3")
-endif()
-
-if(CLANG_ANALYZER_BUILD_Z3)
-  find_package(Z3 4.5)
-  if(Z3_FOUND)
-    set(CLANG_ANALYZER_WITH_Z3 1)
-  else()
-    message(FATAL_ERROR "Cannot find Z3 header file or shared library")
-  endif()
 endif()
 
 if(CLANG_ENABLE_ARCMT)

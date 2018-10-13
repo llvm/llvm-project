@@ -58,6 +58,9 @@ class Command {
   /// The list of program arguments which are inputs.
   llvm::opt::ArgStringList InputFilenames;
 
+  /// Whether to print the input filenames when executing.
+  bool PrintInputFilenames = false;
+
   /// Response file name, if this command is set to use one, or nullptr
   /// otherwise
   const char *ResponseFile = nullptr;
@@ -127,6 +130,9 @@ public:
 
   /// Print a command argument, and optionally quote it.
   static void printArg(llvm::raw_ostream &OS, StringRef Arg, bool Quote);
+
+  /// Set whether to print the input filenames when executing.
+  void setPrintInputFilenames(bool P) { PrintInputFilenames = P; }
 };
 
 /// Like Command, but with a fallback which is executed in case
