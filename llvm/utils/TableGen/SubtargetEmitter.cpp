@@ -653,7 +653,7 @@ SubtargetEmitter::EmitRegisterFileTables(const CodeGenProcModel &ProcModel,
     return 0;
 
   // Print the RegisterCost table first.
-  OS << "\n// {RegisterClassID, Register Cost}\n";
+  OS << "\n// {RegisterClassID, Register Cost, AllowMoveElimination }\n";
   OS << "static const llvm::MCRegisterCostEntry " << ProcModel.ModelName
      << "RegisterCosts"
      << "[] = {\n";
@@ -668,24 +668,28 @@ SubtargetEmitter::EmitRegisterFileTables(const CodeGenProcModel &ProcModel,
       Record *Rec = RC.RCDef;
       if (Rec->getValue("Namespace"))
         OS << Rec->getValueAsString("Namespace") << "::";
-      OS << Rec->getName() << "RegClassID, " << RC.Cost << "},\n";
+      OS << Rec->getName() << "RegClassID, " << RC.Cost << ", "
+         << RC.AllowMoveElimination << "},\n";
     }
   }
   OS << "};\n";
 
   // Now generate a table with register file info.
-  OS << "\n // {Name, #PhysRegs, #CostEntries, IndexToCostTbl}\n";
+  OS << "\n // {Name, #PhysRegs, #CostEntries, IndexToCostTbl, "
+     << "MaxMovesEliminatedPerCycle, AllowZeroMoveEliminationOnly }\n";
   OS << "static const llvm::MCRegisterFileDesc " << ProcModel.ModelName
      << "RegisterFiles"
      << "[] = {\n"
-     << "  { \"InvalidRegisterFile\", 0, 0, 0 },\n";
+     << "  { \"InvalidRegisterFile\", 0, 0, 0, 0, 0 },\n";
   unsigned CostTblIndex = 0;
 
   for (const CodeGenRegisterFile &RD : ProcModel.RegisterFiles) {
     OS << "  { ";
     OS << '"' << RD.Name << '"' << ", " << RD.NumPhysRegs << ", ";
     unsigned NumCostEntries = RD.Costs.size();
-    OS << NumCostEntries << ", " << CostTblIndex << "},\n";
+    OS << NumCostEntries << ", " << CostTblIndex << ", "
+       << RD.MaxMovesEliminatedPerCycle << ", "
+       << RD.AllowZeroMoveEliminationOnly << "},\n";
     CostTblIndex += NumCostEntries;
   }
   OS << "};\n";

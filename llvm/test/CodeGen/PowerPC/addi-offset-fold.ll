@@ -27,10 +27,9 @@ entry:
 ; FIXME: We don't need to do these stores at all.
 ; CHECK-DAG: std 3, -24(1)
 ; CHECK-DAG: stb 4, -16(1)
-; CHECK-DAG: sldi [[REG3:[0-9]+]], 4, 32
 ; CHECK-DAG: lwz [[REG2:[0-9]+]], -20(1)
-; CHECK-DAG: or [[REG4:[0-9]+]], [[REG2]], [[REG3]]
-; CHECK: rldicl 3, [[REG4]], 33, 57
+; CHECK-DAG: rlwinm 3, [[REG2]], 1, 31, 31
+; CHECK: rlwimi 3, 4, 1, 25, 30
 ; CHECK: blr
 }
 

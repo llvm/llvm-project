@@ -388,6 +388,9 @@ protected:
   /// Processor has a single uop BEXTR implementation.
   bool HasFastBEXTR = false;
 
+  /// Try harder to combine to horizontal vector ops if they are fast.
+  bool HasFastHorizontalOps = false;
+
   /// Use a retpoline thunk rather than indirect calls to block speculative
   /// execution.
   bool UseRetpolineIndirectCalls = false;
@@ -636,6 +639,7 @@ public:
   bool hasFastLZCNT() const { return HasFastLZCNT; }
   bool hasFastSHLDRotate() const { return HasFastSHLDRotate; }
   bool hasFastBEXTR() const { return HasFastBEXTR; }
+  bool hasFastHorizontalOps() const { return HasFastHorizontalOps; }
   bool hasMacroFusion() const { return HasMacroFusion; }
   bool hasERMSB() const { return HasERMSB; }
   bool hasSlowDivide32() const { return HasSlowDivide32; }

@@ -29,6 +29,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
@@ -219,8 +220,6 @@ private:
                    MDNode::get(*C, None));
   }
 
-  Comdat *GetOrCreateFunctionComdat(Function &F);
-
   std::string getSectionName(const std::string &Section) const;
   std::string getSectionStart(const std::string &Section) const;
   std::string getSectionEnd(const std::string &Section) const;
@@ -297,6 +296,26 @@ Function *SanitizerCoverageModule::CreateInitCallsForSections(
     appendToGlobalCtors(M, CtorFunc, SanCtorAndDtorPriority, CtorFunc);
   } else {
     appendToGlobalCtors(M, CtorFunc, SanCtorAndDtorPriority);
+  }
+
+  if (TargetTriple.getObjectFormat() == Triple::COFF) {
+    // In COFF files, if the contructors are set as COMDAT (they are because
+    // COFF supports COMDAT) and the linker flag /OPT:REF (strip unreferenced
+    // functions and data) is used, the constructors get stripped. To prevent
+    // this, give the constructors weak ODR linkage and tell the linker to
+    // always include the sancov constructor. This way the linker can
+    // deduplicate the constructors but always leave one copy.
+    CtorFunc->setLinkage(GlobalValue::WeakODRLinkage);
+    SmallString<20> PartialIncDirective("/include:");
+    // Get constructor's mangled name in order to support i386.
+    SmallString<40> MangledName;
+    Mangler().getNameWithPrefix(MangledName, CtorFunc, true);
+    Twine IncDirective = PartialIncDirective + MangledName;
+    Metadata *Args[1] = {MDString::get(*C, IncDirective.str())};
+    MDNode *MetadataNode = MDNode::get(*C, Args);
+    NamedMDNode *NamedMetadata =
+        M.getOrInsertNamedMetadata("llvm.linker.options");
+    NamedMetadata->addOperand(MetadataNode);
   }
   return CtorFunc;
 }
@@ -569,31 +588,20 @@ bool SanitizerCoverageModule::runOnFunction(Function &F) {
   return true;
 }
 
-Comdat *SanitizerCoverageModule::GetOrCreateFunctionComdat(Function &F) {
-  if (auto Comdat = F.getComdat()) return Comdat;
-  if (!TargetTriple.isOSBinFormatELF()) return nullptr;
-  assert(F.hasName());
-  std::string Name = F.getName();
-  if (F.hasLocalLinkage()) {
-    if (CurModuleUniqueId.empty()) return nullptr;
-    Name += CurModuleUniqueId;
-  }
-  auto Comdat = CurModule->getOrInsertComdat(Name);
-  F.setComdat(Comdat);
-  return Comdat;
-}
-
 GlobalVariable *SanitizerCoverageModule::CreateFunctionLocalArrayInSection(
     size_t NumElements, Function &F, Type *Ty, const char *Section) {
   ArrayType *ArrayTy = ArrayType::get(Ty, NumElements);
   auto Array = new GlobalVariable(
       *CurModule, ArrayTy, false, GlobalVariable::PrivateLinkage,
       Constant::getNullValue(ArrayTy), "__sancov_gen_");
-  if (auto Comdat = GetOrCreateFunctionComdat(F))
-    Array->setComdat(Comdat);
+
+  if (TargetTriple.isOSBinFormatELF())
+    if (auto Comdat = GetOrCreateFunctionComdat(F, CurModuleUniqueId))
+      Array->setComdat(Comdat);
   Array->setSection(getSectionName(Section));
   Array->setAlignment(Ty->isPointerTy() ? DL->getPointerSize()
                                         : Ty->getPrimitiveSizeInBits() / 8);
+  GlobalsToAppendToUsed.push_back(Array);
   GlobalsToAppendToCompilerUsed.push_back(Array);
   MDNode *MD = MDNode::get(F.getContext(), ValueAsMetadata::get(&F));
   Array->addMetadata(LLVMContext::MD_associated, *MD);
@@ -631,14 +639,14 @@ SanitizerCoverageModule::CreatePCArray(Function &F,
 
 void SanitizerCoverageModule::CreateFunctionLocalArrays(
     Function &F, ArrayRef<BasicBlock *> AllBlocks) {
-  if (Options.TracePCGuard) {
+  if (Options.TracePCGuard)
     FunctionGuardArray = CreateFunctionLocalArrayInSection(
         AllBlocks.size(), F, Int32Ty, SanCovGuardsSectionName);
-    GlobalsToAppendToUsed.push_back(FunctionGuardArray);
-  }
+
   if (Options.Inline8bitCounters)
     Function8bitCounterArray = CreateFunctionLocalArrayInSection(
         AllBlocks.size(), F, Int8Ty, SanCovCountersSectionName);
+
   if (Options.PCTable)
     FunctionPCsArray = CreatePCArray(F, AllBlocks);
 }

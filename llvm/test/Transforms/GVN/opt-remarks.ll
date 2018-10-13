@@ -49,7 +49,7 @@
 ; YAML-NEXT: --- !Missed
 ; YAML-NEXT: Pass:            gvn
 ; YAML-NEXT: Name:            LoadClobbered
-; YAML-NEXT: DebugLoc:        { File: /tmp/s.c, Line: 3, Column: 3 }
+; YAML-NEXT: DebugLoc:        { File: '/tmp/s.c', Line: 3, Column: 3 }
 ; YAML-NEXT: Function:        may_alias
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'load of type '
@@ -57,10 +57,10 @@
 ; YAML-NEXT:   - String:          ' not eliminated'
 ; YAML-NEXT:   - String:          ' in favor of '
 ; YAML-NEXT:   - OtherAccess:     load
-; YAML-NEXT:     DebugLoc:        { File: /tmp/s.c, Line: 1, Column: 13 }
+; YAML-NEXT:     DebugLoc:        { File: '/tmp/s.c', Line: 1, Column: 13 }
 ; YAML-NEXT:   - String:          ' because it is clobbered by '
 ; YAML-NEXT:   - ClobberedBy:     store
-; YAML-NEXT:     DebugLoc:        { File: /tmp/s.c, Line: 2, Column: 10 }
+; YAML-NEXT:     DebugLoc:        { File: '/tmp/s.c', Line: 2, Column: 10 }
 ; YAML-NEXT: ...
 
 define i32 @arg(i32* %p, i32 %i) {

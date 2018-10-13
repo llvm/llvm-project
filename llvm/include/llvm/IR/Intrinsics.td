@@ -453,6 +453,14 @@ def int_maxnum : Intrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
   [IntrNoMem, IntrSpeculatable, Commutative]
 >;
+def int_minimum : Intrinsic<[llvm_anyfloat_ty],
+  [LLVMMatchType<0>, LLVMMatchType<0>],
+  [IntrNoMem, IntrSpeculatable, Commutative]
+>;
+def int_maximum : Intrinsic<[llvm_anyfloat_ty],
+  [LLVMMatchType<0>, LLVMMatchType<0>],
+  [IntrNoMem, IntrSpeculatable, Commutative]
+>;
 
 // NOTE: these are internal interfaces.
 def int_setjmp     : Intrinsic<[llvm_i32_ty],  [llvm_ptr_ty]>;

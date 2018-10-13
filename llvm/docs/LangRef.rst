@@ -11560,6 +11560,82 @@ NaN, the intrinsic lowering is responsible for quieting the inputs to
 correctly return the non-NaN input (e.g. by using the equivalent of
 ``llvm.canonicalize``).
 
+'``llvm.minimum.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.minimum`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.minimum.f32(float %Val0, float %Val1)
+      declare double    @llvm.minimum.f64(double %Val0, double %Val1)
+      declare x86_fp80  @llvm.minimum.f80(x86_fp80 %Val0, x86_fp80 %Val1)
+      declare fp128     @llvm.minimum.f128(fp128 %Val0, fp128 %Val1)
+      declare ppc_fp128 @llvm.minimum.ppcf128(ppc_fp128 %Val0, ppc_fp128 %Val1)
+
+Overview:
+"""""""""
+
+The '``llvm.minimum.*``' intrinsics return the minimum of the two
+arguments, propagating NaNs and treating -0.0 as less than +0.0.
+
+
+Arguments:
+""""""""""
+
+The arguments and return value are floating-point numbers of the same
+type.
+
+Semantics:
+""""""""""
+If either operand is a NaN, returns NaN. Otherwise returns the lesser
+of the two arguments. -0.0 is considered to be less than +0.0 for this
+intrinsic. Note that these are the semantics specified in the draft of
+IEEE 754-2018.
+
+'``llvm.maximum.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.maximum`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.maximum.f32(float %Val0, float %Val1)
+      declare double    @llvm.maximum.f64(double %Val0, double %Val1)
+      declare x86_fp80  @llvm.maximum.f80(x86_fp80 %Val0, x86_fp80 %Val1)
+      declare fp128     @llvm.maximum.f128(fp128 %Val0, fp128 %Val1)
+      declare ppc_fp128 @llvm.maximum.ppcf128(ppc_fp128 %Val0, ppc_fp128 %Val1)
+
+Overview:
+"""""""""
+
+The '``llvm.maximum.*``' intrinsics return the maximum of the two
+arguments, propagating NaNs and treating -0.0 as less than +0.0.
+
+
+Arguments:
+""""""""""
+
+The arguments and return value are floating-point numbers of the same
+type.
+
+Semantics:
+""""""""""
+If either operand is a NaN, returns NaN. Otherwise returns the greater
+of the two arguments. -0.0 is considered to be less than +0.0 for this
+intrinsic. Note that these are the semantics specified in the draft of
+IEEE 754-2018.
+
 '``llvm.copysign.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -4,17 +4,10 @@
 define <2 x i32> @vcast(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: vcast:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $16, %rsp
-; CHECK-NEXT:    .seh_stackalloc 16
-; CHECK-NEXT:    .seh_endprologue
-; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm1 = mem[0],zero,mem[1],zero
 ; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
+; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm1 = mem[0],zero,mem[1],zero
 ; CHECK-NEXT:    psubq %xmm1, %xmm0
-; CHECK-NEXT:    addq $16, %rsp
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:    .seh_handlerdata
-; CHECK-NEXT:    .text
-; CHECK-NEXT:    .seh_endproc
   %af = bitcast <2 x float> %a to <2 x i32>
   %bf = bitcast <2 x float> %b to <2 x i32>
   %x = sub <2 x i32> %af, %bf
