@@ -72,7 +72,8 @@ public:
 } // namespace
 
 // Returns callbacks that can be used to update the FileIndex with new ASTs.
-std::unique_ptr<ParsingCallbacks> makeUpdateCallbacks(FileIndex *FIndex) {
+static std::unique_ptr<ParsingCallbacks>
+makeUpdateCallbacks(FileIndex *FIndex) {
   struct CB : public ParsingCallbacks {
     CB(FileIndex *FIndex) : FIndex(FIndex) {}
     FileIndex *FIndex;
