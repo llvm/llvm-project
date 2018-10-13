@@ -1994,6 +1994,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
     address.SetLoadAddress(val_ptr_addr, &m_process->GetTarget());
     return true;
   } break;
+  case swift::MetadataKind::Optional:
   case swift::MetadataKind::Struct:
   case swift::MetadataKind::Tuple: {
     CompilerType dyn_type(promise_sp->FulfillTypePromise());
