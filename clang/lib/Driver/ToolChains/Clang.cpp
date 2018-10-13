@@ -5100,6 +5100,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
   }
 
+  // Make the compile command echo its inputs for /showFilenames.
+  if (Output.getType() == types::TY_Object &&
+      Args.hasFlag(options::OPT__SLASH_showFilenames,
+                   options::OPT__SLASH_showFilenames_, false)) {
+    C.getJobs().getJobs().back()->setPrintInputFilenames(true);
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_pg))
     if (!shouldUseFramePointer(Args, Triple))
       D.Diag(diag::err_drv_argument_not_allowed_with) << "-fomit-frame-pointer"
