@@ -172,6 +172,10 @@ static cl::opt<bool> EnableInterleavedMemAccesses(
     "enable-interleaved-mem-accesses", cl::init(false), cl::Hidden,
     cl::desc("Enable vectorization on interleaved memory accesses in a loop"));
 
+static cl::opt<bool> EnableMaskedInterleavedMemAccesses(
+    "enable-masked-interleaved-mem-accesses", cl::init(false), cl::Hidden,
+    cl::desc("Enable vectorization on masked interleaved memory accesses in a loop"));
+
 /// We don't interleave loops with a known constant trip count below this
 /// number.
 static const unsigned TinyTripCountInterleaveThreshold = 128;
@@ -408,8 +412,10 @@ public:
   /// Construct the vector value of a scalarized value \p V one lane at a time.
   void packScalarIntoVectorValue(Value *V, const VPIteration &Instance);
 
-  /// Try to vectorize the interleaved access group that \p Instr belongs to.
-  void vectorizeInterleaveGroup(Instruction *Instr);
+  /// Try to vectorize the interleaved access group that \p Instr belongs to,
+  /// optionally masking the vector operations if \p BlockInMask is non-null.
+  void vectorizeInterleaveGroup(Instruction *Instr,
+                                VectorParts *BlockInMask = nullptr);
 
   /// Vectorize Load and Store instructions, optionally masking the vector
   /// operations if \p BlockInMask is non-null.
@@ -1111,6 +1117,11 @@ public:
   /// Returns true if \p I is a memory instruction with consecutive memory
   /// access that can be widened.
   bool memoryInstructionCanBeWidened(Instruction *I, unsigned VF = 1);
+
+  /// Returns true if \p I is a memory instruction in an interleaved-group
+  /// of memory accesses that can be vectorized with wide vector loads/stores
+  /// and shuffles.
+  bool interleavedAccessCanBeWidened(Instruction *I, unsigned VF = 1);
 
   /// Check if \p Instr belongs to any interleaved access group.
   bool isAccessInterleaved(Instruction *Instr) {
@@ -1946,7 +1957,8 @@ Value *InnerLoopVectorizer::reverseVector(Value *Vec) {
 //   %interleaved.vec = shuffle %R_G.vec, %B_U.vec,
 //        <0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11>    ; Interleave R,G,B elements
 //   store <12 x i32> %interleaved.vec              ; Write 4 tuples of R,G,B
-void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
+void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr,
+                                                   VectorParts *BlockInMask) {
   const InterleaveGroup *Group = Cost->getInterleavedAccessGroup(Instr);
   assert(Group && "Fail to get an interleaved access group.");
 
@@ -1967,6 +1979,15 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
   setDebugLocFromInst(Builder, Ptr);
   SmallVector<Value *, 2> NewPtrs;
   unsigned Index = Group->getIndex(Instr);
+
+  VectorParts Mask;
+  bool IsMaskRequired = BlockInMask;
+  if (IsMaskRequired) {
+    Mask = *BlockInMask;
+    // TODO: extend the masked interleaved-group support to reversed access.
+    assert(!Group->isReverse() && "Reversed masked interleave-group "
+                                  "not supported."); 
+  }
 
   // If the group is reverse, adjust the index to refer to the last vector lane
   // instead of the first. We adjust the index from the first vector lane,
@@ -2011,8 +2032,19 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
     // For each unroll part, create a wide load for the group.
     SmallVector<Value *, 2> NewLoads;
     for (unsigned Part = 0; Part < UF; Part++) {
-      auto *NewLoad = Builder.CreateAlignedLoad(
-          NewPtrs[Part], Group->getAlignment(), "wide.vec");
+      Instruction *NewLoad;
+      if (IsMaskRequired) {
+        auto *Undefs = UndefValue::get(Mask[Part]->getType());
+        auto *RepMask = createReplicatedMask(Builder, InterleaveFactor, VF);
+        Value *ShuffledMask = Builder.CreateShuffleVector(
+            Mask[Part], Undefs, RepMask, "interleaved.mask");
+        NewLoad = Builder.CreateMaskedLoad(NewPtrs[Part], Group->getAlignment(), 
+                                           ShuffledMask, UndefVec,
+                                           "wide.masked.vec");
+      }
+      else
+        NewLoad = Builder.CreateAlignedLoad(NewPtrs[Part], 
+          Group->getAlignment(), "wide.vec");
       Group->addMetadata(NewLoad);
       NewLoads.push_back(NewLoad);
     }
@@ -2079,8 +2111,18 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
     Value *IVec = Builder.CreateShuffleVector(WideVec, UndefVec, IMask,
                                               "interleaved.vec");
 
-    Instruction *NewStoreInstr =
-        Builder.CreateAlignedStore(IVec, NewPtrs[Part], Group->getAlignment());
+    Instruction *NewStoreInstr;
+    if (IsMaskRequired) {
+      auto *Undefs = UndefValue::get(Mask[Part]->getType());
+      auto *RepMask = createReplicatedMask(Builder, InterleaveFactor, VF);
+      Value *ShuffledMask = Builder.CreateShuffleVector(
+          Mask[Part], Undefs, RepMask, "interleaved.mask");
+      NewStoreInstr = Builder.CreateMaskedStore(
+          IVec, NewPtrs[Part], Group->getAlignment(), ShuffledMask);
+    }
+    else
+      NewStoreInstr = Builder.CreateAlignedStore(IVec, NewPtrs[Part], 
+        Group->getAlignment());
 
     Group->addMetadata(NewStoreInstr);
   }
@@ -4253,6 +4295,32 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I, unsigne
   return false;
 }
 
+static bool useMaskedInterleavedAccesses(const TargetTransformInfo &TTI) {
+  if (!(EnableMaskedInterleavedMemAccesses.getNumOccurrences() > 0))
+    return TTI.enableMaskedInterleavedAccessVectorization();
+
+  // If an override option has been passed in for interleaved accesses, use it.
+  return EnableMaskedInterleavedMemAccesses;
+}
+
+bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(Instruction *I,
+                                                               unsigned VF) {
+  assert(isAccessInterleaved(I) && "Expecting interleaved access.");
+  assert(getWideningDecision(I, VF) == CM_Unknown &&
+         "Decision should not be set yet.");
+
+  if (!Legal->blockNeedsPredication(I->getParent()) ||
+      !Legal->isMaskRequired(I))
+    return true;
+
+  if (!useMaskedInterleavedAccesses(TTI))
+    return false;
+
+  auto *Ty = getMemInstValueType(I);
+  return isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty) 
+                          : TTI.isLegalMaskedStore(Ty);
+}
+
 bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(Instruction *I,
                                                                unsigned VF) {
   // Get and ensure we have a valid memory instruction.
@@ -5371,13 +5439,17 @@ unsigned LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
   }
 
   // Calculate the cost of the whole interleaved group.
-  unsigned Cost = TTI.getInterleavedMemoryOpCost(I->getOpcode(), WideVecTy,
-                                                 Group->getFactor(), Indices,
-                                                 Group->getAlignment(), AS);
+  unsigned Cost = TTI.getInterleavedMemoryOpCost(
+      I->getOpcode(), WideVecTy, Group->getFactor(), Indices,
+      Group->getAlignment(), AS, Legal->isMaskRequired(I));
 
-  if (Group->isReverse())
+  if (Group->isReverse()) {
+    // TODO: Add support for reversed masked interleaved access.
+    assert(!Legal->isMaskRequired(I) && 
+           "Reverse masked interleaved access not supported.");
     Cost += Group->getNumMembers() *
             TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, 0);
+  }
   return Cost;
 }
 
@@ -5479,7 +5551,8 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(unsigned VF) {
           continue;
 
         NumAccesses = Group->getNumMembers();
-        InterleaveCost = getInterleaveGroupCost(&I, VF);
+        if (interleavedAccessCanBeWidened(&I, VF))
+          InterleaveCost = getInterleaveGroupCost(&I, VF);
       }
 
       unsigned GatherScatterCost =
@@ -6152,7 +6225,8 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
 }
 
 VPInterleaveRecipe *VPRecipeBuilder::tryToInterleaveMemory(Instruction *I,
-                                                           VFRange &Range) {
+                                                           VFRange &Range,
+                                                           VPlanPtr &Plan) {
   const InterleaveGroup *IG = CM.getInterleavedAccessGroup(I);
   if (!IG)
     return nullptr;
@@ -6174,7 +6248,11 @@ VPInterleaveRecipe *VPRecipeBuilder::tryToInterleaveMemory(Instruction *I,
   assert(I == IG->getInsertPos() &&
          "Generating a recipe for an adjunct member of an interleave group");
 
-  return new VPInterleaveRecipe(IG);
+  VPValue *Mask = nullptr;
+  if (Legal->isMaskRequired(I))
+    Mask = createBlockInMask(I->getParent(), Plan);
+
+  return new VPInterleaveRecipe(IG, Mask);
 }
 
 VPWidenMemoryInstructionRecipe *
@@ -6442,7 +6520,7 @@ bool VPRecipeBuilder::tryToCreateRecipe(Instruction *Instr, VFRange &Range,
   VPRecipeBase *Recipe = nullptr;
   // Check if Instr should belong to an interleave memory recipe, or already
   // does. In the latter case Instr is irrelevant.
-  if ((Recipe = tryToInterleaveMemory(Instr, Range))) {
+  if ((Recipe = tryToInterleaveMemory(Instr, Range, Plan))) {
     VPBB->appendRecipe(Recipe);
     return true;
   }
@@ -6669,6 +6747,10 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent) const {
   O << " +\n"
     << Indent << "\"INTERLEAVE-GROUP with factor " << IG->getFactor() << " at ";
   IG->getInsertPos()->printAsOperand(O, false);
+  if (User) {
+    O << ", ";
+    User->getOperand(0)->printAsOperand(O);
+  }
   O << "\\l\"";
   for (unsigned i = 0; i < IG->getFactor(); ++i)
     if (Instruction *I = IG->getMember(i))
@@ -6731,7 +6813,15 @@ void VPBlendRecipe::execute(VPTransformState &State) {
 
 void VPInterleaveRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "Interleave group being replicated.");
-  State.ILV->vectorizeInterleaveGroup(IG->getInsertPos());
+  if (!User)
+    return State.ILV->vectorizeInterleaveGroup(IG->getInsertPos());
+
+  // Last (and currently only) operand is a mask.
+  InnerLoopVectorizer::VectorParts MaskValues(State.UF);
+  VPValue *Mask = User->getOperand(User->getNumOperands() - 1);
+  for (unsigned Part = 0; Part < State.UF; ++Part)
+    MaskValues[Part] = State.get(Mask, Part);
+  State.ILV->vectorizeInterleaveGroup(IG->getInsertPos(), &MaskValues);
 }
 
 void VPReplicateRecipe::execute(VPTransformState &State) {
@@ -7030,7 +7120,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Analyze interleaved memory accesses.
   if (UseInterleaved) {
-    IAI.analyzeInterleaving();
+    IAI.analyzeInterleaving(useMaskedInterleavedAccesses(*TTI));
   }
 
   // Use the cost model.

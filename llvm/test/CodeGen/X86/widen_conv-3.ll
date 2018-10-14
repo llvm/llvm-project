@@ -7,28 +7,15 @@
 ; sign to float v2i16 to v2f32
 
 define void @convert_v2i16_to_v2f32(<2 x float>* %dst.addr, <2 x i16> %src) nounwind {
-; X86-SSE2-LABEL: convert_v2i16_to_v2f32:
-; X86-SSE2:       # %bb.0: # %entry
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    psllq $48, %xmm0
-; X86-SSE2-NEXT:    psrad $16, %xmm0
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
-; X86-SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
-; X86-SSE2-NEXT:    movss %xmm0, (%eax)
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; X86-SSE2-NEXT:    movss %xmm0, 4(%eax)
-; X86-SSE2-NEXT:    retl
-;
-; X86-SSE42-LABEL: convert_v2i16_to_v2f32:
-; X86-SSE42:       # %bb.0: # %entry
-; X86-SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE42-NEXT:    psllq $48, %xmm0
-; X86-SSE42-NEXT:    psrad $16, %xmm0
-; X86-SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
-; X86-SSE42-NEXT:    cvtdq2ps %xmm0, %xmm0
-; X86-SSE42-NEXT:    extractps $1, %xmm0, 4(%eax)
-; X86-SSE42-NEXT:    movss %xmm0, (%eax)
-; X86-SSE42-NEXT:    retl
+; X86-LABEL: convert_v2i16_to_v2f32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    psllq $48, %xmm0
+; X86-NEXT:    psrad $16, %xmm0
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
+; X86-NEXT:    cvtdq2ps %xmm0, %xmm0
+; X86-NEXT:    movlps %xmm0, (%eax)
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: convert_v2i16_to_v2f32:
 ; X64:       # %bb.0: # %entry

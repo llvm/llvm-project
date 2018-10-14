@@ -52,7 +52,7 @@ public:
 
     MR.getTargetJITDylib().withSearchOrderDo([&](const JITDylibList &JDs) {
       ES.lookup(JDs, InternedSymbols, OnResolvedWithUnwrap, OnReady,
-                RegisterDependencies);
+                RegisterDependencies, &MR.getTargetJITDylib());
     });
   }
 

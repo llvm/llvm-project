@@ -220,6 +220,24 @@ TEST_F(CoreAPIsStandardTest, ChainedJITDylibLookup) {
   EXPECT_TRUE(OnReadyRun) << "OnReady was not run for empty query";
 }
 
+TEST_F(CoreAPIsStandardTest, LookupWithHiddenSymbols) {
+  auto BarHiddenFlags = BarSym.getFlags() & ~JITSymbolFlags::Exported;
+  auto BarHiddenSym = JITEvaluatedSymbol(BarSym.getAddress(), BarHiddenFlags);
+
+  cantFail(JD.define(absoluteSymbols({{Foo, FooSym}, {Bar, BarHiddenSym}})));
+
+  auto &JD2 = ES.createJITDylib("JD2");
+  cantFail(JD2.define(absoluteSymbols({{Bar, QuxSym}})));
+
+  auto Result = cantFail(ES.lookup({&JD, &JD2}, {Foo, Bar}));
+
+  EXPECT_EQ(Result.size(), 2U) << "Unexpected number of results";
+  EXPECT_EQ(Result.count(Foo), 1U) << "Missing result for \"Foo\"";
+  EXPECT_EQ(Result.count(Bar), 1U) << "Missing result for \"Bar\"";
+  EXPECT_EQ(Result[Bar].getAddress(), QuxSym.getAddress())
+      << "Wrong result for \"Bar\"";
+}
+
 TEST_F(CoreAPIsStandardTest, LookupFlagsTest) {
   // Test that lookupFlags works on a predefined symbol, and does not trigger
   // materialization of a lazy symbol. Make the lazy symbol weak to test that
@@ -257,7 +275,7 @@ TEST_F(CoreAPIsStandardTest, TestBasicAliases) {
                                     {Qux, {Bar, JITSymbolFlags::Weak}}})));
   cantFail(JD.define(absoluteSymbols({{Qux, QuxSym}})));
 
-  auto Result = lookup({&JD}, {Baz, Qux});
+  auto Result = ES.lookup({&JD}, {Baz, Qux});
   EXPECT_TRUE(!!Result) << "Unexpected lookup failure";
   EXPECT_EQ(Result->count(Baz), 1U) << "No result for \"baz\"";
   EXPECT_EQ(Result->count(Qux), 1U) << "No result for \"qux\"";
@@ -272,7 +290,7 @@ TEST_F(CoreAPIsStandardTest, TestChainedAliases) {
   cantFail(JD.define(symbolAliases(
       {{Baz, {Bar, BazSym.getFlags()}}, {Bar, {Foo, BarSym.getFlags()}}})));
 
-  auto Result = lookup({&JD}, {Bar, Baz});
+  auto Result = ES.lookup({&JD}, {Bar, Baz});
   EXPECT_TRUE(!!Result) << "Unexpected lookup failure";
   EXPECT_EQ(Result->count(Bar), 1U) << "No result for \"bar\"";
   EXPECT_EQ(Result->count(Baz), 1U) << "No result for \"baz\"";
@@ -291,7 +309,7 @@ TEST_F(CoreAPIsStandardTest, TestBasicReExports) {
 
   cantFail(JD2.define(reexports(JD, {{Bar, {Foo, BarSym.getFlags()}}})));
 
-  auto Result = cantFail(lookup({&JD2}, Bar));
+  auto Result = cantFail(ES.lookup({&JD2}, Bar));
   EXPECT_EQ(Result.getAddress(), FooSym.getAddress())
       << "Re-export Bar for symbol Foo should match FooSym's address";
 }
@@ -317,7 +335,7 @@ TEST_F(CoreAPIsStandardTest, TestThatReExportsDontUnnecessarilyMaterialize) {
   cantFail(JD2.define(reexports(
       JD, {{Baz, {Foo, BazSym.getFlags()}}, {Qux, {Bar, QuxSym.getFlags()}}})));
 
-  auto Result = cantFail(lookup({&JD2}, Baz));
+  auto Result = cantFail(ES.lookup({&JD2}, Baz));
   EXPECT_EQ(Result.getAddress(), FooSym.getAddress())
       << "Re-export Baz for symbol Foo should match FooSym's address";
 
@@ -340,7 +358,7 @@ TEST_F(CoreAPIsStandardTest, TestReexportsFallbackGenerator) {
   EXPECT_EQ(Flags.size(), 1U) << "Unexpected number of results";
   EXPECT_EQ(Flags[Foo], FooSym.getFlags()) << "Unexpected flags for Foo";
 
-  auto Result = cantFail(lookup({&JD}, Foo));
+  auto Result = cantFail(ES.lookup({&JD}, Foo));
 
   EXPECT_EQ(Result.getAddress(), FooSym.getAddress())
       << "Incorrect reexported symbol address";
@@ -650,13 +668,13 @@ TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {
       });
 
   cantFail(JD.define(MU));
-  cantFail(lookup({&JD}, Foo));
+  cantFail(ES.lookup({&JD}, Foo));
 
   // Assert that materialization is complete by now.
   ExpectNoMoreMaterialization = true;
 
   // Look up bar to verify that no further materialization happens.
-  auto BarResult = cantFail(lookup({&JD}, Bar));
+  auto BarResult = cantFail(ES.lookup({&JD}, Bar));
   EXPECT_EQ(BarResult.getAddress(), BarSym.getAddress())
       << "Expected Bar == BarSym";
 }
@@ -670,7 +688,7 @@ TEST_F(CoreAPIsStandardTest, FallbackDefinitionGeneratorTest) {
         return SymbolNameSet({Bar});
       });
 
-  auto Result = cantFail(lookup({&JD}, {Foo, Bar}));
+  auto Result = cantFail(ES.lookup({&JD}, {Foo, Bar}));
 
   EXPECT_EQ(Result.count(Bar), 1U) << "Expected to find fallback def for 'bar'";
   EXPECT_EQ(Result[Bar].getAddress(), BarSym.getAddress())
@@ -679,14 +697,14 @@ TEST_F(CoreAPIsStandardTest, FallbackDefinitionGeneratorTest) {
 
 TEST_F(CoreAPIsStandardTest, FailResolution) {
   auto MU = llvm::make_unique<SimpleMaterializationUnit>(
-      SymbolFlagsMap(
-          {{Foo, JITSymbolFlags::Weak}, {Bar, JITSymbolFlags::Weak}}),
+      SymbolFlagsMap({{Foo, JITSymbolFlags::Exported | JITSymbolFlags::Weak},
+                      {Bar, JITSymbolFlags::Exported | JITSymbolFlags::Weak}}),
       [&](MaterializationResponsibility R) { R.failMaterialization(); });
 
   cantFail(JD.define(MU));
 
   SymbolNameSet Names({Foo, Bar});
-  auto Result = lookup({&JD}, Names);
+  auto Result = ES.lookup({&JD}, Names);
 
   EXPECT_FALSE(!!Result) << "Expected failure";
   if (!Result) {
@@ -718,7 +736,7 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithUnthreadedMaterialization) {
 
   cantFail(JD.define(MU));
 
-  auto FooLookupResult = cantFail(lookup({&JD}, Foo));
+  auto FooLookupResult = cantFail(ES.lookup({&JD}, Foo));
 
   EXPECT_EQ(FooLookupResult.getAddress(), FooSym.getAddress())
       << "lookup returned an incorrect address";
@@ -739,7 +757,7 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
 
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
 
-  auto FooLookupResult = cantFail(lookup({&JD}, Foo));
+  auto FooLookupResult = cantFail(ES.lookup({&JD}, Foo));
 
   EXPECT_EQ(FooLookupResult.getAddress(), FooSym.getAddress())
       << "lookup returned an incorrect address";
@@ -787,14 +805,14 @@ TEST_F(CoreAPIsStandardTest, TestGetRequestedSymbolsAndReplace) {
   EXPECT_FALSE(FooMaterialized) << "Foo should not be materialized yet";
   EXPECT_FALSE(BarMaterialized) << "Bar should not be materialized yet";
 
-  auto FooSymResult = cantFail(lookup({&JD}, Foo));
+  auto FooSymResult = cantFail(ES.lookup({&JD}, Foo));
   EXPECT_EQ(FooSymResult.getAddress(), FooSym.getAddress())
       << "Address mismatch for Foo";
 
   EXPECT_TRUE(FooMaterialized) << "Foo should be materialized now";
   EXPECT_FALSE(BarMaterialized) << "Bar still should not be materialized";
 
-  auto BarSymResult = cantFail(lookup({&JD}, Bar));
+  auto BarSymResult = cantFail(ES.lookup({&JD}, Bar));
   EXPECT_EQ(BarSymResult.getAddress(), BarSym.getAddress())
       << "Address mismatch for Bar";
   EXPECT_TRUE(BarMaterialized) << "Bar should be materialized now";
@@ -814,7 +832,7 @@ TEST_F(CoreAPIsStandardTest, TestMaterializationResponsibilityDelegation) {
 
   cantFail(JD.define(MU));
 
-  auto Result = lookup({&JD}, {Foo, Bar});
+  auto Result = ES.lookup({&JD}, {Foo, Bar});
 
   EXPECT_TRUE(!!Result) << "Result should be a success value";
   EXPECT_EQ(Result->count(Foo), 1U) << "\"Foo\" entry missing";
@@ -863,16 +881,6 @@ TEST_F(CoreAPIsStandardTest, TestMaterializeWeakSymbol) {
 
   FooResponsibility->resolve(SymbolMap({{Foo, FooSym}}));
   FooResponsibility->emit();
-}
-
-TEST_F(CoreAPIsStandardTest, TestMainJITDylibAndDefaultLookupOrder) {
-  cantFail(ES.getMainJITDylib().define(absoluteSymbols({{Foo, FooSym}})));
-  auto Results = cantFail(ES.lookup({Foo}));
-
-  EXPECT_EQ(Results.size(), 1U) << "Incorrect number of results";
-  EXPECT_EQ(Results.count(Foo), 1U) << "Expected result for 'Foo'";
-  EXPECT_EQ(Results[Foo].getAddress(), FooSym.getAddress())
-      << "Expected result address to match Foo's address";
 }
 
 } // namespace

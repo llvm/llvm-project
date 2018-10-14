@@ -628,10 +628,12 @@ private:
                                 const SymbolNameSet &Names);
 
   void lodgeQuery(std::shared_ptr<AsynchronousSymbolQuery> &Q,
-                  SymbolNameSet &Unresolved, MaterializationUnitList &MUs);
+                  SymbolNameSet &Unresolved, JITDylib *MatchNonExportedInJD,
+                  bool MatchNonExported, MaterializationUnitList &MUs);
 
   void lodgeQueryImpl(std::shared_ptr<AsynchronousSymbolQuery> &Q,
-                      SymbolNameSet &Unresolved, MaterializationUnitList &MUs);
+                      SymbolNameSet &Unresolved, JITDylib *MatchNonExportedInJD,
+                      bool MatchNonExported, MaterializationUnitList &MUs);
 
   LookupImplActionFlags
   lookupImpl(std::shared_ptr<AsynchronousSymbolQuery> &Q,
@@ -766,9 +768,19 @@ public:
   /// dependenant symbols for this query (e.g. it is being made by a top level
   /// client to get an address to call) then the value NoDependenciesToRegister
   /// can be used.
+  ///
+  /// If the MatchNonExportedInJD pointer is non-null, then the lookup will find
+  /// non-exported symbols defined in the JITDylib pointed to by
+  /// MatchNonExportedInJD.
+  /// If MatchNonExported is true the lookup will find non-exported symbols in
+  /// any JITDylib (setting MatchNonExportedInJD is redundant in such cases).
+  /// If MatchNonExported is false and MatchNonExportedInJD is null,
+  /// non-exported symbols will never be found.
   void lookup(const JITDylibList &JDs, SymbolNameSet Symbols,
               SymbolsResolvedCallback OnResolve, SymbolsReadyCallback OnReady,
-              RegisterDependenciesFunction RegisterDependencies);
+              RegisterDependenciesFunction RegisterDependencies,
+              JITDylib *MatchNonExportedInJD = nullptr,
+              bool MatchNonExported = false);
 
   /// Blocking version of lookup above. Returns the resolved symbol map.
   /// If WaitUntilReady is true (the default), will not return until all
@@ -779,18 +791,22 @@ public:
   /// error will be reported via reportErrors.
   Expected<SymbolMap> lookup(const JITDylibList &JDs,
                              const SymbolNameSet &Symbols,
-                             RegisterDependenciesFunction RegisterDependencies,
-                             bool WaitUntilReady = true);
+                             RegisterDependenciesFunction RegisterDependencies =
+                                 NoDependenciesToRegister,
+                             bool WaitUntilReady = true,
+                             JITDylib *MatchNonExportedInJD = nullptr,
+                             bool MatchNonExported = false);
 
-  /// Convenience version of the blocking version of lookup above. Uses the main
-  /// JITDylib's search order as the lookup order, and registers no
-  /// dependencies.
-  Expected<SymbolMap> lookup(const SymbolNameSet &Symbols) {
-    return getMainJITDylib().withSearchOrderDo(
-        [&](const JITDylibList &SearchOrder) {
-          return lookup(SearchOrder, Symbols, NoDependenciesToRegister, true);
-        });
-  }
+  /// Convenience version of blocking lookup.
+  /// Performs a single-symbol lookup.
+  Expected<JITEvaluatedSymbol> lookup(const JITDylibList &JDs,
+                                      SymbolStringPtr Symbol,
+                                      bool MatchNonExported = false);
+
+  /// Convenience version of blocking lookup.
+  /// Performs a single-symbol lookup, auto-interning the given symbol name.
+  Expected<JITEvaluatedSymbol> lookup(const JITDylibList &JDs, StringRef Symbol,
+                                      bool MatchNonExported = false);
 
   /// Materialize the given unit.
   void dispatchMaterialization(JITDylib &JD,
@@ -872,16 +888,6 @@ Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &MU) {
     return Error::success();
   });
 }
-
-/// Look up the given names in the given JITDylibs.
-/// JDs will be searched in order and no JITDylib pointer may be null.
-/// All symbols must be found within the given JITDylibs or an error
-/// will be returned.
-Expected<SymbolMap> lookup(const JITDylibList &JDs, SymbolNameSet Names);
-
-/// Look up a symbol by searching a list of JITDylibs.
-Expected<JITEvaluatedSymbol> lookup(const JITDylibList &JDs,
-                                    SymbolStringPtr Name);
 
 /// Mangles symbol names then uniques them in the context of an
 /// ExecutionSession.
