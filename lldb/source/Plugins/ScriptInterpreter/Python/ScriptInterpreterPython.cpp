@@ -132,6 +132,9 @@ public:
 
     InitializePythonHome();
 
+    // Register _lldb as a built-in module.
+    PyImport_AppendInittab("_lldb", g_swig_init_callback);
+
 // Python < 3.2 and Python >= 3.2 reversed the ordering requirements for
 // calling `Py_Initialize` and `PyEval_InitThreads`.  < 3.2 requires that you
 // call `PyEval_InitThreads` first, and >= 3.2 requires that you call it last.
