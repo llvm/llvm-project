@@ -879,7 +879,7 @@
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=hexagon-linux-gnu \
 // RUN:   | FileCheck --check-prefix=CHECK-HEXAGON %s
-// CHECK-HEXAGON: "{{.*}}hexagon-link{{(.exe)?}}"
+// CHECK-HEXAGON: "{{.*}}{{hexagon-link|ld}}{{(.exe)?}}"
 // CHECK-HEXAGON-NOT: "--hash-style={{gnu|both}}"
 //
 // Check that we do not pass --hash-style=gnu and --hash-style=both to linker
