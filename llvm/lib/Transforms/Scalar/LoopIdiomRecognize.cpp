@@ -931,7 +931,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     Value *MSP =
         M->getOrInsertFunction("memset_pattern16", Builder.getVoidTy(),
                                Int8PtrTy, Int8PtrTy, IntPtr);
-    inferLibFuncAttributes(*M->getFunction("memset_pattern16"), *TLI);
+    inferLibFuncAttributes(M->getFunction("memset_pattern16"), *TLI);
 
     // Otherwise we should form a memset_pattern16.  PatternValue is known to be
     // an constant array of 16-bytes.  Plop the value into a mergable global.

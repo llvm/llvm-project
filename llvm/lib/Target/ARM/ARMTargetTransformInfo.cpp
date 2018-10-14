@@ -542,14 +542,16 @@ int ARMTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
                                            unsigned Factor,
                                            ArrayRef<unsigned> Indices,
                                            unsigned Alignment,
-                                           unsigned AddressSpace) {
+                                           unsigned AddressSpace,
+                                           bool IsMasked) {
   assert(Factor >= 2 && "Invalid interleave factor");
   assert(isa<VectorType>(VecTy) && "Expect a vector type");
 
   // vldN/vstN doesn't support vector types of i64/f64 element.
   bool EltIs64Bits = DL.getTypeSizeInBits(VecTy->getScalarType()) == 64;
 
-  if (Factor <= TLI->getMaxSupportedInterleaveFactor() && !EltIs64Bits) {
+  if (Factor <= TLI->getMaxSupportedInterleaveFactor() && !EltIs64Bits &&
+      !IsMasked) {
     unsigned NumElts = VecTy->getVectorNumElements();
     auto *SubVecTy = VectorType::get(VecTy->getScalarType(), NumElts / Factor);
 
@@ -562,7 +564,7 @@ int ARMTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
   }
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                           Alignment, AddressSpace);
+                                           Alignment, AddressSpace, IsMasked);
 }
 
 void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,

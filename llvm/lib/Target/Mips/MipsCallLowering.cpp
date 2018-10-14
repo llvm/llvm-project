@@ -298,8 +298,8 @@ static bool isSupportedType(Type *T) {
   return false;
 }
 
-CCValAssign::LocInfo determineLocInfo(const MVT RegisterVT, const EVT VT,
-                                      const ISD::ArgFlagsTy &Flags) {
+static CCValAssign::LocInfo determineLocInfo(const MVT RegisterVT, const EVT VT,
+                                             const ISD::ArgFlagsTy &Flags) {
   // > does not mean loss of information as type RegisterVT can't hold type VT,
   // it means that type VT is split into multiple registers of type RegisterVT
   if (VT.getSizeInBits() >= RegisterVT.getSizeInBits())
@@ -312,8 +312,8 @@ CCValAssign::LocInfo determineLocInfo(const MVT RegisterVT, const EVT VT,
 }
 
 template <typename T>
-void setLocInfo(SmallVectorImpl<CCValAssign> &ArgLocs,
-                const SmallVectorImpl<T> &Arguments) {
+static void setLocInfo(SmallVectorImpl<CCValAssign> &ArgLocs,
+                       const SmallVectorImpl<T> &Arguments) {
   for (unsigned i = 0; i < ArgLocs.size(); ++i) {
     const CCValAssign &VA = ArgLocs[i];
     CCValAssign::LocInfo LocInfo = determineLocInfo(

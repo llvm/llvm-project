@@ -52,8 +52,8 @@ LazyCallThroughManager::callThroughToSymbol(JITTargetAddress TrampolineAddr) {
     SymbolName = I->second.second;
   }
 
-  auto LookupResult =
-      ES.lookup({SourceJD}, {SymbolName}, NoDependenciesToRegister);
+  auto LookupResult = ES.lookup({SourceJD}, {SymbolName},
+                                NoDependenciesToRegister, true, nullptr, true);
 
   if (!LookupResult) {
     ES.reportError(LookupResult.takeError());

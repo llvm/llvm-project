@@ -78,7 +78,7 @@ Error LLJIT::addObjectFile(JITDylib &JD, std::unique_ptr<MemoryBuffer> Obj) {
 
 Expected<JITEvaluatedSymbol> LLJIT::lookupLinkerMangled(JITDylib &JD,
                                                         StringRef Name) {
-  return llvm::orc::lookup({&JD}, ES->intern(Name));
+  return ES->lookup({&JD}, ES->intern(Name));
 }
 
 LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES,

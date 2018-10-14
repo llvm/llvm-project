@@ -2712,8 +2712,7 @@ define <4 x float> @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) 
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [7:1.00]
 ; GENERIC-NEXT:    addps %xmm1, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1] sched: [1:1.00]
-; GENERIC-NEXT:    movlps %xmm0, (%rdi) # sched: [1:1.00]
+; GENERIC-NEXT:    movhps %xmm0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    movaps %xmm1, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2723,16 +2722,14 @@ define <4 x float> @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) 
 ; ATOM-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [1:1.00]
 ; ATOM-NEXT:    addps %xmm1, %xmm2 # sched: [5:5.00]
 ; ATOM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:0.50]
-; ATOM-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1] sched: [1:1.00]
-; ATOM-NEXT:    movlps %xmm2, (%rdi) # sched: [1:1.00]
+; ATOM-NEXT:    movhps %xmm2, (%rdi) # sched: [1:1.00]
 ; ATOM-NEXT:    retq # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_movhps:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [4:1.00]
 ; SLM-NEXT:    addps %xmm1, %xmm0 # sched: [3:1.00]
-; SLM-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1] sched: [1:1.00]
-; SLM-NEXT:    movlps %xmm0, (%rdi) # sched: [1:1.00]
+; SLM-NEXT:    movhps %xmm0, (%rdi) # sched: [1:1.00]
 ; SLM-NEXT:    movaps %xmm1, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
@@ -2740,8 +2737,7 @@ define <4 x float> @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) 
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [7:1.00]
 ; SANDY-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [3:1.00]
-; SANDY-SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1] sched: [1:1.00]
-; SANDY-SSE-NEXT:    movlps %xmm0, (%rdi) # sched: [1:1.00]
+; SANDY-SSE-NEXT:    movhps %xmm0, (%rdi) # sched: [1:1.00]
 ; SANDY-SSE-NEXT:    movaps %xmm1, %xmm0 # sched: [1:1.00]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2749,7 +2745,7 @@ define <4 x float> @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) 
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [7:1.00]
 ; SANDY-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    vpextrq $1, %xmm0, (%rdi) # sched: [5:1.00]
+; SANDY-NEXT:    vmovhpd %xmm0, (%rdi) # sched: [1:1.00]
 ; SANDY-NEXT:    vmovaps %xmm1, %xmm0 # sched: [1:1.00]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
@@ -2757,8 +2753,7 @@ define <4 x float> @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) 
 ; HASWELL-SSE:       # %bb.0:
 ; HASWELL-SSE-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
 ; HASWELL-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [3:1.00]
-; HASWELL-SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1] sched: [1:1.00]
-; HASWELL-SSE-NEXT:    movlps %xmm0, (%rdi) # sched: [1:1.00]
+; HASWELL-SSE-NEXT:    movhps %xmm0, (%rdi) # sched: [1:1.00]
 ; HASWELL-SSE-NEXT:    movaps %xmm1, %xmm0 # sched: [1:1.00]
 ; HASWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -2766,7 +2761,7 @@ define <4 x float> @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) 
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
 ; HASWELL-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; HASWELL-NEXT:    vpextrq $1, %xmm0, (%rdi) # sched: [2:1.00]
+; HASWELL-NEXT:    vmovhpd %xmm0, (%rdi) # sched: [1:1.00]
 ; HASWELL-NEXT:    vmovaps %xmm1, %xmm0 # sched: [1:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -2774,8 +2769,7 @@ define <4 x float> @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) 
 ; BROADWELL-SSE:       # %bb.0:
 ; BROADWELL-SSE-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
 ; BROADWELL-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [3:1.00]
-; BROADWELL-SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1] sched: [1:1.00]
-; BROADWELL-SSE-NEXT:    movlps %xmm0, (%rdi) # sched: [1:1.00]
+; BROADWELL-SSE-NEXT:    movhps %xmm0, (%rdi) # sched: [1:1.00]
 ; BROADWELL-SSE-NEXT:    movaps %xmm1, %xmm0 # sched: [1:1.00]
 ; BROADWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -2783,7 +2777,7 @@ define <4 x float> @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) 
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
 ; BROADWELL-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BROADWELL-NEXT:    vpextrq $1, %xmm0, (%rdi) # sched: [2:1.00]
+; BROADWELL-NEXT:    vmovhpd %xmm0, (%rdi) # sched: [1:1.00]
 ; BROADWELL-NEXT:    vmovaps %xmm1, %xmm0 # sched: [1:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -2791,8 +2785,7 @@ define <4 x float> @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) 
 ; SKYLAKE-SSE:       # %bb.0:
 ; SKYLAKE-SSE-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
 ; SKYLAKE-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1] sched: [1:1.00]
-; SKYLAKE-SSE-NEXT:    movlps %xmm0, (%rdi) # sched: [1:1.00]
+; SKYLAKE-SSE-NEXT:    movhps %xmm0, (%rdi) # sched: [1:1.00]
 ; SKYLAKE-SSE-NEXT:    movaps %xmm1, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-SSE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -2800,7 +2793,7 @@ define <4 x float> @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) 
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
 ; SKYLAKE-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vpextrq $1, %xmm0, (%rdi) # sched: [2:1.00]
+; SKYLAKE-NEXT:    vmovhpd %xmm0, (%rdi) # sched: [1:1.00]
 ; SKYLAKE-NEXT:    vmovaps %xmm1, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -2808,8 +2801,7 @@ define <4 x float> @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) 
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
 ; SKX-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [4:0.50]
-; SKX-SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1] sched: [1:1.00]
-; SKX-SSE-NEXT:    movlps %xmm0, (%rdi) # sched: [1:1.00]
+; SKX-SSE-NEXT:    movhps %xmm0, (%rdi) # sched: [1:1.00]
 ; SKX-SSE-NEXT:    movaps %xmm1, %xmm0 # sched: [1:0.33]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
@@ -2817,7 +2809,7 @@ define <4 x float> @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) 
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
 ; SKX-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
-; SKX-NEXT:    vpextrq $1, %xmm0, (%rdi) # sched: [2:1.00]
+; SKX-NEXT:    vmovhpd %xmm0, (%rdi) # sched: [1:1.00]
 ; SKX-NEXT:    vmovaps %xmm1, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
@@ -2825,8 +2817,7 @@ define <4 x float> @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) 
 ; BTVER2-SSE:       # %bb.0:
 ; BTVER2-SSE-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
 ; BTVER2-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [3:1.00]
-; BTVER2-SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1] sched: [1:0.50]
-; BTVER2-SSE-NEXT:    movlps %xmm0, (%rdi) # sched: [2:1.00]
+; BTVER2-SSE-NEXT:    movhps %xmm0, (%rdi) # sched: [2:1.00]
 ; BTVER2-SSE-NEXT:    movaps %xmm1, %xmm0 # sched: [1:0.50]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
@@ -2834,7 +2825,7 @@ define <4 x float> @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) 
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [6:1.00]
 ; BTVER2-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vpextrq $1, %xmm0, (%rdi) # sched: [3:1.00]
+; BTVER2-NEXT:    vmovhpd %xmm0, (%rdi) # sched: [2:1.00]
 ; BTVER2-NEXT:    vmovaps %xmm1, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
@@ -2842,8 +2833,7 @@ define <4 x float> @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) 
 ; ZNVER1-SSE:       # %bb.0:
 ; ZNVER1-SSE-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [8:0.50]
 ; ZNVER1-SSE-NEXT:    addps %xmm1, %xmm0 # sched: [3:1.00]
-; ZNVER1-SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1] sched: [1:0.50]
-; ZNVER1-SSE-NEXT:    movlps %xmm0, (%rdi) # sched: [1:0.50]
+; ZNVER1-SSE-NEXT:    movhps %xmm0, (%rdi) # sched: [1:0.50]
 ; ZNVER1-SSE-NEXT:    movaps %xmm1, %xmm0 # sched: [1:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
@@ -2851,7 +2841,7 @@ define <4 x float> @test_movhps(<4 x float> %a0, <4 x float> %a1, x86_mmx *%a2) 
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0] sched: [8:0.50]
 ; ZNVER1-NEXT:    vaddps %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
-; ZNVER1-NEXT:    vpextrq $1, %xmm0, (%rdi) # sched: [5:3.00]
+; ZNVER1-NEXT:    vmovhpd %xmm0, (%rdi) # sched: [1:0.50]
 ; ZNVER1-NEXT:    vmovaps %xmm1, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = bitcast x86_mmx* %a2 to <2 x float>*

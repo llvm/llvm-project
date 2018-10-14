@@ -90,7 +90,8 @@ public:
                                  unsigned Factor,
                                  ArrayRef<unsigned> Indices,
                                  unsigned Alignment,
-                                 unsigned AddressSpace);
+                                 unsigned AddressSpace,
+                                 bool IsMasked = false);
 
   /// @}
 };

@@ -10,8 +10,7 @@ define void @fptrunc_frommem2(<2 x double>* %in, <2 x float>* %out) {
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-SSE-NEXT:    cvtpd2ps (%ecx), %xmm0
-; X32-SSE-NEXT:    extractps $1, %xmm0, 4(%eax)
-; X32-SSE-NEXT:    movss %xmm0, (%eax)
+; X32-SSE-NEXT:    movlpd %xmm0, (%eax)
 ; X32-SSE-NEXT:    retl
 ;
 ; X32-AVX-LABEL: fptrunc_frommem2:
@@ -19,8 +18,7 @@ define void @fptrunc_frommem2(<2 x double>* %in, <2 x float>* %out) {
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-AVX-NEXT:    vcvtpd2psx (%ecx), %xmm0
-; X32-AVX-NEXT:    vextractps $1, %xmm0, 4(%eax)
-; X32-AVX-NEXT:    vmovss %xmm0, (%eax)
+; X32-AVX-NEXT:    vmovlpd %xmm0, (%eax)
 ; X32-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fptrunc_frommem2:
