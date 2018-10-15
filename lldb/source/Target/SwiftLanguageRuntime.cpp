@@ -1347,13 +1347,6 @@ SwiftLanguageRuntime::GetMetadataPromise(lldb::addr_t addr,
   if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
     return nullptr;
 
-  if (auto objc_runtime = GetObjCRuntime()) {
-    if (objc_runtime->GetRuntimeVersion() ==
-        ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2) {
-      addr = ((AppleObjCRuntimeV2 *)objc_runtime)->GetPointerISA(addr);
-    }
-  }
-
   typename decltype(m_promises_map)::key_type key{
       swift_ast_ctx->GetASTContext(), addr};
 
