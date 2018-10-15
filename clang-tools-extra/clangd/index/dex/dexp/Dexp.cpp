@@ -31,9 +31,9 @@ using namespace llvm;
 namespace {
 
 llvm::cl::opt<std::string>
-    SymbolCollection("symbol-collection-file",
-                     llvm::cl::desc("Path to the file with symbol collection"),
-                     llvm::cl::Positional, llvm::cl::Required);
+    IndexPath("index-path",
+              llvm::cl::desc("Path to the index"),
+              llvm::cl::Positional, llvm::cl::Required);
 
 static const std::string Overview = R"(
 This is an **experimental** interactive tool to process user-provided search
@@ -253,6 +253,10 @@ struct {
      llvm::make_unique<Refs>},
 };
 
+std::unique_ptr<SymbolIndex> openIndex(llvm::StringRef Index) {
+  return loadIndex(Index, /*URISchemes=*/{}, /*UseDex=*/true);
+}
+
 } // namespace
 
 int main(int argc, const char *argv[]) {
@@ -262,13 +266,11 @@ int main(int argc, const char *argv[]) {
 
   std::unique_ptr<SymbolIndex> Index;
   reportTime("Dex build", [&]() {
-    Index = loadIndex(SymbolCollection, /*URISchemes=*/{},
-                      /*UseDex=*/true);
+    Index = openIndex(IndexPath);
   });
 
   if (!Index) {
-    llvm::outs()
-        << "ERROR: Please provide a valid path to symbol collection file.\n";
+    llvm::outs() << "Failed to open the index.\n";
     return -1;
   }
 
