@@ -237,7 +237,7 @@ private:
   }
 
   // List of critical edges to be split between iterations.
-  SmallVector<std::pair<TerminatorInst *, unsigned>, 4> toSplit;
+  SmallVector<std::pair<Instruction *, unsigned>, 4> toSplit;
 
   // Helper functions of redundant load elimination
   bool processLoad(LoadInst *L);

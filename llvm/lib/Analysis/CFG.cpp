@@ -71,7 +71,7 @@ void llvm::FindFunctionBackedges(const Function &F,
 /// successor.
 unsigned llvm::GetSuccessorNumber(const BasicBlock *BB,
     const BasicBlock *Succ) {
-  const TerminatorInst *Term = BB->getTerminator();
+  const Instruction *Term = BB->getTerminator();
 #ifndef NDEBUG
   unsigned e = Term->getNumSuccessors();
 #endif

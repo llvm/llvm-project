@@ -1211,7 +1211,7 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
   // predecessor blocks. The only thing to watch out for is that we can't put
   // a possibly trapping load in the predecessor if it is a critical edge.
   for (unsigned Idx = 0, Num = PN.getNumIncomingValues(); Idx != Num; ++Idx) {
-    TerminatorInst *TI = PN.getIncomingBlock(Idx)->getTerminator();
+    Instruction *TI = PN.getIncomingBlock(Idx)->getTerminator();
     Value *InVal = PN.getIncomingValue(Idx);
 
     // If the value is produced by the terminator of the predecessor (an
@@ -1275,7 +1275,7 @@ static void speculatePHINodeLoads(PHINode &PN) {
       continue;
     }
 
-    TerminatorInst *TI = Pred->getTerminator();
+    Instruction *TI = Pred->getTerminator();
     IRBuilderTy PredBuilder(TI);
 
     LoadInst *Load = PredBuilder.CreateLoad(

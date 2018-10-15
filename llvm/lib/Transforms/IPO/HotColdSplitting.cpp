@@ -104,7 +104,7 @@ static bool isSingleEntrySingleExit(BasicBlock *Entry, const BasicBlock *Exit,
 bool blockEndsInUnreachable(const BasicBlock &BB) {
   if (BB.empty())
     return true;
-  const TerminatorInst *I = BB.getTerminator();
+  const Instruction *I = BB.getTerminator();
   if (isa<ReturnInst>(I) || isa<IndirectBrInst>(I))
     return true;
   // Unreachable blocks do not have any successor.

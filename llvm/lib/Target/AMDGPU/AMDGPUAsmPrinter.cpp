@@ -116,9 +116,16 @@ AMDGPUTargetStreamer* AMDGPUAsmPrinter::getTargetStreamer() const {
 }
 
 void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
-  if (IsaInfo::hasCodeObjectV3(getSTI()) &&
-      TM.getTargetTriple().getOS() == Triple::AMDHSA)
-    return;
+  if (IsaInfo::hasCodeObjectV3(getSTI())) {
+    std::string ExpectedTarget;
+    raw_string_ostream ExpectedTargetOS(ExpectedTarget);
+    IsaInfo::streamIsaVersion(getSTI(), ExpectedTargetOS);
+
+    getTargetStreamer()->EmitDirectiveAMDGCNTarget(ExpectedTarget);
+
+    if (TM.getTargetTriple().getOS() == Triple::AMDHSA)
+      return;
+  }
 
   if (TM.getTargetTriple().getOS() != Triple::AMDHSA &&
       TM.getTargetTriple().getOS() != Triple::AMDPAL)

@@ -135,7 +135,7 @@ static const uint32_t IH_NONTAKEN_WEIGHT = 1;
 /// Add \p BB to PostDominatedByUnreachable set if applicable.
 void
 BranchProbabilityInfo::updatePostDominatedByUnreachable(const BasicBlock *BB) {
-  const TerminatorInst *TI = BB->getTerminator();
+  const Instruction *TI = BB->getTerminator();
   if (TI->getNumSuccessors() == 0) {
     if (isa<UnreachableInst>(TI) ||
         // If this block is terminated by a call to
@@ -167,7 +167,7 @@ BranchProbabilityInfo::updatePostDominatedByUnreachable(const BasicBlock *BB) {
 void
 BranchProbabilityInfo::updatePostDominatedByColdCall(const BasicBlock *BB) {
   assert(!PostDominatedByColdCall.count(BB));
-  const TerminatorInst *TI = BB->getTerminator();
+  const Instruction *TI = BB->getTerminator();
   if (TI->getNumSuccessors() == 0)
     return;
 
@@ -202,7 +202,7 @@ BranchProbabilityInfo::updatePostDominatedByColdCall(const BasicBlock *BB) {
 /// Predict that a successor which leads necessarily to an
 /// unreachable-terminated block as extremely unlikely.
 bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
-  const TerminatorInst *TI = BB->getTerminator();
+  const Instruction *TI = BB->getTerminator();
   (void) TI;
   assert(TI->getNumSuccessors() > 1 && "expected more than one successor!");
   assert(!isa<InvokeInst>(TI) &&
@@ -246,7 +246,7 @@ bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
 // heuristic. The probability of the edge coming to unreachable block is
 // set to min of metadata and unreachable heuristic.
 bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
-  const TerminatorInst *TI = BB->getTerminator();
+  const Instruction *TI = BB->getTerminator();
   assert(TI->getNumSuccessors() > 1 && "expected more than one successor!");
   if (!(isa<BranchInst>(TI) || isa<SwitchInst>(TI) || isa<IndirectBrInst>(TI)))
     return false;
@@ -348,7 +348,7 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
 /// Return true if we could compute the weights for cold edges.
 /// Return false, otherwise.
 bool BranchProbabilityInfo::calcColdCallHeuristics(const BasicBlock *BB) {
-  const TerminatorInst *TI = BB->getTerminator();
+  const Instruction *TI = BB->getTerminator();
   (void) TI;
   assert(TI->getNumSuccessors() > 1 && "expected more than one successor!");
   assert(!isa<InvokeInst>(TI) &&

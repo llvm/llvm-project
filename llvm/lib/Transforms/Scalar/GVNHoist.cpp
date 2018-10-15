@@ -577,7 +577,7 @@ private:
   // Returns the edge via which an instruction in BB will get the values from.
 
   // Returns true when the values are flowing out to each edge.
-  bool valueAnticipable(CHIArgs C, TerminatorInst *TI) const {
+  bool valueAnticipable(CHIArgs C, Instruction *TI) const {
     if (TI->getNumSuccessors() > (unsigned)size(C))
       return false; // Not enough args in this CHI.
 
