@@ -17,7 +17,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_SYNCAPI_H
 
 #include "ClangdServer.h"
-#include <future>
+#include "index/Index.h"
 
 namespace clang {
 namespace clangd {
@@ -49,6 +49,9 @@ runWorkspaceSymbols(ClangdServer &Server, StringRef Query, int Limit);
 
 llvm::Expected<std::vector<SymbolInformation>>
 runDocumentSymbols(ClangdServer &Server, PathRef File);
+
+SymbolSlab runFuzzyFind(const SymbolIndex &Index, StringRef Query);
+SymbolSlab runFuzzyFind(const SymbolIndex &Index, const FuzzyFindRequest &Req);
 
 } // namespace clangd
 } // namespace clang
