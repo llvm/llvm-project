@@ -396,13 +396,6 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   if (Args.hasArg(OPT_v) || Args.hasArg(OPT_version))
     message(getLLDVersion() + " (compatible with GNU linkers)");
 
-  // The behavior of -v or --version is a bit strange, but this is
-  // needed for compatibility with GNU linkers.
-  if (Args.hasArg(OPT_v) && !Args.hasArg(OPT_INPUT))
-    return;
-  if (Args.hasArg(OPT_version))
-    return;
-
   if (const char *Path = getReproduceOption(Args)) {
     // Note that --reproduce is a debug option so you can ignore it
     // if you are trying to understand the whole picture of the code.
@@ -421,6 +414,14 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
 
   readConfigs(Args);
   checkZOptions(Args);
+
+  // The behavior of -v or --version is a bit strange, but this is
+  // needed for compatibility with GNU linkers.
+  if (Args.hasArg(OPT_v) && !Args.hasArg(OPT_INPUT))
+    return;
+  if (Args.hasArg(OPT_version))
+    return;
+
   initLLVM();
   createFiles(Args);
   if (errorCount())
