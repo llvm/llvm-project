@@ -38,6 +38,7 @@ add_clang_library(clangDaemon
   URI.cpp
   XRefs.cpp
 
+  index/Background.cpp
   index/CanonicalIncludes.cpp
   index/FileIndex.cpp
   index/Index.cpp
