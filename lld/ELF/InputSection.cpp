@@ -1009,7 +1009,7 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *Buf,
     if (Defined *F = getEnclosingFunction<ELFT>(Rel.Offset)) {
       Prologues.insert(F);
       if (Target->adjustPrologueForCrossSplitStack(Buf + getOffset(F->Value),
-                                                   End))
+                                                   End, F->StOther))
         continue;
       if (!getFile<ELFT>()->SomeNoSplitStack)
         error(lld::toString(this) + ": " + F->getName() +
@@ -1017,7 +1017,9 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *Buf,
               " (without -fsplit-stack), but couldn't adjust its prologue");
     }
   }
-  switchMorestackCallsToMorestackNonSplit(Prologues, MorestackCalls);
+
+  if (Target->NeedsMoreStackNonSplit)
+    switchMorestackCallsToMorestackNonSplit(Prologues, MorestackCalls);
 }
 
 template <class ELFT> void InputSection::writeTo(uint8_t *Buf) {
