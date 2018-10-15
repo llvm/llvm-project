@@ -133,6 +133,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-cov
   llvm-cxxfilt
   llvm-dwarfdump
+  llvm-dwp
   llvm-lib
   llvm-nm
   llvm-objcopy

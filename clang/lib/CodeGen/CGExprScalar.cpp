@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenFunction.h"
-#include "CGCleanup.h"
 #include "CGCXXABI.h"
+#include "CGCleanup.h"
 #include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
+#include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
@@ -23,6 +23,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/FixedPoint.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/ADT/Optional.h"
@@ -326,6 +327,9 @@ public:
   EmitScalarConversion(Value *Src, QualType SrcTy, QualType DstTy,
                        SourceLocation Loc,
                        ScalarConversionOpts Opts = ScalarConversionOpts());
+
+  Value *EmitFixedPointConversion(Value *Src, QualType SrcTy, QualType DstTy,
+                                  SourceLocation Loc);
 
   /// Emit a conversion from the specified complex type to the specified
   /// destination type, where the destination type is an LLVM scalar type.
@@ -1011,6 +1015,10 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
                                                QualType DstType,
                                                SourceLocation Loc,
                                                ScalarConversionOpts Opts) {
+  assert(!SrcType->isFixedPointType() && !DstType->isFixedPointType() &&
+         "Use the ScalarExprEmitter::EmitFixedPoint family functions for "
+         "handling conversions involving fixed point types.");
+
   QualType NoncanonicalSrcType = SrcType;
   QualType NoncanonicalDstType = DstType;
 
@@ -1202,6 +1210,101 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
                                NoncanonicalDstType, Loc);
 
   return Res;
+}
+
+Value *ScalarExprEmitter::EmitFixedPointConversion(Value *Src, QualType SrcTy,
+                                                   QualType DstTy,
+                                                   SourceLocation Loc) {
+  using llvm::APInt;
+  using llvm::ConstantInt;
+  using llvm::Value;
+
+  assert(SrcTy->isFixedPointType());
+  assert(DstTy->isFixedPointType());
+
+  FixedPointSemantics SrcFPSema =
+      CGF.getContext().getFixedPointSemantics(SrcTy);
+  FixedPointSemantics DstFPSema =
+      CGF.getContext().getFixedPointSemantics(DstTy);
+  unsigned SrcWidth = SrcFPSema.getWidth();
+  unsigned DstWidth = DstFPSema.getWidth();
+  unsigned SrcScale = SrcFPSema.getScale();
+  unsigned DstScale = DstFPSema.getScale();
+  bool IsSigned = SrcFPSema.isSigned();
+
+  Value *Result = Src;
+  unsigned ResultWidth = SrcWidth;
+
+  if (!DstFPSema.isSaturated()) {
+    // Downscale
+    if (DstScale < SrcScale) {
+      if (IsSigned)
+        Result = Builder.CreateAShr(Result, SrcScale - DstScale);
+      else
+        Result = Builder.CreateLShr(Result, SrcScale - DstScale);
+    }
+
+    // Resize
+    llvm::Type *DstIntTy = Builder.getIntNTy(DstWidth);
+    if (IsSigned)
+      Result = Builder.CreateSExtOrTrunc(Result, DstIntTy);
+    else
+      Result = Builder.CreateZExtOrTrunc(Result, DstIntTy);
+
+    // Upscale
+    if (DstScale > SrcScale)
+      Result = Builder.CreateShl(Result, DstScale - SrcScale);
+  } else {
+    if (DstScale > SrcScale) {
+      // Need to extend first before scaling up
+      ResultWidth = SrcWidth + DstScale - SrcScale;
+      llvm::Type *UpscaledTy = Builder.getIntNTy(ResultWidth);
+
+      if (IsSigned)
+        Result = Builder.CreateSExt(Result, UpscaledTy);
+      else
+        Result = Builder.CreateZExt(Result, UpscaledTy);
+
+      Result = Builder.CreateShl(Result, DstScale - SrcScale);
+    } else if (DstScale < SrcScale) {
+      if (IsSigned)
+        Result = Builder.CreateAShr(Result, SrcScale - DstScale);
+      else
+        Result = Builder.CreateLShr(Result, SrcScale - DstScale);
+    }
+
+    if (DstFPSema.getIntegralBits() < SrcFPSema.getIntegralBits()) {
+      auto Max = ConstantInt::get(
+          CGF.getLLVMContext(),
+          APFixedPoint::getMax(DstFPSema).getValue().extOrTrunc(ResultWidth));
+      Value *TooHigh = IsSigned ? Builder.CreateICmpSGT(Result, Max)
+                                : Builder.CreateICmpUGT(Result, Max);
+      Result = Builder.CreateSelect(TooHigh, Max, Result);
+
+      if (IsSigned) {
+        // Cannot overflow min to dest type is src is unsigned since all fixed
+        // point types can cover the unsigned min of 0.
+        auto Min = ConstantInt::get(
+            CGF.getLLVMContext(),
+            APFixedPoint::getMin(DstFPSema).getValue().extOrTrunc(ResultWidth));
+        Value *TooLow = Builder.CreateICmpSLT(Result, Min);
+        Result = Builder.CreateSelect(TooLow, Min, Result);
+      }
+    } else if (IsSigned && !DstFPSema.isSigned()) {
+      llvm::Type *ResultTy = Builder.getIntNTy(ResultWidth);
+      Value *Zero = ConstantInt::getNullValue(ResultTy);
+      Value *LTZero = Builder.CreateICmpSLT(Result, Zero);
+      Result = Builder.CreateSelect(LTZero, Zero, Result);
+    }
+
+    // Final resizing to dst width
+    llvm::Type *DstIntTy = Builder.getIntNTy(DstWidth);
+    if (IsSigned)
+      Result = Builder.CreateSExtOrTrunc(Result, DstIntTy);
+    else
+      Result = Builder.CreateZExtOrTrunc(Result, DstIntTy);
+  }
+  return Result;
 }
 
 /// Emit a conversion from the specified complex type to the specified
@@ -1893,6 +1996,10 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     unsigned NumElements = DstTy->getVectorNumElements();
     return Builder.CreateVectorSplat(NumElements, Elt, "splat");
   }
+
+  case CK_FixedPointCast:
+    return EmitFixedPointConversion(Visit(E), E->getType(), DestTy,
+                                    CE->getExprLoc());
 
   case CK_IntegralCast: {
     ScalarConversionOpts Opts;

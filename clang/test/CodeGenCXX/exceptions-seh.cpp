@@ -23,7 +23,7 @@ extern "C" void use_cxx() {
 
 // CXXEH-LABEL: define dso_local void @use_cxx()
 // CXXEH-SAME:  personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*)
-// CXXEH: call %struct.HasCleanup* @"??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* noalias %{{.*}})
+// CXXEH: call %struct.HasCleanup* @"??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
 // CXXEH: invoke void @might_throw()
 // CXXEH:       to label %[[cont:[^ ]*]] unwind label %[[lpad:[^ ]*]]
 //
@@ -38,7 +38,7 @@ extern "C" void use_cxx() {
 
 // NOCXX-LABEL: define dso_local void @use_cxx()
 // NOCXX-NOT: invoke
-// NOCXX: call %struct.HasCleanup* @"??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* noalias %{{.*}})
+// NOCXX: call %struct.HasCleanup* @"??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
 // NOCXX-NOT: invoke
 // NOCXX: call void @might_throw()
 // NOCXX-NOT: invoke

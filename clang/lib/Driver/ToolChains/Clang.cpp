@@ -3047,8 +3047,8 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
 
   // -gsplit-dwarf should turn on -g and enable the backend dwarf
   // splitting and extraction.
-  // FIXME: Currently only works on Linux.
-  if (T.isOSLinux()) {
+  // FIXME: Currently only works on Linux and Fuchsia.
+  if (T.isOSLinux() || T.isOSFuchsia()) {
     if (!SplitDWARFInlining)
       CmdArgs.push_back("-fno-split-dwarf-inlining");
 
@@ -3814,7 +3814,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add the split debug info name to the command lines here so we
   // can propagate it to the backend.
-  bool SplitDWARF = SplitDWARFArg && RawTriple.isOSLinux() &&
+  bool SplitDWARF = SplitDWARFArg &&
+                    (RawTriple.isOSLinux() || RawTriple.isOSFuchsia()) &&
                     (isa<AssembleJobAction>(JA) || isa<CompileJobAction>(JA) ||
                      isa<BackendJobAction>(JA));
   const char *SplitDWARFOut;
@@ -5792,8 +5793,9 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
+  const llvm::Triple &T = getToolChain().getTriple();
   if (Args.hasArg(options::OPT_gsplit_dwarf) &&
-      getToolChain().getTriple().isOSLinux()) {
+      (T.isOSLinux() || T.isOSFuchsia())) {
     CmdArgs.push_back("-split-dwarf-file");
     CmdArgs.push_back(SplitDebugName(Args, Input));
   }

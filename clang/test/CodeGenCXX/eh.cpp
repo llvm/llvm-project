@@ -34,7 +34,7 @@ void test2() {
 // CHECK-NEXT:  [[SELECTORVAR:%.*]] = alloca i32
 // CHECK-NEXT:  [[EXNOBJ:%.*]] = call i8* @__cxa_allocate_exception(i64 16)
 // CHECK-NEXT:  [[EXN:%.*]] = bitcast i8* [[EXNOBJ]] to [[DSTAR:%[^*]*\*]]
-// CHECK-NEXT:  invoke void @_ZN7test2_DC1ERKS_([[DSTAR]] noalias [[EXN]], [[DSTAR]] dereferenceable({{[0-9]+}}) @d2)
+// CHECK-NEXT:  invoke void @_ZN7test2_DC1ERKS_([[DSTAR]] [[EXN]], [[DSTAR]] dereferenceable({{[0-9]+}}) @d2)
 // CHECK-NEXT:     to label %[[CONT:.*]] unwind label %{{.*}}
 //      :     [[CONT]]:   (can't check this in Release-Asserts builds)
 // CHECK:       call void @__cxa_throw(i8* [[EXNOBJ]], i8* bitcast ({{.*}}* @_ZTI7test2_D to i8*), i8* null) [[NR]]
@@ -82,7 +82,7 @@ namespace test5 {
 // CHECK-LABEL:      define void @_ZN5test54testEv()
 // CHECK:      [[EXNOBJ:%.*]] = call i8* @__cxa_allocate_exception(i64 1)
 // CHECK:      [[EXNCAST:%.*]] = bitcast i8* [[EXNOBJ]] to [[A:%[^*]*]]*
-// CHECK-NEXT: invoke void @_ZN5test51AC1Ev([[A]]* noalias [[EXNCAST]])
+// CHECK-NEXT: invoke void @_ZN5test51AC1Ev([[A]]* [[EXNCAST]])
 // CHECK:      invoke void @__cxa_throw(i8* [[EXNOBJ]], i8* bitcast ({{.*}}* @_ZTIN5test51AE to i8*), i8* bitcast (void ([[A]]*)* @_ZN5test51AD1Ev to i8*)) [[NR]]
 // CHECK-NEXT:   to label {{%.*}} unwind label %[[HANDLER:[^ ]*]]
 //      :    [[HANDLER]]:  (can't check this in Release-Asserts builds)
@@ -186,7 +186,7 @@ namespace test9 {
   struct A { A(); };
 
 
-  // CHECK-LABEL: define void @_ZN5test91AC2Ev(%"struct.test9::A"* noalias %this) unnamed_addr
+  // CHECK-LABEL: define void @_ZN5test91AC2Ev(%"struct.test9::A"* %this) unnamed_addr
   // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
   A::A() try {
   // CHECK:      invoke void @_ZN5test96opaqueEv()
@@ -199,7 +199,7 @@ namespace test9 {
   // CHECK:      invoke void @_ZN5test96opaqueEv()
   // CHECK:      invoke void @__cxa_rethrow()
 
-  // CHECK-LABEL:      define void @_ZN5test91AC1Ev(%"struct.test9::A"* noalias %this) unnamed_addr
+  // CHECK-LABEL:      define void @_ZN5test91AC1Ev(%"struct.test9::A"* %this) unnamed_addr
   // CHECK:      call void @_ZN5test91AC2Ev
   // CHECK-NEXT: ret void
     opaque();
@@ -428,9 +428,9 @@ namespace test16 {
     // CHECK-NEXT: store i8* [[EXN]], i8** [[EXN_SAVE]]
     // CHECK-NEXT: store i1 true, i1* [[EXN_ACTIVE]]
     // CHECK-NEXT: [[T0:%.*]] = bitcast i8* [[EXN]] to [[B:%.*]]*
-    // CHECK-NEXT: invoke void @_ZN6test161AC1Ev([[A]]* noalias [[TEMP]])
+    // CHECK-NEXT: invoke void @_ZN6test161AC1Ev([[A]]* [[TEMP]])
     // CHECK:      store i1 true, i1* [[TEMP_ACTIVE]]
-    // CHECK-NEXT: invoke void @_ZN6test161BC1ERKNS_1AE([[B]]* noalias [[T0]], [[A]]* dereferenceable({{[0-9]+}}) [[TEMP]])
+    // CHECK-NEXT: invoke void @_ZN6test161BC1ERKNS_1AE([[B]]* [[T0]], [[A]]* dereferenceable({{[0-9]+}}) [[TEMP]])
     // CHECK:      store i1 false, i1* [[EXN_ACTIVE]]
     // CHECK-NEXT: invoke void @__cxa_throw(i8* [[EXN]],
 
