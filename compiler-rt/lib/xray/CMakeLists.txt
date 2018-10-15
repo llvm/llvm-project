@@ -67,9 +67,11 @@ set(XRAY_IMPL_HEADERS
   xray_basic_logging.h
   xray_buffer_queue.h
   xray_defs.h
+  xray_fdr_controller.h
   xray_fdr_flags.h
   xray_fdr_flags.inc
   xray_fdr_log_records.h
+  xray_fdr_log_writer.h
   xray_fdr_logging.h
   xray_flags.h
   xray_flags.inc
