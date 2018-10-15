@@ -69,10 +69,8 @@ public:
   // The function with a prologue starting at Loc was compiled with
   // -fsplit-stack and it calls a function compiled without. Adjust the prologue
   // to do the right thing. See https://gcc.gnu.org/wiki/SplitStacks.
-  // The symbols st_other flags are needed on PowerPC64 for determining the
-  // offset to the split-stack prologue.
-  virtual bool adjustPrologueForCrossSplitStack(uint8_t *Loc, uint8_t *End,
-                                                uint8_t StOther) const;
+  virtual bool adjustPrologueForCrossSplitStack(uint8_t *Loc,
+                                                uint8_t *End) const;
 
   // Return true if we can reach Dst from Src with Relocation RelocType
   virtual bool inBranchRange(RelType Type, uint64_t Src,
@@ -131,11 +129,6 @@ public:
   // A 4-byte field corresponding to one or more trap instructions, used to pad
   // executable OutputSections.
   uint32_t TrapInstr = 0;
-
-  // If a target needs to rewrite calls to __morestack to instead call
-  // __morestack_non_split when a split-stack enabled caller calls a
-  // non-split-stack callee this will return true. Otherwise returns false.
-  bool NeedsMoreStackNonSplit = true;
 
   virtual RelExpr adjustRelaxExpr(RelType Type, const uint8_t *Data,
                                   RelExpr Expr) const;

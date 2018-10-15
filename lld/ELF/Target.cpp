@@ -132,10 +132,11 @@ bool TargetInfo::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
   return false;
 }
 
-bool TargetInfo::adjustPrologueForCrossSplitStack(uint8_t *Loc, uint8_t *End,
-                                                  uint8_t StOther) const {
+bool TargetInfo::adjustPrologueForCrossSplitStack(uint8_t *Loc,
+                                                  uint8_t *End) const {
   llvm_unreachable("Target doesn't support split stacks.");
 }
+
 
 bool TargetInfo::inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const {
   return true;
