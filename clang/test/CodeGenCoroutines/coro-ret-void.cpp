@@ -31,7 +31,7 @@ coro1 f2() {
 }
 
 // CHECK-LABEL: define void @_Z2f2v(
-// CHECK: call void @_ZN1AC1Ev(%struct.A* noalias %[[AVar:.*]])
+// CHECK: call void @_ZN1AC1Ev(%struct.A* %[[AVar:.*]])
 // CHECK-NEXT: call void @_ZN1AD1Ev(%struct.A* %[[AVar]])
 // CHECK-NEXT: call void @_ZN5coro112promise_type11return_voidEv(%"struct.coro1::promise_type"*
 

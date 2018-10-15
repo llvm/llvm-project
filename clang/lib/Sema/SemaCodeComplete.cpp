@@ -1683,6 +1683,8 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC,
         Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
         Builder.AddPlaceholderChunk("declaration");
         Results.AddResult(Result(Builder.TakeString()));
+      } else {
+        Results.AddResult(Result("template", CodeCompletionResult::RK_Keyword));
       }
     }
 
@@ -1757,6 +1759,8 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC,
       Builder.AddPlaceholderChunk("parameters");
       Builder.AddChunk(CodeCompletionString::CK_RightAngle);
       Results.AddResult(Result(Builder.TakeString()));
+    } else {
+      Results.AddResult(Result("template", CodeCompletionResult::RK_Keyword));
     }
 
     AddStorageSpecifiers(CCC, SemaRef.getLangOpts(), Results);

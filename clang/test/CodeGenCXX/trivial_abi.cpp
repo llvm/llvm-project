@@ -57,7 +57,7 @@ void testParamSmall(Small a) noexcept {
 
 // CHECK: define i64 @_Z15testReturnSmallv()
 // CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_SMALL:.*]], align 8
-// CHECK: %[[CALL:.*]] = call %[[STRUCT_SMALL]]* @_ZN5SmallC1Ev(%[[STRUCT_SMALL]]* noalias %[[RETVAL]])
+// CHECK: %[[CALL:.*]] = call %[[STRUCT_SMALL]]* @_ZN5SmallC1Ev(%[[STRUCT_SMALL]]* %[[RETVAL]])
 // CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_SMALL]], %[[STRUCT_SMALL]]* %[[RETVAL]], i32 0, i32 0
 // CHECK: %[[V0:.*]] = load i32*, i32** %[[COERCE_DIVE]], align 8
 // CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint i32* %[[V0]] to i64
@@ -72,8 +72,8 @@ Small testReturnSmall() {
 // CHECK: define void @_Z14testCallSmall0v()
 // CHECK: %[[T:.*]] = alloca %[[STRUCT_SMALL:.*]], align 8
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_SMALL]], align 8
-// CHECK: %[[CALL:.*]] = call %[[STRUCT_SMALL]]* @_ZN5SmallC1Ev(%[[STRUCT_SMALL]]* noalias %[[T]])
-// CHECK: %[[CALL1:.*]] = call %[[STRUCT_SMALL]]* @_ZN5SmallC1ERKS_(%[[STRUCT_SMALL]]* noalias %[[AGG_TMP]], %[[STRUCT_SMALL]]* dereferenceable(8) %[[T]])
+// CHECK: %[[CALL:.*]] = call %[[STRUCT_SMALL]]* @_ZN5SmallC1Ev(%[[STRUCT_SMALL]]* %[[T]])
+// CHECK: %[[CALL1:.*]] = call %[[STRUCT_SMALL]]* @_ZN5SmallC1ERKS_(%[[STRUCT_SMALL]]* %[[AGG_TMP]], %[[STRUCT_SMALL]]* dereferenceable(8) %[[T]])
 // CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_SMALL]], %[[STRUCT_SMALL]]* %[[AGG_TMP]], i32 0, i32 0
 // CHECK: %[[V0:.*]] = load i32*, i32** %[[COERCE_DIVE]], align 8
 // CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint i32* %[[V0]] to i64
@@ -127,7 +127,7 @@ void testParamLarge(Large a) noexcept {
 }
 
 // CHECK: define void @_Z15testReturnLargev(%[[STRUCT_LARGE:.*]]* noalias sret %[[AGG_RESULT:.*]])
-// CHECK: %[[CALL:.*]] = call %[[STRUCT_LARGE]]* @_ZN5LargeC1Ev(%[[STRUCT_LARGE]]* noalias %[[AGG_RESULT]])
+// CHECK: %[[CALL:.*]] = call %[[STRUCT_LARGE]]* @_ZN5LargeC1Ev(%[[STRUCT_LARGE]]* %[[AGG_RESULT]])
 // CHECK: ret void
 // CHECK: }
 
@@ -139,8 +139,8 @@ Large testReturnLarge() {
 // CHECK: define void @_Z14testCallLarge0v()
 // CHECK: %[[T:.*]] = alloca %[[STRUCT_LARGE:.*]], align 8
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_LARGE]], align 8
-// CHECK: %[[CALL:.*]] = call %[[STRUCT_LARGE]]* @_ZN5LargeC1Ev(%[[STRUCT_LARGE]]* noalias %[[T]])
-// CHECK: %[[CALL1:.*]] = call %[[STRUCT_LARGE]]* @_ZN5LargeC1ERKS_(%[[STRUCT_LARGE]]* noalias %[[AGG_TMP]], %[[STRUCT_LARGE]]* dereferenceable(520) %[[T]])
+// CHECK: %[[CALL:.*]] = call %[[STRUCT_LARGE]]* @_ZN5LargeC1Ev(%[[STRUCT_LARGE]]* %[[T]])
+// CHECK: %[[CALL1:.*]] = call %[[STRUCT_LARGE]]* @_ZN5LargeC1ERKS_(%[[STRUCT_LARGE]]* %[[AGG_TMP]], %[[STRUCT_LARGE]]* dereferenceable(520) %[[T]])
 // CHECK: call void @_Z14testParamLarge5Large(%[[STRUCT_LARGE]]* %[[AGG_TMP]])
 // CHECK: %[[CALL2:.*]] = call %[[STRUCT_LARGE]]* @_ZN5LargeD1Ev(%[[STRUCT_LARGE]]* %[[T]])
 // CHECK: ret void
@@ -187,7 +187,7 @@ Trivial testReturnHasTrivial() {
 }
 
 // CHECK: define void @_Z23testReturnHasNonTrivialv(%[[STRUCT_NONTRIVIAL:.*]]* noalias sret %[[AGG_RESULT:.*]])
-// CHECK: %[[CALL:.*]] = call %[[STRUCT_NONTRIVIAL]]* @_ZN10NonTrivialC1Ev(%[[STRUCT_NONTRIVIAL]]* noalias %[[AGG_RESULT]])
+// CHECK: %[[CALL:.*]] = call %[[STRUCT_NONTRIVIAL]]* @_ZN10NonTrivialC1Ev(%[[STRUCT_NONTRIVIAL]]* %[[AGG_RESULT]])
 // CHECK: ret void
 // CHECK: }
 
@@ -199,8 +199,8 @@ NonTrivial testReturnHasNonTrivial() {
 // CHECK: define void @_Z18testExceptionSmallv()
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_SMALL]], align 8
 // CHECK: %[[AGG_TMP1:.*]] = alloca %[[STRUCT_SMALL]], align 8
-// CHECK: call %[[STRUCT_SMALL]]* @_ZN5SmallC1Ev(%[[STRUCT_SMALL]]* noalias %[[AGG_TMP]])
-// CHECK: invoke %[[STRUCT_SMALL]]* @_ZN5SmallC1Ev(%[[STRUCT_SMALL]]* noalias %[[AGG_TMP1]])
+// CHECK: call %[[STRUCT_SMALL]]* @_ZN5SmallC1Ev(%[[STRUCT_SMALL]]* %[[AGG_TMP]])
+// CHECK: invoke %[[STRUCT_SMALL]]* @_ZN5SmallC1Ev(%[[STRUCT_SMALL]]* %[[AGG_TMP1]])
 
 // CHECK: call void @_Z20calleeExceptionSmall5SmallS_(i64 %{{.*}}, i64 %{{.*}})
 // CHECK-NEXT: ret void
@@ -220,8 +220,8 @@ void testExceptionSmall() {
 // CHECK: define void @_Z18testExceptionLargev()
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_LARGE]], align 8
 // CHECK: %[[AGG_TMP1:.*]] = alloca %[[STRUCT_LARGE]], align 8
-// CHECK: call %[[STRUCT_LARGE]]* @_ZN5LargeC1Ev(%[[STRUCT_LARGE]]* noalias %[[AGG_TMP]])
-// CHECK: invoke %[[STRUCT_LARGE]]* @_ZN5LargeC1Ev(%[[STRUCT_LARGE]]* noalias %[[AGG_TMP1]])
+// CHECK: call %[[STRUCT_LARGE]]* @_ZN5LargeC1Ev(%[[STRUCT_LARGE]]* %[[AGG_TMP]])
+// CHECK: invoke %[[STRUCT_LARGE]]* @_ZN5LargeC1Ev(%[[STRUCT_LARGE]]* %[[AGG_TMP1]])
 
 // CHECK: call void @_Z20calleeExceptionLarge5LargeS_(%[[STRUCT_LARGE]]* %[[AGG_TMP]], %[[STRUCT_LARGE]]* %[[AGG_TMP1]])
 // CHECK-NEXT: ret void

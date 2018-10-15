@@ -33,7 +33,7 @@ struct TCPPObject
 // CHECK: [[TWO:%.*]] = load %struct.TCPPObject*, %struct.TCPPObject** [[ADDR:%.*]], align 8
 // CHECK: [[THREE:%.*]] = load %struct.TCPPObject*, %struct.TCPPObject** [[ADDR1:%.*]], align 8
 // CHECK: [[CALL:%.*]] = call i32 @_Z7DEFAULTv()
-// CHECK:  call void @_ZN10TCPPObjectC1ERKS_i(%struct.TCPPObject* noalias [[TWO]], %struct.TCPPObject* dereferenceable({{[0-9]+}}) [[THREE]], i32 [[CALL]])
+// CHECK:  call void @_ZN10TCPPObjectC1ERKS_i(%struct.TCPPObject* [[TWO]], %struct.TCPPObject* dereferenceable({{[0-9]+}}) [[THREE]], i32 [[CALL]])
 // CHECK:  ret void
 
 // CHECK: define internal void @"\01-[MyDocument MyProperty]"(
