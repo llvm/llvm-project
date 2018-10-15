@@ -652,7 +652,7 @@ Instruction *InstCombiner::FoldPHIArgLoadIntoPHI(PHINode &PN) {
 Instruction *InstCombiner::FoldPHIArgZextsIntoPHI(PHINode &Phi) {
   // We cannot create a new instruction after the PHI if the terminator is an
   // EHPad because there is no valid insertion point.
-  if (TerminatorInst *TI = Phi.getParent()->getTerminator())
+  if (Instruction *TI = Phi.getParent()->getTerminator())
     if (TI->isEHPad())
       return nullptr;
 
@@ -726,7 +726,7 @@ Instruction *InstCombiner::FoldPHIArgZextsIntoPHI(PHINode &Phi) {
 Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
   // We cannot create a new instruction after the PHI if the terminator is an
   // EHPad because there is no valid insertion point.
-  if (TerminatorInst *TI = PN.getParent()->getTerminator())
+  if (Instruction *TI = PN.getParent()->getTerminator())
     if (TI->isEHPad())
       return nullptr;
 

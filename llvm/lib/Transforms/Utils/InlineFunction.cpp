@@ -2247,7 +2247,7 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
   // Change the branch that used to go to AfterCallBB to branch to the first
   // basic block of the inlined function.
   //
-  TerminatorInst *Br = OrigBB->getTerminator();
+  Instruction *Br = OrigBB->getTerminator();
   assert(Br && Br->getOpcode() == Instruction::Br &&
          "splitBasicBlock broken!");
   Br->setOperand(0, &*FirstNewBlock);

@@ -511,6 +511,29 @@ main_body:
   ret void
 }
 
+; GCN-LABEL: {{^}}smrd_uniform_loop:
+;
+; TODO: this should use an s_buffer_load
+;
+; GCN: buffer_load_dword
+define amdgpu_ps float @smrd_uniform_loop(<4 x i32> inreg %desc, i32 %bound) #0 {
+main_body:
+  br label %loop
+
+loop:
+  %counter = phi i32 [ 0, %main_body ], [ %counter.next, %loop ]
+  %sum = phi float [ 0.0, %main_body ], [ %sum.next, %loop ]
+  %offset = shl i32 %counter, 2
+  %v = call float @llvm.SI.load.const.v4i32(<4 x i32> %desc, i32 %offset)
+  %sum.next = fadd float %sum, %v
+  %counter.next = add i32 %counter, 1
+  %cc = icmp uge i32 %counter.next, %bound
+  br i1 %cc, label %exit, label %loop
+
+exit:
+  ret float %sum.next
+}
+
 
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 declare float @llvm.SI.load.const.v4i32(<4 x i32>, i32) #1

@@ -3732,7 +3732,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // Scan down this block to see if there is another stack restore in the
     // same block without an intervening call/alloca.
     BasicBlock::iterator BI(II);
-    TerminatorInst *TI = II->getParent()->getTerminator();
+    Instruction *TI = II->getParent()->getTerminator();
     bool CannotRemove = false;
     for (++BI; &*BI != TI; ++BI) {
       if (isa<AllocaInst>(BI)) {

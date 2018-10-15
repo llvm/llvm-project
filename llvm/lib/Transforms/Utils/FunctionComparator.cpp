@@ -867,8 +867,8 @@ int FunctionComparator::compare() {
     if (int Res = cmpBasicBlocks(BBL, BBR))
       return Res;
 
-    const TerminatorInst *TermL = BBL->getTerminator();
-    const TerminatorInst *TermR = BBR->getTerminator();
+    const Instruction *TermL = BBL->getTerminator();
+    const Instruction *TermR = BBR->getTerminator();
 
     assert(TermL->getNumSuccessors() == TermR->getNumSuccessors());
     for (unsigned i = 0, e = TermL->getNumSuccessors(); i != e; ++i) {
@@ -938,7 +938,7 @@ FunctionComparator::FunctionHash FunctionComparator::functionHash(Function &F) {
     for (auto &Inst : *BB) {
       H.add(Inst.getOpcode());
     }
-    const TerminatorInst *Term = BB->getTerminator();
+    const Instruction *Term = BB->getTerminator();
     for (unsigned i = 0, e = Term->getNumSuccessors(); i != e; ++i) {
       if (!VisitedBBs.insert(Term->getSuccessor(i)).second)
         continue;

@@ -2347,7 +2347,7 @@ tryToMoveFreeBeforeNullTest(CallInst &FI) {
     return nullptr;
 
   // Validate the rest of constraint #1 by matching on the pred branch.
-  TerminatorInst *TI = PredBB->getTerminator();
+  Instruction *TI = PredBB->getTerminator();
   BasicBlock *TrueBB, *FalseBB;
   ICmpInst::Predicate Pred;
   if (!match(TI, m_Br(m_ICmp(Pred, m_Specific(Op), m_Zero()), TrueBB, FalseBB)))
@@ -3285,7 +3285,7 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
 
     // Recursively visit successors.  If this is a branch or switch on a
     // constant, only visit the reachable successor.
-    TerminatorInst *TI = BB->getTerminator();
+    Instruction *TI = BB->getTerminator();
     if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
       if (BI->isConditional() && isa<ConstantInt>(BI->getCondition())) {
         bool CondVal = cast<ConstantInt>(BI->getCondition())->getZExtValue();

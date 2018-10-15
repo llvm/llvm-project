@@ -72,7 +72,7 @@ static bool partitionOuterLoopBlocks(Loop *L, Loop *SubLoop,
   for (BasicBlock *BB : ForeBlocks) {
     if (BB == SubLoopPreHeader)
       continue;
-    TerminatorInst *TI = BB->getTerminator();
+    Instruction *TI = BB->getTerminator();
     for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
       if (!ForeBlocks.count(TI->getSuccessor(i)))
         return false;

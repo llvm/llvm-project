@@ -781,7 +781,7 @@ LoopUnrollResult llvm::UnrollLoop(
         // there is no such latch.
         NewIDom = Latches.back();
         for (BasicBlock *IterLatch : Latches) {
-          TerminatorInst *Term = IterLatch->getTerminator();
+          Instruction *Term = IterLatch->getTerminator();
           if (isa<BranchInst>(Term) && cast<BranchInst>(Term)->isConditional()) {
             NewIDom = IterLatch;
             break;

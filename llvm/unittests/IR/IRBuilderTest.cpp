@@ -160,7 +160,7 @@ TEST_F(IRBuilderTest, CreateCondBr) {
   BasicBlock *FBB = BasicBlock::Create(Ctx, "", F);
 
   BranchInst *BI = Builder.CreateCondBr(Builder.getTrue(), TBB, FBB);
-  TerminatorInst *TI = BB->getTerminator();
+  Instruction *TI = BB->getTerminator();
   EXPECT_EQ(BI, TI);
   EXPECT_EQ(2u, TI->getNumSuccessors());
   EXPECT_EQ(TBB, TI->getSuccessor(0));

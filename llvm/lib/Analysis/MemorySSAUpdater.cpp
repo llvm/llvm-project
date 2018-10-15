@@ -1104,7 +1104,7 @@ void MemorySSAUpdater::removeBlocks(
     const SmallPtrSetImpl<BasicBlock *> &DeadBlocks) {
   // First delete all uses of BB in MemoryPhis.
   for (BasicBlock *BB : DeadBlocks) {
-    TerminatorInst *TI = BB->getTerminator();
+    Instruction *TI = BB->getTerminator();
     assert(TI && "Basic block expected to have a terminator instruction");
     for (BasicBlock *Succ : successors(TI))
       if (!DeadBlocks.count(Succ))

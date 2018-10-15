@@ -792,9 +792,9 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT, MVT PromotedBitwiseVT) {
   for (MVT InnerVT : MVT::all_valuetypes())
     setLoadExtAction(ISD::EXTLOAD, InnerVT, VT, Expand);
 
-  // CNT supports only B element sizes.
+  // CNT supports only B element sizes, then use UADDLP to widen.
   if (VT != MVT::v8i8 && VT != MVT::v16i8)
-    setOperationAction(ISD::CTPOP, VT, Expand);
+    setOperationAction(ISD::CTPOP, VT, Custom);
 
   setOperationAction(ISD::UDIV, VT, Expand);
   setOperationAction(ISD::SDIV, VT, Expand);
@@ -4539,18 +4539,42 @@ SDValue AArch64TargetLowering::LowerCTPOP(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
 
-  if (VT == MVT::i32)
-    Val = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Val);
-  Val = DAG.getNode(ISD::BITCAST, DL, MVT::v8i8, Val);
+  if (VT == MVT::i32 || VT == MVT::i64) {
+    if (VT == MVT::i32)
+      Val = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Val);
+    Val = DAG.getNode(ISD::BITCAST, DL, MVT::v8i8, Val);
 
-  SDValue CtPop = DAG.getNode(ISD::CTPOP, DL, MVT::v8i8, Val);
-  SDValue UaddLV = DAG.getNode(
-      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
-      DAG.getConstant(Intrinsic::aarch64_neon_uaddlv, DL, MVT::i32), CtPop);
+    SDValue CtPop = DAG.getNode(ISD::CTPOP, DL, MVT::v8i8, Val);
+    SDValue UaddLV = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+        DAG.getConstant(Intrinsic::aarch64_neon_uaddlv, DL, MVT::i32), CtPop);
 
-  if (VT == MVT::i64)
-    UaddLV = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, UaddLV);
-  return UaddLV;
+    if (VT == MVT::i64)
+      UaddLV = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, UaddLV);
+    return UaddLV;
+  }
+
+  assert((VT == MVT::v1i64 || VT == MVT::v2i64 || VT == MVT::v2i32 ||
+          VT == MVT::v4i32 || VT == MVT::v4i16 || VT == MVT::v8i16) &&
+         "Unexpected type for custom ctpop lowering");
+
+  EVT VT8Bit = VT.is64BitVector() ? MVT::v8i8 : MVT::v16i8;
+  Val = DAG.getBitcast(VT8Bit, Val);
+  Val = DAG.getNode(ISD::CTPOP, DL, VT8Bit, Val);
+
+  // Widen v8i8/v16i8 CTPOP result to VT by repeatedly widening pairwise adds.
+  unsigned EltSize = 8;
+  unsigned NumElts = VT.is64BitVector() ? 8 : 16;
+  while (EltSize != VT.getScalarSizeInBits()) {
+    EltSize *= 2;
+    NumElts /= 2;
+    MVT WidenVT = MVT::getVectorVT(MVT::getIntegerVT(EltSize), NumElts);
+    Val = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, WidenVT,
+        DAG.getConstant(Intrinsic::aarch64_neon_uaddlp, DL, MVT::i32), Val);
+  }
+
+  return Val;
 }
 
 SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {

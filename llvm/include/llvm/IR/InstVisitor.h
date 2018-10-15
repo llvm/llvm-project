@@ -166,15 +166,6 @@ public:
   // Specific Instruction type classes... note that all of the casts are
   // necessary because we use the instruction classes as opaque types...
   //
-  RetTy visitReturnInst(ReturnInst &I)            { DELEGATE(TerminatorInst);}
-  RetTy visitBranchInst(BranchInst &I)            { DELEGATE(TerminatorInst);}
-  RetTy visitSwitchInst(SwitchInst &I)            { DELEGATE(TerminatorInst);}
-  RetTy visitIndirectBrInst(IndirectBrInst &I)    { DELEGATE(TerminatorInst);}
-  RetTy visitResumeInst(ResumeInst &I)            { DELEGATE(TerminatorInst);}
-  RetTy visitUnreachableInst(UnreachableInst &I)  { DELEGATE(TerminatorInst);}
-  RetTy visitCleanupReturnInst(CleanupReturnInst &I) { DELEGATE(TerminatorInst);}
-  RetTy visitCatchReturnInst(CatchReturnInst &I)  { DELEGATE(TerminatorInst); }
-  RetTy visitCatchSwitchInst(CatchSwitchInst &I)  { DELEGATE(TerminatorInst);}
   RetTy visitICmpInst(ICmpInst &I)                { DELEGATE(CmpInst);}
   RetTy visitFCmpInst(FCmpInst &I)                { DELEGATE(CmpInst);}
   RetTy visitAllocaInst(AllocaInst &I)            { DELEGATE(UnaryInstruction);}
@@ -236,6 +227,37 @@ public:
     return static_cast<SubClass*>(this)->visitCallSite(&I);
   }
 
+  // While terminators don't have a distinct type modeling them, we support
+  // intercepting them with dedicated a visitor callback.
+  RetTy visitReturnInst(ReturnInst &I) {
+    return static_cast<SubClass *>(this)->visitTerminator(I);
+  }
+  RetTy visitBranchInst(BranchInst &I) {
+    return static_cast<SubClass *>(this)->visitTerminator(I);
+  }
+  RetTy visitSwitchInst(SwitchInst &I) {
+    return static_cast<SubClass *>(this)->visitTerminator(I);
+  }
+  RetTy visitIndirectBrInst(IndirectBrInst &I) {
+    return static_cast<SubClass *>(this)->visitTerminator(I);
+  }
+  RetTy visitResumeInst(ResumeInst &I) {
+    return static_cast<SubClass *>(this)->visitTerminator(I);
+  }
+  RetTy visitUnreachableInst(UnreachableInst &I) {
+    return static_cast<SubClass *>(this)->visitTerminator(I);
+  }
+  RetTy visitCleanupReturnInst(CleanupReturnInst &I) {
+    return static_cast<SubClass *>(this)->visitTerminator(I);
+  }
+  RetTy visitCatchReturnInst(CatchReturnInst &I) {
+    return static_cast<SubClass *>(this)->visitTerminator(I);
+  }
+  RetTy visitCatchSwitchInst(CatchSwitchInst &I) {
+    return static_cast<SubClass *>(this)->visitTerminator(I);
+  }
+  RetTy visitTerminator(Instruction &I)    { DELEGATE(Instruction);}
+
   // Next level propagators: If the user does not overload a specific
   // instruction type, they can overload one of these to get the whole class
   // of instructions...
@@ -243,7 +265,6 @@ public:
   RetTy visitCastInst(CastInst &I)                { DELEGATE(UnaryInstruction);}
   RetTy visitBinaryOperator(BinaryOperator &I)    { DELEGATE(Instruction);}
   RetTy visitCmpInst(CmpInst &I)                  { DELEGATE(Instruction);}
-  RetTy visitTerminatorInst(TerminatorInst &I)    { DELEGATE(Instruction);}
   RetTy visitUnaryInstruction(UnaryInstruction &I){ DELEGATE(Instruction);}
 
   // Provide a special visitor for a 'callsite' that visits both calls and
@@ -256,7 +277,7 @@ public:
       DELEGATE(Instruction);
 
     assert(CS.isInvoke());
-    DELEGATE(TerminatorInst);
+    return static_cast<SubClass *>(this)->visitTerminator(I);
   }
 
   // If the user wants a 'default' case, they can choose to override this

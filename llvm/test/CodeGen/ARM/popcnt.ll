@@ -32,11 +32,7 @@ define <4 x i16> @vcnt16(<4 x i16>* %A) nounwind {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vcnt.8 d16, d16
-; CHECK-NEXT:    vrev16.8 d17, d16
-; CHECK-NEXT:    vadd.i8 d16, d16, d17
-; CHECK-NEXT:    vorr d17, d16, d16
-; CHECK-NEXT:    vuzp.8 d16, d17
-; CHECK-NEXT:    vmovl.u8 q8, d16
+; CHECK-NEXT:    vpaddl.u8 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <4 x i16>, <4 x i16>* %A
@@ -49,11 +45,7 @@ define <8 x i16> @vcntQ16(<8 x i16>* %A) nounwind {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vcnt.8 q8, q8
-; CHECK-NEXT:    vrev16.8 q9, q8
-; CHECK-NEXT:    vadd.i8 q8, q8, q9
-; CHECK-NEXT:    vorr q9, q8, q8
-; CHECK-NEXT:    vuzp.8 q8, q9
-; CHECK-NEXT:    vmovl.u8 q8, d16
+; CHECK-NEXT:    vpaddl.u8 q8, q8
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
@@ -67,16 +59,8 @@ define <2 x i32> @vcnt32(<2 x i32>* %A) nounwind {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vcnt.8 d16, d16
-; CHECK-NEXT:    vrev16.8 d17, d16
-; CHECK-NEXT:    vadd.i8 d16, d16, d17
-; CHECK-NEXT:    vorr d17, d16, d16
-; CHECK-NEXT:    vuzp.8 d16, d17
-; CHECK-NEXT:    vmovl.u8 q8, d16
-; CHECK-NEXT:    vrev32.16 d18, d16
-; CHECK-NEXT:    vadd.i16 d16, d16, d18
-; CHECK-NEXT:    vorr d17, d16, d16
-; CHECK-NEXT:    vuzp.16 d16, d17
-; CHECK-NEXT:    vmovl.u16 q8, d16
+; CHECK-NEXT:    vpaddl.u8 d16, d16
+; CHECK-NEXT:    vpaddl.u16 d16, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 	%tmp1 = load <2 x i32>, <2 x i32>* %A
@@ -89,16 +73,8 @@ define <4 x i32> @vcntQ32(<4 x i32>* %A) nounwind {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vcnt.8 q8, q8
-; CHECK-NEXT:    vrev16.8 q9, q8
-; CHECK-NEXT:    vadd.i8 q8, q8, q9
-; CHECK-NEXT:    vorr q9, q8, q8
-; CHECK-NEXT:    vuzp.8 q8, q9
-; CHECK-NEXT:    vmovl.u8 q9, d16
-; CHECK-NEXT:    vrev32.16 q9, q9
-; CHECK-NEXT:    vaddw.u8 q8, q9, d16
-; CHECK-NEXT:    vorr q9, q8, q8
-; CHECK-NEXT:    vuzp.16 q8, q9
-; CHECK-NEXT:    vmovl.u16 q8, d16
+; CHECK-NEXT:    vpaddl.u8 q8, q8
+; CHECK-NEXT:    vpaddl.u16 q8, q8
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
@@ -110,50 +86,13 @@ define <4 x i32> @vcntQ32(<4 x i32>* %A) nounwind {
 define <1 x i64> @vcnt64(<1 x i64>* %A) nounwind {
 ; CHECK-LABEL: vcnt64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    vldr d16, [r0]
-; CHECK-NEXT:    ldr r2, .LCPI6_0
-; CHECK-NEXT:    vmov.32 r0, d16[0]
-; CHECK-NEXT:    ldr r3, .LCPI6_3
-; CHECK-NEXT:    vmov.32 r1, d16[1]
-; CHECK-NEXT:    ldr lr, .LCPI6_2
-; CHECK-NEXT:    ldr r12, .LCPI6_1
-; CHECK-NEXT:    vldr s1, .LCPI6_4
-; CHECK-NEXT:    and r4, r2, r0, lsr #1
-; CHECK-NEXT:    sub r0, r0, r4
-; CHECK-NEXT:    and r2, r2, r1, lsr #1
-; CHECK-NEXT:    sub r1, r1, r2
-; CHECK-NEXT:    and r4, r0, r3
-; CHECK-NEXT:    and r0, r3, r0, lsr #2
-; CHECK-NEXT:    and r2, r1, r3
-; CHECK-NEXT:    add r0, r4, r0
-; CHECK-NEXT:    and r1, r3, r1, lsr #2
-; CHECK-NEXT:    add r1, r2, r1
-; CHECK-NEXT:    add r0, r0, r0, lsr #4
-; CHECK-NEXT:    and r0, r0, lr
-; CHECK-NEXT:    add r1, r1, r1, lsr #4
-; CHECK-NEXT:    mul r2, r0, r12
-; CHECK-NEXT:    and r0, r1, lr
-; CHECK-NEXT:    mul r1, r0, r12
-; CHECK-NEXT:    lsr r0, r2, #24
-; CHECK-NEXT:    add r0, r0, r1, lsr #24
-; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vmov r0, r1, d0
-; CHECK-NEXT:    pop {r4, lr}
+; CHECK-NEXT:    vcnt.8 d16, d16
+; CHECK-NEXT:    vpaddl.u8 d16, d16
+; CHECK-NEXT:    vpaddl.u16 d16, d16
+; CHECK-NEXT:    vpaddl.u32 d16, d16
+; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI6_0:
-; CHECK-NEXT:    .long 1431655765 @ 0x55555555
-; CHECK-NEXT:  .LCPI6_1:
-; CHECK-NEXT:    .long 16843009 @ 0x1010101
-; CHECK-NEXT:  .LCPI6_2:
-; CHECK-NEXT:    .long 252645135 @ 0xf0f0f0f
-; CHECK-NEXT:  .LCPI6_3:
-; CHECK-NEXT:    .long 858993459 @ 0x33333333
-; CHECK-NEXT:  .LCPI6_4:
-; CHECK-NEXT:    .long 0 @ float 0
 	%tmp1 = load <1 x i64>, <1 x i64>* %A
 	%tmp2 = call <1 x i64> @llvm.ctpop.v1i64(<1 x i64> %tmp1)
 	ret <1 x i64> %tmp2
@@ -162,73 +101,14 @@ define <1 x i64> @vcnt64(<1 x i64>* %A) nounwind {
 define <2 x i64> @vcntQ64(<2 x i64>* %A) nounwind {
 ; CHECK-LABEL: vcntQ64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r6, lr}
-; CHECK-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
-; CHECK-NEXT:    vmov.32 r1, d17[1]
-; CHECK-NEXT:    ldr lr, .LCPI7_0
-; CHECK-NEXT:    vmov.32 r2, d17[0]
-; CHECK-NEXT:    ldr r0, .LCPI7_2
-; CHECK-NEXT:    vmov.32 r3, d16[0]
-; CHECK-NEXT:    ldr r12, .LCPI7_1
-; CHECK-NEXT:    ldr r5, .LCPI7_3
-; CHECK-NEXT:    vldr s3, .LCPI7_4
-; CHECK-NEXT:    and r4, lr, r1, lsr #1
-; CHECK-NEXT:    sub r1, r1, r4
-; CHECK-NEXT:    and r4, r1, r0
-; CHECK-NEXT:    and r1, r0, r1, lsr #2
-; CHECK-NEXT:    add r1, r4, r1
-; CHECK-NEXT:    and r4, lr, r2, lsr #1
-; CHECK-NEXT:    sub r2, r2, r4
-; CHECK-NEXT:    and r4, r2, r0
-; CHECK-NEXT:    add r1, r1, r1, lsr #4
-; CHECK-NEXT:    and r2, r0, r2, lsr #2
-; CHECK-NEXT:    and r6, r1, r12
-; CHECK-NEXT:    add r2, r4, r2
-; CHECK-NEXT:    and r4, lr, r3, lsr #1
-; CHECK-NEXT:    sub r3, r3, r4
-; CHECK-NEXT:    and r4, r3, r0
-; CHECK-NEXT:    add r2, r2, r2, lsr #4
-; CHECK-NEXT:    and r3, r0, r3, lsr #2
-; CHECK-NEXT:    and r2, r2, r12
-; CHECK-NEXT:    add r3, r4, r3
-; CHECK-NEXT:    add r3, r3, r3, lsr #4
-; CHECK-NEXT:    and r3, r3, r12
-; CHECK-NEXT:    mul r4, r3, r5
-; CHECK-NEXT:    vmov.32 r3, d16[1]
-; CHECK-NEXT:    and r1, lr, r3, lsr #1
-; CHECK-NEXT:    sub r1, r3, r1
-; CHECK-NEXT:    and r3, r1, r0
-; CHECK-NEXT:    and r0, r0, r1, lsr #2
-; CHECK-NEXT:    mul r1, r2, r5
-; CHECK-NEXT:    add r0, r3, r0
-; CHECK-NEXT:    mul r2, r6, r5
-; CHECK-NEXT:    add r0, r0, r0, lsr #4
-; CHECK-NEXT:    and r0, r0, r12
-; CHECK-NEXT:    mul r3, r0, r5
-; CHECK-NEXT:    lsr r0, r1, #24
-; CHECK-NEXT:    lsr r1, r4, #24
-; CHECK-NEXT:    add r0, r0, r2, lsr #24
-; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    add r0, r1, r3, lsr #24
-; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    vmov.f32 s1, s3
-; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    vmov r0, r1, d0
-; CHECK-NEXT:    pop {r4, r5, r6, lr}
+; CHECK-NEXT:    vcnt.8 q8, q8
+; CHECK-NEXT:    vpaddl.u8 q8, q8
+; CHECK-NEXT:    vpaddl.u16 q8, q8
+; CHECK-NEXT:    vpaddl.u32 q8, q8
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI7_0:
-; CHECK-NEXT:    .long 1431655765 @ 0x55555555
-; CHECK-NEXT:  .LCPI7_1:
-; CHECK-NEXT:    .long 252645135 @ 0xf0f0f0f
-; CHECK-NEXT:  .LCPI7_2:
-; CHECK-NEXT:    .long 858993459 @ 0x33333333
-; CHECK-NEXT:  .LCPI7_3:
-; CHECK-NEXT:    .long 16843009 @ 0x1010101
-; CHECK-NEXT:  .LCPI7_4:
-; CHECK-NEXT:    .long 0 @ float 0
 	%tmp1 = load <2 x i64>, <2 x i64>* %A
 	%tmp2 = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %tmp1)
 	ret <2 x i64> %tmp2
