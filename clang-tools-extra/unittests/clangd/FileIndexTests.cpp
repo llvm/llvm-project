@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "AST.h"
 #include "ClangdUnit.h"
 #include "TestFS.h"
 #include "TestTU.h"
@@ -15,6 +16,7 @@
 #include "index/FileIndex.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
+#include "clang/Frontend/Utils.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -344,6 +346,55 @@ TEST(FileIndexTest, CollectMacros) {
     SeenSymbol = true;
   });
   EXPECT_TRUE(SeenSymbol);
+}
+
+TEST(FileIndexTest, ReferencesInMainFileWithPreamble) {
+  const std::string Header = R"cpp(
+    class Foo {};
+  )cpp";
+  Annotations Main(R"cpp(
+    #include "foo.h"
+    void f() {
+      [[Foo]] foo;
+    }
+  )cpp");
+  auto MainFile = testPath("foo.cpp");
+  auto HeaderFile = testPath("foo.h");
+  std::vector<const char*> Cmd = {"clang", "-xc++", MainFile.c_str()};
+  // Preparse ParseInputs.
+  ParseInputs PI;
+  PI.CompileCommand.Directory = testRoot();
+  PI.CompileCommand.Filename = MainFile;
+  PI.CompileCommand.CommandLine = {Cmd.begin(), Cmd.end()};
+  PI.Contents = Main.code();
+  PI.FS = buildTestFS({{MainFile, Main.code()}, {HeaderFile, Header}});
+
+  // Prepare preamble.
+  auto CI = buildCompilerInvocation(PI);
+  auto PreambleData = buildPreamble(
+      MainFile,
+      *buildCompilerInvocation(PI), /*OldPreamble=*/nullptr,
+      tooling::CompileCommand(), PI,
+      std::make_shared<PCHContainerOperations>(), /*StoreInMemory=*/true,
+      [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP) {});
+  // Build AST for main file with preamble.
+  auto AST = ParsedAST::build(
+      createInvocationFromCommandLine(Cmd), PreambleData,
+      llvm::MemoryBuffer::getMemBufferCopy(Main.code()),
+      std::make_shared<PCHContainerOperations>(),
+      PI.FS);
+  ASSERT_TRUE(AST);
+  FileIndex Index;
+  Index.updateMain(MainFile, *AST);
+
+  auto Foo =
+      findSymbol(TestTU::withHeaderCode(Header).headerSymbols(), "Foo");
+  RefsRequest Request;
+  Request.IDs.insert(Foo.ID);
+
+  // Expect to see references in main file, references in headers are excluded
+  // because we only index main AST.
+  EXPECT_THAT(getRefs(Index, Foo.ID), RefsAre({RefRange(Main.range())}));
 }
 
 } // namespace
