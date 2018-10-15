@@ -871,9 +871,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     // Promote v16i8, v8i16, v4i32 load, select, and, or, xor to v2i64.
     for (auto VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32 }) {
-      setOperationPromotedToType(ISD::AND,    VT, MVT::v2i64);
-      setOperationPromotedToType(ISD::OR,     VT, MVT::v2i64);
-      setOperationPromotedToType(ISD::XOR,    VT, MVT::v2i64);
       setOperationPromotedToType(ISD::LOAD,   VT, MVT::v2i64);
     }
 
@@ -1183,9 +1180,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     // Promote v32i8, v16i16, v8i32 select, and, or, xor to v4i64.
     for (auto VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32 }) {
-      setOperationPromotedToType(ISD::AND,    VT, MVT::v4i64);
-      setOperationPromotedToType(ISD::OR,     VT, MVT::v4i64);
-      setOperationPromotedToType(ISD::XOR,    VT, MVT::v4i64);
       setOperationPromotedToType(ISD::LOAD,   VT, MVT::v4i64);
     }
 
@@ -1383,13 +1377,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setCondCodeAction(ISD::SETLT, VT, Custom);
       setCondCodeAction(ISD::SETLE, VT, Custom);
     }
-
-    // Need to promote to 64-bit even though we have 32-bit masked instructions
-    // because the IR optimizers rearrange bitcasts around logic ops leaving
-    // too many variations to handle if we don't promote them.
-    setOperationPromotedToType(ISD::AND, MVT::v16i32, MVT::v8i64);
-    setOperationPromotedToType(ISD::OR,  MVT::v16i32, MVT::v8i64);
-    setOperationPromotedToType(ISD::XOR, MVT::v16i32, MVT::v8i64);
 
     if (Subtarget.hasDQI()) {
       setOperationAction(ISD::SINT_TO_FP, MVT::v8i64, Legal);
@@ -1592,10 +1579,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SMIN,         VT, Legal);
       setOperationAction(ISD::UMIN,         VT, Legal);
       setOperationAction(ISD::SETCC,        VT, Custom);
-
-      setOperationPromotedToType(ISD::AND,  VT, MVT::v8i64);
-      setOperationPromotedToType(ISD::OR,   VT, MVT::v8i64);
-      setOperationPromotedToType(ISD::XOR,  VT, MVT::v8i64);
 
       // The condition codes aren't legal in SSE/AVX and under AVX512 we use
       // setcc all the way to isel and prefer SETGT in some isel patterns.
@@ -14692,6 +14675,11 @@ static SDValue lowerV16I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
           DL, MVT::v16i16, V1, V2, Mask, Subtarget, DAG))
     return Result;
 
+  // Try to permute the lanes and then use a per-lane permute.
+  if (SDValue V = lowerVectorShuffleAsLanePermuteAndPermute(
+          DL, MVT::v16i16, V1, V2, Mask, DAG, Subtarget))
+    return V;
+
   // Otherwise fall back on generic lowering.
   return lowerVectorShuffleAsSplitOrBlend(DL, MVT::v16i16, V1, V2, Mask, DAG);
 }
@@ -14771,6 +14759,11 @@ static SDValue lowerV32I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue Result = lowerVectorShuffleByMerging128BitLanes(
           DL, MVT::v32i8, V1, V2, Mask, Subtarget, DAG))
     return Result;
+
+  // Try to permute the lanes and then use a per-lane permute.
+  if (SDValue V = lowerVectorShuffleAsLanePermuteAndPermute(
+          DL, MVT::v32i8, V1, V2, Mask, DAG, Subtarget))
+    return V;
 
   // Otherwise fall back on generic lowering.
   return lowerVectorShuffleAsSplitOrBlend(DL, MVT::v32i8, V1, V2, Mask, DAG);
@@ -35216,6 +35209,10 @@ static SDValue combineAndMaskToShift(SDNode *N, SelectionDAG &DAG,
       !SplatVal.isMask())
     return SDValue();
 
+  // Don't prevent creation of ANDN.
+  if (isBitwiseNot(Op0))
+    return SDValue();
+
   if (!SupportedVectorShiftWithImm(VT0.getSimpleVT(), Subtarget, ISD::SRL))
     return SDValue();
 
@@ -35416,6 +35413,27 @@ static SDValue combineParity(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ZERO_EXTEND, DL, N->getValueType(0), Setnp);
 }
 
+// This promotes vectors and/or/xor to a vXi64 type. We used to do this during
+// op legalization, but DAG combine yields better results.
+// TODO: This is largely just to reduce the number of isel patterns. Maybe we
+// can just add all the patterns or do C++ based selection in X86ISelDAGToDAG?
+static SDValue promoteVecLogicOp(SDNode *N, SelectionDAG &DAG) {
+  MVT VT = N->getSimpleValueType(0);
+
+  if (!VT.is128BitVector() && !VT.is256BitVector() && !VT.is512BitVector())
+    return SDValue();
+
+  // Already correct type.
+  if (VT.getVectorElementType() == MVT::i64)
+    return SDValue();
+
+  MVT NewVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
+  SDValue Op0 = DAG.getBitcast(NewVT, N->getOperand(0));
+  SDValue Op1 = DAG.getBitcast(NewVT, N->getOperand(1));
+  return DAG.getBitcast(VT, DAG.getNode(N->getOpcode(), SDLoc(N), NewVT,
+                                        Op0, Op1));
+}
+
 static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -35449,6 +35467,9 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
+
+  if (SDValue V = promoteVecLogicOp(N, DAG))
+    return V;
 
   if (SDValue R = combineCompareEqual(N, DAG, DCI, Subtarget))
     return R;
@@ -35771,6 +35792,9 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
+
+  if (SDValue V = promoteVecLogicOp(N, DAG))
+    return V;
 
   if (SDValue R = combineCompareEqual(N, DAG, DCI, Subtarget))
     return R;
@@ -37799,6 +37823,9 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
+
+  if (SDValue V = promoteVecLogicOp(N, DAG))
+    return V;
 
   if (SDValue SetCC = foldXor1SetCC(N, DAG))
     return SetCC;

@@ -124,8 +124,8 @@ void UopsSnippetGenerator::instantiateMemoryOperands(
          "not enough scratch space");
 }
 
-llvm::Expected<CodeTemplate>
-UopsSnippetGenerator::generateCodeTemplate(const Instruction &Instr) const {
+llvm::Expected<std::vector<CodeTemplate>>
+UopsSnippetGenerator::generateCodeTemplates(const Instruction &Instr) const {
   CodeTemplate CT;
   const llvm::BitVector *ScratchSpaceAliasedRegs = nullptr;
   if (Instr.hasMemoryOperands()) {
@@ -153,13 +153,13 @@ UopsSnippetGenerator::generateCodeTemplate(const Instruction &Instr) const {
     CT.Info = "instruction is parallel, repeating a random one.";
     CT.Instructions.push_back(std::move(IT));
     instantiateMemoryOperands(CT.ScratchSpacePointerInReg, CT.Instructions);
-    return std::move(CT);
+    return getSingleton(CT);
   }
   if (SelfAliasing.hasImplicitAliasing()) {
     CT.Info = "instruction is serial, repeating a random one.";
     CT.Instructions.push_back(std::move(IT));
     instantiateMemoryOperands(CT.ScratchSpacePointerInReg, CT.Instructions);
-    return std::move(CT);
+    return getSingleton(CT);
   }
   const auto TiedVariables = getVariablesWithTiedOperands(Instr);
   if (!TiedVariables.empty()) {
@@ -181,7 +181,7 @@ UopsSnippetGenerator::generateCodeTemplate(const Instruction &Instr) const {
       CT.Instructions.push_back(std::move(TmpIT));
     }
     instantiateMemoryOperands(CT.ScratchSpacePointerInReg, CT.Instructions);
-    return std::move(CT);
+    return getSingleton(CT);
   }
   const auto &ReservedRegisters = State.getRATC().reservedRegisters();
   // No tied variables, we pick random values for defs.
@@ -218,7 +218,7 @@ UopsSnippetGenerator::generateCodeTemplate(const Instruction &Instr) const {
       "instruction has no tied variables picking Uses different from defs";
   CT.Instructions.push_back(std::move(IT));
   instantiateMemoryOperands(CT.ScratchSpacePointerInReg, CT.Instructions);
-  return std::move(CT);
+  return getSingleton(CT);
 }
 
 std::vector<BenchmarkMeasure>

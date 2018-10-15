@@ -801,22 +801,20 @@ define <8 x i16> @test23(<8 x i16> %x) {
 ; SSE2-LABEL: test23:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    pxor %xmm0, %xmm2
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    pcmpgtw %xmm2, %xmm1
-; SSE2-NEXT:    por %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm2, %xmm1
+; SSE2-NEXT:    pcmpgtw %xmm0, %xmm1
+; SSE2-NEXT:    por %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: test23:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSSE3-NEXT:    pxor %xmm2, %xmm0
 ; SSSE3-NEXT:    pxor %xmm0, %xmm2
-; SSSE3-NEXT:    movdqa %xmm0, %xmm1
-; SSSE3-NEXT:    pcmpgtw %xmm2, %xmm1
-; SSSE3-NEXT:    por %xmm0, %xmm1
+; SSSE3-NEXT:    movdqa %xmm2, %xmm1
+; SSSE3-NEXT:    pcmpgtw %xmm0, %xmm1
+; SSSE3-NEXT:    por %xmm2, %xmm1
 ; SSSE3-NEXT:    movdqa %xmm1, %xmm0
 ; SSSE3-NEXT:    retq
 ;
@@ -1029,37 +1027,33 @@ define <16 x i16> @test28(<16 x i16> %x) {
 define <16 x i16> @test29(<16 x i16> %x) {
 ; SSE2-LABEL: test29:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    pxor %xmm4, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm3
-; SSE2-NEXT:    pxor %xmm4, %xmm3
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    pcmpgtw %xmm3, %xmm2
-; SSE2-NEXT:    pxor %xmm0, %xmm4
-; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    pcmpgtw %xmm4, %xmm3
-; SSE2-NEXT:    por %xmm0, %xmm3
-; SSE2-NEXT:    por %xmm1, %xmm2
-; SSE2-NEXT:    movdqa %xmm3, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    pxor %xmm3, %xmm4
+; SSE2-NEXT:    pxor %xmm1, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm2
+; SSE2-NEXT:    pcmpgtw %xmm1, %xmm2
+; SSE2-NEXT:    movdqa %xmm4, %xmm1
+; SSE2-NEXT:    pcmpgtw %xmm0, %xmm1
+; SSE2-NEXT:    por %xmm4, %xmm1
+; SSE2-NEXT:    por %xmm3, %xmm2
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: test29:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSSE3-NEXT:    pxor %xmm4, %xmm0
-; SSSE3-NEXT:    pxor %xmm4, %xmm1
-; SSSE3-NEXT:    movdqa %xmm1, %xmm3
-; SSSE3-NEXT:    pxor %xmm4, %xmm3
-; SSSE3-NEXT:    movdqa %xmm1, %xmm2
-; SSSE3-NEXT:    pcmpgtw %xmm3, %xmm2
-; SSSE3-NEXT:    pxor %xmm0, %xmm4
-; SSSE3-NEXT:    movdqa %xmm0, %xmm3
-; SSSE3-NEXT:    pcmpgtw %xmm4, %xmm3
-; SSSE3-NEXT:    por %xmm0, %xmm3
-; SSSE3-NEXT:    por %xmm1, %xmm2
-; SSSE3-NEXT:    movdqa %xmm3, %xmm0
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; SSSE3-NEXT:    movdqa %xmm0, %xmm4
+; SSSE3-NEXT:    pxor %xmm3, %xmm4
+; SSSE3-NEXT:    pxor %xmm1, %xmm3
+; SSSE3-NEXT:    movdqa %xmm3, %xmm2
+; SSSE3-NEXT:    pcmpgtw %xmm1, %xmm2
+; SSSE3-NEXT:    movdqa %xmm4, %xmm1
+; SSSE3-NEXT:    pcmpgtw %xmm0, %xmm1
+; SSSE3-NEXT:    por %xmm4, %xmm1
+; SSSE3-NEXT:    por %xmm3, %xmm2
+; SSSE3-NEXT:    movdqa %xmm1, %xmm0
 ; SSSE3-NEXT:    movdqa %xmm2, %xmm1
 ; SSSE3-NEXT:    retq
 ;
@@ -1343,66 +1337,58 @@ define <32 x i16> @test34(<32 x i16> %x) {
 define <32 x i16> @test35(<32 x i16> %x) {
 ; SSE2-LABEL: test35:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    pxor %xmm4, %xmm1
-; SSE2-NEXT:    pxor %xmm4, %xmm2
-; SSE2-NEXT:    pxor %xmm4, %xmm3
-; SSE2-NEXT:    movdqa %xmm3, %xmm5
-; SSE2-NEXT:    pxor %xmm4, %xmm5
-; SSE2-NEXT:    movdqa %xmm3, %xmm8
-; SSE2-NEXT:    pcmpgtw %xmm5, %xmm8
-; SSE2-NEXT:    movdqa %xmm2, %xmm6
-; SSE2-NEXT:    pxor %xmm4, %xmm6
-; SSE2-NEXT:    movdqa %xmm2, %xmm5
-; SSE2-NEXT:    pcmpgtw %xmm6, %xmm5
+; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; SSE2-NEXT:    movdqa %xmm0, %xmm6
+; SSE2-NEXT:    pxor %xmm5, %xmm6
 ; SSE2-NEXT:    movdqa %xmm1, %xmm7
-; SSE2-NEXT:    pxor %xmm4, %xmm7
-; SSE2-NEXT:    movdqa %xmm1, %xmm6
-; SSE2-NEXT:    pcmpgtw %xmm7, %xmm6
-; SSE2-NEXT:    pxor %xmm0, %xmm4
-; SSE2-NEXT:    movdqa %xmm0, %xmm7
-; SSE2-NEXT:    pcmpgtw %xmm4, %xmm7
-; SSE2-NEXT:    por %xmm0, %xmm7
-; SSE2-NEXT:    por %xmm1, %xmm6
-; SSE2-NEXT:    por %xmm2, %xmm5
-; SSE2-NEXT:    por %xmm3, %xmm8
-; SSE2-NEXT:    movdqa %xmm7, %xmm0
-; SSE2-NEXT:    movdqa %xmm6, %xmm1
-; SSE2-NEXT:    movdqa %xmm5, %xmm2
+; SSE2-NEXT:    pxor %xmm5, %xmm7
+; SSE2-NEXT:    movdqa %xmm2, %xmm8
+; SSE2-NEXT:    pxor %xmm5, %xmm8
+; SSE2-NEXT:    pxor %xmm3, %xmm5
+; SSE2-NEXT:    movdqa %xmm5, %xmm4
+; SSE2-NEXT:    pcmpgtw %xmm3, %xmm4
 ; SSE2-NEXT:    movdqa %xmm8, %xmm3
+; SSE2-NEXT:    pcmpgtw %xmm2, %xmm3
+; SSE2-NEXT:    movdqa %xmm7, %xmm2
+; SSE2-NEXT:    pcmpgtw %xmm1, %xmm2
+; SSE2-NEXT:    movdqa %xmm6, %xmm1
+; SSE2-NEXT:    pcmpgtw %xmm0, %xmm1
+; SSE2-NEXT:    por %xmm6, %xmm1
+; SSE2-NEXT:    por %xmm7, %xmm2
+; SSE2-NEXT:    por %xmm8, %xmm3
+; SSE2-NEXT:    por %xmm5, %xmm4
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    movdqa %xmm2, %xmm1
+; SSE2-NEXT:    movdqa %xmm3, %xmm2
+; SSE2-NEXT:    movdqa %xmm4, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: test35:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSSE3-NEXT:    pxor %xmm4, %xmm0
-; SSSE3-NEXT:    pxor %xmm4, %xmm1
-; SSSE3-NEXT:    pxor %xmm4, %xmm2
-; SSSE3-NEXT:    pxor %xmm4, %xmm3
-; SSSE3-NEXT:    movdqa %xmm3, %xmm5
-; SSSE3-NEXT:    pxor %xmm4, %xmm5
-; SSSE3-NEXT:    movdqa %xmm3, %xmm8
-; SSSE3-NEXT:    pcmpgtw %xmm5, %xmm8
-; SSSE3-NEXT:    movdqa %xmm2, %xmm6
-; SSSE3-NEXT:    pxor %xmm4, %xmm6
-; SSSE3-NEXT:    movdqa %xmm2, %xmm5
-; SSSE3-NEXT:    pcmpgtw %xmm6, %xmm5
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm5 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; SSSE3-NEXT:    movdqa %xmm0, %xmm6
+; SSSE3-NEXT:    pxor %xmm5, %xmm6
 ; SSSE3-NEXT:    movdqa %xmm1, %xmm7
-; SSSE3-NEXT:    pxor %xmm4, %xmm7
-; SSSE3-NEXT:    movdqa %xmm1, %xmm6
-; SSSE3-NEXT:    pcmpgtw %xmm7, %xmm6
-; SSSE3-NEXT:    pxor %xmm0, %xmm4
-; SSSE3-NEXT:    movdqa %xmm0, %xmm7
-; SSSE3-NEXT:    pcmpgtw %xmm4, %xmm7
-; SSSE3-NEXT:    por %xmm0, %xmm7
-; SSSE3-NEXT:    por %xmm1, %xmm6
-; SSSE3-NEXT:    por %xmm2, %xmm5
-; SSSE3-NEXT:    por %xmm3, %xmm8
-; SSSE3-NEXT:    movdqa %xmm7, %xmm0
-; SSSE3-NEXT:    movdqa %xmm6, %xmm1
-; SSSE3-NEXT:    movdqa %xmm5, %xmm2
+; SSSE3-NEXT:    pxor %xmm5, %xmm7
+; SSSE3-NEXT:    movdqa %xmm2, %xmm8
+; SSSE3-NEXT:    pxor %xmm5, %xmm8
+; SSSE3-NEXT:    pxor %xmm3, %xmm5
+; SSSE3-NEXT:    movdqa %xmm5, %xmm4
+; SSSE3-NEXT:    pcmpgtw %xmm3, %xmm4
 ; SSSE3-NEXT:    movdqa %xmm8, %xmm3
+; SSSE3-NEXT:    pcmpgtw %xmm2, %xmm3
+; SSSE3-NEXT:    movdqa %xmm7, %xmm2
+; SSSE3-NEXT:    pcmpgtw %xmm1, %xmm2
+; SSSE3-NEXT:    movdqa %xmm6, %xmm1
+; SSSE3-NEXT:    pcmpgtw %xmm0, %xmm1
+; SSSE3-NEXT:    por %xmm6, %xmm1
+; SSSE3-NEXT:    por %xmm7, %xmm2
+; SSSE3-NEXT:    por %xmm8, %xmm3
+; SSSE3-NEXT:    por %xmm5, %xmm4
+; SSSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSSE3-NEXT:    movdqa %xmm2, %xmm1
+; SSSE3-NEXT:    movdqa %xmm3, %xmm2
+; SSSE3-NEXT:    movdqa %xmm4, %xmm3
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: test35:

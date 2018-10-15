@@ -2157,7 +2157,7 @@ define <32 x i8> @zext_32xi1_to_32xi8(<32 x i16> %x, <32 x i16> %y) #0 {
 define <4 x i32> @zext_4xi1_to_4x32(<4 x i8> %x, <4 x i8> %y) #0 {
 ; ALL-LABEL: zext_4xi1_to_4x32:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; ALL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [255,255,255,255]
 ; ALL-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; ALL-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; ALL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
@@ -2171,7 +2171,7 @@ define <4 x i32> @zext_4xi1_to_4x32(<4 x i8> %x, <4 x i8> %y) #0 {
 define <2 x i64> @zext_2xi1_to_2xi64(<2 x i8> %x, <2 x i8> %y) #0 {
 ; ALL-LABEL: zext_2xi1_to_2xi64:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
+; ALL-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [255,255]
 ; ALL-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; ALL-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; ALL-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0

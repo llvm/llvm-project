@@ -2750,9 +2750,10 @@ SDValue SelectionDAGLegalize::ExpandBitCount(unsigned Opc, SDValue Op,
                                              DAG.getConstant(4, dl, ShVT))),
                      Mask0F);
     // v = (v * 0x01010101...) >> (Len - 8)
-    Op = DAG.getNode(ISD::SRL, dl, VT,
-                     DAG.getNode(ISD::MUL, dl, VT, Op, Mask01),
-                     DAG.getConstant(Len - 8, dl, ShVT));
+    if (Len > 8)
+      Op = DAG.getNode(ISD::SRL, dl, VT,
+                       DAG.getNode(ISD::MUL, dl, VT, Op, Mask01),
+                       DAG.getConstant(Len - 8, dl, ShVT));
 
     return Op;
   }

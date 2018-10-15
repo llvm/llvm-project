@@ -130,7 +130,7 @@ static void createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
 }
 
 BasicBlock *
-llvm::SplitCriticalEdge(TerminatorInst *TI, unsigned SuccNum,
+llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
                         const CriticalEdgeSplittingOptions &Options) {
   if (!isCriticalEdge(TI, SuccNum, Options.MergeIdenticalEdges))
     return nullptr;

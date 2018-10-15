@@ -73,7 +73,7 @@ public:
 
   inline reference operator*() const {
     assert(!It.atEnd() && "pred_iterator out of range!");
-    return cast<TerminatorInst>(*It)->getParent();
+    return cast<Instruction>(*It)->getParent();
   }
   inline pointer *operator->() const { return &operator*(); }
 

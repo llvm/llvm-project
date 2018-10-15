@@ -993,7 +993,6 @@ define zeroext i8 @test_extractelement_v32i1(<32 x i8> %a, <32 x i8> %b) {
 ; KNL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
-; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kshiftrw $2, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
@@ -1023,7 +1022,6 @@ define zeroext i8 @test_extractelement_v64i1(<64 x i8> %a, <64 x i8> %b) {
 ; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
 ; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
-; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
@@ -1059,7 +1057,6 @@ define zeroext i8 @extractelement_v64i1_alt(<64 x i8> %a, <64 x i8> %b) {
 ; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
 ; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
-; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax

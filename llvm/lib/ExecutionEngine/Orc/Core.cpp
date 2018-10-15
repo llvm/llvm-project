@@ -686,26 +686,26 @@ buildSimpleReexportsAliasMap(JITDylib &SourceJD, const SymbolNameSet &Symbols) {
   return Result;
 }
 
-ReexportsFallbackDefinitionGenerator::ReexportsFallbackDefinitionGenerator(
-    JITDylib &BackingJD, SymbolPredicate Allow)
-    : BackingJD(BackingJD), Allow(std::move(Allow)) {}
+ReexportsGenerator::ReexportsGenerator(JITDylib &SourceJD,
+                                       SymbolPredicate Allow)
+    : SourceJD(SourceJD), Allow(std::move(Allow)) {}
 
-SymbolNameSet ReexportsFallbackDefinitionGenerator::
-operator()(JITDylib &JD, const SymbolNameSet &Names) {
+SymbolNameSet ReexportsGenerator::operator()(JITDylib &JD,
+                                             const SymbolNameSet &Names) {
   orc::SymbolNameSet Added;
   orc::SymbolAliasMap AliasMap;
 
-  auto Flags = BackingJD.lookupFlags(Names);
+  auto Flags = SourceJD.lookupFlags(Names);
 
   for (auto &KV : Flags) {
-    if (!Allow(KV.first))
+    if (Allow && !Allow(KV.first))
       continue;
     AliasMap[KV.first] = SymbolAliasMapEntry(KV.first, KV.second);
     Added.insert(KV.first);
   }
 
   if (!Added.empty())
-    cantFail(JD.define(reexports(BackingJD, AliasMap)));
+    cantFail(JD.define(reexports(SourceJD, AliasMap)));
 
   return Added;
 }
@@ -1117,10 +1117,10 @@ SymbolFlagsMap JITDylib::lookupFlags(const SymbolNameSet &Names) {
   return ES.runSessionLocked([&, this]() {
     SymbolFlagsMap Result;
     auto Unresolved = lookupFlagsImpl(Result, Names);
-    if (FallbackDefinitionGenerator && !Unresolved.empty()) {
-      auto FallbackDefs = FallbackDefinitionGenerator(*this, Unresolved);
-      if (!FallbackDefs.empty()) {
-        auto Unresolved2 = lookupFlagsImpl(Result, FallbackDefs);
+    if (DefGenerator && !Unresolved.empty()) {
+      auto NewDefs = DefGenerator(*this, Unresolved);
+      if (!NewDefs.empty()) {
+        auto Unresolved2 = lookupFlagsImpl(Result, NewDefs);
         (void)Unresolved2;
         assert(Unresolved2.empty() &&
                "All fallback defs should have been found by lookupFlagsImpl");
@@ -1156,14 +1156,13 @@ void JITDylib::lodgeQuery(std::shared_ptr<AsynchronousSymbolQuery> &Q,
   assert(Q && "Query can not be null");
 
   lodgeQueryImpl(Q, Unresolved, MatchNonExportedInJD, MatchNonExported, MUs);
-  if (FallbackDefinitionGenerator && !Unresolved.empty()) {
-    auto FallbackDefs = FallbackDefinitionGenerator(*this, Unresolved);
-    if (!FallbackDefs.empty()) {
-      for (auto &D : FallbackDefs)
+  if (DefGenerator && !Unresolved.empty()) {
+    auto NewDefs = DefGenerator(*this, Unresolved);
+    if (!NewDefs.empty()) {
+      for (auto &D : NewDefs)
         Unresolved.erase(D);
-      lodgeQueryImpl(Q, FallbackDefs, MatchNonExportedInJD, MatchNonExported,
-                     MUs);
-      assert(FallbackDefs.empty() &&
+      lodgeQueryImpl(Q, NewDefs, MatchNonExportedInJD, MatchNonExported, MUs);
+      assert(NewDefs.empty() &&
              "All fallback defs should have been found by lookupImpl");
     }
   }
@@ -1250,15 +1249,15 @@ SymbolNameSet JITDylib::legacyLookup(std::shared_ptr<AsynchronousSymbolQuery> Q,
   SymbolNameSet Unresolved = std::move(Names);
   ES.runSessionLocked([&, this]() {
     ActionFlags = lookupImpl(Q, MUs, Unresolved);
-    if (FallbackDefinitionGenerator && !Unresolved.empty()) {
+    if (DefGenerator && !Unresolved.empty()) {
       assert(ActionFlags == None &&
              "ActionFlags set but unresolved symbols remain?");
-      auto FallbackDefs = FallbackDefinitionGenerator(*this, Unresolved);
-      if (!FallbackDefs.empty()) {
-        for (auto &D : FallbackDefs)
+      auto NewDefs = DefGenerator(*this, Unresolved);
+      if (!NewDefs.empty()) {
+        for (auto &D : NewDefs)
           Unresolved.erase(D);
-        ActionFlags = lookupImpl(Q, MUs, FallbackDefs);
-        assert(FallbackDefs.empty() &&
+        ActionFlags = lookupImpl(Q, MUs, NewDefs);
+        assert(NewDefs.empty() &&
                "All fallback defs should have been found by lookupImpl");
       }
     }

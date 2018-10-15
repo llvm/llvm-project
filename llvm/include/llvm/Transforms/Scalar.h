@@ -26,7 +26,6 @@ class ModulePass;
 class Pass;
 class GetElementPtrInst;
 class PassInfo;
-class TerminatorInst;
 class TargetLowering;
 class TargetMachine;
 

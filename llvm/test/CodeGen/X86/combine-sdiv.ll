@@ -726,7 +726,8 @@ define <16 x i16> @combine_vec_sdiv_by_pow2b_v16i16(<16 x i16> %x) {
 ; AVX1-NEXT:    vpsraw $1, %xmm3, %xmm3
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2],xmm2[3,4,5,6],xmm3[7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
-; AVX1-NEXT:    vmovaps {{.*#+}} ymm2 = [0,65535,65535,65535,65535,65535,65535,65535,0,65535,65535,65535,65535,65535,65535,65535]
+; AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [0,65535,65535,65535,65535,65535,65535,65535,0,65535,65535,65535,65535,65535,65535,65535]
+; AVX1-NEXT:    # ymm2 = mem[0,1,0,1]
 ; AVX1-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; AVX1-NEXT:    vandnps %ymm0, %ymm2, %ymm0
 ; AVX1-NEXT:    vorps %ymm0, %ymm1, %ymm0
@@ -777,7 +778,9 @@ define <16 x i16> @combine_vec_sdiv_by_pow2b_v16i16(<16 x i16> %x) {
 ; XOP-NEXT:    vpaddw %xmm3, %xmm0, %xmm3
 ; XOP-NEXT:    vpshaw %xmm2, %xmm3, %xmm2
 ; XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
-; XOP-NEXT:    vpcmov {{.*}}(%rip), %ymm0, %ymm1, %ymm0
+; XOP-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = [0,65535,65535,65535,65535,65535,65535,65535,0,65535,65535,65535,65535,65535,65535,65535]
+; XOP-NEXT:    # ymm2 = mem[0,1,0,1]
+; XOP-NEXT:    vpcmov %ymm2, %ymm0, %ymm1, %ymm0
 ; XOP-NEXT:    retq
   %1 = sdiv <16 x i16> %x, <i16 1, i16 4, i16 2, i16 16, i16 8, i16 32, i16 64, i16 2, i16 1, i16 4, i16 2, i16 16, i16 8, i16 32, i16 64, i16 2>
   ret <16 x i16> %1
@@ -960,7 +963,8 @@ define <32 x i16> @combine_vec_sdiv_by_pow2b_v32i16(<32 x i16> %x) {
 ; AVX1-NEXT:    vpsraw $1, %xmm5, %xmm5
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm5 = xmm6[0,1],xmm5[2],xmm6[3,4,5,6],xmm5[7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm5, %ymm2
-; AVX1-NEXT:    vmovaps {{.*#+}} ymm5 = [0,65535,65535,65535,65535,65535,65535,65535,0,65535,65535,65535,65535,65535,65535,65535]
+; AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm5 = [0,65535,65535,65535,65535,65535,65535,65535,0,65535,65535,65535,65535,65535,65535,65535]
+; AVX1-NEXT:    # ymm5 = mem[0,1,0,1]
 ; AVX1-NEXT:    vandps %ymm5, %ymm2, %ymm2
 ; AVX1-NEXT:    vandnps %ymm0, %ymm5, %ymm0
 ; AVX1-NEXT:    vorps %ymm0, %ymm2, %ymm0
@@ -1055,7 +1059,8 @@ define <32 x i16> @combine_vec_sdiv_by_pow2b_v32i16(<32 x i16> %x) {
 ; XOP-NEXT:    vpaddw %xmm5, %xmm0, %xmm5
 ; XOP-NEXT:    vpshaw %xmm3, %xmm5, %xmm5
 ; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm5, %ymm2
-; XOP-NEXT:    vmovdqa {{.*#+}} ymm5 = [0,65535,65535,65535,65535,65535,65535,65535,0,65535,65535,65535,65535,65535,65535,65535]
+; XOP-NEXT:    vbroadcastf128 {{.*#+}} ymm5 = [0,65535,65535,65535,65535,65535,65535,65535,0,65535,65535,65535,65535,65535,65535,65535]
+; XOP-NEXT:    # ymm5 = mem[0,1,0,1]
 ; XOP-NEXT:    vpcmov %ymm5, %ymm0, %ymm2, %ymm0
 ; XOP-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; XOP-NEXT:    vpsraw $15, %xmm2, %xmm6

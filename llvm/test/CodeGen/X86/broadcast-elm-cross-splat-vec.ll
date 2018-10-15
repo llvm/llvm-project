@@ -87,21 +87,24 @@ define <16 x i8> @f16xi8_i32(<16 x i8> %a) {
 define <16 x i8> @f16xi8_i64(<16 x i8> %a) {
 ; AVX-LABEL: f16xi8_i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [7.9499288951273625E-275,7.9499288951273625E-275]
+; AVX-NEXT:    # xmm1 = mem[0,0]
 ; AVX-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retl
 ;
 ; ALL32-LABEL: f16xi8_i64:
 ; ALL32:       # %bb.0:
-; ALL32-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; ALL32-NEXT:    vmovddup {{.*#+}} xmm1 = [7.9499288951273625E-275,7.9499288951273625E-275]
+; ALL32-NEXT:    # xmm1 = mem[0,0]
 ; ALL32-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; ALL32-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; ALL32-NEXT:    retl
 ;
 ; AVX-64-LABEL: f16xi8_i64:
 ; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; AVX-64-NEXT:    vmovddup {{.*#+}} xmm1 = [7.9499288951273625E-275,7.9499288951273625E-275]
+; AVX-64-NEXT:    # xmm1 = mem[0,0]
 ; AVX-64-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; AVX-64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-64-NEXT:    retq
@@ -202,7 +205,8 @@ define <32 x i8> @f32xi8_i64(<32 x i8> %a) {
 ; AVX-LABEL: f32xi8_i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
+; AVX-NEXT:    vmovddup {{.*#+}} xmm2 = [7.9499288951273625E-275,7.9499288951273625E-275]
+; AVX-NEXT:    # xmm2 = mem[0,0]
 ; AVX-NEXT:    vpaddb %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -219,7 +223,8 @@ define <32 x i8> @f32xi8_i64(<32 x i8> %a) {
 ; AVX-64-LABEL: f32xi8_i64:
 ; AVX-64:       # %bb.0:
 ; AVX-64-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-64-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
+; AVX-64-NEXT:    vmovddup {{.*#+}} xmm2 = [7.9499288951273625E-275,7.9499288951273625E-275]
+; AVX-64-NEXT:    # xmm2 = mem[0,0]
 ; AVX-64-NEXT:    vpaddb %xmm2, %xmm1, %xmm1
 ; AVX-64-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -424,7 +429,8 @@ define <64 x i8> @f64xi8_i64(<64 x i8> %a) {
 ; AVX-LABEL: f64xi8_i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX-NEXT:    vmovddup {{.*#+}} xmm3 = mem[0,0]
+; AVX-NEXT:    vmovddup {{.*#+}} xmm3 = [7.9499288951273625E-275,7.9499288951273625E-275]
+; AVX-NEXT:    # xmm3 = mem[0,0]
 ; AVX-NEXT:    vpaddb %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vpaddb %xmm3, %xmm1, %xmm1
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
@@ -456,7 +462,8 @@ define <64 x i8> @f64xi8_i64(<64 x i8> %a) {
 ; AVX-64-LABEL: f64xi8_i64:
 ; AVX-64:       # %bb.0:
 ; AVX-64-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX-64-NEXT:    vmovddup {{.*#+}} xmm3 = mem[0,0]
+; AVX-64-NEXT:    vmovddup {{.*#+}} xmm3 = [7.9499288951273625E-275,7.9499288951273625E-275]
+; AVX-64-NEXT:    # xmm3 = mem[0,0]
 ; AVX-64-NEXT:    vpaddb %xmm3, %xmm2, %xmm2
 ; AVX-64-NEXT:    vpaddb %xmm3, %xmm1, %xmm1
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
@@ -675,21 +682,24 @@ define <8 x i16> @f8xi16_i32(<8 x i16> %a) {
 define <8 x i16> @f8xi16_i64(<8 x i16> %a) {
 ; AVX-LABEL: f8xi16_i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [4.1720559249406128E-309,4.1720559249406128E-309]
+; AVX-NEXT:    # xmm1 = mem[0,0]
 ; AVX-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retl
 ;
 ; ALL32-LABEL: f8xi16_i64:
 ; ALL32:       # %bb.0:
-; ALL32-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; ALL32-NEXT:    vmovddup {{.*#+}} xmm1 = [4.1720559249406128E-309,4.1720559249406128E-309]
+; ALL32-NEXT:    # xmm1 = mem[0,0]
 ; ALL32-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; ALL32-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; ALL32-NEXT:    retl
 ;
 ; AVX-64-LABEL: f8xi16_i64:
 ; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; AVX-64-NEXT:    vmovddup {{.*#+}} xmm1 = [4.1720559249406128E-309,4.1720559249406128E-309]
+; AVX-64-NEXT:    # xmm1 = mem[0,0]
 ; AVX-64-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX-64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-64-NEXT:    retq
@@ -750,7 +760,8 @@ define <16 x i16> @f16xi16_i64(<16 x i16> %a) {
 ; AVX-LABEL: f16xi16_i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
+; AVX-NEXT:    vmovddup {{.*#+}} xmm2 = [4.1720559249406128E-309,4.1720559249406128E-309]
+; AVX-NEXT:    # xmm2 = mem[0,0]
 ; AVX-NEXT:    vpaddw %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddw %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -767,7 +778,8 @@ define <16 x i16> @f16xi16_i64(<16 x i16> %a) {
 ; AVX-64-LABEL: f16xi16_i64:
 ; AVX-64:       # %bb.0:
 ; AVX-64-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-64-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
+; AVX-64-NEXT:    vmovddup {{.*#+}} xmm2 = [4.1720559249406128E-309,4.1720559249406128E-309]
+; AVX-64-NEXT:    # xmm2 = mem[0,0]
 ; AVX-64-NEXT:    vpaddw %xmm2, %xmm1, %xmm1
 ; AVX-64-NEXT:    vpaddw %xmm2, %xmm0, %xmm0
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -902,7 +914,8 @@ define <32 x i16> @f32xi16_i64(<32 x i16> %a) {
 ; AVX-LABEL: f32xi16_i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX-NEXT:    vmovddup {{.*#+}} xmm3 = mem[0,0]
+; AVX-NEXT:    vmovddup {{.*#+}} xmm3 = [4.1720559249406128E-309,4.1720559249406128E-309]
+; AVX-NEXT:    # xmm3 = mem[0,0]
 ; AVX-NEXT:    vpaddw %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vpaddw %xmm3, %xmm1, %xmm1
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
@@ -934,7 +947,8 @@ define <32 x i16> @f32xi16_i64(<32 x i16> %a) {
 ; AVX-64-LABEL: f32xi16_i64:
 ; AVX-64:       # %bb.0:
 ; AVX-64-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX-64-NEXT:    vmovddup {{.*#+}} xmm3 = mem[0,0]
+; AVX-64-NEXT:    vmovddup {{.*#+}} xmm3 = [4.1720559249406128E-309,4.1720559249406128E-309]
+; AVX-64-NEXT:    # xmm3 = mem[0,0]
 ; AVX-64-NEXT:    vpaddw %xmm3, %xmm2, %xmm2
 ; AVX-64-NEXT:    vpaddw %xmm3, %xmm1, %xmm1
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
@@ -1120,21 +1134,24 @@ define <32 x i16> @f32xi16_i256(<32 x i16> %a) {
 define <4 x i32> @f4xi32_i64(<4 x i32> %a) {
 ; AVX-LABEL: f4xi32_i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [2.1219957909652723E-314,2.1219957909652723E-314]
+; AVX-NEXT:    # xmm1 = mem[0,0]
 ; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retl
 ;
 ; ALL32-LABEL: f4xi32_i64:
 ; ALL32:       # %bb.0:
-; ALL32-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; ALL32-NEXT:    vmovddup {{.*#+}} xmm1 = [2.1219957909652723E-314,2.1219957909652723E-314]
+; ALL32-NEXT:    # xmm1 = mem[0,0]
 ; ALL32-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; ALL32-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; ALL32-NEXT:    retl
 ;
 ; AVX-64-LABEL: f4xi32_i64:
 ; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; AVX-64-NEXT:    vmovddup {{.*#+}} xmm1 = [2.1219957909652723E-314,2.1219957909652723E-314]
+; AVX-64-NEXT:    # xmm1 = mem[0,0]
 ; AVX-64-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-64-NEXT:    retq
@@ -1155,7 +1172,8 @@ define <8 x i32> @f8xi32_i64(<8 x i32> %a) {
 ; AVX-LABEL: f8xi32_i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
+; AVX-NEXT:    vmovddup {{.*#+}} xmm2 = [2.1219957909652723E-314,2.1219957909652723E-314]
+; AVX-NEXT:    # xmm2 = mem[0,0]
 ; AVX-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -1172,7 +1190,8 @@ define <8 x i32> @f8xi32_i64(<8 x i32> %a) {
 ; AVX-64-LABEL: f8xi32_i64:
 ; AVX-64:       # %bb.0:
 ; AVX-64-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-64-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
+; AVX-64-NEXT:    vmovddup {{.*#+}} xmm2 = [2.1219957909652723E-314,2.1219957909652723E-314]
+; AVX-64-NEXT:    # xmm2 = mem[0,0]
 ; AVX-64-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX-64-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -1237,7 +1256,8 @@ define <16 x i32> @f16xi32_i64(<16 x i32> %a) {
 ; AVX-LABEL: f16xi32_i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX-NEXT:    vmovddup {{.*#+}} xmm3 = mem[0,0]
+; AVX-NEXT:    vmovddup {{.*#+}} xmm3 = [2.1219957909652723E-314,2.1219957909652723E-314]
+; AVX-NEXT:    # xmm3 = mem[0,0]
 ; AVX-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
@@ -1269,7 +1289,8 @@ define <16 x i32> @f16xi32_i64(<16 x i32> %a) {
 ; AVX-64-LABEL: f16xi32_i64:
 ; AVX-64:       # %bb.0:
 ; AVX-64-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX-64-NEXT:    vmovddup {{.*#+}} xmm3 = mem[0,0]
+; AVX-64-NEXT:    vmovddup {{.*#+}} xmm3 = [2.1219957909652723E-314,2.1219957909652723E-314]
+; AVX-64-NEXT:    # xmm3 = mem[0,0]
 ; AVX-64-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
 ; AVX-64-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
@@ -1573,21 +1594,24 @@ define <8 x i64> @f8xi64_i256(<8 x i64> %a) {
 define <4 x float> @f4xf32_f64(<4 x float> %a) {
 ; AVX-LABEL: f4xf32_f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [0.0078125018626451492,0.0078125018626451492]
+; AVX-NEXT:    # xmm1 = mem[0,0]
 ; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vdivps %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retl
 ;
 ; ALL32-LABEL: f4xf32_f64:
 ; ALL32:       # %bb.0:
-; ALL32-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; ALL32-NEXT:    vmovddup {{.*#+}} xmm1 = [0.0078125018626451492,0.0078125018626451492]
+; ALL32-NEXT:    # xmm1 = mem[0,0]
 ; ALL32-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; ALL32-NEXT:    vdivps %xmm0, %xmm1, %xmm0
 ; ALL32-NEXT:    retl
 ;
 ; AVX-64-LABEL: f4xf32_f64:
 ; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; AVX-64-NEXT:    vmovddup {{.*#+}} xmm1 = [0.0078125018626451492,0.0078125018626451492]
+; AVX-64-NEXT:    # xmm1 = mem[0,0]
 ; AVX-64-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-64-NEXT:    vdivps %xmm0, %xmm1, %xmm0
 ; AVX-64-NEXT:    retq
