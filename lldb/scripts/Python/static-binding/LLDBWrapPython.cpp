@@ -28326,6 +28326,96 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBFrame_IsArtificial__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBFrame *arg1 = (lldb::SBFrame *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBFrame_IsArtificial",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBFrame_IsArtificial" "', argument " "1"" of type '" "lldb::SBFrame *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBFrame * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)(arg1)->IsArtificial();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBFrame_IsArtificial__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBFrame *arg1 = (lldb::SBFrame *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBFrame_IsArtificial",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBFrame, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBFrame_IsArtificial" "', argument " "1"" of type '" "lldb::SBFrame const *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBFrame * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)((lldb::SBFrame const *)arg1)->IsArtificial();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBFrame_IsArtificial(PyObject *self, PyObject *args) {
+  int argc;
+  PyObject *argv[2];
+  int ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = (int)PyObject_Length(args);
+  for (ii = 0; (ii < argc) && (ii < 1); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 1) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_lldb__SBFrame, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_SBFrame_IsArtificial__SWIG_0(self, args);
+    }
+  }
+  if (argc == 1) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_lldb__SBFrame, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_SBFrame_IsArtificial__SWIG_1(self, args);
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number of arguments for overloaded function 'SBFrame_IsArtificial'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    IsArtificial(lldb::SBFrame *)\n"
+    "    IsArtificial(lldb::SBFrame const *)\n");
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBFrame_EvaluateExpression__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBFrame *arg1 = (lldb::SBFrame *) 0 ;
@@ -76305,6 +76395,15 @@ static PyMethodDef SwigMethods[] = {
 		"/// Return true if this frame represents an inlined function.\n"
 		"///\n"
 		"/// See also GetFunctionName().\n"
+		"\n"
+		""},
+	 { (char *)"SBFrame_IsArtificial", _wrap_SBFrame_IsArtificial, METH_VARARGS, (char *)"\n"
+		"IsArtificial() -> bool\n"
+		"SBFrame_IsArtificial(SBFrame self) -> bool\n"
+		"\n"
+		"/// Return true if this frame is artificial (e.g a frame synthesized to\n"
+		"/// capture a tail call). Local variables may not be available in an artificial\n"
+		"/// frame.\n"
 		"\n"
 		""},
 	 { (char *)"SBFrame_EvaluateExpression", _wrap_SBFrame_EvaluateExpression, METH_VARARGS, (char *)"\n"
