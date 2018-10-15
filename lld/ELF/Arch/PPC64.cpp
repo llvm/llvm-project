@@ -120,6 +120,9 @@ public:
   void relaxTlsGdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
   void relaxTlsLdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
   void relaxTlsIeToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+
+  bool adjustPrologueForCrossSplitStack(uint8_t *Loc, uint8_t *End,
+                                        uint8_t StOther) const override;
 };
 } // namespace
 
@@ -212,6 +215,8 @@ PPC64::PPC64() {
   TlsOffsetRel = R_PPC64_DTPREL64;
 
   TlsGotRel = R_PPC64_TPREL64;
+
+  NeedsMoreStackNonSplit = false;
 
   // We need 64K pages (at least under glibc/Linux, the loader won't
   // set different permissions on a finer granularity than that).
@@ -761,7 +766,115 @@ void PPC64::relaxTlsGdToIe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   }
 }
 
+// The prologue for a split-stack function is expected to look roughly
+// like this:
+//    .Lglobal_entry_point:
+//      # TOC pointer initalization.
+//      ...
+//    .Llocal_entry_point:
+//      # load the __private_ss member of the threads tcbhead.
+//      ld r0,-0x7000-64(r13)
+//      # subtract the functions stack size from the stack pointer.
+//      addis r12, r1, ha(-stack-frame size)
+//      addi  r12, r12, l(-stack-frame size)
+//      # compare needed to actual and branch to allocate_more_stack if more
+//      # space is needed, otherwise fallthrough to 'normal' function body.
+//      cmpld cr7,r12,r0
+//      blt- .Lallocate_more_stack
+//
+// -) The allocate_more_stack block might be placed after the split-stack
+//    prologue and the `blt-` replaced with a `bge+ .Lnormal_func_body`
+//    instead.
+// -) If either the addis or addi is not needed due to the stack size being
+//    smaller then 32K or a multiple of 64K they will be replaced with a nop,
+//    but there will always be 2 instructions the linker can overwrite for the
+//    adjusted stack size.
+//
+// The linkers job here is to increase the stack size used in the addis/addi
+// pair by split-stack-size-adjust.
+// addis r12, r1, ha(-stack-frame size - split-stack-adjust-size)
+// addi  r12, r12, l(-stack-frame size - split-stack-adjust-size)
+bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *Loc, uint8_t *End,
+                                             uint8_t StOther) const {
+  // If the caller has a global entry point adjust the buffer past it. The start
+  // of the split-stack prologue will be at the local entry point.
+  Loc += getPPC64GlobalEntryToLocalEntryOffset(StOther);
+
+  // At the very least we expect to see a load of some split-stack data from the
+  // tcb, and 2 instructions that calculate the ending stack address this
+  // function will require. If there is not enough room for at least 3
+  // instructions it can't be a split-stack prologue.
+  if (Loc + 12 >= End)
+    return false;
+
+  // First instruction must be `ld r0, -0x7000-64(r13)`
+  if (read32(Loc) != 0xe80d8fc0)
+    return false;
+
+  int16_t HiImm = 0;
+  int16_t LoImm = 0;
+  // First instruction can be either an addis if the frame size is larger then
+  // 32K, or an addi if the size is less then 32K.
+  int32_t FirstInstr = read32(Loc + 4);
+  if (getPrimaryOpCode(FirstInstr) == 15) {
+    HiImm = FirstInstr & 0xFFFF;
+  } else if (getPrimaryOpCode(FirstInstr) == 14) {
+    LoImm = FirstInstr & 0xFFFF;
+  } else {
+    return false;
+  }
+
+  // Second instruction is either an addi or a nop. If the first instruction was
+  // an addi then LoImm is set and the second instruction must be a nop.
+  uint32_t SecondInstr = read32(Loc + 8);
+  if (!LoImm && getPrimaryOpCode(SecondInstr) == 14) {
+    LoImm = SecondInstr & 0xFFFF;
+  } else if (SecondInstr != 0x60000000) {
+    return false;
+  }
+
+  // The register operands of the first instruction should be the stack-pointer
+  // (r1) as the input (RA) and r12 as the output (RT). If the second
+  // instruction is not a nop, then it should use r12 as both input and output.
+  auto CheckRegOperands =
+      [](uint32_t Instr, uint8_t ExpectedRT, uint8_t ExpectedRA) {
+        return ((Instr & 0x3E00000) >> 21 == ExpectedRT) &&
+               ((Instr & 0x1F0000) >> 16  == ExpectedRA);
+      };
+  if (!CheckRegOperands(FirstInstr, 12, 1))
+    return false;
+  if (SecondInstr != 0x60000000 && !CheckRegOperands(SecondInstr, 12, 12))
+    return false;
+
+  int32_t StackFrameSize = (HiImm << 16) + LoImm;
+  // Check that the adjusted size doesn't overflow what we can represent with 2
+  // instructions.
+  if (StackFrameSize < -2147483648 + Config->SplitStackAdjustSize) {
+    error(getErrorLocation(Loc) + "split-stack prologue adjustment overflows");
+    return false;
+  }
+
+  int32_t AdjustedStackFrameSize =
+      StackFrameSize - Config->SplitStackAdjustSize;
+
+  LoImm = AdjustedStackFrameSize & 0xFFFF;
+  HiImm = (AdjustedStackFrameSize + 0x8000) >> 16;
+  if (HiImm) {
+    write32(Loc + 4, 0x3D810000 | (uint16_t)HiImm);
+    // If the low immediate is zero the second instruction will be a nop.
+    SecondInstr =
+        LoImm ? 0x398C0000 | (uint16_t)LoImm : 0x60000000;
+    write32(Loc + 8, SecondInstr);
+  } else {
+    // addi r12, r1, imm
+    write32(Loc + 4, (0x39810000) | (uint16_t)LoImm);
+    write32(Loc + 8, 0x60000000);
+  }
+
+  return true;
+}
+
 TargetInfo *elf::getPPC64TargetInfo() {
   static PPC64 Target;
   return &Target;
-}
+  }
