@@ -112,6 +112,17 @@ public:
 
   char *getNextRecord() const { return NextRecord; }
 
+  void resetRecord() {
+    NextRecord = reinterpret_cast<char *>(Buffer.Data);
+    atomic_store(&Buffer.Extents, 0, memory_order_release);
+  }
+
+  void undoWrites(size_t B) {
+    DCHECK_GE(NextRecord - B, reinterpret_cast<char*>(Buffer.Data));
+    NextRecord -= B;
+    atomic_fetch_sub(&Buffer.Extents, B, memory_order_acq_rel);
+  }
+
 }; // namespace __xray
 
 } // namespace __xray
