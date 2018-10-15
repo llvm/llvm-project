@@ -921,11 +921,9 @@ public:
     return getOriginExpr()->getOperatorNew();
   }
 
-  // Size and maybe implicit alignment in C++17. Instead of size, the AST
-  // contains the construct-expression. Alignment is always hidden.
-  // We pretend that argument 0 is size and argument 1 is alignment (if passed
-  // implicitly) and the rest are placement args. This makes sure that the
-  // number of arguments is always the same as the number of parameters.
+  /// Number of non-placement arguments to the call. It is equal to 2 for
+  /// C++17 aligned operator new() calls that have alignment implicitly
+  /// passed as the second argument, and to 1 for other operator new() calls.
   unsigned getNumImplicitArgs() const {
     return getOriginExpr()->passAlignment() ? 2 : 1;
   }
@@ -941,6 +939,10 @@ public:
     return getOriginExpr()->getPlacementArg(Index - getNumImplicitArgs());
   }
 
+  /// Number of placement arguments to the operator new() call. For example,
+  /// standard std::nothrow operator new and standard placement new both have
+  /// 1 implicit argument (size) and 1 placement argument, while regular
+  /// operator new() has 1 implicit argument and 0 placement arguments.
   const Expr *getPlacementArgExpr(unsigned Index) const {
     return getOriginExpr()->getPlacementArg(Index);
   }
