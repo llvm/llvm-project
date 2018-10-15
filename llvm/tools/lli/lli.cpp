@@ -793,8 +793,8 @@ int runOrcLazyJIT(const char *ProgName) {
     }
     return Dump(std::move(TSM), R);
   });
-  J->getMainJITDylib().setFallbackDefinitionGenerator(ExitOnErr(
-      orc::DynamicLibraryFallbackGenerator::CreateForCurrentProcess(DL)));
+  J->getMainJITDylib().setGenerator(
+      ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(DL)));
 
   orc::MangleAndInterner Mangle(J->getExecutionSession(), DL);
   orc::LocalCXXRuntimeOverrides2 CXXRuntimeOverrides;

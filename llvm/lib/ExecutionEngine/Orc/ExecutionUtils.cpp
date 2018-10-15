@@ -178,21 +178,22 @@ Error LocalCXXRuntimeOverrides2::enable(JITDylib &JD,
   return JD.define(absoluteSymbols(std::move(RuntimeInterposes)));
 }
 
-DynamicLibraryFallbackGenerator::DynamicLibraryFallbackGenerator(
+DynamicLibrarySearchGenerator::DynamicLibrarySearchGenerator(
     sys::DynamicLibrary Dylib, const DataLayout &DL, SymbolPredicate Allow)
     : Dylib(std::move(Dylib)), Allow(std::move(Allow)),
       GlobalPrefix(DL.getGlobalPrefix()) {}
 
-Expected<DynamicLibraryFallbackGenerator> DynamicLibraryFallbackGenerator::Load(
-    const char *FileName, const DataLayout &DL, SymbolPredicate Allow) {
+Expected<DynamicLibrarySearchGenerator>
+DynamicLibrarySearchGenerator::Load(const char *FileName, const DataLayout &DL,
+                                    SymbolPredicate Allow) {
   std::string ErrMsg;
   auto Lib = sys::DynamicLibrary::getPermanentLibrary(FileName, &ErrMsg);
   if (!Lib.isValid())
     return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
-  return DynamicLibraryFallbackGenerator(std::move(Lib), DL, std::move(Allow));
+  return DynamicLibrarySearchGenerator(std::move(Lib), DL, std::move(Allow));
 }
 
-SymbolNameSet DynamicLibraryFallbackGenerator::
+SymbolNameSet DynamicLibrarySearchGenerator::
 operator()(JITDylib &JD, const SymbolNameSet &Names) {
   orc::SymbolNameSet Added;
   orc::SymbolMap NewSymbols;
@@ -200,7 +201,10 @@ operator()(JITDylib &JD, const SymbolNameSet &Names) {
   bool HasGlobalPrefix = (GlobalPrefix != '\0');
 
   for (auto &Name : Names) {
-    if (!Allow(Name) || (*Name).empty())
+    if ((*Name).empty())
+      continue;
+
+    if (Allow && !Allow(Name))
       continue;
 
     if (HasGlobalPrefix && (*Name).front() != GlobalPrefix)
@@ -215,8 +219,8 @@ operator()(JITDylib &JD, const SymbolNameSet &Names) {
     }
   }
 
-  // Add any new symbols to JD. Since the fallback generator is only called for
-  // symbols that are not already defined, this will never trigger a duplicate
+  // Add any new symbols to JD. Since the generator is only called for symbols
+  // that are not already defined, this will never trigger a duplicate
   // definition error, so we can wrap this call in a 'cantFail'.
   if (!NewSymbols.empty())
     cantFail(JD.define(absoluteSymbols(std::move(NewSymbols))));

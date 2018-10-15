@@ -4558,8 +4558,15 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF(bool OptForSize) {
   // If we optimize the program for size, avoid creating the tail loop.
   LLVM_DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
 
+  if (TC == 1) {
+    ORE->emit(createMissedAnalysis("SingleIterationLoop")
+              << "loop trip count is one, irrelevant for vectorization");
+    LLVM_DEBUG(dbgs() << "LV: Aborting, single iteration (non) loop.\n");
+    return None;
+  }
+
   // If we don't know the precise trip count, don't try to vectorize.
-  if (TC < 2) {
+  if (TC == 0) {
     ORE->emit(
         createMissedAnalysis("UnknownLoopCountComplexCFG")
         << "unable to calculate the loop count due to complex control flow");

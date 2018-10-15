@@ -52,7 +52,7 @@ void llvm::DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU) {
   assert((pred_begin(BB) == pred_end(BB) ||
          // Can delete self loop.
          BB->getSinglePredecessor() == BB) && "Block is not dead!");
-  TerminatorInst *BBTerm = BB->getTerminator();
+  Instruction *BBTerm = BB->getTerminator();
   std::vector<DominatorTree::UpdateType> Updates;
 
   // Loop through all of our successors and make sure they know that one
@@ -270,7 +270,7 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
   unsigned SuccNum = GetSuccessorNumber(BB, Succ);
 
   // If this is a critical edge, let SplitCriticalEdge do it.
-  TerminatorInst *LatchTerm = BB->getTerminator();
+  Instruction *LatchTerm = BB->getTerminator();
   if (SplitCriticalEdge(
           LatchTerm, SuccNum,
           CriticalEdgeSplittingOptions(DT, LI, MSSAU).setPreserveLCSSA()))
@@ -298,7 +298,7 @@ llvm::SplitAllCriticalEdges(Function &F,
                             const CriticalEdgeSplittingOptions &Options) {
   unsigned NumBroken = 0;
   for (BasicBlock &BB : F) {
-    TerminatorInst *TI = BB.getTerminator();
+    Instruction *TI = BB.getTerminator();
     if (TI->getNumSuccessors() > 1 && !isa<IndirectBrInst>(TI))
       for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
         if (SplitCriticalEdge(TI, i, Options))
@@ -705,16 +705,17 @@ ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
   return cast<ReturnInst>(NewRet);
 }
 
-TerminatorInst *
-llvm::SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
-                                bool Unreachable, MDNode *BranchWeights,
-                                DominatorTree *DT, LoopInfo *LI) {
+Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
+                                             Instruction *SplitBefore,
+                                             bool Unreachable,
+                                             MDNode *BranchWeights,
+                                             DominatorTree *DT, LoopInfo *LI) {
   BasicBlock *Head = SplitBefore->getParent();
   BasicBlock *Tail = Head->splitBasicBlock(SplitBefore->getIterator());
-  TerminatorInst *HeadOldTerm = Head->getTerminator();
+  Instruction *HeadOldTerm = Head->getTerminator();
   LLVMContext &C = Head->getContext();
   BasicBlock *ThenBlock = BasicBlock::Create(C, "", Head->getParent(), Tail);
-  TerminatorInst *CheckTerm;
+  Instruction *CheckTerm;
   if (Unreachable)
     CheckTerm = new UnreachableInst(C, ThenBlock);
   else
@@ -749,12 +750,12 @@ llvm::SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
 }
 
 void llvm::SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
-                                         TerminatorInst **ThenTerm,
-                                         TerminatorInst **ElseTerm,
+                                         Instruction **ThenTerm,
+                                         Instruction **ElseTerm,
                                          MDNode *BranchWeights) {
   BasicBlock *Head = SplitBefore->getParent();
   BasicBlock *Tail = Head->splitBasicBlock(SplitBefore->getIterator());
-  TerminatorInst *HeadOldTerm = Head->getTerminator();
+  Instruction *HeadOldTerm = Head->getTerminator();
   LLVMContext &C = Head->getContext();
   BasicBlock *ThenBlock = BasicBlock::Create(C, "", Head->getParent(), Tail);
   BasicBlock *ElseBlock = BasicBlock::Create(C, "", Head->getParent(), Tail);

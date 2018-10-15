@@ -395,15 +395,22 @@ reexports(JITDylib &SourceJD, SymbolAliasMap Aliases) {
 Expected<SymbolAliasMap>
 buildSimpleReexportsAliasMap(JITDylib &SourceJD, const SymbolNameSet &Symbols);
 
-class ReexportsFallbackDefinitionGenerator {
+/// ReexportsGenerator can be used with JITDylib::setGenerator to automatically
+/// re-export a subset of the source JITDylib's symbols in the target.
+class ReexportsGenerator {
 public:
   using SymbolPredicate = std::function<bool(SymbolStringPtr)>;
-  ReexportsFallbackDefinitionGenerator(JITDylib &BackingJD,
-                                       SymbolPredicate Allow);
+
+  /// Create a reexports generator. If an Allow predicate is passed, only
+  /// symbols for which the predicate returns true will be reexported. If no
+  /// Allow predicate is passed, all symbols will be exported.
+  ReexportsGenerator(JITDylib &SourceJD,
+                     SymbolPredicate Allow = SymbolPredicate());
+
   SymbolNameSet operator()(JITDylib &JD, const SymbolNameSet &Names);
 
 private:
-  JITDylib &BackingJD;
+  JITDylib &SourceJD;
   SymbolPredicate Allow;
 };
 
@@ -478,7 +485,7 @@ class JITDylib {
   friend class ExecutionSession;
   friend class MaterializationResponsibility;
 public:
-  using FallbackDefinitionGeneratorFunction = std::function<SymbolNameSet(
+  using GeneratorFunction = std::function<SymbolNameSet(
       JITDylib &Parent, const SymbolNameSet &Names)>;
 
   using AsynchronousSymbolQuerySet =
@@ -495,12 +502,12 @@ public:
   /// Get a reference to the ExecutionSession for this JITDylib.
   ExecutionSession &getExecutionSession() const { return ES; }
 
-  /// Set a fallback defenition generator. If set, lookup and lookupFlags will
-  /// pass the unresolved symbols set to the fallback definition generator,
-  /// allowing it to add a new definition to the JITDylib.
-  void setFallbackDefinitionGenerator(
-      FallbackDefinitionGeneratorFunction FallbackDefinitionGenerator) {
-    this->FallbackDefinitionGenerator = std::move(FallbackDefinitionGenerator);
+  /// Set a definition generator. If set, whenever a symbol fails to resolve
+  /// within this JITDylib, lookup and lookupFlags will pass the unresolved
+  /// symbols set to the definition generator. The generator can optionally
+  /// add a definition for the unresolved symbols to the dylib.
+  void setGenerator(GeneratorFunction DefGenerator) {
+    this->DefGenerator = std::move(DefGenerator);
   }
 
   /// Set the search order to be used when fixing up definitions in JITDylib.
@@ -667,7 +674,7 @@ private:
   SymbolMap Symbols;
   UnmaterializedInfosMap UnmaterializedInfos;
   MaterializingInfosMap MaterializingInfos;
-  FallbackDefinitionGeneratorFunction FallbackDefinitionGenerator;
+  GeneratorFunction DefGenerator;
   JITDylibList SearchOrder;
 };
 

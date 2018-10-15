@@ -1800,35 +1800,23 @@ define <64 x i8> @test_unaligned_v64i8(<64 x i8>* %src) {
 define <16 x i32> @test_masked_v16i32(i8 * %addr, <16 x i32> %old, <16 x i32> %mask1) {
 ; SSE2-LABEL: test_masked_v16i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm0, %xmm10
-; SSE2-NEXT:    pxor %xmm12, %xmm12
-; SSE2-NEXT:    pcmpeqd %xmm12, %xmm7
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE2-NEXT:    movdqa %xmm7, %xmm8
-; SSE2-NEXT:    pxor %xmm0, %xmm8
-; SSE2-NEXT:    pcmpeqd %xmm12, %xmm6
-; SSE2-NEXT:    movdqa %xmm6, %xmm9
-; SSE2-NEXT:    pxor %xmm0, %xmm9
-; SSE2-NEXT:    pcmpeqd %xmm12, %xmm5
-; SSE2-NEXT:    movdqa %xmm5, %xmm11
-; SSE2-NEXT:    pxor %xmm0, %xmm11
-; SSE2-NEXT:    pcmpeqd %xmm12, %xmm4
-; SSE2-NEXT:    pxor %xmm4, %xmm0
+; SSE2-NEXT:    pxor %xmm8, %xmm8
+; SSE2-NEXT:    pcmpeqd %xmm8, %xmm7
+; SSE2-NEXT:    pcmpeqd %xmm8, %xmm6
+; SSE2-NEXT:    pcmpeqd %xmm8, %xmm5
+; SSE2-NEXT:    pcmpeqd %xmm8, %xmm4
+; SSE2-NEXT:    pand %xmm4, %xmm0
 ; SSE2-NEXT:    pandn (%rdi), %xmm4
-; SSE2-NEXT:    pandn %xmm10, %xmm0
 ; SSE2-NEXT:    por %xmm4, %xmm0
+; SSE2-NEXT:    pand %xmm5, %xmm1
 ; SSE2-NEXT:    pandn 16(%rdi), %xmm5
-; SSE2-NEXT:    pandn %xmm1, %xmm11
-; SSE2-NEXT:    por %xmm5, %xmm11
+; SSE2-NEXT:    por %xmm5, %xmm1
+; SSE2-NEXT:    pand %xmm6, %xmm2
 ; SSE2-NEXT:    pandn 32(%rdi), %xmm6
-; SSE2-NEXT:    pandn %xmm2, %xmm9
-; SSE2-NEXT:    por %xmm6, %xmm9
+; SSE2-NEXT:    por %xmm6, %xmm2
+; SSE2-NEXT:    pand %xmm7, %xmm3
 ; SSE2-NEXT:    pandn 48(%rdi), %xmm7
-; SSE2-NEXT:    pandn %xmm3, %xmm8
-; SSE2-NEXT:    por %xmm7, %xmm8
-; SSE2-NEXT:    movdqa %xmm11, %xmm1
-; SSE2-NEXT:    movdqa %xmm9, %xmm2
-; SSE2-NEXT:    movdqa %xmm8, %xmm3
+; SSE2-NEXT:    por %xmm7, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_masked_v16i32:

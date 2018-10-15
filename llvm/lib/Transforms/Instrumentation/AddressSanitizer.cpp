@@ -1443,7 +1443,7 @@ static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
     } else {
       IRBuilder<> IRB(I);
       Value *MaskElem = IRB.CreateExtractElement(Mask, Idx);
-      TerminatorInst *ThenTerm = SplitBlockAndInsertIfThen(MaskElem, I, false);
+      Instruction *ThenTerm = SplitBlockAndInsertIfThen(MaskElem, I, false);
       InsertBefore = ThenTerm;
     }
 
@@ -1596,8 +1596,9 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
     Value *TagCheck =
         IRB.CreateICmpEQ(Tag, ConstantInt::get(IntptrTy, kMyriadDDRTag));
 
-    TerminatorInst *TagCheckTerm = SplitBlockAndInsertIfThen(
-        TagCheck, InsertBefore, false, MDBuilder(*C).createBranchWeights(1, 100000));
+    Instruction *TagCheckTerm =
+        SplitBlockAndInsertIfThen(TagCheck, InsertBefore, false,
+                                  MDBuilder(*C).createBranchWeights(1, 100000));
     assert(cast<BranchInst>(TagCheckTerm)->isUnconditional());
     IRB.SetInsertPoint(TagCheckTerm);
     InsertBefore = TagCheckTerm;
@@ -1613,12 +1614,12 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
 
   Value *Cmp = IRB.CreateICmpNE(ShadowValue, CmpVal);
   size_t Granularity = 1ULL << Mapping.Scale;
-  TerminatorInst *CrashTerm = nullptr;
+  Instruction *CrashTerm = nullptr;
 
   if (ClAlwaysSlowPath || (TypeSize < 8 * Granularity)) {
     // We use branch weights for the slow path check, to indicate that the slow
     // path is rarely taken. This seems to be the case for SPEC benchmarks.
-    TerminatorInst *CheckTerm = SplitBlockAndInsertIfThen(
+    Instruction *CheckTerm = SplitBlockAndInsertIfThen(
         Cmp, InsertBefore, false, MDBuilder(*C).createBranchWeights(1, 100000));
     assert(cast<BranchInst>(CheckTerm)->isUnconditional());
     BasicBlock *NextBB = CheckTerm->getSuccessor(0);
@@ -3116,7 +3117,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
       //     <This is not a fake stack; unpoison the redzones>
       Value *Cmp =
           IRBRet.CreateICmpNE(FakeStack, Constant::getNullValue(IntptrTy));
-      TerminatorInst *ThenTerm, *ElseTerm;
+      Instruction *ThenTerm, *ElseTerm;
       SplitBlockAndInsertIfThenElse(Cmp, Ret, &ThenTerm, &ElseTerm);
 
       IRBuilder<> IRBPoison(ThenTerm);

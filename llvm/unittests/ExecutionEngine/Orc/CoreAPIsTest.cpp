@@ -342,17 +342,15 @@ TEST_F(CoreAPIsStandardTest, TestThatReExportsDontUnnecessarilyMaterialize) {
   EXPECT_FALSE(BarMaterialized) << "Bar should not have been materialized";
 }
 
-TEST_F(CoreAPIsStandardTest, TestReexportsFallbackGenerator) {
-  // Test that a re-exports fallback generator can dynamically generate
-  // reexports.
+TEST_F(CoreAPIsStandardTest, TestReexportsGenerator) {
+  // Test that a re-exports generator can dynamically generate reexports.
 
   auto &JD2 = ES.createJITDylib("JD2");
   cantFail(JD2.define(absoluteSymbols({{Foo, FooSym}, {Bar, BarSym}})));
 
   auto Filter = [this](SymbolStringPtr Name) { return Name != Bar; };
 
-  JD.setFallbackDefinitionGenerator(
-      ReexportsFallbackDefinitionGenerator(JD2, Filter));
+  JD.setGenerator(ReexportsGenerator(JD2, Filter));
 
   auto Flags = JD.lookupFlags({Foo, Bar, Baz});
   EXPECT_EQ(Flags.size(), 1U) << "Unexpected number of results";
@@ -679,14 +677,13 @@ TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {
       << "Expected Bar == BarSym";
 }
 
-TEST_F(CoreAPIsStandardTest, FallbackDefinitionGeneratorTest) {
+TEST_F(CoreAPIsStandardTest, GeneratorTest) {
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
 
-  JD.setFallbackDefinitionGenerator(
-      [&](JITDylib &JD2, const SymbolNameSet &Names) {
-        cantFail(JD2.define(absoluteSymbols({{Bar, BarSym}})));
-        return SymbolNameSet({Bar});
-      });
+  JD.setGenerator([&](JITDylib &JD2, const SymbolNameSet &Names) {
+    cantFail(JD2.define(absoluteSymbols({{Bar, BarSym}})));
+    return SymbolNameSet({Bar});
+  });
 
   auto Result = cantFail(ES.lookup({&JD}, {Foo, Bar}));
 
