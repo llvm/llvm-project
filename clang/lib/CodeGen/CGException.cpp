@@ -1248,7 +1248,7 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
     // we follow the false destination for each of the cond branches to reach
     // the rethrow block.
     llvm::BasicBlock *RethrowBlock = WasmCatchStartBlock;
-    while (llvm::TerminatorInst *TI = RethrowBlock->getTerminator()) {
+    while (llvm::Instruction *TI = RethrowBlock->getTerminator()) {
       auto *BI = cast<llvm::BranchInst>(TI);
       assert(BI->isConditional());
       RethrowBlock = BI->getSuccessor(1);

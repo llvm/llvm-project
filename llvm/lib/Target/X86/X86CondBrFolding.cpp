@@ -84,6 +84,7 @@ FunctionPass *llvm::createX86CondBrFolding() {
   return new X86CondBrFoldingPass();
 }
 
+namespace {
 // A class the stores the auxiliary information for each MBB.
 struct TargetMBBInfo {
   MachineBasicBlock *TBB;
@@ -129,6 +130,7 @@ private:
     return MBBInfos[MBB->getNumber()].get();
   }
 };
+} // namespace
 
 // Find a valid path that we can reuse the CondCode.
 // The resulted path (if return true) is stored in BranchPath.

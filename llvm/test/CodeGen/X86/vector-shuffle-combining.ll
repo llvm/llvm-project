@@ -2703,7 +2703,7 @@ define <4 x float> @PR22377(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: PR22377:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movaps %xmm0, %xmm1
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm0[1,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm0[2,3]
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,0,2]
 ; SSE-NEXT:    addps %xmm0, %xmm1
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
@@ -2711,7 +2711,7 @@ define <4 x float> @PR22377(<4 x float> %a, <4 x float> %b) {
 ;
 ; AVX-LABEL: PR22377:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,3,1,3]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,3,2,3]
 ; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,0,2]
 ; AVX-NEXT:    vaddps %xmm0, %xmm1, %xmm1
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]

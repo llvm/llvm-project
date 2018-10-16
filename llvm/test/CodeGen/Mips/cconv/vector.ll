@@ -2420,10 +2420,10 @@ define void @float_2(<2 x float> %a, <2 x float> %b) {
 ; MIPS64R5EB-NEXT:    lui $1, %hi(%neg(%gp_rel(float_2)))
 ; MIPS64R5EB-NEXT:    daddu $1, $1, $25
 ; MIPS64R5EB-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(float_2)))
-; MIPS64R5EB-NEXT:    sd $5, 0($sp)
-; MIPS64R5EB-NEXT:    sd $4, 16($sp)
-; MIPS64R5EB-NEXT:    ld.w $w0, 0($sp)
-; MIPS64R5EB-NEXT:    ld.w $w1, 16($sp)
+; MIPS64R5EB-NEXT:    sd $5, 16($sp)
+; MIPS64R5EB-NEXT:    sd $4, 0($sp)
+; MIPS64R5EB-NEXT:    ld.w $w0, 16($sp)
+; MIPS64R5EB-NEXT:    ld.w $w1, 0($sp)
 ; MIPS64R5EB-NEXT:    fadd.w $w0, $w1, $w0
 ; MIPS64R5EB-NEXT:    shf.w $w0, $w0, 177
 ; MIPS64R5EB-NEXT:    copy_s.d $2, $w0[0]
@@ -2463,10 +2463,10 @@ define void @float_2(<2 x float> %a, <2 x float> %b) {
 ; MIPS64R5EL-NEXT:    lui $1, %hi(%neg(%gp_rel(float_2)))
 ; MIPS64R5EL-NEXT:    daddu $1, $1, $25
 ; MIPS64R5EL-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(float_2)))
-; MIPS64R5EL-NEXT:    sd $5, 0($sp)
-; MIPS64R5EL-NEXT:    sd $4, 16($sp)
-; MIPS64R5EL-NEXT:    ld.w $w0, 0($sp)
-; MIPS64R5EL-NEXT:    ld.w $w1, 16($sp)
+; MIPS64R5EL-NEXT:    sd $5, 16($sp)
+; MIPS64R5EL-NEXT:    sd $4, 0($sp)
+; MIPS64R5EL-NEXT:    ld.w $w0, 16($sp)
+; MIPS64R5EL-NEXT:    ld.w $w1, 0($sp)
 ; MIPS64R5EL-NEXT:    fadd.w $w0, $w1, $w0
 ; MIPS64R5EL-NEXT:    copy_s.d $2, $w0[0]
 ; MIPS64R5EL-NEXT:    ld $1, %got_disp(float_res_v2f32)($1)
@@ -6211,13 +6211,13 @@ define float @mixed_i8(<2 x float> %a, i8 %b, <2 x float> %c) {
 ; MIPS64R5-NEXT:    andi $1, $1, 255
 ; MIPS64R5-NEXT:    sw $1, 36($sp)
 ; MIPS64R5-NEXT:    sw $1, 32($sp)
-; MIPS64R5-NEXT:    sd $4, 16($sp)
+; MIPS64R5-NEXT:    sd $4, 0($sp)
 ; MIPS64R5-NEXT:    ld.w $w0, 32($sp)
 ; MIPS64R5-NEXT:    ffint_s.w $w0, $w0
-; MIPS64R5-NEXT:    ld.w $w1, 16($sp)
-; MIPS64R5-NEXT:    fadd.w $w0, $w0, $w1
-; MIPS64R5-NEXT:    sd $6, 0($sp)
 ; MIPS64R5-NEXT:    ld.w $w1, 0($sp)
+; MIPS64R5-NEXT:    fadd.w $w0, $w0, $w1
+; MIPS64R5-NEXT:    sd $6, 16($sp)
+; MIPS64R5-NEXT:    ld.w $w1, 16($sp)
 ; MIPS64R5-NEXT:    fadd.w $w0, $w0, $w1
 ; MIPS64R5-NEXT:    splati.w $w1, $w0[1]
 ; MIPS64R5-NEXT:    add.s $f0, $f0, $f1

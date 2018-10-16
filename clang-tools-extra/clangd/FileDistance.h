@@ -56,6 +56,7 @@ struct FileDistanceOptions {
   unsigned UpCost = 2;      // |foo/bar.h -> foo|
   unsigned DownCost = 1;    // |foo -> foo/bar.h|
   unsigned IncludeCost = 2; // |foo.cc -> included_header.h|
+  bool AllowDownTraversalFromRoot = true; // | / -> /a |
 };
 
 struct SourceParams {
@@ -70,6 +71,7 @@ struct SourceParams {
 class FileDistance {
 public:
   static constexpr unsigned Unreachable = std::numeric_limits<unsigned>::max();
+  static const llvm::hash_code RootHash;
 
   FileDistance(llvm::StringMap<SourceParams> Sources,
                const FileDistanceOptions &Opts = {});

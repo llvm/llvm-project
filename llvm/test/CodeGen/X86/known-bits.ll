@@ -19,7 +19,7 @@ define void @knownbits_zext_in_reg(i8*) nounwind {
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; X32-NEXT:    vbroadcastss {{.*#+}} xmm2 = [3.57331108E-43,3.57331108E-43,3.57331108E-43,3.57331108E-43]
 ; X32-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; X32-NEXT:    movzbl %cl, %eax
 ; X32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
@@ -69,7 +69,7 @@ define void @knownbits_zext_in_reg(i8*) nounwind {
 ; X64-NEXT:    movzbl %cl, %ecx
 ; X64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm1
-; X64-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; X64-NEXT:    vbroadcastss {{.*#+}} xmm2 = [3.57331108E-43,3.57331108E-43,3.57331108E-43,3.57331108E-43]
 ; X64-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0

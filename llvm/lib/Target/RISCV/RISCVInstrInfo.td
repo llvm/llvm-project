@@ -205,6 +205,12 @@ def ixlenimm : Operand<XLenVT> {
 // Standalone (codegen-only) immleaf patterns.
 def simm32     : ImmLeaf<XLenVT, [{return isInt<32>(Imm);}]>;
 def simm32hi20 : ImmLeaf<XLenVT, [{return isShiftedInt<20, 12>(Imm);}]>;
+// A mask value that won't affect significant shift bits.
+def immshiftxlen : ImmLeaf<XLenVT, [{
+  if (Subtarget->is64Bit())
+    return countTrailingOnes<uint64_t>(Imm) >= 6;
+  return countTrailingOnes<uint64_t>(Imm) >= 5;
+}]>;
 
 // Addressing modes.
 // Necessary because a frameindex can't be matched directly in a pattern.
@@ -646,12 +652,23 @@ def : PatGprGpr<and, AND>;
 def : PatGprSimm12<and, ANDI>;
 def : PatGprGpr<xor, XOR>;
 def : PatGprSimm12<xor, XORI>;
-def : PatGprGpr<shl, SLL>;
 def : PatGprUimmLog2XLen<shl, SLLI>;
-def : PatGprGpr<srl, SRL>;
 def : PatGprUimmLog2XLen<srl, SRLI>;
-def : PatGprGpr<sra, SRA>;
 def : PatGprUimmLog2XLen<sra, SRAI>;
+
+// Match both a plain shift and one where the shift amount is masked (this is
+// typically introduced when the legalizer promotes the shift amount and
+// zero-extends it). For RISC-V, the mask is unnecessary as shifts in the base
+// ISA only read the least significant 5 bits (RV32I) or 6 bits (RV64I).
+multiclass VarShiftXLenPat<PatFrag ShiftOp, RVInst Inst> {
+  def : Pat<(ShiftOp GPR:$rs1, GPR:$rs2), (Inst GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(ShiftOp GPR:$rs1, (and GPR:$rs2, immshiftxlen)),
+            (Inst GPR:$rs1, GPR:$rs2)>;
+}
+
+defm : VarShiftXLenPat<shl, SLL>;
+defm : VarShiftXLenPat<srl, SRL>;
+defm : VarShiftXLenPat<sra, SRA>;
 
 /// FrameIndex calculations
 

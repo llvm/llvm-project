@@ -82,8 +82,8 @@ class User;
 ///   5 -> Other instructions
 static inline unsigned getComplexity(Value *V) {
   if (isa<Instruction>(V)) {
-    if (isa<CastInst>(V) || BinaryOperator::isNeg(V) ||
-        BinaryOperator::isFNeg(V) || BinaryOperator::isNot(V))
+    if (isa<CastInst>(V) || match(V, m_Neg(m_Value())) ||
+        match(V, m_Not(m_Value())) || match(V, m_FNeg(m_Value())))
       return 4;
     return 5;
   }

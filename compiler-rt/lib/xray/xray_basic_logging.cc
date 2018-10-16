@@ -60,7 +60,7 @@ struct alignas(64) ThreadLocalData {
   void *ShadowStack = nullptr;
   size_t StackSize = 0;
   size_t StackEntries = 0;
-  int Fd = -1;
+  __xray::LogWriter *LogWriter = nullptr;
 };
 
 struct BasicLoggingOptions {
@@ -83,10 +83,10 @@ static atomic_uint64_t ThresholdTicks{0};
 static atomic_uint64_t TicksPerSec{0};
 static atomic_uint64_t CycleFrequency{NanosecondsPerSecond};
 
-static int openLogFile() XRAY_NEVER_INSTRUMENT {
-  int F = getLogFD();
-  if (F == -1)
-    return -1;
+static LogWriter *getLog() XRAY_NEVER_INSTRUMENT {
+  LogWriter* LW = LogWriter::Open();
+  if (LW == nullptr)
+    return LW;
 
   static pthread_once_t DetectOnce = PTHREAD_ONCE_INIT;
   pthread_once(&DetectOnce, +[] {
@@ -108,16 +108,16 @@ static int openLogFile() XRAY_NEVER_INSTRUMENT {
   // before setting the values in the header.
   Header.ConstantTSC = 1;
   Header.NonstopTSC = 1;
-  retryingWriteAll(F, reinterpret_cast<char *>(&Header),
-                   reinterpret_cast<char *>(&Header) + sizeof(Header));
-  return F;
+  LW->WriteAll(reinterpret_cast<char *>(&Header),
+               reinterpret_cast<char *>(&Header) + sizeof(Header));
+  return LW;
 }
 
-static int getGlobalFd() XRAY_NEVER_INSTRUMENT {
+static LogWriter *getGlobalLog() XRAY_NEVER_INSTRUMENT {
   static pthread_once_t OnceInit = PTHREAD_ONCE_INIT;
-  static int Fd = 0;
-  pthread_once(&OnceInit, +[] { Fd = openLogFile(); });
-  return Fd;
+  static LogWriter *LW = nullptr;
+  pthread_once(&OnceInit, +[] { LW = getLog(); });
+  return LW;
 }
 
 static ThreadLocalData &getThreadLocalData() XRAY_NEVER_INSTRUMENT {
@@ -129,7 +129,7 @@ static ThreadLocalData &getThreadLocalData() XRAY_NEVER_INSTRUMENT {
       return false;
     }
     pthread_setspecific(PThreadKey, &TLD);
-    TLD.Fd = getGlobalFd();
+    TLD.LogWriter = getGlobalLog();
     TLD.InMemoryBuffer = reinterpret_cast<XRayRecord *>(
         InternalAlloc(sizeof(XRayRecord) * GlobalOptions.ThreadBufferSize,
                       nullptr, alignof(XRayRecord)));
@@ -157,8 +157,8 @@ template <class RDTSC>
 void InMemoryRawLog(int32_t FuncId, XRayEntryType Type,
                     RDTSC ReadTSC) XRAY_NEVER_INSTRUMENT {
   auto &TLD = getThreadLocalData();
-  int Fd = getGlobalFd();
-  if (Fd == -1)
+  LogWriter *LW = getGlobalLog();
+  if (LW == nullptr)
     return;
 
   // Use a simple recursion guard, to handle cases where we're already logging
@@ -242,9 +242,9 @@ void InMemoryRawLog(int32_t FuncId, XRayEntryType Type,
   auto FirstEntry = reinterpret_cast<XRayRecord *>(TLD.InMemoryBuffer);
   internal_memcpy(FirstEntry + TLD.BufferOffset, &R, sizeof(R));
   if (++TLD.BufferOffset == TLD.BufferSize) {
-    SpinMutexLock L(&LogMutex);
-    retryingWriteAll(Fd, reinterpret_cast<char *>(FirstEntry),
-                     reinterpret_cast<char *>(FirstEntry + TLD.BufferOffset));
+    SpinMutexLock Lock(&LogMutex);
+    LW->WriteAll(reinterpret_cast<char *>(FirstEntry),
+                 reinterpret_cast<char *>(FirstEntry + TLD.BufferOffset));
     TLD.BufferOffset = 0;
     TLD.StackEntries = 0;
   }
@@ -257,17 +257,17 @@ void InMemoryRawLogWithArg(int32_t FuncId, XRayEntryType Type, uint64_t Arg1,
   auto FirstEntry =
       reinterpret_cast<XRayArgPayload *>(TLD.InMemoryBuffer);
   const auto &BuffLen = TLD.BufferSize;
-  int Fd = getGlobalFd();
-  if (Fd == -1)
+  LogWriter *LW = getGlobalLog();
+  if (LW == nullptr)
     return;
 
   // First we check whether there's enough space to write the data consecutively
   // in the thread-local buffer. If not, we first flush the buffer before
   // attempting to write the two records that must be consecutive.
   if (TLD.BufferOffset + 2 > BuffLen) {
-    SpinMutexLock L(&LogMutex);
-    retryingWriteAll(Fd, reinterpret_cast<char *>(FirstEntry),
-                     reinterpret_cast<char *>(FirstEntry + TLD.BufferOffset));
+    SpinMutexLock Lock(&LogMutex);
+    LW->WriteAll(reinterpret_cast<char *>(FirstEntry),
+                 reinterpret_cast<char *>(FirstEntry + TLD.BufferOffset));
     TLD.BufferOffset = 0;
     TLD.StackEntries = 0;
   }
@@ -288,9 +288,9 @@ void InMemoryRawLogWithArg(int32_t FuncId, XRayEntryType Type, uint64_t Arg1,
   R.Arg = Arg1;
   internal_memcpy(FirstEntry + TLD.BufferOffset, &R, sizeof(R));
   if (++TLD.BufferOffset == BuffLen) {
-    SpinMutexLock L(&LogMutex);
-    retryingWriteAll(Fd, reinterpret_cast<char *>(FirstEntry),
-                     reinterpret_cast<char *>(FirstEntry + TLD.BufferOffset));
+    SpinMutexLock Lock(&LogMutex);
+    LW->WriteAll(reinterpret_cast<char *>(FirstEntry),
+                 reinterpret_cast<char *>(FirstEntry + TLD.BufferOffset));
     TLD.BufferOffset = 0;
     TLD.StackEntries = 0;
   }
@@ -347,25 +347,25 @@ static void TLDDestructor(void *P) XRAY_NEVER_INSTRUMENT {
       Report("Cleaned up log for TID: %d\n", GetTid());
   });
 
-  if (TLD.Fd == -1 || TLD.BufferOffset == 0) {
+  if (TLD.LogWriter == nullptr || TLD.BufferOffset == 0) {
     if (Verbosity())
-      Report("Skipping buffer for TID: %d; Fd = %d; Offset = %llu\n", GetTid(),
-             TLD.Fd, TLD.BufferOffset);
+      Report("Skipping buffer for TID: %d; Offset = %llu\n", GetTid(),
+             TLD.BufferOffset);
     return;
   }
 
   {
     SpinMutexLock L(&LogMutex);
-    retryingWriteAll(TLD.Fd, reinterpret_cast<char *>(TLD.InMemoryBuffer),
-                     reinterpret_cast<char *>(TLD.InMemoryBuffer) +
-                         (sizeof(XRayRecord) * TLD.BufferOffset));
+    TLD.LogWriter->WriteAll(reinterpret_cast<char *>(TLD.InMemoryBuffer),
+                            reinterpret_cast<char *>(TLD.InMemoryBuffer) +
+                            (sizeof(XRayRecord) * TLD.BufferOffset));
   }
 
   // Because this thread's exit could be the last one trying to write to
   // the file and that we're not able to close out the file properly, we
   // sync instead and hope that the pending writes are flushed as the
   // thread exits.
-  fsync(TLD.Fd);
+  TLD.LogWriter->Flush();
 }
 
 XRayLogInitStatus basicLoggingInit(UNUSED size_t BufferSize,

@@ -206,3 +206,153 @@ define i64 @finally_useful_bswap() {
   ret i64 %swapped
 }
 
+; Make sure we don't assert during type legalization promoting a large
+; bswap due to the need for a large shift that won't fit in the i8 returned
+; from getShiftAmountTy.
+define i528 @large_promotion(i528 %A) nounwind {
+; CHECK-LABEL: large_promotion:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    pushl %ebx
+; CHECK-NEXT:    pushl %edi
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    subl $44, %esp
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    shrdl $16, %ecx, %eax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    bswapl %edx
+; CHECK-NEXT:    shrdl $16, %edx, %ecx
+; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    bswapl %esi
+; CHECK-NEXT:    shrdl $16, %esi, %edx
+; CHECK-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    bswapl %edi
+; CHECK-NEXT:    shrdl $16, %edi, %esi
+; CHECK-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    bswapl %ebx
+; CHECK-NEXT:    shrdl $16, %ebx, %edi
+; CHECK-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    bswapl %ebp
+; CHECK-NEXT:    shrdl $16, %ebp, %ebx
+; CHECK-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    shrdl $16, %ecx, %ebp
+; CHECK-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    shrdl $16, %eax, %ecx
+; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    shrdl $16, %ecx, %eax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    shrdl $16, %eax, %ecx
+; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; CHECK-NEXT:    bswapl %ebp
+; CHECK-NEXT:    shrdl $16, %ebp, %eax
+; CHECK-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; CHECK-NEXT:    bswapl %ebx
+; CHECK-NEXT:    shrdl $16, %ebx, %ebp
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    bswapl %esi
+; CHECK-NEXT:    shrdl $16, %esi, %ebx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    bswapl %edx
+; CHECK-NEXT:    shrdl $16, %edx, %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    shrdl $16, %ecx, %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; CHECK-NEXT:    bswapl %edi
+; CHECK-NEXT:    shrdl $16, %edi, %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %ecx, 60(%eax)
+; CHECK-NEXT:    movl %edx, 56(%eax)
+; CHECK-NEXT:    movl %esi, 52(%eax)
+; CHECK-NEXT:    movl %ebx, 48(%eax)
+; CHECK-NEXT:    movl %ebp, 44(%eax)
+; CHECK-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 40(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 36(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 32(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 28(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 24(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 20(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 16(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 12(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 8(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 4(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, (%eax)
+; CHECK-NEXT:    shrl $16, %edi
+; CHECK-NEXT:    movw %di, 64(%eax)
+; CHECK-NEXT:    addl $44, %esp
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    popl %edi
+; CHECK-NEXT:    popl %ebx
+; CHECK-NEXT:    popl %ebp
+; CHECK-NEXT:    retl $4
+;
+; CHECK64-LABEL: large_promotion:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    pushq %rbx
+; CHECK64-NEXT:    movq %rdi, %rax
+; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
+; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %r11
+; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; CHECK64-NEXT:    bswapq %r10
+; CHECK64-NEXT:    bswapq %rdi
+; CHECK64-NEXT:    shrdq $48, %rdi, %r10
+; CHECK64-NEXT:    bswapq %r11
+; CHECK64-NEXT:    shrdq $48, %r11, %rdi
+; CHECK64-NEXT:    bswapq %rbx
+; CHECK64-NEXT:    shrdq $48, %rbx, %r11
+; CHECK64-NEXT:    bswapq %r9
+; CHECK64-NEXT:    shrdq $48, %r9, %rbx
+; CHECK64-NEXT:    bswapq %r8
+; CHECK64-NEXT:    shrdq $48, %r8, %r9
+; CHECK64-NEXT:    bswapq %rcx
+; CHECK64-NEXT:    shrdq $48, %rcx, %r8
+; CHECK64-NEXT:    bswapq %rdx
+; CHECK64-NEXT:    shrdq $48, %rdx, %rcx
+; CHECK64-NEXT:    bswapq %rsi
+; CHECK64-NEXT:    shrdq $48, %rsi, %rdx
+; CHECK64-NEXT:    shrq $48, %rsi
+; CHECK64-NEXT:    movq %rdx, 56(%rax)
+; CHECK64-NEXT:    movq %rcx, 48(%rax)
+; CHECK64-NEXT:    movq %r8, 40(%rax)
+; CHECK64-NEXT:    movq %r9, 32(%rax)
+; CHECK64-NEXT:    movq %rbx, 24(%rax)
+; CHECK64-NEXT:    movq %r11, 16(%rax)
+; CHECK64-NEXT:    movq %rdi, 8(%rax)
+; CHECK64-NEXT:    movq %r10, (%rax)
+; CHECK64-NEXT:    movw %si, 64(%rax)
+; CHECK64-NEXT:    popq %rbx
+; CHECK64-NEXT:    retq
+  %Z = call i528 @llvm.bswap.i528(i528 %A)
+  ret i528 %Z
+}
+declare i528 @llvm.bswap.i528(i528)

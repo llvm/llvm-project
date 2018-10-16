@@ -97,6 +97,28 @@ void copy_and_increase3(const std::vector<int> &v) {
     *i2; // expected-warning{{Iterator accessed outside of its range}}
 }
 
+template <class InputIterator, class T>
+InputIterator nonStdFind(InputIterator first, InputIterator last,
+                         const T &val) {
+  for (auto i = first; i != last; ++i) {
+    if (*i == val) {
+      return i;
+    }
+  }
+  return last;
+}
+
+void good_non_std_find(std::vector<int> &V, int e) {
+  auto first = nonStdFind(V.begin(), V.end(), e);
+  if (V.end() != first)
+    *first; // no-warning
+}
+
+void bad_non_std_find(std::vector<int> &V, int e) {
+  auto first = nonStdFind(V.begin(), V.end(), e);
+  *first; // expected-warning{{Iterator accessed outside of its range}}
+}
+
 void tricky(std::vector<int> &V, int e) {
   const auto first = V.begin();
   const auto comp1 = (first != V.end()), comp2 = (first == V.end());

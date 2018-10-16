@@ -125,5 +125,17 @@ runDocumentSymbols(ClangdServer &Server, PathRef File) {
   return std::move(*Result);
 }
 
+SymbolSlab runFuzzyFind(const SymbolIndex &Index, StringRef Query) {
+  FuzzyFindRequest Req;
+  Req.Query = Query;
+  return runFuzzyFind(Index, Req);
+}
+
+SymbolSlab runFuzzyFind(const SymbolIndex &Index, const FuzzyFindRequest &Req) {
+  SymbolSlab::Builder Builder;
+  Index.fuzzyFind(Req, [&](const Symbol &Sym) { Builder.insert(Sym); });
+  return std::move(Builder).build();
+}
+
 } // namespace clangd
 } // namespace clang

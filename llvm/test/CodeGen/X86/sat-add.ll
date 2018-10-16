@@ -679,13 +679,12 @@ define <16 x i8> @unsigned_sat_variable_v16i8_using_cmp_notval(<16 x i8> %x, <16
 define <8 x i16> @unsigned_sat_variable_v8i16_using_min(<8 x i16> %x, <8 x i16> %y) {
 ; SSE2-LABEL: unsigned_sat_variable_v8i16_using_min:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm3, %xmm0
-; SSE2-NEXT:    pxor %xmm3, %xmm2
-; SSE2-NEXT:    pxor %xmm1, %xmm2
-; SSE2-NEXT:    pminsw %xmm2, %xmm0
-; SSE2-NEXT:    pxor %xmm3, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [32767,32767,32767,32767,32767,32767,32767,32767]
+; SSE2-NEXT:    pxor %xmm1, %xmm3
+; SSE2-NEXT:    pminsw %xmm3, %xmm0
+; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    paddw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -717,15 +716,12 @@ define <8 x i16> @unsigned_sat_variable_v8i16_using_cmp_sum(<8 x i16> %x, <8 x i
 define <8 x i16> @unsigned_sat_variable_v8i16_using_cmp_notval(<8 x i16> %x, <8 x i16> %y) {
 ; SSE2-LABEL: unsigned_sat_variable_v8i16_using_cmp_notval:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    paddw %xmm1, %xmm3
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    pxor %xmm4, %xmm2
-; SSE2-NEXT:    pxor %xmm1, %xmm2
-; SSE2-NEXT:    pcmpgtw %xmm2, %xmm0
-; SSE2-NEXT:    por %xmm3, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    paddw %xmm1, %xmm2
+; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpgtw %xmm1, %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: unsigned_sat_variable_v8i16_using_cmp_notval:
@@ -750,17 +746,15 @@ define <4 x i32> @unsigned_sat_variable_v4i32_using_min(<4 x i32> %x, <4 x i32> 
 ; SSE2-LABEL: unsigned_sat_variable_v4i32_using_min:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE2-NEXT:    pxor %xmm1, %xmm2
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [2147483648,2147483648,2147483648,2147483648]
-; SSE2-NEXT:    movdqa %xmm0, %xmm4
-; SSE2-NEXT:    pxor %xmm3, %xmm4
-; SSE2-NEXT:    pxor %xmm2, %xmm3
-; SSE2-NEXT:    pxor %xmm1, %xmm3
-; SSE2-NEXT:    pcmpgtd %xmm4, %xmm3
-; SSE2-NEXT:    pand %xmm3, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm3
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm3, %xmm2
-; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    pxor %xmm0, %xmm3
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [2147483647,2147483647,2147483647,2147483647]
+; SSE2-NEXT:    pxor %xmm1, %xmm4
+; SSE2-NEXT:    pcmpgtd %xmm3, %xmm4
+; SSE2-NEXT:    pand %xmm4, %xmm0
+; SSE2-NEXT:    pandn %xmm2, %xmm4
+; SSE2-NEXT:    por %xmm4, %xmm0
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -809,15 +803,12 @@ define <4 x i32> @unsigned_sat_variable_v4i32_using_cmp_sum(<4 x i32> %x, <4 x i
 define <4 x i32> @unsigned_sat_variable_v4i32_using_cmp_notval(<4 x i32> %x, <4 x i32> %y) {
 ; SSE2-LABEL: unsigned_sat_variable_v4i32_using_cmp_notval:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    paddd %xmm1, %xmm3
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,2147483648,2147483648,2147483648]
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    pxor %xmm4, %xmm2
-; SSE2-NEXT:    pxor %xmm1, %xmm2
-; SSE2-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSE2-NEXT:    por %xmm3, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    paddd %xmm1, %xmm2
+; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: unsigned_sat_variable_v4i32_using_cmp_notval:

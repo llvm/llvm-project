@@ -373,8 +373,8 @@ define <16 x i8> @var_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; SSE2-NEXT:    movdqa %xmm3, %xmm4
 ; SSE2-NEXT:    pandn %xmm0, %xmm4
 ; SSE2-NEXT:    psrlw $4, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    pand %xmm3, %xmm0
+; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    por %xmm4, %xmm0
 ; SSE2-NEXT:    paddb %xmm1, %xmm1
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
@@ -382,16 +382,16 @@ define <16 x i8> @var_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; SSE2-NEXT:    movdqa %xmm3, %xmm4
 ; SSE2-NEXT:    pandn %xmm0, %xmm4
 ; SSE2-NEXT:    psrlw $2, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    pand %xmm3, %xmm0
+; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    por %xmm4, %xmm0
 ; SSE2-NEXT:    paddb %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpgtb %xmm1, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; SSE2-NEXT:    pandn %xmm0, %xmm1
 ; SSE2-NEXT:    psrlw $1, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -488,8 +488,8 @@ define <16 x i8> @var_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; X32-SSE-NEXT:    movdqa %xmm3, %xmm4
 ; X32-SSE-NEXT:    pandn %xmm0, %xmm4
 ; X32-SSE-NEXT:    psrlw $4, %xmm0
-; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    pand %xmm3, %xmm0
+; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    por %xmm4, %xmm0
 ; X32-SSE-NEXT:    paddb %xmm1, %xmm1
 ; X32-SSE-NEXT:    pxor %xmm3, %xmm3
@@ -497,16 +497,16 @@ define <16 x i8> @var_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; X32-SSE-NEXT:    movdqa %xmm3, %xmm4
 ; X32-SSE-NEXT:    pandn %xmm0, %xmm4
 ; X32-SSE-NEXT:    psrlw $2, %xmm0
-; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    pand %xmm3, %xmm0
+; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    por %xmm4, %xmm0
 ; X32-SSE-NEXT:    paddb %xmm1, %xmm1
 ; X32-SSE-NEXT:    pcmpgtb %xmm1, %xmm2
 ; X32-SSE-NEXT:    movdqa %xmm2, %xmm1
 ; X32-SSE-NEXT:    pandn %xmm0, %xmm1
 ; X32-SSE-NEXT:    psrlw $1, %xmm0
-; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    pand %xmm2, %xmm0
+; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    por %xmm1, %xmm0
 ; X32-SSE-NEXT:    retl
   %shift = lshr <16 x i8> %a, %b

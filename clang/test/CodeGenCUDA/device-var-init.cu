@@ -173,41 +173,41 @@ __device__ void df() {
   T t;
   // CHECK-NOT: call
   EC ec;
-  // CHECK:  call void @_ZN2ECC1Ev(%struct.EC* noalias %[[ec]])
+  // CHECK:  call void @_ZN2ECC1Ev(%struct.EC* %[[ec]])
   ED ed;
   // CHECK-NOT: call
   ECD ecd;
-  // CHECK:  call void @_ZN3ECDC1Ev(%struct.ECD* noalias %[[ecd]])
+  // CHECK:  call void @_ZN3ECDC1Ev(%struct.ECD* %[[ecd]])
   ETC etc;
-  // CHECK:  call void @_ZN3ETCC1IJEEEDpT_(%struct.ETC* noalias %[[etc]])
+  // CHECK:  call void @_ZN3ETCC1IJEEEDpT_(%struct.ETC* %[[etc]])
   UC uc;
   // undefined constructor -- not allowed
-  // CHECK:  call void @_ZN2UCC1Ev(%struct.UC* noalias %[[uc]])
+  // CHECK:  call void @_ZN2UCC1Ev(%struct.UC* %[[uc]])
   UD ud;
   // undefined destructor -- not allowed
   // CHECK-NOT: call
   ECI eci;
   // empty constructor w/ initializer list -- not allowed
-  // CHECK:  call void @_ZN3ECIC1Ev(%struct.ECI* noalias %[[eci]])
+  // CHECK:  call void @_ZN3ECIC1Ev(%struct.ECI* %[[eci]])
   NEC nec;
   // non-empty constructor -- not allowed
-  // CHECK:  call void @_ZN3NECC1Ev(%struct.NEC* noalias %[[nec]])
+  // CHECK:  call void @_ZN3NECC1Ev(%struct.NEC* %[[nec]])
   // non-empty destructor -- not allowed
   NED ned;
   // no-constructor,  virtual method -- not allowed
-  // CHECK:  call void @_ZN3NCVC1Ev(%struct.NCV* noalias %[[ncv]])
+  // CHECK:  call void @_ZN3NCVC1Ev(%struct.NCV* %[[ncv]])
   NCV ncv;
   // CHECK-NOT: call
   VD vd;
-  // CHECK:  call void @_ZN2VDC1Ev(%struct.VD* noalias %[[vd]])
+  // CHECK:  call void @_ZN2VDC1Ev(%struct.VD* %[[vd]])
   NCF ncf;
-  // CHECK:   call void @_ZN3NCFC1Ev(%struct.NCF* noalias %[[ncf]])
+  // CHECK:   call void @_ZN3NCFC1Ev(%struct.NCF* %[[ncf]])
   NCFS ncfs;
-  // CHECK:  call void @_ZN4NCFSC1Ev(%struct.NCFS* noalias %[[ncfs]])
+  // CHECK:  call void @_ZN4NCFSC1Ev(%struct.NCFS* %[[ncfs]])
   UTC utc;
-  // CHECK:  call void @_ZN3UTCC1IJEEEDpT_(%struct.UTC* noalias %[[utc]])
+  // CHECK:  call void @_ZN3UTCC1IJEEEDpT_(%struct.UTC* %[[utc]])
   NETC netc;
-  // CHECK:  call void @_ZN4NETCC1IJEEEDpT_(%struct.NETC* noalias %[[netc]])
+  // CHECK:  call void @_ZN4NETCC1IJEEEDpT_(%struct.NETC* %[[netc]])
   T_B_T t_b_t;
   // CHECK-NOT: call
   T_F_T t_f_t;
@@ -215,17 +215,17 @@ __device__ void df() {
   T_FA_T t_fa_t;
   // CHECK-NOT: call
   EC_I_EC ec_i_ec;
-  // CHECK:  call void @_ZN7EC_I_ECC1Ev(%struct.EC_I_EC* noalias %[[ec_i_ec]])
+  // CHECK:  call void @_ZN7EC_I_ECC1Ev(%struct.EC_I_EC* %[[ec_i_ec]])
   EC_I_EC1 ec_i_ec1;
-  // CHECK:  call void @_ZN8EC_I_EC1C1Ev(%struct.EC_I_EC1* noalias %[[ec_i_ec1]])
+  // CHECK:  call void @_ZN8EC_I_EC1C1Ev(%struct.EC_I_EC1* %[[ec_i_ec1]])
   T_V_T t_v_t;
-  // CHECK:  call void @_ZN5T_V_TC1Ev(%struct.T_V_T* noalias %[[t_v_t]])
+  // CHECK:  call void @_ZN5T_V_TC1Ev(%struct.T_V_T* %[[t_v_t]])
   T_B_NEC t_b_nec;
-  // CHECK:  call void @_ZN7T_B_NECC1Ev(%struct.T_B_NEC* noalias %[[t_b_nec]])
+  // CHECK:  call void @_ZN7T_B_NECC1Ev(%struct.T_B_NEC* %[[t_b_nec]])
   T_F_NEC t_f_nec;
-  // CHECK:  call void @_ZN7T_F_NECC1Ev(%struct.T_F_NEC* noalias %[[t_f_nec]])
+  // CHECK:  call void @_ZN7T_F_NECC1Ev(%struct.T_F_NEC* %[[t_f_nec]])
   T_FA_NEC t_fa_nec;
-  // CHECK:  call void @_ZN8T_FA_NECC1Ev(%struct.T_FA_NEC* noalias %[[t_fa_nec]])
+  // CHECK:  call void @_ZN8T_FA_NECC1Ev(%struct.T_FA_NEC* %[[t_fa_nec]])
   T_B_NED t_b_ned;
   // CHECK-NOT: call
   T_F_NED t_f_ned;

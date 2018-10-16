@@ -248,7 +248,7 @@ static void copyMustTailReturn(BasicBlock *SplitBB, Instruction *CI,
   ReturnInst* RI = dyn_cast<ReturnInst>(&*II);
   assert(RI && "`musttail` call must be followed by `ret` instruction");
 
-  TerminatorInst *TI = SplitBB->getTerminator();
+  Instruction *TI = SplitBB->getTerminator();
   Value *V = NewCI;
   if (BCI)
     V = cloneInstForMustTail(BCI, TI, V);

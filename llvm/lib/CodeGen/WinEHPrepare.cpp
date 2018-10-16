@@ -218,7 +218,7 @@ static void calculateStateNumbersForInvokes(const Function *Fn,
 // to. If the unwind edge came from an invoke, return null.
 static const BasicBlock *getEHPadFromPredecessor(const BasicBlock *BB,
                                                  Value *ParentPad) {
-  const TerminatorInst *TI = BB->getTerminator();
+  const Instruction *TI = BB->getTerminator();
   if (isa<InvokeInst>(TI))
     return nullptr;
   if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(TI)) {
@@ -977,7 +977,7 @@ void WinEHPrepare::removeImplausibleInstructions(Function &F) {
         break;
       }
 
-      TerminatorInst *TI = BB->getTerminator();
+      Instruction *TI = BB->getTerminator();
       // CatchPadInst and CleanupPadInst can't transfer control to a ReturnInst.
       bool IsUnreachableRet = isa<ReturnInst>(TI) && FuncletPad;
       // The token consumed by a CatchReturnInst must match the funclet token.

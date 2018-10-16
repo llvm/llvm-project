@@ -29,11 +29,11 @@
 using namespace clang;
 using namespace clang::clangd;
 
-// FIXME: remove this option when Dex is stable enough.
+// FIXME: remove this option when Dex is cheap enough.
 static llvm::cl::opt<bool>
     UseDex("use-dex-index",
-           llvm::cl::desc("Use experimental Dex static index."),
-           llvm::cl::init(true), llvm::cl::Hidden);
+           llvm::cl::desc("Use experimental Dex dynamic index."),
+           llvm::cl::init(false), llvm::cl::Hidden);
 
 static llvm::cl::opt<Path> CompileCommandsDir(
     "compile-commands-dir",
@@ -286,6 +286,7 @@ int main(int argc, char *argv[]) {
   if (!ResourceDir.empty())
     Opts.ResourceDir = ResourceDir;
   Opts.BuildDynamicSymbolIndex = EnableIndex;
+  Opts.HeavyweightDynamicSymbolIndex = UseDex;
   std::unique_ptr<SymbolIndex> StaticIdx;
   std::future<void> AsyncIndexLoad; // Block exit while loading the index.
   if (EnableIndex && !IndexFile.empty()) {
@@ -293,7 +294,7 @@ int main(int argc, char *argv[]) {
     SwapIndex *Placeholder;
     StaticIdx.reset(Placeholder = new SwapIndex(llvm::make_unique<MemIndex>()));
     AsyncIndexLoad = runAsync<void>([Placeholder, &Opts] {
-      if (auto Idx = loadIndex(IndexFile, Opts.URISchemes, UseDex))
+      if (auto Idx = loadIndex(IndexFile, Opts.URISchemes, /*UseDex=*/true))
         Placeholder->reset(std::move(Idx));
     });
     if (RunSynchronously)

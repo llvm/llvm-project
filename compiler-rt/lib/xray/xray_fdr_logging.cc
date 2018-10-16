@@ -838,8 +838,8 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
   //      (fixed-sized) and let the tools reading the buffers deal with the data
   //      afterwards.
   //
-  int Fd = getLogFD();
-  if (Fd == -1) {
+  LogWriter* LW = LogWriter::Open();
+  if (LW == nullptr) {
     auto Result = XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
     atomic_store(&LogFlushStatus, Result, memory_order_release);
     return Result;
@@ -847,8 +847,8 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
 
   XRayFileHeader Header = fdrCommonHeaderInfo();
   Header.FdrData = FdrAdditionalHeaderData{BQ->ConfiguredBufferSize()};
-  retryingWriteAll(Fd, reinterpret_cast<char *>(&Header),
-                   reinterpret_cast<char *>(&Header) + sizeof(Header));
+  LW->WriteAll(reinterpret_cast<char *>(&Header),
+               reinterpret_cast<char *>(&Header) + sizeof(Header));
 
   // Release the current thread's buffer before we attempt to write out all the
   // buffers. This ensures that in case we had only a single thread going, that
@@ -871,11 +871,11 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
         uint8_t(MetadataRecord::RecordKinds::BufferExtents);
     internal_memcpy(ExtentsRecord.Data, &BufferExtents, sizeof(BufferExtents));
     if (BufferExtents > 0) {
-      retryingWriteAll(Fd, reinterpret_cast<char *>(&ExtentsRecord),
-                       reinterpret_cast<char *>(&ExtentsRecord) +
-                           sizeof(MetadataRecord));
-      retryingWriteAll(Fd, reinterpret_cast<char *>(B.Data),
-                       reinterpret_cast<char *>(B.Data) + BufferExtents);
+      LW->WriteAll(reinterpret_cast<char *>(&ExtentsRecord),
+                   reinterpret_cast<char *>(&ExtentsRecord) +
+                   sizeof(MetadataRecord));
+      LW->WriteAll(reinterpret_cast<char *>(B.Data),
+                   reinterpret_cast<char *>(B.Data) + BufferExtents);
     }
   });
 

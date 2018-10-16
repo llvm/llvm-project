@@ -37,10 +37,6 @@ namespace PrintIR {
 /// Generic IR-printing helper that unpacks a pointer to IRUnit wrapped into
 /// llvm::Any and does actual print job.
 void unwrapAndPrint(StringRef Banner, Any IR) {
-  if (any_isa<const CallGraphSCC *>(IR) ||
-      any_isa<const LazyCallGraph::SCC *>(IR))
-    return;
-
   SmallString<40> Extra{"\n"};
   const Module *M = nullptr;
   if (any_isa<const Module *>(IR)) {
@@ -55,6 +51,34 @@ void unwrapAndPrint(StringRef Banner, Any IR) {
     }
     M = F->getParent();
     Extra = formatv(" (function: {0})\n", F->getName());
+  } else if (any_isa<const LazyCallGraph::SCC *>(IR)) {
+    const LazyCallGraph::SCC *C = any_cast<const LazyCallGraph::SCC *>(IR);
+    assert(C);
+    if (!llvm::forcePrintModuleIR()) {
+      Extra = formatv(" (scc: {0})\n", C->getName());
+      bool BannerPrinted = false;
+      for (const LazyCallGraph::Node &N : *C) {
+        const Function &F = N.getFunction();
+        if (!F.isDeclaration() && isFunctionInPrintList(F.getName())) {
+          if (!BannerPrinted) {
+            dbgs() << Banner << Extra;
+            BannerPrinted = true;
+          }
+          F.print(dbgs());
+        }
+      }
+      return;
+    }
+    for (const LazyCallGraph::Node &N : *C) {
+      const Function &F = N.getFunction();
+      if (!F.isDeclaration() && isFunctionInPrintList(F.getName())) {
+        M = F.getParent();
+        break;
+      }
+    }
+    if (!M)
+      return;
+    Extra = formatv(" (for scc: {0})\n", C->getName());
   } else if (any_isa<const Loop *>(IR)) {
     const Loop *L = any_cast<const Loop *>(IR);
     const Function *F = L->getHeader()->getParent();

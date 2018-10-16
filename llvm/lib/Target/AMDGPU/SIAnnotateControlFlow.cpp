@@ -288,7 +288,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(
         }
       }
 
-      TerminatorInst *Insert = From->getTerminator();
+      Instruction *Insert = From->getTerminator();
       Value *PhiArg = CallInst::Create(Break, Broken, "", Insert);
       NewPhi->setIncomingValue(i, PhiArg);
     }

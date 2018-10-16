@@ -1712,7 +1712,12 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     break;
   }
   case ISD::ADD:
-  case ISD::SUB: {
+  case ISD::SUB:
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+  case ISD::FDIV:
+  case ISD::FREM: {
     APInt SrcUndef, SrcZero;
     if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts, SrcUndef,
                                    SrcZero, TLO, Depth + 1))

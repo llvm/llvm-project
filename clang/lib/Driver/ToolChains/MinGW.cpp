@@ -10,6 +10,7 @@
 #include "MinGW.h"
 #include "InputInfo.h"
 #include "CommonArgs.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -376,6 +377,10 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
   getFilePaths().push_back(Base + "lib");
   // openSUSE
   getFilePaths().push_back(Base + Arch + "/sys-root/mingw/lib");
+
+  NativeLLVMSupport =
+      Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER)
+          .equals_lower("lld");
 }
 
 bool toolchains::MinGW::IsIntegratedAssemblerDefault() const { return true; }
@@ -401,6 +406,10 @@ Tool *toolchains::MinGW::buildAssembler() const {
 
 Tool *toolchains::MinGW::buildLinker() const {
   return new tools::MinGW::Linker(*this);
+}
+
+bool toolchains::MinGW::HasNativeLLVMSupport() const {
+  return NativeLLVMSupport;
 }
 
 bool toolchains::MinGW::IsUnwindTablesDefault(const ArgList &Args) const {

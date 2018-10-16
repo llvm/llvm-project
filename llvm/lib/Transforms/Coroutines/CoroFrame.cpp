@@ -601,7 +601,7 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
 }
 
 // Sets the unwind edge of an instruction to a particular successor.
-static void setUnwindEdgeTo(TerminatorInst *TI, BasicBlock *Succ) {
+static void setUnwindEdgeTo(Instruction *TI, BasicBlock *Succ) {
   if (auto *II = dyn_cast<InvokeInst>(TI))
     II->setUnwindDest(Succ);
   else if (auto *CS = dyn_cast<CatchSwitchInst>(TI))

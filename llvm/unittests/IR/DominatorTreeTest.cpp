@@ -301,7 +301,7 @@ TEST(DominatorTree, NonUniqueEdges) {
         BasicBlock *BB1 = &*FI++;
         BasicBlock *BB2 = &*FI++;
 
-        const TerminatorInst *TI = BB0->getTerminator();
+        const Instruction *TI = BB0->getTerminator();
         assert(TI->getNumSuccessors() == 3 && "Switch has three successors");
 
         BasicBlockEdge Edge_BB0_BB2(BB0, TI->getSuccessor(0));

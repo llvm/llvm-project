@@ -190,12 +190,12 @@ void ExceptionEscapeCheck::registerMatchers(MatchFinder *Finder) {
     return;
 
   Finder->addMatcher(
-      functionDecl(allOf(throws(unless(isIgnored(IgnoredExceptions))),
-                         anyOf(isNoThrow(), cxxDestructorDecl(),
+      functionDecl(allOf(anyOf(isNoThrow(), cxxDestructorDecl(),
                                cxxConstructorDecl(isMoveConstructor()),
                                cxxMethodDecl(isMoveAssignmentOperator()),
                                hasName("main"), hasName("swap"),
-                               isEnabled(FunctionsThatShouldNotThrow))))
+                               isEnabled(FunctionsThatShouldNotThrow)),
+                         throws(unless(isIgnored(IgnoredExceptions)))))
           .bind("thrower"),
       this);
 }

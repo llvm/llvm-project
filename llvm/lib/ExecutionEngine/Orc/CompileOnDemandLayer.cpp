@@ -68,13 +68,13 @@ namespace orc {
 class PartitioningIRMaterializationUnit : public IRMaterializationUnit {
 public:
   PartitioningIRMaterializationUnit(ExecutionSession &ES, ThreadSafeModule TSM,
-                                    CompileOnDemandLayer2 &Parent)
+                                    CompileOnDemandLayer &Parent)
       : IRMaterializationUnit(ES, std::move(TSM)), Parent(Parent) {}
 
   PartitioningIRMaterializationUnit(
       ThreadSafeModule TSM, SymbolFlagsMap SymbolFlags,
       SymbolNameToDefinitionMap SymbolToDefinition,
-      CompileOnDemandLayer2 &Parent)
+      CompileOnDemandLayer &Parent)
       : IRMaterializationUnit(std::move(TSM), std::move(SymbolFlags),
                               std::move(SymbolToDefinition)),
         Parent(Parent) {}
@@ -93,30 +93,30 @@ private:
   }
 
   mutable std::mutex SourceModuleMutex;
-  CompileOnDemandLayer2 &Parent;
+  CompileOnDemandLayer &Parent;
 };
 
-Optional<CompileOnDemandLayer2::GlobalValueSet>
-CompileOnDemandLayer2::compileRequested(GlobalValueSet Requested) {
+Optional<CompileOnDemandLayer::GlobalValueSet>
+CompileOnDemandLayer::compileRequested(GlobalValueSet Requested) {
   return std::move(Requested);
 }
 
-Optional<CompileOnDemandLayer2::GlobalValueSet>
-CompileOnDemandLayer2::compileWholeModule(GlobalValueSet Requested) {
+Optional<CompileOnDemandLayer::GlobalValueSet>
+CompileOnDemandLayer::compileWholeModule(GlobalValueSet Requested) {
   return None;
 }
 
-CompileOnDemandLayer2::CompileOnDemandLayer2(
+CompileOnDemandLayer::CompileOnDemandLayer(
     ExecutionSession &ES, IRLayer &BaseLayer, LazyCallThroughManager &LCTMgr,
     IndirectStubsManagerBuilder BuildIndirectStubsManager)
     : IRLayer(ES), BaseLayer(BaseLayer), LCTMgr(LCTMgr),
       BuildIndirectStubsManager(std::move(BuildIndirectStubsManager)) {}
 
-void CompileOnDemandLayer2::setPartitionFunction(PartitionFunction Partition) {
+void CompileOnDemandLayer::setPartitionFunction(PartitionFunction Partition) {
   this->Partition = std::move(Partition);
 }
 
-void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
+void CompileOnDemandLayer::emit(MaterializationResponsibility R, VModuleKey K,
                                  ThreadSafeModule TSM) {
   assert(TSM.getModule() && "Null module");
 
@@ -160,8 +160,8 @@ void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
                           std::move(Callables)));
 }
 
-CompileOnDemandLayer2::PerDylibResources &
-CompileOnDemandLayer2::getPerDylibResources(JITDylib &TargetD) {
+CompileOnDemandLayer::PerDylibResources &
+CompileOnDemandLayer::getPerDylibResources(JITDylib &TargetD) {
   auto I = DylibResources.find(&TargetD);
   if (I == DylibResources.end()) {
     auto &ImplD =
@@ -176,7 +176,7 @@ CompileOnDemandLayer2::getPerDylibResources(JITDylib &TargetD) {
   return I->second;
 }
 
-void CompileOnDemandLayer2::cleanUpModule(Module &M) {
+void CompileOnDemandLayer::cleanUpModule(Module &M) {
   for (auto &F : M.functions()) {
     if (F.isDeclaration())
       continue;
@@ -189,7 +189,7 @@ void CompileOnDemandLayer2::cleanUpModule(Module &M) {
   }
 }
 
-void CompileOnDemandLayer2::expandPartition(GlobalValueSet &Partition) {
+void CompileOnDemandLayer::expandPartition(GlobalValueSet &Partition) {
   // Expands the partition to ensure the following rules hold:
   // (1) If any alias is in the partition, its aliasee is also in the partition.
   // (2) If any aliasee is in the partition, its aliases are also in the
@@ -221,7 +221,7 @@ void CompileOnDemandLayer2::expandPartition(GlobalValueSet &Partition) {
     Partition.insert(GV);
 }
 
-void CompileOnDemandLayer2::emitPartition(
+void CompileOnDemandLayer::emitPartition(
     MaterializationResponsibility R, ThreadSafeModule TSM,
     IRMaterializationUnit::SymbolNameToDefinitionMap Defs) {
 

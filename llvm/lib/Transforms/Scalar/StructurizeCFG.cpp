@@ -636,7 +636,7 @@ void StructurizeCFG::setPhiValues() {
 
 /// Remove phi values from all successors and then remove the terminator.
 void StructurizeCFG::killTerminator(BasicBlock *BB) {
-  TerminatorInst *Term = BB->getTerminator();
+  Instruction *Term = BB->getTerminator();
   if (!Term)
     return;
 

@@ -57,10 +57,7 @@ struct Edge {
 };
 
 struct Cluster {
-  Cluster(int Sec, size_t S) {
-    Sections.push_back(Sec);
-    Size = S;
-  }
+  Cluster(int Sec, size_t S) : Sections{Sec}, Size(S) {}
 
   double getDensity() const {
     if (Size == 0)
@@ -96,12 +93,14 @@ constexpr int MAX_DENSITY_DEGRADATION = 8;
 constexpr uint64_t MAX_CLUSTER_SIZE = 1024 * 1024;
 } // end anonymous namespace
 
+typedef std::pair<const InputSectionBase *, const InputSectionBase *>
+    SectionPair;
+
 // Take the edge list in Config->CallGraphProfile, resolve symbol names to
 // Symbols, and generate a graph between InputSections with the provided
 // weights.
 CallGraphSort::CallGraphSort() {
-  llvm::MapVector<std::pair<const InputSectionBase *, const InputSectionBase *>,
-                  uint64_t> &Profile = Config->CallGraphProfile;
+  MapVector<SectionPair, uint64_t> &Profile = Config->CallGraphProfile;
   DenseMap<const InputSectionBase *, int> SecToCluster;
 
   auto GetOrCreateNode = [&](const InputSectionBase *IS) -> int {
@@ -114,7 +113,7 @@ CallGraphSort::CallGraphSort() {
   };
 
   // Create the graph.
-  for (const auto &C : Profile) {
+  for (std::pair<SectionPair, uint64_t> &C : Profile) {
     const auto *FromSB = cast<InputSectionBase>(C.first.first->Repl);
     const auto *ToSB = cast<InputSectionBase>(C.first.second->Repl);
     uint64_t Weight = C.second;
@@ -150,9 +149,7 @@ CallGraphSort::CallGraphSort() {
 // It's bad to merge clusters which would degrade the density too much.
 static bool isNewDensityBad(Cluster &A, Cluster &B) {
   double NewDensity = double(A.Weight + B.Weight) / double(A.Size + B.Size);
-  if (NewDensity < A.getDensity() / MAX_DENSITY_DEGRADATION)
-    return true;
-  return false;
+  return NewDensity < A.getDensity() / MAX_DENSITY_DEGRADATION;
 }
 
 static void mergeClusters(Cluster &Into, Cluster &From) {
@@ -223,7 +220,7 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
   groupClusters();
 
   // Generate order.
-  llvm::DenseMap<const InputSectionBase *, int> OrderMap;
+  DenseMap<const InputSectionBase *, int> OrderMap;
   ssize_t CurOrder = 1;
 
   for (const Cluster &C : Clusters)

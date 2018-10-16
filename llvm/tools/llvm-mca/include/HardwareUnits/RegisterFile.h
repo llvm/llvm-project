@@ -109,12 +109,18 @@ class RegisterFile : public HardwareUnit {
   //
   // Field `AllowMoveElimination` is set for registers that are used as
   // destination by optimizable register moves.
+  //
+  // Field `AliasRegID` is set by writes from register moves that have been
+  // eliminated at register renaming stage. A move eliminated at register
+  // renaming stage is effectively bypassed, and its write aliases the source
+  // register definition.
   struct RegisterRenamingInfo {
     IndexPlusCostPairTy IndexPlusCost;
     llvm::MCPhysReg RenameAs;
+    llvm::MCPhysReg AliasRegID;
     bool AllowMoveElimination;
     RegisterRenamingInfo()
-        : IndexPlusCost(std::make_pair(0U, 1U)), RenameAs(0U),
+        : IndexPlusCost(std::make_pair(0U, 1U)), RenameAs(0U), AliasRegID(0U),
           AllowMoveElimination(false) {}
   };
 

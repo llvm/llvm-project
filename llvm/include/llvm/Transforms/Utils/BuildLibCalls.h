@@ -28,7 +28,7 @@ namespace llvm {
   /// If the library function is unavailable, this doesn't modify it.
   ///
   /// Returns true if any attributes were set and false otherwise.
-  bool inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI);
+  bool inferLibFuncAttributes(Function *Func, const TargetLibraryInfo &TLI);
 
   /// Check whether the overloaded unary floating point function
   /// corresponding to \a Ty is available.

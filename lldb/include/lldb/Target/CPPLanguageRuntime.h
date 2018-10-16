@@ -56,6 +56,19 @@ public:
   bool GetObjectDescription(Stream &str, Value &value,
                             ExecutionContextScope *exe_scope) override;
 
+  /// Obtain a ThreadPlan to get us into C++ constructs such as std::function.
+  ///
+  /// @param[in] thread
+  ///     Curent thrad of execution.
+  ///
+  /// @param[in] stop_others
+  ///     True if other threads should pause during execution.
+  ///
+  /// @return
+  ///      A ThreadPlan Shared pointer
+  lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
+                                                  bool stop_others);
+
 protected:
   //------------------------------------------------------------------
   // Classes that inherit from CPPLanguageRuntime can see and modify these

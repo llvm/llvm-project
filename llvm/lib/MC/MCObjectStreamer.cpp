@@ -14,7 +14,6 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCBTFContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -22,7 +21,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
-#include "MCDwarf2BTF.h"
 using namespace llvm;
 
 MCObjectStreamer::MCObjectStreamer(MCContext &Context,
@@ -441,31 +439,6 @@ void MCObjectStreamer::EmitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
   insert(new MCDwarfCallFrameFragment(*AddrDelta));
 }
 
-void MCObjectStreamer::EmitBTFAdvanceLineAddr(const MCSymbol *Label,
-                                              unsigned Size) {
-  const MCExpr *Value = MCSymbolRefExpr::create(Label, getContext());
-  MCDataFragment *DF = getOrCreateDataFragment();
-
-  // Avoid fixups when possible.
-  int64_t AbsValue;
-  SMLoc Loc;
-
-  if (Value->evaluateAsAbsolute(AbsValue, getAssemblerPtr())) {
-    if (!isUIntN(8 * Size, AbsValue) && !isIntN(8 * Size, AbsValue)) {
-      getContext().reportError(
-          Loc, "value evaluated as " + Twine(AbsValue) + " is out of range.");
-      return;
-    }
-    EmitIntValue(AbsValue, Size);
-    return;
-  }
-
-  DF->getFixups().push_back(
-      MCFixup::create(DF->getContents().size(), Value,
-                      MCFixup::getKindForSize(Size, false), Loc));
-  DF->getContents().resize(DF->getContents().size() + Size, 0);
-}
-
 void MCObjectStreamer::EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                           unsigned Line, unsigned Column,
                                           bool PrologueEnd, bool IsStmt,
@@ -714,13 +687,6 @@ void MCObjectStreamer::FinishImpl() {
 
   // Dump out the dwarf file & directory tables and line tables.
   MCDwarfLineTable::Emit(this, getAssembler().getDWARFLinetableParams());
-
-  auto &BTFCtx = getContext().getBTFContext();
-  if (BTFCtx) {
-    MCDwarf2BTF::addDwarfLineInfo(this);
-    BTFCtx->emitAll(this);
-    BTFCtx.reset();
-  }
 
   flushPendingLabels();
   getAssembler().Finish();

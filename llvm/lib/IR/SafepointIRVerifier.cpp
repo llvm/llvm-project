@@ -134,7 +134,7 @@ public:
     // Top-down walk of the dominator tree
     ReversePostOrderTraversal<const Function *> RPOT(&F);
     for (const BasicBlock *BB : RPOT) {
-      const TerminatorInst *TI = BB->getTerminator();
+      const Instruction *TI = BB->getTerminator();
       assert(TI && "blocks must be well formed");
 
       // For conditional branches, we can perform simple conditional propagation on

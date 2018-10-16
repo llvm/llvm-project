@@ -149,11 +149,11 @@ define <4 x i64> @old(double* %p, <4 x i32>* %i, <4 x i32>* %h, i64 %f) nounwind
 ; LIN-SSE2-NEXT:    andl %ecx, %edx
 ; LIN-SSE2-NEXT:    andl %ecx, %esi
 ; LIN-SSE2-NEXT:    andl %ecx, %edi
-; LIN-SSE2-NEXT:    movd %eax, %xmm0
-; LIN-SSE2-NEXT:    movd %edx, %xmm1
+; LIN-SSE2-NEXT:    movq %rax, %xmm0
+; LIN-SSE2-NEXT:    movq %rdx, %xmm1
 ; LIN-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; LIN-SSE2-NEXT:    movd %edi, %xmm2
-; LIN-SSE2-NEXT:    movd %esi, %xmm1
+; LIN-SSE2-NEXT:    movq %rdi, %xmm2
+; LIN-SSE2-NEXT:    movq %rsi, %xmm1
 ; LIN-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; LIN-SSE2-NEXT:    retq
 ;
@@ -169,11 +169,11 @@ define <4 x i64> @old(double* %p, <4 x i32>* %i, <4 x i32>* %h, i64 %f) nounwind
 ; LIN-SSE4-NEXT:    andl %ecx, %edx
 ; LIN-SSE4-NEXT:    andl %ecx, %esi
 ; LIN-SSE4-NEXT:    andl %ecx, %edi
-; LIN-SSE4-NEXT:    movd %edx, %xmm1
-; LIN-SSE4-NEXT:    movd %eax, %xmm0
+; LIN-SSE4-NEXT:    movq %rdx, %xmm1
+; LIN-SSE4-NEXT:    movq %rax, %xmm0
 ; LIN-SSE4-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; LIN-SSE4-NEXT:    movd %edi, %xmm2
-; LIN-SSE4-NEXT:    movd %esi, %xmm1
+; LIN-SSE4-NEXT:    movq %rdi, %xmm2
+; LIN-SSE4-NEXT:    movq %rsi, %xmm1
 ; LIN-SSE4-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; LIN-SSE4-NEXT:    retq
 ;
@@ -192,11 +192,11 @@ define <4 x i64> @old(double* %p, <4 x i32>* %i, <4 x i32>* %h, i64 %f) nounwind
 ; WIN-SSE2-NEXT:    andl %r9d, %ecx
 ; WIN-SSE2-NEXT:    andl %r9d, %r8d
 ; WIN-SSE2-NEXT:    andl %r9d, %edx
-; WIN-SSE2-NEXT:    movd %eax, %xmm0
-; WIN-SSE2-NEXT:    movd %ecx, %xmm1
+; WIN-SSE2-NEXT:    movq %rax, %xmm0
+; WIN-SSE2-NEXT:    movq %rcx, %xmm1
 ; WIN-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; WIN-SSE2-NEXT:    movd %edx, %xmm2
-; WIN-SSE2-NEXT:    movd %r8d, %xmm1
+; WIN-SSE2-NEXT:    movq %rdx, %xmm2
+; WIN-SSE2-NEXT:    movq %r8, %xmm1
 ; WIN-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; WIN-SSE2-NEXT:    retq
 ;
@@ -212,11 +212,11 @@ define <4 x i64> @old(double* %p, <4 x i32>* %i, <4 x i32>* %h, i64 %f) nounwind
 ; WIN-SSE4-NEXT:    andl %r9d, %ecx
 ; WIN-SSE4-NEXT:    andl %r9d, %r8d
 ; WIN-SSE4-NEXT:    andl %r9d, %edx
-; WIN-SSE4-NEXT:    movd %ecx, %xmm1
-; WIN-SSE4-NEXT:    movd %eax, %xmm0
+; WIN-SSE4-NEXT:    movq %rcx, %xmm1
+; WIN-SSE4-NEXT:    movq %rax, %xmm0
 ; WIN-SSE4-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; WIN-SSE4-NEXT:    movd %edx, %xmm2
-; WIN-SSE4-NEXT:    movd %r8d, %xmm1
+; WIN-SSE4-NEXT:    movq %rdx, %xmm2
+; WIN-SSE4-NEXT:    movq %r8, %xmm1
 ; WIN-SSE4-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; WIN-SSE4-NEXT:    retq
 ;

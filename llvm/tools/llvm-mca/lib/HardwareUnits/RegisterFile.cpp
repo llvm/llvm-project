@@ -171,7 +171,8 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
   // implicitly clears the upper portion of the underlying register.
   // If a write clears its super-registers, then it is renamed as `RenameAs`.
   bool IsWriteZero = WS.isWriteZero();
-  bool ShouldAllocatePhysRegs = !IsWriteZero;
+  bool IsEliminated = WS.isEliminated();
+  bool ShouldAllocatePhysRegs = !IsWriteZero && !IsEliminated;
   const RegisterRenamingInfo &RRI = RegisterMappings[RegID].second;
 
   if (RRI.RenameAs && RRI.RenameAs != RegID) {
@@ -187,6 +188,7 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
       if (OtherWrite.getWriteState() &&
           (OtherWrite.getSourceIndex() != Write.getSourceIndex())) {
         // This partial write has a false dependency on RenameAs.
+        assert(!IsEliminated && "Unexpected partial update!");
         WS.setDependentWrite(OtherWrite.getWriteState());
       }
     }
@@ -205,22 +207,33 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
       ZeroRegisters.clearBit(*I);
   }
 
-  // Update the mapping for register RegID including its sub-registers.
-  RegisterMappings[RegID].first = Write;
-  for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I)
-    RegisterMappings[*I].first = Write;
+  // If this is move has been eliminated, then the call to tryEliminateMove
+  // should have already updated all the register mappings.
+  if (!IsEliminated) {
+    // Update the mapping for register RegID including its sub-registers.
+    RegisterMappings[RegID].first = Write;
+    RegisterMappings[RegID].second.AliasRegID = 0U;
+    for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I) {
+      RegisterMappings[*I].first = Write;
+      RegisterMappings[*I].second.AliasRegID = 0U;
+    }
 
-  // No physical registers are allocated for instructions that are optimized in
-  // hardware. For example, zero-latency data-dependency breaking instructions
-  // don't consume physical registers.
-  if (ShouldAllocatePhysRegs)
-    allocatePhysRegs(RegisterMappings[RegID].second, UsedPhysRegs);
+    // No physical registers are allocated for instructions that are optimized in
+    // hardware. For example, zero-latency data-dependency breaking instructions
+    // don't consume physical registers.
+    if (ShouldAllocatePhysRegs)
+      allocatePhysRegs(RegisterMappings[RegID].second, UsedPhysRegs);
+  }
 
   if (!WS.clearsSuperRegisters())
     return;
 
   for (MCSuperRegIterator I(RegID, &MRI); I.isValid(); ++I) {
-    RegisterMappings[*I].first = Write;
+    if (!IsEliminated) {
+      RegisterMappings[*I].first = Write;
+      RegisterMappings[*I].second.AliasRegID = 0U;
+    }
+
     if (IsWriteZero)
       ZeroRegisters.setBit(*I);
     else
@@ -230,6 +243,11 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
 
 void RegisterFile::removeRegisterWrite(
     const WriteState &WS, MutableArrayRef<unsigned> FreedPhysRegs) {
+  // Early exit if this write was eliminated. A write eliminated at register
+  // renaming stage generates an alias, and it is not added to the PRF.
+  if (WS.isEliminated())
+    return;
+
   unsigned RegID = WS.getRegisterID();
 
   assert(RegID != 0 && "Invalidating an already invalid register?");
@@ -313,10 +331,29 @@ bool RegisterFile::tryEliminateMove(WriteState &WS, const ReadState &RS) {
   if (RMT.AllowZeroMoveEliminationOnly && !IsZeroMove)
     return false;
 
+  MCPhysReg FromReg = RS.getRegisterID();
+  MCPhysReg ToReg = WS.getRegisterID();
+
+  // Construct an alias.
+  MCPhysReg AliasReg = FromReg;
+  if (RRIFrom.RenameAs)
+    AliasReg = RRIFrom.RenameAs;
+
+  const RegisterRenamingInfo &RMAlias = RegisterMappings[AliasReg].second;
+  if (RMAlias.AliasRegID)
+    AliasReg = RMAlias.AliasRegID;
+
+  if (AliasReg != ToReg) {
+    RegisterMappings[ToReg].second.AliasRegID = AliasReg;
+    for (MCSubRegIterator I(ToReg, &MRI); I.isValid(); ++I)
+      RegisterMappings[*I].second.AliasRegID = AliasReg;
+  }
+
   RMT.NumMoveEliminated++;
   if (IsZeroMove)
     WS.setWriteZero();
   WS.setEliminated();
+
   return true;
 }
 
@@ -325,6 +362,12 @@ void RegisterFile::collectWrites(SmallVectorImpl<WriteRef> &Writes,
   assert(RegID && RegID < RegisterMappings.size());
   LLVM_DEBUG(dbgs() << "RegisterFile: collecting writes for register "
                     << MRI.getName(RegID) << '\n');
+
+  // Check if this is an alias.
+  const RegisterRenamingInfo &RRI = RegisterMappings[RegID].second;
+  if (RRI.AliasRegID)
+    RegID = RRI.AliasRegID;
+
   const WriteRef &WR = RegisterMappings[RegID].first;
   if (WR.isValid())
     Writes.push_back(WR);

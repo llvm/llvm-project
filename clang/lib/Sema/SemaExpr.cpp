@@ -5884,7 +5884,33 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
     case Type::STK_FloatingComplex:
     case Type::STK_IntegralComplex:
     case Type::STK_MemberPointer:
+    case Type::STK_FixedPoint:
       llvm_unreachable("illegal cast from pointer");
+    }
+    llvm_unreachable("Should have returned before this");
+
+  case Type::STK_FixedPoint:
+    switch (DestTy->getScalarTypeKind()) {
+    case Type::STK_FixedPoint:
+      return CK_FixedPointCast;
+    case Type::STK_Bool:
+      Diag(Src.get()->getExprLoc(),
+           diag::err_unimplemented_conversion_with_fixed_point_type)
+          << DestTy;
+      return CK_IntegralToBoolean;
+    case Type::STK_Integral:
+    case Type::STK_Floating:
+    case Type::STK_IntegralComplex:
+    case Type::STK_FloatingComplex:
+      Diag(Src.get()->getExprLoc(),
+           diag::err_unimplemented_conversion_with_fixed_point_type)
+          << DestTy;
+      return CK_IntegralCast;
+    case Type::STK_CPointer:
+    case Type::STK_ObjCObjectPointer:
+    case Type::STK_BlockPointer:
+    case Type::STK_MemberPointer:
+      llvm_unreachable("illegal cast to pointer type");
     }
     llvm_unreachable("Should have returned before this");
 
@@ -5916,6 +5942,11 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
       return CK_FloatingRealToComplex;
     case Type::STK_MemberPointer:
       llvm_unreachable("member pointer type in C");
+    case Type::STK_FixedPoint:
+      Diag(Src.get()->getExprLoc(),
+           diag::err_unimplemented_conversion_with_fixed_point_type)
+          << SrcTy;
+      return CK_IntegralCast;
     }
     llvm_unreachable("Should have returned before this");
 
@@ -5943,6 +5974,11 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
       llvm_unreachable("valid float->pointer cast?");
     case Type::STK_MemberPointer:
       llvm_unreachable("member pointer type in C");
+    case Type::STK_FixedPoint:
+      Diag(Src.get()->getExprLoc(),
+           diag::err_unimplemented_conversion_with_fixed_point_type)
+          << SrcTy;
+      return CK_IntegralCast;
     }
     llvm_unreachable("Should have returned before this");
 
@@ -5972,6 +6008,11 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
       llvm_unreachable("valid complex float->pointer cast?");
     case Type::STK_MemberPointer:
       llvm_unreachable("member pointer type in C");
+    case Type::STK_FixedPoint:
+      Diag(Src.get()->getExprLoc(),
+           diag::err_unimplemented_conversion_with_fixed_point_type)
+          << SrcTy;
+      return CK_IntegralCast;
     }
     llvm_unreachable("Should have returned before this");
 
@@ -6001,6 +6042,11 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
       llvm_unreachable("valid complex int->pointer cast?");
     case Type::STK_MemberPointer:
       llvm_unreachable("member pointer type in C");
+    case Type::STK_FixedPoint:
+      Diag(Src.get()->getExprLoc(),
+           diag::err_unimplemented_conversion_with_fixed_point_type)
+          << SrcTy;
+      return CK_IntegralCast;
     }
     llvm_unreachable("Should have returned before this");
   }
@@ -12747,6 +12793,12 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       if (Context.getLangOpts().CPlusPlus) {
         // C++03 [expr.unary.op]p8, C++0x [expr.unary.op]p9:
         // operand contextually converted to bool.
+        if (resultType->getScalarTypeKind() == Type::STK_FixedPoint) {
+          return ExprError(
+              Diag(Input.get()->getExprLoc(),
+                   diag::err_unimplemented_conversion_with_fixed_point_type)
+              << resultType);
+        }
         Input = ImpCastExprToType(Input.get(), Context.BoolTy,
                                   ScalarTypeToBooleanCastKind(resultType));
       } else if (Context.getLangOpts().OpenCL &&

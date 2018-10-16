@@ -287,7 +287,7 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
 
   // Maps catchswitches and cleanuppads that unwind to siblings to the
   // terminators that indicate the unwind, used to detect cycles therein.
-  MapVector<Instruction *, TerminatorInst *> SiblingFuncletInfo;
+  MapVector<Instruction *, Instruction *> SiblingFuncletInfo;
 
   /// Cache of constants visited in search of ConstantExprs.
   SmallPtrSet<const Constant *, 32> ConstantExprVisited;
@@ -457,7 +457,7 @@ private:
   void visitStoreInst(StoreInst &SI);
   void verifyDominatesUse(Instruction &I, unsigned i);
   void visitInstruction(Instruction &I);
-  void visitTerminatorInst(TerminatorInst &I);
+  void visitTerminator(Instruction &I);
   void visitBranchInst(BranchInst &BI);
   void visitReturnInst(ReturnInst &RI);
   void visitSwitchInst(SwitchInst &SI);
@@ -2009,7 +2009,7 @@ void Verifier::verifyFrameRecoverIndices() {
   }
 }
 
-static Instruction *getSuccPad(TerminatorInst *Terminator) {
+static Instruction *getSuccPad(Instruction *Terminator) {
   BasicBlock *UnwindDest;
   if (auto *II = dyn_cast<InvokeInst>(Terminator))
     UnwindDest = II->getUnwindDest();
@@ -2028,7 +2028,7 @@ void Verifier::verifySiblingFuncletUnwinds() {
     if (Visited.count(PredPad))
       continue;
     Active.insert(PredPad);
-    TerminatorInst *Terminator = Pair.second;
+    Instruction *Terminator = Pair.second;
     do {
       Instruction *SuccPad = getSuccPad(Terminator);
       if (Active.count(SuccPad)) {
@@ -2037,7 +2037,7 @@ void Verifier::verifySiblingFuncletUnwinds() {
         SmallVector<Instruction *, 8> CycleNodes;
         do {
           CycleNodes.push_back(CyclePad);
-          TerminatorInst *CycleTerminator = SiblingFuncletInfo[CyclePad];
+          Instruction *CycleTerminator = SiblingFuncletInfo[CyclePad];
           if (CycleTerminator != CyclePad)
             CycleNodes.push_back(CycleTerminator);
           CyclePad = getSuccPad(CycleTerminator);
@@ -2352,7 +2352,7 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
   }
 }
 
-void Verifier::visitTerminatorInst(TerminatorInst &I) {
+void Verifier::visitTerminator(Instruction &I) {
   // Ensure that terminators only exist at the end of the basic block.
   Assert(&I == I.getParent()->getTerminator(),
          "Terminator found in the middle of a basic block!", I.getParent());
@@ -2364,7 +2364,7 @@ void Verifier::visitBranchInst(BranchInst &BI) {
     Assert(BI.getCondition()->getType()->isIntegerTy(1),
            "Branch condition is not 'i1' type!", &BI, BI.getCondition());
   }
-  visitTerminatorInst(BI);
+  visitTerminator(BI);
 }
 
 void Verifier::visitReturnInst(ReturnInst &RI) {
@@ -2383,7 +2383,7 @@ void Verifier::visitReturnInst(ReturnInst &RI) {
 
   // Check to make sure that the return value has necessary properties for
   // terminators...
-  visitTerminatorInst(RI);
+  visitTerminator(RI);
 }
 
 void Verifier::visitSwitchInst(SwitchInst &SI) {
@@ -2398,7 +2398,7 @@ void Verifier::visitSwitchInst(SwitchInst &SI) {
            "Duplicate integer as switch case", &SI, Case.getCaseValue());
   }
 
-  visitTerminatorInst(SI);
+  visitTerminator(SI);
 }
 
 void Verifier::visitIndirectBrInst(IndirectBrInst &BI) {
@@ -2408,7 +2408,7 @@ void Verifier::visitIndirectBrInst(IndirectBrInst &BI) {
     Assert(BI.getDestination(i)->getType()->isLabelTy(),
            "Indirectbr destinations must all have pointer type!", &BI);
 
-  visitTerminatorInst(BI);
+  visitTerminator(BI);
 }
 
 void Verifier::visitSelectInst(SelectInst &SI) {
@@ -2987,7 +2987,7 @@ void Verifier::visitInvokeInst(InvokeInst &II) {
       "The unwind destination does not have an exception handling instruction!",
       &II);
 
-  visitTerminatorInst(II);
+  visitTerminator(II);
 }
 
 /// visitBinaryOperator - Check that both arguments to the binary operator are
@@ -3450,7 +3450,7 @@ void Verifier::visitEHPadPredecessors(Instruction &I) {
   Instruction *ToPad = &I;
   Value *ToPadParent = getParentPad(ToPad);
   for (BasicBlock *PredBB : predecessors(BB)) {
-    TerminatorInst *TI = PredBB->getTerminator();
+    Instruction *TI = PredBB->getTerminator();
     Value *FromPad;
     if (auto *II = dyn_cast<InvokeInst>(TI)) {
       Assert(II->getUnwindDest() == BB && II->getNormalDest() != BB,
@@ -3538,7 +3538,7 @@ void Verifier::visitResumeInst(ResumeInst &RI) {
            "inside a function.",
            &RI);
 
-  visitTerminatorInst(RI);
+  visitTerminator(RI);
 }
 
 void Verifier::visitCatchPadInst(CatchPadInst &CPI) {
@@ -3566,7 +3566,7 @@ void Verifier::visitCatchReturnInst(CatchReturnInst &CatchReturn) {
          "CatchReturnInst needs to be provided a CatchPad", &CatchReturn,
          CatchReturn.getOperand(0));
 
-  visitTerminatorInst(CatchReturn);
+  visitTerminator(CatchReturn);
 }
 
 void Verifier::visitCleanupPadInst(CleanupPadInst &CPI) {
@@ -3687,7 +3687,7 @@ void Verifier::visitFuncletPadInst(FuncletPadInst &FPI) {
           // Record cleanup sibling unwinds for verifySiblingFuncletUnwinds
           if (isa<CleanupPadInst>(&FPI) && !isa<ConstantTokenNone>(UnwindPad) &&
               getParentPad(UnwindPad) == getParentPad(&FPI))
-            SiblingFuncletInfo[&FPI] = cast<TerminatorInst>(U);
+            SiblingFuncletInfo[&FPI] = cast<Instruction>(U);
         }
       }
       // Make sure we visit all uses of FPI, but for nested pads stop as
@@ -3788,7 +3788,7 @@ void Verifier::visitCatchSwitchInst(CatchSwitchInst &CatchSwitch) {
   }
 
   visitEHPadPredecessors(CatchSwitch);
-  visitTerminatorInst(CatchSwitch);
+  visitTerminator(CatchSwitch);
 }
 
 void Verifier::visitCleanupReturnInst(CleanupReturnInst &CRI) {
@@ -3804,7 +3804,7 @@ void Verifier::visitCleanupReturnInst(CleanupReturnInst &CRI) {
            &CRI);
   }
 
-  visitTerminatorInst(CRI);
+  visitTerminator(CRI);
 }
 
 void Verifier::verifyDominatesUse(Instruction &I, unsigned i) {

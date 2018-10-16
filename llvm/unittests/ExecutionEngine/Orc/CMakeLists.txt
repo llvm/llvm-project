@@ -10,7 +10,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(OrcJITTests
-  CompileOnDemandLayerTest.cpp
   CoreAPIsTest.cpp
   IndirectionUtilsTest.cpp
   GlobalMappingLayerTest.cpp
@@ -18,6 +17,8 @@ add_llvm_unittest(OrcJITTests
   LazyCallThroughAndReexportsTest.cpp
   LazyEmittingLayerTest.cpp
   LegacyAPIInteropTest.cpp
+  LegacyCompileOnDemandLayerTest.cpp
+  LegacyRTDyldObjectLinkingLayerTest.cpp
   ObjectTransformLayerTest.cpp
   OrcCAPITest.cpp
   OrcTestCommon.cpp
@@ -25,7 +26,6 @@ add_llvm_unittest(OrcJITTests
   RemoteObjectLayerTest.cpp
   RPCUtilsTest.cpp
   RTDyldObjectLinkingLayerTest.cpp
-  RTDyldObjectLinkingLayer2Test.cpp
   SymbolStringPoolTest.cpp
   ThreadSafeModuleTest.cpp
   )
