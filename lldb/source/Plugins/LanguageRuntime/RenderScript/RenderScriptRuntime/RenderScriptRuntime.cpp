@@ -1758,7 +1758,7 @@ bool RenderScriptRuntime::EvalRSExpression(const char *expr,
   if (!expr_result->GetError().Success()) {
     Status err = expr_result->GetError();
     // Expression returned is void, so this is actually a success
-    if (err.GetError() == UserExpression::kNoResult) {
+    if (err.GetError() == lldb::eExpressionProducedNoResult) {
       if (log)
         log->Printf("%s - expression returned void.", __FUNCTION__);
 

@@ -525,7 +525,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
         }
       } else {
         if (result_valobj_sp->GetError().GetError() ==
-            UserExpression::kNoResult) {
+            lldb::eExpressionProducedNoResult) {
           if (format != eFormatVoid &&
               m_interpreter.GetDebugger().GetNotifyVoid()) {
             error_stream->PutCString("(void)\n");
