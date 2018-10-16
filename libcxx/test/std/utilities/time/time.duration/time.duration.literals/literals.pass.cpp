@@ -14,6 +14,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     using namespace std::literals::chrono_literals;
@@ -55,4 +57,5 @@ int main()
     assert ( ns == std::chrono::nanoseconds(645));
     auto ns2 = 645.ns;
     assert ( ns == ns2 );
+
 }
