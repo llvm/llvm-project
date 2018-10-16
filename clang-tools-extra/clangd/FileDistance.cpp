@@ -54,6 +54,7 @@ static SmallString<128> canonicalize(StringRef Path) {
 }
 
 constexpr const unsigned FileDistance::Unreachable;
+const llvm::hash_code FileDistance::RootHash = hash_value(StringRef("/"));
 
 FileDistance::FileDistance(StringMap<SourceParams> Sources,
                            const FileDistanceOptions &Opts)
@@ -99,15 +100,18 @@ FileDistance::FileDistance(StringMap<SourceParams> Sources,
   for (auto Child : DownEdges.lookup(hash_value(llvm::StringRef(""))))
     Next.push(Child);
   while (!Next.empty()) {
-    auto ParentCost = Cache.lookup(Next.front());
-    for (auto Child : DownEdges.lookup(Next.front())) {
-      auto &ChildCost =
-          Cache.try_emplace(Child, Unreachable).first->getSecond();
-      if (ParentCost + Opts.DownCost < ChildCost)
-        ChildCost = ParentCost + Opts.DownCost;
+    auto Parent = Next.front();
+    Next.pop();
+    auto ParentCost = Cache.lookup(Parent);
+    for (auto Child : DownEdges.lookup(Parent)) {
+      if (Parent != RootHash || Opts.AllowDownTraversalFromRoot) {
+        auto &ChildCost =
+            Cache.try_emplace(Child, Unreachable).first->getSecond();
+        if (ParentCost + Opts.DownCost < ChildCost)
+          ChildCost = ParentCost + Opts.DownCost;
+      }
       Next.push(Child);
     }
-    Next.pop();
   }
 }
 
@@ -119,6 +123,11 @@ unsigned FileDistance::distance(StringRef Path) {
   for (StringRef Rest = Canonical; !Rest.empty();
        Rest = parent_path(Rest, sys::path::Style::posix)) {
     auto Hash = hash_value(Rest);
+    if (Hash == RootHash && !Ancestors.empty() &&
+        !Opts.AllowDownTraversalFromRoot) {
+      Cost = Unreachable;
+      break;
+    }
     auto It = Cache.find(Hash);
     if (It != Cache.end()) {
       Cost = It->second;

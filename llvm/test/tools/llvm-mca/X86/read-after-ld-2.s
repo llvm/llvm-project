@@ -23,7 +23,7 @@ cmp     %edi, %edx
 # HASWELL-NEXT: Total Cycles:      143
 # HASWELL-NEXT: Total uOps:        500
 
-# SKYLAKE-NEXT: Total Cycles:      803
+# SKYLAKE-NEXT: Total Cycles:      110
 # SKYLAKE-NEXT: Total uOps:        500
 
 # ZNVER1-NEXT:  Total Cycles:      110
@@ -40,8 +40,8 @@ cmp     %edi, %edx
 # HASWELL-NEXT: Block RThroughput: 1.3
 
 # SKYLAKE:      Dispatch Width:    6
-# SKYLAKE-NEXT: uOps Per Cycle:    0.62
-# SKYLAKE-NEXT: IPC:               0.50
+# SKYLAKE-NEXT: uOps Per Cycle:    4.55
+# SKYLAKE-NEXT: IPC:               3.64
 # SKYLAKE-NEXT: Block RThroughput: 0.8
 
 # ZNVER1:       Dispatch Width:    4
@@ -57,8 +57,8 @@ cmp     %edi, %edx
 # HASWELL-NEXT:                     0123456789
 # HASWELL-NEXT: Index     0123456789          012
 
-# SKYLAKE-NEXT:                     0123456789          0123456789          0123456789          01234
-# SKYLAKE-NEXT: Index     0123456789          0123456789          0123456789          0123456789
+# SKYLAKE-NEXT:                     0123456789
+# SKYLAKE-NEXT: Index     0123456789
 
 # ZNVER1-NEXT:                      0123456789
 # ZNVER1-NEXT:  Index     0123456789
@@ -145,43 +145,46 @@ cmp     %edi, %edx
 # HASWELL-NEXT: [9,2]     .    .    . DeE-------R   addq	$32, %r8
 # HASWELL-NEXT: [9,3]     .    .    .  DeE------R   cmpl	%edi, %edx
 
-# SKYLAKE:      [0,0]     DeER .    .    .    .    .    .    .    .    .    .    .    .    .    .   .   addl	$1, %edx
-# SKYLAKE-NEXT: [0,1]     DeeeeeeeeER    .    .    .    .    .    .    .    .    .    .    .    .   .   vpaddd	(%r8), %ymm0, %ymm0
-# SKYLAKE-NEXT: [0,2]     DeE-------R    .    .    .    .    .    .    .    .    .    .    .    .   .   addq	$32, %r8
-# SKYLAKE-NEXT: [0,3]     D=eE------R    .    .    .    .    .    .    .    .    .    .    .    .   .   cmpl	%edi, %edx
-# SKYLAKE-NEXT: [1,0]     D=eE------R    .    .    .    .    .    .    .    .    .    .    .    .   .   addl	$1, %edx
-# SKYLAKE-NEXT: [1,1]     .D=======eeeeeeeeER .    .    .    .    .    .    .    .    .    .    .   .   vpaddd	(%r8), %ymm0, %ymm0
-# SKYLAKE-NEXT: [1,2]     .DeE--------------R .    .    .    .    .    .    .    .    .    .    .   .   addq	$32, %r8
-# SKYLAKE-NEXT: [1,3]     .D=eE-------------R .    .    .    .    .    .    .    .    .    .    .   .   cmpl	%edi, %edx
-# SKYLAKE-NEXT: [2,0]     .D=eE-------------R .    .    .    .    .    .    .    .    .    .    .   .   addl	$1, %edx
-# SKYLAKE-NEXT: [2,1]     . D==============eeeeeeeeER   .    .    .    .    .    .    .    .    .   .   vpaddd	(%r8), %ymm0, %ymm0
-# SKYLAKE-NEXT: [2,2]     . DeE---------------------R   .    .    .    .    .    .    .    .    .   .   addq	$32, %r8
-# SKYLAKE-NEXT: [2,3]     . D=eE--------------------R   .    .    .    .    .    .    .    .    .   .   cmpl	%edi, %edx
-# SKYLAKE-NEXT: [3,0]     . D=eE--------------------R   .    .    .    .    .    .    .    .    .   .   addl	$1, %edx
-# SKYLAKE-NEXT: [3,1]     .  D=====================eeeeeeeeER.    .    .    .    .    .    .    .   .   vpaddd	(%r8), %ymm0, %ymm0
-# SKYLAKE-NEXT: [3,2]     .  DeE----------------------------R.    .    .    .    .    .    .    .   .   addq	$32, %r8
-# SKYLAKE-NEXT: [3,3]     .  D=eE---------------------------R.    .    .    .    .    .    .    .   .   cmpl	%edi, %edx
-# SKYLAKE-NEXT: [4,0]     .  D=eE---------------------------R.    .    .    .    .    .    .    .   .   addl	$1, %edx
-# SKYLAKE-NEXT: [4,1]     .   D============================eeeeeeeeER  .    .    .    .    .    .   .   vpaddd	(%r8), %ymm0, %ymm0
-# SKYLAKE-NEXT: [4,2]     .   DeE-----------------------------------R  .    .    .    .    .    .   .   addq	$32, %r8
-# SKYLAKE-NEXT: [4,3]     .   D=eE----------------------------------R  .    .    .    .    .    .   .   cmpl	%edi, %edx
-# SKYLAKE-NEXT: [5,0]     .   D=eE----------------------------------R  .    .    .    .    .    .   .   addl	$1, %edx
-# SKYLAKE-NEXT: [5,1]     .    D===================================eeeeeeeeER    .    .    .    .   .   vpaddd	(%r8), %ymm0, %ymm0
-# SKYLAKE-NEXT: [5,2]     .    DeE------------------------------------------R    .    .    .    .   .   addq	$32, %r8
-# SKYLAKE-NEXT: [5,3]     .    D=eE-----------------------------------------R    .    .    .    .   .   cmpl	%edi, %edx
-# SKYLAKE-NEXT: [6,0]     .    D=eE-----------------------------------------R    .    .    .    .   .   addl	$1, %edx
-# SKYLAKE-NEXT: [6,1]     .    .D==========================================eeeeeeeeER .    .    .   .   vpaddd	(%r8), %ymm0, %ymm0
-# SKYLAKE-NEXT: [6,2]     .    .DeE-------------------------------------------------R .    .    .   .   addq	$32, %r8
-# SKYLAKE-NEXT: [6,3]     .    .D=eE------------------------------------------------R .    .    .   .   cmpl	%edi, %edx
-# SKYLAKE-NEXT: [7,0]     .    .D=eE------------------------------------------------R .    .    .   .   addl	$1, %edx
-# SKYLAKE-NEXT: [7,1]     .    . D=================================================eeeeeeeeER   .   .   vpaddd	(%r8), %ymm0, %ymm0
-# SKYLAKE-NEXT: [7,2]     .    . DeE--------------------------------------------------------R   .   .   addq	$32, %r8
-# SKYLAKE-NEXT: [7,3]     .    . D=eE-------------------------------------------------------R   .   .   cmpl	%edi, %edx
-# SKYLAKE-NEXT: [8,0]     .    . D=eE-------------------------------------------------------R   .   .   addl	$1, %edx
-# SKYLAKE-NEXT: [8,1]     .    .  D========================================================eeeeeeeeER   vpaddd	(%r8), %ymm0, %ymm0
-# SKYLAKE-NEXT: [8,2]     .    .  DeE---------------------------------------------------------------R   addq	$32, %r8
-# SKYLAKE-NEXT: [8,3]     .    .  D=eE--------------------------------------------------------------R   cmpl	%edi, %edx
-# SKYLAKE-NEXT: [9,0]     .    .  D=eE--------------------------------------------------------------R   addl	$1, %edx
+# SKYLAKE:      [0,0]     DeER .    .    .   .   addl	$1, %edx
+# SKYLAKE-NEXT: [0,1]     DeeeeeeeeER    .   .   vpaddd	(%r8), %ymm0, %ymm0
+# SKYLAKE-NEXT: [0,2]     DeE-------R    .   .   addq	$32, %r8
+# SKYLAKE-NEXT: [0,3]     D=eE------R    .   .   cmpl	%edi, %edx
+# SKYLAKE-NEXT: [1,0]     D=eE------R    .   .   addl	$1, %edx
+# SKYLAKE-NEXT: [1,1]     .DeeeeeeeeER   .   .   vpaddd	(%r8), %ymm0, %ymm0
+# SKYLAKE-NEXT: [1,2]     .DeE-------R   .   .   addq	$32, %r8
+# SKYLAKE-NEXT: [1,3]     .D=eE------R   .   .   cmpl	%edi, %edx
+# SKYLAKE-NEXT: [2,0]     .D=eE------R   .   .   addl	$1, %edx
+# SKYLAKE-NEXT: [2,1]     . DeeeeeeeeER  .   .   vpaddd	(%r8), %ymm0, %ymm0
+# SKYLAKE-NEXT: [2,2]     . DeE-------R  .   .   addq	$32, %r8
+# SKYLAKE-NEXT: [2,3]     . D=eE------R  .   .   cmpl	%edi, %edx
+# SKYLAKE-NEXT: [3,0]     . D=eE------R  .   .   addl	$1, %edx
+# SKYLAKE-NEXT: [3,1]     .  DeeeeeeeeER .   .   vpaddd	(%r8), %ymm0, %ymm0
+# SKYLAKE-NEXT: [3,2]     .  DeE-------R .   .   addq	$32, %r8
+# SKYLAKE-NEXT: [3,3]     .  D=eE------R .   .   cmpl	%edi, %edx
+# SKYLAKE-NEXT: [4,0]     .  D=eE------R .   .   addl	$1, %edx
+# SKYLAKE-NEXT: [4,1]     .   DeeeeeeeeER.   .   vpaddd	(%r8), %ymm0, %ymm0
+# SKYLAKE-NEXT: [4,2]     .   DeE-------R.   .   addq	$32, %r8
+# SKYLAKE-NEXT: [4,3]     .   D=eE------R.   .   cmpl	%edi, %edx
+# SKYLAKE-NEXT: [5,0]     .   D=eE------R.   .   addl	$1, %edx
+# SKYLAKE-NEXT: [5,1]     .    DeeeeeeeeER   .   vpaddd	(%r8), %ymm0, %ymm0
+# SKYLAKE-NEXT: [5,2]     .    DeE-------R   .   addq	$32, %r8
+# SKYLAKE-NEXT: [5,3]     .    D=eE------R   .   cmpl	%edi, %edx
+# SKYLAKE-NEXT: [6,0]     .    D=eE------R   .   addl	$1, %edx
+# SKYLAKE-NEXT: [6,1]     .    .DeeeeeeeeER  .   vpaddd	(%r8), %ymm0, %ymm0
+# SKYLAKE-NEXT: [6,2]     .    .DeE-------R  .   addq	$32, %r8
+# SKYLAKE-NEXT: [6,3]     .    .D=eE------R  .   cmpl	%edi, %edx
+# SKYLAKE-NEXT: [7,0]     .    .D=eE------R  .   addl	$1, %edx
+# SKYLAKE-NEXT: [7,1]     .    . DeeeeeeeeER .   vpaddd	(%r8), %ymm0, %ymm0
+# SKYLAKE-NEXT: [7,2]     .    . DeE-------R .   addq	$32, %r8
+# SKYLAKE-NEXT: [7,3]     .    . D=eE------R .   cmpl	%edi, %edx
+# SKYLAKE-NEXT: [8,0]     .    . D=eE------R .   addl	$1, %edx
+# SKYLAKE-NEXT: [8,1]     .    .  DeeeeeeeeER.   vpaddd	(%r8), %ymm0, %ymm0
+# SKYLAKE-NEXT: [8,2]     .    .  DeE-------R.   addq	$32, %r8
+# SKYLAKE-NEXT: [8,3]     .    .  D=eE------R.   cmpl	%edi, %edx
+# SKYLAKE-NEXT: [9,0]     .    .  D=eE------R.   addl	$1, %edx
+# SKYLAKE-NEXT: [9,1]     .    .   DeeeeeeeeER   vpaddd	(%r8), %ymm0, %ymm0
+# SKYLAKE-NEXT: [9,2]     .    .   DeE-------R   addq	$32, %r8
+# SKYLAKE-NEXT: [9,3]     .    .   D=eE------R   cmpl	%edi, %edx
 
 # ZNVER1:       [0,0]     DeER .    .    .   .   addl	$1, %edx
 # ZNVER1-NEXT:  [0,1]     DeeeeeeeeER    .   .   vpaddd	(%r8), %ymm0, %ymm0
@@ -233,21 +236,20 @@ cmp     %edi, %edx
 # ALL:                [0]    [1]    [2]    [3]
 
 # BDWELL-NEXT:  0.     10    1.0    0.4    4.5       addl	$1, %edx
-# BDWELL-NEXT:  1.     10    1.0    0.1    0.0       vpaddd	(%r8), %ymm0, %ymm0
+# HASWELL-NEXT: 0.     10    1.0    0.4    5.4       addl	$1, %edx
+# SKYLAKE-NEXT: 0.     10    1.9    0.1    5.4       addl	$1, %edx
+# ZNVER1-NEXT:  0.     10    1.0    0.1    5.4       addl	$1, %edx
+
+# ALL-NEXT:     1.     10    1.0    0.1    0.0       vpaddd	(%r8), %ymm0, %ymm0
+
 # BDWELL-NEXT:  2.     10    1.0    0.4    5.7       addq	$32, %r8
 # BDWELL-NEXT:  3.     10    1.0    0.0    5.3       cmpl	%edi, %edx
 
-# HASWELL-NEXT: 0.     10    1.0    0.4    5.4       addl	$1, %edx
-# HASWELL-NEXT: 1.     10    1.0    0.1    0.0       vpaddd	(%r8), %ymm0, %ymm0
 # HASWELL-NEXT: 2.     10    1.0    0.4    6.7       addq	$32, %r8
 # HASWELL-NEXT: 3.     10    1.0    0.0    6.3       cmpl	%edi, %edx
 
-# SKYLAKE-NEXT: 0.     10    1.9    0.1    30.6      addl	$1, %edx
-# SKYLAKE-NEXT: 1.     10    32.5   0.1    0.0       vpaddd	(%r8), %ymm0, %ymm0
-# SKYLAKE-NEXT: 2.     10    1.0    0.1    38.5      addq	$32, %r8
-# SKYLAKE-NEXT: 3.     10    2.0    0.0    37.5      cmpl	%edi, %edx
+# SKYLAKE-NEXT: 2.     10    1.0    0.1    7.0       addq	$32, %r8
+# SKYLAKE-NEXT: 3.     10    2.0    0.0    6.0       cmpl	%edi, %edx
 
-# ZNVER1-NEXT:  0.     10    1.0    0.1    5.4       addl	$1, %edx
-# ZNVER1-NEXT:  1.     10    1.0    0.1    0.0       vpaddd	(%r8), %ymm0, %ymm0
 # ZNVER1-NEXT:  2.     10    1.0    0.1    7.0       addq	$32, %r8
 # ZNVER1-NEXT:  3.     10    2.0    0.0    6.0       cmpl	%edi, %edx

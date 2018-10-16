@@ -197,6 +197,7 @@ std::pair<Symbol *, bool> SymbolTable::insertName(StringRef Name) {
     return {SymVector[SymIndex], false};
 
   auto *Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
+  Sym->SymbolKind = Symbol::PlaceholderKind;
   Sym->Visibility = STV_DEFAULT;
   Sym->IsUsedInRegularObj = false;
   Sym->ExportDynamic = false;
@@ -209,7 +210,7 @@ std::pair<Symbol *, bool> SymbolTable::insertName(StringRef Name) {
 
 // Find an existing symbol or create and insert a new one, then apply the given
 // attributes.
-std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name, uint8_t Type,
+std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name,
                                               uint8_t Visibility,
                                               bool CanOmitFromDynSym,
                                               InputFile *File) {
@@ -226,11 +227,6 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name, uint8_t Type,
   if (!File || File->kind() == InputFile::ObjKind)
     S->IsUsedInRegularObj = true;
 
-  bool HasTlsAttr = !WasInserted && (!S->isLazy() || S->isTls());
-  if (HasTlsAttr && (Type == STT_TLS) != S->isTls())
-    error("TLS attribute mismatch: " + toString(*S) + "\n>>> defined in " +
-          toString(S->File) + "\n>>> defined in " + toString(File));
-
   return {S, WasInserted};
 }
 
@@ -243,8 +239,7 @@ Symbol *SymbolTable::addUndefined(StringRef Name, uint8_t Binding,
   Symbol *S;
   bool WasInserted;
   uint8_t Visibility = getVisibility(StOther);
-  std::tie(S, WasInserted) =
-      insert(Name, Type, Visibility, CanOmitFromDynSym, File);
+  std::tie(S, WasInserted) = insert(Name, Visibility, CanOmitFromDynSym, File);
 
   // An undefined symbol with non default visibility must be satisfied
   // in the same DSO.
@@ -392,7 +387,7 @@ Symbol *SymbolTable::addCommon(StringRef N, uint64_t Size, uint32_t Alignment,
                                InputFile &File) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(N, Type, getVisibility(StOther),
+  std::tie(S, WasInserted) = insert(N, getVisibility(StOther),
                                     /*CanOmitFromDynSym*/ false, &File);
 
   int Cmp = compareDefined(S, WasInserted, Binding, N);
@@ -469,7 +464,7 @@ Symbol *SymbolTable::addDefined(StringRef Name, uint8_t StOther, uint8_t Type,
                                 SectionBase *Section, InputFile *File) {
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name, Type, getVisibility(StOther),
+  std::tie(S, WasInserted) = insert(Name, getVisibility(StOther),
                                     /*CanOmitFromDynSym*/ false, File);
   int Cmp = compareDefinedNonCommon(S, WasInserted, Binding, Section == nullptr,
                                     Value, Name);
@@ -491,7 +486,7 @@ void SymbolTable::addShared(StringRef Name, SharedFile<ELFT> &File,
   // unchanged.
   Symbol *S;
   bool WasInserted;
-  std::tie(S, WasInserted) = insert(Name, Sym.getType(), STV_DEFAULT,
+  std::tie(S, WasInserted) = insert(Name, STV_DEFAULT,
                                     /*CanOmitFromDynSym*/ true, &File);
   // Make sure we preempt DSO symbols with default visibility.
   if (Sym.getVisibility() == STV_DEFAULT)
@@ -520,7 +515,7 @@ Symbol *SymbolTable::addBitcode(StringRef Name, uint8_t Binding,
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) =
-      insert(Name, Type, getVisibility(StOther), CanOmitFromDynSym, &F);
+      insert(Name, getVisibility(StOther), CanOmitFromDynSym, &F);
   int Cmp = compareDefinedNonCommon(S, WasInserted, Binding,
                                     /*IsAbs*/ false, /*Value*/ 0, Name);
   if (Cmp > 0)

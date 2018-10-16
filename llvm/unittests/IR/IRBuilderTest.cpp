@@ -68,6 +68,14 @@ TEST_F(IRBuilderTest, Intrinsics) {
   II = cast<IntrinsicInst>(Call);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::maxnum);
 
+  Call = Builder.CreateMinimum(V, V);
+  II = cast<IntrinsicInst>(Call);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::minimum);
+
+  Call = Builder.CreateMaximum(V, V);
+  II = cast<IntrinsicInst>(Call);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::maximum);
+
   Call = Builder.CreateIntrinsic(Intrinsic::readcyclecounter, {}, {});
   II = cast<IntrinsicInst>(Call);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::readcyclecounter);
@@ -152,7 +160,7 @@ TEST_F(IRBuilderTest, CreateCondBr) {
   BasicBlock *FBB = BasicBlock::Create(Ctx, "", F);
 
   BranchInst *BI = Builder.CreateCondBr(Builder.getTrue(), TBB, FBB);
-  TerminatorInst *TI = BB->getTerminator();
+  Instruction *TI = BB->getTerminator();
   EXPECT_EQ(BI, TI);
   EXPECT_EQ(2u, TI->getNumSuccessors());
   EXPECT_EQ(TBB, TI->getSuccessor(0));

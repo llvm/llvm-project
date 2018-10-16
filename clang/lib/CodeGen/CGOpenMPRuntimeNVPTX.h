@@ -360,6 +360,9 @@ private:
   /// true if we're emitting the code for the target region and next parallel
   /// region is L0 for sure.
   bool IsInTargetMasterThreadRegion = false;
+  /// true if currently emitting code for target/teams/distribute region, false
+  /// - otherwise.
+  bool IsInTTDRegion = false;
   /// true if we're definitely in the parallel region.
   bool IsInParallelRegion = false;
 

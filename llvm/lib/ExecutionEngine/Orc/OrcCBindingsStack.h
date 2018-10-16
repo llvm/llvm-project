@@ -77,9 +77,9 @@ public:
   };
 
   template <>
-  class GenericLayerImpl<orc::RTDyldObjectLinkingLayer> : public GenericLayer {
+  class GenericLayerImpl<orc::LegacyRTDyldObjectLinkingLayer> : public GenericLayer {
   private:
-    using LayerT = orc::RTDyldObjectLinkingLayer;
+    using LayerT = orc::LegacyRTDyldObjectLinkingLayer;
   public:
     GenericLayerImpl(LayerT &Layer) : Layer(Layer) {}
 
@@ -107,10 +107,10 @@ class OrcCBindingsStack {
 public:
 
   using CompileCallbackMgr = orc::JITCompileCallbackManager;
-  using ObjLayerT = orc::RTDyldObjectLinkingLayer;
-  using CompileLayerT = orc::IRCompileLayer<ObjLayerT, orc::SimpleCompiler>;
+  using ObjLayerT = orc::LegacyRTDyldObjectLinkingLayer;
+  using CompileLayerT = orc::LegacyIRCompileLayer<ObjLayerT, orc::SimpleCompiler>;
   using CODLayerT =
-        orc::CompileOnDemandLayer<CompileLayerT, CompileCallbackMgr>;
+        orc::LegacyCompileOnDemandLayer<CompileLayerT, CompileCallbackMgr>;
 
   using CallbackManagerBuilder =
       std::function<std::unique_ptr<CompileCallbackMgr>()>;
@@ -312,7 +312,7 @@ public:
 
     // Run the static constructors, and save the static destructor runner for
     // execution when the JIT is torn down.
-    orc::CtorDtorRunner<OrcCBindingsStack> CtorRunner(std::move(CtorNames), K);
+    orc::LegacyCtorDtorRunner<OrcCBindingsStack> CtorRunner(std::move(CtorNames), K);
     if (auto Err = CtorRunner.runViaLayer(*this))
       return std::move(Err);
 
@@ -517,8 +517,8 @@ private:
 
   std::map<orc::VModuleKey, std::unique_ptr<detail::GenericLayer>> KeyLayers;
 
-  orc::LocalCXXRuntimeOverrides CXXRuntimeOverrides;
-  std::vector<orc::CtorDtorRunner<OrcCBindingsStack>> IRStaticDestructorRunners;
+  orc::LegacyLocalCXXRuntimeOverrides CXXRuntimeOverrides;
+  std::vector<orc::LegacyCtorDtorRunner<OrcCBindingsStack>> IRStaticDestructorRunners;
   std::string ErrMsg;
 
   ResolverMap Resolvers;

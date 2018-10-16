@@ -20,6 +20,7 @@ using namespace clang::driver;
 using namespace clang::driver::toolchains;
 
 using llvm::opt::ArgList;
+using llvm::opt::ArgStringList;
 
 void tools::CrossWindows::Assembler::ConstructJob(
     Compilation &C, const JobAction &JA, const InputInfo &Output,

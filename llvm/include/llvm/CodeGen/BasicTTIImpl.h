@@ -783,8 +783,8 @@ public:
   unsigned getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
                                       unsigned Factor,
                                       ArrayRef<unsigned> Indices,
-                                      unsigned Alignment,
-                                      unsigned AddressSpace) {
+                                      unsigned Alignment, unsigned AddressSpace,
+                                      bool IsMasked = false) {
     VectorType *VT = dyn_cast<VectorType>(VecTy);
     assert(VT && "Expect a vector type for interleaved memory op");
 
@@ -795,8 +795,13 @@ public:
     VectorType *SubVT = VectorType::get(VT->getElementType(), NumSubElts);
 
     // Firstly, the cost of load/store operation.
-    unsigned Cost = static_cast<T *>(this)->getMemoryOpCost(
-        Opcode, VecTy, Alignment, AddressSpace);
+    unsigned Cost;
+    if (IsMasked)
+      Cost = static_cast<T *>(this)->getMaskedMemoryOpCost(
+          Opcode, VecTy, Alignment, AddressSpace);
+    else
+      Cost = static_cast<T *>(this)->getMemoryOpCost(Opcode, VecTy, Alignment,
+                                                     AddressSpace);
 
     // Legalize the vector type, and get the legalized and unlegalized type
     // sizes.
@@ -891,6 +896,31 @@ public:
         Cost += static_cast<T *>(this)
                     ->getVectorInstrCost(Instruction::InsertElement, VT, i);
     }
+
+    if (!IsMasked)
+      return Cost;
+
+    Type *I8Type = Type::getInt8Ty(VT->getContext());
+    VectorType *MaskVT = VectorType::get(I8Type, NumElts);
+    SubVT = VectorType::get(I8Type, NumSubElts);
+
+    // The Mask shuffling cost is extract all the elements of the Mask
+    // and insert each of them Factor times into the wide vector:
+    //
+    // E.g. an interleaved group with factor 3:
+    //    %mask = icmp ult <8 x i32> %vec1, %vec2
+    //    %interleaved.mask = shufflevector <8 x i1> %mask, <8 x i1> undef,
+    //        <24 x i32> <0,0,0,1,1,1,2,2,2,3,3,3,4,4,4,5,5,5,6,6,6,7,7,7>
+    // The cost is estimated as extract all mask elements from the <8xi1> mask
+    // vector and insert them factor times into the <24xi1> shuffled mask
+    // vector.
+    for (unsigned i = 0; i < NumSubElts; i++)
+      Cost += static_cast<T *>(this)->getVectorInstrCost(
+          Instruction::ExtractElement, SubVT, i);
+
+    for (unsigned i = 0; i < NumElts; i++)
+      Cost += static_cast<T *>(this)->getVectorInstrCost(
+          Instruction::InsertElement, MaskVT, i);
 
     return Cost;
   }

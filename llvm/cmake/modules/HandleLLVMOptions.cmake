@@ -868,16 +868,19 @@ else()
   set(LLVM_ENABLE_PLUGINS ON)
 endif()
 
-# Remove LLVM_ENABLE_IDE from the CMake cache. This is a temporary change to
-# allow CMake caches to be cleaned up so that we can change the default for this
-# option and how it is used.
-unset(LLVM_ENABLE_IDE CACHE)
-#set(LLVM_ENABLE_IDE_default OFF)
-#if (XCODE OR MSVC_IDE OR CMAKE_EXTRA_GENERATOR)
-#  set(LLVM_ENABLE_IDE_default ON)
-#endif()
-#option(LLVM_ENABLE_IDE "Generate targets and process sources for use with an IDE"
-#    ${LLVM_ENABLE_IDE_default})
+# By default we should enable LLVM_ENABLE_IDE only for multi-configuration
+# generators. This option disables optional build system features that make IDEs
+# less usable.
+set(LLVM_ENABLE_IDE_default OFF)
+if (CMAKE_CONFIGURATION_TYPES)
+  set(LLVM_ENABLE_IDE_default ON)
+endif()
+option(LLVM_ENABLE_IDE
+       "Disable optional build system features that cause problems for IDE generators"
+       ${LLVM_ENABLE_IDE_default})
+if (CMAKE_CONFIGURATION_TYPES AND NOT LLVM_ENABLE_IDE)
+  message(WARNING "Disabling LLVM_ENABLE_IDE on multi-configuration generators is not recommended.")
+endif()
 
 function(get_compile_definitions)
   get_directory_property(top_dir_definitions DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)

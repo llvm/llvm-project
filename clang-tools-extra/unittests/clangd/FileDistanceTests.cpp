@@ -95,6 +95,20 @@ TEST(FileDistance, LimitUpTraversals) {
   EXPECT_EQ(D.distance("/a/b/z"), 2u);
 }
 
+TEST(FileDistance, DisallowDownTraversalsFromRoot) {
+  FileDistanceOptions Opts;
+  Opts.UpCost = Opts.DownCost = 1;
+  Opts.AllowDownTraversalFromRoot = false;
+  SourceParams CostLots;
+  CostLots.Cost = 100;
+
+  FileDistance D({{"/", SourceParams()}, {"/a/b/c", CostLots}}, Opts);
+  EXPECT_EQ(D.distance("/"), 0u);
+  EXPECT_EQ(D.distance("/a"), 102u);
+  EXPECT_EQ(D.distance("/a/b"), 101u);
+  EXPECT_EQ(D.distance("/x"), FileDistance::Unreachable);
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

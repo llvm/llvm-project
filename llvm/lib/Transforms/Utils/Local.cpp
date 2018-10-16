@@ -105,7 +105,7 @@ STATISTIC(NumRemoved, "Number of unreachable basic blocks removed");
 bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
                                   const TargetLibraryInfo *TLI,
                                   DomTreeUpdater *DTU) {
-  TerminatorInst *T = BB->getTerminator();
+  Instruction *T = BB->getTerminator();
   IRBuilder<> Builder(T);
 
   // Branch - See if we are conditional jumping on constant
@@ -2101,7 +2101,7 @@ static bool markAliveBlocks(Function &F,
       }
     }
 
-    TerminatorInst *Terminator = BB->getTerminator();
+    Instruction *Terminator = BB->getTerminator();
     if (auto *II = dyn_cast<InvokeInst>(Terminator)) {
       // Turn invokes that call 'nounwind' functions into ordinary calls.
       Value *Callee = II->getCalledValue();
@@ -2176,7 +2176,7 @@ static bool markAliveBlocks(Function &F,
 }
 
 void llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
-  TerminatorInst *TI = BB->getTerminator();
+  Instruction *TI = BB->getTerminator();
 
   if (auto *II = dyn_cast<InvokeInst>(TI)) {
     changeToCall(II, DTU);

@@ -134,6 +134,8 @@ struct PrintSymbolMapElemsMatchingCLOpts {
 namespace llvm {
 namespace orc {
 
+  SymbolStringPool::PoolMapEntry SymbolStringPtr::Tombstone(0);
+
 char FailedToMaterialize::ID = 0;
 char SymbolsNotFound::ID = 0;
 char SymbolsCouldNotBeRemoved::ID = 0;
@@ -575,20 +577,22 @@ void ReExportsMaterializationUnit::materialize(
     SymbolNameSet QuerySymbols;
     SymbolAliasMap QueryAliases;
 
-    for (auto I = RequestedAliases.begin(), E = RequestedAliases.end();
-         I != E;) {
-      auto Tmp = I++;
-
+    // Collect as many aliases as we can without including a chain.
+    for (auto &KV : RequestedAliases) {
       // Chain detected. Skip this symbol for this round.
-      if (&SrcJD == &TgtJD && (QueryAliases.count(Tmp->second.Aliasee) ||
-                               RequestedAliases.count(Tmp->second.Aliasee)))
+      if (&SrcJD == &TgtJD && (QueryAliases.count(KV.second.Aliasee) ||
+                               RequestedAliases.count(KV.second.Aliasee)))
         continue;
 
-      ResponsibilitySymbols.insert(Tmp->first);
-      QuerySymbols.insert(Tmp->second.Aliasee);
-      QueryAliases[Tmp->first] = std::move(Tmp->second);
-      RequestedAliases.erase(Tmp);
+      ResponsibilitySymbols.insert(KV.first);
+      QuerySymbols.insert(KV.second.Aliasee);
+      QueryAliases[KV.first] = std::move(KV.second);
     }
+
+    // Remove the aliases collected this round from the RequestedAliases map.
+    for (auto &KV : QueryAliases)
+      RequestedAliases.erase(KV.first);
+
     assert(!QuerySymbols.empty() && "Alias cycle detected!");
 
     auto QueryInfo = std::make_shared<OnResolveInfo>(
@@ -646,7 +650,7 @@ void ReExportsMaterializationUnit::materialize(
     auto OnReady = [&ES](Error Err) { ES.reportError(std::move(Err)); };
 
     ES.lookup({&SrcJD}, QuerySymbols, std::move(OnResolve), std::move(OnReady),
-              std::move(RegisterDependencies));
+              std::move(RegisterDependencies), nullptr, true);
   }
 }
 
@@ -686,26 +690,26 @@ buildSimpleReexportsAliasMap(JITDylib &SourceJD, const SymbolNameSet &Symbols) {
   return Result;
 }
 
-ReexportsFallbackDefinitionGenerator::ReexportsFallbackDefinitionGenerator(
-    JITDylib &BackingJD, SymbolPredicate Allow)
-    : BackingJD(BackingJD), Allow(std::move(Allow)) {}
+ReexportsGenerator::ReexportsGenerator(JITDylib &SourceJD,
+                                       SymbolPredicate Allow)
+    : SourceJD(SourceJD), Allow(std::move(Allow)) {}
 
-SymbolNameSet ReexportsFallbackDefinitionGenerator::
-operator()(JITDylib &JD, const SymbolNameSet &Names) {
+SymbolNameSet ReexportsGenerator::operator()(JITDylib &JD,
+                                             const SymbolNameSet &Names) {
   orc::SymbolNameSet Added;
   orc::SymbolAliasMap AliasMap;
 
-  auto Flags = BackingJD.lookupFlags(Names);
+  auto Flags = SourceJD.lookupFlags(Names);
 
   for (auto &KV : Flags) {
-    if (!Allow(KV.first))
+    if (Allow && !Allow(KV.first))
       continue;
     AliasMap[KV.first] = SymbolAliasMapEntry(KV.first, KV.second);
     Added.insert(KV.first);
   }
 
   if (!Added.empty())
-    cantFail(JD.define(reexports(BackingJD, AliasMap)));
+    cantFail(JD.define(reexports(SourceJD, AliasMap)));
 
   return Added;
 }
@@ -1117,10 +1121,10 @@ SymbolFlagsMap JITDylib::lookupFlags(const SymbolNameSet &Names) {
   return ES.runSessionLocked([&, this]() {
     SymbolFlagsMap Result;
     auto Unresolved = lookupFlagsImpl(Result, Names);
-    if (FallbackDefinitionGenerator && !Unresolved.empty()) {
-      auto FallbackDefs = FallbackDefinitionGenerator(*this, Unresolved);
-      if (!FallbackDefs.empty()) {
-        auto Unresolved2 = lookupFlagsImpl(Result, FallbackDefs);
+    if (DefGenerator && !Unresolved.empty()) {
+      auto NewDefs = DefGenerator(*this, Unresolved);
+      if (!NewDefs.empty()) {
+        auto Unresolved2 = lookupFlagsImpl(Result, NewDefs);
         (void)Unresolved2;
         assert(Unresolved2.empty() &&
                "All fallback defs should have been found by lookupFlagsImpl");
@@ -1151,17 +1155,18 @@ SymbolNameSet JITDylib::lookupFlagsImpl(SymbolFlagsMap &Flags,
 
 void JITDylib::lodgeQuery(std::shared_ptr<AsynchronousSymbolQuery> &Q,
                           SymbolNameSet &Unresolved,
+                          JITDylib *MatchNonExportedInJD, bool MatchNonExported,
                           MaterializationUnitList &MUs) {
   assert(Q && "Query can not be null");
 
-  lodgeQueryImpl(Q, Unresolved, MUs);
-  if (FallbackDefinitionGenerator && !Unresolved.empty()) {
-    auto FallbackDefs = FallbackDefinitionGenerator(*this, Unresolved);
-    if (!FallbackDefs.empty()) {
-      for (auto &D : FallbackDefs)
+  lodgeQueryImpl(Q, Unresolved, MatchNonExportedInJD, MatchNonExported, MUs);
+  if (DefGenerator && !Unresolved.empty()) {
+    auto NewDefs = DefGenerator(*this, Unresolved);
+    if (!NewDefs.empty()) {
+      for (auto &D : NewDefs)
         Unresolved.erase(D);
-      lodgeQueryImpl(Q, FallbackDefs, MUs);
-      assert(FallbackDefs.empty() &&
+      lodgeQueryImpl(Q, NewDefs, MatchNonExportedInJD, MatchNonExported, MUs);
+      assert(NewDefs.empty() &&
              "All fallback defs should have been found by lookupImpl");
     }
   }
@@ -1169,19 +1174,26 @@ void JITDylib::lodgeQuery(std::shared_ptr<AsynchronousSymbolQuery> &Q,
 
 void JITDylib::lodgeQueryImpl(
     std::shared_ptr<AsynchronousSymbolQuery> &Q, SymbolNameSet &Unresolved,
+    JITDylib *MatchNonExportedInJD, bool MatchNonExported,
     std::vector<std::unique_ptr<MaterializationUnit>> &MUs) {
-  for (auto I = Unresolved.begin(), E = Unresolved.end(); I != E;) {
-    auto TmpI = I++;
-    auto Name = *TmpI;
 
+  std::vector<SymbolStringPtr> ToRemove;
+  for (auto Name : Unresolved) {
     // Search for the name in Symbols. Skip it if not found.
     auto SymI = Symbols.find(Name);
     if (SymI == Symbols.end())
       continue;
 
-    // If we found Name in JD, remove it frome the Unresolved set and add it
-    // to the added set.
-    Unresolved.erase(TmpI);
+    // If this is a non-exported symbol, then check the values of
+    // MatchNonExportedInJD and MatchNonExported. Skip if we should not match
+    // against this symbol.
+    if (!SymI->second.getFlags().isExported())
+      if (!MatchNonExported && MatchNonExportedInJD != this)
+        continue;
+
+    // If we matched against Name in JD, mark it to be removed from the Unresolved
+    // set.
+    ToRemove.push_back(Name);
 
     // If the symbol has an address then resolve it.
     if (SymI->second.getAddress() != 0)
@@ -1226,6 +1238,10 @@ void JITDylib::lodgeQueryImpl(
     MI.PendingQueries.push_back(Q);
     Q->addQueryDependence(*this, Name);
   }
+
+  // Remove any symbols that we found.
+  for (auto &Name : ToRemove)
+    Unresolved.erase(Name);
 }
 
 SymbolNameSet JITDylib::legacyLookup(std::shared_ptr<AsynchronousSymbolQuery> Q,
@@ -1240,15 +1256,15 @@ SymbolNameSet JITDylib::legacyLookup(std::shared_ptr<AsynchronousSymbolQuery> Q,
   SymbolNameSet Unresolved = std::move(Names);
   ES.runSessionLocked([&, this]() {
     ActionFlags = lookupImpl(Q, MUs, Unresolved);
-    if (FallbackDefinitionGenerator && !Unresolved.empty()) {
+    if (DefGenerator && !Unresolved.empty()) {
       assert(ActionFlags == None &&
              "ActionFlags set but unresolved symbols remain?");
-      auto FallbackDefs = FallbackDefinitionGenerator(*this, Unresolved);
-      if (!FallbackDefs.empty()) {
-        for (auto &D : FallbackDefs)
+      auto NewDefs = DefGenerator(*this, Unresolved);
+      if (!NewDefs.empty()) {
+        for (auto &D : NewDefs)
           Unresolved.erase(D);
-        ActionFlags = lookupImpl(Q, MUs, FallbackDefs);
-        assert(FallbackDefs.empty() &&
+        ActionFlags = lookupImpl(Q, MUs, NewDefs);
+        assert(NewDefs.empty() &&
                "All fallback defs should have been found by lookupImpl");
       }
     }
@@ -1285,19 +1301,17 @@ JITDylib::lookupImpl(std::shared_ptr<AsynchronousSymbolQuery> &Q,
                      std::vector<std::unique_ptr<MaterializationUnit>> &MUs,
                      SymbolNameSet &Unresolved) {
   LookupImplActionFlags ActionFlags = None;
+  std::vector<SymbolStringPtr> ToRemove;
 
-  for (auto I = Unresolved.begin(), E = Unresolved.end(); I != E;) {
-    auto TmpI = I++;
-    auto Name = *TmpI;
+  for (auto Name : Unresolved) {
 
     // Search for the name in Symbols. Skip it if not found.
     auto SymI = Symbols.find(Name);
     if (SymI == Symbols.end())
       continue;
 
-    // If we found Name, remove it frome the Unresolved set and add it
-    // to the dependencies set.
-    Unresolved.erase(TmpI);
+    // If we found Name, mark it to be removed from the Unresolved set.
+    ToRemove.push_back(Name);
 
     // If the symbol has an address then resolve it.
     if (SymI->second.getAddress() != 0) {
@@ -1347,6 +1361,10 @@ JITDylib::lookupImpl(std::shared_ptr<AsynchronousSymbolQuery> &Q,
     MI.PendingQueries.push_back(Q);
     Q->addQueryDependence(*this, Name);
   }
+
+  // Remove any marked symbols from the Unresolved set.
+  for (auto &Name : ToRemove)
+    Unresolved.erase(Name);
 
   return ActionFlags;
 }
@@ -1695,18 +1713,20 @@ Expected<SymbolMap> ExecutionSession::legacyLookup(
 #endif
 }
 
-void ExecutionSession::lookup(
-    const JITDylibList &JDs, SymbolNameSet Symbols,
-    SymbolsResolvedCallback OnResolve, SymbolsReadyCallback OnReady,
-    RegisterDependenciesFunction RegisterDependencies) {
+void ExecutionSession::lookup(const JITDylibList &JDs, SymbolNameSet Symbols,
+                              SymbolsResolvedCallback OnResolve,
+                              SymbolsReadyCallback OnReady,
+                              RegisterDependenciesFunction RegisterDependencies,
+                              JITDylib *MatchNonExportedInJD,
+                              bool MatchNonExported) {
 
   // lookup can be re-entered recursively if running on a single thread. Run any
-  // outstanding MUs in case this query depends on them, otherwise the main
-  // thread will starve waiting for a result from an MU that it failed to run.
+  // outstanding MUs in case this query depends on them, otherwise this lookup
+  // will starve waiting for a result from an MU that is stuck in the queue.
   runOutstandingMUs();
 
   auto Unresolved = std::move(Symbols);
-  std::map<JITDylib *, MaterializationUnitList> MUsMap;
+  std::map<JITDylib *, MaterializationUnitList> CollectedMUsMap;
   auto Q = std::make_shared<AsynchronousSymbolQuery>(
       Unresolved, std::move(OnResolve), std::move(OnReady));
   bool QueryIsFullyResolved = false;
@@ -1716,9 +1736,10 @@ void ExecutionSession::lookup(
   runSessionLocked([&]() {
     for (auto *JD : JDs) {
       assert(JD && "JITDylibList entries must not be null");
-      assert(!MUsMap.count(JD) &&
+      assert(!CollectedMUsMap.count(JD) &&
              "JITDylibList should not contain duplicate entries");
-      JD->lodgeQuery(Q, Unresolved, MUsMap[JD]);
+      JD->lodgeQuery(Q, Unresolved, MatchNonExportedInJD, MatchNonExported,
+                     CollectedMUsMap[JD]);
     }
 
     if (Unresolved.empty()) {
@@ -1741,7 +1762,7 @@ void ExecutionSession::lookup(
       Q->detach();
 
       // Replace the MUs.
-      for (auto &KV : MUsMap)
+      for (auto &KV : CollectedMUsMap)
         for (auto &MU : KV.second)
           KV.first->replace(std::move(MU));
     }
@@ -1761,7 +1782,7 @@ void ExecutionSession::lookup(
   {
     std::lock_guard<std::recursive_mutex> Lock(OutstandingMUsMutex);
 
-    for (auto &KV : MUsMap)
+    for (auto &KV : CollectedMUsMap)
       for (auto &MU : KV.second)
         OutstandingMUs.push_back(std::make_pair(KV.first, std::move(MU)));
   }
@@ -1772,7 +1793,8 @@ void ExecutionSession::lookup(
 Expected<SymbolMap>
 ExecutionSession::lookup(const JITDylibList &JDs, const SymbolNameSet &Symbols,
                          RegisterDependenciesFunction RegisterDependencies,
-                         bool WaitUntilReady) {
+                         bool WaitUntilReady, JITDylib *MatchNonExportedInJD,
+                         bool MatchNonExported) {
 #if LLVM_ENABLE_THREADS
   // In the threaded case we use promises to return the results.
   std::promise<SymbolMap> PromisedResult;
@@ -1839,7 +1861,8 @@ ExecutionSession::lookup(const JITDylibList &JDs, const SymbolNameSet &Symbols,
 #endif
 
   // Perform the asynchronous lookup.
-  lookup(JDs, Symbols, OnResolve, OnReady, RegisterDependencies);
+  lookup(JDs, Symbols, OnResolve, OnReady, RegisterDependencies,
+         MatchNonExportedInJD, MatchNonExported);
 
 #if LLVM_ENABLE_THREADS
   auto ResultFuture = PromisedResult.get_future();
@@ -1882,6 +1905,27 @@ ExecutionSession::lookup(const JITDylibList &JDs, const SymbolNameSet &Symbols,
 #endif
 }
 
+/// Look up a symbol by searching a list of JDs.
+Expected<JITEvaluatedSymbol> ExecutionSession::lookup(const JITDylibList &JDs,
+                                                      SymbolStringPtr Name,
+                                                      bool MatchNonExported) {
+  SymbolNameSet Names({Name});
+
+  if (auto ResultMap = lookup(JDs, std::move(Names), NoDependenciesToRegister,
+                              true, nullptr, MatchNonExported)) {
+    assert(ResultMap->size() == 1 && "Unexpected number of results");
+    assert(ResultMap->count(Name) && "Missing result for symbol");
+    return std::move(ResultMap->begin()->second);
+  } else
+    return ResultMap.takeError();
+}
+
+Expected<JITEvaluatedSymbol> ExecutionSession::lookup(const JITDylibList &JDs,
+                                                      StringRef Name,
+                                                      bool MatchNonExported) {
+  return lookup(JDs, intern(Name), MatchNonExported);
+}
+
 void ExecutionSession::dump(raw_ostream &OS) {
   runSessionLocked([this, &OS]() {
     for (auto &JD : JDs)
@@ -1908,28 +1952,6 @@ void ExecutionSession::runOutstandingMUs() {
     } else
       break;
   }
-}
-
-Expected<SymbolMap> lookup(const JITDylibList &JDs, SymbolNameSet Names) {
-
-  if (JDs.empty())
-    return SymbolMap();
-
-  auto &ES = (*JDs.begin())->getExecutionSession();
-
-  return ES.lookup(JDs, Names, NoDependenciesToRegister, true);
-}
-
-/// Look up a symbol by searching a list of JDs.
-Expected<JITEvaluatedSymbol> lookup(const JITDylibList &JDs,
-                                    SymbolStringPtr Name) {
-  SymbolNameSet Names({Name});
-  if (auto ResultMap = lookup(JDs, std::move(Names))) {
-    assert(ResultMap->size() == 1 && "Unexpected number of results");
-    assert(ResultMap->count(Name) && "Missing result for symbol");
-    return std::move(ResultMap->begin()->second);
-  } else
-    return ResultMap.takeError();
 }
 
 MangleAndInterner::MangleAndInterner(ExecutionSession &ES, const DataLayout &DL)

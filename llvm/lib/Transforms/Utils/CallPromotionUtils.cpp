@@ -270,8 +270,8 @@ static Instruction *versionCallSite(CallSite CS, Value *Callee,
   // Create an if-then-else structure. The original instruction is moved into
   // the "else" block, and a clone of the original instruction is placed in the
   // "then" block.
-  TerminatorInst *ThenTerm = nullptr;
-  TerminatorInst *ElseTerm = nullptr;
+  Instruction *ThenTerm = nullptr;
+  Instruction *ElseTerm = nullptr;
   SplitBlockAndInsertIfThenElse(Cond, CS.getInstruction(), &ThenTerm, &ElseTerm,
                                 BranchWeights);
   BasicBlock *ThenBlock = ThenTerm->getParent();

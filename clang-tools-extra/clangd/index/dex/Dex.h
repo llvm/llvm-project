@@ -52,8 +52,10 @@ public:
       SymbolCollector::Options Opts;
       URISchemes = Opts.URISchemes;
     }
+    llvm::DenseSet<SymbolID> SeenIDs;
     for (auto &&Sym : Symbols)
-      this->Symbols.push_back(&Sym);
+      if (SeenIDs.insert(Sym.ID).second)
+        this->Symbols.push_back(&Sym);
     for (auto &&Ref : Refs)
       this->Refs.try_emplace(Ref.first, Ref.second);
     buildIndex();

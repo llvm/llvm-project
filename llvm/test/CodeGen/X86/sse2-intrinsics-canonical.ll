@@ -198,9 +198,9 @@ define <8 x i8> @test_x86_sse2_psubus_b_64(<8 x i8> %a0, <8 x i8> %a1) {
 ;
 ; AVX2-LABEL: test_x86_sse2_psubus_b_64:
 ; AVX2:       ## %bb.0:
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX2-NEXT:    ## encoding: [0xc5,0xf9,0x6f,0x15,A,A,A,A]
-; AVX2-NEXT:    ## fixup A - offset: 4, value: LCPI6_0, kind: FK_Data_4
+; AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; AVX2-NEXT:    ## encoding: [0xc4,0xe2,0x79,0x79,0x15,A,A,A,A]
+; AVX2-NEXT:    ## fixup A - offset: 5, value: LCPI6_0, kind: FK_Data_4
 ; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm3 ## encoding: [0xc5,0xf1,0xdb,0xda]
 ; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0xc2]
 ; AVX2-NEXT:    vpmaxuw %xmm3, %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x3e,0xc3]
@@ -209,9 +209,9 @@ define <8 x i8> @test_x86_sse2_psubus_b_64(<8 x i8> %a0, <8 x i8> %a1) {
 ;
 ; SKX-LABEL: test_x86_sse2_psubus_b_64:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vmovdqa LCPI6_0, %xmm2 ## EVEX TO VEX Compression xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; SKX-NEXT:    ## encoding: [0xc5,0xf9,0x6f,0x15,A,A,A,A]
-; SKX-NEXT:    ## fixup A - offset: 4, value: LCPI6_0, kind: FK_Data_4
+; SKX-NEXT:    vpbroadcastw LCPI6_0, %xmm2 ## EVEX TO VEX Compression xmm2 = [255,255,255,255,255,255,255,255]
+; SKX-NEXT:    ## encoding: [0xc4,0xe2,0x79,0x79,0x15,A,A,A,A]
+; SKX-NEXT:    ## fixup A - offset: 5, value: LCPI6_0, kind: FK_Data_4
 ; SKX-NEXT:    vpand %xmm2, %xmm1, %xmm3 ## EVEX TO VEX Compression encoding: [0xc5,0xf1,0xdb,0xda]
 ; SKX-NEXT:    vpand %xmm2, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdb,0xc2]
 ; SKX-NEXT:    vpmaxuw %xmm3, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x3e,0xc3]

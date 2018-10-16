@@ -22,6 +22,14 @@
 
 namespace lld {
 namespace elf {
+class Symbol;
+class InputFile;
+} // namespace elf
+
+std::string toString(const elf::Symbol &);
+std::string toString(const elf::InputFile *);
+
+namespace elf {
 
 class ArchiveFile;
 class BitcodeFile;
@@ -50,6 +58,7 @@ struct StringRefZ {
 class Symbol {
 public:
   enum Kind {
+    PlaceholderKind,
     DefinedKind,
     SharedKind,
     UndefinedKind,
@@ -89,7 +98,7 @@ public:
   uint8_t Type;    // symbol type
   uint8_t StOther; // st_other field value
 
-  const uint8_t SymbolKind;
+  uint8_t SymbolKind;
 
   // Symbol visibility. This is the computed minimum visibility of all
   // observed non-DSO symbols.
@@ -359,6 +368,8 @@ void printTraceSymbol(Symbol *Sym);
 
 template <typename T, typename... ArgT>
 void replaceSymbol(Symbol *S, ArgT &&... Arg) {
+  using llvm::ELF::STT_TLS;
+
   static_assert(std::is_trivially_destructible<T>(),
                 "Symbol types must be trivially destructible");
   static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");
@@ -379,6 +390,18 @@ void replaceSymbol(Symbol *S, ArgT &&... Arg) {
   S->Traced = Sym.Traced;
   S->ScriptDefined = Sym.ScriptDefined;
 
+  // Symbols representing thread-local variables must be referenced by
+  // TLS-aware relocations, and non-TLS symbols must be reference by
+  // non-TLS relocations, so there's a clear distinction between TLS
+  // and non-TLS symbols. It is an error if the same symbol is defined
+  // as a TLS symbol in one file and as a non-TLS symbol in other file.
+  bool TlsMismatch = (Sym.Type == STT_TLS && S->Type != STT_TLS) ||
+                     (Sym.Type != STT_TLS && S->Type == STT_TLS);
+
+  if (Sym.SymbolKind != Symbol::PlaceholderKind && TlsMismatch && !Sym.isLazy())
+    error("TLS attribute mismatch: " + toString(Sym) + "\n>>> defined in " +
+          toString(Sym.File) + "\n>>> defined in " + toString(S->File));
+
   // Print out a log message if --trace-symbol was specified.
   // This is for debugging.
   if (S->Traced)
@@ -387,8 +410,6 @@ void replaceSymbol(Symbol *S, ArgT &&... Arg) {
 
 void warnUnorderableSymbol(const Symbol *Sym);
 } // namespace elf
-
-std::string toString(const elf::Symbol &B);
 } // namespace lld
 
 #endif

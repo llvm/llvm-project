@@ -312,7 +312,7 @@ class Configuration(object):
             "inferred use_system_cxx_lib as: %r" % self.use_system_cxx_lib)
 
     def configure_availability(self):
-        # See http://llvm.org/docs/AvailabilityMarkup.html
+        # See https://libcxx.llvm.org/docs/DesignDocs/AvailabilityMarkup.html
         self.with_availability = self.get_lit_bool('with_availability', False)
         self.lit_config.note(
             "inferred with_availability as: %r" % self.with_availability)

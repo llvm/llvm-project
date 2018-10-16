@@ -99,7 +99,7 @@ public:
   Error runDestructors() { return DtorRunner.run(); }
 
   /// Returns a reference to the ObjLinkingLayer
-  RTDyldObjectLinkingLayer2 &getObjLinkingLayer() { return ObjLinkingLayer; }
+  RTDyldObjectLinkingLayer &getObjLinkingLayer() { return ObjLinkingLayer; }
 
 protected:
 
@@ -125,10 +125,10 @@ protected:
   DataLayout DL;
   std::unique_ptr<ThreadPool> CompileThreads;
 
-  RTDyldObjectLinkingLayer2 ObjLinkingLayer;
-  IRCompileLayer2 CompileLayer;
+  RTDyldObjectLinkingLayer ObjLinkingLayer;
+  IRCompileLayer CompileLayer;
 
-  CtorDtorRunner2 CtorRunner, DtorRunner;
+  CtorDtorRunner CtorRunner, DtorRunner;
 };
 
 /// An extended version of LLJIT that supports lazy function-at-a-time
@@ -145,13 +145,13 @@ public:
 
   /// Set an IR transform (e.g. pass manager pipeline) to run on each function
   /// when it is compiled.
-  void setLazyCompileTransform(IRTransformLayer2::TransformFunction Transform) {
+  void setLazyCompileTransform(IRTransformLayer::TransformFunction Transform) {
     TransformLayer.setTransform(std::move(Transform));
   }
 
   /// Sets the partition function.
   void
-  setPartitionFunction(CompileOnDemandLayer2::PartitionFunction Partition) {
+  setPartitionFunction(CompileOnDemandLayer::PartitionFunction Partition) {
     CODLayer.setPartitionFunction(std::move(Partition));
   }
 
@@ -180,8 +180,8 @@ private:
   std::unique_ptr<LazyCallThroughManager> LCTMgr;
   std::function<std::unique_ptr<IndirectStubsManager>()> ISMBuilder;
 
-  IRTransformLayer2 TransformLayer;
-  CompileOnDemandLayer2 CODLayer;
+  IRTransformLayer TransformLayer;
+  CompileOnDemandLayer CODLayer;
 };
 
 } // End namespace orc

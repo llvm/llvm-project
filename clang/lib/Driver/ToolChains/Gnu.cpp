@@ -228,6 +228,29 @@ void tools::gcc::Linker::RenderExtraToolArgs(const JobAction &JA,
   // The types are (hopefully) good enough.
 }
 
+// On Arm the endianness of the output file is determined by the target and
+// can be overridden by the pseudo-target flags '-mlittle-endian'/'-EL' and
+// '-mbig-endian'/'-EB'. Unlike other targets the flag does not result in a
+// normalized triple so we must handle the flag here.
+static bool isArmBigEndian(const llvm::Triple &Triple,
+                           const ArgList &Args) {
+  bool IsBigEndian = false;
+  switch (Triple.getArch()) {
+  case llvm::Triple::armeb:
+  case llvm::Triple::thumbeb:
+    IsBigEndian = true;
+  case llvm::Triple::arm:
+  case llvm::Triple::thumb:
+    if (Arg *A = Args.getLastArg(options::OPT_mlittle_endian,
+                               options::OPT_mbig_endian))
+      IsBigEndian = !A->getOption().matches(options::OPT_mlittle_endian);
+    break;
+  default:
+    break;
+  }
+  return IsBigEndian;
+}
+
 static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
   switch (T.getArch()) {
   case llvm::Triple::x86:
@@ -240,10 +263,9 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
     return "aarch64linuxb";
   case llvm::Triple::arm:
   case llvm::Triple::thumb:
-    return "armelf_linux_eabi";
   case llvm::Triple::armeb:
   case llvm::Triple::thumbeb:
-    return "armelfb_linux_eabi";
+    return isArmBigEndian(T, Args) ? "armelfb_linux_eabi" : "armelf_linux_eabi";
   case llvm::Triple::ppc:
     return "elf32ppclinux";
   case llvm::Triple::ppc64:
@@ -264,11 +286,13 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
   case llvm::Triple::mipsel:
     return "elf32ltsmip";
   case llvm::Triple::mips64:
-    if (tools::mips::hasMipsAbiArg(Args, "n32"))
+    if (tools::mips::hasMipsAbiArg(Args, "n32") ||
+        T.getEnvironment() == llvm::Triple::GNUABIN32)
       return "elf32btsmipn32";
     return "elf64btsmip";
   case llvm::Triple::mips64el:
-    if (tools::mips::hasMipsAbiArg(Args, "n32"))
+    if (tools::mips::hasMipsAbiArg(Args, "n32") ||
+        T.getEnvironment() == llvm::Triple::GNUABIN32)
       return "elf32ltsmipn32";
     return "elf64ltsmip";
   case llvm::Triple::systemz:
@@ -335,8 +359,13 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("-s");
 
-  if (Arch == llvm::Triple::armeb || Arch == llvm::Triple::thumbeb)
-    arm::appendEBLinkFlags(Args, CmdArgs, Triple);
+  if (Triple.isARM() || Triple.isThumb() || Triple.isAArch64()) {
+    bool IsBigEndian = isArmBigEndian(Triple, Args);
+    if (IsBigEndian)
+      arm::appendBE8LinkFlag(Args, CmdArgs, Triple);
+    IsBigEndian = IsBigEndian || Arch == llvm::Triple::aarch64_be;
+    CmdArgs.push_back(IsBigEndian ? "-EB" : "-EL");
+  }
 
   // Most Android ARM64 targets should enable the linker fix for erratum
   // 843419. Only non-Cortex-A53 devices are allowed to skip this flag.
@@ -638,6 +667,7 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb: {
     const llvm::Triple &Triple2 = getToolChain().getTriple();
+    CmdArgs.push_back(isArmBigEndian(Triple2, Args) ? "-EB" : "-EL");
     switch (Triple2.getSubArch()) {
     case llvm::Triple::ARMSubArch_v7:
       CmdArgs.push_back("-mfpu=neon");
@@ -670,6 +700,8 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
   }
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_be: {
+    CmdArgs.push_back(
+        getToolChain().getArch() == llvm::Triple::aarch64_be ? "-EB" : "-EL");
     Args.AddLastArg(CmdArgs, options::OPT_march_EQ);
     normalizeCPUNamesForAssembler(Args, CmdArgs);
 
@@ -1839,22 +1871,30 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       "i486-slackware-linux", "i686-montavista-linux", "i586-linux-gnu"};
 
   static const char *const MIPSLibDirs[] = {"/lib"};
-  static const char *const MIPSTriples[] = {"mips-linux-gnu", "mips-mti-linux",
-                                            "mips-mti-linux-gnu",
-                                            "mips-img-linux-gnu"};
+  static const char *const MIPSTriples[] = {
+      "mips-linux-gnu", "mips-mti-linux", "mips-mti-linux-gnu",
+      "mips-img-linux-gnu", "mipsisa32r6-linux-gnu"};
   static const char *const MIPSELLibDirs[] = {"/lib"};
-  static const char *const MIPSELTriples[] = {"mipsel-linux-gnu",
-                                              "mips-img-linux-gnu"};
+  static const char *const MIPSELTriples[] = {
+      "mipsel-linux-gnu", "mips-img-linux-gnu", "mipsisa32r6el-linux-gnu"};
 
   static const char *const MIPS64LibDirs[] = {"/lib64", "/lib"};
   static const char *const MIPS64Triples[] = {
-      "mips64-linux-gnu", "mips-mti-linux-gnu", "mips-img-linux-gnu",
-      "mips64-linux-gnuabi64"};
+      "mips64-linux-gnu",      "mips-mti-linux-gnu",
+      "mips-img-linux-gnu",    "mips64-linux-gnuabi64",
+      "mipsisa64r6-linux-gnu", "mipsisa64r6-linux-gnuabi64"};
   static const char *const MIPS64ELLibDirs[] = {"/lib64", "/lib"};
   static const char *const MIPS64ELTriples[] = {
-      "mips64el-linux-gnu", "mips-mti-linux-gnu", "mips-img-linux-gnu",
-      "mips64el-linux-gnuabi64"};
+      "mips64el-linux-gnu",      "mips-mti-linux-gnu",
+      "mips-img-linux-gnu",      "mips64el-linux-gnuabi64",
+      "mipsisa64r6el-linux-gnu", "mipsisa64r6el-linux-gnuabi64"};
 
+  static const char *const MIPSN32LibDirs[] = {"/lib32"};
+  static const char *const MIPSN32Triples[] = {"mips64-linux-gnuabin32",
+                                               "mipsisa64r6-linux-gnuabin32"};
+  static const char *const MIPSN32ELLibDirs[] = {"/lib32"};
+  static const char *const MIPSN32ELTriples[] = {
+      "mips64el-linux-gnuabin32", "mipsisa64r6el-linux-gnuabin32"};
 
   static const char *const PPCLibDirs[] = {"/lib32", "/lib"};
   static const char *const PPCTriples[] = {
@@ -2051,6 +2091,8 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     TripleAliases.append(begin(MIPSTriples), end(MIPSTriples));
     BiarchLibDirs.append(begin(MIPS64LibDirs), end(MIPS64LibDirs));
     BiarchTripleAliases.append(begin(MIPS64Triples), end(MIPS64Triples));
+    BiarchLibDirs.append(begin(MIPSN32LibDirs), end(MIPSN32LibDirs));
+    BiarchTripleAliases.append(begin(MIPSN32Triples), end(MIPSN32Triples));
     break;
   case llvm::Triple::mipsel:
     LibDirs.append(begin(MIPSELLibDirs), end(MIPSELLibDirs));
@@ -2058,18 +2100,24 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     TripleAliases.append(begin(MIPSTriples), end(MIPSTriples));
     BiarchLibDirs.append(begin(MIPS64ELLibDirs), end(MIPS64ELLibDirs));
     BiarchTripleAliases.append(begin(MIPS64ELTriples), end(MIPS64ELTriples));
+    BiarchLibDirs.append(begin(MIPSN32ELLibDirs), end(MIPSN32ELLibDirs));
+    BiarchTripleAliases.append(begin(MIPSN32ELTriples), end(MIPSN32ELTriples));
     break;
   case llvm::Triple::mips64:
     LibDirs.append(begin(MIPS64LibDirs), end(MIPS64LibDirs));
     TripleAliases.append(begin(MIPS64Triples), end(MIPS64Triples));
     BiarchLibDirs.append(begin(MIPSLibDirs), end(MIPSLibDirs));
     BiarchTripleAliases.append(begin(MIPSTriples), end(MIPSTriples));
+    BiarchLibDirs.append(begin(MIPSN32LibDirs), end(MIPSN32LibDirs));
+    BiarchTripleAliases.append(begin(MIPSN32Triples), end(MIPSN32Triples));
     break;
   case llvm::Triple::mips64el:
     LibDirs.append(begin(MIPS64ELLibDirs), end(MIPS64ELLibDirs));
     TripleAliases.append(begin(MIPS64ELTriples), end(MIPS64ELTriples));
     BiarchLibDirs.append(begin(MIPSELLibDirs), end(MIPSELLibDirs));
     BiarchTripleAliases.append(begin(MIPSELTriples), end(MIPSELTriples));
+    BiarchLibDirs.append(begin(MIPSN32ELLibDirs), end(MIPSN32ELLibDirs));
+    BiarchTripleAliases.append(begin(MIPSN32ELTriples), end(MIPSN32ELTriples));
     BiarchTripleAliases.append(begin(MIPSTriples), end(MIPSTriples));
     break;
   case llvm::Triple::ppc:

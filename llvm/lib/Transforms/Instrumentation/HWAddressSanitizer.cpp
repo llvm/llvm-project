@@ -467,7 +467,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *PtrLong, bool IsWrite,
     TagMismatch = IRB.CreateAnd(TagMismatch, TagNotIgnored);
   }
 
-  TerminatorInst *CheckTerm =
+  Instruction *CheckTerm =
       SplitBlockAndInsertIfThen(TagMismatch, InsertBefore, !Recover,
                                 MDBuilder(*C).createBranchWeights(1, 100000));
 

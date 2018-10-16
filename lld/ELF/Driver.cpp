@@ -396,13 +396,6 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   if (Args.hasArg(OPT_v) || Args.hasArg(OPT_version))
     message(getLLDVersion() + " (compatible with GNU linkers)");
 
-  // The behavior of -v or --version is a bit strange, but this is
-  // needed for compatibility with GNU linkers.
-  if (Args.hasArg(OPT_v) && !Args.hasArg(OPT_INPUT))
-    return;
-  if (Args.hasArg(OPT_version))
-    return;
-
   if (const char *Path = getReproduceOption(Args)) {
     // Note that --reproduce is a debug option so you can ignore it
     // if you are trying to understand the whole picture of the code.
@@ -421,6 +414,14 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
 
   readConfigs(Args);
   checkZOptions(Args);
+
+  // The behavior of -v or --version is a bit strange, but this is
+  // needed for compatibility with GNU linkers.
+  if (Args.hasArg(OPT_v) && !Args.hasArg(OPT_INPUT))
+    return;
+  if (Args.hasArg(OPT_version))
+    return;
+
   initLLVM();
   createFiles(Args);
   if (errorCount())
@@ -828,6 +829,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->SingleRoRx = Args.hasArg(OPT_no_rosegment);
   Config->SoName = Args.getLastArgValue(OPT_soname);
   Config->SortSection = getSortSection(Args);
+  Config->SplitStackAdjustSize = args::getInteger(Args, OPT_split_stack_adjust_size, 16384);
   Config->Strip = getStrip(Args);
   Config->Sysroot = Args.getLastArgValue(OPT_sysroot);
   Config->Target1Rel = Args.hasFlag(OPT_target1_rel, OPT_target1_abs, false);
@@ -899,6 +901,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     error("--lto-partitions: number of threads must be > 0");
   if (Config->ThinLTOJobs == 0)
     error("--thinlto-jobs: number of threads must be > 0");
+
+  if (Config->SplitStackAdjustSize < 0)
+    error("--split-stack-adjust-size: size must be >= 0");
 
   // Parse ELF{32,64}{LE,BE} and CPU type.
   if (auto *Arg = Args.getLastArg(OPT_m)) {

@@ -586,7 +586,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   std::vector<char> Indexes;
   JamCRC JC;
   for (auto &BB : F) {
-    const TerminatorInst *TI = BB.getTerminator();
+    const Instruction *TI = BB.getTerminator();
     for (unsigned I = 0, E = TI->getNumSuccessors(); I != E; ++I) {
       BasicBlock *Succ = TI->getSuccessor(I);
       auto BI = findBBInfo(Succ);
@@ -698,7 +698,7 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
 
   // Instrument the SrcBB if it has a single successor,
   // otherwise, the DestBB if this is not a critical edge.
-  TerminatorInst *TI = SrcBB->getTerminator();
+  Instruction *TI = SrcBB->getTerminator();
   if (TI->getNumSuccessors() <= 1)
     return SrcBB;
   if (!E->IsCritical)
@@ -1167,7 +1167,7 @@ void PGOUseFunc::setBranchWeights() {
   // Generate MD_prof metadata for every branch instruction.
   LLVM_DEBUG(dbgs() << "\nSetting branch weights.\n");
   for (auto &BB : F) {
-    TerminatorInst *TI = BB.getTerminator();
+    Instruction *TI = BB.getTerminator();
     if (TI->getNumSuccessors() < 2)
       continue;
     if (!(isa<BranchInst>(TI) || isa<SwitchInst>(TI) ||
@@ -1213,7 +1213,7 @@ void PGOUseFunc::annotateIrrLoopHeaderWeights() {
     // to become an irreducible loop header after the indirectbr tail
     // duplication.
     if (BFI->isIrrLoopHeader(&BB) || isIndirectBrTarget(&BB)) {
-      TerminatorInst *TI = BB.getTerminator();
+      Instruction *TI = BB.getTerminator();
       const UseBBInfo &BBCountInfo = getBBInfo(&BB);
       setIrrLoopHeaderMetadata(M, TI, BBCountInfo.CountValue);
     }

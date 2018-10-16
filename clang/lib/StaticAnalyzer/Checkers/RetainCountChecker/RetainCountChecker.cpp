@@ -1314,19 +1314,6 @@ void RetainCountChecker::checkEndFunction(const ReturnStmt *RS,
   processLeaks(state, Leaked, Ctx, Pred);
 }
 
-const ProgramPointTag *
-RetainCountChecker::getDeadSymbolTag(SymbolRef sym) const {
-  const CheckerProgramPointTag *&tag = DeadSymbolTags[sym];
-  if (!tag) {
-    SmallString<64> buf;
-    llvm::raw_svector_ostream out(buf);
-    out << "Dead Symbol : ";
-    sym->dumpToStream(out);
-    tag = new CheckerProgramPointTag(this, out.str());
-  }
-  return tag;
-}
-
 void RetainCountChecker::checkDeadSymbols(SymbolReaper &SymReaper,
                                           CheckerContext &C) const {
   ExplodedNode *Pred = C.getPredecessor();
@@ -1342,8 +1329,8 @@ void RetainCountChecker::checkDeadSymbols(SymbolReaper &SymReaper,
     if (const RefVal *T = B.lookup(Sym)){
       // Use the symbol as the tag.
       // FIXME: This might not be as unique as we would like.
-      const ProgramPointTag *Tag = getDeadSymbolTag(Sym);
-      state = handleAutoreleaseCounts(state, Pred, Tag, C, Sym, *T);
+      static CheckerProgramPointTag Tag(this, "DeadSymbolAutorelease");
+      state = handleAutoreleaseCounts(state, Pred, &Tag, C, Sym, *T);
       if (!state)
         return;
 

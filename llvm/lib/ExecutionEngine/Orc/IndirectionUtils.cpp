@@ -99,9 +99,10 @@ JITTargetAddress JITCompileCallbackManager::executeCompileCallback(
       Name = I->second;
   }
 
-  if (auto Sym = lookup({&CallbacksJD}, Name))
+  if (auto Sym = ES.lookup({&CallbacksJD}, Name, true))
     return Sym->getAddress();
   else {
+    llvm::dbgs() << "Didn't find callback.\n";
     // If anything goes wrong materializing Sym then report it to the session
     // and return the ErrorHandlerAddress;
     ES.reportError(Sym.takeError());

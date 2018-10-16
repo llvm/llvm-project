@@ -56,7 +56,6 @@ namespace llvm {
   class MCSymbolWasm;
   class SMLoc;
   class SourceMgr;
-  class MCBTFContext;
 
   /// Context object for machine code objects.  This class owns all of the
   /// sections that it creates.
@@ -279,9 +278,6 @@ namespace llvm {
     /// Map of currently defined macros.
     StringMap<MCAsmMacro> MacroMap;
 
-    /// for BTF debug information
-    std::unique_ptr<MCBTFContext> BTFCtx;
-
   public:
     explicit MCContext(const MCAsmInfo *MAI, const MCRegisterInfo *MRI,
                        const MCObjectFileInfo *MOFI,
@@ -289,9 +285,6 @@ namespace llvm {
     MCContext(const MCContext &) = delete;
     MCContext &operator=(const MCContext &) = delete;
     ~MCContext();
-
-    void setBTFContext(std::unique_ptr<MCBTFContext> Ctx);
-    std::unique_ptr<MCBTFContext> &getBTFContext() { return BTFCtx; }
 
     const SourceMgr *getSourceManager() const { return SrcMgr; }
 

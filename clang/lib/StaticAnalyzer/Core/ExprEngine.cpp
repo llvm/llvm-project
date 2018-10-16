@@ -98,10 +98,11 @@ STATISTIC(NumMaxBlockCountReachedInInlined,
 STATISTIC(NumTimesRetriedWithoutInlining,
             "The # of times we re-evaluated a call without inlining");
 
-
 //===----------------------------------------------------------------------===//
 // Internal program state traits.
 //===----------------------------------------------------------------------===//
+
+namespace {
 
 // When modeling a C++ constructor, for a variety of reasons we need to track
 // the location of the object for the duration of its ConstructionContext.
@@ -164,6 +165,7 @@ public:
     return Impl < RHS.Impl;
   }
 };
+} // namespace
 
 typedef llvm::ImmutableMap<ConstructedObjectKey, SVal>
     ObjectsUnderConstructionMap;

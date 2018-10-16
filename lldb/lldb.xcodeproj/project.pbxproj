@@ -210,6 +210,7 @@
 		2642FBAE13D003B400ED6808 /* CommunicationKDP.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2642FBA813D003B400ED6808 /* CommunicationKDP.cpp */; };
 		964463EC1A330C0500154ED8 /* CompactUnwindInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 964463EB1A330C0500154ED8 /* CompactUnwindInfo.cpp */; };
 		268900D513353E6F00698AC0 /* CompileUnit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F1510F1B8EC00F91463 /* CompileUnit.cpp */; };
+		AFD966B8217140B6006714AC /* CompileUnitIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFD966B4217140B5006714AC /* CompileUnitIndex.cpp */; };
 		265192C61BA8E905002F08F6 /* CompilerDecl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 265192C51BA8E905002F08F6 /* CompilerDecl.cpp */; };
 		2657AFB71B86910100958979 /* CompilerDeclContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2657AFB61B86910100958979 /* CompilerDeclContext.cpp */; };
 		268900D213353E6F00698AC0 /* CompilerType.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49E45FAD11F660FE008F7B28 /* CompilerType.cpp */; };
@@ -586,6 +587,8 @@
 		4CA0C6CC20F929C700CFE6BB /* PDBLocationToDWARFExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CA0C6CA20F929C600CFE6BB /* PDBLocationToDWARFExpression.cpp */; };
 		268900EE13353E6F00698AC0 /* PathMappingList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 495BBACB119A0DBE00418BEA /* PathMappingList.cpp */; };
 		2668A2EE20AF417D00D94111 /* PathMappingListTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2668A2ED20AF417D00D94111 /* PathMappingListTest.cpp */; };
+		AFD966BA217140B6006714AC /* PdbIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFD966B6217140B6006714AC /* PdbIndex.cpp */; };
+		AFD966B9217140B6006714AC /* PdbUtil.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFD966B5217140B6006714AC /* PdbUtil.cpp */; };
 		25420ED21A649D88009ADBCB /* PipeBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 25420ED11A649D88009ADBCB /* PipeBase.cpp */; };
 		2377C2F819E613C100737875 /* PipePosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2377C2F719E613C100737875 /* PipePosix.cpp */; };
 		268900EF13353E6F00698AC0 /* Platform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 264A43BD1320BCEB005B4096 /* Platform.cpp */; };
@@ -912,6 +915,7 @@
 		4C7D48251F5099B2005314B4 /* SymbolFileDWARFDwoDwp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D481F1F509964005314B4 /* SymbolFileDWARFDwoDwp.cpp */; };
 		4C7D48241F5099A1005314B4 /* SymbolFileDWARFDwp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D481C1F509963005314B4 /* SymbolFileDWARFDwp.cpp */; };
 		9A2057121F3B824B00F6C293 /* SymbolFileDWARFTests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A20570A1F3B81F300F6C293 /* SymbolFileDWARFTests.cpp */; };
+		AFD966BB217140B6006714AC /* SymbolFileNativePDB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFD966B7217140B6006714AC /* SymbolFileNativePDB.cpp */; };
 		AF6335E21C87B21E00F7D554 /* SymbolFilePDB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF6335E01C87B21E00F7D554 /* SymbolFilePDB.cpp */; };
 		268900CE13353E5F00698AC0 /* SymbolFileSymtab.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C89DE10F57C5600BB2B04 /* SymbolFileSymtab.cpp */; };
 		268900E013353E6F00698AC0 /* SymbolVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF94005711C03F6500085DB9 /* SymbolVendor.cpp */; };
@@ -1663,6 +1667,8 @@
 		964463ED1A330C1B00154ED8 /* CompactUnwindInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CompactUnwindInfo.h; path = include/lldb/Symbol/CompactUnwindInfo.h; sourceTree = "<group>"; };
 		26BC7F1510F1B8EC00F91463 /* CompileUnit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CompileUnit.cpp; path = source/Symbol/CompileUnit.cpp; sourceTree = "<group>"; };
 		26BC7C5710F1B6E900F91463 /* CompileUnit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CompileUnit.h; path = include/lldb/Symbol/CompileUnit.h; sourceTree = "<group>"; };
+		AFD966B4217140B5006714AC /* CompileUnitIndex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CompileUnitIndex.cpp; path = source/Plugins/SymbolFile/NativePDB/CompileUnitIndex.cpp; sourceTree = SOURCE_ROOT; };
+		AFD966BD217140C8006714AC /* CompileUnitIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CompileUnitIndex.h; path = source/Plugins/SymbolFile/NativePDB/CompileUnitIndex.h; sourceTree = SOURCE_ROOT; };
 		265192C51BA8E905002F08F6 /* CompilerDecl.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CompilerDecl.cpp; path = source/Symbol/CompilerDecl.cpp; sourceTree = "<group>"; };
 		265192C41BA8E8F8002F08F6 /* CompilerDecl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CompilerDecl.h; path = include/lldb/Symbol/CompilerDecl.h; sourceTree = "<group>"; };
 		2657AFB61B86910100958979 /* CompilerDeclContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CompilerDeclContext.cpp; path = source/Symbol/CompilerDeclContext.cpp; sourceTree = "<group>"; };
@@ -2421,6 +2427,11 @@
 		495BBACB119A0DBE00418BEA /* PathMappingList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PathMappingList.cpp; path = source/Target/PathMappingList.cpp; sourceTree = "<group>"; };
 		495BBACF119A0DE700418BEA /* PathMappingList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PathMappingList.h; path = include/lldb/Target/PathMappingList.h; sourceTree = "<group>"; };
 		2668A2ED20AF417D00D94111 /* PathMappingListTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PathMappingListTest.cpp; path = Target/PathMappingListTest.cpp; sourceTree = "<group>"; };
+		AFD966B6217140B6006714AC /* PdbIndex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbIndex.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbIndex.cpp; sourceTree = SOURCE_ROOT; };
+		AFD966BF217140C8006714AC /* PdbIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = PdbIndex.h; path = source/Plugins/SymbolFile/NativePDB/PdbIndex.h; sourceTree = SOURCE_ROOT; };
+		AFD966BC217140C8006714AC /* PdbSymUid.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = PdbSymUid.h; path = source/Plugins/SymbolFile/NativePDB/PdbSymUid.h; sourceTree = SOURCE_ROOT; };
+		AFD966B5217140B6006714AC /* PdbUtil.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbUtil.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbUtil.cpp; sourceTree = SOURCE_ROOT; };
+		AFD966BE217140C8006714AC /* PdbUtil.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = PdbUtil.h; path = source/Plugins/SymbolFile/NativePDB/PdbUtil.h; sourceTree = SOURCE_ROOT; };
 		260A39A519647A3A004B4130 /* Pipe.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Pipe.h; path = include/lldb/Host/Pipe.h; sourceTree = "<group>"; };
 		25420ED11A649D88009ADBCB /* PipeBase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PipeBase.cpp; sourceTree = "<group>"; };
 		3F5E8AF31A40D4A500A73232 /* PipeBase.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = PipeBase.h; path = include/lldb/Host/PipeBase.h; sourceTree = "<group>"; };
@@ -2997,6 +3008,8 @@
 		4C7D481C1F509963005314B4 /* SymbolFileDWARFDwp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SymbolFileDWARFDwp.cpp; sourceTree = "<group>"; };
 		4C7D481E1F509964005314B4 /* SymbolFileDWARFDwp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SymbolFileDWARFDwp.h; sourceTree = "<group>"; };
 		9A20570A1F3B81F300F6C293 /* SymbolFileDWARFTests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SymbolFileDWARFTests.cpp; path = DWARF/SymbolFileDWARFTests.cpp; sourceTree = "<group>"; };
+		AFD966B7217140B6006714AC /* SymbolFileNativePDB.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SymbolFileNativePDB.cpp; path = source/Plugins/SymbolFile/NativePDB/SymbolFileNativePDB.cpp; sourceTree = SOURCE_ROOT; };
+		AFD966C0217140C8006714AC /* SymbolFileNativePDB.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SymbolFileNativePDB.h; path = source/Plugins/SymbolFile/NativePDB/SymbolFileNativePDB.h; sourceTree = SOURCE_ROOT; };
 		AF6335E01C87B21E00F7D554 /* SymbolFilePDB.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SymbolFilePDB.cpp; path = PDB/SymbolFilePDB.cpp; sourceTree = "<group>"; };
 		AF6335E11C87B21E00F7D554 /* SymbolFilePDB.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SymbolFilePDB.h; path = PDB/SymbolFilePDB.h; sourceTree = "<group>"; };
 		23CB15141D66CF8700EDDDE1 /* SymbolFilePDBTests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SymbolFilePDBTests.cpp; sourceTree = "<group>"; };
@@ -4030,6 +4043,7 @@
 		260C89B110F57C5600BB2B04 /* SymbolFile */ = {
 			isa = PBXGroup;
 			children = (
+				AFD966B321714099006714AC /* NativePDB */,
 				AF6335DF1C87B20A00F7D554 /* PDB */,
 				260C89B210F57C5600BB2B04 /* DWARF */,
 				260C89DD10F57C5600BB2B04 /* Symtab */,
@@ -6899,6 +6913,23 @@
 			name = Target;
 			sourceTree = "<group>";
 		};
+		AFD966B321714099006714AC /* NativePDB */ = {
+			isa = PBXGroup;
+			children = (
+				AFD966B4217140B5006714AC /* CompileUnitIndex.cpp */,
+				AFD966BD217140C8006714AC /* CompileUnitIndex.h */,
+				AFD966B6217140B6006714AC /* PdbIndex.cpp */,
+				AFD966BF217140C8006714AC /* PdbIndex.h */,
+				AFD966BC217140C8006714AC /* PdbSymUid.h */,
+				AFD966B5217140B6006714AC /* PdbUtil.cpp */,
+				AFD966BE217140C8006714AC /* PdbUtil.h */,
+				AFD966B7217140B6006714AC /* SymbolFileNativePDB.cpp */,
+				AFD966C0217140C8006714AC /* SymbolFileNativePDB.h */,
+			);
+			name = NativePDB;
+			path = "New Group";
+			sourceTree = "<group>";
+		};
 		AFDBC36A2046638D00B9C8F2 /* PPC64 */ = {
 			isa = PBXGroup;
 			children = (
@@ -7832,6 +7863,7 @@
 				2689FFF913353DB600698AC0 /* BreakpointLocationCollection.cpp in Sources */,
 				49F811F31E931B2100F4E163 /* CPlusPlusNameParser.cpp in Sources */,
 				2689FFFB13353DB600698AC0 /* BreakpointLocationList.cpp in Sources */,
+				AFD966B9217140B6006714AC /* PdbUtil.cpp in Sources */,
 				2689FFFD13353DB600698AC0 /* BreakpointOptions.cpp in Sources */,
 				2689FFFF13353DB600698AC0 /* BreakpointResolver.cpp in Sources */,
 				25420ECD1A6490B8009ADBCB /* OptionValueChar.cpp in Sources */,
@@ -8095,6 +8127,7 @@
 				23E2E5451D904913006F38BB /* MinidumpTypes.cpp in Sources */,
 				AF33B4BE1C1FA441001B28D9 /* NetBSDSignals.cpp in Sources */,
 				949EEDA31BA76577008C63CF /* Cocoa.cpp in Sources */,
+				AFD966BB217140B6006714AC /* SymbolFileNativePDB.cpp in Sources */,
 				3FDFE56C19AF9C44009756A7 /* HostProcessPosix.cpp in Sources */,
 				268900B413353E5000698AC0 /* RegisterContextMacOSXFrameBackchain.cpp in Sources */,
 				AE44FB321BB07EBC0033EB62 /* GoParser.cpp in Sources */,
@@ -8106,6 +8139,7 @@
 				268900B613353E5000698AC0 /* UnwindMacOSXFrameBackchain.cpp in Sources */,
 				4CE4EFB41E899A4000A80C06 /* RegisterContextOpenBSD_x86_64.cpp in Sources */,
 				268900B713353E5F00698AC0 /* DWARFAbbreviationDeclaration.cpp in Sources */,
+				AFD966B8217140B6006714AC /* CompileUnitIndex.cpp in Sources */,
 				268900B813353E5F00698AC0 /* DWARFCompileUnit.cpp in Sources */,
 				268900B913353E5F00698AC0 /* DWARFDebugAbbrev.cpp in Sources */,
 				949EEDB31BA76736008C63CF /* NSSet.cpp in Sources */,
@@ -8449,6 +8483,7 @@
 				947A1D641616476B0017C8D1 /* CommandObjectPlugin.cpp in Sources */,
 				2666ADC81B3CB675001FAFD3 /* HexagonDYLDRendezvous.cpp in Sources */,
 				26A375811D59462700D6CBDB /* SelectHelper.cpp in Sources */,
+				AFD966BA217140B6006714AC /* PdbIndex.cpp in Sources */,
 				AE44FB471BB4BB090033EB62 /* GoLanguage.cpp in Sources */,
 				262ED0081631FA3A00879631 /* OptionGroupString.cpp in Sources */,
 				94F48F251A01C687005C0EC6 /* StringPrinter.cpp in Sources */,

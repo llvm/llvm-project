@@ -921,15 +921,30 @@ public:
     return getOriginExpr()->getOperatorNew();
   }
 
+  /// Number of non-placement arguments to the call. It is equal to 2 for
+  /// C++17 aligned operator new() calls that have alignment implicitly
+  /// passed as the second argument, and to 1 for other operator new() calls.
+  unsigned getNumImplicitArgs() const {
+    return getOriginExpr()->passAlignment() ? 2 : 1;
+  }
+
   unsigned getNumArgs() const override {
-    return getOriginExpr()->getNumPlacementArgs() + 1;
+    return getOriginExpr()->getNumPlacementArgs() + getNumImplicitArgs();
   }
 
   const Expr *getArgExpr(unsigned Index) const override {
     // The first argument of an allocator call is the size of the allocation.
-    if (Index == 0)
+    if (Index < getNumImplicitArgs())
       return nullptr;
-    return getOriginExpr()->getPlacementArg(Index - 1);
+    return getOriginExpr()->getPlacementArg(Index - getNumImplicitArgs());
+  }
+
+  /// Number of placement arguments to the operator new() call. For example,
+  /// standard std::nothrow operator new and standard placement new both have
+  /// 1 implicit argument (size) and 1 placement argument, while regular
+  /// operator new() has 1 implicit argument and 0 placement arguments.
+  const Expr *getPlacementArgExpr(unsigned Index) const {
+    return getOriginExpr()->getPlacementArg(Index);
   }
 
   Kind getKind() const override { return CE_CXXAllocator; }

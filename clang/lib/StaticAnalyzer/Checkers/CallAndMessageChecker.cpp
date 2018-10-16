@@ -196,6 +196,7 @@ bool CallAndMessageChecker::uninitRefOrPointer(
   return false;
 }
 
+namespace {
 class FindUninitializedField {
 public:
   SmallVector<const FieldDecl *, 10> FieldChain;
@@ -234,6 +235,7 @@ public:
     return false;
   }
 };
+} // namespace
 
 bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
                                                SVal V,

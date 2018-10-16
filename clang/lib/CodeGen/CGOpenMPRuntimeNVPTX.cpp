@@ -371,11 +371,11 @@ class CheckVarsEscapingDeclContext final
     }
   }
 
-  void buildRecordForGlobalizedVars(bool IsInTargetMasterThreadRegion) {
+  void buildRecordForGlobalizedVars(bool IsInTTDRegion) {
     assert(!GlobalizedRD &&
            "Record for globalized variables is built already.");
     ArrayRef<const ValueDecl *> EscapedDeclsForParallel, EscapedDeclsForTeams;
-    if (IsInTargetMasterThreadRegion)
+    if (IsInTTDRegion)
       EscapedDeclsForTeams = EscapedDecls.getArrayRef();
     else
       EscapedDeclsForParallel = EscapedDecls.getArrayRef();
@@ -527,9 +527,9 @@ public:
 
   /// Returns the record that handles all the escaped local variables and used
   /// instead of their original storage.
-  const RecordDecl *getGlobalizedRecord(bool IsInTargetMasterThreadRegion) {
+  const RecordDecl *getGlobalizedRecord(bool IsInTTDRegion) {
     if (!GlobalizedRD)
-      buildRecordForGlobalizedVars(IsInTargetMasterThreadRegion);
+      buildRecordForGlobalizedVars(IsInTTDRegion);
     return GlobalizedRD;
   }
 
@@ -1132,8 +1132,10 @@ void CGOpenMPRuntimeNVPTX::emitNonSPMDKernel(const OMPExecutableDirective &D,
     }
   } Action(EST, WST);
   CodeGen.setAction(Action);
+  IsInTTDRegion = true;
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
                                    IsOffloadEntry, CodeGen);
+  IsInTTDRegion = false;
 
   // Now change the name of the worker function to correspond to this target
   // region's entry function.
@@ -1246,8 +1248,10 @@ void CGOpenMPRuntimeNVPTX::emitSPMDKernel(const OMPExecutableDirective &D,
     }
   } Action(*this, EST, D);
   CodeGen.setAction(Action);
+  IsInTTDRegion = true;
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
                                    IsOffloadEntry, CodeGen);
+  IsInTTDRegion = false;
 }
 
 static void
@@ -1851,12 +1855,15 @@ llvm::Value *CGOpenMPRuntimeNVPTX::emitParallelOutlinedFunction(
     }
   } Action(IsInParallelRegion);
   CodeGen.setAction(Action);
+  bool PrevIsInTTDRegion = IsInTTDRegion;
+  IsInTTDRegion = false;
   bool PrevIsInTargetMasterThreadRegion = IsInTargetMasterThreadRegion;
   IsInTargetMasterThreadRegion = false;
   auto *OutlinedFun =
       cast<llvm::Function>(CGOpenMPRuntime::emitParallelOutlinedFunction(
           D, ThreadIDVar, InnermostKind, CodeGen));
   IsInTargetMasterThreadRegion = PrevIsInTargetMasterThreadRegion;
+  IsInTTDRegion = PrevIsInTTDRegion;
   if (getExecutionMode() != CGOpenMPRuntimeNVPTX::EM_SPMD &&
       !IsInParallelRegion) {
     llvm::Function *WrapperFun =
@@ -2131,7 +2138,8 @@ void CGOpenMPRuntimeNVPTX::emitGenericVarsProlog(CodeGenFunction &CGF,
         CGF.EmitStoreOfScalar(ParValue, VarAddr);
         I->getSecond().MappedParams->setVarAddr(CGF, VD, VarAddr.getAddress());
       }
-      ++SecIt;
+      if (IsTTD)
+        ++SecIt;
     }
   }
   for (const ValueDecl *VD : I->getSecond().EscapedVariableLengthDecls) {
@@ -4142,7 +4150,7 @@ void CGOpenMPRuntimeNVPTX::emitFunctionProlog(CodeGenFunction &CGF,
   CheckVarsEscapingDeclContext VarChecker(CGF);
   VarChecker.Visit(Body);
   const RecordDecl *GlobalizedVarsRecord =
-      VarChecker.getGlobalizedRecord(IsInTargetMasterThreadRegion);
+      VarChecker.getGlobalizedRecord(IsInTTDRegion);
   ArrayRef<const ValueDecl *> EscapedVariableLengthDecls =
       VarChecker.getEscapedVariableLengthDecls();
   if (!GlobalizedVarsRecord && EscapedVariableLengthDecls.empty())
@@ -4160,22 +4168,20 @@ void CGOpenMPRuntimeNVPTX::emitFunctionProlog(CodeGenFunction &CGF,
   for (const ValueDecl *VD : VarChecker.getEscapedDecls()) {
     assert(VD->isCanonicalDecl() && "Expected canonical declaration");
     const FieldDecl *FD = VarChecker.getFieldForGlobalizedVar(VD);
-    Data.insert(
-        std::make_pair(VD, MappedVarData(FD, IsInTargetMasterThreadRegion)));
+    Data.insert(std::make_pair(VD, MappedVarData(FD, IsInTTDRegion)));
   }
-  if (!IsInTargetMasterThreadRegion && !NeedToDelayGlobalization &&
-      !IsInParallelRegion) {
+  if (!IsInTTDRegion && !NeedToDelayGlobalization && !IsInParallelRegion) {
     CheckVarsEscapingDeclContext VarChecker(CGF);
     VarChecker.Visit(Body);
     I->getSecond().SecondaryGlobalRecord =
-        VarChecker.getGlobalizedRecord(/*IsInTargetMasterThreadRegion=*/true);
+        VarChecker.getGlobalizedRecord(/*IsInTTDRegion=*/true);
     I->getSecond().SecondaryLocalVarData.emplace();
     DeclToAddrMapTy &Data = I->getSecond().SecondaryLocalVarData.getValue();
     for (const ValueDecl *VD : VarChecker.getEscapedDecls()) {
       assert(VD->isCanonicalDecl() && "Expected canonical declaration");
       const FieldDecl *FD = VarChecker.getFieldForGlobalizedVar(VD);
-      Data.insert(std::make_pair(
-          VD, MappedVarData(FD, /*IsInTargetMasterThreadRegion=*/true)));
+      Data.insert(
+          std::make_pair(VD, MappedVarData(FD, /*IsInTTDRegion=*/true)));
     }
   }
   if (!NeedToDelayGlobalization) {

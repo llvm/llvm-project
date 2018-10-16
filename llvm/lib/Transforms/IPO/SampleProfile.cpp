@@ -1297,7 +1297,7 @@ void SampleProfileLoader::propagateWeights(Function &F) {
         }
       }
     }
-    TerminatorInst *TI = BB->getTerminator();
+    Instruction *TI = BB->getTerminator();
     if (TI->getNumSuccessors() == 1)
       continue;
     if (!isa<BranchInst>(TI) && !isa<SwitchInst>(TI))

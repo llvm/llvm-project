@@ -120,6 +120,8 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::UMIN:
   case ISD::UMAX:
 
+  case ISD::SADDSAT:
+
   case ISD::FPOW:
   case ISD::FREM:
   case ISD::FSUB:
@@ -800,6 +802,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
+  case ISD::SADDSAT:
     SplitVecRes_BinOp(N, Lo, Hi);
     break;
   case ISD::FMA:
@@ -2809,11 +2812,8 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
     if (WidenNumElts % InVTNumElts == 0) {
       // Widen the input and call convert on the widened input vector.
       unsigned NumConcat = WidenNumElts/InVTNumElts;
-      SmallVector<SDValue, 16> Ops(NumConcat);
+      SmallVector<SDValue, 16> Ops(NumConcat, DAG.getUNDEF(InVT));
       Ops[0] = InOp;
-      SDValue UndefVal = DAG.getUNDEF(InVT);
-      for (unsigned i = 1; i != NumConcat; ++i)
-        Ops[i] = UndefVal;
       SDValue InVec = DAG.getNode(ISD::CONCAT_VECTORS, DL, InWidenVT, Ops);
       if (N->getNumOperands() == 1)
         return DAG.getNode(Opcode, DL, WidenVT, InVec);
@@ -2832,11 +2832,12 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
   }
 
   // Otherwise unroll into some nasty scalar code and rebuild the vector.
-  SmallVector<SDValue, 16> Ops(WidenNumElts);
   EVT EltVT = WidenVT.getVectorElementType();
-  unsigned MinElts = std::min(InVTNumElts, WidenNumElts);
-  unsigned i;
-  for (i=0; i < MinElts; ++i) {
+  SmallVector<SDValue, 16> Ops(WidenNumElts, DAG.getUNDEF(EltVT));
+  // Use the original element count so we don't do more scalar opts than
+  // necessary.
+  unsigned MinElts = N->getValueType(0).getVectorNumElements();
+  for (unsigned i=0; i < MinElts; ++i) {
     SDValue Val = DAG.getNode(
         ISD::EXTRACT_VECTOR_ELT, DL, InEltVT, InOp,
         DAG.getConstant(i, DL, TLI.getVectorIdxTy(DAG.getDataLayout())));
@@ -2845,10 +2846,6 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
     else
       Ops[i] = DAG.getNode(Opcode, DL, EltVT, Val, N->getOperand(1), Flags);
   }
-
-  SDValue UndefVal = DAG.getUNDEF(EltVT);
-  for (; i < WidenNumElts; ++i)
-    Ops[i] = UndefVal;
 
   return DAG.getBuildVector(WidenVT, DL, Ops);
 }
@@ -3028,22 +3025,20 @@ SDValue DAGTypeLegalizer::WidenVecRes_BITCAST(SDNode *N) {
     }
 
     if (TLI.isTypeLegal(NewInVT)) {
-      // Because the result and the input are different vector types, widening
-      // the result could create a legal type but widening the input might make
-      // it an illegal type that might lead to repeatedly splitting the input
-      // and then widening it. To avoid this, we widen the input only if
-      // it results in a legal type.
-      SmallVector<SDValue, 16> Ops(NewNumElts);
-      SDValue UndefVal = DAG.getUNDEF(InVT);
-      Ops[0] = InOp;
-      for (unsigned i = 1; i < NewNumElts; ++i)
-        Ops[i] = UndefVal;
-
       SDValue NewVec;
-      if (InVT.isVector())
+      if (InVT.isVector()) {
+        // Because the result and the input are different vector types, widening
+        // the result could create a legal type but widening the input might make
+        // it an illegal type that might lead to repeatedly splitting the input
+        // and then widening it. To avoid this, we widen the input only if
+        // it results in a legal type.
+        SmallVector<SDValue, 16> Ops(NewNumElts, DAG.getUNDEF(InVT));
+        Ops[0] = InOp;
+
         NewVec = DAG.getNode(ISD::CONCAT_VECTORS, dl, NewInVT, Ops);
-      else
-        NewVec = DAG.getBuildVector(NewInVT, dl, Ops);
+      } else {
+        NewVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, NewInVT, InOp);
+      }
       return DAG.getNode(ISD::BITCAST, dl, WidenVT, NewVec);
     }
   }
@@ -3757,8 +3752,9 @@ SDValue DAGTypeLegalizer::WidenVecOp_Convert(SDNode *N) {
                                 InVT.getVectorNumElements());
   if (TLI.isTypeLegal(WideVT)) {
     SDValue Res = DAG.getNode(Opcode, dl, WideVT, InOp);
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, VT, Res,
-                       DAG.getIntPtrConstant(0, dl));
+    return DAG.getNode(
+        ISD::EXTRACT_SUBVECTOR, dl, VT, Res,
+        DAG.getConstant(0, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
   }
 
   EVT InEltVT = InVT.getVectorElementType();
@@ -3800,20 +3796,31 @@ SDValue DAGTypeLegalizer::WidenVecOp_BITCAST(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_CONCAT_VECTORS(SDNode *N) {
-  // If the input vector is not legal, it is likely that we will not find a
-  // legal vector of the same size. Replace the concatenate vector with a
-  // nasty build vector.
   EVT VT = N->getValueType(0);
   EVT EltVT = VT.getVectorElementType();
+  EVT InVT = N->getOperand(0).getValueType();
   SDLoc dl(N);
+
+  // If the widen width for this operand is the same as the width of the concat
+  // and all but the first operand is undef, just use the widened operand.
+  unsigned NumOperands = N->getNumOperands();
+  if (VT == TLI.getTypeToTransformTo(*DAG.getContext(), InVT)) {
+    unsigned i;
+    for (i = 1; i < NumOperands; ++i)
+      if (!N->getOperand(i).isUndef())
+        break;
+
+    if (i == NumOperands)
+      return GetWidenedVector(N->getOperand(0));
+  }
+
+  // Otherwise, fall back to a nasty build vector.
   unsigned NumElts = VT.getVectorNumElements();
   SmallVector<SDValue, 16> Ops(NumElts);
 
-  EVT InVT = N->getOperand(0).getValueType();
   unsigned NumInElts = InVT.getVectorNumElements();
 
   unsigned Idx = 0;
-  unsigned NumOperands = N->getNumOperands();
   for (unsigned i=0; i < NumOperands; ++i) {
     SDValue InOp = N->getOperand(i);
     assert(getTypeAction(InOp.getValueType()) ==

@@ -365,7 +365,7 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
   }
 
   // Finally, clone over the terminator.
-  const TerminatorInst *OldTI = BB->getTerminator();
+  const Instruction *OldTI = BB->getTerminator();
   bool TerminatorDone = false;
   if (const BranchInst *BI = dyn_cast<BranchInst>(OldTI)) {
     if (BI->isConditional()) {
@@ -414,7 +414,7 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
           CodeInfo->OperandBundleCallSites.push_back(NewInst);
 
     // Recursively clone any reachable successor blocks.
-    const TerminatorInst *TI = BB->getTerminator();
+    const Instruction *TI = BB->getTerminator();
     for (const BasicBlock *Succ : successors(TI))
       ToClone.push_back(Succ);
   }

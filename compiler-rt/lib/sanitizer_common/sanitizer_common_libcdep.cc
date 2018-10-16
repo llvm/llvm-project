@@ -100,14 +100,17 @@ void WriteToSyslog(const char *msg) {
 
   // Print one line at a time.
   // syslog, at least on Android, has an implicit message length limit.
-  do {
-    q = internal_strchr(p, '\n');
-    if (q)
-      *q = '\0';
+  while ((q = internal_strchr(p, '\n'))) {
+    *q = '\0';
     WriteOneLineToSyslog(p);
-    if (q)
-      p = q + 1;
-  } while (q);
+    p = q + 1;
+  }
+  // Print remaining characters, if there are any.
+  // Note that this will add an extra newline at the end.
+  // FIXME: buffer extra output. This would need a thread-local buffer, which
+  // on Android requires plugging into the tools (ex. ASan's) Thread class.
+  if (*p)
+    WriteOneLineToSyslog(p);
 }
 
 void MaybeStartBackgroudThread() {
