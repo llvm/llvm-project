@@ -153,6 +153,7 @@ ifeq "$(OS)" "Darwin"
 	DSYM = $(EXE).dSYM
 	AR := $(CROSS_COMPILE)libtool
 	ARFLAGS := -static -o
+	CODESIGN = codesign
 else
 	AR := $(CROSS_COMPILE)ar
 	# On non-Apple platforms, -arch becomes -m
@@ -513,6 +514,9 @@ endif
 else
 $(EXE) : $(OBJECTS) $(ARCHIVE_NAME)
 	$(LD) $(OBJECTS) $(LDFLAGS) $(ARCHIVE_NAME) -o "$(EXE)"
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$(EXE)"
+endif
 endif
 
 #----------------------------------------------------------------------
@@ -557,6 +561,9 @@ endif
 $(DYLIB_FILENAME) : $(DYLIB_OBJECTS)
 ifeq "$(OS)" "Darwin"
 	$(LD) $(DYLIB_OBJECTS) $(LDFLAGS) -install_name "$(DYLIB_EXECUTABLE_PATH)/$(DYLIB_FILENAME)" -dynamiclib -o "$(DYLIB_FILENAME)"
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$(DYLIB_FILENAME)"
+endif
 ifneq "$(MAKE_DSYM)" "NO"
 ifneq "$(DS)" ""
 	"$(DS)" $(DSFLAGS) "$(DYLIB_FILENAME)"

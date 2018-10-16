@@ -35,7 +35,6 @@ struct HandlerRegisterer {
       } else {
         elog("Failed to decode {0} request.", Method);
       }
-      return Method != "exit"; // Shut down after exit notification.
     });
   }
 

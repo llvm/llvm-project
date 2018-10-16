@@ -48,23 +48,6 @@ enum class ErrorCode {
   // Defined by the protocol.
   RequestCancelled = -32800,
 };
-// Models an LSP error as an llvm::Error.
-class LSPError : public llvm::ErrorInfo<LSPError> {
-public:
-  std::string Message;
-  ErrorCode Code;
-  static char ID;
-
-  LSPError(std::string Message, ErrorCode Code)
-      : Message(std::move(Message)), Code(Code) {}
-
-  void log(llvm::raw_ostream &OS) const override {
-    OS << int(Code) << ": " << Message;
-  }
-  std::error_code convertToErrorCode() const override {
-    return llvm::inconvertibleErrorCode();
-  }
-};
 
 struct URIForFile {
   URIForFile() = default;

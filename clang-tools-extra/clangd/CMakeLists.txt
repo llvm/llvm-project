@@ -26,7 +26,6 @@ add_clang_library(clangDaemon
   GlobalCompilationDatabase.cpp
   Headers.cpp
   JSONRPCDispatcher.cpp
-  JSONTransport.cpp
   Logger.cpp
   Protocol.cpp
   ProtocolHandlers.cpp
