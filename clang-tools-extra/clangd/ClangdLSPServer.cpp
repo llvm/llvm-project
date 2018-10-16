@@ -103,6 +103,8 @@ void ClangdLSPServer::onInitialize(InitializeParams &Params) {
       Params.capabilities.textDocument.publishDiagnostics.clangdFixSupport;
   DiagOpts.SendDiagnosticCategory =
       Params.capabilities.textDocument.publishDiagnostics.categorySupport;
+  SupportsCodeAction =
+      Params.capabilities.textDocument.codeActionLiteralSupport;
 
   if (Params.capabilities.workspace && Params.capabilities.workspace->symbol &&
       Params.capabilities.workspace->symbol->symbolKind &&
@@ -339,29 +341,53 @@ void ClangdLSPServer::onDocumentSymbol(DocumentSymbolParams &Params) {
       });
 }
 
+static Optional<Command> asCommand(const CodeAction &Action) {
+  Command Cmd;
+  if (Action.command && Action.edit)
+    return llvm::None; // Not representable. (We never emit these anyway).
+  if (Action.command) {
+    Cmd = *Action.command;
+  } else if (Action.edit) {
+    Cmd.command = Command::CLANGD_APPLY_FIX_COMMAND;
+    Cmd.workspaceEdit = *Action.edit;
+  } else {
+    return llvm::None;
+  }
+  Cmd.title = Action.title;
+  if (Action.kind && *Action.kind == CodeAction::QUICKFIX_KIND)
+    Cmd.title = "Apply fix: " + Cmd.title;
+  return Cmd;
+}
+
 void ClangdLSPServer::onCodeAction(CodeActionParams &Params) {
-  // We provide a code action for each diagnostic at the requested location
-  // which has FixIts available.
-  auto Code = DraftMgr.getDraft(Params.textDocument.uri.file());
-  if (!Code)
+  // We provide a code action for Fixes on the specified diagnostics.
+  if (!DraftMgr.getDraft(Params.textDocument.uri.file()))
     return replyError(ErrorCode::InvalidParams,
                       "onCodeAction called for non-added file");
 
-  std::vector<Command> Commands;
+  std::vector<CodeAction> Actions;
   for (Diagnostic &D : Params.context.diagnostics) {
     for (auto &F : getFixes(Params.textDocument.uri.file(), D)) {
-      WorkspaceEdit WE;
-      std::vector<TextEdit> Edits(F.Edits.begin(), F.Edits.end());
-      Commands.emplace_back();
-      Commands.back().title = llvm::formatv("Apply fix: {0}", F.Message);
-      Commands.back().command = ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND;
-      Commands.back().workspaceEdit.emplace();
-      Commands.back().workspaceEdit->changes = {
-          {Params.textDocument.uri.uri(), std::move(Edits)},
-      };
+      Actions.emplace_back();
+      Actions.back().title = F.Message;
+      Actions.back().kind = CodeAction::QUICKFIX_KIND;
+      Actions.back().diagnostics = {D};
+      Actions.back().edit.emplace();
+      Actions.back().edit->changes.emplace();
+      (*Actions.back().edit->changes)[Params.textDocument.uri.uri()] = {
+          F.Edits.begin(), F.Edits.end()};
     }
   }
-  reply(json::Array(Commands));
+
+  if (SupportsCodeAction)
+    reply(json::Array(Actions));
+  else {
+    std::vector<Command> Commands;
+    for (const auto &Action : Actions)
+      if (auto Command = asCommand(Action))
+        Commands.push_back(std::move(*Command));
+    reply(json::Array(Commands));
+  }
 }
 
 void ClangdLSPServer::onCompletion(TextDocumentPositionParams &Params) {

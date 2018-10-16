@@ -385,6 +385,10 @@ struct TextDocumentClientCapabilities {
 
   /// Capabilities specific to the 'textDocument/publishDiagnostics'
   PublishDiagnosticsClientCapabilities publishDiagnostics;
+
+  /// Flattened from codeAction.codeActionLiteralSupport.
+  // FIXME: flatten other properties in this way.
+  bool codeActionLiteralSupport = false;
 };
 bool fromJSON(const llvm::json::Value &, TextDocumentClientCapabilities &);
 
@@ -613,6 +617,7 @@ struct Diagnostic {
   /// which the issue was produced, e.g. "Semantic Issue" or "Parse Issue".
   std::string category;
 };
+llvm::json::Value toJSON(const Diagnostic &);
 
 /// A LSP-specific comparator used to find diagnostic in a container like
 /// std:map.
@@ -679,6 +684,32 @@ struct Command : public ExecuteCommandParams {
   std::string title;
 };
 llvm::json::Value toJSON(const Command &C);
+
+/// A code action represents a change that can be performed in code, e.g. to fix
+/// a problem or to refactor code.
+///
+/// A CodeAction must set either `edit` and/or a `command`. If both are
+/// supplied, the `edit` is applied first, then the `command` is executed.
+struct CodeAction {
+  /// A short, human-readable, title for this code action.
+  std::string title;
+
+  /// The kind of the code action.
+  /// Used to filter code actions.
+  llvm::Optional<std::string> kind;
+  const static llvm::StringLiteral QUICKFIX_KIND;
+
+  /// The diagnostics that this code action resolves.
+  llvm::Optional<std::vector<Diagnostic>> diagnostics;
+
+  /// The workspace edit this code action performs.
+  llvm::Optional<WorkspaceEdit> edit;
+
+  /// A command this code action executes. If a code action provides an edit
+  /// and a command, first the edit is executed and then the command.
+  llvm::Optional<Command> command;
+};
+llvm::json::Value toJSON(const CodeAction &);
 
 /// Represents information about programming constructs like variables, classes,
 /// interfaces etc.
