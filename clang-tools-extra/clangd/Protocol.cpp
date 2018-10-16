@@ -665,8 +665,17 @@ bool fromJSON(const llvm::json::Value &Params,
 bool fromJSON(const json::Value &Params,
               ClangdConfigurationParamsChange &CCPC) {
   json::ObjectMapper O(Params);
-  return O && O.map("compilationDatabasePath", CCPC.compilationDatabasePath) &&
+  return O &&
          O.map("compilationDatabaseChanges", CCPC.compilationDatabaseChanges);
+}
+
+bool fromJSON(const json::Value &Params, ClangdInitializationOptions &Opts) {
+  if (!fromJSON(Params, Opts.ParamsChange)) {
+    return false;
+  }
+
+  json::ObjectMapper O(Params);
+  return O && O.map("compilationDatabasePath", Opts.compilationDatabasePath);
 }
 
 bool fromJSON(const json::Value &Params, ReferenceParams &R) {
