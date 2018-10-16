@@ -15,6 +15,7 @@ add_extra_unittest(ClangDocTests
   ClangDocTest.cpp
   MergeTest.cpp
   SerializeTest.cpp
+  YAMLGeneratorTest.cpp
   )
 
 target_link_libraries(ClangDocTests
