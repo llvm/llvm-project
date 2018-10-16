@@ -27,7 +27,6 @@ add_extra_unittest(ClangdTests
   GlobalCompilationDatabaseTests.cpp
   HeadersTests.cpp
   IndexTests.cpp
-  JSONTransportTests.cpp
   QualityTests.cpp
   RIFFTests.cpp
   SerializationTests.cpp

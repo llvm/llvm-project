@@ -37,16 +37,18 @@ public:
   /// If \p CompileCommandsDir has a value, compile_commands.json will be
   /// loaded only from \p CompileCommandsDir. Otherwise, clangd will look
   /// for compile_commands.json in all parent directories of each file.
-  ClangdLSPServer(Transport &Transport,
-                  const clangd::CodeCompleteOptions &CCOpts,
+  ClangdLSPServer(JSONOutput &Out, const clangd::CodeCompleteOptions &CCOpts,
                   llvm::Optional<Path> CompileCommandsDir,
                   bool ShouldUseInMemoryCDB, const ClangdServer::Options &Opts);
 
-  /// Run LSP server loop, communicating with the Transport provided in the
-  /// constructor. This method must not be executed more than once.
+  /// Run LSP server loop, receiving input for it from \p In. \p In must be
+  /// opened in binary mode. Output will be written using Out variable passed to
+  /// class constructor. This method must not be executed more than once for
+  /// each instance of ClangdLSPServer.
   ///
-  /// \return Whether we shut down cleanly with a 'shutdown' -> 'exit' sequence.
-  bool run();
+  /// \return Whether we received a 'shutdown' request before an 'exit' request.
+  bool run(std::FILE *In,
+           JSONStreamStyle InputStyle = JSONStreamStyle::Standard);
 
 private:
   // Implement DiagnosticsConsumer.
@@ -87,9 +89,15 @@ private:
   void reparseOpenedFiles();
   void applyConfiguration(const ClangdConfigurationParamsChange &Settings);
 
+  JSONOutput &Out;
   /// Used to indicate that the 'shutdown' request was received from the
   /// Language Server client.
   bool ShutdownRequestReceived = false;
+
+  /// Used to indicate that the 'exit' notification was received from the
+  /// Language Server client.
+  /// It's used to break out of the LSP parsing loop.
+  bool IsDone = false;
 
   std::mutex FixItsMutex;
   typedef std::map<clangd::Diagnostic, std::vector<Fix>, LSPDiagnosticCompare>
@@ -145,7 +153,6 @@ private:
     bool IsDirectoryBased;
   };
 
-  clangd::Transport &Transport;
   // Various ClangdServer parameters go here. It's important they're created
   // before ClangdServer.
   CompilationDB CDB;

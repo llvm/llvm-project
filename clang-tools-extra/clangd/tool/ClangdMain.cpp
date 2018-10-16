@@ -253,8 +253,11 @@ int main(int argc, char *argv[]) {
   // Use buffered stream to stderr (we still flush each log message). Unbuffered
   // stream can cause significant (non-deterministic) latency for the logger.
   llvm::errs().SetBuffered();
-  JSONOutput Logger(llvm::errs(), LogLevel);
-  clangd::LoggingSession LoggingSession(Logger);
+  JSONOutput Out(llvm::outs(), llvm::errs(), LogLevel,
+                 InputMirrorStream ? InputMirrorStream.getPointer() : nullptr,
+                 PrettyPrint);
+
+  clangd::LoggingSession LoggingSession(Out);
 
   // If --compile-commands-dir arg was invoked, check value and override default
   // path.
@@ -314,16 +317,12 @@ int main(int argc, char *argv[]) {
   CCOpts.AllScopes = AllScopesCompletion;
 
   // Initialize and run ClangdLSPServer.
-  // Change stdin to binary to not lose \r\n on windows.
-  llvm::sys::ChangeStdinToBinary();
-  auto Transport = newJSONTransport(
-      stdin, llvm::outs(),
-      InputMirrorStream ? InputMirrorStream.getPointer() : nullptr, PrettyPrint,
-      InputStyle);
   ClangdLSPServer LSPServer(
-      *Transport, CCOpts, CompileCommandsDirPath,
+      Out, CCOpts, CompileCommandsDirPath,
       /*ShouldUseInMemoryCDB=*/CompileArgsFrom == LSPCompileArgs, Opts);
   constexpr int NoShutdownRequestErrorCode = 1;
   llvm::set_thread_name("clangd.main");
-  return LSPServer.run() ? 0 : NoShutdownRequestErrorCode;
+  // Change stdin to binary to not lose \r\n on windows.
+  llvm::sys::ChangeStdinToBinary();
+  return LSPServer.run(stdin, InputStyle) ? 0 : NoShutdownRequestErrorCode;
 }
