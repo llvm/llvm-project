@@ -13,6 +13,7 @@
 #include "SymbolCollector.h"
 #include "index/Index.h"
 #include "index/Merge.h"
+#include "index/dex/Dex.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
@@ -98,7 +99,8 @@ void FileSymbols::update(PathRef Path, std::unique_ptr<SymbolSlab> Symbols,
     FileToRefs[Path] = std::move(Refs);
 }
 
-std::unique_ptr<SymbolIndex> FileSymbols::buildMemIndex() {
+std::unique_ptr<SymbolIndex>
+FileSymbols::buildIndex(IndexType Type, ArrayRef<std::string> URISchemes) {
   std::vector<std::shared_ptr<SymbolSlab>> SymbolSlabs;
   std::vector<std::shared_ptr<RefSlab>> RefSlabs;
   {
@@ -144,18 +146,27 @@ std::unique_ptr<SymbolIndex> FileSymbols::buildMemIndex() {
     StorageSize += RefSlab->bytes();
 
   // Index must keep the slabs and contiguous ranges alive.
-  return llvm::make_unique<MemIndex>(
-      llvm::make_pointee_range(AllSymbols), std::move(AllRefs),
-      std::make_tuple(std::move(SymbolSlabs), std::move(RefSlabs),
-                      std::move(RefsStorage)),
-      StorageSize);
+  switch (Type) {
+  case IndexType::Light:
+    return llvm::make_unique<MemIndex>(
+        llvm::make_pointee_range(AllSymbols), std::move(AllRefs),
+        std::make_tuple(std::move(SymbolSlabs), std::move(RefSlabs),
+                        std::move(RefsStorage)),
+        StorageSize);
+  case IndexType::Heavy:
+    return llvm::make_unique<dex::Dex>(
+        llvm::make_pointee_range(AllSymbols), std::move(AllRefs),
+        std::make_tuple(std::move(SymbolSlabs), std::move(RefSlabs),
+                        std::move(RefsStorage)),
+        StorageSize, std::move(URISchemes));
+  }
 }
 
-FileIndex::FileIndex(std::vector<std::string> URISchemes)
-    : MergedIndex(&MainFileIndex, &PreambleIndex),
+FileIndex::FileIndex(std::vector<std::string> URISchemes, bool UseDex)
+    : MergedIndex(&MainFileIndex, &PreambleIndex), UseDex(UseDex),
       URISchemes(std::move(URISchemes)),
-      PreambleIndex(PreambleSymbols.buildMemIndex()),
-      MainFileIndex(MainFileSymbols.buildMemIndex()) {}
+      PreambleIndex(llvm::make_unique<MemIndex>()),
+      MainFileIndex(llvm::make_unique<MemIndex>()) {}
 
 void FileIndex::updatePreamble(PathRef Path, ASTContext &AST,
                                std::shared_ptr<Preprocessor> PP) {
@@ -163,7 +174,8 @@ void FileIndex::updatePreamble(PathRef Path, ASTContext &AST,
   PreambleSymbols.update(Path,
                          llvm::make_unique<SymbolSlab>(std::move(Symbols)),
                          llvm::make_unique<RefSlab>());
-  PreambleIndex.reset(PreambleSymbols.buildMemIndex());
+  PreambleIndex.reset(PreambleSymbols.buildIndex(
+      UseDex ? IndexType::Heavy : IndexType::Light, URISchemes));
 }
 
 void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
@@ -171,7 +183,7 @@ void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
   MainFileSymbols.update(
       Path, llvm::make_unique<SymbolSlab>(std::move(Contents.first)),
       llvm::make_unique<RefSlab>(std::move(Contents.second)));
-  MainFileIndex.reset(MainFileSymbols.buildMemIndex());
+  MainFileIndex.reset(MainFileSymbols.buildIndex(IndexType::Light, URISchemes));
 }
 
 } // namespace clangd

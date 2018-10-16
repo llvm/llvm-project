@@ -183,7 +183,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   // FIXME: this should rebuild once-in-a-while, not after every file.
   //       At that point we should use Dex, too.
   vlog("Rebuilding automatic index");
-  reset(IndexedSymbols.buildMemIndex());
+  reset(IndexedSymbols.buildIndex(IndexType::Light));
   return Error::success();
 }
 
