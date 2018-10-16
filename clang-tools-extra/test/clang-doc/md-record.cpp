@@ -46,58 +46,58 @@ class G;
 
 // RUN: cat %t/docs/./F.md | FileCheck %s --check-prefix CHECK-0
 // CHECK-0: # class F
-// CHECK-0: *Defined at line 36 of test*
+// CHECK-0: *Defined at line 36 of {{.*}}*
 // CHECK-0: Inherits from E, D
 
 // RUN: cat %t/docs/./D.md | FileCheck %s --check-prefix CHECK-1
 // CHECK-1: # class D
-// CHECK-1: *Defined at line 23 of test*
+// CHECK-1: *Defined at line 23 of {{.*}}*
 
 // RUN: cat %t/docs/./GlobalNamespace.md | FileCheck %s --check-prefix CHECK-2
 // CHECK-2: # Global Namespace
 // CHECK-2: ## Functions
 // CHECK-2: ### H
 // CHECK-2: *void H()*
-// CHECK-2: *Defined at line 11 of test*
+// CHECK-2: *Defined at line 11 of {{.*}}*
 // CHECK-2: ## Enums
 // CHECK-2: | enum B |
 // CHECK-2: --
 // CHECK-2: | X |
 // CHECK-2: | Y |
-// CHECK-2: *Defined at line 17 of test*
+// CHECK-2: *Defined at line 17 of {{.*}}*
 // CHECK-2: | enum class Bc |
 // CHECK-2: --
 // CHECK-2: | A |
 // CHECK-2: | B |
-// CHECK-2: *Defined at line 19 of test*
+// CHECK-2: *Defined at line 19 of {{.*}}*
 
 // RUN: cat %t/docs/./E.md | FileCheck %s --check-prefix CHECK-3
 // CHECK-3: # class E
-// CHECK-3: *Defined at line 25 of test*
+// CHECK-3: *Defined at line 25 of {{.*}}*
 // CHECK-3: ## Functions
 // CHECK-3: ### E
 // CHECK-3: *void E()*
-// CHECK-3: *Defined at line 27 of test*
+// CHECK-3: *Defined at line 27 of {{.*}}*
 // CHECK-3: ### ~E
 // CHECK-3: *void ~E()*
-// CHECK-3: *Defined at line 28 of test*
+// CHECK-3: *Defined at line 28 of {{.*}}*
 // CHECK-3: ### ProtectedMethod
 // CHECK-3: *void ProtectedMethod()*
-// CHECK-3: *Defined at line 34 of test*
+// CHECK-3: *Defined at line 34 of {{.*}}*
 
 // RUN: cat %t/docs/./C.md | FileCheck %s --check-prefix CHECK-4
 // CHECK-4: # struct C
-// CHECK-4: *Defined at line 21 of test*
+// CHECK-4: *Defined at line 21 of {{.*}}*
 // CHECK-4: ## Members
 // CHECK-4: int i
 
 // RUN: cat %t/docs/./X.md | FileCheck %s --check-prefix CHECK-5
 // CHECK-5: # class X
-// CHECK-5: *Defined at line 38 of test*
+// CHECK-5: *Defined at line 38 of {{.*}}*
 
 // RUN: cat %t/docs/./A.md | FileCheck %s --check-prefix CHECK-6
 // CHECK-6: # union A
-// CHECK-6: *Defined at line 15 of test*
+// CHECK-6: *Defined at line 15 of {{.*}}*
 // CHECK-6: ## Members
 // CHECK-6: int X
 // CHECK-6: int Y

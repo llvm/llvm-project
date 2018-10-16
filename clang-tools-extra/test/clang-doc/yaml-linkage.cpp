@@ -103,7 +103,7 @@ inline void anonInlineFunction();
 // CHECK-0-NEXT: Name:            'Class'
 // CHECK-0-NEXT: DefLocation:     
 // CHECK-0-NEXT:   LineNumber:      32
-// CHECK-0-NEXT:   Filename:        'test'
+// CHECK-0-NEXT:   Filename:        '{{.*}}'
 // CHECK-0-NEXT: TagType:         Class
 // CHECK-0-NEXT: Members:         
 // CHECK-0-NEXT:   - Type:            
@@ -126,7 +126,7 @@ inline void anonInlineFunction();
 // CHECK-0-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-0-NEXT:     Location:        
 // CHECK-0-NEXT:       - LineNumber:      34
-// CHECK-0-NEXT:         Filename:        'test'
+// CHECK-0-NEXT:         Filename:        '{{.*}}'
 // CHECK-0-NEXT:     IsMethod:        true
 // CHECK-0-NEXT:     Parent:          
 // CHECK-0-NEXT:       Type:            Record
@@ -143,7 +143,7 @@ inline void anonInlineFunction();
 // CHECK-0-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-0-NEXT:     Location:        
 // CHECK-0-NEXT:       - LineNumber:      38
-// CHECK-0-NEXT:         Filename:        'test'
+// CHECK-0-NEXT:         Filename:        '{{.*}}'
 // CHECK-0-NEXT:     IsMethod:        true
 // CHECK-0-NEXT:     Parent:          
 // CHECK-0-NEXT:       Type:            Record
@@ -160,7 +160,7 @@ inline void anonInlineFunction();
 // CHECK-0-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-0-NEXT:     Location:        
 // CHECK-0-NEXT:       - LineNumber:      42
-// CHECK-0-NEXT:         Filename:        'test'
+// CHECK-0-NEXT:         Filename:        '{{.*}}'
 // CHECK-0-NEXT:     IsMethod:        true
 // CHECK-0-NEXT:     Parent:          
 // CHECK-0-NEXT:       Type:            Record
@@ -184,7 +184,7 @@ inline void anonInlineFunction();
 // CHECK-1-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-1-NEXT:     Location:        
 // CHECK-1-NEXT:       - LineNumber:      61
-// CHECK-1-NEXT:         Filename:        'test'
+// CHECK-1-NEXT:         Filename:        '{{.*}}'
 // CHECK-1-NEXT:     ReturnType:      
 // CHECK-1-NEXT:       Type:            
 // CHECK-1-NEXT:         Name:            'void'
@@ -196,7 +196,7 @@ inline void anonInlineFunction();
 // CHECK-1-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-1-NEXT:     Location:        
 // CHECK-1-NEXT:       - LineNumber:      62
-// CHECK-1-NEXT:         Filename:        'test'
+// CHECK-1-NEXT:         Filename:        '{{.*}}'
 // CHECK-1-NEXT:     ReturnType:      
 // CHECK-1-NEXT:       Type:            
 // CHECK-1-NEXT:         Name:            'void'
@@ -208,7 +208,7 @@ inline void anonInlineFunction();
 // CHECK-1-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-1-NEXT:     Location:        
 // CHECK-1-NEXT:       - LineNumber:      63
-// CHECK-1-NEXT:         Filename:        'test'
+// CHECK-1-NEXT:         Filename:        '{{.*}}'
 // CHECK-1-NEXT:     ReturnType:      
 // CHECK-1-NEXT:       Type:            
 // CHECK-1-NEXT:         Name:            'void'
@@ -223,7 +223,7 @@ inline void anonInlineFunction();
 // CHECK-2-NEXT:     USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-2-NEXT: DefLocation:     
 // CHECK-2-NEXT:   LineNumber:      78
-// CHECK-2-NEXT:   Filename:        'test'
+// CHECK-2-NEXT:   Filename:        '{{.*}}'
 // CHECK-2-NEXT: TagType:         Class
 // CHECK-2-NEXT: Members:         
 // CHECK-2-NEXT:   - Type:            
@@ -248,7 +248,7 @@ inline void anonInlineFunction();
 // CHECK-2-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-2-NEXT:     Location:        
 // CHECK-2-NEXT:       - LineNumber:      80
-// CHECK-2-NEXT:         Filename:        'test'
+// CHECK-2-NEXT:         Filename:        '{{.*}}'
 // CHECK-2-NEXT:     IsMethod:        true
 // CHECK-2-NEXT:     Parent:          
 // CHECK-2-NEXT:       Type:            Record
@@ -267,7 +267,7 @@ inline void anonInlineFunction();
 // CHECK-2-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-2-NEXT:     Location:        
 // CHECK-2-NEXT:       - LineNumber:      84
-// CHECK-2-NEXT:         Filename:        'test'
+// CHECK-2-NEXT:         Filename:        '{{.*}}'
 // CHECK-2-NEXT:     IsMethod:        true
 // CHECK-2-NEXT:     Parent:          
 // CHECK-2-NEXT:       Type:            Record
@@ -286,7 +286,7 @@ inline void anonInlineFunction();
 // CHECK-2-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-2-NEXT:     Location:        
 // CHECK-2-NEXT:       - LineNumber:      88
-// CHECK-2-NEXT:         Filename:        'test'
+// CHECK-2-NEXT:         Filename:        '{{.*}}'
 // CHECK-2-NEXT:     IsMethod:        true
 // CHECK-2-NEXT:     Parent:          
 // CHECK-2-NEXT:       Type:            Record
@@ -308,7 +308,7 @@ inline void anonInlineFunction();
 // CHECK-3-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-3-NEXT:     Location:        
 // CHECK-3-NEXT:       - LineNumber:      92
-// CHECK-3-NEXT:         Filename:        'test'
+// CHECK-3-NEXT:         Filename:        '{{.*}}'
 // CHECK-3-NEXT:     ReturnType:      
 // CHECK-3-NEXT:       Type:            
 // CHECK-3-NEXT:         Name:            'void'
@@ -319,7 +319,7 @@ inline void anonInlineFunction();
 // CHECK-3-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-3-NEXT:     Location:        
 // CHECK-3-NEXT:       - LineNumber:      93
-// CHECK-3-NEXT:         Filename:        'test'
+// CHECK-3-NEXT:         Filename:        '{{.*}}'
 // CHECK-3-NEXT:     ReturnType:      
 // CHECK-3-NEXT:       Type:            
 // CHECK-3-NEXT:         Name:            'void'
@@ -330,7 +330,7 @@ inline void anonInlineFunction();
 // CHECK-3-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-3-NEXT:     Location:        
 // CHECK-3-NEXT:       - LineNumber:      94
-// CHECK-3-NEXT:         Filename:        'test'
+// CHECK-3-NEXT:         Filename:        '{{.*}}'
 // CHECK-3-NEXT:     ReturnType:      
 // CHECK-3-NEXT:       Type:            
 // CHECK-3-NEXT:         Name:            'void'
@@ -346,7 +346,7 @@ inline void anonInlineFunction();
 // CHECK-4-NEXT:     USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-4-NEXT: DefLocation:     
 // CHECK-4-NEXT:   LineNumber:      47
-// CHECK-4-NEXT:   Filename:        'test'
+// CHECK-4-NEXT:   Filename:        '{{.*}}'
 // CHECK-4-NEXT: TagType:         Class
 // CHECK-4-NEXT: Members:         
 // CHECK-4-NEXT:   - Type:            
@@ -372,7 +372,7 @@ inline void anonInlineFunction();
 // CHECK-4-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-4-NEXT:     Location:        
 // CHECK-4-NEXT:       - LineNumber:      49
-// CHECK-4-NEXT:         Filename:        'test'
+// CHECK-4-NEXT:         Filename:        '{{.*}}'
 // CHECK-4-NEXT:     IsMethod:        true
 // CHECK-4-NEXT:     Parent:          
 // CHECK-4-NEXT:       Type:            Record
@@ -392,7 +392,7 @@ inline void anonInlineFunction();
 // CHECK-4-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-4-NEXT:     Location:        
 // CHECK-4-NEXT:       - LineNumber:      53
-// CHECK-4-NEXT:         Filename:        'test'
+// CHECK-4-NEXT:         Filename:        '{{.*}}'
 // CHECK-4-NEXT:     IsMethod:        true
 // CHECK-4-NEXT:     Parent:          
 // CHECK-4-NEXT:       Type:            Record
@@ -412,7 +412,7 @@ inline void anonInlineFunction();
 // CHECK-4-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-4-NEXT:     Location:        
 // CHECK-4-NEXT:       - LineNumber:      57
-// CHECK-4-NEXT:         Filename:        'test'
+// CHECK-4-NEXT:         Filename:        '{{.*}}'
 // CHECK-4-NEXT:     IsMethod:        true
 // CHECK-4-NEXT:     Parent:          
 // CHECK-4-NEXT:       Type:            Record

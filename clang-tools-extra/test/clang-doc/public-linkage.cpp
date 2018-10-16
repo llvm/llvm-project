@@ -103,7 +103,7 @@ inline void anonInlineFunction();
 // CHECK-0-NEXT: Name:            'Class'
 // CHECK-0-NEXT: DefLocation:     
 // CHECK-0-NEXT:   LineNumber:      32
-// CHECK-0-NEXT:   Filename:        'test'
+// CHECK-0-NEXT:   Filename:        '{{.*}}'
 // CHECK-0-NEXT: TagType:         Class
 // CHECK-0-NEXT: Members:         
 // CHECK-0-NEXT:   - Type:            
@@ -122,7 +122,7 @@ inline void anonInlineFunction();
 // CHECK-0-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-0-NEXT:     Location:        
 // CHECK-0-NEXT:       - LineNumber:      34
-// CHECK-0-NEXT:         Filename:        'test'
+// CHECK-0-NEXT:         Filename:        '{{.*}}'
 // CHECK-0-NEXT:     IsMethod:        true
 // CHECK-0-NEXT:     Parent:          
 // CHECK-0-NEXT:       Type:            Record
@@ -139,7 +139,7 @@ inline void anonInlineFunction();
 // CHECK-0-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-0-NEXT:     Location:        
 // CHECK-0-NEXT:       - LineNumber:      38
-// CHECK-0-NEXT:         Filename:        'test'
+// CHECK-0-NEXT:         Filename:        '{{.*}}'
 // CHECK-0-NEXT:     IsMethod:        true
 // CHECK-0-NEXT:     Parent:          
 // CHECK-0-NEXT:       Type:            Record
@@ -163,7 +163,7 @@ inline void anonInlineFunction();
 // CHECK-1-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-1-NEXT:     Location:        
 // CHECK-1-NEXT:       - LineNumber:      61
-// CHECK-1-NEXT:         Filename:        'test'
+// CHECK-1-NEXT:         Filename:        '{{.*}}'
 // CHECK-1-NEXT:     ReturnType:      
 // CHECK-1-NEXT:       Type:            
 // CHECK-1-NEXT:         Name:            'void'
@@ -175,7 +175,7 @@ inline void anonInlineFunction();
 // CHECK-1-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-1-NEXT:     Location:        
 // CHECK-1-NEXT:       - LineNumber:      63
-// CHECK-1-NEXT:         Filename:        'test'
+// CHECK-1-NEXT:         Filename:        '{{.*}}'
 // CHECK-1-NEXT:     ReturnType:      
 // CHECK-1-NEXT:       Type:            
 // CHECK-1-NEXT:         Name:            'void'
@@ -189,7 +189,7 @@ inline void anonInlineFunction();
 // CHECK-2-NEXT:     Name:            'function'
 // CHECK-2-NEXT:     Location:        
 // CHECK-2-NEXT:       - LineNumber:      10
-// CHECK-2-NEXT:         Filename:        'test'
+// CHECK-2-NEXT:         Filename:        '{{.*}}'
 // CHECK-2-NEXT:     Params:          
 // CHECK-2-NEXT:       - Type:            
 // CHECK-2-NEXT:           Name:            'int'
@@ -201,7 +201,7 @@ inline void anonInlineFunction();
 // CHECK-2-NEXT:     Name:            'inlinedFunction'
 // CHECK-2-NEXT:     Location:        
 // CHECK-2-NEXT:       - LineNumber:      12
-// CHECK-2-NEXT:         Filename:        'test'
+// CHECK-2-NEXT:         Filename:        '{{.*}}'
 // CHECK-2-NEXT:     Params:          
 // CHECK-2-NEXT:       - Type:            
 // CHECK-2-NEXT:           Name:            'int'
@@ -213,7 +213,7 @@ inline void anonInlineFunction();
 // CHECK-2-NEXT:     Name:            'functionWithInnerClass'
 // CHECK-2-NEXT:     DefLocation:     
 // CHECK-2-NEXT:       LineNumber:      14
-// CHECK-2-NEXT:       Filename:        'test'
+// CHECK-2-NEXT:       Filename:        '{{.*}}'
 // CHECK-2-NEXT:     Params:          
 // CHECK-2-NEXT:       - Type:            
 // CHECK-2-NEXT:           Name:            'int'
@@ -225,7 +225,7 @@ inline void anonInlineFunction();
 // CHECK-2-NEXT:     Name:            'inlinedFunctionWithInnerClass'
 // CHECK-2-NEXT:     DefLocation:     
 // CHECK-2-NEXT:       LineNumber:      23
-// CHECK-2-NEXT:       Filename:        'test'
+// CHECK-2-NEXT:       Filename:        '{{.*}}'
 // CHECK-2-NEXT:     Params:          
 // CHECK-2-NEXT:       - Type:            
 // CHECK-2-NEXT:           Name:            'int'
@@ -245,7 +245,7 @@ inline void anonInlineFunction();
 // CHECK-3-NEXT:     USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-3-NEXT: DefLocation:     
 // CHECK-3-NEXT:   LineNumber:      47
-// CHECK-3-NEXT:   Filename:        'test'
+// CHECK-3-NEXT:   Filename:        '{{.*}}'
 // CHECK-3-NEXT: TagType:         Class
 // CHECK-3-NEXT: Members:         
 // CHECK-3-NEXT:   - Type:            
@@ -267,7 +267,7 @@ inline void anonInlineFunction();
 // CHECK-3-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-3-NEXT:     Location:        
 // CHECK-3-NEXT:       - LineNumber:      49
-// CHECK-3-NEXT:         Filename:        'test'
+// CHECK-3-NEXT:         Filename:        '{{.*}}'
 // CHECK-3-NEXT:     IsMethod:        true
 // CHECK-3-NEXT:     Parent:          
 // CHECK-3-NEXT:       Type:            Record
@@ -287,7 +287,7 @@ inline void anonInlineFunction();
 // CHECK-3-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-3-NEXT:     Location:        
 // CHECK-3-NEXT:       - LineNumber:      53
-// CHECK-3-NEXT:         Filename:        'test'
+// CHECK-3-NEXT:         Filename:        '{{.*}}'
 // CHECK-3-NEXT:     IsMethod:        true
 // CHECK-3-NEXT:     Parent:          
 // CHECK-3-NEXT:       Type:            Record

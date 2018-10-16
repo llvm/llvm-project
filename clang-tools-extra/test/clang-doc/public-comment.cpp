@@ -121,10 +121,10 @@ void F(int I, int J) {}
 // CHECK-0-NEXT:                 Text:            ' Bonus comment on definition'
 // CHECK-0-NEXT:     DefLocation:     
 // CHECK-0-NEXT:       LineNumber:      28
-// CHECK-0-NEXT:       Filename:        'test'
+// CHECK-0-NEXT:       Filename:        '{{.*}}'
 // CHECK-0-NEXT:     Location:        
 // CHECK-0-NEXT:       - LineNumber:      25
-// CHECK-0-NEXT:         Filename:        'test'
+// CHECK-0-NEXT:         Filename:        '{{.*}}'
 // CHECK-0-NEXT:     Params:          
 // CHECK-0-NEXT:       - Type:            
 // CHECK-0-NEXT:           Name:            'int'

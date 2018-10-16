@@ -99,7 +99,7 @@ inline void anonInlineFunction();
 
 // RUN: cat %t/docs/./Class.md | FileCheck %s --check-prefix CHECK-0
 // CHECK-0: # class Class
-// CHECK-0: *Defined at line 32 of test*
+// CHECK-0: *Defined at line 32 of {{.*}}*
 // CHECK-0: ## Members
 // CHECK-0: int publicField
 // CHECK-0: protected int protectedField
@@ -126,14 +126,14 @@ inline void anonInlineFunction();
 // CHECK-2: *int inlinedFunction(int x)*
 // CHECK-2: ### functionWithInnerClass
 // CHECK-2: *int functionWithInnerClass(int x)*
-// CHECK-2: *Defined at line 14 of test*
+// CHECK-2: *Defined at line 14 of {{.*}}*
 // CHECK-2: ### inlinedFunctionWithInnerClass
 // CHECK-2: *int inlinedFunctionWithInnerClass(int x)*
-// CHECK-2: *Defined at line 23 of test*
+// CHECK-2: *Defined at line 23 of {{.*}}*
 
 // RUN: cat %t/docs/named/NamedClass.md | FileCheck %s --check-prefix CHECK-3
 // CHECK-3: # class NamedClass
-// CHECK-3: *Defined at line 47 of test*
+// CHECK-3: *Defined at line 47 of {{.*}}*
 // CHECK-3: ## Members
 // CHECK-3: int namedPublicField
 // CHECK-3: protected int namedProtectedField

@@ -50,7 +50,7 @@ class G;
 // CHECK-0-NEXT: Name:            'C'
 // CHECK-0-NEXT: DefLocation:     
 // CHECK-0-NEXT:   LineNumber:      21
-// CHECK-0-NEXT:   Filename:        'test'
+// CHECK-0-NEXT:   Filename:        '{{.*}}'
 // CHECK-0-NEXT: Members:         
 // CHECK-0-NEXT:   - Type:            
 // CHECK-0-NEXT:       Name:            'int'
@@ -63,7 +63,7 @@ class G;
 // CHECK-1-NEXT: Name:            'A'
 // CHECK-1-NEXT: DefLocation:     
 // CHECK-1-NEXT:   LineNumber:      15
-// CHECK-1-NEXT:   Filename:        'test'
+// CHECK-1-NEXT:   Filename:        '{{.*}}'
 // CHECK-1-NEXT: TagType:         Union
 // CHECK-1-NEXT: Members:         
 // CHECK-1-NEXT:   - Type:            
@@ -80,7 +80,7 @@ class G;
 // CHECK-2-NEXT: Name:            'F'
 // CHECK-2-NEXT: DefLocation:     
 // CHECK-2-NEXT:   LineNumber:      36
-// CHECK-2-NEXT:   Filename:        'test'
+// CHECK-2-NEXT:   Filename:        '{{.*}}'
 // CHECK-2-NEXT: TagType:         Class
 // CHECK-2-NEXT: Parents:         
 // CHECK-2-NEXT:   - Type:            Record
@@ -98,7 +98,7 @@ class G;
 // CHECK-3-NEXT: Name:            'G'
 // CHECK-3-NEXT: Location:        
 // CHECK-3-NEXT:   - LineNumber:      42
-// CHECK-3-NEXT:     Filename:        'test'
+// CHECK-3-NEXT:     Filename:        '{{.*}}'
 // CHECK-3-NEXT: TagType:         Class
 // CHECK-3-NEXT: ...
 
@@ -108,7 +108,7 @@ class G;
 // CHECK-4-NEXT: Name:            'E'
 // CHECK-4-NEXT: DefLocation:     
 // CHECK-4-NEXT:   LineNumber:      25
-// CHECK-4-NEXT:   Filename:        'test'
+// CHECK-4-NEXT:   Filename:        '{{.*}}'
 // CHECK-4-NEXT: TagType:         Class
 // CHECK-4-NEXT: ChildFunctions:  
 // CHECK-4-NEXT:   - USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
@@ -119,7 +119,7 @@ class G;
 // CHECK-4-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-4-NEXT:     DefLocation:     
 // CHECK-4-NEXT:       LineNumber:      27
-// CHECK-4-NEXT:       Filename:        'test'
+// CHECK-4-NEXT:       Filename:        '{{.*}}'
 // CHECK-4-NEXT:     IsMethod:        true
 // CHECK-4-NEXT:     Parent:          
 // CHECK-4-NEXT:       Type:            Record
@@ -136,7 +136,7 @@ class G;
 // CHECK-4-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-4-NEXT:     DefLocation:     
 // CHECK-4-NEXT:       LineNumber:      28
-// CHECK-4-NEXT:       Filename:        'test'
+// CHECK-4-NEXT:       Filename:        '{{.*}}'
 // CHECK-4-NEXT:     IsMethod:        true
 // CHECK-4-NEXT:     Parent:          
 // CHECK-4-NEXT:       Type:            Record
@@ -153,10 +153,10 @@ class G;
 // CHECK-4-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-4-NEXT:     DefLocation:     
 // CHECK-4-NEXT:       LineNumber:      34
-// CHECK-4-NEXT:       Filename:        'test'
+// CHECK-4-NEXT:       Filename:        '{{.*}}'
 // CHECK-4-NEXT:     Location:        
 // CHECK-4-NEXT:       - LineNumber:      31
-// CHECK-4-NEXT:         Filename:        'test'
+// CHECK-4-NEXT:         Filename:        '{{.*}}'
 // CHECK-4-NEXT:     IsMethod:        true
 // CHECK-4-NEXT:     Parent:          
 // CHECK-4-NEXT:       Type:            Record
@@ -173,7 +173,7 @@ class G;
 // CHECK-5-NEXT: Name:            'D'
 // CHECK-5-NEXT: DefLocation:     
 // CHECK-5-NEXT:   LineNumber:      23
-// CHECK-5-NEXT:   Filename:        'test'
+// CHECK-5-NEXT:   Filename:        '{{.*}}'
 // CHECK-5-NEXT: TagType:         Class
 // CHECK-5-NEXT: ...
 
@@ -183,7 +183,7 @@ class G;
 // CHECK-6-NEXT: Name:            'X'
 // CHECK-6-NEXT: DefLocation:     
 // CHECK-6-NEXT:   LineNumber:      38
-// CHECK-6-NEXT:   Filename:        'test'
+// CHECK-6-NEXT:   Filename:        '{{.*}}'
 // CHECK-6-NEXT: TagType:         Class
 // CHECK-6-NEXT: ...
 
@@ -195,7 +195,7 @@ class G;
 // CHECK-7-NEXT:     Name:            'H'
 // CHECK-7-NEXT:     DefLocation:     
 // CHECK-7-NEXT:       LineNumber:      11
-// CHECK-7-NEXT:       Filename:        'test'
+// CHECK-7-NEXT:       Filename:        '{{.*}}'
 // CHECK-7-NEXT:     ReturnType:      
 // CHECK-7-NEXT:       Type:            
 // CHECK-7-NEXT:         Name:            'void'
@@ -204,7 +204,7 @@ class G;
 // CHECK-7-NEXT:     Name:            'B'
 // CHECK-7-NEXT:     DefLocation:     
 // CHECK-7-NEXT:       LineNumber:      17
-// CHECK-7-NEXT:       Filename:        'test'
+// CHECK-7-NEXT:       Filename:        '{{.*}}'
 // CHECK-7-NEXT:     Members:         
 // CHECK-7-NEXT:       - 'X'
 // CHECK-7-NEXT:       - 'Y'
@@ -212,7 +212,7 @@ class G;
 // CHECK-7-NEXT:     Name:            'Bc'
 // CHECK-7-NEXT:     DefLocation:     
 // CHECK-7-NEXT:       LineNumber:      19
-// CHECK-7-NEXT:       Filename:        'test'
+// CHECK-7-NEXT:       Filename:        '{{.*}}'
 // CHECK-7-NEXT:     Scoped:          true
 // CHECK-7-NEXT:     Members:         
 // CHECK-7-NEXT:       - 'A'
