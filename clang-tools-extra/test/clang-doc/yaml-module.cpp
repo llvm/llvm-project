@@ -25,7 +25,7 @@ export double exportedModuleFunction(double y, int z); // ExternalLinkage
 // CHECK-0-NEXT:     Name:            'moduleFunction'
 // CHECK-0-NEXT:     Location:        
 // CHECK-0-NEXT:       - LineNumber:      11
-// CHECK-0-NEXT:         Filename:        'test'
+// CHECK-0-NEXT:         Filename:        '{{.*}}'
 // CHECK-0-NEXT:     Params:          
 // CHECK-0-NEXT:       - Type:            
 // CHECK-0-NEXT:           Name:            'int'
@@ -37,7 +37,7 @@ export double exportedModuleFunction(double y, int z); // ExternalLinkage
 // CHECK-0-NEXT:     Name:            'staticModuleFunction'
 // CHECK-0-NEXT:     Location:        
 // CHECK-0-NEXT:       - LineNumber:      13
-// CHECK-0-NEXT:         Filename:        'test'
+// CHECK-0-NEXT:         Filename:        '{{.*}}'
 // CHECK-0-NEXT:     Params:          
 // CHECK-0-NEXT:       - Type:            
 // CHECK-0-NEXT:           Name:            'int'
@@ -49,7 +49,7 @@ export double exportedModuleFunction(double y, int z); // ExternalLinkage
 // CHECK-0-NEXT:     Name:            'exportedModuleFunction'
 // CHECK-0-NEXT:     Location:        
 // CHECK-0-NEXT:       - LineNumber:      15
-// CHECK-0-NEXT:         Filename:        'test'
+// CHECK-0-NEXT:         Filename:        '{{.*}}'
 // CHECK-0-NEXT:     Params:          
 // CHECK-0-NEXT:       - Type:            
 // CHECK-0-NEXT:           Name:            'double'

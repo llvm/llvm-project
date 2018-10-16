@@ -41,10 +41,10 @@ E func(int i) { return X; }
 // CHECK-0-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-0-NEXT:     DefLocation:     
 // CHECK-0-NEXT:       LineNumber:      17
-// CHECK-0-NEXT:       Filename:        'test'
+// CHECK-0-NEXT:       Filename:        '{{.*}}'
 // CHECK-0-NEXT:     Location:        
 // CHECK-0-NEXT:       - LineNumber:      11
-// CHECK-0-NEXT:         Filename:        'test'
+// CHECK-0-NEXT:         Filename:        '{{.*}}'
 // CHECK-0-NEXT:     ReturnType:      
 // CHECK-0-NEXT:       Type:            
 // CHECK-0-NEXT:         Name:            'void'
@@ -70,7 +70,7 @@ E func(int i) { return X; }
 // CHECK-1-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-1-NEXT:     DefLocation:     
 // CHECK-1-NEXT:       LineNumber:      23
-// CHECK-1-NEXT:       Filename:        'test'
+// CHECK-1-NEXT:       Filename:        '{{.*}}'
 // CHECK-1-NEXT:     Params:          
 // CHECK-1-NEXT:       - Type:            
 // CHECK-1-NEXT:           Name:            'int'
@@ -90,7 +90,7 @@ E func(int i) { return X; }
 // CHECK-1-NEXT:         USR:             '{{[0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z][0-9A-Z]}}'
 // CHECK-1-NEXT:     DefLocation:     
 // CHECK-1-NEXT:       LineNumber:      21
-// CHECK-1-NEXT:       Filename:        'test'
+// CHECK-1-NEXT:       Filename:        '{{.*}}'
 // CHECK-1-NEXT:     Members:         
 // CHECK-1-NEXT:       - 'X'
 // CHECK-1-NEXT: ...

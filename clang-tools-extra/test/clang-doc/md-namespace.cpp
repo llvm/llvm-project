@@ -33,16 +33,16 @@ E func(int i) { return X; }
 // CHECK-0: ## Functions
 // CHECK-0: ### f
 // CHECK-0: *void f()*
-// CHECK-0: *Defined at line 17 of test*
+// CHECK-0: *Defined at line 17 of {{.*}}*
 
 // RUN: cat %t/docs/A/B.md | FileCheck %s --check-prefix CHECK-1
 // CHECK-1: # namespace B
 // CHECK-1: ## Functions
 // CHECK-1: ### func
 // CHECK-1: *enum A::B::E func(int i)*
-// CHECK-1: *Defined at line 23 of test*
+// CHECK-1: *Defined at line 23 of {{.*}}*
 // CHECK-1: ## Enums
 // CHECK-1: | enum E |
 // CHECK-1: --
 // CHECK-1: | X |
-// CHECK-1: *Defined at line 21 of test*
+// CHECK-1: *Defined at line 21 of {{.*}}*
