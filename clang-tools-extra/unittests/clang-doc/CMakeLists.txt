@@ -13,6 +13,7 @@ include_directories(
 add_extra_unittest(ClangDocTests
   BitcodeTest.cpp
   ClangDocTest.cpp
+  MergeTest.cpp
   SerializeTest.cpp
   )
 
