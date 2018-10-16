@@ -75,8 +75,11 @@ void BackgroundIndex::blockUntilIdleForTest() {
 
 void BackgroundIndex::enqueue(StringRef Directory,
                               tooling::CompileCommand Cmd) {
-  std::lock_guard<std::mutex> Lock(QueueMu);
-  enqueueLocked(std::move(Cmd));
+  {
+    std::lock_guard<std::mutex> Lock(QueueMu);
+    enqueueLocked(std::move(Cmd));
+  }
+  QueueCV.notify_all();
 }
 
 void BackgroundIndex::enqueueAll(StringRef Directory,

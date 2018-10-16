@@ -65,12 +65,12 @@ private:
   using Task = std::function<void()>; // FIXME: use multiple worker threads.
   void run(); // Main loop executed by Thread. Runs tasks from Queue.
   void enqueueLocked(tooling::CompileCommand Cmd);
-  std::thread Thread;
   std::mutex QueueMu;
   unsigned NumActiveTasks = 0; // Only idle when queue is empty *and* no tasks.
   std::condition_variable QueueCV;
   bool ShouldStop = false;
   std::deque<Task> Queue;
+  std::thread Thread; // Must be last, spawned thread reads instance vars.
 };
 
 } // namespace clangd
