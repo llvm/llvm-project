@@ -61,6 +61,31 @@ void SimpleLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
   computeBlockColors(CurLoop);
 }
 
+bool ICFLoopSafetyInfo::blockMayThrow(const BasicBlock *BB) const {
+  return ICF.hasICF(BB);
+}
+
+bool ICFLoopSafetyInfo::anyBlockMayThrow() const {
+  return MayThrow;
+}
+
+void ICFLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
+  assert(CurLoop != nullptr && "CurLoop can't be null");
+  ICF.clear();
+  MayThrow = false;
+  // Figure out the fact that at least one block may throw.
+  for (auto &BB : CurLoop->blocks())
+    if (ICF.hasICF(&*BB)) {
+      MayThrow = true;
+      break;
+    }
+  computeBlockColors(CurLoop);
+}
+
+void ICFLoopSafetyInfo::dropCachedInfo(const BasicBlock *BB) {
+  ICF.invalidateBlock(BB);
+}
+
 void LoopSafetyInfo::computeBlockColors(const Loop *CurLoop) {
   // Compute funclet colors if we might sink/hoist in a function with a funclet
   // personality routine.
@@ -215,6 +240,12 @@ bool SimpleLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
   return allLoopPathsLeadToBlock(CurLoop, Inst.getParent(), DT);
 }
 
+bool ICFLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
+                                              const DominatorTree *DT,
+                                              const Loop *CurLoop) const {
+  return !ICF.isDominatedByICFIFromSameBlock(&Inst) &&
+         allLoopPathsLeadToBlock(CurLoop, Inst.getParent(), DT);
+}
 
 namespace {
   struct MustExecutePrinter : public FunctionPass {

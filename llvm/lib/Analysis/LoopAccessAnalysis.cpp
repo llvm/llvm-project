@@ -1869,13 +1869,9 @@ void LoopAccessInfo::analyzeLoop(AliasAnalysis *AA, LoopInfo *LI,
   for (StoreInst *ST : Stores) {
     Value *Ptr = ST->getPointerOperand();
 
-    if (isUniform(Ptr)) {
-      // Consider multiple stores to the same uniform address as a store of a
-      // variant value.
-      bool MultipleStoresToUniformPtr = !UniformStores.insert(Ptr).second;
-      HasVariantStoreToLoopInvariantAddress |=
-          (!isUniform(ST->getValueOperand()) || MultipleStoresToUniformPtr);
-    }
+    if (isUniform(Ptr))
+      HasMultipleStoresToLoopInvariantAddress |=
+          !UniformStores.insert(Ptr).second;
 
     // If we did *not* see this pointer before, insert it to  the read-write
     // list. At this phase it is only a 'write' list.
@@ -2276,7 +2272,7 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
       PtrRtChecking(llvm::make_unique<RuntimePointerChecking>(SE)),
       DepChecker(llvm::make_unique<MemoryDepChecker>(*PSE, L)), TheLoop(L),
       NumLoads(0), NumStores(0), MaxSafeDepDistBytes(-1), CanVecMem(false),
-      HasVariantStoreToLoopInvariantAddress(false) {
+      HasMultipleStoresToLoopInvariantAddress(false) {
   if (canAnalyzeLoop())
     analyzeLoop(AA, LI, TLI, DT);
 }
@@ -2308,8 +2304,8 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
   PtrRtChecking->print(OS, Depth);
   OS << "\n";
 
-  OS.indent(Depth) << "Variant Store to invariant address was "
-                   << (HasVariantStoreToLoopInvariantAddress ? "" : "not ")
+  OS.indent(Depth) << "Multiple stores to invariant address were "
+                   << (HasMultipleStoresToLoopInvariantAddress ? "" : "not ")
                    << "found in loop.\n";
 
   OS.indent(Depth) << "SCEV assumptions:\n";

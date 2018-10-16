@@ -730,10 +730,6 @@ code already distributed under a more liberal license (like the UIUC license),
 and GPL-containing subprojects are kept in separate SVN repositories whose
 LICENSE.txt files specifically indicate that they contain GPL code.
 
-We have no plans to change the license of LLVM.  If you have questions or
-comments about the license, please contact the `LLVM Developer's Mailing
-List <mailto:llvm-dev@lists.llvm.org>`_.
-
 Patents
 -------
 

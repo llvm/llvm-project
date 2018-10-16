@@ -23,6 +23,7 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
 
@@ -388,6 +389,7 @@ static int dumpSymtab(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
+  InitLLVM X(argc, argv);
   InitializeAllTargets();
   InitializeAllTargetMCs();
   InitializeAllAsmPrinters();

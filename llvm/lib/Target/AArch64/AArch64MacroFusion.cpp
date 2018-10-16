@@ -21,14 +21,16 @@ using namespace llvm;
 namespace {
 
 /// CMN, CMP, TST followed by Bcc
-static bool isArithmeticBccPair(unsigned FirstOpcode, unsigned SecondOpcode,
-                                const MachineInstr *FirstMI) {
-  if (SecondOpcode != AArch64::Bcc)
+static bool isArithmeticBccPair(const MachineInstr *FirstMI,
+                                const MachineInstr &SecondMI) {
+  if (SecondMI.getOpcode() != AArch64::Bcc)
     return false;
 
-  switch (FirstOpcode) {
-  case AArch64::INSTRUCTION_LIST_END:
+  // Assume the 1st instr to be a wildcard if it is unspecified.
+  if (FirstMI == nullptr)
     return true;
+
+  switch (FirstMI->getOpcode()) {
   case AArch64::ADDSWri:
   case AArch64::ADDSWrr:
   case AArch64::ADDSXri:
@@ -55,21 +57,24 @@ static bool isArithmeticBccPair(unsigned FirstOpcode, unsigned SecondOpcode,
     // Shift value can be 0 making these behave like the "rr" variant...
     return !AArch64InstrInfo::hasShiftedReg(*FirstMI);
   }
+
   return false;
 }
 
 /// ALU operations followed by CBZ/CBNZ.
-static bool isArithmeticCbzPair(unsigned FirstOpcode, unsigned SecondOpcode,
-                                const MachineInstr *FirstMI) {
-  if (SecondOpcode != AArch64::CBNZW &&
-      SecondOpcode != AArch64::CBNZX &&
-      SecondOpcode != AArch64::CBZW &&
-      SecondOpcode != AArch64::CBZX)
+static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
+                                const MachineInstr &SecondMI) {
+  if (SecondMI.getOpcode() != AArch64::CBZW &&
+      SecondMI.getOpcode() != AArch64::CBZX &&
+      SecondMI.getOpcode() != AArch64::CBNZW &&
+      SecondMI.getOpcode() != AArch64::CBNZX)
     return false;
 
-  switch (FirstOpcode) {
-  case AArch64::INSTRUCTION_LIST_END:
+  // Assume the 1st instr to be a wildcard if it is unspecified.
+  if (FirstMI == nullptr)
     return true;
+
+  switch (FirstMI->getOpcode()) {
   case AArch64::ADDWri:
   case AArch64::ADDWrr:
   case AArch64::ADDXri:
@@ -102,34 +107,39 @@ static bool isArithmeticCbzPair(unsigned FirstOpcode, unsigned SecondOpcode,
     // Shift value can be 0 making these behave like the "rr" variant...
     return !AArch64InstrInfo::hasShiftedReg(*FirstMI);
   }
+
   return false;
 }
 
 /// AES crypto encoding or decoding.
-static bool isAESPair(unsigned FirstOpcode, unsigned SecondOpcode) {
+static bool isAESPair(const MachineInstr *FirstMI,
+                      const MachineInstr &SecondMI) {
+  // Assume the 1st instr to be a wildcard if it is unspecified.
+  switch (SecondMI.getOpcode()) {
   // AES encode.
-  if ((FirstOpcode == AArch64::INSTRUCTION_LIST_END ||
-       FirstOpcode == AArch64::AESErr) &&
-      (SecondOpcode == AArch64::AESMCrr ||
-       SecondOpcode == AArch64::AESMCrrTied))
-    return true;
+  case AArch64::AESMCrr:
+  case AArch64::AESMCrrTied:
+    return FirstMI == nullptr || FirstMI->getOpcode() == AArch64::AESErr;
   // AES decode.
-  else if ((FirstOpcode == AArch64::INSTRUCTION_LIST_END ||
-            FirstOpcode == AArch64::AESDrr) &&
-           (SecondOpcode == AArch64::AESIMCrr ||
-            SecondOpcode == AArch64::AESIMCrrTied))
-    return true;
+  case AArch64::AESIMCrr:
+  case AArch64::AESIMCrrTied:
+    return FirstMI == nullptr || FirstMI->getOpcode() == AArch64::AESDrr;
+  }
 
   return false;
 }
 
 /// AESE/AESD/PMULL + EOR.
-static bool isCryptoEORPair(unsigned FirstOpcode, unsigned SecondOpcode) {
-  if (SecondOpcode != AArch64::EORv16i8)
+static bool isCryptoEORPair(const MachineInstr *FirstMI,
+                            const MachineInstr &SecondMI) {
+  if (SecondMI.getOpcode() != AArch64::EORv16i8)
     return false;
 
-  switch (FirstOpcode) {
-  case AArch64::INSTRUCTION_LIST_END:
+  // Assume the 1st instr to be a wildcard if it is unspecified.
+  if (FirstMI == nullptr)
+    return true;
+
+  switch (FirstMI->getOpcode()) {
   case AArch64::AESErr:
   case AArch64::AESDrr:
   case AArch64::PMULLv16i8:
@@ -138,45 +148,47 @@ static bool isCryptoEORPair(unsigned FirstOpcode, unsigned SecondOpcode) {
   case AArch64::PMULLv2i64:
     return true;
   }
+
   return false;
 }
 
 /// Literal generation.
-static bool isLiteralsPair(unsigned FirstOpcode, unsigned SecondOpcode,
-                           const MachineInstr *FirstMI,
+static bool isLiteralsPair(const MachineInstr *FirstMI,
                            const MachineInstr &SecondMI) {
+  // Assume the 1st instr to be a wildcard if it is unspecified.
+
   // PC relative address.
-  if ((FirstOpcode == AArch64::INSTRUCTION_LIST_END ||
-       FirstOpcode == AArch64::ADRP) &&
-      SecondOpcode == AArch64::ADDXri)
+  if ((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::ADRP) &&
+      SecondMI.getOpcode() == AArch64::ADDXri)
     return true;
+
   // 32 bit immediate.
-  else if ((FirstOpcode == AArch64::INSTRUCTION_LIST_END ||
-            FirstOpcode == AArch64::MOVZWi) &&
-           (SecondOpcode == AArch64::MOVKWi &&
-            SecondMI.getOperand(3).getImm() == 16))
+  if ((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::MOVZWi) &&
+      (SecondMI.getOpcode() == AArch64::MOVKWi &&
+       SecondMI.getOperand(3).getImm() == 16))
     return true;
+
   // Lower half of 64 bit immediate.
-  else if((FirstOpcode == AArch64::INSTRUCTION_LIST_END ||
-           FirstOpcode == AArch64::MOVZXi) &&
-          (SecondOpcode == AArch64::MOVKXi &&
-           SecondMI.getOperand(3).getImm() == 16))
+  if((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::MOVZXi) &&
+     (SecondMI.getOpcode() == AArch64::MOVKXi &&
+      SecondMI.getOperand(3).getImm() == 16))
     return true;
+
   // Upper half of 64 bit immediate.
-  else if ((FirstOpcode == AArch64::INSTRUCTION_LIST_END ||
-            (FirstOpcode == AArch64::MOVKXi &&
-             FirstMI->getOperand(3).getImm() == 32)) &&
-           (SecondOpcode == AArch64::MOVKXi &&
-            SecondMI.getOperand(3).getImm() == 48))
+  if ((FirstMI == nullptr ||
+       (FirstMI->getOpcode() == AArch64::MOVKXi &&
+        FirstMI->getOperand(3).getImm() == 32)) &&
+      (SecondMI.getOpcode() == AArch64::MOVKXi &&
+       SecondMI.getOperand(3).getImm() == 48))
     return true;
 
   return false;
 }
 
-// Fuse address generation and loads or stores.
-static bool isAddressLdStPair(unsigned FirstOpcode, unsigned SecondOpcode,
+/// Fuse address generation and loads or stores.
+static bool isAddressLdStPair(const MachineInstr *FirstMI,
                               const MachineInstr &SecondMI) {
-  switch (SecondOpcode) {
+  switch (SecondMI.getOpcode()) {
   case AArch64::STRBBui:
   case AArch64::STRBui:
   case AArch64::STRDui:
@@ -200,29 +212,32 @@ static bool isAddressLdStPair(unsigned FirstOpcode, unsigned SecondOpcode,
   case AArch64::LDRSHWui:
   case AArch64::LDRSHXui:
   case AArch64::LDRSWui:
-    switch (FirstOpcode) {
-    case AArch64::INSTRUCTION_LIST_END:
+    // Assume the 1st instr to be a wildcard if it is unspecified.
+    if (FirstMI == nullptr)
       return true;
+
+   switch (FirstMI->getOpcode()) {
     case AArch64::ADR:
       return SecondMI.getOperand(2).getImm() == 0;
     case AArch64::ADRP:
       return true;
     }
   }
+
   return false;
 }
 
-// Compare and conditional select.
-static bool isCCSelectPair(unsigned FirstOpcode, unsigned SecondOpcode,
-                           const MachineInstr *FirstMI) {
+/// Compare and conditional select.
+static bool isCCSelectPair(const MachineInstr *FirstMI,
+                           const MachineInstr &SecondMI) {
   // 32 bits
-  if (SecondOpcode == AArch64::CSELWr) {
+  if (SecondMI.getOpcode() == AArch64::CSELWr) {
     // Assume the 1st instr to be a wildcard if it is unspecified.
-    if (FirstOpcode == AArch64::INSTRUCTION_LIST_END)
+    if (FirstMI == nullptr)
       return true;
 
     if (FirstMI->definesRegister(AArch64::WZR))
-      switch (FirstOpcode) {
+      switch (FirstMI->getOpcode()) {
       case AArch64::SUBSWrs:
         return !AArch64InstrInfo::hasShiftedReg(*FirstMI);
       case AArch64::SUBSWrx:
@@ -232,14 +247,15 @@ static bool isCCSelectPair(unsigned FirstOpcode, unsigned SecondOpcode,
         return true;
       }
   }
+
   // 64 bits
-  else if (SecondOpcode == AArch64::CSELXr) {
+  if (SecondMI.getOpcode() == AArch64::CSELXr) {
     // Assume the 1st instr to be a wildcard if it is unspecified.
-    if (FirstOpcode == AArch64::INSTRUCTION_LIST_END)
+    if (FirstMI == nullptr)
       return true;
 
     if (FirstMI->definesRegister(AArch64::XZR))
-      switch (FirstOpcode) {
+      switch (FirstMI->getOpcode()) {
       case AArch64::SUBSXrs:
         return !AArch64InstrInfo::hasShiftedReg(*FirstMI);
       case AArch64::SUBSXrx:
@@ -250,6 +266,7 @@ static bool isCCSelectPair(unsigned FirstOpcode, unsigned SecondOpcode,
         return true;
       }
   }
+
   return false;
 }
 
@@ -262,28 +279,21 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                    const MachineInstr &SecondMI) {
   const AArch64Subtarget &ST = static_cast<const AArch64Subtarget&>(TSI);
 
-  // Assume the 1st instr to be a wildcard if it is unspecified.
-  unsigned FirstOpc =
-      FirstMI ? FirstMI->getOpcode()
-              : static_cast<unsigned>(AArch64::INSTRUCTION_LIST_END);
-  unsigned SecondOpc = SecondMI.getOpcode();
-
-  if (ST.hasArithmeticBccFusion() &&
-      isArithmeticBccPair(FirstOpc, SecondOpc, FirstMI))
+  // All checking functions assume that the 1st instr is a wildcard if it is
+  // unspecified.
+  if (ST.hasArithmeticBccFusion() && isArithmeticBccPair(FirstMI, SecondMI))
     return true;
-  if (ST.hasArithmeticCbzFusion() &&
-      isArithmeticCbzPair(FirstOpc, SecondOpc, FirstMI))
+  if (ST.hasArithmeticCbzFusion() && isArithmeticCbzPair(FirstMI, SecondMI))
     return true;
-  if (ST.hasFuseAES() && isAESPair(FirstOpc, SecondOpc))
+  if (ST.hasFuseAES() && isAESPair(FirstMI, SecondMI))
     return true;
-  if (ST.hasFuseCryptoEOR() && isCryptoEORPair(FirstOpc, SecondOpc))
+  if (ST.hasFuseCryptoEOR() && isCryptoEORPair(FirstMI, SecondMI))
     return true;
-  if (ST.hasFuseLiterals() &&
-      isLiteralsPair(FirstOpc, SecondOpc, FirstMI, SecondMI))
+  if (ST.hasFuseLiterals() && isLiteralsPair(FirstMI, SecondMI))
     return true;
-  if (ST.hasFuseAddress() && isAddressLdStPair(FirstOpc, SecondOpc, SecondMI))
+  if (ST.hasFuseAddress() && isAddressLdStPair(FirstMI, SecondMI))
     return true;
-  if (ST.hasFuseCCSelect() && isCCSelectPair(FirstOpc, SecondOpc, FirstMI))
+  if (ST.hasFuseCCSelect() && isCCSelectPair(FirstMI, SecondMI))
     return true;
 
   return false;

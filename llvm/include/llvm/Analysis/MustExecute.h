@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -120,6 +121,37 @@ public:
   SimpleLoopSafetyInfo() : LoopSafetyInfo() {};
 
   virtual ~SimpleLoopSafetyInfo() {};
+};
+
+/// This implementation of LoopSafetyInfo use ImplicitControlFlowTracking to
+/// give precise answers on "may throw" queries. This implementation uses cache
+/// that should be invalidated by calling the method dropCachedInfo whenever we
+/// modify a basic block's contents by adding or removing instructions.
+class ICFLoopSafetyInfo: public LoopSafetyInfo {
+  bool MayThrow = false;       // The current loop contains an instruction which
+                               // may throw.
+  // Contains information about implicit control flow in this loop's blocks.
+  mutable ImplicitControlFlowTracking ICF;
+
+public:
+  virtual bool blockMayThrow(const BasicBlock *BB) const;
+
+  virtual bool anyBlockMayThrow() const;
+
+  virtual void computeLoopSafetyInfo(const Loop *CurLoop);
+
+  virtual bool isGuaranteedToExecute(const Instruction &Inst,
+                                     const DominatorTree *DT,
+                                     const Loop *CurLoop) const;
+
+  /// Drops cached information regarding the implicit control flow in block
+  /// \p BB. It should be called for every block in which we add or remove any
+  /// instructions  to a block before we make queries to it.
+  void dropCachedInfo(const BasicBlock *BB);
+
+  ICFLoopSafetyInfo(DominatorTree *DT) : LoopSafetyInfo(), ICF(DT) {};
+
+  virtual ~ICFLoopSafetyInfo() {};
 };
 
 }

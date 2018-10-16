@@ -1189,7 +1189,6 @@ private:
   /// Load: scalar load + broadcast.
   /// Store: scalar store + (loop invariant value stored? 0 : extract of last
   /// element)
-  /// TODO: Test the extra cost of the extract when loop variant value stored.
   unsigned getUniformMemOpCost(Instruction *I, unsigned VF);
 
   /// Returns whether the instruction is a load or store and will be a emitted
