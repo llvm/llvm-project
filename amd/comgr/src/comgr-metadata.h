@@ -54,6 +54,9 @@ amd_comgr_status_t getIsaMetadata(llvm::StringRef IsaName, DataMeta *Meta);
 
 bool isValidIsaName(llvm::StringRef IsaName);
 
+amd_comgr_status_t getElfIsaName(DataObject *DataP, size_t *Size,
+                                 char *IsaName);
+
 } // namespace COMGR
 } // namespace metadata
 

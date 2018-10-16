@@ -1,7 +1,7 @@
 # TODO: These targets depend on ALL to ensure they are up-to-date, but we
 # should identify what they really need to depend on (it should be both the
 # sources and the clang/llvm/lld being used).
-set(CLANG_COMMON "${LLVM_TOOLS_BINARY_DIR}/clang" --target=amdgcn-amdhsa-opencl -mcpu=gfx803)
+set(CLANG_COMMON "${LLVM_TOOLS_BINARY_DIR}/clang" --target=amdgcn-amd-amdhsa -mcpu=gfx803)
 add_custom_target(bytes1.o ALL ${CLANG_COMMON}
   "${CMAKE_CURRENT_SOURCE_DIR}/reloc1.cl" -c -o
   "${CMAKE_CURRENT_BINARY_DIR}/reloc1.o"
@@ -14,13 +14,12 @@ add_custom_target(shared.so ALL ${CLANG_COMMON}
   "${CMAKE_CURRENT_SOURCE_DIR}/shared.cl" -o
   "${CMAKE_CURRENT_BINARY_DIR}/shared.so"
   SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shared.cl")
-# TODO: Where is this from? We could also build this from source, but it is a
-# standard x86-64 ELF SO, so it will probably not change.
 configure_file("source1.cl" "source1.cl" COPYONLY)
 configure_file("source1-device-libs.cl" "source1-device-libs.cl" COPYONLY)
 configure_file("source2.cl" "source2.cl" COPYONLY)
 configure_file("include-a.h" "include-a.h" COPYONLY)
 configure_file("source1.s" "source1.s" COPYONLY)
+configure_file("shared.cl" "shared.cl" COPYONLY)
 
 if(UNIX)
 set(CMAKE_C_FLAGS "-m64 -g -O0")
@@ -100,6 +99,11 @@ add_executable(isa_name_parsing_test isa_name_parsing_test.c)
 target_link_libraries(isa_name_parsing_test amd_comgr)
 add_test(NAME isa_name_parsing_test COMMAND isa_name_parsing_test)
 
+# Test : Get Data ISA Name
+add_executable(get_data_isa_name_test get_data_isa_name_test.c)
+target_link_libraries(get_data_isa_name_test amd_comgr)
+add_test(NAME get_data_isa_name_test COMMAND get_data_isa_name_test)
+
 # Windows binaries have no equivalent to -rpath, so we must set their PATH to
 # include the .lib/.dll directory.
 if (NOT(UNIX))
@@ -118,5 +122,6 @@ if (NOT(UNIX))
     assemble_test
     link_test
     isa_name_parsing_test
+    get_data_isa_name_test
     PROPERTIES ENVIRONMENT "PATH=$<TARGET_LINKER_FILE_DIR:amd_comgr>")
 endif()

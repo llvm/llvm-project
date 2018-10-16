@@ -649,15 +649,12 @@ amd_comgr_get_data_isa_name(
 {
   DataObject *datap = DataObject::Convert(data);
 
-  if (datap == NULL ||
-      (datap->data_kind != AMD_COMGR_DATA_KIND_BC &&
-       datap->data_kind != AMD_COMGR_DATA_KIND_RELOCATABLE &&
-       datap->data_kind != AMD_COMGR_DATA_KIND_EXECUTABLE) ||
-      size == NULL)
+  if (datap == NULL || size == NULL ||
+      (datap->data_kind != AMD_COMGR_DATA_KIND_RELOCATABLE &&
+       datap->data_kind != AMD_COMGR_DATA_KIND_EXECUTABLE))
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  // TODO: Implement
-  return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  return metadata::getElfIsaName(datap, size, isa_name);
 }
 
 // API functions on Data Set

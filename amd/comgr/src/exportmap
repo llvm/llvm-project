@@ -11,6 +11,7 @@ global: amd_comgr_status_string;
         amd_comgr_get_data;
         amd_comgr_set_data_name;
         amd_comgr_get_data_name;
+        amd_comgr_get_data_isa_name;
         amd_comgr_create_data_set;
         amd_comgr_destroy_data_set;
         amd_comgr_data_set_add;
