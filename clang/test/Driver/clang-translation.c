@@ -330,6 +330,38 @@
 // MIPS64EL: "-target-cpu" "mips64r2"
 // MIPS64EL: "-mfloat-abi" "hard"
 
+// RUN: %clang -target mips64-linux-gnuabi64 -### -S %s 2>&1 | \
+// RUN: FileCheck -check-prefix=MIPS64-GNUABI64 %s
+// MIPS64-GNUABI64: clang
+// MIPS64-GNUABI64: "-cc1"
+// MIPS64-GNUABI64: "-target-cpu" "mips64r2"
+// MIPS64-GNUABI64: "-target-abi" "n64"
+// MIPS64-GNUABI64: "-mfloat-abi" "hard"
+
+// RUN: %clang -target mips64el-linux-gnuabi64 -### -S %s 2>&1 | \
+// RUN: FileCheck -check-prefix=MIPS64EL-GNUABI64 %s
+// MIPS64EL-GNUABI64: clang
+// MIPS64EL-GNUABI64: "-cc1"
+// MIPS64EL-GNUABI64: "-target-cpu" "mips64r2"
+// MIPS64EL-GNUABI64: "-target-abi" "n64"
+// MIPS64EL-GNUABI64: "-mfloat-abi" "hard"
+
+// RUN: %clang -target mips64-linux-gnuabin32 -### -S %s 2>&1 | \
+// RUN: FileCheck -check-prefix=MIPSN32 %s
+// MIPSN32: clang
+// MIPSN32: "-cc1"
+// MIPSN32: "-target-cpu" "mips64r2"
+// MIPSN32: "-target-abi" "n32"
+// MIPSN32: "-mfloat-abi" "hard"
+
+// RUN: %clang -target mips64el-linux-gnuabin32 -### -S %s 2>&1 | \
+// RUN: FileCheck -check-prefix=MIPSN32EL %s
+// MIPSN32EL: clang
+// MIPSN32EL: "-cc1"
+// MIPSN32EL: "-target-cpu" "mips64r2"
+// MIPSN32EL: "-target-abi" "n32"
+// MIPSN32EL: "-mfloat-abi" "hard"
+
 // RUN: %clang -target mips64el-linux-android -### -S %s 2>&1 | \
 // RUN: FileCheck -check-prefix=MIPS64EL-ANDROID %s
 // MIPS64EL-ANDROID: clang
