@@ -22,21 +22,27 @@
 
 namespace __xray {
 
+class LogWriter {
+public:
+  explicit LogWriter(int Fd) : Fd(Fd) {}
+  ~LogWriter();
+
+  // Write a character range into a log.
+  void WriteAll(const char *Begin, const char *End);
+
+  void Flush();
+
+  // Returns a new log instance initialized using the flag-provided values.
+  static LogWriter *Open();
+  // Closes and deallocates the log instance.
+  static void Close(LogWriter *LogWriter);
+
+private:
+  int Fd = -1;
+};
+
 // Default implementation of the reporting interface for sanitizer errors.
 void printToStdErr(const char *Buffer);
-
-// EINTR-safe write routine, provided a file descriptor and a character range.
-void retryingWriteAll(int Fd, const char *Begin, const char *End);
-
-// Reads a long long value from a provided file.
-bool readValueFromFile(const char *Filename, long long *Value);
-
-// EINTR-safe read routine, providing a file descriptor and a character range.
-std::pair<ssize_t, bool> retryingReadSome(int Fd, char *Begin, char *End);
-
-// EINTR-safe open routine, uses flag-provided values for initialising a log
-// file.
-int getLogFD();
 
 constexpr size_t gcd(size_t a, size_t b) {
   return (b == 0) ? a : gcd(b, a % b);
