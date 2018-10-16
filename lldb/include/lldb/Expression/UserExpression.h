@@ -288,10 +288,6 @@ public:
            uint32_t line_offset = 0, std::string *fixed_expression = nullptr,
            lldb::ModuleSP *jit_module_sp_ptr = nullptr);
 
-  static const Status::ValueType kNoResult =
-      0x1001; ///< ValueObject::GetError() returns this if there is no result
-              /// from the expression.
-
   const char *GetFixedText() {
     if (m_fixed_text.empty())
       return nullptr;
