@@ -223,7 +223,7 @@ void DWARFUnit::ExtractDIEsRWLocked() {
           // the list (saves up to 25% in C++ code), we need a way to let the
           // DIE know that it actually doesn't have children.
           if (!m_die_array.empty())
-            m_die_array.back().SetEmptyChildren(true);
+            m_die_array.back().SetHasChildren(false);
         }
       } else {
         die.SetParentIndex(m_die_array.size() - die_index_stack[depth - 1]);
@@ -263,7 +263,7 @@ void DWARFUnit::ExtractDIEsRWLocked() {
   if (!m_die_array.empty()) {
     if (m_first_die) {
       // Only needed for the assertion.
-      m_first_die.SetEmptyChildren(m_die_array.front().GetEmptyChildren());
+      m_first_die.SetHasChildren(m_die_array.front().HasChildren());
       lldbassert(m_first_die == m_die_array.front());
     }
     m_first_die = m_die_array.front();
