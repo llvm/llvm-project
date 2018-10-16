@@ -827,7 +827,6 @@ namespace std {
 
 // Just so we can migrate to the new macros gradually.
 #define _LIBCPP_INLINE_VISIBILITY _LIBCPP_HIDE_FROM_ABI
-#define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY _LIBCPP_HIDE_FROM_ABI_AFTER_V1
 
 #ifndef _LIBCPP_PREFERRED_OVERLOAD
 #  if __has_attribute(__enable_if__)
