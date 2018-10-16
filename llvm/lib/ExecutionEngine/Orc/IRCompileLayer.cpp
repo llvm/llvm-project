@@ -12,16 +12,16 @@
 namespace llvm {
 namespace orc {
 
-IRCompileLayer2::IRCompileLayer2(ExecutionSession &ES, ObjectLayer &BaseLayer,
+IRCompileLayer::IRCompileLayer(ExecutionSession &ES, ObjectLayer &BaseLayer,
                                  CompileFunction Compile)
     : IRLayer(ES), BaseLayer(BaseLayer), Compile(std::move(Compile)) {}
 
-void IRCompileLayer2::setNotifyCompiled(NotifyCompiledFunction NotifyCompiled) {
+void IRCompileLayer::setNotifyCompiled(NotifyCompiledFunction NotifyCompiled) {
   std::lock_guard<std::mutex> Lock(IRLayerMutex);
   this->NotifyCompiled = std::move(NotifyCompiled);
 }
 
-void IRCompileLayer2::emit(MaterializationResponsibility R, VModuleKey K,
+void IRCompileLayer::emit(MaterializationResponsibility R, VModuleKey K,
                            ThreadSafeModule TSM) {
   assert(TSM.getModule() && "Module must not be null");
 

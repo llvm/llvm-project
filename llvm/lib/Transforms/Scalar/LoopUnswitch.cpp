@@ -189,7 +189,7 @@ namespace {
     BasicBlock *loopPreheader = nullptr;
 
     bool SanitizeMemory;
-    LoopSafetyInfo SafetyInfo;
+    SimpleLoopSafetyInfo SafetyInfo;
 
     // LoopBlocks contains all of the basic blocks of the loop, including the
     // preheader of the loop, the body of the loop, and the exit blocks of the
@@ -721,7 +721,7 @@ bool LoopUnswitch::processCurrentLoop() {
     // This is a workaround for the discrepancy between LLVM IR and MSan
     // semantics. See PR28054 for more details.
     if (SanitizeMemory &&
-        !isGuaranteedToExecute(*TI, DT, currentLoop, &SafetyInfo))
+        !SafetyInfo.isGuaranteedToExecute(*TI, DT, currentLoop))
       continue;
 
     if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {

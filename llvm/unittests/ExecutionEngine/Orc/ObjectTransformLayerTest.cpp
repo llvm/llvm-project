@@ -175,19 +175,19 @@ private:
   }
 };
 
-// Test each operation on ObjectTransformLayer.
-TEST(ObjectTransformLayerTest, Main) {
+// Test each operation on LegacyObjectTransformLayer.
+TEST(LegacyObjectTransformLayerTest, Main) {
   MockBaseLayer M;
 
   ExecutionSession ES(std::make_shared<SymbolStringPool>());
 
   // Create one object transform layer using a transform (as a functor)
   // that allocates new objects, and deals in unique pointers.
-  ObjectTransformLayer<MockBaseLayer, AllocatingTransform> T1(M);
+  LegacyObjectTransformLayer<MockBaseLayer, AllocatingTransform> T1(M);
 
   // Create a second object transform layer using a transform (as a lambda)
   // that mutates objects in place, and deals in naked pointers
-  ObjectTransformLayer<MockBaseLayer,
+  LegacyObjectTransformLayer<MockBaseLayer,
                          std::function<std::shared_ptr<MockObjectFile>(
                            std::shared_ptr<MockObjectFile>)>>
     T2(M, [](std::shared_ptr<MockObjectFile> Obj) {
@@ -257,9 +257,9 @@ TEST(ObjectTransformLayerTest, Main) {
   if (!RunStaticChecks)
     return;
 
-  // Make sure that ObjectTransformLayer implements the object layer concept
+  // Make sure that LegacyObjectTransformLayer implements the object layer concept
   // correctly by sandwitching one between an ObjectLinkingLayer and an
-  // IRCompileLayer, verifying that it compiles if we have a call to the
+  // LegacyIRCompileLayer, verifying that it compiles if we have a call to the
   // IRComileLayer's addModule that should call the transform layer's
   // addObject, and also calling the other public transform layer methods
   // directly to make sure the methods they intend to forward to exist on
@@ -282,8 +282,8 @@ TEST(ObjectTransformLayerTest, Main) {
   };
 
   // Construct the jit layers.
-  RTDyldObjectLinkingLayer BaseLayer(ES, [](VModuleKey) {
-    return RTDyldObjectLinkingLayer::Resources{
+  LegacyRTDyldObjectLinkingLayer BaseLayer(ES, [](VModuleKey) {
+    return LegacyRTDyldObjectLinkingLayer::Resources{
         std::make_shared<llvm::SectionMemoryManager>(),
         std::make_shared<NullResolver>()};
   });
@@ -291,20 +291,20 @@ TEST(ObjectTransformLayerTest, Main) {
   auto IdentityTransform = [](std::unique_ptr<llvm::MemoryBuffer> Obj) {
     return Obj;
   };
-  ObjectTransformLayer<decltype(BaseLayer), decltype(IdentityTransform)>
+  LegacyObjectTransformLayer<decltype(BaseLayer), decltype(IdentityTransform)>
       TransformLayer(BaseLayer, IdentityTransform);
   auto NullCompiler = [](llvm::Module &) {
     return std::unique_ptr<llvm::MemoryBuffer>(nullptr);
   };
-  IRCompileLayer<decltype(TransformLayer), decltype(NullCompiler)>
+  LegacyIRCompileLayer<decltype(TransformLayer), decltype(NullCompiler)>
     CompileLayer(TransformLayer, NullCompiler);
 
-  // Make sure that the calls from IRCompileLayer to ObjectTransformLayer
+  // Make sure that the calls from LegacyIRCompileLayer to LegacyObjectTransformLayer
   // compile.
   cantFail(CompileLayer.addModule(ES.allocateVModule(),
                                   std::unique_ptr<llvm::Module>()));
 
-  // Make sure that the calls from ObjectTransformLayer to ObjectLinkingLayer
+  // Make sure that the calls from LegacyObjectTransformLayer to ObjectLinkingLayer
   // compile.
   VModuleKey DummyKey = ES.allocateVModule();
   cantFail(TransformLayer.emitAndFinalize(DummyKey));

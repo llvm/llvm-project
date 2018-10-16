@@ -76,6 +76,10 @@ public:
   /// block.
   bool HasValueForBlock(BasicBlock *BB) const;
 
+  /// Return the value for the specified block if the SSAUpdater has one,
+  /// otherwise return nullptr.
+  Value *FindValueForBlock(BasicBlock *BB) const;
+
   /// Construct SSA form, materializing a value that is live at the end
   /// of the specified block.
   Value *GetValueAtEndOfBlock(BasicBlock *BB);

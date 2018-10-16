@@ -535,6 +535,40 @@ exit:
 }
 
 
+; GCN-LABEL: {{^}}smrd_uniform_loop2:
+; (this test differs from smrd_uniform_loop by the more complex structure of phis,
+; which currently confuses the DivergenceAnalysis after structurization)
+;
+; TODO: this should use an s_buffer_load
+;
+; GCN: buffer_load_dword
+define amdgpu_ps float @smrd_uniform_loop2(<4 x i32> inreg %desc, i32 %bound, i32 %bound.a) #0 {
+main_body:
+  br label %loop
+
+loop:
+  %counter = phi i32 [ 0, %main_body ], [ %counter.next, %loop.a ], [ %counter.next, %loop.b ]
+  %sum = phi float [ 0.0, %main_body ], [ %sum.next, %loop.a ], [ %sum.next.b, %loop.b ]
+  %offset = shl i32 %counter, 2
+  %v = call float @llvm.SI.load.const.v4i32(<4 x i32> %desc, i32 %offset)
+  %sum.next = fadd float %sum, %v
+  %counter.next = add i32 %counter, 1
+  %cc = icmp uge i32 %counter.next, %bound
+  br i1 %cc, label %exit, label %loop.a
+
+loop.a:
+  %cc.a = icmp uge i32 %counter.next, %bound.a
+  br i1 %cc, label %loop, label %loop.b
+
+loop.b:
+  %sum.next.b = fadd float %sum.next, 1.0
+  br label %loop
+
+exit:
+  ret float %sum.next
+}
+
+
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 declare float @llvm.SI.load.const.v4i32(<4 x i32>, i32) #1
 declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #2

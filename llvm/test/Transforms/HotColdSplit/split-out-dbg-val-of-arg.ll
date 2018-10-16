@@ -9,7 +9,7 @@ entry:
   br i1 undef, label %if.then, label %if.end, !dbg !12
 
 if.then:                                          ; preds = %entry
-  unreachable, !dbg !13
+  ret void, !dbg !13
 
 if.end:                                           ; preds = %entry
   call void @llvm.dbg.value(metadata i32 %arg1, metadata !9, metadata !DIExpression()), !dbg !11
@@ -19,10 +19,16 @@ if.then12:                                        ; preds = %if.end
   br label %cleanup40, !dbg !15
 
 cleanup40:                                        ; preds = %if.then12
-  br label %return, !dbg !16
+  br i1 undef, label %if.then5, label %if.end1, !dbg !16
+
+if.then5:
+  br label %return, !dbg !17
+
+if.end1:
+  br label %return, !dbg !18
 
 return:                                           ; preds = %cleanup40
-  ret void, !dbg !17
+  unreachable, !dbg !19
 }
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
@@ -49,3 +55,5 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !15 = !DILocation(line: 5, column: 1, scope: !6)
 !16 = !DILocation(line: 6, column: 1, scope: !6)
 !17 = !DILocation(line: 7, column: 1, scope: !6)
+!18 = !DILocation(line: 8, column: 1, scope: !6)
+!19 = !DILocation(line: 9, column: 1, scope: !6)

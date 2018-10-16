@@ -20,10 +20,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 
-#include <list>
-#include <map>
 #include <memory>
-#include <set>
 #include <vector>
 
 #define DEBUG_TYPE "orc"
@@ -44,18 +41,18 @@ using VModuleKey = uint64_t;
 
 /// A set of symbol names (represented by SymbolStringPtrs for
 //         efficiency).
-using SymbolNameSet = std::set<SymbolStringPtr>;
+using SymbolNameSet = DenseSet<SymbolStringPtr>;
 
 /// A map from symbol names (as SymbolStringPtrs) to JITSymbols
 ///        (address/flags pairs).
-using SymbolMap = std::map<SymbolStringPtr, JITEvaluatedSymbol>;
+using SymbolMap = DenseMap<SymbolStringPtr, JITEvaluatedSymbol>;
 
 /// A map from symbol names (as SymbolStringPtrs) to JITSymbolFlags.
-using SymbolFlagsMap = std::map<SymbolStringPtr, JITSymbolFlags>;
+using SymbolFlagsMap = DenseMap<SymbolStringPtr, JITSymbolFlags>;
 
 /// A base class for materialization failures that allows the failing
 ///        symbols to be obtained for logging.
-using SymbolDependenceMap = std::map<JITDylib *, SymbolNameSet>;
+using SymbolDependenceMap = DenseMap<JITDylib *, SymbolNameSet>;
 
 /// A list of JITDylib pointers.
 using JITDylibList = std::vector<JITDylib *>;
@@ -339,7 +336,7 @@ struct SymbolAliasMapEntry {
 };
 
 /// A map of Symbols to (Symbol, Flags) pairs.
-using SymbolAliasMap = std::map<SymbolStringPtr, SymbolAliasMapEntry>;
+using SymbolAliasMap = DenseMap<SymbolStringPtr, SymbolAliasMapEntry>;
 
 /// A materialization unit for symbol aliases. Allows existing symbols to be
 /// aliased with alternate flags.
@@ -489,7 +486,7 @@ public:
       JITDylib &Parent, const SymbolNameSet &Names)>;
 
   using AsynchronousSymbolQuerySet =
-      std::set<std::shared_ptr<AsynchronousSymbolQuery>>;
+    std::set<std::shared_ptr<AsynchronousSymbolQuery>>;
 
   JITDylib(const JITDylib &) = delete;
   JITDylib &operator=(const JITDylib &) = delete;
@@ -609,7 +606,7 @@ private:
   };
 
   using UnmaterializedInfosMap =
-      std::map<SymbolStringPtr, std::shared_ptr<UnmaterializedInfo>>;
+      DenseMap<SymbolStringPtr, std::shared_ptr<UnmaterializedInfo>>;
 
   struct MaterializingInfo {
     AsynchronousSymbolQueryList PendingQueries;
@@ -618,7 +615,7 @@ private:
     bool IsEmitted = false;
   };
 
-  using MaterializingInfosMap = std::map<SymbolStringPtr, MaterializingInfo>;
+  using MaterializingInfosMap = DenseMap<SymbolStringPtr, MaterializingInfo>;
 
   using LookupImplActionFlags = enum {
     None = 0,

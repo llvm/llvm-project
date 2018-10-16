@@ -204,7 +204,7 @@ static cl::opt<unsigned>
 static cl::opt<unsigned>
     MaxAddRecSize("scalar-evolution-max-add-rec-size", cl::Hidden,
                   cl::desc("Max coefficients in AddRec during evolving"),
-                  cl::init(16));
+                  cl::init(8));
 
 //===----------------------------------------------------------------------===//
 //                           SCEV class definitions

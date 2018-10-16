@@ -94,11 +94,11 @@ iterator_range<CtorDtorIterator> getDestructors(const Module &M);
 /// Convenience class for recording constructor/destructor names for
 ///        later execution.
 template <typename JITLayerT>
-class CtorDtorRunner {
+class LegacyCtorDtorRunner {
 public:
   /// Construct a CtorDtorRunner for the given range using the given
   ///        name mangling function.
-  CtorDtorRunner(std::vector<std::string> CtorDtorNames, VModuleKey K)
+  LegacyCtorDtorRunner(std::vector<std::string> CtorDtorNames, VModuleKey K)
       : CtorDtorNames(std::move(CtorDtorNames)), K(K) {}
 
   /// Run the recorded constructors/destructors through the given JIT
@@ -129,9 +129,9 @@ private:
   orc::VModuleKey K;
 };
 
-class CtorDtorRunner2 {
+class CtorDtorRunner {
 public:
-  CtorDtorRunner2(JITDylib &JD) : JD(JD) {}
+  CtorDtorRunner(JITDylib &JD) : JD(JD) {}
   void add(iterator_range<CtorDtorIterator> CtorDtors);
   Error run();
 
@@ -177,11 +177,11 @@ protected:
                                void *DSOHandle);
 };
 
-class LocalCXXRuntimeOverrides : public LocalCXXRuntimeOverridesBase {
+class LegacyLocalCXXRuntimeOverrides : public LocalCXXRuntimeOverridesBase {
 public:
   /// Create a runtime-overrides class.
   template <typename MangleFtorT>
-  LocalCXXRuntimeOverrides(const MangleFtorT &Mangle) {
+  LegacyLocalCXXRuntimeOverrides(const MangleFtorT &Mangle) {
     addOverride(Mangle("__dso_handle"), toTargetAddress(&DSOHandleOverride));
     addOverride(Mangle("__cxa_atexit"), toTargetAddress(&CXAAtExitOverride));
   }
@@ -202,7 +202,7 @@ private:
   StringMap<JITTargetAddress> CXXRuntimeOverrides;
 };
 
-class LocalCXXRuntimeOverrides2 : public LocalCXXRuntimeOverridesBase {
+class LocalCXXRuntimeOverrides : public LocalCXXRuntimeOverridesBase {
 public:
   Error enable(JITDylib &JD, MangleAndInterner &Mangler);
 };
