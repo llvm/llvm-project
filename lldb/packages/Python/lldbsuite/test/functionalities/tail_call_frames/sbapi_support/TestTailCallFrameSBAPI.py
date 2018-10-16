@@ -43,11 +43,11 @@ class TestTailCallFrameSBAPI(TestBase):
         # Did we hit our breakpoint?
         threads = lldbutil.get_threads_stopped_at_breakpoint(process,
                 breakpoint)
-        self.assertTrue(
-            len(threads) == 1,
+        self.assertEqual(
+            len(threads), 1,
             "There should be a thread stopped at our breakpoint")
 
-        self.assertTrue(breakpoint.GetHitCount() == 1)
+        self.assertEqual(breakpoint.GetHitCount(), 1)
 
         thread = threads[0]
 
@@ -61,5 +61,5 @@ class TestTailCallFrameSBAPI(TestBase):
         artificiality = [False, True, False, True, False]
         for idx, (name, is_artificial) in enumerate(zip(names, artificiality)):
             frame = thread.GetFrameAtIndex(idx)
-            self.assertTrue(frame.GetDisplayFunctionName() == name)
-            self.assertTrue(frame.IsArtificial() == is_artificial)
+            self.assertEqual(frame.GetDisplayFunctionName(), name)
+            self.assertEqual(frame.IsArtificial(), is_artificial)
