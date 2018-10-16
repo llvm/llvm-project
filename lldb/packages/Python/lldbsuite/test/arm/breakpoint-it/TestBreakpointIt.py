@@ -19,6 +19,7 @@ class TestBreakpointIt(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIf(archs=no_match(["arm"]))
+    @skipIf(archs=["arm64", "arm64e"])
     def test_false(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -32,6 +33,7 @@ class TestBreakpointIt(TestBase):
                 "Breakpoint does not get hit")
 
     @skipIf(archs=no_match(["arm"]))
+    @skipIf(archs=["arm64", "arm64e"])
     def test_true(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
