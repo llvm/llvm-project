@@ -2139,8 +2139,7 @@ public:
   }
 };
 
-template <typename Alloc>
-struct Db {
+template <typename Derived, typename Alloc> struct AbstractManglingParser {
   const char *First;
   const char *Last;
 
@@ -2172,7 +2171,10 @@ struct Db {
 
   Alloc ASTAllocator;
 
-  Db(const char *First_, const char *Last_) : First(First_), Last(Last_) {}
+  AbstractManglingParser(const char *First_, const char *Last_)
+      : First(First_), Last(Last_) {}
+
+  Derived &getDerived() { return static_cast<Derived &>(*this); }
 
   void reset(const char *First_, const char *Last_) {
     First = First_;
@@ -2279,7 +2281,7 @@ struct Db {
     FunctionRefQual ReferenceQualifier = FrefQualNone;
     size_t ForwardTemplateRefsBegin;
 
-    NameState(Db *Enclosing)
+    NameState(AbstractManglingParser *Enclosing)
         : ForwardTemplateRefsBegin(Enclosing->ForwardTemplateRefs.size()) {}
   };
 
@@ -2329,35 +2331,36 @@ const char* parse_discriminator(const char* first, const char* last);
 //
 // <unscoped-template-name> ::= <unscoped-name>
 //                          ::= <substitution>
-template<typename Alloc> Node *Db<Alloc>::parseName(NameState *State) {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseName(NameState *State) {
   consumeIf('L'); // extension
 
   if (look() == 'N')
-    return parseNestedName(State);
+    return getDerived().parseNestedName(State);
   if (look() == 'Z')
-    return parseLocalName(State);
+    return getDerived().parseLocalName(State);
 
   //        ::= <unscoped-template-name> <template-args>
   if (look() == 'S' && look(1) != 't') {
-    Node *S = parseSubstitution();
+    Node *S = getDerived().parseSubstitution();
     if (S == nullptr)
       return nullptr;
     if (look() != 'I')
       return nullptr;
-    Node *TA = parseTemplateArgs(State != nullptr);
+    Node *TA = getDerived().parseTemplateArgs(State != nullptr);
     if (TA == nullptr)
       return nullptr;
     if (State) State->EndsWithTemplateArgs = true;
     return make<NameWithTemplateArgs>(S, TA);
   }
 
-  Node *N = parseUnscopedName(State);
+  Node *N = getDerived().parseUnscopedName(State);
   if (N == nullptr)
     return nullptr;
   //        ::= <unscoped-template-name> <template-args>
   if (look() == 'I') {
     Subs.push_back(N);
-    Node *TA = parseTemplateArgs(State != nullptr);
+    Node *TA = getDerived().parseTemplateArgs(State != nullptr);
     if (TA == nullptr)
       return nullptr;
     if (State) State->EndsWithTemplateArgs = true;
@@ -2370,10 +2373,11 @@ template<typename Alloc> Node *Db<Alloc>::parseName(NameState *State) {
 // <local-name> := Z <function encoding> E <entity name> [<discriminator>]
 //              := Z <function encoding> E s [<discriminator>]
 //              := Z <function encoding> Ed [ <parameter number> ] _ <entity name>
-template<typename Alloc> Node *Db<Alloc>::parseLocalName(NameState *State) {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseLocalName(NameState *State) {
   if (!consumeIf('Z'))
     return nullptr;
-  Node *Encoding = parseEncoding();
+  Node *Encoding = getDerived().parseEncoding();
   if (Encoding == nullptr || !consumeIf('E'))
     return nullptr;
 
@@ -2389,13 +2393,13 @@ template<typename Alloc> Node *Db<Alloc>::parseLocalName(NameState *State) {
     parseNumber(true);
     if (!consumeIf('_'))
       return nullptr;
-    Node *N = parseName(State);
+    Node *N = getDerived().parseName(State);
     if (N == nullptr)
       return nullptr;
     return make<LocalName>(Encoding, N);
   }
 
-  Node *Entity = parseName(State);
+  Node *Entity = getDerived().parseName(State);
   if (Entity == nullptr)
     return nullptr;
   First = parse_discriminator(First, Last);
@@ -2405,14 +2409,16 @@ template<typename Alloc> Node *Db<Alloc>::parseLocalName(NameState *State) {
 // <unscoped-name> ::= <unqualified-name>
 //                 ::= St <unqualified-name>   # ::std::
 // extension       ::= StL<unqualified-name>
-template<typename Alloc> Node *Db<Alloc>::parseUnscopedName(NameState *State) {
- if (consumeIf("StL") || consumeIf("St")) {
-   Node *R = parseUnqualifiedName(State);
-   if (R == nullptr)
-     return nullptr;
-   return make<StdQualifiedName>(R);
- }
- return parseUnqualifiedName(State);
+template <typename Derived, typename Alloc>
+Node *
+AbstractManglingParser<Derived, Alloc>::parseUnscopedName(NameState *State) {
+  if (consumeIf("StL") || consumeIf("St")) {
+    Node *R = getDerived().parseUnqualifiedName(State);
+    if (R == nullptr)
+      return nullptr;
+    return make<StdQualifiedName>(R);
+  }
+  return getDerived().parseUnqualifiedName(State);
 }
 
 // <unqualified-name> ::= <operator-name> [abi-tags]
@@ -2420,27 +2426,28 @@ template<typename Alloc> Node *Db<Alloc>::parseUnscopedName(NameState *State) {
 //                    ::= <source-name>
 //                    ::= <unnamed-type-name>
 //                    ::= DC <source-name>+ E      # structured binding declaration
-template<typename Alloc>
-Node *Db<Alloc>::parseUnqualifiedName(NameState *State) {
+template <typename Derived, typename Alloc>
+Node *
+AbstractManglingParser<Derived, Alloc>::parseUnqualifiedName(NameState *State) {
   // <ctor-dtor-name>s are special-cased in parseNestedName().
   Node *Result;
   if (look() == 'U')
-    Result = parseUnnamedTypeName(State);
+    Result = getDerived().parseUnnamedTypeName(State);
   else if (look() >= '1' && look() <= '9')
-    Result = parseSourceName(State);
+    Result = getDerived().parseSourceName(State);
   else if (consumeIf("DC")) {
     size_t BindingsBegin = Names.size();
     do {
-      Node *Binding = parseSourceName(State);
+      Node *Binding = getDerived().parseSourceName(State);
       if (Binding == nullptr)
         return nullptr;
       Names.push_back(Binding);
     } while (!consumeIf('E'));
     Result = make<StructuredBindingName>(popTrailingNodeArray(BindingsBegin));
   } else
-    Result = parseOperatorName(State);
+    Result = getDerived().parseOperatorName(State);
   if (Result != nullptr)
-    Result = parseAbiTags(Result);
+    Result = getDerived().parseAbiTags(Result);
   return Result;
 }
 
@@ -2450,7 +2457,9 @@ Node *Db<Alloc>::parseUnqualifiedName(NameState *State) {
 // <closure-type-name> ::= Ul <lambda-sig> E [ <nonnegative number> ] _
 //
 // <lambda-sig> ::= <parameter type>+  # Parameter types or "v" if the lambda has no parameters
-template<typename Alloc> Node *Db<Alloc>::parseUnnamedTypeName(NameState *) {
+template <typename Derived, typename Alloc>
+Node *
+AbstractManglingParser<Derived, Alloc>::parseUnnamedTypeName(NameState *) {
   if (consumeIf("Ut")) {
     StringView Count = parseNumber();
     if (!consumeIf('_'))
@@ -2463,7 +2472,7 @@ template<typename Alloc> Node *Db<Alloc>::parseUnnamedTypeName(NameState *) {
     if (!consumeIf("vE")) {
       size_t ParamsBegin = Names.size();
       do {
-        Node *P = parseType();
+        Node *P = getDerived().parseType();
         if (P == nullptr)
           return nullptr;
         Names.push_back(P);
@@ -2479,7 +2488,8 @@ template<typename Alloc> Node *Db<Alloc>::parseUnnamedTypeName(NameState *) {
 }
 
 // <source-name> ::= <positive length number> <identifier>
-template<typename Alloc> Node *Db<Alloc>::parseSourceName(NameState *) {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseSourceName(NameState *) {
   size_t Length = 0;
   if (parsePositiveInteger(&Length))
     return nullptr;
@@ -2543,7 +2553,9 @@ template<typename Alloc> Node *Db<Alloc>::parseSourceName(NameState *) {
 //                   ::= rS    # >>=
 //                   ::= ss    # <=> C++2a
 //                   ::= v <digit> <source-name>        # vendor extended operator
-template<typename Alloc> Node *Db<Alloc>::parseOperatorName(NameState *State) {
+template <typename Derived, typename Alloc>
+Node *
+AbstractManglingParser<Derived, Alloc>::parseOperatorName(NameState *State) {
   switch (look()) {
   case 'a':
     switch (look(1)) {
@@ -2583,7 +2595,7 @@ template<typename Alloc> Node *Db<Alloc>::parseOperatorName(NameState *State) {
       SwapAndRestore<bool> SavePermit(PermitForwardTemplateReferences,
                                       PermitForwardTemplateReferences ||
                                           State != nullptr);
-      Node* Ty = parseType();
+      Node *Ty = getDerived().parseType();
       if (Ty == nullptr)
         return nullptr;
       if (State) State->CtorDtorConversion = true;
@@ -2647,7 +2659,7 @@ template<typename Alloc> Node *Db<Alloc>::parseOperatorName(NameState *State) {
     //                   ::= li <source-name>  # operator ""
     case 'i': {
       First += 2;
-      Node *SN = parseSourceName(State);
+      Node *SN = getDerived().parseSourceName(State);
       if (SN == nullptr)
         return nullptr;
       return make<LiteralOperator>(SN);
@@ -2768,7 +2780,7 @@ template<typename Alloc> Node *Db<Alloc>::parseOperatorName(NameState *State) {
   case 'v':
     if (std::isdigit(look(1))) {
       First += 2;
-      Node *SN = parseSourceName(State);
+      Node *SN = getDerived().parseSourceName(State);
       if (SN == nullptr)
         return nullptr;
       return make<ConversionOperatorType>(SN);
@@ -2786,8 +2798,10 @@ template<typename Alloc> Node *Db<Alloc>::parseOperatorName(NameState *State) {
 //                  ::= D1  # complete object destructor
 //                  ::= D2  # base object destructor
 //   extension      ::= D5    # ?
-template<typename Alloc>
-Node *Db<Alloc>::parseCtorDtorName(Node *&SoFar, NameState *State) {
+template <typename Derived, typename Alloc>
+Node *
+AbstractManglingParser<Derived, Alloc>::parseCtorDtorName(Node *&SoFar,
+                                                          NameState *State) {
   if (SoFar->getKind() == Node::KSpecialSubstitution) {
     auto SSK = static_cast<SpecialSubstitution *>(SoFar)->SSK;
     switch (SSK) {
@@ -2811,7 +2825,7 @@ Node *Db<Alloc>::parseCtorDtorName(Node *&SoFar, NameState *State) {
     ++First;
     if (State) State->CtorDtorConversion = true;
     if (IsInherited) {
-      if (parseName(State) == nullptr)
+      if (getDerived().parseName(State) == nullptr)
         return nullptr;
     }
     return make<CtorDtorName>(SoFar, false, Variant);
@@ -2845,7 +2859,9 @@ Node *Db<Alloc>::parseCtorDtorName(Node *&SoFar, NameState *State) {
 // <template-prefix> ::= <prefix> <template unqualified-name>
 //                   ::= <template-param>
 //                   ::= <substitution>
-template<typename Alloc> Node *Db<Alloc>::parseNestedName(NameState *State) {
+template <typename Derived, typename Alloc>
+Node *
+AbstractManglingParser<Derived, Alloc>::parseNestedName(NameState *State) {
   if (!consumeIf('N'))
     return nullptr;
 
@@ -2886,7 +2902,7 @@ template<typename Alloc> Node *Db<Alloc>::parseNestedName(NameState *State) {
 
     //          ::= <template-param>
     if (look() == 'T') {
-      if (!PushComponent(parseTemplateParam()))
+      if (!PushComponent(getDerived().parseTemplateParam()))
         return nullptr;
       Subs.push_back(SoFar);
       continue;
@@ -2894,7 +2910,7 @@ template<typename Alloc> Node *Db<Alloc>::parseNestedName(NameState *State) {
 
     //          ::= <template-prefix> <template-args>
     if (look() == 'I') {
-      Node *TA = parseTemplateArgs(State != nullptr);
+      Node *TA = getDerived().parseTemplateArgs(State != nullptr);
       if (TA == nullptr || SoFar == nullptr)
         return nullptr;
       SoFar = make<NameWithTemplateArgs>(SoFar, TA);
@@ -2907,7 +2923,7 @@ template<typename Alloc> Node *Db<Alloc>::parseNestedName(NameState *State) {
 
     //          ::= <decltype>
     if (look() == 'D' && (look(1) == 't' || look(1) == 'T')) {
-      if (!PushComponent(parseDecltype()))
+      if (!PushComponent(getDerived().parseDecltype()))
         return nullptr;
       Subs.push_back(SoFar);
       continue;
@@ -2915,7 +2931,7 @@ template<typename Alloc> Node *Db<Alloc>::parseNestedName(NameState *State) {
 
     //          ::= <substitution>
     if (look() == 'S' && look(1) != 't') {
-      Node *S = parseSubstitution();
+      Node *S = getDerived().parseSubstitution();
       if (!PushComponent(S))
         return nullptr;
       if (SoFar != S)
@@ -2927,9 +2943,9 @@ template<typename Alloc> Node *Db<Alloc>::parseNestedName(NameState *State) {
     if (look() == 'C' || (look() == 'D' && look(1) != 'C')) {
       if (SoFar == nullptr)
         return nullptr;
-      if (!PushComponent(parseCtorDtorName(SoFar, State)))
+      if (!PushComponent(getDerived().parseCtorDtorName(SoFar, State)))
         return nullptr;
-      SoFar = parseAbiTags(SoFar);
+      SoFar = getDerived().parseAbiTags(SoFar);
       if (SoFar == nullptr)
         return nullptr;
       Subs.push_back(SoFar);
@@ -2937,7 +2953,7 @@ template<typename Alloc> Node *Db<Alloc>::parseNestedName(NameState *State) {
     }
 
     //          ::= <prefix> <unqualified-name>
-    if (!PushComponent(parseUnqualifiedName(State)))
+    if (!PushComponent(getDerived().parseUnqualifiedName(State)))
       return nullptr;
     Subs.push_back(SoFar);
   }
@@ -2950,12 +2966,13 @@ template<typename Alloc> Node *Db<Alloc>::parseNestedName(NameState *State) {
 }
 
 // <simple-id> ::= <source-name> [ <template-args> ]
-template<typename Alloc> Node *Db<Alloc>::parseSimpleId() {
-  Node *SN = parseSourceName(/*NameState=*/nullptr);
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseSimpleId() {
+  Node *SN = getDerived().parseSourceName(/*NameState=*/nullptr);
   if (SN == nullptr)
     return nullptr;
   if (look() == 'I') {
-    Node *TA = parseTemplateArgs();
+    Node *TA = getDerived().parseTemplateArgs();
     if (TA == nullptr)
       return nullptr;
     return make<NameWithTemplateArgs>(SN, TA);
@@ -2965,12 +2982,13 @@ template<typename Alloc> Node *Db<Alloc>::parseSimpleId() {
 
 // <destructor-name> ::= <unresolved-type>  # e.g., ~T or ~decltype(f())
 //                   ::= <simple-id>        # e.g., ~A<2*N>
-template<typename Alloc> Node *Db<Alloc>::parseDestructorName() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseDestructorName() {
   Node *Result;
   if (std::isdigit(look()))
-    Result = parseSimpleId();
+    Result = getDerived().parseSimpleId();
   else
-    Result = parseUnresolvedType();
+    Result = getDerived().parseUnresolvedType();
   if (Result == nullptr)
     return nullptr;
   return make<DtorName>(Result);
@@ -2979,22 +2997,23 @@ template<typename Alloc> Node *Db<Alloc>::parseDestructorName() {
 // <unresolved-type> ::= <template-param>
 //                   ::= <decltype>
 //                   ::= <substitution>
-template<typename Alloc> Node *Db<Alloc>::parseUnresolvedType() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseUnresolvedType() {
   if (look() == 'T') {
-    Node *TP = parseTemplateParam();
+    Node *TP = getDerived().parseTemplateParam();
     if (TP == nullptr)
       return nullptr;
     Subs.push_back(TP);
     return TP;
   }
   if (look() == 'D') {
-    Node *DT = parseDecltype();
+    Node *DT = getDerived().parseDecltype();
     if (DT == nullptr)
       return nullptr;
     Subs.push_back(DT);
     return DT;
   }
-  return parseSubstitution();
+  return getDerived().parseSubstitution();
 }
 
 // <base-unresolved-name> ::= <simple-id>                                # unresolved name
@@ -3004,20 +3023,21 @@ template<typename Alloc> Node *Db<Alloc>::parseUnresolvedType() {
 //                        ::= on <operator-name> <template-args>         # unresolved operator template-id
 //                        ::= dn <destructor-name>                       # destructor or pseudo-destructor;
 //                                                                         # e.g. ~X or ~X<N-1>
-template<typename Alloc> Node *Db<Alloc>::parseBaseUnresolvedName() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseBaseUnresolvedName() {
   if (std::isdigit(look()))
-    return parseSimpleId();
+    return getDerived().parseSimpleId();
 
   if (consumeIf("dn"))
-    return parseDestructorName();
+    return getDerived().parseDestructorName();
 
   consumeIf("on");
 
-  Node *Oper = parseOperatorName(/*NameState=*/nullptr);
+  Node *Oper = getDerived().parseOperatorName(/*NameState=*/nullptr);
   if (Oper == nullptr)
     return nullptr;
   if (look() == 'I') {
-    Node *TA = parseTemplateArgs();
+    Node *TA = getDerived().parseTemplateArgs();
     if (TA == nullptr)
       return nullptr;
     return make<NameWithTemplateArgs>(Oper, TA);
@@ -3036,18 +3056,19 @@ template<typename Alloc> Node *Db<Alloc>::parseBaseUnresolvedName() {
 //  (ignored)        ::= srN <unresolved-type>  <unresolved-qualifier-level>+ E <base-unresolved-name>
 //
 // <unresolved-qualifier-level> ::= <simple-id>
-template<typename Alloc> Node *Db<Alloc>::parseUnresolvedName() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseUnresolvedName() {
   Node *SoFar = nullptr;
 
   // srN <unresolved-type> [<template-args>] <unresolved-qualifier-level>* E <base-unresolved-name>
   // srN <unresolved-type>                   <unresolved-qualifier-level>+ E <base-unresolved-name>
   if (consumeIf("srN")) {
-    SoFar = parseUnresolvedType();
+    SoFar = getDerived().parseUnresolvedType();
     if (SoFar == nullptr)
       return nullptr;
 
     if (look() == 'I') {
-      Node *TA = parseTemplateArgs();
+      Node *TA = getDerived().parseTemplateArgs();
       if (TA == nullptr)
         return nullptr;
       SoFar = make<NameWithTemplateArgs>(SoFar, TA);
@@ -3056,7 +3077,7 @@ template<typename Alloc> Node *Db<Alloc>::parseUnresolvedName() {
     }
 
     while (!consumeIf('E')) {
-      Node *Qual = parseSimpleId();
+      Node *Qual = getDerived().parseSimpleId();
       if (Qual == nullptr)
         return nullptr;
       SoFar = make<QualifiedName>(SoFar, Qual);
@@ -3064,7 +3085,7 @@ template<typename Alloc> Node *Db<Alloc>::parseUnresolvedName() {
         return nullptr;
     }
 
-    Node *Base = parseBaseUnresolvedName();
+    Node *Base = getDerived().parseBaseUnresolvedName();
     if (Base == nullptr)
       return nullptr;
     return make<QualifiedName>(SoFar, Base);
@@ -3074,7 +3095,7 @@ template<typename Alloc> Node *Db<Alloc>::parseUnresolvedName() {
 
   // [gs] <base-unresolved-name>                     # x or (with "gs") ::x
   if (!consumeIf("sr")) {
-    SoFar = parseBaseUnresolvedName();
+    SoFar = getDerived().parseBaseUnresolvedName();
     if (SoFar == nullptr)
       return nullptr;
     if (Global)
@@ -3085,7 +3106,7 @@ template<typename Alloc> Node *Db<Alloc>::parseUnresolvedName() {
   // [gs] sr <unresolved-qualifier-level>+ E   <base-unresolved-name>
   if (std::isdigit(look())) {
     do {
-      Node *Qual = parseSimpleId();
+      Node *Qual = getDerived().parseSimpleId();
       if (Qual == nullptr)
         return nullptr;
       if (SoFar)
@@ -3101,12 +3122,12 @@ template<typename Alloc> Node *Db<Alloc>::parseUnresolvedName() {
   //      sr <unresolved-type>                 <base-unresolved-name>
   //      sr <unresolved-type> <template-args> <base-unresolved-name>
   else {
-    SoFar = parseUnresolvedType();
+    SoFar = getDerived().parseUnresolvedType();
     if (SoFar == nullptr)
       return nullptr;
 
     if (look() == 'I') {
-      Node *TA = parseTemplateArgs();
+      Node *TA = getDerived().parseTemplateArgs();
       if (TA == nullptr)
         return nullptr;
       SoFar = make<NameWithTemplateArgs>(SoFar, TA);
@@ -3117,7 +3138,7 @@ template<typename Alloc> Node *Db<Alloc>::parseUnresolvedName() {
 
   assert(SoFar != nullptr);
 
-  Node *Base = parseBaseUnresolvedName();
+  Node *Base = getDerived().parseBaseUnresolvedName();
   if (Base == nullptr)
     return nullptr;
   return make<QualifiedName>(SoFar, Base);
@@ -3125,7 +3146,8 @@ template<typename Alloc> Node *Db<Alloc>::parseUnresolvedName() {
 
 // <abi-tags> ::= <abi-tag> [<abi-tags>]
 // <abi-tag> ::= B <source-name>
-template<typename Alloc> Node *Db<Alloc>::parseAbiTags(Node *N) {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseAbiTags(Node *N) {
   while (consumeIf('B')) {
     StringView SN = parseBareSourceName();
     if (SN.empty())
@@ -3138,8 +3160,9 @@ template<typename Alloc> Node *Db<Alloc>::parseAbiTags(Node *N) {
 }
 
 // <number> ::= [n] <non-negative decimal integer>
-template<typename Alloc>
-StringView Db<Alloc>::parseNumber(bool AllowNegative) {
+template <typename Alloc, typename Derived>
+StringView
+AbstractManglingParser<Alloc, Derived>::parseNumber(bool AllowNegative) {
   const char *Tmp = First;
   if (AllowNegative)
     consumeIf('n');
@@ -3151,7 +3174,8 @@ StringView Db<Alloc>::parseNumber(bool AllowNegative) {
 }
 
 // <positive length number> ::= [0-9]*
-template<typename Alloc> bool Db<Alloc>::parsePositiveInteger(size_t *Out) {
+template <typename Alloc, typename Derived>
+bool AbstractManglingParser<Alloc, Derived>::parsePositiveInteger(size_t *Out) {
   *Out = 0;
   if (look() < '0' || look() > '9')
     return true;
@@ -3162,7 +3186,8 @@ template<typename Alloc> bool Db<Alloc>::parsePositiveInteger(size_t *Out) {
   return false;
 }
 
-template<typename Alloc> StringView Db<Alloc>::parseBareSourceName() {
+template <typename Alloc, typename Derived>
+StringView AbstractManglingParser<Alloc, Derived>::parseBareSourceName() {
   size_t Int = 0;
   if (parsePositiveInteger(&Int) || numLeft() < Int)
     return StringView();
@@ -3179,7 +3204,8 @@ template<typename Alloc> StringView Db<Alloc>::parseBareSourceName() {
 //
 // <ref-qualifier> ::= R                   # & ref-qualifier
 // <ref-qualifier> ::= O                   # && ref-qualifier
-template<typename Alloc> Node *Db<Alloc>::parseFunctionType() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseFunctionType() {
   Qualifiers CVQuals = parseCVQualifiers();
 
   Node *ExceptionSpec = nullptr;
@@ -3188,7 +3214,7 @@ template<typename Alloc> Node *Db<Alloc>::parseFunctionType() {
     if (!ExceptionSpec)
       return nullptr;
   } else if (consumeIf("DO")) {
-    Node *E = parseExpr();
+    Node *E = getDerived().parseExpr();
     if (E == nullptr || !consumeIf('E'))
       return nullptr;
     ExceptionSpec = make<NoexceptSpec>(E);
@@ -3197,7 +3223,7 @@ template<typename Alloc> Node *Db<Alloc>::parseFunctionType() {
   } else if (consumeIf("Dw")) {
     size_t SpecsBegin = Names.size();
     while (!consumeIf('E')) {
-      Node *T = parseType();
+      Node *T = getDerived().parseType();
       if (T == nullptr)
         return nullptr;
       Names.push_back(T);
@@ -3213,7 +3239,7 @@ template<typename Alloc> Node *Db<Alloc>::parseFunctionType() {
   if (!consumeIf('F'))
     return nullptr;
   consumeIf('Y'); // extern "C"
-  Node *ReturnType = parseType();
+  Node *ReturnType = getDerived().parseType();
   if (ReturnType == nullptr)
     return nullptr;
 
@@ -3232,7 +3258,7 @@ template<typename Alloc> Node *Db<Alloc>::parseFunctionType() {
       ReferenceQualifier = FrefQualRValue;
       break;
     }
-    Node *T = parseType();
+    Node *T = getDerived().parseType();
     if (T == nullptr)
       return nullptr;
     Names.push_back(T);
@@ -3248,7 +3274,8 @@ template<typename Alloc> Node *Db<Alloc>::parseFunctionType() {
 //                         ::= Dv [<dimension expression>] _ <element type>
 // <extended element type> ::= <element type>
 //                         ::= p # AltiVec vector pixel
-template<typename Alloc> Node *Db<Alloc>::parseVectorType() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseVectorType() {
   if (!consumeIf("Dv"))
     return nullptr;
   if (look() >= '1' && look() <= '9') {
@@ -3257,24 +3284,24 @@ template<typename Alloc> Node *Db<Alloc>::parseVectorType() {
       return nullptr;
     if (consumeIf('p'))
       return make<PixelVectorType>(DimensionNumber);
-    Node *ElemType = parseType();
+    Node *ElemType = getDerived().parseType();
     if (ElemType == nullptr)
       return nullptr;
     return make<VectorType>(ElemType, DimensionNumber);
   }
 
   if (!consumeIf('_')) {
-    Node *DimExpr = parseExpr();
+    Node *DimExpr = getDerived().parseExpr();
     if (!DimExpr)
       return nullptr;
     if (!consumeIf('_'))
       return nullptr;
-    Node *ElemType = parseType();
+    Node *ElemType = getDerived().parseType();
     if (!ElemType)
       return nullptr;
     return make<VectorType>(ElemType, DimExpr);
   }
-  Node *ElemType = parseType();
+  Node *ElemType = getDerived().parseType();
   if (!ElemType)
     return nullptr;
   return make<VectorType>(ElemType, StringView());
@@ -3282,12 +3309,13 @@ template<typename Alloc> Node *Db<Alloc>::parseVectorType() {
 
 // <decltype>  ::= Dt <expression> E  # decltype of an id-expression or class member access (C++0x)
 //             ::= DT <expression> E  # decltype of an expression (C++0x)
-template<typename Alloc> Node *Db<Alloc>::parseDecltype() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseDecltype() {
   if (!consumeIf('D'))
     return nullptr;
   if (!consumeIf('t') && !consumeIf('T'))
     return nullptr;
-  Node *E = parseExpr();
+  Node *E = getDerived().parseExpr();
   if (E == nullptr)
     return nullptr;
   if (!consumeIf('E'))
@@ -3297,7 +3325,8 @@ template<typename Alloc> Node *Db<Alloc>::parseDecltype() {
 
 // <array-type> ::= A <positive dimension number> _ <element type>
 //              ::= A [<dimension expression>] _ <element type>
-template<typename Alloc> Node *Db<Alloc>::parseArrayType() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseArrayType() {
   if (!consumeIf('A'))
     return nullptr;
 
@@ -3308,7 +3337,7 @@ template<typename Alloc> Node *Db<Alloc>::parseArrayType() {
     if (!consumeIf('_'))
       return nullptr;
   } else if (!consumeIf('_')) {
-    Node *DimExpr = parseExpr();
+    Node *DimExpr = getDerived().parseExpr();
     if (DimExpr == nullptr)
       return nullptr;
     if (!consumeIf('_'))
@@ -3316,20 +3345,21 @@ template<typename Alloc> Node *Db<Alloc>::parseArrayType() {
     Dimension = DimExpr;
   }
 
-  Node *Ty = parseType();
+  Node *Ty = getDerived().parseType();
   if (Ty == nullptr)
     return nullptr;
   return make<ArrayType>(Ty, Dimension);
 }
 
 // <pointer-to-member-type> ::= M <class type> <member type>
-template<typename Alloc> Node *Db<Alloc>::parsePointerToMemberType() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parsePointerToMemberType() {
   if (!consumeIf('M'))
     return nullptr;
-  Node *ClassType = parseType();
+  Node *ClassType = getDerived().parseType();
   if (ClassType == nullptr)
     return nullptr;
-  Node *MemberType = parseType();
+  Node *MemberType = getDerived().parseType();
   if (MemberType == nullptr)
     return nullptr;
   return make<PointerToMemberType>(ClassType, MemberType);
@@ -3339,7 +3369,8 @@ template<typename Alloc> Node *Db<Alloc>::parsePointerToMemberType() {
 //                   ::= Ts <name>  # dependent elaborated type specifier using 'struct' or 'class'
 //                   ::= Tu <name>  # dependent elaborated type specifier using 'union'
 //                   ::= Te <name>  # dependent elaborated type specifier using 'enum'
-template<typename Alloc> Node *Db<Alloc>::parseClassEnumType() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseClassEnumType() {
   StringView ElabSpef;
   if (consumeIf("Ts"))
     ElabSpef = "struct";
@@ -3348,7 +3379,7 @@ template<typename Alloc> Node *Db<Alloc>::parseClassEnumType() {
   else if (consumeIf("Te"))
     ElabSpef = "enum";
 
-  Node *Name = parseName();
+  Node *Name = getDerived().parseName();
   if (Name == nullptr)
     return nullptr;
 
@@ -3361,7 +3392,8 @@ template<typename Alloc> Node *Db<Alloc>::parseClassEnumType() {
 // <qualified-type>     ::= <qualifiers> <type>
 // <qualifiers> ::= <extended-qualifier>* <CV-qualifiers>
 // <extended-qualifier> ::= U <source-name> [<template-args>] # vendor extended type qualifier
-template<typename Alloc> Node *Db<Alloc>::parseQualifiedType() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseQualifiedType() {
   if (consumeIf('U')) {
     StringView Qual = parseBareSourceName();
     if (Qual.empty())
@@ -3380,20 +3412,20 @@ template<typename Alloc> Node *Db<Alloc>::parseQualifiedType() {
       }
       if (Proto.empty())
         return nullptr;
-      Node *Child = parseQualifiedType();
+      Node *Child = getDerived().parseQualifiedType();
       if (Child == nullptr)
         return nullptr;
       return make<ObjCProtoName>(Child, Proto);
     }
 
-    Node *Child = parseQualifiedType();
+    Node *Child = getDerived().parseQualifiedType();
     if (Child == nullptr)
       return nullptr;
     return make<VendorExtQualType>(Child, Qual);
   }
 
   Qualifiers Quals = parseCVQualifiers();
-  Node *Ty = parseType();
+  Node *Ty = getDerived().parseType();
   if (Ty == nullptr)
     return nullptr;
   if (Quals != QualNone)
@@ -3421,7 +3453,8 @@ template<typename Alloc> Node *Db<Alloc>::parseQualifiedType() {
 //
 // <objc-name> ::= <k0 number> objcproto <k1 number> <identifier>  # k0 = 9 + <number of digits in k1> + k1
 // <objc-type> ::= <source-name>  # PU<11+>objcproto 11objc_object<source-name> 11objc_object -> id<source-name>
-template<typename Alloc> Node *Db<Alloc>::parseType() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseType() {
   Node *Result = nullptr;
 
   if (TypeCallback != nullptr)
@@ -3441,13 +3474,13 @@ template<typename Alloc> Node *Db<Alloc>::parseType() {
         (look(AfterQuals) == 'D' &&
          (look(AfterQuals + 1) == 'o' || look(AfterQuals + 1) == 'O' ||
           look(AfterQuals + 1) == 'w' || look(AfterQuals + 1) == 'x'))) {
-      Result = parseFunctionType();
+      Result = getDerived().parseFunctionType();
       break;
     }
     _LIBCPP_FALLTHROUGH();
   }
   case 'U': {
-    Result = parseQualifiedType();
+    Result = getDerived().parseQualifiedType();
     break;
   }
   // <builtin-type> ::= v    # void
@@ -3585,18 +3618,18 @@ template<typename Alloc> Node *Db<Alloc>::parseType() {
     //             ::= <decltype>
     case 't':
     case 'T': {
-      Result = parseDecltype();
+      Result = getDerived().parseDecltype();
       break;
     }
     // extension   ::= <vector-type> # <vector-type> starts with Dv
     case 'v': {
-      Result = parseVectorType();
+      Result = getDerived().parseVectorType();
       break;
     }
     //           ::= Dp <type>       # pack expansion (C++0x)
     case 'p': {
       First += 2;
-      Node *Child = parseType();
+      Node *Child = getDerived().parseType();
       if (!Child)
         return nullptr;
       Result = make<ParameterPackExpansion>(Child);
@@ -3608,34 +3641,34 @@ template<typename Alloc> Node *Db<Alloc>::parseType() {
     case 'w':
     // Transaction safe function type.
     case 'x':
-      Result = parseFunctionType();
+      Result = getDerived().parseFunctionType();
       break;
     }
     break;
   //             ::= <function-type>
   case 'F': {
-    Result = parseFunctionType();
+    Result = getDerived().parseFunctionType();
     break;
   }
   //             ::= <array-type>
   case 'A': {
-    Result = parseArrayType();
+    Result = getDerived().parseArrayType();
     break;
   }
   //             ::= <pointer-to-member-type>
   case 'M': {
-    Result = parsePointerToMemberType();
+    Result = getDerived().parsePointerToMemberType();
     break;
   }
   //             ::= <template-param>
   case 'T': {
     // This could be an elaborate type specifier on a <class-enum-type>.
     if (look(1) == 's' || look(1) == 'u' || look(1) == 'e') {
-      Result = parseClassEnumType();
+      Result = getDerived().parseClassEnumType();
       break;
     }
 
-    Result = parseTemplateParam();
+    Result = getDerived().parseTemplateParam();
     if (Result == nullptr)
       return nullptr;
 
@@ -3650,7 +3683,7 @@ template<typename Alloc> Node *Db<Alloc>::parseType() {
     // parse them, take the second production.
 
     if (TryToParseTemplateArgs && look() == 'I') {
-      Node *TA = parseTemplateArgs();
+      Node *TA = getDerived().parseTemplateArgs();
       if (TA == nullptr)
         return nullptr;
       Result = make<NameWithTemplateArgs>(Result, TA);
@@ -3660,7 +3693,7 @@ template<typename Alloc> Node *Db<Alloc>::parseType() {
   //             ::= P <type>        # pointer
   case 'P': {
     ++First;
-    Node *Ptr = parseType();
+    Node *Ptr = getDerived().parseType();
     if (Ptr == nullptr)
       return nullptr;
     Result = make<PointerType>(Ptr);
@@ -3669,7 +3702,7 @@ template<typename Alloc> Node *Db<Alloc>::parseType() {
   //             ::= R <type>        # l-value reference
   case 'R': {
     ++First;
-    Node *Ref = parseType();
+    Node *Ref = getDerived().parseType();
     if (Ref == nullptr)
       return nullptr;
     Result = make<ReferenceType>(Ref, ReferenceKind::LValue);
@@ -3678,7 +3711,7 @@ template<typename Alloc> Node *Db<Alloc>::parseType() {
   //             ::= O <type>        # r-value reference (C++11)
   case 'O': {
     ++First;
-    Node *Ref = parseType();
+    Node *Ref = getDerived().parseType();
     if (Ref == nullptr)
       return nullptr;
     Result = make<ReferenceType>(Ref, ReferenceKind::RValue);
@@ -3687,7 +3720,7 @@ template<typename Alloc> Node *Db<Alloc>::parseType() {
   //             ::= C <type>        # complex pair (C99)
   case 'C': {
     ++First;
-    Node *P = parseType();
+    Node *P = getDerived().parseType();
     if (P == nullptr)
       return nullptr;
     Result = make<PostfixQualifiedType>(P, " complex");
@@ -3696,7 +3729,7 @@ template<typename Alloc> Node *Db<Alloc>::parseType() {
   //             ::= G <type>        # imaginary (C99)
   case 'G': {
     ++First;
-    Node *P = parseType();
+    Node *P = getDerived().parseType();
     if (P == nullptr)
       return P;
     Result = make<PostfixQualifiedType>(P, " imaginary");
@@ -3705,7 +3738,7 @@ template<typename Alloc> Node *Db<Alloc>::parseType() {
   //             ::= <substitution>  # See Compression below
   case 'S': {
     if (look(1) && look(1) != 't') {
-      Node *Sub = parseSubstitution();
+      Node *Sub = getDerived().parseSubstitution();
       if (Sub == nullptr)
         return nullptr;
 
@@ -3720,7 +3753,7 @@ template<typename Alloc> Node *Db<Alloc>::parseType() {
       // parse them, take the second production.
 
       if (TryToParseTemplateArgs && look() == 'I') {
-        Node *TA = parseTemplateArgs();
+        Node *TA = getDerived().parseTemplateArgs();
         if (TA == nullptr)
           return nullptr;
         Result = make<NameWithTemplateArgs>(Sub, TA);
@@ -3735,7 +3768,7 @@ template<typename Alloc> Node *Db<Alloc>::parseType() {
   }
   //        ::= <class-enum-type>
   default: {
-    Result = parseClassEnumType();
+    Result = getDerived().parseClassEnumType();
     break;
   }
   }
@@ -3748,24 +3781,28 @@ template<typename Alloc> Node *Db<Alloc>::parseType() {
   return Result;
 }
 
-template<typename Alloc> Node *Db<Alloc>::parsePrefixExpr(StringView Kind) {
-  Node *E = parseExpr();
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parsePrefixExpr(StringView Kind) {
+  Node *E = getDerived().parseExpr();
   if (E == nullptr)
     return nullptr;
   return make<PrefixExpr>(Kind, E);
 }
 
-template<typename Alloc> Node *Db<Alloc>::parseBinaryExpr(StringView Kind) {
-  Node *LHS = parseExpr();
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseBinaryExpr(StringView Kind) {
+  Node *LHS = getDerived().parseExpr();
   if (LHS == nullptr)
     return nullptr;
-  Node *RHS = parseExpr();
+  Node *RHS = getDerived().parseExpr();
   if (RHS == nullptr)
     return nullptr;
   return make<BinaryExpr>(LHS, Kind, RHS);
 }
 
-template<typename Alloc> Node *Db<Alloc>::parseIntegerLiteral(StringView Lit) {
+template <typename Derived, typename Alloc>
+Node *
+AbstractManglingParser<Derived, Alloc>::parseIntegerLiteral(StringView Lit) {
   StringView Tmp = parseNumber(true);
   if (!Tmp.empty() && consumeIf('E'))
     return make<IntegerLiteral>(Lit, Tmp);
@@ -3773,7 +3810,8 @@ template<typename Alloc> Node *Db<Alloc>::parseIntegerLiteral(StringView Lit) {
 }
 
 // <CV-Qualifiers> ::= [r] [V] [K]
-template<typename Alloc> Qualifiers Db<Alloc>::parseCVQualifiers() {
+template <typename Alloc, typename Derived>
+Qualifiers AbstractManglingParser<Alloc, Derived>::parseCVQualifiers() {
   Qualifiers CVR = QualNone;
   if (consumeIf('r'))
     CVR |= QualRestrict;
@@ -3788,7 +3826,8 @@ template<typename Alloc> Qualifiers Db<Alloc>::parseCVQualifiers() {
 //                  ::= fp <top-level CV-Qualifiers> <parameter-2 non-negative number> _   # L == 0, second and later parameters
 //                  ::= fL <L-1 non-negative number> p <top-level CV-Qualifiers> _         # L > 0, first parameter
 //                  ::= fL <L-1 non-negative number> p <top-level CV-Qualifiers> <parameter-2 non-negative number> _   # L > 0, second and later parameters
-template<typename Alloc> Node *Db<Alloc>::parseFunctionParam() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseFunctionParam() {
   if (consumeIf("fp")) {
     parseCVQualifiers();
     StringView Num = parseNumber();
@@ -3815,26 +3854,27 @@ template<typename Alloc> Node *Db<Alloc>::parseFunctionParam() {
 // [gs] na <expression>* _ <type> E                     # new[] (expr-list) type
 // [gs] na <expression>* _ <type> <initializer>         # new[] (expr-list) type (init)
 // <initializer> ::= pi <expression>* E                 # parenthesized initialization
-template<typename Alloc> Node *Db<Alloc>::parseNewExpr() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseNewExpr() {
   bool Global = consumeIf("gs");
   bool IsArray = look(1) == 'a';
   if (!consumeIf("nw") && !consumeIf("na"))
     return nullptr;
   size_t Exprs = Names.size();
   while (!consumeIf('_')) {
-    Node *Ex = parseExpr();
+    Node *Ex = getDerived().parseExpr();
     if (Ex == nullptr)
       return nullptr;
     Names.push_back(Ex);
   }
   NodeArray ExprList = popTrailingNodeArray(Exprs);
-  Node *Ty = parseType();
+  Node *Ty = getDerived().parseType();
   if (Ty == nullptr)
     return Ty;
   if (consumeIf("pi")) {
     size_t InitsBegin = Names.size();
     while (!consumeIf('E')) {
-      Node *Init = parseExpr();
+      Node *Init = getDerived().parseExpr();
       if (Init == nullptr)
         return Init;
       Names.push_back(Init);
@@ -3848,13 +3888,14 @@ template<typename Alloc> Node *Db<Alloc>::parseNewExpr() {
 
 // cv <type> <expression>                               # conversion with one argument
 // cv <type> _ <expression>* E                          # conversion with a different number of arguments
-template<typename Alloc> Node *Db<Alloc>::parseConversionExpr() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseConversionExpr() {
   if (!consumeIf("cv"))
     return nullptr;
   Node *Ty;
   {
     SwapAndRestore<bool> SaveTemp(TryToParseTemplateArgs, false);
-    Ty = parseType();
+    Ty = getDerived().parseType();
   }
 
   if (Ty == nullptr)
@@ -3863,7 +3904,7 @@ template<typename Alloc> Node *Db<Alloc>::parseConversionExpr() {
   if (consumeIf('_')) {
     size_t ExprsBegin = Names.size();
     while (!consumeIf('E')) {
-      Node *E = parseExpr();
+      Node *E = getDerived().parseExpr();
       if (E == nullptr)
         return E;
       Names.push_back(E);
@@ -3872,7 +3913,7 @@ template<typename Alloc> Node *Db<Alloc>::parseConversionExpr() {
     return make<ConversionExpr>(Ty, Exprs);
   }
 
-  Node *E[1] = {parseExpr()};
+  Node *E[1] = {getDerived().parseExpr()};
   if (E[0] == nullptr)
     return nullptr;
   return make<ConversionExpr>(Ty, makeNodeArray(E, E + 1));
@@ -3884,13 +3925,14 @@ template<typename Alloc> Node *Db<Alloc>::parseConversionExpr() {
 //                ::= L <nullptr type> E                                 # nullptr literal (i.e., "LDnE")
 // FIXME:         ::= L <type> <real-part float> _ <imag-part float> E   # complex floating point literal (C 2000)
 //                ::= L <mangled-name> E                                 # external name
-template<typename Alloc> Node *Db<Alloc>::parseExprPrimary() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseExprPrimary() {
   if (!consumeIf('L'))
     return nullptr;
   switch (look()) {
   case 'w':
     ++First;
-    return parseIntegerLiteral("wchar_t");
+    return getDerived().parseIntegerLiteral("wchar_t");
   case 'b':
     if (consumeIf("b0E"))
       return make<BoolExpr>(0);
@@ -3899,55 +3941,55 @@ template<typename Alloc> Node *Db<Alloc>::parseExprPrimary() {
     return nullptr;
   case 'c':
     ++First;
-    return parseIntegerLiteral("char");
+    return getDerived().parseIntegerLiteral("char");
   case 'a':
     ++First;
-    return parseIntegerLiteral("signed char");
+    return getDerived().parseIntegerLiteral("signed char");
   case 'h':
     ++First;
-    return parseIntegerLiteral("unsigned char");
+    return getDerived().parseIntegerLiteral("unsigned char");
   case 's':
     ++First;
-    return parseIntegerLiteral("short");
+    return getDerived().parseIntegerLiteral("short");
   case 't':
     ++First;
-    return parseIntegerLiteral("unsigned short");
+    return getDerived().parseIntegerLiteral("unsigned short");
   case 'i':
     ++First;
-    return parseIntegerLiteral("");
+    return getDerived().parseIntegerLiteral("");
   case 'j':
     ++First;
-    return parseIntegerLiteral("u");
+    return getDerived().parseIntegerLiteral("u");
   case 'l':
     ++First;
-    return parseIntegerLiteral("l");
+    return getDerived().parseIntegerLiteral("l");
   case 'm':
     ++First;
-    return parseIntegerLiteral("ul");
+    return getDerived().parseIntegerLiteral("ul");
   case 'x':
     ++First;
-    return parseIntegerLiteral("ll");
+    return getDerived().parseIntegerLiteral("ll");
   case 'y':
     ++First;
-    return parseIntegerLiteral("ull");
+    return getDerived().parseIntegerLiteral("ull");
   case 'n':
     ++First;
-    return parseIntegerLiteral("__int128");
+    return getDerived().parseIntegerLiteral("__int128");
   case 'o':
     ++First;
-    return parseIntegerLiteral("unsigned __int128");
+    return getDerived().parseIntegerLiteral("unsigned __int128");
   case 'f':
     ++First;
-    return parseFloatingLiteral<float>();
+    return getDerived().template parseFloatingLiteral<float>();
   case 'd':
     ++First;
-    return parseFloatingLiteral<double>();
+    return getDerived().template parseFloatingLiteral<double>();
   case 'e':
     ++First;
-    return parseFloatingLiteral<long double>();
+    return getDerived().template parseFloatingLiteral<long double>();
   case '_':
     if (consumeIf("_Z")) {
-      Node *R = parseEncoding();
+      Node *R = getDerived().parseEncoding();
       if (R != nullptr && consumeIf('E'))
         return R;
     }
@@ -3958,7 +4000,7 @@ template<typename Alloc> Node *Db<Alloc>::parseExprPrimary() {
     return nullptr;
   default: {
     // might be named type
-    Node *T = parseType();
+    Node *T = getDerived().parseType();
     if (T == nullptr)
       return nullptr;
     StringView N = parseNumber();
@@ -3978,45 +4020,46 @@ template<typename Alloc> Node *Db<Alloc>::parseExprPrimary() {
 //                     ::= di <field source-name> <braced-expression>    # .name = expr
 //                     ::= dx <index expression> <braced-expression>     # [expr] = expr
 //                     ::= dX <range begin expression> <range end expression> <braced-expression>
-template<typename Alloc> Node *Db<Alloc>::parseBracedExpr() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseBracedExpr() {
   if (look() == 'd') {
     switch (look(1)) {
     case 'i': {
       First += 2;
-      Node *Field = parseSourceName(/*NameState=*/nullptr);
+      Node *Field = getDerived().parseSourceName(/*NameState=*/nullptr);
       if (Field == nullptr)
         return nullptr;
-      Node *Init = parseBracedExpr();
+      Node *Init = getDerived().parseBracedExpr();
       if (Init == nullptr)
         return nullptr;
       return make<BracedExpr>(Field, Init, /*isArray=*/false);
     }
     case 'x': {
       First += 2;
-      Node *Index = parseExpr();
+      Node *Index = getDerived().parseExpr();
       if (Index == nullptr)
         return nullptr;
-      Node *Init = parseBracedExpr();
+      Node *Init = getDerived().parseBracedExpr();
       if (Init == nullptr)
         return nullptr;
       return make<BracedExpr>(Index, Init, /*isArray=*/true);
     }
     case 'X': {
       First += 2;
-      Node *RangeBegin = parseExpr();
+      Node *RangeBegin = getDerived().parseExpr();
       if (RangeBegin == nullptr)
         return nullptr;
-      Node *RangeEnd = parseExpr();
+      Node *RangeEnd = getDerived().parseExpr();
       if (RangeEnd == nullptr)
         return nullptr;
-      Node *Init = parseBracedExpr();
+      Node *Init = getDerived().parseBracedExpr();
       if (Init == nullptr)
         return nullptr;
       return make<BracedRangeExpr>(RangeBegin, RangeEnd, Init);
     }
     }
   }
-  return parseExpr();
+  return getDerived().parseExpr();
 }
 
 // (not yet in the spec)
@@ -4024,7 +4067,8 @@ template<typename Alloc> Node *Db<Alloc>::parseBracedExpr() {
 //             ::= fR <binary-operator-name> <expression> <expression>
 //             ::= fl <binary-operator-name> <expression>
 //             ::= fr <binary-operator-name> <expression>
-template<typename Alloc> Node *Db<Alloc>::parseFoldExpr() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseFoldExpr() {
   if (!consumeIf('f'))
     return nullptr;
 
@@ -4074,11 +4118,11 @@ template<typename Alloc> Node *Db<Alloc>::parseFoldExpr() {
   else if (consumeIf("rS")) OperatorName = ">>=";
   else return nullptr;
 
-  Node *Pack = parseExpr(), *Init = nullptr;
+  Node *Pack = getDerived().parseExpr(), *Init = nullptr;
   if (Pack == nullptr)
     return nullptr;
   if (HasInitializer) {
-    Init = parseExpr();
+    Init = getDerived().parseExpr();
     if (Init == nullptr)
       return nullptr;
   }
@@ -4133,49 +4177,50 @@ template<typename Alloc> Node *Db<Alloc>::parseFoldExpr() {
 //              ::= fl <binary-operator-name> <expression>
 //              ::= fr <binary-operator-name> <expression>
 //              ::= <expr-primary>
-template<typename Alloc> Node *Db<Alloc>::parseExpr() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
   bool Global = consumeIf("gs");
   if (numLeft() < 2)
     return nullptr;
 
   switch (*First) {
   case 'L':
-    return parseExprPrimary();
+    return getDerived().parseExprPrimary();
   case 'T':
-    return parseTemplateParam();
+    return getDerived().parseTemplateParam();
   case 'f': {
     // Disambiguate a fold expression from a <function-param>.
     if (look(1) == 'p' || (look(1) == 'L' && std::isdigit(look(2))))
-      return parseFunctionParam();
-    return parseFoldExpr();
+      return getDerived().parseFunctionParam();
+    return getDerived().parseFoldExpr();
   }
   case 'a':
     switch (First[1]) {
     case 'a':
       First += 2;
-      return parseBinaryExpr("&&");
+      return getDerived().parseBinaryExpr("&&");
     case 'd':
       First += 2;
-      return parsePrefixExpr("&");
+      return getDerived().parsePrefixExpr("&");
     case 'n':
       First += 2;
-      return parseBinaryExpr("&");
+      return getDerived().parseBinaryExpr("&");
     case 'N':
       First += 2;
-      return parseBinaryExpr("&=");
+      return getDerived().parseBinaryExpr("&=");
     case 'S':
       First += 2;
-      return parseBinaryExpr("=");
+      return getDerived().parseBinaryExpr("=");
     case 't': {
       First += 2;
-      Node *Ty = parseType();
+      Node *Ty = getDerived().parseType();
       if (Ty == nullptr)
         return nullptr;
       return make<EnclosingExpr>("alignof (", Ty, ")");
     }
     case 'z': {
       First += 2;
-      Node *Ty = parseExpr();
+      Node *Ty = getDerived().parseExpr();
       if (Ty == nullptr)
         return nullptr;
       return make<EnclosingExpr>("alignof (", Ty, ")");
@@ -4187,10 +4232,10 @@ template<typename Alloc> Node *Db<Alloc>::parseExpr() {
     // cc <type> <expression>                               # const_cast<type>(expression)
     case 'c': {
       First += 2;
-      Node *Ty = parseType();
+      Node *Ty = getDerived().parseType();
       if (Ty == nullptr)
         return Ty;
-      Node *Ex = parseExpr();
+      Node *Ex = getDerived().parseExpr();
       if (Ex == nullptr)
         return Ex;
       return make<CastExpr>("const_cast", Ty, Ex);
@@ -4198,12 +4243,12 @@ template<typename Alloc> Node *Db<Alloc>::parseExpr() {
     // cl <expression>+ E                                   # call
     case 'l': {
       First += 2;
-      Node *Callee = parseExpr();
+      Node *Callee = getDerived().parseExpr();
       if (Callee == nullptr)
         return Callee;
       size_t ExprsBegin = Names.size();
       while (!consumeIf('E')) {
-        Node *E = parseExpr();
+        Node *E = getDerived().parseExpr();
         if (E == nullptr)
           return E;
         Names.push_back(E);
@@ -4212,104 +4257,104 @@ template<typename Alloc> Node *Db<Alloc>::parseExpr() {
     }
     case 'm':
       First += 2;
-      return parseBinaryExpr(",");
+      return getDerived().parseBinaryExpr(",");
     case 'o':
       First += 2;
-      return parsePrefixExpr("~");
+      return getDerived().parsePrefixExpr("~");
     case 'v':
-      return parseConversionExpr();
+      return getDerived().parseConversionExpr();
     }
     return nullptr;
   case 'd':
     switch (First[1]) {
     case 'a': {
       First += 2;
-      Node *Ex = parseExpr();
+      Node *Ex = getDerived().parseExpr();
       if (Ex == nullptr)
         return Ex;
       return make<DeleteExpr>(Ex, Global, /*is_array=*/true);
     }
     case 'c': {
       First += 2;
-      Node *T = parseType();
+      Node *T = getDerived().parseType();
       if (T == nullptr)
         return T;
-      Node *Ex = parseExpr();
+      Node *Ex = getDerived().parseExpr();
       if (Ex == nullptr)
         return Ex;
       return make<CastExpr>("dynamic_cast", T, Ex);
     }
     case 'e':
       First += 2;
-      return parsePrefixExpr("*");
+      return getDerived().parsePrefixExpr("*");
     case 'l': {
       First += 2;
-      Node *E = parseExpr();
+      Node *E = getDerived().parseExpr();
       if (E == nullptr)
         return E;
       return make<DeleteExpr>(E, Global, /*is_array=*/false);
     }
     case 'n':
-      return parseUnresolvedName();
+      return getDerived().parseUnresolvedName();
     case 's': {
       First += 2;
-      Node *LHS = parseExpr();
+      Node *LHS = getDerived().parseExpr();
       if (LHS == nullptr)
         return nullptr;
-      Node *RHS = parseExpr();
+      Node *RHS = getDerived().parseExpr();
       if (RHS == nullptr)
         return nullptr;
       return make<MemberExpr>(LHS, ".*", RHS);
     }
     case 't': {
       First += 2;
-      Node *LHS = parseExpr();
+      Node *LHS = getDerived().parseExpr();
       if (LHS == nullptr)
         return LHS;
-      Node *RHS = parseExpr();
+      Node *RHS = getDerived().parseExpr();
       if (RHS == nullptr)
         return nullptr;
       return make<MemberExpr>(LHS, ".", RHS);
     }
     case 'v':
       First += 2;
-      return parseBinaryExpr("/");
+      return getDerived().parseBinaryExpr("/");
     case 'V':
       First += 2;
-      return parseBinaryExpr("/=");
+      return getDerived().parseBinaryExpr("/=");
     }
     return nullptr;
   case 'e':
     switch (First[1]) {
     case 'o':
       First += 2;
-      return parseBinaryExpr("^");
+      return getDerived().parseBinaryExpr("^");
     case 'O':
       First += 2;
-      return parseBinaryExpr("^=");
+      return getDerived().parseBinaryExpr("^=");
     case 'q':
       First += 2;
-      return parseBinaryExpr("==");
+      return getDerived().parseBinaryExpr("==");
     }
     return nullptr;
   case 'g':
     switch (First[1]) {
     case 'e':
       First += 2;
-      return parseBinaryExpr(">=");
+      return getDerived().parseBinaryExpr(">=");
     case 't':
       First += 2;
-      return parseBinaryExpr(">");
+      return getDerived().parseBinaryExpr(">");
     }
     return nullptr;
   case 'i':
     switch (First[1]) {
     case 'x': {
       First += 2;
-      Node *Base = parseExpr();
+      Node *Base = getDerived().parseExpr();
       if (Base == nullptr)
         return nullptr;
-      Node *Index = parseExpr();
+      Node *Index = getDerived().parseExpr();
       if (Index == nullptr)
         return Index;
       return make<ArraySubscriptExpr>(Base, Index);
@@ -4318,7 +4363,7 @@ template<typename Alloc> Node *Db<Alloc>::parseExpr() {
       First += 2;
       size_t InitsBegin = Names.size();
       while (!consumeIf('E')) {
-        Node *E = parseBracedExpr();
+        Node *E = getDerived().parseBracedExpr();
         if (E == nullptr)
           return nullptr;
         Names.push_back(E);
@@ -4331,37 +4376,37 @@ template<typename Alloc> Node *Db<Alloc>::parseExpr() {
     switch (First[1]) {
     case 'e':
       First += 2;
-      return parseBinaryExpr("<=");
+      return getDerived().parseBinaryExpr("<=");
     case 's':
       First += 2;
-      return parseBinaryExpr("<<");
+      return getDerived().parseBinaryExpr("<<");
     case 'S':
       First += 2;
-      return parseBinaryExpr("<<=");
+      return getDerived().parseBinaryExpr("<<=");
     case 't':
       First += 2;
-      return parseBinaryExpr("<");
+      return getDerived().parseBinaryExpr("<");
     }
     return nullptr;
   case 'm':
     switch (First[1]) {
     case 'i':
       First += 2;
-      return parseBinaryExpr("-");
+      return getDerived().parseBinaryExpr("-");
     case 'I':
       First += 2;
-      return parseBinaryExpr("-=");
+      return getDerived().parseBinaryExpr("-=");
     case 'l':
       First += 2;
-      return parseBinaryExpr("*");
+      return getDerived().parseBinaryExpr("*");
     case 'L':
       First += 2;
-      return parseBinaryExpr("*=");
+      return getDerived().parseBinaryExpr("*=");
     case 'm':
       First += 2;
       if (consumeIf('_'))
-        return parsePrefixExpr("--");
-      Node *Ex = parseExpr();
+        return getDerived().parsePrefixExpr("--");
+      Node *Ex = getDerived().parseExpr();
       if (Ex == nullptr)
         return nullptr;
       return make<PostfixExpr>(Ex, "--");
@@ -4371,19 +4416,19 @@ template<typename Alloc> Node *Db<Alloc>::parseExpr() {
     switch (First[1]) {
     case 'a':
     case 'w':
-      return parseNewExpr();
+      return getDerived().parseNewExpr();
     case 'e':
       First += 2;
-      return parseBinaryExpr("!=");
+      return getDerived().parseBinaryExpr("!=");
     case 'g':
       First += 2;
-      return parsePrefixExpr("-");
+      return getDerived().parsePrefixExpr("-");
     case 't':
       First += 2;
-      return parsePrefixExpr("!");
+      return getDerived().parsePrefixExpr("!");
     case 'x':
       First += 2;
-      Node *Ex = parseExpr();
+      Node *Ex = getDerived().parseExpr();
       if (Ex == nullptr)
         return Ex;
       return make<EnclosingExpr>("noexcept (", Ex, ")");
@@ -4392,47 +4437,47 @@ template<typename Alloc> Node *Db<Alloc>::parseExpr() {
   case 'o':
     switch (First[1]) {
     case 'n':
-      return parseUnresolvedName();
+      return getDerived().parseUnresolvedName();
     case 'o':
       First += 2;
-      return parseBinaryExpr("||");
+      return getDerived().parseBinaryExpr("||");
     case 'r':
       First += 2;
-      return parseBinaryExpr("|");
+      return getDerived().parseBinaryExpr("|");
     case 'R':
       First += 2;
-      return parseBinaryExpr("|=");
+      return getDerived().parseBinaryExpr("|=");
     }
     return nullptr;
   case 'p':
     switch (First[1]) {
     case 'm':
       First += 2;
-      return parseBinaryExpr("->*");
+      return getDerived().parseBinaryExpr("->*");
     case 'l':
       First += 2;
-      return parseBinaryExpr("+");
+      return getDerived().parseBinaryExpr("+");
     case 'L':
       First += 2;
-      return parseBinaryExpr("+=");
+      return getDerived().parseBinaryExpr("+=");
     case 'p': {
       First += 2;
       if (consumeIf('_'))
-        return parsePrefixExpr("++");
-      Node *Ex = parseExpr();
+        return getDerived().parsePrefixExpr("++");
+      Node *Ex = getDerived().parseExpr();
       if (Ex == nullptr)
         return Ex;
       return make<PostfixExpr>(Ex, "++");
     }
     case 's':
       First += 2;
-      return parsePrefixExpr("+");
+      return getDerived().parsePrefixExpr("+");
     case 't': {
       First += 2;
-      Node *L = parseExpr();
+      Node *L = getDerived().parseExpr();
       if (L == nullptr)
         return nullptr;
-      Node *R = parseExpr();
+      Node *R = getDerived().parseExpr();
       if (R == nullptr)
         return nullptr;
       return make<MemberExpr>(L, "->", R);
@@ -4442,13 +4487,13 @@ template<typename Alloc> Node *Db<Alloc>::parseExpr() {
   case 'q':
     if (First[1] == 'u') {
       First += 2;
-      Node *Cond = parseExpr();
+      Node *Cond = getDerived().parseExpr();
       if (Cond == nullptr)
         return nullptr;
-      Node *LHS = parseExpr();
+      Node *LHS = getDerived().parseExpr();
       if (LHS == nullptr)
         return nullptr;
-      Node *RHS = parseExpr();
+      Node *RHS = getDerived().parseExpr();
       if (RHS == nullptr)
         return nullptr;
       return make<ConditionalExpr>(Cond, LHS, RHS);
@@ -4458,59 +4503,59 @@ template<typename Alloc> Node *Db<Alloc>::parseExpr() {
     switch (First[1]) {
     case 'c': {
       First += 2;
-      Node *T = parseType();
+      Node *T = getDerived().parseType();
       if (T == nullptr)
         return T;
-      Node *Ex = parseExpr();
+      Node *Ex = getDerived().parseExpr();
       if (Ex == nullptr)
         return Ex;
       return make<CastExpr>("reinterpret_cast", T, Ex);
     }
     case 'm':
       First += 2;
-      return parseBinaryExpr("%");
+      return getDerived().parseBinaryExpr("%");
     case 'M':
       First += 2;
-      return parseBinaryExpr("%=");
+      return getDerived().parseBinaryExpr("%=");
     case 's':
       First += 2;
-      return parseBinaryExpr(">>");
+      return getDerived().parseBinaryExpr(">>");
     case 'S':
       First += 2;
-      return parseBinaryExpr(">>=");
+      return getDerived().parseBinaryExpr(">>=");
     }
     return nullptr;
   case 's':
     switch (First[1]) {
     case 'c': {
       First += 2;
-      Node *T = parseType();
+      Node *T = getDerived().parseType();
       if (T == nullptr)
         return T;
-      Node *Ex = parseExpr();
+      Node *Ex = getDerived().parseExpr();
       if (Ex == nullptr)
         return Ex;
       return make<CastExpr>("static_cast", T, Ex);
     }
     case 'p': {
       First += 2;
-      Node *Child = parseExpr();
+      Node *Child = getDerived().parseExpr();
       if (Child == nullptr)
         return nullptr;
       return make<ParameterPackExpansion>(Child);
     }
     case 'r':
-      return parseUnresolvedName();
+      return getDerived().parseUnresolvedName();
     case 't': {
       First += 2;
-      Node *Ty = parseType();
+      Node *Ty = getDerived().parseType();
       if (Ty == nullptr)
         return Ty;
       return make<EnclosingExpr>("sizeof (", Ty, ")");
     }
     case 'z': {
       First += 2;
-      Node *Ex = parseExpr();
+      Node *Ex = getDerived().parseExpr();
       if (Ex == nullptr)
         return Ex;
       return make<EnclosingExpr>("sizeof (", Ex, ")");
@@ -4518,12 +4563,12 @@ template<typename Alloc> Node *Db<Alloc>::parseExpr() {
     case 'Z':
       First += 2;
       if (look() == 'T') {
-        Node *R = parseTemplateParam();
+        Node *R = getDerived().parseTemplateParam();
         if (R == nullptr)
           return nullptr;
         return make<SizeofParamPackExpr>(R);
       } else if (look() == 'f') {
-        Node *FP = parseFunctionParam();
+        Node *FP = getDerived().parseFunctionParam();
         if (FP == nullptr)
           return nullptr;
         return make<EnclosingExpr>("sizeof... (", FP, ")");
@@ -4533,7 +4578,7 @@ template<typename Alloc> Node *Db<Alloc>::parseExpr() {
       First += 2;
       size_t ArgsBegin = Names.size();
       while (!consumeIf('E')) {
-        Node *Arg = parseTemplateArg();
+        Node *Arg = getDerived().parseTemplateArg();
         if (Arg == nullptr)
           return nullptr;
         Names.push_back(Arg);
@@ -4549,26 +4594,26 @@ template<typename Alloc> Node *Db<Alloc>::parseExpr() {
     switch (First[1]) {
     case 'e': {
       First += 2;
-      Node *Ex = parseExpr();
+      Node *Ex = getDerived().parseExpr();
       if (Ex == nullptr)
         return Ex;
       return make<EnclosingExpr>("typeid (", Ex, ")");
     }
     case 'i': {
       First += 2;
-      Node *Ty = parseType();
+      Node *Ty = getDerived().parseType();
       if (Ty == nullptr)
         return Ty;
       return make<EnclosingExpr>("typeid (", Ty, ")");
     }
     case 'l': {
       First += 2;
-      Node *Ty = parseType();
+      Node *Ty = getDerived().parseType();
       if (Ty == nullptr)
         return nullptr;
       size_t InitsBegin = Names.size();
       while (!consumeIf('E')) {
-        Node *E = parseBracedExpr();
+        Node *E = getDerived().parseBracedExpr();
         if (E == nullptr)
           return nullptr;
         Names.push_back(E);
@@ -4580,7 +4625,7 @@ template<typename Alloc> Node *Db<Alloc>::parseExpr() {
       return make<NameType>("throw");
     case 'w': {
       First += 2;
-      Node *Ex = parseExpr();
+      Node *Ex = getDerived().parseExpr();
       if (Ex == nullptr)
         return nullptr;
       return make<ThrowExpr>(Ex);
@@ -4596,7 +4641,7 @@ template<typename Alloc> Node *Db<Alloc>::parseExpr() {
   case '7':
   case '8':
   case '9':
-    return parseUnresolvedName();
+    return getDerived().parseUnresolvedName();
   }
   return nullptr;
 }
@@ -4609,7 +4654,8 @@ template<typename Alloc> Node *Db<Alloc>::parseExpr() {
 //
 // <v-offset>  ::= <offset number> _ <virtual offset number>
 //               # virtual base override, with vcall offset
-template<typename Alloc> bool Db<Alloc>::parseCallOffset() {
+template <typename Alloc, typename Derived>
+bool AbstractManglingParser<Alloc, Derived>::parseCallOffset() {
   // Just scan through the call offset, we never add this information into the
   // output.
   if (consumeIf('h'))
@@ -4638,14 +4684,15 @@ template<typename Alloc> bool Db<Alloc>::parseCallOffset() {
 //                ::= GR <object name> <seq-id> _    # Subsequent temporaries
 //      extension ::= TC <first type> <number> _ <second type> # construction vtable for second-in-first
 //      extension ::= GR <object name> # reference temporary for object
-template<typename Alloc> Node *Db<Alloc>::parseSpecialName() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseSpecialName() {
   switch (look()) {
   case 'T':
     switch (look(1)) {
     // TV <type>    # virtual table
     case 'V': {
       First += 2;
-      Node *Ty = parseType();
+      Node *Ty = getDerived().parseType();
       if (Ty == nullptr)
         return nullptr;
       return make<SpecialName>("vtable for ", Ty);
@@ -4653,7 +4700,7 @@ template<typename Alloc> Node *Db<Alloc>::parseSpecialName() {
     // TT <type>    # VTT structure (construction vtable index)
     case 'T': {
       First += 2;
-      Node *Ty = parseType();
+      Node *Ty = getDerived().parseType();
       if (Ty == nullptr)
         return nullptr;
       return make<SpecialName>("VTT for ", Ty);
@@ -4661,7 +4708,7 @@ template<typename Alloc> Node *Db<Alloc>::parseSpecialName() {
     // TI <type>    # typeinfo structure
     case 'I': {
       First += 2;
-      Node *Ty = parseType();
+      Node *Ty = getDerived().parseType();
       if (Ty == nullptr)
         return nullptr;
       return make<SpecialName>("typeinfo for ", Ty);
@@ -4669,7 +4716,7 @@ template<typename Alloc> Node *Db<Alloc>::parseSpecialName() {
     // TS <type>    # typeinfo name (null-terminated byte string)
     case 'S': {
       First += 2;
-      Node *Ty = parseType();
+      Node *Ty = getDerived().parseType();
       if (Ty == nullptr)
         return nullptr;
       return make<SpecialName>("typeinfo name for ", Ty);
@@ -4679,7 +4726,7 @@ template<typename Alloc> Node *Db<Alloc>::parseSpecialName() {
       First += 2;
       if (parseCallOffset() || parseCallOffset())
         return nullptr;
-      Node *Encoding = parseEncoding();
+      Node *Encoding = getDerived().parseEncoding();
       if (Encoding == nullptr)
         return nullptr;
       return make<SpecialName>("covariant return thunk to ", Encoding);
@@ -4688,12 +4735,12 @@ template<typename Alloc> Node *Db<Alloc>::parseSpecialName() {
     //               # construction vtable for second-in-first
     case 'C': {
       First += 2;
-      Node *FirstType = parseType();
+      Node *FirstType = getDerived().parseType();
       if (FirstType == nullptr)
         return nullptr;
       if (parseNumber(true).empty() || !consumeIf('_'))
         return nullptr;
-      Node *SecondType = parseType();
+      Node *SecondType = getDerived().parseType();
       if (SecondType == nullptr)
         return nullptr;
       return make<CtorVtableSpecialName>(SecondType, FirstType);
@@ -4701,7 +4748,7 @@ template<typename Alloc> Node *Db<Alloc>::parseSpecialName() {
     // TW <object name> # Thread-local wrapper
     case 'W': {
       First += 2;
-      Node *Name = parseName();
+      Node *Name = getDerived().parseName();
       if (Name == nullptr)
         return nullptr;
       return make<SpecialName>("thread-local wrapper routine for ", Name);
@@ -4709,7 +4756,7 @@ template<typename Alloc> Node *Db<Alloc>::parseSpecialName() {
     // TH <object name> # Thread-local initialization
     case 'H': {
       First += 2;
-      Node *Name = parseName();
+      Node *Name = getDerived().parseName();
       if (Name == nullptr)
         return nullptr;
       return make<SpecialName>("thread-local initialization routine for ", Name);
@@ -4720,7 +4767,7 @@ template<typename Alloc> Node *Db<Alloc>::parseSpecialName() {
       bool IsVirt = look() == 'v';
       if (parseCallOffset())
         return nullptr;
-      Node *BaseEncoding = parseEncoding();
+      Node *BaseEncoding = getDerived().parseEncoding();
       if (BaseEncoding == nullptr)
         return nullptr;
       if (IsVirt)
@@ -4734,7 +4781,7 @@ template<typename Alloc> Node *Db<Alloc>::parseSpecialName() {
     // GV <object name> # Guard variable for one-time initialization
     case 'V': {
       First += 2;
-      Node *Name = parseName();
+      Node *Name = getDerived().parseName();
       if (Name == nullptr)
         return nullptr;
       return make<SpecialName>("guard variable for ", Name);
@@ -4744,7 +4791,7 @@ template<typename Alloc> Node *Db<Alloc>::parseSpecialName() {
     // GR <object name> <seq-id> _    # Subsequent temporaries
     case 'R': {
       First += 2;
-      Node *Name = parseName();
+      Node *Name = getDerived().parseName();
       if (Name == nullptr)
         return nullptr;
       size_t Count;
@@ -4761,9 +4808,10 @@ template<typename Alloc> Node *Db<Alloc>::parseSpecialName() {
 // <encoding> ::= <function name> <bare-function-type>
 //            ::= <data name>
 //            ::= <special-name>
-template<typename Alloc> Node *Db<Alloc>::parseEncoding() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseEncoding() {
   if (look() == 'G' || look() == 'T')
-    return parseSpecialName();
+    return getDerived().parseSpecialName();
 
   auto IsEndOfEncoding = [&] {
     // The set of chars that can potentially follow an <encoding> (none of which
@@ -4773,7 +4821,7 @@ template<typename Alloc> Node *Db<Alloc>::parseEncoding() {
   };
 
   NameState NameInfo(this);
-  Node *Name = parseName(&NameInfo);
+  Node *Name = getDerived().parseName(&NameInfo);
   if (Name == nullptr)
     return nullptr;
 
@@ -4787,7 +4835,7 @@ template<typename Alloc> Node *Db<Alloc>::parseEncoding() {
   if (consumeIf("Ua9enable_ifI")) {
     size_t BeforeArgs = Names.size();
     while (!consumeIf('E')) {
-      Node *Arg = parseTemplateArg();
+      Node *Arg = getDerived().parseTemplateArg();
       if (Arg == nullptr)
         return nullptr;
       Names.push_back(Arg);
@@ -4799,7 +4847,7 @@ template<typename Alloc> Node *Db<Alloc>::parseEncoding() {
 
   Node *ReturnType = nullptr;
   if (!NameInfo.CtorDtorConversion && NameInfo.EndsWithTemplateArgs) {
-    ReturnType = parseType();
+    ReturnType = getDerived().parseType();
     if (ReturnType == nullptr)
       return nullptr;
   }
@@ -4811,7 +4859,7 @@ template<typename Alloc> Node *Db<Alloc>::parseEncoding() {
 
   size_t ParamsBegin = Names.size();
   do {
-    Node *Ty = parseType();
+    Node *Ty = getDerived().parseType();
     if (Ty == nullptr)
       return nullptr;
     Names.push_back(Ty);
@@ -4857,9 +4905,9 @@ struct FloatData<long double>
     static constexpr const char *spec = "%LaL";
 };
 
-template<typename Alloc>
-template<class Float>
-Node *Db<Alloc>::parseFloatingLiteral() {
+template <typename Alloc, typename Derived>
+template <class Float>
+Node *AbstractManglingParser<Alloc, Derived>::parseFloatingLiteral() {
   const size_t N = FloatData<Float>::mangled_size;
   if (numLeft() <= N)
     return nullptr;
@@ -4874,7 +4922,8 @@ Node *Db<Alloc>::parseFloatingLiteral() {
 }
 
 // <seq-id> ::= <0-9A-Z>+
-template<typename Alloc> bool Db<Alloc>::parseSeqId(size_t *Out) {
+template <typename Alloc, typename Derived>
+bool AbstractManglingParser<Alloc, Derived>::parseSeqId(size_t *Out) {
   if (!(look() >= '0' && look() <= '9') &&
       !(look() >= 'A' && look() <= 'Z'))
     return true;
@@ -4905,7 +4954,8 @@ template<typename Alloc> bool Db<Alloc>::parseSeqId(size_t *Out) {
 // <substitution> ::= Si # ::std::basic_istream<char,  std::char_traits<char> >
 // <substitution> ::= So # ::std::basic_ostream<char,  std::char_traits<char> >
 // <substitution> ::= Sd # ::std::basic_iostream<char, std::char_traits<char> >
-template<typename Alloc> Node *Db<Alloc>::parseSubstitution() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseSubstitution() {
   if (!consumeIf('S'))
     return nullptr;
 
@@ -4944,7 +4994,7 @@ template<typename Alloc> Node *Db<Alloc>::parseSubstitution() {
     // Itanium C++ ABI 5.1.2: If a name that would use a built-in <substitution>
     // has ABI tags, the tags are appended to the substitution; the result is a
     // substitutable component.
-    Node *WithTags = parseAbiTags(SpecialSub);
+    Node *WithTags = getDerived().parseAbiTags(SpecialSub);
     if (WithTags != SpecialSub) {
       Subs.push_back(WithTags);
       SpecialSub = WithTags;
@@ -4971,7 +5021,8 @@ template<typename Alloc> Node *Db<Alloc>::parseSubstitution() {
 
 // <template-param> ::= T_    # first template parameter
 //                  ::= T <parameter-2 non-negative number> _
-template<typename Alloc> Node *Db<Alloc>::parseTemplateParam() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseTemplateParam() {
   if (!consumeIf('T'))
     return nullptr;
 
@@ -5012,11 +5063,12 @@ template<typename Alloc> Node *Db<Alloc>::parseTemplateParam() {
 //                ::= <expr-primary>            # simple expressions
 //                ::= J <template-arg>* E       # argument pack
 //                ::= LZ <encoding> E           # extension
-template<typename Alloc> Node *Db<Alloc>::parseTemplateArg() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseTemplateArg() {
   switch (look()) {
   case 'X': {
     ++First;
-    Node *Arg = parseExpr();
+    Node *Arg = getDerived().parseExpr();
     if (Arg == nullptr || !consumeIf('E'))
       return nullptr;
     return Arg;
@@ -5025,7 +5077,7 @@ template<typename Alloc> Node *Db<Alloc>::parseTemplateArg() {
     ++First;
     size_t ArgsBegin = Names.size();
     while (!consumeIf('E')) {
-      Node *Arg = parseTemplateArg();
+      Node *Arg = getDerived().parseTemplateArg();
       if (Arg == nullptr)
         return nullptr;
       Names.push_back(Arg);
@@ -5037,23 +5089,24 @@ template<typename Alloc> Node *Db<Alloc>::parseTemplateArg() {
     //                ::= LZ <encoding> E           # extension
     if (look(1) == 'Z') {
       First += 2;
-      Node *Arg = parseEncoding();
+      Node *Arg = getDerived().parseEncoding();
       if (Arg == nullptr || !consumeIf('E'))
         return nullptr;
       return Arg;
     }
     //                ::= <expr-primary>            # simple expressions
-    return parseExprPrimary();
+    return getDerived().parseExprPrimary();
   }
   default:
-    return parseType();
+    return getDerived().parseType();
   }
 }
 
 // <template-args> ::= I <template-arg>* E
 //     extension, the abi says <template-arg>+
-template <typename Alloc>
-Node *Db<Alloc>::parseTemplateArgs(bool TagTemplates) {
+template <typename Derived, typename Alloc>
+Node *
+AbstractManglingParser<Derived, Alloc>::parseTemplateArgs(bool TagTemplates) {
   if (!consumeIf('I'))
     return nullptr;
 
@@ -5066,7 +5119,7 @@ Node *Db<Alloc>::parseTemplateArgs(bool TagTemplates) {
   while (!consumeIf('E')) {
     if (TagTemplates) {
       auto OldParams = std::move(TemplateParams);
-      Node *Arg = parseTemplateArg();
+      Node *Arg = getDerived().parseTemplateArg();
       TemplateParams = std::move(OldParams);
       if (Arg == nullptr)
         return nullptr;
@@ -5080,7 +5133,7 @@ Node *Db<Alloc>::parseTemplateArgs(bool TagTemplates) {
       }
       TemplateParams.push_back(TableEntry);
     } else {
-      Node *Arg = parseTemplateArg();
+      Node *Arg = getDerived().parseTemplateArg();
       if (Arg == nullptr)
         return nullptr;
       Names.push_back(Arg);
@@ -5094,9 +5147,10 @@ Node *Db<Alloc>::parseTemplateArgs(bool TagTemplates) {
 // extension      ::= ___Z <encoding> _block_invoke
 // extension      ::= ___Z <encoding> _block_invoke<decimal-digit>+
 // extension      ::= ___Z <encoding> _block_invoke_<decimal-digit>+
-template<typename Alloc> Node *Db<Alloc>::parse() {
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parse() {
   if (consumeIf("_Z")) {
-    Node *Encoding = parseEncoding();
+    Node *Encoding = getDerived().parseEncoding();
     if (Encoding == nullptr)
       return nullptr;
     if (look() == '.') {
@@ -5109,7 +5163,7 @@ template<typename Alloc> Node *Db<Alloc>::parse() {
   }
 
   if (consumeIf("___Z")) {
-    Node *Encoding = parseEncoding();
+    Node *Encoding = getDerived().parseEncoding();
     if (Encoding == nullptr || !consumeIf("_block_invoke"))
       return nullptr;
     bool RequireNumber = consumeIf('_');
@@ -5122,11 +5176,17 @@ template<typename Alloc> Node *Db<Alloc>::parse() {
     return make<SpecialName>("invocation function for block in ", Encoding);
   }
 
-  Node *Ty = parseType();
+  Node *Ty = getDerived().parseType();
   if (numLeft() != 0)
     return nullptr;
   return Ty;
 }
+
+template <typename Alloc>
+struct ManglingParser : AbstractManglingParser<ManglingParser<Alloc>, Alloc> {
+  using AbstractManglingParser<ManglingParser<Alloc>,
+                               Alloc>::AbstractManglingParser;
+};
 
 }  // namespace itanium_demangle
 }  // namespace

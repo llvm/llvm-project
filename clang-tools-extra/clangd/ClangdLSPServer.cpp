@@ -81,8 +81,16 @@ CompletionItemKindBitset defaultCompletionItemKinds() {
 } // namespace
 
 void ClangdLSPServer::onInitialize(InitializeParams &Params) {
-  if (Params.initializationOptions)
-    applyConfiguration(*Params.initializationOptions);
+  if (Params.initializationOptions) {
+    const ClangdInitializationOptions &Opts = *Params.initializationOptions;
+
+    // Explicit compilation database path.
+    if (Opts.compilationDatabasePath.hasValue()) {
+      CDB.setCompileCommandsDir(Opts.compilationDatabasePath.getValue());
+    }
+
+    applyConfiguration(Opts.ParamsChange);
+  }
 
   if (Params.rootUri && *Params.rootUri)
     Server->setRootPath(Params.rootUri->file());
@@ -425,17 +433,10 @@ void ClangdLSPServer::onHover(TextDocumentPositionParams &Params) {
 }
 
 void ClangdLSPServer::applyConfiguration(
-    const ClangdConfigurationParamsChange &Settings) {
-  // Compilation database change.
-  if (Settings.compilationDatabasePath.hasValue()) {
-    CDB.setCompileCommandsDir(Settings.compilationDatabasePath.getValue());
-
-    reparseOpenedFiles();
-  }
-
-  // Update to the compilation database.
-  if (Settings.compilationDatabaseChanges) {
-    const auto &CompileCommandUpdates = *Settings.compilationDatabaseChanges;
+    const ClangdConfigurationParamsChange &Params) {
+  // Per-file update to the compilation database.
+  if (Params.compilationDatabaseChanges) {
+    const auto &CompileCommandUpdates = *Params.compilationDatabaseChanges;
     bool ShouldReparseOpenFiles = false;
     for (auto &Entry : CompileCommandUpdates) {
       /// The opened files need to be reparsed only when some existing

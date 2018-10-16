@@ -324,7 +324,7 @@ public:
 // Code beyond this point should not be synchronized with LLVM.
 //===----------------------------------------------------------------------===//
 
-using Demangler = itanium_demangle::Db<DefaultAllocator>;
+using Demangler = itanium_demangle::ManglingParser<DefaultAllocator>;
 
 namespace {
 enum : int {

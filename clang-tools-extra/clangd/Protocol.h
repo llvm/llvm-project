@@ -411,8 +411,6 @@ bool fromJSON(const llvm::json::Value &, ClangdCompileCommand &);
 /// "initialize" request and for the "workspace/didChangeConfiguration"
 /// notification since the data received is described as 'any' type in LSP.
 struct ClangdConfigurationParamsChange {
-  llvm::Optional<std::string> compilationDatabasePath;
-
   // The changes that happened to the compilation database.
   // The key of the map is a file name.
   llvm::Optional<std::map<std::string, ClangdCompileCommand>>
@@ -420,7 +418,14 @@ struct ClangdConfigurationParamsChange {
 };
 bool fromJSON(const llvm::json::Value &, ClangdConfigurationParamsChange &);
 
-struct ClangdInitializationOptions : public ClangdConfigurationParamsChange {};
+struct ClangdInitializationOptions {
+  // What we can change throught the didChangeConfiguration request, we can
+  // also set through the initialize request (initializationOptions field).
+  ClangdConfigurationParamsChange ParamsChange;
+
+  llvm::Optional<std::string> compilationDatabasePath;
+};
+bool fromJSON(const llvm::json::Value &, ClangdInitializationOptions &);
 
 struct InitializeParams {
   /// The process Id of the parent process that started
