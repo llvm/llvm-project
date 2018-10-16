@@ -1,4 +1,4 @@
 #ifndef TWO_H
 #define TWO_H
-void two();
+LLDB_TEST_API void two();
 #endif

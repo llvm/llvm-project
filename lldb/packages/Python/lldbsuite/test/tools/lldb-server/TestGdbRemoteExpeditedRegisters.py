@@ -125,6 +125,8 @@ class TestGdbRemoteExpeditedRegisters(
         self.set_inferior_startup_launch()
         self.stop_notification_contains_pc_register()
 
+    # powerpc64 has no FP register
+    @skipIf(triple='^powerpc64')
     def stop_notification_contains_fp_register(self):
         self.stop_notification_contains_generic_register("fp")
 

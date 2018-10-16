@@ -2,6 +2,7 @@
 #include <thread>
 #include <vector>
 #include <queue>
+#include <functional>
 #include <future>
 #include <iostream>
 #include <cassert>

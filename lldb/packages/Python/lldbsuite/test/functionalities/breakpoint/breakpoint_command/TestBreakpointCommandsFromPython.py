@@ -12,12 +12,13 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+import side_effect
 
 
 class PythonBreakpointCommandSettingTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-    my_var = 10
+    NO_DEBUG_INFO_TESTCASE = True
 
     @add_test_categories(['pyapi'])
     def test_step_out_python(self):
@@ -69,12 +70,9 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
         self.assertTrue(got_one_in_B, "Failed to match the pattern in B")
         self.target.BreakpointDelete(no_files_bkpt.GetID())
 
-        PythonBreakpointCommandSettingTestCase.my_var = 10
         error = lldb.SBError()
-        error = body_bkpt.SetScriptCallbackBody("\
-import TestBreakpointCommandsFromPython\n\
-TestBreakpointCommandsFromPython.PythonBreakpointCommandSettingTestCase.my_var = 20\n\
-print('Hit breakpoint')")
+        error = body_bkpt.SetScriptCallbackBody(
+                "import side_effect; side_effect.callback = 'callback was here'")
         self.assertTrue(
             error.Success(),
             "Failed to set the script callback body: %s." %
@@ -84,9 +82,9 @@ print('Hit breakpoint')")
             "command script import --allow-reload ./bktptcmd.py")
         func_bkpt.SetScriptCallbackFunction("bktptcmd.function")
 
-        # We will use the function that touches a text file, so remove it
-        # first:
-        self.RemoveTempFile("output2.txt")
+        # Clear out canary variables
+        side_effect.bktptcmd = None
+        side_effect.callback = None
 
         # Now launch the process, and do not stop at entry point.
         self.process = self.target.LaunchSimple(
@@ -100,11 +98,5 @@ print('Hit breakpoint')")
         self.assertTrue(len(threads) == 1, "Stopped at inner breakpoint.")
         self.thread = threads[0]
 
-        self.assertTrue(PythonBreakpointCommandSettingTestCase.my_var == 20)
-
-        # Check for the function version as well, which produced this file:
-        # Remember to clean up after ourselves...
-        self.assertTrue(
-            os.path.isfile("output2.txt"),
-            "'output2.txt' exists due to breakpoint command for breakpoint function.")
-        self.RemoveTempFile("output2.txt")
+        self.assertEquals("callback was here", side_effect.callback)
+        self.assertEquals("function was here", side_effect.bktptcmd)

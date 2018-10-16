@@ -40,13 +40,17 @@ class LibCxxFunctionTestCase(TestBase):
                     substrs=['stopped',
                              'stop reason = breakpoint'])
 
-        f1 = self.get_variable('f1')
-        f2 = self.get_variable('f2')
+        self.expect("frame variable f1",
+                    substrs=['f1 =  Function = foo(int, int)'])
 
-        if self.TraceOn():
-            print(f1)
-        if self.TraceOn():
-            print(f2)
+        self.expect("frame variable f2",
+                    substrs=['f2 =  Lambda in File main.cpp at Line 27'])
 
-        self.assertTrue(f1.GetValueAsUnsigned(0) != 0, 'f1 has a valid value')
-        self.assertTrue(f2.GetValueAsUnsigned(0) != 0, 'f2 has a valid value')
+        self.expect("frame variable f3",
+                    substrs=['f3 =  Lambda in File main.cpp at Line 31'])
+
+        self.expect("frame variable f4",
+                    substrs=['f4 =  Function in File main.cpp at Line 17'])
+
+        self.expect("frame variable f5",
+                    substrs=['f5 =  Function = Bar::add_num(int) const'])

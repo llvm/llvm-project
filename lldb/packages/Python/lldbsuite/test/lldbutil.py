@@ -344,7 +344,8 @@ def run_break_set_by_file_and_line(
 
     If extra_options is not None, then we append it to the breakpoint set command.
 
-    If num_expected_locations is -1 we check that we got AT LEAST one location, otherwise we check that num_expected_locations equals the number of locations.
+    If num_expected_locations is -1, we check that we got AT LEAST one location. If num_expected_locations is -2, we don't
+    check the actual number at all. Otherwise, we check that num_expected_locations equals the number of locations.
 
     If loc_exact is true, we check that there is one location, and that location must be at the input file and line number."""
 
@@ -511,7 +512,7 @@ def run_break_set_command(test, command):
     patterns = [
         r"^Breakpoint (?P<bpno>[0-9]+): (?P<num_locations>[0-9]+) locations\.$",
         r"^Breakpoint (?P<bpno>[0-9]+): (?P<num_locations>no) locations \(pending\)\.",
-        r"^Breakpoint (?P<bpno>[0-9]+): where = (?P<module>.*)`(?P<symbol>[+\-]{0,1}[^+]+)( \+ (?P<offset>[0-9]+)){0,1}( \[inlined\] (?P<inline_symbol>.*)){0,1} at (?P<file>[^:]+):(?P<line_no>[0-9]+), address = (?P<address>0x[0-9a-fA-F]+)$",
+        r"^Breakpoint (?P<bpno>[0-9]+): where = (?P<module>.*)`(?P<symbol>[+\-]{0,1}[^+]+)( \+ (?P<offset>[0-9]+)){0,1}( \[inlined\] (?P<inline_symbol>.*)){0,1} at (?P<file>[^:]+):(?P<line_no>[0-9]+)(?P<column>(:[0-9]+)?), address = (?P<address>0x[0-9a-fA-F]+)$",
         r"^Breakpoint (?P<bpno>[0-9]+): where = (?P<module>.*)`(?P<symbol>.*)( \+ (?P<offset>[0-9]+)){0,1}, address = (?P<address>0x[0-9a-fA-F]+)$"]
     match_object = test.match(command, patterns)
     break_results = match_object.groupdict()
@@ -564,7 +565,7 @@ def check_breakpoint_result(
     if num_locations == -1:
         test.assertTrue(out_num_locations > 0,
                         "Expecting one or more locations, got none.")
-    else:
+    elif num_locations != -2:
         test.assertTrue(
             num_locations == out_num_locations,
             "Expecting %d locations, got %d." %
@@ -576,7 +577,7 @@ def check_breakpoint_result(
         if 'file' in break_results:
             out_file_name = break_results['file']
         test.assertTrue(
-            file_name == out_file_name,
+            file_name.endswith(out_file_name),
             "Breakpoint file name '%s' doesn't match resultant name '%s'." %
             (file_name,
              out_file_name))
@@ -735,11 +736,44 @@ def get_crashed_threads(test, process):
             threads.append(thread)
     return threads
 
-def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
-                             launch_info = None, exe_name = "a.out",
-                             in_cwd = True):
+# Helper functions for run_to_{source,name}_breakpoint:
+
+def run_to_breakpoint_make_target(test, exe_name, in_cwd):
+    if in_cwd:
+        exe = test.getBuildArtifact(exe_name)
+
+    # Create the target
+    target = test.dbg.CreateTarget(exe)
+    test.assertTrue(target, "Target: %s is not valid."%(exe_name))
+    return target
+
+def run_to_breakpoint_do_run(test, target, bkpt, launch_info):
+    # Launch the process, and do not stop at the entry point.
+    if not launch_info:
+        launch_info = lldb.SBLaunchInfo(None)
+        launch_info.SetWorkingDirectory(test.get_process_working_directory())
+
+    error = lldb.SBError()
+    process = target.Launch(launch_info, error)
+
+    test.assertTrue(process,
+                    "Could not create a valid process for %s: %s"%(target.GetExecutable().GetFilename(),
+                    error.GetCString()))
+
+    # Frame #0 should be at our breakpoint.
+    threads = get_threads_stopped_at_breakpoint(
+                process, bkpt)
+
+    test.assertTrue(len(threads) == 1, "Expected 1 thread to stop at breakpoint, %d did."%(len(threads)))
+    thread = threads[0]
+    return (target, process, thread, bkpt)
+
+def run_to_name_breakpoint (test, bkpt_name, launch_info = None,
+                            exe_name = "a.out",
+                            bkpt_module = None,
+                            in_cwd = True):
     """Start up a target, using exe_name as the executable, and run it to
-       a breakpoint set by source regex bkpt_pattern.
+       a breakpoint set by name on bkpt_name restricted to bkpt_module.
 
        If you want to pass in launch arguments or environment
        variables, you can optionally pass in an SBLaunchInfo.  If you
@@ -749,43 +783,66 @@ def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
        And if your executable isn't in the CWD, pass in the absolute
        path to the executable in exe_name, and set in_cwd to False.
 
+       If you need to restrict the breakpoint to a particular module,
+       pass the module name (a string not a FileSpec) in bkpt_module.  If
+       nothing is passed in setting will be unrestricted.
+
        If the target isn't valid, the breakpoint isn't found, or hit, the
        function will cause a testsuite failure.
 
        If successful it returns a tuple with the target process and
-       thread that hit the breakpoint.
+       thread that hit the breakpoint, and the breakpoint that we set
+       for you.
     """
 
-    if in_cwd:
-        exe = test.getBuildArtifact(exe_name)
-    
-    # Create the target
-    target = test.dbg.CreateTarget(exe)
-    test.assertTrue(target, "Target: %s is not valid."%(exe_name))
+    target = run_to_breakpoint_make_target(test, exe_name, in_cwd)
 
+    breakpoint = target.BreakpointCreateByName(bkpt_name, bkpt_module)
+
+
+    test.assertTrue(breakpoint.GetNumLocations() > 0,
+                    "No locations found for name breakpoint: '%s'."%(bkpt_name))
+    return run_to_breakpoint_do_run(test, target, breakpoint, launch_info)
+
+def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
+                             launch_info = None, exe_name = "a.out",
+                             bkpt_module = None,
+                             in_cwd = True):
+    """Start up a target, using exe_name as the executable, and run it to
+       a breakpoint set by source regex bkpt_pattern.
+
+       The rest of the behavior is the same as run_to_name_breakpoint.
+    """
+
+    target = run_to_breakpoint_make_target(test, exe_name, in_cwd)
     # Set the breakpoints
     breakpoint = target.BreakpointCreateBySourceRegex(
-            bkpt_pattern, source_spec)
-    test.assertTrue(breakpoint.GetNumLocations() > 0, 
-                    'No locations found for source breakpoint: "%s", file: "%s", dir: "%s"'%(bkpt_pattern, source_spec.GetFilename(), source_spec.GetDirectory()))
+            bkpt_pattern, source_spec, bkpt_module)
+    test.assertTrue(breakpoint.GetNumLocations() > 0,
+        'No locations found for source breakpoint: "%s", file: "%s", dir: "%s"'
+        %(bkpt_pattern, source_spec.GetFilename(), source_spec.GetDirectory()))
+    return run_to_breakpoint_do_run(test, target, breakpoint, launch_info)
 
-    # Launch the process, and do not stop at the entry point.
-    if not launch_info:
-        launch_info = lldb.SBLaunchInfo(None)
-        launch_info.SetWorkingDirectory(test.get_process_working_directory())
+def run_to_line_breakpoint(test, source_spec, line_number, column = 0,
+                           launch_info = None, exe_name = "a.out",
+                           bkpt_module = None,
+                           in_cwd = True):
+    """Start up a target, using exe_name as the executable, and run it to
+       a breakpoint set by (source_spec, line_number(, column)).
 
-    error = lldb.SBError()
-    process = target.Launch(launch_info, error)
+       The rest of the behavior is the same as run_to_name_breakpoint.
+    """
 
-    test.assertTrue(process, "Could not create a valid process for %s: %s"%(exe_name, error.GetCString()))
+    target = run_to_breakpoint_make_target(test, exe_name, in_cwd)
+    # Set the breakpoints
+    breakpoint = target.BreakpointCreateByLocation(
+        source_spec, line_number, column, 0, lldb.SBFileSpecList())
+    test.assertTrue(breakpoint.GetNumLocations() > 0,
+        'No locations found for line breakpoint: "%s:%d(:%d)", dir: "%s"'
+        %(source_spec.GetFilename(), line_number, column,
+          source_spec.GetDirectory()))
+    return run_to_breakpoint_do_run(test, target, breakpoint, launch_info)
 
-    # Frame #0 should be at our breakpoint.
-    threads = get_threads_stopped_at_breakpoint(
-                process, breakpoint)
-
-    test.assertTrue(len(threads) == 1, "Expected 1 thread to stop at breakpoint, %d did."%(len(threads)))
-    thread = threads[0]
-    return (target, process, thread, breakpoint)
 
 def continue_to_breakpoint(process, bkpt):
     """ Continues the process, if it stops, returns the threads stopped at bkpt; otherwise, returns None"""

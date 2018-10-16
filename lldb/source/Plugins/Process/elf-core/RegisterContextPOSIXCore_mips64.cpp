@@ -56,7 +56,7 @@ bool RegisterContextCorePOSIX_mips64::ReadRegister(const RegisterInfo *reg_info,
   if (IsGPR(reg_info->kinds[lldb::eRegisterKindLLDB])) {
     if (reg_info->byte_size == 4 && !(arch.GetMachine() == llvm::Triple::mips64el))
       // In case of 32bit core file, the register data are placed at 4 byte
-      // offset. 
+      // offset.
       offset = offset / 2;
     v = m_gpr.GetMaxU64(&offset, reg_info->byte_size);
     value = v;

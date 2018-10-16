@@ -1,5 +1,6 @@
 add_lldb_library(lldbPluginSymbolFilePDB PLUGIN
   PDBASTParser.cpp
+  PDBLocationToDWARFExpression.cpp
   SymbolFilePDB.cpp
 
   LINK_LIBS

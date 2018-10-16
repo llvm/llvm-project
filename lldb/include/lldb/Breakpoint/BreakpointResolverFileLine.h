@@ -20,18 +20,17 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class BreakpointResolverFileLine BreakpointResolverFileLine.h
-/// "lldb/Breakpoint/BreakpointResolverFileLine.h"
-/// @brief This class sets breakpoints by file and line.  Optionally, it will
-/// look for inlined
-/// instances of the file and line specification.
+/// "lldb/Breakpoint/BreakpointResolverFileLine.h" This class sets breakpoints
+/// by file and line.  Optionally, it will look for inlined instances of the
+/// file and line specification.
 //----------------------------------------------------------------------
 
 class BreakpointResolverFileLine : public BreakpointResolver {
 public:
   BreakpointResolverFileLine(Breakpoint *bkpt, const FileSpec &resolver,
-                             uint32_t line_no, lldb::addr_t m_offset,
-                             bool check_inlines, bool skip_prologue,
-                             bool exact_match);
+                             uint32_t line_no, uint32_t column,
+                             lldb::addr_t m_offset, bool check_inlines,
+                             bool skip_prologue, bool exact_match);
 
   static BreakpointResolver *
   CreateFromStructuredData(Breakpoint *bkpt,
@@ -63,13 +62,14 @@ public:
   lldb::BreakpointResolverSP CopyForBreakpoint(Breakpoint &breakpoint) override;
 
 protected:
-  void FilterContexts(SymbolContextList &sc_list);
+  void FilterContexts(SymbolContextList &sc_list, bool is_relative);
 
   friend class Breakpoint;
-  FileSpec m_file_spec;   // This is the file spec we are looking for.
-  uint32_t m_line_number; // This is the line number that we are looking for.
-  bool m_inlines; // This determines whether the resolver looks for inlined
-                  // functions or not.
+  FileSpec m_file_spec;   ///< This is the file spec we are looking for.
+  uint32_t m_line_number; ///< This is the line number that we are looking for.
+  uint32_t m_column;      ///< This is the column that we are looking for.
+  bool m_inlines; ///< This determines whether the resolver looks for inlined
+                  ///< functions or not.
   bool m_skip_prologue;
   bool m_exact_match;
 

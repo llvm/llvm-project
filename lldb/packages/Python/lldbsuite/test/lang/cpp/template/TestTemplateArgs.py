@@ -83,6 +83,7 @@ class TemplateArgsTestCase(TestBase):
             expr_result.GetType().GetName() == "int",
             'expr_result.GetType().GetName() == "int"')
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
     def test_template_template_args(self):
         frame = self.prepareProcess()
 
@@ -115,6 +116,7 @@ class TemplateArgsTestCase(TestBase):
     # parameters.
     @expectedFailureAll(bugnumber="llvm.org/pr28354", compiler="gcc")
     @expectedFailureAll(oslist=["windows"])
+    @expectedFailureAll
     def test_enum_args(self):
         frame = self.prepareProcess()
 

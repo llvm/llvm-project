@@ -156,6 +156,15 @@ public:
     SetPromptOnQuit(bool b);
 
     void
+    AllowExitCodeOnQuit(bool b);
+
+    bool
+    HasCustomQuitExitCode();
+
+    int
+    GetQuitStatus();
+
+    void
     ResolveCommand(const char *command_line, SBCommandReturnObject &result);
 
     bool

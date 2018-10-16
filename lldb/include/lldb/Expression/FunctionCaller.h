@@ -29,7 +29,7 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class FunctionCaller FunctionCaller.h "lldb/Expression/FunctionCaller.h"
-/// @brief Encapsulates a function that can be called.
+/// Encapsulates a function that can be called.
 ///
 /// A given FunctionCaller object can handle a single function signature.
 /// Once constructed, it can set up any number of concurrent calls to
@@ -42,8 +42,8 @@ namespace lldb_private {
 /// struct with the written arguments.  This method lets Clang handle the
 /// vagaries of function calling conventions.
 ///
-/// The simplest use of the FunctionCaller is to construct it with a
-/// function representative of the signature you want to use, then call
+/// The simplest use of the FunctionCaller is to construct it with a function
+/// representative of the signature you want to use, then call
 /// ExecuteFunction(ExecutionContext &, Stream &, Value &).
 ///
 /// If you need to reuse the arguments for several calls, you can call
@@ -53,8 +53,8 @@ namespace lldb_private {
 /// If you need to call the function on the thread plan stack, you can also
 /// call InsertFunction() followed by GetThreadPlanToCallFunction().
 ///
-/// Any of the methods that take arg_addr_ptr or arg_addr_ref can be passed
-/// a pointer set to LLDB_INVALID_ADDRESS and new structure will be allocated
+/// Any of the methods that take arg_addr_ptr or arg_addr_ref can be passed a
+/// pointer set to LLDB_INVALID_ADDRESS and new structure will be allocated
 /// and its address returned in that variable.
 ///
 /// Any of the methods that take arg_addr_ptr can be passed nullptr, and the
@@ -170,8 +170,8 @@ public:
                               DiagnosticManager &diagnostic_manager);
 
   //------------------------------------------------------------------
-  /// Insert an argument struct with a non-default function address and
-  /// non-default argument values
+  /// Insert an argument struct with a non-default function address and non-
+  /// default argument values
   ///
   /// @param[in] exe_ctx
   ///     The execution context to insert the function and its arguments
@@ -308,28 +308,25 @@ public:
 
   //------------------------------------------------------------------
   /// Return the function name that should be used for executing the
-  /// expression.  Text() should contain the definition of this
-  /// function.
+  /// expression.  Text() should contain the definition of this function.
   //------------------------------------------------------------------
   const char *FunctionName() override {
     return m_wrapper_function_name.c_str();
   }
 
   //------------------------------------------------------------------
-  /// Return the object that the parser should use when registering
-  /// local variables. May be nullptr if the Expression doesn't care.
+  /// Return the object that the parser should use when registering local
+  /// variables. May be nullptr if the Expression doesn't care.
   //------------------------------------------------------------------
   ExpressionVariableList *LocalVariables() { return nullptr; }
 
   //------------------------------------------------------------------
-  /// Return true if validation code should be inserted into the
-  /// expression.
+  /// Return true if validation code should be inserted into the expression.
   //------------------------------------------------------------------
   bool NeedsValidation() override { return false; }
 
   //------------------------------------------------------------------
-  /// Return true if external variables in the expression should be
-  /// resolved.
+  /// Return true if external variables in the expression should be resolved.
   //------------------------------------------------------------------
   bool NeedsVariableResolution() override { return false; }
 

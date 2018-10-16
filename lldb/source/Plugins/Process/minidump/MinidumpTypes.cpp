@@ -33,9 +33,6 @@ const MinidumpHeader *MinidumpHeader::Parse(llvm::ArrayRef<uint8_t> &data) {
       version != MinidumpHeaderConstants::Version)
     return nullptr;
 
-  // TODO check for max number of streams ?
-  // TODO more sanity checks ?
-
   return header;
 }
 
@@ -55,10 +52,9 @@ lldb_private::minidump::parseMinidumpString(llvm::ArrayRef<uint8_t> &data) {
     return llvm::None;
 
   auto source_start = reinterpret_cast<const llvm::UTF16 *>(data.data());
-  // source_length is the length of the string in bytes
-  // we need the length of the string in UTF-16 characters/code points (16 bits
-  // per char)
-  // that's why it's divided by 2
+  // source_length is the length of the string in bytes we need the length of
+  // the string in UTF-16 characters/code points (16 bits per char) that's why
+  // it's divided by 2
   const auto source_end = source_start + source_length / 2;
   // resize to worst case length
   result.resize(UNI_MAX_UTF8_BYTES_PER_CODE_POINT * source_length / 2);
@@ -85,10 +81,16 @@ const MinidumpThread *MinidumpThread::Parse(llvm::ArrayRef<uint8_t> &data) {
 
 llvm::ArrayRef<MinidumpThread>
 MinidumpThread::ParseThreadList(llvm::ArrayRef<uint8_t> &data) {
+  const auto orig_size = data.size();
   const llvm::support::ulittle32_t *thread_count;
   Status error = consumeObject(data, thread_count);
   if (error.Fail() || *thread_count * sizeof(MinidumpThread) > data.size())
     return {};
+
+  // Compilers might end up padding an extra 4 bytes depending on how the
+  // structure is padded by the compiler and the #pragma pack settings.
+  if (4 + *thread_count * sizeof(MinidumpThread) < orig_size)
+    data = data.drop_front(4);
 
   return llvm::ArrayRef<MinidumpThread>(
       reinterpret_cast<const MinidumpThread *>(data.data()), *thread_count);
@@ -161,12 +163,17 @@ const MinidumpModule *MinidumpModule::Parse(llvm::ArrayRef<uint8_t> &data) {
 
 llvm::ArrayRef<MinidumpModule>
 MinidumpModule::ParseModuleList(llvm::ArrayRef<uint8_t> &data) {
-
+  const auto orig_size = data.size();
   const llvm::support::ulittle32_t *modules_count;
   Status error = consumeObject(data, modules_count);
   if (error.Fail() || *modules_count * sizeof(MinidumpModule) > data.size())
     return {};
-
+  
+  // Compilers might end up padding an extra 4 bytes depending on how the
+  // structure is padded by the compiler and the #pragma pack settings.
+  if (4 + *modules_count * sizeof(MinidumpModule) < orig_size)
+    data = data.drop_front(4);
+  
   return llvm::ArrayRef<MinidumpModule>(
       reinterpret_cast<const MinidumpModule *>(data.data()), *modules_count);
 }
@@ -184,11 +191,17 @@ MinidumpExceptionStream::Parse(llvm::ArrayRef<uint8_t> &data) {
 
 llvm::ArrayRef<MinidumpMemoryDescriptor>
 MinidumpMemoryDescriptor::ParseMemoryList(llvm::ArrayRef<uint8_t> &data) {
+  const auto orig_size = data.size();
   const llvm::support::ulittle32_t *mem_ranges_count;
   Status error = consumeObject(data, mem_ranges_count);
   if (error.Fail() ||
       *mem_ranges_count * sizeof(MinidumpMemoryDescriptor) > data.size())
     return {};
+  
+  // Compilers might end up padding an extra 4 bytes depending on how the
+  // structure is padded by the compiler and the #pragma pack settings.
+  if (4 + *mem_ranges_count * sizeof(MinidumpMemoryDescriptor) < orig_size)
+    data = data.drop_front(4);
 
   return llvm::makeArrayRef(
       reinterpret_cast<const MinidumpMemoryDescriptor *>(data.data()),

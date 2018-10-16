@@ -16,6 +16,7 @@
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/CompilerType.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/lldb-private.h"
 
@@ -28,10 +29,10 @@ public:
   //------------------------------------------------------------------
   // Symbol file ability bits.
   //
-  // Each symbol file can claim to support one or more symbol file
-  // abilities. These get returned from SymbolFile::GetAbilities().
-  // These help us to determine which plug-in will be best to load
-  // the debug information found in files.
+  // Each symbol file can claim to support one or more symbol file abilities.
+  // These get returned from SymbolFile::GetAbilities(). These help us to
+  // determine which plug-in will be best to load the debug information found
+  // in files.
   //------------------------------------------------------------------
   enum Abilities {
     CompileUnits = (1u << 0),
@@ -150,10 +151,10 @@ public:
                                         SymbolContextList &sc_list);
   virtual uint32_t
   FindGlobalVariables(const ConstString &name,
-                      const CompilerDeclContext *parent_decl_ctx, bool append,
+                      const CompilerDeclContext *parent_decl_ctx,
                       uint32_t max_matches, VariableList &variables);
   virtual uint32_t FindGlobalVariables(const RegularExpression &regex,
-                                       bool append, uint32_t max_matches,
+                                       uint32_t max_matches,
                                        VariableList &variables);
   virtual uint32_t FindFunctions(const ConstString &name,
                                  const CompilerDeclContext *parent_decl_ctx,
@@ -195,6 +196,10 @@ public:
 
   ObjectFile *GetObjectFile() { return m_obj_file; }
   const ObjectFile *GetObjectFile() const { return m_obj_file; }
+
+  virtual std::vector<CallEdge> ParseCallEdgesInFunction(UserID func_id) {
+    return {};
+  }
 
   //------------------------------------------------------------------
   /// Notify the SymbolFile that the file addresses in the Sections
@@ -257,6 +262,7 @@ public:
 
   virtual bool SymbolContextShouldBeExcluded(const SymbolContext &sc,
                                              uint32_t actual_line);
+  virtual void Dump(Stream &s) {}
 
 protected:
   class SourceRange {

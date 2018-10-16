@@ -72,7 +72,7 @@ public:
 
   lldb::IOObjectSP GetReadObject() override { return m_read_sp; }
 
-  uint16_t GetListeningPort(uint32_t timeout_sec);
+  uint16_t GetListeningPort(const Timeout<std::micro> &timeout);
 
   bool GetChildProcessesInherit() const;
   void SetChildProcessesInherit(bool child_processes_inherit);
@@ -104,8 +104,8 @@ protected:
 
   Predicate<uint16_t>
       m_port_predicate; // Used when binding to port zero to wait for the thread
-                        // that creates the socket, binds and listens to resolve
-                        // the port number.
+                        // that creates the socket, binds and listens to
+                        // resolve the port number.
 
   Pipe m_pipe;
   std::recursive_mutex m_mutex;

@@ -15,6 +15,7 @@ class TestGoUserExpression(TestBase):
 
     @add_test_categories(['pyapi'])
     @skipIfRemote  # Not remote test suit ready
+    @skipIfFreeBSD  # Test hanging on FreeBSD - llvm.org/pr37194
     @skipUnlessGoInstalled
     def test_with_dsym_and_python_api(self):
         """Test GoASTUserExpress."""

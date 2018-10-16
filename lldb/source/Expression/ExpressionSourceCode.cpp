@@ -113,15 +113,15 @@ public:
       m_state = CURRENT_FILE_POPPED;
   }
 
-  // An entry is valid if it occurs before the current line in
-  // the current file.
+  // An entry is valid if it occurs before the current line in the current
+  // file.
   bool IsValidEntry(uint32_t line) {
     switch (m_state) {
     case CURRENT_FILE_NOT_YET_PUSHED:
       return true;
     case CURRENT_FILE_PUSHED:
-      // If we are in file included in the current file,
-      // the entry should be added.
+      // If we are in file included in the current file, the entry should be
+      // added.
       if (m_file_stack.back() != m_current_file)
         return true;
 
@@ -493,13 +493,11 @@ bool ExpressionSourceCode::GetText(
           if (is_simulator) {
             // The simulators look like the host OS to Process, but Platform
             // can the version out of an environment variable.
-            platform->GetOSVersion(major, minor, patch, process_sp.get());
-            os_vers << major << "." << minor;
-            if (patch < INT32_MAX)
-              os_vers << "." << patch;
+            os_vers << platform->GetOSVersion(process_sp.get()).getAsString();
           } else {
-            process_sp->GetHostOSVersion(major, minor, patch);
-            os_vers << major << "." << minor << "." << patch;
+	    llvm::VersionTuple version = 
+	      process_sp->GetHostOSVersion();
+	    os_vers << version.getAsString();
           }
         }
       }

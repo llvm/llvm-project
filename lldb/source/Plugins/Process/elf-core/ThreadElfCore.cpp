@@ -55,16 +55,9 @@ void ThreadElfCore::RefreshStateAfterStop() {
   GetRegisterContext()->InvalidateIfNeeded(false);
 }
 
-void ThreadElfCore::ClearStackFrames() {
-  Unwind *unwinder = GetUnwinder();
-  if (unwinder)
-    unwinder->Clear();
-  Thread::ClearStackFrames();
-}
-
 RegisterContextSP ThreadElfCore::GetRegisterContext() {
-  if (m_reg_context_sp.get() == NULL) {
-    m_reg_context_sp = CreateRegisterContextForFrame(NULL);
+  if (!m_reg_context_sp) {
+    m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
   }
   return m_reg_context_sp;
 }
@@ -84,7 +77,7 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
 
     ProcessElfCore *process = static_cast<ProcessElfCore *>(GetProcess().get());
     ArchSpec arch = process->GetArchitecture();
-    RegisterInfoInterface *reg_interface = NULL;
+    RegisterInfoInterface *reg_interface = nullptr;
 
     switch (arch.GetTriple().getOS()) {
     case llvm::Triple::FreeBSD: {
@@ -234,8 +227,10 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
     }
 
     reg_ctx_sp = m_thread_reg_ctx_sp;
-  } else if (m_unwinder_ap.get()) {
-    reg_ctx_sp = m_unwinder_ap->CreateRegisterContextForFrame(frame);
+  } else {
+    Unwind *unwinder = GetUnwinder();
+    if (unwinder != nullptr)
+      reg_ctx_sp = unwinder->CreateRegisterContextForFrame(frame);
   }
   return reg_ctx_sp;
 }
@@ -292,8 +287,8 @@ Status ELFLinuxPrStatus::Parse(const DataExtractor &data,
     return error;
   }
 
-  // Read field by field to correctly account for endianess
-  // of both the core dump and the platform running lldb.
+  // Read field by field to correctly account for endianess of both the core
+  // dump and the platform running lldb.
   offset_t offset = 0;
   si_signo = data.GetU32(&offset);
   si_code = data.GetU32(&offset);
@@ -340,7 +335,7 @@ size_t ELFLinuxPrPsInfo::GetSize(const lldb_private::ArchSpec &arch) {
       return sizeof(ELFLinuxPrPsInfo);
     return mips_linux_pr_psinfo_size_o32_n32;
   }
-  
+
   switch (arch.GetCore()) {
   case lldb_private::ArchSpec::eCore_s390x_generic:
   case lldb_private::ArchSpec::eCore_x86_64_x86_64:
@@ -382,9 +377,9 @@ Status ELFLinuxPrPsInfo::Parse(const DataExtractor &data,
     pr_uid = data.GetU32(&offset);
     pr_gid = data.GetU32(&offset);
   } else {
-  // 16 bit on 32 bit platforms, 32 bit on 64 bit platforms
-  pr_uid = data.GetMaxU64(&offset, data.GetAddressByteSize() >> 1);
-  pr_gid = data.GetMaxU64(&offset, data.GetAddressByteSize() >> 1);
+    // 16 bit on 32 bit platforms, 32 bit on 64 bit platforms
+    pr_uid = data.GetMaxU64(&offset, data.GetAddressByteSize() >> 1);
+    pr_gid = data.GetMaxU64(&offset, data.GetAddressByteSize() >> 1);
   }
 
   pr_pid = data.GetU32(&offset);

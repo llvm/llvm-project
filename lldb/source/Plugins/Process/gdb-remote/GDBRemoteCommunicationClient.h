@@ -121,6 +121,7 @@ public:
   ///     response was received.
   //------------------------------------------------------------------
   int SendEnvironmentPacket(char const *name_equal_value);
+  int SendEnvironment(const Environment &env);
 
   int SendLaunchArchPacket(const char *arch);
 
@@ -265,7 +266,7 @@ public:
 
   bool GetDefaultThreadId(lldb::tid_t &tid);
 
-  bool GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update);
+  llvm::VersionTuple GetOSVersion();
 
   bool GetOSBuildString(std::string &s);
 
@@ -354,6 +355,8 @@ public:
 
   bool GetQXferFeaturesReadSupported();
 
+  bool GetQXferMemoryMapReadSupported();
+
   LazyBool SupportsAllocDeallocMemory() // const
   {
     // Uncomment this to have lldb pretend the debug server doesn't respond to
@@ -401,8 +404,7 @@ public:
                        // the process to exit
       std::string
           *command_output, // Pass nullptr if you don't want the command output
-      uint32_t timeout_sec); // Timeout in seconds to wait for shell program to
-                             // finish
+      const Timeout<std::micro> &timeout);
 
   bool CalculateMD5(const FileSpec &file_spec, uint64_t &high, uint64_t &low);
 
@@ -544,6 +546,7 @@ protected:
   LazyBool m_supports_qXfer_libraries_read;
   LazyBool m_supports_qXfer_libraries_svr4_read;
   LazyBool m_supports_qXfer_features_read;
+  LazyBool m_supports_qXfer_memory_map_read;
   LazyBool m_supports_augmented_libraries_svr4_read;
   LazyBool m_supports_jThreadExtendedInfo;
   LazyBool m_supports_jLoadedDynamicLibrariesInfos;
@@ -570,9 +573,7 @@ protected:
 
   ArchSpec m_host_arch;
   ArchSpec m_process_arch;
-  uint32_t m_os_version_major;
-  uint32_t m_os_version_minor;
-  uint32_t m_os_version_update;
+  llvm::VersionTuple m_os_version;
   std::string m_os_build;
   std::string m_os_kernel;
   std::string m_hostname;
@@ -586,6 +587,9 @@ protected:
 
   bool m_supported_async_json_packets_is_valid;
   lldb_private::StructuredData::ObjectSP m_supported_async_json_packets_sp;
+
+  std::vector<MemoryRegionInfo> m_qXfer_memory_map;
+  bool m_qXfer_memory_map_loaded;
 
   bool GetCurrentProcessInfo(bool allow_lazy_pid = true);
 
@@ -608,6 +612,11 @@ protected:
                                 lldb::tid_t thread_id,
                                 llvm::MutableArrayRef<uint8_t> &buffer,
                                 size_t offset);
+
+  Status LoadQXferMemoryMap();
+
+  Status GetQXferMemoryMapRegionInfo(lldb::addr_t addr,
+                                     MemoryRegionInfo &region);
 
 private:
   DISALLOW_COPY_AND_ASSIGN(GDBRemoteCommunicationClient);

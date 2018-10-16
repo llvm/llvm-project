@@ -55,8 +55,8 @@ public:
   bool GetDescription(lldb::SBStream &description);
 
   //----------------------------------------------------------------------
-  // Returns true if the symbol is externally visible in the module that
-  // it is defined in
+  // Returns true if the symbol is externally visible in the module that it is
+  // defined in
   //----------------------------------------------------------------------
   bool IsExternal();
 

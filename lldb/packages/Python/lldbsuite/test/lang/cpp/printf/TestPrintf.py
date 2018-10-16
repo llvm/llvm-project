@@ -4,4 +4,4 @@ from lldbsuite.test import decorators
 lldbinline.MakeInlineTest(
     __file__, globals(), [
         decorators.expectedFailureAll(
-            bugnumber="rdar://problem/24599697")])
+            bugnumber="llvm.org/PR36715")])

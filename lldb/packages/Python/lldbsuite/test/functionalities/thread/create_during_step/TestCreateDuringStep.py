@@ -90,7 +90,7 @@ class CreateDuringStepTestCase(TestBase):
         target = self.dbg.GetSelectedTarget()
 
         # This should create a breakpoint in the stepping thread.
-        self.bkpt = target.BreakpointCreateByLocation("main.cpp", self.breakpoint) 
+        self.bkpt = target.BreakpointCreateByLocation("main.cpp", self.breakpoint)
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)

@@ -39,10 +39,35 @@ class TestResilience(TestBase):
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
     @decorators.skipIf(debug_info=decorators.no_match("dsym"))
-    def test_cross_module_extension(self):
+    def test_cross_module_extension_a_a(self):
         """Test that LLDB can debug across resilient boundaries"""
         self.build()
-        self.do_test()
+        self.doTestWithFlavor("a", "a")
+
+    @decorators.skipUnlessDarwin
+    @decorators.swiftTest
+    @decorators.skipIf(debug_info=decorators.no_match("dsym"))
+    def test_cross_module_extension_a_b(self):
+        """Test that LLDB can debug across resilient boundaries"""
+        self.build()
+        self.doTestWithFlavor("a", "b")
+
+    @decorators.skipUnlessDarwin
+    @decorators.swiftTest
+    @decorators.skipIf(debug_info=decorators.no_match("dsym"))
+    def test_cross_module_extension_b_a(self):
+        """Test that LLDB can debug across resilient boundaries"""
+        self.build()
+        self.doTestWithFlavor("b", "a")
+
+    @decorators.skipUnlessDarwin
+    @decorators.swiftTest
+    @decorators.skipIf(debug_info=decorators.no_match("dsym"))
+    def test_cross_module_extension_b_b(self):
+        """Test that LLDB can debug across resilient boundaries"""
+        self.build()
+        self.doTestWithFlavor("b", "b")
+
 
     def setUp(self):
         TestBase.setUp(self)
@@ -75,38 +100,21 @@ class TestResilience(TestBase):
 
         source_name = "main.swift"
         source_spec = lldb.SBFileSpec(source_name)
+        _, process, _, breakpoint = lldbutil.run_to_source_breakpoint(
+            self, "break here", source_spec, exe_name=exe_path)
 
-        # Create the target
-        target = self.dbg.CreateTarget(exe_path)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateBySourceRegex('break', source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 1, VALID_BREAKPOINT)
-
-        process = target.LaunchSimple(None, None, os.getcwd())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
         # FIXME: this should work with all flavors!
         if exe_flavor == "a":
             self.expect("target var global", DATA_TYPES_DISPLAYED_CORRECTLY,
                         substrs=["a = 1"])
-        process.Continue()
-
+        threads = lldbutil.continue_to_breakpoint(process, breakpoint)
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
+        frame = threads[0].frames[0]
         
         # Try 'frame variable'
-        var = self.frame.FindVariable("s")
+        var = frame.FindVariable("s")
         child = var.GetChildMemberWithName("a")
         lldbutil.check_variable(self, child, False, value="1")
 
@@ -120,16 +128,6 @@ class TestResilience(TestBase):
         process.Kill()
 
         self.cleanupSymlinks()
-
-    def do_test(self):
-        """Test that LLDB can debug across resilient boundaries"""
-        def cleanup():
-            execute_command("make cleanup")
-        self.addTearDownHook(cleanup)
-
-        for exe_flavor in ["a", "b"]:
-            for mod_flavor in ["a", "b"]:
-                self.doTestWithFlavor(exe_flavor, mod_flavor)
 
 if __name__ == '__main__':
     import atexit

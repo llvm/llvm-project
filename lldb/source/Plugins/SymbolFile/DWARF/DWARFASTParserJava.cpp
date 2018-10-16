@@ -9,7 +9,7 @@
 
 #include "DWARFASTParserJava.h"
 #include "DWARFAttribute.h"
-#include "DWARFCompileUnit.h"
+#include "DWARFUnit.h"
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFDeclContext.h"
@@ -324,7 +324,8 @@ lldb::TypeSP DWARFASTParserJava::ParseTypeFromDWARF(
   dw_tag_t sc_parent_tag = sc_parent_die.Tag();
 
   SymbolContextScope *symbol_context_scope = nullptr;
-  if (sc_parent_tag == DW_TAG_compile_unit) {
+  if (sc_parent_tag == DW_TAG_compile_unit ||
+      sc_parent_tag == DW_TAG_partial_unit) {
     symbol_context_scope = sc.comp_unit;
   } else if (sc.function != nullptr && sc_parent_die) {
     symbol_context_scope =
@@ -418,7 +419,7 @@ bool DWARFASTParserJava::CompleteTypeFromDWARF(
 
 void DWARFASTParserJava::ParseChildMembers(const DWARFDIE &parent_die,
                                            CompilerType &compiler_type) {
-  DWARFCompileUnit *dwarf_cu = parent_die.GetCU();
+  DWARFUnit *dwarf_cu = parent_die.GetCU();
   for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
        die = die.GetSibling()) {
     switch (die.Tag()) {

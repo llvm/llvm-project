@@ -24,6 +24,7 @@
 // Project includes
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Stream.h"
+#include "llvm/Support/DJB.h"
 
 class MappedHash {
 public:
@@ -32,22 +33,10 @@ public:
                           // by the ELF GNU_HASH sections
   };
 
-  static uint32_t HashStringUsingDJB(const char *s) {
-    uint32_t h = 5381;
-
-    for (unsigned char c = *s; c; c = *++s)
-      h = ((h << 5) + h) + c;
-
-    return h;
-  }
-
-  static uint32_t HashString(uint32_t hash_function, const char *s) {
-    if (!s)
-      return 0;
-
+  static uint32_t HashString(uint32_t hash_function, llvm::StringRef s) {
     switch (hash_function) {
     case MappedHash::eHashFunctionDJB:
-      return HashStringUsingDJB(s);
+      return llvm::djbHash(s);
 
     default:
       break;
@@ -152,164 +141,6 @@ public:
     //        Write (int fd);
   };
 
-  template <typename __KeyType, class __HeaderDataType, class __ValueType>
-  class ExportTable {
-  public:
-    typedef __HeaderDataType HeaderDataType;
-    typedef Header<HeaderDataType> HeaderType;
-    typedef __KeyType KeyType;
-    typedef __ValueType ValueType;
-
-    struct Entry {
-      uint32_t hash;
-      KeyType key;
-      ValueType value;
-    };
-
-    typedef std::vector<ValueType> ValueArrayType;
-
-    typedef std::map<KeyType, ValueArrayType> HashData;
-    // Map a name hash to one or more name infos
-    typedef std::map<uint32_t, HashData> HashToHashData;
-
-    virtual KeyType GetKeyForStringType(const char *cstr) const = 0;
-
-    virtual size_t GetByteSize(const HashData &key_to_key_values) = 0;
-
-    virtual bool WriteHashData(const HashData &hash_data,
-                               lldb_private::Stream &ostrm) = 0;
-    //
-    void AddEntry(const char *cstr, const ValueType &value) {
-      Entry entry;
-      entry.hash = MappedHash::HashString(eHashFunctionDJB, cstr);
-      entry.key = GetKeyForStringType(cstr);
-      entry.value = value;
-      m_entries.push_back(entry);
-    }
-
-    void Save(const HeaderDataType &header_data, lldb_private::Stream &ostrm) {
-      if (m_entries.empty())
-        return;
-
-      const uint32_t num_entries = m_entries.size();
-      uint32_t i = 0;
-
-      HeaderType header;
-
-      header.magic = HASH_MAGIC;
-      header.version = 1;
-      header.hash_function = eHashFunctionDJB;
-      header.bucket_count = 0;
-      header.hashes_count = 0;
-      header.prologue_length = header_data.GetByteSize();
-
-      // We need to figure out the number of unique hashes first before we can
-      // calculate the number of buckets we want to use.
-      typedef std::vector<uint32_t> hash_coll;
-      hash_coll unique_hashes;
-      unique_hashes.resize(num_entries);
-      for (i = 0; i < num_entries; ++i)
-        unique_hashes[i] = m_entries[i].hash;
-      std::sort(unique_hashes.begin(), unique_hashes.end());
-      hash_coll::iterator pos =
-          std::unique(unique_hashes.begin(), unique_hashes.end());
-      const size_t num_unique_hashes =
-          std::distance(unique_hashes.begin(), pos);
-
-      if (num_unique_hashes > 1024)
-        header.bucket_count = num_unique_hashes / 4;
-      else if (num_unique_hashes > 16)
-        header.bucket_count = num_unique_hashes / 2;
-      else
-        header.bucket_count = num_unique_hashes;
-      if (header.bucket_count == 0)
-        header.bucket_count = 1;
-
-      std::vector<HashToHashData> hash_buckets;
-      std::vector<uint32_t> hash_indexes(header.bucket_count, 0);
-      std::vector<uint32_t> hash_values;
-      std::vector<uint32_t> hash_offsets;
-      hash_buckets.resize(header.bucket_count);
-      uint32_t bucket_entry_empties = 0;
-      // StreamString hash_file_data(Stream::eBinary,
-      // dwarf->GetObjectFile()->GetAddressByteSize(),
-      // dwarf->GetObjectFile()->GetByteSize());
-
-      // Push all of the hashes into their buckets and create all bucket
-      // entries all populated with data.
-      for (i = 0; i < num_entries; ++i) {
-        const uint32_t hash = m_entries[i].hash;
-        const uint32_t bucket_idx = hash % header.bucket_count;
-        const uint32_t strp_offset = m_entries[i].str_offset;
-        const uint32_t die_offset = m_entries[i].die_offset;
-        hash_buckets[bucket_idx][hash][strp_offset].push_back(die_offset);
-      }
-
-      // Now for each bucket we write the bucket value which is the
-      // number of hashes and the hash index encoded into a single
-      // 32 bit unsigned integer.
-      for (i = 0; i < header.bucket_count; ++i) {
-        HashToHashData &bucket_entry = hash_buckets[i];
-
-        if (bucket_entry.empty()) {
-          // Empty bucket
-          ++bucket_entry_empties;
-          hash_indexes[i] = UINT32_MAX;
-        } else {
-          const uint32_t hash_value_index = hash_values.size();
-          uint32_t hash_count = 0;
-          typename HashToHashData::const_iterator pos, end = bucket_entry.end();
-          for (pos = bucket_entry.begin(); pos != end; ++pos) {
-            hash_values.push_back(pos->first);
-            hash_offsets.push_back(GetByteSize(pos->second));
-            ++hash_count;
-          }
-
-          hash_indexes[i] = hash_value_index;
-        }
-      }
-      header.hashes_count = hash_values.size();
-
-      // Write the header out now that we have the hash_count
-      header.Write(ostrm);
-
-      // Now for each bucket we write the start index of the hashes
-      // for the current bucket, or UINT32_MAX if the bucket is empty
-      for (i = 0; i < header.bucket_count; ++i) {
-        ostrm.PutHex32(hash_indexes[i]);
-      }
-
-      // Now we need to write out all of the hash values
-      for (i = 0; i < header.hashes_count; ++i) {
-        ostrm.PutHex32(hash_values[i]);
-      }
-
-      // Now we need to write out all of the hash data offsets,
-      // there is an offset for each hash in the hashes array
-      // that was written out above
-      for (i = 0; i < header.hashes_count; ++i) {
-        ostrm.PutHex32(hash_offsets[i]);
-      }
-
-      // Now we write the data for each hash and verify we got the offset
-      // correct above...
-      for (i = 0; i < header.bucket_count; ++i) {
-        HashToHashData &bucket_entry = hash_buckets[i];
-
-        typename HashToHashData::const_iterator pos, end = bucket_entry.end();
-        for (pos = bucket_entry.begin(); pos != end; ++pos) {
-          if (!bucket_entry.empty()) {
-            WriteHashData(pos->second);
-          }
-        }
-      }
-    }
-
-  protected:
-    typedef std::vector<Entry> collection;
-    collection m_entries;
-  };
-
   // A class for reading and using a saved hash table from a block of data
   // in memory
   template <typename __KeyType, class __HeaderType, class __HashData>
@@ -377,8 +208,8 @@ public:
       return result;
     }
 
-    bool Find(const char *name, Pair &pair) const {
-      if (!name || !name[0])
+    bool Find(llvm::StringRef name, Pair &pair) const {
+      if (name.empty())
         return false;
 
       if (IsValid()) {
@@ -425,13 +256,12 @@ public:
       return false;
     }
 
-    // This method must be implemented in any subclasses.
-    // The KeyType is user specified and must somehow result in a string
-    // value. For example, the KeyType might be a string offset in a string
-    // table and subclasses can store their string table as a member of the
-    // subclass and return a valie "const char *" given a "key". The value
-    // could also be a C string pointer, in which case just returning "key"
-    // will suffice.
+    // This method must be implemented in any subclasses. The KeyType is user
+    // specified and must somehow result in a string value. For example, the
+    // KeyType might be a string offset in a string table and subclasses can
+    // store their string table as a member of the subclass and return a valie
+    // "const char *" given a "key". The value could also be a C string
+    // pointer, in which case just returning "key" will suffice.
     virtual const char *GetStringForKeyType(KeyType key) const = 0;
 
     virtual bool ReadHashData(uint32_t hash_data_offset,
@@ -439,20 +269,19 @@ public:
 
     // This method must be implemented in any subclasses and it must try to
     // read one "Pair" at the offset pointed to by the "hash_data_offset_ptr"
-    // parameter. This offset should be updated as bytes are consumed and
-    // a value "Result" enum should be returned. If the "name" matches the
-    // full name for the "pair.key" (which must be filled in by this call),
-    // then the HashData in the pair ("pair.value") should be extracted and
-    // filled in and "eResultKeyMatch" should be returned. If "name" doesn't
-    // match this string for the key, then "eResultKeyMismatch" should be
-    // returned and all data for the current HashData must be consumed or
-    // skipped and the "hash_data_offset_ptr" offset needs to be updated to
-    // point to the next HashData. If the end of the HashData objects for
-    // a given hash value have been reached, then "eResultEndOfHashData"
-    // should be returned. If anything else goes wrong during parsing,
-    // return "eResultError" and the corresponding "Find()" function will
-    // be canceled and return false.
-    virtual Result GetHashDataForName(const char *name,
+    // parameter. This offset should be updated as bytes are consumed and a
+    // value "Result" enum should be returned. If the "name" matches the full
+    // name for the "pair.key" (which must be filled in by this call), then the
+    // HashData in the pair ("pair.value") should be extracted and filled in
+    // and "eResultKeyMatch" should be returned. If "name" doesn't match this
+    // string for the key, then "eResultKeyMismatch" should be returned and all
+    // data for the current HashData must be consumed or skipped and the
+    // "hash_data_offset_ptr" offset needs to be updated to point to the next
+    // HashData. If the end of the HashData objects for a given hash value have
+    // been reached, then "eResultEndOfHashData" should be returned. If
+    // anything else goes wrong during parsing, return "eResultError" and the
+    // corresponding "Find()" function will be canceled and return false.
+    virtual Result GetHashDataForName(llvm::StringRef name,
                                       lldb::offset_t *hash_data_offset_ptr,
                                       Pair &pair) const = 0;
 

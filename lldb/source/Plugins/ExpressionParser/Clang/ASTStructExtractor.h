@@ -20,20 +20,19 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class ASTStructExtractor ASTStructExtractor.h
-/// "lldb/Expression/ASTStructExtractor.h"
-/// @brief Extracts and describes the argument structure for a wrapped function.
+/// "lldb/Expression/ASTStructExtractor.h" Extracts and describes the argument
+/// structure for a wrapped function.
 ///
 /// This pass integrates with ClangFunctionCaller, which calls functions with
-/// custom
-/// sets of arguments.  To avoid having to implement the full calling convention
-/// for the target's architecture, ClangFunctionCaller writes a simple wrapper
-/// function that takes a pointer to an argument structure that contains room
-/// for the address of the function to be called, the values of all its
-/// arguments, and room for the function's return value.
+/// custom sets of arguments.  To avoid having to implement the full calling
+/// convention for the target's architecture, ClangFunctionCaller writes a
+/// simple wrapper function that takes a pointer to an argument structure that
+/// contains room for the address of the function to be called, the values of
+/// all its arguments, and room for the function's return value.
 ///
-/// The definition of this struct is itself in the body of the wrapper function,
-/// so Clang does the structure layout itself.  ASTStructExtractor reads through
-/// the AST for the wrapper function and finds the struct.
+/// The definition of this struct is itself in the body of the wrapper
+/// function, so Clang does the structure layout itself.  ASTStructExtractor
+/// reads through the AST for the wrapper function and finds the struct.
 //----------------------------------------------------------------------
 class ASTStructExtractor : public clang::SemaConsumer {
 public:
@@ -73,8 +72,8 @@ public:
   void Initialize(clang::ASTContext &Context) override;
 
   //----------------------------------------------------------------------
-  /// Examine a list of Decls to find the function $__lldb_expr and
-  /// transform its code
+  /// Examine a list of Decls to find the function $__lldb_expr and transform
+  /// its code
   ///
   /// @param[in] D
   ///     The list of Decls to search.  These may contain LinkageSpecDecls,

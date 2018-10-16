@@ -35,16 +35,7 @@ class SwiftTypeMetadataTest(TestBase):
 
     def var_commands(self):
         """Test that LLDB can effectively use the type metadata to reconstruct dynamic types for Swift"""
-        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
-        lldbutil.run_break_set_by_source_regexp(self, "// Set breakpoint here")
-
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
-
+        lldbutil.run_to_source_breakpoint(self, "// Set breakpoint here", lldb.SBFileSpec("main.swift"))
         self.expect("frame select 0", substrs=['foo', 'x', 'ivar'])
         self.expect(
             "frame variable -d run -- x",

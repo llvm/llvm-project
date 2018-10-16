@@ -80,6 +80,7 @@ private:
                                                  // if ShouldStopHere told us
                                                  // to.
   Function *m_immediate_step_from_function;
+  std::vector<lldb::StackFrameSP> m_stepped_past_frames;
   lldb::ValueObjectSP m_return_valobj_sp;
   bool m_is_swift_error_value;
   bool m_calculate_return_value;

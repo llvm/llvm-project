@@ -45,7 +45,6 @@
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -61,11 +60,12 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 
-#include "../source/Commands/CommandObjectBreakpoint.h"
+#include "Commands/CommandObjectBreakpoint.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
@@ -85,8 +85,8 @@ Status AttachToProcess(ProcessAttachInfo &attach_info, Target &target) {
     const auto state = process_sp->GetState();
     if (process_sp->IsAlive() && state == eStateConnected) {
       // If we are already connected, then we have already specified the
-      // listener, so if a valid listener is supplied, we need to error out
-      // to let the client know.
+      // listener, so if a valid listener is supplied, we need to error out to
+      // let the client know.
       if (attach_info.GetListener())
         return Status("process is connected and already has a listener, pass "
                       "empty listener");
@@ -203,7 +203,27 @@ SBStructuredData SBTarget::GetStatistics() {
   return data;
 }
 
+void SBTarget::SetCollectingStats(bool v) {
+  TargetSP target_sp(GetSP());
+  if (!target_sp)
+    return;
+  return target_sp->SetCollectingStats(v);
+}
+
+bool SBTarget::GetCollectingStats() {
+  TargetSP target_sp(GetSP());
+  if (!target_sp)
+    return false;
+  return target_sp->GetCollectingStats();
+}
+
+
 SBProcess SBTarget::LoadCore(const char *core_file) {
+  lldb::SBError error; // Ignored
+  return LoadCore(core_file, error);
+}
+
+SBProcess SBTarget::LoadCore(const char *core_file, lldb::SBError &error) {
   SBProcess sb_process;
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -211,9 +231,14 @@ SBProcess SBTarget::LoadCore(const char *core_file) {
     ProcessSP process_sp(target_sp->CreateProcess(
         target_sp->GetDebugger().GetListener(), "", &filespec));
     if (process_sp) {
-      process_sp->LoadCore();
-      sb_process.SetSP(process_sp);
+      error.SetError(process_sp->LoadCore());
+      if (error.Success())
+        sb_process.SetSP(process_sp);
+    } else {
+      error.SetErrorString("Failed to create the process");
     }
+  } else {
+    error.SetErrorString("SBTarget is invalid");
   }
   return sb_process;
 }
@@ -289,8 +314,8 @@ SBProcess SBTarget::Launch(SBListener &listener, char const **argv,
 
     if (state == eStateConnected) {
       // If we are already connected, then we have already specified the
-      // listener, so if a valid listener is supplied, we need to error out
-      // to let the client know.
+      // listener, so if a valid listener is supplied, we need to error out to
+      // let the client know.
       if (listener.IsValid()) {
         error.SetErrorString("process is connected and already has a listener, "
                              "pass empty listener");
@@ -312,7 +337,7 @@ SBProcess SBTarget::Launch(SBListener &listener, char const **argv,
     if (argv)
       launch_info.GetArguments().AppendArguments(argv);
     if (envp)
-      launch_info.GetEnvironmentEntries().SetArguments(envp);
+      launch_info.GetEnvironment() = Environment(envp);
 
     if (listener.IsValid())
       launch_info.SetListener(listener.GetSP());
@@ -362,7 +387,7 @@ SBProcess SBTarget::Launch(SBLaunchInfo &sb_launch_info, SBError &error) {
       }
     }
 
-    lldb_private::ProcessLaunchInfo &launch_info = sb_launch_info.ref();
+    lldb_private::ProcessLaunchInfo launch_info = sb_launch_info.ref();
 
     if (!launch_info.GetExecutableFile()) {
       Module *exe_module = target_sp->GetExecutableModulePointer();
@@ -375,6 +400,7 @@ SBProcess SBTarget::Launch(SBLaunchInfo &sb_launch_info, SBError &error) {
       launch_info.GetArchitecture() = arch_spec;
 
     error.SetError(target_sp->Launch(launch_info, NULL));
+    sb_launch_info.set_ref(launch_info);
     sb_process.SetSP(target_sp->GetProcessSP());
   } else {
     error.SetErrorString("SBTarget is invalid");
@@ -491,7 +517,8 @@ lldb::SBProcess SBTarget::AttachToProcessWithName(
 
   if (name && target_sp) {
     ProcessAttachInfo attach_info;
-    attach_info.GetExecutableFile().SetFile(name, false);
+    attach_info.GetExecutableFile().SetFile(name, false,
+                                            FileSpec::Style::native);
     attach_info.SetWaitForLaunch(wait_for);
     if (listener.IsValid())
       attach_info.SetListener(listener.GetSP());
@@ -682,6 +709,13 @@ SBBreakpoint
 SBTarget::BreakpointCreateByLocation(const SBFileSpec &sb_file_spec,
                                      uint32_t line, lldb::addr_t offset,
                                      SBFileSpecList &sb_module_list) {
+  return BreakpointCreateByLocation(sb_file_spec, line, 0, offset,
+                                    sb_module_list);
+}
+
+SBBreakpoint SBTarget::BreakpointCreateByLocation(
+    const SBFileSpec &sb_file_spec, uint32_t line, uint32_t column,
+    lldb::addr_t offset, SBFileSpecList &sb_module_list) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBBreakpoint sb_bp;
@@ -699,8 +733,8 @@ SBTarget::BreakpointCreateByLocation(const SBFileSpec &sb_file_spec,
       module_list = sb_module_list.get();
     }
     sb_bp = target_sp->CreateBreakpoint(
-        module_list, *sb_file_spec, line, offset, check_inlines, skip_prologue,
-        internal, hardware, move_to_nearest_code);
+        module_list, *sb_file_spec, line, column, offset, check_inlines,
+        skip_prologue, internal, hardware, move_to_nearest_code);
   }
 
   if (log) {
@@ -1483,10 +1517,10 @@ lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
   if (target_sp) {
     ModuleSpec module_spec;
     if (path)
-      module_spec.GetFileSpec().SetFile(path, false);
+      module_spec.GetFileSpec().SetFile(path, false, FileSpec::Style::native);
 
     if (uuid_cstr)
-      module_spec.GetUUID().SetFromCString(uuid_cstr);
+      module_spec.GetUUID().SetFromStringRef(uuid_cstr);
 
     if (triple)
       module_spec.GetArchitecture() = Platform::GetAugmentedArchSpec(
@@ -1495,7 +1529,8 @@ lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
       module_spec.GetArchitecture() = target_sp->GetArchitecture();
 
     if (symfile)
-      module_spec.GetSymbolFileSpec().SetFile(symfile, false);
+      module_spec.GetSymbolFileSpec().SetFile(symfile, false,
+                                              FileSpec::Style::native);
 
     sb_module.SetSP(target_sp->GetSharedModule(module_spec));
   }
@@ -1557,6 +1592,18 @@ SBModule SBTarget::FindModule(const SBFileSpec &sb_file_spec) {
   return sb_module;
 }
 
+SBSymbolContextList
+SBTarget::FindCompileUnits(const SBFileSpec &sb_file_spec) {
+  SBSymbolContextList sb_sc_list;
+  const TargetSP target_sp(GetSP());
+  if (target_sp && sb_file_spec.IsValid()) {
+    const bool append = true;
+    target_sp->GetImages().FindCompileUnits(*sb_file_spec,
+                                            append, *sb_sc_list);
+  }
+  return sb_sc_list;
+}
+
 lldb::ByteOrder SBTarget::GetByteOrder() {
   TargetSP target_sp(GetSP());
   if (target_sp)
@@ -1568,9 +1615,9 @@ const char *SBTarget::GetTriple() {
   TargetSP target_sp(GetSP());
   if (target_sp) {
     std::string triple(target_sp->GetArchitecture().GetTriple().str());
-    // Unique the string so we don't run into ownership issues since
-    // the const strings put the string into the string pool once and
-    // the strings never comes out
+    // Unique the string so we don't run into ownership issues since the const
+    // strings put the string into the string pool once and the strings never
+    // comes out
     ConstString const_triple(triple.c_str());
     return const_triple.GetCString();
   }
@@ -1720,8 +1767,8 @@ lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {
       }
     }
 
-    // Didn't find the type in the symbols; try the Objective-C runtime
-    // if one is installed
+    // Didn't find the type in the symbols; try the Objective-C runtime if one
+    // is installed
 
     ProcessSP process_sp(target_sp->GetProcessSP());
 
@@ -1829,9 +1876,8 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
   TargetSP target_sp(GetSP());
   if (name && target_sp) {
     VariableList variable_list;
-    const bool append = true;
     const uint32_t match_count = target_sp->GetImages().FindGlobalVariables(
-        ConstString(name), append, max_matches, variable_list);
+        ConstString(name), max_matches, variable_list);
 
     if (match_count > 0) {
       ExecutionContextScope *exe_scope = target_sp->GetProcessSP().get();
@@ -1858,23 +1904,22 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
   if (name && target_sp) {
     llvm::StringRef name_ref(name);
     VariableList variable_list;
-    const bool append = true;
 
     std::string regexstr;
     uint32_t match_count;
     switch (matchtype) {
     case eMatchTypeNormal:
       match_count = target_sp->GetImages().FindGlobalVariables(
-          ConstString(name), append, max_matches, variable_list);
+          ConstString(name), max_matches, variable_list);
       break;
     case eMatchTypeRegex:
       match_count = target_sp->GetImages().FindGlobalVariables(
-          RegularExpression(name_ref), append, max_matches, variable_list);
+          RegularExpression(name_ref), max_matches, variable_list);
       break;
     case eMatchTypeStartsWith:
       regexstr = llvm::Regex::escape(name) + ".*";
       match_count = target_sp->GetImages().FindGlobalVariables(
-          RegularExpression(regexstr), append, max_matches, variable_list);
+          RegularExpression(regexstr), max_matches, variable_list);
       break;
     }
 
@@ -2242,7 +2287,7 @@ lldb::SBLaunchInfo SBTarget::GetLaunchInfo() const {
   lldb::SBLaunchInfo launch_info(NULL);
   TargetSP target_sp(GetSP());
   if (target_sp)
-    launch_info.ref() = m_opaque_sp->GetProcessLaunchInfo();
+    launch_info.set_ref(m_opaque_sp->GetProcessLaunchInfo());
   return launch_info;
 }
 

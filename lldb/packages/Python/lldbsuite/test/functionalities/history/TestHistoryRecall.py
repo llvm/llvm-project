@@ -17,7 +17,7 @@ class TestHistoryRecall(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # If your test case doesn't stress debug info, the 
+    # If your test case doesn't stress debug info, the
     # set this to true.  That way it won't be run once for
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
@@ -35,7 +35,7 @@ class TestHistoryRecall(TestBase):
         result = lldb.SBCommandReturnObject()
         interp.HandleCommand("command history", result, True)
         interp.HandleCommand("platform list", result, True)
-        
+
         interp.HandleCommand("!0", result, False)
         self.assertTrue(result.Succeeded(), "!0 command did not work: %s"%(result.GetError()))
         self.assertTrue("command history" in result.GetOutput(), "!0 didn't rerun command history")

@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h" // for StringMap
 #include "llvm/ADT/StringRef.h" // for StringRef, StringLiteral
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/RWMutex.h"
@@ -73,10 +74,10 @@ public:
         : log_ptr(nullptr), categories(categories),
           default_flags(default_flags) {}
 
-    // This function is safe to call at any time
-    // If the channel is disabled after (or concurrently with) this function
-    // returning a non-null Log pointer, it is still safe to attempt to write to
-    // the Log object -- the output will be discarded.
+    // This function is safe to call at any time If the channel is disabled
+    // after (or concurrently with) this function returning a non-null Log
+    // pointer, it is still safe to attempt to write to the Log object -- the
+    // output will be discarded.
     Log *GetLogIfAll(uint32_t mask) {
       Log *log = log_ptr.load(std::memory_order_relaxed);
       if (log && log->GetMask().AllSet(mask))
@@ -84,10 +85,10 @@ public:
       return nullptr;
     }
 
-    // This function is safe to call at any time
-    // If the channel is disabled after (or concurrently with) this function
-    // returning a non-null Log pointer, it is still safe to attempt to write to
-    // the Log object -- the output will be discarded.
+    // This function is safe to call at any time If the channel is disabled
+    // after (or concurrently with) this function returning a non-null Log
+    // pointer, it is still safe to attempt to write to the Log object -- the
+    // output will be discarded.
     Log *GetLogIfAny(uint32_t mask) {
       Log *log = log_ptr.load(std::memory_order_relaxed);
       if (log && log->GetMask().AnySet(mask))
@@ -140,6 +141,15 @@ public:
     Format(file, function, llvm::formatv(format, std::forward<Args>(args)...));
   }
 
+  template <typename... Args>
+  void FormatError(llvm::Error error, llvm::StringRef file,
+                   llvm::StringRef function, const char *format,
+                   Args &&... args) {
+    Format(file, function,
+           llvm::formatv(format, llvm::toString(std::move(error)),
+                         std::forward<Args>(args)...));
+  }
+
   void Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
   void VAPrintf(const char *format, va_list args);
@@ -161,8 +171,8 @@ public:
 private:
   Channel &m_channel;
 
-  // The mutex makes sure enable/disable operations are thread-safe. The options
-  // and mask variables are atomic to enable their reading in
+  // The mutex makes sure enable/disable operations are thread-safe. The
+  // options and mask variables are atomic to enable their reading in
   // Channel::GetLogIfAny without taking the mutex to speed up the fast path.
   // Their modification however, is still protected by this mutex.
   llvm::sys::RWMutex m_mutex;
@@ -208,14 +218,27 @@ private:
   do {                                                                         \
     ::lldb_private::Log *log_private = (log);                                  \
     if (log_private)                                                           \
-      log_private->Format(__FILE__, __FUNCTION__, __VA_ARGS__);                \
+      log_private->Format(__FILE__, __func__, __VA_ARGS__);                    \
   } while (0)
 
 #define LLDB_LOGV(log, ...)                                                    \
   do {                                                                         \
     ::lldb_private::Log *log_private = (log);                                  \
     if (log_private && log_private->GetVerbose())                              \
-      log_private->Format(__FILE__, __FUNCTION__, __VA_ARGS__);                \
+      log_private->Format(__FILE__, __func__, __VA_ARGS__);                    \
+  } while (0)
+
+// Write message to log, if error is set. In the log message refer to the error
+// with {0}. Error is cleared regardless of whether logging is enabled.
+#define LLDB_LOG_ERROR(log, error, ...)                                        \
+  do {                                                                         \
+    ::lldb_private::Log *log_private = (log);                                  \
+    ::llvm::Error error_private = (error);                                     \
+    if (log_private && error_private) {                                        \
+      log_private->FormatError(::std::move(error_private), __FILE__, __func__, \
+                               __VA_ARGS__);                                   \
+    } else                                                                     \
+      ::llvm::consumeError(::std::move(error_private));                        \
   } while (0)
 
 #endif // LLDB_UTILITY_LOG_H

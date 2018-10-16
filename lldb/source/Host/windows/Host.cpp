@@ -35,8 +35,7 @@ using namespace lldb_private;
 namespace {
 bool GetTripleForProcess(const FileSpec &executable, llvm::Triple &triple) {
   // Open the PE File as a binary file, and parse just enough information to
-  // determine the
-  // machine type.
+  // determine the machine type.
   File imageBinary(executable.GetPath().c_str(), File::eOpenOptionRead,
                    lldb::eFilePermissionsUserRead);
   imageBinary.SeekFromStart(0x3c);
@@ -63,8 +62,8 @@ bool GetTripleForProcess(const FileSpec &executable, llvm::Triple &triple) {
 }
 
 bool GetExecutableForProcess(const AutoHandle &handle, std::string &path) {
-  // Get the process image path.  MAX_PATH isn't long enough, paths can actually
-  // be up to 32KB.
+  // Get the process image path.  MAX_PATH isn't long enough, paths can
+  // actually be up to 32KB.
   std::vector<wchar_t> buffer(PATH_MAX);
   DWORD dwSize = buffer.size();
   if (!::QueryFullProcessImageNameW(handle.get(), 0, &buffer[0], &dwSize))
@@ -75,10 +74,9 @@ bool GetExecutableForProcess(const AutoHandle &handle, std::string &path) {
 void GetProcessExecutableAndTriple(const AutoHandle &handle,
                                    ProcessInstanceInfo &process) {
   // We may not have permissions to read the path from the process.  So start
-  // off by
-  // setting the executable file to whatever Toolhelp32 gives us, and then try
-  // to
-  // enhance this with more detailed information, but fail gracefully.
+  // off by setting the executable file to whatever Toolhelp32 gives us, and
+  // then try to enhance this with more detailed information, but fail
+  // gracefully.
   std::string executable;
   llvm::Triple triple;
   triple.setVendor(llvm::Triple::PC);
@@ -124,7 +122,7 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   std::string path;
   if (!llvm::convertWideToUTF8(buffer.data(), path))
     return module_filespec;
-  module_filespec.SetFile(path, false);
+  module_filespec.SetFile(path, false, FileSpec::Style::native);
   return module_filespec;
 }
 
@@ -184,9 +182,8 @@ HostThread Host::StartMonitoringChildProcess(
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   Status error;
   if (launch_info.GetFlags().Test(eLaunchFlagShellExpandArguments)) {
-    FileSpec expand_tool_spec;
-    if (!HostInfo::GetLLDBPath(lldb::ePathTypeSupportExecutableDir,
-                               expand_tool_spec)) {
+    FileSpec expand_tool_spec = HostInfo::GetSupportExeDir();
+    if (!expand_tool_spec) {
       error.SetErrorString("could not find support executable directory for "
                            "the lldb-argdumper tool");
       return error;
@@ -209,7 +206,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
     std::string output;
     std::string command = expand_command.GetString();
     RunShellCommand(command.c_str(), launch_info.GetWorkingDirectory(), &status,
-                    nullptr, &output, 10);
+                    nullptr, &output, std::chrono::seconds(10));
 
     if (status != 0) {
       error.SetErrorStringWithFormat("lldb-argdumper exited with error %d",
@@ -258,13 +255,12 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   return error;
 }
 
-size_t Host::GetEnvironment(StringList &env) {
+Environment Host::GetEnvironment() {
+  Environment env;
   // The environment block on Windows is a contiguous buffer of NULL terminated
-  // strings,
-  // where the end of the environment block is indicated by two consecutive
-  // NULLs.
+  // strings, where the end of the environment block is indicated by two
+  // consecutive NULLs.
   LPWCH environment_block = ::GetEnvironmentStringsW();
-  env.Clear();
   while (*environment_block != L'\0') {
     std::string current_var;
     auto current_var_size = wcslen(environment_block) + 1;
@@ -273,9 +269,9 @@ size_t Host::GetEnvironment(StringList &env) {
       continue;
     }
     if (current_var[0] != '=')
-      env.AppendString(current_var);
+      env.insert(current_var);
 
     environment_block += current_var_size;
   }
-  return env.GetSize();
+  return env;
 }

@@ -172,9 +172,22 @@ def collect_archives_in_path(path):
             regexp,
             file)]
 
+# Find the swift build directory on MacOS.
+def find_swift_build_dir(paths):
+    for p in paths:
+      if "swift-macosx" in p:
+        return p
+    return None
 
 def archive_list():
     paths = library_paths()
+
+    # Target libraries live in a target specific subdirectory.
+    # Look up for that. (an example is libSwiftReflection.a)
+    swift_build_dir = find_swift_build_dir(paths)
+    if swift_build_dir != None:
+      paths.append(swift_build_dir + "/swift/macosx")
+
     archive_lists = [collect_archives_in_path(path) for path in paths]
     return [archive for archive_list in archive_lists for archive in archive_list]
 

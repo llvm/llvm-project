@@ -55,7 +55,7 @@ public:
 
   bool FindBreakpointID(const char *bp_id, size_t *position) const;
 
-  void InsertStringArray(const char **string_array, size_t array_size,
+  void InsertStringArray(llvm::ArrayRef<const char *> string_array,
                          CommandReturnObject &result);
 
   // Returns a pair consisting of the beginning and end of a breakpoint

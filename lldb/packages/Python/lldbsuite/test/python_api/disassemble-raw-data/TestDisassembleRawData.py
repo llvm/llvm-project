@@ -31,6 +31,9 @@ class DisassembleRawDataTestCase(TestBase):
         elif re.match("mips", arch):
             target = self.dbg.CreateTargetWithFileAndTargetTriple("", "mips")
             raw_bytes = bytearray([0x03, 0xa0, 0xf0, 0x21])
+        elif re.match("powerpc64le", arch):
+            target = self.dbg.CreateTargetWithFileAndTargetTriple("", "powerpc64le")
+            raw_bytes = bytearray([0x00, 0x00, 0x80, 0x38])
         else:
             target = self.dbg.CreateTargetWithFileAndTargetTriple("", "x86_64")
             raw_bytes = bytearray([0x48, 0x89, 0xe5])
@@ -48,6 +51,9 @@ class DisassembleRawDataTestCase(TestBase):
             self.assertTrue(inst.GetMnemonic(target) == "move")
             self.assertTrue(inst.GetOperands(target) ==
                             '$' + "fp, " + '$' + "sp")
+        elif re.match("powerpc64le", arch):
+            self.assertTrue(inst.GetMnemonic(target) == "li")
+            self.assertTrue(inst.GetOperands(target) == "4, 0")
         else:
             self.assertTrue(inst.GetMnemonic(target) == "movq")
             self.assertTrue(inst.GetOperands(target) ==

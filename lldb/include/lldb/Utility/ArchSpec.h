@@ -10,6 +10,7 @@
 #ifndef LLDB_UTILITY_ARCHSPEC_H
 #define LLDB_UTILITY_ARCHSPEC_H
 
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
@@ -23,13 +24,13 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class ArchSpec ArchSpec.h "lldb/Utility/ArchSpec.h"
-/// @brief An architecture specification class.
+/// @class ArchSpec ArchSpec.h "lldb/Utility/ArchSpec.h" An architecture
+/// specification class.
 ///
 /// A class designed to be created from a cpu type and subtype, a
-/// string representation, or an llvm::Triple.  Keeping all of the
-/// conversions of strings to architecture enumeration values confined
-/// to this class allows new architecture support to be added easily.
+/// string representation, or an llvm::Triple.  Keeping all of the conversions
+/// of strings to architecture enumeration values confined to this class
+/// allows new architecture support to be added easily.
 //----------------------------------------------------------------------
 class ArchSpec {
 public:
@@ -245,16 +246,15 @@ public:
   //------------------------------------------------------------------
   /// Default constructor.
   ///
-  /// Default constructor that initializes the object with invalid
-  /// cpu type and subtype values.
+  /// Default constructor that initializes the object with invalid cpu type
+  /// and subtype values.
   //------------------------------------------------------------------
   ArchSpec();
 
   //------------------------------------------------------------------
   /// Constructor over triple.
   ///
-  /// Constructs an ArchSpec with properties consistent with the given
-  /// Triple.
+  /// Constructs an ArchSpec with properties consistent with the given Triple.
   //------------------------------------------------------------------
   explicit ArchSpec(const llvm::Triple &triple);
   explicit ArchSpec(const char *triple_cstr);
@@ -262,8 +262,8 @@ public:
   //------------------------------------------------------------------
   /// Constructor over architecture name.
   ///
-  /// Constructs an ArchSpec with properties consistent with the given
-  /// object type and architecture name.
+  /// Constructs an ArchSpec with properties consistent with the given object
+  /// type and architecture name.
   //------------------------------------------------------------------
   explicit ArchSpec(ArchitectureType arch_type, uint32_t cpu_type,
                     uint32_t cpu_subtype);
@@ -284,16 +284,18 @@ public:
 
   //---------------------------------------------------------------------------
   /// Returns true if the OS, vendor and environment fields of the triple are
-  /// unset. The triple is expected to be normalized (llvm::Triple::normalize).
+  /// unset. The triple is expected to be normalized
+  /// (llvm::Triple::normalize).
   //---------------------------------------------------------------------------
   static bool ContainsOnlyArch(const llvm::Triple &normalized_triple);
 
-  static size_t AutoComplete(llvm::StringRef name, StringList &matches);
+  static void ListSupportedArchNames(StringList &list);
+  static size_t AutoComplete(CompletionRequest &request);
 
   //------------------------------------------------------------------
   /// Returns a static string representing the current architecture.
   ///
-  /// @return A static string correcponding to the current
+  /// @return A static string corresponding to the current
   ///         architecture.
   //------------------------------------------------------------------
   const char *GetArchitectureName() const;
@@ -306,8 +308,8 @@ public:
   bool IsMIPS() const;
 
   //------------------------------------------------------------------
-  /// Returns a string representing current architecture as a target CPU
-  /// for tools like compiler, disassembler etc.
+  /// Returns a string representing current architecture as a target CPU for
+  /// tools like compiler, disassembler etc.
   ///
   /// @return A string representing target CPU for the current
   ///         architecture.
@@ -329,8 +331,7 @@ public:
   void Clear();
 
   //------------------------------------------------------------------
-  /// Returns the size in bytes of an address of the current
-  /// architecture.
+  /// Returns the size in bytes of an address of the current architecture.
   ///
   /// @return The byte size of an address of the current architecture.
   //------------------------------------------------------------------
@@ -356,9 +357,8 @@ public:
   //------------------------------------------------------------------
   /// Set the distribution id of the architecture.
   ///
-  /// This will be something like "ubuntu", "fedora", etc. on Linux.
-  /// This should be the same value returned by
-  /// HostInfo::GetDistributionId ().
+  /// This will be something like "ubuntu", "fedora", etc. on Linux. This
+  /// should be the same value returned by HostInfo::GetDistributionId ().
   ///------------------------------------------------------------------
   void SetDistributionId(const char *distribution_id);
 
@@ -395,13 +395,12 @@ public:
   //------------------------------------------------------------------
   /// Merges fields from another ArchSpec into this ArchSpec.
   ///
-  /// This will use the supplied ArchSpec to fill in any fields of
-  /// the triple in this ArchSpec which were unspecified.  This can
-  /// be used to refine a generic ArchSpec with a more specific one.
-  /// For example, if this ArchSpec's triple is something like
-  /// i386-unknown-unknown-unknown, and we have a triple which is
-  /// x64-pc-windows-msvc, then merging that triple into this one
-  /// will result in the triple i386-pc-windows-msvc.
+  /// This will use the supplied ArchSpec to fill in any fields of the triple
+  /// in this ArchSpec which were unspecified.  This can be used to refine a
+  /// generic ArchSpec with a more specific one. For example, if this
+  /// ArchSpec's triple is something like i386-unknown-unknown-unknown, and we
+  /// have a triple which is x64-pc-windows-msvc, then merging that triple
+  /// into this one will result in the triple i386-pc-windows-msvc.
   ///
   //------------------------------------------------------------------
   void MergeFrom(const ArchSpec &other);
@@ -421,16 +420,16 @@ public:
   ///
   /// @return True if the object, and CPU were successfully set.
   ///
-  /// As a side effect, the vendor value is usually set to unknown.
-  /// The exections are
+  /// As a side effect, the vendor value is usually set to unknown. The
+  /// exceptions are
   ///   aarch64-apple-ios
   ///   arm-apple-ios
   ///   thumb-apple-ios
   ///   x86-apple-
   ///   x86_64-apple-
   ///
-  /// As a side effect, the os value is usually set to unknown
-  /// The exceptions are
+  /// As a side effect, the os value is usually set to unknown The exceptions
+  /// are
   ///   *-*-aix
   ///   aarch64-apple-ios
   ///   arm-apple-ios
@@ -456,10 +455,10 @@ public:
   //------------------------------------------------------------------
   /// Sets this ArchSpec's byte order.
   ///
-  /// In the common case there is no need to call this method as the
-  /// byte order can almost always be determined by the architecture.
-  /// However, many CPU's are bi-endian (ARM, Alpha, PowerPC, etc)
-  /// and the default/assumed byte order may be incorrect.
+  /// In the common case there is no need to call this method as the byte
+  /// order can almost always be determined by the architecture. However, many
+  /// CPU's are bi-endian (ARM, Alpha, PowerPC, etc) and the default/assumed
+  /// byte order may be incorrect.
   //------------------------------------------------------------------
   void SetByteOrder(lldb::ByteOrder byte_order) { m_byte_order = byte_order; }
 
@@ -476,28 +475,28 @@ public:
   //------------------------------------------------------------------
   /// Architecture data byte width accessor
   ///
-  /// @return the size in 8-bit (host) bytes of a minimum addressable
-  /// unit from the Architecture's data bus
+  /// @return the size in 8-bit (host) bytes of a minimum addressable unit
+  /// from the Architecture's data bus
   //------------------------------------------------------------------
   uint32_t GetDataByteSize() const;
 
   //------------------------------------------------------------------
   /// Architecture code byte width accessor
   ///
-  /// @return the size in 8-bit (host) bytes of a minimum addressable
-  /// unit from the Architecture's code bus
+  /// @return the size in 8-bit (host) bytes of a minimum addressable unit
+  /// from the Architecture's code bus
   //------------------------------------------------------------------
   uint32_t GetCodeByteSize() const;
 
   //------------------------------------------------------------------
-  /// Architecture tripple accessor.
+  /// Architecture triple accessor.
   ///
   /// @return A triple describing this ArchSpec.
   //------------------------------------------------------------------
   llvm::Triple &GetTriple() { return m_triple; }
 
   //------------------------------------------------------------------
-  /// Architecture tripple accessor.
+  /// Architecture triple accessor.
   ///
   /// @return A triple describing this ArchSpec.
   //------------------------------------------------------------------
@@ -506,14 +505,14 @@ public:
   void DumpTriple(Stream &s) const;
 
   //------------------------------------------------------------------
-  /// Architecture tripple setter.
+  /// Architecture triple setter.
   ///
-  /// Configures this ArchSpec according to the given triple.  If the
-  /// triple has unknown components in all of the vendor, OS, and
-  /// the optional environment field (i.e. "i386-unknown-unknown")
-  /// then default values are taken from the host.  Architecture and
-  /// environment components are used to further resolve the CPU type
-  /// and subtype, endian characteristics, etc.
+  /// Configures this ArchSpec according to the given triple.  If the triple
+  /// has unknown components in all of the vendor, OS, and the optional
+  /// environment field (i.e. "i386-unknown-unknown") then default values are
+  /// taken from the host.  Architecture and environment components are used
+  /// to further resolve the CPU type and subtype, endian characteristics,
+  /// etc.
   ///
   /// @return A triple describing this ArchSpec.
   //------------------------------------------------------------------
@@ -530,8 +529,8 @@ public:
   lldb::ByteOrder GetDefaultEndian() const;
 
   //------------------------------------------------------------------
-  /// Returns true if 'char' is a signed type by defualt in the
-  /// architecture false otherwise
+  /// Returns true if 'char' is a signed type by default in the architecture
+  /// false otherwise
   ///
   /// @return True if 'char' is a signed type by default on the
   ///         architecture and false otherwise.
@@ -539,18 +538,18 @@ public:
   bool CharIsSignedByDefault() const;
 
   //------------------------------------------------------------------
-  /// Compare an ArchSpec to another ArchSpec, requiring an exact cpu
-  /// type match between them.
-  /// e.g. armv7s is not an exact match with armv7 - this would return false
+  /// Compare an ArchSpec to another ArchSpec, requiring an exact cpu type
+  /// match between them. e.g. armv7s is not an exact match with armv7 - this
+  /// would return false
   ///
   /// @return true if the two ArchSpecs match.
   //------------------------------------------------------------------
   bool IsExactMatch(const ArchSpec &rhs) const;
 
   //------------------------------------------------------------------
-  /// Compare an ArchSpec to another ArchSpec, requiring a compatible
-  /// cpu type match between them.
-  /// e.g. armv7s is compatible with armv7 - this method would return true
+  /// Compare an ArchSpec to another ArchSpec, requiring a compatible cpu type
+  /// match between them. e.g. armv7s is compatible with armv7 - this method
+  /// would return true
   ///
   /// @return true if the two ArchSpecs are compatible
   //------------------------------------------------------------------
@@ -566,12 +565,12 @@ public:
   //------------------------------------------------------------------
   /// Detect whether this architecture uses thumb code exclusively
   ///
-  /// Some embedded ARM chips (e.g. the ARM Cortex M0-7 line) can
-  /// only execute the Thumb instructions, never Arm.  We should normally
-  /// pick up arm/thumbness from their the processor status bits (cpsr/xpsr)
-  /// or hints on each function - but when doing bare-boards low level
-  /// debugging (especially common with these embedded processors), we may
-  /// not have those things easily accessible.
+  /// Some embedded ARM chips (e.g. the ARM Cortex M0-7 line) can only execute
+  /// the Thumb instructions, never Arm.  We should normally pick up
+  /// arm/thumbness from their the processor status bits (cpsr/xpsr) or hints
+  /// on each function - but when doing bare-boards low level debugging
+  /// (especially common with these embedded processors), we may not have
+  /// those things easily accessible.
   ///
   /// @return true if this is an arm ArchSpec which can only execute Thumb
   ///         instructions
@@ -592,31 +591,30 @@ protected:
   Core m_core = kCore_invalid;
   lldb::ByteOrder m_byte_order = lldb::eByteOrderInvalid;
 
-  // Additional arch flags which we cannot get from triple and core
-  // For MIPS these are application specific extensions like
-  // micromips, mips16 etc.
+  // Additional arch flags which we cannot get from triple and core For MIPS
+  // these are application specific extensions like micromips, mips16 etc.
   uint32_t m_flags = 0;
 
   ConstString m_distribution_id;
 
-  // Called when m_def or m_entry are changed.  Fills in all remaining
-  // members with default values.
+  // Called when m_def or m_entry are changed.  Fills in all remaining members
+  // with default values.
   void CoreUpdated(bool update_triple);
 };
 
 //------------------------------------------------------------------
-/// @fn bool operator< (const ArchSpec& lhs, const ArchSpec& rhs)
-/// @brief Less than operator.
+/// @fn bool operator< (const ArchSpec& lhs, const ArchSpec& rhs) Less than
+/// operator.
 ///
-/// Tests two ArchSpec objects to see if \a lhs is less than \a
-/// rhs.
+/// Tests two ArchSpec objects to see if \a lhs is less than \a rhs.
 ///
-/// @param[in] lhs The Left Hand Side ArchSpec object to compare.
-/// @param[in] rhs The Left Hand Side ArchSpec object to compare.
+/// @param[in] lhs The Left Hand Side ArchSpec object to compare. @param[in]
+/// rhs The Left Hand Side ArchSpec object to compare.
 ///
 /// @return true if \a lhs is less than \a rhs
 //------------------------------------------------------------------
 bool operator<(const ArchSpec &lhs, const ArchSpec &rhs);
+bool operator==(const ArchSpec &lhs, const ArchSpec &rhs);
 
 bool ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str, ArchSpec &arch);
 

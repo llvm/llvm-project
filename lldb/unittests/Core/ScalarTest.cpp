@@ -14,8 +14,10 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/Testing/Support/Error.h"
 
 using namespace lldb_private;
+using namespace llvm;
 
 TEST(ScalarTest, RightShiftOperator) {
   int a = 0x00001000;
@@ -31,7 +33,7 @@ TEST(ScalarTest, RightShiftOperator) {
 TEST(ScalarTest, GetBytes) {
   int a = 0x01020304;
   long long b = 0x0102030405060708LL;
-  float c = 1234567.89e32;
+  float c = 1234567.89e32f;
   double d = 1234567.89e42;
   char e[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
   char f[32] = {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
@@ -73,6 +75,12 @@ TEST(ScalarTest, CastOperations) {
   ASSERT_EQ((unsigned long)a, a_scalar.ULong());
   ASSERT_EQ((signed long long)a, a_scalar.SLongLong());
   ASSERT_EQ((unsigned long long)a, a_scalar.ULongLong());
+
+  int a2 = 23;
+  Scalar a2_scalar(a2);
+  ASSERT_EQ((float)a2, a2_scalar.Float());
+  ASSERT_EQ((double)a2, a2_scalar.Double());
+  ASSERT_EQ((long double)a2, a2_scalar.LongDouble());
 }
 
 TEST(ScalarTest, ExtractBitfield) {
@@ -131,4 +139,82 @@ TEST(ScalarTest, GetValue) {
             ScalarGetValue<unsigned long long>(1234567890123ULL));
   EXPECT_EQ(std::to_string(std::numeric_limits<unsigned long long>::max()),
             ScalarGetValue(std::numeric_limits<unsigned long long>::max()));
+}
+
+TEST(ScalarTest, Division) {
+  Scalar lhs(5.0);
+  Scalar rhs(2.0);
+  Scalar r = lhs / rhs;
+  EXPECT_TRUE(r.IsValid());
+  EXPECT_EQ(r, Scalar(2.5));
+}
+
+TEST(ScalarTest, Promotion) {
+  static Scalar::Type int_types[] = {
+      Scalar::e_sint,    Scalar::e_uint,      Scalar::e_slong,
+      Scalar::e_ulong,   Scalar::e_slonglong, Scalar::e_ulonglong,
+      Scalar::e_sint128, Scalar::e_uint128,   Scalar::e_sint256,
+      Scalar::e_uint256,
+      Scalar::e_void // sentinel
+  };
+
+  static Scalar::Type float_types[] = {
+      Scalar::e_float, Scalar::e_double, Scalar::e_long_double,
+      Scalar::e_void // sentinel
+  };
+
+  for (int i = 0; int_types[i] != Scalar::e_void; ++i) {
+    for (int j = 0; float_types[j] != Scalar::e_void; ++j) {
+      Scalar lhs(2);
+      EXPECT_TRUE(lhs.Promote(int_types[i])) << "int promotion #" << i;
+      Scalar rhs(0.5f);
+      EXPECT_TRUE(rhs.Promote(float_types[j])) << "float promotion #" << j;
+      Scalar x(2.5f);
+      EXPECT_TRUE(x.Promote(float_types[j]));
+      EXPECT_EQ(lhs + rhs, x);
+    }
+  }
+
+  for (int i = 0; float_types[i] != Scalar::e_void; ++i) {
+    for (int j = 0; float_types[j] != Scalar::e_void; ++j) {
+      Scalar lhs(2);
+      EXPECT_TRUE(lhs.Promote(float_types[i])) << "float promotion #" << i;
+      Scalar rhs(0.5f);
+      EXPECT_TRUE(rhs.Promote(float_types[j])) << "float promotion #" << j;
+      Scalar x(2.5f);
+      EXPECT_TRUE(x.Promote(float_types[j]));
+      EXPECT_EQ(lhs + rhs, x);
+    }
+  }
+}
+
+TEST(ScalarTest, SetValueFromCString) {
+  Scalar a;
+
+  EXPECT_THAT_ERROR(
+      a.SetValueFromCString("1234567890123", lldb::eEncodingUint, 8).ToError(),
+      Succeeded());
+  EXPECT_EQ(1234567890123ull, a);
+
+  EXPECT_THAT_ERROR(
+      a.SetValueFromCString("-1234567890123", lldb::eEncodingSint, 8).ToError(),
+      Succeeded());
+  EXPECT_EQ(-1234567890123ll, a);
+
+  EXPECT_THAT_ERROR(
+      a.SetValueFromCString("asdf", lldb::eEncodingSint, 8).ToError(),
+      Failed());
+  EXPECT_THAT_ERROR(
+      a.SetValueFromCString("asdf", lldb::eEncodingUint, 8).ToError(),
+      Failed());
+  EXPECT_THAT_ERROR(
+      a.SetValueFromCString("1234567890123", lldb::eEncodingUint, 4).ToError(),
+      Failed());
+  EXPECT_THAT_ERROR(a.SetValueFromCString("123456789012345678901234567890",
+                                          lldb::eEncodingUint, 8)
+                        .ToError(),
+                    Failed());
+  EXPECT_THAT_ERROR(
+      a.SetValueFromCString("-123", lldb::eEncodingUint, 8).ToError(),
+      Failed());
 }

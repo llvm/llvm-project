@@ -17,13 +17,12 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class Declaration Declaration.h "lldb/Symbol/Declaration.h"
-/// @brief A class that describes the declaration location of a
+/// A class that describes the declaration location of a
 ///        lldb object.
 ///
-/// The declarations include the file specification, line number, and
-/// the column info and can help track where functions, blocks, inlined
-/// functions, types, variables, any many other debug core objects were
-/// declared.
+/// The declarations include the file specification, line number, and the
+/// column info and can help track where functions, blocks, inlined functions,
+/// types, variables, any many other debug core objects were declared.
 //----------------------------------------------------------------------
 class Declaration {
 public:
@@ -92,8 +91,8 @@ public:
   //------------------------------------------------------------------
   /// Clear the object's state.
   ///
-  /// Sets the file specification to be empty, and the line and column
-  /// to zero.
+  /// Sets the file specification to be empty, and the line and column to
+  /// zero.
   //------------------------------------------------------------------
   void Clear() {
     m_file.Clear();
@@ -106,9 +105,9 @@ public:
   //------------------------------------------------------------------
   /// Compare two declaration objects.
   ///
-  /// Compares the two file specifications from \a lhs and \a rhs. If
-  /// the file specifications are equal, then continue to compare the
-  /// line number and column numbers respectively.
+  /// Compares the two file specifications from \a lhs and \a rhs. If the file
+  /// specifications are equal, then continue to compare the line number and
+  /// column numbers respectively.
   ///
   /// @param[in] lhs
   ///     The Left Hand Side const Declaration object reference.
@@ -126,8 +125,8 @@ public:
   //------------------------------------------------------------------
   /// Dump a description of this object to a Stream.
   ///
-  /// Dump a description of the contents of this object to the
-  /// supplied stream \a s.
+  /// Dump a description of the contents of this object to the supplied stream
+  /// \a s.
   ///
   /// @param[in] s
   ///     The stream to which to dump the object description.

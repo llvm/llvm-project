@@ -9,6 +9,7 @@
 
 #include "Driver.h"
 
+#include <algorithm>
 #include <atomic>
 #include <csignal>
 #include <fcntl.h>
@@ -41,10 +42,12 @@
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
-#if defined(_WIN32)
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
-#endif
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 #include <thread>
+#include <utility>
 
 #if !defined(__APPLE__)
 #include "llvm/Support/DataTypes.h"
@@ -71,7 +74,7 @@ typedef struct {
   uint32_t usage_mask; // Used to mark options that can be used together.  If (1
                        // << n & usage_mask) != 0
                        // then this option belongs to option set n.
-  bool required;
+  bool required;       // This option is required (in the current usage level)
   const char *long_option; // Full name for this option.
   int short_option;        // Single character for this option.
   int option_has_arg; // no_argument, required_argument or optional_argument
@@ -85,9 +88,8 @@ typedef struct {
 
 #define LLDB_3_TO_5 LLDB_OPT_SET_3 | LLDB_OPT_SET_4 | LLDB_OPT_SET_5
 #define LLDB_4_TO_5 LLDB_OPT_SET_4 | LLDB_OPT_SET_5
-#define LLDB_3_AND_7 LLDB_OPT_SET_3 | LLDB_OPT_SET_7
 
-static OptionDefinition g_options[] = {
+static constexpr OptionDefinition g_options[] = {
     {LLDB_OPT_SET_1, true, "help", 'h', no_argument, 0, eArgTypeNone,
      "Prints out the usage information for the LLDB debugger."},
     {LLDB_OPT_SET_2, true, "version", 'v', no_argument, 0, eArgTypeNone,
@@ -159,8 +161,9 @@ static OptionDefinition g_options[] = {
     {LLDB_OPT_SET_7, true, "repl", 'r', optional_argument, 0, eArgTypeNone,
      "Runs lldb in REPL mode with a stub process."},
     {LLDB_OPT_SET_7, true, "repl-language", 'R', required_argument, 0,
-     eArgTypeNone, "Chooses the language for the REPL."},
-    {0, false, NULL, 0, 0, 0, eArgTypeNone, NULL}};
+     eArgTypeNone, "Chooses the language for the REPL."}};
+
+static constexpr auto g_num_options = sizeof(g_options)/sizeof(OptionDefinition);
 
 static const uint32_t last_option_set_with_args = 2;
 
@@ -229,8 +232,7 @@ void OutputFormattedUsageText(FILE *out, int indent, const char *text,
   }
 }
 
-void ShowUsage(FILE *out, OptionDefinition *option_table,
-               Driver::OptionData data) {
+static void ShowUsage(FILE *out, Driver::OptionData data) {
   uint32_t screen_width = 80;
   uint32_t indent_level = 0;
   const char *name = "lldb";
@@ -245,12 +247,10 @@ void ShowUsage(FILE *out, OptionDefinition *option_table,
   //                                                   [options-for-level-1]
   //                                                   etc.
 
-  uint32_t num_options;
   uint32_t num_option_sets = 0;
 
-  for (num_options = 0; option_table[num_options].long_option != NULL;
-       ++num_options) {
-    uint32_t this_usage_mask = option_table[num_options].usage_mask;
+  for (const auto &opt : g_options) {
+    uint32_t this_usage_mask = opt.usage_mask;
     if (this_usage_mask == LLDB_OPT_SET_ALL) {
       if (num_option_sets == 0)
         num_option_sets = 1;
@@ -274,32 +274,32 @@ void ShowUsage(FILE *out, OptionDefinition *option_table,
     fprintf(out, "%*s%s", indent_level, "", name);
     bool is_help_line = false;
 
-    for (uint32_t i = 0; i < num_options; ++i) {
-      if (option_table[i].usage_mask & opt_set_mask) {
-        CommandArgumentType arg_type = option_table[i].argument_type;
+    for (const auto &opt : g_options) {
+      if (opt.usage_mask & opt_set_mask) {
+        CommandArgumentType arg_type = opt.argument_type;
         const char *arg_name =
             SBCommandInterpreter::GetArgumentTypeAsCString(arg_type);
         // This is a bit of a hack, but there's no way to say certain options
         // don't have arguments yet...
         // so we do it by hand here.
-        if (option_table[i].short_option == 'h')
+        if (opt.short_option == 'h')
           is_help_line = true;
 
-        if (option_table[i].required) {
-          if (option_table[i].option_has_arg == required_argument)
-            fprintf(out, " -%c <%s>", option_table[i].short_option, arg_name);
-          else if (option_table[i].option_has_arg == optional_argument)
-            fprintf(out, " -%c [<%s>]", option_table[i].short_option, arg_name);
+        if (opt.required) {
+          if (opt.option_has_arg == required_argument)
+            fprintf(out, " -%c <%s>", opt.short_option, arg_name);
+          else if (opt.option_has_arg == optional_argument)
+            fprintf(out, " -%c [<%s>]", opt.short_option, arg_name);
           else
-            fprintf(out, " -%c", option_table[i].short_option);
+            fprintf(out, " -%c", opt.short_option);
         } else {
-          if (option_table[i].option_has_arg == required_argument)
-            fprintf(out, " [-%c <%s>]", option_table[i].short_option, arg_name);
-          else if (option_table[i].option_has_arg == optional_argument)
-            fprintf(out, " [-%c [<%s>]]", option_table[i].short_option,
+          if (opt.option_has_arg == required_argument)
+            fprintf(out, " [-%c <%s>]", opt.short_option, arg_name);
+          else if (opt.option_has_arg == optional_argument)
+            fprintf(out, " [-%c [<%s>]]", opt.short_option,
                     arg_name);
           else
-            fprintf(out, " [-%c]", option_table[i].short_option);
+            fprintf(out, " [-%c]", opt.short_option);
         }
       }
     }
@@ -325,25 +325,25 @@ void ShowUsage(FILE *out, OptionDefinition *option_table,
 
   indent_level += 5;
 
-  for (uint32_t i = 0; i < num_options; ++i) {
+  for (const auto &opt : g_options) {
     // Only print this option if we haven't already seen it.
-    pos = options_seen.find(option_table[i].short_option);
+    pos = options_seen.find(opt.short_option);
     if (pos == options_seen.end()) {
-      CommandArgumentType arg_type = option_table[i].argument_type;
+      CommandArgumentType arg_type = opt.argument_type;
       const char *arg_name =
           SBCommandInterpreter::GetArgumentTypeAsCString(arg_type);
 
-      options_seen.insert(option_table[i].short_option);
-      fprintf(out, "%*s-%c ", indent_level, "", option_table[i].short_option);
+      options_seen.insert(opt.short_option);
+      fprintf(out, "%*s-%c ", indent_level, "", opt.short_option);
       if (arg_type != eArgTypeNone)
         fprintf(out, "<%s>", arg_name);
       fprintf(out, "\n");
-      fprintf(out, "%*s--%s ", indent_level, "", option_table[i].long_option);
+      fprintf(out, "%*s--%s ", indent_level, "", opt.long_option);
       if (arg_type != eArgTypeNone)
         fprintf(out, "<%s>", arg_name);
       fprintf(out, "\n");
       indent_level += 5;
-      OutputFormattedUsageText(out, indent_level, option_table[i].usage_text,
+      OutputFormattedUsageText(out, indent_level, opt.usage_text,
                                screen_width);
       indent_level -= 5;
       fprintf(out, "\n");
@@ -380,26 +380,19 @@ void ShowUsage(FILE *out, OptionDefinition *option_table,
       "");
 }
 
-void BuildGetOptTable(OptionDefinition *expanded_option_table,
-                      std::vector<struct option> &getopt_table,
-                      uint32_t num_options) {
-  if (num_options == 0)
-    return;
+ static void BuildGetOptTable(std::vector<option> &getopt_table) {
+  getopt_table.resize(g_num_options + 1);
 
-  uint32_t i;
-  uint32_t j;
   std::bitset<256> option_seen;
-
-  getopt_table.resize(num_options + 1);
-
-  for (i = 0, j = 0; i < num_options; ++i) {
-    char short_opt = expanded_option_table[i].short_option;
+  uint32_t j = 0;
+  for (const auto &opt : g_options) {
+    char short_opt = opt.short_option;
 
     if (option_seen.test(short_opt) == false) {
-      getopt_table[j].name = expanded_option_table[i].long_option;
-      getopt_table[j].has_arg = expanded_option_table[i].option_has_arg;
+      getopt_table[j].name = opt.long_option;
+      getopt_table[j].has_arg = opt.option_has_arg;
       getopt_table[j].flag = NULL;
-      getopt_table[j].val = expanded_option_table[i].short_option;
+      getopt_table[j].val = opt.short_option;
       option_seen.set(short_opt);
       ++j;
     }
@@ -582,44 +575,30 @@ bool Driver::GetDebugMode() const { return m_option_data.m_debug_mode; }
 
 SBError Driver::ParseArgs(int argc, const char *argv[], FILE *out_fh,
                           bool &exiting) {
+  static_assert(g_num_options > 0, "cannot handle arguments");
+
   ResetOptionValues();
 
-  SBCommandReturnObject result;
+  // No arguments or just program name, nothing to parse.
+  if (argc <= 1)
+    return SBError();
 
   SBError error;
-  std::string option_string;
-  struct option *long_options = NULL;
-  std::vector<struct option> long_options_vector;
-  uint32_t num_options;
-
-  for (num_options = 0; g_options[num_options].long_option != NULL;
-       ++num_options)
-    /* Do Nothing. */;
-
-  if (num_options == 0) {
-    if (argc > 1)
-      error.SetErrorStringWithFormat("invalid number of options");
-    return error;
-  }
-
-  BuildGetOptTable(g_options, long_options_vector, num_options);
-
-  if (long_options_vector.empty())
-    long_options = NULL;
-  else
-    long_options = &long_options_vector.front();
-
-  if (long_options == NULL) {
+  std::vector<option> long_options_vector;
+  BuildGetOptTable(long_options_vector);
+  if (long_options_vector.empty()) {
     error.SetErrorStringWithFormat("invalid long options");
     return error;
   }
 
   // Build the option_string argument for call to getopt_long_only.
-
-  for (int i = 0; long_options[i].name != NULL; ++i) {
-    if (long_options[i].flag == NULL) {
-      option_string.push_back((char)long_options[i].val);
-      switch (long_options[i].has_arg) {
+  std::string option_string;
+  auto sentinel_it = std::prev(std::end(long_options_vector));
+  for (auto long_opt_it = std::begin(long_options_vector);
+            long_opt_it != sentinel_it; ++long_opt_it) {
+    if (long_opt_it->flag == nullptr) {
+      option_string.push_back(static_cast<char>(long_opt_it->val));
+      switch (long_opt_it->has_arg) {
       default:
       case no_argument:
         break;
@@ -657,7 +636,7 @@ SBError Driver::ParseArgs(int argc, const char *argv[], FILE *out_fh,
   while (1) {
     int long_options_index = -1;
     val = ::getopt_long_only(argc, const_cast<char **>(argv),
-                             option_string.c_str(), long_options,
+                             option_string.c_str(), long_options_vector.data(),
                              &long_options_index);
 
     if (val == -1)
@@ -671,14 +650,11 @@ SBError Driver::ParseArgs(int argc, const char *argv[], FILE *out_fh,
     else {
       m_option_data.m_seen_options.insert((char)val);
       if (long_options_index == -1) {
-        for (int i = 0; long_options[i].name || long_options[i].has_arg ||
-                        long_options[i].flag || long_options[i].val;
-             ++i) {
-          if (long_options[i].val == val) {
-            long_options_index = i;
-            break;
-          }
-        }
+        auto long_opt_it = std::find_if(std::begin(long_options_vector), sentinel_it,
+            [val](const option &long_option) { return long_option.val == val; });
+        if (std::end(long_options_vector) != long_opt_it)
+          long_options_index =
+              std::distance(std::begin(long_options_vector), long_opt_it);
       }
 
       if (long_options_index >= 0) {
@@ -831,7 +807,7 @@ SBError Driver::ParseArgs(int argc, const char *argv[], FILE *out_fh,
   }
 
   if (error.Fail() || m_option_data.m_print_help) {
-    ShowUsage(out_fh, g_options, m_option_data);
+    ShowUsage(out_fh, m_option_data);
     exiting = true;
   } else if (m_option_data.m_print_version) {
     ::fprintf(out_fh, "%s\n", m_debugger.GetVersionString());
@@ -871,7 +847,6 @@ SBError Driver::ParseArgs(int argc, const char *argv[], FILE *out_fh,
   } else {
     // Skip any options we consumed with getopt_long_only
     argc -= optind;
-    // argv += optind; // Commented out to keep static analyzer happy
 
     if (argc > 0)
       ::fprintf(out_fh,
@@ -968,7 +943,7 @@ std::string EscapeString(std::string arg) {
   return '"' + arg + '"';
 }
 
-void Driver::MainLoop() {
+int Driver::MainLoop() {
   if (::tcgetattr(STDIN_FILENO, &g_old_stdin_termios) == 0) {
     g_old_stdin_termios_is_valid = true;
     atexit(reset_stdin_termios);
@@ -1006,6 +981,10 @@ void Driver::MainLoop() {
     result.PutError(m_debugger.GetErrorFileHandle());
     result.PutOutput(m_debugger.GetOutputFileHandle());
   }
+
+  // We allow the user to specify an exit code when calling quit which we will
+  // return when exiting.
+  m_debugger.GetCommandInterpreter().AllowExitCodeOnQuit(true);
 
   // Now we handle options we got from the command line
   SBStream commands_stream;
@@ -1165,7 +1144,9 @@ void Driver::MainLoop() {
   reset_stdin_termios();
   fclose(stdin);
 
+  int exit_code = sb_interpreter.GetQuitStatus();
   SBDebugger::Destroy(m_debugger);
+  return exit_code;
 }
 
 void Driver::ResizeWindow(unsigned short col) {
@@ -1231,6 +1212,10 @@ main(int argc, char const *argv[])
   const char **argv = argvPointers.data();
 #endif
 
+  llvm::StringRef ToolName = argv[0];
+  llvm::sys::PrintStackTraceOnErrorSignal(ToolName);
+  llvm::PrettyStackTraceProgram X(argc, argv);
+
   SBDebugger::Initialize();
 
   SBHostOS::ThreadCreated("<lldb.driver.main-thread>");
@@ -1243,6 +1228,7 @@ main(int argc, char const *argv[])
   signal(SIGCONT, sigcont_handler);
 #endif
 
+  int exit_code = 0;
   // Create a scope for driver so that the driver object will destroy itself
   // before SBDebugger::Terminate() is called.
   {
@@ -1251,14 +1237,15 @@ main(int argc, char const *argv[])
     bool exiting = false;
     SBError error(driver.ParseArgs(argc, argv, stdout, exiting));
     if (error.Fail()) {
+      exit_code = 1;
       const char *error_cstr = error.GetCString();
       if (error_cstr)
         ::fprintf(stderr, "error: %s\n", error_cstr);
     } else if (!exiting) {
-      driver.MainLoop();
+      exit_code = driver.MainLoop();
     }
   }
 
   SBDebugger::Terminate();
-  return 0;
+  return exit_code;
 }

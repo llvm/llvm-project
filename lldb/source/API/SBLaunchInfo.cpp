@@ -16,8 +16,26 @@
 using namespace lldb;
 using namespace lldb_private;
 
+class lldb_private::SBLaunchInfoImpl : public ProcessLaunchInfo {
+public:
+  SBLaunchInfoImpl()
+      : ProcessLaunchInfo(), m_envp(GetEnvironment().getEnvp()) {}
+
+  const char *const *GetEnvp() const { return m_envp; }
+  void RegenerateEnvp() { m_envp = GetEnvironment().getEnvp(); }
+
+  SBLaunchInfoImpl &operator=(const ProcessLaunchInfo &rhs) {
+    ProcessLaunchInfo::operator=(rhs);
+    RegenerateEnvp();
+    return *this;
+  }
+
+private:
+  Environment::Envp m_envp;
+};
+
 SBLaunchInfo::SBLaunchInfo(const char **argv)
-    : m_opaque_sp(new ProcessLaunchInfo()) {
+    : m_opaque_sp(new SBLaunchInfoImpl()) {
   m_opaque_sp->GetFlags().Reset(eLaunchFlagDebug | eLaunchFlagDisableASLR);
   if (argv && argv[0])
     m_opaque_sp->GetArguments().SetArguments(argv);
@@ -25,10 +43,12 @@ SBLaunchInfo::SBLaunchInfo(const char **argv)
 
 SBLaunchInfo::~SBLaunchInfo() {}
 
-lldb_private::ProcessLaunchInfo &SBLaunchInfo::ref() { return *m_opaque_sp; }
-
 const lldb_private::ProcessLaunchInfo &SBLaunchInfo::ref() const {
   return *m_opaque_sp;
+}
+
+void SBLaunchInfo::set_ref(const ProcessLaunchInfo &info) {
+  *m_opaque_sp = info;
 }
 
 lldb::pid_t SBLaunchInfo::GetProcessID() { return m_opaque_sp->GetProcessID(); }
@@ -83,23 +103,22 @@ void SBLaunchInfo::SetArguments(const char **argv, bool append) {
 }
 
 uint32_t SBLaunchInfo::GetNumEnvironmentEntries() {
-  return m_opaque_sp->GetEnvironmentEntries().GetArgumentCount();
+  return m_opaque_sp->GetEnvironment().size();
 }
 
 const char *SBLaunchInfo::GetEnvironmentEntryAtIndex(uint32_t idx) {
-  return m_opaque_sp->GetEnvironmentEntries().GetArgumentAtIndex(idx);
+  if (idx > GetNumEnvironmentEntries())
+    return nullptr;
+  return m_opaque_sp->GetEnvp()[idx];
 }
 
 void SBLaunchInfo::SetEnvironmentEntries(const char **envp, bool append) {
-  if (append) {
-    if (envp)
-      m_opaque_sp->GetEnvironmentEntries().AppendArguments(envp);
-  } else {
-    if (envp)
-      m_opaque_sp->GetEnvironmentEntries().SetArguments(envp);
-    else
-      m_opaque_sp->GetEnvironmentEntries().Clear();
-  }
+  Environment env(envp);
+  if (append)
+    m_opaque_sp->GetEnvironment().insert(env.begin(), env.end());
+  else
+    m_opaque_sp->GetEnvironment() = env;
+  m_opaque_sp->RegenerateEnvp();
 }
 
 void SBLaunchInfo::Clear() { m_opaque_sp->Clear(); }
@@ -129,8 +148,8 @@ void SBLaunchInfo::SetProcessPluginName(const char *plugin_name) {
 }
 
 const char *SBLaunchInfo::GetShell() {
-  // Constify this string so that it is saved in the string pool.  Otherwise
-  // it would be freed when this function goes out of scope.
+  // Constify this string so that it is saved in the string pool.  Otherwise it
+  // would be freed when this function goes out of scope.
   ConstString shell(m_opaque_sp->GetShell().GetPath().c_str());
   return shell.AsCString();
 }

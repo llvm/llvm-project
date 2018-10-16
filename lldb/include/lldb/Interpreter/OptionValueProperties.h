@@ -62,7 +62,7 @@ public:
   void Apropos(llvm::StringRef keyword,
                std::vector<const Property *> &matching_properties) const;
 
-  void Initialize(const PropertyDefinition *setting_definitions);
+  void Initialize(const PropertyDefinitions &setting_definitions);
 
   //    bool
   //    GetQualifiedName (Stream &strm);
@@ -75,15 +75,15 @@ public:
 
   //---------------------------------------------------------------------
   // Get the index of a property given its exact name in this property
-  // collection, "name" can't be a path to a property path that refers
-  // to a property within a property
+  // collection, "name" can't be a path to a property path that refers to a
+  // property within a property
   //---------------------------------------------------------------------
   virtual uint32_t GetPropertyIndex(const ConstString &name) const;
 
   //---------------------------------------------------------------------
-  // Get a property by exact name exists in this property collection, name
-  // can not be a path to a property path that refers to a property within
-  // a property
+  // Get a property by exact name exists in this property collection, name can
+  // not be a path to a property path that refers to a property within a
+  // property
   //---------------------------------------------------------------------
   virtual const Property *GetProperty(const ExecutionContext *exe_ctx,
                                       bool will_modify,

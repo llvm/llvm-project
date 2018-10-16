@@ -12,6 +12,10 @@
 
 #include "lldb/API/SBDefines.h"
 
+namespace lldb_private {
+class SBLaunchInfoImpl;
+}
+
 namespace lldb {
 
 class SBPlatform;
@@ -141,11 +145,10 @@ protected:
   friend class SBPlatform;
   friend class SBTarget;
 
-  lldb_private::ProcessLaunchInfo &ref();
-
   const lldb_private::ProcessLaunchInfo &ref() const;
+  void set_ref(const lldb_private::ProcessLaunchInfo &info);
 
-  ProcessLaunchInfoSP m_opaque_sp;
+  std::shared_ptr<lldb_private::SBLaunchInfoImpl> m_opaque_sp;
 };
 
 } // namespace lldb

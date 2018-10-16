@@ -133,8 +133,8 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_i386(
       if (addr_range_ptr) {
         if (first_frame->GetFrameCodeAddress() ==
             addr_range_ptr->GetBaseAddress()) {
-          // We are at the first instruction, so we can recover the
-          // previous PC by dereferencing the SP
+          // We are at the first instruction, so we can recover the previous PC
+          // by dereferencing the SP
           lldb::addr_t first_frame_sp = reg_ctx->GetSP(0);
           // Read the real second frame return address into frame.pc
           if (first_frame_sp &&
@@ -224,8 +224,8 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_x86_64(
       if (addr_range_ptr) {
         if (first_frame->GetFrameCodeAddress() ==
             addr_range_ptr->GetBaseAddress()) {
-          // We are at the first instruction, so we can recover the
-          // previous PC by dereferencing the SP
+          // We are at the first instruction, so we can recover the previous PC
+          // by dereferencing the SP
           lldb::addr_t first_frame_sp = reg_ctx->GetSP(0);
           // Read the real second frame return address into frame.pc
           if (process->ReadMemory(first_frame_sp, &frame.pc, sizeof(frame.pc),

@@ -4,6 +4,7 @@ include(CheckSymbolExists)
 include(CheckIncludeFile)
 include(CheckIncludeFiles)
 include(CheckLibraryExists)
+include(CheckTypeSize)
 
 set(CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
 check_symbol_exists(ppoll poll.h HAVE_PPOLL)
@@ -14,14 +15,8 @@ check_cxx_symbol_exists(accept4 "sys/socket.h" HAVE_ACCEPT4)
 check_include_file(termios.h HAVE_TERMIOS_H)
 check_include_files("sys/types.h;sys/event.h" HAVE_SYS_EVENT_H)
 
-check_cxx_source_compiles("
-  #include <sys/uio.h>
-  int main() { process_vm_readv(0, nullptr, 0, nullptr, 0, 0); return 0; }"
-  HAVE_PROCESS_VM_READV)
-check_cxx_source_compiles("
-    #include <sys/syscall.h>
-    int main() { return __NR_process_vm_readv; }"
-    HAVE_NR_PROCESS_VM_READV)
+check_cxx_symbol_exists(process_vm_readv "sys/uio.h" HAVE_PROCESS_VM_READV)
+check_cxx_symbol_exists(__NR_process_vm_readv "sys/syscall.h" HAVE_NR_PROCESS_VM_READV)
 
 check_library_exists(compression compression_encode_buffer "" HAVE_LIBCOMPRESSION)
 
@@ -31,6 +26,24 @@ check_library_exists(compression compression_encode_buffer "" HAVE_LIBCOMPRESSIO
 set(LLDB_CONFIG_TERMIOS_SUPPORTED ${HAVE_TERMIOS_H})
 if(NOT UNIX)
   set(LLDB_DISABLE_POSIX 1)
+endif()
+
+if (NOT LLDB_DISABLE_LIBEDIT)
+  # Check if we libedit capable of handling wide characters (built with
+  # '--enable-widec').
+  set(CMAKE_REQUIRED_LIBRARIES ${libedit_LIBRARIES})
+  set(CMAKE_REQUIRED_INCLUDES ${libedit_INCLUDE_DIRS})
+  check_symbol_exists(el_winsertstr histedit.h LLDB_EDITLINE_USE_WCHAR)
+  set(CMAKE_EXTRA_INCLUDE_FILES histedit.h)
+  check_type_size(el_rfunc_t LLDB_EL_RFUNC_T_SIZE)
+  if (LLDB_EL_RFUNC_T_SIZE STREQUAL "")
+    set(LLDB_HAVE_EL_RFUNC_T 0)
+  else()
+    set(LLDB_HAVE_EL_RFUNC_T 1)
+  endif()
+  set(CMAKE_REQUIRED_LIBRARIES)
+  set(CMAKE_REQUIRED_INCLUDES)
+  set(CMAKE_EXTRA_INCLUDE_FILES)
 endif()
 
 if(NOT LLDB_CONFIG_HEADER_INPUT)

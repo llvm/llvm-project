@@ -127,18 +127,14 @@ Status PipePosix::CreateWithUniqueName(llvm::StringRef prefix,
                                        llvm::SmallVectorImpl<char> &name) {
   llvm::SmallString<PATH_MAX> named_pipe_path;
   llvm::SmallString<PATH_MAX> pipe_spec((prefix + ".%%%%%%").str());
-  FileSpec tmpdir_file_spec;
-  tmpdir_file_spec.Clear();
-  if (HostInfo::GetLLDBPath(ePathTypeLLDBTempSystemDir, tmpdir_file_spec)) {
-    tmpdir_file_spec.AppendPathComponent(pipe_spec.c_str());
-  } else {
+  FileSpec tmpdir_file_spec = HostInfo::GetProcessTempDir();
+  if (!tmpdir_file_spec)
     tmpdir_file_spec.AppendPathComponent("/tmp");
-    tmpdir_file_spec.AppendPathComponent(pipe_spec.c_str());
-  }
+  tmpdir_file_spec.AppendPathComponent(pipe_spec);
 
   // It's possible that another process creates the target path after we've
-  // verified it's available but before we create it, in which case we
-  // should try again.
+  // verified it's available but before we create it, in which case we should
+  // try again.
   Status error;
   do {
     llvm::sys::fs::createUniqueFile(tmpdir_file_spec.GetPath(),

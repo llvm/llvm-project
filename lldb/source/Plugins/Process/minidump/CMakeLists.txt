@@ -1,5 +1,3 @@
-include_directories(../Utility)
-
 add_lldb_library(lldbPluginProcessMinidump PLUGIN
   MinidumpTypes.cpp
   MinidumpParser.cpp

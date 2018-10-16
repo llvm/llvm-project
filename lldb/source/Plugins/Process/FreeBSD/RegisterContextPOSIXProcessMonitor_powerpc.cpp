@@ -14,7 +14,7 @@
 #include "ProcessFreeBSD.h"
 #include "ProcessMonitor.h"
 #include "RegisterContextPOSIXProcessMonitor_powerpc.h"
-#include "RegisterContextPOSIX_powerpc.h"
+#include "Plugins/Process/Utility/RegisterContextPOSIX_powerpc.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -140,8 +140,8 @@ bool RegisterContextPOSIXProcessMonitor_powerpc::ReadRegister(
 
     if (success) {
       // If our return byte size was greater than the return value reg size,
-      // then
-      // use the type specified by reg_info rather than the uint64_t default
+      // then use the type specified by reg_info rather than the uint64_t
+      // default
       if (value.GetByteSize() > reg_info->byte_size)
         value.SetType(reg_info);
     }

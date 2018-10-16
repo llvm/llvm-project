@@ -19,8 +19,8 @@
 // option structure
 struct option {
   const char *name;
-  // has_arg can't be an enum because some compilers complain about
-  // type mismatches in all the code that assumes it is an int.
+  // has_arg can't be an enum because some compilers complain about type
+  // mismatches in all the code that assumes it is an int.
   int has_arg;
   int *flag;
   int val;

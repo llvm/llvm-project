@@ -54,8 +54,8 @@ FileLineResolver::SearchCallback(SearchFilter &filter, SymbolContext &context,
           while (file_idx != UINT32_MAX) {
             line_table->FineLineEntriesForFileIndex(file_idx, append,
                                                     m_sc_list);
-            // Get the next file index in case we have multiple file
-            // entries for the same file
+            // Get the next file index in case we have multiple file entries
+            // for the same file
             file_idx = cu->GetSupportFiles().FindFileIndex(file_idx + 1,
                                                            m_file_spec, false);
           }

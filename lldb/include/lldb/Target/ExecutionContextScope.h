@@ -20,22 +20,21 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class ExecutionContextScope ExecutionContextScope.h
-/// "lldb/Symbol/ExecutionContextScope.h"
-/// @brief Inherit from this if your object can reconstruct its
+/// "lldb/Symbol/ExecutionContextScope.h" Inherit from this if your object can
+/// reconstruct its
 ///        execution context.
 ///
-/// Many objects that have pointers back to parent execution context
-/// objects can inherit from this pure virtual class can reconstruct
-/// their execution context without having to keep a complete
-/// ExecutionContext object in the object state. Examples of these
-/// objects include: Process, Thread, RegisterContext and StackFrame.
+/// Many objects that have pointers back to parent execution context objects
+/// can inherit from this pure virtual class can reconstruct their execution
+/// context without having to keep a complete ExecutionContext object in the
+/// object state. Examples of these objects include: Process, Thread,
+/// RegisterContext and StackFrame.
 ///
-/// Objects can contain a valid pointer to an instance of this so they
-/// can reconstruct the execution context.
+/// Objects can contain a valid pointer to an instance of this so they can
+/// reconstruct the execution context.
 ///
-/// Objects that adhere to this protocol can reconstruct enough of a
-/// execution context to allow functions that take a execution contexts
-/// to be called.
+/// Objects that adhere to this protocol can reconstruct enough of a execution
+/// context to allow functions that take a execution contexts to be called.
 //----------------------------------------------------------------------
 class ExecutionContextScope {
 public:
@@ -52,9 +51,9 @@ public:
   //------------------------------------------------------------------
   /// Reconstruct the object's execution context into \a sc.
   ///
-  /// The object should fill in as much of the ExecutionContextScope as it
-  /// can so function calls that require a execution context can be made
-  /// for the given object.
+  /// The object should fill in as much of the ExecutionContextScope as it can
+  /// so function calls that require a execution context can be made for the
+  /// given object.
   ///
   /// @param[out] exe_ctx
   ///     A reference to an execution context object that gets filled

@@ -22,12 +22,12 @@ def ansi_underline_surround_regex(inner_regex_text):
     # return re.compile(r"\[4m%s\[0m" % inner_regex_text)
     return "4.+\033\\[4m%s\033\\[0m" % inner_regex_text
 
+def ansi_color_surround_regex(inner_regex_text):
+    return "\033\\[3[0-7]m%s\033\\[0m" % inner_regex_text
 
 class SourceManagerTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-
-    SOURCE_FILE = 'main.c'
 
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -35,12 +35,13 @@ class SourceManagerTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break inside main().
-        self.line = line_number(self.SOURCE_FILE, '// Set break point at this line.')
+        self.file = self.getBuildArtifact("main-copy.c")
+        self.line = line_number("main.c", '// Set break point at this line.')
 
     def get_expected_stop_column_number(self):
         """Return the 1-based column number of the first non-whitespace
         character in the breakpoint source line."""
-        stop_line = get_line(self.SOURCE_FILE, self.line)
+        stop_line = get_line(self.file, self.line)
         # The number of spaces that must be skipped to get to the first non-
         # whitespace character --- where we expect the debugger breakpoint
         # column to be --- is equal to the number of characters that get
@@ -48,7 +49,7 @@ class SourceManagerTestCase(TestBase):
         # the character column after the initial whitespace.
         return len(stop_line) - len(stop_line.lstrip()) + 1
 
-    def do_display_source_python_api(self, use_color, column_marker_regex):
+    def do_display_source_python_api(self, use_color, needle_regex, highlight_source=False):
         self.build()
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
@@ -70,9 +71,11 @@ class SourceManagerTestCase(TestBase):
         # Setup whether we should use ansi escape sequences, including color
         # and styles such as underline.
         self.dbg.SetUseColor(use_color)
+        # Disable syntax highlighting if needed.
 
-        # Create the filespec for 'main.c'.
-        filespec = lldb.SBFileSpec('main.c', False)
+        self.runCmd("settings set highlight-source " + str(highlight_source).lower())
+
+        filespec = lldb.SBFileSpec(self.file, False)
         source_mgr = self.dbg.GetSourceManager()
         # Use a string stream as the destination.
         stream = lldb.SBStream()
@@ -89,10 +92,10 @@ class SourceManagerTestCase(TestBase):
         # => 4        printf("Hello world.\n"); // Set break point at this line.
         #    5        return 0;
         #    6    }
-        self.expect(stream.GetData(), "Source code displayed correctly",
+        self.expect(stream.GetData(), "Source code displayed correctly:\n" + stream.GetData(),
                     exe=False,
                     patterns=['=> %d.*Hello world' % self.line,
-                              column_marker_regex])
+                              needle_regex])
 
         # Boundary condition testings for SBStream().  LLDB should not crash!
         stream.Print(None)
@@ -110,8 +113,27 @@ class SourceManagerTestCase(TestBase):
         """Test display of source using the SBSourceManager API, using a
         dumb terminal and thus no color support (the default)."""
         use_color = True
-        underline_regex = ansi_underline_surround_regex(r".")
+        underline_regex = ansi_underline_surround_regex(r"printf")
         self.do_display_source_python_api(use_color, underline_regex)
+
+    @add_test_categories(['pyapi'])
+    def test_display_source_python_ansi_terminal_syntax_highlighting(self):
+        """Test display of source using the SBSourceManager API and check for
+        the syntax highlighted output"""
+        use_color = True
+        syntax_highlighting = True;
+
+        # Just pick 'int' as something that should be colored.
+        color_regex = ansi_color_surround_regex("int")
+        self.do_display_source_python_api(use_color, color_regex, syntax_highlighting)
+
+        # Same for 'char'.
+        color_regex = ansi_color_surround_regex("char")
+        self.do_display_source_python_api(use_color, color_regex, syntax_highlighting)
+
+        # Test that we didn't color unrelated identifiers.
+        self.do_display_source_python_api(use_color, r" main\(", syntax_highlighting)
+        self.do_display_source_python_api(use_color, r"\);", syntax_highlighting)
 
     def test_move_and_then_display_source(self):
         """Test that target.source-map settings work by moving main.c to hidden/main.c."""
@@ -120,12 +142,10 @@ class SourceManagerTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Move main.c to hidden/main.c.
-        main_c = "main.c"
-        main_c_hidden = os.path.join("hidden", main_c)
-        os.rename(main_c, main_c_hidden)
-
-        # Restore main.c after the test.
-        self.addTearDownHook(lambda: os.rename(main_c_hidden, main_c))
+        hidden = self.getBuildArtifact("hidden")
+        lldbutil.mkdir_p(hidden)
+        main_c_hidden = os.path.join(hidden, "main-copy.c")
+        os.rename(self.file, main_c_hidden)
 
         if self.TraceOn():
             system([["ls"]])
@@ -140,12 +160,10 @@ class SourceManagerTestCase(TestBase):
 
         # Set target.source-map settings.
         self.runCmd("settings set target.source-map %s %s" %
-                    (self.getSourceDir(),
-                     os.path.join(self.getSourceDir(), "hidden")))
+                    (self.getBuildDir(), hidden))
         # And verify that the settings work.
         self.expect("settings show target.source-map",
-                    substrs=[self.getSourceDir(),
-                             os.path.join(self.getSourceDir(), "hidden")])
+                    substrs=[self.getBuildDir(), hidden])
 
         # Display main() and verify that the source mapping has been kicked in.
         self.expect("source list -n main", SOURCE_DISPLAYED_CORRECTLY,
@@ -158,19 +176,19 @@ class SourceManagerTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
-            self, "main.c", self.line, num_expected_locations=1, loc_exact=True)
+            self, "main-copy.c", self.line, num_expected_locations=1, loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
                     substrs=['stopped',
-                             'main.c:%d' % self.line,
+                             'main-copy.c:%d' % self.line,
                              'stop reason = breakpoint'])
 
         # Display some source code.
         self.expect(
-            "source list -f main.c -l %d" %
+            "source list -f main-copy.c -l %d" %
             self.line,
             SOURCE_DISPLAYED_CORRECTLY,
             substrs=['Hello world'])
@@ -191,7 +209,7 @@ class SourceManagerTestCase(TestBase):
         self.assertTrue(int(m.group(1)) > 0)
 
         # Read the main.c file content.
-        with io.open('main.c', 'r', newline='\n') as f:
+        with io.open(self.file, 'r', newline='\n') as f:
             original_content = f.read()
             if self.TraceOn():
                 print("original content:", original_content)
@@ -199,49 +217,32 @@ class SourceManagerTestCase(TestBase):
         # Modify the in-memory copy of the original source code.
         new_content = original_content.replace('Hello world', 'Hello lldb', 1)
 
-        # This is the function to restore the original content.
-        def restore_file():
-            #print("os.path.getmtime() before restore:", os.path.getmtime('main.c'))
-            time.sleep(1)
-            with io.open('main.c', 'w', newline='\n') as f:
-                f.write(original_content)
-            if self.TraceOn():
-                with open('main.c', 'r') as f:
-                    print("content restored to:", f.read())
-            # Touch the file just to be sure.
-            os.utime('main.c', None)
-            if self.TraceOn():
-                print(
-                    "os.path.getmtime() after restore:",
-                    os.path.getmtime('main.c'))
-
         # Modify the source code file.
-        with io.open('main.c', 'w', newline='\n') as f:
+        with io.open(self.file, 'w', newline='\n') as f:
             time.sleep(1)
             f.write(new_content)
             if self.TraceOn():
                 print("new content:", new_content)
                 print(
                     "os.path.getmtime() after writing new content:",
-                    os.path.getmtime('main.c'))
-            # Add teardown hook to restore the file to the original content.
-            self.addTearDownHook(restore_file)
+                    os.path.getmtime(self.file))
 
         # Display the source code again.  We should see the updated line.
         self.expect(
-            "source list -f main.c -l %d" %
+            "source list -f main-copy.c -l %d" %
             self.line,
             SOURCE_DISPLAYED_CORRECTLY,
             substrs=['Hello lldb'])
 
     def test_set_breakpoint_with_absolute_path(self):
         self.build()
+        hidden = self.getBuildArtifact("hidden")
+        lldbutil.mkdir_p(hidden)
         self.runCmd("settings set target.source-map %s %s" %
-                    (self.getSourceDir(),
-                     os.path.join(self.getSourceDir(), "hidden")))
+                    (self.getBuildDir(), hidden))
 
         exe = self.getBuildArtifact("a.out")
-        main = os.path.join(self.getSourceDir(), "hidden", "main.c")
+        main = os.path.join(self.getBuildDir(), "hidden", "main-copy.c")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
@@ -252,5 +253,5 @@ class SourceManagerTestCase(TestBase):
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
                     substrs=['stopped',
-                             'main.c:%d' % self.line,
+                             'main-copy.c:%d' % self.line,
                              'stop reason = breakpoint'])

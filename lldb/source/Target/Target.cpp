@@ -336,17 +336,13 @@ BreakpointSP Target::CreateSourceRegexBreakpoint(
 
 BreakpointSP Target::CreateBreakpoint(const FileSpecList *containingModules,
                                       const FileSpec &file, uint32_t line_no,
-                                      lldb::addr_t offset,
+                                      uint32_t column, lldb::addr_t offset,
                                       LazyBool check_inlines,
                                       LazyBool skip_prologue, bool internal,
                                       bool hardware,
                                       LazyBool move_to_nearest_code) {
   FileSpec remapped_file;
-  ConstString remapped_path;
-  if (GetSourcePathMap().ReverseRemapPath(ConstString(file.GetPath().c_str()),
-                                          remapped_path))
-    remapped_file.SetFile(remapped_path.AsCString(), true);
-  else
+  if (!GetSourcePathMap().ReverseRemapPath(file, remapped_file))
     remapped_file = file;
 
   if (check_inlines == eLazyBoolCalculate) {
@@ -390,8 +386,8 @@ BreakpointSP Target::CreateBreakpoint(const FileSpecList *containingModules,
     move_to_nearest_code = GetMoveToNearestCode() ? eLazyBoolYes : eLazyBoolNo;
 
   BreakpointResolverSP resolver_sp(new BreakpointResolverFileLine(
-      nullptr, remapped_file, line_no, offset, check_inlines, skip_prologue,
-      !static_cast<bool>(move_to_nearest_code)));
+      nullptr, remapped_file, line_no, column, offset, check_inlines,
+      skip_prologue, !static_cast<bool>(move_to_nearest_code)));
   return CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true);
 }
 
@@ -402,8 +398,8 @@ BreakpointSP Target::CreateBreakpoint(lldb::addr_t addr, bool internal,
   // Check for any reason we want to move this breakpoint to other address.
   addr = GetBreakableLoadAddress(addr);
 
-  // Attempt to resolve our load address if possible, though it is ok if
-  // it doesn't resolve to section/offset.
+  // Attempt to resolve our load address if possible, though it is ok if it
+  // doesn't resolve to section/offset.
 
   // Try and resolve as a load address if possible
   GetSectionLoadList().ResolveLoadAddress(addr, so_addr);
@@ -557,8 +553,7 @@ SearchFilterSP Target::GetSearchFilterForModuleAndCUList(
   SearchFilterSP filter_sp;
   if (containingModules == nullptr) {
     // We could make a special "CU List only SearchFilter".  Better yet was if
-    // these could be composable,
-    // but that will take a little reworking.
+    // these could be composable, but that will take a little reworking.
 
     filter_sp.reset(new SearchFilterByModuleListAndCU(
         shared_from_this(), FileSpecList(), *containingSourceFiles));
@@ -764,8 +759,8 @@ static bool CheckIfWatchpointsExhausted(Target *target, Status &error) {
   return true;
 }
 
-// See also Watchpoint::SetWatchpointType(uint32_t type) and
-// the OptionGroupWatchpoint::WatchType enum type.
+// See also Watchpoint::SetWatchpointType(uint32_t type) and the
+// OptionGroupWatchpoint::WatchType enum type.
 WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
                                       const CompilerType *type, uint32_t kind,
                                       Status &error) {
@@ -796,8 +791,8 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
   if (!CheckIfWatchpointsExhausted(this, error))
     return wp_sp;
 
-  // Currently we only support one watchpoint per address, with total number
-  // of watchpoints limited by the hardware which the inferior is running on.
+  // Currently we only support one watchpoint per address, with total number of
+  // watchpoints limited by the hardware which the inferior is running on.
 
   // Grab the list mutex while doing operations.
   const bool notify = false; // Don't notify about all the state changes we do
@@ -834,9 +829,8 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
                 wp_sp->GetID());
 
   if (error.Fail()) {
-    // Enabling the watchpoint on the device side failed.
-    // Remove the said watchpoint from the list maintained by the target
-    // instance.
+    // Enabling the watchpoint on the device side failed. Remove the said
+    // watchpoint from the list maintained by the target instance.
     m_watchpoint_list.Remove(wp_sp->GetID(), true);
     // See if we could provide more helpful error message.
     if (!OptionGroupWatchpoint::IsWatchSizeSupported(size))
@@ -1048,8 +1042,7 @@ Status Target::SerializeBreakpointsToFile(const FileSpec &file,
         Breakpoint *bp = GetBreakpointByID(bp_id).get();
         StructuredData::ObjectSP bkpt_save_sp = bp->SerializeToStructuredData();
         // If the user explicitly asked to serialize a breakpoint, and we
-        // can't, then
-        // raise an error:
+        // can't, then raise an error:
         if (!bkpt_save_sp) {
           error.SetErrorStringWithFormat("Unable to serialize breakpoint %d",
                                          bp_id);
@@ -1162,8 +1155,8 @@ bool Target::RemoveAllWatchpoints(bool end_to_end) {
   return true; // Success!
 }
 
-// Assumption: Caller holds the list mutex lock for m_watchpoint_list for end to
-// end operations.
+// Assumption: Caller holds the list mutex lock for m_watchpoint_list for end
+// to end operations.
 bool Target::DisableAllWatchpoints(bool end_to_end) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
   if (log)
@@ -1192,8 +1185,8 @@ bool Target::DisableAllWatchpoints(bool end_to_end) {
   return true; // Success!
 }
 
-// Assumption: Caller holds the list mutex lock for m_watchpoint_list for end to
-// end operations.
+// Assumption: Caller holds the list mutex lock for m_watchpoint_list for end
+// to end operations.
 bool Target::EnableAllWatchpoints(bool end_to_end) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
   if (log)
@@ -1256,8 +1249,8 @@ bool Target::ClearAllWatchpointHistoricValues() {
   return true; // Success!
 }
 
-// Assumption: Caller holds the list mutex lock for m_watchpoint_list
-// during these operations.
+// Assumption: Caller holds the list mutex lock for m_watchpoint_list during
+// these operations.
 bool Target::IgnoreAllWatchpoints(uint32_t ignore_count) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
   if (log)
@@ -1404,7 +1397,7 @@ void Target::DidExec() {
 }
 
 void Target::SetExecutableModule(ModuleSP &executable_sp,
-                                 bool get_dependent_files) {
+                                 LoadDependentFiles load_dependent_files) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
   ClearModules(false);
 
@@ -1428,8 +1421,20 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
 
     FileSpecList dependent_files;
     ObjectFile *executable_objfile = executable_sp->GetObjectFile();
+    bool load_dependens;
+    switch (load_dependent_files) {
+    case eLoadDependentsDefault:
+      load_dependens = executable_sp->IsExecutable();
+      break;
+    case eLoadDependentsYes:
+      load_dependens = true;
+      break;
+    case eLoadDependentsNo:
+      load_dependens = false;
+      break;
+    }
 
-    if (executable_objfile && get_dependent_files) {
+    if (executable_objfile && load_dependens) {
       executable_objfile->GetDependentModules(dependent_files);
       for (uint32_t i = 0; i < dependent_files.GetSize(); i++) {
         FileSpec dependent_file_spec(
@@ -1480,7 +1485,8 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec) {
 
   if (compatible_local_arch || missing_local_arch) {
     // If we haven't got a valid arch spec, or the architectures are compatible
-    // update the architecture, unless the one we already have is more specified
+    // update the architecture, unless the one we already have is more
+    // specified
     if (replace_local_arch)
       m_arch = other;
     LLDB_LOG(log, "set architecture to {0} ({1})",
@@ -1513,7 +1519,7 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec) {
                                                nullptr, nullptr);
 
     if (!error.Fail() && executable_sp) {
-      SetExecutableModule(executable_sp, true);
+      SetExecutableModule(executable_sp, eLoadDependentsYes);
       return true;
     }
   }
@@ -1523,8 +1529,8 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec) {
 bool Target::MergeArchitecture(const ArchSpec &arch_spec) {
   if (arch_spec.IsValid()) {
     if (m_arch.GetSpec().IsCompatibleMatch(arch_spec)) {
-      // The current target arch is compatible with "arch_spec", see if we
-      // can improve our current architecture using bits from "arch_spec"
+      // The current target arch is compatible with "arch_spec", see if we can
+      // improve our current architecture using bits from "arch_spec"
 
       // Merge bits from arch_spec into "merged_arch" and set our architecture
       ArchSpec merged_arch(m_arch.GetSpec());
@@ -1586,8 +1592,7 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     // There is no point in notifying the per-module SwiftASTContexts,
     // but do notify the global scratch context.
     auto swift_ast_ctx =
-        llvm::dyn_cast_or_null<SwiftASTContext>(GetScratchTypeSystemForLanguage(
-            &error, eLanguageTypeSwift, create_on_demand));
+        GetScratchSwiftASTContext(error, nullptr, create_on_demand);
     if (swift_ast_ctx)
       swift_ast_ctx->ModulesDidLoad(module_list);
     module_list.ClearModuleDependentCaches();
@@ -1694,8 +1699,8 @@ size_t Target::ReadMemory(const Address &addr, bool prefer_file_cache,
                           lldb::addr_t *load_addr_ptr) {
   error.Clear();
 
-  // if we end up reading this from process memory, we will fill this
-  // with the actual load address
+  // if we end up reading this from process memory, we will fill this with the
+  // actual load address
   if (load_addr_ptr)
     *load_addr_ptr = LLDB_INVALID_ADDRESS;
 
@@ -1707,16 +1712,16 @@ size_t Target::ReadMemory(const Address &addr, bool prefer_file_cache,
   if (!addr.IsSectionOffset()) {
     SectionLoadList &section_load_list = GetSectionLoadList();
     if (section_load_list.IsEmpty()) {
-      // No sections are loaded, so we must assume we are not running
-      // yet and anything we are given is a file address.
+      // No sections are loaded, so we must assume we are not running yet and
+      // anything we are given is a file address.
       file_addr = addr.GetOffset(); // "addr" doesn't have a section, so its
                                     // offset is the file address
       m_images.ResolveFileAddress(file_addr, resolved_addr);
     } else {
-      // We have at least one section loaded. This can be because
-      // we have manually loaded some sections with "target modules load ..."
-      // or because we have have a live process that has sections loaded
-      // through the dynamic loader
+      // We have at least one section loaded. This can be because we have
+      // manually loaded some sections with "target modules load ..." or
+      // because we have have a live process that has sections loaded through
+      // the dynamic loader
       load_addr = addr.GetOffset(); // "addr" doesn't have a section, so its
                                     // offset is the load address
       section_load_list.ResolveLoadAddress(load_addr, resolved_addr);
@@ -1763,19 +1768,19 @@ size_t Target::ReadMemory(const Address &addr, bool prefer_file_cache,
           *load_addr_ptr = load_addr;
         return bytes_read;
       }
-      // If the address is not section offset we have an address that
-      // doesn't resolve to any address in any currently loaded shared
-      // libraries and we failed to read memory so there isn't anything
-      // more we can do. If it is section offset, we might be able to
-      // read cached memory from the object file.
+      // If the address is not section offset we have an address that doesn't
+      // resolve to any address in any currently loaded shared libraries and we
+      // failed to read memory so there isn't anything more we can do. If it is
+      // section offset, we might be able to read cached memory from the object
+      // file.
       if (!resolved_addr.IsSectionOffset())
         return 0;
     }
   }
 
   if (!prefer_file_cache && resolved_addr.IsSectionOffset()) {
-    // If we didn't already try and read from the object file cache, then
-    // try it after failing to read from the process.
+    // If we didn't already try and read from the object file cache, then try
+    // it after failing to read from the process.
     return ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
   }
   return 0;
@@ -1792,8 +1797,8 @@ size_t Target::ReadCStringFromMemory(const Address &addr, std::string &out_str,
     if (length == 0)
       break;
     out_str.append(buf, length);
-    // If we got "length - 1" bytes, we didn't get the whole C string, we
-    // need to read some more characters
+    // If we got "length - 1" bytes, we didn't get the whole C string, we need
+    // to read some more characters
     if (length == sizeof(buf) - 1)
       curr_addr += length;
     else
@@ -1814,9 +1819,9 @@ size_t Target::ReadCStringFromMemory(const Address &addr, char *dst,
     addr_t curr_addr = addr.GetLoadAddress(this);
     Address address(addr);
 
-    // We could call m_process_sp->GetMemoryCacheLineSize() but I don't
-    // think this really needs to be tied to the memory cache subsystem's
-    // cache line size, so leave this as a fixed constant.
+    // We could call m_process_sp->GetMemoryCacheLineSize() but I don't think
+    // this really needs to be tied to the memory cache subsystem's cache line
+    // size, so leave this as a fixed constant.
     const size_t cache_line_size = 512;
 
     size_t bytes_left = dst_max_len - 1;
@@ -1907,18 +1912,18 @@ bool Target::ReadPointerFromMemory(const Address &addr, bool prefer_file_cache,
     if (pointer_vm_addr != LLDB_INVALID_ADDRESS) {
       SectionLoadList &section_load_list = GetSectionLoadList();
       if (section_load_list.IsEmpty()) {
-        // No sections are loaded, so we must assume we are not running
-        // yet and anything we are given is a file address.
+        // No sections are loaded, so we must assume we are not running yet and
+        // anything we are given is a file address.
         m_images.ResolveFileAddress(pointer_vm_addr, pointer_addr);
       } else {
-        // We have at least one section loaded. This can be because
-        // we have manually loaded some sections with "target modules load ..."
-        // or because we have have a live process that has sections loaded
-        // through the dynamic loader
+        // We have at least one section loaded. This can be because we have
+        // manually loaded some sections with "target modules load ..." or
+        // because we have have a live process that has sections loaded through
+        // the dynamic loader
         section_load_list.ResolveLoadAddress(pointer_vm_addr, pointer_addr);
       }
-      // We weren't able to resolve the pointer value, so just return
-      // an address with no section
+      // We weren't able to resolve the pointer value, so just return an
+      // address with no section
       if (!pointer_addr.IsValid())
         pointer_addr.SetOffset(pointer_vm_addr);
       return true;
@@ -1934,9 +1939,8 @@ ModuleSP Target::GetSharedModule(const ModuleSpec &module_spec,
   Status error;
 
   // First see if we already have this module in our module list.  If we do,
-  // then we're done, we don't need
-  // to consult the shared modules list.  But only do this if we are passed a
-  // UUID.
+  // then we're done, we don't need to consult the shared modules list.  But
+  // only do this if we are passed a UUID.
 
   if (module_spec.GetUUID().IsValid())
     module_sp = m_images.FindFirstModule(module_spec);
@@ -1991,8 +1995,8 @@ ModuleSP Target::GetSharedModule(const ModuleSpec &module_spec,
     }
 
     // We found a module that wasn't in our target list.  Let's make sure that
-    // there wasn't an equivalent
-    // module in the list already, and if there was, let's remove it.
+    // there wasn't an equivalent module in the list already, and if there was,
+    // let's remove it.
     if (module_sp) {
       ObjectFile *objfile = module_sp->GetObjectFile();
       if (objfile) {
@@ -2026,18 +2030,14 @@ ModuleSP Target::GetSharedModule(const ModuleSpec &module_spec,
           return ModuleSP();
         }
         // GetSharedModule is not guaranteed to find the old shared module, for
-        // instance
-        // in the common case where you pass in the UUID, it is only going to
-        // find the one
-        // module matching the UUID.  In fact, it has no good way to know what
-        // the "old module"
-        // relevant to this target is, since there might be many copies of a
-        // module with this file spec
-        // in various running debug sessions, but only one of them will belong
-        // to this target.
-        // So let's remove the UUID from the module list, and look in the
-        // target's module list.
-        // Only do this if there is SOMETHING else in the module spec...
+        // instance in the common case where you pass in the UUID, it is only
+        // going to find the one module matching the UUID.  In fact, it has no
+        // good way to know what the "old module" relevant to this target is,
+        // since there might be many copies of a module with this file spec in
+        // various running debug sessions, but only one of them will belong to
+        // this target. So let's remove the UUID from the module list, and look
+        // in the target's module list. Only do this if there is SOMETHING else
+        // in the module spec...
         if (!old_module_sp) {
           if (module_spec.GetUUID().IsValid() &&
               !module_spec.GetFileSpec().GetFilename().IsEmpty() &&
@@ -2099,7 +2099,7 @@ void Target::ImageSearchPathsChanged(const PathMappingList &path_list,
   Target *target = (Target *)baton;
   ModuleSP exe_module_sp(target->GetExecutableModule());
   if (exe_module_sp)
-    target->SetExecutableModule(exe_module_sp, true);
+    target->SetExecutableModule(exe_module_sp, eLoadDependentsYes);
 }
 
 #ifdef __clang_analyzer__
@@ -2141,10 +2141,8 @@ TypeSystem *Target::GetScratchTypeSystemForLanguage(
     }
   }
 
-  if (m_cant_make_scratch_type_system.find(language) !=
-      m_cant_make_scratch_type_system.end()) {
+  if (m_cant_make_scratch_type_system.count(language))
     return nullptr;
-  }
 
   TypeSystem *type_system = m_scratch_type_system_map.GetTypeSystemForLanguage(
       language, this, create_on_demand, compiler_options);
@@ -2153,52 +2151,57 @@ TypeSystem *Target::GetScratchTypeSystemForLanguage(
             llvm::dyn_cast_or_null<SwiftASTContext>(type_system)) {
       if (swift_ast_ctx->CheckProcessChanged() ||
           swift_ast_ctx->HasFatalErrors()) {
-        if (StreamSP errs = GetDebugger().GetAsyncErrorStream()) {
-          if (swift_ast_ctx->HasFatalErrors()) {
-            auto *module_name = GetExecutableModule()
-                                    ->GetPlatformFileSpec()
-                                    .GetFilename()
-                                    .AsCString();
-            if (m_use_scratch_typesystem_per_module)
-              errs->Printf("\nnote: Swift compiler options for %s "
-                           "conflict with options found in other modules;\n"
-                           "      Switching to a new expression evaluator for "
-                           "%s, old $R variables are lost.\n",
-                           module_name, module_name);
-            else {
+        // If it is safe to replace the scratch context, do so. If
+        // try_lock() fails, then higher stack frame (or another
+        // thread) is holding a read lock to the scratch context and
+        // replacing it could cause a use-after-free later on.
+        if (GetSwiftScratchContextLock().try_lock()) {
+          if (m_use_scratch_typesystem_per_module)
+            DisplayFallbackSwiftContextErrors(swift_ast_ctx);
+          else if (StreamSP errs = GetDebugger().GetAsyncErrorStream()) {
+            if (swift_ast_ctx->HasFatalErrors()) {
+              errs->Printf(
+                  "warning: Swift error in scratch context: %s.\n",
+                  swift_ast_ctx->GetFatalErrors().AsCString("unknown error"));
+              auto *module_name = GetExecutableModule()
+                                      ->GetPlatformFileSpec()
+                                      .GetFilename()
+                                      .AsCString();
               errs->Printf("Shared Swift state for %s has developed fatal "
                            "errors and is being discarded.\n",
                            module_name);
               errs->PutCString("REPL definitions and persistent names/types "
                                "will be lost.\n\n");
+              errs->Flush();
             }
-            errs->Flush();
           }
-        }
 
-        m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
-        type_system = m_scratch_type_system_map.GetTypeSystemForLanguage(
-            language, this, create_on_demand, compiler_options);
+          m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
+          type_system = m_scratch_type_system_map.GetTypeSystemForLanguage(
+              language, this, create_on_demand, compiler_options);
 
-        if (SwiftASTContext *new_swift_ast_ctx =
-                llvm::dyn_cast_or_null<SwiftASTContext>(type_system)) {
-          if (new_swift_ast_ctx->HasFatalErrors()) {
-            if (StreamSP error_stream_sp =
-                    GetDebugger().GetAsyncErrorStream()) {
-              error_stream_sp->PutCString("Can't construct shared Swift state "
-                                          "for this process after repeated "
-                                          "attempts.\n");
-              error_stream_sp->PutCString("Giving up.  Fatal errors:\n");
-              DiagnosticManager diag_mgr;
-              new_swift_ast_ctx->PrintDiagnostics(diag_mgr);
-              error_stream_sp->PutCString(diag_mgr.GetString().c_str());
-              error_stream_sp->Flush();
+          if (SwiftASTContext *new_swift_ast_ctx =
+                  llvm::dyn_cast_or_null<SwiftASTContext>(type_system)) {
+            if (new_swift_ast_ctx->HasFatalErrors()) {
+              if (StreamSP error_stream_sp =
+                      GetDebugger().GetAsyncErrorStream()) {
+                error_stream_sp->PutCString(
+                    "Can't construct shared Swift state "
+                    "for this process after repeated "
+                    "attempts.\n");
+                error_stream_sp->PutCString("Giving up.  Fatal errors:\n");
+                DiagnosticManager diag_mgr;
+                new_swift_ast_ctx->PrintDiagnostics(diag_mgr);
+                error_stream_sp->PutCString(diag_mgr.GetString().c_str());
+                error_stream_sp->Flush();
+              }
+
+              m_cant_make_scratch_type_system[language] = true;
+              m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
+              type_system = nullptr;
             }
-
-            m_cant_make_scratch_type_system[language] = true;
-            m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
-            type_system = nullptr;
           }
+          GetSwiftScratchContextLock().unlock();
         }
       }
     } else if (create_on_demand) {
@@ -2244,9 +2247,7 @@ Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language)
 SwiftPersistentExpressionState *
 Target::GetSwiftPersistentExpressionState(ExecutionContextScope &exe_scope) {
   Status error;
-  auto *swift_ast_context =
-      llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-          GetScratchSwiftASTContext(error, exe_scope, true));
+  auto swift_ast_context = GetScratchSwiftASTContext(error, exe_scope, true);
   if (!swift_ast_context)
     return nullptr;
   return (SwiftPersistentExpressionState *)
@@ -2254,13 +2255,22 @@ Target::GetSwiftPersistentExpressionState(ExecutionContextScope &exe_scope) {
 }
 
 UserExpression *Target::GetUserExpressionForLanguage(
+    ExecutionContext &exe_ctx,
     llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
     Expression::ResultType desired_type,
     const EvaluateExpressionOptions &options, Status &error) {
   Status type_system_error;
 
-  TypeSystem *type_system =
-      GetScratchTypeSystemForLanguage(&type_system_error, language);
+  ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
+  TypeSystem *type_system = nullptr;
+  std::unique_ptr<SwiftASTContextReader> reader;
+  if (language == eLanguageTypeSwift && exe_scope) {
+    reader = llvm::make_unique<SwiftASTContextReader>(
+        GetScratchSwiftASTContext(type_system_error, *exe_scope, true));
+    type_system = reader->get();
+  } else {
+    type_system = GetScratchTypeSystemForLanguage(&type_system_error, language);
+  }
   UserExpression *user_expr = nullptr;
 
   if (!type_system) {
@@ -2359,51 +2369,111 @@ ClangASTImporterSP Target::GetClangASTImporter() {
   return ClangASTImporterSP();
 }
 
-#ifdef __clang_analyzer__
-// See GetScratchTypeSystemForLanguage() in Target.h
-SwiftASTContext *
-Target::GetScratchSwiftASTContextImpl(Status &error,
-                                      ExecutionContextScope &exe_scope,
-                                      bool create_on_demand)
-#else
-SwiftASTContext *
-Target::GetScratchSwiftASTContext(Status &error,
-                                  ExecutionContextScope &exe_scope,
-                                  bool create_on_demand)
-#endif
-{
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
-  while (m_use_scratch_typesystem_per_module && create_on_demand) {
-    lldb::StackFrameSP stack_frame = exe_scope.CalculateStackFrame();
-    if (!stack_frame)
-      break;
+SwiftASTContextReader Target::GetScratchSwiftASTContext(
+    Status &error, ExecutionContextScope &exe_scope, bool create_on_demand) {
+  Module *lldb_module = nullptr;
+  if (m_use_scratch_typesystem_per_module)
+    if (lldb::StackFrameSP stack_frame = exe_scope.CalculateStackFrame()) {
+      auto sc = stack_frame->GetSymbolContext(lldb::eSymbolContextEverything);
+      lldb_module = sc.module_sp.get();
+    }
 
-    auto sc = stack_frame->GetSymbolContext(lldb::eSymbolContextEverything);
-    auto *lldb_module = sc.module_sp.get();
-    if (!lldb_module)
-      break;
+  return GetScratchSwiftASTContext(error, lldb_module, create_on_demand);
+}
+
+SwiftASTContextReader Target::GetScratchSwiftASTContext(Status &error,
+                                                        Module *lldb_module,
+                                                        bool create_on_demand) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
+  auto get_or_create_fallback_context = [&]() -> SwiftASTContext * {
+    if (!lldb_module || !m_use_scratch_typesystem_per_module)
+      return nullptr;
+
     ModuleLanguage idx = {lldb_module, lldb::eLanguageTypeSwift};
     auto cached = m_scratch_typesystem_for_module.find(idx);
     if (cached != m_scratch_typesystem_for_module.end()) {
+      auto *cached_ast_ctx = cast<SwiftASTContext>(cached->second.get());
+      if (cached_ast_ctx->HasFatalErrors() &&
+          !m_cant_make_scratch_type_system.count(lldb::eLanguageTypeSwift)) {
+        DisplayFallbackSwiftContextErrors(cached_ast_ctx);
+        // Try again.
+        m_scratch_typesystem_for_module.erase(cached);
+        return nullptr;
+      }
       if (log)
         log->Printf("returned cached module-wide scratch context\n");
-      return cast<SwiftASTContext>(cached->second.get());
+      return cached_ast_ctx;
     }
 
+    if (!create_on_demand || !GetSwiftScratchContextLock().try_lock())
+      return nullptr;
+
+    if (auto *global_scratch_ctx = llvm::cast_or_null<SwiftASTContext>(
+            GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift, false)))
+      DisplayFallbackSwiftContextErrors(global_scratch_ctx);
+    
     auto typesystem_sp = SwiftASTContext::CreateInstance(
         lldb::eLanguageTypeSwift, *lldb_module, this);
-    auto *swift_ast_context = cast<SwiftASTContext>(typesystem_sp.get());
+    auto *swift_ast_ctx = cast<SwiftASTContext>(typesystem_sp.get());
     m_scratch_typesystem_for_module.insert({idx, typesystem_sp});
+    GetSwiftScratchContextLock().unlock();
     if (log)
       log->Printf("created module-wide scratch context\n");
-    return swift_ast_context;
-  }
+    return swift_ast_ctx;
+  };
 
-  if (log)
-    log->Printf("returned project-wide scratch context\n");
-  return llvm::dyn_cast_or_null<SwiftASTContext>(
-      GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift,
-                                      create_on_demand));
+  auto *swift_ast_ctx = get_or_create_fallback_context();
+  if (!swift_ast_ctx) {
+    if (log)
+      log->Printf("returned project-wide scratch context\n");
+    swift_ast_ctx =
+        llvm::cast_or_null<SwiftASTContext>(GetScratchTypeSystemForLanguage(
+            &error, eLanguageTypeSwift, create_on_demand));
+  }
+  return SwiftASTContextReader(GetSwiftScratchContextLock(), swift_ast_ctx);
+}
+
+static SharedMutex *
+GetSwiftScratchContextMutex(const ExecutionContext *exe_ctx) {
+  if (!exe_ctx)
+    return nullptr;
+  ExecutionContextScope *exe_scope = exe_ctx->GetBestExecutionContextScope();
+  if (auto target = exe_scope->CalculateTarget())
+    return &target->GetSwiftScratchContextLock();
+  return nullptr;
+}
+
+SwiftASTContextLock::SwiftASTContextLock(const ExecutionContext *exe_ctx)
+    : ScopedSharedMutexReader(GetSwiftScratchContextMutex(exe_ctx)) {}
+
+static SharedMutex *
+GetSwiftScratchContextMutex(const ExecutionContextRef *exe_ctx_ref) {
+  if (!exe_ctx_ref)
+    return nullptr;
+  ExecutionContext exe_ctx(exe_ctx_ref);
+  return GetSwiftScratchContextMutex(&exe_ctx);
+}
+
+SwiftASTContextLock::SwiftASTContextLock(const ExecutionContextRef *exe_ctx_ref)
+    : ScopedSharedMutexReader(GetSwiftScratchContextMutex(exe_ctx_ref)) {}
+
+void Target::DisplayFallbackSwiftContextErrors(SwiftASTContext *swift_ast_ctx) {
+  assert(m_use_scratch_typesystem_per_module);
+  StreamSP errs = GetDebugger().GetAsyncErrorStream();
+  if (!errs || m_did_display_scratch_fallback_warning ||
+      !swift_ast_ctx->HasFatalErrors())
+    return;
+
+  m_did_display_scratch_fallback_warning = true;
+  errs->Printf(
+      "warning: Swift error in fallback scratch context: %s\n\nnote: This "
+      "error message is displayed only once. If the error displayed above is "
+      "due to conflicting search paths to Clang modules in different images of "
+      "the debugged executable, this can slow down debugging of Swift code "
+      "significantly, since a fresh Swift context has to be created every time "
+      "a conflict is encountered.\n\n",
+      swift_ast_ctx->GetFatalErrors().AsCString("unknown error"));
+  errs->Flush();
 }
 
 void Target::SettingsInitialize() { Process::SettingsInitialize(); }
@@ -2474,8 +2544,8 @@ ExpressionResults Target::EvaluateExpression(
   if (expr.empty())
     return execution_results;
 
-  // We shouldn't run stop hooks in expressions.
-  // Be sure to reset this if you return anywhere within this function.
+  // We shouldn't run stop hooks in expressions. Be sure to reset this if you
+  // return anywhere within this function.
   bool old_suppress_value = m_suppress_stop_hooks;
   m_suppress_stop_hooks = true;
 
@@ -2489,8 +2559,8 @@ ExpressionResults Target::EvaluateExpression(
     CalculateExecutionContext(exe_ctx);
   }
 
-  // Make sure we aren't just trying to see the value of a persistent
-  // variable (something like "$0")
+  // Make sure we aren't just trying to see the value of a persistent variable
+  // (something like "$0")
   lldb::ExpressionVariableSP persistent_var_sp;
   // Only check for persistent variables the expression starts with a '$'
   if (expr[0] == '$')
@@ -2557,16 +2627,16 @@ lldb::addr_t Target::GetCallableLoadAddress(lldb::addr_t load_addr,
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
     switch (addr_class) {
-    case eAddressClassData:
-    case eAddressClassDebug:
+    case AddressClass::eData:
+    case AddressClass::eDebug:
       return LLDB_INVALID_ADDRESS;
 
-    case eAddressClassUnknown:
-    case eAddressClassInvalid:
-    case eAddressClassCode:
-    case eAddressClassCodeAlternateISA:
-    case eAddressClassRuntime:
-      if ((code_addr & 2ull) || (addr_class == eAddressClassCodeAlternateISA))
+    case AddressClass::eUnknown:
+    case AddressClass::eInvalid:
+    case AddressClass::eCode:
+    case AddressClass::eCodeAlternateISA:
+    case AddressClass::eRuntime:
+      if ((code_addr & 2ull) || (addr_class == AddressClass::eCodeAlternateISA))
         code_addr |= 1ull;
       break;
     }
@@ -2575,25 +2645,24 @@ lldb::addr_t Target::GetCallableLoadAddress(lldb::addr_t load_addr,
   case llvm::Triple::arm:
   case llvm::Triple::thumb:
     switch (addr_class) {
-    case eAddressClassData:
-    case eAddressClassDebug:
+    case AddressClass::eData:
+    case AddressClass::eDebug:
       return LLDB_INVALID_ADDRESS;
 
-    case eAddressClassUnknown:
-    case eAddressClassInvalid:
-    case eAddressClassCode:
-    case eAddressClassCodeAlternateISA:
-    case eAddressClassRuntime:
+    case AddressClass::eUnknown:
+    case AddressClass::eInvalid:
+    case AddressClass::eCode:
+    case AddressClass::eCodeAlternateISA:
+    case AddressClass::eRuntime:
       // Check if bit zero it no set?
       if ((code_addr & 1ull) == 0) {
         // Bit zero isn't set, check if the address is a multiple of 2?
         if (code_addr & 2ull) {
           // The address is a multiple of 2 so it must be thumb, set bit zero
           code_addr |= 1ull;
-        } else if (addr_class == eAddressClassCodeAlternateISA) {
+        } else if (addr_class == AddressClass::eCodeAlternateISA) {
           // We checked the address and the address claims to be the alternate
-          // ISA
-          // which means thumb, so set bit zero.
+          // ISA which means thumb, so set bit zero.
           code_addr |= 1ull;
         }
       }
@@ -2618,15 +2687,15 @@ lldb::addr_t Target::GetOpcodeLoadAddress(lldb::addr_t load_addr,
   case llvm::Triple::arm:
   case llvm::Triple::thumb:
     switch (addr_class) {
-    case eAddressClassData:
-    case eAddressClassDebug:
+    case AddressClass::eData:
+    case AddressClass::eDebug:
       return LLDB_INVALID_ADDRESS;
 
-    case eAddressClassInvalid:
-    case eAddressClassUnknown:
-    case eAddressClassCode:
-    case eAddressClassCodeAlternateISA:
-    case eAddressClassRuntime:
+    case AddressClass::eInvalid:
+    case AddressClass::eUnknown:
+    case AddressClass::eCode:
+    case AddressClass::eCodeAlternateISA:
+    case AddressClass::eRuntime:
       opcode_addr &= ~(1ull);
       break;
     }
@@ -2659,8 +2728,8 @@ lldb::addr_t Target::GetBreakableLoadAddress(lldb::addr_t addr) {
     SectionLoadList &section_load_list = GetSectionLoadList();
 
     if (section_load_list.IsEmpty())
-      // No sections are loaded, so we must assume we are not running yet
-      // and need to operate only on file address.
+      // No sections are loaded, so we must assume we are not running yet and
+      // need to operate only on file address.
       m_images.ResolveFileAddress(addr, resolved_addr);
     else
       section_load_list.ResolveLoadAddress(addr, resolved_addr);
@@ -2735,30 +2804,29 @@ lldb::addr_t Target::GetBreakableLoadAddress(lldb::addr_t addr) {
         } else if (i == 2) {
           // Here we may get one 4-byte instruction or two 2-byte instructions.
           if (num_insns == 2) {
-            // Looks like there are two 2-byte instructions above our breakpoint
-            // target address.
-            // Now the upper 2-byte instruction is either a valid 2-byte
-            // instruction or could be a part of it's upper 4-byte instruction.
-            // In both cases we don't care because in this case lower 2-byte
-            // instruction is definitely a valid instruction
-            // and whatever i=1 iteration has found out is true.
+            // Looks like there are two 2-byte instructions above our
+            // breakpoint target address. Now the upper 2-byte instruction is
+            // either a valid 2-byte instruction or could be a part of it's
+            // upper 4-byte instruction. In both cases we don't care because in
+            // this case lower 2-byte instruction is definitely a valid
+            // instruction and whatever i=1 iteration has found out is true.
             inst_to_choose = 1;
             break;
           } else if (insn_size == 4) {
             // This instruction claims its a valid 4-byte instruction. But it
-            // could be a part of it's upper 4-byte instruction.
-            // Lets try scanning upper 2 bytes to verify this.
+            // could be a part of it's upper 4-byte instruction. Lets try
+            // scanning upper 2 bytes to verify this.
             instruction_list.Append(prev_insn);
             inst_to_choose = 2;
           }
         } else if (i == 3) {
           if (insn_size == 4)
             // FIXME: We reached here that means instruction at [target - 4] has
-            // already claimed to be a 4-byte instruction,
-            // and now instruction at [target - 6] is also claiming that it's a
-            // 4-byte instruction. This can not be true.
-            // In this case we can not decide the valid previous instruction so
-            // we let lldb set the breakpoint at the address given by user.
+            // already claimed to be a 4-byte instruction, and now instruction
+            // at [target - 6] is also claiming that it's a 4-byte instruction.
+            // This can not be true. In this case we can not decide the valid
+            // previous instruction so we let lldb set the breakpoint at the
+            // address given by user.
             inst_to_choose = 0;
           else
             // This is straight-forward
@@ -2874,8 +2942,8 @@ void Target::RunStopHooks() {
     return;
 
   // <rdar://problem/12027563> make sure we check that we are not stopped
-  // because of us running a user expression
-  // since in that case we do not want to run the stop-hooks
+  // because of us running a user expression since in that case we do not want
+  // to run the stop-hooks
   if (m_process_sp->GetModIDRef().IsLastResumeForUserExpression())
     return;
 
@@ -3210,18 +3278,16 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   launch_info.GetFlags().Set(eLaunchFlagDebug);
 
   // Get the value of synchronous execution here.  If you wait till after you
-  // have started to
-  // run, then you could have hit a breakpoint, whose command might switch the
-  // value, and
-  // then you'll pick up that incorrect value.
+  // have started to run, then you could have hit a breakpoint, whose command
+  // might switch the value, and then you'll pick up that incorrect value.
   Debugger &debugger = GetDebugger();
   const bool synchronous_execution =
       debugger.GetCommandInterpreter().GetSynchronous();
 
   PlatformSP platform_sp(GetPlatform());
 
-  // Finalize the file actions, and if none were given, default to opening
-  // up a pseudo terminal
+  // Finalize the file actions, and if none were given, default to opening up a
+  // pseudo terminal
   const bool default_to_use_pty = platform_sp ? platform_sp->IsHost() : false;
   if (log)
     log->Printf("Target::%s have platform=%s, platform_sp->IsHost()=%s, "
@@ -3260,10 +3326,10 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
         GetPlatform()->DebugProcess(launch_info, debugger, this, error);
 
     // Cleanup the old process since someone might still have a strong
-    // reference to this process and we would like to allow it to cleanup
-    // as much as it can without the object being destroyed. We try to
-    // lock the shared pointer and if that works, then someone else still
-    // has a strong reference to the process.
+    // reference to this process and we would like to allow it to cleanup as
+    // much as it can without the object being destroyed. We try to lock the
+    // shared pointer and if that works, then someone else still has a strong
+    // reference to the process.
 
     ProcessSP old_process_sp(process_wp.lock());
     if (old_process_sp)
@@ -3387,8 +3453,8 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
 
   const ModuleSP old_exec_module_sp = GetExecutableModule();
 
-  // If no process info was specified, then use the target executable
-  // name as the process to attach to by default
+  // If no process info was specified, then use the target executable name as
+  // the process to attach to by default
   if (!attach_info.ProcessInfoSpecified()) {
     if (old_exec_module_sp)
       attach_info.GetExecutableFile().GetFilename() =
@@ -3524,16 +3590,19 @@ void Target::StopHook::GetDescription(Stream *s,
 // class TargetProperties
 //--------------------------------------------------------------
 
-OptionEnumValueElement lldb_private::g_dynamic_value_types[] = {
+static constexpr OptionEnumValueElement g_dynamic_value_types[] = {
     {eNoDynamicValues, "no-dynamic-values",
      "Don't calculate the dynamic type of values"},
     {eDynamicCanRunTarget, "run-target", "Calculate the dynamic type of values "
                                          "even if you have to run the target."},
     {eDynamicDontRunTarget, "no-run-target",
-     "Calculate the dynamic type of values, but don't run the target."},
-    {0, nullptr, nullptr}};
+     "Calculate the dynamic type of values, but don't run the target."} };
 
-static OptionEnumValueElement g_inline_breakpoint_enums[] = {
+OptionEnumValues lldb_private::GetDynamicValueTypes() {
+  return OptionEnumValues(g_dynamic_value_types);
+}
+
+static constexpr OptionEnumValueElement g_inline_breakpoint_enums[] = {
     {eInlineBreakpointsNever, "never", "Never look for inline breakpoint "
                                        "locations (fastest). This setting "
                                        "should only be used if you know that "
@@ -3544,8 +3613,7 @@ static OptionEnumValueElement g_inline_breakpoint_enums[] = {
      "files (default)."},
     {eInlineBreakpointsAlways, "always",
      "Always look for inline breakpoint locations when setting file and line "
-     "breakpoints (slower but most accurate)."},
-    {0, nullptr, nullptr}};
+     "breakpoints (slower but most accurate)."} };
 
 typedef enum x86DisassemblyFlavor {
   eX86DisFlavorDefault,
@@ -3553,36 +3621,33 @@ typedef enum x86DisassemblyFlavor {
   eX86DisFlavorATT
 } x86DisassemblyFlavor;
 
-static OptionEnumValueElement g_x86_dis_flavor_value_types[] = {
+static constexpr OptionEnumValueElement g_x86_dis_flavor_value_types[] = {
     {eX86DisFlavorDefault, "default", "Disassembler default (currently att)."},
     {eX86DisFlavorIntel, "intel", "Intel disassembler flavor."},
-    {eX86DisFlavorATT, "att", "AT&T disassembler flavor."},
-    {0, nullptr, nullptr}};
+    {eX86DisFlavorATT, "att", "AT&T disassembler flavor."} };
 
-static OptionEnumValueElement g_hex_immediate_style_values[] = {
+static constexpr OptionEnumValueElement g_hex_immediate_style_values[] = {
     {Disassembler::eHexStyleC, "c", "C-style (0xffff)."},
-    {Disassembler::eHexStyleAsm, "asm", "Asm-style (0ffffh)."},
-    {0, nullptr, nullptr}};
+    {Disassembler::eHexStyleAsm, "asm", "Asm-style (0ffffh)."} };
 
-static OptionEnumValueElement g_load_script_from_sym_file_values[] = {
+static constexpr OptionEnumValueElement g_load_script_from_sym_file_values[] = {
     {eLoadScriptFromSymFileTrue, "true",
      "Load debug scripts inside symbol files"},
     {eLoadScriptFromSymFileFalse, "false",
      "Do not load debug scripts inside symbol files."},
     {eLoadScriptFromSymFileWarn, "warn",
-     "Warn about debug scripts inside symbol files but do not load them."},
-    {0, nullptr, nullptr}};
+     "Warn about debug scripts inside symbol files but do not load them."} };
 
-static OptionEnumValueElement g_load_current_working_dir_lldbinit_values[] = {
+static constexpr
+OptionEnumValueElement g_load_current_working_dir_lldbinit_values[] = {
     {eLoadCWDlldbinitTrue, "true",
      "Load .lldbinit files from current directory"},
     {eLoadCWDlldbinitFalse, "false",
      "Do not load .lldbinit files from current directory"},
     {eLoadCWDlldbinitWarn, "warn",
-     "Warn about loading .lldbinit files from current directory"},
-    {0, nullptr, nullptr}};
+     "Warn about loading .lldbinit files from current directory"} };
 
-static OptionEnumValueElement g_memory_module_load_level_values[] = {
+static constexpr OptionEnumValueElement g_memory_module_load_level_values[] = {
     {eMemoryModuleLoadLevelMinimal, "minimal",
      "Load minimal information when loading modules from memory. Currently "
      "this setting loads sections only."},
@@ -3591,28 +3656,27 @@ static OptionEnumValueElement g_memory_module_load_level_values[] = {
      "this setting loads sections and function bounds."},
     {eMemoryModuleLoadLevelComplete, "complete",
      "Load complete information when loading modules from memory. Currently "
-     "this setting loads sections and all symbols."},
-    {0, nullptr, nullptr}};
+     "this setting loads sections and all symbols."} };
 
-static PropertyDefinition g_properties[] = {
-    {"default-arch", OptionValue::eTypeArch, true, 0, nullptr, nullptr,
+static constexpr PropertyDefinition g_properties[] = {
+    {"default-arch", OptionValue::eTypeArch, true, 0, nullptr, {},
      "Default architecture to choose, when there's a choice."},
     {"move-to-nearest-code", OptionValue::eTypeBoolean, false, true, nullptr,
-     nullptr, "Move breakpoints to nearest code."},
+     {}, "Move breakpoints to nearest code."},
     {"language", OptionValue::eTypeLanguage, false, eLanguageTypeUnknown,
-     nullptr, nullptr,
+     nullptr, {},
      "The language to use when interpreting expressions entered in commands."},
-    {"expr-prefix", OptionValue::eTypeFileSpec, false, 0, nullptr, nullptr,
+    {"expr-prefix", OptionValue::eTypeFileSpec, false, 0, nullptr, {},
      "Path to a file containing expressions to be prepended to all "
      "expressions."},
     {"prefer-dynamic-value", OptionValue::eTypeEnum, false,
-     eDynamicDontRunTarget, nullptr, g_dynamic_value_types,
+     eDynamicDontRunTarget, nullptr, OptionEnumValues(g_dynamic_value_types),
      "Should printed values be shown as their dynamic value."},
     {"enable-synthetic-value", OptionValue::eTypeBoolean, false, true, nullptr,
-     nullptr, "Should synthetic values be used by default whenever available."},
-    {"skip-prologue", OptionValue::eTypeBoolean, false, true, nullptr, nullptr,
+     {}, "Should synthetic values be used by default whenever available."},
+    {"skip-prologue", OptionValue::eTypeBoolean, false, true, nullptr, {},
      "Skip function prologues when setting breakpoints by name."},
-    {"source-map", OptionValue::eTypePathMap, false, 0, nullptr, nullptr,
+    {"source-map", OptionValue::eTypePathMap, false, 0, nullptr, {},
      "Source path remappings are used to track the change of location between "
      "a source file when built, and "
      "where it exists on the current system.  It consists of an array of "
@@ -3624,75 +3688,76 @@ static PropertyDefinition g_properties[] = {
      "Each element of the array is checked in order and the first one that "
      "results in a match wins."},
     {"exec-search-paths", OptionValue::eTypeFileSpecList, false, 0, nullptr,
-     nullptr, "Executable search paths to use when locating executable files "
-              "whose paths don't match the local file system."},
+     {}, "Executable search paths to use when locating executable files "
+         "whose paths don't match the local file system."},
     {"debug-file-search-paths", OptionValue::eTypeFileSpecList, false, 0,
-     nullptr, nullptr,
+     nullptr, {},
      "List of directories to be searched when locating debug symbol files."},
     {"clang-module-search-paths", OptionValue::eTypeFileSpecList, false, 0,
-     nullptr, nullptr,
+     nullptr, {},
      "List of directories to be searched when locating modules for Clang."},
     {"swift-framework-search-paths", OptionValue::eTypeFileSpecList, false, 0,
-     nullptr, nullptr,
+     nullptr, {},
      "List of directories to be searched when locating frameworks for Swift."},
     {"swift-module-search-paths", OptionValue::eTypeFileSpecList, false, 0,
-     nullptr, nullptr,
+     nullptr, {},
      "List of directories to be searched when locating modules for Swift."},
     {"auto-import-clang-modules", OptionValue::eTypeBoolean, false, true,
-     nullptr, nullptr,
+     nullptr, {},
      "Automatically load Clang modules referred to by the program."},
     {"use-all-compiler-flags", OptionValue::eTypeBoolean, false, true, nullptr,
-     nullptr, "Try to use compiler flags for all modules when setting up the "
-              "Swift expression parser, not just the main executable."},
+     {}, "Try to use compiler flags for all modules when setting up the "
+         "Swift expression parser, not just the main executable."},
     {"auto-apply-fixits", OptionValue::eTypeBoolean, false, true, nullptr,
-     nullptr, "Automatically apply fix-it hints to expressions."},
+     {}, "Automatically apply fix-it hints to expressions."},
     {"notify-about-fixits", OptionValue::eTypeBoolean, false, true, nullptr,
-     nullptr, "Print the fixed expression text."},
+     {}, "Print the fixed expression text."},
     {"save-jit-objects", OptionValue::eTypeBoolean, false, false, nullptr,
-     nullptr, "Save intermediate object files generated by the LLVM JIT"},
+     {}, "Save intermediate object files generated by the LLVM JIT"},
     {"max-children-count", OptionValue::eTypeSInt64, false, 256, nullptr,
-     nullptr, "Maximum number of children to expand in any level of depth."},
+     {}, "Maximum number of children to expand in any level of depth."},
     {"max-string-summary-length", OptionValue::eTypeSInt64, false, 1024,
-     nullptr, nullptr,
+     nullptr, {},
      "Maximum number of characters to show when using %s in summary strings."},
     {"max-memory-read-size", OptionValue::eTypeSInt64, false, 1024, nullptr,
-     nullptr, "Maximum number of bytes that 'memory read' will fetch before "
-              "--force must be specified."},
+     {}, "Maximum number of bytes that 'memory read' will fetch before "
+         "--force must be specified."},
     {"breakpoints-use-platform-avoid-list", OptionValue::eTypeBoolean, false,
-     true, nullptr, nullptr, "Consult the platform module avoid list when "
-                             "setting non-module specific breakpoints."},
-    {"arg0", OptionValue::eTypeString, false, 0, nullptr, nullptr,
+     true, nullptr, {}, "Consult the platform module avoid list when "
+                        "setting non-module specific breakpoints."},
+    {"arg0", OptionValue::eTypeString, false, 0, nullptr, {},
      "The first argument passed to the program in the argument array which can "
      "be different from the executable itself."},
-    {"run-args", OptionValue::eTypeArgs, false, 0, nullptr, nullptr,
+    {"run-args", OptionValue::eTypeArgs, false, 0, nullptr, {},
      "A list containing all the arguments to be passed to the executable when "
      "it is run. Note that this does NOT include the argv[0] which is in "
      "target.arg0."},
     {"env-vars", OptionValue::eTypeDictionary, false, OptionValue::eTypeString,
-     nullptr, nullptr, "A list of all the environment variables to be passed "
-                       "to the executable's environment, and their values."},
-    {"inherit-env", OptionValue::eTypeBoolean, false, true, nullptr, nullptr,
+     nullptr, {}, "A list of all the environment variables to be passed "
+                  "to the executable's environment, and their values."},
+    {"inherit-env", OptionValue::eTypeBoolean, false, true, nullptr, {},
      "Inherit the environment from the process that is running LLDB."},
-    {"input-path", OptionValue::eTypeFileSpec, false, 0, nullptr, nullptr,
+    {"input-path", OptionValue::eTypeFileSpec, false, 0, nullptr, {},
      "The file/path to be used by the executable program for reading its "
      "standard input."},
-    {"output-path", OptionValue::eTypeFileSpec, false, 0, nullptr, nullptr,
+    {"output-path", OptionValue::eTypeFileSpec, false, 0, nullptr, {},
      "The file/path to be used by the executable program for writing its "
      "standard output."},
-    {"error-path", OptionValue::eTypeFileSpec, false, 0, nullptr, nullptr,
+    {"error-path", OptionValue::eTypeFileSpec, false, 0, nullptr, {},
      "The file/path to be used by the executable program for writing its "
      "standard error."},
     {"detach-on-error", OptionValue::eTypeBoolean, false, true, nullptr,
-     nullptr, "debugserver will detach (rather than killing) a process if it "
+     {}, "debugserver will detach (rather than killing) a process if it "
               "loses connection with lldb."},
-    {"preload-symbols", OptionValue::eTypeBoolean, false, true, nullptr, nullptr,
+    {"preload-symbols", OptionValue::eTypeBoolean, false, true, nullptr, {},
      "Enable loading of symbol tables before they are needed."},
-    {"disable-aslr", OptionValue::eTypeBoolean, false, true, nullptr, nullptr,
+    {"disable-aslr", OptionValue::eTypeBoolean, false, true, nullptr, {},
      "Disable Address Space Layout Randomization (ASLR)"},
-    {"disable-stdio", OptionValue::eTypeBoolean, false, false, nullptr, nullptr,
+    {"disable-stdio", OptionValue::eTypeBoolean, false, false, nullptr, {},
      "Disable stdin/stdout for process (e.g. for a GUI application)"},
     {"inline-breakpoint-strategy", OptionValue::eTypeEnum, false,
-     eInlineBreakpointsAlways, nullptr, g_inline_breakpoint_enums,
+     eInlineBreakpointsAlways, nullptr,
+     OptionEnumValues(g_inline_breakpoint_enums),
      "The strategy to use when settings breakpoints by file and line. "
      "Breakpoint locations can end up being inlined by the compiler, so that a "
      "compile unit 'a.c' might contain an inlined function from another source "
@@ -3712,25 +3777,29 @@ static PropertyDefinition g_properties[] = {
     // FIXME: This is the wrong way to do per-architecture settings, but we
     // don't have a general per architecture settings system in place yet.
     {"x86-disassembly-flavor", OptionValue::eTypeEnum, false,
-     eX86DisFlavorDefault, nullptr, g_x86_dis_flavor_value_types,
+     eX86DisFlavorDefault, nullptr,
+     OptionEnumValues(g_x86_dis_flavor_value_types),
      "The default disassembly flavor to use for x86 or x86-64 targets."},
     {"use-hex-immediates", OptionValue::eTypeBoolean, false, true, nullptr,
-     nullptr, "Show immediates in disassembly as hexadecimal."},
+     {}, "Show immediates in disassembly as hexadecimal."},
     {"hex-immediate-style", OptionValue::eTypeEnum, false,
-     Disassembler::eHexStyleC, nullptr, g_hex_immediate_style_values,
+     Disassembler::eHexStyleC, nullptr,
+     OptionEnumValues(g_hex_immediate_style_values),
      "Which style to use for printing hexadecimal disassembly values."},
     {"use-fast-stepping", OptionValue::eTypeBoolean, false, true, nullptr,
-     nullptr, "Use a fast stepping algorithm based on running from branch to "
-              "branch rather than instruction single-stepping."},
+     {}, "Use a fast stepping algorithm based on running from branch to "
+         "branch rather than instruction single-stepping."},
     {"load-script-from-symbol-file", OptionValue::eTypeEnum, false,
-     eLoadScriptFromSymFileWarn, nullptr, g_load_script_from_sym_file_values,
+     eLoadScriptFromSymFileWarn, nullptr,
+     OptionEnumValues(g_load_script_from_sym_file_values),
      "Allow LLDB to load scripting resources embedded in symbol files when "
      "available."},
     {"load-cwd-lldbinit", OptionValue::eTypeEnum, false, eLoadCWDlldbinitWarn,
-     nullptr, g_load_current_working_dir_lldbinit_values,
+     nullptr, OptionEnumValues(g_load_current_working_dir_lldbinit_values),
      "Allow LLDB to .lldbinit files from the current directory automatically."},
     {"memory-module-load-level", OptionValue::eTypeEnum, false,
-     eMemoryModuleLoadLevelComplete, nullptr, g_memory_module_load_level_values,
+     eMemoryModuleLoadLevelComplete, nullptr,
+     OptionEnumValues(g_memory_module_load_level_values),
      "Loading modules from memory can be slow as reading the symbol tables and "
      "other data can take a long time depending on your connection to the "
      "debug target. "
@@ -3746,22 +3815,20 @@ static PropertyDefinition g_properties[] = {
      "symbols, but should rarely be used as stack frames in these memory "
      "regions will be inaccurate and not provide any context (fastest). "},
     {"display-expression-in-crashlogs", OptionValue::eTypeBoolean, false, false,
-     nullptr, nullptr, "Expressions that crash will show up in crash logs if "
-                       "the host system supports executable specific crash log "
-                       "strings and this setting is set to true."},
+     nullptr, {}, "Expressions that crash will show up in crash logs if "
+                  "the host system supports executable specific crash log "
+                  "strings and this setting is set to true."},
     {"trap-handler-names", OptionValue::eTypeArray, true,
-     OptionValue::eTypeString, nullptr, nullptr,
+     OptionValue::eTypeString, nullptr, {},
      "A list of trap handler function names, e.g. a common Unix user process "
      "one is _sigtramp."},
-    {"sdk-path", OptionValue::eTypeFileSpec, false, 0, nullptr, nullptr,
+    {"sdk-path", OptionValue::eTypeFileSpec, false, 0, nullptr, {},
      "The path to the SDK used to build the current target."},
     {"display-runtime-support-values", OptionValue::eTypeBoolean, false, false,
-     nullptr, nullptr, "If true, LLDB will show variables that are meant to "
-                       "support the operation of a language's runtime "
-                       "support."},
-    {"non-stop-mode", OptionValue::eTypeBoolean, false, 0, nullptr, nullptr,
-     "Disable lock-step debugging, instead control threads independently."},
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, nullptr, nullptr}};
+     nullptr, {}, "If true, LLDB will show variables that are meant to "
+                  "support the operation of a language's runtime support."},
+    {"non-stop-mode", OptionValue::eTypeBoolean, false, 0, nullptr, {},
+     "Disable lock-step debugging, instead control threads independently."}};
 
 enum {
   ePropertyDefaultArch,
@@ -3830,9 +3897,8 @@ public:
                                      bool will_modify,
                                      uint32_t idx) const override {
     // When getting the value for a key from the target options, we will always
-    // try and grab the setting from the current target if there is one. Else we
-    // just
-    // use the one from this instance.
+    // try and grab the setting from the current target if there is one. Else
+    // we just use the one from this instance.
     if (idx == ePropertyEnvVars)
       GetHostEnvironmentIfNeeded();
 
@@ -3861,36 +3927,19 @@ protected:
                 nullptr, idx, g_properties[idx].default_uint_value != 0)) {
           PlatformSP platform_sp(m_target->GetPlatform());
           if (platform_sp) {
-            StringList env;
-            if (platform_sp->GetEnvironment(env)) {
-              OptionValueDictionary *env_dict =
-                  GetPropertyAtIndexAsOptionValueDictionary(nullptr,
-                                                            ePropertyEnvVars);
-              if (env_dict) {
-                const bool can_replace = false;
-                const size_t envc = env.GetSize();
-                for (size_t idx = 0; idx < envc; idx++) {
-                  const char *env_entry = env.GetStringAtIndex(idx);
-                  if (env_entry) {
-                    const char *equal_pos = ::strchr(env_entry, '=');
-                    ConstString key;
-                    // It is ok to have environment variables with no values
-                    const char *value = nullptr;
-                    if (equal_pos) {
-                      key.SetCStringWithLength(env_entry,
-                                               equal_pos - env_entry);
-                      if (equal_pos[1])
-                        value = equal_pos + 1;
-                    } else {
-                      key.SetCString(env_entry);
-                    }
-                    // Don't allow existing keys to be replaced with ones we get
-                    // from the platform environment
-                    env_dict->SetValueForKey(
-                        key, OptionValueSP(new OptionValueString(value)),
-                        can_replace);
-                  }
-                }
+            Environment env = platform_sp->GetEnvironment();
+            OptionValueDictionary *env_dict =
+                GetPropertyAtIndexAsOptionValueDictionary(nullptr,
+                                                          ePropertyEnvVars);
+            if (env_dict) {
+              const bool can_replace = false;
+              for (const auto &KV : env) {
+                // Don't allow existing keys to be replaced with ones we get
+                // from the platform environment
+                env_dict->SetValueForKey(
+                    ConstString(KV.first()),
+                    OptionValueSP(new OptionValueString(KV.second.c_str())),
+                    can_replace);
               }
             }
           }
@@ -3905,18 +3954,18 @@ protected:
 //----------------------------------------------------------------------
 // TargetProperties
 //----------------------------------------------------------------------
-static PropertyDefinition g_experimental_properties[]{
+static constexpr PropertyDefinition g_experimental_properties[]{
     {"inject-local-vars", OptionValue::eTypeBoolean, true, true, nullptr,
-     nullptr,
+     {},
      "If true, inject local variables explicitly into the expression text.  "
      "This will fix symbol resolution when there are name collisions between "
      "ivars and local variables.  "
      "But it can make expressions run much more slowly."},
     {"use-modern-type-lookup", OptionValue::eTypeBoolean, true, false, nullptr,
-     nullptr, "If true, use Clang's modern type lookup infrastructure."},
-    {"swift-create-module-contexts-in-parallel", OptionValue::eTypeBoolean, false, true,
-     nullptr, nullptr, "Create the per-module Swift AST contexts in parallel."},
-    {nullptr, OptionValue::eTypeInvalid, true, 0, nullptr, nullptr, nullptr}};
+     {}, "If true, use Clang's modern type lookup infrastructure."},
+    {"swift-create-module-contexts-in-parallel", OptionValue::eTypeBoolean,
+     false, true, nullptr, {},
+     "Create the per-module Swift AST contexts in parallel."}};
 
 enum {
   ePropertyInjectLocalVars = 0,
@@ -3946,8 +3995,8 @@ TargetProperties::TargetProperties(Target *target)
     m_collection_sp.reset(
         new TargetOptionValueProperties(target, Target::GetGlobalProperties()));
 
-    // Set callbacks to update launch_info whenever "settins set" updated any of
-    // these properties
+    // Set callbacks to update launch_info whenever "settins set" updated any
+    // of these properties
     m_collection_sp->SetValueChangedCallback(
         ePropertyArg0, TargetProperties::Arg0ValueChangedCallback, this);
     m_collection_sp->SetValueChangedCallback(
@@ -4174,15 +4223,19 @@ void TargetProperties::SetRunArguments(const Args &args) {
   m_launch_info.GetArguments() = args;
 }
 
-size_t TargetProperties::GetEnvironmentAsArgs(Args &env) const {
+Environment TargetProperties::GetEnvironment() const {
+  // TODO: Get rid of the Args intermediate step
+  Args env;
   const uint32_t idx = ePropertyEnvVars;
-  return m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, idx, env);
+  m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, idx, env);
+  return Environment(env);
 }
 
-void TargetProperties::SetEnvironmentFromArgs(const Args &env) {
+void TargetProperties::SetEnvironment(Environment env) {
+  // TODO: Get rid of the Args intermediate step
   const uint32_t idx = ePropertyEnvVars;
-  m_collection_sp->SetPropertyAtIndexFromArgs(nullptr, idx, env);
-  m_launch_info.GetEnvironmentEntries() = env;
+  m_collection_sp->SetPropertyAtIndexFromArgs(nullptr, idx, Args(env));
+  m_launch_info.GetEnvironment() = std::move(env);
 }
 
 bool TargetProperties::GetSkipPrologue() const {
@@ -4453,7 +4506,7 @@ void TargetProperties::SetProcessLaunchInfo(
   m_launch_info = launch_info;
   SetArg0(launch_info.GetArg0());
   SetRunArguments(launch_info.GetArguments());
-  SetEnvironmentFromArgs(launch_info.GetEnvironmentEntries());
+  SetEnvironment(launch_info.GetEnvironment());
   const FileAction *input_file_action =
       launch_info.GetFileActionForFD(STDIN_FILENO);
   if (input_file_action) {
@@ -4494,9 +4547,7 @@ void TargetProperties::EnvVarsValueChangedCallback(void *target_property_ptr,
                                                    OptionValue *) {
   TargetProperties *this_ =
       reinterpret_cast<TargetProperties *>(target_property_ptr);
-  Args args;
-  if (this_->GetEnvironmentAsArgs(args))
-    this_->m_launch_info.GetEnvironmentEntries() = args;
+  this_->m_launch_info.GetEnvironment() = this_->GetEnvironment();
 }
 
 void TargetProperties::InputPathValueChangedCallback(void *target_property_ptr,
@@ -4614,4 +4665,9 @@ Target::TargetEventData::GetModuleListFromEvent(const Event *event_ptr) {
   if (event_data)
     module_list = event_data->m_module_list;
   return module_list;
+}
+
+bool Target::RegisterSwiftContextMessageKey(std::string Key) {
+  std::unique_lock<std::mutex> guard{m_swift_messages_mutex};
+  return m_swift_messages_issued.insert(std::move(Key)).second;
 }

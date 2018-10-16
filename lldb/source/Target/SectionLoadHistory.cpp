@@ -43,13 +43,12 @@ SectionLoadHistory::GetSectionLoadListForStopID(uint32_t stop_id,
   if (!m_stop_id_to_section_load_list.empty()) {
     if (read_only) {
       // The section load list is for reading data only so we don't need to
-      // create
-      // a new SectionLoadList for the current stop ID, just return the section
-      // load list for the stop ID that is equal to or less than the current
-      // stop ID
+      // create a new SectionLoadList for the current stop ID, just return the
+      // section load list for the stop ID that is equal to or less than the
+      // current stop ID
       if (stop_id == eStopIDNow) {
-        // If we are asking for the latest and greatest value, it is always
-        // at the end of our list because that will be the highest stop ID.
+        // If we are asking for the latest and greatest value, it is always at
+        // the end of our list because that will be the highest stop ID.
         StopIDToSectionLoadList::reverse_iterator rpos =
             m_stop_id_to_section_load_list.rbegin();
         return rpos->second.get();
@@ -70,10 +69,8 @@ SectionLoadHistory::GetSectionLoadListForStopID(uint32_t stop_id,
       assert(stop_id != eStopIDNow);
 
       // We are updating the section load list (not read only), so if the stop
-      // ID
-      // passed in isn't the same as the last stop ID in our collection, then
-      // create
-      // a new node using the current stop ID
+      // ID passed in isn't the same as the last stop ID in our collection,
+      // then create a new node using the current stop ID
       StopIDToSectionLoadList::iterator pos =
           m_stop_id_to_section_load_list.lower_bound(stop_id);
       if (pos != m_stop_id_to_section_load_list.end() &&

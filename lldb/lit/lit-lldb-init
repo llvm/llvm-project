@@ -1,2 +1,3 @@
 # LLDB init file for the LIT tests.
 settings set symbols.enable-external-lookup false
+settings set interpreter.echo-comment-commands false

@@ -63,6 +63,7 @@ class RegisterCommandsTestCase(TestBase):
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
     @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054801")
     @skipIfOutOfTreeDebugserver # rdar://38480016
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
     def test_fp_register_write(self):
         """Test commands that write to registers, in particular floating-point registers."""
         self.build()
@@ -76,6 +77,7 @@ class RegisterCommandsTestCase(TestBase):
     @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054801")
     @expectedFailureDarwin(bugnumber="<rdar://problem/34092153>")  # CI bots need to use updated debugserver to match ftag size change in r311579.
     @skipIfOutOfTreeDebugserver
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
     def test_fp_special_purpose_register_read(self):
         """Test commands that read fpu special purpose registers."""
         self.build()
@@ -85,6 +87,7 @@ class RegisterCommandsTestCase(TestBase):
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
     @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054801")
     @skipIfOutOfTreeDebugserver # rdar://38480016
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
     def test_register_expressions(self):
         """Test expression evaluation with commands related to registers."""
         self.build()
@@ -114,6 +117,7 @@ class RegisterCommandsTestCase(TestBase):
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'x86_64']))
     @skipIfOutOfTreeDebugserver # rdar://38480016
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
     def test_convenience_registers(self):
         """Test convenience registers."""
         self.build()
@@ -122,6 +126,7 @@ class RegisterCommandsTestCase(TestBase):
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'x86_64']))
     @skipIfOutOfTreeDebugserver # rdar://38480016
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
     def test_convenience_registers_with_process_attach(self):
         """Test convenience registers after a 'process attach'."""
         self.build()
@@ -130,6 +135,7 @@ class RegisterCommandsTestCase(TestBase):
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'x86_64']))
     @skipIfOutOfTreeDebugserver # rdar://38480016
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
     def test_convenience_registers_16bit_with_process_attach(self):
         """Test convenience registers after a 'process attach'."""
         self.build()
@@ -383,6 +389,8 @@ class RegisterCommandsTestCase(TestBase):
             self.write_and_read(currentFrame, reg, val, must)
 
         if self.getArchitecture() in ['amd64', 'i386', 'x86_64']:
+            if st0regname is None:
+                self.fail("st0regname could not be determined")
             self.runCmd(
                 "register write " +
                 st0regname +

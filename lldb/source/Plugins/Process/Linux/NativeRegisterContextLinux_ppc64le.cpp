@@ -26,8 +26,7 @@
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64le.h"
 
 // System includes - They have to be included after framework includes because
-// they define some
-// macros which collide with variable names in other modules
+// they define some macros which collide with variable names in other modules
 #include <sys/socket.h>
 #include <elf.h>
 #include <asm/ptrace.h>
@@ -50,6 +49,7 @@ static const uint32_t g_gpr_regnums_ppc64le[] = {
     gpr_pc_ppc64le,   gpr_msr_ppc64le, gpr_origr3_ppc64le, gpr_ctr_ppc64le,
     gpr_lr_ppc64le,   gpr_xer_ppc64le, gpr_cr_ppc64le,     gpr_softe_ppc64le,
     gpr_trap_ppc64le,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
 static const uint32_t g_fpr_regnums_ppc64le[] = {
@@ -62,6 +62,7 @@ static const uint32_t g_fpr_regnums_ppc64le[] = {
     fpr_f24_ppc64le,   fpr_f25_ppc64le, fpr_f26_ppc64le, fpr_f27_ppc64le,
     fpr_f28_ppc64le,   fpr_f29_ppc64le, fpr_f30_ppc64le, fpr_f31_ppc64le,
     fpr_fpscr_ppc64le,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
 static const uint32_t g_vmx_regnums_ppc64le[] = {
@@ -74,6 +75,7 @@ static const uint32_t g_vmx_regnums_ppc64le[] = {
     vmx_vr24_ppc64le, vmx_vr25_ppc64le,   vmx_vr26_ppc64le, vmx_vr27_ppc64le,
     vmx_vr28_ppc64le, vmx_vr29_ppc64le,   vmx_vr30_ppc64le, vmx_vr31_ppc64le,
     vmx_vscr_ppc64le, vmx_vrsave_ppc64le,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
 static const uint32_t g_vsx_regnums_ppc64le[] = {
@@ -93,6 +95,7 @@ static const uint32_t g_vsx_regnums_ppc64le[] = {
     vsx_vs52_ppc64le, vsx_vs53_ppc64le, vsx_vs54_ppc64le, vsx_vs55_ppc64le,
     vsx_vs56_ppc64le, vsx_vs57_ppc64le, vsx_vs58_ppc64le, vsx_vs59_ppc64le,
     vsx_vs60_ppc64le, vsx_vs61_ppc64le, vsx_vs62_ppc64le, vsx_vs63_ppc64le,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
 namespace {
@@ -565,8 +568,8 @@ uint32_t NativeRegisterContextLinux_ppc64le::SetHardwareWatchpoint(
   lldb::addr_t real_addr = addr;
   uint32_t rw_mode = 0;
 
-  // Check if we are setting watchpoint other than read/write/access
-  // Update watchpoint flag to match ppc64le write-read bit configuration.
+  // Check if we are setting watchpoint other than read/write/access Update
+  // watchpoint flag to match ppc64le write-read bit configuration.
   switch (watch_flags) {
   case eWatchpointKindWrite:
     rw_mode = PPC_BREAKPOINT_TRIGGER_WRITE;
@@ -587,9 +590,9 @@ uint32_t NativeRegisterContextLinux_ppc64le::SetHardwareWatchpoint(
   if (size != 1 && size != 2 && size != 4 && size != 8)
     return LLDB_INVALID_INDEX32;
 
-  // Check 8-byte alignment for hardware watchpoint target address.
-  // Below is a hack to recalculate address and size in order to
-  // make sure we can watch non 8-byte alligned addresses as well.
+  // Check 8-byte alignment for hardware watchpoint target address. Below is a
+  // hack to recalculate address and size in order to make sure we can watch
+  // non 8-byte alligned addresses as well.
   if (addr & 0x07) {
 
     addr_t begin = llvm::alignDown(addr, 8);

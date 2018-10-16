@@ -117,7 +117,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         """Test that 'lldb-mi --interpreter %s' fails on executable file which is specified via unknown path."""
 
         # Prepare path to executable
-        path = "unknown_dir/%s" % self.myexe
+        path = "unknown_dir" + self.myexe
 
         self.spawnLldbMi(args="%s" % path)
 
@@ -139,7 +139,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
             with open(destFile, 'w+') as dest:
                 dest.write(src.read().replace("a.out", self.myexe))
         return destFile
-        
+
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
     @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races

@@ -203,9 +203,9 @@ bool WatchpointList::ShouldStop(StoppointCallbackContext *context,
 
   WatchpointSP wp_sp = FindByID(watch_id);
   if (wp_sp) {
-    // Let the Watchpoint decide if it should stop here (could not have
-    // reached it's target hit count yet, or it could have a callback
-    // that decided it shouldn't stop.
+    // Let the Watchpoint decide if it should stop here (could not have reached
+    // it's target hit count yet, or it could have a callback that decided it
+    // shouldn't stop.
     return wp_sp->ShouldStop(context);
   }
   // We should stop here since this Watchpoint isn't valid anymore or it

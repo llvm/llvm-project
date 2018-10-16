@@ -10,10 +10,8 @@
 #
 # ------------------------------------------------------------------------------
 import lldbsuite.test.lldbinline as lldbinline
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 
-lldbinline.MakeInlineTest(
-    __file__, globals(), decorators=[
-        decorators.skipUnlessDarwin,
-        decorators.expectedFailureAll(
-            bugnumber='rdar://32800121')])
+lldbinline.MakeInlineTest(__file__, globals(),
+                          decorators=[swiftTest,skipUnlessDarwin,
+                                      expectedFailureAll(bugnumber='rdar://32800121')])

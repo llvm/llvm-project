@@ -31,10 +31,10 @@ class Scalar;
 
 namespace process_linux {
 /// @class NativeProcessLinux
-/// @brief Manages communication with the inferior (debugee) process.
+/// Manages communication with the inferior (debugee) process.
 ///
-/// Upon construction, this class prepares and launches an inferior process for
-/// debugging.
+/// Upon construction, this class prepares and launches an inferior process
+/// for debugging.
 ///
 /// Changes in the inferior process state are broadcasted.
 class NativeProcessLinux : public NativeProcessProtocol {
@@ -183,20 +183,6 @@ private:
                      bool exited);
 
   Status SetupSoftwareSingleStepping(NativeThreadLinux &thread);
-
-#if 0
-        static ::ProcessMessage::CrashReason
-        GetCrashReasonForSIGSEGV(const siginfo_t *info);
-
-        static ::ProcessMessage::CrashReason
-        GetCrashReasonForSIGILL(const siginfo_t *info);
-
-        static ::ProcessMessage::CrashReason
-        GetCrashReasonForSIGFPE(const siginfo_t *info);
-
-        static ::ProcessMessage::CrashReason
-        GetCrashReasonForSIGBUS(const siginfo_t *info);
-#endif
 
   bool HasThreadNoLock(lldb::tid_t thread_id);
 

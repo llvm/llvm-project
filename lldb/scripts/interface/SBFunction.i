@@ -101,7 +101,7 @@ public:
     Returns false if unoptimized, or unknown.") GetIsOptimized;
     bool
     GetIsOptimized();
-    
+
     bool
     GetCanThrow();
 

@@ -242,8 +242,8 @@ dw_offset_t DWARFDebugLine::DumpStatementOpcodes(
           log->Printf("0x%8.8x: DW_LNE_??? (%2.2x) - Skipping unknown upcode",
                       op_offset, opcode);
           // Length doesn't include the zero opcode byte or the length itself,
-          // but
-          // it does include the sub_opcode, so we have to adjust for that below
+          // but it does include the sub_opcode, so we have to adjust for that
+          // below
           offset += arg_size;
           break;
         }
@@ -324,9 +324,9 @@ dw_offset_t DWARFDebugLine::DumpStatementOpcodes(
       // Special Opcodes
       default:
         if (opcode < prologue.opcode_base) {
-          // We have an opcode that this parser doesn't know about, skip
-          // the number of ULEB128 numbers that is says to skip in the
-          // prologue's standard_opcode_lengths array
+          // We have an opcode that this parser doesn't know about, skip the
+          // number of ULEB128 numbers that is says to skip in the prologue's
+          // standard_opcode_lengths array
           uint8_t n = prologue.standard_opcode_lengths[opcode - 1];
           log->Printf("0x%8.8x: Special : Unknown skipping %u ULEB128 values.",
                       op_offset, n);
@@ -357,9 +357,9 @@ dw_offset_t DWARFDebugLine::DumpStatementOpcodes(
 //----------------------------------------------------------------------
 // Parse
 //
-// Parse the entire line table contents calling callback each time a
-// new prologue is parsed and every time a new row is to be added to
-// the line table.
+// Parse the entire line table contents calling callback each time a new
+// prologue is parsed and every time a new row is to be added to the line
+// table.
 //----------------------------------------------------------------------
 void DWARFDebugLine::Parse(const DWARFDataExtractor &debug_line_data,
                            DWARFDebugLine::State::Callback callback,
@@ -444,7 +444,7 @@ bool DWARFDebugLine::ParsePrologue(const DWARFDataExtractor &debug_line_data,
 
 bool DWARFDebugLine::ParseSupportFiles(
     const lldb::ModuleSP &module_sp, const DWARFDataExtractor &debug_line_data,
-    const char *cu_comp_dir, dw_offset_t stmt_list,
+    const lldb_private::FileSpec &cu_comp_dir, dw_offset_t stmt_list,
     FileSpecList &support_files) {
   lldb::offset_t offset = stmt_list;
 
@@ -463,7 +463,7 @@ bool DWARFDebugLine::ParseSupportFiles(
   for (uint32_t file_idx = 1;
        prologue.GetFile(file_idx, cu_comp_dir, file_spec); ++file_idx) {
     if (module_sp->RemapSourceFile(file_spec.GetPath(), remapped_file))
-      file_spec.SetFile(remapped_file, false);
+      file_spec.SetFile(remapped_file, false, FileSpec::Style::native);
     support_files.Append(file_spec);
   }
   return true;
@@ -472,9 +472,9 @@ bool DWARFDebugLine::ParseSupportFiles(
 //----------------------------------------------------------------------
 // ParseStatementTable
 //
-// Parse a single line table (prologue and all rows) and call the
-// callback function once for the prologue (row in state will be zero)
-// and each time a row is to be added to the line table.
+// Parse a single line table (prologue and all rows) and call the callback
+// function once for the prologue (row in state will be zero) and each time a
+// row is to be added to the line table.
 //----------------------------------------------------------------------
 bool DWARFDebugLine::ParseStatementTable(
     const DWARFDataExtractor &debug_line_data, lldb::offset_t *offset_ptr,
@@ -511,8 +511,8 @@ bool DWARFDebugLine::ParseStatementTable(
     uint8_t opcode = debug_line_data.GetU8(offset_ptr);
 
     if (opcode == 0) {
-      // Extended Opcodes always start with a zero opcode followed by
-      // a uleb128 length so you can skip ones you don't know about
+      // Extended Opcodes always start with a zero opcode followed by a uleb128
+      // length so you can skip ones you don't know about
       lldb::offset_t ext_offset = *offset_ptr;
       dw_uleb128_t len = debug_line_data.GetULEB128(offset_ptr);
       dw_offset_t arg_size = len - (*offset_ptr - ext_offset);
@@ -522,12 +522,12 @@ bool DWARFDebugLine::ParseStatementTable(
       switch (sub_opcode) {
       case DW_LNE_end_sequence:
         // Set the end_sequence register of the state machine to true and
-        // append a row to the matrix using the current values of the
-        // state-machine registers. Then reset the registers to the initial
-        // values specified above. Every statement program sequence must end
-        // with a DW_LNE_end_sequence instruction which creates a row whose
-        // address is that of the byte after the last target machine instruction
-        // of the sequence.
+        // append a row to the matrix using the current values of the state-
+        // machine registers. Then reset the registers to the initial values
+        // specified above. Every statement program sequence must end with a
+        // DW_LNE_end_sequence instruction which creates a row whose address is
+        // that of the byte after the last target machine instruction of the
+        // sequence.
         state.end_sequence = true;
         state.AppendRowToMatrix(*offset_ptr);
         state.Reset();
@@ -537,8 +537,8 @@ bool DWARFDebugLine::ParseStatementTable(
         // Takes a single relocatable address as an operand. The size of the
         // operand is the size appropriate to hold an address on the target
         // machine. Set the address register to the value given by the
-        // relocatable address. All of the other statement program opcodes
-        // that affect the address register add a delta to it. This instruction
+        // relocatable address. All of the other statement program opcodes that
+        // affect the address register add a delta to it. This instruction
         // stores a relocatable value into it instead.
         if (arg_size == 4)
           state.address = debug_line_data.GetU32(offset_ptr);
@@ -549,24 +549,24 @@ bool DWARFDebugLine::ParseStatementTable(
       case DW_LNE_define_file:
         // Takes 4 arguments. The first is a null terminated string containing
         // a source file name. The second is an unsigned LEB128 number
-        // representing
-        // the directory index of the directory in which the file was found. The
-        // third is an unsigned LEB128 number representing the time of last
-        // modification of the file. The fourth is an unsigned LEB128 number
-        // representing the length in bytes of the file. The time and length
-        // fields may contain LEB128(0) if the information is not available.
+        // representing the directory index of the directory in which the file
+        // was found. The third is an unsigned LEB128 number representing the
+        // time of last modification of the file. The fourth is an unsigned
+        // LEB128 number representing the length in bytes of the file. The time
+        // and length fields may contain LEB128(0) if the information is not
+        // available.
         //
         // The directory index represents an entry in the include_directories
-        // section of the statement program prologue. The index is LEB128(0)
-        // if the file was found in the current directory of the compilation,
+        // section of the statement program prologue. The index is LEB128(0) if
+        // the file was found in the current directory of the compilation,
         // LEB128(1) if it was found in the first directory in the
         // include_directories section, and so on. The directory index is
         // ignored for file names that represent full path names.
         //
         // The files are numbered, starting at 1, in the order in which they
-        // appear; the names in the prologue come before names defined by
-        // the DW_LNE_define_file instruction. These numbers are used in the
-        // file register of the state machine.
+        // appear; the names in the prologue come before names defined by the
+        // DW_LNE_define_file instruction. These numbers are used in the file
+        // register of the state machine.
         {
           FileNameEntry fileEntry;
           fileEntry.name = debug_line_data.GetCStr(offset_ptr);
@@ -578,8 +578,9 @@ bool DWARFDebugLine::ParseStatementTable(
         break;
 
       default:
-        // Length doesn't include the zero opcode byte or the length itself, but
-        // it does include the sub_opcode, so we have to adjust for that below
+        // Length doesn't include the zero opcode byte or the length itself,
+        // but it does include the sub_opcode, so we have to adjust for that
+        // below
         (*offset_ptr) += arg_size;
         break;
       }
@@ -587,23 +588,23 @@ bool DWARFDebugLine::ParseStatementTable(
       switch (opcode) {
       // Standard Opcodes
       case DW_LNS_copy:
-        // Takes no arguments. Append a row to the matrix using the
-        // current values of the state-machine registers. Then set
-        // the basic_block register to false.
+        // Takes no arguments. Append a row to the matrix using the current
+        // values of the state-machine registers. Then set the basic_block
+        // register to false.
         state.AppendRowToMatrix(*offset_ptr);
         break;
 
       case DW_LNS_advance_pc:
         // Takes a single unsigned LEB128 operand, multiplies it by the
-        // min_inst_length field of the prologue, and adds the
-        // result to the address register of the state machine.
+        // min_inst_length field of the prologue, and adds the result to the
+        // address register of the state machine.
         state.address +=
             debug_line_data.GetULEB128(offset_ptr) * prologue->min_inst_length;
         break;
 
       case DW_LNS_advance_line:
-        // Takes a single signed LEB128 operand and adds that value to
-        // the line register of the state machine.
+        // Takes a single signed LEB128 operand and adds that value to the line
+        // register of the state machine.
         state.line += debug_line_data.GetSLEB128(offset_ptr);
         break;
 
@@ -614,35 +615,35 @@ bool DWARFDebugLine::ParseStatementTable(
         break;
 
       case DW_LNS_set_column:
-        // Takes a single unsigned LEB128 operand and stores it in the
-        // column register of the state machine.
+        // Takes a single unsigned LEB128 operand and stores it in the column
+        // register of the state machine.
         state.column = debug_line_data.GetULEB128(offset_ptr);
         break;
 
       case DW_LNS_negate_stmt:
-        // Takes no arguments. Set the is_stmt register of the state
-        // machine to the logical negation of its current value.
+        // Takes no arguments. Set the is_stmt register of the state machine to
+        // the logical negation of its current value.
         state.is_stmt = !state.is_stmt;
         break;
 
       case DW_LNS_set_basic_block:
-        // Takes no arguments. Set the basic_block register of the
-        // state machine to true
+        // Takes no arguments. Set the basic_block register of the state
+        // machine to true
         state.basic_block = true;
         break;
 
       case DW_LNS_const_add_pc:
-        // Takes no arguments. Add to the address register of the state
-        // machine the address increment value corresponding to special
-        // opcode 255. The motivation for DW_LNS_const_add_pc is this:
-        // when the statement program needs to advance the address by a
-        // small amount, it can use a single special opcode, which occupies
-        // a single byte. When it needs to advance the address by up to
-        // twice the range of the last special opcode, it can use
-        // DW_LNS_const_add_pc followed by a special opcode, for a total
-        // of two bytes. Only if it needs to advance the address by more
-        // than twice that range will it need to use both DW_LNS_advance_pc
-        // and a special opcode, requiring three or more bytes.
+        // Takes no arguments. Add to the address register of the state machine
+        // the address increment value corresponding to special opcode 255. The
+        // motivation for DW_LNS_const_add_pc is this: when the statement
+        // program needs to advance the address by a small amount, it can use a
+        // single special opcode, which occupies a single byte. When it needs
+        // to advance the address by up to twice the range of the last special
+        // opcode, it can use DW_LNS_const_add_pc followed by a special opcode,
+        // for a total of two bytes. Only if it needs to advance the address by
+        // more than twice that range will it need to use both
+        // DW_LNS_advance_pc and a special opcode, requiring three or more
+        // bytes.
         {
           uint8_t adjust_opcode = 255 - prologue->opcode_base;
           dw_addr_t addr_offset = (adjust_opcode / prologue->line_range) *
@@ -652,40 +653,40 @@ bool DWARFDebugLine::ParseStatementTable(
         break;
 
       case DW_LNS_fixed_advance_pc:
-        // Takes a single uhalf operand. Add to the address register of
-        // the state machine the value of the (unencoded) operand. This
-        // is the only extended opcode that takes an argument that is not
-        // a variable length number. The motivation for DW_LNS_fixed_advance_pc
-        // is this: existing assemblers cannot emit DW_LNS_advance_pc or
-        // special opcodes because they cannot encode LEB128 numbers or
-        // judge when the computation of a special opcode overflows and
-        // requires the use of DW_LNS_advance_pc. Such assemblers, however,
-        // can use DW_LNS_fixed_advance_pc instead, sacrificing compression.
+        // Takes a single uhalf operand. Add to the address register of the
+        // state machine the value of the (unencoded) operand. This is the only
+        // extended opcode that takes an argument that is not a variable length
+        // number. The motivation for DW_LNS_fixed_advance_pc is this: existing
+        // assemblers cannot emit DW_LNS_advance_pc or special opcodes because
+        // they cannot encode LEB128 numbers or judge when the computation of a
+        // special opcode overflows and requires the use of DW_LNS_advance_pc.
+        // Such assemblers, however, can use DW_LNS_fixed_advance_pc instead,
+        // sacrificing compression.
         state.address += debug_line_data.GetU16(offset_ptr);
         break;
 
       case DW_LNS_set_prologue_end:
-        // Takes no arguments. Set the prologue_end register of the
-        // state machine to true
+        // Takes no arguments. Set the prologue_end register of the state
+        // machine to true
         state.prologue_end = true;
         break;
 
       case DW_LNS_set_epilogue_begin:
-        // Takes no arguments. Set the basic_block register of the
-        // state machine to true
+        // Takes no arguments. Set the basic_block register of the state
+        // machine to true
         state.epilogue_begin = true;
         break;
 
       case DW_LNS_set_isa:
-        // Takes a single unsigned LEB128 operand and stores it in the
-        // column register of the state machine.
+        // Takes a single unsigned LEB128 operand and stores it in the column
+        // register of the state machine.
         state.isa = debug_line_data.GetULEB128(offset_ptr);
         break;
 
       default:
-        // Handle any unknown standard opcodes here. We know the lengths
-        // of such opcodes because they are specified in the prologue
-        // as a multiple of LEB128 operands for each opcode.
+        // Handle any unknown standard opcodes here. We know the lengths of
+        // such opcodes because they are specified in the prologue as a
+        // multiple of LEB128 operands for each opcode.
         {
           uint8_t i;
           assert(static_cast<size_t>(opcode - 1) <
@@ -702,32 +703,32 @@ bool DWARFDebugLine::ParseStatementTable(
 
       // A special opcode value is chosen based on the amount that needs
       // to be added to the line and address registers. The maximum line
-      // increment for a special opcode is the value of the line_base
-      // field in the header, plus the value of the line_range field,
-      // minus 1 (line base + line range - 1). If the desired line
-      // increment is greater than the maximum line increment, a standard
-      // opcode must be used instead of a special opcode. The "address
-      // advance" is calculated by dividing the desired address increment
-      // by the minimum_instruction_length field from the header. The
-      // special opcode is then calculated using the following formula:
+      // increment for a special opcode is the value of the line_base field in
+      // the header, plus the value of the line_range field, minus 1 (line base
+      // + line range - 1). If the desired line increment is greater than the
+      // maximum line increment, a standard opcode must be used instead of a
+      // special opcode. The "address advance" is calculated by dividing the
+      // desired address increment by the minimum_instruction_length field from
+      // the header. The special opcode is then calculated using the following
+      // formula:
       //
       //  opcode = (desired line increment - line_base) + (line_range * address
       //  advance) + opcode_base
       //
-      // If the resulting opcode is greater than 255, a standard opcode
-      // must be used instead.
+      // If the resulting opcode is greater than 255, a standard opcode must be
+      // used instead.
       //
-      // To decode a special opcode, subtract the opcode_base from the
-      // opcode itself to give the adjusted opcode. The amount to
-      // increment the address register is the result of the adjusted
-      // opcode divided by the line_range multiplied by the
-      // minimum_instruction_length field from the header. That is:
+      // To decode a special opcode, subtract the opcode_base from the opcode
+      // itself to give the adjusted opcode. The amount to increment the
+      // address register is the result of the adjusted opcode divided by the
+      // line_range multiplied by the minimum_instruction_length field from the
+      // header. That is:
       //
       //  address increment = (adjusted opcode / line_range) *
       //  minimum_instruction_length
       //
-      // The amount to increment the line register is the line_base plus
-      // the result of the adjusted opcode modulo the line_range. That is:
+      // The amount to increment the line register is the line_base plus the
+      // result of the adjusted opcode modulo the line_range. That is:
       //
       // line increment = line_base + (adjusted opcode % line_range)
 
@@ -755,8 +756,8 @@ static void ParseStatementTableCallback(dw_offset_t offset,
                                         void *userData) {
   DWARFDebugLine::LineTable *line_table = (DWARFDebugLine::LineTable *)userData;
   if (state.row == DWARFDebugLine::State::StartParsingLineTable) {
-    // Just started parsing the line table, so lets keep a reference to
-    // the prologue using the supplied shared pointer
+    // Just started parsing the line table, so lets keep a reference to the
+    // prologue using the supplied shared pointer
     line_table->prologue = state.prologue;
   } else if (state.row == DWARFDebugLine::State::DoneParsingLineTable) {
     // Done parsing line table, nothing to do for the cleanup
@@ -769,8 +770,8 @@ static void ParseStatementTableCallback(dw_offset_t offset,
 //----------------------------------------------------------------------
 // ParseStatementTable
 //
-// Parse a line table at offset and populate the LineTable class with
-// the prologue and all rows.
+// Parse a line table at offset and populate the LineTable class with the
+// prologue and all rows.
 //----------------------------------------------------------------------
 bool DWARFDebugLine::ParseStatementTable(
     const DWARFDataExtractor &debug_line_data, lldb::offset_t *offset_ptr,
@@ -861,11 +862,11 @@ void DWARFDebugLine::Prologue::Dump(Log *log) {
 //  buff.Append8(0);    // Terminate the file names section with empty string
 //}
 
-bool DWARFDebugLine::Prologue::GetFile(uint32_t file_idx, const char *comp_dir,
-                                       FileSpec &file) const {
+bool DWARFDebugLine::Prologue::GetFile(uint32_t file_idx,
+    const lldb_private::FileSpec &comp_dir, FileSpec &file) const {
   uint32_t idx = file_idx - 1; // File indexes are 1 based...
   if (idx < file_names.size()) {
-    file.SetFile(file_names[idx].name, false);
+    file.SetFile(file_names[idx].name, false, FileSpec::Style::native);
     if (file.IsRelative()) {
       if (file_names[idx].dir_idx > 0) {
         const uint32_t dir_idx = file_names[idx].dir_idx - 1;
@@ -876,7 +877,7 @@ bool DWARFDebugLine::Prologue::GetFile(uint32_t file_idx, const char *comp_dir,
         }
       }
 
-      if (comp_dir && comp_dir[0])
+      if (comp_dir)
         file.PrependPathComponent(comp_dir);
     }
     return true;
@@ -936,11 +937,10 @@ uint32_t DWARFDebugLine::LineTable::LookupAddress(dw_addr_t address,
       if (address < cu_high_pc)
         return rows.size() - 1;
     } else {
-      // Rely on fact that we are using a std::vector and we can do
-      // pointer arithmetic to find the row index (which will be one less
-      // that what we found since it will find the first position after
-      // the current address) since std::vector iterators are just
-      // pointers to the container type.
+      // Rely on fact that we are using a std::vector and we can do pointer
+      // arithmetic to find the row index (which will be one less that what we
+      // found since it will find the first position after the current address)
+      // since std::vector iterators are just pointers to the container type.
       index = pos - begin_pos;
       if (pos->address > address) {
         if (index > 0)
@@ -1005,9 +1005,9 @@ static bool AddressLessThan(const DWARFDebugLine::Row &a,
   return a.address < b.address;
 }
 
-// Insert a row at the correct address if the addresses can be out of
-// order which can only happen when we are linking a line table that
-// may have had it's contents rearranged.
+// Insert a row at the correct address if the addresses can be out of order
+// which can only happen when we are linking a line table that may have had
+// it's contents rearranged.
 void DWARFDebugLine::Row::Insert(Row::collection &state_coll,
                                  const Row &state) {
   // If we don't have anything yet, or if the address of the last state in our
@@ -1020,12 +1020,12 @@ void DWARFDebugLine::Row::Insert(Row::collection &state_coll,
         state_coll.begin(), state_coll.end(), state, AddressLessThan));
 
     // If the addresses are equal, we can safely replace the previous entry
-    // with the current one if the one it is replacing is an end_sequence entry.
-    // We currently always place an extra end sequence when ever we exit a valid
-    // address range for a function in case the functions get rearranged by
-    // optimizations or by order specifications. These extra end sequences will
-    // disappear by getting replaced with valid consecutive entries within a
-    // compile unit if there are no gaps.
+    // with the current one if the one it is replacing is an end_sequence
+    // entry. We currently always place an extra end sequence when ever we exit
+    // a valid address range for a function in case the functions get
+    // rearranged by optimizations or by order specifications. These extra end
+    // sequences will disappear by getting replaced with valid consecutive
+    // entries within a compile unit if there are no gaps.
     if (range.first == range.second) {
       state_coll.insert(range.first, state);
     } else {
@@ -1065,10 +1065,9 @@ void DWARFDebugLine::State::Reset() { Row::Reset(prologue->default_is_stmt); }
 // DWARFDebugLine::State::AppendRowToMatrix
 //----------------------------------------------------------------------
 void DWARFDebugLine::State::AppendRowToMatrix(dw_offset_t offset) {
-  // Each time we are to add an entry into the line table matrix
-  // call the callback function so that someone can do something with
-  // the current state of the state machine (like build a line table
-  // or dump the line table!)
+  // Each time we are to add an entry into the line table matrix call the
+  // callback function so that someone can do something with the current state
+  // of the state machine (like build a line table or dump the line table!)
   if (log) {
     if (row == 0) {
       log->PutCString("Address            Line   Column File   ISA Flags");
@@ -1088,8 +1087,8 @@ void DWARFDebugLine::State::AppendRowToMatrix(dw_offset_t offset) {
 // DWARFDebugLine::State::Finalize
 //----------------------------------------------------------------------
 void DWARFDebugLine::State::Finalize(dw_offset_t offset) {
-  // Call the callback with a special row state when we are done parsing a
-  // line table
+  // Call the callback with a special row state when we are done parsing a line
+  // table
   row = DoneParsingLineTable;
   if (callback)
     callback(offset, *this, callbackUserData);

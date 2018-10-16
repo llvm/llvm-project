@@ -110,6 +110,8 @@ const CMICmnResources::SRsrcTextData
         {IDE_MI_APP_ARG_EXECUTABLE, "executable (NOT IMPLEMENTED)\n\tThe file "
                                     "path to the executable i.e. '\"C:\\My "
                                     "Dev\\foo.exe\"'."},
+        {IDE_MI_APP_ARG_SYNCHRONOUS, "--synchronous\n\tBlock until each command "
+                                     "has finished executing.\n\tUsed for testing only."},
         {IDS_STDIN_ERR_INVALID_PROMPT,
          "Stdin. Invalid prompt description '%s'"},
         {IDS_STDIN_ERR_THREAD_CREATION_FAILED,
@@ -449,7 +451,7 @@ const CMICmnResources::SRsrcTextData
          "'print' error. The option '%s' not found"},
         {IDS_CMD_ERR_EXPR_INVALID, "Failed to evaluate expression: %s"},
         {IDS_CMD_ERR_ATTACH_FAILED,
-         "Command '%s'. Attach to processs failed: %s"},
+         "Command '%s'. Attach to process failed: %s"},
         {IDS_CMD_ERR_ATTACH_BAD_ARGS,
          "Command '%s'. Must specify either a PID or a Name"}};
 

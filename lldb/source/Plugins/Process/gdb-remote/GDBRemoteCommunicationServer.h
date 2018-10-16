@@ -57,8 +57,8 @@ protected:
   bool m_exit_now; // use in asynchronous handling to indicate process should
                    // exit.
 
-  bool m_send_error_strings; // If the client enables this then
-                             // we will send error strings as well.
+  bool m_send_error_strings = false; // If the client enables this then
+                                     // we will send error strings as well.
 
   PacketResult Handle_QErrorStringEnable(StringExtractorGDBRemote &packet);
 

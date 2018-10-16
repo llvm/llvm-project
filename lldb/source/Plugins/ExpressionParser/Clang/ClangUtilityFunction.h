@@ -29,15 +29,15 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class ClangUtilityFunction ClangUtilityFunction.h
-/// "lldb/Expression/ClangUtilityFunction.h"
-/// @brief Encapsulates a single expression for use with Clang
+/// "lldb/Expression/ClangUtilityFunction.h" Encapsulates a single expression
+/// for use with Clang
 ///
 /// LLDB uses expressions for various purposes, notably to call functions
 /// and as a backend for the expr command.  ClangUtilityFunction encapsulates
 /// a self-contained function meant to be used from other code.  Utility
 /// functions can perform error-checking for ClangUserExpressions, or can
-/// simply provide a way to push a function into the target for the debugger to
-/// call later on.
+/// simply provide a way to push a function into the target for the debugger
+/// to call later on.
 //----------------------------------------------------------------------
 class ClangUtilityFunction : public UtilityFunction {
 public:
@@ -60,8 +60,8 @@ public:
     void ResetDeclMap(ExecutionContext &exe_ctx, bool keep_result_in_memory);
 
     //------------------------------------------------------------------
-    /// Return the object that the parser should allow to access ASTs.
-    /// May be NULL if the ASTs do not need to be transformed.
+    /// Return the object that the parser should allow to access ASTs. May be
+    /// NULL if the ASTs do not need to be transformed.
     ///
     /// @param[in] passthrough
     ///     The ASTConsumer that the returned transformer should send

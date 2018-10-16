@@ -77,7 +77,8 @@ public:
   void MakeAllocation(IRMemoryMap &map, Status &err) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-    // Allocate a spare memory area to store the persistent variable's contents.
+    // Allocate a spare memory area to store the persistent variable's
+    // contents.
 
     Status allocate_error;
     const bool zero_memory = false;
@@ -230,8 +231,8 @@ public:
               ExpressionVariable::EVIsProgramReference &&
           !m_persistent_variable_sp->m_live_sp) {
         // If the reference comes from the program, then the
-        // ClangExpressionVariable's
-        // live variable data hasn't been set up yet.  Do this now.
+        // ClangExpressionVariable's live variable data hasn't been set up yet.
+        // Do this now.
 
         lldb::addr_t location;
         Status read_error;
@@ -256,10 +257,8 @@ public:
             frame_bottom != LLDB_INVALID_ADDRESS && location >= frame_bottom &&
             location <= frame_top) {
           // If the variable is resident in the stack frame created by the
-          // expression,
-          // then it cannot be relied upon to stay around.  We treat it as
-          // needing
-          // reallocation.
+          // expression, then it cannot be relied upon to stay around.  We
+          // treat it as needing reallocation.
           m_persistent_variable_sp->m_flags |=
               ExpressionVariable::EVIsLLDBAllocated;
           m_persistent_variable_sp->m_flags |=
@@ -579,6 +578,19 @@ public:
         // FIXME: It would be better to map the type into the context when the
         //        variable is created. 
         auto layout_type = m_variable_sp->GetType()->GetLayoutCompilerType();
+
+        // IRGen wants a fully realized type so we do archetype binding
+        // before asking informations about this type (e.g. its size).
+        if (layout_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
+          lldb::ProcessSP process_sp =
+              map.GetBestExecutionContextScope()->CalculateProcess();
+          SwiftLanguageRuntime *language_runtime =
+              process_sp->GetSwiftLanguageRuntime();
+          if (language_runtime && frame_sp)
+            layout_type = language_runtime->DoArchetypeBindingForType(
+                *frame_sp, layout_type);
+        }
+
         size_t bit_align = layout_type.GetTypeSystem()->MapIntoContext(
             frame_sp, layout_type.GetOpaqueQualType()).GetTypeBitAlign();
         size_t byte_align = (bit_align + 7) / 8;
@@ -923,11 +935,13 @@ public:
 
     Status type_system_error;
     TypeSystem *type_system;
-    
-    if (lang == lldb::eLanguageTypeSwift) {
-      Status error;
-      type_system = target_sp->GetScratchSwiftASTContext(error, *frame_sp);
-    } else
+
+    if (lang == lldb::eLanguageTypeSwift)
+      // We already acquired the lock in the SwiftUserExpression.
+      type_system =
+          target_sp->GetScratchSwiftASTContext(type_system_error, *frame_sp)
+              .get();
+    else
       type_system = target_sp->GetScratchTypeSystemForLanguage(
         &type_system_error, m_type.GetMinimumLanguage());
 

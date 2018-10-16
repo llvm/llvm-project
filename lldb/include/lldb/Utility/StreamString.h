@@ -31,8 +31,6 @@ public:
 
   void Flush() override;
 
-  size_t Write(const void *s, size_t length) override;
-
   void Clear();
 
   bool Empty() const;
@@ -49,6 +47,7 @@ public:
 
 protected:
   std::string m_packet;
+  size_t WriteImpl(const void *s, size_t length) override;
 };
 
 } // namespace lldb_private

@@ -22,15 +22,14 @@ namespace lldb_private {
 
 //------------------------------------------------------------------
 // Queue:
-// This class represents a libdispatch aka Grand Central Dispatch
-// queue in the process.
+// This class represents a libdispatch aka Grand Central Dispatch queue in the
+// process.
 //
 // A program using libdispatch will create queues, put work items
-// (functions, blocks) on the queues.  The system will create /
-// reassign pthreads to execute the work items for the queues.  A
-// serial queue will be associated with a single thread (or possibly
-// no thread, if it is not doing any work).  A concurrent queue may
-// be associated with multiple threads.
+// (functions, blocks) on the queues.  The system will create / reassign
+// pthreads to execute the work items for the queues.  A serial queue will be
+// associated with a single thread (or possibly no thread, if it is not doing
+// any work).  A concurrent queue may be associated with multiple threads.
 //------------------------------------------------------------------
 
 class Queue : public std::enable_shared_from_this<Queue> {

@@ -25,8 +25,8 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class LineSequence LineTable.h "lldb/Symbol/LineTable.h"
-/// @brief An abstract base class used during symbol table creation.
+/// @class LineSequence LineTable.h "lldb/Symbol/LineTable.h" An abstract base
+/// class used during symbol table creation.
 //----------------------------------------------------------------------
 class LineSequence {
 public:
@@ -42,7 +42,7 @@ private:
 
 //----------------------------------------------------------------------
 /// @class LineTable LineTable.h "lldb/Symbol/LineTable.h"
-/// @brief A line table class.
+/// A line table class.
 //----------------------------------------------------------------------
 class LineTable {
 public:
@@ -111,8 +111,7 @@ public:
   void GetDescription(Stream *s, Target *target, lldb::DescriptionLevel level);
 
   //------------------------------------------------------------------
-  /// Find a line entry that contains the section offset address \a
-  /// so_addr.
+  /// Find a line entry that contains the section offset address \a so_addr.
   ///
   /// @param[in] so_addr
   ///     A section offset address object containing the address we
@@ -134,12 +133,12 @@ public:
                               uint32_t *index_ptr = nullptr);
 
   //------------------------------------------------------------------
-  /// Find a line entry index that has a matching file index and
-  /// source line number.
+  /// Find a line entry index that has a matching file index and source line
+  /// number.
   ///
-  /// Finds the next line entry that has a matching \a file_idx and
-  /// source line number \a line starting at the \a start_idx entries
-  /// into the line entry collection.
+  /// Finds the next line entry that has a matching \a file_idx and source
+  /// line number \a line starting at the \a start_idx entries into the line
+  /// entry collection.
   ///
   /// @param[in] start_idx
   ///     The number of entries to skip when starting the search.
@@ -224,8 +223,8 @@ public:
                                         bool append);
 
   //------------------------------------------------------------------
-  /// Given a file range link map, relink the current line table
-  /// and return a fixed up line table.
+  /// Given a file range link map, relink the current line table and return a
+  /// fixed up line table.
   ///
   /// @param[out] file_range_map
   ///     A collection of file ranges that maps to new file ranges

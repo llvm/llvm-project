@@ -35,18 +35,10 @@ class SwiftGetValueAsUnsignedAPITest(TestBase):
 
     def getvalue_commands(self):
         """Tests that the SBValue::GetValueAsUnsigned() API works for Swift types"""
-        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
-        lldbutil.run_break_set_by_source_regexp(
-            self, r"break here", num_expected_locations=1)
+        (target, process, thread, breakpoint) = lldbutil.run_to_source_breakpoint(self, 
+                "break here", lldb.SBFileSpec("main.swift"))
 
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
-
-        frame = self.frame()
+        frame = thread.GetFrameAtIndex(0)
         string = frame.FindVariable("aString")
         number = frame.FindVariable("aNumber")
         number.SetPreferSyntheticValue(True)

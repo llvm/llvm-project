@@ -40,7 +40,7 @@ bool lldb_private::formatters::swift::SwiftMetatype_SummaryProvider(
     if (!swift_runtime)
       return false;
     SwiftLanguageRuntime::MetadataPromiseSP metadata_promise_sp =
-        swift_runtime->GetMetadataPromise(metadata_ptr);
+      swift_runtime->GetMetadataPromise(metadata_ptr, valobj);
     if (CompilerType resolved_type =
             metadata_promise_sp->FulfillTypePromise()) {
       stream.Printf("%s", resolved_type.GetDisplayTypeName().AsCString());

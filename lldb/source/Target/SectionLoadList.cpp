@@ -97,12 +97,12 @@ bool SectionLoadList::SetSectionLoadAddress(const lldb::SectionSP &section,
       // we have multiple load addresses that correspond to a section, we will
       // always attribute the section to the be last section that claims it
       // exists at that address. Sometimes it is ok for more that one section
-      // to be loaded at a specific load address, and other times it isn't.
-      // The "warn_multiple" parameter tells us if we should warn in this case
-      // or not. The DynamicLoader plug-in subclasses should know which
-      // sections should warn and which shouldn't (darwin shared cache modules
-      // all shared the same "__LINKEDIT" sections, so the dynamic loader can
-      // pass false for "warn_multiple").
+      // to be loaded at a specific load address, and other times it isn't. The
+      // "warn_multiple" parameter tells us if we should warn in this case or
+      // not. The DynamicLoader plug-in subclasses should know which sections
+      // should warn and which shouldn't (darwin shared cache modules all
+      // shared the same "__LINKEDIT" sections, so the dynamic loader can pass
+      // false for "warn_multiple").
       if (warn_multiple && section != ats_pos->second) {
         ModuleSP module_sp(section->GetModule());
         if (module_sp) {
@@ -228,8 +228,8 @@ bool SectionLoadList::ResolveLoadAddress(addr_t load_addr, Address &so_addr,
         }
       }
     } else {
-      // There are no entries that have an address that is >= load_addr,
-      // so we need to check the last entry on our collection.
+      // There are no entries that have an address that is >= load_addr, so we
+      // need to check the last entry on our collection.
       addr_to_sect_collection::const_reverse_iterator rpos =
           m_addr_to_sect.rbegin();
       if (load_addr >= rpos->first) {

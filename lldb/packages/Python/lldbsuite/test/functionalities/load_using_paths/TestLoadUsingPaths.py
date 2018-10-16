@@ -20,7 +20,7 @@ class LoadUsingPathsTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     NO_DEBUG_INFO_TESTCASE = True
-   
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -52,8 +52,8 @@ class LoadUsingPathsTestCase(TestBase):
         # The directory with the dynamic library we did not link to.
         path_dir = os.path.join(self.getBuildDir(), "hidden")
 
-        (target, process, thread, 
-         _) = lldbutil.run_to_source_breakpoint(self, 
+        (target, process, thread,
+         _) = lldbutil.run_to_source_breakpoint(self,
                                                 "Break here to do the load using paths",
                                                 lldb.SBFileSpec("main.cpp"))
         error = lldb.SBError()
@@ -63,18 +63,18 @@ class LoadUsingPathsTestCase(TestBase):
         paths.AppendString(os.path.join(self.wd, "no_such_dir"))
 
         out_spec = lldb.SBFileSpec()
-        
+
         # First try with no correct directories on the path, and make sure that doesn't blow up:
         token = process.LoadImageUsingPaths(lib_spec, paths, out_spec, error)
         self.assertEqual(token, lldb.LLDB_INVALID_IMAGE_TOKEN, "Only looked on the provided path.")
-        
+
         # Now add the correct dir to the paths list and try again:
         paths.AppendString(self.hidden_dir)
         token = process.LoadImageUsingPaths(lib_spec, paths, out_spec, error)
 
         self.assertNotEqual(token, lldb.LLDB_INVALID_IMAGE_TOKEN, "Got a valid token")
         self.assertEqual(out_spec, lldb.SBFileSpec(self.hidden_lib), "Found the expected library")
-        
+
         # Make sure this really is in the image list:
         loaded_module = target.FindModule(out_spec)
 
@@ -89,11 +89,11 @@ class LoadUsingPathsTestCase(TestBase):
         # Make sure the token works to unload it:
         process.UnloadImage(token)
 
-        # Make sure this really is no longer in the image list: 
+        # Make sure this really is no longer in the image list:
         loaded_module = target.FindModule(out_spec)
 
         self.assertFalse(loaded_module.IsValid(), "The unloaded module is no longer in the image list.")
-        
+
         # Make sure a relative path also works:
         paths.Clear()
         paths.AppendString(os.path.join(self.wd, "no_such_dir"))
@@ -107,7 +107,7 @@ class LoadUsingPathsTestCase(TestBase):
         self.assertEqual(out_spec, lldb.SBFileSpec(self.hidden_lib), "Found the expected library with relative path")
 
         process.UnloadImage(token)
-        
+
         # Make sure the presence of an empty path doesn't mess anything up:
         paths.Clear()
         paths.AppendString("")
@@ -122,7 +122,7 @@ class LoadUsingPathsTestCase(TestBase):
         self.assertEqual(out_spec, lldb.SBFileSpec(self.hidden_lib), "Found the expected library with included empty path")
 
         process.UnloadImage(token)
-        
+
 
 
         # Finally, passing in an absolute path should work like the basename:
@@ -140,4 +140,4 @@ class LoadUsingPathsTestCase(TestBase):
         self.assertNotEqual(token, lldb.LLDB_INVALID_IMAGE_TOKEN, "Got a valid token")
         self.assertEqual(out_spec, lldb.SBFileSpec(self.hidden_lib), "Found the expected library")
 
-                                        
+

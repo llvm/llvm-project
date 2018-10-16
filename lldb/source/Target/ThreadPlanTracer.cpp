@@ -13,6 +13,7 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
+#include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
@@ -217,7 +218,8 @@ void ThreadPlanAssemblyTracer::Log() {
           reg_value != m_register_values[reg_num]) {
         if (reg_value.GetType() != RegisterValue::eTypeInvalid) {
           stream->PutCString("\n\t");
-          reg_value.Dump(stream, reg_info, true, false, eFormatDefault);
+          DumpRegisterValue(reg_value, stream, reg_info, true, false,
+                            eFormatDefault);
         }
       }
       m_register_values[reg_num] = reg_value;

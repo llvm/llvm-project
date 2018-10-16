@@ -1,8 +1,8 @@
 # RUN: yaml2obj %s > %t.out
-# RUN: lldb-test symbols %t.out | FileCheck %s
-# REQUIRES: darwin
+# RUN: lldb-test object-file %t.out | FileCheck %s
+
 # Test that the deployment target is parsed from the load commands.
-# CHECK: x86_64-apple-macosx10.9.0
+# CHECK: Architecture: x86_64-apple-macosx10.9.0
 --- !mach-o
 FileHeader:      
   magic:           0xFEEDFACF

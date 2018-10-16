@@ -477,11 +477,11 @@ public:
       const ConstString &name);
 
   //------------------------------------------------------------------
-  // Some plug-ins might register a DebuggerInitializeCallback
-  // callback when registering the plug-in. After a new Debugger
-  // instance is created, this DebuggerInitialize function will get
-  // called. This allows plug-ins to install Properties and do any
-  // other initialization that requires a debugger instance.
+  // Some plug-ins might register a DebuggerInitializeCallback callback when
+  // registering the plug-in. After a new Debugger instance is created, this
+  // DebuggerInitialize function will get called. This allows plug-ins to
+  // install Properties and do any other initialization that requires a
+  // debugger instance.
   //------------------------------------------------------------------
   static void DebuggerInitialize(Debugger &debugger);
 

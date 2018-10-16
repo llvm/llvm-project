@@ -29,10 +29,9 @@ BreakpointID::~BreakpointID() = default;
 static llvm::StringRef g_range_specifiers[] = {"-", "to", "To", "TO"};
 
 // Tells whether or not STR is valid to use between two strings representing
-// breakpoint IDs, to
-// indicate a range of breakpoint IDs.  This is broken out into a separate
-// function so that we can
-// easily change or add to the format for specifying ID ranges at a later date.
+// breakpoint IDs, to indicate a range of breakpoint IDs.  This is broken out
+// into a separate function so that we can easily change or add to the format
+// for specifying ID ranges at a later date.
 
 bool BreakpointID::IsRangeIdentifier(llvm::StringRef str) {
   for (auto spec : g_range_specifiers) {

@@ -23,8 +23,8 @@ ThreadPlanCallOnFunctionExit::ThreadPlanCallOnFunctionExit(
 }
 
 void ThreadPlanCallOnFunctionExit::DidPush() {
-  // We now want to queue the "step out" thread plan so it executes
-  // and completes.
+  // We now want to queue the "step out" thread plan so it executes and
+  // completes.
 
   // Set stop vote to eVoteNo.
   m_step_out_threadplan_sp = GetThread().QueueThreadPlanForStepOut(
@@ -59,9 +59,9 @@ bool ThreadPlanCallOnFunctionExit::ValidatePlan(Stream *error) {
 }
 
 bool ThreadPlanCallOnFunctionExit::ShouldStop(Event *event_ptr) {
-  // If this is where we find out that an internal stop came in, then:
-  // Check if the step-out plan completed.  If it did, then we want to
-  // run the callback here (our reason for living...)
+  // If this is where we find out that an internal stop came in, then: Check if
+  // the step-out plan completed.  If it did, then we want to run the callback
+  // here (our reason for living...)
   if (m_step_out_threadplan_sp && m_step_out_threadplan_sp->IsPlanComplete()) {
     m_callback();
 
@@ -71,8 +71,8 @@ bool ThreadPlanCallOnFunctionExit::ShouldStop(Event *event_ptr) {
     // Indicate that this plan is done and can be discarded.
     SetPlanComplete();
 
-    // We're done now, but we want to return false so that we
-    // don't cause the thread to really stop.
+    // We're done now, but we want to return false so that we don't cause the
+    // thread to really stop.
   }
 
   return false;
@@ -80,21 +80,20 @@ bool ThreadPlanCallOnFunctionExit::ShouldStop(Event *event_ptr) {
 
 bool ThreadPlanCallOnFunctionExit::WillStop() {
   // The code looks like the return value is ignored via ThreadList::
-  // ShouldStop().
-  // This is called when we really are going to stop.  We don't care
-  // and don't need to do anything here.
+  // ShouldStop(). This is called when we really are going to stop.  We don't
+  // care and don't need to do anything here.
   return false;
 }
 
 bool ThreadPlanCallOnFunctionExit::DoPlanExplainsStop(Event *event_ptr) {
-  // We don't ever explain a stop.  The only stop that is relevant
-  // to us directly is the step_out plan we added to do the heavy lifting
-  // of getting us past the current method.
+  // We don't ever explain a stop.  The only stop that is relevant to us
+  // directly is the step_out plan we added to do the heavy lifting of getting
+  // us past the current method.
   return false;
 }
 
 lldb::StateType ThreadPlanCallOnFunctionExit::GetPlanRunState() {
-  // This value doesn't matter - we'll never be the top thread plan, so
-  // nobody will ask us this question.
+  // This value doesn't matter - we'll never be the top thread plan, so nobody
+  // will ask us this question.
   return eStateRunning;
 }

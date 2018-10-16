@@ -28,12 +28,15 @@
 #include "swift/AST/Types.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/Demangler.h"
+#include "swift/Reflection/ReflectionContext.h"
+#include "swift/Reflection/TypeRefBuilder.h"
 #include "swift/Remote/MemoryReader.h"
+#include "swift/Remote/RemoteAddress.h"
 #include "swift/RemoteAST/RemoteAST.h"
+#include "swift/Runtime/Metadata.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -52,6 +55,7 @@
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/TypeList.h"
@@ -64,6 +68,7 @@
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
 #include "lldb/Target/ThreadPlanStepOverRange.h"
+#include "lldb/Utility/Status.h"
 
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataBuffer.h"
@@ -82,12 +87,41 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 SwiftLanguageRuntime::~SwiftLanguageRuntime() {}
 
+void SwiftLanguageRuntime::SetupReflection() {
+  auto &target = m_process->GetTarget();
+  auto M = target.GetExecutableModule();
+  auto *obj_file = M->GetObjectFile();
+  Address start_address = obj_file->GetHeaderAddress();
+  auto load_ptr = static_cast<uintptr_t>(start_address.GetLoadAddress(&target));
+
+  // Bail out if we can't read the executable instead of crashing.
+  if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS)
+    return;
+
+  reflection_ctx = new NativeReflectionContext(this->GetMemoryReader());
+  reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
+
+  auto module_list = GetTargetRef().GetImages();
+  module_list.ForEach([&](const ModuleSP &module_sp) -> bool {
+    std::string module_path = module_sp->GetFileSpec().GetPath();
+    auto *obj_file = module_sp->GetObjectFile();
+    Address start_address = obj_file->GetHeaderAddress();
+    auto load_ptr = static_cast<uintptr_t>(
+        start_address.GetLoadAddress(&(m_process->GetTarget())));
+    if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS)
+      return false;
+    reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
+    return true;
+  });
+}
+
 SwiftLanguageRuntime::SwiftLanguageRuntime(Process *process)
     : LanguageRuntime(process), m_negative_cache_mutex(),
       m_SwiftNativeNSErrorISA(), m_memory_reader_sp(), m_promises_map(),
       m_bridged_synthetics_map(), m_box_metadata_type() {
   SetupSwiftError();
   SetupExclusivity();
+  SetupReflection();
 }
 
 static llvm::Optional<lldb::addr_t>
@@ -128,7 +162,7 @@ void SwiftLanguageRuntime::SetupSwiftError() {
   if (m_SwiftNativeNSErrorISA.hasValue())
     return;
 
-  ConstString g_SwiftNativeNSError("_SwiftNativeNSError");
+  ConstString g_SwiftNativeNSError("__SwiftNativeNSError");
 
   m_SwiftNativeNSErrorISA = FindSymbolForSwiftObject(
       target, g_SwiftNativeNSError, eSymbolTypeObjCClass);
@@ -371,6 +405,19 @@ static bool GetObjectDescription_ObjectCopy(Process *process, Stream &str,
     static_type = non_reference_type;
 
   Status error;
+
+  // If we are in a generic context, here the static type of the object
+  // might end up being generic (i.e. <T>). We want to make sure that
+  // we correctly map the type into context before asking questions or
+  // printing, as IRGen requires a fully realized type to work on.
+  auto frame_sp =
+      process->GetThreadList().GetSelectedThread()->GetSelectedFrame();
+  auto *swift_ast_ctx =
+      llvm::dyn_cast_or_null<SwiftASTContext>(static_type.GetTypeSystem());
+  if (swift_ast_ctx)
+    static_type =
+        swift_ast_ctx->MapIntoContext(frame_sp,
+                                      static_type.GetOpaqueQualType());
 
   lldb::addr_t copy_location = process->AllocateMemory(
       static_type.GetByteStride(), ePermissionsReadable | ePermissionsWritable,
@@ -1024,7 +1071,7 @@ std::shared_ptr<swift::remote::MemoryReader>
 SwiftLanguageRuntime::GetMemoryReader() {
   class MemoryReader : public swift::remote::MemoryReader {
   public:
-    MemoryReader(Process *p, size_t max_read_amount = 50 * 1024)
+    MemoryReader(Process *p, size_t max_read_amount = INT32_MAX)
         : m_process(p) {
       lldbassert(m_process && "MemoryReader requires a valid Process");
       m_max_read_amount = max_read_amount;
@@ -1150,7 +1197,8 @@ SwiftLanguageRuntime::GetMemoryReader() {
             "[MemoryReader] asked to read string data at address 0x%" PRIx64,
             address.getAddressData());
 
-      std::vector<char> storage(m_max_read_amount, 0);
+      uint32_t read_size = 50 * 1024;
+      std::vector<char> storage(read_size, 0);
       Target &target(m_process->GetTarget());
       Address addr(address.getAddressData());
       Status error;
@@ -1180,19 +1228,11 @@ SwiftLanguageRuntime::GetMemoryReader() {
   return m_memory_reader_sp;
 }
 
-SwiftASTContext *SwiftLanguageRuntime::GetScratchSwiftASTContext() {
-  Status error;
-  return llvm::dyn_cast_or_null<SwiftASTContext>(
-      m_process->GetTarget().GetScratchTypeSystemForLanguage(
-          &error, eLanguageTypeSwift));
-}
-
 SwiftLanguageRuntime::MetadataPromise::MetadataPromise(
-    SwiftASTContext &swift_ast_ctx, SwiftLanguageRuntime &runtime,
+    ValueObject &for_object, SwiftLanguageRuntime &runtime,
     lldb::addr_t location)
-    : m_swift_ast(*swift_ast_ctx.GetASTContext()),
-      m_remote_ast(runtime.GetRemoteASTContext(swift_ast_ctx)),
-      m_swift_runtime(runtime), m_metadata_location(location) {}
+    : m_for_object_sp(for_object.GetSP()), m_swift_runtime(runtime),
+      m_metadata_location(location) {}
 
 CompilerType
 SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
@@ -1209,12 +1249,18 @@ SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
   if (m_compiler_type.hasValue())
     return m_compiler_type.getValue();
 
+  auto swift_ast_ctx = m_for_object_sp->GetScratchSwiftASTContext();
+  if (!swift_ast_ctx) {
+    error->SetErrorString("couldn't get Swift scratch context");
+    return CompilerType();
+  }
+  auto &remote_ast = m_swift_runtime.GetRemoteASTContext(*swift_ast_ctx);
   swift::remoteAST::Result<swift::Type> result =
-      m_remote_ast.getTypeForRemoteTypeMetadata(
+      remote_ast.getTypeForRemoteTypeMetadata(
           swift::remote::RemoteAddress(m_metadata_location));
 
   if (result) {
-    m_compiler_type = CompilerType(&m_swift_ast, result.getValue().getPointer());
+    m_compiler_type = {swift_ast_ctx.get(), result.getValue().getPointer()};
     if (log)
       log->Printf("[MetadataPromise] result is type %s",
                   m_compiler_type->GetTypeName().AsCString());
@@ -1245,8 +1291,15 @@ SwiftLanguageRuntime::MetadataPromise::FulfillKindPromise(Status *error) {
   if (m_metadata_kind.hasValue())
     return m_metadata_kind;
 
+  auto swift_ast_ctx = m_for_object_sp->GetScratchSwiftASTContext();
+  if (!swift_ast_ctx) {
+    error->SetErrorString("couldn't get Swift scratch context");
+    return llvm::None;
+  }
+  auto &remote_ast = m_swift_runtime.GetRemoteASTContext(*swift_ast_ctx);
+
   swift::remoteAST::Result<swift::MetadataKind> result =
-      m_remote_ast.getKindForRemoteTypeMetadata(
+      remote_ast.getKindForRemoteTypeMetadata(
           swift::remote::RemoteAddress(m_metadata_location));
 
   if (result) {
@@ -1286,22 +1339,13 @@ static inline swift::Type GetSwiftType(const CompilerType &type) {
 
 SwiftLanguageRuntime::MetadataPromiseSP
 SwiftLanguageRuntime::GetMetadataPromise(lldb::addr_t addr,
-                                         SwiftASTContext *swift_ast_ctx) {
-  if (!swift_ast_ctx)
-    swift_ast_ctx = GetScratchSwiftASTContext();
-
+                                         ValueObject &for_object) {
+  auto swift_ast_ctx = for_object.GetScratchSwiftASTContext();
   if (!swift_ast_ctx || swift_ast_ctx->HasFatalErrors())
     return nullptr;
 
   if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
     return nullptr;
-
-  if (auto objc_runtime = GetObjCRuntime()) {
-    if (objc_runtime->GetRuntimeVersion() ==
-        ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2) {
-      addr = ((AppleObjCRuntimeV2 *)objc_runtime)->GetPointerISA(addr);
-    }
-  }
 
   typename decltype(m_promises_map)::key_type key{
       swift_ast_ctx->GetASTContext(), addr};
@@ -1311,7 +1355,7 @@ SwiftLanguageRuntime::GetMetadataPromise(lldb::addr_t addr,
     return iter->second;
 
   MetadataPromiseSP promise_sp(
-      new MetadataPromise(*swift_ast_ctx, *this, std::get<1>(key)));
+      new MetadataPromise(for_object, *this, std::get<1>(key)));
   m_promises_map.emplace(key, promise_sp);
   return promise_sp;
 }
@@ -1345,12 +1389,22 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
   if (!instance_type.IsValid())
     return llvm::None;
 
-  SwiftASTContext *swift_ast_ctx =
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  // Using the module context for RemoteAST is cheaper bit only safe
+  // when there is no dynamic type resolution involved.
+  auto *module_ctx =
       llvm::dyn_cast_or_null<SwiftASTContext>(instance_type.GetTypeSystem());
-  if (!swift_ast_ctx || swift_ast_ctx->HasFatalErrors())
+  if (!module_ctx || module_ctx->HasFatalErrors())
     return llvm::None;
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  llvm::Optional<SwiftASTContextReader> scratch_ctx;
+  if (instance) {
+    scratch_ctx = instance->GetScratchSwiftASTContext();
+    if (!scratch_ctx)
+      return llvm::None;
+  }
+  
+  auto *remote_ast = &GetRemoteASTContext(*module_ctx);
 
   if (log)
     log->Printf(
@@ -1358,18 +1412,15 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
         member_name.AsCString());
 
   // Check whether we've already cached this offset.
-  swift::TypeBase *swift_type =
-    reinterpret_cast<swift::TypeBase *>(
+  auto *swift_type = reinterpret_cast<swift::TypeBase *>(
       instance_type.GetCanonicalType().GetOpaqueQualType());
-  auto known_offset =
-    m_member_offsets.find(
-                       std::make_tuple(swift_type, member_name.GetCString()));
-  if (known_offset != m_member_offsets.end())
-    return known_offset->second;
+  auto key = std::make_tuple(swift_type, member_name.GetCString());
+  auto it = m_member_offsets.find(key);
+  if (it != m_member_offsets.end())
+    return it->second;
 
   // Dig out metadata describing the type, if it's easy to find.
   // FIXME: the Remote AST library should make this easier.
-  auto &remote_ast_context = GetRemoteASTContext(*swift_ast_ctx);
   swift::remote::RemoteAddress optmeta(nullptr);
   const swift::TypeKind type_kind = swift_type->getKind();
   switch (type_kind) {
@@ -1379,41 +1430,54 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
       log->Printf("[MemberVariableOffsetResolver] type is a class - trying to "
                   "get metadata for valueobject %s",
                   (instance ? instance->GetName().AsCString() : "<null>"));
-    // retrieve the metadata for class types as this is where we get the maximum
-    // benefit
     if (instance) {
       lldb::addr_t pointer = instance->GetPointerValue();
-      if (pointer == 0 || pointer == LLDB_INVALID_ADDRESS)
+      if (!pointer || pointer == LLDB_INVALID_ADDRESS)
         break;
       swift::remote::RemoteAddress address(pointer);
-      if (auto metadata =
-              remote_ast_context.getHeapMetadataForObject(address)) {
+      if (auto metadata = remote_ast->getHeapMetadataForObject(address))
         optmeta = metadata.getValue();
-      }
     }
     if (log)
       log->Printf("[MemberVariableOffsetResolver] optmeta = 0x%" PRIx64,
                   optmeta.getAddressData());
-  } break;
-  default: {
-    if (log)
-      log->Printf("[MemberVariableOffsetResolver] type is not a class - no "
-                  "metadata needed");
-  } break;
+    break;
+  }
+
+  default:
+    // Bind generic parameters if necessary.
+    if (instance && swift_type->hasTypeParameter())
+      if (auto *frame = instance->GetExecutionContextRef().GetFrameSP().get())
+        if (auto bound = DoArchetypeBindingForType(*frame, instance_type)) {
+          if (log)
+            log->Printf(
+                "[MemberVariableOffsetResolver] resolved non-class type = %s",
+                bound.GetTypeName().AsCString());
+
+          swift_type = reinterpret_cast<swift::TypeBase *>(
+              bound.GetCanonicalType().GetOpaqueQualType());
+
+          auto key = std::make_tuple(swift_type, member_name.GetCString());
+          auto it = m_member_offsets.find(key);
+          if (it != m_member_offsets.end())
+            return it->second;
+
+          assert(bound.GetTypeSystem() == scratch_ctx->get());
+          remote_ast = &GetRemoteASTContext(*scratch_ctx->get());
+        }
   }
 
   // Determine the member offset.
-  swift::remoteAST::Result<uint64_t> result =
-      remote_ast_context.getOffsetOfMember(swift_type, optmeta,
-                                           member_name.GetStringRef());
+  swift::remoteAST::Result<uint64_t> result = remote_ast->getOffsetOfMember(
+      swift_type, optmeta, member_name.GetStringRef());
   if (result) {
     if (log)
       log->Printf("[MemberVariableOffsetResolver] offset discovered = %" PRIu64,
                   (uint64_t)result.getValue());
 
     // Cache this result.
-    m_member_offsets[std::make_tuple(swift_type, member_name.GetCString())] =
-      result.getValue();
+    auto key = std::make_tuple(swift_type, member_name.GetCString());
+    m_member_offsets.insert(std::make_pair(key, result.getValue()));
     return result.getValue();
   }
 
@@ -1437,11 +1501,24 @@ static size_t BaseClassDepth(ValueObject &in_value) {
   return depth;
 }
 
-bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
-    ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-    TypeAndOrName &class_type_or_name, Address &address) {
-  CompilerType value_type(in_value.GetCompilerType());
+/// Determine whether the scratch SwiftASTContext has been locked.
+static bool IsScratchContextLocked(Target &target) {
+  if (target.GetSwiftScratchContextLock().try_lock()) {
+    target.GetSwiftScratchContextLock().unlock();
+    return false;
+  }
+  return true;
+}
 
+/// Determine whether the scratch SwiftASTContext has been locked.
+static bool IsScratchContextLocked(TargetSP target) {
+    return target ? IsScratchContextLocked(*target) : true;
+}
+
+bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
+    ValueObject &in_value, SwiftASTContext &scratch_ctx,
+    lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
+    Address &address) {
   AddressType address_type;
   lldb::addr_t class_metadata_ptr = in_value.GetPointerValue(&address_type);
   if (auto objc_runtime = GetObjCRuntime()) {
@@ -1457,14 +1534,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
   address.SetRawAddress(class_metadata_ptr);
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
-
-  // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
-  // use the scratch context where such operations are legal and safe.
-  SwiftASTContext *swift_ast_ctx = GetScratchSwiftASTContext();
-  if (!swift_ast_ctx || swift_ast_ctx->HasFatalErrors())
-    return false;
-
-  auto &remote_ast = GetRemoteASTContext(*swift_ast_ctx);
+  auto &remote_ast = GetRemoteASTContext(scratch_ctx);
   swift::remote::RemoteAddress instance_address(class_metadata_ptr);
   auto metadata_address = remote_ast.getHeapMetadataForObject(instance_address);
   if (!metadata_address) {
@@ -1486,13 +1556,12 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
                   metadata_address.getValue(),
                   instance_type.getFailure().render().c_str());
     }
-
     return false;
   }
 
-  CompilerType result_type(swift_ast_ctx,
-                           instance_type.getValue().getPointer());
-  class_type_or_name.SetCompilerType(result_type);
+  // The read lock must have been acquired by the caller.
+  class_type_or_name.SetCompilerType(
+      {&scratch_ctx, instance_type.getValue().getPointer()});
   return true;
 }
 
@@ -1525,7 +1594,7 @@ bool SwiftLanguageRuntime::IsValidErrorValue(
       if (auto descriptor =
               objc_runtime->GetClassDescriptor(*instance_type_sp)) {
         if (descriptor->GetISA() != m_SwiftNativeNSErrorISA.getValue()) {
-          // not a _SwiftNativeNSError - but statically typed as ErrorType
+          // not a __SwiftNativeNSError - but statically typed as ErrorType
           // return true here
           if (out_error_descriptor) {
             *out_error_descriptor = SwiftErrorDescriptor();
@@ -1634,8 +1703,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_ErrorType(
     return false;
   case SwiftErrorDescriptor::Kind::eSwiftBridgeableNative: {
     MetadataPromiseSP promise_sp(GetMetadataPromise(
-        error_descriptor.m_bridgeable_native.metadata_ptr_value,
-        swift_ast_ctx));
+        error_descriptor.m_bridgeable_native.metadata_ptr_value, in_value));
     if (!promise_sp)
       return false;
     error_descriptor.m_bridgeable_native.metadata_location += 4 * ptr_size;
@@ -1659,8 +1727,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_ErrorType(
           error.Fail())
         return false;
       promise_sp = GetMetadataPromise(
-          error_descriptor.m_bridgeable_native.metadata_ptr_value,
-          swift_ast_ctx);
+          error_descriptor.m_bridgeable_native.metadata_ptr_value, in_value);
       if (!promise_sp || !promise_sp->FulfillTypePromise()) {
         // this could still be a random ObjC object
         if (auto objc_runtime = GetObjCRuntime()) {
@@ -1733,7 +1800,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_ErrorType(
   case SwiftErrorDescriptor::Kind::eSwiftPureNative: {
     Status error;
     if (MetadataPromiseSP promise_sp = GetMetadataPromise(
-            error_descriptor.m_pure_native.metadata_location, swift_ast_ctx)) {
+            error_descriptor.m_pure_native.metadata_location, in_value)) {
       if (promise_sp->IsStaticallyDetermined()) {
         if (CompilerType compiler_type = promise_sp->FulfillTypePromise()) {
           class_type_or_name.SetCompilerType(compiler_type);
@@ -1755,8 +1822,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_ErrorType(
             m_process->ReadPointerFromMemory(
                 error_descriptor.m_pure_native.payload_ptr, error);
         if (MetadataPromiseSP promise_sp = GetMetadataPromise(
-                error_descriptor.m_pure_native.metadata_location,
-                swift_ast_ctx)) {
+                error_descriptor.m_pure_native.metadata_location, in_value)) {
           if (CompilerType compiler_type = promise_sp->FulfillTypePromise()) {
             class_type_or_name.SetCompilerType(compiler_type);
             address.SetRawAddress(error_descriptor.m_pure_native.payload_ptr);
@@ -1772,8 +1838,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_ErrorType(
 }
 
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
-    ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-    TypeAndOrName &class_type_or_name, Address &address) {
+    ValueObject &in_value, SwiftASTContext &scratch_ctx,
+    lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
+    Address &address) {
   CompilerType var_type(in_value.GetCompilerType());
   SwiftASTContext::ProtocolInfo protocol_info;
   if (!SwiftASTContext::GetProtocolTypeInfo(var_type, protocol_info))
@@ -1798,7 +1865,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
   bool is_class = protocol_info.m_is_objc || protocol_info.m_is_class_only ||
                   protocol_info.m_is_anyobject;
   if (!is_class) {
-    promise_sp = GetMetadataPromise(instance_type_sp->GetValueAsUnsigned(0));
+    promise_sp =
+        GetMetadataPromise(instance_type_sp->GetValueAsUnsigned(0), in_value);
     if (!promise_sp)
       return false;
     if (promise_sp->FulfillKindPromise().hasValue() &&
@@ -1807,7 +1875,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
       is_class = true;
   }
   if (is_class) {
-    if (GetDynamicTypeAndAddress_Class(*payload0_sp, use_dynamic,
+    if (GetDynamicTypeAndAddress_Class(*payload0_sp, scratch_ctx, use_dynamic,
                                        class_type_or_name, address))
       return true;
 
@@ -1919,6 +1987,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
     address.SetLoadAddress(val_ptr_addr, &m_process->GetTarget());
     return true;
   } break;
+  case swift::MetadataKind::Optional:
   case swift::MetadataKind::Struct:
   case swift::MetadataKind::Tuple: {
     CompilerType dyn_type(promise_sp->FulfillTypePromise());
@@ -1944,27 +2013,23 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
     return true;
   } break;
   case swift::MetadataKind::Existential: {
-    SwiftASTContext *swift_ast_ctx =
-        llvm::dyn_cast_or_null<SwiftASTContext>(var_type.GetTypeSystem());
-
     CompilerType protocol_type(promise_sp->FulfillTypePromise());
     // Error has a special, NSError-compatible layout.
-    if (swift_ast_ctx->IsErrorType(protocol_type)) {
-      if (swift_ast_ctx) {
-        Status error;
-        lldb::addr_t archetype_ptr_value = in_value.GetValueAsUnsigned(0);
-        lldb::addr_t metadata_ptr =
-            m_process->ReadPointerFromMemory(archetype_ptr_value, error);
-        MetadataPromiseSP promise_sp(
-            GetMetadataPromise(metadata_ptr, swift_ast_ctx));
-        if (!promise_sp)
-          return false;
-        CompilerType dynamic_type(promise_sp->FulfillTypePromise());
-        if (dynamic_type.IsValid()) {
-          class_type_or_name.SetCompilerType(dynamic_type);
-          address.SetLoadAddress(archetype_ptr_value, &m_process->GetTarget());
-          return true;
-          }
+    SwiftASTContext *swift_ast_ctx =
+        llvm::dyn_cast_or_null<SwiftASTContext>(protocol_type.GetTypeSystem());
+    if (swift_ast_ctx && swift_ast_ctx->IsErrorType(protocol_type)) {
+      Status error;
+      lldb::addr_t archetype_ptr_value = in_value.GetValueAsUnsigned(0);
+      lldb::addr_t metadata_ptr =
+          m_process->ReadPointerFromMemory(archetype_ptr_value, error);
+      MetadataPromiseSP promise_sp(GetMetadataPromise(metadata_ptr, in_value));
+      if (!promise_sp)
+        return false;
+      CompilerType dynamic_type(promise_sp->FulfillTypePromise());
+      if (dynamic_type.IsValid()) {
+        class_type_or_name.SetCompilerType(dynamic_type);
+        address.SetLoadAddress(archetype_ptr_value, &m_process->GetTarget());
+        return true;
       }
     } else {
       Status error;
@@ -1976,7 +2041,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
           metadata_of_impl_addr == LLDB_INVALID_ADDRESS)
         return false;
       MetadataPromiseSP promise_of_impl_sp(
-          GetMetadataPromise(metadata_of_impl_addr, swift_ast_ctx));
+          GetMetadataPromise(metadata_of_impl_addr, in_value));
       if (GetDynamicTypeAndAddress_Promise(in_value, promise_of_impl_sp,
                                            use_dynamic, class_type_or_name,
                                            address)) {
@@ -2014,12 +2079,6 @@ SwiftLanguageRuntime::GetPromiseForTypeNameAndFrame(const char *type_name,
   if (!frame || !type_name || !type_name[0])
     return nullptr;
 
-  SwiftASTContext *swift_ast_ctx = nullptr;
-  const SymbolContext &sc(frame->GetSymbolContext(eSymbolContextFunction));
-  if (sc.function)
-    swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
-        sc.function->GetCompilerType().GetTypeSystem());
-
   StreamString type_metadata_ptr_var_name;
   type_metadata_ptr_var_name.Printf("$%s", type_name);
   VariableList *var_list = frame->GetVariableList(false);
@@ -2041,22 +2100,32 @@ SwiftLanguageRuntime::GetPromiseForTypeNameAndFrame(const char *type_name,
   if (metadata_location == 0 || metadata_location == LLDB_INVALID_ADDRESS)
     return nullptr;
 
-  return GetMetadataPromise(metadata_location, swift_ast_ctx);
+  return GetMetadataPromise(metadata_location, *metadata_ptr_var_sp);
 }
 
 CompilerType
 SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
                                                 CompilerType base_type) {
-  SwiftASTContext *ast_context =
-      llvm::dyn_cast_or_null<SwiftASTContext>(base_type.GetTypeSystem());
-  lldbassert(ast_context && "null AST Context");
-  if (!ast_context)
+  auto sc = stack_frame.GetSymbolContext(lldb::eSymbolContextEverything);
+  Status error;
+  // A failing Clang import in a module context permanently damages
+  // that module context.  Binding archetypes can trigger an import of
+  // another module, so switch to a scratch context where such an
+  // operation is safe.
+  auto *lldb_module = sc.module_sp.get();
+  auto &target = m_process->GetTarget();
+  assert(IsScratchContextLocked(target) &&
+         "Swift scratch context not locked ahead of archetype binding");
+  auto scratch_ctx = target.GetScratchSwiftASTContext(error, lldb_module);
+  if (!scratch_ctx)
     return base_type;
+  base_type = scratch_ctx->ImportType(base_type, error);
+
   if (base_type.GetTypeInfo() & lldb::eTypeIsSwift) {
     swift::Type target_swift_type(GetSwiftType(base_type));
     target_swift_type = target_swift_type.transform(
         [this, &stack_frame,
-         ast_context](swift::Type candidate_type) -> swift::Type {
+         &scratch_ctx](swift::Type candidate_type) -> swift::Type {
           swift::TypeBase *type = candidate_type.getPointer();
           StreamString type_name;
           if (!GetAbstractTypeName(type_name, type))
@@ -2065,7 +2134,7 @@ SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
               &stack_frame, ConstString(type_name.GetString()));
           Status import_error;
           CompilerType target_concrete_type =
-              ast_context->ImportType(concrete_type, import_error);
+              scratch_ctx->ImportType(concrete_type, import_error);
 
           if (target_concrete_type.IsValid())
             return swift::Type(GetSwiftType(target_concrete_type));
@@ -2073,8 +2142,7 @@ SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
           return candidate_type;
         });
 
-    return CompilerType(ast_context->GetASTContext(),
-                        target_swift_type.getPointer());
+    return {scratch_ctx->GetASTContext(), target_swift_type.getPointer()};
   }
   return base_type;
 }
@@ -2101,16 +2169,16 @@ bool SwiftLanguageRuntime::GetAbstractTypeName(StreamString &name,
 }
 
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_GenericTypeParam(
-    ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-    TypeAndOrName &class_type_or_name, Address &address) {
+    ValueObject &in_value, SwiftASTContext &scratch_ctx,
+    lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
+    Address &address) {
   StreamString assoc;
   StackFrame *frame(in_value.GetFrameSP().get());
   StreamString type_name;
   auto swift_type = GetSwiftType(in_value.GetCompilerType());
   if (!GetAbstractTypeName(type_name, swift_type))
     return false;
-  MetadataPromiseSP promise_sp(
-      GetPromiseForTypeNameAndFrame(type_name.GetData(), frame));
+  auto promise_sp = GetPromiseForTypeNameAndFrame(type_name.GetData(), frame);
   if (!promise_sp)
     return false;
   if (!GetDynamicTypeAndAddress_Promise(in_value, promise_sp, use_dynamic,
@@ -2129,54 +2197,51 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_GenericTypeParam(
       error.Fail())
     return true;
 
-  // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
-  // use the scratch context where such operations are legal and safe.
-  SwiftASTContext *swift_ast_ctx = GetScratchSwiftASTContext();
-  if (!swift_ast_ctx || swift_ast_ctx->HasFatalErrors())
-    return false;
-
-  auto &remote_ast = GetRemoteASTContext(*swift_ast_ctx);
+  auto &remote_ast = GetRemoteASTContext(scratch_ctx);
   swift::remote::RemoteAddress metadata_address(addr_of_meta);
   auto instance_type =
       remote_ast.getTypeForRemoteTypeMetadata(metadata_address,
                                               /*skipArtificial*/ true);
-  if (!instance_type)
-    return false;
-  CompilerType result_type(swift_ast_ctx,
-                           instance_type.getValue().getPointer());
-  class_type_or_name.SetCompilerType(result_type);
+
+  // If we got this far, we know we already have a valid dynamic type
+  // in our hand. If RemoteAST gives us a different answer, update the
+  // type, otherwise return what we have.
+  if (instance_type)
+    class_type_or_name.SetCompilerType(
+        {&scratch_ctx, instance_type.getValue().getPointer()});
   return true;
 }
 
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Tuple(
-    ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-    TypeAndOrName &class_type_or_name, Address &address) {
+    ValueObject &in_value, SwiftASTContext &scratch_ctx,
+    lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
+    Address &address) {
+  Status error;
   std::vector<CompilerType> dyn_types;
-
   for (size_t idx = 0; idx < in_value.GetNumChildren(); idx++) {
     ValueObjectSP child_sp(in_value.GetChildAtIndex(idx, true));
     TypeAndOrName type_and_or_name;
     Address address;
     Value::ValueType value_type;
-    if (GetDynamicTypeAndAddress(*child_sp.get(), use_dynamic, type_and_or_name,
-                                 address, value_type) == false)
-      dyn_types.push_back(child_sp->GetCompilerType());
+    CompilerType child_type;
+    if (!GetDynamicTypeAndAddress(*child_sp.get(), use_dynamic, type_and_or_name,
+                                 address, value_type))
+      child_type = child_sp->GetCompilerType();
     else
-      dyn_types.push_back(type_and_or_name.GetCompilerType());
+      child_type = type_and_or_name.GetCompilerType();
+    dyn_types.push_back(scratch_ctx.ImportType(child_type, error));
   }
 
-  SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
-      in_value.GetCompilerType().GetTypeSystem());
-
-  CompilerType dyn_tuple_type(swift_ast_ctx->CreateTupleType(dyn_types));
-
+  CompilerType dyn_tuple_type = scratch_ctx.CreateTupleType(dyn_types);
   class_type_or_name.SetCompilerType(dyn_tuple_type);
+
   lldb::addr_t tuple_address = in_value.GetPointerValue();
-  Status error;
-  tuple_address = m_process->ReadPointerFromMemory(tuple_address, error);
-  if (error.Fail() || tuple_address == 0 ||
-      tuple_address == LLDB_INVALID_ADDRESS)
-    return false;
+  if (!tuple_address || tuple_address == LLDB_INVALID_ADDRESS)
+    tuple_address = in_value.GetAddressOf(true, nullptr);
+  else
+    tuple_address = m_process->ReadPointerFromMemory(tuple_address, error);
+  if (error.Fail() || !tuple_address || tuple_address == LLDB_INVALID_ADDRESS)
+      return false;
 
   address.SetLoadAddress(tuple_address, in_value.GetTargetSP().get());
 
@@ -2184,33 +2249,17 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Tuple(
 }
 
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Struct(
-    ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-    TypeAndOrName &class_type_or_name, Address &address) {
-  // struct can't inherit from each other, but they can be generic, in which
-  // case
-  // we need to turn MyStruct<U> into MyStruct<$swift.type.U>
+    ValueObject &in_value, CompilerType &bound_type,
+    lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
+    Address &address) {
   std::vector<CompilerType> generic_args;
-
-  lldb_private::StackFrame *frame =
-      in_value.GetExecutionContextRef().GetFrameSP().get();
-
-  if (!frame)
-    return false;
-
-  // this will be a BoundGenericStruct, bound to archetypes
-  CompilerType struct_type(in_value.GetCompilerType());
-  CompilerType resolved_type(DoArchetypeBindingForType(*frame, struct_type));
-  if (!resolved_type)
-    return false;
-
-  class_type_or_name.SetCompilerType(resolved_type);
+  class_type_or_name.SetCompilerType(bound_type);
 
   lldb::addr_t struct_address = in_value.GetPointerValue();
-  if (0 == struct_address || LLDB_INVALID_ADDRESS == struct_address)
+  if (!struct_address || struct_address == LLDB_INVALID_ADDRESS)
     struct_address = in_value.GetAddressOf(true, nullptr);
-  if (0 == struct_address || LLDB_INVALID_ADDRESS == struct_address) {
-    if (false == SwiftASTContext::IsPossibleZeroSizeType(
-                     class_type_or_name.GetCompilerType()))
+  if (!struct_address || struct_address == LLDB_INVALID_ADDRESS) {
+    if (!SwiftASTContext::IsPossibleZeroSizeType(bound_type))
       return false;
   }
 
@@ -2219,30 +2268,16 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Struct(
 }
 
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Enum(
-    ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-    TypeAndOrName &class_type_or_name, Address &address) {
-  // enums can't inherit from each other, but they can be generic, in which case
-  // we need to turn MyEnum<U> into MyEnum<$swift.type.U>
+    ValueObject &in_value, CompilerType &bound_type,
+    lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
+    Address &address) {
   std::vector<CompilerType> generic_args;
-
-  lldb_private::StackFrame *frame =
-      in_value.GetExecutionContextRef().GetFrameSP().get();
-
-  if (!frame)
-    return false;
-
-  // this will be a BoundGenericEnum, bound to archetypes
-  CompilerType enum_type(in_value.GetCompilerType());
-  CompilerType resolved_type(DoArchetypeBindingForType(*frame, enum_type));
-  if (!resolved_type)
-    return false;
-
-  class_type_or_name.SetCompilerType(resolved_type);
+  class_type_or_name.SetCompilerType(bound_type);
 
   lldb::addr_t enum_address = in_value.GetPointerValue();
-  if (0 == enum_address || LLDB_INVALID_ADDRESS == enum_address)
+  if (!enum_address || LLDB_INVALID_ADDRESS == enum_address)
     enum_address = in_value.GetAddressOf(true, nullptr);
-  if (0 == enum_address || LLDB_INVALID_ADDRESS == enum_address) {
+  if (!enum_address || LLDB_INVALID_ADDRESS == enum_address) {
     if (false == SwiftASTContext::IsPossibleZeroSizeType(
                      class_type_or_name.GetCompilerType()))
       return false;
@@ -2259,94 +2294,95 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_IndirectEnumCase(
 
   DataExtractor data;
   Status error;
-  if (in_value.GetParent() && in_value.GetParent()->GetData(data, error) &&
-      error.Success()) {
-    bool has_payload;
-    bool is_indirect;
-    CompilerType payload_type;
-    if (SwiftASTContext::GetSelectedEnumCase(
-            in_value.GetParent()->GetCompilerType(), data, nullptr,
-            &has_payload, &payload_type, &is_indirect)) {
-      if (has_payload && is_indirect && payload_type)
-        class_type_or_name.SetCompilerType(payload_type);
-      lldb::addr_t box_addr = in_value.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-      if (box_addr != LLDB_INVALID_ADDRESS) {
-        box_addr = MaskMaybeBridgedPointer(box_addr);
-        lldb::addr_t box_location =
-            m_process->ReadPointerFromMemory(box_addr, error);
-        if (box_location != LLDB_INVALID_ADDRESS) {
-          box_location = MaskMaybeBridgedPointer(box_location);
-          ProcessStructReader reader(m_process, box_location,
-                                     GetBoxMetadataType());
-          uint32_t offset = reader.GetField<uint32_t>(g_offset);
-          lldb::addr_t box_value = box_addr + offset;
+  if (!(in_value.GetParent() && in_value.GetParent()->GetData(data, error) &&
+        error.Success()))
+    return false;
 
-          // try to read one byte at the box value
-          m_process->ReadUnsignedIntegerFromMemory(box_value, 1, 0, error);
-          if (error
-                  .Fail()) // and if that fails, then we're off in no man's land
-            return false;
+  bool has_payload;
+  bool is_indirect;
+  CompilerType payload_type;
+  if (!SwiftASTContext::GetSelectedEnumCase(
+          in_value.GetParent()->GetCompilerType(), data, nullptr, &has_payload,
+          &payload_type, &is_indirect))
+    return false;
 
-          Flags type_info(payload_type.GetTypeInfo());
-          if (type_info.AllSet(eTypeIsSwift | eTypeIsClass)) {
-            lldb::addr_t old_box_value = box_value;
-            box_value = m_process->ReadPointerFromMemory(box_value, error);
-            if (box_value != LLDB_INVALID_ADDRESS) {
-              DataExtractor data(&box_value, m_process->GetAddressByteSize(),
-                                 m_process->GetByteOrder(),
-                                 m_process->GetAddressByteSize());
-              ValueObjectSP valobj_sp(ValueObject::CreateValueObjectFromData(
-                  "_", data, *m_process, payload_type));
-              if (valobj_sp) {
-                Value::ValueType value_type;
-                if (GetDynamicTypeAndAddress(*valobj_sp, use_dynamic,
-                                             class_type_or_name, address,
-                                             value_type)) {
-                  address.SetRawAddress(old_box_value);
-                  return true;
-                }
-              }
-            }
-          } else if (type_info.AllSet(eTypeIsSwift | eTypeIsProtocol)) {
-            SwiftASTContext::ProtocolInfo protocol_info;
-            if (SwiftASTContext::GetProtocolTypeInfo(payload_type,
-                                                     protocol_info)) {
-              auto ptr_size = m_process->GetAddressByteSize();
-              std::vector<uint8_t> buffer(
-                  ptr_size * protocol_info.m_num_storage_words, 0);
-              for (uint32_t idx = 0; idx < protocol_info.m_num_storage_words;
-                   idx++) {
-                lldb::addr_t word = m_process->ReadUnsignedIntegerFromMemory(
-                    box_value + idx * ptr_size, ptr_size, 0, error);
-                if (error.Fail())
-                  return false;
-                memcpy(&buffer[idx * ptr_size], &word, ptr_size);
-              }
-              DataExtractor data(&buffer[0], buffer.size(),
-                                 m_process->GetByteOrder(),
-                                 m_process->GetAddressByteSize());
-              ValueObjectSP valobj_sp(ValueObject::CreateValueObjectFromData(
-                  "_", data, *m_process, payload_type));
-              if (valobj_sp) {
-                Value::ValueType value_type;
-                if (GetDynamicTypeAndAddress(*valobj_sp, use_dynamic,
-                                             class_type_or_name, address,
-                                             value_type)) {
-                  address.SetRawAddress(box_value);
-                  return true;
-                }
-              }
-            }
-          } else {
-            // this is most likely a statically known type
-            address.SetLoadAddress(box_value, &m_process->GetTarget());
-            return true;
-          }
-        }
-      }
+  if (has_payload && is_indirect && payload_type)
+    class_type_or_name.SetCompilerType(payload_type);
+
+  lldb::addr_t box_addr = in_value.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+  if (box_addr == LLDB_INVALID_ADDRESS)
+    return false;
+
+  box_addr = MaskMaybeBridgedPointer(box_addr);
+  lldb::addr_t box_location = m_process->ReadPointerFromMemory(box_addr, error);
+  if (box_location == LLDB_INVALID_ADDRESS)
+    return false;
+
+  box_location = MaskMaybeBridgedPointer(box_location);
+  ProcessStructReader reader(m_process, box_location, GetBoxMetadataType());
+  uint32_t offset = reader.GetField<uint32_t>(g_offset);
+  lldb::addr_t box_value = box_addr + offset;
+
+  // try to read one byte at the box value
+  m_process->ReadUnsignedIntegerFromMemory(box_value, 1, 0, error);
+  if (error.Fail()) // and if that fails, then we're off in no man's land
+    return false;
+
+  Flags type_info(payload_type.GetTypeInfo());
+  if (type_info.AllSet(eTypeIsSwift | eTypeIsClass)) {
+    lldb::addr_t old_box_value = box_value;
+    box_value = m_process->ReadPointerFromMemory(box_value, error);
+    if (box_value == LLDB_INVALID_ADDRESS)
+      return false;
+
+    DataExtractor data(&box_value, m_process->GetAddressByteSize(),
+                       m_process->GetByteOrder(),
+                       m_process->GetAddressByteSize());
+    ValueObjectSP valobj_sp(ValueObject::CreateValueObjectFromData(
+        "_", data, *m_process, payload_type));
+    if (!valobj_sp)
+      return false;
+
+    Value::ValueType value_type;
+    if (!GetDynamicTypeAndAddress(*valobj_sp, use_dynamic, class_type_or_name,
+                                 address, value_type))
+      return false;
+
+    address.SetRawAddress(old_box_value);
+    return true;
+  } else if (type_info.AllSet(eTypeIsSwift | eTypeIsProtocol)) {
+    SwiftASTContext::ProtocolInfo protocol_info;
+    if (!SwiftASTContext::GetProtocolTypeInfo(payload_type, protocol_info))
+      return false;
+    auto ptr_size = m_process->GetAddressByteSize();
+    std::vector<uint8_t> buffer(ptr_size * protocol_info.m_num_storage_words,
+                                0);
+    for (uint32_t idx = 0; idx < protocol_info.m_num_storage_words; idx++) {
+      lldb::addr_t word = m_process->ReadUnsignedIntegerFromMemory(
+          box_value + idx * ptr_size, ptr_size, 0, error);
+      if (error.Fail())
+        return false;
+      memcpy(&buffer[idx * ptr_size], &word, ptr_size);
     }
+    DataExtractor data(&buffer[0], buffer.size(), m_process->GetByteOrder(),
+                       m_process->GetAddressByteSize());
+    ValueObjectSP valobj_sp(ValueObject::CreateValueObjectFromData(
+        "_", data, *m_process, payload_type));
+    if (!valobj_sp)
+      return false;
+
+    Value::ValueType value_type;
+    if (!GetDynamicTypeAndAddress(*valobj_sp, use_dynamic, class_type_or_name,
+                                   address, value_type))
+      return false;
+
+    address.SetRawAddress(box_value);
+    return true;
+  } else {
+    // This is most likely a statically known type.
+    address.SetLoadAddress(box_value, &m_process->GetTarget());
+    return true;
   }
-  return false;
 }
 
 // Dynamic type resolution tends to want to generate scalar data - but there are
@@ -2430,59 +2466,89 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
     TypeAndOrName &class_type_or_name, Address &address,
     Value::ValueType &value_type) {
   class_type_or_name.Clear();
-
-  if (SwiftASTContext *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(
-          in_value.GetCompilerType().GetTypeSystem())) {
-    if (swift_ast->HasFatalErrors() || !swift_ast->GetClangImporter()) {
-      return false;
-    }
-  } else {
-    return false;
-  }
-
   if (use_dynamic == lldb::eNoDynamicValues || !CouldHaveDynamicValue(in_value))
     return false;
 
-  bool success = false;
-  const bool is_indirect_enum_case = IsIndirectEnumCase(in_value);
+  // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
+  // use the scratch context where such operations are legal and safe.
+  assert(IsScratchContextLocked(in_value.GetTargetSP()) &&
+         "Swift scratch context not locked ahead of dynamic type resolution");
+  auto scratch_ctx = in_value.GetScratchSwiftASTContext();
+  if (!scratch_ctx)
+    return false;
 
+  auto retry_once = [&]() {
+    // Retry exactly once using the per-module fallback scratch context.
+    auto &target = m_process->GetTarget();
+    if (!target.UseScratchTypesystemPerModule()) {
+      Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+      if (log)
+        log->Printf("Dynamic type resolution detected fatal errors in "
+                    "shared Swift state. Falling back to per-module "
+                    "scratch context.\n");
+      target.SetUseScratchTypesystemPerModule(true);
+      return GetDynamicTypeAndAddress(in_value, use_dynamic, class_type_or_name,
+                                      address, value_type);
+    }
+    return false;
+  };
+
+  if (scratch_ctx->HasFatalErrors())
+    return retry_once();
+
+  // Import the type into the scratch context. Any form of dynamic
+  // type resolution may trigger a cross-module import.
+  CompilerType val_type(in_value.GetCompilerType());
+  Flags type_info(val_type.GetTypeInfo());
+  if (!type_info.AnySet(eTypeIsSwift))
+    return false;
+
+  bool success = false;
+  bool is_indirect_enum_case = IsIndirectEnumCase(in_value);
+  // Type kinds with metadata don't need archetype binding.
   if (is_indirect_enum_case)
+    // ..._IndirectEnumCase() recurses, no need to bind archetypes.
     success = GetDynamicTypeAndAddress_IndirectEnumCase(
         in_value, use_dynamic, class_type_or_name, address);
+  else if (type_info.AnySet(eTypeIsClass) ||
+           type_info.AllSet(eTypeIsBuiltIn | eTypeIsPointer | eTypeHasValue))
+    success = GetDynamicTypeAndAddress_Class(
+        in_value, *scratch_ctx, use_dynamic, class_type_or_name, address);
+  else if (type_info.AnySet(eTypeIsProtocol))
+    success = GetDynamicTypeAndAddress_Protocol(
+        in_value, *scratch_ctx, use_dynamic, class_type_or_name, address);
+  else if (type_info.AnySet(eTypeIsGenericTypeParam))
+    // ..._GenericTypeParam performs the archetype binding *and* sets address.
+    success = GetDynamicTypeAndAddress_GenericTypeParam(
+        in_value, *scratch_ctx, use_dynamic, class_type_or_name, address);
+  else if (type_info.AnySet(eTypeIsTuple))
+    // GetDynamicTypeAndAddress_Tuple recursively iterates over all children.
+    success = GetDynamicTypeAndAddress_Tuple(
+        in_value, *scratch_ctx, use_dynamic, class_type_or_name, address);
   else {
-    CompilerType var_type(in_value.GetCompilerType());
-    Flags type_info(var_type.GetTypeInfo());
-    if (type_info.AnySet(eTypeIsSwift)) {
-      if (type_info.AnySet(eTypeIsClass))
-        success = GetDynamicTypeAndAddress_Class(in_value, use_dynamic,
-                                                 class_type_or_name, address);
-      else if (type_info.AnySet(eTypeIsEnumeration))
-        success = GetDynamicTypeAndAddress_Enum(in_value, use_dynamic,
-                                                class_type_or_name, address);
-      else if (type_info.AnySet(eTypeIsProtocol))
-        success = GetDynamicTypeAndAddress_Protocol(
-            in_value, use_dynamic, class_type_or_name, address);
-      else if (type_info.AnySet(eTypeIsGenericTypeParam))
-        success = GetDynamicTypeAndAddress_GenericTypeParam(
-            in_value, use_dynamic, class_type_or_name, address);
-      else if (type_info.AnySet(eTypeIsTuple))
-        success = GetDynamicTypeAndAddress_Tuple(in_value, use_dynamic,
-                                                 class_type_or_name, address);
-      else if (type_info.AnySet(eTypeIsStructUnion))
-        success = GetDynamicTypeAndAddress_Struct(in_value, use_dynamic,
-                                                  class_type_or_name, address);
-      else if (type_info.AllSet(eTypeIsBuiltIn | eTypeIsPointer |
-                                eTypeHasValue))
-        success = GetDynamicTypeAndAddress_Class(in_value, use_dynamic,
-                                                 class_type_or_name, address);
-    }
+    // Perform archetype binding in the scratch context.
+    auto *frame = in_value.GetExecutionContextRef().GetFrameSP().get();
+    if (!frame)
+      return false;
+
+    CompilerType bound_type = DoArchetypeBindingForType(*frame, val_type);
+    if (!bound_type)
+      return false;
+
+    else if (type_info.AnySet(eTypeIsEnumeration))
+      success = GetDynamicTypeAndAddress_Enum(in_value, bound_type, use_dynamic,
+                                              class_type_or_name, address);
+    else if (type_info.AnySet(eTypeIsStructUnion))
+      success = GetDynamicTypeAndAddress_Struct(
+          in_value, bound_type, use_dynamic, class_type_or_name, address);
   }
 
-  if (success) {
+  if (success)
     value_type = GetValueType(
         in_value.GetValue().GetValueType(), in_value.GetCompilerType(),
         class_type_or_name.GetCompilerType(), is_indirect_enum_case);
-  }
+  else if (scratch_ctx->HasFatalErrors())
+    return retry_once();
   return success;
 }
 
@@ -2984,8 +3050,7 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
       Status error;
       Target &target = frame.GetThread()->GetProcess()->GetTarget();
       ExecutionContext exe_ctx(frame);
-      SwiftASTContext *swift_ast =
-          target.GetScratchSwiftASTContext(error, frame);
+      auto swift_ast = target.GetScratchSwiftASTContext(error, frame);
       if (swift_ast) {
         CompilerType function_type = swift_ast->GetTypeFromMangledTypename(
             mangled_name.GetMangledName().AsCString(), error);
@@ -3163,8 +3228,9 @@ SwiftLanguageRuntime::CalculateErrorValueObjectFromValue(
   return error_valobj_sp;
 }
 
-ValueObjectSP SwiftLanguageRuntime::CalculateErrorValueFromFirstArgument(
-    StackFrameSP frame_sp, ConstString variable_name) {
+ValueObjectSP
+SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
+                                          ConstString variable_name) {
   ProcessSP process_sp(frame_sp->GetThread()->GetProcess());
   ABISP abi_sp(process_sp->GetABI());
   ValueList argument_values;
@@ -3181,38 +3247,38 @@ ValueObjectSP SwiftLanguageRuntime::CalculateErrorValueFromFirstArgument(
   input_value.SetCompilerType(clang_void_ptr_type);
   argument_values.PushValue(input_value);
 
-  bool success = abi_sp->GetArgumentValues(*(frame_sp->GetThread().get()),
-                                           argument_values);
-  if (success) {
-    ExecutionContext exe_ctx;
-    frame_sp->CalculateExecutionContext(exe_ctx);
-    DataExtractor data;
+  auto *runtime = process_sp->GetSwiftLanguageRuntime();
+  if (!runtime)
+    return error_valobj_sp;
 
-    SwiftASTContext *ast_context = target->GetScratchSwiftASTContext(
-        error, *frame_sp);
-    if (!ast_context || error.Fail())
-      return error_valobj_sp;
+  llvm::Optional<Value> arg0 =
+      runtime->GetErrorReturnLocationAfterReturn(frame_sp);
+  if (!arg0)
+    return error_valobj_sp;
 
-    CompilerType swift_error_proto_type = ast_context->GetErrorType();
-    if (swift_error_proto_type.IsValid()) {
-      Value *arg0 = argument_values.GetValueAtIndex(0);
-      Status extract_error = arg0->GetValueAsData(&exe_ctx, data, 0, nullptr);
-      if (extract_error.Success()) {
-        error_valobj_sp = ValueObjectConstResult::Create(
-            frame_sp.get(), swift_error_proto_type, variable_name, data);
-        if (error_valobj_sp->GetError().Fail()) {
-          // If we couldn't make the error ValueObject, then we will always
-          // stop.
-          // FIXME: Some logging here would be good.
-          return error_valobj_sp;
-        }
+  ExecutionContext exe_ctx;
+  frame_sp->CalculateExecutionContext(exe_ctx);
 
-        error_valobj_sp =
-            error_valobj_sp->GetQualifiedRepresentationIfAvailable(
-                lldb::eDynamicCanRunTarget, true);
-      }
-    }
-  }
+  auto *exe_scope = exe_ctx.GetBestExecutionContextScope();
+  if (!exe_scope)
+    return error_valobj_sp;
+
+  auto ast_context = target->GetScratchSwiftASTContext(error, *frame_sp);
+  if (!ast_context || error.Fail())
+    return error_valobj_sp;
+
+  CompilerType swift_error_proto_type = ast_context->GetErrorType();
+  if (!swift_error_proto_type.IsValid())
+    return error_valobj_sp;
+
+  arg0->SetCompilerType(swift_error_proto_type);
+  error_valobj_sp =
+      ValueObjectConstResult::Create(exe_scope, *arg0, variable_name);
+  if (error_valobj_sp->GetError().Fail())
+    return error_valobj_sp;
+
+  error_valobj_sp = error_valobj_sp->GetQualifiedRepresentationIfAvailable(
+      lldb::eDynamicCanRunTarget, true);
   return error_valobj_sp;
 }
 
@@ -3245,8 +3311,8 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
       swift::VarDecl *var_decl = new (*ast_context->GetASTContext())
           swift::VarDecl(is_static, specifier, is_capture_list, swift::SourceLoc(),
                          ast_context->GetIdentifier(name.GetCString()),
-                         GetSwiftType(ast_context->GetErrorType()),
                          module_decl);
+      var_decl->setType(GetSwiftType(ast_context->GetErrorType()));
       var_decl->setInterfaceType(var_decl->getType());
       var_decl->setDebuggerVar(true);
 
@@ -3290,8 +3356,8 @@ bool SwiftLanguageRuntime::SwiftExceptionPrecondition::EvaluatePrecondition(
     if (!frame_sp)
       return true;
 
-    ValueObjectSP error_valobj_sp = CalculateErrorValueFromFirstArgument(
-        frame_sp, ConstString("__swift_error_var"));
+    ValueObjectSP error_valobj_sp =
+        CalculateErrorValue(frame_sp, ConstString("__swift_error_var"));
     if (!error_valobj_sp || error_valobj_sp->GetError().Fail())
       return true;
 
@@ -3703,7 +3769,7 @@ SwiftLanguageRuntime::GetBridgedSyntheticChildProvider(ValueObject &valobj) {
   ProjectionSyntheticChildren::TypeProjectionUP type_projection(
       new ProjectionSyntheticChildren::TypeProjectionUP::element_type());
 
-  if (SwiftASTContext *swift_ast_ctx = GetScratchSwiftASTContext()) {
+  if (auto swift_ast_ctx = valobj.GetScratchSwiftASTContext()) {
     Status error;
     CompilerType swift_type =
         swift_ast_ctx->GetTypeFromMangledTypename(type_name, error);
@@ -3848,7 +3914,7 @@ llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationAfterReturn(
       error_reg_name = "r6";
       break;
     case llvm::Triple::ArchType::aarch64:
-      error_reg_name = "x19";
+      error_reg_name = "x21";
       break;
     case llvm::Triple::ArchType::x86_64:
       error_reg_name = "r12";
@@ -3885,11 +3951,6 @@ llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationAfterReturn(
                      const_cast<RegisterInfo *>(reg_info));
     error_val = val;
   }
-//  if (log)
-//    log->Printf("Found return address: 0x%" PRIu64 " from register %s.",
-//                return_addr,
-//                error_reg_name.str().c_str());
-  
   return error_val;
 }
 
@@ -3982,7 +4043,7 @@ SwiftDemangleNodeKindToCString(const swift::Demangle::Node::Kind node_kind) {
 
 static OptionDefinition g_swift_demangle_options[] = {
   // clang-format off
-  {LLDB_OPT_SET_1, false, "expand", 'e', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Whether LLDB should print the demangled tree"},
+  {LLDB_OPT_SET_1, false, "expand", 'e', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Whether LLDB should print the demangled tree"},
   // clang-format on
 };
 
@@ -4146,7 +4207,7 @@ private:
   }
 
 protected:
-  bool DoExecute(const char *command, CommandReturnObject &result) {
+  bool DoExecute(llvm::StringRef command, CommandReturnObject &result) {
     StackFrameSP frame_sp(m_exe_ctx.GetFrameSP());
     EvaluateExpressionOptions options;
     options.SetLanguage(lldb::eLanguageTypeSwift);

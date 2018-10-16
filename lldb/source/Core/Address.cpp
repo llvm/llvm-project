@@ -141,8 +141,8 @@ static bool ReadAddress(ExecutionContextScope *exe_scope,
                                                           deref_so_addr))
         return true;
     } else {
-      // If we were not running, yet able to read an integer, we must
-      // have a module
+      // If we were not running, yet able to read an integer, we must have a
+      // module
       ModuleSP module_sp(address.GetModule());
 
       assert(module_sp);
@@ -151,8 +151,8 @@ static bool ReadAddress(ExecutionContextScope *exe_scope,
     }
 
     // We couldn't make "deref_addr" into a section offset value, but we were
-    // able to read the address, so we return a section offset address with
-    // no section and "deref_addr" as the offset (address).
+    // able to read the address, so we return a section offset address with no
+    // section and "deref_addr" as the offset (address).
     deref_so_addr.SetRawAddress(deref_addr);
     return true;
   }
@@ -278,12 +278,12 @@ addr_t Address::GetFileAddress() const {
       // Section isn't resolved, we can't return a valid file address
       return LLDB_INVALID_ADDRESS;
     }
-    // We have a valid file range, so we can return the file based
-    // address by adding the file base address to our offset
+    // We have a valid file range, so we can return the file based address by
+    // adding the file base address to our offset
     return sect_file_addr + m_offset;
   } else if (SectionWasDeletedPrivate()) {
-    // Used to have a valid section but it got deleted so the
-    // offset doesn't mean anything without the section
+    // Used to have a valid section but it got deleted so the offset doesn't
+    // mean anything without the section
     return LLDB_INVALID_ADDRESS;
   }
   // No section, we just return the offset since it is the value in this case
@@ -297,21 +297,21 @@ addr_t Address::GetLoadAddress(Target *target) const {
       addr_t sect_load_addr = section_sp->GetLoadBaseAddress(target);
 
       if (sect_load_addr != LLDB_INVALID_ADDRESS) {
-        // We have a valid file range, so we can return the file based
-        // address by adding the file base address to our offset
+        // We have a valid file range, so we can return the file based address
+        // by adding the file base address to our offset
         return sect_load_addr + m_offset;
       }
     }
   } else if (SectionWasDeletedPrivate()) {
-    // Used to have a valid section but it got deleted so the
-    // offset doesn't mean anything without the section
+    // Used to have a valid section but it got deleted so the offset doesn't
+    // mean anything without the section
     return LLDB_INVALID_ADDRESS;
   } else {
     // We don't have a section so the offset is the load address
     return m_offset;
   }
-  // The section isn't resolved or an invalid target was passed in
-  // so we can't return a valid load address.
+  // The section isn't resolved or an invalid target was passed in so we can't
+  // return a valid load address.
   return LLDB_INVALID_ADDRESS;
 }
 
@@ -351,7 +351,7 @@ addr_t Address::GetOpcodeLoadAddress(Target *target,
                                      AddressClass addr_class) const {
   addr_t code_addr = GetLoadAddress(target);
   if (code_addr != LLDB_INVALID_ADDRESS) {
-    if (addr_class == eAddressClassInvalid)
+    if (addr_class == AddressClass::eInvalid)
       addr_class = GetAddressClass();
     code_addr = target->GetOpcodeLoadAddress(code_addr, addr_class);
   }
@@ -363,7 +363,7 @@ bool Address::SetOpcodeLoadAddress(lldb::addr_t load_addr, Target *target,
                                    bool allow_section_end) {
   if (SetLoadAddress(load_addr, target, allow_section_end)) {
     if (target) {
-      if (addr_class == eAddressClassInvalid)
+      if (addr_class == AddressClass::eInvalid)
         addr_class = GetAddressClass();
       m_offset = target->GetOpcodeLoadAddress(m_offset, addr_class);
     }
@@ -375,16 +375,15 @@ bool Address::SetOpcodeLoadAddress(lldb::addr_t load_addr, Target *target,
 bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
                    DumpStyle fallback_style, uint32_t addr_size) const {
   // If the section was nullptr, only load address is going to work unless we
-  // are
-  // trying to deref a pointer
+  // are trying to deref a pointer
   SectionSP section_sp(GetSection());
   if (!section_sp && style != DumpStyleResolvedPointerDescription)
     style = DumpStyleLoadAddress;
 
   ExecutionContext exe_ctx(exe_scope);
   Target *target = exe_ctx.GetTargetPtr();
-  // If addr_byte_size is UINT32_MAX, then determine the correct address
-  // byte size for the process or default to the size of addr_t
+  // If addr_byte_size is UINT32_MAX, then determine the correct address byte
+  // size for the process or default to the size of addr_t
   if (addr_size == UINT32_MAX) {
     if (target)
       addr_size = target->GetArchitecture().GetAddressByteSize();
@@ -439,7 +438,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
     /*
      * MIPS:
      * Display address in compressed form for MIPS16 or microMIPS
-     * if the address belongs to eAddressClassCodeAlternateISA.
+     * if the address belongs to AddressClass::eCodeAlternateISA.
     */
     if (target) {
       const llvm::Triple::ArchType llvm_arch =
@@ -651,15 +650,15 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               }
             }
             if (show_stop_context) {
-              // We have a function or a symbol from the same
-              // sections as this address.
+              // We have a function or a symbol from the same sections as this
+              // address.
               sc.DumpStopContext(s, exe_scope, *this, show_fullpaths,
                                  show_module, show_inlined_frames,
                                  show_function_arguments, show_function_name);
             } else {
-              // We found a symbol but it was in a different
-              // section so it isn't the symbol we should be
-              // showing, just show the section name + offset
+              // We found a symbol but it was in a different section so it
+              // isn't the symbol we should be showing, just show the section
+              // name + offset
               Dump(s, exe_scope, DumpStyleSectionNameOffset);
             }
           }
@@ -680,10 +679,10 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
         module_sp->ResolveSymbolContextForAddress(
             *this, eSymbolContextEverything | eSymbolContextVariable, sc);
         if (sc.symbol) {
-          // If we have just a symbol make sure it is in the same section
-          // as our address. If it isn't, then we might have just found
-          // the last symbol that came before the address that we are
-          // looking up that has nothing to do with our address lookup.
+          // If we have just a symbol make sure it is in the same section as
+          // our address. If it isn't, then we might have just found the last
+          // symbol that came before the address that we are looking up that
+          // has nothing to do with our address lookup.
           if (sc.symbol->ValueIsAddress() &&
               sc.symbol->GetAddressRef().GetSection() != GetSection())
             sc.symbol = nullptr;
@@ -771,14 +770,11 @@ bool Address::SectionWasDeletedPrivate() const {
   lldb::SectionWP empty_section_wp;
 
   // If either call to "std::weak_ptr::owner_before(...) value returns true,
-  // this
-  // indicates that m_section_wp once contained (possibly still does) a
-  // reference
-  // to a valid shared pointer. This helps us know if we had a valid reference
-  // to
-  // a section which is now invalid because the module it was in was
-  // unloaded/deleted,
-  // or if the address doesn't have a valid reference to a section.
+  // this indicates that m_section_wp once contained (possibly still does) a
+  // reference to a valid shared pointer. This helps us know if we had a valid
+  // reference to a section which is now invalid because the module it was in
+  // was unloaded/deleted, or if the address doesn't have a valid reference to
+  // a section.
   return empty_section_wp.owner_before(m_section_wp) ||
          m_section_wp.owner_before(empty_section_wp);
 }
@@ -914,8 +910,8 @@ int Address::CompareModulePointerAndOffset(const Address &a, const Address &b) {
     return -1;
   if (a_module > b_module)
     return +1;
-  // Modules are the same, just compare the file address since they should
-  // be unique
+  // Modules are the same, just compare the file address since they should be
+  // unique
   addr_t a_file_addr = a.GetFileAddress();
   addr_t b_file_addr = b.GetFileAddress();
   if (a_file_addr < b_file_addr)
@@ -926,24 +922,23 @@ int Address::CompareModulePointerAndOffset(const Address &a, const Address &b) {
 }
 
 size_t Address::MemorySize() const {
-  // Noting special for the memory size of a single Address object,
-  // it is just the size of itself.
+  // Noting special for the memory size of a single Address object, it is just
+  // the size of itself.
   return sizeof(Address);
 }
 
 //----------------------------------------------------------------------
 // NOTE: Be careful using this operator. It can correctly compare two
-// addresses from the same Module correctly. It can't compare two
-// addresses from different modules in any meaningful way, but it will
-// compare the module pointers.
+// addresses from the same Module correctly. It can't compare two addresses
+// from different modules in any meaningful way, but it will compare the module
+// pointers.
 //
 // To sum things up:
-// - works great for addresses within the same module
-// - it works for addresses across multiple modules, but don't expect the
+// - works great for addresses within the same module - it works for addresses
+// across multiple modules, but don't expect the
 //   address results to make much sense
 //
-// This basically lets Address objects be used in ordered collection
-// classes.
+// This basically lets Address objects be used in ordered collection classes.
 //----------------------------------------------------------------------
 
 bool lldb_private::operator<(const Address &lhs, const Address &rhs) {
@@ -955,8 +950,8 @@ bool lldb_private::operator<(const Address &lhs, const Address &rhs) {
     // Addresses are in the same module, just compare the file addresses
     return lhs.GetFileAddress() < rhs.GetFileAddress();
   } else {
-    // The addresses are from different modules, just use the module
-    // pointer value to get consistent ordering
+    // The addresses are from different modules, just use the module pointer
+    // value to get consistent ordering
     return lhs_module < rhs_module;
   }
 }
@@ -970,8 +965,8 @@ bool lldb_private::operator>(const Address &lhs, const Address &rhs) {
     // Addresses are in the same module, just compare the file addresses
     return lhs.GetFileAddress() > rhs.GetFileAddress();
   } else {
-    // The addresses are from different modules, just use the module
-    // pointer value to get consistent ordering
+    // The addresses are from different modules, just use the module pointer
+    // value to get consistent ordering
     return lhs_module > rhs_module;
   }
 }
@@ -997,7 +992,7 @@ AddressClass Address::GetAddressClass() const {
       return obj_file->GetAddressClass(GetFileAddress());
     }
   }
-  return eAddressClassUnknown;
+  return AddressClass::eUnknown;
 }
 
 bool Address::SetLoadAddress(lldb::addr_t load_addr, Target *target,

@@ -77,8 +77,8 @@ protected:
                              // breakpoint/watchpoint
   uint32_t m_byte_size; // The size in bytes of stop location.  e.g. the length
                         // of the trap opcode for
-  // software breakpoints, or the optional length in bytes for
-  // hardware breakpoints, or the length of the watchpoint.
+  // software breakpoints, or the optional length in bytes for hardware
+  // breakpoints, or the length of the watchpoint.
   uint32_t
       m_hit_count; // Number of times this breakpoint/watchpoint has been hit
 

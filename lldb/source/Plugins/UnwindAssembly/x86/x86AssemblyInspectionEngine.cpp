@@ -246,8 +246,7 @@ void x86AssemblyInspectionEngine::Initialize(
 }
 
 // This function expects an x86 native register number (i.e. the bits stripped
-// out of the
-// actual instruction), not an lldb register number.
+// out of the actual instruction), not an lldb register number.
 //
 // FIXME: This is ABI dependent, it shouldn't be hardcoded here.
 
@@ -321,15 +320,14 @@ bool x86AssemblyInspectionEngine::push_imm_pattern_p() {
 
 // pushl imm8(%esp)
 //
-// e.g. 0xff 0x74 0x24 0x20 - 'pushl 0x20(%esp)'
-// (same byte pattern for 'pushq 0x20(%rsp)' in an x86_64 program)
+// e.g. 0xff 0x74 0x24 0x20 - 'pushl 0x20(%esp)' (same byte pattern for 'pushq
+// 0x20(%rsp)' in an x86_64 program)
 //
-// 0xff (with opcode bits '6' in next byte, PUSH r/m32)
-// 0x74 (ModR/M byte with three bits used to specify the opcode)
+// 0xff (with opcode bits '6' in next byte, PUSH r/m32) 0x74 (ModR/M byte with
+// three bits used to specify the opcode)
 //      mod == b01, opcode == b110, R/M == b100
 //      "+disp8"
-// 0x24 (SIB byte - scaled index = 0, r32 == esp)
-// 0x20 imm8 value
+// 0x24 (SIB byte - scaled index = 0, r32 == esp) 0x20 imm8 value
 
 bool x86AssemblyInspectionEngine::push_extended_pattern_p() {
   if (*m_cur_insn == 0xff) {
@@ -337,9 +335,8 @@ bool x86AssemblyInspectionEngine::push_extended_pattern_p() {
     uint8_t opcode = (*(m_cur_insn + 1) >> 3) & 7;
     if (opcode == 6) {
       // I'm only looking for 0xff /6 here - I
-      // don't really care what value is being pushed,
-      // just that we're pushing a 32/64 bit value on
-      // to the stack is enough.
+      // don't really care what value is being pushed, just that we're pushing
+      // a 32/64 bit value on to the stack is enough.
       return true;
     }
   }
@@ -377,8 +374,8 @@ bool x86AssemblyInspectionEngine::push_reg_p(int &regno) {
   return false;
 }
 
-// movq %rsp, %rbp [0x48 0x8b 0xec] or [0x48 0x89 0xe5]
-// movl %esp, %ebp [0x8b 0xec] or [0x89 0xe5]
+// movq %rsp, %rbp [0x48 0x8b 0xec] or [0x48 0x89 0xe5] movl %esp, %ebp [0x8b
+// 0xec] or [0x89 0xe5]
 bool x86AssemblyInspectionEngine::mov_rsp_rbp_pattern_p() {
   uint8_t *p = m_cur_insn;
   if (m_wordsize == 8 && *p == 0x48)
@@ -529,16 +526,16 @@ bool x86AssemblyInspectionEngine::call_next_insn_pattern_p() {
          (*(p + 3) == 0x0) && (*(p + 4) == 0x0);
 }
 
-// Look for an instruction sequence storing a nonvolatile register
-// on to the stack frame.
+// Look for an instruction sequence storing a nonvolatile register on to the
+// stack frame.
 
 //  movq %rax, -0x10(%rbp) [0x48 0x89 0x45 0xf0]
 //  movl %eax, -0xc(%ebp)  [0x89 0x45 0xf4]
 
-// The offset value returned in rbp_offset will be positive --
-// but it must be subtraced from the frame base register to get
-// the actual location.  The positive value returned for the offset
-// is a convention used elsewhere for CFA offsets et al.
+// The offset value returned in rbp_offset will be positive -- but it must be
+// subtraced from the frame base register to get the actual location.  The
+// positive value returned for the offset is a convention used elsewhere for
+// CFA offsets et al.
 
 bool x86AssemblyInspectionEngine::mov_reg_to_local_stack_frame_p(
     int &regno, int &rbp_offset) {
@@ -550,8 +547,8 @@ bool x86AssemblyInspectionEngine::mov_reg_to_local_stack_frame_p(
     src_reg_prefix_bit = REX_W_SRCREG(*p) << 3;
     target_reg_prefix_bit = REX_W_DSTREG(*p) << 3;
     if (target_reg_prefix_bit == 1) {
-      // rbp/ebp don't need a prefix bit - we know this isn't the
-      // reg we care about.
+      // rbp/ebp don't need a prefix bit - we know this isn't the reg we care
+      // about.
       return false;
     }
     p++;
@@ -671,18 +668,16 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
   *newrow = *row.get();
   row.reset(newrow);
 
-  // Track which registers have been saved so far in the prologue.
-  // If we see another push of that register, it's not part of the prologue.
-  // The register numbers used here are the machine register #'s
-  // (i386_register_numbers, x86_64_register_numbers).
+  // Track which registers have been saved so far in the prologue. If we see
+  // another push of that register, it's not part of the prologue. The register
+  // numbers used here are the machine register #'s (i386_register_numbers,
+  // x86_64_register_numbers).
   std::vector<bool> saved_registers(32, false);
 
   // Once the prologue has completed we'll save a copy of the unwind
-  // instructions
-  // If there is an epilogue in the middle of the function, after that epilogue
-  // we'll reinstate
-  // the unwind setup -- we assume that some code path jumps over the
-  // mid-function epilogue
+  // instructions If there is an epilogue in the middle of the function, after
+  // that epilogue we'll reinstate the unwind setup -- we assume that some code
+  // path jumps over the mid-function epilogue
 
   UnwindPlan::RowSP prologue_completed_row; // copy of prologue row of CFI
   int prologue_completed_sp_bytes_offset_from_cfa; // The sp value before the
@@ -723,9 +718,8 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
     }
 
     // This is the start() function (or a pthread equivalent), it starts with a
-    // pushl $0x0 which puts the
-    // saved pc value of 0 on the stack.  In this case we want to pretend we
-    // didn't see a stack movement at all --
+    // pushl $0x0 which puts the saved pc value of 0 on the stack.  In this
+    // case we want to pretend we didn't see a stack movement at all --
     // normally the saved pc value is already on the stack by the time the
     // function starts executing.
     else if (push_0_pattern_p()) {
@@ -733,9 +727,9 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
 
     else if (push_reg_p(machine_regno)) {
       current_sp_bytes_offset_from_cfa += m_wordsize;
-      // the PUSH instruction has moved the stack pointer - if the CFA is set in
-      // terms of the stack pointer,
-      // we need to add a new row of instructions.
+      // the PUSH instruction has moved the stack pointer - if the CFA is set
+      // in terms of the stack pointer, we need to add a new row of
+      // instructions.
       if (row->GetCFAValue().GetRegisterNumber() == m_lldb_sp_regnum) {
         row->GetCFAValue().SetOffset(current_sp_bytes_offset_from_cfa);
         row_updated = true;
@@ -772,8 +766,7 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
       }
 
       // the POP instruction has moved the stack pointer - if the CFA is set in
-      // terms of the stack pointer,
-      // we need to add a new row of instructions.
+      // terms of the stack pointer, we need to add a new row of instructions.
       if (row->GetCFAValue().GetRegisterNumber() == m_lldb_sp_regnum) {
         row->GetCFAValue().SetIsRegisterPlusOffset(
             m_lldb_sp_regnum, current_sp_bytes_offset_from_cfa);
@@ -790,13 +783,13 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
       }
     }
 
-    // The LEAVE instruction moves the value from rbp into rsp and pops
-    // a value off the stack into rbp (restoring the caller's rbp value).
-    // It is the opposite of ENTER, or 'push rbp, mov rsp rbp'.
+    // The LEAVE instruction moves the value from rbp into rsp and pops a value
+    // off the stack into rbp (restoring the caller's rbp value). It is the
+    // opposite of ENTER, or 'push rbp, mov rsp rbp'.
     else if (leave_pattern_p()) {
       // We're going to copy the value in rbp into rsp, so re-set the sp offset
-      // based on the CFAValue.  Also, adjust it to recognize that we're popping
-      // the saved rbp value off the stack.
+      // based on the CFAValue.  Also, adjust it to recognize that we're
+      // popping the saved rbp value off the stack.
       current_sp_bytes_offset_from_cfa = row->GetCFAValue().GetOffset();
       current_sp_bytes_offset_from_cfa -= m_wordsize;
       row->GetCFAValue().SetOffset(current_sp_bytes_offset_from_cfa);
@@ -822,12 +815,11 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
 
       UnwindPlan::Row::RegisterLocation regloc;
 
-      // stack_offset for 'movq %r15, -80(%rbp)' will be 80.
-      // In the Row, we want to express this as the offset from the CFA.  If the
-      // frame base
-      // is rbp (like the above instruction), the CFA offset for rbp is probably
-      // 16.  So we
-      // want to say that the value is stored at the CFA address - 96.
+      // stack_offset for 'movq %r15, -80(%rbp)' will be 80. In the Row, we
+      // want to express this as the offset from the CFA.  If the frame base is
+      // rbp (like the above instruction), the CFA offset for rbp is probably
+      // 16.  So we want to say that the value is stored at the CFA address -
+      // 96.
       regloc.SetAtCFAPlusOffset(
           -(stack_offset + row->GetCFAValue().GetOffset()));
 
@@ -879,8 +871,8 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
     }
 
     else if (ret_pattern_p() && prologue_completed_row.get()) {
-      // Reinstate the saved prologue setup for any instructions
-      // that come after the ret instruction
+      // Reinstate the saved prologue setup for any instructions that come
+      // after the ret instruction
 
       UnwindPlan::Row *newrow = new UnwindPlan::Row;
       *newrow = *prologue_completed_row.get();
@@ -960,16 +952,15 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
   if (!addr_start.IsValid())
     return false;
 
-  // We either need a live RegisterContext, or we need the UnwindPlan to already
-  // be in the lldb register numbering scheme.
+  // We either need a live RegisterContext, or we need the UnwindPlan to
+  // already be in the lldb register numbering scheme.
   if (reg_ctx.get() == nullptr &&
       unwind_plan.GetRegisterKind() != eRegisterKindLLDB)
     return false;
 
   // Is original unwind_plan valid?
-  // unwind_plan should have at least one row which is ABI-default (CFA register
-  // is sp),
-  // and another row in mid-function.
+  // unwind_plan should have at least one row which is ABI-default (CFA
+  // register is sp), and another row in mid-function.
   if (unwind_plan.GetRowCount() < 2)
     return false;
 
@@ -994,11 +985,9 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
   UnwindPlan::RowSP row(new UnwindPlan::Row(*first_row));
   m_cur_insn = data + offset;
 
-  // After a mid-function epilogue we will need to re-insert the original unwind
-  // rules
-  // so unwinds work for the remainder of the function.  These aren't common
-  // with clang/gcc
-  // on x86 but it is possible.
+  // After a mid-function epilogue we will need to re-insert the original
+  // unwind rules so unwinds work for the remainder of the function.  These
+  // aren't common with clang/gcc on x86 but it is possible.
   bool reinstate_unwind_state = false;
 
   while (offset < size) {
@@ -1015,8 +1004,7 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
     offset += insn_len;
     m_cur_insn = data + offset;
 
-    // offset is pointing beyond the bounds of the
-    // function; stop looping.
+    // offset is pointing beyond the bounds of the function; stop looping.
     if (offset >= size) 
       continue;
 
@@ -1044,9 +1032,8 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
     }
 
     if (row_id == 0) {
-      // If we are here, compiler didn't generate CFI for prologue.
-      // This won't happen to GCC or clang.
-      // In this case, bail out directly.
+      // If we are here, compiler didn't generate CFI for prologue. This won't
+      // happen to GCC or clang. In this case, bail out directly.
       return false;
     }
 
@@ -1086,10 +1073,9 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
       }
       if (pop_reg_p(regno)) {
         // Technically, this might be a nonvolatile register recover in
-        // epilogue.
-        // We should reset RegisterInfo for the register.
-        // But in practice, previous rule for the register is still valid...
-        // So we ignore this case.
+        // epilogue. We should reset RegisterInfo for the register. But in
+        // practice, previous rule for the register is still valid... So we
+        // ignore this case.
 
         row->SetOffset(offset);
         row->GetCFAValue().IncOffset(-m_wordsize);

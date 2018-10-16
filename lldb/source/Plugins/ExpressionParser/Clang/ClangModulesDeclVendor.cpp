@@ -25,6 +25,7 @@
 #include "llvm/Support/Threading.h"
 
 // Project includes
+#include "ClangHost.h"
 #include "ClangModulesDeclVendor.h"
 
 #include "lldb/Core/ModuleList.h"
@@ -40,9 +41,9 @@
 using namespace lldb_private;
 
 namespace {
-// Any Clang compiler requires a consumer for diagnostics.  This one stores them
-// as strings
-// so we can provide them to the user in case a module failed to load.
+// Any Clang compiler requires a consumer for diagnostics.  This one stores
+// them as strings so we can provide them to the user in case a module failed
+// to load.
 class StoringDiagnosticConsumer : public clang::DiagnosticConsumer {
 public:
   StoringDiagnosticConsumer();
@@ -62,8 +63,7 @@ private:
 };
 
 // The private implementation of our ClangModulesDeclVendor.  Contains all the
-// Clang state required
-// to load modules.
+// Clang state required to load modules.
 class ClangModulesDeclVendorImpl : public ClangModulesDeclVendor {
 public:
   ClangModulesDeclVendorImpl(
@@ -146,14 +146,7 @@ void StoringDiagnosticConsumer::DumpDiagnostics(Stream &error_stream) {
 }
 
 static FileSpec GetResourceDir() {
-  static FileSpec g_cached_resource_dir;
-
-  static std::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    HostInfo::GetLLDBPath(lldb::ePathTypeClangDir, g_cached_resource_dir);
-  });
-
+  static FileSpec g_cached_resource_dir = GetClangResourceDir();
   return g_cached_resource_dir;
 }
 
@@ -169,7 +162,7 @@ ClangModulesDeclVendorImpl::ClangModulesDeclVendorImpl(
     : m_diagnostics_engine(std::move(diagnostics_engine)),
       m_compiler_invocation(std::move(compiler_invocation)),
       m_compiler_instance(std::move(compiler_instance)),
-      m_parser(std::move(parser)) {}
+      m_parser(std::move(parser)), m_origin_map() {}
 
 void ClangModulesDeclVendorImpl::ReportModuleExportsHelper(
     std::set<ClangModulesDeclVendor::ModuleID> &exports,
@@ -611,7 +604,7 @@ ClangModulesDeclVendor::Create(Target &target) {
   }
 
   {
-    FileSpec clang_resource_dir = GetResourceDir();
+    FileSpec clang_resource_dir = GetClangResourceDir();
 
     if (llvm::sys::fs::is_directory(clang_resource_dir.GetPath())) {
       compiler_invocation_arguments.push_back("-resource-dir");

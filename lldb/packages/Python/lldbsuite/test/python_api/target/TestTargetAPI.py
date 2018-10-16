@@ -46,6 +46,14 @@ class TargetAPITestCase(TestBase):
         self.find_global_variables('b.out')
 
     @add_test_categories(['pyapi'])
+    def test_find_compile_units(self):
+        """Exercise SBTarget.FindCompileUnits() API."""
+        d = {'EXE': 'b.out'}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        self.find_compile_units(self.getBuildArtifact('b.out'))
+
+    @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_find_functions(self):
         """Exercise SBTarget.FindFunctions() API."""
@@ -61,6 +69,7 @@ class TargetAPITestCase(TestBase):
         self.get_description()
 
     @add_test_categories(['pyapi'])
+    @expectedFailureAll(oslist=["windows"], bugnumber='llvm.org/pr21765')
     def test_resolve_symbol_context_with_address(self):
         """Exercise SBTarget.ResolveSymbolContextForAddress() API."""
         self.build()
@@ -217,6 +226,20 @@ class TargetAPITestCase(TestBase):
                 self.assertTrue(
                     value_list.GetValueAtIndex(0).GetValue() == "'X'")
                 break
+
+    def find_compile_units(self, exe):
+        """Exercise SBTarget.FindCompileUnits() API."""
+        source_name = "main.c"
+
+        # Create a target by the debugger.
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        list = target.FindCompileUnits(lldb.SBFileSpec(source_name, False))
+        # Executable has been built just from one source file 'main.c',
+        # so we may check only the first element of list.
+        self.assertTrue(
+            list[0].GetCompileUnit().GetFileSpec().GetFilename() == source_name)
 
     def find_functions(self, exe_name):
         """Exercise SBTaget.FindFunctions() API."""

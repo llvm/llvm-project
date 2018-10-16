@@ -1,4 +1,4 @@
-"""Test that we get thread names when interrupting a process.""" 
+"""Test that we get thread names when interrupting a process."""
 from __future__ import print_function
 
 
@@ -63,7 +63,7 @@ class TestInterruptThreadNames(TestBase):
         process.Kill()
 
 
-    # The process will set a global variable 'threads_up_and_running' to 1 when 
+    # The process will set a global variable 'threads_up_and_running' to 1 when
     # it has has completed its setup.  Sleep for one second, pause the program,
     # check to see if the global has that value, and continue if it does not.
     def wait_until_program_setup_complete(self, process, listener):
@@ -107,7 +107,7 @@ class TestInterruptThreadNames(TestBase):
         return False
 
     # Listen to the process events until we get an event saying the process is
-    # stopped.  Retry up to five times in case we get other events that we are 
+    # stopped.  Retry up to five times in case we get other events that we are
     # not looking for.
     def wait_for_stop(self, process, listener):
         retry_count = 5

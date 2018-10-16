@@ -18,16 +18,17 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandHistory.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObjectRegexCommand.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/StringList.h"
 
 using namespace lldb;
@@ -37,12 +38,12 @@ using namespace lldb_private;
 // CommandObjectCommandsSource
 //-------------------------------------------------------------------------
 
-static OptionDefinition g_history_options[] = {
+static constexpr OptionDefinition g_history_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_1, false, "count",       'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeUnsignedInteger, "How many history commands to print." },
-  { LLDB_OPT_SET_1, false, "start-index", 's', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeUnsignedInteger, "Index at which to start printing history commands (or end to mean tail mode)." },
-  { LLDB_OPT_SET_1, false, "end-index",   'e', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeUnsignedInteger, "Index at which to stop printing history commands." },
-  { LLDB_OPT_SET_2, false, "clear",       'C', OptionParser::eNoArgument,       nullptr, nullptr, 0, eArgTypeBoolean,         "Clears the current command history." },
+  { LLDB_OPT_SET_1, false, "count",       'c', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeUnsignedInteger, "How many history commands to print." },
+  { LLDB_OPT_SET_1, false, "start-index", 's', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeUnsignedInteger, "Index at which to start printing history commands (or end to mean tail mode)." },
+  { LLDB_OPT_SET_1, false, "end-index",   'e', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeUnsignedInteger, "Index at which to stop printing history commands." },
+  { LLDB_OPT_SET_2, false, "clear",       'C', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeBoolean,         "Clears the current command history." },
     // clang-format on
 };
 
@@ -196,11 +197,11 @@ protected:
 // CommandObjectCommandsSource
 //-------------------------------------------------------------------------
 
-static OptionDefinition g_source_options[] = {
+static constexpr OptionDefinition g_source_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_ALL, false, "stop-on-error",    'e', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean, "If true, stop executing commands on error." },
-  { LLDB_OPT_SET_ALL, false, "stop-on-continue", 'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean, "If true, stop executing commands on continue." },
-  { LLDB_OPT_SET_ALL, false, "silent-run",       's', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean, "If true don't echo commands while executing." },
+  { LLDB_OPT_SET_ALL, false, "stop-on-error",    'e', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean, "If true, stop executing commands on error." },
+  { LLDB_OPT_SET_ALL, false, "stop-on-continue", 'c', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean, "If true, stop executing commands on continue." },
+  { LLDB_OPT_SET_ALL, false, "silent-run",       's', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean, "If true don't echo commands while executing." },
     // clang-format on
 };
 
@@ -234,20 +235,13 @@ public:
     return "";
   }
 
-  int HandleArgumentCompletion(Args &input, int &cursor_index,
-                               int &cursor_char_position,
-                               OptionElementVector &opt_element_vector,
-                               int match_start_point, int max_return_elements,
-                               bool &word_complete,
-                               StringList &matches) override {
-    auto completion_str = input[cursor_index].ref;
-    completion_str = completion_str.take_front(cursor_char_position);
-
+  int HandleArgumentCompletion(
+      CompletionRequest &request,
+      OptionElementVector &opt_element_vector) override {
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
-        completion_str, match_start_point, max_return_elements, nullptr,
-        word_complete, matches);
-    return matches.GetSize();
+        request, nullptr);
+    return request.GetNumberOfMatches();
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -325,14 +319,20 @@ protected:
       CommandInterpreterRunOptions options;
       options.SetStopOnContinue(m_options.m_stop_on_continue.GetCurrentValue());
       options.SetStopOnError(m_options.m_stop_on_error.GetCurrentValue());
-      options.SetEchoCommands(!m_options.m_silent_run.GetCurrentValue());
-      options.SetPrintResults(!m_options.m_silent_run.GetCurrentValue());
+
+      // Individual silent setting is override for global command echo settings.
+      if (m_options.m_silent_run.GetCurrentValue()) {
+        options.SetSilent(true);
+      } else {
+        options.SetPrintResults(true);
+        options.SetEchoCommands(m_interpreter.GetEchoCommands());
+        options.SetEchoCommentCommands(m_interpreter.GetEchoCommentCommands());
+      }
 
       m_interpreter.HandleCommandsFromFile(cmd_file, exe_ctx, options, result);
     } else {
-      // No options were set, inherit any settings from nested "command
-      // source" commands,
-      // or set to sane default settings...
+      // No options were set, inherit any settings from nested "command source"
+      // commands, or set to sane default settings...
       CommandInterpreterRunOptions options;
       m_interpreter.HandleCommandsFromFile(cmd_file, exe_ctx, options, result);
     }
@@ -347,10 +347,10 @@ protected:
 // CommandObjectCommandsAlias
 //-------------------------------------------------------------------------
 
-static OptionDefinition g_alias_options[] = {
+static constexpr OptionDefinition g_alias_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_ALL, false, "help",      'h', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeHelpText, "Help text for this command" },
-  { LLDB_OPT_SET_ALL, false, "long-help", 'H', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeHelpText, "Long help text for this command" },
+  { LLDB_OPT_SET_ALL, false, "help",      'h', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeHelpText, "Help text for this command" },
+  { LLDB_OPT_SET_ALL, false, "long-help", 'H', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeHelpText, "Long help text for this command" },
     // clang-format on
 };
 
@@ -543,9 +543,9 @@ rather than using a positional placeholder:"
   ~CommandObjectCommandsAlias() override = default;
 
 protected:
-  bool DoExecute(const char *raw_command_line,
+  bool DoExecute(llvm::StringRef raw_command_line,
                  CommandReturnObject &result) override {
-    if (!raw_command_line || !raw_command_line[0]) {
+    if (raw_command_line.empty()) {
       result.AppendError("'command alias' requires at least two arguments");
       return false;
     }
@@ -553,42 +553,13 @@ protected:
     ExecutionContext exe_ctx = GetCommandInterpreter().GetExecutionContext();
     m_option_group.NotifyOptionParsingStarting(&exe_ctx);
 
-    const char *remainder = nullptr;
+    OptionsWithRaw args_with_suffix(raw_command_line);
+    const char *remainder = args_with_suffix.GetRawPart().c_str();
 
-    if (raw_command_line[0] == '-') {
-      // We have some options and these options MUST end with --.
-      const char *end_options = nullptr;
-      const char *s = raw_command_line;
-      while (s && s[0]) {
-        end_options = ::strstr(s, "--");
-        if (end_options) {
-          end_options += 2; // Get past the "--"
-          if (::isspace(end_options[0])) {
-            remainder = end_options;
-            while (::isspace(*remainder))
-              ++remainder;
-            break;
-          }
-        }
-        s = end_options;
-      }
-
-      if (end_options) {
-        Args args(
-            llvm::StringRef(raw_command_line, end_options - raw_command_line));
-        if (!ParseOptions(args, result))
-          return false;
-
-        Status error(m_option_group.NotifyOptionParsingFinished(&exe_ctx));
-        if (error.Fail()) {
-          result.AppendError(error.AsCString());
-          result.SetStatus(eReturnStatusFailed);
-          return false;
-        }
-      }
-    }
-    if (nullptr == remainder)
-      remainder = raw_command_line;
+    if (args_with_suffix.HasArgs())
+      if (!ParseOptionsAndNotify(args_with_suffix.GetArgs(), result,
+                                 m_option_group, exe_ctx))
+        return false;
 
     llvm::StringRef raw_command_string(remainder);
     Args args(raw_command_string);
@@ -613,8 +584,7 @@ protected:
     }
 
     // Strip the new alias name off 'raw_command_string'  (leave it on args,
-    // which gets passed to 'Execute', which
-    // does the stripping itself.
+    // which gets passed to 'Execute', which does the stripping itself.
     size_t pos = raw_command_string.find(alias_command);
     if (pos == 0) {
       raw_command_string = raw_command_string.substr(alias_command.size());
@@ -652,9 +622,8 @@ protected:
       return false;
     } else if (!cmd_obj->WantsRawCommandString()) {
       // Note that args was initialized with the original command, and has not
-      // been updated to this point.
-      // Therefore can we pass it to the version of Execute that does not
-      // need/expect raw input in the alias.
+      // been updated to this point. Therefore can we pass it to the version of
+      // Execute that does not need/expect raw input in the alias.
       return HandleAliasingNormalCommand(args, result);
     } else {
       return HandleAliasingRawCommand(alias_command, raw_command_string,
@@ -952,10 +921,10 @@ protected:
 // CommandObjectCommandsAddRegex
 //-------------------------------------------------------------------------
 
-static OptionDefinition g_regex_options[] = {
+static constexpr OptionDefinition g_regex_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_1, false, "help"  , 'h', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeNone, "The help text to display for this command." },
-  { LLDB_OPT_SET_1, false, "syntax", 's', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeNone, "A syntax string showing the typical usage syntax." },
+  { LLDB_OPT_SET_1, false, "help"  , 'h', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeNone, "The help text to display for this command." },
+  { LLDB_OPT_SET_1, false, "syntax", 's', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeNone, "A syntax string showing the typical usage syntax." },
     // clang-format on
 };
 
@@ -1142,8 +1111,8 @@ protected:
       return error;
     }
     const size_t first_separator_char_pos = 1;
-    // use the char that follows 's' as the regex separator character
-    // so we can have "s/<regex>/<subst>/" or "s|<regex>|<subst>|"
+    // use the char that follows 's' as the regex separator character so we can
+    // have "s/<regex>/<subst>/" or "s|<regex>|<subst>|"
     const char separator_char = regex_sed[first_separator_char_pos];
     const size_t second_separator_char_pos =
         regex_sed.find(separator_char, first_separator_char_pos + 1);
@@ -1172,8 +1141,7 @@ protected:
     }
 
     if (third_separator_char_pos != regex_sed_size - 1) {
-      // Make sure that everything that follows the last regex
-      // separator char
+      // Make sure that everything that follows the last regex separator char
       if (regex_sed.find_first_not_of("\t\n\v\f\r ",
                                       third_separator_char_pos + 1) !=
           std::string::npos) {
@@ -1321,7 +1289,7 @@ public:
   }
 
 protected:
-  bool DoExecute(const char *raw_command_line,
+  bool DoExecute(llvm::StringRef raw_command_line,
                  CommandReturnObject &result) override {
     ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
 
@@ -1410,7 +1378,7 @@ public:
   }
 
 protected:
-  bool DoExecute(const char *raw_command_line,
+  bool DoExecute(llvm::StringRef raw_command_line,
                  CommandReturnObject &result) override {
     ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
 
@@ -1447,9 +1415,9 @@ private:
 // CommandObjectCommandsScriptImport
 //-------------------------------------------------------------------------
 
-OptionDefinition g_script_import_options[] = {
+static constexpr OptionDefinition g_script_import_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_1, false, "allow-reload", 'r', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Allow the script to be loaded even if it was already loaded before. This argument exists for backwards compatibility, but reloading is always allowed, whether you specify it or not." },
+  { LLDB_OPT_SET_1, false, "allow-reload", 'r', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Allow the script to be loaded even if it was already loaded before. This argument exists for backwards compatibility, but reloading is always allowed, whether you specify it or not." },
     // clang-format on
 };
 
@@ -1476,20 +1444,13 @@ public:
 
   ~CommandObjectCommandsScriptImport() override = default;
 
-  int HandleArgumentCompletion(Args &input, int &cursor_index,
-                               int &cursor_char_position,
-                               OptionElementVector &opt_element_vector,
-                               int match_start_point, int max_return_elements,
-                               bool &word_complete,
-                               StringList &matches) override {
-    llvm::StringRef completion_str = input[cursor_index].ref;
-    completion_str = completion_str.take_front(cursor_char_position);
-
+  int HandleArgumentCompletion(
+      CompletionRequest &request,
+      OptionElementVector &opt_element_vector) override {
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
-        completion_str, match_start_point, max_return_elements, nullptr,
-        word_complete, matches);
-    return matches.GetSize();
+        request, nullptr);
+    return request.GetNumberOfMatches();
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -1554,10 +1515,11 @@ protected:
       // FIXME: this is necessary because CommandObject::CheckRequirements()
       // assumes that commands won't ever be recursively invoked, but it's
       // actually possible to craft a Python script that does other "command
-      // script imports" in __lldb_init_module the real fix is to have recursive
-      // commands possible with a CommandInvocation object separate from the
-      // CommandObject itself, so that recursive command invocations won't stomp
-      // on each other (wrt to execution contents, options, and more)
+      // script imports" in __lldb_init_module the real fix is to have
+      // recursive commands possible with a CommandInvocation object separate
+      // from the CommandObject itself, so that recursive command invocations
+      // won't stomp on each other (wrt to execution contents, options, and
+      // more)
       m_exe_ctx.Clear();
       if (m_interpreter.GetScriptInterpreter()->LoadScriptingModule(
               entry.c_str(), m_options.m_allow_reload, init_session, error)) {
@@ -1578,22 +1540,24 @@ protected:
 //-------------------------------------------------------------------------
 // CommandObjectCommandsScriptAdd
 //-------------------------------------------------------------------------
+static constexpr OptionEnumValueElement g_script_synchro_type[] = {
+  {eScriptedCommandSynchronicitySynchronous, "synchronous",
+   "Run synchronous"},
+  {eScriptedCommandSynchronicityAsynchronous, "asynchronous",
+   "Run asynchronous"},
+  {eScriptedCommandSynchronicityCurrentValue, "current",
+   "Do not alter current setting"} };
 
-static OptionEnumValueElement g_script_synchro_type[] = {
-    {eScriptedCommandSynchronicitySynchronous, "synchronous",
-     "Run synchronous"},
-    {eScriptedCommandSynchronicityAsynchronous, "asynchronous",
-     "Run asynchronous"},
-    {eScriptedCommandSynchronicityCurrentValue, "current",
-     "Do not alter current setting"},
-    {0, nullptr, nullptr}};
+static constexpr OptionEnumValues ScriptSynchroType() {
+  return OptionEnumValues(g_script_synchro_type);
+}
 
-static OptionDefinition g_script_add_options[] = {
+static constexpr OptionDefinition g_script_add_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_1,   false, "function",      'f', OptionParser::eRequiredArgument, nullptr, nullptr,               0, eArgTypePythonFunction,               "Name of the Python function to bind to this command name." },
-  { LLDB_OPT_SET_2,   false, "class",         'c', OptionParser::eRequiredArgument, nullptr, nullptr,               0, eArgTypePythonClass,                  "Name of the Python class to bind to this command name." },
-  { LLDB_OPT_SET_1,   false, "help"  ,        'h', OptionParser::eRequiredArgument, nullptr, nullptr,               0, eArgTypeHelpText,                     "The help text to display for this command." },
-  { LLDB_OPT_SET_ALL, false, "synchronicity", 's', OptionParser::eRequiredArgument, nullptr, g_script_synchro_type, 0, eArgTypeScriptedCommandSynchronicity, "Set the synchronicity of this command's executions with regard to LLDB event system." },
+  { LLDB_OPT_SET_1,   false, "function",      'f', OptionParser::eRequiredArgument, nullptr, {},                  0, eArgTypePythonFunction,               "Name of the Python function to bind to this command name." },
+  { LLDB_OPT_SET_2,   false, "class",         'c', OptionParser::eRequiredArgument, nullptr, {},                  0, eArgTypePythonClass,                  "Name of the Python class to bind to this command name." },
+  { LLDB_OPT_SET_1,   false, "help"  ,        'h', OptionParser::eRequiredArgument, nullptr, {},                  0, eArgTypeHelpText,                     "The help text to display for this command." },
+  { LLDB_OPT_SET_ALL, false, "synchronicity", 's', OptionParser::eRequiredArgument, nullptr, ScriptSynchroType(), 0, eArgTypeScriptedCommandSynchronicity, "Set the synchronicity of this command's executions with regard to LLDB event system." },
     // clang-format on
 };
 
@@ -1653,7 +1617,7 @@ protected:
         break;
       case 's':
         m_synchronicity =
-            (ScriptedCommandSynchronicity)Args::StringToOptionEnum(
+            (ScriptedCommandSynchronicity)OptionArgParser::ToOptionEnum(
                 option_arg, GetDefinitions()[option_idx].enum_values, 0, error);
         if (!error.Success())
           error.SetErrorStringWithFormat(

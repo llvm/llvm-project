@@ -69,8 +69,8 @@ Status UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit,
   if (!DecodeHostAndPort(name, host_str, port_str, port, &error))
     return error;
 
-  // At this point we have setup the receive port, now we need to
-  // setup the UDP send socket
+  // At this point we have setup the receive port, now we need to setup the UDP
+  // send socket
 
   struct addrinfo hints;
   struct addrinfo *service_info_list = nullptr;

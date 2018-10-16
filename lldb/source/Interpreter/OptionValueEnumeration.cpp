@@ -19,7 +19,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 OptionValueEnumeration::OptionValueEnumeration(
-    const OptionEnumValueElement *enumerators, enum_type value)
+    const OptionEnumValues &enumerators, enum_type value)
     : OptionValue(), m_current_value(value), m_default_value(value),
       m_enumerations() {
   SetEnumerations(enumerators);
@@ -91,41 +91,37 @@ Status OptionValueEnumeration::SetValueFromString(llvm::StringRef value,
 }
 
 void OptionValueEnumeration::SetEnumerations(
-    const OptionEnumValueElement *enumerators) {
+    const OptionEnumValues &enumerators) {
   m_enumerations.Clear();
-  if (enumerators) {
-    for (size_t i = 0; enumerators[i].string_value != nullptr; ++i) {
-      ConstString const_enumerator_name(enumerators[i].string_value);
-      EnumeratorInfo enumerator_info = {enumerators[i].value,
-                                        enumerators[i].usage};
-      m_enumerations.Append(const_enumerator_name,
-                            enumerator_info);
-    }
-    m_enumerations.Sort();
+
+  for (const auto &enumerator : enumerators) {
+    ConstString const_enumerator_name(enumerator.string_value);
+    EnumeratorInfo enumerator_info = {enumerator.value, enumerator.usage};
+    m_enumerations.Append(const_enumerator_name, enumerator_info);
   }
+
+  m_enumerations.Sort();
 }
 
 lldb::OptionValueSP OptionValueEnumeration::DeepCopy() const {
   return OptionValueSP(new OptionValueEnumeration(*this));
 }
 
-size_t OptionValueEnumeration::AutoComplete(
-    CommandInterpreter &interpreter, llvm::StringRef s, int match_start_point,
-    int max_return_elements, bool &word_complete, StringList &matches) {
-  word_complete = false;
-  matches.Clear();
+size_t OptionValueEnumeration::AutoComplete(CommandInterpreter &interpreter,
+                                            CompletionRequest &request) {
+  request.SetWordComplete(false);
 
   const uint32_t num_enumerators = m_enumerations.GetSize();
-  if (!s.empty()) {
+  if (!request.GetCursorArgumentPrefix().empty()) {
     for (size_t i = 0; i < num_enumerators; ++i) {
       llvm::StringRef name = m_enumerations.GetCStringAtIndex(i).GetStringRef();
-      if (name.startswith(s))
-        matches.AppendString(name);
+      if (name.startswith(request.GetCursorArgumentPrefix()))
+        request.AddCompletion(name);
     }
   } else {
     // only suggest "true" or "false" by default
     for (size_t i = 0; i < num_enumerators; ++i)
-      matches.AppendString(m_enumerations.GetCStringAtIndex(i).GetStringRef());
+      request.AddCompletion(m_enumerations.GetCStringAtIndex(i).GetStringRef());
   }
-  return matches.GetSize();
+  return request.GetNumberOfMatches();
 }

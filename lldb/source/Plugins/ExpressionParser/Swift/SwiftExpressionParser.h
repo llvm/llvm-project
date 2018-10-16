@@ -160,7 +160,7 @@ private:
   /// The container for the IR, to be JIT-compiled or interpreted.
   lldb::IRExecutionUnitSP m_execution_unit_sp;
   /// The AST context to build the expression into.
-  SwiftASTContext *m_swift_ast_context;
+  std::unique_ptr<SwiftASTContextReader> m_swift_ast_context;
   /// Used to manage the memory of a potential on-off context.
   //lldb::TypeSystemSP m_typesystem_sp;
   /// The symbol context to use when parsing.

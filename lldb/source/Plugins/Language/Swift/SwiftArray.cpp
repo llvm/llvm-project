@@ -302,9 +302,9 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
     return nullptr;
   }
 
-  if (valobj_typename.startswith(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs21_SwiftDeferredNSArray"))
-      || valobj_typename.startswith("_TtCs21_SwiftDeferredNSArray")
-      || valobj_typename.startswith("Swift._SwiftDeferredNSArray") ) {
+  if (valobj_typename.startswith(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs22__SwiftDeferredNSArray"))
+      || valobj_typename.startswith("_TtCs22__SwiftDeferredNSArray")
+      || valobj_typename.startswith("Swift.__SwiftDeferredNSArray") ) {
     ProcessSP process_sp(valobj.GetProcessSP());
     if (!process_sp)
       return nullptr;
@@ -327,10 +327,8 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
 
     CompilerType argument_type;
 
-    SwiftASTContext *swift_ast_ctx(llvm::dyn_cast_or_null<SwiftASTContext>(
-        valobj.GetCompilerType().GetTypeSystem()));
     SwiftLanguageRuntime::MetadataPromiseSP promise_sp(
-        swift_runtime->GetMetadataPromise(argmetadata_ptr, swift_ast_ctx));
+        swift_runtime->GetMetadataPromise(argmetadata_ptr, valobj));
     if (promise_sp)
       if (CompilerType type = promise_sp->FulfillTypePromise())
         argument_type = type.GetGenericArgumentType(0);

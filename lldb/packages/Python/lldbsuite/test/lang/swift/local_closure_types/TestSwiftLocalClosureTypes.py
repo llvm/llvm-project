@@ -10,11 +10,10 @@
 #
 # ------------------------------------------------------------------------------
 import lldbsuite.test.lldbinline as lldbinline
-from lldbsuite.test import decorators
+from lldbsuite.test.decorators import *
 
 lldbinline.MakeInlineTest(
     __file__,
     globals(),
-    decorators=decorators.skipIf(
-        oslist=["macosx"],
-        bugnumber="rdar://26051759"))
+    decorators=[swiftTest,
+                skipIf(oslist=["macosx"],bugnumber="rdar://26051759")])

@@ -15,9 +15,9 @@
 // Project includes
 #include "lldb/Core/State.h"
 #include "lldb/DataFormatters/FormatManager.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Utility/Args.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -74,13 +74,10 @@ lldb::OptionValueSP OptionValueArch::DeepCopy() const {
 }
 
 size_t OptionValueArch::AutoComplete(CommandInterpreter &interpreter,
-                                     llvm::StringRef s, int match_start_point,
-                                     int max_return_elements,
-                                     bool &word_complete, StringList &matches) {
-  word_complete = false;
-  matches.Clear();
+                                     CompletionRequest &request) {
+  request.SetWordComplete(false);
   CommandCompletions::InvokeCommonCompletionCallbacks(
-      interpreter, CommandCompletions::eArchitectureCompletion, s,
-      match_start_point, max_return_elements, nullptr, word_complete, matches);
-  return matches.GetSize();
+      interpreter, CommandCompletions::eArchitectureCompletion, request,
+      nullptr);
+  return request.GetNumberOfMatches();
 }

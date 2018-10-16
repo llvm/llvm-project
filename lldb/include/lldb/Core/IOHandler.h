@@ -63,14 +63,13 @@ public:
 
   virtual ~IOHandler();
 
-  // Each IOHandler gets to run until it is done. It should read data
-  // from the "in" and place output into "out" and "err and return
-  // when done.
+  // Each IOHandler gets to run until it is done. It should read data from the
+  // "in" and place output into "out" and "err and return when done.
   virtual void Run() = 0;
 
-  // Called when an input reader should relinquish its control so another
-  // can be pushed onto the IO handler stack, or so the current IO
-  // handler can pop itself off the stack
+  // Called when an input reader should relinquish its control so another can
+  // be pushed onto the IO handler stack, or so the current IO handler can pop
+  // itself off the stack
 
   virtual void Cancel() = 0;
 
@@ -273,8 +272,8 @@ public:
   //------------------------------------------------------------------
   virtual bool IOHandlerIsInputComplete(IOHandler &io_handler,
                                         StringList &lines) {
-    // Impose no requirements for input to be considered
-    // complete.  subclasses should do something more intelligent.
+    // Impose no requirements for input to be considered complete.  subclasses
+    // should do something more intelligent.
     return true;
   }
 
@@ -289,8 +288,8 @@ public:
   //------------------------------------------------------------------
   // Intercept the IOHandler::Interrupt() calls and do something.
   //
-  // Return true if the interrupt was handled, false if the IOHandler
-  // should continue to try handle the interrupt itself.
+  // Return true if the interrupt was handled, false if the IOHandler should
+  // continue to try handle the interrupt itself.
   //------------------------------------------------------------------
   virtual bool IOHandlerInterrupt(IOHandler &io_handler) { return false; }
 
@@ -302,8 +301,7 @@ protected:
 // IOHandlerDelegateMultiline
 //
 // A IOHandlerDelegate that handles terminating multi-line input when
-// the last line is equal to "end_line" which is specified in the
-// constructor.
+// the last line is equal to "end_line" which is specified in the constructor.
 //----------------------------------------------------------------------
 class IOHandlerDelegateMultiline : public IOHandlerDelegate {
 public:
@@ -325,9 +323,8 @@ public:
     // Determine whether the end of input signal has been entered
     const size_t num_lines = lines.GetSize();
     if (num_lines > 0 && lines[num_lines - 1] == m_end_line) {
-      // Remove the terminal line from "lines" so it doesn't appear in
-      // the resulting input and return true to indicate we are done
-      // getting lines
+      // Remove the terminal line from "lines" so it doesn't appear in the
+      // resulting input and return true to indicate we are done getting lines
       lines.PopBack();
       return true;
     }
@@ -454,8 +451,7 @@ protected:
 };
 
 // The order of base classes is important. Look at the constructor of
-// IOHandlerConfirm
-// to see how.
+// IOHandlerConfirm to see how.
 class IOHandlerConfirm : public IOHandlerDelegate, public IOHandlerEditline {
 public:
   IOHandlerConfirm(Debugger &debugger, llvm::StringRef prompt,

@@ -17,7 +17,7 @@ class TestFrameVar(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # If your test case doesn't stress debug info, the 
+    # If your test case doesn't stress debug info, the
     # set this to true.  That way it won't be run once for
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
@@ -67,7 +67,7 @@ class TestFrameVar(TestBase):
         frame = threads[0].GetFrameAtIndex(0)
         command_result = lldb.SBCommandReturnObject()
         interp = self.dbg.GetCommandInterpreter()
-        
+
         # Just get args:
         result = interp.HandleCommand("frame var -l", command_result)
         self.assertEqual(result, lldb.eReturnStatusSuccessFinishResult, "frame var -a didn't succeed")
@@ -85,7 +85,7 @@ class TestFrameVar(TestBase):
         self.assertTrue("argv" not in output, "Locals found argv")
         self.assertTrue("test_var" in output, "Locals didn't find test_var")
         self.assertTrue("g_var" not in output, "Locals found a global")
-        
+
         # Get the file statics:
         result = interp.HandleCommand("frame var -l -a -g", command_result)
         self.assertEqual(result, lldb.eReturnStatusSuccessFinishResult, "frame var -a didn't succeed")
@@ -94,6 +94,6 @@ class TestFrameVar(TestBase):
         self.assertTrue("argv" not in output, "Globals found argv")
         self.assertTrue("test_var" not in output, "Globals found test_var")
         self.assertTrue("g_var" in output, "Globals didn't find g_var")
-        
-                        
+
+
 

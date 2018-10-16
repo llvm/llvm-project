@@ -12,9 +12,9 @@
 #include "lldb/Core/State.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Host/FileSystem.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 
 using namespace lldb;
@@ -67,18 +67,15 @@ Status OptionValueFileSpec::SetValueFromString(llvm::StringRef value,
   case eVarSetOperationAssign:
     if (value.size() > 0) {
       // The setting value may have whitespace, double-quotes, or single-quotes
-      // around the file
-      // path to indicate that internal spaces are not word breaks.  Strip off
-      // any ws & quotes
-      // from the start and end of the file path - we aren't doing any word //
-      // breaking here so
-      // the quoting is unnecessary.  NB this will cause a problem if someone
-      // tries to specify
+      // around the file path to indicate that internal spaces are not word
+      // breaks.  Strip off any ws & quotes from the start and end of the file
+      // path - we aren't doing any word // breaking here so the quoting is
+      // unnecessary.  NB this will cause a problem if someone tries to specify
       // a file path that legitimately begins or ends with a " or ' character,
       // or whitespace.
       value = value.trim("\"' \t");
       m_value_was_set = true;
-      m_current_value.SetFile(value.str(), m_resolve);
+      m_current_value.SetFile(value.str(), m_resolve, FileSpec::Style::native);
       m_data_sp.reset();
       m_data_mod_time = llvm::sys::TimePoint<>();
       NotifyValueChanged();
@@ -102,15 +99,12 @@ lldb::OptionValueSP OptionValueFileSpec::DeepCopy() const {
   return OptionValueSP(new OptionValueFileSpec(*this));
 }
 
-size_t OptionValueFileSpec::AutoComplete(
-    CommandInterpreter &interpreter, llvm::StringRef s, int match_start_point,
-    int max_return_elements, bool &word_complete, StringList &matches) {
-  word_complete = false;
-  matches.Clear();
+size_t OptionValueFileSpec::AutoComplete(CommandInterpreter &interpreter,
+                                         CompletionRequest &request) {
+  request.SetWordComplete(false);
   CommandCompletions::InvokeCommonCompletionCallbacks(
-      interpreter, m_completion_mask, s, match_start_point, max_return_elements,
-      nullptr, word_complete, matches);
-  return matches.GetSize();
+      interpreter, m_completion_mask, request, nullptr);
+  return request.GetNumberOfMatches();
 }
 
 const lldb::DataBufferSP &OptionValueFileSpec::GetFileContents() {

@@ -81,7 +81,7 @@ class TestYMMRegister(TestBase):
             self.expect(
                 "register read ymm" + str(i),
                 substrs=[pattern])
-        
+
         self.expect("continue", PROCESS_STOPPED, substrs=['stopped'])
 
         # Check stop reason; Should be either signal SIGTRAP or EXC_BREAKPOINT

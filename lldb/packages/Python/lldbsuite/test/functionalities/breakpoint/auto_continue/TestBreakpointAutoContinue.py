@@ -34,17 +34,17 @@ class BreakpointAutoContinue(TestBase):
         self.build()
         self.auto_continue_location()
 
-    def make_target_and_bkpt(self, additional_options=None, num_expected_loc=1, 
+    def make_target_and_bkpt(self, additional_options=None, num_expected_loc=1,
                              pattern="Set a breakpoint here"):
         exe = self.getBuildArtifact("a.out")
         self.target = self.dbg.CreateTarget(exe)
         self.assertTrue(self.target.IsValid(), "Target is not valid")
-        
+
         extra_options_txt = "--auto-continue 1 "
         if additional_options:
             extra_options_txt += additional_options
-        bpno = lldbutil.run_break_set_by_source_regexp(self, pattern, 
-                                            extra_options = extra_options_txt, 
+        bpno = lldbutil.run_break_set_by_source_regexp(self, pattern,
+                                            extra_options = extra_options_txt,
                                             num_expected_locations = num_expected_loc)
         return bpno
 

@@ -60,7 +60,6 @@ private:
   std::string m_name;
   std::string m_reason;
   RegisterMap m_registers;
-  unsigned int m_signal;
 };
 
 class JThreadsInfo : public Parser<JThreadsInfo> {
@@ -87,9 +86,10 @@ struct RegisterInfoParser : public Parser<lldb_private::RegisterInfo> {
 
 llvm::Expected<lldb_private::RegisterValue>
 parseRegisterValue(const lldb_private::RegisterInfo &Info,
-                   llvm::StringRef HexValue, llvm::support::endianness Endian);
+                   llvm::StringRef HexValue, llvm::support::endianness Endian,
+                   bool ZeroPad = false);
 
-class StopReply {
+class StopReply : public Parser<std::unique_ptr<StopReply>> {
 public:
   StopReply() = default;
   virtual ~StopReply() = default;

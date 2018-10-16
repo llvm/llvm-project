@@ -118,7 +118,7 @@ public:
 
   bool CanDebugProcess() override;
 
-  size_t GetEnvironment(StringList &env) override;
+  Environment GetEnvironment() override;
 
   // FIXME not sure what the _sigtramp equivalent would be on this platform
   void CalculateTrapHandlerSymbolNames() override {}

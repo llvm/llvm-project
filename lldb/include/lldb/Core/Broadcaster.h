@@ -59,10 +59,9 @@ public:
 
   uint32_t GetEventBits() const { return m_event_bits; }
 
-  // Tell whether this BroadcastEventSpec is contained in in_spec.
-  // That is:
-  // (a) the two spec's share the same broadcaster class
-  // (b) the event bits of this spec are wholly contained in those of in_spec.
+  // Tell whether this BroadcastEventSpec is contained in in_spec. That is: (a)
+  // the two spec's share the same broadcaster class (b) the event bits of this
+  // spec are wholly contained in those of in_spec.
   bool IsContainedIn(BroadcastEventSpec in_spec) const {
     if (m_broadcaster_class != in_spec.GetBroadcasterClass())
       return false;
@@ -224,21 +223,21 @@ private:
 };
 
 //----------------------------------------------------------------------
-/// @class Broadcaster Broadcaster.h "lldb/Core/Broadcaster.h"
-/// @brief An event broadcasting class.
+/// @class Broadcaster Broadcaster.h "lldb/Core/Broadcaster.h" An event
+/// broadcasting class.
 ///
-/// The Broadcaster class is designed to be subclassed by objects that
-/// wish to vend events in a multi-threaded environment. Broadcaster
-/// objects can each vend 32 events. Each event is represented by a bit
-/// in a 32 bit value and these bits can be set:
+/// The Broadcaster class is designed to be subclassed by objects that wish to
+/// vend events in a multi-threaded environment. Broadcaster objects can each
+/// vend 32 events. Each event is represented by a bit in a 32 bit value and
+/// these bits can be set:
 ///     @see Broadcaster::SetEventBits(uint32_t)
 /// or cleared:
 ///     @see Broadcaster::ResetEventBits(uint32_t)
-/// When an event gets set the Broadcaster object will notify the
-/// Listener object that is listening for the event (if there is one).
+/// When an event gets set the Broadcaster object will notify the Listener
+/// object that is listening for the event (if there is one).
 ///
-/// Subclasses should provide broadcast bit definitions for any events
-/// they vend, typically using an enumeration:
+/// Subclasses should provide broadcast bit definitions for any events they
+/// vend, typically using an enumeration:
 ///     \code
 ///         class Foo : public Broadcaster
 ///         {
@@ -324,12 +323,11 @@ public:
   //------------------------------------------------------------------
   /// Listen for any events specified by \a event_mask.
   ///
-  /// Only one listener can listen to each event bit in a given
-  /// Broadcaster. Once a listener has acquired an event bit, no
-  /// other broadcaster will have access to it until it is
-  /// relinquished by the first listener that gets it. The actual
-  /// event bits that get acquired by \a listener may be different
-  /// from what is requested in \a event_mask, and to track this the
+  /// Only one listener can listen to each event bit in a given Broadcaster.
+  /// Once a listener has acquired an event bit, no other broadcaster will
+  /// have access to it until it is relinquished by the first listener that
+  /// gets it. The actual event bits that get acquired by \a listener may be
+  /// different from what is requested in \a event_mask, and to track this the
   /// actual event bits that are acquired get returned.
   ///
   /// @param[in] listener
@@ -349,8 +347,7 @@ public:
   }
 
   //------------------------------------------------------------------
-  /// Get the NULL terminated C string name of this Broadcaster
-  /// object.
+  /// Get the NULL terminated C string name of this Broadcaster object.
   ///
   /// @return
   ///     The NULL terminated C string name of this Broadcaster.
@@ -395,10 +392,10 @@ public:
   }
 
   //------------------------------------------------------------------
-  /// Removes a Listener from this broadcasters list and frees the
-  /// event bits specified by \a event_mask that were previously
-  /// acquired by \a listener (assuming \a listener was listening to
-  /// this object) for other listener objects to use.
+  /// Removes a Listener from this broadcasters list and frees the event bits
+  /// specified by \a event_mask that were previously acquired by \a listener
+  /// (assuming \a listener was listening to this object) for other listener
+  /// objects to use.
   ///
   /// @param[in] listener
   ///     A Listener object that previously called AddListener.
@@ -420,10 +417,9 @@ public:
   //------------------------------------------------------------------
   /// Provides a simple mechanism to temporarily redirect events from
   /// broadcaster.  When you call this function passing in a listener and
-  /// event type mask, all events from the broadcaster matching the mask
-  /// will now go to the hijacking listener.
-  /// Only one hijack can occur at a time.  If we need more than this we
-  /// will have to implement a Listener stack.
+  /// event type mask, all events from the broadcaster matching the mask will
+  /// now go to the hijacking listener. Only one hijack can occur at a time.
+  /// If we need more than this we will have to implement a Listener stack.
   ///
   /// @param[in] listener
   ///     A Listener object.  You do not need to call StartListeningForEvents
@@ -454,8 +450,7 @@ public:
   void RestoreBroadcaster() { m_broadcaster_sp->RestoreBroadcaster(); }
 
   // This needs to be filled in if you are going to register the broadcaster
-  // with the broadcaster
-  // manager and do broadcaster class matching.
+  // with the broadcaster manager and do broadcaster class matching.
   // FIXME: Probably should make a ManagedBroadcaster subclass with all the bits
   // needed to work
   // with the BroadcasterManager, so that it is clearer how to add one.
@@ -465,21 +460,17 @@ public:
 
 protected:
   // BroadcasterImpl contains the actual Broadcaster implementation.  The
-  // Broadcaster makes a BroadcasterImpl
-  // which lives as long as it does.  The Listeners & the Events hold a weak
-  // pointer to the BroadcasterImpl,
-  // so that they can survive if a Broadcaster they were listening to is
-  // destroyed w/o their being able to
-  // unregister from it (which can happen if the Broadcasters & Listeners are
-  // being destroyed on separate threads
-  // simultaneously.
-  // The Broadcaster itself can't be shared out as a weak pointer, because some
-  // things that are broadcasters
-  // (e.g. the Target and the Process) are shared in their own right.
+  // Broadcaster makes a BroadcasterImpl which lives as long as it does.  The
+  // Listeners & the Events hold a weak pointer to the BroadcasterImpl, so that
+  // they can survive if a Broadcaster they were listening to is destroyed w/o
+  // their being able to unregister from it (which can happen if the
+  // Broadcasters & Listeners are being destroyed on separate threads
+  // simultaneously. The Broadcaster itself can't be shared out as a weak
+  // pointer, because some things that are broadcasters (e.g. the Target and
+  // the Process) are shared in their own right.
   //
   // For the most part, the Broadcaster functions dispatch to the
-  // BroadcasterImpl, and are documented in the
-  // public Broadcaster API above.
+  // BroadcasterImpl, and are documented in the public Broadcaster API above.
 
   class BroadcasterImpl {
     friend class Listener;
@@ -557,7 +548,7 @@ protected:
     llvm::SmallVector<std::pair<lldb::ListenerSP, uint32_t &>, 4>
     GetListeners();
 
-    Broadcaster &m_broadcaster;    ///< The broadcsater that this implements
+    Broadcaster &m_broadcaster;    ///< The broadcaster that this implements
     event_names_map m_event_names; ///< Optionally define event names for
                                    ///readability and logging for each event bit
     collection m_listeners; ///< A list of Listener / event_mask pairs that are

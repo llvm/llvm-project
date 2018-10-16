@@ -109,8 +109,8 @@ lldb_private::Status SelectHelper::Select() {
     pair.second.PrepareForSelect();
     const lldb::socket_t fd = pair.first;
 #if !defined(__APPLE__) && !defined(_MSC_VER)
-    lldbassert(fd < FD_SETSIZE);
-    if (fd >= FD_SETSIZE) {
+    lldbassert(fd < static_cast<int>(FD_SETSIZE));
+    if (fd >= static_cast<int>(FD_SETSIZE)) {
       error.SetErrorStringWithFormat("%i is too large for select()", fd);
       return error;
     }
@@ -236,8 +236,9 @@ lldb_private::Status SelectHelper::Select() {
       error.SetErrorString("timed out");
       return error;
     } else {
-      // One or more descriptors were set, update the FDInfo::select_is_set mask
-      // so users can ask the SelectHelper class so clients can call one of:
+      // One or more descriptors were set, update the FDInfo::select_is_set
+      // mask so users can ask the SelectHelper class so clients can call one
+      // of:
 
       for (auto &pair : m_fd_map) {
         const int fd = pair.first;

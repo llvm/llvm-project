@@ -31,6 +31,8 @@ public:
     return lldb::eLanguageTypeOCaml;
   }
 
+  bool IsSourceFile(llvm::StringRef file_path) const override;
+
   static void Initialize();
 
   static void Terminate();

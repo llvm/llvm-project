@@ -25,7 +25,7 @@ class AddDsymMidExecutionCommandCase(TestBase):
     @no_debug_info_test  # Prevent the genaration of the dwarf version of this test
     def test_add_dsym_mid_execution(self):
         """Test that add-dsym mid-execution loads the symbols at the right place for a slid binary."""
-        self.buildDefault(clean=True, dictionary={'MAKE_DSYM':'YES'})
+        self.buildDefault(dictionary={'MAKE_DSYM':'YES'})
         exe = self.getBuildArtifact("a.out")
 
         self.target = self.dbg.CreateTarget(exe)

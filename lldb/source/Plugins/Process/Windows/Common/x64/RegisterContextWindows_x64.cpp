@@ -14,9 +14,9 @@
 #include "lldb/lldb-private-types.h"
 
 #include "RegisterContextWindows_x64.h"
-#include "RegisterContext_x86.h"
+#include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "TargetThreadWindows.h"
-#include "lldb-x86-register-enums.h"
+#include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 
 #include "llvm/ADT/STLExtras.h"
 
@@ -29,14 +29,11 @@ using namespace lldb_private;
 namespace {
 
 // This enum defines the layout of the global RegisterInfo array.  This is
-// necessary because
-// lldb register sets are defined in terms of indices into the register array.
-// As such, the
-// order of RegisterInfos defined in global registers array must match the order
-// defined here.
-// When defining the register set layouts, these values can appear in an
-// arbitrary order, and that
-// determines the order that register values are displayed in a dump.
+// necessary because lldb register sets are defined in terms of indices into
+// the register array. As such, the order of RegisterInfos defined in global
+// registers array must match the order defined here. When defining the
+// register set layouts, these values can appear in an arbitrary order, and
+// that determines the order that register values are displayed in a dump.
 enum RegisterIndex {
   eRegisterIndexRax,
   eRegisterIndexRbx,
@@ -44,6 +41,8 @@ enum RegisterIndex {
   eRegisterIndexRdx,
   eRegisterIndexRdi,
   eRegisterIndexRsi,
+  eRegisterIndexRbp,
+  eRegisterIndexRsp,
   eRegisterIndexR8,
   eRegisterIndexR9,
   eRegisterIndexR10,
@@ -52,8 +51,6 @@ enum RegisterIndex {
   eRegisterIndexR13,
   eRegisterIndexR14,
   eRegisterIndexR15,
-  eRegisterIndexRbp,
-  eRegisterIndexRsp,
   eRegisterIndexRip,
   eRegisterIndexRflags
 };
@@ -96,6 +93,16 @@ RegisterInfo g_register_infos[] = {
       LLDB_INVALID_REGNUM, lldb_rsi_x86_64},
      nullptr,
      nullptr},
+    {DEFINE_GPR(rbp, "fp"),
+     {dwarf_rbp_x86_64, dwarf_rbp_x86_64, LLDB_REGNUM_GENERIC_FP,
+      LLDB_INVALID_REGNUM, lldb_rbp_x86_64},
+     nullptr,
+     nullptr},
+    {DEFINE_GPR(rsp, "sp"),
+     {dwarf_rsp_x86_64, dwarf_rsp_x86_64, LLDB_REGNUM_GENERIC_SP,
+      LLDB_INVALID_REGNUM, lldb_rsp_x86_64},
+     nullptr,
+     nullptr},
     {DEFINE_GPR(r8, nullptr),
      {dwarf_r8_x86_64, dwarf_r8_x86_64, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, lldb_r8_x86_64},
@@ -136,16 +143,6 @@ RegisterInfo g_register_infos[] = {
       LLDB_INVALID_REGNUM, lldb_r15_x86_64},
      nullptr,
      nullptr},
-    {DEFINE_GPR(rbp, "fp"),
-     {dwarf_rbp_x86_64, dwarf_rbp_x86_64, LLDB_REGNUM_GENERIC_FP,
-      LLDB_INVALID_REGNUM, lldb_rbp_x86_64},
-     nullptr,
-     nullptr},
-    {DEFINE_GPR(rsp, "sp"),
-     {dwarf_rsp_x86_64, dwarf_rsp_x86_64, LLDB_REGNUM_GENERIC_SP,
-      LLDB_INVALID_REGNUM, lldb_rsp_x86_64},
-     nullptr,
-     nullptr},
     {DEFINE_GPR(rip, "pc"),
      {dwarf_rip_x86_64, dwarf_rip_x86_64, LLDB_REGNUM_GENERIC_PC,
       LLDB_INVALID_REGNUM, lldb_rip_x86_64},
@@ -165,10 +162,10 @@ static size_t k_num_register_infos = llvm::array_lengthof(g_register_infos);
 uint32_t g_gpr_reg_indices[] = {
     eRegisterIndexRax, eRegisterIndexRbx, eRegisterIndexRcx,
     eRegisterIndexRdx, eRegisterIndexRdi, eRegisterIndexRsi,
-    eRegisterIndexR8,  eRegisterIndexR9,  eRegisterIndexR10,
-    eRegisterIndexR11, eRegisterIndexR12, eRegisterIndexR13,
-    eRegisterIndexR14, eRegisterIndexR15, eRegisterIndexRbp,
-    eRegisterIndexRsp, eRegisterIndexRip, eRegisterIndexRflags};
+    eRegisterIndexRbp, eRegisterIndexRsp, eRegisterIndexR8,
+    eRegisterIndexR9,  eRegisterIndexR10, eRegisterIndexR11,
+    eRegisterIndexR12, eRegisterIndexR13, eRegisterIndexR14,
+    eRegisterIndexR15, eRegisterIndexRip, eRegisterIndexRflags};
 
 RegisterSet g_register_sets[] = {
     {"General Purpose Registers", "gpr",
@@ -207,6 +204,9 @@ const RegisterSet *RegisterContextWindows_x64::GetRegisterSet(size_t reg_set) {
 bool RegisterContextWindows_x64::ReadRegister(const RegisterInfo *reg_info,
                                               RegisterValue &reg_value) {
   if (!CacheAllRegisterValues())
+    return false;
+
+  if (reg_info == nullptr)
     return false;
 
   switch (reg_info->kinds[eRegisterKindLLDB]) {
@@ -270,11 +270,10 @@ bool RegisterContextWindows_x64::ReadRegister(const RegisterInfo *reg_info,
 
 bool RegisterContextWindows_x64::WriteRegister(const RegisterInfo *reg_info,
                                                const RegisterValue &reg_value) {
-  // Since we cannot only write a single register value to the inferior, we need
-  // to make sure
-  // our cached copy of the register values are fresh.  Otherwise when writing
-  // EAX, for example,
-  // we may also overwrite some other register with a stale value.
+  // Since we cannot only write a single register value to the inferior, we
+  // need to make sure our cached copy of the register values are fresh.
+  // Otherwise when writing EAX, for example, we may also overwrite some other
+  // register with a stale value.
   if (!CacheAllRegisterValues())
     return false;
 

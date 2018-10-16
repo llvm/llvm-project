@@ -24,10 +24,6 @@
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Symbol/CompilerType.h"
 
-//#include <functional>
-//#include <memory>
-//#include <set>
-
 namespace lldb_private {
 
 class ValueObjectPrinter {
@@ -47,16 +43,16 @@ protected:
 
   InstancePointersSetSP m_printed_instance_pointers;
 
-  // only this class (and subclasses, if any) should ever be concerned with
-  // the depth mechanism
+  // only this class (and subclasses, if any) should ever be concerned with the
+  // depth mechanism
   ValueObjectPrinter(ValueObject *valobj, Stream *s,
                      const DumpValueObjectOptions &options,
                      const DumpValueObjectOptions::PointerDepth &ptr_depth,
                      uint32_t curr_depth,
                      InstancePointersSetSP printed_instance_pointers);
 
-  // we should actually be using delegating constructors here
-  // but some versions of GCC still have trouble with those
+  // we should actually be using delegating constructors here but some versions
+  // of GCC still have trouble with those
   void Init(ValueObject *valobj, Stream *s,
             const DumpValueObjectOptions &options,
             const DumpValueObjectOptions::PointerDepth &ptr_depth,

@@ -98,17 +98,14 @@ public:
   virtual lldb::addr_t GetWatchpointAddress(uint32_t wp_index);
 
   // MIPS Linux kernel returns a masked address (last 3bits are masked)
-  // when a HW watchpoint is hit. However user may not have set a watchpoint
-  // on this address. This function emulates the instruction at PC and
-  // finds the base address used in the load/store instruction. This gives the
-  // exact address used to read/write the variable being watched.
-  // For example:
-  // 'n' is at 0x120010d00 and 'm' is 0x120010d04. When a watchpoint is set at
-  // 'm',
+  // when a HW watchpoint is hit. However user may not have set a watchpoint on
+  // this address. This function emulates the instruction at PC and finds the
+  // base address used in the load/store instruction. This gives the exact
+  // address used to read/write the variable being watched. For example: 'n' is
+  // at 0x120010d00 and 'm' is 0x120010d04. When a watchpoint is set at 'm',
   // then watch exception is generated even when 'n' is read/written. This
-  // function
-  // returns address of 'n' so that client can check whether a watchpoint is set
-  // on this address or not.
+  // function returns address of 'n' so that client can check whether a
+  // watchpoint is set on this address or not.
   virtual lldb::addr_t GetWatchpointHitAddress(uint32_t wp_index);
 
   virtual bool HardwareSingleStep(bool enable);

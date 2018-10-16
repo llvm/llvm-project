@@ -9,22 +9,36 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-func single<T>(_ t : T) -> T {
+func use<T>(_ t : T) {}
+
+func single<T>(_ t : T) {
   let x = t
-  return x //% self.expect('expr   t', substrs=['hello'])
-           //% self.expect('fr var t', substrs=['hello'])
-           //% self.expect('expr   x', substrs=['hello'])
-           //% self.expect('fr var x', substrs=['hello'])
+  use(x) //% self.expect('expr -d run-target -- t', substrs=['hello'])
+         //% self.expect('expr -d run-target -- x', substrs=['hello'])
+         //% self.expect('fr var -d run-target t', substrs=['String', 'hello'])
+         //% self.expect('fr var -d run-target x', substrs=['hello'])
 }
 
-func tuple<T, U>(_ t : (T, U)) -> U {
+func string_tuple<T, U>(_ t : (T, U)) {
   let (_, y) = t
-  return y //% self.expect('expr   t', substrs=['hello', 'hello'])
-           //% self.expect('fr var t', substrs=['hello', 'hello'])
-           //% self.expect('expr   y', substrs=['hello'])
-           //% self.expect('fr var y', substrs=['hello'])
+  use(y) //% self.expect('expr -d run-target -- t', substrs=['hello', 'hello'])
+         //% self.expect('expr -d run-target -- y', substrs=['hello'])
+         //% self.expect('fr var -d run-target t',
+         //%             substrs=['(String, String)', 'hello', 'hello'])
+         //% self.expect('fr var -d run-target y', substrs=['hello'])
+}
+
+func int_tuple<T, U>(_ t : (T, U)) {
+  let (_, y) = t
+  use(y) //% self.expect('expr -d run-target -- t',
+         //%             substrs=['(Int32, Int64)', '111', '222'])
+         //% self.expect('expr -d run-target -- y', substrs=['222'])
+         //% self.expect('fr var -d run-target t',
+         //%             substrs=['(Int32, Int64)', '111', '222'])
+         //% self.expect('fr var -d run-target y', substrs=['222'])
 }
 
 let s = "hello"
-print(single(s))
-print(tuple((s, s)))
+single(s)
+string_tuple((s, s))
+int_tuple((Int32(111), Int64(222)))

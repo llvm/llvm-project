@@ -45,8 +45,8 @@ protected:
 private:
   bool m_enabled;
 
-  // -----------------------------------------------------------
-  // interface for NativeBreakpointList
+  // ----------------------------------------------------------- interface for
+  // NativeBreakpointList
   // -----------------------------------------------------------
   void AddRef();
   int32_t DecRef();

@@ -30,18 +30,11 @@ public:
     // Nothing to do when flushing a buffer based stream...
   }
 
-  virtual size_t Write(const void *s, size_t length) {
-    if (s && length)
-      m_packet.append((const char *)s, ((const char *)s) + length);
-    return length;
-  }
-
   void Clear() { m_packet.clear(); }
 
   // Beware, this might not be NULL terminated as you can expect from
-  // StringString as there may be random bits in the llvm::SmallVector. If
-  // you are using this class to create a C string, be sure the call PutChar
-  // ('\0')
+  // StringString as there may be random bits in the llvm::SmallVector. If you
+  // are using this class to create a C string, be sure the call PutChar ('\0')
   // after you have created your string, or use StreamString.
   const char *GetData() const { return m_packet.data(); }
 
@@ -49,6 +42,12 @@ public:
 
 protected:
   llvm::SmallVector<char, N> m_packet;
+
+  virtual size_t WriteImpl(const void *s, size_t length) {
+    if (s && length)
+      m_packet.append((const char *)s, ((const char *)s) + length);
+    return length;
+  }
 };
 
 } // namespace lldb_private

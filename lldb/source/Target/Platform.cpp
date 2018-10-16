@@ -10,6 +10,7 @@
 // C Includes
 // C++ Includes
 #include <algorithm>
+#include <csignal>
 #include <fstream>
 #include <vector>
 
@@ -45,8 +46,8 @@
 
 #include "llvm/Support/FileSystem.h"
 
-// Define these constants from POSIX mman.h rather than include the file
-// so that they will be correct even when compiled on Linux.
+// Define these constants from POSIX mman.h rather than include the file so
+// that they will be correct even when compiled on Linux.
 #define MAP_PRIVATE 2
 #define MAP_ANON 0x1000
 
@@ -55,8 +56,8 @@ using namespace lldb_private;
 
 static uint32_t g_initialize_count = 0;
 
-// Use a singleton function for g_local_platform_sp to avoid init
-// constructors since LLDB is often part of a shared library
+// Use a singleton function for g_local_platform_sp to avoid init constructors
+// since LLDB is often part of a shared library
 static PlatformSP &GetHostPlatformSP() {
   static PlatformSP g_platform_sp;
   return g_platform_sp;
@@ -66,12 +67,11 @@ const char *Platform::GetHostPlatformName() { return "host"; }
 
 namespace {
 
-PropertyDefinition g_properties[] = {
+static constexpr PropertyDefinition g_properties[] = {
     {"use-module-cache", OptionValue::eTypeBoolean, true, true, nullptr,
-     nullptr, "Use module cache."},
+     {}, "Use module cache."},
     {"module-cache-directory", OptionValue::eTypeFileSpec, true, 0, nullptr,
-     nullptr, "Root directory for cached modules."},
-    {nullptr, OptionValue::eTypeInvalid, false, 0, nullptr, nullptr, nullptr}};
+     {}, "Root directory for cached modules."}};
 
 enum { ePropertyUseModuleCache, ePropertyModuleCacheDirectory };
 
@@ -368,13 +368,11 @@ ArchSpec Platform::GetAugmentedArchSpec(Platform *platform, llvm::StringRef trip
 Platform::Platform(bool is_host)
     : m_is_host(is_host), m_os_version_set_while_connected(false),
       m_system_arch_set_while_connected(false), m_sdk_sysroot(), m_sdk_build(),
-      m_working_dir(), m_remote_url(), m_name(), m_major_os_version(UINT32_MAX),
-      m_minor_os_version(UINT32_MAX), m_update_os_version(UINT32_MAX),
-      m_system_arch(), m_mutex(), m_uid_map(), m_gid_map(),
-      m_max_uid_name_len(0), m_max_gid_name_len(0), m_supports_rsync(false),
-      m_rsync_opts(), m_rsync_prefix(), m_supports_ssh(false), m_ssh_opts(),
-      m_ignores_remote_hostname(false), m_trap_handlers(),
-      m_calculated_trap_handlers(false),
+      m_working_dir(), m_remote_url(), m_name(), m_system_arch(), m_mutex(),
+      m_uid_map(), m_gid_map(), m_max_uid_name_len(0), m_max_gid_name_len(0),
+      m_supports_rsync(false), m_rsync_opts(), m_rsync_prefix(),
+      m_supports_ssh(false), m_ssh_opts(), m_ignores_remote_hostname(false),
+      m_trap_handlers(), m_calculated_trap_handlers(false),
       m_module_cache(llvm::make_unique<ModuleCache>()) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
   if (log)
@@ -394,9 +392,6 @@ Platform::~Platform() {
 }
 
 void Platform::GetStatus(Stream &strm) {
-  uint32_t major = UINT32_MAX;
-  uint32_t minor = UINT32_MAX;
-  uint32_t update = UINT32_MAX;
   std::string s;
   strm.Printf("  Platform: %s\n", GetPluginName().GetCString());
 
@@ -409,12 +404,9 @@ void Platform::GetStatus(Stream &strm) {
     }
   }
 
-  if (GetOSVersion(major, minor, update)) {
-    strm.Printf("OS Version: %u", major);
-    if (minor != UINT32_MAX)
-      strm.Printf(".%u", minor);
-    if (update != UINT32_MAX)
-      strm.Printf(".%u", update);
+  llvm::VersionTuple os_version = GetOSVersion();
+  if (!os_version.empty()) {
+    strm.Format("OS Version: {0}", os_version.getAsString());
 
     if (GetOSBuildString(s))
       strm.Printf(" (%s)", s.c_str());
@@ -446,17 +438,14 @@ void Platform::GetStatus(Stream &strm) {
     strm.Printf("Platform-specific connection: %s\n", specific_info.c_str());
 }
 
-bool Platform::GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update,
-                            Process *process) {
+llvm::VersionTuple Platform::GetOSVersion(Process *process) {
   std::lock_guard<std::mutex> guard(m_mutex);
 
-  bool success = m_major_os_version != UINT32_MAX;
   if (IsHost()) {
-    if (!success) {
+    if (m_os_version.empty()) {
       // We have a local host platform
-      success = HostInfo::GetOSVersion(m_major_os_version, m_minor_os_version,
-                                       m_update_os_version);
-      m_os_version_set_while_connected = success;
+      m_os_version = HostInfo::GetOSVersion();
+      m_os_version_set_while_connected = !m_os_version.empty();
     }
   } else {
     // We have a remote platform. We can only fetch the remote
@@ -466,11 +455,10 @@ bool Platform::GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update,
     const bool is_connected = IsConnected();
 
     bool fetch = false;
-    if (success) {
-      // We have valid OS version info, check to make sure it wasn't
-      // manually set prior to connecting. If it was manually set prior
-      // to connecting, then lets fetch the actual OS version info
-      // if we are now connected.
+    if (!m_os_version.empty()) {
+      // We have valid OS version info, check to make sure it wasn't manually
+      // set prior to connecting. If it was manually set prior to connecting,
+      // then lets fetch the actual OS version info if we are now connected.
       if (is_connected && !m_os_version_set_while_connected)
         fetch = true;
     } else {
@@ -478,22 +466,18 @@ bool Platform::GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update,
       fetch = is_connected;
     }
 
-    if (fetch) {
-      success = GetRemoteOSVersion();
-      m_os_version_set_while_connected = success;
-    }
+    if (fetch)
+      m_os_version_set_while_connected = GetRemoteOSVersion();
   }
 
-  if (success) {
-    major = m_major_os_version;
-    minor = m_minor_os_version;
-    update = m_update_os_version;
-  } else if (process) {
-    // Check with the process in case it can answer the question if
-    // a process was provided
-    return process->GetHostOSVersion(major, minor, update);
+  if (!m_os_version.empty())
+    return m_os_version;
+  if (process) {
+    // Check with the process in case it can answer the question if a process
+    // was provided
+    return process->GetHostOSVersion();
   }
-  return success;
+  return llvm::VersionTuple();
 }
 
 bool Platform::GetOSBuildString(std::string &s) {
@@ -577,8 +561,8 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     // now recurse
     std::string src_dir_path(src.GetPath());
 
-    // Make a filespec that only fills in the directory of a FileSpec so
-    // when we enumerate we can quickly fill in the filename for dst copies
+    // Make a filespec that only fills in the directory of a FileSpec so when
+    // we enumerate we can quickly fill in the filename for dst copies
     FileSpec recurse_dst;
     recurse_dst.GetDirectory().SetCString(dst_dir.GetPath().c_str());
     RecurseCopyBaton rc_baton2 = {recurse_dst, rc_baton->platform_ptr,
@@ -656,9 +640,9 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
       if (first_dst_dir_char == '/' || first_dst_dir_char == '\\') {
         fixed_dst.GetDirectory() = dst.GetDirectory();
       }
-      // If the fixed destination file doesn't have a directory yet,
-      // then we must have a relative path. We will resolve this relative
-      // path against the platform's working directory
+      // If the fixed destination file doesn't have a directory yet, then we
+      // must have a relative path. We will resolve this relative path against
+      // the platform's working directory
       if (!fixed_dst.GetDirectory()) {
         FileSpec relative_spec;
         std::string path;
@@ -859,26 +843,22 @@ const char *Platform::GetGroupName(uint32_t gid) {
   return nullptr;
 }
 
-bool Platform::SetOSVersion(uint32_t major, uint32_t minor, uint32_t update) {
+bool Platform::SetOSVersion(llvm::VersionTuple version) {
   if (IsHost()) {
-    // We don't need anyone setting the OS version for the host platform,
-    // we should be able to figure it out by calling
-    // HostInfo::GetOSVersion(...).
+    // We don't need anyone setting the OS version for the host platform, we
+    // should be able to figure it out by calling HostInfo::GetOSVersion(...).
     return false;
   } else {
-    // We have a remote platform, allow setting the target OS version if
-    // we aren't connected, since if we are connected, we should be able to
+    // We have a remote platform, allow setting the target OS version if we
+    // aren't connected, since if we are connected, we should be able to
     // request the remote OS version from the connected platform.
     if (IsConnected())
       return false;
     else {
-      // We aren't connected and we might want to set the OS version
-      // ahead of time before we connect so we can peruse files and
-      // use a local SDK or PDK cache of support files to disassemble
-      // or do other things.
-      m_major_os_version = major;
-      m_minor_os_version = minor;
-      m_update_os_version = update;
+      // We aren't connected and we might want to set the OS version ahead of
+      // time before we connect so we can peruse files and use a local SDK or
+      // PDK cache of support files to disassemble or do other things.
+      m_os_version = version;
       return true;
     }
   }
@@ -896,9 +876,9 @@ Platform::ResolveExecutable(const ModuleSpec &module_spec,
                                           module_search_paths_ptr, nullptr,
                                           nullptr);
     } else {
-      // No valid architecture was specified, ask the platform for
-      // the architectures that we should be using (in the correct order)
-      // and see if we can find a match that way
+      // No valid architecture was specified, ask the platform for the
+      // architectures that we should be using (in the correct order) and see
+      // if we can find a match that way
       ModuleSpec arch_module_spec(module_spec);
       for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
                idx, arch_module_spec.GetArchitecture());
@@ -942,18 +922,17 @@ const ArchSpec &Platform::GetSystemArchitecture() {
       m_system_arch_set_while_connected = m_system_arch.IsValid();
     }
   } else {
-    // We have a remote platform. We can only fetch the remote
-    // system architecture if we are connected, and we don't want to do it
-    // more than once.
+    // We have a remote platform. We can only fetch the remote system
+    // architecture if we are connected, and we don't want to do it more than
+    // once.
 
     const bool is_connected = IsConnected();
 
     bool fetch = false;
     if (m_system_arch.IsValid()) {
-      // We have valid OS version info, check to make sure it wasn't
-      // manually set prior to connecting. If it was manually set prior
-      // to connecting, then lets fetch the actual OS version info
-      // if we are now connected.
+      // We have valid OS version info, check to make sure it wasn't manually
+      // set prior to connecting. If it was manually set prior to connecting,
+      // then lets fetch the actual OS version info if we are now connected.
       if (is_connected && !m_system_arch_set_while_connected)
         fetch = true;
     } else {
@@ -1025,8 +1004,8 @@ Status Platform::DisconnectRemote() {
 
 bool Platform::GetProcessInfo(lldb::pid_t pid,
                               ProcessInstanceInfo &process_info) {
-  // Take care of the host case so that each subclass can just
-  // call this function to get the host functionality.
+  // Take care of the host case so that each subclass can just call this
+  // function to get the host functionality.
   if (IsHost())
     return Host::GetProcessInfo(pid, process_info);
   return false;
@@ -1034,8 +1013,8 @@ bool Platform::GetProcessInfo(lldb::pid_t pid,
 
 uint32_t Platform::FindProcesses(const ProcessInstanceInfoMatch &match_info,
                                  ProcessInstanceInfoList &process_infos) {
-  // Take care of the host case so that each subclass can just
-  // call this function to get the host functionality.
+  // Take care of the host case so that each subclass can just call this
+  // function to get the host functionality.
   uint32_t match_count = 0;
   if (IsHost())
     match_count = Host::FindProcesses(match_info, process_infos);
@@ -1048,8 +1027,8 @@ Status Platform::LaunchProcess(ProcessLaunchInfo &launch_info) {
   if (log)
     log->Printf("Platform::%s()", __FUNCTION__);
 
-  // Take care of the host case so that each subclass can just
-  // call this function to get the host functionality.
+  // Take care of the host case so that each subclass can just call this
+  // function to get the host functionality.
   if (IsHost()) {
     if (::getenv("LLDB_LAUNCH_FLAG_LAUNCH_IN_TTY"))
       launch_info.GetFlags().Set(eLaunchFlagLaunchInTTY);
@@ -1106,8 +1085,7 @@ Status Platform::KillProcess(const lldb::pid_t pid) {
     log->Printf("Platform::%s, pid %" PRIu64, __FUNCTION__, pid);
 
   // Try to find a process plugin to handle this Kill request.  If we can't,
-  // fall back to
-  // the default OS implementation.
+  // fall back to the default OS implementation.
   size_t num_debuggers = Debugger::GetNumDebuggers();
   for (size_t didx = 0; didx < num_debuggers; ++didx) {
     DebuggerSP debugger = Debugger::GetDebuggerAtIndex(didx);
@@ -1142,23 +1120,22 @@ Platform::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
   // Make sure we stop at the entry point
   launch_info.GetFlags().Set(eLaunchFlagDebug);
   // We always launch the process we are going to debug in a separate process
-  // group, since then we can handle ^C interrupts ourselves w/o having to worry
-  // about the target getting them as well.
+  // group, since then we can handle ^C interrupts ourselves w/o having to
+  // worry about the target getting them as well.
   launch_info.SetLaunchInSeparateProcessGroup(true);
 
   // Allow any StructuredData process-bound plugins to adjust the launch info
   // if needed
   size_t i = 0;
   bool iteration_complete = false;
-  // Note iteration can't simply go until a nullptr callback is returned, as
-  // it is valid for a plugin to not supply a filter.
+  // Note iteration can't simply go until a nullptr callback is returned, as it
+  // is valid for a plugin to not supply a filter.
   auto get_filter_func = PluginManager::GetStructuredDataFilterCallbackAtIndex;
   for (auto filter_callback = get_filter_func(i, iteration_complete);
        !iteration_complete;
        filter_callback = get_filter_func(++i, iteration_complete)) {
     if (filter_callback) {
-      // Give this ProcessLaunchInfo filter a chance to adjust the launch
-      // info.
+      // Give this ProcessLaunchInfo filter a chance to adjust the launch info.
       error = (*filter_callback)(launch_info, target);
       if (!error.Success()) {
         if (log)
@@ -1191,10 +1168,10 @@ Platform::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
         // process if this happens.
         process_sp->SetShouldDetach(false);
 
-        // If we didn't have any file actions, the pseudo terminal might
-        // have been used where the slave side was given as the file to
-        // open for stdin/out/err after we have already opened the master
-        // so we can read/write stdin/out/err.
+        // If we didn't have any file actions, the pseudo terminal might have
+        // been used where the slave side was given as the file to open for
+        // stdin/out/err after we have already opened the master so we can
+        // read/write stdin/out/err.
         int pty_fd = launch_info.GetPTY().ReleaseMasterFileDescriptor();
         if (pty_fd != PseudoTerminal::invalid_fd) {
           process_sp->SetSTDIOFileDescriptor(pty_fd);
@@ -1313,8 +1290,8 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
 
     offset += bytes_written;
     if (bytes_written != bytes_read) {
-      // We didn't write the correct number of bytes, so adjust
-      // the file position in the source file we are reading from...
+      // We didn't write the correct number of bytes, so adjust the file
+      // position in the source file we are reading from...
       source_file.SeekFromStart(offset);
     }
   }
@@ -1373,12 +1350,10 @@ lldb_private::Status Platform::RunShellCommand(
                     // process to exit
     std::string
         *command_output, // Pass nullptr if you don't want the command output
-    uint32_t
-        timeout_sec) // Timeout in seconds to wait for shell program to finish
-{
+    const Timeout<std::micro> &timeout) {
   if (IsHost())
     return Host::RunShellCommand(command, working_dir, status_ptr, signo_ptr,
-                                 command_output, timeout_sec);
+                                 command_output, timeout);
   else
     return Status("unimplemented");
 }
@@ -1402,32 +1377,32 @@ const char *Platform::GetLocalCacheDirectory() {
   return m_local_cache_directory.c_str();
 }
 
-static OptionDefinition g_rsync_option_table[] = {
+static constexpr OptionDefinition g_rsync_option_table[] = {
     {LLDB_OPT_SET_ALL, false, "rsync", 'r', OptionParser::eNoArgument, nullptr,
-     nullptr, 0, eArgTypeNone, "Enable rsync."},
+     {}, 0, eArgTypeNone, "Enable rsync."},
     {LLDB_OPT_SET_ALL, false, "rsync-opts", 'R',
-     OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCommandName,
+     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeCommandName,
      "Platform-specific options required for rsync to work."},
     {LLDB_OPT_SET_ALL, false, "rsync-prefix", 'P',
-     OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCommandName,
+     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeCommandName,
      "Platform-specific rsync prefix put before the remote path."},
     {LLDB_OPT_SET_ALL, false, "ignore-remote-hostname", 'i',
-     OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
+     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
      "Do not automatically fill in the remote hostname when composing the "
      "rsync command."},
 };
 
-static OptionDefinition g_ssh_option_table[] = {
+static constexpr OptionDefinition g_ssh_option_table[] = {
     {LLDB_OPT_SET_ALL, false, "ssh", 's', OptionParser::eNoArgument, nullptr,
-     nullptr, 0, eArgTypeNone, "Enable SSH."},
+     {}, 0, eArgTypeNone, "Enable SSH."},
     {LLDB_OPT_SET_ALL, false, "ssh-opts", 'S', OptionParser::eRequiredArgument,
-     nullptr, nullptr, 0, eArgTypeCommandName,
+     nullptr, {}, 0, eArgTypeCommandName,
      "Platform-specific options required for SSH to work."},
 };
 
-static OptionDefinition g_caching_option_table[] = {
+static constexpr OptionDefinition g_caching_option_table[] = {
     {LLDB_OPT_SET_ALL, false, "local-cache-dir", 'c',
-     OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypePath,
+     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypePath,
      "Path in which to store local copies of files."},
 };
 
@@ -1539,10 +1514,7 @@ lldb_private::Status OptionGroupPlatformCaching::SetOptionValue(
   return error;
 }
 
-size_t Platform::GetEnvironment(StringList &environment) {
-  environment.Clear();
-  return false;
-}
+Environment Platform::GetEnvironment() { return Environment(); }
 
 const std::vector<ConstString> &Platform::GetTrapHandlerSymbolNames() {
   if (!m_calculated_trap_handlers) {
@@ -1602,9 +1574,9 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
 
   if (module_spec.GetArchitecture().IsValid() == false) {
     Status error;
-    // No valid architecture was specified, ask the platform for
-    // the architectures that we should be using (in the correct order)
-    // and see if we can find a match that way
+    // No valid architecture was specified, ask the platform for the
+    // architectures that we should be using (in the correct order) and see if
+    // we can find a match that way
     ModuleSpec arch_module_spec(module_spec);
     for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
              idx, arch_module_spec.GetArchitecture());
@@ -1808,7 +1780,8 @@ uint32_t Platform::LoadImageUsingPaths(lldb_private::Process *process,
   FileSpec file_to_use;
   if (remote_filename.IsAbsolute())
     file_to_use = FileSpec(remote_filename.GetFilename().GetStringRef(), 
-                               false);
+                               false, 
+                               remote_filename.GetPathStyle());
   else
     file_to_use = remote_filename;
     
@@ -1829,8 +1802,8 @@ lldb::ProcessSP Platform::ConnectProcess(llvm::StringRef connect_url,
 
   if (!target) {
     TargetSP new_target_sp;
-    error = debugger.GetTargetList().CreateTarget(debugger, "", "", false,
-                                                  nullptr, new_target_sp);
+    error = debugger.GetTargetList().CreateTarget(
+        debugger, "", "", eLoadDependentsNo, nullptr, new_target_sp);
     target = new_target_sp.get();
   }
 
@@ -1873,22 +1846,22 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
 
   // TODO: support big-endian arm and thumb trap codes.
   case llvm::Triple::arm: {
-    // The ARM reference recommends the use of 0xe7fddefe and 0xdefe
-    // but the linux kernel does otherwise.
+    // The ARM reference recommends the use of 0xe7fddefe and 0xdefe but the
+    // linux kernel does otherwise.
     static const uint8_t g_arm_breakpoint_opcode[] = {0xf0, 0x01, 0xf0, 0xe7};
     static const uint8_t g_thumb_breakpoint_opcode[] = {0x01, 0xde};
 
     lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
-    AddressClass addr_class = eAddressClassUnknown;
+    AddressClass addr_class = AddressClass::eUnknown;
 
     if (bp_loc_sp) {
       addr_class = bp_loc_sp->GetAddress().GetAddressClass();
-      if (addr_class == eAddressClassUnknown &&
+      if (addr_class == AddressClass::eUnknown &&
           (bp_loc_sp->GetAddress().GetFileAddress() & 1))
-        addr_class = eAddressClassCodeAlternateISA;
+        addr_class = AddressClass::eCodeAlternateISA;
     }
 
-    if (addr_class == eAddressClassCodeAlternateISA) {
+    if (addr_class == AddressClass::eCodeAlternateISA) {
       trap_opcode = g_thumb_breakpoint_opcode;
       trap_opcode_size = sizeof(g_thumb_breakpoint_opcode);
     } else {

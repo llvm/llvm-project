@@ -44,6 +44,10 @@ namespace irgen {
 class FixedTypeInfo;
 class TypeInfo;
 }
+namespace serialization {
+struct ValidationInfo;
+struct ExtendedValidationInfo;
+}
 }
 
 class DWARFASTParser;
@@ -57,7 +61,7 @@ public:
 
 private:
   struct EitherComparator {
-    bool operator()(const TypeOrDecl &r1, const TypeOrDecl &r2) {
+    bool operator()(const TypeOrDecl &r1, const TypeOrDecl &r2) const {
       auto r1_as1 = r1.GetAs<CompilerType>();
       auto r1_as2 = r1.GetAs<swift::Decl *>();
 
@@ -294,6 +298,9 @@ public:
   CompilerType GetTypeFromMangledTypename(const char *mangled_typename,
                                           Status &error);
 
+  // Retrieve the Swift.AnyObject type.
+  CompilerType GetAnyObjectType();
+
   // Get a function type that returns nothing and take no parameters
   CompilerType GetVoidFunctionType();
 
@@ -332,9 +339,6 @@ public:
   };
 
   CompilerType CreateTupleType(const std::vector<TupleElement> &elements);
-
-  CompilerType CreateFunctionType(CompilerType arg_type, CompilerType ret_type,
-                                  bool throws = false);
 
   CompilerType GetErrorType();
 
@@ -405,10 +409,6 @@ public:
   const swift::irgen::FixedTypeInfo *GetSwiftFixedTypeInfo(void *type);
 
   DWARFASTParser *GetDWARFParser() override;
-
-  CompilerType GetIntTypeFromBitSize(size_t bit_size, bool is_signed);
-
-  CompilerType GetFloatTypeFromBitSize(size_t bit_size);
 
   //----------------------------------------------------------------------
   // CompilerDecl functions
@@ -815,15 +815,18 @@ protected:
 
   std::vector<lldb::DataBufferSP> &GetASTVectorForModule(const Module *module);
 
+  std::unique_ptr<swift::CompilerInvocation> m_compiler_invocation_ap;
   std::unique_ptr<swift::SourceManager> m_source_manager_ap;
   std::unique_ptr<swift::DiagnosticEngine> m_diagnostic_engine_ap;
+  // CompilerInvocation, SourceMgr, and DiagEngine must come
+  // before the ASTContext, so they get deallocated *after* the
+  // ASTContext.
   std::unique_ptr<swift::ASTContext> m_ast_context_ap;
   std::unique_ptr<llvm::TargetOptions> m_target_options_ap;
   std::unique_ptr<swift::irgen::IRGenerator> m_ir_generator_ap;
   std::unique_ptr<swift::irgen::IRGenModule> m_ir_gen_module_ap;
   llvm::once_flag m_ir_gen_module_once;
   std::unique_ptr<swift::DiagnosticConsumer> m_diagnostic_consumer_ap;
-  std::unique_ptr<swift::CompilerInvocation> m_compiler_invocation_ap;
   std::unique_ptr<DWARFASTParser> m_dwarf_ast_parser_ap;
   Status m_error; // Any errors that were found while creating or using the AST
                  // context
@@ -910,6 +913,12 @@ public:
 private:
   std::unique_ptr<SwiftPersistentExpressionState> m_persistent_state_up;
 };
+
+void printASTValidationInfo(
+    const swift::serialization::ValidationInfo &ast_info,
+    const swift::serialization::ExtendedValidationInfo &ext_ast_info,
+    const Module &module, llvm::StringRef module_buf);
+
 }
 
 #endif // #ifndef liblldb_SwiftASTContext_h_

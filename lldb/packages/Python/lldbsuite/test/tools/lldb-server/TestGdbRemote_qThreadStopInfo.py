@@ -16,7 +16,7 @@ class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
     THREAD_COUNT = 5
 
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    @skipIfDarwinEmbedded # <rdar://problem/27005337> 
+    @skipIfDarwinEmbedded # <rdar://problem/27005337>
     def gather_stop_replies_via_qThreadStopInfo(self, thread_count):
         # Set up the inferior args.
         inferior_args = []

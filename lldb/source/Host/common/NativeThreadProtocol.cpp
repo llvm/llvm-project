@@ -19,36 +19,3 @@ using namespace lldb_private;
 NativeThreadProtocol::NativeThreadProtocol(NativeProcessProtocol &process,
                                            lldb::tid_t tid)
     : m_process(process), m_tid(tid) {}
-
-Status NativeThreadProtocol::ReadRegister(uint32_t reg,
-                                          RegisterValue &reg_value) {
-  NativeRegisterContext &register_context = GetRegisterContext();
-
-  const RegisterInfo *const reg_info =
-      register_context.GetRegisterInfoAtIndex(reg);
-  if (!reg_info)
-    return Status("no register info for reg num %" PRIu32, reg);
-
-  return register_context.ReadRegister(reg_info, reg_value);
-  ;
-}
-
-Status NativeThreadProtocol::WriteRegister(uint32_t reg,
-                                           const RegisterValue &reg_value) {
-  NativeRegisterContext& register_context = GetRegisterContext();
-
-  const RegisterInfo *const reg_info =
-      register_context.GetRegisterInfoAtIndex(reg);
-  if (!reg_info)
-    return Status("no register info for reg num %" PRIu32, reg);
-
-  return register_context.WriteRegister(reg_info, reg_value);
-}
-
-Status NativeThreadProtocol::SaveAllRegisters(lldb::DataBufferSP &data_sp) {
-  return GetRegisterContext().WriteAllRegisterValues(data_sp);
-}
-
-Status NativeThreadProtocol::RestoreAllRegisters(lldb::DataBufferSP &data_sp) {
-  return GetRegisterContext().ReadAllRegisterValues(data_sp);
-}

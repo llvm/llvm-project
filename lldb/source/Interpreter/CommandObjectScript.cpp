@@ -18,10 +18,10 @@
 
 #include "lldb/DataFormatters/DataVisualization.h"
 
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Utility/Args.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -40,7 +40,7 @@ CommandObjectScript::CommandObjectScript(CommandInterpreter &interpreter,
 
 CommandObjectScript::~CommandObjectScript() {}
 
-bool CommandObjectScript::DoExecute(const char *command,
+bool CommandObjectScript::DoExecute(llvm::StringRef command,
                                     CommandReturnObject &result) {
 #ifdef LLDB_DISABLE_PYTHON
   // if we ever support languages other than Python this simple #ifdef won't
@@ -69,7 +69,7 @@ bool CommandObjectScript::DoExecute(const char *command,
                                     // for formatting.. make sure we keep up to
                                     // date with it
 
-  if (command == nullptr || command[0] == '\0') {
+  if (command.empty()) {
     script_interpreter->ExecuteInterpreterLoop();
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
     return result.Succeeded();

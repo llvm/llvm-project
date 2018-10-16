@@ -98,10 +98,10 @@ public:
   lldb::SBThread GetSelectedThread() const;
 
   //------------------------------------------------------------------
-  // Function for lazily creating a thread using the current OS
-  // plug-in. This function will be removed in the future when there
-  // are APIs to create SBThread objects through the interface and add
-  // them to the process through the SBProcess API.
+  // Function for lazily creating a thread using the current OS plug-in. This
+  // function will be removed in the future when there are APIs to create
+  // SBThread objects through the interface and add them to the process through
+  // the SBProcess API.
   //------------------------------------------------------------------
   lldb::SBThread CreateOSPluginThread(lldb::tid_t tid, lldb::addr_t context);
 
@@ -318,11 +318,11 @@ public:
   /// library name and a list of paths, searching along the list of
   /// paths till you find a matching library.
   ///
-  /// @param[in] local_spec
+  /// @param[in] image_spec
   ///     The name of the shared library that you want to load.  
-  ///     If local_spec is a relative path, the relative path will be
+  ///     If image_spec is a relative path, the relative path will be
   ///     appended to the search paths.
-  ///     If the local_spec is an absolute path, just the basename is used.
+  ///     If the image_spec is an absolute path, just the basename is used.
   ///
   /// @param[in] paths
   ///     A list of paths to search for the library whose basename is 

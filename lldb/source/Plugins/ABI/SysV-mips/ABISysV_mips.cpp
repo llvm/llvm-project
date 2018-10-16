@@ -698,8 +698,8 @@ bool ABISysV_mips::PrepareTrivialCall(Thread &thread, addr_t sp,
   if (log)
     log->Printf("Writing r25: 0x%" PRIx64, (uint64_t)func_addr);
 
-  // All callers of position independent functions must place the address of the
-  // called function in t9 (r25)
+  // All callers of position independent functions must place the address of
+  // the called function in t9 (r25)
   if (!reg_ctx->WriteRegisterFromUnsigned(r25_info, func_addr))
     return false;
 
@@ -867,8 +867,8 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
         UINT32_MAX;
     value.GetScalar() = ptr;
   } else if (return_compiler_type.IsAggregateType()) {
-    // Structure/Vector is always passed in memory and pointer to that memory is
-    // passed in r2.
+    // Structure/Vector is always passed in memory and pointer to that memory
+    // is passed in r2.
     uint64_t mem_address = reg_ctx->ReadRegisterAsUnsigned(
         reg_ctx->GetRegisterInfoByName("r2", 0), 0);
     // We have got the address. Create a memory object out of it

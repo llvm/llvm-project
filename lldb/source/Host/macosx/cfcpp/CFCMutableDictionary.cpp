@@ -352,9 +352,8 @@ bool CFCMutableDictionary::AddValueUInt64(CFStringRef key, uint64_t value,
   CFMutableDictionaryRef dict = Dictionary(can_create);
   if (dict != NULL) {
     // The number may appear negative if the MSBit is set in "value". Due to a
-    // limitation of
-    // CFNumber, there isn't a way to have it show up otherwise as of this
-    // writing.
+    // limitation of CFNumber, there isn't a way to have it show up otherwise
+    // as of this writing.
     CFCReleaser<CFNumberRef> cf_number(
         ::CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt64Type, &value));
     if (cf_number.get()) {
@@ -371,9 +370,8 @@ bool CFCMutableDictionary::SetValueUInt64(CFStringRef key, uint64_t value,
   CFMutableDictionaryRef dict = Dictionary(can_create);
   if (dict != NULL) {
     // The number may appear negative if the MSBit is set in "value". Due to a
-    // limitation of
-    // CFNumber, there isn't a way to have it show up otherwise as of this
-    // writing.
+    // limitation of CFNumber, there isn't a way to have it show up otherwise
+    // as of this writing.
     CFCReleaser<CFNumberRef> cf_number(
         ::CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt64Type, &value));
     if (cf_number.get()) {
@@ -390,9 +388,8 @@ bool CFCMutableDictionary::AddValueDouble(CFStringRef key, double value,
   CFMutableDictionaryRef dict = Dictionary(can_create);
   if (dict != NULL) {
     // The number may appear negative if the MSBit is set in "value". Due to a
-    // limitation of
-    // CFNumber, there isn't a way to have it show up otherwise as of this
-    // writing.
+    // limitation of CFNumber, there isn't a way to have it show up otherwise
+    // as of this writing.
     CFCReleaser<CFNumberRef> cf_number(
         ::CFNumberCreate(kCFAllocatorDefault, kCFNumberDoubleType, &value));
     if (cf_number.get()) {
@@ -409,9 +406,8 @@ bool CFCMutableDictionary::SetValueDouble(CFStringRef key, double value,
   CFMutableDictionaryRef dict = Dictionary(can_create);
   if (dict != NULL) {
     // The number may appear negative if the MSBit is set in "value". Due to a
-    // limitation of
-    // CFNumber, there isn't a way to have it show up otherwise as of this
-    // writing.
+    // limitation of CFNumber, there isn't a way to have it show up otherwise
+    // as of this writing.
     CFCReleaser<CFNumberRef> cf_number(
         ::CFNumberCreate(kCFAllocatorDefault, kCFNumberDoubleType, &value));
     if (cf_number.get()) {

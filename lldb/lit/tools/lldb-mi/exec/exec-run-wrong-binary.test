@@ -1,0 +1,6 @@
+# RUN: %lldbmi < %s | FileCheck %s
+
+# Test that -exec-run command won't hang in case of wrong name of binary file.
+
+-file-exec-and-symbols name.exe
+# CHECK: ^error,msg="Command 'file-exec-and-symbols'. Target binary 'name.exe' is invalid.

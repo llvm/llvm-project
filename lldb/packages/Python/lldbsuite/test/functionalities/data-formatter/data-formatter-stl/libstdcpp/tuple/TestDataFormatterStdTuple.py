@@ -40,7 +40,7 @@ class StdTupleDataFormatterTestCase(TestBase):
 
         self.assertEqual('"foobar"', frame.GetValueForVariablePath("ts[0]").GetSummary())
         self.assertFalse(frame.GetValueForVariablePath("ts[1]").IsValid())
-        
+
         self.assertEqual(1, frame.GetValueForVariablePath("tt[0]").GetValueAsUnsigned())
         self.assertEqual('"baz"', frame.GetValueForVariablePath("tt[1]").GetSummary())
         self.assertEqual(2, frame.GetValueForVariablePath("tt[2]").GetValueAsUnsigned())

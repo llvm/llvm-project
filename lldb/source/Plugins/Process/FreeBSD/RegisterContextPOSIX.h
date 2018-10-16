@@ -13,14 +13,14 @@
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
-#include "RegisterInfoInterface.h"
+#include "Plugins/Process/Utility/RegisterInfoInterface.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/ArchSpec.h"
 
 //------------------------------------------------------------------------------
 /// @class POSIXBreakpointProtocol
 ///
-/// @brief Extends RegisterClass with a few virtual operations useful on POSIX.
+/// Extends RegisterClass with a few virtual operations useful on POSIX.
 class POSIXBreakpointProtocol {
 public:
   POSIXBreakpointProtocol() { m_watchpoints_initialized = false; }

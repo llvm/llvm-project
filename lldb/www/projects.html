@@ -403,6 +403,20 @@
                                             </li>
 
                                             <li>
+                                              Convert the dotest style tests to use lldbutil.run_to_source_breakpoint.
+
+                                              <p>
+                                                run_to_source_breakpoint & run_to_name_breakpoint provide a compact API that
+                                                does in one line what the first 10 or 20 lines of most of the old tests now do by
+                                                hand.  Using these functions makes tests much more readable, and by centralizing
+                                                common functionality will make maintaining the testsuites easier in the future.
+                                                This is more of a finger exercise, and perhaps best implemented by a rule like:
+                                                &quotIf you touch a test case, and it isn't using run_to_source_breakpoint, please
+                                                make it do so&quot.
+                                              </p>
+                                            </li>
+
+                                            <li>
                                               Unify Watchpoint's & Breakpoints.  
                                               <p>
                                                 Option handling isn't shared, and more importantly the PerformAction's have a lot 

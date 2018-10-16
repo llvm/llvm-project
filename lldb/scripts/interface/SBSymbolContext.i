@@ -12,7 +12,7 @@ namespace lldb {
 %feature("docstring",
 "A context object that provides access to core debugger entities.
 
-Manay debugger functions require a context when doing lookups. This class
+Many debugger functions require a context when doing lookups. This class
 provides a common structure that can be used as the result of a query that
 can contain a single result.
 

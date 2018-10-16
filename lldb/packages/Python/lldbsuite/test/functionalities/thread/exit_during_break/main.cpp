@@ -86,7 +86,7 @@ int main ()
     // last in the internal list maintained by the debugger.
     pseudo_barrier_init(g_barrier1, 5);
 
-    // The second break synchronyizes thread exection with the breakpoint.
+    // The second break synchronizes thread execution with the breakpoint.
     pseudo_barrier_init(g_barrier2, 5);
 
     // The third barrier keeps the waiting threads around until the breakpoint

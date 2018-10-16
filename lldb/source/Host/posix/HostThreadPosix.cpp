@@ -41,14 +41,11 @@ Status HostThreadPosix::Join(lldb::thread_result_t *result) {
 Status HostThreadPosix::Cancel() {
   Status error;
   if (IsJoinable()) {
-#ifndef __ANDROID__
 #ifndef __FreeBSD__
     llvm_unreachable("someone is calling HostThread::Cancel()");
-#endif
+#else
     int err = ::pthread_cancel(m_thread);
     error.SetError(err, eErrorTypePOSIX);
-#else
-    error.SetErrorString("HostThreadPosix::Cancel() not supported on Android");
 #endif
   }
   return error;

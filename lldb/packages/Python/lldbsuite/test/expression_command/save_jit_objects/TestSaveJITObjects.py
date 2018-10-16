@@ -16,7 +16,7 @@ class SaveJITObjectsTestCase(TestBase):
 
     def enumerateJITFiles(self):
         return [f for f in os.listdir(self.getBuildDir()) if f.startswith("jit")]
-    
+
     def countJITFiles(self):
         return len(self.enumerateJITFiles())
 

@@ -152,23 +152,13 @@ public:
                          Type *type) {
     size_t type_size = m_target_data.getTypeStoreSize(type);
 
-    switch (type_size) {
-    case 1:
-      scalar = (uint8_t)u64value;
-      break;
-    case 2:
-      scalar = (uint16_t)u64value;
-      break;
-    case 4:
-      scalar = (uint32_t)u64value;
-      break;
-    case 8:
-      scalar = (uint64_t)u64value;
-      break;
-    default:
+    if (type_size > 8)
       return false;
-    }
 
+    if (type_size != 1)
+      type_size = PowerOf2Ceil(type_size);
+
+    scalar = llvm::APInt(type_size*8, u64value);
     return true;
   }
 
@@ -198,8 +188,7 @@ public:
         return false;
 
       lldb::offset_t offset = 0;
-      if (value_size == 1 || value_size == 2 || value_size == 4 ||
-          value_size == 8) {
+      if (value_size <= 8) {
         uint64_t u64value = value_extractor.GetMaxU64(&offset, value_size);
         return AssignToMatchType(scalar, u64value, value->getType());
       }
@@ -1579,8 +1568,8 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
 
-      // Push all function arguments to the argument list that will
-      // be passed to the call function thread plan
+      // Push all function arguments to the argument list that will be passed
+      // to the call function thread plan
       for (int i = 0; i < numArgs; i++) {
         // Get details of this argument
         llvm::Value *arg_op = call_inst->getArgOperand(i);

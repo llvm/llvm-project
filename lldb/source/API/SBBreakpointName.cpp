@@ -52,8 +52,8 @@ public:
   bool operator==(const SBBreakpointNameImpl &rhs);
   bool operator!=(const SBBreakpointNameImpl &rhs);
 
-  // For now we take a simple approach and only keep the name, and relook
-  // up the location when we need it.
+  // For now we take a simple approach and only keep the name, and relook up
+  // the location when we need it.
   
   TargetSP GetTarget() const {
     return m_target_wp.lock();
@@ -115,8 +115,7 @@ SBBreakpointName::SBBreakpointName() {}
 SBBreakpointName::SBBreakpointName(SBTarget &sb_target, const char *name)
 {
   m_impl_up.reset(new SBBreakpointNameImpl(sb_target, name));
-  // Call FindBreakpointName here to make sure the name is valid, reset if
-  // not:
+  // Call FindBreakpointName here to make sure the name is valid, reset if not:
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     m_impl_up.reset();
@@ -133,8 +132,7 @@ SBBreakpointName::SBBreakpointName(SBBreakpoint &sb_bkpt, const char *name)
 
   m_impl_up.reset(new SBBreakpointNameImpl(target.shared_from_this(), name));
   
-  // Call FindBreakpointName here to make sure the name is valid, reset if
-  // not:
+  // Call FindBreakpointName here to make sure the name is valid, reset if not:
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name) {
     m_impl_up.reset();

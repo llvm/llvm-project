@@ -33,6 +33,8 @@ def check_first_register_readable(test_case):
         test_case.expect("register read zero", substrs=['zero = 0x'])
     elif arch in ['s390x']:
         test_case.expect("register read r0", substrs=['r0 = 0x'])
+    elif arch in ['powerpc64le']:
+        test_case.expect("register read r0", substrs=['r0 = 0x'])
     else:
         # TODO: Add check for other architectures
         test_case.fail(
@@ -109,7 +111,7 @@ def getHostPlatform():
     # Attempts to return a platform name matching a target Triple platform.
     if sys.platform.startswith('linux'):
         return 'linux'
-    elif sys.platform.startswith('win32'):
+    elif sys.platform.startswith('win32') or sys.platform.startswith('cygwin'):
         return 'windows'
     elif sys.platform.startswith('darwin'):
         return 'darwin'

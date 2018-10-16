@@ -24,7 +24,7 @@ class AsanTestReportDataCase(TestBase):
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @skipIfRemote
     @skipUnlessAddressSanitizer
-    @expectedFailureAll(archs=['i386'], bugnumber="rdar://28658860")
+    @skipIf(archs=['i386'], bugnumber="llvm.org/PR36710")
     def test(self):
         self.build()
         self.asan_tests()
@@ -37,6 +37,7 @@ class AsanTestReportDataCase(TestBase):
         self.line_free = line_number('main.c', '// free line')
         self.line_breakpoint = line_number('main.c', '// break line')
         self.line_crash = line_number('main.c', '// BOOM line')
+        self.col_crash = 16
 
     def asan_tests(self):
         exe = self.getBuildArtifact("a.out")
@@ -63,7 +64,7 @@ class AsanTestReportDataCase(TestBase):
             lldb.eStopReasonInstrumentation)
 
         self.expect("bt", "The backtrace should show the crashing line",
-                    substrs=['main.c:%d' % self.line_crash])
+                    substrs=['main.c:%d:%d' % (self.line_crash, self.col_crash)])
 
         self.expect(
             "thread info -s",

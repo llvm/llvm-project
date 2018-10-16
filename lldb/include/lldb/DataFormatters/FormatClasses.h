@@ -160,8 +160,8 @@ public:
 
 private:
   bool m_is_regex;
-  // this works better than TypeAndOrName because the latter only wraps a TypeSP
-  // whereas TypePair can also be backed by a CompilerType
+  // this works better than TypeAndOrName because the latter only wraps a
+  // TypeSP whereas TypePair can also be backed by a CompilerType
   struct TypeOrName {
     std::string m_type_name;
     TypePair m_type_pair;

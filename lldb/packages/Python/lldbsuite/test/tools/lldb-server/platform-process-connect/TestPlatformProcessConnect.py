@@ -34,9 +34,9 @@ class TestPlatformProcessConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
         unix_protocol = protocol.startswith("unix-")
         if unix_protocol:
             p = re.search("^(.*)-connect", protocol)
-            listen_url = "%s://%s" % (p.group(1),
-                                      os.path.join(working_dir,
-                                                   "platform-%d.sock" % int(time.time())))
+            path = lldbutil.join_remote_paths(configuration.lldb_platform_working_dir,
+                    self.getBuildDirBasename(), "platform-%d.sock" % int(time.time()))
+            listen_url = "%s://%s" % (p.group(1), path)
         else:
             listen_url = "*:0"
 

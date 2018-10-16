@@ -50,12 +50,12 @@ private:
 
 //----------------------------------------------------------------------
 /// @class GoUserExpression GoUserExpression.h
-/// "lldb/Expression/GoUserExpression.h"
-/// @brief Encapsulates a single expression for use with Go
+/// "lldb/Expression/GoUserExpression.h" Encapsulates a single expression for
+/// use with Go
 ///
 /// LLDB uses expressions for various purposes, notably to call functions
-/// and as a backend for the expr command.  GoUserExpression encapsulates
-/// the objects needed to parse and interpret an expression.
+/// and as a backend for the expr command.  GoUserExpression encapsulates the
+/// objects needed to parse and interpret an expression.
 //----------------------------------------------------------------------
 class GoUserExpression : public UserExpression {
 public:
@@ -70,7 +70,6 @@ public:
              uint32_t line_offset) override;
 
   bool CanInterpret() override { return true; }
-
   bool FinalizeJITExecution(
       DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
       lldb::ExpressionVariableSP &result,

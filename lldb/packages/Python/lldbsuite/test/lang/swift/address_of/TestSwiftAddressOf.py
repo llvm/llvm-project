@@ -23,7 +23,6 @@ import unittest2
 class TestSwiftAddressOf(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
-    NO_DEBUG_INFO_TESTCASE = True
 
     @decorators.swiftTest
     @decorators.add_test_categories(["swiftpr"])

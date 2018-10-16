@@ -52,7 +52,7 @@ public:
 
     void UpdateIfNeeded();
 
-    size_t DisplaySourceLines(uint32_t line, uint32_t column,
+    size_t DisplaySourceLines(uint32_t line, llvm::Optional<size_t> column,
                               uint32_t context_before, uint32_t context_after,
                               Stream *s);
     void FindLinesMatchingRegex(RegularExpression &regex, uint32_t start_line,
@@ -106,9 +106,8 @@ public:
 
 #ifndef SWIG
   // The SourceFileCache class separates the source manager from the cache of
-  // source files, so the
-  // cache can be stored in the Debugger, but the source managers can be per
-  // target.
+  // source files, so the cache can be stored in the Debugger, but the source
+  // managers can be per target.
   class SourceFileCache {
   public:
     SourceFileCache() = default;

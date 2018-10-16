@@ -60,8 +60,7 @@ void Block::Dump(Stream *s, addr_t base_addr, int32_t depth,
   if (depth < 0) {
     Block *parent = GetParent();
     if (parent) {
-      // We have a depth that is less than zero, print our parent blocks
-      // first
+      // We have a depth that is less than zero, print our parent blocks first
       parent->Dump(s, base_addr, depth + 1, show_context);
     }
   }
@@ -445,19 +444,16 @@ uint32_t Block::AppendVariables(bool can_create, bool get_parent_variables,
   return num_variables_added;
 }
 
+SymbolFile *Block::GetSymbolFile() {
+  if (ModuleSP module_sp = CalculateSymbolContextModule())
+    if (SymbolVendor *sym_vendor = module_sp->GetSymbolVendor())
+      return sym_vendor->GetSymbolFile();
+  return nullptr;
+}
+
 CompilerDeclContext Block::GetDeclContext() {
-  ModuleSP module_sp = CalculateSymbolContextModule();
-
-  if (module_sp) {
-    SymbolVendor *sym_vendor = module_sp->GetSymbolVendor();
-
-    if (sym_vendor) {
-      SymbolFile *sym_file = sym_vendor->GetSymbolFile();
-
-      if (sym_file)
-        return sym_file->GetDeclContextForUID(GetID());
-    }
-  }
+  if (SymbolFile *sym_file = GetSymbolFile())
+    return sym_file->GetDeclContextForUID(GetID());
   return CompilerDeclContext();
 }
 

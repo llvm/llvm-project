@@ -21,14 +21,14 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class DataBufferHeap DataBufferHeap.h "lldb/Core/DataBufferHeap.h"
-/// @brief A subclass of DataBuffer that stores a data buffer on the heap.
+/// A subclass of DataBuffer that stores a data buffer on the heap.
 ///
-/// This class keeps its data in a heap based buffer that is owned by
-/// the object. This class is best used to store chunks of data that
-/// are created or read from sources that can't intelligently and lazily
-/// fault new data pages in. Large amounts of data that comes from files
-/// should probably use DataBufferLLVM, which can intelligently determine
-/// when memory mapping is optimal.
+/// This class keeps its data in a heap based buffer that is owned by the
+/// object. This class is best used to store chunks of data that are created
+/// or read from sources that can't intelligently and lazily fault new data
+/// pages in. Large amounts of data that comes from files should probably use
+/// DataBufferLLVM, which can intelligently determine when memory mapping is
+/// optimal.
 //----------------------------------------------------------------------
 class DataBufferHeap : public DataBuffer {
 public:
@@ -42,8 +42,7 @@ public:
   //------------------------------------------------------------------
   /// Construct with size \a n and fill with \a ch.
   ///
-  /// Initialize this class with \a n bytes and fills the buffer with
-  /// \a ch.
+  /// Initialize this class with \a n bytes and fills the buffer with \a ch.
   ///
   /// @param[in] n
   ///     The number of bytes that heap based buffer should contain.
@@ -67,8 +66,8 @@ public:
   //------------------------------------------------------------------
   /// Destructor.
   ///
-  /// Virtual destructor since this class inherits from a pure virtual
-  /// base class #DataBuffer.
+  /// Virtual destructor since this class inherits from a pure virtual base
+  /// class #DataBuffer.
   //------------------------------------------------------------------
   ~DataBufferHeap() override;
 
@@ -90,8 +89,8 @@ public:
   //------------------------------------------------------------------
   /// Set the number of bytes in the data buffer.
   ///
-  /// Sets the number of bytes that this object should be able to
-  /// contain. This can be used prior to copying data into the buffer.
+  /// Sets the number of bytes that this object should be able to contain.
+  /// This can be used prior to copying data into the buffer.
   ///
   /// @param[in] byte_size
   ///     The new size in bytes that this data buffer should attempt
@@ -123,8 +122,8 @@ public:
 
 private:
   //------------------------------------------------------------------
-  // This object uses a std::vector<uint8_t> to store its data. This
-  // takes care of free the data when the object is deleted.
+  // This object uses a std::vector<uint8_t> to store its data. This takes care
+  // of free the data when the object is deleted.
   //------------------------------------------------------------------
   typedef std::vector<uint8_t> buffer_t; ///< Buffer type
   buffer_t m_data; ///< The heap based buffer where data is stored

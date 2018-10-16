@@ -213,8 +213,8 @@ private:
         m_exporter.getFromContext().getSourceManager().getFileID(loc);
     if (file != m_file)
       return false;
-    // We are assuming the Decl was parsed in this very expression, so it should
-    // not have external storage.
+    // We are assuming the Decl was parsed in this very expression, so it
+    // should not have external storage.
     lldbassert(!llvm::cast<DeclContext>(decl)->hasExternalLexicalStorage());
     return true;
   }
@@ -591,8 +591,8 @@ bool ClangExpressionDeclMap::GetFunctionInfo(const NamedDecl *decl,
   if (!entity)
     return false;
 
-  // We know m_parser_vars is valid since we searched for the variable by
-  // its NamedDecl
+  // We know m_parser_vars is valid since we searched for the variable by its
+  // NamedDecl
 
   ClangExpressionVariable::ParserVars *parser_vars =
       entity->GetParserVars(GetParserID());
@@ -721,9 +721,9 @@ lldb::VariableSP ClangExpressionDeclMap::FindGlobalVariable(
   VariableList vars;
 
   if (module && namespace_decl)
-    module->FindGlobalVariables(name, namespace_decl, true, -1, vars);
+    module->FindGlobalVariables(name, namespace_decl, -1, vars);
   else
-    target.GetImages().FindGlobalVariables(name, true, -1, vars);
+    target.GetImages().FindGlobalVariables(name, -1, vars);
 
   if (vars.GetSize()) {
     if (type) {
@@ -868,8 +868,8 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
   if (IgnoreName(name, false))
     return;
 
-  // Only look for functions by name out in our symbols if the function
-  // doesn't start with our phony prefix of '$'
+  // Only look for functions by name out in our symbols if the function doesn't
+  // start with our phony prefix of '$'
   Target *target = m_parser_vars->m_exe_ctx.GetTargetPtr();
   StackFrame *frame = m_parser_vars->m_exe_ctx.GetFramePtr();
   SymbolContext sym_ctx;
@@ -978,13 +978,11 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
           m_struct_vars->m_object_pointer_type = self_user_type;
         }
       } else {
-        // This branch will get hit if we are executing code in the context of a
-        // function that
-        // claims to have an object pointer (through DW_AT_object_pointer?) but
-        // is not formally a
-        // method of the class.  In that case, just look up the "this" variable
-        // in the current
-        // scope and use its type.
+        // This branch will get hit if we are executing code in the context of
+        // a function that claims to have an object pointer (through
+        // DW_AT_object_pointer?) but is not formally a method of the class.
+        // In that case, just look up the "this" variable in the current scope
+        // and use its type.
         // FIXME: This code is formally correct, but clang doesn't currently
         // emit DW_AT_object_pointer
         // for C++ so it hasn't actually been tested.
@@ -1094,13 +1092,11 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
         return;
       } else {
-        // This branch will get hit if we are executing code in the context of a
-        // function that
-        // claims to have an object pointer (through DW_AT_object_pointer?) but
-        // is not formally a
-        // method of the class.  In that case, just look up the "self" variable
-        // in the current
-        // scope and use its type.
+        // This branch will get hit if we are executing code in the context of
+        // a function that claims to have an object pointer (through
+        // DW_AT_object_pointer?) but is not formally a method of the class.
+        // In that case, just look up the "self" variable in the current scope
+        // and use its type.
 
         VariableList *vars = frame->GetVariableList(false);
 
@@ -1218,9 +1214,8 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
           vars->GetVariableAtIndex(i)->GetDecl();
 
         // Search for declarations matching the name. Do not include imported
-        // decls
-        // in the search if we are looking for decls in the artificial namespace
-        // $__lldb_local_vars.
+        // decls in the search if we are looking for decls in the artificial
+        // namespace $__lldb_local_vars.
         std::vector<CompilerDecl> found_decls =
             compiler_decl_context.FindDeclByName(name,
                                                  namespace_decl.IsValid());
@@ -1286,15 +1281,15 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
                                         append, sc_list);
     }
 
-    // If we found more than one function, see if we can use the
-    // frame's decl context to remove functions that are shadowed
-    // by other functions which match in type but are nearer in scope.
+    // If we found more than one function, see if we can use the frame's decl
+    // context to remove functions that are shadowed by other functions which
+    // match in type but are nearer in scope.
     //
     // AddOneFunction will not add a function whose type has already been
-    // added, so if there's another function in the list with a matching
-    // type, check to see if their decl context is a parent of the current
-    // frame's or was imported via a and using statement, and pick the
-    // best match according to lookup rules.
+    // added, so if there's another function in the list with a matching type,
+    // check to see if their decl context is a parent of the current frame's or
+    // was imported via a and using statement, and pick the best match
+    // according to lookup rules.
     if (sc_list.GetSize() > 1) {
       // Collect some info about our frame's context.
       StackFrame *frame = m_parser_vars->m_exe_ctx.GetFramePtr();
@@ -1322,11 +1317,10 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
           SymbolContext m_sym_ctx;
         };
 
-        // First, symplify things by looping through the symbol contexts
-        // to remove unwanted functions and separate out the functions we
-        // want to compare and prune into a separate list.
-        // Cache the info needed about the function declarations in a
-        // vector for efficiency.
+        // First, symplify things by looping through the symbol contexts to
+        // remove unwanted functions and separate out the functions we want to
+        // compare and prune into a separate list. Cache the info needed about
+        // the function declarations in a vector for efficiency.
         SymbolContextList sc_sym_list;
         uint32_t num_indices = sc_list.GetSize();
         std::vector<FuncDeclInfo> fdi_cache;
@@ -1336,16 +1330,16 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
           SymbolContext sym_ctx;
           sc_list.GetContextAtIndex(index, sym_ctx);
 
-          // We don't know enough about symbols to compare them,
-          // but we should keep them in the list.
+          // We don't know enough about symbols to compare them, but we should
+          // keep them in the list.
           Function *function = sym_ctx.function;
           if (!function) {
             sc_sym_list.Append(sym_ctx);
             continue;
           }
           // Filter out functions without declaration contexts, as well as
-          // class/instance methods, since they'll be skipped in the
-          // code that follows anyway.
+          // class/instance methods, since they'll be skipped in the code that
+          // follows anyway.
           CompilerDeclContext func_decl_context = function->GetDeclContext();
           if (!func_decl_context ||
               func_decl_context.IsClassMethod(nullptr, nullptr, nullptr))
@@ -1364,11 +1358,10 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
           fdi.m_copied_type = copied_func_type;
           fdi.m_decl_lvl = LLDB_INVALID_DECL_LEVEL;
           if (fdi.m_copied_type && func_decl_context) {
-            // Call CountDeclLevels to get the number of parent scopes we
-            // have to look through before we find the function declaration.
-            // When comparing functions of the same type, the one with a
-            // lower count will be closer to us in the lookup scope and
-            // shadows the other.
+            // Call CountDeclLevels to get the number of parent scopes we have
+            // to look through before we find the function declaration. When
+            // comparing functions of the same type, the one with a lower count
+            // will be closer to us in the lookup scope and shadows the other.
             clang::DeclContext *func_decl_ctx =
                 (clang::DeclContext *)func_decl_context.GetOpaqueDeclContext();
             fdi.m_decl_lvl = ast->CountDeclLevels(
@@ -1537,9 +1530,8 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     }
 
     if (target && !context.m_found.variable && !namespace_decl) {
-      // We couldn't find a non-symbol variable for this.  Now we'll hunt for
-      // a generic
-      // data symbol, and -- if it is found -- treat it as a variable.
+      // We couldn't find a non-symbol variable for this.  Now we'll hunt for a
+      // generic data symbol, and -- if it is found -- treat it as a variable.
       Status error;
 
       const Symbol *data_symbol =
@@ -2133,7 +2125,8 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
   parser_vars->m_llvm_value = NULL;
 
   if (log) {
-    ASTDumper ast_dumper(function_decl);
+    std::string function_str =
+        function_decl ? ASTDumper(function_decl).GetCString() : "nullptr";
 
     StreamString ss;
 
@@ -2144,7 +2137,7 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
     log->Printf(
         "  CEDM::FEVD[%u] Found %s function %s (description %s), returned %s",
         current_id, (function ? "specific" : "generic"), decl_name.c_str(),
-        ss.GetData(), ast_dumper.GetCString());
+        ss.GetData(), function_str.c_str());
   }
 }
 
@@ -2182,7 +2175,7 @@ void ClangExpressionDeclMap::AddThisType(NameSearchContext &context,
     CXXMethodDecl *method_decl =
         ClangASTContext::GetASTContext(m_ast_context)
             ->AddMethodToCXXRecordType(
-                copied_clang_type.GetOpaqueQualType(), "$__lldb_expr",
+                copied_clang_type.GetOpaqueQualType(), "$__lldb_expr", NULL,
                 method_type, lldb::eAccessPublic, is_virtual, is_static,
                 is_inline, is_explicit, is_attr_used, is_artificial);
 

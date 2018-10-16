@@ -30,10 +30,8 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class AddressResolverName AddressResolverName.h
-/// "lldb/Core/AddressResolverName.h"
-/// @brief This class finds addresses for a given function name, either by exact
-/// match
-/// or by regular expression.
+/// "lldb/Core/AddressResolverName.h" This class finds addresses for a given
+/// function name, either by exact match or by regular expression.
 //----------------------------------------------------------------------
 
 class AddressResolverName : public AddressResolver {
@@ -41,8 +39,8 @@ public:
   AddressResolverName(const char *func_name,
                       AddressResolver::MatchType type = Exact);
 
-  // Creates a function breakpoint by regular expression.  Takes over control of
-  // the lifespan of func_regex.
+  // Creates a function breakpoint by regular expression.  Takes over control
+  // of the lifespan of func_regex.
   AddressResolverName(RegularExpression &func_regex);
 
   AddressResolverName(const char *class_name, const char *method,

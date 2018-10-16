@@ -17,10 +17,10 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class Flags Flags.h "lldb/Utility/Flags.h"
-/// @brief A class to manage flags.
+/// A class to manage flags.
 ///
-/// The Flags class managed flag bits and allows testing and
-/// modification of individual or multiple flag bits.
+/// The Flags class managed flag bits and allows testing and modification of
+/// individual or multiple flag bits.
 //----------------------------------------------------------------------
 class Flags {
 public:
@@ -32,8 +32,8 @@ public:
   //----------------------------------------------------------------------
   /// Construct with initial flag bit values.
   ///
-  /// Constructs this object with \a mask as the initial value for all
-  /// of the flags.
+  /// Constructs this object with \a mask as the initial value for all of the
+  /// flags.
   ///
   /// @param[in] mask
   ///     The initial value for all flags.
@@ -64,8 +64,7 @@ public:
   ValueType Get() const { return m_flags; }
 
   //----------------------------------------------------------------------
-  /// Return the number of flags that can be represented in this
-  /// object.
+  /// Return the number of flags that can be represented in this object.
   ///
   /// @return
   ///     The maximum number bits in this flag object.
@@ -95,8 +94,7 @@ public:
   }
 
   //----------------------------------------------------------------------
-  /// Set one or more flags by logical OR'ing \a mask with the current
-  /// flags.
+  /// Set one or more flags by logical OR'ing \a mask with the current flags.
   ///
   /// @param[in] mask
   ///     A bitfield containing one or more flags.

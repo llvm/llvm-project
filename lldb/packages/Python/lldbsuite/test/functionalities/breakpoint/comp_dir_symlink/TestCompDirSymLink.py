@@ -64,7 +64,6 @@ class CompDirSymLinkTestCase(TestBase):
             self.line)
 
     def create_src_symlink(self):
-        self.makeBuildDir()
         pwd_symlink = self.getBuildArtifact('pwd_symlink')
         if os.path.exists(pwd_symlink):
             os.unlink(pwd_symlink)
@@ -73,7 +72,7 @@ class CompDirSymLinkTestCase(TestBase):
         return pwd_symlink
 
     def doBuild(self, pwd_symlink):
-        self.build(None, None, {'PWD': pwd_symlink}, True)
+        self.build(None, None, {'PWD': pwd_symlink})
 
         exe = self.getBuildArtifact(_EXE_NAME)
         self.runCmd('file ' + exe, CURRENT_EXECUTABLE_SET)

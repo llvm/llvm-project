@@ -39,6 +39,8 @@ public:
   HardcodedFormatters::HardcodedSyntheticFinder
   GetHardcodedSynthetics() override;
 
+  bool IsSourceFile(llvm::StringRef file_path) const override;
+
   //------------------------------------------------------------------
   // Static Functions
   //------------------------------------------------------------------

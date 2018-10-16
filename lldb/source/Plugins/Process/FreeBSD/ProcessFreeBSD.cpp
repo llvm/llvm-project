@@ -357,10 +357,10 @@ ProcessFreeBSD::GetFileSpec(const lldb_private::FileAction *file_action,
 
   if (file_action && file_action->GetAction() == FileAction::eFileActionOpen) {
     file_spec = file_action->GetFileSpec();
-    // By default the stdio paths passed in will be pseudo-terminal
-    // (/dev/pts). If so, convert to using a different default path
-    // instead to redirect I/O to the debugger console. This should
-    // also handle user overrides to /dev/null or a different file.
+    // By default the stdio paths passed in will be pseudo-terminal (/dev/pts).
+    // If so, convert to using a different default path instead to redirect I/O
+    // to the debugger console. This should also handle user overrides to
+    // /dev/null or a different file.
     if (!file_spec || file_spec == dbg_pts_file_spec)
       file_spec = default_file_spec;
   }
@@ -407,9 +407,8 @@ Status ProcessFreeBSD::DoLaunch(Module *module,
 
   m_monitor = new ProcessMonitor(
       this, module, launch_info.GetArguments().GetConstArgumentVector(),
-      launch_info.GetEnvironmentEntries().GetConstArgumentVector(),
-      stdin_file_spec, stdout_file_spec, stderr_file_spec, working_dir,
-      launch_info, error);
+      launch_info.GetEnvironment(), stdin_file_spec, stdout_file_spec,
+      stderr_file_spec, working_dir, launch_info, error);
 
   m_module = module;
 
@@ -656,19 +655,19 @@ ProcessFreeBSD::GetSoftwareBreakpointTrapOpcode(BreakpointSite *bp_site) {
     break;
 
   case llvm::Triple::arm: {
-    // The ARM reference recommends the use of 0xe7fddefe and 0xdefe
-    // but the linux kernel does otherwise.
+    // The ARM reference recommends the use of 0xe7fddefe and 0xdefe but the
+    // linux kernel does otherwise.
     static const uint8_t g_arm_breakpoint_opcode[] = {0xf0, 0x01, 0xf0, 0xe7};
     static const uint8_t g_thumb_breakpoint_opcode[] = {0x01, 0xde};
 
     lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
-    AddressClass addr_class = eAddressClassUnknown;
+    AddressClass addr_class = AddressClass::eUnknown;
 
     if (bp_loc_sp)
       addr_class = bp_loc_sp->GetAddress().GetAddressClass();
 
-    if (addr_class == eAddressClassCodeAlternateISA ||
-        (addr_class == eAddressClassUnknown &&
+    if (addr_class == AddressClass::eCodeAlternateISA ||
+        (addr_class == AddressClass::eUnknown &&
          bp_loc_sp->GetAddress().GetOffset() & 1)) {
       opcode = g_thumb_breakpoint_opcode;
       opcode_size = sizeof(g_thumb_breakpoint_opcode);
@@ -745,8 +744,8 @@ Status ProcessFreeBSD::EnableWatchpoint(Watchpoint *wp, bool notify) {
         wp->SetEnabled(true, notify);
         return error;
       } else {
-        // Watchpoint enabling failed on at least one
-        // of the threads so roll back all of them
+        // Watchpoint enabling failed on at least one of the threads so roll
+        // back all of them
         DisableWatchpoint(wp, false);
         error.SetErrorString("Setting hardware watchpoint failed");
       }
@@ -813,8 +812,8 @@ Status ProcessFreeBSD::GetWatchpointSupportInfo(uint32_t &num) {
 
 Status ProcessFreeBSD::GetWatchpointSupportInfo(uint32_t &num, bool &after) {
   Status error = GetWatchpointSupportInfo(num);
-  // Watchpoints trigger and halt the inferior after
-  // the corresponding instruction has been executed.
+  // Watchpoints trigger and halt the inferior after the corresponding
+  // instruction has been executed.
   after = true;
   return error;
 }
@@ -1077,8 +1076,8 @@ Status ProcessFreeBSD::SetupSoftwareSingleStepping(lldb::tid_t tid) {
            "Emulation was successful but PC wasn't updated");
     next_pc = pc_it->second.GetAsUInt64();
   } else if (pc_it == baton.m_register_values.end()) {
-    // Emulate instruction failed and it haven't changed PC. Advance PC
-    // with the size of the current opcode because the emulation of all
+    // Emulate instruction failed and it haven't changed PC. Advance PC with
+    // the size of the current opcode because the emulation of all
     // PC modifying instruction should be successful. The failure most
     // likely caused by a not supported instruction which don't modify PC.
     next_pc =

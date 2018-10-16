@@ -65,8 +65,8 @@ ObjectFile *ObjectFileJIT::CreateInstance(const lldb::ModuleSP &module_sp,
                                           const FileSpec *file,
                                           lldb::offset_t file_offset,
                                           lldb::offset_t length) {
-  // JIT'ed object file is backed by the ObjectFileJITDelegate, never
-  // read from a file
+  // JIT'ed object file is backed by the ObjectFileJITDelegate, never read from
+  // a file
   return NULL;
 }
 
@@ -74,8 +74,8 @@ ObjectFile *ObjectFileJIT::CreateMemoryInstance(const lldb::ModuleSP &module_sp,
                                                 DataBufferSP &data_sp,
                                                 const ProcessSP &process_sp,
                                                 lldb::addr_t header_addr) {
-  // JIT'ed object file is backed by the ObjectFileJITDelegate, never
-  // read from memory
+  // JIT'ed object file is backed by the ObjectFileJITDelegate, never read from
+  // memory
   return NULL;
 }
 
@@ -214,9 +214,8 @@ bool ObjectFileJIT::SetLoadAddress(Target &target, lldb::addr_t value,
     const size_t num_sections = section_list->GetSize();
     // "value" is an offset to apply to each top level segment
     for (size_t sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
-      // Iterate through the object file sections to find all
-      // of the sections that size on disk (to avoid __PAGEZERO)
-      // and load them
+      // Iterate through the object file sections to find all of the sections
+      // that size on disk (to avoid __PAGEZERO) and load them
       SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
       if (section_sp && section_sp->GetFileSize() > 0 &&
           section_sp->IsThreadSpecific() == false) {

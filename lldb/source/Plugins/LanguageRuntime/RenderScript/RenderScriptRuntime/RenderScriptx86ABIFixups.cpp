@@ -46,18 +46,15 @@ bool isRSAPICall(llvm::Module &module, llvm::CallInst *call_inst) {
 
 bool isRSLargeReturnCall(llvm::Module &module, llvm::CallInst *call_inst) {
   // i686 and x86_64 returns for large vectors in the RenderScript API are not
-  // handled as normal
-  // register pairs, but as a hidden sret type. This is not reflected in the
-  // debug info or mangled
-  // symbol name, and the android ABI for x86 and x86_64, (as well as the
-  // emulators) specifies there is
-  // no AVX, so bcc generates an sret function because we cannot natively return
+  // handled as normal register pairs, but as a hidden sret type. This is not
+  // reflected in the debug info or mangled symbol name, and the android ABI
+  // for x86 and x86_64, (as well as the emulators) specifies there is no AVX,
+  // so bcc generates an sret function because we cannot natively return
   // 256 bit vectors.
   // This function simply checks whether a function has a > 128bit return type.
-  // It is perhaps an
-  // unreliable heuristic, and relies on bcc not generating AVX code, so if the
-  // android ABI one day
-  // provides for AVX, this function may go out of fashion.
+  // It is perhaps an unreliable heuristic, and relies on bcc not generating
+  // AVX code, so if the android ABI one day provides for AVX, this function
+  // may go out of fashion.
   (void)module;
   if (!call_inst || !call_inst->getCalledFunction())
     return false;
@@ -88,12 +85,11 @@ bool isRSAllocationTyCallSite(llvm::Module &module, llvm::CallInst *call_inst) {
 
 llvm::FunctionType *cloneToStructRetFnTy(llvm::CallInst *call_inst) {
   // on x86 StructReturn functions return a pointer to the return value, rather
-  // than the return
-  // value itself [ref](http://www.agner.org/optimize/calling_conventions.pdf
-  // section 6).
-  // We create a return type by getting the pointer type of the old return type,
-  // and inserting a new
-  // initial argument of pointer type of the original return type.
+  // than the return value itself
+  // [ref](http://www.agner.org/optimize/calling_conventions.pdf section 6). We
+  // create a return type by getting the pointer type of the old return type,
+  // and inserting a new initial argument of pointer type of the original
+  // return type.
   Log *log(
       GetLogIfAnyCategoriesSet(LIBLLDB_LOG_LANGUAGE | LIBLLDB_LOG_EXPRESSIONS));
 
@@ -112,8 +108,7 @@ llvm::FunctionType *cloneToStructRetFnTy(llvm::CallInst *call_inst) {
                                    orig_type->param_end()};
 
   // This may not work if the function is somehow declared void as llvm is
-  // strongly typed
-  // and represents void* with i8*
+  // strongly typed and represents void* with i8*
   assert(!orig_type->getReturnType()->isVoidTy() &&
          "Cannot add StructRet attribute to void function");
   llvm::PointerType *return_type_ptr_type =
@@ -126,8 +121,8 @@ llvm::FunctionType *cloneToStructRetFnTy(llvm::CallInst *call_inst) {
   if (log)
     log->Printf("%s - return type pointer type for StructRet clone @ '0x%p':\n",
                 __FUNCTION__, (void *)return_type_ptr_type);
-  // put the the sret pointer argument in place at the beginning of the argument
-  // list.
+  // put the sret pointer argument in place at the beginning of the
+  // argument list.
   params.emplace(params.begin(), return_type_ptr_type);
   assert(params.size() == num_params + 1);
   return llvm::FunctionType::get(return_type_ptr_type, params,
@@ -157,11 +152,9 @@ bool findRSCallSites(llvm::Module &module,
 
 bool fixupX86StructRetCalls(llvm::Module &module) {
   bool changed = false;
-  // changing a basic block while iterating over it seems to have some undefined
-  // behaviour
-  // going on so we find all RS callsites first, then fix them up after
-  // consuming
-  // the iterator.
+  // changing a basic block while iterating over it seems to have some
+  // undefined behaviour going on so we find all RS callsites first, then fix
+  // them up after consuming the iterator.
   std::set<llvm::CallInst *> rs_callsites;
   if (!findRSCallSites(module, rs_callsites, isRSLargeReturnCall))
     return false;
@@ -180,8 +173,7 @@ bool fixupX86StructRetCalls(llvm::Module &module) {
 
     // Allocate enough space to store the return value of the original function
     // we pass a pointer to this allocation as the StructRet param, and then
-    // copy its
-    // value into the lldb return value
+    // copy its value into the lldb return value
     const llvm::DataLayout &DL = module.getDataLayout();
     llvm::AllocaInst *return_value_alloc = new llvm::AllocaInst(
       func->getReturnType(), DL.getAllocaAddrSpace(), "var_vector_return_alloc",
@@ -222,19 +214,15 @@ bool fixupX86StructRetCalls(llvm::Module &module) {
 
 bool fixupRSAllocationStructByValCalls(llvm::Module &module) {
   // On x86_64, calls to functions in the RS runtime that take an
-  // `rs_allocation` type argument
-  // are actually handled as by-ref params by bcc, but appear to be passed by
-  // value by lldb (the callsite all use
-  // `struct byval`).
-  // On x86_64 Linux, struct arguments are transferred in registers if the
-  // struct size is no bigger than
-  // 128bits [ref](http://www.agner.org/optimize/calling_conventions.pdf)
-  // section 7.1 "Passing and returning objects"
-  // otherwise passed on the stack.
-  // an object of type `rs_allocation` is actually 256bits, so should be passed
-  // on the stack. However, code generated
-  // by bcc actually treats formal params of type `rs_allocation` as
-  // `rs_allocation *` so we need to convert the
+  // `rs_allocation` type argument are actually handled as by-ref params by
+  // bcc, but appear to be passed by value by lldb (the callsite all use
+  // `struct byval`). On x86_64 Linux, struct arguments are transferred in
+  // registers if the struct size is no bigger than 128bits
+  // [ref](http://www.agner.org/optimize/calling_conventions.pdf) section 7.1
+  // "Passing and returning objects" otherwise passed on the stack. an object
+  // of type `rs_allocation` is actually 256bits, so should be passed on the
+  // stack. However, code generated by bcc actually treats formal params of
+  // type `rs_allocation` as `rs_allocation *` so we need to convert the
   // calling convention to pass by reference, and remove any hint of byval from
   // formal parameters.
   bool changed = false;

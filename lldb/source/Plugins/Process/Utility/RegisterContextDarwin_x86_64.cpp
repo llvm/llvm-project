@@ -165,9 +165,9 @@ enum ehframe_dwarf_regnums {
    sizeof(RegisterContextDarwin_x86_64::FPU))
 
 // These macros will auto define the register name, alt name, register size,
-// register offset, encoding, format and native register. This ensures that
-// the register state structures are defined correctly and have the correct
-// sizes and offsets.
+// register offset, encoding, format and native register. This ensures that the
+// register state structures are defined correctly and have the correct sizes
+// and offsets.
 #define DEFINE_GPR(reg, alt)                                                   \
   #reg, alt, sizeof(((RegisterContextDarwin_x86_64::GPR *) NULL)->reg),        \
                     GPR_OFFSET(reg), eEncodingUint, eFormatHex
@@ -525,9 +525,9 @@ const size_t k_num_fpu_registers = llvm::array_lengthof(g_fpu_regnums);
 const size_t k_num_exc_registers = llvm::array_lengthof(g_exc_regnums);
 
 //----------------------------------------------------------------------
-// Register set definitions. The first definitions at register set index
-// of zero is for all registers, followed by other registers sets. The
-// register information for the all register set need not be filled in.
+// Register set definitions. The first definitions at register set index of
+// zero is for all registers, followed by other registers sets. The register
+// information for the all register set need not be filled in.
 //----------------------------------------------------------------------
 static const RegisterSet g_reg_sets[] = {
     {

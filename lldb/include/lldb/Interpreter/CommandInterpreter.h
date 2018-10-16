@@ -19,11 +19,12 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Event.h"
 #include "lldb/Core/IOHandler.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandAlias.h"
 #include "lldb/Interpreter/CommandHistory.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Utility/Args.h"
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-forward.h"
@@ -34,70 +35,74 @@ namespace lldb_private {
 class CommandInterpreterRunOptions {
 public:
   //------------------------------------------------------------------
-  /// Construct a CommandInterpreterRunOptions object.
-  /// This class is used to control all the instances where we run multiple
-  /// commands, e.g.
+  /// Construct a CommandInterpreterRunOptions object. This class is used to
+  /// control all the instances where we run multiple commands, e.g.
   /// HandleCommands, HandleCommandsFromFile, RunCommandInterpreter.
+  ///
   /// The meanings of the options in this object are:
   ///
   /// @param[in] stop_on_continue
-  ///    If \b true execution will end on the first command that causes the
-  ///    process in the
-  ///    execution context to continue.  If \false, we won't check the execution
-  ///    status.
+  ///    If \b true, execution will end on the first command that causes the
+  ///    process in the execution context to continue. If \b false, we won't
+  ///    check the execution status.
   /// @param[in] stop_on_error
-  ///    If \b true execution will end on the first command that causes an
+  ///    If \b true, execution will end on the first command that causes an
   ///    error.
   /// @param[in] stop_on_crash
-  ///    If \b true when a command causes the target to run, and the end of the
-  ///    run is a
-  ///    signal or exception, stop executing the commands.
+  ///    If \b true, when a command causes the target to run, and the end of the
+  ///    run is a signal or exception, stop executing the commands.
   /// @param[in] echo_commands
-  ///    If \b true echo the command before executing it.  If \false, execute
+  ///    If \b true, echo the command before executing it. If \b false, execute
   ///    silently.
+  /// @param[in] echo_comments
+  ///    If \b true, echo command even if it is a pure comment line. If
+  ///    \b false, print no ouput in this case. This setting has an effect only
+  ///    if \param echo_commands is \b true.
   /// @param[in] print_results
-  ///    If \b true print the results of the command after executing it.  If
-  ///    \false, execute silently.
+  ///    If \b true print the results of the command after executing it. If
+  ///    \b false, execute silently.
   /// @param[in] add_to_history
-  ///    If \b true add the commands to the command history.  If \false, don't
+  ///    If \b true add the commands to the command history. If \b false, don't
   ///    add them.
   //------------------------------------------------------------------
   CommandInterpreterRunOptions(LazyBool stop_on_continue,
                                LazyBool stop_on_error, LazyBool stop_on_crash,
-                               LazyBool echo_commands, LazyBool print_results,
-                               LazyBool add_to_history)
+                               LazyBool echo_commands, LazyBool echo_comments,
+                               LazyBool print_results, LazyBool add_to_history)
       : m_stop_on_continue(stop_on_continue), m_stop_on_error(stop_on_error),
         m_stop_on_crash(stop_on_crash), m_echo_commands(echo_commands),
-        m_print_results(print_results), m_add_to_history(add_to_history) {}
+        m_echo_comment_commands(echo_comments), m_print_results(print_results),
+        m_add_to_history(add_to_history) {}
 
   CommandInterpreterRunOptions()
       : m_stop_on_continue(eLazyBoolCalculate),
         m_stop_on_error(eLazyBoolCalculate),
         m_stop_on_crash(eLazyBoolCalculate),
         m_echo_commands(eLazyBoolCalculate),
+        m_echo_comment_commands(eLazyBoolCalculate),
         m_print_results(eLazyBoolCalculate),
         m_add_to_history(eLazyBoolCalculate) {}
 
   void SetSilent(bool silent) {
     LazyBool value = silent ? eLazyBoolNo : eLazyBoolYes;
 
-    m_echo_commands = value;
     m_print_results = value;
+    m_echo_commands = value;
+    m_echo_comment_commands = value;
     m_add_to_history = value;
   }
   // These return the default behaviors if the behavior is not
-  // eLazyBoolCalculate.
-  // But I've also left the ivars public since for different ways of running the
-  // interpreter you might want to force different defaults...  In that case,
-  // just grab
-  // the LazyBool ivars directly and do what you want with eLazyBoolCalculate.
+  // eLazyBoolCalculate. But I've also left the ivars public since for
+  // different ways of running the interpreter you might want to force
+  // different defaults...  In that case, just grab the LazyBool ivars directly
+  // and do what you want with eLazyBoolCalculate.
   bool GetStopOnContinue() const { return DefaultToNo(m_stop_on_continue); }
 
   void SetStopOnContinue(bool stop_on_continue) {
     m_stop_on_continue = stop_on_continue ? eLazyBoolYes : eLazyBoolNo;
   }
 
-  bool GetStopOnError() const { return DefaultToNo(m_stop_on_continue); }
+  bool GetStopOnError() const { return DefaultToNo(m_stop_on_error); }
 
   void SetStopOnError(bool stop_on_error) {
     m_stop_on_error = stop_on_error ? eLazyBoolYes : eLazyBoolNo;
@@ -113,6 +118,14 @@ public:
 
   void SetEchoCommands(bool echo_commands) {
     m_echo_commands = echo_commands ? eLazyBoolYes : eLazyBoolNo;
+  }
+
+  bool GetEchoCommentCommands() const {
+    return DefaultToYes(m_echo_comment_commands);
+  }
+
+  void SetEchoCommentCommands(bool echo_comments) {
+    m_echo_comment_commands = echo_comments ? eLazyBoolYes : eLazyBoolNo;
   }
 
   bool GetPrintResults() const { return DefaultToYes(m_print_results); }
@@ -131,6 +144,7 @@ public:
   LazyBool m_stop_on_error;
   LazyBool m_stop_on_crash;
   LazyBool m_echo_commands;
+  LazyBool m_echo_comment_commands;
   LazyBool m_print_results;
   LazyBool m_add_to_history;
 
@@ -293,26 +307,19 @@ public:
   CommandObject *GetCommandObjectForCommand(llvm::StringRef &command_line);
 
   // This handles command line completion.  You are given a pointer to the
-  // command string buffer, to the current cursor,
-  // and to the end of the string (in case it is not NULL terminated).
-  // You also passed in an StringList object to fill with the returns.
-  // The first element of the array will be filled with the string that you
-  // would need to insert at
-  // the cursor point to complete the cursor point to the longest common
-  // matching prefix.
-  // If you want to limit the number of elements returned, set
-  // max_return_elements to the number of elements
-  // you want returned.  Otherwise set max_return_elements to -1.
-  // If you want to start some way into the match list, then set
-  // match_start_point to the desired start
-  // point.
-  // Returns:
-  // -1 if the completion character should be inserted
-  // -2 if the entire command line should be deleted and replaced with
-  // matches.GetStringAtIndex(0)
+  // command string buffer, to the current cursor, and to the end of the string
+  // (in case it is not NULL terminated). You also passed in an StringList
+  // object to fill with the returns. The first element of the array will be
+  // filled with the string that you would need to insert at the cursor point
+  // to complete the cursor point to the longest common matching prefix. If you
+  // want to limit the number of elements returned, set max_return_elements to
+  // the number of elements you want returned.  Otherwise set
+  // max_return_elements to -1. If you want to start some way into the match
+  // list, then set match_start_point to the desired start point. Returns: -1
+  // if the completion character should be inserted -2 if the entire command
+  // line should be deleted and replaced with matches.GetStringAtIndex(0)
   // INT_MAX if the number of matches is > max_return_elements, but it is
-  // expensive to compute.
-  // Otherwise, returns the number of matches.
+  // expensive to compute. Otherwise, returns the number of matches.
   //
   // FIXME: Only max_return_elements == -1 is supported at present.
   int HandleCompletion(const char *current_line, const char *cursor,
@@ -320,15 +327,9 @@ public:
                        int max_return_elements, StringList &matches);
 
   // This version just returns matches, and doesn't compute the substring.  It
-  // is here so the
-  // Help command can call it for the first argument.
-  // word_complete tells whether the completions are considered a "complete"
-  // response (so the
-  // completer should complete the quote & put a space after the word.
-  int HandleCompletionMatches(Args &input, int &cursor_index,
-                              int &cursor_char_position, int match_start_point,
-                              int max_return_elements, bool &word_complete,
-                              StringList &matches);
+  // is here so the Help command can call it for the first argument. It uses
+  // a CompletionRequest for simplicity reasons.
+  int HandleCompletionMatches(CompletionRequest &request);
 
   int GetCommandNamesMatchingPartialString(const char *cmd_cstr,
                                            bool include_aliases,
@@ -469,6 +470,36 @@ public:
 
   void SetPromptOnQuit(bool b);
 
+  bool GetEchoCommands() const;
+  void SetEchoCommands(bool b);
+
+  bool GetEchoCommentCommands() const;
+  void SetEchoCommentCommands(bool b);
+
+  //------------------------------------------------------------------
+  /// Specify if the command interpreter should allow that the user can
+  /// specify a custom exit code when calling 'quit'.
+  //------------------------------------------------------------------
+  void AllowExitCodeOnQuit(bool allow);
+
+  //------------------------------------------------------------------
+  /// Sets the exit code for the quit command.
+  /// @param[in] exit_code
+  ///     The exit code that the driver should return on exit.
+  /// @return True if the exit code was successfully set; false if the
+  ///         interpreter doesn't allow custom exit codes.
+  /// @see AllowExitCodeOnQuit
+  //------------------------------------------------------------------
+  LLVM_NODISCARD bool SetQuitExitCode(int exit_code);
+
+  //------------------------------------------------------------------
+  /// Returns the exit code that the user has specified when running the
+  /// 'quit' command.
+  /// @param[out] exited
+  ///     Set to true if the user has called quit with a custom exit code.
+  //------------------------------------------------------------------
+  int GetQuitExitCode(bool &exited) const;
+
   void ResolveCommand(const char *command_line, CommandReturnObject &result);
 
   bool GetStopCmdSourceOnError() const;
@@ -527,6 +558,9 @@ private:
   // An interruptible wrapper around the stream output
   void PrintCommandOutput(Stream &stream, llvm::StringRef str);
 
+  bool EchoCommandNonInteractive(llvm::StringRef line,
+                                 const Flags &io_handler_flags) const;
+
   // A very simple state machine which models the command handling transitions
   enum class CommandHandlingState {
     eIdle,
@@ -572,6 +606,12 @@ private:
   uint32_t m_num_errors;
   bool m_quit_requested;
   bool m_stopped_for_crash;
+
+  // The exit code the user has requested when calling the 'quit' command.
+  // No value means the user hasn't set a custom exit code so far.
+  llvm::Optional<int> m_quit_exit_code;
+  // If the driver is accepts custom exit codes for the 'quit' command.
+  bool m_allow_exit_code = false;
 };
 
 } // namespace lldb_private

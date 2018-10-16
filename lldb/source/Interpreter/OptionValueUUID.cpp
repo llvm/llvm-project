@@ -43,7 +43,7 @@ Status OptionValueUUID::SetValueFromString(llvm::StringRef value,
 
   case eVarSetOperationReplace:
   case eVarSetOperationAssign: {
-    if (m_uuid.SetFromCString(value.str().c_str()) == 0)
+    if (m_uuid.SetFromStringRef(value) == 0)
       error.SetErrorStringWithFormat("invalid uuid string value '%s'",
                                      value.str().c_str());
     else {
@@ -68,40 +68,29 @@ lldb::OptionValueSP OptionValueUUID::DeepCopy() const {
 }
 
 size_t OptionValueUUID::AutoComplete(CommandInterpreter &interpreter,
-                                     llvm::StringRef s, int match_start_point,
-                                     int max_return_elements,
-                                     bool &word_complete, StringList &matches) {
-  word_complete = false;
-  matches.Clear();
+                                     CompletionRequest &request) {
+  request.SetWordComplete(false);
   ExecutionContext exe_ctx(interpreter.GetExecutionContext());
   Target *target = exe_ctx.GetTargetPtr();
   if (target) {
-    const size_t num_modules = target->GetImages().GetSize();
-    if (num_modules > 0) {
-      UUID::ValueType uuid_bytes;
-      uint32_t num_bytes_decoded = 0;
-      UUID::DecodeUUIDBytesFromString(s, uuid_bytes, num_bytes_decoded);
+    auto prefix = request.GetCursorArgumentPrefix();
+    llvm::SmallVector<uint8_t, 20> uuid_bytes;
+    if (UUID::DecodeUUIDBytesFromString(prefix, uuid_bytes).empty()) {
+      const size_t num_modules = target->GetImages().GetSize();
       for (size_t i = 0; i < num_modules; ++i) {
         ModuleSP module_sp(target->GetImages().GetModuleAtIndex(i));
         if (module_sp) {
           const UUID &module_uuid = module_sp->GetUUID();
           if (module_uuid.IsValid()) {
-            bool add_uuid = false;
-            if (num_bytes_decoded == 0)
-              add_uuid = true;
-            else
-              add_uuid = ::memcmp(module_uuid.GetBytes(), uuid_bytes,
-                                  num_bytes_decoded) == 0;
-            if (add_uuid) {
-              std::string uuid_str;
-              uuid_str = module_uuid.GetAsString();
-              if (!uuid_str.empty())
-                matches.AppendString(uuid_str.c_str());
+            llvm::ArrayRef<uint8_t> module_bytes = module_uuid.GetBytes();
+            if (module_bytes.size() >= uuid_bytes.size() &&
+                module_bytes.take_front(uuid_bytes.size()).equals(uuid_bytes)) {
+              request.AddCompletion(module_uuid.GetAsString());
             }
           }
         }
       }
     }
   }
-  return matches.GetSize();
+  return request.GetNumberOfMatches();
 }

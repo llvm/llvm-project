@@ -146,8 +146,8 @@ void SBEvent::reset(Event *event_ptr) {
 }
 
 bool SBEvent::IsValid() const {
-  // Do NOT use m_opaque_ptr directly!!! Must use the SBEvent::get()
-  // accessor. See comments in SBEvent::get()....
+  // Do NOT use m_opaque_ptr directly!!! Must use the SBEvent::get() accessor.
+  // See comments in SBEvent::get()....
   return SBEvent::get() != NULL;
 }
 

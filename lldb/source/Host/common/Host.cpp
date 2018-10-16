@@ -119,9 +119,8 @@ HostThread Host::StartMonitoringChildProcess(
 
 #ifndef __linux__
 //------------------------------------------------------------------
-// Scoped class that will disable thread canceling when it is
-// constructed, and exception safely restore the previous value it
-// when it goes out of scope.
+// Scoped class that will disable thread canceling when it is constructed, and
+// exception safely restore the previous value it when it goes out of scope.
 //------------------------------------------------------------------
 class ScopedPThreadCancelDisabler {
 public:
@@ -270,8 +269,7 @@ static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
                           __FUNCTION__, arg);
             break;
           }
-          // If the callback returns true, it means this process should
-          // exit
+          // If the callback returns true, it means this process should exit
           if (callback_return) {
             if (log)
               log->Printf("%s (arg = %p) thread exiting because callback "
@@ -422,7 +420,7 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   Dl_info info;
   if (::dladdr(host_addr, &info)) {
     if (info.dli_fname)
-      module_filespec.SetFile(info.dli_fname, true);
+      module_filespec.SetFile(info.dli_fname, true, FileSpec::Style::native);
   }
 #endif
   return module_filespec;
@@ -465,15 +463,17 @@ MonitorShellCommand(std::shared_ptr<ShellInfo> shell_info, lldb::pid_t pid,
 Status Host::RunShellCommand(const char *command, const FileSpec &working_dir,
                              int *status_ptr, int *signo_ptr,
                              std::string *command_output_ptr,
-                             uint32_t timeout_sec, bool run_in_default_shell) {
+                             const Timeout<std::micro> &timeout,
+                             bool run_in_default_shell) {
   return RunShellCommand(Args(command), working_dir, status_ptr, signo_ptr,
-                         command_output_ptr, timeout_sec, run_in_default_shell);
+                         command_output_ptr, timeout, run_in_default_shell);
 }
 
 Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
                              int *status_ptr, int *signo_ptr,
                              std::string *command_output_ptr,
-                             uint32_t timeout_sec, bool run_in_default_shell) {
+                             const Timeout<std::micro> &timeout,
+                             bool run_in_default_shell) {
   Status error;
   ProcessLaunchInfo launch_info;
   launch_info.SetArchitecture(HostInfo::GetArchitecture());
@@ -497,11 +497,10 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
   llvm::SmallString<PATH_MAX> output_file_path;
 
   if (command_output_ptr) {
-    // Create a temporary file to get the stdout/stderr and redirect the
-    // output of the command into this file. We will later read this file
-    // if all goes well and fill the data into "command_output_ptr"
-    FileSpec tmpdir_file_spec;
-    if (HostInfo::GetLLDBPath(ePathTypeLLDBTempSystemDir, tmpdir_file_spec)) {
+    // Create a temporary file to get the stdout/stderr and redirect the output
+    // of the command into this file. We will later read this file if all goes
+    // well and fill the data into "command_output_ptr"
+    if (FileSpec tmpdir_file_spec = HostInfo::GetProcessTempDir()) {
       tmpdir_file_spec.AppendPathComponent("lldb-shell-output.%%%%%%");
       llvm::sys::fs::createUniqueFile(tmpdir_file_spec.GetPath(),
                                       output_file_path);
@@ -538,18 +537,14 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
     error.SetErrorString("failed to get process ID");
 
   if (error.Success()) {
-    bool timed_out = false;
-    shell_info_sp->process_reaped.WaitForValueEqualTo(
-        true, std::chrono::seconds(timeout_sec), &timed_out);
-    if (timed_out) {
+    if (!shell_info_sp->process_reaped.WaitForValueEqualTo(true, timeout)) {
       error.SetErrorString("timed out waiting for shell command to complete");
 
       // Kill the process since it didn't complete within the timeout specified
       Kill(pid, SIGKILL);
       // Wait for the monitor callback to get the message
-      timed_out = false;
       shell_info_sp->process_reaped.WaitForValueEqualTo(
-          true, std::chrono::seconds(1), &timed_out);
+          true, std::chrono::seconds(1));
     } else {
       if (status_ptr)
         *status_ptr = shell_info_sp->status;
@@ -580,7 +575,8 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
   return error;
 }
 
-// The functions below implement process launching for non-Apple-based platforms
+// The functions below implement process launching for non-Apple-based
+// platforms
 #if !defined(__APPLE__)
 Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   std::unique_ptr<ProcessLauncher> delegate_launcher;
@@ -595,8 +591,7 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   HostProcess process = launcher.LaunchProcess(launch_info, error);
 
   // TODO(zturner): It would be better if the entire HostProcess were returned
-  // instead of writing
-  // it into this structure.
+  // instead of writing it into this structure.
   launch_info.SetProcessID(process.GetProcessId());
 
   return error;

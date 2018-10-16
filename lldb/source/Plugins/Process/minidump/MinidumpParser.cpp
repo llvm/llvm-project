@@ -14,10 +14,13 @@
 
 // Other libraries and framework includes
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/LLDBAssert.h"
 
 // C includes
 // C++ includes
+#include <algorithm>
 #include <map>
+#include <vector>
 
 using namespace lldb_private;
 using namespace minidump;
@@ -27,47 +30,11 @@ MinidumpParser::Create(const lldb::DataBufferSP &data_buf_sp) {
   if (data_buf_sp->GetByteSize() < sizeof(MinidumpHeader)) {
     return llvm::None;
   }
-
-  llvm::ArrayRef<uint8_t> header_data(data_buf_sp->GetBytes(),
-                                      sizeof(MinidumpHeader));
-  const MinidumpHeader *header = MinidumpHeader::Parse(header_data);
-
-  if (header == nullptr) {
-    return llvm::None;
-  }
-
-  lldb::offset_t directory_list_offset = header->stream_directory_rva;
-  // check if there is enough data for the parsing of the directory list
-  if ((directory_list_offset +
-       sizeof(MinidumpDirectory) * header->streams_count) >
-      data_buf_sp->GetByteSize()) {
-    return llvm::None;
-  }
-
-  const MinidumpDirectory *directory = nullptr;
-  Status error;
-  llvm::ArrayRef<uint8_t> directory_data(
-      data_buf_sp->GetBytes() + directory_list_offset,
-      sizeof(MinidumpDirectory) * header->streams_count);
-  llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> directory_map;
-
-  for (uint32_t i = 0; i < header->streams_count; ++i) {
-    error = consumeObject(directory_data, directory);
-    if (error.Fail()) {
-      return llvm::None;
-    }
-    directory_map[static_cast<const uint32_t>(directory->stream_type)] =
-        directory->location;
-  }
-
-  return MinidumpParser(data_buf_sp, header, std::move(directory_map));
+  return MinidumpParser(data_buf_sp);
 }
 
-MinidumpParser::MinidumpParser(
-    const lldb::DataBufferSP &data_buf_sp, const MinidumpHeader *header,
-    llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> &&directory_map)
-    : m_data_sp(data_buf_sp), m_header(header), m_directory_map(directory_map) {
-}
+MinidumpParser::MinidumpParser(const lldb::DataBufferSP &data_buf_sp)
+    : m_data_sp(data_buf_sp) {}
 
 llvm::ArrayRef<uint8_t> MinidumpParser::GetData() {
   return llvm::ArrayRef<uint8_t>(m_data_sp->GetBytes(),
@@ -96,6 +63,31 @@ llvm::Optional<std::string> MinidumpParser::GetMinidumpString(uint32_t rva) {
   return parseMinidumpString(arr_ref);
 }
 
+UUID MinidumpParser::GetModuleUUID(const MinidumpModule *module) {
+  auto cv_record =
+      GetData().slice(module->CV_record.rva, module->CV_record.data_size);
+
+  // Read the CV record signature
+  const llvm::support::ulittle32_t *signature = nullptr;
+  Status error = consumeObject(cv_record, signature);
+  if (error.Fail())
+    return UUID();
+
+  const CvSignature cv_signature =
+      static_cast<CvSignature>(static_cast<const uint32_t>(*signature));
+
+  if (cv_signature == CvSignature::Pdb70) {
+    // PDB70 record
+    const CvRecordPdb70 *pdb70_uuid = nullptr;
+    Status error = consumeObject(cv_record, pdb70_uuid);
+    if (!error.Fail())
+      return UUID::fromData(pdb70_uuid, sizeof(*pdb70_uuid));
+  } else if (cv_signature == CvSignature::ElfBuildId)
+    return UUID::fromData(cv_record);
+
+  return UUID();
+}
+
 llvm::ArrayRef<MinidumpThread> MinidumpParser::GetThreads() {
   llvm::ArrayRef<uint8_t> data = GetStream(MinidumpStreamType::ThreadList);
 
@@ -115,12 +107,12 @@ MinidumpParser::GetThreadContext(const MinidumpThread &td) {
 
 llvm::ArrayRef<uint8_t>
 MinidumpParser::GetThreadContextWow64(const MinidumpThread &td) {
-  // On Windows, a 32-bit process can run on a 64-bit machine under
-  // WOW64. If the minidump was captured with a 64-bit debugger, then
-  // the CONTEXT we just grabbed from the mini_dump_thread is the one
-  // for the 64-bit "native" process rather than the 32-bit "guest"
-  // process we care about.  In this case, we can get the 32-bit CONTEXT
-  // from the TEB (Thread Environment Block) of the 64-bit process.
+  // On Windows, a 32-bit process can run on a 64-bit machine under WOW64. If
+  // the minidump was captured with a 64-bit debugger, then the CONTEXT we just
+  // grabbed from the mini_dump_thread is the one for the 64-bit "native"
+  // process rather than the 32-bit "guest" process we care about.  In this
+  // case, we can get the 32-bit CONTEXT from the TEB (Thread Environment
+  // Block) of the 64-bit process.
   auto teb_mem = GetMemory(td.teb, sizeof(TEB64));
   if (teb_mem.empty())
     return {};
@@ -130,9 +122,9 @@ MinidumpParser::GetThreadContextWow64(const MinidumpThread &td) {
   if (error.Fail())
     return {};
 
-  // Slot 1 of the thread-local storage in the 64-bit TEB points to a
-  // structure that includes the 32-bit CONTEXT (after a ULONG).
-  // See:  https://msdn.microsoft.com/en-us/library/ms681670.aspx
+  // Slot 1 of the thread-local storage in the 64-bit TEB points to a structure
+  // that includes the 32-bit CONTEXT (after a ULONG). See:
+  // https://msdn.microsoft.com/en-us/library/ms681670.aspx
   auto context =
       GetMemory(wow64teb->tls_slots[1] + 4, sizeof(MinidumpContext_x86_32));
   if (context.size() < sizeof(MinidumpContext_x86_32))
@@ -334,10 +326,10 @@ MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
     }
   }
 
-  // Some Minidumps have a Memory64ListStream that captures all the heap
-  // memory (full-memory Minidumps).  We can't exactly use the same loop as
-  // above, because the Minidump uses slightly different data structures to
-  // describe those
+  // Some Minidumps have a Memory64ListStream that captures all the heap memory
+  // (full-memory Minidumps).  We can't exactly use the same loop as above,
+  // because the Minidump uses slightly different data structures to describe
+  // those
 
   if (!data64.empty()) {
     llvm::ArrayRef<MinidumpMemoryDescriptor64> memory64_list;
@@ -377,8 +369,8 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetMemory(lldb::addr_t addr,
     return {};
 
   // There's at least some overlap between the beginning of the desired range
-  // (addr) and the current range.  Figure out where the overlap begins and
-  // how much overlap there is.
+  // (addr) and the current range.  Figure out where the overlap begins and how
+  // much overlap there is.
 
   const size_t offset = addr - range->start;
 
@@ -455,4 +447,110 @@ MinidumpParser::GetMemoryRegionInfo(lldb::addr_t load_addr) {
   // space, so if you're walking a stack that has kernel frames, the stack may
   // appear truncated.
   return info;
+}
+
+Status MinidumpParser::Initialize() {
+  Status error;
+
+  lldbassert(m_directory_map.empty());
+
+  llvm::ArrayRef<uint8_t> header_data(m_data_sp->GetBytes(),
+                                      sizeof(MinidumpHeader));
+  const MinidumpHeader *header = MinidumpHeader::Parse(header_data);
+  if (header == nullptr) {
+    error.SetErrorString("invalid minidump: can't parse the header");
+    return error;
+  }
+
+  // A minidump without at least one stream is clearly ill-formed
+  if (header->streams_count == 0) {
+    error.SetErrorString("invalid minidump: no streams present");
+    return error;
+  }
+
+  struct FileRange {
+    uint32_t offset = 0;
+    uint32_t size = 0;
+
+    FileRange(uint32_t offset, uint32_t size) : offset(offset), size(size) {}
+    uint32_t end() const { return offset + size; }
+  };
+
+  const uint32_t file_size = m_data_sp->GetByteSize();
+
+  // Build a global minidump file map, checking for:
+  // - overlapping streams/data structures
+  // - truncation (streams pointing past the end of file)
+  std::vector<FileRange> minidump_map;
+
+  // Add the minidump header to the file map
+  if (sizeof(MinidumpHeader) > file_size) {
+    error.SetErrorString("invalid minidump: truncated header");
+    return error;
+  }
+  minidump_map.emplace_back( 0, sizeof(MinidumpHeader) );
+
+  // Add the directory entries to the file map
+  FileRange directory_range(header->stream_directory_rva,
+                            header->streams_count *
+                                sizeof(MinidumpDirectory));
+  if (directory_range.end() > file_size) {
+    error.SetErrorString("invalid minidump: truncated streams directory");
+    return error;
+  }
+  minidump_map.push_back(directory_range);
+
+  // Parse stream directory entries
+  llvm::ArrayRef<uint8_t> directory_data(
+      m_data_sp->GetBytes() + directory_range.offset, directory_range.size);
+  for (uint32_t i = 0; i < header->streams_count; ++i) {
+    const MinidumpDirectory *directory_entry = nullptr;
+    error = consumeObject(directory_data, directory_entry);
+    if (error.Fail())
+      return error;
+    if (directory_entry->stream_type == 0) {
+      // Ignore dummy streams (technically ill-formed, but a number of
+      // existing minidumps seem to contain such streams)
+      if (directory_entry->location.data_size == 0)
+        continue;
+      error.SetErrorString("invalid minidump: bad stream type");
+      return error;
+    }
+    // Update the streams map, checking for duplicate stream types
+    if (!m_directory_map
+             .insert({directory_entry->stream_type, directory_entry->location})
+             .second) {
+      error.SetErrorString("invalid minidump: duplicate stream type");
+      return error;
+    }
+    // Ignore the zero-length streams for layout checks
+    if (directory_entry->location.data_size != 0) {
+      minidump_map.emplace_back(directory_entry->location.rva,
+                                directory_entry->location.data_size);
+    }
+  }
+
+  // Sort the file map ranges by start offset
+  std::sort(minidump_map.begin(), minidump_map.end(),
+            [](const FileRange &a, const FileRange &b) {
+              return a.offset < b.offset;
+            });
+
+  // Check for overlapping streams/data structures
+  for (size_t i = 1; i < minidump_map.size(); ++i) {
+    const auto &prev_range = minidump_map[i - 1];
+    if (prev_range.end() > minidump_map[i].offset) {
+      error.SetErrorString("invalid minidump: overlapping streams");
+      return error;
+    }
+  }
+
+  // Check for streams past the end of file
+  const auto &last_range = minidump_map.back();
+  if (last_range.end() > file_size) {
+    error.SetErrorString("invalid minidump: truncated stream");
+    return error;
+  }
+
+  return error;
 }

@@ -16,11 +16,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#ifdef __linux__
-#include <linux/magic.h>
-#include <sys/mount.h>
-#include <sys/statfs.h>
-#endif
 #if defined(__NetBSD__)
 #include <sys/statvfs.h>
 #endif
@@ -52,7 +47,7 @@ Status FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
     error.SetErrorToErrno();
   else {
     buf[count] = '\0'; // Success
-    dst.SetFile(buf, false);
+    dst.SetFile(buf, false, FileSpec::Style::native);
   }
   return error;
 }

@@ -25,12 +25,12 @@
 
 namespace lldb_private {
 
-// DWARFCallFrameInfo is a class which can read eh_frame and DWARF
-// Call Frame Information FDEs.  It stores little information internally.
-// Only two APIs are exported - one to find the high/low pc values
-// of a function given a text address via the information in the
-// eh_frame / debug_frame, and one to generate an UnwindPlan based
-// on the FDE in the eh_frame / debug_frame section.
+// DWARFCallFrameInfo is a class which can read eh_frame and DWARF Call Frame
+// Information FDEs.  It stores little information internally. Only two APIs
+// are exported - one to find the high/low pc values of a function given a text
+// address via the information in the eh_frame / debug_frame, and one to
+// generate an UnwindPlan based on the FDE in the eh_frame / debug_frame
+// section.
 
 class DWARFCallFrameInfo {
 public:
@@ -40,13 +40,13 @@ public:
 
   ~DWARFCallFrameInfo() = default;
 
-  // Locate an AddressRange that includes the provided Address in this
-  // object's eh_frame/debug_info
-  // Returns true if a range is found to cover that address.
+  // Locate an AddressRange that includes the provided Address in this object's
+  // eh_frame/debug_info Returns true if a range is found to cover that
+  // address.
   bool GetAddressRange(Address addr, AddressRange &range);
 
-  // Return an UnwindPlan based on the call frame information encoded
-  // in the FDE of this DWARFCallFrameInfo section.
+  // Return an UnwindPlan based on the call frame information encoded in the
+  // FDE of this DWARFCallFrameInfo section.
   bool GetUnwindPlan(Address addr, UnwindPlan &unwind_plan);
 
   typedef RangeVector<lldb::addr_t, uint32_t> FunctionAddressAndSizeVector;
@@ -55,12 +55,11 @@ public:
   // Build a vector of file address and size for all functions in this Module
   // based on the eh_frame FDE entries.
   //
-  // The eh_frame information can be a useful source of file address and size of
-  // the functions in a Module.  Often a binary's non-exported symbols are
-  // stripped
-  // before shipping so lldb won't know the start addr / size of many functions
-  // in the Module.  But the eh_frame can help to give the addresses of these
-  // stripped symbols, at least.
+  // The eh_frame information can be a useful source of file address and size
+  // of the functions in a Module.  Often a binary's non-exported symbols are
+  // stripped before shipping so lldb won't know the start addr / size of many
+  // functions in the Module.  But the eh_frame can help to give the addresses
+  // of these stripped symbols, at least.
   //
   // @param[out] function_info
   //      A vector provided by the caller is filled out.  May be empty if no
@@ -112,10 +111,9 @@ private:
 
   typedef std::map<dw_offset_t, CIESP> cie_map_t;
 
-  // Start address (file address), size, offset of FDE location
-  // used for finding an FDE for a given File address; the start address field
-  // is
-  // an offset into an individual Module.
+  // Start address (file address), size, offset of FDE location used for
+  // finding an FDE for a given File address; the start address field is an
+  // offset into an individual Module.
   typedef RangeDataVector<lldb::addr_t, uint32_t, dw_offset_t> FDEEntryMap;
 
   bool IsEHFrame() const;
@@ -133,8 +131,8 @@ private:
   void GetCFIData();
 
   // Applies the specified DWARF opcode to the given row. This function handle
-  // the commands
-  // operates only on a single row (these are the ones what can appear both in
+  // the commands operates only on a single row (these are the ones what can
+  // appear both in
   // CIE and in FDE).
   // Returns true if the opcode is handled and false otherwise.
   bool HandleCommonDwarfOpcode(uint8_t primary_opcode, uint8_t extended_opcode,

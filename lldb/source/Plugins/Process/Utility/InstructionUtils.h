@@ -10,6 +10,9 @@
 #ifndef lldb_InstructionUtils_h_
 #define lldb_InstructionUtils_h_
 
+#include <cassert>
+#include <cstdint>
+
 // Common utilities for manipulating instruction bit fields.
 
 namespace lldb_private {

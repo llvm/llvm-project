@@ -30,8 +30,8 @@ uint64_t NativeThreadDarwin::GetGloballyUniqueThreadIDForMachPortID(
                                 (thread_info_t)&tident, &tident_count);
   if (mach_err != KERN_SUCCESS) {
     // When we fail to get thread info for the supposed port, assume it is
-    // really a globally unique thread id already, or return the best thing
-    // we can, which is the thread port.
+    // really a globally unique thread id already, or return the best thing we
+    // can, which is the thread port.
     return mach_port_id;
   }
   return tident.thread_id;
@@ -47,9 +47,9 @@ NativeThreadDarwin::NativeThreadDarwin(NativeProcessDarwin *process,
 
 bool NativeThreadDarwin::GetIdentifierInfo() {
   // Don't try to get the thread info once and cache it for the life of the
-  // thread.  It changes over time, for instance
-  // if the thread name changes, then the thread_handle also changes...  So you
-  // have to refetch it every time.
+  // thread.  It changes over time, for instance if the thread name changes,
+  // then the thread_handle also changes...  So you have to refetch it every
+  // time.
   mach_msg_type_number_t count = THREAD_IDENTIFIER_INFO_COUNT;
   kern_return_t kret = ::thread_info(m_mach_thread_port, THREAD_IDENTIFIER_INFO,
                                      (thread_info_t)&m_ident_info, &count);
@@ -137,16 +137,16 @@ bool NativeThreadDarwin::NotifyException(MachException::Data &exc) {
 // TODO implement this.
 #if 0
     // Allow the arch specific protocol to process (MachException::Data &)exc
-    // first before possible reassignment of m_stop_exception with exc.
-    // See also MachThread::GetStopException().
+    // first before possible reassignment of m_stop_exception with exc. See
+    // also MachThread::GetStopException().
     bool handled = m_arch_ap->NotifyException(exc);
 
     if (m_stop_exception.IsValid())
     {
         // We may have more than one exception for a thread, but we need to
-        // only remember the one that we will say is the reason we stopped.
-        // We may have been single stepping and also gotten a signal exception,
-        // so just remember the most pertinent one.
+        // only remember the one that we will say is the reason we stopped. We
+        // may have been single stepping and also gotten a signal exception, so
+        // just remember the most pertinent one.
         if (m_stop_exception.IsBreakpoint())
             m_stop_exception = exc;
     }
@@ -170,8 +170,8 @@ bool NativeThreadDarwin::ShouldStop(bool &step_more) const {
 
     if (bp)
     {
-        // This thread is sitting at a breakpoint, ask the breakpoint
-        // if we should be stopping here.
+        // This thread is sitting at a breakpoint, ask the breakpoint if we
+        // should be stopping here.
         return true;
     }
     else
@@ -181,11 +181,10 @@ bool NativeThreadDarwin::ShouldStop(bool &step_more) const {
             step_more = true;
             return false;
         }
-        // The thread state is used to let us know what the thread was
-        // trying to do. MachThread::ThreadWillResume() will set the
-        // thread state to various values depending if the thread was
-        // the current thread and if it was to be single stepped, or
-        // resumed.
+        // The thread state is used to let us know what the thread was trying
+        // to do. MachThread::ThreadWillResume() will set the thread state to
+        // various values depending if the thread was the current thread and if
+        // it was to be single stepped, or resumed.
         if (GetState() == eStateRunning)
         {
             // If our state is running, then we should continue as we are in
@@ -194,8 +193,7 @@ bool NativeThreadDarwin::ShouldStop(bool &step_more) const {
         }
         else
         {
-            // Stop if we have any kind of valid exception for this
-            // thread.
+            // Stop if we have any kind of valid exception for this thread.
             if (GetStopException().IsValid())
                 return true;
         }
@@ -209,17 +207,17 @@ bool NativeThreadDarwin::ShouldStop(bool &step_more) const {
 void NativeThreadDarwin::ThreadDidStop() {
 // TODO implement this.
 #if 0
-    // This thread has existed prior to resuming under debug nub control,
-    // and has just been stopped. Do any cleanup that needs to be done
-    // after running.
+    // This thread has existed prior to resuming under debug nub control, and
+    // has just been stopped. Do any cleanup that needs to be done after
+    // running.
 
-    // The thread state and breakpoint will still have the same values
-    // as they had prior to resuming the thread, so it makes it easy to check
-    // if we were trying to step a thread, or we tried to resume while being
-    // at a breakpoint.
+    // The thread state and breakpoint will still have the same values as they
+    // had prior to resuming the thread, so it makes it easy to check if we
+    // were trying to step a thread, or we tried to resume while being at a
+    // breakpoint.
 
-    // When this method gets called, the process state is still in the
-    // state it was in while running so we can act accordingly.
+    // When this method gets called, the process state is still in the state it
+    // was in while running so we can act accordingly.
     m_arch_ap->ThreadDidStop();
 
 

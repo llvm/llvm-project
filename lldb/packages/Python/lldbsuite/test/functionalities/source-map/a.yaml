@@ -1,0 +1,396 @@
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x0000000A
+  ncmds:           6
+  sizeofcmds:      1376
+  flags:           0x00000000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            D37CC773-C218-3F97-99C9-CE4E77DDF2CE
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          4096
+    nsyms:           2
+    stroff:          4128
+    strsize:         28
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          4096
+    fileoff:         0
+    filesize:        0
+    maxprot:         7
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000100000FA0
+        size:            15
+        offset:          0x00000000
+        align:           4
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x0000000100000FB0
+        size:            72
+        offset:          0x00000000
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294971392
+    vmsize:          4096
+    fileoff:         4096
+    filesize:        60
+    maxprot:         7
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         952
+    segname:         __DWARF
+    vmaddr:          4294975488
+    vmsize:          4096
+    fileoff:         8192
+    filesize:        563
+    maxprot:         7
+    initprot:        3
+    nsects:          11
+    flags:           0
+    Sections:
+      - sectname:        __debug_line
+        segname:         __DWARF
+        addr:            0x0000000100002000
+        size:            60
+        offset:          0x00002000
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_pubnames
+        segname:         __DWARF
+        addr:            0x000000010000203C
+        size:            27
+        offset:          0x0000203C
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_pubtypes
+        segname:         __DWARF
+        addr:            0x0000000100002057
+        size:            26
+        offset:          0x00002057
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_aranges
+        segname:         __DWARF
+        addr:            0x0000000100002071
+        size:            48
+        offset:          0x00002071
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_info
+        segname:         __DWARF
+        addr:            0x00000001000020A1
+        size:            75
+        offset:          0x000020A1
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_abbrev
+        segname:         __DWARF
+        addr:            0x00000001000020EC
+        size:            52
+        offset:          0x000020EC
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_str
+        segname:         __DWARF
+        addr:            0x0000000100002120
+        size:            28
+        offset:          0x00002120
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __apple_names
+        segname:         __DWARF
+        addr:            0x0000000100002160
+        size:            60
+        offset:          0x00002160
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __apple_namespac
+        segname:         __DWARF
+        addr:            0x000000010000219C
+        size:            36
+        offset:          0x0000219C
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __apple_types
+        segname:         __DWARF
+        addr:            0x00000001000021C0
+        size:            79
+        offset:          0x000021C0
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __apple_objc
+        segname:         __DWARF
+        addr:            0x000000010000220F
+        size:            36
+        offset:          0x0000220F
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+LinkEditData:
+  NameList:
+    - n_strx:          2
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          16
+      n_value:         4294967296
+    - n_strx:          22
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294971296
+  StringTable:
+    - ''
+    - ''
+    - __mh_execute_header
+    - _main
+DWARF:
+  debug_str:
+    - ''
+    - obj2yaml
+    - main.c
+    - .
+    - main
+    - int
+  debug_abbrev:
+    - Code:            0x00000001
+      Tag:             DW_TAG_compile_unit
+      Children:        DW_CHILDREN_yes
+      Attributes:
+        - Attribute:       DW_AT_producer
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_language
+          Form:            DW_FORM_data2
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_stmt_list
+          Form:            DW_FORM_sec_offset
+        - Attribute:       DW_AT_comp_dir
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+    - Code:            0x00000002
+      Tag:             DW_TAG_subprogram
+      Children:        DW_CHILDREN_no
+      Attributes:
+        - Attribute:       DW_AT_low_pc
+          Form:            DW_FORM_addr
+        - Attribute:       DW_AT_high_pc
+          Form:            DW_FORM_data4
+        - Attribute:       DW_AT_frame_base
+          Form:            DW_FORM_exprloc
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_decl_file
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_decl_line
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_type
+          Form:            DW_FORM_ref4
+        - Attribute:       DW_AT_external
+          Form:            DW_FORM_flag_present
+    - Code:            0x00000003
+      Tag:             DW_TAG_base_type
+      Children:        DW_CHILDREN_no
+      Attributes:
+        - Attribute:       DW_AT_name
+          Form:            DW_FORM_strp
+        - Attribute:       DW_AT_encoding
+          Form:            DW_FORM_data1
+        - Attribute:       DW_AT_byte_size
+          Form:            DW_FORM_data1
+  debug_aranges:
+    - Length:
+        TotalLength:     44
+      Version:         2
+      CuOffset:        0
+      AddrSize:        8
+      SegSize:         0
+      Descriptors:
+        - Address:         0x0000000100000FA0
+          Length:          15
+  debug_pubnames:
+    Length:
+      TotalLength:     23
+    Version:         2
+    UnitOffset:      0
+    UnitSize:        75
+    Entries:
+      - DieOffset:       0x0000002A
+        Name:            main
+  debug_pubtypes:
+    Length:
+      TotalLength:     22
+    Version:         2
+    UnitOffset:      0
+    UnitSize:        75
+    Entries:
+      - DieOffset:       0x00000043
+        Name:            int
+  debug_info:
+    - Length:
+        TotalLength:     71
+      Version:         4
+      AbbrOffset:      0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+            - Value:           0x000000000000000C
+            - Value:           0x000000000000000A
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000011
+            - Value:           0x0000000100000FA0
+            - Value:           0x000000000000000F
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000100000FA0
+            - Value:           0x000000000000000F
+            - Value:           0x0000000000000001
+              BlockData:
+                - 0x56
+            - Value:           0x0000000000000013
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000001
+            - Value:           0x0000000000000043
+            - Value:           0x0000000000000001
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000018
+            - Value:           0x0000000000000005
+            - Value:           0x0000000000000004
+        - AbbrCode:        0x00000000
+          Values:
+  debug_line:
+    - Length:
+        TotalLength:     56
+      Version:         2
+      PrologueLength:  29
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+      Files:
+        - Name:            main.c
+          DirIdx:          0
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4294971296
+        - Opcode:          DW_LNS_copy
+          Data:            4294971296
+        - Opcode:          DW_LNS_set_column
+          Data:            2
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            2
+        - Opcode:          0xC9
+          Data:            2
+        - Opcode:          DW_LNS_advance_pc
+          Data:            2
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            2
+...

@@ -10,12 +10,15 @@
 #ifndef lldb_Plugins_SymbolFile_PDB_SymbolFilePDB_h_
 #define lldb_Plugins_SymbolFile_PDB_SymbolFilePDB_h_
 
+#include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/UserID.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 
 class SymbolFilePDB : public lldb_private::SymbolFile {
 public:
@@ -108,11 +111,11 @@ public:
   uint32_t
   FindGlobalVariables(const lldb_private::ConstString &name,
                       const lldb_private::CompilerDeclContext *parent_decl_ctx,
-                      bool append, uint32_t max_matches,
+                      uint32_t max_matches,
                       lldb_private::VariableList &variables) override;
 
   uint32_t FindGlobalVariables(const lldb_private::RegularExpression &regex,
-                               bool append, uint32_t max_matches,
+                               uint32_t max_matches,
                                lldb_private::VariableList &variables) override;
 
   uint32_t
@@ -141,8 +144,7 @@ public:
                    bool append, lldb_private::TypeMap &types) override;
 
   void FindTypesByRegex(const lldb_private::RegularExpression &regex,
-                        uint32_t max_matches,
-                        lldb_private::TypeMap &types);
+                        uint32_t max_matches, lldb_private::TypeMap &types);
 
   lldb_private::TypeList *GetTypeList() override;
 
@@ -167,25 +169,76 @@ public:
   const llvm::pdb::IPDBSession &GetPDBSession() const;
 
 private:
-  lldb::CompUnitSP ParseCompileUnitForSymIndex(uint32_t id);
+  lldb::CompUnitSP ParseCompileUnitForUID(uint32_t id,
+                                          uint32_t index = UINT32_MAX);
 
   bool ParseCompileUnitLineTable(const lldb_private::SymbolContext &sc,
                                  uint32_t match_line);
 
   void BuildSupportFileIdToSupportFileIndexMap(
-      const llvm::pdb::PDBSymbolCompiland &cu,
+      const llvm::pdb::PDBSymbolCompiland &pdb_compiland,
       llvm::DenseMap<uint32_t, uint32_t> &index_map) const;
 
   void FindTypesByName(const std::string &name, uint32_t max_matches,
                        lldb_private::TypeMap &types);
 
+  std::string GetMangledForPDBData(const llvm::pdb::PDBSymbolData &pdb_data);
+
+  lldb::VariableSP
+  ParseVariableForPDBData(const lldb_private::SymbolContext &sc,
+                          const llvm::pdb::PDBSymbolData &pdb_data);
+
+  size_t ParseVariables(const lldb_private::SymbolContext &sc,
+                        const llvm::pdb::PDBSymbol &pdb_data,
+                        lldb_private::VariableList *variable_list = nullptr);
+
+  lldb::CompUnitSP
+  GetCompileUnitContainsAddress(const lldb_private::Address &so_addr);
+
+  typedef std::vector<lldb_private::Type *> TypeCollection;
+
+  void GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol &pdb_symbol,
+                            uint32_t type_mask,
+                            TypeCollection &type_collection);
+
+  lldb_private::Function *
+  ParseCompileUnitFunctionForPDBFunc(const llvm::pdb::PDBSymbolFunc &pdb_func,
+                                     const lldb_private::SymbolContext &sc);
+
+  void GetCompileUnitIndex(const llvm::pdb::PDBSymbolCompiland &pdb_compiland,
+                           uint32_t &index);
+
+  std::unique_ptr<llvm::pdb::PDBSymbolCompiland>
+  GetPDBCompilandByUID(uint32_t uid);
+
+  lldb_private::Mangled
+  GetMangledForPDBFunc(const llvm::pdb::PDBSymbolFunc &pdb_func);
+
+  bool ResolveFunction(const llvm::pdb::PDBSymbolFunc &pdb_func,
+                       bool include_inlines,
+                       lldb_private::SymbolContextList &sc_list);
+
+  bool ResolveFunction(uint32_t uid, bool include_inlines,
+                       lldb_private::SymbolContextList &sc_list);
+
+  void CacheFunctionNames();
+
+  bool DeclContextMatchesThisSymbolFile(
+      const lldb_private::CompilerDeclContext *decl_ctx);
+
   llvm::DenseMap<uint32_t, lldb::CompUnitSP> m_comp_units;
   llvm::DenseMap<uint32_t, lldb::TypeSP> m_types;
+  llvm::DenseMap<uint32_t, lldb::VariableSP> m_variables;
 
   std::vector<lldb::TypeSP> m_builtin_types;
   std::unique_ptr<llvm::pdb::IPDBSession> m_session_up;
+  std::unique_ptr<llvm::pdb::PDBSymbolExe> m_global_scope_up;
   uint32_t m_cached_compile_unit_count;
   std::unique_ptr<lldb_private::CompilerDeclContext> m_tu_decl_ctx_up;
+
+  lldb_private::UniqueCStringMap<uint32_t> m_func_full_names;
+  lldb_private::UniqueCStringMap<uint32_t> m_func_base_names;
+  lldb_private::UniqueCStringMap<uint32_t> m_func_method_names;
 };
 
 #endif // lldb_Plugins_SymbolFile_PDB_SymbolFilePDB_h_

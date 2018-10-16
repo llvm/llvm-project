@@ -1,0 +1,9 @@
+REQUIRES: windows
+RUN: clang-cl /Z7 %S/Inputs/CompilandsTest.cpp /o %T/CompilandsTest.cpp.exe
+RUN: lldb-test symbols %T/CompilandsTest.cpp.exe | FileCheck %s
+
+; Link default libraries
+
+CHECK: Module [[CU:.*]]
+CHECK: {{^[0-9A-F]+}}: SymbolVendor ([[CU]])
+CHECK: {{^[0-9A-F]+}}:   CompileUnit{{[{]0x[0-9a-f]+[}]}}, language = "c++", file = '{{.*}}\CompilandsTest.cpp'

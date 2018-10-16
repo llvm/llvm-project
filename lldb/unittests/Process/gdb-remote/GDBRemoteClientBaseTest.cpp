@@ -339,3 +339,23 @@ TEST_F(GDBRemoteClientBaseTest, InterruptNoResponse) {
   ASSERT_TRUE(async_result.get());
   ASSERT_EQ(eStateInvalid, continue_state.get());
 }
+
+TEST_F(GDBRemoteClientBaseTest, SendPacketAndReceiveResponseWithOutputSupport) {
+  StringExtractorGDBRemote response;
+  StreamString command_output;
+
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("O"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("O48656c6c6f2c"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("O20"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("O"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("O776f726c64"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("OK"));
+
+  PacketResult result = client.SendPacketAndReceiveResponseWithOutputSupport(
+      "qRcmd,test", response, true,
+      [&command_output](llvm::StringRef output) { command_output << output; });
+
+  ASSERT_EQ(PacketResult::Success, result);
+  ASSERT_EQ("OK", response.GetStringRef());
+  ASSERT_EQ("Hello, world", command_output.GetString().str());
+}

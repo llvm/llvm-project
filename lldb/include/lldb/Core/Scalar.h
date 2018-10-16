@@ -36,9 +36,9 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 // A class designed to hold onto values and their corresponding types.
-// Operators are defined and Scalar objects will correctly promote
-// their types and values before performing these operations. Type
-// promotion currently follows the ANSI C type promotion rules.
+// Operators are defined and Scalar objects will correctly promote their types
+// and values before performing these operations. Type promotion currently
+// follows the ANSI C type promotion rules.
 //----------------------------------------------------------------------
 class Scalar {
 public:
@@ -50,13 +50,13 @@ public:
     e_ulong,
     e_slonglong,
     e_ulonglong,
+    e_sint128,
+    e_uint128,
+    e_sint256,
+    e_uint256,
     e_float,
     e_double,
-    e_long_double,
-    e_uint128,
-    e_sint128,
-    e_uint256,
-    e_sint256
+    e_long_double
   };
 
   //------------------------------------------------------------------
@@ -165,8 +165,6 @@ public:
 
   bool Promote(Scalar::Type type);
 
-  bool Cast(Scalar::Type type);
-
   bool MakeSigned();
 
   bool MakeUnsigned();
@@ -182,10 +180,10 @@ public:
   static Scalar::Type GetValueTypeForFloatWithByteSize(size_t byte_size);
 
   //----------------------------------------------------------------------
-  // All operators can benefits from the implicit conversions that will
-  // happen automagically by the compiler, so no temporary objects will
-  // need to be created. As a result, we currently don't need a variety of
-  // overloaded set value accessors.
+  // All operators can benefits from the implicit conversions that will happen
+  // automagically by the compiler, so no temporary objects will need to be
+  // created. As a result, we currently don't need a variety of overloaded set
+  // value accessors.
   //----------------------------------------------------------------------
   Scalar &operator=(const int i);
   Scalar &operator=(unsigned int v);
@@ -204,27 +202,27 @@ public:
   Scalar &operator&=(const Scalar &rhs);
 
   //----------------------------------------------------------------------
-  // Shifts the current value to the right without maintaining the current
-  // sign of the value (if it is signed).
+  // Shifts the current value to the right without maintaining the current sign
+  // of the value (if it is signed).
   //----------------------------------------------------------------------
   bool ShiftRightLogical(const Scalar &rhs); // Returns true on success
 
   //----------------------------------------------------------------------
-  // Takes the absolute value of the current value if it is signed, else
-  // the value remains unchanged.
-  // Returns false if the contained value has a void type.
+  // Takes the absolute value of the current value if it is signed, else the
+  // value remains unchanged. Returns false if the contained value has a void
+  // type.
   //----------------------------------------------------------------------
   bool AbsoluteValue(); // Returns true on success
   //----------------------------------------------------------------------
-  // Negates the current value (even for unsigned values).
-  // Returns false if the contained value has a void type.
+  // Negates the current value (even for unsigned values). Returns false if the
+  // contained value has a void type.
   //----------------------------------------------------------------------
   bool UnaryNegate(); // Returns true on success
   //----------------------------------------------------------------------
-  // Inverts all bits in the current value as long as it isn't void or
-  // a float/double/long double type.
-  // Returns false if the contained value has a void/float/double/long
-  // double type, else the value is inverted and true is returned.
+  // Inverts all bits in the current value as long as it isn't void or a
+  // float/double/long double type. Returns false if the contained value has a
+  // void/float/double/long double type, else the value is inverted and true is
+  // returned.
   //----------------------------------------------------------------------
   bool OnesComplement(); // Returns true on success
 
@@ -234,9 +232,9 @@ public:
   Scalar::Type GetType() const { return m_type; }
 
   //----------------------------------------------------------------------
-  // Returns a casted value of the current contained data without
-  // modifying the current value. FAIL_VALUE will be returned if the type
-  // of the value is void or invalid.
+  // Returns a casted value of the current contained data without modifying the
+  // current value. FAIL_VALUE will be returned if the type of the value is
+  // void or invalid.
   //----------------------------------------------------------------------
   int SInt(int fail_value = 0) const;
 
@@ -344,8 +342,8 @@ private:
 };
 
 //----------------------------------------------------------------------
-// Split out the operators into a format where the compiler will be able
-// to implicitly convert numbers into Scalar objects.
+// Split out the operators into a format where the compiler will be able to
+// implicitly convert numbers into Scalar objects.
 //
 // This allows code like:
 //      Scalar two(2);

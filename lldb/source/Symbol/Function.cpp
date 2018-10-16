@@ -10,6 +10,7 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -18,15 +19,15 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/Language.h"
+#include "lldb/Utility/Log.h"
 #include "llvm/Support/Casting.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 //----------------------------------------------------------------------
-// Basic function information is contained in the FunctionInfo class.
-// It is designed to contain the name, linkage name, and declaration
-// location.
+// Basic function information is contained in the FunctionInfo class. It is
+// designed to contain the name, linkage name, and declaration location.
 //----------------------------------------------------------------------
 FunctionInfo::FunctionInfo(const char *name, const Declaration *decl_ptr)
     : m_name(name), m_declaration(decl_ptr) {}
@@ -132,6 +133,60 @@ size_t InlineFunctionInfo::MemorySize() const {
 //----------------------------------------------------------------------
 //
 //----------------------------------------------------------------------
+CallEdge::CallEdge(const char *symbol_name, lldb::addr_t return_pc)
+    : return_pc(return_pc), resolved(false) {
+  lazy_callee.symbol_name = symbol_name;
+}
+
+void CallEdge::ParseSymbolFileAndResolve(ModuleList &images) {
+  if (resolved)
+    return;
+
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  LLDB_LOG(log, "CallEdge: Lazily parsing the call graph for {0}",
+           lazy_callee.symbol_name);
+
+  auto resolve_lazy_callee = [&]() -> Function * {
+    ConstString callee_name{lazy_callee.symbol_name};
+    SymbolContextList sc_list;
+    size_t num_matches =
+        images.FindFunctionSymbols(callee_name, eFunctionNameTypeAuto, sc_list);
+    if (num_matches == 0 || !sc_list[0].symbol) {
+      LLDB_LOG(log, "CallEdge: Found no symbols for {0}, cannot resolve it",
+               callee_name);
+      return nullptr;
+    }
+    Address callee_addr = sc_list[0].symbol->GetAddress();
+    if (!callee_addr.IsValid()) {
+      LLDB_LOG(log, "CallEdge: Invalid symbol address");
+      return nullptr;
+    }
+    Function *f = callee_addr.CalculateSymbolContextFunction();
+    if (!f) {
+      LLDB_LOG(log, "CallEdge: Could not find complete function");
+      return nullptr;
+    }
+    return f;
+  };
+  lazy_callee.def = resolve_lazy_callee();
+  resolved = true;
+}
+
+Function *CallEdge::GetCallee(ModuleList &images) {
+  ParseSymbolFileAndResolve(images);
+  return lazy_callee.def;
+}
+
+lldb::addr_t CallEdge::GetReturnPCAddress(Function &caller,
+                                          Target &target) const {
+  const Address &base = caller.GetAddressRange().GetBaseAddress();
+  Address return_pc_addr{base.GetSection(), return_pc};
+  return return_pc_addr.GetLoadAddress(&target);
+}
+
+//----------------------------------------------------------------------
+//
+//----------------------------------------------------------------------
 Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
                    lldb::user_id_t type_uid, const Mangled &mangled, Type *type,
                    const AddressRange &range, bool canThrow)
@@ -195,8 +250,7 @@ void Function::GetEndLineSourceInfo(FileSpec &source_file, uint32_t &line_no) {
   source_file.Clear();
 
   // The -1 is kind of cheesy, but I want to get the last line entry for the
-  // given function, not the
-  // first entry of the next.
+  // given function, not the first entry of the next.
   Address scratch_addr(GetAddressRange().GetBaseAddress());
   scratch_addr.SetOffset(scratch_addr.GetOffset() +
                          GetAddressRange().GetByteSize() - 1);
@@ -210,6 +264,43 @@ void Function::GetEndLineSourceInfo(FileSpec &source_file, uint32_t &line_no) {
     line_no = line_entry.line;
     source_file = line_entry.file;
   }
+}
+
+llvm::MutableArrayRef<CallEdge> Function::GetCallEdges() {
+  if (m_call_edges_resolved)
+    return m_call_edges;
+
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  LLDB_LOG(log, "GetCallEdges: Attempting to parse call site info for {0}",
+           GetDisplayName());
+
+  m_call_edges_resolved = true;
+
+  // Find the SymbolFile which provided this function's definition.
+  Block &block = GetBlock(/*can_create*/true);
+  SymbolFile *sym_file = block.GetSymbolFile();
+  if (!sym_file)
+    return llvm::None;
+
+  // Lazily read call site information from the SymbolFile.
+  m_call_edges = sym_file->ParseCallEdgesInFunction(GetID());
+
+  // Sort the call edges to speed up return_pc lookups.
+  std::sort(m_call_edges.begin(), m_call_edges.end(),
+            [](const CallEdge &LHS, const CallEdge &RHS) {
+              return LHS.GetUnresolvedReturnPCAddress() <
+                     RHS.GetUnresolvedReturnPCAddress();
+            });
+
+  return m_call_edges;
+}
+
+llvm::MutableArrayRef<CallEdge> Function::GetTailCallingEdges() {
+  // Call edges are sorted by return PC, and tail calling edges have invalid
+  // return PCs. Find them at the end of the list.
+  return GetCallEdges().drop_until([](const CallEdge &edge) {
+    return edge.GetUnresolvedReturnPCAddress() == LLDB_INVALID_ADDRESS;
+  });
 }
 
 Block &Function::GetBlock(bool can_create) {
@@ -338,9 +429,8 @@ size_t Function::MemorySize() const {
 bool Function::GetIsOptimized() {
   bool result = false;
 
-  // Currently optimization is only indicted by the
-  // vendor extension DW_AT_APPLE_optimized which
-  // is set on a compile unit level.
+  // Currently optimization is only indicted by the vendor extension
+  // DW_AT_APPLE_optimized which is set on a compile unit level.
   if (m_comp_unit) {
     result = m_comp_unit->GetIsOptimized();
   }
@@ -450,11 +540,11 @@ uint32_t Function::GetPrologueByteSize() {
           }
         }
 
-        // If we didn't find the end of the prologue in the line tables,
-        // then just use the end address of the first line table entry
+        // If we didn't find the end of the prologue in the line tables, then
+        // just use the end address of the first line table entry
         if (prologue_end_file_addr == LLDB_INVALID_ADDRESS) {
-          // Check the first few instructions and look for one that has
-          // a line number that's different than the first entry.
+          // Check the first few instructions and look for one that has a line
+          // number that's different than the first entry.
           uint32_t last_line_entry_idx = first_line_entry_idx + 6;
           for (uint32_t idx = first_line_entry_idx + 1;
                idx < last_line_entry_idx; ++idx) {
@@ -507,8 +597,8 @@ uint32_t Function::GetPrologueByteSize() {
           }
         }
 
-        // Verify that this prologue end file address in the function's
-        // address range just to be sure
+        // Verify that this prologue end file address in the function's address
+        // range just to be sure
         if (func_start_file_addr < prologue_end_file_addr &&
             prologue_end_file_addr < func_end_file_addr) {
           m_prologue_byte_size = prologue_end_file_addr - func_start_file_addr;

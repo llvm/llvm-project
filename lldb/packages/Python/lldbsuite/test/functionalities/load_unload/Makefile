@@ -5,7 +5,7 @@ LIB_PREFIX := loadunload_
 LD_EXTRAS := -L. -l$(LIB_PREFIX)d -ldl
 CXX_SOURCES := main.cpp
 
-all: lib_a lib_b lib_c lib_d hidden_lib_d install_name_tool a.out
+all: lib_a lib_b lib_c lib_d hidden_lib_d install_name_tool
 
 include $(LEVEL)/Makefile.rules
 

@@ -26,10 +26,8 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/Module.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -77,9 +75,11 @@ GetFreeBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
   size_t pathname_len = sizeof(pathname);
   mib[2] = KERN_PROC_PATHNAME;
   if (::sysctl(mib, 4, pathname, &pathname_len, NULL, 0) == 0)
-    process_info.GetExecutableFile().SetFile(pathname, false);
+    process_info.GetExecutableFile().SetFile(pathname, false,
+                                             FileSpec::Style::native);
   else
-    process_info.GetExecutableFile().SetFile(cstr, false);
+    process_info.GetExecutableFile().SetFile(cstr, false,
+                                             FileSpec::Style::native);
 
   if (!(match_info_ptr == NULL ||
         NameMatches(process_info.GetExecutableFile().GetFilename().GetCString(),
@@ -194,9 +194,8 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
       continue;
 
     // Every thread is a process in FreeBSD, but all the threads of a single
-    // process have the same pid. Do not store the process info in the
-    // result list if a process with given identifier is already registered
-    // there.
+    // process have the same pid. Do not store the process info in the result
+    // list if a process with given identifier is already registered there.
     bool already_registered = false;
     for (uint32_t pi = 0;
          !already_registered && (const int)kinfo.ki_numthreads > 1 &&
@@ -242,14 +241,7 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   return false;
 }
 
-size_t Host::GetEnvironment(StringList &env) {
-  char **host_env = environ;
-  char *env_entry;
-  size_t i;
-  for (i = 0; (env_entry = host_env[i]) != NULL; ++i)
-    env.AppendString(env_entry);
-  return i;
-}
+Environment Host::GetEnvironment() { return Environment(environ); }
 
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   return Status("unimplemented");

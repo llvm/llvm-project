@@ -83,6 +83,7 @@ public:
 private:
   TestClient(std::unique_ptr<lldb_private::Connection> Conn);
 
+  llvm::Error initializeConnection();
   llvm::Error qProcessInfo();
   llvm::Error qRegisterInfos();
   llvm::Error queryProcess();

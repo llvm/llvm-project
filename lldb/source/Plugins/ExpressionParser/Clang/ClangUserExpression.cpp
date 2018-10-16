@@ -204,12 +204,10 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   } else if (clang::FunctionDecl *function_decl =
                  ClangASTContext::DeclContextGetAsFunctionDecl(decl_context)) {
     // We might also have a function that said in the debug information that it
-    // captured an
-    // object pointer.  The best way to deal with getting to the ivars at
-    // present is by pretending
-    // that this is a method of a class in whatever runtime the debug info says
-    // the object pointer
-    // belongs to.  Do that here.
+    // captured an object pointer.  The best way to deal with getting to the
+    // ivars at present is by pretending that this is a method of a class in
+    // whatever runtime the debug info says the object pointer belongs to.  Do
+    // that here.
 
     ClangASTMetadata *metadata =
         ClangASTContext::DeclContextGetMetaData(decl_context, function_decl);
@@ -299,10 +297,10 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   }
 }
 
-// This is a really nasty hack, meant to fix Objective-C expressions of the form
-// (int)[myArray count].  Right now, because the type information for count is
-// not available, [myArray count] returns id, which can't be directly cast to
-// int without causing a clang error.
+// This is a really nasty hack, meant to fix Objective-C expressions of the
+// form (int)[myArray count].  Right now, because the type information for
+// count is not available, [myArray count] returns id, which can't be directly
+// cast to int without causing a clang error.
 static void ApplyObjcCastHack(std::string &expr) {
 #define OBJC_CAST_HACK_FROM "(int)["
 #define OBJC_CAST_HACK_TO "(int)(long long)["
@@ -317,18 +315,23 @@ static void ApplyObjcCastHack(std::string &expr) {
 #undef OBJC_CAST_HACK_FROM
 }
 
-bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
-                                ExecutionContext &exe_ctx,
-                                lldb_private::ExecutionPolicy execution_policy,
-                                bool keep_result_in_memory,
-                                bool generate_debug_info,
-                                uint32_t line_offset) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+namespace {
+// Utility guard that calls a callback when going out of scope.
+class OnExit {
+public:
+  typedef std::function<void(void)> Callback;
 
-  Status err;
+  OnExit(Callback const &callback) : m_callback(callback) {}
 
-  InstallContext(exe_ctx);
+  ~OnExit() { m_callback(); }
 
+private:
+  Callback m_callback;
+};
+} // namespace
+
+bool ClangUserExpression::SetupPersistentState(DiagnosticManager &diagnostic_manager,
+                                 ExecutionContext &exe_ctx) {
   if (Target *target = exe_ctx.GetTargetPtr()) {
     if (PersistentExpressionState *persistent_state =
             target->GetPersistentExpressionStateForLanguage(
@@ -345,26 +348,15 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                  "error: couldn't start parsing (no target)");
     return false;
   }
+  return true;
+}
 
-  ScanContext(exe_ctx, err);
-
-  if (!err.Success()) {
-    diagnostic_manager.PutString(eDiagnosticSeverityWarning, err.AsCString());
-  }
-
-  ////////////////////////////////////
-  // Generate the expression
-  //
-
-  ApplyObjcCastHack(m_expr_text);
-
-  std::string prefix = m_expr_prefix;
-
+static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target) {
   if (ClangModulesDeclVendor *decl_vendor =
-          m_target->GetClangModulesDeclVendor()) {
+          target->GetClangModulesDeclVendor()) {
     const ClangModulesDeclVendor::ModuleVector &hand_imported_modules =
         llvm::cast<ClangPersistentVariables>(
-            m_target->GetPersistentExpressionStateForLanguage(
+            target->GetPersistentExpressionStateForLanguage(
                 lldb::eLanguageTypeC))
             ->GetHandLoadedClangModules();
     ClangModulesDeclVendor::ModuleVector modules_for_macros;
@@ -373,7 +365,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       modules_for_macros.push_back(module);
     }
 
-    if (m_target->GetEnableAutoImportClangModules()) {
+    if (target->GetEnableAutoImportClangModules()) {
       if (StackFrame *frame = exe_ctx.GetFramePtr()) {
         if (Block *block = frame->GetFrameBlock()) {
           SymbolContext sc;
@@ -390,8 +382,13 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       }
     }
   }
+}
 
-  lldb::LanguageType lang_type = lldb::eLanguageTypeUnknown;
+llvm::Optional<lldb::LanguageType> ClangUserExpression::GetLanguageForExpr(
+    DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx) {
+  lldb::LanguageType lang_type = lldb::LanguageType::eLanguageTypeUnknown;
+
+  std::string prefix = m_expr_prefix;
 
   if (m_options.GetExecutionPolicy() == eExecutionPolicyTopLevel) {
     m_transformed_text = m_expr_text;
@@ -414,9 +411,51 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                               m_options, m_swift_generic_info, exe_ctx,
                               first_body_line)) {
       diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                    "couldn't construct expression body");
-      return false;
+                                   "couldn't construct expression body");
+      return llvm::Optional<lldb::LanguageType>();
     }
+  }
+  return lang_type;
+}
+
+bool ClangUserExpression::PrepareForParsing(
+    DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx) {
+  InstallContext(exe_ctx);
+
+  if (!SetupPersistentState(diagnostic_manager, exe_ctx))
+    return false;
+
+  Status err;
+  ScanContext(exe_ctx, err);
+
+  if (!err.Success()) {
+    diagnostic_manager.PutString(eDiagnosticSeverityWarning, err.AsCString());
+  }
+
+  ////////////////////////////////////
+  // Generate the expression
+  //
+
+  ApplyObjcCastHack(m_expr_text);
+
+  SetupDeclVendor(exe_ctx, m_target);
+  return true;
+}
+
+bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
+                                ExecutionContext &exe_ctx,
+                                lldb_private::ExecutionPolicy execution_policy,
+                                bool keep_result_in_memory,
+                                bool generate_debug_info,
+                                uint32_t line_offset) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
+  if (!PrepareForParsing(diagnostic_manager, exe_ctx))
+    return false;
+
+  lldb::LanguageType lang_type = lldb::LanguageType::eLanguageTypeUnknown;
+  if (auto new_lang = GetLanguageForExpr(diagnostic_manager, exe_ctx)) {
+    lang_type = new_lang.getValue();
   }
 
   if (log)
@@ -441,28 +480,12 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   ResetDeclMap(exe_ctx, m_result_delegate, keep_result_in_memory);
 
-  class OnExit {
-  public:
-    typedef std::function<void(void)> Callback;
-
-    OnExit(Callback const &callback) : m_callback(callback) {}
-
-    ~OnExit() { m_callback(); }
-
-  private:
-    Callback m_callback;
-  };
-
   OnExit on_exit([this]() { ResetDeclMap(); });
 
   if (!DeclMap()->WillParse(exe_ctx, m_materializer_ap.get())) {
     diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "current process state is unsuitable for expression parsing");
-
-    ResetDeclMap(); // We are being careful here in the case of breakpoint
-                    // conditions.
-
     return false;
   }
 
@@ -477,17 +500,15 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     exe_scope = exe_ctx.GetTargetPtr();
 
   // We use a shared pointer here so we can use the original parser - if it
-  // succeeds
-  // or the rewrite parser we might make if it fails.  But the parser_sp will
-  // never be empty.
+  // succeeds or the rewrite parser we might make if it fails.  But the
+  // parser_sp will never be empty.
 
   ClangExpressionParser parser(exe_scope, *this, generate_debug_info);
 
   unsigned num_errors = parser.Parse(diagnostic_manager);
 
   // Check here for FixItHints.  If there are any try to apply the fixits and
-  // set the fixed text in m_fixed_text
-  // before returning an error.
+  // set the fixed text in m_fixed_text before returning an error.
   if (num_errors) {
     if (diagnostic_manager.HasFixIts()) {
       if (parser.RewriteExpression(diagnostic_manager)) {
@@ -501,22 +522,19 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
               fixed_expression.substr(fixed_start, fixed_end - fixed_start);
       }
     }
-
-    ResetDeclMap(); // We are being careful here in the case of breakpoint
-                    // conditions.
-
     return false;
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////
-  // Prepare the output of the parser for execution, evaluating it statically if
-  // possible
+  // Prepare the output of the parser for execution, evaluating it statically
+  // if possible
   //
 
   {
     Status jit_error = parser.PrepareForExecution(
         m_jit_start_addr, m_jit_end_addr, m_execution_unit_sp, exe_ctx,
         m_can_interpret, execution_policy);
+
     if (!jit_error.Success()) {
       const char *error_cstr = jit_error.AsCString();
       if (error_cstr && error_cstr[0])
@@ -552,9 +570,9 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       register_execution_unit = true;
     }
 
-    // If there is more than one external function in the execution
-    // unit, it needs to keep living even if it's not top level, because
-    // the result could refer to that function.
+    // If there is more than one external function in the execution unit, it
+    // needs to keep living even if it's not top level, because the result
+    // could refer to that function.
 
     if (m_execution_unit_sp->GetJittedFunctions().size() > 1) {
       register_execution_unit = true;
@@ -577,7 +595,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     uint32_t limit_start_line = 0;
     uint32_t limit_end_line = 0;
     if (limit_file) {
-      limit_file_spec.SetFile(limit_file, false);
+      limit_file_spec.SetFile(limit_file, false, FileSpec::Style::native);
       limit_start_line = m_options.GetPoundLineLine();
       limit_end_line = limit_start_line +
                        std::count(m_expr_text.begin(), m_expr_text.end(), '\n');
@@ -586,10 +604,6 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                          limit_file ? &limit_file_spec : NULL,
                                          limit_start_line, limit_end_line);
   }
-
-  ResetDeclMap(); // Make this go away since we don't need any of its state
-                  // after parsing.  This also gets rid of any
-                  // ClangASTImporter::Minions.
 
   if (process && m_jit_start_addr != LLDB_INVALID_ADDRESS)
     m_jit_process_wp = lldb::ProcessWP(process->shared_from_this());

@@ -11,7 +11,7 @@
 #define liblldb_Host_windows_PosixApi_h
 
 #include "llvm/Support/Compiler.h"
-#if !defined(LLVM_ON_WIN32)
+#if !defined(_WIN32)
 #error "windows/PosixApi.h being #included on non Windows system!"
 #endif
 

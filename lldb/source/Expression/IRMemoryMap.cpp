@@ -49,8 +49,8 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
   //
   // The memory returned by this function will never be written to.  The only
   // point is that it should not shadow process memory if possible, so that
-  // expressions processing real values from the process do not use the
-  // wrong data.
+  // expressions processing real values from the process do not use the wrong
+  // data.
   //
   // If the process can in fact allocate memory (CanJIT() lets us know this)
   // then this can be accomplished just be allocating memory in the inferior.
@@ -93,8 +93,8 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
   }
 
   // Now, if it's possible to use the GetMemoryRegionInfo API to detect mapped
-  // regions, walk forward through memory until a region is found that
-  // has adequate space for our allocation.
+  // regions, walk forward through memory until a region is found that has
+  // adequate space for our allocation.
   if (process_is_alive) {
     const uint64_t end_of_memory = process_sp->GetAddressByteSize() == 8
                                        ? 0xffffffffffffffffull
@@ -188,16 +188,12 @@ bool IRMemoryMap::IntersectsAllocation(lldb::addr_t addr, size_t size) const {
   AllocationMap::const_iterator iter = m_allocations.lower_bound(addr);
 
   // Since we only know that the returned interval begins at a location greater
-  // than or
-  // equal to where the given interval begins, it's possible that the given
-  // interval
-  // intersects either the returned interval or the previous interval.  Thus, we
-  // need to
-  // check both. Note that we only need to check these two intervals.  Since all
-  // intervals
-  // are disjoint it is not possible that an adjacent interval does not
-  // intersect, but a
-  // non-adjacent interval does intersect.
+  // than or equal to where the given interval begins, it's possible that the
+  // given interval intersects either the returned interval or the previous
+  // interval.  Thus, we need to check both. Note that we only need to check
+  // these two intervals.  Since all intervals are disjoint it is not possible
+  // that an adjacent interval does not intersect, but a non-adjacent interval
+  // does intersect.
   if (iter != m_allocations.end()) {
     if (AllocationsIntersect(addr, size, iter->second.m_process_start,
                              iter->second.m_size))
@@ -217,16 +213,15 @@ bool IRMemoryMap::IntersectsAllocation(lldb::addr_t addr, size_t size) const {
 bool IRMemoryMap::AllocationsIntersect(lldb::addr_t addr1, size_t size1,
                                        lldb::addr_t addr2, size_t size2) {
   // Given two half open intervals [A, B) and [X, Y), the only 6 permutations
-  // that satisfy
-  // A<B and X<Y are the following:
+  // that satisfy A<B and X<Y are the following:
   // A B X Y
   // A X B Y  (intersects)
   // A X Y B  (intersects)
   // X A B Y  (intersects)
   // X A Y B  (intersects)
   // X Y A B
-  // The first is B <= X, and the last is Y <= A.
-  // So the condition is !(B <= X || Y <= A)), or (X < B && A < Y)
+  // The first is B <= X, and the last is Y <= A. So the condition is !(B <= X
+  // || Y <= A)), or (X < B && A < Y)
   return (addr2 < (addr1 + size1)) && (addr1 < (addr2 + size2));
 }
 

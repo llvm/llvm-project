@@ -15,8 +15,8 @@
 #include <memory>
 
 namespace lldb_private {
-// ---------------------------------------------------------------
-// Class forward decls.
+// --------------------------------------------------------------- Class
+// forward decls.
 // ---------------------------------------------------------------
 class NativeBreakpoint;
 class NativeBreakpointList;
@@ -26,8 +26,7 @@ class NativeThreadProtocol;
 class ResumeActionList;
 class UnixSignals;
 
-// ---------------------------------------------------------------
-// SP/WP decls.
+// --------------------------------------------------------------- SP/WP decls.
 // ---------------------------------------------------------------
 typedef std::shared_ptr<NativeBreakpoint> NativeBreakpointSP;
 }

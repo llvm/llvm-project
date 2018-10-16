@@ -21,6 +21,7 @@
 
 // Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Demangle/Demangle.h"
 
 // Project includes
 #include "lldb/Core/PluginManager.h"
@@ -30,7 +31,6 @@
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/VectorType.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/FastDemangle.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 
@@ -39,6 +39,7 @@
 #include "CxxStringTypes.h"
 #include "LibCxx.h"
 #include "LibCxxAtomic.h"
+#include "LibCxxVariant.h"
 #include "LibStdcpp.h"
 
 using namespace lldb;
@@ -120,10 +121,9 @@ static bool ReverseFindMatchingChars(const llvm::StringRef &s,
 
 static bool IsTrivialBasename(const llvm::StringRef &basename) {
   // Check that the basename matches with the following regular expression
-  // "^~?([A-Za-z_][A-Za-z_0-9]*)$"
-  // We are using a hand written implementation because it is significantly more
-  // efficient then
-  // using the general purpose regular expression library.
+  // "^~?([A-Za-z_][A-Za-z_0-9]*)$" We are using a hand written implementation
+  // because it is significantly more efficient then using the general purpose
+  // regular expression library.
   size_t idx = 0;
   if (basename.size() > 0 && basename[0] == '~')
     idx = 1;
@@ -151,10 +151,9 @@ static bool IsTrivialBasename(const llvm::StringRef &basename) {
 }
 
 bool CPlusPlusLanguage::MethodName::TrySimplifiedParse() {
-  // This method tries to parse simple method definitions
-  // which are presumably most comman in user programs.
-  // Definitions that can be parsed by this function don't have return types
-  // and templates in the name.
+  // This method tries to parse simple method definitions which are presumably
+  // most comman in user programs. Definitions that can be parsed by this
+  // function don't have return types and templates in the name.
   // A::B::C::fun(std::vector<T> &) const
   size_t arg_start, arg_end;
   llvm::StringRef full(m_full.GetCString());
@@ -251,13 +250,17 @@ std::string CPlusPlusLanguage::MethodName::GetScopeQualifiedName() {
 }
 
 bool CPlusPlusLanguage::IsCPPMangledName(const char *name) {
-  // FIXME, we should really run through all the known C++ Language plugins and
-  // ask each one if
-  // this is a C++ mangled name, but we can put that off till there is actually
-  // more than one
-  // we care about.
+  // FIXME!! we should really run through all the known C++ Language plugins
+  // and ask each one if this is a C++ mangled name
 
-  return (name != nullptr && name[0] == '_' && name[1] == 'Z');
+  if (name == nullptr)
+    return false;
+
+  // MSVC style mangling
+  if (name[0] == '?')
+    return true;
+
+  return (name[0] != '\0' && name[0] == '_' && name[1] == 'Z');
 }
 
 bool CPlusPlusLanguage::ExtractContextAndIdentifier(
@@ -276,46 +279,67 @@ bool CPlusPlusLanguage::ExtractContextAndIdentifier(
 static ConstString SubsPrimitiveParmItanium(llvm::StringRef mangled,
                                             llvm::StringRef search,
                                             llvm::StringRef replace) {
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+  class PrimitiveParmSubs {
+    llvm::StringRef mangled;
+    llvm::StringRef search;
+    llvm::StringRef replace;
+    ptrdiff_t read_pos;
+    std::string output;
+    std::back_insert_iterator<std::string> writer;
 
-  const size_t max_len =
-      mangled.size() + mangled.count(search) * replace.size() + 1;
+  public:
+    PrimitiveParmSubs(llvm::StringRef m, llvm::StringRef s, llvm::StringRef r)
+        : mangled(m), search(s), replace(r), read_pos(0),
+          writer(std::back_inserter(output)) {}
 
-  // Make a temporary buffer to fix up the mangled parameter types and copy the
-  // original there
-  std::string output_buf;
-  output_buf.reserve(max_len);
-  output_buf.insert(0, mangled.str());
-  ptrdiff_t replaced_offset = 0;
+    void Substitute(llvm::StringRef tail) {
+      assert(tail.data() >= mangled.data() &&
+             tail.data() < mangled.data() + mangled.size() &&
+             "tail must point into range of mangled");
 
-  auto swap_parms_hook = [&](const char *parsee) {
-    if (!parsee || !*parsee)
-      return;
+      if (tail.startswith(search)) {
+        auto reader = mangled.begin() + read_pos;
+        ptrdiff_t read_len = tail.data() - (mangled.data() + read_pos);
 
-    // Check whether we've found a substitutee
-    llvm::StringRef s(parsee);
-    if (s.startswith(search)) {
-      // account for the case where a replacement is of a different length to
-      // the original
-      replaced_offset += replace.size() - search.size();
+        // First write the unmatched part of the original. Then write the
+        // replacement string. Finally skip the search string in the original.
+        writer = std::copy(reader, reader + read_len, writer);
+        writer = std::copy(replace.begin(), replace.end(), writer);
+        read_pos += read_len + search.size();
+      }
+    }
 
-      ptrdiff_t replace_idx = (mangled.size() - s.size()) + replaced_offset;
-      output_buf.erase(replace_idx, search.size());
-      output_buf.insert(replace_idx, replace.str());
+    ConstString Finalize() {
+      // If we did a substitution, write the remaining part of the original.
+      if (read_pos > 0) {
+        writer = std::copy(mangled.begin() + read_pos, mangled.end(), writer);
+        read_pos = mangled.size();
+      }
+
+      return ConstString(output);
+    }
+
+    static void Callback(void *context, const char *match) {
+      ((PrimitiveParmSubs *)context)->Substitute(llvm::StringRef(match));
     }
   };
 
-  // FastDemangle will call our hook for each instance of a primitive type,
+  // The demangler will call back for each instance of a primitive type,
   // allowing us to perform substitution
-  const char *const demangled =
-      FastDemangle(mangled.str().c_str(), mangled.size(), swap_parms_hook);
+  PrimitiveParmSubs parmSubs(mangled, search, replace);
+  assert(mangled.data()[mangled.size()] == '\0' && "Expect C-String");
+  bool err = llvm::itaniumFindTypesInMangledName(mangled.data(), &parmSubs,
+                                                 PrimitiveParmSubs::Callback);
+  ConstString result = parmSubs.Finalize();
 
-  if (log)
-    log->Printf("substituted mangling for %s:{%s} %s:{%s}\n",
-                mangled.str().c_str(), demangled, output_buf.c_str(),
-                FastDemangle(output_buf.c_str()));
+  if (Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE)) {
+    if (err)
+      LLDB_LOG(log, "Failed to substitute mangling in {0}", mangled);
+    else if (result)
+      LLDB_LOG(log, "Substituted mangling {0} -> {1}", mangled, result);
+  }
 
-  return output_buf == mangled ? ConstString() : ConstString(output_buf);
+  return result;
 }
 
 uint32_t CPlusPlusLanguage::FindAlternateFunctionManglings(
@@ -489,6 +513,14 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                   "libc++ std::tuple synthetic children",
                   ConstString("^std::__(ndk)?1::tuple<.*>(( )?&)?$"), stl_synth_flags,
                   true);
+  AddCXXSynthetic(cpp_category_sp, LibcxxOptionalFrontEndCreator,
+                  "libc++ std::optional synthetic children",
+                  ConstString("^std::__(ndk)?1::optional<.+>(( )?&)?$"),
+                  stl_synth_flags, true);
+  AddCXXSynthetic(cpp_category_sp, LibcxxVariantFrontEndCreator,
+                  "libc++ std::variant synthetic children",
+                  ConstString("^std::__(ndk)?1::variant<.+>(( )?&)?$"),
+                  stl_synth_flags, true);
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibcxxAtomicSyntheticFrontEndCreator,
@@ -514,6 +546,11 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "weak_ptr synthetic children",
       ConstString("^(std::__(ndk)?1::)weak_ptr<.+>(( )?&)?$"), stl_synth_flags,
       true);
+
+  AddCXXSummary(
+      cpp_category_sp, lldb_private::formatters::LibcxxFunctionSummaryProvider,
+      "libc++ std::function summary provider",
+      ConstString("^std::__(ndk)?1::function<.+>$"), stl_summary_flags, true);
 
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
@@ -580,6 +617,16 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       cpp_category_sp, lldb_private::formatters::LibCxxAtomicSummaryProvider,
       "libc++ std::atomic summary provider",
       ConstString("^std::__(ndk)?1::atomic<.+>$"), stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxOptionalSummaryProvider,
+                "libc++ std::optional summary provider",
+                ConstString("^std::__(ndk)?1::optional<.+>(( )?&)?$"),
+                stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxVariantSummaryProvider,
+                "libc++ std::variant summary provider",
+                ConstString("^std::__(ndk)?1::variant<.+>(( )?&)?$"),
+                stl_summary_flags, true);
 
   stl_summary_flags.SetSkipPointers(true);
 
@@ -606,11 +653,6 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "std::map iterator synthetic children",
       ConstString("^std::__(ndk)?1::__map_iterator<.+>$"), stl_synth_flags,
       true);
-
-  AddCXXSynthetic(
-      cpp_category_sp, lldb_private::formatters::LibcxxFunctionFrontEndCreator,
-      "std::function synthetic value provider",
-      ConstString("^std::__(ndk)?1::function<.+>$"), stl_synth_flags, true);
 #endif
 }
 
@@ -995,4 +1037,17 @@ CPlusPlusLanguage::GetHardcodedSynthetics() {
   });
 
   return g_formatters;
+}
+
+bool CPlusPlusLanguage::IsSourceFile(llvm::StringRef file_path) const {
+  const auto suffixes = {".cpp", ".cxx", ".c++", ".cc",  ".c",
+                         ".h",   ".hh",  ".hpp", ".hxx", ".h++"};
+  for (auto suffix : suffixes) {
+    if (file_path.endswith_lower(suffix))
+      return true;
+  }
+
+  // Check if we're in a STL path (where the files usually have no extension
+  // that we could check for.
+  return file_path.contains("/usr/include/c++/");
 }

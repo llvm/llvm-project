@@ -382,6 +382,7 @@ lldb::SBError CMIDriver::DoParseArgs(const int argc, const char *argv[],
 //          that are only handled by *this driver:
 //              --executable <file>
 //              --source <file> or -s <file>
+//              --synchronous
 //          The application's options --interpreter and --executable in code act
 //          very similar.
 //          The --executable is necessary to differentiate whether the MI Driver
@@ -397,6 +398,7 @@ lldb::SBError CMIDriver::DoParseArgs(const int argc, const char *argv[],
 //          argument for a debug session. Using --interpreter on the command
 //          line does not
 //          issue additional commands to initialise a debug session.
+//          Option --synchronous disables an asynchronous mode in the lldb-mi driver.
 // Type:    Overridden.
 // Args:    argc        - (R)   An integer that contains the count of arguments
 // that follow in
@@ -469,6 +471,8 @@ lldb::SBError CMIDriver::ParseArgs(const int argc, const char *argv[],
                                                     // command line
       {                                             // See fn description.
         bHaveExecutableLongOption = true;
+      } else if (strArg.compare("--synchronous") == 0) {
+        CMICmnLLDBDebugSessionInfo::Instance().GetDebugger().SetAsync(false);
       }
     }
   }

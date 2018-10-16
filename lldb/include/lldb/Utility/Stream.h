@@ -15,6 +15,7 @@
 #include "lldb/lldb-enumerations.h" // for ByteOrder::eByteOrderInvalid
 #include "llvm/ADT/StringRef.h"     // for StringRef
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <stdarg.h>
 #include <stddef.h>    // for size_t
@@ -25,7 +26,7 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class Stream Stream.h "lldb/Utility/Stream.h"
-/// @brief A stream class that can stream formatted output to a file.
+/// A stream class that can stream formatted output to a file.
 //----------------------------------------------------------------------
 class Stream {
 public:
@@ -48,18 +49,28 @@ public:
   //------------------------------------------------------------------
   /// Construct with flags and address size and byte order.
   ///
-  /// Construct with dump flags \a flags and the default address
-  /// size. \a flags can be any of the above enumeration logical OR'ed
-  /// together.
+  /// Construct with dump flags \a flags and the default address size. \a
+  /// flags can be any of the above enumeration logical OR'ed together.
   //------------------------------------------------------------------
   Stream(uint32_t flags, uint32_t addr_size, lldb::ByteOrder byte_order);
 
   //------------------------------------------------------------------
-  /// Construct a default Stream, not binary, host byte order and
-  /// host addr size.
+  /// Construct a default Stream, not binary, host byte order and host addr
+  /// size.
   ///
   //------------------------------------------------------------------
   Stream();
+
+  // FIXME: Streams should not be copyable.
+  Stream(const Stream &other) : m_forwarder(*this) { (*this) = other; }
+
+  Stream &operator=(const Stream &rhs) {
+    m_flags = rhs.m_flags;
+    m_addr_size = rhs.m_addr_size;
+    m_byte_order = rhs.m_byte_order;
+    m_indent_level = rhs.m_indent_level;
+    return *this;
+  }
 
   //------------------------------------------------------------------
   /// Destructor
@@ -73,16 +84,15 @@ public:
   //------------------------------------------------------------------
   /// Flush the stream.
   ///
-  /// Subclasses should flush the stream to make any output appear
-  /// if the stream has any buffering.
+  /// Subclasses should flush the stream to make any output appear if the
+  /// stream has any buffering.
   //------------------------------------------------------------------
   virtual void Flush() = 0;
 
   //------------------------------------------------------------------
   /// Output character bytes to the stream.
   ///
-  /// Appends \a src_len characters from the buffer \a src to the
-  /// stream.
+  /// Appends \a src_len characters from the buffer \a src to the stream.
   ///
   /// @param[in] src
   ///     A buffer containing at least \a src_len bytes of data.
@@ -93,7 +103,13 @@ public:
   /// @return
   ///     The number of bytes that were appended to the stream.
   //------------------------------------------------------------------
-  virtual size_t Write(const void *src, size_t src_len) = 0;
+  size_t Write(const void *src, size_t src_len) {
+    size_t appended_byte_count = WriteImpl(src, src_len);
+    m_bytes_written += appended_byte_count;
+    return appended_byte_count;
+  }
+
+  size_t GetWrittenBytes() const { return m_bytes_written; }
 
   //------------------------------------------------------------------
   // Member functions
@@ -103,8 +119,8 @@ public:
   //------------------------------------------------------------------
   /// Set the byte_order value.
   ///
-  /// Sets the byte order of the data to extract. Extracted values
-  /// will be swapped if necessary when decoding.
+  /// Sets the byte order of the data to extract. Extracted values will be
+  /// swapped if necessary when decoding.
   ///
   /// @param[in] byte_order
   ///     The byte order value to use when extracting data.
@@ -115,9 +131,8 @@ public:
   lldb::ByteOrder SetByteOrder(lldb::ByteOrder byte_order);
 
   //------------------------------------------------------------------
-  /// Format a C string from a printf style format and variable
-  /// arguments and encode and append the resulting C string as hex
-  /// bytes.
+  /// Format a C string from a printf style format and variable arguments and
+  /// encode and append the resulting C string as hex bytes.
   ///
   /// @param[in] format
   ///     A printf style format string.
@@ -132,15 +147,10 @@ public:
       __attribute__((__format__(__printf__, 2, 3)));
 
   //------------------------------------------------------------------
-  /// Format a C string from a printf style format and variable
-  /// arguments and encode and append the resulting C string as hex
-  /// bytes.
+  /// Append an uint8_t value in the hexadecimal format to the stream.
   ///
-  /// @param[in] format
-  ///     A printf style format string.
-  ///
-  /// @param[in] ...
-  ///     Any additional arguments needed for the printf format string.
+  /// @param[in] uvalue
+  ///     The value to append.
   ///
   /// @return
   ///     The number of bytes that were appended to the stream.
@@ -171,8 +181,8 @@ public:
 
   size_t PutPointer(void *ptr);
 
-  // Append \a src_len bytes from \a src to the stream as hex characters
-  // (two ascii characters per byte of input data)
+  // Append \a src_len bytes from \a src to the stream as hex characters (two
+  // ascii characters per byte of input data)
   size_t
   PutBytesAsRawHex8(const void *src, size_t src_len,
                     lldb::ByteOrder src_byte_order = lldb::eByteOrderInvalid,
@@ -322,8 +332,8 @@ public:
   //------------------------------------------------------------------
   /// Output an address value to this stream.
   ///
-  /// Put an address \a addr out to the stream with optional \a prefix
-  /// and \a suffix strings.
+  /// Put an address \a addr out to the stream with optional \a prefix and \a
+  /// suffix strings.
   ///
   /// @param[in] addr
   ///     An address value.
@@ -343,8 +353,8 @@ public:
   //------------------------------------------------------------------
   /// Output an address range to this stream.
   ///
-  /// Put an address range \a lo_addr - \a hi_addr out to the stream
-  /// with optional \a prefix and \a suffix strings.
+  /// Put an address range \a lo_addr - \a hi_addr out to the stream with
+  /// optional \a prefix and \a suffix strings.
   ///
   /// @param[in] lo_addr
   ///     The start address of the address range.
@@ -423,8 +433,8 @@ public:
   //------------------------------------------------------------------
   /// Indent the current line in the stream.
   ///
-  /// Indent the current line using the current indentation level and
-  /// print an optional string following the indentation spaces.
+  /// Indent the current line using the current indentation level and print an
+  /// optional string following the indentation spaces.
   ///
   /// @param[in] s
   ///     A C string to print following the indentation. If nullptr, just
@@ -446,8 +456,8 @@ public:
   //------------------------------------------------------------------
   /// Output an offset value.
   ///
-  /// Put an offset \a uval out to the stream using the printf format
-  /// in \a format.
+  /// Put an offset \a uval out to the stream using the printf format in \a
+  /// format.
   ///
   /// @param[in] offset
   ///     The offset value.
@@ -480,8 +490,8 @@ public:
   //------------------------------------------------------------------
   /// Output a quoted C string value to the stream.
   ///
-  /// Print a double quoted NULL terminated C string to the stream
-  /// using the printf format in \a format.
+  /// Print a double quoted NULL terminated C string to the stream using the
+  /// printf format in \a format.
   ///
   /// @param[in] cstr
   ///     A NULL terminated C string value.
@@ -511,32 +521,31 @@ public:
   //------------------------------------------------------------------
   /// Output a SLEB128 number to the stream.
   ///
-  /// Put an SLEB128 \a uval out to the stream using the printf format
-  /// in \a format.
+  /// Put an SLEB128 \a uval out to the stream using the printf format in \a
+  /// format.
   ///
   /// @param[in] uval
   ///     A uint64_t value that was extracted as a SLEB128 value.
-  ///
-  /// @param[in] format
-  ///     The optional printf format that can be overridden.
   //------------------------------------------------------------------
   size_t PutSLEB128(int64_t uval);
 
   //------------------------------------------------------------------
   /// Output a ULEB128 number to the stream.
   ///
-  /// Put an ULEB128 \a uval out to the stream using the printf format
-  /// in \a format.
+  /// Put an ULEB128 \a uval out to the stream using the printf format in \a
+  /// format.
   ///
   /// @param[in] uval
   ///     A uint64_t value that was extracted as a ULEB128 value.
-  ///
-  /// @param[in] format
-  ///     The optional printf format that can be overridden.
   //------------------------------------------------------------------
   size_t PutULEB128(uint64_t uval);
 
-  static void UnitTest(Stream *s);
+  //------------------------------------------------------------------
+  /// Returns a raw_ostream that forwards the data to this Stream object.
+  //------------------------------------------------------------------
+  llvm::raw_ostream &AsRawOstream() {
+    return m_forwarder;
+  }
 
 protected:
   //------------------------------------------------------------------
@@ -547,8 +556,53 @@ protected:
   lldb::ByteOrder
       m_byte_order;   ///< Byte order to use when encoding scalar types.
   int m_indent_level; ///< Indention level.
+  std::size_t m_bytes_written = 0; ///< Number of bytes written so far.
 
   size_t _PutHex8(uint8_t uvalue, bool add_prefix);
+
+  //------------------------------------------------------------------
+  /// Output character bytes to the stream.
+  ///
+  /// Appends \a src_len characters from the buffer \a src to the stream.
+  ///
+  /// @param[in] src
+  ///     A buffer containing at least \a src_len bytes of data.
+  ///
+  /// @param[in] src_len
+  ///     A number of bytes to append to the stream.
+  ///
+  /// @return
+  ///     The number of bytes that were appended to the stream.
+  //------------------------------------------------------------------
+  virtual size_t WriteImpl(const void *src, size_t src_len) = 0;
+
+  //----------------------------------------------------------------------
+  /// @class RawOstreamForward Stream.h "lldb/Utility/Stream.h"
+  /// This is a wrapper class that exposes a raw_ostream interface that just
+  /// forwards to an LLDB stream, allowing to reuse LLVM algorithms that take
+  /// a raw_ostream within the LLDB code base.
+  //----------------------------------------------------------------------
+  class RawOstreamForward : public llvm::raw_ostream {
+    // Note: This stream must *not* maintain its own buffer, but instead
+    // directly write everything to the internal Stream class. Without this,
+    // we would run into the problem that the Stream written byte count would
+    // differ from the actually written bytes by the size of the internal
+    // raw_ostream buffer.
+
+    Stream &m_target;
+    void write_impl(const char *Ptr, size_t Size) override {
+      m_target.Write(Ptr, Size);
+    }
+
+    uint64_t current_pos() const override {
+      return m_target.GetWrittenBytes();
+    }
+
+  public:
+    RawOstreamForward(Stream &target)
+        : llvm::raw_ostream(/*unbuffered*/ true), m_target(target) {}
+  };
+  RawOstreamForward m_forwarder;
 };
 
 } // namespace lldb_private

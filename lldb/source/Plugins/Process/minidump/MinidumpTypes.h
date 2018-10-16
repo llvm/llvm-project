@@ -43,6 +43,21 @@ enum class MinidumpHeaderConstants : uint32_t {
 
 };
 
+enum class CvSignature : uint32_t {
+  Pdb70 = 0x53445352, // RSDS
+  ElfBuildId = 0x4270454c, // BpEL (Breakpad/Crashpad minidumps)
+};
+
+// Reference:
+// https://crashpad.chromium.org/doxygen/structcrashpad_1_1CodeViewRecordPDB70.html
+struct CvRecordPdb70 {
+  uint8_t Uuid[16];
+  llvm::support::ulittle32_t Age;
+  // char PDBFileName[];
+};
+static_assert(sizeof(CvRecordPdb70) == 20,
+              "sizeof CvRecordPdb70 is not correct!");
+
 // Reference:
 // https://msdn.microsoft.com/en-us/library/windows/desktop/ms680394.aspx
 enum class MinidumpStreamType : uint32_t {

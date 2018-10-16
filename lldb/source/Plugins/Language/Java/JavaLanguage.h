@@ -45,6 +45,8 @@ public:
   bool IsNilReference(ValueObject &valobj) override;
 
   lldb::TypeCategoryImplSP GetFormatters() override;
+
+  bool IsSourceFile(llvm::StringRef file_path) const override;
 };
 
 } // namespace lldb_private

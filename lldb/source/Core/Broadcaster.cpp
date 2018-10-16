@@ -74,9 +74,8 @@ Broadcaster::BroadcasterImpl::GetListeners() {
 void Broadcaster::BroadcasterImpl::Clear() {
   std::lock_guard<std::recursive_mutex> guard(m_listeners_mutex);
 
-  // Make sure the listener forgets about this broadcaster. We do
-  // this in the broadcaster in case the broadcaster object initiates
-  // the removal.
+  // Make sure the listener forgets about this broadcaster. We do this in the
+  // broadcaster in case the broadcaster object initiates the removal.
   for (auto &pair : GetListeners())
     pair.first->BroadcasterWillDestruct(&m_broadcaster);
 

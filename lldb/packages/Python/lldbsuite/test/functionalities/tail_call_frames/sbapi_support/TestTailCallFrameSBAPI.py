@@ -1,0 +1,65 @@
+"""
+Test SB API support for identifying artificial (tail call) frames.
+"""
+
+import lldb
+import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.lldbtest import *
+
+class TestTailCallFrameSBAPI(TestBase):
+    mydir = TestBase.compute_mydir(__file__)
+
+    # If your test case doesn't stress debug info, the
+    # set this to true.  That way it won't be run once for
+    # each debug info format.
+    NO_DEBUG_INFO_TESTCASE = True
+
+    def test_tail_call_frame_sbapi(self):
+        self.build()
+        self.do_test()
+
+    def setUp(self):
+        # Call super's setUp().
+        TestBase.setUp(self)
+
+    def do_test(self):
+        exe = self.getBuildArtifact("a.out")
+
+        # Create a target by the debugger.
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        breakpoint = target.BreakpointCreateBySourceRegex("break here",
+                lldb.SBFileSpec("main.cpp"))
+        self.assertTrue(breakpoint and
+                        breakpoint.GetNumLocations() == 1,
+                        VALID_BREAKPOINT)
+
+        error = lldb.SBError()
+        launch_info = lldb.SBLaunchInfo(None)
+        process = target.Launch(launch_info, error)
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        # Did we hit our breakpoint?
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process,
+                breakpoint)
+        self.assertTrue(
+            len(threads) == 1,
+            "There should be a thread stopped at our breakpoint")
+
+        self.assertTrue(breakpoint.GetHitCount() == 1)
+
+        thread = threads[0]
+
+        # Here's what we expect to see in the backtrace:
+        #   frame #0: ... a.out`sink() at main.cpp:13:4 [opt]
+        #   frame #1: ... a.out`func3() at main.cpp:14:1 [opt] [artificial]
+        #   frame #2: ... a.out`func2() at main.cpp:18:62 [opt]
+        #   frame #3: ... a.out`func1() at main.cpp:18:85 [opt] [artificial]
+        #   frame #4: ... a.out`main at main.cpp:23:3 [opt]
+        names = ["sink()", "func3()", "func2()", "func1()", "main"]
+        artificiality = [False, True, False, True, False]
+        for idx, (name, is_artificial) in enumerate(zip(names, artificiality)):
+            frame = thread.GetFrameAtIndex(idx)
+            self.assertTrue(frame.GetDisplayFunctionName() == name)
+            self.assertTrue(frame.IsArtificial() == is_artificial)

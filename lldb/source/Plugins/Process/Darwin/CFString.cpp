@@ -91,9 +91,8 @@ const char *CFString::UTF8(std::string &str) {
   return CFString::UTF8(get(), str);
 }
 
-// Static function that puts a copy of the UTF8 contents of CF_STR into STR
-// and returns the C string pointer that is contained in STR when successful,
-// else
+// Static function that puts a copy of the UTF8 contents of CF_STR into STR and
+// returns the C string pointer that is contained in STR when successful, else
 // NULL is returned. This allows the std::string parameter to own the extracted
 // string,
 // and also allows that string to be returned as a C string pointer that can be
@@ -120,9 +119,9 @@ const char *CFString::UTF8(CFStringRef cf_str, std::string &str) {
 
 // Static function that puts a copy of the file system representation of CF_STR
 // into STR and returns the C string pointer that is contained in STR when
-// successful, else NULL is returned. This allows the std::string parameter
-// to own the extracted string, and also allows that string to be returned as
-// a C string pointer that can be used.
+// successful, else NULL is returned. This allows the std::string parameter to
+// own the extracted string, and also allows that string to be returned as a C
+// string pointer that can be used.
 
 const char *CFString::FileSystemRepresentation(CFStringRef cf_str,
                                                std::string &str) {

@@ -26,7 +26,7 @@ class MachCoreTestCase(TestBase):
         lldb.DBG.SetSelectedPlatform(self._initial_platform)
         super(MachCoreTestCase, self).tearDown()
 
-    @skipUnlessDarwin
+    @expectedFailureAll(bugnumber="llvm.org/pr37371", hostoslist=["windows"])
     def test_selected_thread(self):
         """Test that the right thread is selected after a core is loaded."""
         # Create core form YAML.

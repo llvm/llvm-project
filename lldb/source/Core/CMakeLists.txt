@@ -18,12 +18,14 @@ add_lldb_library(lldbCore
   Debugger.cpp
   Disassembler.cpp
   DumpDataExtractor.cpp
+  DumpRegisterValue.cpp
   DynamicLoader.cpp
   EmulateInstruction.cpp
   Event.cpp
   FileLineResolver.cpp
   FileSpecList.cpp
   FormatEntity.cpp
+  Highlighter.cpp
   IOHandler.cpp
   Listener.cpp
   Mangled.cpp
@@ -33,6 +35,7 @@ add_lldb_library(lldbCore
   Opcode.cpp
   PluginManager.cpp
   RegisterValue.cpp
+  RichManglingContext.cpp
   Scalar.cpp
   SearchFilter.cpp
   Section.cpp
@@ -72,7 +75,6 @@ add_lldb_library(lldbCore
     lldbPluginProcessUtility
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
-    lldbPluginObjectFileJIT
     ${LLDB_CURSES_LIBS}
 
   LINK_COMPONENTS

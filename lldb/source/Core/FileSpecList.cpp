@@ -42,11 +42,10 @@ void FileSpecList::Append(const FileSpec &file_spec) {
 }
 
 //------------------------------------------------------------------
-// Only append the "file_spec" if this list doesn't already contain
-// it.
+// Only append the "file_spec" if this list doesn't already contain it.
 //
-// Returns true if "file_spec" was added, false if this list already
-// contained a copy of "file_spec".
+// Returns true if "file_spec" was added, false if this list already contained
+// a copy of "file_spec".
 //------------------------------------------------------------------
 bool FileSpecList::AppendIfUnique(const FileSpec &file_spec) {
   collection::iterator end = m_files.end();
@@ -75,18 +74,18 @@ void FileSpecList::Dump(Stream *s, const char *separator_cstr) const {
 }
 
 //------------------------------------------------------------------
-// Find the index of the file in the file spec list that matches
-// "file_spec" starting "start_idx" entries into the file spec list.
+// Find the index of the file in the file spec list that matches "file_spec"
+// starting "start_idx" entries into the file spec list.
 //
-// Returns the valid index of the file that matches "file_spec" if
-// it is found, else std::numeric_limits<uint32_t>::max() is returned.
+// Returns the valid index of the file that matches "file_spec" if it is found,
+// else std::numeric_limits<uint32_t>::max() is returned.
 //------------------------------------------------------------------
 size_t FileSpecList::FindFileIndex(size_t start_idx, const FileSpec &file_spec,
-                                   bool full, bool remove_dots) const {
+                                   bool full) const {
   const size_t num_files = m_files.size();
 
-  // When looking for files, we will compare only the filename if the
-  // FILE_SPEC argument is empty
+  // When looking for files, we will compare only the filename if the FILE_SPEC
+  // argument is empty
   bool compare_filename_only = file_spec.GetDirectory().IsEmpty();
 
   for (size_t idx = start_idx; idx < num_files; ++idx) {
@@ -96,7 +95,7 @@ size_t FileSpecList::FindFileIndex(size_t start_idx, const FileSpec &file_spec,
               file_spec.IsCaseSensitive() || m_files[idx].IsCaseSensitive()))
         return idx;
     } else {
-      if (FileSpec::Equal(m_files[idx], file_spec, full, remove_dots))
+      if (FileSpec::Equal(m_files[idx], file_spec, full))
         return idx;
     }
   }
@@ -106,8 +105,8 @@ size_t FileSpecList::FindFileIndex(size_t start_idx, const FileSpec &file_spec,
 }
 
 //------------------------------------------------------------------
-// Returns the FileSpec object at index "idx". If "idx" is out of
-// range, then an empty FileSpec object will be returned.
+// Returns the FileSpec object at index "idx". If "idx" is out of range, then
+// an empty FileSpec object will be returned.
 //------------------------------------------------------------------
 const FileSpec &FileSpecList::GetFileSpecAtIndex(size_t idx) const {
   if (idx < m_files.size())
@@ -123,11 +122,10 @@ const FileSpec *FileSpecList::GetFileSpecPointerAtIndex(size_t idx) const {
 }
 
 //------------------------------------------------------------------
-// Return the size in bytes that this object takes in memory. This
-// returns the size in bytes of this object's member variables and
-// any FileSpec objects its member variables contain, the result
-// doesn't not include the string values for the directories any
-// filenames as those are in shared string pools.
+// Return the size in bytes that this object takes in memory. This returns the
+// size in bytes of this object's member variables and any FileSpec objects its
+// member variables contain, the result doesn't not include the string values
+// for the directories any filenames as those are in shared string pools.
 //------------------------------------------------------------------
 size_t FileSpecList::MemorySize() const {
   size_t mem_size = sizeof(FileSpecList);

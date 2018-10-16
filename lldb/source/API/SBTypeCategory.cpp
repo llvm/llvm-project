@@ -341,9 +341,9 @@ bool SBTypeCategory::AddTypeSummary(SBTypeNameSpecifier type_name,
   // FIXME: we need to iterate over all the Debugger objects and have each of
   // them contain a copy of the function
   // since we currently have formatters live in a global space, while Python
-  // code lives in a specific Debugger-related environment
-  // this should eventually be fixed by deciding a final location in the LLDB
-  // object space for formatters
+  // code lives in a specific Debugger-related environment this should
+  // eventually be fixed by deciding a final location in the LLDB object space
+  // for formatters
   if (summary.IsFunctionCode()) {
     const void *name_token =
         (const void *)ConstString(type_name.GetName()).GetCString();
@@ -453,9 +453,9 @@ bool SBTypeCategory::AddTypeSynthetic(SBTypeNameSpecifier type_name,
   // FIXME: we need to iterate over all the Debugger objects and have each of
   // them contain a copy of the function
   // since we currently have formatters live in a global space, while Python
-  // code lives in a specific Debugger-related environment
-  // this should eventually be fixed by deciding a final location in the LLDB
-  // object space for formatters
+  // code lives in a specific Debugger-related environment this should
+  // eventually be fixed by deciding a final location in the LLDB object space
+  // for formatters
   if (synth.IsClassCode()) {
     const void *name_token =
         (const void *)ConstString(type_name.GetName()).GetCString();

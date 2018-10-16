@@ -20,32 +20,27 @@
 
 namespace lldb_private {
 
-// Global TaskPool class for running tasks in parallel on a set of worker thread
-// created the first
-// time the task pool is used. The TaskPool provide no guarantee about the order
-// the task will be run
-// and about what tasks will run in parallel. None of the task added to the task
-// pool should block
-// on something (mutex, future, condition variable) what will be set only by the
-// completion of an
-// other task on the task pool as they may run on the same thread sequentally.
+// Global TaskPool class for running tasks in parallel on a set of worker
+// thread created the first time the task pool is used. The TaskPool provide no
+// guarantee about the order the task will be run and about what tasks will run
+// in parallel. None of the task added to the task pool should block on
+// something (mutex, future, condition variable) what will be set only by the
+// completion of an other task on the task pool as they may run on the same
+// thread sequentally.
 class TaskPool {
 public:
   // Add a new task to the task pool and return a std::future belonging to the
-  // newly created task.
-  // The caller of this function has to wait on the future for this task to
-  // complete.
+  // newly created task. The caller of this function has to wait on the future
+  // for this task to complete.
   template <typename F, typename... Args>
   static std::future<typename std::result_of<F(Args...)>::type>
   AddTask(F &&f, Args &&... args);
 
   // Run all of the specified tasks on the task pool and wait until all of them
-  // are finished
-  // before returning. This method is intended to be used for small number tasks
-  // where listing
-  // them as function arguments is acceptable. For running large number of tasks
-  // you should use
-  // AddTask for each task and then call wait() on each returned future.
+  // are finished before returning. This method is intended to be used for
+  // small number tasks where listing them as function arguments is acceptable.
+  // For running large number of tasks you should use AddTask for each task and
+  // then call wait() on each returned future.
   template <typename... T> static void RunTasks(T &&... tasks);
 
 private:

@@ -37,6 +37,9 @@ if not os.path.isdir(llvm_build_dir):
     llvm_build_dir = re.sub("-appletvos-", "-watchos-", llvm_build_dir)
 
 if not os.path.isdir(llvm_build_dir):
+    llvm_build_dir = re.sub("-watchos-", "-bridgeos-", llvm_build_dir)
+
+if not os.path.isdir(llvm_build_dir):
     print llvm_build_dir + " doesn't exist"
     sys.exit(1)
 

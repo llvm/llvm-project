@@ -20,6 +20,7 @@
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
@@ -34,30 +35,30 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static OptionDefinition g_disassemble_options[] = {
+static constexpr OptionDefinition g_disassemble_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_ALL, false, "bytes",         'b', OptionParser::eNoArgument,       nullptr, nullptr, 0,                                     eArgTypeNone,                "Show opcode bytes when disassembling." },
-  { LLDB_OPT_SET_ALL, false, "context",       'C', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                     eArgTypeNumLines,            "Number of context lines of source to show." },
-  { LLDB_OPT_SET_ALL, false, "mixed",         'm', OptionParser::eNoArgument,       nullptr, nullptr, 0,                                     eArgTypeNone,                "Enable mixed source and assembly display." },
-  { LLDB_OPT_SET_ALL, false, "raw",           'r', OptionParser::eNoArgument,       nullptr, nullptr, 0,                                     eArgTypeNone,                "Print raw disassembly with no symbol information." },
-  { LLDB_OPT_SET_ALL, false, "plugin",        'P', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                     eArgTypePlugin,              "Name of the disassembler plugin you want to use." },
-  { LLDB_OPT_SET_ALL, false, "flavor",        'F', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                     eArgTypeDisassemblyFlavor,   "Name of the disassembly flavor you want to use.  "
+  { LLDB_OPT_SET_ALL, false, "bytes",         'b', OptionParser::eNoArgument,       nullptr, {}, 0,                                     eArgTypeNone,                "Show opcode bytes when disassembling." },
+  { LLDB_OPT_SET_ALL, false, "context",       'C', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypeNumLines,            "Number of context lines of source to show." },
+  { LLDB_OPT_SET_ALL, false, "mixed",         'm', OptionParser::eNoArgument,       nullptr, {}, 0,                                     eArgTypeNone,                "Enable mixed source and assembly display." },
+  { LLDB_OPT_SET_ALL, false, "raw",           'r', OptionParser::eNoArgument,       nullptr, {}, 0,                                     eArgTypeNone,                "Print raw disassembly with no symbol information." },
+  { LLDB_OPT_SET_ALL, false, "plugin",        'P', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypePlugin,              "Name of the disassembler plugin you want to use." },
+  { LLDB_OPT_SET_ALL, false, "flavor",        'F', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypeDisassemblyFlavor,   "Name of the disassembly flavor you want to use.  "
   "Currently the only valid options are default, and for Intel "
   "architectures, att and intel." },
-  { LLDB_OPT_SET_ALL, false, "arch",          'A', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                     eArgTypeArchitecture,        "Specify the architecture to use from cross disassembly." },
+  { LLDB_OPT_SET_ALL, false, "arch",          'A', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypeArchitecture,        "Specify the architecture to use from cross disassembly." },
   { LLDB_OPT_SET_1 |
-  LLDB_OPT_SET_2,   true,  "start-address", 's', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                     eArgTypeAddressOrExpression, "Address at which to start disassembling." },
-  { LLDB_OPT_SET_1,   false, "end-address",   'e', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                     eArgTypeAddressOrExpression, "Address at which to end disassembling." },
+  LLDB_OPT_SET_2,   true,  "start-address", 's', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypeAddressOrExpression, "Address at which to start disassembling." },
+  { LLDB_OPT_SET_1,   false, "end-address",   'e', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypeAddressOrExpression, "Address at which to end disassembling." },
   { LLDB_OPT_SET_2 |
   LLDB_OPT_SET_3 |
   LLDB_OPT_SET_4 |
-  LLDB_OPT_SET_5,   false, "count",         'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                     eArgTypeNumLines,            "Number of instructions to display." },
-  { LLDB_OPT_SET_3,   false, "name",          'n', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion, eArgTypeFunctionName,        "Disassemble entire contents of the given function name." },
-  { LLDB_OPT_SET_4,   false, "frame",         'f', OptionParser::eNoArgument,       nullptr, nullptr, 0,                                     eArgTypeNone,                "Disassemble from the start of the current frame's function." },
-  { LLDB_OPT_SET_5,   false, "pc",            'p', OptionParser::eNoArgument,       nullptr, nullptr, 0,                                     eArgTypeNone,                "Disassemble around the current pc." },
-  { LLDB_OPT_SET_6,   false, "line",          'l', OptionParser::eNoArgument,       nullptr, nullptr, 0,                                     eArgTypeNone,                "Disassemble the current frame's current source line instructions if there is debug line "
+  LLDB_OPT_SET_5,   false, "count",         'c', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypeNumLines,            "Number of instructions to display." },
+  { LLDB_OPT_SET_3,   false, "name",          'n', OptionParser::eRequiredArgument, nullptr, {}, CommandCompletions::eSymbolCompletion, eArgTypeFunctionName,        "Disassemble entire contents of the given function name." },
+  { LLDB_OPT_SET_4,   false, "frame",         'f', OptionParser::eNoArgument,       nullptr, {}, 0,                                     eArgTypeNone,                "Disassemble from the start of the current frame's function." },
+  { LLDB_OPT_SET_5,   false, "pc",            'p', OptionParser::eNoArgument,       nullptr, {}, 0,                                     eArgTypeNone,                "Disassemble around the current pc." },
+  { LLDB_OPT_SET_6,   false, "line",          'l', OptionParser::eNoArgument,       nullptr, {}, 0,                                     eArgTypeNone,                "Disassemble the current frame's current source line instructions if there is debug line "
   "table information, else disassemble around the pc." },
-  { LLDB_OPT_SET_7,   false, "address",       'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                     eArgTypeAddressOrExpression, "Disassemble function containing this address." },
+  { LLDB_OPT_SET_7,   false, "address",       'a', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypeAddressOrExpression, "Disassemble function containing this address." },
     // clang-format on
 };
 
@@ -101,14 +102,14 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
     break;
 
   case 's': {
-    start_addr = Args::StringToAddress(execution_context, option_arg,
-                                       LLDB_INVALID_ADDRESS, &error);
+    start_addr = OptionArgParser::ToAddress(execution_context, option_arg,
+                                            LLDB_INVALID_ADDRESS, &error);
     if (start_addr != LLDB_INVALID_ADDRESS)
       some_location_specified = true;
   } break;
   case 'e': {
-    end_addr = Args::StringToAddress(execution_context, option_arg,
-                                     LLDB_INVALID_ADDRESS, &error);
+    end_addr = OptionArgParser::ToAddress(execution_context, option_arg,
+                                          LLDB_INVALID_ADDRESS, &error);
     if (end_addr != LLDB_INVALID_ADDRESS)
       some_location_specified = true;
   } break;
@@ -125,8 +126,8 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
 
   case 'l':
     frame_line = true;
-    // Disassemble the current source line kind of implies showing mixed
-    // source code context.
+    // Disassemble the current source line kind of implies showing mixed source
+    // code context.
     show_mixed = true;
     some_location_specified = true;
     break;
@@ -160,15 +161,14 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
 
   case 'A':
     if (execution_context) {
-      auto target_sp =
-          execution_context ? execution_context->GetTargetSP() : TargetSP();
-      auto platform_sp = target_sp ? target_sp->GetPlatform() : PlatformSP();
-      arch = Platform::GetAugmentedArchSpec(platform_sp.get(), option_arg);
+      const auto &target_sp = execution_context->GetTargetSP();
+      auto platform_ptr = target_sp ? target_sp->GetPlatform().get() : nullptr;
+      arch = Platform::GetAugmentedArchSpec(platform_ptr, option_arg);
     }
     break;
 
   case 'a': {
-    symbol_containing_addr = Args::StringToAddress(
+    symbol_containing_addr = OptionArgParser::ToAddress(
         execution_context, option_arg, LLDB_INVALID_ADDRESS, &error);
     if (symbol_containing_addr != LLDB_INVALID_ADDRESS) {
       some_location_specified = true;
@@ -204,10 +204,9 @@ void CommandObjectDisassemble::CommandOptions::OptionParsingStarting(
       execution_context ? execution_context->GetTargetPtr() : nullptr;
 
   // This is a hack till we get the ability to specify features based on
-  // architecture.  For now GetDisassemblyFlavor
-  // is really only valid for x86 (and for the llvm assembler plugin, but I'm
-  // papering over that since that is the
-  // only disassembler plugin we have...
+  // architecture.  For now GetDisassemblyFlavor is really only valid for x86
+  // (and for the llvm assembler plugin, but I'm papering over that since that
+  // is the only disassembler plugin we have...
   if (target) {
     if (target->GetArchitecture().GetTriple().getArch() == llvm::Triple::x86 ||
         target->GetArchitecture().GetTriple().getArch() ==
@@ -374,8 +373,8 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
       }
     }
 
-    // Did the "m_options.frame_line" find a valid range already? If so
-    // skip the rest...
+    // Did the "m_options.frame_line" find a valid range already? If so skip
+    // the rest...
     if (range.GetByteSize() == 0) {
       if (m_options.at_pc) {
         if (frame == nullptr) {

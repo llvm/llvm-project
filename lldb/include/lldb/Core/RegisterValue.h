@@ -95,14 +95,13 @@ public:
 
   bool GetData(DataExtractor &data) const;
 
-  // Copy the register value from this object into a buffer in "dst"
-  // and obey the "dst_byte_order" when copying the data. Also watch out
-  // in case "dst_len" is longer or shorter than the register value
-  // described by "reg_info" and only copy the least significant bytes
-  // of the register value, or pad the destination with zeroes if the
-  // register byte size is shorter that "dst_len" (all while correctly
-  // abiding the "dst_byte_order"). Returns the number of bytes copied
-  // into "dst".
+  // Copy the register value from this object into a buffer in "dst" and obey
+  // the "dst_byte_order" when copying the data. Also watch out in case
+  // "dst_len" is longer or shorter than the register value described by
+  // "reg_info" and only copy the least significant bytes of the register
+  // value, or pad the destination with zeroes if the register byte size is
+  // shorter that "dst_len" (all while correctly abiding the "dst_byte_order").
+  // Returns the number of bytes copied into "dst".
   uint32_t GetAsMemoryData(const RegisterInfo *reg_info, void *dst,
                            uint32_t dst_len, lldb::ByteOrder dst_byte_order,
                            Status &error) const;
@@ -248,12 +247,6 @@ public:
 
   Status SetValueFromData(const RegisterInfo *reg_info, DataExtractor &data,
                           lldb::offset_t offset, bool partial_data_ok);
-
-  // The default value of 0 for reg_name_right_align_at means no alignment at
-  // all.
-  bool Dump(Stream *s, const RegisterInfo *reg_info, bool prefix_with_name,
-            bool prefix_with_alt_name, lldb::Format format,
-            uint32_t reg_name_right_align_at = 0) const;
 
   const void *GetBytes() const;
 

@@ -42,39 +42,33 @@ size_t HostInfoWindows::GetPageSize() {
   return systemInfo.dwPageSize;
 }
 
-bool HostInfoWindows::GetOSVersion(uint32_t &major, uint32_t &minor,
-                                   uint32_t &update) {
+llvm::VersionTuple HostInfoWindows::GetOSVersion() {
   OSVERSIONINFOEX info;
 
   ZeroMemory(&info, sizeof(OSVERSIONINFOEX));
   info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
 #pragma warning(push)
 #pragma warning(disable : 4996)
-  // Starting with Microsoft SDK for Windows 8.1, this function is deprecated in
-  // favor of the
-  // new Windows Version Helper APIs.  Since we don't specify a minimum SDK
-  // version, it's easier
-  // to simply disable the warning rather than try to support both APIs.
-  if (GetVersionEx((LPOSVERSIONINFO)&info) == 0) {
-    return false;
-  }
+  // Starting with Microsoft SDK for Windows 8.1, this function is deprecated
+  // in favor of the new Windows Version Helper APIs.  Since we don't specify a
+  // minimum SDK version, it's easier to simply disable the warning rather than
+  // try to support both APIs.
+  if (GetVersionEx((LPOSVERSIONINFO)&info) == 0)
+    return llvm::VersionTuple();
 #pragma warning(pop)
 
-  major = info.dwMajorVersion;
-  minor = info.dwMinorVersion;
-  update = info.wServicePackMajor;
-
-  return true;
+  return llvm::VersionTuple(info.dwMajorVersion, info.dwMinorVersion,
+                            info.wServicePackMajor);
 }
 
 bool HostInfoWindows::GetOSBuildString(std::string &s) {
   s.clear();
-  uint32_t major, minor, update;
-  if (!GetOSVersion(major, minor, update))
+  llvm::VersionTuple version = GetOSVersion();
+  if (version.empty())
     return false;
 
   llvm::raw_string_ostream stream(s);
-  stream << "Windows NT " << major << "." << minor << "." << update;
+  stream << "Windows NT " << version.getAsString();
   return true;
 }
 
@@ -98,27 +92,20 @@ FileSpec HostInfoWindows::GetProgramFileSpec() {
     ::GetModuleFileNameW(NULL, buffer.data(), buffer.size());
     std::string path;
     llvm::convertWideToUTF8(buffer.data(), path);
-    m_program_filespec.SetFile(path, false);
+    m_program_filespec.SetFile(path, false, FileSpec::Style::native);
   });
   return m_program_filespec;
 }
 
 FileSpec HostInfoWindows::GetDefaultShell() {
-  std::string shell;
-  GetEnvironmentVar("ComSpec", shell);
-  return FileSpec(shell, false);
-}
+  // Try to retrieve ComSpec from the environment. On the rare occasion
+  // that it fails, try a well-known path for ComSpec instead.
 
-bool HostInfoWindows::ComputePythonDirectory(FileSpec &file_spec) {
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
-    return false;
-  llvm::SmallString<64> path(lldb_file_spec.GetDirectory().AsCString());
-  llvm::sys::path::remove_filename(path);
-  llvm::sys::path::append(path, "lib", "site-packages");
-  std::replace(path.begin(), path.end(), '\\', '/');
-  file_spec.GetDirectory().SetString(path.c_str());
-  return true;
+  std::string shell;
+  if (GetEnvironmentVar("ComSpec", shell))
+    return FileSpec(shell, false);
+
+  return FileSpec("C:\\Windows\\system32\\cmd.exe", false);
 }
 
 bool HostInfoWindows::GetEnvironmentVar(const std::string &var_name,

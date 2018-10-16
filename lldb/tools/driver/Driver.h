@@ -37,7 +37,10 @@ public:
 
   virtual ~Driver();
 
-  void MainLoop();
+  /// Runs the main loop.
+  ///
+  /// @return The exit code that the process should return.
+  int MainLoop();
 
   lldb::SBError ParseArgs(int argc, const char *argv[], FILE *out_fh,
                           bool &do_exit);
@@ -64,8 +67,6 @@ public:
 
     void AddInitialCommand(const char *command, CommandPlacement placement,
                            bool is_file, lldb::SBError &error);
-
-    // static OptionDefinition m_cmd_option_table[];
 
     struct InitialCmdEntry {
       InitialCmdEntry(const char *in_contents, bool in_is_file,

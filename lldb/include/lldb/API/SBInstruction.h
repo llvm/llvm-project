@@ -16,8 +16,7 @@
 #include <stdio.h>
 
 // There's a lot to be fixed here, but need to wait for underlying insn
-// implementation
-// to be revised & settle down first.
+// implementation to be revised & settle down first.
 
 class InstructionImpl;
 
@@ -36,8 +35,6 @@ public:
   bool IsValid();
 
   SBAddress GetAddress();
-
-  lldb::AddressClass GetAddressClass();
 
   const char *GetMnemonic(lldb::SBTarget target);
 

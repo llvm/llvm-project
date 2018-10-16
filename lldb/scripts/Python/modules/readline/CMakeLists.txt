@@ -6,11 +6,13 @@ SET(PYTHON_DIRECTORY python2.7/site-packages)
 # Build the readline python module
 include_directories(${PYTHON_INCLUDE_DIR})
 add_library(readline SHARED readline.cpp)
+target_link_libraries(readline ${PYTHON_LIBRARY})
 
 if (NOT LLDB_DISABLE_LIBEDIT)
-  target_link_libraries(readline ${PYTHON_LIBRARY} edit)
-else()
-  target_link_libraries(readline ${PYTHON_LIBRARY})
+  target_include_directories(readline
+                             PRIVATE
+                               ${libedit_INCLUDE_DIRS})
+  target_link_libraries(readline ${libedit_LIBRARIES})
 endif()
 
 # FIXME: the LIBRARY_OUTPUT_PATH seems to be ignored - this is not a

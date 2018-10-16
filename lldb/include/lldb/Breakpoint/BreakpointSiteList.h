@@ -24,8 +24,8 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class BreakpointSiteList BreakpointSiteList.h
-/// "lldb/Breakpoint/BreakpointSiteList.h"
-/// @brief Class that manages lists of BreakpointSite shared pointers.
+/// "lldb/Breakpoint/BreakpointSiteList.h" Class that manages lists of
+/// BreakpointSite shared pointers.
 //----------------------------------------------------------------------
 class BreakpointSiteList {
   // At present Process directly accesses the map of BreakpointSites so it can
@@ -56,15 +56,13 @@ public:
   lldb::break_id_t Add(const lldb::BreakpointSiteSP &bp_site_sp);
 
   //------------------------------------------------------------------
-  /// Standard Dump routine, doesn't do anything at present.
-  /// @param[in] s
+  /// Standard Dump routine, doesn't do anything at present. @param[in] s
   ///     Stream into which to dump the description.
   //------------------------------------------------------------------
   void Dump(Stream *s) const;
 
   //------------------------------------------------------------------
-  /// Returns a shared pointer to the breakpoint site at address
-  /// \a addr.
+  /// Returns a shared pointer to the breakpoint site at address \a addr.
   ///
   /// @param[in] addr
   ///     The address to look for.
@@ -89,8 +87,8 @@ public:
   lldb::BreakpointSiteSP FindByID(lldb::break_id_t breakID);
 
   //------------------------------------------------------------------
-  /// Returns a shared pointer to the breakpoint site with id \a breakID - const
-  /// version.
+  /// Returns a shared pointer to the breakpoint site with id \a breakID -
+  /// const version.
   ///
   /// @param[in] breakID
   ///   The breakpoint site ID to seek for.
@@ -103,7 +101,8 @@ public:
   const lldb::BreakpointSiteSP FindByID(lldb::break_id_t breakID) const;
 
   //------------------------------------------------------------------
-  /// Returns the breakpoint site id to the breakpoint site at address \a addr.
+  /// Returns the breakpoint site id to the breakpoint site at address \a
+  /// addr.
   ///
   /// @param[in] addr
   ///   The address to match.
@@ -161,8 +160,8 @@ public:
                                           void *baton);
 
   //------------------------------------------------------------------
-  /// Enquires of the breakpoint site on in this list with ID \a breakID whether
-  /// we should stop for the breakpoint or not.
+  /// Enquires of the breakpoint site on in this list with ID \a breakID
+  /// whether we should stop for the breakpoint or not.
   ///
   /// @param[in] context
   ///    This contains the information about this stop.

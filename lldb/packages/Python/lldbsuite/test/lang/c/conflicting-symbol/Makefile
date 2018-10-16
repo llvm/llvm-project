@@ -1,6 +1,6 @@
 LEVEL := ../../../make
 
-LD_EXTRAS := -L$(shell pwd) -LOne -l$(LIB_PREFIX)One -LTwo -l$(LIB_PREFIX)Two
+LD_EXTRAS := -L. -LOne -l$(LIB_PREFIX)One -LTwo -l$(LIB_PREFIX)Two
 C_SOURCES := main.c
 
 all: lib_One lib_Two a.out

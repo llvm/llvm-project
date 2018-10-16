@@ -174,10 +174,9 @@ UnwindPlanSP FuncUnwinders::GetEHFrameAugmentedUnwindPlan(Target &target,
       m_tried_unwind_plan_eh_frame_augmented)
     return m_unwind_plan_eh_frame_augmented_sp;
 
-  // Only supported on x86 architectures where we get eh_frame from the compiler
-  // that describes
-  // the prologue instructions perfectly, and sometimes the epilogue
-  // instructions too.
+  // Only supported on x86 architectures where we get eh_frame from the
+  // compiler that describes the prologue instructions perfectly, and sometimes
+  // the epilogue instructions too.
   if (target.GetArchitecture().GetCore() != ArchSpec::eCore_x86_32_i386 &&
       target.GetArchitecture().GetCore() != ArchSpec::eCore_x86_64_x86_64 &&
       target.GetArchitecture().GetCore() != ArchSpec::eCore_x86_64_x86_64h) {
@@ -194,8 +193,7 @@ UnwindPlanSP FuncUnwinders::GetEHFrameAugmentedUnwindPlan(Target &target,
   m_unwind_plan_eh_frame_augmented_sp.reset(new UnwindPlan(*eh_frame_plan));
 
   // Augment the eh_frame instructions with epilogue descriptions if necessary
-  // so the
-  // UnwindPlan can be used at any instruction in the function.
+  // so the UnwindPlan can be used at any instruction in the function.
 
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
   if (assembly_profiler_sp) {
@@ -238,7 +236,8 @@ FuncUnwinders::GetDebugFrameAugmentedUnwindPlan(Target &target, Thread &thread,
       new UnwindPlan(*debug_frame_plan));
 
   // Augment the debug_frame instructions with epilogue descriptions if
-  // necessary so the UnwindPlan can be used at any instruction in the function.
+  // necessary so the UnwindPlan can be used at any instruction in the
+  // function.
 
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
   if (assembly_profiler_sp) {
@@ -275,8 +274,7 @@ UnwindPlanSP FuncUnwinders::GetAssemblyUnwindPlan(Target &target,
 
 // This method compares the pc unwind rule in the first row of two UnwindPlans.
 // If they have the same way of getting the pc value (e.g. "CFA - 8" + "CFA is
-// sp"),
-// then it will return LazyBoolTrue.
+// sp"), then it will return LazyBoolTrue.
 LazyBool FuncUnwinders::CompareUnwindPlansForIdenticalInitialPCLocation(
     Thread &thread, const UnwindPlanSP &a, const UnwindPlanSP &b) {
   LazyBool plans_are_identical = eLazyBoolCalculate;
@@ -320,22 +318,22 @@ UnwindPlanSP FuncUnwinders::GetUnwindPlanAtNonCallSite(Target &target,
   UnwindPlanSP assembly_sp =
       GetAssemblyUnwindPlan(target, thread, current_offset);
 
-  // This point of this code is to detect when a function is using a
-  // non-standard ABI, and the eh_frame correctly describes that alternate ABI.
+  // This point of this code is to detect when a function is using a non-
+  // standard ABI, and the eh_frame correctly describes that alternate ABI.
   // This is addressing a specific situation on x86_64 linux systems where one
   // function in a library pushes a value on the stack and jumps to another
-  // function.  So using an assembly instruction based unwind will not work when
-  // you're in the second function - the stack has been modified in a non-ABI
-  // way.  But we have eh_frame that correctly describes how to unwind from this
-  // location.  So we're looking to see if the initial pc register save location
-  // from the eh_frame is different from the assembly unwind, the arch default
-  // unwind, and the arch default at initial function entry.
+  // function.  So using an assembly instruction based unwind will not work
+  // when you're in the second function - the stack has been modified in a non-
+  // ABI way.  But we have eh_frame that correctly describes how to unwind from
+  // this location.  So we're looking to see if the initial pc register save
+  // location from the eh_frame is different from the assembly unwind, the arch
+  // default unwind, and the arch default at initial function entry.
   //
   // We may have eh_frame that describes the entire function -- or we may have
   // eh_frame that only describes the unwind after the prologue has executed --
   // so we need to check both the arch default (once the prologue has executed)
-  // and the arch default at initial function entry.  And we may be running on a
-  // target where we have only some of the assembly/arch default unwind plans
+  // and the arch default at initial function entry.  And we may be running on
+  // a target where we have only some of the assembly/arch default unwind plans
   // available.
 
   if (CompareUnwindPlansForIdenticalInitialPCLocation(

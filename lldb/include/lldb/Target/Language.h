@@ -20,6 +20,7 @@
 
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/Highlighter.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/DataFormatters/FormatClasses.h"
@@ -152,12 +153,23 @@ public:
 
   static Language *FindPlugin(lldb::LanguageType language);
 
+  /// Returns the Language associated with the given file path or a nullptr
+  /// if there is no known language.
+  static Language *FindPlugin(llvm::StringRef file_path);
+
+  static Language *FindPlugin(lldb::LanguageType language,
+                              llvm::StringRef file_path);
+
   // return false from callback to stop iterating
   static void ForEach(std::function<bool(Language *)> callback);
 
   virtual lldb::LanguageType GetLanguageType() const = 0;
 
   virtual bool IsTopLevelFunction(Function &function);
+
+  virtual bool IsSourceFile(llvm::StringRef file_path) const = 0;
+
+  virtual const Highlighter *GetHighlighter() const { return nullptr; }
 
   virtual lldb::TypeCategoryImplSP GetFormatters();
 
@@ -184,19 +196,16 @@ public:
   virtual const char *GetLanguageSpecificTypeLookupHelp();
 
   // if an individual data formatter can apply to several types and cross a
-  // language boundary
-  // it makes sense for individual languages to want to customize the printing
-  // of values of that
-  // type by appending proper prefix/suffix information in language-specific
-  // ways
+  // language boundary it makes sense for individual languages to want to
+  // customize the printing of values of that type by appending proper
+  // prefix/suffix information in language-specific ways
   virtual bool GetFormatterPrefixSuffix(ValueObject &valobj,
                                         ConstString type_hint,
                                         std::string &prefix,
                                         std::string &suffix);
 
   // if a language has a custom format for printing variable declarations that
-  // it wants LLDB to honor
-  // it should return an appropriate closure here
+  // it wants LLDB to honor it should return an appropriate closure here
   virtual DumpValueObjectOptions::DeclPrintingHelper GetDeclPrintingHelper();
 
   virtual LazyBool IsLogicalTrue(ValueObject &valobj, Status &error);
@@ -206,11 +215,9 @@ public:
   virtual bool IsNilReference(ValueObject &valobj);
 
   // for a ValueObject of some "reference type", if the language provides a
-  // technique
-  // to decide whether the reference has ever been assigned to some object, this
-  // method
-  // will return true if such detection is possible, and if the reference has
-  // never been assigned
+  // technique to decide whether the reference has ever been assigned to some
+  // object, this method will return true if such detection is possible, and if
+  // the reference has never been assigned
   virtual bool IsUninitializedReference(ValueObject &valobj);
 
   virtual bool GetFunctionDisplayName(const SymbolContext *sc,

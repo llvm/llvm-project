@@ -14,7 +14,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Host/PosixApi.h"
-#include "lldb/Interpreter/Args.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 #include "llvm/ADT/STLExtras.h"
@@ -47,7 +47,7 @@ Status OptionValueBoolean::SetValueFromString(llvm::StringRef value_str,
   case eVarSetOperationReplace:
   case eVarSetOperationAssign: {
     bool success = false;
-    bool value = Args::StringToBoolean(value_str, false, &success);
+    bool value = OptionArgParser::ToBoolean(value_str, false, &success);
     if (success) {
       m_value_was_set = true;
       m_current_value = value;
@@ -76,23 +76,21 @@ lldb::OptionValueSP OptionValueBoolean::DeepCopy() const {
   return OptionValueSP(new OptionValueBoolean(*this));
 }
 
-size_t OptionValueBoolean::AutoComplete(
-    CommandInterpreter &interpreter, llvm::StringRef s, int match_start_point,
-    int max_return_elements, bool &word_complete, StringList &matches) {
-  word_complete = false;
-  matches.Clear();
+size_t OptionValueBoolean::AutoComplete(CommandInterpreter &interpreter,
+                                        CompletionRequest &request) {
+  request.SetWordComplete(false);
   static const llvm::StringRef g_autocomplete_entries[] = {
       "true", "false", "on", "off", "yes", "no", "1", "0"};
 
   auto entries = llvm::makeArrayRef(g_autocomplete_entries);
 
   // only suggest "true" or "false" by default
-  if (s.empty())
+  if (request.GetCursorArgumentPrefix().empty())
     entries = entries.take_front(2);
 
   for (auto entry : entries) {
-    if (entry.startswith_lower(s))
-      matches.AppendString(entry);
+    if (entry.startswith_lower(request.GetCursorArgumentPrefix()))
+      request.AddCompletion(entry);
   }
-  return matches.GetSize();
+  return request.GetNumberOfMatches();
 }

@@ -17,8 +17,6 @@ class TestOptionalAmbiguity(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    NO_DEBUG_INFO_TESTCASE = True
-
     @decorators.swiftTest
     @decorators.add_test_categories(["swiftpr"])
     def test_sample_rename_this(self):

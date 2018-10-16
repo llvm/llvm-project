@@ -165,8 +165,8 @@ Status AdbClient::GetDevices(DeviceIDList &device_list) {
   for (const auto device : devices)
     device_list.push_back(device.split('\t').first);
 
-  // Force disconnect since ADB closes connection after host:devices
-  // response is sent.
+  // Force disconnect since ADB closes connection after host:devices response
+  // is sent.
   m_conn.reset();
   return error;
 }

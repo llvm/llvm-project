@@ -1,10 +1,43 @@
-set(LLVM_SOURCE_DIR "${LLVM_MAIN_SRC_DIR}")
-set(LLVM_BINARY_DIR "${LLVM_BINARY_DIR}")
-set(LLVM_BUILD_MODE "%(build_mode)s")
-set(LLVM_TOOLS_DIR "${LLVM_TOOLS_BINARY_DIR}/%(build_config)s")
-set(LLVM_LIBS_DIR "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/%(build_config)s")
-set(CLANG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
-set(CLANG_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/..")
+# Test runner infrastructure for LLDB. This configures the LLDB test trees
+# for use by Lit, and delegates to LLVM's lit test handlers.
+
+if (CMAKE_CFG_INTDIR STREQUAL ".")
+  set(LLVM_BUILD_MODE ".")
+else ()
+  set(LLVM_BUILD_MODE "%(build_mode)s")
+endif ()
+
+if (NOT LLDB_TEST_USE_CUSTOM_C_COMPILER)
+  string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_TEST_C_COMPILER ${LLDB_TEST_C_COMPILER})
+endif ()
+
+if (NOT LLDB_TEST_USE_CUSTOM_CXX_COMPILER)
+  string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_TEST_CXX_COMPILER ${LLDB_TEST_CXX_COMPILER})
+endif ()
+
+get_property(LLDB_DOTEST_ARGS GLOBAL PROPERTY LLDB_DOTEST_ARGS_PROPERTY)
+
+string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_LIBS_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_TOOLS_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
+string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_DOTEST_ARGS "${LLDB_DOTEST_ARGS}")
+
+list(APPEND LLDB_TEST_DEPS
+  LLDBUnitTests
+  dsymutil
+  lldb
+  lldb-test
+  llvm-config
+  llvm-mc
+  llvm-objcopy
+  )
+
+if(TARGET lld)
+  list(APPEND LLDB_TEST_DEPS lld)
+  set(LLDB_HAVE_LLD 1)
+else()
+  set(LLDB_HAVE_LLD 0)
+endif()
+
 if(BUILD_SHARED_LIBS)
   set(ENABLE_SHARED 1)
 else()
@@ -13,12 +46,8 @@ endif(BUILD_SHARED_LIBS)
 
 # the value is not canonicalized within LLVM
 llvm_canonicalize_cmake_booleans(
+  LLDB_DISABLE_PYTHON
   LLVM_ENABLE_ZLIB)
-
-# BEGIN - Swift Mods
-option(LLDB_TEST_CLANG "Use in-tree clang when testing lldb" On)
-option(LLDB_TEST_SWIFT "Use in-tree swift when testing lldb" On)
-# END - Swift Mods
 
 # This should be inherited from the `check-lldb` target. We currently don't run
 # it for swift, but we might consider removing this code once we're done.
@@ -29,30 +58,16 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.in
-  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
-  )
-
-set(LLDB_TEST_DEPS
-  LLDBUnitTests
-  lldb
-  lldb-test
-  )
+  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg)
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Suite/lit.site.cfg.in
+  ${CMAKE_CURRENT_BINARY_DIR}/Suite/lit.site.cfg)
 
 if(NOT LLDB_BUILT_STANDALONE)
-  list(APPEND LLDB_TEST_DEPS FileCheck not yaml2obj)
-endif()
-
-# lldb-server is not built on every platform.
-if (TARGET lldb-server)
-  list(APPEND LLDB_TEST_DEPS lldb-server)
-endif()
-
-if(APPLE)
-  list(APPEND LLDB_TEST_DEPS debugserver)
-endif()
-
-if(TARGET clang)
-  list(APPEND LLDB_TEST_DEPS clang)
+  list(APPEND LLDB_TEST_DEPS
+    FileCheck
+    not
+    )
 endif()
 
 set(LLDB_TEST_PARAMS

@@ -420,7 +420,7 @@ addr_t SBFrame::GetPC() const {
       frame = exe_ctx.GetFramePtr();
       if (frame) {
         addr = frame->GetFrameCodeAddress().GetOpcodeLoadAddress(
-            target, eAddressClassCode);
+            target, AddressClass::eCode);
       } else {
         if (log)
           log->Printf("SBFrame::GetPC () => error: could not reconstruct frame "
@@ -1364,6 +1364,21 @@ bool SBFrame::IsInlined() const {
         log->Printf("SBFrame::IsInlined () => error: process is running");
     }
   }
+  return false;
+}
+
+bool SBFrame::IsArtificial() {
+  return static_cast<const SBFrame *>(this)->IsArtificial();
+}
+
+bool SBFrame::IsArtificial() const {
+  std::unique_lock<std::recursive_mutex> lock;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+
+  StackFrame *frame = exe_ctx.GetFramePtr();
+  if (frame)
+    return frame->IsArtificial();
+
   return false;
 }
 

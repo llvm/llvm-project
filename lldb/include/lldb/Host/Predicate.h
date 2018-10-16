@@ -20,6 +20,7 @@
 
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-defines.h"
 
 //#define DB_PTHREAD_LOG_EVENTS
@@ -38,8 +39,8 @@ typedef enum {
 
 //----------------------------------------------------------------------
 /// @class Predicate Predicate.h "lldb/Host/Predicate.h"
-/// @brief A C++ wrapper class for providing threaded access to a value
-/// of type T.
+/// A C++ wrapper class for providing threaded access to a value of
+/// type T.
 ///
 /// A templatized class that provides multi-threaded access to a value
 /// of type T. Threads can efficiently wait for bits within T to be set
@@ -118,169 +119,39 @@ public:
   }
 
   //------------------------------------------------------------------
-  /// Set some bits in \a m_value.
+  /// Wait for Cond(m_value) to be true.
   ///
-  /// Logically set the bits \a bits in the contained \a m_value in a
-  /// thread safe way and broadcast if needed.
+  /// Waits in a thread safe way for Cond(m_value) to be true. If Cond(m_value)
+  /// is already true, this function will return without waiting.
   ///
-  /// @param[in] bits
-  ///     The bits to set in \a m_value.
+  /// It is possible for the value to be changed between the time the value is
+  /// set and the time the waiting thread wakes up. If the value no longer
+  /// satisfies the condition when the waiting thread wakes up, it will go back
+  /// into a wait state. It may be necessary for the calling code to use
+  /// additional thread synchronization methods to detect transitory states.
   ///
-  /// @param[in] broadcast_type
-  ///     A value indicating when and if to broadcast. See the
-  ///     PredicateBroadcastType enumeration for details.
+  /// @param[in] Cond
+  ///     The condition we want \a m_value satisfy.
   ///
-  /// @see Predicate::Broadcast()
-  //------------------------------------------------------------------
-  void SetValueBits(T bits, PredicateBroadcastType broadcast_type) {
-    std::lock_guard<std::mutex> guard(m_mutex);
-#ifdef DB_PTHREAD_LOG_EVENTS
-    printf("%s (bits = 0x%8.8x, broadcast_type = %i)\n", __FUNCTION__, bits,
-           broadcast_type);
-#endif
-    const T old_value = m_value;
-    m_value |= bits;
-
-    Broadcast(old_value, broadcast_type);
-  }
-
-  //------------------------------------------------------------------
-  /// Reset some bits in \a m_value.
-  ///
-  /// Logically reset (clear) the bits \a bits in the contained
-  /// \a m_value in a thread safe way and broadcast if needed.
-  ///
-  /// @param[in] bits
-  ///     The bits to clear in \a m_value.
-  ///
-  /// @param[in] broadcast_type
-  ///     A value indicating when and if to broadcast. See the
-  ///     PredicateBroadcastType enumeration for details.
-  ///
-  /// @see Predicate::Broadcast()
-  //------------------------------------------------------------------
-  void ResetValueBits(T bits, PredicateBroadcastType broadcast_type) {
-    std::lock_guard<std::mutex> guard(m_mutex);
-#ifdef DB_PTHREAD_LOG_EVENTS
-    printf("%s (bits = 0x%8.8x, broadcast_type = %i)\n", __FUNCTION__, bits,
-           broadcast_type);
-#endif
-    const T old_value = m_value;
-    m_value &= ~bits;
-
-    Broadcast(old_value, broadcast_type);
-  }
-
-  //------------------------------------------------------------------
-  /// Wait for bits to be set in \a m_value.
-  ///
-  /// Waits in a thread safe way for any bits in \a bits to get
-  /// logically set in \a m_value. If any bits are already set in
-  /// \a m_value, this function will return without waiting.
-  ///
-  /// It is possible for the value to be changed between the time
-  /// the bits are set and the time the waiting thread wakes up.
-  /// If the bits are no longer set when the waiting thread wakes
-  /// up, it will go back into a wait state.  It may be necessary
-  /// for the calling code to use additional thread synchronization
-  /// methods to detect transitory states.
-  ///
-  /// @param[in] bits
-  ///     The bits we are waiting to be set in \a m_value.
-  ///
-  /// @param[in] abstime
-  ///     If non-nullptr, the absolute time at which we should stop
-  ///     waiting, else wait an infinite amount of time.
+  /// @param[in] timeout
+  ///     How long to wait for the condition to hold.
   ///
   /// @return
-  ///     Any bits of the requested bits that actually were set within
-  ///     the time specified. Zero if a timeout or unrecoverable error
-  ///     occurred.
+  ///     @li m_value if Cond(m_value) is true.
+  ///     @li None otherwise (timeout occurred).
   //------------------------------------------------------------------
-  T WaitForSetValueBits(T bits, const std::chrono::microseconds &timeout =
-                                    std::chrono::microseconds(0)) {
-    // pthread_cond_timedwait() or pthread_cond_wait() will atomically
-    // unlock the mutex and wait for the condition to be set. When either
-    // function returns, they will re-lock the mutex. We use an auto lock/unlock
-    // class (std::lock_guard) to allow us to return at any point in this
-    // function and not have to worry about unlocking the mutex.
+  template <typename C>
+  llvm::Optional<T> WaitFor(C Cond, const Timeout<std::micro> &timeout) {
     std::unique_lock<std::mutex> lock(m_mutex);
-#ifdef DB_PTHREAD_LOG_EVENTS
-    printf("%s (bits = 0x%8.8x, timeout = %llu), m_value = 0x%8.8x\n",
-           __FUNCTION__, bits, timeout.count(), m_value);
-#endif
-    while ((m_value & bits) == 0) {
-      if (timeout == std::chrono::microseconds(0)) {
-        m_condition.wait(lock);
-      } else {
-        std::cv_status result = m_condition.wait_for(lock, timeout);
-        if (result == std::cv_status::timeout)
-          break;
-      }
+    auto RealCond = [&] { return Cond(m_value); };
+    if (!timeout) {
+      m_condition.wait(lock, RealCond);
+      return m_value;
     }
-#ifdef DB_PTHREAD_LOG_EVENTS
-    printf("%s (bits = 0x%8.8x), m_value = 0x%8.8x, returning 0x%8.8x\n",
-           __FUNCTION__, bits, m_value, m_value & bits);
-#endif
-
-    return m_value & bits;
+    if (m_condition.wait_for(lock, *timeout, RealCond))
+      return m_value;
+    return llvm::None;
   }
-
-  //------------------------------------------------------------------
-  /// Wait for bits to be reset in \a m_value.
-  ///
-  /// Waits in a thread safe way for any bits in \a bits to get
-  /// logically reset in \a m_value. If all bits are already reset in
-  /// \a m_value, this function will return without waiting.
-  ///
-  /// It is possible for the value to be changed between the time
-  /// the bits are reset and the time the waiting thread wakes up.
-  /// If the bits are no set when the waiting thread wakes up, it will
-  /// go back into a wait state.  It may be necessary for the calling
-  /// code to use additional thread synchronization methods to detect
-  /// transitory states.
-  ///
-  /// @param[in] bits
-  ///     The bits we are waiting to be reset in \a m_value.
-  ///
-  /// @param[in] abstime
-  ///     If non-nullptr, the absolute time at which we should stop
-  ///     waiting, else wait an infinite amount of time.
-  ///
-  /// @return
-  ///     Zero on successful waits, or non-zero if a timeout or
-  ///     unrecoverable error occurs.
-  //------------------------------------------------------------------
-  T WaitForResetValueBits(T bits, const std::chrono::microseconds &timeout =
-                                      std::chrono::microseconds(0)) {
-    // pthread_cond_timedwait() or pthread_cond_wait() will atomically
-    // unlock the mutex and wait for the condition to be set. When either
-    // function returns, they will re-lock the mutex. We use an auto lock/unlock
-    // class (std::lock_guard) to allow us to return at any point in this
-    // function and not have to worry about unlocking the mutex.
-    std::unique_lock<std::mutex> lock(m_mutex);
-
-#ifdef DB_PTHREAD_LOG_EVENTS
-    printf("%s (bits = 0x%8.8x, timeout = %llu), m_value = 0x%8.8x\n",
-           __FUNCTION__, bits, timeout.count(), m_value);
-#endif
-    while ((m_value & bits) != 0) {
-      if (timeout == std::chrono::microseconds(0)) {
-        m_condition.wait(lock);
-      } else {
-        std::cv_status result = m_condition.wait_for(lock, timeout);
-        if (result == std::cv_status::timeout)
-          break;
-      }
-    }
-
-#ifdef DB_PTHREAD_LOG_EVENTS
-    printf("%s (bits = 0x%8.8x), m_value = 0x%8.8x, returning 0x%8.8x\n",
-           __FUNCTION__, bits, m_value, m_value & bits);
-#endif
-    return m_value & bits;
-  }
-
   //------------------------------------------------------------------
   /// Wait for \a m_value to be equal to \a value.
   ///
@@ -298,124 +169,17 @@ public:
   /// @param[in] value
   ///     The value we want \a m_value to be equal to.
   ///
-  /// @param[in] abstime
-  ///     If non-nullptr, the absolute time at which we should stop
-  ///     waiting, else wait an infinite amount of time.
-  ///
-  /// @param[out] timed_out
-  ///     If not null, set to true if we return because of a time out,
-  ///     and false if the value was set.
+  /// @param[in] timeout
+  ///     How long to wait for the condition to hold.
   ///
   /// @return
   ///     @li \b true if the \a m_value is equal to \a value
-  ///     @li \b false otherwise
+  ///     @li \b false otherwise (timeout occurred)
   //------------------------------------------------------------------
-  bool WaitForValueEqualTo(T value, const std::chrono::microseconds &timeout =
-                                        std::chrono::microseconds(0),
-                           bool *timed_out = nullptr) {
-    // pthread_cond_timedwait() or pthread_cond_wait() will atomically
-    // unlock the mutex and wait for the condition to be set. When either
-    // function returns, they will re-lock the mutex. We use an auto lock/unlock
-    // class (std::lock_guard) to allow us to return at any point in this
-    // function and not have to worry about unlocking the mutex.
-    std::unique_lock<std::mutex> lock(m_mutex);
-
-#ifdef DB_PTHREAD_LOG_EVENTS
-    printf("%s (value = 0x%8.8x, timeout = %llu), m_value = 0x%8.8x\n",
-           __FUNCTION__, value, timeout.count(), m_value);
-#endif
-    if (timed_out)
-      *timed_out = false;
-
-    while (m_value != value) {
-      if (timeout == std::chrono::microseconds(0)) {
-        m_condition.wait(lock);
-      } else {
-        std::cv_status result = m_condition.wait_for(lock, timeout);
-        if (result == std::cv_status::timeout) {
-          if (timed_out)
-            *timed_out = true;
-          break;
-        }
-      }
-    }
-
-    return m_value == value;
-  }
-
-  //------------------------------------------------------------------
-  /// Wait for \a m_value to be equal to \a value and then set it to
-  /// a new value.
-  ///
-  /// Waits in a thread safe way for \a m_value to be equal to \a
-  /// value and then sets \a m_value to \a new_value. If \a m_value
-  /// is already equal to \a value, this function will immediately
-  /// set \a m_value to \a new_value and return without waiting.
-  ///
-  /// It is possible for the value to be changed between the time
-  /// the value is set and the time the waiting thread wakes up.
-  /// If the value no longer matches the requested value when the
-  /// waiting thread wakes up, it will go back into a wait state.  It
-  /// may be necessary for the calling code to use additional thread
-  /// synchronization methods to detect transitory states.
-  ///
-  /// @param[in] value
-  ///     The value we want \a m_value to be equal to.
-  ///
-  /// @param[in] new_value
-  ///     The value to which \a m_value will be set if \b true is
-  ///     returned.
-  ///
-  /// @param[in] abstime
-  ///     If non-nullptr, the absolute time at which we should stop
-  ///     waiting, else wait an infinite amount of time.
-  ///
-  /// @param[out] timed_out
-  ///     If not null, set to true if we return because of a time out,
-  ///     and false if the value was set.
-  ///
-  /// @return
-  ///     @li \b true if the \a m_value became equal to \a value
-  ///     @li \b false otherwise
-  //------------------------------------------------------------------
-  bool WaitForValueEqualToAndSetValueTo(
-      T wait_value, T new_value,
-      const std::chrono::microseconds &timeout = std::chrono::microseconds(0),
-      bool *timed_out = nullptr) {
-    // pthread_cond_timedwait() or pthread_cond_wait() will atomically
-    // unlock the mutex and wait for the condition to be set. When either
-    // function returns, they will re-lock the mutex. We use an auto lock/unlock
-    // class (std::lock_guard) to allow us to return at any point in this
-    // function and not have to worry about unlocking the mutex.
-    std::unique_lock<std::mutex> lock(m_mutex);
-
-#ifdef DB_PTHREAD_LOG_EVENTS
-    printf("%s (wait_value = 0x%8.8x, new_value = 0x%8.8x, timeout = %llu), "
-           "m_value = 0x%8.8x\n",
-           __FUNCTION__, wait_value, new_value, timeout.count(), m_value);
-#endif
-    if (timed_out)
-      *timed_out = false;
-
-    while (m_value != wait_value) {
-      if (timeout == std::chrono::microseconds(0)) {
-        m_condition.wait(lock);
-      } else {
-        std::cv_status result = m_condition.wait_for(lock, timeout);
-        if (result == std::cv_status::timeout) {
-          if (timed_out)
-            *timed_out = true;
-          break;
-        }
-      }
-    }
-
-    if (m_value == wait_value) {
-      m_value = new_value;
-      return true;
-    }
-
-    return false;
+  bool WaitForValueEqualTo(T value,
+                           const Timeout<std::micro> &timeout = llvm::None) {
+    return WaitFor([&value](T current) { return value == current; }, timeout) !=
+           llvm::None;
   }
 
   //------------------------------------------------------------------
@@ -435,51 +199,23 @@ public:
   /// @param[in] value
   ///     The value we want \a m_value to not be equal to.
   ///
-  /// @param[out] new_value
-  ///     The new value if \b true is returned.
-  ///
-  /// @param[in] abstime
-  ///     If non-nullptr, the absolute time at which we should stop
-  ///     waiting, else wait an infinite amount of time.
+  /// @param[in] timeout
+  ///     How long to wait for the condition to hold.
   ///
   /// @return
-  ///     @li \b true if the \a m_value is equal to \a value
-  ///     @li \b false otherwise
+  ///     @li m_value if m_value != value
+  ///     @li None otherwise (timeout occurred).
   //------------------------------------------------------------------
-  bool WaitForValueNotEqualTo(
-      T value, T &new_value,
-      const std::chrono::microseconds &timeout = std::chrono::microseconds(0)) {
-    // pthread_cond_timedwait() or pthread_cond_wait() will atomically
-    // unlock the mutex and wait for the condition to be set. When either
-    // function returns, they will re-lock the mutex. We use an auto lock/unlock
-    // class (std::lock_guard) to allow us to return at any point in this
-    // function and not have to worry about unlocking the mutex.
-    std::unique_lock<std::mutex> lock(m_mutex);
-#ifdef DB_PTHREAD_LOG_EVENTS
-    printf("%s (value = 0x%8.8x, timeout = %llu), m_value = 0x%8.8x\n",
-           __FUNCTION__, value, timeout.count(), m_value);
-#endif
-    while (m_value == value) {
-      if (timeout == std::chrono::microseconds(0)) {
-        m_condition.wait(lock);
-      } else {
-        std::cv_status result = m_condition.wait_for(lock, timeout);
-        if (result == std::cv_status::timeout)
-          break;
-      }
-    }
-
-    if (m_value != value) {
-      new_value = m_value;
-      return true;
-    }
-    return false;
+  llvm::Optional<T>
+  WaitForValueNotEqualTo(T value,
+                         const Timeout<std::micro> &timeout = llvm::None) {
+    return WaitFor([&value](T current) { return value != current; }, timeout);
   }
 
 protected:
   //----------------------------------------------------------------------
-  // pthread condition and mutex variable to control access and allow
-  // blocking between the main thread and the spotlight index thread.
+  // pthread condition and mutex variable to control access and allow blocking
+  // between the main thread and the spotlight index thread.
   //----------------------------------------------------------------------
   T m_value; ///< The templatized value T that we are protecting access to
   mutable std::mutex m_mutex; ///< The mutex to use when accessing the data

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.apple.internal.xpc.remote.debugserver</string>
+	<key>RemoteServices</key>
+	<dict>
+		<key>com.apple.internal.debugserver</key>
+		<dict>
+			<key>RequireEntitlement</key>
+			<string>AppleInternal</string>
+			<key>ExposedToUntrustedDevices</key>
+			<true/>
+		</dict>
+	</dict>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/libexec/remotectl</string>
+		<string>trampoline</string>
+		<string>-2</string>
+		<string>42</string>
+		<string>com.apple.internal.debugserver</string>
+		<string>/usr/local/bin/debugserver-nonui</string>
+		<string>--fd</string>
+		<string>42</string>
+	</array>
+	<key>POSIXSpawnType</key>
+	<string>Interactive</string>
+	<key>EnableTransactions</key>
+	<true/>
+	<key>EnablePressuredExit</key>
+	<true/>
+</dict>
+</plist>

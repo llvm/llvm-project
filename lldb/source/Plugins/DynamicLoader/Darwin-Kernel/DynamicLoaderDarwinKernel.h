@@ -17,6 +17,9 @@
 #include <vector>
 
 // Other libraries and framework includes
+
+#include "lldb/Utility/SafeMachO.h"
+
 // Project includes
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
@@ -283,6 +286,9 @@ protected:
 
   static lldb::addr_t
   SearchForKernelViaExhaustiveSearch(lldb_private::Process *process);
+
+  static bool
+  ReadMachHeader(lldb::addr_t addr, lldb_private::Process *process, llvm::MachO::mach_header &mh);
 
   static lldb_private::UUID
   CheckForKernelImageAtAddress(lldb::addr_t addr,

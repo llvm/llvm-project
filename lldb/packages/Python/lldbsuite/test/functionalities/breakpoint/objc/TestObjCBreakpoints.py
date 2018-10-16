@@ -22,7 +22,7 @@ class TestObjCBreakpoints(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def test_break(self):
-        """Test setting Objective C specific breakpoints (DWARF in .o files)."""
+        """Test setting Objective-C specific breakpoints (DWARF in .o files)."""
         self.build()
         self.setTearDownCleanup()
         self.check_objc_breakpoints(False)

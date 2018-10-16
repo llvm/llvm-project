@@ -134,11 +134,10 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     m_language_flags &= ~eLanguageFlagIsClass;
     m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
 
-    // we need to make sure the Target's SwiftASTContext has been setup BEFORE
-    // we do any Swift name lookups
+    // Make sure the target's SwiftASTContext has been setup before
+    // doing any Swift name lookups.
     if (m_target) {
-      SwiftASTContext *swift_ast_ctx = m_target->GetScratchSwiftASTContext(
-          err, *frame);
+      auto swift_ast_ctx = m_target->GetScratchSwiftASTContext(err, *frame);
       if (!swift_ast_ctx) {
         if (log)
           log->Printf("  [SUE::SC] NULL Swift AST Context");
@@ -364,6 +363,15 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                  "couldn't start parsing (no target)");
     return false;
   }
+  if (auto *persistent_state = GetPersistentState(target, exe_ctx)) {
+    persistent_state->AddHandLoadedModule(ConstString("Swift"));
+    m_result_delegate.RegisterPersistentState(persistent_state);
+    m_error_delegate.RegisterPersistentState(persistent_state);
+  } else {
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                 "couldn't start parsing (no persistent data)");
+    return false;
+  }
 
   ScanContext(exe_ctx, err);
 
@@ -438,21 +446,6 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   m_parser =
       llvm::make_unique<SwiftExpressionParser>(exe_scope, *this, m_options);
-  
-  // Don't set the persistent state in the result & error delegates till after
-  // you have made the expression parser.  Doing that could invalidate the 
-  // Target ScratchASTContext, which would destroy the old persistent state, 
-  // leaving the delegates holding onto a dangling pointer.
-  
-  if (auto *persistent_state = GetPersistentState(target, exe_ctx)) {
-    persistent_state->AddHandLoadedModule(ConstString("Swift"));
-    m_result_delegate.RegisterPersistentState(persistent_state);
-    m_error_delegate.RegisterPersistentState(persistent_state);
-  } else {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                 "couldn't start parsing (no persistent data)");
-    return false;
-  }
 
   unsigned error_code = m_parser->Parse(
       diagnostic_manager, first_body_line,
@@ -524,7 +517,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     uint32_t limit_start_line = 0;
     uint32_t limit_end_line = 0;
     if (limit_file) {
-      limit_file_spec.SetFile(limit_file, false);
+      limit_file_spec.SetFile(limit_file, false, FileSpec::Style::native);
       limit_start_line = m_options.GetPoundLineLine();
       limit_end_line = limit_start_line +
                        std::count(m_expr_text.begin(), m_expr_text.end(), '\n');

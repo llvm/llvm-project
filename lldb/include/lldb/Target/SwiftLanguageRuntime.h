@@ -33,6 +33,14 @@ namespace remote {
 class MemoryReader;
 class RemoteAddress;
 }
+
+template <typename T> class External;
+template <unsigned PointerSize> class RuntimeTarget;
+
+namespace reflection {
+template <typename T> class ReflectionContext;
+}
+
 namespace remoteAST {
 class RemoteASTContext;
 }
@@ -128,13 +136,13 @@ public:
     bool m_parse_error;
   };
 
+  /// A proxy object to support lazy binding of Archetypes.
   class MetadataPromise {
     friend class SwiftLanguageRuntime;
 
-    MetadataPromise(SwiftASTContext &, SwiftLanguageRuntime &, lldb::addr_t);
+    MetadataPromise(ValueObject &, SwiftLanguageRuntime &, lldb::addr_t);
 
-    swift::ASTContext &m_swift_ast;
-    swift::remoteAST::RemoteASTContext &m_remote_ast;
+    lldb::ValueObjectSP m_for_object_sp;
     SwiftLanguageRuntime &m_swift_runtime;
     lldb::addr_t m_metadata_location;
     llvm::Optional<swift::MetadataKind> m_metadata_kind;
@@ -246,9 +254,8 @@ public:
 
   SwiftExceptionPrecondition *GetExceptionPrecondition();
 
-  static lldb::ValueObjectSP
-  CalculateErrorValueFromFirstArgument(lldb::StackFrameSP frame_sp,
-                                       ConstString name);
+  static lldb::ValueObjectSP CalculateErrorValue(lldb::StackFrameSP frame_sp,
+                                                 ConstString name);
 
   lldb::ValueObjectSP CalculateErrorValueObjectFromValue(Value &value,
                                                          ConstString name,
@@ -300,9 +307,8 @@ public:
 
   virtual bool CouldHaveDynamicValue(ValueObject &in_value) override;
 
-  virtual MetadataPromiseSP
-  GetMetadataPromise(lldb::addr_t addr,
-                     SwiftASTContext *swift_ast_ctx = nullptr);
+  virtual MetadataPromiseSP GetMetadataPromise(lldb::addr_t addr,
+                                               ValueObject &for_object);
 
   /// Build the artificial type metadata variable name for \p swift_type.
   static bool GetAbstractTypeName(StreamString &name, swift::Type swift_type);
@@ -367,46 +373,58 @@ protected:
                                 const CompilerType &dynamic_type,
                                 bool is_indirect_enum_case);
 
-  virtual bool GetDynamicTypeAndAddress_Class(
-      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-      TypeAndOrName &class_type_or_name, Address &address);
+  bool GetDynamicTypeAndAddress_Class(ValueObject &in_value,
+                                      SwiftASTContext &scratch_ctx,
+                                      lldb::DynamicValueType use_dynamic,
+                                      TypeAndOrName &class_type_or_name,
+                                      Address &address);
 
-  virtual bool GetDynamicTypeAndAddress_Protocol(
-      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-      TypeAndOrName &class_type_or_name, Address &address);
+  bool GetDynamicTypeAndAddress_Protocol(ValueObject &in_value,
+                                         SwiftASTContext &scratch_ctx,
+                                         lldb::DynamicValueType use_dynamic,
+                                         TypeAndOrName &class_type_or_name,
+                                         Address &address);
 
-  virtual bool GetDynamicTypeAndAddress_ErrorType(
-      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-      TypeAndOrName &class_type_or_name, Address &address);
+  bool GetDynamicTypeAndAddress_ErrorType(ValueObject &in_value,
+                                          lldb::DynamicValueType use_dynamic,
+                                          TypeAndOrName &class_type_or_name,
+                                          Address &address);
 
-  virtual bool GetDynamicTypeAndAddress_GenericTypeParam(
-      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-      TypeAndOrName &class_type_or_name, Address &address);
-
-  virtual bool GetDynamicTypeAndAddress_Tuple(
-      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-      TypeAndOrName &class_type_or_name, Address &address);
-
-  virtual bool GetDynamicTypeAndAddress_Struct(
-      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-      TypeAndOrName &class_type_or_name, Address &address);
-
-  virtual bool GetDynamicTypeAndAddress_Enum(ValueObject &in_value,
-                                             lldb::DynamicValueType use_dynamic,
-                                             TypeAndOrName &class_type_or_name,
-                                             Address &address);
-
-  virtual bool GetDynamicTypeAndAddress_IndirectEnumCase(
-      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-      TypeAndOrName &class_type_or_name, Address &address);
-
-  virtual bool GetDynamicTypeAndAddress_Promise(
-      ValueObject &in_value, MetadataPromiseSP promise_sp,
+  bool GetDynamicTypeAndAddress_GenericTypeParam(
+      ValueObject &in_value, SwiftASTContext &scratch_ctx,
       lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
       Address &address);
 
-  virtual MetadataPromiseSP GetPromiseForTypeNameAndFrame(const char *type_name,
-                                                          StackFrame *frame);
+  bool GetDynamicTypeAndAddress_Tuple(ValueObject &in_value,
+                                      SwiftASTContext &scratch_ctx,
+                                      lldb::DynamicValueType use_dynamic,
+                                      TypeAndOrName &class_type_or_name,
+                                      Address &address);
+
+  bool GetDynamicTypeAndAddress_Struct(ValueObject &in_value,
+                                       CompilerType &bound_type,
+                                       lldb::DynamicValueType use_dynamic,
+                                       TypeAndOrName &class_type_or_name,
+                                       Address &address);
+
+  bool GetDynamicTypeAndAddress_Enum(ValueObject &in_value,
+                                     CompilerType &bound_type,
+                                     lldb::DynamicValueType use_dynamic,
+                                     TypeAndOrName &class_type_or_name,
+                                     Address &address);
+
+  bool GetDynamicTypeAndAddress_IndirectEnumCase(
+      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
+      TypeAndOrName &class_type_or_name, Address &address);
+
+  bool GetDynamicTypeAndAddress_Promise(ValueObject &in_value,
+                                        MetadataPromiseSP promise_sp,
+                                        lldb::DynamicValueType use_dynamic,
+                                        TypeAndOrName &class_type_or_name,
+                                        Address &address);
+
+  MetadataPromiseSP GetPromiseForTypeNameAndFrame(const char *type_name,
+                                                  StackFrame *frame);
 
   bool GetTargetOfPartialApply(SymbolContext &curr_sc, ConstString &apply_name,
                                SymbolContext &sc);
@@ -415,12 +433,11 @@ protected:
 
   void SetupSwiftError();
   void SetupExclusivity();
+  void SetupReflection();
 
   const CompilerType &GetBoxMetadataType();
 
   std::shared_ptr<swift::remote::MemoryReader> GetMemoryReader();
-
-  SwiftASTContext *GetScratchSwiftASTContext();
 
   std::unordered_set<std::string> m_library_negative_cache; // We have to load
                                                             // swift dependent
@@ -475,6 +492,10 @@ protected:
   bool m_original_dynamic_exclusivity_flag_state = false;
 
 private:
+  using NativeReflectionContext = swift::reflection::ReflectionContext<
+      swift::External<swift::RuntimeTarget<sizeof(uintptr_t)>>>;
+  NativeReflectionContext *reflection_ctx;
+
   DISALLOW_COPY_AND_ASSIGN(SwiftLanguageRuntime);
 };
 

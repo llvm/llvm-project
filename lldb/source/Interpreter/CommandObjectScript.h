@@ -30,7 +30,7 @@ public:
   ~CommandObjectScript() override;
 
 protected:
-  bool DoExecute(const char *command, CommandReturnObject &result) override;
+  bool DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
 };
 
 } // namespace lldb_private

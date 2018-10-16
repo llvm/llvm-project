@@ -79,13 +79,10 @@ bool HostInfoAndroid::ComputeTempFileBaseDirectory(FileSpec &file_spec) {
   bool success = HostInfoLinux::ComputeTempFileBaseDirectory(file_spec);
 
   // On Android, there is no path which is guaranteed to be writable. If the
-  // user has not
-  // provided a path via an environment variable, the generic algorithm will
-  // deduce /tmp, which
-  // is plain wrong. In that case we have an invalid directory, we substitute
-  // the path with
-  // /data/local/tmp, which is correct at least in some cases (i.e., when
-  // running as shell user).
+  // user has not provided a path via an environment variable, the generic
+  // algorithm will deduce /tmp, which is plain wrong. In that case we have an
+  // invalid directory, we substitute the path with /data/local/tmp, which is
+  // correct at least in some cases (i.e., when running as shell user).
   if (!success || !file_spec.Exists())
     file_spec = FileSpec("/data/local/tmp", false);
 

@@ -17,7 +17,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringList.h" // for StringList
 
-#if defined(LLVM_ON_WIN32)
+#if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
 #endif
 
@@ -96,8 +96,8 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
   Status error;
 
   namespace fs = llvm::sys::fs;
-  // If we have a regular file, a symbolic link or unknown file type, try
-  // and process the file. We must handle unknown as sometimes the directory
+  // If we have a regular file, a symbolic link or unknown file type, try and
+  // process the file. We must handle unknown as sometimes the directory
   // enumeration might be enumerating a file system that doesn't have correct
   // file type information.
   if (ft == fs::file_type::regular_file || ft == fs::file_type::symlink_file ||
@@ -128,17 +128,14 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
               plugin_info.library.getAddressOfSymbol("LLDBPluginTerminate"));
         } else {
           // The initialize function returned FALSE which means the plug-in
-          // might not be
-          // compatible, or might be too new or too old, or might not want to
-          // run on this
-          // machine.  Set it to a default-constructed instance to invalidate
-          // it.
+          // might not be compatible, or might be too new or too old, or might
+          // not want to run on this machine.  Set it to a default-constructed
+          // instance to invalidate it.
           plugin_info = PluginInfo();
         }
 
-        // Regardless of success or failure, cache the plug-in load
-        // in our plug-in info so we don't try to load it again and
-        // again.
+        // Regardless of success or failure, cache the plug-in load in our
+        // plug-in info so we don't try to load it again and again.
         SetPluginInfo(plugin_file_spec, plugin_info);
 
         return FileSpec::eEnumerateDirectoryResultNext;
@@ -148,9 +145,9 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
 
   if (ft == fs::file_type::directory_file ||
       ft == fs::file_type::symlink_file || ft == fs::file_type::type_unknown) {
-    // Try and recurse into anything that a directory or symbolic link.
-    // We must also do this for unknown as sometimes the directory enumeration
-    // might be enumerating a file system that doesn't have correct file type
+    // Try and recurse into anything that a directory or symbolic link. We must
+    // also do this for unknown as sometimes the directory enumeration might be
+    // enumerating a file system that doesn't have correct file type
     // information.
     return FileSpec::eEnumerateDirectoryResultEnter;
   }
@@ -160,19 +157,18 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
 
 void PluginManager::Initialize() {
 #if 1
-  FileSpec dir_spec;
   const bool find_directories = true;
   const bool find_files = true;
   const bool find_other = true;
   char dir_path[PATH_MAX];
-  if (HostInfo::GetLLDBPath(ePathTypeLLDBSystemPlugins, dir_spec)) {
+  if (FileSpec dir_spec = HostInfo::GetSystemPluginDir()) {
     if (dir_spec.Exists() && dir_spec.GetPath(dir_path, sizeof(dir_path))) {
       FileSpec::EnumerateDirectory(dir_path, find_directories, find_files,
                                    find_other, LoadPluginCallback, nullptr);
     }
   }
 
-  if (HostInfo::GetLLDBPath(ePathTypeLLDBUserPlugins, dir_spec)) {
+  if (FileSpec dir_spec = HostInfo::GetUserPluginDir()) {
     if (dir_spec.Exists() && dir_spec.GetPath(dir_path, sizeof(dir_path))) {
       FileSpec::EnumerateDirectory(dir_path, find_directories, find_files,
                                    find_other, LoadPluginCallback, nullptr);
@@ -187,8 +183,8 @@ void PluginManager::Terminate() {
 
   PluginTerminateMap::const_iterator pos, end = plugin_map.end();
   for (pos = plugin_map.begin(); pos != end; ++pos) {
-    // Call the plug-in "void LLDBPluginTerminate (void)" function if there
-    // is one (if the symbol was not nullptr).
+    // Call the plug-in "void LLDBPluginTerminate (void)" function if there is
+    // one (if the symbol was not nullptr).
     if (pos->second.library.isValid()) {
       if (pos->second.plugin_term_callback)
         pos->second.plugin_term_callback();
@@ -2397,8 +2393,8 @@ static lldb::OptionValuePropertiesSP GetDebuggerPropertyForPlugins(
 }
 
 // This is deprecated way to register plugin specific settings.  e.g.
-// "<plugin_type_name>.plugin.<plugin_type_desc>.SETTINGNAME"
-// and Platform generic settings would be under "platform.SETTINGNAME".
+// "<plugin_type_name>.plugin.<plugin_type_desc>.SETTINGNAME" and Platform
+// generic settings would be under "platform.SETTINGNAME".
 static lldb::OptionValuePropertiesSP GetDebuggerPropertyForPluginsOldStyle(
     Debugger &debugger, const ConstString &plugin_type_name,
     const ConstString &plugin_type_desc, bool can_create) {

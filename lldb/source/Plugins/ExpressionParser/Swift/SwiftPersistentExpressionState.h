@@ -42,8 +42,15 @@ public:
   public:
     void AddDecl(swift::ValueDecl *decl, bool check_existing,
                  const ConstString &name);
-    bool FindMatchingDecls(const ConstString &name,
-                           std::vector<swift::ValueDecl *> &matches);
+
+    /// Find decls matching `name`, excluding decls that are equivalent to
+    /// decls in `excluding_equivalents`, and put the results in `matches`.
+    /// Return true if there are any results.
+    bool FindMatchingDecls(
+        const ConstString &name,
+        const std::vector<swift::ValueDecl *> &excluding_equivalents,
+        std::vector<swift::ValueDecl *> &matches);
+
     void CopyDeclsTo(SwiftDeclMap &target_map);
     static bool DeclsAreEquivalent(swift::Decl *lhs, swift::Decl *rhs);
 
@@ -90,8 +97,13 @@ public:
 
   void CopyInSwiftPersistentDecls(SwiftDeclMap &source_map);
 
-  bool GetSwiftPersistentDecls(const ConstString &name,
-                               std::vector<swift::ValueDecl *> &matches);
+  /// Find decls matching `name`, excluding decls that are equivalent to decls
+  /// in `excluding_equivalents`, and put the results in `matches`.  Return true
+  /// if there are any results.
+  bool GetSwiftPersistentDecls(
+      const ConstString &name,
+      const std::vector<swift::ValueDecl *> &excluding_equivalents,
+      std::vector<swift::ValueDecl *> &matches);
 
   // This just adds this module to the list of hand-loaded modules, it doesn't
   // actually load it.

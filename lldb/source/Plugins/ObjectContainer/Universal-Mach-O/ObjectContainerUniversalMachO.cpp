@@ -44,8 +44,8 @@ ObjectContainer *ObjectContainerUniversalMachO::CreateInstance(
     const lldb::ModuleSP &module_sp, DataBufferSP &data_sp,
     lldb::offset_t data_offset, const FileSpec *file,
     lldb::offset_t file_offset, lldb::offset_t length) {
-  // We get data when we aren't trying to look for cached container information,
-  // so only try and look for an architecture slice if we get data
+  // We get data when we aren't trying to look for cached container
+  // information, so only try and look for an architecture slice if we get data
   if (data_sp) {
     DataExtractor data;
     data.SetData(data_sp, data_offset, length);
@@ -81,8 +81,8 @@ ObjectContainerUniversalMachO::~ObjectContainerUniversalMachO() {}
 
 bool ObjectContainerUniversalMachO::ParseHeader() {
   bool success = ParseHeader(m_data, m_header, m_fat_archs);
-  // We no longer need any data, we parsed all we needed to parse
-  // and cached it in m_header and m_fat_archs
+  // We no longer need any data, we parsed all we needed to parse and cached it
+  // in m_header and m_fat_archs
   m_data.Clear();
   return success;
 }
@@ -92,8 +92,7 @@ bool ObjectContainerUniversalMachO::ParseHeader(
     std::vector<llvm::MachO::fat_arch> &fat_archs) {
   bool success = false;
   // Store the file offset for this universal file as we could have a universal
-  // .o file
-  // in a BSD archive, or be contained in another kind of object.
+  // .o file in a BSD archive, or be contained in another kind of object.
   // Universal mach-o files always have their headers in big endian.
   lldb::offset_t offset = 0;
   data.SetByteOrder(eByteOrderBig);

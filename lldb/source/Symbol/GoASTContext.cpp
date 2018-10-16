@@ -667,8 +667,7 @@ GoASTContext::GetFullyUnqualifiedType(lldb::opaque_compiler_type_t type) {
 }
 
 // Returns -1 if this isn't a function of if the function doesn't have a
-// prototype
-// Returns a value >= 0 if there is a prototype.
+// prototype Returns a value >= 0 if there is a prototype.
 int GoASTContext::GetFunctionArgumentCount(lldb::opaque_compiler_type_t type) {
   return GetNumberOfFunctionArguments(type);
 }
@@ -1008,8 +1007,8 @@ CompilerType GoASTContext::GetChildCompilerTypeAtIndex(
   return CompilerType();
 }
 
-// Lookup a child given a name. This function will match base class names
-// and member member names in "clang_type" only, not descendants.
+// Lookup a child given a name. This function will match base class names and
+// member member names in "clang_type" only, not descendants.
 uint32_t
 GoASTContext::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                                       const char *name,
@@ -1048,8 +1047,8 @@ size_t GoASTContext::GetIndexOfChildMemberWithName(
   return 1;
 }
 
-// Converts "s" to a floating point value and place resulting floating
-// point bytes in the "dst" buffer.
+// Converts "s" to a floating point value and place resulting floating point
+// bytes in the "dst" buffer.
 size_t
 GoASTContext::ConvertStringToFloatValue(lldb::opaque_compiler_type_t type,
                                         const char *s, uint8_t *dst,
@@ -1080,9 +1079,8 @@ void GoASTContext::DumpValue(lldb::opaque_compiler_type_t type,
       uint32_t field_idx = 0;
       for (auto *field = st->GetField(field_idx); field != nullptr;
            field_idx++) {
-        // Print the starting squiggly bracket (if this is the
-        // first member) or comma (for member 2 and beyond) for
-        // the struct/union/class member.
+        // Print the starting squiggly bracket (if this is the first member) or
+        // comma (for member 2 and beyond) for the struct/union/class member.
         if (field_idx == 0)
           s->PutChar('{');
         else
@@ -1137,9 +1135,8 @@ void GoASTContext::DumpValue(lldb::opaque_compiler_type_t type,
 
     uint64_t element_idx;
     for (element_idx = 0; element_idx < a->GetLength(); ++element_idx) {
-      // Print the starting squiggly bracket (if this is the
-      // first member) or comman (for member 2 and beyong) for
-      // the struct/union/class member.
+      // Print the starting squiggly bracket (if this is the first member) or
+      // comman (for member 2 and beyong) for the struct/union/class member.
       if (element_idx == 0)
         s->PutChar('{');
       else

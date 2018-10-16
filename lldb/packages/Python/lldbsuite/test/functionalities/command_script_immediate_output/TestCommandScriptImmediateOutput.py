@@ -31,7 +31,6 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
     @skipIfDarwin
     def test_command_script_immediate_output_console(self):
         """Test that LLDB correctly allows scripted commands to set immediate output to the console."""
-        self.makeBuildDir()
         self.launch(timeout=10)
 
         script = os.path.join(self.getSourceDir(), 'custom_command.py')
@@ -55,7 +54,6 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
     @skipIfDarwin
     def test_command_script_immediate_output_file(self):
         """Test that LLDB correctly allows scripted commands to set immediate output to a file."""
-        self.makeBuildDir()
         self.launch(timeout=10)
 
         test_files = {self.getBuildArtifact('read.txt'): 'r',

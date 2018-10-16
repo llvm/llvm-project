@@ -26,6 +26,7 @@ class ExprCommandCallOverriddenMethod(TestBase):
         # Find the line number to break for main.c.
         self.line = line_number('main.cpp', '// Set breakpoint here')
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test(self):
         """Test calls to overridden methods in derived classes."""
         self.build()

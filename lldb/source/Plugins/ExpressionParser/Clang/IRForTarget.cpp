@@ -263,8 +263,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   }
 
   // Get the next available result name from m_decl_map and create the
-  // persistent
-  // variable for it
+  // persistent variable for it
 
   // If the result is an Lvalue, it is emitted as a pointer; see
   // ASTResultSynthesizer::SynthesizeBodyResult.
@@ -345,9 +344,9 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
       GlobalValue::ExternalLinkage, NULL, /* no initializer */
       m_result_name.GetCString());
 
-  // It's too late in compilation to create a new VarDecl for this, but we don't
-  // need to.  We point the metadata at the old VarDecl.  This creates an odd
-  // anomaly: a variable with a Value whose name is something like $0 and a
+  // It's too late in compilation to create a new VarDecl for this, but we
+  // don't need to.  We point the metadata at the old VarDecl.  This creates an
+  // odd anomaly: a variable with a Value whose name is something like $0 and a
   // Decl whose name is $__lldb_expr_result.  This condition is handled in
   // ClangExpressionDeclMap::DoMaterialize, and the name of the variable is
   // fixed up.
@@ -464,9 +463,7 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
     // CFAllocatorRef -> i8*
     // UInt8 * -> i8*
     // CFIndex -> long (i32 or i64, as appropriate; we ask the module for its
-    // pointer size for now)
-    // CFStringEncoding -> i32
-    // Boolean -> i8
+    // pointer size for now) CFStringEncoding -> i32 Boolean -> i8
 
     Type *arg_type_array[5];
 
@@ -801,9 +798,8 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
   // Unpack the message name from the selector.  In LLVM IR, an objc_msgSend
   // gets represented as
   //
-  // %tmp     = load i8** @"OBJC_SELECTOR_REFERENCES_" ; <i8*>
-  // %call    = call i8* (i8*, i8*, ...)* @objc_msgSend(i8* %obj, i8* %tmp, ...)
-  // ; <i8*>
+  // %tmp     = load i8** @"OBJC_SELECTOR_REFERENCES_" ; <i8*> %call    = call
+  // i8* (i8*, i8*, ...)* @objc_msgSend(i8* %obj, i8* %tmp, ...) ; <i8*>
   //
   // where %obj is the object pointer and %tmp is the selector.
   //
@@ -870,7 +866,8 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
       log->Printf("Found sel_registerName at 0x%" PRIx64,
                   sel_registerName_addr);
 
-    // Build the function type: struct objc_selector *sel_registerName(uint8_t*)
+    // Build the function type: struct objc_selector
+    // *sel_registerName(uint8_t*)
 
     // The below code would be "more correct," but in actuality what's required
     // is uint8_t*
@@ -980,11 +977,10 @@ bool IRForTarget::RewriteObjCClassReference(Instruction *class_load) {
   //            %struct._objc_class** @OBJC_CLASS_REFERENCES_, align 4
   //
   // @"OBJC_CLASS_REFERENCES_ is a bitcast of a character array called
-  // @OBJC_CLASS_NAME_.
-  // @OBJC_CLASS_NAME contains the string.
+  // @OBJC_CLASS_NAME_. @OBJC_CLASS_NAME contains the string.
 
-  // Find the pointer's initializer (a ConstantExpr with opcode BitCast)
-  // and get the string from its target
+  // Find the pointer's initializer (a ConstantExpr with opcode BitCast) and
+  // get the string from its target
 
   GlobalVariable *_objc_class_references_ =
       dyn_cast<GlobalVariable>(load->getPointerOperand());
@@ -1159,8 +1155,8 @@ bool IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
       GlobalValue::ExternalLinkage, NULL,   /* no initializer */
       alloc->getName().str());
 
-  // What we're going to do here is make believe this was a regular old external
-  // variable.  That means we need to make the metadata valid.
+  // What we're going to do here is make believe this was a regular old
+  // external variable.  That means we need to make the metadata valid.
 
   NamedMDNode *named_metadata =
       m_module->getOrInsertNamedMetadata("clang.global.decl.ptrs");
@@ -1175,8 +1171,7 @@ bool IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
   named_metadata->addOperand(persistent_global_md);
 
   // Now, since the variable is a pointer variable, we will drop in a load of
-  // that
-  // pointer variable.
+  // that pointer variable.
 
   LoadInst *persistent_load = new LoadInst(persistent_global, "", alloc);
 
@@ -1366,16 +1361,13 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
 
     if (name[0] == '$') {
       // The $__lldb_expr_result name indicates the return value has allocated
-      // as
-      // a static variable.  Per the comment at
-      // ASTResultSynthesizer::SynthesizeBodyResult,
-      // accesses to this static variable need to be redirected to the result of
-      // dereferencing
-      // a pointer that is passed in as one of the arguments.
+      // as a static variable.  Per the comment at
+      // ASTResultSynthesizer::SynthesizeBodyResult, accesses to this static
+      // variable need to be redirected to the result of dereferencing a
+      // pointer that is passed in as one of the arguments.
       //
       // Consequently, when reporting the size of the type, we report a pointer
-      // type pointing
-      // to the type of $__lldb_expr_result, not the type itself.
+      // type pointing to the type of $__lldb_expr_result, not the type itself.
       //
       // We also do this for any user-declared persistent variables.
       compiler_type = compiler_type.GetPointerType();
@@ -1965,12 +1957,11 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
       FunctionValueCache body_result_maker(
           [this, name, offset_type, offset, argument,
            value](llvm::Function *function) -> llvm::Value * {
-            // Per the comment at ASTResultSynthesizer::SynthesizeBodyResult, in
-            // cases where the result
-            // variable is an rvalue, we have to synthesize a dereference of the
-            // appropriate structure
-            // entry in order to produce the static variable that the AST thinks
-            // it is accessing.
+            // Per the comment at ASTResultSynthesizer::SynthesizeBodyResult,
+            // in cases where the result variable is an rvalue, we have to
+            // synthesize a dereference of the appropriate structure entry in
+            // order to produce the static variable that the AST thinks it is
+            // accessing.
 
             llvm::Instruction *entry_instruction = llvm::cast<Instruction>(
                 m_entry_instruction_finder.GetValue(function));
@@ -2194,7 +2185,8 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
         if (log)
           log->Printf("RewriteObjCSelectors() failed");
 
-        // RewriteObjCSelectors() reports its own errors, so we don't do so here
+        // RewriteObjCSelectors() reports its own errors, so we don't do so
+        // here
 
         return false;
       }

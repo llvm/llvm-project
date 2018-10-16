@@ -130,14 +130,14 @@ bool RegisterContextPOSIXProcessMonitor_mips64::ReadRegister(
     bool success = ReadRegister(full_reg, value);
 
     if (success) {
-      // If our read was not aligned (for ah,bh,ch,dh), shift our returned value
-      // one byte to the right.
+      // If our read was not aligned (for ah,bh,ch,dh), shift our returned
+      // value one byte to the right.
       if (is_subreg && (reg_info->byte_offset & 0x1))
         value.SetUInt64(value.GetAsUInt64() >> 8);
 
       // If our return byte size was greater than the return value reg size,
-      // then
-      // use the type specified by reg_info rather than the uint64_t default
+      // then use the type specified by reg_info rather than the uint64_t
+      // default
       if (value.GetByteSize() > reg_info->byte_size)
         value.SetType(reg_info);
     }

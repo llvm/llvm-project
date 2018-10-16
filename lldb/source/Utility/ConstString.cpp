@@ -11,10 +11,10 @@
 
 #include "lldb/Utility/Stream.h"
 
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator.h"            // for iterator_facade_base
 #include "llvm/Support/Allocator.h"       // for BumpPtrAllocator
+#include "llvm/Support/DJB.h"             // for djbHash
 #include "llvm/Support/FormatProviders.h" // for format_provider
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/Threading.h"
@@ -43,8 +43,8 @@ public:
 
   static size_t GetConstCStringLength(const char *ccstr) {
     if (ccstr != nullptr) {
-      // Since the entry is read only, and we derive the entry entirely from the
-      // pointer, we don't need the lock.
+      // Since the entry is read only, and we derive the entry entirely from
+      // the pointer, we don't need the lock.
       const StringPoolEntryType &entry = GetStringMapEntryFromKeyData(ccstr);
       return entry.getKey().size();
     }
@@ -111,38 +111,34 @@ public:
   }
 
   const char *
-  GetConstCStringAndSetMangledCounterPart(const char *demangled_cstr,
+  GetConstCStringAndSetMangledCounterPart(llvm::StringRef demangled,
                                           const char *mangled_ccstr) {
-    if (demangled_cstr != nullptr) {
-      const char *demangled_ccstr = nullptr;
+    const char *demangled_ccstr = nullptr;
 
-      {
-        llvm::StringRef string_ref(demangled_cstr);
-        const uint8_t h = hash(string_ref);
-        llvm::sys::SmartScopedWriter<false> wlock(m_string_pools[h].m_mutex);
+    {
+      const uint8_t h = hash(demangled);
+      llvm::sys::SmartScopedWriter<false> wlock(m_string_pools[h].m_mutex);
 
-        // Make string pool entry with the mangled counterpart already set
-        StringPoolEntryType &entry =
-            *m_string_pools[h]
-                 .m_string_map.insert(std::make_pair(string_ref, mangled_ccstr))
-                 .first;
+      // Make or update string pool entry with the mangled counterpart
+      StringPool &map = m_string_pools[h].m_string_map;
+      StringPoolEntryType &entry = *map.try_emplace(demangled).first;
 
-        // Extract the const version of the demangled_cstr
-        demangled_ccstr = entry.getKeyData();
-      }
+      entry.second = mangled_ccstr;
 
-      {
-        // Now assign the demangled const string as the counterpart of the
-        // mangled const string...
-        const uint8_t h = hash(llvm::StringRef(mangled_ccstr));
-        llvm::sys::SmartScopedWriter<false> wlock(m_string_pools[h].m_mutex);
-        GetStringMapEntryFromKeyData(mangled_ccstr).setValue(demangled_ccstr);
-      }
-
-      // Return the constant demangled C string
-      return demangled_ccstr;
+      // Extract the const version of the demangled_cstr
+      demangled_ccstr = entry.getKeyData();
     }
-    return nullptr;
+
+    {
+      // Now assign the demangled const string as the counterpart of the
+      // mangled const string...
+      const uint8_t h = hash(llvm::StringRef(mangled_ccstr));
+      llvm::sys::SmartScopedWriter<false> wlock(m_string_pools[h].m_mutex);
+      GetStringMapEntryFromKeyData(mangled_ccstr).setValue(demangled_ccstr);
+    }
+
+    // Return the constant demangled C string
+    return demangled_ccstr;
   }
 
   const char *GetConstTrimmedCStringWithLength(const char *cstr,
@@ -155,9 +151,8 @@ public:
   }
 
   //------------------------------------------------------------------
-  // Return the size in bytes that this object and any items in its
-  // collection of uniqued strings + data count values takes in
-  // memory.
+  // Return the size in bytes that this object and any items in its collection
+  // of uniqued strings + data count values takes in memory.
   //------------------------------------------------------------------
   size_t MemorySize() const {
     size_t mem_size = sizeof(Pool);
@@ -171,7 +166,7 @@ public:
 
 protected:
   uint8_t hash(const llvm::StringRef &s) const {
-    uint32_t h = llvm::HashString(s);
+    uint32_t h = llvm::djbHash(s);
     return ((h >> 24) ^ (h >> 16) ^ (h >> 8) ^ h) & 0xff;
   }
 
@@ -184,15 +179,14 @@ protected:
 };
 
 //----------------------------------------------------------------------
-// Frameworks and dylibs aren't supposed to have global C++
-// initializers so we hide the string pool in a static function so
-// that it will get initialized on the first call to this static
-// function.
+// Frameworks and dylibs aren't supposed to have global C++ initializers so we
+// hide the string pool in a static function so that it will get initialized on
+// the first call to this static function.
 //
-// Note, for now we make the string pool a pointer to the pool, because
-// we can't guarantee that some objects won't get destroyed after the
-// global destructor chain is run, and trying to make sure no destructors
-// touch ConstStrings is difficult.  So we leak the pool instead.
+// Note, for now we make the string pool a pointer to the pool, because we
+// can't guarantee that some objects won't get destroyed after the global
+// destructor chain is run, and trying to make sure no destructors touch
+// ConstStrings is difficult.  So we leak the pool instead.
 //----------------------------------------------------------------------
 static Pool &StringPool() {
   static std::once_flag g_pool_initialization_flag;
@@ -246,8 +240,8 @@ bool ConstString::Equals(const ConstString &lhs, const ConstString &rhs,
     return true;
 
   // Since the pointers weren't equal, and identical ConstStrings always have
-  // identical pointers,
-  // the result must be false for case sensitive equality test.
+  // identical pointers, the result must be false for case sensitive equality
+  // test.
   if (case_sensitive)
     return false;
 
@@ -308,7 +302,7 @@ void ConstString::SetString(const llvm::StringRef &s) {
   m_string = StringPool().GetConstCStringWithLength(s.data(), s.size());
 }
 
-void ConstString::SetCStringWithMangledCounterpart(const char *demangled,
+void ConstString::SetStringWithMangledCounterpart(llvm::StringRef demangled,
                                                    const ConstString &mangled) {
   m_string = StringPool().GetConstCStringAndSetMangledCounterPart(
       demangled, mangled.m_string);

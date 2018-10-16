@@ -27,10 +27,18 @@ bool LibcxxWStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libc++ std::wstring
 
+bool LibcxxOptionalSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::optional<>
+
 bool LibcxxSmartPointerSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions
         &options); // libc++ std::shared_ptr<> and std::weak_ptr<>
+
+bool LibcxxFunctionSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::function<>
 
 SyntheticChildrenFrontEnd *
 LibcxxVectorBoolSyntheticFrontEndCreator(CXXSyntheticChildren *,
@@ -124,14 +132,19 @@ SyntheticChildrenFrontEnd *
 LibcxxInitializerListSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                               lldb::ValueObjectSP);
 
-SyntheticChildrenFrontEnd *LibcxxFunctionFrontEndCreator(CXXSyntheticChildren *,
-                                                         lldb::ValueObjectSP);
-
 SyntheticChildrenFrontEnd *LibcxxQueueFrontEndCreator(CXXSyntheticChildren *,
                                                       lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *LibcxxTupleFrontEndCreator(CXXSyntheticChildren *,
                                                       lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibcxxOptionalFrontEndCreator(CXXSyntheticChildren *,
+                              lldb::ValueObjectSP valobj_sp);
+
+SyntheticChildrenFrontEnd *
+LibcxxVariantFrontEndCreator(CXXSyntheticChildren *,
+                             lldb::ValueObjectSP valobj_sp);
 
 } // namespace formatters
 } // namespace lldb_private

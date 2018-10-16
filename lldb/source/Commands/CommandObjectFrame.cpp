@@ -24,7 +24,6 @@
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
@@ -44,6 +43,7 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -61,11 +61,11 @@ using namespace lldb_private;
 // CommandObjectFrameDiagnose
 //-------------------------------------------------------------------------
 
-static OptionDefinition g_frame_diag_options[] = {
+static constexpr OptionDefinition g_frame_diag_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_1, false, "register", 'r', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeRegisterName,    "A register to diagnose." },
-  { LLDB_OPT_SET_1, false, "address",  'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeAddress,         "An address to diagnose." },
-  { LLDB_OPT_SET_1, false, "offset",   'o', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset,          "An optional offset.  Requires --register." }
+  { LLDB_OPT_SET_1, false, "register", 'r', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeRegisterName,    "A register to diagnose." },
+  { LLDB_OPT_SET_1, false, "address",  'a', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeAddress,         "An address to diagnose." },
+  { LLDB_OPT_SET_1, false, "offset",   'o', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeOffset,          "An optional offset.  Requires --register." }
     // clang-format on
 };
 
@@ -251,7 +251,7 @@ protected:
 
 static OptionDefinition g_frame_select_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_1, false, "relative", 'r', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset, "A relative frame index offset from the current frame index." },
+  { LLDB_OPT_SET_1, false, "relative", 'r', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeOffset, "A relative frame index offset from the current frame index." },
     // clang-format on
 };
 
@@ -342,8 +342,8 @@ protected:
           frame_idx += m_options.relative_frame_offset;
         else {
           if (frame_idx == 0) {
-            // If you are already at the bottom of the stack, then just warn and
-            // don't reset the frame.
+            // If you are already at the bottom of the stack, then just warn
+            // and don't reset the frame.
             result.AppendError("Already at the bottom of the stack.");
             result.SetStatus(eReturnStatusFailed);
             return false;
@@ -427,7 +427,17 @@ public:
             "arguments and local variables in scope. Names of argument, "
             "local, file static and file global variables can be specified. "
             "Children of aggregate variables can be specified such as "
-            "'var->child.x'.",
+            "'var->child.x'.  The -> and [] operators in 'frame variable' do "
+            "not invoke operator overloads if they exist, but directly access "
+            "the specified element.  If you want to trigger operator overloads "
+            "use the expression command to print the variable instead."
+            "\nIt is worth noting that except for overloaded "
+            "operators, when printing local variables 'expr local_var' and "
+            "'frame var local_var' produce the same "
+            "results.  However, 'frame variable' is more efficient, since it "
+            "uses debug information and memory reads directly, rather than "
+            "parsing and evaluating an expression, which may even involve "
+            "JITing and running code in the target program.",
             nullptr, eCommandRequiresFrame | eCommandTryTargetAPILock |
                          eCommandProcessMustBeLaunched |
                          eCommandProcessMustBePaused | eCommandRequiresProcess),
@@ -463,21 +473,14 @@ public:
 
   Options *GetOptions() override { return &m_option_group; }
 
-  int HandleArgumentCompletion(Args &input, int &cursor_index,
-                               int &cursor_char_position,
-                               OptionElementVector &opt_element_vector,
-                               int match_start_point, int max_return_elements,
-                               bool &word_complete,
-                               StringList &matches) override {
+  int HandleArgumentCompletion(
+      CompletionRequest &request,
+      OptionElementVector &opt_element_vector) override {
     // Arguments are the standard source file completer.
-    auto completion_str = input[cursor_index].ref;
-    completion_str = completion_str.take_front(cursor_char_position);
-
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eVariablePathCompletion,
-        completion_str, match_start_point, max_return_elements, nullptr,
-        word_complete, matches);
-    return matches.GetSize();
+        request, nullptr);
+    return request.GetNumberOfMatches();
   }
 
 protected:
@@ -504,16 +507,15 @@ protected:
   }
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    // No need to check "frame" for validity as eCommandRequiresFrame ensures it
-    // is valid
+    // No need to check "frame" for validity as eCommandRequiresFrame ensures
+    // it is valid
     StackFrame *frame = m_exe_ctx.GetFramePtr();
 
     Stream &s = result.GetOutputStream();
 
     // Be careful about the stack frame, if any summary formatter runs code, it
-    // might clear the StackFrameList
-    // for the thread.  So hold onto a shared pointer to the frame so it stays
-    // alive.
+    // might clear the StackFrameList for the thread.  So hold onto a shared
+    // pointer to the frame so it stays alive.
 
     VariableList *variable_list =
         frame->GetVariableList(m_option_variable.show_globals);
@@ -547,8 +549,8 @@ protected:
       if (!command.empty()) {
         VariableList regex_var_list;
 
-        // If we have any args to the variable command, we will make
-        // variable objects from them...
+        // If we have any args to the variable command, we will make variable
+        // objects from them...
         for (auto &entry : command) {
           if (m_option_variable.use_regex) {
             const size_t regex_start_index = regex_var_list.GetSize();
@@ -620,9 +622,6 @@ protected:
 
               if (!scope_string.empty())
                 s.PutCString(scope_string);
-
-              //                            if (format != eFormatDefault)
-              //                                valobj_sp->SetFormat (format);
               if (m_option_variable.show_decl && var_sp &&
                   var_sp->GetDeclaration().GetFile()) {
                 var_sp->GetDeclaration().DumpStopContext(&s, false);
@@ -680,14 +679,13 @@ protected:
             if (m_option_variable.show_scope)
               scope_string = GetScopeString(var_sp).str();
 
-            // Use the variable object code to make sure we are
-            // using the same APIs as the public API will be
-            // using...
+            // Use the variable object code to make sure we are using the same
+            // APIs as the public API will be using...
             valobj_sp = frame->GetValueObjectForFrameVariable(
                 var_sp, m_varobj_options.use_dynamic);
             if (valobj_sp) {
-              // When dumping all variables, don't print any variables
-              // that are not in scope to avoid extra unneeded output
+              // When dumping all variables, don't print any variables that are
+              // not in scope to avoid extra unneeded output
               if (valobj_sp->IsInScope()) {
                 if (!valobj_sp->GetTargetSP()
                          ->GetDisplayRuntimeSupportValues() &&

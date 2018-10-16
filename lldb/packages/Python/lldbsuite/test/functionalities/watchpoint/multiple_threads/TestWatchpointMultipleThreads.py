@@ -17,51 +17,26 @@ from lldbsuite.test import lldbutil
 class WatchpointForMultipleThreadsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
+    main_spec = lldb.SBFileSpec("main.cpp", False)
 
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
-    def test_watchpoint_multiple_threads(self):
-        """Test that lldb watchpoint works for multiple threads."""
-        self.build()
-        self.setTearDownCleanup()
-        self.hello_multiple_threads()
+    def test_watchpoint_before_thread_start(self):
+        """Test that we can hit a watchpoint we set before starting another thread"""
+        self.do_watchpoint_test("Before running the thread")
 
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
-    def test_watchpoint_multiple_threads_wp_set_and_then_delete(self):
-        """Test that lldb watchpoint works for multiple threads, and after the watchpoint is deleted, the watchpoint event should no longer fires."""
+    def test_watchpoint_after_thread_start(self):
+        """Test that we can hit a watchpoint we set after starting another thread"""
+        self.do_watchpoint_test("After running the thread")
+
+    def do_watchpoint_test(self, line):
         self.build()
-        self.setTearDownCleanup()
-        self.hello_multiple_threads_wp_set_and_then_delete()
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-        # Our simple source filename.
-        self.source = 'main.cpp'
-        # Find the line number to break inside main().
-        self.first_stop = line_number(
-            self.source, '// Set break point at this line')
-
-    def hello_multiple_threads(self):
-        """Test that lldb watchpoint works for multiple threads."""
-        self.runCmd("file " + self.getBuildArtifact("a.out"),
-                    CURRENT_EXECUTABLE_SET)
-
-        # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
-        lldbutil.run_break_set_by_file_and_line(
-            self, None, self.first_stop, num_expected_locations=1)
-
-        # Run the program.
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        # We should be stopped again due to the breakpoint.
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        lldbutil.run_to_source_breakpoint(self, line, self.main_spec)
 
         # Now let's set a write-type watchpoint for variable 'g_val'.
         self.expect(
@@ -77,39 +52,29 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
         self.expect("watchpoint list -v",
                     substrs=['hit_count = 0'])
 
-        while True:
-            self.runCmd("process continue")
+        self.runCmd("process continue")
 
-            self.runCmd("thread list")
-            if "stop reason = watchpoint" in self.res.GetOutput():
-                # Good, we verified that the watchpoint works!
-                self.runCmd("thread backtrace all")
-                break
-            else:
-                self.fail("The stop reason should be either break or watchpoint")
+        self.runCmd("thread list")
+        if "stop reason = watchpoint" in self.res.GetOutput():
+            # Good, we verified that the watchpoint works!
+            self.runCmd("thread backtrace all")
+        else:
+            self.fail("The stop reason should be either break or watchpoint")
 
         # Use the '-v' option to do verbose listing of the watchpoint.
         # The hit count should now be 1.
         self.expect("watchpoint list -v",
                     substrs=['hit_count = 1'])
 
-    def hello_multiple_threads_wp_set_and_then_delete(self):
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    def test_watchpoint_multiple_threads_wp_set_and_then_delete(self):
         """Test that lldb watchpoint works for multiple threads, and after the watchpoint is deleted, the watchpoint event should no longer fires."""
-        self.runCmd("file " + self.getBuildArtifact("a.out"),
-                    CURRENT_EXECUTABLE_SET)
+        self.build()
+        self.setTearDownCleanup()
 
-        # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
-        lldbutil.run_break_set_by_file_and_line(
-            self, None, self.first_stop, num_expected_locations=1)
-
-        # Run the program.
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        # We should be stopped again due to the breakpoint.
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        lldbutil.run_to_source_breakpoint(self, "After running the thread", self.main_spec)
 
         # Now let's set a write-type watchpoint for variable 'g_val'.
         self.expect(

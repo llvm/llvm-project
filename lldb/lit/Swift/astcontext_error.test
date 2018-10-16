@@ -1,0 +1,7 @@
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: %target-swiftc -g %S/Inputs/ContextError.swift
+# RUN: %lldb ContextError -s %s | FileCheck %S/Inputs/ContextError.swift
+
+br set -p "here"
+run
+run

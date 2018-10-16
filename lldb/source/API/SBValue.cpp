@@ -89,16 +89,13 @@ public:
       // FIXME: This check is necessary but not sufficient.  We for sure don't
       // want to touch SBValues whose owning
       // targets have gone away.  This check is a little weak in that it
-      // enforces that restriction when you call
-      // IsValid, but since IsValid doesn't lock the target, you have no
-      // guarantee that the SBValue won't go
-      // invalid after you call this...
-      // Also, an SBValue could depend on data from one of the modules in the
-      // target, and those could go away
-      // independently of the target, for instance if a module is unloaded.  But
-      // right now, neither SBValues
-      // nor ValueObjects know which modules they depend on.  So I have no good
-      // way to make that check without
+      // enforces that restriction when you call IsValid, but since IsValid
+      // doesn't lock the target, you have no guarantee that the SBValue won't
+      // go invalid after you call this... Also, an SBValue could depend on
+      // data from one of the modules in the target, and those could go away
+      // independently of the target, for instance if a module is unloaded.
+      // But right now, neither SBValues nor ValueObjects know which modules
+      // they depend on.  So I have no good way to make that check without
       // tracking that in all the ValueObject subclasses.
       TargetSP target_sp = m_valobj_sp->GetTargetSP();
       if (target_sp && target_sp->IsValid())
@@ -129,9 +126,9 @@ public:
 
     ProcessSP process_sp(value_sp->GetProcessSP());
     if (process_sp && !stop_locker.TryLock(&process_sp->GetRunLock())) {
-      // We don't allow people to play around with ValueObject if the process is
-      // running.
-      // If you want to look at values, pause the process, then look.
+      // We don't allow people to play around with ValueObject if the process
+      // is running. If you want to look at values, pause the process, then
+      // look.
       if (log)
         log->Printf("SBValue(%p)::GetSP() => error: process is running",
                     static_cast<void *>(value_sp.get()));
@@ -171,10 +168,8 @@ public:
 
   // All the derived values that we would make from the m_valobj_sp will share
   // the ExecutionContext with m_valobj_sp, so we don't need to do the
-  // calculations
-  // in GetSP to return the Target, Process, Thread or Frame.  It is convenient
-  // to
-  // provide simple accessors for these, which I do here.
+  // calculations in GetSP to return the Target, Process, Thread or Frame.  It
+  // is convenient to provide simple accessors for these, which I do here.
   TargetSP GetTargetSP() {
     if (m_valobj_sp)
       return m_valobj_sp->GetTargetSP();
@@ -242,9 +237,9 @@ SBValue &SBValue::operator=(const SBValue &rhs) {
 SBValue::~SBValue() {}
 
 bool SBValue::IsValid() {
-  // If this function ever changes to anything that does more than just
-  // check if the opaque shared pointer is non NULL, then we need to update
-  // all "if (m_opaque_sp)" code in this file.
+  // If this function ever changes to anything that does more than just check
+  // if the opaque shared pointer is non NULL, then we need to update all "if
+  // (m_opaque_sp)" code in this file.
   return m_opaque_sp.get() != NULL && m_opaque_sp->IsValid() &&
          m_opaque_sp->GetRootSP().get() != NULL;
 }
@@ -1397,11 +1392,9 @@ lldb::SBAddress SBValue::GetAddress() {
         if (module_sp)
           module_sp->ResolveFileAddress(value, addr);
       } else if (addr_type == eAddressTypeLoad) {
-        // no need to check the return value on this.. if it can actually do the
-        // resolve
-        // addr will be in the form (section,offset), otherwise it will simply
-        // be returned
-        // as (NULL, value)
+        // no need to check the return value on this.. if it can actually do
+        // the resolve addr will be in the form (section,offset), otherwise it
+        // will simply be returned as (NULL, value)
         addr.SetLoadAddress(value, target_sp.get());
       }
     }
