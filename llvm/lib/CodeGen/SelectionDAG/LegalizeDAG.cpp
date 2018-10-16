@@ -1115,6 +1115,10 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getStrictFPOperationAction(Node->getOpcode(),
                                             Node->getValueType(0));
     break;
+  case ISD::SADDSAT: {
+    Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
+    break;
+  }
   case ISD::MSCATTER:
     Action = TLI.getOperationAction(Node->getOpcode(),
                     cast<MaskedScatterSDNode>(Node)->getValue().getValueType());
@@ -2310,6 +2314,7 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
                                                    EVT DestVT,
                                                    const SDLoc &dl) {
   EVT SrcVT = Op0.getValueType();
+  EVT ShiftVT = TLI.getShiftAmountTy(SrcVT, DAG.getDataLayout());
 
   // TODO: Should any fast-math-flags be set for the created nodes?
   LLVM_DEBUG(dbgs() << "Legalizing INT_TO_FP\n");
@@ -2371,24 +2376,21 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
   // TODO: Generalize this for use with other types.
   if (SrcVT == MVT::i64 && DestVT == MVT::f64) {
     LLVM_DEBUG(dbgs() << "Converting unsigned i64 to f64\n");
-    SDValue TwoP52 =
-      DAG.getConstant(UINT64_C(0x4330000000000000), dl, MVT::i64);
-    SDValue TwoP84PlusTwoP52 =
-      DAG.getConstantFP(BitsToDouble(UINT64_C(0x4530000000100000)), dl,
-                        MVT::f64);
-    SDValue TwoP84 =
-      DAG.getConstant(UINT64_C(0x4530000000000000), dl, MVT::i64);
+    SDValue TwoP52 = DAG.getConstant(UINT64_C(0x4330000000000000), dl, SrcVT);
+    SDValue TwoP84PlusTwoP52 = DAG.getConstantFP(
+        BitsToDouble(UINT64_C(0x4530000000100000)), dl, DestVT);
+    SDValue TwoP84 = DAG.getConstant(UINT64_C(0x4530000000000000), dl, SrcVT);
+    SDValue LoMask = DAG.getConstant(UINT64_C(0x00000000FFFFFFFF), dl, SrcVT);
+    SDValue HiShift = DAG.getConstant(32, dl, ShiftVT);
 
-    SDValue Lo = DAG.getZeroExtendInReg(Op0, dl, MVT::i32);
-    SDValue Hi = DAG.getNode(ISD::SRL, dl, MVT::i64, Op0,
-                             DAG.getConstant(32, dl, MVT::i64));
-    SDValue LoOr = DAG.getNode(ISD::OR, dl, MVT::i64, Lo, TwoP52);
-    SDValue HiOr = DAG.getNode(ISD::OR, dl, MVT::i64, Hi, TwoP84);
-    SDValue LoFlt = DAG.getNode(ISD::BITCAST, dl, MVT::f64, LoOr);
-    SDValue HiFlt = DAG.getNode(ISD::BITCAST, dl, MVT::f64, HiOr);
-    SDValue HiSub = DAG.getNode(ISD::FSUB, dl, MVT::f64, HiFlt,
-                                TwoP84PlusTwoP52);
-    return DAG.getNode(ISD::FADD, dl, MVT::f64, LoFlt, HiSub);
+    SDValue Lo = DAG.getNode(ISD::AND, dl, SrcVT, Op0, LoMask);
+    SDValue Hi = DAG.getNode(ISD::SRL, dl, SrcVT, Op0, HiShift);
+    SDValue LoOr = DAG.getNode(ISD::OR, dl, SrcVT, Lo, TwoP52);
+    SDValue HiOr = DAG.getNode(ISD::OR, dl, SrcVT, Hi, TwoP84);
+    SDValue LoFlt = DAG.getNode(ISD::BITCAST, dl, DestVT, LoOr);
+    SDValue HiFlt = DAG.getNode(ISD::BITCAST, dl, DestVT, HiOr);
+    SDValue HiSub = DAG.getNode(ISD::FSUB, dl, DestVT, HiFlt, TwoP84PlusTwoP52);
+    return DAG.getNode(ISD::FADD, dl, DestVT, LoFlt, HiSub);
   }
 
   // TODO: Generalize this for use with other types.
@@ -2399,8 +2401,7 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
     if (!isSigned) {
       SDValue Fast = DAG.getNode(ISD::SINT_TO_FP, dl, MVT::f32, Op0);
 
-      SDValue ShiftConst = DAG.getConstant(
-          1, dl, TLI.getShiftAmountTy(SrcVT, DAG.getDataLayout()));
+      SDValue ShiftConst = DAG.getConstant(1, dl, ShiftVT);
       SDValue Shr = DAG.getNode(ISD::SRL, dl, MVT::i64, Op0, ShiftConst);
       SDValue AndConst = DAG.getConstant(1, dl, MVT::i64);
       SDValue And = DAG.getNode(ISD::AND, dl, MVT::i64, Op0, AndConst);
@@ -3452,6 +3453,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Hi = DAG.getNode(ISD::SHL, dl, VT, Hi, Shift);
       Results.push_back(DAG.getNode(ISD::OR, dl, VT, Lo, Hi));
     }
+    break;
+  }
+  case ISD::SADDSAT: {
+    Results.push_back(TLI.getExpandedSignedSaturationAddition(Node, DAG));
     break;
   }
   case ISD::SADDO:
