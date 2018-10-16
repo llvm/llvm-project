@@ -69,7 +69,12 @@ public:
         UseIndirectJumpHazard(false), FPMode(FPXX) {
     TheCXXABI.set(TargetCXXABI::GenericMIPS);
 
-    setABI(getTriple().isMIPS32() ? "o32" : "n64");
+    if (Triple.isMIPS32())
+      setABI("o32");
+    else if (Triple.getEnvironment() == llvm::Triple::GNUABIN32)
+      setABI("n32");
+    else
+      setABI("n64");
 
     CPU = ABI == "o32" ? "mips32r2" : "mips64r2";
 

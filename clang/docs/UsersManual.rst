@@ -1825,7 +1825,7 @@ program.
 
 The profile remapping file is a text file containing lines of the form
 
-.. code-block::
+.. code-block:: text
 
   fragmentkind fragment1 fragment2
 
@@ -1844,7 +1844,7 @@ For example, to specify that ``absl::string_view`` and ``std::string_view``
 should be treated as equivalent when matching profile data, the following
 remapping file could be used:
 
-.. code-block::
+.. code-block:: text
 
   # absl::string_view is considered equivalent to std::string_view
   type N4absl11string_viewE St17basic_string_viewIcSt11char_traitsIcEE

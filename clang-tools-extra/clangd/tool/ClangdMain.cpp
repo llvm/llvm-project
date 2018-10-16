@@ -29,11 +29,11 @@
 using namespace clang;
 using namespace clang::clangd;
 
-// FIXME: remove this option when Dex is stable enough.
+// FIXME: remove this option when Dex is cheap enough.
 static llvm::cl::opt<bool>
     UseDex("use-dex-index",
-           llvm::cl::desc("Use experimental Dex static index."),
-           llvm::cl::init(true), llvm::cl::Hidden);
+           llvm::cl::desc("Use experimental Dex dynamic index."),
+           llvm::cl::init(false), llvm::cl::Hidden);
 
 static llvm::cl::opt<Path> CompileCommandsDir(
     "compile-commands-dir",
@@ -253,11 +253,8 @@ int main(int argc, char *argv[]) {
   // Use buffered stream to stderr (we still flush each log message). Unbuffered
   // stream can cause significant (non-deterministic) latency for the logger.
   llvm::errs().SetBuffered();
-  JSONOutput Out(llvm::outs(), llvm::errs(), LogLevel,
-                 InputMirrorStream ? InputMirrorStream.getPointer() : nullptr,
-                 PrettyPrint);
-
-  clangd::LoggingSession LoggingSession(Out);
+  JSONOutput Logger(llvm::errs(), LogLevel);
+  clangd::LoggingSession LoggingSession(Logger);
 
   // If --compile-commands-dir arg was invoked, check value and override default
   // path.
@@ -286,6 +283,7 @@ int main(int argc, char *argv[]) {
   if (!ResourceDir.empty())
     Opts.ResourceDir = ResourceDir;
   Opts.BuildDynamicSymbolIndex = EnableIndex;
+  Opts.HeavyweightDynamicSymbolIndex = UseDex;
   std::unique_ptr<SymbolIndex> StaticIdx;
   std::future<void> AsyncIndexLoad; // Block exit while loading the index.
   if (EnableIndex && !IndexFile.empty()) {
@@ -293,7 +291,7 @@ int main(int argc, char *argv[]) {
     SwapIndex *Placeholder;
     StaticIdx.reset(Placeholder = new SwapIndex(llvm::make_unique<MemIndex>()));
     AsyncIndexLoad = runAsync<void>([Placeholder, &Opts] {
-      if (auto Idx = loadIndex(IndexFile, Opts.URISchemes, UseDex))
+      if (auto Idx = loadIndex(IndexFile, Opts.URISchemes, /*UseDex=*/true))
         Placeholder->reset(std::move(Idx));
     });
     if (RunSynchronously)
@@ -316,12 +314,16 @@ int main(int argc, char *argv[]) {
   CCOpts.AllScopes = AllScopesCompletion;
 
   // Initialize and run ClangdLSPServer.
+  // Change stdin to binary to not lose \r\n on windows.
+  llvm::sys::ChangeStdinToBinary();
+  auto Transport = newJSONTransport(
+      stdin, llvm::outs(),
+      InputMirrorStream ? InputMirrorStream.getPointer() : nullptr, PrettyPrint,
+      InputStyle);
   ClangdLSPServer LSPServer(
-      Out, CCOpts, CompileCommandsDirPath,
+      *Transport, CCOpts, CompileCommandsDirPath,
       /*ShouldUseInMemoryCDB=*/CompileArgsFrom == LSPCompileArgs, Opts);
   constexpr int NoShutdownRequestErrorCode = 1;
   llvm::set_thread_name("clangd.main");
-  // Change stdin to binary to not lose \r\n on windows.
-  llvm::sys::ChangeStdinToBinary();
-  return LSPServer.run(stdin, InputStyle) ? 0 : NoShutdownRequestErrorCode;
+  return LSPServer.run() ? 0 : NoShutdownRequestErrorCode;
 }

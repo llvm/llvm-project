@@ -13,7 +13,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/raw_ostream.h"
-#include <set>
 
 namespace clang {
 namespace clangd {

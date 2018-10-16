@@ -646,19 +646,19 @@ bool WebAssemblyFastISel::fastLowerArguments() {
     case MVT::i8:
     case MVT::i16:
     case MVT::i32:
-      Opc = WebAssembly::ARGUMENT_I32;
+      Opc = WebAssembly::ARGUMENT_i32;
       RC = &WebAssembly::I32RegClass;
       break;
     case MVT::i64:
-      Opc = WebAssembly::ARGUMENT_I64;
+      Opc = WebAssembly::ARGUMENT_i64;
       RC = &WebAssembly::I64RegClass;
       break;
     case MVT::f32:
-      Opc = WebAssembly::ARGUMENT_F32;
+      Opc = WebAssembly::ARGUMENT_f32;
       RC = &WebAssembly::F32RegClass;
       break;
     case MVT::f64:
-      Opc = WebAssembly::ARGUMENT_F64;
+      Opc = WebAssembly::ARGUMENT_f64;
       RC = &WebAssembly::F64RegClass;
       break;
     case MVT::v16i8:
@@ -686,7 +686,7 @@ bool WebAssemblyFastISel::fastLowerArguments() {
       RC = &WebAssembly::V128RegClass;
       break;
     case MVT::ExceptRef:
-      Opc = WebAssembly::ARGUMENT_EXCEPT_REF;
+      Opc = WebAssembly::ARGUMENT_ExceptRef;
       RC = &WebAssembly::EXCEPT_REFRegClass;
       break;
     default:

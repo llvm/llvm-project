@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-objcopy.h"
+#include "Buffer.h"
 #include "CopyConfig.h"
 #include "Object.h"
 

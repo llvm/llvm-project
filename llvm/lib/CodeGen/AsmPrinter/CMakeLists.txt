@@ -17,13 +17,13 @@ add_llvm_library(LLVMAsmPrinter
   DwarfFile.cpp
   DwarfStringPool.cpp
   DwarfUnit.cpp
-  Dwarf2BTF.cpp
   EHStreamer.cpp
   ErlangGCPrinter.cpp
   OcamlGCPrinter.cpp
   WinCFGuard.cpp
   WinException.cpp
   CodeViewDebug.cpp
+  WasmException.cpp
 
   DEPENDS
   intrinsics_gen

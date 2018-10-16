@@ -271,7 +271,7 @@ int main() {
 
 // CHECK-LABEL: define{{.*}} i{{[0-9]+}} @main()
 // CHECK: [[TEST:%.+]] = alloca [[S_FLOAT_TY]],
-// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_CONSTR:@.+]]([[S_FLOAT_TY]]* noalias [[TEST]])
+// CHECK: call {{.*}} [[S_FLOAT_TY_DEF_CONSTR:@.+]]([[S_FLOAT_TY]]* [[TEST]])
 // CHECK: call i{{[0-9]+}} @__tgt_target_teams(
 // CHECK: call void [[OFFLOAD_FUN_0:@.+]](
 // CHECK: call {{.*}} [[S_FLOAT_TY_DEF_DESTR:@.+]]([[S_FLOAT_TY]]* [[TEST]])
@@ -456,7 +456,7 @@ int main() {
 // template tmain with S_INT_TY
 // CHECK-LABEL: define{{.*}} i{{[0-9]+}} @{{.+}}tmain{{.+}}()
 // CHECK: [[TEST:%.+]] = alloca [[S_INT_TY]],
-// CHECK: call {{.*}} [[S_INT_TY_DEF_CONSTR:@.+]]([[S_INT_TY]]* noalias [[TEST]])
+// CHECK: call {{.*}} [[S_INT_TY_DEF_CONSTR:@.+]]([[S_INT_TY]]* [[TEST]])
 // CHECK: call i{{[0-9]+}} @__tgt_target_teams(
 // CHECK: call void [[OFFLOAD_FUN_0:@.+]](
 // CHECK: call {{.*}} [[S_INT_TY_DEF_DESTR:@.+]]([[S_INT_TY]]* [[TEST]])

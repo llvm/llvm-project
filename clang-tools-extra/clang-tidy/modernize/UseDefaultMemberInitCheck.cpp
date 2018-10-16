@@ -60,6 +60,48 @@ static StringRef getValueOfValueInit(const QualType InitType) {
   case Type::STK_IntegralComplex:
     return getValueOfValueInit(
         InitType->getAs<ComplexType>()->getElementType());
+
+  case Type::STK_FixedPoint:
+    switch (InitType->getAs<BuiltinType>()->getKind()) {
+    case BuiltinType::ShortAccum:
+    case BuiltinType::SatShortAccum:
+      return "0.0hk";
+    case BuiltinType::Accum:
+    case BuiltinType::SatAccum:
+      return "0.0k";
+    case BuiltinType::LongAccum:
+    case BuiltinType::SatLongAccum:
+      return "0.0lk";
+    case BuiltinType::UShortAccum:
+    case BuiltinType::SatUShortAccum:
+      return "0.0uhk";
+    case BuiltinType::UAccum:
+    case BuiltinType::SatUAccum:
+      return "0.0uk";
+    case BuiltinType::ULongAccum:
+    case BuiltinType::SatULongAccum:
+      return "0.0ulk";
+    case BuiltinType::ShortFract:
+    case BuiltinType::SatShortFract:
+      return "0.0hr";
+    case BuiltinType::Fract:
+    case BuiltinType::SatFract:
+      return "0.0r";
+    case BuiltinType::LongFract:
+    case BuiltinType::SatLongFract:
+      return "0.0lr";
+    case BuiltinType::UShortFract:
+    case BuiltinType::SatUShortFract:
+      return "0.0uhr";
+    case BuiltinType::UFract:
+    case BuiltinType::SatUFract:
+      return "0.0ur";
+    case BuiltinType::ULongFract:
+    case BuiltinType::SatULongFract:
+      return "0.0ulr";
+    default:
+      llvm_unreachable("Unhandled fixed point BuiltinType");
+    }
   }
   llvm_unreachable("Invalid scalar type kind");
 }

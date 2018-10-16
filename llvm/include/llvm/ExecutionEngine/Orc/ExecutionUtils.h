@@ -94,11 +94,11 @@ iterator_range<CtorDtorIterator> getDestructors(const Module &M);
 /// Convenience class for recording constructor/destructor names for
 ///        later execution.
 template <typename JITLayerT>
-class CtorDtorRunner {
+class LegacyCtorDtorRunner {
 public:
   /// Construct a CtorDtorRunner for the given range using the given
   ///        name mangling function.
-  CtorDtorRunner(std::vector<std::string> CtorDtorNames, VModuleKey K)
+  LegacyCtorDtorRunner(std::vector<std::string> CtorDtorNames, VModuleKey K)
       : CtorDtorNames(std::move(CtorDtorNames)), K(K) {}
 
   /// Run the recorded constructors/destructors through the given JIT
@@ -129,9 +129,9 @@ private:
   orc::VModuleKey K;
 };
 
-class CtorDtorRunner2 {
+class CtorDtorRunner {
 public:
-  CtorDtorRunner2(JITDylib &JD) : JD(JD) {}
+  CtorDtorRunner(JITDylib &JD) : JD(JD) {}
   void add(iterator_range<CtorDtorIterator> CtorDtors);
   Error run();
 
@@ -177,11 +177,11 @@ protected:
                                void *DSOHandle);
 };
 
-class LocalCXXRuntimeOverrides : public LocalCXXRuntimeOverridesBase {
+class LegacyLocalCXXRuntimeOverrides : public LocalCXXRuntimeOverridesBase {
 public:
   /// Create a runtime-overrides class.
   template <typename MangleFtorT>
-  LocalCXXRuntimeOverrides(const MangleFtorT &Mangle) {
+  LegacyLocalCXXRuntimeOverrides(const MangleFtorT &Mangle) {
     addOverride(Mangle("__dso_handle"), toTargetAddress(&DSOHandleOverride));
     addOverride(Mangle("__cxa_atexit"), toTargetAddress(&CXAAtExitOverride));
   }
@@ -202,7 +202,7 @@ private:
   StringMap<JITTargetAddress> CXXRuntimeOverrides;
 };
 
-class LocalCXXRuntimeOverrides2 : public LocalCXXRuntimeOverridesBase {
+class LocalCXXRuntimeOverrides : public LocalCXXRuntimeOverridesBase {
 public:
   Error enable(JITDylib &JD, MangleAndInterner &Mangler);
 };
@@ -212,32 +212,30 @@ public:
 /// If an instance of this class is attached to a JITDylib as a fallback
 /// definition generator, then any symbol found in the given DynamicLibrary that
 /// passes the 'Allow' predicate will be added to the JITDylib.
-class DynamicLibraryFallbackGenerator {
+class DynamicLibrarySearchGenerator {
 public:
   using SymbolPredicate = std::function<bool(SymbolStringPtr)>;
 
-  static bool AllowAll(SymbolStringPtr Name) { return true; }
-
-  /// Create a DynamicLibraryFallbackGenerator that searches for symbols in the
+  /// Create a DynamicLibrarySearchGenerator that searches for symbols in the
   /// given sys::DynamicLibrary.
-  /// Only symbols that match the 'Allow' predicate will be searched for.
-  DynamicLibraryFallbackGenerator(sys::DynamicLibrary Dylib,
-                                  const DataLayout &DL,
-                                  SymbolPredicate Allow = AllowAll);
+  /// If the Allow predicate is given then only symbols matching the predicate
+  /// will be searched for in the DynamicLibrary. If the predicate is not given
+  /// then all symbols will be searched for.
+  DynamicLibrarySearchGenerator(sys::DynamicLibrary Dylib, const DataLayout &DL,
+                                SymbolPredicate Allow = SymbolPredicate());
 
   /// Permanently loads the library at the given path and, on success, returns
-  /// a DynamicLibraryFallbackGenerator that will search it for symbol
-  /// definitions matching the Allow predicate.
-  /// On failure returns the reason the library failed to load.
-  static Expected<DynamicLibraryFallbackGenerator>
+  /// a DynamicLibrarySearchGenerator that will search it for symbol definitions
+  /// in the library. On failure returns the reason the library failed to load.
+  static Expected<DynamicLibrarySearchGenerator>
   Load(const char *FileName, const DataLayout &DL,
-       SymbolPredicate Allow = AllowAll);
+       SymbolPredicate Allow = SymbolPredicate());
 
-  /// Creates a DynamicLibraryFallbackGenerator that searches for symbols in
+  /// Creates a DynamicLibrarySearchGenerator that searches for symbols in
   /// the current process.
-  static Expected<DynamicLibraryFallbackGenerator>
-  CreateForCurrentProcess(const DataLayout &DL,
-                          SymbolPredicate Allow = AllowAll) {
+  static Expected<DynamicLibrarySearchGenerator>
+  GetForCurrentProcess(const DataLayout &DL,
+                       SymbolPredicate Allow = SymbolPredicate()) {
     return Load(nullptr, DL, std::move(Allow));
   }
 

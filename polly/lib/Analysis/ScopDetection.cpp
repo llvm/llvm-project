@@ -657,7 +657,7 @@ bool ScopDetection::isValidCFG(BasicBlock &BB, bool IsLoopBranch,
                                DetectionContext &Context) const {
   Region &CurRegion = Context.CurRegion;
 
-  TerminatorInst *TI = BB.getTerminator();
+  Instruction *TI = BB.getTerminator();
 
   if (AllowUnreachable && isa<UnreachableInst>(TI))
     return true;
@@ -1756,7 +1756,7 @@ bool ScopDetection::isReducibleRegion(Region &R, DebugLoc &DbgLoc) const {
     DFSStack.pop();
 
     // Loop to iterate over the successors of current BB.
-    const TerminatorInst *TInst = CurrBB->getTerminator();
+    const Instruction *TInst = CurrBB->getTerminator();
     unsigned NSucc = TInst->getNumSuccessors();
     for (unsigned I = AdjacentBlockIndex; I < NSucc;
          ++I, ++AdjacentBlockIndex) {

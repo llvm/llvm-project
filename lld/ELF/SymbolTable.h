@@ -67,9 +67,8 @@ public:
                     uint8_t Binding, uint8_t StOther, uint8_t Type,
                     InputFile &File);
 
-  std::pair<Symbol *, bool> insert(StringRef Name, uint8_t Type,
-                                   uint8_t Visibility, bool CanOmitFromDynSym,
-                                   InputFile *File);
+  std::pair<Symbol *, bool> insert(StringRef Name, uint8_t Visibility,
+                                   bool CanOmitFromDynSym, InputFile *File);
 
   template <class ELFT> void fetchLazy(Symbol *Sym);
 

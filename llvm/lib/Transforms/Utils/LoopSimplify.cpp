@@ -435,7 +435,7 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
   unsigned LoopMDKind = BEBlock->getContext().getMDKindID("llvm.loop");
   MDNode *LoopMD = nullptr;
   for (unsigned i = 0, e = BackedgeBlocks.size(); i != e; ++i) {
-    TerminatorInst *TI = BackedgeBlocks[i]->getTerminator();
+    Instruction *TI = BackedgeBlocks[i]->getTerminator();
     if (!LoopMD)
       LoopMD = TI->getMetadata(LoopMDKind);
     TI->setMetadata(LoopMDKind, nullptr);
@@ -488,7 +488,7 @@ ReprocessLoop:
                         << P->getName() << "\n");
 
       // Zap the dead pred's terminator and replace it with unreachable.
-      TerminatorInst *TI = P->getTerminator();
+      Instruction *TI = P->getTerminator();
       changeToUnreachable(TI, /*UseLLVMTrap=*/false, PreserveLCSSA);
       Changed = true;
     }

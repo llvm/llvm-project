@@ -1030,7 +1030,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
 
   // Free setjmpTable buffer before each return instruction
   for (BasicBlock &BB : F) {
-    TerminatorInst *TI = BB.getTerminator();
+    Instruction *TI = BB.getTerminator();
     if (isa<ReturnInst>(TI))
       CallInst::CreateFree(SetjmpTable, TI);
   }

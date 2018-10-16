@@ -22,9 +22,9 @@ namespace exegesis {
 
 LatencySnippetGenerator::~LatencySnippetGenerator() = default;
 
-llvm::Expected<CodeTemplate>
-LatencySnippetGenerator::generateTwoInstructionPrototype(
-    const Instruction &Instr) const {
+llvm::Expected<std::vector<CodeTemplate>>
+generateTwoInstructionPrototypes(const LLVMState &State,
+                                 const Instruction &Instr) {
   std::vector<unsigned> Opcodes;
   Opcodes.resize(State.getInstrInfo().getNumOpcodes());
   std::iota(Opcodes.begin(), Opcodes.end(), 0U);
@@ -50,23 +50,23 @@ LatencySnippetGenerator::generateTwoInstructionPrototype(
                             State.getInstrInfo().getName(OtherOpcode));
     CT.Instructions.push_back(std::move(ThisIT));
     CT.Instructions.push_back(std::move(OtherIT));
-    return std::move(CT);
+    return getSingleton(CT);
   }
   return llvm::make_error<BenchmarkFailure>(
       "Infeasible : Didn't find any scheme to make the instruction serial");
 }
 
-llvm::Expected<CodeTemplate>
-LatencySnippetGenerator::generateCodeTemplate(const Instruction &Instr) const {
+llvm::Expected<std::vector<CodeTemplate>>
+LatencySnippetGenerator::generateCodeTemplates(const Instruction &Instr) const {
   if (Instr.hasMemoryOperands())
     return llvm::make_error<BenchmarkFailure>(
         "Infeasible : has memory operands");
-  if (auto CT = generateSelfAliasingCodeTemplate(Instr))
-    return CT;
-  else
-    llvm::consumeError(CT.takeError());
-  // No self aliasing, trying to create a dependency through another opcode.
-  return generateTwoInstructionPrototype(Instr);
+  return llvm::handleExpected( //
+      generateSelfAliasingCodeTemplates(Instr),
+      [this, &Instr]() {
+        return generateTwoInstructionPrototypes(State, Instr);
+      },
+      [](const BenchmarkFailure &) { /*Consume Error*/ });
 }
 
 const char *LatencyBenchmarkRunner::getCounterName() const {

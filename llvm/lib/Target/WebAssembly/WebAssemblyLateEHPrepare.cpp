@@ -59,7 +59,7 @@ FunctionPass *llvm::createWebAssemblyLateEHPrepare() {
 // possible search paths should be the same.
 // Returns nullptr in case it does not find any EH pad in the search, or finds
 // multiple different EH pads.
-MachineBasicBlock *GetMatchingEHPad(MachineInstr *MI) {
+static MachineBasicBlock *GetMatchingEHPad(MachineInstr *MI) {
   MachineFunction *MF = MI->getParent()->getParent();
   SmallVector<MachineBasicBlock *, 2> WL;
   SmallPtrSet<MachineBasicBlock *, 2> Visited;

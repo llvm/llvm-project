@@ -87,7 +87,7 @@ iterator_range<CtorDtorIterator> getDestructors(const Module &M) {
                     CtorDtorIterator(DtorsList, true));
 }
 
-void CtorDtorRunner2::add(iterator_range<CtorDtorIterator> CtorDtors) {
+void CtorDtorRunner::add(iterator_range<CtorDtorIterator> CtorDtors) {
   if (CtorDtors.begin() == CtorDtors.end())
     return;
 
@@ -115,7 +115,7 @@ void CtorDtorRunner2::add(iterator_range<CtorDtorIterator> CtorDtors) {
   }
 }
 
-Error CtorDtorRunner2::run() {
+Error CtorDtorRunner::run() {
   using CtorDtorTy = void (*)();
 
   SymbolNameSet Names;
@@ -128,7 +128,10 @@ Error CtorDtorRunner2::run() {
     }
   }
 
-  if (auto CtorDtorMap = lookup({&JD}, std::move(Names))) {
+  auto &ES = JD.getExecutionSession();
+  if (auto CtorDtorMap =
+          ES.lookup({&JD}, std::move(Names), NoDependenciesToRegister, true,
+                    nullptr, true)) {
     for (auto &KV : CtorDtorsByPriority) {
       for (auto &Name : KV.second) {
         assert(CtorDtorMap->count(Name) && "No entry for Name");
@@ -162,34 +165,35 @@ int LocalCXXRuntimeOverridesBase::CXAAtExitOverride(DestructorPtr Destructor,
   return 0;
 }
 
-Error LocalCXXRuntimeOverrides2::enable(JITDylib &JD,
+Error LocalCXXRuntimeOverrides::enable(JITDylib &JD,
                                         MangleAndInterner &Mangle) {
-  SymbolMap RuntimeInterposes(
-      {{Mangle("__dso_handle"),
-        JITEvaluatedSymbol(toTargetAddress(&DSOHandleOverride),
-                           JITSymbolFlags::Exported)},
-       {Mangle("__cxa_atexit"),
-        JITEvaluatedSymbol(toTargetAddress(&CXAAtExitOverride),
-                           JITSymbolFlags::Exported)}});
+  SymbolMap RuntimeInterposes;
+  RuntimeInterposes[Mangle("__dso_handle")] =
+    JITEvaluatedSymbol(toTargetAddress(&DSOHandleOverride),
+                       JITSymbolFlags::Exported);
+  RuntimeInterposes[Mangle("__cxa_atexit")] =
+    JITEvaluatedSymbol(toTargetAddress(&CXAAtExitOverride),
+                       JITSymbolFlags::Exported);
 
   return JD.define(absoluteSymbols(std::move(RuntimeInterposes)));
 }
 
-DynamicLibraryFallbackGenerator::DynamicLibraryFallbackGenerator(
+DynamicLibrarySearchGenerator::DynamicLibrarySearchGenerator(
     sys::DynamicLibrary Dylib, const DataLayout &DL, SymbolPredicate Allow)
     : Dylib(std::move(Dylib)), Allow(std::move(Allow)),
       GlobalPrefix(DL.getGlobalPrefix()) {}
 
-Expected<DynamicLibraryFallbackGenerator> DynamicLibraryFallbackGenerator::Load(
-    const char *FileName, const DataLayout &DL, SymbolPredicate Allow) {
+Expected<DynamicLibrarySearchGenerator>
+DynamicLibrarySearchGenerator::Load(const char *FileName, const DataLayout &DL,
+                                    SymbolPredicate Allow) {
   std::string ErrMsg;
   auto Lib = sys::DynamicLibrary::getPermanentLibrary(FileName, &ErrMsg);
   if (!Lib.isValid())
     return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
-  return DynamicLibraryFallbackGenerator(std::move(Lib), DL, std::move(Allow));
+  return DynamicLibrarySearchGenerator(std::move(Lib), DL, std::move(Allow));
 }
 
-SymbolNameSet DynamicLibraryFallbackGenerator::
+SymbolNameSet DynamicLibrarySearchGenerator::
 operator()(JITDylib &JD, const SymbolNameSet &Names) {
   orc::SymbolNameSet Added;
   orc::SymbolMap NewSymbols;
@@ -197,7 +201,10 @@ operator()(JITDylib &JD, const SymbolNameSet &Names) {
   bool HasGlobalPrefix = (GlobalPrefix != '\0');
 
   for (auto &Name : Names) {
-    if (!Allow(Name) || (*Name).empty())
+    if ((*Name).empty())
+      continue;
+
+    if (Allow && !Allow(Name))
       continue;
 
     if (HasGlobalPrefix && (*Name).front() != GlobalPrefix)
@@ -212,8 +219,8 @@ operator()(JITDylib &JD, const SymbolNameSet &Names) {
     }
   }
 
-  // Add any new symbols to JD. Since the fallback generator is only called for
-  // symbols that are not already defined, this will never trigger a duplicate
+  // Add any new symbols to JD. Since the generator is only called for symbols
+  // that are not already defined, this will never trigger a duplicate
   // definition error, so we can wrap this call in a 'cantFail'.
   if (!NewSymbols.empty())
     cantFail(JD.define(absoluteSymbols(std::move(NewSymbols))));

@@ -362,6 +362,26 @@ int CountCopyAndMove::Move = 0;
 
 } // anonymous namespace
 
+// Test initializer list construction.
+TEST(DenseMapCustomTest, InitializerList) {
+  DenseMap<int, int> M({{0, 0}, {0, 1}, {1, 2}});
+  EXPECT_EQ(2u, M.size());
+  EXPECT_EQ(1u, M.count(0));
+  EXPECT_EQ(0, M[0]);
+  EXPECT_EQ(1u, M.count(1));
+  EXPECT_EQ(2, M[1]);
+}
+
+// Test initializer list construction.
+TEST(DenseMapCustomTest, EqualityComparison) {
+  DenseMap<int, int> M1({{0, 0}, {1, 2}});
+  DenseMap<int, int> M2({{0, 0}, {1, 2}});
+  DenseMap<int, int> M3({{0, 0}, {1, 3}});
+
+  EXPECT_EQ(M1, M2);
+  EXPECT_NE(M1, M3);
+}
+
 // Test for the default minimum size of a DenseMap
 TEST(DenseMapCustomTest, DefaultMinReservedSizeTest) {
   // IF THIS VALUE CHANGE, please update InitialSizeTest, InitFromIterator, and

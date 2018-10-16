@@ -1256,7 +1256,8 @@ define void @avg_v32i8_const(<32 x i8>* %a) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [7.9499288951273625E-275,7.9499288951273625E-275]
+; AVX1-NEXT:    # xmm2 = mem[0,0]
 ; AVX1-NEXT:    vpavgb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpavgb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -1310,7 +1311,8 @@ define void @avg_v64i8_const(<64 x i8>* %a) nounwind {
 ; AVX1-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX1-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = mem[0,0]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [7.9499288951273625E-275,7.9499288951273625E-275]
+; AVX1-NEXT:    # xmm3 = mem[0,0]
 ; AVX1-NEXT:    vpavgb %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpavgb %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0

@@ -107,7 +107,7 @@ static bool runImpl(CallGraphSCC &SCC, CallGraph &CG) {
         continue;
 
       for (const BasicBlock &BB : *F) {
-        const TerminatorInst *TI = BB.getTerminator();
+        const Instruction *TI = BB.getTerminator();
         if (CheckUnwind && TI->mayThrow()) {
           SCCMightUnwind = true;
         } else if (CheckReturn && isa<ReturnInst>(TI)) {

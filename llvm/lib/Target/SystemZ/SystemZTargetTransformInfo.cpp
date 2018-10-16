@@ -909,7 +909,11 @@ int SystemZTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
                                                unsigned Factor,
                                                ArrayRef<unsigned> Indices,
                                                unsigned Alignment,
-                                               unsigned AddressSpace) {
+                                               unsigned AddressSpace,
+                                               bool IsMasked) {
+  if (IsMasked)
+    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+                                             Alignment, AddressSpace, IsMasked);
   assert(isa<VectorType>(VecTy) &&
          "Expect a vector type for interleaved memory op");
 

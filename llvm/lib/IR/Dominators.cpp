@@ -41,7 +41,7 @@ static constexpr bool ExpensiveChecksEnabled = false;
 #endif
 
 bool BasicBlockEdge::isSingleEdge() const {
-  const TerminatorInst *TI = Start->getTerminator();
+  const Instruction *TI = Start->getTerminator();
   unsigned NumEdgesToEnd = 0;
   for (unsigned int i = 0, n = TI->getNumSuccessors(); i < n; ++i) {
     if (TI->getSuccessor(i) == End)

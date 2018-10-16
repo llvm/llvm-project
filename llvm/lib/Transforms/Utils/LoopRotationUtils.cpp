@@ -299,7 +299,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
   // For the rest of the instructions, either hoist to the OrigPreheader if
   // possible or create a clone in the OldPreHeader if not.
-  TerminatorInst *LoopEntryBranch = OrigPreheader->getTerminator();
+  Instruction *LoopEntryBranch = OrigPreheader->getTerminator();
 
   // Record all debug intrinsics preceding LoopEntryBranch to avoid duplication.
   using DbgIntrinsicHash =

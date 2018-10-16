@@ -345,15 +345,19 @@ bool SymbolCollector::handleDeclOccurence(
       SM.getFileID(SpellingLoc) == SM.getMainFileID())
     ReferencedDecls.insert(ND);
 
-  if ((static_cast<unsigned>(Opts.RefFilter) & Roles) &&
-      SM.getFileID(SpellingLoc) == SM.getMainFileID())
-    DeclRefs[ND].emplace_back(SpellingLoc, Roles);
+  bool CollectRef = static_cast<unsigned>(Opts.RefFilter) & Roles;
+  bool IsOnlyRef =
+      !(Roles & (static_cast<unsigned>(index::SymbolRole::Declaration) |
+                 static_cast<unsigned>(index::SymbolRole::Definition)));
 
-  // Don't continue indexing if this is a mere reference.
-  if (!(Roles & static_cast<unsigned>(index::SymbolRole::Declaration) ||
-        Roles & static_cast<unsigned>(index::SymbolRole::Definition)))
+  if (IsOnlyRef && !CollectRef)
     return true;
   if (!shouldCollectSymbol(*ND, *ASTCtx, Opts))
+    return true;
+  if (CollectRef && SM.getFileID(SpellingLoc) == SM.getMainFileID())
+    DeclRefs[ND].emplace_back(SpellingLoc, Roles);
+  // Don't continue indexing if this is a mere reference.
+  if (IsOnlyRef)
     return true;
 
   auto ID = getSymbolID(ND);
@@ -476,17 +480,15 @@ void SymbolCollector::finish() {
     std::string MainURI = *MainFileURI;
     for (const auto &It : DeclRefs) {
       if (auto ID = getSymbolID(It.first)) {
-        if (Symbols.find(*ID)) {
-          for (const auto &LocAndRole : It.second) {
-            Ref R;
-            auto Range =
-                getTokenRange(LocAndRole.first, SM, ASTCtx->getLangOpts());
-            R.Location.Start = Range.first;
-            R.Location.End = Range.second;
-            R.Location.FileURI = MainURI;
-            R.Kind = toRefKind(LocAndRole.second);
-            Refs.insert(*ID, R);
-          }
+        for (const auto &LocAndRole : It.second) {
+          Ref R;
+          auto Range =
+              getTokenRange(LocAndRole.first, SM, ASTCtx->getLangOpts());
+          R.Location.Start = Range.first;
+          R.Location.End = Range.second;
+          R.Location.FileURI = MainURI;
+          R.Kind = toRefKind(LocAndRole.second);
+          Refs.insert(*ID, R);
         }
       }
     }

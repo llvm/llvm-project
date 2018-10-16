@@ -48,6 +48,23 @@ enum class ErrorCode {
   // Defined by the protocol.
   RequestCancelled = -32800,
 };
+// Models an LSP error as an llvm::Error.
+class LSPError : public llvm::ErrorInfo<LSPError> {
+public:
+  std::string Message;
+  ErrorCode Code;
+  static char ID;
+
+  LSPError(std::string Message, ErrorCode Code)
+      : Message(std::move(Message)), Code(Code) {}
+
+  void log(llvm::raw_ostream &OS) const override {
+    OS << int(Code) << ": " << Message;
+  }
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
 
 struct URIForFile {
   URIForFile() = default;
@@ -385,6 +402,10 @@ struct TextDocumentClientCapabilities {
 
   /// Capabilities specific to the 'textDocument/publishDiagnostics'
   PublishDiagnosticsClientCapabilities publishDiagnostics;
+
+  /// Flattened from codeAction.codeActionLiteralSupport.
+  // FIXME: flatten other properties in this way.
+  bool codeActionLiteralSupport = false;
 };
 bool fromJSON(const llvm::json::Value &, TextDocumentClientCapabilities &);
 
@@ -411,8 +432,6 @@ bool fromJSON(const llvm::json::Value &, ClangdCompileCommand &);
 /// "initialize" request and for the "workspace/didChangeConfiguration"
 /// notification since the data received is described as 'any' type in LSP.
 struct ClangdConfigurationParamsChange {
-  llvm::Optional<std::string> compilationDatabasePath;
-
   // The changes that happened to the compilation database.
   // The key of the map is a file name.
   llvm::Optional<std::map<std::string, ClangdCompileCommand>>
@@ -420,7 +439,14 @@ struct ClangdConfigurationParamsChange {
 };
 bool fromJSON(const llvm::json::Value &, ClangdConfigurationParamsChange &);
 
-struct ClangdInitializationOptions : public ClangdConfigurationParamsChange {};
+struct ClangdInitializationOptions {
+  // What we can change throught the didChangeConfiguration request, we can
+  // also set through the initialize request (initializationOptions field).
+  ClangdConfigurationParamsChange ParamsChange;
+
+  llvm::Optional<std::string> compilationDatabasePath;
+};
+bool fromJSON(const llvm::json::Value &, ClangdInitializationOptions &);
 
 struct InitializeParams {
   /// The process Id of the parent process that started
@@ -608,6 +634,7 @@ struct Diagnostic {
   /// which the issue was produced, e.g. "Semantic Issue" or "Parse Issue".
   std::string category;
 };
+llvm::json::Value toJSON(const Diagnostic &);
 
 /// A LSP-specific comparator used to find diagnostic in a container like
 /// std:map.
@@ -674,6 +701,32 @@ struct Command : public ExecuteCommandParams {
   std::string title;
 };
 llvm::json::Value toJSON(const Command &C);
+
+/// A code action represents a change that can be performed in code, e.g. to fix
+/// a problem or to refactor code.
+///
+/// A CodeAction must set either `edit` and/or a `command`. If both are
+/// supplied, the `edit` is applied first, then the `command` is executed.
+struct CodeAction {
+  /// A short, human-readable, title for this code action.
+  std::string title;
+
+  /// The kind of the code action.
+  /// Used to filter code actions.
+  llvm::Optional<std::string> kind;
+  const static llvm::StringLiteral QUICKFIX_KIND;
+
+  /// The diagnostics that this code action resolves.
+  llvm::Optional<std::vector<Diagnostic>> diagnostics;
+
+  /// The workspace edit this code action performs.
+  llvm::Optional<WorkspaceEdit> edit;
+
+  /// A command this code action executes. If a code action provides an edit
+  /// and a command, first the edit is executed and then the command.
+  llvm::Optional<Command> command;
+};
+llvm::json::Value toJSON(const CodeAction &);
 
 /// Represents information about programming constructs like variables, classes,
 /// interfaces etc.

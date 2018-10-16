@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../Serialization.h"
-#include "../Dex.h"
+#include "SourceCode.h"
+#include "index/Serialization.h"
+#include "index/dex/Dex.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -30,9 +31,9 @@ using namespace llvm;
 namespace {
 
 llvm::cl::opt<std::string>
-    SymbolCollection("symbol-collection-file",
-                     llvm::cl::desc("Path to the file with symbol collection"),
-                     llvm::cl::Positional, llvm::cl::Required);
+    IndexPath("index-path",
+              llvm::cl::desc("Path to the index"),
+              llvm::cl::Positional, llvm::cl::Required);
 
 static const std::string Overview = R"(
 This is an **experimental** interactive tool to process user-provided search
@@ -50,6 +51,26 @@ void reportTime(StringRef Name, llvm::function_ref<void()> F) {
   const auto Duration = std::chrono::duration_cast<std::chrono::milliseconds>(
       TimerStop - TimerStart);
   llvm::outs() << llvm::formatv("{0} took {1:ms+n}.\n", Name, Duration);
+}
+
+std::vector<clang::clangd::SymbolID>
+getSymbolIDsFromIndex(llvm::StringRef QualifiedName, const SymbolIndex *Index) {
+  FuzzyFindRequest Request;
+  // Remove leading "::" qualifier as FuzzyFind doesn't need leading "::"
+  // qualifier for global scope.
+  bool IsGlobalScope = QualifiedName.consume_front("::");
+  auto Names = clang::clangd::splitQualifiedName(QualifiedName);
+  if (IsGlobalScope || !Names.first.empty())
+    Request.Scopes = {Names.first};
+
+  Request.Query = Names.second;
+  std::vector<clang::clangd::SymbolID> SymIDs;
+  Index->fuzzyFind(Request, [&](const Symbol &Sym) {
+    std::string SymQualifiedName = (Sym.Scope + Sym.Name).str();
+    if (QualifiedName == SymQualifiedName)
+      SymIDs.push_back(Sym.ID);
+  });
+  return SymIDs;
 }
 
 // REPL commands inherit from Command and contain their options as members.
@@ -88,7 +109,6 @@ public:
 };
 
 // FIXME(kbobyrev): Ideas for more commands:
-// * find symbol references: print set of reference locations
 // * load/swap/reload index: this would make it possible to get rid of llvm::cl
 //   usages in the tool driver and actually use llvm::cl library in the REPL.
 // * show posting list density histogram (our dump data somewhere so that user
@@ -139,19 +159,32 @@ class Lookup : public Command {
   cl::opt<std::string> ID{
       "id",
       cl::Positional,
-      cl::Required,
       cl::desc("Symbol ID to look up (hex)"),
+  };
+  cl::opt<std::string> Name{
+      "name", cl::desc("Qualified name to look up."),
   };
 
   void run() override {
-    auto SID = clang::clangd::SymbolID::fromStr(ID);
-    if (!SID) {
-      llvm::outs() << llvm::toString(SID.takeError()) << "\n";
+    if (ID.getNumOccurrences() == 0 && Name.getNumOccurrences() == 0) {
+      llvm::outs()
+          << "Missing required argument: please provide id or -name.\n";
       return;
+    }
+    std::vector<clang::clangd::SymbolID> IDs;
+    if (ID.getNumOccurrences()) {
+      auto SID = clang::clangd::SymbolID::fromStr(ID);
+      if (!SID) {
+        llvm::outs() << llvm::toString(SID.takeError()) << "\n";
+        return;
+      }
+      IDs.push_back(*SID);
+    } else {
+      IDs = getSymbolIDsFromIndex(Name, Index);
     }
 
     clang::clangd::LookupRequest Request;
-    Request.IDs = {*SID};
+    Request.IDs.insert(IDs.begin(), IDs.end());
     bool FoundSymbol = false;
     Index->lookup(Request, [&](const Symbol &Sym) {
       FoundSymbol = true;
@@ -162,14 +195,67 @@ class Lookup : public Command {
   }
 };
 
+class Refs : public Command {
+  cl::opt<std::string> ID{
+      "id", cl::Positional,
+      cl::desc("Symbol ID of the symbol being queried (hex)."),
+  };
+  cl::opt<std::string> Name{
+      "name", cl::desc("Qualified name of the symbol being queried."),
+  };
+  cl::opt<std::string> Filter{
+      "filter", cl::init(".*"),
+      cl::desc(
+          "Print all results from files matching this regular expression."),
+  };
+
+  void run() override {
+    if (ID.getNumOccurrences() == 0 && Name.getNumOccurrences() == 0) {
+      llvm::outs()
+          << "Missing required argument: please provide id or -name.\n";
+      return;
+    }
+    std::vector<clang::clangd::SymbolID> IDs;
+    if (ID.getNumOccurrences()) {
+      auto SID = clang::clangd::SymbolID::fromStr(ID);
+      if (!SID) {
+        llvm::outs() << llvm::toString(SID.takeError()) << "\n";
+        return;
+      }
+      IDs.push_back(*SID);
+    } else {
+      IDs = getSymbolIDsFromIndex(Name, Index);
+    }
+    clang::clangd::RefsRequest RefRequest;
+    RefRequest.IDs.insert(IDs.begin(), IDs.end());
+    llvm::Regex RegexFilter(Filter);
+    Index->refs(RefRequest, [&RegexFilter](const clang::clangd::Ref &R) {
+      auto U = clang::clangd::URI::parse(R.Location.FileURI);
+      if (!U) {
+        llvm::outs() << U.takeError();
+        return;
+      }
+      if (RegexFilter.match(U->body()))
+        llvm::outs() << R << "\n";
+    });
+  }
+};
+
 struct {
   const char *Name;
   const char *Description;
   std::function<std::unique_ptr<Command>()> Implementation;
 } CommandInfo[] = {
     {"find", "Search for symbols with fuzzyFind", llvm::make_unique<FuzzyFind>},
-    {"lookup", "Dump symbol details by ID", llvm::make_unique<Lookup>},
+    {"lookup", "Dump symbol details by ID or qualified name",
+     llvm::make_unique<Lookup>},
+    {"refs", "Find references by ID or qualified name",
+     llvm::make_unique<Refs>},
 };
+
+std::unique_ptr<SymbolIndex> openIndex(llvm::StringRef Index) {
+  return loadIndex(Index, /*URISchemes=*/{}, /*UseDex=*/true);
+}
 
 } // namespace
 
@@ -180,13 +266,11 @@ int main(int argc, const char *argv[]) {
 
   std::unique_ptr<SymbolIndex> Index;
   reportTime("Dex build", [&]() {
-    Index = loadIndex(SymbolCollection, /*URISchemes=*/{},
-                      /*UseDex=*/true);
+    Index = openIndex(IndexPath);
   });
 
   if (!Index) {
-    llvm::outs()
-        << "ERROR: Please provide a valid path to symbol collection file.\n";
+    llvm::outs() << "Failed to open the index.\n";
     return -1;
   }
 

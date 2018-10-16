@@ -226,6 +226,13 @@ void WebAssemblyMCInstLower::Lower(const MachineInstr *MI,
           (MO.getTargetFlags() & WebAssemblyII::MO_SYMBOL_FUNCTION) != 0,
           (MO.getTargetFlags() & WebAssemblyII::MO_SYMBOL_GLOBAL) != 0);
       break;
+    case MachineOperand::MO_MCSymbol:
+      // This is currently used only for LSDA symbols (GCC_except_table),
+      // because global addresses or other external symbols are handled above.
+      assert(MO.getTargetFlags() == 0 &&
+             "WebAssembly does not use target flags on MCSymbol");
+      MCOp = LowerSymbolOperand(MO.getMCSymbol(), /*Offset=*/0, false, false);
+      break;
     }
 
     OutMI.addOperand(MCOp);

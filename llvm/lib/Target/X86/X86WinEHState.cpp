@@ -369,7 +369,7 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
 
   // Insert an unlink before all returns.
   for (BasicBlock &BB : *F) {
-    TerminatorInst *T = BB.getTerminator();
+    Instruction *T = BB.getTerminator();
     if (!isa<ReturnInst>(T))
       continue;
     Builder.SetInsertPoint(T);

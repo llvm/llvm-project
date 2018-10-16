@@ -652,7 +652,7 @@ Demangler::demangleLiteralOperatorIdentifier(StringView &MangledName) {
   return N;
 }
 
-IntrinsicFunctionKind
+static IntrinsicFunctionKind
 translateIntrinsicFunctionCode(char CH, FunctionIdentifierCodeGroup Group) {
   // Not all ? identifiers are intrinsics *functions*.  This function only maps
   // operator codes for the special functions, all others are handled elsewhere,
@@ -1220,7 +1220,7 @@ static void outputEscapedChar(OutputStream &OS, unsigned C) {
   outputHex(OS, C);
 }
 
-unsigned countTrailingNullBytes(const uint8_t *StringBytes, int Length) {
+static unsigned countTrailingNullBytes(const uint8_t *StringBytes, int Length) {
   const uint8_t *End = StringBytes + Length - 1;
   unsigned Count = 0;
   while (Length > 0 && *End == 0) {
@@ -1231,7 +1231,8 @@ unsigned countTrailingNullBytes(const uint8_t *StringBytes, int Length) {
   return Count;
 }
 
-unsigned countEmbeddedNulls(const uint8_t *StringBytes, unsigned Length) {
+static unsigned countEmbeddedNulls(const uint8_t *StringBytes,
+                                   unsigned Length) {
   unsigned Result = 0;
   for (unsigned I = 0; I < Length; ++I) {
     if (*StringBytes++ == 0)
@@ -1240,8 +1241,8 @@ unsigned countEmbeddedNulls(const uint8_t *StringBytes, unsigned Length) {
   return Result;
 }
 
-unsigned guessCharByteSize(const uint8_t *StringBytes, unsigned NumChars,
-                           unsigned NumBytes) {
+static unsigned guessCharByteSize(const uint8_t *StringBytes, unsigned NumChars,
+                                  unsigned NumBytes) {
   assert(NumBytes > 0);
 
   // If the number of bytes is odd, this is guaranteed to be a char string.

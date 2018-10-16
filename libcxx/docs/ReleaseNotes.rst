@@ -40,4 +40,4 @@ New Features
 
 API Changes
 -----------
-
+- Building libc++ for Mac OSX 10.6 is not supported anymore.

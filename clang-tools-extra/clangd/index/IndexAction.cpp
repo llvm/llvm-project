@@ -74,7 +74,7 @@ createStaticIndexingAction(SymbolCollector::Options Opts,
   return llvm::make_unique<IndexAction>(
       std::make_shared<SymbolCollector>(std::move(Opts)), std::move(Includes),
       IndexOpts, SymbolsCallback, RefsCallback);
-};
+}
 
 } // namespace clangd
 } // namespace clang

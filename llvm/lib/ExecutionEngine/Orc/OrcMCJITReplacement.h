@@ -461,8 +461,8 @@ private:
     return MangledName;
   }
 
-  using ObjectLayerT = RTDyldObjectLinkingLayer;
-  using CompileLayerT = IRCompileLayer<ObjectLayerT, orc::SimpleCompiler>;
+  using ObjectLayerT = LegacyRTDyldObjectLinkingLayer;
+  using CompileLayerT = LegacyIRCompileLayer<ObjectLayerT, orc::SimpleCompiler>;
   using LazyEmitLayerT = LazyEmittingLayer<CompileLayerT>;
 
   ExecutionSession ES;

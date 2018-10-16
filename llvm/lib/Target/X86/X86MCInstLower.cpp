@@ -2133,6 +2133,9 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       }
     }
     break;
+  case X86::MOVDDUPrm:
+  case X86::VMOVDDUPrm:
+  case X86::VMOVDDUPZ128rm:
   case X86::VBROADCASTSSrm:
   case X86::VBROADCASTSSYrm:
   case X86::VBROADCASTSSZ128m:
@@ -2169,6 +2172,9 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       int NumElts;
       switch (MI->getOpcode()) {
       default: llvm_unreachable("Invalid opcode");
+      case X86::MOVDDUPrm:         NumElts = 2;  break;
+      case X86::VMOVDDUPrm:        NumElts = 2;  break;
+      case X86::VMOVDDUPZ128rm:    NumElts = 2;  break;
       case X86::VBROADCASTSSrm:    NumElts = 4;  break;
       case X86::VBROADCASTSSYrm:   NumElts = 8;  break;
       case X86::VBROADCASTSSZ128m: NumElts = 4;  break;

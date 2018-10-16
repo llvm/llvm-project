@@ -17,7 +17,6 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCBTFContext.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
@@ -61,7 +60,7 @@ MCContext::MCContext(const MCAsmInfo *mai, const MCRegisterInfo *mri,
     : SrcMgr(mgr), InlineSrcMgr(nullptr), MAI(mai), MRI(mri), MOFI(mofi),
       Symbols(Allocator), UsedNames(Allocator),
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
-      AutoReset(DoAutoReset), BTFCtx(nullptr) {
+      AutoReset(DoAutoReset) {
   SecureLogFile = AsSecureLogFileName;
 
   if (SrcMgr && SrcMgr->getNumBuffers())
@@ -115,14 +114,6 @@ void MCContext::reset() {
   GenDwarfFileNumber = 0;
 
   HadError = false;
-  BTFCtx.reset();
-}
-
-//===----------------------------------------------------------------------===//
-// BTFCtx Manipulation
-//===----------------------------------------------------------------------===//
-void MCContext::setBTFContext(std::unique_ptr<MCBTFContext> Ctx) {
-  BTFCtx = std::move(Ctx);
 }
 
 //===----------------------------------------------------------------------===//

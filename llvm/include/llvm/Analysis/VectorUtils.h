@@ -125,6 +125,21 @@ computeMinimumValueSizes(ArrayRef<BasicBlock*> Blocks,
 /// This function always sets a (possibly null) value for each K in Kinds.
 Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
 
+/// Create a mask with replicated elements.
+///
+/// This function creates a shuffle mask for replicating each of the \p VF 
+/// elements in a vector \p ReplicationFactor times. It can be used to
+/// transform a mask of \p VF elements into a mask of
+/// \p VF * \p ReplicationFactor elements used by a predicated
+/// interleaved-group of loads/stores whose Interleaved-factor ==
+/// \p ReplicationFactor.
+///
+/// For example, the mask for \p ReplicationFactor=3 and \p VF=4 is:
+///
+///   <0,0,0,1,1,1,2,2,2,3,3,3>
+Constant *createReplicatedMask(IRBuilder<> &Builder, unsigned ReplicationFactor,
+                               unsigned VF);
+
 /// Create an interleave shuffle mask.
 ///
 /// This function creates a shuffle mask for interleaving \p NumVecs vectors of
@@ -328,7 +343,7 @@ public:
   InterleavedAccessInfo(PredicatedScalarEvolution &PSE, Loop *L,
                         DominatorTree *DT, LoopInfo *LI,
                         const LoopAccessInfo *LAI)
-    : PSE(PSE), TheLoop(L), DT(DT), LI(LI), LAI(LAI) {}
+      : PSE(PSE), TheLoop(L), DT(DT), LI(LI), LAI(LAI) {}
 
   ~InterleavedAccessInfo() {
     SmallPtrSet<InterleaveGroup *, 4> DelSet;
@@ -341,7 +356,9 @@ public:
 
   /// Analyze the interleaved accesses and collect them in interleave
   /// groups. Substitute symbolic strides using \p Strides.
-  void analyzeInterleaving();
+  /// Consider also predicated loads/stores in the analysis if
+  /// \p EnableMaskedInterleavedGroup is true.
+  void analyzeInterleaving(bool EnableMaskedInterleavedGroup);
 
   /// Check if \p Instr belongs to any interleave group.
   bool isInterleaved(Instruction *Instr) const {

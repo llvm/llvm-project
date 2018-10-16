@@ -21,25 +21,18 @@ multiclass SIMD_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
             Requires<[HasSIMD128]>;
 }
 
-multiclass SIMD_ARGUMENT<ValueType vt> {
-  let hasSideEffects = 1, isCodeGenOnly = 1,
-      Defs = []<Register>, Uses = [ARGUMENTS] in
-  defm ARGUMENT_#vt : SIMD_I<(outs V128:$res), (ins i32imm:$argno),
-                             (outs), (ins i32imm:$argno),
-                             [(set (vt V128:$res),
-                                  (WebAssemblyargument timm:$argno))]>;
-}
-
-defm "": SIMD_ARGUMENT<v16i8>;
-defm "": SIMD_ARGUMENT<v8i16>;
-defm "": SIMD_ARGUMENT<v4i32>;
-defm "": SIMD_ARGUMENT<v2i64>;
-defm "": SIMD_ARGUMENT<v4f32>;
-defm "": SIMD_ARGUMENT<v2f64>;
+defm "" : ARGUMENT<V128, v16i8>;
+defm "" : ARGUMENT<V128, v8i16>;
+defm "" : ARGUMENT<V128, v4i32>;
+defm "" : ARGUMENT<V128, v2i64>;
+defm "" : ARGUMENT<V128, v4f32>;
+defm "" : ARGUMENT<V128, v2f64>;
 
 // Constrained immediate argument types
 foreach SIZE = [8, 16] in
-def ImmI#SIZE : ImmLeaf<i32, "return (Imm & ((1UL << "#SIZE#") - 1)) == Imm;">;
+def ImmI#SIZE : ImmLeaf<i32,
+  "return ((uint64_t)Imm & ((1UL << "#SIZE#") - 1)) == (uint64_t)Imm;"
+>;
 foreach SIZE = [2, 4, 8, 16, 32] in
 def LaneIdx#SIZE : ImmLeaf<i32, "return 0 <= Imm && Imm < "#SIZE#";">;
 
@@ -708,20 +701,20 @@ defm "" : SIMDAbs<v2f64, "f64x2", 128>;
 // Floating-point min and max
 //===----------------------------------------------------------------------===//
 
-// NaN-propagating minimum: min
-// TODO
-
-// NaN-propagating maximum: max
-// TODO
-
-//===----------------------------------------------------------------------===//
-// Floating-point arithmetic
-//===----------------------------------------------------------------------===//
-
 multiclass SIMDBinaryFP<SDNode node, string name, bits<32> baseInst> {
   defm "" : SIMDBinary<v4f32, "f32x4", node, name, baseInst>;
   defm "" : SIMDBinary<v2f64, "f64x2", node, name, !add(baseInst, 1)>;
 }
+
+// NaN-propagating minimum: min
+defm MIN : SIMDBinaryFP<fminnan, "min", 129>;
+
+// NaN-propagating maximum: max
+defm MAX : SIMDBinaryFP<fmaxnan, "max", 131>;
+
+//===----------------------------------------------------------------------===//
+// Floating-point arithmetic
+//===----------------------------------------------------------------------===//
 
 // Addition: add
 let isCommutable = 1 in

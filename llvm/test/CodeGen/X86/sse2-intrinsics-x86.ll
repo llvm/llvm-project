@@ -1418,6 +1418,45 @@ define <8 x i16> @test_x86_sse2_psrl_w(<8 x i16> %a0, <8 x i16> %a1) {
 declare <8 x i16> @llvm.x86.sse2.psrl.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 
+define <8 x i16> @test_x86_sse2_psrl_w_load(<8 x i16> %a0, <8 x i16>* %p) {
+; X86-SSE-LABEL: test_x86_sse2_psrl_w_load:
+; X86-SSE:       ## %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-SSE-NEXT:    psrlw (%eax), %xmm0 ## encoding: [0x66,0x0f,0xd1,0x00]
+; X86-SSE-NEXT:    retl ## encoding: [0xc3]
+;
+; X86-AVX1-LABEL: test_x86_sse2_psrl_w_load:
+; X86-AVX1:       ## %bb.0:
+; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX1-NEXT:    vpsrlw (%eax), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xd1,0x00]
+; X86-AVX1-NEXT:    retl ## encoding: [0xc3]
+;
+; X86-AVX512-LABEL: test_x86_sse2_psrl_w_load:
+; X86-AVX512:       ## %bb.0:
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX512-NEXT:    vpsrlw (%eax), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xd1,0x00]
+; X86-AVX512-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-SSE-LABEL: test_x86_sse2_psrl_w_load:
+; X64-SSE:       ## %bb.0:
+; X64-SSE-NEXT:    psrlw (%rdi), %xmm0 ## encoding: [0x66,0x0f,0xd1,0x07]
+; X64-SSE-NEXT:    retq ## encoding: [0xc3]
+;
+; X64-AVX1-LABEL: test_x86_sse2_psrl_w_load:
+; X64-AVX1:       ## %bb.0:
+; X64-AVX1-NEXT:    vpsrlw (%rdi), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xd1,0x07]
+; X64-AVX1-NEXT:    retq ## encoding: [0xc3]
+;
+; X64-AVX512-LABEL: test_x86_sse2_psrl_w_load:
+; X64-AVX512:       ## %bb.0:
+; X64-AVX512-NEXT:    vpsrlw (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xd1,0x07]
+; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
+  %a1 = load <8 x i16>, <8 x i16>* %p
+  %res = call <8 x i16> @llvm.x86.sse2.psrl.w(<8 x i16> %a0, <8 x i16> %a1) ; <<8 x i16>> [#uses=1]
+  ret <8 x i16> %res
+}
+
+
 define <4 x i32> @test_x86_sse2_psrli_d(<4 x i32> %a0) {
 ; SSE-LABEL: test_x86_sse2_psrli_d:
 ; SSE:       ## %bb.0:

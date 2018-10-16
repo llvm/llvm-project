@@ -83,9 +83,9 @@ namespace test3 {
     // CHECK-NEXT: [[T0:%.*]] = load [[B]]*, [[B]]** [[X]]
     // CHECK-NEXT: [[BOOL:%.*]] = call zeroext i1 @_ZN5test31BcvbEv([[B]]* [[T0]])
     // CHECK-NEXT: br i1 [[BOOL]]
-    // CHECK:      call void @_ZN5test31BC1ERKS0_([[B]]* noalias [[RESULT:%.*]], [[B]]* dereferenceable({{[0-9]+}}) [[T0]])
+    // CHECK:      call void @_ZN5test31BC1ERKS0_([[B]]* [[RESULT:%.*]], [[B]]* dereferenceable({{[0-9]+}}) [[T0]])
     // CHECK-NEXT: br label
-    // CHECK:      call void @_ZN5test31BC1Ev([[B]]* noalias [[RESULT]])
+    // CHECK:      call void @_ZN5test31BC1Ev([[B]]* [[RESULT]])
     // CHECK-NEXT: br label
     // CHECK:      ret void
     return x ?: B();
@@ -97,9 +97,9 @@ namespace test3 {
     // CHECK-NEXT: call  void @_ZN5test312test1_helperEv([[B]]* sret [[TEMP]])
     // CHECK-NEXT: [[BOOL:%.*]] = call zeroext i1 @_ZN5test31BcvbEv([[B]]* [[TEMP]])
     // CHECK-NEXT: br i1 [[BOOL]]
-    // CHECK:      call void @_ZN5test31BC1ERKS0_([[B]]* noalias [[RESULT:%.*]], [[B]]* dereferenceable({{[0-9]+}}) [[TEMP]])
+    // CHECK:      call void @_ZN5test31BC1ERKS0_([[B]]* [[RESULT:%.*]], [[B]]* dereferenceable({{[0-9]+}}) [[TEMP]])
     // CHECK-NEXT: br label
-    // CHECK:      call void @_ZN5test31BC1Ev([[B]]* noalias [[RESULT]])
+    // CHECK:      call void @_ZN5test31BC1Ev([[B]]* [[RESULT]])
     // CHECK-NEXT: br label
     // CHECK:      call void @_ZN5test31BD1Ev([[B]]* [[TEMP]])
     // CHECK-NEXT: ret void
@@ -117,7 +117,7 @@ namespace test3 {
     // CHECK-NEXT: br i1 [[BOOL]]
     // CHECK:      call void @_ZN5test31BcvNS_1AEEv([[A:%.*]]* sret [[RESULT:%.*]], [[B]]* [[T0]])
     // CHECK-NEXT: br label
-    // CHECK:      call void @_ZN5test31AC1Ev([[A]]* noalias [[RESULT]])
+    // CHECK:      call void @_ZN5test31AC1Ev([[A]]* [[RESULT]])
     // CHECK-NEXT: br label
     // CHECK:      ret void
     return x ?: A();
@@ -131,7 +131,7 @@ namespace test3 {
     // CHECK-NEXT: br i1 [[BOOL]]
     // CHECK:      call void @_ZN5test31BcvNS_1AEEv([[A]]* sret [[RESULT:%.*]], [[B]]* [[TEMP]])
     // CHECK-NEXT: br label
-    // CHECK:      call void @_ZN5test31AC1Ev([[A]]* noalias [[RESULT]])
+    // CHECK:      call void @_ZN5test31AC1Ev([[A]]* [[RESULT]])
     // CHECK-NEXT: br label
     // CHECK:      call void @_ZN5test31BD1Ev([[B]]* [[TEMP]])
     // CHECK-NEXT: ret void

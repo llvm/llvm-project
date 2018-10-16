@@ -311,6 +311,19 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITCAST(SDNode *N) {
                      CreateStackStoreLoad(InOp, OutVT));
 }
 
+// Helper for BSWAP/BITREVERSE promotion to ensure we can fit the shift amount
+// in the VT returned by getShiftAmountTy and to return a safe VT if we can't.
+static EVT getShiftAmountTyForConstant(unsigned Val, EVT VT,
+                                       const TargetLowering &TLI,
+                                       SelectionDAG &DAG) {
+  EVT ShiftVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
+  // If the value won't fit in the prefered type, just use something safe. It
+  // will be legalized when the shift is expanded.
+  if ((Log2_32(Val) + 1) > ShiftVT.getScalarSizeInBits())
+    ShiftVT = MVT::i32;
+  return ShiftVT;
+}
+
 SDValue DAGTypeLegalizer::PromoteIntRes_BSWAP(SDNode *N) {
   SDValue Op = GetPromotedInteger(N->getOperand(0));
   EVT OVT = N->getValueType(0);
@@ -318,10 +331,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BSWAP(SDNode *N) {
   SDLoc dl(N);
 
   unsigned DiffBits = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
-  return DAG.getNode(
-      ISD::SRL, dl, NVT, DAG.getNode(ISD::BSWAP, dl, NVT, Op),
-      DAG.getConstant(DiffBits, dl,
-                      TLI.getShiftAmountTy(NVT, DAG.getDataLayout())));
+  EVT ShiftVT = getShiftAmountTyForConstant(DiffBits, NVT, TLI, DAG);
+  return DAG.getNode(ISD::SRL, dl, NVT, DAG.getNode(ISD::BSWAP, dl, NVT, Op),
+                     DAG.getConstant(DiffBits, dl, ShiftVT));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_BITREVERSE(SDNode *N) {
@@ -331,10 +343,10 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITREVERSE(SDNode *N) {
   SDLoc dl(N);
 
   unsigned DiffBits = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
-  return DAG.getNode(
-      ISD::SRL, dl, NVT, DAG.getNode(ISD::BITREVERSE, dl, NVT, Op),
-      DAG.getConstant(DiffBits, dl,
-                      TLI.getShiftAmountTy(NVT, DAG.getDataLayout())));
+  EVT ShiftVT = getShiftAmountTyForConstant(DiffBits, NVT, TLI, DAG);
+  return DAG.getNode(ISD::SRL, dl, NVT,
+                     DAG.getNode(ISD::BITREVERSE, dl, NVT, Op),
+                     DAG.getConstant(DiffBits, dl, ShiftVT));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_BUILD_PAIR(SDNode *N) {

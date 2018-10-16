@@ -490,7 +490,7 @@ static unsigned getBranchHint(unsigned PCC, FunctionLoweringInfo *FuncInfo,
   if (!FuncInfo->BPI) return PPC::BR_NO_HINT;
 
   const BasicBlock *BB = FuncInfo->MBB->getBasicBlock();
-  const TerminatorInst *BBTerm = BB->getTerminator();
+  const Instruction *BBTerm = BB->getTerminator();
 
   if (BBTerm->getNumSuccessors() != 2) return PPC::BR_NO_HINT;
 

@@ -23,14 +23,14 @@
 namespace llvm {
 namespace orc {
 
-class ObjectTransformLayer2 : public ObjectLayer {
+class ObjectTransformLayer : public ObjectLayer {
 public:
   using TransformFunction =
       std::function<Expected<std::unique_ptr<MemoryBuffer>>(
           std::unique_ptr<MemoryBuffer>)>;
 
-  ObjectTransformLayer2(ExecutionSession &ES, ObjectLayer &BaseLayer,
-                        TransformFunction Transform);
+  ObjectTransformLayer(ExecutionSession &ES, ObjectLayer &BaseLayer,
+                       TransformFunction Transform);
 
   void emit(MaterializationResponsibility R, VModuleKey K,
             std::unique_ptr<MemoryBuffer> O) override;
@@ -46,11 +46,11 @@ private:
 /// immediately applies the user supplied functor to each object, then adds
 /// the set of transformed objects to the layer below.
 template <typename BaseLayerT, typename TransformFtor>
-class ObjectTransformLayer {
+class LegacyObjectTransformLayer {
 public:
   /// Construct an ObjectTransformLayer with the given BaseLayer
-  ObjectTransformLayer(BaseLayerT &BaseLayer,
-                       TransformFtor Transform = TransformFtor())
+  LegacyObjectTransformLayer(BaseLayerT &BaseLayer,
+                             TransformFtor Transform = TransformFtor())
       : BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
 
   /// Apply the transform functor to each object in the object set, then

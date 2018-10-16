@@ -859,7 +859,7 @@ public:
   }
 
   /// Reset the solver and remove all constraints.
-  void reset() const override { Z3_solver_reset(Context.Context, Solver); }
+  void reset() override { Z3_solver_reset(Context.Context, Solver); }
 
   void print(raw_ostream &OS) const override {
     OS << Z3_solver_to_string(Context.Context, Solver);
@@ -926,7 +926,7 @@ SMTSolverRef clang::ento::CreateZ3Solver() {
   return llvm::make_unique<Z3Solver>();
 #else
   llvm::report_fatal_error("Clang was not compiled with Z3 support, rebuild "
-                           "with -DCLANG_ANALYZER_BUILD_Z3=ON",
+                           "with -DCLANG_ANALYZER_ENABLE_Z3_SOLVER=ON",
                            false);
   return nullptr;
 #endif
@@ -938,7 +938,7 @@ ento::CreateZ3ConstraintManager(ProgramStateManager &StMgr, SubEngine *Eng) {
   return llvm::make_unique<Z3ConstraintManager>(Eng, StMgr.getSValBuilder());
 #else
   llvm::report_fatal_error("Clang was not compiled with Z3 support, rebuild "
-                           "with -DCLANG_ANALYZER_BUILD_Z3=ON",
+                           "with -DCLANG_ANALYZER_ENABLE_Z3_SOLVER=ON",
                            false);
   return nullptr;
 #endif

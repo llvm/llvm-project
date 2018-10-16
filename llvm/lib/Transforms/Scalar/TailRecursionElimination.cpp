@@ -702,7 +702,7 @@ static bool foldReturnAndProcessPred(
   SmallVector<BranchInst*, 8> UncondBranchPreds;
   for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
     BasicBlock *Pred = *PI;
-    TerminatorInst *PTI = Pred->getTerminator();
+    Instruction *PTI = Pred->getTerminator();
     if (BranchInst *BI = dyn_cast<BranchInst>(PTI))
       if (BI->isUnconditional())
         UncondBranchPreds.push_back(BI);

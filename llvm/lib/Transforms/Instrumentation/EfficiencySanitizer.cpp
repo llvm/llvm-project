@@ -887,7 +887,7 @@ bool EfficiencySanitizer::instrumentFastpathWorkingSet(
   Value *OldValue = IRB.CreateLoad(IRB.CreateIntToPtr(ShadowPtr, ShadowPtrTy));
   // The AND and CMP will be turned into a TEST instruction by the compiler.
   Value *Cmp = IRB.CreateICmpNE(IRB.CreateAnd(OldValue, ValueMask), ValueMask);
-  TerminatorInst *CmpTerm = SplitBlockAndInsertIfThen(Cmp, I, false);
+  Instruction *CmpTerm = SplitBlockAndInsertIfThen(Cmp, I, false);
   // FIXME: do I need to call SetCurrentDebugLocation?
   IRB.SetInsertPoint(CmpTerm);
   // We use OR to set the shadow bits to avoid corrupting the middle 6 bits,

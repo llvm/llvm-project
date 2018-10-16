@@ -643,7 +643,7 @@ StringRef arm::getLLVMArchSuffixForARM(StringRef CPU, StringRef Arch,
   return llvm::ARM::getSubArch(ArchKind);
 }
 
-void arm::appendEBLinkFlags(const ArgList &Args, ArgStringList &CmdArgs,
+void arm::appendBE8LinkFlag(const ArgList &Args, ArgStringList &CmdArgs,
                             const llvm::Triple &Triple) {
   if (Args.hasArg(options::OPT_r))
     return;

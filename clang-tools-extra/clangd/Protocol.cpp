@@ -25,6 +25,8 @@ namespace clang {
 namespace clangd {
 using namespace llvm;
 
+char LSPError::ID;
+
 URIForFile::URIForFile(std::string AbsPath) {
   assert(llvm::sys::path::is_absolute(AbsPath) && "the path is relative");
   File = std::move(AbsPath);
@@ -251,6 +253,9 @@ bool fromJSON(const json::Value &Params, TextDocumentClientCapabilities &R) {
     return false;
   O.map("completion", R.completion);
   O.map("publishDiagnostics", R.publishDiagnostics);
+  if (auto *CodeAction = Params.getAsObject()->getObject("codeAction"))
+    if (CodeAction->getObject("codeActionLiteralSupport"))
+      R.codeActionLiteralSupport = true;
   return true;
 }
 
@@ -360,6 +365,17 @@ bool fromJSON(const json::Value &Params, DocumentSymbolParams &R) {
   return O && O.map("textDocument", R.textDocument);
 }
 
+llvm::json::Value toJSON(const Diagnostic &D) {
+  json::Object Diag{
+      {"range", D.range},
+      {"severity", D.severity},
+      {"message", D.message},
+  };
+  // FIXME: this should be used for publishDiagnostics.
+  // FIXME: send category and fixes when appropriate.
+  return std::move(Diag);
+}
+
 bool fromJSON(const json::Value &Params, Diagnostic &R) {
   json::ObjectMapper O(Params);
   if (!O || !O.map("range", R.range) || !O.map("message", R.message))
@@ -446,6 +462,21 @@ json::Value toJSON(const Command &C) {
   if (C.workspaceEdit)
     Cmd["arguments"] = {*C.workspaceEdit};
   return std::move(Cmd);
+}
+
+const llvm::StringLiteral CodeAction::QUICKFIX_KIND = "quickfix";
+
+llvm::json::Value toJSON(const CodeAction &CA) {
+  auto CodeAction = json::Object{{"title", CA.title}};
+  if (CA.kind)
+    CodeAction["kind"] = *CA.kind;
+  if (CA.diagnostics)
+    CodeAction["diagnostics"] = json::Array(*CA.diagnostics);
+  if (CA.edit)
+    CodeAction["edit"] = *CA.edit;
+  if (CA.command)
+    CodeAction["command"] = *CA.command;
+  return std::move(CodeAction);
 }
 
 json::Value toJSON(const WorkspaceEdit &WE) {
@@ -665,8 +696,17 @@ bool fromJSON(const llvm::json::Value &Params,
 bool fromJSON(const json::Value &Params,
               ClangdConfigurationParamsChange &CCPC) {
   json::ObjectMapper O(Params);
-  return O && O.map("compilationDatabasePath", CCPC.compilationDatabasePath) &&
+  return O &&
          O.map("compilationDatabaseChanges", CCPC.compilationDatabaseChanges);
+}
+
+bool fromJSON(const json::Value &Params, ClangdInitializationOptions &Opts) {
+  if (!fromJSON(Params, Opts.ParamsChange)) {
+    return false;
+  }
+
+  json::ObjectMapper O(Params);
+  return O && O.map("compilationDatabasePath", Opts.compilationDatabasePath);
 }
 
 bool fromJSON(const json::Value &Params, ReferenceParams &R) {

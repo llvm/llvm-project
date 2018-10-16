@@ -232,7 +232,7 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
   if (!FirstCondBlock || !LastCondBlock || (FirstCondBlock == LastCondBlock))
     return false;
 
-  TerminatorInst *TBB = LastCondBlock->getTerminator();
+  Instruction *TBB = LastCondBlock->getTerminator();
   BasicBlock *PS1 = TBB->getSuccessor(0);
   BasicBlock *PS2 = TBB->getSuccessor(1);
   BranchInst *PBI1 = dyn_cast<BranchInst>(PS1->getTerminator());
@@ -325,7 +325,7 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
 bool FlattenCFGOpt::CompareIfRegionBlock(BasicBlock *Head1, BasicBlock *Head2,
                                          BasicBlock *Block1,
                                          BasicBlock *Block2) {
-  TerminatorInst *PTI2 = Head2->getTerminator();
+  Instruction *PTI2 = Head2->getTerminator();
   Instruction *PBI2 = &Head2->front();
 
   bool eq1 = (Block1 == Head1);
@@ -421,7 +421,7 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   if ((IfTrue2 != SecondEntryBlock) && (IfFalse2 != SecondEntryBlock))
     return false;
 
-  TerminatorInst *PTI2 = SecondEntryBlock->getTerminator();
+  Instruction *PTI2 = SecondEntryBlock->getTerminator();
   Instruction *PBI2 = &SecondEntryBlock->front();
 
   if (!CompareIfRegionBlock(FirstEntryBlock, SecondEntryBlock, IfTrue1,

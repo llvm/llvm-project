@@ -150,7 +150,7 @@ struct DOTGraphTraits<const Function*> : public DefaultDOTGraphTraits {
   /// Display the raw branch weights from PGO.
   std::string getEdgeAttributes(const BasicBlock *Node, succ_const_iterator I,
                                 const Function *F) {
-    const TerminatorInst *TI = Node->getTerminator();
+    const Instruction *TI = Node->getTerminator();
     if (TI->getNumSuccessors() == 1)
       return "";
 

@@ -114,14 +114,20 @@ struct DumpVisitor {
     printStr("}");
     --Depth;
   }
+
   // Overload used when T is exactly 'bool', not merely convertible to 'bool'.
-  template<typename T, T * = (bool*)nullptr>
-  void print(T B) {
-    printStr(B ? "true" : "false");
+  void print(bool B) { printStr(B ? "true" : "false"); }
+
+  template <class T>
+  typename std::enable_if<std::is_unsigned<T>::value>::type print(T N) {
+    fprintf(stderr, "%llu", (unsigned long long)N);
   }
-  void print(size_t N) {
-    fprintf(stderr, "%zu", N);
+
+  template <class T>
+  typename std::enable_if<std::is_signed<T>::value>::type print(T N) {
+    fprintf(stderr, "%lld", (long long)N);
   }
+
   void print(ReferenceKind RK) {
     switch (RK) {
     case ReferenceKind::LValue:
@@ -318,7 +324,7 @@ public:
 // Code beyond this point should not be synchronized with LLVM.
 //===----------------------------------------------------------------------===//
 
-using Demangler = itanium_demangle::Db<DefaultAllocator>;
+using Demangler = itanium_demangle::ManglingParser<DefaultAllocator>;
 
 namespace {
 enum : int {

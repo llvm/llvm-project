@@ -4,12 +4,16 @@
 ; Make sure this compiles. This test used to fail with an invalid phi node: the
 ; two predecessors were outlined and the SSA representation was invalid.
 
+; CHECK-LABEL: @fun
+; CHECK: codeRepl:
+; CHECK-NEXT: call void @fun_if.else
+
 define void @fun() {
 entry:
   br i1 undef, label %if.then, label %if.else
 
 if.then:
-  unreachable
+  ret void
 
 if.else:
   br label %if.then4

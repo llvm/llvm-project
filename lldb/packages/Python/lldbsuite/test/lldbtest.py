@@ -2237,10 +2237,12 @@ class TestBase(Base):
 
         # Run FileCheck.
         filecheck_bin = configuration.get_filecheck_path()
+        if not filecheck_bin:
+            self.assertTrue(False, "No valid FileCheck executable specified")
         filecheck_args = [filecheck_bin, check_file_abs]
         if filecheck_options:
             filecheck_args.append(filecheck_options)
-        subproc = Popen(filecheck_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        subproc = Popen(filecheck_args, stdin=PIPE, stdout=PIPE, stderr=PIPE, universal_newlines = True)
         cmd_stdout, cmd_stderr = subproc.communicate(input=output)
         cmd_status = subproc.returncode
 

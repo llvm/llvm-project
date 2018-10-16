@@ -468,9 +468,6 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
       Ctx->getELFSection(".eh_frame", EHSectionType, EHSectionFlags);
 
   StackSizesSection = Ctx->getELFSection(".stack_sizes", ELF::SHT_PROGBITS, 0);
-
-  BTFSection = Ctx->getELFSection(".BTF", ELF::SHT_PROGBITS, 0);
-  BTFExtSection = Ctx->getELFSection(".BTF.ext", ELF::SHT_PROGBITS, 0);
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
@@ -745,6 +742,12 @@ void MCObjectFileInfo::initWasmMCObjectFileInfo(const Triple &T) {
   DwarfFrameSection = Ctx->getWasmSection(".debug_frame", SectionKind::getMetadata());
   DwarfPubNamesSection = Ctx->getWasmSection(".debug_pubnames", SectionKind::getMetadata());
   DwarfPubTypesSection = Ctx->getWasmSection(".debug_pubtypes", SectionKind::getMetadata());
+
+  // Wasm use data section for LSDA.
+  // TODO Consider putting each function's exception table in a separate
+  // section, as in -function-sections, to facilitate lld's --gc-section.
+  LSDASection = Ctx->getWasmSection(".rodata.gcc_except_table",
+                                    SectionKind::getReadOnlyWithRel());
 
   // TODO: Define more sections.
 }

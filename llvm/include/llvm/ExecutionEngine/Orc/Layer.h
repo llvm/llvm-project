@@ -51,12 +51,6 @@ public:
   /// JITDylib.
   virtual Error add(JITDylib &JD, VModuleKey K, ThreadSafeModule TSM);
 
-  /// Adds a MaterializationUnit representing the given IR to the main
-  /// JITDylib.
-  Error add(VModuleKey K, ThreadSafeModule TSM) {
-    return add(ES.getMainJITDylib(), K, std::move(TSM));
-  }
-
   /// Emit should materialize the given IR.
   virtual void emit(MaterializationResponsibility R, VModuleKey K,
                     ThreadSafeModule TSM) = 0;
@@ -126,12 +120,6 @@ public:
   /// Adds a MaterializationUnit representing the given IR to the given
   /// JITDylib.
   virtual Error add(JITDylib &JD, VModuleKey K, std::unique_ptr<MemoryBuffer> O);
-
-  /// Adds a MaterializationUnit representing the given object to the main
-  /// JITDylib.
-  Error add(VModuleKey K, std::unique_ptr<MemoryBuffer> O) {
-    return add(ES.getMainJITDylib(), K, std::move(O));
-  }
 
   /// Emit should materialize the given IR.
   virtual void emit(MaterializationResponsibility R, VModuleKey K,
