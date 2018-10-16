@@ -492,6 +492,11 @@ namespace std {
 
 #define _LIBCPP_ALWAYS_INLINE __attribute__ ((__always_inline__))
 
+// No apple compilers support ""d and ""y at this time.
+#if _LIBCPP_CLANG_VER < 800 || defined(__apple_build_version__)
+#define	_LIBCPP_HAS_NO_CXX20_CHRONO_LITERALS
+#endif
+
 #elif defined(_LIBCPP_COMPILER_GCC)
 
 #define _ALIGNAS(x) __attribute__((__aligned__(x)))

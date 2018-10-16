@@ -4651,3 +4651,46 @@ SDValue TargetLowering::lowerCmpEqZeroToCtlzSrl(SDValue Op,
   }
   return SDValue();
 }
+
+SDValue
+TargetLowering::getExpandedSignedSaturationAddition(SDNode *Node,
+                                                    SelectionDAG &DAG) const {
+  assert(Node->getOpcode() == ISD::SADDSAT &&
+         "Expected method to receive SADDSAT node.");
+  assert(Node->getNumOperands() == 2 &&
+         "Expected SADDSAT node to have 2 operands.");
+
+  SDLoc dl(Node);
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+  assert(LHS.getValueType().isScalarInteger() &&
+         "Expected operands to be integers. Vector of int arguments should "
+         "already be unrolled.");
+  assert(RHS.getValueType().isScalarInteger() &&
+         "Expected operands to be integers. Vector of int arguments should "
+         "already be unrolled.");
+  assert(LHS.getValueType() == RHS.getValueType() &&
+         "Expected both operands of SADDSAT to be the same type");
+
+  unsigned BitWidth = LHS.getValueSizeInBits();
+  EVT ResultType = LHS.getValueType();
+  EVT BoolVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ResultType);
+  SDValue Result =
+      DAG.getNode(ISD::SADDO, dl, DAG.getVTList(ResultType, BoolVT), LHS, RHS);
+  SDValue Sum = Result.getValue(0);
+  SDValue Overflow = Result.getValue(1);
+
+  // SatMax -> Overflow && Sum < 0
+  // SatMin -> Overflow && Sum > 0
+  SDValue Zero = DAG.getConstant(0, dl, LHS.getValueType());
+
+  SDValue SumNeg = DAG.getSetCC(dl, BoolVT, Sum, Zero, ISD::SETLT);
+  APInt MinVal = APInt::getSignedMinValue(BitWidth);
+  APInt MaxVal = APInt::getSignedMaxValue(BitWidth);
+  SDValue SatMin = DAG.getConstant(MinVal, dl, ResultType);
+  SDValue SatMax = DAG.getConstant(MaxVal, dl, ResultType);
+
+  Result = DAG.getSelect(dl, ResultType, SumNeg, SatMax, SatMin);
+  return DAG.getSelect(dl, ResultType, Overflow, Result, Sum);
+}

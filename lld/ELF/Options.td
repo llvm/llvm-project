@@ -42,6 +42,12 @@ defm compress_debug_sections:
 
 defm defsym: Eq<"defsym", "Define a symbol alias">, MetaVarName<"<symbol>=<value>">;
 
+defm split_stack_adjust_size
+    : Eq<"split-stack-adjust-size",
+         "Specify adjustment to stack size when a split-stack function calls a "
+         "non-split-stack function">,
+      MetaVarName<"<value>">;
+
 defm library_path:
   Eq<"library-path", "Add a directory to the library search path">, MetaVarName<"<dir>">;
 
