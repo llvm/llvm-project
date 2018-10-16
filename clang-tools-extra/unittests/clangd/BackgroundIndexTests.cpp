@@ -11,6 +11,8 @@ namespace clangd {
 
 MATCHER_P(Named, N, "") { return arg.Name == N; }
 
+// Temporarily disabled: test timing out on buildbots.
+#if 0
 TEST(BackgroundIndexTest, IndexTwoFiles) {
   MockFSProvider FS;
   // a.h yields different symbols when included by A.cc vs B.cc.
@@ -32,6 +34,7 @@ TEST(BackgroundIndexTest, IndexTwoFiles) {
   EXPECT_THAT(runFuzzyFind(Idx, ""),
               UnorderedElementsAre(Named("a_h"), Named("foo"), Named("bar")));
 }
+#endif
 
 } // namespace clangd
 } // namespace clang
