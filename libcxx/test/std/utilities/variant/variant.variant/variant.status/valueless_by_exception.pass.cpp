@@ -34,13 +34,11 @@
 #include "variant_test_helpers.hpp"
 
 int main() {
-#if TEST_STD_VER == 17
-  { // This test does not pass on C++20 or later; see https://bugs.llvm.org/show_bug.cgi?id=39232
+  {
     using V = std::variant<int, ConstexprTestTypes::NoCtors>;
     constexpr V v;
     static_assert(!v.valueless_by_exception(), "");
   }
-#endif
   {
     using V = std::variant<int, long, std::string>;
     const V v("abc");

@@ -47,10 +47,4 @@ int main()
     assert ( ns == std::chrono::nanoseconds(645));
     auto ns2 = 645.ns;
     assert ( ns == ns2 );
-
-#if TEST_STD_VER > 17
-    std::chrono::year y1 = 2018y;
-    assert (y1 == std::chrono::year(2018));
-//  No conversion from floating point for years
-#endif
 }
