@@ -21,7 +21,7 @@ namespace {
       : llvm::orc::SimpleCompiler(*TM), TM(std::move(TM)) {}
   private:
     // FIXME: shared because std::functions (and thus
-    // IRCompileLayer2::CompileFunction) are not moveable.
+    // IRCompileLayer::CompileFunction) are not moveable.
     std::shared_ptr<llvm::TargetMachine> TM;
   };
 
@@ -96,7 +96,7 @@ LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES, JITTargetMachineBuilder JTMB,
       ObjLinkingLayer(*this->ES,
                       [this](VModuleKey K) { return getMemoryManager(K); }),
       CompileLayer(*this->ES, ObjLinkingLayer,
-                   MultiThreadedSimpleCompiler(std::move(JTMB))),
+                   ConcurrentIRCompiler(std::move(JTMB))),
       CtorRunner(Main), DtorRunner(Main) {
   assert(NumCompileThreads != 0 &&
          "Multithreaded LLJIT instance can not be created with 0 threads");

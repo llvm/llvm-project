@@ -54,7 +54,7 @@ public:
   }
 };
 
-TEST(CompileOnDemandLayerTest, FindSymbol) {
+TEST(LegacyCompileOnDemandLayerTest, FindSymbol) {
   MockBaseLayer<int, std::shared_ptr<Module>> TestBaseLayer;
   TestBaseLayer.findSymbolImpl =
     [](const std::string &Name, bool) {
@@ -76,7 +76,7 @@ TEST(CompileOnDemandLayerTest, FindSymbol) {
     llvm_unreachable("Should never be called");
   };
 
-  llvm::orc::CompileOnDemandLayer<decltype(TestBaseLayer)> COD(
+  llvm::orc::LegacyCompileOnDemandLayer<decltype(TestBaseLayer)> COD(
       ES, TestBaseLayer, GetResolver, SetResolver,
       [](Function &F) { return std::set<Function *>{&F}; }, CallbackMgr,
       [] { return llvm::make_unique<DummyStubsManager>(); }, true);

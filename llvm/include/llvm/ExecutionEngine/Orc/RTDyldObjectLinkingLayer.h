@@ -36,7 +36,7 @@
 namespace llvm {
 namespace orc {
 
-class RTDyldObjectLinkingLayer2 : public ObjectLayer {
+class RTDyldObjectLinkingLayer : public ObjectLayer {
 public:
   /// Functor for receiving object-loaded notifications.
   using NotifyLoadedFunction =
@@ -51,7 +51,7 @@ public:
 
   /// Construct an ObjectLinkingLayer with the given NotifyLoaded,
   ///        and NotifyEmitted functors.
-  RTDyldObjectLinkingLayer2(
+  RTDyldObjectLinkingLayer(
       ExecutionSession &ES, GetMemoryManagerFunction GetMemoryManager,
       NotifyLoadedFunction NotifyLoaded = NotifyLoadedFunction(),
       NotifyEmittedFunction NotifyEmitted = NotifyEmittedFunction());
@@ -66,7 +66,7 @@ public:
   /// the memory manager, rather than just the sections required for execution.
   ///
   /// This is kludgy, and may be removed in the future.
-  RTDyldObjectLinkingLayer2 &setProcessAllSections(bool ProcessAllSections) {
+  RTDyldObjectLinkingLayer &setProcessAllSections(bool ProcessAllSections) {
     this->ProcessAllSections = ProcessAllSections;
     return *this;
   }
@@ -79,13 +79,13 @@ public:
   ///
   /// FIXME: We should be able to remove this if/when COFF properly tracks
   /// exported symbols.
-  RTDyldObjectLinkingLayer2 &
+  RTDyldObjectLinkingLayer &
   setOverrideObjectFlagsWithResponsibilityFlags(bool OverrideObjectFlags) {
     this->OverrideObjectFlags = OverrideObjectFlags;
     return *this;
   }
 
-  /// If set, this RTDyldObjectLinkingLayer2 instance will claim responsibility
+  /// If set, this RTDyldObjectLinkingLayer instance will claim responsibility
   /// for any symbols provided by a given object file that were not already in
   /// the MaterializationResponsibility instance. Setting this flag allows
   /// higher-level program representations (e.g. LLVM IR) to be added based on
@@ -96,7 +96,7 @@ public:
   /// deterministically). If this option is set, clashes for the additional
   /// symbols may not be detected until late, and detection may depend on
   /// the flow of control through JIT'd code. Use with care.
-  RTDyldObjectLinkingLayer2 &
+  RTDyldObjectLinkingLayer &
   setAutoClaimResponsibilityForObjectSymbols(bool AutoClaimObjectSymbols) {
     this->AutoClaimObjectSymbols = AutoClaimObjectSymbols;
     return *this;
@@ -121,7 +121,7 @@ private:
   std::map<VModuleKey, std::shared_ptr<RuntimeDyld::MemoryManager>> MemMgrs;
 };
 
-class RTDyldObjectLinkingLayerBase {
+class LegacyRTDyldObjectLinkingLayerBase {
 public:
   using ObjectPtr = std::unique_ptr<MemoryBuffer>;
 
@@ -173,10 +173,10 @@ protected:
 /// object files to be loaded into memory, linked, and the addresses of their
 /// symbols queried. All objects added to this layer can see each other's
 /// symbols.
-class RTDyldObjectLinkingLayer : public RTDyldObjectLinkingLayerBase {
+class LegacyRTDyldObjectLinkingLayer : public LegacyRTDyldObjectLinkingLayerBase {
 public:
 
-  using RTDyldObjectLinkingLayerBase::ObjectPtr;
+  using LegacyRTDyldObjectLinkingLayerBase::ObjectPtr;
 
   /// Functor for receiving object-loaded notifications.
   using NotifyLoadedFtor =
@@ -197,7 +197,7 @@ private:
   template <typename MemoryManagerPtrT>
   class ConcreteLinkedObject : public LinkedObject {
   public:
-    ConcreteLinkedObject(RTDyldObjectLinkingLayer &Parent, VModuleKey K,
+    ConcreteLinkedObject(LegacyRTDyldObjectLinkingLayer &Parent, VModuleKey K,
                          OwnedObject Obj, MemoryManagerPtrT MemMgr,
                          std::shared_ptr<SymbolResolver> Resolver,
                          bool ProcessAllSections)
@@ -313,7 +313,7 @@ private:
     };
 
     VModuleKey K;
-    RTDyldObjectLinkingLayer &Parent;
+    LegacyRTDyldObjectLinkingLayer &Parent;
     MemoryManagerPtrT MemMgr;
     OwnedObject ObjForNotify;
     std::unique_ptr<PreFinalizeContents> PFC;
@@ -321,7 +321,7 @@ private:
 
   template <typename MemoryManagerPtrT>
   std::unique_ptr<ConcreteLinkedObject<MemoryManagerPtrT>>
-  createLinkedObject(RTDyldObjectLinkingLayer &Parent, VModuleKey K,
+  createLinkedObject(LegacyRTDyldObjectLinkingLayer &Parent, VModuleKey K,
                      OwnedObject Obj, MemoryManagerPtrT MemMgr,
                      std::shared_ptr<SymbolResolver> Resolver,
                      bool ProcessAllSections) {
@@ -341,7 +341,7 @@ public:
 
   /// Construct an ObjectLinkingLayer with the given NotifyLoaded,
   ///        and NotifyFinalized functors.
-  RTDyldObjectLinkingLayer(
+  LegacyRTDyldObjectLinkingLayer(
       ExecutionSession &ES, ResourcesGetter GetResources,
       NotifyLoadedFtor NotifyLoaded = NotifyLoadedFtor(),
       NotifyFinalizedFtor NotifyFinalized = NotifyFinalizedFtor(),

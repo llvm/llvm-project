@@ -696,7 +696,7 @@ int main(int argc, char **argv, char * const *envp) {
   return Result;
 }
 
-static orc::IRTransformLayer2::TransformFunction createDebugDumper() {
+static orc::IRTransformLayer::TransformFunction createDebugDumper() {
   switch (OrcDumpKind) {
   case DumpKind::NoDump:
     return [](orc::ThreadSafeModule TSM,
@@ -781,7 +781,7 @@ int runOrcLazyJIT(const char *ProgName) {
   auto J = ExitOnErr(orc::LLLazyJIT::Create(std::move(JTMB), DL, LazyJITCompileThreads));
 
   if (PerModuleLazy)
-    J->setPartitionFunction(orc::CompileOnDemandLayer2::compileWholeModule);
+    J->setPartitionFunction(orc::CompileOnDemandLayer::compileWholeModule);
 
   auto Dump = createDebugDumper();
 
@@ -797,7 +797,7 @@ int runOrcLazyJIT(const char *ProgName) {
       ExitOnErr(orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(DL)));
 
   orc::MangleAndInterner Mangle(J->getExecutionSession(), DL);
-  orc::LocalCXXRuntimeOverrides2 CXXRuntimeOverrides;
+  orc::LocalCXXRuntimeOverrides CXXRuntimeOverrides;
   ExitOnErr(CXXRuntimeOverrides.enable(J->getMainJITDylib(), Mangle));
 
   // Add the main module.

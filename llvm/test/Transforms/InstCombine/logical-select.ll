@@ -531,3 +531,39 @@ define <4 x i32> @vec_sel_xor_multi_use(<4 x i32> %a, <4 x i32> %b, <4 x i1> %c)
   ret <4 x i32> %add
 }
 
+; The 'ashr' guarantees that we have a bitmask, so this is select with truncated condition.
+
+define i32 @allSignBits(i32 %cond, i32 %tval, i32 %fval) {
+; CHECK-LABEL: @allSignBits(
+; CHECK-NEXT:    [[BITMASK:%.*]] = ashr i32 [[COND:%.*]], 31
+; CHECK-NEXT:    [[NOT_BITMASK:%.*]] = xor i32 [[BITMASK]], -1
+; CHECK-NEXT:    [[A1:%.*]] = and i32 [[BITMASK]], [[TVAL:%.*]]
+; CHECK-NEXT:    [[A2:%.*]] = and i32 [[NOT_BITMASK]], [[FVAL:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = or i32 [[A1]], [[A2]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %bitmask = ashr i32 %cond, 31
+  %not_bitmask = xor i32 %bitmask, -1
+  %a1 = and i32 %tval, %bitmask
+  %a2 = and i32 %not_bitmask, %fval
+  %sel = or i32 %a1, %a2
+  ret i32 %sel
+}
+
+define <4 x i8> @allSignBits_vec(<4 x i8> %cond, <4 x i8> %tval, <4 x i8> %fval) {
+; CHECK-LABEL: @allSignBits_vec(
+; CHECK-NEXT:    [[BITMASK:%.*]] = ashr <4 x i8> [[COND:%.*]], <i8 7, i8 7, i8 7, i8 7>
+; CHECK-NEXT:    [[NOT_BITMASK:%.*]] = xor <4 x i8> [[BITMASK]], <i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[A1:%.*]] = and <4 x i8> [[BITMASK]], [[TVAL:%.*]]
+; CHECK-NEXT:    [[A2:%.*]] = and <4 x i8> [[NOT_BITMASK]], [[FVAL:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = or <4 x i8> [[A2]], [[A1]]
+; CHECK-NEXT:    ret <4 x i8> [[SEL]]
+;
+  %bitmask = ashr <4 x i8> %cond, <i8 7, i8 7, i8 7, i8 7>
+  %not_bitmask = xor <4 x i8> %bitmask, <i8 -1, i8 -1, i8 -1, i8 -1>
+  %a1 = and <4 x i8> %tval, %bitmask
+  %a2 = and <4 x i8> %fval, %not_bitmask
+  %sel = or <4 x i8> %a2, %a1
+  ret <4 x i8> %sel
+}
+
