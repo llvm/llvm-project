@@ -149,14 +149,9 @@ if (LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY)
   endif()
 
   if ( CMAKE_OSX_DEPLOYMENT_TARGET STREQUAL "10.6" )
-    add_definitions(-D__STRICT_ANSI__)
-    add_link_flags(
-      "-compatibility_version 1"
-      "-current_version 1"
-      "-install_name /usr/lib/libc++.1.dylib"
-      "-Wl,-reexport_library,/usr/lib/libc++abi.dylib"
-      "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++unexp.exp"
-      "/usr/lib/libSystem.B.dylib")
+    message(FATAL_ERROR "Mac OSX 10.6 is not supported anymore as a deployment "
+                        "target. If you need support for this, please contact "
+                        "the libc++ maintainers.")
   else()
 	  if (DEFINED CMAKE_OSX_SYSROOT AND NOT CMAKE_OSX_SYSROOT STREQUAL "")
       list(FIND CMAKE_OSX_ARCHITECTURES "armv7" OSX_HAS_ARMV7)
