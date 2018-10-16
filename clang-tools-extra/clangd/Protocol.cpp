@@ -25,6 +25,8 @@ namespace clang {
 namespace clangd {
 using namespace llvm;
 
+char LSPError::ID;
+
 URIForFile::URIForFile(std::string AbsPath) {
   assert(llvm::sys::path::is_absolute(AbsPath) && "the path is relative");
   File = std::move(AbsPath);
