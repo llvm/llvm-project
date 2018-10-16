@@ -44,6 +44,9 @@ static std::string getMultiarchTriple(const Driver &D,
   llvm::Triple::EnvironmentType TargetEnvironment =
       TargetTriple.getEnvironment();
   bool IsAndroid = TargetTriple.isAndroid();
+  std::string Mips64Abi = "gnuabi64";
+  if (TargetEnvironment == llvm::Triple::GNUABIN32)
+    Mips64Abi = "gnuabin32";
 
   // For most architectures, just use whatever we have rather than trying to be
   // clever.
@@ -112,18 +115,14 @@ static std::string getMultiarchTriple(const Driver &D,
       return "mipsel-linux-gnu";
     break;
   case llvm::Triple::mips64:
-    if (D.getVFS().exists(SysRoot + "/lib/mips64-linux-gnu"))
-      return "mips64-linux-gnu";
-    if (D.getVFS().exists(SysRoot + "/lib/mips64-linux-gnuabi64"))
-      return "mips64-linux-gnuabi64";
+    if (D.getVFS().exists(SysRoot + "/lib/mips64-linux-" + Mips64Abi))
+      return "mips64-linux-" + Mips64Abi;
     break;
   case llvm::Triple::mips64el:
     if (IsAndroid)
       return "mips64el-linux-android";
-    if (D.getVFS().exists(SysRoot + "/lib/mips64el-linux-gnu"))
-      return "mips64el-linux-gnu";
-    if (D.getVFS().exists(SysRoot + "/lib/mips64el-linux-gnuabi64"))
-      return "mips64el-linux-gnuabi64";
+    if (D.getVFS().exists(SysRoot + "/lib/mips64el-linux-" + Mips64Abi))
+      return "mips64el-linux-" + Mips64Abi;
     break;
   case llvm::Triple::ppc:
     if (D.getVFS().exists(SysRoot + "/lib/powerpc-linux-gnuspe"))
@@ -702,6 +701,10 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   const StringRef MIPS64ELMultiarchIncludeDirs[] = {
       "/usr/include/mips64el-linux-gnu",
       "/usr/include/mips64el-linux-gnuabi64"};
+  const StringRef MIPSN32MultiarchIncludeDirs[] = {
+      "/usr/include/mips64-linux-gnuabin32"};
+  const StringRef MIPSN32ELMultiarchIncludeDirs[] = {
+      "/usr/include/mips64el-linux-gnuabin32"};
   const StringRef PPCMultiarchIncludeDirs[] = {
       "/usr/include/powerpc-linux-gnu",
       "/usr/include/powerpc-linux-gnuspe"};
@@ -748,10 +751,16 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     MultiarchIncludeDirs = MIPSELMultiarchIncludeDirs;
     break;
   case llvm::Triple::mips64:
-    MultiarchIncludeDirs = MIPS64MultiarchIncludeDirs;
+    if (getTriple().getEnvironment() == llvm::Triple::GNUABIN32)
+      MultiarchIncludeDirs = MIPSN32MultiarchIncludeDirs;
+    else
+      MultiarchIncludeDirs = MIPS64MultiarchIncludeDirs;
     break;
   case llvm::Triple::mips64el:
-    MultiarchIncludeDirs = MIPS64ELMultiarchIncludeDirs;
+    if (getTriple().getEnvironment() == llvm::Triple::GNUABIN32)
+      MultiarchIncludeDirs = MIPSN32ELMultiarchIncludeDirs;
+    else
+      MultiarchIncludeDirs = MIPS64ELMultiarchIncludeDirs;
     break;
   case llvm::Triple::ppc:
     MultiarchIncludeDirs = PPCMultiarchIncludeDirs;

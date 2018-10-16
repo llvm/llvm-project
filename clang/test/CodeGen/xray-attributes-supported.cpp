@@ -11,6 +11,14 @@
 // RUN: %clang_cc1 %s -fxray-instrument -std=c++11 -x c++ -emit-llvm -o - \
 // RUN:     -triple mips64el-unknown-linux-gnu | FileCheck %s
 // RUN: %clang_cc1 %s -fxray-instrument -std=c++11 -x c++ -emit-llvm -o - \
+// RUN:     -triple mips64-unknown-linux-gnuabi64 | FileCheck %s
+// RUN: %clang_cc1 %s -fxray-instrument -std=c++11 -x c++ -emit-llvm -o - \
+// RUN:     -triple mips64el-unknown-linux-gnuabi64 | FileCheck %s
+// RUN: %clang_cc1 %s -fxray-instrument -std=c++11 -x c++ -emit-llvm -o - \
+// RUN:     -triple mips64-unknown-linux-gnuabin32 | FileCheck %s
+// RUN: %clang_cc1 %s -fxray-instrument -std=c++11 -x c++ -emit-llvm -o - \
+// RUN:     -triple mips64el-unknown-linux-gnuabin32 | FileCheck %s
+// RUN: %clang_cc1 %s -fxray-instrument -std=c++11 -x c++ -emit-llvm -o - \
 // RUN:     -triple powerpc64le-unknown-linux-gnu | FileCheck %s
 
 // Make sure that the LLVM attribute for XRay-annotated functions do show up.
