@@ -166,6 +166,8 @@ private:
   SymbolKindBitset SupportedSymbolKinds;
   /// The supported completion item kinds of the client.
   CompletionItemKindBitset SupportedCompletionItemKinds;
+  // Whether the client supports CodeAction response objects.
+  bool SupportsCodeAction = false;
 
   // Store of the current versions of the open documents.
   DraftStore DraftMgr;
