@@ -486,12 +486,25 @@ static llvm::Triple computeTargetTriple(const Driver &D,
   // If target is MIPS adjust the target triple
   // accordingly to provided ABI name.
   A = Args.getLastArg(options::OPT_mabi_EQ);
-  if (A && Target.isMIPS())
-    Target = llvm::StringSwitch<llvm::Triple>(A->getValue())
-                 .Case("32", Target.get32BitArchVariant())
-                 .Case("n32", Target.get64BitArchVariant())
-                 .Case("64", Target.get64BitArchVariant())
-                 .Default(Target);
+  if (A && Target.isMIPS()) {
+    StringRef ABIName = A->getValue();
+    if (ABIName == "32") {
+      Target = Target.get32BitArchVariant();
+      if (Target.getEnvironment() == llvm::Triple::GNUABI64 ||
+          Target.getEnvironment() == llvm::Triple::GNUABIN32)
+        Target.setEnvironment(llvm::Triple::GNU);
+    } else if (ABIName == "n32") {
+      Target = Target.get64BitArchVariant();
+      if (Target.getEnvironment() == llvm::Triple::GNU ||
+          Target.getEnvironment() == llvm::Triple::GNUABI64)
+        Target.setEnvironment(llvm::Triple::GNUABIN32);
+    } else if (ABIName == "64") {
+      Target = Target.get64BitArchVariant();
+      if (Target.getEnvironment() == llvm::Triple::GNU ||
+          Target.getEnvironment() == llvm::Triple::GNUABIN32)
+        Target.setEnvironment(llvm::Triple::GNUABI64);
+    }
+  }
 
   return Target;
 }
