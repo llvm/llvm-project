@@ -44,9 +44,7 @@ static std::string getMultiarchTriple(const Driver &D,
   llvm::Triple::EnvironmentType TargetEnvironment =
       TargetTriple.getEnvironment();
   bool IsAndroid = TargetTriple.isAndroid();
-  std::string Mips64Abi = "gnuabi64";
-  if (TargetEnvironment == llvm::Triple::GNUABIN32)
-    Mips64Abi = "gnuabin32";
+  bool IsMipsR6 = TargetTriple.getSubArch() == llvm::Triple::MipsSubArch_r6;
 
   // For most architectures, just use whatever we have rather than trying to be
   // clever.
@@ -104,26 +102,36 @@ static std::string getMultiarchTriple(const Driver &D,
     if (D.getVFS().exists(SysRoot + "/lib/aarch64_be-linux-gnu"))
       return "aarch64_be-linux-gnu";
     break;
-  case llvm::Triple::mips:
-    if (D.getVFS().exists(SysRoot + "/lib/mips-linux-gnu"))
-      return "mips-linux-gnu";
+  case llvm::Triple::mips: {
+    std::string Arch = IsMipsR6 ? "mipsisa32r6" : "mips";
+    if (D.getVFS().exists(SysRoot + "/lib/" + Arch + "-linux-gnu"))
+      return Arch + "-linux-gnu";
     break;
-  case llvm::Triple::mipsel:
+  }
+  case llvm::Triple::mipsel: {
     if (IsAndroid)
       return "mipsel-linux-android";
-    if (D.getVFS().exists(SysRoot + "/lib/mipsel-linux-gnu"))
-      return "mipsel-linux-gnu";
+    std::string Arch = IsMipsR6 ? "mipsisa32r6el" : "mipsel";
+    if (D.getVFS().exists(SysRoot + "/lib/" + Arch + "-linux-gnu"))
+      return Arch + "-linux-gnu";
     break;
-  case llvm::Triple::mips64:
-    if (D.getVFS().exists(SysRoot + "/lib/mips64-linux-" + Mips64Abi))
-      return "mips64-linux-" + Mips64Abi;
+  }
+  case llvm::Triple::mips64: {
+    std::string Arch = IsMipsR6 ? "mipsisa64r6" : "mips64";
+    std::string ABI = llvm::Triple::getEnvironmentTypeName(TargetEnvironment);
+    if (D.getVFS().exists(SysRoot + "/lib/" + Arch + "-linux-" + ABI))
+      return Arch + "-linux-" + ABI;
     break;
-  case llvm::Triple::mips64el:
+  }
+  case llvm::Triple::mips64el: {
     if (IsAndroid)
       return "mips64el-linux-android";
-    if (D.getVFS().exists(SysRoot + "/lib/mips64el-linux-" + Mips64Abi))
-      return "mips64el-linux-" + Mips64Abi;
+    std::string Arch = IsMipsR6 ? "mipsisa64r6el" : "mips64el";
+    std::string ABI = llvm::Triple::getEnvironmentTypeName(TargetEnvironment);
+    if (D.getVFS().exists(SysRoot + "/lib/" + Arch + "-linux-" + ABI))
+      return Arch + "-linux-" + ABI;
     break;
+  }
   case llvm::Triple::ppc:
     if (D.getVFS().exists(SysRoot + "/lib/powerpc-linux-gnuspe"))
       return "powerpc-linux-gnuspe";
@@ -697,14 +705,25 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   const StringRef MIPSELMultiarchIncludeDirs[] = {
       "/usr/include/mipsel-linux-gnu"};
   const StringRef MIPS64MultiarchIncludeDirs[] = {
-      "/usr/include/mips64-linux-gnu", "/usr/include/mips64-linux-gnuabi64"};
+      "/usr/include/mips64-linux-gnuabi64"};
   const StringRef MIPS64ELMultiarchIncludeDirs[] = {
-      "/usr/include/mips64el-linux-gnu",
       "/usr/include/mips64el-linux-gnuabi64"};
   const StringRef MIPSN32MultiarchIncludeDirs[] = {
       "/usr/include/mips64-linux-gnuabin32"};
   const StringRef MIPSN32ELMultiarchIncludeDirs[] = {
       "/usr/include/mips64el-linux-gnuabin32"};
+  const StringRef MIPSR6MultiarchIncludeDirs[] = {
+      "/usr/include/mipsisa32-linux-gnu"};
+  const StringRef MIPSR6ELMultiarchIncludeDirs[] = {
+      "/usr/include/mipsisa32r6el-linux-gnu"};
+  const StringRef MIPS64R6MultiarchIncludeDirs[] = {
+      "/usr/include/mipsisa64r6-linux-gnuabi64"};
+  const StringRef MIPS64R6ELMultiarchIncludeDirs[] = {
+      "/usr/include/mipsisa64r6el-linux-gnuabi64"};
+  const StringRef MIPSN32R6MultiarchIncludeDirs[] = {
+      "/usr/include/mipsisa64r6-linux-gnuabin32"};
+  const StringRef MIPSN32R6ELMultiarchIncludeDirs[] = {
+      "/usr/include/mipsisa64r6el-linux-gnuabin32"};
   const StringRef PPCMultiarchIncludeDirs[] = {
       "/usr/include/powerpc-linux-gnu",
       "/usr/include/powerpc-linux-gnuspe"};
@@ -745,19 +764,35 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
       MultiarchIncludeDirs = ARMEBMultiarchIncludeDirs;
     break;
   case llvm::Triple::mips:
-    MultiarchIncludeDirs = MIPSMultiarchIncludeDirs;
+    if (getTriple().getSubArch() == llvm::Triple::MipsSubArch_r6)
+      MultiarchIncludeDirs = MIPSR6MultiarchIncludeDirs;
+    else
+      MultiarchIncludeDirs = MIPSMultiarchIncludeDirs;
     break;
   case llvm::Triple::mipsel:
-    MultiarchIncludeDirs = MIPSELMultiarchIncludeDirs;
+    if (getTriple().getSubArch() == llvm::Triple::MipsSubArch_r6)
+      MultiarchIncludeDirs = MIPSR6ELMultiarchIncludeDirs;
+    else
+      MultiarchIncludeDirs = MIPSELMultiarchIncludeDirs;
     break;
   case llvm::Triple::mips64:
-    if (getTriple().getEnvironment() == llvm::Triple::GNUABIN32)
+    if (getTriple().getSubArch() == llvm::Triple::MipsSubArch_r6)
+      if (getTriple().getEnvironment() == llvm::Triple::GNUABIN32)
+        MultiarchIncludeDirs = MIPSN32R6MultiarchIncludeDirs;
+      else
+        MultiarchIncludeDirs = MIPS64R6MultiarchIncludeDirs;
+    else if (getTriple().getEnvironment() == llvm::Triple::GNUABIN32)
       MultiarchIncludeDirs = MIPSN32MultiarchIncludeDirs;
     else
       MultiarchIncludeDirs = MIPS64MultiarchIncludeDirs;
     break;
   case llvm::Triple::mips64el:
-    if (getTriple().getEnvironment() == llvm::Triple::GNUABIN32)
+    if (getTriple().getSubArch() == llvm::Triple::MipsSubArch_r6)
+      if (getTriple().getEnvironment() == llvm::Triple::GNUABIN32)
+        MultiarchIncludeDirs = MIPSN32R6ELMultiarchIncludeDirs;
+      else
+        MultiarchIncludeDirs = MIPS64R6ELMultiarchIncludeDirs;
+    else if (getTriple().getEnvironment() == llvm::Triple::GNUABIN32)
       MultiarchIncludeDirs = MIPSN32ELMultiarchIncludeDirs;
     else
       MultiarchIncludeDirs = MIPS64ELMultiarchIncludeDirs;

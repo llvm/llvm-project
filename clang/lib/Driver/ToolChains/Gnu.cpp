@@ -1871,26 +1871,30 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       "i486-slackware-linux", "i686-montavista-linux", "i586-linux-gnu"};
 
   static const char *const MIPSLibDirs[] = {"/lib"};
-  static const char *const MIPSTriples[] = {"mips-linux-gnu", "mips-mti-linux",
-                                            "mips-mti-linux-gnu",
-                                            "mips-img-linux-gnu"};
+  static const char *const MIPSTriples[] = {
+      "mips-linux-gnu", "mips-mti-linux", "mips-mti-linux-gnu",
+      "mips-img-linux-gnu", "mipsisa32r6-linux-gnu"};
   static const char *const MIPSELLibDirs[] = {"/lib"};
-  static const char *const MIPSELTriples[] = {"mipsel-linux-gnu",
-                                              "mips-img-linux-gnu"};
+  static const char *const MIPSELTriples[] = {
+      "mipsel-linux-gnu", "mips-img-linux-gnu", "mipsisa32r6el-linux-gnu"};
 
   static const char *const MIPS64LibDirs[] = {"/lib64", "/lib"};
   static const char *const MIPS64Triples[] = {
-      "mips64-linux-gnu", "mips-mti-linux-gnu", "mips-img-linux-gnu",
-      "mips64-linux-gnuabi64"};
+      "mips64-linux-gnu",      "mips-mti-linux-gnu",
+      "mips-img-linux-gnu",    "mips64-linux-gnuabi64",
+      "mipsisa64r6-linux-gnu", "mipsisa64r6-linux-gnuabi64"};
   static const char *const MIPS64ELLibDirs[] = {"/lib64", "/lib"};
   static const char *const MIPS64ELTriples[] = {
-      "mips64el-linux-gnu", "mips-mti-linux-gnu", "mips-img-linux-gnu",
-      "mips64el-linux-gnuabi64"};
+      "mips64el-linux-gnu",      "mips-mti-linux-gnu",
+      "mips-img-linux-gnu",      "mips64el-linux-gnuabi64",
+      "mipsisa64r6el-linux-gnu", "mipsisa64r6el-linux-gnuabi64"};
 
   static const char *const MIPSN32LibDirs[] = {"/lib32"};
-  static const char *const MIPSN32Triples[] = {"mips64-linux-gnuabin32"};
+  static const char *const MIPSN32Triples[] = {"mips64-linux-gnuabin32",
+                                               "mipsisa64r6-linux-gnuabin32"};
   static const char *const MIPSN32ELLibDirs[] = {"/lib32"};
-  static const char *const MIPSN32ELTriples[] = {"mips64el-linux-gnuabin32"};
+  static const char *const MIPSN32ELTriples[] = {
+      "mips64el-linux-gnuabin32", "mipsisa64r6el-linux-gnuabin32"};
 
   static const char *const PPCLibDirs[] = {"/lib32", "/lib"};
   static const char *const PPCTriples[] = {
