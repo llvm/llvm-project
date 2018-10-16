@@ -72,7 +72,8 @@ public:
 } // namespace
 
 // Returns callbacks that can be used to update the FileIndex with new ASTs.
-std::unique_ptr<ParsingCallbacks> makeUpdateCallbacks(FileIndex *FIndex) {
+static std::unique_ptr<ParsingCallbacks>
+makeUpdateCallbacks(FileIndex *FIndex) {
   struct CB : public ParsingCallbacks {
     CB(FileIndex *FIndex) : FIndex(FIndex) {}
     FileIndex *FIndex;
@@ -104,8 +105,10 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
     : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),
       ResourceDir(Opts.ResourceDir ? Opts.ResourceDir->str()
                                    : getStandardResourceDir()),
-      DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex(Opts.URISchemes)
-                                              : nullptr),
+      DynamicIdx(Opts.BuildDynamicSymbolIndex
+                     ? new FileIndex(Opts.URISchemes,
+                                     Opts.HeavyweightDynamicSymbolIndex)
+                     : nullptr),
       PCHs(std::make_shared<PCHContainerOperations>()),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
       // parsed file and rebuild the file index synchronously each time an AST

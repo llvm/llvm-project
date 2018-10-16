@@ -197,6 +197,10 @@ CAST_OPERATION(IntegralToBoolean)
 ///    float f = i;
 CAST_OPERATION(IntegralToFloating)
 
+/// CK_FixedPointCast - Fixed point to fixed point.
+///    (_Accum) 0.5r
+CAST_OPERATION(FixedPointCast)
+
 /// CK_FloatingToIntegral - Floating point to integral.  Rounds
 /// towards zero, discarding any fractional component.
 ///    (int) f

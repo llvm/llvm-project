@@ -382,6 +382,18 @@
     # CHECK: f64x2.abs # encoding: [0xfd,0x80]
     f64x2.abs
 
+    # CHECK: f32x4.min # encoding: [0xfd,0x81]
+    f32x4.min
+
+    # CHECK: f64x2.min # encoding: [0xfd,0x82]
+    f64x2.min
+
+    # CHECK: f32x4.max # encoding: [0xfd,0x83]
+    f32x4.max
+
+    # CHECK: f64x2.max # encoding: [0xfd,0x84]
+    f64x2.max
+
     # CHECK: f32x4.add # encoding: [0xfd,0x85]
     f32x4.add
 

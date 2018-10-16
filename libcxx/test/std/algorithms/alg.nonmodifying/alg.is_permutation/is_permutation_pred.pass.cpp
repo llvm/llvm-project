@@ -44,6 +44,18 @@ constexpr bool test_constexpr() {
     }
 #endif
 
+
+struct S {
+  S(int i) : i_(i) {}
+  bool operator==(const S& other) = delete;
+  int i_;
+};
+
+struct eq {
+  bool operator()(const S& a, const S&b) { return a.i_ == b.i_; }
+};
+
+
 int main()
 {
     {
@@ -739,14 +751,6 @@ int main()
 #endif
     }
     {
-      struct S {
-          S(int i) : i_(i) {}
-          bool operator==(const S& other) = delete;
-          int i_;
-      };
-      struct eq {
-          bool operator()(const S& a, const S&b) { return a.i_ == b.i_; }
-      };
       const S a[] = {S(0), S(1)};
       const S b[] = {S(1), S(0)};
       const unsigned sa = sizeof(a)/sizeof(a[0]);

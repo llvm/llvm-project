@@ -267,7 +267,7 @@ bool LoopInvariantCodeMotion::runOnLoop(
   BasicBlock *Preheader = L->getLoopPreheader();
 
   // Compute loop safety information.
-  LoopSafetyInfo SafetyInfo;
+  SimpleLoopSafetyInfo SafetyInfo;
   SafetyInfo.computeLoopSafetyInfo(L);
 
   // We want to visit all of the instructions in this loop... that are not parts
@@ -798,7 +798,7 @@ static bool isFreeInLoop(const Instruction &I, const Loop *CurLoop,
 static bool isNotUsedOrFreeInLoop(const Instruction &I, const Loop *CurLoop,
                                   const LoopSafetyInfo *SafetyInfo,
                                   TargetTransformInfo *TTI, bool &FreeInLoop) {
-  const auto &BlockColors = SafetyInfo->BlockColors;
+  const auto &BlockColors = SafetyInfo->getBlockColors();
   bool IsFree = isFreeInLoop(I, CurLoop, TTI);
   for (const User *U : I.users()) {
     const Instruction *UI = cast<Instruction>(U);
@@ -833,7 +833,7 @@ CloneInstructionInExitBlock(Instruction &I, BasicBlock &ExitBlock, PHINode &PN,
                             const LoopSafetyInfo *SafetyInfo) {
   Instruction *New;
   if (auto *CI = dyn_cast<CallInst>(&I)) {
-    const auto &BlockColors = SafetyInfo->BlockColors;
+    const auto &BlockColors = SafetyInfo->getBlockColors();
 
     // Sinking call-sites need to be handled differently from other
     // instructions.  The cloned call-site needs a funclet bundle operand
@@ -913,7 +913,7 @@ static bool canSplitPredecessors(PHINode *PN, LoopSafetyInfo *SafetyInfo) {
   // it require updating BlockColors for all offspring blocks accordingly. By
   // skipping such corner case, we can make updating BlockColors after splitting
   // predecessor fairly simple.
-  if (!SafetyInfo->BlockColors.empty() && BB->getFirstNonPHI()->isEHPad())
+  if (!SafetyInfo->getBlockColors().empty() && BB->getFirstNonPHI()->isEHPad())
     return false;
   for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
     BasicBlock *BBPred = *PI;
@@ -967,7 +967,7 @@ static void splitPredecessorsOfLoopExit(PHINode *PN, DominatorTree *DT,
   // LE:
   //   %p = phi [%p1, %LE.split], [%p2, %LE.split2]
   //
-  auto &BlockColors = SafetyInfo->BlockColors;
+  const auto &BlockColors = SafetyInfo->getBlockColors();
   SmallSetVector<BasicBlock *, 8> PredBBs(pred_begin(ExitBB), pred_end(ExitBB));
   while (!PredBBs.empty()) {
     BasicBlock *PredBB = *PredBBs.begin();
@@ -979,14 +979,11 @@ static void splitPredecessorsOfLoopExit(PHINode *PN, DominatorTree *DT,
       // Since we do not allow splitting EH-block with BlockColors in
       // canSplitPredecessors(), we can simply assign predecessor's color to
       // the new block.
-      if (!BlockColors.empty()) {
+      if (!BlockColors.empty())
         // Grab a reference to the ColorVector to be inserted before getting the
         // reference to the vector we are copying because inserting the new
         // element in BlockColors might cause the map to be reallocated.
-        ColorVector &ColorsForNewBlock = BlockColors[NewPred];
-        ColorVector &ColorsForOldBlock = BlockColors[PredBB];
-        ColorsForNewBlock = ColorsForOldBlock;
-      }
+        SafetyInfo->copyColors(NewPred, PredBB);
     }
     PredBBs.remove(PredBB);
   }
@@ -1116,7 +1113,7 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
       // The check on hasMetadataOtherThanDebugLoc is to prevent us from burning
       // time in isGuaranteedToExecute if we don't actually have anything to
       // drop.  It is a compile time optimization, not required for correctness.
-      !isGuaranteedToExecute(I, DT, CurLoop, SafetyInfo))
+      !SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop))
     I.dropUnknownNonDebugMetadata();
 
   // Move the new node to the Preheader, before its terminator.
@@ -1150,7 +1147,7 @@ static bool isSafeToExecuteUnconditionally(Instruction &Inst,
     return true;
 
   bool GuaranteedToExecute =
-      isGuaranteedToExecute(Inst, DT, CurLoop, SafetyInfo);
+      SafetyInfo->isGuaranteedToExecute(Inst, DT, CurLoop);
 
   if (!GuaranteedToExecute) {
     auto *LI = dyn_cast<LoadInst>(&Inst);
@@ -1408,7 +1405,7 @@ bool llvm::promoteLoopAccessesToScalars(
 
         if (!DereferenceableInPH || !SafeToInsertStore ||
             (InstAlignment > Alignment)) {
-          if (isGuaranteedToExecute(*UI, DT, CurLoop, SafetyInfo)) {
+          if (SafetyInfo->isGuaranteedToExecute(*UI, DT, CurLoop)) {
             DereferenceableInPH = true;
             SafeToInsertStore = true;
             Alignment = std::max(Alignment, InstAlignment);

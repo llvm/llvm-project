@@ -55,8 +55,19 @@ Hexagon::Hexagon() {
   NoneRel = R_HEX_NONE;
 }
 
-// Support V60 only at the moment.
-uint32_t Hexagon::calcEFlags() const { return 0x60; }
+uint32_t Hexagon::calcEFlags() const {
+  assert(!ObjectFiles.empty());
+
+  // The architecture revision must always be equal to or greater than
+  // greatest revision in the list of inputs.
+  uint32_t Ret = 0;
+  for (InputFile *F : ObjectFiles) {
+    uint32_t EFlags = cast<ObjFile<ELF32LE>>(F)->getObj().getHeader()->e_flags;
+    if (EFlags > Ret)
+      Ret = EFlags;
+  }
+  return Ret;
+}
 
 static uint32_t applyMask(uint32_t Mask, uint32_t Data) {
   uint32_t Result = 0;

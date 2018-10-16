@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 #include "xray_utils.h"
 
+#include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "xray_allocator.h"
 #include "xray_defs.h"
 #include "xray_flags.h"
 #include <cstdio>
@@ -31,7 +33,11 @@ void printToStdErr(const char *Buffer) XRAY_NEVER_INSTRUMENT {
   fprintf(stderr, "%s", Buffer);
 }
 
-void retryingWriteAll(int Fd, const char *Begin, const char *End) XRAY_NEVER_INSTRUMENT {
+LogWriter::~LogWriter() {
+  internal_close(Fd);
+}
+
+void LogWriter::WriteAll(const char *Begin, const char *End) XRAY_NEVER_INSTRUMENT {
   if (Begin == End)
     return;
   auto TotalBytes = std::distance(Begin, End);
@@ -49,50 +55,11 @@ void retryingWriteAll(int Fd, const char *Begin, const char *End) XRAY_NEVER_INS
   }
 }
 
-std::pair<ssize_t, bool> retryingReadSome(int Fd, char *Begin,
-                                          char *End) XRAY_NEVER_INSTRUMENT {
-  auto BytesToRead = std::distance(Begin, End);
-  ssize_t BytesRead;
-  ssize_t TotalBytesRead = 0;
-  while (BytesToRead && (BytesRead = read(Fd, Begin, BytesToRead))) {
-    if (BytesRead == -1) {
-      if (errno == EINTR)
-        continue;
-      Report("Read error; errno = %d\n", errno);
-      return std::make_pair(TotalBytesRead, false);
-    }
-
-    TotalBytesRead += BytesRead;
-    BytesToRead -= BytesRead;
-    Begin += BytesRead;
-  }
-  return std::make_pair(TotalBytesRead, true);
+void LogWriter::Flush() XRAY_NEVER_INSTRUMENT {
+  fsync(Fd);
 }
 
-bool readValueFromFile(const char *Filename,
-                       long long *Value) XRAY_NEVER_INSTRUMENT {
-  int Fd = open(Filename, O_RDONLY | O_CLOEXEC);
-  if (Fd == -1)
-    return false;
-  static constexpr size_t BufSize = 256;
-  char Line[BufSize] = {};
-  ssize_t BytesRead;
-  bool Success;
-  std::tie(BytesRead, Success) = retryingReadSome(Fd, Line, Line + BufSize);
-  if (!Success)
-    return false;
-  close(Fd);
-  const char *End = nullptr;
-  long long Tmp = internal_simple_strtoll(Line, &End, 10);
-  bool Result = false;
-  if (Line[0] != '\0' && (*End == '\n' || *End == '\0')) {
-    *Value = Tmp;
-    Result = true;
-  }
-  return Result;
-}
-
-int getLogFD() XRAY_NEVER_INSTRUMENT {
+LogWriter *LogWriter::Open() XRAY_NEVER_INSTRUMENT {
   // Open a temporary file once for the log.
   char TmpFilename[256] = {};
   char TmpWildcardPattern[] = "XXXXXX";
@@ -108,18 +75,25 @@ int getLogFD() XRAY_NEVER_INSTRUMENT {
       flags()->xray_logfile_base, Progname, TmpWildcardPattern);
   if (NeededLength > int(sizeof(TmpFilename))) {
     Report("XRay log file name too long (%d): %s\n", NeededLength, TmpFilename);
-    return -1;
+    return nullptr;
   }
   int Fd = mkstemp(TmpFilename);
   if (Fd == -1) {
     Report("XRay: Failed opening temporary file '%s'; not logging events.\n",
            TmpFilename);
-    return -1;
+    return nullptr;
   }
   if (Verbosity())
     Report("XRay: Log file in '%s'\n", TmpFilename);
 
-  return Fd;
+  LogWriter *LW = allocate<LogWriter>();
+  new (LW) LogWriter(Fd);
+  return LW;
+}
+
+void LogWriter::Close(LogWriter *LW) {
+  LW->~LogWriter();
+  deallocate(LW);
 }
 
 } // namespace __xray

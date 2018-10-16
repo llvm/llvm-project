@@ -130,7 +130,7 @@ static void createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
 }
 
 BasicBlock *
-llvm::SplitCriticalEdge(TerminatorInst *TI, unsigned SuccNum,
+llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
                         const CriticalEdgeSplittingOptions &Options) {
   if (!isCriticalEdge(TI, SuccNum, Options.MergeIdenticalEdges))
     return nullptr;
@@ -318,7 +318,7 @@ findIBRPredecessor(BasicBlock *BB, SmallVectorImpl<BasicBlock *> &OtherPreds) {
   BasicBlock *IBB = nullptr;
   for (unsigned Pred = 0, E = PN->getNumIncomingValues(); Pred != E; ++Pred) {
     BasicBlock *PredBB = PN->getIncomingBlock(Pred);
-    TerminatorInst *PredTerm = PredBB->getTerminator();
+    Instruction *PredTerm = PredBB->getTerminator();
     switch (PredTerm->getOpcode()) {
     case Instruction::IndirectBr:
       if (IBB)

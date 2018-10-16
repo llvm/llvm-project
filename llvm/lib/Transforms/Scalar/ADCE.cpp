@@ -103,7 +103,7 @@ struct BlockInfoType {
   BasicBlock *BB = nullptr;
 
   /// Cache of BB->getTerminator().
-  TerminatorInst *Terminator = nullptr;
+  Instruction *Terminator = nullptr;
 
   /// Post-order numbering of reverse control flow graph.
   unsigned PostOrder;
@@ -206,7 +206,7 @@ bool AggressiveDeadCodeElimination::performDeadCodeElimination() {
   return removeDeadInstructions();
 }
 
-static bool isUnconditionalBranch(TerminatorInst *Term) {
+static bool isUnconditionalBranch(Instruction *Term) {
   auto *BR = dyn_cast<BranchInst>(Term);
   return BR && BR->isUnconditional();
 }
@@ -277,7 +277,7 @@ void AggressiveDeadCodeElimination::initialize() {
     // treat all edges to a block already seen as loop back edges
     // and mark the branch live it if there is a back edge.
     for (auto *BB: depth_first_ext(&F.getEntryBlock(), State)) {
-      TerminatorInst *Term = BB->getTerminator();
+      Instruction *Term = BB->getTerminator();
       if (isLive(Term))
         continue;
 
@@ -643,7 +643,7 @@ void AggressiveDeadCodeElimination::computeReversePostOrder() {
 
 void AggressiveDeadCodeElimination::makeUnconditional(BasicBlock *BB,
                                                       BasicBlock *Target) {
-  TerminatorInst *PredTerm = BB->getTerminator();
+  Instruction *PredTerm = BB->getTerminator();
   // Collect the live debug info scopes attached to this instruction.
   if (const DILocation *DL = PredTerm->getDebugLoc())
     collectLiveScopes(*DL);

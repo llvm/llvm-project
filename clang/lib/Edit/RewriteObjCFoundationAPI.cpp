@@ -1085,6 +1085,9 @@ static bool rewriteToNumericBoxedExpression(const ObjCMessageExpr *Msg,
 
     case CK_BooleanToSignedIntegral:
       llvm_unreachable("OpenCL-specific cast in Objective-C?");
+
+    case CK_FixedPointCast:
+      llvm_unreachable("Fixed point types are disabled for Objective-C");
     }
   }
 

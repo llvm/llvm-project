@@ -144,6 +144,19 @@ void bad_overwrite(std::vector<int> &v1, std::vector<int> &v2, int n) {
   v1.insert(i, n); // expected-warning{{Container accessed using foreign iterator argument}}
 }
 
+template<typename Container, typename Iterator>
+bool is_cend(Container cont, Iterator it) {
+  return it == cont.cend();
+}
+
+void good_empty(std::vector<int> &v) {
+  is_cend(v, v.cbegin()); // no-warning
+}
+
+void bad_empty(std::vector<int> &v1, std::vector<int> &v2) {
+  is_cend(v1, v2.cbegin()); // expected-warning@-8{{Iterators of different containers used where the same container is expected}}
+}
+
 void good_move(std::vector<int> &v1, std::vector<int> &v2) {
   const auto i0 = ++v2.cbegin();
   v1 = std::move(v2);

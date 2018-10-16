@@ -409,7 +409,7 @@ bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock *> &BBs) {
         for (BasicBlock *Succ : successors(&BB))
           Succ->removePredecessor(&BB);
 
-        TerminatorInst *BBTerm = BB.getTerminator();
+        Instruction *BBTerm = BB.getTerminator();
         if (BBTerm->isEHPad() || BBTerm->getType()->isTokenTy())
           continue;
         if (!BBTerm->getType()->isVoidTy())

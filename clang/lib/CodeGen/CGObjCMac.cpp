@@ -7188,15 +7188,21 @@ CGObjCNonFragileABIMac::GetClassGlobal(StringRef Name,
       Weak ? llvm::GlobalValue::ExternalWeakLinkage
            : llvm::GlobalValue::ExternalLinkage;
 
-
-
   llvm::GlobalVariable *GV = CGM.getModule().getGlobalVariable(Name);
-  if (!GV) {
-    GV = new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ClassnfABITy,
-                                  false, L, nullptr, Name);
+  if (!GV || GV->getType() != ObjCTypes.ClassnfABITy->getPointerTo()) {
+    auto *NewGV = new llvm::GlobalVariable(ObjCTypes.ClassnfABITy, false, L,
+                                           nullptr, Name);
 
     if (DLLImport)
-      GV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
+      NewGV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
+
+    if (GV) {
+      GV->replaceAllUsesWith(
+          llvm::ConstantExpr::getBitCast(NewGV, GV->getType()));
+      GV->eraseFromParent();
+    }
+    GV = NewGV;
+    CGM.getModule().getGlobalList().push_back(GV);
   }
 
   assert(GV->getLinkage() == L);

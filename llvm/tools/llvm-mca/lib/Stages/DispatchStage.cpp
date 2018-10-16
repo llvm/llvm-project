@@ -101,10 +101,11 @@ Error DispatchStage::dispatch(InstRef IR) {
   }
 
   // Check if this is an optimizable reg-reg move.
+  bool IsEliminated = false;
   if (IS.isOptimizableMove()) {
     assert(IS.getDefs().size() == 1 && "Expected a single input!");
     assert(IS.getUses().size() == 1 && "Expected a single output!");
-    PRF.tryEliminateMove(*IS.getDefs()[0], *IS.getUses()[0]);
+    IsEliminated = PRF.tryEliminateMove(*IS.getDefs()[0], *IS.getUses()[0]);
   }
 
   // A dependency-breaking instruction doesn't have to wait on the register
@@ -113,9 +114,15 @@ Error DispatchStage::dispatch(InstRef IR) {
   // instruction. A dependency-breaking instruction is a zero-latency
   // instruction that doesn't consume hardware resources.
   // An example of dependency-breaking instruction on X86 is a zero-idiom XOR.
-  for (std::unique_ptr<ReadState> &RS : IS.getUses())
-    if (!RS->isIndependentFromDef())
-      updateRAWDependencies(*RS, STI);
+  //
+  // We also don't update data dependencies for instructions that have been
+  // eliminated at register renaming stage.
+  if (!IsEliminated) {
+    for (std::unique_ptr<ReadState> &RS : IS.getUses()) {
+      if (!RS->isIndependentFromDef())
+        updateRAWDependencies(*RS, STI);
+    }
+  }
 
   // By default, a dependency-breaking zero-idiom is expected to be optimized
   // at register renaming stage. That means, no physical register is allocated

@@ -26,12 +26,8 @@ public:
   LatencySnippetGenerator(const LLVMState &State) : SnippetGenerator(State) {}
   ~LatencySnippetGenerator() override;
 
-  llvm::Expected<CodeTemplate>
-  generateCodeTemplate(const Instruction &Instr) const override;
-
-private:
-  llvm::Expected<CodeTemplate>
-  generateTwoInstructionPrototype(const Instruction &Instr) const;
+  llvm::Expected<std::vector<CodeTemplate>>
+  generateCodeTemplates(const Instruction &Instr) const override;
 };
 
 class LatencyBenchmarkRunner : public BenchmarkRunner {

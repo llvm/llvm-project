@@ -44,10 +44,9 @@ define void @and_masks(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwi
 ; X32-AVX2-NEXT:    vcmpltps %ymm0, %ymm1, %ymm1
 ; X32-AVX2-NEXT:    vmovups (%eax), %ymm2
 ; X32-AVX2-NEXT:    vcmpltps %ymm0, %ymm2, %ymm0
-; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1]
-; X32-AVX2-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; X32-AVX2-NEXT:    vandps %ymm1, %ymm0, %ymm0
-; X32-AVX2-NEXT:    vmovaps %ymm0, (%eax)
+; X32-AVX2-NEXT:    vpsrld $31, %ymm0, %ymm0
+; X32-AVX2-NEXT:    vmovdqa %ymm0, (%eax)
 ; X32-AVX2-NEXT:    vzeroupper
 ; X32-AVX2-NEXT:    retl
 ;
@@ -58,10 +57,9 @@ define void @and_masks(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwi
 ; X64-AVX2-NEXT:    vcmpltps %ymm0, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    vmovups (%rdx), %ymm2
 ; X64-AVX2-NEXT:    vcmpltps %ymm0, %ymm2, %ymm0
-; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1]
-; X64-AVX2-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    vandps %ymm1, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vmovaps %ymm0, (%rax)
+; X64-AVX2-NEXT:    vpsrld $31, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vmovdqa %ymm0, (%rax)
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
   %v0 = load <8 x float>, <8 x float>* %a, align 16

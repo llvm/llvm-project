@@ -643,7 +643,7 @@ static void findUnconditionalPreds(SmallVectorImpl<BasicBlock *> &Blocks,
   for (pred_iterator I = pred_begin(BB), E = pred_end(BB); I != E; ++I) {
     BasicBlock *Pred = *I;
     if (Pred == BB) continue;
-    TerminatorInst *PredTI = Pred->getTerminator();
+    Instruction *PredTI = Pred->getTerminator();
     if (PredTI->getNumSuccessors() != 1)
       continue;
 

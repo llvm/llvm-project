@@ -200,13 +200,13 @@ struct Static {
 static S1 gs1(5);
 #pragma omp threadprivate(gs1)
 #pragma omp threadprivate(gs1)
-// CHECK:      define {{.*}} [[S1_CTOR:@.*]]([[S1]]* noalias {{.*}},
+// CHECK:      define {{.*}} [[S1_CTOR:@.*]]([[S1]]* {{.*}},
 // CHECK:      define {{.*}} [[S1_DTOR:@.*]]([[S1]]* {{.*}})
 // CHECK:      define internal {{.*}}i8* [[GS1_CTOR:@\.__kmpc_global_ctor_\..*]](i8*)
 // CHECK:      store i8* %0, i8** [[ARG_ADDR:%.*]],
 // CHECK:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
 // CHECK:      [[RES:%.*]] = bitcast i8* [[ARG]] to [[S1]]*
-// CHECK-NEXT: call {{.*}} [[S1_CTOR]]([[S1]]* noalias [[RES]], {{.*}} 5)
+// CHECK-NEXT: call {{.*}} [[S1_CTOR]]([[S1]]* [[RES]], {{.*}} 5)
 // CHECK:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
 // CHECK:      ret i8* [[ARG]]
 // CHECK-NEXT: }
@@ -230,11 +230,11 @@ static S1 gs1(5);
 // CHECK-DEBUG:      store i8* %0, i8** [[ARG_ADDR:%.*]],
 // CHECK-DEBUG:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
 // CHECK-DEBUG:      [[RES:%.*]] = bitcast i8* [[ARG]] to [[S1]]*
-// CHECK-DEBUG-NEXT: call {{.*}} [[S1_CTOR:@.+]]([[S1]]* noalias [[RES]], {{.*}} 5){{.*}}, !dbg
+// CHECK-DEBUG-NEXT: call {{.*}} [[S1_CTOR:@.+]]([[S1]]* [[RES]], {{.*}} 5){{.*}}, !dbg
 // CHECK-DEBUG:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
 // CHECK-DEBUG:      ret i8* [[ARG]]
 // CHECK-DEBUG-NEXT: }
-// CHECK-DEBUG:      define {{.*}} [[S1_CTOR]]([[S1]]* noalias {{.*}},
+// CHECK-DEBUG:      define {{.*}} [[S1_CTOR]]([[S1]]* {{.*}},
 // CHECK-DEBUG:      define internal {{.*}}void [[GS1_DTOR]](i8*)
 // CHECK-DEBUG:      store i8* %0, i8** [[ARG_ADDR:%.*]],
 // CHECK-DEBUG:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
@@ -244,11 +244,11 @@ static S1 gs1(5);
 // CHECK-DEBUG-NEXT: }
 // CHECK-DEBUG:      define {{.*}} [[S1_DTOR]]([[S1]]* {{.*}})
 static S2 gs2(27);
-// CHECK:      define {{.*}} [[S2_CTOR:@.*]]([[S2]]* noalias {{.*}},
+// CHECK:      define {{.*}} [[S2_CTOR:@.*]]([[S2]]* {{.*}},
 // CHECK:      define {{.*}} [[S2_DTOR:@.*]]([[S2]]* {{.*}})
 // No another call for S2 constructor because it is not threadprivate
 // CHECK-NOT:  call {{.*}} [[S2_CTOR]]([[S2]]*
-// CHECK-DEBUG:      define {{.*}} [[S2_CTOR:@.*]]([[S2]]* noalias {{.*}},
+// CHECK-DEBUG:      define {{.*}} [[S2_CTOR:@.*]]([[S2]]* {{.*}},
 // CHECK-DEBUG:      define {{.*}} [[S2_DTOR:@.*]]([[S2]]* {{.*}})
 // No another call for S2 constructor because it is not threadprivate
 // CHECK-DEBUG-NOT:  call {{.*}} [[S2_CTOR]]([[S2]]*
@@ -260,18 +260,18 @@ S1 arr_x[2][3] = { { 1, 2, 3 }, { 4, 5, 6 } };
 // CHECK:      [[RES:%.*]] = bitcast i8* [[ARG]] to [2 x [3 x [[S1]]]]*
 // CHECK:      [[ARR1:%.*]] = getelementptr inbounds [2 x [3 x [[S1]]]], [2 x [3 x [[S1]]]]* [[RES]], i{{.*}} 0, i{{.*}} 0
 // CHECK:      [[ARR:%.*]] = getelementptr inbounds [3 x [[S1]]], [3 x [[S1]]]* [[ARR1]], i{{.*}} 0, i{{.*}} 0
-// CHECK:      invoke {{.*}} [[S1_CTOR]]([[S1]]* noalias [[ARR]], [[INT]] {{.*}}1)
+// CHECK:      invoke {{.*}} [[S1_CTOR]]([[S1]]* [[ARR]], [[INT]] {{.*}}1)
 // CHECK:      [[ARR_ELEMENT:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[ARR]], i{{.*}} 1
-// CHECK:      invoke {{.*}} [[S1_CTOR]]([[S1]]* noalias [[ARR_ELEMENT]], [[INT]] {{.*}}2)
+// CHECK:      invoke {{.*}} [[S1_CTOR]]([[S1]]* [[ARR_ELEMENT]], [[INT]] {{.*}}2)
 // CHECK:      [[ARR_ELEMENT2:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[ARR_ELEMENT]], i{{.*}} 1
-// CHECK:      invoke {{.*}} [[S1_CTOR]]([[S1]]* noalias [[ARR_ELEMENT2]], [[INT]] {{.*}}3)
+// CHECK:      invoke {{.*}} [[S1_CTOR]]([[S1]]* [[ARR_ELEMENT2]], [[INT]] {{.*}}3)
 // CHECK:      [[ARR_ELEMENT3:%.*]] = getelementptr inbounds [3 x [[S1]]], [3 x [[S1]]]* [[ARR1]], i{{.*}} 1
 // CHECK:      [[ARR_:%.*]] = getelementptr inbounds [3 x [[S1]]], [3 x [[S1]]]* [[ARR_ELEMENT3]], i{{.*}} 0, i{{.*}} 0
-// CHECK:      invoke {{.*}} [[S1_CTOR]]([[S1]]* noalias [[ARR_]], [[INT]] {{.*}}4)
+// CHECK:      invoke {{.*}} [[S1_CTOR]]([[S1]]* [[ARR_]], [[INT]] {{.*}}4)
 // CHECK:      [[ARR_ELEMENT:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[ARR_]], i{{.*}} 1
-// CHECK:      invoke {{.*}} [[S1_CTOR]]([[S1]]* noalias [[ARR_ELEMENT]], [[INT]] {{.*}}5)
+// CHECK:      invoke {{.*}} [[S1_CTOR]]([[S1]]* [[ARR_ELEMENT]], [[INT]] {{.*}}5)
 // CHECK:      [[ARR_ELEMENT2:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[ARR_ELEMENT]], i{{.*}} 1
-// CHECK:      invoke {{.*}} [[S1_CTOR]]([[S1]]* noalias [[ARR_ELEMENT2]], [[INT]] {{.*}}6)
+// CHECK:      invoke {{.*}} [[S1_CTOR]]([[S1]]* [[ARR_ELEMENT2]], [[INT]] {{.*}}6)
 // CHECK:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
 // CHECK:      ret i8* [[ARG]]
 // CHECK:      }
@@ -349,7 +349,7 @@ int main() {
 // CHECK-NEXT: [[GS1_ADDR:%.*]] = bitcast i8* [[GS1_TEMP_ADDR]] to [[S1]]*
 // CHECK-NEXT: [[GS1_A_ADDR:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[GS1_ADDR]], i{{.*}} 0, i{{.*}} 0
 // CHECK-NEXT: [[GS1_A:%.*]] = load [[INT]], [[INT]]* [[GS1_A_ADDR]]
-// CHECK-NEXT: invoke {{.*}} [[SMAIN_CTOR:.*]]([[SMAIN]]* noalias [[SM]], [[INT]] {{.*}}[[GS1_A]])
+// CHECK-NEXT: invoke {{.*}} [[SMAIN_CTOR:.*]]([[SMAIN]]* [[SM]], [[INT]] {{.*}}[[GS1_A]])
 // CHECK:      call {{.*}}void @__cxa_guard_release
 // CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
 // CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC3]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
@@ -363,7 +363,7 @@ int main() {
 // CHECK-DEBUG-NEXT: [[GS1_ADDR:%.*]] = bitcast i8* [[GS1_TEMP_ADDR]] to [[S1]]*
 // CHECK-DEBUG-NEXT: [[GS1_A_ADDR:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[GS1_ADDR]], i{{.*}} 0, i{{.*}} 0
 // CHECK-DEBUG-NEXT: [[GS1_A:%.*]] = load [[INT]], [[INT]]* [[GS1_A_ADDR]]
-// CHECK-DEBUG-NEXT: invoke {{.*}} [[SMAIN_CTOR:.*]]([[SMAIN]]* noalias [[SM]], [[INT]] {{.*}}[[GS1_A]])
+// CHECK-DEBUG-NEXT: invoke {{.*}} [[SMAIN_CTOR:.*]]([[SMAIN]]* [[SM]], [[INT]] {{.*}}[[GS1_A]])
 // CHECK-DEBUG:      call {{.*}}void @__cxa_guard_release
 // CHECK-TLS:      [[IS_INIT_INT:%.*]] = load i8, i8* [[SM_GUARD]]
 // CHECK-TLS-NEXT: [[IS_INIT_BOOL:%.*]] = icmp eq i8 [[IS_INIT_INT]], 0
@@ -372,7 +372,7 @@ int main() {
 // CHECK-TLS-NEXT: [[GS1_ADDR:%.*]] = call [[S1]]* [[GS1_TLS_INITD:@[^,]+]]
 // CHECK-TLS-NEXT: [[GS1_A_ADDR:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[GS1_ADDR]], i32 0, i32 0
 // CHECK-TLS-NEXT: [[GS1_A_VAL:%.*]] = load i32, i32* [[GS1_A_ADDR]]
-// CHECK-TLS-NEXT: call void [[SM_CTOR1:@.*]]([[SMAIN]]* noalias [[SM]], i32 [[GS1_A_VAL]])
+// CHECK-TLS-NEXT: call void [[SM_CTOR1:@.*]]([[SMAIN]]* [[SM]], i32 [[GS1_A_VAL]])
 // CHECK-TLS-NEXT: call i32 @__cxa_thread_atexit(void (i8*)* bitcast (void ([[SMAIN]]*)* [[SM_DTOR1:@.*]] to void (i8*)*), i8* bitcast ([[SMAIN]]* [[SM]] to i8*), i8* @__dso_handle)
 // CHECK-TLS-NEXT: store i8 1, i8* [[SM_GUARD]]
 // CHECK-TLS-NEXT: br label %[[INIT_DONE]]
@@ -590,11 +590,11 @@ int main() {
 // CHECK-NEXT: [[GS1_ADDR:%.*]] = bitcast i8* [[GS1_TEMP_ADDR]] to [[S1]]*
 // CHECK-NEXT: [[GS1_A_ADDR:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[GS1_ADDR]], i{{.*}} 0, i{{.*}} 0
 // CHECK-NEXT: [[GS1_A:%.*]] = load [[INT]], [[INT]]* [[GS1_A_ADDR]]
-// CHECK-NEXT: call {{.*}} [[SMAIN_CTOR:@.+]]([[SMAIN]]* noalias [[RES]], [[INT]] {{.*}}[[GS1_A]])
+// CHECK-NEXT: call {{.*}} [[SMAIN_CTOR:@.+]]([[SMAIN]]* [[RES]], [[INT]] {{.*}}[[GS1_A]])
 // CHECK:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
 // CHECK-NEXT: ret i8* [[ARG]]
 // CHECK-NEXT: }
-// CHECK:      define {{.*}} [[SMAIN_CTOR]]([[SMAIN]]* noalias {{.*}},
+// CHECK:      define {{.*}} [[SMAIN_CTOR]]([[SMAIN]]* {{.*}},
 // CHECK:      define internal {{.*}}void [[SM_DTOR]](i8*)
 // CHECK:      store i8* %0, i8** [[ARG_ADDR:%.*]],
 // CHECK:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
@@ -617,11 +617,11 @@ int main() {
 // CHECK-DEBUG-NEXT: [[GS1_ADDR:%.*]] = bitcast i8* [[GS1_TEMP_ADDR]] to [[S1]]*
 // CHECK-DEBUG-NEXT: [[GS1_A_ADDR:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[GS1_ADDR]], i{{.*}} 0, i{{.*}} 0
 // CHECK-DEBUG-NEXT: [[GS1_A:%.*]] = load [[INT]], [[INT]]* [[GS1_A_ADDR]]
-// CHECK-DEBUG-NEXT: call {{.*}} [[SMAIN_CTOR:@.+]]([[SMAIN]]* noalias [[RES]], [[INT]] {{.*}}[[GS1_A]])
+// CHECK-DEBUG-NEXT: call {{.*}} [[SMAIN_CTOR:@.+]]([[SMAIN]]* [[RES]], [[INT]] {{.*}}[[GS1_A]])
 // CHECK-DEBUG:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
 // CHECK-DEBUG-NEXT: ret i8* [[ARG]]
 // CHECK-DEBUG-NEXT: }
-// CHECK-DEBUG:      define {{.*}} [[SMAIN_CTOR]]([[SMAIN]]* noalias {{.*}},
+// CHECK-DEBUG:      define {{.*}} [[SMAIN_CTOR]]([[SMAIN]]* {{.*}},
 // CHECK-DEBUG:      define internal {{.*}} [[SM_DTOR:@.+]](i8*)
 // CHECK-DEBUG:      call {{.*}} [[SMAIN_DTOR:@.+]]([[SMAIN]]*
 // CHECK-DEBUG:      }
@@ -630,8 +630,8 @@ int main() {
 // CHECK-TLS-NEXT: call void [[GS1_TLS_INIT]]
 // CHECK-TLS-NEXT: ret [[S1]]* [[GS1]]
 // CHECK-TLS-NEXT: }
-// CHECK-TLS: define internal void [[SM_CTOR1]]([[SMAIN]]* noalias %this, i32 {{.*}}) {{.*}} {
-// CHECK-TLS: void [[SM_CTOR2:@.*]]([[SMAIN]]* noalias {{.*}}, i32 {{.*}})
+// CHECK-TLS: define internal void [[SM_CTOR1]]([[SMAIN]]* %this, i32 {{.*}}) {{.*}} {
+// CHECK-TLS: void [[SM_CTOR2:@.*]]([[SMAIN]]* {{.*}}, i32 {{.*}})
 // CHECK-TLS: }
 // CHECK-TLS: define internal void [[SM_DTOR1]]([[SMAIN]]* %this) {{.*}} {
 // CHECK-TLS: void [[SM_DTOR2:@.*]]([[SMAIN]]* {{.*}})
@@ -860,11 +860,11 @@ int foobar() {
 // CHECK:      store i8* %0, i8** [[ARG_ADDR:%.*]],
 // CHECK:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
 // CHECK:      [[RES:%.*]] = bitcast i8* [[ARG]] to [[S4]]*
-// CHECK-NEXT: call {{.*}} [[S4_CTOR:@.+]]([[S4]]* noalias [[RES]], {{.*}} 23)
+// CHECK-NEXT: call {{.*}} [[S4_CTOR:@.+]]([[S4]]* [[RES]], {{.*}} 23)
 // CHECK:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
 // CHECK-NEXT: ret i8* [[ARG]]
 // CHECK-NEXT: }
-// CHECK:      define {{.*}} [[S4_CTOR]]([[S4]]* noalias {{.*}},
+// CHECK:      define {{.*}} [[S4_CTOR]]([[S4]]* {{.*}},
 // CHECK:      define internal {{.*}}void [[ST_S4_ST_DTOR]](i8*)
 // CHECK:      store i8* %0, i8** [[ARG_ADDR:%.*]],
 // CHECK:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
@@ -880,7 +880,7 @@ int foobar() {
 // CHECK-DEBUG:      call {{.*}}void @__kmpc_threadprivate_register([[IDENT]]* [[KMPC_LOC_ADDR]], i8* bitcast ([[S4]]* [[ST_S4_ST]] to i8*), i8* (i8*)* [[ST_S4_ST_CTOR:@\.__kmpc_global_ctor_\..+]], i8* (i8*, i8*)* null, void (i8*)* [[ST_S4_ST_DTOR:@\.__kmpc_global_dtor_\..+]])
 // CHECK-DEBUG:      define internal {{.*}}i8* [[ST_S4_ST_CTOR]](i8*)
 // CHECK-DEBUG:      }
-// CHECK-DEBUG:      define {{.*}} [[S4_CTOR:@.*]]([[S4]]* noalias {{.*}},
+// CHECK-DEBUG:      define {{.*}} [[S4_CTOR:@.*]]([[S4]]* {{.*}},
 // CHECK-DEBUG:      define internal {{.*}}void [[ST_S4_ST_DTOR]](i8*)
 // CHECK-DEBUG:      }
 // CHECK-DEBUG:      define {{.*}} [[S4_DTOR:@.*]]([[S4]]* {{.*}})
@@ -893,56 +893,56 @@ int foobar() {
 // CHECK-DEBUG:      ret void
 
 // CHECK-TLS: define internal void [[GS1_CXX_INIT:@.*]]()
-// CHECK-TLS: call void [[GS1_CTOR1:@.*]]([[S1]]* noalias [[GS1]], i32 5)
+// CHECK-TLS: call void [[GS1_CTOR1:@.*]]([[S1]]* [[GS1]], i32 5)
 // CHECK-TLS: call i32 @__cxa_thread_atexit(void (i8*)* bitcast (void ([[S1]]*)* [[GS1_DTOR1:.*]] to void (i8*)*), i8* bitcast ([[S1]]* [[GS1]] to i8*)
 // CHECK-TLS: }
-// CHECK-TLS: define {{.*}}void [[GS1_CTOR1]]([[S1]]* noalias {{.*}}, i32 {{.*}})
-// CHECK-TLS: call void [[GS1_CTOR2:@.*]]([[S1]]* noalias {{.*}}, i32 {{.*}})
+// CHECK-TLS: define {{.*}}void [[GS1_CTOR1]]([[S1]]* {{.*}}, i32 {{.*}})
+// CHECK-TLS: call void [[GS1_CTOR2:@.*]]([[S1]]* {{.*}}, i32 {{.*}})
 // CHECK-TLS: }
 // CHECK-TLS: define {{.*}}void [[GS1_DTOR1]]([[S1]]* {{.*}})
 // CHECK-TLS: call void [[GS1_DTOR2:@.*]]([[S1]]* {{.*}})
 // CHECK-TLS: }
-// CHECK-TLS: define {{.*}}void [[GS1_CTOR2]]([[S1]]* noalias {{.*}}, i32 {{.*}})
+// CHECK-TLS: define {{.*}}void [[GS1_CTOR2]]([[S1]]* {{.*}}, i32 {{.*}})
 // CHECK-TLS: define {{.*}}void [[GS1_DTOR2]]([[S1]]* {{.*}})
 
 // CHECK-TLS: define internal void [[GS2_CXX_INIT:@.*]]()
-// CHECK-TLS: call void [[GS2_CTOR1:@.*]]([[S2]]* noalias [[GS2]], i32 27)
+// CHECK-TLS: call void [[GS2_CTOR1:@.*]]([[S2]]* [[GS2]], i32 27)
 // CHECK-TLS: call i32 @__cxa_atexit(void (i8*)* bitcast (void ([[S2]]*)* [[GS2_DTOR1:.*]] to void (i8*)*), i8* bitcast ([[S2]]* [[GS2]] to i8*)
 // CHECK-TLS: }
-// CHECK-TLS: define {{.*}}void [[GS2_CTOR1]]([[S2]]* noalias {{.*}}, i32 {{.*}})
-// CHECK-TLS: call void [[GS2_CTOR2:@.*]]([[S2]]* noalias {{.*}}, i32 {{.*}})
+// CHECK-TLS: define {{.*}}void [[GS2_CTOR1]]([[S2]]* {{.*}}, i32 {{.*}})
+// CHECK-TLS: call void [[GS2_CTOR2:@.*]]([[S2]]* {{.*}}, i32 {{.*}})
 // CHECK-TLS: }
 // CHECK-TLS: define {{.*}}void [[GS2_DTOR1]]([[S2]]* {{.*}})
 // CHECK-TLS: call void [[GS2_DTOR2:@.*]]([[S2]]* {{.*}})
 // CHECK-TLS: }
-// CHECK-TLS: define {{.*}}void [[GS2_CTOR2]]([[S2]]* noalias {{.*}}, i32 {{.*}})
+// CHECK-TLS: define {{.*}}void [[GS2_CTOR2]]([[S2]]* {{.*}}, i32 {{.*}})
 // CHECK-TLS: define {{.*}}void [[GS2_DTOR2]]([[S2]]* {{.*}})
 
 // CHECK-TLS: define internal void [[ARR_X_CXX_INIT:@.*]]()
-// CHECK-TLS: invoke void [[GS1_CTOR1]]([[S1]]* noalias getelementptr inbounds ([2 x [3 x [[S1]]]], [2 x [3 x [[S1]]]]* [[ARR_X]], i{{.*}} 0, i{{.*}} 0, i{{.*}} 0), i{{.*}} 1)
-// CHECK-TLS: invoke void [[GS1_CTOR1]]([[S1]]* noalias getelementptr inbounds ([2 x [3 x [[S1]]]], [2 x [3 x [[S1]]]]* [[ARR_X]], i{{.*}} 0, i{{.*}} 0, i{{.*}} 1), i{{.*}} 2)
-// CHECK-TLS: invoke void [[GS1_CTOR1]]([[S1]]* noalias getelementptr inbounds ([2 x [3 x [[S1]]]], [2 x [3 x [[S1]]]]* [[ARR_X]], i{{.*}} 0, i{{.*}} 0, i{{.*}} 2), i{{.*}} 3)
-// CHECK-TLS: invoke void [[GS1_CTOR1]]([[S1]]* noalias getelementptr inbounds ([2 x [3 x [[S1]]]], [2 x [3 x [[S1]]]]* [[ARR_X]], i{{.*}} 0, i{{.*}} 1, i{{.*}} 0), i{{.*}} 4)
-// CHECK-TLS: invoke void [[GS1_CTOR1]]([[S1]]* noalias getelementptr inbounds ([2 x [3 x [[S1]]]], [2 x [3 x [[S1]]]]* [[ARR_X]], i{{.*}} 0, i{{.*}} 1, i{{.*}} 1), i{{.*}} 5)
-// CHECK-TLS: invoke void [[GS1_CTOR1]]([[S1]]* noalias getelementptr inbounds ([2 x [3 x [[S1]]]], [2 x [3 x [[S1]]]]* [[ARR_X]], i{{.*}} 0, i{{.*}} 1, i{{.*}} 2), i{{.*}} 6)
+// CHECK-TLS: invoke void [[GS1_CTOR1]]([[S1]]* getelementptr inbounds ([2 x [3 x [[S1]]]], [2 x [3 x [[S1]]]]* [[ARR_X]], i{{.*}} 0, i{{.*}} 0, i{{.*}} 0), i{{.*}} 1)
+// CHECK-TLS: invoke void [[GS1_CTOR1]]([[S1]]* getelementptr inbounds ([2 x [3 x [[S1]]]], [2 x [3 x [[S1]]]]* [[ARR_X]], i{{.*}} 0, i{{.*}} 0, i{{.*}} 1), i{{.*}} 2)
+// CHECK-TLS: invoke void [[GS1_CTOR1]]([[S1]]* getelementptr inbounds ([2 x [3 x [[S1]]]], [2 x [3 x [[S1]]]]* [[ARR_X]], i{{.*}} 0, i{{.*}} 0, i{{.*}} 2), i{{.*}} 3)
+// CHECK-TLS: invoke void [[GS1_CTOR1]]([[S1]]* getelementptr inbounds ([2 x [3 x [[S1]]]], [2 x [3 x [[S1]]]]* [[ARR_X]], i{{.*}} 0, i{{.*}} 1, i{{.*}} 0), i{{.*}} 4)
+// CHECK-TLS: invoke void [[GS1_CTOR1]]([[S1]]* getelementptr inbounds ([2 x [3 x [[S1]]]], [2 x [3 x [[S1]]]]* [[ARR_X]], i{{.*}} 0, i{{.*}} 1, i{{.*}} 1), i{{.*}} 5)
+// CHECK-TLS: invoke void [[GS1_CTOR1]]([[S1]]* getelementptr inbounds ([2 x [3 x [[S1]]]], [2 x [3 x [[S1]]]]* [[ARR_X]], i{{.*}} 0, i{{.*}} 1, i{{.*}} 2), i{{.*}} 6)
 // CHECK-TLS: call i32 @__cxa_thread_atexit(void (i8*)* [[ARR_X_CXX_DTOR:@[^,]+]]
 // CHECK-TLS: define internal void [[ARR_X_CXX_DTOR]](i8*)
 // CHECK-TLS: void [[GS1_DTOR1]]([[S1]]* {{.*}})
 
-// CHECK-TLS: define {{.*}}void [[SM_CTOR2]]([[SMAIN]]* noalias {{.*}}, i32 {{.*}})
+// CHECK-TLS: define {{.*}}void [[SM_CTOR2]]([[SMAIN]]* {{.*}}, i32 {{.*}})
 // CHECK-TLS: define {{.*}}void [[SM_DTOR2]]([[SMAIN]]* {{.*}})
 
 // CHECK-TLS: define internal void [[ST_S4_ST_CXX_INIT]]()
-// CHECK-TLS: call void [[ST_S4_ST_CTOR1:@.*]]([[S4]]* noalias [[ST_S4_ST]], i32 23)
+// CHECK-TLS: call void [[ST_S4_ST_CTOR1:@.*]]([[S4]]* [[ST_S4_ST]], i32 23)
 // CHECK-TLS: call i32 @__cxa_thread_atexit(void (i8*)* bitcast (void ([[S4]]*)* [[ST_S4_ST_DTOR1:.*]] to void (i8*)*), i8* bitcast ([[S4]]* [[ST_S4_ST]] to i8*)
 // CHECK-TLS: }
-// CHECK-TLS: define {{.*}}void [[ST_S4_ST_CTOR1]]([[S4]]* noalias {{.*}}, i32 {{.*}})
-// CHECK-TLS: call void [[ST_S4_ST_CTOR2:@.*]]([[S4]]* noalias {{.*}}, i32 {{.*}})
+// CHECK-TLS: define {{.*}}void [[ST_S4_ST_CTOR1]]([[S4]]* {{.*}}, i32 {{.*}})
+// CHECK-TLS: call void [[ST_S4_ST_CTOR2:@.*]]([[S4]]* {{.*}}, i32 {{.*}})
 // CHECK-TLS: }
 // CHECK-TLS: define {{.*}}void [[ST_S4_ST_DTOR1]]([[S4]]* {{.*}})
 // CHECK-TLS: call void [[ST_S4_ST_DTOR2:@.*]]([[S4]]* {{.*}})
 // CHECK-TLS: }
-// CHECK-TLS: define {{.*}}void [[ST_S4_ST_CTOR2]]([[S4]]* noalias {{.*}}, i32 {{.*}})
+// CHECK-TLS: define {{.*}}void [[ST_S4_ST_CTOR2]]([[S4]]* {{.*}}, i32 {{.*}})
 // CHECK-TLS: define {{.*}}void [[ST_S4_ST_DTOR2]]([[S4]]* {{.*}})
 
 // CHECK-TLS:      define internal void @__tls_init()

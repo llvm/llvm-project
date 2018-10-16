@@ -286,6 +286,7 @@ class SymbolSlab {
 public:
   using const_iterator = std::vector<Symbol>::const_iterator;
   using iterator = const_iterator;
+  using value_type = Symbol;
 
   SymbolSlab() = default;
 
@@ -294,6 +295,7 @@ public:
   const_iterator find(const SymbolID &SymID) const;
 
   size_t size() const { return Symbols.size(); }
+  bool empty() const { return Symbols.empty(); }
   // Estimates the total memory usage.
   size_t bytes() const {
     return sizeof(*this) + Arena.getTotalMemory() +
@@ -389,6 +391,7 @@ public:
   const_iterator begin() const { return Refs.begin(); }
   const_iterator end() const { return Refs.end(); }
   size_t size() const { return Refs.size(); }
+  bool empty() const { return Refs.empty(); }
 
   size_t bytes() const {
     return sizeof(*this) + Arena.getTotalMemory() +

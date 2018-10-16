@@ -448,7 +448,7 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
         CI->replaceAllUsesWith(result);
       }
       SplitBlock(CI->getParent(), cmp);
-      TerminatorInst *Brnch
+      Instruction *Brnch
         = SplitBlockAndInsertIfThen(cmp, cmp->getNextNode(), false);
 
       Builder.SetInsertPoint(Brnch);

@@ -382,7 +382,7 @@ bool isErrorBlock(llvm::BasicBlock &BB, const llvm::Region &R,
 /// @param TI The terminator to get the condition from.
 ///
 /// @return The condition of @p TI and nullptr if none could be extracted.
-llvm::Value *getConditionFromTerminator(llvm::TerminatorInst *TI);
+llvm::Value *getConditionFromTerminator(llvm::Instruction *TI);
 
 /// Check if @p LInst can be hoisted in @p R.
 ///

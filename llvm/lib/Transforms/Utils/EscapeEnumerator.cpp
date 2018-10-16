@@ -37,7 +37,7 @@ IRBuilder<> *EscapeEnumerator::Next() {
 
     // Branches and invokes do not escape, only unwind, resume, and return
     // do.
-    TerminatorInst *TI = CurBB->getTerminator();
+    Instruction *TI = CurBB->getTerminator();
     if (!isa<ReturnInst>(TI) && !isa<ResumeInst>(TI))
       continue;
 

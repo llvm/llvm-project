@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -45,9 +46,8 @@ class Loop;
 /// loop were made and the info wasn't recomputed properly, the behavior of all
 /// methods except for computeLoopSafetyInfo is undefined.
 class LoopSafetyInfo {
-  bool MayThrow = false;       // The current loop contains an instruction which
-                               // may throw.
-  bool HeaderMayThrow = false; // Same as previous, but specific to loop header
+  // Used to update funclet bundle operands.
+  DenseMap<BasicBlock *, ColorVector> BlockColors;
 
   /// Collect all blocks from \p CurLoop which lie on all possible paths from
   /// the header of \p CurLoop (inclusive) to BB (exclusive) into the set
@@ -56,22 +56,27 @@ class LoopSafetyInfo {
       const Loop *CurLoop, const BasicBlock *BB,
       SmallPtrSetImpl<const BasicBlock *> &Predecessors) const;
 
-public:
-  // Used to update funclet bundle operands.
-  DenseMap<BasicBlock *, ColorVector> BlockColors;
+protected:
+  /// Computes block colors.
+  void computeBlockColors(const Loop *CurLoop);
 
-  /// Returns true iff the header block of the loop for which this info is
-  /// calculated contains an instruction that may throw or otherwise exit
-  /// abnormally.
-  bool headerMayThrow() const;
+public:
+  /// Returns block colors map that is used to update funclet operand bundles.
+  const DenseMap<BasicBlock *, ColorVector> &getBlockColors() const;
+
+  /// Copy colors of block \p Old into the block \p New.
+  void copyColors(BasicBlock *New, BasicBlock *Old);
+
+  /// Returns true iff the block \p BB potentially may throw exception. It can
+  /// be false-positive in cases when we want to avoid complex analysis.
+  virtual bool blockMayThrow(const BasicBlock *BB) const = 0;
 
   /// Returns true iff any block of the loop for which this info is contains an
   /// instruction that may throw or otherwise exit abnormally.
-  bool anyBlockMayThrow() const;
+  virtual bool anyBlockMayThrow() const = 0;
 
   /// Return true if we must reach the block \p BB under assumption that the
-  /// loop \p CurLoop is entered and no instruction throws or otherwise exits
-  /// abnormally.
+  /// loop \p CurLoop is entered.
   bool allLoopPathsLeadToBlock(const Loop *CurLoop, const BasicBlock *BB,
                                const DominatorTree *DT) const;
 
@@ -80,16 +85,74 @@ public:
   /// as argument. Updates safety information in LoopSafetyInfo argument.
   /// Note: This is defined to clear and reinitialize an already initialized
   /// LoopSafetyInfo.  Some callers rely on this fact.
-  void computeLoopSafetyInfo(Loop *);
+  virtual void computeLoopSafetyInfo(const Loop *CurLoop) = 0;
+
+  /// Returns true if the instruction in a loop is guaranteed to execute at
+  /// least once (under the assumption that the loop is entered).
+  virtual bool isGuaranteedToExecute(const Instruction &Inst,
+                                     const DominatorTree *DT,
+                                     const Loop *CurLoop) const = 0;
 
   LoopSafetyInfo() = default;
+
+  virtual ~LoopSafetyInfo() = default;
 };
 
-/// Returns true if the instruction in a loop is guaranteed to execute at least
-/// once (under the assumption that the loop is entered).
-bool isGuaranteedToExecute(const Instruction &Inst, const DominatorTree *DT,
-                           const Loop *CurLoop,
-                           const LoopSafetyInfo *SafetyInfo);
+
+/// Simple and conservative implementation of LoopSafetyInfo that can give
+/// false-positive answers to its queries in order to avoid complicated
+/// analysis.
+class SimpleLoopSafetyInfo: public LoopSafetyInfo {
+  bool MayThrow = false;       // The current loop contains an instruction which
+                               // may throw.
+  bool HeaderMayThrow = false; // Same as previous, but specific to loop header
+
+public:
+  virtual bool blockMayThrow(const BasicBlock *BB) const;
+
+  virtual bool anyBlockMayThrow() const;
+
+  virtual void computeLoopSafetyInfo(const Loop *CurLoop);
+
+  virtual bool isGuaranteedToExecute(const Instruction &Inst,
+                                     const DominatorTree *DT,
+                                     const Loop *CurLoop) const;
+
+  SimpleLoopSafetyInfo() : LoopSafetyInfo() {};
+
+  virtual ~SimpleLoopSafetyInfo() {};
+};
+
+/// This implementation of LoopSafetyInfo use ImplicitControlFlowTracking to
+/// give precise answers on "may throw" queries. This implementation uses cache
+/// that should be invalidated by calling the method dropCachedInfo whenever we
+/// modify a basic block's contents by adding or removing instructions.
+class ICFLoopSafetyInfo: public LoopSafetyInfo {
+  bool MayThrow = false;       // The current loop contains an instruction which
+                               // may throw.
+  // Contains information about implicit control flow in this loop's blocks.
+  mutable ImplicitControlFlowTracking ICF;
+
+public:
+  virtual bool blockMayThrow(const BasicBlock *BB) const;
+
+  virtual bool anyBlockMayThrow() const;
+
+  virtual void computeLoopSafetyInfo(const Loop *CurLoop);
+
+  virtual bool isGuaranteedToExecute(const Instruction &Inst,
+                                     const DominatorTree *DT,
+                                     const Loop *CurLoop) const;
+
+  /// Drops cached information regarding the implicit control flow in block
+  /// \p BB. It should be called for every block in which we add or remove any
+  /// instructions  to a block before we make queries to it.
+  void dropCachedInfo(const BasicBlock *BB);
+
+  ICFLoopSafetyInfo(DominatorTree *DT) : LoopSafetyInfo(), ICF(DT) {};
+
+  virtual ~ICFLoopSafetyInfo() {};
+};
 
 }
 

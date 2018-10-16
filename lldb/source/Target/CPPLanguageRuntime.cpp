@@ -26,6 +26,7 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
+#include "lldb/Target/ThreadPlanStepInRange.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -158,7 +159,6 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   // We do this by find the first < and , and extracting in between.
   //
   // This covers the case of the lambda known at compile time.
-  //
   size_t first_open_angle_bracket = vtable_name.find('<') + 1;
   size_t first_comma = vtable_name.find_first_of(',');
 
@@ -261,4 +261,77 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   }
 
   return optional_info;
+}
+
+lldb::ThreadPlanSP
+CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
+                                                 bool stop_others) {
+  ThreadPlanSP ret_plan_sp;
+
+  lldb::addr_t curr_pc = thread.GetRegisterContext()->GetPC();
+
+  TargetSP target_sp(thread.CalculateTarget());
+
+  if (target_sp->GetSectionLoadList().IsEmpty())
+    return ret_plan_sp;
+
+  Address pc_addr_resolved;
+  SymbolContext sc;
+  Symbol *symbol;
+
+  if (!target_sp->GetSectionLoadList().ResolveLoadAddress(curr_pc,
+                                                          pc_addr_resolved))
+    return ret_plan_sp;
+
+  target_sp->GetImages().ResolveSymbolContextForAddress(
+      pc_addr_resolved, eSymbolContextEverything, sc);
+  symbol = sc.symbol;
+
+  if (symbol == nullptr)
+    return ret_plan_sp;
+
+  llvm::StringRef function_name(symbol->GetName().GetCString());
+
+  // Handling the case where we are attempting to step into std::function.
+  // The behavior will be that we will attempt to obtain the wrapped
+  // callable via FindLibCppStdFunctionCallableInfo() and if we find it we
+  // will return a ThreadPlanRunToAddress to the callable. Therefore we will
+  // step into the wrapped callable.
+  //
+  bool found_expected_start_string =
+      function_name.startswith("std::__1::function<");
+
+  if (!found_expected_start_string)
+    return ret_plan_sp;
+
+  AddressRange range_of_curr_func;
+  sc.GetAddressRange(eSymbolContextEverything, 0, false, range_of_curr_func);
+
+  StackFrameSP frame = thread.GetStackFrameAtIndex(0);
+
+  if (frame) {
+    ValueObjectSP value_sp = frame->FindVariable(ConstString("this"));
+
+    CPPLanguageRuntime::LibCppStdFunctionCallableInfo callable_info =
+        FindLibCppStdFunctionCallableInfo(value_sp);
+
+    if (callable_info.callable_case != LibCppStdFunctionCallableCase::Invalid &&
+        value_sp->GetValueIsValid()) {
+      // We found the std::function wrapped callable and we have its address.
+      // We now create a ThreadPlan to run to the callable.
+      ret_plan_sp.reset(new ThreadPlanRunToAddress(
+          thread, callable_info.callable_address, stop_others));
+      return ret_plan_sp;
+    } else {
+      // We are in std::function but we could not obtain the callable.
+      // We create a ThreadPlan to keep stepping through using the address range
+      // of the current function.
+      ret_plan_sp.reset(new ThreadPlanStepInRange(thread, range_of_curr_func,
+                                                  sc, eOnlyThisThread,
+                                                  eLazyBoolYes, eLazyBoolYes));
+      return ret_plan_sp;
+    }
+  }
+
+  return ret_plan_sp;
 }

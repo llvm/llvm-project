@@ -560,8 +560,9 @@ namespace ISD {
     ///
     /// The return value of (FMINNUM 0.0, -0.0) could be either 0.0 or -0.0.
     FMINNUM, FMAXNUM,
-    /// FMINNAN/FMAXNAN - Behave identically to FMINNUM/FMAXNUM, except that
-    /// when a single input is NaN, NaN is returned.
+    /// FMINNAN/FMAXNAN - NaN-propagating minimum/maximum that also treat -0.0
+    /// as less than 0.0. While FMINNUM/FMAXNUM follow IEEE 754-2008 semantics,
+    /// FMINNAN/FMAXNAN follow IEEE 754-2018 draft semantics.
     FMINNAN, FMAXNAN,
 
     /// FSINCOS - Compute both fsin and fcos as a single operation.

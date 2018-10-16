@@ -178,16 +178,16 @@ define <8 x double> @fhadd_16_4(<8 x double> %x225, <8 x double> %x227) {
 define <4 x double> @fadd_noundef_low(<8 x double> %x225, <8 x double> %x227) {
 ; KNL-LABEL: fadd_noundef_low:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vunpcklpd {{.*#+}} zmm2 = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
-; KNL-NEXT:    vunpckhpd {{.*#+}} zmm0 = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7]
+; KNL-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; KNL-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
 ; KNL-NEXT:    vaddpd %zmm0, %zmm2, %zmm0
 ; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: fadd_noundef_low:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vunpcklpd {{.*#+}} zmm2 = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
-; SKX-NEXT:    vunpckhpd {{.*#+}} zmm0 = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7]
+; SKX-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; SKX-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
 ; SKX-NEXT:    vaddpd %zmm0, %zmm2, %zmm0
 ; SKX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; SKX-NEXT:    retq
@@ -252,17 +252,15 @@ define <8 x i32> @hadd_16_3_sv(<16 x i32> %x225, <16 x i32> %x227) {
 define double @fadd_noundef_eel(<8 x double> %x225, <8 x double> %x227) {
 ; KNL-LABEL: fadd_noundef_eel:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vunpcklpd {{.*#+}} zmm2 = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
-; KNL-NEXT:    vunpckhpd {{.*#+}} zmm0 = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7]
-; KNL-NEXT:    vaddpd %zmm0, %zmm2, %zmm0
+; KNL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; KNL-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
 ; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: fadd_noundef_eel:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vunpcklpd {{.*#+}} zmm2 = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
-; SKX-NEXT:    vunpckhpd {{.*#+}} zmm0 = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7]
-; SKX-NEXT:    vaddpd %zmm0, %zmm2, %zmm0
+; SKX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; SKX-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
 ; SKX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -278,18 +276,18 @@ define double @fadd_noundef_eel(<8 x double> %x225, <8 x double> %x227) {
 define double @fsub_noundef_ee (<8 x double> %x225, <8 x double> %x227) {
 ; KNL-LABEL: fsub_noundef_ee:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vunpcklpd {{.*#+}} zmm2 = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
-; KNL-NEXT:    vunpckhpd {{.*#+}} zmm0 = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7]
-; KNL-NEXT:    vsubpd %zmm0, %zmm2, %zmm0
+; KNL-NEXT:    vextractf32x4 $2, %zmm1, %xmm0
+; KNL-NEXT:    vbroadcastsd %xmm0, %zmm0
+; KNL-NEXT:    vsubpd %zmm1, %zmm0, %zmm0
 ; KNL-NEXT:    vextractf32x4 $2, %zmm0, %xmm0
 ; KNL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: fsub_noundef_ee:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vunpcklpd {{.*#+}} zmm2 = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
-; SKX-NEXT:    vunpckhpd {{.*#+}} zmm0 = zmm0[1],zmm1[1],zmm0[3],zmm1[3],zmm0[5],zmm1[5],zmm0[7],zmm1[7]
-; SKX-NEXT:    vsubpd %zmm0, %zmm2, %zmm0
+; SKX-NEXT:    vextractf32x4 $2, %zmm1, %xmm0
+; SKX-NEXT:    vbroadcastsd %xmm0, %zmm0
+; SKX-NEXT:    vsubpd %zmm1, %zmm0, %zmm0
 ; SKX-NEXT:    vextractf32x4 $2, %zmm0, %xmm0
 ; SKX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; SKX-NEXT:    vzeroupper

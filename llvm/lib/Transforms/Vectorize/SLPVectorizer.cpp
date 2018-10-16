@@ -1536,12 +1536,12 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // Check for terminator values (e.g. invoke).
       for (unsigned j = 0; j < VL.size(); ++j)
         for (unsigned i = 0, e = PH->getNumIncomingValues(); i < e; ++i) {
-          TerminatorInst *Term = dyn_cast<TerminatorInst>(
-              cast<PHINode>(VL[j])->getIncomingValueForBlock(PH->getIncomingBlock(i)));
-          if (Term) {
-            LLVM_DEBUG(
-                dbgs()
-                << "SLP: Need to swizzle PHINodes (TerminatorInst use).\n");
+          Instruction *Term = dyn_cast<Instruction>(
+              cast<PHINode>(VL[j])->getIncomingValueForBlock(
+                  PH->getIncomingBlock(i)));
+          if (Term && Term->isTerminator()) {
+            LLVM_DEBUG(dbgs()
+                       << "SLP: Need to swizzle PHINodes (terminator use).\n");
             BS.cancelScheduling(VL, VL0);
             newTreeEntry(VL, false, UserTreeIdx, ReuseShuffleIndicies);
             return;
@@ -3652,7 +3652,7 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
       if (PHINode *PH = dyn_cast<PHINode>(User)) {
         for (int i = 0, e = PH->getNumIncomingValues(); i != e; ++i) {
           if (PH->getIncomingValue(i) == Scalar) {
-            TerminatorInst *IncomingTerminator =
+            Instruction *IncomingTerminator =
                 PH->getIncomingBlock(i)->getTerminator();
             if (isa<CatchSwitchInst>(IncomingTerminator)) {
               Builder.SetInsertPoint(VecI->getParent(),
@@ -3960,7 +3960,7 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
     ScheduleEnd = I->getNextNode();
     if (isOneOf(S, I) != I)
       CheckSheduleForI(I);
-    assert(ScheduleEnd && "tried to vectorize a TerminatorInst?");
+    assert(ScheduleEnd && "tried to vectorize a terminator?");
     LLVM_DEBUG(dbgs() << "SLP:  initialize schedule region to " << *I << "\n");
     return true;
   }
@@ -3996,7 +3996,7 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
         ScheduleEnd = I->getNextNode();
         if (isOneOf(S, I) != I)
           CheckSheduleForI(I);
-        assert(ScheduleEnd && "tried to vectorize a TerminatorInst?");
+        assert(ScheduleEnd && "tried to vectorize a terminator?");
         LLVM_DEBUG(dbgs() << "SLP:  extend schedule region end to " << *I
                           << "\n");
         return true;

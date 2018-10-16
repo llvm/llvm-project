@@ -3,6 +3,8 @@
 
 ; ALL-ASM-LABEL: {{^}}fadd:
 
+; OSABI-AMDHSA-ASM-NOT: .hsa_code_object_version
+; OSABI-AMDHSA-ASM-NOT: .hsa_code_object_isa
 ; OSABI-AMDHSA-ASM-NOT: .amdgpu_hsa_kernel
 ; OSABI-AMDHSA-ASM-NOT: .amd_kernel_code_t
 

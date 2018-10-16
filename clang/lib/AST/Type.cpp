@@ -1965,6 +1965,7 @@ Type::ScalarTypeKind Type::getScalarTypeKind() const {
     if (BT->getKind() == BuiltinType::NullPtr) return STK_CPointer;
     if (BT->isInteger()) return STK_Integral;
     if (BT->isFloatingPoint()) return STK_Floating;
+    if (BT->isFixedPointType()) return STK_FixedPoint;
     llvm_unreachable("unknown scalar builtin type");
   } else if (isa<PointerType>(T)) {
     return STK_CPointer;

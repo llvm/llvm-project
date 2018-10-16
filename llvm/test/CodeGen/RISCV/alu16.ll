@@ -6,8 +6,6 @@
 ; that legalisation of these non-native types doesn't introduce unnecessary
 ; inefficiencies.
 
-; TODO: it's unnecessary to mask (zero-extend) the shift amount.
-
 define i16 @addi(i16 %a) nounwind {
 ; RV32I-LABEL: addi:
 ; RV32I:       # %bb.0:
@@ -122,9 +120,6 @@ define i16 @sub(i16 %a, i16 %b) nounwind {
 define i16 @sll(i16 %a, i16 %b) nounwind {
 ; RV32I-LABEL: sll:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 16
-; RV32I-NEXT:    addi a2, a2, -1
-; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    sll a0, a0, a1
 ; RV32I-NEXT:    ret
   %1 = shl i16 %a, %b
@@ -173,7 +168,6 @@ define i16 @srl(i16 %a, i16 %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 16
 ; RV32I-NEXT:    addi a2, a2, -1
-; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    and a0, a0, a2
 ; RV32I-NEXT:    srl a0, a0, a1
 ; RV32I-NEXT:    ret
@@ -184,9 +178,6 @@ define i16 @srl(i16 %a, i16 %b) nounwind {
 define i16 @sra(i16 %a, i16 %b) nounwind {
 ; RV32I-LABEL: sra:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 16
-; RV32I-NEXT:    addi a2, a2, -1
-; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    slli a0, a0, 16
 ; RV32I-NEXT:    srai a0, a0, 16
 ; RV32I-NEXT:    sra a0, a0, a1

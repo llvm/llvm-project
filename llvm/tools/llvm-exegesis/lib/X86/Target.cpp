@@ -38,14 +38,14 @@ class X86LatencySnippetGenerator : public LatencySnippetGenerator {
 public:
   using LatencySnippetGenerator::LatencySnippetGenerator;
 
-  llvm::Expected<CodeTemplate>
-  generateCodeTemplate(const Instruction &Instr) const override {
+  llvm::Expected<std::vector<CodeTemplate>>
+  generateCodeTemplates(const Instruction &Instr) const override {
     if (auto E = IsInvalidOpcode(Instr))
       return std::move(E);
 
     switch (GetX86FPFlags(Instr)) {
     case llvm::X86II::NotFP:
-      return LatencySnippetGenerator::generateCodeTemplate(Instr);
+      return LatencySnippetGenerator::generateCodeTemplates(Instr);
     case llvm::X86II::ZeroArgFP:
     case llvm::X86II::OneArgFP:
     case llvm::X86II::SpecialFP:
@@ -58,7 +58,7 @@ public:
       //   - `ST(0) = fsqrt(ST(0))` (OneArgFPRW)
       //   - `ST(0) = ST(0) + ST(i)` (TwoArgFP)
       // They are intrinsically serial and do not modify the state of the stack.
-      return generateSelfAliasingCodeTemplate(Instr);
+      return generateSelfAliasingCodeTemplates(Instr);
     default:
       llvm_unreachable("Unknown FP Type!");
     }
@@ -69,14 +69,14 @@ class X86UopsSnippetGenerator : public UopsSnippetGenerator {
 public:
   using UopsSnippetGenerator::UopsSnippetGenerator;
 
-  llvm::Expected<CodeTemplate>
-  generateCodeTemplate(const Instruction &Instr) const override {
+  llvm::Expected<std::vector<CodeTemplate>>
+  generateCodeTemplates(const Instruction &Instr) const override {
     if (auto E = IsInvalidOpcode(Instr))
       return std::move(E);
 
     switch (GetX86FPFlags(Instr)) {
     case llvm::X86II::NotFP:
-      return UopsSnippetGenerator::generateCodeTemplate(Instr);
+      return UopsSnippetGenerator::generateCodeTemplates(Instr);
     case llvm::X86II::ZeroArgFP:
     case llvm::X86II::OneArgFP:
     case llvm::X86II::SpecialFP:
@@ -88,12 +88,12 @@ public:
       //   - `ST(0) = ST(0) + ST(i)` (TwoArgFP)
       // They are intrinsically serial and do not modify the state of the stack.
       // We generate the same code for latency and uops.
-      return generateSelfAliasingCodeTemplate(Instr);
+      return generateSelfAliasingCodeTemplates(Instr);
     case llvm::X86II::CompareFP:
     case llvm::X86II::CondMovFP:
       // We can compute uops for any FP instruction that does not grow or shrink
       // the stack (either do not touch the stack or push as much as they pop).
-      return generateUnconstrainedCodeTemplate(
+      return generateUnconstrainedCodeTemplates(
           Instr, "instruction does not grow/shrink the FP stack");
     default:
       llvm_unreachable("Unknown FP Type!");

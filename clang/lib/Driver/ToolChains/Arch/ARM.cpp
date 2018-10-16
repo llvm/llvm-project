@@ -378,6 +378,13 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
                       Features);
   } else if (FPUArg) {
     getARMFPUFeatures(D, FPUArg, Args, FPUArg->getValue(), Features);
+  } else if (Triple.isAndroid() && getARMSubArchVersionNumber(Triple) >= 7) {
+    // Android mandates minimum FPU requirements based on OS version.
+    const char *AndroidFPU =
+        Triple.isAndroidVersionLT(23) ? "vfpv3-d16" : "neon";
+    if (!llvm::ARM::getFPUFeatures(llvm::ARM::parseFPU(AndroidFPU), Features))
+      D.Diag(clang::diag::err_drv_clang_unsupported)
+          << std::string("-mfpu=") + AndroidFPU;
   }
 
   // Honor -mhwdiv=. ClangAs gives preference to -Wa,-mhwdiv=.
@@ -636,7 +643,7 @@ StringRef arm::getLLVMArchSuffixForARM(StringRef CPU, StringRef Arch,
   return llvm::ARM::getSubArch(ArchKind);
 }
 
-void arm::appendEBLinkFlags(const ArgList &Args, ArgStringList &CmdArgs,
+void arm::appendBE8LinkFlag(const ArgList &Args, ArgStringList &CmdArgs,
                             const llvm::Triple &Triple) {
   if (Args.hasArg(options::OPT_r))
     return;

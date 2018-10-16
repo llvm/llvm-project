@@ -268,7 +268,7 @@ VPRegionBlock *PlainCFGBuilder::buildPlainCFG() {
     // Set VPBB successors. We create empty VPBBs for successors if they don't
     // exist already. Recipes will be created when the successor is visited
     // during the RPO traversal.
-    TerminatorInst *TI = BB->getTerminator();
+    Instruction *TI = BB->getTerminator();
     assert(TI && "Terminator expected.");
     unsigned NumSuccs = TI->getNumSuccessors();
 
