@@ -82,12 +82,12 @@ RefSlab getRefs(const SymbolIndex &I, SymbolID ID) {
 
 TEST(FileSymbolsTest, UpdateAndGet) {
   FileSymbols FS;
-  EXPECT_THAT(runFuzzyFind(*FS.buildMemIndex(), ""), IsEmpty());
+  EXPECT_THAT(runFuzzyFind(*FS.buildIndex(IndexType::Light), ""), IsEmpty());
 
   FS.update("f1", numSlab(1, 3), refSlab(SymbolID("1"), "f1.cc"));
-  EXPECT_THAT(runFuzzyFind(*FS.buildMemIndex(), ""),
+  EXPECT_THAT(runFuzzyFind(*FS.buildIndex(IndexType::Light), ""),
               UnorderedElementsAre(QName("1"), QName("2"), QName("3")));
-  EXPECT_THAT(getRefs(*FS.buildMemIndex(), SymbolID("1")),
+  EXPECT_THAT(getRefs(*FS.buildIndex(IndexType::Light), SymbolID("1")),
               RefsAre({FileURI("f1.cc")}));
 }
 
@@ -95,9 +95,10 @@ TEST(FileSymbolsTest, Overlap) {
   FileSymbols FS;
   FS.update("f1", numSlab(1, 3), nullptr);
   FS.update("f2", numSlab(3, 5), nullptr);
-  EXPECT_THAT(runFuzzyFind(*FS.buildMemIndex(), ""),
-              UnorderedElementsAre(QName("1"), QName("2"), QName("3"),
-                                   QName("4"), QName("5")));
+  for (auto Type : {IndexType::Light, IndexType::Heavy})
+    EXPECT_THAT(runFuzzyFind(*FS.buildIndex(Type), ""),
+                UnorderedElementsAre(QName("1"), QName("2"), QName("3"),
+                                     QName("4"), QName("5")));
 }
 
 TEST(FileSymbolsTest, SnapshotAliveAfterRemove) {
@@ -106,13 +107,13 @@ TEST(FileSymbolsTest, SnapshotAliveAfterRemove) {
   SymbolID ID("1");
   FS.update("f1", numSlab(1, 3), refSlab(ID, "f1.cc"));
 
-  auto Symbols = FS.buildMemIndex();
+  auto Symbols = FS.buildIndex(IndexType::Light);
   EXPECT_THAT(runFuzzyFind(*Symbols, ""),
               UnorderedElementsAre(QName("1"), QName("2"), QName("3")));
   EXPECT_THAT(getRefs(*Symbols, ID), RefsAre({FileURI("f1.cc")}));
 
   FS.update("f1", nullptr, nullptr);
-  auto Empty = FS.buildMemIndex();
+  auto Empty = FS.buildIndex(IndexType::Light);
   EXPECT_THAT(runFuzzyFind(*Empty, ""), IsEmpty());
   EXPECT_THAT(getRefs(*Empty, ID), ElementsAre());
 

@@ -50,7 +50,8 @@ SymbolSlab TestTU::headerSymbols() const {
 
 std::unique_ptr<SymbolIndex> TestTU::index() const {
   auto AST = build();
-  auto Idx = llvm::make_unique<FileIndex>();
+  auto Idx = llvm::make_unique<FileIndex>(
+      /*URISchemes=*/std::vector<std::string>{}, /*UseDex=*/true);
   Idx->updatePreamble(Filename, AST.getASTContext(), AST.getPreprocessorPtr());
   Idx->updateMain(Filename, AST);
   return std::move(Idx);
