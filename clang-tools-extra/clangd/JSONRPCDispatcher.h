@@ -25,23 +25,6 @@
 namespace clang {
 namespace clangd {
 
-// Logs to an output stream, such as stderr.
-// FIXME: Rename to StreamLogger or such, and move to Logger.h.
-class JSONOutput : public Logger {
-public:
-  JSONOutput(llvm::raw_ostream &Logs, Logger::Level MinLevel)
-      : MinLevel(MinLevel), Logs(Logs) {}
-
-  /// Write a line to the logging stream.
-  void log(Level, const llvm::formatv_object_base &Message) override;
-
-private:
-  Logger::Level MinLevel;
-  llvm::raw_ostream &Logs;
-
-  std::mutex StreamMutex;
-};
-
 /// Sends a successful reply.
 /// Current context must derive from JSONRPCDispatcher::Handler.
 void reply(llvm::json::Value &&Result);

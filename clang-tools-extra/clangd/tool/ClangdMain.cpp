@@ -253,7 +253,7 @@ int main(int argc, char *argv[]) {
   // Use buffered stream to stderr (we still flush each log message). Unbuffered
   // stream can cause significant (non-deterministic) latency for the logger.
   llvm::errs().SetBuffered();
-  JSONOutput Logger(llvm::errs(), LogLevel);
+  StreamLogger Logger(llvm::errs(), LogLevel);
   clangd::LoggingSession LoggingSession(Logger);
 
   // If --compile-commands-dir arg was invoked, check value and override default
