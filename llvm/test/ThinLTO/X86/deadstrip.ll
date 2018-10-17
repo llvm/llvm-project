@@ -8,10 +8,10 @@
 ; RUN: llvm-lto -exported-symbol=_main -thinlto-action=promote %t1.bc -thinlto-index=%t.index.bc -o - | llvm-lto -exported-symbol=_main -thinlto-action=internalize -thinlto-index %t.index.bc -thinlto-module-id=%t1.bc - -o - | llvm-dis -o - | FileCheck %s
 ; RUN: llvm-lto -exported-symbol=_main -thinlto-action=promote %t2.bc -thinlto-index=%t.index.bc -o - | llvm-lto -exported-symbol=_main -thinlto-action=internalize -thinlto-index %t.index.bc -thinlto-module-id=%t2.bc - -o - | llvm-dis -o - | FileCheck %s --check-prefix=CHECK2
 
-; RUN: llvm-lto -exported-symbol=_main -thinlto-action=run %t1.bc %t2.bc
+; RUN: llvm-lto -exported-symbol=_main -thinlto-action=run -stats %t1.bc %t2.bc 2>&1 | FileCheck %s --check-prefix=STATS
 ; RUN: llvm-nm %t1.bc.thinlto.o | FileCheck %s --check-prefix=CHECK-NM
 
-; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t.out -save-temps \
+; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t.out -save-temps -stats \
 ; RUN:   -r %t1.bc,_main,plx \
 ; RUN:   -r %t1.bc,_bar,pl \
 ; RUN:   -r %t1.bc,_dead_func,pl \
@@ -25,7 +25,7 @@
 ; RUN:   -r %t2.bc,_dead_func,l \
 ; RUN:   -r %t2.bc,_another_dead_func,pl \
 ; RUN:   -thinlto-threads=1 \
-; RUN:	 -debug-only=function-import 2>&1 | FileCheck %s --check-prefix=DEBUG
+; RUN:	 -debug-only=function-import 2>&1 | FileCheck %s --check-prefix=DEBUG --check-prefix=STATS
 ; RUN: llvm-dis < %t.out.1.3.import.bc | FileCheck %s --check-prefix=LTO2
 ; RUN: llvm-dis < %t.out.2.3.import.bc | FileCheck %s --check-prefix=LTO2-CHECK2
 ; RUN: llvm-nm %t.out.1 | FileCheck %s --check-prefix=CHECK2-NM
@@ -88,6 +88,8 @@
 ; DEBUG-DAG: Ignores Dead GUID: 7546896869197086323 (baz)
 ; DEBUG-DAG: Initialize import for 15611644523426561710 (boo)
 ; DEBUG-DAG: Ignores Dead GUID: 2384416018110111308 (another_dead_func)
+
+; STATS: 3 function-import  - Number of dead stripped symbols in index
 
 ; Next test the case where Inputs/deadstrip.ll does not get a module index,
 ; which will cause it to be handled by regular LTO in the new LTO API.

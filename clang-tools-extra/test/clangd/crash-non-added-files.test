@@ -32,3 +32,5 @@
 {"jsonrpc":"2.0","id":6,"method":"shutdown"}
 ---
 {"jsonrpc":"2.0","method":"exit"}
+---
+{"jsonrpc":"2.0","method":"exit"}
