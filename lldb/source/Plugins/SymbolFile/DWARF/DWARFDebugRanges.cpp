@@ -143,10 +143,17 @@ bool DWARFDebugRngLists::ExtractRangeList(const DWARFDataExtractor &data,
       break;
     }
 
+    case DW_RLE_start_end: {
+      dw_addr_t begin = data.GetMaxU64(offset_ptr, addrSize);
+      dw_addr_t end = data.GetMaxU64(offset_ptr, addrSize);
+      rangeList.Append(DWARFRangeList::Entry(begin, end - begin));
+      break;
+    }
+
     default:
       // Next encodings are not yet supported:
       // DW_RLE_base_addressx, DW_RLE_startx_endx, DW_RLE_startx_length,
-      // DW_RLE_offset_pair, DW_RLE_base_address, DW_RLE_start_end
+      // DW_RLE_offset_pair, DW_RLE_base_address.
       lldbassert(0 && "unknown range list entry encoding");
       error = true;
     }
