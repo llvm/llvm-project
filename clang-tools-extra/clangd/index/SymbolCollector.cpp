@@ -480,9 +480,6 @@ void SymbolCollector::finish() {
   auto GetURI = [&](FileID FID) -> llvm::Optional<std::string> {
     auto Found = URICache.find(FID);
     if (Found == URICache.end()) {
-      // Ignore cases where we can not find a corresponding file entry
-      // for the loc, thoses are not interesting, e.g. symbols formed
-      // via macro concatenation.
       if (auto *FileEntry = SM.getFileEntryForID(FID)) {
         auto FileURI = toURI(SM, FileEntry->getName(), Opts);
         if (!FileURI) {
@@ -490,6 +487,11 @@ void SymbolCollector::finish() {
           FileURI = ""; // reset to empty as we also want to cache this case.
         }
         Found = URICache.insert({FID, *FileURI}).first;
+      } else {
+        // Ignore cases where we can not find a corresponding file entry
+        // for the loc, thoses are not interesting, e.g. symbols formed
+        // via macro concatenation.
+        return llvm::None;
       }
     }
     return Found->second;
