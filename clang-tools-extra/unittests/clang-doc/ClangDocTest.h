@@ -22,7 +22,7 @@ using EmittedInfoList = std::vector<std::unique_ptr<Info>>;
 
 static const SymbolID EmptySID = SymbolID();
 static const SymbolID NonEmptySID =
-    SymbolID{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+    SymbolID{{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}};
 
 NamespaceInfo *InfoAsNamespace(Info *I);
 RecordInfo *InfoAsRecord(Info *I);
