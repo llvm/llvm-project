@@ -54,6 +54,14 @@ std::string printQualifiedName(const NamedDecl &ND) {
   return QName;
 }
 
+std::string printNamespaceScope(const DeclContext &DC) {
+  for (const auto *Ctx = &DC; Ctx != nullptr; Ctx = Ctx->getParent())
+    if (const auto *NS = dyn_cast<NamespaceDecl>(Ctx))
+      if (!NS->isAnonymousNamespace() && !NS->isInlineNamespace())
+        return printQualifiedName(*NS) + "::";
+  return "";
+}
+
 llvm::Optional<SymbolID> getSymbolID(const Decl *D) {
   llvm::SmallString<128> USR;
   if (index::generateUSRForDecl(D, USR))
