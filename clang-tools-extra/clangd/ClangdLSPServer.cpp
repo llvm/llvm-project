@@ -97,29 +97,14 @@ void ClangdLSPServer::onInitialize(InitializeParams &Params) {
   else if (Params.rootPath && !Params.rootPath->empty())
     Server->setRootPath(*Params.rootPath);
 
-  CCOpts.EnableSnippets =
-      Params.capabilities.textDocument.completion.completionItem.snippetSupport;
-  DiagOpts.EmbedFixesInDiagnostics =
-      Params.capabilities.textDocument.publishDiagnostics.clangdFixSupport;
-  DiagOpts.SendDiagnosticCategory =
-      Params.capabilities.textDocument.publishDiagnostics.categorySupport;
-  SupportsCodeAction =
-      Params.capabilities.textDocument.codeActionLiteralSupport;
-
-  if (Params.capabilities.workspace && Params.capabilities.workspace->symbol &&
-      Params.capabilities.workspace->symbol->symbolKind &&
-      Params.capabilities.workspace->symbol->symbolKind->valueSet) {
-    for (SymbolKind Kind :
-         *Params.capabilities.workspace->symbol->symbolKind->valueSet) {
-      SupportedSymbolKinds.set(static_cast<size_t>(Kind));
-    }
-  }
-
-  if (Params.capabilities.textDocument.completion.completionItemKind &&
-      Params.capabilities.textDocument.completion.completionItemKind->valueSet)
-    for (CompletionItemKind Kind : *Params.capabilities.textDocument.completion
-                                        .completionItemKind->valueSet)
-      SupportedCompletionItemKinds.set(static_cast<size_t>(Kind));
+  CCOpts.EnableSnippets = Params.capabilities.CompletionSnippets;
+  DiagOpts.EmbedFixesInDiagnostics = Params.capabilities.DiagnosticFixes;
+  DiagOpts.SendDiagnosticCategory = Params.capabilities.DiagnosticCategory;
+  if (Params.capabilities.WorkspaceSymbolKinds)
+    SupportedSymbolKinds |= *Params.capabilities.WorkspaceSymbolKinds;
+  if (Params.capabilities.CompletionItemKinds)
+    SupportedCompletionItemKinds |= *Params.capabilities.CompletionItemKinds;
+  SupportsCodeAction = Params.capabilities.CodeActionStructure;
 
   reply(json::Object{
       {{"capabilities",
