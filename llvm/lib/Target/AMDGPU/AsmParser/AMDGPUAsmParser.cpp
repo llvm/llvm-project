@@ -3065,9 +3065,18 @@ bool AMDGPUAsmParser::ParseDirectiveISAVersion() {
 }
 
 bool AMDGPUAsmParser::ParseDirectiveHSAMetadata() {
+  const char *AssemblerDirectiveBegin;
+  const char *AssemblerDirectiveEnd;
+  std::tie(AssemblerDirectiveBegin, AssemblerDirectiveEnd) =
+      AMDGPU::IsaInfo::hasCodeObjectV3(&getSTI())
+          ? std::make_tuple(HSAMD::V3::AssemblerDirectiveBegin,
+                            HSAMD::V3::AssemblerDirectiveEnd)
+          : std::make_tuple(HSAMD::AssemblerDirectiveBegin,
+                            HSAMD::AssemblerDirectiveEnd);
+
   if (getSTI().getTargetTriple().getOS() != Triple::AMDHSA) {
     return Error(getParser().getTok().getLoc(),
-                 (Twine(HSAMD::AssemblerDirectiveBegin) + Twine(" directive is "
+                 (Twine(AssemblerDirectiveBegin) + Twine(" directive is "
                  "not available on non-amdhsa OSes")).str());
   }
 
@@ -3085,7 +3094,7 @@ bool AMDGPUAsmParser::ParseDirectiveHSAMetadata() {
 
     if (getLexer().is(AsmToken::Identifier)) {
       StringRef ID = getLexer().getTok().getIdentifier();
-      if (ID == AMDGPU::HSAMD::AssemblerDirectiveEnd) {
+      if (ID == AssemblerDirectiveEnd) {
         Lex();
         FoundEnd = true;
         break;
@@ -3150,6 +3159,10 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
 
     if (IDVal == ".amdhsa_kernel")
       return ParseDirectiveAMDHSAKernel();
+
+    // TODO: Restructure/combine with PAL metadata directive.
+    if (IDVal == AMDGPU::HSAMD::V3::AssemblerDirectiveBegin)
+      return ParseDirectiveHSAMetadata();
   } else {
     if (IDVal == ".hsa_code_object_version")
       return ParseDirectiveHSACodeObjectVersion();
@@ -3165,10 +3178,10 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
 
     if (IDVal == ".amd_amdgpu_isa")
       return ParseDirectiveISAVersion();
-  }
 
-  if (IDVal == AMDGPU::HSAMD::AssemblerDirectiveBegin)
-    return ParseDirectiveHSAMetadata();
+    if (IDVal == AMDGPU::HSAMD::AssemblerDirectiveBegin)
+      return ParseDirectiveHSAMetadata();
+  }
 
   if (IDVal == PALMD::AssemblerDirective)
     return ParseDirectivePALMetadata();

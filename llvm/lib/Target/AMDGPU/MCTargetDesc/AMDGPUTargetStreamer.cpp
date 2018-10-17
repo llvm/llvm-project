@@ -222,9 +222,9 @@ bool AMDGPUTargetAsmStreamer::EmitHSAMetadata(
   yaml::Output YOut(StrOS);
   YOut << HSAMetadataRoot;
 
-  OS << '\t' << AssemblerDirectiveBegin << '\n';
+  OS << '\t' << V3::AssemblerDirectiveBegin << '\n';
   OS << StrOS.str() << '\n';
-  OS << '\t' << AssemblerDirectiveEnd << '\n';
+  OS << '\t' << V3::AssemblerDirectiveEnd << '\n';
   return true;
 }
 

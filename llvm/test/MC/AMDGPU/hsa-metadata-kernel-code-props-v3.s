@@ -2,7 +2,7 @@
 // RUN: llvm-mc -mattr=+code-object-v3 -triple=amdgcn-amd-amdhsa -mcpu=gfx800 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX800 %s
 // RUN: llvm-mc -mattr=+code-object-v3 -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX900 %s
 
-// CHECK:  .amd_amdgpu_hsa_metadata
+// CHECK:  .amdgpu_metadata
 // CHECK:    amdhsa.kernels:
 // CHECK:      - .sgpr_count: 40
 // CHECK:        .max_flat_workgroup_size:    256
@@ -19,7 +19,7 @@
 // CHECK:    amdhsa.version:
 // CHECK-NEXT: - 1
 // CHECK-NEXT: - 0
-.amd_amdgpu_hsa_metadata
+.amdgpu_metadata
   amdhsa.version:
     - 1
     - 0
@@ -39,4 +39,4 @@
       .vgpr_count:               14
       .sgpr_spill_count:         1
       .vgpr_spill_count:         1
-.end_amd_amdgpu_hsa_metadata
+.end_amdgpu_metadata

@@ -216,7 +216,7 @@ v_mov_b32_e32 v16, s3
 
 // Metadata
 
-.amd_amdgpu_hsa_metadata
+.amdgpu_metadata
   amdhsa.version:
     - 3
     - 0
@@ -241,9 +241,9 @@ v_mov_b32_e32 v16, s3
       .sgpr_count: 14
       .vgpr_count: 40
       .max_flat_workgroup_size: 256
-.end_amd_amdgpu_hsa_metadata
+.end_amdgpu_metadata
 
-// ASM: .amd_amdgpu_hsa_metadata
+// ASM: .amdgpu_metadata
 // ASM:    amdhsa.kernels:
 // ASM:  - .sgpr_count:     14
 // ASM:    .max_flat_workgroup_size: 256
@@ -268,4 +268,4 @@ v_mov_b32_e32 v16, s3
 // ASM:    amdhsa.version:
 // ASM-NEXT: - 3
 // ASM-NEXT: - 0
-// ASM: .end_amd_amdgpu_hsa_metadata
+// ASM: .end_amdgpu_metadata

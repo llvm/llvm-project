@@ -2,7 +2,7 @@
 // RUN: llvm-mc -mattr=+code-object-v3 -triple=amdgcn-amd-amdhsa -mcpu=gfx800 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX800 %s
 // RUN: llvm-mc -mattr=+code-object-v3 -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX900 %s
 
-// CHECK:  .amd_amdgpu_hsa_metadata
+// CHECK:  .amdgpu_metadata
 // CHECK:    amdhsa.kernels:
 // CHECK:      - .max_flat_workgroup_size: 256
 // CHECK:        .wavefront_size: 128
@@ -32,8 +32,8 @@
 // CHECK:    amdhsa.printf:
 // CHECK:      - '1:1:4:%d\n'
 // CHECK:      - '2:1:8:%g\n'
-// CHECK: .end_amd_amdgpu_hsa_metadata
-.amd_amdgpu_hsa_metadata
+// CHECK: .end_amdgpu_metadata
+.amdgpu_metadata
   amdhsa.version:
     - 1
     - 0
@@ -64,4 +64,4 @@
         - 16
         - 32
       .vec_type_hint:       int
-.end_amd_amdgpu_hsa_metadata
+.end_amdgpu_metadata
