@@ -550,7 +550,7 @@ static amd_comgr_status_t ParseLLVMOptions(const std::vector<std::string>& Optio
 }
 
 static amd_comgr_status_t LLDLink(llvm::ArrayRef<const char *> Args) {
-  driver::ArgStringList LLDArgs(
+  ArgStringList LLDArgs(
       llvm::iterator_range<ArrayRef<const char *>::iterator>(Args.begin(),
                                                              Args.end()));
   LLDArgs.insert(LLDArgs.begin(), "");
