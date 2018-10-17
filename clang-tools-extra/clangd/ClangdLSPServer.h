@@ -24,7 +24,6 @@
 namespace clang {
 namespace clangd {
 
-class JSONOutput;
 class SymbolIndex;
 
 /// This class exposes ClangdServer's capabilities via Language Server Protocol.

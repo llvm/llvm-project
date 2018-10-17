@@ -15,9 +15,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Chrono.h"
 #include "llvm/Support/Errno.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/SourceMgr.h"
@@ -58,18 +56,6 @@ public:
 };
 Key<std::unique_ptr<RequestSpan>> RequestSpan::RSKey;
 } // namespace
-
-void JSONOutput::log(Logger::Level Level,
-                     const llvm::formatv_object_base &Message) {
-  if (Level < MinLevel)
-    return;
-  llvm::sys::TimePoint<> Timestamp = std::chrono::system_clock::now();
-  trace::log(Message);
-  std::lock_guard<std::mutex> Guard(StreamMutex);
-  Logs << llvm::formatv("{0}[{1:%H:%M:%S.%L}] {2}\n", indicator(Level),
-                        Timestamp, Message);
-  Logs.flush();
-}
 
 void clangd::reply(json::Value &&Result) {
   auto ID = getRequestId();
