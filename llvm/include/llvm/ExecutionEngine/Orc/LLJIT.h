@@ -111,8 +111,6 @@ protected:
   LLJIT(std::unique_ptr<ExecutionSession> ES, JITTargetMachineBuilder JTMB,
         DataLayout DL, unsigned NumCompileThreads);
 
-  std::unique_ptr<RuntimeDyld::MemoryManager> getMemoryManager(VModuleKey K);
-
   std::string mangle(StringRef UnmangledName);
 
   Error applyDataLayout(Module &M);

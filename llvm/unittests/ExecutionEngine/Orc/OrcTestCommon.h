@@ -97,7 +97,7 @@ public:
       orc::SymbolFlagsMap SymbolFlags, MaterializeFunction Materialize,
       DiscardFunction Discard = DiscardFunction(),
       DestructorFunction Destructor = DestructorFunction())
-      : MaterializationUnit(std::move(SymbolFlags)),
+      : MaterializationUnit(std::move(SymbolFlags), orc::VModuleKey()),
         Materialize(std::move(Materialize)), Discard(std::move(Discard)),
         Destructor(std::move(Destructor)) {}
 

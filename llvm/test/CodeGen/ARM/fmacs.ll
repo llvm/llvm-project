@@ -27,10 +27,11 @@ entry:
 	ret float %1
 }
 
-define float @vlma_minsize(float %acc, float %a, float %b) #0 {
+define float @vmla_minsize(float %acc, float %a, float %b) #0 {
 entry:
-; VMLA-LABEL: vlma_minsize:
-; VLMA:       vmla.f32  s0, s1, s2
+; VMLA-LABEL: vmla_minsize:
+; VMLA:       vmla.f32  s0, s1, s2
+; VMLA-NEXT:  bx  lr
 
   %0 = fmul float %a, %b
   %1 = fadd float %acc, %0

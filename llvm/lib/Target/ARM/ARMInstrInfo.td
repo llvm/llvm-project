@@ -357,7 +357,10 @@ let RecomputePerFunction = 1 in {
   def DontUseMovt      : Predicate<"!Subtarget->useMovt(*MF)">;
   def UseMovtInPic     : Predicate<"Subtarget->useMovt(*MF) && Subtarget->allowPositionIndependentMovt()">;
   def DontUseMovtInPic : Predicate<"!Subtarget->useMovt(*MF) || !Subtarget->allowPositionIndependentMovt()">;
-  def UseFPVMLx        : Predicate<"Subtarget->useFPVMLx() || MF->getFunction().optForMinSize()">;
+
+  def UseFPVMLx: Predicate<"((Subtarget->useFPVMLx() &&"
+                           "  TM.Options.AllowFPOpFusion != FPOpFusion::Fast) ||"
+                           "MF->getFunction().optForMinSize())">;
 }
 def UseMulOps        : Predicate<"Subtarget->useMulOps()">;
 
@@ -368,10 +371,6 @@ def UseFusedMAC      : Predicate<"(TM.Options.AllowFPOpFusion =="
                                  " FPOpFusion::Fast && "
                                  " Subtarget->hasVFP4()) && "
                                  "!Subtarget->isTargetDarwin()">;
-def DontUseFusedMAC  : Predicate<"!(TM.Options.AllowFPOpFusion =="
-                                 " FPOpFusion::Fast &&"
-                                 " Subtarget->hasVFP4()) || "
-                                 "Subtarget->isTargetDarwin()">;
 
 def HasFastVGETLNi32 : Predicate<"!Subtarget->hasSlowVGETLNi32()">;
 def HasSlowVGETLNi32 : Predicate<"Subtarget->hasSlowVGETLNi32()">;
