@@ -12,3 +12,6 @@ Content-Length: 172
 Content-Length: 44
 
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
+Content-Length: 33
+
+{"jsonrpc":"2.0","method":"exit"}

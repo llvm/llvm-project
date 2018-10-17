@@ -24,3 +24,5 @@
 # CHECK-NEXT:         "message": "MACRO is one",
 ---
 {"jsonrpc":"2.0","id":10000,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}
