@@ -238,18 +238,6 @@ enum class TextDocumentSyncKind {
   Incremental = 2,
 };
 
-struct CompletionItemClientCapabilities {
-  /// Client supports snippets as insert text.
-  bool snippetSupport = false;
-  /// Client supports commit characters on a completion item.
-  bool commitCharacterSupport = false;
-  // Client supports the follow content formats for the documentation property.
-  // The order describes the preferred format of the client.
-  // NOTE: not used by clangd at the moment.
-  // std::vector<MarkupKind> documentationFormat;
-};
-bool fromJSON(const llvm::json::Value &, CompletionItemClientCapabilities &);
-
 /// The kind of a completion entry.
 enum class CompletionItemKind {
   Missing = 0,
@@ -280,57 +268,15 @@ enum class CompletionItemKind {
   TypeParameter = 25,
 };
 bool fromJSON(const llvm::json::Value &, CompletionItemKind &);
-
-struct CompletionItemKindCapabilities {
-  /// The CompletionItemKinds that the client supports. If not set, the client
-  /// only supports <= CompletionItemKind::Reference and will not fall back to a
-  /// valid default value.
-  llvm::Optional<std::vector<CompletionItemKind>> valueSet;
-};
-// Discards unknown CompletionItemKinds.
-bool fromJSON(const llvm::json::Value &, std::vector<CompletionItemKind> &);
-bool fromJSON(const llvm::json::Value &, CompletionItemKindCapabilities &);
-
 constexpr auto CompletionItemKindMin =
     static_cast<size_t>(CompletionItemKind::Text);
 constexpr auto CompletionItemKindMax =
     static_cast<size_t>(CompletionItemKind::TypeParameter);
 using CompletionItemKindBitset = std::bitset<CompletionItemKindMax + 1>;
+bool fromJSON(const llvm::json::Value &, CompletionItemKindBitset &);
 CompletionItemKind
 adjustKindToCapability(CompletionItemKind Kind,
                        CompletionItemKindBitset &supportedCompletionItemKinds);
-
-struct CompletionClientCapabilities {
-  /// Whether completion supports dynamic registration.
-  bool dynamicRegistration = false;
-  /// The client supports the following `CompletionItem` specific capabilities.
-  CompletionItemClientCapabilities completionItem;
-  /// The CompletionItemKinds that the client supports. If not set, the client
-  /// only supports <= CompletionItemKind::Reference and will not fall back to a
-  /// valid default value.
-  llvm::Optional<CompletionItemKindCapabilities> completionItemKind;
-
-  /// The client supports to send additional context information for a
-  /// `textDocument/completion` request.
-  bool contextSupport = false;
-};
-bool fromJSON(const llvm::json::Value &, CompletionClientCapabilities &);
-
-struct PublishDiagnosticsClientCapabilities {
-  // Whether the client accepts diagnostics with related information.
-  // NOTE: not used by clangd at the moment.
-  // bool relatedInformation;
-
-  /// Whether the client accepts diagnostics with fixes attached using the
-  /// "clangd_fixes" extension.
-  bool clangdFixSupport = false;
-
-  /// Whether the client accepts diagnostics with category attached to it
-  /// using the "category" extension.
-  bool categorySupport = false;
-};
-bool fromJSON(const llvm::json::Value &,
-              PublishDiagnosticsClientCapabilities &);
 
 /// A symbol kind.
 enum class SymbolKind {
@@ -361,62 +307,44 @@ enum class SymbolKind {
   Operator = 25,
   TypeParameter = 26
 };
-
+bool fromJSON(const llvm::json::Value &, SymbolKind &);
 constexpr auto SymbolKindMin = static_cast<size_t>(SymbolKind::File);
 constexpr auto SymbolKindMax = static_cast<size_t>(SymbolKind::TypeParameter);
 using SymbolKindBitset = std::bitset<SymbolKindMax + 1>;
-
-bool fromJSON(const llvm::json::Value &, SymbolKind &);
-
-struct SymbolKindCapabilities {
-  /// The SymbolKinds that the client supports. If not set, the client only
-  /// supports <= SymbolKind::Array and will not fall back to a valid default
-  /// value.
-  llvm::Optional<std::vector<SymbolKind>> valueSet;
-};
-// Discards unknown SymbolKinds.
-bool fromJSON(const llvm::json::Value &, std::vector<SymbolKind> &);
-bool fromJSON(const llvm::json::Value &, SymbolKindCapabilities &);
+bool fromJSON(const llvm::json::Value &, SymbolKindBitset &);
 SymbolKind adjustKindToCapability(SymbolKind Kind,
                                   SymbolKindBitset &supportedSymbolKinds);
 
-struct WorkspaceSymbolCapabilities {
-  /// Capabilities SymbolKind.
-  llvm::Optional<SymbolKindCapabilities> symbolKind;
-};
-bool fromJSON(const llvm::json::Value &, WorkspaceSymbolCapabilities &);
-
-// FIXME: most of the capabilities are missing from this struct. Only the ones
-// used by clangd are currently there.
-struct WorkspaceClientCapabilities {
-  /// Capabilities specific to `workspace/symbol`.
-  llvm::Optional<WorkspaceSymbolCapabilities> symbol;
-};
-bool fromJSON(const llvm::json::Value &, WorkspaceClientCapabilities &);
-
-// FIXME: most of the capabilities are missing from this struct. Only the ones
-// used by clangd are currently there.
-struct TextDocumentClientCapabilities {
-  /// Capabilities specific to the `textDocument/completion`
-  CompletionClientCapabilities completion;
-
-  /// Capabilities specific to the 'textDocument/publishDiagnostics'
-  PublishDiagnosticsClientCapabilities publishDiagnostics;
-
-  /// Flattened from codeAction.codeActionLiteralSupport.
-  // FIXME: flatten other properties in this way.
-  bool codeActionLiteralSupport = false;
-};
-bool fromJSON(const llvm::json::Value &, TextDocumentClientCapabilities &);
-
+// This struct doesn't mirror LSP!
+// The protocol defines deeply nested structures for client capabilities.
+// Instead of mapping them all, this just parses out the bits we care about.
 struct ClientCapabilities {
-  // Workspace specific client capabilities.
-  llvm::Optional<WorkspaceClientCapabilities> workspace;
+  /// The supported set of SymbolKinds for workspace/symbol.
+  /// workspace.symbol.symbolKind.valueSet
+  llvm::Optional<SymbolKindBitset> WorkspaceSymbolKinds;
 
-  // Text document specific client capabilities.
-  TextDocumentClientCapabilities textDocument;
+  /// Whether the client accepts diagnostics with fixes attached using the
+  /// "clangd_fixes" extension.
+  /// textDocument.publishDiagnostics.clangdFixSupport
+  bool DiagnosticFixes = false;
+
+  /// Whether the client accepts diagnostics with category attached to it
+  /// using the "category" extension.
+  /// textDocument.publishDiagnostics.categorySupport
+  bool DiagnosticCategory = false;
+
+  /// Client supports snippets as insert text.
+  /// textDocument.completion.completionItem.snippetSupport
+  bool CompletionSnippets = false;
+
+  /// The supported set of CompletionItemKinds for textDocument/completion.
+  /// textDocument.completion.completionItemKind.valueSet
+  llvm::Optional<CompletionItemKindBitset> CompletionItemKinds;
+
+  /// Client supports CodeAction return value for textDocument/codeAction.
+  /// textDocument.codeAction.codeActionLiteralSupport.
+  bool CodeActionStructure = false;
 };
-
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &);
 
 /// Clangd extension that's used in the 'compilationDatabaseChanges' in

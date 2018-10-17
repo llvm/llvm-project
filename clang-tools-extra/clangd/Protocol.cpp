@@ -161,35 +161,6 @@ bool fromJSON(const json::Value &E, TraceLevel &Out) {
   return false;
 }
 
-bool fromJSON(const json::Value &Params, CompletionItemClientCapabilities &R) {
-  json::ObjectMapper O(Params);
-  if (!O)
-    return false;
-  O.map("snippetSupport", R.snippetSupport);
-  O.map("commitCharacterSupport", R.commitCharacterSupport);
-  return true;
-}
-
-bool fromJSON(const json::Value &Params, CompletionClientCapabilities &R) {
-  json::ObjectMapper O(Params);
-  if (!O)
-    return false;
-  O.map("dynamicRegistration", R.dynamicRegistration);
-  O.map("completionItem", R.completionItem);
-  O.map("contextSupport", R.contextSupport);
-  return true;
-}
-
-bool fromJSON(const llvm::json::Value &Params,
-              PublishDiagnosticsClientCapabilities &R) {
-  json::ObjectMapper O(Params);
-  if (!O)
-    return false;
-  O.map("clangdFixSupport", R.clangdFixSupport);
-  O.map("categorySupport", R.categorySupport);
-  return true;
-}
-
 bool fromJSON(const json::Value &E, SymbolKind &Out) {
   if (auto T = E.getAsInteger()) {
     if (*T < static_cast<int>(SymbolKind::File) ||
@@ -201,22 +172,16 @@ bool fromJSON(const json::Value &E, SymbolKind &Out) {
   return false;
 }
 
-bool fromJSON(const json::Value &E, std::vector<SymbolKind> &Out) {
+bool fromJSON(const json::Value &E, SymbolKindBitset &Out) {
   if (auto *A = E.getAsArray()) {
-    Out.clear();
     for (size_t I = 0; I < A->size(); ++I) {
       SymbolKind KindOut;
       if (fromJSON((*A)[I], KindOut))
-        Out.push_back(KindOut);
+        Out.set(size_t(KindOut));
     }
     return true;
   }
   return false;
-}
-
-bool fromJSON(const json::Value &Params, SymbolKindCapabilities &R) {
-  json::ObjectMapper O(Params);
-  return O && O.map("valueSet", R.valueSet);
 }
 
 SymbolKind adjustKindToCapability(SymbolKind Kind,
@@ -237,34 +202,46 @@ SymbolKind adjustKindToCapability(SymbolKind Kind,
   }
 }
 
-bool fromJSON(const json::Value &Params, WorkspaceSymbolCapabilities &R) {
-  json::ObjectMapper O(Params);
-  return O && O.map("symbolKind", R.symbolKind);
-}
-
-bool fromJSON(const json::Value &Params, WorkspaceClientCapabilities &R) {
-  json::ObjectMapper O(Params);
-  return O && O.map("symbol", R.symbol);
-}
-
-bool fromJSON(const json::Value &Params, TextDocumentClientCapabilities &R) {
-  json::ObjectMapper O(Params);
-  if (!O)
-    return false;
-  O.map("completion", R.completion);
-  O.map("publishDiagnostics", R.publishDiagnostics);
-  if (auto *CodeAction = Params.getAsObject()->getObject("codeAction"))
-    if (CodeAction->getObject("codeActionLiteralSupport"))
-      R.codeActionLiteralSupport = true;
-  return true;
-}
-
 bool fromJSON(const json::Value &Params, ClientCapabilities &R) {
-  json::ObjectMapper O(Params);
+  const json::Object *O = Params.getAsObject();
   if (!O)
     return false;
-  O.map("textDocument", R.textDocument);
-  O.map("workspace", R.workspace);
+  if (auto *TextDocument = O->getObject("textDocument")) {
+    if (auto *Diagnostics = TextDocument->getObject("publishDiagnostics")) {
+      if (auto CategorySupport = Diagnostics->getBoolean("categorySupport"))
+        R.DiagnosticCategory = *CategorySupport;
+      if (auto ClangdFixSupport = Diagnostics->getBoolean("clangdFixSupport"))
+        R.DiagnosticFixes = *ClangdFixSupport;
+    }
+    if (auto *Completion = TextDocument->getObject("completion")) {
+      if (auto *Item = Completion->getObject("completionItem")) {
+        if (auto SnippetSupport = Item->getBoolean("snippetSupport"))
+          R.CompletionSnippets = *SnippetSupport;
+      }
+      if (auto *ItemKind = Completion->getObject("completionItemKind")) {
+        if (auto *ValueSet = ItemKind->get("valueSet")) {
+          R.CompletionItemKinds.emplace();
+          if (!fromJSON(*ValueSet, *R.CompletionItemKinds))
+            return false;
+        }
+      }
+    }
+    if (auto *CodeAction = TextDocument->getObject("codeAction")) {
+      if (CodeAction->getObject("codeActionLiteralSupport"))
+        R.CodeActionStructure = true;
+    }
+  }
+  if (auto *Workspace = O->getObject("workspace")) {
+    if (auto *Symbol = Workspace->getObject("symbol")) {
+      if (auto *SymbolKind = Symbol->getObject("symbolKind")) {
+        if (auto *ValueSet = SymbolKind->get("valueSet")) {
+          R.WorkspaceSymbolKinds.emplace();
+          if (!fromJSON(*ValueSet, *R.WorkspaceSymbolKinds))
+            return false;
+        }
+      }
+    }
+  }
   return true;
 }
 
@@ -560,22 +537,16 @@ adjustKindToCapability(CompletionItemKind Kind,
   }
 }
 
-bool fromJSON(const json::Value &E, std::vector<CompletionItemKind> &Out) {
+bool fromJSON(const json::Value &E, CompletionItemKindBitset &Out) {
   if (auto *A = E.getAsArray()) {
-    Out.clear();
     for (size_t I = 0; I < A->size(); ++I) {
       CompletionItemKind KindOut;
       if (fromJSON((*A)[I], KindOut))
-        Out.push_back(KindOut);
+        Out.set(size_t(KindOut));
     }
     return true;
   }
   return false;
-}
-
-bool fromJSON(const json::Value &Params, CompletionItemKindCapabilities &R) {
-  json::ObjectMapper O(Params);
-  return O && O.map("valueSet", R.valueSet);
 }
 
 json::Value toJSON(const CompletionItem &CI) {
