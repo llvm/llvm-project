@@ -1056,7 +1056,9 @@ public:
                                       bool Recover = false,
                                       bool UseAfterScope = false)
       : FunctionPass(ID), CompileKernel(CompileKernel), Recover(Recover),
-        UseAfterScope(UseAfterScope) {}
+        UseAfterScope(UseAfterScope) {
+    initializeAddressSanitizerLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
 
   StringRef getPassName() const override {
     return "AddressSanitizerFunctionPass";

@@ -71,8 +71,7 @@ def int_wasm_catch : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty],
 // WebAssembly EH must maintain the landingpads in the order assigned to them
 // by WasmEHPrepare pass to generate landingpad table in EHStreamer. This is
 // used in order to give them the indices in WasmEHPrepare.
-def int_wasm_landingpad_index: Intrinsic<[], [llvm_token_ty, llvm_i32_ty],
-                                         [IntrNoMem]>;
+def int_wasm_landingpad_index: Intrinsic<[], [llvm_i32_ty], [IntrNoMem]>;
 
 // Returns LSDA address of the current function.
 def int_wasm_lsda : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;

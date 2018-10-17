@@ -30,7 +30,7 @@ catch.start:                                      ; preds = %catch.dispatch
 ; CHECK: catch.start:
 ; CHECK-NEXT:   %[[CATCHPAD:.*]] = catchpad
 ; CHECK-NEXT:   %[[EXN:.*]] = call i8* @llvm.wasm.catch(i32 0)
-; CHECK-NEXT:   call void @llvm.wasm.landingpad.index(token %[[CATCHPAD]], i32 0)
+; CHECK-NEXT:   call void @llvm.wasm.landingpad.index(i32 0)
 ; CHECK-NEXT:   store i32 0, i32* getelementptr inbounds ({ i32, i8*, i32 }, { i32, i8*, i32 }* @__wasm_lpad_context, i32 0, i32 0)
 ; CHECK-NEXT:   %[[LSDA:.*]] = call i8* @llvm.wasm.lsda()
 ; CHECK-NEXT:   store i8* %[[LSDA]], i8** getelementptr inbounds ({ i32, i8*, i32 }, { i32, i8*, i32 }* @__wasm_lpad_context, i32 0, i32 1)
@@ -98,7 +98,7 @@ catch.start3:                                     ; preds = %catch.dispatch2
   %matches = icmp eq i32 %8, %9
   br i1 %matches, label %catch4, label %rethrow
 ; CHECK: catch.start3:
-; CHECK:   call void @llvm.wasm.landingpad.index(token %{{.+}}, i32 0)
+; CHECK:   call void @llvm.wasm.landingpad.index(i32 0)
 
 catch4:                                           ; preds = %catch.start3
   %10 = call i8* @__cxa_begin_catch(i8* %7) [ "funclet"(token %6) ]
@@ -311,7 +311,7 @@ declare void @__cxa_rethrow()
 declare void @__clang_call_terminate(i8*)
 
 ; CHECK-DAG: declare i8* @llvm.wasm.catch(i32)
-; CHECK-DAG: declare void @llvm.wasm.landingpad.index(token, i32)
+; CHECK-DAG: declare void @llvm.wasm.landingpad.index(i32)
 ; CHECK-DAG: declare i8* @llvm.wasm.lsda()
 ; CHECK-DAG: declare i32 @_Unwind_CallPersonality(i8*)
 

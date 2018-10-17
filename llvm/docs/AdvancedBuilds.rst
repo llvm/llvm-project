@@ -41,6 +41,16 @@ This command itself isn't terribly useful because it assumes default
 configurations for each stage. The next series of examples utilize CMake cache
 scripts to provide more complex options.
 
+By default, only a few CMake options will be passed between stages.
+The list, called _BOOTSTRAP_DEFAULT_PASSTHROUGH, is defined in clang/CMakeLists.txt.
+To force the passing of the variables between stages, use the -DCLANG_BOOTSTRAP_PASSTHROUGH
+CMake option, each variable separated by a ";". As example:
+
+.. code-block:: console
+
+  $ cmake -G Ninja -DCLANG_ENABLE_BOOTSTRAP=On -DCLANG_BOOTSTRAP_PASSTHROUGH="CMAKE_INSTALL_PREFIX;CMAKE_VERBOSE_MAKEFILE" <path to source>
+  $ ninja stage2
+
 The clang build system refers to builds as stages. A stage1 build is a standard
 build using the compiler installed on the host, and a stage2 build is built
 using the stage1 compiler. This nomenclature holds up to more stages too. In
