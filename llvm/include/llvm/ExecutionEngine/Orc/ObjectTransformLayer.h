@@ -32,7 +32,7 @@ public:
   ObjectTransformLayer(ExecutionSession &ES, ObjectLayer &BaseLayer,
                        TransformFunction Transform);
 
-  void emit(MaterializationResponsibility R, VModuleKey K,
+  void emit(MaterializationResponsibility R,
             std::unique_ptr<MemoryBuffer> O) override;
 
 private:

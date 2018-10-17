@@ -454,7 +454,7 @@ namespace {
     }
 
     bool foldLoadStoreIntoMemOperand(SDNode *Node);
-    bool matchBEXTRFromAndImm(SDNode *Node);
+    MachineSDNode *matchBEXTRFromAndImm(SDNode *Node);
     bool matchBEXTR(SDNode *Node);
     bool shrinkAndImmediate(SDNode *N);
     bool isMaskZeroExtended(SDNode *N) const;
@@ -2714,7 +2714,7 @@ bool X86DAGToDAGISel::matchBEXTR(SDNode *Node) {
 }
 
 // See if this is an (X >> C1) & C2 that we can match to BEXTR/BEXTRI.
-bool X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
+MachineSDNode *X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
   MVT NVT = Node->getSimpleValueType(0);
   SDLoc dl(Node);
 
@@ -2729,30 +2729,30 @@ bool X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
   // BEXTR?
   if (!Subtarget->hasTBM() &&
       !(Subtarget->hasBMI() && Subtarget->hasFastBEXTR()))
-    return false;
+    return nullptr;
 
   // Must have a shift right.
   if (N0->getOpcode() != ISD::SRL && N0->getOpcode() != ISD::SRA)
-    return false;
+    return nullptr;
 
   // Shift can't have additional users.
   if (!N0->hasOneUse())
-    return false;
+    return nullptr;
 
   // Only supported for 32 and 64 bits.
   if (NVT != MVT::i32 && NVT != MVT::i64)
-    return false;
+    return nullptr;
 
   // Shift amount and RHS of and must be constant.
   ConstantSDNode *MaskCst = dyn_cast<ConstantSDNode>(N1);
   ConstantSDNode *ShiftCst = dyn_cast<ConstantSDNode>(N0->getOperand(1));
   if (!MaskCst || !ShiftCst)
-    return false;
+    return nullptr;
 
   // And RHS must be a mask.
   uint64_t Mask = MaskCst->getZExtValue();
   if (!isMask_64(Mask))
-    return false;
+    return nullptr;
 
   uint64_t Shift = ShiftCst->getZExtValue();
   uint64_t MaskSize = countPopulation(Mask);
@@ -2760,12 +2760,12 @@ bool X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
   // Don't interfere with something that can be handled by extracting AH.
   // TODO: If we are able to fold a load, BEXTR might still be better than AH.
   if (Shift == 8 && MaskSize == 8)
-    return false;
+    return nullptr;
 
   // Make sure we are only using bits that were in the original value, not
   // shifted in.
   if (Shift + MaskSize > NVT.getSizeInBits())
-    return false;
+    return nullptr;
 
   SDValue New = CurDAG->getTargetConstant(Shift | (MaskSize << 8), dl, NVT);
   unsigned ROpc = NVT == MVT::i64 ? X86::BEXTRI64ri : X86::BEXTRI32ri;
@@ -2794,9 +2794,7 @@ bool X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
     NewNode = CurDAG->getMachineNode(ROpc, dl, NVT, Input, New);
   }
 
-  ReplaceUses(SDValue(Node, 0), SDValue(NewNode, 0));
-  CurDAG->RemoveDeadNode(Node);
-  return true;
+  return NewNode;
 }
 
 // Emit a PCMISTR(I/M) instruction.
@@ -3106,8 +3104,11 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     break;
 
   case ISD::AND:
-    if (matchBEXTRFromAndImm(Node))
+    if (MachineSDNode *NewNode = matchBEXTRFromAndImm(Node)) {
+      ReplaceUses(SDValue(Node, 0), SDValue(NewNode, 0));
+      CurDAG->RemoveDeadNode(Node);
       return;
+    }
     if (matchBEXTR(Node))
       return;
     if (AndImmShrink && shrinkAndImmediate(Node))
@@ -3551,6 +3552,22 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     // Save the original VT of the compare.
     MVT CmpVT = N0.getSimpleValueType();
 
+    // If we are comparing (and (shr X, C, Mask) with 0, emit a BEXTR followed
+    // by a test instruction. The test should be removed later by
+    // analyzeCompare if we are using only the zero flag.
+    // TODO: Should we check the users and use the BEXTR flags directly?
+    if (isNullConstant(N1) && N0.getOpcode() == ISD::AND && N0.hasOneUse()) {
+      if (MachineSDNode *NewNode = matchBEXTRFromAndImm(N0.getNode())) {
+        unsigned TestOpc = CmpVT == MVT::i64 ? X86::TEST64rr
+                                             : X86::TEST32rr;
+        SDValue BEXTR = SDValue(NewNode, 0);
+        NewNode = CurDAG->getMachineNode(TestOpc, dl, MVT::i32, BEXTR, BEXTR);
+        ReplaceUses(SDValue(Node, 0), SDValue(NewNode, 0));
+        CurDAG->RemoveDeadNode(Node);
+        return;
+      }
+    }
+
     // We can peek through truncates, but we need to be careful below.
     if (N0.getOpcode() == ISD::TRUNCATE && N0.hasOneUse())
       N0 = N0.getOperand(0);
@@ -3561,7 +3578,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     if (N0.getOpcode() == ISD::AND &&
         N0.getNode()->hasOneUse() &&
         N0.getValueType() != MVT::i8 &&
-        X86::isZeroNode(N1)) {
+        isNullConstant(N1)) {
       ConstantSDNode *C = dyn_cast<ConstantSDNode>(N0.getOperand(1));
       if (!C) break;
       uint64_t Mask = C->getZExtValue();

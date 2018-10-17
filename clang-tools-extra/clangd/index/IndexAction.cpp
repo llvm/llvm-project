@@ -66,8 +66,10 @@ createStaticIndexingAction(SymbolCollector::Options Opts,
   Opts.CollectIncludePath = true;
   Opts.CountReferences = true;
   Opts.Origin = SymbolOrigin::Static;
-  if (RefsCallback != nullptr)
+  if (RefsCallback != nullptr) {
     Opts.RefFilter = RefKind::All;
+    Opts.RefsInHeaders = true;
+  }
   auto Includes = llvm::make_unique<CanonicalIncludes>();
   addSystemHeadersMapping(Includes.get());
   Opts.Includes = Includes.get();

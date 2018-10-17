@@ -312,13 +312,12 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 
 ; IR-LABEL: @multi_divergent_region_exit_ret_ret_return_value(
 ; IR: Flow2:
-; IR: %11 = phi float [ 2.000000e+00, %exit1 ], [ undef, %Flow1 ]
-; IR: %12 = phi i1 [ false, %exit1 ], [ %16, %Flow1 ]
-; IR: call void @llvm.amdgcn.end.cf(i64 %20)
+; IR: %11 = phi i1 [ false, %exit1 ], [ %15, %Flow1 ]
+; IR: call void @llvm.amdgcn.end.cf(i64 %19)
 
 ; IR: UnifiedReturnBlock:
-; IR: %UnifiedRetVal = phi float [ %11, %Flow2 ], [ 1.000000e+00, %exit0 ]
-; IR: call void @llvm.amdgcn.end.cf(i64 %15)
+; IR: %UnifiedRetVal = phi float [ 2.000000e+00, %Flow2 ], [ 1.000000e+00, %exit0 ]
+; IR: call void @llvm.amdgcn.end.cf(i64 %14)
 ; IR: ret float %UnifiedRetVal
 define amdgpu_ps float @multi_divergent_region_exit_ret_ret_return_value(i32 %vgpr) #0 {
 entry:
@@ -353,8 +352,8 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; GCN: {{^}}[[FLOW]]:
 ; GCN: s_cbranch_vccnz [[FLOW1:BB[0-9]+]]
 
-; GCN: v_mov_b32_e32 v0, 2.0
 ; GCN: s_or_b64 exec, exec
+; GCN: v_mov_b32_e32 v0, 2.0
 ; GCN-NOT: s_and_b64 exec, exec
 ; GCN: v_mov_b32_e32 v0, 1.0
 

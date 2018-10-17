@@ -4402,16 +4402,16 @@ defm VMLA     : N3VMulOp_QHS<0, 0, 0b1001, 0, IIC_VMACi16D, IIC_VMACi32D,
                              IIC_VMACi16Q, IIC_VMACi32Q, "vmla", "i", add>;
 def  VMLAfd   : N3VDMulOp<0, 0, 0b00, 0b1101, 1, IIC_VMACD, "vmla", "f32",
                           v2f32, fmul_su, fadd_mlx>,
-                Requires<[HasNEON, UseFPVMLx, DontUseFusedMAC]>;
+                Requires<[HasNEON, UseFPVMLx]>;
 def  VMLAfq   : N3VQMulOp<0, 0, 0b00, 0b1101, 1, IIC_VMACQ, "vmla", "f32",
                           v4f32, fmul_su, fadd_mlx>,
-                Requires<[HasNEON, UseFPVMLx, DontUseFusedMAC]>;
+                Requires<[HasNEON, UseFPVMLx]>;
 def  VMLAhd   : N3VDMulOp<0, 0, 0b01, 0b1101, 1, IIC_VMACD, "vmla", "f16",
                           v4f16, fmul_su, fadd_mlx>,
-                Requires<[HasNEON, HasFullFP16, UseFPVMLx, DontUseFusedMAC]>;
+                Requires<[HasNEON, HasFullFP16, UseFPVMLx]>;
 def  VMLAhq   : N3VQMulOp<0, 0, 0b01, 0b1101, 1, IIC_VMACQ, "vmla", "f16",
                           v8f16, fmul_su, fadd_mlx>,
-                Requires<[HasNEON, HasFullFP16, UseFPVMLx, DontUseFusedMAC]>;
+                Requires<[HasNEON, HasFullFP16, UseFPVMLx]>;
 defm VMLAsl   : N3VMulOpSL_HS<0b0000, IIC_VMACi16D, IIC_VMACi32D,
                               IIC_VMACi16Q, IIC_VMACi32Q, "vmla", "i", add>;
 def  VMLAslfd : N3VDMulOpSL<0b10, 0b0001, IIC_VMACD, "vmla", "f32",
@@ -4632,16 +4632,16 @@ defm VMLS     : N3VMulOp_QHS<1, 0, 0b1001, 0, IIC_VMACi16D, IIC_VMACi32D,
                              IIC_VMACi16Q, IIC_VMACi32Q, "vmls", "i", sub>;
 def  VMLSfd   : N3VDMulOp<0, 0, 0b10, 0b1101, 1, IIC_VMACD, "vmls", "f32",
                           v2f32, fmul_su, fsub_mlx>,
-                Requires<[HasNEON, UseFPVMLx, DontUseFusedMAC]>;
+                Requires<[HasNEON, UseFPVMLx]>;
 def  VMLSfq   : N3VQMulOp<0, 0, 0b10, 0b1101, 1, IIC_VMACQ, "vmls", "f32",
                           v4f32, fmul_su, fsub_mlx>,
-                Requires<[HasNEON, UseFPVMLx, DontUseFusedMAC]>;
+                Requires<[HasNEON, UseFPVMLx]>;
 def  VMLShd   : N3VDMulOp<0, 0, 0b11, 0b1101, 1, IIC_VMACD, "vmls", "f16",
                           v4f16, fmul, fsub>,
-                Requires<[HasNEON, HasFullFP16, UseFPVMLx, DontUseFusedMAC]>;
+                Requires<[HasNEON, HasFullFP16, UseFPVMLx]>;
 def  VMLShq   : N3VQMulOp<0, 0, 0b11, 0b1101, 1, IIC_VMACQ, "vmls", "f16",
                           v8f16, fmul, fsub>,
-                Requires<[HasNEON, HasFullFP16, UseFPVMLx, DontUseFusedMAC]>;
+                Requires<[HasNEON, HasFullFP16, UseFPVMLx]>;
 defm VMLSsl   : N3VMulOpSL_HS<0b0100, IIC_VMACi16D, IIC_VMACi32D,
                               IIC_VMACi16Q, IIC_VMACi32Q, "vmls", "i", sub>;
 def  VMLSslfd : N3VDMulOpSL<0b10, 0b0101, IIC_VMACD, "vmls", "f32",
@@ -7084,9 +7084,9 @@ def : N3VSPat<fadd, VADDfd>;
 def : N3VSPat<fsub, VSUBfd>;
 def : N3VSPat<fmul, VMULfd>;
 def : N3VSMulOpPat<fmul, fadd, VMLAfd>,
-      Requires<[HasNEON, UseNEONForFP, UseFPVMLx, DontUseFusedMAC]>;
+      Requires<[HasNEON, UseNEONForFP, UseFPVMLx]>;
 def : N3VSMulOpPat<fmul, fsub, VMLSfd>,
-      Requires<[HasNEON, UseNEONForFP, UseFPVMLx, DontUseFusedMAC]>;
+      Requires<[HasNEON, UseNEONForFP, UseFPVMLx]>;
 def : N3VSMulOpPat<fmul, fadd, VFMAfd>,
       Requires<[HasVFP4, UseNEONForFP, UseFusedMAC]>;
 def : N3VSMulOpPat<fmul, fsub, VFMSfd>,

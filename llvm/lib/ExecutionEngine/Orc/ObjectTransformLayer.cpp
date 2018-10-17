@@ -18,12 +18,12 @@ ObjectTransformLayer::ObjectTransformLayer(ExecutionSession &ES,
                                             TransformFunction Transform)
     : ObjectLayer(ES), BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
 
-void ObjectTransformLayer::emit(MaterializationResponsibility R, VModuleKey K,
+void ObjectTransformLayer::emit(MaterializationResponsibility R,
                                 std::unique_ptr<MemoryBuffer> O) {
   assert(O && "Module must not be null");
 
   if (auto TransformedObj = Transform(std::move(O)))
-    BaseLayer.emit(std::move(R), std::move(K), std::move(*TransformedObj));
+    BaseLayer.emit(std::move(R), std::move(*TransformedObj));
   else {
     R.failMaterialization();
     getExecutionSession().reportError(TransformedObj.takeError());

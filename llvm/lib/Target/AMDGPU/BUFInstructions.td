@@ -17,8 +17,6 @@ def MUBUFScratchOffset : ComplexPattern<i64, 3, "SelectMUBUFScratchOffset", [], 
 def MUBUFOffset : ComplexPattern<i64, 6, "SelectMUBUFOffset">;
 def MUBUFOffsetNoGLC : ComplexPattern<i64, 3, "SelectMUBUFOffset">;
 def MUBUFOffsetAtomic : ComplexPattern<i64, 4, "SelectMUBUFOffset">;
-def MUBUFIntrinsicOffset : ComplexPattern<i32, 2, "SelectMUBUFIntrinsicOffset">;
-def MUBUFIntrinsicVOffset : ComplexPattern<i32, 3, "SelectMUBUFIntrinsicVOffset">;
 
 class MubufLoad <SDPatternOperator op> : PatFrag <
   (ops node:$ptr), (op node:$ptr), [{

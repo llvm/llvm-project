@@ -16,6 +16,7 @@ endif()
 
 add_subdirectory(change-namespace)
 add_subdirectory(clang-apply-replacements)
+add_subdirectory(clang-doc)
 add_subdirectory(clang-move)
 add_subdirectory(clang-query)
 add_subdirectory(clang-tidy)

@@ -662,8 +662,6 @@ ValueObject *ValueObject::CreateChildAtIndex(size_t idx,
         child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
         child_is_base_class, child_is_deref_of_parent, eAddressTypeInvalid,
         language_flags);
-    // if (valobj)
-    //    valobj->SetAddressTypeOfChildren(eAddressTypeInvalid);
   }
 
   return valobj;

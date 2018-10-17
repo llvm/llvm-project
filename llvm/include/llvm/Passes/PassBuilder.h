@@ -19,6 +19,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include <vector>
@@ -384,8 +385,9 @@ public:
   /// If the sequence of passes aren't all the exact same kind of pass, it will
   /// be an error. You cannot mix different levels implicitly, you must
   /// explicitly form a pass manager in which to nest passes.
-  bool parsePassPipeline(ModulePassManager &MPM, StringRef PipelineText,
-                         bool VerifyEachPass = true, bool DebugLogging = false);
+  Error parsePassPipeline(ModulePassManager &MPM, StringRef PipelineText,
+                          bool VerifyEachPass = true,
+                          bool DebugLogging = false);
 
   /// {{@ Parse a textual pass pipeline description into a specific PassManager
   ///
@@ -394,12 +396,15 @@ public:
   /// this is the valid pipeline text:
   ///
   ///   function(lpass)
-  bool parsePassPipeline(CGSCCPassManager &CGPM, StringRef PipelineText,
-                         bool VerifyEachPass = true, bool DebugLogging = false);
-  bool parsePassPipeline(FunctionPassManager &FPM, StringRef PipelineText,
-                         bool VerifyEachPass = true, bool DebugLogging = false);
-  bool parsePassPipeline(LoopPassManager &LPM, StringRef PipelineText,
-                         bool VerifyEachPass = true, bool DebugLogging = false);
+  Error parsePassPipeline(CGSCCPassManager &CGPM, StringRef PipelineText,
+                          bool VerifyEachPass = true,
+                          bool DebugLogging = false);
+  Error parsePassPipeline(FunctionPassManager &FPM, StringRef PipelineText,
+                          bool VerifyEachPass = true,
+                          bool DebugLogging = false);
+  Error parsePassPipeline(LoopPassManager &LPM, StringRef PipelineText,
+                          bool VerifyEachPass = true,
+                          bool DebugLogging = false);
   /// @}}
 
   /// Parse a textual alias analysis pipeline into the provided AA manager.
@@ -417,7 +422,7 @@ public:
   /// Returns false if the text cannot be parsed cleanly. The specific state of
   /// the \p AA manager is unspecified if such an error is encountered and this
   /// returns false.
-  bool parseAAPipeline(AAManager &AA, StringRef PipelineText);
+  Error parseAAPipeline(AAManager &AA, StringRef PipelineText);
 
   /// Register a callback for a default optimizer pipeline extension
   /// point
@@ -565,28 +570,28 @@ private:
   static Optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);
 
-  bool parseModulePass(ModulePassManager &MPM, const PipelineElement &E,
+  Error parseModulePass(ModulePassManager &MPM, const PipelineElement &E,
+                        bool VerifyEachPass, bool DebugLogging);
+  Error parseCGSCCPass(CGSCCPassManager &CGPM, const PipelineElement &E,
                        bool VerifyEachPass, bool DebugLogging);
-  bool parseCGSCCPass(CGSCCPassManager &CGPM, const PipelineElement &E,
+  Error parseFunctionPass(FunctionPassManager &FPM, const PipelineElement &E,
+                          bool VerifyEachPass, bool DebugLogging);
+  Error parseLoopPass(LoopPassManager &LPM, const PipelineElement &E,
                       bool VerifyEachPass, bool DebugLogging);
-  bool parseFunctionPass(FunctionPassManager &FPM, const PipelineElement &E,
-                     bool VerifyEachPass, bool DebugLogging);
-  bool parseLoopPass(LoopPassManager &LPM, const PipelineElement &E,
-                     bool VerifyEachPass, bool DebugLogging);
   bool parseAAPassName(AAManager &AA, StringRef Name);
 
-  bool parseLoopPassPipeline(LoopPassManager &LPM,
-                             ArrayRef<PipelineElement> Pipeline,
-                             bool VerifyEachPass, bool DebugLogging);
-  bool parseFunctionPassPipeline(FunctionPassManager &FPM,
-                                 ArrayRef<PipelineElement> Pipeline,
-                                 bool VerifyEachPass, bool DebugLogging);
-  bool parseCGSCCPassPipeline(CGSCCPassManager &CGPM,
+  Error parseLoopPassPipeline(LoopPassManager &LPM,
                               ArrayRef<PipelineElement> Pipeline,
                               bool VerifyEachPass, bool DebugLogging);
-  bool parseModulePassPipeline(ModulePassManager &MPM,
+  Error parseFunctionPassPipeline(FunctionPassManager &FPM,
+                                  ArrayRef<PipelineElement> Pipeline,
+                                  bool VerifyEachPass, bool DebugLogging);
+  Error parseCGSCCPassPipeline(CGSCCPassManager &CGPM,
                                ArrayRef<PipelineElement> Pipeline,
                                bool VerifyEachPass, bool DebugLogging);
+  Error parseModulePassPipeline(ModulePassManager &MPM,
+                                ArrayRef<PipelineElement> Pipeline,
+                                bool VerifyEachPass, bool DebugLogging);
 
   void addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
                          OptimizationLevel Level, bool RunProfileGen,

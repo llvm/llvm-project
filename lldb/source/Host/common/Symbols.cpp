@@ -90,7 +90,7 @@ static bool LookForDsymNextToExecutablePath(const ModuleSpec &mod_spec,
 
     // See if the binary name exists in the dSYM DWARF
     // subdir.
-    FileSpec dsym_fspec = dsym_directory;
+    dsym_fspec = dsym_directory;
     dsym_fspec.AppendPathComponent(filename.AsCString());
     if (dsym_fspec.Exists()
         && FileAtPathContainsArchAndUUID(dsym_fspec, 

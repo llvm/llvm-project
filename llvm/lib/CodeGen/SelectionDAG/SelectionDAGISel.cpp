@@ -27,7 +27,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -1129,36 +1128,6 @@ static bool hasExceptionPointerOrCodeUser(const CatchPadInst *CPI) {
   return false;
 }
 
-// wasm.landingpad.index intrinsic is for associating a landing pad index number
-// with a catchpad instruction. Retrieve the landing pad index in the intrinsic
-// and store the mapping in the function.
-static void mapWasmLandingPadIndex(MachineBasicBlock *MBB,
-                                   const CatchPadInst *CPI) {
-  MachineFunction *MF = MBB->getParent();
-  // In case of single catch (...), we don't emit LSDA, so we don't need
-  // this information.
-  bool IsSingleCatchAllClause =
-      CPI->getNumArgOperands() == 1 &&
-      cast<Constant>(CPI->getArgOperand(0))->isNullValue();
-  if (!IsSingleCatchAllClause) {
-    // Create a mapping from landing pad label to landing pad index.
-    bool IntrFound = false;
-    for (const User *U : CPI->users()) {
-      if (const auto *Call = dyn_cast<IntrinsicInst>(U)) {
-        Intrinsic::ID IID = Call->getIntrinsicID();
-        if (IID == Intrinsic::wasm_landingpad_index) {
-          Value *IndexArg = Call->getArgOperand(1);
-          int Index = cast<ConstantInt>(IndexArg)->getZExtValue();
-          MF->setWasmLandingPadIndex(MBB, Index);
-          IntrFound = true;
-          break;
-        }
-      }
-    }
-    assert(IntrFound && "wasm.landingpad.index intrinsic not found!");
-  }
-}
-
 /// PrepareEHLandingPad - Emit an EH_LABEL, set up live-in registers, and
 /// do other setup for EH landing-pad blocks.
 bool SelectionDAGISel::PrepareEHLandingPad() {
@@ -1168,48 +1137,44 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
   const TargetRegisterClass *PtrRC =
       TLI->getRegClassFor(TLI->getPointerTy(CurDAG->getDataLayout()));
 
-  auto Pers = classifyEHPersonality(PersonalityFn);
-
   // Catchpads have one live-in register, which typically holds the exception
   // pointer or code.
-  if (isFuncletEHPersonality(Pers)) {
-    if (const auto *CPI = dyn_cast<CatchPadInst>(LLVMBB->getFirstNonPHI())) {
-      if (hasExceptionPointerOrCodeUser(CPI)) {
-        // Get or create the virtual register to hold the pointer or code.  Mark
-        // the live in physreg and copy into the vreg.
-        MCPhysReg EHPhysReg = TLI->getExceptionPointerRegister(PersonalityFn);
-        assert(EHPhysReg && "target lacks exception pointer register");
-        MBB->addLiveIn(EHPhysReg);
-        unsigned VReg = FuncInfo->getCatchPadExceptionPointerVReg(CPI, PtrRC);
-        BuildMI(*MBB, FuncInfo->InsertPt, SDB->getCurDebugLoc(),
-                TII->get(TargetOpcode::COPY), VReg)
-            .addReg(EHPhysReg, RegState::Kill);
-      }
+  if (const auto *CPI = dyn_cast<CatchPadInst>(LLVMBB->getFirstNonPHI())) {
+    if (hasExceptionPointerOrCodeUser(CPI)) {
+      // Get or create the virtual register to hold the pointer or code.  Mark
+      // the live in physreg and copy into the vreg.
+      MCPhysReg EHPhysReg = TLI->getExceptionPointerRegister(PersonalityFn);
+      assert(EHPhysReg && "target lacks exception pointer register");
+      MBB->addLiveIn(EHPhysReg);
+      unsigned VReg = FuncInfo->getCatchPadExceptionPointerVReg(CPI, PtrRC);
+      BuildMI(*MBB, FuncInfo->InsertPt, SDB->getCurDebugLoc(),
+              TII->get(TargetOpcode::COPY), VReg)
+          .addReg(EHPhysReg, RegState::Kill);
     }
     return true;
   }
+
+  if (!LLVMBB->isLandingPad())
+    return true;
 
   // Add a label to mark the beginning of the landing pad.  Deletion of the
   // landing pad can thus be detected via the MachineModuleInfo.
   MCSymbol *Label = MF->addLandingPad(MBB);
 
+  // Assign the call site to the landing pad's begin label.
+  MF->setCallSiteLandingPad(Label, SDB->LPadToCallSiteMap[MBB]);
+
   const MCInstrDesc &II = TII->get(TargetOpcode::EH_LABEL);
   BuildMI(*MBB, FuncInfo->InsertPt, SDB->getCurDebugLoc(), II)
     .addSym(Label);
 
-  if (Pers == EHPersonality::Wasm_CXX) {
-    if (const auto *CPI = dyn_cast<CatchPadInst>(LLVMBB->getFirstNonPHI()))
-      mapWasmLandingPadIndex(MBB, CPI);
-  } else {
-    // Assign the call site to the landing pad's begin label.
-    MF->setCallSiteLandingPad(Label, SDB->LPadToCallSiteMap[MBB]);
-    // Mark exception register as live in.
-    if (unsigned Reg = TLI->getExceptionPointerRegister(PersonalityFn))
-      FuncInfo->ExceptionPointerVirtReg = MBB->addLiveIn(Reg, PtrRC);
-    // Mark exception selector register as live in.
-    if (unsigned Reg = TLI->getExceptionSelectorRegister(PersonalityFn))
-      FuncInfo->ExceptionSelectorVirtReg = MBB->addLiveIn(Reg, PtrRC);
-  }
+  // Mark exception register as live in.
+  if (unsigned Reg = TLI->getExceptionPointerRegister(PersonalityFn))
+    FuncInfo->ExceptionPointerVirtReg = MBB->addLiveIn(Reg, PtrRC);
+
+  // Mark exception selector register as live in.
+  if (unsigned Reg = TLI->getExceptionSelectorRegister(PersonalityFn))
+    FuncInfo->ExceptionSelectorVirtReg = MBB->addLiveIn(Reg, PtrRC);
 
   return true;
 }

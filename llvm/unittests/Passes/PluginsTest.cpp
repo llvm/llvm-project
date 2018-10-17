@@ -15,6 +15,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Testing/Support/Error.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "gtest/gtest.h"
 
@@ -54,8 +55,8 @@ TEST(PluginsTests, LoadPlugin) {
 
   PassBuilder PB;
   ModulePassManager PM;
-  ASSERT_FALSE(PB.parsePassPipeline(PM, "plugin-pass"));
+  ASSERT_THAT_ERROR(PB.parsePassPipeline(PM, "plugin-pass"), Failed());
 
   Plugin->registerPassBuilderCallbacks(PB);
-  ASSERT_TRUE(PB.parsePassPipeline(PM, "plugin-pass"));
+  ASSERT_THAT_ERROR(PB.parsePassPipeline(PM, "plugin-pass"), Succeeded());
 }

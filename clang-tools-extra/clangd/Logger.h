@@ -15,6 +15,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <mutex>
 
 namespace clang {
 namespace clangd {
@@ -84,6 +85,22 @@ public:
 
   LoggingSession(LoggingSession const &) = delete;
   LoggingSession &operator=(LoggingSession const &) = delete;
+};
+
+// Logs to an output stream, such as stderr.
+class StreamLogger : public Logger {
+public:
+  StreamLogger(llvm::raw_ostream &Logs, Logger::Level MinLevel)
+      : MinLevel(MinLevel), Logs(Logs) {}
+
+  /// Write a line to the logging stream.
+  void log(Level, const llvm::formatv_object_base &Message) override;
+
+private:
+  Logger::Level MinLevel;
+  llvm::raw_ostream &Logs;
+
+  std::mutex StreamMutex;
 };
 
 } // namespace clangd

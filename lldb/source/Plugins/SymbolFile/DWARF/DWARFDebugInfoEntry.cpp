@@ -40,9 +40,8 @@ bool DWARFDebugInfoEntry::FastExtract(
   m_offset = *offset_ptr;
   m_parent_idx = 0;
   m_sibling_idx = 0;
-  m_empty_children = false;
   const uint64_t abbr_idx = debug_info_data.GetULEB128(offset_ptr);
-  assert(abbr_idx < (1 << DIE_ABBR_IDX_BITSIZE));
+  lldbassert(abbr_idx <= UINT16_MAX);
   m_abbr_idx = abbr_idx;
 
   // assert (fixed_form_sizes);  // For best performance this should be
@@ -220,7 +219,7 @@ bool DWARFDebugInfoEntry::Extract(SymbolFileDWARF *dwarf2Data,
     m_offset = offset;
 
     const uint64_t abbr_idx = debug_info_data.GetULEB128(&offset);
-    assert(abbr_idx < (1 << DIE_ABBR_IDX_BITSIZE));
+    lldbassert(abbr_idx <= UINT16_MAX);
     m_abbr_idx = abbr_idx;
     if (abbr_idx) {
       const DWARFAbbreviationDeclaration *abbrevDecl =
@@ -1836,7 +1835,6 @@ void DWARFDebugInfoEntry::DumpDIECollection(
 bool DWARFDebugInfoEntry::operator==(const DWARFDebugInfoEntry &rhs) const {
   return m_offset == rhs.m_offset && m_parent_idx == rhs.m_parent_idx &&
          m_sibling_idx == rhs.m_sibling_idx &&
-         m_empty_children == rhs.m_empty_children &&
          m_abbr_idx == rhs.m_abbr_idx && m_has_children == rhs.m_has_children &&
          m_tag == rhs.m_tag;
 }

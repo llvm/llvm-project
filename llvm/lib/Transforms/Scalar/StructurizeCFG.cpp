@@ -13,6 +13,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
@@ -596,7 +597,8 @@ void StructurizeCFG::addPhiValues(BasicBlock *From, BasicBlock *To) {
 
 /// Add the real PHI value as soon as everything is set up
 void StructurizeCFG::setPhiValues() {
-  SSAUpdater Updater;
+  SmallVector<PHINode *, 8> InsertedPhis;
+  SSAUpdater Updater(&InsertedPhis);
   for (const auto &AddedPhi : AddedPhis) {
     BasicBlock *To = AddedPhi.first;
     const BBVector &From = AddedPhi.second;
@@ -632,6 +634,26 @@ void StructurizeCFG::setPhiValues() {
     DeletedPhis.erase(To);
   }
   assert(DeletedPhis.empty());
+
+  // Simplify any phis inserted by the SSAUpdater if possible
+  bool Changed;
+  do {
+    Changed = false;
+
+    SimplifyQuery Q(Func->getParent()->getDataLayout());
+    Q.DT = DT;
+    for (size_t i = 0; i < InsertedPhis.size(); ++i) {
+      PHINode *Phi = InsertedPhis[i];
+      if (Value *V = SimplifyInstruction(Phi, Q)) {
+        Phi->replaceAllUsesWith(V);
+        Phi->eraseFromParent();
+        InsertedPhis[i] = InsertedPhis.back();
+        InsertedPhis.pop_back();
+        i--;
+        Changed = true;
+      }
+    }
+  } while (Changed);
 }
 
 /// Remove phi values from all successors and then remove the terminator.

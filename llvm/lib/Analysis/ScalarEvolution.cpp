@@ -8808,7 +8808,13 @@ bool ScalarEvolution::SimplifyICmpOperands(ICmpInst::Predicate &Pred,
                                            const SCEV *&LHS, const SCEV *&RHS,
                                            unsigned Depth) {
   bool Changed = false;
-
+  // Simplifies ICMP to trivial true or false by turning it into '0 == 0' or
+  // '0 != 0'.
+  auto TrivialCase = [&](bool TriviallyTrue) {
+    LHS = RHS = getConstant(ConstantInt::getFalse(getContext()));
+    Pred = TriviallyTrue ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
+    return true;
+  };
   // If we hit the max recursion limit bail out.
   if (Depth >= 3)
     return false;
@@ -8820,9 +8826,9 @@ bool ScalarEvolution::SimplifyICmpOperands(ICmpInst::Predicate &Pred,
       if (ConstantExpr::getICmp(Pred,
                                 LHSC->getValue(),
                                 RHSC->getValue())->isNullValue())
-        goto trivially_false;
+        return TrivialCase(false);
       else
-        goto trivially_true;
+        return TrivialCase(true);
     }
     // Otherwise swap the operands to put the constant on the right.
     std::swap(LHS, RHS);
@@ -8852,9 +8858,9 @@ bool ScalarEvolution::SimplifyICmpOperands(ICmpInst::Predicate &Pred,
     if (!ICmpInst::isEquality(Pred)) {
       ConstantRange ExactCR = ConstantRange::makeExactICmpRegion(Pred, RA);
       if (ExactCR.isFullSet())
-        goto trivially_true;
+        return TrivialCase(true);
       else if (ExactCR.isEmptySet())
-        goto trivially_false;
+        return TrivialCase(false);
 
       APInt NewRHS;
       CmpInst::Predicate NewPred;
@@ -8890,7 +8896,7 @@ bool ScalarEvolution::SimplifyICmpOperands(ICmpInst::Predicate &Pred,
         // The "Should have been caught earlier!" messages refer to the fact
         // that the ExactCR.isFullSet() or ExactCR.isEmptySet() check above
         // should have fired on the corresponding cases, and canonicalized the
-        // check to trivially_true or trivially_false.
+        // check to trivial case.
 
       case ICmpInst::ICMP_UGE:
         assert(!RA.isMinValue() && "Should have been caught earlier!");
@@ -8923,9 +8929,9 @@ bool ScalarEvolution::SimplifyICmpOperands(ICmpInst::Predicate &Pred,
   // Check for obvious equality.
   if (HasSameValue(LHS, RHS)) {
     if (ICmpInst::isTrueWhenEqual(Pred))
-      goto trivially_true;
+      return TrivialCase(true);
     if (ICmpInst::isFalseWhenEqual(Pred))
-      goto trivially_false;
+      return TrivialCase(false);
   }
 
   // If possible, canonicalize GE/LE comparisons to GT/LT comparisons, by
@@ -8993,18 +8999,6 @@ bool ScalarEvolution::SimplifyICmpOperands(ICmpInst::Predicate &Pred,
     return SimplifyICmpOperands(Pred, LHS, RHS, Depth+1);
 
   return Changed;
-
-trivially_true:
-  // Return 0 == 0.
-  LHS = RHS = getConstant(ConstantInt::getFalse(getContext()));
-  Pred = ICmpInst::ICMP_EQ;
-  return true;
-
-trivially_false:
-  // Return 0 != 0.
-  LHS = RHS = getConstant(ConstantInt::getFalse(getContext()));
-  Pred = ICmpInst::ICMP_NE;
-  return true;
 }
 
 bool ScalarEvolution::isKnownNegative(const SCEV *S) {

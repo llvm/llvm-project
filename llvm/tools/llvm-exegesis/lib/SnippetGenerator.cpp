@@ -22,7 +22,7 @@
 
 namespace exegesis {
 
-std::vector<CodeTemplate> getSingleton(CodeTemplate &CT) {
+std::vector<CodeTemplate> getSingleton(CodeTemplate &&CT) {
   std::vector<CodeTemplate> Result;
   Result.push_back(std::move(CT));
   return Result;

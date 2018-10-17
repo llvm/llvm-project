@@ -64,13 +64,21 @@ public:
     char *const AlignedPtr;
   };
 
+  // A helper to measure counters while executing a function in a sandboxed
+  // context.
+  class FunctionExecutor {
+  public:
+    ~FunctionExecutor();
+    virtual llvm::Expected<int64_t>
+    runAndMeasure(const char *Counters) const = 0;
+  };
+
 protected:
   const LLVMState &State;
 
 private:
-  virtual std::vector<BenchmarkMeasure>
-  runMeasurements(const ExecutableFunction &EF,
-                  ScratchSpace &Scratch) const = 0;
+  virtual llvm::Expected<std::vector<BenchmarkMeasure>>
+  runMeasurements(const FunctionExecutor &Executor) const = 0;
 
   llvm::Expected<std::string>
   writeObjectFile(const BenchmarkCode &Configuration,

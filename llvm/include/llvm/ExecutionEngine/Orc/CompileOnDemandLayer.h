@@ -94,8 +94,7 @@ public:
 
   /// Emits the given module. This should not be called by clients: it will be
   /// called by the JIT when a definition added via the add method is requested.
-  void emit(MaterializationResponsibility R, VModuleKey K,
-            ThreadSafeModule TSM) override;
+  void emit(MaterializationResponsibility R, ThreadSafeModule TSM) override;
 
 private:
   struct PerDylibResources {

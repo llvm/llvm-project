@@ -138,7 +138,7 @@ public:
     virtual ~basic_streambuf();
 
     // 27.6.2.2.1 locales:
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     locale pubimbue(const locale& __loc) {
         imbue(__loc);
         locale __r = __loc_;
@@ -146,70 +146,70 @@ public:
         return __r;
     }
 
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     locale getloc() const { return __loc_; }
 
     // 27.6.2.2.2 buffer and positioning:
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     basic_streambuf* pubsetbuf(char_type* __s, streamsize __n)
     { return setbuf(__s, __n); }
 
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     pos_type pubseekoff(off_type __off, ios_base::seekdir __way,
                         ios_base::openmode __which = ios_base::in | ios_base::out)
     { return seekoff(__off, __way, __which); }
 
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     pos_type pubseekpos(pos_type __sp,
                         ios_base::openmode __which = ios_base::in | ios_base::out)
     { return seekpos(__sp, __which); }
 
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     int pubsync() { return sync(); }
 
     // Get and put areas:
     // 27.6.2.2.3 Get area:
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     streamsize in_avail() {
         if (__ninp_ < __einp_)
             return static_cast<streamsize>(__einp_ - __ninp_);
         return showmanyc();
     }
 
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     int_type snextc() {
         if (sbumpc() == traits_type::eof())
             return traits_type::eof();
         return sgetc();
     }
 
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     int_type sbumpc() {
         if (__ninp_ == __einp_)
             return uflow();
         return traits_type::to_int_type(*__ninp_++);
     }
 
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     int_type sgetc() {
         if (__ninp_ == __einp_)
             return underflow();
         return traits_type::to_int_type(*__ninp_);
     }
 
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     streamsize sgetn(char_type* __s, streamsize __n)
     { return xsgetn(__s, __n); }
 
     // 27.6.2.2.4 Putback:
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     int_type sputbackc(char_type __c) {
         if (__binp_ == __ninp_ || !traits_type::eq(__c, __ninp_[-1]))
             return pbackfail(traits_type::to_int_type(__c));
         return traits_type::to_int_type(*--__ninp_);
     }
 
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     int_type sungetc() {
         if (__binp_ == __ninp_)
           return pbackfail();
@@ -217,7 +217,7 @@ public:
     }
 
     // 27.6.2.2.5 Put area:
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     int_type sputc(char_type __c) {
         if (__nout_ == __eout_)
             return overflow(traits_type::to_int_type(__c));
@@ -225,7 +225,7 @@ public:
         return traits_type::to_int_type(__c);
     }
 
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     streamsize sputn(const char_type* __s, streamsize __n)
     { return xsputn(__s, __n); }
 
@@ -240,10 +240,10 @@ protected:
     _LIBCPP_INLINE_VISIBILITY char_type* gptr()  const {return __ninp_;}
     _LIBCPP_INLINE_VISIBILITY char_type* egptr() const {return __einp_;}
 
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     void gbump(int __n) { __ninp_ += __n; }
 
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     void setg(char_type* __gbeg, char_type* __gnext, char_type* __gend) {
         __binp_ = __gbeg;
         __ninp_ = __gnext;
@@ -255,13 +255,13 @@ protected:
     _LIBCPP_INLINE_VISIBILITY char_type* pptr()  const {return __nout_;}
     _LIBCPP_INLINE_VISIBILITY char_type* epptr() const {return __eout_;}
 
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     void pbump(int __n) { __nout_ += __n; }
 
     _LIBCPP_INLINE_VISIBILITY
     void __pbump(streamsize __n) { __nout_ += __n; }
 
-    inline _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+    inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     void setp(char_type* __pbeg, char_type* __pend) {
         __bout_ = __nout_ = __pbeg;
         __eout_ = __pend;

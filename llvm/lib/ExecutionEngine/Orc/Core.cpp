@@ -368,8 +368,8 @@ void AsynchronousSymbolQuery::detach() {
 }
 
 MaterializationResponsibility::MaterializationResponsibility(
-    JITDylib &JD, SymbolFlagsMap SymbolFlags)
-    : JD(JD), SymbolFlags(std::move(SymbolFlags)) {
+    JITDylib &JD, SymbolFlagsMap SymbolFlags, VModuleKey K)
+    : JD(JD), SymbolFlags(std::move(SymbolFlags)), K(std::move(K)) {
   assert(!this->SymbolFlags.empty() && "Materializing nothing?");
 
 #ifndef NDEBUG
@@ -461,7 +461,12 @@ void MaterializationResponsibility::replace(
 }
 
 MaterializationResponsibility
-MaterializationResponsibility::delegate(const SymbolNameSet &Symbols) {
+MaterializationResponsibility::delegate(const SymbolNameSet &Symbols,
+                                        VModuleKey NewKey) {
+
+  if (NewKey == VModuleKey())
+    NewKey = K;
+
   SymbolFlagsMap DelegatedFlags;
 
   for (auto &Name : Symbols) {
@@ -474,7 +479,8 @@ MaterializationResponsibility::delegate(const SymbolNameSet &Symbols) {
     SymbolFlags.erase(I);
   }
 
-  return MaterializationResponsibility(JD, std::move(DelegatedFlags));
+  return MaterializationResponsibility(JD, std::move(DelegatedFlags),
+                                       std::move(NewKey));
 }
 
 void MaterializationResponsibility::addDependencies(
@@ -491,8 +497,9 @@ void MaterializationResponsibility::addDependenciesForAll(
 }
 
 AbsoluteSymbolsMaterializationUnit::AbsoluteSymbolsMaterializationUnit(
-    SymbolMap Symbols)
-    : MaterializationUnit(extractFlags(Symbols)), Symbols(std::move(Symbols)) {}
+    SymbolMap Symbols, VModuleKey K)
+    : MaterializationUnit(extractFlags(Symbols), std::move(K)),
+      Symbols(std::move(Symbols)) {}
 
 StringRef AbsoluteSymbolsMaterializationUnit::getName() const {
   return "<Absolute Symbols>";
@@ -519,9 +526,9 @@ AbsoluteSymbolsMaterializationUnit::extractFlags(const SymbolMap &Symbols) {
 }
 
 ReExportsMaterializationUnit::ReExportsMaterializationUnit(
-    JITDylib *SourceJD, SymbolAliasMap Aliases)
-    : MaterializationUnit(extractFlags(Aliases)), SourceJD(SourceJD),
-      Aliases(std::move(Aliases)) {}
+    JITDylib *SourceJD, SymbolAliasMap Aliases, VModuleKey K)
+    : MaterializationUnit(extractFlags(Aliases), std::move(K)),
+      SourceJD(SourceJD), Aliases(std::move(Aliases)) {}
 
 StringRef ReExportsMaterializationUnit::getName() const {
   return "<Reexports>";
