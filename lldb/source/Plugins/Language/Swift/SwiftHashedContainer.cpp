@@ -84,7 +84,7 @@ protected:
 
   size_t GetBucketCount() { return 1 << m_scale; }
   size_t GetWordWidth() { return m_ptr_size * 8; }
-  size_t GetWordCount() { return std::max(1ul, GetBucketCount() / GetWordWidth()); }
+  size_t GetWordCount() { return std::max(static_cast<size_t>(1), GetBucketCount() / GetWordWidth()); }
 
   uint64_t GetMetadataWord(int index, Status &error);
 

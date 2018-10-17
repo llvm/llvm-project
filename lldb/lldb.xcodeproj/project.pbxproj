@@ -5962,7 +5962,6 @@
 				26C5577B132575AD008FD8FE /* PlatformMacOSX.cpp */,
 				AF3A4AD11EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.h */,
 				AF8AD6331BEC28C400150209 /* PlatformRemoteAppleTV.cpp */,
-				AF8AD6341BEC28C400150209 /* PlatformRemoteAppleTV.h */,
 				AF66324E216EB9C300BB510D /* PlatformRemoteAppleBridge.cpp */,
 				AF66324F216EB9C300BB510D /* PlatformRemoteAppleBridge.h */,
 				AF8AD6351BEC28C400150209 /* PlatformRemoteAppleWatch.cpp */,
@@ -15387,6 +15386,13 @@
 			};
 			name = BuildAndIntegration;
 		};
+		AF8C0C18216FD9F30006CA38 /* CustomSwift-Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = ios;
+			};
+			name = "CustomSwift-Debug";
+		};
 		AFA9B72020606A13008E86C6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -15743,6 +15749,7 @@
 				AFA9B72320606A13008E86C6 /* BuildAndIntegration */,
 				AF1DD02F20606EAC002A0283 /* DebugPresubmission */,
 				AF1DD03020606EAC002A0283 /* CustomSwift-Release */,
+				AF8C0C18216FD9F30006CA38 /* CustomSwift-Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = BuildAndIntegration;
