@@ -109,6 +109,16 @@ TEST(FileDistance, DisallowDownTraversalsFromRoot) {
   EXPECT_EQ(D.distance("/x"), FileDistance::Unreachable);
 }
 
+TEST(ScopeDistance, Smoke) {
+  ScopeDistance D({"x::y::z", "x::", "", "a::"});
+  EXPECT_EQ(D.distance("x::y::z::"), 0u);
+  EXPECT_GT(D.distance("x::y::"), D.distance("x::y::z::"));
+  EXPECT_GT(D.distance("x::"), D.distance("x::y::"));
+  EXPECT_GT(D.distance("x::y::z::down::"), D.distance("x::y::"));
+  EXPECT_GT(D.distance(""), D.distance("a::"));
+  EXPECT_GT(D.distance("x::"), D.distance("a::"));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

@@ -48,6 +48,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
+#include <memory>
 
 namespace clang {
 namespace clangd {
@@ -109,6 +110,19 @@ private:
   llvm::StringMap<SourceParams> Sources;
   llvm::StringMap<std::unique_ptr<FileDistance>> ByScheme;
   FileDistanceOptions Opts;
+};
+
+/// Support lookups like FileDistance, but the lookup keys are symbol scopes.
+/// For example, a scope "na::nb::" is converted to "/na/nb".
+class ScopeDistance {
+public:
+  /// QueryScopes[0] is the preferred scope.
+  ScopeDistance(llvm::ArrayRef<std::string> QueryScopes);
+
+  unsigned distance(llvm::StringRef SymbolScope);
+
+private:
+  FileDistance Distance;
 };
 
 } // namespace clangd

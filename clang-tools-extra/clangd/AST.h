@@ -34,6 +34,9 @@ SourceLocation findNameLoc(const clang::Decl *D);
 /// like inline namespaces.
 std::string printQualifiedName(const NamedDecl &ND);
 
+/// Returns the first enclosing namespace scope starting from \p DC.
+std::string printNamespaceScope(const DeclContext &DC);
+
 /// Gets the symbol ID for a declaration, if possible.
 llvm::Optional<SymbolID> getSymbolID(const Decl *D);
 
