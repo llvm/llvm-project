@@ -52,6 +52,8 @@ class Node {
   const amd_comgr_metadata_kind_t Kind;
 
 public:
+  virtual ~Node() = default;
+
   amd_comgr_metadata_kind_t getKind() const { return Kind; }
   Node(amd_comgr_metadata_kind_t Kind) : Kind(Kind) {}
 };
