@@ -58,7 +58,7 @@ Key<std::unique_ptr<RequestSpan>> RequestSpan::RSKey;
 } // namespace
 
 void clangd::reply(json::Value &&Result) {
-  auto ID = getRequestId();
+  auto ID = Context::current().get(RequestID);
   if (!ID) {
     elog("Attempted to reply to a notification!");
     return;
@@ -77,7 +77,7 @@ void clangd::replyError(ErrorCode Code, const llvm::StringRef &Message) {
                                  {"message", Message.str()}};
   });
 
-  if (auto ID = getRequestId()) {
+  if (auto ID = Context::current().get(RequestID)) {
     log("--> reply({0}) error: {1}", *ID, Message);
     Context::current()
         .getExisting(CurrentTransport)
@@ -205,8 +205,4 @@ llvm::Error JSONRPCDispatcher::runLanguageServerLoop(Transport &Transport) {
   // Propagate transport to all handlers so they can reply.
   WithContextValue WithTransport(CurrentTransport, &Transport);
   return Transport.loop(*this);
-}
-
-const json::Value *clangd::getRequestId() {
-  return Context::current().get(RequestID);
 }
