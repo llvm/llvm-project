@@ -102,10 +102,6 @@ HANDLE_MEMORY_VALUE(MemoryUse)
 HANDLE_MEMORY_VALUE(MemoryDef)
 HANDLE_MEMORY_VALUE(MemoryPhi)
 
-HANDLE_MEMORY_VALUE(DetachUse)
-HANDLE_MEMORY_VALUE(DetachDef)
-HANDLE_MEMORY_VALUE(DetachPhi)
-
 HANDLE_INSTRUCTION(Instruction)
 // Enum values starting at InstructionVal are used for Instructions;
 // don't add new values here!
