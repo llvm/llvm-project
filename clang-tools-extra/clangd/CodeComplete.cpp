@@ -562,7 +562,7 @@ getQueryScopes(CodeCompletionContext &CCContext, const Sema &CCSema,
     for (auto *Context : CCContext.getVisitedContexts()) {
       if (isa<TranslationUnitDecl>(Context))
         Info.AccessibleScopes.push_back(""); // global namespace
-      else if (const auto *NS = dyn_cast<NamespaceDecl>(Context))
+      else if (isa<NamespaceDecl>(Context))
         Info.AccessibleScopes.push_back(printNamespaceScope(*Context));
     }
     return Info;

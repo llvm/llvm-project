@@ -57,6 +57,7 @@ struct SymbolQualitySignals {
   bool Deprecated = false;
   bool ReservedName = false; // __foo, _Foo are usually implementation details.
                              // FIXME: make these findable once user types _.
+  bool ImplementationDetail = false;
   unsigned References = 0;
 
   enum SymbolCategory {

@@ -63,19 +63,19 @@ MATCHER_P2(IncludeHeaderWithRef, IncludeHeader, References,  "") {
   return (arg.IncludeHeader == IncludeHeader) && (arg.References == References);
 }
 MATCHER_P(DeclRange, Pos, "") {
-  return std::tie(arg.CanonicalDeclaration.Start.Line,
-                  arg.CanonicalDeclaration.Start.Column,
-                  arg.CanonicalDeclaration.End.Line,
-                  arg.CanonicalDeclaration.End.Column) ==
-         std::tie(Pos.start.line, Pos.start.character, Pos.end.line,
-                  Pos.end.character);
+  return std::make_tuple(arg.CanonicalDeclaration.Start.line(),
+                         arg.CanonicalDeclaration.Start.column(),
+                         arg.CanonicalDeclaration.End.line(),
+                         arg.CanonicalDeclaration.End.column()) ==
+         std::make_tuple(Pos.start.line, Pos.start.character, Pos.end.line,
+                         Pos.end.character);
 }
 MATCHER_P(DefRange, Pos, "") {
-  return std::tie(arg.Definition.Start.Line,
-                  arg.Definition.Start.Column, arg.Definition.End.Line,
-                  arg.Definition.End.Column) ==
-         std::tie(Pos.start.line, Pos.start.character, Pos.end.line,
-                  Pos.end.character);
+  return std::make_tuple(
+             arg.Definition.Start.line(), arg.Definition.Start.column(),
+             arg.Definition.End.line(), arg.Definition.End.column()) ==
+         std::make_tuple(Pos.start.line, Pos.start.character, Pos.end.line,
+                         Pos.end.character);
 }
 MATCHER_P(RefCount, R, "") { return int(arg.References) == R; }
 MATCHER_P(ForCodeCompletion, IsIndexedForCodeCompletion, "") {
@@ -83,13 +83,16 @@ MATCHER_P(ForCodeCompletion, IsIndexedForCodeCompletion, "") {
          IsIndexedForCodeCompletion;
 }
 MATCHER(Deprecated, "") { return arg.Flags & Symbol::Deprecated; }
+MATCHER(ImplementationDetail, "") {
+  return arg.Flags & Symbol::ImplementationDetail;
+}
 MATCHER(RefRange, "") {
   const Ref &Pos = testing::get<0>(arg);
   const Range &Range = testing::get<1>(arg);
-  return std::tie(Pos.Location.Start.Line, Pos.Location.Start.Column,
-                  Pos.Location.End.Line, Pos.Location.End.Column) ==
-         std::tie(Range.start.line, Range.start.character, Range.end.line,
-                  Range.end.character);
+  return std::make_tuple(Pos.Location.Start.line(), Pos.Location.Start.column(),
+                         Pos.Location.End.line(), Pos.Location.End.column()) ==
+         std::make_tuple(Range.start.line, Range.start.character,
+                         Range.end.line, Range.end.character);
 }
 testing::Matcher<const std::vector<Ref> &>
 HaveRanges(const std::vector<Range> Ranges) {
@@ -1035,6 +1038,21 @@ TEST_F(SymbolCollectorTest, DeprecatedSymbols) {
   EXPECT_THAT(Symbols, UnorderedElementsAre(
                            AllOf(QName("TestClangc"), Deprecated()),
                            AllOf(QName("TestClangd"), Not(Deprecated()))));
+}
+
+TEST_F(SymbolCollectorTest, ImplementationDetail) {
+  const std::string Header = R"(
+    #define DECL_NAME(x, y) x##_##y##_Decl
+    #define DECL(x, y) class DECL_NAME(x, y) {};
+    DECL(X, Y); // X_Y_Decl
+
+    class Public {};
+  )";
+  runSymbolCollector(Header, /**/ "");
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(QName("X_Y_Decl"), ImplementationDetail()),
+                  AllOf(QName("Public"), Not(ImplementationDetail()))));
 }
 
 } // namespace

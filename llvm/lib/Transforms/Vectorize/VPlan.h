@@ -317,6 +317,9 @@ struct VPTransformState {
   /// Values they correspond to.
   VPValue2ValueTy VPValue2Value;
 
+  /// Hold the trip count of the scalar loop.
+  Value *TripCount = nullptr;
+
   /// Hold a pointer to InnerLoopVectorizer to reuse its IR generation methods.
   InnerLoopVectorizer *ILV;
 
@@ -607,7 +610,7 @@ class VPInstruction : public VPUser, public VPRecipeBase {
 
 public:
   /// VPlan opcodes, extending LLVM IR with idiomatics instructions.
-  enum { Not = Instruction::OtherOpsEnd + 1 };
+  enum { Not = Instruction::OtherOpsEnd + 1, ICmpULE };
 
 private:
   typedef unsigned char OpcodeTy;
@@ -1115,6 +1118,10 @@ private:
   // (operators '==' and '<').
   SmallPtrSet<VPValue *, 16> VPExternalDefs;
 
+  /// Represents the backedge taken count of the original loop, for folding
+  /// the tail.
+  VPValue *BackedgeTakenCount = nullptr;
+
   /// Holds a mapping between Values and their corresponding VPValue inside
   /// VPlan.
   Value2VPValueTy Value2VPValue;
@@ -1132,7 +1139,10 @@ public:
     if (Entry)
       VPBlockBase::deleteCFG(Entry);
     for (auto &MapEntry : Value2VPValue)
-      delete MapEntry.second;
+      if (MapEntry.second != BackedgeTakenCount)
+        delete MapEntry.second;
+    if (BackedgeTakenCount)
+      delete BackedgeTakenCount; // Delete once, if in Value2VPValue or not.
     for (VPValue *Def : VPExternalDefs)
       delete Def;
     for (VPValue *CBV : VPCBVs)
@@ -1146,6 +1156,13 @@ public:
   const VPBlockBase *getEntry() const { return Entry; }
 
   VPBlockBase *setEntry(VPBlockBase *Block) { return Entry = Block; }
+
+  /// The backedge taken count of the original loop.
+  VPValue *getOrCreateBackedgeTakenCount() {
+    if (!BackedgeTakenCount)
+      BackedgeTakenCount = new VPValue();
+    return BackedgeTakenCount;
+  }
 
   void addVF(unsigned VF) { VFs.insert(VF); }
 

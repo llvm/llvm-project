@@ -24,6 +24,11 @@ class Decl;
 
 namespace clangd {
 
+/// Returns true if the declaration is considered implementation detail based on
+/// heuristics. For example, a declaration whose name is not explicitly spelled
+/// in code is considered implementation detail.
+bool isImplementationDetail(const Decl *D);
+
 /// Find the identifier source location of the given D.
 ///
 /// The returned location is usually the spelling location where the name of the

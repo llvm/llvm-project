@@ -12,6 +12,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/Sema/LoopHint.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
@@ -335,10 +336,10 @@ void LoopInfoStack::InsertHelper(Instruction *I) const {
   if (!L.getLoopID())
     return;
 
-  if (TerminatorInst *TI = dyn_cast<TerminatorInst>(I)) {
-    for (unsigned i = 0, ie = TI->getNumSuccessors(); i < ie; ++i)
-      if (TI->getSuccessor(i) == L.getHeader()) {
-        TI->setMetadata(llvm::LLVMContext::MD_loop, L.getLoopID());
+  if (I->isTerminator()) {
+    for (BasicBlock *Succ : successors(I))
+      if (Succ == L.getHeader()) {
+        I->setMetadata(llvm::LLVMContext::MD_loop, L.getLoopID());
         break;
       }
     return;

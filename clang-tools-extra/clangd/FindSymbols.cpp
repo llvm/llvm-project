@@ -140,10 +140,10 @@ getWorkspaceSymbols(StringRef Query, int Limit, const SymbolIndex *const Index,
     Location L;
     L.uri = URIForFile((*Path));
     Position Start, End;
-    Start.line = CD.Start.Line;
-    Start.character = CD.Start.Column;
-    End.line = CD.End.Line;
-    End.character = CD.End.Column;
+    Start.line = CD.Start.line();
+    Start.character = CD.Start.column();
+    End.line = CD.End.line();
+    End.character = CD.End.column();
     L.range = {Start, End};
     SymbolKind SK = indexSymbolKindToSymbolKind(Sym.SymInfo.Kind);
     std::string Scope = Sym.Scope;

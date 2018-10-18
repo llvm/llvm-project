@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Quality.h"
+#include "AST.h"
 #include "FileDistance.h"
 #include "URI.h"
 #include "index/Index.h"
@@ -177,6 +178,7 @@ void SymbolQualitySignals::merge(const CodeCompletionResult &SemaCCResult) {
   Category = categorize(SemaCCResult);
 
   if (SemaCCResult.Declaration) {
+    ImplementationDetail |= isImplementationDetail(SemaCCResult.Declaration);
     if (auto *ID = SemaCCResult.Declaration->getIdentifier())
       ReservedName = ReservedName || isReserved(ID->getName());
   } else if (SemaCCResult.Kind == CodeCompletionResult::RK_Macro)
@@ -185,6 +187,7 @@ void SymbolQualitySignals::merge(const CodeCompletionResult &SemaCCResult) {
 
 void SymbolQualitySignals::merge(const Symbol &IndexResult) {
   Deprecated |= (IndexResult.Flags & Symbol::Deprecated);
+  ImplementationDetail |= (IndexResult.Flags & Symbol::ImplementationDetail);
   References = std::max(IndexResult.References, References);
   Category = categorize(IndexResult.SymInfo);
   ReservedName = ReservedName || isReserved(IndexResult.Name);
@@ -212,6 +215,8 @@ float SymbolQualitySignals::evaluate() const {
     Score *= 0.1f;
   if (ReservedName)
     Score *= 0.1f;
+  if (ImplementationDetail)
+    Score *= 0.2f;
 
   switch (Category) {
   case Keyword: // Often relevant, but misses most signals.
