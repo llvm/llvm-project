@@ -68,9 +68,8 @@ public:
   static constexpr const size_t kMinNumDifferentAddresses = 6;
 
 private:
-  std::vector<BenchmarkMeasure>
-  runMeasurements(const ExecutableFunction &EF,
-                  ScratchSpace &Scratch) const override;
+  llvm::Expected<std::vector<BenchmarkMeasure>>
+  runMeasurements(const FunctionExecutor &Executor) const override;
 };
 
 } // namespace exegesis

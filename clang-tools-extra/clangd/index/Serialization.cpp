@@ -496,13 +496,18 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
     }
   }
 
+  size_t SymSize = Symbols.size();
+  size_t RefSize = Refs.size();
   trace::Span Tracer("BuildIndex");
   auto Index =
       UseDex ? dex::Dex::build(std::move(Symbols), std::move(Refs), URISchemes)
              : MemIndex::build(std::move(Symbols), std::move(Refs));
-  vlog("Loaded {0} from {1} with estimated memory usage {2}",
+  vlog("Loaded {0} from {1} with estimated memory usage {2} bytes\n"
+       "  - number of symbos: {3}\n"
+       "  - number of refs: {4}\n",
        UseDex ? "Dex" : "MemIndex", SymbolFilename,
-       Index->estimateMemoryUsage());
+       Index->estimateMemoryUsage(),
+       SymSize, RefSize);
   return Index;
 }
 

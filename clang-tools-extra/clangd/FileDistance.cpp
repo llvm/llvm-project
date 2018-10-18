@@ -176,5 +176,46 @@ FileDistance &URIDistance::forScheme(llvm::StringRef Scheme) {
   return *Delegate;
 }
 
+static std::pair<std::string, int> scopeToPath(llvm::StringRef Scope) {
+  SmallVector<StringRef, 4> Split;
+  Scope.split(Split, "::", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  return {"/" + llvm::join(Split, "/"), Split.size()};
+}
+
+static FileDistance
+createScopeFileDistance(llvm::ArrayRef<std::string> QueryScopes) {
+  FileDistanceOptions Opts;
+  Opts.UpCost = 2;
+  Opts.DownCost = 4;
+  Opts.AllowDownTraversalFromRoot = false;
+
+  StringMap<SourceParams> Sources;
+  StringRef Preferred = QueryScopes.empty() ? "" : QueryScopes.front().c_str();
+  for (StringRef S : QueryScopes) {
+    SourceParams Param;
+    // Penalize the global scope even it's preferred, as all projects can define
+    // symbols in it, and there is pattern where using-namespace is used in
+    // place of enclosing namespaces (e.g. in implementation files).
+    if (S == Preferred)
+      Param.Cost = S == "" ? 2 : 0;
+    else if (Preferred.startswith(S) && !S.empty())
+      continue; // just rely on up-traversals.
+    else
+      Param.Cost = S == "" ? 5 : 2;
+    auto Path = scopeToPath(S);
+    // The global namespace is not 'near' its children.
+    Param.MaxUpTraversals = std::max(Path.second - 1, 0);
+    Sources[Path.first] = std::move(Param);
+  }
+  return FileDistance(Sources, Opts);
+}
+
+ScopeDistance::ScopeDistance(llvm::ArrayRef<std::string> QueryScopes)
+    : Distance(createScopeFileDistance(QueryScopes)) {}
+
+unsigned ScopeDistance::distance(llvm::StringRef SymbolScope) {
+  return Distance.distance(scopeToPath(SymbolScope).first);
+}
+
 } // namespace clangd
 } // namespace clang

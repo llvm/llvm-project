@@ -7,24 +7,34 @@ add_custom_target(check-clang-python
     DEPENDS libclang
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
-# Check if we are building with ASan
-list(FIND LLVM_USE_SANITIZER "Address" LLVM_USE_ASAN_INDEX)
-if (LLVM_USE_ASAN_INDEX EQUAL -1)
-  set(LLVM_USE_ASAN FALSE)
-else()
-  set(LLVM_USE_ASAN TRUE)
-endif()
+set(RUN_PYTHON_TESTS TRUE)
 
-# Tests fail on Windows, and need someone knowledgeable to fix.
-# It's not clear whether it's a test or a valid binding problem.
-#
 # Do not try to run if libclang was built with ASan because
 # the sanitizer library will likely be loaded too late to perform
 # interception and will then fail.
 # We could use LD_PRELOAD/DYLD_INSERT_LIBRARIES but this isn't
 # portable so its easier just to not run the tests when building
 # with ASan.
-if((NOT WIN32) AND (NOT LLVM_USE_ASAN))
+list(FIND LLVM_USE_SANITIZER "Address" LLVM_USE_ASAN_INDEX)
+if(NOT LLVM_USE_ASAN_INDEX EQUAL -1)
+  set(RUN_PYTHON_TESTS FALSE)
+endif()
+
+# Tests fail on Windows, and need someone knowledgeable to fix.
+# It's not clear whether it's a test or a valid binding problem.
+if(WIN32)
+  set(RUN_PYTHON_TESTS FALSE)
+endif()
+
+# AArch64 and Hexagon have known test failures that need to be
+# addressed.
+# SystemZ has broken Python/FFI interface:
+# https://reviews.llvm.org/D52840#1265716
+if(${LLVM_NATIVE_ARCH} MATCHES "^(AArch64|Hexagon|SystemZ)$")
+  set(RUN_PYTHON_TESTS FALSE)
+endif()
+
+if(RUN_PYTHON_TESTS)
     set_property(GLOBAL APPEND PROPERTY
                  LLVM_ADDITIONAL_TEST_TARGETS check-clang-python)
 endif()

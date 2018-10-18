@@ -212,8 +212,8 @@ private:
                              bool IsLeafFunc = true);
   Function *CreateInitCallsForSections(Module &M, const char *InitFunctionName,
                                        Type *Ty, const char *Section);
-  std::pair<GlobalVariable *, GlobalVariable *>
-  CreateSecStartEnd(Module &M, const char *Section, Type *Ty);
+  std::pair<Value *, Value *> CreateSecStartEnd(Module &M, const char *Section,
+                                                Type *Ty);
 
   void SetNoSanitizeMetadata(Instruction *I) {
     I->setMetadata(I->getModule()->getMDKindID("nosanitize"),
@@ -251,7 +251,7 @@ private:
 
 } // namespace
 
-std::pair<GlobalVariable *, GlobalVariable *>
+std::pair<Value *, Value *>
 SanitizerCoverageModule::CreateSecStartEnd(Module &M, const char *Section,
                                            Type *Ty) {
   GlobalVariable *SecStart =
@@ -262,33 +262,28 @@ SanitizerCoverageModule::CreateSecStartEnd(Module &M, const char *Section,
       new GlobalVariable(M, Ty, false, GlobalVariable::ExternalLinkage,
                          nullptr, getSectionEnd(Section));
   SecEnd->setVisibility(GlobalValue::HiddenVisibility);
+  IRBuilder<> IRB(M.getContext());
+  Value *SecEndPtr = IRB.CreatePointerCast(SecEnd, Ty);
+  if (TargetTriple.getObjectFormat() != Triple::COFF)
+    return std::make_pair(IRB.CreatePointerCast(SecStart, Ty), SecEndPtr);
 
-  return std::make_pair(SecStart, SecEnd);
+  // Account for the fact that on windows-msvc __start_* symbols actually
+  // point to a uint64_t before the start of the array.
+  auto SecStartI8Ptr = IRB.CreatePointerCast(SecStart, Int8PtrTy);
+  auto GEP = IRB.CreateGEP(SecStartI8Ptr,
+                           ConstantInt::get(IntptrTy, sizeof(uint64_t)));
+  return std::make_pair(IRB.CreatePointerCast(GEP, Ty), SecEndPtr);
 }
-
 
 Function *SanitizerCoverageModule::CreateInitCallsForSections(
     Module &M, const char *InitFunctionName, Type *Ty,
     const char *Section) {
-  IRBuilder<> IRB(M.getContext());
   auto SecStartEnd = CreateSecStartEnd(M, Section, Ty);
   auto SecStart = SecStartEnd.first;
   auto SecEnd = SecStartEnd.second;
   Function *CtorFunc;
-  Value *SecStartPtr = nullptr;
-  // Account for the fact that on windows-msvc __start_* symbols actually
-  // point to a uint64_t before the start of the array.
-  if (TargetTriple.getObjectFormat() == Triple::COFF) {
-    auto SecStartI8Ptr = IRB.CreatePointerCast(SecStart, Int8PtrTy);
-    auto GEP = IRB.CreateGEP(SecStartI8Ptr,
-                             ConstantInt::get(IntptrTy, sizeof(uint64_t)));
-    SecStartPtr = IRB.CreatePointerCast(GEP, Ty);
-  } else {
-    SecStartPtr = IRB.CreatePointerCast(SecStart, Ty);
-  }
   std::tie(CtorFunc, std::ignore) = createSanitizerCtorAndInitFunctions(
-      M, SanCovModuleCtorName, InitFunctionName, {Ty, Ty},
-      {SecStartPtr, IRB.CreatePointerCast(SecEnd, Ty)});
+      M, SanCovModuleCtorName, InitFunctionName, {Ty, Ty}, {SecStart, SecEnd});
 
   if (TargetTriple.supportsCOMDAT()) {
     // Use comdat to dedup CtorFunc.
@@ -431,20 +426,7 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
     Function *InitFunction = declareSanitizerInitFunction(
         M, SanCovPCsInitName, {IntptrPtrTy, IntptrPtrTy});
     IRBuilder<> IRBCtor(Ctor->getEntryBlock().getTerminator());
-    Value *SecStartPtr = nullptr;
-    // Account for the fact that on windows-msvc __start_pc_table actually
-    // points to a uint64_t before the start of the PC table.
-    if (TargetTriple.getObjectFormat() == Triple::COFF) {
-      auto SecStartI8Ptr = IRB.CreatePointerCast(SecStartEnd.first, Int8PtrTy);
-      auto GEP = IRB.CreateGEP(SecStartI8Ptr,
-                               ConstantInt::get(IntptrTy, sizeof(uint64_t)));
-      SecStartPtr = IRB.CreatePointerCast(GEP, IntptrPtrTy);
-    } else {
-      SecStartPtr = IRB.CreatePointerCast(SecStartEnd.first, IntptrPtrTy);
-    }
-    IRBCtor.CreateCall(
-        InitFunction,
-        {SecStartPtr, IRB.CreatePointerCast(SecStartEnd.second, IntptrPtrTy)});
+    IRBCtor.CreateCall(InitFunction, {SecStartEnd.first, SecStartEnd.second});
   }
   // We don't reference these arrays directly in any of our runtime functions,
   // so we need to prevent them from being dead stripped.

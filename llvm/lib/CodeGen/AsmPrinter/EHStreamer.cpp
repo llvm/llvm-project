@@ -345,9 +345,7 @@ computeCallSiteTable(SmallVectorImpl<CallSiteEntry> &CallSites,
 ///     unwound and handling continues.
 ///  3. Type ID table contains references to all the C++ typeinfo for all
 ///     catches in the function.  This tables is reverse indexed base 1.
-///
-/// Returns the starting symbol of an exception table.
-MCSymbol *EHStreamer::emitExceptionTable() {
+void EHStreamer::emitExceptionTable() {
   const MachineFunction *MF = Asm->MF;
   const std::vector<const GlobalValue *> &TypeInfos = MF->getTypeInfos();
   const std::vector<unsigned> &FilterIds = MF->getFilterIds();
@@ -377,7 +375,6 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   computeCallSiteTable(CallSites, LandingPads, FirstActions);
 
   bool IsSJLJ = Asm->MAI->getExceptionHandlingType() == ExceptionHandling::SjLj;
-  bool IsWasm = Asm->MAI->getExceptionHandlingType() == ExceptionHandling::Wasm;
   unsigned CallSiteEncoding =
       IsSJLJ ? dwarf::DW_EH_PE_udata4 : dwarf::DW_EH_PE_uleb128;
   bool HaveTTData = !TypeInfos.empty() || !FilterIds.empty();
@@ -460,8 +457,8 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   Asm->EmitLabelDifferenceAsULEB128(CstEndLabel, CstBeginLabel);
   Asm->OutStreamer->EmitLabel(CstBeginLabel);
 
-  // SjLj / Wasm Exception handling
-  if (IsSJLJ || IsWasm) {
+  // SjLj Exception handling
+  if (IsSJLJ) {
     unsigned idx = 0;
     for (SmallVectorImpl<CallSiteEntry>::const_iterator
          I = CallSites.begin(), E = CallSites.end(); I != E; ++I, ++idx) {
@@ -607,7 +604,6 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   }
 
   Asm->EmitAlignment(2);
-  return GCCETSym;
 }
 
 void EHStreamer::emitTypeInfos(unsigned TTypeEncoding, MCSymbol *TTBaseLabel) {

@@ -2183,7 +2183,7 @@ void llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
     return;
   }
 
-  TerminatorInst *NewTI;
+  Instruction *NewTI;
   BasicBlock *UnwindDest;
 
   if (auto *CRI = dyn_cast<CleanupReturnInst>(TI)) {
@@ -2260,7 +2260,7 @@ bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI,
       continue;
     }
     if (DTU) {
-      // Remove the TerminatorInst of BB to clear the successor list of BB.
+      // Remove the terminator of BB to clear the successor list of BB.
       if (BB->getTerminator())
         BB->getInstList().pop_back();
       new UnreachableInst(BB->getContext(), BB);

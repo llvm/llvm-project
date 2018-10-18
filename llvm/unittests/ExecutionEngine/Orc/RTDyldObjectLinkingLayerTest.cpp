@@ -54,7 +54,7 @@ static bool testSetProcessAllSections(std::unique_ptr<MemoryBuffer> Obj,
   auto &JD = ES.createJITDylib("main");
   auto Foo = ES.intern("foo");
 
-  RTDyldObjectLinkingLayer ObjLayer(ES, [&DebugSectionSeen](VModuleKey) {
+  RTDyldObjectLinkingLayer ObjLayer(ES, [&DebugSectionSeen]() {
     return llvm::make_unique<MemoryManagerWrapper>(DebugSectionSeen);
   });
 
@@ -65,8 +65,7 @@ static bool testSetProcessAllSections(std::unique_ptr<MemoryBuffer> Obj,
   auto OnReadyDoNothing = [](Error Err) { cantFail(std::move(Err)); };
 
   ObjLayer.setProcessAllSections(ProcessAllSections);
-  auto K = ES.allocateVModule();
-  cantFail(ObjLayer.add(JD, K, std::move(Obj)));
+  cantFail(ObjLayer.add(JD, std::move(Obj), ES.allocateVModule()));
   ES.lookup({&JD}, {Foo}, OnResolveDoNothing, OnReadyDoNothing,
             NoDependenciesToRegister);
   return DebugSectionSeen;
@@ -152,12 +151,12 @@ TEST(RTDyldObjectLinkingLayerTest, TestOverrideObjectFlags) {
   auto &JD = ES.createJITDylib("main");
   auto Foo = ES.intern("foo");
   RTDyldObjectLinkingLayer ObjLayer(
-      ES, [](VModuleKey) { return llvm::make_unique<SectionMemoryManager>(); });
+      ES, []() { return llvm::make_unique<SectionMemoryManager>(); });
   IRCompileLayer CompileLayer(ES, ObjLayer, FunkySimpleCompiler(*TM));
 
   ObjLayer.setOverrideObjectFlagsWithResponsibilityFlags(true);
 
-  cantFail(CompileLayer.add(JD, ES.allocateVModule(), std::move(M)));
+  cantFail(CompileLayer.add(JD, std::move(M), ES.allocateVModule()));
   ES.lookup({&JD}, {Foo}, [](Expected<SymbolMap> R) { cantFail(std::move(R)); },
             [](Error Err) { cantFail(std::move(Err)); },
             NoDependenciesToRegister);
@@ -214,12 +213,12 @@ TEST(RTDyldObjectLinkingLayerTest, TestAutoClaimResponsibilityForSymbols) {
   auto &JD = ES.createJITDylib("main");
   auto Foo = ES.intern("foo");
   RTDyldObjectLinkingLayer ObjLayer(
-      ES, [](VModuleKey) { return llvm::make_unique<SectionMemoryManager>(); });
+      ES, []() { return llvm::make_unique<SectionMemoryManager>(); });
   IRCompileLayer CompileLayer(ES, ObjLayer, FunkySimpleCompiler(*TM));
 
   ObjLayer.setAutoClaimResponsibilityForObjectSymbols(true);
 
-  cantFail(CompileLayer.add(JD, ES.allocateVModule(), std::move(M)));
+  cantFail(CompileLayer.add(JD, std::move(M), ES.allocateVModule()));
   ES.lookup({&JD}, {Foo}, [](Expected<SymbolMap> R) { cantFail(std::move(R)); },
             [](Error Err) { cantFail(std::move(Err)); },
             NoDependenciesToRegister);

@@ -68,14 +68,16 @@ namespace orc {
 class PartitioningIRMaterializationUnit : public IRMaterializationUnit {
 public:
   PartitioningIRMaterializationUnit(ExecutionSession &ES, ThreadSafeModule TSM,
-                                    CompileOnDemandLayer &Parent)
-      : IRMaterializationUnit(ES, std::move(TSM)), Parent(Parent) {}
+                                    VModuleKey K, CompileOnDemandLayer &Parent)
+      : IRMaterializationUnit(ES, std::move(TSM), std::move(K)),
+        Parent(Parent) {}
 
   PartitioningIRMaterializationUnit(
       ThreadSafeModule TSM, SymbolFlagsMap SymbolFlags,
       SymbolNameToDefinitionMap SymbolToDefinition,
       CompileOnDemandLayer &Parent)
-      : IRMaterializationUnit(std::move(TSM), std::move(SymbolFlags),
+      : IRMaterializationUnit(std::move(TSM), std::move(K),
+                              std::move(SymbolFlags),
                               std::move(SymbolToDefinition)),
         Parent(Parent) {}
 
@@ -116,8 +118,8 @@ void CompileOnDemandLayer::setPartitionFunction(PartitionFunction Partition) {
   this->Partition = std::move(Partition);
 }
 
-void CompileOnDemandLayer::emit(MaterializationResponsibility R, VModuleKey K,
-                                 ThreadSafeModule TSM) {
+void CompileOnDemandLayer::emit(MaterializationResponsibility R,
+                                ThreadSafeModule TSM) {
   assert(TSM.getModule() && "Null module");
 
   auto &ES = getExecutionSession();
@@ -149,7 +151,7 @@ void CompileOnDemandLayer::emit(MaterializationResponsibility R, VModuleKey K,
   // implementation dylib.
   if (auto Err = PDR.getImplDylib().define(
           llvm::make_unique<PartitioningIRMaterializationUnit>(
-              ES, std::move(TSM), *this))) {
+              ES, std::move(TSM), R.getVModuleKey(), *this))) {
     ES.reportError(std::move(Err));
     R.failMaterialization();
     return;
@@ -245,7 +247,7 @@ void CompileOnDemandLayer::emitPartition(
   // unmodified to the base layer.
   if (GVsToExtract == None) {
     Defs.clear();
-    BaseLayer.emit(std::move(R), ES.allocateVModule(), std::move(TSM));
+    BaseLayer.emit(std::move(R), std::move(TSM));
     return;
   }
 
@@ -285,9 +287,9 @@ void CompileOnDemandLayer::emitPartition(
 
   auto ExtractedTSM = extractSubModule(TSM, ".submodule", ShouldExtract);
   R.replace(llvm::make_unique<PartitioningIRMaterializationUnit>(
-      ES, std::move(TSM), *this));
+      ES, std::move(TSM), R.getVModuleKey(), *this));
 
-  BaseLayer.emit(std::move(R), ES.allocateVModule(), std::move(ExtractedTSM));
+  BaseLayer.emit(std::move(R), std::move(ExtractedTSM));
 }
 
 } // end namespace orc

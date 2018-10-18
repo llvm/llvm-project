@@ -4796,6 +4796,70 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   return SDValue(NewNode, 0);
 }
 
+SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
+                                       SDValue Offset, SDValue GLC,
+                                       SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      MachinePointerInfo(),
+      MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+          MachineMemOperand::MOInvariant,
+      VT.getStoreSize(), VT.getStoreSize());
+
+  if (!Offset->isDivergent()) {
+    SDValue Ops[] = {
+        Rsrc,
+        Offset, // Offset
+        GLC     // glc
+    };
+    return DAG.getMemIntrinsicNode(AMDGPUISD::SBUFFER_LOAD, DL,
+                                   DAG.getVTList(VT), Ops, VT, MMO);
+  }
+
+  // We have a divergent offset. Emit a MUBUF buffer load instead. We can
+  // assume that the buffer is unswizzled.
+  SmallVector<SDValue, 4> Loads;
+  unsigned NumLoads = 1;
+  MVT LoadVT = VT.getSimpleVT();
+
+  assert(LoadVT == MVT::i32 || LoadVT == MVT::v2i32 || LoadVT == MVT::v4i32 ||
+         LoadVT == MVT::v8i32 || LoadVT == MVT::v16i32);
+
+  if (VT == MVT::v8i32 || VT == MVT::v16i32) {
+    NumLoads = VT == MVT::v16i32 ? 4 : 2;
+    LoadVT = MVT::v4i32;
+  }
+
+  SDVTList VTList = DAG.getVTList({LoadVT, MVT::Glue});
+  unsigned CachePolicy = cast<ConstantSDNode>(GLC)->getZExtValue();
+  SDValue Ops[] = {
+      DAG.getEntryNode(),                         // Chain
+      Rsrc,                                       // rsrc
+      DAG.getConstant(0, DL, MVT::i32),           // vindex
+      {},                                         // voffset
+      {},                                         // soffset
+      {},                                         // offset
+      DAG.getConstant(CachePolicy, DL, MVT::i32), // cachepolicy
+      DAG.getConstant(0, DL, MVT::i1),            // idxen
+  };
+
+  // Use the alignment to ensure that the required offsets will fit into the
+  // immediate offsets.
+  setBufferOffsets(Offset, DAG, &Ops[3], NumLoads > 1 ? 16 * NumLoads : 4);
+
+  uint64_t InstOffset = cast<ConstantSDNode>(Ops[5])->getZExtValue();
+  for (unsigned i = 0; i < NumLoads; ++i) {
+    Ops[5] = DAG.getConstant(InstOffset + 16 * i, DL, MVT::i32);
+    Loads.push_back(DAG.getMemIntrinsicNode(AMDGPUISD::BUFFER_LOAD, DL, VTList,
+                                            Ops, LoadVT, MMO));
+  }
+
+  if (VT == MVT::v8i32 || VT == MVT::v16i32)
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Loads);
+
+  return Loads[0];
+}
+
 SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                   SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
@@ -4951,38 +5015,15 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                           SDLoc(DAG.getEntryNode()),
                           MFI->getArgInfo().WorkItemIDZ);
   case AMDGPUIntrinsic::SI_load_const: {
-    SDValue Ops[] = {
-      Op.getOperand(1),   // Ptr
-      Op.getOperand(2),   // Offset
-      DAG.getTargetConstant(0, DL, MVT::i1) // glc
-    };
-
-    MachineMemOperand *MMO = MF.getMachineMemOperand(
-        MachinePointerInfo(),
-        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
-            MachineMemOperand::MOInvariant,
-        VT.getStoreSize(), 4);
-    SDVTList VTList = DAG.getVTList(MVT::i32);
-    SDValue Load = DAG.getMemIntrinsicNode(AMDGPUISD::SBUFFER_LOAD, DL,
-                                           VTList, Ops, MVT::i32, MMO);
-
+    SDValue Load =
+        lowerSBuffer(MVT::i32, DL, Op.getOperand(1), Op.getOperand(2),
+                     DAG.getTargetConstant(0, DL, MVT::i1), DAG);
     return DAG.getNode(ISD::BITCAST, DL, MVT::f32, Load);
   }
   case Intrinsic::amdgcn_s_buffer_load: {
     unsigned Cache = cast<ConstantSDNode>(Op.getOperand(3))->getZExtValue();
-    SDValue Ops[] = {
-      Op.getOperand(1), // Ptr
-      Op.getOperand(2), // Offset
-      DAG.getTargetConstant(Cache & 1, DL, MVT::i1) // glc
-    };
-
-    MachineMemOperand *MMO = MF.getMachineMemOperand(
-        MachinePointerInfo(),
-        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
-            MachineMemOperand::MOInvariant,
-        VT.getStoreSize(), VT.getStoreSize());
-    return DAG.getMemIntrinsicNode(AMDGPUISD::SBUFFER_LOAD, DL,
-                                   Op->getVTList(), Ops, VT, MMO);
+    return lowerSBuffer(VT, DL, Op.getOperand(1), Op.getOperand(2),
+                        DAG.getTargetConstant(Cache & 1, DL, MVT::i1), DAG);
   }
   case Intrinsic::amdgcn_fdiv_fast:
     return lowerFDIV_FAST(Op, DAG);
@@ -6017,13 +6058,13 @@ std::pair<SDValue, SDValue> SITargetLowering::splitBufferOffsets(
 // three offsets (voffset, soffset and instoffset) into the SDValue[3] array
 // pointed to by Offsets.
 void SITargetLowering::setBufferOffsets(SDValue CombinedOffset,
-                                        SelectionDAG &DAG,
-                                        SDValue *Offsets) const {
+                                        SelectionDAG &DAG, SDValue *Offsets,
+                                        unsigned Align) const {
   SDLoc DL(CombinedOffset);
   if (auto C = dyn_cast<ConstantSDNode>(CombinedOffset)) {
     uint32_t Imm = C->getZExtValue();
     uint32_t SOffset, ImmOffset;
-    if (AMDGPU::splitMUBUFOffset(Imm, SOffset, ImmOffset, Subtarget)) {
+    if (AMDGPU::splitMUBUFOffset(Imm, SOffset, ImmOffset, Subtarget, Align)) {
       Offsets[0] = DAG.getConstant(0, DL, MVT::i32);
       Offsets[1] = DAG.getConstant(SOffset, DL, MVT::i32);
       Offsets[2] = DAG.getConstant(ImmOffset, DL, MVT::i32);
@@ -6035,8 +6076,8 @@ void SITargetLowering::setBufferOffsets(SDValue CombinedOffset,
     SDValue N1 = CombinedOffset.getOperand(1);
     uint32_t SOffset, ImmOffset;
     int Offset = cast<ConstantSDNode>(N1)->getSExtValue();
-    if (Offset >= 0
-        && AMDGPU::splitMUBUFOffset(Offset, SOffset, ImmOffset, Subtarget)) {
+    if (Offset >= 0 && AMDGPU::splitMUBUFOffset(Offset, SOffset, ImmOffset,
+                                                Subtarget, Align)) {
       Offsets[0] = N0;
       Offsets[1] = DAG.getConstant(SOffset, DL, MVT::i32);
       Offsets[2] = DAG.getConstant(ImmOffset, DL, MVT::i32);
@@ -6251,6 +6292,17 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
     if (NumElements > 2)
       return SplitVectorLoad(Op, DAG);
+
+    // SI has a hardware bug in the LDS / GDS boounds checking: if the base
+    // address is negative, then the instruction is incorrectly treated as
+    // out-of-bounds even if base + offsets is in bounds. Split vectorized
+    // loads here to avoid emitting ds_read2_b32. We may re-combine the
+    // load later in the SILoadStoreOptimizer.
+    if (Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS &&
+        NumElements == 2 && MemVT.getStoreSize() == 8 &&
+        Load->getAlignment() < 8) {
+      return SplitVectorLoad(Op, DAG);
+    }
   }
   return SDValue();
 }
@@ -6653,6 +6705,18 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
 
     if (NumElements > 2)
       return SplitVectorStore(Op, DAG);
+
+    // SI has a hardware bug in the LDS / GDS boounds checking: if the base
+    // address is negative, then the instruction is incorrectly treated as
+    // out-of-bounds even if base + offsets is in bounds. Split vectorized
+    // stores here to avoid emitting ds_write2_b32. We may re-combine the
+    // store later in the SILoadStoreOptimizer.
+    if (Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS &&
+        NumElements == 2 && VT.getStoreSize() == 8 &&
+        Store->getAlignment() < 8) {
+      return SplitVectorStore(Op, DAG);
+    }
+
     return SDValue();
   } else {
     llvm_unreachable("unhandled address space");

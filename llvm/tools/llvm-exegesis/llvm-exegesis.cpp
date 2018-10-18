@@ -38,13 +38,14 @@
 #include <algorithm>
 #include <string>
 
-static llvm::cl::opt<unsigned>
+static llvm::cl::opt<int>
     OpcodeIndex("opcode-index", llvm::cl::desc("opcode to measure, by index"),
                 llvm::cl::init(0));
 
-static llvm::cl::opt<std::string>
-    OpcodeName("opcode-name", llvm::cl::desc("opcode to measure, by name"),
-               llvm::cl::init(""));
+static llvm::cl::opt<std::string> OpcodeNames(
+    "opcode-name",
+    llvm::cl::desc("comma-separated list of opcodes to measure, by name"),
+    llvm::cl::init(""));
 
 static llvm::cl::opt<std::string>
     SnippetsFile("snippets-file", llvm::cl::desc("code snippets to measure"),
@@ -99,11 +100,12 @@ static llvm::ExitOnError ExitOnErr;
 void LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET();
 #endif
 
-// Checks that only one of OpcodeName, OpcodeIndex or SnippetsFile is provided,
-// and returns the opcode index or 0 if snippets should be read from
+// Checks that only one of OpcodeNames, OpcodeIndex or SnippetsFile is provided,
+// and returns the opcode indices or {} if snippets should be read from
 // `SnippetsFile`.
-static unsigned getOpcodeOrDie(const llvm::MCInstrInfo &MCInstrInfo) {
-  const size_t NumSetFlags = (OpcodeName.empty() ? 0 : 1) +
+static std::vector<unsigned>
+getOpcodesOrDie(const llvm::MCInstrInfo &MCInstrInfo) {
+  const size_t NumSetFlags = (OpcodeNames.empty() ? 0 : 1) +
                              (OpcodeIndex == 0 ? 0 : 1) +
                              (SnippetsFile.empty() ? 0 : 1);
   if (NumSetFlags != 1)
@@ -111,14 +113,35 @@ static unsigned getOpcodeOrDie(const llvm::MCInstrInfo &MCInstrInfo) {
         "please provide one and only one of 'opcode-index', 'opcode-name' or "
         "'snippets-file'");
   if (!SnippetsFile.empty())
-    return 0;
+    return {};
   if (OpcodeIndex > 0)
-    return OpcodeIndex;
+    return {static_cast<unsigned>(OpcodeIndex)};
+  if (OpcodeIndex < 0) {
+    std::vector<unsigned> Result;
+    for (unsigned I = 1, E = MCInstrInfo.getNumOpcodes(); I <= E; ++I)
+      Result.push_back(I);
+    return Result;
+  }
   // Resolve opcode name -> opcode.
-  for (unsigned I = 0, E = MCInstrInfo.getNumOpcodes(); I < E; ++I)
-    if (MCInstrInfo.getName(I) == OpcodeName)
-      return I;
-  llvm::report_fatal_error(llvm::Twine("unknown opcode ").concat(OpcodeName));
+  const auto ResolveName =
+      [&MCInstrInfo](llvm::StringRef OpcodeName) -> unsigned {
+    for (unsigned I = 1, E = MCInstrInfo.getNumOpcodes(); I < E; ++I)
+      if (MCInstrInfo.getName(I) == OpcodeName)
+        return I;
+    return 0u;
+  };
+  llvm::SmallVector<llvm::StringRef, 2> Pieces;
+  llvm::StringRef(OpcodeNames.getValue())
+      .split(Pieces, ",", /* MaxSplit */ -1, /* KeepEmpty */ false);
+  std::vector<unsigned> Result;
+  for (const llvm::StringRef OpcodeName : Pieces) {
+    if (unsigned Opcode = ResolveName(OpcodeName))
+      Result.push_back(Opcode);
+    else
+      llvm::report_fatal_error(
+          llvm::Twine("unknown opcode ").concat(OpcodeName));
+  }
+  return Result;
 }
 
 // Generates code snippets for opcode `Opcode`.
@@ -299,18 +322,29 @@ void benchmarkMain() {
 #endif
 
   const LLVMState State;
-  const auto Opcode = getOpcodeOrDie(State.getInstrInfo());
+  const auto Opcodes = getOpcodesOrDie(State.getInstrInfo());
 
   std::vector<BenchmarkCode> Configurations;
-  if (Opcode > 0) {
-    // Ignore instructions without a sched class if -ignore-invalid-sched-class
-    // is passed.
-    if (IgnoreInvalidSchedClass &&
-        State.getInstrInfo().get(Opcode).getSchedClass() == 0) {
-      llvm::errs() << "ignoring instruction without sched class\n";
-      return;
+  if (!Opcodes.empty()) {
+    for (const unsigned Opcode : Opcodes) {
+      // Ignore instructions without a sched class if
+      // -ignore-invalid-sched-class is passed.
+      if (IgnoreInvalidSchedClass &&
+          State.getInstrInfo().get(Opcode).getSchedClass() == 0) {
+        llvm::errs() << State.getInstrInfo().getName(Opcode)
+                     << ": ignoring instruction without sched class\n";
+        continue;
+      }
+      auto ConfigsForInstr = generateSnippets(State, Opcode);
+      if (!ConfigsForInstr) {
+        llvm::logAllUnhandledErrors(
+            ConfigsForInstr.takeError(), llvm::errs(),
+            llvm::Twine(State.getInstrInfo().getName(Opcode)).concat(": "));
+        continue;
+      }
+      std::move(ConfigsForInstr->begin(), ConfigsForInstr->end(),
+                std::back_inserter(Configurations));
     }
-    Configurations = ExitOnErr(generateSnippets(State, Opcode));
   } else {
     Configurations = ExitOnErr(readSnippets(State, SnippetsFile));
   }
