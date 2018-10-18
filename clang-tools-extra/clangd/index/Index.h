@@ -33,10 +33,23 @@ namespace clangd {
 struct SymbolLocation {
   // Specify a position (Line, Column) of symbol. Using Line/Column allows us to
   // build LSP responses without reading the file content.
+  //
+  // Position is encoded into 32 bits to save space.
+  // If Line/Column overflow, the value will be their maximum value.
   struct Position {
-    uint32_t Line = 0; // 0-based
+    void setLine(uint32_t Line);
+    uint32_t line() const { return Line; }
+    void setColumn(uint32_t Column);
+    uint32_t column() const { return Column; }
+
+    static constexpr uint32_t MaxLine = (1 << 20) - 1;
+    static constexpr uint32_t MaxColumn = (1 << 12) - 1;
+
+    // Clients should use getters and setters to access these members.
+    // FIXME: hide these members.
+    uint32_t Line : 20; // 0-based
     // Using UTF-16 code units.
-    uint32_t Column = 0; // 0-based
+    uint32_t Column : 12; // 0-based
   };
 
   // The URI of the source file where a symbol occurs.
@@ -50,11 +63,13 @@ struct SymbolLocation {
 };
 inline bool operator==(const SymbolLocation::Position &L,
                        const SymbolLocation::Position &R) {
-  return std::tie(L.Line, L.Column) == std::tie(R.Line, R.Column);
+  return std::make_tuple(L.line(), L.column()) ==
+         std::make_tuple(R.line(), R.column());
 }
 inline bool operator<(const SymbolLocation::Position &L,
                       const SymbolLocation::Position &R) {
-  return std::tie(L.Line, L.Column) < std::tie(R.Line, R.Column);
+  return std::make_tuple(L.line(), L.column()) <
+         std::make_tuple(R.line(), R.column());
 }
 inline bool operator==(const SymbolLocation &L, const SymbolLocation &R) {
   return std::tie(L.FileURI, L.Start, L.End) ==
