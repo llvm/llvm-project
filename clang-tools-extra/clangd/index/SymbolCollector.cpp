@@ -536,6 +536,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
 
   if (isIndexedForCodeCompletion(ND, Ctx))
     S.Flags |= Symbol::IndexedForCodeCompletion;
+  if (isImplementationDetail(&ND))
+    S.Flags |= Symbol::ImplementationDetail;
   S.SymInfo = index::getSymbolInfo(&ND);
   std::string FileURI;
   if (auto DeclLoc = getTokenLocation(findNameLoc(&ND), SM, Opts,
