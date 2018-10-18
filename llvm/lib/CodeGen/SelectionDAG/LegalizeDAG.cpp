@@ -1115,6 +1115,10 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getStrictFPOperationAction(Node->getOpcode(),
                                             Node->getValueType(0));
     break;
+  case ISD::SADDSAT: {
+    Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
+    break;
+  }
   case ISD::MSCATTER:
     Action = TLI.getOperationAction(Node->getOpcode(),
                     cast<MaskedScatterSDNode>(Node)->getValue().getValueType());
@@ -3449,6 +3453,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Hi = DAG.getNode(ISD::SHL, dl, VT, Hi, Shift);
       Results.push_back(DAG.getNode(ISD::OR, dl, VT, Lo, Hi));
     }
+    break;
+  }
+  case ISD::SADDSAT: {
+    Results.push_back(TLI.getExpandedSignedSaturationAddition(Node, DAG));
     break;
   }
   case ISD::SADDO:

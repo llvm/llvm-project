@@ -25,23 +25,6 @@
 namespace clang {
 namespace clangd {
 
-// Logs to an output stream, such as stderr.
-// FIXME: Rename to StreamLogger or such, and move to Logger.h.
-class JSONOutput : public Logger {
-public:
-  JSONOutput(llvm::raw_ostream &Logs, Logger::Level MinLevel)
-      : MinLevel(MinLevel), Logs(Logs) {}
-
-  /// Write a line to the logging stream.
-  void log(Level, const llvm::formatv_object_base &Message) override;
-
-private:
-  Logger::Level MinLevel;
-  llvm::raw_ostream &Logs;
-
-  std::mutex StreamMutex;
-};
-
 /// Sends a successful reply.
 /// Current context must derive from JSONRPCDispatcher::Handler.
 void reply(llvm::json::Value &&Result);
@@ -52,9 +35,6 @@ void replyError(ErrorCode Code, const llvm::StringRef &Message);
 /// fetches the related message from error's message method. If error doesn't
 /// match any known errors, uses ErrorCode::InvalidParams for the error.
 void replyError(llvm::Error E);
-/// Returns the request-id of the current request. Should not be used directly
-/// for replying to requests, use the above mentioned methods for that case.
-const llvm::json::Value *getRequestId();
 /// Sends a request to the client.
 /// Current context must derive from JSONRPCDispatcher::Handler.
 void call(llvm::StringRef Method, llvm::json::Value &&Params);

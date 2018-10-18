@@ -102,6 +102,15 @@ void test_mov_dpp2(global int* out, int a, int b, int c, int d, bool e)
   *out = __builtin_amdgcn_mov_dpp(a, 0, 0, 0, e); // expected-error {{argument to '__builtin_amdgcn_mov_dpp' must be a constant integer}}
 }
 
+void test_update_dpp2(global int* out, int a, int b, int c, int d, int e, bool f)
+{
+  *out = __builtin_amdgcn_update_dpp(a, b, 0, 0, 0, false);
+  *out = __builtin_amdgcn_update_dpp(a, 0, c, 0, 0, false); // expected-error {{argument to '__builtin_amdgcn_update_dpp' must be a constant integer}}
+  *out = __builtin_amdgcn_update_dpp(a, 0, 0, d, 0, false); // expected-error {{argument to '__builtin_amdgcn_update_dpp' must be a constant integer}}
+  *out = __builtin_amdgcn_update_dpp(a, 0, 0, 0, e, false); // expected-error {{argument to '__builtin_amdgcn_update_dpp' must be a constant integer}}
+  *out = __builtin_amdgcn_update_dpp(a, 0, 0, 0, 0, f); // expected-error {{argument to '__builtin_amdgcn_update_dpp' must be a constant integer}}
+}
+
 void test_ds_faddf(local float *out, float src, int a) {
   *out = __builtin_amdgcn_ds_faddf(out, src, a, 0, false); // expected-error {{argument to '__builtin_amdgcn_ds_faddf' must be a constant integer}}
   *out = __builtin_amdgcn_ds_faddf(out, src, 0, a, false); // expected-error {{argument to '__builtin_amdgcn_ds_faddf' must be a constant integer}}

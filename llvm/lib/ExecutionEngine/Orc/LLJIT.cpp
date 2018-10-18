@@ -65,15 +65,13 @@ Error LLJIT::addIRModule(JITDylib &JD, ThreadSafeModule TSM) {
   if (auto Err = applyDataLayout(*TSM.getModule()))
     return Err;
 
-  auto K = ES->allocateVModule();
-  return CompileLayer.add(JD, K, std::move(TSM));
+  return CompileLayer.add(JD, std::move(TSM), ES->allocateVModule());
 }
 
 Error LLJIT::addObjectFile(JITDylib &JD, std::unique_ptr<MemoryBuffer> Obj) {
   assert(Obj && "Can not add null object");
 
-  auto K = ES->allocateVModule();
-  return ObjLinkingLayer.add(JD, K, std::move(Obj));
+  return ObjLinkingLayer.add(JD, std::move(Obj), ES->allocateVModule());
 }
 
 Expected<JITEvaluatedSymbol> LLJIT::lookupLinkerMangled(JITDylib &JD,
@@ -84,8 +82,9 @@ Expected<JITEvaluatedSymbol> LLJIT::lookupLinkerMangled(JITDylib &JD,
 LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES,
              std::unique_ptr<TargetMachine> TM, DataLayout DL)
     : ES(std::move(ES)), Main(this->ES->getMainJITDylib()), DL(std::move(DL)),
-      ObjLinkingLayer(*this->ES,
-                      [this](VModuleKey K) { return getMemoryManager(K); }),
+      ObjLinkingLayer(
+          *this->ES,
+          []() { return llvm::make_unique<SectionMemoryManager>(); }),
       CompileLayer(*this->ES, ObjLinkingLayer,
                    TMOwningSimpleCompiler(std::move(TM))),
       CtorRunner(Main), DtorRunner(Main) {}
@@ -93,8 +92,9 @@ LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES,
 LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES, JITTargetMachineBuilder JTMB,
              DataLayout DL, unsigned NumCompileThreads)
     : ES(std::move(ES)), Main(this->ES->getMainJITDylib()), DL(std::move(DL)),
-      ObjLinkingLayer(*this->ES,
-                      [this](VModuleKey K) { return getMemoryManager(K); }),
+      ObjLinkingLayer(
+          *this->ES,
+          []() { return llvm::make_unique<SectionMemoryManager>(); }),
       CompileLayer(*this->ES, ObjLinkingLayer,
                    ConcurrentIRCompiler(std::move(JTMB))),
       CtorRunner(Main), DtorRunner(Main) {
@@ -115,11 +115,6 @@ LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES, JITTargetMachineBuilder JTMB,
         auto Work = [SharedMU, &JD]() { SharedMU->doMaterialize(JD); };
         CompileThreads->async(std::move(Work));
       });
-}
-
-std::unique_ptr<RuntimeDyld::MemoryManager>
-LLJIT::getMemoryManager(VModuleKey K) {
-  return llvm::make_unique<SectionMemoryManager>();
 }
 
 std::string LLJIT::mangle(StringRef UnmangledName) {
@@ -187,8 +182,7 @@ Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
 
   recordCtorDtors(*TSM.getModule());
 
-  auto K = ES->allocateVModule();
-  return CODLayer.add(JD, K, std::move(TSM));
+  return CODLayer.add(JD, std::move(TSM), ES->allocateVModule());
 }
 
 LLLazyJIT::LLLazyJIT(

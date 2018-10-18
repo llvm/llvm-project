@@ -41,8 +41,7 @@ public:
 
   void setNotifyCompiled(NotifyCompiledFunction NotifyCompiled);
 
-  void emit(MaterializationResponsibility R, VModuleKey K,
-            ThreadSafeModule TSM) override;
+  void emit(MaterializationResponsibility R, ThreadSafeModule TSM) override;
 
 private:
   mutable std::mutex IRLayerMutex;

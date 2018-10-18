@@ -231,6 +231,29 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
           }
         }
       }
+
+      const char *addtional_platform_dirs = getenv("PLATFORM_SDK_DIRECTORY");
+      if (addtional_platform_dirs) {
+        SDKDirectoryInfoCollection env_var_sdk_directory_infos;
+        FileSpec::EnumerateDirectory(addtional_platform_dirs, find_directories,
+                                     find_files, find_other,
+                                     GetContainedFilesIntoVectorOfStringsCallback,
+                                     &env_var_sdk_directory_infos);
+        FileSpec sdk_symbols_symlink_fspec;
+        for (const auto &sdk_directory_info : env_var_sdk_directory_infos) {
+          sdk_symbols_symlink_fspec = sdk_directory_info.directory;
+          sdk_symbols_symlink_fspec.AppendPathComponent("Symbols");
+          if (sdk_symbols_symlink_fspec.Exists()) {
+            m_sdk_directory_infos.push_back(sdk_directory_info);
+            if (log) {
+              log->Printf("PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
+                          "added env var SDK directory %s",
+                          sdk_symbols_symlink_fspec.GetPath().c_str());
+            }
+          }
+        }
+      }
+
     }
   }
   return !m_sdk_directory_infos.empty();

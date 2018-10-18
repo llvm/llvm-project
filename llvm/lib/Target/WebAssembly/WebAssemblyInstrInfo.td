@@ -269,8 +269,6 @@ def : Pat<(i32 (WebAssemblywrapper tglobaladdr:$addr)),
           (CONST_I32 tglobaladdr:$addr)>;
 def : Pat<(i32 (WebAssemblywrapper texternalsym:$addr)),
           (CONST_I32 texternalsym:$addr)>;
-def : Pat<(i32 (WebAssemblywrapper mcsym:$sym)), (CONST_I32 mcsym:$sym)>;
-def : Pat<(i64 (WebAssemblywrapper mcsym:$sym)), (CONST_I64 mcsym:$sym)>;
 
 //===----------------------------------------------------------------------===//
 // Additional sets of instructions.

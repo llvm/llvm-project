@@ -192,10 +192,10 @@ def _decorateTest(mode,
             py_version is None) or _check_expected_version(
             py_version[0], py_version[1], sys.version_info)
         skip_for_macos_version = (macos_version is None) or (
-            _check_expected_version(
+            (platform.mac_ver()[0] != "") and (_check_expected_version(
                 macos_version[0],
                 macos_version[1],
-                platform.mac_ver()[0]))
+                platform.mac_ver()[0])))
 
         # For the test to be skipped, all specified (e.g. not None) parameters must be True.
         # An unspecified parameter means "any", so those are marked skip by default.  And we skip
