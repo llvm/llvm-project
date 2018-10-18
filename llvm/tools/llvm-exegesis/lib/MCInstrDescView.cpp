@@ -27,7 +27,14 @@ unsigned Variable::getPrimaryOperandIndex() const {
   return TiedOperands[0];
 }
 
-bool Variable::hasTiedOperands() const { return TiedOperands.size() > 1; }
+bool Variable::hasTiedOperands() const {
+  assert(TiedOperands.size() <= 2 &&
+         "No more than two operands can be tied together");
+  // By definition only Use and Def operands can be tied together.
+  // TiedOperands[0] is the Def operand (LLVM stores defs first).
+  // TiedOperands[1] is the Use operand.
+  return TiedOperands.size() > 1;
+}
 
 unsigned Operand::getIndex() const {
   assert(Index >= 0 && "Index must be set");
@@ -197,6 +204,10 @@ bool Instruction::hasAliasingRegisters() const {
   return AllDefRegs.anyCommon(AllUseRegs);
 }
 
+bool Instruction::hasOneUseOrOneDef() const {
+  return AllDefRegs.count() || AllUseRegs.count();
+}
+
 void Instruction::dump(const llvm::MCRegisterInfo &RegInfo,
                        llvm::raw_ostream &Stream) const {
   Stream << "- " << Name << "\n";
@@ -288,8 +299,7 @@ bool AliasingConfigurations::hasImplicitAliasing() const {
 }
 
 AliasingConfigurations::AliasingConfigurations(
-    const Instruction &DefInstruction, const Instruction &UseInstruction)
-    : DefInstruction(DefInstruction), UseInstruction(UseInstruction) {
+    const Instruction &DefInstruction, const Instruction &UseInstruction) {
   if (UseInstruction.AllUseRegs.anyCommon(DefInstruction.AllDefRegs)) {
     auto CommonRegisters = UseInstruction.AllUseRegs;
     CommonRegisters &= DefInstruction.AllDefRegs;

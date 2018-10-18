@@ -37,6 +37,12 @@ namespace llvm {
                        LibFunc DoubleFn, LibFunc FloatFn,
                        LibFunc LongDoubleFn);
 
+  /// Get the name of the overloaded unary floating point function
+  /// corresponding to \a Ty.
+  StringRef getUnaryFloatFn(const TargetLibraryInfo *TLI, Type *Ty,
+                            LibFunc DoubleFn, LibFunc FloatFn,
+                            LibFunc LongDoubleFn);
+
   /// Return V if it is an i8*, otherwise cast it to i8*.
   Value *castToCStr(Value *V, IRBuilder<> &B);
 
@@ -92,6 +98,13 @@ namespace llvm {
   /// value with the same type. If 'Op' is a long double, 'l' is added as the
   /// suffix of name, if 'Op' is a float, we add a 'f' suffix.
   Value *emitUnaryFloatFnCall(Value *Op, StringRef Name, IRBuilder<> &B,
+                              const AttributeList &Attrs);
+
+  /// Emit a call to the unary function DoubleFn, FloatFn or LongDoubleFn,
+  /// depending of the type of Op.
+  Value *emitUnaryFloatFnCall(Value *Op, const TargetLibraryInfo *TLI,
+                              LibFunc DoubleFn, LibFunc FloatFn,
+                              LibFunc LongDoubleFn, IRBuilder<> &B,
                               const AttributeList &Attrs);
 
   /// Emit a call to the binary function named 'Name' (e.g. 'fmin'). This

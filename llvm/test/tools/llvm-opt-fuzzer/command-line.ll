@@ -13,7 +13,7 @@
 
 ; Don't start with incorrect passes specified
 ; RUN: not llvm-opt-fuzzer %t -ignore_remaining_args=1 -mtriple x86_64 -passes no-pass 2>&1 | FileCheck -check-prefix=PIPELINE %s
-; PIPELINE: can't parse pass pipeline
+; PIPELINE: unknown pass name 'no-pass'
 
 ; Correct command line
 ; RUN: llvm-opt-fuzzer %t -ignore_remaining_args=1 -mtriple x86_64 -passes instcombine 2>&1 | FileCheck -check-prefix=CORRECT %s

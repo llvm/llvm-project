@@ -294,9 +294,13 @@ public:
   Value(json::Array &&Elements) : Type(T_Array) {
     create<json::Array>(std::move(Elements));
   }
+  template <typename Elt>
+  Value(const std::vector<Elt> &C) : Value(json::Array(C)) {}
   Value(json::Object &&Properties) : Type(T_Object) {
     create<json::Object>(std::move(Properties));
   }
+  template <typename Elt>
+  Value(const std::map<std::string, Elt> &C) : Value(json::Object(C)) {}
   // Strings: types with value semantics. Must be valid UTF-8.
   Value(std::string V) : Type(T_String) {
     if (LLVM_UNLIKELY(!isUTF8(V))) {

@@ -808,10 +808,10 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   for (unsigned i = 0, e = Users.size(); i != e; ++i)
     // The BasicBlock which contains the branch is not in the region
     // modify the branch target to a new block
-    if (TerminatorInst *TI = dyn_cast<TerminatorInst>(Users[i]))
-      if (!Blocks.count(TI->getParent()) &&
-          TI->getParent()->getParent() == oldFunction)
-        TI->replaceUsesOfWith(header, newHeader);
+    if (Instruction *I = dyn_cast<Instruction>(Users[i]))
+      if (I->isTerminator() && !Blocks.count(I->getParent()) &&
+          I->getParent()->getParent() == oldFunction)
+        I->replaceUsesOfWith(header, newHeader);
 
   return newFunction;
 }

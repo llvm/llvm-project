@@ -703,6 +703,7 @@ static std::unique_ptr<IRBuilder<>> Builder;
 static std::unique_ptr<Module> TheModule;
 static std::map<std::string, AllocaInst *> NamedValues;
 static std::map<std::string, std::unique_ptr<PrototypeAST>> FunctionProtos;
+static ExitOnError ExitOnErr;
 
 Value *LogErrorV(const char *Str) {
   LogError(Str);
@@ -1116,7 +1117,7 @@ static void HandleDefinition() {
       fprintf(stderr, "Read function definition:");
       FnIR->print(errs());
       fprintf(stderr, "\n");
-      TheJIT->addModule(std::move(TheModule));
+      ExitOnErr(TheJIT->addModule(std::move(TheModule)));
       InitializeModule();
     }
   } else {
@@ -1151,23 +1152,16 @@ static void HandleTopLevelExpression() {
     if (FnAST->codegen()) {
       // JIT the module containing the anonymous expression, keeping a handle so
       // we can free it later.
-      TheJIT->addModule(std::move(TheModule));
+      ExitOnErr(TheJIT->addModule(std::move(TheModule)));
       InitializeModule();
 
       // Get the anonymous expression's JITSymbol.
-      auto Sym =  TheJIT->lookup(("__anon_expr" + Twine(ExprCount)).str());
+      auto Sym =
+        ExitOnErr(TheJIT->lookup(("__anon_expr" + Twine(ExprCount)).str()));
 
-      if (Sym) {
-        // If the lookup succeeded, cast the symbol's address to a function
-        // pointer then call it.
-        auto *FP = (double (*)())(intptr_t)Sym->getAddress();
-        assert(FP && "Failed to codegen function");
-        fprintf(stderr, "Evaluated to %f\n", FP());
-      } else {
-        // Otherwise log the reason the symbol lookup failed.
-        logAllUnhandledErrors(Sym.takeError(), errs(),
-                              "Could not evaluate: ");
-      }
+      auto *FP = (double (*)())(intptr_t)Sym.getAddress();
+      assert(FP && "Failed to codegen function");
+      fprintf(stderr, "Evaluated to %f\n", FP());
     }
   } else {
     // Skip token for error recovery.
@@ -1235,7 +1229,7 @@ int main() {
   fprintf(stderr, "ready> ");
   getNextToken();
 
-  TheJIT = llvm::make_unique<KaleidoscopeJIT>();
+  TheJIT = ExitOnErr(KaleidoscopeJIT::Create());
   TheContext = &TheJIT->getContext();
 
   InitializeModule();

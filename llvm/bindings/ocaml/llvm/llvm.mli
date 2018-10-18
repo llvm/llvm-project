@@ -1887,16 +1887,16 @@ val set_volatile : bool -> llvalue -> unit
 val is_terminator : llvalue -> bool
 
 (** [successor v i] returns the successor at index [i] for the value [v].
-    See the method [llvm::TerminatorInst::getSuccessor]. *)
+    See the method [llvm::Instruction::getSuccessor]. *)
 val successor : llvalue -> int -> llbasicblock
 
 (** [set_successor v i o] sets the successor of the value [v] at the index [i] to
     the value [o].
-    See the method [llvm::TerminatorInst::setSuccessor]. *)
+    See the method [llvm::Instruction::setSuccessor]. *)
 val set_successor : llvalue -> int -> llbasicblock -> unit
 
 (** [num_successors v] returns the number of successors for the value [v].
-    See the method [llvm::TerminatorInst::getNumSuccessors]. *)
+    See the method [llvm::Instruction::getNumSuccessors]. *)
 val num_successors : llvalue -> int
 
 (** [successors v] returns the successors of [v]. *)

@@ -608,7 +608,7 @@ void MergeFunctions::filterInstsUnrelatedToPDI(
         LLVM_DEBUG(BI->print(dbgs()));
         LLVM_DEBUG(dbgs() << "\n");
       }
-    } else if (dyn_cast<TerminatorInst>(BI) == GEntryBlock->getTerminator()) {
+    } else if (BI->isTerminator() && &*BI == GEntryBlock->getTerminator()) {
       LLVM_DEBUG(dbgs() << " Will Include Terminator: ");
       LLVM_DEBUG(BI->print(dbgs()));
       LLVM_DEBUG(dbgs() << "\n");
