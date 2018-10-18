@@ -122,10 +122,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   // Target identification.
   Builder.defineMacro("__aarch64__");
-  // For bare-metal none-eabi.
+  // For bare-metal.
   if (getTriple().getOS() == llvm::Triple::UnknownOS &&
-      (getTriple().getEnvironment() == llvm::Triple::EABI ||
-       getTriple().getEnvironment() == llvm::Triple::EABIHF))
+      getTriple().isOSBinFormatELF())
     Builder.defineMacro("__ELF__");
 
   // Target properties.
