@@ -122,6 +122,24 @@ Improvements to clang-tidy
   Detects usage of magic numbers, numbers that are used as literals instead of
   introduced via constants or symbols.
 
+- New :doc:`readability-uppercase-literal-suffix
+  <clang-tidy/checks/readability-uppercase-literal-suffix>` check.
+
+  Detects when the integral literal or floating point literal has non-uppercase
+  suffix, and suggests to make the suffix uppercase. The list of destination
+  suffixes can be optionally provided.
+
+- New alias :doc:`cert-dcl16-c
+  <clang-tidy/checks/cert-dcl16-c>` to :doc:`readability-uppercase-literal-suffix
+  <clang-tidy/checks/readability-uppercase-literal-suffix>`
+  added.
+
+- New alias :doc:`hicpp-uppercase-literal-suffix
+  <clang-tidy/checks/hicpp-uppercase-literal-suffix>` to
+  :doc:`readability-uppercase-literal-suffix
+  <clang-tidy/checks/readability-uppercase-literal-suffix>`
+  added.
+
 Improvements to include-fixer
 -----------------------------
 
