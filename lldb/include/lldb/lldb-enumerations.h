@@ -254,8 +254,7 @@ enum ExpressionResults {
   eExpressionHitBreakpoint,
   eExpressionTimedOut,
   eExpressionResultUnavailable,
-  eExpressionStoppedForDebug,
-  eExpressionProducedNoResult
+  eExpressionStoppedForDebug
 };
 
 enum SearchDepth {
