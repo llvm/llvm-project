@@ -1,7 +1,7 @@
-// RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t -- -- -I %S -std=cl2.0 -x cl
+// RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t -- -- -target x86_64-pc-linux-gnu -I %S -std=cl2.0 -x cl
 // RUN: grep -Ev "// *[A-Z-]+:" %s > %t.cpp
-// RUN: clang-tidy %t.cpp -checks='-*,readability-uppercase-literal-suffix' -fix -- -I %S -std=cl2.0 -x cl
-// RUN: clang-tidy %t.cpp -checks='-*,readability-uppercase-literal-suffix' -warnings-as-errors='-*,readability-uppercase-literal-suffix' -- -I %S -std=cl2.0 -x cl
+// RUN: clang-tidy %t.cpp -checks='-*,readability-uppercase-literal-suffix' -fix -- -target x86_64-pc-linux-gnu -I %S -std=cl2.0 -x cl
+// RUN: clang-tidy %t.cpp -checks='-*,readability-uppercase-literal-suffix' -warnings-as-errors='-*,readability-uppercase-literal-suffix' -- -target x86_64-pc-linux-gnu -I %S -std=cl2.0 -x cl
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
