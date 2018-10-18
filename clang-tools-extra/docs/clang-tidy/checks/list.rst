@@ -91,6 +91,7 @@ Clang-Tidy Checks
    cppcoreguidelines-interfaces-global-init
    cppcoreguidelines-narrowing-conversions
    cppcoreguidelines-no-malloc
+   cppcoreguidelines-non-private-member-variables-in-classes (redirects to misc-non-private-member-variables-in-classes) <cppcoreguidelines-non-private-member-variables-in-classes>
    cppcoreguidelines-owning-memory
    cppcoreguidelines-pro-bounds-array-to-pointer-decay
    cppcoreguidelines-pro-bounds-constant-array-index
@@ -165,6 +166,7 @@ Clang-Tidy Checks
    misc-misplaced-const
    misc-new-delete-overloads
    misc-non-copyable-objects
+   misc-non-private-member-variables-in-classes
    misc-redundant-expression
    misc-static-assert
    misc-throw-by-value-catch-by-reference
