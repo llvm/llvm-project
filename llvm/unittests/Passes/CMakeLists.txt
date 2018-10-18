@@ -12,6 +12,7 @@ add_llvm_unittest(PluginsTests
   PluginsTest.cpp
   )
 export_executable_symbols(PluginsTests)
+target_link_libraries(PluginsTests PRIVATE LLVMTestingSupport)
 
 set(LLVM_LINK_COMPONENTS)
 add_llvm_loadable_module(TestPlugin

@@ -13,9 +13,11 @@
 #include "Assembler.h"
 #include "BenchmarkRunner.h"
 #include "MCInstrDescView.h"
+#include "PerfHelper.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
@@ -42,6 +44,54 @@ GenerateInstructions(const BenchmarkCode &BC, const size_t MinInstructions) {
     Code.push_back(BC.Instructions[I % BC.Instructions.size()]);
   return Code;
 }
+
+namespace {
+class FunctionExecutorImpl : public BenchmarkRunner::FunctionExecutor {
+public:
+  FunctionExecutorImpl(const LLVMState &State,
+                       llvm::object::OwningBinary<llvm::object::ObjectFile> Obj,
+                       BenchmarkRunner::ScratchSpace *Scratch)
+      : Function(State.createTargetMachine(), std::move(Obj)),
+        Scratch(Scratch) {}
+
+private:
+  llvm::Expected<int64_t> runAndMeasure(const char *Counters) const override {
+    // We sum counts when there are several counters for a single ProcRes
+    // (e.g. P23 on SandyBridge).
+    int64_t CounterValue = 0;
+    llvm::SmallVector<llvm::StringRef, 2> CounterNames;
+    llvm::StringRef(Counters).split(CounterNames, ',');
+    char *const ScratchPtr = Scratch->ptr();
+    for (const auto &CounterName : CounterNames) {
+      pfm::PerfEvent PerfEvent(CounterName);
+      if (!PerfEvent.valid())
+        llvm::report_fatal_error(
+            llvm::Twine("invalid perf event ").concat(Counters));
+      pfm::Counter Counter(PerfEvent);
+      Scratch->clear();
+      {
+        llvm::CrashRecoveryContext CRC;
+        llvm::CrashRecoveryContext::Enable();
+        const bool Crashed = !CRC.RunSafely([this, &Counter, ScratchPtr]() {
+          Counter.start();
+          Function(ScratchPtr);
+          Counter.stop();
+        });
+        llvm::CrashRecoveryContext::Disable();
+        // FIXME: Better diagnosis.
+        if (Crashed)
+          return llvm::make_error<BenchmarkFailure>(
+              "snippet crashed while running");
+      }
+      CounterValue += Counter.read();
+    }
+    return CounterValue;
+  }
+
+  const ExecutableFunction Function;
+  BenchmarkRunner::ScratchSpace *const Scratch;
+};
+} // namespace
 
 InstructionBenchmark
 BenchmarkRunner::runConfiguration(const BenchmarkCode &BC,
@@ -86,16 +136,21 @@ BenchmarkRunner::runConfiguration(const BenchmarkCode &BC,
   }
   llvm::outs() << "Check generated assembly with: /usr/bin/objdump -d "
                << *ObjectFilePath << "\n";
-  const ExecutableFunction EF(State.createTargetMachine(),
-                              getObjectFromFile(*ObjectFilePath));
-  InstrBenchmark.Measurements = runMeasurements(EF, *Scratch);
+  const FunctionExecutorImpl Executor(State, getObjectFromFile(*ObjectFilePath),
+                                      Scratch.get());
+  auto Measurements = runMeasurements(Executor);
+  if (llvm::Error E = Measurements.takeError()) {
+    InstrBenchmark.Error = llvm::toString(std::move(E));
+    return InstrBenchmark;
+  }
+  InstrBenchmark.Measurements = std::move(*Measurements);
   assert(InstrBenchmark.NumRepetitions > 0 && "invalid NumRepetitions");
   for (BenchmarkMeasure &BM : InstrBenchmark.Measurements) {
     // Scale the measurements by instruction.
     BM.PerInstructionValue /= InstrBenchmark.NumRepetitions;
     // Scale the measurements by snippet.
     BM.PerSnippetValue *= static_cast<double>(BC.Instructions.size()) /
-                   InstrBenchmark.NumRepetitions;
+                          InstrBenchmark.NumRepetitions;
   }
 
   return InstrBenchmark;
@@ -114,5 +169,7 @@ BenchmarkRunner::writeObjectFile(const BenchmarkCode &BC,
                    BC.LiveIns, BC.RegisterInitialValues, Code, OFS);
   return ResultPath.str();
 }
+
+BenchmarkRunner::FunctionExecutor::~FunctionExecutor() {}
 
 } // namespace exegesis

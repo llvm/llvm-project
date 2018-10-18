@@ -175,9 +175,10 @@ OPTIONS
  Specify the opcode to measure, by index. See example 1 for details.
  Either `opcode-index`, `opcode-name` or `snippets-file` must be set.
 
-.. option:: -opcode-name=<LLVM opcode name>
+.. option:: -opcode-name=<opcode name 1>,<opcode name 2>,...
 
- Specify the opcode to measure, by name. See example 1 for details.
+ Specify the opcode to measure, by name. Several opcodes can be specified as
+ a comma-separated list. See example 1 for details.
  Either `opcode-index`, `opcode-name` or `snippets-file` must be set.
 
  .. option:: -snippets-file=<filename>

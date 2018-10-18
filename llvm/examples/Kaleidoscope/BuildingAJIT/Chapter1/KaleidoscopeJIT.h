@@ -32,37 +32,45 @@ namespace orc {
 
 class KaleidoscopeJIT {
 private:
-
   ExecutionSession ES;
-  RTDyldObjectLinkingLayer ObjectLayer{ES, getMemoryMgr};
-  IRCompileLayer CompileLayer{ES, ObjectLayer,
-                              ConcurrentIRCompiler(getJTMB())};
-  DataLayout DL{cantFail(getJTMB().getDefaultDataLayoutForTarget())};
-  MangleAndInterner Mangle{ES, DL};
-  ThreadSafeContext Ctx{llvm::make_unique<LLVMContext>()};
+  RTDyldObjectLinkingLayer ObjectLayer;
+  IRCompileLayer CompileLayer;
 
-  static JITTargetMachineBuilder getJTMB() {
-    return cantFail(JITTargetMachineBuilder::detectHost());
-  }
-
-  static std::unique_ptr<SectionMemoryManager> getMemoryMgr() {
-    return llvm::make_unique<SectionMemoryManager>();
-  }
+  DataLayout DL;
+  MangleAndInterner Mangle;
+  ThreadSafeContext Ctx;
 
 public:
-
-  KaleidoscopeJIT() {
+  KaleidoscopeJIT(JITTargetMachineBuilder JTMB, DataLayout DL)
+      : ObjectLayer(ES,
+                    []() { return llvm::make_unique<SectionMemoryManager>(); }),
+        CompileLayer(ES, ObjectLayer, ConcurrentIRCompiler(std::move(JTMB))),
+        DL(std::move(DL)), Mangle(ES, this->DL),
+        Ctx(llvm::make_unique<LLVMContext>()) {
     ES.getMainJITDylib().setGenerator(
-      cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(DL)));
+        cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(DL)));
+  }
+
+  static Expected<std::unique_ptr<KaleidoscopeJIT>> Create() {
+    auto JTMB = JITTargetMachineBuilder::detectHost();
+
+    if (!JTMB)
+      return JTMB.takeError();
+
+    auto DL = JTMB->getDefaultDataLayoutForTarget();
+    if (!DL)
+      return DL.takeError();
+
+    return llvm::make_unique<KaleidoscopeJIT>(std::move(*JTMB), std::move(*DL));
   }
 
   const DataLayout &getDataLayout() const { return DL; }
 
   LLVMContext &getContext() { return *Ctx.getContext(); }
 
-  void addModule(std::unique_ptr<Module> M) {
-    cantFail(CompileLayer.add(ES.getMainJITDylib(),
-                              ThreadSafeModule(std::move(M), Ctx)));
+  Error addModule(std::unique_ptr<Module> M) {
+    return CompileLayer.add(ES.getMainJITDylib(),
+                            ThreadSafeModule(std::move(M), Ctx));
   }
 
   Expected<JITEvaluatedSymbol> lookup(StringRef Name) {

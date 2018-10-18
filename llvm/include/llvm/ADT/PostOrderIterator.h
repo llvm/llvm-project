@@ -296,12 +296,15 @@ class ReversePostOrderTraversal {
 
 public:
   using rpo_iterator = typename std::vector<NodeRef>::reverse_iterator;
+  using const_rpo_iterator = typename std::vector<NodeRef>::const_reverse_iterator;
 
   ReversePostOrderTraversal(GraphT G) { Initialize(GT::getEntryNode(G)); }
 
   // Because we want a reverse post order, use reverse iterators from the vector
   rpo_iterator begin() { return Blocks.rbegin(); }
+  const_rpo_iterator begin() const { return Blocks.crbegin(); }
   rpo_iterator end() { return Blocks.rend(); }
+  const_rpo_iterator end() const { return Blocks.crend(); }
 };
 
 } // end namespace llvm

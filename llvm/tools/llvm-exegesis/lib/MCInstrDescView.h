@@ -125,6 +125,11 @@ struct Instruction {
   // reads or write the same memory region.
   bool hasMemoryOperands() const;
 
+  // Returns whether this instruction as at least one use or one def.
+  // Repeating this instruction may execute sequentially by adding an
+  // instruction that aliases one of these.
+  bool hasOneUseOrOneDef() const;
+
   // Convenient function to help with debugging.
   void dump(const llvm::MCRegisterInfo &RegInfo,
             llvm::raw_ostream &Stream) const;
@@ -174,10 +179,7 @@ struct AliasingConfigurations {
 
   bool empty() const; // True if no aliasing configuration is found.
   bool hasImplicitAliasing() const;
-  void setExplicitAliasing() const;
 
-  const Instruction &DefInstruction;
-  const Instruction &UseInstruction;
   llvm::SmallVector<AliasingRegisterOperands, 32> Configurations;
 };
 
