@@ -728,9 +728,8 @@ void TUScheduler::runWithAST(
     llvm::unique_function<void(llvm::Expected<InputsAndAST>)> Action) {
   auto It = Files.find(File);
   if (It == Files.end()) {
-    Action(llvm::make_error<llvm::StringError>(
-        "trying to get AST for non-added document",
-        llvm::errc::invalid_argument));
+    Action(llvm::make_error<LSPError>(
+        "trying to get AST for non-added document", ErrorCode::InvalidParams));
     return;
   }
 
@@ -742,9 +741,9 @@ void TUScheduler::runWithPreamble(
     llvm::unique_function<void(llvm::Expected<InputsAndPreamble>)> Action) {
   auto It = Files.find(File);
   if (It == Files.end()) {
-    Action(llvm::make_error<llvm::StringError>(
+    Action(llvm::make_error<LSPError>(
         "trying to get preamble for non-added document",
-        llvm::errc::invalid_argument));
+        ErrorCode::InvalidParams));
     return;
   }
 
