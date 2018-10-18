@@ -103,7 +103,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            DiagnosticsConsumer &DiagConsumer,
                            const Options &Opts)
     : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),
-      ResourceDir(Opts.ResourceDir ? Opts.ResourceDir->str()
+      ResourceDir(Opts.ResourceDir ? *Opts.ResourceDir
                                    : getStandardResourceDir()),
       DynamicIdx(Opts.BuildDynamicSymbolIndex
                      ? new FileIndex(Opts.URISchemes,

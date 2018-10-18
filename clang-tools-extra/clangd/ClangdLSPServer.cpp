@@ -87,6 +87,7 @@ CompletionItemKindBitset defaultCompletionItemKinds() {
 //  - logging of inbound messages
 //  - cancellation handling
 //  - basic call tracing
+// MessageHandler ensures that initialize() is called before any other handler.
 class ClangdLSPServer::MessageHandler : public Transport::MessageHandler {
 public:
   MessageHandler(ClangdLSPServer &Server) : Server(Server) {}
@@ -95,7 +96,9 @@ public:
     log("<-- {0}", Method);
     if (Method == "exit")
       return false;
-    if (Method == "$/cancelRequest")
+    if (!Server.Server)
+      elog("Notification {0} before initialization", Method);
+    else if (Method == "$/cancelRequest")
       onCancel(std::move(Params));
     else if (auto Handler = Notifications.lookup(Method))
       Handler(std::move(Params));
@@ -106,7 +109,11 @@ public:
 
   bool onCall(StringRef Method, json::Value Params, json::Value ID) override {
     log("<-- {0}({1})", Method, ID);
-    if (auto Handler = Calls.lookup(Method))
+    if (!Server.Server && Method != "initialize") {
+      elog("Call {0} before initialization.", Method);
+      Server.reply(ID, make_error<LSPError>("server not initialized",
+                                            ErrorCode::ServerNotInitialized));
+    } else if (auto Handler = Calls.lookup(Method))
       Handler(std::move(Params), std::move(ID));
     else
       Server.reply(ID, llvm::make_error<LSPError>("method not found",
@@ -254,6 +261,11 @@ void ClangdLSPServer::reply(llvm::json::Value ID,
 
 void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                                    Callback<json::Value> Reply) {
+  if (Server)
+    return Reply(make_error<LSPError>("server already initialized",
+                                      ErrorCode::InvalidRequest));
+  Server.emplace(CDB.getCDB(), FSProvider,
+                 static_cast<DiagnosticsConsumer &>(*this), ClangdServerOpts);
   if (Params.initializationOptions) {
     const ClangdInitializationOptions &Opts = *Params.initializationOptions;
 
@@ -663,8 +675,7 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
                                      std::move(CompileCommandsDir))),
       CCOpts(CCOpts), SupportedSymbolKinds(defaultSymbolKinds()),
       SupportedCompletionItemKinds(defaultCompletionItemKinds()),
-      Server(new ClangdServer(CDB.getCDB(), FSProvider, /*DiagConsumer=*/*this,
-                              Opts)) {
+      ClangdServerOpts(Opts) {
   // clang-format off
   MsgHandler->bind("initialize", &ClangdLSPServer::onInitialize);
   MsgHandler->bind("shutdown", &ClangdLSPServer::onShutdown);
@@ -694,8 +705,6 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
 ClangdLSPServer::~ClangdLSPServer() = default;
 
 bool ClangdLSPServer::run() {
-  assert(Server);
-
   // Run the Language Server loop.
   bool CleanExit = true;
   if (auto Err = Transp.loop(*MsgHandler)) {
@@ -705,7 +714,6 @@ bool ClangdLSPServer::run() {
 
   // Destroy ClangdServer to ensure all worker threads finish.
   Server.reset();
-
   return CleanExit && ShutdownRequestReceived;
 }
 

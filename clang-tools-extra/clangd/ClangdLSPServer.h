@@ -183,12 +183,10 @@ private:
   // Store of the current versions of the open documents.
   DraftStore DraftMgr;
 
-  // Server must be the last member of the class to allow its destructor to exit
-  // the worker thread that may otherwise run an async callback on partially
-  // destructed instance of ClangdLSPServer.
-  // Set in construtor and destroyed when run() finishes. To ensure all worker
-  // threads exit before run() returns.
-  std::unique_ptr<ClangdServer> Server;
+  // The ClangdServer is created by the "initialize" LSP method.
+  // It is destroyed before run() returns, to ensure worker threads exit.
+  ClangdServer::Options ClangdServerOpts;
+  llvm::Optional<ClangdServer> Server;
 };
 } // namespace clangd
 } // namespace clang
