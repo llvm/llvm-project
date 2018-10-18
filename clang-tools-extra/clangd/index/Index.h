@@ -259,6 +259,8 @@ struct Symbol {
     IndexedForCodeCompletion = 1 << 0,
     /// Indicates if the symbol is deprecated.
     Deprecated = 1 << 1,
+    // Symbol is an implementation detail.
+    ImplementationDetail = 1 << 2,
   };
 
   SymbolFlag Flags = SymbolFlag::None;

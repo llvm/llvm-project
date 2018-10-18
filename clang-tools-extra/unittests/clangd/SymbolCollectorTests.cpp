@@ -83,6 +83,9 @@ MATCHER_P(ForCodeCompletion, IsIndexedForCodeCompletion, "") {
          IsIndexedForCodeCompletion;
 }
 MATCHER(Deprecated, "") { return arg.Flags & Symbol::Deprecated; }
+MATCHER(ImplementationDetail, "") {
+  return arg.Flags & Symbol::ImplementationDetail;
+}
 MATCHER(RefRange, "") {
   const Ref &Pos = testing::get<0>(arg);
   const Range &Range = testing::get<1>(arg);
@@ -1035,6 +1038,21 @@ TEST_F(SymbolCollectorTest, DeprecatedSymbols) {
   EXPECT_THAT(Symbols, UnorderedElementsAre(
                            AllOf(QName("TestClangc"), Deprecated()),
                            AllOf(QName("TestClangd"), Not(Deprecated()))));
+}
+
+TEST_F(SymbolCollectorTest, ImplementationDetail) {
+  const std::string Header = R"(
+    #define DECL_NAME(x, y) x##_##y##_Decl
+    #define DECL(x, y) class DECL_NAME(x, y) {};
+    DECL(X, Y); // X_Y_Decl
+
+    class Public {};
+  )";
+  runSymbolCollector(Header, /**/ "");
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(QName("X_Y_Decl"), ImplementationDetail()),
+                  AllOf(QName("Public"), Not(ImplementationDetail()))));
 }
 
 } // namespace
