@@ -103,6 +103,13 @@ Improvements to clang-tidy
   Flags uses of ``absl::StrCat()`` to append to a ``std::string``. Suggests
   ``absl::StrAppend()`` should be used instead.
 
+- New :doc:`misc-non-private-member-variables-in-classes
+  <clang-tidy/checks/misc-non-private-member-variables-in-classes>` check.
+
+  Finds classes that not only contain the data (non-static member variables),
+  but also have logic (non-static member functions), and diagnoses all member
+  variables that have any other scope other than ``private``.
+
 - New :doc:`modernize-concat-nested-namespaces
   <clang-tidy/checks/modernize-concat-nested-namespaces>` check.
 
@@ -132,6 +139,12 @@ Improvements to clang-tidy
 - New alias :doc:`cert-dcl16-c
   <clang-tidy/checks/cert-dcl16-c>` to :doc:`readability-uppercase-literal-suffix
   <clang-tidy/checks/readability-uppercase-literal-suffix>`
+  added.
+
+- New alias :doc:`cppcoreguidelines-non-private-member-variables-in-classes
+  <clang-tidy/checks/cppcoreguidelines-non-private-member-variables-in-classes>`
+  to :doc:`misc-non-private-member-variables-in-classes
+  <clang-tidy/checks/misc-non-private-member-variables-in-classes>`
   added.
 
 - New alias :doc:`hicpp-uppercase-literal-suffix
