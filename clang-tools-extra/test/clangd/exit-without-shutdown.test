@@ -1,2 +1,4 @@
 # RUN: not clangd -lit-test < %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+---
 {"jsonrpc":"2.0","method":"exit"}
