@@ -35,6 +35,7 @@ public:
   virtual Status Cancel() = 0;
   virtual bool IsJoinable() const;
   virtual void Reset();
+  virtual bool EqualsThread(lldb::thread_t thread) const;
   lldb::thread_t Release();
 
   lldb::thread_t GetSystemHandle() const;
