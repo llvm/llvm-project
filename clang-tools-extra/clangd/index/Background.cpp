@@ -174,9 +174,9 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   Action->EndSourceFile();
 
   log("Indexed {0} ({1} symbols, {2} refs)", Inputs.CompileCommand.Filename,
-      Symbols.size(), Refs.size());
+      Symbols.size(), Refs.numRefs());
   SPAN_ATTACH(Tracer, "symbols", int(Symbols.size()));
-  SPAN_ATTACH(Tracer, "refs", int(Refs.size()));
+  SPAN_ATTACH(Tracer, "refs", int(Refs.numRefs()));
   // FIXME: partition the symbols by file rather than TU, to avoid duplication.
   IndexedSymbols.update(AbsolutePath,
                         llvm::make_unique<SymbolSlab>(std::move(Symbols)),

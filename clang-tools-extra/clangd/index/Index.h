@@ -407,7 +407,9 @@ public:
 
   const_iterator begin() const { return Refs.begin(); }
   const_iterator end() const { return Refs.end(); }
+  /// Gets the number of symbols.
   size_t size() const { return Refs.size(); }
+  size_t numRefs() const { return NumRefs; }
   bool empty() const { return Refs.empty(); }
 
   size_t bytes() const {
@@ -431,11 +433,14 @@ public:
   };
 
 private:
-  RefSlab(std::vector<value_type> Refs, llvm::BumpPtrAllocator Arena)
-      : Arena(std::move(Arena)), Refs(std::move(Refs)) {}
+  RefSlab(std::vector<value_type> Refs, llvm::BumpPtrAllocator Arena,
+          size_t NumRefs)
+      : Arena(std::move(Arena)), Refs(std::move(Refs)), NumRefs(NumRefs) {}
 
   llvm::BumpPtrAllocator Arena;
   std::vector<value_type> Refs;
+  // Number of all references.
+  size_t NumRefs = 0;
 };
 
 struct FuzzyFindRequest {
