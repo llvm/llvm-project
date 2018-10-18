@@ -18,13 +18,27 @@
 namespace clang {
 namespace doc {
 
-std::string writeInfo(Info *I) {
+template <typename T> static std::string writeInfo(T &I) {
   SmallString<2048> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
   ClangDocBitcodeWriter Writer(Stream);
-  // Check that there was no error in the write.
-  assert(Writer.dispatchInfoForWrite(I) == false);
+  Writer.emitBlock(I);
   return Buffer.str().str();
+}
+
+std::string writeInfo(Info *I) {
+  switch (I->IT) {
+  case InfoType::IT_namespace:
+    return writeInfo(*static_cast<NamespaceInfo *>(I));
+  case InfoType::IT_record:
+    return writeInfo(*static_cast<RecordInfo *>(I));
+  case InfoType::IT_enum:
+    return writeInfo(*static_cast<EnumInfo *>(I));
+  case InfoType::IT_function:
+    return writeInfo(*static_cast<FunctionInfo *>(I));
+  default:
+    return "";
+  }
 }
 
 std::vector<std::unique_ptr<Info>> readInfo(StringRef Bitcode,

@@ -52,6 +52,7 @@
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizerPass.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/ObjCARC.h"
@@ -1021,6 +1022,16 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
         MPM = PB.buildPerModuleDefaultPipeline(Level,
                                                CodeGenOpts.DebugPassManager);
       }
+    }
+
+    if (LangOpts.Sanitize.has(SanitizerKind::Address)) {
+      bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::Address);
+      MPM.addPass(createModuleToFunctionPassAdaptor(
+          AddressSanitizerPass(/*CompileKernel=*/false, Recover,
+                               CodeGenOpts.SanitizeAddressUseAfterScope)));
+      bool ModuleUseAfterScope = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
+      MPM.addPass(AddressSanitizerPass(/*CompileKernel=*/false, Recover,
+                                       ModuleUseAfterScope));
     }
   }
 

@@ -221,7 +221,8 @@ struct CanonicalizerAllocator::MakeNodeImpl<
 
 // FIXME: Also expand built-in substitutions?
 
-using CanonicalizingDemangler = itanium_demangle::Db<CanonicalizerAllocator>;
+using CanonicalizingDemangler =
+    itanium_demangle::ManglingParser<CanonicalizerAllocator>;
 }
 
 struct ItaniumManglingCanonicalizer::Impl {

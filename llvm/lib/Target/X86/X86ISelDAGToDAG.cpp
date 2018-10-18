@@ -165,6 +165,9 @@ namespace {
     /// If true, selector should try to optimize for minimum code size.
     bool OptForMinSize;
 
+    /// Disable direct TLS access through segment registers.
+    bool IndirectTlsSegRefs;
+
   public:
     explicit X86DAGToDAGISel(X86TargetMachine &tm, CodeGenOpt::Level OptLevel)
         : SelectionDAGISel(tm, OptLevel), OptForSize(false),
@@ -177,6 +180,8 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override {
       // Reset the subtarget each time through.
       Subtarget = &MF.getSubtarget<X86Subtarget>();
+      IndirectTlsSegRefs = MF.getFunction().hasFnAttribute(
+                             "indirect-tls-seg-refs");
       SelectionDAGISel::runOnMachineFunction(MF);
       return true;
     }
@@ -981,6 +986,7 @@ bool X86DAGToDAGISel::matchLoadInAddress(LoadSDNode *N, X86ISelAddressMode &AM){
   // For more information see http://people.redhat.com/drepper/tls.pdf
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Address))
     if (C->getSExtValue() == 0 && AM.Segment.getNode() == nullptr &&
+        !IndirectTlsSegRefs &&
         (Subtarget->isTargetGlibc() || Subtarget->isTargetAndroid() ||
          Subtarget->isTargetFuchsia()))
       switch (N->getPointerInfo().getAddrSpace()) {
