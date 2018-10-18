@@ -979,7 +979,7 @@ void ScopBuilder::buildAccessFunctions(ScopStmt *Stmt, BasicBlock &BB,
       buildMemoryAccess(MemInst, Stmt);
     }
 
-    // PHI nodes have already been modeled above and TerminatorInsts that are
+    // PHI nodes have already been modeled above and terminators that are
     // not part of a non-affine subregion are fully modeled and regenerated
     // from the polyhedral domains. Hence, they do not need to be modeled as
     // explicit data dependences.
