@@ -31,12 +31,27 @@ namespace {
 
 MATCHER_P(Named, N, "") { return arg.Name == N; }
 MATCHER_P(RefRange, Range, "") {
-  return std::tie(arg.Location.Start.Line, arg.Location.Start.Column,
-                  arg.Location.End.Line, arg.Location.End.Column) ==
-         std::tie(Range.start.line, Range.start.character, Range.end.line,
-                  Range.end.character);
+  return std::make_tuple(arg.Location.Start.line(), arg.Location.Start.column(),
+                         arg.Location.End.line(), arg.Location.End.column()) ==
+         std::make_tuple(Range.start.line, Range.start.character,
+                         Range.end.line, Range.end.character);
 }
 MATCHER_P(FileURI, F, "") { return arg.Location.FileURI == F; }
+
+TEST(SymbolLocation, Position) {
+  using Position = SymbolLocation::Position;
+  Position Pos;
+
+  Pos.setLine(1);
+  EXPECT_EQ(1u, Pos.line());
+  Pos.setColumn(2);
+  EXPECT_EQ(2u, Pos.column());
+
+  Pos.setLine(Position::MaxLine + 1); // overflow
+  EXPECT_EQ(Pos.line(), Position::MaxLine);
+  Pos.setColumn(Position::MaxColumn + 1); // overflow
+  EXPECT_EQ(Pos.column(), Position::MaxColumn);
+}
 
 TEST(SymbolSlab, FindAndIterate) {
   SymbolSlab::Builder B;

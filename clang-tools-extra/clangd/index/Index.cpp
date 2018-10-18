@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Index.h"
+#include "Logger.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -18,11 +19,30 @@ namespace clang {
 namespace clangd {
 using namespace llvm;
 
+constexpr uint32_t SymbolLocation::Position::MaxLine;
+constexpr uint32_t SymbolLocation::Position::MaxColumn;
+void SymbolLocation::Position::setLine(uint32_t L) {
+  if (L > MaxLine) {
+    log("Set an overflowed Line {0}", L);
+    Line = MaxLine;
+    return;
+  }
+  Line = L;
+}
+void SymbolLocation::Position::setColumn(uint32_t Col) {
+  if (Col > MaxColumn) {
+    log("Set an overflowed Column {0}", Col);
+    Column = MaxColumn;
+    return;
+  }
+  Column = Col;
+}
+
 raw_ostream &operator<<(raw_ostream &OS, const SymbolLocation &L) {
   if (!L)
     return OS << "(none)";
-  return OS << L.FileURI << "[" << L.Start.Line << ":" << L.Start.Column << "-"
-            << L.End.Line << ":" << L.End.Column << ")";
+  return OS << L.FileURI << "[" << L.Start.line() << ":" << L.Start.column()
+            << "-" << L.End.line() << ":" << L.End.column() << ")";
 }
 
 SymbolID::SymbolID(StringRef USR)

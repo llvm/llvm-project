@@ -232,8 +232,8 @@ void writeLocation(const SymbolLocation &Loc, const StringTableOut &Strings,
                    raw_ostream &OS) {
   writeVar(Strings.index(Loc.FileURI), OS);
   for (const auto &Endpoint : {Loc.Start, Loc.End}) {
-    writeVar(Endpoint.Line, OS);
-    writeVar(Endpoint.Column, OS);
+    writeVar(Endpoint.line(), OS);
+    writeVar(Endpoint.column(), OS);
   }
 }
 
@@ -241,8 +241,8 @@ SymbolLocation readLocation(Reader &Data, ArrayRef<StringRef> Strings) {
   SymbolLocation Loc;
   Loc.FileURI = Data.consumeString(Strings);
   for (auto *Endpoint : {&Loc.Start, &Loc.End}) {
-    Endpoint->Line = Data.consumeVar();
-    Endpoint->Column = Data.consumeVar();
+    Endpoint->setLine(Data.consumeVar());
+    Endpoint->setColumn(Data.consumeVar());
   }
   return Loc;
 }
