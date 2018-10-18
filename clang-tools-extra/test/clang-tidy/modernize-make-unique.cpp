@@ -403,18 +403,15 @@ void initialization(int T, Base b) {
   // CHECK-FIXES: FFs = std::make_unique<Foo[]>(Num2);
 
   std::unique_ptr<int[]> FI;
+  FI.reset(new int[5]()); // default initialization.
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
+  // CHECK-FIXES: FI = std::make_unique<int[]>(5);
+
+  // The check doesn't give warnings and fixes for cases where the original new
+  // expresion doesn't do any initialization.
   FI.reset(new int[5]);
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
-  // CHECK-FIXES: FI = std::make_unique<int[]>(5);
-  FI.reset(new int[5]());
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
-  // CHECK-FIXES: FI = std::make_unique<int[]>(5);
   FI.reset(new int[Num]);
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
-  // CHECK-FIXES: FI = std::make_unique<int[]>(Num);
   FI.reset(new int[Num2]);
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
-  // CHECK-FIXES: FI = std::make_unique<int[]>(Num2);
 }
 
 void aliases() {
