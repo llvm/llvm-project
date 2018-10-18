@@ -369,7 +369,7 @@ bool ExpressionSourceCode::GetText(
     }
 
     ConstString object_name;
-    if (1 /* Language::LanguageIsCPlusPlus(frame->GetLanguage())*/) {
+    if (Language::LanguageIsCPlusPlus(frame->GetLanguage())) {
       if (target->GetInjectLocalVariables(&exe_ctx)) {
         lldb::VariableListSP var_list_sp =
             frame->GetInScopeVariableList(false, true);
