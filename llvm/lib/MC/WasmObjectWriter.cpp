@@ -635,12 +635,10 @@ static void addData(SmallVectorImpl<char> &DataBytes,
         llvm_unreachable("The fill should be an assembler constant");
       DataBytes.insert(DataBytes.end(), Fill->getValueSize() * NumValues,
                        Fill->getValue());
-    } else if (auto *LEB = dyn_cast<MCLEBFragment>(&Frag)) {
-      const SmallVectorImpl<char> &Contents = LEB->getContents();
-      DataBytes.insert(DataBytes.end(), Contents.begin(), Contents.end());
     } else {
       const auto &DataFrag = cast<MCDataFragment>(Frag);
       const SmallVectorImpl<char> &Contents = DataFrag.getContents();
+
       DataBytes.insert(DataBytes.end(), Contents.begin(), Contents.end());
     }
   }

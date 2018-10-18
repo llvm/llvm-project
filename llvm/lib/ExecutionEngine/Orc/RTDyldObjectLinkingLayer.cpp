@@ -84,8 +84,7 @@ RTDyldObjectLinkingLayer::RTDyldObjectLinkingLayer(
       NotifyEmitted(std::move(NotifyEmitted)) {}
 
 void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
-                                     VModuleKey K,
-                                     std::unique_ptr<MemoryBuffer> O) {
+                                    std::unique_ptr<MemoryBuffer> O) {
   assert(O && "Object must not be null");
 
   // This method launches an asynchronous link step that will fulfill our
@@ -121,15 +120,9 @@ void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
     }
   }
 
-  auto MemoryManager = GetMemoryManager(K);
-  auto &MemMgr = *MemoryManager;
-  {
-    std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
-
-    assert(!MemMgrs.count(K) &&
-           "A memory manager already exists for this key?");
-    MemMgrs[K] = std::move(MemoryManager);
-  }
+  auto K = R.getVModuleKey();
+  MemMgrs.push_back(GetMemoryManager());
+  auto &MemMgr = *MemMgrs.back();
 
   JITDylibSearchOrderResolver Resolver(*SharedR);
 

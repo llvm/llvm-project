@@ -479,6 +479,17 @@ TEST_F(SymbolCollectorTest, Refs) {
   EXPECT_THAT(Refs, Not(Contains(Pair(findSymbol(MainSymbols, "c").ID, _))));
 }
 
+TEST_F(SymbolCollectorTest, RefsInHeaders) {
+  CollectorOpts.RefFilter = RefKind::All;
+  CollectorOpts.RefsInHeaders = true;
+  Annotations Header(R"(
+  class [[Foo]] {};
+  )");
+  runSymbolCollector(Header.code(), "");
+  EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "Foo").ID,
+                                  HaveRanges(Header.ranges()))));
+}
+
 TEST_F(SymbolCollectorTest, References) {
   const std::string Header = R"(
     class W;

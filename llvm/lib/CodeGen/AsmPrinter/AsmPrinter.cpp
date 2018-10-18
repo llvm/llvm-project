@@ -16,7 +16,6 @@
 #include "CodeViewDebug.h"
 #include "DwarfDebug.h"
 #include "DwarfException.h"
-#include "WasmException.h"
 #include "WinCFGuard.h"
 #include "WinException.h"
 #include "llvm/ADT/APFloat.h"
@@ -357,7 +356,7 @@ bool AsmPrinter::doInitialization(Module &M) {
     }
     break;
   case ExceptionHandling::Wasm:
-    ES = new WasmException(this);
+    // TODO to prevent warning
     break;
   }
   if (ES)

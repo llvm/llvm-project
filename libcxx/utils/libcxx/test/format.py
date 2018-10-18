@@ -188,7 +188,7 @@ class LibcxxTestFormat(object):
             if rc != 0:
                 report = libcxx.util.makeReport(cmd, out, err, rc)
                 report += "Compilation failed unexpectedly!"
-                return lit.Test.FAIL, report
+                return lit.Test.Result(lit.Test.FAIL, report)
             # Run the test
             local_cwd = os.path.dirname(source_path)
             env = None
@@ -206,14 +206,14 @@ class LibcxxTestFormat(object):
                 cmd, out, err, rc = self.executor.run(exec_path, [exec_path],
                                                       local_cwd, data_files,
                                                       env)
+                report = "Compiled With: %s\n" % compile_cmd
+                report += libcxx.util.makeReport(cmd, out, err, rc)
                 if rc == 0:
                     res = lit.Test.PASS if retry_count == 0 else lit.Test.FLAKYPASS
-                    return res, ''
+                    return lit.Test.Result(res, report)
                 elif rc != 0 and retry_count + 1 == max_retry:
-                    report = libcxx.util.makeReport(cmd, out, err, rc)
-                    report = "Compiled With: %s\n%s" % (compile_cmd, report)
                     report += "Compiled test failed unexpectedly!"
-                    return lit.Test.FAIL, report
+                    return lit.Test.Result(lit.Test.FAIL, report)
 
             assert False # Unreachable
         finally:
@@ -255,10 +255,10 @@ class LibcxxTestFormat(object):
                 test_cxx.flags += ['-Werror=unused-result']
         cmd, out, err, rc = test_cxx.compile(source_path, out=os.devnull)
         expected_rc = 0 if use_verify else 1
+        report = libcxx.util.makeReport(cmd, out, err, rc)
         if rc == expected_rc:
-            return lit.Test.PASS, ''
+            return lit.Test.Result(lit.Test.PASS, report)
         else:
-            report = libcxx.util.makeReport(cmd, out, err, rc)
-            report_msg = ('Expected compilation to fail!' if not use_verify else
-                          'Expected compilation using verify to pass!')
-            return lit.Test.FAIL, report + report_msg + '\n'
+            report += ('Expected compilation to fail!\n' if not use_verify else
+                       'Expected compilation using verify to pass!\n')
+            return lit.Test.Result(lit.Test.FAIL, report)

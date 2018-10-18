@@ -49,11 +49,11 @@ public:
 
   /// Adds a MaterializationUnit representing the given IR to the given
   /// JITDylib.
-  virtual Error add(JITDylib &JD, VModuleKey K, ThreadSafeModule TSM);
+  virtual Error add(JITDylib &JD, ThreadSafeModule TSM,
+                    VModuleKey K = VModuleKey());
 
   /// Emit should materialize the given IR.
-  virtual void emit(MaterializationResponsibility R, VModuleKey K,
-                    ThreadSafeModule TSM) = 0;
+  virtual void emit(MaterializationResponsibility R, ThreadSafeModule TSM) = 0;
 
 private:
   bool CloneToNewContextOnEmit = false;
@@ -70,14 +70,16 @@ public:
 
   /// Create an IRMaterializationLayer. Scans the module to build the
   /// SymbolFlags and SymbolToDefinition maps.
-  IRMaterializationUnit(ExecutionSession &ES, ThreadSafeModule TSM);
+  IRMaterializationUnit(ExecutionSession &ES, ThreadSafeModule TSM,
+                        VModuleKey K);
 
   /// Create an IRMaterializationLayer from a module, and pre-existing
   /// SymbolFlags and SymbolToDefinition maps. The maps must provide
   /// entries for each definition in M.
   /// This constructor is useful for delegating work from one
   /// IRMaterializationUnit to another.
-  IRMaterializationUnit(ThreadSafeModule TSM, SymbolFlagsMap SymbolFlags,
+  IRMaterializationUnit(ThreadSafeModule TSM, VModuleKey K,
+                        SymbolFlagsMap SymbolFlags,
                         SymbolNameToDefinitionMap SymbolToDefinition);
 
   /// Return the ModuleIdentifier as the name for this MaterializationUnit.
@@ -119,10 +121,11 @@ public:
 
   /// Adds a MaterializationUnit representing the given IR to the given
   /// JITDylib.
-  virtual Error add(JITDylib &JD, VModuleKey K, std::unique_ptr<MemoryBuffer> O);
+  virtual Error add(JITDylib &JD, std::unique_ptr<MemoryBuffer> O,
+                    VModuleKey K = VModuleKey());
 
   /// Emit should materialize the given IR.
-  virtual void emit(MaterializationResponsibility R, VModuleKey K,
+  virtual void emit(MaterializationResponsibility R,
                     std::unique_ptr<MemoryBuffer> O) = 0;
 
 private:
@@ -149,7 +152,6 @@ private:
   void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
 
   ObjectLayer &L;
-  VModuleKey K;
   std::unique_ptr<MemoryBuffer> O;
 };
 

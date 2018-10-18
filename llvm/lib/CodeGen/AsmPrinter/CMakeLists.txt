@@ -23,7 +23,6 @@ add_llvm_library(LLVMAsmPrinter
   WinCFGuard.cpp
   WinException.cpp
   CodeViewDebug.cpp
-  WasmException.cpp
 
   DEPENDS
   intrinsics_gen

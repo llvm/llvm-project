@@ -64,15 +64,11 @@ static bool isArithmeticBccPair(const MachineInstr *FirstMI,
 /// ALU operations followed by CBZ/CBNZ.
 static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
                                 const MachineInstr &SecondMI) {
-  switch (SecondMI.getOpcode()) {
-  default:
+  if (SecondMI.getOpcode() != AArch64::CBZW &&
+      SecondMI.getOpcode() != AArch64::CBZX &&
+      SecondMI.getOpcode() != AArch64::CBNZW &&
+      SecondMI.getOpcode() != AArch64::CBNZX)
     return false;
-  case AArch64::CBNZW:
-  case AArch64::CBNZX:
-  case AArch64::CBZW:
-  case AArch64::CBZX:
-    LLVM_FALLTHROUGH;
-  }
 
   // Assume the 1st instr to be a wildcard if it is unspecified.
   if (FirstMI == nullptr)

@@ -105,22 +105,23 @@ TEST_F(JSONTransportTest, StandardDense) {
   auto Err = T->loop(E);
   EXPECT_FALSE(bool(Err)) << llvm::toString(std::move(Err));
 
-  EXPECT_EQ(trim(E.log()), trim(R"(
+  const char *WantLog = R"(
 Notification call: 1234
 Reply(1234): 5678
 Call foo("abcd"): "efgh"
 Reply("xyz"): error = 99: bad!
 Call err("wxyz"): "boom!"
 Notification exit: null
-  )"));
-  EXPECT_EQ(
-      trim(output()),
+  )";
+  EXPECT_EQ(trim(E.log()), trim(WantLog));
+  const char *WantOutput =
       "Content-Length: 60\r\n\r\n"
       R"({"id":42,"jsonrpc":"2.0","method":"echo call","params":1234})"
       "Content-Length: 45\r\n\r\n"
       R"({"id":"abcd","jsonrpc":"2.0","result":"efgh"})"
       "Content-Length: 77\r\n\r\n"
-      R"({"error":{"code":88,"message":"trouble at mill"},"id":"wxyz","jsonrpc":"2.0"})");
+      R"({"error":{"code":88,"message":"trouble at mill"},"id":"wxyz","jsonrpc":"2.0"})";
+  EXPECT_EQ(output(), WantOutput);
   EXPECT_EQ(trim(input_mirror()), trim(input()));
 }
 
@@ -145,36 +146,38 @@ TEST_F(JSONTransportTest, DelimitedPretty) {
   auto Err = T->loop(E);
   EXPECT_FALSE(bool(Err)) << llvm::toString(std::move(Err));
 
-  EXPECT_EQ(trim(E.log()), trim(R"(
+  const char *WantLog = R"(
 Notification call: 1234
 Reply(1234): 5678
 Call foo("abcd"): "efgh"
 Reply("xyz"): error = 99: bad!
 Call err("wxyz"): "boom!"
 Notification exit: null
-  )"));
-  EXPECT_EQ(trim(output()), "Content-Length: 77\r\n\r\n"
-                            R"({
+  )";
+  EXPECT_EQ(trim(E.log()), trim(WantLog));
+  const char *WantOutput = "Content-Length: 77\r\n\r\n"
+                           R"({
   "id": 42,
   "jsonrpc": "2.0",
   "method": "echo call",
   "params": 1234
 })"
-                            "Content-Length: 58\r\n\r\n"
-                            R"({
+                           "Content-Length: 58\r\n\r\n"
+                           R"({
   "id": "abcd",
   "jsonrpc": "2.0",
   "result": "efgh"
 })"
-                            "Content-Length: 105\r\n\r\n"
-                            R"({
+                           "Content-Length: 105\r\n\r\n"
+                           R"({
   "error": {
     "code": 88,
     "message": "trouble at mill"
   },
   "id": "wxyz",
   "jsonrpc": "2.0"
-})");
+})";
+  EXPECT_EQ(output(), WantOutput);
   EXPECT_EQ(trim(input_mirror()), trim(input()));
 }
 

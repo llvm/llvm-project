@@ -24,7 +24,6 @@
 namespace clang {
 namespace clangd {
 
-class JSONOutput;
 class SymbolIndex;
 
 /// This class exposes ClangdServer's capabilities via Language Server Protocol.
@@ -37,8 +36,7 @@ public:
   /// If \p CompileCommandsDir has a value, compile_commands.json will be
   /// loaded only from \p CompileCommandsDir. Otherwise, clangd will look
   /// for compile_commands.json in all parent directories of each file.
-  ClangdLSPServer(Transport &Transport,
-                  const clangd::CodeCompleteOptions &CCOpts,
+  ClangdLSPServer(Transport &Transp, const clangd::CodeCompleteOptions &CCOpts,
                   llvm::Optional<Path> CompileCommandsDir,
                   bool ShouldUseInMemoryCDB, const ClangdServer::Options &Opts);
 
@@ -145,7 +143,7 @@ private:
     bool IsDirectoryBased;
   };
 
-  clangd::Transport &Transport;
+  clangd::Transport &Transp;
   // Various ClangdServer parameters go here. It's important they're created
   // before ClangdServer.
   CompilationDB CDB;

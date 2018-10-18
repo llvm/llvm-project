@@ -85,10 +85,9 @@ protected:
   /// zero for the landing pad and the action.  Calls marked 'nounwind' have
   /// no entry and must not be contained in the try-range of any entry - they
   /// form gaps in the table.  Entries must be ordered by try-range address.
-  virtual void computeCallSiteTable(
-      SmallVectorImpl<CallSiteEntry> &CallSites,
-      const SmallVectorImpl<const LandingPadInfo *> &LandingPads,
-      const SmallVectorImpl<unsigned> &FirstActions);
+  void computeCallSiteTable(SmallVectorImpl<CallSiteEntry> &CallSites,
+                            const SmallVectorImpl<const LandingPadInfo *> &LandingPads,
+                            const SmallVectorImpl<unsigned> &FirstActions);
 
   /// Emit landing pads and actions.
   ///
@@ -109,9 +108,7 @@ protected:
   ///     found the frame is unwound and handling continues.
   ///  3. Type id table contains references to all the C++ typeinfo for all
   ///     catches in the function.  This tables is reversed indexed base 1.
-  ///
-  /// Returns the starting symbol of an exception table.
-  MCSymbol *emitExceptionTable();
+  void emitExceptionTable();
 
   virtual void emitTypeInfos(unsigned TTypeEncoding, MCSymbol *TTBaseLabel);
 

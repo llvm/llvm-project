@@ -30,7 +30,7 @@
 
 namespace exegesis {
 
-std::vector<CodeTemplate> getSingleton(CodeTemplate &CT);
+std::vector<CodeTemplate> getSingleton(CodeTemplate &&CT);
 
 // Generates code templates that has a self-dependency.
 llvm::Expected<std::vector<CodeTemplate>>

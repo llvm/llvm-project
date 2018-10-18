@@ -325,7 +325,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
           if (result_valobj_sp->GetError().Success()) {
             handled |= PrintOneVariable(debugger, output_sp, result_valobj_sp);
           } else if (result_valobj_sp->GetError().GetError() ==
-                     UserExpression::kNoResult) {
+                     lldb::eExpressionProducedNoResult) {
             if (format != lldb::eFormatVoid && debugger.GetNotifyVoid()) {
               error_sp->PutCString("(void)\n");
               handled = true;

@@ -1056,8 +1056,7 @@ void fdrLoggingHandleTypedEvent(
   endBufferIfFull();
 }
 
-XRayLogInitStatus fdrLoggingInit(UNUSED size_t BufferSize,
-                                 UNUSED size_t BufferMax, void *Options,
+XRayLogInitStatus fdrLoggingInit(size_t, size_t, void *Options,
                                  size_t OptionsSize) XRAY_NEVER_INSTRUMENT {
   if (Options == nullptr)
     return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
@@ -1104,9 +1103,8 @@ XRayLogInitStatus fdrLoggingInit(UNUSED size_t BufferSize,
   // environment-variable defined options.
   FDRParser.ParseString(static_cast<const char *>(Options));
   *fdrFlags() = FDRFlags;
-  BufferSize = FDRFlags.buffer_size;
-  BufferMax = FDRFlags.buffer_max;
-
+  auto BufferSize = FDRFlags.buffer_size;
+  auto BufferMax = FDRFlags.buffer_max;
   bool Success = false;
 
   if (BQ != nullptr) {

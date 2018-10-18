@@ -47,7 +47,7 @@ public:
   using NotifyEmittedFunction = std::function<void(VModuleKey)>;
 
   using GetMemoryManagerFunction =
-      std::function<std::unique_ptr<RuntimeDyld::MemoryManager>(VModuleKey)>;
+      std::function<std::unique_ptr<RuntimeDyld::MemoryManager>()>;
 
   /// Construct an ObjectLinkingLayer with the given NotifyLoaded,
   ///        and NotifyEmitted functors.
@@ -57,7 +57,7 @@ public:
       NotifyEmittedFunction NotifyEmitted = NotifyEmittedFunction());
 
   /// Emit the object.
-  void emit(MaterializationResponsibility R, VModuleKey K,
+  void emit(MaterializationResponsibility R,
             std::unique_ptr<MemoryBuffer> O) override;
 
   /// Set the 'ProcessAllSections' flag.
@@ -118,7 +118,7 @@ private:
   bool ProcessAllSections = false;
   bool OverrideObjectFlags = false;
   bool AutoClaimObjectSymbols = false;
-  std::map<VModuleKey, std::shared_ptr<RuntimeDyld::MemoryManager>> MemMgrs;
+  std::vector<std::unique_ptr<RuntimeDyld::MemoryManager>> MemMgrs;
 };
 
 class LegacyRTDyldObjectLinkingLayerBase {

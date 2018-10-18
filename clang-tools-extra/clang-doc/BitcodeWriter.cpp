@@ -309,10 +309,8 @@ void ClangDocBitcodeWriter::emitRecord(const Location &Loc, RecordId ID) {
   // FIXME: Assert that the line number is of the appropriate size.
   Record.push_back(Loc.LineNumber);
   assert(Loc.Filename.size() < (1U << BitCodeConstants::StringLengthSize));
-  // Record.push_back(Loc.Filename.size());
-  // Stream.EmitRecordWithBlob(Abbrevs.get(ID), Record, Loc.Filename);
-  Record.push_back(4);
-  Stream.EmitRecordWithBlob(Abbrevs.get(ID), Record, "test");
+  Record.push_back(Loc.Filename.size());
+  Stream.EmitRecordWithBlob(Abbrevs.get(ID), Record, Loc.Filename);
 }
 
 void ClangDocBitcodeWriter::emitRecord(bool Val, RecordId ID) {
