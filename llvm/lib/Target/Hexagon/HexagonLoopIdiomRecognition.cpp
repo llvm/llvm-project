@@ -2360,7 +2360,7 @@ bool HexagonLoopIdiomRecognize::runOnLoopBlock(Loop *CurLoop, BasicBlock *BB,
   auto DominatedByBB = [this,BB] (BasicBlock *EB) -> bool {
     return DT->dominates(BB, EB);
   };
-  if (!std::all_of(ExitBlocks.begin(), ExitBlocks.end(), DominatedByBB))
+  if (!all_of(ExitBlocks, DominatedByBB))
     return false;
 
   bool MadeChange = false;

@@ -174,7 +174,7 @@ const Operand &Instruction::getPrimaryOperand(const Variable &Var) const {
 }
 
 bool Instruction::hasMemoryOperands() const {
-  return std::any_of(Operands.begin(), Operands.end(), [](const Operand &Op) {
+  return any_of(Operands, [](const Operand &Op) {
     return Op.isReg() && Op.isExplicit() && Op.isMemory();
   });
 }

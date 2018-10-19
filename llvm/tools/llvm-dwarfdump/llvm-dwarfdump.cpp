@@ -624,7 +624,7 @@ int main(int argc, char **argv) {
 
   if (Verify) {
     // If we encountered errors during verify, exit with a non-zero exit status.
-    if (!std::all_of(Objects.begin(), Objects.end(), [&](std::string Object) {
+    if (!all_of(Objects, [&](std::string Object) {
           return handleFile(Object, verifyObjectFile, OS);
         }))
       exit(1);
