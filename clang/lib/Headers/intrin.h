@@ -870,6 +870,8 @@ __nop(void) {
 #if defined(__aarch64__)
 unsigned __int64 __getReg(int);
 long _InterlockedAdd(long volatile *Addend, long Value);
+int _ReadStatusReg(int);
+void _WriteStatusReg(int, int);
 #endif
 
 /*----------------------------------------------------------------------------*\

@@ -10,6 +10,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "../misc/NonPrivateMemberVariablesInClassesCheck.h"
 #include "../misc/UnconventionalAssignOperatorCheck.h"
 #include "../readability/MagicNumbersCheck.h"
 #include "AvoidGotoCheck.h"
@@ -47,6 +48,8 @@ public:
     CheckFactories.registerCheck<NarrowingConversionsCheck>(
         "cppcoreguidelines-narrowing-conversions");
     CheckFactories.registerCheck<NoMallocCheck>("cppcoreguidelines-no-malloc");
+    CheckFactories.registerCheck<misc::NonPrivateMemberVariablesInClassesCheck>(
+        "cppcoreguidelines-non-private-member-variables-in-classes");
     CheckFactories.registerCheck<OwningMemoryCheck>(
         "cppcoreguidelines-owning-memory");
     CheckFactories.registerCheck<ProBoundsArrayToPointerDecayCheck>(
@@ -74,6 +77,16 @@ public:
     CheckFactories.registerCheck<SlicingCheck>("cppcoreguidelines-slicing");
     CheckFactories.registerCheck<misc::UnconventionalAssignOperatorCheck>(
         "cppcoreguidelines-c-copy-assignment-signature");
+  }
+
+  ClangTidyOptions getModuleOptions() override {
+    ClangTidyOptions Options;
+    ClangTidyOptions::OptionMap &Opts = Options.CheckOptions;
+
+    Opts["cppcoreguidelines-non-private-member-variables-in-classes."
+         "IgnoreClassesWithAllMemberVariablesBeingPublic"] = "1";
+
+    return Options;
   }
 };
 

@@ -108,7 +108,7 @@ void DivergenceAnalysis::addUniformOverride(const Value &UniVal) {
   UniformOverrides.insert(&UniVal);
 }
 
-bool DivergenceAnalysis::updateTerminator(const TerminatorInst &Term) const {
+bool DivergenceAnalysis::updateTerminator(const Instruction &Term) const {
   if (Term.getNumSuccessors() <= 1)
     return false;
   if (auto *BranchTerm = dyn_cast<BranchInst>(&Term)) {
@@ -297,7 +297,7 @@ bool DivergenceAnalysis::propagateJoinDivergence(const BasicBlock &JoinBlock,
   return false;
 }
 
-void DivergenceAnalysis::propagateBranchDivergence(const TerminatorInst &Term) {
+void DivergenceAnalysis::propagateBranchDivergence(const Instruction &Term) {
   LLVM_DEBUG(dbgs() << "propBranchDiv " << Term.getParent()->getName() << "\n");
 
   markDivergent(Term);
@@ -380,11 +380,10 @@ void DivergenceAnalysis::compute() {
       continue;
 
     // propagate divergence caused by terminator
-    if (isa<TerminatorInst>(I)) {
-      auto &Term = cast<TerminatorInst>(I);
-      if (updateTerminator(Term)) {
+    if (I.isTerminator()) {
+      if (updateTerminator(I)) {
         // propagate control divergence to affected instructions
-        propagateBranchDivergence(Term);
+        propagateBranchDivergence(I);
         continue;
       }
     }

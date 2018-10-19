@@ -31,6 +31,7 @@ add_clang_library(clangTidyReadabilityModule
   StaticDefinitionInAnonymousNamespaceCheck.cpp
   StringCompareCheck.cpp
   UniqueptrDeleteReleaseCheck.cpp
+  UppercaseLiteralSuffixCheck.cpp
 
   LINK_LIBS
   clangAST

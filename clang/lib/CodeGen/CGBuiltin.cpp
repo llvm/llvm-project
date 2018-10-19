@@ -6667,6 +6667,43 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return EmitSpecialRegisterBuiltin(*this, E, RegisterType, ValueType, IsRead);
   }
 
+  if (BuiltinID == AArch64::BI_ReadStatusReg ||
+      BuiltinID == AArch64::BI_WriteStatusReg) {
+    LLVMContext &Context = CGM.getLLVMContext();
+
+    unsigned SysReg =
+      E->getArg(0)->EvaluateKnownConstInt(getContext()).getZExtValue();
+
+    std::string SysRegStr;
+    llvm::raw_string_ostream(SysRegStr) <<
+                       ((1 << 1) | ((SysReg >> 14) & 1))  << ":" <<
+                       ((SysReg >> 11) & 7)               << ":" <<
+                       ((SysReg >> 7)  & 15)              << ":" <<
+                       ((SysReg >> 3)  & 15)              << ":" <<
+                       ( SysReg        & 7);
+
+    llvm::Metadata *Ops[] = { llvm::MDString::get(Context, SysRegStr) };
+    llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
+    llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
+
+    llvm::Type *RegisterType = Int64Ty;
+    llvm::Type *ValueType = Int32Ty;
+    llvm::Type *Types[] = { RegisterType };
+
+    if (BuiltinID == AArch64::BI_ReadStatusReg) {
+      llvm::Value *F = CGM.getIntrinsic(llvm::Intrinsic::read_register, Types);
+      llvm::Value *Call = Builder.CreateCall(F, Metadata);
+
+      return Builder.CreateTrunc(Call, ValueType);
+    }
+
+    llvm::Value *F = CGM.getIntrinsic(llvm::Intrinsic::write_register, Types);
+    llvm::Value *ArgValue = EmitScalarExpr(E->getArg(1));
+    ArgValue = Builder.CreateZExt(ArgValue, RegisterType);
+
+    return Builder.CreateCall(F, { Metadata, ArgValue });
+  }
+
   // Find out if any arguments are required to be integer constant
   // expressions.
   unsigned ICEArguments = 0;

@@ -10851,6 +10851,19 @@ APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx,
   return EvalResult.Val.getInt();
 }
 
+APSInt Expr::EvaluateKnownConstIntCheckOverflow(
+    const ASTContext &Ctx, SmallVectorImpl<PartialDiagnosticAt> *Diag) const {
+  EvalResult EvalResult;
+  EvalResult.Diag = Diag;
+  EvalInfo Info(Ctx, EvalResult, EvalInfo::EM_EvaluateForOverflow);
+  bool Result = ::EvaluateAsRValue(Info, this, EvalResult.Val);
+  (void)Result;
+  assert(Result && "Could not evaluate expression");
+  assert(EvalResult.Val.isInt() && "Expression did not evaluate to integer");
+
+  return EvalResult.Val.getInt();
+}
+
 void Expr::EvaluateForOverflow(const ASTContext &Ctx) const {
   bool IsConst;
   EvalResult EvalResult;

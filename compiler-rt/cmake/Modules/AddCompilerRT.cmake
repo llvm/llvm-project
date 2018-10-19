@@ -77,7 +77,7 @@ function(add_compiler_rt_object_libraries name)
     endif()
 
     set_target_compile_flags(${libname}
-      ${CMAKE_CXX_FLAGS} ${extra_cflags_${libname}} ${target_flags})
+      ${extra_cflags_${libname}} ${target_flags})
     set_property(TARGET ${libname} APPEND PROPERTY
       COMPILE_DEFINITIONS ${LIB_DEFS})
     set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Libraries")

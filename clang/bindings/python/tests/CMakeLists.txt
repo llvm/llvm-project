@@ -8,6 +8,7 @@ add_custom_target(check-clang-python
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 set(RUN_PYTHON_TESTS TRUE)
+set_target_properties(check-clang-python PROPERTIES FOLDER "Clang tests")
 
 # Do not try to run if libclang was built with ASan because
 # the sanitizer library will likely be loaded too late to perform
