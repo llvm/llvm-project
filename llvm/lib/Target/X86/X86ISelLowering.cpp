@@ -23312,15 +23312,14 @@ static SDValue LowerScalarVariableShift(SDValue Op, SelectionDAG &DAG,
   }
 
   // Check cases (mainly 32-bit) where i64 is expanded into high and low parts.
-  if (VT == MVT::v2i64  && Amt.getOpcode() == ISD::BITCAST &&
+  if (VT == MVT::v2i64 && Amt.getOpcode() == ISD::BITCAST &&
       Amt.getOperand(0).getOpcode() == ISD::BUILD_VECTOR) {
     Amt = Amt.getOperand(0);
-    unsigned Ratio = Amt.getSimpleValueType().getVectorNumElements() /
-                     VT.getVectorNumElements();
+    unsigned Ratio = 64 / Amt.getScalarValueSizeInBits();
     std::vector<SDValue> Vals(Ratio);
     for (unsigned i = 0; i != Ratio; ++i)
       Vals[i] = Amt.getOperand(i);
-    for (unsigned i = Ratio; i != Amt.getNumOperands(); i += Ratio) {
+    for (unsigned i = Ratio, e = Amt.getNumOperands(); i != e; i += Ratio) {
       for (unsigned j = 0; j != Ratio; ++j)
         if (Vals[j] != Amt.getOperand(i + j))
           return SDValue();
