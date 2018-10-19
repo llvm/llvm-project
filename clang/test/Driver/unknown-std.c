@@ -14,8 +14,8 @@
 // CHECK-NEXT: note: use 'gnu99' for 'ISO C 1999 with GNU extensions' standard
 // CHECK-NEXT: note: use 'c11' or 'iso9899:2011' for 'ISO C 2011' standard
 // CHECK-NEXT: note: use 'gnu11' for 'ISO C 2011 with GNU extensions' standard
-// CHECK-NEXT: note: use 'c17' or 'iso9899:2017' for 'ISO C 2017' standard
-// CHECK-NEXT: note: use 'gnu17' for 'ISO C 2017 with GNU extensions' standard
+// CHECK-NEXT: note: use 'c17', 'iso9899:2017', 'c18', or 'iso9899:2018' for 'ISO C 2017' standard
+// CHECK-NEXT: note: use 'gnu17' or 'gnu18' for 'ISO C 2017 with GNU extensions' standard
 
 // Make sure that no other output is present.
 // CHECK-NOT: {{^.+$}}

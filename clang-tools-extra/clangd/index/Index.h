@@ -37,6 +37,7 @@ struct SymbolLocation {
   // Position is encoded into 32 bits to save space.
   // If Line/Column overflow, the value will be their maximum value.
   struct Position {
+    Position() : Line(0), Column(0) {}
     void setLine(uint32_t Line);
     uint32_t line() const { return Line; }
     void setColumn(uint32_t Column);

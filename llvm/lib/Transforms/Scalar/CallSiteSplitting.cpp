@@ -461,10 +461,9 @@ static bool tryToSplitOnPredicatedArgument(CallSite CS, DominatorTree *DT) {
     PredsCS.push_back({Pred, Conditions});
   }
 
-  if (std::all_of(PredsCS.begin(), PredsCS.end(),
-                  [](const std::pair<BasicBlock *, ConditionsTy> &P) {
-                    return P.second.empty();
-                  }))
+  if (all_of(PredsCS, [](const std::pair<BasicBlock *, ConditionsTy> &P) {
+        return P.second.empty();
+      }))
     return false;
 
   splitCallSite(CS, PredsCS, DT);

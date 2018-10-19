@@ -195,9 +195,9 @@ LLVMContext &Function::getContext() const {
   return getType()->getContext();
 }
 
-unsigned Function::getInstructionCount() {
+unsigned Function::getInstructionCount() const {
   unsigned NumInstrs = 0;
-  for (BasicBlock &BB : BasicBlocks)
+  for (const BasicBlock &BB : BasicBlocks)
     NumInstrs += std::distance(BB.instructionsWithoutDebug().begin(),
                                BB.instructionsWithoutDebug().end());
   return NumInstrs;

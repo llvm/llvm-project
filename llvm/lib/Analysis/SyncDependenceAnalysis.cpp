@@ -208,7 +208,7 @@ struct DivergencePropagator {
   }
 
   // find all blocks reachable by two disjoint paths from @rootTerm.
-  // This method works for both divergent TerminatorInsts and loops with
+  // This method works for both divergent terminators and loops with
   // divergent exits.
   // @rootBlock is either the block containing the branch or the header of the
   // divergent loop.
@@ -355,7 +355,7 @@ const ConstBlockSet &SyncDependenceAnalysis::join_blocks(const Loop &Loop) {
 }
 
 const ConstBlockSet &
-SyncDependenceAnalysis::join_blocks(const TerminatorInst &Term) {
+SyncDependenceAnalysis::join_blocks(const Instruction &Term) {
   // trivial case
   if (Term.getNumSuccessors() < 1) {
     return EmptyBlockSet;
