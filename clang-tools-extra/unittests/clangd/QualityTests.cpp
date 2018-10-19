@@ -45,16 +45,33 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
 
     [[deprecated]]
     int _f() { return _X; }
+
+    #define DECL_NAME(x, y) x##_##y##_Decl
+    #define DECL(x, y) class DECL_NAME(x, y) {};
+    DECL(X, Y); // X_Y_Decl
+
+    class MAC {};
   )cpp");
+  Header.ExtraArgs = {"-DMAC=mac_name"};
+
   auto Symbols = Header.headerSymbols();
   auto AST = Header.build();
 
   SymbolQualitySignals Quality;
   Quality.merge(findSymbol(Symbols, "_X"));
   EXPECT_FALSE(Quality.Deprecated);
+  EXPECT_FALSE(Quality.ImplementationDetail);
   EXPECT_TRUE(Quality.ReservedName);
   EXPECT_EQ(Quality.References, SymbolQualitySignals().References);
   EXPECT_EQ(Quality.Category, SymbolQualitySignals::Variable);
+
+  Quality.merge(findSymbol(Symbols, "X_Y_Decl"));
+  EXPECT_TRUE(Quality.ImplementationDetail);
+
+  Quality.ImplementationDetail = false;
+  Quality.merge(
+      CodeCompletionResult(&findDecl(AST, "mac_name"), /*Priority=*/42));
+  EXPECT_TRUE(Quality.ImplementationDetail);
 
   Symbol F = findSymbol(Symbols, "_f");
   F.References = 24; // TestTU doesn't count references, so fake it.
@@ -181,6 +198,10 @@ TEST(QualityTests, SymbolQualitySignalsSanity) {
   SymbolQualitySignals ReservedName;
   ReservedName.ReservedName = true;
   EXPECT_LT(ReservedName.evaluate(), Default.evaluate());
+
+  SymbolQualitySignals ImplementationDetail;
+  ImplementationDetail.ImplementationDetail = true;
+  EXPECT_LT(ImplementationDetail.evaluate(), Default.evaluate());
 
   SymbolQualitySignals WithReferences, ManyReferences;
   WithReferences.References = 20;

@@ -57,10 +57,10 @@ llvm::Optional<Location> toLSPLocation(const SymbolLocation &Loc,
   }
   Location LSPLoc;
   LSPLoc.uri = URIForFile(*Path);
-  LSPLoc.range.start.line = Loc.Start.Line;
-  LSPLoc.range.start.character = Loc.Start.Column;
-  LSPLoc.range.end.line = Loc.End.Line;
-  LSPLoc.range.end.character = Loc.End.Column;
+  LSPLoc.range.start.line = Loc.Start.line();
+  LSPLoc.range.start.character = Loc.Start.column();
+  LSPLoc.range.end.line = Loc.End.line();
+  LSPLoc.range.end.character = Loc.End.column();
   return LSPLoc;
 }
 

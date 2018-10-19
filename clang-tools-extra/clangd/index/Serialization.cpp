@@ -232,8 +232,8 @@ void writeLocation(const SymbolLocation &Loc, const StringTableOut &Strings,
                    raw_ostream &OS) {
   writeVar(Strings.index(Loc.FileURI), OS);
   for (const auto &Endpoint : {Loc.Start, Loc.End}) {
-    writeVar(Endpoint.Line, OS);
-    writeVar(Endpoint.Column, OS);
+    writeVar(Endpoint.line(), OS);
+    writeVar(Endpoint.column(), OS);
   }
 }
 
@@ -241,8 +241,8 @@ SymbolLocation readLocation(Reader &Data, ArrayRef<StringRef> Strings) {
   SymbolLocation Loc;
   Loc.FileURI = Data.consumeString(Strings);
   for (auto *Endpoint : {&Loc.Start, &Loc.End}) {
-    Endpoint->Line = Data.consumeVar();
-    Endpoint->Column = Data.consumeVar();
+    Endpoint->setLine(Data.consumeVar());
+    Endpoint->setColumn(Data.consumeVar());
   }
   return Loc;
 }
@@ -496,18 +496,18 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
     }
   }
 
-  size_t SymSize = Symbols.size();
-  size_t RefSize = Refs.size();
+  size_t NumSym = Symbols.size();
+  size_t NumRefs = Refs.numRefs();
+
   trace::Span Tracer("BuildIndex");
   auto Index =
       UseDex ? dex::Dex::build(std::move(Symbols), std::move(Refs), URISchemes)
              : MemIndex::build(std::move(Symbols), std::move(Refs));
   vlog("Loaded {0} from {1} with estimated memory usage {2} bytes\n"
-       "  - number of symbos: {3}\n"
+       "  - number of symbols: {3}\n"
        "  - number of refs: {4}\n",
        UseDex ? "Dex" : "MemIndex", SymbolFilename,
-       Index->estimateMemoryUsage(),
-       SymSize, RefSize);
+       Index->estimateMemoryUsage(), NumSym, NumRefs);
   return Index;
 }
 

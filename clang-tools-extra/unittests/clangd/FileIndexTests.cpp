@@ -32,10 +32,10 @@ using testing::Pair;
 using testing::UnorderedElementsAre;
 
 MATCHER_P(RefRange, Range, "") {
-  return std::tie(arg.Location.Start.Line, arg.Location.Start.Column,
-                  arg.Location.End.Line, arg.Location.End.Column) ==
-         std::tie(Range.start.line, Range.start.character, Range.end.line,
-                  Range.end.character);
+  return std::make_tuple(arg.Location.Start.line(), arg.Location.Start.column(),
+                         arg.Location.End.line(), arg.Location.End.column()) ==
+         std::make_tuple(Range.start.line, Range.start.character,
+                         Range.end.line, Range.end.character);
 }
 MATCHER_P(FileURI, F, "") { return arg.Location.FileURI == F; }
 MATCHER_P(DeclURI, U, "") { return arg.CanonicalDeclaration.FileURI == U; }

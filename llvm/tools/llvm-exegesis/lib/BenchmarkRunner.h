@@ -68,7 +68,7 @@ public:
   // context.
   class FunctionExecutor {
   public:
-    ~FunctionExecutor();
+    virtual ~FunctionExecutor();
     virtual llvm::Expected<int64_t>
     runAndMeasure(const char *Counters) const = 0;
   };

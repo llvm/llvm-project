@@ -8,10 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangdLSPServer.h"
-#include "JSONRPCDispatcher.h"
 #include "Path.h"
-#include "RIFF.h"
 #include "Trace.h"
+#include "Transport.h"
 #include "index/Serialization.h"
 #include "clang/Basic/Version.h"
 #include "llvm/Support/CommandLine.h"

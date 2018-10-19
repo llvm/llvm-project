@@ -93,7 +93,7 @@ private:
   // A helper function that explores data dependents of V.
   void exploreDataDependency(Value *V);
   // A helper function that explores sync dependents of TI.
-  void exploreSyncDependency(TerminatorInst *TI);
+  void exploreSyncDependency(Instruction *TI);
   // Computes the influence region from Start to End. This region includes all
   // basic blocks on any simple path from Start to End.
   void computeInfluenceRegion(BasicBlock *Start, BasicBlock *End,
@@ -128,7 +128,7 @@ void DivergencePropagator::populateWithSourcesOfDivergence() {
   }
 }
 
-void DivergencePropagator::exploreSyncDependency(TerminatorInst *TI) {
+void DivergencePropagator::exploreSyncDependency(Instruction *TI) {
   // Propagation rule 1: if branch TI is divergent, all PHINodes in TI's
   // immediate post dominator are divergent. This rule handles if-then-else
   // patterns. For example,
@@ -252,11 +252,11 @@ void DivergencePropagator::propagate() {
   while (!Worklist.empty()) {
     Value *V = Worklist.back();
     Worklist.pop_back();
-    if (TerminatorInst *TI = dyn_cast<TerminatorInst>(V)) {
+    if (Instruction *I = dyn_cast<Instruction>(V)) {
       // Terminators with less than two successors won't introduce sync
       // dependency. Ignore them.
-      if (TI->getNumSuccessors() > 1)
-        exploreSyncDependency(TI);
+      if (I->isTerminator() && I->getNumSuccessors() > 1)
+        exploreSyncDependency(I);
     }
     exploreDataDependency(V);
   }

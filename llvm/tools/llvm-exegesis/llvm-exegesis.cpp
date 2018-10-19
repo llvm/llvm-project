@@ -118,7 +118,7 @@ getOpcodesOrDie(const llvm::MCInstrInfo &MCInstrInfo) {
     return {static_cast<unsigned>(OpcodeIndex)};
   if (OpcodeIndex < 0) {
     std::vector<unsigned> Result;
-    for (unsigned I = 1, E = MCInstrInfo.getNumOpcodes(); I <= E; ++I)
+    for (unsigned I = 1, E = MCInstrInfo.getNumOpcodes(); I < E; ++I)
       Result.push_back(I);
     return Result;
   }

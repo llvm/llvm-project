@@ -151,9 +151,6 @@ lldb::ExpressionResults UserExpression::Evaluate(
                                       ? UserExpression::eResultTypeId
                                       : UserExpression::eResultTypeAny;
   lldb::ExpressionResults execution_results = lldb::eExpressionSetupError;
-  
-  static const char *no_result_error = "Expression completed successfully "
-                                       "but had no result";
 
   Target *target = exe_ctx.GetTargetPtr();
   if (!target) {
@@ -307,8 +304,7 @@ lldb::ExpressionResults UserExpression::Evaluate(
         error.SetExpressionError(lldb::eExpressionSetupError,
                                  "expression needed to run but couldn't");
     } else if (execution_policy == eExecutionPolicyTopLevel) {
-      error.SetExpressionError(lldb::eExpressionProducedNoResult,
-                               no_result_error);
+      error.SetError(UserExpression::kNoResult, lldb::eErrorTypeGeneric);
       return lldb::eExpressionCompleted;
     } else {
       if (options.InvokeCancelCallback(lldb::eExpressionEvaluationExecution)) {
@@ -353,8 +349,7 @@ lldb::ExpressionResults UserExpression::Evaluate(
             log->Printf("== [UserExpression::Evaluate] Execution completed "
                         "normally with no result ==");
 
-          error.SetExpressionError(lldb::eExpressionProducedNoResult,
-                                   no_result_error);
+          error.SetError(UserExpression::kNoResult, lldb::eErrorTypeGeneric);
         }
       }
     }
