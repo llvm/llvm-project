@@ -46,10 +46,15 @@ TEST(SymbolLocation, Position) {
   EXPECT_EQ(1u, Pos.line());
   Pos.setColumn(2);
   EXPECT_EQ(2u, Pos.column());
+  EXPECT_FALSE(Pos.hasOverflow());
 
   Pos.setLine(Position::MaxLine + 1); // overflow
+  EXPECT_TRUE(Pos.hasOverflow());
   EXPECT_EQ(Pos.line(), Position::MaxLine);
+  Pos.setLine(1); // reset the overflowed line.
+
   Pos.setColumn(Position::MaxColumn + 1); // overflow
+  EXPECT_TRUE(Pos.hasOverflow());
   EXPECT_EQ(Pos.column(), Position::MaxColumn);
 }
 
