@@ -2578,18 +2578,6 @@ SwiftLanguageRuntime::FixUpDynamicType(const TypeAndOrName &type_and_or_name,
     else if (should_be_made_into_ref)
       corrected_type = orig_type.GetLValueReferenceType();
     ret.SetCompilerType(corrected_type);
-  } else /*if (m_dynamic_type_info.HasName())*/
-  {
-    // If we are here we need to adjust our dynamic type name to include the
-    // correct & or * symbol
-    std::string corrected_name(type_and_or_name.GetName().GetCString());
-    if (should_be_made_into_ptr)
-      corrected_name.append(" *");
-    else if (should_be_made_into_ref)
-      corrected_name.append(" &");
-    // the parent type should be a correctly pointer'ed or referenc'ed type
-    ret.SetCompilerType(static_value.GetCompilerType());
-    ret.SetName(corrected_name.c_str());
   }
   return ret;
 }
