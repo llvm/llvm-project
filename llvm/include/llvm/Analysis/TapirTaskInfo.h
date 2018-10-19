@@ -55,7 +55,7 @@ public:
 private:
   SPType Ty;
 
-  Task *ParentTask;
+  Task *ParentTask = nullptr;
 
   // The list of basic blocks in this spindle.  The first entry is the entry
   // block of the spindle.
@@ -258,9 +258,9 @@ protected:
   friend class TaskInfo;
 
   /// This creates an empty spindle.
-  Spindle() : ParentTask(nullptr) {}
+  Spindle() {}
 
-  explicit Spindle(BasicBlock *BB, SPType Ty) : Ty(Ty), ParentTask(nullptr) {
+  explicit Spindle(BasicBlock *BB, SPType Ty) : Ty(Ty) {
     Blocks.push_back(BB);
     DenseBlockSet.insert(BB);
   }
