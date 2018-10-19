@@ -46,34 +46,6 @@
 namespace llvm {
 
 //===----------------------------------------------------------------------===//
-//                            TerminatorInst Class
-//===----------------------------------------------------------------------===//
-
-/// Subclasses of this class are all able to terminate a basic
-/// block. Thus, these are all the flow control type of operations.
-///
-class TerminatorInst : public Instruction {
-protected:
-  TerminatorInst(Type *Ty, Instruction::TermOps iType,
-                 Use *Ops, unsigned NumOps,
-                 Instruction *InsertBefore = nullptr)
-    : Instruction(Ty, iType, Ops, NumOps, InsertBefore) {}
-
-  TerminatorInst(Type *Ty, Instruction::TermOps iType,
-                 Use *Ops, unsigned NumOps, BasicBlock *InsertAtEnd)
-    : Instruction(Ty, iType, Ops, NumOps, InsertAtEnd) {}
-
-public:
-  // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return I->isTerminator();
-  }
-  static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
-  }
-};
-
-//===----------------------------------------------------------------------===//
 //                          UnaryInstruction Class
 //===----------------------------------------------------------------------===//
 

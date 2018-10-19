@@ -2595,6 +2595,11 @@ LLVMValueRef LLVMInstructionClone(LLVMValueRef Inst) {
   return nullptr;
 }
 
+LLVMValueRef LLVMIsATerminatorInst(LLVMValueRef Inst) {
+  Instruction *I = dyn_cast<Instruction>(unwrap(Inst));
+  return (I && I->isTerminator()) ? wrap(I) : nullptr;
+}
+
 unsigned LLVMGetNumArgOperands(LLVMValueRef Instr) {
   if (FuncletPadInst *FPI = dyn_cast<FuncletPadInst>(unwrap(Instr))) {
     return FPI->getNumArgOperands();
@@ -2710,15 +2715,15 @@ void LLVMSetUnwindDest(LLVMValueRef Invoke, LLVMBasicBlockRef B) {
 /*--.. Operations on terminators ...........................................--*/
 
 unsigned LLVMGetNumSuccessors(LLVMValueRef Term) {
-  return unwrap<TerminatorInst>(Term)->getNumSuccessors();
+  return unwrap<Instruction>(Term)->getNumSuccessors();
 }
 
 LLVMBasicBlockRef LLVMGetSuccessor(LLVMValueRef Term, unsigned i) {
-  return wrap(unwrap<TerminatorInst>(Term)->getSuccessor(i));
+  return wrap(unwrap<Instruction>(Term)->getSuccessor(i));
 }
 
 void LLVMSetSuccessor(LLVMValueRef Term, unsigned i, LLVMBasicBlockRef block) {
-  return unwrap<TerminatorInst>(Term)->setSuccessor(i,unwrap(block));
+  return unwrap<Instruction>(Term)->setSuccessor(i, unwrap(block));
 }
 
 /*--.. Operations on branch instructions (only) ............................--*/

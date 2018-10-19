@@ -241,6 +241,10 @@ public:
   /// If false, good old LV code.
   bool canVectorize(bool UseVPlanNativePath);
 
+  /// Return true if we can vectorize this loop while folding its tail by
+  /// masking.
+  bool canFoldTailByMasking();
+
   /// Returns the primary induction variable.
   PHINode *getPrimaryInduction() { return PrimaryInduction; }
 

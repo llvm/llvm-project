@@ -102,6 +102,7 @@
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -170,6 +171,12 @@ static cl::opt<int> SwpLoopLimit("pipeliner-max", cl::Hidden, cl::init(-1));
 static cl::opt<bool> SwpIgnoreRecMII("pipeliner-ignore-recmii",
                                      cl::ReallyHidden, cl::init(false),
                                      cl::ZeroOrMore, cl::desc("Ignore RecMII"));
+
+// A command line option to enable the CopyToPhi DAG mutation.
+static cl::opt<bool>
+    SwpEnableCopyToPhi("pipeliner-enable-copytophi", cl::ReallyHidden,
+                       cl::init(true), cl::ZeroOrMore,
+                       cl::desc("Enable CopyToPhi DAG Mutation"));
 
 namespace {
 
@@ -307,12 +314,18 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
     void unblock(int U);
   };
 
+  struct CopyToPhiMutation : public ScheduleDAGMutation {
+    void apply(ScheduleDAGInstrs *DAG) override;
+  };
+
 public:
   SwingSchedulerDAG(MachinePipeliner &P, MachineLoop &L, LiveIntervals &lis,
                     const RegisterClassInfo &rci)
       : ScheduleDAGInstrs(*P.MF, P.MLI, false), Pass(P), Loop(L), LIS(lis),
         RegClassInfo(rci), Topo(SUnits, &ExitSU) {
     P.MF->getSubtarget().getSMSMutations(Mutations);
+    if (SwpEnableCopyToPhi)
+      Mutations.push_back(llvm::make_unique<CopyToPhiMutation>());
   }
 
   void schedule() override;
@@ -390,6 +403,8 @@ public:
   void addMutation(std::unique_ptr<ScheduleDAGMutation> Mutation) {
     Mutations.push_back(std::move(Mutation));
   }
+
+  static bool classof(const ScheduleDAGInstrs *DAG) { return true; }
 
 private:
   void addLoopCarriedDependences(AliasAnalysis *AA);
@@ -893,8 +908,8 @@ void SwingSchedulerDAG::schedule() {
   addLoopCarriedDependences(AA);
   updatePhiDependences();
   Topo.InitDAGTopologicalSorting();
-  postprocessDAG();
   changeDependences();
+  postprocessDAG();
   LLVM_DEBUG(dump());
 
   NodeSetType NodeSets;
@@ -1622,6 +1637,85 @@ void SwingSchedulerDAG::findCircuits(NodeSetType &NodeSets) {
 
   // Change the dependences back so that we've created a DAG again.
   swapAntiDependences(SUnits);
+}
+
+// Create artificial dependencies between the source of COPY/REG_SEQUENCE that
+// is loop-carried to the USE in next iteration. This will help pipeliner avoid
+// additional copies that are needed across iterations. An artificial dependence
+// edge is added from USE to SOURCE of COPY/REG_SEQUENCE.
+
+// PHI-------Anti-Dep-----> COPY/REG_SEQUENCE (loop-carried)
+// SRCOfCopY------True-Dep---> COPY/REG_SEQUENCE
+// PHI-------True-Dep------> USEOfPhi
+
+// The mutation creates
+// USEOfPHI -------Artificial-Dep---> SRCOfCopy
+
+// This overall will ensure, the USEOfPHI is scheduled before SRCOfCopy
+// (since USE is a predecessor), implies, the COPY/ REG_SEQUENCE is scheduled
+// late  to avoid additional copies across iterations. The possible scheduling
+// order would be
+// USEOfPHI --- SRCOfCopy---  COPY/REG_SEQUENCE.
+
+void SwingSchedulerDAG::CopyToPhiMutation::apply(ScheduleDAGInstrs *DAG) {
+  for (SUnit &SU : DAG->SUnits) {
+    // Find the COPY/REG_SEQUENCE instruction.
+    if (!SU.getInstr()->isCopy() && !SU.getInstr()->isRegSequence())
+      continue;
+
+    // Record the loop carried PHIs.
+    SmallVector<SUnit *, 4> PHISUs;
+    // Record the SrcSUs that feed the COPY/REG_SEQUENCE instructions.
+    SmallVector<SUnit *, 4> SrcSUs;
+
+    for (auto &Dep : SU.Preds) {
+      SUnit *TmpSU = Dep.getSUnit();
+      MachineInstr *TmpMI = TmpSU->getInstr();
+      SDep::Kind DepKind = Dep.getKind();
+      // Save the loop carried PHI.
+      if (DepKind == SDep::Anti && TmpMI->isPHI())
+        PHISUs.push_back(TmpSU);
+      // Save the source of COPY/REG_SEQUENCE.
+      // If the source has no pre-decessors, we will end up creating cycles.
+      else if (DepKind == SDep::Data && !TmpMI->isPHI() && TmpSU->NumPreds > 0)
+        SrcSUs.push_back(TmpSU);
+    }
+
+    if (PHISUs.size() == 0 || SrcSUs.size() == 0)
+      continue;
+
+    // Find the USEs of PHI. If the use is a PHI or REG_SEQUENCE, push back this
+    // SUnit to the container.
+    SmallVector<SUnit *, 8> UseSUs;
+    for (auto I = PHISUs.begin(); I != PHISUs.end(); ++I) {
+      for (auto &Dep : (*I)->Succs) {
+        if (Dep.getKind() != SDep::Data)
+          continue;
+
+        SUnit *TmpSU = Dep.getSUnit();
+        MachineInstr *TmpMI = TmpSU->getInstr();
+        if (TmpMI->isPHI() || TmpMI->isRegSequence()) {
+          PHISUs.push_back(TmpSU);
+          continue;
+        }
+        UseSUs.push_back(TmpSU);
+      }
+    }
+
+    if (UseSUs.size() == 0)
+      continue;
+
+    SwingSchedulerDAG *SDAG = cast<SwingSchedulerDAG>(DAG);
+    // Add the artificial dependencies if it does not form a cycle.
+    for (auto I : UseSUs) {
+      for (auto Src : SrcSUs) {
+        if (!SDAG->Topo.IsReachable(I, Src) && Src != I) {
+          Src->addPred(SDep(I, SDep::Artificial));
+          SDAG->Topo.AddPred(Src, I);
+        }
+      }
+    }
+  }
 }
 
 /// Return true for DAG nodes that we ignore when computing the cost functions.

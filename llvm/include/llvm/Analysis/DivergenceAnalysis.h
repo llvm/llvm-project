@@ -80,7 +80,7 @@ public:
   void print(raw_ostream &OS, const Module *) const;
 
 private:
-  bool updateTerminator(const TerminatorInst &Term) const;
+  bool updateTerminator(const Instruction &Term) const;
   bool updatePHINode(const PHINode &Phi) const;
 
   /// \brief Computes whether \p Inst is divergent based on the
@@ -135,7 +135,7 @@ private:
 
   /// \brief Propagate induced value divergence due to control divergence in \p
   /// Term.
-  void propagateBranchDivergence(const TerminatorInst &Term);
+  void propagateBranchDivergence(const Instruction &Term);
 
   /// \brief Propagate divergent caused by a divergent loop exit.
   ///
