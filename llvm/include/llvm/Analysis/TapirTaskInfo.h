@@ -935,8 +935,7 @@ public:
 
   /// Return the innermost task that encompases both spindles S1 and S2.
   Task *getEnclosingTask(const Spindle *S1, const Spindle *S2) const {
-    return getTaskFor(getRootTask()->DomTree.findNearestCommonDominator(
-                          S1->getEntry(), S2->getEntry()));
+    return getEnclosingTask(S1->getEntry(), S2->getEntry());
   }
 
   /// Return true if task T1 encloses task T2.
