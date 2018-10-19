@@ -302,7 +302,7 @@ TEST_F(DivergenceAnalysisTest, DAJoinDivergence) {
         if (!Phi)
           continue;
 
-        if (&BB == *ItDivJoins) {
+        if (ItDivJoins != ItCase.second.end() && &BB == *ItDivJoins) {
           EXPECT_TRUE(DA.isDivergent(*Phi));
           // Advance to next block with expected divergent PHI node.
           ++ItDivJoins;

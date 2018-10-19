@@ -29,8 +29,6 @@ class BasicBlock;
 class DominatorTree;
 class Loop;
 class PostDominatorTree;
-class TerminatorInst;
-class TerminatorInst;
 
 using ConstBlockSet = SmallPtrSet<const BasicBlock *, 4>;
 
@@ -59,7 +57,7 @@ public:
   /// header. Those exit blocks are added to the returned set.
   /// If L is the parent loop of \p Term and an exit of L is in the returned
   /// set then L is a divergent loop.
-  const ConstBlockSet &join_blocks(const TerminatorInst &Term);
+  const ConstBlockSet &join_blocks(const Instruction &Term);
 
   /// \brief Computes divergent join points and loop exits (in the surrounding
   /// loop) caused by the divergent loop exits of\p Loop.
@@ -79,7 +77,7 @@ private:
   const LoopInfo &LI;
 
   std::map<const Loop *, std::unique_ptr<ConstBlockSet>> CachedLoopExitJoins;
-  std::map<const TerminatorInst *, std::unique_ptr<ConstBlockSet>>
+  std::map<const Instruction *, std::unique_ptr<ConstBlockSet>>
       CachedBranchJoins;
 };
 
