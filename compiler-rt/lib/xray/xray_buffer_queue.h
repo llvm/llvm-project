@@ -33,7 +33,6 @@ class BufferQueue {
 public:
   struct Buffer {
     atomic_uint64_t Extents{0};
-    uint64_t Generation{0};
     void *Data = nullptr;
     size_t Size = 0;
   };
@@ -131,10 +130,6 @@ private:
   // Count of buffers that have been handed out through 'getBuffer'.
   size_t LiveBuffers;
 
-  // We use a generation number to identify buffers and which generation they're
-  // associated with.
-  atomic_uint64_t Generation;
-
 public:
   enum class ErrorCode : unsigned {
     Ok,
@@ -142,7 +137,6 @@ public:
     QueueFinalizing,
     UnrecognizedBuffer,
     AlreadyFinalized,
-    AlreadyInitialized,
   };
 
   static const char *getErrorString(ErrorCode E) {
@@ -157,8 +151,6 @@ public:
       return "buffer being returned not owned by buffer queue";
     case ErrorCode::AlreadyFinalized:
       return "queue already finalized";
-    case ErrorCode::AlreadyInitialized:
-      return "queue already initialized";
     }
     return "unknown error";
   }
@@ -189,21 +181,8 @@ public:
   ///     the buffer being released.
   ErrorCode releaseBuffer(Buffer &Buf);
 
-  /// Initializes the buffer queue, starting a new generation. We can re-set the
-  /// size of buffers with |BS| along with the buffer count with |BC|.
-  ///
-  /// Returns:
-  ///   - ErrorCode::Ok when we successfully initialize the buffer. This
-  ///   requires that the buffer queue is previously finalized.
-  ///   - ErrorCode::AlreadyInitialized when the buffer queue is not finalized.
-  ErrorCode init(size_t BS, size_t BC);
-
   bool finalizing() const {
     return atomic_load(&Finalizing, memory_order_acquire);
-  }
-
-  uint64_t generation() const {
-    return atomic_load(&Generation, memory_order_acquire);
   }
 
   /// Returns the configured size of the buffers in the buffer queue.
