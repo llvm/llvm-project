@@ -33,6 +33,7 @@ generateSnippetSetupCode(const ExegesisTarget &ET,
                          const llvm::MCSubtargetInfo *const MSI,
                          llvm::ArrayRef<RegisterValue> RegisterInitialValues,
                          bool &IsSnippetSetupComplete) {
+  IsSnippetSetupComplete = true;
   std::vector<llvm::MCInst> Result;
   for (const RegisterValue &RV : RegisterInitialValues) {
     // Load a constant in the register.
@@ -170,7 +171,7 @@ void assembleToStream(const ExegesisTarget &ET,
   for (const unsigned Reg : LiveIns)
     MF.getRegInfo().addLiveIn(Reg);
 
-  bool IsSnippetSetupComplete = false;
+  bool IsSnippetSetupComplete;
   std::vector<llvm::MCInst> Code =
       generateSnippetSetupCode(ET, TM->getMCSubtargetInfo(),
                                RegisterInitialValues, IsSnippetSetupComplete);

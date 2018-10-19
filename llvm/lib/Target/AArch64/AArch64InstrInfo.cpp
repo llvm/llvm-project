@@ -5084,12 +5084,9 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   unsigned FrameID = MachineOutlinerDefault;
   unsigned NumBytesToCreateFrame = 4;
 
-  bool HasBTI =
-      std::any_of(RepeatedSequenceLocs.begin(), RepeatedSequenceLocs.end(),
-                  [](outliner::Candidate &C) {
-                    return C.getMF()->getFunction().hasFnAttribute(
-                        "branch-target-enforcement");
-                  });
+  bool HasBTI = any_of(RepeatedSequenceLocs, [](outliner::Candidate &C) {
+    return C.getMF()->getFunction().hasFnAttribute("branch-target-enforcement");
+  });
 
   // If the last instruction in any candidate is a terminator, then we should
   // tail call all of the candidates.
@@ -5124,10 +5121,9 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // LR is live, so we need to save it. Decide whether it should be saved to
   // the stack, or if it can be saved to a register.
   else {
-    if (std::all_of(RepeatedSequenceLocs.begin(), RepeatedSequenceLocs.end(),
-                    [this](outliner::Candidate &C) {
-                      return findRegisterToSaveLRTo(C);
-                    })) {
+    if (all_of(RepeatedSequenceLocs, [this](outliner::Candidate &C) {
+          return findRegisterToSaveLRTo(C);
+        })) {
       // Every candidate has an available callee-saved register for the save.
       // We can save LR to a register.
       FrameID = MachineOutlinerRegSave;
@@ -5195,8 +5191,7 @@ AArch64InstrInfo::getMachineOutlinerMBBFlags(MachineBasicBlock &MBB) const {
   unsigned Flags = 0x0;
   // Check if there's a call inside this MachineBasicBlock. If there is, then
   // set a flag.
-  if (std::any_of(MBB.begin(), MBB.end(),
-                  [](MachineInstr &MI) { return MI.isCall(); }))
+  if (any_of(MBB, [](MachineInstr &MI) { return MI.isCall(); }))
     Flags |= MachineOutlinerMBBFlags::HasCalls;
 
   // Check if LR is available through all of the MBB. If it's not, then set

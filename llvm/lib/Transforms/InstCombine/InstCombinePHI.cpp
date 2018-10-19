@@ -211,23 +211,20 @@ Instruction *InstCombiner::FoldIntegerTypedPHI(PHINode &PN) {
   }
 
   // If it requires a conversion for every PHI operand, do not do it.
-  if (std::all_of(AvailablePtrVals.begin(), AvailablePtrVals.end(),
-                  [&](Value *V) {
-                    return (V->getType() != IntToPtr->getType()) ||
-                           isa<IntToPtrInst>(V);
-                  }))
+  if (all_of(AvailablePtrVals, [&](Value *V) {
+        return (V->getType() != IntToPtr->getType()) || isa<IntToPtrInst>(V);
+      }))
     return nullptr;
 
   // If any of the operand that requires casting is a terminator
   // instruction, do not do it.
-  if (std::any_of(AvailablePtrVals.begin(), AvailablePtrVals.end(),
-                  [&](Value *V) {
-                    if (V->getType() == IntToPtr->getType())
-                      return false;
+  if (any_of(AvailablePtrVals, [&](Value *V) {
+        if (V->getType() == IntToPtr->getType())
+          return false;
 
-                    auto *Inst = dyn_cast<Instruction>(V);
-                    return Inst && Inst->isTerminator();
-                  }))
+        auto *Inst = dyn_cast<Instruction>(V);
+        return Inst && Inst->isTerminator();
+      }))
     return nullptr;
 
   PHINode *NewPtrPHI = PHINode::Create(
