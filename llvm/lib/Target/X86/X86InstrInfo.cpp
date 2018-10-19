@@ -3109,7 +3109,7 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   LLVM_DEBUG(dbgs() << "Cannot copy " << RI.getName(SrcReg) << " to "
                     << RI.getName(DestReg) << '\n');
-  llvm_unreachable("Cannot emit physreg copy instruction");
+  report_fatal_error("Cannot emit physreg copy instruction");
 }
 
 bool X86InstrInfo::isCopyInstr(const MachineInstr &MI,
