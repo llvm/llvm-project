@@ -158,7 +158,7 @@ public:
   /// Returns the number of non-debug IR instructions in this function.
   /// This is equivalent to the sum of the sizes of each basic block contained
   /// within this function.
-  unsigned getInstructionCount();
+  unsigned getInstructionCount() const;
 
   /// Returns the FunctionType for me.
   FunctionType *getFunctionType() const {

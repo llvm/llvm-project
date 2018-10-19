@@ -5203,6 +5203,22 @@ class OMPClauseVisitor :
 template<class ImplClass, typename RetTy = void>
 class ConstOMPClauseVisitor :
       public OMPClauseVisitorBase <ImplClass, const_ptr, RetTy> {};
+
+class OMPClausePrinter final : public OMPClauseVisitor<OMPClausePrinter> {
+  raw_ostream &OS;
+  const PrintingPolicy &Policy;
+
+  /// Process clauses with list of variables.
+  template <typename T> void VisitOMPClauseList(T *Node, char StartSym);
+
+public:
+  OMPClausePrinter(raw_ostream &OS, const PrintingPolicy &Policy)
+      : OS(OS), Policy(Policy) {}
+
+#define OPENMP_CLAUSE(Name, Class) void Visit##Class(Class *S);
+#include "clang/Basic/OpenMPKinds.def"
+};
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_OPENMPCLAUSE_H

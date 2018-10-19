@@ -63,9 +63,9 @@ indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
   auto Refs = Collector.takeRefs();
   vlog("index AST for {0} (main={1}): \n"
        "  symbol slab: {2} symbols, {3} bytes\n"
-       "  ref slab: {4} symbols, {5} bytes",
+       "  ref slab: {4} symbols, {5} refs, {6} bytes",
        FileName, IsIndexMainAST, Syms.size(), Syms.bytes(), Refs.size(),
-       Refs.bytes());
+       Refs.numRefs(), Refs.bytes());
   return {std::move(Syms), std::move(Refs)};
 }
 

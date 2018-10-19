@@ -7,3 +7,9 @@ void check__getReg() {
   __getReg(-1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __getReg(32); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
+
+void check_ReadWriteStatusReg(int v) {
+  int x;
+  _ReadStatusReg(x); // expected-error {{argument to '_ReadStatusReg' must be a constant integer}}
+  _WriteStatusReg(x, v); // expected-error {{argument to '_WriteStatusReg' must be a constant integer}}
+}

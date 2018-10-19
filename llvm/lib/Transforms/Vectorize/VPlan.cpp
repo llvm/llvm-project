@@ -303,6 +303,13 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     State.set(this, V, Part);
     break;
   }
+  case VPInstruction::ICmpULE: {
+    Value *IV = State.get(getOperand(0), Part);
+    Value *TC = State.get(getOperand(1), Part);
+    Value *V = Builder.CreateICmpULE(IV, TC);
+    State.set(this, V, Part);
+    break;
+  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -328,6 +335,9 @@ void VPInstruction::print(raw_ostream &O) const {
   case VPInstruction::Not:
     O << "not";
     break;
+  case VPInstruction::ICmpULE:
+    O << "icmp ule";
+    break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
   }
@@ -342,6 +352,15 @@ void VPInstruction::print(raw_ostream &O) const {
 /// LoopVectorBody basic-block was created for this. Introduce additional
 /// basic-blocks as needed, and fill them all.
 void VPlan::execute(VPTransformState *State) {
+  // -1. Check if the backedge taken count is needed, and if so build it.
+  if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
+    Value *TC = State->TripCount;
+    IRBuilder<> Builder(State->CFG.PrevBB->getTerminator());
+    auto *TCMO = Builder.CreateSub(TC, ConstantInt::get(TC->getType(), 1),
+                                   "trip.count.minus.1");
+    Value2VPValue[TCMO] = BackedgeTakenCount;
+  }
+
   // 0. Set the reverse mapping from VPValues to Values for code generation.
   for (auto &Entry : Value2VPValue)
     State->VPValue2Value[Entry.second] = Entry.first;
@@ -469,8 +488,11 @@ void VPlanPrinter::dump() {
   OS << "graph [labelloc=t, fontsize=30; label=\"Vectorization Plan";
   if (!Plan.getName().empty())
     OS << "\\n" << DOT::EscapeString(Plan.getName());
-  if (!Plan.Value2VPValue.empty()) {
+  if (!Plan.Value2VPValue.empty() || Plan.BackedgeTakenCount) {
     OS << ", where:";
+    if (Plan.BackedgeTakenCount)
+      OS << "\\n"
+         << *Plan.getOrCreateBackedgeTakenCount() << " := BackedgeTakenCount";
     for (auto Entry : Plan.Value2VPValue) {
       OS << "\\n" << *Entry.second;
       OS << DOT::EscapeString(" := ");

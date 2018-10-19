@@ -121,6 +121,15 @@ void MakeSmartPtrCheck::check(const MatchFinder::MatchResult &Result) {
   if (New->getNumPlacementArgs() != 0)
     return;
 
+  // Be conservative for cases where we construct an array without any
+  // initalization.
+  // For example,
+  //    P.reset(new int[5]) // check fix: P = make_unique<int []>(5)
+  //
+  // The fix of the check has side effect, it introduces default initialization
+  // which maybe unexpected and cause performance regression.
+  if (New->isArray() && !New->hasInitializer())
+    return;
   if (Construct)
     checkConstruct(SM, Result.Context, Construct, Type, New);
   else if (Reset)

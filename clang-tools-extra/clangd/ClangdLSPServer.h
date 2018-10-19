@@ -16,7 +16,7 @@
 #include "GlobalCompilationDatabase.h"
 #include "Path.h"
 #include "Protocol.h"
-#include "ProtocolHandlers.h"
+#include "Transport.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/Optional.h"
 #include <memory>
@@ -28,10 +28,10 @@ class SymbolIndex;
 
 /// This class exposes ClangdServer's capabilities via Language Server Protocol.
 ///
-/// JSONRPCDispatcher binds the implemented ProtocolCallbacks methods
-/// (e.g. onInitialize) to corresponding JSON-RPC methods ("initialize").
-/// The server also supports $/cancelRequest (JSONRPCDispatcher provides this).
-class ClangdLSPServer : private DiagnosticsConsumer, private ProtocolCallbacks {
+/// MessageHandler binds the implemented LSP methods (e.g. onInitialize) to
+/// corresponding JSON-RPC methods ("initialize").
+/// The server also supports $/cancelRequest (MessageHandler provides this).
+class ClangdLSPServer : private DiagnosticsConsumer {
 public:
   /// If \p CompileCommandsDir has a value, compile_commands.json will be
   /// loaded only from \p CompileCommandsDir. Otherwise, clangd will look
@@ -39,6 +39,7 @@ public:
   ClangdLSPServer(Transport &Transp, const clangd::CodeCompleteOptions &CCOpts,
                   llvm::Optional<Path> CompileCommandsDir,
                   bool ShouldUseInMemoryCDB, const ClangdServer::Options &Opts);
+  ~ClangdLSPServer();
 
   /// Run LSP server loop, communicating with the Transport provided in the
   /// constructor. This method must not be executed more than once.
@@ -50,32 +51,41 @@ private:
   // Implement DiagnosticsConsumer.
   void onDiagnosticsReady(PathRef File, std::vector<Diag> Diagnostics) override;
 
-  // Implement ProtocolCallbacks.
-  void onInitialize(InitializeParams &Params) override;
-  void onShutdown(ShutdownParams &Params) override;
-  void onExit(ExitParams &Params) override;
-  void onDocumentDidOpen(DidOpenTextDocumentParams &Params) override;
-  void onDocumentDidChange(DidChangeTextDocumentParams &Params) override;
-  void onDocumentDidClose(DidCloseTextDocumentParams &Params) override;
-  void
-  onDocumentOnTypeFormatting(DocumentOnTypeFormattingParams &Params) override;
-  void
-  onDocumentRangeFormatting(DocumentRangeFormattingParams &Params) override;
-  void onDocumentFormatting(DocumentFormattingParams &Params) override;
-  void onDocumentSymbol(DocumentSymbolParams &Params) override;
-  void onCodeAction(CodeActionParams &Params) override;
-  void onCompletion(TextDocumentPositionParams &Params) override;
-  void onSignatureHelp(TextDocumentPositionParams &Params) override;
-  void onGoToDefinition(TextDocumentPositionParams &Params) override;
-  void onReference(ReferenceParams &Params) override;
-  void onSwitchSourceHeader(TextDocumentIdentifier &Params) override;
-  void onDocumentHighlight(TextDocumentPositionParams &Params) override;
-  void onFileEvent(DidChangeWatchedFilesParams &Params) override;
-  void onCommand(ExecuteCommandParams &Params) override;
-  void onWorkspaceSymbol(WorkspaceSymbolParams &Params) override;
-  void onRename(RenameParams &Parames) override;
-  void onHover(TextDocumentPositionParams &Params) override;
-  void onChangeConfiguration(DidChangeConfigurationParams &Params) override;
+  // LSP methods. Notifications have signature void(const Params&).
+  // Calls have signature void(const Params&, Callback<Response>).
+  void onInitialize(const InitializeParams &, Callback<llvm::json::Value>);
+  void onShutdown(const ShutdownParams &, Callback<std::nullptr_t>);
+  void onDocumentDidOpen(const DidOpenTextDocumentParams &);
+  void onDocumentDidChange(const DidChangeTextDocumentParams &);
+  void onDocumentDidClose(const DidCloseTextDocumentParams &);
+  void onDocumentOnTypeFormatting(const DocumentOnTypeFormattingParams &,
+                                  Callback<std::vector<TextEdit>>);
+  void onDocumentRangeFormatting(const DocumentRangeFormattingParams &,
+                                 Callback<std::vector<TextEdit>>);
+  void onDocumentFormatting(const DocumentFormattingParams &,
+                            Callback<std::vector<TextEdit>>);
+  void onDocumentSymbol(const DocumentSymbolParams &,
+                        Callback<std::vector<SymbolInformation>>);
+  void onCodeAction(const CodeActionParams &, Callback<llvm::json::Value>);
+  void onCompletion(const TextDocumentPositionParams &,
+                    Callback<CompletionList>);
+  void onSignatureHelp(const TextDocumentPositionParams &,
+                       Callback<SignatureHelp>);
+  void onGoToDefinition(const TextDocumentPositionParams &,
+                        Callback<std::vector<Location>>);
+  void onReference(const ReferenceParams &, Callback<std::vector<Location>>);
+  void onSwitchSourceHeader(const TextDocumentIdentifier &,
+                            Callback<std::string>);
+  void onDocumentHighlight(const TextDocumentPositionParams &,
+                           Callback<std::vector<DocumentHighlight>>);
+  void onFileEvent(const DidChangeWatchedFilesParams &);
+  void onCommand(const ExecuteCommandParams &, Callback<llvm::json::Value>);
+  void onWorkspaceSymbol(const WorkspaceSymbolParams &,
+                         Callback<std::vector<SymbolInformation>>);
+  void onRename(const RenameParams &, Callback<WorkspaceEdit>);
+  void onHover(const TextDocumentPositionParams &,
+               Callback<llvm::Optional<Hover>>);
+  void onChangeConfiguration(const DidChangeConfigurationParams &);
 
   std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
 
@@ -143,7 +153,17 @@ private:
     bool IsDirectoryBased;
   };
 
+  // Most code should not deal with Transport directly.
+  // MessageHandler deals with incoming messages, use call() etc for outgoing.
   clangd::Transport &Transp;
+  class MessageHandler;
+  std::unique_ptr<MessageHandler> MsgHandler;
+  std::atomic<int> NextCallID = {0};
+  std::mutex TranspWriter;
+  void call(StringRef Method, llvm::json::Value Params);
+  void notify(StringRef Method, llvm::json::Value Params);
+  void reply(llvm::json::Value ID, llvm::Expected<llvm::json::Value> Result);
+
   // Various ClangdServer parameters go here. It's important they're created
   // before ClangdServer.
   CompilationDB CDB;
@@ -163,12 +183,10 @@ private:
   // Store of the current versions of the open documents.
   DraftStore DraftMgr;
 
-  // Server must be the last member of the class to allow its destructor to exit
-  // the worker thread that may otherwise run an async callback on partially
-  // destructed instance of ClangdLSPServer.
-  // Set in construtor and destroyed when run() finishes. To ensure all worker
-  // threads exit before run() returns.
-  std::unique_ptr<ClangdServer> Server;
+  // The ClangdServer is created by the "initialize" LSP method.
+  // It is destroyed before run() returns, to ensure worker threads exit.
+  ClangdServer::Options ClangdServerOpts;
+  llvm::Optional<ClangdServer> Server;
 };
 } // namespace clangd
 } // namespace clang

@@ -49,6 +49,11 @@ public:
   /// Returns a reference to the JITDylib representing the JIT'd main program.
   JITDylib &getMainJITDylib() { return Main; }
 
+  /// Create a new JITDylib with the given name and return a reference to it.
+  JITDylib &createJITDylib(std::string Name) {
+    return ES->createJITDylib(std::move(Name));
+  }
+
   /// Convenience method for defining an absolute symbol.
   Error defineAbsolute(StringRef Name, JITEvaluatedSymbol Address);
 
