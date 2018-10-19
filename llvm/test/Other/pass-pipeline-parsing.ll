@@ -210,15 +210,15 @@
 
 ; RUN: not opt -passes='no-op-module,bad' \
 ; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=CHECK-UNKNOWN-MODULE
-; CHECK-UNKNOWN-MODULE: opt: unknown module pass 'bad'
+; CHECK-UNKNOWN-MODULE: unknown module pass 'bad'
 
 ; RUN: not opt -passes='no-op-loop,bad' \
 ; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=CHECK-UNKNOWN-LOOP
-; CHECK-UNKNOWN-LOOP: opt: unknown loop pass 'bad'
+; CHECK-UNKNOWN-LOOP: unknown loop pass 'bad'
 
 ; RUN: not opt -passes='no-op-cgscc,bad' \
 ; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=CHECK-UNKNOWN-CGSCC
-; CHECK-UNKNOWN-CGSCC: opt: unknown cgscc pass 'bad'
+; CHECK-UNKNOWN-CGSCC: unknown cgscc pass 'bad'
 
 ; RUN: not opt -passes='no-op-function,bad' \
 ; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=CHECK-UNKNOWN-FUNCTION
@@ -230,7 +230,7 @@
 ; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=CHECK-UNKNOWN-FUNCTION
 ; RUN: not opt -passes='module(cgscc(function(bad,pipeline,text)))' \
 ; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=CHECK-UNKNOWN-FUNCTION
-; CHECK-UNKNOWN-FUNCTION: opt: unknown function pass 'bad'
+; CHECK-UNKNOWN-FUNCTION: unknown function pass 'bad'
 
 ; RUN: not opt -aa-pipeline=bad -passes=no-op-function \
 ; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=AA-PIPELINE-ERR

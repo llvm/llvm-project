@@ -345,20 +345,29 @@ public:
                         const LoopAccessInfo *LAI)
       : PSE(PSE), TheLoop(L), DT(DT), LI(LI), LAI(LAI) {}
 
-  ~InterleavedAccessInfo() {
-    SmallPtrSet<InterleaveGroup *, 4> DelSet;
-    // Avoid releasing a pointer twice.
-    for (auto &I : InterleaveGroupMap)
-      DelSet.insert(I.second);
-    for (auto *Ptr : DelSet)
-      delete Ptr;
-  }
+  ~InterleavedAccessInfo() { reset(); }
 
   /// Analyze the interleaved accesses and collect them in interleave
   /// groups. Substitute symbolic strides using \p Strides.
   /// Consider also predicated loads/stores in the analysis if
   /// \p EnableMaskedInterleavedGroup is true.
   void analyzeInterleaving(bool EnableMaskedInterleavedGroup);
+
+  /// Invalidate groups, e.g., in case all blocks in loop will be predicated
+  /// contrary to original assumption. Although we currently prevent group
+  /// formation for predicated accesses, we may be able to relax this limitation
+  /// in the future once we handle more complicated blocks.
+  void reset() {
+    SmallPtrSet<InterleaveGroup *, 4> DelSet;
+    // Avoid releasing a pointer twice.
+    for (auto &I : InterleaveGroupMap)
+      DelSet.insert(I.second);
+    for (auto *Ptr : DelSet)
+      delete Ptr;
+    InterleaveGroupMap.clear();
+    RequiresScalarEpilogue = false;
+  }
+
 
   /// Check if \p Instr belongs to any interleave group.
   bool isInterleaved(Instruction *Instr) const {

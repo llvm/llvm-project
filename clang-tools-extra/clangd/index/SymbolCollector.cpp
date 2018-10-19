@@ -192,8 +192,8 @@ getTokenRange(SourceLocation TokLoc, const SourceManager &SM,
   auto CreatePosition = [&SM](SourceLocation Loc) {
     auto LSPLoc = sourceLocToPosition(SM, Loc);
     SymbolLocation::Position Pos;
-    Pos.Line = LSPLoc.line;
-    Pos.Column = LSPLoc.character;
+    Pos.setLine(LSPLoc.line);
+    Pos.setColumn(LSPLoc.character);
     return Pos;
   };
 
@@ -536,6 +536,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
 
   if (isIndexedForCodeCompletion(ND, Ctx))
     S.Flags |= Symbol::IndexedForCodeCompletion;
+  if (isImplementationDetail(&ND))
+    S.Flags |= Symbol::ImplementationDetail;
   S.SymInfo = index::getSymbolInfo(&ND);
   std::string FileURI;
   if (auto DeclLoc = getTokenLocation(findNameLoc(&ND), SM, Opts,

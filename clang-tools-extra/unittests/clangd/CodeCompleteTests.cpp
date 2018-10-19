@@ -1040,6 +1040,28 @@ TEST(CompletionTest, UnqualifiedIdQuery) {
                                 UnorderedElementsAre("", "ns::", "std::"))));
 }
 
+TEST(CompletionTest, EnclosingScopeComesFirst) {
+  auto Requests = captureIndexRequests(R"cpp(
+      namespace std {}
+      using namespace std;
+      namespace nx {
+      namespace ns {
+      namespace {
+      void f() {
+        vec^
+      }
+      }
+      }
+      }
+  )cpp");
+
+  EXPECT_THAT(Requests,
+              ElementsAre(Field(
+                  &FuzzyFindRequest::Scopes,
+                  UnorderedElementsAre("", "std::", "nx::ns::", "nx::"))));
+  EXPECT_EQ(Requests[0].Scopes[0], "nx::ns::");
+}
+
 TEST(CompletionTest, ResolvedQualifiedIdQuery) {
   auto Requests = captureIndexRequests(R"cpp(
       namespace ns1 {}

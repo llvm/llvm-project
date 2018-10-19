@@ -47,6 +47,8 @@ TEST(JSONTest, Constructors) {
             s(Object{{"A", Object{{"B", Object{{"X", "Y"}}}}}}));
   EXPECT_EQ("null", s(llvm::Optional<double>()));
   EXPECT_EQ("2.5", s(llvm::Optional<double>(2.5)));
+  EXPECT_EQ("[[2.5,null]]", s(std::vector<std::vector<llvm::Optional<double>>>{
+                                 {2.5, llvm::None}}));
 }
 
 TEST(JSONTest, StringOwnership) {

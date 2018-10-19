@@ -1188,7 +1188,7 @@ getInductionVariablesSubstitution(isl::schedule_node Node,
 /// the micro-kernel.
 ///
 /// In case of parametric bounds, this helps to auto-vectorize the unrolled
-/// innermost loops, using the SLP vectorizer. 
+/// innermost loops, using the SLP vectorizer.
 ///
 /// @param Node              The schedule node to be modified.
 /// @param MicroKernelParams Parameters of the micro-kernel

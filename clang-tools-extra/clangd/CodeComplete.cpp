@@ -34,6 +34,8 @@
 #include "Trace.h"
 #include "URI.h"
 #include "index/Index.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -44,6 +46,7 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
@@ -549,17 +552,18 @@ struct SpecifiedScope {
 };
 
 // Get all scopes that will be queried in indexes and whether symbols from
-// any scope is allowed.
+// any scope is allowed. The first scope in the list is the preferred scope
+// (e.g. enclosing namespace).
 std::pair<std::vector<std::string>, bool>
-getQueryScopes(CodeCompletionContext &CCContext, const SourceManager &SM,
+getQueryScopes(CodeCompletionContext &CCContext, const Sema &CCSema,
                const CodeCompleteOptions &Opts) {
   auto GetAllAccessibleScopes = [](CodeCompletionContext &CCContext) {
     SpecifiedScope Info;
     for (auto *Context : CCContext.getVisitedContexts()) {
       if (isa<TranslationUnitDecl>(Context))
         Info.AccessibleScopes.push_back(""); // global namespace
-      else if (const auto *NS = dyn_cast<NamespaceDecl>(Context))
-        Info.AccessibleScopes.push_back(NS->getQualifiedNameAsString() + "::");
+      else if (isa<NamespaceDecl>(Context))
+        Info.AccessibleScopes.push_back(printNamespaceScope(*Context));
     }
     return Info;
   };
@@ -568,12 +572,13 @@ getQueryScopes(CodeCompletionContext &CCContext, const SourceManager &SM,
 
   // Unqualified completion (e.g. "vec^").
   if (!SS) {
-    // FIXME: Once we can insert namespace qualifiers and use the in-scope
-    //        namespaces for scoring, search in all namespaces.
-    // FIXME: Capture scopes and use for scoring, for example,
-    //        "using namespace std; namespace foo {v^}" =>
-    //        foo::value > std::vector > boost::variant
-    auto Scopes = GetAllAccessibleScopes(CCContext).scopesForIndexQuery();
+    std::vector<std::string> Scopes;
+    std::string EnclosingScope = printNamespaceScope(*CCSema.CurContext);
+    Scopes.push_back(EnclosingScope);
+    for (auto &S : GetAllAccessibleScopes(CCContext).scopesForIndexQuery()) {
+      if (EnclosingScope != S)
+        Scopes.push_back(std::move(S));
+    }
     // Allow AllScopes completion only for there is no explicit scope qualifier.
     return {Scopes, Opts.AllScopes};
   }
@@ -592,8 +597,8 @@ getQueryScopes(CodeCompletionContext &CCContext, const SourceManager &SM,
   Info.AccessibleScopes.push_back(""); // global namespace
 
   Info.UnresolvedQualifier =
-      Lexer::getSourceText(CharSourceRange::getCharRange((*SS)->getRange()), SM,
-                           clang::LangOptions())
+      Lexer::getSourceText(CharSourceRange::getCharRange((*SS)->getRange()),
+                           CCSema.SourceMgr, clang::LangOptions())
           .ltrim("::");
   // Sema excludes the trailing "::".
   if (!Info.UnresolvedQualifier->empty())
@@ -1216,6 +1221,8 @@ class CodeCompleteFlow {
   bool Incomplete = false; // Would more be available with a higher limit?
   llvm::Optional<FuzzyMatcher> Filter;  // Initialized once Sema runs.
   std::vector<std::string> QueryScopes; // Initialized once Sema runs.
+  // Initialized once QueryScopes is initialized, if there are scopes.
+  llvm::Optional<ScopeDistance> ScopeProximity;
   // Whether to query symbols from any scope. Initialized once Sema runs.
   bool AllScopes = false;
   // Include-insertion and proximity scoring rely on the include structure.
@@ -1341,8 +1348,10 @@ private:
     }
     Filter = FuzzyMatcher(
         Recorder->CCSema->getPreprocessor().getCodeCompletionFilter());
-    std::tie(QueryScopes, AllScopes) = getQueryScopes(
-        Recorder->CCContext, Recorder->CCSema->getSourceManager(), Opts);
+    std::tie(QueryScopes, AllScopes) =
+        getQueryScopes(Recorder->CCContext, *Recorder->CCSema, Opts);
+    if (!QueryScopes.empty())
+      ScopeProximity.emplace(QueryScopes);
     // Sema provides the needed context to query the index.
     // FIXME: in addition to querying for extra/overlapping symbols, we should
     //        explicitly request symbols corresponding to Sema results.
@@ -1479,7 +1488,8 @@ private:
     Relevance.Context = Recorder->CCContext.getKind();
     Relevance.Query = SymbolRelevanceSignals::CodeComplete;
     Relevance.FileProximityMatch = FileProximity.getPointer();
-    // FIXME: incorparate scope proximity into relevance score.
+    if (ScopeProximity)
+      Relevance.ScopeProximityMatch = ScopeProximity.getPointer();
 
     auto &First = Bundle.front();
     if (auto FuzzyScore = fuzzyScore(First))

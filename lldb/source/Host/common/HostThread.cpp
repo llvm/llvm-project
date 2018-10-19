@@ -43,5 +43,5 @@ lldb::thread_result_t HostThread::GetResult() const {
 }
 
 bool HostThread::EqualsThread(lldb::thread_t thread) const {
-  return m_native_thread->GetSystemHandle() == thread;
+  return m_native_thread->EqualsThread(thread);
 }

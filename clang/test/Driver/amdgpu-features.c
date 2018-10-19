@@ -6,6 +6,12 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MAMDGPU-DEBUGGER-ABI-1-0 %s
 // CHECK-MAMDGPU-DEBUGGER-ABI-1-0: "-target-feature" "+amdgpu-debugger-insert-nops" "-target-feature" "+amdgpu-debugger-emit-prologue"
 
+// RUN: %clang -### -target amdgcn -mcpu=gfx700 -mcode-object-v3 %s 2>&1 | FileCheck --check-prefix=CODE-OBJECT-V3 %s
+// CODE-OBJECT-V3: "-target-feature" "+code-object-v3"
+
+// RUN: %clang -### -target amdgcn -mcpu=gfx700 -mno-code-object-v3 %s 2>&1 | FileCheck --check-prefix=NO-CODE-OBJECT-V3 %s
+// NO-CODE-OBJECT-V3: "-target-feature" "-code-object-v3"
+
 // RUN: %clang -### -target amdgcn -mcpu=gfx700 -mxnack %s 2>&1 | FileCheck --check-prefix=XNACK %s
 // XNACK: "-target-feature" "+xnack"
 

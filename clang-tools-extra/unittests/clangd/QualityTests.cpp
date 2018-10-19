@@ -28,6 +28,7 @@
 #include "llvm/Support/Casting.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -44,16 +45,33 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
 
     [[deprecated]]
     int _f() { return _X; }
+
+    #define DECL_NAME(x, y) x##_##y##_Decl
+    #define DECL(x, y) class DECL_NAME(x, y) {};
+    DECL(X, Y); // X_Y_Decl
+
+    class MAC {};
   )cpp");
+  Header.ExtraArgs = {"-DMAC=mac_name"};
+
   auto Symbols = Header.headerSymbols();
   auto AST = Header.build();
 
   SymbolQualitySignals Quality;
   Quality.merge(findSymbol(Symbols, "_X"));
   EXPECT_FALSE(Quality.Deprecated);
+  EXPECT_FALSE(Quality.ImplementationDetail);
   EXPECT_TRUE(Quality.ReservedName);
   EXPECT_EQ(Quality.References, SymbolQualitySignals().References);
   EXPECT_EQ(Quality.Category, SymbolQualitySignals::Variable);
+
+  Quality.merge(findSymbol(Symbols, "X_Y_Decl"));
+  EXPECT_TRUE(Quality.ImplementationDetail);
+
+  Quality.ImplementationDetail = false;
+  Quality.merge(
+      CodeCompletionResult(&findDecl(AST, "mac_name"), /*Priority=*/42));
+  EXPECT_TRUE(Quality.ImplementationDetail);
 
   Symbol F = findSymbol(Symbols, "_f");
   F.References = 24; // TestTU doesn't count references, so fake it.
@@ -117,13 +135,14 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
 
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findDecl(AST, "main"), 42));
-  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 1.0f) << "Decl in current file";
+  EXPECT_FLOAT_EQ(Relevance.SemaFileProximityScore, 1.0f)
+      << "Decl in current file";
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findDecl(AST, "header"), 42));
-  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 0.6f) << "Decl from header";
+  EXPECT_FLOAT_EQ(Relevance.SemaFileProximityScore, 0.6f) << "Decl from header";
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findDecl(AST, "header_main"), 42));
-  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 1.0f)
+  EXPECT_FLOAT_EQ(Relevance.SemaFileProximityScore, 1.0f)
       << "Current file and header";
 
   auto constructShadowDeclCompletionResult = [&](const std::string DeclName) {
@@ -146,10 +165,10 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
 
   Relevance = {};
   Relevance.merge(constructShadowDeclCompletionResult("Bar"));
-  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 1.0f)
+  EXPECT_FLOAT_EQ(Relevance.SemaFileProximityScore, 1.0f)
       << "Using declaration in main file";
   Relevance.merge(constructShadowDeclCompletionResult("FLAGS_FOO"));
-  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 1.0f)
+  EXPECT_FLOAT_EQ(Relevance.SemaFileProximityScore, 1.0f)
       << "Using declaration in main file";
 
   Relevance = {};
@@ -179,6 +198,10 @@ TEST(QualityTests, SymbolQualitySignalsSanity) {
   SymbolQualitySignals ReservedName;
   ReservedName.ReservedName = true;
   EXPECT_LT(ReservedName.evaluate(), Default.evaluate());
+
+  SymbolQualitySignals ImplementationDetail;
+  ImplementationDetail.ImplementationDetail = true;
+  EXPECT_LT(ImplementationDetail.evaluate(), Default.evaluate());
 
   SymbolQualitySignals WithReferences, ManyReferences;
   WithReferences.References = 20;
@@ -210,9 +233,21 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
   PoorNameMatch.NameMatch = 0.2f;
   EXPECT_LT(PoorNameMatch.evaluate(), Default.evaluate());
 
-  SymbolRelevanceSignals WithSemaProximity;
-  WithSemaProximity.SemaProximityScore = 0.2f;
-  EXPECT_GT(WithSemaProximity.evaluate(), Default.evaluate());
+  SymbolRelevanceSignals WithSemaFileProximity;
+  WithSemaFileProximity.SemaFileProximityScore = 0.2f;
+  EXPECT_GT(WithSemaFileProximity.evaluate(), Default.evaluate());
+
+  ScopeDistance ScopeProximity({"x::y::"});
+
+  SymbolRelevanceSignals WithSemaScopeProximity;
+  WithSemaScopeProximity.ScopeProximityMatch = &ScopeProximity;
+  WithSemaScopeProximity.SemaSaysInScope = true;
+  EXPECT_GT(WithSemaScopeProximity.evaluate(), Default.evaluate());
+
+  SymbolRelevanceSignals WithIndexScopeProximity;
+  WithIndexScopeProximity.ScopeProximityMatch = &ScopeProximity;
+  WithIndexScopeProximity.SymbolScope = "x::";
+  EXPECT_GT(WithSemaScopeProximity.evaluate(), Default.evaluate());
 
   SymbolRelevanceSignals IndexProximate;
   IndexProximate.SymbolURI = "unittest:/foo/bar.h";
@@ -240,6 +275,35 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
   EXPECT_LT(Instance.evaluate(), Default.evaluate());
   Instance.IsInstanceMember = true;
   EXPECT_EQ(Instance.evaluate(), Default.evaluate());
+}
+
+TEST(QualityTests, ScopeProximity) {
+  SymbolRelevanceSignals Relevance;
+  ScopeDistance ScopeProximity({"x::y::z::", "x::", "llvm::", ""});
+  Relevance.ScopeProximityMatch = &ScopeProximity;
+
+  Relevance.SymbolScope = "other::";
+  float NotMatched = Relevance.evaluate();
+
+  Relevance.SymbolScope = "";
+  float Global = Relevance.evaluate();
+  EXPECT_GT(Global, NotMatched);
+
+  Relevance.SymbolScope = "llvm::";
+  float NonParent = Relevance.evaluate();
+  EXPECT_GT(NonParent, Global);
+
+  Relevance.SymbolScope = "x::";
+  float GrandParent = Relevance.evaluate();
+  EXPECT_GT(GrandParent, Global);
+
+  Relevance.SymbolScope = "x::y::";
+  float Parent = Relevance.evaluate();
+  EXPECT_GT(Parent, GrandParent);
+
+  Relevance.SymbolScope = "x::y::z::";
+  float Enclosing = Relevance.evaluate();
+  EXPECT_GT(Enclosing, Parent);
 }
 
 TEST(QualityTests, SortText) {

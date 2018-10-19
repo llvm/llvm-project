@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Quality.h"
+#include "AST.h"
 #include "FileDistance.h"
 #include "URI.h"
 #include "index/Index.h"
@@ -18,10 +19,16 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cmath>
 
 namespace clang {
@@ -171,6 +178,7 @@ void SymbolQualitySignals::merge(const CodeCompletionResult &SemaCCResult) {
   Category = categorize(SemaCCResult);
 
   if (SemaCCResult.Declaration) {
+    ImplementationDetail |= isImplementationDetail(SemaCCResult.Declaration);
     if (auto *ID = SemaCCResult.Declaration->getIdentifier())
       ReservedName = ReservedName || isReserved(ID->getName());
   } else if (SemaCCResult.Kind == CodeCompletionResult::RK_Macro)
@@ -179,6 +187,7 @@ void SymbolQualitySignals::merge(const CodeCompletionResult &SemaCCResult) {
 
 void SymbolQualitySignals::merge(const Symbol &IndexResult) {
   Deprecated |= (IndexResult.Flags & Symbol::Deprecated);
+  ImplementationDetail |= (IndexResult.Flags & Symbol::ImplementationDetail);
   References = std::max(IndexResult.References, References);
   Category = categorize(IndexResult.SymInfo);
   ReservedName = ReservedName || isReserved(IndexResult.Name);
@@ -206,6 +215,8 @@ float SymbolQualitySignals::evaluate() const {
     Score *= 0.1f;
   if (ReservedName)
     Score *= 0.1f;
+  if (ImplementationDetail)
+    Score *= 0.2f;
 
   switch (Category) {
   case Keyword: // Often relevant, but misses most signals.
@@ -268,6 +279,7 @@ void SymbolRelevanceSignals::merge(const Symbol &IndexResult) {
   // relevant to non-completion requests, we should recognize class members etc.
 
   SymbolURI = IndexResult.CanonicalDeclaration.FileURI;
+  SymbolScope = IndexResult.Scope;
   IsInstanceMember |= isInstanceMember(IndexResult.SymInfo);
 }
 
@@ -277,6 +289,7 @@ void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
     Forbidden = true;
 
   if (SemaCCResult.Declaration) {
+    SemaSaysInScope = true;
     // We boost things that have decls in the main file. We give a fixed score
     // for all other declarations in sema as they are already included in the
     // translation unit.
@@ -284,7 +297,7 @@ void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
                            hasUsingDeclInMainFile(SemaCCResult))
                               ? 1.0
                               : 0.6;
-    SemaProximityScore = std::max(DeclProximity, SemaProximityScore);
+    SemaFileProximityScore = std::max(DeclProximity, SemaFileProximityScore);
     IsInstanceMember |= isInstanceMember(SemaCCResult.Declaration);
   }
 
@@ -295,13 +308,23 @@ void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
   NeedsFixIts = !SemaCCResult.FixIts.empty();
 }
 
-static std::pair<float, unsigned> proximityScore(llvm::StringRef SymbolURI,
-                                                 URIDistance *D) {
+static std::pair<float, unsigned> uriProximity(llvm::StringRef SymbolURI,
+                                               URIDistance *D) {
   if (!D || SymbolURI.empty())
     return {0.f, 0u};
   unsigned Distance = D->distance(SymbolURI);
   // Assume approximately default options are used for sensible scoring.
   return {std::exp(Distance * -0.4f / FileDistanceOptions().UpCost), Distance};
+}
+
+static float scopeBoost(ScopeDistance &Distance,
+                        llvm::Optional<llvm::StringRef> SymbolScope) {
+  if (!SymbolScope)
+    return 1;
+  auto D = Distance.distance(*SymbolScope);
+  if (D == FileDistance::Unreachable)
+    return 0.4;
+  return std::max(0.5, 2.0 * std::pow(0.6, D / 2.0));
 }
 
 float SymbolRelevanceSignals::evaluate() const {
@@ -312,10 +335,18 @@ float SymbolRelevanceSignals::evaluate() const {
 
   Score *= NameMatch;
 
-  // Proximity scores are [0,1] and we translate them into a multiplier in the
-  // range from 1 to 3.
-  Score *= 1 + 2 * std::max(proximityScore(SymbolURI, FileProximityMatch).first,
-                            SemaProximityScore);
+  // File proximity scores are [0,1] and we translate them into a multiplier in
+  // the range from 1 to 3.
+  Score *= 1 + 2 * std::max(uriProximity(SymbolURI, FileProximityMatch).first,
+                            SemaFileProximityScore);
+
+  if (ScopeProximityMatch)
+    // Use a constant scope boost for sema results, as scopes of sema results
+    // can be tricky (e.g. class/function scope). Set to the max boost as we
+    // don't load top-level symbols from the preamble and sema results are
+    // always in the accessible scope.
+    Score *=
+        SemaSaysInScope ? 2.0 : scopeBoost(*ScopeProximityMatch, SymbolScope);
 
   // Symbols like local variables may only be referenced within their scope.
   // Conversely if we're in that scope, it's likely we'll reference them.
@@ -358,15 +389,25 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolRelevanceSignals &S) {
   OS << formatv("\tNeedsFixIts: {0}\n", S.NeedsFixIts);
   OS << formatv("\tIsInstanceMember: {0}\n", S.IsInstanceMember);
   OS << formatv("\tContext: {0}\n", getCompletionKindString(S.Context));
-  OS << formatv("\tSymbol URI: {0}\n", S.SymbolURI);
-  if (S.FileProximityMatch) {
-    auto Score = proximityScore(S.SymbolURI, S.FileProximityMatch);
-    OS << formatv("\tIndex proximity: {0} (distance={1})\n", Score.first,
-                  Score.second);
-  }
-  OS << formatv("\tSema proximity: {0}\n", S.SemaProximityScore);
   OS << formatv("\tQuery type: {0}\n", static_cast<int>(S.Query));
   OS << formatv("\tScope: {0}\n", static_cast<int>(S.Scope));
+
+  OS << formatv("\tSymbol URI: {0}\n", S.SymbolURI);
+  OS << formatv("\tSymbol scope: {0}\n",
+                S.SymbolScope ? *S.SymbolScope : "<None>");
+
+  if (S.FileProximityMatch) {
+    auto Score = uriProximity(S.SymbolURI, S.FileProximityMatch);
+    OS << formatv("\tIndex URI proximity: {0} (distance={1})\n", Score.first,
+                  Score.second);
+  }
+  OS << formatv("\tSema file proximity: {0}\n", S.SemaFileProximityScore);
+
+  OS << formatv("\tSema says in scope: {0}\n", S.SemaSaysInScope);
+  if (S.ScopeProximityMatch)
+    OS << formatv("\tIndex scope boost: {0}\n",
+                  scopeBoost(*S.ScopeProximityMatch, S.SymbolScope));
+
   return OS;
 }
 

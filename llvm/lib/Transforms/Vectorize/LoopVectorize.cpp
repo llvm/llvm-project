@@ -1105,7 +1105,7 @@ public:
   // through scalar predication or masked load/store or masked gather/scatter.
   // Superset of instructions that return true for isScalarWithPredication.
   bool isPredicatedInst(Instruction *I) {
-    if (!Legal->blockNeedsPredication(I->getParent()))
+    if (!blockNeedsPredication(I->getParent()))
       return false;
     // Loads and stores that need some form of masked operation are predicated
     // instructions.
@@ -1137,6 +1137,13 @@ public:
   /// to handle accesses with gaps.
   bool requiresScalarEpilogue() const {
     return InterleaveInfo.requiresScalarEpilogue();
+  }
+
+  /// Returns true if all loop blocks should be masked to fold tail loop.
+  bool foldTailByMasking() const { return FoldTailByMasking; }
+
+  bool blockNeedsPredication(BasicBlock *BB) {
+    return foldTailByMasking() || Legal->blockNeedsPredication(BB);
   }
 
 private:
@@ -1221,6 +1228,9 @@ private:
   /// A set containing all BasicBlocks that are known to present after
   /// vectorization as a predicated block.
   SmallPtrSet<BasicBlock *, 4> PredicatedBBsAfterVectorization;
+
+  /// All blocks of loop are to be masked to fold tail of scalar iterations.
+  bool FoldTailByMasking = false;
 
   /// A map holding scalar costs for different vectorization factors. The
   /// presence of a cost for an instruction in the mapping indicates that the
@@ -2339,6 +2349,7 @@ Value *InnerLoopVectorizer::getOrCreateTripCount(Loop *L) {
   if (TripCount)
     return TripCount;
 
+  assert(L && "Create Trip Count for null loop.");
   IRBuilder<> Builder(L->getLoopPreheader()->getTerminator());
   // Find the loop boundaries.
   ScalarEvolution *SE = PSE.getSE();
@@ -2388,12 +2399,26 @@ Value *InnerLoopVectorizer::getOrCreateVectorTripCount(Loop *L) {
   Value *TC = getOrCreateTripCount(L);
   IRBuilder<> Builder(L->getLoopPreheader()->getTerminator());
 
+  Type *Ty = TC->getType();
+  Constant *Step = ConstantInt::get(Ty, VF * UF);
+
+  // If the tail is to be folded by masking, round the number of iterations N
+  // up to a multiple of Step instead of rounding down. This is done by first
+  // adding Step-1 and then rounding down. Note that it's ok if this addition
+  // overflows: the vector induction variable will eventually wrap to zero given
+  // that it starts at zero and its Step is a power of two; the loop will then
+  // exit, with the last early-exit vector comparison also producing all-true.
+  if (Cost->foldTailByMasking()) {
+    assert(isPowerOf2_32(VF * UF) &&
+           "VF*UF must be a power of 2 when folding tail by masking");
+    TC = Builder.CreateAdd(TC, ConstantInt::get(Ty, VF * UF - 1), "n.rnd.up");
+  }
+
   // Now we need to generate the expression for the part of the loop that the
   // vectorized body will execute. This is equal to N - (N % Step) if scalar
   // iterations are not required for correctness, or N - Step, otherwise. Step
   // is equal to the vectorization factor (number of SIMD elements) times the
   // unroll factor (number of SIMD instructions).
-  Constant *Step = ConstantInt::get(TC->getType(), VF * UF);
   Value *R = Builder.CreateURem(TC, Step, "n.mod.vf");
 
   // If there is a non-reversed interleaved group that may speculatively access
@@ -2456,8 +2481,13 @@ void InnerLoopVectorizer::emitMinimumIterationCountCheck(Loop *L,
   // of zero. In this case we will also jump to the scalar loop.
   auto P = Cost->requiresScalarEpilogue() ? ICmpInst::ICMP_ULE
                                           : ICmpInst::ICMP_ULT;
-  Value *CheckMinIters = Builder.CreateICmp(
-      P, Count, ConstantInt::get(Count->getType(), VF * UF), "min.iters.check");
+
+  // If tail is to be folded, vector loop takes care of all iterations.
+  Value *CheckMinIters = Builder.getFalse();
+  if (!Cost->foldTailByMasking())
+    CheckMinIters = Builder.CreateICmp(
+        P, Count, ConstantInt::get(Count->getType(), VF * UF),
+        "min.iters.check");
 
   BasicBlock *NewBB = BB->splitBasicBlock(BB->getTerminator(), "vector.ph");
   // Update dominator tree immediately if the generated block is a
@@ -2486,6 +2516,7 @@ void InnerLoopVectorizer::emitSCEVChecks(Loop *L, BasicBlock *Bypass) {
     if (C->isZero())
       return;
 
+  assert(!Cost->foldTailByMasking() && "Cannot check stride when folding tail");
   // Create a new block containing the stride check.
   BB->setName("vector.scevcheck");
   auto *NewBB = BB->splitBasicBlock(BB->getTerminator(), "vector.ph");
@@ -2518,6 +2549,7 @@ void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass) {
   if (!MemRuntimeCheck)
     return;
 
+  assert(!Cost->foldTailByMasking() && "Cannot check memory when folding tail");
   // Create a new block containing the memory check.
   BB->setName("vector.memcheck");
   auto *NewBB = BB->splitBasicBlock(BB->getTerminator(), "vector.ph");
@@ -2786,9 +2818,12 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   // Add a check in the middle block to see if we have completed
   // all of the iterations in the first vector loop.
   // If (N - N%VF) == N, then we *don't* need to run the remainder.
-  Value *CmpN =
-      CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_EQ, Count,
-                      CountRoundDown, "cmp.n", MiddleBlock->getTerminator());
+  // If tail is to be folded, we know we don't need to run the remainder.
+  Value *CmpN = Builder.getTrue();
+  if (!Cost->foldTailByMasking())
+    CmpN =
+        CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_EQ, Count,
+                        CountRoundDown, "cmp.n", MiddleBlock->getTerminator());
   ReplaceInstWithInst(MiddleBlock->getTerminator(),
                       BranchInst::Create(ExitBlock, ScalarPH, CmpN));
 
@@ -4262,7 +4297,7 @@ void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
 }
 
 bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I, unsigned VF) {
-  if (!Legal->blockNeedsPredication(I->getParent()))
+  if (!blockNeedsPredication(I->getParent()))
     return false;
   switch(I->getOpcode()) {
   default:
@@ -4564,36 +4599,36 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF(bool OptForSize) {
     return None;
   }
 
-  // If we don't know the precise trip count, don't try to vectorize.
+  unsigned MaxVF = computeFeasibleMaxVF(OptForSize, TC);
+
+  if (TC > 0 && TC % MaxVF == 0) {
+    LLVM_DEBUG(dbgs() << "LV: No tail will remain for any chosen VF.\n");
+    return MaxVF;
+  }
+
+  // If we don't know the precise trip count, or if the trip count that we
+  // found modulo the vectorization factor is not zero, try to fold the tail
+  // by masking.
+  // FIXME: look for a smaller MaxVF that does divide TC rather than masking.
+  // FIXME: return None if loop requiresScalarEpilog(<MaxVF>), or look for a
+  //        smaller MaxVF that does not require a scalar epilog.
+  if (Legal->canFoldTailByMasking()) {
+    FoldTailByMasking = true;
+    return MaxVF;
+  }
+
   if (TC == 0) {
     ORE->emit(
         createMissedAnalysis("UnknownLoopCountComplexCFG")
         << "unable to calculate the loop count due to complex control flow");
-    LLVM_DEBUG(
-        dbgs() << "LV: Aborting. A tail loop is required with -Os/-Oz.\n");
     return None;
   }
 
-  unsigned MaxVF = computeFeasibleMaxVF(OptForSize, TC);
-
-  if (TC % MaxVF != 0) {
-    // If the trip count that we found modulo the vectorization factor is not
-    // zero then we require a tail.
-    // FIXME: look for a smaller MaxVF that does divide TC rather than give up.
-    // FIXME: return None if loop requiresScalarEpilog(<MaxVF>), or look for a
-    //        smaller MaxVF that does not require a scalar epilog.
-
-    ORE->emit(createMissedAnalysis("NoTailLoopWithOptForSize")
-              << "cannot optimize for size and vectorize at the "
-                 "same time. Enable vectorization of this loop "
-                 "with '#pragma clang loop vectorize(enable)' "
-                 "when compiling with -Os/-Oz");
-    LLVM_DEBUG(
-        dbgs() << "LV: Aborting. A tail loop is required with -Os/-Oz.\n");
-    return None;
-  }
-
-  return MaxVF;
+  ORE->emit(createMissedAnalysis("NoTailLoopWithOptForSize")
+            << "cannot optimize for size and vectorize at the same time. "
+               "Enable vectorization of this loop with '#pragma clang loop "
+               "vectorize(enable)' when compiling with -Os/-Oz");
+  return None;
 }
 
 unsigned
@@ -4831,6 +4866,9 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(bool OptForSize,
   // fit without causing spills. All of this is rounded down if necessary to be
   // a power of two. We want power of two interleave count to simplify any
   // addressing operations or alignment considerations.
+  // We also want power of two interleave counts to ensure that the induction
+  // variable of the vector loop wraps to zero, when tail is folded by masking;
+  // this currently happens when OptForSize, in which case IC is set to 1 above.
   unsigned IC = PowerOf2Floor((TargetNumRegisters - R.LoopInvariantRegs) /
                               R.MaxLocalUsers);
 
@@ -5117,7 +5155,7 @@ void LoopVectorizationCostModel::collectInstsToScalarize(unsigned VF) {
   // determine if it would be better to not if-convert the blocks they are in.
   // If so, we also record the instructions to scalarize.
   for (BasicBlock *BB : TheLoop->blocks()) {
-    if (!Legal->blockNeedsPredication(BB))
+    if (!blockNeedsPredication(BB))
       continue;
     for (Instruction &I : *BB)
       if (isScalarWithPredication(&I)) {
@@ -5282,7 +5320,7 @@ LoopVectorizationCostModel::expectedCost(unsigned VF) {
     // unconditionally executed. For the scalar case, we may not always execute
     // the predicated block. Thus, scale the block's cost by the probability of
     // executing it.
-    if (VF == 1 && Legal->blockNeedsPredication(BB))
+    if (VF == 1 && blockNeedsPredication(BB))
       BlockCost.first /= getReciprocalPredBlockProb();
 
     Cost.first += BlockCost.first;
@@ -5973,6 +6011,10 @@ LoopVectorizationPlanner::plan(bool OptForSize, unsigned UserVF) {
   if (!MaybeMaxVF.hasValue()) // Cases considered too costly to vectorize.
     return NoVectorization;
 
+  // Invalidate interleave groups if all blocks of loop will be predicated.
+  if (CM.blockNeedsPredication(OrigLoop->getHeader()))
+    CM.InterleaveInfo.reset();
+
   if (UserVF) {
     LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
     assert(isPowerOf2_32(UserVF) && "VF needs to be a power of two");
@@ -6029,6 +6071,7 @@ void LoopVectorizationPlanner::executePlan(InnerLoopVectorizer &ILV,
                          DT,     ILV.Builder, ILV.VectorLoopValueMap,
                          &ILV,   CallbackILV};
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
+  State.TripCount = ILV.getOrCreateTripCount(nullptr);
 
   //===------------------------------------------------===//
   //
@@ -6209,9 +6252,17 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
   // load/store/gather/scatter. Initialize BlockMask to no-mask.
   VPValue *BlockMask = nullptr;
 
-  // Loop incoming mask is all-one.
-  if (OrigLoop->getHeader() == BB)
+  if (OrigLoop->getHeader() == BB) {
+    if (!CM.blockNeedsPredication(BB))
+      return BlockMaskCache[BB] = BlockMask; // Loop incoming mask is all-one.
+
+    // Introduce the early-exit compare IV <= BTC to form header block mask.
+    // This is used instead of IV < TC because TC may wrap, unlike BTC.
+    VPValue *IV = Plan->getVPValue(Legal->getPrimaryInduction());
+    VPValue *BTC = Plan->getOrCreateBackedgeTakenCount();
+    BlockMask = Builder.createNaryOp(VPInstruction::ICmpULE, {IV, BTC});
     return BlockMaskCache[BB] = BlockMask;
+  }
 
   // This is the block mask. We OR all incoming edges.
   for (auto *Predecessor : predecessors(BB)) {
@@ -6576,6 +6627,11 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(unsigned MinVF,
     if (Branch && Branch->isConditional())
       NeedDef.insert(Branch->getCondition());
   }
+
+  // If the tail is to be folded by masking, the primary induction variable
+  // needs to be represented in VPlan for it to model early-exit masking.
+  if (CM.foldTailByMasking())
+    NeedDef.insert(Legal->getPrimaryInduction());
 
   // Collect instructions from the original loop that will become trivially dead
   // in the vectorized loop. We don't need to vectorize these instructions. For

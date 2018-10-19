@@ -11,6 +11,7 @@ add_lldb_library(lldbPluginSymbolFileNativePDB PLUGIN
     lldbSymbol
 	  lldbUtility
   LINK_COMPONENTS
+    DebugInfoCodeView
     DebugInfoPDB
     Support
   )

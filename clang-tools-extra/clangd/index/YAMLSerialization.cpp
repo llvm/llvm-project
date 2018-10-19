@@ -19,6 +19,7 @@
 #include "dex/Dex.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -36,6 +37,13 @@ struct VariantEntry {
   llvm::Optional<clang::clangd::Symbol> Symbol;
   llvm::Optional<RefBundle> Refs;
 };
+// A class helps YAML to serialize the 32-bit encoded position (Line&Column),
+// as YAMLIO can't directly map bitfields.
+struct YPosition {
+  uint32_t Line;
+  uint32_t Column;
+};
+
 } // namespace
 namespace llvm {
 namespace yaml {
@@ -94,18 +102,39 @@ struct NormalizedSymbolOrigin {
   uint8_t Origin = 0;
 };
 
-template <> struct MappingTraits<SymbolLocation::Position> {
-  static void mapping(IO &IO, SymbolLocation::Position &Value) {
+template <> struct MappingTraits<YPosition> {
+  static void mapping(IO &IO, YPosition &Value) {
     IO.mapRequired("Line", Value.Line);
     IO.mapRequired("Column", Value.Column);
   }
 };
 
+struct NormalizedPosition {
+  using Position = clang::clangd::SymbolLocation::Position;
+  NormalizedPosition(IO &) {}
+  NormalizedPosition(IO &, const Position &Pos) {
+    P.Line = Pos.line();
+    P.Column = Pos.column();
+  }
+
+  Position denormalize(IO &) {
+    Position Pos;
+    Pos.setLine(P.Line);
+    Pos.setColumn(P.Column);
+    return Pos;
+  }
+  YPosition P;
+};
+
 template <> struct MappingTraits<SymbolLocation> {
   static void mapping(IO &IO, SymbolLocation &Value) {
     IO.mapRequired("FileURI", Value.FileURI);
-    IO.mapRequired("Start", Value.Start);
-    IO.mapRequired("End", Value.End);
+    MappingNormalization<NormalizedPosition, SymbolLocation::Position> NStart(
+        IO, Value.Start);
+    IO.mapRequired("Start", NStart->P);
+    MappingNormalization<NormalizedPosition, SymbolLocation::Position> NEnd(
+        IO, Value.End);
+    IO.mapRequired("End", NEnd->P);
   }
 };
 

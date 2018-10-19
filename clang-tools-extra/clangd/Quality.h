@@ -28,6 +28,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_QUALITY_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_QUALITY_H
 
+#include "FileDistance.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -56,6 +57,7 @@ struct SymbolQualitySignals {
   bool Deprecated = false;
   bool ReservedName = false; // __foo, _Foo are usually implementation details.
                              // FIXME: make these findable once user types _.
+  bool ImplementationDetail = false;
   unsigned References = 0;
 
   enum SymbolCategory {
@@ -87,13 +89,19 @@ struct SymbolRelevanceSignals {
   bool NeedsFixIts = false;
 
   URIDistance *FileProximityMatch = nullptr;
-  /// This is used to calculate proximity between the index symbol and the
+  /// These are used to calculate proximity between the index symbol and the
   /// query.
   llvm::StringRef SymbolURI;
-  /// Proximity between best declaration and the query. [0-1], 1 is closest.
   /// FIXME: unify with index proximity score - signals should be
   /// source-independent.
-  float SemaProximityScore = 0;
+  /// Proximity between best declaration and the query. [0-1], 1 is closest.
+  float SemaFileProximityScore = 0;
+
+  // Scope proximity is only considered (both index and sema) when this is set.
+  ScopeDistance *ScopeProximityMatch = nullptr;
+  llvm::Optional<llvm::StringRef> SymbolScope;
+  // A symbol from sema should be accessible from the current scope.
+  bool SemaSaysInScope = false;
 
   // An approximate measure of where we expect the symbol to be used.
   enum AccessibleScope {

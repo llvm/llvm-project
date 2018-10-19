@@ -24,6 +24,11 @@ class Decl;
 
 namespace clangd {
 
+/// Returns true if the declaration is considered implementation detail based on
+/// heuristics. For example, a declaration whose name is not explicitly spelled
+/// in code is considered implementation detail.
+bool isImplementationDetail(const Decl *D);
+
 /// Find the identifier source location of the given D.
 ///
 /// The returned location is usually the spelling location where the name of the
@@ -33,6 +38,9 @@ SourceLocation findNameLoc(const clang::Decl *D);
 /// Returns the qualified name of ND. The scope doesn't contain unwritten scopes
 /// like inline namespaces.
 std::string printQualifiedName(const NamedDecl &ND);
+
+/// Returns the first enclosing namespace scope starting from \p DC.
+std::string printNamespaceScope(const DeclContext &DC);
 
 /// Gets the symbol ID for a declaration, if possible.
 llvm::Optional<SymbolID> getSymbolID(const Decl *D);

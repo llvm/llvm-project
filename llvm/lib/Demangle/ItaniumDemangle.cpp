@@ -322,7 +322,7 @@ public:
 // Code beyond this point should not be synchronized with libc++abi.
 //===----------------------------------------------------------------------===//
 
-using Demangler = itanium_demangle::Db<DefaultAllocator>;
+using Demangler = itanium_demangle::ManglingParser<DefaultAllocator>;
 
 char *llvm::itaniumDemangle(const char *MangledName, char *Buf,
                             size_t *N, int *Status) {

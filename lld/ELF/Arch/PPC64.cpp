@@ -697,7 +697,8 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   case R_PPC64_REL24: {
     uint32_t Mask = 0x03FFFFFC;
-    checkInt(Loc, Val, 24, Type);
+    checkInt(Loc, Val, 26, Type);
+    checkAlignment(Loc, Val, 4, Type);
     write32(Loc, (read32(Loc) & ~Mask) | (Val & Mask));
     break;
   }

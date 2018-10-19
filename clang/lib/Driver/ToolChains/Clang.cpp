@@ -1739,6 +1739,10 @@ void Clang::AddX86TargetArgs(const ArgList &Args,
       Args.hasArg(options::OPT_fapple_kext))
     CmdArgs.push_back("-disable-red-zone");
 
+  if (!Args.hasFlag(options::OPT_mtls_direct_seg_refs,
+                    options::OPT_mno_tls_direct_seg_refs, true))
+    CmdArgs.push_back("-mno-tls-direct-seg-refs");
+
   // Default to avoid implicit floating-point for kernel/kext code, but allow
   // that to be overridden with -mno-soft-float.
   bool NoImplicitFloat = (Args.hasArg(options::OPT_mkernel) ||

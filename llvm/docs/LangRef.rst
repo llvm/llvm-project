@@ -1450,6 +1450,10 @@ example:
 ``noredzone``
     This attribute indicates that the code generator should not use a
     red zone, even if the target-specific ABI normally permits it.
+``indirect-tls-seg-refs``
+    This attribute indicates that the code generator should not use
+    direct TLS access through segment registers, even if the
+    target-specific ABI normally permits it.
 ``noreturn``
     This function attribute indicates that the function never returns
     normally. This produces undefined behavior at runtime if the
