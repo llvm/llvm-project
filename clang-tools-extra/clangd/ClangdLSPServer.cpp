@@ -261,6 +261,10 @@ void ClangdLSPServer::reply(llvm::json::Value ID,
 
 void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                                    Callback<json::Value> Reply) {
+  if (Params.rootUri && *Params.rootUri)
+    ClangdServerOpts.WorkspaceRoot = Params.rootUri->file();
+  else if (Params.rootPath && !Params.rootPath->empty())
+    ClangdServerOpts.WorkspaceRoot = *Params.rootPath;
   if (Server)
     return Reply(make_error<LSPError>("server already initialized",
                                       ErrorCode::InvalidRequest));
@@ -276,11 +280,6 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
 
     applyConfiguration(Opts.ParamsChange);
   }
-
-  if (Params.rootUri && *Params.rootUri)
-    Server->setRootPath(Params.rootUri->file());
-  else if (Params.rootPath && !Params.rootPath->empty())
-    Server->setRootPath(*Params.rootPath);
 
   CCOpts.EnableSnippets = Params.capabilities.CompletionSnippets;
   DiagOpts.EmbedFixesInDiagnostics = Params.capabilities.DiagnosticFixes;
