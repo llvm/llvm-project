@@ -517,7 +517,8 @@ static bool needPhiInTaskContinue(
     for (const_pred_iterator PI = pred_begin(BB), E = pred_end(BB);
          PI != E; ++PI) {
       const BasicBlock *P = *PI;
-      if (TI.getSpindleFor(BB)->predInDifferentTask(TI.getSpindleFor(P))) {
+      if (TI.getSpindleFor(BB) && TI.getSpindleFor(P) &&
+          TI.getSpindleFor(BB)->predInDifferentTask(TI.getSpindleFor(P))) {
         DEBUG(dbgs() << "Alloca " << *AI << " has use reattached from " <<
               P->getName() << "\n");
         return true;
