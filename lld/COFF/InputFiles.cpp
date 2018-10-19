@@ -501,6 +501,10 @@ void ImportFile::parse() {
   ExternalName = ExtName;
 
   ImpSym = Symtab->addImportData(ImpName, this);
+  // If this was a duplicate, we logged an error but may continue;
+  // in this case, ImpSym is nullptr.
+  if (!ImpSym)
+    return;
 
   if (Hdr->getType() == llvm::COFF::IMPORT_CONST)
     static_cast<void>(Symtab->addImportData(Name, this));
