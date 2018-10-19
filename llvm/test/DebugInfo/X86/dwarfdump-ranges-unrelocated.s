@@ -21,6 +21,16 @@
 # BRIEF-NEXT:  [0x0000000000000000, 0x0000000000000002)
 # BRIEF-NEXT:  [0x0000000000000000, 0x0000000000000003))
 
+# RUN: llvm-dwarfdump -diff %t | FileCheck %s --check-prefix=DIFF
+# DIFF: DW_TAG_compile_unit
+# DIFF-NEXT: DW_AT_producer	()
+# DIFF-NEXT: DW_AT_language	(DW_LANG_C_plus_plus)
+# DIFF-NEXT: DW_AT_name	()
+# DIFF-NEXT: DW_AT_stmt_list	()
+# DIFF-NEXT: DW_AT_comp_dir	()
+# DIFF-NEXT: DW_AT_low_pc	()
+# DIFF-NEXT: DW_AT_ranges	()
+
 ## Asm code for testcase is a reduced and modified output from next
 ## invocation and source:
 # clang test.cpp -S -o test.s -gmlt -ffunction-sections

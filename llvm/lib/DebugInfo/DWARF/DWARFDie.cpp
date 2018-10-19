@@ -59,12 +59,14 @@ static void dumpRanges(const DWARFObject &Obj, raw_ostream &OS,
                        const DWARFAddressRangesVector &Ranges,
                        unsigned AddressSize, unsigned Indent,
                        const DIDumpOptions &DumpOpts) {
+  if (!DumpOpts.ShowAddresses)
+    return;
+
   ArrayRef<SectionName> SectionNames;
   if (DumpOpts.Verbose)
     SectionNames = Obj.getSectionNames();
 
   for (const DWARFAddressRange &R : Ranges) {
-
     OS << '\n';
     OS.indent(Indent);
     R.dump(OS, AddressSize);
