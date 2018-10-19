@@ -113,6 +113,13 @@ typedef struct {
   uint64_t _padding : 52;
 } store_prop_t;
 
+typedef struct {
+  // The alloca is static.
+  unsigned is_static : 1;
+  // Pad struct to 64 total bits.
+  uint64_t _padding : 63;
+} alloca_prop_t;
+
 WEAK void __csi_init();
 
 WEAK void __csi_unit_init(const char * const file_name,
@@ -165,15 +172,17 @@ WEAK void __csi_task_exit(const csi_id_t task_exit_id,
 WEAK void __csi_detach_continue(const csi_id_t detach_continue_id,
                                 const csi_id_t detach_id);
 
-WEAK void __csi_sync(const csi_id_t sync_id);
-
-WEAK void __csi_after_alloca(const csi_id_t alloca_id,
-                        const void *addr,
-                        uint64_t total_size,
-                        uint64_t isStaticAlloca);
+WEAK void __csi_before_sync(const csi_id_t sync_id);
+WEAK void __csi_after_sync(const csi_id_t sync_id);
 
 WEAK void __csi_before_alloca(const csi_id_t alloca_id,
-                         uint64_t isStaticAlloca);
+                              uint64_t num_bytes,
+                              const alloca_prop_t prop);
+
+WEAK void __csi_after_alloca(const csi_id_t alloca_id,
+                             const void *addr,
+                             uint64_t num_bytes,
+                             const alloca_prop_t prop);
 
 // This struct is mirrored in ComprehensiveStaticInstrumentation.cpp,
 // FrontEndDataTable::getSourceLocStructType.

@@ -68,14 +68,19 @@ WEAK void __csi_detach_continue(const csi_id_t detach_continue_id,
                                 const csi_id_t detach_id) {}
 
 __attribute__((always_inline))
-WEAK void __csi_sync(const csi_id_t sync_id) {}
+WEAK void __csi_before_sync(const csi_id_t sync_id) {}
+
+__attribute__((always_inline))
+WEAK void __csi_after_sync(const csi_id_t sync_id) {}
+
 __attribute__((always_inline))
 WEAK void __csi_after_alloca(const csi_id_t alloca_id,
-                        const void *addr,
-                        uint64_t total_size,
-                        uint64_t isStaticAlloca) {}
+                             const void *addr,
+                             uint64_t num_bytes,
+                             const alloca_prop_t prop) {}
 
 __attribute__((always_inline))
 WEAK void __csi_before_alloca(const csi_id_t alloca_id,
-                         uint64_t isStaticAlloca) {}
+                              uint64_t num_bytes,
+                              const alloca_prop_t prop) {}
 
