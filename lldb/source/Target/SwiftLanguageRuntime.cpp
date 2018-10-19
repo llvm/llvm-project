@@ -699,19 +699,6 @@ static bool StringHasAnyOf(const llvm::StringRef &s,
   return false;
 }
 
-bool StringHasAnyOf(const llvm::StringRef &s, const char *which,
-                    size_t &where) {
-  for (const char *c = which; *c != 0; c++) {
-    size_t where_item = s.find(*c);
-    if (where_item != llvm::StringRef::npos) {
-      where = where_item;
-      return true;
-    }
-  }
-  where = llvm::StringRef::npos;
-  return false;
-}
-
 static bool UnpackTerminatedSubstring(const llvm::StringRef &s,
                                       const char start, const char stop,
                                       llvm::StringRef &dest) {
