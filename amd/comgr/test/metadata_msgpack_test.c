@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
   amd_comgr_metadata_kind_t mkind = AMD_COMGR_METADATA_KIND_NULL;
 
   // Read input file
-  size1 = setBuf(TEST_OBJ_DIR "/shared.so", &buf);
+  size1 = setBuf(TEST_OBJ_DIR "/shared-v3.so", &buf);
 
   // Create data object
   {
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 
     amd_comgr_metadata_node_t metaLookup;
     amd_comgr_metadata_kind_t mkindLookup;
-    status = amd_comgr_metadata_lookup(meta, "Version", &metaLookup);
+    status = amd_comgr_metadata_lookup(meta, "amdhsa.version", &metaLookup);
     checkError(status, "amd_comgr_metadata_lookup");
     status = amd_comgr_get_metadata_kind(metaLookup, &mkindLookup);
     checkError(status, "amd_comgr_get_metadata_kind");
@@ -97,6 +97,9 @@ int main(int argc, char *argv[]) {
     int indent = 0;
     status = amd_comgr_iterate_map_metadata(meta, print_entry, (void *)&indent);
     checkError(status, "amd_comgr_iterate_map_metadata");
+
+    status = amd_comgr_destroy_metadata(meta);
+    checkError(status, "amd_comgr_destroy_metadata");
   }
 
   {

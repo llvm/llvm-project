@@ -134,18 +134,20 @@ static amd_comgr_status_t getElfMetadataRoot(const ELFObjectFile<ELFT> *Obj,
                                              DataMeta *metap) {
   amd_comgr_status_t NoteStatus = AMD_COMGR_STATUS_SUCCESS;
   auto ProcessNote = [&](const Elf_Note<ELFT> &Note) {
-    if (Note.getName() == "AMD") {
-      auto DescString =
-          StringRef(reinterpret_cast<const char *>(Note.getDesc().data()),
-                    Note.getDesc().size());
-      if (Note.getType() == ELF::NT_AMD_AMDGPU_HSA_METADATA) {
-        metap->node = YAML::Load(DescString);
-        return true;
-      } else if (Note.getType() == PAL_METADATA_NOTE_TYPE) {
-        msgpack::Reader MPReader(DescString);
-        NoteStatus = COMGR::msgpack::parse(MPReader, metap->msgpack_node);
-        return true;
-      }
+    auto DescString =
+        StringRef(reinterpret_cast<const char *>(Note.getDesc().data()),
+                  Note.getDesc().size());
+    if (Note.getName() == "AMD" &&
+        Note.getType() == ELF::NT_AMD_AMDGPU_HSA_METADATA) {
+      metap->node = YAML::Load(DescString);
+      return true;
+    } else if ((Note.getName() == "AMDGPU" &&
+                Note.getType() == PAL_METADATA_NOTE_TYPE) ||
+               (Note.getName() == "AMDGPU" &&
+                Note.getType() == ELF::NT_AMDGPU_METADATA)) {
+      msgpack::Reader MPReader(DescString);
+      NoteStatus = COMGR::msgpack::parse(MPReader, metap->msgpack_node);
+      return true;
     }
     return false;
   };

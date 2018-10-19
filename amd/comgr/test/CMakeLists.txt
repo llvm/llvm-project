@@ -2,17 +2,21 @@
 # should identify what they really need to depend on (it should be both the
 # sources and the clang/llvm/lld being used).
 set(CLANG_COMMON "${LLVM_TOOLS_BINARY_DIR}/clang" --target=amdgcn-amd-amdhsa -mcpu=gfx803)
-add_custom_target(bytes1.o ALL ${CLANG_COMMON}
+add_custom_target(bytes1.o ALL ${CLANG_COMMON} -mno-code-object-v3
   "${CMAKE_CURRENT_SOURCE_DIR}/reloc1.cl" -c -o
   "${CMAKE_CURRENT_BINARY_DIR}/reloc1.o"
   SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/reloc1.cl")
-add_custom_target(bytes2.o ALL ${CLANG_COMMON}
+add_custom_target(bytes2.o ALL ${CLANG_COMMON} -mno-code-object-v3
   "${CMAKE_CURRENT_SOURCE_DIR}/reloc2.cl" -c -o
   "${CMAKE_CURRENT_BINARY_DIR}/reloc2.o"
   SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/reloc2.cl")
-add_custom_target(shared.so ALL ${CLANG_COMMON}
+add_custom_target(shared.so ALL ${CLANG_COMMON} -mno-code-object-v3
   "${CMAKE_CURRENT_SOURCE_DIR}/shared.cl" -o
   "${CMAKE_CURRENT_BINARY_DIR}/shared.so"
+  SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shared.cl")
+add_custom_target(shared-v3.so ALL ${CLANG_COMMON} -mcode-object-v3
+  "${CMAKE_CURRENT_SOURCE_DIR}/shared.cl" -o
+  "${CMAKE_CURRENT_BINARY_DIR}/shared-v3.so"
   SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shared.cl")
 configure_file("source1.cl" "source1.cl" COPYONLY)
 configure_file("source1-device-libs.cl" "source1-device-libs.cl" COPYONLY)
@@ -53,6 +57,11 @@ add_test(NAME metadata_tp_test COMMAND metadata_tp_test)
 add_executable(metadata_yaml_test metadata_yaml_test.c)
 target_link_libraries(metadata_yaml_test amd_comgr)
 add_test(NAME metadata_yaml_test COMMAND metadata_yaml_test)
+
+# Test : Metadata MsgPack (Metadata of a code object)
+add_executable(metadata_msgpack_test metadata_msgpack_test.c)
+target_link_libraries(metadata_msgpack_test amd_comgr)
+add_test(NAME metadata_msgpack_test COMMAND metadata_msgpack_test)
 
 # Test : Symbols
 add_executable(symbols_test symbols_test.c)
@@ -113,6 +122,7 @@ if (NOT(UNIX))
     disasm_llvm_so_test
     metadata_tp_test
     metadata_yaml_test
+    metadata_msgpack_test
     # FIXME: Add these tests again when upstream LLVM emits kernel symbols to .dynsym
     #symbols_test
     #symbols_iterate_test

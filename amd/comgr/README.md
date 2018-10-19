@@ -15,7 +15,9 @@ of both of these components. Comgr also depends on yaml-cpp, but version
 included in-tree.
 
 Comgr depends on Clang and LLD, which should be built as a part of the LLVM
-distribution used.
+distribution used. The LLVM, Clang, and LLD used must be from the amd-common
+branches of their respective repositories on the [RadeonOpenCompute
+Github](https://github.com/RadeonOpenCompute) organisation.
 
 An example command-line to build Comgr on Linux is:
 

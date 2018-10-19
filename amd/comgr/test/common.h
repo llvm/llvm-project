@@ -117,4 +117,72 @@ amd_comgr_status_t print_symbol(
   return status;
 }
 
+amd_comgr_status_t print_entry(amd_comgr_metadata_node_t key,
+                               amd_comgr_metadata_node_t value, void *data) {
+  amd_comgr_metadata_kind_t kind;
+  amd_comgr_metadata_node_t son;
+  amd_comgr_status_t status;
+  size_t size;
+  char keybuf[50];
+  char buf[50];
+  int *indent = (int *)data;
+
+  // assume key to be string in this test function
+  status = amd_comgr_get_metadata_kind(key, &kind);
+  checkError(status, "amd_comgr_get_metadata_kind");
+  if (kind != AMD_COMGR_METADATA_KIND_STRING)
+    return AMD_COMGR_STATUS_ERROR;
+  status = amd_comgr_get_metadata_string(key, &size, NULL);
+  checkError(status, "amd_comgr_get_metadata_string");
+  status = amd_comgr_get_metadata_string(key, &size, keybuf);
+  checkError(status, "amd_comgr_get_metadata_string");
+
+  status = amd_comgr_get_metadata_kind(value, &kind);
+  checkError(status, "amd_comgr_get_metadata_kind");
+  for (int i = 0; i < *indent; i++)
+    printf("  ");
+
+  switch (kind) {
+  case AMD_COMGR_METADATA_KIND_STRING: {
+    printf("%s  :  ", size ? keybuf : "");
+    status = amd_comgr_get_metadata_string(value, &size, NULL);
+    checkError(status, "amd_comgr_get_metadata_string");
+    status = amd_comgr_get_metadata_string(value, &size, buf);
+    checkError(status, "amd_comgr_get_metadata_string");
+    printf(" %s\n", buf);
+    break;
+  }
+  case AMD_COMGR_METADATA_KIND_LIST: {
+    *indent += 1;
+    status = amd_comgr_get_metadata_list_size(value, &size);
+    checkError(status, "amd_comgr_get_metadata_list_size");
+    printf("LIST %s %ld entries = \n", keybuf, size);
+    for (int i = 0; i < size; i++) {
+      status = amd_comgr_index_list_metadata(value, i, &son);
+      checkError(status, "amd_comgr_index_list_metadata");
+      status = print_entry(key, son, data);
+      checkError(status, "print_entry_list");
+      status = amd_comgr_destroy_metadata(son);
+      checkError(status, "amd_comgr_destroy_metadata");
+    }
+    *indent = *indent > 0 ? *indent - 1 : 0;
+    break;
+  }
+  case AMD_COMGR_METADATA_KIND_MAP: {
+    *indent += 1;
+    status = amd_comgr_get_metadata_map_size(value, &size);
+    checkError(status, "amd_comgr_get_metadata_map_size");
+    printf("MAP %ld entries = \n", size);
+    status = amd_comgr_iterate_map_metadata(value, print_entry, data);
+    checkError(status, "amd_comgr_iterate_map_metadata");
+    *indent = *indent > 0 ? *indent - 1 : 0;
+    break;
+  }
+  default:
+    return AMD_COMGR_STATUS_ERROR;
+  } // switch
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
 #endif // COMGR_TEST_COMMON_H

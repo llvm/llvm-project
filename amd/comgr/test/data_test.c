@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
     status = amd_comgr_set_data_name(dataObject, "DO1");
     checkError(status, "amd_comgr_set_data_name");
 
-    long size;
+    size_t size;
     char name[10];
     status = amd_comgr_get_data_name(dataObject, &size, NULL);
     checkError(status, "amd_comgr_get_data_name");
