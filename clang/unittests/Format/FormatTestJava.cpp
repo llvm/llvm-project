@@ -155,6 +155,15 @@ TEST_F(FormatTestJava, ClassDeclarations) {
                "  void doStuff(int theStuff);\n"
                "  void doMoreStuff(int moreStuff);\n"
                "}");
+  verifyFormat("class A {\n"
+               "  public @interface SomeInterface {\n"
+               "    int stuff;\n"
+               "    void doMoreStuff(int moreStuff);\n"
+               "  }\n"
+               "}");
+  verifyFormat("class A {\n"
+               "  public @interface SomeInterface {}\n"
+               "}");
 }
 
 TEST_F(FormatTestJava, AnonymousClasses) {

@@ -4,6 +4,7 @@ Test SB API support for identifying artificial (tail call) frames.
 
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 class TestArtificialFrameThreadStepOut1(TestBase):
@@ -51,6 +52,7 @@ class TestArtificialFrameThreadStepOut1(TestBase):
         #   frame #4: ... a.out`main at main.cpp:23:3 [opt]
         return thread
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr26265")
     def test_stepping_out_past_artificial_frame(self):
         self.build()
         thread = self.prepare_thread()
@@ -68,6 +70,7 @@ class TestArtificialFrameThreadStepOut1(TestBase):
         self.assertEqual(frame4.GetDisplayFunctionName(), "main")
         self.assertFalse(frame2.IsArtificial())
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr26265")
     def test_return_past_artificial_frame(self):
         self.build()
         thread = self.prepare_thread()

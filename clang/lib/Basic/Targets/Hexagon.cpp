@@ -25,14 +25,7 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__qdsp6__", "1");
   Builder.defineMacro("__hexagon__", "1");
 
-  if (CPU == "hexagonv4") {
-    Builder.defineMacro("__HEXAGON_V4__");
-    Builder.defineMacro("__HEXAGON_ARCH__", "4");
-    if (Opts.HexagonQdsp6Compat) {
-      Builder.defineMacro("__QDSP6_V4__");
-      Builder.defineMacro("__QDSP6_ARCH__", "4");
-    }
-  } else if (CPU == "hexagonv5") {
+  if (CPU == "hexagonv5") {
     Builder.defineMacro("__HEXAGON_V5__");
     Builder.defineMacro("__HEXAGON_ARCH__", "5");
     if (Opts.HexagonQdsp6Compat) {
@@ -150,9 +143,9 @@ struct CPUSuffix {
 };
 
 static constexpr CPUSuffix Suffixes[] = {
-    {{"hexagonv4"}, {"4"}},   {{"hexagonv5"}, {"5"}},
-    {{"hexagonv55"}, {"55"}}, {{"hexagonv60"}, {"60"}},
-    {{"hexagonv62"}, {"62"}}, {{"hexagonv65"}, {"65"}},
+    {{"hexagonv5"},  {"5"}},  {{"hexagonv55"}, {"55"}},
+    {{"hexagonv60"}, {"60"}}, {{"hexagonv62"}, {"62"}},
+    {{"hexagonv65"}, {"65"}},
 };
 
 const char *HexagonTargetInfo::getHexagonCPUSuffix(StringRef Name) {

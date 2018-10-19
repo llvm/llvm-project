@@ -109,6 +109,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                      ? new FileIndex(Opts.URISchemes,
                                      Opts.HeavyweightDynamicSymbolIndex)
                      : nullptr),
+      WorkspaceRoot(Opts.WorkspaceRoot),
       PCHs(std::make_shared<PCHContainerOperations>()),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
       // parsed file and rebuild the file index synchronously each time an AST
@@ -129,18 +130,6 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
     Index = Opts.StaticIndex;
   else
     Index = nullptr;
-}
-
-void ClangdServer::setRootPath(PathRef RootPath) {
-  auto FS = FSProvider.getFileSystem();
-  auto Status = FS->status(RootPath);
-  if (!Status)
-    elog("Failed to get status for RootPath {0}: {1}", RootPath,
-         Status.getError().message());
-  else if (Status->isDirectory())
-    this->RootPath = RootPath;
-  else
-    elog("The provided RootPath {0} is not a directory.", RootPath);
 }
 
 void ClangdServer::addDocument(PathRef File, StringRef Contents,
@@ -495,7 +484,7 @@ void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
 void ClangdServer::workspaceSymbols(
     StringRef Query, int Limit, Callback<std::vector<SymbolInformation>> CB) {
   CB(clangd::getWorkspaceSymbols(Query, Limit, Index,
-                                 RootPath ? *RootPath : ""));
+                                 WorkspaceRoot.getValueOr("")));
 }
 
 void ClangdServer::documentSymbols(
