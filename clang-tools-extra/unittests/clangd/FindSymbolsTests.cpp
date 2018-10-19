@@ -42,6 +42,7 @@ MATCHER_P(SymRange, Range, "") { return arg.location.range == Range; }
 
 ClangdServer::Options optsForTests() {
   auto ServerOpts = ClangdServer::optsForTest();
+  ServerOpts.WorkspaceRoot = testRoot();
   ServerOpts.BuildDynamicSymbolIndex = true;
   ServerOpts.URISchemes = {"unittest", "file"};
   return ServerOpts;
@@ -53,7 +54,6 @@ public:
       : Server(CDB, FSProvider, DiagConsumer, optsForTests()) {
     // Make sure the test root directory is created.
     FSProvider.Files[testPath("unused")] = "";
-    Server.setRootPath(testRoot());
   }
 
 protected:
