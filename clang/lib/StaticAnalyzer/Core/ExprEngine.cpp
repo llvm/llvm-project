@@ -3107,3 +3107,8 @@ std::string ExprEngine::DumpGraph(ArrayRef<const ExplodedNode*> Nodes,
   llvm::errs() << "Warning: dumping graph requires assertions" << "\n";
   return "";
 }
+
+void *ProgramStateTrait<ReplayWithoutInlining>::GDMIndex() {
+  static int index = 0;
+  return &index;
+}
