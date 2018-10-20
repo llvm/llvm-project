@@ -25,7 +25,9 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Error.h"
 #include <utility>
 
 namespace clang {
@@ -42,6 +44,29 @@ class Stmt;
 class TagDecl;
 class TypeSourceInfo;
 class Attr;
+
+  class ImportError : public llvm::ErrorInfo<ImportError> {
+  public:
+    /// \brief Kind of error when importing an AST component.
+    enum ErrorKind {
+        NameConflict, /// Naming ambiguity (likely ODR violation).
+        UnsupportedConstruct, /// Not supported node or case.
+        Unknown /// Other error.
+    };
+
+    ErrorKind Error;
+
+    static char ID;
+
+    ImportError() : Error(Unknown) { }
+    ImportError(const ImportError &Other) : Error(Other.Error) { }
+    ImportError(ErrorKind Error) : Error(Error) { }
+
+    std::string toString() const;
+
+    void log(raw_ostream &OS) const override;
+    std::error_code convertToErrorCode() const override;
+  };
 
   // \brief Returns with a list of declarations started from the canonical decl
   // then followed by subsequent decls in the translation unit.
@@ -122,6 +147,24 @@ class Attr;
     /// to-be-completed forward declarations when possible.
     bool isMinimalImport() const { return Minimal; }
 
+    /// \brief Import the given object, returns the result.
+    ///
+    /// \param To Import the object into this variable.
+    /// \param From Object to import.
+    /// \return Error information (success or error).
+    template <typename ImportT>
+    LLVM_NODISCARD llvm::Error importInto(ImportT &To, const ImportT &From) {
+      To = Import(From);
+      if (From && !To)
+          return llvm::make_error<ImportError>();
+      return llvm::Error::success();
+      // FIXME: this should be the final code
+      //auto ToOrErr = Import(From);
+      //if (ToOrErr)
+      //  To = *ToOrErr;
+      //return ToOrErr.takeError();
+    }
+
     /// Import the given type from the "from" context into the "to"
     /// context.
     ///
@@ -161,8 +204,8 @@ class Attr;
     /// AST context into the "to" AST context.
     ///
     /// \returns the equivalent declaration context in the "to"
-    /// context, or a NULL type if an error occurred.
-    DeclContext *ImportContext(DeclContext *FromDC);
+    /// context, or error value.
+    llvm::Expected<DeclContext *> ImportContext(DeclContext *FromDC);
 
     /// Import the given expression from the "from" context into the
     /// "to" context.
@@ -220,7 +263,8 @@ class Attr;
     /// Import the given identifier from the "from" context
     /// into the "to" context.
     ///
-    /// \returns the equivalent identifier in the "to" context.
+    /// \returns the equivalent identifier in the "to" context. Note: It
+    /// returns nullptr only if the FromId was nullptr.
     IdentifierInfo *Import(const IdentifierInfo *FromId);
 
     /// Import the given Objective-C selector from the "from"
@@ -251,8 +295,10 @@ class Attr;
 
     /// Import the definition of the given declaration, including all of
     /// the declarations it contains.
-    ///
-    /// This routine is intended to be used
+    LLVM_NODISCARD llvm::Error ImportDefinition_New(Decl *From);
+
+    // FIXME: Compatibility function.
+    // Usages of this should be changed to ImportDefinition_New.
     void ImportDefinition(Decl *From);
 
     /// Cope with a name conflict when importing a declaration into the
@@ -336,9 +382,9 @@ class Attr;
 
     /// Determine the index of a field in its parent record.
     /// F should be a field (or indirect field) declaration.
-    /// \returns The index of the field in its parent context, starting from 1.
-    /// 0 is returned on error (parent context is non-record).
-    static unsigned getFieldIndex(Decl *F);
+    /// \returns The index of the field in its parent context (starting from 0).
+    /// On error `None` is returned (parent context is non-record).
+    static llvm::Optional<unsigned> getFieldIndex(Decl *F);
 
   };
 

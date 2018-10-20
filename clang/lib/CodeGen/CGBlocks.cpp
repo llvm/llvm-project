@@ -1817,8 +1817,6 @@ static std::string getBlockCaptureStr(const BlockCaptureManagedEntity &E,
                                       CodeGenModule &CGM) {
   std::string Str;
   ASTContext &Ctx = CGM.getContext();
-  std::unique_ptr<ItaniumMangleContext> MC(
-      ItaniumMangleContext::create(Ctx, Ctx.getDiagnostics()));
   const BlockDecl::Capture &CI = *E.CI;
   QualType CaptureTy = CI.getVariable()->getType();
 
@@ -1844,7 +1842,7 @@ static std::string getBlockCaptureStr(const BlockCaptureManagedEntity &E,
     Str += "c";
     SmallString<256> TyStr;
     llvm::raw_svector_ostream Out(TyStr);
-    MC->mangleTypeName(CaptureTy, Out);
+    CGM.getCXXABI().getMangleContext().mangleTypeName(CaptureTy, Out);
     Str += llvm::to_string(TyStr.size()) + TyStr.c_str();
     break;
   }

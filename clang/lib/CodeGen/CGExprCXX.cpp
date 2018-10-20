@@ -2252,7 +2252,6 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
 }
 
 void CodeGenFunction::EmitLambdaExpr(const LambdaExpr *E, AggValueSlot Slot) {
-  RunCleanupsScope Scope(*this);
   LValue SlotLV = MakeAddrLValue(Slot.getAddress(), E->getType());
 
   CXXRecordDecl::field_iterator CurField = E->getLambdaClass()->field_begin();

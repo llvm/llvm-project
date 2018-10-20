@@ -59,14 +59,6 @@
 // -----------------------------------------------------------------------------
 // RUN: %clang -### -target hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
-// RUN:   -mcpu=hexagonv4 \
-// RUN:   %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK020 %s
-// CHECK020: "-cc1" {{.*}} "-target-cpu" "hexagonv4"
-// CHECK020: {{hexagon-link|ld}}{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v4/crt0
-
-// RUN: %clang -### -target hexagon-unknown-elf \
-// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv5 \
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK021 %s
