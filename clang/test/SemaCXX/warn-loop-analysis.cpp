@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wloop-analysis -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wloop-analysis -verify -std=c++17 %s
 
 struct S {
   bool stop() { return false; }
@@ -278,3 +278,24 @@ void test9() {
   // Don't warn when variable is defined by the loop condition.
   for (int i = 0; int x = f(i); ++i) {}
 }
+
+// Don't warn when decomposition variables are in the loop condition.
+// TODO: BindingDecl's which make a copy should warn.
+void test10() {
+  int arr[] = {1, 2, 3};
+  for (auto[i, j, k] = arr;;) { }
+  for (auto[i, j, k] = arr; i < j; ++i, ++j) { }
+
+  for (auto[i, j, k] = arr; i;) { }
+  for (auto[i, j, k] = arr; i < j;) { }
+  for (auto[i, j, k] = arr; i < j; ++arr[0]) { }
+
+  int a = 1, b = 2;
+  for (auto[i, j, k] = arr; a < b;) { }  // expected-warning{{variables 'a' and 'b' used in loop condition not modified in loop body}}
+  for (auto[i, j, k] = arr; a < b; ++a) { }
+
+  for (auto [i, j, k] = arr; i < a;) { }
+  for (auto[i, j, k] = arr; i < a; ++a) { }
+  for (auto[i, j, k] = arr; i < a; ++i) { }
+  for (auto[i, j, k] = arr; i < a; ++arr[0]) { }
+};

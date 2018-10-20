@@ -14,8 +14,9 @@
 //       mapped_type& at(const key_type& k);
 // const mapped_type& at(const key_type& k) const;
 
-#include <map>
 #include <cassert>
+#include <map>
+#include <stdexcept>
 
 #include "min_allocator.h"
 #include "test_macros.h"

@@ -153,10 +153,10 @@ public:
 private:
   void addUnitsImpl(DWARFContext &Context, const DWARFObject &Obj,
                     const DWARFSection &Section, const DWARFDebugAbbrev *DA,
-                    const DWARFSection *RS, StringRef SS,
-                    const DWARFSection &SOS, const DWARFSection *AOS,
-                    const DWARFSection &LS, bool LE, bool IsDWO, bool Lazy,
-                    DWARFSectionKind SectionKind);
+                    const DWARFSection *RS, const DWARFSection *LocSection,
+                    StringRef SS, const DWARFSection &SOS,
+                    const DWARFSection *AOS, const DWARFSection &LS, bool LE,
+                    bool IsDWO, bool Lazy, DWARFSectionKind SectionKind);
 };
 
 /// Represents base address of the CU.
@@ -198,6 +198,12 @@ class DWARFUnit {
   const DWARFDebugAbbrev *Abbrev;
   const DWARFSection *RangeSection;
   uint32_t RangeSectionBase;
+  /// We either keep track of the location list section or its data, depending
+  /// on whether we are handling a split DWARF section or not.
+  union {
+    const DWARFSection *LocSection;
+    StringRef LocSectionData;
+  };
   const DWARFSection &LineSection;
   StringRef StringSection;
   const DWARFSection &StringOffsetSection;
@@ -258,16 +264,19 @@ protected:
 
 public:
   DWARFUnit(DWARFContext &Context, const DWARFSection &Section,
-            const DWARFUnitHeader &Header,
-            const DWARFDebugAbbrev *DA, const DWARFSection *RS, StringRef SS,
-            const DWARFSection &SOS, const DWARFSection *AOS,
+            const DWARFUnitHeader &Header, const DWARFDebugAbbrev *DA,
+            const DWARFSection *RS, const DWARFSection *LocSection,
+            StringRef SS, const DWARFSection &SOS, const DWARFSection *AOS,
             const DWARFSection &LS, bool LE, bool IsDWO,
             const DWARFUnitVector &UnitVector);
 
   virtual ~DWARFUnit();
 
+  bool isDWOUnit() const { return isDWO; }
   DWARFContext& getContext() const { return Context; }
   const DWARFSection &getInfoSection() const { return InfoSection; }
+  const DWARFSection *getLocSection() const { return LocSection; }
+  StringRef getLocSectionData() const { return LocSectionData; }
   uint32_t getOffset() const { return Header.getOffset(); }
   const dwarf::FormParams &getFormParams() const {
     return Header.getFormParams();

@@ -10,6 +10,10 @@
 #include "lldb/Utility/Status.h"
 #include "gtest/gtest.h"
 
+#ifdef _WIN32
+#include <winerror.h>
+#endif
+
 using namespace lldb_private;
 using namespace lldb;
 
@@ -51,3 +55,22 @@ TEST(StatusTest, ErrorConversion) {
   EXPECT_TRUE(bool(foo));
   EXPECT_EQ("foo", llvm::toString(std::move(foo)));
 }
+
+#ifdef _WIN32
+TEST(StatusTest, ErrorWin32) {
+  auto success = Status(NO_ERROR, ErrorType::eErrorTypeWin32);
+  EXPECT_STREQ(NULL, success.AsCString());
+  EXPECT_FALSE(success.ToError());
+  EXPECT_TRUE(success.Success());
+
+  auto s = Status(ERROR_ACCESS_DENIED, ErrorType::eErrorTypeWin32);
+  EXPECT_TRUE(s.Fail());
+  EXPECT_STREQ("Access is denied. ", s.AsCString());
+
+  s.SetError(ERROR_IPSEC_IKE_TIMED_OUT, ErrorType::eErrorTypeWin32);
+  EXPECT_STREQ("Negotiation timed out ", s.AsCString());
+
+  s.SetError(16000, ErrorType::eErrorTypeWin32);
+  EXPECT_STREQ("unknown error", s.AsCString());
+}
+#endif

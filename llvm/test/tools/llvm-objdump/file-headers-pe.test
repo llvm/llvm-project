@@ -7,7 +7,7 @@ header: !Header
   Machine: IMAGE_FILE_MACHINE_I386
   Characteristics: [ IMAGE_FILE_DEBUG_STRIPPED ]
 OptionalHeader:
-  AddressOfEntryPoint: 0x1234
+  AddressOfEntryPoint: 0x123456
 # Unfortunately, all these flags are mandatory to set AddressOfEntryPoint.
 # All the values are randomly picked. They can't interfere in what
 # we are testing here.
@@ -30,4 +30,4 @@ sections:
 symbols:
 
 # CHECK: architecture: i386
-# CHECK: start address: 0x1234
+# CHECK: start address: 0x00123456
