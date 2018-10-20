@@ -29,8 +29,8 @@ std::unique_ptr<SymbolIndex> Dex::build(SymbolSlab Symbols, RefSlab Refs,
                                         ArrayRef<std::string> URISchemes) {
   auto Size = Symbols.bytes() + Refs.bytes();
   auto Data = std::make_pair(std::move(Symbols), std::move(Refs));
-  return make_unique<Dex>(Data.first, Data.second, std::move(Data), Size,
-                          std::move(URISchemes));
+  return llvm::make_unique<Dex>(Data.first, Data.second, std::move(Data), Size,
+                                std::move(URISchemes));
 }
 
 namespace {
