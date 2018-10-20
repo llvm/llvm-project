@@ -160,6 +160,7 @@ FileSymbols::buildIndex(IndexType Type, ArrayRef<std::string> URISchemes) {
                         std::move(RefsStorage)),
         StorageSize, std::move(URISchemes));
   }
+  llvm_unreachable("Unknown clangd::IndexType");
 }
 
 FileIndex::FileIndex(std::vector<std::string> URISchemes, bool UseDex)
