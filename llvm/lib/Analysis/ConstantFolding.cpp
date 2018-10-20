@@ -1363,6 +1363,8 @@ bool llvm::canConstantFoldCallTo(ImmutableCallSite CS, const Function *F) {
   case Intrinsic::fabs:
   case Intrinsic::minnum:
   case Intrinsic::maxnum:
+  case Intrinsic::minimum:
+  case Intrinsic::maximum:
   case Intrinsic::log:
   case Intrinsic::log2:
   case Intrinsic::log10:
@@ -1910,6 +1912,18 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
           const APFloat &C1 = Op1->getValueAPF();
           const APFloat &C2 = Op2->getValueAPF();
           return ConstantFP::get(Ty->getContext(), maxnum(C1, C2));
+        }
+
+        if (IntrinsicID == Intrinsic::minimum) {
+          const APFloat &C1 = Op1->getValueAPF();
+          const APFloat &C2 = Op2->getValueAPF();
+          return ConstantFP::get(Ty->getContext(), minimum(C1, C2));
+        }
+
+        if (IntrinsicID == Intrinsic::maximum) {
+          const APFloat &C1 = Op1->getValueAPF();
+          const APFloat &C2 = Op2->getValueAPF();
+          return ConstantFP::get(Ty->getContext(), maximum(C1, C2));
         }
 
         if (!TLI)

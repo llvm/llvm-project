@@ -849,8 +849,7 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
 
   // Attempt to remove vectors moves that were inserted to zero upper bits.
 
-  SelectionDAG::allnodes_iterator Position(CurDAG->getRoot().getNode());
-  ++Position;
+  SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
 
   while (Position != CurDAG->allnodes_begin()) {
     SDNode *N = &*--Position;

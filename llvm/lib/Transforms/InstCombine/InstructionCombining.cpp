@@ -747,8 +747,9 @@ Value *InstCombiner::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
 /// Given a 'sub' instruction, return the RHS of the instruction if the LHS is a
 /// constant zero (which is the 'negate' form).
 Value *InstCombiner::dyn_castNegVal(Value *V) const {
-  if (BinaryOperator::isNeg(V))
-    return BinaryOperator::getNegArgument(V);
+  Value *NegV;
+  if (match(V, m_Neg(m_Value(NegV))))
+    return NegV;
 
   // Constants can be considered to be negated values if they can be folded.
   if (ConstantInt *C = dyn_cast<ConstantInt>(V))

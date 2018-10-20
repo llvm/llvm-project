@@ -1228,7 +1228,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
                                              const HexagonSubtarget &ST)
     : TargetLowering(TM), HTM(static_cast<const HexagonTargetMachine&>(TM)),
       Subtarget(ST) {
-  bool IsV4 = !Subtarget.hasV5Ops();
   auto &HRI = *Subtarget.getRegisterInfo();
 
   setPrefLoopAlignment(4);
@@ -1270,10 +1269,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::v4i16, &Hexagon::DoubleRegsRegClass);
   addRegisterClass(MVT::v2i32, &Hexagon::DoubleRegsRegClass);
 
-  if (Subtarget.hasV5Ops()) {
-    addRegisterClass(MVT::f32, &Hexagon::IntRegsRegClass);
-    addRegisterClass(MVT::f64, &Hexagon::DoubleRegsRegClass);
-  }
+  addRegisterClass(MVT::f32, &Hexagon::IntRegsRegClass);
+  addRegisterClass(MVT::f64, &Hexagon::DoubleRegsRegClass);
 
   //
   // Handling of scalar operations.
@@ -1351,8 +1348,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTTZ, MVT::i8,  Promote);
   setOperationAction(ISD::CTTZ, MVT::i16, Promote);
 
-  // In V5, popcount can count # of 1s in i64 but returns i32.
-  // On V4 it will be expanded (set later).
+  // Popcount can count # of 1s in i64 but returns i32.
   setOperationAction(ISD::CTPOP, MVT::i8,  Promote);
   setOperationAction(ISD::CTPOP, MVT::i16, Promote);
   setOperationAction(ISD::CTPOP, MVT::i32, Promote);
@@ -1515,57 +1511,28 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ROTL, MVT::i32, Custom);
     setOperationAction(ISD::ROTL, MVT::i64, Custom);
   }
-  if (Subtarget.hasV5Ops()) {
-    setOperationAction(ISD::FMA,  MVT::f64, Expand);
-    setOperationAction(ISD::FADD, MVT::f64, Expand);
-    setOperationAction(ISD::FSUB, MVT::f64, Expand);
-    setOperationAction(ISD::FMUL, MVT::f64, Expand);
 
-    setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
-    setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
+  // V5+.
+  setOperationAction(ISD::FMA,  MVT::f64, Expand);
+  setOperationAction(ISD::FADD, MVT::f64, Expand);
+  setOperationAction(ISD::FSUB, MVT::f64, Expand);
+  setOperationAction(ISD::FMUL, MVT::f64, Expand);
 
-    setOperationAction(ISD::FP_TO_UINT, MVT::i1,  Promote);
-    setOperationAction(ISD::FP_TO_UINT, MVT::i8,  Promote);
-    setOperationAction(ISD::FP_TO_UINT, MVT::i16, Promote);
-    setOperationAction(ISD::FP_TO_SINT, MVT::i1,  Promote);
-    setOperationAction(ISD::FP_TO_SINT, MVT::i8,  Promote);
-    setOperationAction(ISD::FP_TO_SINT, MVT::i16, Promote);
-    setOperationAction(ISD::UINT_TO_FP, MVT::i1,  Promote);
-    setOperationAction(ISD::UINT_TO_FP, MVT::i8,  Promote);
-    setOperationAction(ISD::UINT_TO_FP, MVT::i16, Promote);
-    setOperationAction(ISD::SINT_TO_FP, MVT::i1,  Promote);
-    setOperationAction(ISD::SINT_TO_FP, MVT::i8,  Promote);
-    setOperationAction(ISD::SINT_TO_FP, MVT::i16, Promote);
-  } else { // V4
-    setOperationAction(ISD::SINT_TO_FP, MVT::i32, Expand);
-    setOperationAction(ISD::SINT_TO_FP, MVT::i64, Expand);
-    setOperationAction(ISD::UINT_TO_FP, MVT::i32, Expand);
-    setOperationAction(ISD::UINT_TO_FP, MVT::i64, Expand);
-    setOperationAction(ISD::FP_TO_SINT, MVT::f64, Expand);
-    setOperationAction(ISD::FP_TO_SINT, MVT::f32, Expand);
-    setOperationAction(ISD::FP_EXTEND,  MVT::f32, Expand);
-    setOperationAction(ISD::FP_ROUND,   MVT::f64, Expand);
-    setCondCodeAction(ISD::SETUNE, MVT::f64, Expand);
+  setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
+  setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
 
-    setOperationAction(ISD::CTPOP, MVT::i8,  Expand);
-    setOperationAction(ISD::CTPOP, MVT::i16, Expand);
-    setOperationAction(ISD::CTPOP, MVT::i32, Expand);
-    setOperationAction(ISD::CTPOP, MVT::i64, Expand);
-
-    // Expand these operations for both f32 and f64:
-    for (unsigned FPExpOpV4 :
-         {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FABS, ISD::FNEG, ISD::FMA}) {
-      setOperationAction(FPExpOpV4, MVT::f32, Expand);
-      setOperationAction(FPExpOpV4, MVT::f64, Expand);
-    }
-
-    for (ISD::CondCode FPExpCCV4 :
-         {ISD::SETOEQ, ISD::SETOGT, ISD::SETOLT, ISD::SETOGE, ISD::SETOLE,
-          ISD::SETUO,  ISD::SETO}) {
-      setCondCodeAction(FPExpCCV4, MVT::f32, Expand);
-      setCondCodeAction(FPExpCCV4, MVT::f64, Expand);
-    }
-  }
+  setOperationAction(ISD::FP_TO_UINT, MVT::i1,  Promote);
+  setOperationAction(ISD::FP_TO_UINT, MVT::i8,  Promote);
+  setOperationAction(ISD::FP_TO_UINT, MVT::i16, Promote);
+  setOperationAction(ISD::FP_TO_SINT, MVT::i1,  Promote);
+  setOperationAction(ISD::FP_TO_SINT, MVT::i8,  Promote);
+  setOperationAction(ISD::FP_TO_SINT, MVT::i16, Promote);
+  setOperationAction(ISD::UINT_TO_FP, MVT::i1,  Promote);
+  setOperationAction(ISD::UINT_TO_FP, MVT::i8,  Promote);
+  setOperationAction(ISD::UINT_TO_FP, MVT::i16, Promote);
+  setOperationAction(ISD::SINT_TO_FP, MVT::i1,  Promote);
+  setOperationAction(ISD::SINT_TO_FP, MVT::i8,  Promote);
+  setOperationAction(ISD::SINT_TO_FP, MVT::i16, Promote);
 
   // Handling of indexed loads/stores: default is "expand".
   //
@@ -1601,42 +1568,18 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setLibcallName(RTLIB::FPTOSINT_F32_I128, "__hexagon_fixsfti");
   setLibcallName(RTLIB::FPTOSINT_F64_I128, "__hexagon_fixdfti");
 
-  if (IsV4) {
-    // Handle single-precision floating point operations on V4.
-    if (FastMath) {
-      setLibcallName(RTLIB::ADD_F32, "__hexagon_fast_addsf3");
-      setLibcallName(RTLIB::SUB_F32, "__hexagon_fast_subsf3");
-      setLibcallName(RTLIB::MUL_F32, "__hexagon_fast_mulsf3");
-      setLibcallName(RTLIB::OGT_F32, "__hexagon_fast_gtsf2");
-      setLibcallName(RTLIB::OLT_F32, "__hexagon_fast_ltsf2");
-      // Double-precision compares.
-      setLibcallName(RTLIB::OGT_F64, "__hexagon_fast_gtdf2");
-      setLibcallName(RTLIB::OLT_F64, "__hexagon_fast_ltdf2");
-    } else {
-      setLibcallName(RTLIB::ADD_F32, "__hexagon_addsf3");
-      setLibcallName(RTLIB::SUB_F32, "__hexagon_subsf3");
-      setLibcallName(RTLIB::MUL_F32, "__hexagon_mulsf3");
-      setLibcallName(RTLIB::OGT_F32, "__hexagon_gtsf2");
-      setLibcallName(RTLIB::OLT_F32, "__hexagon_ltsf2");
-      // Double-precision compares.
-      setLibcallName(RTLIB::OGT_F64, "__hexagon_gtdf2");
-      setLibcallName(RTLIB::OLT_F64, "__hexagon_ltdf2");
-    }
-  }
-
   // This is the only fast library function for sqrtd.
   if (FastMath)
     setLibcallName(RTLIB::SQRT_F64, "__hexagon_fast2_sqrtdf2");
 
   // Prefix is: nothing  for "slow-math",
-  //            "fast2_" for V4 fast-math and V5+ fast-math double-precision
+  //            "fast2_" for V5+ fast-math double-precision
   // (actually, keep fast-math and fast-math2 separate for now)
   if (FastMath) {
     setLibcallName(RTLIB::ADD_F64, "__hexagon_fast_adddf3");
     setLibcallName(RTLIB::SUB_F64, "__hexagon_fast_subdf3");
     setLibcallName(RTLIB::MUL_F64, "__hexagon_fast_muldf3");
     setLibcallName(RTLIB::DIV_F64, "__hexagon_fast_divdf3");
-    // Calling __hexagon_fast2_divsf3 with fast-math on V5 (ok).
     setLibcallName(RTLIB::DIV_F32, "__hexagon_fast_divsf3");
   } else {
     setLibcallName(RTLIB::ADD_F64, "__hexagon_adddf3");
@@ -1646,44 +1589,10 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setLibcallName(RTLIB::DIV_F32, "__hexagon_divsf3");
   }
 
-  if (Subtarget.hasV5Ops()) {
-    if (FastMath)
-      setLibcallName(RTLIB::SQRT_F32, "__hexagon_fast2_sqrtf");
-    else
-      setLibcallName(RTLIB::SQRT_F32, "__hexagon_sqrtf");
-  } else {
-    // V4
-    setLibcallName(RTLIB::SINTTOFP_I32_F32, "__hexagon_floatsisf");
-    setLibcallName(RTLIB::SINTTOFP_I32_F64, "__hexagon_floatsidf");
-    setLibcallName(RTLIB::SINTTOFP_I64_F32, "__hexagon_floatdisf");
-    setLibcallName(RTLIB::SINTTOFP_I64_F64, "__hexagon_floatdidf");
-    setLibcallName(RTLIB::UINTTOFP_I32_F32, "__hexagon_floatunsisf");
-    setLibcallName(RTLIB::UINTTOFP_I32_F64, "__hexagon_floatunsidf");
-    setLibcallName(RTLIB::UINTTOFP_I64_F32, "__hexagon_floatundisf");
-    setLibcallName(RTLIB::UINTTOFP_I64_F64, "__hexagon_floatundidf");
-    setLibcallName(RTLIB::FPTOUINT_F32_I32, "__hexagon_fixunssfsi");
-    setLibcallName(RTLIB::FPTOUINT_F32_I64, "__hexagon_fixunssfdi");
-    setLibcallName(RTLIB::FPTOUINT_F64_I32, "__hexagon_fixunsdfsi");
-    setLibcallName(RTLIB::FPTOUINT_F64_I64, "__hexagon_fixunsdfdi");
-    setLibcallName(RTLIB::FPTOSINT_F32_I32, "__hexagon_fixsfsi");
-    setLibcallName(RTLIB::FPTOSINT_F32_I64, "__hexagon_fixsfdi");
-    setLibcallName(RTLIB::FPTOSINT_F64_I32, "__hexagon_fixdfsi");
-    setLibcallName(RTLIB::FPTOSINT_F64_I64, "__hexagon_fixdfdi");
-    setLibcallName(RTLIB::FPEXT_F32_F64,    "__hexagon_extendsfdf2");
-    setLibcallName(RTLIB::FPROUND_F64_F32,  "__hexagon_truncdfsf2");
-    setLibcallName(RTLIB::OEQ_F32, "__hexagon_eqsf2");
-    setLibcallName(RTLIB::OEQ_F64, "__hexagon_eqdf2");
-    setLibcallName(RTLIB::OGE_F32, "__hexagon_gesf2");
-    setLibcallName(RTLIB::OGE_F64, "__hexagon_gedf2");
-    setLibcallName(RTLIB::OLE_F32, "__hexagon_lesf2");
-    setLibcallName(RTLIB::OLE_F64, "__hexagon_ledf2");
-    setLibcallName(RTLIB::UNE_F32, "__hexagon_nesf2");
-    setLibcallName(RTLIB::UNE_F64, "__hexagon_nedf2");
-    setLibcallName(RTLIB::UO_F32,  "__hexagon_unordsf2");
-    setLibcallName(RTLIB::UO_F64,  "__hexagon_unorddf2");
-    setLibcallName(RTLIB::O_F32,   "__hexagon_unordsf2");
-    setLibcallName(RTLIB::O_F64,   "__hexagon_unorddf2");
-  }
+  if (FastMath)
+    setLibcallName(RTLIB::SQRT_F32, "__hexagon_fast2_sqrtf");
+  else
+    setLibcallName(RTLIB::SQRT_F32, "__hexagon_sqrtf");
 
   // These cause problems when the shift amount is non-constant.
   setLibcallName(RTLIB::SHL_I128, nullptr);
@@ -3007,7 +2916,7 @@ HexagonTargetLowering::getRegForInlineAsmConstraint(
 /// specified FP immediate natively. If false, the legalizer will
 /// materialize the FP immediate as a load from a constant pool.
 bool HexagonTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
-  return Subtarget.hasV5Ops();
+  return true;
 }
 
 /// isLegalAddressingMode - Return true if the addressing mode represented by

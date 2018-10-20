@@ -342,8 +342,6 @@ class Instruction {
   // This field is set for instructions that are candidates for move
   // elimination. For more information about move elimination, see the
   // definition of RegisterMappingTracker in RegisterFile.h
-  //
-  // TODO: Teach subtargets how to describe optimizable register moves.
   bool IsOptimizableMove;
 
   using UniqueDef = std::unique_ptr<WriteState>;

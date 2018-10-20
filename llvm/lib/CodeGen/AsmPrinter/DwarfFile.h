@@ -32,6 +32,37 @@ class DwarfUnit;
 class LexicalScope;
 class MCSection;
 
+// Data structure to hold a range for range lists.
+class RangeSpan {
+public:
+  RangeSpan(MCSymbol *S, MCSymbol *E) : Start(S), End(E) {}
+  const MCSymbol *getStart() const { return Start; }
+  const MCSymbol *getEnd() const { return End; }
+  void setEnd(const MCSymbol *E) { End = E; }
+
+private:
+  const MCSymbol *Start, *End;
+};
+
+class RangeSpanList {
+private:
+  // Index for locating within the debug_range section this particular span.
+  MCSymbol *RangeSym;
+  const MCSymbol **CUBaseAddress;
+  // List of ranges.
+  SmallVector<RangeSpan, 2> Ranges;
+
+public:
+  RangeSpanList(MCSymbol *Sym, const MCSymbol *&CUBaseAddress,
+                SmallVector<RangeSpan, 2> Ranges)
+      : RangeSym(Sym), CUBaseAddress(&CUBaseAddress),
+        Ranges(std::move(Ranges)) {}
+  MCSymbol *getSym() const { return RangeSym; }
+  const MCSymbol *&getBaseAddress() const { return *CUBaseAddress; }
+  const SmallVectorImpl<RangeSpan> &getRanges() const { return Ranges; }
+  void addRange(RangeSpan Range) { Ranges.push_back(Range); }
+};
+
 class DwarfFile {
   // Target of Dwarf emission, used for sizing of abbreviations.
   AsmPrinter *Asm;
@@ -45,6 +76,10 @@ class DwarfFile {
   SmallVector<std::unique_ptr<DwarfCompileUnit>, 1> CUs;
 
   DwarfStringPool StrPool;
+
+  // List of range lists for a given compile unit, separate from the ranges for
+  // the CU itself.
+  SmallVector<RangeSpanList, 1> CURangeLists;
 
   /// DWARF v5: The symbol that designates the start of the contribution to
   /// the string offsets table. The contribution is shared by all units.
@@ -82,6 +117,14 @@ public:
 
   const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
     return CUs;
+  }
+
+  std::pair<uint32_t, RangeSpanList *> addRange(const MCSymbol *&CUBaseAddress,
+                                                SmallVector<RangeSpan, 2> R);
+
+  /// getRangeLists - Get the vector of range lists.
+  const SmallVectorImpl<RangeSpanList> &getRangeLists() const {
+    return CURangeLists;
   }
 
   /// Compute the size and offset of a DIE given an incoming Offset.

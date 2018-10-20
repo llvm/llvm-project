@@ -35,33 +35,6 @@ class ConstantFP;
 class DbgVariable;
 class DwarfCompileUnit;
 
-// Data structure to hold a range for range lists.
-class RangeSpan {
-public:
-  RangeSpan(MCSymbol *S, MCSymbol *E) : Start(S), End(E) {}
-  const MCSymbol *getStart() const { return Start; }
-  const MCSymbol *getEnd() const { return End; }
-  void setEnd(const MCSymbol *E) { End = E; }
-
-private:
-  const MCSymbol *Start, *End;
-};
-
-class RangeSpanList {
-private:
-  // Index for locating within the debug_range section this particular span.
-  MCSymbol *RangeSym;
-  // List of ranges.
-  SmallVector<RangeSpan, 2> Ranges;
-
-public:
-  RangeSpanList(MCSymbol *Sym, SmallVector<RangeSpan, 2> Ranges)
-      : RangeSym(Sym), Ranges(std::move(Ranges)) {}
-  MCSymbol *getSym() const { return RangeSym; }
-  const SmallVectorImpl<RangeSpan> &getRanges() const { return Ranges; }
-  void addRange(RangeSpan Range) { Ranges.push_back(Range); }
-};
-
 //===----------------------------------------------------------------------===//
 /// This dwarf writer support class manages information associated with a
 /// source file.
