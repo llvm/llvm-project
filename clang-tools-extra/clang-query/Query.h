@@ -83,11 +83,14 @@ struct QuitQuery : Query {
 
 /// Query for "match MATCHER".
 struct MatchQuery : Query {
-  MatchQuery(const ast_matchers::dynamic::DynTypedMatcher &Matcher)
-      : Query(QK_Match), Matcher(Matcher) {}
+  MatchQuery(StringRef Source,
+             const ast_matchers::dynamic::DynTypedMatcher &Matcher)
+      : Query(QK_Match), Matcher(Matcher), Source(Source) {}
   bool run(llvm::raw_ostream &OS, QuerySession &QS) const override;
 
   ast_matchers::dynamic::DynTypedMatcher Matcher;
+
+  StringRef Source;
 
   static bool classof(const Query *Q) { return Q->Kind == QK_Match; }
 };

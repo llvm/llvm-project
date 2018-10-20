@@ -41,6 +41,8 @@ bool HelpQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
         "as part of other expressions.\n"
         "  set bind-root (true|false)        "
         "Set whether to bind the root matcher to \"root\".\n"
+        "  set print-matcher (true|false)    "
+        "Set whether to print the current matcher,\n"
         "  set output (diag|print|dump)      "
         "Set whether to print bindings as diagnostics,\n"
         "                                    "
@@ -85,6 +87,12 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
       return false;
     }
     Finder.matchAST(AST->getASTContext());
+
+    if (QS.PrintMatcher) {
+      std::string prefixText = "Matcher: ";
+      OS << "\n  " << prefixText << Source << "\n";
+      OS << "  " << std::string(prefixText.size() + Source.size(), '=') << '\n';
+    }
 
     for (auto MI = Matches.begin(), ME = Matches.end(); MI != ME; ++MI) {
       OS << "\nMatch #" << ++MatchCount << ":\n\n";
