@@ -31,9 +31,9 @@
 #include <algorithm>
 #include <cmath>
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
-using namespace llvm;
 static bool isReserved(StringRef Name) {
   // FIXME: Should we exclude _Bool and others recognized by the standard?
   return Name.size() >= 2 && Name[0] == '_' &&
@@ -308,7 +308,7 @@ void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
   NeedsFixIts = !SemaCCResult.FixIts.empty();
 }
 
-static std::pair<float, unsigned> uriProximity(llvm::StringRef SymbolURI,
+static std::pair<float, unsigned> uriProximity(StringRef SymbolURI,
                                                URIDistance *D) {
   if (!D || SymbolURI.empty())
     return {0.f, 0u};
@@ -318,7 +318,7 @@ static std::pair<float, unsigned> uriProximity(llvm::StringRef SymbolURI,
 }
 
 static float scopeBoost(ScopeDistance &Distance,
-                        llvm::Optional<llvm::StringRef> SymbolScope) {
+                        Optional<StringRef> SymbolScope) {
   if (!SymbolScope)
     return 1;
   auto D = Distance.distance(*SymbolScope);
@@ -429,20 +429,19 @@ static uint32_t encodeFloat(float F) {
   return U + TopBit; // Positive floats map onto the high half of integers.
 }
 
-std::string sortText(float Score, llvm::StringRef Name) {
+std::string sortText(float Score, StringRef Name) {
   // We convert -Score to an integer, and hex-encode for readability.
   // Example: [0.5, "foo"] -> "41000000foo"
   std::string S;
-  llvm::raw_string_ostream OS(S);
-  write_hex(OS, encodeFloat(-Score), llvm::HexPrintStyle::Lower,
+  raw_string_ostream OS(S);
+  write_hex(OS, encodeFloat(-Score), HexPrintStyle::Lower,
             /*Width=*/2 * sizeof(Score));
   OS << Name;
   OS.flush();
   return S;
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              const SignatureQualitySignals &S) {
+raw_ostream &operator<<(raw_ostream &OS, const SignatureQualitySignals &S) {
   OS << formatv("=== Signature Quality:\n");
   OS << formatv("\tNumber of parameters: {0}\n", S.NumberOfParameters);
   OS << formatv("\tNumber of optional parameters: {0}\n",

@@ -12,6 +12,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 
@@ -27,18 +28,17 @@ MATCHER_P(Scheme, S, "") { return arg.scheme() == S; }
 MATCHER_P(Authority, A, "") { return arg.authority() == A; }
 MATCHER_P(Body, B, "") { return arg.body() == B; }
 
-std::string createOrDie(llvm::StringRef AbsolutePath,
-                        llvm::StringRef Scheme = "file") {
+std::string createOrDie(StringRef AbsolutePath, StringRef Scheme = "file") {
   auto Uri = URI::create(AbsolutePath, Scheme);
   if (!Uri)
-    llvm_unreachable(llvm::toString(Uri.takeError()).c_str());
+    llvm_unreachable(toString(Uri.takeError()).c_str());
   return Uri->toString();
 }
 
-URI parseOrDie(llvm::StringRef Uri) {
+URI parseOrDie(StringRef Uri) {
   auto U = URI::parse(Uri);
   if (!U)
-    llvm_unreachable(llvm::toString(U.takeError()).c_str());
+    llvm_unreachable(toString(U.takeError()).c_str());
   return *U;
 }
 
@@ -60,10 +60,10 @@ TEST(PercentEncodingTest, Decode) {
   EXPECT_EQ(parseOrDie("x:a:b%3bc").body(), "a:b;c");
 }
 
-std::string resolveOrDie(const URI &U, llvm::StringRef HintPath = "") {
+std::string resolveOrDie(const URI &U, StringRef HintPath = "") {
   auto Path = URI::resolve(U, HintPath);
   if (!Path)
-    llvm_unreachable(llvm::toString(Path.takeError()).c_str());
+    llvm_unreachable(toString(Path.takeError()).c_str());
   return *Path;
 }
 
@@ -77,9 +77,9 @@ TEST(URITest, Create) {
 }
 
 TEST(URITest, FailedCreate) {
-  auto Fail = [](llvm::Expected<URI> U) {
+  auto Fail = [](Expected<URI> U) {
     if (!U) {
-      llvm::consumeError(U.takeError());
+      consumeError(U.takeError());
       return true;
     }
     return false;
@@ -120,10 +120,10 @@ TEST(URITest, Parse) {
 }
 
 TEST(URITest, ParseFailed) {
-  auto FailedParse = [](llvm::StringRef U) {
+  auto FailedParse = [](StringRef U) {
     auto URI = URI::parse(U);
     if (!URI) {
-      llvm::consumeError(URI.takeError());
+      consumeError(URI.takeError());
       return true;
     }
     return false;
@@ -160,10 +160,10 @@ TEST(URITest, Platform) {
 }
 
 TEST(URITest, ResolveFailed) {
-  auto FailedResolve = [](llvm::StringRef Uri) {
+  auto FailedResolve = [](StringRef Uri) {
     auto Path = URI::resolve(parseOrDie(Uri));
     if (!Path) {
-      llvm::consumeError(Path.takeError());
+      consumeError(Path.takeError());
       return true;
     }
     return false;

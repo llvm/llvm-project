@@ -17,6 +17,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "llvm/Support/Path.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -29,10 +30,9 @@ public:
   // Record existing #includes - both written and resolved paths. Only #includes
   // in the main file are collected.
   void InclusionDirective(SourceLocation HashLoc, const Token & /*IncludeTok*/,
-                          llvm::StringRef FileName, bool IsAngled,
+                          StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange, const FileEntry *File,
-                          llvm::StringRef /*SearchPath*/,
-                          llvm::StringRef /*RelativePath*/,
+                          StringRef /*SearchPath*/, StringRef /*RelativePath*/,
                           const Module * /*Imported*/,
                           SrcMgr::CharacteristicKind /*FileType*/) override {
     if (SM.isInMainFile(HashLoc))
@@ -61,13 +61,13 @@ private:
 
 } // namespace
 
-bool isLiteralInclude(llvm::StringRef Include) {
+bool isLiteralInclude(StringRef Include) {
   return Include.startswith("<") || Include.startswith("\"");
 }
 
 bool HeaderFile::valid() const {
   return (Verbatim && isLiteralInclude(File)) ||
-         (!Verbatim && llvm::sys::path::is_absolute(File));
+         (!Verbatim && sys::path::is_absolute(File));
 }
 
 std::unique_ptr<PPCallbacks>
@@ -76,9 +76,9 @@ collectIncludeStructureCallback(const SourceManager &SM,
   return llvm::make_unique<RecordHeaders>(SM, Out);
 }
 
-void IncludeStructure::recordInclude(llvm::StringRef IncludingName,
-                                     llvm::StringRef IncludedName,
-                                     llvm::StringRef IncludedRealName) {
+void IncludeStructure::recordInclude(StringRef IncludingName,
+                                     StringRef IncludedName,
+                                     StringRef IncludedRealName) {
   auto Child = fileIndex(IncludedName);
   if (!IncludedRealName.empty() && RealPathNames[Child].empty())
     RealPathNames[Child] = IncludedRealName;
@@ -86,20 +86,19 @@ void IncludeStructure::recordInclude(llvm::StringRef IncludingName,
   IncludeChildren[Parent].push_back(Child);
 }
 
-unsigned IncludeStructure::fileIndex(llvm::StringRef Name) {
+unsigned IncludeStructure::fileIndex(StringRef Name) {
   auto R = NameToIndex.try_emplace(Name, RealPathNames.size());
   if (R.second)
     RealPathNames.emplace_back();
   return R.first->getValue();
 }
 
-llvm::StringMap<unsigned>
-IncludeStructure::includeDepth(llvm::StringRef Root) const {
+StringMap<unsigned> IncludeStructure::includeDepth(StringRef Root) const {
   // Include depth 0 is the main file only.
-  llvm::StringMap<unsigned> Result;
+  StringMap<unsigned> Result;
   Result[Root] = 0;
   std::vector<unsigned> CurrentLevel;
-  llvm::DenseSet<unsigned> Seen;
+  DenseSet<unsigned> Seen;
   auto It = NameToIndex.find(Root);
   if (It != NameToIndex.end()) {
     CurrentLevel.push_back(It->second);
@@ -139,7 +138,7 @@ bool IncludeInserter::shouldInsertInclude(
   assert(DeclaringHeader.valid() && InsertedHeader.valid());
   if (FileName == DeclaringHeader.File || FileName == InsertedHeader.File)
     return false;
-  auto Included = [&](llvm::StringRef Header) {
+  auto Included = [&](StringRef Header) {
     return IncludedHeaders.find(Header) != IncludedHeaders.end();
   };
   return !Included(DeclaringHeader.File) && !Included(InsertedHeader.File);

@@ -27,9 +27,9 @@
 #include <memory>
 #include <string>
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
-
 namespace {
 
 using testing::_;
@@ -222,7 +222,7 @@ public:
 class SymbolCollectorTest : public ::testing::Test {
 public:
   SymbolCollectorTest()
-      : InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
+      : InMemoryFileSystem(new vfs::InMemoryFileSystem),
         TestHeaderName(testPath("symbol.h")),
         TestFileName(testPath("symbol.cc")) {
     TestHeaderURI = URI::createFile(TestHeaderName).toString();
@@ -231,7 +231,7 @@ public:
 
   bool runSymbolCollector(StringRef HeaderCode, StringRef MainCode,
                           const std::vector<std::string> &ExtraArgs = {}) {
-    llvm::IntrusiveRefCntPtr<FileManager> Files(
+    IntrusiveRefCntPtr<FileManager> Files(
         new FileManager(FileSystemOptions(), InMemoryFileSystem));
 
     auto Factory = llvm::make_unique<SymbolIndexActionFactory>(
@@ -251,9 +251,9 @@ public:
         std::make_shared<PCHContainerOperations>());
 
     InMemoryFileSystem->addFile(TestHeaderName, 0,
-                                llvm::MemoryBuffer::getMemBuffer(HeaderCode));
+                                MemoryBuffer::getMemBuffer(HeaderCode));
     InMemoryFileSystem->addFile(TestFileName, 0,
-                                llvm::MemoryBuffer::getMemBuffer(MainCode));
+                                MemoryBuffer::getMemBuffer(MainCode));
     Invocation.run();
     Symbols = Factory->Collector->takeSymbols();
     Refs = Factory->Collector->takeRefs();
@@ -261,7 +261,7 @@ public:
   }
 
 protected:
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
+  IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem;
   std::string TestHeaderName;
   std::string TestHeaderURI;
   std::string TestFileName;
@@ -848,7 +848,7 @@ TEST_F(SymbolCollectorTest, SkipIncFileWhenCanonicalizeHeaders) {
   auto IncFile = testPath("test.inc");
   auto IncURI = URI::createFile(IncFile).toString();
   InMemoryFileSystem->addFile(IncFile, 0,
-                              llvm::MemoryBuffer::getMemBuffer("class X {};"));
+                              MemoryBuffer::getMemBuffer("class X {};"));
   runSymbolCollector("#include \"test.inc\"\nclass Y {};", /*Main=*/"",
                      /*ExtraArgs=*/{"-I", testRoot()});
   EXPECT_THAT(Symbols,
@@ -867,7 +867,7 @@ TEST_F(SymbolCollectorTest, MainFileIsHeaderWhenSkipIncFile) {
   auto IncFile = testPath("test.inc");
   auto IncURI = URI::createFile(IncFile).toString();
   InMemoryFileSystem->addFile(IncFile, 0,
-                              llvm::MemoryBuffer::getMemBuffer("class X {};"));
+                              MemoryBuffer::getMemBuffer("class X {};"));
   runSymbolCollector("", /*Main=*/"#include \"test.inc\"",
                      /*ExtraArgs=*/{"-I", testRoot()});
   EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(QName("X"), DeclURI(IncURI),
@@ -883,7 +883,7 @@ TEST_F(SymbolCollectorTest, MainFileIsHeaderWithoutExtensionWhenSkipIncFile) {
   auto IncFile = testPath("test.inc");
   auto IncURI = URI::createFile(IncFile).toString();
   InMemoryFileSystem->addFile(IncFile, 0,
-                              llvm::MemoryBuffer::getMemBuffer("class X {};"));
+                              MemoryBuffer::getMemBuffer("class X {};"));
   runSymbolCollector("", /*Main=*/"#include \"test.inc\"",
                      /*ExtraArgs=*/{"-I", testRoot()});
   EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(QName("X"), DeclURI(IncURI),
@@ -897,7 +897,7 @@ TEST_F(SymbolCollectorTest, FallbackToIncFileWhenIncludingFileIsCC) {
   auto IncFile = testPath("test.inc");
   auto IncURI = URI::createFile(IncFile).toString();
   InMemoryFileSystem->addFile(IncFile, 0,
-                              llvm::MemoryBuffer::getMemBuffer("class X {};"));
+                              MemoryBuffer::getMemBuffer("class X {};"));
   runSymbolCollector("", /*Main=*/"#include \"test.inc\"",
                      /*ExtraArgs=*/{"-I", testRoot()});
   EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(QName("X"), DeclURI(IncURI),
