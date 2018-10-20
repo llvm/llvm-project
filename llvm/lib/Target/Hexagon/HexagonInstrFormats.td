@@ -194,8 +194,6 @@ class HInst<dag outs, dag ins, string asmstr, InstrItinClass itin, IType type> :
 //                         Instruction Classes Definitions +
 //===----------------------------------------------------------------------===//
 
-// LD Instruction Class in V2/V3/V4.
-// Definition of the instruction class NOT CHANGED.
 let mayLoad = 1 in
 class LDInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
              string cstr = "", InstrItinClass itin = LD_tc_ld_SLOT01>
@@ -205,9 +203,6 @@ class CONSTLDInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
              string cstr = "", InstrItinClass itin = LD_tc_ld_SLOT01>
   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeLD>, OpcodeHexagon;
 
-// ST Instruction Class in V2/V3 can take SLOT0 only.
-// ST Instruction Class in V4    can take SLOT0 & SLOT1.
-// Definition of the instruction class CHANGED from V2/V3 to V4.
 let mayStore = 1 in
 class STInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
              string cstr = "", InstrItinClass itin = ST_tc_st_SLOT01>
@@ -235,15 +230,6 @@ class PseudoM<dag outs, dag ins, string asmstr, list<dag> pattern = [],
 //                         Instruction Classes Definitions -
 //===----------------------------------------------------------------------===//
 
-//===----------------------------------------------------------------------===//
-// V4 Instruction Format Definitions +
-//===----------------------------------------------------------------------===//
-
-include "HexagonInstrFormatsV4.td"
-
-//===----------------------------------------------------------------------===//
-// V60+ Instruction Format Definitions +
-//===----------------------------------------------------------------------===//
-
+include "HexagonInstrFormatsV5.td"
 include "HexagonInstrFormatsV60.td"
 include "HexagonInstrFormatsV65.td"

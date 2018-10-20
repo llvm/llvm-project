@@ -991,7 +991,7 @@ def A2_roundsat : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = round($Rss32):sat",
-tc_c2f7d806, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_c2f7d806, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001000110;
 let hasNewValue = 1;
@@ -3314,7 +3314,7 @@ def A5_vaddhubs : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rd32 = vaddhub($Rss32,$Rtt32):sat",
-tc_2b6f77c6, TypeS_3op>, Enc_d2216a, Requires<[HasV5]> {
+tc_2b6f77c6, TypeS_3op>, Enc_d2216a {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001010;
@@ -4059,7 +4059,7 @@ def F2_conv_d2df : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = convert_d2df($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000011;
 let Inst{31-21} = 0b10000000111;
 let isFP = 1;
@@ -4069,7 +4069,7 @@ def F2_conv_d2sf : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = convert_d2sf($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001000010;
 let hasNewValue = 1;
@@ -4081,7 +4081,7 @@ def F2_conv_df2d : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = convert_df2d($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10000000111;
 let isFP = 1;
@@ -4091,7 +4091,7 @@ def F2_conv_df2d_chop : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = convert_df2d($Rss32):chop",
-tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000110;
 let Inst{31-21} = 0b10000000111;
 let isFP = 1;
@@ -4101,7 +4101,7 @@ def F2_conv_df2sf : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = convert_df2sf($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001000000;
 let hasNewValue = 1;
@@ -4113,7 +4113,7 @@ def F2_conv_df2ud : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = convert_df2ud($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10000000111;
 let isFP = 1;
@@ -4123,7 +4123,7 @@ def F2_conv_df2ud_chop : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = convert_df2ud($Rss32):chop",
-tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000111;
 let Inst{31-21} = 0b10000000111;
 let isFP = 1;
@@ -4133,7 +4133,7 @@ def F2_conv_df2uw : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = convert_df2uw($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001000011;
 let hasNewValue = 1;
@@ -4145,7 +4145,7 @@ def F2_conv_df2uw_chop : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = convert_df2uw($Rss32):chop",
-tc_f3eaa14b, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001000101;
 let hasNewValue = 1;
@@ -4157,7 +4157,7 @@ def F2_conv_df2w : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = convert_df2w($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001000100;
 let hasNewValue = 1;
@@ -4169,7 +4169,7 @@ def F2_conv_df2w_chop : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = convert_df2w($Rss32):chop",
-tc_f3eaa14b, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001000111;
 let hasNewValue = 1;
@@ -4181,7 +4181,7 @@ def F2_conv_sf2d : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = convert_sf2d($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_3a3d62, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000100;
 let Inst{31-21} = 0b10000100100;
 let isFP = 1;
@@ -4191,7 +4191,7 @@ def F2_conv_sf2d_chop : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = convert_sf2d($Rs32):chop",
-tc_f3eaa14b, TypeS_2op>, Enc_3a3d62, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000110;
 let Inst{31-21} = 0b10000100100;
 let isFP = 1;
@@ -4201,7 +4201,7 @@ def F2_conv_sf2df : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = convert_sf2df($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_3a3d62, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10000100100;
 let isFP = 1;
@@ -4211,7 +4211,7 @@ def F2_conv_sf2ud : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = convert_sf2ud($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_3a3d62, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000011;
 let Inst{31-21} = 0b10000100100;
 let isFP = 1;
@@ -4221,7 +4221,7 @@ def F2_conv_sf2ud_chop : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = convert_sf2ud($Rs32):chop",
-tc_f3eaa14b, TypeS_2op>, Enc_3a3d62, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000101;
 let Inst{31-21} = 0b10000100100;
 let isFP = 1;
@@ -4231,7 +4231,7 @@ def F2_conv_sf2uw : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = convert_sf2uw($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_5e2823, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10001011011;
 let hasNewValue = 1;
@@ -4243,7 +4243,7 @@ def F2_conv_sf2uw_chop : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = convert_sf2uw($Rs32):chop",
-tc_f3eaa14b, TypeS_2op>, Enc_5e2823, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001011011;
 let hasNewValue = 1;
@@ -4255,7 +4255,7 @@ def F2_conv_sf2w : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = convert_sf2w($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_5e2823, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10001011100;
 let hasNewValue = 1;
@@ -4267,7 +4267,7 @@ def F2_conv_sf2w_chop : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = convert_sf2w($Rs32):chop",
-tc_f3eaa14b, TypeS_2op>, Enc_5e2823, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001011100;
 let hasNewValue = 1;
@@ -4279,7 +4279,7 @@ def F2_conv_ud2df : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = convert_ud2df($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000010;
 let Inst{31-21} = 0b10000000111;
 let isFP = 1;
@@ -4289,7 +4289,7 @@ def F2_conv_ud2sf : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = convert_ud2sf($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001000001;
 let hasNewValue = 1;
@@ -4301,7 +4301,7 @@ def F2_conv_uw2df : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = convert_uw2df($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_3a3d62, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10000100100;
 let isFP = 1;
@@ -4311,7 +4311,7 @@ def F2_conv_uw2sf : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = convert_uw2sf($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_5e2823, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10001011001;
 let hasNewValue = 1;
@@ -4323,7 +4323,7 @@ def F2_conv_w2df : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = convert_w2df($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_3a3d62, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000010;
 let Inst{31-21} = 0b10000100100;
 let isFP = 1;
@@ -4333,7 +4333,7 @@ def F2_conv_w2sf : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = convert_w2sf($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_5e2823, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10001011010;
 let hasNewValue = 1;
@@ -4345,7 +4345,7 @@ def F2_dfclass : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, u5_0Imm:$Ii),
 "$Pd4 = dfclass($Rss32,#$Ii)",
-tc_7a830544, TypeALU64>, Enc_1f19b5, Requires<[HasV5]> {
+tc_7a830544, TypeALU64>, Enc_1f19b5 {
 let Inst{4-2} = 0b100;
 let Inst{13-10} = 0b0000;
 let Inst{31-21} = 0b11011100100;
@@ -4356,7 +4356,7 @@ def F2_dfcmpeq : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = dfcmp.eq($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7, Requires<[HasV5]> {
+tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010111;
@@ -4368,7 +4368,7 @@ def F2_dfcmpge : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = dfcmp.ge($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7, Requires<[HasV5]> {
+tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b010000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010111;
@@ -4380,7 +4380,7 @@ def F2_dfcmpgt : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = dfcmp.gt($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7, Requires<[HasV5]> {
+tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b001000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010111;
@@ -4392,7 +4392,7 @@ def F2_dfcmpuo : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = dfcmp.uo($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7, Requires<[HasV5]> {
+tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b011000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010111;
@@ -4404,7 +4404,7 @@ def F2_dfimm_n : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins u10_0Imm:$Ii),
 "$Rdd32 = dfmake(#$Ii):neg",
-tc_234a11a5, TypeALU64>, Enc_e6c957, Requires<[HasV5]> {
+tc_234a11a5, TypeALU64>, Enc_e6c957 {
 let Inst{20-16} = 0b00000;
 let Inst{31-22} = 0b1101100101;
 let prefersSlot3 = 1;
@@ -4413,7 +4413,7 @@ def F2_dfimm_p : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins u10_0Imm:$Ii),
 "$Rdd32 = dfmake(#$Ii):pos",
-tc_234a11a5, TypeALU64>, Enc_e6c957, Requires<[HasV5]> {
+tc_234a11a5, TypeALU64>, Enc_e6c957 {
 let Inst{20-16} = 0b00000;
 let Inst{31-22} = 0b1101100100;
 let prefersSlot3 = 1;
@@ -4422,7 +4422,7 @@ def F2_sfadd : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = sfadd($Rs32,$Rt32)",
-tc_6792d5ff, TypeM>, Enc_5ab2be, Requires<[HasV5]> {
+tc_6792d5ff, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101011000;
@@ -4436,7 +4436,7 @@ def F2_sfclass : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Pd4 = sfclass($Rs32,#$Ii)",
-tc_7a830544, TypeS_2op>, Enc_83ee64, Requires<[HasV5]> {
+tc_7a830544, TypeS_2op>, Enc_83ee64 {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10000101111;
@@ -4447,7 +4447,7 @@ def F2_sfcmpeq : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = sfcmp.eq($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e, Requires<[HasV5]> {
+tc_1e856f58, TypeS_3op>, Enc_c2b48e {
 let Inst{7-2} = 0b011000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111111;
@@ -4459,7 +4459,7 @@ def F2_sfcmpge : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = sfcmp.ge($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e, Requires<[HasV5]> {
+tc_1e856f58, TypeS_3op>, Enc_c2b48e {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111111;
@@ -4471,7 +4471,7 @@ def F2_sfcmpgt : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = sfcmp.gt($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e, Requires<[HasV5]> {
+tc_1e856f58, TypeS_3op>, Enc_c2b48e {
 let Inst{7-2} = 0b100000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111111;
@@ -4483,7 +4483,7 @@ def F2_sfcmpuo : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = sfcmp.uo($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e, Requires<[HasV5]> {
+tc_1e856f58, TypeS_3op>, Enc_c2b48e {
 let Inst{7-2} = 0b001000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111111;
@@ -4495,7 +4495,7 @@ def F2_sffixupd : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = sffixupd($Rs32,$Rt32)",
-tc_6792d5ff, TypeM>, Enc_5ab2be, Requires<[HasV5]> {
+tc_6792d5ff, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101011110;
@@ -4507,7 +4507,7 @@ def F2_sffixupn : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = sffixupn($Rs32,$Rt32)",
-tc_6792d5ff, TypeM>, Enc_5ab2be, Requires<[HasV5]> {
+tc_6792d5ff, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101011110;
@@ -4519,7 +4519,7 @@ def F2_sffixupr : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = sffixupr($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_5e2823, Requires<[HasV5]> {
+tc_f3eaa14b, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10001011101;
 let hasNewValue = 1;
@@ -4530,7 +4530,7 @@ def F2_sffma : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += sfmpy($Rs32,$Rt32)",
-tc_d580173f, TypeM>, Enc_2ae154, Requires<[HasV5]> {
+tc_d580173f, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111000;
@@ -4544,7 +4544,7 @@ def F2_sffma_lib : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += sfmpy($Rs32,$Rt32):lib",
-tc_d580173f, TypeM>, Enc_2ae154, Requires<[HasV5]> {
+tc_d580173f, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111000;
@@ -4558,7 +4558,7 @@ def F2_sffma_sc : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32, PredRegs:$Pu4),
 "$Rx32 += sfmpy($Rs32,$Rt32,$Pu4):scale",
-tc_038a1342, TypeM>, Enc_437f33, Requires<[HasV5]> {
+tc_038a1342, TypeM>, Enc_437f33 {
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111011;
@@ -4572,7 +4572,7 @@ def F2_sffms : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= sfmpy($Rs32,$Rt32)",
-tc_d580173f, TypeM>, Enc_2ae154, Requires<[HasV5]> {
+tc_d580173f, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111000;
@@ -4586,7 +4586,7 @@ def F2_sffms_lib : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= sfmpy($Rs32,$Rt32):lib",
-tc_d580173f, TypeM>, Enc_2ae154, Requires<[HasV5]> {
+tc_d580173f, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111000;
@@ -4600,7 +4600,7 @@ def F2_sfimm_n : HInst<
 (outs IntRegs:$Rd32),
 (ins u10_0Imm:$Ii),
 "$Rd32 = sfmake(#$Ii):neg",
-tc_234a11a5, TypeALU64>, Enc_6c9440, Requires<[HasV5]> {
+tc_234a11a5, TypeALU64>, Enc_6c9440 {
 let Inst{20-16} = 0b00000;
 let Inst{31-22} = 0b1101011001;
 let hasNewValue = 1;
@@ -4611,7 +4611,7 @@ def F2_sfimm_p : HInst<
 (outs IntRegs:$Rd32),
 (ins u10_0Imm:$Ii),
 "$Rd32 = sfmake(#$Ii):pos",
-tc_234a11a5, TypeALU64>, Enc_6c9440, Requires<[HasV5]> {
+tc_234a11a5, TypeALU64>, Enc_6c9440 {
 let Inst{20-16} = 0b00000;
 let Inst{31-22} = 0b1101011000;
 let hasNewValue = 1;
@@ -4622,7 +4622,7 @@ def F2_sfinvsqrta : HInst<
 (outs IntRegs:$Rd32, PredRegs:$Pe4),
 (ins IntRegs:$Rs32),
 "$Rd32,$Pe4 = sfinvsqrta($Rs32)",
-tc_4d99bca9, TypeS_2op>, Enc_890909, Requires<[HasV5]> {
+tc_4d99bca9, TypeS_2op>, Enc_890909 {
 let Inst{13-7} = 0b0000000;
 let Inst{31-21} = 0b10001011111;
 let hasNewValue = 1;
@@ -4634,7 +4634,7 @@ def F2_sfmax : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = sfmax($Rs32,$Rt32)",
-tc_976ddc4f, TypeM>, Enc_5ab2be, Requires<[HasV5]> {
+tc_976ddc4f, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101011100;
@@ -4648,7 +4648,7 @@ def F2_sfmin : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = sfmin($Rs32,$Rt32)",
-tc_976ddc4f, TypeM>, Enc_5ab2be, Requires<[HasV5]> {
+tc_976ddc4f, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101011100;
@@ -4662,7 +4662,7 @@ def F2_sfmpy : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = sfmpy($Rs32,$Rt32)",
-tc_6792d5ff, TypeM>, Enc_5ab2be, Requires<[HasV5]> {
+tc_6792d5ff, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101011010;
@@ -4676,7 +4676,7 @@ def F2_sfrecipa : HInst<
 (outs IntRegs:$Rd32, PredRegs:$Pe4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32,$Pe4 = sfrecipa($Rs32,$Rt32)",
-tc_9c00ce8d, TypeM>, Enc_a94f3b, Requires<[HasV5]> {
+tc_9c00ce8d, TypeM>, Enc_a94f3b {
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101011111;
@@ -4689,7 +4689,7 @@ def F2_sfsub : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = sfsub($Rs32,$Rt32)",
-tc_6792d5ff, TypeM>, Enc_5ab2be, Requires<[HasV5]> {
+tc_6792d5ff, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101011000;
@@ -16981,7 +16981,7 @@ def M4_cmpyi_whc : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rd32 = cmpyiwh($Rss32,$Rt32*):<<1:rnd:sat",
-tc_8fd5f294, TypeS_3op>, Enc_3d5b28, Requires<[HasV5]> {
+tc_8fd5f294, TypeS_3op>, Enc_3d5b28 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000101000;
@@ -17007,7 +17007,7 @@ def M4_cmpyr_whc : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rd32 = cmpyrwh($Rss32,$Rt32*):<<1:rnd:sat",
-tc_8fd5f294, TypeS_3op>, Enc_3d5b28, Requires<[HasV5]> {
+tc_8fd5f294, TypeS_3op>, Enc_3d5b28 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000101000;
@@ -17360,7 +17360,7 @@ def M5_vdmacbsu : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vdmpybsu($Rss32,$Rtt32):sat",
-tc_e913dc32, TypeM>, Enc_88c16c, Requires<[HasV5]> {
+tc_e913dc32, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010001;
@@ -17372,7 +17372,7 @@ def M5_vdmpybsu : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vdmpybsu($Rss32,$Rtt32):sat",
-tc_8fd5f294, TypeM>, Enc_a56825, Requires<[HasV5]> {
+tc_8fd5f294, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000101;
@@ -18207,7 +18207,7 @@ def S2_asr_i_p_rnd : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rdd32 = asr($Rss32,#$Ii):rnd",
-tc_2b6f77c6, TypeS_2op>, Enc_5eac98, Requires<[HasV5]> {
+tc_2b6f77c6, TypeS_2op>, Enc_5eac98 {
 let Inst{7-5} = 0b111;
 let Inst{31-21} = 0b10000000110;
 let prefersSlot3 = 1;
@@ -18216,7 +18216,7 @@ def S2_asr_i_p_rnd_goodsyntax : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rdd32 = asrrnd($Rss32,#$Ii)",
-tc_2b6f77c6, TypeS_2op>, Requires<[HasV5]> {
+tc_2b6f77c6, TypeS_2op> {
 let isPseudo = 1;
 }
 def S2_asr_i_r : HInst<
@@ -25151,7 +25151,7 @@ def S5_asrhub_rnd_sat : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, u4_0Imm:$Ii),
 "$Rd32 = vasrhub($Rss32,#$Ii):raw",
-tc_2b6f77c6, TypeS_2op>, Enc_11a146, Requires<[HasV5]> {
+tc_2b6f77c6, TypeS_2op>, Enc_11a146 {
 let Inst{7-5} = 0b100;
 let Inst{13-12} = 0b00;
 let Inst{31-21} = 0b10001000011;
@@ -25164,7 +25164,7 @@ def S5_asrhub_rnd_sat_goodsyntax : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, u4_0Imm:$Ii),
 "$Rd32 = vasrhub($Rss32,#$Ii):rnd:sat",
-tc_2b6f77c6, TypeS_2op>, Requires<[HasV5]> {
+tc_2b6f77c6, TypeS_2op> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -25173,7 +25173,7 @@ def S5_asrhub_sat : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, u4_0Imm:$Ii),
 "$Rd32 = vasrhub($Rss32,#$Ii):sat",
-tc_2b6f77c6, TypeS_2op>, Enc_11a146, Requires<[HasV5]> {
+tc_2b6f77c6, TypeS_2op>, Enc_11a146 {
 let Inst{7-5} = 0b101;
 let Inst{13-12} = 0b00;
 let Inst{31-21} = 0b10001000011;
@@ -25186,7 +25186,7 @@ def S5_popcountp : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = popcount($Rss32)",
-tc_00afc57e, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_00afc57e, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000011;
 let Inst{31-21} = 0b10001000011;
 let hasNewValue = 1;
@@ -25197,7 +25197,7 @@ def S5_vasrhrnd : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u4_0Imm:$Ii),
 "$Rdd32 = vasrh($Rss32,#$Ii):raw",
-tc_2b6f77c6, TypeS_2op>, Enc_12b6e9, Requires<[HasV5]> {
+tc_2b6f77c6, TypeS_2op>, Enc_12b6e9 {
 let Inst{7-5} = 0b000;
 let Inst{13-12} = 0b00;
 let Inst{31-21} = 0b10000000001;
@@ -25207,7 +25207,7 @@ def S5_vasrhrnd_goodsyntax : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u4_0Imm:$Ii),
 "$Rdd32 = vasrh($Rss32,#$Ii):rnd",
-tc_2b6f77c6, TypeS_2op>, Requires<[HasV5]> {
+tc_2b6f77c6, TypeS_2op> {
 let isPseudo = 1;
 }
 def S6_allocframe_to_raw : HInst<
@@ -37007,7 +37007,7 @@ def Y5_l2fetch : HInst<
 (outs),
 (ins IntRegs:$Rs32, DoubleRegs:$Rtt32),
 "l2fetch($Rs32,$Rtt32)",
-tc_daa058fa, TypeST>, Enc_e6abcf, Requires<[HasV5]> {
+tc_daa058fa, TypeST>, Enc_e6abcf {
 let Inst{7-0} = 0b00000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10100110100;

@@ -269,9 +269,11 @@ static void dumpAddrSection(raw_ostream &OS, DWARFDataExtractor &AddrData,
 }
 
 // Dump the .debug_rnglists or .debug_rnglists.dwo section (DWARF v5).
-static void dumpRnglistsSection(raw_ostream &OS,
-                                DWARFDataExtractor &rnglistData,
-                                DIDumpOptions DumpOpts) {
+static void
+dumpRnglistsSection(raw_ostream &OS, DWARFDataExtractor &rnglistData,
+                    llvm::function_ref<Optional<SectionedAddress>(uint32_t)>
+                        LookupPooledAddress,
+                    DIDumpOptions DumpOpts) {
   uint32_t Offset = 0;
   while (rnglistData.isValidOffset(Offset)) {
     llvm::DWARFDebugRnglistTable Rnglists;
@@ -285,7 +287,7 @@ static void dumpRnglistsSection(raw_ostream &OS,
         break;
       Offset = TableOffset + Length;
     } else {
-      Rnglists.dump(OS, DumpOpts);
+      Rnglists.dump(OS, LookupPooledAddress, DumpOpts);
     }
   }
 }
@@ -495,18 +497,26 @@ void DWARFContext::dump(
     }
   }
 
+  auto LookupPooledAddress = [&](uint32_t Index) -> Optional<SectionedAddress> {
+    const auto &CUs = compile_units();
+    auto I = CUs.begin();
+    if (I == CUs.end())
+      return None;
+    return (*I)->getAddrOffsetSectionItem(Index);
+  };
+
   if (shouldDump(Explicit, ".debug_rnglists", DIDT_ID_DebugRnglists,
                  DObj->getRnglistsSection().Data)) {
     DWARFDataExtractor RnglistData(*DObj, DObj->getRnglistsSection(),
                                    isLittleEndian(), 0);
-    dumpRnglistsSection(OS, RnglistData, DumpOpts);
+    dumpRnglistsSection(OS, RnglistData, LookupPooledAddress, DumpOpts);
   }
 
   if (shouldDump(ExplicitDWO, ".debug_rnglists.dwo", DIDT_ID_DebugRnglists,
                  DObj->getRnglistsDWOSection().Data)) {
     DWARFDataExtractor RnglistData(*DObj, DObj->getRnglistsDWOSection(),
                                    isLittleEndian(), 0);
-    dumpRnglistsSection(OS, RnglistData, DumpOpts);
+    dumpRnglistsSection(OS, RnglistData, LookupPooledAddress, DumpOpts);
   }
 
   if (shouldDump(Explicit, ".debug_pubnames", DIDT_ID_DebugPubnames,

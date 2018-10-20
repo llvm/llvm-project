@@ -2898,7 +2898,13 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
               cannotBeOrderedLessThanZeroImpl(I->getOperand(1), TLI,
                                               SignBitOnly, Depth + 1));
 
+    case Intrinsic::maximum:
+      return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
+                                             Depth + 1) ||
+             cannotBeOrderedLessThanZeroImpl(I->getOperand(1), TLI, SignBitOnly,
+                                             Depth + 1);
     case Intrinsic::minnum:
+    case Intrinsic::minimum:
       return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
                                              Depth + 1) &&
              cannotBeOrderedLessThanZeroImpl(I->getOperand(1), TLI, SignBitOnly,

@@ -156,7 +156,10 @@ public:
   uint32_t getHeaderOffset() const { return Header.getHeaderOffset(); }
   uint8_t getAddrSize() const { return Header.getAddrSize(); }
 
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts = {}) const;
+  void dump(raw_ostream &OS,
+            llvm::function_ref<Optional<SectionedAddress>(uint32_t)>
+                LookupPooledAddress,
+            DIDumpOptions DumpOpts = {}) const;
 
   /// Return the contents of the offset entry designated by a given index.
   Optional<uint32_t> getOffsetEntry(uint32_t Index) const {
@@ -229,8 +232,11 @@ Error DWARFListType<ListEntryType>::extract(DWARFDataExtractor Data,
 }
 
 template <typename DWARFListType>
-void DWARFListTableBase<DWARFListType>::dump(raw_ostream &OS,
-                                             DIDumpOptions DumpOpts) const {
+void DWARFListTableBase<DWARFListType>::dump(
+    raw_ostream &OS,
+    llvm::function_ref<Optional<SectionedAddress>(uint32_t)>
+        LookupPooledAddress,
+    DIDumpOptions DumpOpts) const {
   Header.dump(OS, DumpOpts);
   OS << HeaderString << "\n";
 
@@ -249,7 +255,7 @@ void DWARFListTableBase<DWARFListType>::dump(raw_ostream &OS,
   for (const auto &List : ListMap)
     for (const auto &Entry : List.second.getEntries())
       Entry.dump(OS, getAddrSize(), MaxEncodingStringLength, CurrentBase,
-                 DumpOpts);
+                 DumpOpts, LookupPooledAddress);
 }
 
 template <typename DWARFListType>

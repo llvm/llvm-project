@@ -448,7 +448,7 @@ class raw_ostream;
     /// MI is not required to have an index.
     SlotIndex getIndexBefore(const MachineInstr &MI) const {
       const MachineBasicBlock *MBB = MI.getParent();
-      assert(MBB && "MI must be inserted inna basic block");
+      assert(MBB && "MI must be inserted in a basic block");
       MachineBasicBlock::const_iterator I = MI, B = MBB->begin();
       while (true) {
         if (I == B)
@@ -465,7 +465,7 @@ class raw_ostream;
     /// MI is not required to have an index.
     SlotIndex getIndexAfter(const MachineInstr &MI) const {
       const MachineBasicBlock *MBB = MI.getParent();
-      assert(MBB && "MI must be inserted inna basic block");
+      assert(MBB && "MI must be inserted in a basic block");
       MachineBasicBlock::const_iterator I = MI, E = MBB->end();
       while (true) {
         ++I;

@@ -634,8 +634,7 @@ bool HexagonMCInstrInfo::isOrderedDuplexPair(MCInstrInfo const &MCII,
       return false;
   }
 
-  if (STI.getCPU().equals_lower("hexagonv4") ||
-      STI.getCPU().equals_lower("hexagonv5") ||
+  if (STI.getCPU().equals_lower("hexagonv5") ||
       STI.getCPU().equals_lower("hexagonv55") ||
       STI.getCPU().equals_lower("hexagonv60")) {
     // If a store appears, it must be in slot 0 (MIa) 1st, and then slot 1 (MIb);
