@@ -230,7 +230,8 @@ void ExternalASTMerger::CompleteType(TagDecl *Tag) {
     if (!SourceTag->getDefinition())
       return false;
     Forward.MapImported(SourceTag, Tag);
-    Forward.ImportDefinition(SourceTag);
+    if (llvm::Error Err = Forward.ImportDefinition_New(SourceTag))
+      llvm::consumeError(std::move(Err));
     Tag->setCompleteDefinition(SourceTag->isCompleteDefinition());
     return true;
   });
@@ -249,7 +250,8 @@ void ExternalASTMerger::CompleteType(ObjCInterfaceDecl *Interface) {
         if (!SourceInterface->getDefinition())
           return false;
         Forward.MapImported(SourceInterface, Interface);
-        Forward.ImportDefinition(SourceInterface);
+        if (llvm::Error Err = Forward.ImportDefinition_New(SourceInterface))
+          llvm::consumeError(std::move(Err));
         return true;
       });
 }

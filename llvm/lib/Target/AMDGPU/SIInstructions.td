@@ -1327,9 +1327,19 @@ def : GCNPat <
   (S_XOR_B64 $src0, $src1)
 >;
 
+def : GCNPat <
+  (i1 (sub i1:$src0, i1:$src1)),
+  (S_XOR_B64 $src0, $src1)
+>;
+
 let AddedComplexity = 1 in {
 def : GCNPat <
   (i1 (add i1:$src0, (i1 -1))),
+  (S_NOT_B64 $src0)
+>;
+
+def : GCNPat <
+  (i1 (sub i1:$src0, (i1 -1))),
   (S_NOT_B64 $src0)
 >;
 }

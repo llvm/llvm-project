@@ -325,9 +325,10 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
       case dwarf::DW_UT_split_type: {
         Unit = TypeUnitVector.addUnit(llvm::make_unique<DWARFTypeUnit>(
             DCtx, S, Header, DCtx.getDebugAbbrev(), &DObj.getRangeSection(),
-            DObj.getStringSection(), DObj.getStringOffsetSection(),
-            &DObj.getAppleObjCSection(), DObj.getLineSection(),
-            DCtx.isLittleEndian(), false, TypeUnitVector));
+            &DObj.getLocSection(), DObj.getStringSection(),
+            DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
+            DObj.getLineSection(), DCtx.isLittleEndian(), false,
+            TypeUnitVector));
         break;
       }
       case dwarf::DW_UT_skeleton:
@@ -338,9 +339,10 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
       case 0: {
         Unit = CompileUnitVector.addUnit(llvm::make_unique<DWARFCompileUnit>(
             DCtx, S, Header, DCtx.getDebugAbbrev(), &DObj.getRangeSection(),
-            DObj.getStringSection(), DObj.getStringOffsetSection(),
-            &DObj.getAppleObjCSection(), DObj.getLineSection(),
-            DCtx.isLittleEndian(), false, CompileUnitVector));
+            &DObj.getLocSection(), DObj.getStringSection(),
+            DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
+            DObj.getLineSection(), DCtx.isLittleEndian(), false,
+            CompileUnitVector));
         break;
       }
       default: { llvm_unreachable("Invalid UnitType."); }

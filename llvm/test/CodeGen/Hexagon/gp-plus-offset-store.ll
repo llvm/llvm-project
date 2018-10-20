@@ -1,35 +1,38 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv4 < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 ; Check that we generate store instructions with global + offset
 
-%struct.struc = type { i8, i8, i16, i32 }
+%s.0 = type { i8, i8, i16, i32 }
 
-@foo = common global %struct.struc zeroinitializer, align 4
+@g0 = common global %s.0 zeroinitializer, align 4
 
-define void @storeByte(i32 %val1, i32 %val2, i8 zeroext %ival) nounwind {
-; CHECK: memb(##foo+1) = r{{[0-9]+}}
-entry:
-  %cmp = icmp sgt i32 %val1, %val2
-  br i1 %cmp, label %if.then, label %if.end
+; CHECK-LABEL: f0:
+; CHECK: memb(##g0+1) = r{{[0-9]+}}
+define void @f0(i32 %a0, i32 %a1, i8 zeroext %a2) #0 {
+b0:
+  %v0 = icmp sgt i32 %a0, %a1
+  br i1 %v0, label %b1, label %b2
 
-if.then:                                          ; preds = %entry
-  store i8 %ival, i8* getelementptr inbounds (%struct.struc, %struct.struc* @foo, i32 0, i32 1), align 1
-  br label %if.end
+b1:                                               ; preds = %b0
+  store i8 %a2, i8* getelementptr inbounds (%s.0, %s.0* @g0, i32 0, i32 1), align 1
+  br label %b2
 
-if.end:                                           ; preds = %if.then, %entry
+b2:                                               ; preds = %b1, %b0
   ret void
 }
 
-define void @storeHW(i32 %val1, i32 %val2, i16 signext %ival) nounwind {
-; CHECK: memh(##foo+2) = r{{[0-9]+}}
-entry:
-  %cmp = icmp sgt i32 %val1, %val2
-  br i1 %cmp, label %if.then, label %if.end
+; CHECK-LABEL: f1:
+; CHECK: memh(##g0+2) = r{{[0-9]+}}
+define void @f1(i32 %a0, i32 %a1, i16 signext %a2) #0 {
+b0:
+  %v0 = icmp sgt i32 %a0, %a1
+  br i1 %v0, label %b1, label %b2
 
-if.then:                                          ; preds = %entry
-  store i16 %ival, i16* getelementptr inbounds (%struct.struc, %struct.struc* @foo, i32 0, i32 2), align 2
-  br label %if.end
+b1:                                               ; preds = %b0
+  store i16 %a2, i16* getelementptr inbounds (%s.0, %s.0* @g0, i32 0, i32 2), align 2
+  br label %b2
 
-if.end:                                           ; preds = %if.then, %entry
+b2:                                               ; preds = %b1, %b0
   ret void
 }
 
+attributes #0 = { nounwind "target-cpu"="hexagonv5" }

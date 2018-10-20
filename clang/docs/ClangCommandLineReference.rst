@@ -2146,7 +2146,7 @@ Link stack frames through backchain on System Z
 
 .. option:: -mconsole<arg>
 
-.. option:: -mcpu=<arg>, -mv4 (equivalent to -mcpu=hexagonv4), -mv5 (equivalent to -mcpu=hexagonv5), -mv55 (equivalent to -mcpu=hexagonv55), -mv60 (equivalent to -mcpu=hexagonv60), -mv62 (equivalent to -mcpu=hexagonv62), -mv65 (equivalent to -mcpu=hexagonv65)
+.. option:: -mcpu=<arg>, -mv5 (equivalent to -mcpu=hexagonv5), -mv55 (equivalent to -mcpu=hexagonv55), -mv60 (equivalent to -mcpu=hexagonv60), -mv62 (equivalent to -mcpu=hexagonv62), -mv65 (equivalent to -mcpu=hexagonv65)
 
 .. option:: -mcrc, -mno-crc
 

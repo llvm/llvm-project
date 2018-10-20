@@ -2220,8 +2220,11 @@ static void printFileHeaders(const ObjectFile *o) {
   Expected<uint64_t> StartAddrOrErr = o->getStartAddress();
   if (!StartAddrOrErr)
     report_error(o->getFileName(), StartAddrOrErr.takeError());
+
+  StringRef Fmt = o->getBytesInAddress() > 4 ? "%016" PRIx64 : "%08" PRIx64;
+  uint64_t Address = StartAddrOrErr.get();
   outs() << "start address: "
-         << format("0x%0*x", o->getBytesInAddress(), StartAddrOrErr.get())
+         << "0x" << format(Fmt.data(), Address)
          << "\n";
 }
 

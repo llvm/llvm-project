@@ -118,18 +118,7 @@ HexagonRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 
   bool HasEHReturn = MF->getInfo<HexagonMachineFunctionInfo>()->hasEHReturn();
 
-  switch (MF->getSubtarget<HexagonSubtarget>().getHexagonArchVersion()) {
-  case Hexagon::ArchEnum::V4:
-  case Hexagon::ArchEnum::V5:
-  case Hexagon::ArchEnum::V55:
-  case Hexagon::ArchEnum::V60:
-  case Hexagon::ArchEnum::V62:
-  case Hexagon::ArchEnum::V65:
-    return HasEHReturn ? CalleeSavedRegsV3EHReturn : CalleeSavedRegsV3;
-  }
-
-  llvm_unreachable("Callee saved registers requested for unknown architecture "
-                   "version");
+  return HasEHReturn ? CalleeSavedRegsV3EHReturn : CalleeSavedRegsV3;
 }
 
 

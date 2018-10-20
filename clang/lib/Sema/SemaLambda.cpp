@@ -775,16 +775,6 @@ QualType Sema::buildLambdaInitCaptureInitialization(SourceLocation Loc,
 
   if (Result.isInvalid())
     return QualType();
-  Init = Result.getAs<Expr>();
-
-  // The init-capture initialization is a full-expression that must be
-  // processed as one before we enter the declcontext of the lambda's
-  // call-operator.
-  Result = ActOnFinishFullExpr(Init, Loc, /*DiscardedValue*/ false,
-                               /*IsConstexpr*/ false,
-                               /*IsLambdaInitCaptureInitializer*/ true);
-  if (Result.isInvalid())
-    return QualType();
 
   Init = Result.getAs<Expr>();
   return DeducedType;

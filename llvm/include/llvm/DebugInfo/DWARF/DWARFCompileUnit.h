@@ -18,13 +18,13 @@ namespace llvm {
 class DWARFCompileUnit : public DWARFUnit {
 public:
   DWARFCompileUnit(DWARFContext &Context, const DWARFSection &Section,
-                   const DWARFUnitHeader &Header,
-                   const DWARFDebugAbbrev *DA, const DWARFSection *RS,
+                   const DWARFUnitHeader &Header, const DWARFDebugAbbrev *DA,
+                   const DWARFSection *RS, const DWARFSection *LocSection,
                    StringRef SS, const DWARFSection &SOS,
                    const DWARFSection *AOS, const DWARFSection &LS, bool LE,
                    bool IsDWO, const DWARFUnitVector &UnitVector)
-      : DWARFUnit(Context, Section, Header, DA, RS, SS, SOS, AOS, LS, LE, IsDWO,
-                  UnitVector) {}
+      : DWARFUnit(Context, Section, Header, DA, RS, LocSection, SS, SOS, AOS,
+                  LS, LE, IsDWO, UnitVector) {}
 
   /// VTable anchor.
   ~DWARFCompileUnit() override;

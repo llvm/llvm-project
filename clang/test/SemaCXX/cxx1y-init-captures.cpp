@@ -144,13 +144,13 @@ int test(T t = T{}) {
     };
   }
   { // will need to capture x in outer lambda
-    const int x = 10; //expected-note 2{{declared}}
-    auto L = [z = x](char a) { //expected-note 2{{begins}}
-      auto M = [&y = x](T b) { //expected-error 2{{cannot be implicitly captured}}
+    const int x = 10; //expected-note {{declared}}
+    auto L = [z = x](char a) { //expected-note {{begins}}
+      auto M = [&y = x](T b) { //expected-error {{cannot be implicitly captured}}
         return y;
       };
       return M;
-    };     
+    };
   }
   {
     // no captures

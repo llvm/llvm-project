@@ -1409,7 +1409,11 @@ namespace {
 
     void VisitDeclRefExpr(DeclRefExpr *E) {
       VarDecl *VD = dyn_cast<VarDecl>(E->getDecl());
-      if (!VD) return;
+      if (!VD) {
+        // Don't allow unhandled Decl types.
+        Simple = false;
+        return;
+      }
 
       Ranges.push_back(E->getSourceRange());
 
