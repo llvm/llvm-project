@@ -523,8 +523,7 @@ void CloneConstraint::splitCloneGroups(
       Result.push_back(PotentialGroup);
     }
 
-    assert(std::all_of(Indexes.begin(), Indexes.end(),
-                       [](char c) { return c == 1; }));
+    assert(llvm::all_of(Indexes, [](char c) { return c == 1; }));
   }
   CloneGroups = Result;
 }

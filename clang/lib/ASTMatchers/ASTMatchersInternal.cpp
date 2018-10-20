@@ -144,10 +144,10 @@ DynTypedMatcher DynTypedMatcher::constructVariadic(
     ast_type_traits::ASTNodeKind SupportedKind,
     std::vector<DynTypedMatcher> InnerMatchers) {
   assert(!InnerMatchers.empty() && "Array must not be empty.");
-  assert(std::all_of(InnerMatchers.begin(), InnerMatchers.end(),
-                     [SupportedKind](const DynTypedMatcher &M) {
-                       return M.canConvertTo(SupportedKind);
-                     }) &&
+  assert(llvm::all_of(InnerMatchers,
+                      [SupportedKind](const DynTypedMatcher &M) {
+                        return M.canConvertTo(SupportedKind);
+                      }) &&
          "InnerMatchers must be convertible to SupportedKind!");
 
   // We must relax the restrict kind here.
@@ -449,7 +449,7 @@ bool HasNameMatcher::matchesNodeUnqualified(const NamedDecl &Node) const {
   assert(UseUnqualifiedMatch);
   llvm::SmallString<128> Scratch;
   StringRef NodeName = getNodeName(Node, Scratch);
-  return std::any_of(Names.begin(), Names.end(), [&](StringRef Name) {
+  return llvm::any_of(Names, [&](StringRef Name) {
     return consumeNameSuffix(Name, NodeName) && Name.empty();
   });
 }
