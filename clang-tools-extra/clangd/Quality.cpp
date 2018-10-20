@@ -323,7 +323,7 @@ static float scopeBoost(ScopeDistance &Distance,
     return 1;
   auto D = Distance.distance(*SymbolScope);
   if (D == FileDistance::Unreachable)
-    return 0.4;
+    return 0.4f;
   return std::max(0.5, 2.0 * std::pow(0.6, D / 2.0));
 }
 
