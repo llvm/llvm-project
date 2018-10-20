@@ -19,3 +19,29 @@ define amdgpu_kernel void @add_var_imm_i1(i1 addrspace(1)* %out, i1 addrspace(1)
   store i1 %add, i1 addrspace(1)* %out
   ret void
 }
+
+; GCN-LABEL: {{^}}add_i1_cf:
+; GCN: v_cmp_ne_u32_e32 vcc, 0, {{v[0-9]+}}
+; GCN-NEXT: s_not_b64 s{{\[[0-9]+:[0-9]+\]}}, vcc
+define amdgpu_kernel void @add_i1_cf(i1 addrspace(1)* %out, i1 addrspace(1)* %a, i1 addrspace(1)* %b) {
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %d_cmp = icmp ult i32 %tid, 16
+  br i1 %d_cmp, label %if, label %else
+
+if:
+  %0 = load volatile i1, i1 addrspace(1)* %a
+  br label %endif
+
+else:
+  %1 = load volatile i1, i1 addrspace(1)* %b
+  br label %endif
+
+endif:
+  %2 = phi i1 [%0, %if], [%1, %else]
+  %3 = add i1 %2, -1
+  store i1 %3, i1 addrspace(1)* %out
+  ret void
+}
+
+declare i32 @llvm.amdgcn.workitem.id.x()

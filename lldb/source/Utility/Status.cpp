@@ -27,6 +27,9 @@
 #include <mach/mach.h>
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <stdint.h> // for uint32_t
 
 namespace llvm {
@@ -87,7 +90,8 @@ llvm::Error Status::ToError() const {
   if (Success())
     return llvm::Error::success();
   if (m_type == ErrorType::eErrorTypePOSIX)
-    return llvm::errorCodeToError(std::error_code(m_code, std::generic_category()));
+    return llvm::errorCodeToError(
+        std::error_code(m_code, std::generic_category()));
   return llvm::make_error<llvm::StringError>(AsCString(),
                                              llvm::inconvertibleErrorCode());
 }
@@ -105,6 +109,23 @@ const Status &Status::operator=(const Status &rhs) {
 }
 
 Status::~Status() = default;
+
+#ifdef _WIN32
+static std::string RetrieveWin32ErrorString(uint32_t error_code) {
+  char *buffer = nullptr;
+  std::string message;
+  // Retrieve win32 system error.
+  if (::FormatMessageA(
+          FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+              FORMAT_MESSAGE_MAX_WIDTH_MASK,
+          NULL, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+          (LPSTR)&buffer, 0, NULL)) {
+    message.assign(buffer);
+    ::LocalFree(buffer);
+  }
+  return message;
+}
+#endif
 
 //----------------------------------------------------------------------
 // Get the error value as a NULL C string. The error string will be fetched and
@@ -126,6 +147,12 @@ const char *Status::AsCString(const char *default_error_str) const {
 
     case eErrorTypePOSIX:
       m_string = llvm::sys::StrError(m_code);
+      break;
+
+    case eErrorTypeWin32:
+#if defined(_WIN32)
+      m_string = RetrieveWin32ErrorString(m_code);
+#endif
       break;
 
     default:

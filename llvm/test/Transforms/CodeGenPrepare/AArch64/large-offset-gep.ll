@@ -145,3 +145,31 @@ while_body:
 while_end:
   ret void
 }
+
+declare i8* @llvm.strip.invariant.group.p0i8(i8*)
+
+define void @test_invariant_group(i32) {
+; CHECK-LABEL: test_invariant_group
+  br i1 undef, label %8, label %7
+
+; <label>:2:                                      ; preds = %8, %2
+  br i1 undef, label %2, label %7
+
+; <label>:3:                                      ; preds = %8
+  %4 = getelementptr inbounds i8, i8* %9, i32 40000
+  %5 = bitcast i8* %4 to i64*
+  br i1 undef, label %7, label %6
+
+; <label>:6:                                      ; preds = %3
+  store i64 1, i64* %5, align 8
+  br label %7
+
+; <label>:7:                                      ; preds = %6, %3, %2, %1
+  ret void
+
+; <label>:8:                                      ; preds = %1
+  %9 = call i8* @llvm.strip.invariant.group.p0i8(i8* nonnull undef)
+  %10 = icmp eq i32 %0, 0
+  br i1 %10, label %3, label %2
+}
+

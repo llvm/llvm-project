@@ -1398,7 +1398,5 @@ def: T_R_pat<Y2_dczeroa,     int_hexagon_Y2_dczeroa>;
 def: T_RR_pat<Y4_l2fetch,    int_hexagon_Y4_l2fetch>;
 def: T_RP_pat<Y5_l2fetch,    int_hexagon_Y5_l2fetch>;
 
-include "HexagonIntrinsicsV3.td"
-include "HexagonIntrinsicsV4.td"
 include "HexagonIntrinsicsV5.td"
 include "HexagonIntrinsicsV60.td"

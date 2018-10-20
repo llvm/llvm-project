@@ -57,10 +57,10 @@ include "HexagonDepIICScalar.td"
 include "HexagonDepIICHVX.td"
 
 //===----------------------------------------------------------------------===//
-// V4 Machine Info +
+// V5 Machine Info +
 //===----------------------------------------------------------------------===//
 
-include "HexagonScheduleV4.td"
+include "HexagonScheduleV5.td"
 
 // V55 Machine Info +
 include "HexagonScheduleV55.td"

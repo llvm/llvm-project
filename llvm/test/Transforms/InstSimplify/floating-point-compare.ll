@@ -179,6 +179,7 @@ declare double @llvm.powi.f64(double,i32)
 declare float @llvm.exp.f32(float)
 declare float @llvm.minnum.f32(float, float)
 declare float @llvm.maxnum.f32(float, float)
+declare float @llvm.maximum.f32(float, float)
 declare double @llvm.exp2.f64(double)
 declare float @llvm.fma.f32(float,float,float)
 
@@ -282,6 +283,18 @@ define i1 @orderedLessZeroMaxNum(float, float) {
   ret i1 %uge
 }
 
+; But using maximum, we can simplify, since the NaN would be propagated
+
+define i1 @orderedLessZeroMaximum(float, float) {
+; CHECK-LABEL: @orderedLessZeroMaximum(
+; CHECK-NEXT:    ret i1 true
+;
+  %a = call float @llvm.exp.f32(float %0)
+  %b = call float @llvm.maximum.f32(float %a, float %1)
+  %uge = fcmp uge float %b, 0.000000e+00
+  ret i1 %uge
+}
+
 define i1 @known_positive_olt_with_negative_constant(double %a) {
 ; CHECK-LABEL: @known_positive_olt_with_negative_constant(
 ; CHECK-NEXT:    ret i1 false
@@ -375,4 +388,3 @@ define <2 x i1> @unorderedCompareWithNaNVector_undef_elt(<2 x double> %A) {
   %cmp = fcmp ult <2 x double> %A, <double undef, double 0xFFFFFFFFFFFFFFFF>
   ret <2 x i1> %cmp
 }
-

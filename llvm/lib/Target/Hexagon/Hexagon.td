@@ -323,31 +323,27 @@ class Proc<string Name, SchedMachineModel Model,
  : ProcessorModel<Name, Model, Features>;
 
 def : Proc<"generic", HexagonModelV60,
-           [ArchV4, ArchV5, ArchV55, ArchV60,
+           [ArchV5, ArchV55, ArchV60,
             FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
             FeaturePackets, FeatureSmallData]>;
-def : Proc<"hexagonv4",  HexagonModelV4,
-           [ArchV4,
-            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
-            FeaturePackets, FeatureSmallData]>;
-def : Proc<"hexagonv5",  HexagonModelV4,
-           [ArchV4, ArchV5,
+def : Proc<"hexagonv5",  HexagonModelV5,
+           [ArchV5,
             FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
             FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv55", HexagonModelV55,
-           [ArchV4, ArchV5, ArchV55,
+           [ArchV5, ArchV55,
             FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
             FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv60", HexagonModelV60,
-           [ArchV4, ArchV5, ArchV55, ArchV60,
+           [ArchV5, ArchV55, ArchV60,
             FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
             FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv62", HexagonModelV62,
-           [ArchV4, ArchV5, ArchV55, ArchV60, ArchV62,
+           [ArchV5, ArchV55, ArchV60, ArchV62,
             FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
             FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv65", HexagonModelV65,
-           [ArchV4, ArchV5, ArchV55, ArchV60, ArchV62, ArchV65,
+           [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65,
             FeatureDuplex, FeatureMemNoShuf, FeatureMemops, FeatureNVJ,
             FeatureNVS, FeaturePackets, FeatureSmallData]>;
 

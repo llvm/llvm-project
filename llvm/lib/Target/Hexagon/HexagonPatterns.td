@@ -365,38 +365,34 @@ def ToI32: OutPatFrag<(ops node:$V), (A2_tfrsi $V)>;
 // --(2) Type cast -------------------------------------------------------
 //
 
-let Predicates = [HasV5] in {
-  def: OpR_R_pat<F2_conv_sf2df,      pf1<fpextend>,   f64, F32>;
-  def: OpR_R_pat<F2_conv_df2sf,      pf1<fpround>,    f32, F64>;
+def: OpR_R_pat<F2_conv_sf2df,      pf1<fpextend>,   f64, F32>;
+def: OpR_R_pat<F2_conv_df2sf,      pf1<fpround>,    f32, F64>;
 
-  def: OpR_R_pat<F2_conv_w2sf,       pf1<sint_to_fp>, f32, I32>;
-  def: OpR_R_pat<F2_conv_d2sf,       pf1<sint_to_fp>, f32, I64>;
-  def: OpR_R_pat<F2_conv_w2df,       pf1<sint_to_fp>, f64, I32>;
-  def: OpR_R_pat<F2_conv_d2df,       pf1<sint_to_fp>, f64, I64>;
+def: OpR_R_pat<F2_conv_w2sf,       pf1<sint_to_fp>, f32, I32>;
+def: OpR_R_pat<F2_conv_d2sf,       pf1<sint_to_fp>, f32, I64>;
+def: OpR_R_pat<F2_conv_w2df,       pf1<sint_to_fp>, f64, I32>;
+def: OpR_R_pat<F2_conv_d2df,       pf1<sint_to_fp>, f64, I64>;
 
-  def: OpR_R_pat<F2_conv_uw2sf,      pf1<uint_to_fp>, f32, I32>;
-  def: OpR_R_pat<F2_conv_ud2sf,      pf1<uint_to_fp>, f32, I64>;
-  def: OpR_R_pat<F2_conv_uw2df,      pf1<uint_to_fp>, f64, I32>;
-  def: OpR_R_pat<F2_conv_ud2df,      pf1<uint_to_fp>, f64, I64>;
+def: OpR_R_pat<F2_conv_uw2sf,      pf1<uint_to_fp>, f32, I32>;
+def: OpR_R_pat<F2_conv_ud2sf,      pf1<uint_to_fp>, f32, I64>;
+def: OpR_R_pat<F2_conv_uw2df,      pf1<uint_to_fp>, f64, I32>;
+def: OpR_R_pat<F2_conv_ud2df,      pf1<uint_to_fp>, f64, I64>;
 
-  def: OpR_R_pat<F2_conv_sf2w_chop,  pf1<fp_to_sint>, i32, F32>;
-  def: OpR_R_pat<F2_conv_df2w_chop,  pf1<fp_to_sint>, i32, F64>;
-  def: OpR_R_pat<F2_conv_sf2d_chop,  pf1<fp_to_sint>, i64, F32>;
-  def: OpR_R_pat<F2_conv_df2d_chop,  pf1<fp_to_sint>, i64, F64>;
+def: OpR_R_pat<F2_conv_sf2w_chop,  pf1<fp_to_sint>, i32, F32>;
+def: OpR_R_pat<F2_conv_df2w_chop,  pf1<fp_to_sint>, i32, F64>;
+def: OpR_R_pat<F2_conv_sf2d_chop,  pf1<fp_to_sint>, i64, F32>;
+def: OpR_R_pat<F2_conv_df2d_chop,  pf1<fp_to_sint>, i64, F64>;
 
-  def: OpR_R_pat<F2_conv_sf2uw_chop, pf1<fp_to_uint>, i32, F32>;
-  def: OpR_R_pat<F2_conv_df2uw_chop, pf1<fp_to_uint>, i32, F64>;
-  def: OpR_R_pat<F2_conv_sf2ud_chop, pf1<fp_to_uint>, i64, F32>;
-  def: OpR_R_pat<F2_conv_df2ud_chop, pf1<fp_to_uint>, i64, F64>;
-}
+def: OpR_R_pat<F2_conv_sf2uw_chop, pf1<fp_to_uint>, i32, F32>;
+def: OpR_R_pat<F2_conv_df2uw_chop, pf1<fp_to_uint>, i32, F64>;
+def: OpR_R_pat<F2_conv_sf2ud_chop, pf1<fp_to_uint>, i64, F32>;
+def: OpR_R_pat<F2_conv_df2ud_chop, pf1<fp_to_uint>, i64, F64>;
 
 // Bitcast is different than [fp|sint|uint]_to_[sint|uint|fp].
-let Predicates = [HasV5] in {
-  def: Pat<(i32 (bitconvert F32:$v)), (I32:$v)>;
-  def: Pat<(f32 (bitconvert I32:$v)), (F32:$v)>;
-  def: Pat<(i64 (bitconvert F64:$v)), (I64:$v)>;
-  def: Pat<(f64 (bitconvert I64:$v)), (F64:$v)>;
-}
+def: Pat<(i32 (bitconvert F32:$v)), (I32:$v)>;
+def: Pat<(f32 (bitconvert I32:$v)), (F32:$v)>;
+def: Pat<(i64 (bitconvert F64:$v)), (I64:$v)>;
+def: Pat<(f64 (bitconvert I64:$v)), (F64:$v)>;
 
 multiclass Cast_pat<ValueType Ta, ValueType Tb, RegisterClass RC> {
   def: Pat<(Tb (bitconvert (Ta RC:$Rs))), (Tb RC:$Rs)>;
@@ -599,31 +595,29 @@ def: OpR_RR_pat<A2_vcmpwgtu,  RevCmp<setult>, v2i1, V2I32>;
 def: OpR_RR_pat<A2_vcmpwgtu,  setugt,         i1,   V2I32>;
 def: OpR_RR_pat<A2_vcmpwgtu,  setugt,         v2i1, V2I32>;
 
-let Predicates = [HasV5] in {
-  def: OpR_RR_pat<F2_sfcmpeq,   seteq,          i1, F32>;
-  def: OpR_RR_pat<F2_sfcmpgt,   setgt,          i1, F32>;
-  def: OpR_RR_pat<F2_sfcmpge,   setge,          i1, F32>;
-  def: OpR_RR_pat<F2_sfcmpeq,   setoeq,         i1, F32>;
-  def: OpR_RR_pat<F2_sfcmpgt,   setogt,         i1, F32>;
-  def: OpR_RR_pat<F2_sfcmpge,   setoge,         i1, F32>;
-  def: OpR_RR_pat<F2_sfcmpgt,   RevCmp<setolt>, i1, F32>;
-  def: OpR_RR_pat<F2_sfcmpge,   RevCmp<setole>, i1, F32>;
-  def: OpR_RR_pat<F2_sfcmpgt,   RevCmp<setlt>,  i1, F32>;
-  def: OpR_RR_pat<F2_sfcmpge,   RevCmp<setle>,  i1, F32>;
-  def: OpR_RR_pat<F2_sfcmpuo,   setuo,          i1, F32>;
+def: OpR_RR_pat<F2_sfcmpeq,   seteq,          i1, F32>;
+def: OpR_RR_pat<F2_sfcmpgt,   setgt,          i1, F32>;
+def: OpR_RR_pat<F2_sfcmpge,   setge,          i1, F32>;
+def: OpR_RR_pat<F2_sfcmpeq,   setoeq,         i1, F32>;
+def: OpR_RR_pat<F2_sfcmpgt,   setogt,         i1, F32>;
+def: OpR_RR_pat<F2_sfcmpge,   setoge,         i1, F32>;
+def: OpR_RR_pat<F2_sfcmpgt,   RevCmp<setolt>, i1, F32>;
+def: OpR_RR_pat<F2_sfcmpge,   RevCmp<setole>, i1, F32>;
+def: OpR_RR_pat<F2_sfcmpgt,   RevCmp<setlt>,  i1, F32>;
+def: OpR_RR_pat<F2_sfcmpge,   RevCmp<setle>,  i1, F32>;
+def: OpR_RR_pat<F2_sfcmpuo,   setuo,          i1, F32>;
 
-  def: OpR_RR_pat<F2_dfcmpeq,   seteq,          i1, F64>;
-  def: OpR_RR_pat<F2_dfcmpgt,   setgt,          i1, F64>;
-  def: OpR_RR_pat<F2_dfcmpge,   setge,          i1, F64>;
-  def: OpR_RR_pat<F2_dfcmpeq,   setoeq,         i1, F64>;
-  def: OpR_RR_pat<F2_dfcmpgt,   setogt,         i1, F64>;
-  def: OpR_RR_pat<F2_dfcmpge,   setoge,         i1, F64>;
-  def: OpR_RR_pat<F2_dfcmpgt,   RevCmp<setolt>, i1, F64>;
-  def: OpR_RR_pat<F2_dfcmpge,   RevCmp<setole>, i1, F64>;
-  def: OpR_RR_pat<F2_dfcmpgt,   RevCmp<setlt>,  i1, F64>;
-  def: OpR_RR_pat<F2_dfcmpge,   RevCmp<setle>,  i1, F64>;
-  def: OpR_RR_pat<F2_dfcmpuo,   setuo,          i1, F64>;
-}
+def: OpR_RR_pat<F2_dfcmpeq,   seteq,          i1, F64>;
+def: OpR_RR_pat<F2_dfcmpgt,   setgt,          i1, F64>;
+def: OpR_RR_pat<F2_dfcmpge,   setge,          i1, F64>;
+def: OpR_RR_pat<F2_dfcmpeq,   setoeq,         i1, F64>;
+def: OpR_RR_pat<F2_dfcmpgt,   setogt,         i1, F64>;
+def: OpR_RR_pat<F2_dfcmpge,   setoge,         i1, F64>;
+def: OpR_RR_pat<F2_dfcmpgt,   RevCmp<setolt>, i1, F64>;
+def: OpR_RR_pat<F2_dfcmpge,   RevCmp<setole>, i1, F64>;
+def: OpR_RR_pat<F2_dfcmpgt,   RevCmp<setlt>,  i1, F64>;
+def: OpR_RR_pat<F2_dfcmpge,   RevCmp<setle>,  i1, F64>;
+def: OpR_RR_pat<F2_dfcmpuo,   setuo,          i1, F64>;
 
 // Avoid C4_cmpneqi, C4_cmpltei, C4_cmplteui, since they cannot form compounds.
 
@@ -746,32 +740,28 @@ class Cmpud<InstHexagon MI>:  T3<C2_or,  F2_dfcmpuo, MI>;
 class Cmpufn<InstHexagon MI>: T3<C2_orn, F2_sfcmpuo, MI>;
 class Cmpudn<InstHexagon MI>: T3<C2_orn, F2_dfcmpuo, MI>;
 
-let Predicates = [HasV5] in {
-  def: OpmR_RR_pat<Cmpuf<F2_sfcmpeq>,  setueq,         i1, F32>;
-  def: OpmR_RR_pat<Cmpuf<F2_sfcmpge>,  setuge,         i1, F32>;
-  def: OpmR_RR_pat<Cmpuf<F2_sfcmpgt>,  setugt,         i1, F32>;
-  def: OpmR_RR_pat<Cmpuf<F2_sfcmpge>,  RevCmp<setule>, i1, F32>;
-  def: OpmR_RR_pat<Cmpuf<F2_sfcmpgt>,  RevCmp<setult>, i1, F32>;
-  def: OpmR_RR_pat<Cmpufn<F2_sfcmpeq>, setune,         i1, F32>;
+def: OpmR_RR_pat<Cmpuf<F2_sfcmpeq>,  setueq,         i1, F32>;
+def: OpmR_RR_pat<Cmpuf<F2_sfcmpge>,  setuge,         i1, F32>;
+def: OpmR_RR_pat<Cmpuf<F2_sfcmpgt>,  setugt,         i1, F32>;
+def: OpmR_RR_pat<Cmpuf<F2_sfcmpge>,  RevCmp<setule>, i1, F32>;
+def: OpmR_RR_pat<Cmpuf<F2_sfcmpgt>,  RevCmp<setult>, i1, F32>;
+def: OpmR_RR_pat<Cmpufn<F2_sfcmpeq>, setune,         i1, F32>;
 
-  def: OpmR_RR_pat<Cmpud<F2_dfcmpeq>,  setueq,         i1, F64>;
-  def: OpmR_RR_pat<Cmpud<F2_dfcmpge>,  setuge,         i1, F64>;
-  def: OpmR_RR_pat<Cmpud<F2_dfcmpgt>,  setugt,         i1, F64>;
-  def: OpmR_RR_pat<Cmpud<F2_dfcmpge>,  RevCmp<setule>, i1, F64>;
-  def: OpmR_RR_pat<Cmpud<F2_dfcmpgt>,  RevCmp<setult>, i1, F64>;
-  def: OpmR_RR_pat<Cmpudn<F2_dfcmpeq>, setune,         i1, F64>;
-}
+def: OpmR_RR_pat<Cmpud<F2_dfcmpeq>,  setueq,         i1, F64>;
+def: OpmR_RR_pat<Cmpud<F2_dfcmpge>,  setuge,         i1, F64>;
+def: OpmR_RR_pat<Cmpud<F2_dfcmpgt>,  setugt,         i1, F64>;
+def: OpmR_RR_pat<Cmpud<F2_dfcmpge>,  RevCmp<setule>, i1, F64>;
+def: OpmR_RR_pat<Cmpud<F2_dfcmpgt>,  RevCmp<setult>, i1, F64>;
+def: OpmR_RR_pat<Cmpudn<F2_dfcmpeq>, setune,         i1, F64>;
 
-let Predicates = [HasV5] in {
-  def: OpmR_RR_pat<Outn<F2_sfcmpeq>, setone, i1, F32>;
-  def: OpmR_RR_pat<Outn<F2_sfcmpeq>, setne,  i1, F32>;
+def: OpmR_RR_pat<Outn<F2_sfcmpeq>, setone, i1, F32>;
+def: OpmR_RR_pat<Outn<F2_sfcmpeq>, setne,  i1, F32>;
 
-  def: OpmR_RR_pat<Outn<F2_dfcmpeq>, setone, i1, F64>;
-  def: OpmR_RR_pat<Outn<F2_dfcmpeq>, setne,  i1, F64>;
+def: OpmR_RR_pat<Outn<F2_dfcmpeq>, setone, i1, F64>;
+def: OpmR_RR_pat<Outn<F2_dfcmpeq>, setne,  i1, F64>;
 
-  def: OpmR_RR_pat<Outn<F2_sfcmpuo>, seto,   i1, F32>;
-  def: OpmR_RR_pat<Outn<F2_dfcmpuo>, seto,   i1, F64>;
-}
+def: OpmR_RR_pat<Outn<F2_sfcmpuo>, seto,   i1, F32>;
+def: OpmR_RR_pat<Outn<F2_dfcmpuo>, seto,   i1, F64>;
 
 
 // --(6) Select ----------------------------------------------------------
@@ -801,27 +791,25 @@ def: Pat<(select I1:$Pu, I64:$Rs, I64:$Rt),
          (Combinew (C2_mux I1:$Pu, (HiReg $Rs), (HiReg $Rt)),
                    (C2_mux I1:$Pu, (LoReg $Rs), (LoReg $Rt)))>;
 
-let Predicates = [HasV5] in {
-  def: Pat<(select I1:$Pu, F32:$Rs, f32ImmPred:$I),
-           (C2_muxir I1:$Pu, F32:$Rs, (ftoi $I))>;
-  def: Pat<(select I1:$Pu, f32ImmPred:$I, F32:$Rt),
-           (C2_muxri I1:$Pu, (ftoi $I), F32:$Rt)>;
-  def: Pat<(select I1:$Pu, F32:$Rs, F32:$Rt),
-           (C2_mux I1:$Pu, F32:$Rs, F32:$Rt)>;
-  def: Pat<(select I1:$Pu, F64:$Rs, F64:$Rt),
-           (Combinew (C2_mux I1:$Pu, (HiReg $Rs), (HiReg $Rt)),
-                     (C2_mux I1:$Pu, (LoReg $Rs), (LoReg $Rt)))>;
+def: Pat<(select I1:$Pu, F32:$Rs, f32ImmPred:$I),
+         (C2_muxir I1:$Pu, F32:$Rs, (ftoi $I))>;
+def: Pat<(select I1:$Pu, f32ImmPred:$I, F32:$Rt),
+         (C2_muxri I1:$Pu, (ftoi $I), F32:$Rt)>;
+def: Pat<(select I1:$Pu, F32:$Rs, F32:$Rt),
+         (C2_mux I1:$Pu, F32:$Rs, F32:$Rt)>;
+def: Pat<(select I1:$Pu, F64:$Rs, F64:$Rt),
+         (Combinew (C2_mux I1:$Pu, (HiReg $Rs), (HiReg $Rt)),
+                   (C2_mux I1:$Pu, (LoReg $Rs), (LoReg $Rt)))>;
 
-  def: Pat<(select (i1 (setult F32:$Ra, F32:$Rb)), F32:$Rs, F32:$Rt),
-           (C2_mux (F2_sfcmpgt F32:$Rb, F32:$Ra), F32:$Rs, F32:$Rt)>;
-  def: Pat<(select (i1 (setult F64:$Ra, F64:$Rb)), F64:$Rs, F64:$Rt),
-           (C2_vmux (F2_dfcmpgt F64:$Rb, F64:$Ra), F64:$Rs, F64:$Rt)>;
+def: Pat<(select (i1 (setult F32:$Ra, F32:$Rb)), F32:$Rs, F32:$Rt),
+         (C2_mux (F2_sfcmpgt F32:$Rb, F32:$Ra), F32:$Rs, F32:$Rt)>;
+def: Pat<(select (i1 (setult F64:$Ra, F64:$Rb)), F64:$Rs, F64:$Rt),
+         (C2_vmux (F2_dfcmpgt F64:$Rb, F64:$Ra), F64:$Rs, F64:$Rt)>;
 
-  def: Pat<(select (not I1:$Pu), f32ImmPred:$I, F32:$Rs),
-           (C2_muxir I1:$Pu, F32:$Rs, (ftoi $I))>;
-  def: Pat<(select (not I1:$Pu), F32:$Rt, f32ImmPred:$I),
-           (C2_muxri I1:$Pu, (ftoi $I), F32:$Rt)>;
-}
+def: Pat<(select (not I1:$Pu), f32ImmPred:$I, F32:$Rs),
+         (C2_muxir I1:$Pu, F32:$Rs, (ftoi $I))>;
+def: Pat<(select (not I1:$Pu), F32:$Rt, f32ImmPred:$I),
+         (C2_muxri I1:$Pu, (ftoi $I), F32:$Rt)>;
 
 def: Pat<(select I1:$Pu, V4I8:$Rs, V4I8:$Rt),
          (LoReg (C2_vmux I1:$Pu, (ToZext64 $Rs), (ToZext64 $Rt)))>;
@@ -889,7 +877,7 @@ let AddedComplexity = 200 in {
   defm: SelMinMax_pats<setult, I64, A2_minup, A2_maxup>;
 }
 
-let AddedComplexity = 100, Predicates = [HasV5] in {
+let AddedComplexity = 100 in {
   defm: SelMinMax_pats<setolt, F32, F2_sfmin, F2_sfmax>;
   defm: SelMinMax_pats<setole, F32, F2_sfmin, F2_sfmax>;
   defm: SelMinMax_pats<setogt, F32, F2_sfmax, F2_sfmin>;
@@ -1014,7 +1002,7 @@ let Predicates = [HasV60] in {
 def: Pat<(sra (add (sra I32:$Rs, u5_0ImmPred:$u5), 1), (i32 1)),
          (S2_asr_i_r_rnd I32:$Rs, imm:$u5)>;
 def: Pat<(sra (add (sra I64:$Rs, u6_0ImmPred:$u6), 1), (i32 1)),
-         (S2_asr_i_p_rnd I64:$Rs, imm:$u6)>, Requires<[HasV5]>;
+         (S2_asr_i_p_rnd I64:$Rs, imm:$u6)>;
 
 // Prefer S2_addasl_rrri over S2_asl_i_r_acc.
 let AddedComplexity = 120 in
@@ -1191,17 +1179,15 @@ def: Pat<(not  I32:$Rs), (A2_subri -1, I32:$Rs)>;
 def: Pat<(not  I64:$Rs), (A2_notp  I64:$Rs)>;
 def: Pat<(ineg I64:$Rs), (A2_negp  I64:$Rs)>;
 
-let Predicates = [HasV5] in {
-  def: Pat<(fabs F32:$Rs), (S2_clrbit_i    F32:$Rs, 31)>;
-  def: Pat<(fneg F32:$Rs), (S2_togglebit_i F32:$Rs, 31)>;
+def: Pat<(fabs F32:$Rs), (S2_clrbit_i    F32:$Rs, 31)>;
+def: Pat<(fneg F32:$Rs), (S2_togglebit_i F32:$Rs, 31)>;
 
-  def: Pat<(fabs F64:$Rs),
-           (Combinew (S2_clrbit_i (HiReg $Rs), 31),
-                     (i32 (LoReg $Rs)))>;
-  def: Pat<(fneg F64:$Rs),
-           (Combinew (S2_togglebit_i (HiReg $Rs), 31),
-                     (i32 (LoReg $Rs)))>;
-}
+def: Pat<(fabs F64:$Rs),
+         (Combinew (S2_clrbit_i (HiReg $Rs), 31),
+                   (i32 (LoReg $Rs)))>;
+def: Pat<(fneg F64:$Rs),
+         (Combinew (S2_togglebit_i (HiReg $Rs), 31),
+                   (i32 (LoReg $Rs)))>;
 
 def: Pat<(add I32:$Rs, anyimm:$s16),   (A2_addi   I32:$Rs,  imm:$s16)>;
 def: Pat<(or  I32:$Rs, anyimm:$s10),   (A2_orir   I32:$Rs,  imm:$s10)>;
@@ -1267,13 +1253,11 @@ def: OpR_RR_pat<C2_and,       Mul,        v2i1,  V2I1>;
 def: OpR_RR_pat<C2_and,       Mul,        v4i1,  V4I1>;
 def: OpR_RR_pat<C2_and,       Mul,        v8i1,  V8I1>;
 
-let Predicates = [HasV5] in {
-  def: OpR_RR_pat<F2_sfadd,     pf2<fadd>,    f32, F32>;
-  def: OpR_RR_pat<F2_sfsub,     pf2<fsub>,    f32, F32>;
-  def: OpR_RR_pat<F2_sfmpy,     pf2<fmul>,    f32, F32>;
-  def: OpR_RR_pat<F2_sfmin,     pf2<fminnum>, f32, F32>;
-  def: OpR_RR_pat<F2_sfmax,     pf2<fmaxnum>, f32, F32>;
-}
+def: OpR_RR_pat<F2_sfadd,     pf2<fadd>,    f32, F32>;
+def: OpR_RR_pat<F2_sfsub,     pf2<fsub>,    f32, F32>;
+def: OpR_RR_pat<F2_sfmpy,     pf2<fmul>,    f32, F32>;
+def: OpR_RR_pat<F2_sfmin,     pf2<fminnum>, f32, F32>;
+def: OpR_RR_pat<F2_sfmax,     pf2<fmaxnum>, f32, F32>;
 
 // In expressions like a0*b0 + a1*b1 + ..., prefer to generate multiply-add,
 // over add-add with individual multiplies as inputs.
@@ -1506,14 +1490,12 @@ def: Pat<(add I32:$Ru, (Su<Mul> I32:$Ry, I32:$Rs)),
          (M4_mpyrr_addr IntRegs:$Ru, IntRegs:$Ry, IntRegs:$Rs)>;
 
 
-let Predicates = [HasV5] in {
-  def: Pat<(fma F32:$Rs, F32:$Rt, F32:$Rx),
-           (F2_sffma F32:$Rx, F32:$Rs, F32:$Rt)>;
-  def: Pat<(fma (fneg F32:$Rs), F32:$Rt, F32:$Rx),
-           (F2_sffms F32:$Rx, F32:$Rs, F32:$Rt)>;
-  def: Pat<(fma F32:$Rs, (fneg F32:$Rt), F32:$Rx),
-           (F2_sffms F32:$Rx, F32:$Rs, F32:$Rt)>;
-}
+def: Pat<(fma F32:$Rs, F32:$Rt, F32:$Rx),
+         (F2_sffma F32:$Rx, F32:$Rs, F32:$Rt)>;
+def: Pat<(fma (fneg F32:$Rs), F32:$Rt, F32:$Rx),
+         (F2_sffms F32:$Rx, F32:$Rs, F32:$Rt)>;
+def: Pat<(fma F32:$Rs, (fneg F32:$Rt), F32:$Rx),
+         (F2_sffms F32:$Rx, F32:$Rs, F32:$Rt)>;
 
 
 def: Pat<(mul V2I32:$Rs, V2I32:$Rt),
@@ -1540,14 +1522,12 @@ def: Pat<(v4i16 (mul V4I16:$Rs, V4I16:$Rt)),
 
 // Multiplies two v4i8 vectors.
 def: Pat<(v4i8 (mul V4I8:$Rs, V4I8:$Rt)),
-         (S2_vtrunehb (M5_vmpybuu V4I8:$Rs, V4I8:$Rt))>,
-     Requires<[HasV5]>;
+         (S2_vtrunehb (M5_vmpybuu V4I8:$Rs, V4I8:$Rt))>;
 
 // Multiplies two v8i8 vectors.
 def: Pat<(v8i8 (mul V8I8:$Rs, V8I8:$Rt)),
          (Combinew (S2_vtrunehb (M5_vmpybuu (HiReg $Rs), (HiReg $Rt))),
-                   (S2_vtrunehb (M5_vmpybuu (LoReg $Rs), (LoReg $Rt))))>,
-     Requires<[HasV5]>;
+                   (S2_vtrunehb (M5_vmpybuu (LoReg $Rs), (LoReg $Rt))))>;
 
 
 // --(10) Bit ------------------------------------------------------------

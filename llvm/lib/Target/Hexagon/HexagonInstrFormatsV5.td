@@ -1,4 +1,4 @@
-//==- HexagonInstrFormatsV4.td - Hexagon Instruction Formats --*- tablegen -==//
+//==- HexagonInstrFormatsV5.td - Hexagon Instruction Formats --*- tablegen -==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file describes the Hexagon V4 instruction classes in TableGen format.
+// This file describes the Hexagon V5 instruction classes in TableGen format.
 //
 //===----------------------------------------------------------------------===//
 
