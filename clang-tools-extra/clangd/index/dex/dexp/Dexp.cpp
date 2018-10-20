@@ -22,18 +22,14 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Signals.h"
 
-using clang::clangd::FuzzyFindRequest;
-using clang::clangd::loadIndex;
-using clang::clangd::Symbol;
-using clang::clangd::SymbolIndex;
 using namespace llvm;
+using namespace clang;
+using namespace clangd;
 
 namespace {
 
-llvm::cl::opt<std::string>
-    IndexPath("index-path",
-              llvm::cl::desc("Path to the index"),
-              llvm::cl::Positional, llvm::cl::Required);
+cl::opt<std::string> IndexPath("index-path", cl::desc("Path to the index"),
+                               cl::Positional, cl::Required);
 
 static const std::string Overview = R"(
 This is an **experimental** interactive tool to process user-provided search
@@ -44,27 +40,27 @@ and manually construct non-trivial test cases.
 Type use "help" request to get information about the details.
 )";
 
-void reportTime(StringRef Name, llvm::function_ref<void()> F) {
+void reportTime(StringRef Name, function_ref<void()> F) {
   const auto TimerStart = std::chrono::high_resolution_clock::now();
   F();
   const auto TimerStop = std::chrono::high_resolution_clock::now();
   const auto Duration = std::chrono::duration_cast<std::chrono::milliseconds>(
       TimerStop - TimerStart);
-  llvm::outs() << llvm::formatv("{0} took {1:ms+n}.\n", Name, Duration);
+  outs() << formatv("{0} took {1:ms+n}.\n", Name, Duration);
 }
 
-std::vector<clang::clangd::SymbolID>
-getSymbolIDsFromIndex(llvm::StringRef QualifiedName, const SymbolIndex *Index) {
+std::vector<SymbolID> getSymbolIDsFromIndex(StringRef QualifiedName,
+                                            const SymbolIndex *Index) {
   FuzzyFindRequest Request;
   // Remove leading "::" qualifier as FuzzyFind doesn't need leading "::"
   // qualifier for global scope.
   bool IsGlobalScope = QualifiedName.consume_front("::");
-  auto Names = clang::clangd::splitQualifiedName(QualifiedName);
+  auto Names = splitQualifiedName(QualifiedName);
   if (IsGlobalScope || !Names.first.empty())
     Request.Scopes = {Names.first};
 
   Request.Query = Names.second;
-  std::vector<clang::clangd::SymbolID> SymIDs;
+  std::vector<SymbolID> SymIDs;
   Index->fuzzyFind(Request, [&](const Symbol &Sym) {
     std::string SymQualifiedName = (Sym.Scope + Sym.Name).str();
     if (QualifiedName == SymQualifiedName)
@@ -90,7 +86,7 @@ public:
   virtual void parseAndRun(ArrayRef<const char *> Argv, const char *Overview,
                            const SymbolIndex &Index) {
     std::string ParseErrs;
-    llvm::raw_string_ostream OS(ParseErrs);
+    raw_string_ostream OS(ParseErrs);
     bool Ok =
         cl::ParseCommandLineOptions(Argv.size(), Argv.data(), Overview, &OS);
     if (Help.getNumOccurrences() > 0) {
@@ -139,18 +135,16 @@ class FuzzyFind : public Command {
     Request.Limit = Limit;
     Request.Query = Query;
     if (Scopes.getNumOccurrences() > 0) {
-      llvm::SmallVector<StringRef, 8> Scopes;
+      SmallVector<StringRef, 8> Scopes;
       StringRef(this->Scopes).split(Scopes, ',');
       Request.Scopes = {Scopes.begin(), Scopes.end()};
     }
     // FIXME(kbobyrev): Print symbol final scores to see the distribution.
     static const auto OutputFormat = "{0,-4} | {1,-40} | {2,-25}\n";
-    llvm::outs() << llvm::formatv(OutputFormat, "Rank", "Symbol ID",
-                                  "Symbol Name");
+    outs() << formatv(OutputFormat, "Rank", "Symbol ID", "Symbol Name");
     size_t Rank = 0;
     Index->fuzzyFind(Request, [&](const Symbol &Sym) {
-      llvm::outs() << llvm::formatv(OutputFormat, Rank++, Sym.ID.str(),
-                                    Sym.Name);
+      outs() << formatv(OutputFormat, Rank++, Sym.ID.str(), Sym.Name);
     });
   }
 };
@@ -167,15 +161,14 @@ class Lookup : public Command {
 
   void run() override {
     if (ID.getNumOccurrences() == 0 && Name.getNumOccurrences() == 0) {
-      llvm::outs()
-          << "Missing required argument: please provide id or -name.\n";
+      outs() << "Missing required argument: please provide id or -name.\n";
       return;
     }
-    std::vector<clang::clangd::SymbolID> IDs;
+    std::vector<SymbolID> IDs;
     if (ID.getNumOccurrences()) {
-      auto SID = clang::clangd::SymbolID::fromStr(ID);
+      auto SID = SymbolID::fromStr(ID);
       if (!SID) {
-        llvm::outs() << llvm::toString(SID.takeError()) << "\n";
+        outs() << toString(SID.takeError()) << "\n";
         return;
       }
       IDs.push_back(*SID);
@@ -183,15 +176,15 @@ class Lookup : public Command {
       IDs = getSymbolIDsFromIndex(Name, Index);
     }
 
-    clang::clangd::LookupRequest Request;
+    LookupRequest Request;
     Request.IDs.insert(IDs.begin(), IDs.end());
     bool FoundSymbol = false;
     Index->lookup(Request, [&](const Symbol &Sym) {
       FoundSymbol = true;
-      llvm::outs() << toYAML(Sym);
+      outs() << toYAML(Sym);
     });
     if (!FoundSymbol)
-      llvm::outs() << "not found\n";
+      outs() << "not found\n";
   }
 };
 
@@ -211,32 +204,31 @@ class Refs : public Command {
 
   void run() override {
     if (ID.getNumOccurrences() == 0 && Name.getNumOccurrences() == 0) {
-      llvm::outs()
-          << "Missing required argument: please provide id or -name.\n";
+      outs() << "Missing required argument: please provide id or -name.\n";
       return;
     }
-    std::vector<clang::clangd::SymbolID> IDs;
+    std::vector<SymbolID> IDs;
     if (ID.getNumOccurrences()) {
-      auto SID = clang::clangd::SymbolID::fromStr(ID);
+      auto SID = SymbolID::fromStr(ID);
       if (!SID) {
-        llvm::outs() << llvm::toString(SID.takeError()) << "\n";
+        outs() << toString(SID.takeError()) << "\n";
         return;
       }
       IDs.push_back(*SID);
     } else {
       IDs = getSymbolIDsFromIndex(Name, Index);
     }
-    clang::clangd::RefsRequest RefRequest;
+    RefsRequest RefRequest;
     RefRequest.IDs.insert(IDs.begin(), IDs.end());
-    llvm::Regex RegexFilter(Filter);
-    Index->refs(RefRequest, [&RegexFilter](const clang::clangd::Ref &R) {
-      auto U = clang::clangd::URI::parse(R.Location.FileURI);
+    Regex RegexFilter(Filter);
+    Index->refs(RefRequest, [&RegexFilter](const Ref &R) {
+      auto U = URI::parse(R.Location.FileURI);
       if (!U) {
-        llvm::outs() << U.takeError();
+        outs() << U.takeError();
         return;
       }
       if (RegexFilter.match(U->body()))
-        llvm::outs() << R << "\n";
+        outs() << R << "\n";
     });
   }
 };
@@ -253,16 +245,16 @@ struct {
      llvm::make_unique<Refs>},
 };
 
-std::unique_ptr<SymbolIndex> openIndex(llvm::StringRef Index) {
+std::unique_ptr<SymbolIndex> openIndex(StringRef Index) {
   return loadIndex(Index, /*URISchemes=*/{}, /*UseDex=*/true);
 }
 
 } // namespace
 
 int main(int argc, const char *argv[]) {
-  llvm::cl::ParseCommandLineOptions(argc, argv, Overview);
-  llvm::cl::ResetCommandLineParser(); // We reuse it for REPL commands.
-  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
+  cl::ParseCommandLineOptions(argc, argv, Overview);
+  cl::ResetCommandLineParser(); // We reuse it for REPL commands.
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   std::unique_ptr<SymbolIndex> Index;
   reportTime("Dex build", [&]() {
@@ -270,13 +262,13 @@ int main(int argc, const char *argv[]) {
   });
 
   if (!Index) {
-    llvm::outs() << "Failed to open the index.\n";
+    outs() << "Failed to open the index.\n";
     return -1;
   }
 
-  llvm::LineEditor LE("dexp");
+  LineEditor LE("dexp");
 
-  while (llvm::Optional<std::string> Request = LE.readLine()) {
+  while (Optional<std::string> Request = LE.readLine()) {
     // Split on spaces and add required null-termination.
     std::replace(Request->begin(), Request->end(), ' ', '\0');
     SmallVector<StringRef, 8> Args;
@@ -286,7 +278,7 @@ int main(int argc, const char *argv[]) {
     if (Args.front() == "help") {
       outs() << "dexp - Index explorer\nCommands:\n";
       for (const auto &C : CommandInfo)
-        outs() << llvm::formatv("{0,16} - {1}\n", C.Name, C.Description);
+        outs() << formatv("{0,16} - {1}\n", C.Name, C.Description);
       outs() << "Get detailed command help with e.g. `find -help`.\n";
       continue;
     }

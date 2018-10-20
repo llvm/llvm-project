@@ -39,6 +39,9 @@ void AddressPool::emitHeader(AsmPrinter &Asm, MCSection *Section) {
 
 // Emit addresses into the section given.
 void AddressPool::emit(AsmPrinter &Asm, MCSection *AddrSection) {
+  if (isEmpty())
+    return;
+
   // Start the dwarf addr section.
   Asm.OutStreamer->SwitchSection(AddrSection);
 
@@ -48,9 +51,6 @@ void AddressPool::emit(AsmPrinter &Asm, MCSection *AddrSection) {
   // Define the symbol that marks the start of the contribution.
   // It is referenced via DW_AT_addr_base.
   Asm.OutStreamer->EmitLabel(AddressTableBaseSym);
-
-  if (Pool.empty())
-    return;
 
   // Order the address pool entries by ID
   SmallVector<const MCExpr *, 64> Entries(Pool.size());

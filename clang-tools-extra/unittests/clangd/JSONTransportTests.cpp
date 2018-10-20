@@ -24,7 +24,7 @@ namespace {
 // Fixture takes care of managing the input/output buffers for the transport.
 class JSONTransportTest : public ::testing::Test {
   std::string InBuf, OutBuf, MirrorBuf;
-  llvm::raw_string_ostream Out, Mirror;
+  raw_string_ostream Out, Mirror;
   std::unique_ptr<FILE, int (*)(FILE *)> In;
 
 protected:
@@ -78,8 +78,8 @@ public:
     if (Params)
       Log << "Reply(" << ID << "): " << *Params << "\n";
     else
-      Log << "Reply(" << ID
-          << "): error = " << llvm::toString(Params.takeError()) << "\n";
+      Log << "Reply(" << ID << "): error = " << toString(Params.takeError())
+          << "\n";
     return true;
   }
 };
@@ -104,7 +104,7 @@ TEST_F(JSONTransportTest, StandardDense) {
       /*Pretty=*/false, JSONStreamStyle::Standard);
   Echo E(*T);
   auto Err = T->loop(E);
-  EXPECT_FALSE(bool(Err)) << llvm::toString(std::move(Err));
+  EXPECT_FALSE(bool(Err)) << toString(std::move(Err));
 
   const char *WantLog = R"(
 Notification call: 1234
@@ -145,7 +145,7 @@ TEST_F(JSONTransportTest, DelimitedPretty) {
                      /*Pretty=*/true, JSONStreamStyle::Delimited);
   Echo E(*T);
   auto Err = T->loop(E);
-  EXPECT_FALSE(bool(Err)) << llvm::toString(std::move(Err));
+  EXPECT_FALSE(bool(Err)) << toString(std::move(Err));
 
   const char *WantLog = R"(
 Notification call: 1234

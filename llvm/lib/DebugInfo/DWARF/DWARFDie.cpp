@@ -109,7 +109,7 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
       auto LL = DebugLoc.parseOneLocationList(Data, &Offset);
       if (LL) {
         uint64_t BaseAddr = 0;
-        if (Optional<BaseAddress> BA = U->getBaseAddress())
+        if (Optional<SectionedAddress> BA = U->getBaseAddress())
           BaseAddr = BA->Address;
         LL->dump(OS, Ctx.isLittleEndian(), Obj.getAddressSize(), MRI, BaseAddr,
                  Indent);

@@ -9088,17 +9088,17 @@ Value *CodeGenFunction::EmitX86CpuSupports(const CallExpr *E) {
   return EmitX86CpuSupports(FeatureStr);
 }
 
-uint32_t
+uint64_t
 CodeGenFunction::GetX86CpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   // Processor features and mapping to processor feature value.
-  uint32_t FeaturesMask = 0;
+  uint64_t FeaturesMask = 0;
   for (const StringRef &FeatureStr : FeatureStrs) {
     unsigned Feature =
         StringSwitch<unsigned>(FeatureStr)
 #define X86_FEATURE_COMPAT(VAL, ENUM, STR) .Case(STR, VAL)
 #include "llvm/Support/X86TargetParser.def"
         ;
-    FeaturesMask |= (1U << Feature);
+    FeaturesMask |= (1ULL << Feature);
   }
   return FeaturesMask;
 }
@@ -9107,31 +9107,54 @@ Value *CodeGenFunction::EmitX86CpuSupports(ArrayRef<StringRef> FeatureStrs) {
   return EmitX86CpuSupports(GetX86CpuSupportsMask(FeatureStrs));
 }
 
-llvm::Value *CodeGenFunction::EmitX86CpuSupports(uint32_t FeaturesMask) {
-  // Matching the struct layout from the compiler-rt/libgcc structure that is
-  // filled in:
-  // unsigned int __cpu_vendor;
-  // unsigned int __cpu_type;
-  // unsigned int __cpu_subtype;
-  // unsigned int __cpu_features[1];
-  llvm::Type *STy = llvm::StructType::get(Int32Ty, Int32Ty, Int32Ty,
-                                          llvm::ArrayType::get(Int32Ty, 1));
+llvm::Value *CodeGenFunction::EmitX86CpuSupports(uint64_t FeaturesMask) {
+  uint32_t Features1 = Lo_32(FeaturesMask);
+  uint32_t Features2 = Hi_32(FeaturesMask);
 
-  // Grab the global __cpu_model.
-  llvm::Constant *CpuModel = CGM.CreateRuntimeVariable(STy, "__cpu_model");
+  Value *Result = Builder.getTrue();
 
-  // Grab the first (0th) element from the field __cpu_features off of the
-  // global in the struct STy.
-  Value *Idxs[] = {ConstantInt::get(Int32Ty, 0), ConstantInt::get(Int32Ty, 3),
-                   ConstantInt::get(Int32Ty, 0)};
-  Value *CpuFeatures = Builder.CreateGEP(STy, CpuModel, Idxs);
-  Value *Features =
-      Builder.CreateAlignedLoad(CpuFeatures, CharUnits::fromQuantity(4));
+  if (Features1 != 0) {
+    // Matching the struct layout from the compiler-rt/libgcc structure that is
+    // filled in:
+    // unsigned int __cpu_vendor;
+    // unsigned int __cpu_type;
+    // unsigned int __cpu_subtype;
+    // unsigned int __cpu_features[1];
+    llvm::Type *STy = llvm::StructType::get(Int32Ty, Int32Ty, Int32Ty,
+                                            llvm::ArrayType::get(Int32Ty, 1));
 
-  // Check the value of the bit corresponding to the feature requested.
-  Value *Mask = Builder.getInt32(FeaturesMask);
-  Value *Bitset = Builder.CreateAnd(Features, Mask);
-  return Builder.CreateICmpEQ(Bitset, Mask);
+    // Grab the global __cpu_model.
+    llvm::Constant *CpuModel = CGM.CreateRuntimeVariable(STy, "__cpu_model");
+
+    // Grab the first (0th) element from the field __cpu_features off of the
+    // global in the struct STy.
+    Value *Idxs[] = {Builder.getInt32(0), Builder.getInt32(3),
+                     Builder.getInt32(0)};
+    Value *CpuFeatures = Builder.CreateGEP(STy, CpuModel, Idxs);
+    Value *Features =
+        Builder.CreateAlignedLoad(CpuFeatures, CharUnits::fromQuantity(4));
+
+    // Check the value of the bit corresponding to the feature requested.
+    Value *Mask = Builder.getInt32(Features1);
+    Value *Bitset = Builder.CreateAnd(Features, Mask);
+    Value *Cmp = Builder.CreateICmpEQ(Bitset, Mask);
+    Result = Builder.CreateAnd(Result, Cmp);
+  }
+
+  if (Features2 != 0) {
+    llvm::Constant *CpuFeatures2 = CGM.CreateRuntimeVariable(Int32Ty,
+                                                             "__cpu_features2");
+    Value *Features =
+        Builder.CreateAlignedLoad(CpuFeatures2, CharUnits::fromQuantity(4));
+
+    // Check the value of the bit corresponding to the feature requested.
+    Value *Mask = Builder.getInt32(Features2);
+    Value *Bitset = Builder.CreateAnd(Features, Mask);
+    Value *Cmp = Builder.CreateICmpEQ(Bitset, Mask);
+    Result = Builder.CreateAnd(Result, Cmp);
+  }
+
+  return Result;
 }
 
 Value *CodeGenFunction::EmitX86CpuInit() {

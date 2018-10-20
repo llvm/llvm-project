@@ -4308,7 +4308,7 @@ public:
   void EmitCPUDispatchMultiVersionResolver(
       llvm::Function *Resolver,
       ArrayRef<CPUDispatchMultiVersionResolverOption> Options);
-  static uint32_t GetX86CpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
+  static uint64_t GetX86CpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
 
 private:
   QualType getVarArgType(const Expr *Arg);
@@ -4325,7 +4325,7 @@ private:
   llvm::Value *EmitX86CpuIs(StringRef CPUStr);
   llvm::Value *EmitX86CpuSupports(const CallExpr *E);
   llvm::Value *EmitX86CpuSupports(ArrayRef<StringRef> FeatureStrs);
-  llvm::Value *EmitX86CpuSupports(uint32_t Mask);
+  llvm::Value *EmitX86CpuSupports(uint64_t Mask);
   llvm::Value *EmitX86CpuInit();
   llvm::Value *FormResolverCondition(const MultiVersionResolverOption &RO);
 };
