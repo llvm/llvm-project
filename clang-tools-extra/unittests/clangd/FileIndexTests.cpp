@@ -41,6 +41,7 @@ MATCHER_P(FileURI, F, "") { return arg.Location.FileURI == F; }
 MATCHER_P(DeclURI, U, "") { return arg.CanonicalDeclaration.FileURI == U; }
 MATCHER_P(QName, N, "") { return (arg.Scope + arg.Name).str() == N; }
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -49,7 +50,7 @@ RefsAre(std::vector<testing::Matcher<Ref>> Matchers) {
   return ElementsAre(testing::Pair(_, UnorderedElementsAreArray(Matchers)));
 }
 
-Symbol symbol(llvm::StringRef ID) {
+Symbol symbol(StringRef ID) {
   Symbol Sym;
   Sym.ID = SymbolID(ID);
   Sym.Name = ID;
@@ -63,7 +64,7 @@ std::unique_ptr<SymbolSlab> numSlab(int Begin, int End) {
   return llvm::make_unique<SymbolSlab>(std::move(Slab).build());
 }
 
-std::unique_ptr<RefSlab> refSlab(const SymbolID &ID, llvm::StringRef Path) {
+std::unique_ptr<RefSlab> refSlab(const SymbolID &ID, StringRef Path) {
   RefSlab::Builder Slab;
   Ref R;
   R.Location.FileURI = Path;
@@ -123,7 +124,7 @@ TEST(FileSymbolsTest, SnapshotAliveAfterRemove) {
 }
 
 // Adds Basename.cpp, which includes Basename.h, which contains Code.
-void update(FileIndex &M, llvm::StringRef Basename, llvm::StringRef Code) {
+void update(FileIndex &M, StringRef Basename, StringRef Code) {
   TestTU File;
   File.Filename = (Basename + ".cpp").str();
   File.HeaderFilename = (Basename + ".h").str();
@@ -228,7 +229,7 @@ TEST(FileIndexTest, RebuildWithPreamble) {
   PI.CompileCommand.Filename = FooCpp;
   PI.CompileCommand.CommandLine = {"clang", "-xc++", FooCpp};
 
-  llvm::StringMap<std::string> Files;
+  StringMap<std::string> Files;
   Files[FooCpp] = "";
   Files[FooH] = R"cpp(
     namespace ns_in_header {
@@ -343,11 +344,10 @@ TEST(FileIndexTest, ReferencesInMainFileWithPreamble) {
       std::make_shared<PCHContainerOperations>(), /*StoreInMemory=*/true,
       [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP) {});
   // Build AST for main file with preamble.
-  auto AST = ParsedAST::build(
-      createInvocationFromCommandLine(Cmd), PreambleData,
-      llvm::MemoryBuffer::getMemBufferCopy(Main.code()),
-      std::make_shared<PCHContainerOperations>(),
-      PI.FS);
+  auto AST =
+      ParsedAST::build(createInvocationFromCommandLine(Cmd), PreambleData,
+                       MemoryBuffer::getMemBufferCopy(Main.code()),
+                       std::make_shared<PCHContainerOperations>(), PI.FS);
   ASSERT_TRUE(AST);
   FileIndex Index;
   Index.updateMain(MainFile, *AST);

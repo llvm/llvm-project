@@ -9,6 +9,7 @@
 
 #include "SyncAPI.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 
@@ -25,7 +26,7 @@ namespace {
 ///    T Result;
 ///    someAsyncFunc(Param1, Param2, /*Callback=*/capture(Result));
 template <typename T> struct CaptureProxy {
-  CaptureProxy(llvm::Optional<T> &Target) : Target(&Target) {
+  CaptureProxy(Optional<T> &Target) : Target(&Target) {
     assert(!Target.hasValue());
   }
 
@@ -37,7 +38,7 @@ template <typename T> struct CaptureProxy {
   }
   CaptureProxy &operator=(CaptureProxy &&) = delete;
 
-  operator llvm::unique_function<void(T)>() && {
+  operator unique_function<void(T)>() && {
     assert(!Future.valid() && "conversion to callback called multiple times");
     Future = Promise.get_future();
     return Bind(
@@ -56,7 +57,7 @@ template <typename T> struct CaptureProxy {
   }
 
 private:
-  llvm::Optional<T> *Target;
+  Optional<T> *Target;
   // Using shared_ptr to workaround compilation errors with MSVC.
   // MSVC only allows default-construcitble and copyable objects as future<>
   // arguments.
@@ -64,63 +65,63 @@ private:
   std::future<std::shared_ptr<T>> Future;
 };
 
-template <typename T> CaptureProxy<T> capture(llvm::Optional<T> &Target) {
+template <typename T> CaptureProxy<T> capture(Optional<T> &Target) {
   return CaptureProxy<T>(Target);
 }
 } // namespace
 
-llvm::Expected<CodeCompleteResult>
-runCodeComplete(ClangdServer &Server, PathRef File, Position Pos,
-                clangd::CodeCompleteOptions Opts) {
-  llvm::Optional<llvm::Expected<CodeCompleteResult>> Result;
+Expected<CodeCompleteResult> runCodeComplete(ClangdServer &Server, PathRef File,
+                                             Position Pos,
+                                             clangd::CodeCompleteOptions Opts) {
+  Optional<Expected<CodeCompleteResult>> Result;
   Server.codeComplete(File, Pos, Opts, capture(Result));
   return std::move(*Result);
 }
 
-llvm::Expected<SignatureHelp> runSignatureHelp(ClangdServer &Server,
-                                               PathRef File, Position Pos) {
-  llvm::Optional<llvm::Expected<SignatureHelp>> Result;
+Expected<SignatureHelp> runSignatureHelp(ClangdServer &Server, PathRef File,
+                                         Position Pos) {
+  Optional<Expected<SignatureHelp>> Result;
   Server.signatureHelp(File, Pos, capture(Result));
   return std::move(*Result);
 }
 
-llvm::Expected<std::vector<Location>>
-runFindDefinitions(ClangdServer &Server, PathRef File, Position Pos) {
-  llvm::Optional<llvm::Expected<std::vector<Location>>> Result;
+Expected<std::vector<Location>> runFindDefinitions(ClangdServer &Server,
+                                                   PathRef File, Position Pos) {
+  Optional<Expected<std::vector<Location>>> Result;
   Server.findDefinitions(File, Pos, capture(Result));
   return std::move(*Result);
 }
 
-llvm::Expected<std::vector<DocumentHighlight>>
+Expected<std::vector<DocumentHighlight>>
 runFindDocumentHighlights(ClangdServer &Server, PathRef File, Position Pos) {
-  llvm::Optional<llvm::Expected<std::vector<DocumentHighlight>>> Result;
+  Optional<Expected<std::vector<DocumentHighlight>>> Result;
   Server.findDocumentHighlights(File, Pos, capture(Result));
   return std::move(*Result);
 }
 
-llvm::Expected<std::vector<tooling::Replacement>>
+Expected<std::vector<tooling::Replacement>>
 runRename(ClangdServer &Server, PathRef File, Position Pos, StringRef NewName) {
-  llvm::Optional<llvm::Expected<std::vector<tooling::Replacement>>> Result;
+  Optional<Expected<std::vector<tooling::Replacement>>> Result;
   Server.rename(File, Pos, NewName, capture(Result));
   return std::move(*Result);
 }
 
 std::string runDumpAST(ClangdServer &Server, PathRef File) {
-  llvm::Optional<std::string> Result;
+  Optional<std::string> Result;
   Server.dumpAST(File, capture(Result));
   return std::move(*Result);
 }
 
-llvm::Expected<std::vector<SymbolInformation>>
+Expected<std::vector<SymbolInformation>>
 runWorkspaceSymbols(ClangdServer &Server, StringRef Query, int Limit) {
-  llvm::Optional<llvm::Expected<std::vector<SymbolInformation>>> Result;
+  Optional<Expected<std::vector<SymbolInformation>>> Result;
   Server.workspaceSymbols(Query, Limit, capture(Result));
   return std::move(*Result);
 }
 
-llvm::Expected<std::vector<SymbolInformation>>
+Expected<std::vector<SymbolInformation>>
 runDocumentSymbols(ClangdServer &Server, PathRef File) {
-  llvm::Optional<llvm::Expected<std::vector<SymbolInformation>>> Result;
+  Optional<Expected<std::vector<SymbolInformation>>> Result;
   Server.documentSymbols(File, capture(Result));
   return std::move(*Result);
 }

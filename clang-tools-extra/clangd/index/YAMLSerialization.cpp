@@ -26,6 +26,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 
+using namespace llvm;
+
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::clangd::Symbol::IncludeHeaderWithReferences)
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::clangd::Ref)
 
@@ -34,8 +36,8 @@ using RefBundle =
     std::pair<clang::clangd::SymbolID, std::vector<clang::clangd::Ref>>;
 // This is a pale imitation of std::variant<Symbol, RefBundle>
 struct VariantEntry {
-  llvm::Optional<clang::clangd::Symbol> Symbol;
-  llvm::Optional<RefBundle> Refs;
+  Optional<clang::clangd::Symbol> Symbol;
+  Optional<RefBundle> Refs;
 };
 // A class helps YAML to serialize the 32-bit encoded position (Line&Column),
 // as YAMLIO can't directly map bitfields.
@@ -62,14 +64,14 @@ using clang::index::SymbolLanguage;
 struct NormalizedSymbolID {
   NormalizedSymbolID(IO &) {}
   NormalizedSymbolID(IO &, const SymbolID &ID) {
-    llvm::raw_string_ostream OS(HexString);
+    raw_string_ostream OS(HexString);
     OS << ID;
   }
 
   SymbolID denormalize(IO &I) {
     auto ID = SymbolID::fromStr(HexString);
     if (!ID) {
-      I.setError(llvm::toString(ID.takeError()));
+      I.setError(toString(ID.takeError()));
       return SymbolID();
     }
     return *ID;
@@ -273,7 +275,7 @@ namespace clang {
 namespace clangd {
 
 void writeYAML(const IndexFileOut &O, raw_ostream &OS) {
-  llvm::yaml::Output Yout(OS);
+  yaml::Output Yout(OS);
   for (const auto &Sym : *O.Symbols) {
     VariantEntry Entry;
     Entry.Symbol = Sym;
@@ -290,12 +292,12 @@ void writeYAML(const IndexFileOut &O, raw_ostream &OS) {
 Expected<IndexFileIn> readYAML(StringRef Data) {
   SymbolSlab::Builder Symbols;
   RefSlab::Builder Refs;
-  llvm::yaml::Input Yin(Data);
+  yaml::Input Yin(Data);
   do {
     VariantEntry Variant;
     Yin >> Variant;
     if (Yin.error())
-      return llvm::errorCodeToError(Yin.error());
+      return errorCodeToError(Yin.error());
     if (Variant.Symbol)
       Symbols.insert(*Variant.Symbol);
     if (Variant.Refs)
@@ -312,8 +314,8 @@ Expected<IndexFileIn> readYAML(StringRef Data) {
 std::string toYAML(const Symbol &S) {
   std::string Buf;
   {
-    llvm::raw_string_ostream OS(Buf);
-    llvm::yaml::Output Yout(OS);
+    raw_string_ostream OS(Buf);
+    yaml::Output Yout(OS);
     Symbol Sym = S; // copy: Yout<< requires mutability.
     Yout << Sym;
   }
@@ -324,8 +326,8 @@ std::string toYAML(const std::pair<SymbolID, ArrayRef<Ref>> &Data) {
   RefBundle Refs = {Data.first, Data.second};
   std::string Buf;
   {
-    llvm::raw_string_ostream OS(Buf);
-    llvm::yaml::Output Yout(OS);
+    raw_string_ostream OS(Buf);
+    yaml::Output Yout(OS);
     Yout << Refs;
   }
   return Buf;

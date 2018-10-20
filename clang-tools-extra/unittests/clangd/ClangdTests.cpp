@@ -30,6 +30,7 @@
 #include <thread>
 #include <vector>
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 
@@ -104,14 +105,14 @@ public:
 
 private:
   mutable std::mutex Mutex;
-  llvm::StringMap<bool> LastDiagsHadError;
+  StringMap<bool> LastDiagsHadError;
 };
 
 /// Replaces all patterns of the form 0x123abc with spaces
 std::string replacePtrsInDump(std::string const &Dump) {
-  llvm::Regex RE("0x[0-9a-fA-F]+");
-  llvm::SmallVector<StringRef, 1> Matches;
-  llvm::StringRef Pending = Dump;
+  Regex RE("0x[0-9a-fA-F]+");
+  SmallVector<StringRef, 1> Matches;
+  StringRef Pending = Dump;
 
   std::string Result;
   while (RE.match(Pending, &Matches)) {
@@ -264,7 +265,7 @@ int b = a;
 TEST_F(ClangdVFSTest, PropagatesContexts) {
   static Key<int> Secret;
   struct FSProvider : public FileSystemProvider {
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> getFileSystem() const override {
+    IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() const override {
       Got = Context::current().getExisting(Secret);
       return buildTestFS({});
     }
@@ -308,19 +309,19 @@ TEST_F(ClangdVFSTest, SearchLibDir) {
 
   // A lib dir for gcc installation
   SmallString<64> LibDir("/randomusr/lib/gcc/x86_64-linux-gnu");
-  llvm::sys::path::append(LibDir, Version);
+  sys::path::append(LibDir, Version);
 
   // Put crtbegin.o into LibDir/64 to trick clang into thinking there's a gcc
   // installation there.
   SmallString<64> DummyLibFile;
-  llvm::sys::path::append(DummyLibFile, LibDir, "64", "crtbegin.o");
+  sys::path::append(DummyLibFile, LibDir, "64", "crtbegin.o");
   FS.Files[DummyLibFile] = "";
 
   SmallString<64> IncludeDir("/randomusr/include/c++");
-  llvm::sys::path::append(IncludeDir, Version);
+  sys::path::append(IncludeDir, Version);
 
   SmallString<64> StringPath;
-  llvm::sys::path::append(StringPath, IncludeDir, "string");
+  sys::path::append(StringPath, IncludeDir, "string");
   FS.Files[StringPath] = "class mock_string {};";
 
   auto FooCpp = testPath("foo.cpp");
@@ -593,7 +594,7 @@ int d;
 
     void onDiagnosticsReady(PathRef File,
                             std::vector<Diag> Diagnostics) override {
-      StringRef FileIndexStr = llvm::sys::path::stem(File);
+      StringRef FileIndexStr = sys::path::stem(File);
       ASSERT_TRUE(FileIndexStr.consume_front("Foo"));
 
       unsigned long FileIndex = std::stoul(FileIndexStr.str());
@@ -781,7 +782,7 @@ TEST_F(ClangdVFSTest, CheckSourceHeaderSwitch) {
   FS.Files[FooH] = "int a;";
   FS.Files[Invalid] = "int main() { \n return 0; \n }";
 
-  llvm::Optional<Path> PathResult = Server.switchSourceHeader(FooCpp);
+  Optional<Path> PathResult = Server.switchSourceHeader(FooCpp);
   EXPECT_TRUE(PathResult.hasValue());
   ASSERT_EQ(PathResult.getValue(), FooH);
 
@@ -970,28 +971,28 @@ TEST_F(ClangdVFSTest, ChangedHeaderFromISystem) {
 TEST(ClangdTests, PreambleVFSStatCache) {
   class ListenStatsFSProvider : public FileSystemProvider {
   public:
-    ListenStatsFSProvider(llvm::StringMap<unsigned> &CountStats)
+    ListenStatsFSProvider(StringMap<unsigned> &CountStats)
         : CountStats(CountStats) {}
 
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> getFileSystem() const override {
-      class ListenStatVFS : public llvm::vfs::ProxyFileSystem {
+    IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() const override {
+      class ListenStatVFS : public vfs::ProxyFileSystem {
       public:
-        ListenStatVFS(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                      llvm::StringMap<unsigned> &CountStats)
+        ListenStatVFS(IntrusiveRefCntPtr<vfs::FileSystem> FS,
+                      StringMap<unsigned> &CountStats)
             : ProxyFileSystem(std::move(FS)), CountStats(CountStats) {}
 
-        llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
+        ErrorOr<std::unique_ptr<vfs::File>>
         openFileForRead(const Twine &Path) override {
-          ++CountStats[llvm::sys::path::filename(Path.str())];
+          ++CountStats[sys::path::filename(Path.str())];
           return ProxyFileSystem::openFileForRead(Path);
         }
-        llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override {
-          ++CountStats[llvm::sys::path::filename(Path.str())];
+        ErrorOr<vfs::Status> status(const Twine &Path) override {
+          ++CountStats[sys::path::filename(Path.str())];
           return ProxyFileSystem::status(Path);
         }
 
       private:
-        llvm::StringMap<unsigned> &CountStats;
+        StringMap<unsigned> &CountStats;
       };
 
       return IntrusiveRefCntPtr<ListenStatVFS>(
@@ -999,11 +1000,11 @@ TEST(ClangdTests, PreambleVFSStatCache) {
     }
 
     // If relative paths are used, they are resolved with testPath().
-    llvm::StringMap<std::string> Files;
-    llvm::StringMap<unsigned> &CountStats;
+    StringMap<std::string> Files;
+    StringMap<unsigned> &CountStats;
   };
 
-  llvm::StringMap<unsigned> CountStats;
+  StringMap<unsigned> CountStats;
   ListenStatsFSProvider FS(CountStats);
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB;

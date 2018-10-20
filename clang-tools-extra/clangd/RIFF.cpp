@@ -42,7 +42,7 @@ Expected<Chunk> readChunk(StringRef &Stream) {
 raw_ostream &operator<<(raw_ostream &OS, const Chunk &C) {
   OS.write(C.ID.data(), C.ID.size());
   char Size[4];
-  llvm::support::endian::write32le(Size, C.Data.size());
+  support::endian::write32le(Size, C.Data.size());
   OS.write(Size, sizeof(Size));
   OS << C.Data;
   if (C.Data.size() % 2)
@@ -50,7 +50,7 @@ raw_ostream &operator<<(raw_ostream &OS, const Chunk &C) {
   return OS;
 }
 
-llvm::Expected<File> readFile(llvm::StringRef Stream) {
+Expected<File> readFile(StringRef Stream) {
   auto RIFF = readChunk(Stream);
   if (!RIFF)
     return RIFF.takeError();
@@ -60,7 +60,7 @@ llvm::Expected<File> readFile(llvm::StringRef Stream) {
     return makeError("RIFF chunk too short");
   File F;
   std::copy(RIFF->Data.begin(), RIFF->Data.begin() + 4, F.Type.begin());
-  for (llvm::StringRef Body = RIFF->Data.drop_front(4); !Body.empty();)
+  for (StringRef Body = RIFF->Data.drop_front(4); !Body.empty();)
     if (auto Chunk = readChunk(Body)) {
       F.Chunks.push_back(*Chunk);
     } else
@@ -75,7 +75,7 @@ raw_ostream &operator<<(raw_ostream &OS, const File &F) {
     DataLen += 4 + 4 + C.Data.size() + (C.Data.size() % 2);
   OS << "RIFF";
   char Size[4];
-  llvm::support::endian::write32le(Size, DataLen);
+  support::endian::write32le(Size, DataLen);
   OS.write(Size, sizeof(Size));
   OS.write(F.Type.data(), F.Type.size());
   for (const auto &C : F.Chunks)

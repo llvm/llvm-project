@@ -18,6 +18,8 @@ using testing::AllOf;
 using testing::Pair;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
+
+using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -156,7 +158,7 @@ TEST(SerializationTest, BinaryConversions) {
   // Write to binary format, and parse again.
   IndexFileOut Out(*In);
   Out.Format = IndexFileFormat::RIFF;
-  std::string Serialized = llvm::to_string(Out);
+  std::string Serialized = to_string(Out);
 
   auto In2 = readIndexFile(Serialized);
   ASSERT_TRUE(bool(In2)) << In.takeError();

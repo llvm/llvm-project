@@ -14,13 +14,14 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
 using ::testing::ElementsAre;
 
 TEST(GlobalCompilationDatabaseTest, FallbackCommand) {
-  DirectoryBasedGlobalCompilationDatabase DB(llvm::None);
+  DirectoryBasedGlobalCompilationDatabase DB(None);
   auto Cmd = DB.getFallbackCommand(testPath("foo/bar.cc"));
   EXPECT_EQ(Cmd.Directory, testPath("foo"));
   EXPECT_THAT(Cmd.CommandLine, ElementsAre("clang", testPath("foo/bar.cc")));

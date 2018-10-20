@@ -14,10 +14,9 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/raw_ostream.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
-
-using namespace llvm;
 
 // FIXME: Deleted symbols in dirty files are still returned (from Static).
 //        To identify these eliminate these, we should:
@@ -63,9 +62,8 @@ bool MergedIndex::fuzzyFind(const FuzzyFindRequest &Req,
   return More;
 }
 
-void MergedIndex::lookup(
-    const LookupRequest &Req,
-    llvm::function_ref<void(const Symbol &)> Callback) const {
+void MergedIndex::lookup(const LookupRequest &Req,
+                         function_ref<void(const Symbol &)> Callback) const {
   trace::Span Tracer("MergedIndex lookup");
   SymbolSlab::Builder B;
 
@@ -86,7 +84,7 @@ void MergedIndex::lookup(
 }
 
 void MergedIndex::refs(const RefsRequest &Req,
-                       llvm::function_ref<void(const Ref &)> Callback) const {
+                       function_ref<void(const Ref &)> Callback) const {
   trace::Span Tracer("MergedIndex refs");
   // We don't want duplicated refs from the static/dynamic indexes,
   // and we can't reliably duplicate them because offsets may differ slightly.
@@ -96,7 +94,7 @@ void MergedIndex::refs(const RefsRequest &Req,
   // FIXME: The heuristic fails if the dynamic index contains a file, but all
   // refs were removed (we will report stale ones from the static index).
   // Ultimately we should explicit check which index has the file instead.
-  llvm::StringSet<> DynamicIndexFileURIs;
+  StringSet<> DynamicIndexFileURIs;
   Dynamic->refs(Req, [&](const Ref &O) {
     DynamicIndexFileURIs.insert(O.Location.FileURI);
     Callback(O);

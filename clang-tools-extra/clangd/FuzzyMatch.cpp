@@ -60,9 +60,9 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Format.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
-using namespace llvm;
 
 constexpr int FuzzyMatcher::MaxPat;
 constexpr int FuzzyMatcher::MaxWord;
@@ -299,8 +299,8 @@ int FuzzyMatcher::matchBonus(int P, int W, Action Last) const {
   return S;
 }
 
-llvm::SmallString<256> FuzzyMatcher::dumpLast(llvm::raw_ostream &OS) const {
-  llvm::SmallString<256> Result;
+SmallString<256> FuzzyMatcher::dumpLast(raw_ostream &OS) const {
+  SmallString<256> Result;
   OS << "=== Match \"" << StringRef(Word, WordN) << "\" against ["
      << StringRef(Pat, PatN) << "] ===\n";
   if (PatN == 0) {
