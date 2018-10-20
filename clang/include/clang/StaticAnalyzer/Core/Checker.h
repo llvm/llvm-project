@@ -558,6 +558,8 @@ struct ImplicitNullDerefEvent {
   // dereference might happen later (for example pointer passed to a parameter
   // that is marked with nonnull attribute.)
   bool IsDirectDereference;
+
+  static int Tag;
 };
 
 /// A helper class which wraps a boolean value set to false by default.
