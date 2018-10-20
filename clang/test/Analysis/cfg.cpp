@@ -1,6 +1,6 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -std=c++11 -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -fheinous-gnu-extensions -std=c++11 -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
 // RUN: FileCheck --input-file=%t -check-prefixes=CHECK,WARNINGS %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -std=c++11 -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -fheinous-gnu-extensions -std=c++11 -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t -check-prefixes=CHECK,ANALYZER %s
 
 // This file tests how we construct two different flavors of the Clang CFG -
@@ -83,6 +83,24 @@ void checkDeclStmts() {
 
   static_assert(1, "abc");
 }
+
+
+// CHECK-LABEL: void checkGCCAsmRValueOutput()
+// CHECK: [B2 (ENTRY)]
+// CHECK-NEXT: Succs (1): B1
+// CHECK: [B1]
+// CHECK-NEXT:   1: int arg
+// CHECK-NEXT:   2: arg
+// CHECK-NEXT:   3: (int)[B1.2] (CStyleCastExpr, NoOp, int)
+// CHECK-NEXT:   4: asm ("" : "=r" ([B1.3]));
+// CHECK-NEXT:   5: arg
+// CHECK-NEXT:   6: asm ("" : "=r" ([B1.5]));
+void checkGCCAsmRValueOutput() {
+  int arg;
+  __asm__("" : "=r"((int)arg));  // rvalue output operand
+  __asm__("" : "=r"(arg));       // lvalue output operand
+}
+
 
 // CHECK-LABEL: void F(EmptyE e)
 // CHECK: ENTRY

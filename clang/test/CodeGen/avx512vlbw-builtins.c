@@ -2465,6 +2465,12 @@ __m256i test_mm256_maskz_mov_epi8(__mmask32 __U, __m256i __A) {
   return _mm256_maskz_mov_epi8(__U, __A); 
 }
 
+__m128i test_mm_loadu_epi16(void const *__P) {
+  // CHECK-LABEL: @test_mm_loadu_epi16
+  // CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 1{{$}}
+  return _mm_loadu_epi16(__P);
+}
+
 __m128i test_mm_mask_loadu_epi16(__m128i __W, __mmask8 __U, void const *__P) {
   // CHECK-LABEL: @test_mm_mask_loadu_epi16
   // CHECK: @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %{{.*}}, i32 1, <8 x i1> %{{.*}}, <8 x i16> %{{.*}})
@@ -2475,6 +2481,12 @@ __m128i test_mm_maskz_loadu_epi16(__mmask8 __U, void const *__P) {
   // CHECK-LABEL: @test_mm_maskz_loadu_epi16
   // CHECK: @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %{{.*}}, i32 1, <8 x i1> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_maskz_loadu_epi16(__U, __P); 
+}
+
+__m256i test_mm256_loadu_epi16(void const *__P) {
+  // CHECK-LABEL: @test_mm256_loadu_epi16
+  // CHECK: load <4 x i64>, <4 x i64>* %{{.*}}, align 1{{$}}
+  return _mm256_loadu_epi16(__P);
 }
 
 __m256i test_mm256_mask_loadu_epi16(__m256i __W, __mmask16 __U, void const *__P) {
@@ -2489,6 +2501,12 @@ __m256i test_mm256_maskz_loadu_epi16(__mmask16 __U, void const *__P) {
   return _mm256_maskz_loadu_epi16(__U, __P); 
 }
 
+__m128i test_mm_loadu_epi8(void const *__P) {
+  // CHECK-LABEL: @test_mm_loadu_epi8
+  // CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 1{{$}}
+  return _mm_loadu_epi8(__P);
+}
+
 __m128i test_mm_mask_loadu_epi8(__m128i __W, __mmask16 __U, void const *__P) {
   // CHECK-LABEL: @test_mm_mask_loadu_epi8
   // CHECK: @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %{{.*}}, i32 1, <16 x i1> %{{.*}}, <16 x i8> %{{.*}})
@@ -2499,6 +2517,12 @@ __m128i test_mm_maskz_loadu_epi8(__mmask16 __U, void const *__P) {
   // CHECK-LABEL: @test_mm_maskz_loadu_epi8
   // CHECK: @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %{{.*}}, i32 1, <16 x i1> %{{.*}}, <16 x i8> %{{.*}})
   return _mm_maskz_loadu_epi8(__U, __P); 
+}
+
+__m256i test_mm256_loadu_epi8(void const *__P) {
+  // CHECK-LABEL: @test_mm256_loadu_epi8
+  // CHECK: load <4 x i64>, <4 x i64>* %{{.*}}, align 1{{$}}
+  return _mm256_loadu_epi8(__P);
 }
 
 __m256i test_mm256_mask_loadu_epi8(__m256i __W, __mmask32 __U, void const *__P) {
@@ -2513,10 +2537,22 @@ __m256i test_mm256_maskz_loadu_epi8(__mmask32 __U, void const *__P) {
   return _mm256_maskz_loadu_epi8(__U, __P); 
 }
 
+void test_mm_storeu_epi16(void *__p, __m128i __a) {
+  // check-label: @test_mm_storeu_epi16
+  // check: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
+  return _mm_storeu_epi16(__p, __a);
+}
+
 void test_mm_mask_storeu_epi16(void *__P, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_mask_storeu_epi16
   // CHECK: @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %{{.*}}, <8 x i16>* %{{.*}}, i32 1, <8 x i1> %{{.*}})
   return _mm_mask_storeu_epi16(__P, __U, __A); 
+}
+
+void test_mm256_storeu_epi16(void *__P, __m256i __A) {
+  // CHECK-LABEL: @test_mm256_storeu_epi16
+  // CHECK: store <4 x i64> %{{.*}}, <4 x i64>* %{{.*}}, align 1{{$}}
+  return _mm256_storeu_epi16(__P, __A);
 }
 
 void test_mm256_mask_storeu_epi16(void *__P, __mmask16 __U, __m256i __A) {
@@ -2525,10 +2561,22 @@ void test_mm256_mask_storeu_epi16(void *__P, __mmask16 __U, __m256i __A) {
   return _mm256_mask_storeu_epi16(__P, __U, __A); 
 }
 
+void test_mm_storeu_epi8(void *__p, __m128i __a) {
+  // check-label: @test_mm_storeu_epi8
+  // check: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
+  return _mm_storeu_epi8(__p, __a);
+}
+
 void test_mm_mask_storeu_epi8(void *__P, __mmask16 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_mask_storeu_epi8
   // CHECK: @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %{{.*}}, <16 x i8>* %{{.*}}, i32 1, <16 x i1> %{{.*}})
   return _mm_mask_storeu_epi8(__P, __U, __A); 
+}
+
+void test_mm256_storeu_epi8(void *__P, __m256i __A) {
+  // CHECK-LABEL: @test_mm256_storeu_epi8
+  // CHECK: store <4 x i64> %{{.*}}, <4 x i64>* %{{.*}}, align 1{{$}}
+  return _mm256_storeu_epi8(__P, __A);
 }
 
 void test_mm256_mask_storeu_epi8(void *__P, __mmask32 __U, __m256i __A) {
