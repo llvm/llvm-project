@@ -884,15 +884,16 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   unsigned Features3 = 0;
   unsigned EAX, EBX;
 
-#define setFeature(F)              \
-  do {                             \
-    if (F < 32)                    \
-      Features |= 1 << F;          \
-    else if (F < 64)               \
-      Features2 |= 1 << (F - 32);  \
-    else if (F < 96)               \
-      Features3 |= 1 << (F - 64);  \
-  } while (0)
+  auto setFeature = [&](unsigned F) {
+    if (F < 32)
+      Features |= 1 << F;
+    else if (F < 64)
+      Features2 |= 1 << (F - 32);
+    else if (F < 96)
+      Features3 |= 1 << (F - 64);
+    else
+      llvm_unreachable("Unexpected FeatureBit");
+  };
 
   if ((EDX >> 15) & 1)
     setFeature(X86::FEATURE_CMOV);
@@ -1004,7 +1005,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   *FeaturesOut  = Features;
   *Features2Out = Features2;
   *Features3Out = Features3;
-#undef setFeature
 }
 
 StringRef sys::getHostCPUName() {

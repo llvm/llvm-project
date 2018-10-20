@@ -1,5 +1,7 @@
 ; RUN: lli -jit-kind=orc-lazy -orc-lazy-debug=funcs-to-stdout %s | FileCheck %s
 ;
+; Test that global constructors and destructors are run.
+;
 ; CHECK: Hello
 ; CHECK: [ {{.*}}main{{.*}} ]
 ; CHECK: Goodbye
