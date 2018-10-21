@@ -18,6 +18,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -56,7 +57,7 @@ private:
     CI->getDiagnosticOpts().IgnoreWarnings = true;
     auto Clang = prepareCompilerInstance(
         std::move(CI), /*Preamble=*/nullptr,
-        llvm::MemoryBuffer::getMemBuffer(FS.Files[MainFile], MainFile),
+        MemoryBuffer::getMemBuffer(FS.Files[MainFile], MainFile),
         std::make_shared<PCHContainerOperations>(), VFS, IgnoreDiags);
 
     EXPECT_FALSE(Clang->getFrontendOpts().Inputs.empty());
@@ -88,9 +89,9 @@ protected:
 
     if (Preferred.empty())
       Preferred = Original;
-    auto ToHeaderFile = [](llvm::StringRef Header) {
+    auto ToHeaderFile = [](StringRef Header) {
       return HeaderFile{Header,
-                        /*Verbatim=*/!llvm::sys::path::is_absolute(Header)};
+                        /*Verbatim=*/!sys::path::is_absolute(Header)};
     };
 
     IncludeInserter Inserter(MainFile, /*Code=*/"", format::getLLVMStyle(),
@@ -125,7 +126,7 @@ protected:
   MockCompilationDatabase CDB;
   std::string MainFile = testPath("main.cpp");
   std::string Subdir = testPath("sub");
-  std::string SearchDirArg = (llvm::Twine("-I") + Subdir).str();
+  std::string SearchDirArg = (Twine("-I") + Subdir).str();
   IgnoringDiagConsumer IgnoreDiags;
 };
 
@@ -237,7 +238,7 @@ TEST_F(HeadersTest, DontInsertDuplicateResolved) {
 TEST_F(HeadersTest, PreferInserted) {
   auto Edit = insert("<y>");
   EXPECT_TRUE(Edit.hasValue());
-  EXPECT_TRUE(llvm::StringRef(Edit->newText).contains("<y>"));
+  EXPECT_TRUE(StringRef(Edit->newText).contains("<y>"));
 }
 
 } // namespace

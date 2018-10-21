@@ -1160,8 +1160,8 @@ public:
     // Reject any candidate that only resolves to instance members since they
     // aren't viable as standalone identifiers instead of member references.
     if (Candidate.isResolved() && !Candidate.isKeyword() &&
-        std::all_of(Candidate.begin(), Candidate.end(),
-                    [](NamedDecl *ND) { return ND->isCXXInstanceMember(); }))
+        llvm::all_of(Candidate,
+                     [](NamedDecl *ND) { return ND->isCXXInstanceMember(); }))
       return false;
 
     return CorrectionCandidateCallback::ValidateCandidate(Candidate);

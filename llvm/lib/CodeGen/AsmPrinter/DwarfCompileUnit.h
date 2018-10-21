@@ -44,6 +44,7 @@ class MDNode;
 class DwarfCompileUnit final : public DwarfUnit {
   /// A numeric ID unique among all CUs in the module
   unsigned UniqueID;
+  bool HasRangeLists = false;
 
   /// The attribute index of DW_AT_stmt_list in the compile unit DIE, avoiding
   /// the need to search for it in applyStmtList.
@@ -68,10 +69,6 @@ class DwarfCompileUnit final : public DwarfUnit {
 
   /// GlobalTypes - A map of globally visible types for this unit.
   StringMap<const DIE *> GlobalTypes;
-
-  // List of range lists for a given compile unit, separate from the ranges for
-  // the CU itself.
-  SmallVector<RangeSpanList, 1> CURangeLists;
 
   // List of ranges for a given compile unit.
   SmallVector<RangeSpan, 2> CURanges;
@@ -108,6 +105,7 @@ public:
   DwarfCompileUnit(unsigned UID, const DICompileUnit *Node, AsmPrinter *A,
                    DwarfDebug *DW, DwarfFile *DWU);
 
+  bool hasRangeLists() const { return HasRangeLists; }
   unsigned getUniqueID() const { return UniqueID; }
 
   DwarfCompileUnit *getSkeleton() const {
@@ -298,11 +296,6 @@ public:
                                              DIE &SPDie);
 
   void applyLabelAttributes(const DbgLabel &Label, DIE &LabelDie);
-
-  /// getRangeLists - Get the vector of range lists.
-  const SmallVectorImpl<RangeSpanList> &getRangeLists() const {
-    return (Skeleton ? Skeleton : this)->CURangeLists;
-  }
 
   /// getRanges - Get the list of ranges for this unit.
   const SmallVectorImpl<RangeSpan> &getRanges() const { return CURanges; }

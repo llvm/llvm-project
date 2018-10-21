@@ -14,9 +14,9 @@
 #include "clang/Basic/SourceManager.h"
 #include <utility>
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
-
 namespace {
 
 bool isInformativeQualifierChunk(CodeCompletionString::Chunk const &Chunk) {
@@ -24,7 +24,7 @@ bool isInformativeQualifierChunk(CodeCompletionString::Chunk const &Chunk) {
          StringRef(Chunk.Text).endswith("::");
 }
 
-void appendEscapeSnippet(const llvm::StringRef Text, std::string *Out) {
+void appendEscapeSnippet(const StringRef Text, std::string *Out) {
   for (const auto Character : Text) {
     if (Character == '$' || Character == '}' || Character == '\\')
       Out->push_back('\\');
@@ -32,13 +32,13 @@ void appendEscapeSnippet(const llvm::StringRef Text, std::string *Out) {
   }
 }
 
-bool looksLikeDocComment(llvm::StringRef CommentText) {
+bool looksLikeDocComment(StringRef CommentText) {
   // We don't report comments that only contain "special" chars.
   // This avoids reporting various delimiters, like:
   //   =================
   //   -----------------
   //   *****************
-  return CommentText.find_first_not_of("/*-= \t\r\n") != llvm::StringRef::npos;
+  return CommentText.find_first_not_of("/*-= \t\r\n") != StringRef::npos;
 }
 
 } // namespace
@@ -56,7 +56,7 @@ std::string getDocComment(const ASTContext &Ctx,
 }
 
 std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
-  if (llvm::isa<NamespaceDecl>(Decl)) {
+  if (isa<NamespaceDecl>(Decl)) {
     // Namespaces often have too many redecls for any particular redecl comment
     // to be useful. Moreover, we often confuse file headers or generated
     // comments with namespace comments. Therefore we choose to just ignore
@@ -146,7 +146,7 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
 }
 
 std::string formatDocumentation(const CodeCompletionString &CCS,
-                                llvm::StringRef DocComment) {
+                                StringRef DocComment) {
   // Things like __attribute__((nonnull(1,3))) and [[noreturn]]. Present this
   // information in the documentation field.
   std::string Result;

@@ -101,6 +101,7 @@ public:
   Optional<int64_t> getAsSignedConstant() const;
   Optional<const char *> getAsCString() const;
   Optional<uint64_t> getAsAddress() const;
+  Optional<SectionedAddress> getAsSectionedAddress() const;
   Optional<uint64_t> getAsSectionOffset() const;
   Optional<ArrayRef<uint8_t>> getAsBlock() const;
   Optional<uint64_t> getAsCStringOffset() const;
@@ -235,6 +236,13 @@ inline int64_t toSigned(const Optional<DWARFFormValue> &V, int64_t Default) {
 inline Optional<uint64_t> toAddress(const Optional<DWARFFormValue> &V) {
   if (V)
     return V->getAsAddress();
+  return None;
+}
+
+inline Optional<SectionedAddress>
+toSectionedAddress(const Optional<DWARFFormValue> &V) {
+  if (V)
+    return V->getAsSectionedAddress();
   return None;
 }
 

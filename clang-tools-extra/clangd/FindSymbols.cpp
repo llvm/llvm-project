@@ -23,9 +23,9 @@
 
 #define DEBUG_TYPE "FindSymbols"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
-
 namespace {
 
 // Convert a index::SymbolKind to clangd::SymbolKind (LSP)
@@ -98,7 +98,7 @@ struct ScoredSymbolGreater {
 
 } // namespace
 
-llvm::Expected<std::vector<SymbolInformation>>
+Expected<std::vector<SymbolInformation>>
 getWorkspaceSymbols(StringRef Query, int Limit, const SymbolIndex *const Index,
                     StringRef HintPath) {
   std::vector<SymbolInformation> Result;
@@ -181,7 +181,7 @@ class DocumentSymbolsConsumer : public index::IndexDataConsumer {
   ASTContext &AST;
   std::vector<SymbolInformation> Symbols;
   // We are always list document for the same file, so cache the value.
-  llvm::Optional<URIForFile> MainFileUri;
+  Optional<URIForFile> MainFileUri;
 
 public:
   DocumentSymbolsConsumer(ASTContext &AST) : AST(AST) {}
@@ -230,7 +230,7 @@ public:
       // we can get here when in the presence of "extern" decls.
       return true;
     }
-    const NamedDecl *ND = llvm::dyn_cast<NamedDecl>(ASTNode.OrigD);
+    const NamedDecl *ND = dyn_cast<NamedDecl>(ASTNode.OrigD);
     if (!shouldIncludeSymbol(ND))
       return true;
 
@@ -262,8 +262,7 @@ public:
 };
 } // namespace
 
-llvm::Expected<std::vector<SymbolInformation>>
-getDocumentSymbols(ParsedAST &AST) {
+Expected<std::vector<SymbolInformation>> getDocumentSymbols(ParsedAST &AST) {
   DocumentSymbolsConsumer DocumentSymbolsCons(AST.getASTContext());
 
   index::IndexingOptions IndexOpts;

@@ -13,10 +13,10 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
-using namespace llvm;
 using testing::Not;
 
 struct ExpectedMatch {
@@ -208,7 +208,7 @@ struct RankMatcher : public testing::MatcherInterface<StringRef> {
         Ok = false;
       } else {
         std::string Buf;
-        llvm::raw_string_ostream Info(Buf);
+        raw_string_ostream Info(Buf);
         auto AnnotatedMatch = Matcher.dumpLast(Info);
 
         if (!Str.accepts(AnnotatedMatch)) {

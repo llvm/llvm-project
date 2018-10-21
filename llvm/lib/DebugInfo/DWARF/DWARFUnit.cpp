@@ -195,15 +195,16 @@ DWARFDataExtractor DWARFUnit::getDebugInfoExtractor() const {
                             getAddressByteSize());
 }
 
-bool DWARFUnit::getAddrOffsetSectionItem(uint32_t Index,
-                                                uint64_t &Result) const {
+Optional<SectionedAddress>
+DWARFUnit::getAddrOffsetSectionItem(uint32_t Index) const {
   uint32_t Offset = AddrOffsetSectionBase + Index * getAddressByteSize();
   if (AddrOffsetSection->Data.size() < Offset + getAddressByteSize())
-    return false;
+    return None;
   DWARFDataExtractor DA(Context.getDWARFObj(), *AddrOffsetSection,
                         isLittleEndian, getAddressByteSize());
-  Result = DA.getRelocatedAddress(&Offset);
-  return true;
+  uint64_t Section;
+  uint64_t Address = DA.getRelocatedAddress(&Offset, &Section);
+  return {{Address, Section}};
 }
 
 bool DWARFUnit::getStringOffsetSectionItem(uint32_t Index,
@@ -401,8 +402,10 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
     if (!isDWO) {
       assert(AddrOffsetSectionBase == 0);
       assert(RangeSectionBase == 0);
-      AddrOffsetSectionBase =
-          toSectionOffset(UnitDie.find(DW_AT_GNU_addr_base), 0);
+      AddrOffsetSectionBase = toSectionOffset(UnitDie.find(DW_AT_addr_base), 0);
+      if (!AddrOffsetSectionBase)
+        AddrOffsetSectionBase =
+            toSectionOffset(UnitDie.find(DW_AT_GNU_addr_base), 0);
       RangeSectionBase = toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0);
     }
 
@@ -536,7 +539,7 @@ DWARFUnit::findRnglistFromOffset(uint32_t Offset) {
                                   isLittleEndian, RngListTable->getAddrSize());
     auto RangeListOrError = RngListTable->findList(RangesData, Offset);
     if (RangeListOrError)
-      return RangeListOrError.get().getAbsoluteRanges(getBaseAddress());
+      return RangeListOrError.get().getAbsoluteRanges(getBaseAddress(), *this);
     return RangeListOrError.takeError();
   }
 
@@ -760,15 +763,13 @@ const DWARFAbbreviationDeclarationSet *DWARFUnit::getAbbreviations() const {
   return Abbrevs;
 }
 
-llvm::Optional<BaseAddress> DWARFUnit::getBaseAddress() {
+llvm::Optional<SectionedAddress> DWARFUnit::getBaseAddress() {
   if (BaseAddr)
     return BaseAddr;
 
   DWARFDie UnitDie = getUnitDIE();
   Optional<DWARFFormValue> PC = UnitDie.find({DW_AT_low_pc, DW_AT_entry_pc});
-  if (Optional<uint64_t> Addr = toAddress(PC))
-    BaseAddr = {*Addr, PC->getSectionIndex()};
-
+  BaseAddr = toSectionedAddress(PC);
   return BaseAddr;
 }
 
