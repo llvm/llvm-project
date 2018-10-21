@@ -26,13 +26,13 @@ class raw_ostream;
 class DWARFTypeUnit : public DWARFUnit {
 public:
   DWARFTypeUnit(DWARFContext &Context, const DWARFSection &Section,
-                const DWARFUnitHeader &Header,
-                const DWARFDebugAbbrev *DA, const DWARFSection *RS,
+                const DWARFUnitHeader &Header, const DWARFDebugAbbrev *DA,
+                const DWARFSection *RS, const DWARFSection *LocSection,
                 StringRef SS, const DWARFSection &SOS, const DWARFSection *AOS,
                 const DWARFSection &LS, bool LE, bool IsDWO,
                 const DWARFUnitVector &UnitVector)
-      : DWARFUnit(Context, Section, Header, DA, RS, SS, SOS, AOS, LS, LE, IsDWO,
-                  UnitVector) {}
+      : DWARFUnit(Context, Section, Header, DA, RS, LocSection, SS, SOS, AOS,
+                  LS, LE, IsDWO, UnitVector) {}
 
   uint64_t getTypeHash() const { return getHeader().getTypeHash(); }
   uint32_t getTypeOffset() const { return getHeader().getTypeOffset(); }

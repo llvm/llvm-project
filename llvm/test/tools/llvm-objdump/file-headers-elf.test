@@ -8,7 +8,7 @@ FileHeader:
   Data:            ELFDATA2LSB
   Type:            ET_REL
   Machine:         EM_X86_64
-  Entry:           0x123456
+  Entry:           0x123456789abcde
 
 # CHECK: architecture: x86_64
-# CHECK: start address: 0x00123456
+# CHECK: start address: 0x00123456789abcde

@@ -3255,11 +3255,8 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
 
   case LambdaExprClass: {
     const LambdaExpr *LE = cast<LambdaExpr>(this);
-    for (LambdaExpr::capture_iterator I = LE->capture_begin(),
-                                      E = LE->capture_end(); I != E; ++I)
-      if (I->getCaptureKind() == LCK_ByCopy)
-        // FIXME: Only has a side-effect if the variable is volatile or if
-        // the copy would invoke a non-trivial copy constructor.
+    for (Expr *E : LE->capture_inits())
+      if (E->HasSideEffects(Ctx, IncludePossibleEffects))
         return true;
     return false;
   }

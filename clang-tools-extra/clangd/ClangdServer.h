@@ -86,6 +86,11 @@ public:
     /// If set, use this index to augment code completion results.
     SymbolIndex *StaticIndex = nullptr;
 
+    /// Clangd's workspace root. Relevant for "workspace" operations not bound
+    /// to a particular file.
+    /// FIXME: If not set, should use the current working directory.
+    llvm::Optional<std::string> WorkspaceRoot;
+
     /// The resource directory is used to find internal headers, overriding
     /// defaults and -resource-dir compiler flag).
     /// If None, ClangdServer calls CompilerInvocation::GetResourcePath() to
@@ -115,9 +120,6 @@ public:
   ClangdServer(const GlobalCompilationDatabase &CDB,
                const FileSystemProvider &FSProvider,
                DiagnosticsConsumer &DiagConsumer, const Options &Opts);
-
-  /// Set the root path of the workspace.
-  void setRootPath(PathRef RootPath);
 
   /// Add a \p File to the list of tracked C++ files or update the contents if
   /// \p File is already tracked. Also schedules parsing of the AST for it on a
@@ -255,8 +257,7 @@ private:
       CachedCompletionFuzzyFindRequestByFile;
   mutable std::mutex CachedCompletionFuzzyFindRequestMutex;
 
-  // If set, this represents the workspace path.
-  llvm::Optional<std::string> RootPath;
+  llvm::Optional<std::string> WorkspaceRoot;
   std::shared_ptr<PCHContainerOperations> PCHs;
   /// Used to serialize diagnostic callbacks.
   /// FIXME(ibiryukov): get rid of an extra map and put all version counters

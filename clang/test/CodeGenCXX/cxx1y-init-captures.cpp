@@ -38,6 +38,19 @@ void g() {
 
 // CHECK: add nsw i32
 
+// CHECK-LABEL: define void @_Z18init_capture_dtorsv
+void init_capture_dtors() {
+  // Ensure that init-captures are not treated as separate full-expressions.
+  struct HasDtor { ~HasDtor() {} };
+  void some_function_call();
+  void other_function_call();
+  // CHECK: call {{.*}}some_function_call
+  // CHECK: call {{.*}}HasDtorD
+  ([x = (HasDtor(), 0)]{}, some_function_call());
+  // CHECK: call {{.*}}other_function_call
+  other_function_call();
+}
+
 int h(int a) {
   // CHECK-LABEL: define i32 @_Z1hi(
   // CHECK: %[[A_ADDR:.*]] = alloca i32,

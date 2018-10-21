@@ -3919,8 +3919,13 @@ bool AsmParser::parseDirectiveCFIStartProc() {
         parseToken(AsmToken::EndOfStatement))
       return addErrorSuffix(" in '.cfi_startproc' directive");
   }
-
-  getStreamer().EmitCFIStartProc(!Simple.empty());
+  
+  // TODO(kristina): Deal with a corner case of incorrect diagnostic context
+  // being produced if this directive is emitted as part of preprocessor macro
+  // expansion which can *ONLY* happen if Clang's cc1as is the API consumer.
+  // Tools like llvm-mc on the other hand are not affected by it, and report
+  // correct context information.
+  getStreamer().EmitCFIStartProc(!Simple.empty(), Lexer.getLoc());
   return false;
 }
 

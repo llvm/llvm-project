@@ -25,11 +25,13 @@ namespace query {
 class QuerySession {
 public:
   QuerySession(llvm::ArrayRef<std::unique_ptr<ASTUnit>> ASTs)
-      : ASTs(ASTs), OutKind(OK_Diag), BindRoot(true), Terminate(false) {}
+      : ASTs(ASTs), OutKind(OK_Diag), BindRoot(true), PrintMatcher(false),
+        Terminate(false) {}
 
   llvm::ArrayRef<std::unique_ptr<ASTUnit>> ASTs;
   OutputKind OutKind;
   bool BindRoot;
+  bool PrintMatcher;
   bool Terminate;
   llvm::StringMap<ast_matchers::dynamic::VariantValue> NamedValues;
 };

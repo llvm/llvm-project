@@ -347,10 +347,10 @@ void MCStreamer::EmitCFISections(bool EH, bool Debug) {
   assert(EH || Debug);
 }
 
-void MCStreamer::EmitCFIStartProc(bool IsSimple) {
+void MCStreamer::EmitCFIStartProc(bool IsSimple, SMLoc Loc) {
   if (hasUnfinishedDwarfFrameInfo())
-    getContext().reportError(
-        SMLoc(), "starting new .cfi frame before finishing the previous one");
+    return getContext().reportError(
+        Loc, "starting new .cfi frame before finishing the previous one");
 
   MCDwarfFrameInfo Frame;
   Frame.IsSimple = IsSimple;

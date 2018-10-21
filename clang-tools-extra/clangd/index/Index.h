@@ -43,6 +43,10 @@ struct SymbolLocation {
     void setColumn(uint32_t Column);
     uint32_t column() const { return Column; }
 
+    bool hasOverflow() const {
+      return Line >= MaxLine || Column >= MaxColumn;
+    }
+
     static constexpr uint32_t MaxLine = (1 << 20) - 1;
     static constexpr uint32_t MaxColumn = (1 << 12) - 1;
 

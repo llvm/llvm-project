@@ -57,6 +57,29 @@
 # BOTH:         ranges:
 # BOTH-NOT:     [
 
+# TERSE-NEXT:   range list header: length = 0x0000000b, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+
+# VERBOSE-NEXT: 0x{{[0-9a-f]*}}:
+# VERBOSE-SAME: range list header: length = 0x0000000b, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+
+# BOTH-NEXT:    ranges:
+# TERSE-NEXT:   <End of list>
+
+# VERBOSE-NEXT: 0x00000082: [DW_RLE_base_addressx]:  0x0000000000000000
+# VERBOSE-NEXT: 0x00000084: [DW_RLE_end_of_list ]
+
+# TERSE-NEXT:   range list header: length = 0x0000000c, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+
+# VERBOSE-NEXT: 0x{{[0-9a-f]*}}:
+# VERBOSE-SAME: range list header: length = 0x0000000c, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+
+# BOTH-NEXT:    ranges:
+# TERSE-NEXT:   [0x0000000000000000, 0x000000000000002a)
+# TERSE-NEXT:   <End of list>
+
+# VERBOSE-NEXT: 0x000000a1: [DW_RLE_startx_length]:  0x0000000000000002, 0x000000000000002a => [0x0000000000000000, 0x000000000000002a)
+# VERBOSE-NEXT: 0x000000a4: [DW_RLE_end_of_list ]
+
 # TERSE-NEXT:   range list header: length = 0x0000000e, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 
 # VERBOSE-NEXT: 0x{{[0-9a-f]*}}:
@@ -87,9 +110,7 @@
 # BOTH-NOT:     range list header:
 
 # ERR-NOT:  error:
-# ERR:      error: unsupported rnglists encoding DW_RLE_base_addressx at offset 0x82
-# ERR-NEXT: error: unsupported rnglists encoding DW_RLE_startx_endx at offset 0x91
-# ERR-NEXT: error: unsupported rnglists encoding DW_RLE_startx_length at offset 0xa1
+# ERR: error: unsupported rnglists encoding DW_RLE_startx_endx at offset 0x91
 # ERR-NOT:  error:
 
 .section .debug_rnglists,"",@progbits

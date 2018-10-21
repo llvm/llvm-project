@@ -48,6 +48,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   // Booleans always contain 0 or 1.
   setBooleanContents(ZeroOrOneBooleanContent);
+  // Except in SIMD vectors
+  setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
   // WebAssembly does not produce floating-point exceptions on normal floating
   // point operations.
   setHasFloatingPointExceptions(false);
@@ -137,6 +139,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     }
   }
 
+  // Custom lowering to avoid having to emit a wrap for 2xi64 constant shifts
+  if (Subtarget->hasSIMD128() && EnableUnimplementedWasmSIMDInstrs)
+    for (auto Op : {ISD::SHL, ISD::SRA, ISD::SRL})
+      setOperationAction(Op, MVT::v2i64, Custom);
+
   // As a special case, these operators use the type to mean the type to
   // sign-extend from.
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
@@ -144,6 +151,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto T : {MVT::i8, MVT::i16, MVT::i32})
       setOperationAction(ISD::SIGN_EXTEND_INREG, T, Expand);
   }
+  for (auto T : MVT::integer_vector_valuetypes())
+    setOperationAction(ISD::SIGN_EXTEND_INREG, T, Expand);
 
   // Dynamic stack allocation: use the default expansion.
   setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
@@ -823,6 +832,10 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return LowerINTRINSIC_WO_CHAIN(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::SHL:
+  case ISD::SRA:
+  case ISD::SRL:
+    return LowerShift(Op, DAG);
   }
 }
 
@@ -990,12 +1003,43 @@ WebAssemblyTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   // Expand mask indices to byte indices and materialize them as operands
   for (size_t I = 0, Lanes = Mask.size(); I < Lanes; ++I) {
     for (size_t J = 0; J < LaneBytes; ++J) {
-      Ops[OpIdx++] =
-          DAG.getConstant((uint64_t)Mask[I] * LaneBytes + J, DL, MVT::i32);
+      // Lower undefs (represented by -1 in mask) to zero
+      uint64_t ByteIndex =
+          Mask[I] == -1 ? 0 : (uint64_t)Mask[I] * LaneBytes + J;
+      Ops[OpIdx++] = DAG.getConstant(ByteIndex, DL, MVT::i32);
     }
   }
 
   return DAG.getNode(WebAssemblyISD::SHUFFLE, DL, MVT::v16i8, Ops);
+}
+
+SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  auto *ShiftVec = dyn_cast<BuildVectorSDNode>(Op.getOperand(1).getNode());
+  APInt SplatValue, SplatUndef;
+  unsigned SplatBitSize;
+  bool HasAnyUndefs;
+  if (!ShiftVec || !ShiftVec->isConstantSplat(SplatValue, SplatUndef,
+                                              SplatBitSize, HasAnyUndefs))
+    return Op;
+  unsigned Opcode;
+  switch (Op.getOpcode()) {
+  case ISD::SHL:
+    Opcode = WebAssemblyISD::VEC_SHL;
+    break;
+  case ISD::SRA:
+    Opcode = WebAssemblyISD::VEC_SHR_S;
+    break;
+  case ISD::SRL:
+    Opcode = WebAssemblyISD::VEC_SHR_U;
+    break;
+  default:
+    llvm_unreachable("unexpected opcode");
+    return Op;
+  }
+  return DAG.getNode(Opcode, DL, Op.getValueType(), Op.getOperand(0),
+                     DAG.getConstant(SplatValue.trunc(32), DL, MVT::i32));
 }
 
 //===----------------------------------------------------------------------===//

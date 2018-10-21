@@ -1227,14 +1227,14 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilder<> &B) {
       default:
         return nullptr;
       case LibFunc_expf:  case LibFunc_exp:  case LibFunc_expl:
-        ExpName = "exp";
+        ExpName = TLI->getName(LibFunc_exp);
         ID = Intrinsic::exp;
         LibFnFloat = LibFunc_expf;
         LibFnDouble = LibFunc_exp;
         LibFnLongDouble = LibFunc_expl;
         break;
       case LibFunc_exp2f: case LibFunc_exp2: case LibFunc_exp2l:
-        ExpName = "exp2";
+        ExpName = TLI->getName(LibFunc_exp2);
         ID = Intrinsic::exp2;
         LibFnFloat = LibFunc_exp2f;
         LibFnDouble = LibFunc_exp2;

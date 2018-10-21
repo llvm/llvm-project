@@ -157,8 +157,11 @@ int main()
     {
         assert(G::n_alive == 0);
         assert(!G::op_run);
-        std::thread t((G()));
-        t.join();
+        {
+            G g;
+            std::thread t(g);
+            t.join();
+        }
         assert(G::n_alive == 0);
         assert(G::op_run);
     }
@@ -185,8 +188,11 @@ int main()
     {
         assert(G::n_alive == 0);
         assert(!G::op_run);
-        std::thread t(G(), 5, 5.5);
-        t.join();
+        {
+            G g;
+            std::thread t(g, 5, 5.5);
+            t.join();
+        }
         assert(G::n_alive == 0);
         assert(G::op_run);
     }

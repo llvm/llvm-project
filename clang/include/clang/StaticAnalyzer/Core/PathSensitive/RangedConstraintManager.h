@@ -131,7 +131,7 @@ using ConstraintRangeTy = llvm::ImmutableMap<SymbolRef, RangeSet>;
 template <>
 struct ProgramStateTrait<ConstraintRange>
   : public ProgramStatePartialTrait<ConstraintRangeTy> {
-  static void *GDMIndex() { static int Index; return &Index; }
+  static void *GDMIndex();
 };
 
 

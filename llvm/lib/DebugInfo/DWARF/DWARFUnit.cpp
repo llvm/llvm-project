@@ -39,9 +39,10 @@ void DWARFUnitVector::addUnitsForSection(DWARFContext &C,
                                          DWARFSectionKind SectionKind) {
   const DWARFObject &D = C.getDWARFObj();
   addUnitsImpl(C, D, Section, C.getDebugAbbrev(), &D.getRangeSection(),
-               D.getStringSection(), D.getStringOffsetSection(),
-               &D.getAddrSection(), D.getLineSection(), D.isLittleEndian(),
-               false, false, SectionKind);
+               &D.getLocSection(), D.getStringSection(),
+               D.getStringOffsetSection(), &D.getAddrSection(),
+               D.getLineSection(), D.isLittleEndian(), false, false,
+               SectionKind);
 }
 
 void DWARFUnitVector::addUnitsForDWOSection(DWARFContext &C,
@@ -50,16 +51,18 @@ void DWARFUnitVector::addUnitsForDWOSection(DWARFContext &C,
                                             bool Lazy) {
   const DWARFObject &D = C.getDWARFObj();
   addUnitsImpl(C, D, DWOSection, C.getDebugAbbrevDWO(), &D.getRangeDWOSection(),
-               D.getStringDWOSection(), D.getStringOffsetDWOSection(),
-               &D.getAddrSection(), D.getLineDWOSection(), C.isLittleEndian(),
-               true, Lazy, SectionKind);
+               &D.getLocDWOSection(), D.getStringDWOSection(),
+               D.getStringOffsetDWOSection(), &D.getAddrSection(),
+               D.getLineDWOSection(), C.isLittleEndian(), true, Lazy,
+               SectionKind);
 }
 
 void DWARFUnitVector::addUnitsImpl(
     DWARFContext &Context, const DWARFObject &Obj, const DWARFSection &Section,
-    const DWARFDebugAbbrev *DA, const DWARFSection *RS, StringRef SS,
-    const DWARFSection &SOS, const DWARFSection *AOS, const DWARFSection &LS,
-    bool LE, bool IsDWO, bool Lazy, DWARFSectionKind SectionKind) {
+    const DWARFDebugAbbrev *DA, const DWARFSection *RS,
+    const DWARFSection *LocSection, StringRef SS, const DWARFSection &SOS,
+    const DWARFSection *AOS, const DWARFSection &LS, bool LE, bool IsDWO,
+    bool Lazy, DWARFSectionKind SectionKind) {
   DWARFDataExtractor Data(Obj, Section, LE, 0);
   // Lazy initialization of Parser, now that we have all section info.
   if (!Parser) {
@@ -79,12 +82,12 @@ void DWARFUnitVector::addUnitsImpl(
       std::unique_ptr<DWARFUnit> U;
       if (Header.isTypeUnit())
         U = llvm::make_unique<DWARFTypeUnit>(Context, InfoSection, Header, DA,
-                                             RS, SS, SOS, AOS, LS, LE, IsDWO,
-                                             *this);
+                                             RS, LocSection, SS, SOS, AOS, LS,
+                                             LE, IsDWO, *this);
       else
         U = llvm::make_unique<DWARFCompileUnit>(Context, InfoSection, Header,
-                                                DA, RS, SS, SOS, AOS, LS, LE,
-                                                IsDWO, *this);
+                                                DA, RS, LocSection, SS, SOS,
+                                                AOS, LS, LE, IsDWO, *this);
       return U;
     };
   }
@@ -164,16 +167,25 @@ DWARFUnitVector::getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) {
 }
 
 DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
-                     const DWARFUnitHeader &Header,
-                     const DWARFDebugAbbrev *DA, const DWARFSection *RS,
+                     const DWARFUnitHeader &Header, const DWARFDebugAbbrev *DA,
+                     const DWARFSection *RS, const DWARFSection *LocSection,
                      StringRef SS, const DWARFSection &SOS,
                      const DWARFSection *AOS, const DWARFSection &LS, bool LE,
                      bool IsDWO, const DWARFUnitVector &UnitVector)
     : Context(DC), InfoSection(Section), Header(Header), Abbrev(DA),
-      RangeSection(RS), LineSection(LS), StringSection(SS),
-      StringOffsetSection(SOS),  AddrOffsetSection(AOS), isLittleEndian(LE),
-      isDWO(IsDWO), UnitVector(UnitVector) {
+      RangeSection(RS), LocSection(LocSection), LineSection(LS),
+      StringSection(SS), StringOffsetSection(SOS), AddrOffsetSection(AOS),
+      isLittleEndian(LE), isDWO(IsDWO), UnitVector(UnitVector) {
   clear();
+  // For split DWARF we only need to keep track of the location list section's
+  // data (no relocations), and if we are reading a package file, we need to
+  // adjust the location list data based on the index entries.
+  if (IsDWO) {
+    LocSectionData = LocSection->Data;
+    if (auto *IndexEntry = Header.getIndexEntry())
+      if (const auto *C = IndexEntry->getOffset(DW_SECT_LOC))
+        LocSectionData = LocSectionData.substr(C->Offset, C->Length);
+  }
 }
 
 DWARFUnit::~DWARFUnit() = default;
@@ -183,15 +195,16 @@ DWARFDataExtractor DWARFUnit::getDebugInfoExtractor() const {
                             getAddressByteSize());
 }
 
-bool DWARFUnit::getAddrOffsetSectionItem(uint32_t Index,
-                                                uint64_t &Result) const {
+Optional<SectionedAddress>
+DWARFUnit::getAddrOffsetSectionItem(uint32_t Index) const {
   uint32_t Offset = AddrOffsetSectionBase + Index * getAddressByteSize();
   if (AddrOffsetSection->Data.size() < Offset + getAddressByteSize())
-    return false;
+    return None;
   DWARFDataExtractor DA(Context.getDWARFObj(), *AddrOffsetSection,
                         isLittleEndian, getAddressByteSize());
-  Result = DA.getRelocatedAddress(&Offset);
-  return true;
+  uint64_t Section;
+  uint64_t Address = DA.getRelocatedAddress(&Offset, &Section);
+  return {{Address, Section}};
 }
 
 bool DWARFUnit::getStringOffsetSectionItem(uint32_t Index,
@@ -389,8 +402,10 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
     if (!isDWO) {
       assert(AddrOffsetSectionBase == 0);
       assert(RangeSectionBase == 0);
-      AddrOffsetSectionBase =
-          toSectionOffset(UnitDie.find(DW_AT_GNU_addr_base), 0);
+      AddrOffsetSectionBase = toSectionOffset(UnitDie.find(DW_AT_addr_base), 0);
+      if (!AddrOffsetSectionBase)
+        AddrOffsetSectionBase =
+            toSectionOffset(UnitDie.find(DW_AT_GNU_addr_base), 0);
       RangeSectionBase = toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0);
     }
 
@@ -524,7 +539,7 @@ DWARFUnit::findRnglistFromOffset(uint32_t Offset) {
                                   isLittleEndian, RngListTable->getAddrSize());
     auto RangeListOrError = RngListTable->findList(RangesData, Offset);
     if (RangeListOrError)
-      return RangeListOrError.get().getAbsoluteRanges(getBaseAddress());
+      return RangeListOrError.get().getAbsoluteRanges(getBaseAddress(), *this);
     return RangeListOrError.takeError();
   }
 
@@ -748,15 +763,13 @@ const DWARFAbbreviationDeclarationSet *DWARFUnit::getAbbreviations() const {
   return Abbrevs;
 }
 
-llvm::Optional<BaseAddress> DWARFUnit::getBaseAddress() {
+llvm::Optional<SectionedAddress> DWARFUnit::getBaseAddress() {
   if (BaseAddr)
     return BaseAddr;
 
   DWARFDie UnitDie = getUnitDIE();
   Optional<DWARFFormValue> PC = UnitDie.find({DW_AT_low_pc, DW_AT_entry_pc});
-  if (Optional<uint64_t> Addr = toAddress(PC))
-    BaseAddr = {*Addr, PC->getSectionIndex()};
-
+  BaseAddr = toSectionedAddress(PC);
   return BaseAddr;
 }
 

@@ -37,6 +37,11 @@ const Decl *getDefinition(const Decl *D) {
   return nullptr;
 }
 
+void logIfOverflow(const SymbolLocation &Loc) {
+  if (Loc.Start.hasOverflow() || Loc.End.hasOverflow())
+    log("Possible overflow in symbol location: {0}", Loc);
+}
+
 // Convert a SymbolLocation to LSP's Location.
 // HintPath is used to resolve the path of URI.
 // FIXME: figure out a good home for it, and share the implementation with
@@ -61,6 +66,7 @@ llvm::Optional<Location> toLSPLocation(const SymbolLocation &Loc,
   LSPLoc.range.start.character = Loc.Start.column();
   LSPLoc.range.end.line = Loc.End.line();
   LSPLoc.range.end.character = Loc.End.column();
+  logIfOverflow(Loc);
   return LSPLoc;
 }
 

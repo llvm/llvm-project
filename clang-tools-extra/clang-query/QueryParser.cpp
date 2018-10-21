@@ -142,7 +142,12 @@ enum ParsedQueryKind {
   PQK_Quit
 };
 
-enum ParsedQueryVariable { PQV_Invalid, PQV_Output, PQV_BindRoot };
+enum ParsedQueryVariable {
+  PQV_Invalid,
+  PQV_Output,
+  PQV_BindRoot,
+  PQV_PrintMatcher
+};
 
 QueryRef makeInvalidQueryFromDiagnostics(const Diagnostics &Diag) {
   std::string ErrStr;
@@ -214,21 +219,23 @@ QueryRef QueryParser::doParse() {
       return completeMatcherExpression();
 
     Diagnostics Diag;
+    auto MatcherSource = StringRef(Begin, End - Begin).trim();
     Optional<DynTypedMatcher> Matcher = Parser::parseMatcherExpression(
-        StringRef(Begin, End - Begin), nullptr, &QS.NamedValues, &Diag);
+        MatcherSource, nullptr, &QS.NamedValues, &Diag);
     if (!Matcher) {
       return makeInvalidQueryFromDiagnostics(Diag);
     }
-    return new MatchQuery(*Matcher);
+    return new MatchQuery(MatcherSource, *Matcher);
   }
 
   case PQK_Set: {
     StringRef VarStr;
-    ParsedQueryVariable Var = LexOrCompleteWord<ParsedQueryVariable>(this,
-                                                                     VarStr)
-                                  .Case("output", PQV_Output)
-                                  .Case("bind-root", PQV_BindRoot)
-                                  .Default(PQV_Invalid);
+    ParsedQueryVariable Var =
+        LexOrCompleteWord<ParsedQueryVariable>(this, VarStr)
+            .Case("output", PQV_Output)
+            .Case("bind-root", PQV_BindRoot)
+            .Case("print-matcher", PQV_PrintMatcher)
+            .Default(PQV_Invalid);
     if (VarStr.empty())
       return new InvalidQuery("expected variable name");
     if (Var == PQV_Invalid)
@@ -241,6 +248,9 @@ QueryRef QueryParser::doParse() {
       break;
     case PQV_BindRoot:
       Q = parseSetBool(&QuerySession::BindRoot);
+      break;
+    case PQV_PrintMatcher:
+      Q = parseSetBool(&QuerySession::PrintMatcher);
       break;
     case PQV_Invalid:
       llvm_unreachable("Invalid query kind");
