@@ -1379,7 +1379,7 @@ PrevCrossBBInst(MachineBasicBlock::const_iterator MBBI) {
 
 static const Constant *getConstantFromPool(const MachineInstr &MI,
                                            const MachineOperand &Op) {
-  if (!Op.isCPI())
+  if (!Op.isCPI() || Op.getOffset() != 0)
     return nullptr;
 
   ArrayRef<MachineConstantPoolEntry> Constants =

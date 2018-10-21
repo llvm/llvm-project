@@ -27,6 +27,58 @@
 using namespace clang;
 using namespace sema;
 
+/// Remove the upper-level LValueToRValue cast from an expression.
+static void removeLValueToRValueCast(Expr *E) {
+  Expr *Parent = E;
+  Expr *ExprUnderCast = nullptr;
+  SmallVector<Expr *, 8> ParentsToUpdate;
+
+  while (true) {
+    ParentsToUpdate.push_back(Parent);
+    if (auto *ParenE = dyn_cast<ParenExpr>(Parent)) {
+      Parent = ParenE->getSubExpr();
+      continue;
+    }
+
+    Expr *Child = nullptr;
+    CastExpr *ParentCast = dyn_cast<CastExpr>(Parent);
+    if (ParentCast)
+      Child = ParentCast->getSubExpr();
+    else
+      return;
+
+    if (auto *CastE = dyn_cast<CastExpr>(Child))
+      if (CastE->getCastKind() == CK_LValueToRValue) {
+        ExprUnderCast = CastE->getSubExpr();
+        // LValueToRValue cast inside GCCAsmStmt requires an explicit cast.
+        ParentCast->setSubExpr(ExprUnderCast);
+        break;
+      }
+    Parent = Child;
+  }
+
+  // Update parent expressions to have same ValueType as the underlying.
+  assert(ExprUnderCast &&
+         "Should be reachable only if LValueToRValue cast was found!");
+  auto ValueKind = ExprUnderCast->getValueKind();
+  for (Expr *E : ParentsToUpdate)
+    E->setValueKind(ValueKind);
+}
+
+/// Emit a warning about usage of "noop"-like casts for lvalues (GNU extension)
+/// and fix the argument with removing LValueToRValue cast from the expression.
+static void emitAndFixInvalidAsmCastLValue(const Expr *LVal, Expr *BadArgument,
+                                           Sema &S) {
+  if (!S.getLangOpts().HeinousExtensions) {
+    S.Diag(LVal->getBeginLoc(), diag::err_invalid_asm_cast_lvalue)
+        << BadArgument->getSourceRange();
+  } else {
+    S.Diag(LVal->getBeginLoc(), diag::warn_invalid_asm_cast_lvalue)
+        << BadArgument->getSourceRange();
+  }
+  removeLValueToRValueCast(BadArgument);
+}
+
 /// CheckAsmLValue - GNU C has an extremely ugly extension whereby they silently
 /// ignore "noop" casts in places where an lvalue is required by an inline asm.
 /// We emulate this behavior when -fheinous-gnu-extensions is specified, but
@@ -34,7 +86,7 @@ using namespace sema;
 ///
 /// This method checks to see if the argument is an acceptable l-value and
 /// returns false if it is a case we can handle.
-static bool CheckAsmLValue(const Expr *E, Sema &S) {
+static bool CheckAsmLValue(Expr *E, Sema &S) {
   // Type dependent expressions will be checked during instantiation.
   if (E->isTypeDependent())
     return false;
@@ -46,12 +98,7 @@ static bool CheckAsmLValue(const Expr *E, Sema &S) {
   // are supposed to allow.
   const Expr *E2 = E->IgnoreParenNoopCasts(S.Context);
   if (E != E2 && E2->isLValue()) {
-    if (!S.getLangOpts().HeinousExtensions)
-      S.Diag(E2->getBeginLoc(), diag::err_invalid_asm_cast_lvalue)
-          << E->getSourceRange();
-    else
-      S.Diag(E2->getBeginLoc(), diag::warn_invalid_asm_cast_lvalue)
-          << E->getSourceRange();
+    emitAndFixInvalidAsmCastLValue(E2, E, S);
     // Accept, even if we emitted an error diagnostic.
     return false;
   }
@@ -264,13 +311,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
       break;
     case Expr::MLV_LValueCast: {
       const Expr *LVal = OutputExpr->IgnoreParenNoopCasts(Context);
-      if (!getLangOpts().HeinousExtensions) {
-        Diag(LVal->getBeginLoc(), diag::err_invalid_asm_cast_lvalue)
-            << OutputExpr->getSourceRange();
-      } else {
-        Diag(LVal->getBeginLoc(), diag::warn_invalid_asm_cast_lvalue)
-            << OutputExpr->getSourceRange();
-      }
+      emitAndFixInvalidAsmCastLValue(LVal, OutputExpr, *this);
       // Accept, even if we emitted an error diagnostic.
       break;
     }

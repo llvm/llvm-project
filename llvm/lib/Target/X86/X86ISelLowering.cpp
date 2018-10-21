@@ -5536,7 +5536,7 @@ static const Constant *getTargetConstantFromNode(SDValue Op) {
     Ptr = Ptr->getOperand(0);
 
   auto *CNode = dyn_cast<ConstantPoolSDNode>(Ptr);
-  if (!CNode || CNode->isMachineConstantPoolEntry())
+  if (!CNode || CNode->isMachineConstantPoolEntry() || CNode->getOffset() != 0)
     return nullptr;
 
   return dyn_cast<Constant>(CNode->getConstVal());
@@ -14647,9 +14647,14 @@ static SDValue lowerV16I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (V2.isUndef()) {
     // There are no generalized cross-lane shuffle operations available on i16
     // element types.
-    if (is128BitLaneCrossingShuffleMask(MVT::v16i16, Mask))
+    if (is128BitLaneCrossingShuffleMask(MVT::v16i16, Mask)) {
+      if (SDValue V = lowerVectorShuffleAsLanePermuteAndPermute(
+              DL, MVT::v16i16, V1, V2, Mask, DAG, Subtarget))
+        return V;
+
       return lowerVectorShuffleAsLanePermuteAndBlend(DL, MVT::v16i16, V1, V2,
                                                      Mask, DAG, Subtarget);
+    }
 
     SmallVector<int, 8> RepeatedMask;
     if (is128BitLaneRepeatedShuffleMask(MVT::v16i16, Mask, RepeatedMask)) {
@@ -14742,9 +14747,14 @@ static SDValue lowerV32I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // There are no generalized cross-lane shuffle operations available on i8
   // element types.
-  if (V2.isUndef() && is128BitLaneCrossingShuffleMask(MVT::v32i8, Mask))
+  if (V2.isUndef() && is128BitLaneCrossingShuffleMask(MVT::v32i8, Mask)) {
+    if (SDValue V = lowerVectorShuffleAsLanePermuteAndPermute(
+            DL, MVT::v32i8, V1, V2, Mask, DAG, Subtarget))
+      return V;
+
     return lowerVectorShuffleAsLanePermuteAndBlend(DL, MVT::v32i8, V1, V2, Mask,
                                                    DAG, Subtarget);
+  }
 
   if (SDValue PSHUFB = lowerVectorShuffleWithPSHUFB(
           DL, MVT::v32i8, Mask, V1, V2, Zeroable, Subtarget, DAG))
