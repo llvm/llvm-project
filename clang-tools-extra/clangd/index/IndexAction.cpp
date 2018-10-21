@@ -3,6 +3,8 @@
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Tooling/Tooling.h"
+
+using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -38,7 +40,7 @@ public:
     const auto &CI = getCompilerInstance();
     if (CI.hasDiagnostics() &&
         CI.getDiagnostics().hasUncompilableErrorOccurred()) {
-      llvm::errs() << "Skipping TU due to uncompilable errors\n";
+      errs() << "Skipping TU due to uncompilable errors\n";
       return;
     }
     SymbolsCallback(Collector->takeSymbols());

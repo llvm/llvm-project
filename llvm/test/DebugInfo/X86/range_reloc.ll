@@ -16,8 +16,21 @@
 ; smaller (the growth of debug_ranges itself would be more significant).
 
 ; COMMON: {{^.Ldebug_ranges0}}
-; COMMON-NEXT:   .quad   .Lfunc_begin0
-; COMMON-NEXT:   .quad   .Lfunc_end0
+; NOBASE-NEXT:   .quad   .Lfunc_begin0
+; NOBASE-NEXT:   .quad   .Lfunc_end0
+; NOBASE-NEXT:   .quad   .Lfunc_begin1
+; NOBASE-NEXT:   .quad   .Lfunc_end1
+; NOBASE-NEXT:   .quad   .Lfunc_begin3
+; NOBASE-NEXT:   .quad   .Lfunc_end3
+; NOBASE-NEXT:   .quad   .Lfunc_begin4
+; NOBASE-NEXT:   .quad   .Lfunc_end4
+; NOBASE-NEXT:   .quad   .Lfunc_begin5
+; NOBASE-NEXT:   .quad   .Lfunc_end5
+
+; BASE-NEXT:   .quad   -1
+; BASE-NEXT:   .quad   .Lfunc_begin0
+; BASE-NEXT:   .quad   .Lfunc_begin0-.Lfunc_begin0
+; BASE-NEXT:   .quad   .Lfunc_end0-.Lfunc_begin0
 ; BASE-NEXT:   .quad   -1
 ; BASE-NEXT:   .quad   .Lfunc_begin1
 ; BASE-NEXT:   .quad   .Lfunc_begin1-.Lfunc_begin1
@@ -25,35 +38,33 @@
 ; BASE-NEXT:   .quad   .Lfunc_begin3-.Lfunc_begin1
 ; BASE-NEXT:   .quad   .Lfunc_end3-.Lfunc_begin1
 ; BASE-NEXT:   .quad   -1
-; BASE-NEXT:   .quad   0
-; NOBASE-NEXT:   .quad   .Lfunc_begin1
-; NOBASE-NEXT:   .quad   .Lfunc_end1
-; NOBASE-NEXT:   .quad   .Lfunc_begin3
-; NOBASE-NEXT:   .quad   .Lfunc_end3
-; COMMON-NEXT:   .quad   .Lfunc_begin4
-; COMMON-NEXT:   .quad   .Lfunc_end4
-; COMMON-NEXT:   .quad   .Lfunc_begin5
-; COMMON-NEXT:   .quad   .Lfunc_end5
+; BASE-NEXT:   .quad   .Lfunc_begin4
+; BASE-NEXT:   .quad   .Lfunc_begin4-.Lfunc_begin4
+; BASE-NEXT:   .quad   .Lfunc_end4-.Lfunc_begin4
+; BASE-NEXT:   .quad   -1
+; BASE-NEXT:   .quad   .Lfunc_begin5
+; BASE-NEXT:   .quad   .Lfunc_begin5-.Lfunc_begin5
+; BASE-NEXT:   .quad   .Lfunc_end5-.Lfunc_begin5
 ; COMMON-NEXT:   .quad   0
 ; COMMON-NEXT:   .quad   0
 
 ; DWARF5: {{^.Ldebug_ranges0}}
-; DWARF5-NEXT:                                      # DW_RLE_start_length
-; DWARF5-NEXT: .quad    .Lfunc_begin0               #   start
+; DWARF5-NEXT:                                      # DW_RLE_startx_length
+; DWARF5-NEXT: .byte 0                              #   start index
 ; DWARF5-NEXT: .uleb128 .Lfunc_end0-.Lfunc_begin0   #   length
-; DWARF5-NEXT:                                      # DW_RLE_base_address
-; DWARF5-NEXT: .quad    .Lfunc_begin1               #   base address
+; DWARF5-NEXT:                                      # DW_RLE_base_addressx
+; DWARF5-NEXT: .byte 1                              #   base address index
 ; DWARF5-NEXT:                                      # DW_RLE_offset_pair
 ; DWARF5-NEXT: .uleb128 .Lfunc_begin1-.Lfunc_begin1 #   starting offset
 ; DWARF5-NEXT: .uleb128 .Lfunc_end1-.Lfunc_begin1   #   ending offset
 ; DWARF5-NEXT:                                      # DW_RLE_offset_pair
 ; DWARF5-NEXT: .uleb128 .Lfunc_begin3-.Lfunc_begin1 #   starting offset
 ; DWARF5-NEXT: .uleb128 .Lfunc_end3-.Lfunc_begin1   #   ending offset
-; DWARF5-NEXT:                                      # DW_RLE_start_length
-; DWARF5-NEXT: .quad	   .Lfunc_begin4               #   start
+; DWARF5-NEXT:                                      # DW_RLE_startx_length
+; DWARF5-NEXT: .byte 3                              #   start index
 ; DWARF5-NEXT: .uleb128 .Lfunc_end4-.Lfunc_begin4   #   length
-; DWARF5-NEXT:                                      # DW_RLE_start_length
-; DWARF5-NEXT: .quad	   .Lfunc_begin5               #   start
+; DWARF5-NEXT:                                      # DW_RLE_startx_length
+; DWARF5-NEXT: .byte 4                              #   start index
 ; DWARF5-NEXT: .uleb128 .Lfunc_end5-.Lfunc_begin5   #   length
 ; DWARF5-NEXT:                                      # DW_RLE_end_of_list
 

@@ -1747,6 +1747,15 @@ _mm512_kunpackw (__mmask32 __A, __mmask32 __B)
                 (__mmask32) __B);
 }
 
+static __inline __m512i __DEFAULT_FN_ATTRS512
+_mm512_loadu_epi16 (void const *__P)
+{
+  struct __loadu_epi16 {
+    __m512i __v;
+  } __attribute__((__packed__, __may_alias__));
+  return ((struct __loadu_epi16*)__P)->__v;
+}
+
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
 _mm512_mask_loadu_epi16 (__m512i __W, __mmask32 __U, void const *__P)
 {
@@ -1762,6 +1771,15 @@ _mm512_maskz_loadu_epi16 (__mmask32 __U, void const *__P)
                  (__v32hi)
                  _mm512_setzero_si512 (),
                  (__mmask32) __U);
+}
+
+static __inline __m512i __DEFAULT_FN_ATTRS512
+_mm512_loadu_epi8 (void const *__P)
+{
+  struct __loadu_epi8 {
+    __m512i __v;
+  } __attribute__((__packed__, __may_alias__));
+  return ((struct __loadu_epi8*)__P)->__v;
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
@@ -1780,12 +1798,31 @@ _mm512_maskz_loadu_epi8 (__mmask64 __U, void const *__P)
                  _mm512_setzero_si512 (),
                  (__mmask64) __U);
 }
+
+static __inline void __DEFAULT_FN_ATTRS512
+_mm512_storeu_epi16 (void *__P, __m512i __A)
+{
+  struct __storeu_epi16 {
+    __m512i __v;
+  } __attribute__((__packed__, __may_alias__));
+  ((struct __storeu_epi16*)__P)->__v = __A;
+}
+
 static __inline__ void __DEFAULT_FN_ATTRS512
 _mm512_mask_storeu_epi16 (void *__P, __mmask32 __U, __m512i __A)
 {
   __builtin_ia32_storedquhi512_mask ((__v32hi *) __P,
              (__v32hi) __A,
              (__mmask32) __U);
+}
+
+static __inline void __DEFAULT_FN_ATTRS512
+_mm512_storeu_epi8 (void *__P, __m512i __A)
+{
+  struct __storeu_epi8 {
+    __m512i __v;
+  } __attribute__((__packed__, __may_alias__));
+  ((struct __storeu_epi8*)__P)->__v = __A;
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS512

@@ -11,10 +11,10 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
-using namespace llvm;
 using ::testing::ElementsAre;
 
 TEST(RIFFTest, File) {
@@ -28,7 +28,7 @@ TEST(RIFFTest, File) {
                                    "oddd\x05\0\0\0abcde\0",
                                    38);
 
-  EXPECT_EQ(llvm::to_string(File), Serialized);
+  EXPECT_EQ(to_string(File), Serialized);
   auto Parsed = riff::readFile(Serialized);
   ASSERT_TRUE(bool(Parsed)) << Parsed.takeError();
   EXPECT_EQ(*Parsed, File);

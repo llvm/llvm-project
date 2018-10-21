@@ -19,13 +19,14 @@
 #include "clang/Lex/Preprocessor.h"
 #include <memory>
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 
 static std::pair<SymbolSlab, RefSlab>
 indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
-             llvm::ArrayRef<Decl *> DeclsToIndex, bool IsIndexMainAST,
-             llvm::ArrayRef<std::string> URISchemes) {
+             ArrayRef<Decl *> DeclsToIndex, bool IsIndexMainAST,
+             ArrayRef<std::string> URISchemes) {
   SymbolCollector::Options CollectorOpts;
   // FIXME(ioeric): we might also want to collect include headers. We would need
   // to make sure all includes are canonicalized (with CanonicalIncludes), which
@@ -70,14 +71,14 @@ indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
 }
 
 std::pair<SymbolSlab, RefSlab>
-indexMainDecls(ParsedAST &AST, llvm::ArrayRef<std::string> URISchemes) {
+indexMainDecls(ParsedAST &AST, ArrayRef<std::string> URISchemes) {
   return indexSymbols(AST.getASTContext(), AST.getPreprocessorPtr(),
                       AST.getLocalTopLevelDecls(),
                       /*IsIndexMainAST=*/true, URISchemes);
 }
 
 SymbolSlab indexHeaderSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
-                              llvm::ArrayRef<std::string> URISchemes) {
+                              ArrayRef<std::string> URISchemes) {
   std::vector<Decl *> DeclsToIndex(
       AST.getTranslationUnitDecl()->decls().begin(),
       AST.getTranslationUnitDecl()->decls().end());
@@ -116,9 +117,9 @@ FileSymbols::buildIndex(IndexType Type, ArrayRef<std::string> URISchemes) {
       AllSymbols.push_back(&Sym);
 
   std::vector<Ref> RefsStorage; // Contiguous ranges for each SymbolID.
-  llvm::DenseMap<SymbolID, ArrayRef<Ref>> AllRefs;
+  DenseMap<SymbolID, ArrayRef<Ref>> AllRefs;
   {
-    llvm::DenseMap<SymbolID, SmallVector<Ref, 4>> MergedRefs;
+    DenseMap<SymbolID, SmallVector<Ref, 4>> MergedRefs;
     size_t Count = 0;
     for (const auto &RefSlab : RefSlabs)
       for (const auto &Sym : *RefSlab) {
@@ -149,17 +150,18 @@ FileSymbols::buildIndex(IndexType Type, ArrayRef<std::string> URISchemes) {
   switch (Type) {
   case IndexType::Light:
     return llvm::make_unique<MemIndex>(
-        llvm::make_pointee_range(AllSymbols), std::move(AllRefs),
+        make_pointee_range(AllSymbols), std::move(AllRefs),
         std::make_tuple(std::move(SymbolSlabs), std::move(RefSlabs),
                         std::move(RefsStorage)),
         StorageSize);
   case IndexType::Heavy:
     return llvm::make_unique<dex::Dex>(
-        llvm::make_pointee_range(AllSymbols), std::move(AllRefs),
+        make_pointee_range(AllSymbols), std::move(AllRefs),
         std::make_tuple(std::move(SymbolSlabs), std::move(RefSlabs),
                         std::move(RefsStorage)),
         StorageSize, std::move(URISchemes));
   }
+  llvm_unreachable("Unknown clangd::IndexType");
 }
 
 FileIndex::FileIndex(std::vector<std::string> URISchemes, bool UseDex)

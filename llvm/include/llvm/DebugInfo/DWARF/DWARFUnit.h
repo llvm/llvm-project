@@ -160,11 +160,6 @@ private:
 };
 
 /// Represents base address of the CU.
-struct BaseAddress {
-  uint64_t Address;
-  uint64_t SectionIndex;
-};
-
 /// Represents a unit's contribution to the string offsets table.
 struct StrOffsetsContributionDescriptor {
   uint64_t Base = 0;
@@ -221,7 +216,7 @@ class DWARFUnit {
   Optional<DWARFDebugRnglistTable> RngListTable;
 
   mutable const DWARFAbbreviationDeclarationSet *Abbrevs;
-  llvm::Optional<BaseAddress> BaseAddr;
+  llvm::Optional<SectionedAddress> BaseAddr;
   /// The compile unit debug information entry items.
   std::vector<DWARFDebugInfoEntry> DieArray;
 
@@ -310,7 +305,7 @@ public:
     RangeSectionBase = Base;
   }
 
-  bool getAddrOffsetSectionItem(uint32_t Index, uint64_t &Result) const;
+  Optional<SectionedAddress> getAddrOffsetSectionItem(uint32_t Index) const;
   bool getStringOffsetSectionItem(uint32_t Index, uint64_t &Result) const;
 
   DWARFDataExtractor getDebugInfoExtractor() const;
@@ -381,7 +376,7 @@ public:
     llvm_unreachable("Invalid UnitType.");
   }
 
-  llvm::Optional<BaseAddress> getBaseAddress();
+  llvm::Optional<SectionedAddress> getBaseAddress();
 
   DWARFDie getUnitDIE(bool ExtractUnitDIEOnly = true) {
     extractDIEsIfNeeded(ExtractUnitDIEOnly);

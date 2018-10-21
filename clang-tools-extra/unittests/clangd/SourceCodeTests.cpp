@@ -13,12 +13,10 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-namespace clang{
+using namespace llvm;
+namespace clang {
 namespace clangd {
 namespace {
-
-using llvm::Failed;
-using llvm::HasValue;
 
 MATCHER_P2(Pos, Line, Col, "") {
   return arg.line == Line && arg.character == Col;

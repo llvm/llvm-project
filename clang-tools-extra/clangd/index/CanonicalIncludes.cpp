@@ -13,40 +13,39 @@
 #include "llvm/Support/Path.h"
 #include <algorithm>
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
 const char IWYUPragma[] = "// IWYU pragma: private, include ";
 } // namespace
 
-void CanonicalIncludes::addPathSuffixMapping(llvm::StringRef Suffix,
-                                             llvm::StringRef CanonicalPath) {
-  int Components = std::distance(llvm::sys::path::begin(Suffix),
-                                 llvm::sys::path::end(Suffix));
+void CanonicalIncludes::addPathSuffixMapping(StringRef Suffix,
+                                             StringRef CanonicalPath) {
+  int Components =
+      std::distance(sys::path::begin(Suffix), sys::path::end(Suffix));
   MaxSuffixComponents = std::max(MaxSuffixComponents, Components);
   SuffixHeaderMapping[Suffix] = CanonicalPath;
 }
 
-void CanonicalIncludes::addMapping(llvm::StringRef Path,
-                                   llvm::StringRef CanonicalPath) {
+void CanonicalIncludes::addMapping(StringRef Path, StringRef CanonicalPath) {
   FullPathMapping[Path] = CanonicalPath;
 }
 
-void CanonicalIncludes::addSymbolMapping(llvm::StringRef QualifiedName,
-                                         llvm::StringRef CanonicalPath) {
+void CanonicalIncludes::addSymbolMapping(StringRef QualifiedName,
+                                         StringRef CanonicalPath) {
   this->SymbolMapping[QualifiedName] = CanonicalPath;
 }
 
-llvm::StringRef
-CanonicalIncludes::mapHeader(llvm::ArrayRef<std::string> Headers,
-                             llvm::StringRef QualifiedName) const {
+StringRef CanonicalIncludes::mapHeader(ArrayRef<std::string> Headers,
+                                       StringRef QualifiedName) const {
   assert(!Headers.empty());
   auto SE = SymbolMapping.find(QualifiedName);
   if (SE != SymbolMapping.end())
     return SE->second;
   // Find the first header such that the extension is not '.inc', and isn't a
   // recognized non-header file
-  auto I = llvm::find_if(Headers, [](llvm::StringRef Include) {
+  auto I = llvm::find_if(Headers, [](StringRef Include) {
     // Skip .inc file whose including header file should
     // be #included instead.
     return !Include.endswith(".inc");
@@ -56,7 +55,7 @@ CanonicalIncludes::mapHeader(llvm::ArrayRef<std::string> Headers,
   StringRef Header = *I;
   // If Header is not expected be included (e.g. .cc file), we fall back to
   // the declaring header.
-  StringRef Ext = llvm::sys::path::extension(Header).trim('.');
+  StringRef Ext = sys::path::extension(Header).trim('.');
   // Include-able headers must have precompile type. Treat files with
   // non-recognized extenstions (TY_INVALID) as headers.
   auto ExtType = driver::types::lookupTypeForExtension(Ext);
@@ -69,8 +68,7 @@ CanonicalIncludes::mapHeader(llvm::ArrayRef<std::string> Headers,
     return MapIt->second;
 
   int Components = 1;
-  for (auto It = llvm::sys::path::rbegin(Header),
-            End = llvm::sys::path::rend(Header);
+  for (auto It = sys::path::rbegin(Header), End = sys::path::rend(Header);
        It != End && Components <= MaxSuffixComponents; ++It, ++Components) {
     auto SubPath = Header.substr(It->data() - Header.begin());
     auto MappingIt = SuffixHeaderMapping.find(SubPath);

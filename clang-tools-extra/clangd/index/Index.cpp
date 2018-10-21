@@ -15,9 +15,9 @@
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/raw_ostream.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
-using namespace llvm;
 
 constexpr uint32_t SymbolLocation::Position::MaxLine;
 constexpr uint32_t SymbolLocation::Position::MaxColumn;
@@ -50,7 +50,7 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolID &ID) {
   return OS << toHex(ID.raw());
 }
 
-SymbolID SymbolID::fromRaw(llvm::StringRef Raw) {
+SymbolID SymbolID::fromRaw(StringRef Raw) {
   SymbolID ID;
   assert(Raw.size() == RawSize);
   memcpy(ID.HashValue.data(), Raw.data(), RawSize);
@@ -59,12 +59,12 @@ SymbolID SymbolID::fromRaw(llvm::StringRef Raw) {
 
 std::string SymbolID::str() const { return toHex(raw()); }
 
-llvm::Expected<SymbolID> SymbolID::fromStr(llvm::StringRef Str) {
+Expected<SymbolID> SymbolID::fromStr(StringRef Str) {
   if (Str.size() != RawSize * 2)
-    return createStringError(llvm::inconvertibleErrorCode(), "Bad ID length");
+    return createStringError(inconvertibleErrorCode(), "Bad ID length");
   for (char C : Str)
     if (!isHexDigit(C))
-      return createStringError(llvm::inconvertibleErrorCode(), "Bad hex ID");
+      return createStringError(inconvertibleErrorCode(), "Bad hex ID");
   return fromRaw(fromHex(Str));
 }
 
@@ -111,7 +111,7 @@ SymbolSlab::const_iterator SymbolSlab::find(const SymbolID &ID) const {
 }
 
 // Copy the underlying data of the symbol into the owned arena.
-static void own(Symbol &S, llvm::UniqueStringSaver &Strings) {
+static void own(Symbol &S, UniqueStringSaver &Strings) {
   visitStrings(S, [&](StringRef &V) { V = Strings.save(V); });
 }
 
@@ -133,7 +133,7 @@ SymbolSlab SymbolSlab::Builder::build() && {
              [](const Symbol &L, const Symbol &R) { return L.ID < R.ID; });
   // We may have unused strings from overwritten symbols. Build a new arena.
   BumpPtrAllocator NewArena;
-  llvm::UniqueStringSaver Strings(NewArena);
+  UniqueStringSaver Strings(NewArena);
   for (auto &S : Symbols)
     own(S, Strings);
   return SymbolSlab(std::move(NewArena), std::move(Symbols));
@@ -155,7 +155,7 @@ raw_ostream &operator<<(raw_ostream &OS, RefKind K) {
   return OS;
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Ref &R) {
+raw_ostream &operator<<(raw_ostream &OS, const Ref &R) {
   return OS << R.Location << ":" << R.Kind;
 }
 
@@ -199,7 +199,7 @@ std::shared_ptr<SymbolIndex> SwapIndex::snapshot() const {
   return Index;
 }
 
-bool fromJSON(const llvm::json::Value &Parameters, FuzzyFindRequest &Request) {
+bool fromJSON(const json::Value &Parameters, FuzzyFindRequest &Request) {
   json::ObjectMapper O(Parameters);
   int64_t Limit;
   bool OK =
@@ -212,7 +212,7 @@ bool fromJSON(const llvm::json::Value &Parameters, FuzzyFindRequest &Request) {
   return OK;
 }
 
-llvm::json::Value toJSON(const FuzzyFindRequest &Request) {
+json::Value toJSON(const FuzzyFindRequest &Request) {
   return json::Object{
       {"Query", Request.Query},
       {"Scopes", json::Array{Request.Scopes}},
@@ -223,15 +223,15 @@ llvm::json::Value toJSON(const FuzzyFindRequest &Request) {
 }
 
 bool SwapIndex::fuzzyFind(const FuzzyFindRequest &R,
-                          llvm::function_ref<void(const Symbol &)> CB) const {
+                          function_ref<void(const Symbol &)> CB) const {
   return snapshot()->fuzzyFind(R, CB);
 }
 void SwapIndex::lookup(const LookupRequest &R,
-                       llvm::function_ref<void(const Symbol &)> CB) const {
+                       function_ref<void(const Symbol &)> CB) const {
   return snapshot()->lookup(R, CB);
 }
 void SwapIndex::refs(const RefsRequest &R,
-                     llvm::function_ref<void(const Ref &)> CB) const {
+                     function_ref<void(const Ref &)> CB) const {
   return snapshot()->refs(R, CB);
 }
 size_t SwapIndex::estimateMemoryUsage() const {
