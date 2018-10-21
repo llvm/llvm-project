@@ -2210,16 +2210,14 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Struct(
     ValueObject &in_value, CompilerType &bound_type,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
     Address &address) {
-  std::vector<CompilerType> generic_args;
   class_type_or_name.SetCompilerType(bound_type);
 
   lldb::addr_t struct_address = in_value.GetPointerValue();
   if (!struct_address || struct_address == LLDB_INVALID_ADDRESS)
     struct_address = in_value.GetAddressOf(true, nullptr);
-  if (!struct_address || struct_address == LLDB_INVALID_ADDRESS) {
+  if (!struct_address || struct_address == LLDB_INVALID_ADDRESS)
     if (!SwiftASTContext::IsPossibleZeroSizeType(bound_type))
       return false;
-  }
 
   address.SetLoadAddress(struct_address, in_value.GetTargetSP().get());
   return true;
@@ -2229,17 +2227,14 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Enum(
     ValueObject &in_value, CompilerType &bound_type,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
     Address &address) {
-  std::vector<CompilerType> generic_args;
   class_type_or_name.SetCompilerType(bound_type);
 
   lldb::addr_t enum_address = in_value.GetPointerValue();
   if (!enum_address || LLDB_INVALID_ADDRESS == enum_address)
     enum_address = in_value.GetAddressOf(true, nullptr);
-  if (!enum_address || LLDB_INVALID_ADDRESS == enum_address) {
-    if (false == SwiftASTContext::IsPossibleZeroSizeType(
-                     class_type_or_name.GetCompilerType()))
+  if (!enum_address || LLDB_INVALID_ADDRESS == enum_address)
+    if (!SwiftASTContext::IsPossibleZeroSizeType(bound_type))
       return false;
-  }
 
   address.SetLoadAddress(enum_address, in_value.GetTargetSP().get());
   return true;
