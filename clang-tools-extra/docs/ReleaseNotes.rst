@@ -67,6 +67,10 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- The :doc:`readability-redundant-smartptr-get
+  <clang-tidy/checks/readability-redundant-smartptr-get>` check does not warn
+  about calls inside macros anymore by default.
+
 - New :doc:`abseil-duration-division
   <clang-tidy/checks/abseil-duration-division>` check.
 
