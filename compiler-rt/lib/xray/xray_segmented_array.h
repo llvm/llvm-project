@@ -78,6 +78,8 @@ public:
 
   static SegmentBase SentinelSegment;
 
+  using size_type = size_t;
+
 private:
   AllocatorType *Alloc;
   SegmentBase *Head = &SentinelSegment;
@@ -334,9 +336,8 @@ public:
     if (Elements == 0)
       return;
 
-    DCHECK_LE(Elements, Size);
-    DCHECK_GT(Size, 0);
     auto OldSize = Size;
+    Elements = Elements >= Size ? Size : Elements;
     Size -= Elements;
 
     DCHECK_NE(Head, &SentinelSegment);
@@ -346,8 +347,11 @@ public:
                                 nearest_boundary(Size, ElementsPerSegment)) /
                                ElementsPerSegment;
          SegmentsToTrim > 0; --SegmentsToTrim) {
-      DCHECK_NE(Head, &SentinelSegment);
-      DCHECK_NE(Tail, &SentinelSegment);
+
+      // We want to short-circuit if the trace is already empty.
+      if (Head == &SentinelSegment && Head == Tail)
+        return;
+
       // Put the tail into the Freelist.
       auto *FreeSegment = Tail;
       Tail = Tail->Prev;
