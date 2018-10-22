@@ -19,5 +19,5 @@
 type = Library
 name = AMDGPUDesc
 parent = AMDGPU
-required_libraries = Core MC AMDGPUAsmPrinter AMDGPUInfo AMDGPUUtils Support
+required_libraries = Core MC AMDGPUAsmPrinter AMDGPUInfo AMDGPUUtils Support BinaryFormat
 add_to_library_groups = AMDGPU
