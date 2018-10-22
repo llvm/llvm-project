@@ -24,6 +24,7 @@
     __cpp_lib_boyer_moore_searcher              201603L
     __cpp_lib_byte                              201603L
     __cpp_lib_chrono                            201611L
+    __cpp_lib_chrono_udls                       201304L
     __cpp_lib_clamp                             201603L
     __cpp_lib_complex_udls                      201309L
     __cpp_lib_concepts                          201806L
