@@ -14,12 +14,12 @@ MATH_MANGLE(fmin)(float x, float y)
 
     if (DAZ_OPT() & !FINITE_ONLY_OPT()) {
         // XXX revisit this later
-        ret = BUILTIN_CMIN_F32(BUILTIN_CANONICALIZE_F32(x), BUILTIN_CANONICALIZE_F32(y));
+        ret = BUILTIN_CMIN_F32(x, y);
     } else {
         if (FINITE_ONLY_OPT()) {
             ret = BUILTIN_MIN_F32(x, y);
         } else {
-            ret = BUILTIN_MIN_F32(BUILTIN_CANONICALIZE_F32(x), BUILTIN_CANONICALIZE_F32(y));
+            ret = BUILTIN_MIN_F32(x, y);
         }
     }
 
