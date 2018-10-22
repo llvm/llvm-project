@@ -94,6 +94,7 @@ private:
   SortSectionPolicy readSortKind();
   SymbolAssignment *readProvideHidden(bool Provide, bool Hidden);
   SymbolAssignment *readAssignment(StringRef Tok);
+  std::pair<ELFKind, uint16_t> readBfdName();
   void readSort();
   Expr readAssert();
   Expr readConstant();
@@ -382,10 +383,34 @@ void ScriptParser::readOutputArch() {
     skip();
 }
 
+std::pair<ELFKind, uint16_t> ScriptParser::readBfdName() {
+  StringRef S = next();
+  if (S == "elf32-i386")
+    return {ELF32LEKind, EM_386};
+  if (S == "elf32-iamcu")
+    return {ELF32LEKind, EM_IAMCU};
+  if (S == "elf32-x86-64")
+    return {ELF32LEKind, EM_X86_64};
+  if (S == "elf64-littleaarch64")
+    return {ELF64LEKind, EM_AARCH64};
+  if (S == "elf64-x86-64")
+    return {ELF64LEKind, EM_X86_64};
+
+  setError("unknown output format name: " + S);
+  return {ELFNoneKind, EM_NONE};
+}
+
+// Parse OUTPUT_FORMAT(bfdname) or OUTPUT_FORMAT(bfdname, big, little).
+// Currently we ignore big and little parameters.
 void ScriptParser::readOutputFormat() {
-  // Error checking only for now.
   expect("(");
-  skip();
+
+  std::pair<ELFKind, uint16_t> P = readBfdName();
+  if (Config->EKind == ELFNoneKind) {
+    Config->EKind = P.first;
+    Config->EMachine = P.second;
+  }
+
   if (consume(")"))
     return;
   expect(",");
