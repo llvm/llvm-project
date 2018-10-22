@@ -74,7 +74,6 @@ uint64_t elf::getPPC64TocBase() {
   return TocVA + PPC64TocOffset;
 }
 
-
 unsigned elf::getPPC64GlobalEntryToLocalEntryOffset(uint8_t StOther) {
   // The offset is encoded into the 3 most significant bits of the st_other
   // field, with some special values described in section 3.4.1 of the ABI:
@@ -515,9 +514,9 @@ void PPC64::writePltHeader(uint8_t *Buf) const {
 void PPC64::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
                      uint64_t PltEntryAddr, int32_t Index,
                      unsigned RelOff) const {
- int32_t Offset = PltHeaderSize + Index * PltEntrySize;
- // bl __glink_PLTresolve
- write32(Buf, 0x48000000 | ((-Offset) & 0x03FFFFFc));
+  int32_t Offset = PltHeaderSize + Index * PltEntrySize;
+  // bl __glink_PLTresolve
+  write32(Buf, 0x48000000 | ((-Offset) & 0x03FFFFFc));
 }
 
 static std::pair<RelType, uint64_t> toAddr16Rel(RelType Type, uint64_t Val) {
@@ -837,11 +836,11 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *Loc, uint8_t *End,
   // The register operands of the first instruction should be the stack-pointer
   // (r1) as the input (RA) and r12 as the output (RT). If the second
   // instruction is not a nop, then it should use r12 as both input and output.
-  auto CheckRegOperands =
-      [](uint32_t Instr, uint8_t ExpectedRT, uint8_t ExpectedRA) {
-        return ((Instr & 0x3E00000) >> 21 == ExpectedRT) &&
-               ((Instr & 0x1F0000) >> 16  == ExpectedRA);
-      };
+  auto CheckRegOperands = [](uint32_t Instr, uint8_t ExpectedRT,
+                             uint8_t ExpectedRA) {
+    return ((Instr & 0x3E00000) >> 21 == ExpectedRT) &&
+           ((Instr & 0x1F0000) >> 16 == ExpectedRA);
+  };
   if (!CheckRegOperands(FirstInstr, 12, 1))
     return false;
   if (SecondInstr != 0x60000000 && !CheckRegOperands(SecondInstr, 12, 12))
@@ -863,8 +862,7 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *Loc, uint8_t *End,
   if (HiImm) {
     write32(Loc + 4, 0x3D810000 | (uint16_t)HiImm);
     // If the low immediate is zero the second instruction will be a nop.
-    SecondInstr =
-        LoImm ? 0x398C0000 | (uint16_t)LoImm : 0x60000000;
+    SecondInstr = LoImm ? 0x398C0000 | (uint16_t)LoImm : 0x60000000;
     write32(Loc + 8, SecondInstr);
   } else {
     // addi r12, r1, imm
@@ -878,4 +876,4 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *Loc, uint8_t *End,
 TargetInfo *elf::getPPC64TargetInfo() {
   static PPC64 Target;
   return &Target;
-  }
+}

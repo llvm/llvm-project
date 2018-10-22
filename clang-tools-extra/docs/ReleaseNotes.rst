@@ -103,6 +103,12 @@ Improvements to clang-tidy
   Flags uses of ``absl::StrCat()`` to append to a ``std::string``. Suggests
   ``absl::StrAppend()`` should be used instead.
 
+- New :doc:`cppcoreguidelines-macro-usage
+  <clang-tidy/checks/cppcoreguidelines-macro-usage>` check.
+
+  Find macro usage that is considered problematic because better language
+  constructs exist for the task.
+
 - New :doc:`misc-non-private-member-variables-in-classes
   <clang-tidy/checks/misc-non-private-member-variables-in-classes>` check.
 
