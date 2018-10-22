@@ -919,3 +919,27 @@ void InterleavedAccessInfo::analyzeInterleaving(
     }
   }
 }
+
+void InterleavedAccessInfo::invalidateGroupsRequiringScalarEpilogue() {
+  // If no group had triggered the requirement to create an epilogue loop,
+  // there is nothing to do.
+  if (!requiresScalarEpilogue())
+    return;
+
+  // Avoid releasing a Group twice.
+  SmallPtrSet<InterleaveGroup *, 4> DelSet;
+  for (auto &I : InterleaveGroupMap) {
+    InterleaveGroup *Group = I.second;
+    if (Group->requiresScalarEpilogue())
+      DelSet.insert(Group);
+  }
+  for (auto *Ptr : DelSet) {
+    LLVM_DEBUG(
+        dbgs() 
+        << "LV: Invalidate candidate interleaved group due to gaps that "
+           "require a scalar epilogue.\n");
+    releaseGroup(Ptr);
+  }
+
+  RequiresScalarEpilogue = false;
+}

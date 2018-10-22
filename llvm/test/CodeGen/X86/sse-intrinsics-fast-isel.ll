@@ -79,12 +79,15 @@ define <4 x float> @test_mm_andnot_ps(<4 x float> %a0, <4 x float> %a1) nounwind
 ;
 ; AVX1-LABEL: test_mm_andnot_ps:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandnps %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xf8,0x55,0xc1]
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2 # encoding: [0xc5,0xe9,0x76,0xd2]
+; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xef,0xc2]
+; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xdb,0xc1]
 ; AVX1-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
 ; AVX512-LABEL: test_mm_andnot_ps:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vandnps %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x55,0xc1]
+; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x08,0x25,0xc0,0x0f]
+; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdb,0xc1]
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <4 x float> %a0 to <4 x i32>
   %arg1 = bitcast <4 x float> %a1 to <4 x i32>

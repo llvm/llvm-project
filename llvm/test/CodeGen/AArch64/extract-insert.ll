@@ -12,8 +12,7 @@ define i32 @trunc_i64_to_i32_le(i64 %x) {
 ;
 ; LE-LABEL: trunc_i64_to_i32_le:
 ; LE:       // %bb.0:
-; LE-NEXT:    fmov d0, x0
-; LE-NEXT:    fmov w0, s0
+; LE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; LE-NEXT:    ret
   %ins = insertelement <2 x i64> undef, i64 %x, i32 0
   %bc = bitcast <2 x i64> %ins to <4 x i32>
@@ -24,9 +23,7 @@ define i32 @trunc_i64_to_i32_le(i64 %x) {
 define i32 @trunc_i64_to_i32_be(i64 %x) {
 ; BE-LABEL: trunc_i64_to_i32_be:
 ; BE:       // %bb.0:
-; BE-NEXT:    fmov d0, x0
-; BE-NEXT:    rev64 v0.4s, v0.4s
-; BE-NEXT:    mov w0, v0.s[1]
+; BE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; BE-NEXT:    ret
 ;
 ; LE-LABEL: trunc_i64_to_i32_be:
@@ -50,8 +47,7 @@ define i16 @trunc_i64_to_i16_le(i64 %x) {
 ;
 ; LE-LABEL: trunc_i64_to_i16_le:
 ; LE:       // %bb.0:
-; LE-NEXT:    fmov d0, x0
-; LE-NEXT:    umov w0, v0.h[0]
+; LE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; LE-NEXT:    ret
   %ins = insertelement <2 x i64> undef, i64 %x, i32 0
   %bc = bitcast <2 x i64> %ins to <8 x i16>
@@ -62,9 +58,7 @@ define i16 @trunc_i64_to_i16_le(i64 %x) {
 define i16 @trunc_i64_to_i16_be(i64 %x) {
 ; BE-LABEL: trunc_i64_to_i16_be:
 ; BE:       // %bb.0:
-; BE-NEXT:    fmov d0, x0
-; BE-NEXT:    rev64 v0.8h, v0.8h
-; BE-NEXT:    umov w0, v0.h[3]
+; BE-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; BE-NEXT:    ret
 ;
 ; LE-LABEL: trunc_i64_to_i16_be:
@@ -88,8 +82,6 @@ define i8 @trunc_i32_to_i8_le(i32 %x) {
 ;
 ; LE-LABEL: trunc_i32_to_i8_le:
 ; LE:       // %bb.0:
-; LE-NEXT:    fmov s0, w0
-; LE-NEXT:    umov w0, v0.b[0]
 ; LE-NEXT:    ret
   %ins = insertelement <4 x i32> undef, i32 %x, i32 0
   %bc = bitcast <4 x i32> %ins to <16 x i8>
@@ -100,9 +92,6 @@ define i8 @trunc_i32_to_i8_le(i32 %x) {
 define i8 @trunc_i32_to_i8_be(i32 %x) {
 ; BE-LABEL: trunc_i32_to_i8_be:
 ; BE:       // %bb.0:
-; BE-NEXT:    fmov s0, w0
-; BE-NEXT:    rev32 v0.16b, v0.16b
-; BE-NEXT:    umov w0, v0.b[3]
 ; BE-NEXT:    ret
 ;
 ; LE-LABEL: trunc_i32_to_i8_be:
@@ -113,6 +102,25 @@ define i8 @trunc_i32_to_i8_be(i32 %x) {
   %ins = insertelement <4 x i32> undef, i32 %x, i32 0
   %bc = bitcast <4 x i32> %ins to <16 x i8>
   %ext = extractelement <16 x i8> %bc, i32 3
+  ret i8 %ext
+}
+
+; Weird type (non-power-of-2 vector) is ok.
+
+define i8 @trunc_i64_to_i8_be(i64 %x) {
+; BE-LABEL: trunc_i64_to_i8_be:
+; BE:       // %bb.0:
+; BE-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; BE-NEXT:    ret
+;
+; LE-LABEL: trunc_i64_to_i8_be:
+; LE:       // %bb.0:
+; LE-NEXT:    fmov d0, x0
+; LE-NEXT:    umov w0, v0.b[7]
+; LE-NEXT:    ret
+  %ins = insertelement <3 x i64> undef, i64 %x, i32 0
+  %bc = bitcast <3 x i64> %ins to <24 x i8>
+  %ext = extractelement <24 x i8> %bc, i32 7
   ret i8 %ext
 }
 

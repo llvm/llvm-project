@@ -85,7 +85,10 @@ define <4 x double> @test_mm256_andnot_pd(<4 x double> %a0, <4 x double> %a1) no
 define <8 x float> @test_mm256_andnot_ps(<8 x float> %a0, <8 x float> %a1) nounwind {
 ; CHECK-LABEL: test_mm256_andnot_ps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vandnps %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
+; CHECK-NEXT:    vxorps %ymm2, %ymm0, %ymm0
+; CHECK-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = bitcast <8 x float> %a0 to <8 x i32>
   %2 = bitcast <8 x float> %a1 to <8 x i32>

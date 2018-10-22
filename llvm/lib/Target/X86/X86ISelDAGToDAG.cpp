@@ -470,6 +470,8 @@ namespace {
     MachineSDNode *emitPCMPESTR(unsigned ROpc, unsigned MOpc, bool MayFoldLoad,
                                 const SDLoc &dl, MVT VT, SDNode *Node,
                                 SDValue &InFlag);
+
+    bool tryOptimizeRem8Extend(SDNode *N);
   };
 }
 
@@ -841,21 +843,62 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
   }
 }
 
+// Look for a redundant movzx/movsx that can occur after an 8-bit divrem.
+bool X86DAGToDAGISel::tryOptimizeRem8Extend(SDNode *N) {
+  unsigned Opc = N->getMachineOpcode();
+  if (Opc != X86::MOVZX32rr8 && Opc != X86::MOVSX32rr8 &&
+      Opc != X86::MOVSX64rr8)
+    return false;
+
+  SDValue N0 = N->getOperand(0);
+
+  // We need to be extracting the lower bit of an extend.
+  if (!N0.isMachineOpcode() ||
+      N0.getMachineOpcode() != TargetOpcode::EXTRACT_SUBREG ||
+      N0.getConstantOperandVal(1) != X86::sub_8bit)
+    return false;
+
+  // We're looking for either a movsx or movzx to match the original opcode.
+  unsigned ExpectedOpc = Opc == X86::MOVZX32rr8 ? X86::MOVZX32rr8_NOREX
+                                                : X86::MOVSX32rr8_NOREX;
+  SDValue N00 = N0.getOperand(0);
+  if (!N00.isMachineOpcode() || N00.getMachineOpcode() != ExpectedOpc)
+    return false;
+
+  if (Opc == X86::MOVSX64rr8) {
+    // If we had a sign extend from 8 to 64 bits. We still need to go from 32
+    // to 64.
+    MachineSDNode *Extend = CurDAG->getMachineNode(X86::MOVSX64rr32, SDLoc(N),
+                                                   MVT::i64, N00);
+    ReplaceUses(N, Extend);
+  } else {
+    // Ok we can drop this extend and just use the original extend.
+    ReplaceUses(N, N00.getNode());
+  }
+
+  return true;
+}
 
 void X86DAGToDAGISel::PostprocessISelDAG() {
   // Skip peepholes at -O0.
   if (TM.getOptLevel() == CodeGenOpt::None)
     return;
 
-  // Attempt to remove vectors moves that were inserted to zero upper bits.
-
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
 
+  bool MadeChange = false;
   while (Position != CurDAG->allnodes_begin()) {
     SDNode *N = &*--Position;
     // Skip dead nodes and any non-machine opcodes.
     if (N->use_empty() || !N->isMachineOpcode())
       continue;
+
+    if (tryOptimizeRem8Extend(N)) {
+      MadeChange = true;
+      continue;
+    }
+
+    // Attempt to remove vectors moves that were inserted to zero upper bits.
 
     if (N->getMachineOpcode() != TargetOpcode::SUBREG_TO_REG)
       continue;
@@ -905,11 +948,11 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
     // Producing instruction is another vector instruction. We can drop the
     // move.
     CurDAG->UpdateNodeOperands(N, N->getOperand(0), In, N->getOperand(2));
-
-    // If the move is now dead, delete it.
-    if (Move.getNode()->use_empty())
-      CurDAG->RemoveDeadNode(Move.getNode());
+    MadeChange = true;
   }
+
+  if (MadeChange)
+    CurDAG->RemoveDeadNodes();
 }
 
 
@@ -2812,21 +2855,17 @@ MachineSDNode *X86DAGToDAGISel::emitPCMPISTR(unsigned ROpc, unsigned MOpc,
   const ConstantInt *Val = cast<ConstantSDNode>(Imm)->getConstantIntValue();
   Imm = CurDAG->getTargetConstant(*Val, SDLoc(Node), Imm.getValueType());
 
-  // If there is a load, it will be behind a bitcast. We don't need to check
-  // alignment on this load.
+  // Try to fold a load. No need to check alignment.
   SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
-  if (MayFoldLoad && N1->getOpcode() == ISD::BITCAST && N1->hasOneUse() &&
-      tryFoldLoad(Node, N1.getNode(), N1.getOperand(0), Tmp0, Tmp1, Tmp2,
-                  Tmp3, Tmp4)) {
-    SDValue Load = N1.getOperand(0);
+  if (MayFoldLoad && tryFoldLoad(Node, N1, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4)) {
     SDValue Ops[] = { N0, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, Imm,
-                      Load.getOperand(0) };
+                      N1.getOperand(0) };
     SDVTList VTs = CurDAG->getVTList(VT, MVT::i32, MVT::Other);
     MachineSDNode *CNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
     // Update the chain.
-    ReplaceUses(Load.getValue(1), SDValue(CNode, 2));
+    ReplaceUses(N1.getValue(1), SDValue(CNode, 2));
     // Record the mem-refs
-    CurDAG->setNodeMemRefs(CNode, {cast<LoadSDNode>(Load)->getMemOperand()});
+    CurDAG->setNodeMemRefs(CNode, {cast<LoadSDNode>(N1)->getMemOperand()});
     return CNode;
   }
 
@@ -2849,22 +2888,18 @@ MachineSDNode *X86DAGToDAGISel::emitPCMPESTR(unsigned ROpc, unsigned MOpc,
   const ConstantInt *Val = cast<ConstantSDNode>(Imm)->getConstantIntValue();
   Imm = CurDAG->getTargetConstant(*Val, SDLoc(Node), Imm.getValueType());
 
-  // If there is a load, it will be behind a bitcast. We don't need to check
-  // alignment on this load.
+  // Try to fold a load. No need to check alignment.
   SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
-  if (MayFoldLoad && N2->getOpcode() == ISD::BITCAST && N2->hasOneUse() &&
-      tryFoldLoad(Node, N2.getNode(), N2.getOperand(0), Tmp0, Tmp1, Tmp2,
-                  Tmp3, Tmp4)) {
-    SDValue Load = N2.getOperand(0);
+  if (MayFoldLoad && tryFoldLoad(Node, N2, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4)) {
     SDValue Ops[] = { N0, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, Imm,
-                      Load.getOperand(0), InFlag };
+                      N2.getOperand(0), InFlag };
     SDVTList VTs = CurDAG->getVTList(VT, MVT::i32, MVT::Other, MVT::Glue);
     MachineSDNode *CNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
     InFlag = SDValue(CNode, 3);
     // Update the chain.
-    ReplaceUses(Load.getValue(1), SDValue(CNode, 2));
+    ReplaceUses(N2.getValue(1), SDValue(CNode, 2));
     // Record the mem-refs
-    CurDAG->setNodeMemRefs(CNode, {cast<LoadSDNode>(Load)->getMemOperand()});
+    CurDAG->setNodeMemRefs(CNode, {cast<LoadSDNode>(N2)->getMemOperand()});
     return CNode;
   }
 
@@ -3370,15 +3405,12 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   }
 
   case ISD::SDIVREM:
-  case ISD::UDIVREM:
-  case X86ISD::SDIVREM8_SEXT_HREG:
-  case X86ISD::UDIVREM8_ZEXT_HREG: {
+  case ISD::UDIVREM: {
     SDValue N0 = Node->getOperand(0);
     SDValue N1 = Node->getOperand(1);
 
     unsigned Opc, MOpc;
-    bool isSigned = (Opcode == ISD::SDIVREM ||
-                     Opcode == X86ISD::SDIVREM8_SEXT_HREG);
+    bool isSigned = Opcode == ISD::SDIVREM;
     if (!isSigned) {
       switch (NVT.SimpleTy) {
       default: llvm_unreachable("Unsupported VT!");
@@ -3517,13 +3549,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       SDValue Result(RNode, 0);
       InFlag = SDValue(RNode, 1);
 
-      if (Opcode == X86ISD::UDIVREM8_ZEXT_HREG ||
-          Opcode == X86ISD::SDIVREM8_SEXT_HREG) {
-        assert(Node->getValueType(1) == MVT::i32 && "Unexpected result type!");
-      } else {
-        Result =
-            CurDAG->getTargetExtractSubreg(X86::sub_8bit, dl, MVT::i8, Result);
-      }
+      Result =
+          CurDAG->getTargetExtractSubreg(X86::sub_8bit, dl, MVT::i8, Result);
+
       ReplaceUses(SDValue(Node, 1), Result);
       LLVM_DEBUG(dbgs() << "=> "; Result.getNode()->dump(CurDAG);
                  dbgs() << '\n');
