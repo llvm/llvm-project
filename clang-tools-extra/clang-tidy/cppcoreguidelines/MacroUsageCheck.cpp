@@ -13,6 +13,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Regex.h"
 #include <algorithm>
+#include <cctype>
 
 namespace clang {
 namespace tidy {
