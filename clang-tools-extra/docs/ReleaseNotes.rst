@@ -106,7 +106,7 @@ Improvements to clang-tidy
 - New :doc:`cppcoreguidelines-macro-usage
   <clang-tidy/checks/cppcoreguidelines-macro-usage>` check.
 
-  Find macro usage that is considered problematic because better language
+  Finds macro usage that is considered problematic because better language
   constructs exist for the task.
 
 - New :doc:`misc-non-private-member-variables-in-classes
