@@ -2193,11 +2193,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Tuple(
   CompilerType dyn_tuple_type = scratch_ctx.CreateTupleType(dyn_types);
   class_type_or_name.SetCompilerType(dyn_tuple_type);
 
-  lldb::addr_t tuple_address = in_value.GetPointerValue();
-  if (!tuple_address || tuple_address == LLDB_INVALID_ADDRESS)
-    tuple_address = in_value.GetAddressOf(true, nullptr);
-  else
-    tuple_address = m_process->ReadPointerFromMemory(tuple_address, error);
+  lldb::addr_t tuple_address = in_value.GetAddressOf(true, nullptr);
   if (error.Fail() || !tuple_address || tuple_address == LLDB_INVALID_ADDRESS)
       return false;
 
@@ -2212,9 +2208,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Struct(
     Address &address) {
   class_type_or_name.SetCompilerType(bound_type);
 
-  lldb::addr_t struct_address = in_value.GetPointerValue();
-  if (!struct_address || struct_address == LLDB_INVALID_ADDRESS)
-    struct_address = in_value.GetAddressOf(true, nullptr);
+  lldb::addr_t struct_address = in_value.GetAddressOf(true, nullptr);
   if (!struct_address || struct_address == LLDB_INVALID_ADDRESS)
     if (!SwiftASTContext::IsPossibleZeroSizeType(bound_type))
       return false;
@@ -2229,9 +2223,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Enum(
     Address &address) {
   class_type_or_name.SetCompilerType(bound_type);
 
-  lldb::addr_t enum_address = in_value.GetPointerValue();
-  if (!enum_address || LLDB_INVALID_ADDRESS == enum_address)
-    enum_address = in_value.GetAddressOf(true, nullptr);
+  lldb::addr_t enum_address = in_value.GetAddressOf(true, nullptr);
   if (!enum_address || LLDB_INVALID_ADDRESS == enum_address)
     if (!SwiftASTContext::IsPossibleZeroSizeType(bound_type))
       return false;
