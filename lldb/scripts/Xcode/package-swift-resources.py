@@ -42,6 +42,7 @@ if os.environ['ACTION'] == 'install':
 
 target_dir = sys.argv[1]
 swift_build_dir = lldbbuild.expected_package_build_path_for("swift")
+print("JSMTMP lldbbuild build path for swift: %s" % swift_build_dir)
 
 if not os.path.isdir(target_dir):
     print target_dir + " doesn't exist"
