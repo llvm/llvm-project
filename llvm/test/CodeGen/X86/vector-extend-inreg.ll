@@ -13,6 +13,7 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X32-SSE-NEXT:    subl $384, %esp # imm = 0x180
 ; X32-SSE-NEXT:    movl 88(%ebp), %ecx
 ; X32-SSE-NEXT:    movdqa 72(%ebp), %xmm0
+; X32-SSE-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
 ; X32-SSE-NEXT:    xorps %xmm1, %xmm1
 ; X32-SSE-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; X32-SSE-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
@@ -21,7 +22,6 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X32-SSE-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; X32-SSE-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; X32-SSE-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
-; X32-SSE-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
 ; X32-SSE-NEXT:    movdqa %xmm0, {{[0-9]+}}(%esp)
 ; X32-SSE-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
 ; X32-SSE-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
