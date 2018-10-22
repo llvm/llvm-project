@@ -126,7 +126,7 @@ void SwiftASTManipulator::WrapExpression(
   StreamString fixed_text;
 
   if (playground) {
-    const char *playground_prefix = R"(
+    const char *playground_logger_declarations = R"(
 @_silgen_name ("playground_logger_initialize") func __builtin_logger_initialize ()
 @_silgen_name ("playground_log_hidden") func __builtin_log_with_id<T> (_ object : T, _ name : String, _ id : Int, _ sl : Int, _ el : Int, _ sc : Int, _ ec: Int) -> AnyObject
 @_silgen_name ("playground_log_scope_entry") func __builtin_log_scope_entry (_ sl : Int, _ el : Int, _ sc : Int, _ ec: Int) -> AnyObject
@@ -135,6 +135,13 @@ void SwiftASTManipulator::WrapExpression(
 @_silgen_name ("DVTSendPlaygroundLogData") func __builtin_send_data (_ :  AnyObject!)
 __builtin_logger_initialize()
 )";
+
+    // The debug function declarations need only be declared once per session - on the first REPL call.
+    // This code assumes that the first call is the first REPL call; don't call playground once then playground || repl again
+    bool first_expression = options.GetPreparePlaygroundStubFunctions();
+
+    const char *playground_prefix =  first_expression ? playground_logger_declarations : "";
+
     if (pound_file && pound_line) {
       wrapped_stream.Printf("%s#sourceLocation(file: \"%s\", line: %u)\n%s\n",
                             playground_prefix, pound_file, pound_line,
@@ -145,7 +152,7 @@ __builtin_logger_initialize()
       first_body_line = 7;
     }
     return;
-  } else if (repl) {
+  } else if (repl) { // repl but not playground.
     if (pound_file && pound_line) {
       wrapped_stream.Printf("#sourceLocation(file: \"%s\", line:  %u)\n%s\n",
                             llvm::sys::path::filename(pound_file).str().c_str(),
