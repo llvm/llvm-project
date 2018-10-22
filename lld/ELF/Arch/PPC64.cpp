@@ -780,7 +780,7 @@ void PPC64::relaxTlsGdToIe(uint8_t *Loc, RelType Type, uint64_t Val) const {
 //      # compare needed to actual and branch to allocate_more_stack if more
 //      # space is needed, otherwise fallthrough to 'normal' function body.
 //      cmpld cr7,r12,r0
-//      blt- .Lallocate_more_stack
+//      blt- cr7, .Lallocate_more_stack
 //
 // -) The allocate_more_stack block might be placed after the split-stack
 //    prologue and the `blt-` replaced with a `bge+ .Lnormal_func_body`
