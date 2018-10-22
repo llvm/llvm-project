@@ -3,7 +3,7 @@
 cppcoreguidelines-macro-usage
 =============================
 
-Find macro usage that is considered problematic because better language
+Finds macro usage that is considered problematic because better language
 constructs exist for the task.
 
 The relevant sections in the C++ Core Guidelines are 
