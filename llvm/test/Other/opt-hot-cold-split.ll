@@ -18,8 +18,8 @@
 ; CHECK-NEXT:  Pass Arguments:
 ; CHECK-NEXT:  Target Library Information
 ; CHECK-NEXT:  Target Transform Information
-; CHECK-NEXT:  Target Pass Configuration
-; CHECK-NEXT:  Type-Based Alias Analysis
+;              Target Pass Configuration
+; CHECK:       Type-Based Alias Analysis
 ; CHECK-NEXT:  Scoped NoAlias Alias Analysis
 ; CHECK-NEXT:  Assumption Cache Tracker
 ; CHECK-NEXT:  Profile summary info
@@ -27,7 +27,7 @@
 ; CHECK-NEXT:      Force set function attributes
 ; CHECK-NEXT:      Infer set function attributes
 ; CHECK-NEXT:      Interprocedural Sparse Conditional Constant Propagation
-; CHECK-NEXT:        Unnamed pass: implement Pass::getPassName()
+;                    Unnamed pass: implement Pass::getPassName()
 ; CHECK-NEXT:     Called Value Propagation
 ; CHECK-NEXT:     Global Variable Optimizer
 ; CHECK-NEXT:       Unnamed pass: implement Pass::getPassName()
@@ -266,10 +266,11 @@
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:     Bitcode Writer
-; CHECK-NEXT: Pass Arguments:  -domtree
+; CHECK-NEXT: Pass Arguments:  -targetlibinfo -domtree
+; CHECK-NEXT: Target Library Information
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     Dominator Tree Construction
-; CHECK-NEXT: Pass Arguments:  -targetlibinfo -domtree -loops -branch-prob -block-freq
+;      CHECK: Pass Arguments:  -targetlibinfo -domtree -loops -branch-prob -block-freq
 ; CHECK-NEXT: Target Library Information
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     Dominator Tree Construction
@@ -283,10 +284,10 @@
 ; CHECK-NEXT:     Natural Loop Information
 ; CHECK-NEXT:     Branch Probability Analysis
 ; CHECK-NEXT:     Block Frequency Analysis
-; CHECK-NEXT: Pass Arguments:  -targetlibinfo -domtree -loops -branch-prob -block-freq
-; CHECK-NEXT: Target Library Information
-; CHECK-NEXT:   FunctionPass Manager
-; CHECK-NEXT:     Dominator Tree Construction
-; CHECK-NEXT:     Natural Loop Information
-; CHECK-NEXT:     Branch Probability Analysis
-; CHECK-NEXT:     Block Frequency Analysis
+;             Pass Arguments:  -targetlibinfo -domtree -loops -branch-prob -block-freq
+;             Target Library Information
+;               FunctionPass Manager
+;                 Dominator Tree Construction
+;                 Natural Loop Information
+;                 Branch Probability Analysis
+;                 Block Frequency Analysis
