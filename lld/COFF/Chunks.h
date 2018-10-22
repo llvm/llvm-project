@@ -345,7 +345,9 @@ private:
 // See comments for DefinedLocalImport class.
 class LocalImportChunk : public Chunk {
 public:
-  explicit LocalImportChunk(Defined *S) : Sym(S) {}
+  explicit LocalImportChunk(Defined *S) : Sym(S) {
+    Alignment = Config->is64() ? 8 : 4;
+  }
   size_t getSize() const override;
   void getBaserels(std::vector<Baserel> *Res) override;
   void writeTo(uint8_t *Buf) const override;
