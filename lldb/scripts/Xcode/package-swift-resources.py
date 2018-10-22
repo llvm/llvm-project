@@ -82,6 +82,8 @@ if not os.path.isdir(shims_dir):
 
 swift_resources = os.path.join(resources, "Swift")
 
+print("JSMTMP swift resources diretctory: %s" % swift_resources)
+
 if os.path.isdir(swift_resources):
     shutil.rmtree(swift_resources)
 
