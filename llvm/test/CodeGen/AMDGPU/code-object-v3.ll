@@ -58,6 +58,9 @@
 ; OSABI-AMDHSA-ELF: {{[0-9]+}}: 0000000000000000 64         OBJECT GLOBAL DEFAULT {{[0-9]+}} fadd.kd
 ; OSABI-AMDHSA-ELF: {{[0-9]+}}: 0000000000000040 64         OBJECT GLOBAL DEFAULT {{[0-9]+}} fsub.kd
 
+; OSABI-AMDHSA-ELF: Displaying notes found at file offset
+; OSABI-AMDHSA-ELF: AMDGPU 0x{{[0-9a-f]+}} NT_AMDGPU_METADATA (AMDGPU Metadata)
+
 define amdgpu_kernel void @fadd(
     float addrspace(1)* %r,
     float addrspace(1)* %a,
