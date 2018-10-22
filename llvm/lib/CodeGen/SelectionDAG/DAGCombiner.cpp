@@ -15503,16 +15503,41 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     // converts.
   }
 
-  if (ConstEltNo && InVec.getOpcode() == ISD::BITCAST) {
+  // TODO: These transforms should not require the 'hasOneUse' restriction, but
+  // there are regressions on multiple targets without it. We can end up with a
+  // mess of scalar and vector code if we reduce only part of the DAG to scalar.
+  if (ConstEltNo && InVec.getOpcode() == ISD::BITCAST && VT.isInteger() &&
+      InVec.hasOneUse()) {
     // The vector index of the LSBs of the source depend on the endian-ness.
     bool IsLE = DAG.getDataLayout().isLittleEndian();
-
+    unsigned ExtractIndex = ConstEltNo->getZExtValue();
     // extract_elt (v2i32 (bitcast i64:x)), BCTruncElt -> i32 (trunc i64:x)
     unsigned BCTruncElt = IsLE ? 0 : VT.getVectorNumElements() - 1;
     SDValue BCSrc = InVec.getOperand(0);
-    if (InVec.hasOneUse() && ConstEltNo->getZExtValue() == BCTruncElt &&
-        VT.isInteger() && BCSrc.getValueType().isScalarInteger())
+    if (ExtractIndex == BCTruncElt && BCSrc.getValueType().isScalarInteger())
       return DAG.getNode(ISD::TRUNCATE, SDLoc(N), NVT, BCSrc);
+
+    if (LegalTypes && BCSrc.getValueType().isInteger() &&
+        BCSrc.getOpcode() == ISD::SCALAR_TO_VECTOR) {
+      // ext_elt (bitcast (scalar_to_vec i64 X to v2i64) to v4i32), TruncElt -->
+      // trunc i64 X to i32
+      SDValue X = BCSrc.getOperand(0);
+      assert(X.getValueType().isScalarInteger() && NVT.isScalarInteger() &&
+             "Extract element and scalar to vector can't change element type "
+             "from FP to integer.");
+      unsigned XBitWidth = X.getValueSizeInBits();
+      unsigned VecEltBitWidth = VT.getScalarSizeInBits();
+      BCTruncElt = IsLE ? 0 : XBitWidth / VecEltBitWidth - 1;
+
+      // An extract element return value type can be wider than its vector
+      // operand element type. In that case, the high bits are undefined, so
+      // it's possible that we may need to extend rather than truncate.
+      if (ExtractIndex == BCTruncElt && XBitWidth > VecEltBitWidth) {
+        assert(XBitWidth % VecEltBitWidth == 0 &&
+               "Scalar bitwidth must be a multiple of vector element bitwidth");
+        return DAG.getAnyExtOrTrunc(X, SDLoc(N), NVT);
+      }
+    }
   }
 
   // extract_vector_elt (insert_vector_elt vec, val, idx), idx) -> val

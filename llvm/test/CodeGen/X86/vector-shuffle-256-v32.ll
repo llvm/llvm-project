@@ -2728,26 +2728,16 @@ define <32 x i8> @shuffle_v32i8_56_zz_zz_zz_57_zz_zz_zz_58_zz_zz_zz__zz_59_zz_zz
 ;
 ; AVX2-LABEL: shuffle_v32i8_56_zz_zz_zz_57_zz_zz_zz_58_zz_zz_zz__zz_59_zz_zz_zz_60_zz_zz_zz_61_zz_zz_zz_62_zz_zz_zz_63_zz_zz_zz:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX2-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX2-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,2,3]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[8],zero,zero,zero,ymm0[9],zero,zero,zero,ymm0[10],zero,zero,zero,ymm0[11],zero,zero,zero,ymm0[28],zero,zero,zero,ymm0[29],zero,zero,zero,ymm0[30],zero,zero,zero,ymm0[31],zero,zero,zero
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: shuffle_v32i8_56_zz_zz_zz_57_zz_zz_zz_58_zz_zz_zz__zz_59_zz_zz_zz_60_zz_zz_zz_61_zz_zz_zz_62_zz_zz_zz_63_zz_zz_zz:
 ; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512VLBW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512VLBW-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
-; AVX512VLBW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VLBW-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; AVX512VLBW-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX512VLBW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX512VLBW-NEXT:    movl $286331153, %eax # imm = 0x11111111
 ; AVX512VLBW-NEXT:    kmovd %eax, %k1
-; AVX512VLBW-NEXT:    vmovdqu8 %ymm0, %ymm0 {%k1} {z}
+; AVX512VLBW-NEXT:    vpshufb {{.*#+}} ymm0 {%k1} {z} = ymm0[8,u,u,u,9,u,u,u,10,u,u,u,11,u,u,u,28,u,u,u,29,u,u,u,30,u,u,u,31,u,u,u]
 ; AVX512VLBW-NEXT:    retq
 ;
 ; AVX512VLVBMI-LABEL: shuffle_v32i8_56_zz_zz_zz_57_zz_zz_zz_58_zz_zz_zz__zz_59_zz_zz_zz_60_zz_zz_zz_61_zz_zz_zz_62_zz_zz_zz_63_zz_zz_zz:

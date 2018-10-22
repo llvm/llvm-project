@@ -1956,14 +1956,8 @@ define <16 x i16> @shuffle_v16i16_28_zz_zz_zz_29_zz_zz_zz_30_zz_zz_zz_31_zz_zz_z
 ;
 ; AVX2-LABEL: shuffle_v16i16_28_zz_zz_zz_29_zz_zz_zz_30_zz_zz_zz_31_zz_zz_zz:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX2-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX2-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3],ymm0[4],ymm1[5,6,7],ymm0[8],ymm1[9,10,11],ymm0[12],ymm1[13,14,15]
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,2,3]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[8,9],zero,zero,zero,zero,zero,zero,ymm0[10,11],zero,zero,zero,zero,zero,zero,ymm0[28,29],zero,zero,zero,zero,zero,zero,ymm0[30,31],zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: shuffle_v16i16_28_zz_zz_zz_29_zz_zz_zz_30_zz_zz_zz_31_zz_zz_zz:
