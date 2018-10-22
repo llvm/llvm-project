@@ -8,7 +8,7 @@
 struct redret {
     int i;
     float r;
-} redret;
+};
 
 // For trigs
 extern struct redret __half_red(float);
