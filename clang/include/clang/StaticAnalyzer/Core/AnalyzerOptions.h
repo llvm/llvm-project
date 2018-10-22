@@ -85,7 +85,7 @@ enum CXXInlineableMemberKind {
   // Uninitialized = 0,
 
   /// A dummy mode in which no C++ inlining is enabled.
-  CIMK_None = 1,
+  CIMK_None,
 
   /// Refers to regular member function and operator calls.
   CIMK_MemberFunctions,
@@ -102,8 +102,6 @@ enum CXXInlineableMemberKind {
 
 /// Describes the different modes of inter-procedural analysis.
 enum IPAKind {
-  IPAK_NotSet = 0,
-
   /// Perform only intra-procedural analysis.
   IPAK_None = 1,
 
@@ -188,16 +186,11 @@ public:
     UnexploredFirstQueue,
     UnexploredFirstLocationQueue,
     BFSBlockDFSContents,
-    NotSet
   };
 
 private:
-  ExplorationStrategyKind ExplorationStrategy = ExplorationStrategyKind::NotSet;
-
   /// Describes the kinds for high-level analyzer mode.
   enum UserModeKind {
-    UMK_NotSet = 0,
-
     /// Perform shallow but fast analyzes.
     UMK_Shallow = 1,
 
@@ -205,16 +198,18 @@ private:
     UMK_Deep = 2
   };
 
+  llvm::Optional<ExplorationStrategyKind> ExplorationStrategy;
+
   /// Controls the high-level analyzer mode, which influences the default
   /// settings for some of the lower-level config options (such as IPAMode).
   /// \sa getUserMode
-  UserModeKind UserMode = UMK_NotSet;
+  llvm::Optional<UserModeKind> UserMode;
 
   /// Controls the mode of inter-procedural analysis.
-  IPAKind IPAMode = IPAK_NotSet;
+  llvm::Optional<IPAKind> IPAMode;
 
   /// Controls which C++ member functions will be considered for inlining.
-  CXXInlineableMemberKind CXXMemberInliningMode;
+  llvm::Optional<CXXInlineableMemberKind> CXXMemberInliningMode;
 
   /// \sa includeImplicitDtorsInCFG
   Optional<bool> IncludeImplicitDtorsInCFG;
@@ -420,6 +415,12 @@ public:
                          const ento::CheckerBase *C = nullptr,
                          bool SearchInParents = false);
 
+
+  unsigned getOptionAsUInt(Optional<unsigned> &V, StringRef Name,
+                           unsigned DefaultVal,
+                           const ento::CheckerBase *C = nullptr,
+                           bool SearchInParents = false);
+
   /// Query an option's string value.
   ///
   /// If an option value is not provided, returns the given \p DefaultVal.
@@ -434,6 +435,11 @@ public:
   /// be searched as well. The inner packages take precedence over the outer
   /// ones.
   StringRef getOptionAsString(StringRef Name, StringRef DefaultVal,
+                              const ento::CheckerBase *C = nullptr,
+                              bool SearchInParents = false);
+
+  StringRef getOptionAsString(Optional<StringRef> &V, StringRef Name,
+                              StringRef DefaultVal,
                               const ento::CheckerBase *C = nullptr,
                               bool SearchInParents = false);
 
