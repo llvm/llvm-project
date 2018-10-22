@@ -96,12 +96,11 @@ public:
 
 // Utility function declarations.
 
-/// Returns the object that was constructed by CtorDecl, or None if that isn't
-/// possible.
-// TODO: Refactor this function so that it returns the constructed object's
-// region.
-static Optional<nonloc::LazyCompoundVal>
-getObjectVal(const CXXConstructorDecl *CtorDecl, CheckerContext &Context);
+/// Returns the region that was constructed by CtorDecl, or nullptr if that
+/// isn't possible.
+static const TypedValueRegion *
+getConstructedRegion(const CXXConstructorDecl *CtorDecl,
+                     CheckerContext &Context);
 
 /// Checks whether the object constructed by \p Ctor will be analyzed later
 /// (e.g. if the object is a field of another object, in which case we'd check
@@ -135,11 +134,11 @@ void UninitializedObjectChecker::checkEndFunction(
   if (willObjectBeAnalyzedLater(CtorDecl, Context))
     return;
 
-  Optional<nonloc::LazyCompoundVal> Object = getObjectVal(CtorDecl, Context);
-  if (!Object)
+  const TypedValueRegion *R = getConstructedRegion(CtorDecl, Context);
+  if (!R)
     return;
 
-  FindUninitializedFields F(Context.getState(), Object->getRegion(), Opts);
+  FindUninitializedFields F(Context.getState(), R, Opts);
 
   const UninitFieldMap &UninitFields = F.getUninitFields();
 
@@ -400,25 +399,27 @@ static void printTail(llvm::raw_ostream &Out,
 //                           Utility functions.
 //===----------------------------------------------------------------------===//
 
-static Optional<nonloc::LazyCompoundVal>
-getObjectVal(const CXXConstructorDecl *CtorDecl, CheckerContext &Context) {
+static const TypedValueRegion *
+getConstructedRegion(const CXXConstructorDecl *CtorDecl,
+                     CheckerContext &Context) {
 
-  Loc ThisLoc = Context.getSValBuilder().getCXXThis(CtorDecl->getParent(),
+  Loc ThisLoc = Context.getSValBuilder().getCXXThis(CtorDecl,
                                                     Context.getStackFrame());
-  // Getting the value for 'this'.
-  SVal This = Context.getState()->getSVal(ThisLoc);
 
-  // Getting the value for '*this'.
-  SVal Object = Context.getState()->getSVal(This.castAs<Loc>());
+  SVal ObjectV = Context.getState()->getSVal(ThisLoc);
 
-  return Object.getAs<nonloc::LazyCompoundVal>();
+  auto *R = ObjectV.getAsRegion()->getAs<TypedValueRegion>();
+  if (R && !R->getValueType()->getAsCXXRecordDecl())
+    return nullptr;
+
+  return R;
 }
 
 static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
                                       CheckerContext &Context) {
 
-  Optional<nonloc::LazyCompoundVal> CurrentObject = getObjectVal(Ctor, Context);
-  if (!CurrentObject)
+  const TypedValueRegion *CurrRegion = getConstructedRegion(Ctor, Context);
+  if (!CurrRegion)
     return false;
 
   const LocationContext *LC = Context.getLocationContext();
@@ -429,14 +430,14 @@ static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
     if (!OtherCtor)
       continue;
 
-    Optional<nonloc::LazyCompoundVal> OtherObject =
-        getObjectVal(OtherCtor, Context);
-    if (!OtherObject)
+    const TypedValueRegion *OtherRegion =
+        getConstructedRegion(OtherCtor, Context);
+    if (!OtherRegion)
       continue;
 
-    // If the CurrentObject is a subregion of OtherObject, it will be analyzed
-    // during the analysis of OtherObject.
-    if (CurrentObject->getRegion()->isSubRegionOf(OtherObject->getRegion()))
+    // If the CurrRegion is a subregion of OtherRegion, it will be analyzed
+    // during the analysis of OtherRegion.
+    if (CurrRegion->isSubRegionOf(OtherRegion))
       return true;
   }
 

@@ -224,7 +224,7 @@ entry:
 define <16 x i16> @shuffle_v16i16_4501_mem(<16 x i16>* %a, <16 x i16>* %b) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: shuffle_v16i16_4501_mem:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX1-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = mem[0,1],ymm0[0,1]

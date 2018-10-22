@@ -3644,6 +3644,9 @@ public:
   /// \returns True, if the expansion was successful, false otherwise
   bool expandFP_TO_SINT(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
 
+  /// Expand fminnum/fmaxnum into fminnum_ieee/fmaxnum_ieee with quieted inputs.
+  SDValue expandFMINNUM_FMAXNUM(SDNode *N, SelectionDAG &DAG) const;
+
   /// Turn load of vector type into a load of the individual elements.
   /// \param LD load to expand
   /// \returns MERGE_VALUEs of the scalar loads with their chains.

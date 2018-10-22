@@ -225,3 +225,10 @@ void f(int a) {
 
 int PR24718;
 enum class X { PR24718 }; // Ok, not shadowing
+
+struct PR24718_1;
+struct PR24718_2 {
+  enum {
+    PR24718_1 // Does not shadow a type.
+  };
+};

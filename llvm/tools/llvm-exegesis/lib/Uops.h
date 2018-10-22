@@ -18,6 +18,7 @@
 #include "BenchmarkRunner.h"
 #include "SnippetGenerator.h"
 
+namespace llvm {
 namespace exegesis {
 
 class UopsSnippetGenerator : public SnippetGenerator {
@@ -73,5 +74,6 @@ private:
 };
 
 } // namespace exegesis
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_EXEGESIS_UOPS_H

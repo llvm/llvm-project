@@ -11,6 +11,7 @@
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
 
+namespace llvm {
 namespace exegesis {
 
 namespace {
@@ -90,3 +91,4 @@ void InitializeAArch64ExegesisTarget() {
 }
 
 } // namespace exegesis
+} // namespace llvm

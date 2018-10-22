@@ -10,6 +10,7 @@
 #include "RegisterValue.h"
 #include "llvm/ADT/APFloat.h"
 
+namespace llvm {
 namespace exegesis {
 
 static llvm::APFloat getFloatValue(const llvm::fltSemantics &FltSemantics,
@@ -47,3 +48,4 @@ llvm::APInt bitcastFloatValue(const llvm::fltSemantics &FltSemantics,
 }
 
 } // namespace exegesis
+} // namespace llvm

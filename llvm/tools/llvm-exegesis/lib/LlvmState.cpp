@@ -19,6 +19,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
+namespace llvm {
 namespace exegesis {
 
 LLVMState::LLVMState(const std::string &Triple, const std::string &CpuName) {
@@ -71,3 +72,4 @@ bool LLVMState::canAssemble(const llvm::MCInst &Inst) const {
 }
 
 } // namespace exegesis
+} // namespace llvm

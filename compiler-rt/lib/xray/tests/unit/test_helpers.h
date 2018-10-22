@@ -14,8 +14,9 @@
 #define COMPILER_RT_LIB_XRAY_TESTS_TEST_HELPERS_H_
 
 #include "xray_buffer_queue.h"
-#include "llvm/XRay/XRayRecord.h"
+#include "xray_segmented_array.h"
 #include "llvm/XRay/Trace.h"
+#include "llvm/XRay/XRayRecord.h"
 #include "gmock/gmock.h"
 
 // TODO: Move these to llvm/include/Testing/XRay/...
@@ -53,6 +54,19 @@ MATCHER_P(HasArg, A, "") {
 namespace __xray {
 
 std::string serialize(BufferQueue &Buffers, int32_t Version);
+
+template <class T> void PrintTo(const Array<T> &A, std::ostream *OS) {
+  *OS << "[";
+  bool first = true;
+  for (const auto &E : A) {
+    if (!first) {
+      *OS << ", ";
+    }
+    PrintTo(E, OS);
+    first = false;
+  }
+  *OS << "]";
+}
 
 } // namespace __xray
 

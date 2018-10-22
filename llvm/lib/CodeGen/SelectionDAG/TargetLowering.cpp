@@ -4113,6 +4113,35 @@ bool TargetLowering::expandFP_TO_SINT(SDNode *Node, SDValue &Result,
   return true;
 }
 
+SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
+                                              SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  unsigned NewOp = Node->getOpcode() == ISD::FMINNUM ?
+    ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
+  EVT VT = Node->getValueType(0);
+  if (isOperationLegalOrCustom(NewOp, VT)) {
+    SDValue Quiet0 = Node->getOperand(0);
+    SDValue Quiet1 = Node->getOperand(1);
+
+    if (!Node->getFlags().hasNoNaNs()) {
+      // Insert canonicalizes if it's possible we need to quiet to get correct
+      // sNaN behavior.
+      if (!DAG.isKnownNeverSNaN(Quiet0)) {
+        Quiet0 = DAG.getNode(ISD::FCANONICALIZE, dl, VT, Quiet0,
+                             Node->getFlags());
+      }
+      if (!DAG.isKnownNeverSNaN(Quiet1)) {
+        Quiet1 = DAG.getNode(ISD::FCANONICALIZE, dl, VT, Quiet1,
+                             Node->getFlags());
+      }
+    }
+
+    return DAG.getNode(NewOp, dl, VT, Quiet0, Quiet1, Node->getFlags());
+  }
+
+  return SDValue();
+}
+
 SDValue TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
                                             SelectionDAG &DAG) const {
   SDLoc SL(LD);

@@ -38,63 +38,63 @@
 #include <algorithm>
 #include <string>
 
-static llvm::cl::opt<int>
-    OpcodeIndex("opcode-index", llvm::cl::desc("opcode to measure, by index"),
-                llvm::cl::init(0));
-
-static llvm::cl::opt<std::string> OpcodeNames(
-    "opcode-name",
-    llvm::cl::desc("comma-separated list of opcodes to measure, by name"),
-    llvm::cl::init(""));
-
-static llvm::cl::opt<std::string>
-    SnippetsFile("snippets-file", llvm::cl::desc("code snippets to measure"),
-                 llvm::cl::init(""));
-
-static llvm::cl::opt<std::string>
-    BenchmarkFile("benchmarks-file", llvm::cl::desc(""), llvm::cl::init(""));
-
-static llvm::cl::opt<exegesis::InstructionBenchmark::ModeE> BenchmarkMode(
-    "mode", llvm::cl::desc("the mode to run"),
-    llvm::cl::values(clEnumValN(exegesis::InstructionBenchmark::Latency,
-                                "latency", "Instruction Latency"),
-                     clEnumValN(exegesis::InstructionBenchmark::Uops, "uops",
-                                "Uop Decomposition"),
-                     // When not asking for a specific benchmark mode, we'll
-                     // analyse the results.
-                     clEnumValN(exegesis::InstructionBenchmark::Unknown,
-                                "analysis", "Analysis")));
-
-static llvm::cl::opt<unsigned>
-    NumRepetitions("num-repetitions",
-                   llvm::cl::desc("number of time to repeat the asm snippet"),
-                   llvm::cl::init(10000));
-
-static llvm::cl::opt<bool> IgnoreInvalidSchedClass(
-    "ignore-invalid-sched-class",
-    llvm::cl::desc("ignore instructions that do not define a sched class"),
-    llvm::cl::init(false));
-
-static llvm::cl::opt<unsigned> AnalysisNumPoints(
-    "analysis-numpoints",
-    llvm::cl::desc("minimum number of points in an analysis cluster"),
-    llvm::cl::init(3));
-
-static llvm::cl::opt<float>
-    AnalysisEpsilon("analysis-epsilon",
-                    llvm::cl::desc("dbscan epsilon for analysis clustering"),
-                    llvm::cl::init(0.1));
-
-static llvm::cl::opt<std::string>
-    AnalysisClustersOutputFile("analysis-clusters-output-file",
-                               llvm::cl::desc(""), llvm::cl::init("-"));
-static llvm::cl::opt<std::string>
-    AnalysisInconsistenciesOutputFile("analysis-inconsistencies-output-file",
-                                      llvm::cl::desc(""), llvm::cl::init("-"));
-
+namespace llvm {
 namespace exegesis {
 
-static llvm::ExitOnError ExitOnErr;
+static cl::opt<int> OpcodeIndex("opcode-index",
+                                cl::desc("opcode to measure, by index"),
+                                cl::init(0));
+
+static cl::opt<std::string>
+    OpcodeNames("opcode-name",
+                cl::desc("comma-separated list of opcodes to measure, by name"),
+                cl::init(""));
+
+static cl::opt<std::string> SnippetsFile("snippets-file",
+                                         cl::desc("code snippets to measure"),
+                                         cl::init(""));
+
+static cl::opt<std::string> BenchmarkFile("benchmarks-file", cl::desc(""),
+                                          cl::init(""));
+
+static cl::opt<exegesis::InstructionBenchmark::ModeE>
+    BenchmarkMode("mode", cl::desc("the mode to run"),
+                  cl::values(clEnumValN(exegesis::InstructionBenchmark::Latency,
+                                        "latency", "Instruction Latency"),
+                             clEnumValN(exegesis::InstructionBenchmark::Uops,
+                                        "uops", "Uop Decomposition"),
+                             // When not asking for a specific benchmark mode,
+                             // we'll analyse the results.
+                             clEnumValN(exegesis::InstructionBenchmark::Unknown,
+                                        "analysis", "Analysis")));
+
+static cl::opt<unsigned>
+    NumRepetitions("num-repetitions",
+                   cl::desc("number of time to repeat the asm snippet"),
+                   cl::init(10000));
+
+static cl::opt<bool> IgnoreInvalidSchedClass(
+    "ignore-invalid-sched-class",
+    cl::desc("ignore instructions that do not define a sched class"),
+    cl::init(false));
+
+static cl::opt<unsigned> AnalysisNumPoints(
+    "analysis-numpoints",
+    cl::desc("minimum number of points in an analysis cluster"), cl::init(3));
+
+static cl::opt<float>
+    AnalysisEpsilon("analysis-epsilon",
+                    cl::desc("dbscan epsilon for analysis clustering"),
+                    cl::init(0.1));
+
+static cl::opt<std::string>
+    AnalysisClustersOutputFile("analysis-clusters-output-file", cl::desc(""),
+                               cl::init("-"));
+static cl::opt<std::string>
+    AnalysisInconsistenciesOutputFile("analysis-inconsistencies-output-file",
+                                      cl::desc(""), cl::init("-"));
+
+static ExitOnError ExitOnErr;
 
 #ifdef LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET
 void LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET();
@@ -430,9 +430,11 @@ static void analysisMain() {
 }
 
 } // namespace exegesis
+} // namespace llvm
 
 int main(int Argc, char **Argv) {
-  llvm::cl::ParseCommandLineOptions(Argc, Argv, "");
+  using namespace llvm;
+  cl::ParseCommandLineOptions(Argc, Argv, "");
 
   exegesis::ExitOnErr.setExitCodeMapper([](const llvm::Error &Err) {
     if (Err.isA<llvm::StringError>())
@@ -440,7 +442,7 @@ int main(int Argc, char **Argv) {
     return EXIT_FAILURE;
   });
 
-  if (BenchmarkMode == exegesis::InstructionBenchmark::Unknown) {
+  if (exegesis::BenchmarkMode == exegesis::InstructionBenchmark::Unknown) {
     exegesis::analysisMain();
   } else {
     exegesis::benchmarkMain();

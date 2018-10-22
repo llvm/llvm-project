@@ -10,16 +10,18 @@
 #include "PdbUtil.h"
 
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
+#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 
 #include "lldb/Utility/LLDBAssert.h"
+
+#include "lldb/lldb-enumerations.h"
 
 using namespace lldb_private;
 using namespace lldb_private::npdb;
 using namespace llvm::codeview;
 using namespace llvm::pdb;
 
-llvm::pdb::PDB_SymType
-lldb_private::npdb::CVSymToPDBSym(llvm::codeview::SymbolKind kind) {
+PDB_SymType lldb_private::npdb::CVSymToPDBSym(SymbolKind kind) {
   switch (kind) {
   case S_COMPILE3:
   case S_OBJNAME:
@@ -71,7 +73,32 @@ lldb_private::npdb::CVSymToPDBSym(llvm::codeview::SymbolKind kind) {
   return PDB_SymType::None;
 }
 
-bool lldb_private::npdb::SymbolHasAddress(const llvm::codeview::CVSymbol &sym) {
+PDB_SymType lldb_private::npdb::CVTypeToPDBType(TypeLeafKind kind) {
+  switch (kind) {
+  case LF_ARRAY:
+    return PDB_SymType::ArrayType;
+  case LF_ARGLIST:
+    return PDB_SymType::FunctionSig;
+  case LF_BCLASS:
+    return PDB_SymType::BaseClass;
+  case LF_BINTERFACE:
+    return PDB_SymType::BaseInterface;
+  case LF_CLASS:
+  case LF_STRUCTURE:
+  case LF_INTERFACE:
+  case LF_UNION:
+    return PDB_SymType::UDT;
+  case LF_POINTER:
+    return PDB_SymType::PointerType;
+  case LF_ENUM:
+    return PDB_SymType::Enum;
+  default:
+    lldbassert(false && "Invalid type record kind!");
+  }
+  return PDB_SymType::None;
+}
+
+bool lldb_private::npdb::SymbolHasAddress(const CVSymbol &sym) {
   switch (sym.kind()) {
   case S_GPROC32:
   case S_LPROC32:
@@ -98,7 +125,7 @@ bool lldb_private::npdb::SymbolHasAddress(const llvm::codeview::CVSymbol &sym) {
   }
 }
 
-bool lldb_private::npdb::SymbolIsCode(const llvm::codeview::CVSymbol &sym) {
+bool lldb_private::npdb::SymbolIsCode(const CVSymbol &sym) {
   switch (sym.kind()) {
   case S_GPROC32:
   case S_LPROC32:
@@ -156,8 +183,7 @@ SegmentOffset GetSegmentAndOffset<ThreadLocalDataSym>(const CVSymbol &sym) {
   return {record.Segment, record.DataOffset};
 }
 
-SegmentOffset
-lldb_private::npdb::GetSegmentAndOffset(const llvm::codeview::CVSymbol &sym) {
+SegmentOffset lldb_private::npdb::GetSegmentAndOffset(const CVSymbol &sym) {
   switch (sym.kind()) {
   case S_GPROC32:
   case S_LPROC32:
@@ -229,8 +255,8 @@ GetSegmentOffsetAndLength<CoffGroupSym>(const CVSymbol &sym) {
   return SegmentOffsetLength{record.Segment, record.Offset, record.Size};
 }
 
-SegmentOffsetLength lldb_private::npdb::GetSegmentOffsetAndLength(
-    const llvm::codeview::CVSymbol &sym) {
+SegmentOffsetLength
+lldb_private::npdb::GetSegmentOffsetAndLength(const CVSymbol &sym) {
   switch (sym.kind()) {
   case S_GPROC32:
   case S_LPROC32:
@@ -255,4 +281,77 @@ SegmentOffsetLength lldb_private::npdb::GetSegmentOffsetAndLength(
     lldbassert(false && "Record does not have a segment/offset/length triple!");
   }
   return {0, 0, 0};
+}
+
+bool lldb_private::npdb::IsForwardRefUdt(CVType cvt) {
+  ClassRecord cr;
+  UnionRecord ur;
+  EnumRecord er;
+  switch (cvt.kind()) {
+  case LF_CLASS:
+  case LF_STRUCTURE:
+  case LF_INTERFACE:
+    llvm::cantFail(TypeDeserializer::deserializeAs<ClassRecord>(cvt, cr));
+    return cr.isForwardRef();
+  case LF_UNION:
+    llvm::cantFail(TypeDeserializer::deserializeAs<UnionRecord>(cvt, ur));
+    return ur.isForwardRef();
+  case LF_ENUM:
+    llvm::cantFail(TypeDeserializer::deserializeAs<EnumRecord>(cvt, er));
+    return er.isForwardRef();
+  default:
+    return false;
+  }
+}
+
+lldb::AccessType
+lldb_private::npdb::TranslateMemberAccess(MemberAccess access) {
+  switch (access) {
+  case MemberAccess::Private:
+    return lldb::eAccessPrivate;
+  case MemberAccess::Protected:
+    return lldb::eAccessProtected;
+  case MemberAccess::Public:
+    return lldb::eAccessPublic;
+  case MemberAccess::None:
+    return lldb::eAccessNone;
+  }
+  llvm_unreachable("unreachable");
+}
+
+TypeIndex lldb_private::npdb::GetFieldListIndex(CVType cvt) {
+  switch (cvt.kind()) {
+  case LF_CLASS:
+  case LF_STRUCTURE:
+  case LF_INTERFACE: {
+    ClassRecord cr;
+    cantFail(TypeDeserializer::deserializeAs<ClassRecord>(cvt, cr));
+    return cr.FieldList;
+  }
+  case LF_UNION: {
+    UnionRecord ur;
+    cantFail(TypeDeserializer::deserializeAs<UnionRecord>(cvt, ur));
+    return ur.FieldList;
+  }
+  case LF_ENUM: {
+    EnumRecord er;
+    cantFail(TypeDeserializer::deserializeAs<EnumRecord>(cvt, er));
+    return er.FieldList;
+  }
+  default:
+    llvm_unreachable("Unreachable!");
+  }
+}
+
+llvm::StringRef lldb_private::npdb::DropNameScope(llvm::StringRef name) {
+  // Not all PDB names can be parsed with CPlusPlusNameParser.
+  // E.g. it fails on names containing `anonymous namespace'.
+  // So we simply drop everything before '::'
+
+  auto offset = name.rfind("::");
+  if (offset == llvm::StringRef::npos)
+    return name;
+  assert(offset + 2 <= name.size());
+
+  return name.substr(offset + 2);
 }

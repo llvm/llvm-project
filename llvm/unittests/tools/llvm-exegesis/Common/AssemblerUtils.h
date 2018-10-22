@@ -24,6 +24,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+namespace llvm {
 namespace exegesis {
 
 class MachineFunctionGeneratorBaseTest : public ::testing::Test {
@@ -89,5 +90,6 @@ private:
 };
 
 } // namespace exegesis
+} // namespace llvm
 
 #endif

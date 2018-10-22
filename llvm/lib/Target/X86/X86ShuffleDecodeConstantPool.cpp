@@ -112,10 +112,11 @@ static bool extractConstantMask(const Constant *C, unsigned MaskEltSizeInBits,
   return true;
 }
 
-void DecodePSHUFBMask(const Constant *C, unsigned Width,
-                      SmallVectorImpl<int> &ShuffleMask) {
-  assert((Width == 128 || Width == 256 || Width == 512) &&
-         C->getType()->getPrimitiveSizeInBits() >= Width &&
+void DecodePSHUFBMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask) {
+  Type *MaskTy = C->getType();
+  unsigned MaskTySize = MaskTy->getPrimitiveSizeInBits();
+  (void)MaskTySize;
+  assert((MaskTySize == 128 || MaskTySize == 256 || MaskTySize == 512) &&
          "Unexpected vector size.");
 
   // The shuffle mask requires a byte vector.
@@ -124,7 +125,7 @@ void DecodePSHUFBMask(const Constant *C, unsigned Width,
   if (!extractConstantMask(C, 8, UndefElts, RawMask))
     return;
 
-  unsigned NumElts = Width / 8;
+  unsigned NumElts = RawMask.size();
   assert((NumElts == 16 || NumElts == 32 || NumElts == 64) &&
          "Unexpected number of vector elements.");
 
@@ -150,10 +151,12 @@ void DecodePSHUFBMask(const Constant *C, unsigned Width,
   }
 }
 
-void DecodeVPERMILPMask(const Constant *C, unsigned ElSize, unsigned Width,
+void DecodeVPERMILPMask(const Constant *C, unsigned ElSize,
                         SmallVectorImpl<int> &ShuffleMask) {
-  assert((Width == 128 || Width == 256 || Width == 512) &&
-         C->getType()->getPrimitiveSizeInBits() >= Width &&
+  Type *MaskTy = C->getType();
+  unsigned MaskTySize = MaskTy->getPrimitiveSizeInBits();
+  (void)MaskTySize;
+  assert((MaskTySize == 128 || MaskTySize == 256 || MaskTySize == 512) &&
          "Unexpected vector size.");
   assert((ElSize == 32 || ElSize == 64) && "Unexpected vector element size.");
 
@@ -163,7 +166,7 @@ void DecodeVPERMILPMask(const Constant *C, unsigned ElSize, unsigned Width,
   if (!extractConstantMask(C, ElSize, UndefElts, RawMask))
     return;
 
-  unsigned NumElts = Width / ElSize;
+  unsigned NumElts = RawMask.size();
   unsigned NumEltsPerLane = 128 / ElSize;
   assert((NumElts == 2 || NumElts == 4 || NumElts == 8 || NumElts == 16) &&
          "Unexpected number of vector elements.");
@@ -186,13 +189,11 @@ void DecodeVPERMILPMask(const Constant *C, unsigned ElSize, unsigned Width,
 }
 
 void DecodeVPERMIL2PMask(const Constant *C, unsigned M2Z, unsigned ElSize,
-                         unsigned Width,
                          SmallVectorImpl<int> &ShuffleMask) {
   Type *MaskTy = C->getType();
   unsigned MaskTySize = MaskTy->getPrimitiveSizeInBits();
   (void)MaskTySize;
-  assert((MaskTySize == 128 || MaskTySize == 256) &&
-         Width >= MaskTySize && "Unexpected vector size.");
+  assert((MaskTySize == 128 || MaskTySize == 256) && "Unexpected vector size.");
 
   // The shuffle mask requires elements the same size as the target.
   APInt UndefElts;
@@ -200,7 +201,7 @@ void DecodeVPERMIL2PMask(const Constant *C, unsigned M2Z, unsigned ElSize,
   if (!extractConstantMask(C, ElSize, UndefElts, RawMask))
     return;
 
-  unsigned NumElts = Width / ElSize;
+  unsigned NumElts = RawMask.size();
   unsigned NumEltsPerLane = 128 / ElSize;
   assert((NumElts == 2 || NumElts == 4 || NumElts == 8) &&
          "Unexpected number of vector elements.");
@@ -241,12 +242,9 @@ void DecodeVPERMIL2PMask(const Constant *C, unsigned M2Z, unsigned ElSize,
   }
 }
 
-void DecodeVPPERMMask(const Constant *C, unsigned Width,
-                      SmallVectorImpl<int> &ShuffleMask) {
-  Type *MaskTy = C->getType();
-  unsigned MaskTySize = MaskTy->getPrimitiveSizeInBits();
-  (void)MaskTySize;
-  assert(Width == 128 && Width >= MaskTySize && "Unexpected vector size.");
+void DecodeVPPERMMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask) {
+  assert(C->getType()->getPrimitiveSizeInBits() == 128 &&
+         "Unexpected vector size.");
 
   // The shuffle mask requires a byte vector.
   APInt UndefElts;
@@ -254,7 +252,7 @@ void DecodeVPPERMMask(const Constant *C, unsigned Width,
   if (!extractConstantMask(C, 8, UndefElts, RawMask))
     return;
 
-  unsigned NumElts = Width / 8;
+  unsigned NumElts = RawMask.size();
   assert(NumElts == 16 && "Unexpected number of vector elements.");
 
   for (unsigned i = 0; i != NumElts; ++i) {
@@ -293,10 +291,12 @@ void DecodeVPPERMMask(const Constant *C, unsigned Width,
   }
 }
 
-void DecodeVPERMVMask(const Constant *C, unsigned ElSize, unsigned Width,
+void DecodeVPERMVMask(const Constant *C, unsigned ElSize,
                       SmallVectorImpl<int> &ShuffleMask) {
-  assert((Width == 128 || Width == 256 || Width == 512) &&
-         C->getType()->getPrimitiveSizeInBits() >= Width &&
+  Type *MaskTy = C->getType();
+  unsigned MaskTySize = MaskTy->getPrimitiveSizeInBits();
+  (void)MaskTySize;
+  assert((MaskTySize == 128 || MaskTySize == 256 || MaskTySize == 512) &&
          "Unexpected vector size.");
   assert((ElSize == 8 || ElSize == 16 || ElSize == 32 || ElSize == 64) &&
          "Unexpected vector element size.");
@@ -307,7 +307,7 @@ void DecodeVPERMVMask(const Constant *C, unsigned ElSize, unsigned Width,
   if (!extractConstantMask(C, ElSize, UndefElts, RawMask))
     return;
 
-  unsigned NumElts = Width / ElSize;
+  unsigned NumElts = RawMask.size();
 
   for (unsigned i = 0; i != NumElts; ++i) {
     if (UndefElts[i]) {
@@ -319,10 +319,12 @@ void DecodeVPERMVMask(const Constant *C, unsigned ElSize, unsigned Width,
   }
 }
 
-void DecodeVPERMV3Mask(const Constant *C, unsigned ElSize, unsigned Width,
+void DecodeVPERMV3Mask(const Constant *C, unsigned ElSize,
                        SmallVectorImpl<int> &ShuffleMask) {
-  assert((Width == 128 || Width == 256 || Width == 512) &&
-         C->getType()->getPrimitiveSizeInBits() >= Width &&
+  Type *MaskTy = C->getType();
+  unsigned MaskTySize = MaskTy->getPrimitiveSizeInBits();
+  (void)MaskTySize;
+  assert((MaskTySize == 128 || MaskTySize == 256 || MaskTySize == 512) &&
          "Unexpected vector size.");
   assert((ElSize == 8 || ElSize == 16 || ElSize == 32 || ElSize == 64) &&
          "Unexpected vector element size.");
@@ -333,7 +335,7 @@ void DecodeVPERMV3Mask(const Constant *C, unsigned ElSize, unsigned Width,
   if (!extractConstantMask(C, ElSize, UndefElts, RawMask))
     return;
 
-  unsigned NumElts = Width / ElSize;
+  unsigned NumElts = RawMask.size();
 
   for (unsigned i = 0; i != NumElts; ++i) {
     if (UndefElts[i]) {

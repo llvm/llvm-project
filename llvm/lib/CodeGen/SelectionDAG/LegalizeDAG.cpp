@@ -3247,7 +3247,12 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Tmp1);
     break;
   }
-
+  case ISD::FMINNUM:
+  case ISD::FMAXNUM: {
+    if (SDValue Expanded = TLI.expandFMINNUM_FMAXNUM(Node, DAG))
+      Results.push_back(Expanded);
+    break;
+  }
   case ISD::FSIN:
   case ISD::FCOS: {
     EVT VT = Node->getValueType(0);

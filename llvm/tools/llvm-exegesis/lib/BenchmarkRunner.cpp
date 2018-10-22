@@ -22,6 +22,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 
+namespace llvm {
 namespace exegesis {
 
 BenchmarkFailure::BenchmarkFailure(const llvm::Twine &S)
@@ -173,3 +174,4 @@ BenchmarkRunner::writeObjectFile(const BenchmarkCode &BC,
 BenchmarkRunner::FunctionExecutor::~FunctionExecutor() {}
 
 } // namespace exegesis
+} // namespace llvm

@@ -693,20 +693,20 @@ define void @test_sdiv_pow2_v2i32(<2 x i32>* %x, <2 x i32>* %y) nounwind {
 ; X86-NEXT:    movdqa %xmm0, %xmm1
 ; X86-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; X86-NEXT:    movdqa {{.*#+}} xmm2 = [31,0,31,0]
-; X86-NEXT:    movdqa {{.*#+}} xmm3 = [0,2147483648,0,2147483648]
-; X86-NEXT:    movdqa %xmm3, %xmm4
-; X86-NEXT:    psrlq %xmm2, %xmm4
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [0,2147483648,0,2147483648]
+; X86-NEXT:    movdqa {{.*#+}} xmm3 = [31,0,31,0]
+; X86-NEXT:    movdqa %xmm2, %xmm4
+; X86-NEXT:    psrlq %xmm3, %xmm4
 ; X86-NEXT:    movl $31, %ecx
 ; X86-NEXT:    movd %ecx, %xmm5
-; X86-NEXT:    psrlq %xmm5, %xmm3
-; X86-NEXT:    movsd {{.*#+}} xmm3 = xmm4[0],xmm3[1]
+; X86-NEXT:    psrlq %xmm5, %xmm2
+; X86-NEXT:    movsd {{.*#+}} xmm2 = xmm4[0],xmm2[1]
 ; X86-NEXT:    movdqa %xmm1, %xmm4
-; X86-NEXT:    psrlq %xmm2, %xmm4
+; X86-NEXT:    psrlq %xmm3, %xmm4
 ; X86-NEXT:    psrlq %xmm5, %xmm1
 ; X86-NEXT:    movsd {{.*#+}} xmm1 = xmm4[0],xmm1[1]
-; X86-NEXT:    xorpd %xmm3, %xmm1
-; X86-NEXT:    psubq %xmm3, %xmm1
+; X86-NEXT:    xorpd %xmm2, %xmm1
+; X86-NEXT:    psubq %xmm2, %xmm1
 ; X86-NEXT:    pand {{\.LCPI.*}}, %xmm1
 ; X86-NEXT:    psrlq $29, %xmm1
 ; X86-NEXT:    paddq %xmm0, %xmm1

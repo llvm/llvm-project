@@ -7097,6 +7097,13 @@ static SDValue combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
   case ISD::SETLE:
   case ISD::SETULT:
   case ISD::SETULE: {
+    // Since it's known never nan to get here already, either fminnum or
+    // fminnum_ieee are OK. Try the ieee version first, since it's fminnum is
+    // expanded in terms of it.
+    unsigned IEEEOpcode = (LHS == True) ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
+    if (TLI.isOperationLegalOrCustom(IEEEOpcode, VT))
+      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS);
+
     unsigned Opcode = (LHS == True) ? ISD::FMINNUM : ISD::FMAXNUM;
     if (TLI.isOperationLegalOrCustom(Opcode, TransformVT))
       return DAG.getNode(Opcode, DL, VT, LHS, RHS);
@@ -7108,6 +7115,10 @@ static SDValue combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
   case ISD::SETGE:
   case ISD::SETUGT:
   case ISD::SETUGE: {
+    unsigned IEEEOpcode = (LHS == True) ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
+    if (TLI.isOperationLegalOrCustom(IEEEOpcode, VT))
+      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS);
+
     unsigned Opcode = (LHS == True) ? ISD::FMAXNUM : ISD::FMINNUM;
     if (TLI.isOperationLegalOrCustom(Opcode, TransformVT))
       return DAG.getNode(Opcode, DL, VT, LHS, RHS);

@@ -408,6 +408,11 @@ def fminnum    : SDNode<"ISD::FMINNUM"    , SDTFPBinOp,
                                   [SDNPCommutative, SDNPAssociative]>;
 def fmaxnum    : SDNode<"ISD::FMAXNUM"    , SDTFPBinOp,
                                   [SDNPCommutative, SDNPAssociative]>;
+def fminnum_ieee : SDNode<"ISD::FMINNUM_IEEE", SDTFPBinOp,
+                          [SDNPCommutative]>;
+def fmaxnum_ieee  : SDNode<"ISD::FMAXNUM_IEEE", SDTFPBinOp,
+                           [SDNPCommutative]>;
+
 def fminnan    : SDNode<"ISD::FMINNAN"    , SDTFPBinOp>;
 def fmaxnan    : SDNode<"ISD::FMAXNAN"    , SDTFPBinOp>;
 def fgetsign   : SDNode<"ISD::FGETSIGN"   , SDTFPToIntOp>;
