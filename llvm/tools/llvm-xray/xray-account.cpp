@@ -358,8 +358,11 @@ void LatencyAccountant::exportStats(const XRayFileHeader &Header, F Fn) const {
     break;
   }
 
-  if (AccountTop > 0)
-    Results.erase(Results.begin() + AccountTop.getValue(), Results.end());
+  if (AccountTop > 0) {
+    auto MaxTop =
+        std::min(AccountTop.getValue(), static_cast<int>(Results.size()));
+    Results.erase(Results.begin() + MaxTop, Results.end());
+  }
 
   for (const auto &R : Results)
     Fn(std::get<0>(R), std::get<1>(R), std::get<2>(R));
