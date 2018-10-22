@@ -27,6 +27,7 @@ namespace llvm {
 class AsmPrinter;
 class MachineInstr;
 class MachineModuleInfo;
+class MCExpr;
 
 /// Represents the location at which a variable is stored.
 struct DbgVariableLocation {
@@ -121,6 +122,10 @@ public:
 
   /// Return Label immediately following the instruction.
   MCSymbol *getLabelAfterInsn(const MachineInstr *MI);
+
+  /// Return the function-local offset of an instruction. A label for the
+  /// instruction \p MI should exist (\ref getLabelAfterInsn).
+  const MCExpr *getFunctionLocalOffsetAfterInsn(const MachineInstr *MI);
 
   /// If this type is derived from a base type then return base type size.
   static uint64_t getBaseTypeSize(const DITypeRef TyRef);
