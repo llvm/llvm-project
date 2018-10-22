@@ -8952,9 +8952,9 @@ llvm::Value *CodeGenFunction::EmitX86CpuSupports(uint32_t FeaturesMask) {
       Builder.CreateAlignedLoad(CpuFeatures, CharUnits::fromQuantity(4));
 
   // Check the value of the bit corresponding to the feature requested.
-  Value *Bitset = Builder.CreateAnd(
-      Features, llvm::ConstantInt::get(Int32Ty, FeaturesMask));
-  return Builder.CreateICmpNE(Bitset, llvm::ConstantInt::get(Int32Ty, 0));
+  Value *Mask = Builder.getInt32(FeaturesMask);
+  Value *Bitset = Builder.CreateAnd(Features, Mask);
+  return Builder.CreateICmpEQ(Bitset, Mask);
 }
 
 Value *CodeGenFunction::EmitX86CpuInit() {

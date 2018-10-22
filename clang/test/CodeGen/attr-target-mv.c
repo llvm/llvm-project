@@ -70,6 +70,22 @@ void bar4() {
 // CHECK: ret void ()* @foo_decls.sse4.2
 // CHECK: ret void ()* @foo_decls
 
+// CHECK: define void @bar4()
+// CHECK: call void @foo_multi.ifunc()
+
+// CHECK: define void ()* @foo_multi.resolver() comdat
+// CHECK: and i32 %{{.*}}, 4352
+// CHECK: icmp eq i32 %{{.*}}, 4352
+// CHECK: ret void ()* @foo_multi.fma4_sse4.2
+// CHECK: icmp eq i32 %{{.*}}, 12
+// CHECK: and i32 %{{.*}}, 4352
+// CHECK: icmp eq i32 %{{.*}}, 4352
+// CHECK: ret void ()* @foo_multi.arch_ivybridge_fma4_sse4.2
+// CHECK: and i32 %{{.*}}, 768
+// CHECK: icmp eq i32 %{{.*}}, 768
+// CHECK: ret void ()* @foo_multi.avx_sse4.2
+// CHECK: ret void ()* @foo_multi
+
 // CHECK: declare i32 @foo.arch_sandybridge()
 
 // CHECK: define available_externally i32 @foo_inline.sse4.2()
@@ -88,4 +104,3 @@ void bar4() {
 // CHECK: define available_externally void @foo_multi.avx_sse4.2()
 // CHECK: define available_externally void @foo_multi.fma4_sse4.2()
 // CHECK: define available_externally void @foo_multi.arch_ivybridge_fma4_sse4.2()
-
