@@ -24,10 +24,11 @@ namespace clangd {
 
 BackgroundIndex::BackgroundIndex(Context BackgroundContext,
                                  StringRef ResourceDir,
-                                 const FileSystemProvider &FSProvider)
+                                 const FileSystemProvider &FSProvider,
+                                 ArrayRef<std::string> URISchemes)
     : SwapIndex(make_unique<MemIndex>()), ResourceDir(ResourceDir),
       FSProvider(FSProvider), BackgroundContext(std::move(BackgroundContext)),
-      Thread([this] { run(); }) {}
+      URISchemes(URISchemes), Thread([this] { run(); }) {}
 
 BackgroundIndex::~BackgroundIndex() {
   stop();
@@ -185,7 +186,7 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   // FIXME: this should rebuild once-in-a-while, not after every file.
   //       At that point we should use Dex, too.
   vlog("Rebuilding automatic index");
-  reset(IndexedSymbols.buildIndex(IndexType::Light));
+  reset(IndexedSymbols.buildIndex(IndexType::Light, URISchemes));
   return Error::success();
 }
 
