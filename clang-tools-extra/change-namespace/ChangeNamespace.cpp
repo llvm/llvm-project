@@ -7,8 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 #include "ChangeNamespace.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace clang::ast_matchers;
@@ -283,23 +285,48 @@ bool isDeclVisibleAtLocation(const SourceManager &SM, const Decl *D,
 }
 
 // Given a qualified symbol name, returns true if the symbol will be
-// incorrectly qualified without leading "::".
-bool conflictInNamespace(llvm::StringRef QualifiedSymbol,
+// incorrectly qualified without leading "::". For example, a symbol
+// "nx::ny::Foo" in namespace "na::nx::ny" without leading "::"; a symbol
+// "util::X" in namespace "na" can potentially conflict with "na::util" (if this
+// exists).
+bool conflictInNamespace(const ASTContext &AST, llvm::StringRef QualifiedSymbol,
                          llvm::StringRef Namespace) {
   auto SymbolSplitted = splitSymbolName(QualifiedSymbol.trim(":"));
   assert(!SymbolSplitted.empty());
   SymbolSplitted.pop_back();  // We are only interested in namespaces.
 
-  if (SymbolSplitted.size() > 1 && !Namespace.empty()) {
+  if (SymbolSplitted.size() >= 1 && !Namespace.empty()) {
+    auto SymbolTopNs = SymbolSplitted.front();
     auto NsSplitted = splitSymbolName(Namespace.trim(":"));
     assert(!NsSplitted.empty());
-    // We do not check the outermost namespace since it would not be a conflict
-    // if it equals to the symbol's outermost namespace and the symbol name
-    // would have been shortened.
+
+    auto LookupDecl = [&AST](const Decl &Scope,
+                             llvm::StringRef Name) -> const NamedDecl * {
+      const auto *DC = llvm::dyn_cast<DeclContext>(&Scope);
+      if (!DC)
+        return nullptr;
+      auto LookupRes = DC->lookup(DeclarationName(&AST.Idents.get(Name)));
+      if (LookupRes.empty())
+        return nullptr;
+      return LookupRes.front();
+    };
+    // We do not check the outermost namespace since it would not be a
+    // conflict if it equals to the symbol's outermost namespace and the
+    // symbol name would have been shortened.
+    const NamedDecl *Scope =
+        LookupDecl(*AST.getTranslationUnitDecl(), NsSplitted.front());
     for (auto I = NsSplitted.begin() + 1, E = NsSplitted.end(); I != E; ++I) {
-      if (*I == SymbolSplitted.front())
+      if (*I == SymbolTopNs) // Handles "::ny" in "::nx::ny" case.
         return true;
+      // Handles "::util" and "::nx::util" conflicts.
+      if (Scope) {
+        if (LookupDecl(*Scope, SymbolTopNs))
+          return true;
+        Scope = LookupDecl(*Scope, *I);
+      }
     }
+    if (Scope && LookupDecl(*Scope, SymbolTopNs))
+      return true;
   }
   return false;
 }
@@ -844,15 +871,16 @@ void ChangeNamespaceTool::replaceQualifiedSymbolInDeclContext(
       }
     }
   }
+  bool Conflict = conflictInNamespace(DeclCtx->getParentASTContext(),
+                                      ReplaceName, NewNamespace);
   // If the new nested name in the new namespace is the same as it was in the
-  // old namespace, we don't create replacement.
-  if (NestedName == ReplaceName ||
+  // old namespace, we don't create replacement unless there can be ambiguity.
+  if ((NestedName == ReplaceName && !Conflict) ||
       (NestedName.startswith("::") && NestedName.drop_front(2) == ReplaceName))
     return;
   // If the reference need to be fully-qualified, add a leading "::" unless
   // NewNamespace is the global namespace.
-  if (ReplaceName == FromDeclName && !NewNamespace.empty() &&
-      conflictInNamespace(ReplaceName, NewNamespace))
+  if (ReplaceName == FromDeclName && !NewNamespace.empty() && Conflict)
     ReplaceName = "::" + ReplaceName;
   addReplacementOrDie(Start, End, ReplaceName, *Result.SourceManager,
                       &FileToReplacements);

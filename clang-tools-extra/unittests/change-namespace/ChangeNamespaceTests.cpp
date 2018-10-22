@@ -2244,6 +2244,39 @@ TEST_F(ChangeNamespaceTest, InjectedClassNameInFriendDecl) {
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 
+TEST_F(ChangeNamespaceTest, FullyQualifyConflictNamespace) {
+  std::string Code =
+      "namespace x { namespace util { class Some {}; } }\n"
+      "namespace x { namespace y {namespace base { class Base {}; } } }\n"
+      "namespace util { class Status {}; }\n"
+      "namespace base { class Base {}; }\n"
+      "namespace na {\n"
+      "namespace nb {\n"
+      "void f() {\n"
+      "  util::Status s1; x::util::Some s2;\n"
+      "  base::Base b1; x::y::base::Base b2;\n"
+      "}\n"
+      "} // namespace nb\n"
+      "} // namespace na\n";
+
+  std::string Expected =
+      "namespace x { namespace util { class Some {}; } }\n"
+      "namespace x { namespace y {namespace base { class Base {}; } } }\n"
+      "namespace util { class Status {}; }\n"
+      "namespace base { class Base {}; }\n"
+      "\n"
+      "namespace x {\n"
+      "namespace y {\n"
+      "void f() {\n"
+      "  ::util::Status s1; util::Some s2;\n"
+      "  ::base::Base b1; base::Base b2;\n"
+      "}\n"
+      "} // namespace y\n"
+      "} // namespace x\n";
+
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
 } // anonymous namespace
 } // namespace change_namespace
 } // namespace clang
