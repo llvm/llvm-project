@@ -50,27 +50,24 @@ AnalyzerOptions::getRegisteredCheckers(bool IncludeExperimental /* = false */) {
 }
 
 AnalyzerOptions::UserModeKind AnalyzerOptions::getUserMode() {
-  if (UserMode == UMK_NotSet) {
-    StringRef ModeStr =
-        Config.insert(std::make_pair("mode", "deep")).first->second;
-    UserMode = llvm::StringSwitch<UserModeKind>(ModeStr)
+  if (!UserMode.hasValue()) {
+    StringRef ModeStr = getOptionAsString("mode", "deep");
+    UserMode = llvm::StringSwitch<llvm::Optional<UserModeKind>>(ModeStr)
       .Case("shallow", UMK_Shallow)
       .Case("deep", UMK_Deep)
-      .Default(UMK_NotSet);
-    assert(UserMode != UMK_NotSet && "User mode is invalid.");
+      .Default(None);
+    assert(UserMode.getValue() && "User mode is invalid.");
   }
-  return UserMode;
+  return UserMode.getValue();
 }
 
 AnalyzerOptions::ExplorationStrategyKind
 AnalyzerOptions::getExplorationStrategy() {
-  if (ExplorationStrategy == ExplorationStrategyKind::NotSet) {
-    StringRef StratStr =
-        Config
-            .insert(std::make_pair("exploration_strategy", "unexplored_first_queue"))
-            .first->second;
+  if (!ExplorationStrategy.hasValue()) {
+    StringRef StratStr = getOptionAsString("exploration_strategy",
+                                           "unexplored_first_queue");
     ExplorationStrategy =
-        llvm::StringSwitch<ExplorationStrategyKind>(StratStr)
+        llvm::StringSwitch<llvm::Optional<ExplorationStrategyKind>>(StratStr)
             .Case("dfs", ExplorationStrategyKind::DFS)
             .Case("bfs", ExplorationStrategyKind::BFS)
             .Case("unexplored_first",
@@ -81,15 +78,15 @@ AnalyzerOptions::getExplorationStrategy() {
                   ExplorationStrategyKind::UnexploredFirstLocationQueue)
             .Case("bfs_block_dfs_contents",
                   ExplorationStrategyKind::BFSBlockDFSContents)
-            .Default(ExplorationStrategyKind::NotSet);
-    assert(ExplorationStrategy != ExplorationStrategyKind::NotSet &&
+            .Default(None);
+    assert(ExplorationStrategy.hasValue() &&
            "User mode is invalid.");
   }
-  return ExplorationStrategy;
+  return ExplorationStrategy.getValue();
 }
 
 IPAKind AnalyzerOptions::getIPAMode() {
-  if (IPAMode == IPAK_NotSet) {
+  if (!IPAMode.hasValue()) {
     // Use the User Mode to set the default IPA value.
     // Note, we have to add the string to the Config map for the ConfigDumper
     // checker to function properly.
@@ -102,22 +99,18 @@ IPAKind AnalyzerOptions::getIPAMode() {
     assert(DefaultIPA);
 
     // Lookup the ipa configuration option, use the default from User Mode.
-    StringRef ModeStr =
-        Config.insert(std::make_pair("ipa", DefaultIPA)).first->second;
-    IPAKind IPAConfig = llvm::StringSwitch<IPAKind>(ModeStr)
+    StringRef ModeStr = getOptionAsString("ipa", DefaultIPA);
+    IPAMode = llvm::StringSwitch<llvm::Optional<IPAKind>>(ModeStr)
             .Case("none", IPAK_None)
             .Case("basic-inlining", IPAK_BasicInlining)
             .Case("inlining", IPAK_Inlining)
             .Case("dynamic", IPAK_DynamicDispatch)
             .Case("dynamic-bifurcate", IPAK_DynamicDispatchBifurcate)
-            .Default(IPAK_NotSet);
-    assert(IPAConfig != IPAK_NotSet && "IPA Mode is invalid.");
-
-    // Set the member variable.
-    IPAMode = IPAConfig;
+            .Default(None);
+    assert(IPAMode.hasValue() && "IPA Mode is invalid.");
   }
 
-  return IPAMode;
+  return IPAMode.getValue();
 }
 
 bool
@@ -126,29 +119,21 @@ AnalyzerOptions::mayInlineCXXMemberFunction(CXXInlineableMemberKind K) {
     return false;
 
   if (!CXXMemberInliningMode) {
-    static const char *ModeKey = "c++-inlining";
+    StringRef ModeStr = getOptionAsString("c++-inlining", "destructors");
 
-    StringRef ModeStr =
-        Config.insert(std::make_pair(ModeKey, "destructors")).first->second;
-
-    CXXInlineableMemberKind &MutableMode =
-      const_cast<CXXInlineableMemberKind &>(CXXMemberInliningMode);
-
-    MutableMode = llvm::StringSwitch<CXXInlineableMemberKind>(ModeStr)
+    CXXMemberInliningMode =
+      llvm::StringSwitch<llvm::Optional<CXXInlineableMemberKind>>(ModeStr)
       .Case("constructors", CIMK_Constructors)
       .Case("destructors", CIMK_Destructors)
-      .Case("none", CIMK_None)
       .Case("methods", CIMK_MemberFunctions)
-      .Default(CXXInlineableMemberKind());
+      .Case("none", CIMK_None)
+      .Default(None);
 
-    if (!MutableMode) {
-      // FIXME: We should emit a warning here about an unknown inlining kind,
-      // but the AnalyzerOptions doesn't have access to a diagnostic engine.
-      MutableMode = CIMK_None;
-    }
+    assert(CXXMemberInliningMode.hasValue() &&
+           "Invalid c++ member function inlining mode.");
   }
 
-  return CXXMemberInliningMode >= K;
+  return *CXXMemberInliningMode >= K;
 }
 
 static StringRef toString(bool b) { return b ? "true" : "false"; }
@@ -183,7 +168,7 @@ bool AnalyzerOptions::getBooleanOption(StringRef Name, bool DefaultVal,
   StringRef V =
       C ? getCheckerOption(C->getTagDescription(), Name, Default,
                            SearchInParents)
-        : StringRef(Config.insert(std::make_pair(Name, Default)).first->second);
+        : getOptionAsString(Name, Default);
   return llvm::StringSwitch<bool>(V)
       .Case("true", true)
       .Case("false", false)
@@ -338,14 +323,22 @@ int AnalyzerOptions::getOptionAsInteger(StringRef Name, int DefaultVal,
 
   StringRef V = C ? getCheckerOption(C->getTagDescription(), Name, OS.str(),
                                      SearchInParents)
-                  : StringRef(Config.insert(std::make_pair(Name, OS.str()))
-                                  .first->second);
+                  : getOptionAsString(Name, OS.str());
 
   int Res = DefaultVal;
   bool b = V.getAsInteger(10, Res);
   assert(!b && "analyzer-config option should be numeric");
   (void)b;
   return Res;
+}
+
+unsigned AnalyzerOptions::getOptionAsUInt(Optional<unsigned> &V, StringRef Name,
+                                          unsigned DefaultVal,
+                                          const CheckerBase *C,
+                                          bool SearchInParents) {
+  if (!V.hasValue())
+    V = getOptionAsInteger(Name, DefaultVal, C, SearchInParents);
+  return V.getValue();
 }
 
 StringRef AnalyzerOptions::getOptionAsString(StringRef Name,
@@ -356,6 +349,16 @@ StringRef AnalyzerOptions::getOptionAsString(StringRef Name,
                               SearchInParents)
            : StringRef(
                  Config.insert(std::make_pair(Name, DefaultVal)).first->second);
+}
+
+StringRef AnalyzerOptions::getOptionAsString(Optional<StringRef> &V,
+                                             StringRef Name,
+                                             StringRef DefaultVal,
+                                             const ento::CheckerBase *C,
+                                             bool SearchInParents) {
+  if (!V.hasValue())
+    V = getOptionAsString(Name, DefaultVal, C, SearchInParents);
+  return V.getValue();
 }
 
 unsigned AnalyzerOptions::getAlwaysInlineSize() {
@@ -369,8 +372,6 @@ unsigned AnalyzerOptions::getMaxInlinableSize() {
     int DefaultValue = 0;
     UserModeKind HighLevelMode = getUserMode();
     switch (HighLevelMode) {
-      default:
-        llvm_unreachable("Invalid mode.");
       case UMK_Shallow:
         DefaultValue = 4;
         break;
@@ -414,8 +415,6 @@ unsigned AnalyzerOptions::getMaxNodesPerTopLevelFunction() {
     int DefaultValue = 0;
     UserModeKind HighLevelMode = getUserMode();
     switch (HighLevelMode) {
-      default:
-        llvm_unreachable("Invalid mode.");
       case UMK_Shallow:
         DefaultValue = 75000;
         break;
