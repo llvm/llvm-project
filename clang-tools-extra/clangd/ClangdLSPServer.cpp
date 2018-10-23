@@ -783,7 +783,7 @@ void ClangdLSPServer::reparseOpenedFiles() {
 }
 
 ClangdLSPServer::CompilationDB ClangdLSPServer::CompilationDB::makeInMemory() {
-  return CompilationDB(llvm::make_unique<InMemoryCompilationDb>(), nullptr,
+  return CompilationDB(llvm::make_unique<InMemoryCompilationDb>(),
                        /*IsDirectoryBased=*/false);
 }
 
@@ -792,16 +792,13 @@ ClangdLSPServer::CompilationDB::makeDirectoryBased(
     Optional<Path> CompileCommandsDir) {
   auto CDB = llvm::make_unique<DirectoryBasedGlobalCompilationDatabase>(
       std::move(CompileCommandsDir));
-  auto CachingCDB = llvm::make_unique<CachingCompilationDb>(*CDB);
-  return CompilationDB(std::move(CDB), std::move(CachingCDB),
+  return CompilationDB(std::move(CDB),
                        /*IsDirectoryBased=*/true);
 }
 
 void ClangdLSPServer::CompilationDB::invalidate(PathRef File) {
   if (!IsDirectoryBased)
     static_cast<InMemoryCompilationDb *>(CDB.get())->invalidate(File);
-  else
-    CachingCDB->invalidate(File);
 }
 
 bool ClangdLSPServer::CompilationDB::setCompilationCommandForFile(
@@ -826,7 +823,6 @@ void ClangdLSPServer::CompilationDB::setExtraFlagsForFile(
   }
   static_cast<DirectoryBasedGlobalCompilationDatabase *>(CDB.get())
       ->setExtraFlagsForFile(File, std::move(ExtraFlags));
-  CachingCDB->invalidate(File);
 }
 
 void ClangdLSPServer::CompilationDB::setCompileCommandsDir(Path P) {
@@ -837,13 +833,6 @@ void ClangdLSPServer::CompilationDB::setCompileCommandsDir(Path P) {
   }
   static_cast<DirectoryBasedGlobalCompilationDatabase *>(CDB.get())
       ->setCompileCommandsDir(P);
-  CachingCDB->clear();
-}
-
-GlobalCompilationDatabase &ClangdLSPServer::CompilationDB::getCDB() {
-  if (CachingCDB)
-    return *CachingCDB;
-  return *CDB;
 }
 
 } // namespace clangd
