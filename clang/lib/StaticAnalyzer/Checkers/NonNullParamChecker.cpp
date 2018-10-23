@@ -192,7 +192,7 @@ NonNullParamChecker::genReportNullAttrNonNull(const ExplodedNode *ErrorNode,
       *BTAttrNonNull,
       "Null pointer passed as an argument to a 'nonnull' parameter", ErrorNode);
   if (ArgE)
-    bugreporter::trackNullOrUndefValue(ErrorNode, ArgE, *R);
+    bugreporter::trackExpressionValue(ErrorNode, ArgE, *R);
 
   return R;
 }
@@ -208,9 +208,7 @@ std::unique_ptr<BugReport> NonNullParamChecker::genReportReferenceToNullPointer(
     const Expr *ArgEDeref = bugreporter::getDerefExpr(ArgE);
     if (!ArgEDeref)
       ArgEDeref = ArgE;
-    bugreporter::trackNullOrUndefValue(ErrorNode,
-                                       ArgEDeref,
-                                       *R);
+    bugreporter::trackExpressionValue(ErrorNode, ArgEDeref, *R);
   }
   return R;
 
