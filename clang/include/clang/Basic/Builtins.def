@@ -1398,9 +1398,9 @@ BUILTIN(__builtin_subcl, "ULiULiCULiCULiCULi*", "n")
 BUILTIN(__builtin_subcll, "ULLiULLiCULLiCULLiCULLi*", "n")
 
 // Checked Arithmetic Builtins for Security.
-BUILTIN(__builtin_add_overflow, "v.", "nt")
-BUILTIN(__builtin_sub_overflow, "v.", "nt")
-BUILTIN(__builtin_mul_overflow, "v.", "nt")
+BUILTIN(__builtin_add_overflow, "b.", "nt")
+BUILTIN(__builtin_sub_overflow, "b.", "nt")
+BUILTIN(__builtin_mul_overflow, "b.", "nt")
 BUILTIN(__builtin_uadd_overflow, "bUiCUiCUi*", "n")
 BUILTIN(__builtin_uaddl_overflow, "bULiCULiCULi*", "n")
 BUILTIN(__builtin_uaddll_overflow, "bULLiCULLiCULLi*", "n")

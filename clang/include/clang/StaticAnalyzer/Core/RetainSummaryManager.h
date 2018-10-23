@@ -56,7 +56,7 @@ enum ArgEffect {
 
   /// The argument has its reference count decreased by 1.  This is as
   /// if a -release message has been sent to the argument.  This differs
-  /// in behavior from DecRef when GC is enabled.
+  /// in behavior from DecRef when ARC is enabled.
   DecRefMsg,
 
   /// The argument has its reference count decreased by 1 to model
@@ -65,7 +65,7 @@ enum ArgEffect {
 
   /// The argument has its reference count increased by 1.  This is as
   /// if a -retain message has been sent to the argument.  This differs
-  /// in behavior from IncRef when GC is enabled.
+  /// in behavior from IncRef when ARC is enabled.
   IncRefMsg,
 
   /// The argument has its reference count increased by 1.  This is as
