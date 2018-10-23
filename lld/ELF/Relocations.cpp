@@ -1088,6 +1088,20 @@ static bool mergeCmp(const InputSection *A, const InputSection *B) {
   return false;
 }
 
+// Call Fn on every executable InputSection accessed via the linker script
+// InputSectionDescription::Sections.
+static void forEachInputSectionDescription(
+    ArrayRef<OutputSection *> OutputSections,
+    llvm::function_ref<void(OutputSection *, InputSectionDescription *)> Fn) {
+  for (OutputSection *OS : OutputSections) {
+    if (!(OS->Flags & SHF_ALLOC) || !(OS->Flags & SHF_EXECINSTR))
+      continue;
+    for (BaseCommand *BC : OS->SectionCommands)
+      if (auto *ISD = dyn_cast<InputSectionDescription>(BC))
+        Fn(OS, ISD);
+  }
+}
+
 // Thunk Implementation
 //
 // Thunks (sometimes called stubs, veneers or branch islands) are small pieces
@@ -1353,20 +1367,6 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(Symbol &Sym, RelType Type,
   Thunk *T = addThunk(Type, Sym);
   ThunkVec->push_back(T);
   return std::make_pair(T, true);
-}
-
-// Call Fn on every executable InputSection accessed via the linker script
-// InputSectionDescription::Sections.
-void ThunkCreator::forEachInputSectionDescription(
-    ArrayRef<OutputSection *> OutputSections,
-    llvm::function_ref<void(OutputSection *, InputSectionDescription *)> Fn) {
-  for (OutputSection *OS : OutputSections) {
-    if (!(OS->Flags & SHF_ALLOC) || !(OS->Flags & SHF_EXECINSTR))
-      continue;
-    for (BaseCommand *BC : OS->SectionCommands)
-      if (auto *ISD = dyn_cast<InputSectionDescription>(BC))
-        Fn(OS, ISD);
-  }
 }
 
 // Return true if the relocation target is an in range Thunk.
