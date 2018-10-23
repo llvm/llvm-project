@@ -81,7 +81,7 @@ private:
                                       SmallVectorImpl<T> &ISDArgs) const;
 
   /// Split structures and arrays, save original argument indices since
-  /// Mips calling conv needs info about original argument type.
+  /// Mips calling convention needs info about original argument type.
   void splitToValueTypes(const ArgInfo &OrigArg, unsigned OriginalIndex,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
                          SmallVectorImpl<unsigned> &SplitArgsOrigIndices) const;

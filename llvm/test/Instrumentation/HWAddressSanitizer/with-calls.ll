@@ -199,5 +199,6 @@ entry:
 
 ; CHECK:      define internal void @hwasan.module_ctor() {
 ; CHECK-NEXT:   call void @__hwasan_init()
+; CHECK-NEXT:   call void @__hwasan_init_frames(
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }

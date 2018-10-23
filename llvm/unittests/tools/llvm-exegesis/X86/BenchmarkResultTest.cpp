@@ -25,6 +25,7 @@ using ::testing::get;
 using ::testing::Pointwise;
 using ::testing::Property;
 
+namespace llvm {
 namespace exegesis {
 
 bool operator==(const BenchmarkMeasure &A, const BenchmarkMeasure &B) {
@@ -136,3 +137,4 @@ TEST(BenchmarkResultTest, PerInstructionStats) {
 }
 } // namespace
 } // namespace exegesis
+} // namespace llvm

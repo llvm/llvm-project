@@ -10,6 +10,8 @@
 #ifndef LLDB_PLUGINS_SYMBOLFILENATIVEPDB_PDBUTIL_H
 #define LLDB_PLUGINS_SYMBOLFILENATIVEPDB_PDBUTIL_H
 
+#include "lldb/lldb-enumerations.h"
+
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 
@@ -35,6 +37,7 @@ struct SegmentOffsetLength {
 };
 
 llvm::pdb::PDB_SymType CVSymToPDBSym(llvm::codeview::SymbolKind kind);
+llvm::pdb::PDB_SymType CVTypeToPDBType(llvm::codeview::TypeLeafKind kind);
 
 bool SymbolHasAddress(const llvm::codeview::CVSymbol &sym);
 bool SymbolIsCode(const llvm::codeview::CVSymbol &sym);
@@ -51,6 +54,13 @@ inline bool IsValidRecord(const llvm::codeview::ProcRefSym &sym) {
   // S_PROCREF symbols have 1-based module indices.
   return sym.Module > 0;
 }
+
+bool IsForwardRefUdt(llvm::codeview::CVType cvt);
+
+lldb::AccessType TranslateMemberAccess(llvm::codeview::MemberAccess access);
+llvm::codeview::TypeIndex GetFieldListIndex(llvm::codeview::CVType cvt);
+
+llvm::StringRef DropNameScope(llvm::StringRef name);
 
 } // namespace npdb
 } // namespace lldb_private

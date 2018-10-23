@@ -42,12 +42,13 @@ void emitWebAssemblyDisassemblerTables(
     auto Prefix = Opc >> 8;
     Opc = Opc & 0xFF;
     auto &CGIP = OpcodeTable[Prefix][Opc];
-    // All wasm instructions have a StackBased fieldof type bit, we only want
-    // the instructions for which this is 1.
-    auto Bit = Def.getValue("StackBased")->getValue()->
-                 getCastTo(BitRecTy::get());
-    auto IsStackBased = Bit && reinterpret_cast<const BitInit *>(Bit)
-                                 ->getValue();
+    // All wasm instructions have a StackBased field of type string, we only
+    // want the instructions for which this is "true".
+    auto StackString =
+        Def.getValue("StackBased")->getValue()->getCastTo(StringRecTy::get());
+    auto IsStackBased =
+        StackString &&
+        reinterpret_cast<const StringInit *>(StackString)->getValue() == "true";
     if (IsStackBased && !CGIP.second) {
       // this picks the first of many typed variants, which is
       // currently the except_ref one, though this shouldn't matter for

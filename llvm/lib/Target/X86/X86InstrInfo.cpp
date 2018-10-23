@@ -2640,6 +2640,11 @@ bool X86InstrInfo::AnalyzeBranchImpl(
     if (BranchCode == X86::COND_INVALID)
       return true;  // Can't handle indirect branch.
 
+    // In practice we should never have an undef eflags operand, if we do
+    // abort here as we are not prepared to preserve the flag.
+    if (I->getOperand(1).isUndef())
+      return true;
+
     // Working from the bottom, handle the first conditional branch.
     if (Cond.empty()) {
       MachineBasicBlock *TargetBB = I->getOperand(0).getMBB();

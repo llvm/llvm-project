@@ -30,6 +30,7 @@
 #include <string>
 #include <unordered_map>
 
+namespace llvm {
 namespace exegesis {
 
 // A helper class to analyze benchmark results for a target.
@@ -135,5 +136,6 @@ std::vector<std::pair<uint16_t, float>> computeIdealizedProcResPressure(
     llvm::SmallVector<llvm::MCWriteProcResEntry, 8> WPRS);
 
 } // namespace exegesis
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_EXEGESIS_CLUSTERING_H

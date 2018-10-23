@@ -2389,15 +2389,72 @@ defm XOR  : sse12_fp_packed_logical<0x57, "xor", xor, SchedWriteFLogic>;
 let isCommutable = 0 in
   defm ANDN : sse12_fp_packed_logical<0x55, "andn", X86andnp, SchedWriteFLogic>;
 
+let Predicates = [HasAVX2, NoVLX] in {
+  def : Pat<(v32i8 (and VR256:$src1, VR256:$src2)),
+            (VPANDYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v16i16 (and VR256:$src1, VR256:$src2)),
+            (VPANDYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v8i32 (and VR256:$src1, VR256:$src2)),
+            (VPANDYrr VR256:$src1, VR256:$src2)>;
+
+  def : Pat<(v32i8 (or VR256:$src1, VR256:$src2)),
+            (VPORYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v16i16 (or VR256:$src1, VR256:$src2)),
+            (VPORYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v8i32 (or VR256:$src1, VR256:$src2)),
+            (VPORYrr VR256:$src1, VR256:$src2)>;
+
+  def : Pat<(v32i8 (xor VR256:$src1, VR256:$src2)),
+            (VPXORYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v16i16 (xor VR256:$src1, VR256:$src2)),
+            (VPXORYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v8i32 (xor VR256:$src1, VR256:$src2)),
+            (VPXORYrr VR256:$src1, VR256:$src2)>;
+
+  def : Pat<(v32i8 (X86andnp VR256:$src1, VR256:$src2)),
+            (VPANDNYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v16i16 (X86andnp VR256:$src1, VR256:$src2)),
+            (VPANDNYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v8i32 (X86andnp VR256:$src1, VR256:$src2)),
+            (VPANDNYrr VR256:$src1, VR256:$src2)>;
+}
+
 // If only AVX1 is supported, we need to handle integer operations with
 // floating point instructions since the integer versions aren't available.
 let Predicates = [HasAVX1Only] in {
+  def : Pat<(v32i8 (and VR256:$src1, VR256:$src2)),
+            (VANDPSYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v16i16 (and VR256:$src1, VR256:$src2)),
+            (VANDPSYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v8i32 (and VR256:$src1, VR256:$src2)),
+            (VANDPSYrr VR256:$src1, VR256:$src2)>;
   def : Pat<(v4i64 (and VR256:$src1, VR256:$src2)),
             (VANDPSYrr VR256:$src1, VR256:$src2)>;
+
+  def : Pat<(v32i8 (or VR256:$src1, VR256:$src2)),
+            (VORPSYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v16i16 (or VR256:$src1, VR256:$src2)),
+            (VORPSYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v8i32 (or VR256:$src1, VR256:$src2)),
+            (VORPSYrr VR256:$src1, VR256:$src2)>;
   def : Pat<(v4i64 (or VR256:$src1, VR256:$src2)),
             (VORPSYrr VR256:$src1, VR256:$src2)>;
+
+  def : Pat<(v32i8 (xor VR256:$src1, VR256:$src2)),
+            (VXORPSYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v16i16 (xor VR256:$src1, VR256:$src2)),
+            (VXORPSYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v8i32 (xor VR256:$src1, VR256:$src2)),
+            (VXORPSYrr VR256:$src1, VR256:$src2)>;
   def : Pat<(v4i64 (xor VR256:$src1, VR256:$src2)),
             (VXORPSYrr VR256:$src1, VR256:$src2)>;
+
+  def : Pat<(v32i8 (X86andnp VR256:$src1, VR256:$src2)),
+            (VANDNPSYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v16i16 (X86andnp VR256:$src1, VR256:$src2)),
+            (VANDNPSYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v8i32 (X86andnp VR256:$src1, VR256:$src2)),
+            (VANDNPSYrr VR256:$src1, VR256:$src2)>;
   def : Pat<(v4i64 (X86andnp VR256:$src1, VR256:$src2)),
             (VANDNPSYrr VR256:$src1, VR256:$src2)>;
 
@@ -2502,6 +2559,66 @@ let Predicates = [UseSSE2] in {
              (v2f64 (ANDNPDrr (v2f64 (COPY_TO_REGCLASS FR64:$src1, VR128)),
                               (v2f64 (COPY_TO_REGCLASS FR64:$src2, VR128)))),
              FR64)>;
+}
+
+let Predicates = [HasAVX, NoVLX] in {
+  def : Pat<(v16i8 (and VR128:$src1, VR128:$src2)),
+            (VPANDrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v8i16 (and VR128:$src1, VR128:$src2)),
+            (VPANDrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v4i32 (and VR128:$src1, VR128:$src2)),
+            (VPANDrr VR128:$src1, VR128:$src2)>;
+
+  def : Pat<(v16i8 (or VR128:$src1, VR128:$src2)),
+            (VPORrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v8i16 (or VR128:$src1, VR128:$src2)),
+            (VPORrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v4i32 (or VR128:$src1, VR128:$src2)),
+            (VPORrr VR128:$src1, VR128:$src2)>;
+
+  def : Pat<(v16i8 (xor VR128:$src1, VR128:$src2)),
+            (VPXORrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v8i16 (xor VR128:$src1, VR128:$src2)),
+            (VPXORrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v4i32 (xor VR128:$src1, VR128:$src2)),
+            (VPXORrr VR128:$src1, VR128:$src2)>;
+
+  def : Pat<(v16i8 (X86andnp VR128:$src1, VR128:$src2)),
+            (VPANDNrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v8i16 (X86andnp VR128:$src1, VR128:$src2)),
+            (VPANDNrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v4i32 (X86andnp VR128:$src1, VR128:$src2)),
+            (VPANDNrr VR128:$src1, VR128:$src2)>;
+}
+
+let Predicates = [UseSSE2] in {
+  def : Pat<(v16i8 (and VR128:$src1, VR128:$src2)),
+            (PANDrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v8i16 (and VR128:$src1, VR128:$src2)),
+            (PANDrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v4i32 (and VR128:$src1, VR128:$src2)),
+            (PANDrr VR128:$src1, VR128:$src2)>;
+
+  def : Pat<(v16i8 (or VR128:$src1, VR128:$src2)),
+            (PORrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v8i16 (or VR128:$src1, VR128:$src2)),
+            (PORrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v4i32 (or VR128:$src1, VR128:$src2)),
+            (PORrr VR128:$src1, VR128:$src2)>;
+
+  def : Pat<(v16i8 (xor VR128:$src1, VR128:$src2)),
+            (PXORrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v8i16 (xor VR128:$src1, VR128:$src2)),
+            (PXORrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v4i32 (xor VR128:$src1, VR128:$src2)),
+            (PXORrr VR128:$src1, VR128:$src2)>;
+
+  def : Pat<(v16i8 (X86andnp VR128:$src1, VR128:$src2)),
+            (PANDNrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v8i16 (X86andnp VR128:$src1, VR128:$src2)),
+            (PANDNrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v4i32 (X86andnp VR128:$src1, VR128:$src2)),
+            (PANDNrr VR128:$src1, VR128:$src2)>;
 }
 
 // Patterns for packed operations when we don't have integer type available.

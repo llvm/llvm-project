@@ -11,6 +11,7 @@
 #include "Latency.h"
 #include "Uops.h"
 
+namespace llvm {
 namespace exegesis {
 
 ExegesisTarget::~ExegesisTarget() {} // anchor.
@@ -109,3 +110,4 @@ const ExegesisTarget &ExegesisTarget::getDefault() {
 }
 
 } // namespace exegesis
+} // namespace llvm

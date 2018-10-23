@@ -1,8 +1,12 @@
+#include "test_helpers.h"
 #include "xray_segmented_array.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace __xray {
 namespace {
+
+using ::testing::SizeIs;
 
 struct TestData {
   s64 First;
@@ -11,6 +15,10 @@ struct TestData {
   // Need a constructor for emplace operations.
   TestData(s64 F, s64 S) : First(F), Second(S) {}
 };
+
+void PrintTo(const TestData &D, std::ostream *OS) {
+  *OS << "{ " << D.First << ", " << D.Second << " }";
+}
 
 TEST(SegmentedArrayTest, ConstructWithAllocators) {
   using AllocatorType = typename Array<TestData>::AllocatorType;
@@ -159,6 +167,23 @@ TEST(SegmentedArrayTest, IteratorTrimBehaviour) {
     Data.AppendEmplace(static_cast<s64>(i), static_cast<s64>(i));
   }
   EXPECT_EQ(Data.size(), SegmentX2);
+}
+
+TEST(SegmentedArrayTest, HandleExhaustedAllocator) {
+  using AllocatorType = typename Array<TestData>::AllocatorType;
+  constexpr auto Segment = Array<TestData>::SegmentSize;
+  constexpr auto MaxElements = Array<TestData>::ElementsPerSegment;
+  AllocatorType A(Segment);
+  Array<TestData> Data(A);
+  for (auto i = MaxElements; i > 0u; --i)
+    EXPECT_NE(Data.AppendEmplace(static_cast<s64>(i), static_cast<s64>(i)),
+              nullptr);
+  EXPECT_EQ(Data.AppendEmplace(0, 0), nullptr);
+  EXPECT_THAT(Data, SizeIs(MaxElements));
+
+  // Trimming more elements than there are in the container should be fine.
+  Data.trim(MaxElements + 1);
+  EXPECT_THAT(Data, SizeIs(0u));
 }
 
 struct ShadowStackEntry {

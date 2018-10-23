@@ -11,6 +11,7 @@
 #include <string>
 #include <unordered_set>
 
+namespace llvm {
 namespace exegesis {
 
 // The clustering problem has the following characteristics:
@@ -170,3 +171,4 @@ InstructionBenchmarkClustering::create(
 }
 
 } // namespace exegesis
+} // namespace llvm

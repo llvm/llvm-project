@@ -89,6 +89,7 @@ Clang-Tidy Checks
    cppcoreguidelines-avoid-magic-numbers (redirects to readability-magic-numbers) <cppcoreguidelines-avoid-magic-numbers>
    cppcoreguidelines-c-copy-assignment-signature (redirects to misc-unconventional-assign-operator) <cppcoreguidelines-c-copy-assignment-signature>
    cppcoreguidelines-interfaces-global-init
+   cppcoreguidelines-macro-usage
    cppcoreguidelines-narrowing-conversions
    cppcoreguidelines-no-malloc
    cppcoreguidelines-non-private-member-variables-in-classes (redirects to misc-non-private-member-variables-in-classes) <cppcoreguidelines-non-private-member-variables-in-classes>

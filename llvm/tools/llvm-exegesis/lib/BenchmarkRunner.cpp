@@ -22,6 +22,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 
+namespace llvm {
 namespace exegesis {
 
 BenchmarkFailure::BenchmarkFailure(const llvm::Twine &S)
@@ -74,7 +75,7 @@ private:
         llvm::CrashRecoveryContext::Enable();
         const bool Crashed = !CRC.RunSafely([this, &Counter, ScratchPtr]() {
           Counter.start();
-          Function(ScratchPtr);
+          this->Function(ScratchPtr);
           Counter.stop();
         });
         llvm::CrashRecoveryContext::Disable();
@@ -173,3 +174,4 @@ BenchmarkRunner::writeObjectFile(const BenchmarkCode &BC,
 BenchmarkRunner::FunctionExecutor::~FunctionExecutor() {}
 
 } // namespace exegesis
+} // namespace llvm

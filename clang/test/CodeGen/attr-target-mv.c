@@ -88,19 +88,19 @@ void bar4() {
 
 // CHECK: declare i32 @foo.arch_sandybridge()
 
-// CHECK: define available_externally i32 @foo_inline.sse4.2()
+// CHECK: define linkonce i32 @foo_inline.sse4.2()
 // CHECK: ret i32 0
 
 // CHECK: declare i32 @foo_inline.arch_sandybridge()
 //
-// CHECK: define available_externally i32 @foo_inline.arch_ivybridge()
+// CHECK: define linkonce i32 @foo_inline.arch_ivybridge()
 // CHECK: ret i32 1
-// CHECK: define available_externally i32 @foo_inline()
+// CHECK: define linkonce i32 @foo_inline()
 // CHECK: ret i32 2
 
-// CHECK: define available_externally void @foo_decls()
-// CHECK: define available_externally void @foo_decls.sse4.2()
+// CHECK: define linkonce void @foo_decls()
+// CHECK: define linkonce void @foo_decls.sse4.2()
 
-// CHECK: define available_externally void @foo_multi.avx_sse4.2()
-// CHECK: define available_externally void @foo_multi.fma4_sse4.2()
-// CHECK: define available_externally void @foo_multi.arch_ivybridge_fma4_sse4.2()
+// CHECK: define linkonce void @foo_multi.avx_sse4.2()
+// CHECK: define linkonce void @foo_multi.fma4_sse4.2()
+// CHECK: define linkonce void @foo_multi.arch_ivybridge_fma4_sse4.2()

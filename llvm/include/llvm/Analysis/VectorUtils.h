@@ -308,6 +308,23 @@ public:
     propagateMetadata(NewInst, VL);
   }
 
+  /// Returns true if this Group requires a scalar iteration to handle gaps.
+  bool requiresScalarEpilogue() const {
+    // If Group has no gaps, or has gaps but the last member exists, then a
+    // scalar epilog is not needed for this group.
+    if (getNumMembers() == getFactor() || getMember(getFactor() - 1))
+      return false;
+
+    // We have a group with gaps. It therefore cannot be a group of stores,
+    // and it can't be a reversed access, because such groups get invalidated.
+    assert(!getMember(0)->mayWriteToMemory() &&
+           "Group should have been invalidated");
+    assert(!isReverse() && "Group should have been invalidated");
+
+    // This is a group of loads, with gaps, and without a last-member
+    return true;
+  }
+
 private:
   unsigned Factor; // Interleave Factor.
   bool Reverse;
@@ -387,6 +404,11 @@ public:
   /// Returns true if an interleaved group that may access memory
   /// out-of-bounds requires a scalar epilogue iteration for correctness.
   bool requiresScalarEpilogue() const { return RequiresScalarEpilogue; }
+
+  /// Invalidate groups that require a scalar epilogue (due to gaps). This can
+  /// happen when we optimize for size and don't allow creating a scalar
+  /// epilogue.
+  void invalidateGroupsRequiringScalarEpilogue();
 
 private:
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks.

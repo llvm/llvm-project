@@ -360,6 +360,7 @@ enum NodeType : unsigned {
   SIN_HW,
   FMAX_LEGACY,
   FMIN_LEGACY,
+
   FMAX3,
   SMAX3,
   UMAX3,

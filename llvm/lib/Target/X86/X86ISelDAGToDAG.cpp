@@ -460,7 +460,7 @@ namespace {
 
     bool foldLoadStoreIntoMemOperand(SDNode *Node);
     MachineSDNode *matchBEXTRFromAndImm(SDNode *Node);
-    bool matchBEXTR(SDNode *Node);
+    bool matchBitExtract(SDNode *Node);
     bool shrinkAndImmediate(SDNode *N);
     bool isMaskZeroExtended(SDNode *N) const;
     bool tryShiftAmountMod(SDNode *N);
@@ -2681,15 +2681,15 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
   return true;
 }
 
-// See if this is an  X & Mask  that we can match to BEXTR.
+// See if this is an  X & Mask  that we can match to BEXTR/BZHI.
 // Where Mask is one of the following patterns:
 //   a) x &  (1 << nbits) - 1
 //   b) x & ~(-1 << nbits)
 //   c) x &  (-1 >> (32 - y))
 //   d) x << (32 - y) >> (32 - y)
-bool X86DAGToDAGISel::matchBEXTR(SDNode *Node) {
-  // BEXTR is BMI instruction. However, if we have BMI2, we prefer BZHI.
-  if (!Subtarget->hasBMI() || Subtarget->hasBMI2())
+bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
+  // BEXTR is BMI instruction, BZHI is BMI2 instruction. We need at least one.
+  if (!Subtarget->hasBMI() && !Subtarget->hasBMI2())
     return false;
 
   MVT NVT = Node->getSimpleValueType(0);
@@ -2700,14 +2700,39 @@ bool X86DAGToDAGISel::matchBEXTR(SDNode *Node) {
 
   SDValue NBits;
 
+  // If we have BMI2's BZHI, we are ok with muti-use patterns.
+  // Else, if we only have BMI1's BEXTR, we require one-use.
+  const bool CanHaveExtraUses = Subtarget->hasBMI2();
+  auto checkOneUse = [CanHaveExtraUses](SDValue Op) {
+    return CanHaveExtraUses || Op.hasOneUse();
+  };
+
+  // a) x & ((1 << nbits) + (-1))
+  auto matchPatternA = [&checkOneUse, &NBits](SDValue Mask) -> bool {
+    // Match `add`. Must only have one use!
+    if (Mask->getOpcode() != ISD::ADD || !checkOneUse(Mask))
+      return false;
+    // We should be adding all-ones constant (i.e. subtracting one.)
+    if (!isAllOnesConstant(Mask->getOperand(1)))
+      return false;
+    // Match `1 << nbits`. Must only have one use!
+    SDValue M0 = Mask->getOperand(0);
+    if (M0->getOpcode() != ISD::SHL || !checkOneUse(M0))
+      return false;
+    if (!isOneConstant(M0->getOperand(0)))
+      return false;
+    NBits = M0->getOperand(1);
+    return true;
+  };
+
   // b) x & ~(-1 << nbits)
-  auto matchPatternB = [&NBits](SDValue Mask) -> bool {
+  auto matchPatternB = [&checkOneUse, &NBits](SDValue Mask) -> bool {
     // Match `~()`. Must only have one use!
-    if (!isBitwiseNot(Mask) || !Mask->hasOneUse())
+    if (!isBitwiseNot(Mask) || !checkOneUse(Mask))
       return false;
     // Match `-1 << nbits`. Must only have one use!
     SDValue M0 = Mask->getOperand(0);
-    if (M0->getOpcode() != ISD::SHL || !M0->hasOneUse())
+    if (M0->getOpcode() != ISD::SHL || !checkOneUse(M0))
       return false;
     if (!isAllOnesConstant(M0->getOperand(0)))
       return false;
@@ -2715,9 +2740,10 @@ bool X86DAGToDAGISel::matchBEXTR(SDNode *Node) {
     return true;
   };
 
-  auto matchLowBitMask = [&matchPatternB](SDValue Mask) -> bool {
-    // FIXME: patterns a, c, d.
-    return matchPatternB(Mask);
+  auto matchLowBitMask = [&matchPatternA,
+                          &matchPatternB](SDValue Mask) -> bool {
+    // FIXME: patterns c, d.
+    return matchPatternA(Mask) || matchPatternB(Mask);
   };
 
   SDValue X = Node->getOperand(0);
@@ -2742,6 +2768,15 @@ bool X86DAGToDAGISel::matchBEXTR(SDNode *Node) {
   NBits = CurDAG->getTargetInsertSubreg(X86::sub_8bit, DL, NVT, ImplDef, NBits);
   insertDAGNode(*CurDAG, OrigNBits, NBits);
 
+  if (Subtarget->hasBMI2()) {
+    // Great, just emit the the BZHI..
+    SDValue Extract = CurDAG->getNode(X86ISD::BZHI, DL, NVT, X, NBits);
+    ReplaceNode(Node, Extract.getNode());
+    SelectCode(Extract.getNode());
+    return true;
+  }
+
+  // Else, emitting BEXTR requires one more step.
   // The 'control' of BEXTR has the pattern of:
   // [15...8 bit][ 7...0 bit] location
   // [ bit count][     shift] name
@@ -3149,7 +3184,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       CurDAG->RemoveDeadNode(Node);
       return;
     }
-    if (matchBEXTR(Node))
+    if (matchBitExtract(Node))
       return;
     if (AndImmShrink && shrinkAndImmediate(Node))
       return;

@@ -9,6 +9,7 @@
 
 #include "RegisterAliasing.h"
 
+namespace llvm {
 namespace exegesis {
 
 llvm::BitVector getAliasedBits(const llvm::MCRegisterInfo &RegInfo,
@@ -81,3 +82,4 @@ RegisterAliasingTrackerCache::getRegisterClass(unsigned RegClassIndex) const {
 }
 
 } // namespace exegesis
+} // namespace llvm

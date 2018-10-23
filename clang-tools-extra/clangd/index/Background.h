@@ -18,7 +18,9 @@
 #include "llvm/Support/SHA1.h"
 #include <condition_variable>
 #include <deque>
+#include <string>
 #include <thread>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -31,7 +33,8 @@ class BackgroundIndex : public SwapIndex {
 public:
   // FIXME: resource-dir injection should be hoisted somewhere common.
   BackgroundIndex(Context BackgroundContext, StringRef ResourceDir,
-                  const FileSystemProvider &);
+                  const FileSystemProvider &,
+                  ArrayRef<std::string> URISchemes = {});
   ~BackgroundIndex(); // Blocks while the current task finishes.
 
   // Enqueue a translation unit for indexing.
@@ -54,6 +57,7 @@ private:
   std::string ResourceDir;
   const FileSystemProvider &FSProvider;
   Context BackgroundContext;
+  std::vector<std::string> URISchemes;
 
   // index state
   llvm::Error index(tooling::CompileCommand);

@@ -2319,7 +2319,7 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
       Opc == PPC::RLDICL_32 || Opc == PPC::RLDICL_32_64 ||
       Opc == PPC::RLWINM || Opc == PPC::RLWINMo ||
       Opc == PPC::RLWINM8 || Opc == PPC::RLWINM8o;
-    if (!instrHasImmForm(MI, III) && !ConvertibleImmForm)
+    if (!instrHasImmForm(MI, III, true) && !ConvertibleImmForm)
       return nullptr;
 
     // Don't convert or %X, %Y, %Y since that's just a register move.
@@ -2421,7 +2421,7 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
     *KilledDef = DefMI;
 
   ImmInstrInfo III;
-  bool HasImmForm = instrHasImmForm(MI, III);
+  bool HasImmForm = instrHasImmForm(MI, III, PostRA);
   // If this is a reg+reg instruction that has a reg+imm form,
   // and one of the operands is produced by an add-immediate,
   // try to convert it.
@@ -2644,8 +2644,12 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
   return false;
 }
 
+static bool isVFReg(unsigned Reg) {
+  return PPC::VFRCRegClass.contains(Reg);
+}
+
 bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
-                                   ImmInstrInfo &III) const {
+                                   ImmInstrInfo &III, bool PostRA) const {
   unsigned Opc = MI.getOpcode();
   // The vast majority of the instructions would need their operand 2 replaced
   // with an immediate when switching to the reg+imm form. A marked exception
@@ -2946,13 +2950,20 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
     case PPC::STFDUX: III.ImmOpcode = PPC::STFDU; break;
     }
     break;
-  // Power9 only.
+  // Power9 and up only. For some of these, the X-Form version has access to all
+  // 64 VSR's whereas the D-Form only has access to the VR's. We replace those
+  // with pseudo-ops pre-ra and for post-ra, we check that the register loaded
+  // into or stored from is one of the VR registers.
   case PPC::LXVX:
   case PPC::LXSSPX:
   case PPC::LXSDX:
   case PPC::STXVX:
   case PPC::STXSSPX:
   case PPC::STXSDX:
+  case PPC::XFLOADf32:
+  case PPC::XFLOADf64:
+  case PPC::XFSTOREf32:
+  case PPC::XFSTOREf64:
     if (!Subtarget.hasP9Vector())
       return false;
     III.SignedImm = true;
@@ -2962,6 +2973,7 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
     III.IsSummingOperands = true;
     III.ImmOpNo = 1;
     III.OpNoForForwarding = 2;
+    III.ImmMustBeMultipleOf = 4;
     switch(Opc) {
     default: llvm_unreachable("Unknown opcode");
     case PPC::LXVX:
@@ -2969,24 +2981,56 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
       III.ImmMustBeMultipleOf = 16;
       break;
     case PPC::LXSSPX:
-      III.ImmOpcode = PPC::LXSSP;
-      III.ImmMustBeMultipleOf = 4;
+      if (PostRA) {
+        if (isVFReg(MI.getOperand(0).getReg()))
+          III.ImmOpcode = PPC::LXSSP;
+        else
+          III.ImmOpcode = PPC::LFS;
+        break;
+      }
+      LLVM_FALLTHROUGH;
+    case PPC::XFLOADf32:
+      III.ImmOpcode = PPC::DFLOADf32;
       break;
     case PPC::LXSDX:
-      III.ImmOpcode = PPC::LXSD;
-      III.ImmMustBeMultipleOf = 4;
+      if (PostRA) {
+        if (isVFReg(MI.getOperand(0).getReg()))
+          III.ImmOpcode = PPC::LXSD;
+        else
+          III.ImmOpcode = PPC::LFD;
+        break;
+      }
+      LLVM_FALLTHROUGH;
+    case PPC::XFLOADf64:
+      III.ImmOpcode = PPC::DFLOADf64;
       break;
     case PPC::STXVX:
       III.ImmOpcode = PPC::STXV;
       III.ImmMustBeMultipleOf = 16;
       break;
     case PPC::STXSSPX:
-      III.ImmOpcode = PPC::STXSSP;
-      III.ImmMustBeMultipleOf = 4;
+      if (PostRA) {
+        if (isVFReg(MI.getOperand(0).getReg()))
+          III.ImmOpcode = PPC::STXSSP;
+        else
+          III.ImmOpcode = PPC::STFS;
+        break;
+      }
+      LLVM_FALLTHROUGH;
+    case PPC::XFSTOREf32:
+      III.ImmOpcode = PPC::DFSTOREf32;
       break;
     case PPC::STXSDX:
-      III.ImmOpcode = PPC::STXSD;
-      III.ImmMustBeMultipleOf = 4;
+      if (PostRA) {
+        if (isVFReg(MI.getOperand(0).getReg()))
+          III.ImmOpcode = PPC::STXSD;
+        else
+          III.ImmOpcode = PPC::STFD;
+        break;
+      }
+      LLVM_FALLTHROUGH;
+    case PPC::XFSTOREf64:
+      III.ImmOpcode = PPC::DFSTOREf64;
       break;
     }
     break;

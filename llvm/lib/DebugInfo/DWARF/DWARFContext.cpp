@@ -292,6 +292,27 @@ dumpRnglistsSection(raw_ostream &OS, DWARFDataExtractor &rnglistData,
   }
 }
 
+static void dumpLoclistsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
+                                DWARFDataExtractor Data,
+                                const MCRegisterInfo *MRI,
+                                Optional<uint64_t> DumpOffset) {
+  uint32_t Offset = 0;
+  DWARFDebugLoclists Loclists;
+
+  DWARFListTableHeader Header(".debug_loclists", "locations");
+  if (Error E = Header.extract(Data, &Offset)) {
+    WithColor::error() << toString(std::move(E)) << '\n';
+    return;
+  }
+
+  Header.dump(OS, DumpOpts);
+  DataExtractor LocData(Data.getData().drop_front(Offset),
+                        Data.isLittleEndian(), Header.getAddrSize());
+
+  Loclists.parse(LocData);
+  Loclists.dump(OS, 0, MRI, DumpOffset);
+}
+
 void DWARFContext::dump(
     raw_ostream &OS, DIDumpOptions DumpOpts,
     std::array<Optional<uint64_t>, DIDT_ID_Count> DumpOffsets) {
@@ -366,9 +387,15 @@ void DWARFContext::dump(
                  DObj->getLocSection().Data)) {
     getDebugLoc()->dump(OS, getRegisterInfo(), DumpOffset);
   }
+  if (shouldDump(Explicit, ".debug_loclists", DIDT_ID_DebugLoclists,
+                 DObj->getLoclistsSection().Data)) {
+    DWARFDataExtractor Data(*DObj, DObj->getLoclistsSection(), isLittleEndian(),
+                            0);
+    dumpLoclistsSection(OS, DumpOpts, Data, getRegisterInfo(), DumpOffset);
+  }
   if (shouldDump(ExplicitDWO, ".debug_loc.dwo", DIDT_ID_DebugLoc,
                  DObj->getLocDWOSection().Data)) {
-    getDebugLocDWO()->dump(OS, getRegisterInfo(), DumpOffset);
+    getDebugLocDWO()->dump(OS, 0, getRegisterInfo(), DumpOffset);
   }
 
   if (shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,
@@ -696,11 +723,11 @@ const DWARFDebugLoc *DWARFContext::getDebugLoc() {
   return Loc.get();
 }
 
-const DWARFDebugLocDWO *DWARFContext::getDebugLocDWO() {
+const DWARFDebugLoclists *DWARFContext::getDebugLocDWO() {
   if (LocDWO)
     return LocDWO.get();
 
-  LocDWO.reset(new DWARFDebugLocDWO());
+  LocDWO.reset(new DWARFDebugLoclists());
   // Assume all compile units have the same address byte size.
   // FIXME: We don't need AddressSize for split DWARF since relocatable
   // addresses cannot appear there. At the moment DWARFExpression requires it.
@@ -1213,6 +1240,7 @@ class DWARFObjInMemory final : public DWARFObject {
 
   DWARFSectionMap InfoSection;
   DWARFSectionMap LocSection;
+  DWARFSectionMap LocListsSection;
   DWARFSectionMap LineSection;
   DWARFSectionMap RangeSection;
   DWARFSectionMap RnglistsSection;
@@ -1234,6 +1262,7 @@ class DWARFObjInMemory final : public DWARFObject {
     return StringSwitch<DWARFSectionMap *>(Name)
         .Case("debug_info", &InfoSection)
         .Case("debug_loc", &LocSection)
+        .Case("debug_loclists", &LocListsSection)
         .Case("debug_line", &LineSection)
         .Case("debug_str_offsets", &StringOffsetSection)
         .Case("debug_ranges", &RangeSection)
@@ -1529,6 +1558,7 @@ public:
 
   StringRef getAbbrevSection() const override { return AbbrevSection; }
   const DWARFSection &getLocSection() const override { return LocSection; }
+  const DWARFSection &getLoclistsSection() const override { return LocListsSection; }
   StringRef getARangeSection() const override { return ARangeSection; }
   StringRef getDebugFrameSection() const override { return DebugFrameSection; }
   StringRef getEHFrameSection() const override { return EHFrameSection; }

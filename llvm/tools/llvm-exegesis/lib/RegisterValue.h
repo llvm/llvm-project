@@ -17,6 +17,7 @@
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
 
+namespace llvm {
 namespace exegesis {
 
 // A simple object storing the value for a particular register.
@@ -43,3 +44,4 @@ llvm::APInt bitcastFloatValue(const llvm::fltSemantics &FltSemantics,
                               PredefinedValues Value);
 
 } // namespace exegesis
+} // namespace llvm
