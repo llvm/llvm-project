@@ -37,6 +37,9 @@ using __sanitizer::u16;
 using __sanitizer::u8;
 
 SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_init_frames(uptr, uptr);
+
+SANITIZER_INTERFACE_ATTRIBUTE
 extern uptr __hwasan_shadow_memory_dynamic_address;
 
 SANITIZER_INTERFACE_ATTRIBUTE

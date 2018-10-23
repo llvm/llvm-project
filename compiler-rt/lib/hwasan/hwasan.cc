@@ -220,6 +220,22 @@ void UpdateMemoryUsage() {
 void UpdateMemoryUsage() {}
 #endif
 
+struct FrameDescription {
+  uptr PC;
+  const char *Descr;
+};
+
+void InitFrameDescriptors(uptr b, uptr e) {
+  FrameDescription *beg = reinterpret_cast<FrameDescription *>(b);
+  FrameDescription *end = reinterpret_cast<FrameDescription *>(e);
+  // Must have at least one entry, which we can use for a linked list.
+  CHECK_GE(end - beg, 1U);
+  if (Verbosity()) {
+    for (FrameDescription *frame_descr = beg; frame_descr < end; frame_descr++)
+      Printf("Frame: %p %s\n", frame_descr->PC, frame_descr->Descr);
+  }
+}
+
 } // namespace __hwasan
 
 // Interface.
@@ -236,6 +252,10 @@ void __hwasan_shadow_init() {
     Die();
   }
   hwasan_shadow_inited = 1;
+}
+
+void __hwasan_init_frames(uptr beg, uptr end) {
+  InitFrameDescriptors(beg, end);
 }
 
 void __hwasan_init() {
