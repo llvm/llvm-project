@@ -18,6 +18,7 @@
 #ifndef LLDB_PLUGINS_SYMBOLFILENATIVEPDB_PDBSYMUID_H
 #define LLDB_PLUGINS_SYMBOLFILENATIVEPDB_PDBSYMUID_H
 
+#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/Support/Compiler.h"
 

@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PublicsStream.h"
 #include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
+#include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Error.h"
 
@@ -50,6 +51,8 @@ PdbIndex::create(std::unique_ptr<llvm::pdb::PDBFile> file) {
   ASSIGN_PTR_OR_RETURN(result->m_publics, file->getPDBPublicsStream());
   ASSIGN_PTR_OR_RETURN(result->m_globals, file->getPDBGlobalsStream());
   ASSIGN_PTR_OR_RETURN(result->m_symrecords, file->getPDBSymbolStream());
+
+  result->m_tpi->buildHashMap();
 
   result->m_file = std::move(file);
 
@@ -101,6 +104,9 @@ void PdbIndex::ParseSectionContribs() {
         : m_ctx(ctx), m_imap(imap) {}
 
     void visit(const SectionContrib &C) override {
+      if (C.Size == 0)
+        return;
+
       uint64_t va = m_ctx.MakeVirtualAddress(C.ISect, C.Off);
       uint64_t end = va + C.Size;
       // IntervalMap's start and end represent a closed range, not a half-open

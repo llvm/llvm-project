@@ -681,22 +681,33 @@ static void readCallGraph(MemoryBufferRef MB) {
 }
 
 template <class ELFT> static void readCallGraphsFromObjectFiles() {
-  auto FindSection = [&](const Symbol *Sym) -> const InputSectionBase * {
-    warnUnorderableSymbol(Sym);
-    if (const auto *SymD = dyn_cast<Defined>(Sym))
-      return dyn_cast_or_null<InputSectionBase>(SymD->Section);
-    return nullptr;
-  };
-
   for (auto File : ObjectFiles) {
     auto *Obj = cast<ObjFile<ELFT>>(File);
     for (const Elf_CGProfile_Impl<ELFT> &CGPE : Obj->CGProfile) {
-      const InputSectionBase *FromSB =
-          FindSection(&Obj->getSymbol(CGPE.cgp_from));
-      const InputSectionBase *ToSB = FindSection(&Obj->getSymbol(CGPE.cgp_to));
-      if (!FromSB || !ToSB)
+      auto *FromSym = dyn_cast<Defined>(&Obj->getSymbol(CGPE.cgp_from));
+      auto *ToSym = dyn_cast<Defined>(&Obj->getSymbol(CGPE.cgp_to));
+      if (!FromSym || !ToSym)
         continue;
-      Config->CallGraphProfile[{FromSB, ToSB}] += CGPE.cgp_weight;
+      auto *FromSec = dyn_cast_or_null<InputSectionBase>(FromSym->Section);
+      auto *ToSec = dyn_cast_or_null<InputSectionBase>(ToSym->Section);
+
+      // The profile from .llvm.call-graph-profile is conceptually affiliated to
+      // FromSec. Don't warn unorderable symbol if FromSym is not absolute
+      // (FromSec isn't null) and the section is discarded
+      // (!FromSec->Repl->Live).
+      //
+      // We also don't want to warn when ToSym is undefined or is in a shared
+      // object (as symbols in shared objects are fixed and unorderable).
+      //
+      // The check used here is more relaxed (no warning if either FromSym or
+      // ToSym is not Defined) for simplicity and there is no compelling reason
+      // to warn on more cases.
+      if (!FromSec || FromSec->Repl->Live) {
+        warnUnorderableSymbol(FromSym);
+        warnUnorderableSymbol(ToSym);
+      }
+      if (FromSec && ToSec)
+        Config->CallGraphProfile[{FromSec, ToSec}] += CGPE.cgp_weight;
     }
   }
 }

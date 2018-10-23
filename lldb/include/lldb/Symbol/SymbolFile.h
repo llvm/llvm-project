@@ -22,6 +22,14 @@
 
 #include "llvm/ADT/DenseSet.h"
 
+#include <mutex>
+
+#if defined(LLDB_CONFIGURATION_DEBUG)
+#define ASSERT_MODULE_LOCK(expr) (expr->AssertModuleLock())
+#else
+#define ASSERT_MODULE_LOCK(expr) ((void)0)
+#endif
+
 namespace lldb_private {
 
 class SymbolFile : public PluginInterface {
@@ -94,6 +102,12 @@ public:
   }
 
   virtual uint32_t CalculateAbilities() = 0;
+
+  //------------------------------------------------------------------
+  /// Symbols file subclasses should override this to return the Module that
+  /// owns the TypeSystem that this symbol file modifies type information in.
+  //------------------------------------------------------------------
+  virtual std::recursive_mutex &GetModuleMutex() const;
 
   //------------------------------------------------------------------
   /// Initialize the SymbolFile object.
@@ -273,6 +287,8 @@ protected:
     uint32_t first_line;
     uint32_t last_line;
   };
+
+  void AssertModuleLock();
 
   ObjectFile *m_obj_file; // The object file that symbols can be extracted from.
   uint32_t m_abilities;

@@ -3029,7 +3029,7 @@ bool DWARFASTParserClang::ParseChildMembers(
                   if (anon_field_info.IsValid()) {
                     clang::FieldDecl *unnamed_bitfield_decl =
                         ClangASTContext::AddFieldToRecordType(
-                            class_clang_type, NULL,
+                            class_clang_type, llvm::StringRef(),
                             m_ast.GetBuiltinTypeForEncodingAndBitSize(
                                 eEncodingSint, word_width),
                             accessibility, anon_field_info.bit_size);
