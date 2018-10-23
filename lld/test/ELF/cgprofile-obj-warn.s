@@ -27,9 +27,6 @@ A:
     .cg_profile poppy, A, 30
 
 # CHECK: unable to order absolute symbol: B
-# CHECK: unable to order undefined symbol: adena1
-# CHECK: unable to order undefined symbol: adena2
-# CHECK: unable to order undefined symbol: poppy
 
 # RUN: ld.lld %t -o /dev/null \
 # RUN:   -noinhibit-exec -icf=all --no-warn-symbol-ordering 2>&1 \

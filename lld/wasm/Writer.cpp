@@ -979,7 +979,7 @@ void Writer::createCtorFunction() {
     OS << BodyContent;
   }
 
-  ArrayRef<uint8_t> Body = toArrayRef(Saver.save(FunctionBody));
+  ArrayRef<uint8_t> Body = arrayRefFromStringRef(Saver.save(FunctionBody));
   cast<SyntheticFunction>(WasmSym::CallCtors->Function)->setBody(Body);
 }
 

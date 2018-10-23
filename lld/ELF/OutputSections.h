@@ -130,7 +130,6 @@ std::vector<InputSection *> getInputSections(OutputSection* OS);
 struct Out {
   static uint8_t First;
   static PhdrEntry *TlsPhdr;
-  static OutputSection *DebugInfo;
   static OutputSection *ElfHeader;
   static OutputSection *ProgramHeaders;
   static OutputSection *PreinitArray;
