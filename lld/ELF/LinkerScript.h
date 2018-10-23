@@ -30,12 +30,13 @@ namespace lld {
 namespace elf {
 
 class Defined;
-class Symbol;
-class InputSectionBase;
 class InputSection;
-class OutputSection;
 class InputSectionBase;
+class InputSectionBase;
+class OutputSection;
 class SectionBase;
+class Symbol;
+class ThunkSection;
 
 // This represents an r-value in the linker script.
 struct ExprValue {
@@ -153,7 +154,6 @@ struct SectionPattern {
   SortSectionPolicy SortInner;
 };
 
-class ThunkSection;
 struct InputSectionDescription : BaseCommand {
   InputSectionDescription(StringRef FilePattern)
       : BaseCommand(InputSectionKind), FilePat(FilePattern) {}
