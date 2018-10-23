@@ -251,16 +251,24 @@ int main(int argc, char *argv[]) {
   // If --compile-commands-dir arg was invoked, check value and override default
   // path.
   Optional<Path> CompileCommandsDirPath;
-  if (CompileCommandsDir.empty()) {
-    CompileCommandsDirPath = None;
-  } else if (!sys::path::is_absolute(CompileCommandsDir) ||
-             !sys::fs::exists(CompileCommandsDir)) {
-    errs() << "Path specified by --compile-commands-dir either does not "
-              "exist or is not an absolute "
-              "path. The argument will be ignored.\n";
-    CompileCommandsDirPath = None;
-  } else {
-    CompileCommandsDirPath = CompileCommandsDir;
+  if (!CompileCommandsDir.empty()) {
+    if (sys::fs::exists(CompileCommandsDir)) {
+      // We support passing both relative and absolute paths to the
+      // --compile-commands-dir argument, but we assume the path is absolute in
+      // the rest of clangd so we make sure the path is absolute before
+      // continuing.
+      SmallString<128> Path(CompileCommandsDir);
+      if (std::error_code EC = sys::fs::make_absolute(Path)) {
+        errs() << "Error while converting the relative path specified by "
+                  "--compile-commands-dir to an absolute path: "
+               << EC.message() << ". The argument will be ignored.\n";
+      } else {
+        CompileCommandsDirPath = Path.str();
+      }
+    } else {
+      errs() << "Path specified by --compile-commands-dir does not exist. The "
+                "argument will be ignored.\n";
+    }
   }
 
   ClangdServer::Options Opts;
