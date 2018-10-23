@@ -11,7 +11,7 @@
 
 // class match_results<BidirectionalIterator, Allocator>
 
-// match_results(const match_results&& m) noexcept;
+// match_results(match_results&& m) noexcept;
 
 #include <regex>
 #include <cassert>
