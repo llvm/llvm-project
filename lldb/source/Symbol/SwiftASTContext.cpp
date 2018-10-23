@@ -943,9 +943,10 @@ static std::string GetCurrentCLToolsPath() {
 }
 
 static StringRef GetResourceDir() {
+  const char *fn = __FUNCTION__;
   static std::string g_cached_resource_dir;
   static std::once_flag g_once_flag;
-  std::call_once(g_once_flag, []() {
+  std::call_once(g_once_flag, [&fn]() {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
     // First, check if there's something in our bundle
@@ -953,7 +954,7 @@ static StringRef GetResourceDir() {
       FileSpec swift_dir_spec;
       if (FileSpec swift_dir_spec = HostInfo::GetSwiftDir()) {
         if (log)
-          log->Printf("%s: trying ePathTypeSwiftDir: %s", __FUNCTION__,
+          log->Printf("%s: trying ePathTypeSwiftDir: %s", fn,
                       swift_dir_spec.GetCString());
         // We can't just check for the Swift directory, because that
         // always exists.  We have to look for "clang" inside that.
@@ -965,7 +966,7 @@ static StringRef GetResourceDir() {
           if (log)
             log->Printf("%s: found Swift resource dir via "
                         "ePathTypeSwiftDir': %s",
-                        __FUNCTION__, g_cached_resource_dir.c_str());
+                        fn, g_cached_resource_dir.c_str());
           return;
         }
       }
@@ -977,13 +978,13 @@ static StringRef GetResourceDir() {
     {
       std::string xcode_toolchain_path = GetCurrentToolchainPath();
       if (log)
-        log->Printf("%s: trying toolchain path: %s", __FUNCTION__,
+        log->Printf("%s: trying toolchain path: %s", fn,
                     xcode_toolchain_path.c_str());
 
       if (!xcode_toolchain_path.empty()) {
         xcode_toolchain_path.append("usr/lib/swift");
         if (log)
-          log->Printf("%s: trying toolchain-based lib path: %s", __FUNCTION__,
+          log->Printf("%s: trying toolchain-based lib path: %s", fn,
                       xcode_toolchain_path.c_str());
 
         if (IsDirectory(FileSpec(xcode_toolchain_path, false))) {
@@ -991,7 +992,7 @@ static StringRef GetResourceDir() {
           if (log)
             log->Printf("%s: found Swift resource dir via "
                         "toolchain path + 'usr/lib/swift': %s",
-                        __FUNCTION__, g_cached_resource_dir.c_str());
+                        fn, g_cached_resource_dir.c_str());
           return;
         }
       }
@@ -1002,7 +1003,7 @@ static StringRef GetResourceDir() {
     {
       std::string xcode_contents_path = GetXcodeContentsPath();
       if (log)
-        log->Printf("%s: trying Xcode path: %s", __FUNCTION__,
+        log->Printf("%s: trying Xcode path: %s", fn,
                     xcode_contents_path.c_str());
 
       if (!xcode_contents_path.empty()) {
@@ -1010,7 +1011,7 @@ static StringRef GetResourceDir() {
                                    "XcodeDefault.xctoolchain"
                                    "/usr/lib/swift");
         if (log)
-          log->Printf("%s: trying Xcode-based lib path: %s", __FUNCTION__,
+          log->Printf("%s: trying Xcode-based lib path: %s", fn,
                       xcode_contents_path.c_str());
 
         if (IsDirectory(FileSpec(xcode_contents_path, false))) {
@@ -1019,7 +1020,7 @@ static StringRef GetResourceDir() {
             log->Printf("%s: found Swift resource dir via "
                         "Xcode contents path + default toolchain "
                         "relative dir: %s",
-                        __FUNCTION__, g_cached_resource_dir.c_str());
+                        fn, g_cached_resource_dir.c_str());
           return;
         }
       }
@@ -1030,7 +1031,7 @@ static StringRef GetResourceDir() {
     {
       std::string cl_tools_path = GetCurrentCLToolsPath();
       if (log)
-        log->Printf("%s: trying command-line tools path: %s", __FUNCTION__,
+        log->Printf("%s: trying command-line tools path: %s", fn,
                     cl_tools_path.c_str());
 
       if (!cl_tools_path.empty()) {
@@ -1038,7 +1039,7 @@ static StringRef GetResourceDir() {
         if (log)
           log->Printf("%s: trying command-line tools-based lib "
                       "path: %s",
-                      __FUNCTION__, cl_tools_path.c_str());
+                      fn, cl_tools_path.c_str());
 
         if (IsDirectory(FileSpec(cl_tools_path, false))) {
           g_cached_resource_dir = cl_tools_path;
@@ -1046,7 +1047,7 @@ static StringRef GetResourceDir() {
             log->Printf("%s: found Swift resource dir via "
                         "command-line tools path + "
                         "usr/lib/swift: %s",
-                        __FUNCTION__, g_cached_resource_dir.c_str());
+                        fn, g_cached_resource_dir.c_str());
           return;
         }
       }
@@ -1113,7 +1114,7 @@ static StringRef GetResourceDir() {
                     if (log)
                         log->Printf("%s: trying ePathTypeSwiftDir regex-based "
                                     "build dir: %s",
-                                    __FUNCTION__,
+                                    fn,
                                     build_tree_resource_dir.c_str());
                     FileSpec swift_resource_dir_spec(
                         build_tree_resource_dir.c_str(), false);
@@ -1123,7 +1124,7 @@ static StringRef GetResourceDir() {
                         log->Printf("%s: found Swift resource dir via "
                                     "ePathTypeSwiftDir + inferred "
                                     "build-tree dir: %s",
-                                    __FUNCTION__,
+                                    fn,
                                     g_cached_resource_dir.c_str());
                       return;
                     }
@@ -1134,7 +1135,7 @@ static StringRef GetResourceDir() {
 
     // We failed to find a reasonable Swift resource dir.
     if (log)
-      log->Printf("%s: failed to find a Swift resource dir", __FUNCTION__);
+      log->Printf("%s: failed to find a Swift resource dir", fn);
   });
 
   return g_cached_resource_dir;
