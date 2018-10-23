@@ -24,10 +24,11 @@ namespace clangd {
 
 BackgroundIndex::BackgroundIndex(Context BackgroundContext,
                                  StringRef ResourceDir,
-                                 const FileSystemProvider &FSProvider)
-    : SwapIndex(llvm::make_unique<MemIndex>()), ResourceDir(ResourceDir),
+                                 const FileSystemProvider &FSProvider,
+                                 ArrayRef<std::string> URISchemes)
+    : SwapIndex(make_unique<MemIndex>()), ResourceDir(ResourceDir),
       FSProvider(FSProvider), BackgroundContext(std::move(BackgroundContext)),
-      Thread([this] { run(); }) {}
+      URISchemes(URISchemes), Thread([this] { run(); }) {}
 
 BackgroundIndex::~BackgroundIndex() {
   stop();
@@ -45,7 +46,7 @@ void BackgroundIndex::stop() {
 void BackgroundIndex::run() {
   WithContext Background(std::move(BackgroundContext));
   while (true) {
-    llvm::Optional<Task> Task;
+    Optional<Task> Task;
     {
       std::unique_lock<std::mutex> Lock(QueueMu);
       QueueCV.wait(Lock, [&] { return ShouldStop || !Queue.empty(); });
@@ -111,15 +112,15 @@ void BackgroundIndex::enqueueLocked(tooling::CompileCommand Cmd) {
       std::move(Cmd)));
 }
 
-llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
+Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   trace::Span Tracer("BackgroundIndex");
   SPAN_ATTACH(Tracer, "file", Cmd.Filename);
   SmallString<128> AbsolutePath;
-  if (llvm::sys::path::is_absolute(Cmd.Filename)) {
+  if (sys::path::is_absolute(Cmd.Filename)) {
     AbsolutePath = Cmd.Filename;
   } else {
     AbsolutePath = Cmd.Directory;
-    llvm::sys::path::append(AbsolutePath, Cmd.Filename);
+    sys::path::append(AbsolutePath, Cmd.Filename);
   }
 
   auto FS = FSProvider.getFileSystem();
@@ -141,14 +142,14 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   Inputs.CompileCommand = std::move(Cmd);
   auto CI = buildCompilerInvocation(Inputs);
   if (!CI)
-    return createStringError(llvm::inconvertibleErrorCode(),
+    return createStringError(inconvertibleErrorCode(),
                              "Couldn't build compiler invocation");
   IgnoreDiagnostics IgnoreDiags;
   auto Clang = prepareCompilerInstance(
       std::move(CI), /*Preamble=*/nullptr, std::move(*Buf),
       std::make_shared<PCHContainerOperations>(), Inputs.FS, IgnoreDiags);
   if (!Clang)
-    return createStringError(llvm::inconvertibleErrorCode(),
+    return createStringError(inconvertibleErrorCode(),
                              "Couldn't build compiler instance");
 
   SymbolCollector::Options IndexOpts;
@@ -166,11 +167,10 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
 
   const FrontendInputFile &Input = Clang->getFrontendOpts().Inputs.front();
   if (!Action->BeginSourceFile(*Clang, Input))
-    return createStringError(llvm::inconvertibleErrorCode(),
+    return createStringError(inconvertibleErrorCode(),
                              "BeginSourceFile() failed");
   if (!Action->Execute())
-    return createStringError(llvm::inconvertibleErrorCode(),
-                             "Execute() failed");
+    return createStringError(inconvertibleErrorCode(), "Execute() failed");
   Action->EndSourceFile();
 
   log("Indexed {0} ({1} symbols, {2} refs)", Inputs.CompileCommand.Filename,
@@ -186,7 +186,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   // FIXME: this should rebuild once-in-a-while, not after every file.
   //       At that point we should use Dex, too.
   vlog("Rebuilding automatic index");
-  reset(IndexedSymbols.buildIndex(IndexType::Light));
+  reset(IndexedSymbols.buildIndex(IndexType::Light, URISchemes));
   return Error::success();
 }
 

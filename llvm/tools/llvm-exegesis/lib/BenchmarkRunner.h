@@ -27,6 +27,7 @@
 #include <memory>
 #include <vector>
 
+namespace llvm {
 namespace exegesis {
 
 // A class representing failures that happened during Benchmark, they are used
@@ -90,5 +91,6 @@ private:
 };
 
 } // namespace exegesis
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_EXEGESIS_BENCHMARKRUNNER_H

@@ -22,6 +22,10 @@ static constexpr const char kIntegerPrefix[] = "i_0x";
 static constexpr const char kDoublePrefix[] = "f_";
 static constexpr const char kInvalidOperand[] = "INVALID";
 
+namespace llvm {
+
+namespace {
+
 // A mutable struct holding an LLVMState that can be passed through the
 // serialization process to encode/decode registers and instructions.
 struct YamlContext {
@@ -141,13 +145,13 @@ private:
     return 0;
   }
 
-  const exegesis::LLVMState *State;
+  const llvm::exegesis::LLVMState *State;
   std::string LastError;
   llvm::raw_string_ostream ErrorStream;
 };
+} // namespace
 
 // Defining YAML traits for IO.
-namespace llvm {
 namespace yaml {
 
 static YamlContext &getTypedContext(void *Ctx) {
@@ -294,7 +298,6 @@ struct MappingContextTraits<exegesis::InstructionBenchmark, YamlContext> {
 };
 
 } // namespace yaml
-} // namespace llvm
 
 namespace exegesis {
 
@@ -384,3 +387,4 @@ void PerInstructionStats::push(const BenchmarkMeasure &BM) {
 }
 
 } // namespace exegesis
+} // namespace llvm

@@ -13,6 +13,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 
@@ -21,24 +22,22 @@ GlobalCompilationDatabase::getFallbackCommand(PathRef File) const {
   std::vector<std::string> Argv = {"clang"};
   // Clang treats .h files as C by default, resulting in unhelpful diagnostics.
   // Parsing as Objective C++ is friendly to more cases.
-  if (llvm::sys::path::extension(File) == ".h")
+  if (sys::path::extension(File) == ".h")
     Argv.push_back("-xobjective-c++-header");
   Argv.push_back(File);
-  return tooling::CompileCommand(llvm::sys::path::parent_path(File),
-                                 llvm::sys::path::filename(File),
-                                 std::move(Argv),
+  return tooling::CompileCommand(sys::path::parent_path(File),
+                                 sys::path::filename(File), std::move(Argv),
                                  /*Output=*/"");
 }
 
 DirectoryBasedGlobalCompilationDatabase::
-    DirectoryBasedGlobalCompilationDatabase(
-        llvm::Optional<Path> CompileCommandsDir)
+    DirectoryBasedGlobalCompilationDatabase(Optional<Path> CompileCommandsDir)
     : CompileCommandsDir(std::move(CompileCommandsDir)) {}
 
 DirectoryBasedGlobalCompilationDatabase::
     ~DirectoryBasedGlobalCompilationDatabase() = default;
 
-llvm::Optional<tooling::CompileCommand>
+Optional<tooling::CompileCommand>
 DirectoryBasedGlobalCompilationDatabase::getCompileCommand(PathRef File) const {
   if (auto CDB = getCDBForFile(File)) {
     auto Candidates = CDB->getCompileCommands(File);
@@ -49,7 +48,7 @@ DirectoryBasedGlobalCompilationDatabase::getCompileCommand(PathRef File) const {
   } else {
     log("Failed to find compilation database for {0}", File);
   }
-  return llvm::None;
+  return None;
 }
 
 tooling::CompileCommand
@@ -102,7 +101,7 @@ DirectoryBasedGlobalCompilationDatabase::getCDBInDirLocked(PathRef Dir) const {
 
 tooling::CompilationDatabase *
 DirectoryBasedGlobalCompilationDatabase::getCDBForFile(PathRef File) const {
-  namespace path = llvm::sys::path;
+  namespace path = sys::path;
   assert((path::is_absolute(File, path::Style::posix) ||
           path::is_absolute(File, path::Style::windows)) &&
          "path must be absolute");
@@ -121,7 +120,7 @@ CachingCompilationDb::CachingCompilationDb(
     const GlobalCompilationDatabase &InnerCDB)
     : InnerCDB(InnerCDB) {}
 
-llvm::Optional<tooling::CompileCommand>
+Optional<tooling::CompileCommand>
 CachingCompilationDb::getCompileCommand(PathRef File) const {
   std::unique_lock<std::mutex> Lock(Mut);
   auto It = Cached.find(File);
@@ -129,8 +128,7 @@ CachingCompilationDb::getCompileCommand(PathRef File) const {
     return It->second;
 
   Lock.unlock();
-  llvm::Optional<tooling::CompileCommand> Command =
-      InnerCDB.getCompileCommand(File);
+  Optional<tooling::CompileCommand> Command = InnerCDB.getCompileCommand(File);
   Lock.lock();
   return Cached.try_emplace(File, std::move(Command)).first->getValue();
 }
@@ -150,7 +148,7 @@ void CachingCompilationDb::clear() {
   Cached.clear();
 }
 
-llvm::Optional<tooling::CompileCommand>
+Optional<tooling::CompileCommand>
 InMemoryCompilationDb::getCompileCommand(PathRef File) const {
   std::lock_guard<std::mutex> Lock(Mutex);
   auto It = Commands.find(File);

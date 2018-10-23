@@ -176,6 +176,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FABS:                       return "fabs";
   case ISD::FMINNUM:                    return "fminnum";
   case ISD::FMAXNUM:                    return "fmaxnum";
+  case ISD::FMINNUM_IEEE:               return "fminnum_ieee";
+  case ISD::FMAXNUM_IEEE:               return "fmaxnum_ieee";
+
   case ISD::FMINNAN:                    return "fminnan";
   case ISD::FMAXNAN:                    return "fmaxnan";
   case ISD::FNEG:                       return "fneg";
@@ -283,6 +286,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::SRL_PARTS:                  return "srl_parts";
 
   case ISD::SADDSAT:                    return "saddsat";
+  case ISD::UADDSAT:                    return "uaddsat";
 
   // Conversion operators.
   case ISD::SIGN_EXTEND:                return "sign_extend";

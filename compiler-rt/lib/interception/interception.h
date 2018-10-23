@@ -170,7 +170,7 @@ const interpose_substitution substitution_##func_name[] \
 #elif !SANITIZER_MAC
 # define PTR_TO_REAL(x) real_##x
 # define REAL(x) __interception::PTR_TO_REAL(x)
-# define FUNC_TYPE(x) x##_f
+# define FUNC_TYPE(x) x##_type
 
 # define DECLARE_REAL(ret_type, func, ...) \
     typedef ret_type (*FUNC_TYPE(func))(__VA_ARGS__); \

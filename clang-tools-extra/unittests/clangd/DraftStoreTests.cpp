@@ -13,6 +13,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -23,18 +24,18 @@ struct IncrementalTestStep {
 };
 
 int rangeLength(StringRef Code, const Range &Rng) {
-  llvm::Expected<size_t> Start = positionToOffset(Code, Rng.start);
-  llvm::Expected<size_t> End = positionToOffset(Code, Rng.end);
+  Expected<size_t> Start = positionToOffset(Code, Rng.start);
+  Expected<size_t> End = positionToOffset(Code, Rng.end);
   assert(Start);
   assert(End);
   return *End - *Start;
 }
 
 /// Send the changes one by one to updateDraft, verify the intermediate results.
-void stepByStep(llvm::ArrayRef<IncrementalTestStep> Steps) {
+void stepByStep(ArrayRef<IncrementalTestStep> Steps) {
   DraftStore DS;
   Annotations InitialSrc(Steps.front().Src);
-  constexpr llvm::StringLiteral Path("/hello.cpp");
+  constexpr StringLiteral Path("/hello.cpp");
 
   // Set the initial content.
   DS.addDraft(Path, InitialSrc.code());
@@ -49,7 +50,7 @@ void stepByStep(llvm::ArrayRef<IncrementalTestStep> Steps) {
         Contents.str(),
     };
 
-    llvm::Expected<std::string> Result = DS.updateDraft(Path, {Event});
+    Expected<std::string> Result = DS.updateDraft(Path, {Event});
     ASSERT_TRUE(!!Result);
     EXPECT_EQ(*Result, SrcAfter.code());
     EXPECT_EQ(*DS.getDraft(Path), SrcAfter.code());
@@ -57,11 +58,11 @@ void stepByStep(llvm::ArrayRef<IncrementalTestStep> Steps) {
 }
 
 /// Send all the changes at once to updateDraft, check only the final result.
-void allAtOnce(llvm::ArrayRef<IncrementalTestStep> Steps) {
+void allAtOnce(ArrayRef<IncrementalTestStep> Steps) {
   DraftStore DS;
   Annotations InitialSrc(Steps.front().Src);
   Annotations FinalSrc(Steps.back().Src);
-  constexpr llvm::StringLiteral Path("/hello.cpp");
+  constexpr StringLiteral Path("/hello.cpp");
   std::vector<TextDocumentContentChangeEvent> Changes;
 
   for (size_t i = 0; i < Steps.size() - 1; i++) {
@@ -78,9 +79,9 @@ void allAtOnce(llvm::ArrayRef<IncrementalTestStep> Steps) {
   // Set the initial content.
   DS.addDraft(Path, InitialSrc.code());
 
-  llvm::Expected<std::string> Result = DS.updateDraft(Path, Changes);
+  Expected<std::string> Result = DS.updateDraft(Path, Changes);
 
-  ASSERT_TRUE(!!Result) << llvm::toString(Result.takeError());
+  ASSERT_TRUE(!!Result) << toString(Result.takeError());
   EXPECT_EQ(*Result, FinalSrc.code());
   EXPECT_EQ(*DS.getDraft(Path), FinalSrc.code());
 }
@@ -195,11 +196,11 @@ TEST(DraftStoreIncrementalUpdateTest, WrongRangeLength) {
   Change.range->end.character = 2;
   Change.rangeLength = 10;
 
-  llvm::Expected<std::string> Result = DS.updateDraft(File, {Change});
+  Expected<std::string> Result = DS.updateDraft(File, {Change});
 
   EXPECT_TRUE(!Result);
   EXPECT_EQ(
-      llvm::toString(Result.takeError()),
+      toString(Result.takeError()),
       "Change's rangeLength (10) doesn't match the computed range length (2).");
 }
 
@@ -216,10 +217,10 @@ TEST(DraftStoreIncrementalUpdateTest, EndBeforeStart) {
   Change.range->end.line = 0;
   Change.range->end.character = 3;
 
-  llvm::Expected<std::string> Result = DS.updateDraft(File, {Change});
+  Expected<std::string> Result = DS.updateDraft(File, {Change});
 
   EXPECT_TRUE(!Result);
-  EXPECT_EQ(llvm::toString(Result.takeError()),
+  EXPECT_EQ(toString(Result.takeError()),
             "Range's end position (0:3) is before start position (0:5)");
 }
 
@@ -237,10 +238,10 @@ TEST(DraftStoreIncrementalUpdateTest, StartCharOutOfRange) {
   Change.range->end.character = 100;
   Change.text = "foo";
 
-  llvm::Expected<std::string> Result = DS.updateDraft(File, {Change});
+  Expected<std::string> Result = DS.updateDraft(File, {Change});
 
   EXPECT_TRUE(!Result);
-  EXPECT_EQ(llvm::toString(Result.takeError()),
+  EXPECT_EQ(toString(Result.takeError()),
             "UTF-16 offset 100 is invalid for line 0");
 }
 
@@ -258,10 +259,10 @@ TEST(DraftStoreIncrementalUpdateTest, EndCharOutOfRange) {
   Change.range->end.character = 100;
   Change.text = "foo";
 
-  llvm::Expected<std::string> Result = DS.updateDraft(File, {Change});
+  Expected<std::string> Result = DS.updateDraft(File, {Change});
 
   EXPECT_TRUE(!Result);
-  EXPECT_EQ(llvm::toString(Result.takeError()),
+  EXPECT_EQ(toString(Result.takeError()),
             "UTF-16 offset 100 is invalid for line 0");
 }
 
@@ -279,11 +280,10 @@ TEST(DraftStoreIncrementalUpdateTest, StartLineOutOfRange) {
   Change.range->end.character = 0;
   Change.text = "foo";
 
-  llvm::Expected<std::string> Result = DS.updateDraft(File, {Change});
+  Expected<std::string> Result = DS.updateDraft(File, {Change});
 
   EXPECT_TRUE(!Result);
-  EXPECT_EQ(llvm::toString(Result.takeError()),
-            "Line value is out of range (100)");
+  EXPECT_EQ(toString(Result.takeError()), "Line value is out of range (100)");
 }
 
 TEST(DraftStoreIncrementalUpdateTest, EndLineOutOfRange) {
@@ -300,11 +300,10 @@ TEST(DraftStoreIncrementalUpdateTest, EndLineOutOfRange) {
   Change.range->end.character = 0;
   Change.text = "foo";
 
-  llvm::Expected<std::string> Result = DS.updateDraft(File, {Change});
+  Expected<std::string> Result = DS.updateDraft(File, {Change});
 
   EXPECT_TRUE(!Result);
-  EXPECT_EQ(llvm::toString(Result.takeError()),
-            "Line value is out of range (100)");
+  EXPECT_EQ(toString(Result.takeError()), "Line value is out of range (100)");
 }
 
 /// Check that if a valid change is followed by an invalid change, the original
@@ -334,13 +333,13 @@ TEST(DraftStoreIncrementalUpdateTest, InvalidRangeInASequence) {
   Change2.range->end.character = 100;
   Change2.text = "something";
 
-  llvm::Expected<std::string> Result = DS.updateDraft(File, {Change1, Change2});
+  Expected<std::string> Result = DS.updateDraft(File, {Change1, Change2});
 
   EXPECT_TRUE(!Result);
-  EXPECT_EQ(llvm::toString(Result.takeError()),
+  EXPECT_EQ(toString(Result.takeError()),
             "UTF-16 offset 100 is invalid for line 0");
 
-  llvm::Optional<std::string> Contents = DS.getDraft(File);
+  Optional<std::string> Contents = DS.getDraft(File);
   EXPECT_TRUE(Contents);
   EXPECT_EQ(*Contents, OriginalContents);
 }

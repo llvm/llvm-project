@@ -17,6 +17,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/FormatVariadic.h"
 
+namespace llvm {
 namespace exegesis {
 
 struct ExecutionClass {
@@ -200,3 +201,4 @@ LatencyBenchmarkRunner::runMeasurements(
 }
 
 } // namespace exegesis
+} // namespace llvm

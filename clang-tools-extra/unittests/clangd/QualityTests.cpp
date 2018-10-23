@@ -30,6 +30,7 @@
 #include "gtest/gtest.h"
 #include <vector>
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 
@@ -251,7 +252,7 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
 
   SymbolRelevanceSignals IndexProximate;
   IndexProximate.SymbolURI = "unittest:/foo/bar.h";
-  llvm::StringMap<SourceParams> ProxSources;
+  StringMap<SourceParams> ProxSources;
   ProxSources.try_emplace(testPath("foo/baz.h"));
   URIDistance Distance(ProxSources);
   IndexProximate.FileProximityMatch = &Distance;
@@ -335,7 +336,7 @@ TEST(QualityTests, NoBoostForClassConstructor) {
 
   const NamedDecl *CtorDecl = &findAnyDecl(AST, [](const NamedDecl &ND) {
     return (ND.getQualifiedNameAsString() == "Foo::Foo") &&
-           llvm::isa<CXXConstructorDecl>(&ND);
+           isa<CXXConstructorDecl>(&ND);
   });
   SymbolRelevanceSignals Ctor;
   Ctor.merge(CodeCompletionResult(CtorDecl, /*Priority=*/0));
@@ -397,7 +398,7 @@ TEST(QualityTests, ConstructorQuality) {
 
   const NamedDecl *CtorDecl = &findAnyDecl(AST, [](const NamedDecl &ND) {
     return (ND.getQualifiedNameAsString() == "Foo::Foo") &&
-           llvm::isa<CXXConstructorDecl>(&ND);
+           isa<CXXConstructorDecl>(&ND);
   });
 
   SymbolQualitySignals Q;

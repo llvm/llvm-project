@@ -256,13 +256,13 @@ namespace ISD {
     /// Same for multiplication.
     SMULO, UMULO,
 
-    /// RESULT = SADDSAT(LHS, RHS) - Perform signed saturation addition on 2
+    /// RESULT = [US]ADDSAT(LHS, RHS) - Perform saturation addition on 2
     /// integers with the same bit width (W). If the true value of LHS + RHS
-    /// exceeds the largest signed value that can be represented by W bits, the
+    /// exceeds the largest value that can be represented by W bits, the
     /// resulting value is this maximum value. Otherwise, if this value is less
-    /// than the smallest signed value that can be represented by W bits, the
+    /// than the smallest value that can be represented by W bits, the
     /// resulting value is this minimum value.
-    SADDSAT,
+    SADDSAT, UADDSAT,
 
     /// Simple binary floating point operators.
     FADD, FSUB, FMUL, FDIV, FREM,
@@ -564,10 +564,19 @@ namespace ISD {
     FCEIL, FTRUNC, FRINT, FNEARBYINT, FROUND, FFLOOR,
     /// FMINNUM/FMAXNUM - Perform floating-point minimum or maximum on two
     /// values.
-    /// In the case where a single input is NaN, the non-NaN input is returned.
+    //
+    /// In the case where a single input is a NaN (either signaling or quiet),
+    /// the non-NaN input is returned.
     ///
     /// The return value of (FMINNUM 0.0, -0.0) could be either 0.0 or -0.0.
     FMINNUM, FMAXNUM,
+
+    /// FMINNUM_IEEE/FMAXNUM_IEEE - Perform floating-point minimum or maximum on
+    /// two values, following the IEEE-754 2008 definition. This differs from
+    /// FMINNUM/FMAXNUM in the handling of signaling NaNs. If one input is a
+    /// signaling NaN, returns a quiet NaN.
+    FMINNUM_IEEE, FMAXNUM_IEEE,
+
     /// FMINNAN/FMAXNAN - NaN-propagating minimum/maximum that also treat -0.0
     /// as less than 0.0. While FMINNUM/FMAXNUM follow IEEE 754-2008 semantics,
     /// FMINNAN/FMAXNAN follow IEEE 754-2018 draft semantics.

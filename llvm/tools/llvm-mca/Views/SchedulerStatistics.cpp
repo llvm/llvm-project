@@ -121,7 +121,7 @@ void SchedulerStatistics::printSchedulerUsage(raw_ostream &OS) const {
   FOS.flush();
 }
 
-void SchedulerStatistics::printView(llvm::raw_ostream &OS) const {
+void SchedulerStatistics::printView(raw_ostream &OS) const {
   printSchedulerStats(OS);
   printSchedulerUsage(OS);
 }

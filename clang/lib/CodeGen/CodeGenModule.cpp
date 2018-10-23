@@ -3669,6 +3669,10 @@ llvm::GlobalValue::LinkageTypes CodeGenModule::getLLVMLinkageForDeclarator(
       return llvm::GlobalVariable::WeakAnyLinkage;
   }
 
+  if (const auto *FD = D->getAsFunction())
+    if (FD->isMultiVersion() && Linkage == GVA_AvailableExternally)
+      return llvm::GlobalVariable::LinkOnceAnyLinkage;
+
   // We are guaranteed to have a strong definition somewhere else,
   // so we can use available_externally linkage.
   if (Linkage == GVA_AvailableExternally)

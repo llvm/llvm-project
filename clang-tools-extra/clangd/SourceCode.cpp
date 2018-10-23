@@ -16,9 +16,9 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
-using namespace llvm;
 
 // Here be dragons. LSP positions use columns measured in *UTF-16 code units*!
 // Clangd uses UTF-8 and byte-offsets internally, so conversion is nontrivial.
@@ -80,23 +80,23 @@ static size_t utf16Len(StringRef U8) {
   return Count;
 }
 
-llvm::Expected<size_t> positionToOffset(StringRef Code, Position P,
-                                        bool AllowColumnsBeyondLineLength) {
+Expected<size_t> positionToOffset(StringRef Code, Position P,
+                                  bool AllowColumnsBeyondLineLength) {
   if (P.line < 0)
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("Line value can't be negative ({0})", P.line),
-        llvm::errc::invalid_argument);
+    return make_error<StringError>(
+        formatv("Line value can't be negative ({0})", P.line),
+        errc::invalid_argument);
   if (P.character < 0)
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("Character value can't be negative ({0})", P.character),
-        llvm::errc::invalid_argument);
+    return make_error<StringError>(
+        formatv("Character value can't be negative ({0})", P.character),
+        errc::invalid_argument);
   size_t StartOfLine = 0;
   for (int I = 0; I != P.line; ++I) {
     size_t NextNL = Code.find('\n', StartOfLine);
     if (NextNL == StringRef::npos)
-      return llvm::make_error<llvm::StringError>(
-          llvm::formatv("Line value is out of range ({0})", P.line),
-          llvm::errc::invalid_argument);
+      return make_error<StringError>(
+          formatv("Line value is out of range ({0})", P.line),
+          errc::invalid_argument);
     StartOfLine = NextNL + 1;
   }
 
@@ -108,10 +108,10 @@ llvm::Expected<size_t> positionToOffset(StringRef Code, Position P,
   size_t ByteOffsetInLine = measureUTF16(
       Code.substr(StartOfLine, NextNL - StartOfLine), P.character, Valid);
   if (!Valid && !AllowColumnsBeyondLineLength)
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("UTF-16 offset {0} is invalid for line {1}", P.character,
-                      P.line),
-        llvm::errc::invalid_argument);
+    return make_error<StringError>(
+        formatv("UTF-16 offset {0} is invalid for line {1}", P.character,
+                P.line),
+        errc::invalid_argument);
   return StartOfLine + ByteOffsetInLine;
 }
 
@@ -162,10 +162,9 @@ std::pair<size_t, size_t> offsetToClangLineColumn(StringRef Code,
   return {Lines + 1, Offset - StartOfLine + 1};
 }
 
-std::pair<llvm::StringRef, llvm::StringRef>
-splitQualifiedName(llvm::StringRef QName) {
+std::pair<StringRef, StringRef> splitQualifiedName(StringRef QName) {
   size_t Pos = QName.rfind("::");
-  if (Pos == llvm::StringRef::npos)
+  if (Pos == StringRef::npos)
     return {StringRef(), QName};
   return {QName.substr(0, Pos + 2), QName.substr(Pos + 2)};
 }
@@ -185,8 +184,8 @@ std::vector<TextEdit> replacementsToEdits(StringRef Code,
   return Edits;
 }
 
-llvm::Optional<std::string> getRealPath(const FileEntry *F,
-                                        const SourceManager &SourceMgr) {
+Optional<std::string> getRealPath(const FileEntry *F,
+                                  const SourceManager &SourceMgr) {
   // Ideally, we get the real path from the FileEntry object.
   SmallString<128> FilePath = F->tryGetRealPathName();
   if (!FilePath.empty()) {
@@ -196,16 +195,16 @@ llvm::Optional<std::string> getRealPath(const FileEntry *F,
   // Otherwise, we try to compute ourselves.
   vlog("FileEntry for {0} did not contain the real path.", F->getName());
 
-  llvm::SmallString<128> Path = F->getName();
+  SmallString<128> Path = F->getName();
 
-  if (!llvm::sys::path::is_absolute(Path)) {
+  if (!sys::path::is_absolute(Path)) {
     if (!SourceMgr.getFileManager().makeAbsolutePath(Path)) {
       log("Could not turn relative path to absolute: {0}", Path);
-      return llvm::None;
+      return None;
     }
   }
 
-  llvm::SmallString<128> RealPath;
+  SmallString<128> RealPath;
   if (SourceMgr.getFileManager().getVirtualFileSystem()->getRealPath(
           Path, RealPath)) {
     log("Could not compute real path: {0}", Path);

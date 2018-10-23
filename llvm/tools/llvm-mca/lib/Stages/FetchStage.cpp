@@ -36,7 +36,7 @@ llvm::Error FetchStage::getNextInstruction() {
     return llvm::ErrorSuccess();
   const SourceRef SR = SM.peekNext();
   llvm::Expected<std::unique_ptr<Instruction>> InstOrErr =
-      IB.createInstruction(*SR.second);
+      IB.createInstruction(SR.second);
   if (!InstOrErr)
     return InstOrErr.takeError();
   CurrentInstruction = std::move(InstOrErr.get());

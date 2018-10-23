@@ -23,8 +23,8 @@ using testing::ElementsAre;
 using testing::Pair;
 using testing::Pointee;
 using testing::UnorderedElementsAre;
-using namespace llvm;
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {

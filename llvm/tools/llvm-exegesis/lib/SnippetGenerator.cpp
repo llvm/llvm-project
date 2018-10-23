@@ -20,6 +20,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Program.h"
 
+namespace llvm {
 namespace exegesis {
 
 std::vector<CodeTemplate> getSingleton(CodeTemplate &&CT) {
@@ -222,3 +223,4 @@ void randomizeUnsetVariables(const llvm::BitVector &ForbiddenRegs,
 }
 
 } // namespace exegesis
+} // namespace llvm

@@ -68,8 +68,8 @@ define i32 @trunc_i64_to_i32_le(i64 %x) {
 ;
 ; X64-LABEL: trunc_i64_to_i32_le:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %xmm0
-; X64-NEXT:    movd %xmm0, %eax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %ins = insertelement <2 x i64> undef, i64 %x, i32 0
   %bc = bitcast <2 x i64> %ins to <4 x i32>
@@ -86,9 +86,8 @@ define i16 @trunc_i64_to_i16_le(i64 %x) {
 ;
 ; X64-LABEL: trunc_i64_to_i16_le:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %xmm0
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    # kill: def $ax killed $ax killed $rax
 ; X64-NEXT:    retq
   %ins = insertelement <2 x i64> undef, i64 %x, i32 0
   %bc = bitcast <2 x i64> %ins to <8 x i16>

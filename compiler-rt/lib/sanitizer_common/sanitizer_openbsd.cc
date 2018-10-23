@@ -51,6 +51,13 @@ int internal_mprotect(void *addr, uptr length, int prot) {
   return mprotect(addr, length, prot);
 }
 
+int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
+                          const void *newp, uptr newlen) {
+  Printf("internal_sysctlbyname not implemented for OpenBSD");
+  Die();
+  return 0;
+}
+
 uptr ReadBinaryName(/*out*/char *buf, uptr buf_len) {
   // On OpenBSD we cannot get the full path
   struct kinfo_proc kp;

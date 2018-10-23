@@ -448,7 +448,7 @@ void writeRIFF(const IndexFileOut &Data, raw_ostream &OS) {
 void writeYAML(const IndexFileOut &, raw_ostream &);
 Expected<IndexFileIn> readYAML(StringRef);
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O) {
+raw_ostream &operator<<(raw_ostream &OS, const IndexFileOut &O) {
   switch (O.Format) {
   case IndexFileFormat::RIFF:
     writeRIFF(O, OS);
@@ -467,17 +467,17 @@ Expected<IndexFileIn> readIndexFile(StringRef Data) {
     return std::move(*YAMLContents);
   } else {
     return makeError("Not a RIFF file and failed to parse as YAML: " +
-                     llvm::toString(YAMLContents.takeError()));
+                     toString(YAMLContents.takeError()));
   }
 }
 
-std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
-                                       llvm::ArrayRef<std::string> URISchemes,
+std::unique_ptr<SymbolIndex> loadIndex(StringRef SymbolFilename,
+                                       ArrayRef<std::string> URISchemes,
                                        bool UseDex) {
   trace::Span OverallTracer("LoadIndex");
   auto Buffer = MemoryBuffer::getFile(SymbolFilename);
   if (!Buffer) {
-    llvm::errs() << "Can't open " << SymbolFilename << "\n";
+    errs() << "Can't open " << SymbolFilename << "\n";
     return nullptr;
   }
 
@@ -491,7 +491,7 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
       if (I->Refs)
         Refs = std::move(*I->Refs);
     } else {
-      llvm::errs() << "Bad Index: " << llvm::toString(I.takeError()) << "\n";
+      errs() << "Bad Index: " << toString(I.takeError()) << "\n";
       return nullptr;
     }
   }

@@ -19,10 +19,16 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-private.h"
 
+#include <future>
+
 using namespace lldb_private;
 
 void SymbolFile::PreloadSymbols() {
   // No-op for most implementations.
+}
+
+std::recursive_mutex &SymbolFile::GetModuleMutex() const {
+  return GetObjectFile()->GetModule()->GetMutex();
 }
 
 SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
@@ -149,4 +155,18 @@ size_t SymbolFile::FindTypes(const std::vector<CompilerContext> &context,
   if (!append)
     types.Clear();
   return 0;
+}
+
+void SymbolFile::AssertModuleLock() {
+  // The code below is too expensive to leave enabled in release builds. It's
+  // enabled in debug builds or when the correct macro is set.
+#if defined(LLDB_CONFIGURATION_DEBUG)
+  // We assert that we have to module lock by trying to acquire the lock from a
+  // different thread. Note that we must abort if the result is true to
+  // guarantee correctness.
+  assert(std::async(std::launch::async,
+                    [this] { return this->GetModuleMutex().try_lock(); })
+                 .get() == false &&
+         "Module is not locked");
+#endif
 }

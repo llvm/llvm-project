@@ -4599,6 +4599,14 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF(bool OptForSize) {
     return None;
   }
 
+  // Record that scalar epilogue is not allowed.
+  LLVM_DEBUG(dbgs() << "LV: Not inserting scalar epilogue for access with gaps "
+                       "due to -Os/-Oz.\n");
+
+  // We don't create an epilogue when optimizing for size.
+  // Invalidate interleave groups that require an epilogue.
+  InterleaveInfo.invalidateGroupsRequiringScalarEpilogue();
+
   unsigned MaxVF = computeFeasibleMaxVF(OptForSize, TC);
 
   if (TC > 0 && TC % MaxVF == 0) {
@@ -4610,8 +4618,6 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF(bool OptForSize) {
   // found modulo the vectorization factor is not zero, try to fold the tail
   // by masking.
   // FIXME: look for a smaller MaxVF that does divide TC rather than masking.
-  // FIXME: return None if loop requiresScalarEpilog(<MaxVF>), or look for a
-  //        smaller MaxVF that does not require a scalar epilog.
   if (Legal->canFoldTailByMasking()) {
     FoldTailByMasking = true;
     return MaxVF;

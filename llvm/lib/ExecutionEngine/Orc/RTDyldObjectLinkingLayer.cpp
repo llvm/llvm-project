@@ -121,8 +121,15 @@ void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
   }
 
   auto K = R.getVModuleKey();
-  MemMgrs.push_back(GetMemoryManager());
-  auto &MemMgr = *MemMgrs.back();
+  RuntimeDyld::MemoryManager *MemMgr = nullptr;
+
+  // Create a record a memory manager for this object.
+  {
+    auto Tmp = GetMemoryManager();
+    std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
+    MemMgrs.push_back(std::move(Tmp));
+    MemMgr = MemMgrs.back().get();
+  }
 
   JITDylibSearchOrderResolver Resolver(*SharedR);
 
@@ -134,7 +141,7 @@ void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
    * duplicate defs.
    */
   jitLinkForORC(
-      **Obj, std::move(O), MemMgr, Resolver, ProcessAllSections,
+      **Obj, std::move(O), *MemMgr, Resolver, ProcessAllSections,
       [this, K, SharedR, &Obj, InternalSymbols](
           std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo,
           std::map<StringRef, JITEvaluatedSymbol> ResolvedSymbols) {

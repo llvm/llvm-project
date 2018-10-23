@@ -11,6 +11,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+namespace llvm {
 namespace exegesis {
 
 namespace {
@@ -29,3 +30,4 @@ TEST(ScratchSpaceTest, Works) {
 
 } // namespace
 } // namespace exegesis
+} // namespace llvm

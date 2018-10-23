@@ -68,9 +68,8 @@ static std::unique_ptr<WorkList> generateWorkList(AnalyzerOptions &Opts,
       return WorkList::makeUnexploredFirstPriorityQueue();
     case AnalyzerOptions::ExplorationStrategyKind::UnexploredFirstLocationQueue:
       return WorkList::makeUnexploredFirstPriorityLocationQueue();
-    default:
-      llvm_unreachable("Unexpected case");
   }
+  llvm_unreachable("Unknown AnalyzerOptions::ExplorationStrategyKind");
 }
 
 CoreEngine::CoreEngine(SubEngine &subengine, FunctionSummariesTy *FS,

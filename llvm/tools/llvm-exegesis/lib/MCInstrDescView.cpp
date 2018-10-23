@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 
+namespace llvm {
 namespace exegesis {
 
 unsigned Variable::getIndex() const {
@@ -343,3 +344,4 @@ void DumpMCInst(const llvm::MCRegisterInfo &MCRegisterInfo,
 }
 
 } // namespace exegesis
+} // namespace llvm

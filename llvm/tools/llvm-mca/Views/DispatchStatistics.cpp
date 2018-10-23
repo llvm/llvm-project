@@ -33,7 +33,7 @@ void DispatchStatistics::onEvent(const HWInstructionEvent &Event) {
   NumDispatched += DE.MicroOpcodes;
 }
 
-void DispatchStatistics::printDispatchHistogram(llvm::raw_ostream &OS) const {
+void DispatchStatistics::printDispatchHistogram(raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
   TempStream << "\n\nDispatch Logic - "

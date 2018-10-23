@@ -1,12 +1,24 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
-; GCN-LABEL: {{^}}test_fmax_f32:
-; GCN: v_max_f32_e32
-define amdgpu_kernel void @test_fmax_f32(float addrspace(1)* %out, float %a, float %b) #0 {
-  %val = call float @llvm.maxnum.f32(float %a, float %b)
+; GCN-LABEL: {{^}}test_fmax_f32_ieee_mode_on:
+; GCN: v_mul_f32_e64 [[QUIET0:v[0-9]+]], 1.0, s{{[0-9]+}}
+; GCN: v_mul_f32_e64 [[QUIET1:v[0-9]+]], 1.0, s{{[0-9]+}}
+; GCN: v_max_f32_e32 [[RESULT:v[0-9]+]], [[QUIET1]], [[QUIET0]]
+; GCN-NOT: [[RESULT]]
+; GCN: buffer_store_dword [[RESULT]]
+define amdgpu_kernel void @test_fmax_f32_ieee_mode_on(float addrspace(1)* %out, float %a, float %b) #0 {
+  %val = call float @llvm.maxnum.f32(float %a, float %b) #1
   store float %val, float addrspace(1)* %out, align 4
   ret void
+}
+
+; GCN-LABEL: {{^}}test_fmax_f32_ieee_mode_off:
+; GCN: v_max_f32_e32 v0, v0, v1
+; GCN-NEXT: ; return
+define amdgpu_ps float @test_fmax_f32_ieee_mode_off(float %a, float %b) #0 {
+  %val = call float @llvm.maxnum.f32(float %a, float %b) #1
+  ret float %val
 }
 
 ; GCN-LABEL: {{^}}test_fmax_v2f32:
@@ -158,38 +170,34 @@ define amdgpu_kernel void @constant_fold_fmax_f32_n0_n0(float addrspace(1)* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}fmax_var_immediate_f32:
+; GCN-LABEL: {{^}}fmax_var_immediate_f32_no_ieee:
 ; GCN: v_max_f32_e64 {{v[0-9]+}}, {{s[0-9]+}}, 2.0
-define amdgpu_kernel void @fmax_var_immediate_f32(float addrspace(1)* %out, float %a) #0 {
-  %val = call float @llvm.maxnum.f32(float %a, float 2.0)
-  store float %val, float addrspace(1)* %out, align 4
-  ret void
+define amdgpu_ps float @fmax_var_immediate_f32_no_ieee(float inreg %a) #0 {
+  %val = call float @llvm.maxnum.f32(float %a, float 2.0) #0
+  ret float %val
 }
 
-; GCN-LABEL: {{^}}fmax_immediate_var_f32:
+; GCN-LABEL: {{^}}fmax_immediate_var_f32_no_ieee:
 ; GCN: v_max_f32_e64 {{v[0-9]+}}, {{s[0-9]+}}, 2.0
-define amdgpu_kernel void @fmax_immediate_var_f32(float addrspace(1)* %out, float %a) #0 {
-  %val = call float @llvm.maxnum.f32(float 2.0, float %a)
-  store float %val, float addrspace(1)* %out, align 4
-  ret void
+define amdgpu_ps float @fmax_immediate_var_f32_no_ieee(float inreg %a) #0 {
+  %val = call float @llvm.maxnum.f32(float 2.0, float %a) #0
+  ret float %val
 }
 
-; GCN-LABEL: {{^}}fmax_var_literal_f32:
+; GCN-LABEL: {{^}}fmax_var_literal_f32_no_ieee:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x42c60000
 ; GCN: v_max_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, [[REG]]
-define amdgpu_kernel void @fmax_var_literal_f32(float addrspace(1)* %out, float %a) #0 {
-  %val = call float @llvm.maxnum.f32(float %a, float 99.0)
-  store float %val, float addrspace(1)* %out, align 4
-  ret void
+define amdgpu_ps float @fmax_var_literal_f32_no_ieee(float inreg %a) #0 {
+  %val = call float @llvm.maxnum.f32(float %a, float 99.0) #0
+  ret float %val
 }
 
-; GCN-LABEL: {{^}}fmax_literal_var_f32:
+; GCN-LABEL: {{^}}fmax_literal_var_f32_no_ieee:
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x42c60000
 ; GCN: v_max_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, [[REG]]
-define amdgpu_kernel void @fmax_literal_var_f32(float addrspace(1)* %out, float %a) #0 {
-  %val = call float @llvm.maxnum.f32(float 99.0, float %a)
-  store float %val, float addrspace(1)* %out, align 4
-  ret void
+define amdgpu_ps float @fmax_literal_var_f32_no_ieee(float inreg %a) #0 {
+  %val = call float @llvm.maxnum.f32(float 99.0, float %a) #0
+  ret float %val
 }
 
 ; GCN-LABEL: {{^}}test_func_fmax_v3f32:

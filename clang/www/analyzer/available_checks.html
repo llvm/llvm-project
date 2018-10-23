@@ -543,7 +543,34 @@ void test() {
 <colgroup><col class="namedescr"><col class="example"></colgroup>
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 
+
 <tbody>
+<tr><td><div class="namedescr expandable"><span class="name">
+optin.cplusplus.VirtualCall</span><span class="lang">
+(C++)</span><div class="descr">
+Check virtual member function calls during construction or 
+destruction.</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+class A {
+public:
+  A() { 
+    f(); // warn
+  }
+  virtual void f();
+};
+</pre></div><div class="separator"></div>
+<div class="example"><pre>
+class A {
+public:
+  ~A() {
+    this-&gt;f(); // warn
+  }
+  virtual void f();
+};
+</pre></div></div></td></tr>
+
+
 <tr><td><div class="namedescr expandable"><span class="name">
 optin.mpi.MPI-Checker</span><span class="lang">
 (C)</span><div class="descr">

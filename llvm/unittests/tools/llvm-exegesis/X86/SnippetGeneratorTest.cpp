@@ -17,6 +17,7 @@
 
 #include <unordered_set>
 
+namespace llvm {
 namespace exegesis {
 
 void InitializeX86ExegesisTarget();
@@ -413,3 +414,4 @@ TEST_F(FakeSnippetGeneratorTest, ComputeRegisterInitialValuesAdd64rr) {
 
 } // namespace
 } // namespace exegesis
+} // namespace llvm

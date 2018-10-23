@@ -796,15 +796,12 @@ int internal_sysctl(const int *name, unsigned int namelen, void *oldp,
 #endif
 }
 
+#if SANITIZER_FREEBSD
 int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
                           const void *newp, uptr newlen) {
-#if SANITIZER_OPENBSD
-  return sysctlbyname(sname, oldp, (size_t *)oldlenp, (void *)newp,
-                      (size_t)newlen);
-#else
   return sysctlbyname(sname, oldp, (size_t *)oldlenp, newp, (size_t)newlen);
-#endif
 }
+#endif
 #endif
 
 #if SANITIZER_LINUX

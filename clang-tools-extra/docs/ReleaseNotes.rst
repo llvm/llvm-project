@@ -103,6 +103,12 @@ Improvements to clang-tidy
   Flags uses of ``absl::StrCat()`` to append to a ``std::string``. Suggests
   ``absl::StrAppend()`` should be used instead.
 
+- New :doc:`cppcoreguidelines-macro-usage
+  <clang-tidy/checks/cppcoreguidelines-macro-usage>` check.
+
+  Finds macro usage that is considered problematic because better language
+  constructs exist for the task.
+
 - New :doc:`misc-non-private-member-variables-in-classes
   <clang-tidy/checks/misc-non-private-member-variables-in-classes>` check.
 
@@ -152,6 +158,10 @@ Improvements to clang-tidy
   :doc:`readability-uppercase-literal-suffix
   <clang-tidy/checks/readability-uppercase-literal-suffix>`
   added.
+
+- The :doc:`readability-redundant-smartptr-get
+  <clang-tidy/checks/readability-redundant-smartptr-get>` check does not warn
+  about calls inside macros anymore by default.
 
 Improvements to include-fixer
 -----------------------------

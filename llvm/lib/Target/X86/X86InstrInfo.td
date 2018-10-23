@@ -291,6 +291,8 @@ def X86lock_dec  : SDNode<"X86ISD::LDEC",  SDTLockUnaryArithWithFlags,
 
 def X86bextr  : SDNode<"X86ISD::BEXTR",  SDTIntBinOp>;
 
+def X86bzhi   : SDNode<"X86ISD::BZHI",   SDTIntBinOp>;
+
 def X86mul_imm : SDNode<"X86ISD::MUL_IMM", SDTIntBinOp>;
 
 def X86WinAlloca : SDNode<"X86ISD::WIN_ALLOCA", SDT_X86WIN_ALLOCA,
@@ -2454,9 +2456,9 @@ multiclass bmi_bzhi<bits<8> opc, string mnemonic, RegisterClass RC,
 
 let Predicates = [HasBMI2], Defs = [EFLAGS] in {
   defm BZHI32 : bmi_bzhi<0xF5, "bzhi{l}", GR32, i32mem,
-                         int_x86_bmi_bzhi_32, loadi32, WriteBZHI>;
+                         X86bzhi, loadi32, WriteBZHI>;
   defm BZHI64 : bmi_bzhi<0xF5, "bzhi{q}", GR64, i64mem,
-                         int_x86_bmi_bzhi_64, loadi64, WriteBZHI>, VEX_W;
+                         X86bzhi, loadi64, WriteBZHI>, VEX_W;
 }
 
 def CountTrailingOnes : SDNodeXForm<imm, [{
@@ -2512,18 +2514,6 @@ let Predicates = [HasBMI2] in {
   multiclass bmi_bzhi_patterns<RegisterClass RC, int bitwidth, ValueType VT,
                                Instruction DstInst, X86MemOperand x86memop,
                                Instruction DstMemInst> {
-    // x & ((1 << y) - 1)
-    defm : _bmi_bzhi_pattern<(and RC:$src, (add (shl 1, GR8:$lz), -1)),
-                             (and (x86memop addr:$src),
-                                  (add (shl 1, GR8:$lz), -1)),
-                             RC, VT, DstInst, DstMemInst>;
-
-    // x & ~(-1 << y)
-    defm : _bmi_bzhi_pattern<(and RC:$src, (xor (shl -1, GR8:$lz), -1)),
-                             (and (x86memop addr:$src),
-                                  (xor (shl -1, GR8:$lz), -1)),
-                             RC, VT, DstInst, DstMemInst>;
-
     // x & (-1 >> (bitwidth - y))
     defm : _bmi_bzhi_pattern<(and RC:$src, (srl -1, (sub bitwidth, GR8:$lz))),
                              (and (x86memop addr:$src),
@@ -2976,6 +2966,8 @@ def : MnemonicAlias<"popf",  "popfl", "att">, Requires<[In32BitMode]>;
 def : MnemonicAlias<"popf",  "popfq", "att">, Requires<[In64BitMode]>;
 def : MnemonicAlias<"popf",  "popfq", "intel">, Requires<[In64BitMode]>;
 def : MnemonicAlias<"popfd", "popfl", "att">;
+def : MnemonicAlias<"popfw", "popf",  "intel">, Requires<[In32BitMode]>;
+def : MnemonicAlias<"popfw", "popf",  "intel">, Requires<[In64BitMode]>;
 
 // FIXME: This is wrong for "push reg".  "push %bx" should turn into pushw in
 // all modes.  However: "push (addr)" and "push $42" should default to
@@ -2988,6 +2980,8 @@ def : MnemonicAlias<"pushf",  "pushfl", "att">, Requires<[In32BitMode]>;
 def : MnemonicAlias<"pushf",  "pushfq", "att">, Requires<[In64BitMode]>;
 def : MnemonicAlias<"pushf",  "pushfq", "intel">, Requires<[In64BitMode]>;
 def : MnemonicAlias<"pushfd", "pushfl", "att">;
+def : MnemonicAlias<"pushfw", "pushf",  "intel">, Requires<[In32BitMode]>;
+def : MnemonicAlias<"pushfw", "pushf",  "intel">, Requires<[In64BitMode]>;
 
 def : MnemonicAlias<"popad",  "popal",  "intel">, Requires<[Not64BitMode]>;
 def : MnemonicAlias<"pushad", "pushal", "intel">, Requires<[Not64BitMode]>;

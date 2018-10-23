@@ -414,7 +414,8 @@ public:
                               MachineInstr **KilledDef = nullptr) const;
   void replaceInstrWithLI(MachineInstr &MI, const LoadImmediateInfo &LII) const;
 
-  bool instrHasImmForm(const MachineInstr &MI, ImmInstrInfo &III) const;
+  bool instrHasImmForm(const MachineInstr &MI, ImmInstrInfo &III,
+                       bool PostRA) const;
 
   /// getRegNumForOperand - some operands use different numbering schemes
   /// for the same registers. For example, a VSX instruction may have any of

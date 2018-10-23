@@ -23,6 +23,7 @@
 
 struct perf_event_attr;
 
+namespace llvm {
 namespace exegesis {
 namespace pfm {
 
@@ -102,5 +103,6 @@ void Measure(
 
 } // namespace pfm
 } // namespace exegesis
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_EXEGESIS_PERFHELPER_H

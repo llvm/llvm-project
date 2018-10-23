@@ -6441,7 +6441,7 @@ static bool isVarOnPath(IndirectLocalPath &Path, VarDecl *VD) {
 }
 
 static bool pathContainsInit(IndirectLocalPath &Path) {
-  return std::any_of(Path.begin(), Path.end(), [=](IndirectLocalPathEntry E) {
+  return llvm::any_of(Path, [=](IndirectLocalPathEntry E) {
     return E.Kind == IndirectLocalPathEntry::DefaultInit ||
            E.Kind == IndirectLocalPathEntry::VarInit;
   });

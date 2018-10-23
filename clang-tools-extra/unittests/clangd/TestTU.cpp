@@ -16,9 +16,9 @@
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/Utils.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
-using namespace llvm;
 
 ParsedAST TestTU::build() const {
   std::string FullFilename = testPath(Filename),
@@ -57,7 +57,7 @@ std::unique_ptr<SymbolIndex> TestTU::index() const {
   return std::move(Idx);
 }
 
-const Symbol &findSymbol(const SymbolSlab &Slab, llvm::StringRef QName) {
+const Symbol &findSymbol(const SymbolSlab &Slab, StringRef QName) {
   const Symbol *Result = nullptr;
   for (const Symbol &S : Slab) {
     if (QName != (S.Scope + S.Name).str())
@@ -78,13 +78,13 @@ const Symbol &findSymbol(const SymbolSlab &Slab, llvm::StringRef QName) {
   return *Result;
 }
 
-const NamedDecl &findDecl(ParsedAST &AST, llvm::StringRef QName) {
-  llvm::SmallVector<llvm::StringRef, 4> Components;
+const NamedDecl &findDecl(ParsedAST &AST, StringRef QName) {
+  SmallVector<StringRef, 4> Components;
   QName.split(Components, "::");
 
   auto &Ctx = AST.getASTContext();
   auto LookupDecl = [&Ctx](const DeclContext &Scope,
-                           llvm::StringRef Name) -> const NamedDecl & {
+                           StringRef Name) -> const NamedDecl & {
     auto LookupRes = Scope.lookup(DeclarationName(&Ctx.Idents.get(Name)));
     assert(!LookupRes.empty() && "Lookup failed");
     assert(LookupRes.size() == 1 && "Lookup returned multiple results");
@@ -103,7 +103,7 @@ const NamedDecl &findAnyDecl(ParsedAST &AST,
                              std::function<bool(const NamedDecl &)> Callback) {
   struct Visitor : RecursiveASTVisitor<Visitor> {
     decltype(Callback) CB;
-    llvm::SmallVector<const NamedDecl *, 1> Decls;
+    SmallVector<const NamedDecl *, 1> Decls;
     bool VisitNamedDecl(const NamedDecl *ND) {
       if (CB(*ND))
         Decls.push_back(ND);
@@ -120,7 +120,7 @@ const NamedDecl &findAnyDecl(ParsedAST &AST,
   return *Visitor.Decls.front();
 }
 
-const NamedDecl &findAnyDecl(ParsedAST &AST, llvm::StringRef Name) {
+const NamedDecl &findAnyDecl(ParsedAST &AST, StringRef Name) {
   return findAnyDecl(AST, [Name](const NamedDecl &ND) {
     if (auto *ID = ND.getIdentifier())
       if (ID->getName() == Name)

@@ -63,6 +63,7 @@
 
 using namespace llvm;
 using namespace reassociate;
+using namespace PatternMatch;
 
 #define DEBUG_TYPE "reassociate"
 
@@ -125,10 +126,10 @@ XorOpnd::XorOpnd(Value *V) {
     Value *V0 = I->getOperand(0);
     Value *V1 = I->getOperand(1);
     const APInt *C;
-    if (match(V0, PatternMatch::m_APInt(C)))
+    if (match(V0, m_APInt(C)))
       std::swap(V0, V1);
 
-    if (match(V1, PatternMatch::m_APInt(C))) {
+    if (match(V1, m_APInt(C))) {
       ConstPart = *C;
       SymbolicPart = V0;
       isOr = (I->getOpcode() == Instruction::Or);
@@ -1304,7 +1305,7 @@ Value *ReassociatePass::OptimizeXor(Instruction *I,
     Value *V = Ops[i].Op;
     const APInt *C;
     // TODO: Support non-splat vectors.
-    if (match(V, PatternMatch::m_APInt(C))) {
+    if (match(V, m_APInt(C))) {
       ConstOpnd ^= *C;
     } else {
       XorOpnd O(V);

@@ -548,14 +548,15 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       // For tail calls, no return PC information is needed. For regular calls,
       // the return PC is needed to disambiguate paths in the call graph which
       // could lead to some target function.
-      const MCSymbol *ReturnPC = IsTail ? nullptr : getLabelAfterInsn(&MI);
+      const MCExpr *PCOffset =
+          IsTail ? nullptr : getFunctionLocalOffsetAfterInsn(&MI);
 
-      assert((IsTail || ReturnPC) && "Call without return PC information");
+      assert((IsTail || PCOffset) && "Call without return PC information");
       LLVM_DEBUG(dbgs() << "CallSiteEntry: " << MF.getName() << " -> "
                         << CalleeDecl->getName() << (IsTail ? " [tail]" : "")
                         << "\n");
       CU.constructCallSiteEntryDIE(ScopeDIE, *CalleeDecl->getSubprogram(),
-                                   IsTail, ReturnPC);
+                                   IsTail, PCOffset);
     }
   }
 }

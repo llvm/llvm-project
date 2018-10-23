@@ -21,11 +21,11 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
-using namespace llvm;
-
 namespace {
+
 using testing::ElementsAre;
 using testing::Field;
 using testing::IsEmpty;
@@ -374,7 +374,7 @@ int [[bar_not_preamble]];
   // Make the compilation paths appear as ../src/foo.cpp in the compile
   // commands.
   SmallString<32> RelPathPrefix("..");
-  llvm::sys::path::append(RelPathPrefix, "src");
+  sys::path::append(RelPathPrefix, "src");
   std::string BuildDir = testPath("build");
   MockCompilationDatabase CDB(BuildDir, RelPathPrefix);
 
@@ -1243,7 +1243,7 @@ TEST(FindReferences, NoQueryForLocalSymbols) {
   struct RecordingIndex : public MemIndex {
     mutable Optional<DenseSet<SymbolID>> RefIDs;
     void refs(const RefsRequest &Req,
-              llvm::function_ref<void(const Ref &)>) const override {
+              function_ref<void(const Ref &)>) const override {
       RefIDs = Req.IDs;
     }
   };
@@ -1267,9 +1267,9 @@ TEST(FindReferences, NoQueryForLocalSymbols) {
     auto AST = TestTU::withCode(File.code()).build();
     findReferences(AST, File.point(), &Rec);
     if (T.WantQuery)
-      EXPECT_NE(Rec.RefIDs, llvm::None) << T.AnnotatedCode;
+      EXPECT_NE(Rec.RefIDs, None) << T.AnnotatedCode;
     else
-      EXPECT_EQ(Rec.RefIDs, llvm::None) << T.AnnotatedCode;
+      EXPECT_EQ(Rec.RefIDs, None) << T.AnnotatedCode;
   }
 }
 

@@ -19,8 +19,8 @@ namespace clangd {
 using namespace llvm;
 
 IntrusiveRefCntPtr<vfs::FileSystem>
-buildTestFS(llvm::StringMap<std::string> const &Files,
-            llvm::StringMap<time_t> const &Timestamps) {
+buildTestFS(StringMap<std::string> const &Files,
+            StringMap<time_t> const &Timestamps) {
   IntrusiveRefCntPtr<vfs::InMemoryFileSystem> MemFS(
       new vfs::InMemoryFileSystem);
   MemFS->setCurrentWorkingDirectory(testRoot());
@@ -56,7 +56,7 @@ MockCompilationDatabase::getCompileCommand(PathRef File) const {
   } else {
     // Build a relative path using RelPathPrefix.
     SmallString<32> RelativeFilePath(RelPathPrefix);
-    llvm::sys::path::append(RelativeFilePath, FileName);
+    sys::path::append(RelativeFilePath, FileName);
     CommandLine.push_back(RelativeFilePath.str());
   }
 
@@ -90,29 +90,26 @@ class TestScheme : public URIScheme {
 public:
   static const char *Scheme;
 
-  llvm::Expected<std::string>
-  getAbsolutePath(llvm::StringRef /*Authority*/, llvm::StringRef Body,
-                  llvm::StringRef HintPath) const override {
+  Expected<std::string> getAbsolutePath(StringRef /*Authority*/, StringRef Body,
+                                        StringRef HintPath) const override {
     assert(HintPath.startswith(testRoot()));
     if (!Body.consume_front("/"))
-      return llvm::make_error<llvm::StringError>(
+      return make_error<StringError>(
           "Body of an unittest: URI must start with '/'",
-          llvm::inconvertibleErrorCode());
-    llvm::SmallString<16> Path(Body.begin(), Body.end());
-    llvm::sys::path::native(Path);
+          inconvertibleErrorCode());
+    SmallString<16> Path(Body.begin(), Body.end());
+    sys::path::native(Path);
     return testPath(Path);
   }
 
-  llvm::Expected<URI>
-  uriFromAbsolutePath(llvm::StringRef AbsolutePath) const override {
-    llvm::StringRef Body = AbsolutePath;
+  Expected<URI> uriFromAbsolutePath(StringRef AbsolutePath) const override {
+    StringRef Body = AbsolutePath;
     if (!Body.consume_front(testRoot()))
-      return llvm::make_error<llvm::StringError>(
-          AbsolutePath + "does not start with " + testRoot(),
-          llvm::inconvertibleErrorCode());
+      return make_error<StringError>(AbsolutePath + "does not start with " +
+                                         testRoot(),
+                                     inconvertibleErrorCode());
 
-    return URI(Scheme, /*Authority=*/"",
-               llvm::sys::path::convert_to_slash(Body));
+    return URI(Scheme, /*Authority=*/"", sys::path::convert_to_slash(Body));
   }
 };
 
