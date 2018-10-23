@@ -9,7 +9,7 @@ struct OSMetaClass;
 
 struct OSObject {
   virtual void retain();
-  virtual void release();
+  virtual void release() {};
   virtual ~OSObject(){}
 
   static OSObject *generateObject(int);
