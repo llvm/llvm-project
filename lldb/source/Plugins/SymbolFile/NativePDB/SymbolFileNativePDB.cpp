@@ -868,7 +868,6 @@ TypeSP SymbolFileNativePDB::CreateAndCacheType(PdbSymUid type_uid) {
     lldbassert(record_decl);
 
     TypeIndex ti(type_id.index);
-    CVType cvt = m_index->tpi().getType(ti);
     m_uid_to_decl[best_uid.toOpaqueId()] = record_decl;
     m_decl_to_status[record_decl] =
         DeclStatus(best_uid.toOpaqueId(), Type::eResolveStateForward);
