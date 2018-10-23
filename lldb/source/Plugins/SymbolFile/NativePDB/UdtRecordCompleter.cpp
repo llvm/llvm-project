@@ -108,8 +108,7 @@ Error UdtRecordCompleter::visitKnownMember(
   lldb::AccessType access =
       TranslateMemberAccess(static_data_member.getAccess());
   ClangASTContext::AddVariableToRecordType(
-      m_derived_ct, static_data_member.Name.str().c_str(), complete_member_type,
-      access);
+      m_derived_ct, static_data_member.Name, complete_member_type, access);
 
   // FIXME: Add a PdbSymUid namespace for field list members and update
   // the m_uid_to_decl map with this decl.
@@ -130,8 +129,7 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
   lldb::AccessType access = TranslateMemberAccess(data_member.getAccess());
 
   clang::FieldDecl *decl = ClangASTContext::AddFieldToRecordType(
-      m_derived_ct, data_member.Name.str().c_str(), complete_member_type,
-      access, 0);
+      m_derived_ct, data_member.Name, complete_member_type, access, 0);
   // FIXME: Add a PdbSymUid namespace for field list members and update
   // the m_uid_to_decl map with this decl.
 

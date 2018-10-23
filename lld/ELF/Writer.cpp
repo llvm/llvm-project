@@ -1533,7 +1533,6 @@ static bool computeIsPreemptible(const Symbol &B) {
 
 // Create output section objects and add them to OutputSections.
 template <class ELFT> void Writer<ELFT>::finalizeSections() {
-  Out::DebugInfo = findSection(".debug_info");
   Out::PreinitArray = findSection(".preinit_array");
   Out::InitArray = findSection(".init_array");
   Out::FiniArray = findSection(".fini_array");
@@ -1757,9 +1756,13 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
   // program to fail to link due to relocation overflow, if their
   // program text is above 2 GiB. We use the address of the .text
   // section instead to prevent that failure.
+  //
+  // In a rare sitaution, .text section may not exist. If that's the
+  // case, use the image base address as a last resort.
   OutputSection *Default = findSection(".text");
   if (!Default)
     Default = Out::ElfHeader;
+
   auto Define = [=](StringRef Start, StringRef End, OutputSection *OS) {
     if (OS) {
       addOptionalRegular(Start, OS, 0);

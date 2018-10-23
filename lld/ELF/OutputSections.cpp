@@ -32,7 +32,6 @@ using namespace lld::elf;
 
 uint8_t Out::First;
 PhdrEntry *Out::TlsPhdr;
-OutputSection *Out::DebugInfo;
 OutputSection *Out::ElfHeader;
 OutputSection *Out::ProgramHeaders;
 OutputSection *Out::PreinitArray;
