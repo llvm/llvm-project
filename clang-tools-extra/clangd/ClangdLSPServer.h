@@ -129,10 +129,6 @@ private:
     void setExtraFlagsForFile(PathRef File,
                               std::vector<std::string> ExtraFlags);
 
-    /// Set the compile commands directory to \p P.
-    /// Only valid for directory-based CDB, no-op and error log on InMemoryCDB;
-    void setCompileCommandsDir(Path P);
-
     /// Returns a CDB that should be used to get compile commands for the
     /// current instance of ClangdLSPServer.
     GlobalCompilationDatabase &getCDB() { return *CDB; }
@@ -160,10 +156,6 @@ private:
   void notify(StringRef Method, llvm::json::Value Params);
   void reply(llvm::json::Value ID, llvm::Expected<llvm::json::Value> Result);
 
-  // Various ClangdServer parameters go here. It's important they're created
-  // before ClangdServer.
-  CompilationDB CDB;
-
   RealFileSystemProvider FSProvider;
   /// Options used for code completion
   clangd::CodeCompleteOptions CCOpts;
@@ -179,6 +171,9 @@ private:
   // Store of the current versions of the open documents.
   DraftStore DraftMgr;
 
+  // The CDB is created by the "initialize" LSP method.
+  bool UseInMemoryCDB; // FIXME: make this a capability.
+  llvm::Optional<CompilationDB> CDB;
   // The ClangdServer is created by the "initialize" LSP method.
   // It is destroyed before run() returns, to ensure worker threads exit.
   ClangdServer::Options ClangdServerOpts;
