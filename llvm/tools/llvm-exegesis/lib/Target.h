@@ -28,6 +28,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
 
+namespace llvm {
 namespace exegesis {
 
 class ExegesisTarget {
@@ -100,5 +101,6 @@ private:
 };
 
 } // namespace exegesis
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_EXEGESIS_TARGET_H

@@ -10,6 +10,7 @@
 #include "../Common/AssemblerUtils.h"
 #include "ARMInstrInfo.h"
 
+namespace llvm {
 namespace exegesis {
 namespace {
 
@@ -47,3 +48,4 @@ TEST_F(ARMMachineFunctionGeneratorTest, DISABLED_JitFunctionADDrr) {
 
 } // namespace
 } // namespace exegesis
+} // namespace llvm

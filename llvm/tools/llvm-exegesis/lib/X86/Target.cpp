@@ -17,9 +17,61 @@
 #include "X86Subtarget.h"
 #include "llvm/MC/MCInstBuilder.h"
 
+namespace llvm {
 namespace exegesis {
 
 namespace {
+
+// A chunk of instruction's operands that represents a single memory access.
+struct MemoryOperandRange {
+  MemoryOperandRange(llvm::ArrayRef<Operand> Operands) : Ops(Operands) {}
+
+  // Setup InstructionTemplate so the memory access represented by this object
+  // points to [reg] + offset.
+  void fillOrDie(InstructionTemplate &IT, unsigned Reg, unsigned Offset) {
+    switch (Ops.size()) {
+    case 5:
+      IT.getValueFor(Ops[0]) = llvm::MCOperand::createReg(Reg);    // BaseReg
+      IT.getValueFor(Ops[1]) = llvm::MCOperand::createImm(1);      // ScaleAmt
+      IT.getValueFor(Ops[2]) = llvm::MCOperand::createReg(0);      // IndexReg
+      IT.getValueFor(Ops[3]) = llvm::MCOperand::createImm(Offset); // Disp
+      IT.getValueFor(Ops[4]) = llvm::MCOperand::createReg(0);      // Segment
+      break;
+    default:
+      llvm::errs() << Ops.size() << "-op are not handled right now ("
+                   << IT.Instr.Name << ")\n";
+      llvm_unreachable("Invalid memory configuration");
+    }
+  }
+
+  // Returns whether Range can be filled.
+  static bool isValid(const MemoryOperandRange &Range) {
+    return Range.Ops.size() == 5;
+  }
+
+  // Returns whether Op is a valid memory operand.
+  static bool isMemoryOperand(const Operand &Op) {
+    return Op.isMemory() && Op.isExplicit();
+  }
+
+  llvm::ArrayRef<Operand> Ops;
+};
+
+// X86 memory access involve non constant number of operands, this function
+// extracts contiguous memory operands into MemoryOperandRange so it's easier to
+// check and fill.
+static std::vector<MemoryOperandRange>
+getMemoryOperandRanges(llvm::ArrayRef<Operand> Operands) {
+  std::vector<MemoryOperandRange> Result;
+  while (!Operands.empty()) {
+    Operands = Operands.drop_until(MemoryOperandRange::isMemoryOperand);
+    auto MemoryOps = Operands.take_while(MemoryOperandRange::isMemoryOperand);
+    if (!MemoryOps.empty())
+      Result.push_back(MemoryOps);
+    Operands = Operands.drop_front(MemoryOps.size());
+  }
+  return Result;
+}
 
 static llvm::Error IsInvalidOpcode(const Instruction &Instr) {
   const auto OpcodeName = Instr.Name;
@@ -27,6 +79,23 @@ static llvm::Error IsInvalidOpcode(const Instruction &Instr) {
       OpcodeName.startswith("ADJCALLSTACK"))
     return llvm::make_error<BenchmarkFailure>(
         "unsupported opcode: Push/Pop/AdjCallStack");
+  const bool ValidMemoryOperands = llvm::all_of(
+      getMemoryOperandRanges(Instr.Operands), MemoryOperandRange::isValid);
+  if (!ValidMemoryOperands)
+    return llvm::make_error<BenchmarkFailure>(
+        "unsupported opcode: non uniform memory access");
+  // We do not handle instructions with OPERAND_PCREL.
+  for (const Operand &Op : Instr.Operands)
+    if (Op.isExplicit() &&
+        Op.getExplicitOperandInfo().OperandType == llvm::MCOI::OPERAND_PCREL)
+      return llvm::make_error<BenchmarkFailure>(
+          "unsupported opcode: PC relative operand");
+  for (const Operand &Op : Instr.Operands)
+    if (Op.isReg() && Op.isExplicit() &&
+        Op.getExplicitOperandInfo().RegClass ==
+            llvm::X86::SEGMENT_REGRegClassID)
+      return llvm::make_error<BenchmarkFailure>(
+          "unsupported opcode: access segment memory");
   // We do not handle second-form X87 instructions. We only handle first-form
   // ones (_Fp), see comment in X86InstrFPStack.td.
   for (const Operand &Op : Instr.Operands)
@@ -281,31 +350,8 @@ class ExegesisX86Target : public ExegesisTarget {
                           unsigned Offset) const override {
     // FIXME: For instructions that read AND write to memory, we use the same
     // value for input and output.
-    for (size_t I = 0, E = IT.Instr.Operands.size(); I < E; ++I) {
-      const Operand *Op = &IT.Instr.Operands[I];
-      if (Op->isExplicit() && Op->isMemory()) {
-        // Case 1: 5-op memory.
-        assert((I + 5 <= E) && "x86 memory references are always 5 ops");
-        IT.getValueFor(*Op) = llvm::MCOperand::createReg(Reg); // BaseReg
-        Op = &IT.Instr.Operands[++I];
-        assert(Op->isMemory());
-        assert(Op->isExplicit());
-        IT.getValueFor(*Op) = llvm::MCOperand::createImm(1); // ScaleAmt
-        Op = &IT.Instr.Operands[++I];
-        assert(Op->isMemory());
-        assert(Op->isExplicit());
-        IT.getValueFor(*Op) = llvm::MCOperand::createReg(0); // IndexReg
-        Op = &IT.Instr.Operands[++I];
-        assert(Op->isMemory());
-        assert(Op->isExplicit());
-        IT.getValueFor(*Op) = llvm::MCOperand::createImm(Offset); // Disp
-        Op = &IT.Instr.Operands[++I];
-        assert(Op->isMemory());
-        assert(Op->isExplicit());
-        IT.getValueFor(*Op) = llvm::MCOperand::createReg(0); // Segment
-        // Case2: segment:index addressing. We assume that ES is 0.
-      }
-    }
+    for (auto &MemoryRange : getMemoryOperandRanges(IT.Instr.Operands))
+      MemoryRange.fillOrDie(IT, Reg, Offset);
   }
 
   std::vector<llvm::MCInst> setRegTo(const llvm::MCSubtargetInfo &STI,
@@ -378,3 +424,4 @@ void InitializeX86ExegesisTarget() {
 }
 
 } // namespace exegesis
+} // namespace llvm

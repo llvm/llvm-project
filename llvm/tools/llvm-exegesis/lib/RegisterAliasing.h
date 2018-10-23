@@ -22,6 +22,7 @@
 #include "llvm/ADT/PackedVector.h"
 #include "llvm/MC/MCRegisterInfo.h"
 
+namespace llvm {
 namespace exegesis {
 
 // Returns the registers that are aliased by the ones set in SourceBits.
@@ -104,5 +105,6 @@ private:
 };
 
 } // namespace exegesis
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_EXEGESIS_ALIASINGTRACKER_H

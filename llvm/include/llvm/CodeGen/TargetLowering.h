@@ -3644,6 +3644,9 @@ public:
   /// \returns True, if the expansion was successful, false otherwise
   bool expandFP_TO_SINT(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
 
+  /// Expand fminnum/fmaxnum into fminnum_ieee/fmaxnum_ieee with quieted inputs.
+  SDValue expandFMINNUM_FMAXNUM(SDNode *N, SelectionDAG &DAG) const;
+
   /// Turn load of vector type into a load of the individual elements.
   /// \param LD load to expand
   /// \returns MERGE_VALUEs of the scalar loads with their chains.
@@ -3681,10 +3684,9 @@ public:
   SDValue getVectorElementPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
                                   SDValue Index) const;
 
-  /// Method for building the DAG expansion of ISD::SADDSAT. This method accepts
-  /// integers or vectors of integers as its arguments.
-  SDValue getExpandedSignedSaturationAddition(SDNode *Node,
-                                              SelectionDAG &DAG) const;
+  /// Method for building the DAG expansion of ISD::[US]ADDSAT. This method
+  /// accepts integers or vectors of integers as its arguments.
+  SDValue getExpandedSaturationAddition(SDNode *Node, SelectionDAG &DAG) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks

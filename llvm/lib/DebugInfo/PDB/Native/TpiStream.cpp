@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
+#include "llvm/DebugInfo/CodeView/RecordName.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordHelpers.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
@@ -158,6 +159,20 @@ void TpiStream::buildHashMap() {
   }
 }
 
+std::vector<TypeIndex> TpiStream::findRecordsByName(StringRef Name) const {
+  uint32_t Bucket = hashStringV1(Name) % Header->NumHashBuckets;
+  if (Bucket > HashMap.size())
+    return {};
+
+  std::vector<TypeIndex> Result;
+  for (TypeIndex TI : HashMap[Bucket]) {
+    std::string ThisName = computeTypeName(*Types, TI);
+    if (ThisName == Name)
+      Result.push_back(TI);
+  }
+  return Result;
+}
+
 bool TpiStream::supportsTypeLookup() const { return !HashMap.empty(); }
 
 Expected<TypeIndex>
@@ -197,6 +212,10 @@ TpiStream::findFullDeclForForwardRef(TypeIndex ForwardRefTI) const {
       return TI;
   }
   return ForwardRefTI;
+}
+
+codeview::CVType TpiStream::getType(codeview::TypeIndex Index) {
+  return Types->getType(Index);
 }
 
 BinarySubstreamRef TpiStream::getTypeRecordsSubstream() const {

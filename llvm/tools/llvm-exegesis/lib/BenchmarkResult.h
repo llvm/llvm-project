@@ -28,6 +28,7 @@
 #include <unordered_map>
 #include <vector>
 
+namespace llvm {
 namespace exegesis {
 
 struct InstructionBenchmarkKey {
@@ -111,5 +112,6 @@ private:
 };
 
 } // namespace exegesis
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_EXEGESIS_BENCHMARKRESULT_H

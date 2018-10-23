@@ -61,6 +61,10 @@ public:
   Expected<codeview::TypeIndex>
   findFullDeclForForwardRef(codeview::TypeIndex ForwardRefTI) const;
 
+  std::vector<codeview::TypeIndex> findRecordsByName(StringRef Name) const;
+
+  codeview::CVType getType(codeview::TypeIndex Index);
+
   BinarySubstreamRef getTypeRecordsSubstream() const;
 
   Error commit();

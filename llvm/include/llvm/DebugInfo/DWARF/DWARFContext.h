@@ -76,7 +76,7 @@ class DWARFContext : public DIContext {
 
   DWARFUnitVector DWOUnits;
   std::unique_ptr<DWARFDebugAbbrev> AbbrevDWO;
-  std::unique_ptr<DWARFDebugLocDWO> LocDWO;
+  std::unique_ptr<DWARFDebugLoclists> LocDWO;
 
   /// The maximum DWARF version of all units.
   unsigned MaxVersion = 0;
@@ -262,7 +262,7 @@ public:
   const DWARFDebugAbbrev *getDebugAbbrevDWO();
 
   /// Get a pointer to the parsed DebugLoc object.
-  const DWARFDebugLocDWO *getDebugLocDWO();
+  const DWARFDebugLoclists *getDebugLocDWO();
 
   /// Get a pointer to the parsed DebugAranges object.
   const DWARFDebugAranges *getDebugAranges();

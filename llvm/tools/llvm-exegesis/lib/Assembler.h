@@ -32,6 +32,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
+namespace llvm {
 namespace exegesis {
 
 class ExegesisTarget;
@@ -82,5 +83,6 @@ struct ExecutableFunction {
 };
 
 } // namespace exegesis
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_EXEGESIS_ASSEMBLER_H

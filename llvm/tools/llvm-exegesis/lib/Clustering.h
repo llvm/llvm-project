@@ -19,6 +19,7 @@
 #include "llvm/Support/Error.h"
 #include <vector>
 
+namespace llvm {
 namespace exegesis {
 
 class InstructionBenchmarkClustering {
@@ -109,5 +110,6 @@ private:
 };
 
 } // namespace exegesis
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_EXEGESIS_CLUSTERING_H

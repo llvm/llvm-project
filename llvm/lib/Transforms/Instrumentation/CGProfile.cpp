@@ -88,11 +88,10 @@ void CGProfilePass::addModuleFlags(
   std::vector<Metadata *> Nodes;
 
   for (auto E : Counts) {
-    SmallVector<Metadata *, 3> Vals;
-    Vals.push_back(ValueAsMetadata::get(E.first.first));
-    Vals.push_back(ValueAsMetadata::get(E.first.second));
-    Vals.push_back(MDB.createConstant(
-        ConstantInt::get(Type::getInt64Ty(Context), E.second)));
+    Metadata *Vals[] = {ValueAsMetadata::get(E.first.first),
+                        ValueAsMetadata::get(E.first.second),
+                        MDB.createConstant(ConstantInt::get(
+                            Type::getInt64Ty(Context), E.second))};
     Nodes.push_back(MDNode::get(Context, Vals));
   }
 

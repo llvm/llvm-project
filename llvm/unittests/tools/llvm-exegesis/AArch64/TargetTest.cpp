@@ -9,6 +9,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+namespace llvm {
 namespace exegesis {
 
 void InitializeAArch64ExegesisTarget();
@@ -60,3 +61,4 @@ TEST_F(AArch64TargetTest, SetRegToConstant) {
 
 } // namespace
 } // namespace exegesis
+} // namespace llvm

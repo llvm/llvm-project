@@ -78,6 +78,7 @@
 // In that case we just use a greedy register assignment and hope for the
 // best.
 
+namespace llvm {
 namespace exegesis {
 
 static llvm::SmallVector<const Variable *, 8>
@@ -252,3 +253,4 @@ UopsBenchmarkRunner::runMeasurements(const FunctionExecutor &Executor) const {
 constexpr const size_t UopsSnippetGenerator::kMinNumDifferentAddresses;
 
 } // namespace exegesis
+} // namespace llvm

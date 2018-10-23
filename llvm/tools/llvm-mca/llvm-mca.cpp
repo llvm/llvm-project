@@ -68,13 +68,15 @@ static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"));
 
 static cl::opt<std::string>
-    ArchName("march", cl::desc("Target arch to assemble for, "
-                               "see -version for available targets"),
+    ArchName("march",
+             cl::desc("Target arch to assemble for, "
+                      "see -version for available targets"),
              cl::cat(ToolOptions));
 
 static cl::opt<std::string>
-    TripleName("mtriple", cl::desc("Target triple to assemble for, "
-                                   "see -version for available targets"),
+    TripleName("mtriple",
+               cl::desc("Target triple to assemble for, "
+                        "see -version for available targets"),
                cl::cat(ToolOptions));
 
 static cl::opt<std::string>
@@ -270,9 +272,10 @@ public:
       : MCStreamer(Context), Regions(R) {}
 
   // We only want to intercept the emission of new instructions.
-  virtual void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+  virtual void EmitInstruction(const MCInst &Inst,
+                               const MCSubtargetInfo & /* unused */,
                                bool /* unused */) override {
-    Regions.addInstruction(llvm::make_unique<const MCInst>(Inst));
+    Regions.addInstruction(Inst);
   }
 
   bool EmitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
@@ -290,8 +293,7 @@ public:
   void EmitCOFFSymbolType(int Type) override {}
   void EndCOFFSymbolDef() override {}
 
-  const std::vector<std::unique_ptr<const MCInst>> &
-  GetInstructionSequence(unsigned Index) const {
+  ArrayRef<MCInst> GetInstructionSequence(unsigned Index) const {
     return Regions.getInstructionSequence(Index);
   }
 };
