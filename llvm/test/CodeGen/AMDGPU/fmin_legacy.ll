@@ -1,5 +1,9 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN-SAFE -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN-NONAN -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN-SAFE,SI-SAFE,GCN,FUNC %s
+; RUN: llc -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=SI-NONAN,GCN-NONAN,GCN,FUNC %s
+
+; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI-SAFE,GCN-SAFE,GCN,FUNC %s
+; RUN: llc -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI-NONAN,GCN-NONAN,GCN,FUNC %s
+
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope -check-prefix=EG -check-prefix=FUNC %s
 
 declare i32 @llvm.r600.read.tidig.x() #1
@@ -10,8 +14,13 @@ declare i32 @llvm.r600.read.tidig.x() #1
 
 ; FUNC-LABEL: {{^}}s_test_fmin_legacy_subreg_inputs_f32:
 ; EG: MIN *
-; GCN-SAFE: v_min_legacy_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
-; GCN-NONAN: v_min_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; SI-SAFE: v_min_legacy_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+
+; SI-NONAN: v_min_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+
+; VI-SAFE: v_cmp_nlt_f32_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
+
+; VI-NONAN: v_min_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @s_test_fmin_legacy_subreg_inputs_f32(float addrspace(1)* %out, <4 x float> %reg0) #0 {
    %r0 = extractelement <4 x float> %reg0, i32 0
    %r1 = extractelement <4 x float> %reg0, i32 1
@@ -22,13 +31,17 @@ define amdgpu_kernel void @s_test_fmin_legacy_subreg_inputs_f32(float addrspace(
 }
 
 ; FUNC-LABEL: {{^}}s_test_fmin_legacy_ule_f32:
-; GCN-DAG: s_load_dwordx2 s{{\[}}[[A:[0-9]+]]:[[B:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0xb
+; GCN-DAG: s_load_dwordx2 s{{\[}}[[A:[0-9]+]]:[[B:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
 
 ; GCN-DAG: v_mov_b32_e32 [[VB:v[0-9]+]], s[[B]]
 
-; GCN-SAFE: v_min_legacy_f32_e64 {{v[0-9]+}}, [[VB]], s[[A]]
-; GCN-NONAN: v_min_f32_e32 {{v[0-9]+}}, s[[A]], [[VB]]
+; SI-SAFE: v_min_legacy_f32_e64 {{v[0-9]+}}, [[VB]], s[[A]]
 
+; VI-SAFE: v_mov_b32_e32 [[VA:v[0-9]+]], s[[A]]
+; VI-SAFE: v_cmp_ngt_f32_e32 vcc, s[[A]], [[VB]]
+; VI-SAFE: v_cndmask_b32_e32 v{{[0-9]+}}, [[VB]], [[VA]]
+
+; GCN-NONAN: v_min_f32_e32 {{v[0-9]+}}, s[[A]], [[VB]]
 define amdgpu_kernel void @s_test_fmin_legacy_ule_f32(float addrspace(1)* %out, float %a, float %b) #0 {
   %cmp = fcmp ule float %a, %b
   %val = select i1 %cmp, float %a, float %b
@@ -36,13 +49,19 @@ define amdgpu_kernel void @s_test_fmin_legacy_ule_f32(float addrspace(1)* %out, 
   ret void
 }
 
+; Nsz also needed
+; FIXME: Should separate tests
 ; GCN-LABEL: {{^}}s_test_fmin_legacy_ule_f32_nnan_src:
-; GCN: s_load_dwordx2 s{{\[}}[[A:[0-9]+]]:[[B:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0xb
+; GCN: s_load_dwordx2 s{{\[}}[[A:[0-9]+]]:[[B:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
 
 ; GCN-DAG: v_add_f32_e64 [[ADD_A:v[0-9]+]], s[[A]], 1.0
 ; GCN-DAG: v_add_f32_e64 [[ADD_B:v[0-9]+]], s[[B]], 2.0
 
-; GCN-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[ADD_B]], [[ADD_A]]
+; SI-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[ADD_B]], [[ADD_A]]
+
+; VI-SAFE: v_cmp_ngt_f32_e32 vcc, [[ADD_A]], [[ADD_B]]
+; VI-SAFE: v_cndmask_b32_e32 {{v[0-9]+}}, [[ADD_B]], [[ADD_A]], vcc
+
 ; GCN-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[ADD_A]], [[ADD_B]]
 define amdgpu_kernel void @s_test_fmin_legacy_ule_f32_nnan_src(float addrspace(1)* %out, float %a, float %b) #0 {
   %a.nnan = fadd nnan float %a, 1.0
@@ -54,9 +73,14 @@ define amdgpu_kernel void @s_test_fmin_legacy_ule_f32_nnan_src(float addrspace(1
 }
 
 ; FUNC-LABEL: {{^}}test_fmin_legacy_ule_f32:
-; GCN: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; GCN: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
-; GCN-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
+; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
+
+; SI-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
+
+; VI-SAFE: v_cmp_ngt_f32_e32 vcc, [[A]], [[B]]
+; VI-SAFE: v_cndmask_b32_e32 v{{[0-9]+}}, [[B]], [[A]]
+
 ; GCN-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @test_fmin_legacy_ule_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
@@ -73,9 +97,14 @@ define amdgpu_kernel void @test_fmin_legacy_ule_f32(float addrspace(1)* %out, fl
 }
 
 ; FUNC-LABEL: {{^}}test_fmin_legacy_ole_f32:
-; GCN: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; GCN: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
-; GCN-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
+; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
+
+; SI-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
+
+; VI-SAFE v_cmp_le_f32_e32 vcc, [[A]], [[B]]
+; VI-SAFE: v_cndmask_b32_e32 v{{[0-9]+}}, [[B]], [[A]]
+
 ; GCN-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @test_fmin_legacy_ole_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
@@ -92,9 +121,14 @@ define amdgpu_kernel void @test_fmin_legacy_ole_f32(float addrspace(1)* %out, fl
 }
 
 ; FUNC-LABEL: {{^}}test_fmin_legacy_olt_f32:
-; GCN: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; GCN: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
-; GCN-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
+; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
+
+; SI-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
+
+; VI-SAFE v_cmp_lt_f32_e32 vcc, [[A]], [[B]]
+; VI-SAFE: v_cndmask_b32_e32 v{{[0-9]+}}, [[B]], [[A]]
+
 ; GCN-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @test_fmin_legacy_olt_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
@@ -111,9 +145,14 @@ define amdgpu_kernel void @test_fmin_legacy_olt_f32(float addrspace(1)* %out, fl
 }
 
 ; FUNC-LABEL: {{^}}test_fmin_legacy_ult_f32:
-; GCN: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; GCN: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
-; GCN-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
+; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
+
+; SI-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
+
+; VI-SAFE v_cmp_lt_f32_e32 vcc, [[A]], [[B]]
+; VI-SAFE: v_cndmask_b32_e32 v{{[0-9]+}}, [[B]], [[A]]
+
 ; GCN-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @test_fmin_legacy_ult_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
@@ -130,9 +169,14 @@ define amdgpu_kernel void @test_fmin_legacy_ult_f32(float addrspace(1)* %out, fl
 }
 
 ; FUNC-LABEL: {{^}}test_fmin_legacy_ult_v1f32:
-; GCN: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; GCN: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
-; GCN-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
+; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
+
+; SI-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
+
+; VI-SAFE v_cmp_lt_f32_e32 vcc, [[A]], [[B]]
+; VI-SAFE: v_cndmask_b32_e32 v{{[0-9]+}}, [[B]], [[A]]
+
 ; GCN-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @test_fmin_legacy_ult_v1f32(<1 x float> addrspace(1)* %out, <1 x float> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
@@ -149,10 +193,15 @@ define amdgpu_kernel void @test_fmin_legacy_ult_v1f32(<1 x float> addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}test_fmin_legacy_ult_v2f32:
-; GCN: buffer_load_dwordx2
-; GCN: buffer_load_dwordx2
-; GCN-SAFE: v_min_legacy_f32_e32
-; GCN-SAFE: v_min_legacy_f32_e32
+; GCN: {{buffer|flat}}_load_dwordx2
+; GCN: {{buffer|flat}}_load_dwordx2
+; SI-SAFE: v_min_legacy_f32_e32
+; SI-SAFE: v_min_legacy_f32_e32
+
+; VI-SAFE v_cmp_lt_f32_e32
+; VI-SAFE: v_cndmask_b32_e32
+; VI-SAFE v_cmp_lt_f32_e32
+; VI-SAFE: v_cndmask_b32_e32
 
 ; GCN-NONAN: v_min_f32_e32
 ; GCN-NONAN: v_min_f32_e32
@@ -171,13 +220,24 @@ define amdgpu_kernel void @test_fmin_legacy_ult_v2f32(<2 x float> addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}test_fmin_legacy_ult_v3f32:
-; GCN-SAFE: v_min_legacy_f32_e32
-; GCN-SAFE: v_min_legacy_f32_e32
-; GCN-SAFE: v_min_legacy_f32_e32
+; SI-SAFE: v_min_legacy_f32_e32
+; SI-SAFE: v_min_legacy_f32_e32
+; SI-SAFE: v_min_legacy_f32_e32
+; SI-SAFE-NOT: v_min_
+
+; VI-SAFE: v_cmp_nge_f32_e32
+; VI-SAFE: v_cndmask_b32_e32
+; VI-SAFE: v_cmp_nge_f32_e32
+; VI-SAFE: v_cndmask_b32_e32
+; VI-SAFE: v_cmp_nge_f32_e32
+; VI-SAFE: v_cndmask_b32_e32
+; VI-NOT: v_cmp
+; VI-NOT: v_cndmask
 
 ; GCN-NONAN: v_min_f32_e32
 ; GCN-NONAN: v_min_f32_e32
 ; GCN-NONAN: v_min_f32_e32
+; GCN-NONAN-NOT: v_min_
 define amdgpu_kernel void @test_fmin_legacy_ult_v3f32(<3 x float> addrspace(1)* %out, <3 x float> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
   %gep.0 = getelementptr <3 x float>, <3 x float> addrspace(1)* %in, i32 %tid
@@ -193,8 +253,8 @@ define amdgpu_kernel void @test_fmin_legacy_ult_v3f32(<3 x float> addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}test_fmin_legacy_ole_f32_multi_use:
-; GCN: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; GCN: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
+; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
+; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN-NOT: v_min
 ; GCN: v_cmp_le_f32
 ; GCN-NEXT: v_cndmask_b32

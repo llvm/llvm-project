@@ -10,6 +10,7 @@
 #include "../Common/AssemblerUtils.h"
 #include "X86InstrInfo.h"
 
+namespace llvm {
 namespace exegesis {
 
 void InitializeX86ExegesisTarget();
@@ -63,3 +64,4 @@ TEST_F(X86MachineFunctionGeneratorTest, DISABLED_JitFunctionMOV32ri) {
 
 } // namespace
 } // namespace exegesis
+} // namespace llvm

@@ -38,6 +38,7 @@ public:
   forEachTypesSections(function_ref<void(const DWARFSection &)> F) const {}
   virtual StringRef getAbbrevSection() const { return ""; }
   virtual const DWARFSection &getLocSection() const { return Dummy; }
+  virtual const DWARFSection &getLoclistsSection() const { return Dummy; }
   virtual StringRef getARangeSection() const { return ""; }
   virtual StringRef getDebugFrameSection() const { return ""; }
   virtual StringRef getEHFrameSection() const { return ""; }

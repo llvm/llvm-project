@@ -460,7 +460,7 @@ namespace {
 
     bool foldLoadStoreIntoMemOperand(SDNode *Node);
     MachineSDNode *matchBEXTRFromAndImm(SDNode *Node);
-    bool matchBEXTR(SDNode *Node);
+    bool matchBitExtract(SDNode *Node);
     bool shrinkAndImmediate(SDNode *N);
     bool isMaskZeroExtended(SDNode *N) const;
     bool tryShiftAmountMod(SDNode *N);
@@ -2681,15 +2681,19 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
   return true;
 }
 
-// See if this is an  X & Mask  that we can match to BEXTR.
+// See if this is an  X & Mask  that we can match to BEXTR/BZHI.
 // Where Mask is one of the following patterns:
 //   a) x &  (1 << nbits) - 1
 //   b) x & ~(-1 << nbits)
 //   c) x &  (-1 >> (32 - y))
 //   d) x << (32 - y) >> (32 - y)
-bool X86DAGToDAGISel::matchBEXTR(SDNode *Node) {
-  // BEXTR is BMI instruction. However, if we have BMI2, we prefer BZHI.
-  if (!Subtarget->hasBMI() || Subtarget->hasBMI2())
+bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
+  assert(
+      (Node->getOpcode() == ISD::AND || Node->getOpcode() == ISD::SRL) &&
+      "Should be either an and-mask, or right-shift after clearing high bits.");
+
+  // BEXTR is BMI instruction, BZHI is BMI2 instruction. We need at least one.
+  if (!Subtarget->hasBMI() && !Subtarget->hasBMI2())
     return false;
 
   MVT NVT = Node->getSimpleValueType(0);
@@ -2698,16 +2702,44 @@ bool X86DAGToDAGISel::matchBEXTR(SDNode *Node) {
   if (NVT != MVT::i32 && NVT != MVT::i64)
     return false;
 
+  unsigned Size = NVT.getSizeInBits();
+
   SDValue NBits;
 
+  // If we have BMI2's BZHI, we are ok with muti-use patterns.
+  // Else, if we only have BMI1's BEXTR, we require one-use.
+  const bool CanHaveExtraUses = Subtarget->hasBMI2();
+  auto checkOneUse = [CanHaveExtraUses](SDValue Op, unsigned NUses = 1) {
+    return CanHaveExtraUses ||
+           Op.getNode()->hasNUsesOfValue(NUses, Op.getResNo());
+  };
+
+  // a) x & ((1 << nbits) + (-1))
+  auto matchPatternA = [&checkOneUse, &NBits](SDValue Mask) -> bool {
+    // Match `add`. Must only have one use!
+    if (Mask->getOpcode() != ISD::ADD || !checkOneUse(Mask))
+      return false;
+    // We should be adding all-ones constant (i.e. subtracting one.)
+    if (!isAllOnesConstant(Mask->getOperand(1)))
+      return false;
+    // Match `1 << nbits`. Must only have one use!
+    SDValue M0 = Mask->getOperand(0);
+    if (M0->getOpcode() != ISD::SHL || !checkOneUse(M0))
+      return false;
+    if (!isOneConstant(M0->getOperand(0)))
+      return false;
+    NBits = M0->getOperand(1);
+    return true;
+  };
+
   // b) x & ~(-1 << nbits)
-  auto matchPatternB = [&NBits](SDValue Mask) -> bool {
+  auto matchPatternB = [&checkOneUse, &NBits](SDValue Mask) -> bool {
     // Match `~()`. Must only have one use!
-    if (!isBitwiseNot(Mask) || !Mask->hasOneUse())
+    if (!isBitwiseNot(Mask) || !checkOneUse(Mask))
       return false;
     // Match `-1 << nbits`. Must only have one use!
     SDValue M0 = Mask->getOperand(0);
-    if (M0->getOpcode() != ISD::SHL || !M0->hasOneUse())
+    if (M0->getOpcode() != ISD::SHL || !checkOneUse(M0))
       return false;
     if (!isAllOnesConstant(M0->getOperand(0)))
       return false;
@@ -2715,33 +2747,85 @@ bool X86DAGToDAGISel::matchBEXTR(SDNode *Node) {
     return true;
   };
 
-  auto matchLowBitMask = [&matchPatternB](SDValue Mask) -> bool {
-    // FIXME: patterns a, c, d.
-    return matchPatternB(Mask);
+  SDValue X;
+
+  // d) x << (32 - y) >> (32 - y)
+  auto matchPatternD = [&checkOneUse, Size, &X, &NBits](SDNode *Node) -> bool {
+    if (Node->getOpcode() != ISD::SRL)
+      return false;
+    SDValue N0 = Node->getOperand(0);
+    if (N0->getOpcode() != ISD::SHL || !checkOneUse(N0))
+      return false;
+    SDValue N1 = Node->getOperand(1);
+    SDValue N01 = N0->getOperand(1);
+    // Both of the shifts must be by the exact same value.
+    // There should not be any uses of the shift amount outside of the pattern.
+    if (N1 != N01 || !checkOneUse(N1, 2))
+      return false;
+    // Skip over a truncate of the shift amount.
+    if (N1->getOpcode() == ISD::TRUNCATE) {
+      N1 = N1->getOperand(0);
+      // The trunc should have been the only user of the real shift amount.
+      if (!checkOneUse(N1))
+        return false;
+    }
+    // Match the shift amount as: (bitwidth - y). It should go away, too.
+    if (N1.getOpcode() != ISD::SUB)
+      return false;
+    auto N10 = dyn_cast<ConstantSDNode>(N1.getOperand(0));
+    if (!N10 || N10->getZExtValue() != Size)
+      return false;
+    X = N0->getOperand(0);
+    NBits = N1.getOperand(1);
+    return true;
   };
 
-  SDValue X = Node->getOperand(0);
-  SDValue Mask = Node->getOperand(1);
+  auto matchLowBitMask = [&matchPatternA,
+                          &matchPatternB](SDValue Mask) -> bool {
+    // FIXME: pattern c.
+    return matchPatternA(Mask) || matchPatternB(Mask);
+  };
 
-  if (matchLowBitMask(Mask)) {
-    // Great.
-  } else {
-    std::swap(X, Mask);
-    if (!matchLowBitMask(Mask))
-      return false;
-  }
+  if (Node->getOpcode() == ISD::AND) {
+    X = Node->getOperand(0);
+    SDValue Mask = Node->getOperand(1);
+
+    if (matchLowBitMask(Mask)) {
+      // Great.
+    } else {
+      std::swap(X, Mask);
+      if (!matchLowBitMask(Mask))
+        return false;
+    }
+  } else if (!matchPatternD(Node))
+    return false;
 
   SDLoc DL(Node);
+
+  SDValue OrigNBits = NBits;
+  // Do we need to truncate the shift amount?
+  if (NBits.getValueType() != MVT::i8) {
+    NBits = CurDAG->getNode(ISD::TRUNCATE, DL, MVT::i8, NBits);
+    insertDAGNode(*CurDAG, OrigNBits, NBits);
+  }
 
   // Insert 8-bit NBits into lowest 8 bits of NVT-sized (32 or 64-bit) register.
   // All the other bits are undefined, we do not care about them.
   SDValue ImplDef =
       SDValue(CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, NVT), 0);
   insertDAGNode(*CurDAG, NBits, ImplDef);
-  SDValue OrigNBits = NBits;
   NBits = CurDAG->getTargetInsertSubreg(X86::sub_8bit, DL, NVT, ImplDef, NBits);
   insertDAGNode(*CurDAG, OrigNBits, NBits);
 
+  if (Subtarget->hasBMI2()) {
+    // Great, just emit the the BZHI..
+    SDValue Extract = CurDAG->getNode(X86ISD::BZHI, DL, NVT, X, NBits);
+    ReplaceNode(Node, Extract.getNode());
+    SelectCode(Extract.getNode());
+    return true;
+  }
+
+  // Else, emitting BEXTR requires one more step.
   // The 'control' of BEXTR has the pattern of:
   // [15...8 bit][ 7...0 bit] location
   // [ bit count][     shift] name
@@ -2928,17 +3012,8 @@ bool X86DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
   if (ShiftAmt->getOpcode() == ISD::TRUNCATE)
     ShiftAmt = ShiftAmt->getOperand(0);
 
-  // Special case to avoid messing up a BZHI pattern.
-  // Look for (srl (shl X, (size - y)), (size - y)
-  if (Subtarget->hasBMI2() && (VT == MVT::i32 || VT == MVT::i64) &&
-      N->getOpcode() == ISD::SRL && N->getOperand(0).getOpcode() == ISD::SHL &&
-      // Shift amounts the same?
-      N->getOperand(1) == N->getOperand(0).getOperand(1) &&
-      // Shift amounts size - y?
-      ShiftAmt.getOpcode() == ISD::SUB &&
-      isa<ConstantSDNode>(ShiftAmt.getOperand(0)) &&
-      cast<ConstantSDNode>(ShiftAmt.getOperand(0))->getZExtValue() == Size)
-    return false;
+  // This function is called after X86DAGToDAGISel::matchBitExtract(),
+  // so we are not afraid that we might mess up BZHI/BEXTR pattern.
 
   SDValue NewShiftAmt;
   if (ShiftAmt->getOpcode() == ISD::ADD || ShiftAmt->getOpcode() == ISD::SUB) {
@@ -3137,6 +3212,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   }
 
   case ISD::SRL:
+    if (matchBitExtract(Node))
+      return;
+    LLVM_FALLTHROUGH;
   case ISD::SRA:
   case ISD::SHL:
     if (tryShiftAmountMod(Node))
@@ -3149,7 +3227,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       CurDAG->RemoveDeadNode(Node);
       return;
     }
-    if (matchBEXTR(Node))
+    if (matchBitExtract(Node))
       return;
     if (AndImmShrink && shrinkAndImmediate(Node))
       return;

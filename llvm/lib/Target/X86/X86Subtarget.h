@@ -52,6 +52,8 @@ enum Style {
 
 class X86Subtarget final : public X86GenSubtargetInfo {
 public:
+  // NOTE: Do not add anything new to this list. Coarse, CPU name based flags
+  // are not a good idea. We should be migrating away from these.
   enum X86ProcFamilyEnum {
     Others,
     IntelAtom,
@@ -59,14 +61,7 @@ public:
     IntelGLM,
     IntelGLP,
     IntelTRM,
-    IntelHaswell,
-    IntelBroadwell,
-    IntelSkylake,
     IntelKNL,
-    IntelSKX,
-    IntelCannonlake,
-    IntelIcelakeClient,
-    IntelIcelakeServer,
   };
 
 protected:

@@ -24,7 +24,7 @@ void RetireControlUnitStatistics::onEvent(const HWInstructionEvent &Event) {
     ++NumRetired;
 }
 
-void RetireControlUnitStatistics::printView(llvm::raw_ostream &OS) const {
+void RetireControlUnitStatistics::printView(raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
   TempStream << "\n\nRetire Control Unit - "

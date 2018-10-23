@@ -303,3 +303,126 @@ define <4 x float> @collectShuffleElts(<2 x float> %x, float %y) {
   ret <4 x float> %v3
 }
 
+; TODO: Simplest case - insert scalar into undef, then shuffle that value in place into another vector.
+
+define <4 x float> @insert_shuffle(float %x, <4 x float> %y) {
+; CHECK-LABEL: @insert_shuffle(
+; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[XV]], <4 x float> [[Y:%.*]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %xv = insertelement <4 x float> undef, float %x, i32 0
+  %r = shufflevector <4 x float> %xv, <4 x float> %y, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  ret <4 x float> %r
+}
+
+; TODO: Insert scalar into some element of a dummy vector, then move it to a different element in another vector.
+
+define <4 x float> @insert_shuffle_translate(float %x, <4 x float> %y) {
+; CHECK-LABEL: @insert_shuffle_translate(
+; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[XV]], <4 x float> [[Y:%.*]], <4 x i32> <i32 4, i32 0, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %xv = insertelement <4 x float> undef, float %x, i32 0
+  %r = shufflevector <4 x float> %xv, <4 x float> %y, <4 x i32> <i32 4, i32 0, i32 6, i32 7>
+  ret <4 x float> %r
+}
+
+; TODO: The vector operand of the insert is irrelevant.
+
+define <4 x float> @insert_not_undef_shuffle_translate(float %x, <4 x float> %y, <4 x float> %q) {
+; CHECK-LABEL: @insert_not_undef_shuffle_translate(
+; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 3
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[XV]], <4 x float> [[Y:%.*]], <4 x i32> <i32 4, i32 5, i32 3, i32 7>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %xv = insertelement <4 x float> %q, float %x, i32 3
+  %r = shufflevector <4 x float> %xv, <4 x float> %y, <4 x i32> <i32 4, i32 5, i32 3, i32 7>
+  ret <4 x float> %r
+}
+
+; TODO: The insert may be the 2nd operand of the shuffle. The shuffle mask can include undef elements.
+
+define <4 x float> @insert_not_undef_shuffle_translate_commute(float %x, <4 x float> %y, <4 x float> %q) {
+; CHECK-LABEL: @insert_not_undef_shuffle_translate_commute(
+; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 2
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> [[XV]], <4 x i32> <i32 0, i32 6, i32 2, i32 undef>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %xv = insertelement <4 x float> %q, float %x, i32 2
+  %r = shufflevector <4 x float> %y, <4 x float> %xv, <4 x i32> <i32 0, i32 6, i32 2, i32 undef>
+  ret <4 x float> %r
+}
+
+; TODO: Both shuffle operands may be inserts - choose the correct side.
+
+define <4 x float> @insert_insert_shuffle_translate(float %x1, float %x2, <4 x float> %q) {
+; CHECK-LABEL: @insert_insert_shuffle_translate(
+; CHECK-NEXT:    [[XV1:%.*]] = insertelement <4 x float> undef, float [[X1:%.*]], i32 0
+; CHECK-NEXT:    [[XV2:%.*]] = insertelement <4 x float> [[Q:%.*]], float [[X2:%.*]], i32 2
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[XV1]], <4 x float> [[XV2]], <4 x i32> <i32 4, i32 0, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %xv1 = insertelement <4 x float> %q, float %x1, i32 0
+  %xv2 = insertelement <4 x float> %q, float %x2, i32 2
+  %r = shufflevector <4 x float> %xv1, <4 x float> %xv2, <4 x i32> <i32 4, i32 0, i32 6, i32 7>
+  ret <4 x float> %r
+}
+
+; TODO: Both shuffle operands may be inserts - choose the correct side.
+
+define <4 x float> @insert_insert_shuffle_translate_commute(float %x1, float %x2, <4 x float> %q) {
+; CHECK-LABEL: @insert_insert_shuffle_translate_commute(
+; CHECK-NEXT:    [[XV1:%.*]] = insertelement <4 x float> [[Q:%.*]], float [[X1:%.*]], i32 0
+; CHECK-NEXT:    [[XV2:%.*]] = insertelement <4 x float> undef, float [[X2:%.*]], i32 2
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[XV1]], <4 x float> [[XV2]], <4 x i32> <i32 0, i32 6, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %xv1 = insertelement <4 x float> %q, float %x1, i32 0
+  %xv2 = insertelement <4 x float> %q, float %x2, i32 2
+  %r = shufflevector <4 x float> %xv1, <4 x float> %xv2, <4 x i32> <i32 0, i32 6, i32 2, i32 3>
+  ret <4 x float> %r
+}
+
+define <4 x float> @insert_insert_shuffle_translate_wrong_mask(float %x1, float %x2, <4 x float> %q) {
+; CHECK-LABEL: @insert_insert_shuffle_translate_wrong_mask(
+; CHECK-NEXT:    [[XV1:%.*]] = insertelement <4 x float> [[Q:%.*]], float [[X1:%.*]], i32 0
+; CHECK-NEXT:    [[XV2:%.*]] = insertelement <4 x float> [[Q]], float [[X2:%.*]], i32 2
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[XV1]], <4 x float> [[XV2]], <4 x i32> <i32 0, i32 6, i32 2, i32 7>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %xv1 = insertelement <4 x float> %q, float %x1, i32 0
+  %xv2 = insertelement <4 x float> %q, float %x2, i32 2
+  %r = shufflevector <4 x float> %xv1, <4 x float> %xv2, <4 x i32> <i32 0, i32 6, i32 2, i32 7>
+  ret <4 x float> %r
+}
+
+; TODO: The insert may have other uses.
+
+declare void @use(<4 x float>)
+
+define <4 x float> @insert_not_undef_shuffle_translate_commute_uses(float %x, <4 x float> %y, <4 x float> %q) {
+; CHECK-LABEL: @insert_not_undef_shuffle_translate_commute_uses(
+; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> [[Q:%.*]], float [[X:%.*]], i32 2
+; CHECK-NEXT:    call void @use(<4 x float> [[XV]])
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> [[XV]], <4 x i32> <i32 6, i32 undef, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %xv = insertelement <4 x float> %q, float %x, i32 2
+  call void @use(<4 x float> %xv)
+  %r = shufflevector <4 x float> %y, <4 x float> %xv, <4 x i32> <i32 6, i32 undef, i32 2, i32 3>
+  ret <4 x float> %r
+}
+
+define <5 x float> @insert_not_undef_shuffle_translate_commute_lengthen(float %x, <4 x float> %y, <4 x float> %q) {
+; CHECK-LABEL: @insert_not_undef_shuffle_translate_commute_lengthen(
+; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 2
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> [[XV]], <5 x i32> <i32 0, i32 6, i32 2, i32 undef, i32 undef>
+; CHECK-NEXT:    ret <5 x float> [[R]]
+;
+  %xv = insertelement <4 x float> %q, float %x, i32 2
+  %r = shufflevector <4 x float> %y, <4 x float> %xv, <5 x i32> <i32 0, i32 6, i32 2, i32 undef, i32 undef>
+  ret <5 x float> %r
+}
+

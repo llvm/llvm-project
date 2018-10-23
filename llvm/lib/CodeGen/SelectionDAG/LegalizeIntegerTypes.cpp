@@ -141,7 +141,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::ADDCARRY:
   case ISD::SUBCARRY:    Res = PromoteIntRes_ADDSUBCARRY(N, ResNo); break;
 
-  case ISD::SADDSAT:     Res = PromoteIntRes_SADDSAT(N); break;
+  case ISD::SADDSAT:
+  case ISD::UADDSAT:     Res = PromoteIntRes_ADDSAT(N); break;
 
   case ISD::ATOMIC_LOAD:
     Res = PromoteIntRes_Atomic0(cast<AtomicSDNode>(N)); break;
@@ -548,16 +549,21 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Overflow(SDNode *N) {
   return SDValue(Res.getNode(), 1);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntRes_SADDSAT(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntRes_ADDSAT(SDNode *N) {
   // For promoting iN -> iM, this can be expanded by
   // 1. ANY_EXTEND iN to iM
   // 2. SHL by M-N
-  // 3. SADDSAT
-  // 4. ASHR by M-N
+  // 3. U/SADDSAT
+  // 4. L/ASHR by M-N
   SDLoc dl(N);
   SDValue Op1 = N->getOperand(0);
   SDValue Op2 = N->getOperand(1);
   unsigned OldBits = Op1.getValueSizeInBits();
+
+  unsigned Opcode = N->getOpcode();
+  assert((Opcode == ISD::SADDSAT || Opcode == ISD::UADDSAT) &&
+         "Expected opcode to be SADDSAT or UADDSAT");
+  unsigned ShiftOp = Opcode == ISD::SADDSAT ? ISD::SRA : ISD::SRL;
 
   SDValue Op1Promoted = GetPromotedInteger(Op1);
   SDValue Op2Promoted = GetPromotedInteger(Op2);
@@ -573,8 +579,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SADDSAT(SDNode *N) {
       DAG.getNode(ISD::SHL, dl, PromotedType, Op2Promoted, ShiftAmount);
 
   SDValue Result =
-      DAG.getNode(ISD::SADDSAT, dl, PromotedType, Op1Promoted, Op2Promoted);
-  return DAG.getNode(ISD::SRA, dl, PromotedType, Result, ShiftAmount);
+      DAG.getNode(Opcode, dl, PromotedType, Op1Promoted, Op2Promoted);
+  return DAG.getNode(ShiftOp, dl, PromotedType, Result, ShiftAmount);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_SADDSUBO(SDNode *N, unsigned ResNo) {
@@ -1498,7 +1504,8 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::UMULO:
   case ISD::SMULO: ExpandIntRes_XMULO(N, Lo, Hi); break;
 
-  case ISD::SADDSAT: ExpandIntRes_SADDSAT(N, Lo, Hi); break;
+  case ISD::SADDSAT:
+  case ISD::UADDSAT: ExpandIntRes_ADDSAT(N, Lo, Hi); break;
   }
 
   // If Lo/Hi is null, the sub-method took care of registering results etc.
@@ -2461,9 +2468,9 @@ void DAGTypeLegalizer::ExpandIntRes_READCYCLECOUNTER(SDNode *N, SDValue &Lo,
   ReplaceValueWith(SDValue(N, 1), R.getValue(2));
 }
 
-void DAGTypeLegalizer::ExpandIntRes_SADDSAT(SDNode *N, SDValue &Lo,
-                                            SDValue &Hi) {
-  SDValue Result = TLI.getExpandedSignedSaturationAddition(N, DAG);
+void DAGTypeLegalizer::ExpandIntRes_ADDSAT(SDNode *N, SDValue &Lo,
+                                           SDValue &Hi) {
+  SDValue Result = TLI.getExpandedSaturationAddition(N, DAG);
   SplitInteger(Result, Lo, Hi);
 }
 

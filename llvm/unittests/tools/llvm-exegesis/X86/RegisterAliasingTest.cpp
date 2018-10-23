@@ -9,6 +9,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+namespace llvm {
 namespace exegesis {
 namespace {
 
@@ -89,3 +90,4 @@ TEST_F(RegisterAliasingTest, TrackRegisterClassCache) {
 
 } // namespace
 } // namespace exegesis
+} // namespace llvm

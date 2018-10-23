@@ -19,6 +19,7 @@
 #include "MCInstrDescView.h"
 #include "SnippetGenerator.h"
 
+namespace llvm {
 namespace exegesis {
 
 class LatencySnippetGenerator : public SnippetGenerator {
@@ -43,5 +44,6 @@ private:
   virtual const char *getCounterName() const;
 };
 } // namespace exegesis
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_EXEGESIS_LATENCY_H

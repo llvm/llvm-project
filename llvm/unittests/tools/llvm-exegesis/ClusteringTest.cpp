@@ -14,6 +14,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+namespace llvm {
 namespace exegesis {
 
 namespace {
@@ -104,3 +105,4 @@ TEST(ClusteringTest, Ordering) {
 
 } // namespace
 } // namespace exegesis
+} // namespace llvm

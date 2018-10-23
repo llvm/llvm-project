@@ -527,7 +527,7 @@ ReSimplify:
   }
 
   case X86::CLEANUPRET: {
-    // Replace CATCHRET with the appropriate RET.
+    // Replace CLEANUPRET with the appropriate RET.
     OutMI = MCInst();
     OutMI.setOpcode(getRetOpcode(AsmPrinter.getSubtarget()));
     break;

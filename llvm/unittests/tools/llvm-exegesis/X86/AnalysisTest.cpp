@@ -8,6 +8,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+namespace llvm {
 namespace exegesis {
 namespace {
 
@@ -100,3 +101,4 @@ TEST_F(AnalysisTest, ComputeIdealizedProcResPressure_1P1_1P05_2P0156) {
 
 } // namespace
 } // namespace exegesis
+} // namespace llvm
