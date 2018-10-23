@@ -77,7 +77,13 @@ ValueObject *ValueObjectConstResultImpl::CreateChildAtIndex(
       ignore_array_bounds, child_name_str, child_byte_size, child_byte_offset,
       child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
       child_is_deref_of_parent, m_impl_backend, language_flags);
-  if (child_compiler_type && child_byte_size) {
+
+  // One might think we should check that the size of the children
+  // is always strictly positive, hence we could avoid creating a
+  // ValueObject if that's not the case, but it turns out there
+  // are languages out there which allow zero-size types with
+  // children (e.g. Swift).
+  if (child_compiler_type) {
     if (synthetic_index)
       child_byte_offset += child_byte_size * synthetic_index;
 
