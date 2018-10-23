@@ -4600,8 +4600,7 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF(bool OptForSize) {
   }
 
   // Record that scalar epilogue is not allowed.
-  LLVM_DEBUG(dbgs() << "LV: Not inserting scalar epilogue for access with gaps "
-                       "due to -Os/-Oz.\n");
+  LLVM_DEBUG(dbgs() << "LV: Not allowing scalar epilogue due to -Os/-Oz.\n");
 
   // We don't create an epilogue when optimizing for size.
   // Invalidate interleave groups that require an epilogue.

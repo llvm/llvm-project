@@ -412,6 +412,8 @@ int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
         {ISD::VECTOR_SHUFFLE, MVT::v2f32, 1},
         {ISD::VECTOR_SHUFFLE, MVT::v2i64, 1},
         {ISD::VECTOR_SHUFFLE, MVT::v2f64, 1},
+        {ISD::VECTOR_SHUFFLE, MVT::v4i16, 1},
+        {ISD::VECTOR_SHUFFLE, MVT::v8i8,  1},
 
         {ISD::VECTOR_SHUFFLE, MVT::v4i32, 2},
         {ISD::VECTOR_SHUFFLE, MVT::v4f32, 2},

@@ -869,9 +869,8 @@ public:
     case CK_FloatingToIntegral:
     case CK_FloatingToBoolean:
     case CK_FloatingCast:
-    case CK_ZeroToOCLEvent:
-    case CK_ZeroToOCLQueue:
     case CK_FixedPointCast:
+    case CK_ZeroToOCLOpaqueType:
       return nullptr;
     }
     llvm_unreachable("Invalid CastKind");

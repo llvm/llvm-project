@@ -37,7 +37,10 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
+
 using namespace llvm;
+using namespace PatternMatch;
 
 #define DEBUG_TYPE "wasm-fastisel"
 
@@ -417,9 +420,10 @@ unsigned WebAssemblyFastISel::getRegForI1Value(const Value *V, bool &Not) {
         return getRegForValue(ICmp->getOperand(0));
       }
 
-  if (BinaryOperator::isNot(V) && V->getType()->isIntegerTy(32)) {
+  Value *NotV;
+  if (match(V, m_Not(m_Value(NotV))) && V->getType()->isIntegerTy(32)) {
     Not = true;
-    return getRegForValue(BinaryOperator::getNotArgument(V));
+    return getRegForValue(NotV);
   }
 
   Not = false;

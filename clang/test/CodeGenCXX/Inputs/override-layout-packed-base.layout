@@ -3,16 +3,26 @@
 Type: class B<0>
 
 Layout: <ASTRecordLayout
+  Size:40
   FieldOffsets: [0, 32]>
 
 *** Dumping AST Record Layout
 Type: class B<1>
 
 Layout: <ASTRecordLayout
+  Size:40
   FieldOffsets: [0, 32]>
 
 *** Dumping AST Record Layout
 Type: class C
 
 Layout: <ASTRecordLayout
+  Size:88
   FieldOffsets: [80]>
+
+*** Dumping AST Record Layout
+Type: class D
+
+Layout: <ASTRecordLayout
+  Size:120
+  FieldOffsets: [32]>

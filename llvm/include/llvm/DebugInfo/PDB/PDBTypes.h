@@ -12,6 +12,7 @@
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
+#include "llvm/DebugInfo/PDB/IPDBFrameData.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include <cctype>
 #include <cstddef>
@@ -71,6 +72,7 @@ using IPDBEnumLineNumbers = IPDBEnumChildren<IPDBLineNumber>;
 using IPDBEnumTables = IPDBEnumChildren<IPDBTable>;
 using IPDBEnumInjectedSources = IPDBEnumChildren<IPDBInjectedSource>;
 using IPDBEnumSectionContribs = IPDBEnumChildren<IPDBSectionContrib>;
+using IPDBEnumFrameData = IPDBEnumChildren<IPDBFrameData>;
 
 /// Specifies which PDB reader implementation is to be used.  Only a value
 /// of PDB_ReaderType::DIA is currently supported, but Native is in the works.

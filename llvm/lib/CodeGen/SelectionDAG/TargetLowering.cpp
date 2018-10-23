@@ -4142,6 +4142,61 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
   return SDValue();
 }
 
+bool TargetLowering::expandCTTZ(SDNode *Node, SDValue &Result,
+                                SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  EVT VT = Node->getValueType(0);
+  SDValue Op = Node->getOperand(0);
+  unsigned NumBitsPerElt = VT.getScalarSizeInBits();
+
+  // If the non-ZERO_UNDEF version is supported we can use that instead.
+  if (Node->getOpcode() == ISD::CTTZ_ZERO_UNDEF &&
+      isOperationLegalOrCustom(ISD::CTTZ, VT)) {
+    Result = DAG.getNode(ISD::CTTZ, dl, VT, Op);
+    return true;
+  }
+
+  // If the ZERO_UNDEF version is supported use that and handle the zero case.
+  if (isOperationLegalOrCustom(ISD::CTTZ_ZERO_UNDEF, VT)) {
+    EVT SetCCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+    SDValue CTTZ = DAG.getNode(ISD::CTTZ_ZERO_UNDEF, dl, VT, Op);
+    SDValue Zero = DAG.getConstant(0, dl, VT);
+    SDValue SrcIsZero = DAG.getSetCC(dl, SetCCVT, Op, Zero, ISD::SETEQ);
+    Result = DAG.getNode(ISD::SELECT, dl, VT, SrcIsZero,
+                         DAG.getConstant(NumBitsPerElt, dl, VT), CTTZ);
+    return true;
+  }
+
+  // Only expand vector types if we have the appropriate vector bit operations.
+  if (VT.isVector() && (!isPowerOf2_32(NumBitsPerElt) ||
+                        (!isOperationLegalOrCustom(ISD::CTPOP, VT) &&
+                         !isOperationLegalOrCustom(ISD::CTLZ, VT)) ||
+                        !isOperationLegalOrCustom(ISD::SUB, VT) ||
+                        !isOperationLegalOrCustomOrPromote(ISD::AND, VT) ||
+                        !isOperationLegalOrCustomOrPromote(ISD::XOR, VT)))
+    return false;
+
+  // for now, we use: { return popcount(~x & (x - 1)); }
+  // unless the target has ctlz but not ctpop, in which case we use:
+  // { return 32 - nlz(~x & (x-1)); }
+  // Ref: "Hacker's Delight" by Henry Warren
+  SDValue Tmp = DAG.getNode(
+      ISD::AND, dl, VT, DAG.getNOT(dl, Op, VT),
+      DAG.getNode(ISD::SUB, dl, VT, Op, DAG.getConstant(1, dl, VT)));
+
+  // If ISD::CTLZ is legal and CTPOP isn't, then do that instead.
+  if (isOperationLegal(ISD::CTLZ, VT) && !isOperationLegal(ISD::CTPOP, VT)) {
+    Result =
+        DAG.getNode(ISD::SUB, dl, VT, DAG.getConstant(NumBitsPerElt, dl, VT),
+                    DAG.getNode(ISD::CTLZ, dl, VT, Tmp));
+    return true;
+  }
+
+  Result = DAG.getNode(ISD::CTPOP, dl, VT, Tmp);
+  return true;
+}
+
 SDValue TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
                                             SelectionDAG &DAG) const {
   SDLoc SL(LD);

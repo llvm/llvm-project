@@ -322,11 +322,9 @@ CAST_OPERATION(CopyAndAutoreleaseBlockObject)
 // callee of a call expression.
 CAST_OPERATION(BuiltinFnToFnPtr)
 
-// Convert a zero value for OpenCL event_t initialization.
-CAST_OPERATION(ZeroToOCLEvent)
-
-// Convert a zero value for OpenCL queue_t initialization.
-CAST_OPERATION(ZeroToOCLQueue)
+// Convert a zero value for OpenCL opaque types initialization (event_t,
+// queue_t, etc.)
+CAST_OPERATION(ZeroToOCLOpaqueType)
 
 // Convert a pointer to a different address space.
 CAST_OPERATION(AddressSpaceConversion)

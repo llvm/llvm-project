@@ -555,6 +555,7 @@ public:
                           Type *SubTp) {
     switch (Kind) {
     case TTI::SK_Select:
+    case TTI::SK_Reverse:
     case TTI::SK_Transpose:
     case TTI::SK_PermuteSingleSrc:
     case TTI::SK_PermuteTwoSrc:

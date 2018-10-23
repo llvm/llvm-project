@@ -30,7 +30,7 @@ lldbSectTypeToLlvmSectionKind(lldb::SectionType type) {
   case lldb::eSectionTypeDWARFDebugLine:
     return llvm::DW_SECT_LINE;
   case lldb::eSectionTypeDWARFDebugLoc:
-    return llvm::DW_SECT_LOC;
+    return llvm::DW_SECT_LOC; 
   case lldb::eSectionTypeDWARFDebugStrOffsets:
     return llvm::DW_SECT_STR_OFFSETS;
   // case lldb::eSectionTypeDWARFDebugMacinfo:

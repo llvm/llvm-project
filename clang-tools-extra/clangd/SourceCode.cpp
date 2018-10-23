@@ -67,13 +67,12 @@ static size_t measureUTF16(StringRef U8, int U16Units, bool &Valid) {
   return std::min(Result, U8.size());
 }
 
-// Counts the number of UTF-16 code units needed to represent a string.
 // Like most strings in clangd, the input is UTF-8 encoded.
-static size_t utf16Len(StringRef U8) {
+size_t lspLength(StringRef Code) {
   // A codepoint takes two UTF-16 code unit if it's astral (outside BMP).
   // Astral codepoints are encoded as 4 bytes in UTF-8, starting with 11110xxx.
   size_t Count = 0;
-  iterateCodepoints(U8, [&](int U8Len, int U16Len) {
+  iterateCodepoints(Code, [&](int U8Len, int U16Len) {
     Count += U16Len;
     return false;
   });
@@ -123,7 +122,7 @@ Position offsetToPosition(StringRef Code, size_t Offset) {
   size_t StartOfLine = (PrevNL == StringRef::npos) ? 0 : (PrevNL + 1);
   Position Pos;
   Pos.line = Lines;
-  Pos.character = utf16Len(Before.substr(StartOfLine));
+  Pos.character = lspLength(Before.substr(StartOfLine));
   return Pos;
 }
 
@@ -139,7 +138,7 @@ Position sourceLocToPosition(const SourceManager &SM, SourceLocation Loc) {
   if (!Invalid) {
     auto ColumnInBytes = SM.getColumnNumber(FID, Offset) - 1;
     auto LineSoFar = Code.substr(Offset - ColumnInBytes, ColumnInBytes);
-    P.character = utf16Len(LineSoFar);
+    P.character = lspLength(LineSoFar);
   }
   return P;
 }

@@ -412,8 +412,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_BlockPointerToObjCPointerCast:
       case CK_AnyPointerToBlockPointerCast:
       case CK_ObjCObjectLValueCast:
-      case CK_ZeroToOCLEvent:
-      case CK_ZeroToOCLQueue:
+      case CK_ZeroToOCLOpaqueType:
       case CK_IntToOCLSampler:
       case CK_LValueBitCast:
       case CK_FixedPointCast: {

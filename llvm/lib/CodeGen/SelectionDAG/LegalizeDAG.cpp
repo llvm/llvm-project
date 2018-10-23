@@ -2789,35 +2789,6 @@ SDValue SelectionDAGLegalize::ExpandBitCount(unsigned Opc, SDValue Op,
     Op = DAG.getNOT(dl, Op, VT);
     return DAG.getNode(ISD::CTPOP, dl, VT, Op);
   }
-  case ISD::CTTZ_ZERO_UNDEF:
-    // This trivially expands to CTTZ.
-    return DAG.getNode(ISD::CTTZ, dl, VT, Op);
-  case ISD::CTTZ: {
-    if (TLI.isOperationLegalOrCustom(ISD::CTTZ_ZERO_UNDEF, VT)) {
-      EVT SetCCVT = getSetCCResultType(VT);
-      SDValue CTTZ = DAG.getNode(ISD::CTTZ_ZERO_UNDEF, dl, VT, Op);
-      SDValue Zero = DAG.getConstant(0, dl, VT);
-      SDValue SrcIsZero = DAG.getSetCC(dl, SetCCVT, Op, Zero, ISD::SETEQ);
-      return DAG.getNode(ISD::SELECT, dl, VT, SrcIsZero,
-                         DAG.getConstant(Len, dl, VT), CTTZ);
-    }
-
-    // for now, we use: { return popcount(~x & (x - 1)); }
-    // unless the target has ctlz but not ctpop, in which case we use:
-    // { return 32 - nlz(~x & (x-1)); }
-    // Ref: "Hacker's Delight" by Henry Warren
-    SDValue Tmp3 = DAG.getNode(ISD::AND, dl, VT,
-                               DAG.getNOT(dl, Op, VT),
-                               DAG.getNode(ISD::SUB, dl, VT, Op,
-                                           DAG.getConstant(1, dl, VT)));
-    // If ISD::CTLZ is legal and CTPOP isn't, then do that instead.
-    if (!TLI.isOperationLegal(ISD::CTPOP, VT) &&
-        TLI.isOperationLegal(ISD::CTLZ, VT))
-      return DAG.getNode(ISD::SUB, dl, VT,
-                         DAG.getConstant(Len, dl, VT),
-                         DAG.getNode(ISD::CTLZ, dl, VT, Tmp3));
-    return DAG.getNode(ISD::CTPOP, dl, VT, Tmp3);
-  }
   }
 }
 
@@ -2831,10 +2802,13 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::CTPOP:
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
-  case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
     Tmp1 = ExpandBitCount(Node->getOpcode(), Node->getOperand(0), dl);
     Results.push_back(Tmp1);
+    break;
+  case ISD::CTTZ:
+  case ISD::CTTZ_ZERO_UNDEF:
+    if (TLI.expandCTTZ(Node, Tmp1, DAG))
+      Results.push_back(Tmp1);
     break;
   case ISD::BITREVERSE:
     Results.push_back(ExpandBITREVERSE(Node->getOperand(0), dl));

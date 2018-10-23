@@ -190,16 +190,6 @@ define void @test20(i32 %A, i32 %B) {
   ret void
 }
 
-define i32 @test21(i1 %C, i32 %A, i32 %B) {
-; CHECK-LABEL: @test21(
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C:%.*]], i32 [[B:%.*]], i32 [[A:%.*]]
-; CHECK-NEXT:    ret i32 [[D]]
-;
-  %C2 = xor i1 %C, true
-  %D = select i1 %C2, i32 %A, i32 %B
-  ret i32 %D
-}
-
 define i32 @test22(i1 %X) {
 ; CHECK-LABEL: @test22(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[X:%.*]] to i32

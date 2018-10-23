@@ -2046,13 +2046,9 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
                                          CE->getExprLoc());
   }
 
-  case CK_ZeroToOCLEvent: {
-    assert(DestTy->isEventT() && "CK_ZeroToOCLEvent cast on non-event type");
-    return llvm::Constant::getNullValue(ConvertType(DestTy));
-  }
-
-  case CK_ZeroToOCLQueue: {
-    assert(DestTy->isQueueT() && "CK_ZeroToOCLQueue cast on non queue_t type");
+  case CK_ZeroToOCLOpaqueType: {
+    assert((DestTy->isEventT() || DestTy->isQueueT()) &&
+           "CK_ZeroToOCLEvent cast on non-event type");
     return llvm::Constant::getNullValue(ConvertType(DestTy));
   }
 
