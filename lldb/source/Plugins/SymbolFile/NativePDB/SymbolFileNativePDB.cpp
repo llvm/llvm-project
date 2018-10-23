@@ -310,7 +310,7 @@ static llvm::StringRef GetSimpleTypeName(SimpleTypeKind kind) {
     return "char";
   case SimpleTypeKind::SignedCharacter:
   case SimpleTypeKind::SByte:
-    return "signed chr";
+    return "signed char";
   case SimpleTypeKind::Character16:
     return "char16_t";
   case SimpleTypeKind::Character32:
@@ -332,7 +332,7 @@ static llvm::StringRef GetSimpleTypeName(SimpleTypeKind kind) {
     return "__int128";
   case SimpleTypeKind::Int64:
   case SimpleTypeKind::Int64Quad:
-    return "__int64";
+    return "int64_t";
   case SimpleTypeKind::Int32:
     return "int";
   case SimpleTypeKind::Int16:
@@ -341,7 +341,7 @@ static llvm::StringRef GetSimpleTypeName(SimpleTypeKind kind) {
     return "unsigned __int128";
   case SimpleTypeKind::UInt64:
   case SimpleTypeKind::UInt64Quad:
-    return "unsigned __int64";
+    return "uint64_t";
   case SimpleTypeKind::HResult:
     return "HRESULT";
   case SimpleTypeKind::UInt32:
@@ -644,7 +644,7 @@ lldb::TypeSP SymbolFileNativePDB::CreateSimpleType(TypeIndex ti) {
     TypeSP direct_sp = GetOrCreateType(ti.makeDirect());
     CompilerType ct = direct_sp->GetFullCompilerType();
     ct = ct.GetPointerType();
-    uint32_t pointer_size = 4;
+    uint32_t pointer_size = 0;
     switch (ti.getSimpleMode()) {
     case SimpleTypeMode::FarPointer32:
     case SimpleTypeMode::NearPointer32:

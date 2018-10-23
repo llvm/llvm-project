@@ -149,14 +149,6 @@ public:
   ClangASTImporter &GetASTImporter() { return *m_importer; }
 
 private:
-  void AddBaseClassesToLayout(CompilerType &derived_ct,
-                              ClangASTImporter::LayoutInfo &layout,
-                              const llvm::codeview::ClassRecord &record);
-  void AddMembersToLayout(ClangASTImporter::LayoutInfo &layout,
-                          const llvm::codeview::TagRecord &record);
-  void AddMethodsToLayout(ClangASTImporter::LayoutInfo &layout,
-                          const llvm::codeview::TagRecord &record);
-
   size_t FindTypesByName(llvm::StringRef name, uint32_t max_matches,
                          TypeMap &types);
 
