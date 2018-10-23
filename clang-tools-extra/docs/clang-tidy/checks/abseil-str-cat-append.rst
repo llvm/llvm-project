@@ -13,5 +13,5 @@ them makes the code smaller and faster.
 
   a = absl::StrCat(a, b); // Use absl::StrAppend(&a, b) instead.
 
-Does not diagnose cases where ``abls::StrCat()`` is used as a template 
+Does not diagnose cases where ``absl::StrCat()`` is used as a template
 argument for a functor.

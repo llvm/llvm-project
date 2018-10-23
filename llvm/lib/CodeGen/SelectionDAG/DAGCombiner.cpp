@@ -12897,7 +12897,8 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
     if (!isTypeLegal(LDMemType))
       continue;
     if (STMemType != LDMemType) {
-      if (numVectorEltsOrZero(STMemType) == numVectorEltsOrZero(LDMemType) &&
+      // TODO: Support vectors? This requires extract_subvector/bitcast.
+      if (!STMemType.isVector() && !LDMemType.isVector() && 
           STMemType.isInteger() && LDMemType.isInteger())
         Val = DAG.getNode(ISD::TRUNCATE, SDLoc(LD), LDMemType, Val);
       else

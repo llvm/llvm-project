@@ -15,6 +15,7 @@
 #include "../readability/MagicNumbersCheck.h"
 #include "AvoidGotoCheck.h"
 #include "InterfacesGlobalInitCheck.h"
+#include "MacroUsageCheck.h"
 #include "NarrowingConversionsCheck.h"
 #include "NoMallocCheck.h"
 #include "OwningMemoryCheck.h"
@@ -45,6 +46,8 @@ public:
         "cppcoreguidelines-avoid-magic-numbers");
     CheckFactories.registerCheck<InterfacesGlobalInitCheck>(
         "cppcoreguidelines-interfaces-global-init");
+    CheckFactories.registerCheck<MacroUsageCheck>(
+        "cppcoreguidelines-macro-usage");
     CheckFactories.registerCheck<NarrowingConversionsCheck>(
         "cppcoreguidelines-narrowing-conversions");
     CheckFactories.registerCheck<NoMallocCheck>("cppcoreguidelines-no-malloc");

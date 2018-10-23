@@ -2890,21 +2890,17 @@ MachineSDNode *X86DAGToDAGISel::emitPCMPISTR(unsigned ROpc, unsigned MOpc,
   const ConstantInt *Val = cast<ConstantSDNode>(Imm)->getConstantIntValue();
   Imm = CurDAG->getTargetConstant(*Val, SDLoc(Node), Imm.getValueType());
 
-  // If there is a load, it will be behind a bitcast. We don't need to check
-  // alignment on this load.
+  // Try to fold a load. No need to check alignment.
   SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
-  if (MayFoldLoad && N1->getOpcode() == ISD::BITCAST && N1->hasOneUse() &&
-      tryFoldLoad(Node, N1.getNode(), N1.getOperand(0), Tmp0, Tmp1, Tmp2,
-                  Tmp3, Tmp4)) {
-    SDValue Load = N1.getOperand(0);
+  if (MayFoldLoad && tryFoldLoad(Node, N1, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4)) {
     SDValue Ops[] = { N0, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, Imm,
-                      Load.getOperand(0) };
+                      N1.getOperand(0) };
     SDVTList VTs = CurDAG->getVTList(VT, MVT::i32, MVT::Other);
     MachineSDNode *CNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
     // Update the chain.
-    ReplaceUses(Load.getValue(1), SDValue(CNode, 2));
+    ReplaceUses(N1.getValue(1), SDValue(CNode, 2));
     // Record the mem-refs
-    CurDAG->setNodeMemRefs(CNode, {cast<LoadSDNode>(Load)->getMemOperand()});
+    CurDAG->setNodeMemRefs(CNode, {cast<LoadSDNode>(N1)->getMemOperand()});
     return CNode;
   }
 
@@ -2927,22 +2923,18 @@ MachineSDNode *X86DAGToDAGISel::emitPCMPESTR(unsigned ROpc, unsigned MOpc,
   const ConstantInt *Val = cast<ConstantSDNode>(Imm)->getConstantIntValue();
   Imm = CurDAG->getTargetConstant(*Val, SDLoc(Node), Imm.getValueType());
 
-  // If there is a load, it will be behind a bitcast. We don't need to check
-  // alignment on this load.
+  // Try to fold a load. No need to check alignment.
   SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
-  if (MayFoldLoad && N2->getOpcode() == ISD::BITCAST && N2->hasOneUse() &&
-      tryFoldLoad(Node, N2.getNode(), N2.getOperand(0), Tmp0, Tmp1, Tmp2,
-                  Tmp3, Tmp4)) {
-    SDValue Load = N2.getOperand(0);
+  if (MayFoldLoad && tryFoldLoad(Node, N2, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4)) {
     SDValue Ops[] = { N0, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, Imm,
-                      Load.getOperand(0), InFlag };
+                      N2.getOperand(0), InFlag };
     SDVTList VTs = CurDAG->getVTList(VT, MVT::i32, MVT::Other, MVT::Glue);
     MachineSDNode *CNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
     InFlag = SDValue(CNode, 3);
     // Update the chain.
-    ReplaceUses(Load.getValue(1), SDValue(CNode, 2));
+    ReplaceUses(N2.getValue(1), SDValue(CNode, 2));
     // Record the mem-refs
-    CurDAG->setNodeMemRefs(CNode, {cast<LoadSDNode>(Load)->getMemOperand()});
+    CurDAG->setNodeMemRefs(CNode, {cast<LoadSDNode>(N2)->getMemOperand()});
     return CNode;
   }
 

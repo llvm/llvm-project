@@ -460,22 +460,8 @@ def ProcIntelGLP  : SubtargetFeature<"glp", "X86ProcFamily", "IntelGLP",
                     "Intel Goldmont Plus processors">;
 def ProcIntelTRM  : SubtargetFeature<"tremont", "X86ProcFamily", "IntelTRM",
                     "Intel Tremont processors">;
-def ProcIntelHSW  : SubtargetFeature<"haswell", "X86ProcFamily",
-                    "IntelHaswell", "Intel Haswell processors">;
-def ProcIntelBDW  : SubtargetFeature<"broadwell", "X86ProcFamily",
-                    "IntelBroadwell", "Intel Broadwell processors">;
-def ProcIntelSKL  : SubtargetFeature<"skylake", "X86ProcFamily",
-                    "IntelSkylake", "Intel Skylake processors">;
 def ProcIntelKNL  : SubtargetFeature<"knl", "X86ProcFamily",
                     "IntelKNL", "Intel Knights Landing processors">;
-def ProcIntelSKX  : SubtargetFeature<"skx", "X86ProcFamily",
-                    "IntelSKX", "Intel Skylake Server processors">;
-def ProcIntelCNL  : SubtargetFeature<"cannonlake", "X86ProcFamily",
-                    "IntelCannonlake", "Intel Cannonlake processors">;
-def ProcIntelICL  : SubtargetFeature<"icelake-client", "X86ProcFamily",
-                    "IntelIcelakeClient", "Intel Icelake processors">;
-def ProcIntelICX  : SubtargetFeature<"icelake-server", "X86ProcFamily",
-                    "IntelIcelakeServer", "Intel Icelake Server processors">;
 
 class Proc<string Name, list<SubtargetFeature> Features>
  : ProcessorModel<Name, GenericModel, Features>;
@@ -787,7 +773,6 @@ def HSWFeatures : ProcessorFeatures<IVBFeatures.Value, [
 
 class HaswellProc<string Name> : ProcModel<Name, HaswellModel,
                                            HSWFeatures.Value, [
-  ProcIntelHSW,
   FeaturePOPCNTFalseDeps,
   FeatureLZCNTFalseDeps
 ]>;
@@ -801,7 +786,6 @@ def BDWFeatures : ProcessorFeatures<HSWFeatures.Value, [
 ]>;
 class BroadwellProc<string Name> : ProcModel<Name, BroadwellModel,
                                              BDWFeatures.Value, [
-  ProcIntelBDW,
   FeaturePOPCNTFalseDeps,
   FeatureLZCNTFalseDeps
 ]>;
@@ -818,7 +802,6 @@ def SKLFeatures : ProcessorFeatures<BDWFeatures.Value, [
 
 class SkylakeClientProc<string Name> : ProcModel<Name, SkylakeClientModel,
                                                  SKLFeatures.Value, [
-  ProcIntelSKL,
   FeatureHasFastGather,
   FeaturePOPCNTFalseDeps,
   FeatureSGX
@@ -873,7 +856,6 @@ def SKXFeatures : ProcessorFeatures<SKLFeatures.Value, [
 
 class SkylakeServerProc<string Name> : ProcModel<Name, SkylakeServerModel,
                                                  SKXFeatures.Value, [
-  ProcIntelSKX,
   FeatureHasFastGather,
   FeaturePOPCNTFalseDeps
 ]>;
@@ -895,7 +877,6 @@ def CNLFeatures : ProcessorFeatures<SKLFeatures.Value, [
 
 class CannonlakeProc<string Name> : ProcModel<Name, SkylakeServerModel,
                                               CNLFeatures.Value, [
-  ProcIntelCNL,
   FeatureHasFastGather
 ]>;
 def : CannonlakeProc<"cannonlake">;
@@ -914,14 +895,12 @@ def ICLFeatures : ProcessorFeatures<CNLFeatures.Value, [
 
 class IcelakeClientProc<string Name> : ProcModel<Name, SkylakeServerModel,
                                                  ICLFeatures.Value, [
-  ProcIntelICL,
   FeatureHasFastGather
 ]>;
 def : IcelakeClientProc<"icelake-client">;
 
 class IcelakeServerProc<string Name> : ProcModel<Name, SkylakeServerModel,
                                                  ICLFeatures.Value, [
-  ProcIntelICX,
   FeaturePCONFIG,
   FeatureWBNOINVD,
   FeatureHasFastGather

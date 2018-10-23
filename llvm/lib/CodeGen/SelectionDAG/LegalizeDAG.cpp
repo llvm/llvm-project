@@ -1115,7 +1115,8 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getStrictFPOperationAction(Node->getOpcode(),
                                             Node->getValueType(0));
     break;
-  case ISD::SADDSAT: {
+  case ISD::SADDSAT:
+  case ISD::UADDSAT: {
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   }
@@ -3460,8 +3461,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     break;
   }
-  case ISD::SADDSAT: {
-    Results.push_back(TLI.getExpandedSignedSaturationAddition(Node, DAG));
+  case ISD::SADDSAT:
+  case ISD::UADDSAT: {
+    Results.push_back(TLI.getExpandedSaturationAddition(Node, DAG));
     break;
   }
   case ISD::SADDO:

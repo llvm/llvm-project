@@ -256,13 +256,13 @@ namespace ISD {
     /// Same for multiplication.
     SMULO, UMULO,
 
-    /// RESULT = SADDSAT(LHS, RHS) - Perform signed saturation addition on 2
+    /// RESULT = [US]ADDSAT(LHS, RHS) - Perform saturation addition on 2
     /// integers with the same bit width (W). If the true value of LHS + RHS
-    /// exceeds the largest signed value that can be represented by W bits, the
+    /// exceeds the largest value that can be represented by W bits, the
     /// resulting value is this maximum value. Otherwise, if this value is less
-    /// than the smallest signed value that can be represented by W bits, the
+    /// than the smallest value that can be represented by W bits, the
     /// resulting value is this minimum value.
-    SADDSAT,
+    SADDSAT, UADDSAT,
 
     /// Simple binary floating point operators.
     FADD, FSUB, FMUL, FDIV, FREM,

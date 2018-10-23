@@ -3684,10 +3684,9 @@ public:
   SDValue getVectorElementPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
                                   SDValue Index) const;
 
-  /// Method for building the DAG expansion of ISD::SADDSAT. This method accepts
-  /// integers or vectors of integers as its arguments.
-  SDValue getExpandedSignedSaturationAddition(SDNode *Node,
-                                              SelectionDAG &DAG) const;
+  /// Method for building the DAG expansion of ISD::[US]ADDSAT. This method
+  /// accepts integers or vectors of integers as its arguments.
+  SDValue getExpandedSaturationAddition(SDNode *Node, SelectionDAG &DAG) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks

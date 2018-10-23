@@ -2966,6 +2966,8 @@ def : MnemonicAlias<"popf",  "popfl", "att">, Requires<[In32BitMode]>;
 def : MnemonicAlias<"popf",  "popfq", "att">, Requires<[In64BitMode]>;
 def : MnemonicAlias<"popf",  "popfq", "intel">, Requires<[In64BitMode]>;
 def : MnemonicAlias<"popfd", "popfl", "att">;
+def : MnemonicAlias<"popfw", "popf",  "intel">, Requires<[In32BitMode]>;
+def : MnemonicAlias<"popfw", "popf",  "intel">, Requires<[In64BitMode]>;
 
 // FIXME: This is wrong for "push reg".  "push %bx" should turn into pushw in
 // all modes.  However: "push (addr)" and "push $42" should default to
@@ -2978,6 +2980,8 @@ def : MnemonicAlias<"pushf",  "pushfl", "att">, Requires<[In32BitMode]>;
 def : MnemonicAlias<"pushf",  "pushfq", "att">, Requires<[In64BitMode]>;
 def : MnemonicAlias<"pushf",  "pushfq", "intel">, Requires<[In64BitMode]>;
 def : MnemonicAlias<"pushfd", "pushfl", "att">;
+def : MnemonicAlias<"pushfw", "pushf",  "intel">, Requires<[In32BitMode]>;
+def : MnemonicAlias<"pushfw", "pushf",  "intel">, Requires<[In64BitMode]>;
 
 def : MnemonicAlias<"popad",  "popal",  "intel">, Requires<[Not64BitMode]>;
 def : MnemonicAlias<"pushad", "pushal", "intel">, Requires<[Not64BitMode]>;

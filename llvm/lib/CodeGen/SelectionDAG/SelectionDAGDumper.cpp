@@ -286,6 +286,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::SRL_PARTS:                  return "srl_parts";
 
   case ISD::SADDSAT:                    return "saddsat";
+  case ISD::UADDSAT:                    return "uaddsat";
 
   // Conversion operators.
   case ISD::SIGN_EXTEND:                return "sign_extend";

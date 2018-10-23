@@ -75,7 +75,7 @@ private:
         llvm::CrashRecoveryContext::Enable();
         const bool Crashed = !CRC.RunSafely([this, &Counter, ScratchPtr]() {
           Counter.start();
-          Function(ScratchPtr);
+          this->Function(ScratchPtr);
           Counter.stop();
         });
         llvm::CrashRecoveryContext::Disable();
