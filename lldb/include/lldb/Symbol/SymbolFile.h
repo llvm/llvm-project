@@ -25,7 +25,7 @@
 #include <mutex>
 
 #if defined(LLDB_CONFIGURATION_DEBUG)
-#define ASSERT_MODULE_LOCK(expr) (expr->AssertModuleLock();)
+#define ASSERT_MODULE_LOCK(expr) (expr->AssertModuleLock())
 #else
 #define ASSERT_MODULE_LOCK(expr) ((void)0)
 #endif
