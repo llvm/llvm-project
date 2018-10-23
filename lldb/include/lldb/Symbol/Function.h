@@ -324,7 +324,8 @@ public:
   /// made the call.
   lldb::addr_t GetReturnPCAddress(Function &caller, Target &target) const;
 
-  /// Like \ref GetReturnPCAddress, but returns an unresolved file address.
+  /// Like \ref GetReturnPCAddress, but returns an unslid function-local PC
+  /// offset.
   lldb::addr_t GetUnresolvedReturnPCAddress() const { return return_pc; }
 
 private:
@@ -337,8 +338,9 @@ private:
     Function *def;
   } lazy_callee;
 
-  /// An invalid address if this is a tail call. Otherwise, the return PC for
-  /// the call. Note that this is a file address which must be resolved.
+  /// An invalid address if this is a tail call. Otherwise, the function-local
+  /// PC offset. Adding this PC offset to the function's base load address
+  /// gives the return PC for the call.
   lldb::addr_t return_pc;
 
   /// Whether or not an attempt was made to find the callee's definition.
