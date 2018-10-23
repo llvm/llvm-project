@@ -3686,13 +3686,20 @@ void Sema::CodeCompleteOrdinaryName(Scope *S,
   }
 
   // If we are in a C++ non-static member function, check the qualifiers on
-  // the member function to filter/prioritize the results list.
-  if (CXXMethodDecl *CurMethod = dyn_cast<CXXMethodDecl>(CurContext))
-    if (CurMethod->isInstance())
+  // the member function to filter/prioritize the results list and set the
+  // context to the record context so that accessibility check in base class
+  // works correctly.
+  RecordDecl *MemberCompletionRecord = nullptr;
+  if (CXXMethodDecl *CurMethod = dyn_cast<CXXMethodDecl>(CurContext)) {
+    if (CurMethod->isInstance()) {
       Results.setObjectTypeQualifiers(
                       Qualifiers::fromCVRMask(CurMethod->getTypeQualifiers()));
+      MemberCompletionRecord = CurMethod->getParent();
+    }
+  }
 
-  CodeCompletionDeclConsumer Consumer(Results, CurContext);
+  CodeCompletionDeclConsumer Consumer(Results, CurContext, /*FixIts=*/{},
+                                      MemberCompletionRecord);
   LookupVisibleDecls(S, LookupOrdinaryName, Consumer,
                      CodeCompleter->includeGlobals(),
                      CodeCompleter->loadExternal());

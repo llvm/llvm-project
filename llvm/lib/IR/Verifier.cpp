@@ -4474,13 +4474,16 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
 
     break;
   }
-  case Intrinsic::sadd_sat: {
+  case Intrinsic::sadd_sat:
+  case Intrinsic::uadd_sat: {
     Value *Op1 = CS.getArgOperand(0);
     Value *Op2 = CS.getArgOperand(1);
-    Assert(Op1->getType()->isIntOrIntVectorTy(),
-           "first operand of sadd_sat must be an int type or vector of ints");
-    Assert(Op2->getType()->isIntOrIntVectorTy(),
-           "second operand of sadd_sat must be an int type or vector of ints");
+    Assert(
+        Op1->getType()->isIntOrIntVectorTy(),
+        "first operand of [us]add_sat must be an int type or vector of ints");
+    Assert(
+        Op2->getType()->isIntOrIntVectorTy(),
+        "second operand of [us]add_sat must be an int type or vector of ints");
     break;
   }
   };

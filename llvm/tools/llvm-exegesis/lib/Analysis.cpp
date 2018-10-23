@@ -15,6 +15,7 @@
 #include <unordered_set>
 #include <vector>
 
+namespace llvm {
 namespace exegesis {
 
 static const char kCsvSep = ',';
@@ -796,3 +797,4 @@ std::vector<std::pair<uint16_t, float>> computeIdealizedProcResPressure(
 }
 
 } // namespace exegesis
+} // namespace llvm

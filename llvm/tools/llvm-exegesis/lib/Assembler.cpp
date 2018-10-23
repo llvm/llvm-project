@@ -23,6 +23,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/MemoryBuffer.h"
 
+namespace llvm {
 namespace exegesis {
 
 static constexpr const char ModuleID[] = "ExegesisInfoTest";
@@ -110,6 +111,8 @@ static void fillMachineFunction(llvm::MachineFunction &MF,
         Builder.addReg(Op.getReg(), Flags);
       } else if (Op.isImm()) {
         Builder.addImm(Op.getImm());
+      } else if (!Op.isValid()) {
+        llvm_unreachable("Operand is not set");
       } else {
         llvm_unreachable("Not yet implemented");
       }
@@ -293,3 +296,4 @@ ExecutableFunction::ExecutableFunction(
 }
 
 } // namespace exegesis
+} // namespace llvm

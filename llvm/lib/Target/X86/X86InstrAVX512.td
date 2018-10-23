@@ -5184,6 +5184,94 @@ defm VPXOR : avx512_logic_rm_vl_dq<0xEF, 0xEF, "vpxor", xor,
 defm VPANDN : avx512_logic_rm_vl_dq<0xDF, 0xDF, "vpandn", X86andnp,
                                     SchedWriteVecLogic>;
 
+let Predicates = [HasVLX] in {
+  def : Pat<(v16i8 (and VR128X:$src1, VR128X:$src2)),
+            (VPANDQZ128rr VR128X:$src1, VR128X:$src2)>;
+  def : Pat<(v8i16 (and VR128X:$src1, VR128X:$src2)),
+            (VPANDQZ128rr VR128X:$src1, VR128X:$src2)>;
+  def : Pat<(v4i32 (and VR128X:$src1, VR128X:$src2)),
+            (VPANDQZ128rr VR128X:$src1, VR128X:$src2)>;
+
+  def : Pat<(v16i8 (or VR128X:$src1, VR128X:$src2)),
+            (VPORQZ128rr VR128X:$src1, VR128X:$src2)>;
+  def : Pat<(v8i16 (or VR128X:$src1, VR128X:$src2)),
+            (VPORQZ128rr VR128X:$src1, VR128X:$src2)>;
+  def : Pat<(v4i32 (or VR128X:$src1, VR128X:$src2)),
+            (VPORQZ128rr VR128X:$src1, VR128X:$src2)>;
+
+  def : Pat<(v16i8 (xor VR128X:$src1, VR128X:$src2)),
+            (VPXORQZ128rr VR128X:$src1, VR128X:$src2)>;
+  def : Pat<(v8i16 (xor VR128X:$src1, VR128X:$src2)),
+            (VPXORQZ128rr VR128X:$src1, VR128X:$src2)>;
+  def : Pat<(v4i32 (xor VR128X:$src1, VR128X:$src2)),
+            (VPXORQZ128rr VR128X:$src1, VR128X:$src2)>;
+
+  def : Pat<(v16i8 (X86andnp VR128X:$src1, VR128X:$src2)),
+            (VPANDNQZ128rr VR128X:$src1, VR128X:$src2)>;
+  def : Pat<(v8i16 (X86andnp VR128X:$src1, VR128X:$src2)),
+            (VPANDNQZ128rr VR128X:$src1, VR128X:$src2)>;
+  def : Pat<(v4i32 (X86andnp VR128X:$src1, VR128X:$src2)),
+            (VPANDNQZ128rr VR128X:$src1, VR128X:$src2)>;
+
+  def : Pat<(v32i8 (and VR256X:$src1, VR256X:$src2)),
+            (VPANDQZ256rr VR256X:$src1, VR256X:$src2)>;
+  def : Pat<(v16i16 (and VR256X:$src1, VR256X:$src2)),
+            (VPANDQZ256rr VR256X:$src1, VR256X:$src2)>;
+  def : Pat<(v8i32 (and VR256X:$src1, VR256X:$src2)),
+            (VPANDQZ256rr VR256X:$src1, VR256X:$src2)>;
+
+  def : Pat<(v32i8 (or VR256X:$src1, VR256X:$src2)),
+            (VPORQZ256rr VR256X:$src1, VR256X:$src2)>;
+  def : Pat<(v16i16 (or VR256X:$src1, VR256X:$src2)),
+            (VPORQZ256rr VR256X:$src1, VR256X:$src2)>;
+  def : Pat<(v8i32 (or VR256X:$src1, VR256X:$src2)),
+            (VPORQZ256rr VR256X:$src1, VR256X:$src2)>;
+
+  def : Pat<(v32i8 (xor VR256X:$src1, VR256X:$src2)),
+            (VPXORQZ256rr VR256X:$src1, VR256X:$src2)>;
+  def : Pat<(v16i16 (xor VR256X:$src1, VR256X:$src2)),
+            (VPXORQZ256rr VR256X:$src1, VR256X:$src2)>;
+  def : Pat<(v8i32 (xor VR256X:$src1, VR256X:$src2)),
+            (VPXORQZ256rr VR256X:$src1, VR256X:$src2)>;
+
+  def : Pat<(v32i8 (X86andnp VR256X:$src1, VR256X:$src2)),
+            (VPANDNQZ256rr VR256X:$src1, VR256X:$src2)>;
+  def : Pat<(v16i16 (X86andnp VR256X:$src1, VR256X:$src2)),
+            (VPANDNQZ256rr VR256X:$src1, VR256X:$src2)>;
+  def : Pat<(v8i32 (X86andnp VR256X:$src1, VR256X:$src2)),
+            (VPANDNQZ256rr VR256X:$src1, VR256X:$src2)>;
+}
+
+let Predicates = [HasAVX512] in {
+  def : Pat<(v64i8 (and VR512:$src1, VR512:$src2)),
+            (VPANDQZrr VR512:$src1, VR512:$src2)>;
+  def : Pat<(v32i16 (and VR512:$src1, VR512:$src2)),
+            (VPANDQZrr VR512:$src1, VR512:$src2)>;
+  def : Pat<(v16i32 (and VR512:$src1, VR512:$src2)),
+            (VPANDQZrr VR512:$src1, VR512:$src2)>;
+
+  def : Pat<(v64i8 (or VR512:$src1, VR512:$src2)),
+            (VPORQZrr VR512:$src1, VR512:$src2)>;
+  def : Pat<(v32i16 (or VR512:$src1, VR512:$src2)),
+            (VPORQZrr VR512:$src1, VR512:$src2)>;
+  def : Pat<(v16i32 (or VR512:$src1, VR512:$src2)),
+            (VPORQZrr VR512:$src1, VR512:$src2)>;
+
+  def : Pat<(v64i8 (xor VR512:$src1, VR512:$src2)),
+            (VPXORQZrr VR512:$src1, VR512:$src2)>;
+  def : Pat<(v32i16 (xor VR512:$src1, VR512:$src2)),
+            (VPXORQZrr VR512:$src1, VR512:$src2)>;
+  def : Pat<(v16i32 (xor VR512:$src1, VR512:$src2)),
+            (VPXORQZrr VR512:$src1, VR512:$src2)>;
+
+  def : Pat<(v64i8 (X86andnp VR512:$src1, VR512:$src2)),
+            (VPANDNQZrr VR512:$src1, VR512:$src2)>;
+  def : Pat<(v32i16 (X86andnp VR512:$src1, VR512:$src2)),
+            (VPANDNQZrr VR512:$src1, VR512:$src2)>;
+  def : Pat<(v16i32 (X86andnp VR512:$src1, VR512:$src2)),
+            (VPANDNQZrr VR512:$src1, VR512:$src2)>;
+}
+
 //===----------------------------------------------------------------------===//
 // AVX-512  FP arithmetic
 //===----------------------------------------------------------------------===//

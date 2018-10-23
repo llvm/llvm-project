@@ -102,7 +102,7 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
   FormValue.dump(OS, DumpOpts);
   if (FormValue.isFormClass(DWARFFormValue::FC_SectionOffset)) {
     uint32_t Offset = *FormValue.getAsSectionOffset();
-    if (!U->isDWOUnit()) {
+    if (!U->isDWOUnit() && !U->getLocSection()->Data.empty()) {
       DWARFDebugLoc DebugLoc;
       DWARFDataExtractor Data(Obj, *U->getLocSection(), Ctx.isLittleEndian(),
                               Obj.getAddressSize());
@@ -115,11 +115,23 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
                  Indent);
       } else
         OS << "error extracting location list.";
-    } else {
-      DataExtractor Data(U->getLocSectionData(), Ctx.isLittleEndian(), 0);
-      auto LL = DWARFDebugLocDWO::parseOneLocationList(Data, &Offset);
+      return;
+    }
+
+    StringRef LoclistsSectionData =
+        U->isDWOUnit() ? U->getLocSectionData() : Obj.getLoclistsSection().Data;
+    if (!LoclistsSectionData.empty()) {
+      DataExtractor Data(LoclistsSectionData, Ctx.isLittleEndian(),
+                         Obj.getAddressSize());
+      auto LL = DWARFDebugLoclists::parseOneLocationList(Data, &Offset);
+
+      uint64_t BaseAddr = 0;
+      if (Optional<SectionedAddress> BA = U->getBaseAddress())
+        BaseAddr = BA->Address;
+
       if (LL)
-        LL->dump(OS, Ctx.isLittleEndian(), Obj.getAddressSize(), MRI, Indent);
+        LL->dump(OS, BaseAddr, Ctx.isLittleEndian(), Obj.getAddressSize(), MRI,
+                 Indent);
       else
         OS << "error extracting location list.";
     }

@@ -154,6 +154,19 @@ def TypeIndex : Operand<i32>;
 } // OperandNamespace = "WebAssembly"
 
 //===----------------------------------------------------------------------===//
+// WebAssembly Register to Stack instruction mapping
+//===----------------------------------------------------------------------===//
+
+class StackRel;
+def getStackOpcode : InstrMapping {
+  let FilterClass = "StackRel";
+  let RowFields = ["BaseName"];
+  let ColFields = ["StackBased"];
+  let KeyCol = ["false"];
+  let ValueCols = [["true"]];
+}
+
+//===----------------------------------------------------------------------===//
 // WebAssembly Instruction Format Definitions.
 //===----------------------------------------------------------------------===//
 

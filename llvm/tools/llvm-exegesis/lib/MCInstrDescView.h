@@ -29,6 +29,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 
+namespace llvm {
 namespace exegesis {
 
 // A variable represents the value associated to an Operand or a set of Operands
@@ -191,5 +192,6 @@ void DumpMCInst(const llvm::MCRegisterInfo &MCRegisterInfo,
                 const llvm::MCInst &MCInst, llvm::raw_ostream &OS);
 
 } // namespace exegesis
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_EXEGESIS_MCINSTRDESCVIEW_H

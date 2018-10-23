@@ -35,6 +35,7 @@ bool operator==(const MCInst &a, const MCInst &b) {
 
 } // namespace llvm
 
+namespace llvm {
 namespace exegesis {
 
 void InitializeX86ExegesisTarget();
@@ -376,3 +377,4 @@ TEST_F(Core2TargetTest, SetRegToFP1_4Bits) {
 
 } // namespace
 } // namespace exegesis
+} // namespace llvm

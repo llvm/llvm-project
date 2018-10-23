@@ -429,6 +429,10 @@ public:
     return (Options & ClassOptions::ForwardReference) != ClassOptions::None;
   }
 
+  bool isScoped() const {
+    return (Options & ClassOptions::Scoped) != ClassOptions::None;
+  }
+
   uint16_t getMemberCount() const { return MemberCount; }
   ClassOptions getOptions() const { return Options; }
   TypeIndex getFieldList() const { return FieldList; }

@@ -9,6 +9,7 @@
 
 #include "CodeTemplate.h"
 
+namespace llvm {
 namespace exegesis {
 
 CodeTemplate::CodeTemplate(CodeTemplate &&) = default;
@@ -115,3 +116,4 @@ getExecutionModeBits(ExecutionMode Execution) {
 }
 
 } // namespace exegesis
+} // namespace llvm

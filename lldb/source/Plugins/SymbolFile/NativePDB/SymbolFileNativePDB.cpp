@@ -9,8 +9,6 @@
 
 #include "SymbolFileNativePDB.h"
 
-#include "clang/Lex/Lexer.h"
-
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -151,10 +149,9 @@ void SymbolFileNativePDB::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-void SymbolFileNativePDB::DebuggerInitialize(lldb_private::Debugger &debugger) {
-}
+void SymbolFileNativePDB::DebuggerInitialize(Debugger &debugger) {}
 
-lldb_private::ConstString SymbolFileNativePDB::GetPluginNameStatic() {
+ConstString SymbolFileNativePDB::GetPluginNameStatic() {
   static ConstString g_name("native-pdb");
   return g_name;
 }
@@ -163,12 +160,11 @@ const char *SymbolFileNativePDB::GetPluginDescriptionStatic() {
   return "Microsoft PDB debug symbol cross-platform file reader.";
 }
 
-lldb_private::SymbolFile *
-SymbolFileNativePDB::CreateInstance(lldb_private::ObjectFile *obj_file) {
+SymbolFile *SymbolFileNativePDB::CreateInstance(ObjectFile *obj_file) {
   return new SymbolFileNativePDB(obj_file);
 }
 
-SymbolFileNativePDB::SymbolFileNativePDB(lldb_private::ObjectFile *object_file)
+SymbolFileNativePDB::SymbolFileNativePDB(ObjectFile *object_file)
     : SymbolFile(object_file) {}
 
 SymbolFileNativePDB::~SymbolFileNativePDB() {}
@@ -260,7 +256,7 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbSymUid func_uid,
   if (!func_range.GetBaseAddress().IsValid())
     return nullptr;
 
-  lldb_private::Type *func_type = nullptr;
+  Type *func_type = nullptr;
 
   // FIXME: Resolve types and mangled names.
   PdbSymUid sig_uid =
@@ -287,7 +283,7 @@ SymbolFileNativePDB::CreateCompileUnit(const CompilandIndexItem &cci) {
 
   llvm::StringRef source_file_name =
       m_index->compilands().GetMainSourceFile(cci);
-  lldb_private::FileSpec fs(source_file_name, false);
+  FileSpec fs(source_file_name, false);
 
   CompUnitSP cu_sp =
       std::make_shared<CompileUnit>(m_obj_file->GetModule(), nullptr, fs,
@@ -333,8 +329,8 @@ lldb::CompUnitSP SymbolFileNativePDB::ParseCompileUnitAtIndex(uint32_t index) {
   return GetOrCreateCompileUnit(item);
 }
 
-lldb::LanguageType SymbolFileNativePDB::ParseCompileUnitLanguage(
-    const lldb_private::SymbolContext &sc) {
+lldb::LanguageType
+SymbolFileNativePDB::ParseCompileUnitLanguage(const SymbolContext &sc) {
   // What fields should I expect to be filled out on the SymbolContext?  Is it
   // safe to assume that `sc.comp_unit` is valid?
   if (!sc.comp_unit)
@@ -350,8 +346,7 @@ lldb::LanguageType SymbolFileNativePDB::ParseCompileUnitLanguage(
   return TranslateLanguage(item->m_compile_opts->getLanguage());
 }
 
-size_t SymbolFileNativePDB::ParseCompileUnitFunctions(
-    const lldb_private::SymbolContext &sc) {
+size_t SymbolFileNativePDB::ParseCompileUnitFunctions(const SymbolContext &sc) {
   lldbassert(sc.comp_unit);
   return false;
 }
@@ -366,10 +361,9 @@ static bool NeedsResolvedCompileUnit(uint32_t resolve_scope) {
   return (resolve_scope & flags) != 0;
 }
 
-uint32_t
-SymbolFileNativePDB::ResolveSymbolContext(const lldb_private::Address &addr,
-                                          uint32_t resolve_scope,
-                                          lldb_private::SymbolContext &sc) {
+uint32_t SymbolFileNativePDB::ResolveSymbolContext(const Address &addr,
+                                                   uint32_t resolve_scope,
+                                                   SymbolContext &sc) {
   uint32_t resolved_flags = 0;
   lldb::addr_t file_addr = addr.GetFileAddress();
 
@@ -444,8 +438,7 @@ static void TerminateLineSequence(LineTable &table,
   table.InsertSequence(seq.release());
 }
 
-bool SymbolFileNativePDB::ParseCompileUnitLineTable(
-    const lldb_private::SymbolContext &sc) {
+bool SymbolFileNativePDB::ParseCompileUnitLineTable(const SymbolContext &sc) {
   // Unfortunately LLDB is set up to parse the entire compile unit line table
   // all at once, even if all it really needs is line info for a specific
   // function.  In the future it would be nice if it could set the sc.m_function
@@ -519,15 +512,13 @@ bool SymbolFileNativePDB::ParseCompileUnitLineTable(
   return true;
 }
 
-bool SymbolFileNativePDB::ParseCompileUnitDebugMacros(
-    const lldb_private::SymbolContext &sc) {
+bool SymbolFileNativePDB::ParseCompileUnitDebugMacros(const SymbolContext &sc) {
   // PDB doesn't contain information about macros
   return false;
 }
 
 bool SymbolFileNativePDB::ParseCompileUnitSupportFiles(
-    const lldb_private::SymbolContext &sc,
-    lldb_private::FileSpecList &support_files) {
+    const SymbolContext &sc, FileSpecList &support_files) {
   lldbassert(sc.comp_unit);
 
   PdbSymUid comp_uid = PdbSymUid::fromOpaqueId(sc.comp_unit->GetID());
@@ -547,23 +538,20 @@ bool SymbolFileNativePDB::ParseCompileUnitSupportFiles(
 }
 
 bool SymbolFileNativePDB::ParseImportedModules(
-    const lldb_private::SymbolContext &sc,
-    std::vector<lldb_private::ConstString> &imported_modules) {
+    const SymbolContext &sc, std::vector<ConstString> &imported_modules) {
   // PDB does not yet support module debug info
   return false;
 }
 
-size_t SymbolFileNativePDB::ParseFunctionBlocks(
-    const lldb_private::SymbolContext &sc) {
+size_t SymbolFileNativePDB::ParseFunctionBlocks(const SymbolContext &sc) {
   lldbassert(sc.comp_unit && sc.function);
   return 0;
 }
 
 uint32_t SymbolFileNativePDB::FindFunctions(
-    const lldb_private::ConstString &name,
-    const lldb_private::CompilerDeclContext *parent_decl_ctx,
+    const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
     uint32_t name_type_mask, bool include_inlines, bool append,
-    lldb_private::SymbolContextList &sc_list) {
+    SymbolContextList &sc_list) {
   // For now we only support lookup by method name.
   if (!(name_type_mask & eFunctionNameTypeMethod))
     return 0;
@@ -583,7 +571,7 @@ uint32_t SymbolFileNativePDB::FindFunctions(
 
     PdbSymUid cuid = PdbSymUid::makeCompilandId(proc);
     CompilandIndexItem &cci = m_index->compilands().GetOrCreateCompiland(cuid);
-    lldb_private::SymbolContext sc;
+    SymbolContext sc;
 
     sc.comp_unit = GetOrCreateCompileUnit(cci).get();
     sc.module_sp = sc.comp_unit->GetModule();
@@ -596,21 +584,50 @@ uint32_t SymbolFileNativePDB::FindFunctions(
   return sc_list.GetSize();
 }
 
-uint32_t
-SymbolFileNativePDB::FindFunctions(const lldb_private::RegularExpression &regex,
-                                   bool include_inlines, bool append,
-                                   lldb_private::SymbolContextList &sc_list) {
+uint32_t SymbolFileNativePDB::FindFunctions(const RegularExpression &regex,
+                                            bool include_inlines, bool append,
+                                            SymbolContextList &sc_list) {
   return 0;
 }
 
-lldb_private::CompilerDeclContext SymbolFileNativePDB::FindNamespace(
-    const lldb_private::SymbolContext &sc,
-    const lldb_private::ConstString &name,
-    const lldb_private::CompilerDeclContext *parent_decl_ctx) {
+uint32_t SymbolFileNativePDB::FindTypes(
+    const SymbolContext &sc, const ConstString &name,
+    const CompilerDeclContext *parent_decl_ctx, bool append,
+    uint32_t max_matches, llvm::DenseSet<SymbolFile *> &searched_symbol_files,
+    TypeMap &types) {
+  return 0;
+}
+
+size_t
+SymbolFileNativePDB::FindTypes(const std::vector<CompilerContext> &context,
+                               bool append, TypeMap &types) {
+  return 0;
+}
+
+size_t SymbolFileNativePDB::ParseTypes(const SymbolContext &sc) { return 0; }
+
+Type *SymbolFileNativePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
+  return nullptr;
+}
+
+bool SymbolFileNativePDB::CompleteType(CompilerType &compiler_type) {
+  return false;
+}
+
+size_t SymbolFileNativePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
+                                     uint32_t type_mask,
+                                     lldb_private::TypeList &type_list) {
+  return 0;
+}
+
+CompilerDeclContext
+SymbolFileNativePDB::FindNamespace(const SymbolContext &sc,
+                                   const ConstString &name,
+                                   const CompilerDeclContext *parent_decl_ctx) {
   return {};
 }
 
-lldb_private::TypeSystem *
+TypeSystem *
 SymbolFileNativePDB::GetTypeSystemForLanguage(lldb::LanguageType language) {
   auto type_system =
       m_obj_file->GetModule()->GetTypeSystemForLanguage(language);
@@ -619,7 +636,7 @@ SymbolFileNativePDB::GetTypeSystemForLanguage(lldb::LanguageType language) {
   return type_system;
 }
 
-lldb_private::ConstString SymbolFileNativePDB::GetPluginName() {
+ConstString SymbolFileNativePDB::GetPluginName() {
   static ConstString g_name("pdb");
   return g_name;
 }

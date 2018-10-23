@@ -1381,12 +1381,16 @@ void JITDylib::dump(raw_ostream &OS) {
     OS << "JITDylib \"" << JITDylibName
        << "\" (ES: " << format("0x%016x", reinterpret_cast<uintptr_t>(&ES))
        << "):\n"
+       << "Search order: [";
+    for (auto *JD : SearchOrder)
+      OS << " \"" << JD->getName() << "\"";
+    OS << " ]\n"
        << "Symbol table:\n";
 
     for (auto &KV : Symbols) {
       OS << "    \"" << *KV.first << "\": ";
       if (auto Addr = KV.second.getAddress())
-        OS << format("0x%016x", Addr);
+        OS << format("0x%016x", Addr) << ", " << KV.second.getFlags();
       else
         OS << "<not resolved>";
       if (KV.second.getFlags().isLazy() ||
@@ -1400,7 +1404,7 @@ void JITDylib::dump(raw_ostream &OS) {
         }
         if (KV.second.getFlags().isMaterializing())
           OS << " Materializing";
-        OS << " )\n";
+        OS << ", " << KV.second.getFlags() << " )\n";
       } else
         OS << "\n";
     }

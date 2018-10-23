@@ -43,27 +43,29 @@ def : Pat<(brcond (i32 (seteq I32:$cond, 0)), bb:$dst),
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
 let isCodeGenOnly = 1 in
 def BR_TABLE_I32 : NI<(outs), (ins I32:$index, variable_ops),
-                      [(WebAssemblybr_table I32:$index)], 0,
+                      [(WebAssemblybr_table I32:$index)], "false",
                       "br_table \t$index", 0x0e> {
   let TSFlags{0} = 1;
   let TSFlags{1} = 1;
 }
+let BaseName = "BR_TABLE_I32" in
 def BR_TABLE_I32_S : NI<(outs), (ins variable_ops),
-                        [], 1,
-                        "br_table", 0x0e> {
+                        [], "true",
+                        "br_table \t", 0x0e> {
   let TSFlags{0} = 1;
   let TSFlags{1} = 1;
 }
 let isCodeGenOnly = 1 in
 def BR_TABLE_I64 : NI<(outs), (ins I64:$index, variable_ops),
-                      [(WebAssemblybr_table I64:$index)], 0,
+                      [(WebAssemblybr_table I64:$index)], "false",
                       "br_table \t$index"> {
   let TSFlags{0} = 1;
   let TSFlags{1} = 1;
 }
+let BaseName = "BR_TABLE_I64" in
 def BR_TABLE_I64_S : NI<(outs), (ins variable_ops),
-                        [], 1,
-                        "br_table"> {
+                        [], "true",
+                        "br_table \t"> {
   let TSFlags{0} = 1;
   let TSFlags{1} = 1;
 }

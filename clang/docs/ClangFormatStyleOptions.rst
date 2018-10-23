@@ -1134,21 +1134,17 @@ the configuration (without a prefix: ``Auto``).
   .. code-block:: c++
 
     true:
-    FitsOnOneLine::Constructor()
-        : aaaaaaaaaaaaa(aaaaaaaaaaaaaa), aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}
-
-    DoesntFit::Constructor()
-        : aaaaaaaaaaaaa(aaaaaaaaaaaaaa),
-          aaaaaaaaaaaaa(aaaaaaaaaaaaaa),
-          aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}
+    SomeClass::Constructor()
+        : aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaa) {
+      return 0;
+    }
 
     false:
-    FitsOnOneLine::Constructor()
-        : aaaaaaaaaaaaa(aaaaaaaaaaaaaa), aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}
-
-    DoesntFit::Constructor()
-        : aaaaaaaaaaaaa(aaaaaaaaaaaaaa), aaaaaaaaaaaaa(aaaaaaaaaaaaaa),
-          aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}
+    SomeClass::Constructor()
+        : aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaa),
+          aaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaa) {
+      return 0;
+    }
 
 **ConstructorInitializerIndentWidth** (``unsigned``)
   The number of characters to use for indentation of constructor
@@ -1401,6 +1397,39 @@ the configuration (without a prefix: ``Auto``).
      false:
      LoooooooooooooooooooooooooooooooooooooooongReturnType
      LoooooooooooooooooooooooooooooooongFunctionDeclaration();
+
+**JavaImportGroups** (``std::vector<std::string>``)
+  A vector of prefixes ordered by the desired groups for Java imports.
+
+  Each group is seperated by a newline. Static imports will also follow the
+  same grouping convention above all non-static imports. One group's prefix
+  can be a subset of another - the longest prefix is always matched. Within
+  a group, the imports are ordered lexicographically.
+
+  In the .clang-format configuration file, this can be configured like
+  in the following yaml example. This will result in imports being
+  formatted as in the Java example below.
+
+  .. code-block:: yaml
+
+    JavaImportGroups: ['com.example', 'com', 'org']
+
+
+  .. code-block:: java
+
+     import static com.example.function1;
+
+     import static com.test.function2;
+
+     import static org.example.function3;
+
+     import com.example.ClassA;
+     import com.example.Test;
+     import com.example.a.ClassB;
+
+     import com.test.ClassC;
+
+     import org.example.ClassD;
 
 **JavaScriptQuotes** (``JavaScriptQuoteStyle``)
   The JavaScriptQuoteStyle to use for JavaScript strings.
@@ -1980,7 +2009,8 @@ the configuration (without a prefix: ``Auto``).
 
 
 **StatementMacros** (``std::vector<std::string>``)
-  A vector of macros that should be interpreted as complete statements.
+  A vector of macros that should be interpreted as complete
+  statements.
 
   Typical macros are expressions, and require a semi-colon to be
   added; sometimes this is not the case, and this allows to make

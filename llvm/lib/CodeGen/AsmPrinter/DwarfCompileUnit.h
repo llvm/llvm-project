@@ -210,10 +210,10 @@ public:
 
   /// Construct a call site entry DIE describing a call within \p Scope to a
   /// callee described by \p CalleeSP. \p IsTail specifies whether the call is
-  /// a tail call. \p ReturnPC must be non-null for non-tail calls and point
-  /// to the PC value after the call returns.
+  /// a tail call. \p PCOffset must be non-zero for non-tail calls or be the
+  /// function-local offset to PC value after the call instruction.
   DIE &constructCallSiteEntryDIE(DIE &ScopeDIE, const DISubprogram &CalleeSP,
-                                 bool IsTail, const MCSymbol *ReturnPC);
+                                 bool IsTail, const MCExpr *PCOffset);
 
   /// Construct import_module DIE.
   DIE *constructImportedEntityDIE(const DIImportedEntity *Module);
@@ -291,6 +291,9 @@ public:
 
   /// Add a Dwarf expression attribute data and value.
   void addExpr(DIELoc &Die, dwarf::Form Form, const MCExpr *Expr);
+
+  /// Add an attribute containing an address expression to \p Die.
+  void addAddressExpr(DIE &Die, dwarf::Attribute Attribute, const MCExpr *Expr);
 
   void applySubprogramAttributesToDefinition(const DISubprogram *SP,
                                              DIE &SPDie);

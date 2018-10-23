@@ -1,6 +1,25 @@
 #!/usr/bin/env python
 # This script is used to bisect skip and count arguments for --debug-counter.
 # It is similar to bisect, except it understands how to increase skip and decrease count
+#
+# Typical usage:
+#
+# bisect-skip-count bisect-command.sh "%(skip)d" "%(count)d" 2>&1 | tee bisect.out
+#
+# bisect-command.sh is something like this:
+# #! /bin/bash
+#
+# skip=$1
+# count=$2
+#
+# opt -debug-counter=my-counter-skip=${skip},my-counter-count=${count}
+# ... Test output of opt and exit zero for pass, non-zero for fail
+#
+# Examine bisect.out to look for "Last good skip" and "Last good
+# count" to find the values of the counter that produce a passing
+# result.  Incrementing the last good count by one or decrementing the
+# last good skip by one should produce a failure.
+#
 import os
 import sys
 import argparse
