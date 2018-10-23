@@ -894,6 +894,12 @@ SymbolContext::FindBestGlobalDataSymbol(const ConstString &name, Status &error) 
             case eSymbolTypeUndefined:
             case eSymbolTypeResolver:
               break;
+
+            case eSymbolTypeASTFile:
+              break;
+
+            case eSymbolTypeIVarOffset:
+              break;
           }
         }
       }

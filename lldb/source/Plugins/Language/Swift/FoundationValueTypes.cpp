@@ -271,7 +271,7 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
   bool success = false;
   uint64_t len = value_sp->GetValueAsUnsigned(0, &success);
   if (success) {
-    stream.Printf("%llu bytes", len);
+    stream.Printf("%" PRIu64 " bytes", len);
     return true;
   }
 

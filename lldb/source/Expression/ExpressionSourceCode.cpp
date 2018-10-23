@@ -186,7 +186,7 @@ static void AddMacros(const DebugMacros *dm, CompileUnit *comp_unit,
 }
 
 static bool ExprBodyContainsVar(llvm::StringRef var, llvm::StringRef body) {
-  int from = 0;
+  size_t from = 0;
   while ((from = body.find(var, from)) != llvm::StringRef::npos) {
     if ((from != 0 && clang::isIdentifierBody(body[from-1])) ||
         (from + var.size() != body.size() &&
@@ -486,7 +486,6 @@ bool ExpressionSourceCode::GetText(
       if (triple.isOSDarwin()) {
         if (auto process_sp = exe_ctx.GetProcessSP()) {
           os_vers << getAvailabilityName(triple.getOS()) << " ";
-          uint32_t major, minor, patch;
           auto platform = target->GetPlatform();
           bool is_simulator =
               platform->GetPluginName().GetStringRef().endswith("-simulator");

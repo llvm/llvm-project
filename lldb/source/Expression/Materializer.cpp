@@ -1113,7 +1113,6 @@ private:
   CompilerType m_type;
   bool m_is_program_reference;
   bool m_keep_in_memory;
-  bool m_is_error_result;
 
   lldb::addr_t m_temporary_allocation;
   size_t m_temporary_allocation_size;
