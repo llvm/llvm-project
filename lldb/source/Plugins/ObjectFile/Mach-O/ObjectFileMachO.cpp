@@ -1199,6 +1199,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
           case eSectionTypeDWARFDebugLine:
           case eSectionTypeDWARFDebugLineStr:
           case eSectionTypeDWARFDebugLoc:
+          case eSectionTypeDWARFDebugLocLists:
           case eSectionTypeDWARFDebugMacInfo:
           case eSectionTypeDWARFDebugMacro:
           case eSectionTypeDWARFDebugNames:
@@ -1457,6 +1458,7 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_dwarf_debug_info("__debug_info");
   static ConstString g_sect_name_dwarf_debug_line("__debug_line");
   static ConstString g_sect_name_dwarf_debug_loc("__debug_loc");
+  static ConstString g_sect_name_dwarf_debug_loclists("__debug_loclists");
   static ConstString g_sect_name_dwarf_debug_macinfo("__debug_macinfo");
   static ConstString g_sect_name_dwarf_debug_names("__debug_names");
   static ConstString g_sect_name_dwarf_debug_pubnames("__debug_pubnames");
@@ -1486,6 +1488,8 @@ static lldb::SectionType GetSectionType(uint32_t flags,
     return eSectionTypeDWARFDebugLine;
   if (section_name == g_sect_name_dwarf_debug_loc)
     return eSectionTypeDWARFDebugLoc;
+  if (section_name == g_sect_name_dwarf_debug_loclists)
+    return eSectionTypeDWARFDebugLocLists;
   if (section_name == g_sect_name_dwarf_debug_macinfo)
     return eSectionTypeDWARFDebugMacInfo;
   if (section_name == g_sect_name_dwarf_debug_names)
