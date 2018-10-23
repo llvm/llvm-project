@@ -6,7 +6,7 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
+// UNSUPPORTED: c++03
 // <regex>
 
 // class match_results<BidirectionalIterator, Allocator>
