@@ -4868,11 +4868,11 @@ bool ASTReader::readASTFileControlBlock(
       unsigned Idx = 0, N = Record.size();
       while (Idx < N) {
         // Read information about the AST file.
-        Idx += 5; // ImportLoc, Size, ModTime, Signature
-        SkipString(Record, Idx); // Module name; FIXME: pass to listener?
+        Idx += 1+1+1+1+5; // Kind, ImportLoc, Size, ModTime, Signature
+        std::string ModuleName = ReadString(Record, Idx);
         std::string Filename = ReadString(Record, Idx);
         ResolveImportedPath(Filename, ModuleDir);
-        Listener.visitImport(Filename);
+        Listener.visitImport(ModuleName, Filename);
       }
       break;
     }

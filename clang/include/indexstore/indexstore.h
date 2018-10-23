@@ -53,8 +53,12 @@
 #endif
 
 #ifndef INDEXSTORE_PUBLIC
-# if defined (_MSC_VER)
-#  define INDEXSTORE_PUBLIC __declspec(dllimport)
+# ifdef _WIN32
+#  ifdef IndexStore_EXPORTS
+#    define INDEXSTORE_PUBLIC __declspec(dllexport)
+#  else
+#    define INDEXSTORE_PUBLIC __declspec(dllimport)
+#  endif
 # else
 #  define INDEXSTORE_PUBLIC
 # endif
