@@ -102,12 +102,13 @@ class MockGDBServerResponder:
             return self.interrupt()
         if packet == "c":
             return self.cont()
-        if packet == "g":
+        if packet[0] == "g":
             return self.readRegisters()
         if packet[0] == "G":
             return self.writeRegisters(packet[1:])
         if packet[0] == "p":
-            return self.readRegister(int(packet[1:], 16))
+            regnum = packet[1:].split(';')[0]
+            return self.readRegister(int(regnum, 16))
         if packet[0] == "P":
             register, value = packet[1:].split("=")
             return self.readRegister(int(register, 16), value)
@@ -124,11 +125,15 @@ class MockGDBServerResponder:
             return self.qSupported(packet[11:].split(";"))
         if packet == "qfThreadInfo":
             return self.qfThreadInfo()
+        if packet == "qsThreadInfo":
+            return self.qsThreadInfo()
         if packet == "qC":
             return self.qC()
         if packet == "QEnableErrorStrings":
             return self.QEnableErrorStrings()
         if packet == "?":
+            return self.haltReason()
+        if packet == "s":
             return self.haltReason()
         if packet[0] == "H":
             return self.selectThread(packet[1], int(packet[2:], 16))
@@ -144,6 +149,16 @@ class MockGDBServerResponder:
             return self.vAttach(int(pid, 16))
         if packet[0] == "Z":
             return self.setBreakpoint(packet)
+        if packet.startswith("qThreadStopInfo"):
+            threadnum = int (packet[15:], 16)
+            return self.threadStopInfo(threadnum)
+        if packet == "QThreadSuffixSupported":
+            return self.QThreadSuffixSupported()
+        if packet == "QListThreadsInStopReply":
+            return self.QListThreadsInStopReply()
+        if packet.startswith("qMemoryRegionInfo:"):
+            return self.qMemoryRegionInfo()
+
         return self.other(packet)
 
     def interrupt(self):
@@ -179,6 +194,9 @@ class MockGDBServerResponder:
     def qfThreadInfo(self):
         return "l"
 
+    def qsThreadInfo(self):
+        return "l"
+
     def qC(self):
         return "QC0"
 
@@ -204,8 +222,20 @@ class MockGDBServerResponder:
     def setBreakpoint(self, packet):
         raise self.UnexpectedPacketException()
 
+    def threadStopInfo(self, threadnum):
+        return ""
+
     def other(self, packet):
         # empty string means unsupported
+        return ""
+
+    def QThreadSuffixSupported(self):
+        return ""
+
+    def QListThreadsInStopReply(self):
+        return ""
+
+    def qMemoryRegionInfo(self):
         return ""
 
     """
@@ -246,7 +276,7 @@ class MockGDBServer:
         addr = ("127.0.0.1", self.port)
         self._socket.bind(addr)
         self.port = self._socket.getsockname()[1]
-        self._socket.listen(0)
+        self._socket.listen(1)
         self._thread = threading.Thread(target=self._run)
         self._thread.start()
 
