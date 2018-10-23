@@ -135,21 +135,17 @@ private:
 
     /// Returns a CDB that should be used to get compile commands for the
     /// current instance of ClangdLSPServer.
-    GlobalCompilationDatabase &getCDB();
+    GlobalCompilationDatabase &getCDB() { return *CDB; }
 
   private:
     CompilationDB(std::unique_ptr<GlobalCompilationDatabase> CDB,
-                  std::unique_ptr<CachingCompilationDb> CachingCDB,
                   bool IsDirectoryBased)
-        : CDB(std::move(CDB)), CachingCDB(std::move(CachingCDB)),
-          IsDirectoryBased(IsDirectoryBased) {}
+        : CDB(std::move(CDB)), IsDirectoryBased(IsDirectoryBased) {}
 
     // if IsDirectoryBased is true, an instance of InMemoryCDB.
     // If IsDirectoryBased is false, an instance of DirectoryBasedCDB.
     // unique_ptr<GlobalCompilationDatabase> CDB;
     std::unique_ptr<GlobalCompilationDatabase> CDB;
-    // Non-null only for directory-based CDB
-    std::unique_ptr<CachingCompilationDb> CachingCDB;
     bool IsDirectoryBased;
   };
 
