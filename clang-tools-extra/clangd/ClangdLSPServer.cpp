@@ -105,16 +105,21 @@ public:
   }
 
   bool onCall(StringRef Method, json::Value Params, json::Value ID) override {
+    // Calls can be canceled by the client. Add cancellation context.
+    WithContext WithCancel(cancelableRequestContext(ID));
+    trace::Span Tracer(Method);
+    SPAN_ATTACH(Tracer, "Params", Params);
+    ReplyOnce Reply(ID, Method, &Server, Tracer.Args);
     log("<-- {0}({1})", Method, ID);
     if (!Server.Server && Method != "initialize") {
       elog("Call {0} before initialization.", Method);
-      Server.reply(ID, make_error<LSPError>("server not initialized",
-                                            ErrorCode::ServerNotInitialized));
+      Reply(make_error<LSPError>("server not initialized",
+                                 ErrorCode::ServerNotInitialized));
     } else if (auto Handler = Calls.lookup(Method))
-      Handler(std::move(Params), std::move(ID));
+      Handler(std::move(Params), std::move(Reply));
     else
-      Server.reply(ID, make_error<LSPError>("method not found",
-                                            ErrorCode::MethodNotFound));
+      Reply(
+          make_error<LSPError>("method not found", ErrorCode::MethodNotFound));
     return true;
   }
 
@@ -128,36 +133,19 @@ public:
   }
 
   // Bind an LSP method name to a call.
-  template <typename Param, typename Reply>
+  template <typename Param, typename Result>
   void bind(const char *Method,
-            void (ClangdLSPServer::*Handler)(const Param &, Callback<Reply>)) {
+            void (ClangdLSPServer::*Handler)(const Param &, Callback<Result>)) {
     Calls[Method] = [Method, Handler, this](json::Value RawParams,
-                                            json::Value ID) {
+                                            ReplyOnce Reply) {
       Param P;
-      if (!fromJSON(RawParams, P)) {
+      if (fromJSON(RawParams, P)) {
+        (Server.*Handler)(P, std::move(Reply));
+      } else {
         elog("Failed to decode {0} request.", Method);
-        Server.reply(ID, make_error<LSPError>("failed to decode request",
-                                              ErrorCode::InvalidRequest));
-        return;
+        Reply(make_error<LSPError>("failed to decode request",
+                                   ErrorCode::InvalidRequest));
       }
-      trace::Span Tracer(Method);
-      SPAN_ATTACH(Tracer, "Params", RawParams);
-      auto *Trace = Tracer.Args; // We attach reply from another thread.
-      // Calls can be canceled by the client. Add cancellation context.
-      WithContext WithCancel(cancelableRequestContext(ID));
-      // FIXME: this function should assert it's called exactly once.
-      (Server.*Handler)(P, [this, ID, Trace](Expected<Reply> Result) {
-        if (Result) {
-          if (Trace)
-            (*Trace)["Reply"] = *Result;
-          Server.reply(ID, json::Value(std::move(*Result)));
-        } else {
-          auto Err = Result.takeError();
-          if (Trace)
-            (*Trace)["Error"] = to_string(Err);
-          Server.reply(ID, std::move(Err));
-        }
-      });
     };
   }
 
@@ -178,8 +166,65 @@ public:
   }
 
 private:
+  // Function object to reply to an LSP call.
+  // Each instance must be called exactly once, otherwise:
+  //  - the bug is logged, and (in debug mode) an assert will fire
+  //  - if there was no reply, an error reply is sent
+  //  - if there were multiple replies, only the first is sent
+  class ReplyOnce {
+    std::atomic<bool> Replied = {false};
+    json::Value ID;
+    std::string Method;
+    ClangdLSPServer *Server; // Null when moved-from.
+    json::Object *TraceArgs;
+
+  public:
+    ReplyOnce(const json::Value &ID, StringRef Method, ClangdLSPServer *Server,
+              json::Object *TraceArgs)
+        : ID(ID), Method(Method), Server(Server), TraceArgs(TraceArgs) {
+      assert(Server);
+    }
+    ReplyOnce(ReplyOnce &&Other)
+        : Replied(Other.Replied.load()), ID(std::move(Other.ID)),
+          Method(std::move(Other.Method)), Server(Other.Server),
+          TraceArgs(Other.TraceArgs) {
+      Other.Server = nullptr;
+    }
+    ReplyOnce& operator=(ReplyOnce&&) = delete;
+    ReplyOnce(const ReplyOnce &) = delete;
+    ReplyOnce& operator=(const ReplyOnce&) = delete;
+
+    ~ReplyOnce() {
+      if (Server && !Replied) {
+        elog("No reply to message {0}({1})", Method, ID);
+        assert(false && "must reply to all calls!");
+        (*this)(make_error<LSPError>("server failed to reply",
+                                     ErrorCode::InternalError));
+      }
+    }
+
+    void operator()(Expected<json::Value> Reply) {
+      assert(Server && "moved-from!");
+      if (Replied.exchange(true)) {
+        elog("Replied twice to message {0}({1})", Method, ID);
+        assert(false && "must reply to each call only once!");
+        return;
+      }
+      if (TraceArgs) {
+        if (Reply)
+          (*TraceArgs)["Reply"] = *Reply;
+        else {
+          auto Err = Reply.takeError();
+          (*TraceArgs)["Error"] = to_string(Err);
+          Reply = std::move(Err);
+        }
+      }
+      Server->reply(ID, std::move(Reply));
+    }
+  };
+
   StringMap<std::function<void(json::Value)>> Notifications;
-  StringMap<std::function<void(json::Value, json::Value)>> Calls;
+  StringMap<std::function<void(json::Value, ReplyOnce)>> Calls;
 
   // Method calls may be cancelled by ID, so keep track of their state.
   // This needs a mutex: handlers may finish on a different thread, and that's
