@@ -18,8 +18,28 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSchedule.h"
+#include "llvm/Support/Error.h"
 
 namespace mca {
+
+template <typename T>
+class InstructionError : public llvm::ErrorInfo<InstructionError<T>> {
+public:
+  static char ID;
+  std::string Message;
+  const T &Inst;
+
+  InstructionError(std::string M, const T &MCI)
+      : Message(std::move(M)), Inst(MCI) {}
+
+  void log(llvm::raw_ostream &OS) const override { OS << Message; }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+template <typename T> char InstructionError<T>::ID;
 
 /// This class represents the number of cycles per resource (fractions of
 /// cycles).  That quantity is managed here as a ratio, and accessed via the

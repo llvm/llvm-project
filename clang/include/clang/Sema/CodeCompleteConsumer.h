@@ -272,11 +272,15 @@ public:
     CCC_Type,
 
     /// Code completion occurred where a new name is expected.
-    CCC_Name,
+    CCC_NewName,
 
-    /// Code completion occurred where a new name is expected and a
-    /// qualified name is permissible.
-    CCC_PotentiallyQualifiedName,
+    /// Code completion occurred where both a new name and an existing symbol is
+    /// permissible.
+    CCC_SymbolOrNewName,
+
+    /// Code completion occurred where an existing name(such as type, function
+    /// or variable) is expected.
+    CCC_Symbol,
 
     /// Code completion occurred where an macro is being defined.
     CCC_MacroName,
@@ -821,6 +825,9 @@ public:
   /// Whether this result is hidden by another name.
   bool Hidden : 1;
 
+  /// Whether this is a class member from base class.
+  bool InBaseClass : 1;
+
   /// Whether this result was found via lookup into a base class.
   bool QualifierIsInformative : 1;
 
@@ -859,7 +866,7 @@ public:
                        bool Accessible = true,
                        std::vector<FixItHint> FixIts = std::vector<FixItHint>())
       : Declaration(Declaration), Priority(Priority), Kind(RK_Declaration),
-        FixIts(std::move(FixIts)), Hidden(false),
+        FixIts(std::move(FixIts)), Hidden(false), InBaseClass(false),
         QualifierIsInformative(QualifierIsInformative),
         StartsNestedNameSpecifier(false), AllParametersAreInformative(false),
         DeclaringEntity(false), Qualifier(Qualifier) {
@@ -870,7 +877,7 @@ public:
   /// Build a result that refers to a keyword or symbol.
   CodeCompletionResult(const char *Keyword, unsigned Priority = CCP_Keyword)
       : Keyword(Keyword), Priority(Priority), Kind(RK_Keyword),
-        CursorKind(CXCursor_NotImplemented), Hidden(false),
+        CursorKind(CXCursor_NotImplemented), Hidden(false), InBaseClass(false),
         QualifierIsInformative(false), StartsNestedNameSpecifier(false),
         AllParametersAreInformative(false), DeclaringEntity(false) {}
 
@@ -879,28 +886,29 @@ public:
                        const MacroInfo *MI = nullptr,
                        unsigned Priority = CCP_Macro)
       : Macro(Macro), Priority(Priority), Kind(RK_Macro),
-        CursorKind(CXCursor_MacroDefinition), Hidden(false),
+        CursorKind(CXCursor_MacroDefinition), Hidden(false), InBaseClass(false),
         QualifierIsInformative(false), StartsNestedNameSpecifier(false),
         AllParametersAreInformative(false), DeclaringEntity(false),
         MacroDefInfo(MI) {}
 
   /// Build a result that refers to a pattern.
-  CodeCompletionResult(CodeCompletionString *Pattern,
-                       unsigned Priority = CCP_CodePattern,
-                       CXCursorKind CursorKind = CXCursor_NotImplemented,
-                   CXAvailabilityKind Availability = CXAvailability_Available,
-                       const NamedDecl *D = nullptr)
+  CodeCompletionResult(
+      CodeCompletionString *Pattern, unsigned Priority = CCP_CodePattern,
+      CXCursorKind CursorKind = CXCursor_NotImplemented,
+      CXAvailabilityKind Availability = CXAvailability_Available,
+      const NamedDecl *D = nullptr)
       : Declaration(D), Pattern(Pattern), Priority(Priority), Kind(RK_Pattern),
         CursorKind(CursorKind), Availability(Availability), Hidden(false),
-        QualifierIsInformative(false), StartsNestedNameSpecifier(false),
-        AllParametersAreInformative(false), DeclaringEntity(false) {}
+        InBaseClass(false), QualifierIsInformative(false),
+        StartsNestedNameSpecifier(false), AllParametersAreInformative(false),
+        DeclaringEntity(false) {}
 
   /// Build a result that refers to a pattern with an associated
   /// declaration.
   CodeCompletionResult(CodeCompletionString *Pattern, const NamedDecl *D,
                        unsigned Priority)
       : Declaration(D), Pattern(Pattern), Priority(Priority), Kind(RK_Pattern),
-        Hidden(false), QualifierIsInformative(false),
+        Hidden(false), InBaseClass(false), QualifierIsInformative(false),
         StartsNestedNameSpecifier(false), AllParametersAreInformative(false),
         DeclaringEntity(false) {
     computeCursorKindAndAvailability();

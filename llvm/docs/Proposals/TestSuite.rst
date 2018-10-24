@@ -252,6 +252,13 @@ FTensors
 --------
 http://www.wlandry.net/Projects/FTensor
 
+rawspeed
+--------
+https://github.com/darktable-org/rawspeed
+
+Its test dataset is 756 MB in size, which is too large to be included
+into the test-suite repository.
+
 Generic Algorithms
 ==================
 

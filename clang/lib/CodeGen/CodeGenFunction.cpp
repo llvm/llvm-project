@@ -430,7 +430,24 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
     NormalCleanupDest = Address::invalid();
   }
 
-  // Add the required-vector-width attribute.
+  // Scan function arguments for vector width.
+  for (llvm::Argument &A : CurFn->args())
+    if (auto *VT = dyn_cast<llvm::VectorType>(A.getType()))
+      LargestVectorWidth = std::max(LargestVectorWidth,
+                                    VT->getPrimitiveSizeInBits());
+
+  // Update vector width based on return type.
+  if (auto *VT = dyn_cast<llvm::VectorType>(CurFn->getReturnType()))
+    LargestVectorWidth = std::max(LargestVectorWidth,
+                                  VT->getPrimitiveSizeInBits());
+
+  // Add the required-vector-width attribute. This contains the max width from:
+  // 1. min-vector-width attribute used in the source program.
+  // 2. Any builtins used that have a vector width specified.
+  // 3. Values passed in and out of inline assembly.
+  // 4. Width of vector arguments and return types for this function.
+  // 5. Width of vector aguments and return types for functions called by this
+  //    function.
   if (LargestVectorWidth != 0)
     CurFn->addFnAttr("min-legal-vector-width",
                      llvm::utostr(LargestVectorWidth));

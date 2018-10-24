@@ -35,6 +35,7 @@
 #include "Views/TimelineView.h"
 #include "include/Context.h"
 #include "include/Pipeline.h"
+#include "include/Support.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -326,6 +327,30 @@ static void processViewOptions() {
   processOptionImpl(PrintRetireStats, Default);
 }
 
+// Returns true on success.
+static bool runPipeline(mca::Pipeline &P, MCInstPrinter &MCIP,
+                        const MCSubtargetInfo &STI) {
+  // Handle pipeline errors here.
+  if (auto Err = P.run()) {
+    if (auto NewE = handleErrors(
+            std::move(Err),
+            [&MCIP, &STI](const mca::InstructionError<MCInst> &IE) {
+              std::string InstructionStr;
+              raw_string_ostream SS(InstructionStr);
+              WithColor::error() << IE.Message << '\n';
+              MCIP.printInst(&IE.Inst, SS, "", STI);
+              SS.flush();
+              WithColor::note() << "instruction: " << InstructionStr << '\n';
+            })) {
+      // Default case.
+      WithColor::error() << toString(std::move(NewE));
+    }
+    return false;
+  }
+
+  return true;
+}
+
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
@@ -462,7 +487,7 @@ int main(int argc, char **argv) {
     Width = DispatchWidth;
 
   // Create an instruction builder.
-  mca::InstrBuilder IB(*STI, *MCII, *MRI, *MCIA, *IP);
+  mca::InstrBuilder IB(*STI, *MCII, *MRI, *MCIA);
 
   // Create a context to control ownership of the pipeline hardware.
   mca::Context MCA(*MRI, *STI);
@@ -494,7 +519,7 @@ int main(int argc, char **argv) {
       //  Create a pipeline, stages, and a printer.
       auto P = llvm::make_unique<mca::Pipeline>();
       P->appendStage(llvm::make_unique<mca::FetchStage>(IB, S));
-      P->appendStage(llvm::make_unique<mca::InstructionTables>(SM, IB));
+      P->appendStage(llvm::make_unique<mca::InstructionTables>(SM));
       mca::PipelinePrinter Printer(*P);
 
       // Create the views for this pipeline, execute, and emit a report.
@@ -504,9 +529,10 @@ int main(int argc, char **argv) {
       }
       Printer.addView(
           llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, S));
-      auto Err = P->run();
-      if (Err)
-        report_fatal_error(toString(std::move(Err)));
+
+      if (!runPipeline(*P, *IP, *STI))
+        return 1;
+
       Printer.printReport(TOF->os());
       continue;
     }
@@ -543,9 +569,9 @@ int main(int argc, char **argv) {
           *STI, *IP, S, TimelineMaxIterations, TimelineMaxCycles));
     }
 
-    auto Err = P->run();
-    if (Err)
-      report_fatal_error(toString(std::move(Err)));
+    if (!runPipeline(*P, *IP, *STI))
+      return 1;
+
     Printer.printReport(TOF->os());
 
     // Clear the InstrBuilder internal state in preparation for another round.

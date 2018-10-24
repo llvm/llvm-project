@@ -625,13 +625,12 @@ bool contextAllowsIndex(enum CodeCompletionContext::Kind K) {
   case CodeCompletionContext::CCC_ObjCProtocolName:
   case CodeCompletionContext::CCC_Namespace:
   case CodeCompletionContext::CCC_Type:
-  case CodeCompletionContext::CCC_Name: // FIXME: why does ns::^ give this?
-  case CodeCompletionContext::CCC_PotentiallyQualifiedName:
   case CodeCompletionContext::CCC_ParenthesizedExpression:
   case CodeCompletionContext::CCC_ObjCInterfaceName:
   case CodeCompletionContext::CCC_ObjCCategoryName:
+  case CodeCompletionContext::CCC_Symbol:
+  case CodeCompletionContext::CCC_SymbolOrNewName:
     return true;
-  case CodeCompletionContext::CCC_Other: // Be conservative.
   case CodeCompletionContext::CCC_OtherWithMacros:
   case CodeCompletionContext::CCC_DotMemberAccess:
   case CodeCompletionContext::CCC_ArrowMemberAccess:
@@ -640,13 +639,16 @@ bool contextAllowsIndex(enum CodeCompletionContext::Kind K) {
   case CodeCompletionContext::CCC_MacroNameUse:
   case CodeCompletionContext::CCC_PreprocessorExpression:
   case CodeCompletionContext::CCC_PreprocessorDirective:
-  case CodeCompletionContext::CCC_NaturalLanguage:
   case CodeCompletionContext::CCC_SelectorName:
   case CodeCompletionContext::CCC_TypeQualifiers:
   case CodeCompletionContext::CCC_ObjCInstanceMessage:
   case CodeCompletionContext::CCC_ObjCClassMessage:
   case CodeCompletionContext::CCC_IncludedFile:
+  // FIXME: Provide identifier based completions for the following contexts:
+  case CodeCompletionContext::CCC_Other: // Be conservative.
+  case CodeCompletionContext::CCC_NaturalLanguage:
   case CodeCompletionContext::CCC_Recovery:
+  case CodeCompletionContext::CCC_NewName:
     return false;
   }
   llvm_unreachable("unknown code completion context");
@@ -728,9 +730,9 @@ struct CompletionRecorder : public CodeCompleteConsumer {
     // Retain the results we might want.
     for (unsigned I = 0; I < NumResults; ++I) {
       auto &Result = InResults[I];
-      // Drop hidden items which cannot be found by lookup after completion.
-      // Exception: some items can be named by using a qualifier.
-      if (Result.Hidden && (!Result.Qualifier || Result.QualifierIsInformative))
+      // Class members that are shadowed by subclasses are usually noise.
+      if (Result.Hidden && Result.Declaration &&
+          Result.Declaration->isCXXClassMember())
         continue;
       if (!Opts.IncludeIneligibleResults &&
           (Result.Availability == CXAvailability_NotAvailable ||

@@ -43,8 +43,11 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolLocation &L) {
             << "-" << L.End.line() << ":" << L.End.column() << ")";
 }
 
-SymbolID::SymbolID(StringRef USR)
-    : HashValue(SHA1::hash(arrayRefFromStringRef(USR))) {}
+SymbolID::SymbolID(StringRef USR) {
+  auto Hash = SHA1::hash(arrayRefFromStringRef(USR));
+  static_assert(sizeof(Hash) >= RawSize, "RawSize larger than SHA1");
+  memcpy(HashValue.data(), Hash.data(), RawSize);
+}
 
 raw_ostream &operator<<(raw_ostream &OS, const SymbolID &ID) {
   return OS << toHex(ID.raw());

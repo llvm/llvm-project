@@ -4704,106 +4704,122 @@ define <2 x i64> @test_pmovzxwq(<8 x i16> %a0, <2 x i16> *%a1) {
   ret <2 x i64> %5
 }
 
-define <2 x i64> @test_pmuldq(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
+define <2 x i64> @test_pmuldq(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2, <4 x i32> *%a3) {
 ; GENERIC-LABEL: test_pmuldq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    pmuldq %xmm1, %xmm0 # sched: [5:1.00]
-; GENERIC-NEXT:    pmuldq (%rdi), %xmm0 # sched: [11:1.00]
+; GENERIC-NEXT:    pmuldq (%rdi), %xmm2 # sched: [11:1.00]
+; GENERIC-NEXT:    por %xmm2, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: test_pmuldq:
 ; SLM:       # %bb.0:
+; SLM-NEXT:    pmuldq (%rdi), %xmm2 # sched: [7:1.00]
 ; SLM-NEXT:    pmuldq %xmm1, %xmm0 # sched: [4:1.00]
-; SLM-NEXT:    pmuldq (%rdi), %xmm0 # sched: [7:1.00]
+; SLM-NEXT:    por %xmm2, %xmm0 # sched: [1:0.50]
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-SSE-LABEL: test_pmuldq:
 ; SANDY-SSE:       # %bb.0:
 ; SANDY-SSE-NEXT:    pmuldq %xmm1, %xmm0 # sched: [5:1.00]
-; SANDY-SSE-NEXT:    pmuldq (%rdi), %xmm0 # sched: [11:1.00]
+; SANDY-SSE-NEXT:    pmuldq (%rdi), %xmm2 # sched: [11:1.00]
+; SANDY-SSE-NEXT:    por %xmm2, %xmm0 # sched: [1:0.33]
 ; SANDY-SSE-NEXT:    retq # sched: [1:1.00]
 ;
 ; SANDY-LABEL: test_pmuldq:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    vpmuldq %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
-; SANDY-NEXT:    vpmuldq (%rdi), %xmm0, %xmm0 # sched: [11:1.00]
+; SANDY-NEXT:    vpmuldq (%rdi), %xmm2, %xmm1 # sched: [11:1.00]
+; SANDY-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-SSE-LABEL: test_pmuldq:
 ; HASWELL-SSE:       # %bb.0:
 ; HASWELL-SSE-NEXT:    pmuldq %xmm1, %xmm0 # sched: [5:1.00]
-; HASWELL-SSE-NEXT:    pmuldq (%rdi), %xmm0 # sched: [11:1.00]
+; HASWELL-SSE-NEXT:    pmuldq (%rdi), %xmm2 # sched: [11:1.00]
+; HASWELL-SSE-NEXT:    por %xmm2, %xmm0 # sched: [1:0.33]
 ; HASWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; HASWELL-LABEL: test_pmuldq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmuldq %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
-; HASWELL-NEXT:    vpmuldq (%rdi), %xmm0, %xmm0 # sched: [11:1.00]
+; HASWELL-NEXT:    vpmuldq (%rdi), %xmm2, %xmm1 # sched: [11:1.00]
+; HASWELL-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-SSE-LABEL: test_pmuldq:
 ; BROADWELL-SSE:       # %bb.0:
 ; BROADWELL-SSE-NEXT:    pmuldq %xmm1, %xmm0 # sched: [5:1.00]
-; BROADWELL-SSE-NEXT:    pmuldq (%rdi), %xmm0 # sched: [10:1.00]
+; BROADWELL-SSE-NEXT:    pmuldq (%rdi), %xmm2 # sched: [10:1.00]
+; BROADWELL-SSE-NEXT:    por %xmm2, %xmm0 # sched: [1:0.33]
 ; BROADWELL-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmuldq:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpmuldq %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
-; BROADWELL-NEXT:    vpmuldq (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
+; BROADWELL-NEXT:    vpmuldq (%rdi), %xmm2, %xmm1 # sched: [10:1.00]
+; BROADWELL-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-SSE-LABEL: test_pmuldq:
 ; SKYLAKE-SSE:       # %bb.0:
 ; SKYLAKE-SSE-NEXT:    pmuldq %xmm1, %xmm0 # sched: [4:0.50]
-; SKYLAKE-SSE-NEXT:    pmuldq (%rdi), %xmm0 # sched: [10:0.50]
+; SKYLAKE-SSE-NEXT:    pmuldq (%rdi), %xmm2 # sched: [10:0.50]
+; SKYLAKE-SSE-NEXT:    por %xmm2, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pmuldq:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpmuldq %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vpmuldq (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
+; SKYLAKE-NEXT:    vpmuldq (%rdi), %xmm2, %xmm1 # sched: [10:0.50]
+; SKYLAKE-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-SSE-LABEL: test_pmuldq:
 ; SKX-SSE:       # %bb.0:
 ; SKX-SSE-NEXT:    pmuldq %xmm1, %xmm0 # sched: [4:0.50]
-; SKX-SSE-NEXT:    pmuldq (%rdi), %xmm0 # sched: [10:0.50]
+; SKX-SSE-NEXT:    pmuldq (%rdi), %xmm2 # sched: [10:0.50]
+; SKX-SSE-NEXT:    por %xmm2, %xmm0 # sched: [1:0.33]
 ; SKX-SSE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmuldq:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmuldq %xmm1, %xmm0, %xmm0 # sched: [4:0.50]
-; SKX-NEXT:    vpmuldq (%rdi), %xmm0, %xmm0 # sched: [10:0.50]
+; SKX-NEXT:    vpmuldq (%rdi), %xmm2, %xmm1 # sched: [10:0.50]
+; SKX-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_pmuldq:
 ; BTVER2-SSE:       # %bb.0:
+; BTVER2-SSE-NEXT:    pmuldq (%rdi), %xmm2 # sched: [7:1.00]
 ; BTVER2-SSE-NEXT:    pmuldq %xmm1, %xmm0 # sched: [2:1.00]
-; BTVER2-SSE-NEXT:    pmuldq (%rdi), %xmm0 # sched: [7:1.00]
+; BTVER2-SSE-NEXT:    por %xmm2, %xmm0 # sched: [1:0.50]
 ; BTVER2-SSE-NEXT:    retq # sched: [4:1.00]
 ;
 ; BTVER2-LABEL: test_pmuldq:
 ; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    vpmuldq (%rdi), %xmm2, %xmm2 # sched: [7:1.00]
 ; BTVER2-NEXT:    vpmuldq %xmm1, %xmm0, %xmm0 # sched: [2:1.00]
-; BTVER2-NEXT:    vpmuldq (%rdi), %xmm0, %xmm0 # sched: [7:1.00]
+; BTVER2-NEXT:    vpor %xmm2, %xmm0, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-SSE-LABEL: test_pmuldq:
 ; ZNVER1-SSE:       # %bb.0:
+; ZNVER1-SSE-NEXT:    pmuldq (%rdi), %xmm2 # sched: [11:1.00]
 ; ZNVER1-SSE-NEXT:    pmuldq %xmm1, %xmm0 # sched: [4:1.00]
-; ZNVER1-SSE-NEXT:    pmuldq (%rdi), %xmm0 # sched: [11:1.00]
+; ZNVER1-SSE-NEXT:    por %xmm2, %xmm0 # sched: [1:0.25]
 ; ZNVER1-SSE-NEXT:    retq # sched: [1:0.50]
 ;
 ; ZNVER1-LABEL: test_pmuldq:
 ; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    vpmuldq (%rdi), %xmm2, %xmm2 # sched: [11:1.00]
 ; ZNVER1-NEXT:    vpmuldq %xmm1, %xmm0, %xmm0 # sched: [4:1.00]
-; ZNVER1-NEXT:    vpmuldq (%rdi), %xmm0, %xmm0 # sched: [11:1.00]
+; ZNVER1-NEXT:    vpor %xmm2, %xmm0, %xmm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <2 x i64> @llvm.x86.sse41.pmuldq(<4 x i32> %a0, <4 x i32> %a1)
-  %2 = bitcast <2 x i64> %1 to <4 x i32>
-  %3 = load <4 x i32>, <4 x i32> *%a2, align 16
-  %4 = call <2 x i64> @llvm.x86.sse41.pmuldq(<4 x i32> %2, <4 x i32> %3)
+  %2 = load <4 x i32>, <4 x i32> *%a3, align 16
+  %3 = call <2 x i64> @llvm.x86.sse41.pmuldq(<4 x i32> %a2, <4 x i32> %2)
+  %4 = or <2 x i64> %1, %3
   ret <2 x i64> %4
 }
 declare <2 x i64> @llvm.x86.sse41.pmuldq(<4 x i32>, <4 x i32>) nounwind readnone

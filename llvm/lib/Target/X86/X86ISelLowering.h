@@ -874,6 +874,12 @@ namespace llvm {
                                                  TargetLoweringOpt &TLO,
                                                  unsigned Depth) const override;
 
+    bool SimplifyDemandedBitsForTargetNode(SDValue Op,
+                                           const APInt &DemandedBits,
+                                           KnownBits &Known,
+                                           TargetLoweringOpt &TLO,
+                                           unsigned Depth) const override;
+
     SDValue unwrapAddress(SDValue N) const override;
 
     bool isGAPlusOffset(SDNode *N, const GlobalValue* &GA,

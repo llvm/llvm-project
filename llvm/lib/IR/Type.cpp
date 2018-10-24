@@ -297,20 +297,26 @@ FunctionType::FunctionType(Type *Result, ArrayRef<Type*> Params,
 FunctionType *FunctionType::get(Type *ReturnType,
                                 ArrayRef<Type*> Params, bool isVarArg) {
   LLVMContextImpl *pImpl = ReturnType->getContext().pImpl;
-  FunctionTypeKeyInfo::KeyTy Key(ReturnType, Params, isVarArg);
-  auto I = pImpl->FunctionTypes.find_as(Key);
+  const FunctionTypeKeyInfo::KeyTy Key(ReturnType, Params, isVarArg);
   FunctionType *FT;
-
-  if (I == pImpl->FunctionTypes.end()) {
+  // Since we only want to allocate a fresh function type in case none is found
+  // and we don't want to perform two lookups (one for checking if existent and
+  // one for inserting the newly allocated one), here we instead lookup based on
+  // Key and update the reference to the function type in-place to a newly
+  // allocated one if not found.
+  auto Insertion = pImpl->FunctionTypes.insert_as(nullptr, Key);
+  if (Insertion.second) {
+    // The function type was not found. Allocate one and update FunctionTypes
+    // in-place.
     FT = (FunctionType *)pImpl->TypeAllocator.Allocate(
         sizeof(FunctionType) + sizeof(Type *) * (Params.size() + 1),
         alignof(FunctionType));
     new (FT) FunctionType(ReturnType, Params, isVarArg);
-    pImpl->FunctionTypes.insert(FT);
+    *Insertion.first = FT;
   } else {
-    FT = *I;
+    // The function type was found. Just return it.
+    FT = *Insertion.first;
   }
-
   return FT;
 }
 

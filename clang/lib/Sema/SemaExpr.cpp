@@ -11280,6 +11280,12 @@ static bool IgnoreCommaOperand(const Expr *E) {
     if (CE->getCastKind() == CK_ToVoid) {
       return true;
     }
+
+    // static_cast<void> on a dependent type will not show up as CK_ToVoid.
+    if (CE->getCastKind() == CK_Dependent && E->getType()->isVoidType() &&
+        CE->getSubExpr()->getType()->isDependentType()) {
+      return true;
+    }
   }
 
   return false;

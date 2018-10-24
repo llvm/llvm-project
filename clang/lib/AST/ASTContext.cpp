@@ -5755,49 +5755,47 @@ int ASTContext::getIntegerTypeOrder(QualType LHS, QualType RHS) const {
 }
 
 TypedefDecl *ASTContext::getCFConstantStringDecl() const {
-  if (!CFConstantStringTypeDecl) {
-    assert(!CFConstantStringTagDecl &&
-           "tag and typedef should be initialized together");
-    CFConstantStringTagDecl = buildImplicitRecord("__NSConstantString_tag");
-    CFConstantStringTagDecl->startDefinition();
+  if (CFConstantStringTypeDecl)
+    return CFConstantStringTypeDecl;
 
-    QualType FieldTypes[4];
-    const char *FieldNames[4];
+  assert(!CFConstantStringTagDecl &&
+         "tag and typedef should be initialized together");
+  CFConstantStringTagDecl = buildImplicitRecord("__NSConstantString_tag");
+  CFConstantStringTagDecl->startDefinition();
 
-    // const int *isa;
-    FieldTypes[0] = getPointerType(IntTy.withConst());
-    FieldNames[0] = "isa";
-    // int flags;
-    FieldTypes[1] = IntTy;
-    FieldNames[1] = "flags";
-    // const char *str;
-    FieldTypes[2] = getPointerType(CharTy.withConst());
-    FieldNames[2] = "str";
-    // long length;
-    FieldTypes[3] = LongTy;
-    FieldNames[3] = "length";
+  QualType FieldTypes[4];
+  const char *FieldNames[4];
 
-    // Create fields
-    for (unsigned i = 0; i < 4; ++i) {
-      FieldDecl *Field = FieldDecl::Create(*this, CFConstantStringTagDecl,
-                                           SourceLocation(),
-                                           SourceLocation(),
-                                           &Idents.get(FieldNames[i]),
-                                           FieldTypes[i], /*TInfo=*/nullptr,
-                                           /*BitWidth=*/nullptr,
-                                           /*Mutable=*/false,
-                                           ICIS_NoInit);
-      Field->setAccess(AS_public);
-      CFConstantStringTagDecl->addDecl(Field);
-    }
+  // const int *isa;
+  FieldTypes[0] = getPointerType(IntTy.withConst());
+  FieldNames[0] = "isa";
+  // int flags;
+  FieldTypes[1] = IntTy;
+  FieldNames[1] = "flags";
+  // const char *str;
+  FieldTypes[2] = getPointerType(CharTy.withConst());
+  FieldNames[2] = "str";
+  // long length;
+  FieldTypes[3] = LongTy;
+  FieldNames[3] = "length";
 
-    CFConstantStringTagDecl->completeDefinition();
-    // This type is designed to be compatible with NSConstantString, but cannot
-    // use the same name, since NSConstantString is an interface.
-    auto tagType = getTagDeclType(CFConstantStringTagDecl);
-    CFConstantStringTypeDecl =
-        buildImplicitTypedef(tagType, "__NSConstantString");
+  // Create fields
+  for (unsigned i = 0; i < 4; ++i) {
+    FieldDecl *Field =
+        FieldDecl::Create(*this, CFConstantStringTagDecl, SourceLocation(),
+                          SourceLocation(), &Idents.get(FieldNames[i]),
+                          FieldTypes[i], /*TInfo=*/nullptr,
+                          /*BitWidth=*/nullptr, /*Mutable=*/false, ICIS_NoInit);
+    Field->setAccess(AS_public);
+    CFConstantStringTagDecl->addDecl(Field);
   }
+
+  CFConstantStringTagDecl->completeDefinition();
+  // This type is designed to be compatible with NSConstantString, but cannot
+  // use the same name, since NSConstantString is an interface.
+  auto tagType = getTagDeclType(CFConstantStringTagDecl);
+  CFConstantStringTypeDecl =
+      buildImplicitTypedef(tagType, "__NSConstantString");
 
   return CFConstantStringTypeDecl;
 }

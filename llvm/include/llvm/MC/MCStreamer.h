@@ -109,6 +109,11 @@ public:
 
   virtual void emitValue(const MCExpr *Value);
 
+  /// Emit the bytes in \p Data into the output.
+  ///
+  /// This is used to emit bytes in \p Data as sequence of .byte directives.
+  virtual void emitRawBytes(StringRef Data);
+
   virtual void finish();
 };
 

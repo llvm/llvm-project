@@ -49,6 +49,8 @@ bool CodeCompletionContext::wantConstructorResults() const {
   case CCC_Expression:
   case CCC_ObjCMessageReceiver:
   case CCC_ParenthesizedExpression:
+  case CCC_Symbol:
+  case CCC_SymbolOrNewName:
     return true;
 
   case CCC_TopLevel:
@@ -65,8 +67,7 @@ bool CodeCompletionContext::wantConstructorResults() const {
   case CCC_ObjCProtocolName:
   case CCC_Namespace:
   case CCC_Type:
-  case CCC_Name:
-  case CCC_PotentiallyQualifiedName:
+  case CCC_NewName:
   case CCC_MacroName:
   case CCC_MacroNameUse:
   case CCC_PreprocessorExpression:
@@ -128,10 +129,12 @@ StringRef clang::getCompletionKindString(CodeCompletionContext::Kind Kind) {
     return "Namespace";
   case CCKind::CCC_Type:
     return "Type";
-  case CCKind::CCC_Name:
-    return "Name";
-  case CCKind::CCC_PotentiallyQualifiedName:
-    return "PotentiallyQualifiedName";
+  case CCKind::CCC_NewName:
+    return "NewName";
+  case CCKind::CCC_Symbol:
+    return "Symbol";
+  case CCKind::CCC_SymbolOrNewName:
+    return "SymbolOrNewName";
   case CCKind::CCC_MacroName:
     return "MacroName";
   case CCKind::CCC_MacroNameUse:
@@ -548,13 +551,18 @@ PrintingCodeCompleteConsumer::ProcessCodeCompleteResults(Sema &SemaRef,
     switch (Results[I].Kind) {
     case CodeCompletionResult::RK_Declaration:
       OS << *Results[I].Declaration;
-      if (Results[I].Hidden)
-        OS << " (Hidden)";
-      if (CodeCompletionString *CCS
-            = Results[I].CreateCodeCompletionString(SemaRef, Context,
-                                                    getAllocator(),
-                                                    CCTUInfo,
-                                                    includeBriefComments())) {
+      {
+        std::vector<std::string> Tags;
+        if (Results[I].Hidden)
+          Tags.push_back("Hidden");
+        if (Results[I].InBaseClass)
+          Tags.push_back("InBase");
+        if (!Tags.empty())
+          OS << " (" << llvm::join(Tags, ",") << ")";
+      }
+      if (CodeCompletionString *CCS = Results[I].CreateCodeCompletionString(
+              SemaRef, Context, getAllocator(), CCTUInfo,
+              includeBriefComments())) {
         OS << " : " << CCS->getAsString();
         if (const char *BriefComment = CCS->getBriefComment())
           OS << " : " << BriefComment;

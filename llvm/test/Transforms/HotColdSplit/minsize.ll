@@ -2,7 +2,7 @@
 
 ; CHECK-LABEL: @fun
 ; CHECK: codeRepl:
-; CHECK-NEXT: call void @fun_if.else
+; CHECK-NEXT: call void @fun.cold.1
 
 define void @fun() {
 entry:
@@ -28,5 +28,5 @@ cleanup:
   unreachable
 }
 
-; CHECK: define {{.*}} @fun_if.else{{.*}}#[[outlined_func_attr:[0-9]+]]
+; CHECK: define {{.*}} @fun.cold.1{{.*}}#[[outlined_func_attr:[0-9]+]]
 ; CHECK: attributes #[[outlined_func_attr]] = { {{.*}}minsize
