@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 3.2.0)
 project(code_object_manager)
 
-find_package(LLVM REQUIRED CONFIG)
+find_package(Clang REQUIRED CONFIG)
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
+include_directories(${CLANG_INCLUDE_DIRS})
 
 find_package(AMDDeviceLibs CONFIG)
 
