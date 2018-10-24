@@ -2178,6 +2178,15 @@ TEST(CompletionTest, NoQualifierIfShadowed) {
                                    AllOf(Qualifier("nx::"), Named("Clangd2"))));
 }
 
+TEST(CompletionTest, NoCompletionsForNewNames) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.AllScopes = true;
+  auto Results = completions(R"cpp(
+      void f() { int n^ }
+    )cpp",
+                             {cls("naber"), cls("nx::naber")}, Opts);
+  EXPECT_THAT(Results.Completions, UnorderedElementsAre());
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

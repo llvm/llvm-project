@@ -551,7 +551,7 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   // We use the primary template, as clang does during code completion.
   CodeCompletionResult SymbolCompletion(&getTemplateOrThis(ND), 0);
   const auto *CCS = SymbolCompletion.CreateCodeCompletionString(
-      *ASTCtx, *PP, CodeCompletionContext::CCC_Name, *CompletionAllocator,
+      *ASTCtx, *PP, CodeCompletionContext::CCC_Symbol, *CompletionAllocator,
       *CompletionTUInfo,
       /*IncludeBriefComments*/ false);
   std::string Signature;
