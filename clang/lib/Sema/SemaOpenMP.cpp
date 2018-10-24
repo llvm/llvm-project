@@ -2181,8 +2181,14 @@ public:
       // Define implicit data-sharing attributes for task.
       DVar = Stack->getImplicitDSA(FD, /*FromParent=*/false);
       if (isOpenMPTaskingDirective(DKind) && DVar.CKind != OMPC_shared &&
-          !Stack->isLoopControlVariable(FD).first)
-        ImplicitFirstprivate.push_back(E);
+          !Stack->isLoopControlVariable(FD).first) {
+        // Check if there is a captured expression for the current field in the
+        // region. Do not mark it as firstprivate unless there is no captured
+        // expression.
+        // TODO: try to make it firstprivate.
+        if (DVar.CKind != OMPC_unknown)
+          ImplicitFirstprivate.push_back(E);
+      }
       return;
     }
     if (isOpenMPTargetExecutionDirective(DKind)) {

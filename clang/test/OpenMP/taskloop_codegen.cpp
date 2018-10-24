@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 // CHECK: [[ST:%.+]] = getelementptr inbounds [[TD_TY]], [[TD_TY]]* [[TASK_DATA]], i32 0, i32 7
 // CHECK: store i64 1, i64* [[ST]],
 // CHECK: [[ST_VAL:%.+]] = load i64, i64* [[ST]],
-// CHECK: call void @__kmpc_taskloop(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 1, i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 0, i32 0, i64 0, i8* null)
+// CHECK: call void @__kmpc_taskloop(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 1, i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 1, i32 0, i64 0, i8* null)
 // CHECK: call void @__kmpc_end_taskgroup(%struct.ident_t* [[DEFLOC]], i32 [[GTID]])
 #pragma omp taskloop priority(argc)
   for (int i = 0; i < 10; ++i)
@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
 // CHECK: store i64 1, i64* [[ST]],
 // CHECK: [[ST_VAL:%.+]] = load i64, i64* [[ST]],
 // CHECK: [[GRAINSIZE:%.+]] = zext i32 %{{.+}} to i64
-// CHECK: call void @__kmpc_taskloop(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 1, i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 0, i32 1, i64 [[GRAINSIZE]], i8* null)
+// CHECK: call void @__kmpc_taskloop(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 1, i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 1, i32 1, i64 [[GRAINSIZE]], i8* null)
 #pragma omp taskloop nogroup grainsize(argc)
   for (int i = 0; i < 10; ++i)
     ;
@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
 // CHECK: [[ST:%.+]] = getelementptr inbounds [[TD_TY]], [[TD_TY]]* [[TASK_DATA]], i32 0, i32 7
 // CHECK: store i64 1, i64* [[ST]],
 // CHECK: [[ST_VAL:%.+]] = load i64, i64* [[ST]],
-// CHECK: call void @__kmpc_taskloop(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 [[IF_INT]], i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 0, i32 2, i64 4, i8* null)
+// CHECK: call void @__kmpc_taskloop(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 [[IF_INT]], i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 1, i32 2, i64 4, i8* null)
 // CHECK: call void @__kmpc_end_taskgroup(%struct.ident_t* [[DEFLOC]], i32 [[GTID]])
   int i;
 #pragma omp taskloop if(argc) shared(argc, argv) collapse(2) num_tasks(4)
@@ -164,7 +164,7 @@ struct S {
 // CHECK: store i64 1, i64* [[ST]],
 // CHECK: [[ST_VAL:%.+]] = load i64, i64* [[ST]],
 // CHECK: [[NUM_TASKS:%.+]] = zext i32 %{{.+}} to i64
-// CHECK: call void @__kmpc_taskloop(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 1, i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 0, i32 2, i64 [[NUM_TASKS]], i8* null)
+// CHECK: call void @__kmpc_taskloop(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 1, i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 1, i32 2, i64 [[NUM_TASKS]], i8* null)
 #pragma omp taskloop shared(c) num_tasks(a)
     for (a = 0; a < c; ++a)
       ;

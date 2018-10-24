@@ -4121,6 +4121,9 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   llvm::Constant *Zero = llvm::Constant::getNullValue(Int32Ty);
   llvm::Constant *Zeros[] = { Zero, Zero };
 
+  const ASTContext &Context = getContext();
+  const llvm::Triple &Triple = getTriple();
+
   // If we don't already have it, get __CFConstantStringClassReference.
   if (!CFConstantStringClassRef) {
     llvm::Type *Ty = getTypes().ConvertType(getContext().IntTy);
@@ -4128,12 +4131,12 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
     llvm::Constant *C =
         CreateRuntimeVariable(Ty, "__CFConstantStringClassReference");
 
-    if (getTriple().isOSBinFormatELF() || getTriple().isOSBinFormatCOFF()) {
+    if (Triple.isOSBinFormatELF() || Triple.isOSBinFormatCOFF()) {
       llvm::GlobalValue *GV = nullptr;
 
       if ((GV = dyn_cast<llvm::GlobalValue>(C))) {
-        IdentifierInfo &II = getContext().Idents.get(GV->getName());
-        TranslationUnitDecl *TUDecl = getContext().getTranslationUnitDecl();
+        IdentifierInfo &II = Context.Idents.get(GV->getName());
+        TranslationUnitDecl *TUDecl = Context.getTranslationUnitDecl();
         DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
 
         const VarDecl *VD = nullptr;
@@ -4141,18 +4144,15 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
           if ((VD = dyn_cast<VarDecl>(Result)))
             break;
 
-        if (getTriple().isOSBinFormatELF()) {
+        if (Triple.isOSBinFormatELF()) {
           if (!VD)
             GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
-        }
-        else {
-          if (!VD || !VD->hasAttr<DLLExportAttr>()) {
+        } else {
+          GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
+          if (!VD || !VD->hasAttr<DLLExportAttr>())
             GV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
-            GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
-          } else {
+          else
             GV->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
-            GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
-          }
         }
 
         setDSOLocal(GV);
@@ -4164,7 +4164,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
         llvm::ConstantExpr::getGetElementPtr(Ty, C, Zeros);
   }
 
-  QualType CFTy = getContext().getCFConstantStringType();
+  QualType CFTy = Context.getCFConstantStringType();
 
   auto *STy = cast<llvm::StructType>(getTypes().ConvertType(CFTy));
 
@@ -4196,20 +4196,19 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   // Don't enforce the target's minimum global alignment, since the only use
   // of the string is via this class initializer.
-  CharUnits Align = isUTF16
-                        ? getContext().getTypeAlignInChars(getContext().ShortTy)
-                        : getContext().getTypeAlignInChars(getContext().CharTy);
+  CharUnits Align = isUTF16 ? Context.getTypeAlignInChars(Context.ShortTy)
+                            : Context.getTypeAlignInChars(Context.CharTy);
   GV->setAlignment(Align.getQuantity());
 
   // FIXME: We set the section explicitly to avoid a bug in ld64 224.1.
   // Without it LLVM can merge the string with a non unnamed_addr one during
   // LTO.  Doing that changes the section it ends in, which surprises ld64.
-  if (getTriple().isOSBinFormatMachO())
+  if (Triple.isOSBinFormatMachO())
     GV->setSection(isUTF16 ? "__TEXT,__ustring"
                            : "__TEXT,__cstring,cstring_literals");
   // Make sure the literal ends up in .rodata to allow for safe ICF and for
   // the static linker to adjust permissions to read-only later on.
-  else if (getTriple().isOSBinFormatELF())
+  else if (Triple.isOSBinFormatELF())
     GV->setSection(".rodata");
 
   // String.
@@ -4222,7 +4221,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   Fields.add(Str);
 
   // String length.
-  auto Ty = getTypes().ConvertType(getContext().LongTy);
+  auto Ty = getTypes().ConvertType(Context.LongTy);
   Fields.addInt(cast<llvm::IntegerType>(Ty), StringLength);
 
   CharUnits Alignment = getPointerAlign();
@@ -4231,7 +4230,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   GV = Fields.finishAndCreateGlobal("_unnamed_cfstring_", Alignment,
                                     /*isConstant=*/false,
                                     llvm::GlobalVariable::PrivateLinkage);
-  switch (getTriple().getObjectFormat()) {
+  switch (Triple.getObjectFormat()) {
   case llvm::Triple::UnknownObjectFormat:
     llvm_unreachable("unknown file format");
   case llvm::Triple::COFF:
