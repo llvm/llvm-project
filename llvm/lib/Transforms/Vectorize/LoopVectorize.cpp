@@ -4600,8 +4600,7 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF(bool OptForSize) {
   }
 
   // Record that scalar epilogue is not allowed.
-  LLVM_DEBUG(dbgs() << "LV: Not inserting scalar epilogue for access with gaps "
-                       "due to -Os/-Oz.\n");
+  LLVM_DEBUG(dbgs() << "LV: Not allowing scalar epilogue due to -Os/-Oz.\n");
 
   // We don't create an epilogue when optimizing for size.
   // Invalidate interleave groups that require an epilogue.
@@ -6018,8 +6017,14 @@ LoopVectorizationPlanner::plan(bool OptForSize, unsigned UserVF) {
     return NoVectorization;
 
   // Invalidate interleave groups if all blocks of loop will be predicated.
-  if (CM.blockNeedsPredication(OrigLoop->getHeader()))
+  if (CM.blockNeedsPredication(OrigLoop->getHeader()) &&
+      !useMaskedInterleavedAccesses(*TTI)) {
+    LLVM_DEBUG(
+        dbgs()
+        << "LV: Invalidate all interleaved groups due to fold-tail by masking "
+           "which requires masked-interleaved support.\n");
     CM.InterleaveInfo.reset();
+  }
 
   if (UserVF) {
     LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");

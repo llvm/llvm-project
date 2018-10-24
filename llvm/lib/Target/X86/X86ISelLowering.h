@@ -940,6 +940,8 @@ namespace llvm {
     /// the immediate into a register.
     bool isLegalAddImmediate(int64_t Imm) const override;
 
+    bool isLegalStoreImmediate(int64_t Imm) const override;
+
     /// Return the cost of the scaling factor used in the addressing
     /// mode represented by AM for this target, for a load/store
     /// of the specified type.

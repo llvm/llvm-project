@@ -54,8 +54,8 @@ using SymbolFlagsMap = DenseMap<SymbolStringPtr, JITSymbolFlags>;
 ///        symbols to be obtained for logging.
 using SymbolDependenceMap = DenseMap<JITDylib *, SymbolNameSet>;
 
-/// A list of JITDylib pointers.
-using JITDylibList = std::vector<JITDylib *>;
+/// A list of (JITDylib*, bool) pairs.
+using JITDylibSearchList = std::vector<std::pair<JITDylib *, bool>>;
 
 /// Render a SymbolStringPtr.
 raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPtr &Sym);
@@ -85,8 +85,8 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolDependenceMap &Deps);
 /// Render a MaterializationUnit.
 raw_ostream &operator<<(raw_ostream &OS, const MaterializationUnit &MU);
 
-/// Render a JITDylibList.
-raw_ostream &operator<<(raw_ostream &OS, const JITDylibList &JDs);
+/// Render a JITDylibSearchList.
+raw_ostream &operator<<(raw_ostream &OS, const JITDylibSearchList &JDs);
 
 /// Callback to notify client that symbols have been resolved.
 using SymbolsResolvedCallback = std::function<void(Expected<SymbolMap>)>;
@@ -351,14 +351,15 @@ using SymbolAliasMap = DenseMap<SymbolStringPtr, SymbolAliasMapEntry>;
 class ReExportsMaterializationUnit : public MaterializationUnit {
 public:
   /// SourceJD is allowed to be nullptr, in which case the source JITDylib is
-  /// taken to be whatever JITDylib these definitions are materialized in. This
-  /// is useful for defining aliases within a JITDylib.
+  /// taken to be whatever JITDylib these definitions are materialized in (and
+  /// MatchNonExported has no effect). This is useful for defining aliases
+  /// within a JITDylib.
   ///
   /// Note: Care must be taken that no sets of aliases form a cycle, as such
   ///       a cycle will result in a deadlock when any symbol in the cycle is
   ///       resolved.
-  ReExportsMaterializationUnit(JITDylib *SourceJD, SymbolAliasMap Aliases,
-                               VModuleKey K);
+  ReExportsMaterializationUnit(JITDylib *SourceJD, bool MatchNonExported,
+                               SymbolAliasMap Aliases, VModuleKey K);
 
   StringRef getName() const override;
 
@@ -368,6 +369,7 @@ private:
   static SymbolFlagsMap extractFlags(const SymbolAliasMap &Aliases);
 
   JITDylib *SourceJD = nullptr;
+  bool MatchNonExported = false;
   SymbolAliasMap Aliases;
 };
 
@@ -385,16 +387,19 @@ private:
 inline std::unique_ptr<ReExportsMaterializationUnit>
 symbolAliases(SymbolAliasMap Aliases, VModuleKey K = VModuleKey()) {
   return llvm::make_unique<ReExportsMaterializationUnit>(
-      nullptr, std::move(Aliases), std::move(K));
+      nullptr, true, std::move(Aliases), std::move(K));
 }
 
 /// Create a materialization unit for re-exporting symbols from another JITDylib
 /// with alternative names/flags.
+/// If MatchNonExported is true then non-exported symbols from SourceJD can be
+/// re-exported. If it is false, attempts to re-export a non-exported symbol
+/// will result in a "symbol not found" error.
 inline std::unique_ptr<ReExportsMaterializationUnit>
 reexports(JITDylib &SourceJD, SymbolAliasMap Aliases,
-          VModuleKey K = VModuleKey()) {
+          bool MatchNonExported = false, VModuleKey K = VModuleKey()) {
   return llvm::make_unique<ReExportsMaterializationUnit>(
-      &SourceJD, std::move(Aliases), std::move(K));
+      &SourceJD, MatchNonExported, std::move(Aliases), std::move(K));
 }
 
 /// Build a SymbolAliasMap for the common case where you want to re-export
@@ -411,13 +416,14 @@ public:
   /// Create a reexports generator. If an Allow predicate is passed, only
   /// symbols for which the predicate returns true will be reexported. If no
   /// Allow predicate is passed, all symbols will be exported.
-  ReexportsGenerator(JITDylib &SourceJD,
+  ReexportsGenerator(JITDylib &SourceJD, bool MatchNonExported = false,
                      SymbolPredicate Allow = SymbolPredicate());
 
   SymbolNameSet operator()(JITDylib &JD, const SymbolNameSet &Names);
 
 private:
   JITDylib &SourceJD;
+  bool MatchNonExported = false;
   SymbolPredicate Allow;
 };
 
@@ -536,16 +542,18 @@ public:
   /// as the first in the search order (instead of this dylib) ensures that
   /// definitions within this dylib resolve to the lazy-compiling stubs,
   /// rather than immediately materializing the definitions in this dylib.
-  void setSearchOrder(JITDylibList NewSearchOrder,
-                      bool SearchThisJITDylibFirst = true);
+  void setSearchOrder(JITDylibSearchList NewSearchOrder,
+                      bool SearchThisJITDylibFirst = true,
+                      bool MatchNonExportedInThisDylib = true);
 
   /// Add the given JITDylib to the search order for definitions in this
   /// JITDylib.
-  void addToSearchOrder(JITDylib &JD);
+  void addToSearchOrder(JITDylib &JD, bool MatcNonExported = false);
 
   /// Replace OldJD with NewJD in the search order if OldJD is present.
   /// Otherwise this operation is a no-op.
-  void replaceInSearchOrder(JITDylib &OldJD, JITDylib &NewJD);
+  void replaceInSearchOrder(JITDylib &OldJD, JITDylib &NewJD,
+                            bool MatchNonExported = false);
 
   /// Remove the given JITDylib from the search order for this JITDylib if it is
   /// present. Otherwise this operation is a no-op.
@@ -554,7 +562,7 @@ public:
   /// Do something with the search order (run under the session lock).
   template <typename Func>
   auto withSearchOrderDo(Func &&F)
-      -> decltype(F(std::declval<const JITDylibList &>()));
+      -> decltype(F(std::declval<const JITDylibSearchList &>()));
 
   /// Define all symbols provided by the materialization unit to be part of this
   /// JITDylib.
@@ -642,12 +650,12 @@ private:
                                 const SymbolNameSet &Names);
 
   void lodgeQuery(std::shared_ptr<AsynchronousSymbolQuery> &Q,
-                  SymbolNameSet &Unresolved, JITDylib *MatchNonExportedInJD,
-                  bool MatchNonExported, MaterializationUnitList &MUs);
+                  SymbolNameSet &Unresolved, bool MatchNonExported,
+                  MaterializationUnitList &MUs);
 
   void lodgeQueryImpl(std::shared_ptr<AsynchronousSymbolQuery> &Q,
-                      SymbolNameSet &Unresolved, JITDylib *MatchNonExportedInJD,
-                      bool MatchNonExported, MaterializationUnitList &MUs);
+                      SymbolNameSet &Unresolved, bool MatchNonExported,
+                      MaterializationUnitList &MUs);
 
   LookupImplActionFlags
   lookupImpl(std::shared_ptr<AsynchronousSymbolQuery> &Q,
@@ -682,7 +690,7 @@ private:
   UnmaterializedInfosMap UnmaterializedInfos;
   MaterializingInfosMap MaterializingInfos;
   GeneratorFunction DefGenerator;
-  JITDylibList SearchOrder;
+  JITDylibSearchList SearchOrder;
 };
 
 /// An ExecutionSession represents a running JIT program.
@@ -766,6 +774,10 @@ public:
 
   /// Search the given JITDylib list for the given symbols.
   ///
+  /// SearchOrder lists the JITDylibs to search. For each dylib, the associated
+  /// boolean indicates whether the search should match against non-exported
+  /// (hidden visibility) symbols in that dylib (true means match against
+  /// non-exported symbols, false means do not match).
   ///
   /// The OnResolve callback will be called once all requested symbols are
   /// resolved, or if an error occurs prior to resolution.
@@ -782,19 +794,9 @@ public:
   /// dependenant symbols for this query (e.g. it is being made by a top level
   /// client to get an address to call) then the value NoDependenciesToRegister
   /// can be used.
-  ///
-  /// If the MatchNonExportedInJD pointer is non-null, then the lookup will find
-  /// non-exported symbols defined in the JITDylib pointed to by
-  /// MatchNonExportedInJD.
-  /// If MatchNonExported is true the lookup will find non-exported symbols in
-  /// any JITDylib (setting MatchNonExportedInJD is redundant in such cases).
-  /// If MatchNonExported is false and MatchNonExportedInJD is null,
-  /// non-exported symbols will never be found.
-  void lookup(const JITDylibList &JDs, SymbolNameSet Symbols,
+  void lookup(const JITDylibSearchList &SearchOrder, SymbolNameSet Symbols,
               SymbolsResolvedCallback OnResolve, SymbolsReadyCallback OnReady,
-              RegisterDependenciesFunction RegisterDependencies,
-              JITDylib *MatchNonExportedInJD = nullptr,
-              bool MatchNonExported = false);
+              RegisterDependenciesFunction RegisterDependencies);
 
   /// Blocking version of lookup above. Returns the resolved symbol map.
   /// If WaitUntilReady is true (the default), will not return until all
@@ -803,24 +805,29 @@ public:
   /// or an error occurs. If WaitUntilReady is false and an error occurs
   /// after resolution, the function will return a success value, but the
   /// error will be reported via reportErrors.
-  Expected<SymbolMap> lookup(const JITDylibList &JDs,
+  Expected<SymbolMap> lookup(const JITDylibSearchList &SearchOrder,
                              const SymbolNameSet &Symbols,
                              RegisterDependenciesFunction RegisterDependencies =
                                  NoDependenciesToRegister,
-                             bool WaitUntilReady = true,
-                             JITDylib *MatchNonExportedInJD = nullptr,
-                             bool MatchNonExported = false);
+                             bool WaitUntilReady = true);
 
   /// Convenience version of blocking lookup.
-  /// Performs a single-symbol lookup.
-  Expected<JITEvaluatedSymbol> lookup(const JITDylibList &JDs,
-                                      SymbolStringPtr Symbol,
-                                      bool MatchNonExported = false);
+  /// Searches each of the JITDylibs in the search order in turn for the given
+  /// symbol.
+  Expected<JITEvaluatedSymbol> lookup(const JITDylibSearchList &SearchOrder,
+                                      SymbolStringPtr Symbol);
 
   /// Convenience version of blocking lookup.
-  /// Performs a single-symbol lookup, auto-interning the given symbol name.
-  Expected<JITEvaluatedSymbol> lookup(const JITDylibList &JDs, StringRef Symbol,
-                                      bool MatchNonExported = false);
+  /// Searches each of the JITDylibs in the search order in turn for the given
+  /// symbol. The search will not find non-exported symbols.
+  Expected<JITEvaluatedSymbol> lookup(ArrayRef<JITDylib *> SearchOrder,
+                                      SymbolStringPtr Symbol);
+
+  /// Convenience version of blocking lookup.
+  /// Searches each of the JITDylibs in the search order in turn for the given
+  /// symbol. The search will not find non-exported symbols.
+  Expected<JITEvaluatedSymbol> lookup(ArrayRef<JITDylib *> SearchOrder,
+                                      StringRef Symbol);
 
   /// Materialize the given unit.
   void dispatchMaterialization(JITDylib &JD,
@@ -866,7 +873,7 @@ private:
 
 template <typename Func>
 auto JITDylib::withSearchOrderDo(Func &&F)
-    -> decltype(F(std::declval<const JITDylibList &>())) {
+    -> decltype(F(std::declval<const JITDylibSearchList &>())) {
   return ES.runSessionLocked([&]() { return F(SearchOrder); });
 }
 

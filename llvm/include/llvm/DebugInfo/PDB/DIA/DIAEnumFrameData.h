@@ -17,12 +17,9 @@
 namespace llvm {
 namespace pdb {
 
-class DIASession;
-
 class DIAEnumFrameData : public IPDBEnumChildren<IPDBFrameData> {
 public:
-  explicit DIAEnumFrameData(const DIASession &PDBSession,
-                            CComPtr<IDiaEnumFrameData> DiaEnumerator);
+  explicit DIAEnumFrameData(CComPtr<IDiaEnumFrameData> DiaEnumerator);
 
   uint32_t getChildCount() const override;
   ChildTypePtr getChildAtIndex(uint32_t Index) const override;
@@ -30,7 +27,6 @@ public:
   void reset() override;
 
 private:
-  const DIASession &Session;
   CComPtr<IDiaEnumFrameData> Enumerator;
 };
 

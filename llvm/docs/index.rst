@@ -559,6 +559,7 @@ can be better.
 
    CodeOfConduct
    Proposals/GitHubMove
+   Proposals/TestSuite
    Proposals/VectorizationPlan
 
 :doc:`CodeOfConduct`
@@ -567,6 +568,9 @@ can be better.
 
 :doc:`Proposals/GitHubMove`
    Proposal to move from SVN/Git to GitHub.
+
+:doc:`Proposals/TestSuite`
+   Proposals for additional benchmarks/programs for llvm's test-suite.
 
 :doc:`Proposals/VectorizationPlan`
    Proposal to model the process and upgrade the infrastructure of LLVM's Loop Vectorizer.

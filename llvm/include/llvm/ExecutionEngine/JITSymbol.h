@@ -40,6 +40,18 @@ class SymbolRef;
 /// Represents an address in the target process's address space.
 using JITTargetAddress = uint64_t;
 
+/// Convert a JITTargetAddress to a pointer.
+template <typename T> T jitTargetAddressToPointer(JITTargetAddress Addr) {
+  static_assert(std::is_pointer<T>::value, "T must be a pointer type");
+  uintptr_t IntPtr = static_cast<uintptr_t>(Addr);
+  assert(IntPtr == Addr && "JITTargetAddress value out of range for uintptr_t");
+  return reinterpret_cast<T>(IntPtr);
+}
+
+template <typename T> JITTargetAddress pointerToJITTargetAddress(T *Ptr) {
+  return static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(Ptr));
+}
+
 /// Flags for symbols in the JIT.
 class JITSymbolFlags {
 public:

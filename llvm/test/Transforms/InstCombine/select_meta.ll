@@ -298,6 +298,44 @@ define i32 @umax2(i32 %x) {
   ret i32 %sel
 }
 
+; The condition is inverted, and the select ops are swapped. The metadata should be swapped.
+
+define i32 @not_cond(i1 %c, i32 %tv, i32 %fv) {
+; CHECK-LABEL: @not_cond(
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i32 [[FV:%.*]], i32 [[TV:%.*]], !prof ![[$MD3]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %notc = xor i1 %c, true
+  %r = select i1 %notc, i32 %tv, i32 %fv, !prof !1
+  ret i32 %r
+}
+
+; The condition is inverted, and the select ops are swapped. The metadata should be swapped.
+
+define <2 x i32> @not_cond_vec(<2 x i1> %c, <2 x i32> %tv, <2 x i32> %fv) {
+; CHECK-LABEL: @not_cond_vec(
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i32> [[FV:%.*]], <2 x i32> [[TV:%.*]], !prof ![[$MD3]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %notc = xor <2 x i1> %c, <i1 true, i1 true>
+  %r = select <2 x i1> %notc, <2 x i32> %tv, <2 x i32> %fv, !prof !1
+  ret <2 x i32> %r
+}
+
+; Should match vector 'not' with undef element.
+; The condition is inverted, and the select ops are swapped. The metadata should be swapped.
+
+define <2 x i32> @not_cond_vec_undef(<2 x i1> %c, <2 x i32> %tv, <2 x i32> %fv) {
+; CHECK-LABEL: @not_cond_vec_undef(
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i32> [[FV:%.*]], <2 x i32> [[TV:%.*]], !prof ![[$MD3]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %notc = xor <2 x i1> %c, <i1 undef, i1 true>
+  %r = select <2 x i1> %notc, <2 x i32> %tv, <2 x i32> %fv, !prof !1
+  ret <2 x i32> %r
+}
+
+
 !1 = !{!"branch_weights", i32 2, i32 10}
 !2 = !{!"branch_weights", i32 3, i32 10}
 

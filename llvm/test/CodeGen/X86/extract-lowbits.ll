@@ -1553,7 +1553,7 @@ define i32 @bzhi32_c2_load(i32* %w, i32 %numlowbits) nounwind {
 ; X86-BMI1BMI2:       # %bb.0:
 ; X86-BMI1BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BMI1BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BMI1BMI2-NEXT:    bzhil %ecx, (%eax), %eax
+; X86-BMI1BMI2-NEXT:    bzhil %eax, (%ecx), %eax
 ; X86-BMI1BMI2-NEXT:    retl
 ;
 ; X64-NOBMI-LABEL: bzhi32_c2_load:
@@ -2245,7 +2245,7 @@ define i32 @bzhi32_d2_load(i32* %w, i32 %numlowbits) nounwind {
 ; X86-BMI1BMI2:       # %bb.0:
 ; X86-BMI1BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BMI1BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BMI1BMI2-NEXT:    bzhil %ecx, (%eax), %eax
+; X86-BMI1BMI2-NEXT:    bzhil %eax, (%ecx), %eax
 ; X86-BMI1BMI2-NEXT:    retl
 ;
 ; X64-NOBMI-LABEL: bzhi32_d2_load:

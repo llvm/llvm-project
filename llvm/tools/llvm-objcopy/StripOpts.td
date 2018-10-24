@@ -19,6 +19,9 @@ def p : Flag<[ "-" ], "p">, Alias<preserve_dates>;
 def strip_all : Flag<["-", "--"], "strip-all">,
                 HelpText<"Remove non-allocated sections other than .gnu.warning* sections">;
 
+def s : Flag<["-"], "s">,
+        Alias<strip_all>;
+
 def strip_debug : Flag<["-", "--"], "strip-debug">,
                   HelpText<"Remove debugging symbols only">;
 

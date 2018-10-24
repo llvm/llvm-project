@@ -2109,21 +2109,6 @@ BinaryOperator *BinaryOperator::CreateNot(Value *Op, const Twine &Name,
                             Op->getType(), Name, InsertAtEnd);
 }
 
-// isConstantAllOnes - Helper function for several functions below
-static inline bool isConstantAllOnes(const Value *V) {
-  if (const Constant *C = dyn_cast<Constant>(V))
-    return C->isAllOnesValue();
-  return false;
-}
-
-bool BinaryOperator::isNeg(const Value *V) {
-  if (const BinaryOperator *Bop = dyn_cast<BinaryOperator>(V))
-    if (Bop->getOpcode() == Instruction::Sub)
-      if (Constant *C = dyn_cast<Constant>(Bop->getOperand(0)))
-        return C->isNegativeZeroValue();
-  return false;
-}
-
 bool BinaryOperator::isFNeg(const Value *V, bool IgnoreZeroSign) {
   if (const BinaryOperator *Bop = dyn_cast<BinaryOperator>(V))
     if (Bop->getOpcode() == Instruction::FSub)
@@ -2135,43 +2120,12 @@ bool BinaryOperator::isFNeg(const Value *V, bool IgnoreZeroSign) {
   return false;
 }
 
-bool BinaryOperator::isNot(const Value *V) {
-  if (const BinaryOperator *Bop = dyn_cast<BinaryOperator>(V))
-    return (Bop->getOpcode() == Instruction::Xor &&
-            (isConstantAllOnes(Bop->getOperand(1)) ||
-             isConstantAllOnes(Bop->getOperand(0))));
-  return false;
-}
-
-Value *BinaryOperator::getNegArgument(Value *BinOp) {
-  return cast<BinaryOperator>(BinOp)->getOperand(1);
-}
-
-const Value *BinaryOperator::getNegArgument(const Value *BinOp) {
-  return getNegArgument(const_cast<Value*>(BinOp));
-}
-
 Value *BinaryOperator::getFNegArgument(Value *BinOp) {
   return cast<BinaryOperator>(BinOp)->getOperand(1);
 }
 
 const Value *BinaryOperator::getFNegArgument(const Value *BinOp) {
   return getFNegArgument(const_cast<Value*>(BinOp));
-}
-
-Value *BinaryOperator::getNotArgument(Value *BinOp) {
-  assert(isNot(BinOp) && "getNotArgument on non-'not' instruction!");
-  BinaryOperator *BO = cast<BinaryOperator>(BinOp);
-  Value *Op0 = BO->getOperand(0);
-  Value *Op1 = BO->getOperand(1);
-  if (isConstantAllOnes(Op0)) return Op1;
-
-  assert(isConstantAllOnes(Op1));
-  return Op0;
-}
-
-const Value *BinaryOperator::getNotArgument(const Value *BinOp) {
-  return getNotArgument(const_cast<Value*>(BinOp));
 }
 
 // Exchange the two operands to this instruction. This instruction is safe to

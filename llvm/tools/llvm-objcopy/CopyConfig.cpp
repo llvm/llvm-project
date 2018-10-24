@@ -61,7 +61,7 @@ static const opt::OptTable::Info ObjcopyInfoTable[] = {
 
 class ObjcopyOptTable : public opt::OptTable {
 public:
-  ObjcopyOptTable() : OptTable(ObjcopyInfoTable, true) {}
+  ObjcopyOptTable() : OptTable(ObjcopyInfoTable) {}
 };
 
 enum StripID {
@@ -90,7 +90,7 @@ static const opt::OptTable::Info StripInfoTable[] = {
 
 class StripOptTable : public opt::OptTable {
 public:
-  StripOptTable() : OptTable(StripInfoTable, true) {}
+  StripOptTable() : OptTable(StripInfoTable) {}
 };
 
 enum SectionFlag {
@@ -345,8 +345,6 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
 
   Config.PreserveDates = InputArgs.hasArg(OBJCOPY_preserve_dates);
 
-  DriverConfig DC;
-  DC.CopyConfigs.push_back(std::move(Config));
   if (Config.DecompressDebugSections &&
       Config.CompressionType != DebugCompressionType::None) {
     error("Cannot specify --compress-debug-sections at the same time as "
@@ -356,6 +354,8 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   if (Config.DecompressDebugSections && !zlib::isAvailable())
     error("LLVM was not compiled with LLVM_ENABLE_ZLIB: cannot decompress.");
 
+  DriverConfig DC;
+  DC.CopyConfigs.push_back(std::move(Config));
   return DC;
 }
 
