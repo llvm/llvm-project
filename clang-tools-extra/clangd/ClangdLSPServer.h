@@ -140,7 +140,6 @@ private:
 
     // if IsDirectoryBased is true, an instance of InMemoryCDB.
     // If IsDirectoryBased is false, an instance of DirectoryBasedCDB.
-    // unique_ptr<GlobalCompilationDatabase> CDB;
     std::unique_ptr<GlobalCompilationDatabase> CDB;
     bool IsDirectoryBased;
   };
