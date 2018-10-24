@@ -173,10 +173,6 @@ private:
 
   void createInitialThunkSections(ArrayRef<OutputSection *> OutputSections);
 
-  void forEachInputSectionDescription(
-      ArrayRef<OutputSection *> OutputSections,
-      llvm::function_ref<void(OutputSection *, InputSectionDescription *)> Fn);
-
   std::pair<Thunk *, bool> getThunk(Symbol &Sym, RelType Type, uint64_t Src);
 
   ThunkSection *addThunkSection(OutputSection *OS, InputSectionDescription *,

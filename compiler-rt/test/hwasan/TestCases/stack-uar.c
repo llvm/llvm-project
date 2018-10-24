@@ -9,8 +9,8 @@ void USE(void *x) { // pretend_to_do_something(void *x)
 
 __attribute__((noinline))
 char *buggy() {
-  char z[0x1000];
-  char *volatile p = z;
+  char zzz[0x1000];
+  char *volatile p = zzz;
   return p;
 }
 
@@ -29,9 +29,13 @@ int main() {
   // CHECK: is located in stack of thread
   // CHECK: Previosly allocated frames:
   // CHECK: Unrelated3
+  // CHECK: 16 CCC
   // CHECK: Unrelated2
+  // CHECK: 12 BB
   // CHECK: Unrelated1
+  // CHECK: 8 A
   // CHECK: buggy
+  // CHECK: 4096 zzz
 
   // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in main
 }

@@ -204,11 +204,13 @@ void PrintAddressDescription(
         uptr pc_mask = (1ULL << 48) - 1;
         uptr pc = record & pc_mask;
         if (SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc)) {
-          frame_desc.append("  sp: 0x%zx pc: %p ", sp, pc);
+          frame_desc.append(" sp: 0x%zx pc: %p ", sp, pc);
           RenderFrame(&frame_desc, "in %f %s:%l\n", 0, frame->info,
                       common_flags()->symbolize_vs_style,
                       common_flags()->strip_path_prefix);
           frame->ClearAll();
+          if (auto Descr = GetStackFrameDescr(pc))
+            frame_desc.append("  %s\n", Descr);
         }
         Printf("%s", frame_desc.data());
         frame_desc.clear();
