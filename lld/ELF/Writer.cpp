@@ -1759,7 +1759,8 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
     if (OS->Flags & SHF_EXECINSTR)
       for (InputSection *IS : getInputSections(OS))
         if (!(IS->Flags & SHF_EXECINSTR))
-          error("-execute-only does not support intermingling data and code");
+          error("cannot place " + toString(IS) + " into " + toString(OS->Name) +
+                ": -execute-only does not support intermingling data and code");
 }
 
 // The linker is expected to define SECNAME_start and SECNAME_end
