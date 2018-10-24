@@ -227,19 +227,37 @@ raw_ostream &operator<<(raw_ostream &OS, const Diag &D) {
   return OS;
 }
 
-void toLSPDiags(const Diag &D,
-                function_ref<void(clangd::Diagnostic, ArrayRef<Fix>)> OutFn) {
+CodeAction toCodeAction(const Fix &F, const URIForFile &File) {
+  CodeAction Action;
+  Action.title = F.Message;
+  Action.kind = CodeAction::QUICKFIX_KIND;
+  Action.edit.emplace();
+  Action.edit->changes.emplace();
+  (*Action.edit->changes)[File.uri()] = {F.Edits.begin(), F.Edits.end()};
+  return Action;
+}
+
+void toLSPDiags(
+    const Diag &D, const URIForFile &File, const ClangdDiagnosticOptions &Opts,
+    function_ref<void(clangd::Diagnostic, ArrayRef<Fix>)> OutFn) {
   auto FillBasicFields = [](const DiagBase &D) -> clangd::Diagnostic {
     clangd::Diagnostic Res;
     Res.range = D.Range;
     Res.severity = getSeverity(D.Severity);
-    Res.category = D.Category;
     return Res;
   };
 
   {
     clangd::Diagnostic Main = FillBasicFields(D);
     Main.message = mainMessage(D);
+    if (Opts.EmbedFixesInDiagnostics) {
+      Main.codeActions.emplace();
+      for (const auto &Fix : D.Fixes)
+        Main.codeActions->push_back(toCodeAction(Fix, File));
+    }
+    if (Opts.SendDiagnosticCategory && !D.Category.empty())
+      Main.category = D.Category;
+
     OutFn(std::move(Main), D.Fixes);
   }
 
