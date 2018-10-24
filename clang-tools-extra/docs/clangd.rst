@@ -113,7 +113,7 @@ Editor Integration
 
 Any full-featured Language Server Protocol Client implementation should work
 with :program:`Clangd`. This `list
-<https://langserver.org/#implementations-client>` contains information about
+<https://langserver.org/#implementations-client>`_ contains information about
 extensions and plugins that are known to work for different editors.
 
 Vim Integration
