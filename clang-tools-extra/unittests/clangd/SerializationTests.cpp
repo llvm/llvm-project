@@ -27,7 +27,7 @@ namespace {
 const char *YAML = R"(
 ---
 !Symbol
-ID: 057557CEBF6E6B2DD437FBF60CC58F352D1DF856
+ID: 057557CEBF6E6B2DD437FBF60CC58F35
 Name:   'Foo1'
 Scope:   'clang::'
 SymInfo:
@@ -53,7 +53,7 @@ IncludeHeaders:
 ...
 ---
 !Symbol
-ID: 057557CEBF6E6B2DD437FBF60CC58F352D1DF858
+ID: 057557CEBF6E6B2DD437FBF60CC58F36
 Name:   'Foo2'
 Scope:   'clang::'
 SymInfo:
@@ -72,7 +72,7 @@ Signature:    '-sig'
 CompletionSnippetSuffix:    '-snippet'
 ...
 !Refs
-ID: 057557CEBF6E6B2DD437FBF60CC58F352D1DF856
+ID: 057557CEBF6E6B2DD437FBF60CC58F35
 References:
   - Kind: 4
     Location:
@@ -98,15 +98,14 @@ TEST(SerializationTest, YAMLConversions) {
   auto ParsedYAML = readIndexFile(YAML);
   ASSERT_TRUE(bool(ParsedYAML)) << ParsedYAML.takeError();
   ASSERT_TRUE(bool(ParsedYAML->Symbols));
-  EXPECT_THAT(
-      *ParsedYAML->Symbols,
-      UnorderedElementsAre(ID("057557CEBF6E6B2DD437FBF60CC58F352D1DF856"),
-                           ID("057557CEBF6E6B2DD437FBF60CC58F352D1DF858")));
+  EXPECT_THAT(*ParsedYAML->Symbols,
+              UnorderedElementsAre(ID("057557CEBF6E6B2DD437FBF60CC58F35"),
+                                   ID("057557CEBF6E6B2DD437FBF60CC58F36")));
 
   auto Sym1 = *ParsedYAML->Symbols->find(
-      cantFail(SymbolID::fromStr("057557CEBF6E6B2DD437FBF60CC58F352D1DF856")));
+      cantFail(SymbolID::fromStr("057557CEBF6E6B2DD437FBF60CC58F35")));
   auto Sym2 = *ParsedYAML->Symbols->find(
-      cantFail(SymbolID::fromStr("057557CEBF6E6B2DD437FBF60CC58F352D1DF858")));
+      cantFail(SymbolID::fromStr("057557CEBF6E6B2DD437FBF60CC58F36")));
 
   EXPECT_THAT(Sym1, QName("clang::Foo1"));
   EXPECT_EQ(Sym1.Signature, "");
@@ -128,11 +127,11 @@ TEST(SerializationTest, YAMLConversions) {
   EXPECT_TRUE(Sym2.Flags & Symbol::Deprecated);
 
   ASSERT_TRUE(bool(ParsedYAML->Refs));
-  EXPECT_THAT(*ParsedYAML->Refs,
-              UnorderedElementsAre(
-                  Pair(cantFail(SymbolID::fromStr(
-                           "057557CEBF6E6B2DD437FBF60CC58F352D1DF856")),
-                       testing::SizeIs(1))));
+  EXPECT_THAT(
+      *ParsedYAML->Refs,
+      UnorderedElementsAre(
+          Pair(cantFail(SymbolID::fromStr("057557CEBF6E6B2DD437FBF60CC58F35")),
+               testing::SizeIs(1))));
   auto Ref1 = ParsedYAML->Refs->begin()->second.front();
   EXPECT_EQ(Ref1.Kind, RefKind::Reference);
   EXPECT_EQ(Ref1.Location.FileURI, "file:///path/foo.cc");
