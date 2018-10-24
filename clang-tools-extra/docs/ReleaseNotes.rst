@@ -74,6 +74,13 @@ Improvements to clang-tidy
   floating-point context, and recommends the use of a function that
   returns a floating-point value.
 
+- New :doc:`abseil-duration-factory-float
+  <clang-tidy/checks/abseil-duration-factory-float>` check.
+
+  Checks for cases where the floating-point overloads of various
+  ``absl::Duration`` factory functions are called when the more-efficient
+  integer versions could be used instead.
+
 - New :doc:`abseil-faster-strsplit-delimiter
   <clang-tidy/checks/abseil-faster-strsplit-delimiter>` check.
 
