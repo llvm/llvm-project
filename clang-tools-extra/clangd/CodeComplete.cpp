@@ -728,9 +728,9 @@ struct CompletionRecorder : public CodeCompleteConsumer {
     // Retain the results we might want.
     for (unsigned I = 0; I < NumResults; ++I) {
       auto &Result = InResults[I];
-      // Drop hidden items which cannot be found by lookup after completion.
-      // Exception: some items can be named by using a qualifier.
-      if (Result.Hidden && (!Result.Qualifier || Result.QualifierIsInformative))
+      // Class members that are shadowed by subclasses are usually noise.
+      if (Result.Hidden && Result.Declaration &&
+          Result.Declaration->isCXXClassMember())
         continue;
       if (!Opts.IncludeIneligibleResults &&
           (Result.Availability == CXAvailability_NotAvailable ||
