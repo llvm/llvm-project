@@ -180,7 +180,7 @@ static Defined *addOptionalRegular(StringRef Name, SectionBase *Sec,
 static Defined *addAbsolute(StringRef Name) {
   return cast<Defined>(Symtab->addDefined(Name, STV_HIDDEN, STT_NOTYPE, 0, 0,
                                           STB_GLOBAL, nullptr, nullptr));
-};
+}
 
 // The linker is expected to define some symbols depending on
 // the linking result. This function defines such symbols.

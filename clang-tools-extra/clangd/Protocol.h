@@ -323,9 +323,8 @@ struct ClientCapabilities {
   /// workspace.symbol.symbolKind.valueSet
   llvm::Optional<SymbolKindBitset> WorkspaceSymbolKinds;
 
-  /// Whether the client accepts diagnostics with fixes attached using the
-  /// "clangd_fixes" extension.
-  /// textDocument.publishDiagnostics.clangdFixSupport
+  /// Whether the client accepts diagnostics with codeActions attached inline.
+  /// textDocument.publishDiagnostics.codeActionsInline.
   bool DiagnosticFixes = false;
 
   /// Whether the client accepts diagnostics with category attached to it
@@ -536,6 +535,7 @@ struct DocumentSymbolParams {
 };
 bool fromJSON(const llvm::json::Value &, DocumentSymbolParams &);
 
+struct CodeAction;
 struct Diagnostic {
   /// The range at which the message applies.
   Range range;
@@ -560,7 +560,12 @@ struct Diagnostic {
   /// An LSP extension that's used to send the name of the category over to the
   /// client. The category typically describes the compilation stage during
   /// which the issue was produced, e.g. "Semantic Issue" or "Parse Issue".
-  std::string category;
+  llvm::Optional<std::string> category;
+
+  /// Clangd extension: code actions related to this diagnostic.
+  /// Only with capability textDocument.publishDiagnostics.codeActionsInline.
+  /// (These actions can also be obtained using textDocument/codeAction).
+  llvm::Optional<std::vector<CodeAction>> codeActions;
 };
 llvm::json::Value toJSON(const Diagnostic &);
 

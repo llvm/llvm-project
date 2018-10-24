@@ -210,8 +210,8 @@ bool fromJSON(const json::Value &Params, ClientCapabilities &R) {
     if (auto *Diagnostics = TextDocument->getObject("publishDiagnostics")) {
       if (auto CategorySupport = Diagnostics->getBoolean("categorySupport"))
         R.DiagnosticCategory = *CategorySupport;
-      if (auto ClangdFixSupport = Diagnostics->getBoolean("clangdFixSupport"))
-        R.DiagnosticFixes = *ClangdFixSupport;
+      if (auto CodeActions = Diagnostics->getBoolean("codeActionsInline"))
+        R.DiagnosticFixes = *CodeActions;
     }
     if (auto *Completion = TextDocument->getObject("completion")) {
       if (auto *Item = Completion->getObject("completionItem")) {
@@ -348,8 +348,10 @@ json::Value toJSON(const Diagnostic &D) {
       {"severity", D.severity},
       {"message", D.message},
   };
-  // FIXME: this should be used for publishDiagnostics.
-  // FIXME: send category and fixes when appropriate.
+  if (D.category)
+    Diag["category"] = *D.category;
+  if (D.codeActions)
+    Diag["codeActions"] = D.codeActions;
   return std::move(Diag);
 }
 
@@ -358,6 +360,7 @@ bool fromJSON(const json::Value &Params, Diagnostic &R) {
   if (!O || !O.map("range", R.range) || !O.map("message", R.message))
     return false;
   O.map("severity", R.severity);
+  O.map("category", R.category);
   return true;
 }
 
