@@ -103,7 +103,8 @@ TEST_F(QueryEngineTest, Basic) {
 
   Str.clear();
 
-  EXPECT_TRUE(SetQuery<OutputKind>(&QuerySession::OutKind, OK_Dump).run(OS, S));
+  EXPECT_TRUE(
+      SetQuery<OutputKind>(&QuerySession::OutKind, OK_DetailedAST).run(OS, S));
   EXPECT_TRUE(MatchQuery(FooMatcherString, FooMatcher).run(OS, S));
 
   EXPECT_TRUE(OS.str().find("FunctionDecl") != std::string::npos);
