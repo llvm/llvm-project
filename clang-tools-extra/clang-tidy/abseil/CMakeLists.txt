@@ -18,4 +18,5 @@ add_clang_library(clangTidyAbseilModule
   clangLex
   clangTidy
   clangTidyUtils
+  clangTooling
   )
