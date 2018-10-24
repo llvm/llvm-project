@@ -1955,8 +1955,17 @@ static bool isDefinedInClangModule(const RecordDecl *RD) {
   if (auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD)) {
     if (!CXXDecl->isCompleteDefinition())
       return false;
+    // Check wether RD is a template.
     auto TemplateKind = CXXDecl->getTemplateSpecializationKind();
     if (TemplateKind != TSK_Undeclared) {
+      // Unfortunately getOwningModule() isn't accurate enough to find the
+      // owning module of a ClassTemplateSpecializationDecl that is inside a
+      // namespace spanning multiple modules.
+      bool Explicit = false;
+      if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(CXXDecl))
+        Explicit = TD->isExplicitInstantiationOrSpecialization();
+      if (!Explicit && CXXDecl->getEnclosingNamespaceContext())
+        return false;
       // This is a template, check the origin of the first member.
       if (CXXDecl->field_begin() == CXXDecl->field_end())
         return TemplateKind == TSK_ExplicitInstantiationDeclaration;
@@ -3802,32 +3811,6 @@ CGDebugInfo::EmitDeclareOfAutoVariable(const VarDecl *VD, llvm::Value *Storage,
                                        CGBuilderTy &Builder) {
   assert(DebugKind >= codegenoptions::LimitedDebugInfo);
   return EmitDeclare(VD, Storage, llvm::None, Builder);
-}
-
-void CGDebugInfo::EmitLabel(const LabelDecl *D, CGBuilderTy &Builder) {
-  assert(DebugKind >= codegenoptions::LimitedDebugInfo);
-  assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
-
-  if (D->hasAttr<NoDebugAttr>())
-    return;
-
-  auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
-  llvm::DIFile *Unit = getOrCreateFile(D->getLocation());
-
-  // Get location information.
-  unsigned Line = getLineNumber(D->getLocation());
-  unsigned Column = getColumnNumber(D->getLocation());
-
-  StringRef Name = D->getName();
-
-  // Create the descriptor for the label.
-  auto *L =
-      DBuilder.createLabel(Scope, Name, Unit, Line, CGM.getLangOpts().Optimize);
-
-  // Insert an llvm.dbg.label into the current block.
-  DBuilder.insertLabel(L,
-                       llvm::DebugLoc::get(Line, Column, Scope, CurInlinedAt),
-                       Builder.GetInsertBlock());
 }
 
 llvm::DIType *CGDebugInfo::CreateSelfType(const QualType &QualTy,

@@ -1536,7 +1536,9 @@ void Driver::HandleAutocompletions(StringRef PassedFlags) const {
   if (SuggestedCompletions.empty())
     SuggestedCompletions = Opts->suggestValueCompletions(Cur, "");
 
-  if (SuggestedCompletions.empty()) {
+  // When flag ends with '=' and there was no value completion, return empty
+  // string and fall back to the file autocompletion.
+  if (SuggestedCompletions.empty() && !Cur.endswith("=")) {
     // If the flag is in the form of "--autocomplete=-foo",
     // we were requested to print out all option names that start with "-foo".
     // For example, "--autocomplete=-fsyn" is expanded to "-fsyntax-only".

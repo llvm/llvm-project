@@ -49,7 +49,7 @@ void ObjCAtSyncChecker::checkPreStmt(const ObjCAtSynchronizedStmt *S,
                                             "for @synchronized"));
       auto report =
           llvm::make_unique<BugReport>(*BT_undef, BT_undef->getDescription(), N);
-      bugreporter::trackNullOrUndefValue(N, Ex, *report);
+      bugreporter::trackExpressionValue(N, Ex, *report);
       C.emitReport(std::move(report));
     }
     return;
@@ -73,7 +73,7 @@ void ObjCAtSyncChecker::checkPreStmt(const ObjCAtSynchronizedStmt *S,
                     "(no synchronization will occur)"));
         auto report =
             llvm::make_unique<BugReport>(*BT_null, BT_null->getDescription(), N);
-        bugreporter::trackNullOrUndefValue(N, Ex, *report);
+        bugreporter::trackExpressionValue(N, Ex, *report);
 
         C.emitReport(std::move(report));
         return;

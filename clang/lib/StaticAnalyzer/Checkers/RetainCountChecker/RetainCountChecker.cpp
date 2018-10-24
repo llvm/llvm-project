@@ -45,7 +45,7 @@ ProgramStateRef removeRefBinding(ProgramStateRef State, SymbolRef Sym) {
 
 void RefVal::print(raw_ostream &Out) const {
   if (!T.isNull())
-    Out << "Tracked " << T.getAsString() << '/';
+    Out << "Tracked " << T.getAsString() << " | ";
 
   switch (getKind()) {
     default: llvm_unreachable("Invalid RefVal kind");
@@ -175,9 +175,7 @@ void RetainCountChecker::checkPostStmt(const BlockExpr *BE,
     Regions.push_back(VR);
   }
 
-  state =
-    state->scanReachableSymbols<StopTrackingCallback>(Regions.data(),
-                                    Regions.data() + Regions.size()).getState();
+  state = state->scanReachableSymbols<StopTrackingCallback>(Regions).getState();
   C.addTransition(state);
 }
 
@@ -776,31 +774,27 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
 
   const LocationContext *LCtx = C.getLocationContext();
 
-  // Process OSDynamicCast: should just return the first argument.
-  // For now, tresting the cast as a no-op, and disregarding the case where
-  // the output becomes null due to the type mismatch.
-  if (FD->getNameAsString() == "safeMetaCast") {
-    state = state->BindExpr(CE, LCtx, 
-                            state->getSVal(CE->getArg(0), LCtx));
-    C.addTransition(state);
-    return true;
-  }
-
   // See if it's one of the specific functions we know how to eval.
   if (!SmrMgr.canEval(CE, FD, hasTrustedImplementationAnnotation))
     return false;
 
   // Bind the return value.
-  SVal RetVal = state->getSVal(CE->getArg(0), LCtx);
-  if (RetVal.isUnknown() ||
-      (hasTrustedImplementationAnnotation && !ResultTy.isNull())) {
+  // For now, all the functions which we can evaluate and which take
+  // at least one argument are identities.
+  if (CE->getNumArgs() >= 1) {
+    SVal RetVal = state->getSVal(CE->getArg(0), LCtx);
+
     // If the receiver is unknown or the function has
     // 'rc_ownership_trusted_implementation' annotate attribute, conjure a
     // return value.
-    SValBuilder &SVB = C.getSValBuilder();
-    RetVal = SVB.conjureSymbolVal(nullptr, CE, LCtx, ResultTy, C.blockCount());
+    if (RetVal.isUnknown() ||
+        (hasTrustedImplementationAnnotation && !ResultTy.isNull())) {
+      SValBuilder &SVB = C.getSValBuilder();
+      RetVal =
+          SVB.conjureSymbolVal(nullptr, CE, LCtx, ResultTy, C.blockCount());
+    }
+    state = state->BindExpr(CE, LCtx, RetVal, false);
   }
-  state = state->BindExpr(CE, LCtx, RetVal, false);
 
   C.addTransition(state);
   return true;

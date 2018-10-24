@@ -111,6 +111,12 @@ static bool suppressReport(const Expr *E) {
   return E->getType().getQualifiers().hasAddressSpace();
 }
 
+static bool isDeclRefExprToReference(const Expr *E) {
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return DRE->getDecl()->getType()->isReferenceType();
+  return false;
+}
+
 void DereferenceChecker::reportBug(ProgramStateRef State, const Stmt *S,
                                    CheckerContext &C) const {
   // Generate an error node.
@@ -154,7 +160,7 @@ void DereferenceChecker::reportBug(ProgramStateRef State, const Stmt *S,
   }
   case Stmt::MemberExprClass: {
     const MemberExpr *M = cast<MemberExpr>(S);
-    if (M->isArrow() || bugreporter::isDeclRefExprToReference(M->getBase())) {
+    if (M->isArrow() || isDeclRefExprToReference(M->getBase())) {
       os << "Access to field '" << M->getMemberNameInfo()
          << "' results in a dereference of a null pointer";
       AddDerefSource(os, Ranges, M->getBase()->IgnoreParenCasts(),
@@ -177,7 +183,7 @@ void DereferenceChecker::reportBug(ProgramStateRef State, const Stmt *S,
   auto report = llvm::make_unique<BugReport>(
       *BT_null, buf.empty() ? BT_null->getDescription() : StringRef(buf), N);
 
-  bugreporter::trackNullOrUndefValue(N, bugreporter::getDerefExpr(S), *report);
+  bugreporter::trackExpressionValue(N, bugreporter::getDerefExpr(S), *report);
 
   for (SmallVectorImpl<SourceRange>::iterator
        I = Ranges.begin(), E = Ranges.end(); I!=E; ++I)
@@ -197,8 +203,7 @@ void DereferenceChecker::checkLocation(SVal l, bool isLoad, const Stmt* S,
 
       auto report =
           llvm::make_unique<BugReport>(*BT_undef, BT_undef->getDescription(), N);
-      bugreporter::trackNullOrUndefValue(N, bugreporter::getDerefExpr(S),
-                                         *report);
+      bugreporter::trackExpressionValue(N, bugreporter::getDerefExpr(S), *report);
       C.emitReport(std::move(report));
     }
     return;
