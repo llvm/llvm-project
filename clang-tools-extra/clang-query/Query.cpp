@@ -43,12 +43,18 @@ bool HelpQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
         "Set whether to bind the root matcher to \"root\".\n"
         "  set print-matcher (true|false)    "
         "Set whether to print the current matcher,\n"
-        "  set output (diag|print|dump)      "
-        "Set whether to print bindings as diagnostics,\n"
-        "                                    "
-        "AST pretty prints or AST dumps.\n"
+        "  set output <feature>              "
+        "Set whether to output only <feature> content.\n"
         "  quit, q                           "
-        "Terminates the query session.\n\n";
+        "Terminates the query session.\n\n"
+        "Several commands accept a <feature> parameter. The available features "
+        "are:\n\n"
+        "  print                             "
+        "Pretty-print bound nodes.\n"
+        "  diag                              "
+        "Diagnostic location for bound nodes.\n"
+        "  dump                              "
+        "Detailed AST output for bound nodes.\n\n";
   return true;
 }
 
