@@ -999,6 +999,13 @@ TEST(Hover, All) {
           )cpp",
           "",
       },
+      {
+          R"cpp(// More compilcated structured types.
+            int bar();
+            ^auto (*foo)() = bar;
+          )cpp",
+          "int",
+      },
   };
 
   for (const OneTest &Test : Tests) {

@@ -1380,6 +1380,9 @@ def tUDF : TI<(outs), (ins imm0_255:$imm8), IIC_Br, "udf\t$imm8",
   let Inst{7-0} = imm8;
 }
 
+def : Pat<(debugtrap), (tBKPT 0)>, Requires<[IsThumb, HasV5T]>;
+def : Pat<(debugtrap), (tUDF 254)>, Requires<[IsThumb, NoV5T]>;
+
 def t__brkdiv0 : TI<(outs), (ins), IIC_Br, "__brkdiv0",
                     [(int_arm_undefined 249)]>, Encoding16,
     Requires<[IsThumb, IsWindows]> {

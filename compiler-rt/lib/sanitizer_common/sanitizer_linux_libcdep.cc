@@ -782,12 +782,15 @@ INLINE bool CanUseVDSO() {
 
 // MonotonicNanoTime is a timing function that can leverage the vDSO by calling
 // clock_gettime. real_clock_gettime only exists if clock_gettime is
-// intercepted, so define it weakly and use it if available.
+// intercepted, so define it weakly and use it if available. MonotonicNanoTime
+// might also be called when interceptors are not yet initialized, so check for
+// that as well.
 extern "C" SANITIZER_WEAK_ATTRIBUTE
 int real_clock_gettime(u32 clk_id, void *tp);
+namespace __interception { int (*real_clock_gettime)(u32 clk_id, void *tp); }
 u64 MonotonicNanoTime() {
   timespec ts;
-  if (CanUseVDSO()) {
+  if (CanUseVDSO() && __interception::real_clock_gettime) {
     if (&real_clock_gettime)
       real_clock_gettime(CLOCK_MONOTONIC, &ts);
     else

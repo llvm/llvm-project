@@ -224,6 +224,10 @@ if(NOT WIN32 AND NOT CYGWIN)
   append_if(SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG "-fvisibility-inlines-hidden" CMAKE_CXX_FLAGS)
 endif()
 
+if(CMAKE_SIZEOF_VOID_P EQUAL 8 AND MINGW)
+  add_definitions( -D_FILE_OFFSET_BITS=64 )
+endif()
+
 if( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32 )
   # TODO: support other platforms and toolchains.
   if( LLVM_BUILD_32_BITS )

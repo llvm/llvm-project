@@ -148,13 +148,15 @@ void ResourcePressureView::printResourcePressurePerInstruction(
   std::string Instruction;
   raw_string_ostream InstrStream(Instruction);
 
-  for (unsigned I = 0, E = Source.size(); I < E; ++I) {
+  unsigned InstrIndex = 0;
+  for (const MCInst &MCI : Source) {
+    unsigned BaseEltIdx = InstrIndex * NumResourceUnits;
     for (unsigned J = 0; J < NumResourceUnits; ++J) {
-      double Usage = ResourceUsage[J + I * NumResourceUnits];
+      double Usage = ResourceUsage[J + BaseEltIdx];
       printResourcePressure(FOS, Usage / Executions, (J + 1) * 7);
     }
 
-    MCIP.printInst(&Source.getMCInstFromIndex(I), InstrStream, "", STI);
+    MCIP.printInst(&MCI, InstrStream, "", STI);
     InstrStream.flush();
     StringRef Str(Instruction);
 
@@ -167,6 +169,8 @@ void ResourcePressureView::printResourcePressurePerInstruction(
     FOS.flush();
     OS << Buffer;
     Buffer = "";
+
+    ++InstrIndex;
   }
 }
 } // namespace mca

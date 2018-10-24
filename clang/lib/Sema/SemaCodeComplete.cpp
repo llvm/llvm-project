@@ -970,6 +970,11 @@ void ResultBuilder::MaybeAddResult(Result R, DeclContext *CurContext) {
     MaybeAddConstructorResults(R);
 }
 
+static void setInBaseClass(ResultBuilder::Result &R) {
+  R.Priority += CCD_InBaseClass;
+  R.InBaseClass = true;
+}
+
 void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
                               NamedDecl *Hiding, bool InBaseClass = false) {
   if (R.Kind != Result::RK_Declaration) {
@@ -1030,7 +1035,7 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
 
   // Adjust the priority if this result comes from a base class.
   if (InBaseClass)
-    R.Priority += CCD_InBaseClass;
+    setInBaseClass(R);
 
   AdjustResultPriorityForDecl(R);
 
@@ -3748,11 +3753,14 @@ void Sema::CodeCompleteDeclSpec(Scope *S, DeclSpec &DS,
                                 bool AllowNonIdentifiers,
                                 bool AllowNestedNameSpecifiers) {
   typedef CodeCompletionResult Result;
-  ResultBuilder Results(*this, CodeCompleter->getAllocator(),
-                        CodeCompleter->getCodeCompletionTUInfo(),
-                        AllowNestedNameSpecifiers
-                          ? CodeCompletionContext::CCC_PotentiallyQualifiedName
-                          : CodeCompletionContext::CCC_Name);
+  ResultBuilder Results(
+      *this, CodeCompleter->getAllocator(),
+      CodeCompleter->getCodeCompletionTUInfo(),
+      AllowNestedNameSpecifiers
+          // FIXME: Try to separate codepath leading here to deduce whether we
+          // need an existing symbol or a new one.
+          ? CodeCompletionContext::CCC_SymbolOrNewName
+          : CodeCompletionContext::CCC_NewName);
   Results.EnterNewScope();
 
   // Type qualifiers can come after names.
@@ -4836,7 +4844,7 @@ void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
   // it can be useful for global code completion which have information about
   // contexts/symbols that are not in the AST.
   if (SS.isInvalid()) {
-    CodeCompletionContext CC(CodeCompletionContext::CCC_Name);
+    CodeCompletionContext CC(CodeCompletionContext::CCC_Symbol);
     CC.setCXXScopeSpecifier(SS);
     HandleCodeCompleteResults(this, CodeCompleter, CC, nullptr, 0);
     return;
@@ -4854,7 +4862,7 @@ void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
 
   ResultBuilder Results(*this, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
-                        CodeCompletionContext::CCC_Name);
+                        CodeCompletionContext::CCC_Symbol);
   Results.EnterNewScope();
 
   // The "template" keyword can follow "::" in the grammar, but only
@@ -4894,7 +4902,10 @@ void Sema::CodeCompleteUsing(Scope *S) {
 
   ResultBuilder Results(*this, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
-                        CodeCompletionContext::CCC_PotentiallyQualifiedName,
+                        // This can be both a using alias or using
+                        // declaration, in the former we expect a new name and a
+                        // symbol in the latter case.
+                        CodeCompletionContext::CCC_SymbolOrNewName,
                         &ResultBuilder::IsNestedNameSpecifier);
   Results.EnterNewScope();
 
@@ -5046,7 +5057,7 @@ void Sema::CodeCompleteConstructorInitializer(
 
   ResultBuilder Results(*this, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
-                        CodeCompletionContext::CCC_PotentiallyQualifiedName);
+                        CodeCompletionContext::CCC_Symbol);
   Results.EnterNewScope();
 
   // Fill in any already-initialized fields or base classes.
@@ -5659,7 +5670,7 @@ static void AddObjCMethods(ObjCContainerDecl *Container,
       R.StartParameter = SelIdents.size();
       R.AllParametersAreInformative = (WantKind != MK_Any);
       if (!InOriginalClass)
-        R.Priority += CCD_InBaseClass;
+        setInBaseClass(R);
       Results.MaybeAddResult(R, CurContext);
     }
   }
@@ -7763,10 +7774,10 @@ void Sema::CodeCompleteObjCMethodDecl(Scope *S, Optional<bool> IsInstanceMethod,
     }
 
     unsigned Priority = CCP_CodePattern;
+    auto R = Result(Builder.TakeString(), Method, Priority);
     if (!M->second.getInt())
-      Priority += CCD_InBaseClass;
-
-    Results.AddResult(Result(Builder.TakeString(), Method, Priority));
+      setInBaseClass(R);
+    Results.AddResult(std::move(R));
   }
 
   // Add Key-Value-Coding and Key-Value-Observing accessor methods for all of

@@ -50,8 +50,7 @@ struct SymbolLocation {
     static constexpr uint32_t MaxLine = (1 << 20) - 1;
     static constexpr uint32_t MaxColumn = (1 << 12) - 1;
 
-    // Clients should use getters and setters to access these members.
-    // FIXME: hide these members.
+  private:
     uint32_t Line : 20; // 0-based
     // Using UTF-16 code units.
     uint32_t Column : 12; // 0-based
@@ -89,7 +88,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolLocation &);
 // The class identifies a particular C++ symbol (class, function, method, etc).
 //
 // As USRs (Unified Symbol Resolution) could be large, especially for functions
-// with long type arguments, SymbolID is using 160-bits SHA1(USR) values to
+// with long type arguments, SymbolID is using truncated SHA1(USR) values to
 // guarantee the uniqueness of symbols while using a relatively small amount of
 // memory (vs storing USRs directly).
 //
@@ -106,13 +105,16 @@ public:
     return HashValue < Sym.HashValue;
   }
 
-  constexpr static size_t RawSize = 20;
+  // The stored hash is truncated to RawSize bytes.
+  // This trades off memory against the number of symbols we can handle.
+  // FIXME: can we reduce this further to 8 bytes?
+  constexpr static size_t RawSize = 16;
   llvm::StringRef raw() const {
     return StringRef(reinterpret_cast<const char *>(HashValue.data()), RawSize);
   }
   static SymbolID fromRaw(llvm::StringRef);
 
-  // Returns a 40-bytes hex encoded string.
+  // Returns a hex encoded string.
   std::string str() const;
   static llvm::Expected<SymbolID> fromStr(llvm::StringRef);
 

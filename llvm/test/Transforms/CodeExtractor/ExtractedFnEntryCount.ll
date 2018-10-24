@@ -22,7 +22,7 @@ entry:
   ret i32 %val
 }
 
-; CHECK: @inlinedFunc.1_if.then(i1 %cond) !prof [[COUNT1:![0-9]+]]
+; CHECK: @inlinedFunc.1.if.then(i1 %cond) !prof [[COUNT1:![0-9]+]]
 
 
 !llvm.module.flags = !{!0}
