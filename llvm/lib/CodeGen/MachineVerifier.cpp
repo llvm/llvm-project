@@ -778,7 +778,7 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
                "isn't a terminator instruction!", MBB);
       }
       if (Cond.empty()) {
-        report("MBB exits via conditinal branch/branch but there's no "
+        report("MBB exits via conditional branch/branch but there's no "
                "condition!", MBB);
       }
     } else {

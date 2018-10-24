@@ -3171,9 +3171,11 @@ static SDValue promoteToConstantPool(const ARMTargetLowering *TLI,
 
 bool ARMTargetLowering::isReadOnly(const GlobalValue *GV) const {
   if (const GlobalAlias *GA = dyn_cast<GlobalAlias>(GV))
-    GV = GA->getBaseObject();
-  return (isa<GlobalVariable>(GV) && cast<GlobalVariable>(GV)->isConstant()) ||
-         isa<Function>(GV);
+    if (!(GV = GA->getBaseObject()))
+      return false;
+  if (const auto *V = dyn_cast<GlobalVariable>(GV))
+    return V->isConstant();
+  return isa<Function>(GV);
 }
 
 SDValue ARMTargetLowering::LowerGlobalAddress(SDValue Op,

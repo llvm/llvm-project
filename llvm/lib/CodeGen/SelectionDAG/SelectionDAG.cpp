@@ -3889,9 +3889,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     case ISD::SIGN_EXTEND:
       return getConstant(Val.sextOrTrunc(VT.getSizeInBits()), DL, VT,
                          C->isTargetOpcode(), C->isOpaque());
+    case ISD::TRUNCATE:
+      if (C->isOpaque())
+        break;
+      LLVM_FALLTHROUGH;
     case ISD::ANY_EXTEND:
     case ISD::ZERO_EXTEND:
-    case ISD::TRUNCATE:
       return getConstant(Val.zextOrTrunc(VT.getSizeInBits()), DL, VT,
                          C->isTargetOpcode(), C->isOpaque());
     case ISD::UINT_TO_FP:
@@ -5158,8 +5161,11 @@ static SDValue getMemsetValue(SDValue Value, EVT VT, SelectionDAG &DAG,
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Value)) {
     assert(C->getAPIntValue().getBitWidth() == 8);
     APInt Val = APInt::getSplat(NumBits, C->getAPIntValue());
-    if (VT.isInteger())
-      return DAG.getConstant(Val, dl, VT);
+    if (VT.isInteger()) {
+      bool IsOpaque = VT.getSizeInBits() > 64 ||
+          !DAG.getTargetLoweringInfo().isLegalStoreImmediate(C->getSExtValue());
+      return DAG.getConstant(Val, dl, VT, false, IsOpaque);
+    }
     return DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(VT), Val), dl,
                              VT);
   }

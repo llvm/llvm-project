@@ -5901,7 +5901,7 @@ multiclass avx512_vptest_wb<bits<8> opc, string OpcodeStr,
                             v16i8x_info, NAME#"B">, EVEX_V128;
   }
 
-  let Predicates = [HasAVX512, NoVLX] in {
+  let Predicates = [HasBWI, NoVLX] in {
   defm BZ256_Alt : avx512_vptest_lowering<OpNode, v64i8_info, v32i8x_info, NAME#"B">;
   defm BZ128_Alt : avx512_vptest_lowering<OpNode, v64i8_info, v16i8x_info, NAME#"B">;
   defm WZ256_Alt : avx512_vptest_lowering<OpNode, v32i16_info, v16i16x_info, NAME#"W">;

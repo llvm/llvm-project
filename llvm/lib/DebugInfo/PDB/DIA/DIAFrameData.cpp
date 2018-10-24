@@ -13,9 +13,8 @@
 
 using namespace llvm::pdb;
 
-DIAFrameData::DIAFrameData(const DIASession &PDBSession,
-                           CComPtr<IDiaFrameData> DiaFrameData)
-    : Session(PDBSession), FrameData(DiaFrameData) {}
+DIAFrameData::DIAFrameData(CComPtr<IDiaFrameData> DiaFrameData)
+    : FrameData(DiaFrameData) {}
 
 template <typename ArgType>
 ArgType

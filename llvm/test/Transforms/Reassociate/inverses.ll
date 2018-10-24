@@ -14,10 +14,7 @@ define i32 @test1(i32 %a, i32 %b) {
 
 define <2 x i32> @not_op_vec_undef(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @not_op_vec_undef(
-; CHECK-NEXT:    [[T2:%.*]] = and <2 x i32> [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = xor <2 x i32> [[A]], <i32 -1, i32 undef>
-; CHECK-NEXT:    [[T5:%.*]] = and <2 x i32> [[T2]], [[T4]]
-; CHECK-NEXT:    ret <2 x i32> [[T5]]
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
   %t2 = and <2 x i32> %b, %a
   %t4 = xor <2 x i32> %a, <i32 -1, i32 undef>

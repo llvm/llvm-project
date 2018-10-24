@@ -226,7 +226,7 @@ static alias VerboseAlias("v", desc("Alias for -verbose."), aliasopt(Verbose),
 static void error(StringRef Prefix, std::error_code EC) {
   if (!EC)
     return;
-  errs() << Prefix << ": " << EC.message() << "\n";
+  WithColor::error() << Prefix << ": " << EC.message() << "\n";
   exit(1);
 }
 
@@ -568,6 +568,14 @@ int main(int argc, char **argv) {
 
   if (Help) {
     PrintHelpMessage(/*Hidden =*/false, /*Categorized =*/true);
+    return 0;
+  }
+
+  // FIXME: Audit interactions between these two options and make them
+  //        compatible.
+  if (Diff && Verbose) {
+    WithColor::error() << "incompatible arguments: specifying both -diff and "
+                          "-verbose is currently not supported";
     return 0;
   }
 

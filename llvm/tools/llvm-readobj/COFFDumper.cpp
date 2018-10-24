@@ -1549,8 +1549,10 @@ void COFFDumper::printUnwindInfo() {
     Dumper.printData(Ctx);
     break;
   }
+  case COFF::IMAGE_FILE_MACHINE_ARM64:
   case COFF::IMAGE_FILE_MACHINE_ARMNT: {
-    ARM::WinEH::Decoder Decoder(W);
+    ARM::WinEH::Decoder Decoder(W, Obj->getMachine() ==
+                                       COFF::IMAGE_FILE_MACHINE_ARM64);
     Decoder.dumpProcedureData(*Obj);
     break;
   }

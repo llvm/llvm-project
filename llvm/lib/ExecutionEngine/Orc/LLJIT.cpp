@@ -76,7 +76,7 @@ Error LLJIT::addObjectFile(JITDylib &JD, std::unique_ptr<MemoryBuffer> Obj) {
 
 Expected<JITEvaluatedSymbol> LLJIT::lookupLinkerMangled(JITDylib &JD,
                                                         StringRef Name) {
-  return ES->lookup({&JD}, ES->intern(Name));
+  return ES->lookup(JITDylibSearchList({{&JD, true}}), ES->intern(Name));
 }
 
 LLJIT::LLJIT(std::unique_ptr<ExecutionSession> ES,
@@ -144,13 +144,13 @@ void LLJIT::recordCtorDtors(Module &M) {
 }
 
 Expected<std::unique_ptr<LLLazyJIT>>
-  LLLazyJIT::Create(JITTargetMachineBuilder JTMB, DataLayout DL,
-                    unsigned NumCompileThreads) {
+LLLazyJIT::Create(JITTargetMachineBuilder JTMB, DataLayout DL,
+                  JITTargetAddress ErrorAddr, unsigned NumCompileThreads) {
   auto ES = llvm::make_unique<ExecutionSession>();
 
   const Triple &TT = JTMB.getTargetTriple();
 
-  auto LCTMgr = createLocalLazyCallThroughManager(TT, *ES, 0);
+  auto LCTMgr = createLocalLazyCallThroughManager(TT, *ES, ErrorAddr);
   if (!LCTMgr)
     return LCTMgr.takeError();
 
