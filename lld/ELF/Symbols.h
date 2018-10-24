@@ -348,9 +348,6 @@ struct ElfSym {
 
   // __rela_iplt_end or __rel_iplt_end
   static Defined *RelaIpltEnd;
-
-  // __global_pointer$ in RISC-V.
-  static Defined *RISCVGlobalPointer;
 };
 
 // A buffer class that is large enough to hold any Symbol-derived

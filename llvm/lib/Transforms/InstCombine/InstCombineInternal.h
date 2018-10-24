@@ -141,7 +141,7 @@ static inline Constant *SubOne(Constant *C) {
 /// uses of V and only keep uses of ~V.
 static inline bool IsFreeToInvert(Value *V, bool WillInvertAllUses) {
   // ~(~(X)) -> X.
-  if (BinaryOperator::isNot(V))
+  if (match(V, m_Not(m_Value())))
     return true;
 
   // Constants can be considered to be not'ed values.

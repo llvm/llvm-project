@@ -3037,6 +3037,7 @@ bool DWARFExpression::AddressRangeForLocationListEntry(
     high_pc = debug_loc_data.GetAddress(offset_ptr);
     return true;
   case SplitDwarfLocationList:
+  case LocLists:
     switch (debug_loc_data.GetU8(offset_ptr)) {
     case DW_LLE_end_of_list:
       return false;
@@ -3054,8 +3055,19 @@ bool DWARFExpression::AddressRangeForLocationListEntry(
       high_pc = low_pc + length;
       return true;
     }
+    case DW_LLE_start_length: {
+      low_pc = debug_loc_data.GetAddress(offset_ptr);
+      high_pc = low_pc + debug_loc_data.GetULEB128(offset_ptr);
+      return true;
+    }
+    case DW_LLE_start_end: {
+      low_pc = debug_loc_data.GetAddress(offset_ptr);
+      high_pc = debug_loc_data.GetAddress(offset_ptr);
+      return true;
+    }
     default:
       // Not supported entry type
+      lldbassert(false && "Not supported location list type");
       return false;
     }
   }

@@ -1040,6 +1040,15 @@ def : Pat<(v2f64 (bitconvert v1i128:$A)),
 def : Pat<(v1i128 (bitconvert v2f64:$A)),
           (COPY_TO_REGCLASS $A, VRRC)>;
 
+def : Pat<(v2i64 (bitconvert f128:$A)),
+          (COPY_TO_REGCLASS $A, VRRC)>;
+def : Pat<(v4i32 (bitconvert f128:$A)),
+          (COPY_TO_REGCLASS $A, VRRC)>;
+def : Pat<(v8i16 (bitconvert f128:$A)),
+          (COPY_TO_REGCLASS $A, VRRC)>;
+def : Pat<(v16i8 (bitconvert f128:$A)),
+          (COPY_TO_REGCLASS $A, VRRC)>;
+
 def : Pat<(v2f64 (PPCsvec2fp v4i32:$C, 0)),
           (v2f64 (XVCVSXWDP (v2i64 (XXMRGHW $C, $C))))>;
 def : Pat<(v2f64 (PPCsvec2fp v4i32:$C, 1)),

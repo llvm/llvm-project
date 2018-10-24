@@ -85,6 +85,7 @@ public:
 
   std::unique_ptr<IPDBEnumSectionContribs> getSectionContribs() const override;
 
+  std::unique_ptr<IPDBEnumFrameData> getFrameData() const override;
 private:
   CComPtr<IDiaSession> Session;
 };

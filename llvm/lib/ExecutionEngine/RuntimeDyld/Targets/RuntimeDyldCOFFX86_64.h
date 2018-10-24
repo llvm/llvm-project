@@ -37,7 +37,13 @@ private:
     if (!ImageBase) {
       ImageBase = std::numeric_limits<uint64_t>::max();
       for (const SectionEntry &Section : Sections)
-        ImageBase = std::min(ImageBase, Section.getLoadAddress());
+        // The Sections list may contain sections that weren't loaded for
+        // whatever reason: they may be debug sections, and ProcessAllSections
+        // is false, or they may be sections that contain 0 bytes. If the
+        // section isn't loaded, the load address will be 0, and it should not
+        // be included in the ImageBase calculation.
+        if (Section.getLoadAddress() != 0)
+          ImageBase = std::min(ImageBase, Section.getLoadAddress());
     }
     return ImageBase;
   }

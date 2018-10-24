@@ -152,16 +152,6 @@ analyzer typically does not make any assumptions about whether or not the object
 is returned retained. Explicitly adding the 'ns_returns_retained' attribute to C
 functions allows the analyzer to perform extra checking.</p>
 
-<p><b>Important note when using Garbage Collection</b>: Note that the analyzer
-interprets this attribute slightly differently when using Objective-C garbage
-collection (available on Mac OS 10.5+). When analyzing Cocoa code that uses
-garbage collection, &quot;alloc&quot; methods are assumed to return an object
-that is managed by the garbage collector (and thus doesn't have a retain count
-the caller must balance). These same assumptions are applied to methods or
-functions annotated with 'ns_returns_retained'. If you are returning a Core
-Foundation object (which may not be managed by the garbage collector) you should
-use 'cf_returns_retained'.</p>
-
 <p><b>Example</b></p>
 
 <pre class="code_example">
@@ -243,16 +233,15 @@ that is functionally equivalent to the one shown below.</p>
 <p><b>Placing on Objective-C methods</b>: With respect to Objective-C methods.,
 this attribute is identical in its behavior and usage to 'ns_returns_retained'
 except for the distinction of returning a Core Foundation object instead of a
-Cocoa object. This distinction is important for two reasons:</p>
+Cocoa object.
 
-<ul>
-  <li>Core Foundation objects are not automatically managed by the Objective-C
-  garbage collector.</li>
-  <li>Because Core Foundation is a C API, the analyzer cannot always tell that a
-  pointer return value refers to a Core Foundation object. In contrast, it is
-  trivial for the analyzer to recognize if a pointer refers to a Cocoa object
-  (given the Objective-C type system).
-</ul>
+This distinction is important for the following reason:
+as Core Foundation is a C API,
+the analyzer cannot always tell that a pointer return value refers to a
+Core Foundation object.
+In contrast, it is
+trivial for the analyzer to recognize if a pointer refers to a Cocoa object
+(given the Objective-C type system).
 
 <p><b>Placing on C functions</b>: When placing the attribute
 'cf_returns_retained' on the declarations of C functions, the analyzer
@@ -264,16 +253,10 @@ interprets the function as:</p>
 contained the keywords &quot;create&quot; or &quot;copy&quot;. This means the
 returned object as a +1 retain count that must be released by the caller, either
 by sending a <tt>release</tt> message (via toll-free bridging to an Objective-C
-object pointer), calling <tt>CFRelease</tt> (or similar function), or using
-<tt>CFMakeCollectable</tt> to register the object with the Objective-C garbage
-collector.</li>
+object pointer), or calling <tt>CFRelease</tt> or a similar function.</li>
 </ol>
 
 <p><b>Example</b></p>
-
-<p>In this example, observe the difference in output when the code is compiled
-to not use garbage collection versus when it is compiled to only use garbage
-collection (<tt>-fobjc-gc-only</tt>).</p>
 
 <pre class="code_example">
 <span class="command">$ cat test.m</span>
@@ -322,15 +305,6 @@ CFDateRef returnsRetainedCFDate()  {
 
 <img src="images/example_cf_returns_retained.png" alt="example returns retained">
 
-<p>When the above code is compiled using Objective-C garbage collection (i.e.,
-code is compiled with the flag <tt>-fobjc-gc</tt> or <tt>-fobjc-gc-only</tt>),
-<tt>scan-build</tt> produces both the above error (with slightly different text
-to indicate the code uses garbage collection) as well as the following warning,
-which indicates a leak that occurs <em>only</em> when using garbage
-collection:</p>
-
-<img src="images/example_cf_returns_retained_gc.png" alt="example returns retained gc">
-
 <h4 id="attr_cf_returns_not_retained">Attribute 'cf_returns_not_retained'
 (Clang-specific)</h4>
 
@@ -372,13 +346,6 @@ static analyzer that a <tt>release</tt> message is implicitly sent to the
 parameter upon completion of the call to the given function or method. The 
 Foundation framework defines a macro <b><tt>NS_RELEASES_ARGUMENT</tt></b> that 
 is functionally equivalent to the <tt>NS_CONSUMED</tt> macro shown below.</p>
-  
-<p><b>Important note when using Garbage Collection</b>: Note that the analyzer
-essentially ignores this attribute when code is compiled to use Objective-C
-garbage collection.  This is because the <tt>release</tt> message does nothing
-when using GC.  If the underlying function/method uses something like
-<tt>CFRelease</tt> to decrement the reference count, consider using
-the <a href="#attr_cf_consumed">cf_consumed</a> attribute instead.</p>
 
 <p><b>Example</b></p>
 
@@ -432,10 +399,7 @@ to the given function or method. The CoreFoundation framework defines a macro
 <b><tt>CF_RELEASES_ARGUMENT</tt></b> that is functionally equivalent to the
 <tt>CF_CONSUMED</tt> macro shown below.</p>
     
-<p>Operationally this attribute is nearly identical to 'ns_consumed' with the
-main difference that the reference count decrement still occurs when using
-Objective-C garbage collection (which is important for Core Foundation types,
-which are not automatically garbage collected).</p>
+<p>Operationally this attribute is nearly identical to 'ns_consumed'.</p>
 
 <p><b>Example</b></p>
 

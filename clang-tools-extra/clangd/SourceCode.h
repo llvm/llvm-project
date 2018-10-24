@@ -23,6 +23,10 @@ class SourceManager;
 
 namespace clangd {
 
+// Counts the number of UTF-16 code units needed to represent a string (LSP
+// specifies string lengths in UTF-16 code units).
+size_t lspLength(StringRef Code);
+
 /// Turn a [line, column] pair into an offset in Code.
 ///
 /// If P.character exceeds the line length, returns the offset at end-of-line.

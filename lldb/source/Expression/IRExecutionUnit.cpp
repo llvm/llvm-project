@@ -553,6 +553,8 @@ lldb::SectionType IRExecutionUnit::GetSectionTypeFromSectionName(
           sect_type = lldb::eSectionTypeDWARFDebugLine;
         else if (dwarf_name.equals("loc"))
           sect_type = lldb::eSectionTypeDWARFDebugLoc;
+        else if (dwarf_name.equals("loclists"))
+          sect_type = lldb::eSectionTypeDWARFDebugLocLists;
         break;
 
       case 'm':
@@ -1088,6 +1090,7 @@ bool IRExecutionUnit::CommitOneAllocation(lldb::ProcessSP &process_sp,
   case lldb::eSectionTypeDWARFDebugInfo:
   case lldb::eSectionTypeDWARFDebugLine:
   case lldb::eSectionTypeDWARFDebugLoc:
+  case lldb::eSectionTypeDWARFDebugLocLists:
   case lldb::eSectionTypeDWARFDebugMacInfo:
   case lldb::eSectionTypeDWARFDebugPubNames:
   case lldb::eSectionTypeDWARFDebugPubTypes:

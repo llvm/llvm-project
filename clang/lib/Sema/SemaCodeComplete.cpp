@@ -4419,6 +4419,9 @@ void Sema::CodeCompleteCase(Scope *S) {
     return;
 
   SwitchStmt *Switch = getCurFunction()->SwitchStack.back().getPointer();
+  // Condition expression might be invalid, do not continue in this case.
+  if (!Switch->getCond())
+    return;
   QualType type = Switch->getCond()->IgnoreImplicit()->getType();
   if (!type->isEnumeralType()) {
     CodeCompleteExpressionData Data(type);
