@@ -185,6 +185,13 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findDecl(AST, "S::S"), 42));
   EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::GlobalScope);
+
+  Relevance = {};
+  EXPECT_FALSE(Relevance.InBaseClass);
+  auto BaseMember = CodeCompletionResult(&findAnyDecl(AST, "y"), 42);
+  BaseMember.InBaseClass = true;
+  Relevance.merge(BaseMember);
+  EXPECT_TRUE(Relevance.InBaseClass);
 }
 
 // Do the signals move the scores in the direction we expect?
@@ -276,6 +283,10 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
   EXPECT_LT(Instance.evaluate(), Default.evaluate());
   Instance.IsInstanceMember = true;
   EXPECT_EQ(Instance.evaluate(), Default.evaluate());
+
+  SymbolRelevanceSignals InBaseClass;
+  InBaseClass.InBaseClass = true;
+  EXPECT_LT(InBaseClass.evaluate(), Default.evaluate());
 }
 
 TEST(QualityTests, ScopeProximity) {
