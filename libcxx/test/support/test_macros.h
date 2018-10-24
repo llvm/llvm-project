@@ -87,8 +87,9 @@
 #endif
 #endif
 
-// Attempt to deduce GCC version
-#if defined(_LIBCPP_VERSION) && __has_include(<features.h>)
+// Attempt to deduce the GLIBC version
+#if (defined(__has_include) && __has_include(<features.h>)) || \
+    defined(__linux__)
 #include <features.h>
 #define TEST_HAS_GLIBC
 #define TEST_GLIBC_PREREQ(major, minor) __GLIBC_PREREQ(major, minor)
@@ -135,7 +136,7 @@
 #    define TEST_HAS_TIMESPEC_GET
 #  elif defined(__linux__)
 #    if !defined(_LIBCPP_HAS_MUSL_LIBC)
-#      if _LIBCPP_GLIBC_PREREQ(2, 17)
+#      if defined(TEST_GLIBC_PREREQ) && TEST_GLIBC_PREREQ(2, 17)
 #        define TEST_HAS_TIMESPEC_GET
 #        define TEST_HAS_C11_FEATURES
 #      endif
