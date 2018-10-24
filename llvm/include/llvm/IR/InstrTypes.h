@@ -308,21 +308,12 @@ public:
   static BinaryOperator *CreateNot(Value *Op, const Twine &Name,
                                    BasicBlock *InsertAtEnd);
 
-  /// Check if the given Value is a NEG, FNeg, or NOT instruction.
-  ///
-  static bool isNeg(const Value *V);
+  /// Check if the given Value is an FNeg instruction.
   static bool isFNeg(const Value *V, bool IgnoreZeroSign=false);
-  static bool isNot(const Value *V);
 
-  /// Helper functions to extract the unary argument of a NEG, FNEG or NOT
-  /// operation implemented via Sub, FSub, or Xor.
-  ///
-  static const Value *getNegArgument(const Value *BinOp);
-  static       Value *getNegArgument(      Value *BinOp);
+  /// Helper functions to extract the unary argument of an FNeg.
   static const Value *getFNegArgument(const Value *BinOp);
   static       Value *getFNegArgument(      Value *BinOp);
-  static const Value *getNotArgument(const Value *BinOp);
-  static       Value *getNotArgument(      Value *BinOp);
 
   BinaryOps getOpcode() const {
     return static_cast<BinaryOps>(Instruction::getOpcode());

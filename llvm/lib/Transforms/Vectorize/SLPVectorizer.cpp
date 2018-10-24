@@ -5126,9 +5126,12 @@ class HorizontalReduction {
     /// Checks if the reduction operation can be vectorized.
     bool isVectorizable() const {
       return LHS && RHS &&
-             // We currently only support adds && min/max reductions.
+             // We currently only support add/mul/logical && min/max reductions.
              ((Kind == RK_Arithmetic &&
-               (Opcode == Instruction::Add || Opcode == Instruction::FAdd)) ||
+               (Opcode == Instruction::Add || Opcode == Instruction::FAdd ||
+                Opcode == Instruction::Mul || Opcode == Instruction::FMul ||
+                Opcode == Instruction::And || Opcode == Instruction::Or ||
+                Opcode == Instruction::Xor)) ||
               ((Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) &&
                (Kind == RK_Min || Kind == RK_Max)) ||
               (Opcode == Instruction::ICmp &&

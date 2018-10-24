@@ -108,7 +108,7 @@ void CallAndMessageChecker::emitBadCall(BugType *BT, CheckerContext &C,
     R->addRange(BadE->getSourceRange());
     if (BadE->isGLValue())
       BadE = bugreporter::getDerefExpr(BadE);
-    bugreporter::trackNullOrUndefValue(N, BadE, *R);
+    bugreporter::trackExpressionValue(N, BadE, *R);
   }
   C.emitReport(std::move(R));
 }
@@ -185,9 +185,9 @@ bool CallAndMessageChecker::uninitRefOrPointer(
         LazyInit_BT(BD, BT);
         auto R = llvm::make_unique<BugReport>(*BT, Os.str(), N);
         R->addRange(ArgRange);
-        if (ArgEx) {
-          bugreporter::trackNullOrUndefValue(N, ArgEx, *R);
-        }
+        if (ArgEx)
+          bugreporter::trackExpressionValue(N, ArgEx, *R);
+
         C.emitReport(std::move(R));
       }
       return true;
@@ -264,7 +264,7 @@ bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
 
       R->addRange(ArgRange);
       if (ArgEx)
-        bugreporter::trackNullOrUndefValue(N, ArgEx, *R);
+        bugreporter::trackExpressionValue(N, ArgEx, *R);
       C.emitReport(std::move(R));
     }
     return true;
@@ -307,7 +307,7 @@ bool CallAndMessageChecker::PreVisitProcessArg(CheckerContext &C,
         R->addRange(ArgRange);
 
         if (ArgEx)
-          bugreporter::trackNullOrUndefValue(N, ArgEx, *R);
+          bugreporter::trackExpressionValue(N, ArgEx, *R);
         // FIXME: enhance track back for uninitialized value for arbitrary
         // memregions
         C.emitReport(std::move(R));
@@ -367,7 +367,7 @@ void CallAndMessageChecker::checkPreStmt(const CXXDeleteExpr *DE,
       Desc = "Argument to 'delete' is uninitialized";
     BugType *BT = BT_cxx_delete_undef.get();
     auto R = llvm::make_unique<BugReport>(*BT, Desc, N);
-    bugreporter::trackNullOrUndefValue(N, DE, *R);
+    bugreporter::trackExpressionValue(N, DE, *R);
     C.emitReport(std::move(R));
     return;
   }
@@ -496,7 +496,7 @@ void CallAndMessageChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
 
       // FIXME: getTrackNullOrUndefValueVisitor can't handle "super" yet.
       if (const Expr *ReceiverE = ME->getInstanceReceiver())
-        bugreporter::trackNullOrUndefValue(N, ReceiverE, *R);
+        bugreporter::trackExpressionValue(N, ReceiverE, *R);
       C.emitReport(std::move(R));
     }
     return;
@@ -537,7 +537,7 @@ void CallAndMessageChecker::emitNilReceiverBug(CheckerContext &C,
   report->addRange(ME->getReceiverRange());
   // FIXME: This won't track "self" in messages to super.
   if (const Expr *receiver = ME->getInstanceReceiver()) {
-    bugreporter::trackNullOrUndefValue(N, receiver, *report);
+    bugreporter::trackExpressionValue(N, receiver, *report);
   }
   C.emitReport(std::move(report));
 }

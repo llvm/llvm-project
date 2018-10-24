@@ -159,6 +159,10 @@ class MockSession : public IPDBSession {
   std::unique_ptr<IPDBEnumSectionContribs> getSectionContribs() const override {
     return nullptr;
   }
+
+  std::unique_ptr<IPDBEnumFrameData> getFrameData() const override {
+    return nullptr;
+  }
 };
 
 class MockRawSymbol : public IPDBRawSymbol {

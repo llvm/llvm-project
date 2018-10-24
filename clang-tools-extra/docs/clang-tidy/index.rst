@@ -255,16 +255,19 @@ An overview of all the command-line options:
           value:           'some value'
       ...
 
+Suppressing Undesired Diagnostics
+=================================
+
 :program:`clang-tidy` diagnostics are intended to call out code that does
 not adhere to a coding standard, or is otherwise problematic in some way.
 However, if it is known that the code is correct, the check-specific ways
-to silence the diagnostics could be used, if they are available (e.g. 
-bugprone-use-after-move can be silenced by re-initializing the variable after 
-it has been moved out, misc-string-integer-assignment can be suppressed by 
-explicitly casting the integer to char, readability-implicit-bool-conversion
-can also be suppressed by using explicit casts, etc.). If they are not 
-available or if changing the semantics of the code is not desired, 
-the ``NOLINT`` or ``NOLINTNEXTLINE`` comments can be used instead. For example:
+to silence the diagnostics could be used, if they are available (e.g.
+bugprone-use-after-move can be silenced by re-initializing the variable after it
+has been moved out, bugprone-string-integer-assignment can be suppressed by
+explicitly casting the integer to char, readability-implicit-bool-conversion can
+also be suppressed by using explicit casts, etc.). If they are not available or
+if changing the semantics of the code is not desired, the ``NOLINT`` or
+``NOLINTNEXTLINE`` comments can be used instead. For example:
 
 .. code-block:: c++
 

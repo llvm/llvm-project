@@ -71,12 +71,6 @@ using namespace ento;
 // Utility functions.
 //===----------------------------------------------------------------------===//
 
-bool bugreporter::isDeclRefExprToReference(const Expr *E) {
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
-    return DRE->getDecl()->getType()->isReferenceType();
-  return false;
-}
-
 static const Expr *peelOffPointerArithmetic(const BinaryOperator *B) {
   if (B->isAdditiveOp() && B->getType()->isPointerType()) {
     if (B->getLHS()->getType()->isPointerType()) {
@@ -158,20 +152,6 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
       E = CE->getSubExpr();
 
   return E;
-}
-
-const Stmt *bugreporter::GetDenomExpr(const ExplodedNode *N) {
-  const Stmt *S = N->getLocationAs<PreStmt>()->getStmt();
-  if (const auto *BE = dyn_cast<BinaryOperator>(S))
-    return BE->getRHS();
-  return nullptr;
-}
-
-const Stmt *bugreporter::GetRetValExpr(const ExplodedNode *N) {
-  const Stmt *S = N->getLocationAs<PostStmt>()->getStmt();
-  if (const auto *RS = dyn_cast<ReturnStmt>(S))
-    return RS->getRetValue();
-  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -884,7 +864,7 @@ public:
     RetE = RetE->IgnoreParenCasts();
 
     // If we're returning 0, we should track where that 0 came from.
-    bugreporter::trackNullOrUndefValue(N, RetE, BR, EnableNullFPSuppression);
+    bugreporter::trackExpressionValue(N, RetE, BR, EnableNullFPSuppression);
 
     // Build an appropriate message based on the return value.
     SmallString<64> Msg;
@@ -979,8 +959,7 @@ public:
       if (!State->isNull(*ArgV).isConstrainedTrue())
         continue;
 
-      if (bugreporter::trackNullOrUndefValue(N, ArgE, BR,
-                                             EnableNullFPSuppression))
+      if (bugreporter::trackExpressionValue(N, ArgE, BR, EnableNullFPSuppression))
         ShouldInvalidate = false;
 
       // If we /can't/ track the null pointer, we should err on the side of
@@ -1258,8 +1237,8 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
         V.getAs<loc::ConcreteInt>() || V.getAs<nonloc::ConcreteInt>()) {
       if (!IsParam)
         InitE = InitE->IgnoreParenCasts();
-      bugreporter::trackNullOrUndefValue(StoreSite, InitE, BR,
-                                         EnableNullFPSuppression);
+      bugreporter::trackExpressionValue(StoreSite, InitE, BR,
+                                   EnableNullFPSuppression);
     }
     ReturnVisitor::addVisitorIfNecessary(StoreSite, InitE->IgnoreParenCasts(),
                                          BR, EnableNullFPSuppression);
@@ -1588,14 +1567,13 @@ static const ExplodedNode* findNodeForExpression(const ExplodedNode *N,
   return N;
 }
 
-bool bugreporter::trackNullOrUndefValue(const ExplodedNode *InputNode,
-                                        const Stmt *InputS,
-                                        BugReport &report,
-                                        bool EnableNullFPSuppression) {
-  if (!InputS || !InputNode || !isa<Expr>(InputS))
+bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
+                                       const Expr *E, BugReport &report,
+                                       bool EnableNullFPSuppression) {
+  if (!E || !InputNode)
     return false;
 
-  const Expr *Inner = peelOffOuterExpr(cast<Expr>(InputS), InputNode);
+  const Expr *Inner = peelOffOuterExpr(E, InputNode);
   const ExplodedNode *LVNode = findNodeForExpression(InputNode, Inner);
   if (!LVNode)
     return false;
@@ -1606,11 +1584,11 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *InputNode,
   // At this point in the path, the receiver should be live since we are at the
   // message send expr. If it is nil, start tracking it.
   if (const Expr *Receiver = NilReceiverBRVisitor::getNilReceiver(Inner, LVNode))
-    trackNullOrUndefValue(LVNode, Receiver, report, EnableNullFPSuppression);
+    trackExpressionValue(LVNode, Receiver, report, EnableNullFPSuppression);
 
   // See if the expression we're interested refers to a variable.
   // If so, we can track both its contents and constraints on its value.
-  if (Inner && ExplodedGraph::isInterestingLValueExpr(Inner)) {
+  if (ExplodedGraph::isInterestingLValueExpr(Inner)) {
     SVal LVal = LVNode->getSVal(Inner);
 
     const MemRegion *RR = getLocationRegionIfReference(Inner, LVNode);
@@ -1703,7 +1681,7 @@ bool bugreporter::trackNullOrUndefValue(const ExplodedNode *InputNode,
     if (RegionRVal && isa<SymbolicRegion>(RegionRVal)) {
       report.markInteresting(RegionRVal);
       report.addVisitor(llvm::make_unique<TrackConstraintBRVisitor>(
-            loc::MemRegionVal(RegionRVal), false));
+            loc::MemRegionVal(RegionRVal), /*assumption=*/false));
     }
   }
   return true;
@@ -1751,8 +1729,8 @@ NilReceiverBRVisitor::VisitNode(const ExplodedNode *N,
   // The receiver was nil, and hence the method was skipped.
   // Register a BugReporterVisitor to issue a message telling us how
   // the receiver was null.
-  bugreporter::trackNullOrUndefValue(N, Receiver, BR,
-                                     /*EnableNullFPSuppression*/ false);
+  bugreporter::trackExpressionValue(N, Receiver, BR,
+                               /*EnableNullFPSuppression*/ false);
   // Issue a message saying that the method was skipped.
   PathDiagnosticLocation L(Receiver, BRC.getSourceManager(),
                                      N->getLocationContext());

@@ -2058,6 +2058,14 @@ public:
     return true;
   }
 
+  /// Return true if the specified immediate is legal for the value input of a
+  /// store instruction.
+  virtual bool isLegalStoreImmediate(int64_t Value) const {
+    // Default implementation assumes that at least 0 works since it is likely
+    // that a zero register exists or a zero immediate is allowed.
+    return Value == 0;
+  }
+
   /// Return true if it's significantly cheaper to shift a vector by a uniform
   /// scalar than by an amount which will vary across each lane. On x86, for
   /// example, there is a "psllw" instruction for the former case, but no simple
@@ -3646,6 +3654,27 @@ public:
 
   /// Expand fminnum/fmaxnum into fminnum_ieee/fmaxnum_ieee with quieted inputs.
   SDValue expandFMINNUM_FMAXNUM(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand CTPOP nodes. Expands vector/scalar CTPOP nodes,
+  /// vector nodes can only succeed if all operations are legal/custom.
+  /// \param N Node to expand
+  /// \param Result output after conversion
+  /// \returns True, if the expansion was successful, false otherwise
+  bool expandCTPOP(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+
+  /// Expand CTLZ/CTLZ_ZERO_UNDEF nodes. Expands vector/scalar CTLZ nodes,
+  /// vector nodes can only succeed if all operations are legal/custom.
+  /// \param N Node to expand
+  /// \param Result output after conversion
+  /// \returns True, if the expansion was successful, false otherwise
+  bool expandCTLZ(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+
+  /// Expand CTTZ/CTTZ_ZERO_UNDEF nodes. Expands vector/scalar CTTZ nodes,
+  /// vector nodes can only succeed if all operations are legal/custom.
+  /// \param N Node to expand
+  /// \param Result output after conversion
+  /// \returns True, if the expansion was successful, false otherwise
+  bool expandCTTZ(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
 
   /// Turn load of vector type into a load of the individual elements.
   /// \param LD load to expand

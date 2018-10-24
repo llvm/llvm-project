@@ -200,6 +200,11 @@ NativeSession::getSectionContribs() const {
   return nullptr;
 }
 
+std::unique_ptr<IPDBEnumFrameData>
+NativeSession::getFrameData() const {
+  return nullptr;
+}
+
 void NativeSession::initializeExeSymbol() {
   if (ExeSymbol == 0)
     ExeSymbol = Cache.createSymbol<NativeExeSymbol>();

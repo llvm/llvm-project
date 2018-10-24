@@ -135,3 +135,26 @@ struct PR28903 {
   };
   int makeStructNonEmpty;
 };
+
+static int EnumRedecl; // expected-note 2 {{previous definition is here}}
+struct S {
+  enum {
+    EnumRedecl = 4 // expected-error {{redefinition of 'EnumRedecl'}}
+  } e;
+};
+
+union U {
+  enum {
+    EnumRedecl = 5 // expected-error {{redefinition of 'EnumRedecl'}}
+  } e;
+};
+
+enum PR15071 {
+  PR15071_One // expected-note {{previous definition is here}}
+};
+
+struct EnumRedeclStruct {
+  enum {
+    PR15071_One // expected-error {{redefinition of enumerator 'PR15071_One'}}
+  } e;
+};

@@ -2829,14 +2829,13 @@ void MicrosoftRecordLayoutBuilder::layoutVirtualBases(const CXXRecordDecl *RD) {
     CharUnits BaseOffset;
 
     // Respect the external AST source base offset, if present.
-    bool FoundBase = false;
     if (UseExternalLayout) {
-      FoundBase = External.getExternalVBaseOffset(BaseDecl, BaseOffset);
-      if (FoundBase)
-        assert(BaseOffset >= Size && "base offset already allocated");
-    }
-    if (!FoundBase)
+      if (!External.getExternalVBaseOffset(BaseDecl, BaseOffset))
+        BaseOffset = Size;
+    } else
       BaseOffset = Size.alignTo(Info.Alignment);
+
+    assert(BaseOffset >= Size && "base offset already allocated");
 
     VBases.insert(std::make_pair(BaseDecl,
         ASTRecordLayout::VBaseInfo(BaseOffset, HasVtordisp)));

@@ -1093,7 +1093,7 @@ public:
   /// template.
   ArrayRef<TemplateArgument> getInjectedTemplateArgs();
 
-  /// Merge \param Prev with our RedeclarableTemplateDecl::Common.
+  /// Merge \p Prev with our RedeclarableTemplateDecl::Common.
   void mergePrevDecl(FunctionTemplateDecl *Prev);
 
   /// Create a function template node.

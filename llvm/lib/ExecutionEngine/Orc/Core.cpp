@@ -205,14 +205,16 @@ raw_ostream &operator<<(raw_ostream &OS, const MaterializationUnit &MU) {
   return OS << ")";
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const JITDylibList &JDs) {
+raw_ostream &operator<<(raw_ostream &OS, const JITDylibSearchList &JDs) {
   OS << "[";
   if (!JDs.empty()) {
-    assert(JDs.front() && "JITDylibList entries must not be null");
-    OS << " " << JDs.front()->getName();
-    for (auto *JD : make_range(std::next(JDs.begin()), JDs.end())) {
-      assert(JD && "JITDylibList entries must not be null");
-      OS << ", " << JD->getName();
+    assert(JDs.front().first && "JITDylibList entries must not be null");
+    OS << " (\"" << JDs.front().first->getName() << "\", "
+       << (JDs.front().second ? "true" : "false") << ")";
+    for (auto &KV : make_range(std::next(JDs.begin()), JDs.end())) {
+      assert(KV.first && "JITDylibList entries must not be null");
+      OS << ", (\"" << KV.first->getName() << "\", "
+         << (KV.second ? "true" : "false") << ")";
     }
   }
   OS << " ]";
@@ -526,9 +528,11 @@ AbsoluteSymbolsMaterializationUnit::extractFlags(const SymbolMap &Symbols) {
 }
 
 ReExportsMaterializationUnit::ReExportsMaterializationUnit(
-    JITDylib *SourceJD, SymbolAliasMap Aliases, VModuleKey K)
+    JITDylib *SourceJD, bool MatchNonExported, SymbolAliasMap Aliases,
+    VModuleKey K)
     : MaterializationUnit(extractFlags(Aliases), std::move(K)),
-      SourceJD(SourceJD), Aliases(std::move(Aliases)) {}
+      SourceJD(SourceJD), MatchNonExported(MatchNonExported),
+      Aliases(std::move(Aliases)) {}
 
 StringRef ReExportsMaterializationUnit::getName() const {
   return "<Reexports>";
@@ -556,7 +560,7 @@ void ReExportsMaterializationUnit::materialize(
 
   if (!Aliases.empty()) {
     if (SourceJD)
-      R.replace(reexports(*SourceJD, std::move(Aliases)));
+      R.replace(reexports(*SourceJD, std::move(Aliases), MatchNonExported));
     else
       R.replace(symbolAliases(std::move(Aliases)));
   }
@@ -656,8 +660,9 @@ void ReExportsMaterializationUnit::materialize(
 
     auto OnReady = [&ES](Error Err) { ES.reportError(std::move(Err)); };
 
-    ES.lookup({&SrcJD}, QuerySymbols, std::move(OnResolve), std::move(OnReady),
-              std::move(RegisterDependencies), nullptr, true);
+    ES.lookup(JITDylibSearchList({{&SrcJD, MatchNonExported}}), QuerySymbols,
+              std::move(OnResolve), std::move(OnReady),
+              std::move(RegisterDependencies));
   }
 }
 
@@ -698,8 +703,10 @@ buildSimpleReexportsAliasMap(JITDylib &SourceJD, const SymbolNameSet &Symbols) {
 }
 
 ReexportsGenerator::ReexportsGenerator(JITDylib &SourceJD,
+                                       bool MatchNonExported,
                                        SymbolPredicate Allow)
-    : SourceJD(SourceJD), Allow(std::move(Allow)) {}
+    : SourceJD(SourceJD), MatchNonExported(MatchNonExported),
+      Allow(std::move(Allow)) {}
 
 SymbolNameSet ReexportsGenerator::operator()(JITDylib &JD,
                                              const SymbolNameSet &Names) {
@@ -716,7 +723,7 @@ SymbolNameSet ReexportsGenerator::operator()(JITDylib &JD,
   }
 
   if (!Added.empty())
-    cantFail(JD.define(reexports(SourceJD, AliasMap)));
+    cantFail(JD.define(reexports(SourceJD, AliasMap, MatchNonExported)));
 
   return Added;
 }
@@ -1041,30 +1048,41 @@ void JITDylib::notifyFailed(const SymbolNameSet &FailedSymbols) {
     Q->handleFailed(make_error<FailedToMaterialize>(FailedSymbols));
 }
 
-void JITDylib::setSearchOrder(JITDylibList NewSearchOrder,
-                              bool SearchThisJITDylibFirst) {
-  if (SearchThisJITDylibFirst && NewSearchOrder.front() != this)
-    NewSearchOrder.insert(NewSearchOrder.begin(), this);
+void JITDylib::setSearchOrder(JITDylibSearchList NewSearchOrder,
+                              bool SearchThisJITDylibFirst,
+                              bool MatchNonExportedInThisDylib) {
+  if (SearchThisJITDylibFirst && NewSearchOrder.front().first != this)
+    NewSearchOrder.insert(NewSearchOrder.begin(),
+                          {this, MatchNonExportedInThisDylib});
 
   ES.runSessionLocked([&]() { SearchOrder = std::move(NewSearchOrder); });
 }
 
-void JITDylib::addToSearchOrder(JITDylib &JD) {
-  ES.runSessionLocked([&]() { SearchOrder.push_back(&JD); });
+void JITDylib::addToSearchOrder(JITDylib &JD, bool MatchNonExported) {
+  ES.runSessionLocked([&]() {
+    SearchOrder.push_back({&JD, MatchNonExported});
+  });
 }
 
-void JITDylib::replaceInSearchOrder(JITDylib &OldJD, JITDylib &NewJD) {
+void JITDylib::replaceInSearchOrder(JITDylib &OldJD, JITDylib &NewJD,
+                                    bool MatchNonExported) {
   ES.runSessionLocked([&]() {
-    auto I = std::find(SearchOrder.begin(), SearchOrder.end(), &OldJD);
+    auto I = std::find_if(SearchOrder.begin(), SearchOrder.end(),
+                          [&](const JITDylibSearchList::value_type &KV) {
+                            return KV.first == &OldJD;
+                          });
 
     if (I != SearchOrder.end())
-      *I = &NewJD;
+      *I = {&NewJD, MatchNonExported};
   });
 }
 
 void JITDylib::removeFromSearchOrder(JITDylib &JD) {
   ES.runSessionLocked([&]() {
-    auto I = std::find(SearchOrder.begin(), SearchOrder.end(), &JD);
+    auto I = std::find_if(SearchOrder.begin(), SearchOrder.end(),
+                          [&](const JITDylibSearchList::value_type &KV) {
+                            return KV.first == &JD;
+                          });
     if (I != SearchOrder.end())
       SearchOrder.erase(I);
   });
@@ -1161,18 +1179,17 @@ SymbolNameSet JITDylib::lookupFlagsImpl(SymbolFlagsMap &Flags,
 }
 
 void JITDylib::lodgeQuery(std::shared_ptr<AsynchronousSymbolQuery> &Q,
-                          SymbolNameSet &Unresolved,
-                          JITDylib *MatchNonExportedInJD, bool MatchNonExported,
+                          SymbolNameSet &Unresolved, bool MatchNonExported,
                           MaterializationUnitList &MUs) {
   assert(Q && "Query can not be null");
 
-  lodgeQueryImpl(Q, Unresolved, MatchNonExportedInJD, MatchNonExported, MUs);
+  lodgeQueryImpl(Q, Unresolved, MatchNonExported, MUs);
   if (DefGenerator && !Unresolved.empty()) {
     auto NewDefs = DefGenerator(*this, Unresolved);
     if (!NewDefs.empty()) {
       for (auto &D : NewDefs)
         Unresolved.erase(D);
-      lodgeQueryImpl(Q, NewDefs, MatchNonExportedInJD, MatchNonExported, MUs);
+      lodgeQueryImpl(Q, NewDefs, MatchNonExported, MUs);
       assert(NewDefs.empty() &&
              "All fallback defs should have been found by lookupImpl");
     }
@@ -1181,7 +1198,7 @@ void JITDylib::lodgeQuery(std::shared_ptr<AsynchronousSymbolQuery> &Q,
 
 void JITDylib::lodgeQueryImpl(
     std::shared_ptr<AsynchronousSymbolQuery> &Q, SymbolNameSet &Unresolved,
-    JITDylib *MatchNonExportedInJD, bool MatchNonExported,
+    bool MatchNonExported,
     std::vector<std::unique_ptr<MaterializationUnit>> &MUs) {
 
   std::vector<SymbolStringPtr> ToRemove;
@@ -1191,12 +1208,9 @@ void JITDylib::lodgeQueryImpl(
     if (SymI == Symbols.end())
       continue;
 
-    // If this is a non-exported symbol, then check the values of
-    // MatchNonExportedInJD and MatchNonExported. Skip if we should not match
-    // against this symbol.
-    if (!SymI->second.getFlags().isExported())
-      if (!MatchNonExported && MatchNonExportedInJD != this)
-        continue;
+    // If this is a non exported symbol and we're skipping those then skip it.
+    if (!SymI->second.getFlags().isExported() && !MatchNonExported)
+      continue;
 
     // If we matched against Name in JD, mark it to be removed from the Unresolved
     // set.
@@ -1382,8 +1396,9 @@ void JITDylib::dump(raw_ostream &OS) {
        << "\" (ES: " << format("0x%016x", reinterpret_cast<uintptr_t>(&ES))
        << "):\n"
        << "Search order: [";
-    for (auto *JD : SearchOrder)
-      OS << " \"" << JD->getName() << "\"";
+    for (auto &KV : SearchOrder)
+      OS << " (\"" << KV.first->getName() << "\", "
+         << (KV.second ? "all" : "exported only") << ")";
     OS << " ]\n"
        << "Symbol table:\n";
 
@@ -1431,7 +1446,7 @@ void JITDylib::dump(raw_ostream &OS) {
 
 JITDylib::JITDylib(ExecutionSession &ES, std::string Name)
     : ES(ES), JITDylibName(std::move(Name)) {
-  SearchOrder.push_back(this);
+  SearchOrder.push_back({this, true});
 }
 
 Error JITDylib::defineImpl(MaterializationUnit &MU) {
@@ -1724,12 +1739,10 @@ Expected<SymbolMap> ExecutionSession::legacyLookup(
 #endif
 }
 
-void ExecutionSession::lookup(const JITDylibList &JDs, SymbolNameSet Symbols,
-                              SymbolsResolvedCallback OnResolve,
-                              SymbolsReadyCallback OnReady,
-                              RegisterDependenciesFunction RegisterDependencies,
-                              JITDylib *MatchNonExportedInJD,
-                              bool MatchNonExported) {
+void ExecutionSession::lookup(
+    const JITDylibSearchList &SearchOrder, SymbolNameSet Symbols,
+    SymbolsResolvedCallback OnResolve, SymbolsReadyCallback OnReady,
+    RegisterDependenciesFunction RegisterDependencies) {
 
   // lookup can be re-entered recursively if running on a single thread. Run any
   // outstanding MUs in case this query depends on them, otherwise this lookup
@@ -1745,12 +1758,14 @@ void ExecutionSession::lookup(const JITDylibList &JDs, SymbolNameSet Symbols,
   bool QueryFailed = false;
 
   runSessionLocked([&]() {
-    for (auto *JD : JDs) {
-      assert(JD && "JITDylibList entries must not be null");
-      assert(!CollectedMUsMap.count(JD) &&
+    for (auto &KV : SearchOrder) {
+      assert(KV.first && "JITDylibList entries must not be null");
+      assert(!CollectedMUsMap.count(KV.first) &&
              "JITDylibList should not contain duplicate entries");
-      JD->lodgeQuery(Q, Unresolved, MatchNonExportedInJD, MatchNonExported,
-                     CollectedMUsMap[JD]);
+
+      auto &JD = *KV.first;
+      auto MatchNonExported = KV.second;
+      JD.lodgeQuery(Q, Unresolved, MatchNonExported, CollectedMUsMap[&JD]);
     }
 
     if (Unresolved.empty()) {
@@ -1801,11 +1816,9 @@ void ExecutionSession::lookup(const JITDylibList &JDs, SymbolNameSet Symbols,
   runOutstandingMUs();
 }
 
-Expected<SymbolMap>
-ExecutionSession::lookup(const JITDylibList &JDs, const SymbolNameSet &Symbols,
-                         RegisterDependenciesFunction RegisterDependencies,
-                         bool WaitUntilReady, JITDylib *MatchNonExportedInJD,
-                         bool MatchNonExported) {
+Expected<SymbolMap> ExecutionSession::lookup(
+    const JITDylibSearchList &SearchOrder, const SymbolNameSet &Symbols,
+    RegisterDependenciesFunction RegisterDependencies, bool WaitUntilReady) {
 #if LLVM_ENABLE_THREADS
   // In the threaded case we use promises to return the results.
   std::promise<SymbolMap> PromisedResult;
@@ -1872,8 +1885,7 @@ ExecutionSession::lookup(const JITDylibList &JDs, const SymbolNameSet &Symbols,
 #endif
 
   // Perform the asynchronous lookup.
-  lookup(JDs, Symbols, OnResolve, OnReady, RegisterDependencies,
-         MatchNonExportedInJD, MatchNonExported);
+  lookup(SearchOrder, Symbols, OnResolve, OnReady, RegisterDependencies);
 
 #if LLVM_ENABLE_THREADS
   auto ResultFuture = PromisedResult.get_future();
@@ -1916,14 +1928,13 @@ ExecutionSession::lookup(const JITDylibList &JDs, const SymbolNameSet &Symbols,
 #endif
 }
 
-/// Look up a symbol by searching a list of JDs.
-Expected<JITEvaluatedSymbol> ExecutionSession::lookup(const JITDylibList &JDs,
-                                                      SymbolStringPtr Name,
-                                                      bool MatchNonExported) {
+Expected<JITEvaluatedSymbol>
+ExecutionSession::lookup(const JITDylibSearchList &SearchOrder,
+                         SymbolStringPtr Name) {
   SymbolNameSet Names({Name});
 
-  if (auto ResultMap = lookup(JDs, std::move(Names), NoDependenciesToRegister,
-                              true, nullptr, MatchNonExported)) {
+  if (auto ResultMap = lookup(SearchOrder, std::move(Names),
+                              NoDependenciesToRegister, true)) {
     assert(ResultMap->size() == 1 && "Unexpected number of results");
     assert(ResultMap->count(Name) && "Missing result for symbol");
     return std::move(ResultMap->begin()->second);
@@ -1931,10 +1942,21 @@ Expected<JITEvaluatedSymbol> ExecutionSession::lookup(const JITDylibList &JDs,
     return ResultMap.takeError();
 }
 
-Expected<JITEvaluatedSymbol> ExecutionSession::lookup(const JITDylibList &JDs,
-                                                      StringRef Name,
-                                                      bool MatchNonExported) {
-  return lookup(JDs, intern(Name), MatchNonExported);
+Expected<JITEvaluatedSymbol>
+ExecutionSession::lookup(ArrayRef<JITDylib *> SearchOrder,
+                         SymbolStringPtr Name) {
+  SymbolNameSet Names({Name});
+
+  JITDylibSearchList FullSearchOrder(SearchOrder.size());
+  for (auto *JD : SearchOrder)
+    FullSearchOrder.push_back({JD, false});
+
+  return lookup(FullSearchOrder, Name);
+}
+
+Expected<JITEvaluatedSymbol>
+ExecutionSession::lookup(ArrayRef<JITDylib *> SearchOrder, StringRef Name) {
+  return lookup(SearchOrder, intern(Name));
 }
 
 void ExecutionSession::dump(raw_ostream &OS) {
