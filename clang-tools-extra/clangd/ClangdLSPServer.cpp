@@ -173,6 +173,7 @@ private:
   //  - if there were multiple replies, only the first is sent
   class ReplyOnce {
     std::atomic<bool> Replied = {false};
+    std::chrono::steady_clock::time_point Start;
     json::Value ID;
     std::string Method;
     ClangdLSPServer *Server; // Null when moved-from.
@@ -181,13 +182,14 @@ private:
   public:
     ReplyOnce(const json::Value &ID, StringRef Method, ClangdLSPServer *Server,
               json::Object *TraceArgs)
-        : ID(ID), Method(Method), Server(Server), TraceArgs(TraceArgs) {
+        : Start(std::chrono::steady_clock::now()), ID(ID), Method(Method),
+          Server(Server), TraceArgs(TraceArgs) {
       assert(Server);
     }
     ReplyOnce(ReplyOnce &&Other)
-        : Replied(Other.Replied.load()), ID(std::move(Other.ID)),
-          Method(std::move(Other.Method)), Server(Other.Server),
-          TraceArgs(Other.TraceArgs) {
+        : Replied(Other.Replied.load()), Start(Other.Start),
+          ID(std::move(Other.ID)), Method(std::move(Other.Method)),
+          Server(Other.Server), TraceArgs(Other.TraceArgs) {
       Other.Server = nullptr;
     }
     ReplyOnce& operator=(ReplyOnce&&) = delete;
@@ -210,16 +212,21 @@ private:
         assert(false && "must reply to each call only once!");
         return;
       }
-      if (TraceArgs) {
-        if (Reply)
+      auto Duration = std::chrono::steady_clock::now() - Start;
+      if (Reply) {
+        log("--> reply:{0}({1}) {2:ms}", Method, ID, Duration);
+        if (TraceArgs)
           (*TraceArgs)["Reply"] = *Reply;
-        else {
-          auto Err = Reply.takeError();
+        std::lock_guard<std::mutex> Lock(Server->TranspWriter);
+        Server->Transp.reply(std::move(ID), std::move(Reply));
+      } else {
+        Error Err = Reply.takeError();
+        log("--> reply:{0}({1}) {2:ms}, error: {3}", Method, ID, Duration, Err);
+        if (TraceArgs)
           (*TraceArgs)["Error"] = to_string(Err);
-          Reply = std::move(Err);
-        }
+        std::lock_guard<std::mutex> Lock(Server->TranspWriter);
+        Server->Transp.reply(std::move(ID), std::move(Err));
       }
-      Server->reply(ID, std::move(Reply));
     }
   };
 
@@ -285,19 +292,6 @@ void ClangdLSPServer::notify(StringRef Method, json::Value Params) {
   log("--> {0}", Method);
   std::lock_guard<std::mutex> Lock(TranspWriter);
   Transp.notify(Method, std::move(Params));
-}
-
-void ClangdLSPServer::reply(json::Value ID, Expected<json::Value> Result) {
-  if (Result) {
-    log("--> reply({0})", ID);
-    std::lock_guard<std::mutex> Lock(TranspWriter);
-    Transp.reply(std::move(ID), std::move(Result));
-  } else {
-    Error Err = Result.takeError();
-    log("--> reply({0}) error: {1}", ID, Err);
-    std::lock_guard<std::mutex> Lock(TranspWriter);
-    Transp.reply(std::move(ID), std::move(Err));
-  }
 }
 
 void ClangdLSPServer::onInitialize(const InitializeParams &Params,
