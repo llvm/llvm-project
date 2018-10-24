@@ -1015,9 +1015,26 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
                                                QualType DstType,
                                                SourceLocation Loc,
                                                ScalarConversionOpts Opts) {
-  assert(!SrcType->isFixedPointType() && !DstType->isFixedPointType() &&
-         "Use the ScalarExprEmitter::EmitFixedPoint family functions for "
-         "handling conversions involving fixed point types.");
+  // All conversions involving fixed point types should be handled by the
+  // EmitFixedPoint family functions. This is done to prevent bloating up this
+  // function more, and although fixed point numbers are represented by
+  // integers, we do not want to follow any logic that assumes they should be
+  // treated as integers.
+  // TODO(leonardchan): When necessary, add another if statement checking for
+  // conversions to fixed point types from other types.
+  if (SrcType->isFixedPointType()) {
+    if (DstType->isFixedPointType()) {
+      return EmitFixedPointConversion(Src, SrcType, DstType, Loc);
+    } else if (DstType->isBooleanType()) {
+      // We do not need to check the padding bit on unsigned types if unsigned
+      // padding is enabled because overflow into this bit is undefined
+      // behavior.
+      return Builder.CreateIsNotNull(Src);
+    }
+
+    llvm_unreachable(
+        "Unhandled scalar conversion involving a fixed point type.");
+  }
 
   QualType NoncanonicalSrcType = SrcType;
   QualType NoncanonicalDstType = DstType;
@@ -1998,8 +2015,15 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   }
 
   case CK_FixedPointCast:
-    return EmitFixedPointConversion(Visit(E), E->getType(), DestTy,
-                                    CE->getExprLoc());
+    return EmitScalarConversion(Visit(E), E->getType(), DestTy,
+                                CE->getExprLoc());
+
+  case CK_FixedPointToBoolean:
+    assert(E->getType()->isFixedPointType() &&
+           "Expected src type to be fixed point type");
+    assert(DestTy->isBooleanType() && "Expected dest type to be boolean type");
+    return EmitScalarConversion(Visit(E), E->getType(), DestTy,
+                                CE->getExprLoc());
 
   case CK_IntegralCast: {
     ScalarConversionOpts Opts;

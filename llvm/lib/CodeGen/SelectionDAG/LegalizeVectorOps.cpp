@@ -1081,23 +1081,10 @@ SDValue VectorLegalizer::ExpandFSUB(SDValue Op) {
 }
 
 SDValue VectorLegalizer::ExpandCTLZ(SDValue Op) {
-  EVT VT = Op.getValueType();
-  unsigned NumBitsPerElt = VT.getScalarSizeInBits();
-
-  // If the non-ZERO_UNDEF version is supported we can use that instead.
-  if (Op.getOpcode() == ISD::CTLZ_ZERO_UNDEF &&
-      TLI.isOperationLegalOrCustom(ISD::CTLZ, VT)) {
-    SDLoc DL(Op);
-    return DAG.getNode(ISD::CTLZ, DL, VT, Op.getOperand(0));
-  }
-
-  // If we have the appropriate vector bit operations, it is better to use them
-  // than unrolling and expanding each component.
-  if (isPowerOf2_32(NumBitsPerElt) &&
-      TLI.isOperationLegalOrCustom(ISD::CTPOP, VT) &&
-      TLI.isOperationLegalOrCustom(ISD::SRL, VT) &&
-      TLI.isOperationLegalOrCustomOrPromote(ISD::OR, VT))
-    return Op;
+  // Attempt to expand using TargetLowering.
+  SDValue Result;
+  if (TLI.expandCTLZ(Op.getNode(), Result, DAG))
+    return Result;
 
   // Otherwise go ahead and unroll.
   return DAG.UnrollVectorOp(Op.getNode());

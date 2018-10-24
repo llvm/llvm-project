@@ -1,0 +1,69 @@
+RUN: llvm-readobj -unwind %p/Inputs/arm64-win1.obj | FileCheck %s -check-prefix=UNWIND1
+RUN: llvm-readobj -unwind %p/Inputs/arm64-win2.obj | FileCheck %s -check-prefix=UNWIND2
+
+UNWIND1:         ExceptionData {
+UNWIND1-NEXT:      FunctionLength: 340
+UNWIND1-NEXT:      Version: 0
+UNWIND1-NEXT:      ExceptionData: No
+UNWIND1-NEXT:      EpiloguePacked: Yes
+UNWIND1-NEXT:      EpilogueOffset: 15
+UNWIND1-NEXT:      ByteCodeLength: 28
+UNWIND1-NEXT:      Prologue [
+UNWIND1-NEXT:        0xe002dac8          ; sub sp, #2993280
+UNWIND1-NEXT:        0xe3                ; nop
+UNWIND1-NEXT:        0xe3                ; nop
+UNWIND1-NEXT:        0xe3                ; nop
+UNWIND1-NEXT:        0xd885              ; stp d10, d11, [sp, #40]
+UNWIND1-NEXT:        0xd803              ; stp d8, d9, [sp, #24]
+UNWIND1-NEXT:        0xd2c2              ; str x30, [sp, #16]
+UNWIND1-NEXT:        0x28                ; stp x19, x20, [sp, #-64]!
+UNWIND1-NEXT:        0xe4                ; end
+UNWIND1-NEXT:      ]
+UNWIND1-NEXT:      Epilogue [
+UNWIND1-NEXT:        0xe002dac8          ; add sp, #2993280
+UNWIND1-NEXT:        0xd885              ; ldp d10, d11, [sp, #40]
+UNWIND1-NEXT:        0xd803              ; ldp d8, d9, [sp, #24]
+UNWIND1-NEXT:        0xd2c2              ; ldr x30, [sp, #16]
+UNWIND1-NEXT:        0x28                ; ldp x19, x20, [sp], #64
+UNWIND1-NEXT:        0xe4                ; end
+UNWIND1-NEXT:      ]
+UNWIND1_NEXT:    }
+
+
+UNWIND2:         ExceptionData {
+UNWIND2-NEXT:      FunctionLength: 72
+UNWIND2-NEXT:      Version: 0
+UNWIND2-NEXT:      ExceptionData: No
+UNWIND2-NEXT:      EpiloguePacked: No
+UNWIND2-NEXT:      EpilogueScopes: 2
+UNWIND2-NEXT:      ByteCodeLength: 8
+UNWIND2-NEXT:      Prologue [
+UNWIND2-NEXT:        0x1f                ; sub sp, #496
+UNWIND2-NEXT:        0xd600              ; stp x19, lr, [sp, #0]
+UNWIND2-NEXT:        0x01                ; sub sp, #16
+UNWIND2-NEXT:        0xe4                ; end
+UNWIND2-NEXT:      ]
+UNWIND2-NEXT:      EpilogueScopes [
+UNWIND2-NEXT:        EpilogueScope {
+UNWIND2-NEXT:          StartOffset: 8
+UNWIND2-NEXT:          EpilogueStartIndex: 0
+UNWIND2-NEXT:          Opcodes [
+UNWIND2-NEXT:            0x1f                ; add sp, #496
+UNWIND2-NEXT:            0xd600              ; ldp x19, lr, [sp, #0]
+UNWIND2-NEXT:            0x01                ; add sp, #16
+UNWIND2-NEXT:            0xe4                ; end
+UNWIND2-NEXT:          ]
+UNWIND2-NEXT:        }
+UNWIND2-NEXT:        EpilogueScope {
+UNWIND2-NEXT:          StartOffset: 14
+UNWIND2-NEXT:          EpilogueStartIndex: 0
+UNWIND2-NEXT:          Opcodes [
+UNWIND2-NEXT:            0x1f                ; add sp, #496
+UNWIND2-NEXT:            0xd600              ; ldp x19, lr, [sp, #0]
+UNWIND2-NEXT:            0x01                ; add sp, #16
+UNWIND2-NEXT:            0xe4                ; end
+UNWIND2-NEXT:          ]
+UNWIND2-NEXT:        }
+UNWIND2-NEXT:      ]
+UNWIND2-NEXT:    }
+

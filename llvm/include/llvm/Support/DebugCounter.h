@@ -55,6 +55,8 @@ namespace llvm {
 
 class DebugCounter {
 public:
+  ~DebugCounter();
+
   /// Returns a reference to the singleton instance.
   static DebugCounter &instance();
 

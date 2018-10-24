@@ -870,6 +870,7 @@ public:
     case CK_FloatingToBoolean:
     case CK_FloatingCast:
     case CK_FixedPointCast:
+    case CK_FixedPointToBoolean:
     case CK_ZeroToOCLOpaqueType:
       return nullptr;
     }

@@ -4142,6 +4142,108 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
   return SDValue();
 }
 
+bool TargetLowering::expandCTPOP(SDNode *Node, SDValue &Result,
+                                 SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  EVT VT = Node->getValueType(0);
+  EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
+  SDValue Op = Node->getOperand(0);
+  unsigned Len = VT.getScalarSizeInBits();
+  assert(VT.isInteger() && Len <= 128 && Len % 8 == 0 &&
+         "CTPOP not implemented for this type.");
+
+  // This is the "best" algorithm from
+  // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+  SDValue Mask55 =
+      DAG.getConstant(APInt::getSplat(Len, APInt(8, 0x55)), dl, VT);
+  SDValue Mask33 =
+      DAG.getConstant(APInt::getSplat(Len, APInt(8, 0x33)), dl, VT);
+  SDValue Mask0F =
+      DAG.getConstant(APInt::getSplat(Len, APInt(8, 0x0F)), dl, VT);
+  SDValue Mask01 =
+      DAG.getConstant(APInt::getSplat(Len, APInt(8, 0x01)), dl, VT);
+
+  // v = v - ((v >> 1) & 0x55555555...)
+  Op = DAG.getNode(ISD::SUB, dl, VT, Op,
+                   DAG.getNode(ISD::AND, dl, VT,
+                               DAG.getNode(ISD::SRL, dl, VT, Op,
+                                           DAG.getConstant(1, dl, ShVT)),
+                               Mask55));
+  // v = (v & 0x33333333...) + ((v >> 2) & 0x33333333...)
+  Op = DAG.getNode(ISD::ADD, dl, VT, DAG.getNode(ISD::AND, dl, VT, Op, Mask33),
+                   DAG.getNode(ISD::AND, dl, VT,
+                               DAG.getNode(ISD::SRL, dl, VT, Op,
+                                           DAG.getConstant(2, dl, ShVT)),
+                               Mask33));
+  // v = (v + (v >> 4)) & 0x0F0F0F0F...
+  Op = DAG.getNode(ISD::AND, dl, VT,
+                   DAG.getNode(ISD::ADD, dl, VT, Op,
+                               DAG.getNode(ISD::SRL, dl, VT, Op,
+                                           DAG.getConstant(4, dl, ShVT))),
+                   Mask0F);
+  // v = (v * 0x01010101...) >> (Len - 8)
+  if (Len > 8)
+    Op =
+        DAG.getNode(ISD::SRL, dl, VT, DAG.getNode(ISD::MUL, dl, VT, Op, Mask01),
+                    DAG.getConstant(Len - 8, dl, ShVT));
+
+  Result = Op;
+  return true;
+}
+
+bool TargetLowering::expandCTLZ(SDNode *Node, SDValue &Result,
+                                SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  EVT VT = Node->getValueType(0);
+  EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
+  SDValue Op = Node->getOperand(0);
+  unsigned NumBitsPerElt = VT.getScalarSizeInBits();
+
+  // If the non-ZERO_UNDEF version is supported we can use that instead.
+  if (Node->getOpcode() == ISD::CTLZ_ZERO_UNDEF &&
+      isOperationLegalOrCustom(ISD::CTLZ, VT)) {
+    Result = DAG.getNode(ISD::CTLZ, dl, VT, Op);
+    return true;
+  }
+
+  // If the ZERO_UNDEF version is supported use that and handle the zero case.
+  if (isOperationLegalOrCustom(ISD::CTLZ_ZERO_UNDEF, VT)) {
+    EVT SetCCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+    SDValue CTLZ = DAG.getNode(ISD::CTLZ_ZERO_UNDEF, dl, VT, Op);
+    SDValue Zero = DAG.getConstant(0, dl, VT);
+    SDValue SrcIsZero = DAG.getSetCC(dl, SetCCVT, Op, Zero, ISD::SETEQ);
+    Result = DAG.getNode(ISD::SELECT, dl, VT, SrcIsZero,
+                         DAG.getConstant(NumBitsPerElt, dl, VT), CTLZ);
+    return true;
+  }
+
+  // Only expand vector types if we have the appropriate vector bit operations.
+  if (VT.isVector() && (!isPowerOf2_32(NumBitsPerElt) ||
+                        !isOperationLegalOrCustom(ISD::CTPOP, VT) ||
+                        !isOperationLegalOrCustom(ISD::SRL, VT) ||
+                        !isOperationLegalOrCustomOrPromote(ISD::OR, VT)))
+    return false;
+
+  // for now, we do this:
+  // x = x | (x >> 1);
+  // x = x | (x >> 2);
+  // ...
+  // x = x | (x >>16);
+  // x = x | (x >>32); // for 64-bit input
+  // return popcount(~x);
+  //
+  // Ref: "Hacker's Delight" by Henry Warren
+  for (unsigned i = 0; (1U << i) <= (NumBitsPerElt / 2); ++i) {
+    SDValue Tmp = DAG.getConstant(1ULL << i, dl, ShVT);
+    Op = DAG.getNode(ISD::OR, dl, VT, Op,
+                     DAG.getNode(ISD::SRL, dl, VT, Op, Tmp));
+  }
+  Op = DAG.getNOT(dl, Op, VT);
+  Result = DAG.getNode(ISD::CTPOP, dl, VT, Op);
+  return true;
+}
+
 bool TargetLowering::expandCTTZ(SDNode *Node, SDValue &Result,
                                 SelectionDAG &DAG) const {
   SDLoc dl(Node);

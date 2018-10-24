@@ -2109,13 +2109,6 @@ BinaryOperator *BinaryOperator::CreateNot(Value *Op, const Twine &Name,
                             Op->getType(), Name, InsertAtEnd);
 }
 
-// isConstantAllOnes - Helper function for several functions below
-static inline bool isConstantAllOnes(const Value *V) {
-  if (const Constant *C = dyn_cast<Constant>(V))
-    return C->isAllOnesValue();
-  return false;
-}
-
 bool BinaryOperator::isFNeg(const Value *V, bool IgnoreZeroSign) {
   if (const BinaryOperator *Bop = dyn_cast<BinaryOperator>(V))
     if (Bop->getOpcode() == Instruction::FSub)

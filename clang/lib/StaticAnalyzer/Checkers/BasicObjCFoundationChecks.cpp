@@ -214,7 +214,7 @@ void NilArgChecker::generateBugReport(ExplodedNode *N,
 
   auto R = llvm::make_unique<BugReport>(*BT, Msg, N);
   R->addRange(Range);
-  bugreporter::trackNullOrUndefValue(N, E, *R);
+  bugreporter::trackExpressionValue(N, E, *R);
   C.emitReport(std::move(R));
 }
 
@@ -578,7 +578,7 @@ void CFRetainReleaseChecker::checkPreCall(const CallEvent &Call,
 
     auto report = llvm::make_unique<BugReport>(BT, OS.str(), N);
     report->addRange(Call.getArgSourceRange(0));
-    bugreporter::trackNullOrUndefValue(N, Call.getArgExpr(0), *report);
+    bugreporter::trackExpressionValue(N, Call.getArgExpr(0), *report);
     C.emitReport(std::move(report));
     return;
   }

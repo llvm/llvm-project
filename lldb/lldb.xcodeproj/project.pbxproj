@@ -998,6 +998,7 @@
 		54067BF11DF2041B00749AA5 /* UBSanRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 54067BEC1DF2034B00749AA5 /* UBSanRuntime.cpp */; };
 		2579065D1BD0488100178368 /* UDPSocket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2579065B1BD0488100178368 /* UDPSocket.cpp */; };
 		49CA97001E6AACC900C03FEE /* UUID.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49CA96EA1E6AAC6600C03FEE /* UUID.cpp */; };
+		AF0578C4217FA80700CF9D80 /* UdtRecordCompleter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0578C2217FA80700CF9D80 /* UdtRecordCompleter.cpp */; };
 		268900CD13353E5F00698AC0 /* UniqueDWARFASTType.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26B8B42312EEC52A00A831B2 /* UniqueDWARFASTType.cpp */; };
 		2689010C13353E6F00698AC0 /* UnixSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C00987011500B4300F316B0 /* UnixSignals.cpp */; };
 		9A2057201F3B8D2500F6C293 /* UnixSignalsTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A20571E1F3B8D2100F6C293 /* UnixSignalsTest.cpp */; };
@@ -3162,6 +3163,8 @@
 		2579065B1BD0488100178368 /* UDPSocket.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = UDPSocket.cpp; sourceTree = "<group>"; };
 		49CA96EA1E6AAC6600C03FEE /* UUID.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = UUID.cpp; path = source/Utility/UUID.cpp; sourceTree = "<group>"; };
 		49CA96F51E6AAC8E00C03FEE /* UUID.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UUID.h; path = include/lldb/Utility/UUID.h; sourceTree = "<group>"; };
+		AF0578C2217FA80700CF9D80 /* UdtRecordCompleter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = UdtRecordCompleter.cpp; path = source/Plugins/SymbolFile/NativePDB/UdtRecordCompleter.cpp; sourceTree = SOURCE_ROOT; };
+		AF0578C1217FA80700CF9D80 /* UdtRecordCompleter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UdtRecordCompleter.h; path = source/Plugins/SymbolFile/NativePDB/UdtRecordCompleter.h; sourceTree = SOURCE_ROOT; };
 		268A813F115B19D000F645B0 /* UniqueCStringMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UniqueCStringMap.h; path = include/lldb/Core/UniqueCStringMap.h; sourceTree = "<group>"; };
 		26B8B42312EEC52A00A831B2 /* UniqueDWARFASTType.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = UniqueDWARFASTType.cpp; sourceTree = "<group>"; };
 		26B8B42212EEC52A00A831B2 /* UniqueDWARFASTType.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UniqueDWARFASTType.h; sourceTree = "<group>"; };
@@ -6925,6 +6928,8 @@
 				AFD966BE217140C8006714AC /* PdbUtil.h */,
 				AFD966B7217140B6006714AC /* SymbolFileNativePDB.cpp */,
 				AFD966C0217140C8006714AC /* SymbolFileNativePDB.h */,
+				AF0578C2217FA80700CF9D80 /* UdtRecordCompleter.cpp */,
+				AF0578C1217FA80700CF9D80 /* UdtRecordCompleter.h */,
 			);
 			name = NativePDB;
 			path = "New Group";
@@ -7865,6 +7870,7 @@
 				2689FFFB13353DB600698AC0 /* BreakpointLocationList.cpp in Sources */,
 				AFD966B9217140B6006714AC /* PdbUtil.cpp in Sources */,
 				2689FFFD13353DB600698AC0 /* BreakpointOptions.cpp in Sources */,
+				AF0578C4217FA80700CF9D80 /* UdtRecordCompleter.cpp in Sources */,
 				2689FFFF13353DB600698AC0 /* BreakpointResolver.cpp in Sources */,
 				25420ECD1A6490B8009ADBCB /* OptionValueChar.cpp in Sources */,
 				2689000113353DB600698AC0 /* BreakpointResolverAddress.cpp in Sources */,

@@ -428,5 +428,5 @@ DIASession::getFrameData() const {
   if (!FD)
     return nullptr;
 
-  return llvm::make_unique<DIAEnumFrameData>(*this, FD);
+  return llvm::make_unique<DIAEnumFrameData>(FD);
 }

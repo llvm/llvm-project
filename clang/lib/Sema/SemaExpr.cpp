@@ -5894,10 +5894,7 @@ CastKind Sema::PrepareScalarCast(ExprResult &Src, QualType DestTy) {
     case Type::STK_FixedPoint:
       return CK_FixedPointCast;
     case Type::STK_Bool:
-      Diag(Src.get()->getExprLoc(),
-           diag::err_unimplemented_conversion_with_fixed_point_type)
-          << DestTy;
-      return CK_IntegralToBoolean;
+      return CK_FixedPointToBoolean;
     case Type::STK_Integral:
     case Type::STK_Floating:
     case Type::STK_IntegralComplex:
@@ -12793,12 +12790,6 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       if (Context.getLangOpts().CPlusPlus) {
         // C++03 [expr.unary.op]p8, C++0x [expr.unary.op]p9:
         // operand contextually converted to bool.
-        if (resultType->getScalarTypeKind() == Type::STK_FixedPoint) {
-          return ExprError(
-              Diag(Input.get()->getExprLoc(),
-                   diag::err_unimplemented_conversion_with_fixed_point_type)
-              << resultType);
-        }
         Input = ImpCastExprToType(Input.get(), Context.BoolTy,
                                   ScalarTypeToBooleanCastKind(resultType));
       } else if (Context.getLangOpts().OpenCL &&

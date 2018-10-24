@@ -20,8 +20,7 @@ class DIASession;
 
 class DIAFrameData : public IPDBFrameData {
 public:
-  explicit DIAFrameData(const DIASession &PDBSession,
-                        CComPtr<IDiaFrameData> DiaFrameData);
+  explicit DIAFrameData(CComPtr<IDiaFrameData> DiaFrameData);
 
   uint32_t getAddressOffset() const override;
   uint32_t getAddressSection() const override;
@@ -31,7 +30,6 @@ public:
   uint64_t getVirtualAddress() const override;
 
 private:
-  const DIASession &Session;
   CComPtr<IDiaFrameData> FrameData;
 };
 

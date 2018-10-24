@@ -13,9 +13,8 @@
 
 using namespace llvm::pdb;
 
-DIAEnumFrameData::DIAEnumFrameData(const DIASession &PDBSession,
-                                   CComPtr<IDiaEnumFrameData> DiaEnumerator)
-    : Session(PDBSession), Enumerator(DiaEnumerator) {}
+DIAEnumFrameData::DIAEnumFrameData(CComPtr<IDiaEnumFrameData> DiaEnumerator)
+    : Enumerator(DiaEnumerator) {}
 
 uint32_t DIAEnumFrameData::getChildCount() const {
   LONG Count = 0;
@@ -28,7 +27,7 @@ DIAEnumFrameData::getChildAtIndex(uint32_t Index) const {
   if (S_OK != Enumerator->Item(Index, &Item))
     return nullptr;
 
-  return std::unique_ptr<IPDBFrameData>(new DIAFrameData(Session, Item));
+  return std::unique_ptr<IPDBFrameData>(new DIAFrameData(Item));
 }
 
 std::unique_ptr<IPDBFrameData> DIAEnumFrameData::getNext() {
@@ -37,7 +36,7 @@ std::unique_ptr<IPDBFrameData> DIAEnumFrameData::getNext() {
   if (S_OK != Enumerator->Next(1, &Item, &NumFetched))
     return nullptr;
 
-  return std::unique_ptr<IPDBFrameData>(new DIAFrameData(Session, Item));
+  return std::unique_ptr<IPDBFrameData>(new DIAFrameData(Item));
 }
 
 void DIAEnumFrameData::reset() { Enumerator->Reset(); }

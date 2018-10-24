@@ -242,14 +242,12 @@ define void @memset_8_stack() {
   ret void
 }
 
-; FIXME This could be better: x9 is a superset of w8's bit-pattern.
 define void @memset_12_stack() {
 ; CHECK-LABEL: memset_12_stack:
-; CHECK:       mov w8, #-1431655766
-; CHECK-NEXT:  mov x9, #-6148914691236517206
+; CHECK:       mov x8, #-6148914691236517206
 ; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  str x8, [sp]
 ; CHECK-NEXT:  str w8, [sp, #8]
-; CHECK-NEXT:  str x9, [sp]
 ; CHECK-NEXT:  bl something
   %buf = alloca [12 x i8], align 1
   %cast = bitcast [12 x i8]* %buf to i8*
@@ -272,14 +270,12 @@ define void @memset_16_stack() {
   ret void
 }
 
-; FIXME This could be better: x9 is a superset of w8's bit-pattern.
 define void @memset_20_stack() {
 ; CHECK-LABEL: memset_20_stack:
-; CHECK:       mov w8, #-1431655766
-; CHECK-NEXT:  mov x9, #-6148914691236517206
+; CHECK:       mov x8, #-6148914691236517206
 ; CHECK-NEXT:  add x0, sp, #8
+; CHECK-NEXT:  stp x8, x8, [sp, #8]
 ; CHECK-NEXT:  str w8, [sp, #24]
-; CHECK-NEXT:  stp x9, x9, [sp, #8]
 ; CHECK-NEXT:  bl something
   %buf = alloca [20 x i8], align 1
   %cast = bitcast [20 x i8]* %buf to i8*
@@ -288,15 +284,13 @@ define void @memset_20_stack() {
   ret void
 }
 
-; FIXME This could be better: x9 is a superset of w8's bit-pattern.
 define void @memset_26_stack() {
 ; CHECK-LABEL: memset_26_stack:
-; CHECK:       mov w8, #43690
-; CHECK-NEXT:  mov x9, #-6148914691236517206
+; CHECK:       mov x8, #-6148914691236517206
 ; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  stp x8, x8, [sp, #8]
+; CHECK-NEXT:  str x8, [sp]
 ; CHECK-NEXT:  strh w8, [sp, #24]
-; CHECK-NEXT:  stp x9, x9, [sp, #8]
-; CHECK-NEXT:  str x9, [sp]
 ; CHECK-NEXT:  bl something
   %buf = alloca [26 x i8], align 1
   %cast = bitcast [26 x i8]* %buf to i8*
