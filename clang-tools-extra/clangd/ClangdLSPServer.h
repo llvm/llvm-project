@@ -140,7 +140,6 @@ private:
 
     // if IsDirectoryBased is true, an instance of InMemoryCDB.
     // If IsDirectoryBased is false, an instance of DirectoryBasedCDB.
-    // unique_ptr<GlobalCompilationDatabase> CDB;
     std::unique_ptr<GlobalCompilationDatabase> CDB;
     bool IsDirectoryBased;
   };
@@ -154,7 +153,6 @@ private:
   std::mutex TranspWriter;
   void call(StringRef Method, llvm::json::Value Params);
   void notify(StringRef Method, llvm::json::Value Params);
-  void reply(llvm::json::Value ID, llvm::Expected<llvm::json::Value> Result);
 
   RealFileSystemProvider FSProvider;
   /// Options used for code completion

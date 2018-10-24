@@ -276,3 +276,13 @@ void test14() {
   // CHECK: fix-it:{{.*}}:{[[@LINE-7]]:33-[[@LINE-7]]:33}:"static_cast<void>("
   // CHECK: fix-it:{{.*}}:{[[@LINE-8]]:46-[[@LINE-8]]:46}:")"
 }
+
+// PR39375 - test cast to void to silence warnings
+template <typename T>
+void test15() {
+  (void)42, 0;
+  static_cast<void>(42), 0;
+
+  (void)T{}, 0;
+  static_cast<void>(T{}), 0;
+}

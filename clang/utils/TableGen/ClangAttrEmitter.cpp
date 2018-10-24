@@ -2935,9 +2935,9 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
       if (I != List.cbegin())
         OS << " else ";
       if (I->first.empty())
-        OS << "if (!Scope || Scope->getName() == \"\") {\n";
+        OS << "if (ScopeName == \"\") {\n";
       else
-        OS << "if (Scope->getName() == \"" << I->first << "\") {\n";
+        OS << "if (ScopeName == \"" << I->first << "\") {\n";
       OS << "  return llvm::StringSwitch<int>(Name)\n";
       GenerateHasAttrSpellingStringSwitch(I->second, OS, Spelling, I->first);
       OS << "}";

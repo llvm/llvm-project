@@ -147,7 +147,7 @@ getOpcodesOrDie(const llvm::MCInstrInfo &MCInstrInfo) {
 // Generates code snippets for opcode `Opcode`.
 static llvm::Expected<std::vector<BenchmarkCode>>
 generateSnippets(const LLVMState &State, unsigned Opcode) {
-  const Instruction Instr(State, Opcode);
+  const Instruction &Instr = State.getIC().getInstr(Opcode);
   const llvm::MCInstrDesc &InstrDesc = *Instr.Description;
   // Ignore instructions that we cannot run.
   if (InstrDesc.isPseudo())

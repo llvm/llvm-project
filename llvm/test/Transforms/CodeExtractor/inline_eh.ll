@@ -42,11 +42,11 @@ entry:
 ; CHECK: entry:
 ; CHECK-NEXT: br i1
 ; CHECK: codeRepl.i:
-; CHECK-NEXT: call void @callee.1_{{.*}}()
+; CHECK-NEXT: call void @callee.1.{{.*}}()
   call void @callee(i1 %cond)
   ret void
 }
 
-; CHECK-LABEL: define {{.*}} @callee.1_{{.*}}() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+; CHECK-LABEL: define {{.*}} @callee.1.{{.*}}() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
 ; CHECK: invoke void @bar()
 ; CHECK: landingpad

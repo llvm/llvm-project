@@ -105,16 +105,21 @@ public:
   }
 
   bool onCall(StringRef Method, json::Value Params, json::Value ID) override {
+    // Calls can be canceled by the client. Add cancellation context.
+    WithContext WithCancel(cancelableRequestContext(ID));
+    trace::Span Tracer(Method);
+    SPAN_ATTACH(Tracer, "Params", Params);
+    ReplyOnce Reply(ID, Method, &Server, Tracer.Args);
     log("<-- {0}({1})", Method, ID);
     if (!Server.Server && Method != "initialize") {
       elog("Call {0} before initialization.", Method);
-      Server.reply(ID, make_error<LSPError>("server not initialized",
-                                            ErrorCode::ServerNotInitialized));
+      Reply(make_error<LSPError>("server not initialized",
+                                 ErrorCode::ServerNotInitialized));
     } else if (auto Handler = Calls.lookup(Method))
-      Handler(std::move(Params), std::move(ID));
+      Handler(std::move(Params), std::move(Reply));
     else
-      Server.reply(ID, make_error<LSPError>("method not found",
-                                            ErrorCode::MethodNotFound));
+      Reply(
+          make_error<LSPError>("method not found", ErrorCode::MethodNotFound));
     return true;
   }
 
@@ -128,36 +133,19 @@ public:
   }
 
   // Bind an LSP method name to a call.
-  template <typename Param, typename Reply>
+  template <typename Param, typename Result>
   void bind(const char *Method,
-            void (ClangdLSPServer::*Handler)(const Param &, Callback<Reply>)) {
+            void (ClangdLSPServer::*Handler)(const Param &, Callback<Result>)) {
     Calls[Method] = [Method, Handler, this](json::Value RawParams,
-                                            json::Value ID) {
+                                            ReplyOnce Reply) {
       Param P;
-      if (!fromJSON(RawParams, P)) {
+      if (fromJSON(RawParams, P)) {
+        (Server.*Handler)(P, std::move(Reply));
+      } else {
         elog("Failed to decode {0} request.", Method);
-        Server.reply(ID, make_error<LSPError>("failed to decode request",
-                                              ErrorCode::InvalidRequest));
-        return;
+        Reply(make_error<LSPError>("failed to decode request",
+                                   ErrorCode::InvalidRequest));
       }
-      trace::Span Tracer(Method);
-      SPAN_ATTACH(Tracer, "Params", RawParams);
-      auto *Trace = Tracer.Args; // We attach reply from another thread.
-      // Calls can be canceled by the client. Add cancellation context.
-      WithContext WithCancel(cancelableRequestContext(ID));
-      // FIXME: this function should assert it's called exactly once.
-      (Server.*Handler)(P, [this, ID, Trace](Expected<Reply> Result) {
-        if (Result) {
-          if (Trace)
-            (*Trace)["Reply"] = *Result;
-          Server.reply(ID, json::Value(std::move(*Result)));
-        } else {
-          auto Err = Result.takeError();
-          if (Trace)
-            (*Trace)["Error"] = to_string(Err);
-          Server.reply(ID, std::move(Err));
-        }
-      });
     };
   }
 
@@ -178,8 +166,72 @@ public:
   }
 
 private:
+  // Function object to reply to an LSP call.
+  // Each instance must be called exactly once, otherwise:
+  //  - the bug is logged, and (in debug mode) an assert will fire
+  //  - if there was no reply, an error reply is sent
+  //  - if there were multiple replies, only the first is sent
+  class ReplyOnce {
+    std::atomic<bool> Replied = {false};
+    std::chrono::steady_clock::time_point Start;
+    json::Value ID;
+    std::string Method;
+    ClangdLSPServer *Server; // Null when moved-from.
+    json::Object *TraceArgs;
+
+  public:
+    ReplyOnce(const json::Value &ID, StringRef Method, ClangdLSPServer *Server,
+              json::Object *TraceArgs)
+        : Start(std::chrono::steady_clock::now()), ID(ID), Method(Method),
+          Server(Server), TraceArgs(TraceArgs) {
+      assert(Server);
+    }
+    ReplyOnce(ReplyOnce &&Other)
+        : Replied(Other.Replied.load()), Start(Other.Start),
+          ID(std::move(Other.ID)), Method(std::move(Other.Method)),
+          Server(Other.Server), TraceArgs(Other.TraceArgs) {
+      Other.Server = nullptr;
+    }
+    ReplyOnce& operator=(ReplyOnce&&) = delete;
+    ReplyOnce(const ReplyOnce &) = delete;
+    ReplyOnce& operator=(const ReplyOnce&) = delete;
+
+    ~ReplyOnce() {
+      if (Server && !Replied) {
+        elog("No reply to message {0}({1})", Method, ID);
+        assert(false && "must reply to all calls!");
+        (*this)(make_error<LSPError>("server failed to reply",
+                                     ErrorCode::InternalError));
+      }
+    }
+
+    void operator()(Expected<json::Value> Reply) {
+      assert(Server && "moved-from!");
+      if (Replied.exchange(true)) {
+        elog("Replied twice to message {0}({1})", Method, ID);
+        assert(false && "must reply to each call only once!");
+        return;
+      }
+      auto Duration = std::chrono::steady_clock::now() - Start;
+      if (Reply) {
+        log("--> reply:{0}({1}) {2:ms}", Method, ID, Duration);
+        if (TraceArgs)
+          (*TraceArgs)["Reply"] = *Reply;
+        std::lock_guard<std::mutex> Lock(Server->TranspWriter);
+        Server->Transp.reply(std::move(ID), std::move(Reply));
+      } else {
+        Error Err = Reply.takeError();
+        log("--> reply:{0}({1}) {2:ms}, error: {3}", Method, ID, Duration, Err);
+        if (TraceArgs)
+          (*TraceArgs)["Error"] = to_string(Err);
+        std::lock_guard<std::mutex> Lock(Server->TranspWriter);
+        Server->Transp.reply(std::move(ID), std::move(Err));
+      }
+    }
+  };
+
   StringMap<std::function<void(json::Value)>> Notifications;
-  StringMap<std::function<void(json::Value, json::Value)>> Calls;
+  StringMap<std::function<void(json::Value, ReplyOnce)>> Calls;
 
   // Method calls may be cancelled by ID, so keep track of their state.
   // This needs a mutex: handlers may finish on a different thread, and that's
@@ -240,19 +292,6 @@ void ClangdLSPServer::notify(StringRef Method, json::Value Params) {
   log("--> {0}", Method);
   std::lock_guard<std::mutex> Lock(TranspWriter);
   Transp.notify(Method, std::move(Params));
-}
-
-void ClangdLSPServer::reply(json::Value ID, Expected<json::Value> Result) {
-  if (Result) {
-    log("--> reply({0})", ID);
-    std::lock_guard<std::mutex> Lock(TranspWriter);
-    Transp.reply(std::move(ID), std::move(Result));
-  } else {
-    Error Err = Result.takeError();
-    log("--> reply({0}) error: {1}", ID, Err);
-    std::lock_guard<std::mutex> Lock(TranspWriter);
-    Transp.reply(std::move(ID), std::move(Err));
-  }
 }
 
 void ClangdLSPServer::onInitialize(const InitializeParams &Params,
@@ -549,14 +588,8 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
   std::vector<CodeAction> Actions;
   for (const Diagnostic &D : Params.context.diagnostics) {
     for (auto &F : getFixes(Params.textDocument.uri.file(), D)) {
-      Actions.emplace_back();
-      Actions.back().title = F.Message;
-      Actions.back().kind = CodeAction::QUICKFIX_KIND;
+      Actions.push_back(toCodeAction(F, Params.textDocument.uri));
       Actions.back().diagnostics = {D};
-      Actions.back().edit.emplace();
-      Actions.back().edit->changes.emplace();
-      (*Actions.back().edit->changes)[Params.textDocument.uri.uri()] = {
-          F.Edits.begin(), F.Edits.end()};
     }
   }
 
@@ -724,36 +757,16 @@ std::vector<Fix> ClangdLSPServer::getFixes(StringRef File,
 
 void ClangdLSPServer::onDiagnosticsReady(PathRef File,
                                          std::vector<Diag> Diagnostics) {
-  json::Array DiagnosticsJSON;
-
+  URIForFile URI(File);
+  std::vector<Diagnostic> LSPDiagnostics;
   DiagnosticToReplacementMap LocalFixIts; // Temporary storage
   for (auto &Diag : Diagnostics) {
-    toLSPDiags(Diag, [&](clangd::Diagnostic Diag, ArrayRef<Fix> Fixes) {
-      json::Object LSPDiag({
-          {"range", Diag.range},
-          {"severity", Diag.severity},
-          {"message", Diag.message},
-      });
-      // LSP extension: embed the fixes in the diagnostic.
-      if (DiagOpts.EmbedFixesInDiagnostics && !Fixes.empty()) {
-        json::Array ClangdFixes;
-        for (const auto &Fix : Fixes) {
-          WorkspaceEdit WE;
-          URIForFile URI{File};
-          WE.changes = {{URI.uri(), std::vector<TextEdit>(Fix.Edits.begin(),
-                                                          Fix.Edits.end())}};
-          ClangdFixes.push_back(
-              json::Object{{"edit", toJSON(WE)}, {"title", Fix.Message}});
-        }
-        LSPDiag["clangd_fixes"] = std::move(ClangdFixes);
-      }
-      if (DiagOpts.SendDiagnosticCategory && !Diag.category.empty())
-        LSPDiag["category"] = Diag.category;
-      DiagnosticsJSON.push_back(std::move(LSPDiag));
-
-      auto &FixItsForDiagnostic = LocalFixIts[Diag];
-      llvm::copy(Fixes, std::back_inserter(FixItsForDiagnostic));
-    });
+    toLSPDiags(Diag, URI, DiagOpts,
+               [&](clangd::Diagnostic Diag, ArrayRef<Fix> Fixes) {
+                 auto &FixItsForDiagnostic = LocalFixIts[Diag];
+                 llvm::copy(Fixes, std::back_inserter(FixItsForDiagnostic));
+                 LSPDiagnostics.push_back(std::move(Diag));
+               });
   }
 
   // Cache FixIts
@@ -766,8 +779,8 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File,
   // Publish diagnostics.
   notify("textDocument/publishDiagnostics",
          json::Object{
-             {"uri", URIForFile{File}},
-             {"diagnostics", std::move(DiagnosticsJSON)},
+             {"uri", URI},
+             {"diagnostics", std::move(LSPDiagnostics)},
          });
 }
 

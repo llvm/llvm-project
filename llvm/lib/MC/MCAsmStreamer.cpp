@@ -858,10 +858,14 @@ void MCAsmStreamer::EmitBytes(StringRef Data) {
   // supported, emit as vector of 8bits data.
   if (Data.size() == 1 ||
       !(MAI->getAscizDirective() || MAI->getAsciiDirective())) {
-    const char *Directive = MAI->getData8bitsDirective();
-    for (const unsigned char C : Data.bytes()) {
-      OS << Directive << (unsigned)C;
-      EmitEOL();
+    if (MCTargetStreamer *TS = getTargetStreamer()) {
+      TS->emitRawBytes(Data);
+    } else {
+      const char *Directive = MAI->getData8bitsDirective();
+      for (const unsigned char C : Data.bytes()) {
+        OS << Directive << (unsigned)C;
+        EmitEOL();
+      }
     }
     return;
   }

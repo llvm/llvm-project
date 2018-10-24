@@ -516,9 +516,9 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+reserved-r19");
   }
-  if (isAutoHVXEnabled(DriverArgs)) {
+  if (!isAutoHVXEnabled(DriverArgs)) {
     CC1Args.push_back("-mllvm");
-    CC1Args.push_back("-hexagon-autohvx");
+    CC1Args.push_back("-hexagon-autohvx=0");
   }
 }
 

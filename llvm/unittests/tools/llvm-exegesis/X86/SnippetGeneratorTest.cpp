@@ -61,7 +61,7 @@ protected:
 
   std::vector<CodeTemplate> checkAndGetCodeTemplates(unsigned Opcode) {
     randomGenerator().seed(0); // Initialize seed.
-    const Instruction Instr(State, Opcode);
+    const Instruction &Instr = State.getIC().getInstr(Opcode);
     auto CodeTemplateOrError = Generator.generateCodeTemplates(Instr);
     EXPECT_FALSE(CodeTemplateOrError.takeError()); // Valid configuration.
     return std::move(CodeTemplateOrError.get());
@@ -341,7 +341,7 @@ TEST_F(UopsSnippetGeneratorTest, MemoryUse_Movsb) {
   // - hasAliasingImplicitRegisters (execution is always serial)
   // - hasAliasingRegisters
   const unsigned Opcode = llvm::X86::MOVSB;
-  const Instruction Instr(State, Opcode);
+  const Instruction &Instr = State.getIC().getInstr(Opcode);
   auto Error = Generator.generateCodeTemplates(Instr).takeError();
   EXPECT_TRUE((bool)Error);
   llvm::consumeError(std::move(Error));
@@ -352,7 +352,7 @@ public:
   FakeSnippetGenerator(const LLVMState &State) : SnippetGenerator(State) {}
 
   Instruction createInstruction(unsigned Opcode) {
-    return Instruction(State, Opcode);
+    return State.getIC().getInstr(Opcode);
   }
 
 private:

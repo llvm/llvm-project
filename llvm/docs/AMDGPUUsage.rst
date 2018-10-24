@@ -210,6 +210,11 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                       .. TODO
                                                                          Add product
                                                                          names.
+     ``gfx909``                  ``amdgcn``   APU   - xnack           *TBA* (Raven Ridge 2)
+                                                      [on]
+                                                                      .. TODO
+                                                                         Add product
+                                                                         names.
      =========== =============== ============ ===== ========= ======= ==================
 
 .. _amdgpu-target-features:
@@ -589,6 +594,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX904``  0x02e      ``gfx904``
      ``EF_AMDGPU_MACH_AMDGCN_GFX906``  0x02f      ``gfx906``
      *reserved*                        0x030      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX909``  0x031      ``gfx909``
      ================================= ========== =============================
 
 Sections

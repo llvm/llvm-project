@@ -22,7 +22,6 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
   const MCSchedModel &SM = STI.getSchedModel();
-  unsigned Instructions = Source.size();
 
   std::string Instruction;
   raw_string_ostream InstrStream(Instruction);
@@ -32,8 +31,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
              << "[4]: MayLoad\n[5]: MayStore\n[6]: HasSideEffects (U)\n\n";
 
   TempStream << "[1]    [2]    [3]    [4]    [5]    [6]    Instructions:\n";
-  for (unsigned I = 0, E = Instructions; I < E; ++I) {
-    const MCInst &Inst = Source.getMCInstFromIndex(I);
+  for (const MCInst &Inst : Source) {
     const MCInstrDesc &MCDesc = MCII.get(Inst.getOpcode());
 
     // Obtain the scheduling class information from the instruction.

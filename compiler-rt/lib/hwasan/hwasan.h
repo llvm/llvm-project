@@ -93,6 +93,7 @@ void InstallTrapHandler();
 void InstallAtExitHandler();
 
 const char *GetStackOriginDescr(u32 id, uptr *pc);
+const char *GetStackFrameDescr(uptr pc);
 
 void EnterSymbolizer();
 void ExitSymbolizer();

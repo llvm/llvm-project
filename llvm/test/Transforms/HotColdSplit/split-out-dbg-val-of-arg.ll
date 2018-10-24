@@ -1,6 +1,6 @@
 ; RUN: opt -hotcoldsplit -S < %s | FileCheck %s
 
-; CHECK-LABEL: define {{.*}}@foo_if.end
+; CHECK-LABEL: define {{.*}}@foo.cold
 ; CHECK-NOT: llvm.dbg.value
 
 define void @foo(i32 %arg1) !dbg !6 {

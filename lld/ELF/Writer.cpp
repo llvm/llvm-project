@@ -56,6 +56,7 @@ private:
   void maybeAddThunks();
   void sortInputSections();
   void finalizeSections();
+  void checkExecuteOnly();
   void setReservedSymbolSections();
 
   std::vector<PhdrEntry *> createPhdrs();
@@ -180,7 +181,7 @@ static Defined *addOptionalRegular(StringRef Name, SectionBase *Sec,
 static Defined *addAbsolute(StringRef Name) {
   return cast<Defined>(Symtab->addDefined(Name, STV_HIDDEN, STT_NOTYPE, 0, 0,
                                           STB_GLOBAL, nullptr, nullptr));
-};
+}
 
 // The linker is expected to define some symbols depending on
 // the linking result. This function defines such symbols.
@@ -458,6 +459,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // to the string table, and add entries to .got and .plt.
   // finalizeSections does that.
   finalizeSections();
+  checkExecuteOnly();
   if (errorCount())
     return;
 
@@ -483,10 +485,9 @@ template <class ELFT> void Writer<ELFT>::run() {
 
   setPhdrs();
 
-  if (Config->Relocatable) {
+  if (Config->Relocatable)
     for (OutputSection *Sec : OutputSections)
       Sec->Addr = 0;
-  }
 
   if (Config->CheckSections)
     checkSections();
@@ -1654,15 +1655,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     if (auto *Sec = dyn_cast<OutputSection>(Base))
       OutputSections.push_back(Sec);
 
-  // Ensure data sections are not mixed with executable sections when
-  // -execute-only is used.
-  if (Config->ExecuteOnly)
-    for (OutputSection *OS : OutputSections)
-      if (OS->Flags & SHF_EXECINSTR)
-        for (InputSection *IS : getInputSections(OS))
-          if (!(IS->Flags & SHF_EXECINSTR))
-            error("-execute-only does not support intermingling data and code");
-
   // Prefer command line supplied address over other constraints.
   for (OutputSection *Sec : OutputSections) {
     auto I = Config->SectionStartMap.find(Sec->Name);
@@ -1675,9 +1667,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // particularly relevant.
   Out::ElfHeader->SectionIndex = 1;
 
-  unsigned I = 1;
-  for (OutputSection *Sec : OutputSections) {
-    Sec->SectionIndex = I++;
+  for (size_t I = 0, E = OutputSections.size(); I != E; ++I) {
+    OutputSection *Sec = OutputSections[I];
+    Sec->SectionIndex = I + 1;
     Sec->ShName = In.ShStrTab->addString(Sec->Name);
   }
 
@@ -1756,6 +1748,21 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     Sec->finalize<ELFT>();
 }
 
+// Ensure data sections are not mixed with executable sections when
+// -execute-only is used. -execute-only is a feature to make pages executable
+// but not readable, and the feature is currently supported only on AArch64.
+template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
+  if (!Config->ExecuteOnly)
+    return;
+
+  for (OutputSection *OS : OutputSections)
+    if (OS->Flags & SHF_EXECINSTR)
+      for (InputSection *IS : getInputSections(OS))
+        if (!(IS->Flags & SHF_EXECINSTR))
+          error("cannot place " + toString(IS) + " into " + toString(OS->Name) +
+                ": -execute-only does not support intermingling data and code");
+}
+
 // The linker is expected to define SECNAME_start and SECNAME_end
 // symbols for a few sections. This function defines them.
 template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
@@ -1818,7 +1825,7 @@ static bool needsPtLoad(OutputSection *Sec) {
   // Don't allocate VA space for TLS NOBITS sections. The PT_TLS PHDR is
   // responsible for allocating space for them, not the PT_LOAD that
   // contains the TLS initialization image.
-  if (Sec->Flags & SHF_TLS && Sec->Type == SHT_NOBITS)
+  if ((Sec->Flags & SHF_TLS) && Sec->Type == SHT_NOBITS)
     return false;
   return true;
 }
@@ -2014,49 +2021,48 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
   }
 }
 
-// Adjusts the file alignment for a given output section and returns
-// its new file offset. The file offset must be the same with its
-// virtual address (modulo the page size) so that the loader can load
-// executables without any address adjustment.
-static uint64_t getFileAlignment(uint64_t Off, OutputSection *Cmd) {
-  OutputSection *First = Cmd->PtLoad ? Cmd->PtLoad->FirstSec : nullptr;
-  // The first section in a PT_LOAD has to have congruent offset and address
-  // module the page size.
-  if (Cmd == First)
-    return alignTo(Off, std::max<uint64_t>(Cmd->Alignment, Config->MaxPageSize),
-                   Cmd->Addr);
-
-  // For SHT_NOBITS we don't want the alignment of the section to impact the
-  // offset of the sections that follow. Since nothing seems to care about the
-  // sh_offset of the SHT_NOBITS section itself, just ignore it.
-  if (Cmd->Type == SHT_NOBITS)
+// Compute an in-file position for a given section. The file offset must be the
+// same with its virtual address modulo the page size, so that the loader can
+// load executables without any address adjustment.
+static uint64_t computeFileOffset(OutputSection *OS, uint64_t Off) {
+  // File offsets are not significant for .bss sections. By convention, we keep
+  // section offsets monotonically increasing rather than setting to zero.
+  if (OS->Type == SHT_NOBITS)
     return Off;
 
   // If the section is not in a PT_LOAD, we just have to align it.
-  if (!Cmd->PtLoad)
-    return alignTo(Off, Cmd->Alignment);
+  if (!OS->PtLoad)
+    return alignTo(Off, OS->Alignment);
+
+  // The first section in a PT_LOAD has to have congruent offset and address
+  // module the page size.
+  OutputSection *First = OS->PtLoad->FirstSec;
+  if (OS == First) {
+    uint64_t Alignment = std::max<uint64_t>(OS->Alignment, Config->MaxPageSize);
+    return alignTo(Off, Alignment, OS->Addr);
+  }
 
   // If two sections share the same PT_LOAD the file offset is calculated
   // using this formula: Off2 = Off1 + (VA2 - VA1).
-  return First->Offset + Cmd->Addr - First->Addr;
+  return First->Offset + OS->Addr - First->Addr;
 }
 
-static uint64_t setOffset(OutputSection *Cmd, uint64_t Off) {
-  Off = getFileAlignment(Off, Cmd);
-  Cmd->Offset = Off;
+// Set an in-file position to a given section and returns the end position of
+// the section.
+static uint64_t setFileOffset(OutputSection *OS, uint64_t Off) {
+  Off = computeFileOffset(OS, Off);
+  OS->Offset = Off;
 
-  // For SHT_NOBITS we should not count the size.
-  if (Cmd->Type == SHT_NOBITS)
+  if (OS->Type == SHT_NOBITS)
     return Off;
-
-  return Off + Cmd->Size;
+  return Off + OS->Size;
 }
 
 template <class ELFT> void Writer<ELFT>::assignFileOffsetsBinary() {
   uint64_t Off = 0;
   for (OutputSection *Sec : OutputSections)
     if (Sec->Flags & SHF_ALLOC)
-      Off = setOffset(Sec, Off);
+      Off = setFileOffset(Sec, Off);
   FileSize = alignTo(Off, Config->Wordsize);
 }
 
@@ -2067,8 +2073,8 @@ static std::string rangeToString(uint64_t Addr, uint64_t Len) {
 // Assign file offsets to output sections.
 template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
   uint64_t Off = 0;
-  Off = setOffset(Out::ElfHeader, Off);
-  Off = setOffset(Out::ProgramHeaders, Off);
+  Off = setFileOffset(Out::ElfHeader, Off);
+  Off = setFileOffset(Out::ProgramHeaders, Off);
 
   PhdrEntry *LastRX = nullptr;
   for (PhdrEntry *P : Phdrs)
@@ -2076,7 +2082,7 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
       LastRX = P;
 
   for (OutputSection *Sec : OutputSections) {
-    Off = setOffset(Sec, Off);
+    Off = setFileOffset(Sec, Off);
     if (Script->HasSectionsCommand)
       continue;
     // If this is a last section of the last executable segment and that

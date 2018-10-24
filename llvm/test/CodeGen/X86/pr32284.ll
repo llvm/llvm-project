@@ -10,13 +10,12 @@ define void @foo() {
 ; X86-O0-LABEL: foo:
 ; X86-O0:       # %bb.0: # %entry
 ; X86-O0-NEXT:    xorl %eax, %eax
-; X86-O0-NEXT:    movl %eax, %ecx
-; X86-O0-NEXT:    xorl %eax, %eax
+; X86-O0-NEXT:    xorl %ecx, %ecx
 ; X86-O0-NEXT:    movzbl c, %edx
-; X86-O0-NEXT:    subl %edx, %eax
-; X86-O0-NEXT:    movslq %eax, %rsi
-; X86-O0-NEXT:    subq %rsi, %rcx
-; X86-O0-NEXT:    movb %cl, %dil
+; X86-O0-NEXT:    subl %edx, %ecx
+; X86-O0-NEXT:    movslq %ecx, %rsi
+; X86-O0-NEXT:    subq %rsi, %rax
+; X86-O0-NEXT:    movb %al, %dil
 ; X86-O0-NEXT:    cmpb $0, %dil
 ; X86-O0-NEXT:    setne %dil
 ; X86-O0-NEXT:    andb $1, %dil
@@ -26,13 +25,13 @@ define void @foo() {
 ; X86-O0-NEXT:    xorb $-1, %dil
 ; X86-O0-NEXT:    xorb $-1, %dil
 ; X86-O0-NEXT:    andb $1, %dil
-; X86-O0-NEXT:    movzbl %dil, %eax
+; X86-O0-NEXT:    movzbl %dil, %ecx
 ; X86-O0-NEXT:    movzbl c, %edx
-; X86-O0-NEXT:    cmpl %edx, %eax
+; X86-O0-NEXT:    cmpl %edx, %ecx
 ; X86-O0-NEXT:    setle %dil
 ; X86-O0-NEXT:    andb $1, %dil
-; X86-O0-NEXT:    movzbl %dil, %eax
-; X86-O0-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
+; X86-O0-NEXT:    movzbl %dil, %ecx
+; X86-O0-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
 ; X86-O0-NEXT:    retq
 ;
 ; X64-LABEL: foo:

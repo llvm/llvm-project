@@ -41,8 +41,7 @@ define float @caller(i8* %error_ref) {
 ; CHECK-APPLE: callq {{.*}}free
 
 ; CHECK-O0-LABEL: caller:
-; CHECK-O0: xorl
-; CHECK-O0: movl %{{.*}}, %r12d
+; CHECK-O0: xorl %r12d, %r12d
 ; CHECK-O0: callq {{.*}}foo
 ; CHECK-O0: jne
 entry:
@@ -78,8 +77,7 @@ define float @caller2(i8* %error_ref) {
 ; CHECK-APPLE: callq {{.*}}free
 
 ; CHECK-O0-LABEL: caller2:
-; CHECK-O0: xorl
-; CHECK-O0: movl %{{.*}}, %r12d
+; CHECK-O0: xorl %r12d, %r12d
 ; CHECK-O0: callq {{.*}}foo
 ; CHECK-O0: movq %r12, [[ID:%[a-z]+]]
 ; CHECK-O0: cmpq $0, %r12
@@ -254,8 +252,7 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-APPLE: callq {{.*}}free
 
 ; CHECK-O0-LABEL: caller3:
-; CHECK-O0: xorl
-; CHECK-O0: movl {{.*}}, %r12d
+; CHECK-O0: xorl %r12d, %r12d
 ; CHECK-O0: movl $1, %esi
 ; CHECK-O0: movq {{.*}}, %rdi
 ; CHECK-O0: callq {{.*}}foo_sret
@@ -313,14 +310,12 @@ define float @caller_with_multiple_swifterror_values(i8* %error_ref, i8* %error_
 ; CHECK-O0-LABEL: caller_with_multiple_swifterror_values:
 
 ; The first swifterror value:
-; CHECK-O0: xorl
-; CHECK-O0: movl %{{.*}}, %r12d
+; CHECK-O0: xorl %r12d, %r12d
 ; CHECK-O0: callq {{.*}}foo
 ; CHECK-O0: jne
 
 ; The second swifterror value:
-; CHECK-O0: xorl
-; CHECK-O0: movl %{{.*}}, %r12d
+; CHECK-O0: xorl %r12d, %r12d
 ; CHECK-O0: callq {{.*}}foo
 ; CHECK-O0: jne
 entry:
@@ -715,8 +710,7 @@ declare swiftcc void @foo2(%swift_error** swifterror)
 ; Make sure we properly assign registers during fast-isel.
 ; CHECK-O0-LABEL: testAssign
 ; CHECK-O0:        pushq   %r12
-; CHECK-O0:        xorl    [[ZERO:%[a-z0-9]+]], [[ZERO]]
-; CHECK-O0:        movl    [[ZERO]], %r12d
+; CHECK-O0:        xorl    %r12d, %r12d
 ; CHECK-O0:        callq   _foo2
 ; CHECK-O0:        movq    %r12, [[SLOT:[-a-z0-9\(\)\%]*]]
 ;
@@ -792,8 +786,7 @@ a:
 
 ; CHECK-O0-LABEL: testAssign4
 ; CHECK-O0:        callq   _foo2
-; CHECK-O0:        xorl    %ecx, %ecx
-; CHECK-O0:        movl    %ecx, %eax
+; CHECK-O0:        xorl    %eax, %eax
 ; CHECK-O0:        movq    %rax, [[SLOT:[-a-z0-9\(\)\%]*]]
 ; CHECK-O0:        movq    [[SLOT]], %rax
 ; CHECK-O0:        movq    %rax, [[SLOT2:[-a-z0-9\(\)\%]*]]

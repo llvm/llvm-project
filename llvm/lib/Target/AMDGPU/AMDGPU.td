@@ -553,6 +553,13 @@ def FeatureISAVersion9_0_6 : SubtargetFeatureISAVersion <9,0,6,
    FeatureLDSBankCount32,
    FeatureDLInsts]>;
 
+def FeatureISAVersion9_0_9 : SubtargetFeatureISAVersion <9,0,9,
+  [FeatureGFX9,
+   FeatureMadMixInsts,
+   FeatureLDSBankCount32,
+   FeatureXNACK,
+   FeatureD16PreservesUnusedBits]>;
+
 //===----------------------------------------------------------------------===//
 // Debugger related subtarget features.
 //===----------------------------------------------------------------------===//

@@ -4734,46 +4734,52 @@ define <4 x i64> @test_pmovzxwq(<8 x i16> %a0, <8 x i16> *%a1) {
   ret <4 x i64> %6
 }
 
-define <4 x i64> @test_pmuldq(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
+define <4 x i64> @test_pmuldq(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32> *%a3) {
 ; GENERIC-LABEL: test_pmuldq:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; GENERIC-NEXT:    vpmuldq (%rdi), %ymm0, %ymm0 # sched: [12:1.00]
+; GENERIC-NEXT:    vpmuldq (%rdi), %ymm2, %ymm1 # sched: [12:1.00]
+; GENERIC-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmuldq:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    vpmuldq (%rdi), %ymm0, %ymm0 # sched: [12:1.00]
+; HASWELL-NEXT:    vpmuldq (%rdi), %ymm2, %ymm1 # sched: [12:1.00]
+; HASWELL-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_pmuldq:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; BROADWELL-NEXT:    vpmuldq (%rdi), %ymm0, %ymm0 # sched: [11:1.00]
+; BROADWELL-NEXT:    vpmuldq (%rdi), %ymm2, %ymm1 # sched: [11:1.00]
+; BROADWELL-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_pmuldq:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
-; SKYLAKE-NEXT:    vpmuldq (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
+; SKYLAKE-NEXT:    vpmuldq (%rdi), %ymm2, %ymm1 # sched: [11:0.50]
+; SKYLAKE-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_pmuldq:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0 # sched: [4:0.50]
-; SKX-NEXT:    vpmuldq (%rdi), %ymm0, %ymm0 # sched: [11:0.50]
+; SKX-NEXT:    vpmuldq (%rdi), %ymm2, %ymm1 # sched: [11:0.50]
+; SKX-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_pmuldq:
 ; ZNVER1:       # %bb.0:
+; ZNVER1-NEXT:    vpmuldq (%rdi), %ymm2, %ymm2 # sched: [11:1.00]
 ; ZNVER1-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0 # sched: [4:1.00]
-; ZNVER1-NEXT:    vpmuldq (%rdi), %ymm0, %ymm0 # sched: [11:1.00]
+; ZNVER1-NEXT:    vpor %ymm2, %ymm0, %ymm0 # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <4 x i64> @llvm.x86.avx2.pmul.dq(<8 x i32> %a0, <8 x i32> %a1)
-  %2 = bitcast <4 x i64> %1 to <8 x i32>
-  %3 = load <8 x i32>, <8 x i32> *%a2, align 32
-  %4 = call <4 x i64> @llvm.x86.avx2.pmul.dq(<8 x i32> %2, <8 x i32> %3)
+  %2 = load <8 x i32>, <8 x i32> *%a3, align 32
+  %3 = call <4 x i64> @llvm.x86.avx2.pmul.dq(<8 x i32> %a2, <8 x i32> %2)
+  %4 = or <4 x i64> %1, %3
   ret <4 x i64> %4
 }
 declare <4 x i64> @llvm.x86.avx2.pmul.dq(<8 x i32>, <8 x i32>) nounwind readnone

@@ -585,17 +585,6 @@ public:
 
   Optional<QualType> getDeducedType() { return DeducedType; }
 
-  // Remove the surrounding Reference or Pointer type of the given type T.
-  QualType UnwrapReferenceOrPointer(QualType T) {
-    // "auto &" is represented as a ReferenceType containing an AutoType
-    if (const ReferenceType *RT = dyn_cast<ReferenceType>(T.getTypePtr()))
-      return RT->getPointeeType();
-    // "auto *" is represented as a PointerType containing an AutoType
-    if (const PointerType *PT = dyn_cast<PointerType>(T.getTypePtr()))
-      return PT->getPointeeType();
-    return T;
-  }
-
   // Handle auto initializers:
   //- auto i = 1;
   //- decltype(auto) i = 1;
@@ -606,17 +595,9 @@ public:
         D->getTypeSourceInfo()->getTypeLoc().getBeginLoc() != SearchedLocation)
       return true;
 
-    auto DeclT = UnwrapReferenceOrPointer(D->getType());
-    const AutoType *AT = dyn_cast<AutoType>(DeclT.getTypePtr());
-    if (AT && !AT->getDeducedType().isNull()) {
-      // For auto, use the underlying type because the const& would be
-      // represented twice: written in the code and in the hover.
-      // Example: "const auto I = 1", we only want "int" when hovering on auto,
-      // not "const int".
-      //
-      // For decltype(auto), take the type as is because it cannot be written
-      // with qualifiers or references but its decuded type can be const-ref.
-      DeducedType = AT->isDecltypeAuto() ? DeclT : DeclT.getUnqualifiedType();
+    if (auto *AT = D->getType()->getContainedAutoType()) {
+      if (!AT->getDeducedType().isNull())
+        DeducedType = AT->getDeducedType();
     }
     return true;
   }
@@ -640,12 +621,13 @@ public:
     if (CurLoc != SearchedLocation)
       return true;
 
-    auto T = UnwrapReferenceOrPointer(D->getReturnType());
-    const AutoType *AT = dyn_cast<AutoType>(T.getTypePtr());
+    const AutoType *AT = D->getReturnType()->getContainedAutoType();
     if (AT && !AT->getDeducedType().isNull()) {
-      DeducedType = T.getUnqualifiedType();
-    } else { // auto in a trailing return type just points to a DecltypeType.
-      const DecltypeType *DT = dyn_cast<DecltypeType>(T.getTypePtr());
+      DeducedType = AT->getDeducedType();
+    } else {
+      // auto in a trailing return type just points to a DecltypeType and
+      // getContainedAutoType does not unwrap it.
+      const DecltypeType *DT = dyn_cast<DecltypeType>(D->getReturnType());
       if (!DT->getUnderlyingType().isNull())
         DeducedType = DT->getUnderlyingType();
     }

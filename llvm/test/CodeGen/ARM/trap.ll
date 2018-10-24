@@ -59,25 +59,25 @@ entry:
 define void @t2() nounwind {
 entry:
 ; DARWIN-LABEL: t2:
-; DARWIN: trap
+; DARWIN: udf #254
 
 ; FUNC-LABEL: t2:
 ; FUNC: bl __trap
 
 ; NACL-LABEL: t2:
-; NACL: .inst 0xe7fedef0
+; NACL: bkpt #0
 
 ; ARM-LABEL: t2:
-; ARM: .inst 0xe7ffdefe
+; ARM: bkpt #0
 
 ; THUMB-LABEL: t2:
-; THUMB: .inst.n 0xdefe
+; THUMB: bkpt #0
 
-; ENCODING-NACL: f0 de fe e7 trap
+; ENCODING-NACL: 70 00 20 e1 bkpt #0
 
-; ENCODING-ARM: fe de ff e7 trap
+; ENCODING-ARM: 70 00 20 e1 bkpt #0
 
-; ENCODING-THUMB: fe de trap
+; ENCODING-THUMB: 00 be bkpt #0
 
   call void @llvm.debugtrap()
   unreachable

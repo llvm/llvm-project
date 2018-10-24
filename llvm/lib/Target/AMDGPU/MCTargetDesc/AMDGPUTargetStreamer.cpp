@@ -83,6 +83,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX902: AK = GK_GFX902;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX904: AK = GK_GFX904;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX906: AK = GK_GFX906;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX909: AK = GK_GFX909;  break;
   case ELF::EF_AMDGPU_MACH_NONE:          AK = GK_NONE;    break;
   }
 
@@ -129,6 +130,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX902:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX902;
   case GK_GFX904:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX904;
   case GK_GFX906:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX906;
+  case GK_GFX909:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX909;
   case GK_NONE:    return ELF::EF_AMDGPU_MACH_NONE;
   }
 

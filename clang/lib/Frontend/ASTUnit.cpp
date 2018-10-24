@@ -282,7 +282,7 @@ void ASTUnit::enableSourceFileDiagnostics() {
 
 /// Determine the set of code-completion contexts in which this
 /// declaration should be shown.
-static unsigned getDeclShowContexts(const NamedDecl *ND,
+static uint64_t getDeclShowContexts(const NamedDecl *ND,
                                     const LangOptions &LangOpts,
                                     bool &IsNestedNameSpecifier) {
   IsNestedNameSpecifier = false;
@@ -436,14 +436,15 @@ void ASTUnit::CacheCodeCompletionResults() {
           | (1LL << CodeCompletionContext::CCC_UnionTag)
           | (1LL << CodeCompletionContext::CCC_ClassOrStructTag)
           | (1LL << CodeCompletionContext::CCC_Type)
-          | (1LL << CodeCompletionContext::CCC_PotentiallyQualifiedName)
+          | (1LL << CodeCompletionContext::CCC_Symbol)
+          | (1LL << CodeCompletionContext::CCC_SymbolOrNewName)
           | (1LL << CodeCompletionContext::CCC_ParenthesizedExpression);
 
         if (isa<NamespaceDecl>(R.Declaration) ||
             isa<NamespaceAliasDecl>(R.Declaration))
           NNSContexts |= (1LL << CodeCompletionContext::CCC_Namespace);
 
-        if (unsigned RemainingContexts
+        if (uint64_t RemainingContexts
                                 = NNSContexts & ~CachedResult.ShowInContexts) {
           // If there any contexts where this completion can be a
           // nested-name-specifier but isn't already an option, create a
@@ -1951,8 +1952,8 @@ static void CalculateHiddenNames(const CodeCompletionContext &Context,
   case CodeCompletionContext::CCC_ObjCPropertyAccess:
   case CodeCompletionContext::CCC_Namespace:
   case CodeCompletionContext::CCC_Type:
-  case CodeCompletionContext::CCC_Name:
-  case CodeCompletionContext::CCC_PotentiallyQualifiedName:
+  case CodeCompletionContext::CCC_Symbol:
+  case CodeCompletionContext::CCC_SymbolOrNewName:
   case CodeCompletionContext::CCC_ParenthesizedExpression:
   case CodeCompletionContext::CCC_ObjCInterfaceName:
     break;
@@ -1977,6 +1978,7 @@ static void CalculateHiddenNames(const CodeCompletionContext &Context,
   case CodeCompletionContext::CCC_ObjCClassMessage:
   case CodeCompletionContext::CCC_ObjCCategoryName:
   case CodeCompletionContext::CCC_IncludedFile:
+  case CodeCompletionContext::CCC_NewName:
     // We're looking for nothing, or we're looking for names that cannot
     // be hidden.
     return;

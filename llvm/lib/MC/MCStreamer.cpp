@@ -72,6 +72,18 @@ void MCTargetStreamer::emitValue(const MCExpr *Value) {
   Streamer.EmitRawText(OS.str());
 }
 
+void MCTargetStreamer::emitRawBytes(StringRef Data) {
+  const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
+  const char *Directive = MAI->getData8bitsDirective();
+  for (const unsigned char C : Data.bytes()) {
+    SmallString<128> Str;
+    raw_svector_ostream OS(Str);
+
+    OS << Directive << (unsigned)C;
+    Streamer.EmitRawText(OS.str());
+  }
+}
+
 void MCTargetStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {}
 
 MCStreamer::MCStreamer(MCContext &Ctx)

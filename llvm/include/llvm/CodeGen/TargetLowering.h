@@ -2916,10 +2916,21 @@ public:
   /// elements, returning true on success. Otherwise, analyze the expression and
   /// return a mask of KnownUndef and KnownZero elements for the expression
   /// (used to simplify the caller). The KnownUndef/Zero elements may only be
-  /// accurate for those bits in the DemandedMask
+  /// accurate for those bits in the DemandedMask.
   virtual bool SimplifyDemandedVectorEltsForTargetNode(
       SDValue Op, const APInt &DemandedElts, APInt &KnownUndef,
       APInt &KnownZero, TargetLoweringOpt &TLO, unsigned Depth = 0) const;
+
+  /// Attempt to simplify any target nodes based on the demanded bits,
+  /// returning true on success. Otherwise, analyze the
+  /// expression and return a mask of KnownOne and KnownZero bits for the
+  /// expression (used to simplify the caller).  The KnownZero/One bits may only
+  /// be accurate for those bits in the DemandedMask.
+  virtual bool SimplifyDemandedBitsForTargetNode(SDValue Op,
+                                                 const APInt &DemandedBits,
+                                                 KnownBits &Known,
+                                                 TargetLoweringOpt &TLO,
+                                                 unsigned Depth = 0) const;
 
   /// If \p SNaN is false, \returns true if \p Op is known to never be any
   /// NaN. If \p sNaN is true, returns if \p Op is known to never be a signaling
