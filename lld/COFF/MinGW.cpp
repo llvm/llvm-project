@@ -84,6 +84,7 @@ AutoExporter::AutoExporter() {
       "libsupc++",
       "libobjc",
       "libgcj",
+      "libclang_rt.builtins",
       "libclang_rt.builtins-aarch64",
       "libclang_rt.builtins-arm",
       "libclang_rt.builtins-i386",
