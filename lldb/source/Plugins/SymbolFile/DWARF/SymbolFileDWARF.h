@@ -53,7 +53,8 @@ class DWARFDebugAranges;
 class DWARFDebugInfo;
 class DWARFDebugInfoEntry;
 class DWARFDebugLine;
-class DWARFDebugRangesBase;
+class DWARFDebugRanges;
+class DWARFDebugRngLists;
 class DWARFDeclContext;
 class DWARFDIECollection;
 class DWARFFormValue;
@@ -265,9 +266,9 @@ public:
 
   const DWARFDebugInfo *DebugInfo() const;
 
-  DWARFDebugRangesBase *DebugRanges();
+  DWARFDebugRanges *DebugRanges();
 
-  const DWARFDebugRangesBase *DebugRanges() const;
+  const DWARFDebugRanges *DebugRanges() const;
 
   const lldb_private::DWARFDataExtractor &DebugLocData();
 
@@ -511,7 +512,7 @@ protected:
   typedef std::shared_ptr<std::set<DIERef>> DIERefSetSP;
   typedef std::unordered_map<std::string, DIERefSetSP> NameToOffsetMap;
   NameToOffsetMap m_function_scope_qualified_name_map;
-  std::unique_ptr<DWARFDebugRangesBase> m_ranges;
+  std::unique_ptr<DWARFDebugRanges> m_ranges;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
   DIEToTypePtr m_die_to_type;
   DIEToVariableSP m_die_to_variable_sp;
