@@ -24,7 +24,7 @@
 namespace mca {
 
 class FetchStage final : public Stage {
-  std::unique_ptr<Instruction> CurrentInstruction;
+  InstRef CurrentInstruction;
   using InstMap = std::map<unsigned, std::unique_ptr<Instruction>>;
   InstMap Instructions;
   InstrBuilder &IB;

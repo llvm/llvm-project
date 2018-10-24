@@ -215,9 +215,8 @@ Error InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
   }
 
   if (CurrentDef != NumExplicitDefs) {
-    return make_error<StringError>(
-        "error: Expected more register operand definitions.",
-        inconvertibleErrorCode());
+    return make_error<InstructionError<MCInst>>(
+        "Expected more register operand definitions.", MCI);
   }
 
   CurrentDef = 0;
@@ -253,11 +252,12 @@ Error InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
     // Always assume that the optional definition is the last operand of the
     // MCInst sequence.
     const MCOperand &Op = MCI.getOperand(MCI.getNumOperands() - 1);
-    if (i == MCI.getNumOperands() || !Op.isReg())
-      return make_error<StringError>(
-          "error: expected a register operand for an optional "
-          "definition. Instruction has not be correctly analyzed.",
-          inconvertibleErrorCode());
+    if (i == MCI.getNumOperands() || !Op.isReg()) {
+      std::string Message =
+          "expected a register operand for an optional definition. Instruction "
+          "has not been correctly analyzed.";
+      return make_error<InstructionError<MCInst>>(Message, MCI);
+    }
 
     WriteDescriptor &Write = ID.Writes[TotalDefs - 1];
     Write.OpIndex = MCI.getNumOperands() - 1;
@@ -284,9 +284,8 @@ Error InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
   }
 
   if (NumExplicitDefs) {
-    return make_error<StringError>(
-        "error: Expected more register operand definitions. ",
-        inconvertibleErrorCode());
+    return make_error<InstructionError<MCInst>>(
+        "Expected more register operand definitions.", MCI);
   }
 
   unsigned NumExplicitUses = MCI.getNumOperands() - i;
@@ -332,23 +331,18 @@ Error InstrBuilder::verifyInstrDesc(const InstrDesc &ID,
   if (!UsesMemory && !UsesBuffers && !UsesResources)
     return ErrorSuccess();
 
-  std::string ToString;
-  raw_string_ostream OS(ToString);
+  StringRef Message;
   if (UsesMemory) {
-    WithColor::error() << "found an inconsistent instruction that decodes "
-                       << "into zero opcodes and that consumes load/store "
-                       << "unit resources.\n";
+    Message = "found an inconsistent instruction that decodes "
+              "into zero opcodes and that consumes load/store "
+              "unit resources.";
   } else {
-    WithColor::error() << "found an inconsistent instruction that decodes"
-                       << " to zero opcodes and that consumes scheduler "
-                       << "resources.\n";
+    Message = "found an inconsistent instruction that decodes "
+              "to zero opcodes and that consumes scheduler "
+              "resources.";
   }
 
-  MCIP.printInst(&MCI, OS, "", STI);
-  OS.flush();
-  WithColor::note() << "instruction: " << ToString << '\n';
-  return make_error<StringError>("Invalid instruction definition found",
-                                 inconvertibleErrorCode());
+  return make_error<InstructionError<MCInst>>(Message, MCI);
 }
 
 Expected<const InstrDesc &>
@@ -371,24 +365,17 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
       SchedClassID = STI.resolveVariantSchedClass(SchedClassID, &MCI, CPUID);
 
     if (!SchedClassID) {
-      return make_error<StringError>("unable to resolve this variant class.",
-                                     inconvertibleErrorCode());
+      return make_error<InstructionError<MCInst>>(
+          "unable to resolve scheduling class for write variant.", MCI);
     }
   }
 
   // Check if this instruction is supported. Otherwise, report an error.
   const MCSchedClassDesc &SCDesc = *SM.getSchedClassDesc(SchedClassID);
   if (SCDesc.NumMicroOps == MCSchedClassDesc::InvalidNumMicroOps) {
-    std::string ToString;
-    raw_string_ostream OS(ToString);
-    WithColor::error() << "found an unsupported instruction in the input"
-                       << " assembly sequence.\n";
-    MCIP.printInst(&MCI, OS, "", STI);
-    OS.flush();
-    WithColor::note() << "instruction: " << ToString << '\n';
-    return make_error<StringError>(
-        "Don't know how to analyze unsupported instructions",
-        inconvertibleErrorCode());
+    return make_error<InstructionError<MCInst>>(
+        "found an unsupported instruction in the input assembly sequence.",
+        MCI);
   }
 
   // Create a new empty descriptor.

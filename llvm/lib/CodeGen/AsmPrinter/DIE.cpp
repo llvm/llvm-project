@@ -589,8 +589,7 @@ void DIEString::print(raw_ostream &O) const {
 //===----------------------------------------------------------------------===//
 void DIEInlineString::EmitValue(const AsmPrinter *AP, dwarf::Form Form) const {
   if (Form == dwarf::DW_FORM_string) {
-    for (char ch : S)
-      AP->emitInt8(ch);
+    AP->OutStreamer->EmitBytes(S);
     AP->emitInt8(0);
     return;
   }

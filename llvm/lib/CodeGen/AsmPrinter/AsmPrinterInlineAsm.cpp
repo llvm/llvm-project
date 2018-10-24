@@ -156,9 +156,10 @@ void AsmPrinter::EmitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   Parser->setAssemblerDialect(Dialect);
   Parser->setTargetParser(*TAP.get());
   Parser->setEnablePrintSchedInfo(EnablePrintSchedInfo);
+  // Enable lexing Masm binary and hex integer literals in intel inline
+  // assembly.
   if (Dialect == InlineAsm::AD_Intel)
-    // We need this flag to be able to parse numbers like "0bH"
-    Parser->setParsingInlineAsm(true);
+    Parser->getLexer().setLexMasmIntegers(true);
   if (MF) {
     const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
     TAP->SetFrameRegister(TRI->getFrameRegister(*MF));

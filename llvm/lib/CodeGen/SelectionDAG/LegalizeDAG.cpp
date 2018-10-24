@@ -2399,24 +2399,25 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
     // For unsigned conversions, convert them to signed conversions using the
     // algorithm from the x86_64 __floatundidf in compiler_rt.
     if (!isSigned) {
-      SDValue Fast = DAG.getNode(ISD::SINT_TO_FP, dl, MVT::f32, Op0);
+      SDValue Fast = DAG.getNode(ISD::SINT_TO_FP, dl, DestVT, Op0);
 
       SDValue ShiftConst = DAG.getConstant(1, dl, ShiftVT);
-      SDValue Shr = DAG.getNode(ISD::SRL, dl, MVT::i64, Op0, ShiftConst);
-      SDValue AndConst = DAG.getConstant(1, dl, MVT::i64);
-      SDValue And = DAG.getNode(ISD::AND, dl, MVT::i64, Op0, AndConst);
-      SDValue Or = DAG.getNode(ISD::OR, dl, MVT::i64, And, Shr);
+      SDValue Shr = DAG.getNode(ISD::SRL, dl, SrcVT, Op0, ShiftConst);
+      SDValue AndConst = DAG.getConstant(1, dl, SrcVT);
+      SDValue And = DAG.getNode(ISD::AND, dl, SrcVT, Op0, AndConst);
+      SDValue Or = DAG.getNode(ISD::OR, dl, SrcVT, And, Shr);
 
-      SDValue SignCvt = DAG.getNode(ISD::SINT_TO_FP, dl, MVT::f32, Or);
-      SDValue Slow = DAG.getNode(ISD::FADD, dl, MVT::f32, SignCvt, SignCvt);
+      SDValue SignCvt = DAG.getNode(ISD::SINT_TO_FP, dl, DestVT, Or);
+      SDValue Slow = DAG.getNode(ISD::FADD, dl, DestVT, SignCvt, SignCvt);
 
       // TODO: This really should be implemented using a branch rather than a
       // select.  We happen to get lucky and machinesink does the right
       // thing most of the time.  This would be a good candidate for a
-      //pseudo-op, or, even better, for whole-function isel.
-      SDValue SignBitTest = DAG.getSetCC(dl, getSetCCResultType(MVT::i64),
-        Op0, DAG.getConstant(0, dl, MVT::i64), ISD::SETLT);
-      return DAG.getSelect(dl, MVT::f32, SignBitTest, Slow, Fast);
+      // pseudo-op, or, even better, for whole-function isel.
+      SDValue SignBitTest =
+          DAG.getSetCC(dl, getSetCCResultType(SrcVT), Op0,
+                       DAG.getConstant(0, dl, SrcVT), ISD::SETLT);
+      return DAG.getSelect(dl, DestVT, SignBitTest, Slow, Fast);
     }
 
     // Otherwise, implement the fully general conversion.

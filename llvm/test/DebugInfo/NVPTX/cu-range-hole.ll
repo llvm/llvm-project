@@ -148,75 +148,15 @@ entry:
 ; CHECK: // .b32 .debug_abbrev                   // Offset Into Abbrev. Section
 ; CHECK: // .b8 8                                // Address Size (in bytes)
 ; CHECK: // .b8 1                                // Abbrev [1] 0xb:0xb0 DW_TAG_compile_unit
-; CHECK: // .b8 99                               // DW_AT_producer
-; CHECK: // .b8 108
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 103
-; CHECK: // .b8 32
-; CHECK: // .b8 118
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 111
-; CHECK: // .b8 110
-; CHECK: // .b8 32
-; CHECK: // .b8 51
-; CHECK: // .b8 46
-; CHECK: // .b8 53
-; CHECK: // .b8 46
-; CHECK: // .b8 48
-; CHECK: // .b8 32
-; CHECK: // .b8 40
-; CHECK: // .b8 116
-; CHECK: // .b8 114
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 107
-; CHECK: // .b8 32
-; CHECK: // .b8 50
-; CHECK: // .b8 48
-; CHECK: // .b8 52
-; CHECK: // .b8 49
-; CHECK: // .b8 54
-; CHECK: // .b8 52
-; CHECK: // .b8 41
-; CHECK: // .b8 32
-; CHECK: // .b8 40
-; CHECK: // .b8 108
-; CHECK: // .b8 108
-; CHECK: // .b8 118
-; CHECK: // .b8 109
-; CHECK: // .b8 47
-; CHECK: // .b8 116
-; CHECK: // .b8 114
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 107
-; CHECK: // .b8 32
-; CHECK: // .b8 50
-; CHECK: // .b8 48
-; CHECK: // .b8 52
-; CHECK: // .b8 49
-; CHECK: // .b8 56
-; CHECK: // .b8 51
-; CHECK: // .b8 41
+; CHECK: // .b8 99,108,97,110,103,32,118,101,114,115,105,111,110,32,51,46,53,46,48,32,40,116,114,117,110,107,32,50,48,52,49,54,52,41,32,40,108,108,118,109 // DW_AT_producer
+; CHECK: // .b8 47,116,114,117,110,107,32,50,48,52,49,56,51,41
 ; CHECK: // .b8 0
 ; CHECK: // .b8 12                               // DW_AT_language
 ; CHECK: // .b8 0
-; CHECK: // .b8 98                               // DW_AT_name
-; CHECK: // .b8 46
-; CHECK: // .b8 99
+; CHECK: // .b8 98,46,99                         // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b32 .debug_line                     // DW_AT_stmt_list
-; CHECK: // .b8 47                               // DW_AT_comp_dir
-; CHECK: // .b8 115
-; CHECK: // .b8 111
-; CHECK: // .b8 117
-; CHECK: // .b8 114
-; CHECK: // .b8 99
-; CHECK: // .b8 101
+; CHECK: // .b8 47,115,111,117,114,99,101        // DW_AT_comp_dir
 ; CHECK: // .b8 0
 ; CHECK: // .b64 Lfunc_begin0                    // DW_AT_low_pc
 ; CHECK: // .b64 Lfunc_end2                      // DW_AT_high_pc
@@ -259,9 +199,7 @@ entry:
 ; CHECK: // .b32 179                             // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 4                                // Abbrev [4] 0xb3:0x7 DW_TAG_base_type
-; CHECK: // .b8 105                              // DW_AT_name
-; CHECK: // .b8 110
-; CHECK: // .b8 116
+; CHECK: // .b8 105,110,116                      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 5                                // DW_AT_encoding
 ; CHECK: // .b8 4                                // DW_AT_byte_size

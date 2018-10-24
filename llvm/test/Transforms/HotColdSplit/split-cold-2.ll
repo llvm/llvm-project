@@ -4,10 +4,10 @@
 ; Make sure this compiles. This test used to fail with an invalid phi node: the
 ; two predecessors were outlined and the SSA representation was invalid.
 
-; CHECK: remark: <unknown>:0:0: fun split cold code into fun_if.else
+; CHECK: remark: <unknown>:0:0: fun split cold code into fun.cold.1
 ; CHECK-LABEL: @fun
 ; CHECK: codeRepl:
-; CHECK-NEXT: call void @fun_if.else
+; CHECK-NEXT: call void @fun.cold.1
 
 define void @fun() {
 entry:

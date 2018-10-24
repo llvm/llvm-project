@@ -22,7 +22,6 @@ namespace mca {
 using namespace llvm;
 
 Error InstructionTables::execute(InstRef &IR) {
-  ArrayRef<uint64_t> Masks = IB.getProcResourceMasks();
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
   UsedResources.clear();
 

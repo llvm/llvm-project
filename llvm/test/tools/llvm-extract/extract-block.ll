@@ -12,7 +12,7 @@ bb:
   ret void
 }
 
-; CHECK: @foo_bb4
+; CHECK: @foo.bb4
 ; CHECK: call void @bar()
 ; CHECK: %tmp5
 define i32 @foo(i32 %arg) {

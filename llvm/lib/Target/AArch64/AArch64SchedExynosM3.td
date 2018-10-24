@@ -26,9 +26,6 @@ def ExynosM3Model : SchedMachineModel {
   let CompleteModel         =   1; // Use the default model otherwise.
 
   list<Predicate> UnsupportedFeatures = [HasSVE];
-
-  // FIXME: Remove when all errors have been fixed.
-  let FullInstRWOverlapCheck = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -109,15 +106,16 @@ def M3UnitNSHF : ProcResGroup<[M3UnitNSHF0,
 //===----------------------------------------------------------------------===//
 // Predicates.
 
-def M3BranchLinkFastPred  : SchedPredicate<[{MI->getOpcode() == AArch64::BLR &&
-                                             MI->getOperand(0).isReg() &&
-                                             MI->getOperand(0).getReg() != AArch64::LR}]>;
-def M3ResetFastPred       : SchedPredicate<[{TII->isExynosResetFast(*MI)}]>;
-def M3RotateRightFastPred : SchedPredicate<[{(MI->getOpcode() == AArch64::EXTRWrri ||
-                                              MI->getOpcode() == AArch64::EXTRXrri) &&
-                                             MI->getOperand(1).isReg() && MI->getOperand(2).isReg() &&
-                                             MI->getOperand(1).getReg() == MI->getOperand(2).getReg()}]>;
-def M3ShiftLeftFastPred   : SchedPredicate<[{TII->isExynosShiftLeftFast(*MI)}]>;
+def M3BranchLinkPred : SchedPredicate<[{MI->getOpcode() == AArch64::BLR &&
+                                        MI->getOperand(0).isReg() &&
+                                        MI->getOperand(0).getReg() != AArch64::LR}]>;
+def M3ResetPred      : SchedPredicate<[{TII->isExynosResetFast(*MI)}]>;
+def M3RotatePred     : SchedPredicate<[{(MI->getOpcode() == AArch64::EXTRWrri ||
+                                         MI->getOpcode() == AArch64::EXTRXrri) &&
+                                        MI->getOperand(1).isReg() && MI->getOperand(2).isReg() &&
+                                        MI->getOperand(1).getReg() == MI->getOperand(2).getReg()}]>;
+def M3LdStExtPred    : SchedPredicate<[{TII->isExynosLdStExtFast(*MI)}]>;
+def M3ShiftExtPred   : SchedPredicate<[{TII->isExynosShiftExtFast(*MI)}]>;
 
 //===----------------------------------------------------------------------===//
 // Coarse scheduling model.
@@ -140,15 +138,15 @@ def M3WriteAD : SchedWriteRes<[M3UnitALU,
                                              let NumMicroOps = 2; }
 def M3WriteC1 : SchedWriteRes<[M3UnitC]>   { let Latency = 1; }
 def M3WriteC2 : SchedWriteRes<[M3UnitC]>   { let Latency = 2; }
-def M3WriteAX : SchedWriteVariant<[SchedVar<M3ResetFastPred,     [M3WriteZ0]>,
-                                   SchedVar<M3ShiftLeftFastPred, [M3WriteA1]>,
-                                   SchedVar<NoSchedPred,         [M3WriteAA]>]>;
-def M3WriteAY : SchedWriteVariant<[SchedVar<M3RotateRightFastPred, [M3WriteA1]>,
-                                   SchedVar<NoSchedPred,           [M3WriteAA]>]>;
+def M3WriteAX : SchedWriteVariant<[SchedVar<M3ResetPred,    [M3WriteZ0]>,
+                                   SchedVar<M3ShiftExtPred, [M3WriteA1]>,
+                                   SchedVar<NoSchedPred,    [M3WriteAA]>]>;
+def M3WriteAY : SchedWriteVariant<[SchedVar<M3RotatePred, [M3WriteA1]>,
+                                   SchedVar<NoSchedPred,  [M3WriteAA]>]>;
 
 def M3WriteB1 : SchedWriteRes<[M3UnitB]> { let Latency = 1; }
-def M3WriteBX : SchedWriteVariant<[SchedVar<M3BranchLinkFastPred, [M3WriteAB]>,
-                                   SchedVar<NoSchedPred,          [M3WriteAC]>]>;
+def M3WriteBX : SchedWriteVariant<[SchedVar<M3BranchLinkPred, [M3WriteAB]>,
+                                   SchedVar<NoSchedPred,      [M3WriteAC]>]>;
 
 def M3WriteL4 : SchedWriteRes<[M3UnitL]> { let Latency = 4; }
 def M3WriteL5 : SchedWriteRes<[M3UnitL]> { let Latency = 5; }
@@ -168,8 +166,8 @@ def M3WriteLD : SchedWriteRes<[M3UnitA,
 def M3WriteLH : SchedWriteRes<[]>        { let Latency = 5;
                                            let NumMicroOps = 0; }
 
-def M3WriteLX : SchedWriteVariant<[SchedVar<M3ShiftLeftFastPred, [M3WriteL5]>,
-                                   SchedVar<NoSchedPred,         [M3WriteLB]>]>;
+def M3WriteLX : SchedWriteVariant<[SchedVar<M3LdStExtPred, [M3WriteL5]>,
+                                   SchedVar<NoSchedPred,   [M3WriteLB]>]>;
 
 def M3WriteS1 : SchedWriteRes<[M3UnitS]>   { let Latency = 1; }
 def M3WriteSA : SchedWriteRes<[M3UnitA,
@@ -183,10 +181,10 @@ def M3WriteSC : SchedWriteRes<[M3UnitA,
                                M3UnitS]>   { let Latency = 2;
                                              let NumMicroOps = 2; }
 
-def M3WriteSX : SchedWriteVariant<[SchedVar<M3ShiftLeftFastPred, [M3WriteS1]>,
-                                   SchedVar<NoSchedPred,         [M3WriteSB]>]>;
-def M3WriteSY : SchedWriteVariant<[SchedVar<M3ShiftLeftFastPred, [M3WriteS1]>,
-                                   SchedVar<NoSchedPred,         [M3WriteSC]>]>;
+def M3WriteSX : SchedWriteVariant<[SchedVar<M3LdStExtPred, [M3WriteS1]>,
+                                   SchedVar<NoSchedPred,   [M3WriteSB]>]>;
+def M3WriteSY : SchedWriteVariant<[SchedVar<M3LdStExtPred, [M3WriteS1]>,
+                                   SchedVar<NoSchedPred,   [M3WriteSC]>]>;
 
 def M3ReadAdrBase : SchedReadVariant<[SchedVar<ScaledIdxPred, [ReadDefault]>,
                                       SchedVar<NoSchedPred,   [ReadDefault]>]>;
@@ -484,8 +482,8 @@ def M3WriteAES     : SchedWriteRes<[M3UnitNCRY]>  { let Latency = 1; }
 def M3ReadAES      : SchedReadAdvance<1, [M3WriteAES]>;
 def M3ReadFMAC     : SchedReadAdvance<1, [M3WriteFMAC4,
                                           M3WriteFMAC5]>;
-def M3WriteMOVI    : SchedWriteVariant<[SchedVar<M3ResetFastPred, [M3WriteZ0]>,
-                                        SchedVar<NoSchedPred,     [M3WriteNALU1]>]>;
+def M3WriteMOVI    : SchedWriteVariant<[SchedVar<M3ResetPred, [M3WriteZ0]>,
+                                        SchedVar<NoSchedPred, [M3WriteNALU1]>]>;
 def M3ReadNMUL     : SchedReadAdvance<1, [M3WriteNMUL3]>;
 
 // Branch instructions
@@ -588,7 +586,7 @@ def : InstRW<[M3WriteSA,
 // ASIMD instructions.
 def : InstRW<[M3WriteNMSC3], (instregex "^[SU]ABAL?v")>;
 def : InstRW<[M3WriteNMSC1], (instregex "^[SU]ABDL?v")>;
-def : InstRW<[M3WriteNMSC1], (instregex "^(SQ)?(ABS|NEG)v")>;
+def : InstRW<[M3WriteNMSC1], (instregex "^((SQ)?ABS|SQNEG)v")>;
 def : InstRW<[M3WriteNALU1], (instregex "^(ADD|NEG|SUB)v")>;
 def : InstRW<[M3WriteNMSC3], (instregex "^[SU]?ADDL?Pv")>;
 def : InstRW<[M3WriteNMSC3], (instregex "^[SU]H(ADD|SUB)v")>;
@@ -597,7 +595,6 @@ def : InstRW<[M3WriteNMSC3], (instregex "^R?(ADD|SUB)HN2?v")>;
 def : InstRW<[M3WriteNMSC3], (instregex "^[SU]Q(ADD|SUB)v")>;
 def : InstRW<[M3WriteNMSC3], (instregex "^(SU|US)QADDv")>;
 def : InstRW<[M3WriteNMSC3], (instregex "^[SU]RHADDv")>;
-def : InstRW<[M3WriteNMSC3], (instregex "^[SU]?ADDL?Vv")>;
 def : InstRW<[M3WriteNMSC1], (instregex "^CM(EQ|GE|GT|HI|HS|LE|LT)v")>;
 def : InstRW<[M3WriteNALU1], (instregex "^CMTSTv")>;
 def : InstRW<[M3WriteNALU1], (instregex "^(AND|BIC|EOR|MVNI|NOT|ORN|ORR)v")>;

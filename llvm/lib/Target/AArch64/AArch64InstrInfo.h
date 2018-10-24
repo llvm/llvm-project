@@ -250,12 +250,15 @@ public:
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      const outliner::Candidate &C) const override;
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
-  /// Returns true if the instruction sets to an immediate value that can be
+  /// Returns true if the instruction sets a constant value that can be
   /// executed more efficiently.
   bool isExynosResetFast(const MachineInstr &MI) const;
-  /// Returns true if the instruction has a shift left that can be executed
+  /// Returns true if the load or store has an extension that can be executed
   /// more efficiently.
-  bool isExynosShiftLeftFast(const MachineInstr &MI) const;
+  bool isExynosLdStExtFast(const MachineInstr &MI) const;
+  /// Returns true if the instruction has a constant shift left or extension
+  /// that can be executed more efficiently.
+  bool isExynosShiftExtFast(const MachineInstr &MI) const;
   /// Returns true if the instruction has a shift by immediate that can be
   /// executed in one cycle less.
   bool isFalkorShiftExtFast(const MachineInstr &MI) const;

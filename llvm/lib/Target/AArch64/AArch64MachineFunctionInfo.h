@@ -162,6 +162,19 @@ public:
   unsigned getVarArgsFPRSize() const { return VarArgsFPRSize; }
   void setVarArgsFPRSize(unsigned Size) { VarArgsFPRSize = Size; }
 
+  unsigned getJumpTableEntrySize(int Idx) const {
+    auto It = JumpTableEntryInfo.find(Idx);
+    if (It != JumpTableEntryInfo.end())
+      return It->second.first;
+    return 4;
+  }
+  MCSymbol *getJumpTableEntryPCRelSymbol(int Idx) const {
+    return JumpTableEntryInfo.find(Idx)->second.second;
+  }
+  void setJumpTableEntryInfo(int Idx, unsigned Size, MCSymbol *PCRelSym) {
+    JumpTableEntryInfo[Idx] = std::make_pair(Size, PCRelSym);
+  }
+
   using SetOfInstructions = SmallPtrSet<const MachineInstr *, 16>;
 
   const SetOfInstructions &getLOHRelated() const { return LOHRelated; }
@@ -200,6 +213,8 @@ private:
   // Hold the lists of LOHs.
   MILOHContainer LOHContainerSet;
   SetOfInstructions LOHRelated;
+
+  DenseMap<int, std::pair<unsigned, MCSymbol *>> JumpTableEntryInfo;
 };
 
 } // end namespace llvm

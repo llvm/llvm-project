@@ -123,6 +123,10 @@ static cl::opt<bool>
     BranchRelaxation("aarch64-enable-branch-relax", cl::Hidden, cl::init(true),
                      cl::desc("Relax out of range conditional branches"));
 
+static cl::opt<bool> EnableCompressJumpTables(
+    "aarch64-enable-compress-jump-tables", cl::Hidden, cl::init(true),
+    cl::desc("Use smallest entry possible for jump tables"));
+
 // FIXME: Unify control over GlobalMerge.
 static cl::opt<cl::boolOrDefault>
     EnableGlobalMerge("aarch64-enable-global-merge", cl::Hidden,
@@ -158,6 +162,7 @@ extern "C" void LLVMInitializeAArch64Target() {
   initializeAArch64AdvSIMDScalarPass(*PR);
   initializeAArch64BranchTargetsPass(*PR);
   initializeAArch64CollectLOHPass(*PR);
+  initializeAArch64CompressJumpTablesPass(*PR);
   initializeAArch64ConditionalComparesPass(*PR);
   initializeAArch64ConditionOptimizerPass(*PR);
   initializeAArch64DeadRegisterDefinitionsPass(*PR);
@@ -545,6 +550,9 @@ void AArch64PassConfig::addPreEmitPass() {
 
   if (EnableBranchTargets)
     addPass(createAArch64BranchTargetsPass());
+
+  if (TM->getOptLevel() != CodeGenOpt::None && EnableCompressJumpTables)
+    addPass(createAArch64CompressJumpTablesPass());
 
   if (TM->getOptLevel() != CodeGenOpt::None && EnableCollectLOH &&
       TM->getTargetTriple().isOSBinFormatMachO())
