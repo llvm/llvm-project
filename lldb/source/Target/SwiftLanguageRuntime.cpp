@@ -85,9 +85,14 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 // Destructor
 //----------------------------------------------------------------------
-SwiftLanguageRuntime::~SwiftLanguageRuntime() {}
+SwiftLanguageRuntime::~SwiftLanguageRuntime() {
+  delete reflection_ctx;
+  reflection_ctx = nullptr;
+}
 
 void SwiftLanguageRuntime::SetupReflection() {
+  reflection_ctx = new NativeReflectionContext(this->GetMemoryReader());
+
   auto &target = m_process->GetTarget();
   auto M = target.GetExecutableModule();
   auto *obj_file = M->GetObjectFile();
@@ -184,8 +189,19 @@ void SwiftLanguageRuntime::SetupExclusivity() {
                 *m_dynamic_exclusivity_flag_addr : 0);
 }
 
-
-void SwiftLanguageRuntime::ModulesDidLoad(const ModuleList &module_list) {}
+void SwiftLanguageRuntime::ModulesDidLoad(const ModuleList &module_list) {
+  module_list.ForEach([&](const ModuleSP &module_sp) -> bool {
+    std::string module_path = module_sp->GetFileSpec().GetPath();
+    auto *obj_file = module_sp->GetObjectFile();
+    Address start_address = obj_file->GetHeaderAddress();
+    auto load_ptr = static_cast<uintptr_t>(
+        start_address.GetLoadAddress(&(m_process->GetTarget())));
+    if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS)
+      return false;
+    reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
+    return true;
+  });
+}
 
 static bool GetObjectDescription_ResultVariable(Process *process, Stream &str,
                                                 ValueObject &object) {
@@ -1475,6 +1491,44 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
   if (log)
     log->Printf("[MemberVariableOffsetResolver] failure: %s",
                 failure.render().c_str());
+
+  // Try remote mirrors.
+  if (!reflection_ctx)
+    return llvm::None;
+  ConstString mangled_name(instance_type.GetMangledTypeName());
+  StringRef mangled_no_prefix =
+      swift::Demangle::dropSwiftManglingPrefix(mangled_name.GetStringRef());
+  swift::Demangle::Demangler Dem;
+  auto demangled = Dem.demangleType(mangled_no_prefix);
+  auto *type_ref = swift::Demangle::decodeMangledType(
+      reflection_ctx->getBuilder(), demangled);
+  if (!type_ref)
+    return llvm::None;
+  auto type_info =
+      reflection_ctx->getBuilder().getTypeConverter().getTypeInfo(type_ref);
+  if (!type_info)
+    return llvm::None;
+  auto record_type_info =
+      llvm::dyn_cast<swift::reflection::RecordTypeInfo>(type_info);
+  if (record_type_info) {
+    for (auto &field : record_type_info->getFields()) {
+      if (ConstString(field.Name) == member_name)
+        return field.Offset;
+    }
+  }
+
+  lldb::addr_t pointer = instance->GetPointerValue();
+  auto class_instance_type_info = reflection_ctx->getInstanceTypeInfo(pointer);
+  if (class_instance_type_info) {
+    auto class_type_info = llvm::dyn_cast<swift::reflection::RecordTypeInfo>(
+        class_instance_type_info);
+    if (class_type_info) {
+      for (auto &field : class_type_info->getFields()) {
+        if (ConstString(field.Name) == member_name)
+          return field.Offset;
+      }
+    }
+  }
   return llvm::None;
 }
 
