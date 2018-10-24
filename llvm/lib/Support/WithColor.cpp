@@ -19,15 +19,10 @@ static cl::opt<cl::boolOrDefault>
              cl::desc("Use colors in output (default=autodetect)"),
              cl::init(cl::BOU_UNSET));
 
-bool WithColor::colorsEnabled(raw_ostream &OS) {
-  if (UseColor == cl::BOU_UNSET)
-    return OS.has_colors();
-  return UseColor == cl::BOU_TRUE;
-}
-
-WithColor::WithColor(raw_ostream &OS, HighlightColor Color) : OS(OS) {
+WithColor::WithColor(raw_ostream &OS, HighlightColor Color, bool DisableColors)
+    : OS(OS), DisableColors(DisableColors) {
   // Detect color from terminal type unless the user passed the --color option.
-  if (colorsEnabled(OS)) {
+  if (colorsEnabled()) {
     switch (Color) {
     case HighlightColor::Address:
       OS.changeColor(raw_ostream::YELLOW);
@@ -56,6 +51,9 @@ WithColor::WithColor(raw_ostream &OS, HighlightColor Color) : OS(OS) {
     case HighlightColor::Note:
       OS.changeColor(raw_ostream::BLACK, true);
       break;
+    case HighlightColor::Remark:
+      OS.changeColor(raw_ostream::BLUE, true);
+      break;
     }
   }
 }
@@ -66,25 +64,58 @@ raw_ostream &WithColor::warning() { return warning(errs()); }
 
 raw_ostream &WithColor::note() { return note(errs()); }
 
-raw_ostream &WithColor::error(raw_ostream &OS, StringRef Prefix) {
+raw_ostream &WithColor::remark() { return remark(errs()); }
+
+raw_ostream &WithColor::error(raw_ostream &OS, StringRef Prefix,
+                              bool DisableColors) {
   if (!Prefix.empty())
     OS << Prefix << ": ";
-  return WithColor(OS, HighlightColor::Error).get() << "error: ";
+  return WithColor(OS, HighlightColor::Error, DisableColors).get()
+         << "error: ";
 }
 
-raw_ostream &WithColor::warning(raw_ostream &OS, StringRef Prefix) {
+raw_ostream &WithColor::warning(raw_ostream &OS, StringRef Prefix,
+                                bool DisableColors) {
   if (!Prefix.empty())
     OS << Prefix << ": ";
-  return WithColor(OS, HighlightColor::Warning).get() << "warning: ";
+  return WithColor(OS, HighlightColor::Warning, DisableColors).get()
+         << "warning: ";
 }
 
-raw_ostream &WithColor::note(raw_ostream &OS, StringRef Prefix) {
+raw_ostream &WithColor::note(raw_ostream &OS, StringRef Prefix,
+                             bool DisableColors) {
   if (!Prefix.empty())
     OS << Prefix << ": ";
-  return WithColor(OS, HighlightColor::Note).get() << "note: ";
+  return WithColor(OS, HighlightColor::Note, DisableColors).get() << "note: ";
 }
 
-WithColor::~WithColor() {
-  if (colorsEnabled(OS))
+raw_ostream &WithColor::remark(raw_ostream &OS, StringRef Prefix,
+                               bool DisableColors) {
+  if (!Prefix.empty())
+    OS << Prefix << ": ";
+  return WithColor(OS, HighlightColor::Remark, DisableColors).get()
+         << "remark: ";
+}
+
+bool WithColor::colorsEnabled() {
+  if (DisableColors)
+    return false;
+  if (UseColor == cl::BOU_UNSET)
+    return OS.has_colors();
+  return UseColor == cl::BOU_TRUE;
+}
+
+WithColor &WithColor::changeColor(raw_ostream::Colors Color, bool Bold,
+                                  bool BG) {
+  if (colorsEnabled())
+    OS.changeColor(Color, Bold, BG);
+  return *this;
+}
+
+WithColor &WithColor::resetColor() {
+  if (colorsEnabled())
     OS.resetColor();
+  return *this;
 }
+
+WithColor::~WithColor() { resetColor(); }

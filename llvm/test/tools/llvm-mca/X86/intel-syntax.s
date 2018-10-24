@@ -5,7 +5,7 @@
 
   .intel_syntax noprefix
   mov	eax, 1
-  mov	ebx, 0ffh
+  mov	ebx, 0xff
   imul	esi, edi
   lea	eax, [rsi + rdi]
 

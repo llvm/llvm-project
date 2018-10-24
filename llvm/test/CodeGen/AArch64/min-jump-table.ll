@@ -14,8 +14,8 @@ entry:
 ; CHECK0-NEXT: Jump Tables:
 ; CHECK0-NEXT: %jump-table.0:
 ; CHECK0-NOT: %jump-table.1:
-; CHECK4-NOT: Jump Tables:
-; CHECK8-NOT: Jump Tables:
+; CHECK4-NOT: {{^}}Jump Tables:
+; CHECK8-NOT: {{^}}Jump Tables:
 
 bb1: tail call void @ext(i32 0) br label %return
 bb2: tail call void @ext(i32 2) br label %return
@@ -38,7 +38,7 @@ entry:
 ; CHECK4-NEXT: Jump Tables:
 ; CHECK4-NEXT: %jump-table.0:
 ; CHECK4-NOT: %jump-table.1:
-; CHECK8-NOT: Jump Tables:
+; CHECK8-NOT: {{^}}Jump Tables:
 
 bb1: tail call void @ext(i32 0) br label %return
 bb2: tail call void @ext(i32 2) br label %return

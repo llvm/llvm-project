@@ -28,7 +28,7 @@ define i32 @dummy_caller(i32* %arg) local_unnamed_addr {
  }
 
 
-; CHECK-LABEL: define internal void @outline_region_notlikely.1_bb1(i32* %arg) {
+; CHECK-LABEL: define internal void @outline_region_notlikely.1.bb1(i32* %arg) {
 ; CHECK-NEXT: newFuncRoot:
 
 declare i32 @foo(i32 * %arg)

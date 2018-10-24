@@ -444,7 +444,7 @@ public:
   const Instruction *getInstruction() const { return Data.second; }
 
   /// Returns true if this references a valid instruction.
-  bool isValid() const { return Data.second; }
+  operator bool() const { return Data.second != nullptr; }
 
   /// Invalidate this reference.
   void invalidate() { Data.second = nullptr; }

@@ -20,8 +20,8 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_MCINSTRDESCVIEW_H
 
 #include <random>
+#include <unordered_map>
 
-#include "LlvmState.h"
 #include "RegisterAliasing.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -94,7 +94,8 @@ struct Operand {
 // A view over an MCInstrDesc offering a convenient interface to compute
 // Register aliasing.
 struct Instruction {
-  Instruction(const LLVMState &State, unsigned Opcode);
+  Instruction(const llvm::MCInstrInfo &InstrInfo,
+              const RegisterAliasingTrackerCache &RATC, unsigned Opcode);
 
   // Returns the Operand linked to this Variable.
   // In case the Variable is tied, the primary (i.e. Def) Operand is returned.
@@ -143,6 +144,22 @@ struct Instruction {
   llvm::BitVector ImplUseRegs; // The set of aliased implicit use registers.
   llvm::BitVector AllDefRegs;  // The set of all aliased def registers.
   llvm::BitVector AllUseRegs;  // The set of all aliased use registers.
+};
+
+// Instructions are expensive to instantiate. This class provides a cache of
+// Instructions with lazy construction.
+struct InstructionsCache {
+  InstructionsCache(const llvm::MCInstrInfo &InstrInfo,
+                    const RegisterAliasingTrackerCache &RATC);
+
+  // Returns the Instruction object corresponding to this Opcode.
+  const Instruction &getInstr(unsigned Opcode) const;
+
+private:
+  const llvm::MCInstrInfo &InstrInfo;
+  const RegisterAliasingTrackerCache &RATC;
+  mutable std::unordered_map<unsigned, std::unique_ptr<Instruction>>
+      Instructions;
 };
 
 // Represents the assignment of a Register to an Operand.

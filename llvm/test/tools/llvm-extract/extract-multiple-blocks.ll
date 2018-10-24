@@ -1,7 +1,7 @@
 ; RUN: llvm-extract -S -bb foo:bb4 -bb foo:bb7 %s | FileCheck %s
 
-; CHECK: @foo_bb4
-; CHECK: @foo_bb7
+; CHECK: @foo.bb4
+; CHECK: @foo.bb7
 define i32 @foo(i32 %arg) {
 bb:
   %tmp = alloca i32, align 4

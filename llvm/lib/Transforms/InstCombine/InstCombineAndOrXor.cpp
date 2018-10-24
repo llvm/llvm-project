@@ -1831,14 +1831,33 @@ static bool areInverseVectorBitmasks(Constant *C1, Constant *C2) {
 /// We have an expression of the form (A & C) | (B & D). If A is a scalar or
 /// vector composed of all-zeros or all-ones values and is the bitwise 'not' of
 /// B, it can be used as the condition operand of a select instruction.
-static Value *getSelectCondition(Value *A, Value *B,
-                                 InstCombiner::BuilderTy &Builder) {
-  // If these are scalars or vectors of i1, A can be used directly.
+Value *InstCombiner::getSelectCondition(Value *A, Value *B) {
+  // Step 1: We may have peeked through bitcasts in the caller.
+  // Exit immediately if we don't have (vector) integer types.
   Type *Ty = A->getType();
-  if (match(A, m_Not(m_Specific(B))) && Ty->isIntOrIntVectorTy(1))
-    return A;
+  if (!Ty->isIntOrIntVectorTy() || !B->getType()->isIntOrIntVectorTy())
+    return nullptr;
 
-  // If A and B are sign-extended, look through the sexts to find the booleans.
+  // Step 2: We need 0 or all-1's bitmasks.
+  if (ComputeNumSignBits(A) != Ty->getScalarSizeInBits())
+    return nullptr;
+
+  // Step 3: If B is the 'not' value of A, we have our answer.
+  if (match(A, m_Not(m_Specific(B)))) {
+    // If these are scalars or vectors of i1, A can be used directly.
+    if (Ty->isIntOrIntVectorTy(1))
+      return A;
+    return Builder.CreateTrunc(A, CmpInst::makeCmpResultType(Ty));
+  }
+
+  // If both operands are constants, see if the constants are inverse bitmasks.
+  Constant *AConst, *BConst;
+  if (match(A, m_Constant(AConst)) && match(B, m_Constant(BConst)))
+    if (AConst == ConstantExpr::getNot(BConst))
+      return Builder.CreateZExtOrTrunc(A, CmpInst::makeCmpResultType(Ty));
+
+  // Look for more complex patterns. The 'not' op may be hidden behind various
+  // casts. Look through sexts and bitcasts to find the booleans.
   Value *Cond;
   Value *NotB;
   if (match(A, m_SExt(m_Value(Cond))) &&
@@ -1854,36 +1873,29 @@ static Value *getSelectCondition(Value *A, Value *B,
   if (!Ty->isVectorTy())
     return nullptr;
 
-  // If both operands are constants, see if the constants are inverse bitmasks.
-  Constant *AC, *BC;
-  if (match(A, m_Constant(AC)) && match(B, m_Constant(BC)) &&
-      areInverseVectorBitmasks(AC, BC)) {
-    return Builder.CreateZExtOrTrunc(AC, CmpInst::makeCmpResultType(Ty));
-  }
-
   // If both operands are xor'd with constants using the same sexted boolean
   // operand, see if the constants are inverse bitmasks.
-  if (match(A, (m_Xor(m_SExt(m_Value(Cond)), m_Constant(AC)))) &&
-      match(B, (m_Xor(m_SExt(m_Specific(Cond)), m_Constant(BC)))) &&
+  // TODO: Use ConstantExpr::getNot()?
+  if (match(A, (m_Xor(m_SExt(m_Value(Cond)), m_Constant(AConst)))) &&
+      match(B, (m_Xor(m_SExt(m_Specific(Cond)), m_Constant(BConst)))) &&
       Cond->getType()->isIntOrIntVectorTy(1) &&
-      areInverseVectorBitmasks(AC, BC)) {
-    AC = ConstantExpr::getTrunc(AC, CmpInst::makeCmpResultType(Ty));
-    return Builder.CreateXor(Cond, AC);
+      areInverseVectorBitmasks(AConst, BConst)) {
+    AConst = ConstantExpr::getTrunc(AConst, CmpInst::makeCmpResultType(Ty));
+    return Builder.CreateXor(Cond, AConst);
   }
   return nullptr;
 }
 
 /// We have an expression of the form (A & C) | (B & D). Try to simplify this
 /// to "A' ? C : D", where A' is a boolean or vector of booleans.
-static Value *matchSelectFromAndOr(Value *A, Value *C, Value *B, Value *D,
-                                   InstCombiner::BuilderTy &Builder) {
+Value *InstCombiner::matchSelectFromAndOr(Value *A, Value *C, Value *B,
+                                          Value *D) {
   // The potential condition of the select may be bitcasted. In that case, look
   // through its bitcast and the corresponding bitcast of the 'not' condition.
   Type *OrigType = A->getType();
   A = peekThroughBitcast(A, true);
   B = peekThroughBitcast(B, true);
-
-  if (Value *Cond = getSelectCondition(A, B, Builder)) {
+  if (Value *Cond = getSelectCondition(A, B)) {
     // ((bc Cond) & C) | ((bc ~Cond) & D) --> bc (select Cond, (bc C), (bc D))
     // The bitcasts will either all exist or all not exist. The builder will
     // not create unnecessary casts if the types already match.
@@ -2234,21 +2246,21 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
     // 'or' that it is replacing.
     if (Op0->hasOneUse() || Op1->hasOneUse()) {
       // (Cond & C) | (~Cond & D) -> Cond ? C : D, and commuted variants.
-      if (Value *V = matchSelectFromAndOr(A, C, B, D, Builder))
+      if (Value *V = matchSelectFromAndOr(A, C, B, D))
         return replaceInstUsesWith(I, V);
-      if (Value *V = matchSelectFromAndOr(A, C, D, B, Builder))
+      if (Value *V = matchSelectFromAndOr(A, C, D, B))
         return replaceInstUsesWith(I, V);
-      if (Value *V = matchSelectFromAndOr(C, A, B, D, Builder))
+      if (Value *V = matchSelectFromAndOr(C, A, B, D))
         return replaceInstUsesWith(I, V);
-      if (Value *V = matchSelectFromAndOr(C, A, D, B, Builder))
+      if (Value *V = matchSelectFromAndOr(C, A, D, B))
         return replaceInstUsesWith(I, V);
-      if (Value *V = matchSelectFromAndOr(B, D, A, C, Builder))
+      if (Value *V = matchSelectFromAndOr(B, D, A, C))
         return replaceInstUsesWith(I, V);
-      if (Value *V = matchSelectFromAndOr(B, D, C, A, Builder))
+      if (Value *V = matchSelectFromAndOr(B, D, C, A))
         return replaceInstUsesWith(I, V);
-      if (Value *V = matchSelectFromAndOr(D, B, A, C, Builder))
+      if (Value *V = matchSelectFromAndOr(D, B, A, C))
         return replaceInstUsesWith(I, V);
-      if (Value *V = matchSelectFromAndOr(D, B, C, A, Builder))
+      if (Value *V = matchSelectFromAndOr(D, B, C, A))
         return replaceInstUsesWith(I, V);
     }
   }

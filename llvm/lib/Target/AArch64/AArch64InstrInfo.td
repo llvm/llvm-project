@@ -448,6 +448,30 @@ def : Pat<(AArch64LOADgot texternalsym:$addr),
 def : Pat<(AArch64LOADgot tconstpool:$addr),
           (LOADgot tconstpool:$addr)>;
 
+// 32-bit jump table destination is actually only 2 instructions since we can
+// use the table itself as a PC-relative base. But optimization occurs after
+// branch relaxation so be pessimistic.
+let Size = 12, Constraints = "@earlyclobber $dst,@earlyclobber $scratch" in {
+def JumpTableDest32 : Pseudo<(outs GPR64:$dst, GPR64sp:$scratch),
+                             (ins GPR64:$table, GPR64:$entry, i32imm:$jti), []>,
+                      Sched<[]>;
+def JumpTableDest16 : Pseudo<(outs GPR64:$dst, GPR64sp:$scratch),
+                             (ins GPR64:$table, GPR64:$entry, i32imm:$jti), []>,
+                      Sched<[]>;
+def JumpTableDest8 : Pseudo<(outs GPR64:$dst, GPR64sp:$scratch),
+                            (ins GPR64:$table, GPR64:$entry, i32imm:$jti), []>,
+                     Sched<[]>;
+}
+
+// Space-consuming pseudo to aid testing of placement and reachability
+// algorithms. Immediate operand is the number of bytes this "instruction"
+// occupies; register operands can be used to enforce dependency and constrain
+// the scheduler.
+let hasSideEffects = 1, mayLoad = 1, mayStore = 1 in
+def SPACE : Pseudo<(outs GPR64:$Rd), (ins i32imm:$size, GPR64:$Rn),
+                   [(set GPR64:$Rd, (int_aarch64_space imm:$size, GPR64:$Rn))]>,
+            Sched<[]>;
+
 //===----------------------------------------------------------------------===//
 // System instructions.
 //===----------------------------------------------------------------------===//

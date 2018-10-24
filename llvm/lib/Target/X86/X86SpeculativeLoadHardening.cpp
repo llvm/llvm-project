@@ -487,20 +487,14 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
     // Otherwise, just build the predicate state itself by zeroing a register
     // as we don't need any initial state.
     PS->InitialReg = MRI->createVirtualRegister(PS->RC);
-    unsigned PredStateSubReg = MRI->createVirtualRegister(&X86::GR32RegClass);
-    auto ZeroI = BuildMI(Entry, EntryInsertPt, Loc, TII->get(X86::MOV32r0),
-                         PredStateSubReg);
+    auto ZeroI = BuildMI(Entry, EntryInsertPt, Loc, TII->get(X86::MOV64r0),
+                         PS->InitialReg);
     ++NumInstsInserted;
     MachineOperand *ZeroEFLAGSDefOp =
         ZeroI->findRegisterDefOperand(X86::EFLAGS);
     assert(ZeroEFLAGSDefOp && ZeroEFLAGSDefOp->isImplicit() &&
            "Must have an implicit def of EFLAGS!");
     ZeroEFLAGSDefOp->setIsDead(true);
-    BuildMI(Entry, EntryInsertPt, Loc, TII->get(X86::SUBREG_TO_REG),
-            PS->InitialReg)
-        .addImm(0)
-        .addReg(PredStateSubReg)
-        .addImm(X86::sub_32bit);
   }
 
   // We're going to need to trace predicate state throughout the function's

@@ -64,9 +64,10 @@ def M1UnitNALU : ProcResGroup<[M1UnitNAL0,
 //===----------------------------------------------------------------------===//
 // Predicates.
 
-def M1BranchLinkFastPred : SchedPredicate<[{MI->getOpcode() == AArch64::BLR &&
-                                            MI->getOperand(0).getReg() != AArch64::LR}]>;
-def M1ShiftLeftFastPred  : SchedPredicate<[{TII->isExynosShiftLeftFast(*MI)}]>;
+def M1BranchLinkPred : SchedPredicate<[{MI->getOpcode() == AArch64::BLR &&
+                                        MI->getOperand(0).getReg() != AArch64::LR}]>;
+def M1LdStExtPred    : SchedPredicate<[{TII->isExynosLdStExtFast(*MI)}]>;
+def M1ShiftExtPred   : SchedPredicate<[{TII->isExynosShiftExtFast(*MI)}]>;
 
 //===----------------------------------------------------------------------===//
 // Coarse scheduling model.
@@ -85,14 +86,14 @@ def M1WriteAC : SchedWriteRes<[M1UnitALU,
 def M1WriteAD : SchedWriteRes<[M1UnitALU,
                                M1UnitC]>   { let Latency = 2;
                                              let NumMicroOps = 2; }
-def M1WriteAX : SchedWriteVariant<[SchedVar<M1ShiftLeftFastPred, [M1WriteA1]>,
-                                   SchedVar<NoSchedPred,         [M1WriteAA]>]>;
+def M1WriteAX : SchedWriteVariant<[SchedVar<M1ShiftExtPred, [M1WriteA1]>,
+                                   SchedVar<NoSchedPred,    [M1WriteAA]>]>;
 def M1WriteC1 : SchedWriteRes<[M1UnitC]>   { let Latency = 1; }
 def M1WriteC2 : SchedWriteRes<[M1UnitC]>   { let Latency = 2; }
 
 def M1WriteB1 : SchedWriteRes<[M1UnitB]> { let Latency = 1; }
-def M1WriteBX : SchedWriteVariant<[SchedVar<M1BranchLinkFastPred, [M1WriteAB]>,
-                                   SchedVar<NoSchedPred,          [M1WriteAC]>]>;
+def M1WriteBX : SchedWriteVariant<[SchedVar<M1BranchLinkPred, [M1WriteAB]>,
+                                   SchedVar<NoSchedPred,      [M1WriteAC]>]>;
 
 def M1WriteL5 : SchedWriteRes<[M1UnitL]> { let Latency = 5; }
 def M1WriteL6 : SchedWriteRes<[M1UnitL]> { let Latency = 6; }
@@ -110,10 +111,10 @@ def M1WriteLD : SchedWriteRes<[M1UnitL,
                                            let ResourceCycles = [2, 1]; }
 def M1WriteLH : SchedWriteRes<[]>        { let Latency = 5;
                                            let NumMicroOps = 0; }
-def M1WriteLX : SchedWriteVariant<[SchedVar<M1ShiftLeftFastPred, [M1WriteL5]>,
-                                   SchedVar<NoSchedPred,         [M1WriteLC]>]>;
-def M1WriteLY : SchedWriteVariant<[SchedVar<M1ShiftLeftFastPred, [M1WriteL5]>,
-                                   SchedVar<NoSchedPred,         [M1WriteLD]>]>;
+def M1WriteLX : SchedWriteVariant<[SchedVar<M1LdStExtPred, [M1WriteL5]>,
+                                   SchedVar<NoSchedPred,   [M1WriteLC]>]>;
+def M1WriteLY : SchedWriteVariant<[SchedVar<M1LdStExtPred, [M1WriteL5]>,
+                                   SchedVar<NoSchedPred,   [M1WriteLD]>]>;
 
 def M1WriteS1 : SchedWriteRes<[M1UnitS]>   { let Latency = 1; }
 def M1WriteS3 : SchedWriteRes<[M1UnitS]>   { let Latency = 3; }
@@ -140,10 +141,10 @@ def M1WriteSD : SchedWriteRes<[M1UnitS,
 def M1WriteSE : SchedWriteRes<[M1UnitS,
                                M1UnitA]>   { let Latency = 2;
                                              let NumMicroOps = 2; }
-def M1WriteSX : SchedWriteVariant<[SchedVar<M1ShiftLeftFastPred, [M1WriteS1]>,
-                                   SchedVar<NoSchedPred,         [M1WriteSE]>]>;
-def M1WriteSY : SchedWriteVariant<[SchedVar<M1ShiftLeftFastPred, [M1WriteS1]>,
-                                   SchedVar<NoSchedPred,         [M1WriteSB]>]>;
+def M1WriteSX : SchedWriteVariant<[SchedVar<M1LdStExtPred, [M1WriteS1]>,
+                                   SchedVar<NoSchedPred,   [M1WriteSE]>]>;
+def M1WriteSY : SchedWriteVariant<[SchedVar<M1LdStExtPred, [M1WriteS1]>,
+                                   SchedVar<NoSchedPred,   [M1WriteSB]>]>;
 
 def M1ReadAdrBase : SchedReadVariant<[SchedVar<ScaledIdxPred, [ReadDefault]>,
                                       SchedVar<NoSchedPred,   [ReadDefault]>]>;

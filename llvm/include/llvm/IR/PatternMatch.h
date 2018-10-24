@@ -659,11 +659,32 @@ inline BinaryOp_match<LHS, RHS, Instruction::FSub> m_FSub(const LHS &L,
   return BinaryOp_match<LHS, RHS, Instruction::FSub>(L, R);
 }
 
+template <typename Op_t> struct FNeg_match {
+  Op_t X;
+
+  FNeg_match(const Op_t &Op) : X(Op) {}
+  template <typename OpTy> bool match(OpTy *V) {
+    auto *FPMO = dyn_cast<FPMathOperator>(V);
+    if (!FPMO || FPMO->getOpcode() != Instruction::FSub)
+      return false;
+    if (FPMO->hasNoSignedZeros()) {
+      // With 'nsz', any zero goes.
+      if (!cstfp_pred_ty<is_any_zero_fp>().match(FPMO->getOperand(0)))
+        return false;
+    } else {
+      // Without 'nsz', we need fsub -0.0, X exactly.
+      if (!cstfp_pred_ty<is_neg_zero_fp>().match(FPMO->getOperand(0)))
+        return false;
+    }
+    return X.match(FPMO->getOperand(1));
+  }
+};
+
 /// Match 'fneg X' as 'fsub -0.0, X'.
-template <typename RHS>
-inline BinaryOp_match<cstfp_pred_ty<is_neg_zero_fp>, RHS, Instruction::FSub>
-m_FNeg(const RHS &X) {
-  return m_FSub(m_NegZeroFP(), X);
+template <typename OpTy>
+inline FNeg_match<OpTy>
+m_FNeg(const OpTy &X) {
+  return FNeg_match<OpTy>(X);
 }
 
 /// Match 'fneg X' as 'fsub +-0.0, X'.

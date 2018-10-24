@@ -41,7 +41,7 @@ bb:
 ; CHECK-LABEL: @dummy_caller
 ; CHECK: br i1
 ; CHECK: br i1
-; CHECK: call void @bar.2_
+; CHECK: call void @bar.2.
 ; LIMIT-LABEL: @dummy_caller
 ; LIMIT-NOT: br
 ; LIMIT: call i32 @bar(
@@ -84,7 +84,7 @@ bb5:                                              ; preds = %bb4, %bb1
 define i32 @dummy_caller2(i32 %arg) local_unnamed_addr #0 {
 ; CHECK: br i1
 ; CHECK: br i1
-; CHECK: call {{.*}} @bar_multi_ret.1_
+; CHECK: call {{.*}} @bar_multi_ret.1.
   %tmp = tail call i32 @bar_multi_ret(i32 %arg)
   ret i32 %tmp
 }

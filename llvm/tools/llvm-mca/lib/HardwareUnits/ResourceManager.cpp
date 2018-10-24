@@ -97,8 +97,7 @@ getStrategyFor(const ResourceState &RS) {
   return std::unique_ptr<ResourceStrategy>(nullptr);
 }
 
-ResourceManager::ResourceManager(const MCSchedModel &SM)
-    : ProcResID2Mask(SM.getNumProcResourceKinds()) {
+ResourceManager::ResourceManager(const MCSchedModel &SM) {
   computeProcResourceMasks(SM, ProcResID2Mask);
   Resources.resize(SM.getNumProcResourceKinds());
   Strategies.resize(SM.getNumProcResourceKinds());

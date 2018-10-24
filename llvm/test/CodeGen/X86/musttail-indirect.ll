@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=i686-win32 | FileCheck %s
-; RUN: llc < %s -mtriple=i686-win32 -O0 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=i686-win32 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=i686-win32 -O0 | FileCheck %s
 
 ; IR simplified from the following C++ snippet compiled for i686-windows-msvc:
 
