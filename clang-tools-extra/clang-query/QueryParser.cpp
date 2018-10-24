@@ -111,11 +111,13 @@ QueryRef QueryParser::parseSetOutputKind() {
   unsigned OutKind = LexOrCompleteWord<unsigned>(this, ValStr)
                          .Case("diag", OK_Diag)
                          .Case("print", OK_Print)
-                         .Case("dump", OK_Dump)
+                         .Case("detailed-ast", OK_DetailedAST)
+                         .Case("dump", OK_DetailedAST)
                          .Default(~0u);
   if (OutKind == ~0u) {
-    return new InvalidQuery("expected 'diag', 'print' or 'dump', got '" +
-                            ValStr + "'");
+    return new InvalidQuery(
+        "expected 'diag', 'print', 'detailed-ast' or 'dump', got '" + ValStr +
+        "'");
   }
   return new SetQuery<OutputKind>(&QuerySession::OutKind, OutputKind(OutKind));
 }

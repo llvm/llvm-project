@@ -53,8 +53,10 @@ bool HelpQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
         "Pretty-print bound nodes.\n"
         "  diag                              "
         "Diagnostic location for bound nodes.\n"
+        "  detailed-ast                      "
+        "Detailed AST output for bound nodes.\n"
         "  dump                              "
-        "Detailed AST output for bound nodes.\n\n";
+        "Detailed AST output for bound nodes (alias of detailed-ast).\n\n";
   return true;
 }
 
@@ -124,7 +126,7 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
           OS << "\n";
           break;
         }
-        case OK_Dump: {
+        case OK_DetailedAST: {
           OS << "Binding for \"" << BI->first << "\":\n";
           BI->second.dump(OS, AST->getSourceManager());
           OS << "\n";
