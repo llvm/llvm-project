@@ -41,11 +41,11 @@ bb:
 ; CHECK-LABEL: @dummy_caller
 ; CHECK: br i1
 ; CHECK: br i1
-; CHECK: call void @bar.1_
+; CHECK: call void @bar.1.
 ; LIMIT-LABEL: @dummy_caller
 ; LIMIT: br i1
 ; LIMIT-NOT: br
-; LIMIT: call void @bar.1_
+; LIMIT: call void @bar.1.
   %tmp = tail call i32 @bar(i32 %arg)
   ret i32 %tmp
 }
