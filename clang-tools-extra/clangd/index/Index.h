@@ -50,8 +50,7 @@ struct SymbolLocation {
     static constexpr uint32_t MaxLine = (1 << 20) - 1;
     static constexpr uint32_t MaxColumn = (1 << 12) - 1;
 
-    // Clients should use getters and setters to access these members.
-    // FIXME: hide these members.
+  private:
     uint32_t Line : 20; // 0-based
     // Using UTF-16 code units.
     uint32_t Column : 12; // 0-based
