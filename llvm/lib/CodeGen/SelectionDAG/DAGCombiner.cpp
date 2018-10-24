@@ -13738,8 +13738,6 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
                   ((uint64_t)IdxC * MemVT.getVectorNumElements()) / Elts;
               Idx = DAG.getConstant(NewIdx, SDLoc(Val), Idx.getValueType());
             }
-            if (!MemVT.isVector() && Val.getValueType().isVector())
-              dbgs() << "hit!\n";
             EVT NewVecTy =
                 EVT::getVectorVT(*DAG.getContext(), MemVTScalarTy, Elts);
             Vec = DAG.getBitcast(NewVecTy, Vec);
