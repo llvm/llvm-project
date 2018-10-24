@@ -153,7 +153,6 @@ private:
   std::mutex TranspWriter;
   void call(StringRef Method, llvm::json::Value Params);
   void notify(StringRef Method, llvm::json::Value Params);
-  void reply(llvm::json::Value ID, llvm::Expected<llvm::json::Value> Result);
 
   RealFileSystemProvider FSProvider;
   /// Options used for code completion
