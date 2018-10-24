@@ -25,6 +25,7 @@
 // STDLIBALL-NEXT: platform
 // RUN: %clang --autocomplete=-meabi,d | FileCheck %s -check-prefix=MEABI
 // MEABI: default
+// RUN: %clang --autocomplete=-meabi, | FileCheck %s -check-prefix=MEABIALL
 // RUN: %clang --autocomplete=-meabi | FileCheck %s -check-prefix=MEABIALL
 // MEABIALL: 4
 // MEABIALL-NEXT: 5
@@ -121,3 +122,8 @@
 // MODULE_FILE_EQUAL-NOT: -fmodule-file=
 // RUN: %clang --autocomplete=-fmodule-file | FileCheck %s -check-prefix=MODULE_FILE
 // MODULE_FILE: -fmodule-file=
+
+// RUN: %clang --autocomplete=-Qunused-arguments, | FileCheck %s -check-prefix=QUNUSED_COMMA
+// QUNUSED_COMMA-NOT: -Qunused-arguments
+// RUN: %clang --autocomplete=-Qunused-arguments | FileCheck %s -check-prefix=QUNUSED
+// QUNUSED: -Qunused-arguments

@@ -4293,21 +4293,6 @@ public:
   void EmitMultiVersionResolver(llvm::Function *Resolver,
                                 ArrayRef<MultiVersionResolverOption> Options);
 
-  struct CPUDispatchMultiVersionResolverOption {
-    llvm::Function *Function;
-    // Note: EmitX86CPUSupports only has 32 bits available, so we store the mask
-    // as 32 bits here.  When 64-bit support is added to __builtin_cpu_supports,
-    // this can be extended to 64 bits.
-    uint32_t FeatureMask;
-    CPUDispatchMultiVersionResolverOption(llvm::Function *F, uint64_t Mask)
-        : Function(F), FeatureMask(static_cast<uint32_t>(Mask)) {}
-    bool operator>(const CPUDispatchMultiVersionResolverOption &Other) const {
-      return FeatureMask > Other.FeatureMask;
-    }
-  };
-  void EmitCPUDispatchMultiVersionResolver(
-      llvm::Function *Resolver,
-      ArrayRef<CPUDispatchMultiVersionResolverOption> Options);
   static uint64_t GetX86CpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
 
 private:

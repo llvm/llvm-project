@@ -138,6 +138,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX906:
       Features["dl-insts"] = true;
       LLVM_FALLTHROUGH;
+    case GK_GFX909:
     case GK_GFX904:
     case GK_GFX902:
     case GK_GFX900:

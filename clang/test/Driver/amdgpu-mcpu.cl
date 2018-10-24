@@ -84,6 +84,7 @@
 // RUN: %clang -### -target amdgcn -mcpu=gfx902 %s 2>&1 | FileCheck --check-prefix=GFX902 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx904 %s 2>&1 | FileCheck --check-prefix=GFX904 %s
 // RUN: %clang -### -target amdgcn -mcpu=gfx906 %s 2>&1 | FileCheck --check-prefix=GFX906 %s
+// RUN: %clang -### -target amdgcn -mcpu=gfx909 %s 2>&1 | FileCheck --check-prefix=GFX909 %s
 
 // GFX600:    "-target-cpu" "gfx600"
 // TAHITI:    "-target-cpu" "tahiti"
@@ -117,3 +118,4 @@
 // GFX902:    "-target-cpu" "gfx902"
 // GFX904:    "-target-cpu" "gfx904"
 // GFX906:    "-target-cpu" "gfx906"
+// GFX909:    "-target-cpu" "gfx909"

@@ -383,6 +383,11 @@ public:
   IdentifierInfo *getScopeName() const { return ScopeName; }
   SourceLocation getScopeLoc() const { return ScopeLoc; }
 
+  bool isGNUScope() const {
+    return ScopeName &&
+           (ScopeName->isStr("gnu") || ScopeName->isStr("__gnu__"));
+  }
+
   bool hasParsedType() const { return HasParsedType; }
 
   /// Is this the Microsoft __declspec(property) attribute?
