@@ -56,6 +56,7 @@ private:
   void maybeAddThunks();
   void sortInputSections();
   void finalizeSections();
+  void checkExecuteOnly();
   void setReservedSymbolSections();
 
   std::vector<PhdrEntry *> createPhdrs();
@@ -458,6 +459,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // to the string table, and add entries to .got and .plt.
   // finalizeSections does that.
   finalizeSections();
+  checkExecuteOnly();
   if (errorCount())
     return;
 
@@ -483,10 +485,9 @@ template <class ELFT> void Writer<ELFT>::run() {
 
   setPhdrs();
 
-  if (Config->Relocatable) {
+  if (Config->Relocatable)
     for (OutputSection *Sec : OutputSections)
       Sec->Addr = 0;
-  }
 
   if (Config->CheckSections)
     checkSections();
@@ -1654,15 +1655,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     if (auto *Sec = dyn_cast<OutputSection>(Base))
       OutputSections.push_back(Sec);
 
-  // Ensure data sections are not mixed with executable sections when
-  // -execute-only is used.
-  if (Config->ExecuteOnly)
-    for (OutputSection *OS : OutputSections)
-      if (OS->Flags & SHF_EXECINSTR)
-        for (InputSection *IS : getInputSections(OS))
-          if (!(IS->Flags & SHF_EXECINSTR))
-            error("-execute-only does not support intermingling data and code");
-
   // Prefer command line supplied address over other constraints.
   for (OutputSection *Sec : OutputSections) {
     auto I = Config->SectionStartMap.find(Sec->Name);
@@ -1754,6 +1746,20 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // of finalizing other sections.
   for (OutputSection *Sec : OutputSections)
     Sec->finalize<ELFT>();
+}
+
+// Ensure data sections are not mixed with executable sections when
+// -execute-only is used. -execute-only is a feature to make pages executable
+// but not readable, and the feature is currently supported only on AArch64.
+template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
+  if (!Config->ExecuteOnly)
+    return;
+
+  for (OutputSection *OS : OutputSections)
+    if (OS->Flags & SHF_EXECINSTR)
+      for (InputSection *IS : getInputSections(OS))
+        if (!(IS->Flags & SHF_EXECINSTR))
+          error("-execute-only does not support intermingling data and code");
 }
 
 // The linker is expected to define SECNAME_start and SECNAME_end

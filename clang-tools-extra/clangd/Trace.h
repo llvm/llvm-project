@@ -87,6 +87,7 @@ public:
 
   /// Mutable metadata, if this span is interested.
   /// Prefer to use SPAN_ATTACH rather than accessing this directly.
+  /// The lifetime of Args is the whole event, even if the Span dies.
   llvm::json::Object *const Args;
 
 private:
