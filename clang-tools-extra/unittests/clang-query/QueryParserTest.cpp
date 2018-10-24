@@ -83,14 +83,12 @@ TEST_F(QueryParserTest, Set) {
             cast<InvalidQuery>(Q)->ErrStr);
 
   Q = parse("set output dump");
-  ASSERT_TRUE(isa<SetQuery<OutputKind> >(Q));
-  EXPECT_EQ(&QuerySession::OutKind, cast<SetQuery<OutputKind> >(Q)->Var);
-  EXPECT_EQ(OK_DetailedAST, cast<SetQuery<OutputKind>>(Q)->Value);
+  ASSERT_TRUE(isa<SetExclusiveOutputQuery >(Q));
+  EXPECT_EQ(&QuerySession::DetailedASTOutput, cast<SetExclusiveOutputQuery>(Q)->Var);
 
   Q = parse("set output detailed-ast");
-  ASSERT_TRUE(isa<SetQuery<OutputKind>>(Q));
-  EXPECT_EQ(&QuerySession::OutKind, cast<SetQuery<OutputKind>>(Q)->Var);
-  EXPECT_EQ(OK_DetailedAST, cast<SetQuery<OutputKind>>(Q)->Value);
+  ASSERT_TRUE(isa<SetExclusiveOutputQuery>(Q));
+  EXPECT_EQ(&QuerySession::DetailedASTOutput, cast<SetExclusiveOutputQuery>(Q)->Var);
 
   Q = parse("set bind-root foo");
   ASSERT_TRUE(isa<InvalidQuery>(Q));

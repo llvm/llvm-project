@@ -107,8 +107,7 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
 
       for (auto BI = MI->getMap().begin(), BE = MI->getMap().end(); BI != BE;
            ++BI) {
-        switch (QS.OutKind) {
-        case OK_Diag: {
+        if (QS.DiagOutput) {
           clang::SourceRange R = BI->second.getSourceRange();
           if (R.isValid()) {
             TextDiagnostic TD(OS, AST->getASTContext().getLangOpts(),
@@ -118,20 +117,16 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
                 DiagnosticsEngine::Note, "\"" + BI->first + "\" binds here",
                 CharSourceRange::getTokenRange(R), None);
           }
-          break;
         }
-        case OK_Print: {
+        if (QS.PrintOutput) {
           OS << "Binding for \"" << BI->first << "\":\n";
           BI->second.print(OS, AST->getASTContext().getPrintingPolicy());
           OS << "\n";
-          break;
         }
-        case OK_DetailedAST: {
+        if (QS.DetailedASTOutput) {
           OS << "Binding for \"" << BI->first << "\":\n";
           BI->second.dump(OS, AST->getSourceManager());
           OS << "\n";
-          break;
-        }
         }
       }
 

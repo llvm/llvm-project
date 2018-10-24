@@ -119,7 +119,17 @@ QueryRef QueryParser::parseSetOutputKind() {
         "expected 'diag', 'print', 'detailed-ast' or 'dump', got '" + ValStr +
         "'");
   }
-  return new SetQuery<OutputKind>(&QuerySession::OutKind, OutputKind(OutKind));
+
+  switch (OutKind) {
+  case OK_DetailedAST:
+    return new SetExclusiveOutputQuery(&QuerySession::DetailedASTOutput);
+  case OK_Diag:
+    return new SetExclusiveOutputQuery(&QuerySession::DiagOutput);
+  case OK_Print:
+    return new SetExclusiveOutputQuery(&QuerySession::PrintOutput);
+  }
+
+  llvm_unreachable("Invalid output kind");
 }
 
 QueryRef QueryParser::endQuery(QueryRef Q) {
