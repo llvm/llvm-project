@@ -381,10 +381,13 @@ TEST(CompletionTest, Qualifiers) {
       void test() { Bar().^ }
   )cpp");
   EXPECT_THAT(Results.Completions,
-              HasSubsequence(AllOf(Qualifier(""), Named("bar")),
-                             AllOf(Qualifier("Foo::"), Named("foo"))));
+              Contains(AllOf(Qualifier(""), Named("bar"))));
+  // Hidden members are not shown.
   EXPECT_THAT(Results.Completions,
-              Not(Contains(AllOf(Qualifier(""), Named("foo"))))); // private
+              Not(Contains(AllOf(Qualifier("Foo::"), Named("foo")))));
+  // Private members are not shown.
+  EXPECT_THAT(Results.Completions,
+              Not(Contains(AllOf(Qualifier(""), Named("foo")))));
 }
 
 TEST(CompletionTest, InjectedTypename) {
