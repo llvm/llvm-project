@@ -201,19 +201,6 @@ public:
       m_platform_sdk_path.clear();
   }
 
-  const char *GetResourceDir() const {
-    if (m_resource_dir.empty())
-      return NULL;
-    return m_resource_dir.c_str();
-  }
-
-  void SetResourceDir(const char *path) {
-    if (path)
-      m_resource_dir = path;
-    else
-      m_resource_dir.clear();
-  }
-
   size_t GetNumModuleSearchPaths() const;
 
   const char *GetModuleSearchPathAtIndex(size_t idx) const;
@@ -846,7 +833,6 @@ protected:
                                     // an expression has been evaluated will the
                                     // target's process pointer be filled in
   std::string m_platform_sdk_path;
-  std::string m_resource_dir;
   typedef std::map<Module *, std::vector<lldb::DataBufferSP>> ASTFileDataMap;
   ASTFileDataMap m_ast_file_data_map;
   // FIXME: this vector is needed because the LLDBNameLookup debugger clients
