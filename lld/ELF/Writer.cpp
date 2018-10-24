@@ -53,6 +53,7 @@ private:
   void forEachRelSec(llvm::function_ref<void(InputSectionBase &)> Fn);
   void sortSections();
   void resolveShfLinkOrder();
+  void maybeAddThunks();
   void sortInputSections();
   void finalizeSections();
   void setReservedSymbolSections();
@@ -1461,11 +1462,49 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
   }
 }
 
-static void applySynthetic(const std::vector<SyntheticSection *> &Sections,
-                           llvm::function_ref<void(SyntheticSection *)> Fn) {
-  for (SyntheticSection *SS : Sections)
-    if (SS && SS->getParent() && !SS->empty())
-      Fn(SS);
+// For most RISC ISAs, we need to generate content that depends on the address
+// of InputSections. For example some architectures such as AArch64 use small
+// displacements for jump instructions that is the linker's responsibility for
+// creating range extension thunks for. As the generation of the content may
+// also alter InputSection addresses we must converge to a fixed point.
+template <class ELFT> void Writer<ELFT>::maybeAddThunks() {
+  if (!Target->NeedsThunks && !Config->AndroidPackDynRelocs &&
+      !Config->RelrPackDynRelocs)
+    return;
+
+  ThunkCreator TC;
+  AArch64Err843419Patcher A64P;
+
+  for (;;) {
+    bool Changed = false;
+
+    Script->assignAddresses();
+
+    if (Target->NeedsThunks)
+      Changed |= TC.createThunks(OutputSections);
+
+    if (Config->FixCortexA53Errata843419) {
+      if (Changed)
+        Script->assignAddresses();
+      Changed |= A64P.createFixes();
+    }
+
+    if (In.MipsGot)
+      In.MipsGot->updateAllocSize();
+
+    Changed |= In.RelaDyn->updateAllocSize();
+
+    if (In.RelrDyn)
+      Changed |= In.RelrDyn->updateAllocSize();
+
+    if (!Changed)
+      return;
+  }
+}
+
+static void finalizeSynthetic(SyntheticSection *Sec) {
+  if (Sec && !Sec->empty() && Sec->getParent())
+    Sec->finalizeContents();
 }
 
 // In order to allow users to manipulate linker-synthesized sections,
@@ -1560,19 +1599,14 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   addRelIpltSymbols();
 
   // RISC-V's gp can address +/- 2 KiB, set it to .sdata + 0x800 if not defined.
-  if (Config->EMachine == EM_RISCV) {
-    ElfSym::RISCVGlobalPointer =
-        dyn_cast_or_null<Defined>(Symtab->find("__global_pointer$"));
-    if (!ElfSym::RISCVGlobalPointer)
-      ElfSym::RISCVGlobalPointer =
-          addOptionalRegular("__global_pointer$", findSection(".sdata"), 0x800);
-  }
+  if (Config->EMachine == EM_RISCV)
+    if (!dyn_cast_or_null<Defined>(Symtab->find("__global_pointer$")))
+      addOptionalRegular("__global_pointer$", findSection(".sdata"), 0x800);
 
   // This responsible for splitting up .eh_frame section into
   // pieces. The relocation scan uses those pieces, so this has to be
   // earlier.
-  applySynthetic({In.EhFrame},
-                 [](SyntheticSection *SS) { SS->finalizeContents(); });
+  finalizeSynthetic(In.EhFrame);
 
   for (Symbol *S : Symtab->getSymbols())
     S->IsPreemptible |= computeIsPreemptible(*S);
@@ -1668,31 +1702,30 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // Dynamic section must be the last one in this list and dynamic
   // symbol table section (DynSymTab) must be the first one.
-  applySynthetic({In.DynSymTab,
-                  In.Bss,
-                  In.BssRelRo,
-                  In.GnuHashTab,
-                  In.HashTab,
-                  In.SymTabShndx,
-                  In.ShStrTab,
-                  In.StrTab,
-                  In.VerDef,
-                  In.DynStrTab,
-                  In.Got,
-                  In.MipsGot,
-                  In.IgotPlt,
-                  In.GotPlt,
-                  In.RelaDyn,
-                  In.RelrDyn,
-                  In.RelaIplt,
-                  In.RelaPlt,
-                  In.Plt,
-                  In.Iplt,
-                  In.EhFrameHdr,
-                  InX<ELFT>::VerSym,
-                  InX<ELFT>::VerNeed,
-                  In.Dynamic},
-                 [](SyntheticSection *SS) { SS->finalizeContents(); });
+  finalizeSynthetic(In.DynSymTab);
+  finalizeSynthetic(In.Bss);
+  finalizeSynthetic(In.BssRelRo);
+  finalizeSynthetic(In.GnuHashTab);
+  finalizeSynthetic(In.HashTab);
+  finalizeSynthetic(In.SymTabShndx);
+  finalizeSynthetic(In.ShStrTab);
+  finalizeSynthetic(In.StrTab);
+  finalizeSynthetic(In.VerDef);
+  finalizeSynthetic(In.DynStrTab);
+  finalizeSynthetic(In.Got);
+  finalizeSynthetic(In.MipsGot);
+  finalizeSynthetic(In.IgotPlt);
+  finalizeSynthetic(In.GotPlt);
+  finalizeSynthetic(In.RelaDyn);
+  finalizeSynthetic(In.RelrDyn);
+  finalizeSynthetic(In.RelaIplt);
+  finalizeSynthetic(In.RelaPlt);
+  finalizeSynthetic(In.Plt);
+  finalizeSynthetic(In.Iplt);
+  finalizeSynthetic(In.EhFrameHdr);
+  finalizeSynthetic(InX<ELFT>::VerSym);
+  finalizeSynthetic(InX<ELFT>::VerNeed);
+  finalizeSynthetic(In.Dynamic);
 
   if (!Script->HasSectionsCommand && !Config->Relocatable)
     fixSectionAlignments();
@@ -1701,37 +1734,20 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // needs to be resolved before any other address dependent operation.
   resolveShfLinkOrder();
 
-  // Some architectures need to generate content that depends on the address
-  // of InputSections. For example some architectures use small displacements
-  // for jump instructions that is the linker's responsibility for creating
-  // range extension thunks for. As the generation of the content may also
-  // alter InputSection addresses we must converge to a fixed point.
-  if (Target->NeedsThunks || Config->AndroidPackDynRelocs ||
-      Config->RelrPackDynRelocs) {
-    ThunkCreator TC;
-    AArch64Err843419Patcher A64P;
-    bool Changed;
-    do {
-      Script->assignAddresses();
-      Changed = false;
-      if (Target->NeedsThunks)
-        Changed |= TC.createThunks(OutputSections);
-      if (Config->FixCortexA53Errata843419) {
-        if (Changed)
-          Script->assignAddresses();
-        Changed |= A64P.createFixes();
-      }
-      if (In.MipsGot)
-        In.MipsGot->updateAllocSize();
-      Changed |= In.RelaDyn->updateAllocSize();
-      if (In.RelrDyn)
-        Changed |= In.RelrDyn->updateAllocSize();
-    } while (Changed);
-  }
+  // Jump instructions in many ISAs have small displacements, and therefore they
+  // cannot jump to arbitrary addresses in memory. For example, RISC-V JAL
+  // instruction can target only +-1 MiB from PC. It is a linker's
+  // responsibility to create and insert small pieces of code between sections
+  // to extend the ranges if jump targets are out of range. Such code pieces are
+  // called "thunks".
+  //
+  // We add thunks at this stage. We couldn't do this before this point because
+  // this is the earliest point where we know sizes of sections and their
+  // layouts (that are needed to determine if jump targets are in range).
+  maybeAddThunks();
 
   // createThunks may have added local symbols to the static symbol table
-  applySynthetic({In.SymTab},
-                 [](SyntheticSection *SS) { SS->finalizeContents(); });
+  finalizeSynthetic(In.SymTab);
 
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result
