@@ -26890,6 +26890,10 @@ bool X86TargetLowering::isLegalAddImmediate(int64_t Imm) const {
   return isInt<32>(Imm);
 }
 
+bool X86TargetLowering::isLegalStoreImmediate(int64_t Imm) const {
+  return isInt<32>(Imm);
+}
+
 bool X86TargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
   if (!VT1.isInteger() || !VT2.isInteger())
     return false;

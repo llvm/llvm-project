@@ -80,7 +80,7 @@ static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
   const char *B = Contents.begin();
   const char *P = nullptr, *E = nullptr, *S = nullptr;
   for (P = Contents.begin(), E = Contents.end(); P < E; ++P) {
-    if (std::isgraph(*P) || std::isblank(*P)) {
+    if (isPrint(*P) || *P == '\t') {
       if (S == nullptr)
         S = P;
     } else if (S) {

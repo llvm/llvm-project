@@ -2,6 +2,11 @@
 
 struct OSMetaClass;
 
+#define TRUSTED __attribute__((annotate("rc_ownership_trusted_implementation")))
+#define OS_CONSUME TRUSTED __attribute__((annotate("rc_ownership_consumed")))
+#define OS_RETURNS_RETAINED TRUSTED __attribute__((annotate("rc_ownership_returns_retained")))
+#define OS_RETURNS_NOT_RETAINED TRUSTED __attribute__((annotate("rc_ownership_returns_not_retained")))
+
 #define OSTypeID(type)   (type::metaClass)
 
 #define OSDynamicCast(type, inst)   \
@@ -9,7 +14,7 @@ struct OSMetaClass;
 
 struct OSObject {
   virtual void retain();
-  virtual void release();
+  virtual void release() {};
   virtual ~OSObject(){}
 
   static OSObject *generateObject(int);
@@ -21,13 +26,52 @@ struct OSArray : public OSObject {
   unsigned int getCount();
 
   static OSArray *withCapacity(unsigned int capacity);
+  static void consumeArray(OS_CONSUME OSArray * array);
+
+  static OSArray* consumeArrayHasCode(OS_CONSUME OSArray * array) {
+    return nullptr;
+  }
+
+  static OS_RETURNS_NOT_RETAINED OSArray *MaskedGetter();
+  static OS_RETURNS_RETAINED OSArray *getOoopsActuallyCreate();
+
 
   static const OSMetaClass * const metaClass;
+};
+
+struct OtherStruct {
+  static void doNothingToArray(OSArray *array);
 };
 
 struct OSMetaClassBase {
   static OSObject *safeMetaCast(const OSObject *inst, const OSMetaClass *meta);
 };
+
+void check_no_invalidation() {
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to function 'withCapacity' returns an OSObject of type struct OSArray * with a +1 retain count}}
+  OtherStruct::doNothingToArray(arr);
+} // expected-warning{{Potential leak of an object stored into 'arr'}}
+  // expected-note@-1{{Object leaked}}
+
+void check_rc_consumed() {
+  OSArray *arr = OSArray::withCapacity(10);
+  OSArray::consumeArray(arr);
+}
+
+void check_rc_consume_temporary() {
+  OSArray::consumeArray(OSArray::withCapacity(10));
+}
+
+void check_rc_getter() {
+  OSArray *arr = OSArray::MaskedGetter();
+  (void)arr;
+}
+
+void check_rc_create() {
+  OSArray *arr = OSArray::getOoopsActuallyCreate();
+  arr->release();
+}
+
 
 void check_dynamic_cast() {
   OSArray *arr = OSDynamicCast(OSArray, OSObject::generateObject(1));
@@ -79,11 +123,6 @@ struct ArrayOwner {
 
   OSArray *getArraySourceUnknown();
 };
-
-//unsigned int leak_on_create_no_release(ArrayOwner *owner) {
-  //OSArray *myArray = 
-
-//}
 
 unsigned int no_warning_on_getter(ArrayOwner *owner) {
   OSArray *arr = owner->getArray();

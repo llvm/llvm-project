@@ -54,7 +54,7 @@ define i64 @const_i64_i32() {
 define void @main(i32 ** %data) {
 ; ALL-LABEL: main:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    movq $0, %rax
+; ALL-NEXT:    xorl %eax, %eax
 ; ALL-NEXT:    movq %rax, (%rdi)
 ; ALL-NEXT:    retq
   store i32* null, i32** %data, align 8

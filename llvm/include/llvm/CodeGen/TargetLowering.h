@@ -2058,6 +2058,14 @@ public:
     return true;
   }
 
+  /// Return true if the specified immediate is legal for the value input of a
+  /// store instruction.
+  virtual bool isLegalStoreImmediate(int64_t Value) const {
+    // Default implementation assumes that at least 0 works since it is likely
+    // that a zero register exists or a zero immediate is allowed.
+    return Value == 0;
+  }
+
   /// Return true if it's significantly cheaper to shift a vector by a uniform
   /// scalar than by an amount which will vary across each lane. On x86, for
   /// example, there is a "psllw" instruction for the former case, but no simple

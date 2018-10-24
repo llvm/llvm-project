@@ -38,6 +38,7 @@ LLVMState::LLVMState(const std::string &Triple, const std::string &CpuName) {
   }
   RATC.reset(new RegisterAliasingTrackerCache(
       getRegInfo(), getFunctionReservedRegs(getTargetMachine())));
+  IC.reset(new InstructionsCache(getInstrInfo(), getRATC()));
 }
 
 LLVMState::LLVMState()

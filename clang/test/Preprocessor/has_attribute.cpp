@@ -21,10 +21,14 @@
   int has_clang_fallthrough_2();
 #endif
 
-// The scope cannot be bracketed with double underscores.
+// The scope cannot be bracketed with double underscores unless it is for gnu.
 // CHECK: does_not_have___clang___fallthrough
 #if !__has_cpp_attribute(__clang__::fallthrough)
   int does_not_have___clang___fallthrough();
+#endif
+// CHECK: has_gnu_const
+#if __has_cpp_attribute(__gnu__::__const__)
+  int has_gnu_const();
 #endif
 
 // Test that C++11, target-specific attributes behave properly.

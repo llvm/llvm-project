@@ -177,11 +177,10 @@ void TimelineView::printAverageWaitTimes(raw_ostream &OS) const {
 
   formatted_raw_ostream FOS(OS);
   unsigned Executions = Timeline.size() / AsmSequence.size();
-  for (unsigned I = 0, E = WaitTime.size(); I < E; ++I) {
-    printWaitTimeEntry(FOS, WaitTime[I], I, Executions);
+  unsigned IID = 0;
+  for (const MCInst &Inst : AsmSequence) {
+    printWaitTimeEntry(FOS, WaitTime[IID], IID, Executions);
     // Append the instruction info at the end of the line.
-    const MCInst &Inst = AsmSequence.getMCInstFromIndex(I);
-
     MCIP.printInst(&Inst, InstrStream, "", STI);
     InstrStream.flush();
 
@@ -191,6 +190,8 @@ void TimelineView::printAverageWaitTimes(raw_ostream &OS) const {
     FOS << "   " << Str << '\n';
     FOS.flush();
     Instruction = "";
+
+    ++IID;
   }
 }
 
@@ -266,25 +267,29 @@ void TimelineView::printTimeline(raw_ostream &OS) const {
   std::string Instruction;
   raw_string_ostream InstrStream(Instruction);
 
-  for (unsigned I = 0, E = Timeline.size(); I < E; ++I) {
-    const TimelineViewEntry &Entry = Timeline[I];
-    if (Entry.CycleRetired == 0)
-      return;
+  unsigned IID = 0;
+  const unsigned Iterations = Timeline.size() / AsmSequence.size();
+  for (unsigned Iteration = 0; Iteration < Iterations; ++Iteration) {
+    for (const MCInst &Inst : AsmSequence) {
+      const TimelineViewEntry &Entry = Timeline[IID];
+      if (Entry.CycleRetired == 0)
+        return;
 
-    unsigned Iteration = I / AsmSequence.size();
-    unsigned SourceIndex = I % AsmSequence.size();
-    printTimelineViewEntry(FOS, Entry, Iteration, SourceIndex);
-    // Append the instruction info at the end of the line.
-    const MCInst &Inst = AsmSequence.getMCInstFromIndex(I);
-    MCIP.printInst(&Inst, InstrStream, "", STI);
-    InstrStream.flush();
+      unsigned SourceIndex = IID % AsmSequence.size();
+      printTimelineViewEntry(FOS, Entry, Iteration, SourceIndex);
+      // Append the instruction info at the end of the line.
+      MCIP.printInst(&Inst, InstrStream, "", STI);
+      InstrStream.flush();
 
-    // Consume any tabs or spaces at the beginning of the string.
-    StringRef Str(Instruction);
-    Str = Str.ltrim();
-    FOS << "   " << Str << '\n';
-    FOS.flush();
-    Instruction = "";
+      // Consume any tabs or spaces at the beginning of the string.
+      StringRef Str(Instruction);
+      Str = Str.ltrim();
+      FOS << "   " << Str << '\n';
+      FOS.flush();
+      Instruction = "";
+
+      ++IID;
+    }
   }
 }
 } // namespace mca

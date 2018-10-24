@@ -87,6 +87,7 @@ struct SymbolRelevanceSignals {
   bool Forbidden = false; // Unavailable (e.g const) or inaccessible (private).
   /// Whether fixits needs to be applied for that completion or not.
   bool NeedsFixIts = false;
+  bool InBaseClass = false; // A member from base class of the accessed class.
 
   URIDistance *FileProximityMatch = nullptr;
   /// These are used to calculate proximity between the index symbol and the

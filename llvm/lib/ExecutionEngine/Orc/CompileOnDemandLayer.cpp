@@ -157,7 +157,7 @@ void CompileOnDemandLayer::emit(MaterializationResponsibility R,
     return;
   }
 
-  R.replace(reexports(PDR.getImplDylib(), std::move(NonCallables)));
+  R.replace(reexports(PDR.getImplDylib(), std::move(NonCallables), true));
   R.replace(lazyReexports(LCTMgr, PDR.getISManager(), PDR.getImplDylib(),
                           std::move(Callables)));
 }
@@ -166,10 +166,17 @@ CompileOnDemandLayer::PerDylibResources &
 CompileOnDemandLayer::getPerDylibResources(JITDylib &TargetD) {
   auto I = DylibResources.find(&TargetD);
   if (I == DylibResources.end()) {
-    auto &ImplD =
-        getExecutionSession().createJITDylib(TargetD.getName() + ".impl");
-    TargetD.withSearchOrderDo([&](const JITDylibList &TargetSearchOrder) {
-      ImplD.setSearchOrder(TargetSearchOrder, false);
+    auto &ImplD = getExecutionSession().createJITDylib(
+        TargetD.getName() + ".impl", false);
+    TargetD.withSearchOrderDo([&](const JITDylibSearchList &TargetSearchOrder) {
+      auto NewSearchOrder = TargetSearchOrder;
+      assert(!NewSearchOrder.empty() &&
+             NewSearchOrder.front().first == &TargetD &&
+             NewSearchOrder.front().second == true &&
+             "TargetD must be at the front of its own search order and match "
+             "non-exported symbol");
+      NewSearchOrder.insert(std::next(NewSearchOrder.begin()), {&ImplD, true});
+      ImplD.setSearchOrder(std::move(NewSearchOrder), false);
     });
     PerDylibResources PDR(ImplD, BuildIndirectStubsManager());
     I = DylibResources.insert(std::make_pair(&TargetD, std::move(PDR))).first;

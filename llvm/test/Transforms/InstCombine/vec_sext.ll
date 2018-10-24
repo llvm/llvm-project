@@ -4,12 +4,9 @@
 define <4 x i32> @vec_select(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @vec_select(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <4 x i32> zeroinitializer, [[A:%.*]]
-; CHECK-NEXT:    [[B_LOBIT1:%.*]] = ashr <4 x i32> [[B:%.*]], <i32 31, i32 31, i32 31, i32 31>
-; CHECK-NEXT:    [[T1:%.*]] = xor <4 x i32> [[B_LOBIT1]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = and <4 x i32> [[T1]], [[A]]
-; CHECK-NEXT:    [[T3:%.*]] = and <4 x i32> [[B_LOBIT1]], [[SUB]]
-; CHECK-NEXT:    [[COND:%.*]] = or <4 x i32> [[T2]], [[T3]]
-; CHECK-NEXT:    ret <4 x i32> [[COND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[B:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[A]], <4 x i32> [[SUB]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %cmp = icmp slt <4 x i32> %b, zeroinitializer
   %sext = sext <4 x i1> %cmp to <4 x i32>
@@ -26,12 +23,9 @@ define <4 x i32> @vec_select(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i32> @vec_select_alternate_sign_bit_test(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @vec_select_alternate_sign_bit_test(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <4 x i32> zeroinitializer, [[A:%.*]]
-; CHECK-NEXT:    [[B_LOBIT1:%.*]] = ashr <4 x i32> [[B:%.*]], <i32 31, i32 31, i32 31, i32 31>
-; CHECK-NEXT:    [[B_LOBIT1_NOT:%.*]] = xor <4 x i32> [[B_LOBIT1]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = and <4 x i32> [[B_LOBIT1]], [[A]]
-; CHECK-NEXT:    [[T3:%.*]] = and <4 x i32> [[B_LOBIT1_NOT]], [[SUB]]
-; CHECK-NEXT:    [[COND:%.*]] = or <4 x i32> [[T2]], [[T3]]
-; CHECK-NEXT:    ret <4 x i32> [[COND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[B:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[SUB]], <4 x i32> [[A]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %cmp = icmp sgt <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
   %sext = sext <4 x i1> %cmp to <4 x i32>
