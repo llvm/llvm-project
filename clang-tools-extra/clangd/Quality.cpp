@@ -373,15 +373,15 @@ float SymbolRelevanceSignals::evaluate() const {
   if (!IsInstanceMember &&
       (Context == CodeCompletionContext::CCC_DotMemberAccess ||
        Context == CodeCompletionContext::CCC_ArrowMemberAccess)) {
-    Score *= 0.2;
+    Score *= 0.2f;
   }
 
   if (InBaseClass)
-    Score *= 0.5;
+    Score *= 0.5f;
 
   // Penalize for FixIts.
   if (NeedsFixIts)
-    Score *= 0.5;
+    Score *= 0.5f;
 
   return Score;
 }
