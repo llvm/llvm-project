@@ -41,6 +41,7 @@ public:
     NonLocationList,     // Not a location list
     RegularLocationList, // Location list format used in non-split dwarf files
     SplitDwarfLocationList, // Location list format used in split dwarf files
+    LocLists,               // Location list format used in DWARF v5 (.debug_loclists).
   };
 
   //------------------------------------------------------------------

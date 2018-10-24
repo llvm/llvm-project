@@ -293,8 +293,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT5]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i1> undef, i1 [[CMP]], i32 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> undef, i32 [[K]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i1> [[TMP2]], <i1 undef, i1 undef, i1 undef, i1 true>
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP4]], <4 x i32> [[TMP3]], <4 x i32> [[BROADCAST_SPLAT6]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[BROADCAST_SPLAT6]], <4 x i32> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[PREDPHI]], i32 3
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:

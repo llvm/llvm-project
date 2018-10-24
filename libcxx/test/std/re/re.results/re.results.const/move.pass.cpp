@@ -6,12 +6,14 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
+// UNSUPPORTED: c++03
 // <regex>
 
 // class match_results<BidirectionalIterator, Allocator>
 
-// match_results(const match_results&& m) noexcept;
+// match_results(match_results&& m) noexcept;
+//
+//  Additionally, the stored Allocator value is move constructed from m.get_allocator().
 
 #include <regex>
 #include <cassert>
@@ -26,6 +28,8 @@ test(const Allocator& a)
     ASSERT_NOEXCEPT(SM(std::declval<SM&&>()));
 
     SM m0(a);
+    assert(m0.get_allocator() == a);
+
     SM m1(std::move(m0));
     assert(m1.size() == 0);
     assert(m1.str() == std::basic_string<CharT>());
@@ -38,5 +42,7 @@ int main()
     test<wchar_t>(std::allocator<std::sub_match<const wchar_t *> >());
 
     test<char>   (test_allocator<std::sub_match<const char*> >(3));
+    assert(test_alloc_base::moved == 1);
     test<wchar_t>(test_allocator<std::sub_match<const wchar_t*> >(3));
+    assert(test_alloc_base::moved == 2);
 }

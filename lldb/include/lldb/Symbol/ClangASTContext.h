@@ -833,7 +833,7 @@ public:
   // Modifying RecordType
   //----------------------------------------------------------------------
   static clang::FieldDecl *AddFieldToRecordType(const CompilerType &type,
-                                                const char *name,
+                                                llvm::StringRef name,
                                                 const CompilerType &field_type,
                                                 lldb::AccessType access,
                                                 uint32_t bitfield_bit_size);
@@ -843,7 +843,7 @@ public:
   static void SetIsPacked(const CompilerType &type);
 
   static clang::VarDecl *AddVariableToRecordType(const CompilerType &type,
-                                                 const char *name,
+                                                 llvm::StringRef name,
                                                  const CompilerType &var_type,
                                                  lldb::AccessType access);
 

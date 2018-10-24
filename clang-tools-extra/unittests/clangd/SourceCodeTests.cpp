@@ -42,6 +42,16 @@ Range range(const std::pair<int, int> p1, const std::pair<int, int> p2) {
   return range;
 }
 
+TEST(SourceCodeTests, lspLength) {
+  EXPECT_EQ(lspLength(""), 0UL);
+  EXPECT_EQ(lspLength("ascii"), 5UL);
+  // BMP
+  EXPECT_EQ(lspLength("↓"), 1UL);
+  EXPECT_EQ(lspLength("¥"), 1UL);
+  // astral
+  EXPECT_EQ(lspLength("😂"), 2UL);
+}
+
 TEST(SourceCodeTests, PositionToOffset) {
   // line out of bounds
   EXPECT_THAT_EXPECTED(positionToOffset(File, position(-1, 2)), Failed());

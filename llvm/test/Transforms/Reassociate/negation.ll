@@ -33,9 +33,8 @@ define i32 @test2(i32 %a, i32 %b, i32 %z) {
 
 define <2 x i32> @negate_vec_undefs(<2 x i32> %a, <2 x i32> %b, <2 x i32> %z) {
 ; CHECK-LABEL: @negate_vec_undefs(
-; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i32> [[Z:%.*]], <i32 -40, i32 -40>
-; CHECK-NEXT:    [[E:%.*]] = mul <2 x i32> [[TMP1]], [[A:%.*]]
-; CHECK-NEXT:    [[F:%.*]] = sub <2 x i32> <i32 0, i32 undef>, [[E]]
+; CHECK-NEXT:    [[E:%.*]] = mul <2 x i32> [[A:%.*]], <i32 40, i32 40>
+; CHECK-NEXT:    [[F:%.*]] = mul <2 x i32> [[E]], [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[F]]
 ;
   %d = mul <2 x i32> %z, <i32 40, i32 40>

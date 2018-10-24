@@ -310,9 +310,9 @@ public:
 
   /// Returns true if this Group requires a scalar iteration to handle gaps.
   bool requiresScalarEpilogue() const {
-    // If Group has no gaps, or has gaps but the last member exists, then a
-    // scalar epilog is not needed for this group.
-    if (getNumMembers() == getFactor() || getMember(getFactor() - 1))
+    // If the last member of the Group exists, then a scalar epilog is not
+    // needed for this group.
+    if (getMember(getFactor() - 1))
       return false;
 
     // We have a group with gaps. It therefore cannot be a group of stores,

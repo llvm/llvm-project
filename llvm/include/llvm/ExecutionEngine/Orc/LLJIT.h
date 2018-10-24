@@ -144,7 +144,7 @@ public:
   /// LLLazyJIT with the given number of compile threads.
   static Expected<std::unique_ptr<LLLazyJIT>>
   Create(JITTargetMachineBuilder JTMB, DataLayout DL,
-         unsigned NumCompileThreads = 0);
+         JITTargetAddress ErrorAddr, unsigned NumCompileThreads = 0);
 
   /// Set an IR transform (e.g. pass manager pipeline) to run on each function
   /// when it is compiled.

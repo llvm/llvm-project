@@ -1820,9 +1820,19 @@ lldb::ProcessSP Platform::ConnectProcess(llvm::StringRef connect_url,
   error.Clear();
 
   if (!target) {
+    ArchSpec arch;
+    if (target && target->GetArchitecture().IsValid())
+      arch = target->GetArchitecture();
+    else
+      arch = Target::GetDefaultArchitecture();
+
+    const char *triple = "";
+    if (arch.IsValid())
+      triple = arch.GetTriple().getTriple().c_str();
+
     TargetSP new_target_sp;
     error = debugger.GetTargetList().CreateTarget(
-        debugger, "", "", eLoadDependentsNo, nullptr, new_target_sp);
+        debugger, "", triple, eLoadDependentsNo, nullptr, new_target_sp);
     target = new_target_sp.get();
   }
 

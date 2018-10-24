@@ -9551,8 +9551,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_IntegralComplexCast:
   case CK_IntegralComplexToFloatingComplex:
   case CK_BuiltinFnToFnPtr:
-  case CK_ZeroToOCLEvent:
-  case CK_ZeroToOCLQueue:
+  case CK_ZeroToOCLOpaqueType:
   case CK_NonAtomicToAtomic:
   case CK_AddressSpaceConversion:
   case CK_IntToOCLSampler:
@@ -9589,6 +9588,14 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (BoolResult && E->getCastKind() == CK_BooleanToSignedIntegral)
       IntResult = (uint64_t)-1;
     return Success(IntResult, E);
+  }
+
+  case CK_FixedPointToBoolean: {
+    // Unsigned padding does not affect this.
+    APValue Val;
+    if (!Evaluate(Val, Info, SubExpr))
+      return false;
+    return Success(Val.getInt().getBoolValue(), E);
   }
 
   case CK_IntegralCast: {
@@ -10086,12 +10093,12 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_ARCExtendBlockObject:
   case CK_CopyAndAutoreleaseBlockObject:
   case CK_BuiltinFnToFnPtr:
-  case CK_ZeroToOCLEvent:
-  case CK_ZeroToOCLQueue:
+  case CK_ZeroToOCLOpaqueType:
   case CK_NonAtomicToAtomic:
   case CK_AddressSpaceConversion:
   case CK_IntToOCLSampler:
   case CK_FixedPointCast:
+  case CK_FixedPointToBoolean:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_LValueToRValue:

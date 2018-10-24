@@ -1572,10 +1572,17 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform) {
 }
 
 bool Target::MergeArchitecture(const ArchSpec &arch_spec) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
   if (arch_spec.IsValid()) {
     if (m_arch.GetSpec().IsCompatibleMatch(arch_spec)) {
       // The current target arch is compatible with "arch_spec", see if we can
       // improve our current architecture using bits from "arch_spec"
+
+      if (log)
+        log->Printf("Target::MergeArchitecture target has arch %s, merging with "
+                    "arch %s", 
+                    m_arch.GetSpec().GetTriple().getTriple().c_str(),
+                    arch_spec.GetTriple().getTriple().c_str());
 
       // Merge bits from arch_spec into "merged_arch" and set our architecture
       ArchSpec merged_arch(m_arch.GetSpec());

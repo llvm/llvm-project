@@ -49,6 +49,7 @@
 // For GNU Hurd
 #if defined(__GNU__) && !defined(PATH_MAX)
 # define PATH_MAX 4096
+# define MAXPATHLEN 4096
 #endif
 
 #include <sys/types.h>
@@ -82,7 +83,7 @@
 #define STATVFS_F_FRSIZE(vfs) static_cast<uint64_t>(vfs.f_bsize)
 #endif
 
-#if defined(__NetBSD__)
+#if defined(__NetBSD__) || defined(__GNU__)
 #define STATVFS_F_FLAG(vfs) (vfs).f_flag
 #else
 #define STATVFS_F_FLAG(vfs) (vfs).f_flags
@@ -98,7 +99,7 @@ const file_t kInvalidFile = -1;
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||     \
     defined(__minix) || defined(__FreeBSD_kernel__) || defined(__linux__) ||   \
-    defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX)
+    defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX) || defined(__GNU__)
 static int
 test_dir(char ret[PATH_MAX], const char *dir, const char *bin)
 {
@@ -178,14 +179,34 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   char exe_path[MAXPATHLEN];
   StringRef aPath("/proc/self/exe");
   if (sys::fs::exists(aPath)) {
-      // /proc is not always mounted under Linux (chroot for example).
-      ssize_t len = readlink(aPath.str().c_str(), exe_path, sizeof(exe_path));
-      if (len >= 0)
-          return std::string(exe_path, len);
+    // /proc is not always mounted under Linux (chroot for example).
+    ssize_t len = readlink(aPath.str().c_str(), exe_path, sizeof(exe_path));
+    if (len < 0)
+      return "";
+
+    // Null terminate the string for realpath. readlink never null
+    // terminates its output.
+    len = std::min(len, ssize_t(sizeof(exe_path) - 1));
+    exe_path[len] = '\0';
+
+    // On Linux, /proc/self/exe always looks through symlinks. However, on
+    // GNU/Hurd, /proc/self/exe is a symlink to the path that was used to start
+    // the program, and not the eventual binary file. Therefore, call realpath
+    // so this behaves the same on all platforms.
+#if _POSIX_VERSION >= 200112 || defined(__GLIBC__)
+    char *real_path = realpath(exe_path, NULL);
+    std::string ret = std::string(real_path);
+    free(real_path);
+    return ret;
+#else
+    char real_path[MAXPATHLEN];
+    realpath(exe_path, real_path);
+    return std::string(real_path);
+#endif
   } else {
-      // Fall back to the classical detection.
-      if (getprogpath(exe_path, argv0))
-        return exe_path;
+    // Fall back to the classical detection.
+    if (getprogpath(exe_path, argv0))
+      return exe_path;
   }
 #elif defined(HAVE_DLFCN_H) && defined(HAVE_DLADDR)
   // Use dladdr to get executable path if available.
@@ -347,7 +368,7 @@ std::error_code remove(const Twine &path, bool IgnoreNonExisting) {
 }
 
 static bool is_local_impl(struct STATVFS &Vfs) {
-#if defined(__linux__)
+#if defined(__linux__) || defined(__GNU__)
 #ifndef NFS_SUPER_MAGIC
 #define NFS_SUPER_MAGIC 0x6969
 #endif
@@ -357,7 +378,11 @@ static bool is_local_impl(struct STATVFS &Vfs) {
 #ifndef CIFS_MAGIC_NUMBER
 #define CIFS_MAGIC_NUMBER 0xFF534D42
 #endif
+#ifdef __GNU__
+  switch ((uint32_t)Vfs.__f_type) {
+#else
   switch ((uint32_t)Vfs.f_type) {
+#endif
   case NFS_SUPER_MAGIC:
   case SMB_SUPER_MAGIC:
   case CIFS_MAGIC_NUMBER:

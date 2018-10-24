@@ -531,7 +531,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
                                         block_length);
             } else {
               const DWARFDataExtractor &debug_loc_data =
-                  dwarf2Data->get_debug_loc_data();
+                  dwarf2Data->DebugLocData();
               const dw_offset_t debug_loc_offset = form_value.Unsigned();
 
               size_t loc_list_length = DWARFExpression::LocationListSize(
@@ -726,7 +726,7 @@ void DWARFDebugInfoEntry::DumpAttribute(
       uint64_t debug_loc_offset = form_value.Unsigned();
       if (dwarf2Data) {
         DWARFExpression::PrintDWARFLocationList(
-            s, cu, dwarf2Data->get_debug_loc_data(), debug_loc_offset);
+            s, cu, dwarf2Data->DebugLocData(), debug_loc_offset);
       }
     }
   } break;

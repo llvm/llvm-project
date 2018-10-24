@@ -2606,6 +2606,13 @@ vector<bool, _Allocator>::__construct_at_end(size_type __n, bool __x)
 {
     size_type __old_size = this->__size_;
     this->__size_ += __n;
+    if (__old_size == 0 || ((__old_size - 1) / __bits_per_word) != ((this->__size_ - 1) / __bits_per_word))
+    {
+        if (this->__size_ <= __bits_per_word)
+            this->__begin_[0] = __storage_type(0);
+        else
+            this->__begin_[(this->__size_ - 1) / __bits_per_word] = __storage_type(0);
+    }
     _VSTD::fill_n(__make_iter(__old_size), __n, __x);
 }
 
@@ -2620,6 +2627,13 @@ vector<bool, _Allocator>::__construct_at_end(_ForwardIterator __first, _ForwardI
 {
     size_type __old_size = this->__size_;
     this->__size_ += _VSTD::distance(__first, __last);
+    if (__old_size == 0 || ((__old_size - 1) / __bits_per_word) != ((this->__size_ - 1) / __bits_per_word))
+    {
+        if (this->__size_ <= __bits_per_word)
+            this->__begin_[0] = __storage_type(0);
+        else
+            this->__begin_[(this->__size_ - 1) / __bits_per_word] = __storage_type(0);
+    }
     _VSTD::copy(__first, __last, __make_iter(__old_size));
 }
 

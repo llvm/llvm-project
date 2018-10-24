@@ -810,6 +810,10 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
   // 64-bit packed integer vectors (v2i32) are promoted to type v2i64.
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
 
+  // Treat Transpose as 2-op shuffles - there's no difference in lowering.
+  if (Kind == TTI::SK_Transpose)
+    Kind = TTI::SK_PermuteTwoSrc;
+
   // For Broadcasts we are splatting the first element from the first input
   // register, so only need to reference that input and all the output
   // registers are the same.

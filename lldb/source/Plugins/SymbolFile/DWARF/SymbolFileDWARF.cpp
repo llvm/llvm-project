@@ -654,8 +654,20 @@ const DWARFDataExtractor &SymbolFileDWARF::get_debug_macro_data() {
   return GetCachedSectionData(eSectionTypeDWARFDebugMacro, m_data_debug_macro);
 }
 
+const DWARFDataExtractor &SymbolFileDWARF::DebugLocData() {
+  const DWARFDataExtractor &debugLocData = get_debug_loc_data();
+  if (debugLocData.GetByteSize() > 0)
+    return debugLocData;
+  return get_debug_loclists_data();
+}
+
 const DWARFDataExtractor &SymbolFileDWARF::get_debug_loc_data() {
   return GetCachedSectionData(eSectionTypeDWARFDebugLoc, m_data_debug_loc);
+}
+
+const DWARFDataExtractor &SymbolFileDWARF::get_debug_loclists_data() {
+  return GetCachedSectionData(eSectionTypeDWARFDebugLocLists,
+                              m_data_debug_loclists);
 }
 
 const DWARFDataExtractor &SymbolFileDWARF::get_debug_ranges_data() {
@@ -3346,7 +3358,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
               uint32_t block_length = form_value.Unsigned();
               location.CopyOpcodeData(module, data, block_offset, block_length);
             } else {
-              const DWARFDataExtractor &debug_loc_data = get_debug_loc_data();
+              const DWARFDataExtractor &debug_loc_data = DebugLocData();
               const dw_offset_t debug_loc_offset = form_value.Unsigned();
 
               size_t loc_list_length = DWARFExpression::LocationListSize(
@@ -3860,6 +3872,8 @@ SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
 
 DWARFExpression::LocationListFormat
 SymbolFileDWARF::GetLocationListFormat() const {
+  if (m_data_debug_loclists.m_data.GetByteSize() > 0)
+    return DWARFExpression::LocLists;
   return DWARFExpression::RegularLocationList;
 }
 

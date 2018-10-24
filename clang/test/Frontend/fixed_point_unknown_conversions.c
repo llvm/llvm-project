@@ -35,7 +35,6 @@ void func() {
   accum_ptr = ptr; // expected-warning{{incompatible pointer types assigning to '_Accum *' from 'int *'}}
   accum = i2;      // expected-error{{conversion between fixed point and 'int_t' (aka 'int') is not yet supported}}
 
-  b = accum;       // expected-error{{conversion between fixed point and '_Bool' is not yet supported}}
   c = accum;       // expected-error{{conversion between fixed point and 'char' is not yet supported}}
   i = accum;       // expected-error{{conversion between fixed point and 'int' is not yet supported}}
   f = accum;       // expected-error{{conversion between fixed point and 'float' is not yet supported}}

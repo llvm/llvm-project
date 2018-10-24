@@ -2519,14 +2519,6 @@ let Predicates = [HasBMI2] in {
                              (and (x86memop addr:$src),
                                   (srl -1, (sub bitwidth, GR8:$lz))),
                              RC, VT, DstInst, DstMemInst>;
-
-    // x << (bitwidth - y) >> (bitwidth - y)
-    defm : _bmi_bzhi_pattern<(srl (shl RC:$src, (sub bitwidth, GR8:$lz)),
-                                  (sub bitwidth, GR8:$lz)),
-                             (srl (shl (x86memop addr:$src),
-                                        (sub bitwidth, GR8:$lz)),
-                                  (sub bitwidth, GR8:$lz)),
-                             RC, VT, DstInst, DstMemInst>;
   }
 
   defm : bmi_bzhi_patterns<GR32, 32, i32, BZHI32rr, loadi32, BZHI32rm>;
@@ -2543,24 +2535,6 @@ let Predicates = [HasBMI2] in {
             (BZHI64rr GR64:$src,
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$lz, sub_32bit))>;
   def : Pat<(and (loadi64 addr:$src), (srl -1, (i8 (trunc (sub 64, GR32:$lz))))),
-            (BZHI64rm addr:$src,
-              (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$lz, sub_32bit))>;
-
-  // x << (32 - y) >> (32 - y)
-  def : Pat<(srl (shl GR32:$src, (i8 (trunc (sub 32, GR32:$lz)))),
-                 (i8 (trunc (sub 32, GR32:$lz)))),
-            (BZHI32rr GR32:$src, GR32:$lz)>;
-  def : Pat<(srl (shl (loadi32 addr:$src), (i8 (trunc (sub 32, GR32:$lz)))),
-                 (i8 (trunc (sub 32, GR32:$lz)))),
-            (BZHI32rm addr:$src, GR32:$lz)>;
-
-  // x << (64 - y) >> (64 - y)
-  def : Pat<(srl (shl GR64:$src, (i8 (trunc (sub 64, GR32:$lz)))),
-                 (i8 (trunc (sub 64, GR32:$lz)))),
-            (BZHI64rr GR64:$src,
-              (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$lz, sub_32bit))>;
-  def : Pat<(srl (shl (loadi64 addr:$src), (i8 (trunc (sub 64, GR32:$lz)))),
-                 (i8 (trunc (sub 64, GR32:$lz)))),
             (BZHI64rm addr:$src,
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$lz, sub_32bit))>;
 } // HasBMI2

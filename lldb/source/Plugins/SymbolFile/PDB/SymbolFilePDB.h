@@ -169,6 +169,13 @@ public:
   const llvm::pdb::IPDBSession &GetPDBSession() const;
 
 private:
+  struct SecContribInfo {
+    uint32_t Offset;
+    uint32_t Size;
+    uint32_t CompilandId;
+  };
+  using SecContribsMap = std::map<uint32_t, std::vector<SecContribInfo>>;
+
   lldb::CompUnitSP ParseCompileUnitForUID(uint32_t id,
                                           uint32_t index = UINT32_MAX);
 
@@ -227,9 +234,14 @@ private:
   bool DeclContextMatchesThisSymbolFile(
       const lldb_private::CompilerDeclContext *decl_ctx);
 
+  uint32_t GetCompilandId(const llvm::pdb::PDBSymbolData &data);
+
   llvm::DenseMap<uint32_t, lldb::CompUnitSP> m_comp_units;
   llvm::DenseMap<uint32_t, lldb::TypeSP> m_types;
   llvm::DenseMap<uint32_t, lldb::VariableSP> m_variables;
+  llvm::DenseMap<uint64_t, std::string> m_public_names;
+
+  SecContribsMap m_sec_contribs;
 
   std::vector<lldb::TypeSP> m_builtin_types;
   std::unique_ptr<llvm::pdb::IPDBSession> m_session_up;

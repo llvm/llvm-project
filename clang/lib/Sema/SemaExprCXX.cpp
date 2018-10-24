@@ -4236,14 +4236,9 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   }
 
   case ICK_Zero_Event_Conversion:
-    From = ImpCastExprToType(From, ToType,
-                             CK_ZeroToOCLEvent,
-                             From->getValueKind()).get();
-    break;
-
   case ICK_Zero_Queue_Conversion:
     From = ImpCastExprToType(From, ToType,
-                             CK_ZeroToOCLQueue,
+                             CK_ZeroToOCLOpaqueType,
                              From->getValueKind()).get();
     break;
 
