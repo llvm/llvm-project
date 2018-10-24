@@ -2557,7 +2557,7 @@ void CastOperation::CheckCStyleCast() {
       llvm::APSInt CastInt;
       if (SrcExpr.get()->EvaluateAsInt(CastInt, Self.Context)) {
         if (0 == CastInt) {
-          Kind = CK_ZeroToOCLEvent;
+          Kind = CK_ZeroToOCLOpaqueType;
           return;
         }
         Self.Diag(OpRange.getBegin(),

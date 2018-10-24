@@ -174,7 +174,8 @@ private:
       if (Error == ErrorKind::NilAssignedToNonnull ||
           Error == ErrorKind::NilPassedToNonnull ||
           Error == ErrorKind::NilReturnedToNonnull)
-        bugreporter::trackNullOrUndefValue(N, ValueExpr, *R);
+        if (const auto *Ex = dyn_cast<Expr>(ValueExpr))
+          bugreporter::trackExpressionValue(N, Ex, *R);
     }
     BR.emitReport(std::move(R));
   }

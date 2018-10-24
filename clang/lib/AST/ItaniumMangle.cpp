@@ -33,12 +33,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
-#define MANGLE_CHECKER 0
-
-#if MANGLE_CHECKER
-#include <cxxabi.h>
-#endif
-
 using namespace clang;
 
 namespace {
@@ -415,17 +409,6 @@ public:
         SeqID(Outer.SeqID), FunctionTypeDepth(Outer.FunctionTypeDepth),
         AbiTagsRoot(AbiTags), Substitutions(Outer.Substitutions) {}
 
-#if MANGLE_CHECKER
-  ~CXXNameMangler() {
-    if (Out.str()[0] == '\01')
-      return;
-
-    int status = 0;
-    char *result = abi::__cxa_demangle(Out.str().str().c_str(), 0, 0, &status);
-    assert(status == 0 && "Could not demangle mangled name!");
-    free(result);
-  }
-#endif
   raw_ostream &getStream() { return Out; }
 
   void disableDerivedAbiTags() { DisableDerivedAbiTags = true; }
