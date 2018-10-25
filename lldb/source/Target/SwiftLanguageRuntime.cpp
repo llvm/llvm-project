@@ -1964,7 +1964,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
     return false;
 
   switch (promise_sp->FulfillKindPromise().getValue()) {
-  case swift::MetadataKind::Class: {
+  case swift::MetadataKind::Class:
+  case swift::MetadataKind::ObjCClassWrapper: {
     CompilerType dyn_type(promise_sp->FulfillTypePromise());
     if (!dyn_type.IsValid())
       return false;
