@@ -93,7 +93,7 @@ private:
   /// may be very expensive.  This method is normally called when the
   /// compilation database is changed.
   void reparseOpenedFiles();
-  void applyConfiguration(const ClangdConfigurationParamsChange &Settings);
+  void applyConfiguration(const ConfigurationSettings &Settings);
 
   /// Used to indicate that the 'shutdown' request was received from the
   /// Language Server client.
