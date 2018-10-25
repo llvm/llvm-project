@@ -556,9 +556,11 @@ static bool includeInSymtab(const Symbol &B) {
     if (!Sec)
       return true;
     Sec = Sec->Repl;
+
     // Exclude symbols pointing to garbage-collected sections.
     if (isa<InputSectionBase>(Sec) && !Sec->Live)
       return false;
+
     if (auto *S = dyn_cast<MergeInputSection>(Sec))
       if (!S->getSectionPiece(D->Value)->Live)
         return false;
@@ -594,11 +596,11 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   }
 }
 
+// Create a section symbol for each output section so that we can represent
+// relocations that point to the section. If we know that no relocation is
+// referring to a section (that happens if the section is a synthetic one), we
+// don't create a section symbol for that section.
 template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
-  // Create a section symbol for each output section so that we can represent
-  // relocations that point to the section. If we know that no relocation is
-  // referring to a section (that happens if the section is a synthetic one), we
-  // don't create a section symbol for that section.
   for (BaseCommand *Base : Script->SectionCommands) {
     auto *Sec = dyn_cast<OutputSection>(Base);
     if (!Sec)
@@ -673,6 +675,11 @@ static bool isRelroSection(const OutputSection *Sec) {
   if (In.Got && Sec == In.Got->getParent())
     return true;
 
+  // .toc is a GOT-ish section for PowerPC64. Their contents are accessed
+  // through r2 register, which is reserved for that purpose. Since r2 is used
+  // for accessing .got as well, .got and .toc need to be close enough in the
+  // virtual address space. Usually, .toc comes just after .got. Since we place
+  // .got into RELRO, .toc needs to be placed into RELRO too.
   if (Sec->Name.equals(".toc"))
     return true;
 
@@ -858,8 +865,10 @@ static unsigned getSectionRank(const OutputSection *Sec) {
 static bool compareSections(const BaseCommand *ACmd, const BaseCommand *BCmd) {
   const OutputSection *A = cast<OutputSection>(ACmd);
   const OutputSection *B = cast<OutputSection>(BCmd);
+
   if (A->SortRank != B->SortRank)
     return A->SortRank < B->SortRank;
+
   if (!(A->SortRank & RF_NOT_ADDR_SET))
     return Config->SectionStartMap.lookup(A->Name) <
            Config->SectionStartMap.lookup(B->Name);
@@ -1105,6 +1114,7 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
       }
     }
   };
+
   // We want both global and local symbols. We get the global ones from the
   // symbol table and iterate the object files for the local ones.
   for (Symbol *Sym : Symtab->getSymbols())
@@ -1349,10 +1359,12 @@ static bool compareByFilePosition(InputSection *A, InputSection *B) {
   if (A->kind() == InputSectionBase::Synthetic ||
       B->kind() == InputSectionBase::Synthetic)
     return A->kind() != InputSectionBase::Synthetic;
+
   InputSection *LA = A->getLinkOrderDep();
   InputSection *LB = B->getLinkOrderDep();
   OutputSection *AOut = LA->getParent();
   OutputSection *BOut = LB->getParent();
+
   if (AOut != BOut)
     return AOut->SectionIndex < BOut->SectionIndex;
   return LA->OutSecOff < LB->OutSecOff;
@@ -1399,6 +1411,7 @@ static bool isDuplicateArmExidxSec(InputSection *Prev, InputSection *Cur) {
   for (const ExidxEntry Entry : Cur->getDataAs<ExidxEntry>())
     if (IsExtabRef(Entry.Unwind) || Entry.Unwind != PrevEntry.Unwind)
       return false;
+
   // All table entries in this .ARM.exidx Section can be merged into the
   // previous Section.
   return true;
@@ -1430,18 +1443,19 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
         assert(Sections.size() >= 2 &&
                "We should create a sentinel section only if there are "
                "alive regular exidx sections.");
+
         // The last executable section is required to fill the sentinel.
         // Remember it here so that we don't have to find it again.
         Sentinel->Highest = Sections[Sections.size() - 2]->getLinkOrderDep();
       }
 
+      // The EHABI for the Arm Architecture permits consecutive identical
+      // table entries to be merged. We use a simple implementation that
+      // removes a .ARM.exidx Input Section if it can be merged into the
+      // previous one. This does not require any rewriting of InputSection
+      // contents but misses opportunities for fine grained deduplication
+      // where only a subset of the InputSection contents can be merged.
       if (Config->MergeArmExidx) {
-        // The EHABI for the Arm Architecture permits consecutive identical
-        // table entries to be merged. We use a simple implementation that
-        // removes a .ARM.exidx Input Section if it can be merged into the
-        // previous one. This does not require any rewriting of InputSection
-        // contents but misses opportunities for fine grained deduplication
-        // where only a subset of the InputSection contents can be merged.
         size_t Prev = 0;
         // The last one is a sentinel entry which should not be removed.
         for (size_t I = 1; I < Sections.size() - 1; ++I) {
@@ -1545,6 +1559,7 @@ static void removeUnusedSyntheticSections() {
 // with the same name defined in other ELF executable or DSO.
 static bool computeIsPreemptible(const Symbol &B) {
   assert(!B.isLocal());
+
   // Only symbols that appear in dynsym can be preempted.
   if (!B.includeInDynsym())
     return false;
@@ -1610,7 +1625,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   finalizeSynthetic(In.EhFrame);
 
   for (Symbol *S : Symtab->getSymbols())
-    S->IsPreemptible |= computeIsPreemptible(*S);
+    if (!S->IsPreemptible)
+      S->IsPreemptible = computeIsPreemptible(*S);
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
@@ -1738,7 +1754,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // layouts (that are needed to determine if jump targets are in range).
   maybeAddThunks();
 
-  // createThunks may have added local symbols to the static symbol table
+  // maybeAddThunks may have added local symbols to the static symbol table.
   finalizeSynthetic(In.SymTab);
 
   // Fill other section headers. The dynamic table is finalized
@@ -2007,14 +2023,17 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
   for (const PhdrEntry *P : Phdrs) {
     if (P->p_type != PT_GNU_RELRO)
       continue;
+
     if (P->FirstSec)
       PageAlign(P->FirstSec);
+
     // Find the first section after PT_GNU_RELRO. If it is in a PT_LOAD we
     // have to align it to a page.
     auto End = OutputSections.end();
     auto I = std::find(OutputSections.begin(), End, P->LastSec);
     if (I == End || (I + 1) == End)
       continue;
+
     OutputSection *Cmd = (*(I + 1));
     if (needsPtLoad(Cmd))
       PageAlign(Cmd);
@@ -2085,6 +2104,7 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
     Off = setFileOffset(Sec, Off);
     if (Script->HasSectionsCommand)
       continue;
+
     // If this is a last section of the last executable segment and that
     // segment is the last loadable segment, align the offset of the
     // following section to avoid loading non-segments parts of the file.
@@ -2120,19 +2140,23 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
   for (PhdrEntry *P : Phdrs) {
     OutputSection *First = P->FirstSec;
     OutputSection *Last = P->LastSec;
+
     if (First) {
       P->p_filesz = Last->Offset - First->Offset;
       if (Last->Type != SHT_NOBITS)
         P->p_filesz += Last->Size;
+
       P->p_memsz = Last->Addr + Last->Size - First->Addr;
       P->p_offset = First->Offset;
       P->p_vaddr = First->Addr;
+
       if (!P->HasLMA)
         P->p_paddr = First->getLMA();
     }
-    if (P->p_type == PT_LOAD)
+
+    if (P->p_type == PT_LOAD) {
       P->p_align = std::max<uint64_t>(P->p_align, Config->MaxPageSize);
-    else if (P->p_type == PT_GNU_RELRO) {
+    } else if (P->p_type == PT_GNU_RELRO) {
       P->p_align = 1;
       // The glibc dynamic loader rounds the size down, so we need to round up
       // to protect the last page. This is a no-op on FreeBSD which always
@@ -2289,6 +2313,7 @@ static uint8_t getAbiVersion() {
 
 template <class ELFT> void Writer<ELFT>::writeHeader() {
   uint8_t *Buf = Buffer->getBufferStart();
+
   // For executable segments, the trap instructions are written before writing
   // the header. Setting Elf header bytes to zero ensures that any unused bytes
   // in header are zero-cleared, instead of having trap instructions.

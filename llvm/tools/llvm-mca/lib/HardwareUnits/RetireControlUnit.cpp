@@ -63,7 +63,7 @@ const RetireControlUnit::RUToken &RetireControlUnit::peekCurrentToken() const {
 void RetireControlUnit::consumeCurrentToken() {
   const RetireControlUnit::RUToken &Current = peekCurrentToken();
   assert(Current.NumSlots && "Reserved zero slots?");
-  assert(Current.IR.isValid() && "Invalid RUToken in the RCU queue.");
+  assert(Current.IR && "Invalid RUToken in the RCU queue.");
 
   // Update the slot index to be the next item in the circular queue.
   CurrentInstructionSlotIdx += Current.NumSlots;
@@ -73,7 +73,7 @@ void RetireControlUnit::consumeCurrentToken() {
 
 void RetireControlUnit::onInstructionExecuted(unsigned TokenID) {
   assert(Queue.size() > TokenID);
-  assert(Queue[TokenID].Executed == false && Queue[TokenID].IR.isValid());
+  assert(Queue[TokenID].Executed == false && Queue[TokenID].IR);
   Queue[TokenID].Executed = true;
 }
 

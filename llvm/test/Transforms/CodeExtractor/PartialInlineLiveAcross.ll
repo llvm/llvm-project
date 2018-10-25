@@ -36,7 +36,7 @@ declare void @foo(...) local_unnamed_addr #1
 define i32 @dummy_caller(i32 %arg) local_unnamed_addr #0 {
 ; CHECK-LABEL: @dummy_caller
 ; CHECK: codeRepl.i:
-; CHECK:  call void @test.1_bb2()
+; CHECK:  call void @test.1.bb2()
 ; CHECK-NOT: load
 ; CHECK  br
 
@@ -45,7 +45,7 @@ bb:
   ret i32 %tmp
 }
 
-; CHECK-LABEL: define internal void @test.1_bb2()
+; CHECK-LABEL: define internal void @test.1.bb2()
 ; CHECK: .exitStub:
 ; CHECK-NOT:  store i32 %tmp7, i32* %tmp7.out
 ; CHECK: ret

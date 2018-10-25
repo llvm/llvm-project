@@ -116,6 +116,10 @@ OPTIONS
   as old tests are migrated to the new non-overlapping ``CHECK-DAG:``
   implementation.
 
+.. option:: --color
+
+  Use colors in output (autodetected by default).
+
 EXIT STATUS
 -----------
 

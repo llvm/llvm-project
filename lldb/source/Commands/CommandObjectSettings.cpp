@@ -30,7 +30,8 @@ using namespace lldb_private;
 
 static constexpr OptionDefinition g_settings_set_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_2, false, "global", 'g', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Apply the new value to the global default value." }
+  { LLDB_OPT_SET_2, false, "global", 'g', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Apply the new value to the global default value." },
+  { LLDB_OPT_SET_2, false, "force",  'f', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Force an empty value to be accepted as the default." }
     // clang-format on
 };
 
@@ -108,6 +109,9 @@ insert-before or insert-after.");
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
+      case 'f':
+        m_force = true;
+        break;
       case 'g':
         m_global = true;
         break;
@@ -122,6 +126,7 @@ insert-before or insert-after.");
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_global = false;
+      m_force = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -129,8 +134,8 @@ insert-before or insert-after.");
     }
 
     // Instance variables to hold the values for command options.
-
     bool m_global;
+    bool m_force;
   };
 
   int HandleArgumentCompletion(
@@ -184,8 +189,10 @@ protected:
     if (!ParseOptions(cmd_args, result))
       return false;
 
+    const size_t min_argc = m_options.m_force ? 1 : 2;
     const size_t argc = cmd_args.GetArgumentCount();
-    if ((argc < 2) && (!m_options.m_global)) {
+
+    if ((argc < min_argc) && (!m_options.m_global)) {
       result.AppendError("'settings set' takes more arguments");
       result.SetStatus(eReturnStatusFailed);
       return false;
@@ -197,6 +204,19 @@ protected:
           "'settings set' command requires a valid variable name");
       result.SetStatus(eReturnStatusFailed);
       return false;
+    }
+
+    // A missing value corresponds to clearing the setting when "force" is
+    // specified.
+    if (argc == 1 && m_options.m_force) {
+      Status error(m_interpreter.GetDebugger().SetPropertyValue(
+          &m_exe_ctx, eVarSetOperationClear, var_name, llvm::StringRef()));
+      if (error.Fail()) {
+        result.AppendError(error.AsCString());
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+      return result.Succeeded();
     }
 
     // Split the raw command into var_name and value pair.

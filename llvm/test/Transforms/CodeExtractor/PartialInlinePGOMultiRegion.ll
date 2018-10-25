@@ -109,9 +109,9 @@ define signext i32 @foo(i32 signext %value, i32 signext %ub) #0 !prof !30 {
 ; CHECK-LABEL: @foo
 ; CHECK-NOT: call signext i32 @bar
 ; CHECK: codeRepl1.i:
-; CHECK: call void @bar.1_if.then
+; CHECK: call void @bar.1.if.then
 ; CHECK: codeRepl.i:
-; CHECK: call void @bar.1_if.then2
+; CHECK: call void @bar.1.if.then2
 entry:
   %value.addr = alloca i32, align 4
   %ub.addr = alloca i32, align 4
@@ -123,11 +123,11 @@ entry:
   ret i32 %call
 }
 
-; CHECK-LABEL: define internal void @bar.1_if.then2
+; CHECK-LABEL: define internal void @bar.1.if.then2
 ; CHECK: .exitStub:
 ; CHECK: ret void
 
-; CHECK-LABEL: define internal void @bar.1_if.then
+; CHECK-LABEL: define internal void @bar.1.if.then
 ; CHECK: .exitStub:
 ; CHECK: ret void
 

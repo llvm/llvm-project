@@ -154,7 +154,7 @@ Error DispatchStage::cycleStart() {
   AvailableEntries = CarryOver >= DispatchWidth ? 0 : DispatchWidth - CarryOver;
   unsigned DispatchedOpcodes = DispatchWidth - AvailableEntries;
   CarryOver -= DispatchedOpcodes;
-  assert(CarriedOver.isValid() && "Invalid dispatched instruction");
+  assert(CarriedOver && "Invalid dispatched instruction");
 
   SmallVector<unsigned, 8> RegisterFiles(PRF.getNumRegisterFiles(), 0U);
   notifyInstructionDispatched(CarriedOver, RegisterFiles, DispatchedOpcodes);

@@ -346,6 +346,10 @@ int X86TTIImpl::getArithmeticInstrCost(
   }
 
   static const CostTblEntry AVX512BWConstCostTable[] = {
+    { ISD::SDIV, MVT::v64i8,  14 }, // 2*ext+2*pmulhw sequence
+    { ISD::SREM, MVT::v64i8,  16 }, // 2*ext+2*pmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v64i8,  14 }, // 2*ext+2*pmulhw sequence
+    { ISD::UREM, MVT::v64i8,  16 }, // 2*ext+2*pmulhw+mul+sub sequence
     { ISD::SDIV, MVT::v32i16,  6 }, // vpmulhw sequence
     { ISD::SREM, MVT::v32i16,  8 }, // vpmulhw+mul+sub sequence
     { ISD::UDIV, MVT::v32i16,  6 }, // vpmulhuw sequence
@@ -376,6 +380,10 @@ int X86TTIImpl::getArithmeticInstrCost(
   }
 
   static const CostTblEntry AVX2ConstCostTable[] = {
+    { ISD::SDIV, MVT::v32i8,  14 }, // 2*ext+2*pmulhw sequence
+    { ISD::SREM, MVT::v32i8,  16 }, // 2*ext+2*pmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v32i8,  14 }, // 2*ext+2*pmulhw sequence
+    { ISD::UREM, MVT::v32i8,  16 }, // 2*ext+2*pmulhw+mul+sub sequence
     { ISD::SDIV, MVT::v16i16,  6 }, // vpmulhw sequence
     { ISD::SREM, MVT::v16i16,  8 }, // vpmulhw+mul+sub sequence
     { ISD::UDIV, MVT::v16i16,  6 }, // vpmulhuw sequence
@@ -394,6 +402,14 @@ int X86TTIImpl::getArithmeticInstrCost(
   }
 
   static const CostTblEntry SSE2ConstCostTable[] = {
+    { ISD::SDIV, MVT::v32i8,  28+2 }, // 4*ext+4*pmulhw sequence + split.
+    { ISD::SREM, MVT::v32i8,  32+2 }, // 4*ext+4*pmulhw+mul+sub sequence + split.
+    { ISD::SDIV, MVT::v16i8,    14 }, // 2*ext+2*pmulhw sequence
+    { ISD::SREM, MVT::v16i8,    16 }, // 2*ext+2*pmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v32i8,  28+2 }, // 4*ext+4*pmulhw sequence + split.
+    { ISD::UREM, MVT::v32i8,  32+2 }, // 4*ext+4*pmulhw+mul+sub sequence + split.
+    { ISD::UDIV, MVT::v16i8,    14 }, // 2*ext+2*pmulhw sequence
+    { ISD::UREM, MVT::v16i8,    16 }, // 2*ext+2*pmulhw+mul+sub sequence
     { ISD::SDIV, MVT::v16i16, 12+2 }, // 2*pmulhw sequence + split.
     { ISD::SREM, MVT::v16i16, 16+2 }, // 2*pmulhw+mul+sub sequence + split.
     { ISD::SDIV, MVT::v8i16,     6 }, // pmulhw sequence

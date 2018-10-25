@@ -1335,6 +1335,13 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     LLVM_FALLTHROUGH;
   }
   default:
+    if (Op.getOpcode() >= ISD::BUILTIN_OP_END) {
+      if (SimplifyDemandedBitsForTargetNode(Op, DemandedBits, Known, TLO,
+                                            Depth))
+        return true;
+      break;
+    }
+
     // Just use computeKnownBits to compute output bits.
     TLO.DAG.computeKnownBits(Op, Known, Depth);
     break;
@@ -1800,6 +1807,23 @@ bool TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
           Op.getOpcode() == ISD::INTRINSIC_VOID) &&
          "Should use SimplifyDemandedVectorElts if you don't know whether Op"
          " is a target node!");
+  return false;
+}
+
+bool TargetLowering::SimplifyDemandedBitsForTargetNode(
+    SDValue Op, const APInt &DemandedBits, KnownBits &Known,
+    TargetLoweringOpt &TLO, unsigned Depth) const {
+  assert((Op.getOpcode() >= ISD::BUILTIN_OP_END ||
+          Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
+          Op.getOpcode() == ISD::INTRINSIC_W_CHAIN ||
+          Op.getOpcode() == ISD::INTRINSIC_VOID) &&
+         "Should use SimplifyDemandedBits if you don't know whether Op"
+         " is a target node!");
+  EVT VT = Op.getValueType();
+  APInt DemandedElts = VT.isVector()
+                           ? APInt::getAllOnesValue(VT.getVectorNumElements())
+                           : APInt(1, 1);
+  computeKnownBitsForTargetNode(Op, Known, DemandedElts, TLO.DAG, Depth);
   return false;
 }
 
