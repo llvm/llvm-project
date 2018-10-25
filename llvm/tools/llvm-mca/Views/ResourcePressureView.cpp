@@ -20,7 +20,10 @@ namespace mca {
 
 using namespace llvm;
 
-void ResourcePressureView::initialize() {
+ResourcePressureView::ResourcePressureView(const llvm::MCSubtargetInfo &sti,
+                                           llvm::MCInstPrinter &Printer,
+                                           const SourceMgr &Sequence)
+    : STI(sti), MCIP(Printer), Source(Sequence) {
   // Populate the map of resource descriptors.
   unsigned R2VIndex = 0;
   const MCSchedModel &SM = STI.getSchedModel();
@@ -92,8 +95,7 @@ static void printResourcePressure(formatted_raw_ostream &OS, double Pressure,
   OS.PadToColumn(Col);
 }
 
-void ResourcePressureView::printResourcePressurePerIteration(
-    raw_ostream &OS, unsigned Executions) const {
+void ResourcePressureView::printResourcePressurePerIter(raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
   formatted_raw_ostream FOS(TempStream);
@@ -126,6 +128,7 @@ void ResourcePressureView::printResourcePressurePerIteration(
   FOS << '\n';
   FOS.flush();
 
+  const unsigned Executions = Source.getNumIterations();
   for (unsigned I = 0, E = NumResourceUnits; I < E; ++I) {
     double Usage = ResourceUsage[I + Source.size() * E];
     printResourcePressure(FOS, Usage / Executions, (I + 1) * 7);
@@ -135,8 +138,7 @@ void ResourcePressureView::printResourcePressurePerIteration(
   OS << Buffer;
 }
 
-void ResourcePressureView::printResourcePressurePerInstruction(
-    raw_ostream &OS, unsigned Executions) const {
+void ResourcePressureView::printResourcePressurePerInst(raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
   formatted_raw_ostream FOS(TempStream);
@@ -149,6 +151,7 @@ void ResourcePressureView::printResourcePressurePerInstruction(
   raw_string_ostream InstrStream(Instruction);
 
   unsigned InstrIndex = 0;
+  const unsigned Executions = Source.getNumIterations();
   for (const MCInst &MCI : Source) {
     unsigned BaseEltIdx = InstrIndex * NumResourceUnits;
     for (unsigned J = 0; J < NumResourceUnits; ++J) {

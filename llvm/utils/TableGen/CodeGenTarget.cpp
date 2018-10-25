@@ -711,4 +711,3 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
   // Sort the argument attributes for later benefit.
   llvm::sort(ArgumentAttributes);
 }
-

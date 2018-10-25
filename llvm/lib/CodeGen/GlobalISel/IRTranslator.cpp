@@ -1330,7 +1330,22 @@ bool IRTranslator::translateExtractElement(const User &U,
   }
   unsigned Res = getOrCreateVReg(U);
   unsigned Val = getOrCreateVReg(*U.getOperand(0));
-  unsigned Idx = getOrCreateVReg(*U.getOperand(1));
+  const auto &TLI = *MF->getSubtarget().getTargetLowering();
+  unsigned PreferredVecIdxWidth = TLI.getVectorIdxTy(*DL).getSizeInBits();
+  unsigned Idx = 0;
+  if (auto *CI = dyn_cast<ConstantInt>(U.getOperand(1))) {
+    if (CI->getBitWidth() != PreferredVecIdxWidth) {
+      APInt NewIdx = CI->getValue().sextOrTrunc(PreferredVecIdxWidth);
+      auto *NewIdxCI = ConstantInt::get(CI->getContext(), NewIdx);
+      Idx = getOrCreateVReg(*NewIdxCI);
+    }
+  }
+  if (!Idx)
+    Idx = getOrCreateVReg(*U.getOperand(1));
+  if (MRI->getType(Idx).getSizeInBits() != PreferredVecIdxWidth) {
+    const LLT &VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+    Idx = MIRBuilder.buildSExtOrTrunc(VecIdxTy, Idx)->getOperand(0).getReg();
+  }
   MIRBuilder.buildExtractVectorElement(Res, Val, Idx);
   return true;
 }

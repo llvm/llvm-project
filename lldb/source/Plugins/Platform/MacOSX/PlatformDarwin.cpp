@@ -1402,14 +1402,11 @@ bool PlatformDarwin::SDKSupportsModules(SDKType desired_type,
   if (last_path_component) {
     const llvm::StringRef sdk_name = last_path_component.GetStringRef();
 
-    llvm::StringRef version_part;
-
-    if (sdk_name.startswith(sdk_strings[(int)desired_type])) {
-      version_part =
-          sdk_name.drop_front(strlen(sdk_strings[(int)desired_type]));
-    } else {
+    if (!sdk_name.startswith(sdk_strings[(int)desired_type]))
       return false;
-    }
+    auto version_part =
+        sdk_name.drop_front(strlen(sdk_strings[(int)desired_type]));
+    version_part.consume_back(".sdk");
 
     llvm::VersionTuple version;
     if (version.tryParse(version_part))

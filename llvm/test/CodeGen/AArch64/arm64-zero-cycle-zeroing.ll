@@ -162,28 +162,28 @@ entry:
 define <8 x i8> @tv8i8() {
 entry:
 ; ALL-LABEL: tv8i8:
-; ALL: movi d0, #0
+; ALL: movi{{(.16b)?}} v0{{(.2d)?}}, #0
   ret <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
 }
 
 define <4 x i16> @tv4i16() {
 entry:
 ; ALL-LABEL: tv4i16:
-; ALL: movi d0, #0
+; ALL: movi{{(.16b)?}} v0{{(.2d)?}}, #0
   ret <4 x i16> <i16 0, i16 0, i16 0, i16 0>
 }
 
 define <2 x i32> @tv2i32() {
 entry:
 ; ALL-LABEL: tv2i32:
-; ALL: movi d0, #0
+; ALL: movi{{(.16b)?}} v0{{(.2d)?}}, #0
   ret <2 x i32> <i32 0, i32 0>
 }
 
 define <2 x float> @tv2f32() {
 entry:
 ; ALL-LABEL: tv2f32:
-; ALL: movi d0, #0
+; ALL: movi{{(.16b)?}} v0{{(.2d)?}}, #0
   ret <2 x float> <float 0.0, float 0.0>
 }
 

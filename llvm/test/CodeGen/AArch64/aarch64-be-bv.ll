@@ -746,7 +746,7 @@ define void @modimm_t10_call() {
   ; CHECK-NEXT:    rev64   v{{[0-9]+}}.4h, v[[REG1]].4h
   ; CHECK-NEXT:    bl      f_v4i16
   call i16 @f_v4i16(<4 x i16> <i16 -1, i16 0, i16 -1, i16 0>)
-  ; CHECK:         movi    d[[REG1:[0-9]+]], #0xffffffffffffffff
+  ; CHECK:         movi    v[[REG1:[0-9]+]].2d, #0xffffffffffffffff
   ; CHECK-NEXT:    rev64   v{{[0-9]+}}.2s, v[[REG1]].2s
   ; CHECK-NEXT:    bl      f_v2i32
   call i32 @f_v2i32(<2 x i32> <i32 -1, i32 -1>)

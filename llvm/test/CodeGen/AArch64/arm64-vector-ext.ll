@@ -19,7 +19,7 @@ define void @func30(%T0_30 %v0, %T1_30* %p1) {
 ; sensible instead.
 define <1 x i32> @autogen_SD7918() {
 ; CHECK-LABEL: autogen_SD7918
-; CHECK: movi d0, #0000000000000000
+; CHECK: movi.2d v0, #0000000000000000
 ; CHECK-NEXT: ret
   %I29 = insertelement <1 x i1> zeroinitializer, i1 false, i32 0
   %ZE = zext <1 x i1> %I29 to <1 x i32>

@@ -106,6 +106,9 @@ public:
     SBThreadPlan
     QueueThreadPlanForRunToAddress (SBAddress address);
 
+    SBThreadPlan
+    QueueThreadPlanForStepScripted(const char *script_class_name);
+
 
 protected:
     friend class SBBreakpoint;

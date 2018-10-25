@@ -145,7 +145,8 @@ void DWARFDebugLoc::parse(const DWARFDataExtractor &data) {
 }
 
 Optional<DWARFDebugLoclists::LocationList>
-DWARFDebugLoclists::parseOneLocationList(DataExtractor Data, unsigned *Offset) {
+DWARFDebugLoclists::parseOneLocationList(DataExtractor Data, unsigned *Offset,
+                                         unsigned Version) {
   LocationList LL;
   LL.Offset = *Offset;
 
@@ -158,7 +159,12 @@ DWARFDebugLoclists::parseOneLocationList(DataExtractor Data, unsigned *Offset) {
     switch (Kind) {
     case dwarf::DW_LLE_startx_length:
       E.Value0 = Data.getULEB128(Offset);
-      E.Value1 = Data.getU32(Offset);
+      // Pre-DWARF 5 has different interpretation of the length field. We have
+      // to support both pre- and standartized styles for the compatibility.
+      if (Version < 5)
+        E.Value1 = Data.getU32(Offset);
+      else
+        E.Value1 = Data.getULEB128(Offset);
       break;
     case dwarf::DW_LLE_start_length:
       E.Value0 = Data.getAddress(Offset);
@@ -189,13 +195,13 @@ DWARFDebugLoclists::parseOneLocationList(DataExtractor Data, unsigned *Offset) {
   return LL;
 }
 
-void DWARFDebugLoclists::parse(DataExtractor data) {
+void DWARFDebugLoclists::parse(DataExtractor data, unsigned Version) {
   IsLittleEndian = data.isLittleEndian();
   AddressSize = data.getAddressSize();
 
   uint32_t Offset = 0;
   while (data.isValidOffset(Offset)) {
-    if (auto LL = parseOneLocationList(data, &Offset))
+    if (auto LL = parseOneLocationList(data, &Offset, Version))
       Locations.push_back(std::move(*LL));
     else
       return;

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -start-before dwarfehprepare -no-stack-coloring=false -stop-after stack-coloring -o - %s
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -no-stack-coloring=false -run-pass stack-coloring -o - %s
 
 # Test to insure that the liveness analysis in the StackColoring
 # pass gracefully handles statically unreachable blocks. See PR 37310.

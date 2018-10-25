@@ -2369,30 +2369,6 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
   assert(!isSigned && "Legalize cannot Expand SINT_TO_FP for i64 yet");
   // Code below here assumes !isSigned without checking again.
 
-  // Implementation of unsigned i64 to f64 following the algorithm in
-  // __floatundidf in compiler_rt. This implementation has the advantage
-  // of performing rounding correctly, both in the default rounding mode
-  // and in all alternate rounding modes.
-  // TODO: Generalize this for use with other types.
-  if (SrcVT == MVT::i64 && DestVT == MVT::f64) {
-    LLVM_DEBUG(dbgs() << "Converting unsigned i64 to f64\n");
-    SDValue TwoP52 = DAG.getConstant(UINT64_C(0x4330000000000000), dl, SrcVT);
-    SDValue TwoP84PlusTwoP52 = DAG.getConstantFP(
-        BitsToDouble(UINT64_C(0x4530000000100000)), dl, DestVT);
-    SDValue TwoP84 = DAG.getConstant(UINT64_C(0x4530000000000000), dl, SrcVT);
-    SDValue LoMask = DAG.getConstant(UINT64_C(0x00000000FFFFFFFF), dl, SrcVT);
-    SDValue HiShift = DAG.getConstant(32, dl, ShiftVT);
-
-    SDValue Lo = DAG.getNode(ISD::AND, dl, SrcVT, Op0, LoMask);
-    SDValue Hi = DAG.getNode(ISD::SRL, dl, SrcVT, Op0, HiShift);
-    SDValue LoOr = DAG.getNode(ISD::OR, dl, SrcVT, Lo, TwoP52);
-    SDValue HiOr = DAG.getNode(ISD::OR, dl, SrcVT, Hi, TwoP84);
-    SDValue LoFlt = DAG.getNode(ISD::BITCAST, dl, DestVT, LoOr);
-    SDValue HiFlt = DAG.getNode(ISD::BITCAST, dl, DestVT, HiOr);
-    SDValue HiSub = DAG.getNode(ISD::FSUB, dl, DestVT, HiFlt, TwoP84PlusTwoP52);
-    return DAG.getNode(ISD::FADD, dl, DestVT, LoFlt, HiSub);
-  }
-
   // TODO: Generalize this for use with other types.
   if (SrcVT == MVT::i64 && DestVT == MVT::f32) {
     LLVM_DEBUG(dbgs() << "Converting unsigned i64 to f32\n");
@@ -2921,8 +2897,13 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Tmp1);
     break;
   }
-  case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
+    if (TLI.expandUINT_TO_FP(Node, Tmp1, DAG)) {
+      Results.push_back(Tmp1);
+      break;
+    }
+    LLVM_FALLTHROUGH;
+  case ISD::SINT_TO_FP:
     Tmp1 = ExpandLegalINT_TO_FP(Node->getOpcode() == ISD::SINT_TO_FP,
                                 Node->getOperand(0), Node->getValueType(0), dl);
     Results.push_back(Tmp1);

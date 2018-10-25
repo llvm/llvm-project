@@ -482,8 +482,15 @@ void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
 
 void ClangdServer::workspaceSymbols(
     StringRef Query, int Limit, Callback<std::vector<SymbolInformation>> CB) {
-  CB(clangd::getWorkspaceSymbols(Query, Limit, Index,
-                                 WorkspaceRoot.getValueOr("")));
+  std::string QueryCopy = Query;
+  WorkScheduler.run(
+      "getWorkspaceSymbols",
+      Bind(
+          [QueryCopy, Limit, this](decltype(CB) CB) {
+            CB(clangd::getWorkspaceSymbols(QueryCopy, Limit, Index,
+                                           WorkspaceRoot.getValueOr("")));
+          },
+          std::move(CB)));
 }
 
 void ClangdServer::documentSymbols(

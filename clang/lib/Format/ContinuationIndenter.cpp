@@ -1502,10 +1502,25 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
   // violate the rectangle rule and visually flows within the surrounding
   // source.
   bool ContentStartsOnNewline = Current.TokenText[OldPrefixSize] == '\n';
-  unsigned NextStartColumn =
-      ContentStartsOnNewline
-          ? State.Stack.back().NestedBlockIndent + Style.IndentWidth
-          : FirstStartColumn;
+  // If this token is the last parameter (checked by looking if it's followed by
+  // `)`, the base the indent off the line's nested block indent. Otherwise,
+  // base the indent off the arguments indent, so we can achieve:
+  // fffffffffff(1, 2, 3, R"pb(
+  //     key1: 1  #
+  //     key2: 2)pb");
+  //
+  // fffffffffff(1, 2, 3,
+  //             R"pb(
+  //               key1: 1  #
+  //               key2: 2
+  //             )pb",
+  //             5);
+  unsigned CurrentIndent = (Current.Next && Current.Next->is(tok::r_paren))
+                               ? State.Stack.back().NestedBlockIndent
+                               : State.Stack.back().Indent;
+  unsigned NextStartColumn = ContentStartsOnNewline
+                                 ? CurrentIndent + Style.IndentWidth
+                                 : FirstStartColumn;
 
   // The last start column is the column the raw string suffix starts if it is
   // put on a newline.
@@ -1517,7 +1532,7 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
   //     indent.
   unsigned LastStartColumn = Current.NewlinesBefore
                                  ? FirstStartColumn - NewPrefixSize
-                                 : State.Stack.back().NestedBlockIndent;
+                                 : CurrentIndent;
 
   std::pair<tooling::Replacements, unsigned> Fixes = internal::reformat(
       RawStringStyle, RawText, {tooling::Range(0, RawText.size())},
@@ -1527,8 +1542,7 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
   auto NewCode = applyAllReplacements(RawText, Fixes.first);
   tooling::Replacements NoFixes;
   if (!NewCode) {
-    State.Column += Current.ColumnWidth;
-    return 0;
+    return addMultilineToken(Current, State);
   }
   if (!DryRun) {
     if (NewDelimiter != OldDelimiter) {
@@ -1577,6 +1591,13 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
   unsigned PrefixExcessCharacters =
       StartColumn + NewPrefixSize > Style.ColumnLimit ?
       StartColumn + NewPrefixSize - Style.ColumnLimit : 0;
+  bool IsMultiline =
+      ContentStartsOnNewline || (NewCode->find('\n') != std::string::npos);
+  if (IsMultiline) {
+    // Break before further function parameters on all levels.
+    for (unsigned i = 0, e = State.Stack.size(); i != e; ++i)
+      State.Stack[i].BreakBeforeParameter = true;
+  }
   return Fixes.second + PrefixExcessCharacters * Style.PenaltyExcessCharacter;
 }
 
